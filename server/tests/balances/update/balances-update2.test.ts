@@ -34,7 +34,7 @@ const testCase = "balances-update2";
 describe(`${chalk.yellowBright("balances-update2: testing update balance after tracking into overage")}`, () => {
 	const customerId = testCase;
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
-	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2 });
+	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2_0 });
 
 	beforeAll(async () => {
 		await initCustomerV3({

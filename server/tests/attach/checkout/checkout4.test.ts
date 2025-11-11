@@ -73,6 +73,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach coupon`)}`, () => {
 		await timeout(10000);
 
 		const customer = await autumn.customers.get(customerId);
+		console.log("customer", customer);
 
 		expectProductAttached({
 			customer,

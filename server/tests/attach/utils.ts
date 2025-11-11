@@ -1,25 +1,5 @@
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import {
-	AppEnv,
-	AttachBranch,
-	BillingInterval,
-	CreateEntity,
-	FeatureOptions,
-	Organization,
-	ProductItem,
-	ProductV2,
-} from "@autumn/shared";
-import { getAttachTotal } from "tests/utils/testAttachUtils/testAttachUtils.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { expectInvoicesCorrect } from "tests/utils/expectUtils/expectProductAttached.js";
-import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
-import { notNullish, nullish, timeout, toSnakeCase } from "@/utils/genUtils.js";
-import { expectSubItemsCorrect } from "tests/utils/expectUtils/expectSubUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import Stripe from "stripe";
-import { expect } from "chai";
-
-import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
+import type { BillingInterval, ProductItem, ProductV2 } from "@autumn/shared";
+import { nullish } from "@/utils/genUtils.js";
 
 // export const runAttachTest = async ({
 //   autumn,
@@ -182,20 +162,20 @@ export const replaceItems = ({
 	newItem: ProductItem;
 	items: ProductItem[];
 }) => {
-	let newItems = structuredClone(items);
+	const newItems = structuredClone(items);
 
 	let index;
 	if (featureId) {
-		index = newItems.findIndex((item) => item.feature_id == featureId);
+		index = newItems.findIndex((item) => item.feature_id === featureId);
 	}
 
 	if (interval) {
 		index = newItems.findIndex(
-			(item) => item.interval == (interval as any) && nullish(item.feature_id),
+			(item) => item.interval === (interval as any) && nullish(item.feature_id),
 		);
 	}
 
-	if (index == -1) {
+	if (index === -1) {
 		throw new Error("Item not found");
 	}
 

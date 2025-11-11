@@ -73,7 +73,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		expand: [],
 	});
 
-	childLogger.info(`${method} ${path}`);
+	// childLogger.info(`${method} ${path}`);
 
 	await next();
 };

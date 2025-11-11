@@ -1,6 +1,6 @@
+import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import path from "path";
 import { defineConfig } from "vite";
 
 // https://vite.dev/config/
@@ -25,8 +25,6 @@ export default defineConfig({
 			"@radix/tabs": "@radix-ui/react-tabs",
 			"@radix/tooltip": "@radix-ui/react-tooltip",
 		},
-		// // Preserve symlinks for workspace dependencies
-		// preserveSymlinks: true,
 	},
 	optimizeDeps: {
 		// Exclude workspace dependencies from pre-bundling to avoid cache issues
@@ -35,6 +33,7 @@ export default defineConfig({
 			"better-auth",
 			"better-auth/react",
 			"@better-auth/stripe",
+			"zod/v4",
 		],
 	},
 	// Clear cache on config change

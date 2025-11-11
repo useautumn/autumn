@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	ApiVersion,
-	type CheckResponse,
 	type CheckResponseV0,
+	type CheckResponseV1,
 	type LimitedItem,
 	SuccessCode,
 } from "@autumn/shared";
@@ -32,6 +32,7 @@ describe(`${chalk.yellowBright("credit-systems2: test /check on credit system fe
 	const customerId = "credit-systems2";
 	const autumnV0: AutumnInt = new AutumnInt({ version: ApiVersion.V0_2 });
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
+	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2_0 });
 
 	beforeAll(async () => {
 		await initCustomerV3({
@@ -53,31 +54,13 @@ describe(`${chalk.yellowBright("credit-systems2: test /check on credit system fe
 		});
 	});
 
-	test("v0 response - within balance", async () => {
-		const requiredCredits = 50.25;
-		const res = (await autumnV0.check({
-			customer_id: customerId,
-			feature_id: TestFeature.Credits,
-			required_balance: requiredCredits,
-		})) as unknown as CheckResponseV0;
-
-		expect(res.allowed).toBe(true);
-		expect(res.balances).toBeDefined();
-		expect(res.balances).toHaveLength(1);
-		expect(res.balances[0]).toMatchObject({
-			balance: creditsFeature.included_usage,
-			required: requiredCredits,
-			feature_id: TestFeature.Credits,
-		});
-	});
-
 	test("v1 response - within balance", async () => {
 		const requiredCredits = 50.25;
 		const res = (await autumnV1.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Credits,
 			required_balance: requiredCredits,
-		})) as unknown as CheckResponse;
+		})) as unknown as CheckResponseV1;
 
 		expect(res).toMatchObject({
 			allowed: true,
@@ -97,31 +80,13 @@ describe(`${chalk.yellowBright("credit-systems2: test /check on credit system fe
 		expect(res.next_reset_at).toBeDefined();
 	});
 
-	test("v0 response - exceeds balance", async () => {
-		const requiredCredits = 100.5;
-		const res = (await autumnV0.check({
-			customer_id: customerId,
-			feature_id: TestFeature.Credits,
-			required_balance: requiredCredits,
-		})) as unknown as CheckResponseV0;
-
-		expect(res.allowed).toBe(false);
-		expect(res.balances).toBeDefined();
-		expect(res.balances).toHaveLength(1);
-		expect(res.balances[0]).toMatchObject({
-			balance: creditsFeature.included_usage,
-			required: requiredCredits,
-			feature_id: TestFeature.Credits,
-		});
-	});
-
 	test("v1 response - exceeds balance", async () => {
 		const requiredCredits = 100.5;
 		const res = (await autumnV1.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Credits,
 			required_balance: requiredCredits,
-		})) as unknown as CheckResponse;
+		})) as unknown as CheckResponseV1;
 
 		expect(res).toMatchObject({
 			allowed: false,
@@ -139,5 +104,41 @@ describe(`${chalk.yellowBright("credit-systems2: test /check on credit system fe
 		});
 
 		expect(res.next_reset_at).toBeDefined();
+	});
+
+	test("v0 response - within balance", async () => {
+		const requiredCredits = 50.25;
+		const res = (await autumnV0.check({
+			customer_id: customerId,
+			feature_id: TestFeature.Credits,
+			required_balance: requiredCredits,
+		})) as unknown as CheckResponseV0;
+
+		expect(res.allowed).toBe(true);
+		expect(res.balances).toBeDefined();
+		expect(res.balances).toHaveLength(1);
+		expect(res.balances[0]).toMatchObject({
+			balance: creditsFeature.included_usage,
+			required: requiredCredits,
+			feature_id: TestFeature.Credits,
+		});
+	});
+
+	test("v0 response - exceeds balance", async () => {
+		const requiredCredits = 100.5;
+		const res = (await autumnV0.check({
+			customer_id: customerId,
+			feature_id: TestFeature.Credits,
+			required_balance: requiredCredits,
+		})) as unknown as CheckResponseV0;
+
+		expect(res.allowed).toBe(false);
+		expect(res.balances).toBeDefined();
+		expect(res.balances).toHaveLength(1);
+		expect(res.balances[0]).toMatchObject({
+			balance: creditsFeature.included_usage,
+			required: requiredCredits,
+			feature_id: TestFeature.Credits,
+		});
 	});
 });

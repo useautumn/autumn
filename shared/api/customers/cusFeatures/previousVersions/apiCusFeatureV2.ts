@@ -1,6 +1,6 @@
 import { EntInterval } from "@models/productModels/entModels/entEnums.js";
 import { z } from "zod/v4";
-import { ApiCusRolloverSchema } from "../apiCusFeature.js";
+import { ApiCusFeatureV3RolloverSchema } from "./apiCusFeatureV3.js";
 
 // Version 2 of cus feature response
 export const ApiCusFeatureV2Schema = z.object({
@@ -14,7 +14,7 @@ export const ApiCusFeatureV2Schema = z.object({
 	next_reset_at: z.number().nullish(),
 	overage_allowed: z.boolean().nullish(),
 	usage_limit: z.number().nullish(),
-	rollovers: z.array(ApiCusRolloverSchema).nullish(),
+	rollovers: z.array(ApiCusFeatureV3RolloverSchema).nullish(),
 });
 
 export type ApiCusFeatureV2 = z.infer<typeof ApiCusFeatureV2Schema>;

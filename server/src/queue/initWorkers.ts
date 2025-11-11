@@ -1,0 +1,261 @@
+import {
+	DeleteMessageCommand,
+	type Message,
+	ReceiveMessageCommand,
+} from "@aws-sdk/client-sqs";
+import type { Logger } from "pino";
+import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
+import { logger } from "@/external/logtail/logtailUtils.js";
+import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
+import { runInsertEventBatch } from "@/internal/balances/track/eventUtils/runInsertEventBatch.js";
+import { runSyncBalanceBatch } from "@/internal/balances/track/syncUtils/runSyncBalanceBatch.js";
+import { runSaveFeatureDisplayTask } from "@/internal/features/featureUtils.js";
+import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
+import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigrationTask.js";
+import { detectBaseVariant } from "@/internal/products/productUtils/detectProductVariant.js";
+import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutReward.js";
+import { generateId } from "@/utils/genUtils.js";
+import { createWorkerContext } from "./createWorkerContext.js";
+import { QUEUE_URL, sqs } from "./initSqs.js";
+import { JobName } from "./JobName.js";
+
+const actionHandlers = [
+	JobName.HandleProductsUpdated,
+	JobName.HandleCustomerCreated,
+];
+
+interface SqsJob {
+	name: string;
+	data: any;
+}
+
+/**
+ * Process a single SQS message
+ */
+const processMessage = async ({
+	message,
+	db,
+	workerId,
+}: {
+	message: Message;
+	db: DrizzleCli;
+	workerId: number;
+}) => {
+	if (!message.Body) {
+		console.warn("Received message without body");
+		return;
+	}
+
+	const job: SqsJob = JSON.parse(message.Body);
+
+	const workerLogger = logger.child({
+		context: {
+			worker: {
+				messageId: message.MessageId,
+				type: job.name,
+				payload: job.data,
+			},
+		},
+	});
+
+	const ctx = await createWorkerContext({
+		db,
+		orgId: job.data.orgId,
+		env: job.data.env,
+		logger: workerLogger,
+	});
+
+	try {
+		if (job.name === JobName.DetectBaseVariant) {
+			await detectBaseVariant({
+				db,
+				curProduct: job.data.curProduct,
+				logger: workerLogger as Logger,
+			});
+			return;
+		}
+
+		if (job.name === JobName.GenerateFeatureDisplay) {
+			await runSaveFeatureDisplayTask({
+				db,
+				feature: job.data.feature,
+				logger: workerLogger,
+			});
+			return;
+		}
+
+		if (job.name === JobName.Migration) {
+			await runMigrationTask({
+				db,
+				payload: job.data,
+				logger: workerLogger,
+			});
+			return;
+		}
+
+		if (actionHandlers.includes(job.name as JobName)) {
+			// Note: action handlers need BullMQ queue for nested jobs
+			// This will need to be refactored when migrating action handlers to SQS
+			await runActionHandlerTask({
+				ctx,
+				jobName: job.name as JobName,
+				payload: job.data,
+			});
+			return;
+		}
+
+		if (job.name === JobName.RewardMigration) {
+			await runRewardMigrationTask({
+				db,
+				payload: job.data,
+				logger: workerLogger,
+			});
+			return;
+		}
+
+		if (job.name === JobName.SyncBalanceBatch) {
+			await runSyncBalanceBatch({
+				ctx,
+				payload: job.data,
+			});
+			return;
+		}
+
+		if (job.name === JobName.InsertEventBatch) {
+			await runInsertEventBatch({
+				db,
+				payload: job.data,
+				logger: workerLogger as Logger,
+			});
+			return;
+		}
+
+		if (job.name === JobName.TriggerCheckoutReward) {
+			await runTriggerCheckoutReward({
+				db,
+				payload: job.data,
+				logger: workerLogger,
+			});
+		}
+	} catch (error: any) {
+		workerLogger.error(`Failed to process SQS job: ${job.name}`, {
+			jobName: job.name,
+			error: {
+				message: error.message,
+				stack: error.stack,
+			},
+		});
+		// Don't delete the message on error - it will become visible again for retry
+		throw error;
+	}
+};
+
+let isRunning = true;
+const isFifoQueue = QUEUE_URL.endsWith(".fifo");
+let abortController: AbortController;
+
+/**
+ * Single SQS polling loop - runs continuously until shutdown
+ */
+const startPollingLoop = async ({ db }: { db: DrizzleCli }) => {
+	console.log(`[Process ${process.pid}] SQS poller started`);
+	abortController = new AbortController();
+
+	while (isRunning) {
+		try {
+			const command = new ReceiveMessageCommand({
+				QueueUrl: QUEUE_URL,
+				MaxNumberOfMessages: 10, // Receive up to 10 messages at once
+				WaitTimeSeconds: 20, // Long polling
+				VisibilityTimeout: 60, // 60 seconds to process the message
+				// For FIFO queues, add ReceiveRequestAttemptId for deduplication
+				...(isFifoQueue && {
+					ReceiveRequestAttemptId: generateId("receive"),
+				}),
+			});
+
+			const response = await sqs.send(command, {
+				abortSignal: abortController.signal,
+			});
+
+			if (response.Messages && response.Messages.length > 0) {
+				// Process all messages concurrently
+				await Promise.allSettled(
+					response.Messages.map(async (message) => {
+						// Check if we should stop before processing
+						if (!isRunning) return;
+
+						try {
+							await processMessage({ message, db, workerId: 1 });
+						} catch (error: any) {
+							logger.error(
+								`Failed to process message ${message.MessageId}: ${error.message}`,
+							);
+						}
+
+						// Always delete message, even on error (receive once only)
+						if (message.ReceiptHandle) {
+							try {
+								await sqs.send(
+									new DeleteMessageCommand({
+										QueueUrl: QUEUE_URL,
+										ReceiptHandle: message.ReceiptHandle,
+									}),
+								);
+							} catch (deleteError: any) {
+								console.error(
+									`Failed to delete message ${message.MessageId}:`,
+									deleteError.message,
+								);
+							}
+						}
+					}),
+				);
+			}
+		} catch (error: any) {
+			// Ignore abort errors during shutdown
+			if (error.name === "AbortError" || error.name === "RequestAbortedError") {
+				break;
+			}
+
+			if (isRunning) {
+				console.error("SQS polling error:", error.message);
+				// Wait a bit before retrying after an error
+				await new Promise((resolve) => setTimeout(resolve, 5000));
+			}
+		}
+	}
+
+	console.log("SQS poller stopped");
+};
+
+/**
+ * Initialize single SQS poller for this process
+ * cluster.fork() in workers.ts handles multi-process parallelism
+ */
+export const initWorkers = async () => {
+	const { db } = initDrizzle({ maxConnections: 3 });
+
+	// Graceful shutdown handler
+	const shutdown = async () => {
+		console.log("Shutting down SQS poller...");
+		isRunning = false;
+
+		// Abort in-flight SQS request
+		if (abortController) {
+			abortController.abort();
+		}
+
+		// Give 5 seconds to finish current message processing
+		setTimeout(() => {
+			console.log("Shutdown timeout reached, forcing exit");
+			process.exit(0);
+		}, 5000);
+	};
+
+	process.on("SIGTERM", shutdown);
+	process.on("SIGINT", shutdown);
+
+	// Start the single polling loop
+	await startPollingLoop({ db });
+};

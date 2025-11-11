@@ -44,7 +44,7 @@ export const handleUsagePrices = async ({
 	usageSub: Stripe.Subscription;
 	logger: any;
 	activeProduct: FullCusProduct;
-}) => {
+}): Promise<boolean> => {
 	const invoiceCreatedRecently =
 		Math.abs(
 			differenceInMinutes(
@@ -59,12 +59,12 @@ export const handleUsagePrices = async ({
 
 	if (invoiceCreatedRecently) {
 		logger.info("Invoice created recently, skipping");
-		return;
+		return false;
 	}
 
 	if (invoiceFromUpgrade) {
 		logger.info("Invoice is from upgrade, skipping");
-		return;
+		return false;
 	}
 
 	logger.info(`✨ Handling usage prices for ${customer.name || customer.id}`);
@@ -75,7 +75,7 @@ export const handleUsagePrices = async ({
 	// If relatedCusEnt's balance > 0 and next_reset_at is null, skip...
 	if (relatedCusEnt.balance! > 0 && !relatedCusEnt.next_reset_at) {
 		logger.info("Balance > 0 and next_reset_at is null, skipping");
-		return;
+		return false;
 	}
 
 	const subItem = findStripeItemForPrice({
@@ -107,7 +107,7 @@ export const handleUsagePrices = async ({
 			logger.warn(
 				`Price ${price.id} has no stripe meter id, skipping invoice.created for usage in arrear`,
 			);
-			return;
+			return false;
 		}
 
 		const { roundedUsage } = getCusPriceUsage({
@@ -132,7 +132,7 @@ export const handleUsagePrices = async ({
 	}
 
 	if (relatedCusEnt.entitlement.interval === EntInterval.Lifetime) {
-		return;
+		return false;
 	}
 
 	const ent = relatedCusEnt.entitlement;
@@ -167,4 +167,5 @@ export const handleUsagePrices = async ({
 	}
 
 	logger.info("✅ Successfully reset balance");
+	return true;
 };

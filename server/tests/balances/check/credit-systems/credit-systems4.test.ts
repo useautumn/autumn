@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { ApiVersion, type CheckResponse, SuccessCode } from "@autumn/shared";
+import { ApiVersion, type CheckResponseV1, SuccessCode } from "@autumn/shared";
 import chalk from "chalk";
 import { TestFeature } from "tests/setup/v2Features.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
@@ -65,7 +65,7 @@ describe(`${chalk.yellowBright("credit-systems4: test send_event with credit sys
 			feature_id: TestFeature.Action1,
 			required_balance: requiredAction1Units,
 			send_event: true,
-		})) as unknown as CheckResponse;
+		})) as unknown as CheckResponseV1;
 
 		expect(checkRes.allowed).toBe(true);
 		expect(checkRes.feature_id).toBe(TestFeature.Credits);
@@ -145,7 +145,7 @@ describe(`${chalk.yellowBright("credit-systems4: test send_event with credit sys
 			feature_id: TestFeature.Action1,
 			required_balance: requiredAction1Units,
 			send_event: true,
-		})) as unknown as CheckResponse;
+		})) as unknown as CheckResponseV1;
 
 		expect(checkRes.allowed).toBe(false);
 

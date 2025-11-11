@@ -3,6 +3,10 @@ import { EntitlementWithFeatureSchema } from "../../productModels/entModels/entM
 import { ReplaceableSchema } from "./replaceableSchema.js";
 import { RolloverSchema } from "./rolloverModels/rolloverTable.js";
 
+export const SortCusEntParamsSchema = z.object({
+	cusEntId: z.string().optional(),
+});
+
 export const EntityBalanceSchema = z.object({
 	id: z.string(),
 	balance: z.number(),
@@ -45,8 +49,8 @@ export const FullCustomerEntitlementSchema = CustomerEntitlementSchema.extend({
 	rollovers: z.array(RolloverSchema),
 });
 
+export type SortCusEntParams = z.infer<typeof SortCusEntParamsSchema>;
 export type EntityBalance = z.infer<typeof EntityBalanceSchema>;
-
 export type CustomerEntitlement = z.infer<typeof CustomerEntitlementSchema>;
 export type FullCustomerEntitlement = z.infer<
 	typeof FullCustomerEntitlementSchema

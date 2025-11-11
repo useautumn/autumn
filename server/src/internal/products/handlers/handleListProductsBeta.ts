@@ -1,10 +1,10 @@
-import { getCusWithCache } from "@/internal/customers/cusCache/getCusWithCache.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import type {
 	ExtendedRequest,
 	ExtendedResponse,
 } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
+import { CusService } from "../../customers/CusService.js";
 import { getProductResponse } from "../productUtils/productResponseUtils/getProductResponse.js";
 import { sortFullProducts } from "../productUtils/sortProductUtils.js";
 
@@ -32,14 +32,14 @@ export const handleListProductsBeta = async (req: any, res: any) =>
 						return undefined;
 					}
 
-					return await getCusWithCache({
+					return await CusService.getFull({
 						db,
-						org,
 						idOrInternalId: customerId as string,
-						allowNotFound: true,
-						entityId: entityId as string,
+						orgId: org.id,
 						env,
-						logger: req.logger,
+						entityId: entityId as string,
+						withEntities: true,
+						withSubs: true,
 					});
 				})(),
 			]);

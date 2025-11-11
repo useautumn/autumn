@@ -1,10 +1,14 @@
-import { type Feature, FeatureNotFoundError } from "@autumn/shared";
+import {
+	type Feature,
+	FeatureNotFoundError,
+	RecaseError,
+} from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
-import { getCreditSystemsFromFeature } from "../../../features/creditSystemUtils.js";
 
 export type FeatureDeduction = {
 	feature: Feature;
 	deduction: number;
+	targetBalance?: number;
 };
 
 const DEFAULT_VALUE = 1;
@@ -30,28 +34,11 @@ export const getTrackFeatureDeductions = ({
 			featureId,
 		});
 	}
-	const creditSystems = getCreditSystemsFromFeature({
-		featureId: mainFeature.id,
-		features,
-	});
 
 	featureDeductions.push({
 		feature: mainFeature,
 		deduction: mainFeatureDeduction,
 	});
-
-	// for (const creditSystem of creditSystems) {
-	// 	const creditSystemDeduction = getCreditCost({
-	// 		featureId: mainFeature.id,
-	// 		creditSystem,
-	// 		amount: mainFeatureDeduction,
-	// 	});
-
-	// 	featureDeductions.push({
-	// 		feature: creditSystem,
-	// 		deduction: creditSystemDeduction,
-	// 	});
-	// }
 
 	return featureDeductions;
 };
@@ -78,6 +65,12 @@ export const getTrackEventNameDeductions = ({
 			value,
 		}),
 	);
+
+	if (featureDeductions.length === 0) {
+		throw new RecaseError({
+			message: `No features found for event name: ${eventName}`,
+		});
+	}
 
 	return featureDeductions;
 };

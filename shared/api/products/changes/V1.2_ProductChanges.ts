@@ -40,7 +40,7 @@ import {
  */
 
 export const V1_2_ProductChanges = defineVersionChange({
-	newVersion: ApiVersion.V2, // Breaking change introduced in V2
+	newVersion: ApiVersion.V2_0, // Breaking change introduced in V2
 	oldVersion: ApiVersion.V1_Beta, // Applied when targetVersion <= V1.2
 	description: [
 		"Product format changed from Plan to ProductV2 schema",

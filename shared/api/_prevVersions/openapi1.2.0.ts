@@ -14,7 +14,7 @@ import { setUsageJsDoc } from "../common/jsDocs.js";
 import { ApiCusProductV3Schema } from "../customers/cusPlans/previousVersions/apiCusProductV3.js";
 import { ApiEntityWithMeta } from "../entities/entitiesOpenApi.js";
 import {
-	ApiCusFeatureSchema,
+	ApiCusFeatureV3Schema,
 	ApiCustomerSchema,
 	ApiFeatureSchema,
 	ApiProductItemSchema,
@@ -414,7 +414,7 @@ const OPENAPI_1_2_0 = createDocument(
 				}),
 				Customer: ApiCustomerWithMeta,
 				CustomerProduct: ApiCusProductV3Schema,
-				CustomerFeature: ApiCusFeatureSchema.meta({
+				CustomerFeature: ApiCusFeatureV3Schema.meta({
 					id: "CustomerFeature",
 					description: "Customer feature object returned by the API",
 				}),

@@ -1,16 +1,22 @@
 -- Helper: Deduct from rollovers before deducting from main entitlements
-DROP FUNCTION IF EXISTS deduct_from_rollovers(text[], numeric, text, boolean);
+DROP FUNCTION IF EXISTS deduct_from_rollovers(jsonb);
 
-CREATE FUNCTION deduct_from_rollovers(
-  rollover_ids text[],
-  amount_to_deduct numeric,
-  target_entity_id text DEFAULT NULL,
-  has_entity_scope boolean DEFAULT false
-)
+CREATE FUNCTION deduct_from_rollovers(params jsonb)
 RETURNS TABLE(total_deducted numeric)
 LANGUAGE plpgsql
 AS $$
 DECLARE
+  -- Extract parameters from JSONB
+  rollover_ids text[] := CASE 
+    WHEN params->'rollover_ids' IS NULL OR jsonb_typeof(params->'rollover_ids') != 'array' THEN ARRAY[]::text[]
+    ELSE ARRAY(SELECT jsonb_array_elements_text(params->'rollover_ids'))
+  END;
+  amount_to_deduct numeric := (params->>'amount_to_deduct')::numeric;
+  target_entity_id text := NULLIF(params->>'target_entity_id', '');
+  has_entity_scope boolean := COALESCE((params->>'has_entity_scope')::boolean, false);
+  
+
+  -- Other variables
   remaining_amount numeric := amount_to_deduct;
   rollover_id text;
   current_balance numeric;
@@ -76,7 +82,7 @@ BEGIN
       new_entities := current_entities;
       deduct_amount := 0;
       
-      FOR entity_key IN SELECT jsonb_object_keys(current_entities)
+      FOR entity_key IN SELECT jsonb_object_keys(current_entities) ORDER BY 1
       LOOP
         EXIT WHEN remaining_amount <= 0;
         

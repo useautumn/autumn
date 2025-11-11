@@ -1,20 +1,29 @@
 {
 	"name": "autumn",
 	"private": true,
-	"workspaces": [
-		"server",
-		"shared",
-		"vite",
-		"scripts"
-	],
+	"workspaces": {
+		"packages": [
+			"server",
+			"shared",
+			"vite",
+			"scripts"
+		],
+		"catalog": {
+			"drizzle-orm": "0.43.1",
+			"drizzle-kit": "^0.31.1"
+		}
+	},
 	"type": "module",
 	"scripts": {
-		"dev": "node scripts/start-dev.js",
-		"dev:simple": "concurrently \"cd shared && bun dev:watch\" \"cd server && bun dev\" \"cd server && bun workers:dev\" \"cd vite && bun dev\"",
+		"dev": "bun scripts/start-dev.js",
+
+		"d": "ENV_FILE=.env infisical run --env=dev -- bun scripts/start-dev.js",
+		"p": "ENV_FILE=.env.prod infisical run --env=prod -- bun scripts/start-dev.js",
+
 		"vite:build": "bun -F @autumn/shared build && bun -F @autumn/vite build:bun",
 		"vite:start": "bun -F @autumn/vite start:bun",
 		"shared": "bun -F @autumn/shared build",
-		"server": "bun -F @autumn/shared build && bun -F @autumn/server start",
+		"server": "cd server && bun start",
 		"workers": "bun -F @autumn/shared build && bun -F @autumn/server workers",
 		"cron": "bun -F @autumn/shared build && bun -F @autumn/server cron",
 		"check": "bun -F @autumn/shared build && bun -F @autumn/server check",
@@ -38,7 +47,6 @@
 		"@wooorm/starry-night": "^3.8.0",
 		"ag-charts-react": "^12.3.0",
 		"chalk": "^5.6.2",
-		"drizzle-kit": "^0.31.5",
 		"tailwind-scrollbar-hide": "^4.0.0"
 	},
 	"devDependencies": {

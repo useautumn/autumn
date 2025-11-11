@@ -99,6 +99,22 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing attach pro annual to
 				},
 			],
 		});
+
+		await timeout(2000);
+		const nonCachedEntity = await autumn.entities.get(customerId, entityId, {
+			skip_cache: "true",
+		});
+
+		expectFeaturesCorrect({
+			customer: nonCachedEntity,
+			product: proAnnual,
+			usage: [
+				{
+					featureId: TestFeature.Words,
+					value: usage,
+				},
+			],
+		});
 	});
 
 	test("should have correct invoice after cycle", async () => {

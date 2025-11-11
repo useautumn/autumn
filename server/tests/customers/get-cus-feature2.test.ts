@@ -36,7 +36,7 @@ const testCase = "get-cus-feature2";
 describe(`${chalk.yellowBright("get-cus-feature2: testing arrear feature")}`, () => {
 	const customerId = testCase;
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
-	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2 });
+	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2_0 });
 
 	const usage = 20.132;
 

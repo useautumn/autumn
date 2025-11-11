@@ -20,7 +20,7 @@ export const UpdatePlanFeatureSchema = z
 			.object({
 				interval: z.enum(ResetInterval).optional(),
 				interval_count: z.number().optional(),
-				when_enabled: z.boolean().optional(),
+				reset_when_enabled: z.boolean().optional(),
 			})
 			.optional(),
 

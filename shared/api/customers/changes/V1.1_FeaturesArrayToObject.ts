@@ -75,7 +75,7 @@ export const V1_1_FeaturesArrayToObject = defineVersionChange({
 						next_reset_at: breakdownItem.next_reset_at,
 						usage_limit:
 							breakdownItem.usage_limit || breakdownItem.included_usage,
-						rollovers: breakdownItem.rollovers,
+						// rollovers: breakdownItem.rollovers,
 
 						// Feature-level fields (same for all intervals)
 						unlimited: false,

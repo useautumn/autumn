@@ -9,7 +9,6 @@ import { CusSearchService } from "@/internal/customers/CusSearchService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { handleBatchCustomers } from "../api/batch/handlers/handleBatchCustomers.js";
-import { expressEntityRouter } from "../api/entities/entityRouter.js";
 import { toSuccessUrl } from "../orgs/orgUtils/convertOrgUtils.js";
 import { CusService } from "./CusService.js";
 import { handleAddCouponToCus } from "./handlers/handleAddCouponToCus.js";
@@ -137,8 +136,6 @@ expressCusRouter.post(
 );
 
 expressCusRouter.post("/:customer_id/coupons/:coupon_id", handleAddCouponToCus);
-
-expressCusRouter.use("/:customer_id/entities", expressEntityRouter);
 
 expressCusRouter.post("/:customer_id/transfer", handleTransferProduct);
 

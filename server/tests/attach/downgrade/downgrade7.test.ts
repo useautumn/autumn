@@ -3,12 +3,16 @@ import type { Customer } from "@autumn/shared";
 import chalk from "chalk";
 import type Stripe from "stripe";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { products } from "tests/global.js";
-import { compareMainProduct } from "tests/utils/compare.js";
+import { expectCustomerV0Correct } from "tests/utils/expectUtils/expectCustomerV0Correct.js";
 import { getSubsFromCusId } from "tests/utils/expectUtils/expectSubUtils.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import {
+	sharedProProduct,
+	sharedPremiumProduct,
+	initDowngradeSharedProducts,
+} from "./sharedProducts.js";
 
 const testCase = "downgrade7";
 describe(`${chalk.yellowBright(`${testCase}: testing expire scheduled product`)}`, () => {
@@ -20,6 +24,9 @@ describe(`${chalk.yellowBright(`${testCase}: testing expire scheduled product`)}
 
 	beforeAll(async () => {
 		stripeCli = ctx.stripeCli;
+
+		// Explicitly ensure shared products exist
+		await initDowngradeSharedProducts();
 
 		const { testClockId: testClockId_, customer: customer_ } =
 			await initCustomerV3({
@@ -38,12 +45,12 @@ describe(`${chalk.yellowBright(`${testCase}: testing expire scheduled product`)}
 	test("should attach premium, then attach pro", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
-			productId: products.premium.id,
+			productId: sharedPremiumProduct.id,
 		});
 
 		await AutumnCli.attach({
 			customerId: customerId,
-			productId: products.pro.id,
+			productId: sharedProProduct.id,
 		});
 	});
 
@@ -51,13 +58,13 @@ describe(`${chalk.yellowBright(`${testCase}: testing expire scheduled product`)}
 		// const cusProduct = await findCusProductById({
 		//   db: this.db,
 		//   internalCustomerId: customer.internal_id,
-		//   productId: products.pro.id,
+		//   productId: sharedProProduct.id,
 		// });
 
 		// expect(cusProduct).to.exist;
 		await autumn.cancel({
 			customer_id: customerId,
-			product_id: products.pro.id,
+			product_id: sharedProProduct.id,
 			cancel_immediately: true,
 		});
 		// await AutumnCli.expire(cusProduct!.id);
@@ -66,15 +73,15 @@ describe(`${chalk.yellowBright(`${testCase}: testing expire scheduled product`)}
 	test("should have correct product and entitlements (premium)", async () => {
 		// Check that free is attached
 		const res = await AutumnCli.getCustomer(customerId);
-		compareMainProduct({
-			sent: products.premium,
+		expectCustomerV0Correct({
+			sent: sharedPremiumProduct,
 			cusRes: res,
 		});
 
 		const { subs } = await getSubsFromCusId({
 			stripeCli,
 			customerId: customerId,
-			productId: products.premium.id,
+			productId: sharedPremiumProduct.id,
 			db: ctx.db,
 			org: ctx.org,
 			env: ctx.env,

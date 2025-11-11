@@ -27,9 +27,8 @@
 		"date-fns": "^4.1.0",
 		"decimal.js": "^10.5.0",
 		"dotenv": "^16.5.0",
-		"drizzle-kit": "^0.31.1",
-		"drizzle-orm": "^0.43.1",
-		"drizzle-zod": "^0.8.2",
+		"drizzle-kit": "catalog:",
+		"drizzle-orm": "catalog:",
 		"yaml": "^2.8.1",
 		"zod-openapi": "^5.4.1"
 	},
@@ -39,7 +38,7 @@
 	"devDependencies": {
 		"@types/bun": "latest",
 		"@types/node": "^24.0.3",
-		"@typescript/native-preview": "^7.0.0-dev.20250731.1",
+
 		"cross-env": "^7.0.3",
 		"nodemon": "^3.1.7",
 		"tsx": "^4.19.4",

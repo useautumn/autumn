@@ -17,6 +17,7 @@ import { toApiFeature } from "@/internal/features/utils/mapFeatureUtils.js";
 import type { AutumnContext } from "../honoUtils/HonoEnv.js";
 import type { CheckData } from "../internal/api/check/checkTypes/CheckData.js";
 import { getApiCustomer } from "../internal/customers/cusUtils/apiCusUtils/getApiCustomer.js";
+import { getApiCustomerBase } from "../internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
 import { generateId } from "../utils/genUtils.js";
 
 export const mergeNewCusEntsIntoCusProducts = ({
@@ -99,34 +100,42 @@ export const handleAllowanceUsed = async ({
 }) => {
 	const { db, org, env, features, logger } = ctx;
 
-	// Make sure overage allowed is false
-	const oldCusEnts = structuredClone(cusEnts);
-	for (const cusEnt of oldCusEnts) {
-		cusEnt.usage_allowed = false;
+	const newFullCus = structuredClone(fullCus);
+	for (const cusProduct of newFullCus.customer_products) {
+		for (const cusEnt of cusProduct.customer_entitlements) {
+			cusEnt.usage_allowed = false;
+		}
 	}
 
-	const clonedNewCusEnts = structuredClone(newCusEnts);
-	for (const cusEnt of clonedNewCusEnts) {
-		cusEnt.usage_allowed = false;
-	}
+	const { apiCustomer: prevApiCustomer } = await getApiCustomerBase({
+		ctx,
+		fullCus: fullCus,
+	});
+
+	const { apiCustomer: newApiCustomer } = await getApiCustomerBase({
+		ctx,
+		fullCus: newFullCus,
+	});
+
+	const prevCusFeature = prevApiCustomer.features[feature.id];
+	const newCusFeature = newApiCustomer.features[feature.id];
 
 	const prevCheckData: CheckData = {
-		fullCus,
-		cusEnts: oldCusEnts,
+		customerId: fullCus.id || "",
+		entityId: fullCus.entity?.id,
+		cusFeature: prevCusFeature,
 		originalFeature: feature,
 		featureToUse: feature,
-		cusProducts: fullCus.customer_products,
-		entity: fullCus.entity,
 	};
 
 	const newCheckData: CheckData = {
-		fullCus,
-		cusEnts: clonedNewCusEnts,
+		customerId: newFullCus.id || "",
+		entityId: newFullCus.entity?.id,
+		cusFeature: newCusFeature,
 		originalFeature: feature,
 		featureToUse: feature,
-		cusProducts: fullCus.customer_products,
-		entity: fullCus.entity,
 	};
+
 	const prevCheckResponse = await getV2CheckResponse({
 		ctx,
 		checkData: prevCheckData,
@@ -192,13 +201,36 @@ export const handleThresholdReached = async ({
 			expand: [],
 		};
 
+		const newFullCus = structuredClone(fullCus);
+		newFullCus.customer_products = mergeNewCusEntsIntoCusProducts({
+			cusProducts: fullCus.customer_products,
+			newCusEnts: newCusEnts,
+		});
+
+		const { apiCustomer: prevApiCustomer } = await getApiCustomerBase({
+			ctx,
+			fullCus: fullCus,
+		});
+
+		const { apiCustomer: newApiCustomer } = await getApiCustomerBase({
+			ctx,
+			fullCus: newFullCus,
+		});
+
 		const checkData1: CheckData = {
-			fullCus,
-			cusEnts,
+			customerId: fullCus.id || "",
+			entityId: fullCus.entity?.id,
+			cusFeature: prevApiCustomer.features[feature.id],
 			originalFeature: feature,
 			featureToUse: feature,
-			cusProducts: fullCus.customer_products,
-			entity: fullCus.entity,
+		};
+
+		const checkData2: CheckData = {
+			customerId: newFullCus.id || "",
+			entityId: newFullCus.entity?.id,
+			cusFeature: newApiCustomer.features[feature.id],
+			originalFeature: feature,
+			featureToUse: feature,
 		};
 
 		const prevCheckResponse = await getV2CheckResponse({
@@ -206,22 +238,6 @@ export const handleThresholdReached = async ({
 			checkData: checkData1,
 			requiredBalance: 1,
 		});
-
-		const newCusProducts = mergeNewCusEntsIntoCusProducts({
-			cusProducts: fullCus.customer_products,
-			newCusEnts: newCusEnts,
-		});
-
-		fullCus.customer_products = newCusProducts;
-
-		const checkData2: CheckData = {
-			fullCus,
-			cusEnts: newCusEnts,
-			originalFeature: feature,
-			featureToUse: feature,
-			cusProducts: newCusProducts,
-			entity: fullCus.entity,
-		};
 
 		const newCheckResponse = await getV2CheckResponse({
 			ctx,

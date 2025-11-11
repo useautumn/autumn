@@ -135,7 +135,6 @@ export const handleProductsUpdated = async ({
 	const apiCustomer = await getApiCustomer({
 		ctx,
 		fullCus: customer,
-		expand: [],
 	});
 
 	const productRes = await getProductResponse({

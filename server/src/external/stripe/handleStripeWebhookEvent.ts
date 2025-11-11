@@ -1,12 +1,12 @@
-import type { AppEnv, Organization } from "@autumn/shared";
+import type { Organization } from "@autumn/shared";
 import chalk from "chalk";
 import { Stripe } from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 import { unsetOrgStripeKeys } from "@/internal/orgs/orgUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../honoUtils/HonoEnv.js";
+import { deleteCachedApiCustomer } from "../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import type { Logger } from "../logtail/logtailUtils.js";
 import { handleCheckoutSessionCompleted } from "./webhookHandlers/handleCheckoutCompleted.js";
 import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
@@ -33,13 +33,10 @@ const logStripeWebhook = ({
 	);
 };
 
+const updateProductEvents = ["customer.subscription.updated"];
+
 const coreEvents = [
-	"customer.subscription.created",
-	"customer.subscription.updated",
 	"customer.subscription.deleted",
-	"invoice.paid",
-	"invoice.created",
-	"invoice.finalized",
 	"subscription_schedule.canceled",
 	"checkout.session.completed",
 ];
@@ -47,19 +44,17 @@ const coreEvents = [
 const handleStripeWebhookRefresh = async ({
 	eventType,
 	data,
-	db,
-	org,
-	env,
-	logger,
+	ctx,
 }: {
 	eventType: string;
 	data: any;
-	db: DrizzleCli;
-	org: Organization;
-	env: AppEnv;
-	logger: any;
+	ctx: AutumnContext;
 }) => {
-	if (coreEvents.includes(eventType)) {
+	const { db, logger, org, env } = ctx;
+	if (
+		coreEvents.includes(eventType) ||
+		updateProductEvents.includes(eventType)
+	) {
 		const stripeCusId = data.object.customer;
 		if (!stripeCusId) {
 			logger.warn(
@@ -86,12 +81,38 @@ const handleStripeWebhookRefresh = async ({
 			return;
 		}
 
-		await deleteCusCache({
-			db,
+		logger.info(`Attempting delete cached api customer! ${eventType}`);
+		await deleteCachedApiCustomer({
 			customerId: cus.id!,
-			org,
+			orgId: org.id,
 			env,
+			source: `handleStripeWebhookRefresh: ${eventType}`,
 		});
+
+		// if (updateProductEvents.includes(eventType)) {
+		// 	const fullCus = await CusService.getFull({
+		// 		db,
+		// 		idOrInternalId: cus.id!,
+		// 		orgId: org.id,
+		// 		env,
+		// 		withEntities: true,
+		// 		withSubs: true,
+		// 	});
+
+		// 	await setCachedApiCusProducts({
+		// 		ctx,
+		// 		fullCus,
+		// 		customerId: cus.id!,
+		// 	});
+		// } else {
+		// 	logger.info(`Attempting delete cached api customer! ${eventType}`);
+		// 	await deleteCachedApiCustomer({
+		// 		customerId: cus.id!,
+		// 		orgId: org.id,
+		// 		env,
+		// 		source: `handleStripeWebhookRefresh: ${eventType}`,
+		// 	});
+		// }
 	}
 };
 
@@ -99,20 +120,23 @@ const handleStripeWebhookRefresh = async ({
  * Handles Stripe webhook events after org/env extraction
  */
 export const handleStripeWebhookEvent = async ({
+	ctx,
 	event,
-	db,
-	org,
-	env,
-	logger,
-	req,
+	// db,
+	// org,
+	// env,
+	// logger,
+	// req,
 }: {
+	ctx: AutumnContext;
 	event: Stripe.Event;
-	db: DrizzleCli;
-	org: Organization;
-	env: AppEnv;
-	logger: Logger;
-	req: ExtendedRequest;
+	// db: DrizzleCli;
+	// org: Organization;
+	// env: AppEnv;
+	// logger: Logger;
+	// req: ExtendedRequest;
 }) => {
+	const { db, logger, org, env } = ctx;
 	logStripeWebhook({ logger, org, event });
 
 	try {
@@ -131,7 +155,7 @@ export const handleStripeWebhookEvent = async ({
 			case "customer.subscription.updated": {
 				const subscription = event.data.object;
 				await handleSubscriptionUpdated({
-					req,
+					req: ctx as ExtendedRequest,
 					db,
 					org,
 					subscription,
@@ -144,7 +168,7 @@ export const handleStripeWebhookEvent = async ({
 
 			case "customer.subscription.deleted":
 				await handleSubDeleted({
-					req,
+					req: ctx as ExtendedRequest,
 					stripeCli,
 					data: event.data.object,
 					logger,
@@ -154,7 +178,7 @@ export const handleStripeWebhookEvent = async ({
 			case "checkout.session.completed": {
 				const checkoutSession = event.data.object;
 				await handleCheckoutSessionCompleted({
-					req,
+					req: ctx as ExtendedRequest,
 					db,
 					data: checkoutSession,
 					org,
@@ -172,7 +196,7 @@ export const handleStripeWebhookEvent = async ({
 					invoiceData: invoice,
 					env,
 					event,
-					req,
+					req: ctx as ExtendedRequest,
 				});
 				break;
 			}
@@ -182,7 +206,7 @@ export const handleStripeWebhookEvent = async ({
 					stripeCli,
 					env,
 					event,
-					req,
+					req: ctx as ExtendedRequest,
 				});
 				break;
 
@@ -229,7 +253,6 @@ export const handleStripeWebhookEvent = async ({
 					discount: event.data.object,
 					env,
 					logger,
-					res: req,
 				});
 				break;
 		}
@@ -251,6 +274,14 @@ export const handleStripeWebhookEvent = async ({
 			}
 		}
 
+		if (
+			process.env.NODE_ENV === "development" &&
+			error instanceof Error &&
+			error.message.includes("No stripe account linked to organization")
+		) {
+			return;
+		}
+
 		logger.error(`Stripe webhook, error: ${error}`, { error });
 		throw error;
 	}
@@ -259,10 +290,7 @@ export const handleStripeWebhookEvent = async ({
 		await handleStripeWebhookRefresh({
 			eventType: event.type,
 			data: event.data,
-			db,
-			org,
-			env,
-			logger,
+			ctx,
 		});
 	} catch (error) {
 		logger.error(`Stripe webhook, error refreshing cache!`, { error });

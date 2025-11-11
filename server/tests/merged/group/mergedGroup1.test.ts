@@ -1,3 +1,4 @@
+import { beforeAll, describe, test } from "bun:test";
 import {
 	type AppEnv,
 	CusProductStatus,
@@ -6,17 +7,17 @@ import {
 } from "@autumn/shared";
 import chalk from "chalk";
 import type { Stripe } from "stripe";
-import { setupBefore } from "tests/before.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { createProducts } from "tests/utils/productUtils.js";
+import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { expectSubToBeCorrect } from "../mergeUtils.test.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { expectSubToBeCorrect } from "../mergeUtils/expectSubCorrect.js";
 
 // UNCOMMENT FROM HERE
 const g1Pro = constructProduct({
@@ -86,47 +87,34 @@ describe(`${chalk.yellowBright("mergedGroup1: Testing products from diff groups"
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	let stripeCli: Stripe;
-	let testClockId: string;
-	let curUnix: number;
 	let db: DrizzleCli;
 	let org: Organization;
 	let env: AppEnv;
 
-	before(async function () {
-		await setupBefore(this);
-		const { autumnJs } = this;
-		db = this.db;
-		org = this.org;
-		env = this.env;
-
-		stripeCli = this.stripeCli;
-
-		await createProducts({
-			autumn: autumnJs,
+	beforeAll(async () => {
+		await initProductsV0({
+			ctx,
 			products: [g1Pro, g2Pro, g1Premium, g2Premium],
-			db,
-			orgId: org.id,
-			env,
+			// prefix: customerId,
 			customerId,
 		});
 
-		const { testClockId: testClockId1 } = await initCustomer({
-			autumn: autumnJs,
+		await initCustomerV3({
+			ctx,
 			customerId,
-			db,
-			org,
-			env,
+
 			attachPm: "success",
+			withTestClock: true,
 		});
 
-		testClockId = testClockId1!;
+		stripeCli = ctx.stripeCli;
+		db = ctx.db;
+		org = ctx.org;
+		env = ctx.env;
 	});
 
-	it("should attach pro product", async () => {
-		for (const op of ops) {
-			// console.log(
-			// 	`Op: ${op.product.id}, Other Products: ${op.otherProducts?.map((p) => p.id).join(", ")}`,
-			// );
+	for (const op of ops) {
+		test(`should attach ${op.product.id}, other products: ${op.otherProducts?.map((p) => p.id).join(", ")}`, async () => {
 			await attachAndExpectCorrect({
 				autumn,
 				customerId,
@@ -136,7 +124,7 @@ describe(`${chalk.yellowBright("mergedGroup1: Testing products from diff groups"
 				db,
 				org,
 				env,
-				skipFeatureCheck: op.skipFeatureCheck,
+				// skipFeatureCheck: op.skipFeatureCheck,
 			});
 
 			const customer = await autumn.customers.get(customerId);
@@ -147,10 +135,10 @@ describe(`${chalk.yellowBright("mergedGroup1: Testing products from diff groups"
 					status: result.status,
 				});
 			}
-		}
-	});
+		});
+	}
 
-	it("should cancel scheduled product (g1Pro)", async () => {
+	test("should cancel scheduled product (g1Pro)", async () => {
 		await autumn.cancel({
 			customer_id: customerId,
 			product_id: g1Pro.id,

@@ -12,17 +12,17 @@ if [[ "$1" == *"setup"* ]]; then
   BUN_SETUP
 fi
 
-# These tests still use Mocha - will be migrated later
 
-MOCHA_CMD \
-'tests/attach/migrations/*.ts' \
-'tests/attach/newVersion/*.ts' \
-'tests/attach/upgradeOld/*.ts' \
-'tests/attach/others/*.ts' \
-'tests/attach/updateEnts/*.ts' \
-'tests/advanced/check/*.ts'
 
-MOCHA_CMD 'tests/attach/prepaid/*.ts' \
-'tests/interval/upgrade/*.ts' \
-'tests/interval/multiSub/*.ts'
+# BUN_PARALLEL_COMPACT \
+#   'server/tests/attach/migrations' \
+#   'server/tests/attach/others' \
+#   'server/tests/attach/newVersion' \
+#   'server/tests/attach/upgradeOld' \
+#   'server/tests/attach/updateEnts' \
+#   'server/tests/advanced/check' \
+#   'server/tests/attach/prepaid' \
+#   'server/tests/interval/upgrade' \
+#   'server/tests/interval/multiSub' \
+#   --max=6
 

@@ -1,9 +1,11 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	ApiVersion,
-	type CheckResponse,
 	type CheckResponseV0,
+	type CheckResponseV1,
+	type CheckResponseV2,
 	type LimitedItem,
+	ResetInterval,
 	SuccessCode,
 } from "@autumn/shared";
 import chalk from "chalk";
@@ -33,7 +35,7 @@ describe(`${chalk.yellowBright("check5: test /check on usage-based feature")}`, 
 	const customerId = "check5";
 	const autumnV0: AutumnInt = new AutumnInt({ version: ApiVersion.V0_2 });
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
-
+	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2_0 });
 	beforeAll(async () => {
 		await initCustomerV3({
 			ctx,
@@ -54,29 +56,40 @@ describe(`${chalk.yellowBright("check5: test /check on usage-based feature")}`, 
 		});
 	});
 
-	test("v0 response", async () => {
-		const res = (await autumnV0.check({
+	test("v2 response", async () => {
+		const res = (await autumnV2.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
-		})) as unknown as CheckResponseV0;
+		})) as unknown as CheckResponseV2;
 
-		expect(res.allowed).toBe(true);
-		expect(res.balances).toBeDefined();
-		expect(res.balances).toHaveLength(1);
-		expect(res.balances[0]).toMatchObject({
-			balance: messagesFeature.included_usage,
-			feature_id: TestFeature.Messages,
-			unlimited: false,
-			usage_allowed: true,
-			required: null,
+		expect(res).toMatchObject({
+			allowed: true,
+			customer_id: "check5",
+			required_balance: 1,
+			balance: {
+				feature_id: "messages",
+				unlimited: false,
+				granted_balance: messagesFeature.included_usage,
+				purchased_balance: 0,
+				current_balance: messagesFeature.included_usage,
+				usage: 0,
+				max_purchase: 0,
+				overage_allowed: true,
+				reset: {
+					interval: ResetInterval.Month,
+					// resets_at: 1765391171000,
+				},
+			},
 		});
+
+		expect(res.balance?.reset?.resets_at).toBeDefined();
 	});
 
 	test("v1 response", async () => {
 		const res = (await autumnV1.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
-		})) as unknown as CheckResponse;
+		})) as unknown as CheckResponseV1;
 
 		const expectedRes = {
 			allowed: true,
@@ -95,5 +108,23 @@ describe(`${chalk.yellowBright("check5: test /check on usage-based feature")}`, 
 
 		expect(res).toMatchObject(expectedRes);
 		expect(res.next_reset_at).toBeDefined();
+	});
+
+	test("v0 response", async () => {
+		const res = (await autumnV0.check({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+		})) as unknown as CheckResponseV0;
+
+		expect(res.allowed).toBe(true);
+		expect(res.balances).toBeDefined();
+		expect(res.balances).toHaveLength(1);
+		expect(res.balances[0]).toMatchObject({
+			balance: messagesFeature.included_usage,
+			feature_id: TestFeature.Messages,
+			unlimited: false,
+			usage_allowed: true,
+			required: null,
+		});
 	});
 });

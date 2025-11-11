@@ -5,7 +5,7 @@ import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 import type { BillingType } from "../../models/productModels/priceModels/priceEnums.js";
 import type { FullProduct } from "../../models/productModels/productModels.js";
-import { cusEntMatchesEntity } from "../cusEntUtils/cusEntUtils.js";
+import { cusEntMatchesEntity } from "../cusEntUtils/filterCusEntUtils.js";
 import { sortCusEntsForDeduction } from "../cusEntUtils/sortCusEntsForDeduction.js";
 import { getBillingType } from "../productUtils/priceUtils.js";
 
@@ -48,11 +48,12 @@ export const cusProductsToCusPrices = ({
 
 export const cusProductsToCusEnts = ({
 	cusProducts,
-	inStatuses = [CusProductStatus.Active],
+	inStatuses = [CusProductStatus.Active, CusProductStatus.PastDue],
 	reverseOrder = false,
 	featureId,
 	featureIds,
 	entity,
+	sortParams,
 }: {
 	cusProducts: FullCusProduct[];
 	inStatuses?: CusProductStatus[];
@@ -60,13 +61,14 @@ export const cusProductsToCusEnts = ({
 	featureId?: string;
 	featureIds?: string[];
 	entity?: Entity;
+	sortParams?: {
+		cusEntId?: string;
+	};
 }) => {
 	let cusEnts: FullCusEntWithFullCusProduct[] = [];
 
 	for (const cusProduct of cusProducts) {
-		if (!inStatuses.includes(cusProduct.status)) {
-			continue;
-		}
+		if (!inStatuses.includes(cusProduct.status)) continue;
 
 		cusEnts.push(
 			...cusProduct.customer_entitlements.map((cusEnt) => ({
@@ -97,7 +99,12 @@ export const cusProductsToCusEnts = ({
 		);
 	}
 
-	sortCusEntsForDeduction(cusEnts, reverseOrder);
+	sortCusEntsForDeduction({
+		cusEnts,
+		reverseOrder,
+		entityId: entity?.id,
+		sortParams,
+	});
 
 	return cusEnts as FullCusEntWithFullCusProduct[];
 };

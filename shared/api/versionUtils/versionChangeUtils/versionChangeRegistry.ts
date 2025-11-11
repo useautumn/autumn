@@ -12,6 +12,8 @@ import { V1_2_CustomerQueryChange } from "@api/customers/requestChanges/V1.2_Cus
 // Import product changes
 import { V1_2_ProductChanges } from "@api/products/changes/V1.2_ProductChanges.js";
 import { V0_2_CheckChange } from "../../balances/check/changes/V0.2_CheckChange.js";
+import { V1_2_CheckChange } from "../../balances/check/changes/V1.2_CheckChange.js";
+import { V1_2_CheckQueryChange } from "../../balances/check/changes/V1.2_CheckQueryChange.js";
 import { ApiVersion } from "../ApiVersion.js";
 import type { VersionChangeConstructor } from "./VersionChange.js";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
@@ -20,6 +22,8 @@ export const V2_CHANGES: VersionChangeConstructor[] = [
 	V1_2_CustomerChange, // Transforms Customer TO V1.2 format from V2 format
 	V1_2_CustomerQueryChange, // Transforms Customer Query TO V2.0 format (adds expand options)
 	V1_2_ProductChanges, // Transforms Product TO V1.2 format from V2 Plan format
+	V1_2_CheckChange, // Transforms Check TO V1.2 format from V0.2 format
+	V1_2_CheckQueryChange, // Transforms Check Query TO V2.0 format (adds expand options)
 ];
 
 export const V1_4_CHANGES: VersionChangeConstructor[] = [
@@ -44,7 +48,7 @@ export const V0_1_CHANGES: VersionChangeConstructor[] = [];
 
 export function registerAllVersionChanges() {
 	VersionChangeRegistryClass.register({
-		version: ApiVersion.V2,
+		version: ApiVersion.V2_0,
 		changes: V2_CHANGES,
 	});
 	VersionChangeRegistryClass.register({
@@ -72,4 +76,4 @@ export function registerAllVersionChanges() {
 // Auto-register on import
 registerAllVersionChanges();
 
-export { V0_2_InvoicesAlwaysExpanded };
+export { V0_2_InvoicesAlwaysExpanded, V1_2_CheckQueryChange };

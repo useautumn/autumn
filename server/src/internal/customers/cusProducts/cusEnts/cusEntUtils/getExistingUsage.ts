@@ -102,7 +102,7 @@ export const getExistingUsages = ({
 		const ent = cusEnt.entitlement;
 		const key = `${ent.feature_id}-${ent.interval}-${ent.interval_count || 1}`;
 		const feature = ent.feature;
-		if (feature.type == FeatureType.Boolean) continue;
+		if (feature.type === FeatureType.Boolean) continue;
 
 		const { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
 			cusEnts: curCusProduct.customer_entitlements,
@@ -193,7 +193,7 @@ export const addExistingUsagesToCusEnts = ({
 	}) as FullCusEntWithFullCusProduct[];
 
 	// Sort cusEnts
-	sortCusEntsForDeduction(fullCusEnts);
+	sortCusEntsForDeduction({ cusEnts: fullCusEnts });
 
 	printLogs = false;
 	if (printLogs) {
@@ -223,7 +223,7 @@ export const addExistingUsagesToCusEnts = ({
 			const fromEntities = existingUsages[key].fromEntities;
 
 			// if (cusEntKey !== key) continue;
-			const isSameFeature = cusEnt.feature_id == feature_id;
+			const isSameFeature = cusEnt.feature_id === feature_id;
 
 			if (!isSameFeature) continue;
 

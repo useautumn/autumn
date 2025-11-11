@@ -1,10 +1,22 @@
-import type { ApiCustomer, AppEnv } from "@autumn/shared";
+import {
+	type ApiCustomer,
+	ApiCustomerSchema,
+	type AppEnv,
+	CusExpand,
+	type CustomerLegacyData,
+	filterOutEntitiesFromCusProducts,
+} from "@autumn/shared";
+import { CACHE_CUSTOMER_VERSION } from "@lua/cacheConfig.js";
+import { GET_CUSTOMER_SCRIPT } from "@lua/luaScripts.js";
 import { redis } from "../../../../external/redis/initRedis.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
+import {
+	normalizeCachedData,
+	tryRedisRead,
+} from "../../../../utils/cacheUtils/cacheUtils.js";
 import { CusService } from "../../CusService.js";
-import { RELEVANT_STATUSES } from "../../cusProducts/CusProductService.js";
 import { getApiCustomerBase } from "../apiCusUtils/getApiCustomerBase.js";
-import { GET_CUSTOMER_SCRIPT, SET_CUSTOMER_SCRIPT } from "./luaScripts.js";
+import { setCachedApiCustomer } from "./setCachedApiCustomer.js";
 
 export const buildCachedApiCustomerKey = ({
 	customerId,
@@ -15,66 +27,121 @@ export const buildCachedApiCustomerKey = ({
 	orgId: string;
 	env: string;
 }) => {
-	return `${orgId}:${env}:customer:${customerId}`;
+	return `{${orgId}}:${env}:customer:${CACHE_CUSTOMER_VERSION}:${customerId}`;
 };
 
 /**
  * Get ApiCustomer from Redis cache
  * If not found, fetch from DB, cache it, and return
+ * If skipCache is true, always fetch from DB
  */
 export const getCachedApiCustomer = async ({
 	ctx,
 	customerId,
+	skipCache = false,
+	skipEntityMerge = false,
+	source,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
-}): Promise<ApiCustomer> => {
+	skipCache?: boolean;
+	skipEntityMerge?: boolean; // If true, returns only customer's own features (no entity merging)
+	source?: string;
+}): Promise<{ apiCustomer: ApiCustomer; legacyData: CustomerLegacyData }> => {
 	const { org, env, db } = ctx;
 
-	const cacheKey = buildCachedApiCustomerKey({
-		customerId,
-		orgId: org.id,
-		env,
-	});
+	const getExpandedApiCustomer = async () => {
+		// await redis.del(
+		// 	buildCachedApiCustomerKey({ customerId, orgId: org.id, env }),
+		// );
+		// Try to get from cache using Lua script (unless skipCache is true)
+		if (!skipCache) {
+			const cachedResult = await tryRedisRead(() =>
+				redis.eval(
+					GET_CUSTOMER_SCRIPT,
+					0, // No KEYS, all params in ARGV
+					org.id,
+					env,
+					customerId,
+					skipEntityMerge ? "true" : "false",
+				),
+			);
 
-	// Try to get from cache using Lua script
-	const cachedResult = await redis.eval(
-		GET_CUSTOMER_SCRIPT,
-		1, // number of keys
-		cacheKey, // KEYS[1]
-	);
+			if (cachedResult) {
+				const cached = normalizeCachedData(
+					JSON.parse(cachedResult as string) as ApiCustomer & {
+						legacyData: CustomerLegacyData;
+					},
+				);
 
-	// If found in cache, parse and return
-	if (cachedResult) {
-		const customer = JSON.parse(cachedResult as string) as ApiCustomer;
-		return customer;
+				const { legacyData, ...rest } = cached;
+
+				return {
+					// ← This returns from getCachedApiCustomer!
+					apiCustomer: ApiCustomerSchema.parse(rest),
+					legacyData,
+				};
+			}
+		}
+
+		// Cache miss or skipCache - fetch from DB
+
+		const fullCus = await CusService.getFull({
+			db,
+			idOrInternalId: customerId,
+			orgId: org.id,
+			env: env as AppEnv,
+			withEntities: true,
+			withSubs: true,
+		});
+
+		// Build ApiCustomer (base only, no expand) to return
+
+		const { apiCustomer, legacyData } = await getApiCustomerBase({
+			ctx,
+			fullCus,
+			withAutumnId: true,
+		});
+
+		const { apiCustomer: masterApiCustomer } = await getApiCustomerBase({
+			ctx,
+			fullCus: {
+				...fullCus,
+				customer_products: filterOutEntitiesFromCusProducts({
+					cusProducts: fullCus.customer_products,
+				}),
+			},
+			withAutumnId: true,
+		});
+
+		// Store customer and entity caches (only if not skipping cache)
+		if (!skipCache) {
+			await setCachedApiCustomer({
+				ctx,
+				fullCus,
+				customerId,
+				source,
+			});
+		}
+
+		return {
+			apiCustomer: ApiCustomerSchema.parse(
+				skipEntityMerge ? masterApiCustomer : apiCustomer,
+			),
+			legacyData,
+		};
+	};
+
+	const { apiCustomer, legacyData } = await getExpandedApiCustomer();
+
+	if (!ctx.expand.includes(CusExpand.BalanceFeature)) {
+		for (const featureId in apiCustomer.balances) {
+			apiCustomer.balances[featureId].feature = undefined;
+		}
 	}
 
-	// Cache miss - fetch from DB
-	const fullCus = await CusService.getFull({
-		db,
-		idOrInternalId: customerId,
-		orgId: org.id,
-		env: env as AppEnv,
-		inStatuses: RELEVANT_STATUSES,
-		withEntities: false,
-		withSubs: true,
-	});
-
-	// Build ApiCustomer (base only, no expand)
-	const apiCustomer = await getApiCustomerBase({
-		ctx,
-		fullCus,
-		withAutumnId: false,
-	});
-
-	// Store in cache using Lua script
-	await redis.eval(
-		SET_CUSTOMER_SCRIPT,
-		1, // number of keys
-		cacheKey, // KEYS[1]
-		JSON.stringify(apiCustomer), // ARGV[1]
-	);
-
-	return apiCustomer;
+	return {
+		apiCustomer,
+		legacyData,
+	};
 };

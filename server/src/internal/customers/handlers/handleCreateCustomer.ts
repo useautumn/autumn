@@ -156,7 +156,9 @@ export const handleCreateCustomerWithId = async ({
 
 			const updatedCustomer = await CusService.update({
 				db,
-				internalCusId: cusWithEmail[0].internal_id,
+				idOrInternalId: cusWithEmail[0].internal_id,
+				orgId: org.id,
+				env,
 				update: {
 					id: newCus.id,
 					name: newCus.name,

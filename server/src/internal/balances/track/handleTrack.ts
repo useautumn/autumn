@@ -1,26 +1,42 @@
 import {
-	ApiVersion,
-	InsufficientBalanceError,
-	SuccessCode,
+	AffectedResource,
+	applyResponseVersionChanges,
+	CusExpand,
+	ErrCode,
+	RecaseError,
 	TrackParamsSchema,
+	TrackQuerySchema,
+	type TrackResponseV2,
 } from "@autumn/shared";
 import { createRoute } from "../../../honoMiddlewares/routeHandler.js";
+import { runRedisDeduction } from "./redisTrackUtils/runRedisDeduction.js";
+import { executePostgresTracking } from "./trackUtils/executePostgresTracking.js";
 import {
 	getTrackEventNameDeductions,
 	getTrackFeatureDeductions,
 } from "./trackUtils/getFeatureDeductions.js";
-import { runDeductionTx } from "./trackUtils/runDeductionTx.js";
 
 export const handleTrack = createRoute({
+	query: TrackQuerySchema,
 	body: TrackParamsSchema,
 	handler: async (c) => {
-		// 1. Get feature deductions
 		const body = c.req.valid("json");
 		const ctx = c.get("ctx");
+		const query = c.req.valid("query");
 
-		// Legacy
+		// Legacy: support value in properties
 		if (body.properties?.value) {
 			body.value = body.properties.value;
+		}
+
+		// Validate: event_name cannot be used with overage_behavior: "reject"
+		if (body.event_name && body.overage_behavior === "reject") {
+			throw new RecaseError({
+				message:
+					'overage_behavior "reject" is not supported with event_name. Use feature_id or set overage_behavior to "cap".',
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
 		}
 
 		// Build feature deductions
@@ -32,58 +48,126 @@ export const handleTrack = createRoute({
 				})
 			: getTrackEventNameDeductions({
 					ctx,
+					// biome-ignore lint/style/noNonNullAssertion: event name will be provided here
 					eventName: body.event_name!,
 					value: body.value,
 				});
 
-		try {
-			const start = Date.now();
+		const { fallback, balances } = await runRedisDeduction({
+			ctx,
+			query,
+			trackParams: body,
+			featureDeductions,
+			overageBehavior: body.overage_behavior || "cap",
+			eventInfo: {
+				event_name: body.feature_id || body.event_name || "",
+				value: body.value ?? 1,
+				properties: body.properties,
+				timestamp: body.timestamp,
+				idempotency_key: body.idempotency_key,
+			},
+		});
 
-			// Skip additional_balance for negative amounts (returns/refunds)
-			const skipAdditionalBalance = body.value !== undefined && body.value < 0;
-
-			const { fullCus, event } = await runDeductionTx({
+		let response: TrackResponseV2;
+		if (fallback) {
+			response = await executePostgresTracking({
 				ctx,
-				customerId: body.customer_id,
-				entityId: body.entity_id,
-				deductions: featureDeductions,
-				overageBehaviour: body.overage_behaviour,
-				skipAdditionalBalance,
-				eventInfo: {
-					event_name: body.feature_id || body.event_name!,
-					value: body.value ?? 1,
-					properties: body.properties,
-					timestamp: body.timestamp,
-					idempotency_key: body.idempotency_key,
-				},
+				body,
+				featureDeductions,
 			});
+		} else {
+			// Clean balances
+			if (balances && Object.keys(balances).length > 0) {
+				for (const balance of Object.values(balances)) {
+					if (!ctx.expand.includes(CusExpand.BalanceFeature)) {
+						balance.feature = undefined;
+					}
+				}
+			}
 
-			const elapsed = Date.now() - start;
-			ctx.logger.info(`[handleTrack] runDeductionTx ms: ${elapsed}`);
-
-			const response: any = {
-				id: event?.id || "",
-				code: SuccessCode.EventReceived,
+			response = {
 				customer_id: body.customer_id,
 				entity_id: body.entity_id,
-				feature_id: body.feature_id,
 				event_name: body.event_name,
+				value: body.value ?? 1,
+				balance:
+					balances && Object.keys(balances).length === 1
+						? Object.values(balances)[0]
+						: null,
+				balances:
+					balances && Object.keys(balances).length > 1 ? balances : undefined,
 			};
-
-			if (ctx.apiVersion.gte(ApiVersion.V1_1)) return c.json(response);
-			return c.json({ success: true });
-		} catch (error) {
-			if (error instanceof InsufficientBalanceError) {
-				return c.json({
-					id: "",
-					code: "insufficient_balance",
-					customer_id: body.customer_id,
-					entity_id: body.entity_id,
-					feature_id: body.feature_id,
-					event_name: body.event_name,
-				});
-			}
-			throw error;
 		}
+
+		const transformedResponse = applyResponseVersionChanges<TrackResponseV2>({
+			input: response,
+			targetVersion: ctx.apiVersion,
+			resource: AffectedResource.Track,
+			legacyData: {
+				feature_id: body.feature_id || body.event_name,
+			},
+		});
+
+		return c.json(transformedResponse);
 	},
 });
+
+// Original PostgreSQL-based implementation (commented out for reference)
+// 1. Run track deduction tx
+
+// try {
+// 	const start = Date.now();
+// 	const { fullCus, event } = await runDeductionTx({
+// 		ctx,
+// 		customerId: body.customer_id,
+// 		entityId: body.entity_id,
+// 		deductions: featureDeductions,
+// 		overageBehavior: body.overage_behavior,
+// 		eventInfo: {
+// 			event_name: body.feature_id || body.event_name!,
+// 			value: body.value ?? 1,
+// 			properties: body.properties,
+// 			timestamp: body.timestamp,
+// 			idempotency_key: body.idempotency_key,
+// 		},
+// 	});
+
+// 	const elapsed = Date.now() - start;
+// 	ctx.logger.info(`[handleTrack] runDeductionTx ms: ${elapsed}`);
+
+// 	const response: any = {
+// 		id: event?.id || "",
+// 		code: SuccessCode.EventReceived,
+// 		customer_id: body.customer_id,
+// 		entity_id: body.entity_id,
+// 		feature_id: body.feature_id,
+// 		event_name: body.event_name,
+// 	};
+
+// 	if (ctx.apiVersion.gte(ApiVersion.V1_1)) return c.json(response);
+// 	return c.json({ success: true });
+// } catch (error) {
+// 	if (error instanceof InsufficientBalanceError) {
+// 		return c.json({
+// 			id: "",
+// 			code: "insufficient_balance",
+// 			customer_id: body.customer_id,
+// 			entity_id: body.entity_id,
+// 			feature_id: body.feature_id,
+// 			event_name: body.event_name,
+// 		});
+// 	}
+// 	throw error;
+// }
+
+// // Scenario 1: idempotency_key requires PostgreSQL (for event persistence)
+// if (body.idempotency_key || hasContUseFeature) {
+// 	const response = await executePostgresTracking({
+// 		ctx,
+// 		body,
+// 		featureDeductions,
+// 	});
+
+// 	if (ctx.apiVersion.gte(ApiVersion.V1_1)) return c.json(response);
+// 	return c.json({ success: true });
+// }

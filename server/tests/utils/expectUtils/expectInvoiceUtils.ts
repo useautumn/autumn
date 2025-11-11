@@ -1,20 +1,21 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { cusProductToPrices, cusProductToEnts } from "@autumn/shared";
-import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
-import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import {
-	Organization,
 	BillingInterval,
-	UsagePriceConfig,
+	cusProductToEnts,
+	cusProductToPrices,
+	type Organization,
+	type UsagePriceConfig,
 } from "@autumn/shared";
-import { AppEnv } from "autumn-js";
+import type { AppEnv } from "autumn-js";
 import { Decimal } from "decimal.js";
-import Stripe from "stripe";
-import { getSubsFromCusId } from "./expectSubUtils.js";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import {
 	isArrearPrice,
 	isFixedPrice,
 } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
+import { getSubsFromCusId } from "./expectSubUtils.js";
 
 export const getExpectedInvoiceTotal = async ({
 	customerId,
@@ -60,7 +61,7 @@ export const getExpectedInvoiceTotal = async ({
 
 	let total = new Decimal(0);
 	for (const price of prices) {
-		if (onlyIncludeMonthly && price.config.interval != BillingInterval.Month) {
+		if (onlyIncludeMonthly && price.config.interval !== BillingInterval.Month) {
 			continue;
 		}
 
@@ -74,8 +75,10 @@ export const getExpectedInvoiceTotal = async ({
 
 		const usageAmount = usage.find(
 			(u) =>
-				u.featureId == featureId &&
-				(u.entityFeatureId ? u.entityFeatureId == ent.entity_feature_id : true),
+				u.featureId === featureId &&
+				(u.entityFeatureId
+					? u.entityFeatureId === ent.entity_feature_id
+					: true),
 		)?.value;
 
 		const overage =

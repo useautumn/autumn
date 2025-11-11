@@ -89,8 +89,15 @@ export const PlanFeatureRow = ({
 	const handleRowClicked = () => {
 		if (isDisabled) return;
 		const currentItemId = getItemId({ item, itemIndex: index });
-		setItem(item);
-		setSheet({ type: "edit-feature", itemId: currentItemId });
+
+		if (isSelected) {
+			// If already selected, deselect by going back to edit-plan
+			setSheet({ type: "edit-plan" });
+		} else {
+			// If not selected, select it
+			setItem(item);
+			setSheet({ type: "edit-feature", itemId: currentItemId });
+		}
 	};
 
 	const handleDeleteRow = () => {
@@ -162,7 +169,7 @@ export const PlanFeatureRow = ({
 			{...(isDisabled && { "data-disabled": true })}
 			data-pressed={isPressed}
 			className={cn(
-				"flex w-full group !h-9 group/row select-none outline-none",
+				"flex items-center w-full group !h-9 group/row select-none outline-none",
 				"input-base input-shadow-tiny input-state-open-tiny",
 				isDisabled && "pointer-events-none cursor-default",
 			)}
@@ -189,7 +196,7 @@ export const PlanFeatureRow = ({
 			}}
 		>
 			{/* Left side - Icons and text */}
-			<div className="flex flex-row items-center flex-1 gap-4 min-w-0 relative">
+			<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
 				<AdminHover texts={adminHoverText()}>
 					<div className="flex flex-row items-center gap-1 flex-shrink-0">
 						<PlanFeatureIcon item={item} position="left" />
@@ -200,43 +207,43 @@ export const PlanFeatureRow = ({
 					</div>
 				</AdminHover>
 
-				<div className="flex items-center gap-2 flex-1 min-w-0 max-w-[90%] ">
-					<p className="whitespace-nowrap truncate max-w-full">
-						<span className={cn("text-body", !hasFeatureName && "!text-t4")}>
-							{displayText}
-						</span>
+				<p className="whitespace-nowrap truncate flex-1 min-w-0">
+					<span className={cn("text-body", !hasFeatureName && "!text-t4")}>
+						{displayText}
+					</span>
 
-						<span className="text-body-secondary">
-							{" "}
-							{display.secondary_text}
-						</span>
-					</p>
+					<span className="text-body-secondary">
+						{" "}
+						{display.secondary_text}
+					</span>
+				</p>
+
+				<div className={cn(
+					"flex items-center gap-2 max-w-0 opacity-0 overflow-hidden group-hover:max-w-[200px] group-hover:opacity-100 transition-all duration-200 flex-shrink-0",
+					isSelected && "max-w-[200px] opacity-100"
+				)}>
+					<CopyButton
+						text={item.feature_id || ""}
+						disableActive={true}
+						size="sm"
+						variant="skeleton"
+						tabIndex={-1}
+						side="bottom"
+					/>
+					<IconButton
+						icon={<TrashIcon size={16} weight="regular" />}
+						iconOrientation="center"
+						onClick={(e) => {
+							e.stopPropagation();
+							e.preventDefault();
+							handleDeleteRow();
+						}}
+						aria-label="Delete feature"
+						variant="skeleton"
+						disableActive={true}
+						tabIndex={-1}
+					/>
 				</div>
-
-				<CopyButton
-					text={item.feature_id || ""}
-					disableActive={true}
-					size="sm"
-					variant="skeleton"
-					tabIndex={-1}
-					className="absolute right-0 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-50 bg-hover-primary group-hover:bg-transparent"
-				/>
-			</div>
-
-			<div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-50">
-				<IconButton
-					icon={<TrashIcon size={16} weight="regular" />}
-					iconOrientation="center"
-					onClick={(e) => {
-						e.stopPropagation();
-						e.preventDefault();
-						handleDeleteRow();
-					}}
-					aria-label="Delete feature"
-					variant="skeleton"
-					disableActive={true}
-					tabIndex={-1}
-				/>
 
 				{/* <div className="group/btn cursor-grab active:cursor-grabbing flex items-center justify-center p-1 w-6 h-6">
 					<div className="text-t3 group-hover/btn:text-primary transition-colors">

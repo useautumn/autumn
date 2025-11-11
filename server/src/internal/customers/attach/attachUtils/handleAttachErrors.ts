@@ -2,17 +2,11 @@ import {
 	type AttachBody,
 	AttachBranch,
 	type AttachConfig,
-	AttachErrCode,
 	BillingType,
-	cusProductsToCusEnts,
-	cusProductToPrices, ErrCode,
-	type FullCusProduct,
-	getStartingBalance,
-	type UsagePriceConfig
+	ErrCode,
+	type UsagePriceConfig,
 } from "@autumn/shared";
-import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
-import { findPriceForFeature } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import {
 	getBillingType,
 	getEntOptions,
@@ -23,7 +17,6 @@ import RecaseError from "@/utils/errorUtils.js";
 import { notNullish, nullOrUndefined } from "@/utils/genUtils.js";
 import type { AttachParams } from "../../cusProducts/AttachParams.js";
 import type { AttachFlags } from "../models/AttachFlags.js";
-import { attachParamToCusProducts } from "./convertAttachParams.js";
 import { handleMultiAttachErrors } from "./handleAttachErrors/handleMultiAttachErrors.js";
 
 const handleNonCheckoutErrors = ({
@@ -144,66 +137,6 @@ const handlePrepaidErrors = async ({
 	}
 };
 
-const handleUpdateQuantityErrors = async ({
-	attachParams,
-}: {
-	attachParams: AttachParams;
-}) => {
-	const { curMainProduct, curSameProduct } = attachParamToCusProducts({
-		attachParams,
-	});
-
-	if (!curSameProduct && !curMainProduct) {
-		return;
-	}
-
-	const cusProduct = (curSameProduct || curMainProduct) as FullCusProduct;
-	const cusEnts = cusProductsToCusEnts({ cusProducts: [cusProduct] });
-	const prices = cusProductToPrices({ cusProduct });
-
-	for (const option of attachParams.optionsList) {
-		const price = findPriceForFeature({
-			prices,
-			internalFeatureId: option.internal_feature_id!,
-		});
-
-		if (!price) continue;
-
-		const totalQuantity =
-			option.quantity! * (price?.config as UsagePriceConfig).billing_units!;
-
-		const totalUsage = cusEnts
-			.reduce((acc, curr) => {
-				if (
-					curr.entitlement.internal_feature_id === option.internal_feature_id
-				) {
-					const allowance = getStartingBalance({
-						entitlement: curr.entitlement,
-						options: cusProduct.options.find(
-							(o) => o.internal_feature_id === option.internal_feature_id,
-						),
-						relatedPrice: price,
-					});
-
-					const usage = new Decimal(allowance!).minus(curr.balance!);
-
-					return acc.plus(usage);
-				}
-
-				return acc;
-			}, new Decimal(0))
-			.toNumber();
-
-		if (totalUsage > totalQuantity) {
-			throw new RecaseError({
-				message: `Current usage for ${option.feature_id} is ${totalUsage}, can't update to ${totalQuantity}`,
-				code: AttachErrCode.InvalidOptions,
-				statusCode: StatusCodes.BAD_REQUEST,
-			});
-		}
-	}
-};
-
 export const handleAttachErrors = async ({
 	attachParams,
 	attachBody,
@@ -237,12 +170,7 @@ export const handleAttachErrors = async ({
 			AttachBranch.Downgrade,
 		];
 
-
-
-
-		if (
-			upgradeDowngradeFlows.includes(branch) 
-		) {
+		if (upgradeDowngradeFlows.includes(branch)) {
 			handleNonCheckoutErrors({
 				flags,
 				config,

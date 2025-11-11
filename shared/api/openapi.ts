@@ -7,8 +7,7 @@
 // import { CustomerDataSchema } from "./common/customerData.js";
 // import { EntityDataSchema } from "./common/entityData.js";
 // import { coreOps } from "./core/coreOpenApi.js";
-// import { ApiCusFeatureSchema } from "./customers/cusFeatures/apiCusFeature.js";
-// import { ApiCusProductSchema } from "./customers/cusProducts/apiCusProduct.js";
+
 // import {
 // 	ApiCustomerWithMeta,
 // 	customerOps,
@@ -49,10 +48,7 @@
 // 				}),
 // 				Customer: ApiCustomerWithMeta,
 // 				CustomerProduct: ApiCusProductSchema,
-// 				CustomerFeature: ApiCusFeatureSchema.meta({
-// 					id: "CustomerFeature",
-// 					description: "Customer feature object returned by the API",
-// 				}),
+
 // 				Product: ApiProductWithMeta,
 // 				ProductItem: ApiProductItemSchema,
 // 				Feature: ApiFeatureWithMeta,

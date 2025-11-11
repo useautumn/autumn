@@ -55,7 +55,7 @@ describe(`${chalk.yellowBright("multiUpgrade2: Testing multi attach and update q
 	let org: Organization;
 	let env: AppEnv;
 
-	before(async function () {
+	beforeAll(async function () {
 		await setupBefore(this);
 		const { autumnJs } = this;
 		db = this.db;

@@ -34,8 +34,9 @@ export const ApiCusFeatureV3BreakdownSchema = z.object({
 	usage_limit: z.number().nullish().meta({
 		description: "The maximum usage allowed",
 	}),
-	rollovers: z.array(ApiCusFeatureV3RolloverSchema).nullish().meta({
-		description: "Array of rollover balances from previous periods",
+
+	overage_allowed: z.boolean().nullish().meta({
+		description: "Whether overage usage beyond the limit is allowed",
 	}),
 });
 
