@@ -9,9 +9,13 @@ import {
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { submitBillingDataToVercel, submitInvoiceToVercel } from "@/external/vercel/misc/vercelInvoicing.js";
+import {
+	submitBillingDataToVercel,
+	submitInvoiceToVercel,
+} from "@/external/vercel/misc/vercelInvoicing.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -45,6 +49,12 @@ export const handleInvoiceFinalized = async ({
 	const invoice = await getFullStripeInvoice({
 		stripeCli,
 		stripeId: data.id!,
+	});
+
+	const features = await FeatureService.list({
+		db,
+		orgId: org.id,
+		env,
 	});
 
 	const subId = invoiceToSubId({ invoice });
@@ -130,12 +140,17 @@ export const handleInvoiceFinalized = async ({
 							invoice,
 							customer,
 							product,
+							org,
+							features,
 						});
 
-						console.info("✅ Vercel invoice submitted, waiting for payment confirmation webhook", {
-							vercelInvoiceId: result.invoiceId,
-							stripeInvoiceId: invoice.id,
-						});
+						console.info(
+							"✅ Vercel invoice submitted, waiting for payment confirmation webhook",
+							{
+								vercelInvoiceId: result.invoiceId,
+								stripeInvoiceId: invoice.id,
+							},
+						);
 
 						// Do NOT report payment to Stripe here - we've only submitted the invoice to Vercel
 						// Vercel will process payment asynchronously and send marketplace.invoice.paid webhook

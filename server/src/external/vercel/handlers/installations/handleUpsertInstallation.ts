@@ -1,4 +1,9 @@
-import { type Customer, ProcessorType } from "@autumn/shared";
+import {
+	AppEnv,
+	type Customer,
+	cusProductToProduct,
+	ProcessorType,
+} from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createCustomStripeCard } from "@/external/stripe/stripeCardUtils.js";
 import { createStripeCustomer } from "@/external/stripe/stripeCusUtils.js";
@@ -11,7 +16,11 @@ import {
 	verifyClaims,
 	verifyToken,
 } from "../../misc/vercelAuth.js";
-import type { VercelUpsertInstallation } from "../../misc/vercelTypes.js";
+import type {
+	VercelBillingPlan,
+	VercelUpsertInstallation,
+} from "../../misc/vercelTypes.js";
+import { productToBillingPlan } from "../handleListBillingPlans.js";
 
 export const handleUpsertInstallation = createRoute({
 	handler: async (c) => {
@@ -66,16 +75,19 @@ export const handleUpsertInstallation = createRoute({
 			if (createdCustomer) {
 				// Create test clock for sandbox/development environments
 				let testClockId: string | undefined;
-				if (ctx.env === "sandbox" || ctx.env === "development") {
+				if (ctx.env === AppEnv.Sandbox) {
 					const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 					const testClock = await stripeCli.testHelpers.testClocks.create({
 						frozen_time: Math.floor(Date.now() / 1000),
 					});
 					testClockId = testClock.id;
 
-					ctx.logger.info("Created test clock for sandbox Vercel installation", {
-						testClockId: testClock.id,
-					});
+					ctx.logger.info(
+						"Created test clock for sandbox Vercel installation",
+						{
+							testClockId: testClock.id,
+						},
+					);
 				}
 
 				const stripeCustomer = await createStripeCustomer({
@@ -150,7 +162,29 @@ export const handleUpsertInstallation = createRoute({
 			console.log("--------------------------------");
 		}
 
-		if (createdCustomer) return c.body(null, 200);
+		if (createdCustomer) {
+			const fullCreatedCustomer = await CusService.getFull({
+				db: ctx.db,
+				idOrInternalId: createdCustomer.internal_id,
+				orgId: ctx.org.id,
+				env: ctx.env,
+			});
+			return c.json(
+				{
+					billingPlan:
+						fullCreatedCustomer.customer_products[0] !== undefined
+							? (productToBillingPlan({
+									product: cusProductToProduct({
+										cusProduct: fullCreatedCustomer.customer_products[0],
+									}),
+									orgCurrency: ctx.org.default_currency ?? "usd",
+								}) as unknown as VercelBillingPlan)
+							: null,
+				},
+				200,
+			);
+		}
+
 		return c.body(null, 500);
 	},
 });
