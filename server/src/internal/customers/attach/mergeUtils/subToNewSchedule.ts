@@ -33,9 +33,10 @@ export const subToNewSchedule = async ({
 		attachParams,
 		includeCanceled: true,
 	});
+
 	console.log(
 		`REMOVING CUS PRODUCTS: ${cusProductsToRemove.map((cp) => `${cp.product.id} (E: ${cp.entity_id})`).join(", ")}`,
-	); // See mergedDowngrade5.test.ts -- if there's no schedule and creating one, might need to include canceled cus products
+	);
 
 	const res = await paramsToScheduleItems({
 		req,
