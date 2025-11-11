@@ -162,4 +162,8 @@ export const ErrCode = {
 
 	// Payment method
 	PaymentMethodNotFound: "payment_method_not_found",
+
+	// Vercel
+	VercelSubscriptionAlreadyExists: "vercel_subscription_already_exists",
+	VercelSubscriptionNotFound: "vercel_subscription_not_found",
 };

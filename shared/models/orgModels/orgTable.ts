@@ -1,3 +1,4 @@
+import type { ProcessorConfigs } from "@models/genModels/processorSchemas.js";
 import { sql } from "drizzle-orm";
 import {
 	boolean,
@@ -8,7 +9,6 @@ import {
 	timestamp,
 	unique,
 } from "drizzle-orm/pg-core";
-import type { ProcessorConfigs } from "../genModels/processorSchemas.js";
 import type { OrgConfig } from "./orgConfig.js";
 
 export type SvixConfig = {

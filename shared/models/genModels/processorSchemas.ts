@@ -18,6 +18,26 @@ export const ExternalProcessorsSchema = z.object({
 	vercel: VercelProcessorSchema.optional(),
 });
 
+export const VercelCusProductProcessorSchema = z.object({
+	installation_id: z.string(),
+	billing_plan_id: z.string(),
+});
+
+export type VercelCusProductProcessor = z.infer<
+	typeof VercelCusProductProcessorSchema
+>;
+export const ExternalCusProductProcessorsSchema = z.object({
+	vercel: VercelCusProductProcessorSchema.optional(),
+});
+export type ExternalCusProductProcessors = z.infer<
+	typeof ExternalCusProductProcessorsSchema
+>;
+
+export enum VercelMarketplaceMode {
+	Installation = "installation",
+	Resource = "resource",
+}
+
 /**
  * Organization-level Vercel processor configuration
  * Stores OAuth app credentials and webhook URL
@@ -35,6 +55,10 @@ export const VercelProcessorConfigSchema = z.object({
 			sandbox: z.string().optional(),
 		})
 		.optional(),
+	marketplace_mode: z
+		.enum(VercelMarketplaceMode)
+		.optional()
+		.default(VercelMarketplaceMode.Installation),
 });
 
 export const UpsertVercelProcessorConfigSchema = z.object({
@@ -50,6 +74,7 @@ export const UpsertVercelProcessorConfigSchema = z.object({
 			sandbox: z.string().min(8).optional(),
 		})
 		.optional(),
+	marketplace_mode: z.enum(VercelMarketplaceMode).optional(),
 });
 
 /**

@@ -239,6 +239,7 @@ export const createOrgResponse = ({
 				client_secret: vercelConnection.client_secret,
 				webhook_url: vercelConnection.webhook_url,
 				custom_payment_method: vercelConnection.custom_payment_method,
+				marketplace_mode: vercelConnection.marketplace_mode,
 			},
 		},
 
