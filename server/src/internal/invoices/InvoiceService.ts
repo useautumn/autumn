@@ -60,11 +60,17 @@ export class InvoiceService {
 			with: {
 				customer: {
 					with: {
-						org: true,
+						org: {
+							with: {
+								master: true,
+							},
+						},
 					},
 				},
 			},
-		})) as Invoice & { customer: Customer & { org: Organization } };
+		})) as Invoice & {
+			customer: Customer & { org: Organization & { master: Organization } };
+		};
 	}
 
 	static async list({
