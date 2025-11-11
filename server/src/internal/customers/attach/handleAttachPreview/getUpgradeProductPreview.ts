@@ -1,7 +1,6 @@
 import {
 	AttachBranch,
 	type AttachConfig,
-	CouponDurationType,
 	cusProductToPrices,
 	cusProductToProduct,
 	type FreeTrial,
@@ -214,53 +213,6 @@ export const getUpgradeProductPreview = async ({
 			logger,
 			withPrepaid,
 		});
-
-		if (nextCycleAt) {
-			// Apply discount math to next cycle items (only for multi-cycle discounts)
-			let discountedNextCycleItems = nextCycleItems;
-			if (attachParams.rewards && attachParams.rewards.length > 0) {
-				// Filter rewards that should apply to next cycle
-				const nextCycleRewards = attachParams.rewards.filter((reward) => {
-					const durationType = reward.discount_config?.duration_type;
-					return (
-						durationType === CouponDurationType.Forever ||
-						(durationType === CouponDurationType.Months &&
-							(reward.discount_config?.duration_value || 0) > 1)
-					);
-				});
-
-				if (nextCycleRewards.length > 0) {
-					discountedNextCycleItems = nextCycleItems.map((item) => {
-						if (!item.amount) return item;
-						let discountedAmount = item.amount;
-
-						// Apply each multi-cycle reward discount
-						for (const reward of nextCycleRewards) {
-							discountedAmount = getAmountAfterReward({
-								amount: discountedAmount,
-								reward,
-								subDiscounts: [], // Don't consider existing sub discounts in preview
-								currency: attachParams.org.default_currency || undefined,
-							});
-						}
-
-						return {
-							...item,
-							amount: discountedAmount,
-							price: formatAmount({
-								org: attachParams.org,
-								amount: discountedAmount,
-							}),
-						};
-					});
-				}
-			}
-
-			dueNextCycle = {
-				line_items: discountedNextCycleItems,
-				due_at: nextCycleAt,
-			};
-		}
 	}
 
 	let items = [...curPreviewItems, ...newPreviewItems];
@@ -376,3 +328,52 @@ export const getUpgradeProductPreview = async ({
 		options,
 	};
 };
+
+// this is for later, handles discounts in preview
+
+// if (nextCycleAt) {
+// 	// Apply discount math to next cycle items (only for multi-cycle discounts)
+// 	let discountedNextCycleItems = nextCycleItems;
+// 	if (attachParams.rewards && attachParams.rewards.length > 0) {
+// 		// Filter rewards that should apply to next cycle
+// 		const nextCycleRewards = attachParams.rewards.filter((reward) => {
+// 			const durationType = reward.discount_config?.duration_type;
+// 			return (
+// 				durationType === CouponDurationType.Forever ||
+// 				(durationType === CouponDurationType.Months &&
+// 					(reward.discount_config?.duration_value || 0) > 1)
+// 			);
+// 		});
+
+// 		if (nextCycleRewards.length > 0) {
+// 			discountedNextCycleItems = nextCycleItems.map((item) => {
+// 				if (!item.amount) return item;
+// 				let discountedAmount = item.amount;
+
+// 				// Apply each multi-cycle reward discount
+// 				for (const reward of nextCycleRewards) {
+// 					discountedAmount = getAmountAfterReward({
+// 						amount: discountedAmount,
+// 						reward,
+// 						subDiscounts: [], // Don't consider existing sub discounts in preview
+// 						currency: attachParams.org.default_currency || undefined,
+// 					});
+// 				}
+
+// 				return {
+// 					...item,
+// 					amount: discountedAmount,
+// 					price: formatAmount({
+// 						org: attachParams.org,
+// 						amount: discountedAmount,
+// 					}),
+// 				};
+// 			});
+// 		}
+// 	}
+
+// 	dueNextCycle = {
+// 		line_items: discountedNextCycleItems,
+// 		due_at: nextCycleAt,
+// 	};
+// }
