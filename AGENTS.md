@@ -5,6 +5,7 @@
 - JS Doc comments should be SHORT and SWEET. Don't need examples unless ABSOLUTELY necessary
 - When writing DB queries, for the `customers`, `products` and `features` tables (and others possibly not mentioned here), the primary key when updating is `internal_id`, not `id`
 - When using db schemas in Drizzle, import them from '@autumn/shared', and don't do schemas.
+- Do NOT use "any" type.
 
 # Testing
 - When writing tests, ALWAYS read:

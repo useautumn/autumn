@@ -4,10 +4,11 @@ import {
 	type CheckResponseV0,
 	type CheckResponseV1,
 	type CheckResponseV2,
+	type LimitedItem,
 } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { TestFeature } from "tests/setup/v2Features.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -27,10 +28,10 @@ const freeProd = constructProduct({
 	items: [prepaidMessagesFeature],
 });
 
-const testCase = "check1";
+const testCase = "check-prepaid1";
 
 describe(`${chalk.yellowBright("check-prepaid1: test /check when prepaid feature attached")}`, () => {
-	const customerId = "check1";
+	const customerId = testCase;
 	const autumnV0: AutumnInt = new AutumnInt({ version: ApiVersion.V0_2 });
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2_0 });

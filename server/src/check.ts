@@ -36,16 +36,16 @@ import { checkCusSubCorrect } from "./utils/checkUtils/checkCustomerCorrect.js";
 
 const { db } = initDrizzle({ maxConnections: 5 });
 
-let orgSlugs = process.env.ORG_SLUGS!.split(",");
+const orgSlugs = process.env.ORG_SLUGS!.split(",");
 const skipEmails = process.env.SKIP_EMAILS!.split(",");
 const skipIds = [
 	"cus_2tXCCwC6iyiftgA6ndSo1Ubb2dx",
 	"DxG668K7uDd0Vahk54YWjvCGVgf2",
 ];
 
-orgSlugs = ["welcome-back-1747670264"];
-let customerId = null;
-customerId = "56";
+// orgSlugs = ["welcome-back-1747670264"];
+// let customerId = null;
+const customerId = null;
 
 const getSingleCustomer = async ({
 	stripeCli,

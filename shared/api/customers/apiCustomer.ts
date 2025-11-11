@@ -5,14 +5,9 @@ import { AppEnv } from "@models/genModels/genEnums.js";
 import { z } from "zod/v4";
 import { ApiCusReferralSchema } from "./components/apiCusReferral.js";
 import { ApiCusUpcomingInvoiceSchema } from "./components/apiCusUpcomingInvoice.js";
+import { ApiTrialsUsedSchema } from "./components/apiTrialsUsed.js";
 import { ApiBalanceSchema } from "./cusFeatures/apiBalance.js";
 import { ApiSubscriptionSchema } from "./cusPlans/apiSubscription.js";
-
-export const ApiTrialsUsedSchema = z.object({
-	product_id: z.string(),
-	customer_id: z.string(),
-	fingerprint: z.string().nullish(),
-});
 
 export const ApiCusExpandSchema = z.object({
 	invoices: z.array(ApiInvoiceSchema).optional(),

@@ -8,11 +8,11 @@ import {
 import chalk from "chalk";
 import { addHours, addMonths } from "date-fns";
 import type Stripe from "stripe";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
+import { AutumnCli } from "@tests/cli/AutumnCli.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
+import { advanceTestClock } from "@tests/utils/stripeUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { attachFailedPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";

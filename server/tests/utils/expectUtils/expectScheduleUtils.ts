@@ -12,7 +12,7 @@ import {
 import { expect } from "chai";
 import { addHours } from "date-fns";
 import type Stripe from "stripe";
-import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
+import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { findStripePriceFromPrices } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";

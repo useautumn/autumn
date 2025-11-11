@@ -69,13 +69,13 @@ export function parseTestOutput(output: string): TestSummary {
 
 	// Extract failure details
 	let currentTestFile = "";
-	let inFailureSection = false;
+	const inFailureSection = false;
 
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
 
 		// Detect test file being processed
-		const fileMatch = line.match(/tests\/[\w\/.-]+\.test\.ts:/);
+		const fileMatch = line.match(/tests\/[\w/.-]+\.test\.ts:/);
 		if (fileMatch) {
 			currentTestFile = fileMatch[0].replace(":", "");
 		}

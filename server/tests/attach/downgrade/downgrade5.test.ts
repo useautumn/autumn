@@ -1,19 +1,19 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
+import { AutumnCli } from "@tests/cli/AutumnCli.js";
+import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
+import { expectCustomerV0Correct } from "@tests/utils/expectUtils/expectCustomerV0Correct.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { addHours, addMonths } from "date-fns";
 import type Stripe from "stripe";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { expectCustomerV0Correct } from "tests/utils/expectUtils/expectCustomerV0Correct.js";
-import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import {
-	sharedProProduct,
-	sharedPremiumProduct,
 	initDowngradeSharedProducts,
+	sharedPremiumProduct,
+	sharedProProduct,
 } from "./sharedProducts.js";
 
 const testCase = "downgrade5";
@@ -60,7 +60,6 @@ describe(`${chalk.yellowBright(`${testCase}: testing basic downgrade (paid to pa
 		expectCustomerV0Correct({
 			sent: sharedPremiumProduct,
 			cusRes: res,
-			ctx,
 		});
 
 		const { products: resProducts } = res;
@@ -90,7 +89,6 @@ describe(`${chalk.yellowBright(`${testCase}: testing basic downgrade (paid to pa
 		expectCustomerV0Correct({
 			sent: sharedPremiumProduct,
 			cusRes: res,
-			ctx,
 		});
 	});
 

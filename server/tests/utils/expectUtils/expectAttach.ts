@@ -11,13 +11,13 @@ import type { AttachParams, Customer } from "autumn-js";
 import { expect } from "chai";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
-import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
-import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
+import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect.js";
+import { expectFeaturesCorrect } from "@tests/utils/expectUtils/expectFeaturesCorrect.js";
 import {
 	expectInvoicesCorrect,
 	expectProductAttached,
-} from "tests/utils/expectUtils/expectProductAttached.js";
-import { getCurrentOptions } from "tests/utils/testAttachUtils/testAttachUtils.js";
+} from "@tests/utils/expectUtils/expectProductAttached.js";
+import { getCurrentOptions } from "@tests/utils/testAttachUtils/testAttachUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";

@@ -16,11 +16,11 @@ import {
 import chalk from "chalk";
 import { addDays } from "date-fns";
 import type { Stripe } from "stripe";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { timeout } from "tests/utils/genUtils.js";
-import { createReferralProgram } from "tests/utils/productUtils.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { timeout } from "@tests/utils/genUtils.js";
+import { createReferralProgram } from "@tests/utils/productUtils.js";
+import { advanceTestClock } from "@tests/utils/stripeUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";

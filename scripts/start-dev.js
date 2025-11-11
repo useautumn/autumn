@@ -145,27 +145,6 @@ async function startDev() {
 			// await handlePorts();
 		}
 
-		// Step 1: Build shared package first (initial build)
-		console.log("\n📦 Building shared package...\n");
-		const buildShared = spawn("bun", ["run", "build"], {
-			cwd: "shared",
-			stdio: "inherit",
-			shell: true,
-		});
-
-		await new Promise((resolve, reject) => {
-			buildShared.on("close", (code) => {
-				if (code !== 0) {
-					reject(new Error(`Shared package build failed with code ${code}`));
-				} else {
-					resolve();
-				}
-			});
-			buildShared.on("error", reject);
-		});
-
-		console.log("\n✅ Shared package built successfully!\n");
-
 		// Clear Vite cache to prevent dep optimization issues
 		const viteCachePath = path.join(
 			projectRoot,
@@ -180,19 +159,18 @@ async function startDev() {
 
 		console.log("🚀 Starting development servers in watch mode...\n");
 
-		// Step 2: Start server, workers, and vite first (they'll use the built shared package)
+		// Start server, workers, and vite (they'll use the shared package source files directly)
 		const concurrentlyCmd = spawn(
 			"bunx",
 			[
 				"concurrently",
 				"-n",
-				"server,workers,vite,shared",
+				"server,workers,vite",
 				"-c",
-				"green,yellow,blue,cyan",
+				"green,yellow,blue",
 				`"cd server && SERVER_PORT=${SERVER_PORT} bun dev"`,
 				`"cd server && bun workers:dev"`,
 				`"cd vite && VITE_PORT=${VITE_PORT} bun dev"`,
-				`"cd shared && bun run dev:watch"`,
 			],
 			{
 				stdio: "inherit",

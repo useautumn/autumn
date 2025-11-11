@@ -5,7 +5,7 @@ dotenv.config();
 
 import {
 	type AttachBody,
-	type CreateEntity,
+	type CreateEntityParams,
 	type CreateRewardProgram,
 	CusExpand,
 	EntityExpand,
@@ -321,7 +321,7 @@ export class AutumnCliV2 {
 
 		create: async (
 			customerId: string,
-			entity: CreateEntity | CreateEntity[],
+			entity: CreateEntityParams | CreateEntityParams[],
 		) => {
 			return await this.post(
 				`/customers/${customerId}/entities?with_autumn_id=true`,

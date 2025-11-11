@@ -18,6 +18,7 @@ import {
 	type RewardRedemption,
 	type TrackParams,
 } from "@autumn/shared";
+import { defaultApiVersion } from "@tests/constants.js";
 import type {
 	CancelParams,
 	CheckoutParams,
@@ -27,7 +28,6 @@ import type {
 	Customer,
 	UsageParams,
 } from "autumn-js";
-import { defaultApiVersion } from "tests/constants.js";
 
 export default class AutumnError extends Error {
 	message: string;

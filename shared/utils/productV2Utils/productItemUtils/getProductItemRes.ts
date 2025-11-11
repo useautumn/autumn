@@ -1,5 +1,4 @@
 import { ApiProductItemSchema } from "@api/products/planFeature/previousVersions/apiProductItem.js";
-import { Decimal } from "decimal.js";
 import type { FeatureOptions } from "@models/cusProductModels/cusProductModels.js";
 import type { Feature } from "@models/featureModels/featureModels.js";
 import {
@@ -10,6 +9,7 @@ import {
 import { toApiFeature } from "@utils/featureUtils.js";
 import { getProductItemDisplay } from "@utils/productDisplayUtils.js";
 import { notNullish } from "@utils/utils.js";
+import { Decimal } from "decimal.js";
 import { getItemType } from "./getItemType.js";
 
 export const calculateProrationAmount = ({

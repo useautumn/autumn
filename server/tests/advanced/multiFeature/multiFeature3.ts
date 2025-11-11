@@ -9,15 +9,15 @@ import {
 import { expect } from "chai";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
-import { setupBefore } from "tests/before.js";
-import { features } from "tests/global.js";
+import { setupBefore } from "@tests/before.js";
+import { features } from "@tests/global.js";
 import {
 	getLifetimeFreeCusEnt,
 	getUsageCusEnt,
-} from "tests/utils/cusProductUtils/cusEntSearchUtils.js";
-import { getMainCusProduct } from "tests/utils/cusProductUtils/cusProductUtils.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
+} from "@tests/utils/cusProductUtils/cusEntSearchUtils.js";
+import { getMainCusProduct } from "@tests/utils/cusProductUtils/cusProductUtils.js";
+import { createProducts } from "@tests/utils/productUtils.js";
+import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {

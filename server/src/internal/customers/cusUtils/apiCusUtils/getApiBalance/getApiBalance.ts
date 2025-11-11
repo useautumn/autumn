@@ -166,12 +166,12 @@ export const getApiBalance = ({
 		}),
 	);
 
-	const totalUnused = sumValues(
-		cusEnts.map((cusEnt) => {
-			const { unused } = getCusEntBalance({ cusEnt, entityId });
-			return unused;
-		}),
-	);
+	// const totalUnused = sumValues(
+	// 	cusEnts.map((cusEnt) => {
+	// 		const { unused } = getCusEntBalance({ cusEnt, entityId });
+	// 		return unused;
+	// 	}),
+	// );
 
 	const totalAdditionalBalance = sumValues(
 		cusEnts.map((cusEnt) => {
@@ -183,25 +183,6 @@ export const getApiBalance = ({
 	const totalMaxPurchase = sumValues(
 		cusEnts.map((cusEnt) => cusEntToMaxPurchase({ cusEnt })),
 	);
-	// const totalUsageLimit = sumValues(
-	// 	cusEnts.map((cusEnt) => cusEntToUsageLimit({ cusEnt, entityId })),
-	// );
-
-	// const totalIncludedUsage = sumValues(
-	// 	cusEnts.map((cusEnt) => cusEntToIncludedUsage({ cusEnt, entityId })),
-	// );
-
-	// const totalIncludedUsageWithRollovers = sumValues(
-	// 	cusEnts.map((cusEnt) =>
-	// 		cusEntToIncludedUsage({ cusEnt, entityId, withRollovers: true }),
-	// 	),
-	// );
-
-	// const totalUsage = new Decimal(totalIncludedUsageWithRollovers)
-	// 	.add(totalAdjustment)
-	// 	.sub(totalBalanceWithRollovers)
-	// 	.sub(totalUnused)
-	// 	.toNumber();
 
 	// 1. Granted balance
 	const totalGrantedBalanceWithRollovers = sumValues(
@@ -256,10 +237,6 @@ export const getApiBalance = ({
 
 	const reset = cusEntsToReset({ cusEnts, feature });
 	const rollovers = cusEntsToRollovers({ cusEnts, entityId });
-
-	// console.log(
-	// 	`Feature: ${feature.id}, Total Max Purchase: ${totalMaxPurchase}, Usage Allowed: ${usageAllowed}`,
-	// );
 
 	const { data: apiBalance, error } = ApiBalanceSchema.safeParse({
 		feature: ctx.expand.includes(CusExpand.BalanceFeature)

@@ -17,10 +17,10 @@ import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
-import { getUsageBasedSub } from "@/external/stripe/stripeSubUtils.js";
 import { getRelatedCusPrice } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { cusProductToSub } from "../internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { handleProratedDowngrade } from "./arrearProratedUsage/handleProratedDowngrade.js";
 import { handleProratedUpgrade } from "./arrearProratedUsage/handleProratedUpgrade.js";
 
@@ -115,12 +115,17 @@ export const adjustAllowance = async ({
 	logger.info(`Customer: ${customer.name}, Org: ${org.slug}`);
 
 	const stripeCli = createStripeCli({ org, env });
-	const sub = await getUsageBasedSub({
-		db,
+	const sub = await cusProductToSub({
+		cusProduct,
 		stripeCli,
-		subIds: cusProduct.subscription_ids!,
-		feature: affectedFeature,
 	});
+
+	// const sub = await getUsageBasedSub({
+	// 	db,
+	// 	stripeCli,
+	// 	subIds: cusProduct.subscription_ids!,
+	// 	feature: affectedFeature,
+	// });
 
 	if (!sub) {
 		logger.error("adjustAllowance: no usage-based sub found");

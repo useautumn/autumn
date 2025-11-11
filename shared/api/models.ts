@@ -24,6 +24,7 @@ export * from "./customers/cusPlans/cusProductLegacyData.js";
 export * from "./customers/customerLegacyData.js";
 export * from "./customers/customerOpModels.js";
 export * from "./customers/previousVersions/apiCustomerV2.js";
+export * from "./customers/previousVersions/apiCustomerV3.js";
 
 // NOTE: customersOpenApi.js is NOT exported here - it's only imported by openapi.ts for spec generation
 
@@ -76,6 +77,7 @@ export * from "./balances/usageModels.js";
 export * from "./common/customerData.js";
 export * from "./common/entityData.js";
 export * from "./customers/cusFeatures/cusFeatureLegacyData.js";
+export * from "./customers/cusPlans/previousVersions/apiCusProductV3.js";
 // Errors
 export * from "./errors/index.js";
 // Models

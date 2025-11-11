@@ -8,12 +8,12 @@ import {
 import chalk from "chalk";
 import { addWeeks } from "date-fns";
 import type Stripe from "stripe";
-import { addPrefixToProducts } from "tests/attach/utils.js";
-import { setupBefore } from "tests/before.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import { addPrefixToProducts } from "@tests/attach/utils.js";
+import { setupBefore } from "@tests/before.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
+import { createProducts } from "@tests/utils/productUtils.js";
+import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";

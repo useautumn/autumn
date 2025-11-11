@@ -155,7 +155,7 @@ export const handleStripeWebhookEvent = async ({
 			case "customer.subscription.updated": {
 				const subscription = event.data.object;
 				await handleSubscriptionUpdated({
-					req: ctx as ExtendedRequest,
+					req: ctx as unknown as ExtendedRequest,
 					db,
 					org,
 					subscription,
@@ -168,7 +168,7 @@ export const handleStripeWebhookEvent = async ({
 
 			case "customer.subscription.deleted":
 				await handleSubDeleted({
-					req: ctx as ExtendedRequest,
+					req: ctx as unknown as ExtendedRequest,
 					stripeCli,
 					data: event.data.object,
 					logger,
@@ -178,7 +178,7 @@ export const handleStripeWebhookEvent = async ({
 			case "checkout.session.completed": {
 				const checkoutSession = event.data.object;
 				await handleCheckoutSessionCompleted({
-					req: ctx as ExtendedRequest,
+					req: ctx as unknown as ExtendedRequest,
 					db,
 					data: checkoutSession,
 					org,
@@ -196,7 +196,7 @@ export const handleStripeWebhookEvent = async ({
 					invoiceData: invoice,
 					env,
 					event,
-					req: ctx as ExtendedRequest,
+					req: ctx as unknown as ExtendedRequest,
 				});
 				break;
 			}
@@ -206,7 +206,7 @@ export const handleStripeWebhookEvent = async ({
 					stripeCli,
 					env,
 					event,
-					req: ctx as ExtendedRequest,
+					req: ctx as unknown as ExtendedRequest,
 				});
 				break;
 

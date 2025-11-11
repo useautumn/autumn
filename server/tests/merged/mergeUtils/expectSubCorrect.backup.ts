@@ -10,7 +10,7 @@ import {
 import { notNullish } from "@shared/utils/utils.js";
 import { expect } from "chai";
 import type Stripe from "stripe";
-import { defaultApiVersion } from "tests/constants.js";
+import { defaultApiVersion } from "@tests/constants.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { priceToStripeItem } from "@/external/stripe/priceToStripeItem/priceToStripeItem.js";

@@ -5,8 +5,8 @@ import {
 	Feature,
 } from "@autumn/shared";
 import { expect } from "chai";
-import { timeout } from "tests/utils/genUtils.js";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
+import { timeout } from "@tests/utils/genUtils.js";
+import { AutumnCli } from "@tests/cli/AutumnCli.js";
 import { alexFeatures } from "./init.js";
 
 const checkEntitledOnFeatures = async (customerId: string, product: any) => {

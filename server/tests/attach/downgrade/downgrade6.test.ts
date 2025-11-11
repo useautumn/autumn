@@ -1,9 +1,9 @@
 import { beforeAll, describe, test } from "bun:test";
 import type { Customer } from "@autumn/shared";
 import chalk from "chalk";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { expectCustomerV0Correct } from "tests/utils/expectUtils/expectCustomerV0Correct.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
+import { AutumnCli } from "@tests/cli/AutumnCli.js";
+import { expectCustomerV0Correct } from "@tests/utils/expectUtils/expectCustomerV0Correct.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import {

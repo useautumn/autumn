@@ -5,12 +5,12 @@ import {
 	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
+import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import type { Stripe } from "stripe";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { advanceToNextInvoice } from "tests/utils/testAttachUtils/testAttachUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";

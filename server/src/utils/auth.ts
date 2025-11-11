@@ -1,9 +1,14 @@
 import "dotenv/config";
 
 import { invitation } from "@autumn/shared";
-import { betterAuth } from "better-auth";
+import { betterAuth, type User } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { admin, emailOTP, organization } from "better-auth/plugins";
+import {
+	admin,
+	emailOTP,
+	type Organization,
+	organization,
+} from "better-auth/plugins";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
@@ -104,7 +109,11 @@ export const auth = betterAuth({
 		}),
 
 		organization({
-			async sendInvitationEmail(data) {
+			async sendInvitationEmail(data: {
+				id: string;
+				email: string;
+				organization: Organization;
+			}) {
 				const inviteLink = `${process.env.CLIENT_URL}/accept?id=${data.id}`;
 				await sendInvitationEmail({
 					email: data.email,
@@ -135,7 +144,13 @@ export const auth = betterAuth({
 
 			organizationCreation: {
 				disabled: false,
-				afterCreate: async ({ organization, user }) => {
+				afterCreate: async ({
+					organization,
+					user,
+				}: {
+					organization: Organization;
+					user: User;
+				}) => {
 					await afterOrgCreated({ org: organization, user });
 				},
 			},

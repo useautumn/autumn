@@ -5,7 +5,6 @@ export { schemas };
 export * from "./api/apiUtils.js";
 // API MODELS
 export * from "./api/models.js";
-export * from "./api/operations.js";
 
 // API VERSIONING SYSTEM
 export * from "./api/versionUtils/versionUtils.js";
@@ -24,7 +23,6 @@ export * from "./enums/WebhookEventType.js";
 // ANALYTICS MODELS
 export * from "./models/analyticsModels/actionEnums.js";
 export * from "./models/analyticsModels/actionTable.js";
-export * from "./models/attachModels/attachBody.js";
 export * from "./models/attachModels/attachEnums/AttachBranch.js";
 export * from "./models/attachModels/attachEnums/AttachConfig.js";
 export * from "./models/attachModels/attachEnums/AttachFunction.js";
@@ -48,7 +46,6 @@ export * from "./models/cusModels/cusModels.js";
 export * from "./models/cusModels/cusTable.js";
 export * from "./models/cusModels/entityModels/entityExpand.js";
 export * from "./models/cusModels/entityModels/entityModels.js";
-export * from "./models/cusModels/entityModels/entityResModels.js";
 export * from "./models/cusModels/entityModels/entityTable.js";
 export * from "./models/cusModels/fullCusModel.js";
 export * from "./models/cusModels/invoiceModels/invoiceModels.js";

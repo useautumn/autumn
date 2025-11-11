@@ -71,7 +71,7 @@ export const CreateCustomerParamsSchema = z.object({
 		example: "fp_123abc",
 	}),
 
-	metadata: z.record(z.string(), z.any()).default({}).meta({
+	metadata: z.record(z.string(), z.any()).nullish().meta({
 		description: "Additional metadata for the customer",
 	}),
 

@@ -1,7 +1,7 @@
 import chalk from "chalk";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { compareMainProduct } from "tests/utils/compare.js";
-import { initCustomer } from "tests/utils/init.js";
+import { AutumnCli } from "@tests/cli/AutumnCli.js";
+import { compareMainProduct } from "@tests/utils/compare.js";
+import { initCustomer } from "@tests/utils/init.js";
 import { alexProducts } from "./init.js";
 import { runEventsAndCheckBalances } from "./utils.js";
 
