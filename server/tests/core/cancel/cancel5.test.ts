@@ -17,8 +17,8 @@ import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtil
 import { timeout } from "@/utils/genUtils.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
-const testCase = "cancel1";
-describe(`${chalk.yellowBright("cancel1: Testing cancel for trial products")}`, () => {
+const testCase = "cancel5";
+describe(`${chalk.yellowBright("cancel5: Testing cancel for trial products")}`, () => {
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
@@ -97,7 +97,6 @@ describe(`${chalk.yellowBright("cancel1: Testing cancel for trial products")}`, 
 			status: CusProductStatus.Scheduled,
 		});
 	});
-	return;
 
 	it("should renew pro produce through stripe CLI and have it update correctly", async () => {
 		await stripeCli.subscriptions.update(sub!.id, {

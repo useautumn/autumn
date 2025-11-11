@@ -1,20 +1,25 @@
-import Stripe from "stripe";
-import { AttachParams } from "../../cusProducts/AttachParams.js";
+import {
+	type AttachConfig,
+	CusProductStatus,
+	cusProductToPrices,
+	cusProductToProduct,
+	type FullCusProduct,
+} from "@autumn/shared";
+import type Stripe from "stripe";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
-import { AttachConfig, CusProductStatus, FullCusProduct } from "@autumn/shared";
-import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { cusProductToPrices, cusProductToProduct } from "@autumn/shared";
-import { isArrearPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import {
 	findStripeItemForPrice,
 	subItemInCusProduct,
 } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
-import { mergeNewSubItems } from "./mergeNewSubItems.js";
+import { isArrearPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { formatPrice } from "@/internal/products/prices/priceUtils.js";
-import { getQuantityToRemove } from "./mergeUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { ItemSet } from "@/utils/models/ItemSet.js";
+import type { ItemSet } from "@/utils/models/ItemSet.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AttachParams } from "../../cusProducts/AttachParams.js";
+import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
+import { mergeNewSubItems } from "./mergeNewSubItems.js";
+import { getQuantityToRemove } from "./mergeUtils.js";
 
 export const getCusProductsToRemove = ({
 	attachParams,
@@ -53,12 +58,12 @@ export const getCusProductsToRemove = ({
 			cusProductsToRemove.push(curScheduledProduct);
 		}
 
-		// 1. If product is an add on, and there's current same, add it
-		else if (curSameProduct) {
+		// 2. If cancelling, and same product exists (add on / main), add it.
+		else if (curSameProduct && attachParams.fromCancel) {
 			cusProductsToRemove.push(curSameProduct);
 		}
 
-		// 2. If product is a main product, add curMain
+		// 3. If product is a main product, add curMain
 		else if (!product.is_add_on && curMainProduct) {
 			cusProductsToRemove.push(curMainProduct);
 		}
@@ -100,8 +105,7 @@ export const paramsToSubItems = async ({
 	removeCusProducts?: FullCusProduct[];
 	addItemSet?: ItemSet;
 }) => {
-	const { logger } = req;
-	let curSubItems = sub?.items.data || [];
+	const curSubItems = sub?.items.data || [];
 
 	const itemSet = notNullish(addItemSet)
 		? addItemSet!
@@ -120,7 +124,7 @@ export const paramsToSubItems = async ({
 		cusProductsToRemove.map((cp) => cp.product.name),
 	);
 
-	let newSubItems = mergeNewSubItems({
+	const newSubItems = mergeNewSubItems({
 		itemSet,
 		curSubItems,
 	});
@@ -165,7 +169,7 @@ export const paramsToSubItems = async ({
 					allCusProducts.some((cp) => {
 						if (cp.id === cusProduct.id) return false;
 
-						if (cp.status == CusProductStatus.Scheduled) return false;
+						if (cp.status === CusProductStatus.Scheduled) return false;
 
 						return subItemInCusProduct({
 							cusProduct: cp,
@@ -177,7 +181,7 @@ export const paramsToSubItems = async ({
 				}
 
 				if (
-					itemSet.subItems.some((si) => si.price == existingSubItem.price?.id)
+					itemSet.subItems.some((si) => si.price === existingSubItem.price?.id)
 				) {
 					continue;
 				}
