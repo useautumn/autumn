@@ -1,20 +1,17 @@
+import { sql } from "drizzle-orm";
 import {
-	pgTable,
-	numeric,
 	boolean,
 	foreignKey,
-	unique,
-	text,
 	index,
 	jsonb,
+	numeric,
+	pgTable,
+	text,
+	unique,
 } from "drizzle-orm/pg-core";
-
+import type { RolloverConfig } from "../../../index.js";
 import { features } from "../../featureModels/featureTable.js";
 import { products } from "../productTable.js";
-import { createInsertSchema } from "drizzle-zod";
-import { sql } from "drizzle-orm";
-import { collatePgColumn } from "../../../db/utils.js";
-import { RolloverConfig } from "../../../index.js";
 
 export const entitlements = pgTable(
 	"entitlements",
@@ -57,7 +54,3 @@ export const entitlements = pgTable(
 		index("idx_entitlements_internal_product_id").on(table.internal_product_id),
 	],
 );
-
-export const EntInsertSchema = createInsertSchema(entitlements);
-
-collatePgColumn(entitlements.id, "C");
