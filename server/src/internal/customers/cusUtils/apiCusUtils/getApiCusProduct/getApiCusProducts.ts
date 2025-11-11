@@ -17,7 +17,8 @@ const mergeCusProductResponses = ({
 		const status = ACTIVE_STATUSES.includes(product.status as CusProductStatus)
 			? "active"
 			: product.status;
-		return `${product.id}:${status}`;
+		const cancellationStatus = product.canceled_at ? "cancelled" : "active";
+		return `${product.id}:${status}:${cancellationStatus}`;
 	};
 
 	const record: Record<string, any> = {};
