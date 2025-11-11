@@ -1,9 +1,9 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import chalk from "chalk";
-import { defaultApiVersion } from "tests/constants.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
+import { defaultApiVersion } from "@tests/constants.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";

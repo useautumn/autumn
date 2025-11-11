@@ -6,6 +6,7 @@ import {
 } from "../versionRegistryUtils.js";
 import type {
 	AffectedResource,
+	VersionChange,
 	VersionChangeConstructor,
 } from "./VersionChange.js";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
@@ -298,7 +299,7 @@ export function getChangesForResource({
 	currentVersion: ApiVersion;
 	targetVersion: ApiVersion;
 	resource: AffectedResource;
-}) {
+}): VersionChange[] {
 	const versionsToApply = getVersionsBetween({
 		from: targetVersion,
 		to: currentVersion,

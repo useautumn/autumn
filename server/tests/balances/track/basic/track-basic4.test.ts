@@ -6,9 +6,9 @@ import {
 } from "@autumn/shared";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { timeout } from "tests/utils/genUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { timeout } from "@tests/utils/genUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";

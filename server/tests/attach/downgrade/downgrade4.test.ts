@@ -8,14 +8,14 @@ import {
 } from "@autumn/shared";
 import chalk from "chalk";
 import type Stripe from "stripe";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
 import {
 	expectDowngradeCorrect,
 	expectNextCycleCorrect,
-} from "tests/utils/expectUtils/expectScheduleUtils.js";
-import { advanceMonths } from "tests/utils/stripeUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
+} from "@tests/utils/expectUtils/expectScheduleUtils.js";
+import { advanceMonths } from "@tests/utils/stripeUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";

@@ -1,9 +1,9 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion, type LimitedItem } from "@autumn/shared";
 import chalk from "chalk";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { timeout } from "tests/utils/genUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { timeout } from "@tests/utils/genUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
 	constructArrearItem,

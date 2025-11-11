@@ -24,6 +24,18 @@ export const handleFeatureTypeChanged = async ({
 	const { linkedEntitlements, entitlements, prices, creditSystems, cusEnts } =
 		objectsUsingFeature;
 
+	// Cannot switch between credit system <-> metered / boolean
+	if (
+		(feature.type === FeatureType.CreditSystem &&
+			newType !== FeatureType.CreditSystem) ||
+		(feature.type !== FeatureType.CreditSystem &&
+			newType === FeatureType.CreditSystem)
+	) {
+		throw new RecaseError({
+			message: `Cannot change type of feature ${feature.id} from ${feature.type} to ${newType}`,
+		});
+	}
+
 	if (cusEnts.length > 0) {
 		throw new RecaseError({
 			message: `Cannot change type of feature ${feature.id} because it has been attached to a customer before`,

@@ -1,9 +1,9 @@
 import { beforeAll, describe, test } from "bun:test";
 import chalk from "chalk";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { expectCustomerV0Correct } from "tests/utils/expectUtils/expectCustomerV0Correct.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
+import { AutumnCli } from "@tests/cli/AutumnCli.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectCustomerV0Correct } from "@tests/utils/expectUtils/expectCustomerV0Correct.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";

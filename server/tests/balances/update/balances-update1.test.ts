@@ -1,14 +1,13 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import {
-	type ApiCusFeature,
 	type ApiCusFeatureV3,
 	ApiVersion,
 	type LimitedItem,
 } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -65,9 +64,7 @@ describe(`${chalk.yellowBright("balances-update1: testing update balance after t
 
 		await timeout(2000);
 		const customer = await autumnV2.customers.get(customerId);
-		const feature = customer.features[
-			TestFeature.Messages
-		] as unknown as ApiCusFeature;
+		const feature = customer.features[TestFeature.Messages] as any;
 
 		const currentBalance = new Decimal(messagesFeature.included_usage)
 			.minus(usage)

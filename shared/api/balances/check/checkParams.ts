@@ -51,3 +51,5 @@ export const CheckParamsSchema = ExtCheckParamsSchema.extend({
 );
 
 export type CheckParams = z.infer<typeof CheckParamsSchema>;
+
+export type CheckQuery = z.infer<typeof CheckQuerySchema>;

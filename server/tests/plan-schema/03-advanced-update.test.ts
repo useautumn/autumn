@@ -8,8 +8,8 @@ import {
 } from "@autumn/shared";
 import { expect } from "chai";
 import chalk from "chalk";
-import { setupBefore } from "tests/before.js";
-import { features } from "tests/global.js";
+import { setupBefore } from "@tests/before.js";
+import { features } from "@tests/global.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnCliV2 } from "@/external/autumn/autumnCliV2.js";
 import { ProductService } from "@/internal/products/ProductService.js";

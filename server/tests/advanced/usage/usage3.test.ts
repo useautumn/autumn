@@ -7,12 +7,12 @@ import {
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { expectCustomerV0Correct } from "tests/utils/expectUtils/expectCustomerV0Correct.js";
-import { getSubsFromCusId } from "tests/utils/expectUtils/expectSubUtils.js";
-import { checkSubscriptionContainsProducts } from "tests/utils/scheduleCheckUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
-import { v1ProductToBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectCustomerV0Correct } from "@tests/utils/expectUtils/expectCustomerV0Correct.js";
+import { getSubsFromCusId } from "@tests/utils/expectUtils/expectSubUtils.js";
+import { checkSubscriptionContainsProducts } from "@tests/utils/scheduleCheckUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { v1ProductToBasePrice } from "@tests/utils/testProductUtils/testProductUtils.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
 import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";

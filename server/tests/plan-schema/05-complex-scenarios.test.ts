@@ -9,10 +9,11 @@ import {
 	TierInfinite,
 	UsageModel,
 } from "@autumn/shared";
+
+import { setupBefore } from "@tests/before.js";
+import { features } from "@tests/global.js";
 import { expect } from "chai";
 import chalk from "chalk";
-import { setupBefore } from "tests/before.js";
-import { features } from "tests/global.js";
 import { AutumnCliV2 } from "@/external/autumn/autumnCliV2.js";
 
 describe(chalk.yellowBright("Plan V2 - Complex Real-World Scenarios"), () => {

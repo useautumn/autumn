@@ -38,17 +38,15 @@ export const buildCachedApiCustomerKey = ({
 export const getCachedApiCustomer = async ({
 	ctx,
 	customerId,
-	skipCache = false,
 	skipEntityMerge = false,
 	source,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
-	skipCache?: boolean;
 	skipEntityMerge?: boolean; // If true, returns only customer's own features (no entity merging)
 	source?: string;
 }): Promise<{ apiCustomer: ApiCustomer; legacyData: CustomerLegacyData }> => {
-	const { org, env, db } = ctx;
+	const { org, env, db, skipCache } = ctx;
 
 	const getExpandedApiCustomer = async () => {
 		// await redis.del(

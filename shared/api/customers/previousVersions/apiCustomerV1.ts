@@ -2,8 +2,8 @@ import { ApiCusFeatureV1Schema } from "@api/customers/cusFeatures/previousVersio
 import { ApiInvoiceSchema } from "@api/others/apiInvoice.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
 import { z } from "zod/v4";
+import { ApiTrialsUsedSchema } from "../components/apiTrialsUsed.js";
 import { ApiCusProductV1Schema } from "../cusPlans/previousVersions/apiCusProductV1.js";
-import { ApiTrialsUsedSchema } from "./apiCustomerV3.js";
 
 /**
  * ApiCustomerV1Schema - Customer response format for API V0_2/V1_0/V1_1 (pre V1_2)

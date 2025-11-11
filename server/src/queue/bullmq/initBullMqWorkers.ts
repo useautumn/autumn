@@ -74,10 +74,9 @@ const initWorker = ({ id, db }: { id: number; db: DrizzleCli }) => {
 
 				if (actionHandlers.includes(job.name as JobName)) {
 					await runActionHandlerTask({
-						queue: queue,
-						job,
-						logger: workerLogger,
-						db,
+						jobName: job.name as JobName,
+						payload: job.data,
+						ctx,
 					});
 					return;
 				}

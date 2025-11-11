@@ -1,18 +1,13 @@
 import { ApiCusReferralSchema } from "@api/customers/components/apiCusReferral.js";
+import { ApiCusUpcomingInvoiceSchema } from "@api/customers/components/apiCusUpcomingInvoice.js";
+import { ApiTrialsUsedSchema } from "@api/customers/components/apiTrialsUsed.js";
 import { ApiBaseEntitySchema } from "@api/entities/apiEntity.js";
 import { ApiCusRewardsSchema } from "@api/others/apiDiscount.js";
 import { ApiInvoiceSchema } from "@api/others/apiInvoice.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
 import { z } from "zod/v4";
-import { ApiCusUpcomingInvoiceSchema } from "../components/apiCusUpcomingInvoice.js";
 import { ApiCusFeatureV3Schema } from "../cusFeatures/previousVersions/apiCusFeatureV3.js";
 import { ApiCusProductV3Schema } from "../cusPlans/previousVersions/apiCusProductV3.js";
-
-export const ApiTrialsUsedSchema = z.object({
-	product_id: z.string(),
-	customer_id: z.string(),
-	fingerprint: z.string().nullish(),
-});
 
 export const ApiCusExpandV3Schema = z.object({
 	invoices: z.array(ApiInvoiceSchema).optional(),

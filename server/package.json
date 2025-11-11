@@ -23,7 +23,9 @@
 		"parallel-tests:v1": "ENV_FILE=.env infisical run --env=dev -- bun tests/testRunner/runParallelGroups.ts",
 		"parallel-tests:verbose": "ENV_FILE=.env infisical run --env=dev -- bun tests/testRunner/runParallelGroups.ts --verbose",
 		"parallel-tests:debug": "ENV_FILE=.env infisical run --env=dev -- bun tests/testRunner/runParallelGroups.ts --debug",
-		"clear-master": "ENV_FILE=.env infisical run --env=dev -- bun tests/clearMasterOrg.ts"
+		"clear-master": "ENV_FILE=.env infisical run --env=dev -- bun tests/clearMasterOrg.ts",
+
+		"ts": "bunx tsgo --build --noEmit"
 	},
 	"mocha": {
 		"node-option": [
@@ -113,7 +115,7 @@
 		"recaseai": "^0.0.37",
 		"resend": "^4.1.1",
 		"semver": "^7.7.2",
-		"stripe": "18.4.0-beta.2",
+		"stripe": "catalog:",
 		"svix": "^1.45.1",
 		"tsc-alias": "^1.8.16",
 		"ws": "^8.18.0",

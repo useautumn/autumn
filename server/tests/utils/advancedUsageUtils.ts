@@ -1,9 +1,9 @@
 import type { Feature, ProductV2 } from "@autumn/shared";
 import assert from "assert";
 import { Decimal } from "decimal.js";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { creditSystems, features } from "tests/global.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
+import { AutumnCli } from "@tests/cli/AutumnCli.js";
+import { creditSystems, features } from "@tests/global.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { getPriceForOverage } from "@/internal/products/prices/priceUtils.js";
 import { convertProductV2ToV1 } from "@/internal/products/productUtils/productV2Utils/convertProductV2ToV1.js";
 import { timeout } from "./genUtils.js";

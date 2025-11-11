@@ -7,11 +7,11 @@ import {
 	ProductItemInterval,
 } from "@autumn/shared";
 import chalk from "chalk";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { expectCustomerV0Correct } from "tests/utils/expectUtils/expectCustomerV0Correct.js";
-import { timeout } from "tests/utils/genUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
+import { AutumnCli } from "@tests/cli/AutumnCli.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectCustomerV0Correct } from "@tests/utils/expectUtils/expectCustomerV0Correct.js";
+import { timeout } from "@tests/utils/genUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { convertProductV2ToV1 } from "@/internal/products/productUtils/productV2Utils/convertProductV2ToV1.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";

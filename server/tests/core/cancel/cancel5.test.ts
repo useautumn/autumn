@@ -1,65 +1,90 @@
+import { beforeAll, describe, expect, it } from "bun:test";
 import {
-	type AppEnv,
 	CusProductStatus,
 	LegacyVersion,
-	type Organization,
+	ProductItemInterval,
 } from "@autumn/shared";
-import { expect } from "chai";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import type { Stripe } from "stripe";
-import { setupBefore } from "tests/before.js";
-import { products } from "tests/global.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { timeout } from "@/utils/genUtils.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
-const testCase = "cancel1";
-describe(`${chalk.yellowBright("cancel1: Testing cancel for trial products")}`, () => {
+const freeProd = constructProduct({
+	type: "free",
+	isDefault: true,
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 5,
+			interval: ProductItemInterval.Month,
+		}),
+	],
+});
+
+const proProd = constructProduct({
+	type: "pro",
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Dashboard,
+			isBoolean: true,
+		}),
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 10,
+			interval: ProductItemInterval.Month,
+		}),
+		constructFeatureItem({
+			featureId: TestFeature.Admin,
+			unlimited: true,
+		}),
+	],
+});
+
+const testCase = "cancel5";
+describe(`${chalk.yellowBright("cancel5: Testing cancel for trial products")}`, () => {
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	let stripeCli: Stripe;
-	let testClockId: string;
-	let curUnix: number;
-	let db: DrizzleCli;
-	let org: Organization;
-	let env: AppEnv;
 
-	beforeAll(async function () {
-		await setupBefore(this);
-		const { autumnJs } = this;
-		db = this.db;
-		org = this.org;
-		env = this.env;
-
-		stripeCli = this.stripeCli;
-
-		const { testClockId: testClockId1 } = await initCustomer({
-			autumn: autumnJs,
+	beforeAll(async () => {
+		await initProductsV0({
+			ctx,
+			products: [freeProd, proProd],
+			prefix: testCase,
 			customerId,
-			db,
-			org,
-			env,
-			attachPm: "success",
 		});
 
-		testClockId = testClockId1!;
+		await initCustomerV3({
+			ctx,
+			customerId,
+			attachPm: "success",
+			withTestClock: true,
+			withDefault: true,
+		});
+
+		stripeCli = ctx.stripeCli;
 	});
 
 	it("should attach pro", async () => {
 		await autumn.attach({
 			customer_id: customerId,
-			product_id: products.pro.id,
+			product_id: proProd.id,
 		});
 
 		const customer = await autumn.customers.get(customerId);
 		expectProductAttached({
 			customer,
-			productId: products.pro.id,
+			product: proProd,
 		});
 	});
 
@@ -67,10 +92,10 @@ describe(`${chalk.yellowBright("cancel1: Testing cancel for trial products")}`, 
 
 	it("should cancel pro product through stripe CLI", async () => {
 		const fullCus = await CusService.getFull({
-			db,
+			db: ctx.db,
 			idOrInternalId: customerId,
-			orgId: org.id,
-			env,
+			orgId: ctx.org.id,
+			env: ctx.env,
 		});
 
 		sub = await cusProductToSub({
@@ -87,17 +112,16 @@ describe(`${chalk.yellowBright("cancel1: Testing cancel for trial products")}`, 
 		const customer = await autumn.customers.get(customerId);
 		expectProductAttached({
 			customer,
-			productId: products.pro.id,
+			product: proProd,
 			isCanceled: true,
 		});
 
 		expectProductAttached({
 			customer,
-			productId: products.free.id,
+			product: freeProd,
 			status: CusProductStatus.Scheduled,
 		});
 	});
-	return;
 
 	it("should renew pro produce through stripe CLI and have it update correctly", async () => {
 		await stripeCli.subscriptions.update(sub!.id, {
@@ -109,10 +133,10 @@ describe(`${chalk.yellowBright("cancel1: Testing cancel for trial products")}`, 
 		const customer = await autumn.customers.get(customerId);
 		expectProductAttached({
 			customer,
-			productId: products.pro.id,
+			product: proProd,
 			status: CusProductStatus.Active,
 		});
 
-		expect(customer.products.length).to.equal(1);
+		expect(customer.products.length).toBe(1);
 	});
 });

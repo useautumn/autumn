@@ -1,9 +1,9 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { LegacyVersion } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectAttachCorrect } from "@tests/utils/expectUtils/expectAttach.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { expectAttachCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
@@ -47,7 +47,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach with customer ID and
 	const entityId = "1";
 	test("should attach create customer with no ID", async () => {
 		const customer = await autumn.customers.create({
-			// @ts-expect-error
 			id: null,
 			email: `${customerId}@test.com`,
 			name: customerId,

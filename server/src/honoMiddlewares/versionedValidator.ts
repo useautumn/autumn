@@ -65,7 +65,7 @@ export const versionedValidator = ({
 				throw result.error;
 			}
 			validatedData = result.data as Record<string, unknown>;
-			c.req.addValidatedData(target, result.data);
+			c.req.addValidatedData(target, validatedData);
 		} else {
 			// For other targets, use zValidator
 			const validatorMiddleware = zValidator(target, schema, (result, _c) => {

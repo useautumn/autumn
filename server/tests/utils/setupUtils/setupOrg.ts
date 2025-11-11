@@ -1,6 +1,6 @@
 import type { AppEnv } from "@autumn/shared";
 import axios from "axios";
-import { getFeatures } from "tests/setup/v2Features.js";
+import { getFeatures } from "@tests/setup/v2Features.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";

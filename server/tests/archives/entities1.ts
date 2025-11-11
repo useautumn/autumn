@@ -1,12 +1,12 @@
 // import { Autumn } from "@/external/autumn/autumnCli.js";
-// import { setupBefore } from "tests/before.js";
+// import { setupBefore } from "@tests/before.js";
 // import { CusProductStatus, organizations } from "@autumn/shared";
-// import { getFeaturePrice, getUsagePriceTiers } from "tests/utils/genUtils.js";
+// import { getFeaturePrice, getUsagePriceTiers } from "@tests/utils/genUtils.js";
 // import { entityProducts, features } from "../global.js";
 // import { Stripe } from "stripe";
-// import { checkBalance } from "tests/utils/autumnUtils.js";
-// import { initCustomerWithTestClock } from "tests/utils/testInitUtils.js";
-// import { advanceTestClock } from "tests/utils/stripeUtils.js";
+// import { checkBalance } from "@tests/utils/autumnUtils.js";
+// import { initCustomerWithTestClock } from "@tests/utils/testInitUtils.js";
+// import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 // import { addDays, addHours, addMonths } from "date-fns";
 // import { CacheManager } from "@/external/caching/CacheManager.js";
 // import { CacheType } from "@/external/caching/cacheActions.js";

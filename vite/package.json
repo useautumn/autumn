@@ -100,6 +100,7 @@
 		"@types/react": "^18.3.18",
 		"@types/react-dom": "^18.3.5",
 		"@types/react-router-dom": "^5.3.3",
+		"@typescript/native-preview": "^7.0.0-dev.20251111.1",
 		"@vitejs/plugin-react": "^4.3.4",
 		"eslint": "^9.21.0",
 		"eslint-plugin-react-hooks": "^5.1.0",
@@ -107,6 +108,7 @@
 		"globals": "^15.15.0",
 		"typescript": "~5.7.2",
 		"typescript-eslint": "^8.24.1",
-		"vite": "^6.2.0"
+		"vite": "^6.2.0",
+		"vite-tsconfig-paths": "^5.1.4"
 	}
 }

@@ -158,6 +158,7 @@ export const handleCancelProduct = async ({
 				replaceables: [],
 				entities: fullCus.entities,
 				features: req.features,
+				fromCancel: true,
 			},
 			config: getDefaultAttachConfig(),
 			skipInsertCusProduct,

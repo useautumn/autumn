@@ -5,10 +5,10 @@ import {
 } from "@autumn/shared";
 import { beforeAll, describe, expect, test } from "bun:test";
 import chalk from "chalk";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { expectSubQuantityCorrect } from "tests/utils/expectUtils/expectContUseUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
+import { expectSubQuantityCorrect } from "@tests/utils/expectUtils/expectContUseUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";

@@ -5,13 +5,12 @@
   },
   "compilerOptions": {
     "target": "ES2020",
-    "moduleResolution": "NodeNext",
-    "module": "NodeNext",
+    "moduleResolution": "bundler",
+    "module": "Preserve",
 
     // "declaration": true,
     "jsx": "react-jsx",
     "rootDir": ".",
-    "baseUrl": ".",
     "outDir": "./dist",
     "strict": true,
     "esModuleInterop": true,
@@ -19,18 +18,22 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "paths": {
-      "@/*": ["src/*"],
+      "@/*": ["./src/*"],
       "@shared/*": ["../shared/*"],
-      "@emails/*": ["emails/*"],
-      "@scripts/*": ["scripts/*"],
-      "@lua/*": ["src/_luaScripts/*"],
+      "@emails/*": ["./emails/*"],
+      "@scripts/*": ["./scripts/*"],
+      "@lua/*": ["./src/_luaScripts/*"],
+      "@tests/*": ["./tests/*"],
+
+
+      // From shared package?
+      "@autumn/shared": ["../shared/index.ts"],
+      "@autumn/shared/*": ["../shared/*"],
+      "@api/*": ["../shared/api/*"],
+      "@models/*": ["../shared/models/*"],
+      "@utils/*": ["../shared/utils/*"],
     }
   },
   "include": ["src", "tests", "scripts", "emails", "experiments"],
-  "references": [
-    {
-      "path": "../shared"
-    }
-  ],
-  "exclude": ["node_modules", "dist"]
+  "exclude": ["node_modules", "dist", "tests/archives"]
 }

@@ -8,10 +8,10 @@ import {
 import { expect } from "chai";
 import chalk from "chalk";
 import type Stripe from "stripe";
-import { addPrefixToProducts, replaceItems } from "tests/attach/utils.js";
-import { setupBefore } from "tests/before.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { createProducts } from "tests/utils/productUtils.js";
+import { addPrefixToProducts, replaceItems } from "@tests/attach/utils.js";
+import { setupBefore } from "@tests/before.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { createProducts } from "@tests/utils/productUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
