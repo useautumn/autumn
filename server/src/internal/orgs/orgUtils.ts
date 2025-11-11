@@ -251,8 +251,6 @@ export const createOrgResponse = ({
 };
 
 export const getOrgAndFeatures = async ({ req }: { req: any }) => {
-	const { orgId, env } = req;
-
 	const [org, features] = await Promise.all([
 		OrgService.getFromReq(req),
 		FeatureService.getFromReq(req),

@@ -11,7 +11,6 @@ import {
 	type FullCustomer,
 	type Organization,
 } from "@autumn/shared";
-import { trace } from "@opentelemetry/api";
 import { and, eq, ilike, or, sql, type Table } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -20,7 +19,7 @@ import { withSpan } from "../analytics/tracer/spanUtils.js";
 import { RELEVANT_STATUSES } from "./cusProducts/CusProductService.js";
 import { getFullCusQuery } from "./getFullCusQuery.js";
 
-const tracer = trace.getTracer("express");
+// const tracer = trace.getTracer("express");
 
 export class CusService {
 	static async getFull({
@@ -274,6 +273,7 @@ export class CusService {
 				return null;
 			}
 		} catch (error) {
+			// biome-ignore lint/complexity/noUselessCatch: hello
 			throw error;
 		}
 	}

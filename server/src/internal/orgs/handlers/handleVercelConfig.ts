@@ -1,5 +1,9 @@
-import type { Organization } from "@autumn/shared";
-import { UpsertVercelProcessorConfigSchema } from "@autumn/shared";
+import {
+	AppEnv,
+	type Organization,
+	UpsertVercelProcessorConfigSchema,
+	type VercelProcessorConfig,
+} from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { OrgService } from "../OrgService.js";
 
@@ -8,7 +12,7 @@ export const getVercelConfigDisplay = ({
 	env,
 }: {
 	org: Organization;
-	env: "sandbox" | "live";
+	env: AppEnv;
 }) => {
 	const mask = (v: string | undefined, prefix: number, suffix: number) => {
 		if (!v) return undefined;
@@ -31,19 +35,19 @@ export const getVercelConfigDisplay = ({
 
 	// Get env-specific values
 	const clientId =
-		env === "live"
+		env === AppEnv.Live
 			? vercelConfig.client_integration_id
 			: vercelConfig.sandbox_client_id;
 	const clientSecret =
-		env === "live"
+		env === AppEnv.Live
 			? vercelConfig.client_secret
 			: vercelConfig.sandbox_client_secret;
 	const webhookUrl =
-		env === "live"
+		env === AppEnv.Live
 			? vercelConfig.webhook_url
 			: vercelConfig.sandbox_webhook_url;
 	const customPaymentMethod =
-		env === "live"
+		env === AppEnv.Live
 			? vercelConfig.custom_payment_method?.live
 			: vercelConfig.custom_payment_method?.sandbox;
 
@@ -64,7 +68,8 @@ export const handleUpsertVercelConfig = createRoute({
 		const body = c.req.valid("json");
 
 		// Merge with existing processor_configs to avoid unsetting fields
-		const existingVercelConfig = org.processor_configs?.vercel || {};
+		const existingVercelConfig =
+			org.processor_configs?.vercel || ({} as VercelProcessorConfig);
 
 		// Merge custom_payment_method object properly
 		const customPaymentMethod =
