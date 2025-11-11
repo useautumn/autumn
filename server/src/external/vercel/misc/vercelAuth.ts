@@ -46,7 +46,6 @@ export async function verifyToken({
 			throw new AuthError("Invalid issuer");
 		}
 
-		console.log("Vercel auth claims", JSON.stringify(claims, null, 4));
 		return claims;
 	} catch (err) {
 		if (err instanceof JWTExpired) {
@@ -117,26 +116,23 @@ export class AuthError extends Error {}
  * 5. Store validated claims in context
  */
 export const vercelOidcAuthMiddleware = async (c: any, next: any) => {
-	const { org, env, logger } = c.get("ctx");
+	const { org, env } = c.get("ctx");
 	const authHeader = c.req.header("authorization");
 	const authType = c.req.header("x-vercel-auth");
 
 	// Validate required headers
 	if (!authHeader) {
-		logger.warn("Missing Authorization header");
 		return c.json({ error: "Unauthorized", code: "missing_auth_header" }, 401);
 	}
 
 	if (!authType) {
-		logger.warn("Missing X-Vercel-Auth header");
 		return c.json(
 			{ error: "Unauthorized", code: "missing_auth_type_header" },
 			401,
 		);
 	}
 
-	if (authType !== "user" && authType !== "system") {
-		logger.warn("Invalid X-Vercel-Auth value", { authType });
+	if (!["user", "system"].includes(authType)) {
 		return c.json({ error: "Unauthorized", code: "invalid_auth_type" }, 401);
 	}
 
@@ -145,7 +141,6 @@ export const vercelOidcAuthMiddleware = async (c: any, next: any) => {
 	try {
 		token = getAuthorizationToken(authHeader);
 	} catch (error) {
-		logger.warn("Invalid Authorization header format");
 		return c.json(
 			{ error: "Unauthorized", code: "invalid_auth_header_format" },
 			401,
@@ -157,10 +152,6 @@ export const vercelOidcAuthMiddleware = async (c: any, next: any) => {
 	try {
 		claims = await verifyToken({ token, org, env });
 	} catch (error: any) {
-		logger.warn("JWT verification failed", {
-			error: error.message,
-			authType,
-		});
 		return c.json(
 			{
 				error: "Unauthorized",
@@ -186,12 +177,6 @@ export const vercelOidcAuthMiddleware = async (c: any, next: any) => {
 		if (authType === "user") {
 			// User auth: always validate installation_id matches URL param
 			if (claims.installation_id !== integrationConfigurationId) {
-				logger.warn("Installation ID mismatch for user auth", {
-					claim_installation_id: claims.installation_id,
-					url_installation_id: integrationConfigurationId,
-					path,
-					all_params: c.req.param(),
-				});
 				return c.json(
 					{ error: "Forbidden", code: "installation_id_mismatch" },
 					403,
@@ -201,12 +186,6 @@ export const vercelOidcAuthMiddleware = async (c: any, next: any) => {
 			// System auth: validate installation_id only if not null
 			if (claims.installation_id !== null) {
 				if (claims.installation_id !== integrationConfigurationId) {
-					logger.warn("Installation ID mismatch for system auth", {
-						claim_installation_id: claims.installation_id,
-						url_installation_id: integrationConfigurationId,
-						path,
-						all_params: c.req.param(),
-					});
 					return c.json(
 						{ error: "Forbidden", code: "installation_id_mismatch" },
 						403,
@@ -216,13 +195,6 @@ export const vercelOidcAuthMiddleware = async (c: any, next: any) => {
 			// If installation_id is null, we only validate JWKS (already done above)
 		}
 	}
-
-	logger.debug("OIDC auth successful", {
-		authType,
-		installation_id: claims.installation_id,
-		user_id: claims.user_id,
-	});
-
 	// Store claims in context for downstream handlers
 	c.set("vercelClaims", claims);
 

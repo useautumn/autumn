@@ -233,11 +233,6 @@ export const handleInvoicePaid = async ({
 					),
 				);
 
-				console.log(
-					"Invoice paid, filtered cus products:",
-					cusProducts.map((cp) => `${cp.product.name} - ${cp.product.id}`),
-				);
-
 				if (cusProducts.length === 0) {
 					cusProducts = activeCusProducts;
 				}

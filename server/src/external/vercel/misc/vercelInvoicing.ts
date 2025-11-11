@@ -166,8 +166,8 @@ export const submitInvoiceToVercel = async ({
 				? {
 						test: {
 							validate: true,
-							// result: "paid",
-							result: "notpaid",
+							result: "paid",
+							// result: "notpaid",
 						},
 					}
 				: {}),
@@ -213,11 +213,6 @@ export const parseVercelPrepaidQuantities = ({
 		);
 
 		if (!entitlement) {
-			console.warn("Feature not found in product, skipping prepaid quantity", {
-				featureId,
-				productId: product.id,
-				quantity,
-			});
 			continue;
 		}
 
@@ -228,16 +223,6 @@ export const parseVercelPrepaidQuantities = ({
 		});
 
 		if (!prepaidPrice) {
-			console.warn(
-				"Feature is not prepaid or has no price configured, skipping",
-				{
-					featureId,
-					featureName: entitlement.feature.name,
-					internalFeatureId: entitlement.internal_feature_id,
-					productId: product.id,
-					quantity,
-				},
-			);
 			continue;
 		}
 
@@ -246,13 +231,6 @@ export const parseVercelPrepaidQuantities = ({
 			feature_id: featureId,
 			internal_feature_id: entitlement.internal_feature_id,
 			quantity,
-		});
-
-		console.info("Parsed prepaid quantity from Vercel metadata", {
-			featureId,
-			featureName: entitlement.feature.name,
-			quantity,
-			priceId: prepaidPrice.id,
 		});
 	}
 

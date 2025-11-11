@@ -33,13 +33,6 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 		invoiceDate,
 	} = payload;
 
-	logger.info("❌ marketplace.invoice.notpaid webhook received", {
-		vercelInvoiceId: invoiceId,
-		stripeInvoiceId: externalInvoiceId,
-		amount: invoiceTotal,
-		installationId,
-	});
-
 	const stripeCli = createStripeCli({ org, env });
 
 	// 1. Get the invoice
@@ -47,22 +40,11 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 		expand: ["subscription"],
 	});
 
-	logger.info("Retrieved Stripe invoice", {
-		invoiceId: invoice.id,
-		status: invoice.status,
-		amountDue: invoice.amount_due / 100,
-	});
-
 	// 2. Check if already paid
 	if (invoice.status === "paid") {
 		logger.info("Invoice already marked as not paid, skipping");
 		return;
 	}
-
-	console.log(
-		"invoice.lines.data",
-		JSON.stringify(invoice.lines.data, null, 4),
-	);
 
 	// 3. Get subscription and payment method
 	const subscription = await stripeCli.subscriptions.retrieve(
@@ -73,16 +55,9 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 		)?.parent?.subscription_item_details?.subscription as string,
 	);
 
-	console.log("subscription", JSON.stringify(subscription, null, 4));
-
 	const customPaymentMethod = await stripeCli.paymentMethods.retrieve(
 		subscription.default_payment_method as string,
 	);
-
-	logger.info("Found custom payment method", {
-		paymentMethodId: customPaymentMethod.id,
-		type: customPaymentMethod.type,
-	});
 
 	try {
 		const partialCustomer = await CusService.getByStripeId({
@@ -139,8 +114,6 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 
 	// 5. Report failed payment to Stripe via Payment Records API
 	// This marks the payment as "failed" and allows Stripe to mark the invoice as not paid
-	logger.info("Reporting failed payment to Stripe");
-
 	const paymentRecord = await stripeCli.paymentRecords.reportPayment({
 		amount_requested: {
 			value: invoice.amount_due,
@@ -166,36 +139,18 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 		},
 	});
 
-	logger.info("✅ Payment reported to Stripe", {
-		paymentRecordId: paymentRecord.id,
-	});
-
 	// 6. Attach payment record to invoice
 	try {
 		await stripeCli.invoices.attachPayment(externalInvoiceId, {
 			payment_record: paymentRecord.id,
 		});
-
-		logger.info("✅ Payment record attached to invoice", {
-			invoiceId: externalInvoiceId,
-			paymentRecordId: paymentRecord.id,
-		});
 	} catch (error: any) {
 		// Might already be attached from handleMarketplaceInvoicePaid
 		if (error.code === "resource_already_exists") {
-			logger.info("Payment record already attached to invoice");
 		} else {
 			throw error;
 		}
 	}
 
 	await stripeCli.subscriptions.cancel(subscription.id);
-
-	logger.info("Cancelled subscription", {
-		subscriptionId: subscription.id,
-	});
-
-	logger.info(
-		"❌ Vercel payment failed - invoice not paid, subscription cancelled",
-	);
 };
