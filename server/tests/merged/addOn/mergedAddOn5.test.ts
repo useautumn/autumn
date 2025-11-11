@@ -182,6 +182,7 @@ describe(`${chalk.yellowBright("mergedAddOn5: testing cancelling add on immediat
 			customer_id: customerId,
 			product_id: addOn.id,
 			entity_id: "1",
+			cancel_immediately: true,
 		});
 
 		const customer = await autumn.customers.get(customerId);
@@ -195,13 +196,8 @@ describe(`${chalk.yellowBright("mergedAddOn5: testing cancelling add on immediat
 			product: premium,
 		});
 
-		expectProductAttached({
-			customer,
-			product: addOn,
-		});
-
 		const products = customer.products.filter((p) => p.group === addOn.group);
-		expect(products.length).to.equal(3);
+		expect(products.length).to.equal(2);
 
 		await expectSubToBeCorrect({
 			customerId,
