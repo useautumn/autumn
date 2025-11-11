@@ -1,4 +1,7 @@
-import type { UpsertVercelProcessorConfig } from "@autumn/shared";
+import type {
+	UpsertVercelProcessorConfig,
+	VercelMarkeplaceMode,
+} from "@autumn/shared";
 import type { AxiosInstance } from "axios";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -30,6 +33,7 @@ export const ConfigureVercel = () => {
 		client_secret: "",
 		webhook_url: "",
 		custom_payment_method: "",
+		marketplace_mode: "" as VercelMarkeplaceMode,
 	});
 
 	const handleSaveVercelConfig = async (
@@ -39,6 +43,7 @@ export const ConfigureVercel = () => {
 			client_secret?: string;
 			webhook_url?: string;
 			custom_payment_method?: string;
+			marketplace_mode?: VercelMarkeplaceMode;
 		},
 	) => {
 		try {
@@ -79,6 +84,10 @@ export const ConfigureVercel = () => {
 				};
 			}
 
+			if (vercelConfig.marketplace_mode) {
+				filteredConfig.marketplace_mode = vercelConfig.marketplace_mode;
+			}
+
 			const res = await OrgService.upsertVercelConfig(
 				axiosInstance,
 				filteredConfig,
@@ -92,6 +101,8 @@ export const ConfigureVercel = () => {
 					client_secret: "",
 					webhook_url: "",
 					custom_payment_method: "",
+					marketplace_mode:
+						filteredConfig.marketplace_mode as VercelMarkeplaceMode,
 				});
 			} else {
 				toast.error("Failed to update Vercel config");
@@ -194,6 +205,37 @@ export const ConfigureVercel = () => {
 						}
 					/>
 				</div>
+
+				{/* <div className="col-span-2 w-full">
+					<FormLabel className="mb-1">
+						<span className="text-t2">Marketplace Mode</span>
+					</FormLabel>
+					<p className="text-t3 text-sm mb-2">
+						This is the marketplace mode for your Vercel integration in {env}{" "}
+						mode.
+					</p>
+					<Select
+						value={
+							vercelConfig.marketplace_mode ||
+							org?.processor_configs?.vercel?.marketplace_mode ||
+							"installation"
+						}
+						onValueChange={(value) =>
+							setVercelConfig({
+								...vercelConfig,
+								marketplace_mode: value as VercelMarkeplaceMode,
+							})
+						}
+					>
+						<SelectTrigger>
+							<SelectValue placeholder="Select marketplace mode" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="installation">Installation</SelectItem>
+							<SelectItem value="resource">Resource</SelectItem>
+						</SelectContent>
+					</Select>
+				</div> */}
 
 				<div className="flex gap-2 mt-2">
 					<Button

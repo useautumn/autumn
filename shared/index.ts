@@ -39,9 +39,10 @@ export * from "./models/chatResultModels/chatResultFeature.js";
 export * from "./models/chatResultModels/chatResultTable.js";
 export * from "./models/checkModels/checkPreviewModels.js";
 export * from "./models/cusModels/cusExpand.js";
-
 // 8. Customer Models
 export * from "./models/cusModels/cusModels.js";
+// Processor Models
+export * from "./models/processorModels/processorModels.js";
 
 // Cus response
 

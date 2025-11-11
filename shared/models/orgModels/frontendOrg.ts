@@ -1,3 +1,4 @@
+import { VercelMarketplaceMode } from "@models/genModels/processorSchemas.js";
 import { z } from "zod/v4";
 
 export const FrontendOrgSchema = z.object({
@@ -33,6 +34,7 @@ export const FrontendOrgSchema = z.object({
 			client_secret: z.string().optional(),
 			webhook_url: z.string().optional(),
 			custom_payment_method: z.string().optional(),
+			marketplace_mode: z.enum(VercelMarketplaceMode).optional(),
 		}),
 	}),
 });

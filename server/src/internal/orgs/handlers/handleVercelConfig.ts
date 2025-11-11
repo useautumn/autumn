@@ -2,6 +2,7 @@ import {
 	AppEnv,
 	type Organization,
 	UpsertVercelProcessorConfigSchema,
+	type VercelMarkeplaceMode,
 	type VercelProcessorConfig,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -30,6 +31,7 @@ export const getVercelConfigDisplay = ({
 			client_secret: undefined,
 			webhook_url: undefined,
 			custom_payment_method: undefined,
+			marketplace_mode: undefined,
 		};
 	}
 
@@ -57,6 +59,7 @@ export const getVercelConfigDisplay = ({
 		client_secret: mask(clientSecret, 3, 2),
 		webhook_url: mask(webhookUrl, 8, 6),
 		custom_payment_method: mask(customPaymentMethod, 5, 3),
+		marketplace_mode: vercelConfig.marketplace_mode,
 	};
 };
 
@@ -109,6 +112,12 @@ export const handleUpsertVercelConfig = createRoute({
 						// Custom payment method (for both envs)
 						...(customPaymentMethod
 							? { custom_payment_method: customPaymentMethod }
+							: {}),
+						...(body.marketplace_mode
+							? {
+									marketplace_mode:
+										body.marketplace_mode as VercelMarkeplaceMode,
+								}
 							: {}),
 					},
 				},
