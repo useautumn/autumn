@@ -2,17 +2,18 @@ import {
 	type BillingInterval,
 	isPriceItem,
 	notNullish,
-	nullish,
 	type ProductItem,
 	ProductItemInterval,
 	productV2ToBasePrice,
+	productV2ToPlanType,
 } from "@autumn/shared";
-import { CoinsIcon, InfoIcon } from "@phosphor-icons/react";
+import { CoinsIcon } from "@phosphor-icons/react";
 import { PanelButton } from "@/components/v2/buttons/PanelButton";
+import { IncludedUsageIcon } from "@/components/v2/icons/AutumnIcons";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 
-export const PriceTypeSection = ({
+export const PlanTypeSection = ({
 	withSeparator = true,
 }: {
 	withSeparator?: boolean;
@@ -20,7 +21,9 @@ export const PriceTypeSection = ({
 	const product = useProductStore((s) => s.product);
 	const setProduct = useProductStore((s) => s.setProduct);
 
-	if (!product.items) return null;
+	const planType = productV2ToPlanType({ product });
+
+	// if (!product.items) return null;
 
 	const basePrice = productV2ToBasePrice({ product });
 
@@ -48,7 +51,7 @@ export const PriceTypeSection = ({
 	};
 
 	const handleUpdateBasePrice = ({
-		amount,
+		amount = "",
 		interval,
 		intervalCount,
 	}: {
@@ -74,11 +77,17 @@ export const PriceTypeSection = ({
 			newItems[basePriceIndex] = {
 				...newItems[basePriceIndex],
 				price: newAmount as number,
-				// interval: interval
+				interval: interval as unknown as ProductItemInterval,
 				// 	? billingToItemInterval({ billingInterval: interval })
 				// 	: basePrice?.interval,
 				interval_count: interval ? intervalCount : basePrice?.intervalCount,
 			};
+		} else {
+			newItems.push({
+				price: Number.parseFloat(amount ?? "") as number,
+				interval: interval as unknown as ProductItemInterval,
+				interval_count: intervalCount,
+			});
 		}
 
 		setProduct({
@@ -87,62 +96,89 @@ export const PriceTypeSection = ({
 		});
 	};
 
-	const disabled = nullish(basePrice);
-
 	return (
 		<SheetSection title="Select Plan Type">
 			<div className="space-y-4">
 				<div className="mt-3 space-y-4">
 					<div className="flex w-full items-center gap-4">
 						<PanelButton
-							isSelected={!disabled}
+							isSelected={planType === "free"}
 							onClick={() => {
-								if (disabled) {
-									setProduct({
-										...product,
-										items: [
-											...product.items,
-											{
-												price: 10,
-												interval: ProductItemInterval.Month,
-											},
-										],
-									});
-								} else {
-									handleDeleteBasePrice();
-								}
+								// handleDeleteBasePrice();
+								setProduct({
+									...product,
+									planType: "free",
+									basePriceType: null,
+									items:
+										product.items?.filter(
+											(item: ProductItem) => !isPriceItem(item),
+										) ?? [],
+								});
+							}}
+							icon={<IncludedUsageIcon size={16} color="currentColor" />}
+						/>
+						<div className="flex-1">
+							<div className="text-body-highlight mb-1 flex-row flex items-center gap-1">
+								Free
+								{/* <InfoIcon size={8} weight="regular" color="#888888" /> */}
+							</div>
+							<div className="text-body-secondary leading-tight">
+								A plan without pricing that customers can use for free
+							</div>
+						</div>
+					</div>
+
+					<div className="flex w-full items-center gap-4">
+						<PanelButton
+							isSelected={planType === "paid"}
+							onClick={async () => {
+								// await handleDeleteBasePrice();
+								setProduct({
+									...product,
+									planType: "paid",
+									basePriceType: "recurring",
+									is_default: false,
+									items: [
+										{
+											price: "" as unknown as number,
+											interval: ProductItemInterval.Month,
+											interval_count: 1,
+										},
+									],
+								});
+								// handleUpdateBasePrice({
+								// 	amount: "",
+								// 	interval:
+								// 		ProductItemInterval.Month as unknown as BillingInterval,
+								// 	intervalCount: 1,
+								// });
+								// console.log("hey");
+
+								// console.log(product);
+								// await setProduct({
+								// 	...product,
+								// 	items: [
+								// 		...product.items,
+								// 		{
+								// 			price: 10,
+								// 			interval: ProductItemInterval.Month,
+								// 		},
+								// 	],
+								// });
 							}}
 							icon={<CoinsIcon size={16} color="currentColor" />}
 						/>
 						<div className="flex-1">
 							<div className="text-body-highlight mb-1 flex-row flex items-center gap-1">
-								Free
-								<InfoIcon size={8} weight="regular" color="#888888" />
+								Paid
+								{/* <InfoIcon size={8} weight="regular" color="#888888" /> */}
 							</div>
 							<div className="text-body-secondary leading-tight">
-								A usage-based feature that you want to track
+								A plan with fixed or usage-based pricing that customers may
+								purchase
 							</div>
 						</div>
 					</div>
-					{/* 
-					<div className="flex w-full items-center gap-4">
-						<PanelButton
-							isSelected={feature.type === APIFeatureType.Boolean}
-							onClick={() => {
-								setFeature({ ...feature, type: APIFeatureType.Boolean });
-							}}
-							icon={<BooleanIcon />}
-						/>
-						<div className="flex-1">
-							<div className="text-body-highlight mb-1 flex-row flex items-center gap-1">
-								Boolean
-								<InfoIcon size={8} weight="regular" color="#888888" />
-							</div>
-							<div className="text-body-secondary leading-tight">
-								A flag that can either be enabled or disabled.
-							</div>
-						</div>
-					</div> */}
 				</div>
 			</div>
 		</SheetSection>

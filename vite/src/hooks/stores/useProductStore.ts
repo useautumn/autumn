@@ -1,25 +1,34 @@
-import { type ProductV2, productsAreSame } from "@autumn/shared";
+import {
+	type FrontendProduct,
+	type ProductItem,
+	productsAreSame,
+	productV2ToFeatureItems,
+} from "@autumn/shared";
 import { useMemo } from "react";
 import { create } from "zustand";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { getItemId } from "@/utils/product/productItemUtils";
 import { DEFAULT_PRODUCT } from "@/views/products/plan/utils/defaultProduct";
+import { useSheetStore } from "./useSheetStore";
 
 interface ProductState {
 	// The product being edited (working copy)
-	product: ProductV2;
+	product: FrontendProduct;
 
 	// The base/original product (for comparison)
-	baseProduct: ProductV2 | null;
+	baseProduct: FrontendProduct | null;
 
 	// Actions
-	setProduct: (product: ProductV2 | ((prev: ProductV2) => ProductV2)) => void;
-	setBaseProduct: (product: ProductV2 | null) => void;
+	setProduct: (
+		product: FrontendProduct | ((prev: FrontendProduct) => FrontendProduct),
+	) => void;
+	setBaseProduct: (product: FrontendProduct | null) => void;
 	reset: () => void;
 }
 
 const initialState = {
 	product: DEFAULT_PRODUCT,
-	baseProduct: null as ProductV2 | null,
+	baseProduct: null as FrontendProduct | null,
 };
 
 export const useProductStore = create<ProductState>((set) => ({
@@ -50,8 +59,8 @@ export const useHasChanges = () => {
 		if (!baseProduct) return false;
 
 		const comparison = productsAreSame({
-			newProductV2: product as unknown as ProductV2,
-			curProductV2: baseProduct as unknown as ProductV2,
+			newProductV2: product as unknown as FrontendProduct,
+			curProductV2: baseProduct as unknown as FrontendProduct,
 			features,
 		});
 
@@ -72,8 +81,8 @@ export const useWillVersion = () => {
 		if (!baseProduct) return false;
 
 		const comparison = productsAreSame({
-			newProductV2: product as unknown as ProductV2,
-			curProductV2: baseProduct as unknown as ProductV2,
+			newProductV2: product as unknown as FrontendProduct,
+			curProductV2: baseProduct as unknown as FrontendProduct,
 			features,
 		});
 
@@ -94,11 +103,69 @@ export const useHasDetailsChanged = () => {
 		if (!baseProduct) return false;
 
 		const comparison = productsAreSame({
-			newProductV2: product as unknown as ProductV2,
-			curProductV2: baseProduct as unknown as ProductV2,
+			newProductV2: product as unknown as FrontendProduct,
+			curProductV2: baseProduct as unknown as FrontendProduct,
 			features,
 		});
 
 		return !comparison.detailsSame;
 	}, [product, baseProduct, features]);
+};
+
+export const useCurrentItem = () => {
+	const product = useProductStore((s) => s.product);
+	const itemId = useSheetStore((s) => s.itemId);
+
+	return useMemo(() => {
+		if (!itemId || !product?.items) return null;
+
+		const featureItems = productV2ToFeatureItems({ items: product.items });
+
+		// Find the item by comparing itemIds using the original items array indices
+		for (let i = 0; i < product.items.length; i++) {
+			const item = product.items[i];
+			if (!item) continue;
+
+			// Check if this item is in the featureItems array
+			const isFeatureItem = featureItems.some((fi) => fi === item);
+			if (!isFeatureItem) continue;
+
+			const currentItemId = getItemId({ item, itemIndex: i });
+			if (currentItemId === itemId) {
+				return item;
+			}
+		}
+
+		return null;
+	}, [product, itemId]);
+};
+
+export const useSetCurrentItem = () => {
+	const product = useProductStore((s) => s.product);
+	const setProduct = useProductStore((s) => s.setProduct);
+	const itemId = useSheetStore((s) => s.itemId);
+
+	return (updatedItem: ProductItem) => {
+		if (!product || !product.items || !itemId) return;
+
+		// Find the index in the original items array
+		let originalIndex = -1;
+		for (let i = 0; i < product.items.length; i++) {
+			const item = product.items[i];
+			if (!item) continue;
+
+			const currentItemId = getItemId({ item, itemIndex: i });
+			if (currentItemId === itemId) {
+				originalIndex = i;
+				break;
+			}
+		}
+
+		if (originalIndex === -1) return;
+
+		// Update the item in the original items array
+		const updatedItems = [...product.items];
+		updatedItems[originalIndex] = updatedItem;
+		setProduct({ ...product, items: updatedItems });
+	};
 };

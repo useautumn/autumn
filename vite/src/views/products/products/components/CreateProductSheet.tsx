@@ -1,4 +1,4 @@
-import type { ProductV2 } from "@autumn/shared";
+import { type ProductV2, productV2ToBasePrice } from "@autumn/shared";
 import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
@@ -20,7 +20,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { AdditionalOptions } from "../../plan/components/edit-plan-details/AdditionalOptions";
 import { BasePriceSection } from "../../plan/components/edit-plan-details/BasePriceSection";
-import { PriceTypeSection } from "../../plan/components/edit-plan-details/PriceTypeSection";
+import { PlanTypeSection } from "../../plan/components/edit-plan-details/PlanTypeSection";
 import { DEFAULT_PRODUCT } from "../../plan/utils/defaultProduct";
 import { CreateProductMainDetails } from "./CreateProductMainDetails";
 
@@ -40,6 +40,8 @@ function CreateProductSheet({
 	const setOpen = controlledOnOpenChange || setInternalOpen;
 
 	const product = useProductStore((s) => s.product);
+	const basePrice = productV2ToBasePrice({ product });
+
 	const setProduct = useProductStore((s) => s.setProduct);
 	const reset = useProductStore((s) => s.reset);
 
@@ -105,9 +107,9 @@ function CreateProductSheet({
 
 				<div className="flex-1 overflow-y-auto">
 					<CreateProductMainDetails />
-					<PriceTypeSection />
+					<PlanTypeSection />
 					<BasePriceSection />
-					<AdditionalOptions withSeparator={false} />
+					<AdditionalOptions withSeparator={false} hideAddOn={true} />
 				</div>
 
 				<SheetFooter>
@@ -120,6 +122,14 @@ function CreateProductSheet({
 						Cancel
 					</ShortcutButton>
 					<ShortcutButton
+						disabled={
+							(product.planType === "paid" &&
+								product.basePriceType !== "usage" &&
+								!basePrice?.amount) ||
+							!product.name ||
+							!product.id ||
+							!product.planType
+						}
 						className="w-full"
 						onClick={handleCreateClicked}
 						metaShortcut="enter"
