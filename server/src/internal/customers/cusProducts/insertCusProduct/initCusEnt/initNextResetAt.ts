@@ -63,13 +63,6 @@ export const initNextResetAt = ({
 		entitlement.interval_count || 1,
 	).getTime();
 
-	// console.log(`--------------------------------`);
-	// console.log(`Interval: `, entitlement.interval);
-	// console.log(`Interval count: `, entitlement.interval_count);
-	// console.log(`Now: `, formatUnixToDateTime(now));
-	// console.log(`Next reset at: `, formatUnixToDateTime(nextResetAtCalculated));
-	// console.log(`Anchor to unix: `, formatUnixToDateTime(anchorToUnix));
-
 	// If anchorToUnix, align next reset at to anchorToUnix...
 	if (
 		anchorToUnix &&

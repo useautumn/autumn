@@ -1,9 +1,9 @@
 import { beforeAll, describe, test } from "bun:test";
 import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
 import chalk from "chalk";
 import { addWeeks } from "date-fns";
 import type { Stripe } from "stripe";
-import { TestFeature } from "tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";

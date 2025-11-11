@@ -16,6 +16,26 @@ export const shouldBillNow = (onIncrease: OnIncrease | OnDecrease) => {
 	);
 };
 
+export const shouldProrateDowngradeNow = ({
+	onIncrease,
+	onDecrease,
+}: {
+	onIncrease: OnIncrease;
+	onDecrease: OnDecrease;
+}) => {
+	if (
+		onDecrease === OnDecrease.NoProrations ||
+		onDecrease === OnDecrease.None
+	) {
+		return false;
+	}
+
+	return (
+		onIncrease === OnIncrease.ProrateImmediately ||
+		onIncrease === OnIncrease.BillImmediately
+	);
+};
+
 export const shouldProrate = (onIncrease?: OnIncrease | OnDecrease) => {
 	if (!onIncrease) {
 		return true;
