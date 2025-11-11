@@ -91,8 +91,8 @@ export const PlanCardPreview = ({
 						productV3.price.amount > 0 ? (
 						<span className="text-main">
 							${productV3.price.amount}/
-							{keyToTitle(productV3.price.interval ?? "once", {
-								exclusionMap: { one_off: "once" },
+							{keyToTitle(productV3.price.interval ?? "one-off", {
+								exclusionMap: { one_off: "one-off" },
 							}).toLowerCase()}
 						</span>
 					) : (
