@@ -65,11 +65,6 @@ export const createVercelSubscription = async ({
 	metadata?: Record<string, any>;
 	resourceId?: string;
 }): Promise<{ subscription: Stripe.Subscription; product: FullProduct }> => {
-	logger.info("Creating Vercel subscription", {
-		billingPlanId,
-		integrationConfigurationId,
-	});
-
 	// 1. Check for existing subscription (only allow one per installation)
 	const existingSubscription = stripeCustomer.subscriptions?.data.find(
 		(s) => s.metadata.vercel_installation_id === integrationConfigurationId,
@@ -121,23 +116,13 @@ export const createVercelSubscription = async ({
 		});
 	}
 
-	logger.info("Found custom payment method", {
-		paymentMethodId: customPaymentMethod.id,
-		type: customPaymentMethod.type,
-	});
-
 	// 4. Parse prepaid quantities from metadata if provided
 	let optionsList;
 	if (metadata && Object.keys(metadata).length > 0) {
-		logger.info("Parsing prepaid quantities from metadata", {
-			metadata,
-			productId: product.id,
-		});
 		optionsList = parseVercelPrepaidQuantities({
 			metadata,
 			product,
 			prices: product.prices,
-			logger,
 		});
 	}
 
@@ -174,15 +159,6 @@ export const createVercelSubscription = async ({
 		config,
 		itemSet,
 		logger,
-	});
-
-	logger.info("Subscription created with custom payment method", {
-		subscriptionId: subscription.id,
-		status: subscription.status,
-		latestInvoiceId:
-			typeof subscription.latest_invoice === "string"
-				? subscription.latest_invoice
-				: subscription.latest_invoice?.id,
 	});
 
 	// Subscription will be 'incomplete' initially with an 'open' invoice

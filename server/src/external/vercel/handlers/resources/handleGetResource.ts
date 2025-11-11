@@ -10,12 +10,7 @@ export const handleGetResource = createRoute({
 	handler: async (c) => {
 		const { orgId, env, integrationConfigurationId, resourceId } =
 			c.req.param();
-		const { db, logger } = c.get("ctx");
-
-		logger.info("Getting Vercel resource", {
-			integrationConfigurationId,
-			resourceId,
-		});
+		const { db } = c.get("ctx");
 
 		const resource = await VercelResourceService.getByIdAndInstallation({
 			db,

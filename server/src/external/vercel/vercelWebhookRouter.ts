@@ -14,7 +14,10 @@ import { handleGetResource } from "./handlers/resources/handleGetResource.js";
 import { handleUpdateResource } from "./handlers/resources/handleUpdateResource.js";
 import { captureRawBody } from "./misc/rawBodyMiddleware.js";
 import { vercelOidcAuthMiddleware } from "./misc/vercelAuth.js";
-import { vercelSeederMiddleware } from "./misc/vercelMiddleware.js";
+import {
+	vercelLogMiddleware,
+	vercelSeederMiddleware,
+} from "./misc/vercelMiddleware.js";
 import { vercelSignatureMiddleware } from "./misc/vercelSignatureMiddleware.js";
 
 export const vercelWebhookRouter = new Hono<HonoEnv>();
@@ -95,26 +98,15 @@ vercelWebhookRouter.post(
 	vercelSeederMiddleware,
 	captureRawBody,
 	vercelSignatureMiddleware,
+	vercelLogMiddleware,
 	async (c) => {
 		const { db, org, env, logger } = c.get("ctx");
-		const params = c.req.param();
-		const headers = c.req.header();
 		let body: any;
 		try {
 			body = await c.req.json();
 		} catch {
 			body = {};
 		}
-
-		logger.info("Vercel webhook received", {
-			method: "POST",
-			eventType: body.type,
-			params,
-			headers,
-			body,
-		});
-		console.log("Vercel webhook headers", JSON.stringify(headers, null, 4));
-		console.log("Vercel webhook received", "POST", params, body);
 
 		const eventType = body.type;
 

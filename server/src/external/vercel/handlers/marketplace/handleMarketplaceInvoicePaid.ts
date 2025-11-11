@@ -45,13 +45,6 @@ export const handleMarketplaceInvoicePaid = async ({
 		invoiceDate,
 	} = payload;
 
-	logger.info("💰 marketplace.invoice.paid webhook received", {
-		vercelInvoiceId: invoiceId,
-		stripeInvoiceId: externalInvoiceId,
-		amount: invoiceTotal,
-		installationId,
-	});
-
 	const stripeCli = createStripeCli({ org, env });
 
 	// 1. Get the invoice
@@ -59,22 +52,11 @@ export const handleMarketplaceInvoicePaid = async ({
 		expand: ["subscription"],
 	});
 
-	logger.info("Retrieved Stripe invoice", {
-		invoiceId: invoice.id,
-		status: invoice.status,
-		amountDue: invoice.amount_due / 100,
-	});
-
 	// 2. Check if already paid
 	if (invoice.status === "paid") {
 		logger.info("Invoice already marked as paid, skipping");
 		return;
 	}
-
-	console.log(
-		"invoice.lines.data",
-		JSON.stringify(invoice.lines.data, null, 4),
-	);
 
 	// 3. Get subscription and payment method
 	const subscription = await stripeCli.subscriptions.retrieve(
@@ -85,21 +67,9 @@ export const handleMarketplaceInvoicePaid = async ({
 		)?.parent?.subscription_item_details?.subscription as string,
 	);
 
-	console.log("subscription", JSON.stringify(subscription, null, 4));
-
 	const customPaymentMethod = await stripeCli.paymentMethods.retrieve(
 		subscription.default_payment_method as string,
 	);
-
-	logger.info("Found custom payment method", {
-		paymentMethodId: customPaymentMethod.id,
-		type: customPaymentMethod.type,
-	});
-
-	// 4. Create cus_product BEFORE reporting payment
-	// This ensures the user gets access to the product when payment is confirmed
-	// and the invoice.paid webhook can find the cus_product
-	logger.info("Creating customer product before reporting payment");
 
 	try {
 		const partialCustomer = await CusService.getByStripeId({
@@ -108,9 +78,6 @@ export const handleMarketplaceInvoicePaid = async ({
 		});
 
 		if (!partialCustomer) {
-			logger.error("Customer not found for payment", {
-				stripeCustomerId: invoice.customer,
-			});
 			throw new Error("Customer not found");
 		}
 
@@ -122,9 +89,6 @@ export const handleMarketplaceInvoicePaid = async ({
 		});
 
 		if (!customer) {
-			logger.error("Customer not found", {
-				internalCustomerId: partialCustomer.internal_id,
-			});
 			throw new Error("Customer not found");
 		}
 
@@ -142,9 +106,6 @@ export const handleMarketplaceInvoicePaid = async ({
 		});
 
 		if (!product) {
-			logger.error("Product not found", {
-				billingPlanId: vercelBillingPlanId,
-			});
 			throw new Error("Product not found");
 		}
 
@@ -157,12 +118,6 @@ export const handleMarketplaceInvoicePaid = async ({
 		});
 
 		const isRenewal = existingCusProducts.length > 0;
-
-		logger.info("Detected subscription type", {
-			isRenewal,
-			subscriptionId: subscription.id,
-			existingCusProductCount: existingCusProducts.length,
-		});
 
 		// Fetch Vercel resource by ID from subscription metadata
 		let optionsList: FeatureOptions[] = [];
@@ -178,11 +133,6 @@ export const handleMarketplaceInvoicePaid = async ({
 				});
 
 				if (resource?.metadata && Object.keys(resource.metadata).length > 0) {
-					logger.info("Parsing prepaid quantities from resource metadata", {
-						resourceId: resource.id,
-						metadata: resource.metadata,
-					});
-
 					optionsList = parseVercelPrepaidQuantities({
 						metadata: resource.metadata,
 						product,
@@ -196,21 +146,9 @@ export const handleMarketplaceInvoicePaid = async ({
 				});
 				// Continue with empty optionsList
 			}
-		} else {
-			logger.info(
-				"No resource ID in subscription metadata (legacy or installation-level billing)",
-				{
-					vercelResourceId,
-				},
-			);
 		}
 
 		if (isRenewal) {
-			// Process renewal - reset balances after payment confirmation
-			logger.info(
-				"Processing renewal - resetting balances after payment confirmation",
-			);
-
 			// Call sendUsageAndReset which handles all balance resets
 			const activeProduct = existingCusProducts[0];
 
@@ -223,14 +161,8 @@ export const handleMarketplaceInvoicePaid = async ({
 				stripeSubs: [subscription],
 				logger,
 			});
-
-			logger.info(
-				"✅ Renewal balance resets completed after payment confirmation",
-			);
 		} else {
 			// New subscription - create cus_product
-			logger.info("New subscription - creating cus_product");
-
 			await createFullCusProduct({
 				db,
 				attachParams: attachToInsertParams(
@@ -260,11 +192,6 @@ export const handleMarketplaceInvoicePaid = async ({
 				scenario: AttachScenario.New,
 				logger,
 			});
-
-			logger.info("✅ Customer product created", {
-				productId: product.id,
-				customerId: customer.id,
-			});
 		}
 	} catch (error: any) {
 		logger.error("❌ Failed to create customer product", {
@@ -275,8 +202,6 @@ export const handleMarketplaceInvoicePaid = async ({
 
 	// 5. Report successful payment to Stripe via Payment Records API
 	// This marks the payment as "guaranteed" and allows Stripe to mark the invoice as paid
-	logger.info("Reporting guaranteed payment to Stripe");
-
 	const paymentRecord = await stripeCli.paymentRecords.reportPayment({
 		amount_requested: {
 			value: invoice.amount_due,
@@ -302,19 +227,10 @@ export const handleMarketplaceInvoicePaid = async ({
 		},
 	});
 
-	logger.info("✅ Payment reported to Stripe", {
-		paymentRecordId: paymentRecord.id,
-	});
-
 	// 6. Attach payment record to invoice
 	try {
 		await stripeCli.invoices.attachPayment(externalInvoiceId, {
 			payment_record: paymentRecord.id,
-		});
-
-		logger.info("✅ Payment record attached to invoice", {
-			invoiceId: externalInvoiceId,
-			paymentRecordId: paymentRecord.id,
 		});
 	} catch (error: any) {
 		// Might already be attached from handleInvoicePaymentAttemptRequired
@@ -324,8 +240,4 @@ export const handleMarketplaceInvoicePaid = async ({
 			throw error;
 		}
 	}
-
-	logger.info(
-		"🎉 Vercel payment confirmed - invoice paid, subscription active",
-	);
 };

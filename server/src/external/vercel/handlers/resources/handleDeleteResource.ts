@@ -10,12 +10,7 @@ export const handleDeleteResource = createRoute({
 	handler: async (c) => {
 		const { orgId, env, integrationConfigurationId, resourceId } =
 			c.req.param();
-		const { db, logger } = c.get("ctx");
-
-		logger.info("Deleting Vercel resource", {
-			integrationConfigurationId,
-			resourceId,
-		});
+		const { db } = c.get("ctx");
 
 		await VercelResourceService.delete({
 			db,

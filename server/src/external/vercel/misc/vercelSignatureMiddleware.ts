@@ -72,7 +72,5 @@ export const vercelSignatureMiddleware = async (c: any, next: any) => {
 		return c.json({ error: "Unauthorized", code: "invalid_signature" }, 401);
 	}
 
-	logger.debug("Webhook signature validated", { env });
-
 	await next();
 };

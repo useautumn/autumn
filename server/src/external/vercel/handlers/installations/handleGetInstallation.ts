@@ -17,17 +17,6 @@ export const handleGetInstallation = createRoute({
 			env: ctx.env,
 		});
 
-		// const billingPlan = customer?.customer_products?.find((x) =>
-		// 	isMainProduct({
-		// 		product: {
-		// 			...x.product,
-		// 			prices: x.customer_prices.map((y) => y.price) ?? {},
-		// 			entitlements: x.customer_entitlements.map((y) => y.entitlement) ?? [],
-		// 		},
-		// 		prices: x.customer_prices.map((y) => y.price) ?? [],
-		// 	}),
-		// );
-
 		if (!customer) {
 			return c.json(
 				{
@@ -41,6 +30,7 @@ export const handleGetInstallation = createRoute({
 			{
 				notification: null,
 				billingPlan:
+					// edge case: [0] = add-on [1] = main
 					customer.customer_products?.[0] !== undefined
 						? (productToBillingPlan({
 								product: cusProductToProduct({

@@ -9,11 +9,6 @@ export const handleDeleteInstallation = createRoute({
 		const { db, org, logger } = ctx;
 
 		try {
-			// 1. Delete all resources for this installation in parallel
-			logger.info("Deleting resources for installation", {
-				integrationConfigurationId,
-			});
-
 			const resources = await VercelResourceService.listByInstallation({
 				db,
 				installationId: integrationConfigurationId,
@@ -32,19 +27,6 @@ export const handleDeleteInstallation = createRoute({
 				),
 			);
 
-			const successCount = deleteResults.filter(
-				(r) => r.status === "fulfilled",
-			).length;
-			const failCount = deleteResults.filter(
-				(r) => r.status === "rejected",
-			).length;
-
-			logger.info("Resources deletion complete", {
-				total: resources.length,
-				success: successCount,
-				failed: failCount,
-			});
-
 			// 2. Delete the customer/installation
 			await deleteCusById({
 				db: ctx.db,
@@ -59,11 +41,6 @@ export const handleDeleteInstallation = createRoute({
 				error,
 				integrationConfigurationId,
 			});
-			console.log(
-				"ERROR: Error deleting installation: --------------------------------",
-			);
-			console.log(error);
-			console.log("--------------------------------");
 		}
 		return c.json(
 			{

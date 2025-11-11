@@ -28,7 +28,7 @@ export class VercelResourceService {
 			db,
 			installationId: resource.installation_id,
 			orgId: resource.org_id,
-			env: resource.env,
+			env: resource.env as AppEnv,
 		});
 
 		if (existing) {
@@ -136,7 +136,7 @@ export class VercelResourceService {
 		if (!resource) {
 			throw new RecaseError({
 				message: `Resource ${resourceId} not found for installation ${installationId}`,
-				code: ErrCode.NotFound,
+				code: ErrCode.VercelResourceNotFound,
 				statusCode: StatusCodes.NOT_FOUND,
 			});
 		}

@@ -61,15 +61,6 @@ function calculatePrepaidCosts({
 			// Calculate total cost for this feature
 			const featureCost = subscriptionItemQuantity * unitAmount;
 			totalPrepaidCost += featureCost;
-
-			console.info("Calculated prepaid feature cost for billing plan", {
-				featureId: options.feature_id,
-				quantity: options.quantity,
-				billingUnits,
-				subscriptionItemQuantity,
-				unitAmount,
-				featureCost,
-			});
 		}
 	}
 
@@ -139,8 +130,8 @@ export const handleListBillingPlansPerInstall = createRoute({
 		metadata: z.string().optional(),
 	}),
 	handler: async (c) => {
-		const { orgId, env, integrationConfigurationId } = c.req.param();
-		const { db, org, features, logger } = c.get("ctx");
+		const { orgId, env } = c.req.param();
+		const { db, org, logger } = c.get("ctx");
 
 		// Parse metadata from query params
 		let metadata: Record<string, any> = {};

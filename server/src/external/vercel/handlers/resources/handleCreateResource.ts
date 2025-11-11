@@ -32,13 +32,6 @@ export const handleCreateResource = createRoute({
 		const { db, org, features, logger } = c.get("ctx");
 		const { productId, name, metadata, billingPlanId } = c.req.valid("json");
 
-		logger.info("Creating Vercel resource", {
-			productId,
-			name,
-			billingPlanId,
-			integrationConfigurationId,
-		});
-
 		// 1. Get customer
 		const customer = await CusService.getFull({
 			db,
@@ -75,7 +68,7 @@ export const handleCreateResource = createRoute({
 		// 2. Create resource in database (enforces 1-resource limit)
 		const resourceId = generateId("vre");
 
-		const resource = await VercelResourceService.create({
+		await VercelResourceService.create({
 			db,
 			resource: {
 				id: resourceId,
@@ -86,10 +79,6 @@ export const handleCreateResource = createRoute({
 				status: "pending",
 				metadata: metadata ?? {},
 			},
-		});
-
-		logger.info("Resource created in database", {
-			resourceId: resource.id,
 		});
 
 		// 3. Create subscription (installation-level billing)

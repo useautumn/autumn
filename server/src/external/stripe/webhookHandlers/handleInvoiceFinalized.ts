@@ -13,6 +13,7 @@ import {
 	submitBillingDataToVercel,
 	submitInvoiceToVercel,
 } from "@/external/vercel/misc/vercelInvoicing.js";
+import { logVercelWebhook } from "@/external/vercel/misc/vercelMiddleware.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
@@ -59,9 +60,6 @@ export const handleInvoiceFinalized = async ({
 
 	const subId = invoiceToSubId({ invoice });
 
-	console.log("subId", subId);
-	console.log("will Invoice Vercel", subId, invoice.amount_due > 0);
-
 	if (subId) {
 		const stripeCli = createStripeCli({ org, env });
 		// Handle Vercel custom payment method invoices
@@ -71,9 +69,6 @@ export const handleInvoiceFinalized = async ({
 			const vercelInstallationId =
 				subscription.metadata?.vercel_installation_id;
 			const vercelBillingPlanId = subscription.metadata?.vercel_billing_plan_id;
-
-			console.log("vercelInstallationId", vercelInstallationId);
-			console.log("vercelBillingPlanId", vercelBillingPlanId);
 
 			if (
 				vercelInstallationId &&
@@ -86,15 +81,14 @@ export const handleInvoiceFinalized = async ({
 
 				// Only process if it's a custom payment method (Vercel)
 				if (paymentMethod.type === "custom") {
-					console.info(
-						"🔵 Vercel invoice finalized, submitting to Vercel marketplace",
-						{
-							invoiceId: invoice.id,
-							subscriptionId: subscription.id,
-							vercelInstallationId,
-							amountDue: invoice.amount_due / 100,
+					logVercelWebhook({
+						logger,
+						org,
+						event: {
+							type: "marketplace.invoice.finalized",
+							id: invoice.id,
 						},
-					);
+					});
 
 					try {
 						// Get customer and product
@@ -132,10 +126,8 @@ export const handleInvoiceFinalized = async ({
 							product,
 						});
 
-						console.info("✅ Vercel billing data submitted");
-
 						// Submit invoice to Vercel
-						const result = await submitInvoiceToVercel({
+						await submitInvoiceToVercel({
 							installationId: vercelInstallationId,
 							invoice,
 							customer,
@@ -144,14 +136,6 @@ export const handleInvoiceFinalized = async ({
 							features,
 						});
 
-						console.info(
-							"✅ Vercel invoice submitted, waiting for payment confirmation webhook",
-							{
-								vercelInvoiceId: result.invoiceId,
-								stripeInvoiceId: invoice.id,
-							},
-						);
-
 						// Do NOT report payment to Stripe here - we've only submitted the invoice to Vercel
 						// Vercel will process payment asynchronously and send marketplace.invoice.paid webhook
 						// handleMarketplaceInvoicePaid will then:
@@ -159,9 +143,11 @@ export const handleInvoiceFinalized = async ({
 						//   2. Report payment as "guaranteed" to Stripe
 						//   3. Attach payment record to invoice (marks it as paid)
 					} catch (error: any) {
-						console.error("❌ Failed to process Vercel invoice", {
-							error: error.message,
-							invoiceId: invoice.id,
+						logger.error("Failed to process Vercel invoice", {
+							data: {
+								error: error.message,
+								invoiceId: invoice.id,
+							},
 						});
 					}
 				}
