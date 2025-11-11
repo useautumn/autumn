@@ -49,7 +49,10 @@ export const getFeatureName = ({
 	}
 
 	if (capitalize) {
-		featureName = featureName.charAt(0).toUpperCase() + featureName.slice(1);
+		featureName = featureName
+			.split(" ")
+			.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+			.join(" ");
 	}
 
 	return featureName;

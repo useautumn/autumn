@@ -1,5 +1,5 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
-import { Feature } from "@autumn/shared";
+import type { Feature } from "@autumn/shared";
 import { generateObject } from "ai";
 import { z } from "zod";
 
@@ -20,8 +20,8 @@ export const generateFeatureDisplay = async (feature: Feature) => {
   </feature>
   `;
 
-	let { object } = await generateObject({
-		model: anthropic("claude-3-5-sonnet-latest"),
+	const { object } = await generateObject({
+		model: anthropic("claude-haiku-4-5"),
 		schema: z.object({
 			singular: z.string(),
 			plural: z.string(),
