@@ -141,7 +141,7 @@ export const getUsageBasedSub = async ({
 		let usageFeatures: string[] | null = null;
 
 		// 1. Check if there's autumn sub
-		const autumnSub = autumnSubs?.find((sub) => sub.stripe_id == stripeSub.id);
+		const autumnSub = autumnSubs?.find((sub) => sub.stripe_id === stripeSub.id);
 		if (autumnSub) {
 			const containsFeature = autumnSub.usage_features.includes(
 				feature.internal_id!,
@@ -153,14 +153,14 @@ export const getUsageBasedSub = async ({
 
 		try {
 			usageFeatures = JSON.parse(stripeSub.metadata.usage_features);
-		} catch (error) {
+		} catch {
 			continue;
 		}
 
 		if (
 			!usageFeatures ||
 			usageFeatures.find(
-				(feat: any) => feat.internal_id == feature.internal_id,
+				(feat: any) => feat.internal_id === feature.internal_id,
 			) === undefined
 		) {
 			continue;

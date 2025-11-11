@@ -106,7 +106,6 @@ export const getV2CheckResponse = async ({
 		notNullish(apiCusFeature.balance) &&
 		new Decimal(apiCusFeature.balance).gte(requiredBalance)
 	) {
-		// console.log("Balance + total paid usage allowance >= required balance");
 		allowed = true;
 	}
 

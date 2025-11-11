@@ -30,17 +30,19 @@ export const productToCusProduct = ({
 				? cusProduct.internal_entity_id === internalEntityId
 				: nullish(cusProduct.internal_entity_id);
 
-			const statusMatch = inStatuses
-				? inStatuses.includes(cusProduct.status)
-				: true;
+			// const statusMatch = inStatuses
+			// 	? inStatuses.includes(cusProduct.status)
+			// 	: true;
 
-			return (
-				cusProductIdMatch &&
-				versionMatch &&
-				prodIdMatch &&
-				entityMatch &&
-				statusMatch
-			);
+			// if (cusProductIdMatch) {
+			// 	console.log(`Cus Product ID Match: ${cusProductIdMatch}`);
+			// 	console.log(`Version Match: ${versionMatch}`);
+			// 	console.log(`Prod ID Match: ${prodIdMatch}`);
+			// 	console.log(`Entity Match: ${entityMatch}`);
+			// 	console.log(`--------------------------------`);
+			// }
+
+			return cusProductIdMatch && versionMatch && prodIdMatch && entityMatch;
 		});
 	}
 
