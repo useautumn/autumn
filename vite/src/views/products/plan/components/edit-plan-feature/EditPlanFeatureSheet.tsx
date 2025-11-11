@@ -26,6 +26,11 @@ export function EditPlanFeatureSheet({
 	const feature = getFeature(item?.feature_id ?? "", features);
 	const isFeaturePrice = isFeaturePriceItem(item);
 
+	// Check if user has explicitly chosen a billing type
+	const hasChosenBillingType =
+		isFeaturePrice || // Has tiers (priced)
+		(item.included_usage !== undefined && item.included_usage !== null); // Has included usage set
+
 	return (
 		<div
 			className={
@@ -47,21 +52,25 @@ export function EditPlanFeatureSheet({
 						<BillingType />
 					</SheetSection>
 
-					<SheetSection
-						title={`Allowance ${isFeaturePrice ? "(optional)" : ""}`}
-					>
-						<IncludedUsage />
-					</SheetSection>
+					{hasChosenBillingType && (
+						<>
+							<SheetSection
+								title={`Allowance ${isFeaturePrice ? "(optional)" : ""}`}
+							>
+								<IncludedUsage />
+							</SheetSection>
 
-					{isFeaturePrice && (
-						<SheetSection title="Price">
-							<PriceTiers />
-							<UsageReset showBillingLabel={true} />
-							<PricedFeatureSettings />
-						</SheetSection>
+							{isFeaturePrice && (
+								<SheetSection title="Price">
+									<PriceTiers />
+									<UsageReset showBillingLabel={true} />
+									<PricedFeatureSettings />
+								</SheetSection>
+							)}
+
+							<AdvancedSettings />
+						</>
 					)}
-
-					<AdvancedSettings />
 				</>
 			)}
 
