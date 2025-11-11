@@ -1,3 +1,4 @@
+import type { ZodOpenApiPathsObject } from "zod-openapi";
 import {
 	CreateReferralCodeResponseSchema,
 	RedeemReferralCodeResponseSchema,
@@ -7,7 +8,7 @@ import {
 	RedeemReferralCodeParamsSchema,
 } from "./referralOpModels.js";
 
-export const referralOps = {
+export const referralOps: ZodOpenApiPathsObject = {
 	"/referrals/code": {
 		post: {
 			summary: "Create a referral code",
