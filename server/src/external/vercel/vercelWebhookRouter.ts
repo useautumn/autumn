@@ -7,77 +7,115 @@ import { handleDeleteInstallation } from "./handlers/installations/handleDeleteI
 import { handleGetInstallation } from "./handlers/installations/handleGetInstallation.js";
 import { handleUpsertInstallation } from "./handlers/installations/handleUpsertInstallation.js";
 import { handleMarketplaceInvoicePaid } from "./handlers/marketplace/handleMarketplaceInvoicePaid.js";
+import { handleMarketplaceInvoiceNotPaid } from "./handlers/marketplace/handleMarketplaceInvoidNotPaid.js";
 import { handleCreateResource } from "./handlers/resources/handleCreateResource.js";
+import { handleDeleteResource } from "./handlers/resources/handleDeleteResource.js";
+import { handleGetResource } from "./handlers/resources/handleGetResource.js";
+import { handleUpdateResource } from "./handlers/resources/handleUpdateResource.js";
+import { captureRawBody } from "./misc/rawBodyMiddleware.js";
+import { vercelOidcAuthMiddleware } from "./misc/vercelAuth.js";
 import { vercelSeederMiddleware } from "./misc/vercelMiddleware.js";
+import { vercelSignatureMiddleware } from "./misc/vercelSignatureMiddleware.js";
 
 export const vercelWebhookRouter = new Hono<HonoEnv>();
 
 vercelWebhookRouter.get(
 	"/:orgId/:env/v1/products/:integrationConfigurationId/plans",
 	vercelSeederMiddleware,
+	vercelOidcAuthMiddleware,
 	...handleListBillingPlansPerInstall,
 );
 
 vercelWebhookRouter.get(
 	"/:orgId/:env/v1/installations/:integrationConfigurationId/plans",
 	vercelSeederMiddleware,
+	vercelOidcAuthMiddleware,
 	...handleListBillingPlansPerInstall,
 );
 
 vercelWebhookRouter.get(
 	"/:orgId/:env/v1/installations/:integrationConfigurationId",
 	vercelSeederMiddleware,
+	vercelOidcAuthMiddleware,
 	...handleGetInstallation,
 );
 
 vercelWebhookRouter.put(
 	"/:orgId/:env/v1/installations/:integrationConfigurationId",
 	vercelSeederMiddleware,
+	vercelOidcAuthMiddleware,
 	...handleUpsertInstallation,
 );
 
 vercelWebhookRouter.patch(
 	"/:orgId/:env/v1/installations/:integrationConfigurationId",
 	vercelSeederMiddleware,
+	vercelOidcAuthMiddleware,
 	...handleUpdateBillingPlan,
 );
 
 vercelWebhookRouter.post(
 	"/:orgId/:env/v1/installations/:integrationConfigurationId/resources",
 	vercelSeederMiddleware,
+	vercelOidcAuthMiddleware,
 	...handleCreateResource,
+);
+
+vercelWebhookRouter.get(
+	"/:orgId/:env/v1/installations/:integrationConfigurationId/resources/:resourceId",
+	vercelSeederMiddleware,
+	vercelOidcAuthMiddleware,
+	...handleGetResource,
+);
+
+vercelWebhookRouter.patch(
+	"/:orgId/:env/v1/installations/:integrationConfigurationId/resources/:resourceId",
+	vercelSeederMiddleware,
+	vercelOidcAuthMiddleware,
+	...handleUpdateResource,
+);
+
+vercelWebhookRouter.delete(
+	"/:orgId/:env/v1/installations/:integrationConfigurationId/resources/:resourceId",
+	vercelSeederMiddleware,
+	vercelOidcAuthMiddleware,
+	...handleDeleteResource,
 );
 
 vercelWebhookRouter.delete(
 	"/:orgId/:env/v1/installations/:integrationConfigurationId",
 	vercelSeederMiddleware,
+	vercelOidcAuthMiddleware,
 	...handleDeleteInstallation,
 );
 
-// Vercel marketplace webhooks
-vercelWebhookRouter.all("/:orgId/:env/*", vercelSeederMiddleware, async (c) => {
-	const { db, org, env, logger } = c.get("ctx");
-	const method = c.req.method;
-	const params = c.req.param();
-	const headers = c.req.header();
-	let body: any;
-	try {
-		body = await c.req.json();
-	} catch {
-		body = {};
-	}
+// Vercel marketplace webhooks - POST with signature validation
+vercelWebhookRouter.post(
+	"/:orgId/:env/*",
+	vercelSeederMiddleware,
+	captureRawBody,
+	vercelSignatureMiddleware,
+	async (c) => {
+		const { db, org, env, logger } = c.get("ctx");
+		const params = c.req.param();
+		const headers = c.req.header();
+		let body: any;
+		try {
+			body = await c.req.json();
+		} catch {
+			body = {};
+		}
 
-	logger.info("Vercel webhook received", {
-		method,
-		eventType: body.type,
-		params,
-		headers,
-		body,
-	});
-	console.log("Vercel webhook headers", JSON.stringify(headers, null, 4));
-	console.log("Vercel webhook received", method, params, body);
+		logger.info("Vercel webhook received", {
+			method: "POST",
+			eventType: body.type,
+			params,
+			headers,
+			body,
+		});
+		console.log("Vercel webhook headers", JSON.stringify(headers, null, 4));
+		console.log("Vercel webhook received", "POST", params, body);
 
-	if (method === "POST") {
 		const eventType = body.type;
 
 		try {
@@ -93,7 +131,13 @@ vercelWebhookRouter.all("/:orgId/:env/*", vercelSeederMiddleware, async (c) => {
 					return c.json({ success: true }, 200);
 
 				case "marketplace.invoice.notpaid":
-					logger.warn("marketplace.invoice.notpaid not yet implemented");
+					await handleMarketplaceInvoiceNotPaid({
+						db,
+						org,
+						env: env as AppEnv,
+						logger,
+						payload: body.payload,
+					});
 					return c.json({ received: true }, 200);
 
 				default:
@@ -107,7 +151,10 @@ vercelWebhookRouter.all("/:orgId/:env/*", vercelSeederMiddleware, async (c) => {
 			});
 			return c.json({ error: error.message }, 500);
 		}
-	}
+	},
+);
 
+// Fallback for other methods
+vercelWebhookRouter.all("/:orgId/:env/*", vercelSeederMiddleware, async (c) => {
 	return c.body(null, 200);
 });

@@ -101,7 +101,7 @@ export type VercelUpsertInstallation = {
  * Type for a Vercel Provisioned Resource.
  * Represents all configuration and status for a user's provisioned integration resource.
  */
-export type VercelProvisionResource = {
+export type VercelResource = {
 	id: string; // The partner-specific ID of the resource
 	productId: string; // The partner-specific ID/slug of the product, eg. "redis"
 	protocolSettings?: {
@@ -182,4 +182,19 @@ export type VercelMarketplaceInvoice = {
 	};
 	invoiceDate: string; // ISO Date string
 	invoiceTotal: string; // Decimal as string
+};
+
+export type VercelError = {
+	error: {
+		code: "validation_error";
+		message: string;
+		user?: {
+			message: string;
+			url?: string | null;
+		} | null;
+		fields?: Array<{
+			key: string;
+			message?: string | null;
+		}> | null;
+	};
 };
