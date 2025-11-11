@@ -22,7 +22,8 @@
       "@/*": ["src/*"],
       "@shared/*": ["../shared/*"],
       "@scripts/*": ["scripts/*"],
-      "@emails/*": ["emails/*"]
+      "@emails/*": ["emails/*"],
+      "@tests/*": ["tests/*"]
     }
   },
   "include": ["src", "tests", "scripts", "emails"],

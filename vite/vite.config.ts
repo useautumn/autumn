@@ -35,6 +35,7 @@ export default defineConfig({
 			"better-auth",
 			"better-auth/react",
 			"@better-auth/stripe",
+			"zod/v4",
 		],
 	},
 	// Clear cache on config change
