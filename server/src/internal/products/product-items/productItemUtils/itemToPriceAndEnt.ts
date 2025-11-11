@@ -251,7 +251,8 @@ export const toFeatureAndPrice = ({
 		// console.log("Item config:", item.config);
 		if (shouldProrate(onDecrease) || onDecrease === OnDecrease.Prorate) {
 			onDecrease =
-				onIncrease === OnIncrease.ProrateImmediately
+				onIncrease === OnIncrease.ProrateImmediately ||
+				onIncrease === OnIncrease.BillImmediately
 					? OnDecrease.ProrateImmediately
 					: OnDecrease.ProrateNextCycle;
 		}

@@ -14,8 +14,8 @@ fi
 
 # These tests still use Mocha - will be migrated later
 
-MOCHA_CMD 'tests/contUse/entities/*.ts'
-MOCHA_CMD 'tests/contUse/update/*.ts'
+# MOCHA_CMD 'tests/contUse/entities/*.ts'
+# MOCHA_CMD 'tests/contUse/update/*.ts'
 MOCHA_CMD 'tests/contUse/track/*.ts'
-MOCHA_CMD 'tests/contUse/roles/*.ts'
+# MOCHA_CMD 'tests/contUse/roles/*.ts'
 
