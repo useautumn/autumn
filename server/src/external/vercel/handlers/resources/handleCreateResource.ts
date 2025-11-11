@@ -3,17 +3,18 @@ import { ErrCode } from "@shared/enums/ErrCode.js";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod/v4";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { createVercelSubscription } from "@/external/vercel/misc/vercelSubscriptions.js";
+import { VercelResourceService } from "@/external/vercel/services/VercelResourceService.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { generateId } from "@/utils/genUtils.js";
-import { createVercelSubscription } from "../../misc/createVercelSubscription.js";
 import { productToBillingPlan } from "../handleListBillingPlans.js";
 
 export const handleCreateResource = createRoute({
 	body: z.object({
 		productId: z.string().min(1),
 		name: z.string().min(1),
-		metadata: z.record(z.any()),
+		metadata: z.record(z.any(), z.any()),
 		billingPlanId: z.string().min(1),
 		externalId: z.string().optional(),
 		protocolSettings: z
@@ -71,7 +72,27 @@ export const handleCreateResource = createRoute({
 			});
 		}
 
-		// 2. Create subscription (installation-level billing - same as UPDATE flow)
+		// 2. Create resource in database (enforces 1-resource limit)
+		const resourceId = generateId("vre");
+
+		const resource = await VercelResourceService.create({
+			db,
+			resource: {
+				id: resourceId,
+				org_id: orgId,
+				env: env as AppEnv,
+				installation_id: integrationConfigurationId,
+				name,
+				status: "pending",
+				metadata: metadata ?? {},
+			},
+		});
+
+		logger.info("Resource created in database", {
+			resourceId: resource.id,
+		});
+
+		// 3. Create subscription (installation-level billing)
 		const { product } = await createVercelSubscription({
 			db,
 			org,
@@ -84,10 +105,9 @@ export const handleCreateResource = createRoute({
 			features,
 			logger,
 			c,
+			metadata,
+			resourceId,
 		});
-
-		// 3. Generate placeholder resource ID (no database storage yet)
-		const resourceId = generateId("vre");
 
 		// 4. Return resource response
 		return c.json({
