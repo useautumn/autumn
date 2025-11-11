@@ -1,19 +1,27 @@
-import { ApiFeatureType } from "@api/features/apiFeature.js";
+import { type ApiFeature, ApiFeatureType } from "@api/features/apiFeature.js";
 import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import {
 	AffectedResource,
 	defineVersionChange,
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
-import { resetIntvToEntIntv } from "@utils/planFeatureUtils/planFeatureIntervals.js";
-import { nullish } from "@utils/utils.js";
 import { Decimal } from "decimal.js";
 import type { z } from "zod/v4";
-import { ApiCusFeatureSchema } from "../apiCusFeature.js";
+import { EntInterval } from "../../../../models/productModels/entModels/entEnums.js";
+import { resetIntvToEntIntv } from "../../../../utils/planFeatureUtils/planFeatureIntervals.js";
+import {
+	type ApiBalance,
+	type ApiBalanceBreakdown,
+	ApiBalanceSchema,
+} from "../apiBalance.js";
 import {
 	type CusFeatureLegacyData,
 	CusFeatureLegacyDataSchema,
 } from "../cusFeatureLegacyData.js";
-import { ApiCusFeatureV3Schema } from "../previousVersions/apiCusFeatureV3.js";
+import {
+	type ApiCusFeatureV3Breakdown,
+	ApiCusFeatureV3Schema,
+} from "../previousVersions/apiCusFeatureV3.js";
+
 // overage_allowed: z.boolean().nullish().meta({
 // 	description: "Whether overage usage beyond the limit is allowed",
 // 	example: true,
@@ -23,111 +31,190 @@ import { ApiCusFeatureV3Schema } from "../previousVersions/apiCusFeatureV3.js";
  * Transform feature from V2.0 format to V1.2 format
  * Exported so it can be reused in other transformations (e.g., V1_2_CustomerChange)
  */
-export function transformCusFeatureToV3({
+
+const resetToV3IntervalParams = ({
 	input,
+	feature,
+	unlimited,
+}: {
+	input: ApiBalance | ApiBalanceBreakdown;
+	feature?: ApiFeature;
+	unlimited: boolean;
+}): {
+	interval: EntInterval | "multiple" | null;
+	interval_count: number | null;
+	next_reset_at: number | null;
+} => {
+	const isBoolean = feature?.type === ApiFeatureType.Boolean;
+
+	// 1. No reset
+	if (!input.reset)
+		return {
+			interval: null,
+			interval_count: isBoolean || unlimited ? null : 1,
+			next_reset_at: null,
+		};
+
+	// 2. Multiple interval
+	if (input.reset?.interval === "multiple") {
+		return {
+			interval: "multiple",
+			interval_count: null,
+			next_reset_at: null,
+		};
+	}
+
+	// 3. Single interval
+	return {
+		interval: resetIntvToEntIntv({ resetIntv: input.reset?.interval }),
+		interval_count: input.reset?.interval_count || 1,
+		next_reset_at: input.reset?.resets_at,
+	};
+};
+
+const toV3Type = ({ feature }: { feature?: ApiFeature }) => {
+	if (feature?.type === ApiFeatureType.Boolean) {
+		return ApiFeatureType.Static;
+	} else return feature?.type ?? ApiFeatureType.SingleUsage;
+};
+
+const toV3BalanceParams = ({
+	input,
+	feature,
+	unlimited,
 	legacyData,
 }: {
-	input: z.infer<typeof ApiCusFeatureSchema>;
+	input: ApiBalance | ApiBalanceBreakdown;
+	feature?: ApiFeature;
+	unlimited: boolean;
 	legacyData?: CusFeatureLegacyData;
-}): z.infer<typeof ApiCusFeatureV3Schema> {
-	const toUsageLimit = ({
-		maxPurchase,
-		startingBalance,
-	}: {
-		maxPurchase?: number;
-		startingBalance: number;
-	}) => {
-		return maxPurchase && startingBalance
-			? new Decimal(maxPurchase).add(startingBalance).toNumber()
-			: undefined;
-	};
+}) => {
+	const isBoolean = feature?.type === ApiFeatureType.Boolean;
 
-	const toV3Type = ({ type }: { type: ApiFeatureType }) => {
-		if (type === ApiFeatureType.Boolean) {
-			return ApiFeatureType.Static;
-		} else return type;
-	};
+	if (isBoolean || unlimited) {
+		return {
+			includedUsage: 0,
+			balance: 0,
+			usage: 0,
+			overageAllowed: false,
+			usageLimit: undefined,
+		};
+	}
 
-	const itemInterval = nullish(input.reset?.interval)
-		? "multiple"
-		: resetIntvToEntIntv({ resetIntv: input.reset?.interval });
+	const prepaidQuantity = legacyData?.prepaid_quantity ?? 0;
+	const overage = new Decimal(input.purchased_balance)
+		.sub(prepaidQuantity)
+		.toNumber();
 
 	// 1. Get included usage
 	const includedUsage = new Decimal(input.granted_balance)
-		.add(new Decimal(legacyData?.prepaid_quantity ?? 0))
+		.add(prepaidQuantity)
 		.toNumber();
 
-	// 2. Current balance
-	// Included usage - usage + adjustment = current balance?
-	const currentBalance = new Decimal(includedUsage)
-		.sub(new Decimal(input.usage))
-		.sub(new Decimal(legacyData?.total_adjustment ?? 0))
-		.toNumber();
-	// const balance = new Decimal(input.current_balance)
-	// 	.add(new Decimal(legacyData?.purchased_balance ?? 0))
-	// 	.toNumber();
+	// 2. Balance
+	const balance = new Decimal(input.current_balance).sub(overage).toNumber();
 
-	// const usageLimit = toUsageLimit({
-	// 	maxPurchase: input.max_purchase,
-	// 	startingBalance: input.starting_balance,
-	// });
+	// 3. Usage
+	const usage = new Decimal(input.usage).toNumber();
 
-	// const overageAllowed =
-	// 	Boolean(input.pay_per_use) && nullish(input.max_purchase);
+	// 4. Overage allowed
+	let overageAllowed = input.overage_allowed ?? false;
+	if (overageAllowed && input.max_purchase) {
+		overageAllowed = false;
+	}
 
-	// let newBreakdown: ApiCusFeatureV3Breakdown[] | undefined;
-	// if (input.breakdown && input.breakdown.length > 0) {
-	// 	newBreakdown = input.breakdown.map((breakdown) => {
-	// 		const interval = resetIntvToEntIntv({
-	// 			resetIntv: breakdown.reset_interval,
-	// 		});
+	// 5. Usage limit
 
-	// 		const usageLimit = toUsageLimit({
-	// 			maxPurchase: breakdown.max_purchase,
-	// 			startingBalance: breakdown.starting_balance,
-	// 		});
+	const usageLimit = input.max_purchase
+		? new Decimal(input.max_purchase).add(includedUsage).toNumber()
+		: undefined;
 
-	// 		return {
-	// 			interval,
-	// 			interval_count: breakdown.reset_interval_count || 1,
+	return { includedUsage, balance, usage, overageAllowed, usageLimit };
+};
 
-	// 			balance: breakdown.balance,
-	// 			usage: breakdown.usage,
-	// 			included_usage: breakdown.starting_balance,
-	// 			next_reset_at: breakdown.resets_at,
-	// 			usage_limit: usageLimit,
-	// 		} satisfies ApiCusFeatureV3Breakdown;
-	// 	});
-	// }
+export function transformBalanceToCusFeatureV3({
+	input,
+	legacyData,
+}: {
+	input: z.infer<typeof ApiBalanceSchema>;
+	legacyData?: CusFeatureLegacyData;
+}): z.infer<typeof ApiCusFeatureV3Schema> {
+	// 1. Is boolean feature
+
+	const feature = input.feature;
+	const isUnlimited = input.unlimited;
+
+	const { interval, interval_count, next_reset_at } = resetToV3IntervalParams({
+		input,
+		feature,
+		unlimited: isUnlimited,
+	});
+
+	const { includedUsage, balance, usage, overageAllowed, usageLimit } =
+		toV3BalanceParams({
+			input,
+			feature,
+			unlimited: isUnlimited,
+			legacyData,
+		});
+
+	let newBreakdown: ApiCusFeatureV3Breakdown[] | undefined;
+	if (input.breakdown && input.breakdown.length > 0) {
+		newBreakdown = input.breakdown.map((breakdown) => {
+			// const interval = resetIntvToEntIntv({
+			// 	resetIntv: breakdown.reset_interval,
+			// });
+			const { interval, interval_count, next_reset_at } =
+				resetToV3IntervalParams({
+					input: breakdown,
+					feature,
+					unlimited: isUnlimited,
+				});
+
+			const { includedUsage, balance, usage, overageAllowed, usageLimit } =
+				toV3BalanceParams({
+					input: breakdown,
+					feature,
+					unlimited: isUnlimited,
+					legacyData,
+				});
+
+			return {
+				interval:
+					interval === "multiple" || !interval ? EntInterval.Month : interval,
+
+				interval_count: interval_count,
+
+				balance: balance,
+				usage: usage,
+				included_usage: includedUsage,
+				next_reset_at: next_reset_at,
+				usage_limit: usageLimit,
+				overage_allowed: overageAllowed,
+			} satisfies ApiCusFeatureV3Breakdown;
+		});
+	}
 
 	// 1. Included usage: granted_balance, or if prepaid, granted_balance + purchased_balance (?)
 
-	const v3Type = toV3Type({
-		type: input.feature?.type ?? ApiFeatureType.SingleUsage,
-	});
-
-	const omitInterval = v3Type === ApiFeatureType.Static || input.unlimited;
-
 	return {
 		id: input.feature_id,
-		type: v3Type,
+		type: toV3Type({ feature }),
 
 		name: input.feature?.name ?? null,
 		unlimited: input.unlimited,
 
 		included_usage: includedUsage,
-		balance: currentBalance,
-		usage: input.usage,
-		next_reset_at: input.resets_at,
+		balance: balance,
+		usage: usage,
 
-		interval: omitInterval ? undefined : itemInterval,
-		interval_count: omitInterval
-			? undefined
-			: itemInterval === "multiple"
-				? null
-				: input.reset?.interval_count || 1,
+		usage_limit: usageLimit,
 
-		overage_allowed: input.pay_per_use,
+		interval: interval,
+		interval_count: interval_count,
+		next_reset_at: next_reset_at,
+
+		overage_allowed: overageAllowed,
 
 		credit_schema: input.feature?.credit_schema
 			? input.feature.credit_schema.map((credit) => ({
@@ -136,8 +223,7 @@ export function transformCusFeatureToV3({
 				}))
 			: undefined,
 
-		// breakdown: newBreakdown,
-		// usage_limit: usageLimit,
+		breakdown: newBreakdown,
 		rollovers: input.rollovers,
 	};
 }
@@ -157,7 +243,7 @@ export function transformCusFeatureToV3({
  * Output: ApiCusFeatureV3 (V1.2 format)
  */
 export const V1_2_CusFeatureChange = defineVersionChange({
-	newVersion: ApiVersion.V2,
+	newVersion: ApiVersion.V2_0,
 	oldVersion: ApiVersion.V1_2,
 	description: [
 		"Simplified customer feature schema",
@@ -165,9 +251,9 @@ export const V1_2_CusFeatureChange = defineVersionChange({
 		"Removed verbose fields",
 	],
 	affectedResources: [AffectedResource.Customer],
-	newSchema: ApiCusFeatureSchema,
+	newSchema: ApiBalanceSchema,
 	oldSchema: ApiCusFeatureV3Schema,
 	legacyDataSchema: CusFeatureLegacyDataSchema,
 
-	transformResponse: transformCusFeatureToV3,
+	transformResponse: transformBalanceToCusFeatureV3,
 });

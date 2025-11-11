@@ -25,10 +25,15 @@ export const keyToTitle = (
 		.replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
-// export const generateId = (prefix: string) => {
-// 	if (!prefix) {
-// 		return KSUID.randomSync().string;
-// 	} else {
-// 		return `${prefix}_${KSUID.randomSync().string}`;
-// 	}
-// };
+export const addToExpand = <T extends { expand: string[] }>({
+	ctx,
+	add,
+}: {
+	ctx: T;
+	add: string[];
+}): T => {
+	return {
+		...ctx,
+		expand: [...ctx.expand, ...add],
+	};
+};

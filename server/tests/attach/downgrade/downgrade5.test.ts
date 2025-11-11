@@ -4,13 +4,17 @@ import chalk from "chalk";
 import { addHours, addMonths } from "date-fns";
 import type Stripe from "stripe";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { products } from "tests/global.js";
-import { compareMainProduct } from "tests/utils/compare.js";
+import { expectCustomerV0Correct } from "tests/utils/expectUtils/expectCustomerV0Correct.js";
 import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import {
+	sharedProProduct,
+	sharedPremiumProduct,
+	initDowngradeSharedProducts,
+} from "./sharedProducts.js";
 
 const testCase = "downgrade5";
 describe(`${chalk.yellowBright(`${testCase}: testing basic downgrade (paid to paid)`)}`, () => {
@@ -21,6 +25,9 @@ describe(`${chalk.yellowBright(`${testCase}: testing basic downgrade (paid to pa
 
 	beforeAll(async () => {
 		stripeCli = ctx.stripeCli;
+
+		// Explicitly ensure shared products exist
+		await initDowngradeSharedProducts();
 
 		const { testClockId: testClockId_ } = await initCustomerV3({
 			ctx,
@@ -36,30 +43,31 @@ describe(`${chalk.yellowBright(`${testCase}: testing basic downgrade (paid to pa
 	test("should attach premium", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
-			productId: products.premium.id,
+			productId: sharedPremiumProduct.id,
 		});
 	});
 
 	test("should attach pro", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
-			productId: products.pro.id,
+			productId: sharedProProduct.id,
 		});
 	});
 
 	test("should have correct product and entitlements for scheduled pro", async () => {
 		const res = await AutumnCli.getCustomer(customerId);
 
-		compareMainProduct({
-			sent: products.premium,
+		expectCustomerV0Correct({
+			sent: sharedPremiumProduct,
 			cusRes: res,
+			ctx,
 		});
 
 		const { products: resProducts } = res;
 
 		const resPro = resProducts.find(
 			(p: any) =>
-				p.id === products.pro.id && p.status === CusProductStatus.Scheduled,
+				p.id === sharedProProduct.id && p.status === CusProductStatus.Scheduled,
 		);
 
 		expect(resPro).toBeDefined();
@@ -68,20 +76,21 @@ describe(`${chalk.yellowBright(`${testCase}: testing basic downgrade (paid to pa
 	test("should attach premium and remove scheduled pro", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
-			productId: products.premium.id,
+			productId: sharedPremiumProduct.id,
 		});
 
 		const res = await AutumnCli.getCustomer(customerId);
 		const resPro = res.products.find(
 			(p: any) =>
-				p.id === products.pro.id && p.status === CusProductStatus.Scheduled,
+				p.id === sharedProProduct.id && p.status === CusProductStatus.Scheduled,
 		);
 
 		expect(resPro).toBeUndefined();
 
-		compareMainProduct({
-			sent: products.premium,
+		expectCustomerV0Correct({
+			sent: sharedPremiumProduct,
 			cusRes: res,
+			ctx,
 		});
 	});
 
@@ -89,7 +98,7 @@ describe(`${chalk.yellowBright(`${testCase}: testing basic downgrade (paid to pa
 	test("should attach pro, advance stripe clock and have pro is attached", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
-			productId: products.pro.id,
+			productId: sharedProProduct.id,
 		});
 
 		await advanceTestClock({
@@ -103,8 +112,8 @@ describe(`${chalk.yellowBright(`${testCase}: testing basic downgrade (paid to pa
 		});
 
 		const res = await AutumnCli.getCustomer(customerId);
-		compareMainProduct({
-			sent: products.pro,
+		expectCustomerV0Correct({
+			sent: sharedProProduct,
 			cusRes: res,
 		});
 	});

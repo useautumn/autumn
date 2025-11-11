@@ -5,8 +5,8 @@ import { AppEnv } from "@models/genModels/genEnums.js";
 import { z } from "zod/v4";
 import { ApiCusReferralSchema } from "./components/apiCusReferral.js";
 import { ApiCusUpcomingInvoiceSchema } from "./components/apiCusUpcomingInvoice.js";
-import { ApiCusFeatureSchema } from "./cusFeatures/apiCusFeature.js";
-import { ApiCusPlanSchema } from "./cusPlans/apiCusPlan.js";
+import { ApiBalanceSchema } from "./cusFeatures/apiBalance.js";
+import { ApiSubscriptionSchema } from "./cusPlans/apiSubscription.js";
 
 export const ApiTrialsUsedSchema = z.object({
 	product_id: z.string(),
@@ -25,6 +25,7 @@ export const ApiCusExpandSchema = z.object({
 });
 
 export const ApiCustomerSchema = z.object({
+	autumn_id: z.string().optional(),
 	id: z.string(),
 	name: z.string().nullable(),
 	email: z.string().nullable(),
@@ -33,10 +34,8 @@ export const ApiCustomerSchema = z.object({
 	stripe_id: z.string().nullable(),
 	env: z.enum(AppEnv),
 	metadata: z.record(z.any(), z.any()),
-
-	plans: z.array(ApiCusPlanSchema),
-
-	features: z.record(z.string(), ApiCusFeatureSchema),
+	subscriptions: z.array(ApiSubscriptionSchema),
+	balances: z.record(z.string(), ApiBalanceSchema),
 	...ApiCusExpandSchema.shape,
 });
 

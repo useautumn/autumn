@@ -9,5 +9,5 @@ export enum CusExpand {
 	// PlansPlan = "plans.plan",
 	// FeaturesFeature = "features.feature",
 	Plan = "plan",
-	Feature = "feature",
+	BalanceFeature = "balance.feature",
 }

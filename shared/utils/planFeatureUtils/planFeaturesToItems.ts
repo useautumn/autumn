@@ -16,12 +16,12 @@ export const planFeaturesToItems = ({
 	features: (ApiPlanFeature | UpdatePlanFeatureParams)[];
 }): ProductItem[] =>
 	(features ?? []).map((feature) => {
-		// Determine interval: use reset_interval if present, otherwise use price.interval
-		const interval = feature.reset?.interval
-			? resetIntvToItemIntv(feature.reset.interval as ResetInterval)
-			: feature.price?.interval
-				? (feature.price.interval as any)
-				: null;
+		// // Determine interval: use reset_interval if present, otherwise use price.interval
+		// const interval = feature.reset?.interval
+		// 	? resetIntvToItemIntv(feature.reset.interval as ResetInterval)
+		// 	: feature.price?.interval
+		// 		? (feature.price.interval as any)
+		// 		: null;
 
 		return ProductItemSchema.parse({
 			feature_id: feature.feature_id,
@@ -55,6 +55,6 @@ export const planFeaturesToItems = ({
 			usage_limit: feature.price?.max_purchase
 				? feature.price.max_purchase + (feature.granted_balance ?? 0)
 				: undefined,
-			reset_usage_when_enabled: feature.reset?.when_enabled,
+			reset_usage_when_enabled: feature.reset?.reset_when_enabled,
 		} satisfies ProductItem);
 	});

@@ -351,10 +351,12 @@ export const createFullCusProduct = async ({
 	}
 
 	const cusProdId = generateId("cus_prod");
-	logger.info(
-		`Inserting cus product ${product.id} for ${customer.name}, cus product ID: ${cusProdId}`,
-	);
-	logger.info(productOptions);
+	logger.info(`Inserting cus product ${product.id} for ${customer.name}`, {
+		data: {
+			cusProductId: cusProdId,
+			productOptions: productOptions || undefined,
+		},
+	});
 
 	// 1. create customer entitlements
 	const cusEnts: CustomerEntitlement[] = [];

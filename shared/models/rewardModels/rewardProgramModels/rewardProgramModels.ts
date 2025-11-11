@@ -24,21 +24,21 @@ export const RewardProgram = z.object({
 
 export const CreateRewardProgram = z.object({
 	id: z.string(),
-	when: z.nativeEnum(RewardTriggerEvent),
+	when: z.enum(RewardTriggerEvent),
 	product_ids: z.array(z.string()).optional(),
 	exclude_trial: z.boolean().optional(),
 	internal_reward_id: z.string(),
 	max_redemptions: z.number().optional(),
-	received_by: z.nativeEnum(RewardReceivedBy),
+	received_by: z.enum(RewardReceivedBy),
 });
 
 export const UpdateRewardProgram = z.object({
-	when: z.nativeEnum(RewardTriggerEvent),
+	when: z.enum(RewardTriggerEvent),
 	product_ids: z.array(z.string()).optional(),
 	exclude_trial: z.boolean().optional(),
 	internal_reward_id: z.string(),
 	max_redemptions: z.number().optional(),
-	received_by: z.nativeEnum(RewardReceivedBy),
+	received_by: z.enum(RewardReceivedBy),
 });
 
 export type RewardProgram = z.infer<typeof RewardProgram>;

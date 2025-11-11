@@ -9,11 +9,9 @@ import { notNullish } from "@/utils/genUtils.js";
 export const cusEntMatchesEntity = ({
 	cusEnt,
 	entity,
-	features,
 }: {
 	cusEnt: FullCusEntWithFullCusProduct;
 	entity?: Entity;
-	features?: Feature[];
 }) => {
 	if (!entity) return true;
 
@@ -25,9 +23,6 @@ export const cusEntMatchesEntity = ({
 	}
 
 	let entityFeatureIdMatch = true;
-	// let feature = features?.find(
-	//   (f) => f.id == cusEnt.entitlement.entity_feature_id,
-	// );
 
 	if (notNullish(cusEnt.entitlement.entity_feature_id)) {
 		entityFeatureIdMatch =

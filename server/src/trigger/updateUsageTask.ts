@@ -23,7 +23,6 @@ import { sql } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { refreshCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 import { getFeatureBalance } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { deductFromApiCusRollovers } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverDeductionUtils.js";
 import { getCusEntsInFeatures } from "@/internal/customers/cusUtils/cusUtils.js";
@@ -493,7 +492,6 @@ export const updateUsage = async ({
 						org,
 						cusPrices: cusPrices as any[],
 						customer,
-						properties,
 						entity: customer.entity,
 					},
 					featureDeductions,
@@ -528,7 +526,6 @@ export const updateUsage = async ({
 			env,
 			features: allFeatures,
 			db,
-
 			feature,
 			cusEnts: originalCusEnts,
 			newCusEnts: cusEnts,
@@ -620,16 +617,24 @@ export const runUpdateUsageTask = async ({
 			},
 		);
 
-		await refreshCusCache({
-			db,
-			customerId,
-			entityId,
-			org,
-			env,
-		});
+		if (!cusEnts || cusEnts.length === 0) {
+			return;
+		}
+		console.log("   ✅ Usage updated");
 	} catch (error) {
-		logger.error(`ERROR UPDATING USAGE`);
-		logger.error(error);
+		if (logger) {
+			logger.use((log: any) => {
+				return {
+					...log,
+					data: payload,
+				};
+			});
+
+			logger.error(`ERROR UPDATING USAGE`);
+			logger.error(error);
+		} else {
+			console.log(error);
+		}
 
 		if (throwError) {
 			throw error;

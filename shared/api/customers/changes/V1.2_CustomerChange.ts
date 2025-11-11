@@ -5,9 +5,10 @@ import {
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
 import type { z } from "zod/v4";
 import { ApiCustomerSchema } from "../apiCustomer.js";
-import { transformCusFeatureToV3 } from "../cusFeatures/changes/V1.2_CusFeatureChange.js";
+import { transformBalanceToCusFeatureV3 } from "../cusFeatures/changes/V1.2_CusFeatureChange.js";
 import type { ApiCusFeatureV3 } from "../cusFeatures/previousVersions/apiCusFeatureV3.js";
-import { transformCusPlanToProductV3 } from "../cusPlans/changes/V1.2_CusPlanChange.js";
+import type { ApiSubscription } from "../cusPlans/apiSubscription.js";
+import { transformSubscriptionToCusProductV3 } from "../cusPlans/changes/V1.2_CusPlanChange.js";
 import type { ApiCusProductV3 } from "../cusPlans/previousVersions/apiCusProductV3.js";
 import { CustomerLegacyDataSchema } from "../customerLegacyData.js";
 import { ApiCustomerV3Schema } from "../previousVersions/apiCustomerV3.js";
@@ -34,7 +35,7 @@ import { ApiCustomerV3Schema } from "../previousVersions/apiCustomerV3.js";
  */
 
 export const V1_2_CustomerChange = defineVersionChange({
-	newVersion: ApiVersion.V2,
+	newVersion: ApiVersion.V2_0,
 	oldVersion: ApiVersion.V1_Beta,
 	description: [
 		"Products renamed to plans in SDK",
@@ -49,17 +50,20 @@ export const V1_2_CustomerChange = defineVersionChange({
 	// Response: V2.0 → V1.2
 	transformResponse: ({ input, legacyData }) => {
 		// Step 1: Transform plans V2.0 → V1.2 (products)
-		const v3CusProducts: ApiCusProductV3[] = input.plans.map((plan) =>
-			transformCusPlanToProductV3({
-				input: plan,
-				legacyData: legacyData?.cusProductLegacyData[plan.plan_id],
-			}),
+		const v3CusProducts: ApiCusProductV3[] = input.subscriptions.map(
+			(subscription: ApiSubscription) =>
+				transformSubscriptionToCusProductV3({
+					input: subscription,
+					legacyData: legacyData?.cusProductLegacyData[subscription.plan_id],
+				}),
 		);
 
 		// Step 2: Transform features V2.0 → V1.2
 		const v3_features: Record<string, ApiCusFeatureV3> = {};
-		for (const [featureId, feature] of Object.entries(input.features)) {
-			v3_features[featureId] = transformCusFeatureToV3({ input: feature });
+		for (const [featureId, feature] of Object.entries(input.balances)) {
+			v3_features[featureId] = transformBalanceToCusFeatureV3({
+				input: feature,
+			});
 		}
 
 		// Step 3: Return V1.2 customer format

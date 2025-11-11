@@ -79,7 +79,10 @@ export const updateProduct = async ({
 		features,
 	});
 
-	const newFreeTrial = updates.free_trial as FreeTrial | undefined;
+	const newFreeTrial =
+		"free_trial" in updates
+			? (updates.free_trial as FreeTrial | undefined)
+			: curProductV2.free_trial;
 	const newProductV2: ProductV2 = {
 		...curProductV2,
 		...updates,

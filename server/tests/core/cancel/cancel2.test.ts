@@ -46,7 +46,7 @@ describe(`${chalk.yellowBright("cancel2: Testing cancel at period end (with usag
 	let org: Organization;
 	let env: AppEnv;
 
-	before(async function () {
+	beforeAll(async function () {
 		await setupBefore(this);
 		const { autumnJs } = this;
 		db = this.db;

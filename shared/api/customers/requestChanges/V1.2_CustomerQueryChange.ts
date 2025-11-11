@@ -27,7 +27,7 @@ import { GetCustomerQuerySchema } from "../customerOpModels.js";
  */
 
 export const V1_2_CustomerQueryChange = defineVersionChange({
-	newVersion: ApiVersion.V2,
+	newVersion: ApiVersion.V2_0,
 	oldVersion: ApiVersion.V1_Beta,
 	description: [
 		"Automatically expands plans.plan and features.feature for V1.2 clients",
@@ -50,7 +50,11 @@ export const V1_2_CustomerQueryChange = defineVersionChange({
 		const existingExpand = input.expand || [];
 
 		// Add `plan` and `feature` to expand array
-		const newExpand = [...existingExpand, CusExpand.Plan, CusExpand.Feature];
+		const newExpand = [
+			...existingExpand,
+			CusExpand.Plan,
+			CusExpand.BalanceFeature,
+		];
 
 		return {
 			...input,

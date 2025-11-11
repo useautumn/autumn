@@ -7,6 +7,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { invoicesToResponse } from "@/internal/invoices/invoiceUtils.js";
+import { CusService } from "../../CusService.js";
 import { getCusPaymentMethodRes } from "../cusResponseUtils/getCusPaymentMethodRes.js";
 import { getCusReferrals } from "../cusResponseUtils/getCusReferrals.js";
 import { getCusRewards } from "../cusResponseUtils/getCusRewards.js";
@@ -14,13 +15,30 @@ import { getCusUpcomingInvoice } from "../cusResponseUtils/getCusUpcomingInvoice
 
 export const getApiCustomerExpand = async ({
 	ctx,
+	customerId,
 	fullCus,
 }: {
 	ctx: AutumnContext;
-	fullCus: FullCustomer;
+	customerId?: string;
+	fullCus?: FullCustomer;
 }): Promise<ApiCusExpand> => {
 	const { org, env, db, logger, expand } = ctx;
-	console.log("Expand: ", expand);
+
+	const asyncExpand = expand.filter((e) => e !== CusExpand.BalanceFeature);
+	if (asyncExpand.length === 0) return {};
+
+	if (!fullCus) {
+		fullCus = await CusService.getFull({
+			db,
+			idOrInternalId: customerId || "",
+			orgId: org.id,
+			env,
+			expand: expand as CusExpand[],
+			withEntities: expand.includes(CusExpand.Entities),
+			withSubs: true,
+		});
+	}
+
 	const getCusTrialsUsed = () => {
 		if (expand.includes(CusExpand.TrialsUsed)) {
 			return fullCus.trials_used;

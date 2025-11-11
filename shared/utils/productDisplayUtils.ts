@@ -64,8 +64,6 @@ export const getIntervalString = ({
 		intervalStr = "half year";
 	}
 
-	console.log("intervalStr", intervalStr);
-
 	if (!interval) return "";
 	if (intervalCount === 1) {
 		return `per ${intervalStr}`;

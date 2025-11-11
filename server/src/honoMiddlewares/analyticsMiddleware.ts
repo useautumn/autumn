@@ -56,13 +56,11 @@ const logResponse = async ({
 
 		// Log response in non-development environments
 		if (process.env.NODE_ENV !== "development") {
-			ctx.logger.info(
-				`[${c.res.status}] ${method} ${c.req.path} (${ctx.org?.slug})`,
-				{
-					statusCode: c.res.status,
-					res: responseBody,
-				},
-			);
+			const log = c.res.status === 200 ? ctx.logger.info : ctx.logger.warn;
+			log(`[${c.res.status}] ${c.req.path} (${ctx.org?.slug})`, {
+				statusCode: c.res.status,
+				res: responseBody,
+			});
 		}
 	} catch (error) {
 		console.error("Failed to log response to logtail");

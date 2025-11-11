@@ -1,3 +1,4 @@
+import { expect } from "bun:test";
 import {
 	type AppEnv,
 	CusProductStatus,
@@ -8,7 +9,6 @@ import {
 	type Organization,
 } from "@autumn/shared";
 import { notNullish } from "@shared/utils/utils.js";
-import { expect } from "chai";
 import type Stripe from "stripe";
 import { defaultApiVersion } from "tests/constants.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -80,7 +80,7 @@ const compareActualItems = async ({
 			});
 		}
 
-		expect(actualItem).to.exist;
+		expect(actualItem).toBeDefined();
 
 		if (actualItem?.quantity !== (expectedItem as any).quantity) {
 			if (phaseStartsAt) {
@@ -117,13 +117,12 @@ const compareActualItems = async ({
 			console.log("--------------------------------");
 		}
 
-		expect(actualItem?.quantity).to.equal(
+		expect(actualItem?.quantity).toBe(
 			(expectedItem as any).quantity,
-			`actual items quantity should be equals to ${expectedItem.quantity}`,
 		);
 	}
 
-	expect(actualItems.length).to.equal(expectedItems.length);
+	expect(actualItems.length).toBe(expectedItems.length);
 };
 
 export const expectSubToBeCorrect = async ({
@@ -167,7 +166,7 @@ export const expectSubToBeCorrect = async ({
 	if (!subId) {
 		const subIds = cusProductToSubIds({ cusProducts });
 		subId = subIds[0];
-		expect(subIds.length, "should only have 1 sub ID available").to.equal(1);
+		expect(subIds.length).toBe(1);
 	} else {
 		cusProducts = cusProducts.filter((cp) =>
 			cp.subscription_ids?.includes(subId!),
@@ -205,8 +204,7 @@ export const expectSubToBeCorrect = async ({
 		const apiVersion = cusProduct.api_semver || defaultApiVersion;
 
 		if (isFreeProduct(product.prices)) {
-			expect(cusProduct.subscription_ids, "free product should have no subs").to
-				.be.empty;
+			expect(cusProduct.subscription_ids).toEqual([]);
 			continue;
 		}
 
@@ -369,9 +367,9 @@ export const expectSubToBeCorrect = async ({
 			const corresponding = subCouponIds.find(
 				(subCouponId: any) => subCouponId === reward,
 			);
-			expect(corresponding, `reward ${reward} should be in sub`).to.exist;
+			expect(corresponding).toBeDefined();
 		}
-		expect(subCouponIds.length).to.equal(rewards.length);
+		expect(subCouponIds.length).toBe(rewards.length);
 	}
 
 	await compareActualItems({
@@ -383,11 +381,11 @@ export const expectSubToBeCorrect = async ({
 	});
 
 	if (shouldBeTrialing) {
-		expect(sub.status, "sub should be trialing").to.equal("trialing");
+		expect(sub.status).toBe("trialing");
 	}
 
 	if (flags?.checkNotTrialing) {
-		expect(sub.status, "sub should not be trialing").to.not.equal("trialing");
+		expect(sub.status).not.toBe("trialing");
 	}
 
 	// Should be canceled
@@ -424,9 +422,9 @@ export const expectSubToBeCorrect = async ({
 	// console.log("Final should be canceled:", finalShouldBeCanceled);
 
 	if (finalShouldBeCanceled) {
-		expect(sub.schedule, "sub should NOT have a schedule").to.be.null;
-		// expect(sub.cancel_at, "sub should be canceled").to.exist;
-		expect(subIsCanceled({ sub }), "sub should be canceled").to.be.true;
+		expect(sub.schedule).toBeNull();
+		// expect(sub.cancel_at).toBeDefined();
+		expect(subIsCanceled({ sub })).toBe(true);
 		return;
 	}
 
@@ -458,14 +456,14 @@ export const expectSubToBeCorrect = async ({
 		if (supposedPhase.items.length === 0) continue;
 
 		const actualPhase = schedule?.phases?.[i + 1];
-		expect(schedule?.phases.length).to.be.greaterThan(i + 1);
+		expect(schedule?.phases.length).toBeGreaterThan(i + 1);
 
 		expect(
 			similarUnix({
 				unix1: supposedPhase.start_date,
 				unix2: actualPhase!.start_date * 1000,
 			}),
-		).to.be.true;
+		).toBe(true);
 
 		const actualItems =
 			actualPhase?.items.map((item) => ({
@@ -483,9 +481,9 @@ export const expectSubToBeCorrect = async ({
 		});
 	}
 
-	expect(sub.cancel_at, "sub should not be canceled").to.be.null;
+	expect(sub.cancel_at).toBeNull();
 	// if (shouldBeCanceled) {
-	//   expect(sub.cancel_at, "sub should be canceled").to.exist;
+	//   expect(sub.cancel_at).toBeDefined();
 	// } else {
 	// }
 };

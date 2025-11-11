@@ -113,7 +113,9 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
 
 			await CusService.update({
 				db: req.db,
-				internalCusId: originalCustomer.internal_id,
+				idOrInternalId: originalCustomer.internal_id,
+				orgId: req.orgId,
+				env: req.env,
 				update: {
 					...newCusData,
 					processor: newStripeId

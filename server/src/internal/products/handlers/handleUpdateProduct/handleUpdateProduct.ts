@@ -56,7 +56,7 @@ export const handleUpdateProductV2 = createRoute({
 
 		// Convert to ProductV2 format only if client sent V2 Plan format
 		// V1.2 clients already send ProductV2, no conversion needed
-		const v1_2Body = ctx.apiVersion.gte(new ApiVersionClass(ApiVersion.V2))
+		const v1_2Body = ctx.apiVersion.gte(new ApiVersionClass(ApiVersion.V2_0))
 			? planToProductV2({ plan: body as ApiPlan })
 			: (body as UpdateProductV2Params);
 

@@ -1,46 +1,52 @@
-import { ApiCusFeatureV3Schema } from "@api/customers/cusFeatures/previousVersions/apiCusFeatureV3.js";
-import { ApiCusPlanSchema } from "@api/customers/cusPlans/apiCusPlan.js";
+import { ApiBalanceSchema } from "@api/customers/cusFeatures/apiBalance.js";
+import { ApiSubscriptionSchema } from "@api/customers/cusPlans/apiSubscription.js";
 import { ApiInvoiceSchema } from "@api/others/apiInvoice.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
 import { z } from "zod/v4";
 
+const entityDescriptions = {
+	id: "The unique identifier of the entity",
+	name: "The name of the entity",
+	customer_id: "The customer ID this entity belongs to",
+	feature_id: "The feature ID this entity belongs to",
+	created_at: "Unix timestamp when the entity was created",
+	env: "The environment (sandbox/live)",
+};
+
 export const ApiBaseEntitySchema = z.object({
+	autumn_id: z.string().optional(),
+
 	id: z.string().nullable().meta({
-		description: "The unique identifier of the entity",
-		example: "<string>",
+		description: entityDescriptions.id,
 	}),
 	name: z.string().nullable().meta({
-		description: "The name of the entity",
-		example: "<string>",
+		description: entityDescriptions.name,
 	}),
 	customer_id: z.string().nullish().meta({
-		description: "The customer ID this entity belongs to",
-		example: "<string>",
+		description: entityDescriptions.customer_id,
 	}),
-	feature_id: z.string().nullish(),
+	feature_id: z.string().nullish().meta({
+		description: entityDescriptions.feature_id,
+	}),
 	created_at: z.number().meta({
-		description: "Unix timestamp when the entity was created",
-		example: 1686168121,
+		description: entityDescriptions.created_at,
 	}),
 	env: z.enum(AppEnv).meta({
-		description: "The environment (sandbox/live)",
-		example: "live",
+		description: entityDescriptions.env,
 	}),
 });
 
 export const ApiEntitySchema = ApiBaseEntitySchema.extend({
-	plans: z.array(ApiCusPlanSchema).optional().meta({
+	subscriptions: z.array(ApiSubscriptionSchema).optional().meta({
 		description: "Plans associated with this entity",
 		example: [],
 	}),
-	features: z.record(z.string(), ApiCusFeatureV3Schema).optional().meta({
+	balances: z.record(z.string(), ApiBalanceSchema).optional().meta({
 		description: "Features associated with this entity",
-		example: {},
 	}),
 	invoices: z.array(ApiInvoiceSchema).optional().meta({
 		description:
 			"Invoices for this entity (only included when expand=invoices)",
-		example: [],
 	}),
 });
 

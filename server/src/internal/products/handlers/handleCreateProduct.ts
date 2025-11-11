@@ -104,7 +104,9 @@ export const createProduct = createRoute({
 		const ctx = c.get("ctx");
 
 		const v1_2Body = (
-			ctx.apiVersion.gte(ApiVersion.V2) ? planToProductV2({ plan: body }) : body
+			ctx.apiVersion.gte(ApiVersion.V2_0)
+				? planToProductV2({ plan: body })
+				: body
 		) as CreateProductV2Params;
 
 		const { logger, org, features, env, db } = ctx;

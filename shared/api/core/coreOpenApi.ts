@@ -3,8 +3,6 @@ import {
 	CheckoutResponseSchema,
 	ExtAttachBodySchema,
 	ExtCheckoutParamsSchema,
-	TrackParamsSchema,
-	TrackResponseSchema,
 } from "@api/models.js";
 import type { ZodOpenApiPathsObject } from "zod-openapi";
 import { SetUsageParamsSchema } from "../balances/usageModels.js";
@@ -13,14 +11,12 @@ import {
 	attachJsDoc,
 	billingPortalJsDoc,
 	cancelJsDoc,
-	checkJsDoc,
 	checkoutJsDoc,
 	queryJsDoc,
 	setUsageJsDoc,
 	setupPaymentJsDoc,
-	trackJsDoc,
 } from "../common/jsDocs.js";
-import { CheckParamsSchema, CheckResultSchema } from "./checkModels.js";
+// import { CheckParamsSchema, CheckResultSchema } from "./checkModels.js";
 import {
 	BillingPortalParamsSchema,
 	BillingPortalResultSchema,
@@ -103,24 +99,24 @@ export const coreOps: ZodOpenApiPathsObject = {
 			},
 		},
 	},
-	"/track": {
-		post: {
-			summary: "Track Event",
-			description: trackJsDoc,
-			tags: ["core"],
-			requestBody: {
-				content: {
-					"application/json": { schema: TrackParamsSchema },
-				},
-			},
-			responses: {
-				"200": {
-					description: "200 OK",
-					content: { "application/json": { schema: TrackResponseSchema } },
-				},
-			},
-		},
-	},
+	// "/track": {
+	// 	post: {
+	// 		summary: "Track Event",
+	// 		description: trackJsDoc,
+	// 		tags: ["core"],
+	// 		requestBody: {
+	// 			content: {
+	// 				"application/json": { schema: TrackParamsSchema },
+	// 			},
+	// 		},
+	// 		responses: {
+	// 			"200": {
+	// 				description: "200 OK",
+	// 				content: { "application/json": { schema: TrackResponseSchema } },
+	// 			},
+	// 		},
+	// 	},
+	// },
 	"/query": {
 		post: {
 			summary: "Query Analytics",
@@ -139,24 +135,24 @@ export const coreOps: ZodOpenApiPathsObject = {
 			},
 		},
 	},
-	"/check": {
-		post: {
-			summary: "Check Feature Access",
-			description: checkJsDoc,
-			tags: ["core"],
-			requestBody: {
-				content: {
-					"application/json": { schema: CheckParamsSchema },
-				},
-			},
-			responses: {
-				"200": {
-					description: "200 OK",
-					content: { "application/json": { schema: CheckResultSchema } },
-				},
-			},
-		},
-	},
+	// "/check": {
+	// 	post: {
+	// 		summary: "Check Feature Access",
+	// 		description: checkJsDoc,
+	// 		tags: ["core"],
+	// 		requestBody: {
+	// 			content: {
+	// 				"application/json": { schema: CheckParamsSchema },
+	// 			},
+	// 		},
+	// 		responses: {
+	// 			"200": {
+	// 				description: "200 OK",
+	// 				content: { "application/json": { schema: CheckResultSchema } },
+	// 			},
+	// 		},
+	// 	},
+	// },
 	"/setup_payment": {
 		post: {
 			summary: "Setup Payment Method",

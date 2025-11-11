@@ -39,9 +39,7 @@ export const initCusEntEntities = ({
 		: null;
 
 	for (const entity of entities) {
-		if (!entitlementLinkedToEntity({ entitlement, entity })) {
-			continue;
-		}
+		if (!entitlementLinkedToEntity({ entitlement, entity })) continue;
 
 		if (
 			existingCusEnt &&

@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	ApiVersion,
-	type CheckResponse,
+	type CheckResponseV1,
 	type LimitedItem,
 	SuccessCode,
 } from "@autumn/shared";
@@ -65,7 +65,7 @@ describe(`${chalk.yellowBright("credit-systems3: test /check fallback from meter
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,
 			required_balance: requiredAction1Units,
-		})) as unknown as CheckResponse;
+		})) as unknown as CheckResponseV1;
 
 		expect(res).toMatchObject({
 			allowed: true,
@@ -100,7 +100,7 @@ describe(`${chalk.yellowBright("credit-systems3: test /check fallback from meter
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,
 			required_balance: requiredAction1Units,
-		})) as unknown as CheckResponse;
+		})) as unknown as CheckResponseV1;
 
 		// Calculate the credit cost for the required Action1 units
 		const convertedCreditCost = featureToCreditSystem({

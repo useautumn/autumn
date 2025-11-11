@@ -12,14 +12,12 @@ export async function handleCusDiscountDeleted({
 	discount,
 	env,
 	logger,
-	res,
 }: {
 	db: DrizzleCli;
 	org: any;
 	discount: any;
 	env: any;
 	logger: any;
-	res: any;
 }) {
 	const customer = await CusService.getByStripeId({
 		db,
@@ -48,12 +46,12 @@ export async function handleCusDiscountDeleted({
 		`discount.deleted:, discount ID: ${discount.id}, found ${redemptions.length} redemptions`,
 	);
 
-	if (redemptions.length == 0) return;
+	if (redemptions.length === 0) return;
 
 	const paidProductRedemption = redemptions.find(
 		(r) =>
 			r.reward_program.reward.id ===
-			(typeof discount.coupon == "string"
+			(typeof discount.coupon === "string"
 				? discount.coupon
 				: discount.coupon.id),
 	);

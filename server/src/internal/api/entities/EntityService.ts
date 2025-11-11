@@ -1,8 +1,7 @@
+import { type Entity, ErrCode, entities } from "@autumn/shared";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode } from "@autumn/shared";
-import { Entity, entities } from "@autumn/shared";
-import { and, eq, inArray, sql } from "drizzle-orm";
 
 export class EntityService {
 	static async get({
@@ -69,7 +68,7 @@ export class EntityService {
 		db: DrizzleCli;
 		internalId: string;
 	}) {
-		let entity = await db.query.entities.findFirst({
+		const entity = await db.query.entities.findFirst({
 			where: (entities, { eq, and }) =>
 				and(eq(entities.internal_id, internalId)),
 		});

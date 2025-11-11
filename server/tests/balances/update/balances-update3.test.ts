@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { ApiVersion, type LimitedItem } from "@autumn/shared";
+import { type ApiCustomer, ApiVersion, type LimitedItem } from "@autumn/shared";
 import chalk from "chalk";
 import { TestFeature } from "tests/setup/v2Features.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
@@ -29,7 +29,7 @@ const testCase = "balances-update3";
 
 describe(`${chalk.yellowBright("balances-update3: Balance decoupling tests")}`, () => {
 	const customerId = testCase;
-	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2 });
+	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2_0 });
 
 	const getRawCusEnt = async () => {
 		const fullCus = await CusService.getFull({
@@ -50,8 +50,10 @@ describe(`${chalk.yellowBright("balances-update3: Balance decoupling tests")}`, 
 
 	const logState = async (label: string) => {
 		const cusEnt = await getRawCusEnt();
-		const customer = await autumnV2.customers.get(customerId);
-		const feature = customer.features[TestFeature.Users];
+		const customer = (await autumnV2.customers.get(
+			customerId,
+		)) as unknown as ApiCustomer;
+		const balance = customer.balances[TestFeature.Users];
 
 		console.log(`\n=== ${label} ===`);
 		console.log("DB:", {
@@ -60,10 +62,10 @@ describe(`${chalk.yellowBright("balances-update3: Balance decoupling tests")}`, 
 			add_grant: cusEnt?.additional_granted_balance,
 		});
 		console.log("API:", {
-			granted: feature.granted_balance,
-			purchased: feature.purchased_balance,
-			current: feature.current_balance,
-			usage: feature.usage,
+			granted: balance.granted_balance,
+			purchased: balance.purchased_balance,
+			current: balance.current_balance,
+			usage: balance.usage,
 		});
 	};
 
@@ -112,10 +114,10 @@ describe(`${chalk.yellowBright("balances-update3: Balance decoupling tests")}`, 
 		expect(cusEnt?.additional_granted_balance).toBe(10); // Added
 
 		const customer = await autumnV2.customers.get(customerId);
-		const feature = customer.features[TestFeature.Users];
+		const balance = customer.balances[TestFeature.Users];
 		// current = 0 + 0 + 10 = 10
-		expect(feature.current_balance).toBe(10);
-		expect(feature.granted_balance).toBe(10);
+		expect(balance.current_balance).toBe(10);
+		expect(balance.granted_balance).toBe(10);
 	});
 
 	test("CASE B: balances.update REMOVE with sufficient additional_balance", async () => {

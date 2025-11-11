@@ -20,7 +20,6 @@ import { Decimal } from "decimal.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { entityFeatureIdExists } from "@/internal/api/entities/entityUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { refreshCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { findCusEnt } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
 import {
@@ -702,7 +701,6 @@ export const updateCustomerBalance = async ({
 					org,
 					cusPrices: cusPrices as any[],
 					customer,
-					properties: event.properties,
 					entity: customer.entity,
 				},
 				featureDeductions,
@@ -721,7 +719,6 @@ export const updateCustomerBalance = async ({
 					org,
 					cusPrices: cusPrices as any[],
 					customer,
-					properties: event.properties,
 					entity: customer.entity,
 				},
 			});
@@ -774,16 +771,6 @@ export const runUpdateBalanceTask = async ({
 			entityId,
 			allFeatures,
 		});
-
-		// console.time("refreshCusCache");
-		await refreshCusCache({
-			db,
-			customerId,
-			org,
-			env,
-			entityId,
-		});
-		// console.timeEnd("refreshCusCache");
 
 		if (!cusEnts || cusEnts.length === 0) {
 			return;

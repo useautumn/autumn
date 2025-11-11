@@ -3,6 +3,7 @@ import { ApiVersion } from "@autumn/shared";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 import { TestFeature } from "tests/setup/v2Features.js";
+import { timeout } from "tests/utils/genUtils.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
@@ -74,6 +75,31 @@ describe(`${chalk.yellowBright("track-basic5: track specific feature_id only aff
 		});
 
 		const customer = await autumnV1.customers.get(customerId);
+
+		// action1 should be deducted
+		const expectedAction1Balance = new Decimal(100).sub(deductValue).toNumber();
+		expect(customer.features[TestFeature.Action1].balance).toBe(
+			expectedAction1Balance,
+		);
+		expect(customer.features[TestFeature.Action1].usage).toBe(deductValue);
+
+		// action2 and action3 should remain unchanged
+		expect(customer.features[TestFeature.Action2].balance).toBe(150);
+		expect(customer.features[TestFeature.Action2].usage).toBe(0);
+		expect(customer.features[TestFeature.Action3].balance).toBe(200);
+		expect(customer.features[TestFeature.Action3].usage).toBe(0);
+	});
+
+	test("should reflect deduction in non-cached customer after 2s", async () => {
+		const deductValue = 37.82;
+
+		// Wait 2 seconds for DB sync
+		await timeout(2000);
+
+		// Fetch customer with skip_cache=true
+		const customer = await autumnV1.customers.get(customerId, {
+			skip_cache: "true",
+		});
 
 		// action1 should be deducted
 		const expectedAction1Balance = new Decimal(100).sub(deductValue).toNumber();

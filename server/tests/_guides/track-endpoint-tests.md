@@ -70,11 +70,16 @@ const creditsFeature = constructFeatureItem({
 
 ```typescript
 const freeProd = constructProduct({
-  type: "free",
+  type: "free",  // IMPORTANT: Set type to "free" for immediate attachment
   isDefault: false,
   items: [messagesFeature, creditsFeature],
 });
 ```
+
+**IMPORTANT: Product Type**
+- **`type: "free"`** - Feature is attached to customer **immediately** after `attach()` call
+- **`type: "pro"` or other paid types** - Feature requires payment/subscription flow and may not be immediately available for testing
+- **Rule of thumb:** For track/check tests, always use `type: "free"` unless specifically testing paid subscription flows
 
 ### Step 3: Initialize Test Environment
 
@@ -459,6 +464,47 @@ describe(`${chalk.yellowBright("track-X: description")}`, () => {
 - Don't assume balance order without sorting
 - Don't forget to test concurrent scenarios
 
+## Testing Cached vs Non-Cached Customer Data
+
+After tracking, **always verify both the cached and non-cached customer** to ensure Redis cache and DB are in sync:
+
+```typescript
+test("should deduct exact value provided", async () => {
+  const deductValue = 23.47;
+
+  await autumnV1.track({
+    customer_id: customerId,
+    feature_id: TestFeature.Messages,
+    value: deductValue,
+  });
+
+  // Check cached customer (immediate)
+  const customer = await autumnV1.customers.get(customerId);
+  expect(customer.features[TestFeature.Messages].balance).toBe(100 - deductValue);
+  expect(customer.features[TestFeature.Messages].usage).toBe(deductValue);
+});
+
+test("should reflect deduction in non-cached customer after 2s", async () => {
+  const deductValue = 23.47;
+  
+  // Wait 2 seconds for DB sync
+  await timeout(2000);
+
+  // Fetch customer with skip_cache=true (direct from DB)
+  const customer = await autumnV1.customers.get(customerId, {
+    skip_cache: "true",
+  });
+  
+  expect(customer.features[TestFeature.Messages].balance).toBe(100 - deductValue);
+  expect(customer.features[TestFeature.Messages].usage).toBe(deductValue);
+});
+```
+
+**Why test both?**
+- **Cached customer**: Verifies Redis cache is updated immediately after tracking
+- **Non-cached customer**: Verifies DB write was successful (with 2s delay for batch sync)
+- Ensures data consistency across cache layer and database
+
 ## Checklist
 
 - [ ] Unique test case name (e.g., "track-basic1")
@@ -470,7 +516,7 @@ describe(`${chalk.yellowBright("track-X: description")}`, () => {
 - [ ] For credit systems: use `getCreditCost` helper
 - [ ] Verify both `balance` and `usage` fields
 - [ ] Test concurrent requests when relevant
-- [ ] No setTimeout/timeouts (track is synchronous)
+- [ ] **Test both cached and non-cached customer (with 2s delay for DB sync)**
 
 ## Common Pitfalls
 

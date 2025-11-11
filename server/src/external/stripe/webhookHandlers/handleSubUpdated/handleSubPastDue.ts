@@ -6,6 +6,7 @@ import {
 import type Stripe from "stripe";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { deleteCachedApiCustomer } from "../../../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 
 export const isSubPastDue = ({
 	previousAttributes,
@@ -67,5 +68,14 @@ export const handleSubPastDue = async ({
 				error,
 			});
 		}
+	}
+
+	const customerId = updatedCusProducts[0].customer?.id;
+	if (customerId) {
+		await deleteCachedApiCustomer({
+			customerId,
+			orgId: org.id,
+			env,
+		});
 	}
 };

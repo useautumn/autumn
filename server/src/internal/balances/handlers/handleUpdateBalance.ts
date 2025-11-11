@@ -14,6 +14,7 @@ export const handleUpdateBalance = createRoute({
 			usage: z.number().optional(),
 
 			// Internal
+			customer_entitlement_id: z.string().optional(),
 		})
 		.refine(
 			(data) => {
@@ -47,11 +48,16 @@ export const handleUpdateBalance = createRoute({
 				deductions: [
 					{
 						feature,
-						deduction: body.current_balance, // Target balance
+						deduction: 0,
+						targetBalance: body.current_balance,
 					},
 				],
 				skipAdditionalBalance: false,
 				alterGrantedBalance: true,
+				sortParams: {
+					cusEntId: body.customer_entitlement_id,
+				},
+				refreshCache: true,
 			});
 		}
 

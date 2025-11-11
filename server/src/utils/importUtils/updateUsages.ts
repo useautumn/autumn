@@ -1,8 +1,7 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
+import { cusProductsToCusEnts, type FullCustomer } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
-import { cusProductsToCusEnts } from "@autumn/shared";
-import { FullCustomer } from "@autumn/shared";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 
 export const updateUsages = async ({
 	featureId,
@@ -15,7 +14,7 @@ export const updateUsages = async ({
 	fullCus: FullCustomer;
 	db: DrizzleCli;
 }) => {
-	let cusEnts = cusProductsToCusEnts({
+	const cusEnts = cusProductsToCusEnts({
 		cusProducts: fullCus.customer_products,
 		inStatuses: RELEVANT_STATUSES,
 		featureId,
@@ -24,8 +23,8 @@ export const updateUsages = async ({
 		throw new Error(`No cus ent for ${featureId}`);
 	}
 
-	let cusEnt = cusEnts[0];
-	let newBalance = cusEnt.balance! - usage;
+	const cusEnt = cusEnts[0];
+	const newBalance = cusEnt.balance! - usage;
 
 	await CusEntService.update({
 		db,

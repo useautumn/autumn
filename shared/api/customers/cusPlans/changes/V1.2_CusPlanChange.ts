@@ -8,7 +8,10 @@ import { CusProductStatus } from "@models/cusProductModels/cusProductEnums.js";
 import { convertPlanToItems } from "@utils/planFeatureUtils/planToItems.js";
 import { getProductItemResponse } from "@utils/productV2Utils/productItemUtils/getProductItemRes.js";
 import type { z } from "zod/v4";
-import { type ApiCusPlan, ApiCusPlanSchema } from "../apiCusPlan.js";
+import {
+	type ApiSubscription,
+	ApiSubscriptionSchema,
+} from "../apiSubscription.js";
 import {
 	type CusProductLegacyData,
 	CusProductLegacyDataSchema,
@@ -19,14 +22,14 @@ import { ApiCusProductV3Schema } from "../previousVersions/apiCusProductV3.js";
  * Transform plan from V2.0 format to V1.2 product format
  * Exported so it can be reused in other transformations (e.g., V1_2_CustomerChange)
  */
-export function transformCusPlanToProductV3({
+export function transformSubscriptionToCusProductV3({
 	input,
 	legacyData,
 }: {
-	input: z.infer<typeof ApiCusPlanSchema>;
+	input: z.infer<typeof ApiSubscriptionSchema>;
 	legacyData?: CusProductLegacyData;
 }): z.infer<typeof ApiCusProductV3Schema> {
-	const cusPlanToCusProductV3Status = (plan: ApiCusPlan) => {
+	const cusPlanToCusProductV3Status = (plan: ApiSubscription) => {
 		if (plan.status === CusProductStatus.Active) {
 			if (plan.past_due) {
 				return "past_due";
@@ -95,7 +98,7 @@ export function transformCusPlanToProductV3({
  * Output: ApiCusProductV3 (V1.2 format with verbose fields)
  */
 export const V1_2_CusPlanChange = defineVersionChange({
-	newVersion: ApiVersion.V2,
+	newVersion: ApiVersion.V2_0,
 	oldVersion: ApiVersion.V1_2,
 	description: [
 		"Renamed products to plans",
@@ -103,10 +106,10 @@ export const V1_2_CusPlanChange = defineVersionChange({
 		"Added trial_ends_at field",
 	],
 	affectedResources: [AffectedResource.Customer],
-	newSchema: ApiCusPlanSchema,
+	newSchema: ApiSubscriptionSchema,
 	oldSchema: ApiCusProductV3Schema,
 
 	legacyDataSchema: CusProductLegacyDataSchema,
 
-	transformResponse: transformCusPlanToProductV3,
+	transformResponse: transformSubscriptionToCusProductV3,
 });

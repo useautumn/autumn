@@ -1,10 +1,11 @@
 import {
 	AffectedResource,
+	ApiVersion,
 	applyResponseVersionChanges,
 	type CheckParams,
 	CheckParamsSchema,
-	type CheckResult,
-	notNullish,
+	CheckQuerySchema,
+	type CheckResponseV2,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getTrackFeatureDeductions } from "../../balances/track/trackUtils/getFeatureDeductions.js";
@@ -16,6 +17,11 @@ import { handleProductCheck } from "./handlers/handleProductCheck.js";
 
 const DEFAULT_REQUIRED_BALANCE = 1;
 export const handleCheck = createRoute({
+	versionedQuery: {
+		latest: CheckQuerySchema,
+		[ApiVersion.V1_2]: CheckQuerySchema,
+	},
+	resource: AffectedResource.Check,
 	body: CheckParamsSchema,
 	handler: async (c) => {
 		const body = c.req.valid("json");
@@ -25,7 +31,6 @@ export const handleCheck = createRoute({
 			feature_id,
 			product_id,
 			entity_id,
-			customer_data,
 			required_quantity,
 			required_balance,
 			send_event,
@@ -47,24 +52,21 @@ export const handleCheck = createRoute({
 		const checkData = await getCheckData({
 			ctx,
 			body: body as CheckParams & { feature_id: string },
+			requiredBalance,
 		});
 
 		const v2Response = await getV2CheckResponse({
-			ctx,
 			checkData,
 			requiredBalance,
 		});
 
 		const preview = with_preview
 			? await getCheckPreview({
-					db: ctx.db,
-					allowed: v2Response.allowed,
-					balance: notNullish(v2Response.balance)
-						? v2Response.balance
-						: undefined,
-					feature: checkData.featureToUse!,
-					cusProducts: checkData.cusProducts,
-					allFeatures: ctx.features,
+					ctx,
+					checkResponse: v2Response,
+					checkData,
+					customerId: customer_id,
+					entityId: entity_id,
 				})
 			: undefined;
 
@@ -82,53 +84,26 @@ export const handleCheck = createRoute({
 					entityId: body.entity_id,
 					deductions: featureDeductions,
 					overageBehaviour: "cap",
+					refreshCache: true,
 					eventInfo: {
 						event_name: feature_id,
 						value: requiredBalance,
 						properties: body.properties,
 					},
 				});
-				// await handleEventSent({
-				// 	req: {
-				// 		...ctx,
-				// 		body: {
-				// 			...body,
-				// 			value: requiredBalance,
-				// 		},
-				// 	},
-				// 	customer_id: customer_id,
-				// 	customer_data: customer_data,
-				// 	event_data: {
-				// 		customer_id: customer_id,
-				// 		feature_id: feature_id,
-				// 		value: requiredBalance,
-				// 		entity_id: entity_id,
-				// 	},
-				// });
 			}
-
-			// else if (notNullish(event_data)) {
-			// 	await handleEventSent({
-			// 		req,
-			// 		customer_id: customer_id,
-			// 		customer_data: customer_data,
-			// 		event_data: {
-			// 			customer_id: customer_id,
-			// 			feature_id: feature_id,
-			// 			...event_data,
-			// 		},
-			// 	});
-			// }
 		}
 
 		// Apply version transformations based on API version
-		const transformedResponse = applyResponseVersionChanges<CheckResult>({
+
+		const transformedResponse = applyResponseVersionChanges<CheckResponseV2>({
 			input: v2Response,
 			targetVersion: ctx.apiVersion,
 			resource: AffectedResource.Check,
 			legacyData: {
-				noCusEnts: checkData.cusEnts.length === 0,
+				noCusEnts: checkData.apiBalance === undefined,
 				featureToUse: checkData.featureToUse,
+				cusFeatureLegacyData: checkData.cusFeatureLegacyData,
 			},
 		});
 
@@ -139,40 +114,20 @@ export const handleCheck = createRoute({
 	},
 });
 
-// // 2. If boolean, return true
-// if (feature.type === FeatureType.Boolean) {
-// 	return await getBooleanEntitledResult({
-// 		db,
-// 		fullCus,
-// 		res,
-// 		cusEnts,
-// 		feature,
-// 		apiVersion: req.apiVersion,
-// 		withPreview: req.body.with_preview,
-// 		cusProducts,
-// 		allFeatures,
-// 	});
-// }
-
-// const v1Response = getV1CheckResponse({
-// 	originalFeature: feature,
-// 	creditSystems,
-// 	cusEnts: cusEnts!,
-// 	quantity,
-// 	entityId: entity_id,
-// 	org,
+// await handleEventSent({
+// 	req: {
+// 		...ctx,
+// 		body: {
+// 			...body,
+// 			value: requiredBalance,
+// 		},
+// 	},
+// 	customer_id: customer_id,
+// 	customer_data: customer_data,
+// 	event_data: {
+// 		customer_id: customer_id,
+// 		feature_id: feature_id,
+// 		value: requiredBalance,
+// 		entity_id: entity_id,
+// 	},
 // });
-
-// let quantity = 1;
-// if (notNullish(requiredBalance)) {
-// 	const floatQuantity = parseFloat(requiredBalance);
-
-// 	if (Number.isNaN(floatQuantity)) {
-// 		throw new RecaseError({
-// 			message: "Invalid required_balance",
-// 			code: ErrCode.InvalidRequest,
-// 			statusCode: StatusCodes.BAD_REQUEST,
-// 		});
-// 	}
-// 	quantity = floatQuantity;
-// }

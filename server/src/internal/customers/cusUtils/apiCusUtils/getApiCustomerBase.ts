@@ -1,42 +1,36 @@
 import {
 	type ApiCustomer,
 	ApiCustomerSchema,
-	type CusProductLegacyData,
+	type CustomerLegacyData,
 	type FullCustomer,
 } from "@autumn/shared";
-import type { CusFeatureLegacyData } from "@shared/api/customers/cusFeatures/cusFeatureLegacyData.js";
 import { z } from "zod/v4";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
-import { getApiCusFeatures } from "./getApiCusFeature/getApiCusFeatures.js";
-import { getApiCusPlans } from "./getApiCusPlan/getApiCusPlans.js";
+import { getApiBalances } from "./getApiBalance/getApiBalances.js";
+import { getApiSubscriptions } from "./getApiSubscription/getApiSubscriptions.js";
 
 /**
  * Get base ApiCustomer without expand fields
  * This is the core customer object that can be cached
+ * By default, it includes the autumn_id
  */
 export const getApiCustomerBase = async ({
 	ctx,
 	fullCus,
-	withAutumnId = false,
+	withAutumnId = true,
 }: {
 	ctx: RequestContext;
 	fullCus: FullCustomer;
 	withAutumnId?: boolean;
-}): Promise<{
-	cus: ApiCustomer;
-	legacyData: {
-		cusProductLegacyData: Record<string, CusProductLegacyData>;
-		cusFeaturesLegacyData: Record<string, CusFeatureLegacyData>;
-	};
-}> => {
-	const { apiCusFeatures, legacyData: cusFeaturesLegacyData } =
-		await getApiCusFeatures({
+}): Promise<{ apiCustomer: ApiCustomer; legacyData: CustomerLegacyData }> => {
+	const { data: apiBalances, legacyData: cusFeatureLegacyData } =
+		await getApiBalances({
 			ctx,
 			fullCus,
 		});
 
-	const { apiCusPlans, legacyData: cusProductLegacyData } =
-		await getApiCusPlans({
+	const { data: apiSubscriptions, legacyData: cusProductLegacyData } =
+		await getApiSubscriptions({
 			ctx,
 			fullCus,
 		});
@@ -56,12 +50,15 @@ export const getApiCustomerBase = async ({
 		env: fullCus.env,
 		metadata: fullCus.metadata,
 
-		plans: apiCusPlans,
-		features: apiCusFeatures,
+		subscriptions: apiSubscriptions,
+		balances: apiBalances,
 	});
 
 	return {
-		cus: apiCustomer,
-		legacyData: { cusProductLegacyData, cusFeaturesLegacyData },
+		apiCustomer,
+		legacyData: {
+			cusProductLegacyData,
+			cusFeatureLegacyData,
+		},
 	};
 };

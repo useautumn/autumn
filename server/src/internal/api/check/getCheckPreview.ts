@@ -1,12 +1,11 @@
 import {
+	type CheckResponseV2,
 	cusProductToProduct,
-	type Feature,
 	FeaturePreviewScenario,
 	type FullCusProduct,
 	type FullEntitlement,
 	type FullProduct,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import {
@@ -18,25 +17,38 @@ import {
 	isProductUpgrade,
 } from "@/internal/products/productUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
+import { CusService } from "../../customers/CusService.js";
+import type { CheckData } from "./checkTypes/CheckData.js";
 
 export const getCheckPreview = async ({
-	db,
-	allowed,
-	balance,
-	feature,
-	cusProducts,
-	allFeatures,
+	ctx,
+	checkResponse,
+	checkData,
+	customerId,
+	entityId,
 }: {
-	db: DrizzleCli;
-	allowed: boolean;
-	balance?: number | null;
-	feature: Feature;
-	cusProducts: FullCusProduct[];
-	allFeatures: Feature[];
+	ctx: AutumnContext;
+	checkResponse: CheckResponseV2;
+	checkData: CheckData;
+	customerId: string;
+	entityId?: string;
 }) => {
-	if (allowed) {
-		return null;
-	}
+	const { allowed } = checkResponse;
+	const { apiBalance, featureToUse: feature } = checkData;
+
+	if (allowed) return null;
+
+	const { db, org, env, features: allFeatures } = ctx;
+	const fullCus = await CusService.getFull({
+		db,
+		idOrInternalId: customerId,
+		orgId: org.id,
+		env,
+		entityId,
+	});
+
+	const cusProducts = fullCus.customer_products;
 
 	const mainCusProds = cusProducts.filter(
 		(cp: FullCusProduct) => !cp.product.is_add_on,
@@ -109,7 +121,7 @@ export const getCheckPreview = async ({
 		),
 	);
 
-	const scenario = notNullish(balance)
+	const scenario = notNullish(apiBalance)
 		? FeaturePreviewScenario.UsageLimit
 		: FeaturePreviewScenario.FeatureFlag;
 
@@ -139,7 +151,7 @@ export const getCheckPreview = async ({
 
 	let msg = "";
 
-	if (notNullish(balance)) {
+	if (scenario === FeaturePreviewScenario.UsageLimit) {
 		msg = `You have reached the usage limit for ${feature.name.toLowerCase()}.`;
 
 		if (mainProds.length > 0) {

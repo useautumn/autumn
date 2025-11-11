@@ -6,7 +6,7 @@ import {
 	type FullCustomer,
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
-import { getApiCustomerBase } from "./getApiCustomerBase.js";
+import { getCachedApiCustomer } from "../apiCusCacheUtils/getCachedApiCustomer.js";
 import { getApiCustomerExpand } from "./getApiCustomerExpand.js";
 
 /**
@@ -14,39 +14,59 @@ import { getApiCustomerExpand } from "./getApiCustomerExpand.js";
  */
 export const getApiCustomer = async ({
 	ctx,
-	fullCus,
 	withAutumnId = false,
+	customerId,
+	fullCus,
+	skipCache = false,
+	baseData,
 }: {
 	ctx: RequestContext;
-	fullCus: FullCustomer;
 	withAutumnId?: boolean;
+	customerId?: string;
+	fullCus?: FullCustomer;
+	skipCache?: boolean;
+	baseData?: { apiCustomer: ApiCustomer; legacyData: CustomerLegacyData };
 }) => {
-	// Get base customer (cacheable)
-	const baseCustomer = await getApiCustomerBase({
-		ctx,
-		fullCus,
-		withAutumnId,
-	});
+	let baseCustomer: ApiCustomer;
+	let cusLegacyData: CustomerLegacyData;
+
+	if (!baseData) {
+		const { apiCustomer, legacyData } = await getCachedApiCustomer({
+			ctx,
+			customerId: customerId || "",
+			skipCache,
+		});
+		baseCustomer = apiCustomer;
+		cusLegacyData = legacyData;
+	} else {
+		baseCustomer = baseData.apiCustomer;
+		cusLegacyData = baseData.legacyData;
+	}
+
+	// Clean api customer
+	baseCustomer = {
+		...baseCustomer,
+		entities: undefined,
+		autumn_id: withAutumnId ? baseCustomer.autumn_id : undefined,
+	};
 
 	// Get expand fields (not cacheable)
 	const apiCusExpand = await getApiCustomerExpand({
 		ctx,
+		customerId,
 		fullCus,
 	});
 
 	// Merge expand fields
 	const apiCustomer = {
-		...baseCustomer.cus,
+		...baseCustomer,
 		...apiCusExpand,
 	};
 
 	// Get legacy data for version changes
 	return applyResponseVersionChanges<ApiCustomer, CustomerLegacyData>({
 		input: apiCustomer,
-		legacyData: {
-			cusProductLegacyData: baseCustomer.legacyData.cusProductLegacyData,
-			cusFeatureLegacyData: baseCustomer.legacyData.cusFeaturesLegacyData,
-		},
+		legacyData: cusLegacyData,
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Customer,
 	});

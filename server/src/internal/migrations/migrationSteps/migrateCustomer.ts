@@ -10,8 +10,8 @@ import type {
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { deleteCusCache } from "@/internal/customers/cusCache/updateCachedCus.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { deleteCachedApiCustomer } from "../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { migrationToAttachParams } from "../migrationUtils/migrationToAttachParams.js";
 import { runMigrationAttach } from "../migrationUtils/runMigrationAttach.js";
 
@@ -80,10 +80,9 @@ export const migrateCustomer = async ({
 				fromProduct,
 			});
 
-			await deleteCusCache({
-				db,
+			await deleteCachedApiCustomer({
 				customerId,
-				org,
+				orgId,
 				env,
 			});
 		}

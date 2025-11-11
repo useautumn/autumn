@@ -3,6 +3,7 @@ import {
 	CusExpand,
 	type CusProductStatus,
 	type Customer,
+	CustomerNotFoundError,
 	customers,
 	type EntityExpand,
 	ErrCode,
@@ -83,10 +84,8 @@ export class CusService {
 						return null as FullCustomer;
 					}
 
-					throw new RecaseError({
-						message: `Customer ${idOrInternalId} not found`,
-						code: ErrCode.CustomerNotFound,
-						statusCode: StatusCodes.NOT_FOUND,
+					throw new CustomerNotFoundError({
+						customerId: idOrInternalId,
 					});
 				}
 
@@ -232,18 +231,31 @@ export class CusService {
 
 	static async update({
 		db,
-		internalCusId,
+		idOrInternalId,
+		orgId,
+		env,
 		update,
 	}: {
 		db: DrizzleCli;
-		internalCusId: string;
+		idOrInternalId: string;
+		orgId: string;
+		env: AppEnv;
 		update: any;
 	}) {
 		try {
 			const results = await db
 				.update(customers)
 				.set(update)
-				.where(eq(customers.internal_id, internalCusId))
+				.where(
+					and(
+						or(
+							eq(customers.id, idOrInternalId),
+							eq(customers.internal_id, idOrInternalId),
+						),
+						eq(customers.org_id, orgId),
+						eq(customers.env, env),
+					),
+				)
 				.returning();
 
 			if (results && results.length > 0) {

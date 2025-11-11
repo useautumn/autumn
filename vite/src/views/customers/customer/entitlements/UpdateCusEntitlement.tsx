@@ -1,28 +1,29 @@
 import {
-	DialogTrigger,
-	DialogTitle,
-	DialogHeader,
-	DialogFooter,
-} from "@/components/ui/dialog";
-import { DialogContent } from "@/components/ui/dialog";
-import { Dialog } from "@/components/ui/dialog";
-import { FullCusProduct, FullCustomerEntitlement } from "@autumn/shared";
+	type FullCusProduct,
+	type FullCustomerEntitlement,
+	getCusEntBalance,
+} from "@autumn/shared";
+import { Decimal } from "decimal.js";
+import { AlertCircle } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useCustomerContext } from "../CustomerContext";
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { Input } from "@/components/ui/input";
-
-import { Button } from "@/components/ui/button";
-
-import { DateInputUnix } from "@/components/general/DateInputUnix";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { CusService } from "@/services/customers/CusService";
 import { toast } from "sonner";
-import { getBackendErr, notNullish } from "@/utils/genUtils";
 import CopyButton from "@/components/general/CopyButton";
-import { AlertCircle, Info, InfoIcon } from "lucide-react";
+import { DateInputUnix } from "@/components/general/DateInputUnix";
+import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { getBackendErr, notNullish } from "@/utils/genUtils";
+import { useCustomerContext } from "../CustomerContext";
 import { useCusQuery } from "../hooks/useCusQuery";
-import { getCusEntBalance } from "@autumn/shared";
 
 function UpdateCusEntitlement({
 	selectedCusEntitlement,
@@ -36,28 +37,8 @@ function UpdateCusEntitlement({
 
 	const cusEnt = selectedCusEntitlement;
 
-	console.log(
-		"Balance: ",
-		cusEnt
-			? getCusEntBalance({
-					cusEnt: cusEnt!,
-					entityId,
-				}).balance
-			: null,
-	);
-
 	const [updateLoading, setUpdateLoading] = useState(false);
 	const axiosInstance = useAxiosInstance();
-
-	console.log(
-		`Cus ent: ${cusEnt?.entitlement.feature_id}, Balances: `,
-		cusEnt
-			? getCusEntBalance({
-					cusEnt: cusEnt!,
-					entityId,
-				})
-			: null,
-	);
 
 	const [updateFields, setUpdateFields] = useState<any>({
 		balance: cusEnt
@@ -78,13 +59,13 @@ function UpdateCusEntitlement({
 	};
 
 	useEffect(() => {
+		if (!cusEnt) return;
+		const { balance, additional_balance } = getCusEntBalance({
+			cusEnt: cusEnt,
+			entityId,
+		});
 		setUpdateFields({
-			balance: cusEnt
-				? getCusEntBalance({
-						cusEnt: cusEnt!,
-						entityId,
-					}).balance
-				: null,
+			balance: new Decimal(balance).add(additional_balance).toNumber(),
 			next_reset_at: cusEnt?.next_reset_at,
 		});
 	}, [selectedCusEntitlement]);
@@ -104,23 +85,20 @@ function UpdateCusEntitlement({
 			return;
 		}
 
-		if (cusPrice && updateFields.next_reset_at != cusEnt.next_reset_at) {
+		if (cusPrice && updateFields.next_reset_at !== cusEnt.next_reset_at) {
 			toast.error(`Not allowed to change reset at for paid features`);
 			return;
 		}
 
 		setUpdateLoading(true);
 		try {
-			await CusService.updateCusEntitlement(
-				axiosInstance,
-				customer.id || customer.internal_id,
-				cusEnt.id,
-				{
-					balance: balanceInt,
-					next_reset_at: updateFields.next_reset_at,
-					entity_id: entityId,
-				},
-			);
+			await axiosInstance.post("/v1/balances/update", {
+				customer_id: customer.id || customer.internal_id,
+				feature_id: feature.id,
+				current_balance: balanceInt,
+				// usage: 0,
+			});
+
 			toast.success("Entitlement updated successfully");
 			await refetch();
 			setSelectedCusEntitlement(null);

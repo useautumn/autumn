@@ -1,19 +1,17 @@
 import {
 	type ApiEntity,
 	type Entity,
-	type EntityExpand,
 	ErrCode,
 	type FullCusProduct,
 	type FullCustomer,
 	notNullish,
 	type Subscription,
 } from "@autumn/shared";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { getApiCusPlans } from "@/internal/customers/cusUtils/apiCusUtils/getApiCusPlan/getApiCusPlans.js";
 import { getCusFeaturesResponse } from "@/internal/customers/cusUtils/cusFeatureResponseUtils/getCusFeaturesResponse.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { nullish } from "@/utils/genUtils.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
+import { getApiSubscriptions } from "../../customers/cusUtils/apiCusUtils/getApiSubscription/getApiSubscriptions.js";
 
 export const getSingleEntityResponse = async ({
 	ctx,
@@ -74,7 +72,7 @@ export const getSingleEntityResponse = async ({
 	// });
 
 	// const products: ApiCusProduct[] = [...main, ...addOns];
-	const { apiCusPlans, legacyData } = await getApiCusPlans({
+	const { data: apiSubscriptions, legacyData } = await getApiSubscriptions({
 		ctx,
 		fullCus: fullEntity,
 	});
@@ -95,95 +93,9 @@ export const getSingleEntityResponse = async ({
 			// feature_id: entity.feature_id,
 			customer_id: fullCus.id || fullCus.internal_id,
 			env,
-			plans: apiCusPlans,
+			plans: apiSubscriptions,
 			features: cusFeatures,
 		} satisfies ApiEntity,
 		legacyData,
-	};
-};
-
-export const getEntityResponse = async ({
-	ctx,
-	entityIds,
-	customerId,
-	expand,
-	entityId,
-	withAutumnId = false,
-	skipCache = false,
-}: {
-	ctx: AutumnContext;
-	entityIds: string[];
-	customerId: string;
-	expand?: EntityExpand[];
-	entityId?: string;
-	withAutumnId?: boolean;
-	skipCache?: boolean;
-}) => {
-	// const fullCus = await getCusWithCache({
-	// 	db,
-	// 	idOrInternalId: customerId,
-	// 	org,
-	// 	env,
-	// 	expand,
-	// 	entityId,
-	// 	logger,
-	// 	skipCache,
-	// });
-
-	// don't use cache anymore?
-
-	const { org, env, features, db } = ctx;
-
-	const fullCus = await CusService.getFull({
-		db,
-		idOrInternalId: customerId,
-		orgId: org.id,
-		env,
-		entityId,
-		expand,
-		withSubs: true,
-		withEntities: true,
-	});
-
-	if (!fullCus) {
-		throw new RecaseError({
-			message: `Customer ${customerId} not found`,
-			code: ErrCode.CustomerNotFound,
-			statusCode: 400,
-		});
-	}
-
-	const entityResponses: ApiEntity[] = [];
-
-	for (const entityId of entityIds) {
-		const entity = fullCus.entities.find(
-			(e: Entity) => e.id === entityId || e.internal_id === entityId,
-		);
-
-		if (!entity) {
-			throw new RecaseError({
-				message: `Entity ${entityId} not found for customer ${fullCus.id}`,
-				code: ErrCode.EntityNotFound,
-				statusCode: 400,
-			});
-		}
-
-		const { entity: entityData, legacyData: entityLegacyData } =
-			await getSingleEntityResponse({
-				ctx,
-				entityId,
-				fullCus,
-				entity,
-				withAutumnId,
-			});
-
-		entityResponses.push({ entity: entityData, legacyData: entityLegacyData });
-	}
-
-	return {
-		entities: entityResponses,
-		customer: fullCus,
-		fullEntities: fullCus.entities,
-		invoices: fullCus.invoices,
 	};
 };

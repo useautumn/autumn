@@ -4,9 +4,11 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import {
+	type ApiEntity,
 	type AttachBody,
 	type BalancesUpdateParams,
-	type CreateEntity,
+	type CreateCustomerParams,
+	type CreateEntityParams,
 	type CreateRewardProgram,
 	CusExpand,
 	EntityExpand,
@@ -25,6 +27,7 @@ import type {
 	Customer,
 	UsageParams,
 } from "autumn-js";
+import { defaultApiVersion } from "tests/constants.js";
 
 export default class AutumnError extends Error {
 	message: string;
@@ -71,7 +74,7 @@ export class AutumnInt {
 		};
 
 		if (version) {
-			this.headers["x-api-version"] = version.toString();
+			this.headers["x-api-version"] = version.toString() || defaultApiVersion;
 		}
 
 		if (orgConfig) {
@@ -290,10 +293,14 @@ export class AutumnInt {
 			customerId: string,
 			params?: {
 				expand?: CusExpand[];
+				skip_cache?: string;
+				with_autumn_id?: boolean;
 			},
 		): Promise<
 			Customer & {
 				invoices: any[];
+				autumn_id?: string;
+				entities?: ApiEntity[];
 			}
 		> => {
 			const queryParams = new URLSearchParams();
@@ -305,15 +312,35 @@ export class AutumnInt {
 			if (finalParams.expand) {
 				queryParams.append("expand", finalParams.expand.join(","));
 			}
-
+			if (finalParams.skip_cache) {
+				queryParams.append("skip_cache", finalParams.skip_cache);
+			}
+			if (finalParams.with_autumn_id) {
+				queryParams.append(
+					"with_autumn_id",
+					finalParams.with_autumn_id ? "true" : "false",
+				);
+			}
 			const data = await this.get(
 				`/customers/${customerId}?${queryParams.toString()}`,
 			);
 			return data;
 		},
 
-		create: async (customer: { id: string; email?: string; name?: string }) => {
-			const data = await this.post(`/customers?with_autumn_id=true`, customer);
+		create: async ({
+			withAutumnId = true,
+			expand = [],
+			...customerData
+		}: {
+			withAutumnId?: boolean;
+			expand?: CusExpand[];
+		} & CreateCustomerParams) => {
+			const data = await this.post(
+				`/customers?with_autumn_id=${withAutumnId ? "true" : "false"}${expand && expand.length > 0 ? `&expand=${expand.join(",")}` : ""}`,
+				{
+					...customerData,
+				},
+			);
 			return data;
 		},
 		delete: async (
@@ -332,16 +359,36 @@ export class AutumnInt {
 	};
 
 	entities = {
-		get: async (customerId: string, entityId: string) => {
+		get: async (
+			customerId: string,
+			entityId: string,
+			params?: {
+				expand?: EntityExpand[];
+				skip_cache?: string;
+			},
+		) => {
+			const queryParams = new URLSearchParams();
+			const defaultParams = {
+				expand: [EntityExpand.Invoices],
+			};
+
+			const finalParams = { ...defaultParams, ...params };
+			if (finalParams.expand) {
+				queryParams.append("expand", finalParams.expand.join(","));
+			}
+			if (finalParams.skip_cache) {
+				queryParams.append("skip_cache", finalParams.skip_cache);
+			}
+
 			const data = await this.get(
-				`/customers/${customerId}/entities/${entityId}?expand=${EntityExpand.Invoices}`,
+				`/customers/${customerId}/entities/${entityId}?${queryParams.toString()}`,
 			);
 			return data;
 		},
 
 		create: async (
 			customerId: string,
-			entity: CreateEntity | CreateEntity[],
+			entity: CreateEntityParams | CreateEntityParams[],
 		) => {
 			// let entities = Array.isArray(entity) ? entity : [entity];
 			const data = await this.post(

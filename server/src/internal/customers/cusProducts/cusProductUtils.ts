@@ -1,38 +1,23 @@
 import {
 	ACTIVE_STATUSES,
-	ApiCusPlanSchema,
-	ApiVersion,
-	type ApiVersionClass,
 	AttachScenario,
 	CusProductStatus,
-	type Entity,
-	type FixedPriceConfig,
 	type FullCusProduct,
 	type FullCustomer,
 	type FullProduct,
-	type Organization,
-	PriceType,
-	type Subscription,
-	TierInfinite,
-	type UsagePriceConfig,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import {
-	getPriceOptions,
-	getUsageTier,
-} from "@/internal/products/prices/priceUtils.js";
 import { isDefaultTrialFullProduct } from "@/internal/products/productUtils/classifyProduct.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
-import { notNullish, nullish } from "@/utils/genUtils.js";
+import { nullish } from "@/utils/genUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { handleAddProduct } from "../attach/attachFunctions/addProductFlow/handleAddProduct.js";
 import { newCusToAttachParams } from "../attach/attachUtils/attachParams/convertToParams.js";
 import { initStripeCusAndProducts } from "../handlers/handleCreateCustomer.js";
 import { CusProductService, RELEVANT_STATUSES } from "./CusProductService.js";
-import { getRelatedCusEnt } from "./cusPrices/cusPriceUtils.js";
 import { getExistingCusProducts } from "./cusProductUtils/getExistingCusProducts.js";
 
 export const getDefaultProduct = async ({
@@ -175,162 +160,162 @@ export const activateFutureProduct = async ({
 	return futureProduct;
 };
 
-export const processFullCusProduct = ({
-	cusProduct,
-	subs,
-	org,
-	entities = [],
-	apiVersion,
-}: {
-	cusProduct: FullCusProduct;
-	org: Organization;
-	subs?: Subscription[];
-	entities?: Entity[];
-	apiVersion: ApiVersionClass;
-}) => {
-	// Process prices
+// export const processFullCusProduct = ({
+// 	cusProduct,
+// 	subs,
+// 	org,
+// 	entities = [],
+// 	apiVersion,
+// }: {
+// 	cusProduct: FullCusProduct;
+// 	org: Organization;
+// 	subs?: Subscription[];
+// 	entities?: Entity[];
+// 	apiVersion: ApiVersionClass;
+// }) => {
+// 	// Process prices
 
-	const prices = cusProduct.customer_prices.map((cp) => {
-		const price = cp.price;
+// 	const prices = cusProduct.customer_prices.map((cp) => {
+// 		const price = cp.price;
 
-		if (price.config?.type === PriceType.Fixed) {
-			const config = price.config as FixedPriceConfig;
-			return {
-				amount: config.amount,
-				interval: config.interval,
-			};
-		} else {
-			const config = price.config as UsagePriceConfig;
-			const priceOptions = getPriceOptions(price, cusProduct.options);
-			const usageTier = getUsageTier(price, priceOptions?.quantity!);
-			const cusEnt = getRelatedCusEnt({
-				cusPrice: cp,
-				cusEnts: cusProduct.customer_entitlements,
-			});
+// 		if (price.config?.type === PriceType.Fixed) {
+// 			const config = price.config as FixedPriceConfig;
+// 			return {
+// 				amount: config.amount,
+// 				interval: config.interval,
+// 			};
+// 		} else {
+// 			const config = price.config as UsagePriceConfig;
+// 			const priceOptions = getPriceOptions(price, cusProduct.options);
+// 			const usageTier = getUsageTier(price, priceOptions?.quantity!);
+// 			const cusEnt = getRelatedCusEnt({
+// 				cusPrice: cp,
+// 				cusEnts: cusProduct.customer_entitlements,
+// 			});
 
-			const ent = cusEnt?.entitlement;
+// 			const ent = cusEnt?.entitlement;
 
-			const singleTier =
-				ent?.allowance === 0 && config.usage_tiers.length === 1;
+// 			const singleTier =
+// 				ent?.allowance === 0 && config.usage_tiers.length === 1;
 
-			if (singleTier) {
-				return {
-					amount: usageTier.amount,
-					interval: config.interval,
-					quantity: priceOptions?.quantity,
-				};
-			} else {
-				// Add allowance to tiers
-				const allowance = ent?.allowance;
-				let tiers;
+// 			if (singleTier) {
+// 				return {
+// 					amount: usageTier.amount,
+// 					interval: config.interval,
+// 					quantity: priceOptions?.quantity,
+// 				};
+// 			} else {
+// 				// Add allowance to tiers
+// 				const allowance = ent?.allowance;
+// 				let tiers;
 
-				if (notNullish(allowance) && allowance! > 0) {
-					tiers = [
-						{
-							to: allowance,
-							amount: 0,
-						},
-						...config.usage_tiers.map((tier) => {
-							const isLastTier = tier.to === -1 || tier.to === TierInfinite;
-							return {
-								to: isLastTier ? tier.to : Number(tier.to) + allowance!,
-								amount: tier.amount,
-							};
-						}),
-					];
-				} else {
-					tiers = config.usage_tiers.map((tier) => {
-						const isLastTier = tier.to === -1 || tier.to === TierInfinite;
-						return {
-							to: isLastTier ? tier.to : Number(tier.to) + allowance!,
-							amount: tier.amount,
-						};
-					});
-				}
+// 				if (notNullish(allowance) && allowance! > 0) {
+// 					tiers = [
+// 						{
+// 							to: allowance,
+// 							amount: 0,
+// 						},
+// 						...config.usage_tiers.map((tier) => {
+// 							const isLastTier = tier.to === -1 || tier.to === TierInfinite;
+// 							return {
+// 								to: isLastTier ? tier.to : Number(tier.to) + allowance!,
+// 								amount: tier.amount,
+// 							};
+// 						}),
+// 					];
+// 				} else {
+// 					tiers = config.usage_tiers.map((tier) => {
+// 						const isLastTier = tier.to === -1 || tier.to === TierInfinite;
+// 						return {
+// 							to: isLastTier ? tier.to : Number(tier.to) + allowance!,
+// 							amount: tier.amount,
+// 						};
+// 					});
+// 				}
 
-				return {
-					tiers: tiers,
-					name: "",
-					quantity: priceOptions?.quantity,
-				};
-			}
-		}
-	});
+// 				return {
+// 					tiers: tiers,
+// 					name: "",
+// 					quantity: priceOptions?.quantity,
+// 				};
+// 			}
+// 		}
+// 	});
 
-	const trialing =
-		cusProduct.trial_ends_at && cusProduct.trial_ends_at > Date.now();
+// 	const trialing =
+// 		cusProduct.trial_ends_at && cusProduct.trial_ends_at > Date.now();
 
-	const subIds = cusProduct.subscription_ids;
-	let stripeSubData = {};
+// 	const subIds = cusProduct.subscription_ids;
+// 	let stripeSubData = {};
 
-	if (subIds && subIds.length > 0 && apiVersion.gte(ApiVersion.V0_2)) {
-		const baseSub = subs?.find(
-			(s) => s.id === subIds[0] || (s as Subscription).stripe_id === subIds[0],
-		);
-		stripeSubData = {
-			current_period_end: baseSub?.current_period_end
-				? baseSub.current_period_end * 1000
-				: null,
-			current_period_start: baseSub?.current_period_start
-				? baseSub.current_period_start * 1000
-				: null,
-		};
-	}
+// 	if (subIds && subIds.length > 0 && apiVersion.gte(ApiVersion.V0_2)) {
+// 		const baseSub = subs?.find(
+// 			(s) => s.id === subIds[0] || (s as Subscription).stripe_id === subIds[0],
+// 		);
+// 		stripeSubData = {
+// 			current_period_end: baseSub?.current_period_end
+// 				? baseSub.current_period_end * 1000
+// 				: null,
+// 			current_period_start: baseSub?.current_period_start
+// 				? baseSub.current_period_start * 1000
+// 				: null,
+// 		};
+// 	}
 
-	if (!subIds && trialing) {
-		stripeSubData = {
-			current_period_start: cusProduct.starts_at,
-			current_period_end: cusProduct.trial_ends_at,
-		};
-	}
+// 	if (!subIds && trialing) {
+// 		stripeSubData = {
+// 			current_period_start: cusProduct.starts_at,
+// 			current_period_end: cusProduct.trial_ends_at,
+// 		};
+// 	}
 
-	if (apiVersion.gte(ApiVersion.V1_1)) {
-		if ((!subIds || subIds.length === 0) && trialing) {
-			stripeSubData = {
-				current_period_start: cusProduct.starts_at,
-				current_period_end: cusProduct.trial_ends_at,
-			};
-		}
+// 	if (apiVersion.gte(ApiVersion.V1_1)) {
+// 		if ((!subIds || subIds.length === 0) && trialing) {
+// 			stripeSubData = {
+// 				current_period_start: cusProduct.starts_at,
+// 				current_period_end: cusProduct.trial_ends_at,
+// 			};
+// 		}
 
-		return ApiCusPlanSchema.parse({
-			id: cusProduct.product.id,
-			name: cusProduct.product.name,
-			group: cusProduct.product.group || null,
-			status: trialing ? CusProductStatus.Trialing : cusProduct.status,
-			canceled_at: cusProduct.canceled_at,
-			is_default: cusProduct.product.is_default || false,
-			is_add_on: cusProduct.product.is_add_on || false,
-			stripe_subscription_ids: cusProduct.subscription_ids || [],
-			started_at: cusProduct.starts_at,
-			entity_id: cusProduct.internal_entity_id
-				? entities?.find((e) => e.internal_id === cusProduct.internal_entity_id)
-						?.id
-				: cusProduct.entity_id || undefined,
+// 		return ApiSubscriptionSchema.parse({
+// 			id: cusProduct.product.id,
+// 			name: cusProduct.product.name,
+// 			group: cusProduct.product.group || null,
+// 			status: trialing ? CusProductStatus.Trialing : cusProduct.status,
+// 			canceled_at: cusProduct.canceled_at,
+// 			is_default: cusProduct.product.is_default || false,
+// 			is_add_on: cusProduct.product.is_add_on || false,
+// 			stripe_subscription_ids: cusProduct.subscription_ids || [],
+// 			started_at: cusProduct.starts_at,
+// 			entity_id: cusProduct.internal_entity_id
+// 				? entities?.find((e) => e.internal_id === cusProduct.internal_entity_id)
+// 						?.id
+// 				: cusProduct.entity_id || undefined,
 
-			...stripeSubData,
-		});
-	} else {
-		const cusProductResponse = {
-			id: cusProduct.product.id,
-			name: cusProduct.product.name,
-			group: cusProduct.product.group,
-			status: trialing ? CusProductStatus.Trialing : cusProduct.status,
-			created_at: cusProduct.created_at,
-			canceled_at: cusProduct.canceled_at,
-			processor: {
-				type: cusProduct.processor?.type,
-				subscription_id: cusProduct.processor?.subscription_id || null,
-			},
-			subscription_ids: cusProduct.subscription_ids || [],
-			prices: prices,
-			starts_at: cusProduct.starts_at,
+// 			...stripeSubData,
+// 		});
+// 	} else {
+// 		const cusProductResponse = {
+// 			id: cusProduct.product.id,
+// 			name: cusProduct.product.name,
+// 			group: cusProduct.product.group,
+// 			status: trialing ? CusProductStatus.Trialing : cusProduct.status,
+// 			created_at: cusProduct.created_at,
+// 			canceled_at: cusProduct.canceled_at,
+// 			processor: {
+// 				type: cusProduct.processor?.type,
+// 				subscription_id: cusProduct.processor?.subscription_id || null,
+// 			},
+// 			subscription_ids: cusProduct.subscription_ids || [],
+// 			prices: prices,
+// 			starts_at: cusProduct.starts_at,
 
-			...stripeSubData,
-		};
+// 			...stripeSubData,
+// 		};
 
-		return cusProductResponse;
-	}
-};
+// 		return cusProductResponse;
+// 	}
+// };
 
 export const searchCusProducts = ({
 	productId,

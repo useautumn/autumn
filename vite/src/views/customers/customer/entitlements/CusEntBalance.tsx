@@ -3,6 +3,7 @@ import {
 	FeatureType,
 	type FullCusEntWithFullCusProduct,
 } from "@autumn/shared";
+import { Decimal } from "decimal.js";
 import { useCustomerContext } from "../CustomerContext";
 
 const BalanceWrapper = ({ children }: { children: React.ReactNode }) => {
@@ -57,7 +58,7 @@ export const CusEntBalance = ({
 
 	if (cusEnt.entities) {
 		const totalBalance = Object.values(cusEnt.entities).reduce(
-			(sum, entity) => sum + (entity.balance || 0),
+			(sum, entity) => sum + (entity.balance || 0) + entity.additional_balance,
 			0,
 		);
 
@@ -66,7 +67,8 @@ export const CusEntBalance = ({
 			return (
 				sum +
 				Object.values(rollover.entities).reduce(
-					(entitySum: number, entity: any) => entitySum + (entity.balance || 0),
+					(entitySum: number, entity: any) =>
+						entitySum + (entity.balance || 0) + entity.additional_balance,
 					0,
 				)
 			);
@@ -94,7 +96,9 @@ export const CusEntBalance = ({
 	return (
 		<BalanceWrapper>
 			<p>
-				{cusEnt.balance}
+				{new Decimal(cusEnt.balance ?? 0)
+					.add(cusEnt.additional_balance)
+					.toNumber()}
 				{rolloverAmount > 0 && (
 					<span className="text-t3"> + {rolloverAmount} (rolled over)</span>
 				)}

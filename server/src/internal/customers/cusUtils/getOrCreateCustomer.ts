@@ -8,12 +8,8 @@ import {
 } from "@autumn/shared";
 import { autoCreateEntity } from "@/internal/entities/handlers/handleCreateEntity/autoCreateEntity.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { CusService } from "../CusService.js";
-import { getCusWithCache } from "../cusCache/getCusWithCache.js";
-import {
-	deleteCusCache,
-	refreshCusCache,
-} from "../cusCache/updateCachedCus.js";
 import { handleCreateCustomer } from "../handlers/handleCreateCustomer.js";
 import { updateCustomerDetails } from "./cusUtils.js";
 
@@ -55,30 +51,18 @@ export const getOrCreateCustomer = async ({
 	}
 
 	if (!skipGet && customerId) {
-		if (withCache) {
-			customer = await getCusWithCache({
-				db,
-				idOrInternalId: customerId,
-				org,
-				env,
-				entityId,
-				expand: expand as CusExpand[],
-				logger,
-			});
-		} else {
-			customer = await CusService.getFull({
-				db,
-				idOrInternalId: customerId,
-				orgId: org.id,
-				env,
-				inStatuses,
-				withEntities,
-				entityId,
-				expand,
-				allowNotFound: true,
-				withSubs: true,
-			});
-		}
+		customer = await CusService.getFull({
+			db,
+			idOrInternalId: customerId,
+			orgId: org.id,
+			env,
+			inStatuses,
+			withEntities,
+			entityId,
+			expand,
+			allowNotFound: true,
+			withSubs: true,
+		});
 	}
 
 	if (!customer) {
@@ -92,7 +76,9 @@ export const getOrCreateCustomer = async ({
 					fingerprint: customerData?.fingerprint,
 					metadata: customerData?.metadata || {},
 					stripe_id: customerData?.stripe_id,
+					// default_product_id: customerData?.default_product_id,
 				},
+				createDefaultProducts: customerData?.disable_default !== true,
 			})) as FullCustomer;
 
 			customer = await CusService.getFull({
@@ -105,13 +91,6 @@ export const getOrCreateCustomer = async ({
 				entityId,
 				expand,
 				withSubs: true,
-			});
-
-			await deleteCusCache({
-				db,
-				customerId: customer.id || customer.internal_id,
-				org,
-				env,
 			});
 		} catch (error: any) {
 			if (error?.data?.code === "23505" && customerId) {
@@ -132,13 +111,25 @@ export const getOrCreateCustomer = async ({
 		}
 	}
 
-	customer = await updateCustomerDetails({
-		db,
+	const updated = await updateCustomerDetails({
+		ctx: req as unknown as AutumnContext,
 		customer,
 		customerData,
-		org,
-		logger,
 	});
+
+	if (updated) {
+		customer = await CusService.getFull({
+			db,
+			idOrInternalId: customer.id || customer.internal_id,
+			orgId: org.id,
+			env,
+			inStatuses,
+			withEntities,
+			entityId,
+			expand,
+			withSubs: true,
+		});
+	}
 
 	// Customer is defined by this point!
 	customer = customer as FullCustomer;
@@ -147,26 +138,17 @@ export const getOrCreateCustomer = async ({
 		logger.info(`Auto creating entity ${entityId} for customer ${customerId}`);
 
 		const newEntity = (await autoCreateEntity({
-			req,
-			customer,
+			ctx: req as unknown as AutumnContext,
+			customerId: customer.id || customer.internal_id,
 			entityId,
 			entityData: {
-				id: entityId,
 				name: entityData?.name,
 				feature_id: entityData?.feature_id || "",
 			},
-			logger,
 		})) as Entity;
 
 		customer.entities = [...(customer.entities || []), newEntity];
 		customer.entity = newEntity;
-
-		await refreshCusCache({
-			db,
-			customerId: customer.id || customer.internal_id,
-			org,
-			env: customer.env,
-		});
 	}
 
 	return customer as FullCustomer;

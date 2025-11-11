@@ -18,7 +18,7 @@ export const ApiPlanFeatureSchema = z
 			.object({
 				interval: z.enum(ResetInterval).optional(),
 				interval_count: z.number().optional(),
-				when_enabled: z.boolean().optional(),
+				reset_when_enabled: z.boolean().optional(),
 			})
 			.optional(),
 
@@ -38,10 +38,10 @@ export const ApiPlanFeatureSchema = z
 			})
 			.optional(),
 
-		proration: z
+		display: z
 			.object({
-				on_increase: z.enum(OnIncrease).optional(),
-				on_decrease: z.enum(OnDecrease).optional(),
+				primary_text: z.string(),
+				secondary_text: z.string().optional(),
 			})
 			.optional(),
 
@@ -53,10 +53,10 @@ export const ApiPlanFeatureSchema = z
 			})
 			.optional(),
 
-		display: z
+		proration: z
 			.object({
-				primary_text: z.string(),
-				secondary_text: z.string().optional(),
+				on_increase: z.enum(OnIncrease).optional(),
+				on_decrease: z.enum(OnDecrease).optional(),
 			})
 			.optional(),
 	})
@@ -92,13 +92,5 @@ export const ApiPlanFeatureSchema = z
 			}
 		}
 	});
-
-// .refine((x) => {
-// 	if(x.reset_interval || x.reset_interval_count) {
-// 		if(x.price.interval || x.price.interval_count) {
-// 			return false;
-// 		}
-// 	}
-// });
 
 export type ApiPlanFeature = z.infer<typeof ApiPlanFeatureSchema>;

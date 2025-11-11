@@ -1,6 +1,6 @@
 import { ErrCode } from "@autumn/shared";
-import { QueueManager } from "@/queue/QueueManager.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { redis } from "./initRedis.js";
 
 export const handleAttachRaceCondition = async ({
 	req,
@@ -9,13 +9,23 @@ export const handleAttachRaceCondition = async ({
 	req: any;
 	res: any;
 }) => {
-	const redisConn = await QueueManager.getConnection({ useBackup: false });
 	const customerId = req.body.customer_id;
 	const orgId = req.orgId;
 	const env = req.env;
+	const lockKey = `attach_${customerId}_${orgId}_${env}`;
+
+	// Check if Redis is ready before attempting lock
+	if (redis.status !== "ready") {
+		req.logger.warn("❗️❗️ Redis not ready, proceeding without lock", {
+			status: redis.status,
+			customerId,
+		});
+		return null;
+	}
+
 	try {
-		const lockKey = `attach_${customerId}_${orgId}_${env}`;
-		const existingLock = await redisConn.get(lockKey);
+		const existingLock = await redis.get(lockKey);
+
 		if (existingLock) {
 			throw new RecaseError({
 				message: `Attach already runnning for customer ${customerId}, try again in a few seconds`,
@@ -24,7 +34,7 @@ export const handleAttachRaceCondition = async ({
 			});
 		}
 		// Create lock with 5 second timeout
-		await redisConn.set(lockKey, "1", "PX", 5000, "NX");
+		await redis.set(lockKey, "1", "PX", 5000, "NX");
 
 		const originalJson = res.json;
 		res.json = async function (body: any) {
@@ -40,12 +50,15 @@ export const handleAttachRaceCondition = async ({
 
 		return lockKey;
 	} catch (error) {
+		// Only throw if it's a lock conflict error
 		if (error instanceof RecaseError) {
 			throw error;
 		}
 
-		req.logger.warn("❗️❗️ Error acquiring lock", {
+		// Redis is down - log warning but allow operation to proceed
+		req.logger.warn("❗️❗️ Redis unavailable, proceeding without lock", {
 			error,
+			customerId,
 		});
 		return null;
 	}
@@ -66,10 +79,20 @@ export const handleCustomerRaceCondition = async ({
 	res: any;
 	logger: any;
 }) => {
-	const redisConn = await QueueManager.getConnection({ useBackup: false });
+	const lockKey = `${action}_${customerId}_${orgId}_${env}`;
+
+	// Check if Redis is ready before attempting lock
+	if (redis.status !== "ready") {
+		logger.warn("❗️❗️ Redis not ready, proceeding without lock", {
+			status: redis.status,
+			action,
+			customerId,
+		});
+		return null;
+	}
+
 	try {
-		const lockKey = `${action}_${customerId}_${orgId}_${env}`;
-		const existingLock = await redisConn.get(lockKey);
+		const existingLock = await redis.get(lockKey);
 		if (existingLock) {
 			throw new RecaseError({
 				message: `Action ${action} already running for customer ${customerId}, try again in a few seconds`,
@@ -78,27 +101,33 @@ export const handleCustomerRaceCondition = async ({
 			});
 		}
 		// Create lock with 5 second timeout
-		await redisConn.set(lockKey, "1", "PX", 5000, "NX");
+		await redis.set(lockKey, "1", "PX", 5000, "NX");
 
 		const originalJson = res.json;
 		res.json = async function (body: any) {
 			try {
 				await clearLock({ lockKey, logger });
 			} catch (error) {
-				logger.warn("❗️❗️ Error clearing lock");
-				logger.warn(error);
+				logger.warn("❗️❗️ Error clearing lock", {
+					error,
+				});
 			}
 			originalJson.call(this, body);
 		};
 
 		return lockKey;
 	} catch (error) {
+		// Only throw if it's a lock conflict error
 		if (error instanceof RecaseError) {
 			throw error;
 		}
 
-		logger.warn("❗️❗️ Error acquiring lock");
-		logger.warn(error);
+		// Redis is down - log warning but allow operation to proceed
+		logger.warn("❗️❗️ Redis unavailable, proceeding without lock", {
+			error,
+			action,
+			customerId,
+		});
 		return null;
 	}
 };
@@ -110,9 +139,16 @@ export const clearLock = async ({
 	lockKey: string;
 	logger: any;
 }) => {
+	if (redis.status !== "ready") {
+		logger.warn("❗️❗️ Redis not ready, skipping lock clear", {
+			status: redis.status,
+			lockKey,
+		});
+		return;
+	}
+
 	try {
-		const redisConn = await QueueManager.getConnection({ useBackup: false });
-		await redisConn.del(lockKey);
+		await redis.del(lockKey);
 	} catch (error) {
 		logger.warn("❗️❗️ Error clearing lock");
 		logger.warn(error);

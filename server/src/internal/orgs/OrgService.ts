@@ -11,7 +11,7 @@ import {
 	organizations,
 	user,
 } from "@autumn/shared";
-import { and, eq, or, sql } from "drizzle-orm";
+import { and, eq, inArray, or, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { FeatureService } from "../features/FeatureService.js";
@@ -204,6 +204,46 @@ export class OrgService {
 			},
 			features: result.features || [],
 		};
+	}
+
+	static async listWithFeatures({
+		db,
+		env,
+		orgIds,
+	}: {
+		db: DrizzleCli;
+		env: AppEnv;
+		orgIds: string[];
+	}) {
+		const result = await db.query.organizations.findMany({
+			where: inArray(organizations.id, orgIds),
+			with: {
+				features: {
+					where: eq(features.env, env),
+				},
+				master: true,
+			},
+		});
+
+		if (!result) {
+			return [];
+		}
+
+		return result.map((r) => {
+			const org = structuredClone(r);
+			delete (org as any).features;
+
+			return {
+				org: {
+					...org,
+					config: OrgConfigSchema.parse(org.config || {}),
+				},
+				features: r.features || [],
+			} as {
+				org: Organization;
+				features: Feature[];
+			};
+		});
 	}
 
 	static async getFromPkeyWithFeatures({

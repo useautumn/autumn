@@ -88,8 +88,8 @@ export function semVerToLegacy({
  * Supports .clover suffix: "2025-04-17.clover"
  * Supports partial SemVer: "2" → "2.0.0", "2.0" → "2.0.0"
  * @example parseVersion({ versionStr: "2025-04-17" }) // ApiVersion.V1_1
- * @example parseVersion({ versionStr: "2" }) // ApiVersion.V2
- * @example parseVersion({ versionStr: "2.0" }) // ApiVersion.V2
+ * @example parseVersion({ versionStr: "2" }) // ApiVersion.V2_0
+ * @example parseVersion({ versionStr: "2.0" }) // ApiVersion.V2_0
  */
 export function parseVersion({
 	versionStr,
@@ -146,7 +146,7 @@ export function createdAtToVersion({
 	let version: ApiVersion;
 
 	if (!createdAt || createdAt >= v2_0) {
-		version = ApiVersion.V2;
+		version = ApiVersion.V2_0;
 	} else if (createdAt >= v1_2) {
 		version = ApiVersion.V1_2;
 	} else if (createdAt >= v1_1) {
@@ -158,7 +158,7 @@ export function createdAtToVersion({
 	}
 
 	return new ApiVersionClass(version);
-	// return new ApiVersionClass(ApiVersion.V2);
+	// return new ApiVersionClass(ApiVersion.V2_0);
 }
 
 // Convert org creation date

@@ -12,6 +12,7 @@ export enum AffectedResource {
 	Invoice = "invoice",
 	Product = "product",
 	Check = "check",
+	Track = "track",
 	// Add more as needed
 }
 

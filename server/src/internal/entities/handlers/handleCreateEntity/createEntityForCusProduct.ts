@@ -1,5 +1,5 @@
 import {
-	type CreateEntity,
+	type CreateEntityParams,
 	ErrCode,
 	type FullCusProduct,
 	type FullCustomer,
@@ -27,11 +27,13 @@ export const updateLinkedCusEnt = async ({
 }: {
 	db: DrizzleCli;
 	linkedCusEnt: FullCustomerEntitlement;
-	inputEntities: CreateEntity[];
+	inputEntities: CreateEntityParams[];
 	entityToReplacement: Record<string, string>;
 }) => {
 	const newEntities = structuredClone(linkedCusEnt.entities) || {};
 	for (const entity of inputEntities) {
+		if (!entity.id) continue;
+
 		const replaceableId = entityToReplacement[entity.id];
 		const replaceableInEntities = replaceableId
 			? newEntities[replaceableId]
@@ -73,7 +75,7 @@ export const createEntityForCusProduct = async ({
 	req: ExtendedRequest;
 	customer: FullCustomer;
 	cusProduct: FullCusProduct;
-	inputEntities: CreateEntity[];
+	inputEntities: CreateEntityParams[];
 	logger: any;
 	fromAutoCreate?: boolean;
 }) => {
@@ -82,7 +84,7 @@ export const createEntityForCusProduct = async ({
 			acc[entity.feature_id!] = [...(acc[entity.feature_id!] || []), entity];
 			return acc;
 		},
-		{} as Record<string, CreateEntity[]>,
+		{} as Record<string, CreateEntityParams[]>,
 	);
 
 	const { db, env, org, features } = req;
@@ -161,7 +163,7 @@ export const createEntityForCusProduct = async ({
 		const entityToReplacement: Record<string, string> = {};
 		for (let i = 0; i < deletedReplaceables.length; i++) {
 			const replaceable = deletedReplaceables[i];
-			entityToReplacement[inputEntities[i].id] = replaceable.id;
+			entityToReplacement[inputEntities[i].id!] = replaceable.id;
 
 			if (i >= inputEntities.length) {
 				break;

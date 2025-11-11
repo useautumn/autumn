@@ -1,8 +1,9 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	ApiVersion,
-	type CheckResponse,
 	type CheckResponseV0,
+	type CheckResponseV1,
+	type CheckResponseV2,
 	SuccessCode,
 } from "@autumn/shared";
 import chalk from "chalk";
@@ -36,6 +37,7 @@ describe(`${chalk.yellowBright("check2: test /check on boolean feature")}`, () =
 	const customerId = "check2";
 	const autumnV0: AutumnInt = new AutumnInt({ version: ApiVersion.V0_2 });
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
+	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2_0 });
 
 	beforeAll(async () => {
 		await initCustomerV3({
@@ -56,6 +58,54 @@ describe(`${chalk.yellowBright("check2: test /check on boolean feature")}`, () =
 		});
 	});
 
+	test("v2 response", async () => {
+		const res = (await autumnV2.check({
+			customer_id: customerId,
+			feature_id: TestFeature.Dashboard,
+		})) as unknown as CheckResponseV2;
+
+		expect(res).toEqual({
+			allowed: true,
+			customer_id: customerId,
+			required_balance: 1,
+			balance: {
+				feature_id: TestFeature.Dashboard,
+				unlimited: false,
+				granted_balance: 0,
+				purchased_balance: 0,
+				current_balance: 0,
+				usage: 0,
+				max_purchase: 0,
+				overage_allowed: false,
+			},
+		});
+	});
+
+	test("v1 response", async () => {
+		const res = (await autumnV1.check({
+			customer_id: customerId,
+			feature_id: TestFeature.Dashboard,
+		})) as unknown as CheckResponseV1;
+
+		expect(res).toStrictEqual({
+			customer_id: customerId,
+			feature_id: TestFeature.Dashboard,
+			code: SuccessCode.FeatureFound,
+			allowed: true,
+
+			// New fields for boolean?
+			interval: null,
+			interval_count: null,
+			balance: 0,
+			included_usage: 0,
+			usage: 0,
+			next_reset_at: null,
+			overage_allowed: false,
+			required_balance: 1,
+			unlimited: false,
+		});
+	});
+
 	test("v0 response", async () => {
 		const res = (await autumnV0.check({
 			customer_id: customerId,
@@ -70,37 +120,6 @@ describe(`${chalk.yellowBright("check2: test /check on boolean feature")}`, () =
 					balance: null,
 				},
 			],
-		});
-
-		// expect(res.allowed).toBe(true);
-		// expect(res.balances).toBeDefined();
-		// expect(res.balances).toHaveLength(1);
-		// expect(res.balances[0]).toStrictEqual({
-		// 	feature_id: TestFeature.Dashboard,
-		// 	balance: null,
-		// });
-	});
-
-	test("v1 response", async () => {
-		const res = (await autumnV1.check({
-			customer_id: customerId,
-			feature_id: TestFeature.Dashboard,
-		})) as unknown as CheckResponse;
-
-		expect(res).toStrictEqual({
-			customer_id: customerId,
-			feature_id: TestFeature.Dashboard,
-			code: SuccessCode.FeatureFound,
-			allowed: true,
-
-			// New fields for boolean?
-			balance: 0,
-			included_usage: 0,
-			usage: 0,
-			next_reset_at: null,
-			overage_allowed: false,
-			required_balance: 1,
-			unlimited: false,
 		});
 	});
 });

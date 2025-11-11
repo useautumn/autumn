@@ -58,7 +58,7 @@ describe(`${chalk.yellowBright("mergedTrial3: Testing upgrade to product with tr
 	let org: Organization;
 	let env: AppEnv;
 
-	before(async function () {
+	beforeAll(async function () {
 		await setupBefore(this);
 		const { autumnJs } = this;
 		db = this.db;
