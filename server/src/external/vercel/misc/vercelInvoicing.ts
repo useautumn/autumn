@@ -5,10 +5,12 @@ import {
 	type AttachConfig,
 	type Customer,
 	type Feature,
+	type FeatureOptions,
 	type FullCustomer,
 	type FullProduct,
 	mapToProductV2,
 	type Organization,
+	type Price,
 	ProrationBehavior,
 	productV2ToBasePrice,
 } from "@autumn/shared";
@@ -18,6 +20,8 @@ import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { buildInvoiceMemo } from "@/internal/invoices/invoiceMemoUtils.js";
+import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 
 /**
  * Vercel Marketplace Payment Flow:
@@ -54,8 +58,8 @@ export const submitBillingDataToVercel = async ({
 
 	// Map invoice line items to Vercel billing format
 	const billingItems = invoice.lines.data
-		.filter(line => line.amount > 0) // Only include items with charges
-		.map(line => {
+		.filter((line) => line.amount > 0) // Only include items with charges
+		.map((line) => {
 			const amount = line.amount / 100; // Convert to dollars
 			return {
 				resourceId: line.metadata?.vercel_resource_id || installationId,
@@ -70,8 +74,8 @@ export const submitBillingDataToVercel = async ({
 
 	// Extract usage metrics from line items (for usage-based features)
 	const usageMetrics = invoice.lines.data
-		.filter(line => line.description?.includes("Messages")) // Usage items
-		.map(line => ({
+		.filter((line) => line.description?.includes("Messages")) // Usage items
+		.map((line) => ({
 			resourceId: installationId,
 			name: "Messages",
 			type: "interval" as const,
@@ -102,11 +106,15 @@ export const submitInvoiceToVercel = async ({
 	invoice,
 	customer,
 	product,
+	org,
+	features,
 }: {
 	installationId: string;
 	invoice: Stripe.Invoice;
 	customer: Customer;
 	product: FullProduct;
+	org: Organization;
+	features: Feature[];
 }) => {
 	const vercel = new Vercel({
 		bearerToken: customer.processors?.vercel?.access_token,
@@ -125,6 +133,14 @@ export const submitInvoiceToVercel = async ({
 
 	// Calculate total amount from invoice (includes subscription + usage charges)
 	const totalAmount = invoice.amount_due / 100;
+
+	let memo;
+
+	if (org.config.invoice_memos) {
+		try {
+			memo = await buildInvoiceMemo({ org, product, features });
+		} catch (_) {}
+	}
 
 	return await vercel.marketplace.submitInvoice({
 		integrationConfigurationId: installationId,
@@ -150,10 +166,12 @@ export const submitInvoiceToVercel = async ({
 				? {
 						test: {
 							validate: true,
-							result: "paid",
+							// result: "paid",
+							result: "notpaid",
 						},
 					}
 				: {}),
+			...(memo ? { memo } : {}),
 		},
 	});
 };
@@ -166,7 +184,82 @@ export const submitBillingUsageToVercel = async ({
 	usage: number;
 }) => {};
 
-export const getNewVercelAttachBody = ({
+/**
+ * Parses Vercel metadata to extract prepaid quantities for features
+ * Expected metadata format: { "<feature_id>": quantity, ... }
+ * Validates features exist in product and have prepaid prices configured
+ */
+export const parseVercelPrepaidQuantities = ({
+	metadata,
+	product,
+	prices,
+}: {
+	metadata: Record<string, any>;
+	product: FullProduct;
+	prices: Price[];
+}): FeatureOptions[] => {
+	const optionsList: FeatureOptions[] = [];
+
+	// Iterate over metadata entries
+	for (const [featureId, quantity] of Object.entries(metadata)) {
+		// Skip non-numeric values silently
+		if (typeof quantity !== "number" || Number.isNaN(quantity)) {
+			continue;
+		}
+
+		// Find entitlement for this feature
+		const entitlement = product.entitlements.find(
+			(ent) => ent.feature.id === featureId,
+		);
+
+		if (!entitlement) {
+			console.warn("Feature not found in product, skipping prepaid quantity", {
+				featureId,
+				productId: product.id,
+				quantity,
+			});
+			continue;
+		}
+
+		// Validate prepaid price exists for this feature
+		const prepaidPrice = findPrepaidPrice({
+			prices,
+			internalFeatureId: entitlement.internal_feature_id,
+		});
+
+		if (!prepaidPrice) {
+			console.warn(
+				"Feature is not prepaid or has no price configured, skipping",
+				{
+					featureId,
+					featureName: entitlement.feature.name,
+					internalFeatureId: entitlement.internal_feature_id,
+					productId: product.id,
+					quantity,
+				},
+			);
+			continue;
+		}
+
+		// Valid prepaid feature with price - add to options list
+		optionsList.push({
+			feature_id: featureId,
+			internal_feature_id: entitlement.internal_feature_id,
+			quantity,
+		});
+
+		console.info("Parsed prepaid quantity from Vercel metadata", {
+			featureId,
+			featureName: entitlement.feature.name,
+			quantity,
+			priceId: prepaidPrice.id,
+		});
+	}
+
+	return optionsList;
+};
+
+export const getVercelAttachBody = ({
 	stripeCli,
 	stripeCustomer,
 	now,
@@ -180,6 +273,8 @@ export const getNewVercelAttachBody = ({
 	env,
 	c,
 	customPaymentMethod,
+	optionsList = [],
+	resourceId,
 }: {
 	stripeCli: Stripe;
 	stripeCustomer: Stripe.Customer;
@@ -194,6 +289,8 @@ export const getNewVercelAttachBody = ({
 	env: AppEnv;
 	c: Context<HonoEnv>;
 	customPaymentMethod: Stripe.PaymentMethod | null;
+	optionsList?: FeatureOptions[];
+	resourceId?: string;
 }): { attachParams: AttachParams; config: AttachConfig } => {
 	const attachParams: AttachParams = {
 		stripeCli,
@@ -203,7 +300,7 @@ export const getNewVercelAttachBody = ({
 		org,
 		customer,
 		products: [product],
-		optionsList: [],
+		optionsList,
 		prices: product.prices,
 		entitlements: product.entitlements,
 		freeTrial: null,
@@ -223,7 +320,7 @@ export const getNewVercelAttachBody = ({
 			vercel_installation_id: integrationConfigurationId,
 			vercel_billing_plan_id: billingPlanId,
 			vercel_product_id: product.id,
-			vercel_resource_id: integrationConfigurationId, // Resource ID same as installation for simple case
+			vercel_resource_id: resourceId || integrationConfigurationId,
 		},
 
 		req: {

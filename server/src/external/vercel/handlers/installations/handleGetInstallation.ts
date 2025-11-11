@@ -1,6 +1,8 @@
+import { cusProductToProduct } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import type { VercelBillingPlan } from "../../misc/vercelTypes.js";
+import { productToBillingPlan } from "../handleListBillingPlans.js";
 
 export const handleGetInstallation = createRoute({
 	handler: async (c) => {
@@ -38,15 +40,15 @@ export const handleGetInstallation = createRoute({
 		return c.json(
 			{
 				notification: null,
-				billingPlan: customer.customer_products?.[0]?.product
-					? ({
-							id: customer.customer_products?.[0]?.product.id ?? "",
-							type: "subscription",
-							name: customer.customer_products?.[0]?.product.name ?? "",
-							scope: "installation",
-							description: "",
-						} satisfies VercelBillingPlan)
-					: null,
+				billingPlan:
+					customer.customer_products?.[0] !== undefined
+						? (productToBillingPlan({
+								product: cusProductToProduct({
+									cusProduct: customer.customer_products?.[0],
+								}),
+								orgCurrency: org?.default_currency ?? "usd",
+							}) satisfies VercelBillingPlan)
+						: null,
 			},
 			200,
 		);

@@ -3,9 +3,10 @@ import { ErrCode } from "@shared/enums/ErrCode.js";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod/v4";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { createVercelSubscription } from "@/external/vercel/misc/vercelSubscriptions.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { createVercelSubscription } from "../misc/createVercelSubscription.js";
+import type { VercelError } from "../misc/vercelTypes.js";
 import { productToBillingPlan } from "./handleListBillingPlans.js";
 
 export const handleUpdateBillingPlan = createRoute({
@@ -34,6 +35,23 @@ export const handleUpdateBillingPlan = createRoute({
 				statusCode: StatusCodes.NOT_FOUND,
 			});
 		} else {
+			if (
+				customer.customer_products.find((cp) => cp.product_id === billingPlanId)
+			) {
+				return c.json(
+					{
+						error: {
+							code: "validation_error",
+							message: "You already have this billing plan",
+							user: {
+								message: "You already have this billing plan",
+							},
+						},
+					} satisfies VercelError,
+					StatusCodes.BAD_REQUEST,
+				);
+			}
+
 			const stripeCli = await createStripeCli({
 				org,
 				env: env as AppEnv,
@@ -93,8 +111,8 @@ export const handleUpdateBillingPlan = createRoute({
 			return c.json({
 				notification: {
 					level: "error",
-					title: "Plan changes not supported",
-					message: `Plan upgrades/downgrades not yet implemented.`,
+					title: "Plan changes are not supported",
+					message: `Plan upgrades/downgrades are unsupported. Please contact support.`,
 				},
 			});
 		}
