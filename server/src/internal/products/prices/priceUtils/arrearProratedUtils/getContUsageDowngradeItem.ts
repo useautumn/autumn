@@ -22,16 +22,12 @@ export const getReplaceables = ({
 	}
 
 	const numReplaceables = prevOverage - newOverage;
-	const newReplaceables = Array.from(
-		{ length: numReplaceables },
-		(_, i) =>
-			({
-				id: generateId("rep"),
-				cus_ent_id: cusEnt.id,
-				created_at: Date.now(),
-				delete_next_cycle: deleteNextCycle,
-			}) satisfies InsertReplaceable,
-	);
+	const newReplaceables = Array.from({ length: numReplaceables }, (_, i) => ({
+		id: generateId("rep"),
+		cus_ent_id: cusEnt.id,
+		created_at: Date.now(),
+		delete_next_cycle: deleteNextCycle,
+	}));
 
 	return newReplaceables;
 };

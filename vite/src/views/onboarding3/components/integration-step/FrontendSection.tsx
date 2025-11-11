@@ -23,13 +23,7 @@ export const FrontendSection = () => {
 						Wrap your React app in <CodeSpan>{"<AutumnProvider />"}</CodeSpan>
 					</span>
 				}
-				description={
-					<p>
-						<CodeSpan>{"autumnHandler"}</CodeSpan> mounts routes on the{" "}
-						<CodeSpan>{"/api/autumn/*"}</CodeSpan> paths which allows our React
-						hooks and components to interact with the Autumn API directly.
-					</p>
-				}
+				description="This allows you to use our React hooks and components in your app. If your server URL is different to your client, you will need to pass in the backend URL as a prop."
 			/>
 
 			<div className="pl-[32px] flex flex-col gap-6">

@@ -158,7 +158,10 @@ export const AttachModal = ({
 				entityId,
 				product,
 				optionsInput:
-					preview?.branch !== AttachBranch.NewVersion ? options : undefined,
+					preview?.branch !== AttachBranch.NewVersion &&
+					preview?.branch !== AttachBranch.SameCustomEnts
+						? options
+						: undefined,
 				attachState,
 				useInvoice,
 				enableProductImmediately,
@@ -199,7 +202,7 @@ export const AttachModal = ({
 			} else {
 				toast.error(getBackendErr(error, "Error creating plan"));
 			}
-		} finally{
+		} finally {
 			setLoading(false);
 		}
 	};
@@ -216,9 +219,7 @@ export const AttachModal = ({
 						className={`p-6 pb-2 flex flex-col gap-4 ${mainWidth} rounded-sm`}
 					>
 						<DialogHeader>
-							<DialogTitle className="text-t2 text-md">
-								Attach plan
-							</DialogTitle>
+							<DialogTitle className="text-t2 text-md">Attach plan</DialogTitle>
 						</DialogHeader>
 
 						<div className="text-sm flex flex-col gap-4">
