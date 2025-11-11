@@ -114,7 +114,7 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
 				},
 				toDeduct: deducted,
 				addAdjustment: true,
-				allowNegativeBalance: cusEnt.usage_allowed || false,
+				allowNegativeBalance: true,
 				entityId: entity_id,
 			},
 		);
