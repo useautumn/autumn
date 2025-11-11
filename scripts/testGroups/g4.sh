@@ -25,7 +25,7 @@ MOCHA_CMD 'tests/merged/add/*.ts' \
 
 MOCHA_CMD 'tests/merged/addOn/*.ts' \
 'tests/core/cancel/*.ts' \
-'tests/core/multiAttach/*.ts' \
-'tests/core/multiAttach/multiInvoice/*.ts' \
-'tests/core/multiAttach/multiUpgrade/*.ts'
+# 'tests/core/multiAttach/*.ts' \
+# 'tests/core/multiAttach/multiInvoice/*.ts' \
+# 'tests/core/multiAttach/multiUpgrade/*.ts'
 

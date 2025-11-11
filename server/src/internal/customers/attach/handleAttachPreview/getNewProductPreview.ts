@@ -99,6 +99,10 @@ export const getNewProductPreview = async ({
 
 	let trialEnds: number | undefined;
 
+	if (config.disableTrial) {
+		attachParams.freeTrial = null;
+	}
+
 	// Scenario where we update a current sub with new product (so no create sub)
 	let anchor: number | undefined;
 	if (mergeSub && !config.disableMerge) {
@@ -117,10 +121,6 @@ export const getNewProductPreview = async ({
 			interval: BillingInterval.Month,
 			intervalCount: 1,
 		});
-	}
-
-	if (config.disableTrial) {
-		attachParams.freeTrial = null;
 	}
 
 	const items = await getItemsForNewProduct({

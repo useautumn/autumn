@@ -1,11 +1,10 @@
-import { generateId } from "@/utils/genUtils.js";
 import {
-	FullCustomerEntitlement,
-	InsertReplaceable,
-	InsertReplaceableSchema,
+	type FullCustomerEntitlement,
+	type InsertReplaceable,
 	OnDecrease,
-	Price,
+	type Price,
 } from "@autumn/shared";
+import { generateId } from "@/utils/genUtils.js";
 
 export const getReplaceables = ({
 	cusEnt,
@@ -22,15 +21,13 @@ export const getReplaceables = ({
 		return [];
 	}
 
-	let numReplaceables = prevOverage - newOverage;
-	let newReplaceables = Array.from({ length: numReplaceables }, (_, i) =>
-		InsertReplaceableSchema.parse({
-			id: generateId("rep"),
-			cus_ent_id: cusEnt.id,
-			created_at: Date.now(),
-			delete_next_cycle: deleteNextCycle,
-		}),
-	);
+	const numReplaceables = prevOverage - newOverage;
+	const newReplaceables = Array.from({ length: numReplaceables }, (_, i) => ({
+		id: generateId("rep"),
+		cus_ent_id: cusEnt.id,
+		created_at: Date.now(),
+		delete_next_cycle: deleteNextCycle,
+	}));
 
 	return newReplaceables;
 };
@@ -46,10 +43,10 @@ export const getContUsageDowngradeItem = ({
 	prevOverage: number;
 	newOverage: number;
 }) => {
-	let noProration = price.proration_config?.on_decrease == OnDecrease.None;
+	const noProration = price.proration_config?.on_decrease === OnDecrease.None;
 
 	if (noProration) {
-		let newReplaceables = getReplaceables({
+		const newReplaceables = getReplaceables({
 			cusEnt,
 			prevOverage,
 			newOverage,

@@ -78,25 +78,6 @@ function promptUser(question) {
 }
 
 /**
- * Clear Vite cache to prevent optimization errors
- */
-async function clearViteCache() {
-	const rootDir = path.dirname(new URL(import.meta.url).pathname);
-	const projectRoot = path.join(rootDir, "..");
-	const viteCachePath = path.join(projectRoot, "vite", "node_modules", ".vite");
-
-	if (fs.existsSync(viteCachePath)) {
-		try {
-			console.log("🧹 Clearing Vite cache...");
-			fs.rmSync(viteCachePath, { recursive: true, force: true });
-			console.log("✅ Vite cache cleared\n");
-		} catch (error) {
-			console.warn("⚠️  Failed to clear Vite cache:", error.message);
-		}
-	}
-}
-
-/**
  * Check and kill processes on ports 3000 and 8080
  */
 async function handlePorts() {
@@ -146,9 +127,6 @@ async function handlePorts() {
 
 async function startDev() {
 	try {
-		// Clear Vite cache first to prevent optimization errors
-		await clearViteCache();
-
 		// Check if using remote backend (api.useautumn.com)
 		const rootDir = path.dirname(new URL(import.meta.url).pathname);
 		const projectRoot = path.join(rootDir, "..");
@@ -159,11 +137,12 @@ async function startDev() {
 		const isUsingRemoteBackend = backendUrl?.includes("api.useautumn.com");
 
 		if (isUsingRemoteBackend) {
-			console.log("🌐 Using remote backend (api.useautumn.com)");
+			console.log("\n🌐 Using remote backend (api.useautumn.com)");
 			console.log("⏭️  Skipping port cleanup...\n");
 		} else {
-			// Check and kill processes on ports 3000 and 8080 if needed
-			await handlePorts();
+			// Port cleanup disabled (detection is unreliable)
+			console.log("⏭️  Skipping port cleanup...\n");
+			// await handlePorts();
 		}
 
 		// Step 1: Build shared package first (initial build)
@@ -186,6 +165,19 @@ async function startDev() {
 		});
 
 		console.log("\n✅ Shared package built successfully!\n");
+
+		// Clear Vite cache to prevent dep optimization issues
+		const viteCachePath = path.join(
+			projectRoot,
+			"vite",
+			"node_modules",
+			".vite",
+		);
+		if (fs.existsSync(viteCachePath)) {
+			console.log("🧹 Clearing Vite cache...\n");
+			fs.rmSync(viteCachePath, { recursive: true, force: true });
+		}
+
 		console.log("🚀 Starting development servers in watch mode...\n");
 
 		// Step 2: Start server, workers, and vite first (they'll use the built shared package)

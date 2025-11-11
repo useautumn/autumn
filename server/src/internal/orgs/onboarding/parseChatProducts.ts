@@ -1,7 +1,6 @@
 import {
 	AppEnv,
 	CreateProductV2ParamsSchema,
-	EntInsertSchema,
 	type Entitlement,
 	type Feature,
 	type Price,
@@ -56,7 +55,7 @@ export const parseChatProducts = async ({
 
 		allEnts.push(
 			...entitlements.map((ent) => {
-				return EntInsertSchema.parse(ent) as unknown as Entitlement;
+				return ent;
 			}),
 		);
 	}
