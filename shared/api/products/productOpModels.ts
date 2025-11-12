@@ -2,6 +2,7 @@ import { CreateFreeTrialSchema } from "@models/productModels/freeTrialModels/fre
 import { ProductItemSchema } from "@models/productV2Models/productItemModels/productItemModels.js";
 import { idRegex } from "@utils/utils.js";
 import { z } from "zod/v4";
+import { AppEnv } from "../../models/genModels/genEnums.js";
 
 // Use the full ProductItemSchema but mark backend fields as internal
 export const CreateProductItemParamsSchema = ProductItemSchema.meta({
@@ -140,3 +141,36 @@ export const UpdateProductQuerySchema = z.object({
 
 export type CreateProductV2Params = z.infer<typeof CreateProductV2ParamsSchema>;
 export type UpdateProductV2Params = z.infer<typeof UpdateProductV2ParamsSchema>;
+
+// Copy Product Schema
+export const CopyProductParamsSchema = z.object({
+	id: z.string().nonempty().regex(idRegex).meta({
+		description: "New product ID in the target environment",
+	}),
+	name: z.string().nonempty().meta({
+		description: "New product name in the target environment",
+	}),
+	env: z.enum(AppEnv).meta({
+		description: "Target environment to copy the product to",
+	}),
+});
+
+export type CopyProductParams = z.infer<typeof CopyProductParamsSchema>;
+
+// Migrate Product Schema
+export const MigrateProductParamsSchema = z.object({
+	from_product_id: z.string().nonempty().meta({
+		description: "ID of the product to migrate from",
+	}),
+	from_version: z.number().optional().meta({
+		description: "Version of the product to migrate from",
+	}),
+	to_product_id: z.string().nonempty().meta({
+		description: "ID of the product to migrate to",
+	}),
+	to_version: z.number().optional().meta({
+		description: "Version of the product to migrate to",
+	}),
+});
+
+export type MigrateProductParams = z.infer<typeof MigrateProductParamsSchema>;
