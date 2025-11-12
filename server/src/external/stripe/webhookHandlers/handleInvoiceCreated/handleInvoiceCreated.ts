@@ -376,16 +376,11 @@ export const handleInvoiceCreated = async ({
 			// Skip balance reset for Vercel subscriptions - handled in marketplace.invoice.paid
 			const subId = invoiceToSubId({ invoice });
 			const subscription = stripeSubs.find((s) => s.id === subId);
+			if (!subscription) {
+				continue;
+			}
 
-			if (subscription?.metadata?.vercel_installation_id) {
-				logger.info(
-					"Skipping invoice.created balance reset for Vercel subscription",
-					{
-						subscriptionId: subscription.id,
-						vercelInstallationId: subscription.metadata.vercel_installation_id,
-						invoiceId: invoice.id,
-					},
-				);
+			if (!validateProductShouldReset({ subscription, _invoice: invoice })) {
 				continue;
 			}
 
@@ -400,4 +395,18 @@ export const handleInvoiceCreated = async ({
 			});
 		}
 	}
+};
+
+export const validateProductShouldReset = async ({
+	subscription,
+	_invoice,
+}: {
+	subscription: Stripe.Subscription;
+	_invoice: Stripe.Invoice;
+}) => {
+	if (subscription.metadata?.vercel_installation_id) {
+		return false;
+	}
+
+	return true;
 };
