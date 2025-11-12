@@ -6,7 +6,7 @@ import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createVercelSubscription } from "@/external/vercel/misc/vercelSubscriptions.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import type { VercelError } from "../misc/vercelTypes.js";
+import type { VercelError, VercelNotification } from "../misc/vercelTypes.js";
 import { productToBillingPlan } from "./handleListBillingPlans.js";
 
 export const handleUpdateBillingPlan = createRoute({
@@ -76,6 +76,16 @@ export const handleUpdateBillingPlan = createRoute({
 				(s) => s.metadata.vercel_installation_id === integrationConfigurationId,
 			);
 
+			if (!existingSubscription && billingPlanId === "cancel_plan") {
+				return c.json({
+					notification: {
+						level: "error",
+						title: "You cannot cancel your plan",
+						message: `You cannot cancel your plan. You don't have an active subscription.`,
+					},
+				});
+			}
+
 			if (!existingSubscription) {
 				// New subscription flow - create installation-level subscription
 				const { product } = await createVercelSubscription({
@@ -102,6 +112,17 @@ export const handleUpdateBillingPlan = createRoute({
 						title: "Billing plan provisioning",
 						message: `Setting up ${product?.name} plan...`,
 					},
+				});
+			}
+
+			if (existingSubscription && billingPlanId === "cancel_plan") {
+				await stripeCli.subscriptions.cancel(existingSubscription.id);
+				return c.json({
+					notification: {
+						level: "info",
+						title: "Succesfully cancelled plan",
+						message: `You have successfully cancelled your plan. You will no longer be charged or have access to this plan.`,
+					} satisfies VercelNotification,
 				});
 			}
 
