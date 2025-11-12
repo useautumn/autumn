@@ -59,6 +59,13 @@ export const handleUpsertInstallation = createRoute({
 					id: integrationConfigurationId,
 					email: body.account.contact.email,
 					name: body.account.contact.name,
+					processors: {
+						vercel: {
+							installation_id: integrationConfigurationId,
+							access_token: body.credentials.access_token,
+							account_id: claims.account_id,
+						},
+					},
 				},
 			});
 

@@ -110,7 +110,6 @@ export const createNewCustomer = async ({
 					type: "stripe",
 				}
 			: undefined,
-		processors: {},
 	};
 
 	// Check if stripeCli exists
