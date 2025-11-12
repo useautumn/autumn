@@ -16,9 +16,11 @@ export const vercelSeederMiddleware = async (
 	if (!ctx.org && orgId) {
 		ctx.org = await OrgService.get({ db: ctx.db, orgId });
 	}
-	if (!ctx.env && env) {
+
+	if (ctx.env !== env) {
 		ctx.env = env as AppEnv;
 	}
+
 	if (!ctx.features && orgId) {
 		ctx.features = await FeatureService.list({
 			db: ctx.db,

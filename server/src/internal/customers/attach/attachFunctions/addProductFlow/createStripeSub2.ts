@@ -32,7 +32,8 @@ export const createStripeSub2 = async ({
 	itemSet: ItemSet;
 	logger: any;
 }) => {
-	const { customer, invoiceOnly, freeTrial, org, now, rewards, metadata } = attachParams;
+	const { customer, invoiceOnly, freeTrial, org, now, rewards, metadata } =
+		attachParams;
 
 	const paymentMethod = await getCusPaymentMethod({
 		stripeCli,

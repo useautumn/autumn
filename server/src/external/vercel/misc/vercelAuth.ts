@@ -34,7 +34,9 @@ export async function verifyToken({
 	env: AppEnv;
 }): Promise<OidcClaims> {
 	try {
-		const { payload: claims } = await jwtVerify<OidcClaims>(token, JWKS);
+		const { payload: claims } = await jwtVerify<OidcClaims>(token, JWKS, {
+			clockTolerance: 5,
+		});
 
 		// Get the correct client_integration_id based on env
 		const clientIntegrationId =
@@ -158,7 +160,7 @@ export const vercelOidcAuthMiddleware = async (c: any, next: any) => {
 	} catch (error: any) {
 		return c.json(
 			{
-				error: "Unauthorized",
+				error: "Unauthorized" + error.message,
 				code:
 					error instanceof AuthError
 						? "auth_failed"

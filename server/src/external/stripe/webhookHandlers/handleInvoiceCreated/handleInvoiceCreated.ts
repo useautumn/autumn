@@ -376,10 +376,13 @@ export const handleInvoiceCreated = async ({
 			// Skip balance reset for Vercel subscriptions - handled in marketplace.invoice.paid
 			const subId = invoiceToSubId({ invoice });
 			const subscription = stripeSubs.find((s) => s.id === subId);
+			console.log("Found sub for sendUsageAndReset", subId);
 
 			if (!validateProductShouldReset({ subscription, _invoice: invoice })) {
+				console.log("Skipping sendUsageAndReset", subId);
 				continue;
 			}
+			console.log("Sending sendUsageAndReset", subId);
 
 			await sendUsageAndReset({
 				db,
@@ -394,7 +397,7 @@ export const handleInvoiceCreated = async ({
 	}
 };
 
-export const validateProductShouldReset = async ({
+export const validateProductShouldReset = ({
 	subscription,
 	_invoice,
 }: {
@@ -402,8 +405,17 @@ export const validateProductShouldReset = async ({
 	_invoice: Stripe.Invoice;
 }) => {
 	if (subscription?.metadata?.vercel_installation_id) {
+		console.log(
+			"Skipping sendUsageAndReset for Vercel subscription",
+			subscription.id,
+			subscription.metadata.vercel_installation_id,
+		);
 		return false;
 	}
 
+	console.log(
+		"Sending sendUsageAndReset for subscription because not a Vercel subscription",
+		subscription?.id,
+	);
 	return true;
 };
