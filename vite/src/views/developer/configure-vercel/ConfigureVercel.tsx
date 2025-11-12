@@ -195,6 +195,7 @@ export const ConfigureVercel = () => {
 					/>
 				</div>
 
+				<div></div>
 				{/* <div className="col-span-2 w-full">
 					<FormLabel className="mb-1">
 						<span className="text-t2">Marketplace Mode</span>
@@ -264,7 +265,7 @@ export const ConfigureVercel = () => {
 							<CodeGroupContent
 								value={env}
 								copyText={`https://api.useautumn.com/webhooks/vercel/${org?.id}/${env}`}
-								className="border-t-1"
+								className="border-t min-w-"
 							>
 								<CodeGroupCodeSolidColour className="text-primary">{`https://api.useautumn.com/webhooks/vercel/${org?.id}/${env}`}</CodeGroupCodeSolidColour>
 							</CodeGroupContent>
@@ -280,11 +281,14 @@ export const ConfigureVercel = () => {
 						style={{
 							height: "100%",
 							borderRadius: "none",
+							padding: "0px",
+							margin: "0px",
+							overflow: "clip",
 							// marginTop: "0.5rem",
 							// paddingLeft: "1rem",
 							// paddingRight: "1rem",
 						}}
-						fullSize
+						// fullSize
 					/>
 				) : (
 					<div className="text-muted-foreground">Dashboard URL not found.</div>

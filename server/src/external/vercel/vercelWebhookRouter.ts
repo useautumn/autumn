@@ -1,5 +1,6 @@
 import type { AppEnv } from "@autumn/shared";
 import { Hono } from "hono";
+import { analyticsMiddleware } from "@/honoMiddlewares/analyticsMiddleware.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleListBillingPlansPerInstall } from "./handlers/handleListBillingPlans.js";
 import { handleUpdateBillingPlan } from "./handlers/handleUpdateBillingPlan.js";
@@ -21,6 +22,12 @@ import {
 import { vercelSignatureMiddleware } from "./misc/vercelSignatureMiddleware.js";
 
 export const vercelWebhookRouter = new Hono<HonoEnv>();
+
+vercelWebhookRouter.use(
+	"/:orgId/:env/*",
+	vercelSeederMiddleware,
+	analyticsMiddleware,
+);
 
 vercelWebhookRouter.get(
 	"/:orgId/:env/v1/products/:productId/plans",
