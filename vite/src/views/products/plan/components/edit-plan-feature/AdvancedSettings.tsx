@@ -1,5 +1,5 @@
 /** biome-ignore-all lint/a11y/noStaticElementInteractions: shush */
-import { FeatureUsageType } from "@autumn/shared";
+import { FeatureUsageType, isFeaturePriceItem } from "@autumn/shared";
 import { AreaCheckbox } from "@/components/v2/checkboxes/AreaCheckbox";
 import {
 	SheetAccordion,
@@ -24,6 +24,13 @@ export function AdvancedSettings() {
 	const { hasEntityFeatureId } = useHasEntityFeatureId();
 
 	if (!item) return null;
+	//if feature is not priced and single use, return null
+	if (
+		!isFeaturePriceItem(item) &&
+		getFeatureUsageType({ item, features }) === FeatureUsageType.Continuous
+	) {
+		return null;
+	}
 
 	const usageType = getFeatureUsageType({ item, features });
 	const hasCreditSystem = getFeatureCreditSystem({ item, features });
@@ -77,30 +84,35 @@ export function AdvancedSettings() {
 		<SheetAccordion type="single" withSeparator={false} collapsible={true}>
 			<SheetAccordionItem
 				value="advanced"
-				title="Advanced settings"
-				description="Additional configuration options for this feature"
+				title="Advanced"
+				// description="Additional configuration options for this feature"
 			>
 				<div className="space-y-6 pt-2 pb-10 [>&_.advanced-input-width]:w-xs">
 					{/* Reset existing usage when plan is enabled */}
-					<AreaCheckbox
-						title="Reset existing usage when plan is enabled"
-						description="When coming from another plan, this will reset the customer's feature usage to 0."
-						checked={!!item.reset_usage_when_enabled}
-						// hide={usageType === FeatureUsageType.Continuous}
-						disabled={
-							usageType === FeatureUsageType.Continuous ||
-							notNullish(item.config?.rollover)
-						}
-						onCheckedChange={(checked) =>
-							setItem({
-								...item,
-								reset_usage_when_enabled: checked,
-							})
-						}
-					/>
+					{usageType === FeatureUsageType.Single && (
+						<AreaCheckbox
+							title="Reset existing usage when plan is enabled"
+							description="When coming from another plan, this will reset the customer's feature usage to 0."
+							checked={!!item.reset_usage_when_enabled}
+							// hide={usageType === FeatureUsageType.Continuous}
+							disabled={
+								usageType === FeatureUsageType.Continuous ||
+								notNullish(item.config?.rollover)
+							}
+							onCheckedChange={(checked) =>
+								setItem({
+									...item,
+									reset_usage_when_enabled: checked,
+								})
+							}
+						/>
+					)}
 
 					{/* Usage Limits */}
-					<UsageLimit />
+					{
+						//if feature is priced, show usage limit
+						isFeaturePriceItem(item) && <UsageLimit />
+					}
 
 					{/* Rollover */}
 					<RolloverConfig />

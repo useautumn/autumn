@@ -1,8 +1,12 @@
 import { PlusIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/v2/buttons/Button";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import {
+	useCurrentItem,
+	useProductStore,
+} from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { useProductStore } from "@/hooks/stores/useProductStore";
+import { checkItemIsValid } from "@/utils/product/entitlementUtils";
 
 interface AddFeatureRowProps {
 	disabled?: boolean;
@@ -13,16 +17,21 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 	const { features } = useFeaturesQuery();
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const product = useProductStore((s) => s.product);
+	const item = useCurrentItem();
 
 	const handleAddFeatureClick = () => {
 		// Get feature IDs that are already added to the plan
 		const addedFeatureIds = new Set(
-			product.items?.map((item) => item.feature_id).filter(Boolean) || []
+			product.items?.map((item) => item.feature_id).filter(Boolean) || [],
 		);
+
+		if (item && !checkItemIsValid(item)) {
+			return;
+		}
 
 		// Filter out features that are already on the plan
 		const availableFeatures = features.filter(
-			(feature) => !addedFeatureIds.has(feature.id)
+			(feature) => !addedFeatureIds.has(feature.id),
 		);
 
 		if (availableFeatures.length === 0) {
