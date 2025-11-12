@@ -190,7 +190,6 @@ export const getCusPaymentMethod = async ({
 		});
 
 		let paymentMethods = res.data;
-		console.log("paymentMethods", paymentMethods);
 		paymentMethods.sort((a, b) => b.created - a.created);
 		if (typeFilter) {
 			paymentMethods = paymentMethods.filter((pm) => pm.type === typeFilter);
