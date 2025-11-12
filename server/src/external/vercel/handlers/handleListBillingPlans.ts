@@ -4,15 +4,19 @@ import {
 	isOneOffPrice,
 	isPriceItem,
 	mapToProductV2,
+	type Organization,
 	productV2ToBasePrice,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { z } from "zod/v4";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { parseVercelPrepaidQuantities } from "@/external/vercel/misc/vercelInvoicing.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import { getProductItemDisplay } from "@/internal/products/productUtils/productResponseUtils/getProductItemDisplay.js";
+import { isOneOff } from "@/internal/products/productUtils.js";
 import { formatAmount } from "@/utils/formatUtils.js";
 import type { VercelBillingPlan } from "../misc/vercelTypes.js";
 
@@ -120,18 +124,116 @@ export function productToBillingPlan({
 			}),
 		paymentMethodRequired: false,
 		// paymentMethodRequired: totalAmount > 0,
-		disabled: product.archived || false,
+		disabled: !!product.archived,
 	} satisfies VercelBillingPlan;
 	return bp;
 }
+
+export const listVercelPlansForOrg = async ({
+	db,
+	org,
+	env,
+	metadata,
+	canCancel = true,
+}: {
+	db: DrizzleCli;
+	org: Organization;
+	env: AppEnv;
+	metadata?: Record<string, any>;
+	canCancel?: boolean;
+}) => {
+	const products = await ProductService.listFull({
+		db,
+		orgId: org.id,
+		env,
+		archived: false,
+	});
+
+	return [
+		...products
+			.filter(
+				// Can't be an add-on, can't be archived, can't be one off
+				// Can be default, can be usage-based, can be prepaid.
+				// Can't have 0 entitlements, unless it's the default product.
+				(p) =>
+					!p.is_add_on &&
+					!p.archived &&
+					!isOneOff(p.prices) &&
+					(p.entitlements.length > 0 || p.is_default),
+			)
+			.map((product) =>
+				productToBillingPlan({
+					product,
+					orgCurrency: org?.default_currency ?? "usd",
+					metadata,
+				}),
+			),
+		...((canCancel
+			? [
+					{
+						id: "cancel_plan",
+						type: "subscription",
+						name: "Cancel plan",
+						description:
+							"Select this to immediately cancel your subscription and lose access.",
+						cost: undefined,
+						highlightedDetails: [],
+						disabled: false,
+					},
+				]
+			: []) as VercelBillingPlan[]),
+	] satisfies VercelBillingPlan[];
+};
 
 export const handleListBillingPlansPerInstall = createRoute({
 	query: z.object({
 		metadata: z.string().optional(),
 	}),
 	handler: async (c) => {
-		const { orgId, env } = c.req.param();
+		let { env, integrationConfigurationId, productId } = c.req.param() as {
+			env: AppEnv;
+			integrationConfigurationId?: string;
+			productId?: string;
+		};
 		const { db, org, logger } = c.get("ctx");
+
+		if (!integrationConfigurationId && !productId) {
+			return c.json(
+				{
+					error: "Missing integration configuration ID or product ID",
+				},
+				400,
+			);
+		}
+
+		if (productId && !integrationConfigurationId) {
+			const claims = c.get("vercelClaims");
+			if (!claims) {
+				return c.json(
+					{
+						error: "Missing installation ID",
+					},
+					400,
+				);
+			}
+			integrationConfigurationId = claims.installation_id ?? "";
+		}
+
+		if (!integrationConfigurationId) {
+			return c.json(
+				{
+					error: "Missing installation ID",
+				},
+				400,
+			);
+		}
+
+		const customer = await CusService.getByVercelId({
+			db,
+			vercelInstallationId: integrationConfigurationId,
+			orgId: org.id,
+			env: env as AppEnv,
+		});
 
 		// Parse metadata from query params
 		let metadata: Record<string, any> = {};
@@ -147,20 +249,15 @@ export const handleListBillingPlansPerInstall = createRoute({
 			}
 		}
 
-		const products = await ProductService.listFull({
+		const plans = await listVercelPlansForOrg({
 			db,
-			orgId,
-			env: env as AppEnv,
-			archived: false,
+			org,
+			env,
+			metadata,
+			canCancel:
+				customer?.customer_products?.length === 0 ||
+				customer?.customer_products?.every((p) => !p?.product?.is_default),
 		});
-
-		const plans = products.map((product) =>
-			productToBillingPlan({
-				product,
-				orgCurrency: org?.default_currency ?? "usd",
-				metadata,
-			}),
-		);
 
 		return c.json({ plans });
 	},
