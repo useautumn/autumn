@@ -18,6 +18,10 @@ export const ExternalProcessorsSchema = z.object({
 	vercel: VercelProcessorSchema.optional(),
 });
 
+/**
+ * CustomerProduct-level Vercel processor
+ * Stores installation-specific data for a customer product's Vercel integration
+ */
 export const VercelCusProductProcessorSchema = z.object({
 	installation_id: z.string(),
 	billing_plan_id: z.string(),
@@ -59,6 +63,12 @@ export const VercelProcessorConfigSchema = z.object({
 		.enum(VercelMarketplaceMode)
 		.optional()
 		.default(VercelMarketplaceMode.Installation),
+	svix: z
+		.object({
+			live_id: z.string().optional(),
+			sandbox_id: z.string().optional(),
+		})
+		.optional(),
 });
 
 export const UpsertVercelProcessorConfigSchema = z.object({

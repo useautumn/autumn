@@ -20,3 +20,5 @@ export const vercelResources = pgTable(
 		}).onDelete("cascade"),
 	],
 );
+
+export type VercelResource = typeof vercelResources.$inferSelect;
