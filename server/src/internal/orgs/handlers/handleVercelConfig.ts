@@ -2,9 +2,12 @@ import {
 	AppEnv,
 	type Organization,
 	UpsertVercelProcessorConfigSchema,
-	type VercelMarkeplaceMode,
+	type VercelMarketplaceMode,
 	type VercelProcessorConfig,
 } from "@autumn/shared";
+import type { ApplicationOut } from "svix";
+import { createSvixApp } from "@/external/svix/svixHelpers.js";
+import { createSvixCli } from "@/external/svix/svixUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { OrgService } from "../OrgService.js";
 
@@ -116,7 +119,7 @@ export const handleUpsertVercelConfig = createRoute({
 						...(body.marketplace_mode
 							? {
 									marketplace_mode:
-										body.marketplace_mode as VercelMarkeplaceMode,
+										body.marketplace_mode as VercelMarketplaceMode,
 								}
 							: {}),
 					},
@@ -127,5 +130,74 @@ export const handleUpsertVercelConfig = createRoute({
 		return c.json({
 			success: true,
 		});
+	},
+});
+
+export const handleGetVercelSink = createRoute({
+	handler: async (c) => {
+		const { db, org, env } = c.get("ctx");
+		const vercelConfig = org.processor_configs?.vercel;
+		const svixCli = createSvixCli();
+		let liveApp: ApplicationOut | undefined;
+		let sandboxApp: ApplicationOut | undefined;
+		if (!vercelConfig?.svix?.live_id || !vercelConfig?.svix?.sandbox_id) {
+			liveApp = await createSvixApp({
+				name: `${org.slug}_live_vercel_sink`,
+				orgId: org.id,
+				env: AppEnv.Live,
+			});
+		}
+
+		if (!vercelConfig?.svix?.sandbox_id) {
+			sandboxApp = await createSvixApp({
+				name: `${org.slug}_sandbox_vercel_sink`,
+				orgId: org.id,
+				env: AppEnv.Sandbox,
+			});
+		}
+
+		const updates = {
+			...(liveApp
+				? { svix: { ...(vercelConfig?.svix || {}), live_id: liveApp.id } }
+				: {}),
+			...(sandboxApp
+				? { svix: { ...(vercelConfig?.svix || {}), sandbox_id: sandboxApp.id } }
+				: {}),
+		};
+
+		await OrgService.update({
+			db,
+			orgId: org.id,
+			updates: {
+				processor_configs: {
+					...org.processor_configs,
+					vercel: { ...(vercelConfig || {}), ...updates },
+				},
+			},
+		});
+
+		let url: string | undefined;
+
+		if (env === AppEnv.Live) {
+			url = (
+				await svixCli.authentication.appPortalAccess(
+					liveApp?.id || vercelConfig?.svix?.live_id || "",
+					{
+						featureFlags: ["vercel"],
+					},
+				)
+			).url;
+		} else {
+			url = (
+				await svixCli.authentication.appPortalAccess(
+					sandboxApp?.id || vercelConfig?.svix?.sandbox_id || "",
+					{
+						featureFlags: ["vercel"],
+					},
+				)
+			).url;
+		}
+
+		return c.json({ url });
 	},
 });

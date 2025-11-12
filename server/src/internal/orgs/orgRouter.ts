@@ -11,7 +11,10 @@ import {
 import { handleGetUploadUrl } from "./handlers/handleGetUploadUrl.js";
 import { handleResetDefaultAccount } from "./handlers/handleResetDefaultAccount.js";
 import { handleUpdateOrg } from "./handlers/handleUpdateOrg.js";
-import { handleUpsertVercelConfig } from "./handlers/handleVercelConfig.js";
+import {
+	handleGetVercelSink,
+	handleUpsertVercelConfig,
+} from "./handlers/handleVercelConfig.js";
 import { handleConnectStripe } from "./handlers/stripeHandlers/handleConnectStripe.js";
 import { handleDeleteStripe } from "./handlers/stripeHandlers/handleDeleteStripe.js";
 import { handleGetOAuthUrl } from "./handlers/stripeHandlers/handleGetOAuthUrl.js";
@@ -43,3 +46,4 @@ honoOrgRouter.post("/stripe", ...handleConnectStripe);
 honoOrgRouter.get("/stripe/oauth_url", ...handleGetOAuthUrl);
 honoOrgRouter.post("/reset_default_account", ...handleResetDefaultAccount);
 honoOrgRouter.patch("/vercel", ...handleUpsertVercelConfig);
+honoOrgRouter.get("/vercel_sink", ...handleGetVercelSink);

@@ -1,10 +1,11 @@
 import type {
 	UpsertVercelProcessorConfig,
-	VercelMarkeplaceMode,
+	VercelMarketplaceMode,
 } from "@autumn/shared";
 import type { AxiosInstance } from "axios";
 import { useState } from "react";
 import { toast } from "sonner";
+import { AppPortal } from "svix-react";
 import { PageSectionHeader } from "@/components/general/PageSectionHeader";
 import { Button } from "@/components/v2/buttons/Button";
 import {
@@ -18,6 +19,7 @@ import {
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
 import { useOrg } from "@/hooks/common/useOrg";
+import { useVercelQuery } from "@/hooks/queries/useVercelQuery";
 import { OrgService } from "@/services/OrgService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
@@ -26,6 +28,12 @@ import LoadingScreen from "@/views/general/LoadingScreen";
 
 export const ConfigureVercel = () => {
 	const { org, isLoading, mutate } = useOrg();
+	const {
+		svixDashboardUrl,
+		isLoading: isVercelLoading,
+		error: vercelError,
+		refetch: vercelRefetch,
+	} = useVercelQuery();
 	const env = useEnv();
 	const axiosInstance = useAxiosInstance();
 	const [vercelConfig, setVercelConfig] = useState({
@@ -33,7 +41,7 @@ export const ConfigureVercel = () => {
 		client_secret: "",
 		webhook_url: "",
 		custom_payment_method: "",
-		marketplace_mode: "" as VercelMarkeplaceMode,
+		marketplace_mode: "" as VercelMarketplaceMode,
 	});
 
 	const handleSaveVercelConfig = async (
@@ -43,7 +51,7 @@ export const ConfigureVercel = () => {
 			client_secret?: string;
 			webhook_url?: string;
 			custom_payment_method?: string;
-			marketplace_mode?: VercelMarkeplaceMode;
+			marketplace_mode?: VercelMarketplaceMode;
 		},
 	) => {
 		try {
@@ -102,7 +110,7 @@ export const ConfigureVercel = () => {
 					webhook_url: "",
 					custom_payment_method: "",
 					marketplace_mode:
-						filteredConfig.marketplace_mode as VercelMarkeplaceMode,
+						filteredConfig.marketplace_mode as VercelMarketplaceMode,
 				});
 			} else {
 				toast.error("Failed to update Vercel config");
@@ -117,7 +125,7 @@ export const ConfigureVercel = () => {
 			<PageSectionHeader
 				title={`Vercel Settings (${env === "live" ? "Live" : "Sandbox"})`}
 			/>
-			<div className="px-10 flex flex-col gap-4 grid grid-cols-2 grid-rows-2">
+			<div className="px-10 flex-col gap-4 grid grid-cols-2 grid-rows-2">
 				<div>
 					<FormLabel className="mb-1">
 						<span className="text-t2">Client (Integration) ID</span>
@@ -258,7 +266,7 @@ export const ConfigureVercel = () => {
 						This is the base URL for connecting to your Vercel project. You
 						should provide this to Vercel as the webhook URL.
 					</p>
-					<div className="grid grid-cols-2 grid-rows-2 gap-4">
+					<div className="grid grid-cols-2 grid-rows-1 gap-4">
 						<CodeGroup value={env} className="">
 							<CodeGroupList>
 								<CodeGroupTab value={env}>
@@ -282,6 +290,24 @@ export const ConfigureVercel = () => {
 						</CodeGroup>
 					</div>
 				</div>
+			</div>
+			<PageSectionHeader title="Vercel Sink" />
+			<div className="px-10 flex flex-col gap-4">
+				{svixDashboardUrl && !isVercelLoading && !vercelError ? (
+					<AppPortal
+						url={svixDashboardUrl}
+						style={{
+							height: "100%",
+							borderRadius: "none",
+							// marginTop: "0.5rem",
+							// paddingLeft: "1rem",
+							// paddingRight: "1rem",
+						}}
+						fullSize
+					/>
+				) : (
+					<div className="text-muted-foreground">Dashboard URL not found.</div>
+				)}
 			</div>
 		</div>
 	) : (

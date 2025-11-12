@@ -133,7 +133,6 @@ vercelWebhookRouter.post(
 					return c.json({ received: true }, 200);
 
 				default:
-					logger.warn("Unhandled Vercel webhook type", { eventType });
 					return c.json({ received: true }, 200);
 			}
 		} catch (error: any) {

@@ -1,24 +1,28 @@
 import { AppEnv, type Organization } from "@autumn/shared";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { JWTExpired, JWTInvalid } from "jose/errors";
+import { z } from "zod/v4";
 
 const JWKS = createRemoteJWKSet(
 	new URL(`https://marketplace.vercel.com/.well-known/jwks`),
 );
 
-export interface OidcClaims {
-	sub: string;
-	aud: string;
-	iss: string;
-	exp: number;
-	iat: number;
-	account_id: string;
-	installation_id: string | null; // Can be null for system auth
-	user_id?: string; // Optional for system auth
-	user_role?: string; // Optional for system auth
-	user_name?: string;
-	user_avatar_url?: string;
-}
+/** Vercel OIDC Claims schema */
+export const OidcClaimsSchema = z.object({
+	sub: z.string(),
+	aud: z.string(),
+	iss: z.string(),
+	exp: z.number(),
+	iat: z.number(),
+	account_id: z.string(),
+	installation_id: z.string().nullable(),
+	user_id: z.string().optional(),
+	user_role: z.string().optional(),
+	user_name: z.string().optional(),
+	user_avatar_url: z.string().optional(),
+});
+
+export type OidcClaims = z.infer<typeof OidcClaimsSchema>;
 
 export async function verifyToken({
 	token,
