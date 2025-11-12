@@ -139,6 +139,17 @@ export const handleMarketplaceInvoicePaid = async ({
 						prices: product.prices,
 					});
 				}
+
+				await VercelResourceService.update({
+					db,
+					resourceId: vercelResourceId,
+					installationId,
+					orgId: org.id,
+					env,
+					updates: {
+						status: "ready",
+					},
+				});
 			} catch (error: any) {
 				logger.warn("Could not fetch or parse resource metadata", {
 					error: error.message,

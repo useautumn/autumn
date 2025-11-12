@@ -4,6 +4,7 @@ import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { VercelResourceService } from "../../services/VercelResourceService.js";
 
 export const handleMarketplaceInvoiceNotPaid = async ({
 	db,
@@ -90,6 +91,20 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 		if (!vercelBillingPlanId) {
 			logger.error("No vercel_billing_plan_id in subscription metadata");
 			throw new Error("Missing vercel_billing_plan_id");
+		}
+
+		const vercelResourceId = subscription.metadata?.vercel_resource_id;
+		if (vercelResourceId?.startsWith("vre_")) {
+			await VercelResourceService.update({
+				db,
+				resourceId: vercelResourceId,
+				installationId,
+				orgId: org.id,
+				env,
+				updates: {
+					status: "suspended",
+				},
+			});
 		}
 
 		const product = await ProductService.getFull({

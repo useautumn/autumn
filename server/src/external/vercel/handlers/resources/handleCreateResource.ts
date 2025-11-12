@@ -1,13 +1,18 @@
-import { type AppEnv, CusExpand, RecaseError } from "@autumn/shared";
+import { AppEnv, CusExpand, RecaseError } from "@autumn/shared";
 import { ErrCode } from "@shared/enums/ErrCode.js";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod/v4";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { sendCustomSvixEvent } from "@/external/svix/svixHelpers.js";
 import { createVercelSubscription } from "@/external/vercel/misc/vercelSubscriptions.js";
 import { VercelResourceService } from "@/external/vercel/services/VercelResourceService.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { generateId } from "@/utils/genUtils.js";
+import {
+	type VercelResourceCreatedEvent,
+	VercelWebhooks,
+} from "../../misc/vercelWebhookTypes.js";
 import { productToBillingPlan } from "../handleListBillingPlans.js";
 
 export const handleCreateResource = createRoute({
@@ -98,6 +103,25 @@ export const handleCreateResource = createRoute({
 			resourceId,
 		});
 
+		try {
+			await sendCustomSvixEvent({
+				appId:
+					org.processor_configs?.vercel?.svix?.[
+						env === AppEnv.Live ? "live_id" : "sandbox_id"
+					] ?? "",
+				org,
+				env: env as AppEnv,
+				eventType: VercelWebhooks.ResourceProvisioned,
+				data: {
+					resource: {
+						id: resourceId,
+						name,
+					},
+					installation_id: integrationConfigurationId,
+					access_token: customer.processors?.vercel?.access_token ?? "",
+				} satisfies VercelResourceCreatedEvent,
+			});
+		} catch (_error) {}
 		// 4. Return resource response
 		return c.json({
 			id: resourceId,
@@ -105,12 +129,6 @@ export const handleCreateResource = createRoute({
 			name,
 			metadata,
 			status: "pending", // Will become "ready" after marketplace.invoice.paid confirms payment
-			secrets: [
-				{
-					name: "AUTUMN_IS_AMAZING",
-					value: `${new Date().toISOString()}-MAGIC`,
-				},
-			],
 			billingPlan: {
 				...productToBillingPlan({
 					product,
@@ -118,6 +136,7 @@ export const handleCreateResource = createRoute({
 				}),
 				scope: "installation", // Always installation-level
 			},
+			secrets: [],
 			notification: {
 				level: "info",
 				title: "Resource provisioning",

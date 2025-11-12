@@ -176,14 +176,6 @@ export const submitInvoiceToVercel = async ({
 	});
 };
 
-export const submitBillingUsageToVercel = async ({
-	installationId,
-	usage,
-}: {
-	installationId: string;
-	usage: number;
-}) => {};
-
 /**
  * Parses Vercel metadata to extract prepaid quantities for features
  * Expected metadata format: { "<feature_id>": quantity, ... }
