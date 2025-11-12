@@ -121,11 +121,11 @@ export const ConfigureVercel = () => {
 	};
 
 	return !isLoading ? (
-		<div className="flex flex-col gap-4">
+		<div className="flex flex-col">
 			<PageSectionHeader
 				title={`Vercel Settings (${env === "live" ? "Live" : "Sandbox"})`}
 			/>
-			<div className="px-10 flex-col gap-4 grid grid-cols-2 grid-rows-2">
+			<div className="px-10 flex-col py-4 gap-4 grid grid-cols-2 grid-rows-2">
 				<div>
 					<FormLabel className="mb-1">
 						<span className="text-t2">Client (Integration) ID</span>
@@ -172,26 +172,7 @@ export const ConfigureVercel = () => {
 					/>
 				</div>
 
-				<div>
-					<FormLabel className="mb-1">
-						<span className="text-t2">Webhook URL</span>
-					</FormLabel>
-					<p className="text-t3 text-sm mb-2">
-						This is the webhook URL for your Vercel project in {env} mode.
-					</p>
-					<Input
-						value={vercelConfig.webhook_url || ""}
-						onChange={(e) =>
-							setVercelConfig({ ...vercelConfig, webhook_url: e.target.value })
-						}
-						placeholder={
-							org?.processor_configs?.vercel?.webhook_url ||
-							"eg. https://useautumn.com/api/vercel/webhook"
-						}
-					/>
-				</div>
-
-				<div>
+				<div className="col-span-2">
 					<FormLabel className="mb-1">
 						<span className="text-t2">Custom Payment Method ID</span>
 					</FormLabel>
@@ -257,7 +238,7 @@ export const ConfigureVercel = () => {
 				</div>
 			</div>
 			<PageSectionHeader title="Vercel Integration" />
-			<div className="px-10 flex flex-col gap-4">
+			<div className="px-10 flex flex-col gap-4 py-4">
 				<div>
 					<FormLabel className="mb-1 text-t2">
 						<span>Base URL</span>
@@ -267,7 +248,7 @@ export const ConfigureVercel = () => {
 						should provide this to Vercel as the webhook URL.
 					</p>
 					<div className="grid grid-cols-2 grid-rows-1 gap-4">
-						<CodeGroup value={env} className="">
+						<CodeGroup value={env} className="col-span-2">
 							<CodeGroupList>
 								<CodeGroupTab value={env}>
 									{env === "live" ? "Live" : "Sandbox"}
@@ -292,7 +273,7 @@ export const ConfigureVercel = () => {
 				</div>
 			</div>
 			<PageSectionHeader title="Vercel Sink" />
-			<div className="px-10 flex flex-col gap-4">
+			<div className="flex flex-col pt-0 mt-0">
 				{svixDashboardUrl && !isVercelLoading && !vercelError ? (
 					<AppPortal
 						url={svixDashboardUrl}
