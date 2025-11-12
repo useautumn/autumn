@@ -137,6 +137,33 @@ const handlePrepaidErrors = async ({
 	}
 };
 
+export const handleCustomPaymentMethodErrors = ({
+	attachParams,
+}: {
+	attachParams: AttachParams;
+}) => {
+	const { paymentMethod } = attachParams;
+	if (
+		paymentMethod?.type === "custom" ||
+		attachParams.customer.processors?.vercel?.custom_payment_method_id ===
+			paymentMethod?.custom?.type
+	) {
+		throw new RecaseError({
+			message:
+				"This customer is billed outside of Stripe, please use the origin platform to manage their billing.",
+			code: ErrCode.InvalidRequest,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	} else if (attachParams.customer.processors?.vercel?.installation_id) {
+		throw new RecaseError({
+			message:
+				"This customer is billed outside of Stripe, please use the origin platform to manage their billing.",
+			code: ErrCode.InvalidRequest,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+};
+
 export const handleAttachErrors = async ({
 	attachParams,
 	attachBody,
@@ -151,6 +178,10 @@ export const handleAttachErrors = async ({
 	config: AttachConfig;
 }) => {
 	const { onlyCheckout } = config;
+
+	handleCustomPaymentMethodErrors({
+		attachParams,
+	});
 
 	if (branch === AttachBranch.MultiAttach) {
 		await handleMultiAttachErrors({
