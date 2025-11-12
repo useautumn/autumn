@@ -13,6 +13,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/v2/selects/Select";
+import { useProductStore } from "@/hooks/stores/useProductStore";
 import { formatIntervalText } from "@/utils/formatUtils/formatTextUtils";
 import { CustomiseIntervalPopover } from "../CustomiseIntervalPopover";
 
@@ -20,17 +21,21 @@ export const SelectBillingCycle = ({
 	item,
 	setItem,
 	disabled,
+	filterOneOff,
 }: {
 	item?: ProductItem;
 	setItem: (item: ProductItem) => void;
 	disabled: boolean;
+	filterOneOff?: boolean;
 }) => {
+	const product = useProductStore((s) => s.product);
+
 	return (
 		<div className="w-full">
 			<FormLabel disabled={disabled}>Billing Interval</FormLabel>
 			<Select
 				disabled={disabled}
-				value={item ? itemToBillingInterval({ item }) : ""}
+				value={item ? itemToBillingInterval({ item }) : BillingInterval.Month}
 				defaultValue={BillingInterval.Month}
 				onValueChange={(value) => {
 					if (!item) return;
@@ -46,15 +51,23 @@ export const SelectBillingCycle = ({
 					<SelectValue placeholder="Select interval" />
 				</SelectTrigger>
 				<SelectContent>
-					{Object.values(BillingInterval).map((interval) => (
-						<SelectItem key={interval} value={interval}>
-							{formatIntervalText({
-								billingInterval: interval,
-								intervalCount: item?.interval_count || 1,
-								isBillingInterval: true,
-							})}
-						</SelectItem>
-					))}
+					{Object.values(BillingInterval)
+						// .filter((interval) => interval !== BillingInterval.OneOff)
+						.filter((interval) => {
+							if (filterOneOff) {
+								return interval !== BillingInterval.OneOff;
+							}
+							return true;
+						})
+						.map((interval) => (
+							<SelectItem key={interval} value={interval}>
+								{formatIntervalText({
+									billingInterval: interval,
+									intervalCount: item?.interval_count || 1,
+									isBillingInterval: true,
+								})}
+							</SelectItem>
+						))}
 					{item && <CustomiseIntervalPopover item={item} setItem={setItem} />}
 				</SelectContent>
 			</Select>

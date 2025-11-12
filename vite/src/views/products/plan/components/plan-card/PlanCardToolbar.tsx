@@ -1,7 +1,7 @@
 import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { IconButton } from "@/components/v2/buttons/IconButton";
+import { Button } from "@/components/v2/buttons/Button";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useIsEditingPlan } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
@@ -46,11 +46,11 @@ export const PlanCardToolbar = ({
 				}}
 			/>
 			<div className="flex flex-row items-center gap-1">
-				<IconButton
-					icon={<PencilSimpleIcon />}
+				<Button
+					// icon={<PencilSimpleIcon />}
 					onClick={onEdit}
 					aria-label="Edit plan"
-					variant="muted"
+					variant="secondary"
 					disabled={editDisabled}
 					// size="sm"
 					className={cn(
@@ -58,8 +58,9 @@ export const PlanCardToolbar = ({
 						isEditingPlan && "btn-secondary-active !opacity-100 ",
 					)}
 				>
-					Plan Details
-				</IconButton>
+					<PencilSimpleIcon />
+					Edit Plan
+				</Button>
 			</div>
 		</>
 	);
