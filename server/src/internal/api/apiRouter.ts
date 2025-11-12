@@ -12,13 +12,11 @@ import { expressCusRouter } from "../customers/cusRouter.js";
 import { handleCreateBillingPortal } from "../customers/handlers/handleCreateBillingPortal.js";
 import { featureRouter } from "../features/featureRouter.js";
 import { internalFeatureRouter } from "../features/internalFeatureRouter.js";
-import { migrationRouter } from "../migrations/migrationRouter.js";
 import { handleGetOrg } from "../orgs/handlers/handleGetOrg.js";
 import { platformRouter } from "../platform/platformLegacy/platformRouter.js";
 import { productBetaRouter, productRouter } from "../products/productRouter.js";
 import { componentRouter } from "./components/componentRouter.js";
 import { entityRouter } from "./entities/entityRouter.js";
-// import { checkRouter } from "./entitled/checkRouter.js";
 import { eventsRouter } from "./events/eventRouter.js";
 import { usageRouter } from "./events/usageRouter.js";
 import { invoiceRouter } from "./invoiceRouter.js";
@@ -45,7 +43,6 @@ apiRouter.use("/internal_features", internalFeatureRouter);
 
 apiRouter.use("/usage", usageRouter);
 apiRouter.use("/entities", entityRouter);
-apiRouter.use("/migrations", migrationRouter);
 
 // REWARDS
 apiRouter.use("/reward_programs", rewardProgramRouter);
@@ -55,9 +52,6 @@ apiRouter.use("/redemptions", redemptionRouter);
 // Cus Product
 apiRouter.use("", attachRouter);
 apiRouter.use("/cancel", cancelRouter);
-
-// apiRouter.use("/entitled", checkRouter);
-// apiRouter.use("/check", checkRouter);
 
 apiRouter.use("/events", eventsRouter);
 apiRouter.use("/track", eventsRouter);

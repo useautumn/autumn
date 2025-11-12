@@ -20,7 +20,10 @@ import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/han
 import { honoOrgRouter } from "./internal/orgs/orgRouter.js";
 import { platformBetaRouter } from "./internal/platform/platformBeta/platformBetaRouter.js";
 import { internalProductRouter } from "./internal/products/internalProductRouter.js";
-import { honoProductRouter } from "./internal/products/productRouter.js";
+import {
+	honoProductRouter,
+	migrationRouter,
+} from "./internal/products/productRouter.js";
 import { auth } from "./utils/auth.js";
 
 const ALLOWED_ORIGINS = [
@@ -92,6 +95,7 @@ export const createHonoApp = () => {
 	app.use("/v1/*", queryMiddleware());
 
 	// API Routes
+	app.route("v1", migrationRouter);
 	app.post("/v1/entitled", ...handleCheck);
 	app.post("/v1/check", ...handleCheck);
 	app.route("v1/customers", cusRouter);

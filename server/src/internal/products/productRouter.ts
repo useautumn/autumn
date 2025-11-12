@@ -150,8 +150,9 @@ import { handleUpdateProductV2 } from "./handlers/handleUpdateProduct/handleUpda
 
 // Create a Hono app for products
 export const honoProductRouter = new Hono<HonoEnv>();
+export const migrationRouter = new Hono<HonoEnv>();
 
 honoProductRouter.post("", ...createProduct);
 honoProductRouter.post("/:productId", ...handleUpdateProductV2);
 honoProductRouter.post("/:productId/copy", ...handleCopyProductV2);
-honoProductRouter.post("/migrate", ...handleMigrateProductV2);
+migrationRouter.post("migrations", ...handleMigrateProductV2);
