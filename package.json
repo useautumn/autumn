@@ -11,8 +11,7 @@
 		"catalog": {
 			"stripe": "19.2.0",
 			"drizzle-orm": "0.43.1",
-			"drizzle-kit": "^0.31.1",
-			"stripe": "19.2.0"
+			"drizzle-kit": "^0.31.1"
 		}
 	},
 	"type": "module",
