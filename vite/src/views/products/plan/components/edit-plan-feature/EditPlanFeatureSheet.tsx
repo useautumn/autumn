@@ -42,13 +42,13 @@ export function EditPlanFeatureSheet({
 			{!isOnboarding && (
 				<SheetHeader
 					title={`Configure ${feature?.name}`}
-					description="Configure how this feature is used in your app"
+					description="How users access this feature when they're on this plan"
 				/>
 			)}
 
 			{feature?.type !== FeatureType.Boolean && (
 				<>
-					<SheetSection title="Configuration">
+					<SheetSection title="Feature Type">
 						<BillingType />
 					</SheetSection>
 
