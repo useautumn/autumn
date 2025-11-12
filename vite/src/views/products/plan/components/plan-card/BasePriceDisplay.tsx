@@ -16,33 +16,52 @@ export const BasePriceDisplay = () => {
 	const isOnboarding = useOnboardingStore((s) => s.isOnboarding);
 	const { org } = useOrg();
 
-	const formattedAmount = formatAmount({
-		org: org as unknown as Organization,
-		amount: productV3.price?.amount ?? 0,
-		amountFormatOptions: {
-			style: "currency",
-			currency: org?.default_currency || "USD",
-			currencyDisplay: "narrowSymbol",
-		},
-	});
+	const renderPriceContent = () => {
+		if (product.planType === "free") {
+			return <span className="text-main-sec inline-block">Free</span>;
+		}
 
-	const secondaryText = productV3.price?.interval
-		? `${getIntervalString({ interval: productV3.price.interval, intervalCount: productV3.price.intervalCount })}`
-		: "once";
+		const price = productV3.price;
+		const priceExists = notNullish(price) && price.amount > 0;
+		if (priceExists && price) {
+			const formattedAmount = formatAmount({
+				org: org as unknown as Organization,
+				amount: price.amount,
+				amountFormatOptions: {
+					style: "currency",
+					currency: org?.default_currency || "USD",
+					currencyDisplay: "narrowSymbol",
+				},
+			});
 
-	const priceExists = notNullish(productV3.price) && productV3.price.amount > 0;
-	return (
-		<div className={cn(isOnboarding && "mt-1")}>
-			{priceExists ? (
+			const secondaryText = price.interval
+				? `${getIntervalString({ interval: price.interval, intervalCount: price.intervalCount })}`
+				: "one-off";
+
+			return (
 				<span className="text-body-secondary">
 					<span className="text-main-sec">{formattedAmount}</span>{" "}
 					{secondaryText}
 				</span>
-			) : (
+			);
+		}
+
+		if (product.basePriceType === "usage") {
+			return (
 				<span className="text-t4 text-body-secondary inline-block mt-[4.5px]">
-					No base price
+					Usage-based
 				</span>
-			)}
-		</div>
+			);
+		}
+
+		return (
+			<span className="text-t4 text-body-secondary inline-block mt-[4.5px]">
+				No base price
+			</span>
+		);
+	};
+
+	return (
+		<div className={cn(isOnboarding && "mt-1")}>{renderPriceContent()}</div>
 	);
 };

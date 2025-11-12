@@ -16,13 +16,13 @@ import { useProductItemContext } from "@/views/products/product/product-item/Pro
 const getOnIncreaseText = (option: OnIncrease) => {
 	switch (option) {
 		case OnIncrease.BillImmediately:
-			return "Pay full amount immediately";
+			return "Bill full amount immediately";
 		case OnIncrease.ProrateImmediately:
-			return "Pay for prorated amount immediately";
+			return "Bill prorated amount immediately";
 		case OnIncrease.ProrateNextCycle:
-			return "Add prorated amount to next invoice";
+			return "Bill prorated amount next cycle";
 		case OnIncrease.BillNextCycle:
-			return "Pay for full amount next cycle";
+			return "Bill from next cycle";
 	}
 };
 
@@ -35,14 +35,11 @@ const getOnDecreaseText = ({
 }) => {
 	switch (option) {
 		case OnDecrease.Prorate:
-			return "Prorate";
+			return "Prorate (refund unused time)";
 		case OnDecrease.None:
-			if (usageModel === UsageModel.Prepaid) {
-				return "No proration (balance will be kept till next cycle)";
-			}
-			return "No proration (usage will be kept till next cycle)";
+			return "No proration (purchased amount is kept till next cycle)";
 		case OnDecrease.NoProrations:
-			return "No proration";
+			return "No proration (purchased amount is cleared)";
 	}
 };
 

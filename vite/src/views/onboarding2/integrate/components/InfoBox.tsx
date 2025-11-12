@@ -1,5 +1,5 @@
+import { InfoIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import { Info } from "lucide-react";
 
 export const InfoBox = ({
 	classNames,
@@ -14,12 +14,12 @@ export const InfoBox = ({
 	return (
 		<div
 			className={cn(
-				"bg-stone-100 border p-4 text-t2 flex gap-2",
+				"bg-t8/10 p-4 text-t8 flex gap-2 rounded-lg",
 				classNames?.infoBox,
 			)}
 		>
 			<div className={cn("pt-0.5 mr-1", classNames?.infoIcon)}>
-				<Info size={14} />
+				<InfoIcon size={16} className="text-t8" weight="fill" />
 			</div>
 			{children}
 		</div>
