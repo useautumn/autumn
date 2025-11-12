@@ -7,9 +7,9 @@ import {
 	type LimitedItem,
 	SuccessCode,
 } from "@autumn/shared";
-import chalk from "chalk";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
 	featureToCreditSystem,
@@ -88,7 +88,7 @@ describe(`${chalk.yellowBright("credit-systems1: test /check on action that uses
 					purchased_balance: 0,
 					current_balance: creditsFeature.included_usage,
 					usage: 0,
-					max_purchase: 0,
+					max_purchase: null,
 					overage_allowed: false,
 					reset: {
 						interval: "month",

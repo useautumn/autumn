@@ -39,6 +39,8 @@ export default defineConfig({
 			"better-auth/react",
 			"@better-auth/stripe",
 			"zod/v4",
+			"drizzle-orm/pg-core",
+			"drizzle-orm",
 		],
 	},
 	// Clear cache on config change

@@ -124,7 +124,6 @@ const toV3BalanceParams = ({
 	}
 
 	// 5. Usage limit
-
 	const usageLimit = input.max_purchase
 		? new Decimal(input.max_purchase).add(includedUsage).toNumber()
 		: undefined;
@@ -150,6 +149,7 @@ export function transformBalanceToCusFeatureV3({
 		unlimited: isUnlimited,
 	});
 
+	console.log("Legacy data:", legacyData);
 	const { includedUsage, balance, usage, overageAllowed, usageLimit } =
 		toV3BalanceParams({
 			input,

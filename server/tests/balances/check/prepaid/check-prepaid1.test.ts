@@ -1,7 +1,6 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	ApiVersion,
-	type CheckResponseV0,
 	type CheckResponseV1,
 	type CheckResponseV2,
 	type LimitedItem,
@@ -32,7 +31,6 @@ const testCase = "check-prepaid1";
 
 describe(`${chalk.yellowBright("check-prepaid1: test /check when prepaid feature attached")}`, () => {
 	const customerId = testCase;
-	const autumnV0: AutumnInt = new AutumnInt({ version: ApiVersion.V0_2 });
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2_0 });
 
@@ -81,14 +79,16 @@ describe(`${chalk.yellowBright("check-prepaid1: test /check when prepaid feature
 				current_balance:
 					prepaidQuantity + prepaidMessagesFeature.included_usage,
 				usage: 0,
-				max_purchase: 0,
+
+				max_purchase: null,
 				overage_allowed: false,
 				reset: {
 					interval: "month",
-					// resets_at: 1765462114000,
 				},
 			},
 		});
+
+		expect(res.balance?.reset?.resets_at).toBeDefined();
 	});
 
 	test("should have allowed true if value is less than current balance", async () => {
@@ -119,26 +119,19 @@ describe(`${chalk.yellowBright("check-prepaid1: test /check when prepaid feature
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV1;
 
-		console.log("Res:", res);
-
-		// expect(res).toStrictEqual({
-		// 	allowed: false,
-		// 	customer_id: customerId,
-		// 	feature_id: TestFeature.Messages,
-		// 	required_balance: 1,
-		// 	code: SuccessCode.FeatureFound,
-		// });
-	});
-	return;
-
-	test("should have correct v0 response", async () => {
-		const res = (await autumnV0.check({
+		expect(res).toMatchObject({
+			allowed: true,
+			code: "feature_found",
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
-		})) as unknown as CheckResponseV0;
-
-		expect(res.allowed).toBe(false);
-		expect(res.balances).toBeDefined();
-		expect(res.balances).toHaveLength(0);
+			required_balance: 1,
+			interval: "month",
+			interval_count: 1,
+			unlimited: false,
+			balance: prepaidQuantity + prepaidMessagesFeature.included_usage,
+			usage: 0,
+			included_usage: prepaidQuantity + prepaidMessagesFeature.included_usage,
+			overage_allowed: false,
+		});
 	});
 });

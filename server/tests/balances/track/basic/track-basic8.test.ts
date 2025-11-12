@@ -1,9 +1,14 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { ApiVersion, ErrCode, type TrackResponseV2 } from "@autumn/shared";
-import chalk from "chalk";
+import {
+	type ApiCustomer,
+	ApiVersion,
+	ErrCode,
+	type TrackResponseV2,
+} from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { timeout } from "@tests/utils/genUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -15,11 +20,11 @@ const testCase = "track-basic8";
 const customerId = testCase;
 
 // Prepaid feature: 5 included, no overage allowed
-const prepaidQuantity = 500;
+
 const prepaidItem = constructPrepaidItem({
 	featureId: TestFeature.Messages,
-	includedUsage: 0,
-	billingUnits: 100,
+	includedUsage: 2,
+	billingUnits: 1,
 	price: 1,
 });
 
@@ -29,6 +34,7 @@ const prepaidProduct = constructProduct({
 	type: "pro",
 });
 
+const prepaidQuantity = 3;
 describe(`${chalk.yellowBright(`${testCase}: Testing prepaid tracking`)}`, () => {
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2_0 });
@@ -62,7 +68,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing prepaid tracking`)}`, () =>
 		const customer = await autumnV1.customers.get(customerId);
 		const balance = customer.features[TestFeature.Messages].balance;
 
-		expect(balance).toBe(prepaidQuantity);
+		expect(balance).toBe(5);
 	});
 
 	test("should reject tracking 7 units when balance is 5 (no overage)", async () => {
@@ -72,7 +78,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing prepaid tracking`)}`, () =>
 				await autumnV1.track({
 					customer_id: customerId,
 					feature_id: TestFeature.Messages,
-					value: prepaidQuantity + 1,
+					value: 7,
 					overage_behavior: "reject",
 				});
 			},
@@ -82,7 +88,22 @@ describe(`${chalk.yellowBright(`${testCase}: Testing prepaid tracking`)}`, () =>
 		const customer = await autumnV1.customers.get(customerId);
 		const balance = customer.features[TestFeature.Messages].balance;
 
-		expect(balance).toBe(prepaidQuantity);
+		expect(balance).toBe(5);
+	});
+
+	test("should track 4 units and have correct balance", async () => {
+		const trackRes: TrackResponseV2 = await autumnV2.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 4,
+		});
+
+		expect(trackRes.balance).toMatchObject({
+			granted_balance: 2,
+			purchased_balance: 3,
+			current_balance: 1,
+			usage: 4,
+		});
 	});
 
 	test("should reflect unchanged balance in non-cached customer after 2s", async () => {
@@ -90,21 +111,16 @@ describe(`${chalk.yellowBright(`${testCase}: Testing prepaid tracking`)}`, () =>
 		await timeout(2000);
 
 		// Fetch customer with skip_cache=true
-		const customer = await autumnV1.customers.get(customerId, {
+		const customer = (await autumnV2.customers.get(customerId, {
 			skip_cache: "true",
+		})) as unknown as ApiCustomer;
+		const feature = customer.balances[TestFeature.Messages];
+
+		expect(feature).toMatchObject({
+			granted_balance: 2,
+			purchased_balance: 3,
+			current_balance: 1,
+			usage: 4,
 		});
-		const balance = customer.features[TestFeature.Messages].balance;
-
-		expect(balance).toBe(prepaidQuantity);
-	});
-
-	test("should track 3 units and have correct balance", async () => {
-		const trackRes: TrackResponseV2 = await autumnV2.track({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			value: 3,
-		});
-
-		console.log("Track res:", trackRes);
 	});
 });

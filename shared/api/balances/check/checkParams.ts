@@ -1,12 +1,12 @@
 import { z } from "zod/v4";
+import { CusExpand } from "../../../models/cusModels/cusExpand.js";
 import { CustomerDataSchema } from "../../common/customerData.js";
 import { EntityDataSchema } from "../../common/entityData.js";
 import { queryStringArray } from "../../common/queryHelpers.js";
-import { CheckExpand } from "./enums/CheckExpand.js";
 
 export const CheckQuerySchema = z.object({
 	skip_cache: z.boolean().optional(),
-	expand: queryStringArray(z.enum(CheckExpand)).optional(),
+	expand: queryStringArray(z.enum([CusExpand.BalanceFeature])).optional(),
 });
 
 // Check Feature Schemas

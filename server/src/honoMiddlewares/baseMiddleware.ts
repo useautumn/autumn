@@ -71,6 +71,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 		// Query params
 		expand: [],
+		skipCache: false,
 	});
 
 	// childLogger.info(`${method} ${path}`);

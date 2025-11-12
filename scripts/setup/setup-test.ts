@@ -1,35 +1,48 @@
 #!/usr/bin/env node
 import chalk from "chalk";
 import inquirer from "inquirer";
-import { createTestOrg, TEST_ORG_CONFIG } from "./setupTestUtils/createTestOrg.js";
+import {
+	createTestOrg,
+	TEST_ORG_CONFIG,
+} from "../setupTestUtils/createTestOrg.js";
+import {
+	updateMultipleEnvVars,
+	updateSingleEnvVar,
+} from "../setupTestUtils/incrementalEnvUpdate.js";
 import {
 	setupStripeTestKey,
 	setupTunnelUrl,
 	setupUpstash,
-} from "./setupTestUtils/setupPrompts.js";
-import { updateEnvFile } from "./setupTestUtils/updateEnvFile.js";
-import {
-	updateSingleEnvVar,
-	updateMultipleEnvVars,
-} from "./setupTestUtils/incrementalEnvUpdate.js";
+} from "../setupTestUtils/setupPrompts.js";
+import { updateEnvFile } from "../setupTestUtils/updateEnvFile.js";
 
 async function showPreparationChecklist() {
 	console.log(
-		chalk.magentaBright("\n================ Autumn Test Setup ================\n"),
+		chalk.magentaBright(
+			"\n================ Autumn Test Setup ================\n",
+		),
 	);
 	console.log(
-		chalk.cyan("This script will set up a test organization for development.\n"),
+		chalk.cyan(
+			"This script will set up a test organization for development.\n",
+		),
 	);
-	console.log(chalk.yellowBright("Before you begin, please have the following ready:\n"));
+	console.log(
+		chalk.yellowBright("Before you begin, please have the following ready:\n"),
+	);
 
 	console.log(chalk.whiteBright("1. Stripe Test API Key (sk_test_...)"));
 	console.log(
-		chalk.gray("   → Used to link Stripe to your test account for payment processing\n"),
+		chalk.gray(
+			"   → Used to link Stripe to your test account for payment processing\n",
+		),
 	);
 
 	console.log(chalk.whiteBright("2. Upstash Redis REST URL and Token"));
 	console.log(
-		chalk.gray("   → Used for caching customer objects and testing race conditions\n"),
+		chalk.gray(
+			"   → Used for caching customer objects and testing race conditions\n",
+		),
 	);
 
 	console.log(chalk.whiteBright("3. Tunnel URL (e.g., ngrok URL)"));
@@ -50,7 +63,11 @@ async function showPreparationChecklist() {
 	]);
 
 	if (!ready) {
-		console.log(chalk.yellow("\nSetup cancelled. Run the script again when you're ready!\n"));
+		console.log(
+			chalk.yellow(
+				"\nSetup cancelled. Run the script again when you're ready!\n",
+			),
+		);
 		process.exit(0);
 	}
 }
@@ -61,7 +78,7 @@ async function main() {
 
 	try {
 		// Import db from server
-		const { db } = await import("../server/src/db/initDrizzle.js");
+		const { db } = await import("@server/db/initDrizzle.js");
 
 		// Step 1: Create test organization in database and get API key
 		const autumnSecretKey = await createTestOrg({ db });

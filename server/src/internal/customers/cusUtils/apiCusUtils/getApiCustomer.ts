@@ -17,14 +17,12 @@ export const getApiCustomer = async ({
 	withAutumnId = false,
 	customerId,
 	fullCus,
-	skipCache = false,
 	baseData,
 }: {
 	ctx: RequestContext;
 	withAutumnId?: boolean;
 	customerId?: string;
 	fullCus?: FullCustomer;
-	skipCache?: boolean;
 	baseData?: { apiCustomer: ApiCustomer; legacyData: CustomerLegacyData };
 }) => {
 	let baseCustomer: ApiCustomer;
@@ -34,7 +32,6 @@ export const getApiCustomer = async ({
 		const { apiCustomer, legacyData } = await getCachedApiCustomer({
 			ctx,
 			customerId: customerId || "",
-			skipCache,
 		});
 		baseCustomer = apiCustomer;
 		cusLegacyData = legacyData;

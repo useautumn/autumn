@@ -7,6 +7,7 @@ import {
 	type ApiEntity,
 	type AttachBody,
 	type BalancesUpdateParams,
+	type CheckQuery,
 	type CreateCustomerParams,
 	type CreateEntityParams,
 	type CreateRewardProgram,
@@ -557,8 +558,14 @@ export class AutumnInt {
 		return data;
 	};
 
-	check = async (params: CheckParams): Promise<CheckResult> => {
-		const data = await this.post(`/check`, params);
+	check = async <T = CheckResult>(
+		params: CheckParams & CheckQuery,
+	): Promise<T> => {
+		const queryParams = new URLSearchParams();
+		if (params.skip_cache) {
+			queryParams.append("skip_cache", "true");
+		}
+		const data = await this.post(`/check?${queryParams.toString()}`, params);
 		return data;
 	};
 

@@ -8,11 +8,12 @@ import {
 	ApiBalanceBreakdownSchema,
 	ApiBalanceSchema,
 	CusExpand,
+	cusEntMatchesFeature,
+	cusEntsToMaxPurchase,
 	cusEntToBalance,
 	cusEntToCusPrice,
 	cusEntToGrantedBalance,
 	cusEntToKey,
-	cusEntToMaxPurchase,
 	cusEntToPurchasedBalance,
 	type Feature,
 	FeatureType,
@@ -26,7 +27,6 @@ import { Decimal } from "decimal.js";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getUnlimitedAndUsageAllowed } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import type { CusFeatureLegacyData } from "../../../../../../../shared/api/customers/cusFeatures/cusFeatureLegacyData.js";
-import { cusEntMatchesFeature } from "../../../cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
 import {
 	cusEntsToReset,
 	cusEntsToRollovers,
@@ -85,14 +85,14 @@ const cusEntsToBreakdown = ({
 	return breakdown;
 };
 
-const cusEntsToPrepaidQuantity = ({
+export const cusEntsToPrepaidQuantity = ({
 	cusEnts,
 	feature,
 }: {
 	cusEnts: FullCusEntWithFullCusProduct[];
 	feature: Feature;
 }) => {
-	const prepaidQuantity = new Decimal(0);
+	let prepaidQuantity = new Decimal(0);
 
 	for (const cusEnt of cusEnts) {
 		// 1. if cus ent doesn't match feature, skip
@@ -100,18 +100,21 @@ const cusEntsToPrepaidQuantity = ({
 
 		// 2. If cus ent is not prepaid, skip
 		const cusPrice = cusEntToCusPrice({ cusEnt });
+
 		if (!cusPrice || !isPrepaidPrice({ price: cusPrice.price })) continue;
 
 		// 3. Get quantity
 		const options = cusEnt.customer_product.options.find(
 			(option) => option.internal_feature_id === feature.internal_id,
 		);
+
 		if (!options) continue;
 
 		const quantityWithUnits = new Decimal(options.quantity)
 			.mul(cusPrice.price.config.billing_units ?? 1)
 			.toNumber();
-		prepaidQuantity.add(quantityWithUnits);
+
+		prepaidQuantity = prepaidQuantity.add(quantityWithUnits);
 	}
 
 	return prepaidQuantity.toNumber();
@@ -180,9 +183,7 @@ export const getApiBalance = ({
 		}),
 	);
 
-	const totalMaxPurchase = sumValues(
-		cusEnts.map((cusEnt) => cusEntToMaxPurchase({ cusEnt })),
-	);
+	const totalMaxPurchase = cusEntsToMaxPurchase({ cusEnts, entityId });
 
 	// 1. Granted balance
 	const totalGrantedBalanceWithRollovers = sumValues(
@@ -260,19 +261,19 @@ export const getApiBalance = ({
 		usage: totalUsage,
 
 		// Max purchase...
-		max_purchase: totalMaxPurchase ?? 0,
 		overage_allowed: usageAllowed ?? false,
 
+		max_purchase: totalMaxPurchase,
 		reset: reset,
 		breakdown: cusEntsToBreakdown({ ctx, fullCus, cusEnts }),
 		rollovers,
-	});
+	} satisfies ApiBalance);
 
 	if (error) throw error;
 
 	// Return in latest format - version transformation happens at Customer level
 	const totalPrepaidQuantity = cusEntsToPrepaidQuantity({ cusEnts, feature });
-	console.log("Total prepaid quantity:", totalPrepaidQuantity);
+
 	return {
 		data: apiBalance,
 		legacyData: {

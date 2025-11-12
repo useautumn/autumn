@@ -24,7 +24,7 @@ import { CheckResponseV1Schema } from "../prevVersions/CheckResponseV1.js";
 export const V1_2_CheckChange = defineVersionChange({
 	name: "V1_2 Check Change",
 	newVersion: ApiVersion.V2_0,
-	oldVersion: ApiVersion.V1_2,
+	oldVersion: ApiVersion.V1_Beta,
 	description: ["Check response transformed to V2.0 format"],
 	affectedResources: [AffectedResource.Check],
 	newSchema: CheckResponseV2Schema,

@@ -359,24 +359,30 @@ local function deductFromOverage(cusFeature, amount, adjustGrantedBalance)
         for index, breakdown in ipairs(cusFeature.breakdown) do
             if remaining <= 0 then break end
             
-            -- Check if this breakdown allows overage
-            local breakdownAllowOverage = breakdown.overage_allowed or allowOverage
+            -- Check if this breakdown explicitly allows overage
+            -- Only deduct from breakdowns that have overage_allowed=true
+            -- Don't fall back to top-level allowOverage - each breakdown controls its own overage
+            local breakdownAllowOverage = breakdown.overage_allowed == true
             
             if breakdownAllowOverage then
                 local breakdownPurchasedBalance = breakdown.purchased_balance or 0
-                local breakdownMaxPurchase = breakdown.max_purchase or (cusFeature.max_purchase or 0)
+                -- Calculate availableCapacity: nil if breakdown.max_purchase is nil/null (unlimited), otherwise max_purchase - purchased_balance
+                local availableCapacity
+                if breakdown.max_purchase == nil or breakdown.max_purchase == cjson.null then
+                    -- No max_purchase limit - unlimited capacity
+                    availableCapacity = nil
+                else
+                    -- Use breakdown max_purchase limit
+                    local breakdownMaxPurchase = toNum(breakdown.max_purchase)
+                    availableCapacity = breakdownMaxPurchase - breakdownPurchasedBalance
+                end
                 
-                -- Calculate how much we can increment purchased_balance (up to max_purchase)
-                local availableCapacity = breakdownMaxPurchase - breakdownPurchasedBalance
-                
-                if availableCapacity > 0 then
-                    local toIncrement = math.min(remaining, availableCapacity)
+                if availableCapacity == nil or availableCapacity > 0 then
+                    local toIncrement = availableCapacity == nil and remaining or math.min(remaining, availableCapacity)
                     
                     -- Collect Redis deltas
                     table.insert(deltas, {key = breakdown._key, field = "purchased_balance", delta = toIncrement})
-                    table.insert(deltas, {key = breakdown._key, field = "current_balance", delta = toIncrement})
                     table.insert(deltas, {key = cusFeature._key, field = "purchased_balance", delta = toIncrement})
-                    table.insert(deltas, {key = cusFeature._key, field = "current_balance", delta = toIncrement})
                     
                     -- Either increment usage or decrement granted_balance based on flag
                     if adjustGrantedBalance then
@@ -394,12 +400,6 @@ local function deductFromOverage(cusFeature, amount, adjustGrantedBalance)
                         field = "purchased_balance",
                         delta = toIncrement
                     })
-                    table.insert(stateChanges, {
-                        type = "breakdown",
-                        index = index,
-                        field = "current_balance",
-                        delta = toIncrement
-                    })
                     if adjustGrantedBalance then
                         table.insert(stateChanges, {
                             type = "breakdown",
@@ -430,11 +430,6 @@ local function deductFromOverage(cusFeature, amount, adjustGrantedBalance)
                         field = "purchased_balance",
                         delta = toIncrement
                     })
-                    table.insert(stateChanges, {
-                        type = "cusFeature",
-                        field = "current_balance",
-                        delta = toIncrement
-                    })
                     
                     remaining = remaining - toIncrement
                 end
@@ -443,17 +438,22 @@ local function deductFromOverage(cusFeature, amount, adjustGrantedBalance)
     else
         -- No breakdowns: deduct from top-level overage
         local topLevelPurchasedBalance = cusFeature.purchased_balance or 0
-        local topLevelMaxPurchase = cusFeature.max_purchase or 0
+        -- Calculate availableCapacity: nil if max_purchase is nil/null (unlimited), otherwise max_purchase - purchased_balance
+        local availableCapacity
+        if cusFeature.max_purchase == nil or cusFeature.max_purchase == cjson.null then
+            -- No max_purchase limit - unlimited capacity
+            availableCapacity = nil
+        else
+            -- Use max_purchase limit
+            local topLevelMaxPurchase = toNum(cusFeature.max_purchase)
+            availableCapacity = topLevelMaxPurchase - topLevelPurchasedBalance
+        end
         
-        -- Calculate how much we can increment purchased_balance (up to max_purchase)
-        local availableCapacity = topLevelMaxPurchase - topLevelPurchasedBalance
-        
-        if availableCapacity > 0 then
-            local toIncrement = math.min(remaining, availableCapacity)
+        if availableCapacity == nil or availableCapacity > 0 then
+            local toIncrement = availableCapacity == nil and remaining or math.min(remaining, availableCapacity)
             
             -- Collect Redis deltas
             table.insert(deltas, {key = cusFeature._key, field = "purchased_balance", delta = toIncrement})
-            table.insert(deltas, {key = cusFeature._key, field = "current_balance", delta = toIncrement})
             
             -- Either increment usage or decrement granted_balance based on flag
             if adjustGrantedBalance then
@@ -466,11 +466,6 @@ local function deductFromOverage(cusFeature, amount, adjustGrantedBalance)
             table.insert(stateChanges, {
                 type = "cusFeature",
                 field = "purchased_balance",
-                delta = toIncrement
-            })
-            table.insert(stateChanges, {
-                type = "cusFeature",
-                field = "current_balance",
                 delta = toIncrement
             })
             if adjustGrantedBalance then

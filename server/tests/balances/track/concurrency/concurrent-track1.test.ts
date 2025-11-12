@@ -1,14 +1,13 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion } from "@autumn/shared";
-import chalk from "chalk";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { trackWasSuccessful } from "../trackTestUtils.js";
 
 const testCase = "concurrentTrack1";
 const customerId = testCase;
@@ -85,10 +84,10 @@ describe(`${chalk.yellowBright(`concurrentTrack1: Testing track with concurrent 
 			}),
 		];
 
-		const results = await Promise.all(promises);
+		const results = await Promise.allSettled(promises);
 
 		// With cap behavior, all requests pass (cap at 0 instead of rejecting)
-		const allFulfilled = results.every((r) => trackWasSuccessful({ res: r }));
+		const allFulfilled = results.every((r) => r.status === "fulfilled");
 		expect(allFulfilled).toBe(true);
 
 		// Check final balance

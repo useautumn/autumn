@@ -16,16 +16,16 @@
 	},
 	"type": "module",
 	"scripts": {
-		"dev": "bun scripts/start-dev.js",
-		"d": "ENV_FILE=.env infisical run --env=dev -- bun scripts/start-dev.js",
-		"p": "ENV_FILE=.env.prod infisical run --env=prod -- bun scripts/start-dev.js",
+		"dev": "bun scripts/dev.ts",
+		"d": "ENV_FILE=.env infisical run --env=dev -- bun scripts/dev.ts",
+		"p": "ENV_FILE=.env.prod infisical run --env=prod -- bun scripts/dev.ts",
 
-		"setup": "node scripts/setup.js",
-		"setup:test": "bun scripts/setup-test.ts",
+		"setup": "node scripts/setup/setup.js",
+		"setup:test": "bun scripts/setup/setup-test.ts",
 		"tests": "bun scripts/test.ts",
 
-		"setupci": "node scripts/setupci.js",
-		"replicate": "bun scripts/replicate.ts",
+		"setupci": "node scripts/setup/setupci.js",
+		"replicate": "bun scripts/db/replicate.ts",
 		"db:push": " bun -F @autumn/shared db:push",
 		"db:generate": "bun -F @autumn/shared db:generate",
 		"db:migrate": " bun -F @autumn/shared db:migrate"

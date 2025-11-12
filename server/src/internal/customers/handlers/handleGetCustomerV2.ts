@@ -18,7 +18,7 @@ export const handleGetCustomerV2 = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const customerId = c.req.param("customer_id");
-		const { env, db, logger, org, expand } = ctx;
+		const { expand } = ctx;
 		const { skip_cache = false, with_autumn_id } = c.req.valid("query");
 
 		// SIDE EFFECT
@@ -34,8 +34,6 @@ export const handleGetCustomerV2 = createRoute({
 		const customer = await getApiCustomer({
 			ctx,
 			customerId,
-
-			skipCache: skip_cache,
 			withAutumnId: with_autumn_id,
 		});
 
