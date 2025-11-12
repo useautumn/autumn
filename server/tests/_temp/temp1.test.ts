@@ -21,9 +21,25 @@ import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js"
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
 // UNCOMMENT FROM HERE
-const addOn = constructProduct({
+const pro = constructProduct({
 	type: "pro",
-	isAddOn: true,
+
+	items: [
+		// constructFeatureItem({ featureId: TestFeature.Words, includedUsage: 100 }),
+		constructArrearProratedItem({
+			featureId: TestFeature.Users,
+			includedUsage: 1,
+			pricePerUnit: 10,
+			config: {
+				on_increase: OnIncrease.BillImmediately,
+				on_decrease: OnDecrease.Prorate,
+			},
+		}),
+	],
+});
+const premium = constructProduct({
+	type: "premium",
+
 	items: [
 		// constructFeatureItem({ featureId: TestFeature.Words, includedUsage: 100 }),
 		constructArrearProratedItem({
@@ -38,8 +54,8 @@ const addOn = constructProduct({
 	],
 });
 
-describe(`${chalk.yellowBright("temp1: Testing add ons")}`, () => {
-	const customerId = "temp1";
+describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
+	const customerId = "temp";
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	let stripeCli: Stripe;
@@ -65,7 +81,7 @@ describe(`${chalk.yellowBright("temp1: Testing add ons")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [addOn],
+			products: [pro, premium],
 			prefix: customerId,
 		});
 
@@ -75,31 +91,8 @@ describe(`${chalk.yellowBright("temp1: Testing add ons")}`, () => {
 	test("should attach pro product", async () => {
 		await autumn.attach({
 			customer_id: customerId,
-			product_id: addOn.id,
+			product_id: pro.id,
 		});
-
-		await autumn.entities.create(customerId, [
-			{
-				id: "1",
-				name: "Entity 1",
-				feature_id: TestFeature.Users,
-			},
-			{
-				id: "2",
-				name: "Entity 2",
-				feature_id: TestFeature.Users,
-			},
-		]);
-
-		await autumn.entities.delete(customerId, "1");
-		// await autumn.attach({
-		// 	customer_id: customerId,
-		// 	product_id: addOn.id,
-		// });
-		// await autumn.attach({
-		// 	customer_id: customerId,
-		// 	product_id: addOn.id,
-		// });
 	});
 
 	// test("should cancel one add on", async () => {
