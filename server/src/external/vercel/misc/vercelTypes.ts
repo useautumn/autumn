@@ -62,13 +62,15 @@ export type VercelInstallation = {
 		effectiveDate?: string; // ISO date-time format for when the plan becomes effective
 		disabled?: boolean; // If true, plan cannot be selected
 	};
-	notification: {
-		level: "info" | "warn" | "error";
-		title: string;
-		message?: string;
-		href?: string;
-	} | null;
+	notification: VercelNotification;
 };
+
+export type VercelNotification = {
+	level: "info" | "warn" | "error";
+	title: string;
+	message?: string;
+	href?: string;
+} | null;
 
 /**
  * Request body for upserting a Vercel Integration Installation.

@@ -23,7 +23,7 @@ import { vercelSignatureMiddleware } from "./misc/vercelSignatureMiddleware.js";
 export const vercelWebhookRouter = new Hono<HonoEnv>();
 
 vercelWebhookRouter.get(
-	"/:orgId/:env/v1/products/:integrationConfigurationId/plans",
+	"/:orgId/:env/v1/products/:productId/plans",
 	vercelSeederMiddleware,
 	vercelOidcAuthMiddleware,
 	...handleListBillingPlansPerInstall,
