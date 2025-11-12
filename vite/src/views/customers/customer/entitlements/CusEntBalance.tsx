@@ -58,7 +58,8 @@ export const CusEntBalance = ({
 
 	if (cusEnt.entities) {
 		const totalBalance = Object.values(cusEnt.entities).reduce(
-			(sum, entity) => sum + (entity.balance || 0) + entity.additional_balance,
+			(sum, entity) =>
+				sum + (entity.balance || 0) + (entity.additional_balance ?? 0),
 			0,
 		);
 
@@ -68,7 +69,9 @@ export const CusEntBalance = ({
 				sum +
 				Object.values(rollover.entities).reduce(
 					(entitySum: number, entity: any) =>
-						entitySum + (entity.balance || 0) + entity.additional_balance,
+						entitySum +
+						(entity.balance || 0) +
+						(entity.additional_balance ?? 0),
 					0,
 				)
 			);

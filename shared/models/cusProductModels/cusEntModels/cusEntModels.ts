@@ -12,8 +12,8 @@ export const EntityBalanceSchema = z.object({
 	balance: z.number(),
 	adjustment: z.number(),
 
-	additional_balance: z.number(),
-	additional_granted_balance: z.number(),
+	additional_balance: z.number().optional(),
+	additional_granted_balance: z.number().optional(),
 });
 
 export const CustomerEntitlementSchema = z.object({

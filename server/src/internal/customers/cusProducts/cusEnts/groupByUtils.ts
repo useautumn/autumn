@@ -20,6 +20,8 @@ export const getResetBalancesUpdate = ({
 		for (const entityId in newEntities) {
 			newEntities[entityId].balance = newBalance;
 			newEntities[entityId].adjustment = 0;
+			newEntities[entityId].additional_balance = 0;
+			newEntities[entityId].additional_granted_balance = 0;
 		}
 		update = { entities: newEntities };
 	} else {

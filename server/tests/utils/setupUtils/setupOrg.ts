@@ -1,6 +1,6 @@
 import type { AppEnv } from "@autumn/shared";
-import axios from "axios";
 import { getFeatures } from "@tests/setup/v2Features.js";
+import axios from "axios";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
@@ -8,7 +8,8 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 export const getAxiosInstance = (apiKey?: string) => {
 	// Priority: 1. Passed apiKey, 2. Org secret key from context, 3. TEST_ORG_SECRET_KEY fallback
 	// Import ctx here to avoid circular dependency issues
-	const ctx = require("tests/utils/testInitUtils/createTestContext.js").default;
+	const ctx =
+		require("@tests/utils/testInitUtils/createTestContext.js").default;
 	const secretKey =
 		apiKey || ctx?.orgSecretKey || process.env.TEST_ORG_SECRET_KEY;
 

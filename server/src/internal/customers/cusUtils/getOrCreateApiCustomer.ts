@@ -1,6 +1,6 @@
 import {
 	type ApiCustomer,
-	ApiEntitySchema,
+	ApiEntityV1Schema,
 	type CustomerData,
 	type CustomerLegacyData,
 	CustomerNotFoundError,
@@ -45,6 +45,7 @@ export const getOrCreateApiCustomer = async ({
 				metadata: customerData?.metadata || {},
 				stripe_id: customerData?.stripe_id,
 			},
+			createDefaultProducts: customerData?.disable_default !== true,
 		});
 
 		const res = await getCachedApiCustomer({
@@ -89,6 +90,7 @@ export const getOrCreateApiCustomer = async ({
 						metadata: customerData?.metadata || {},
 						stripe_id: customerData?.stripe_id,
 					},
+					createDefaultProducts: customerData?.disable_default !== true,
 				});
 
 				const res = await getCachedApiCustomer({
@@ -167,7 +169,7 @@ export const getOrCreateApiCustomer = async ({
 			customerId,
 		});
 
-		const apiEntity = ApiEntitySchema.parse(newEntity);
+		const apiEntity = ApiEntityV1Schema.parse(newEntity);
 		apiCustomer.entities = [...(apiCustomer.entities || []), apiEntity];
 	}
 

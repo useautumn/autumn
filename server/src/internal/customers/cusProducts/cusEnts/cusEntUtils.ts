@@ -313,7 +313,7 @@ export const getTotalNegativeBalance = ({
 		}
 	}
 
-	if (totalNegative == 0) {
+	if (totalNegative === 0) {
 		if (Object.values(entities).length > 0) {
 			const entityBalances = Object.values(entities).map((e) => e.balance || 0);
 			return Math.min(...entityBalances);

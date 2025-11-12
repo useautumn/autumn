@@ -1,6 +1,6 @@
 import {
 	type ApiCustomer,
-	type ApiEntity,
+	type ApiEntityV1,
 	type CheckParams,
 	type CustomerLegacyData,
 	ErrCode,
@@ -44,7 +44,7 @@ export const getFeatureToUse = ({
 }: {
 	creditSystems: Feature[];
 	feature: Feature;
-	apiEntity: ApiCustomer | ApiEntity;
+	apiEntity: ApiCustomer | ApiEntityV1;
 	requiredBalance: number;
 }) => {
 	// 1. If there's a credit system & cusEnts for that credit system -> return credit system
@@ -95,7 +95,7 @@ export const getCheckData = async ({
 		});
 	}
 
-	let apiEntity: ApiCustomer | ApiEntity | undefined;
+	let apiEntity: ApiCustomer | ApiEntityV1 | undefined;
 	let legacyData: CustomerLegacyData | undefined;
 	const { apiCustomer, legacyData: legacyDataResult } =
 		await getOrCreateApiCustomer({

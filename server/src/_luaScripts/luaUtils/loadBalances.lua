@@ -202,6 +202,30 @@ local function mergeBalanceReset(target, source)
     end
 end
 
+-- Helper function to generate breakdown item key for matching
+-- Key format: "interval_count:interval:overage_allowed"
+-- Example: "1:month:true" or "1:month:false"
+local function getBreakdownItemKey(breakdownItem)
+    if not breakdownItem then
+        return nil
+    end
+    
+    local intervalCount = 1
+    local interval = "none"
+    
+    -- Extract interval and interval_count from reset object
+    if breakdownItem.reset and breakdownItem.reset ~= cjson.null and type(breakdownItem.reset) == "table" then
+        interval = breakdownItem.reset.interval or "none"
+        intervalCount = breakdownItem.reset.interval_count or 1
+    end
+    
+    -- Get overage_allowed (usage model)
+    local overageAllowed = breakdownItem.overage_allowed or false
+    
+    -- Return key in format: "interval_count:interval:overage_allowed"
+    return tostring(intervalCount) .. ":" .. interval .. ":" .. tostring(overageAllowed)
+end
+
 -- Helper function to merge source balance into target balance
 -- Mutates targetBalance by adding sourceBalance's balances, usage, breakdowns, and rollovers
 -- Also handles minimum resets_at (earliest reset time) and overage_allowed (true if any is true)
@@ -214,18 +238,18 @@ local function mergeFeatureBalances(targetBalance, sourceBalance)
     mergeBalanceReset(targetBalance, sourceBalance)
     
     -- Merge breakdown balances and usage
-    -- Breakdown items are matched by reset.interval, not by index
+    -- Breakdown items are matched by key (interval_count:interval:overage_allowed)
     -- If a matching breakdown exists, merge it; otherwise, add as new breakdown item
     if sourceBalance.breakdown then
         for _, sourceBreakdown in ipairs(sourceBalance.breakdown) do
-            local sourceInterval = sourceBreakdown.reset and sourceBreakdown.reset.interval
+            local sourceKey = getBreakdownItemKey(sourceBreakdown)
             local foundMatch = false
             
-            -- Try to find matching breakdown by reset.interval
+            -- Try to find matching breakdown by key
             if targetBalance.breakdown then
                 for _, targetBreakdown in ipairs(targetBalance.breakdown) do
-                    local targetInterval = targetBreakdown.reset and targetBreakdown.reset.interval
-                    if sourceInterval and targetInterval and sourceInterval == targetInterval then
+                    local targetKey = getBreakdownItemKey(targetBreakdown)
+                    if sourceKey and targetKey and sourceKey == targetKey then
                         -- Found matching breakdown - merge it
                         mergeBalanceNumericFields(targetBreakdown, sourceBreakdown)
                         mergeBalanceOverageAllowed(targetBreakdown, sourceBreakdown)

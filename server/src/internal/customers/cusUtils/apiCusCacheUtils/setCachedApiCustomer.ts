@@ -1,5 +1,5 @@
 import {
-	type ApiEntity,
+	type ApiEntityV1,
 	addToExpand,
 	CusExpand,
 	type FullCustomer,
@@ -34,7 +34,10 @@ export const setCachedApiCustomer = async ({
 }) => {
 	const { org, env, logger } = ctx;
 
-	const ctxWithExpand = addToExpand({ ctx, add: [CusExpand.BalanceFeature] });
+	const ctxWithExpand = addToExpand({
+		ctx,
+		add: [CusExpand.BalanceFeature, CusExpand.SubscriptionPlan],
+	});
 
 	// Build master api customer (customer-level features only)
 	const { apiCustomer: masterApiCustomer, legacyData } =
@@ -55,7 +58,7 @@ export const setCachedApiCustomer = async ({
 	});
 
 	// Build entities first
-	const entityBatch: { entityId: string; entityData: ApiEntity }[] = [];
+	const entityBatch: { entityId: string; entityData: ApiEntityV1 }[] = [];
 	const entityFullCus = {
 		...fullCus,
 		customer_products: entityLevelCusProducts,

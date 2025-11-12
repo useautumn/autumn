@@ -21,15 +21,6 @@ export const handleDeleteEntity = createRoute({
 		const { customer_id, entity_id } = c.req.param();
 		const ctx = c.get("ctx");
 
-		// await handleCustomerRaceCondition({
-		// 	action: "entity",
-		// 	customerId: customer_id,
-		// 	orgId: org.id,
-		// 	env,
-		// 	res,
-		// 	logger,
-		// });
-
 		const { db, org, env, features, logger } = ctx;
 
 		const fullCus = await CusService.getFull({

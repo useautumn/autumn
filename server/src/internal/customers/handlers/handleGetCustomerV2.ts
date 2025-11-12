@@ -19,7 +19,7 @@ export const handleGetCustomerV2 = createRoute({
 		const ctx = c.get("ctx");
 		const customerId = c.req.param("customer_id");
 		const { expand } = ctx;
-		const { skip_cache = false, with_autumn_id } = c.req.valid("query");
+		const { with_autumn_id } = c.req.valid("query");
 
 		// SIDE EFFECT
 		if (

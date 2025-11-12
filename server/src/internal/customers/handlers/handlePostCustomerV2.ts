@@ -42,7 +42,6 @@ export const handlePostCustomer = createRoute({
 		const apiCustomer = await getApiCustomer({
 			ctx,
 			customerId: createCusParams.id || "",
-			skipCache: false,
 			withAutumnId: with_autumn_id,
 			baseData: {
 				apiCustomer: baseData.apiCustomer,

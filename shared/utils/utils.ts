@@ -24,16 +24,3 @@ export const keyToTitle = (
 		.replace(/[-_]/g, " ")
 		.replace(/\b\w/g, (char) => char.toUpperCase());
 };
-
-export const addToExpand = <T extends { expand: string[] }>({
-	ctx,
-	add,
-}: {
-	ctx: T;
-	add: string[];
-}): T => {
-	return {
-		...ctx,
-		expand: [...ctx.expand, ...add],
-	};
-};

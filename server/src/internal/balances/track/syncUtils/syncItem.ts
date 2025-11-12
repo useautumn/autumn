@@ -2,7 +2,7 @@ import type { Feature, FullCusEntWithFullCusProduct } from "@autumn/shared";
 import {
 	type ApiBalance,
 	type ApiCustomer,
-	type ApiEntity,
+	type ApiEntityV1,
 	cusEntToPrepaidQuantity,
 	cusProductsToCusEnts,
 	filterEntityLevelCusProducts,
@@ -77,7 +77,7 @@ export const syncItem = async ({
 
 	// Get cached customer/entity from Redis WITHOUT merging
 	// For sync, we need the raw balance for that specific scope (not merged)
-	let redisEntity: ApiCustomer | ApiEntity;
+	let redisEntity: ApiCustomer | ApiEntityV1;
 
 	if (entityId) {
 		const { apiEntity } = await getCachedApiEntity({

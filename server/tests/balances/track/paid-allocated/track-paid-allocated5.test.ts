@@ -1,7 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { LegacyVersion, OnDecrease, OnIncrease } from "@autumn/shared";
-import chalk from "chalk";
-import { addWeeks } from "date-fns";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
 import {
@@ -10,12 +8,14 @@ import {
 } from "@tests/utils/expectUtils/expectContUseUtils.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
+import { addWeeks } from "date-fns";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { timeout } from "@/utils/genUtils.js";
 import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { getV2Balance } from "../../testBalanceUtils";
 
 const userItem = constructArrearProratedItem({
 	featureId: TestFeature.Users,
@@ -32,13 +32,13 @@ export const pro = constructProduct({
 	type: "pro",
 });
 
-const testCase = "track3";
+const testCase = "track-paid-allocated5";
 
-describe(`${chalk.yellowBright(`contUse/${testCase}: Testing track usage for cont use, prorate next cycle`)}`, () => {
+describe(`${chalk.yellowBright(`${testCase}: Testing track usage for cont use, prorate next cycle`)}`, () => {
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
-	let curUnix = new Date().getTime();
+	let curUnix = Date.now();
 
 	beforeAll(async () => {
 		await initProductsV0({
@@ -77,7 +77,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing track usage for con
 			stripeCli: ctx.stripeCli,
 			testClockId,
 			advanceTo: addWeeks(new Date(), 2).getTime(),
-			waitForSeconds: 5,
+			waitForSeconds: 30,
 		});
 
 		await autumn.track({
@@ -86,11 +86,9 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing track usage for con
 			value: 3,
 		});
 
-		await timeout(15000);
-
 		usage += 3;
 
-		const { stripeSubs, cusProduct, fullCus } = await expectSubQuantityCorrect({
+		const { stripeSubs, fullCus } = await expectSubQuantityCorrect({
 			stripeCli: ctx.stripeCli,
 			productId: pro.id,
 			db: ctx.db,
@@ -113,6 +111,18 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing track usage for con
 		const customer = await autumn.customers.get(customerId);
 		const invoices = customer.invoices;
 		expect(invoices.length).toBe(1);
+
+		const v2Balance = await getV2Balance({
+			customerId,
+			featureId: TestFeature.Users,
+		});
+
+		expect(v2Balance).toMatchObject({
+			granted_balance: 1,
+			purchased_balance: 2,
+			current_balance: 0,
+			usage: 3,
+		});
 	});
 
 	test("should track -1 and have no new invoice", async () => {
@@ -120,7 +130,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing track usage for con
 			stripeCli: ctx.stripeCli,
 			testClockId,
 			advanceTo: addWeeks(curUnix, 1).getTime(),
-			waitForSeconds: 5,
+			waitForSeconds: 30,
 		});
 
 		await autumn.track({
@@ -131,7 +141,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing track usage for con
 
 		usage -= 1;
 
-		const { stripeSubs, cusProduct, fullCus } = await expectSubQuantityCorrect({
+		const { stripeSubs, fullCus } = await expectSubQuantityCorrect({
 			stripeCli: ctx.stripeCli,
 			productId: pro.id,
 			db: ctx.db,
@@ -154,10 +164,22 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing track usage for con
 		const customer = await autumn.customers.get(customerId);
 		const invoices = customer.invoices;
 		expect(invoices.length).toBe(1);
+
+		const v2Balance = await getV2Balance({
+			customerId,
+			featureId: TestFeature.Users,
+		});
+
+		expect(v2Balance).toMatchObject({
+			granted_balance: 1,
+			purchased_balance: 1,
+			current_balance: 0,
+			usage: 2,
+		});
 	});
 
 	test("should track -1 and have no new invoice", async () => {
-		const quantity = 2;
+		const quantity = -1;
 		await autumn.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Users,
@@ -189,5 +211,17 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing track usage for con
 		const customer = await autumn.customers.get(customerId);
 		const invoices = customer.invoices;
 		expect(invoices.length).toBe(1);
+
+		const v2Balance = await getV2Balance({
+			customerId,
+			featureId: TestFeature.Users,
+		});
+
+		expect(v2Balance).toMatchObject({
+			granted_balance: 1,
+			purchased_balance: 0,
+			current_balance: 0,
+			usage: 1,
+		});
 	});
 });

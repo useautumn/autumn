@@ -77,6 +77,7 @@ describe(`${chalk.yellowBright("check2: test /check on boolean feature")}`, () =
 				usage: 0,
 				max_purchase: null,
 				overage_allowed: false,
+				reset: null,
 			},
 		});
 	});

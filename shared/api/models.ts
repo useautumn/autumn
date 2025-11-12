@@ -26,19 +26,17 @@ export * from "./customers/customerOpModels.js";
 export * from "./customers/previousVersions/apiCustomerV2.js";
 export * from "./customers/previousVersions/apiCustomerV3.js";
 
-// NOTE: customersOpenApi.js is NOT exported here - it's only imported by openapi.ts for spec generation
-
 // Entities
 export * from "./entities/apiEntity.js";
-// NOTE: entitiesOpenApi.js is NOT exported here - it's only imported by openapi.ts for spec generation
+export * from "./entities/entityLegacyData.js";
 export * from "./entities/entityOpModels.js";
+export * from "./entities/prevVersions/apiEntityV0.js";
 export * from "./errors/classes/featureErrClasses.js";
 export * from "./errors/codes/featureErrCodes.js";
+
 // Features
 export * from "./features/apiFeature.js";
 export * from "./features/featureOpModels.js";
-
-// NOTE: featuresOpenApi.js is NOT exported here - it's only imported by openapi.ts for spec generation
 
 // Others
 export * from "./others/apiDiscount.js";
@@ -71,13 +69,14 @@ export * from "./balances/check/prevVersions/CheckResponseV1.js";
 export * from "./balances/track/prevVersions/trackResponseV1.js";
 export * from "./balances/track/trackParams.js";
 export * from "./balances/track/trackResponseV2.js";
-// Balances
-
+export * from "./balances/track/trackTypes/pgDeductionUpdate.js";
 export * from "./balances/usageModels.js";
+
 export * from "./common/customerData.js";
 export * from "./common/entityData.js";
 export * from "./customers/cusFeatures/cusFeatureLegacyData.js";
 export * from "./customers/cusPlans/previousVersions/apiCusProductV3.js";
+export * from "./entities/apiBaseEntity.js";
 // Errors
 export * from "./errors/index.js";
 // Models

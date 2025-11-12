@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import type { LimitedItem } from "@autumn/shared";
-import chalk from "chalk";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
 import { constructArrearItem } from "../../../../src/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "../../../../src/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "../../../../src/utils/scriptUtils/testUtils/initCustomerV3.js";

@@ -79,6 +79,15 @@ export const V1_2_CustomerChange = defineVersionChange({
 			metadata: input.metadata,
 			products: v3CusProducts,
 			features: v3_features,
+
+			// The others
+			invoices: input.invoices,
+			entities: input.entities,
+			trials_used: input.trials_used,
+			rewards: input.rewards,
+			upcoming_invoice: input.upcoming_invoice,
+			referrals: input.referrals,
+			payment_method: input.payment_method,
 		} satisfies z.infer<typeof ApiCustomerV3Schema>;
 	},
 });

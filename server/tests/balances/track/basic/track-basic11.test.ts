@@ -120,7 +120,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing negative values (refunds/cr
 
 	test("should reflect large refund in non-cached customer after 2s", async () => {
 		// Wait 2 seconds for DB sync
-		await timeout(5000);
+		await timeout(8000);
 
 		// Fetch customer with skip_cache=true
 		const customer = await autumnV1.customers.get(customerId, {

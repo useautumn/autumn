@@ -1,19 +1,21 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
+	ApiVersion,
 	LegacyVersion,
 	OnDecrease,
 	OnIncrease,
 } from "@autumn/shared";
-import { beforeAll, describe, expect, test } from "bun:test";
-import chalk from "chalk";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
 import { expectSubQuantityCorrect } from "@tests/utils/expectUtils/expectContUseUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { getV2Balance } from "../../testBalanceUtils";
 
 const userItem = constructArrearProratedItem({
 	featureId: TestFeature.Users,
@@ -30,13 +32,12 @@ export const pro = constructProduct({
 	type: "pro",
 });
 
-const testCase = "track2";
+const testCase = "track-paid-allocated4";
 
-describe(`${chalk.yellowBright(`contUse/${testCase}: Testing track usage for cont use (without overage)`)}`, () => {
+describe(`${chalk.yellowBright(`${testCase}: Testing track usage for cont use (without overage)`)}`, () => {
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
-	let testClockId: string;
-	const curUnix = new Date().getTime();
+	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2_0 });
 
 	beforeAll(async () => {
 		await initProductsV0({
@@ -46,15 +47,12 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing track usage for con
 			customerId,
 		});
 
-		const { testClockId: testClockId1 } = await initCustomerV3({
+		await initCustomerV3({
 			ctx,
 			customerId,
-			customerData: {},
 			attachPm: "success",
 			withTestClock: true,
 		});
-
-		testClockId = testClockId1!;
 	});
 
 	let usage = 0;
@@ -111,6 +109,19 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing track usage for con
 			env: ctx.env,
 			customerId,
 			usage,
+		});
+
+		// Verify balance values reflect the replaceable (unused) logic
+		const v2Balance = await getV2Balance({
+			customerId,
+			featureId: TestFeature.Users,
+		});
+
+		expect(v2Balance).toMatchObject({
+			granted_balance: 1,
+			purchased_balance: 0,
+			current_balance: 1,
+			usage: 0,
 		});
 	});
 });

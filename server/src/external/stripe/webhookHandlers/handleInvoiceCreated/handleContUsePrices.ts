@@ -55,9 +55,7 @@ export const handleContUsePrices = async ({
 
 	const replaceables = cusEnt.replaceables.filter((r) => r.delete_next_cycle);
 
-	if (replaceables.length === 0) {
-		return false;
-	}
+	if (replaceables.length === 0) return false;
 
 	logger.info(`🚀 Deleting replaceables for ${feature.id}`);
 

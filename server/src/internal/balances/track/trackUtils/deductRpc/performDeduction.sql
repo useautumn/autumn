@@ -188,7 +188,7 @@ BEGIN
         WHERE ce.id = ent_id;
       END IF;
 
-      -- Track in updates_json
+      -- Track in updates_json (deducted is inclusive of additional_deducted)
       updates_json := jsonb_set(
         updates_json,
         ARRAY[ent_id],
@@ -197,7 +197,7 @@ BEGIN
           'additional_balance', new_additional_balance,
           'additional_granted_balance', new_additional_granted_balance,
           'entities', new_entities,
-          'deducted', deducted,
+          'deducted', deducted + additional_deducted,
           'additional_deducted', additional_deducted
         )
       );
@@ -281,6 +281,7 @@ BEGIN
         -- Update or create entry in updates_json
         IF updates_json ? ent_id THEN
           -- Update existing entry (entitlement was updated in both passes)
+          -- deducted from Pass 1 already includes additional_deducted, so just add Pass 2 deducted
           updates_json := jsonb_set(
             updates_json,
             ARRAY[ent_id],
@@ -294,7 +295,7 @@ BEGIN
             )
           );
         ELSE
-          -- Create new entry (entitlement only updated in Pass 2)
+          -- Create new entry (entitlement only updated in Pass 2, no additional_balance deduction)
           updates_json := jsonb_set(
             updates_json,
             ARRAY[ent_id],

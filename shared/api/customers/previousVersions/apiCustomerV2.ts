@@ -3,7 +3,7 @@ import { ApiCusUpcomingInvoiceSchema } from "@api/customers/components/apiCusUpc
 import { ApiTrialsUsedSchema } from "@api/customers/components/apiTrialsUsed.js";
 import { ApiCusFeatureV2Schema } from "@api/customers/cusFeatures/previousVersions/apiCusFeatureV2.js";
 import { ApiCusProductV2Schema } from "@api/customers/cusPlans/previousVersions/apiCusProductV2.js";
-import { ApiEntitySchema } from "@api/entities/apiEntity.js";
+import { ApiBaseEntitySchema } from "@api/entities/apiBaseEntity.js";
 import { ApiCusRewardsSchema } from "@api/models.js";
 import { ApiInvoiceSchema } from "@api/others/apiInvoice.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
@@ -48,7 +48,7 @@ export const ApiCustomerV2Schema = z.object({
 
 	rewards: ApiCusRewardsSchema.nullish(),
 	metadata: z.record(z.any(), z.any()).default({}),
-	entities: z.array(ApiEntitySchema).optional(),
+	entities: z.array(ApiBaseEntitySchema).optional(),
 	referrals: z.array(ApiCusReferralSchema).optional(),
 	upcoming_invoice: ApiCusUpcomingInvoiceSchema.nullish(),
 	payment_method: z.any().nullish(),

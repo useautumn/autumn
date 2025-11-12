@@ -21,11 +21,11 @@ export const getSummedEntityBalances = ({
 
 	return {
 		additional_balance: Object.values(cusEnt.entities).reduce(
-			(acc, curr) => acc + curr.additional_balance,
+			(acc, curr) => acc + (curr.additional_balance ?? 0),
 			0,
 		),
 		additional_granted_balance: Object.values(cusEnt.entities).reduce(
-			(acc, curr) => acc + curr.additional_granted_balance,
+			(acc, curr) => acc + (curr.additional_granted_balance ?? 0),
 			0,
 		),
 		balance: Object.values(cusEnt.entities).reduce(

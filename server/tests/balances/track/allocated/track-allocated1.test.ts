@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion, ProductItemFeatureType } from "@autumn/shared";
-import chalk from "chalk";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -88,13 +88,13 @@ describe(`${chalk.yellowBright(`track-allocated1: Tracking allocated feature `)}
 		// Check final balance
 		const customer = await autumnV1.customers.get(customerId);
 		const finalBalance = customer.features[TestFeature.Users].balance;
-
 		expect(finalBalance).toBe(-4);
 
 		// Get non-cached customer
 		const nonCachedCustomer = await autumnV1.customers.get(customerId, {
 			skip_cache: "true",
 		});
+
 		const nonCachedFinalBalance =
 			nonCachedCustomer.features[TestFeature.Users].balance;
 

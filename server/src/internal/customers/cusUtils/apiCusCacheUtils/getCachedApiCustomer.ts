@@ -2,9 +2,9 @@ import {
 	type ApiCustomer,
 	ApiCustomerSchema,
 	type AppEnv,
-	CusExpand,
 	type CustomerLegacyData,
 	filterOutEntitiesFromCusProducts,
+	filterPlanAndFeatureExpand,
 } from "@autumn/shared";
 import { CACHE_CUSTOMER_VERSION } from "@lua/cacheConfig.js";
 import { GET_CUSTOMER_SCRIPT } from "@lua/luaScripts.js";
@@ -132,14 +132,13 @@ export const getCachedApiCustomer = async ({
 
 	const { apiCustomer, legacyData } = await getExpandedApiCustomer();
 
-	if (!ctx.expand.includes(CusExpand.BalanceFeature)) {
-		for (const featureId in apiCustomer.balances) {
-			apiCustomer.balances[featureId].feature = undefined;
-		}
-	}
+	const filteredApiCustomer = filterPlanAndFeatureExpand<ApiCustomer>({
+		expand: ctx.expand,
+		target: apiCustomer,
+	});
 
 	return {
-		apiCustomer,
+		apiCustomer: filteredApiCustomer,
 		legacyData,
 	};
 };
