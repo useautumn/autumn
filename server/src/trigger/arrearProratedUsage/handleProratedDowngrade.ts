@@ -5,6 +5,7 @@ import {
 	getFeatureInvoiceDescription,
 	type InsertReplaceable,
 	OnDecrease,
+	OnIncrease,
 	type Organization,
 	type Product,
 	type UsagePriceConfig,
@@ -21,12 +22,12 @@ import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/pric
 import {
 	shouldBillNow,
 	shouldProrate,
+	shouldProrateDowngradeNow,
 } from "@/internal/products/prices/priceUtils/prorationConfigUtils.js";
 import { roundUsage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { formatUnixToDate } from "@/utils/genUtils.js";
 import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
 import { getUsageFromBalance } from "../adjustAllowance.js";
-
 export const createDowngradeProrationInvoice = async ({
 	org,
 	cusPrice,
@@ -38,6 +39,7 @@ export const createDowngradeProrationInvoice = async ({
 	newRoundedUsage,
 	feature,
 	product,
+	onIncrease,
 	onDecrease,
 	logger,
 }: {
@@ -51,6 +53,7 @@ export const createDowngradeProrationInvoice = async ({
 	newRoundedUsage: number;
 	feature: Feature;
 	product: Product;
+	onIncrease: OnIncrease;
 	onDecrease: OnDecrease;
 	logger: any;
 }) => {
@@ -102,7 +105,12 @@ export const createDowngradeProrationInvoice = async ({
 	await stripeCli.invoiceItems.create(invoiceItem);
 	let invoice = null;
 
-	if (shouldBillNow(onDecrease)) {
+	if (
+		shouldProrateDowngradeNow({
+			onIncrease,
+			onDecrease,
+		})
+	) {
 		const { invoice: finalInvoice } = await createAndFinalizeInvoice({
 			stripeCli,
 			paymentMethod: null,
@@ -196,6 +204,9 @@ export const handleProratedDowngrade = async ({
 			}),
 			feature,
 			product,
+			onIncrease:
+				cusPrice.price.proration_config?.on_increase ||
+				OnIncrease.ProrateImmediately,
 			onDecrease,
 			logger,
 		});

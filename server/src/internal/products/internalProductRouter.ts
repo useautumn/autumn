@@ -518,7 +518,7 @@ expressProductRouter.get(
 
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { handleCopyEnvironment } from "./handlers/handleCopyEnvironment.js";
+import { handleCopyEnvironment } from "./handlers/handleCopyEnvironment/handleCopyEnvironment.js";
 import { handleGetProductCount } from "./internalHandlers/handleGetProductCount.js";
 import { handleGetProductInternal } from "./internalHandlers/handleGetProductInternal.js";
 

@@ -1,5 +1,5 @@
+import { type AxiosInstance } from "axios";
 import { notNullish } from "@/utils/genUtils";
-import axios, { AxiosInstance } from "axios";
 
 export class ProductService {
 	static async createProduct(axiosInstance: AxiosInstance, data: any) {
