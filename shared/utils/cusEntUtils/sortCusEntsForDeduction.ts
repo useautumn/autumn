@@ -119,6 +119,15 @@ export const sortCusEntsForDeduction = ({
 			}
 		}
 
+		// If one has a usage_allowed, it should go last
+		if (a.usage_allowed && !b.usage_allowed) {
+			return 1;
+		}
+
+		if (!a.usage_allowed && b.usage_allowed) {
+			return -1;
+		}
+
 		// 0a. If both are entity products (attached to entities), sort by entity_id for consistent ordering
 		const aIsProductEntity = !!a.customer_product?.internal_entity_id;
 		const bIsProductEntity = !!b.customer_product?.internal_entity_id;

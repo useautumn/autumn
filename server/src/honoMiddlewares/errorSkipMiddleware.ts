@@ -47,7 +47,16 @@ const ROUTE_SPECIFIC_RULES: Array<{
 	name: string;
 	match: (err: Error, c: Context<HonoEnv>) => boolean;
 	statusCode: ContentfulStatusCode;
-}> = [];
+}> = [
+	{
+		name: "Stripe webhook secret not set in development",
+		match: (err: Error) =>
+			err.message.includes(
+				"STRIPE_WEBHOOK_SECRET env variable is not set (live)",
+			) && process.env.NODE_ENV === "development",
+		statusCode: 500,
+	},
+];
 
 /** Stripe-specific error handling rules */
 const STRIPE_RULES = [
@@ -224,13 +233,16 @@ export const handleErrorSkip = (err: Error, c: Context<HonoEnv>) => {
 	// 3. Check advanced route-specific rules
 	for (const rule of ROUTE_SPECIFIC_RULES) {
 		if (rule.match(err, c)) {
-			const recaseErr = err as RecaseError;
-			logger.warn(`${recaseErr.message}, org: ${ctx.org?.slug || "unknown"}`);
+			const errorCode =
+				err instanceof RecaseError || err instanceof SharedRecaseError
+					? err.code
+					: ErrCode.InternalError;
+			logger.warn(`${rule.name}, org: ${ctx.org?.slug || "unknown"}`);
 			return createErrorResponse({
 				c,
 				ctx,
-				message: recaseErr.message,
-				code: recaseErr.code,
+				message: err.message,
+				code: errorCode,
 				statusCode: rule.statusCode,
 			});
 		}

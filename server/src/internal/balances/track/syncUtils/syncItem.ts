@@ -1,12 +1,18 @@
+import type { Feature, FullCusEntWithFullCusProduct } from "@autumn/shared";
 import {
 	type ApiBalance,
 	type ApiCustomer,
 	type ApiEntity,
+	cusEntToPrepaidQuantity,
+	cusProductsToCusEnts,
 	filterEntityLevelCusProducts,
 	filterOutEntitiesFromCusProducts,
 	getRelevantFeatures,
+	orgToInStatuses,
+	sumValues,
 } from "@autumn/shared";
 import chalk from "chalk";
+import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
@@ -24,12 +30,35 @@ export interface SyncItem {
 	timestamp: number;
 }
 
-const apiToBackendBalance = ({ apiBalance }: { apiBalance?: ApiBalance }) => {
-	if (!apiBalance) {
-		return undefined;
-	}
+const apiToBackendBalance = ({
+	cusEnts,
+	features,
+	apiBalance,
+}: {
+	cusEnts: FullCusEntWithFullCusProduct[];
+	features: Feature[];
+	apiBalance?: ApiBalance;
+}) => {
+	const feature = features.find((f) => f.id === apiBalance?.feature_id);
+	if (!apiBalance || !feature) return 0;
+
+	const totalPrepaidQuantity = sumValues(
+		cusEnts.map((cusEnt) => cusEntToPrepaidQuantity({ cusEnt })),
+	);
+
+	const backendBalance = new Decimal(totalPrepaidQuantity)
+		.add(apiBalance.current_balance)
+		.sub(apiBalance.purchased_balance)
+		.toNumber();
+
+	// console.log("Converting api balance to backend balance");
+	// console.log(`Current balance: ${apiBalance.current_balance}`);
+	// console.log(`Purchased balance: ${apiBalance.purchased_balance}`);
+	// console.log(`Total prepaid quantity: ${totalPrepaidQuantity}`);
+	// console.log(`Backend balance: ${backendBalance}`);
+
 	// 1. Current balance = granted balance + purchased balance - usage
-	return apiBalance.current_balance - apiBalance.purchased_balance;
+	return backendBalance;
 };
 
 /**
@@ -49,6 +78,7 @@ export const syncItem = async ({
 	// Get cached customer/entity from Redis WITHOUT merging
 	// For sync, we need the raw balance for that specific scope (not merged)
 	let redisEntity: ApiCustomer | ApiEntity;
+
 	if (entityId) {
 		const { apiEntity } = await getCachedApiEntity({
 			ctx,
@@ -103,7 +133,19 @@ export const syncItem = async ({
 		const redisBalance = redisEntity.balances?.[relevantFeature.id];
 		if (!redisBalance) continue;
 
-		const backendBalance = apiToBackendBalance({ apiBalance: redisBalance });
+		const cusEnts = cusProductsToCusEnts({
+			cusProducts: fullCus.customer_products,
+			featureIds: relevantFeatures.map((f) => f.id),
+			reverseOrder: org.config?.reverse_deduction_order,
+			entity: fullCus.entity,
+			inStatuses: orgToInStatuses({ org }),
+		});
+
+		const backendBalance = apiToBackendBalance({
+			apiBalance: redisBalance,
+			cusEnts,
+			features: relevantFeatures,
+		});
 
 		featureDeductions.push({
 			feature: relevantFeature,

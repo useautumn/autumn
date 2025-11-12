@@ -32,16 +32,6 @@ export const cusEntMatchesEntity = ({
 	return cusProductMatch && entityFeatureIdMatch;
 };
 
-export const cusEntMatchesFeature = ({
-	cusEnt,
-	feature,
-}: {
-	cusEnt: FullCustomerEntitlement;
-	feature: Feature;
-}) => {
-	return cusEnt.entitlement.feature.internal_id === feature.internal_id;
-};
-
 export const findMainCusEntForFeature = ({
 	cusEnts,
 	feature,

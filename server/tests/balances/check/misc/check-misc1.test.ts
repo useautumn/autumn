@@ -1,9 +1,9 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { LegacyVersion, type LimitedItem } from "@autumn/shared";
-import chalk from "chalk";
-import { Decimal } from "decimal.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
+import { Decimal } from "decimal.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
@@ -35,14 +35,13 @@ describe(`${chalk.yellowBright("check-misc1: Checking credit systems")}`, () => 
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	beforeAll(async () => {
-		const { customer: customer_, testClockId: testClockId_ } =
-			await initCustomerV3({
-				ctx,
-				customerId,
-				customerData: {},
-				attachPm: "success",
-				withTestClock: true,
-			});
+		await initCustomerV3({
+			ctx,
+			customerId,
+			customerData: {},
+			attachPm: "success",
+			withTestClock: true,
+		});
 
 		await initProductsV0({
 			ctx,

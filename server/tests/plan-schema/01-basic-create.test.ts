@@ -141,25 +141,25 @@ describe(chalk.yellowBright("Plan V2 - Basic CREATE Tests"), () => {
 		} catch (_error) {}
 
 		const created = (await autumnV2.products.create({
-			id: "metered_monthly",
+			id: productId,
 			name: "Metered Monthly",
 			features: [
 				{
 					feature_id: features.metered1.id,
-					granted: 1000,
-					reset_interval: ResetInterval.Month,
+					granted_balance: 1000,
+					reset: {
+						interval: ResetInterval.Month,
+					},
 				},
 			],
 		} as CreatePlanParams)) as ApiPlan;
 
 		// V2 response validation
 		expect(created.features).to.have.lengthOf(1);
-		expect(created.features[0].granted).to.equal(1000);
+		expect(created.features[0].granted_balance).to.equal(1000);
 
 		// V1.2 validation (items format)
-		const v1_2 = (await autumnV1_2.products.get(
-			"metered_monthly",
-		)) as ApiProduct;
+		const v1_2 = (await autumnV1_2.products.get(productId)) as ApiProduct;
 		expect(v1_2.items[0].included_usage).to.equal(1000);
 		expect(v1_2.items[0].interval).to.equal("month");
 	});

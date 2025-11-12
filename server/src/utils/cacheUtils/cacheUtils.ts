@@ -129,15 +129,15 @@ export const normalizeCachedData = <T extends ApiCustomer | ApiEntity>(
 		for (const featureId in data.balances) {
 			const feature = data.balances[featureId];
 
-			if (!feature.reset) {
-				feature.reset = undefined;
-			}
+			// if (!feature.reset) {
+			// 	feature.reset = null;
+			// }
 
 			if (feature.breakdown) {
 				for (const breakdown of feature.breakdown) {
-					if (!breakdown.reset) {
-						breakdown.reset = undefined;
-					}
+					// if (!breakdown.reset) {
+					// 	breakdown.reset = null;
+					// }
 				}
 			}
 

@@ -3,7 +3,6 @@ import {
 	type ApiBalanceReset,
 	type ApiBalanceRollover,
 	type ApiFeature,
-	cusEntToKey,
 	entIntvToResetIntv,
 	type Feature,
 	type FullCusEntWithFullCusProduct,
@@ -36,15 +35,16 @@ export const cusEntsToReset = ({
 }: {
 	cusEnts: FullCusEntWithFullCusProduct[];
 	feature: Feature;
-}): ApiBalanceReset | undefined => {
-	// 1. If feature is allocated, undefined
-	if (isContUseFeature({ feature })) return undefined;
+}): ApiBalanceReset | null => {
+	// 1. If feature is allocated, null
+	if (isContUseFeature({ feature })) return null;
 
-	const cusEntKeys = cusEnts.map((cusEnt) => cusEntToKey({ cusEnt }));
-	const uniqueCusEntKeys = [...new Set(cusEntKeys)];
+	// Check if there are multiple intervals
+	const uniqueIntervals = [
+		...new Set(cusEnts.map((cusEnt) => cusEnt.entitlement.interval)),
+	];
 
-	// 2. If > 1 cus ent key, return multiple
-	if (uniqueCusEntKeys.length > 1) {
+	if (uniqueIntervals.length > 1) {
 		return { interval: "multiple", interval_count: undefined, resets_at: null };
 	}
 
@@ -108,10 +108,10 @@ export const getBooleanApiBalance = ({
 		current_balance: 0,
 		usage: 0,
 
-		max_purchase: 0,
 		overage_allowed: false,
+		max_purchase: null,
+		reset: null,
 
-		reset: undefined,
 		breakdown: undefined,
 		rollovers: undefined,
 	} satisfies ApiBalance;
@@ -137,10 +137,10 @@ export const getUnlimitedApiBalance = ({
 		current_balance: 0,
 		usage: 0,
 
-		max_purchase: 0,
+		reset: null,
+		max_purchase: null,
 		overage_allowed: false,
 
-		reset: undefined,
 		breakdown: undefined,
 		rollovers: undefined,
 	};
@@ -163,10 +163,10 @@ export const getNoCusEntsApiBalance = ({
 		current_balance: 0,
 		usage: 0,
 
-		max_purchase: 0,
+		reset: null,
+		max_purchase: null,
 		overage_allowed: false,
 
-		reset: undefined,
 		breakdown: undefined,
 		rollovers: undefined,
 	};

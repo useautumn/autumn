@@ -19,10 +19,9 @@ export const ApiBalanceBreakdownSchema = z.object({
 	current_balance: z.number(),
 	usage: z.number(),
 
-	max_purchase: z.number().optional(),
-	overage_allowed: z.boolean().optional(),
-
-	reset: ApiBalanceResetSchema.optional(),
+	overage_allowed: z.boolean(),
+	max_purchase: z.number().nullable(),
+	reset: ApiBalanceResetSchema.nullable(),
 });
 
 export const ApiBalanceSchema = z.object({
@@ -35,10 +34,10 @@ export const ApiBalanceSchema = z.object({
 	current_balance: z.number(),
 	usage: z.number(),
 
-	max_purchase: z.number(),
 	overage_allowed: z.boolean(),
+	max_purchase: z.number().nullable(),
+	reset: ApiBalanceResetSchema.nullable(),
 
-	reset: ApiBalanceResetSchema.optional(),
 	breakdown: z.array(ApiBalanceBreakdownSchema).nullish(),
 	rollovers: z.array(ApiBalanceRolloverSchema).nullish(),
 });

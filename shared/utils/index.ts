@@ -1,10 +1,12 @@
 // Cus ent utils
 
+export * from "./cusEntUtils/balanceUtils/cusEntToPrepaidQuantity.js";
 export * from "./cusEntUtils/balanceUtils/cusEntToPurchasedBalance.js";
 export * from "./cusEntUtils/balanceUtils.js";
+export * from "./cusEntUtils/convertCusEntUtils/cusEntsToMaxPurchase.js";
 export * from "./cusEntUtils/convertCusEntUtils.js";
 export * from "./cusEntUtils/cusEntUtils.js";
-
+export * from "./cusEntUtils/filterCusEntUtils.js";
 // Cus ent utils
 export * from "./cusEntUtils/getRolloverFields.js";
 export * from "./cusEntUtils/getStartingBalance.js";
