@@ -4,9 +4,9 @@ import {
 	type FullCustomer,
 	type Organization,
 } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
 import { expect } from "chai";
 import type Stripe from "stripe";
-import { TestFeature } from "@tests/setup/v2Features.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";

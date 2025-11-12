@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { EntityExpand } from "../../models/cusModels/entityModels/entityExpand.js";
+import { CusExpand } from "../../models/cusModels/cusExpand.js";
 import { queryStringArray } from "../apiUtils.js";
 import { CustomerDataSchema } from "../common/customerData.js";
 
@@ -19,7 +19,13 @@ export const CreateEntityParamsSchema = z.object({
 
 // Get Entity Query Params
 export const GetEntityQuerySchema = z.object({
-	expand: queryStringArray(z.enum(EntityExpand)).default([]),
+	expand: queryStringArray(
+		z.enum([
+			CusExpand.Invoices,
+			CusExpand.SubscriptionPlan,
+			CusExpand.BalanceFeature,
+		]),
+	).default([]),
 	skip_cache: z.boolean().optional(),
 	with_autumn_id: z.boolean().optional(),
 });

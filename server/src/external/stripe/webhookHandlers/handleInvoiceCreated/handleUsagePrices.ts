@@ -16,7 +16,6 @@ import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRol
 import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils.js";
 import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils.js";
 import { getCusPriceUsage } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
-import { getAllFullCustomers } from "@/utils/scriptUtils/getAll/getAllAutumnCustomers.js";
 import { submitUsageToStripe } from "../../stripeMeterUtils.js";
 import { getInvoiceItemForUsage } from "../../stripePriceUtils.js";
 import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";

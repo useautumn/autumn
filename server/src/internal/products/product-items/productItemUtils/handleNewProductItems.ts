@@ -330,13 +330,6 @@ export const handleNewProductItems = async ({
 		});
 	}
 
-	console.log(`
-		Update Confirmations:
-		- New ${newEnts.length} entitlements: ${JSON.stringify(newEnts, null, 4)}
-		- Updated ${updatedEnts.length} entitlements: ${JSON.stringify(updatedEnts, null, 4)}
-		- Deleted ${deletedEnts.length} entitlements: ${JSON.stringify(deletedEnts, null, 4)}
-	`);
-
 	return {
 		prices: [...newPrices, ...updatedPrices],
 		entitlements: [...newEnts, ...updatedEnts].map((ent) => ({

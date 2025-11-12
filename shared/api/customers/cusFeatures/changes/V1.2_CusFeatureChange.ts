@@ -149,7 +149,6 @@ export function transformBalanceToCusFeatureV3({
 		unlimited: isUnlimited,
 	});
 
-	console.log("Legacy data:", legacyData);
 	const { includedUsage, balance, usage, overageAllowed, usageLimit } =
 		toV3BalanceParams({
 			input,

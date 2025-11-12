@@ -115,12 +115,12 @@ const setEntityScript = readFileSync(
 );
 export const SET_ENTITY_SCRIPT = `${CACHE_KEY_UTILS}\n${CACHE_BALANCE_UTILS}\n${CHECK_ENTITY_CACHE_EXISTS}\n${setEntityScript}`;
 
-// Prepend cache key utils to SET_ENTITIES_BATCH_SCRIPT
+// Prepend cache key utils and balance utils to SET_ENTITIES_BATCH_SCRIPT
 const setEntitiesBatchScript = readFileSync(
 	join(__dirname, "entityLuaScripts/setEntitiesBatch.lua"),
 	"utf-8",
 );
-export const SET_ENTITIES_BATCH_SCRIPT = `${CACHE_KEY_UTILS}\n${setEntitiesBatchScript}`;
+export const SET_ENTITIES_BATCH_SCRIPT = `${CACHE_KEY_UTILS}\n${CACHE_BALANCE_UTILS}\n${setEntitiesBatchScript}`;
 
 // Prepend cache key utils to SET_ENTITY_PRODUCTS_SCRIPT
 const setEntityProductsScript = readFileSync(

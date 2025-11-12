@@ -1,17 +1,17 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { OnDecrease, OnIncrease, ProductItemFeatureType } from "@autumn/shared";
-import chalk from "chalk";
-import { addDays, addHours } from "date-fns";
-import { Decimal } from "decimal.js";
-import type Stripe from "stripe";
 import { defaultApiVersion } from "@tests/constants.js";
-import { features } from "@tests/global.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
 import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
 import { getSubsFromCusId } from "@tests/utils/expectUtils/expectSubUtils.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { getBasePrice } from "@tests/utils/testProductUtils/testProductUtils.js";
+import chalk from "chalk";
+import { addDays, addHours } from "date-fns";
+import { Decimal } from "decimal.js";
+import type Stripe from "stripe";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
@@ -21,7 +21,7 @@ import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js"
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
 const seatsItem = constructArrearProratedItem({
-	featureId: features.seats.id,
+	featureId: TestFeature.Users,
 	featureType: ProductItemFeatureType.ContinuousUse,
 	pricePerUnit: 20,
 	includedUsage: 3,
@@ -36,7 +36,7 @@ const seatsProduct = constructProduct({
 	items: [seatsItem],
 });
 
-const testCase = "track5";
+const testCase = "set-usage1";
 const includedUsage = seatsItem.included_usage as number;
 
 const simulateOneCycle = async ({
@@ -76,7 +76,7 @@ const simulateOneCycle = async ({
 		});
 
 		const customer = await autumn.customers.get(customerId);
-		const prevBalance = customer.features[seatsItem.feature_id!].balance!;
+		const prevBalance = customer.features[TestFeature.Users].balance!;
 		const prevUsage = includedUsage - prevBalance;
 
 		const usageDiff = usageValue - prevUsage;
@@ -86,13 +86,13 @@ const simulateOneCycle = async ({
 
 		await autumn.track({
 			customer_id: customerId,
-			feature_id: seatsItem.feature_id!,
+			feature_id: TestFeature.Users,
 			value: value1,
 		});
 
 		await autumn.track({
 			customer_id: customerId,
-			feature_id: seatsItem.feature_id!,
+			feature_id: TestFeature.Users,
 			value: value2,
 		});
 
@@ -115,7 +115,7 @@ const simulateOneCycle = async ({
 	}
 
 	const customer = await autumn.customers.get(customerId);
-	const balance = customer.features[seatsItem.feature_id!].balance!;
+	const balance = customer.features[TestFeature.Users].balance!;
 
 	const overage = Math.min(0, includedUsage - balance);
 	const usagePrice = overage * seatsItem.price!;
@@ -127,7 +127,7 @@ const simulateOneCycle = async ({
 		.toDecimalPlaces(2)
 		.toNumber();
 
-	const { start, end } = subToPeriodStartEnd({ sub });
+	const { end } = subToPeriodStartEnd({ sub });
 	curUnix = await advanceTestClock({
 		stripeCli,
 		testClockId,
@@ -147,7 +147,7 @@ const simulateOneCycle = async ({
 	};
 };
 
-describe(`${chalk.yellowBright("conUse/track5: Testing update cont use through /usage")}`, () => {
+describe(`${chalk.yellowBright(`${testCase}: Testing update cont use through /usage`)}`, () => {
 	const customerId = testCase;
 	let testClockId = "";
 	const autumn = new AutumnInt({ version: defaultApiVersion });

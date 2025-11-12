@@ -1,7 +1,5 @@
-import type {
-	EntityBalance,
-	FullCustomerEntitlement,
-} from "@models/cusProductModels/cusEntModels/cusEntModels.js";
+import type { FullCustomerEntitlement } from "@models/cusProductModels/cusEntModels/cusEntModels.js";
+import type { PgDeductionUpdate } from "../../api/balances/track/trackTypes/pgDeductionUpdate.js";
 import type { FullCustomer } from "../../models/cusModels/fullCusModel.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import { cusEntToCusPrice } from "../productUtils/convertUtils.js";
@@ -33,11 +31,7 @@ export const updateCusEntInFullCus = ({
 }: {
 	fullCus: FullCustomer;
 	cusEntId: string;
-	update: {
-		balance: number;
-		entities: Record<string, EntityBalance> | undefined;
-		adjustment: number;
-	};
+	update: PgDeductionUpdate;
 }) => {
 	for (let i = 0; i < fullCus.customer_products.length; i++) {
 		for (
@@ -47,11 +41,31 @@ export const updateCusEntInFullCus = ({
 		) {
 			const ce = fullCus.customer_products[i].customer_entitlements[j];
 			if (ce.id === cusEntId) {
+				let replaceables = ce.replaceables ?? [];
+
+				if (update.newReplaceables) {
+					replaceables = [
+						...replaceables,
+						...update.newReplaceables.map((r) => ({
+							...r,
+							delete_next_cycle: r.delete_next_cycle ?? true,
+							from_entity_id: r.from_entity_id ?? null,
+						})),
+					];
+				}
+
+				if (update.deletedReplaceables) {
+					replaceables = replaceables.filter(
+						(r) => !update.deletedReplaceables?.map((r) => r.id).includes(r.id),
+					);
+				}
+
 				fullCus.customer_products[i].customer_entitlements[j] = {
 					...ce,
 					balance: update.balance,
 					entities: update.entities,
 					adjustment: update.adjustment,
+					replaceables,
 				};
 			}
 		}

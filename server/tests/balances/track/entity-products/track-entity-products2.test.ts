@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion, type LimitedItem } from "@autumn/shared";
-import chalk from "chalk";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -203,7 +203,7 @@ describe(`${chalk.yellowBright("track-entity-products2: entity product tracking 
 			);
 
 			// Each entity should have some messages deducted
-			expect(entityFromDb.features[TestFeature.Messages]).toEqual(
+			expect(entityFromDb.features[TestFeature.Messages]).toMatchObject(
 				entityFromCache.features[TestFeature.Messages],
 			);
 

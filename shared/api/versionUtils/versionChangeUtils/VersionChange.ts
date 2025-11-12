@@ -6,6 +6,7 @@ import type { ApiVersion } from "../ApiVersion.js";
  */
 export enum AffectedResource {
 	Customer = "customer",
+	Entity = "entity",
 	CusProduct = "cus_product",
 	CusFeature = "cus_feature",
 	CusBalance = "cus_balance",

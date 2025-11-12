@@ -4,10 +4,9 @@ import {
 	customers,
 	type ProductV2,
 } from "@autumn/shared";
+import { createProducts } from "@tests/utils/productUtils.js";
+import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { and, eq, inArray } from "drizzle-orm";
-
-import { createProducts } from "tests/utils/productUtils.js";
-import type { TestContext } from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 
 export const createSharedProducts = async ({

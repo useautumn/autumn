@@ -1,4 +1,4 @@
-import { ApiBaseEntitySchema } from "@api/entities/apiEntity.js";
+import { ApiBaseEntitySchema } from "@api/entities/apiBaseEntity.js";
 import { ApiCusRewardsSchema } from "@api/others/apiDiscount.js";
 import { ApiInvoiceSchema } from "@api/others/apiInvoice.js";
 import { AppEnv } from "@models/genModels/genEnums.js";

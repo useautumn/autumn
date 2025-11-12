@@ -169,12 +169,12 @@ export const getApiBalance = ({
 		}),
 	);
 
-	// const totalUnused = sumValues(
-	// 	cusEnts.map((cusEnt) => {
-	// 		const { unused } = getCusEntBalance({ cusEnt, entityId });
-	// 		return unused;
-	// 	}),
-	// );
+	const totalUnused = sumValues(
+		cusEnts.map((cusEnt) => {
+			const { unused } = getCusEntBalance({ cusEnt, entityId });
+			return unused;
+		}),
+	);
 
 	const totalAdditionalBalance = sumValues(
 		cusEnts.map((cusEnt) => {
@@ -226,13 +226,12 @@ export const getApiBalance = ({
 
 	const currentBalance = new Decimal(Math.max(0, totalBalanceWithRollovers))
 		.add(totalAdditionalBalance)
+		.add(totalUnused)
 		.toNumber();
-	// .add(totalUnused)
 
 	// 4. Usage
 	const totalUsage = new Decimal(grantedBalance)
 		.add(totalPurchasedBalance)
-		// .add(totalAdjustment)
 		.sub(currentBalance)
 		.toNumber();
 

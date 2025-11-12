@@ -1,5 +1,5 @@
 import {
-	type ApiEntity,
+	type ApiEntityV1,
 	type Entity,
 	ErrCode,
 	type FullCusProduct,
@@ -93,9 +93,9 @@ export const getSingleEntityResponse = async ({
 			// feature_id: entity.feature_id,
 			customer_id: fullCus.id || fullCus.internal_id,
 			env,
-			plans: apiSubscriptions,
-			features: cusFeatures,
-		} satisfies ApiEntity,
+			subscriptions: apiSubscriptions,
+			balances: cusFeatures,
+		} satisfies ApiEntityV1,
 		legacyData,
 	};
 };

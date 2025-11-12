@@ -1,6 +1,5 @@
 -- setEntity.lua
 -- Atomically stores an entity object with base data as JSON and balances/breakdowns as HSETs
--- Uses new ApiEntity schema with balances (replacing features) and subscriptions (replacing products)
 -- ARGV[1]: serialized entity data JSON string
 -- ARGV[2]: org_id
 -- ARGV[3]: env

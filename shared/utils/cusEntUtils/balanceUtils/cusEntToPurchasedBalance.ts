@@ -19,7 +19,14 @@ export const cusEntToPurchasedBalance = ({
 	// return 0;
 	// 1. If prepaid
 	const cusPrice = cusEntToCusPrice({ cusEnt });
-	if (nullish(cusPrice)) return 0;
+	if (nullish(cusPrice)) {
+		const { balance } = getCusEntBalance({
+			cusEnt,
+			entityId,
+		});
+
+		return Math.max(0, -balance);
+	}
 
 	const billingType = getBillingType(cusPrice.price.config);
 	const billingUnits = cusPrice.price.config.billing_units || 1;
@@ -40,14 +47,10 @@ export const cusEntToPurchasedBalance = ({
 		return quantityWithBillingUnits;
 	}
 
-	const { balance, adjustment } = getCusEntBalance({
+	const { balance } = getCusEntBalance({
 		cusEnt,
 		entityId,
 	});
 
-	// Balance always includes adjustment. Purchased balance should NOT include adjustment
-	// return new Decimal(balance).sub(adjustment).toNumber();
-
-	// // Return negative amount of balance...
-	return Math.max(0, -(cusEnt.balance || 0));
+	return Math.max(0, -balance);
 };

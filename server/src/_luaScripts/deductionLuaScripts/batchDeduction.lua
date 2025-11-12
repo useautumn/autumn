@@ -983,7 +983,7 @@ local function processRequest(request, loadedCusFeatures, entityFeatureStates)
                                 -- If credit system couldn't cover all, calculate how much of original remains
                                 if result.remaining ~= 0 then
                                     local creditCovered = creditAmount - result.remaining
-                                    local originalCovered = creditCovered / creditItem.credit_amount
+                                    local originalCovered = creditCovered / creditItem.credit_cost
                                     remainingAmount = remainingAmount - originalCovered
                                 else
                                     -- Credit system covered everything
@@ -1059,6 +1059,20 @@ for _, request in ipairs(requests) do
     end
 end
 
+-- Helper function to apply legacy continuous_use logic
+-- Legacy case: continuous_use features always allow overage
+local function applyContinuousUseLegacy(balance)
+    if balance.feature and balance.feature.type == "continuous_use" then
+        balance.overage_allowed = true
+        -- Apply to breakdowns as well
+        if balance.breakdown then
+            for _, breakdown in ipairs(balance.breakdown) do
+                breakdown.overage_allowed = true
+            end
+        end
+    end
+end
+
 -- Get list of all customer feature IDs
 local baseJson = redis.call("GET", cacheKey)
 local allFeatureIds = {}
@@ -1074,6 +1088,10 @@ for _, featureId in ipairs(allFeatureIds) do
     if balance then
         -- Add id field for compatibility with existing code
         balance.id = featureId
+        
+        -- Apply legacy continuous_use logic
+        applyContinuousUseLegacy(balance)
+        
         loadedCusFeatures[featureId] = balance
     end
 end
@@ -1099,6 +1117,10 @@ for _, entityId in ipairs(entityIds) do
             if balance then
                 -- Add id field for compatibility with existing code
                 balance.id = featureId
+                
+                -- Apply legacy continuous_use logic
+                applyContinuousUseLegacy(balance)
+                
                 entityFeatureStates[entityId][featureId] = balance
             end
         end
@@ -1126,6 +1148,28 @@ end
 local changedEntityIdsArray = {}
 for entityId, _ in pairs(changedEntityIds) do
     table.insert(changedEntityIdsArray, entityId)
+end
+
+-- Calculate actual deductions per feature from keyDeltas
+-- Sum up usage deltas (or granted_balance deltas if adjustGrantedBalance is true)
+local featureDeductions = {}
+for key, deltas in pairs(keyDeltas) do
+    -- Extract featureId from key (format: "{orgId}:env:customer:{version}:customerId:balances:featureId" or with ":entity:entityId:balances:featureId")
+    local featureId = key:match(":balances:([^:]+)$")
+    if featureId then
+        local deductionAmount = 0
+        if adjustGrantedBalance then
+            -- When adjustGrantedBalance is true, we decrement granted_balance (negative delta = deduction)
+            deductionAmount = -(deltas.granted_balance or 0)
+        else
+            -- Normal case: increment usage (positive delta = deduction)
+            deductionAmount = deltas.usage or 0
+        end
+        
+        if deductionAmount ~= 0 then
+            featureDeductions[featureId] = (featureDeductions[featureId] or 0) + deductionAmount
+        end
+    end
 end
 
 -- ============================================================================
@@ -1169,7 +1213,8 @@ return cjson.encode({
     results = results,
     customerChanged = customerChanged,
     changedEntityIds = changedEntityIdsArray,
-    balances = changedBalances
+    balances = changedBalances,
+    featureDeductions = featureDeductions
 })
 
 

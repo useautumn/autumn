@@ -1,7 +1,7 @@
 import { beforeAll, describe, test } from "bun:test";
 import { ProductItemInterval } from "@autumn/shared";
-import chalk from "chalk";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
 import {
 	constructFeatureItem,
 	constructPrepaidItem,

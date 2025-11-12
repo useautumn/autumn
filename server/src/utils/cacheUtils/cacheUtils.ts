@@ -1,4 +1,4 @@
-import type { ApiCustomer, ApiEntity } from "@autumn/shared";
+import type { ApiCustomer, ApiEntityV1 } from "@autumn/shared";
 import { redis } from "@/external/redis/initRedis.js";
 import { logger } from "../../external/logtail/logtailUtils.js";
 
@@ -98,7 +98,7 @@ export const normalizeCachedBalance = (balance: any): any => {
  * - Converts empty objects {} back to [] for all array fields
  * - Converts usage_limit: 0 to undefined (when all sources were undefined)
  */
-export const normalizeCachedData = <T extends ApiCustomer | ApiEntity>(
+export const normalizeCachedData = <T extends ApiCustomer | ApiEntityV1>(
 	data: T,
 ): T => {
 	// Normalize top-level products array
@@ -132,6 +132,20 @@ export const normalizeCachedData = <T extends ApiCustomer | ApiEntity>(
 			// if (!feature.reset) {
 			// 	feature.reset = null;
 			// }
+
+			if (
+				!Array.isArray(feature.breakdown) &&
+				typeof feature.breakdown === "object"
+			) {
+				feature.breakdown = undefined;
+			}
+
+			if (
+				!Array.isArray(feature.rollovers) &&
+				typeof feature.rollovers === "object"
+			) {
+				feature.rollovers = undefined;
+			}
 
 			if (feature.breakdown) {
 				for (const breakdown of feature.breakdown) {

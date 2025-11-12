@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import {
-	type ApiEntity,
+	type ApiBaseEntity,
 	type AttachBody,
 	type BalancesUpdateParams,
 	type CheckQuery,
@@ -290,20 +290,20 @@ export class AutumnInt {
 			return data;
 		},
 
-		get: async (
+		get: async <
+			T = Customer & {
+				invoices: any[];
+				autumn_id?: string;
+				entities?: ApiBaseEntity[];
+			},
+		>(
 			customerId: string,
 			params?: {
 				expand?: CusExpand[];
 				skip_cache?: string;
 				with_autumn_id?: boolean;
 			},
-		): Promise<
-			Customer & {
-				invoices: any[];
-				autumn_id?: string;
-				entities?: ApiEntity[];
-			}
-		> => {
+		): Promise<T> => {
 			const queryParams = new URLSearchParams();
 			const defaultParams = {
 				expand: [CusExpand.Invoices],

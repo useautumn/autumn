@@ -1,7 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { LegacyVersion, OnDecrease, OnIncrease } from "@autumn/shared";
-import chalk from "chalk";
-import { addWeeks } from "date-fns";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
 import {
@@ -10,6 +8,8 @@ import {
 } from "@tests/utils/expectUtils/expectContUseUtils.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
+import { addWeeks } from "date-fns";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
 import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
@@ -32,9 +32,9 @@ export const pro = constructProduct({
 	type: "pro",
 });
 
-const testCase = "track4";
+const testCase = "set-usage2";
 
-describe(`${chalk.yellowBright(`contUse/${testCase}: Testing set usage for cont use, prorate next cycle`)}`, () => {
+describe(`${chalk.yellowBright(`${testCase}: Testing set usage for cont use, prorate next cycle`)}`, () => {
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;

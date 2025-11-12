@@ -22,6 +22,7 @@ export * from "./cusProductUtils/formatCusProductUtils.js";
 export * from "./cusProductUtils/productIdToCusProduct.js";
 // Cus utils
 export * from "./cusUtils/cusPlanUtils/cusPlanUtils.js";
+export * from "./expandUtils.js";
 export * from "./featureUtils/apiFeatureToDbFeature.js";
 export * from "./featureUtils/convertFeatureUtils.js";
 // Feature utils

@@ -27,6 +27,7 @@ interface BatchDeductionResult {
 	customerChanged?: boolean; // True if customer-level features were modified
 	changedEntityIds?: string[]; // Array of entity IDs that were modified
 	balances?: Record<string, ApiBalance>; // Object of changed balances keyed by featureId
+	featureDeductions?: Record<string, number>; // Actual amounts deducted per feature
 	debug?: unknown; // For debugging purposes
 }
 
@@ -65,6 +66,17 @@ export const executeBatchDeduction = async ({
 		// Log debug info if present
 		if (parsed.debug) {
 			console.log("🔍 Lua debug info:", JSON.stringify(parsed.debug, null, 2));
+		}
+
+		// Log actual feature deductions
+		if (
+			parsed.featureDeductions &&
+			Object.keys(parsed.featureDeductions).length > 0
+		) {
+			console.log(
+				"✅ Feature deductions from Redis:",
+				parsed.featureDeductions,
+			);
 		}
 
 		return parsed;
