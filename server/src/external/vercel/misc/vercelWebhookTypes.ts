@@ -1,5 +1,12 @@
 import { z } from "zod/v4";
 
+export const VercelWebhookEventSchema = z.object({
+	installation_id: z.string(),
+	event: z.any(),
+});
+
+export type VercelWebhookEvent = z.infer<typeof VercelWebhookEventSchema>;
+
 export const VercelResourceCreatedEventSchema = z.object({
 	installation_id: z.string(),
 	access_token: z.string(),
@@ -27,4 +34,5 @@ export type VercelResourceDeletedEvent = z.infer<
 export enum VercelWebhooks {
 	ResourceProvisioned = "vercel.resources.provisioned",
 	ResourceDeleted = "vercel.resources.deleted",
+	WebhookEvent = "vercel.webhooks.event",
 }

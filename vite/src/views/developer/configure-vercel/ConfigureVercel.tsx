@@ -273,7 +273,7 @@ export const ConfigureVercel = () => {
 					</div>
 				</div>
 			</div>
-			<PageSectionHeader title="Vercel Sink" />
+			<PageSectionHeader title="Vercel Webhook" />
 			<div className="flex flex-col pt-0 mt-0">
 				{svixDashboardUrl && !isVercelLoading && !vercelError ? (
 					<AppPortal
