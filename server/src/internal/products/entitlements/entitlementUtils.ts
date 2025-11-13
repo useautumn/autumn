@@ -58,9 +58,6 @@ export const trialToDays = (freeTrial: FreeTrial) => {
 			days = freeTrial.length * 365;
 			break;
 	}
-	console.log(
-		`[trialToDays] Trial duration: ${freeTrial.duration}, length: ${freeTrial.length}, calculated days: ${days}`,
-	);
 	return days;
 };
 
@@ -68,29 +65,12 @@ export const applyTrialToEntitlement = (
 	entitlement: EntitlementWithFeature,
 	freeTrial: FreeTrial | null,
 ) => {
-	if (!freeTrial) {
-		console.log("[applyTrialToEntitlement] No free trial, returning false");
-		return false;
-	}
+	if (!freeTrial) return false;
 
-	if (entitlement.feature.type === FeatureType.Boolean) {
-		console.log(
-			"[applyTrialToEntitlement] Boolean feature, returning false",
-		);
+	if (entitlement.feature.type === FeatureType.Boolean) return false;
+	if (!entitlement.interval || entitlement.interval === EntInterval.Lifetime)
 		return false;
-	}
-	if (!entitlement.interval || entitlement.interval === EntInterval.Lifetime) {
-		console.log(
-			`[applyTrialToEntitlement] Invalid interval: ${entitlement.interval}, returning false`,
-		);
-		return false;
-	}
-	if (entitlement.allowance_type === AllowanceType.Unlimited) {
-		console.log(
-			"[applyTrialToEntitlement] Unlimited allowance, returning false",
-		);
-		return false;
-	}
+	if (entitlement.allowance_type === AllowanceType.Unlimited) return false;
 
 	const trialDays = trialToDays(freeTrial);
 	const entDays = entIntervalToTrialDuration({
@@ -98,20 +78,10 @@ export const applyTrialToEntitlement = (
 		intervalCount: entitlement.interval_count || 1,
 	});
 
-	console.log(
-		`[applyTrialToEntitlement] Comparing: trialDays=${trialDays}, entDays=${entDays}, interval=${entitlement.interval}, intervalCount=${entitlement.interval_count || 1}`,
-	);
-
 	if (entDays && entDays > trialDays) {
-		console.log(
-			`[applyTrialToEntitlement] entDays (${entDays}) > trialDays (${trialDays}), returning true`,
-		);
 		return true;
 	}
 
-	console.log(
-		`[applyTrialToEntitlement] entDays (${entDays}) <= trialDays (${trialDays}), returning false`,
-	);
 	return false;
 };
 
