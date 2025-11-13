@@ -78,7 +78,9 @@ export const applyTrialToEntitlement = (
 		intervalCount: entitlement.interval_count || 1,
 	});
 
-	if (entDays && entDays > trialDays) {
+	console.log("Ent days: ", entDays);
+	console.log("Trial days: ", trialDays);
+	if (entDays && trialDays < entDays) {
 		return true;
 	}
 

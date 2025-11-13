@@ -178,7 +178,7 @@ export const initCusEntitlement = ({
 
 	if (notNullish(productOptions?.quantity) && notNullish(newBalance)) {
 		newBalance = new Decimal(newBalance!)
-			.mul(productOptions?.quantity!)
+			.mul(productOptions?.quantity || 1)
 			.toNumber();
 	}
 
