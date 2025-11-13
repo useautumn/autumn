@@ -1,6 +1,6 @@
 import { type AppEnv, ErrCode, RecaseError } from "@autumn/shared";
 import { vercelResources } from "@shared/models/processorModels/vercelModels/vercelResourcesTable.js";
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
@@ -98,6 +98,7 @@ export class VercelResourceService {
 					eq(vercelResources.installation_id, installationId),
 					eq(vercelResources.org_id, orgId),
 					eq(vercelResources.env, env),
+					ne(vercelResources.status, "uninstalled"),
 				),
 			);
 

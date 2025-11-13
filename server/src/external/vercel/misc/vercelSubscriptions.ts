@@ -65,9 +65,12 @@ export const createVercelSubscription = async ({
 	metadata?: Record<string, any>;
 	resourceId?: string;
 }): Promise<{ subscription: Stripe.Subscription; product: FullProduct }> => {
-	// 1. Check for existing subscription (only allow one per installation)
+	// 1. Check for existing non-incomplete subscription (only allow one per installation)
 	const existingSubscription = stripeCustomer.subscriptions?.data.find(
-		(s) => s.metadata.vercel_installation_id === integrationConfigurationId,
+		(s) =>
+			s.metadata.vercel_installation_id === integrationConfigurationId &&
+			s.status !== "incomplete" &&
+			s.status !== "incomplete_expired",
 	);
 
 	if (existingSubscription) {

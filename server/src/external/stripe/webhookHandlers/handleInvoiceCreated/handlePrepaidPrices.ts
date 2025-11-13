@@ -27,6 +27,7 @@ export const handlePrepaidPrices = async ({
 	customer,
 	invoice,
 	logger,
+	resetBalance = true,
 }: {
 	db: DrizzleCli;
 	stripeCli: Stripe;
@@ -36,11 +37,14 @@ export const handlePrepaidPrices = async ({
 	customer: Customer;
 	invoice: Stripe.Invoice;
 	logger: any;
+	resetBalance?: boolean;
 }): Promise<boolean> => {
 	const { start, end } = subToPeriodStartEnd({ sub: usageSub });
 	const isNewPeriod = invoice.period_start !== start;
 
 	if (!isNewPeriod) return false;
+
+	if (!resetBalance) return false;
 
 	const cusEnt = getRelatedCusEnt({
 		cusPrice,

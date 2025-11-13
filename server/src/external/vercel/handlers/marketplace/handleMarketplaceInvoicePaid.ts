@@ -171,6 +171,8 @@ export const handleMarketplaceInvoicePaid = async ({
 				invoice,
 				stripeSubs: [subscription],
 				logger,
+				submitUsage: false, // Usage already submitted in invoice.created
+				resetBalance: true, // Payment confirmed - now safe to reset balance
 			});
 		} else {
 			// New subscription - create cus_product
