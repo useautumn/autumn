@@ -5,7 +5,26 @@ import { existsSync } from "node:fs";
 
 // Determine which version to export
 const versionArg = process.argv.find((arg) => arg.startsWith("--version="));
-const version = versionArg ? versionArg.split("=")[1] : "2.0.0";
+let version: string;
+
+if (versionArg) {
+	version = versionArg.split("=")[1];
+} else {
+	// Check for positional argument (e.g., "bun api 1.2")
+	const positionalArg = process.argv.find(
+		(arg, index) => index >= 2 && !arg.startsWith("--"),
+	);
+
+	if (positionalArg) {
+		// If version has only one dot (e.g., "1.2"), append ".0" to make it "1.2.0"
+		version =
+			positionalArg.split(".").length === 2
+				? `${positionalArg}.0`
+				: positionalArg;
+	} else {
+		version = "2.0.0";
+	}
+}
 
 // Export to YAML file during build
 if (process.env.NODE_ENV !== "production") {
@@ -15,7 +34,7 @@ if (process.env.NODE_ENV !== "production") {
 		// Dynamically import the correct version to avoid schema conflicts
 		if (version === "1.2.0") {
 			const { writeOpenApi_1_2_0 } = await import(
-				"./_prevVersions/openapi1.2.0.js"
+				"./_openapi/prevVersions/openapi1.2/openapi1.2.0.js"
 			);
 			writeOpenApiFunc = writeOpenApi_1_2_0;
 			console.log("Using OpenAPI version 1.2.0");
@@ -44,15 +63,6 @@ if (process.env.NODE_ENV !== "production") {
 		// Write OpenAPI spec and optionally run Stainless generation
 		if (process.env.STAINLESS_PATH) {
 			writeOpenApiFunc();
-			// writeFileSync(
-			// 	`${process.env.STAINLESS_PATH.replace("\\ ", " ")}/openapi.yml`,
-			// 	yamlContent,
-			// 	"utf8",
-			// );
-
-			// console.log(
-			// 	`OpenAPI document exported to ${process.env.STAINLESS_PATH}/openapi.yml`,
-			// );
 
 			// Run the run.sh script if it exists
 			const runScriptPath = `${process.env.STAINLESS_PATH.replace("\\ ", " ")}/run.sh`;
@@ -68,10 +78,11 @@ if (process.env.NODE_ENV !== "production") {
 				} catch (error) {
 					console.error("Failed to run Stainless generation script:", error);
 				}
-			} else
+			} else {
 				console.log(
 					`\n${!runStainless ? "Stainless generation skipped due to --noEmit flag" : "Stainless generation script not found"}`,
 				);
+			}
 		}
 
 		// If docs path, run bun pull to update documentation
@@ -96,3 +107,13 @@ if (process.env.NODE_ENV !== "production") {
 	// Exit the process after completion
 	process.exit(0);
 }
+
+// writeFileSync(
+// 	`${process.env.STAINLESS_PATH.replace("\\ ", " ")}/openapi.yml`,
+// 	yamlContent,
+// 	"utf8",
+// );
+
+// console.log(
+// 	`OpenAPI document exported to ${process.env.STAINLESS_PATH}/openapi.yml`,
+// );

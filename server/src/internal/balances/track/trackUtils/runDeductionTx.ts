@@ -295,6 +295,9 @@ export const deductFromCusEnts = async ({
 				entities: update.entities,
 			});
 
+			console.log("Original balance:", originalGrpBalance);
+			console.log("New balance:", newGrpBalance);
+
 			const { newReplaceables, deletedReplaceables } = await adjustAllowance({
 				db,
 				env,
@@ -307,6 +310,9 @@ export const deductFromCusEnts = async ({
 				newBalance: newGrpBalance,
 				logger: ctx.logger,
 			});
+
+			console.log("New replaceables:", newReplaceables);
+			console.log("Deleted replaceables:", deletedReplaceables);
 
 			// Adjust balance based on replaceables
 			let reUpdatedBalance = update.balance;

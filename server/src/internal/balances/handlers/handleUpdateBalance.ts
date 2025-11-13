@@ -10,7 +10,7 @@ export const handleUpdateBalance = createRoute({
 			entity_id: z.string().optional(),
 			feature_id: z.string(),
 
-			current_balance: z.number().min(0).optional(),
+			current_balance: z.number().optional(),
 			usage: z.number().optional(),
 
 			// Internal
@@ -52,7 +52,7 @@ export const handleUpdateBalance = createRoute({
 						targetBalance: body.current_balance,
 					},
 				],
-				skipAdditionalBalance: false,
+				skipAdditionalBalance: true,
 				alterGrantedBalance: true,
 				sortParams: {
 					cusEntId: body.customer_entitlement_id,

@@ -34,6 +34,9 @@ DECLARE
   
   -- For rollover calculations
   rollover_balance numeric;
+  
+  -- For replaceables count
+  replaceables_count numeric;
 BEGIN
   -- ============================================================================
   -- SECTION 1: Sum balance across all entitlements
@@ -73,7 +76,13 @@ BEGIN
         total_balance := total_balance + current_additional_balance;
       END IF;
     ELSE
-      total_balance := total_balance + GREATEST(0, current_balance) + current_additional_balance;
+      -- Count replaceables (only for non-entity-scoped entitlements)
+      SELECT COUNT(*)
+      INTO replaceables_count
+      FROM replaceables r
+      WHERE r.cus_ent_id = ent_id;
+      
+      total_balance := total_balance + current_balance + current_additional_balance + replaceables_count;
     END IF;
   END LOOP;
   

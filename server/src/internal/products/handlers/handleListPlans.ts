@@ -67,18 +67,17 @@ export const handleListPlans = createRoute({
 		}
 
 		const plansList = await Promise.all(batchResponse);
-
-		return c.json({
-			list: plansList.map((p) => {
-				return applyResponseVersionChanges<ApiPlan>({
-					input: p,
-					targetVersion: ctx.apiVersion,
-					resource: AffectedResource.Product,
-					legacyData: {
-						features: ctx.features,
-					},
-				});
-			}),
+		const res = plansList.map((p) => {
+			return applyResponseVersionChanges<ApiPlan>({
+				input: p,
+				targetVersion: ctx.apiVersion,
+				resource: AffectedResource.Product,
+				legacyData: {
+					features: ctx.features,
+				},
+			});
 		});
+
+		return c.json({ list: res });
 	},
 });

@@ -12,29 +12,6 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
-const freeProd = constructProduct({
-	type: "free",
-	isDefault: false,
-	items: [
-		constructFeatureItem({
-			featureId: TestFeature.Messages,
-			includedUsage: 300,
-		}),
-		constructFeatureItem({ featureId: TestFeature.Users, includedUsage: 10 }),
-	],
-});
-
-const proProd = constructProduct({
-	type: "pro",
-	isDefault: false,
-	items: [
-		constructFeatureItem({
-			featureId: TestFeature.Messages,
-			includedUsage: 300,
-		}),
-		constructFeatureItem({ featureId: TestFeature.Users, includedUsage: 10 }),
-	],
-});
 const premiumProd = constructProduct({
 	type: "premium",
 	isDefault: false,
@@ -43,7 +20,7 @@ const premiumProd = constructProduct({
 			featureId: TestFeature.Messages,
 			includedUsage: 300,
 		}),
-		// constructFeatureItem({ featureId: TestFeature.Users, includedUsage: 10 }),
+
 		constructArrearProratedItem({
 			featureId: TestFeature.Users,
 			includedUsage: 1,
@@ -54,8 +31,8 @@ const premiumProd = constructProduct({
 
 const testCase = "temp";
 
-describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
-	const customerId = "temp";
+describe(`${chalk.yellowBright("balances-update4: update balance for paid allocated")}`, () => {
+	const customerId = "balances-update4";
 	const autumnV0: AutumnInt = new AutumnInt({ version: ApiVersion.V0_2 });
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
@@ -69,8 +46,8 @@ describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [freeProd, proProd, premiumProd],
-			// prefix: testCase,
+			products: [premiumProd],
+			prefix: testCase,
 		});
 
 		await autumnV1.attach({
@@ -80,16 +57,21 @@ describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 	});
 
 	test("should have correct v1 response", async () => {
-		await autumnV1.track({
-			customer_id: customerId,
-			feature_id: TestFeature.Users,
-			value: 4,
-		});
-
-		await autumnV1.track({
-			customer_id: customerId,
-			feature_id: TestFeature.Users,
-			value: -2,
-		});
+		// await autumnV1.balances.update({
+		// 	customer_id: customerId,
+		// 	feature_id: TestFeature.Users,
+		// 	current_balance: 4
+		// });
 	});
+
+	// await autumnV1.track({
+	//   customer_id: customerId,
+	//   feature_id: TestFeature.Users,
+	//   value: -2,
+	// });
+	// await autumnV1.track({
+	//   customer_id: customerId,
+	//   feature_id: TestFeature.Users,
+	//   value: -1,
+	// });
 });
