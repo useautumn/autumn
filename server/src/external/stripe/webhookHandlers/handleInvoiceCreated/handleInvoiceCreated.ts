@@ -177,6 +177,8 @@ export const sendUsageAndReset = async ({
 	invoice,
 	stripeSubs,
 	logger,
+	submitUsage = true,
+	resetBalance = true,
 }: {
 	db: DrizzleCli;
 	activeProduct: FullCusProduct;
@@ -185,6 +187,8 @@ export const sendUsageAndReset = async ({
 	invoice: Stripe.Invoice;
 	stripeSubs: Stripe.Subscription[];
 	logger: any;
+	submitUsage?: boolean;
+	resetBalance?: boolean;
 }) => {
 	const stripeCli = createStripeCli({ org, env });
 
@@ -235,6 +239,8 @@ export const sendUsageAndReset = async ({
 				usageSub: usageBasedSub,
 				logger,
 				activeProduct,
+				submitUsage,
+				resetBalance,
 			});
 
 			handled.push(handledUsage);
@@ -249,6 +255,7 @@ export const sendUsageAndReset = async ({
 				invoice,
 				usageSub: usageBasedSub,
 				logger,
+				resetBalance,
 			});
 
 			handled.push(handledContUse);
@@ -264,6 +271,7 @@ export const sendUsageAndReset = async ({
 				customer,
 				invoice,
 				logger,
+				resetBalance,
 			});
 
 			handled.push(handledPrepaid);
@@ -373,16 +381,8 @@ export const handleInvoiceCreated = async ({
 		});
 
 		for (const activeProduct of activeProducts) {
-			// Skip balance reset for Vercel subscriptions - handled in marketplace.invoice.paid
 			const subId = invoiceToSubId({ invoice });
 			const subscription = stripeSubs.find((s) => s.id === subId);
-			console.log("Found sub for sendUsageAndReset", subId);
-
-			if (!validateProductShouldReset({ subscription, _invoice: invoice })) {
-				console.log("Skipping sendUsageAndReset", subId);
-				continue;
-			}
-			console.log("Sending sendUsageAndReset", subId);
 
 			await sendUsageAndReset({
 				db,
@@ -392,6 +392,11 @@ export const handleInvoiceCreated = async ({
 				stripeSubs,
 				invoice,
 				logger,
+				submitUsage: true, // Always submit usage during invoice.created
+				resetBalance: validateProductShouldReset({
+					subscription,
+					_invoice: invoice,
+				}), // Skip balance reset for Vercel (wait for payment confirmation)
 			});
 		}
 	}
@@ -404,18 +409,10 @@ export const validateProductShouldReset = ({
 	subscription?: Stripe.Subscription;
 	_invoice: Stripe.Invoice;
 }) => {
-	if (subscription?.metadata?.vercel_installation_id) {
-		console.log(
-			"Skipping sendUsageAndReset for Vercel subscription",
-			subscription.id,
-			subscription.metadata.vercel_installation_id,
-		);
-		return false;
-	}
-
-	console.log(
-		"Sending sendUsageAndReset for subscription because not a Vercel subscription",
-		subscription?.id,
-	);
+	/**
+	 * This was separated so as to give us headroom to add further Custom Payment Methods in the future.
+	 * e.g RevenueCat etc...
+	 */
+	if (subscription?.metadata?.vercel_installation_id) return false;
 	return true;
 };

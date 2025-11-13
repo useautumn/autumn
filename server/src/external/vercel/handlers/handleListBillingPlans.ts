@@ -168,20 +168,20 @@ export const listVercelPlansForOrg = async ({
 					metadata,
 				}),
 			),
-		...((canCancel
-			? [
-					{
-						id: "cancel_plan",
-						type: "subscription",
-						name: "Cancel plan",
-						description:
-							"Select this to immediately cancel your subscription and lose access.",
-						cost: undefined,
-						highlightedDetails: [],
-						disabled: false,
-					},
-				]
-			: []) as VercelBillingPlan[]),
+		// ...((canCancel
+		// 	? [
+		// 			{
+		// 				id: "cancel_plan",
+		// 				type: "subscription",
+		// 				name: "Cancel plan",
+		// 				description:
+		// 					"Select this to immediately cancel your subscription and lose access.",
+		// 				cost: undefined,
+		// 				highlightedDetails: [],
+		// 				disabled: false,
+		// 			},
+		// 		]
+		// 	: []) as VercelBillingPlan[]),
 	] satisfies VercelBillingPlan[];
 };
 
