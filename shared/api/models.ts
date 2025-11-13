@@ -52,7 +52,6 @@ export * from "./products/productsOpenApi.js";
 // Referrals
 export * from "./referrals/apiReferralCode.js";
 export * from "./referrals/referralOpModels.js";
-export * from "./referrals/referralsOpenApi.js";
 
 // NOTE: productsOpenApi.js is NOT exported here - it's only imported by openapi.ts for spec generation
 
@@ -81,3 +80,5 @@ export * from "./entities/apiBaseEntity.js";
 export * from "./errors/index.js";
 // Models
 export * from "./platform/platformModels.js";
+
+export * from "./products/planExpand.js";

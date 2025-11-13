@@ -91,7 +91,7 @@ export class InvoiceService {
 					? eq(invoices.internal_entity_id, internalEntityId)
 					: undefined,
 			),
-			orderBy: [desc(invoices.created_at)],
+			orderBy: [desc(invoices.created_at), desc(invoices.id)],
 			limit,
 		})) as Invoice[];
 	}

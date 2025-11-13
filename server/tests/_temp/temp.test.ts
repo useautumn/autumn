@@ -1,14 +1,10 @@
-import { beforeAll, describe, expect, test } from "bun:test";
-import {
-	ApiVersion,
-	type CheckResponseV0,
-	type CheckResponseV1,
-	SuccessCode,
-} from "@autumn/shared";
+import { beforeAll, describe, test } from "bun:test";
+import { ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
@@ -16,7 +12,36 @@ import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js"
 const freeProd = constructProduct({
 	type: "free",
 	isDefault: false,
-	items: [],
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 300,
+		}),
+		constructFeatureItem({ featureId: TestFeature.Users, includedUsage: 10 }),
+	],
+});
+
+const proProd = constructProduct({
+	type: "pro",
+	isDefault: false,
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 300,
+		}),
+		constructFeatureItem({ featureId: TestFeature.Users, includedUsage: 10 }),
+	],
+});
+const premiumProd = constructProduct({
+	type: "premium",
+	isDefault: false,
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 300,
+		}),
+		constructFeatureItem({ featureId: TestFeature.Users, includedUsage: 10 }),
+	],
 });
 
 const testCase = "temp";
@@ -35,34 +60,10 @@ describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [freeProd],
-			prefix: testCase,
+			products: [freeProd, proProd, premiumProd],
+			// prefix: testCase,
 		});
 	});
 
-	test("should have correct v1 response", async () => {
-		const res = (await autumnV1.check({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-		})) as unknown as CheckResponseV1;
-
-		expect(res).toStrictEqual({
-			allowed: false,
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			required_balance: 1,
-			code: SuccessCode.FeatureFound,
-		});
-	});
-
-	test("should have correct v0 response", async () => {
-		const res = (await autumnV0.check({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-		})) as unknown as CheckResponseV0;
-
-		expect(res.allowed).toBe(false);
-		expect(res.balances).toBeDefined();
-		expect(res.balances).toHaveLength(0);
-	});
+	test("should have correct v1 response", async () => {});
 });

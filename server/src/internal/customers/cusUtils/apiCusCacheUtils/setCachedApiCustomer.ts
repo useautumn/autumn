@@ -36,7 +36,7 @@ export const setCachedApiCustomer = async ({
 
 	const ctxWithExpand = addToExpand({
 		ctx,
-		add: [CusExpand.BalanceFeature, CusExpand.SubscriptionPlan],
+		add: [CusExpand.BalancesFeature, CusExpand.SubscriptionsPlan],
 	});
 
 	// Build master api customer (customer-level features only)

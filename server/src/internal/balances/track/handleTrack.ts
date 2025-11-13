@@ -1,7 +1,6 @@
 import {
 	AffectedResource,
 	applyResponseVersionChanges,
-	CusExpand,
 	ErrCode,
 	RecaseError,
 	TrackParamsSchema,
@@ -77,11 +76,10 @@ export const handleTrack = createRoute({
 			});
 		} else {
 			// Clean balances
+
 			if (balances && Object.keys(balances).length > 0) {
 				for (const balance of Object.values(balances)) {
-					if (!ctx.expand.includes(CusExpand.BalanceFeature)) {
-						balance.feature = undefined;
-					}
+					balance.feature = undefined;
 				}
 			}
 

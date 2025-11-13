@@ -1,4 +1,5 @@
 import { ApiFeatureSchema } from "@api/features/apiFeature.js";
+import { ProductItemInterval } from "@models/productModels/intervals/productItemInterval.js";
 import { Infinite } from "@models/productModels/productEnums.js";
 import {
 	OnDecrease,
@@ -7,7 +8,6 @@ import {
 import {
 	PriceTierSchema,
 	ProductItemFeatureType,
-	ProductItemInterval,
 	ProductItemType,
 	RolloverConfigSchema,
 	UsageModel,

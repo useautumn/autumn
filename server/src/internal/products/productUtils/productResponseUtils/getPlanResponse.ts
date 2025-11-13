@@ -5,9 +5,9 @@ import {
 	ApiPlanSchema,
 	AttachScenario,
 	type Feature,
-	type FeatureOptions,
 	type FullCustomer,
 	type FullProduct,
+	getProductItemDisplay,
 	itemsToPlanFeatures,
 	itemToBillingInterval,
 	productV2ToBasePrice,
@@ -22,7 +22,21 @@ import { getAttachScenario } from "./getAttachScenario.js";
 /**
  * Get free trial response in Plan V2 format
  */
-const getFreeTrialV2Response = async ({
+const getFreeTrialV2Response = ({
+	product,
+}: {
+	product: FullProduct;
+}): ApiFreeTrialV2 | undefined => {
+	if (!product.free_trial) return undefined;
+
+	return ApiFreeTrialV2Schema.parse({
+		duration_type: product.free_trial.duration,
+		duration_length: product.free_trial.length,
+		card_required: product.free_trial.card_required ?? false,
+	});
+};
+
+const getTrialAvailable = async ({
 	db,
 	product,
 	fullCus,
@@ -32,7 +46,7 @@ const getFreeTrialV2Response = async ({
 	product: FullProduct;
 	fullCus?: FullCustomer;
 	attachScenario: AttachScenario;
-}): Promise<ApiFreeTrialV2 | undefined> => {
+}) => {
 	if (!product.free_trial) return undefined;
 
 	// Check trial availability if customer exists
@@ -48,15 +62,11 @@ const getFreeTrialV2Response = async ({
 
 		// No trial for downgrades
 		if (attachScenario === AttachScenario.Downgrade || !trial) {
-			return undefined;
+			return false;
 		}
 	}
 
-	return ApiFreeTrialV2Schema.parse({
-		duration_type: product.free_trial.duration,
-		duration_length: product.free_trial.length,
-		card_required: product.free_trial.card_required ?? false,
-	});
+	return true;
 };
 
 /**
@@ -67,13 +77,11 @@ export const getPlanResponse = async ({
 	features,
 	fullCus,
 	db,
-	options,
 }: {
 	product: FullProduct;
 	features: Feature[];
 	fullCus?: FullCustomer;
 	db?: DrizzleCli;
-	options?: FeatureOptions[];
 }): Promise<ApiPlan> => {
 	// 1. Convert prices/entitlements to items
 	const rawItems = mapToProductItems({
@@ -89,7 +97,18 @@ export const getPlanResponse = async ({
 	const productV2 = { items: sortedItems };
 
 	// 4. Extract base price using existing helper
-	const basePrice = productV2ToBasePrice({ product: productV2 as any });
+	const basePriceItem = productV2ToBasePrice({ product: productV2 as any });
+	const basePrice: ApiPlan["price"] | null = basePriceItem
+		? {
+				amount: basePriceItem.price,
+				interval: itemToBillingInterval({ item: basePriceItem }),
+				interval_count:
+					basePriceItem.interval_count !== 1
+						? (basePriceItem.interval_count ?? undefined)
+						: undefined,
+				display: getProductItemDisplay({ item: basePriceItem, features }),
+			}
+		: null;
 
 	// 5. Get feature items only (no base price)
 	const featureItems = productV2ToFeatureItems({
@@ -98,7 +117,12 @@ export const getPlanResponse = async ({
 	});
 
 	// 6. Convert items to plan features
-	const planFeatures = itemsToPlanFeatures({ items: featureItems ?? [] });
+	let planFeatures = itemsToPlanFeatures({
+		items: featureItems,
+		features,
+	});
+
+	planFeatures = planFeatures.map((pf) => ({ ...pf, proration: undefined }));
 
 	// 7. Get attach scenario for customer context
 	const attachScenario = getAttachScenario({
@@ -107,7 +131,11 @@ export const getPlanResponse = async ({
 	});
 
 	// 8. Get free trial in V2 format
-	const freeTrial = await getFreeTrialV2Response({
+	const freeTrial = getFreeTrialV2Response({
+		product,
+	});
+
+	const trialAvailable = await getTrialAvailable({
 		db,
 		product,
 		fullCus,
@@ -128,14 +156,7 @@ export const getPlanResponse = async ({
 		default: product.is_default,
 
 		// Price field (optional - only for products with base price)
-		price: basePrice
-			? {
-					amount: basePrice.amount,
-					interval: itemToBillingInterval({ item: basePrice }),
-					interval_count:
-						basePrice.intervalCount !== 1 ? basePrice.intervalCount : undefined,
-				}
-			: null,
+		price: basePrice,
 
 		// Features array
 		features: planFeatures ?? [],
@@ -150,10 +171,11 @@ export const getPlanResponse = async ({
 		base_variant_id: product.base_variant_id,
 
 		// Customer context (optional)
-		// Uncomment when ready to add customer context
-		// customer_context: {
-		//     trial_available: notNullish(freeTrial),
-		//     scenario: attachScenario,
-		// },
+		customer_eligibility: fullCus
+			? {
+					trial_available: trialAvailable,
+					scenario: attachScenario,
+				}
+			: undefined,
 	});
 };

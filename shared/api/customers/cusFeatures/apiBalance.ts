@@ -1,5 +1,5 @@
 import { ApiFeatureSchema } from "@api/features/apiFeature.js";
-import { ResetInterval } from "@api/products/planEnums.js";
+import { ResetInterval } from "@models/productModels/intervals/resetInterval.js";
 import { z } from "zod/v4";
 
 export const ApiBalanceResetSchema = z.object({

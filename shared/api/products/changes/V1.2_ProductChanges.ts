@@ -8,6 +8,10 @@ import { isPriceItem } from "@utils/index.js";
 import { convertPlanToItems } from "@utils/planFeatureUtils/planToItems.js";
 import { type ApiPlan, ApiPlanSchema } from "../apiPlan.js";
 import {
+	type PlanLegacyData,
+	PlanLegacyDataSchema,
+} from "../planLegacyData.js";
+import {
 	type ApiProduct,
 	ApiProductSchema,
 } from "../previousVersions/apiProduct.js";
@@ -51,17 +55,25 @@ export const V1_2_ProductChanges = defineVersionChange({
 	affectedResources: [AffectedResource.Product],
 	newSchema: ApiPlanSchema,
 	oldSchema: ApiProductSchema,
+	legacyDataSchema: PlanLegacyDataSchema,
 
 	// Only transform responses (requests handled manually in handler)
 	affectsRequest: false,
 	affectsResponse: true,
 
 	// Response: V2 Plan -> V1.2 ProductV2
-	transformResponse: ({ input }: { input: ApiPlan }): ApiProduct => {
-		// Transform Plan format to ProductV2 format for V1.2 clients
-
+	transformResponse: ({
+		input,
+		legacyData,
+	}: {
+		input: ApiPlan;
+		legacyData?: PlanLegacyData;
+	}): ApiProduct => {
 		// Convert plan to items using shared utility (handles base price + features)
-		const items = convertPlanToItems({ plan: input }).filter((x) => {
+		const items = convertPlanToItems({
+			plan: input,
+			features: legacyData?.features || [],
+		}).filter((x) => {
 			if (isPriceItem(x)) {
 				const y: PriceItem = x as unknown as PriceItem;
 				return y.price > 0;
@@ -74,6 +86,7 @@ export const V1_2_ProductChanges = defineVersionChange({
 			id: input.id,
 			name: input.name,
 			group: input.group,
+			description: input.description,
 			env: input.env,
 			is_add_on: input.add_on,
 			is_default: input.default,

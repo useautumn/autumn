@@ -1,4 +1,4 @@
-import { EntInterval } from "@models/productModels/entModels/entEnums.js";
+import { EntInterval } from "@models/productModels/intervals/entitlementInterval.js";
 import { z } from "zod/v4";
 import { ApiCusFeatureV3RolloverSchema } from "./apiCusFeatureV3.js";
 

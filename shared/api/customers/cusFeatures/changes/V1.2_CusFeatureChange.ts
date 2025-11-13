@@ -4,9 +4,9 @@ import {
 	AffectedResource,
 	defineVersionChange,
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
+import { EntInterval } from "@models/productModels/intervals/entitlementInterval.js";
 import { Decimal } from "decimal.js";
 import type { z } from "zod/v4";
-import { EntInterval } from "../../../../models/productModels/entModels/entEnums.js";
 import { resetIntvToEntIntv } from "../../../../utils/planFeatureUtils/planFeatureIntervals.js";
 import {
 	type ApiBalance,

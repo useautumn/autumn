@@ -92,7 +92,7 @@ export const disableCurrentDefault = async ({
 /**
  * Route: POST /products - Create a product
  */
-export const createProduct = createRoute({
+export const handleCreatePlan = createRoute({
 	// body: CreateProductV2ParamsSchema,
 	versionedBody: {
 		latest: CreatePlanParamsSchema,
@@ -105,7 +105,7 @@ export const createProduct = createRoute({
 
 		const v1_2Body = (
 			ctx.apiVersion.gte(ApiVersion.V2_0)
-				? planToProductV2({ plan: body })
+				? planToProductV2({ plan: body, features: ctx.features })
 				: body
 		) as CreateProductV2Params;
 
@@ -126,13 +126,15 @@ export const createProduct = createRoute({
 			newProduct: v1_2Body as CreateProductV2Params,
 		});
 
+		const backendProduct = constructProduct({
+			productData: v1_2Body as CreateProductV2Params,
+			orgId: org.id,
+			env,
+		});
+
 		const product = await ProductService.insert({
 			db,
-			product: constructProduct({
-				productData: v1_2Body as CreateProductV2Params,
-				orgId: org.id,
-				env,
-			}),
+			product: backendProduct,
 		});
 
 		const { items, free_trial } = v1_2Body;
@@ -196,11 +198,6 @@ export const createProduct = createRoute({
 			},
 		});
 
-		// const productResponse = await getProductResponse({
-		// 	product: newFullProduct,
-		// 	features,
-		// });
-
 		const planResponse = await getPlanResponse({
 			product: newFullProduct,
 			features,
@@ -211,6 +208,9 @@ export const createProduct = createRoute({
 			input: planResponse,
 			targetVersion: ctx.apiVersion,
 			resource: AffectedResource.Product,
+			legacyData: {
+				features: ctx.features,
+			},
 		});
 
 		return c.json(versionedResponse);

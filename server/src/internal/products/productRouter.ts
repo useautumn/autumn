@@ -9,23 +9,16 @@ import { handleRequestError } from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { CusProductService } from "../customers/cusProducts/CusProductService.js";
 import { handleCopyProduct } from "./handlers/handleCopyProduct.js";
-import { handleDeleteProduct } from "./handlers/handleDeleteProduct.js";
-import { handleGetProduct } from "./handlers/handleGetProduct.js";
 import { handleGetProductDeleteInfo } from "./handlers/handleGetProductDeleteInfo.js";
-import { handleListProductsBeta } from "./handlers/handleListProductsBeta.js";
 
-export const productBetaRouter: Router = Router();
-productBetaRouter.get("", handleListProductsBeta);
+// export const productBetaRouter: Router = Router();
+// productBetaRouter.get("", handleListProductsBeta);
 
 export const productRouter: Router = Router();
 
-productRouter.get("", handleListProductsBeta);
-
-productRouter.get("/:productId", handleGetProduct);
+// productRouter.get("", handleListProductsBeta);
 
 // productRouter.post("/:productId", handleUpdateProductV2);
-
-productRouter.delete("/:productId", handleDeleteProduct);
 
 productRouter.post("/:productId/copy", handleCopyProduct);
 
@@ -146,12 +139,22 @@ productRouter.get("/:productId/deletion_info", handleGetProductDeleteInfo);
 
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { createProduct } from "./handlers/handleCreateProduct.js";
-import { handleUpdateProductV2 } from "./handlers/handleUpdateProduct/handleUpdateProduct.js";
+import { handleCreatePlan } from "./handlers/handleCreatePlan.js";
+import { handleDeleteProduct as handleDeleteProductHono } from "./handlers/handleDeleteProduct.js";
+import { handleGetPlan } from "./handlers/handleGetPlan.js";
+import { handleListPlans } from "./handlers/handleListPlans.js";
+import { handleUpdatePlan } from "./handlers/handleUpdateProduct/handleUpdatePlan.js";
+
+export const honoProductBetaRouter = new Hono<HonoEnv>();
+honoProductBetaRouter.get("", ...handleListPlans);
 
 // Create a Hono app for products
 export const honoProductRouter = new Hono<HonoEnv>();
 
 // POST /products - Create a product
-honoProductRouter.post("", ...createProduct);
-honoProductRouter.post("/:productId", ...handleUpdateProductV2); // will be deprecated
+honoProductRouter.get("", ...handleListPlans);
+honoProductRouter.post("", ...handleCreatePlan);
+
+honoProductRouter.get("/:product_id", ...handleGetPlan);
+honoProductRouter.post("/:product_id", ...handleUpdatePlan); // will be deprecated
+honoProductRouter.delete("/:product_id", ...handleDeleteProductHono);

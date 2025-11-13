@@ -34,8 +34,9 @@ export function transformSubscriptionToCusProductV3({
 			if (plan.past_due) {
 				return "past_due";
 			}
+
 			// trialing
-			else if (plan.trial_ends_at && plan.trial_ends_at < Date.now()) {
+			else if (plan.trial_ends_at && plan.trial_ends_at > Date.now()) {
 				return "trialing";
 			}
 			return "active";
@@ -76,7 +77,7 @@ export function transformSubscriptionToCusProductV3({
 		current_period_start: input.current_period_start,
 		current_period_end: input.current_period_end,
 
-		entity_id: null,
+		// entity_id: null,
 
 		quantity: input.quantity,
 	} satisfies z.infer<typeof ApiCusProductV3Schema>;

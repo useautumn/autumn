@@ -29,7 +29,7 @@ export const getApiCustomerExpand = async ({
 	// Filter out balances.feature and subscriptions.plan
 	const filteredExpand = filterExpand({
 		expand,
-		filter: [CusExpand.BalanceFeature, CusExpand.SubscriptionPlan],
+		filter: [CusExpand.BalancesFeature, CusExpand.SubscriptionsPlan],
 	});
 
 	if (filteredExpand.length === 0) return {};

@@ -8,10 +8,9 @@ export enum CusExpand {
 	UpcomingInvoice = "upcoming_invoice",
 	// PlansPlan = "plans.plan",
 	// FeaturesFeature = "features.feature",
-	Plan = "plan",
 
-	SubscriptionPlan = "subscription.plan",
-	BalanceFeature = "balance.feature",
+	SubscriptionsPlan = "subscriptions.plan",
+	BalancesFeature = "balances.feature",
 
 	// SubscriptionsPlan = "subscriptions.plan",
 	// BalancesFeature = "balances.feature",

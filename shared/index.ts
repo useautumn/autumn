@@ -97,6 +97,8 @@ export * from "./models/orgModels/orgConfig.js";
 export * from "./models/orgModels/orgTable.js";
 export * from "./models/otherModels/metadataModels.js";
 export * from "./models/otherModels/metadataTable.js";
+// Duration Types
+export * from "./models/productModels/durationTypes/rolloverExpiryDurationType.js";
 export * from "./models/productModels/entModels/entEnums.js";
 export * from "./models/productModels/entModels/entModels.js";
 // 3. Entitlement Models
@@ -105,11 +107,27 @@ export * from "./models/productModels/entModels/entTable.js";
 export * from "./models/productModels/freeTrialModels/freeTrialEnums.js";
 export * from "./models/productModels/freeTrialModels/freeTrialModels.js";
 export * from "./models/productModels/freeTrialModels/freeTrialTable.js";
+// Interval Models
+export * from "./models/productModels/intervals/billingInterval.js";
+// Intervals
+export * from "./models/productModels/intervals/billingInterval.js";
+export * from "./models/productModels/intervals/entitlementInterval.js";
+export * from "./models/productModels/intervals/entitlementInterval.js";
+export * from "./models/productModels/intervals/productItemInterval.js";
+export * from "./models/productModels/intervals/productItemInterval.js";
+export * from "./models/productModels/intervals/resetInterval.js";
+export * from "./models/productModels/intervals/resetInterval.js";
 export * from "./models/productModels/priceModels/priceConfig/fixedPriceConfig.js";
+// Price Models
+export * from "./models/productModels/priceModels/priceConfig/fixedPriceConfig.js";
+export * from "./models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 export * from "./models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 // 4. Price Models
 export * from "./models/productModels/priceModels/priceEnums.js";
+export * from "./models/productModels/priceModels/priceEnums.js";
 export * from "./models/productModels/priceModels/priceModels.js";
+export * from "./models/productModels/priceModels/priceModels.js";
+export * from "./models/productModels/priceModels/priceTable.js";
 export * from "./models/productModels/priceModels/priceTable.js";
 // 5. Product Models
 export * from "./models/productModels/productEnums.js";
@@ -129,7 +147,6 @@ export * from "./models/rewardModels/referralModels/referralCodeTable.js";
 export * from "./models/rewardModels/referralModels/referralModels.js";
 export * from "./models/rewardModels/referralModels/rewardRedemptionTable.js";
 export * from "./models/rewardModels/rewardModels/rewardEnums.js";
-
 // Reward Models
 export * from "./models/rewardModels/rewardModels/rewardModels.js";
 export * from "./models/rewardModels/rewardModels/rewardResponseModels.js";
@@ -159,18 +176,5 @@ export * from "./utils/productUtils.js";
 export * from "./utils/productV2Utils/compareProductUtils.ts/compareProductUtils.js";
 export * from "./utils/productV2Utils/productItemUtils/getProductItemRes.js";
 export * from "./utils/productV2Utils/productItemUtils/itemIntervalUtils.js";
-export * from "./utils/productV3Utils/mapToProductV3.js";
 export * from "./utils/productV3Utils/productItemUtils/productV3ItemUtils.js";
 export * from "./utils/rewardUtils/rewardMigrationUtils.js";
-
-export enum ResetInterval {
-	OneOff = "one_off",
-	Minute = "minute",
-	Hour = "hour",
-	Day = "day",
-	Week = "week",
-	Month = "month",
-	Quarter = "quarter",
-	SemiAnnual = "semi_annual",
-	Year = "year",
-}

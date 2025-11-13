@@ -1,4 +1,4 @@
-import { BillingInterval } from "@models/productModels/priceModels/priceEnums.js";
+import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { idRegex } from "@utils/utils.js";
 import { z } from "zod/v4";
 import { ApiFreeTrialV2Schema } from "./apiPlan.js";
@@ -62,5 +62,19 @@ export const UpdatePlanQuerySchema = z.object({
 	disable_version: z.boolean().optional(),
 });
 
+export const ListPlansQuerySchema = z.object({
+	customer_id: z.string().optional(),
+	entity_id: z.string().optional().meta({
+		internal: true,
+	}),
+	include_archived: z.boolean().optional().meta({
+		internal: true,
+	}),
+	v1_schema: z.boolean().optional().meta({
+		internal: true,
+	}),
+});
+
 export type CreatePlanParams = z.infer<typeof CreatePlanParamsSchema>;
 export type UpdatePlanParams = z.infer<typeof UpdatePlanParamsSchema>;
+export type ListPlansQuery = z.infer<typeof ListPlansQuerySchema>;

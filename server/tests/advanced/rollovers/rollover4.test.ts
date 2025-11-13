@@ -4,7 +4,7 @@ import {
 	type Customer,
 	LegacyVersion,
 	type LimitedItem,
-	RolloverDuration,
+	RolloverExpiryDurationType,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
@@ -22,7 +22,7 @@ import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js"
 const rolloverConfig = {
 	max: 400,
 	length: 1,
-	duration: RolloverDuration.Month,
+	duration: RolloverExpiryDurationType.Month,
 };
 const messagesItem = constructPrepaidItem({
 	featureId: TestFeature.Messages,

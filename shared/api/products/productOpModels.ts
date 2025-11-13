@@ -121,6 +121,10 @@ export const UpdateProductV2ParamsSchema = z.object({
 	is_default: z.boolean().optional().meta({
 		description: descriptions.is_default,
 	}),
+
+	description: z.string().nullish().optional().meta({
+		description: descriptions.description,
+	}),
 	// version: z.number().optional().meta({
 	// 	internal: true,
 	// }),

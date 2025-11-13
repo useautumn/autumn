@@ -5,7 +5,6 @@ import {
 	CusProductStatus,
 	cusProductToPlanStatus,
 	cusProductToProduct,
-	type Entity,
 	type FullCusProduct,
 	type FullCustomer,
 	isTrialing,
@@ -18,12 +17,10 @@ export const getApiSubscription = async ({
 	ctx,
 	fullCus,
 	cusProduct,
-	entities,
 }: {
 	ctx: RequestContext;
 	fullCus: FullCustomer;
 	cusProduct: FullCusProduct;
-	entities?: Entity[];
 }) => {
 	const trialing =
 		cusProduct.trial_ends_at && cusProduct.trial_ends_at > Date.now();
@@ -64,7 +61,10 @@ export const getApiSubscription = async ({
 	const status = cusProductToPlanStatus({ status: cusProduct.status });
 
 	// Check if we should expand the plan object
-	const shouldExpandPlan = (ctx.expand ?? []).includes(CusExpand.Plan);
+	const shouldExpandPlan = (ctx.expand ?? []).includes(
+		CusExpand.SubscriptionsPlan,
+	);
+
 	const apiPlan = shouldExpandPlan
 		? await getPlanResponse({
 				product: fullProduct,
@@ -100,22 +100,3 @@ export const getApiSubscription = async ({
 		} satisfies CusProductLegacyData,
 	};
 };
-
-// const apiCusProduct = ApiCusProductSchema.parse({
-// 	id: fullProduct.id,
-// 	name: fullProduct.name,
-// 	group: fullProduct.group || null,
-// 	status: trialing ? CusProductStatus.Trialing : cusProduct.status,
-// 	canceled_at: cusProduct.canceled_at || null,
-
-// 	is_default: fullProduct.is_default || false,
-// 	is_add_on: fullProduct.is_add_on || false,
-// 	version: fullProduct.version,
-// 	quantity: cusProduct.quantity,
-
-// 	started_at: cusProduct.starts_at,
-// 	entity_id: entity?.id || cusProduct.entity_id || undefined,
-
-// 	...stripeSubData,
-// 	items: v2Product.items,
-// });
