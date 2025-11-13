@@ -45,8 +45,14 @@ export function transformSubscriptionToCusProductV3({
 	};
 
 	let items: ApiProductItem[] | null = null;
+
+	// Get features
+
 	if (input.plan && legacyData) {
-		const productItems = convertPlanToItems({ plan: input.plan });
+		const productItems = convertPlanToItems({
+			plan: input.plan,
+			features: legacyData.features,
+		});
 
 		const itemResponses = productItems.map((item) =>
 			getProductItemResponse({

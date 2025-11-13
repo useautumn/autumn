@@ -6,6 +6,7 @@ import {
 import type { PriceItem } from "@models/productV2Models/productItemModels/priceItem.js";
 import { isPriceItem } from "@utils/index.js";
 import { convertPlanToItems } from "@utils/planFeatureUtils/planToItems.js";
+import { productV2ToProperties } from "../../../utils/productV2Utils/productV2ToProperties.js";
 import { type ApiPlan, ApiPlanSchema } from "../apiPlan.js";
 import {
 	type PlanLegacyData,
@@ -17,6 +18,7 @@ import {
 } from "../previousVersions/apiProduct.js";
 
 /**
+import { productV2ToProperties } from "../../../utils/productV2Utils/productV2ToProperties.js";
  * V1_2_ProductChanges: Transforms product response TO V1.2 format
  *
  * Applied when: targetVersion <= V1.2
@@ -82,11 +84,11 @@ export const V1_2_ProductChanges = defineVersionChange({
 			}
 		});
 
-		return ApiProductSchema.parse({
+		const productV2 = {
 			id: input.id,
 			name: input.name,
 			group: input.group,
-			description: input.description,
+			// description: input.description,
 			env: input.env,
 			is_add_on: input.add_on,
 			is_default: input.default,
@@ -100,9 +102,22 @@ export const V1_2_ProductChanges = defineVersionChange({
 						length: input.free_trial.duration_length,
 						card_required: input.free_trial.card_required,
 						unique_fingerprint: true,
+						trial_available:
+							input.customer_eligibility?.trial_available ?? null,
 					}
 				: null,
 			base_variant_id: input.base_variant_id,
+			scenario: input.customer_eligibility?.scenario ?? undefined,
+		} satisfies ApiProduct;
+
+		const properties = productV2ToProperties({
+			productV2: productV2,
+			trialAvailable: true,
 		});
+
+		return {
+			...productV2,
+			properties: properties,
+		};
 	},
 });

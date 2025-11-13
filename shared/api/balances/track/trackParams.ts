@@ -5,21 +5,28 @@ import { queryStringArray } from "../../common/queryHelpers.js";
 import { CheckExpand } from "../check/enums/CheckExpand.js";
 
 const trackDescriptions = {
-	customer_id: "The ID of the customer",
-	customer_data:
-		"Customer data to create or update the customer if they don't exist",
-	event_name: "The name of the event to track",
+	customer_id: "ID which you provided when creating the customer",
 	feature_id:
-		"The ID of the feature (alternative to event_name for usage events)",
-	properties: "Additional properties for the event",
-	timestamp: "Unix timestamp in milliseconds when the event occurred",
-	idempotency_key: "Idempotency key to prevent duplicate events",
-	value: "The value/count of the event",
-	set_usage: "Whether to set the usage to this value instead of increment",
-	entity_id: "The ID of the entity this event is associated with",
-	entity_data: "Data for creating the entity if it doesn't exist",
+		"ID of the feature to track usage for. Required if event_name is not provided. Use this for direct feature tracking.",
+	event_name:
+		"An [event name](/features/tracking-usage#using-event-names) can be used in place of feature_id. This can be used if multiple features are tracked in the same event.",
+	value:
+		"The amount of usage to record. Defaults to 1. Can be negative to increase the balance (e.g., when removing a seat).",
+	customer_data:
+		"Additional customer properties. These will be used to create or update the customer if they don't exist or their properties are not already set.",
+	properties: "Additional properties to attach to this usage event.",
+	timestamp:
+		"Unix timestamp in milliseconds when the event occurred. Defaults to current time if not provided.",
+	idempotency_key:
+		"Unique key to prevent duplicate event recording. Use this to safely retry requests without creating duplicate usage records.",
+	entity_id:
+		"If using [entity balances](/features/feature-entities) (eg, seats), the entity ID to track usage for.",
+	entity_data:
+		"Additional entity properties. These will be used to create the entity if it doesn't exist.",
+	overage_behavior:
+		"How to handle usage when balance is insufficient. 'cap' limits usage to available balance, 'reject' prevents the usage entirely.",
 	skip_event:
-		"Skip event insertion (for stress tests). Balance is still deducted, but event is not persisted to database.",
+		"If true, balance is deducted but the event is not persisted to the database. Used for performance testing only.",
 };
 
 export const TrackQuerySchema = z.object({
@@ -33,47 +40,44 @@ export const TrackParamsSchema = z
 		customer_id: z.string().nonempty().meta({
 			description: trackDescriptions.customer_id,
 		}),
+		feature_id: z.string().optional().meta({
+			description: trackDescriptions.feature_id,
+		}),
+		event_name: z.string().nonempty().optional().meta({
+			description: trackDescriptions.event_name,
+		}),
+		value: z.number().optional().meta({
+			description: trackDescriptions.value,
+		}),
+		properties: z.record(z.string(), z.any()).optional().meta({
+			description: trackDescriptions.properties,
+		}),
+		timestamp: z.number().optional().meta({
+			internal: true,
+		}),
+		idempotency_key: z.string().optional().meta({
+			description: trackDescriptions.idempotency_key,
+		}),
 		customer_data: CustomerDataSchema.optional().meta({
 			description: trackDescriptions.customer_data,
 		}),
 
-		feature_id: z.string().optional().meta({
-			description: trackDescriptions.feature_id,
-		}),
+		// set_usage: z.boolean().nullish().meta({
+		// 	description:
+		// 		"Whether to set the usage to this value instead of increment",
+		// }),
 
-		event_name: z.string().nonempty().optional().meta({
-			description: trackDescriptions.event_name,
-		}),
-
-		value: z.number().optional().meta({
-			description: trackDescriptions.value,
-		}),
-
-		properties: z.record(z.string(), z.any()).optional().meta({
-			description: "Additional properties for the event",
-		}),
-		timestamp: z.number().optional().meta({
-			description: "Unix timestamp in milliseconds when the event occurred",
-		}),
-		idempotency_key: z.string().optional().meta({
-			description: "Idempotency key to prevent duplicate events",
-		}),
-
-		set_usage: z.boolean().nullish().meta({
-			description:
-				"Whether to set the usage to this value instead of increment",
-		}),
 		entity_id: z.string().optional().meta({
-			description: "The ID of the entity this event is associated with",
+			description: trackDescriptions.entity_id,
 		}),
 		entity_data: EntityDataSchema.optional().meta({
-			description: "Data for creating the entity if it doesn't exist",
+			internal: true,
 		}),
 		overage_behavior: z.enum(["cap", "reject"]).optional().meta({
-			description: "The behavior when the balance is insufficient",
+			description: trackDescriptions.overage_behavior,
 		}),
 		skip_event: z.boolean().optional().meta({
-			description: trackDescriptions.skip_event,
+			internal: true,
 		}),
 	})
 	.refine(

@@ -93,7 +93,7 @@ const getCheckoutOptions = async ({
 		const option = getPriceOptions(prepaidPrice, attachParams.optionsList);
 		if (!option) {
 			newOptions.push({
-				feature_id: feature?.id!,
+				feature_id: feature?.id ?? "",
 				internal_feature_id: feature?.internal_id,
 				quantity: 1,
 			});

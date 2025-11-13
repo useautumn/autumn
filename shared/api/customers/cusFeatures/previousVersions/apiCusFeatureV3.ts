@@ -2,127 +2,142 @@ import { ApiFeatureType } from "@api/features/apiFeature.js";
 import { EntInterval } from "@models/productModels/intervals/entitlementInterval.js";
 import { z } from "zod/v4";
 
+// Descriptions
+const breakdownDescriptions = {
+	interval: "The reset interval for this feature breakdown",
+	interval_count: "The number of intervals between usage resets",
+	balance:
+		"The remaining available balance for this interval. Only present for metered features",
+	usage: "The total amount of usage consumed in the current cycle",
+	included_usage:
+		"The amount of usage included in the customer's plan for this interval",
+	next_reset_at:
+		"Unix timestamp (in milliseconds) when the usage counter will reset for the next billing period",
+	usage_limit:
+		"The maximum usage allowed for this feature. null if unlimited or no limit is set",
+	overage_allowed:
+		"Whether the customer can continue using the feature beyond the usage limit. If false, access is blocked when limit is reached",
+};
+
+const coreFeatureDescriptions = {
+	interval:
+		"The billing interval (e.g., 'month', 'year') or 'multiple' if the feature has different intervals across subscriptions",
+	interval_count: "The number of intervals between usage resets",
+	unlimited:
+		"Whether the feature has unlimited usage with no restrictions or limits",
+	balance:
+		"The remaining available balance across all subscriptions for this feature (or all time for allocated features)",
+	usage:
+		"The total cumulative usage consumed in the current cycle across all subscriptions (or all time for allocated features)",
+	included_usage:
+		"The total amount of usage included in the customer's plan(s) for this feature",
+	next_reset_at:
+		"Unix timestamp (in milliseconds) when the usage counter will reset for the next cycle",
+	overage_allowed:
+		"Whether the customer can continue using the feature beyond the included usage. If false, access is blocked when limit is reached",
+	breakdown:
+		"Detailed breakdown by interval for features with multiple reset intervals across different subscriptions",
+
+	usage_limit:
+		"If this feature has a price, the usage limit indicates the maximum amount of usage the customer can use of this feature.",
+};
+
 export const ApiCusFeatureV3RolloverSchema = z.object({
 	balance: z.number().meta({
-		description: "The remaining balance amount that has rolled over",
+		internal: true,
 	}),
 	expires_at: z.number().meta({
-		description: "Timestamp when the rollover balance expires",
+		internal: true,
 	}),
 });
 
 // Version 3 of cus feature response
 export const ApiCusFeatureV3BreakdownSchema = z.object({
 	interval: z.enum(EntInterval).meta({
-		description: "The billing interval for this feature breakdown",
+		description: breakdownDescriptions.interval,
 	}),
 	interval_count: z.number().nullish().meta({
-		description: "The number of intervals between resets",
+		description: breakdownDescriptions.interval_count,
 	}),
 	balance: z.number().nullish().meta({
-		description: "The remaining balance for this interval",
+		description: breakdownDescriptions.balance,
 	}),
 	usage: z.number().nullish().meta({
-		description: "The current usage amount",
+		description: breakdownDescriptions.usage,
 	}),
 	included_usage: z.number().nullish().meta({
-		description: "The amount of usage included in this interval",
+		description: breakdownDescriptions.included_usage,
 	}),
 	next_reset_at: z.number().nullish().meta({
-		description: "Timestamp when the usage resets",
+		description: breakdownDescriptions.next_reset_at,
 	}),
 	usage_limit: z.number().nullish().meta({
-		description: "The maximum usage allowed",
+		description: breakdownDescriptions.usage_limit,
 	}),
 
 	overage_allowed: z.boolean().nullish().meta({
-		description: "Whether overage usage beyond the limit is allowed",
+		description: breakdownDescriptions.overage_allowed,
 	}),
 });
 
 export const CoreCusFeatureSchema = z.object({
 	interval: z.enum(EntInterval).or(z.literal("multiple")).nullish().meta({
-		description:
-			"The billing interval or 'multiple' if the feature has multiple intervals",
+		description: coreFeatureDescriptions.interval,
 	}),
 	interval_count: z.number().nullish().meta({
-		description: "The number of intervals between resets",
+		description: coreFeatureDescriptions.interval_count,
 	}),
 	unlimited: z.boolean().nullish().meta({
-		description: "Whether the feature has unlimited usage",
+		description: coreFeatureDescriptions.unlimited,
 	}),
 	balance: z.number().nullish().meta({
-		description: "The remaining balance for this feature",
+		description: coreFeatureDescriptions.balance,
 	}),
 	usage: z.number().nullish().meta({
-		description: "The current usage amount",
+		description: coreFeatureDescriptions.usage,
 	}),
 	included_usage: z.number().nullish().meta({
-		description: "The amount of usage included",
+		description: coreFeatureDescriptions.included_usage,
 	}),
 	next_reset_at: z.number().nullish().meta({
-		description: "Timestamp when the usage resets",
+		description: coreFeatureDescriptions.next_reset_at,
 	}),
 	overage_allowed: z.boolean().nullish().meta({
-		description: "Whether overage usage beyond the limit is allowed",
-		example: true,
+		description: coreFeatureDescriptions.overage_allowed,
 	}),
 
-	breakdown: z
-		.array(ApiCusFeatureV3BreakdownSchema)
-		.nullish()
-		.meta({
-			description:
-				"Detailed breakdown by interval for features with multiple intervals",
-			example: [
-				{ interval: "month", interval_count: 1, balance: 500, usage: 250 },
-			],
-		}),
+	breakdown: z.array(ApiCusFeatureV3BreakdownSchema).nullish().meta({
+		description:
+			"Detailed breakdown by interval for features with multiple intervals",
+	}),
 	credit_schema: z
 		.array(
 			z.object({
-				feature_id: z.string().meta({
-					description: "The ID of the feature that credits are applied to",
-					example: "feature_123",
-				}),
-				credit_amount: z.number().meta({
-					description: "The amount of credits applied per usage",
-					example: 10,
-				}),
+				feature_id: z.string(),
+				credit_amount: z.number(),
 			}),
 		)
 		.nullish()
-		.meta({
-			description: "Credit conversion schema for credit system features",
-			example: [{ feature_id: "feature_123", credit_amount: 10 }],
-		}),
+		.meta({ internal: true }),
 
 	usage_limit: z.number().nullish().meta({
-		description: "The maximum usage allowed",
-		example: 1000,
+		description: coreFeatureDescriptions.usage_limit,
 	}),
-	rollovers: z
-		.array(ApiCusFeatureV3RolloverSchema)
-		.nullish()
-		.meta({
-			description: "Array of rollover balances from previous periods",
-			example: [{ balance: 100, expires_at: 1759247877000 }],
-		}),
+	rollovers: z.array(ApiCusFeatureV3RolloverSchema).nullish().meta({
+		internal: true,
+	}),
 });
 
 export const ApiCusFeatureV3Schema = z
 	.object({
 		id: z.string().meta({
-			description: "The unique identifier of the feature",
-			example: "feature_123",
+			description: "The ID of the feature",
 		}),
 		type: z.enum(ApiFeatureType).meta({
 			description: "The type of the feature",
-			example: "single_use",
 		}),
 		name: z.string().nullish().meta({
 			description: "The name of the feature",
-			example: "API Calls",
 		}),
 	})
 	.extend(CoreCusFeatureSchema.shape);

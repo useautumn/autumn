@@ -93,25 +93,18 @@ export const SetupPaymentResultSchema = z.object({
 });
 
 export const BillingPortalParamsSchema = z.object({
-	customer_id: z.string().meta({
-		description: "The ID of the customer",
-		example: "cus_123",
-	}),
 	return_url: z.string().optional().meta({
 		description:
-			"Time range for the query (defaults to last_cycle if not provided)",
-		example: "7d",
+			"URL to redirect to when back button is clicked in the billing portal.",
 	}),
 });
 
 export const BillingPortalResultSchema = z.object({
 	customer_id: z.string().meta({
 		description: "The ID of the customer",
-		example: "cus_123",
 	}),
 	url: z.string().meta({
 		description: "URL to the billing portal",
-		example: "https://billing.stripe.com/...",
 	}),
 });
 
