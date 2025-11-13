@@ -143,6 +143,8 @@ export const constructProduct = ({
 		id ||
 		(isAnnual ? `${type}-annual` : interval ? `${type}-${interval}` : type);
 
+	const freeTrialLength = freeTrial?.length || 7;
+
 	const product: ProductV2 = {
 		id: id_,
 		name: id
@@ -161,7 +163,7 @@ export const constructProduct = ({
 		free_trial:
 			freeTrial || trial
 				? (CreateFreeTrialSchema.parse({
-						length: 7,
+						length: freeTrialLength,
 						duration: FreeTrialDuration.Day,
 						unique_fingerprint: false,
 						card_required: true,
