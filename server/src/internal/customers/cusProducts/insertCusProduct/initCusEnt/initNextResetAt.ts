@@ -10,7 +10,6 @@ import { UTCDate } from "@date-fns/utc";
 import { applyTrialToEntitlement } from "@/internal/products/entitlements/entitlementUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { getNextEntitlementReset } from "@/utils/timeUtils.js";
-import { formatUnixToDateTime } from "../../../../../utils/genUtils.js";
 import { getAlignedUnix } from "../../../../products/prices/billingIntervalUtils2.js";
 
 export const initNextResetAt = ({
@@ -48,18 +47,19 @@ export const initNextResetAt = ({
 			? freeTrialToStripeTimestamp({ freeTrial, now })
 			: null;
 
-	if (
-		freeTrial &&
-		applyTrialToEntitlement(entitlement, freeTrial) &&
-		trialEndTimestamp
-	) {
+	const shouldApplyTrial = freeTrial
+		? applyTrialToEntitlement(entitlement, freeTrial)
+		: false;
+
+	if (freeTrial && shouldApplyTrial && trialEndTimestamp) {
 		nextResetAtCalculated = new UTCDate(trialEndTimestamp! * 1000);
 	}
 
 	const resetInterval = entitlement.interval as EntInterval;
 
+	const startDate = nextResetAtCalculated || new UTCDate(now);
 	nextResetAtCalculated = getNextEntitlementReset(
-		nextResetAtCalculated || new UTCDate(now),
+		startDate,
 		resetInterval,
 		entitlement.interval_count || 1,
 	).getTime();
@@ -70,7 +70,8 @@ export const initNextResetAt = ({
 		nextResetAtCalculated &&
 		Object.values(BillingInterval).includes(
 			entitlement.interval as unknown as BillingInterval,
-		)
+		) &&
+		!shouldApplyTrial
 	) {
 		nextResetAtCalculated = getAlignedUnix({
 			anchor: anchorToUnix,
