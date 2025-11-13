@@ -223,7 +223,6 @@ export const handleUpdateProductDetails = async ({
 	}
 
 	// 2. Update product
-	console.log("New group:", newProduct.group);
 
 	await ProductService.updateByInternalId({
 		db,

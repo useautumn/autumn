@@ -17,7 +17,7 @@ const pro = constructProduct({
 		constructFeatureItem({ featureId: TestFeature.Words, includedUsage: 100 }),
 	],
 	freeTrial: {
-		length: 365,
+		length: 7,
 		duration: FreeTrialDuration.Day,
 		unique_fingerprint: false,
 		card_required: true,
