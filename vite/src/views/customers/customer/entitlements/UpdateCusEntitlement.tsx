@@ -3,7 +3,7 @@ import {
 	type FullCustomerEntitlement,
 	getCusEntBalance,
 } from "@autumn/shared";
-import { AlertCircle, Info, InfoIcon } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import CopyButton from "@/components/general/CopyButton";
@@ -39,28 +39,28 @@ function UpdateCusEntitlement({
 
 	const cusEnt = selectedCusEntitlement;
 
-	console.log(
-		"Balance: ",
-		cusEnt
-			? getCusEntBalance({
-					cusEnt: cusEnt!,
-					entityId,
-				}).balance
-			: null,
-	);
+	// console.log(
+	// 	"Balance: ",
+	// 	cusEnt
+	// 		? getCusEntBalance({
+	// 				cusEnt: cusEnt!,
+	// 				entityId,
+	// 			}).balance
+	// 		: null,
+	// );
 
 	const [updateLoading, setUpdateLoading] = useState(false);
 	const axiosInstance = useAxiosInstance();
 
-	console.log(
-		`Cus ent: ${cusEnt?.entitlement.feature_id}, Balances: `,
-		cusEnt
-			? getCusEntBalance({
-					cusEnt: cusEnt!,
-					entityId,
-				})
-			: null,
-	);
+	// console.log(
+	// 	`Cus ent: ${cusEnt?.entitlement.feature_id}, Balances: `,
+	// 	cusEnt
+	// 		? getCusEntBalance({
+	// 				cusEnt: cusEnt!,
+	// 				entityId,
+	// 			})
+	// 		: null,
+	// );
 
 	const [updateFields, setUpdateFields] = useState<any>({
 		balance: cusEnt

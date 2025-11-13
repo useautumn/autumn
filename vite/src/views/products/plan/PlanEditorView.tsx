@@ -76,7 +76,7 @@ export default function PlanEditorView() {
 					setSheet({ type: "edit-plan" });
 				}}
 			/>
-			<div className="flex w-full h-full overflow-hidden bg-gray-medium relative">
+			<div className="flex w-full h-full overflow-hidden relative">
 				<motion.div
 					className="flex flex-col justify-between h-full overflow-x-hidden overflow-y-auto absolute inset-0"
 					animate={{
@@ -87,7 +87,7 @@ export default function PlanEditorView() {
 					<EditPlanHeader />
 					{/* <ManagePlan /> */}
 					<div
-						className="flex flex-col w-full h-full bg-gray-medium items-center justify-start pt-20 px-10"
+						className="flex flex-col w-full h-full items-center justify-start pt-20 px-10"
 						// onClick={() => {
 						// 	if (sheetType) {
 						// 		closeSheet();

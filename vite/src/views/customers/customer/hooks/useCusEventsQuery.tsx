@@ -1,6 +1,6 @@
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const useCusEventsQuery = () => {
 	const axiosInstance = useAxiosInstance();
@@ -11,7 +11,7 @@ export const useCusEventsQuery = () => {
 		const { data } = await axiosInstance.get(
 			`/customers/${customer_id}/events`,
 		);
-		console.log("Events:", data);
+		// console.log("Events:", data);
 		return data;
 	};
 

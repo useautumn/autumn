@@ -49,7 +49,7 @@ export const BasePriceDisplay = () => {
 		if (product.basePriceType === "usage") {
 			return (
 				<span className="text-t4 text-body-secondary inline-block mt-[4.5px]">
-					Usage-based
+					Variable
 				</span>
 			);
 		}

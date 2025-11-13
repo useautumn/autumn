@@ -65,11 +65,15 @@ export default function CustomerView2() {
 					</div>
 					<CustomerActions />
 				</div>
+				{/* <Separator /> */}
 				{/* <Separator className="my-2" /> */}
-				<div className="flex flex-col gap-20 mt-4">
+				<div className="flex flex-col gap-16 mt-4">
 					<CustomerProductsTable />
+					{/* <Separator /> */}
 					<CustomerFeatureUsageTable />
+					{/* <Separator /> */}
 					<CustomerUsageAnalyticsTable />
+					{/* <Separator /> */}
 					<CustomerInvoicesTable />
 				</div>
 			</div>

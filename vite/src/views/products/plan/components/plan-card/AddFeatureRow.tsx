@@ -1,12 +1,8 @@
 import { PlusIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/v2/buttons/Button";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import {
-	useCurrentItem,
-	useProductStore,
-} from "@/hooks/stores/useProductStore";
+import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { checkItemIsValid } from "@/utils/product/entitlementUtils";
 
 interface AddFeatureRowProps {
 	disabled?: boolean;
@@ -17,17 +13,12 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 	const { features } = useFeaturesQuery();
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const product = useProductStore((s) => s.product);
-	const item = useCurrentItem();
 
 	const handleAddFeatureClick = () => {
 		// Get feature IDs that are already added to the plan
 		const addedFeatureIds = new Set(
 			product.items?.map((item) => item.feature_id).filter(Boolean) || [],
 		);
-
-		if (item && !checkItemIsValid(item)) {
-			return;
-		}
 
 		// Filter out features that are already on the plan
 		const availableFeatures = features.filter(
@@ -47,7 +38,7 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 	return (
 		<Button
 			variant="dotted"
-			className="group input-base input-shadow-tiny input-state-open-tiny w-full !h-8 !bg-[#FDFDFC] !border-dashed !text-primary [&_svg]:text-primary hover:!border-solid hover:!border-primary [&:not(:hover)]:!border-neutral-300 active:!bg-[#FDFDFC] active:!border-dashed focus-visible:!bg-[#FDFDFC] focus-visible:!border-dashed [data-state='open']:!bg-[#FDFDFC]"
+			className="group input-base input-shadow-tiny input-state-open-tiny w-full !h-8 !border-dashed !text-primary [&_svg]:text-primary hover:!border-solid hover:!border-primary [&:not(:hover)]:!border-neutral-300 active:!bg-[#FDFDFC] active:!border-dashed focus-visible:!bg-[#FDFDFC] focus-visible:!border-dashed [data-state='open']:!bg-[#FDFDFC]"
 			disabled={disabled}
 			onClick={handleAddFeatureClick}
 			aria-label="Add new feature"
