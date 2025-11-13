@@ -9,6 +9,7 @@ import {
 	type Feature,
 	FeatureType,
 	type FreeTrial,
+	FreeTrialDuration,
 	type FullEntitlement,
 	type FullProduct,
 	type Price,
@@ -44,6 +45,22 @@ export const entIntervalToTrialDuration = ({
 	}
 };
 
+export const trialToDays = (freeTrial: FreeTrial) => {
+	let days: number;
+	switch (freeTrial.duration) {
+		case FreeTrialDuration.Day:
+			days = freeTrial.length;
+			break;
+		case FreeTrialDuration.Month:
+			days = freeTrial.length * 30;
+			break;
+		case FreeTrialDuration.Year:
+			days = freeTrial.length * 365;
+			break;
+	}
+	return days;
+};
+
 export const applyTrialToEntitlement = (
 	entitlement: EntitlementWithFeature,
 	freeTrial: FreeTrial | null,
@@ -55,7 +72,7 @@ export const applyTrialToEntitlement = (
 		return false;
 	if (entitlement.allowance_type === AllowanceType.Unlimited) return false;
 
-	const trialDays = freeTrial.length;
+	const trialDays = trialToDays(freeTrial);
 	const entDays = entIntervalToTrialDuration({
 		interval: entitlement.interval!,
 		intervalCount: entitlement.interval_count || 1,
