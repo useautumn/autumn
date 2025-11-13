@@ -1,8 +1,8 @@
 import {
 	isFeaturePriceItem,
-	mapToProductV3,
 	type ProductItem,
 	type ProductV2,
+	productV2ToBasePrice,
 	productV2ToFeatureItems,
 } from "@autumn/shared";
 import { Button } from "@/components/v2/buttons/Button";
@@ -65,7 +65,7 @@ export const PlanCardPreview = ({
 	disabled = false,
 	loading = false,
 }: PlanCardPreviewProps) => {
-	const productV3 = mapToProductV3({ product: product as ProductV2 });
+	const basePrice = productV2ToBasePrice({ product: product as ProductV2 });
 	const featureItems = productV2ToFeatureItems({
 		items: product.items as ProductItem[],
 	});
@@ -85,13 +85,12 @@ export const PlanCardPreview = ({
 					{/* Price */}
 					{product.items.filter((x) => isFeaturePriceItem(x as ProductItem))
 						.length > 0 &&
-					(productV3.price?.amount === 0 || productV3.price == null) ? (
+					(basePrice?.price === 0 || basePrice?.price == null) ? (
 						<span className="text-main">Varies</span>
-					) : typeof productV3.price?.amount === "number" &&
-						productV3.price.amount > 0 ? (
+					) : typeof basePrice?.price === "number" && basePrice?.price > 0 ? (
 						<span className="text-main">
-							${productV3.price.amount}/
-							{keyToTitle(productV3.price.interval ?? "once", {
+							${basePrice?.price}/
+							{keyToTitle(basePrice?.interval ?? "once", {
 								exclusionMap: { one_off: "once" },
 							}).toLowerCase()}
 						</span>
@@ -100,9 +99,9 @@ export const PlanCardPreview = ({
 					)}
 
 					{/* Description */}
-					{productV3.description && (
+					{product.description && (
 						<p className="text-body-secondary line-clamp-2">
-							{productV3.description}
+							{product.description}
 						</p>
 					)}
 				</div>

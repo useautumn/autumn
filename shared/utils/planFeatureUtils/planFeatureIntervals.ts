@@ -1,9 +1,6 @@
-import { ResetInterval } from "@api/models.js";
-import { EntInterval } from "@models/productModels/entModels/entEnums.js";
-import {
-	ProductItemInterval,
-	RolloverDuration,
-} from "@models/productV2Models/productItemModels/productItemModels.js";
+import { EntInterval } from "@models/productModels/intervals/entitlementInterval.js";
+import { ProductItemInterval } from "@models/productModels/intervals/productItemInterval.js";
+import { ResetInterval } from "@models/productModels/intervals/resetInterval.js";
 
 export const resetIntvToItemIntv = (
 	resetIntv: ResetInterval,
@@ -27,19 +24,8 @@ export const resetIntvToItemIntv = (
 			return ProductItemInterval.SemiAnnual;
 		case ResetInterval.Year:
 			return ProductItemInterval.Year;
-	}
-};
-
-export const resetIntvToRollover = (
-	resetIntv: ResetInterval,
-): RolloverDuration => {
-	switch (resetIntv) {
-		case ResetInterval.Month:
-			return RolloverDuration.Month;
-		case null:
-			return RolloverDuration.Forever;
 		default:
-			return RolloverDuration.Month;
+			return null;
 	}
 };
 
@@ -47,7 +33,7 @@ export const resetIntvToRollover = (
  * Convert ProductItemInterval back to ResetInterval
  */
 export const itemIntvToResetIntv = (
-	itemIntv: ProductItemInterval,
+	itemIntv: ProductItemInterval | null,
 ): ResetInterval => {
 	switch (itemIntv) {
 		case ProductItemInterval.Minute:
@@ -68,22 +54,6 @@ export const itemIntvToResetIntv = (
 			return ResetInterval.Year;
 		default:
 			return ResetInterval.OneOff;
-	}
-};
-
-/**
- * Convert RolloverDuration back to ResetInterval
- */
-export const rolloverToResetIntv = (
-	duration: RolloverDuration,
-): ResetInterval => {
-	switch (duration) {
-		case RolloverDuration.Month:
-			return ResetInterval.Month;
-		case RolloverDuration.Forever:
-			return ResetInterval.OneOff; // Forever maps to one-off/null
-		default:
-			return ResetInterval.Month;
 	}
 };
 

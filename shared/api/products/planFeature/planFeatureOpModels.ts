@@ -1,12 +1,13 @@
+import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
+import { ResetInterval } from "@models/productModels/intervals/resetInterval.js";
 import { UsageTierSchema } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
-import { BillingInterval } from "@models/productModels/priceModels/priceEnums.js";
+import { UsageModel } from "@models/productV2Models/productItemModels/productItemModels.js";
+import { z } from "zod/v4";
+import { RolloverExpiryDurationType } from "../../../models/productModels/durationTypes/rolloverExpiryDurationType.js";
 import {
 	OnDecrease,
 	OnIncrease,
-} from "@models/productV2Models/productItemModels/productItemEnums.js";
-import { UsageModel } from "@models/productV2Models/productItemModels/productItemModels.js";
-import { z } from "zod/v4";
-import { ResetInterval } from "../apiPlan.js";
+} from "../../../models/productV2Models/productItemModels/productItemEnums.js";
 
 export const UpdatePlanFeatureSchema = z
 	.object({
@@ -14,11 +15,9 @@ export const UpdatePlanFeatureSchema = z
 		granted_balance: z.number().optional(),
 		unlimited: z.boolean().optional(),
 
-		// reset_interval: z.enum(ResetInterval).optional(),
-		// reset_interval_count: z.number().optional(),
 		reset: z
 			.object({
-				interval: z.enum(ResetInterval).optional(),
+				interval: z.enum(ResetInterval),
 				interval_count: z.number().optional(),
 				reset_when_enabled: z.boolean().optional(),
 			})
@@ -48,25 +47,23 @@ export const UpdatePlanFeatureSchema = z
 		rollover: z
 			.object({
 				max: z.number(),
-				expiry_duration_type: z.enum(ResetInterval),
+				expiry_duration_type: z.enum(RolloverExpiryDurationType),
 				expiry_duration_length: z.number().optional(),
 			})
 			.optional(),
 	})
 	.check((ctx) => {
-		const resetGroup =
-			ctx.value.reset?.interval ||
-			ctx.value.reset?.interval_count !== undefined;
+		const resetInterval = ctx.value.reset?.interval;
+		const priceInterval = ctx.value.price?.interval;
 
-		const intervalGroup =
-			ctx.value.price?.interval ||
-			ctx.value.price?.interval_count !== undefined;
-
-		if (resetGroup && intervalGroup) {
+		if (
+			resetInterval &&
+			priceInterval &&
+			String(resetInterval) !== String(priceInterval)
+		) {
 			ctx.issues.push({
 				code: "custom",
-				message:
-					"reset_interval/reset_interval_count and interval/interval_count are mutually exclusive.",
+				message: "either pass in reset.interval, or price.interval, not both.",
 				input: ctx.value,
 			});
 		}

@@ -7,6 +7,7 @@ import {
 	type ApiBalanceBreakdown,
 	ApiBalanceBreakdownSchema,
 	ApiBalanceSchema,
+	CheckExpand,
 	CusExpand,
 	cusEntMatchesFeature,
 	cusEntsToMaxPurchase,
@@ -15,6 +16,7 @@ import {
 	cusEntToGrantedBalance,
 	cusEntToKey,
 	cusEntToPurchasedBalance,
+	expandIncludes,
 	type Feature,
 	FeatureType,
 	getCusEntBalance,
@@ -133,7 +135,10 @@ export const getApiBalance = ({
 }): { data: ApiBalance; legacyData?: CusFeatureLegacyData } => {
 	const entityId = fullCus.entity?.id;
 
-	const apiFeature = ctx.expand.includes(CusExpand.BalanceFeature)
+	const apiFeature = expandIncludes({
+		expand: ctx.expand,
+		includes: [CheckExpand.BalanceFeature, CusExpand.BalancesFeature],
+	})
 		? toApiFeature({ feature })
 		: undefined;
 
@@ -239,7 +244,10 @@ export const getApiBalance = ({
 	const rollovers = cusEntsToRollovers({ cusEnts, entityId });
 
 	const { data: apiBalance, error } = ApiBalanceSchema.safeParse({
-		feature: ctx.expand.includes(CusExpand.BalanceFeature)
+		feature: expandIncludes({
+			expand: ctx.expand,
+			includes: [CheckExpand.BalanceFeature, CusExpand.BalancesFeature],
+		})
 			? apiFeature
 			: undefined,
 

@@ -11,7 +11,7 @@ import {
 	ProductItemInterval,
 	ProductItemSchema,
 	type RolloverConfig,
-	RolloverDuration,
+	RolloverExpiryDurationType,
 	UsageModel,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
@@ -214,7 +214,7 @@ const validateProductItem = ({
 		}
 
 		// Validate rollover length for monthly durations
-		if (rollover.duration === RolloverDuration.Month) {
+		if (rollover.duration === RolloverExpiryDurationType.Month) {
 			if (typeof rollover.length !== "number" || rollover.length < 0) {
 				throw new RecaseError({
 					message:
@@ -226,7 +226,7 @@ const validateProductItem = ({
 		}
 
 		// Set length to 0 for forever duration
-		if (rollover.duration === RolloverDuration.Forever) {
+		if (rollover.duration === RolloverExpiryDurationType.Forever) {
 			rollover.length = 0;
 		}
 

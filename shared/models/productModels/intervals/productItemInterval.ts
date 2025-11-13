@@ -1,13 +1,13 @@
-/**
- * Shared enums for Plan API to avoid circular dependencies
- */
+export enum ProductItemInterval {
+	// None = "none",
 
-export enum ResetInterval {
-	OneOff = "one_off",
+	// Reset interval
 	Minute = "minute",
 	Hour = "hour",
 	Day = "day",
 	Week = "week",
+
+	// Billing interval
 	Month = "month",
 	Quarter = "quarter",
 	SemiAnnual = "semi_annual",

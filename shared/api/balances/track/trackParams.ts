@@ -1,7 +1,8 @@
 import { z } from "zod/v4";
-import { CusExpand } from "../../../models/cusModels/cusExpand.js";
 import { CustomerDataSchema } from "../../common/customerData.js";
 import { EntityDataSchema } from "../../common/entityData.js";
+import { queryStringArray } from "../../common/queryHelpers.js";
+import { CheckExpand } from "../check/enums/CheckExpand.js";
 
 const trackDescriptions = {
 	customer_id: "The ID of the customer",
@@ -22,7 +23,7 @@ const trackDescriptions = {
 };
 
 export const TrackQuerySchema = z.object({
-	expand: z.array(z.enum([CusExpand.BalanceFeature])).optional(),
+	expand: queryStringArray(z.enum([CheckExpand.BalanceFeature])).optional(),
 	skip_cache: z.boolean().optional(),
 });
 

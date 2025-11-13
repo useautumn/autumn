@@ -21,7 +21,10 @@ import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/han
 import { honoOrgRouter } from "./internal/orgs/orgRouter.js";
 import { platformBetaRouter } from "./internal/platform/platformBeta/platformBetaRouter.js";
 import { internalProductRouter } from "./internal/products/internalProductRouter.js";
-import { honoProductRouter } from "./internal/products/productRouter.js";
+import {
+	honoProductBetaRouter,
+	honoProductRouter,
+} from "./internal/products/productRouter.js";
 import { auth } from "./utils/auth.js";
 
 const ALLOWED_ORIGINS = [
@@ -118,7 +121,11 @@ export const createHonoApp = () => {
 
 	app.route("v1", entityRouter);
 	app.route("v1/customers", cusRouter);
+
+	app.route("v1/products_beta", honoProductBetaRouter);
 	app.route("v1/products", honoProductRouter);
+	app.route("v1/plans", honoProductRouter);
+
 	app.route("v1", balancesRouter);
 	app.route("v1/platform", platformBetaRouter);
 	app.route("v1/platform/beta", platformBetaRouter);

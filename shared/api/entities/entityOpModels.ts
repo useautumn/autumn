@@ -22,8 +22,8 @@ export const GetEntityQuerySchema = z.object({
 	expand: queryStringArray(
 		z.enum([
 			CusExpand.Invoices,
-			CusExpand.SubscriptionPlan,
-			CusExpand.BalanceFeature,
+			CusExpand.SubscriptionsPlan,
+			CusExpand.BalancesFeature,
 		]),
 	).default([]),
 	skip_cache: z.boolean().optional(),

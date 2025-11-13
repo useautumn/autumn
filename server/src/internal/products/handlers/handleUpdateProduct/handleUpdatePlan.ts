@@ -3,6 +3,7 @@ import {
 	type ApiPlan,
 	ApiVersion,
 	ApiVersionClass,
+	applyResponseVersionChanges,
 	type FreeTrial,
 	mapToProductV2,
 	notNullish,
@@ -29,13 +30,13 @@ import {
 } from "../../free-trials/freeTrialUtils.js";
 import { ProductService } from "../../ProductService.js";
 import { handleNewProductItems } from "../../product-items/productItemUtils/handleNewProductItems.js";
-import { getProductResponse } from "../../productUtils/productResponseUtils/getProductResponse.js";
+import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
 import { initProductInStripe } from "../../productUtils.js";
-import { disableCurrentDefault } from "../handleCreateProduct.js";
+import { disableCurrentDefault } from "../handleCreatePlan.js";
 import { handleVersionProductV2 } from "../handleVersionProduct.js";
 import { handleUpdateProductDetails } from "./updateProductDetails.js";
 
-export const handleUpdateProductV2 = createRoute({
+export const handleUpdatePlan = createRoute({
 	versionedBody: {
 		latest: UpdatePlanParamsSchema,
 		[ApiVersion.V1_2]: UpdateProductV2ParamsSchema,
@@ -48,7 +49,7 @@ export const handleUpdateProductV2 = createRoute({
 	handler: async (c) => {
 		const body = c.req.valid("json");
 		const ctx = c.get("ctx");
-		const productId = c.req.param("productId");
+		const productId = c.req.param("product_id");
 
 		const { db, org, env, features, logger } = ctx;
 		const query = c.req.valid("query") || {};
@@ -57,7 +58,7 @@ export const handleUpdateProductV2 = createRoute({
 		// Convert to ProductV2 format only if client sent V2 Plan format
 		// V1.2 clients already send ProductV2, no conversion needed
 		const v1_2Body = ctx.apiVersion.gte(new ApiVersionClass(ApiVersion.V2_0))
-			? planToProductV2({ plan: body as ApiPlan })
+			? planToProductV2({ plan: body as ApiPlan, features: ctx.features })
 			: (body as UpdateProductV2Params);
 
 		const [fullProduct, rewardPrograms, _defaultProds] = await Promise.all([
@@ -223,11 +224,19 @@ export const handleUpdateProductV2 = createRoute({
 			},
 		});
 
-		const productResponse = await getProductResponse({
+		const planResponse = await getPlanResponse({
 			product: newFullProduct,
 			features,
 		});
 
-		return c.json(productResponse);
+		const versionedResponse = applyResponseVersionChanges<ApiPlan>({
+			input: planResponse,
+			targetVersion: ctx.apiVersion,
+			resource: AffectedResource.Product,
+			legacyData: {
+				features: ctx.features,
+			},
+		});
+		return c.json(versionedResponse);
 	},
 });

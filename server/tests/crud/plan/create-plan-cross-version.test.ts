@@ -1,32 +1,26 @@
+import { describe, expect, test } from "bun:test";
 import {
 	type ApiPlan,
 	type ApiProduct,
+	ApiVersion,
 	BillingInterval,
 	type CreatePlanParams,
+	FreeTrialDuration,
 	Infinite,
+	ProductItemInterval,
 	ResetInterval,
 	TierInfinite,
 	UsageModel,
 } from "@autumn/shared";
-import { expect } from "chai";
 import chalk from "chalk";
-import { setupBefore } from "@tests/before.js";
-import { features } from "@tests/global.js";
-import { AutumnCliV2 } from "@/external/autumn/autumnCliV2.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { TestFeature } from "../../setup/v2Features.js";
 
 describe(chalk.yellowBright("Plan V2 - Cross-Version Consistency"), () => {
-	const autumnV2 = new AutumnCliV2({ version: "2.0.0" });
-	const autumnV1_2 = new AutumnCliV2({ version: "1.2" });
-	let _db, _org, _env;
+	const autumnV2 = new AutumnInt({ version: ApiVersion.V2_0 });
+	const autumnV1_2 = new AutumnInt({ version: ApiVersion.V1_2 });
 
-	before(async function () {
-		await setupBefore(this);
-		_db = this.db;
-		_org = this.org;
-		_env = this.env;
-	});
-
-	it("V2 CREATE → V1.2 GET: field transformations", async () => {
+	test("V2 CREATE → V1.2 GET: field transformations", async () => {
 		const productId = "cross_v2";
 		try {
 			await autumnV2.products.delete(productId);
@@ -40,9 +34,11 @@ describe(chalk.yellowBright("Plan V2 - Cross-Version Consistency"), () => {
 			price: { amount: 1000, interval: BillingInterval.Month },
 			features: [
 				{
-					feature_id: features.metered1.id,
-					granted: 100,
-					reset_interval: ResetInterval.Month,
+					feature_id: TestFeature.Messages,
+					granted_balance: 100,
+					reset: {
+						interval: ResetInterval.Month,
+					},
 				},
 			],
 		} as CreatePlanParams);
@@ -50,22 +46,22 @@ describe(chalk.yellowBright("Plan V2 - Cross-Version Consistency"), () => {
 		const v1_2 = (await autumnV1_2.products.get("cross_v2")) as ApiProduct;
 
 		// Field renames
-		expect(v1_2.is_add_on).to.be.true;
-		expect(v1_2.is_default).to.be.false;
+		expect(v1_2.is_add_on).toBe(true);
+		expect(v1_2.is_default).toBe(false);
 
 		// Structure transformations
-		expect(v1_2.items).to.have.lengthOf(2); // base price + feature
+		expect(v1_2.items).toHaveLength(2); // base price + feature
 
 		const basePrice = v1_2.items.find((i) => !i.feature_id);
-		expect(basePrice!.price).to.equal(1000);
+		expect(basePrice!.price).toBe(1000);
 
 		const feature = v1_2.items.find(
-			(i) => i.feature_id === features.metered1.id,
+			(i) => i.feature_id === TestFeature.Messages,
 		);
-		expect(feature!.included_usage).to.equal(100);
+		expect(feature!.included_usage).toBe(100);
 	});
 
-	it("Round-trip: V2 → V1.2 → V2 data consistency", async () => {
+	test("Round-trip: V2 → V1.2 → V2 data consistency", async () => {
 		const productId = "roundtrip";
 		try {
 			await autumnV2.products.delete(productId);
@@ -77,24 +73,25 @@ describe(chalk.yellowBright("Plan V2 - Cross-Version Consistency"), () => {
 			price: { amount: 5000, interval: BillingInterval.Month },
 			features: [
 				{
-					feature_id: features.metered1.id,
-					granted: 500,
-					reset_interval: ResetInterval.Month,
+					feature_id: TestFeature.Messages,
+					granted_balance: 500,
+					reset: {
+						interval: ResetInterval.Month,
+					},
 				},
 			],
-		};
+		} as CreatePlanParams;
 
-		await autumnV2.products.create(original as CreatePlanParams);
+		await autumnV2.products.create(original);
 
-		const _asV1_2 = (await autumnV1_2.products.get("roundtrip")) as ApiProduct;
 		const backToV2 = (await autumnV2.products.get("roundtrip")) as ApiPlan;
-		expect(backToV2.name).to.equal(original.name);
-		expect(backToV2.price!.amount).to.equal(original.price.amount);
-		expect(backToV2.features.length).to.equal(1);
-		expect(backToV2.features[0].granted).to.equal(500);
+		expect(backToV2.name).toBe(original.name);
+		expect(backToV2.price!.amount).toBe(original.price!.amount);
+		expect(backToV2.features.length).toBe(1);
+		expect(backToV2.features[0].granted_balance).toBe(500);
 	});
 
-	it("Free trial transformation: V2 duration_type → V1.2 duration", async () => {
+	test("Free trial transformation: V2 duration_type → V1.2 duration", async () => {
 		const productId = "trial_transform";
 		try {
 			await autumnV2.products.delete(productId);
@@ -105,25 +102,25 @@ describe(chalk.yellowBright("Plan V2 - Cross-Version Consistency"), () => {
 			name: "Trial Transform",
 			price: { amount: 2900, interval: BillingInterval.Month },
 			free_trial: {
-				duration_type: ResetInterval.Day,
+				duration_type: FreeTrialDuration.Day,
 				duration_length: 7,
 				card_required: true,
 			},
 		} as CreatePlanParams);
 
 		const v2 = (await autumnV2.products.get("trial_transform")) as ApiPlan;
-		expect(v2.free_trial!.duration_type).to.equal(ResetInterval.Day);
-		expect(v2.free_trial!.duration_length).to.equal(7);
+		expect(v2.free_trial!.duration_type).toBe(FreeTrialDuration.Day);
+		expect(v2.free_trial!.duration_length).toBe(7);
 
 		const v1_2 = (await autumnV1_2.products.get(
 			"trial_transform",
 		)) as ApiProduct;
-		expect(v1_2.free_trial!.duration).to.equal("day");
-		expect(v1_2.free_trial!.length).to.equal(7);
-		expect(v1_2.free_trial!.unique_fingerprint).to.be.true; // Always true in V1.2
+		expect(v1_2.free_trial!.duration).toBe(ProductItemInterval.Day);
+		expect(v1_2.free_trial!.length).toBe(7);
+		expect(v1_2.free_trial!.unique_fingerprint).toBe(true); // Always true in V1.2
 	});
 
-	it("Unlimited feature transformation", async () => {
+	test("Unlimited feature transformation", async () => {
 		const productId = "unlimited_transform";
 		try {
 			await autumnV2.products.delete(productId);
@@ -134,23 +131,23 @@ describe(chalk.yellowBright("Plan V2 - Cross-Version Consistency"), () => {
 			name: "Unlimited Transform",
 			features: [
 				{
-					feature_id: features.metered1.id,
+					feature_id: TestFeature.Messages,
 					unlimited: true,
 				},
 			],
 		} as CreatePlanParams);
 
 		const v2 = (await autumnV2.products.get("unlimited_transform")) as ApiPlan;
-		expect(v2.features[0].unlimited).to.be.true;
-		expect(v2.features[0].granted).to.equal(0);
+		expect(v2.features[0].unlimited).toBe(true);
+		expect(v2.features[0].granted_balance).toBe(0);
 
 		const v1_2 = (await autumnV1_2.products.get(
 			"unlimited_transform",
 		)) as ApiProduct;
-		expect(v1_2.items[0].included_usage).to.equal(Infinite);
+		expect(v1_2.items[0].included_usage).toBe(Infinite);
 	});
 
-	it("Tiered pricing transformation", async () => {
+	test("Tiered pricing transformation", async () => {
 		const productId = "tiered_transform";
 		try {
 			await autumnV2.products.delete(productId);
@@ -161,7 +158,7 @@ describe(chalk.yellowBright("Plan V2 - Cross-Version Consistency"), () => {
 			name: "Tiered Transform",
 			features: [
 				{
-					feature_id: features.metered1.id,
+					feature_id: TestFeature.Messages,
 					price: {
 						interval: BillingInterval.Month,
 						usage_model: UsageModel.PayPerUse,
@@ -179,7 +176,7 @@ describe(chalk.yellowBright("Plan V2 - Cross-Version Consistency"), () => {
 		const v1_2 = (await autumnV1_2.products.get(
 			"tiered_transform",
 		)) as ApiProduct;
-		expect(v1_2.items[0].tiers).to.have.lengthOf(3);
-		expect(v1_2.items[0].tiers![2].to).to.equal(TierInfinite);
+		expect(v1_2.items[0].tiers).toHaveLength(3);
+		expect(v1_2.items[0].tiers![2].to).toBe(TierInfinite);
 	});
 });

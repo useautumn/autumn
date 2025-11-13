@@ -1,6 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { LegacyVersion } from "@autumn/shared";
-import chalk from "chalk";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { expectFeaturesCorrect } from "@tests/utils/expectUtils/expectFeaturesCorrect.js";
@@ -8,6 +7,7 @@ import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAtt
 import { completeInvoiceCheckout } from "@tests/utils/stripeUtils/completeInvoiceCheckout.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { getBasePrice } from "@tests/utils/testProductUtils/testProductUtils.js";
+import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";

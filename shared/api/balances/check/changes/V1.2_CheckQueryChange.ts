@@ -4,8 +4,8 @@ import {
 	defineVersionChange,
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
 import type { z } from "zod/v4";
-import { CusExpand } from "../../../../models/cusModels/cusExpand.js";
 import { CheckQuerySchema } from "../checkParams.js";
+import { CheckExpand } from "../enums/CheckExpand.js";
 
 /**
  * V1_2_CheckQueryChange: Transforms check query TO latest format
@@ -50,9 +50,9 @@ export const V1_2_CheckQueryChange = defineVersionChange({
 
 		// Add `balance.feature` to expand array
 		// Type assertion needed because schema expects CusExpand.BalanceFeature[] specifically
-		const newExpand: CusExpand.BalanceFeature[] = [
-			...(existingExpand as CusExpand.BalanceFeature[]),
-			CusExpand.BalanceFeature,
+		const newExpand: CheckExpand[] = [
+			...(existingExpand as CheckExpand[]),
+			CheckExpand.BalanceFeature,
 		];
 
 		return {

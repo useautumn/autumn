@@ -1,10 +1,12 @@
-import type {
-	AppEnv,
-	Entitlement,
-	Feature,
-	Price,
-	Product,
-	ProductItem,
+import {
+	type AppEnv,
+	type Entitlement,
+	type Feature,
+	logEnts,
+	logPrices,
+	type Price,
+	type Product,
+	type ProductItem,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
@@ -185,12 +187,6 @@ export const handleNewProductItems = async ({
 		env: product.env as AppEnv,
 	});
 
-	// addIdsToItems()
-	// //1. Base price -> gets another fixed price ID.
-	// //2. group plan features by feature ID#
-	// //3. sort by price, then usage_model
-	// //3.
-
 	features = allFeatures;
 
 	const newPrices: Price[] = [];
@@ -201,13 +197,7 @@ export const handleNewProductItems = async ({
 
 	const deletedPrices: Price[] = curPrices.filter((price) => {
 		// Check if this price matches any new item (by ID or feature+interval)
-		const item = newItems.find(
-			(item) =>
-				item.price_id === price.id ||
-				(!item.price_id &&
-					price.feature_id === item.feature_id &&
-					price.interval === item.interval),
-		);
+		const item = newItems.find((item) => item.price_id === price.id);
 		if (!item) {
 			return true;
 		}
@@ -216,14 +206,7 @@ export const handleNewProductItems = async ({
 	});
 
 	const deletedEnts: Entitlement[] = curEnts.filter(
-		(ent) =>
-			!newItems.some(
-				(item) =>
-					item.entitlement_id === ent.id ||
-					(!item.entitlement_id &&
-						item.feature_id === ent.feature_id &&
-						item.interval === ent.interval),
-			),
+		(ent) => !newItems.some((item) => item.entitlement_id === ent.id),
 	);
 
 	const samePrices: Price[] = [];
@@ -232,33 +215,10 @@ export const handleNewProductItems = async ({
 	for (const item of newItems) {
 		const feature = features.find((f) => f.id === item.feature_id);
 
-		// Match existing entitlement by ID (V1.2) or feature_id+interval (V2 Plan format)
-		const curEnt = curEnts.find((ent) => {
-			// Primary: match by entitlement_id if present
-			if (item.entitlement_id) {
-				return ent.id === item.entitlement_id;
-			}
+		const curEnt = curEnts.find((ent) => ent.id === item.entitlement_id);
+		const curPrice = curPrices.find((price) => price.id === item.price_id);
 
-			// Fallback: match by feature_id + interval (V2 Plan format without entitlement_id)
-			return (
-				ent.feature_id === item.feature_id && ent.interval === item.interval
-			);
-		});
-
-		// Match existing price by ID (V1.2) or feature_id+interval (V2)
-		const curPrice = curPrices.find((price) => {
-			// Primary: match by price_id if present
-			if (item.price_id) {
-				return price.id === item.price_id;
-			}
-
-			// Fallback: match by feature_id + interval for usage prices
-			return (
-				price.feature_id === item.feature_id && price.interval === item.interval
-			);
-		});
-
-		// 2. Update price and entitlement?
+		// 3. Update price and entitlement?
 		const { newPrice, newEnt, updatedPrice, updatedEnt, samePrice, sameEnt } =
 			itemToPriceAndEnt({
 				item,
@@ -296,6 +256,16 @@ export const handleNewProductItems = async ({
 			sameEnts.push(sameEnt);
 		}
 	}
+
+	logPrices({ prices: newPrices, prefix: "New prices" });
+	logEnts({ ents: newEnts, prefix: "New entitlements" });
+	logPrices({ prices: updatedPrices, prefix: "Updated prices" });
+	logEnts({ ents: updatedEnts, prefix: "Updated entitlements" });
+	logPrices({ prices: deletedPrices, prefix: "Deleted prices" });
+	logEnts({ ents: deletedEnts, prefix: "Deleted entitlements" });
+	logPrices({ prices: samePrices, prefix: "Same prices" });
+	logEnts({ ents: sameEnts, prefix: "Same entitlements" });
+	// throw new Error("test");
 
 	if (newFeatures.length > 0 && saveToDb) {
 		await FeatureService.insert({

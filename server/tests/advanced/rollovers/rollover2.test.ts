@@ -1,15 +1,15 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type Customer,
 	LegacyVersion,
 	type LimitedItem,
 	ProductItemInterval,
-	RolloverDuration,
+	RolloverExpiryDurationType,
 } from "@autumn/shared";
-import { beforeAll, describe, expect, test } from "bun:test";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import type Stripe from "stripe";
-import ctx from "@tests/utils/testInitUtils/createTestContext.js";
-import { TestFeature } from "@tests/setup/v2Features.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
@@ -21,7 +21,7 @@ import { resetAndGetCusEnt } from "./rolloverTestUtils.js";
 const rolloverConfig = {
 	max: 500,
 	length: 1,
-	duration: RolloverDuration.Month,
+	duration: RolloverExpiryDurationType.Month,
 };
 
 const msgesItem = constructFeatureItem({
@@ -153,8 +153,11 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item 
 					skip_cache: "true",
 				},
 			);
-			const nonCachedMsgesFeature = nonCachedEntity.features[TestFeature.Messages];
-			expect(nonCachedMsgesFeature.balance).toBe(includedUsage + expectedRollover);
+			const nonCachedMsgesFeature =
+				nonCachedEntity.features[TestFeature.Messages];
+			expect(nonCachedMsgesFeature.balance).toBe(
+				includedUsage + expectedRollover,
+			);
 			expect(nonCachedMsgesFeature.rollovers[0].balance).toBe(expectedRollover);
 		}
 	});
@@ -186,7 +189,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item 
 		const nonCachedEntity1 = await autumn.entities.get(customerId, entity1Id, {
 			skip_cache: "true",
 		});
-		const nonCachedEntity1Msges = nonCachedEntity1.features[TestFeature.Messages];
+		const nonCachedEntity1Msges =
+			nonCachedEntity1.features[TestFeature.Messages];
 		const nonCachedRollovers1 = nonCachedEntity1Msges.rollovers;
 		expect(nonCachedRollovers1[0].balance).toBe(100);
 		expect(nonCachedRollovers1[1].balance).toBe(400);
@@ -194,7 +198,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item 
 		const nonCachedEntity2 = await autumn.entities.get(customerId, entity2Id, {
 			skip_cache: "true",
 		});
-		const nonCachedEntity2Msges = nonCachedEntity2.features[TestFeature.Messages];
+		const nonCachedEntity2Msges =
+			nonCachedEntity2.features[TestFeature.Messages];
 		const nonCachedRollovers2 = nonCachedEntity2Msges.rollovers;
 		expect(nonCachedRollovers2[0].balance).toBe(100);
 		expect(nonCachedRollovers2[1].balance).toBe(400);
@@ -224,7 +229,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item 
 			const nonCachedEntity = await autumn.entities.get(customerId, entity.id, {
 				skip_cache: "true",
 			});
-			const nonCachedMsgesFeature = nonCachedEntity.features[TestFeature.Messages];
+			const nonCachedMsgesFeature =
+				nonCachedEntity.features[TestFeature.Messages];
 			const nonCachedRollovers = nonCachedMsgesFeature.rollovers;
 			expect(nonCachedRollovers[0].balance).toBe(0);
 			expect(nonCachedRollovers[1].balance).toBe(350);
@@ -256,7 +262,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item 
 			const nonCachedEntity = await autumn.entities.get(customerId, entity.id, {
 				skip_cache: "true",
 			});
-			const nonCachedMsgesFeature = nonCachedEntity.features[TestFeature.Messages];
+			const nonCachedMsgesFeature =
+				nonCachedEntity.features[TestFeature.Messages];
 			const nonCachedRollovers = nonCachedMsgesFeature.rollovers;
 			expect(nonCachedRollovers[0].balance).toBe(0);
 			expect(nonCachedRollovers[1].balance).toBe(0);

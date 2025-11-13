@@ -2,7 +2,7 @@ import { ApiProductPropertiesSchema } from "@api/products/previousVersions/apiPr
 import { z } from "zod/v4";
 import { AttachScenario } from "../checkModels/checkPreviewModels.js";
 import { AppEnv } from "../genModels/genEnums.js";
-import { ProductItemInterval } from "../productV2Models/productItemModels/productItemModels.js";
+import { ProductItemInterval } from "../productModels/intervals/productItemInterval.js";
 
 export const PlanResponseSchema = z.object({
 	id: z.string(),

@@ -1,13 +1,13 @@
 import {
-	FullCustomerEntitlement,
-	RolloverConfig,
-	EntityRolloverBalance,
-	RolloverDuration,
-	Rollover,
+	type EntityRolloverBalance,
+	type FullCustomerEntitlement,
+	type Rollover,
+	type RolloverConfig,
+	RolloverExpiryDurationType,
 } from "@autumn/shared";
-import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 import { addMonths } from "date-fns";
 import { Decimal } from "decimal.js";
+import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 
 export const getRolloverUpdates = ({
 	cusEnt,
@@ -16,7 +16,7 @@ export const getRolloverUpdates = ({
 	cusEnt: FullCustomerEntitlement;
 	nextResetAt: number;
 }) => {
-	let update: {
+	const update: {
 		toDelete: string[];
 		toInsert: Rollover[];
 		toUpdate: Rollover[];
@@ -25,15 +25,15 @@ export const getRolloverUpdates = ({
 		toInsert: [],
 		toUpdate: [],
 	};
-	let ent = cusEnt.entitlement;
-	let shouldRollover =
+	const ent = cusEnt.entitlement;
+	const shouldRollover =
 		cusEnt.balance && cusEnt.balance > 0 && notNullish(ent.rollover);
 
 	if (!shouldRollover) return update;
 
-	let nextExpiry = calculateNextExpiry(nextResetAt, ent.rollover!);
+	const nextExpiry = calculateNextExpiry(nextResetAt, ent.rollover!);
 
-	let newRollover: Rollover = {
+	const newRollover: Rollover = {
 		id: generateId("roll"),
 		cus_ent_id: cusEnt.id,
 		balance: 0,
@@ -44,7 +44,7 @@ export const getRolloverUpdates = ({
 
 	if (notNullish(ent.entity_feature_id)) {
 		for (const entityId in cusEnt.entities) {
-			let entRollover = cusEnt.entities[entityId].balance;
+			const entRollover = cusEnt.entities[entityId].balance;
 
 			if (entRollover > 0) {
 				newRollover.entities[entityId] = {
@@ -57,7 +57,7 @@ export const getRolloverUpdates = ({
 
 		update.toInsert.push(newRollover);
 	} else {
-		let balance = cusEnt.balance!;
+		const balance = cusEnt.balance!;
 		if (balance > 0) {
 			newRollover.balance = balance;
 			update.toInsert.push(newRollover);
@@ -75,7 +75,7 @@ export const calculateNextExpiry = (
 		return null;
 	}
 
-	if (config.duration == RolloverDuration.Forever) return null;
+	if (config.duration === RolloverExpiryDurationType.Forever) return null;
 
 	return addMonths(nextResetAt, config.length).getTime();
 };
@@ -93,7 +93,7 @@ export function performMaximumClearing({
 	// cusEntID: string;
 	// entityMode: boolean;
 }) {
-	let rolloverConfig = cusEnt.entitlement.rollover;
+	const rolloverConfig = cusEnt.entitlement.rollover;
 
 	if (!rolloverConfig) {
 		return { toDelete: [], toUpdate: [] };
@@ -103,9 +103,9 @@ export function performMaximumClearing({
 		return { toDelete: [], toUpdate: [] };
 	}
 
-	let total = 0;
-	let toDelete: string[] = [];
-	let toUpdate: Rollover[] = [];
+	const total = 0;
+	const toDelete: string[] = [];
+	const toUpdate: Rollover[] = [];
 
 	// look through each row
 	// if entityMode is true, then look through each entity
@@ -127,20 +127,23 @@ export function performMaximumClearing({
 		return 0;
 	});
 
-	let ent = cusEnt.entitlement;
-	let entityMode = !!ent.entity_feature_id;
+	const ent = cusEnt.entitlement;
+	const entityMode = !!ent.entity_feature_id;
 
 	if (!entityMode) {
-		let totalRolloverBalance = rows.reduce((acc, row) => acc + row.balance, 0);
+		const totalRolloverBalance = rows.reduce(
+			(acc, row) => acc + row.balance,
+			0,
+		);
 		let toDeduct = new Decimal(totalRolloverBalance).sub(rolloverConfig.max);
 
 		if (toDeduct.lt(0)) return { toDelete: [], toUpdate: [] };
 
-		let toUpdate: Rollover[] = [];
-		let toDelete: string[] = [];
+		const toUpdate: Rollover[] = [];
+		const toDelete: string[] = [];
 
 		for (const row of rows) {
-			let curBalance = new Decimal(row.balance);
+			const curBalance = new Decimal(row.balance);
 			let newBalance = curBalance;
 			if (curBalance.gte(toDeduct)) {
 				newBalance = newBalance.sub(toDeduct);
@@ -171,8 +174,10 @@ export function performMaximumClearing({
 		});
 
 		const entityTotals = new Map<string, number>();
-		allEntityIds.forEach((id) => entityTotals.set(id, 0));
-		let entityIdToTotal: Record<string, number> = {};
+		allEntityIds.forEach((id) => {
+			entityTotals.set(id, 0);
+		});
+		const entityIdToTotal: Record<string, number> = {};
 		rows.forEach((row) => {
 			for (const entityId in row.entities) {
 				entityIdToTotal[entityId] =
@@ -182,22 +187,22 @@ export function performMaximumClearing({
 
 		// console.log(`id to total:`, entityIdToTotal);
 
-		let toUpdate: Rollover[] = [];
-		let toDelete: string[] = [];
+		const toUpdate: Rollover[] = [];
+		const toDelete: string[] = [];
 
 		// Non entity mode
 		for (const row of rows) {
-			let update = structuredClone(row);
+			const update = structuredClone(row);
 			let shouldUpdate = false;
 
 			for (const entityId in entityIdToTotal) {
-				let entityTotal = entityIdToTotal[entityId];
-				let toDeduct = new Decimal(entityTotal).sub(rolloverConfig.max);
+				const entityTotal = entityIdToTotal[entityId];
+				const toDeduct = new Decimal(entityTotal).sub(rolloverConfig.max);
 
 				if (toDeduct.lte(0) || !row.entities[entityId]) continue;
 				// console.log(`Entity ${entityId}, deducting ${toDeduct.toNumber()}`);
 
-				let curBalance = new Decimal(row.entities[entityId].balance);
+				const curBalance = new Decimal(row.entities[entityId].balance);
 				let newBalance = curBalance;
 
 				if (curBalance.gte(toDeduct)) {

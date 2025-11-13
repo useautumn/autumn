@@ -1,69 +1,83 @@
-import { ProductNotFoundError, RecaseError } from "@autumn/shared";
+import {
+	AffectedResource,
+	ProductNotFoundError,
+	RecaseError,
+} from "@autumn/shared";
+import { z } from "zod/v4";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { routeHandler } from "@/utils/routerUtils.js";
 
-export const handleDeleteProduct = (req: any, res: any) =>
-	routeHandler({
-		req,
-		res,
-		action: "delete product",
-		handler: async () => {
-			const { db, orgId, env } = req;
-			const { productId } = req.params;
-			const { all_versions } = req.query;
+const DeleteProductParamsSchema = z.object({
+	product_id: z.string(),
+});
 
-			const product = await ProductService.get({
+const DeleteProductQuerySchema = z.object({
+	all_versions: z
+		.string()
+		.optional()
+		.transform((val) => val === "true"),
+});
+
+export const handleDeleteProduct = createRoute({
+	params: DeleteProductParamsSchema,
+	query: DeleteProductQuerySchema,
+	resource: AffectedResource.Product,
+	handler: async (c) => {
+		const { product_id } = c.req.valid("param");
+		const { all_versions } = c.req.valid("query");
+		const { db, org, env } = c.get("ctx");
+
+		const product = await ProductService.get({
+			db,
+			id: product_id,
+			orgId: org.id,
+			env,
+		});
+
+		if (!product) {
+			throw new ProductNotFoundError({ productId: product_id });
+		}
+
+		const [latestCounts, allCounts] = await Promise.all([
+			CusProdReadService.getCounts({
 				db,
-				id: productId,
-				orgId,
+				internalProductId: product.internal_id,
+			}),
+			CusProdReadService.getCountsForAllVersions({
+				db,
+				productId: product_id,
+				orgId: org.id,
+				env,
+			}),
+		]);
+
+		const deleteAllVersions = all_versions === true;
+		const cusProdCount = deleteAllVersions ? allCounts.all : latestCounts.all;
+
+		if (cusProdCount > 0) {
+			throw new RecaseError({
+				message: `Product ${product_id} has ${cusProdCount} customers (expired or active) on it and therefore cannot be deleted`,
+			});
+		}
+
+		// 2. Delete prices, entitlements, and product
+		if (deleteAllVersions) {
+			await ProductService.deleteByProductId({
+				db,
+				productId: product_id,
+				orgId: org.id,
 				env,
 			});
+		} else {
+			await ProductService.deleteByInternalId({
+				db,
+				internalId: product.internal_id,
+				orgId: org.id,
+				env,
+			});
+		}
 
-			if (!product) {
-				throw new ProductNotFoundError({ productId: productId });
-			}
-
-			const [latestCounts, allCounts] = await Promise.all([
-				CusProdReadService.getCounts({
-					db,
-					internalProductId: product.internal_id,
-				}),
-				CusProdReadService.getCountsForAllVersions({
-					db,
-					productId: productId,
-					orgId,
-					env,
-				}),
-			]);
-
-			const deleteAllVersions = all_versions === "true";
-			const cusProdCount = deleteAllVersions ? allCounts.all : latestCounts.all;
-
-			if (cusProdCount > 0) {
-				throw new RecaseError({
-					message: `Product ${productId} has ${cusProdCount} customers (expired or active) on it and therefore cannot be deleted`,
-				});
-			}
-
-			// 2. Delete prices, entitlements, and product
-			if (deleteAllVersions) {
-				await ProductService.deleteByProductId({
-					db,
-					productId,
-					orgId,
-					env,
-				});
-			} else {
-				await ProductService.deleteByInternalId({
-					db,
-					internalId: product.internal_id,
-					orgId,
-					env,
-				});
-			}
-
-			res.status(200).json({ success: true });
-			return;
-		},
-	});
+		return c.json({ success: true });
+	},
+});

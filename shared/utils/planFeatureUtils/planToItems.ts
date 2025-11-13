@@ -1,7 +1,9 @@
 import type { ApiPlan } from "@api/products/apiPlan.js";
-import type { BillingInterval } from "@models/productModels/priceModels/priceEnums.js";
+import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import type { ProductItem } from "@models/productV2Models/productItemModels/productItemModels.js";
 import type { CreatePlanParams } from "../../api/products/planOpModels.js";
+import type { Feature } from "../../models/featureModels/featureModels.js";
+import { billingToItemInterval } from "../productV2Utils/productItemUtils/itemIntervalUtils.js";
 import { planFeaturesToItems } from "./planFeaturesToItems.js";
 
 /**
@@ -18,7 +20,9 @@ export const constructPriceItem = ({
 }): ProductItem => {
 	return {
 		price: price,
-		interval: interval as any,
+		interval: billingToItemInterval({
+			billingInterval: interval ?? BillingInterval.Month,
+		}),
 		interval_count: intervalCount || 1,
 	};
 };
@@ -29,12 +33,15 @@ export const constructPriceItem = ({
  */
 export const convertPlanToItems = ({
 	plan,
+	features,
 }: {
 	plan: ApiPlan | CreatePlanParams;
+	features: Feature[];
 }): ProductItem[] => {
 	// Convert features to items
 	const featureItems = planFeaturesToItems({
-		features: plan.features || [],
+		planFeatures: plan.features || [],
+		features,
 	});
 
 	const items = [...featureItems];

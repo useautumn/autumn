@@ -1,4 +1,6 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
+	ApiVersion,
 	type AppEnv,
 	type CreateProductV2Params,
 	type Organization,
@@ -6,41 +8,39 @@ import {
 	ResetInterval,
 	type UpdatePlanParams,
 } from "@autumn/shared";
-import { expect } from "chai";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { setupBefore } from "@tests/before.js";
-import { features } from "@tests/global.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { AutumnCliV2 } from "@/external/autumn/autumnCliV2.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { TestFeature } from "../../setup/v2Features.js";
 
 describe(
 	chalk.yellowBright("Plan V2 - Advanced UPDATE (Entitlement Remapping)"),
 	() => {
-		const autumnV2 = new AutumnCliV2({ version: "2.0.0" });
-		const autumnV1_2 = new AutumnCliV2({ version: "1.2.0" });
+		const autumnV2 = new AutumnInt({ version: ApiVersion.V2_0 });
+		const autumnV1_2 = new AutumnInt({ version: ApiVersion.V1_2 });
 		let db: DrizzleCli, org: Organization, env: AppEnv;
 
-		before(async function () {
-			await setupBefore(this);
-			db = this.db;
-			org = this.org;
-			env = this.env;
+		beforeAll(() => {
+			db = ctx.db;
+			org = ctx.org;
+			env = ctx.env;
 		});
 
-		it("UPDATE: should match existing entitlement by feature_id (no entitlement_id)", async () => {
+		test("UPDATE: should match existing entitlement by feature_id (no entitlement_id)", async () => {
 			const productId = "update_match_1";
 			try {
 				await autumnV2.products.delete(productId);
 			} catch (_error) {}
 
 			// 1. Create initial product via V1.2 (has entitlement_id in items)
-			const x = await autumnV1_2.products.create({
+			await autumnV1_2.products.create({
 				id: "update_match_1",
 				name: "Update Match Test",
 				items: [
 					{
-						feature_id: features.metered1.id,
+						feature_id: TestFeature.Messages,
 						included_usage: 1000,
 						interval: ProductItemInterval.Month,
 					},
@@ -55,17 +55,19 @@ describe(
 				env,
 			});
 			const initialEntId = initialFull.entitlements.find(
-				(e) => e.feature_id === features.metered1.id,
+				(e) => e.feature_id === TestFeature.Messages,
 			)!.id;
-			expect(initialEntId).to.exist;
+			expect(initialEntId).toBeDefined();
 
 			// 2. Update via V2 (NO entitlement_id in features)
 			await autumnV2.products.update("update_match_1", {
 				features: [
 					{
-						feature_id: features.metered1.id,
-						granted: 2000,
-						reset_interval: ResetInterval.Month,
+						feature_id: TestFeature.Messages,
+						granted_balance: 2000,
+						reset: {
+							interval: ResetInterval.Month,
+						},
 					},
 				],
 			} as UpdatePlanParams);
@@ -78,13 +80,13 @@ describe(
 				env,
 			});
 			const updatedEnt = updatedFull.entitlements.find(
-				(e) => e.feature_id === features.metered1.id,
+				(e) => e.feature_id === TestFeature.Messages,
 			)!;
-			expect(updatedEnt.id).to.equal(initialEntId); // Same ID!
-			expect(updatedEnt.allowance).to.equal(2000); // Updated value
+			expect(updatedEnt.id).toBe(initialEntId); // Same ID!
+			expect(updatedEnt.allowance).toBe(2000); // Updated value
 		});
 
-		it("UPDATE: should match entitlement with same feature + interval", async () => {
+		test("UPDATE: should match entitlement with same feature + interval", async () => {
 			const productId = "update_match_2";
 			try {
 				await autumnV2.products.delete(productId);
@@ -96,7 +98,7 @@ describe(
 				name: "Quarterly Match Test",
 				items: [
 					{
-						feature_id: features.metered1.id,
+						feature_id: TestFeature.Messages,
 						included_usage: 500,
 						interval: ProductItemInterval.Quarter,
 					},
@@ -110,16 +112,18 @@ describe(
 				env,
 			});
 			const initialEntId = initialFull.entitlements.find(
-				(e) => e.feature_id === features.metered1.id,
+				(e) => e.feature_id === TestFeature.Messages,
 			)!.id;
 
 			// 2. Update via V2 - change granted amount
 			await autumnV2.products.update("update_match_2", {
 				features: [
 					{
-						feature_id: features.metered1.id,
-						granted: 1500,
-						reset_interval: ResetInterval.Quarter,
+						feature_id: TestFeature.Messages,
+						granted_balance: 1500,
+						reset: {
+							interval: ResetInterval.Quarter,
+						},
 					},
 				],
 			} as UpdatePlanParams);
@@ -132,13 +136,13 @@ describe(
 				env,
 			});
 			const updatedEnt = updatedFull.entitlements.find(
-				(e) => e.feature_id === features.metered1.id,
+				(e) => e.feature_id === TestFeature.Messages,
 			)!;
-			expect(updatedEnt.id).to.equal(initialEntId);
-			expect(updatedEnt.allowance).to.equal(1500);
+			expect(updatedEnt.id).toBe(initialEntId);
+			expect(updatedEnt.allowance).toBe(1500);
 		});
 
-		it("UPDATE: should create NEW entitlement when interval changes", async () => {
+		test("UPDATE: should create NEW entitlement when interval changes", async () => {
 			const productId = "update_interval_change";
 			try {
 				await autumnV2.products.delete(productId);
@@ -150,7 +154,7 @@ describe(
 				name: "Interval Change Test",
 				items: [
 					{
-						feature_id: features.metered1.id,
+						feature_id: TestFeature.Messages,
 						included_usage: 1000,
 						interval: ProductItemInterval.Month,
 					},
@@ -164,16 +168,18 @@ describe(
 				env,
 			});
 			const initialEntId = initialFull.entitlements.find(
-				(e) => e.feature_id === features.metered1.id,
+				(e) => e.feature_id === TestFeature.Messages,
 			)!.id;
 
 			// 2. Update to quarterly (different interval)
 			await autumnV2.products.update("update_interval_change", {
 				features: [
 					{
-						feature_id: features.metered1.id,
-						granted: 3000,
-						reset_interval: ResetInterval.Quarter,
+						feature_id: TestFeature.Messages,
+						granted_balance: 3000,
+						reset: {
+							interval: ResetInterval.Quarter,
+						},
 					},
 				],
 			} as UpdatePlanParams);
@@ -186,13 +192,13 @@ describe(
 				env,
 			});
 			const updatedEnt = updatedFull.entitlements.find(
-				(e) => e.feature_id === features.metered1.id,
+				(e) => e.feature_id === TestFeature.Messages,
 			)!;
-			expect(updatedEnt.id).to.not.equal(initialEntId); // Different ID!
-			expect(updatedEnt.allowance).to.equal(3000);
+			expect(updatedEnt.id).not.toBe(initialEntId); // Different ID!
+			expect(updatedEnt.allowance).toBe(3000);
 		});
 
-		it("UPDATE: should handle multiple features with same feature_id (different intervals)", async () => {
+		test("UPDATE: should handle multiple features with same feature_id (different intervals)", async () => {
 			const productId = "multi_interval";
 			try {
 				await autumnV2.products.delete(productId);
@@ -204,12 +210,12 @@ describe(
 				name: "Multi Interval Test",
 				items: [
 					{
-						feature_id: features.metered1.id,
+						feature_id: TestFeature.Messages,
 						included_usage: 1000,
 						interval: ProductItemInterval.Month,
 					},
 					{
-						feature_id: features.metered1.id,
+						feature_id: TestFeature.Messages,
 						included_usage: 3000,
 						interval: ProductItemInterval.Quarter,
 					},
@@ -223,25 +229,29 @@ describe(
 				env,
 			});
 			const monthlyEntId = initialFull.entitlements.find(
-				(e) => e.feature_id === features.metered1.id && e.interval === "month",
+				(e) => e.feature_id === TestFeature.Messages && e.interval === "month",
 			)!.id;
 			const quarterlyEntId = initialFull.entitlements.find(
 				(e) =>
-					e.feature_id === features.metered1.id && e.interval === "quarter",
+					e.feature_id === TestFeature.Messages && e.interval === "quarter",
 			)!.id;
 
 			// Update via V2 - both features
 			await autumnV2.products.update("multi_interval", {
 				features: [
 					{
-						feature_id: features.metered1.id,
-						granted: 1500,
-						reset_interval: ResetInterval.Month,
+						feature_id: TestFeature.Messages,
+						granted_balance: 1500,
+						reset: {
+							interval: ResetInterval.Month,
+						},
 					},
 					{
-						feature_id: features.metered1.id,
-						granted: 4500,
-						reset_interval: ResetInterval.Quarter,
+						feature_id: TestFeature.Messages,
+						granted_balance: 4500,
+						reset: {
+							interval: ResetInterval.Quarter,
+						},
 					},
 				],
 			} as UpdatePlanParams);
@@ -254,18 +264,18 @@ describe(
 				env,
 			});
 			const monthlyEnt = updatedFull.entitlements.find(
-				(e) => e.feature_id === features.metered1.id && e.interval === "month",
+				(e) => e.feature_id === TestFeature.Messages && e.interval === "month",
 			)!;
 			const quarterlyEnt = updatedFull.entitlements.find(
 				(e) =>
-					e.feature_id === features.metered1.id && e.interval === "quarter",
+					e.feature_id === TestFeature.Messages && e.interval === "quarter",
 			)!;
 
-			expect(monthlyEnt.id).to.equal(monthlyEntId); // Same ID
-			expect(monthlyEnt.allowance).to.equal(1500); // Updated value
+			expect(monthlyEnt.id).toBe(monthlyEntId); // Same ID
+			expect(monthlyEnt.allowance).toBe(1500); // Updated value
 
-			expect(quarterlyEnt.id).to.equal(quarterlyEntId); // Same ID
-			expect(quarterlyEnt.allowance).to.equal(4500); // Updated value
+			expect(quarterlyEnt.id).toBe(quarterlyEntId); // Same ID
+			expect(quarterlyEnt.allowance).toBe(4500); // Updated value
 		});
 	},
 );

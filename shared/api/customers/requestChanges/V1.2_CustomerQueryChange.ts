@@ -52,8 +52,8 @@ export const V1_2_CustomerQueryChange = defineVersionChange({
 		// Add `plan` and `feature` to expand array
 		const newExpand = [
 			...existingExpand,
-			CusExpand.Plan,
-			CusExpand.BalanceFeature,
+			CusExpand.SubscriptionsPlan,
+			CusExpand.BalancesFeature,
 		];
 
 		return {

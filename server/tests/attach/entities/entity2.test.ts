@@ -1,6 +1,4 @@
 import { beforeAll, describe, test } from "bun:test";
-import chalk from "chalk";
-import { addHours, addMonths } from "date-fns";
 import { defaultApiVersion } from "@tests/constants.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
@@ -9,6 +7,8 @@ import { expectFeaturesCorrect } from "@tests/utils/expectUtils/expectFeaturesCo
 import { expectInvoiceAfterUsage } from "@tests/utils/expectUtils/expectSingleUse/expectUsageInvoice.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
+import { addHours, addMonths } from "date-fns";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
@@ -34,7 +34,7 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing attach pro annual to
 	const autumn: AutumnInt = new AutumnInt({ version: defaultApiVersion });
 	let testClockId: string;
 
-	let curUnix = new Date().getTime();
+	let curUnix = Date.now();
 
 	beforeAll(async () => {
 		const result = await initCustomerV3({

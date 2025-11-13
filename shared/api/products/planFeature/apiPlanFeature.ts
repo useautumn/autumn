@@ -1,26 +1,31 @@
+import { ResetInterval } from "@models/productModels/intervals/resetInterval.js";
 import { UsageTierSchema } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
-import { BillingInterval } from "@models/productModels/priceModels/priceEnums.js";
+import { UsageModel } from "@models/productV2Models/productItemModels/productItemModels.js";
+import { z } from "zod/v4";
+import { RolloverExpiryDurationType } from "../../../models/productModels/durationTypes/rolloverExpiryDurationType.js";
+import { BillingInterval } from "../../../models/productModels/intervals/billingInterval.js";
 import {
 	OnDecrease,
 	OnIncrease,
-} from "@models/productV2Models/productItemModels/productItemEnums.js";
-import { UsageModel } from "@models/productV2Models/productItemModels/productItemModels.js";
-import { z } from "zod/v4";
-import { ResetInterval } from "../planEnums.js";
+} from "../../../models/productV2Models/productItemModels/productItemEnums.js";
+import { ApiFeatureSchema } from "../../features/apiFeature.js";
+import { DisplaySchema } from "../components/display.js";
 
 export const ApiPlanFeatureSchema = z
 	.object({
 		feature_id: z.string(),
+		feature: ApiFeatureSchema.optional(),
+
 		granted_balance: z.number(),
 		unlimited: z.boolean(),
 
 		reset: z
 			.object({
-				interval: z.enum(ResetInterval).optional(),
+				interval: z.enum(ResetInterval),
 				interval_count: z.number().optional(),
-				reset_when_enabled: z.boolean().optional(),
+				reset_when_enabled: z.boolean(),
 			})
-			.optional(),
+			.nullable(),
 
 		price: z
 			.object({
@@ -32,23 +37,16 @@ export const ApiPlanFeatureSchema = z
 
 				billing_units: z.number(),
 				usage_model: z.enum(UsageModel),
-
-				// Use max_purchase for pay per use features
-				max_purchase: z.number().optional(),
+				max_purchase: z.number().nullable(),
 			})
-			.optional(),
+			.nullable(),
 
-		display: z
-			.object({
-				primary_text: z.string(),
-				secondary_text: z.string().optional(),
-			})
-			.optional(),
+		display: DisplaySchema.optional(),
 
 		rollover: z
 			.object({
 				max: z.number().nullable(),
-				expiry_duration_type: z.enum(ResetInterval),
+				expiry_duration_type: z.enum(RolloverExpiryDurationType),
 				expiry_duration_length: z.number().optional(),
 			})
 			.optional(),
@@ -61,19 +59,17 @@ export const ApiPlanFeatureSchema = z
 			.optional(),
 	})
 	.check((ctx) => {
-		const resetGroup =
-			ctx.value.reset?.interval ||
-			ctx.value.reset?.interval_count !== undefined;
+		const resetInterval = ctx.value.reset?.interval;
+		const priceInterval = ctx.value.price?.interval;
 
-		const intervalGroup =
-			ctx.value.price?.interval ||
-			ctx.value.price?.interval_count !== undefined;
-
-		if (resetGroup && intervalGroup) {
+		if (
+			resetInterval &&
+			priceInterval &&
+			String(resetInterval) !== String(priceInterval)
+		) {
 			ctx.issues.push({
 				code: "custom",
-				message:
-					"Top level reset intervals and feature price intervals are mutually exclusive.",
+				message: "either pass in reset.interval, or price.interval, not both.",
 				input: ctx.value,
 			});
 		}

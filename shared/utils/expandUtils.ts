@@ -1,4 +1,8 @@
-import type { ApiCustomer, ApiEntityV1 } from "../api/models.js";
+import {
+	type ApiCustomer,
+	type ApiEntityV1,
+	CheckExpand,
+} from "../api/models.js";
 import { CusExpand } from "../models/cusModels/cusExpand.js";
 
 export const addToExpand = <T extends { expand: string[] }>({
@@ -45,7 +49,7 @@ export const filterPlanAndFeatureExpand = <
 }): T => {
 	const expandBalanceFeature = expandIncludes({
 		expand,
-		includes: [CusExpand.BalanceFeature],
+		includes: [CusExpand.BalancesFeature, CheckExpand.BalanceFeature],
 	});
 
 	if (!expandBalanceFeature && target.balances) {
@@ -56,7 +60,7 @@ export const filterPlanAndFeatureExpand = <
 
 	const expandSubscriptionPlan = expandIncludes({
 		expand,
-		includes: [CusExpand.SubscriptionPlan],
+		includes: [CusExpand.SubscriptionsPlan],
 	});
 
 	if (!expandSubscriptionPlan && target.subscriptions) {

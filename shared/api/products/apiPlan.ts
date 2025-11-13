@@ -1,12 +1,10 @@
 import { AttachScenario } from "@models/checkModels/checkPreviewModels.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
 import { FreeTrialDuration } from "@models/productModels/freeTrialModels/freeTrialEnums.js";
-import { BillingInterval } from "@models/productModels/priceModels/priceEnums.js";
+import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { z } from "zod/v4";
+import { DisplaySchema } from "./components/display.js";
 import { ApiPlanFeatureSchema } from "./planFeature/apiPlanFeature.js";
-
-// Re-export for backward compatibility
-export { ResetInterval } from "./planEnums.js";
 
 export const ApiFreeTrialV2Schema = z.object({
 	duration_type: z.enum(FreeTrialDuration),
@@ -23,7 +21,6 @@ export const ApiPlanSchema = z.object({
 	group: z.string().nullable(),
 
 	version: z.number(),
-
 	add_on: z.boolean(),
 	default: z.boolean(),
 
@@ -33,6 +30,7 @@ export const ApiPlanSchema = z.object({
 			amount: z.number(),
 			interval: z.enum(BillingInterval),
 			interval_count: z.number().optional(),
+			display: DisplaySchema.optional(),
 		})
 		.nullable(),
 
@@ -43,14 +41,11 @@ export const ApiPlanSchema = z.object({
 	created_at: z.number(),
 	env: z.enum(AppEnv),
 	archived: z.boolean(),
-	base_variant_id: z.string().nullable().meta({
-		description: "ID of the base variant this product is derived from",
-		example: "var_1234567890abcdef",
-	}),
+	base_variant_id: z.string().nullable(),
 
-	customer_context: z
+	customer_eligibility: z
 		.object({
-			trial_available: z.boolean(),
+			trial_available: z.boolean().optional(),
 			scenario: z.enum(AttachScenario),
 		})
 		.optional(),

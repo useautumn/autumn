@@ -1,5 +1,5 @@
 import { ApiFeatureType } from "@api/features/apiFeature.js";
-import { EntInterval } from "@models/productModels/entModels/entEnums.js";
+import { EntInterval } from "@models/productModels/intervals/entitlementInterval.js";
 import { z } from "zod/v4";
 
 export const ApiCusFeatureV3RolloverSchema = z.object({
