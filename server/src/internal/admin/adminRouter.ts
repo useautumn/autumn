@@ -1,8 +1,8 @@
-import { handleFrontendReqError } from "@/utils/errorUtils.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
 import { member, organizations, user } from "@autumn/shared";
 import { and, desc, eq, gt, gte, ilike, inArray, lt, or } from "drizzle-orm";
 import { Router } from "express";
+import { handleFrontendReqError } from "@/utils/errorUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const adminRouter: Router = Router();
 
@@ -136,9 +136,9 @@ adminRouter.get("/orgs", async (req: any, res: any) => {
 			.orderBy(desc(organizations.createdAt), desc(organizations.id))
 			.limit(21);
 
-		let orgIds = orgs.map((org) => org.id);
+		const orgIds = orgs.map((org) => org.id);
 
-		let memberships = await db
+		const memberships = await db
 			.select()
 			.from(member)
 			.leftJoin(user, eq(member.userId, user.id))

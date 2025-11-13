@@ -212,16 +212,15 @@ export const PlanFeatureRow = ({
 						{displayText}
 					</span>
 
-					<span className="text-body-secondary">
-						{" "}
-						{display.secondary_text}
-					</span>
+					<span className="text-body-secondary"> {display.secondary_text}</span>
 				</p>
 
-				<div className={cn(
-					"flex items-center gap-2 max-w-0 opacity-0 overflow-hidden group-hover:max-w-[200px] group-hover:opacity-100 transition-all duration-200 flex-shrink-0",
-					isSelected && "max-w-[200px] opacity-100"
-				)}>
+				<div
+					className={cn(
+						"flex items-center gap-2 max-w-0 opacity-0 overflow-hidden group-hover:max-w-[200px] group-hover:opacity-100 transition-all duration-200 flex-shrink-0",
+						isSelected && "max-w-[200px] opacity-100",
+					)}
+				>
 					<CopyButton
 						text={item.feature_id || ""}
 						disableActive={true}

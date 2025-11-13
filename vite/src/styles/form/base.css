@@ -7,7 +7,7 @@
 	font-size: 13px;
 	font-weight: var(--font-weight-medium);
 
-	border: 1px solid var(--color-input);
+	border: 1px solid var(--color-border-table);
 	border-radius: var(--radius);
 	background-color: var(--color-input-background);
 	color: var(--color-t2);

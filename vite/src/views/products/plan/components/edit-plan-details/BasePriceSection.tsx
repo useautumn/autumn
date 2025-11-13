@@ -211,7 +211,7 @@ export const BasePriceSection = ({
 							},
 							{
 								value: "usage",
-								label: "Usage-based",
+								label: "Variable",
 								icon: <BarcodeIcon className="size-[14px]" weight="regular" />,
 							},
 						]}

@@ -88,7 +88,9 @@ html {
 
 	/* White */
 	--input-background: #ffffff;
-	--card: #fafaf9;
+	--card: #f8f8f7;
+	/* --card: #f5f5f5; */
+	/* --card: #fafaf9; */
 
 	/* --primary: #9048ff; (old) */
 	font-synthesis: none;
