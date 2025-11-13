@@ -1,7 +1,8 @@
-import type { AppEnv } from "@autumn/shared";
+import { AppEnv } from "@autumn/shared";
 import { Hono } from "hono";
 import { analyticsMiddleware } from "@/honoMiddlewares/analyticsMiddleware.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { sendCustomSvixEvent } from "../svix/svixHelpers.js";
 import { handleListBillingPlansPerInstall } from "./handlers/handleListBillingPlans.js";
 import { handleUpdateBillingPlan } from "./handlers/handleUpdateBillingPlan.js";
 import { handleDeleteInstallation } from "./handlers/installations/handleDeleteInstallation.js";
@@ -20,6 +21,10 @@ import {
 	vercelSeederMiddleware,
 } from "./misc/vercelMiddleware.js";
 import { vercelSignatureMiddleware } from "./misc/vercelSignatureMiddleware.js";
+import {
+	type VercelWebhookEvent,
+	VercelWebhooks,
+} from "./misc/vercelWebhookTypes.js";
 
 export const vercelWebhookRouter = new Hono<HonoEnv>();
 
@@ -140,6 +145,19 @@ vercelWebhookRouter.post(
 					return c.json({ received: true }, 200);
 
 				default:
+					await sendCustomSvixEvent({
+						appId:
+							org.processor_configs?.vercel?.svix?.[
+								env === AppEnv.Live ? "live_id" : "sandbox_id"
+							] ?? "",
+						org,
+						env: env as AppEnv,
+						eventType: VercelWebhooks.WebhookEvent,
+						data: {
+							installation_id: body.installation_id,
+							event: body,
+						} satisfies VercelWebhookEvent,
+					});
 					return c.json({ received: true }, 200);
 			}
 		} catch (error: any) {
