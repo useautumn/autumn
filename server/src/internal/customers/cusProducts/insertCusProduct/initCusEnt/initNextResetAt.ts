@@ -47,18 +47,35 @@ export const initNextResetAt = ({
 			? freeTrialToStripeTimestamp({ freeTrial, now })
 			: null;
 
+	const resetInterval = entitlement.interval as EntInterval;
+	const nowDate = new UTCDate(now);
+	const entitlementResetFromNow = getNextEntitlementReset(
+		nowDate,
+		resetInterval,
+		entitlement.interval_count || 1,
+	);
+
 	if (
 		freeTrial &&
 		applyTrialToEntitlement(entitlement, freeTrial) &&
 		trialEndTimestamp
 	) {
-		nextResetAtCalculated = new UTCDate(trialEndTimestamp! * 1000);
+		const trialEndDate = new UTCDate(trialEndTimestamp * 1000);
+
+		// Compare trial duration with entitlement cycle
+		// If trial ends BEFORE the first entitlement reset, use trial end as base
+		// Otherwise, use current time as base (trial is longer than reset cycle)
+		if (trialEndDate.getTime() < entitlementResetFromNow.getTime()) {
+			// Trial < Entitlement cycle: next reset = trial end + entitlement cycle
+			nextResetAtCalculated = new UTCDate(trialEndTimestamp * 1000);
+		} else {
+			// Trial > Entitlement cycle: next reset = now + entitlement cycle
+			nextResetAtCalculated = nowDate;
+		}
 	}
 
-	const resetInterval = entitlement.interval as EntInterval;
-
 	nextResetAtCalculated = getNextEntitlementReset(
-		nextResetAtCalculated || new UTCDate(now),
+		nextResetAtCalculated || nowDate,
 		resetInterval,
 		entitlement.interval_count || 1,
 	).getTime();
