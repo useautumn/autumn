@@ -12,6 +12,9 @@ import { V1_2_CustomerQueryChange } from "@api/customers/requestChanges/V1.2_Cus
 // Import entity changes
 import { V1_2_EntityChange } from "@api/entities/changes/V1.2_EntityChange.js";
 import { V1_2_EntityQueryChange } from "@api/entities/requestChanges/V1.2_EntityQueryChange.js";
+// Import feature changes
+import { V1_2_FeatureChange } from "@api/features/changes/V1.2_FeatureChange.js";
+import { V1_2_CreateFeatureChange } from "@api/features/changes/V1.2_FeatureParamsChange.js";
 // Import product changes
 import { V1_2_ProductChanges } from "@api/products/changes/V1.2_ProductChanges.js";
 import { V0_2_CheckChange } from "../../balances/check/changes/V0.2_CheckChange.js";
@@ -29,6 +32,9 @@ export const V2_CHANGES: VersionChangeConstructor[] = [
 	V1_2_ProductChanges, // Transforms Product TO V1.2 format from V2 Plan format
 	V1_2_CheckChange, // Transforms Check TO V1.2 format from V0.2 format
 	V1_2_CheckQueryChange, // Transforms Check Query TO V2.0 format (adds expand options)
+
+	V1_2_FeatureChange, // Transforms Feature TO V1_Beta format (V0) from V2 format (V1)
+	V1_2_CreateFeatureChange, // Transforms Create Feature params TO V1_Beta
 ];
 
 export const V1_4_CHANGES: VersionChangeConstructor[] = [

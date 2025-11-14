@@ -44,7 +44,6 @@ import {
 	getMeteredDeduction,
 	performDeduction,
 } from "./deductUtils.js";
-import { handleThresholdReached } from "./handleThresholdReached.js";
 
 export type DeductParams = {
 	db: DrizzleCli;
@@ -265,7 +264,7 @@ export const performDeductionOnCusEnt = ({
 					deducted: newDeducted,
 					toDeduct: newToDeduct,
 				} = performDeduction({
-					cusEntBalance: new Decimal(entityBalance),
+					cusEntBalance: new Decimal(entityBalance ?? 0),
 					toDeduct: toDeductCursor,
 					allowNegativeBalance,
 					ent: cusEnt.entitlement,
@@ -527,7 +526,7 @@ export const deductFromUsageBasedCusEnt = async ({
 
 	const cusPrice = getRelatedCusPrice(usageBasedEnt, cusPrices);
 	const billingType = cusPrice?.price
-		? getBillingType(cusPrice?.price.config!)
+		? getBillingType(cusPrice?.price.config ?? undefined)
 		: undefined;
 	const blockUsageLimit =
 		billingType === BillingType.InArrearProrated ? false : true;
@@ -723,18 +722,6 @@ export const updateCustomerBalance = async ({
 				},
 			});
 		}
-
-		handleThresholdReached({
-			org,
-			env,
-			features: allFeatures,
-			db,
-			feature,
-			cusEnts: originalCusEnts,
-			newCusEnts: cusEnts,
-			fullCus: customer,
-			logger,
-		});
 	}
 
 	return cusEnts;

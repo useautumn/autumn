@@ -496,8 +496,4 @@ export class AutumnCliV2 {
 	}) => {
 		return await this.post(`/migrations`, params);
 	};
-
-	initStripe = async () => {
-		await this.post(`/products/all/init_stripe`, {});
-	};
 }

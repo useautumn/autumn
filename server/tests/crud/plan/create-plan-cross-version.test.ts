@@ -7,7 +7,6 @@ import {
 	type CreatePlanParams,
 	FreeTrialDuration,
 	Infinite,
-	ProductItemInterval,
 	ResetInterval,
 	TierInfinite,
 	UsageModel,
@@ -115,7 +114,7 @@ describe(chalk.yellowBright("Plan V2 - Cross-Version Consistency"), () => {
 		const v1_2 = (await autumnV1_2.products.get(
 			"trial_transform",
 		)) as ApiProduct;
-		expect(v1_2.free_trial!.duration).toBe(ProductItemInterval.Day);
+		expect(v1_2.free_trial!.duration).toBe(FreeTrialDuration.Day);
 		expect(v1_2.free_trial!.length).toBe(7);
 		expect(v1_2.free_trial!.unique_fingerprint).toBe(true); // Always true in V1.2
 	});

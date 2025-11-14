@@ -13,10 +13,7 @@ const DeleteProductParamsSchema = z.object({
 });
 
 const DeleteProductQuerySchema = z.object({
-	all_versions: z
-		.string()
-		.optional()
-		.transform((val) => val === "true"),
+	all_versions: z.boolean(),
 });
 
 export const handleDeleteProduct = createRoute({
@@ -24,7 +21,7 @@ export const handleDeleteProduct = createRoute({
 	query: DeleteProductQuerySchema,
 	resource: AffectedResource.Product,
 	handler: async (c) => {
-		const { product_id } = c.req.valid("param");
+		const { product_id } = c.req.param();
 		const { all_versions } = c.req.valid("query");
 		const { db, org, env } = c.get("ctx");
 

@@ -589,10 +589,6 @@ export class AutumnInt {
 		return data;
 	};
 
-	initStripe = async () => {
-		await this.post(`/products/all/init_stripe`, {});
-	};
-
 	balances = {
 		update: async (params: BalancesUpdateParams) => {
 			const data = await this.post(`/balances/update`, params);

@@ -1,14 +1,14 @@
-import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
+import type { ProductV2 } from "@autumn/shared";
+import { Router } from "express";
 import { CusService } from "@/internal/customers/CusService.js";
+import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { toPricecnProduct } from "@/internal/products/pricecn/pricecnUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { isProductUpgrade } from "@/internal/products/productUtils.js";
+import { toPricecnProduct } from "@/internal/products/pricecn/pricecnUtils.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
+import { isProductUpgrade } from "@/internal/products/productUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { ProductV2 } from "@autumn/shared";
-import { Router } from "express";
 
 export const componentRouter: Router = Router();
 
@@ -19,7 +19,7 @@ componentRouter.get("/pricing_table", async (req: any, res) =>
 		action: "get pricing table",
 		handler: async () => {
 			const { orgId, env, db } = req;
-			let customerId = req.query.customer_id;
+			const customerId = req.query.customer_id;
 
 			const [org, features, products, customer] = await Promise.all([
 				OrgService.getFromReq(req),
@@ -45,7 +45,7 @@ componentRouter.get("/pricing_table", async (req: any, res) =>
 
 			// 1. Sort products by price
 			products.sort((a, b) => {
-				let isUpgradeA = isProductUpgrade({
+				const isUpgradeA = isProductUpgrade({
 					prices1: a.prices,
 					prices2: b.prices,
 					usageAlwaysUpgrade: false,
@@ -58,13 +58,13 @@ componentRouter.get("/pricing_table", async (req: any, res) =>
 				}
 			});
 
-			let batchResponse = [];
-			for (let p of products) {
-				let prod = await getProductResponse({ product: p, features });
+			const batchResponse = [];
+			for (const p of products) {
+				const prod = await getProductResponse({ product: p, features });
 				let curMainProduct, curScheduledProduct;
 
 				if (customer) {
-					let res = getExistingCusProducts({
+					const res = getExistingCusProducts({
 						product: p,
 						cusProducts: customer.customer_products,
 					});
@@ -82,13 +82,13 @@ componentRouter.get("/pricing_table", async (req: any, res) =>
 						features,
 						curMainProduct,
 						curScheduledProduct,
-						otherProducts: products.filter((other) => other.id != p.id),
+						otherProducts: products.filter((other) => other.id !== p.id),
 						fullCus: customer,
 					}),
 				);
 			}
 
-			let pricecnProds = await Promise.all(batchResponse);
+			const pricecnProds = await Promise.all(batchResponse);
 
 			// let pricecnProds = await Promise.all(
 			//   products

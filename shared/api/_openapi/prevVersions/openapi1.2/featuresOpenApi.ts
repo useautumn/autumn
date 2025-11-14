@@ -4,15 +4,15 @@ import {
 	SuccessResponseSchema,
 } from "../../../common/commonResponses.js";
 import {
-	ApiFeatureSchema,
+	ApiFeatureV0Schema,
 	FEATURE_EXAMPLE,
-} from "../../../features/apiFeature.js";
+} from "../../../features/prevVersions/apiFeatureV0.js";
 import {
 	CreateFeatureParamsSchema,
 	UpdateFeatureParamsSchema,
-} from "../../../features/featureOpModels.js";
+} from "../../../features/prevVersions/featureV0OpModels.js";
 
-export const ApiFeatureWithMeta = ApiFeatureSchema.extend({
+export const ApiFeatureWithMeta = ApiFeatureV0Schema.extend({
 	type: z.enum(["boolean", "single_use", "continuous_use", "credit_system"]),
 }).meta({
 	id: "Feature",

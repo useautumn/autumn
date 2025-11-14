@@ -90,6 +90,12 @@ export const normalizeCachedBalance = (balance: any): any => {
 		}
 	}
 
+	if (balance.feature?.event_names) {
+		balance.feature.event_names = normalizeArray(
+			balance.feature.event_names,
+		) as typeof balance.feature.event_names;
+	}
+
 	return balance;
 };
 
@@ -127,64 +133,39 @@ export const normalizeCachedData = <T extends ApiCustomer | ApiEntityV1>(
 	// Fix missing credit_schema -> null
 	if (data.balances) {
 		for (const featureId in data.balances) {
-			const feature = data.balances[featureId];
+			const balance = data.balances[featureId];
 
 			// if (!feature.reset) {
 			// 	feature.reset = null;
 			// }
 
 			if (
-				!Array.isArray(feature.breakdown) &&
-				typeof feature.breakdown === "object"
+				!Array.isArray(balance.breakdown) &&
+				typeof balance.breakdown === "object"
 			) {
-				feature.breakdown = undefined;
+				balance.breakdown = undefined;
 			}
 
 			if (
-				!Array.isArray(feature.rollovers) &&
-				typeof feature.rollovers === "object"
+				!Array.isArray(balance.rollovers) &&
+				typeof balance.rollovers === "object"
 			) {
-				feature.rollovers = undefined;
+				balance.rollovers = undefined;
 			}
 
-			if (feature.breakdown) {
-				for (const breakdown of feature.breakdown) {
+			if (balance.feature?.event_names) {
+				balance.feature.event_names = normalizeArray(
+					balance.feature.event_names,
+				) as typeof balance.feature.event_names;
+			}
+
+			if (balance.breakdown) {
+				for (const breakdown of balance.breakdown) {
 					// if (!breakdown.reset) {
 					// 	breakdown.reset = null;
 					// }
 				}
 			}
-
-			// if (feature.usage_limit === 0 || feature.usage_limit === null) {
-			// 	feature.usage_limit = undefined;
-			// }
-
-			// // Ensure credit_schema is null if undefined (for consistent schema)
-			// if (feature.credit_schema === null) {
-			// 	feature.credit_schema = undefined;
-			// }
-
-			// if (feature.interval_count === undefined) {
-			// 	feature.interval_count = null;
-			// }
-
-			// // interval should be null if undefined
-			// if (feature.interval === undefined) {
-			// 	feature.interval = null;
-			// }
-
-			// Fix breakdown usage_limit
-			// if (feature.breakdown) {
-			// 	for (const breakdown of feature.breakdown) {
-			// 		if (breakdown.usage_limit === 0) {
-			// 			breakdown.usage_limit = undefined;
-			// 		}
-
-			// 		// if (breakdown.next_reset_at === undefined) {
-			// 		// 	breakdown.next_reset_at = null;
-			// 		// }
-			// 	}
-			// }
 		}
 	}
 

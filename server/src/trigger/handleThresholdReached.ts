@@ -1,10 +1,11 @@
 import {
+	dbToApiFeatureV1,
 	type Feature,
 	type FullCustomer,
+	toApiFeature,
 	WebhookEventType,
 } from "@autumn/shared";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
-import { toApiFeature } from "@/internal/features/utils/mapFeatureUtils.js";
 import type { AutumnContext } from "../honoUtils/HonoEnv.js";
 import { apiBalanceToAllowed } from "../internal/api/check/checkUtils/apiBalanceToAllowed.js";
 import { getApiCustomerBase } from "../internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
@@ -59,7 +60,10 @@ export const handleAllowanceUsed = async ({
 			data: {
 				threshold_type: "allowance_used",
 				customer: newApiCustomer,
-				feature: toApiFeature({ feature }),
+				feature: dbToApiFeatureV1({
+					dbFeature: feature,
+					targetVersion: ctx.apiVersion,
+				}),
 			},
 		});
 	}

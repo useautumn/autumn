@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { ApiFeatureType } from "./apiFeature.js";
+import { ApiFeatureType } from "./apiFeatureV0.js";
 
 const featureDescriptions = {
 	id: "The ID of the feature. This is used to refer to it in other API calls like /track or /check.",
@@ -16,7 +16,7 @@ const featureDescriptions = {
 };
 
 // Create Feature Params
-export const CreateFeatureParamsSchema = z.object({
+export const CreateFeatureV0ParamsSchema = z.object({
 	id: z.string().meta({ description: featureDescriptions.id }),
 	name: z.string().nullish().meta({ description: featureDescriptions.name }),
 	type: z.enum(ApiFeatureType).meta({ description: featureDescriptions.type }),
@@ -40,7 +40,7 @@ export const CreateFeatureParamsSchema = z.object({
 });
 
 // Update Feature Params
-export const UpdateFeatureParamsSchema = z.object({
+export const UpdateFeatureV0ParamsSchema = z.object({
 	id: z.string().optional().meta({ description: featureDescriptions.id }),
 	name: z.string().optional().meta({ description: featureDescriptions.name }),
 	type: z
@@ -70,5 +70,5 @@ export const UpdateFeatureParamsSchema = z.object({
 		.meta({ description: featureDescriptions.archived }),
 });
 
-export type CreateFeatureParams = z.infer<typeof CreateFeatureParamsSchema>;
-export type UpdateFeatureParams = z.infer<typeof UpdateFeatureParamsSchema>;
+export type CreateFeatureV0Params = z.infer<typeof CreateFeatureV0ParamsSchema>;
+export type UpdateFeatureV0Params = z.infer<typeof UpdateFeatureV0ParamsSchema>;

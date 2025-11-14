@@ -1,4 +1,4 @@
-import { type ApiFeature, ApiFeatureType } from "@api/features/apiFeature.js";
+import { ApiFeatureType } from "@api/features/prevVersions/apiFeatureV0.js";
 import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import {
 	AffectedResource,
@@ -7,7 +7,9 @@ import {
 import { EntInterval } from "@models/productModels/intervals/entitlementInterval.js";
 import { Decimal } from "decimal.js";
 import type { z } from "zod/v4";
+import { FeatureType } from "../../../../models/featureModels/featureEnums.js";
 import { resetIntvToEntIntv } from "../../../../utils/planFeatureUtils/planFeatureIntervals.js";
+import type { ApiFeatureV1 } from "../../../features/apiFeatureV1.js";
 import {
 	type ApiBalance,
 	type ApiBalanceBreakdown,
@@ -38,14 +40,14 @@ const resetToV3IntervalParams = ({
 	unlimited,
 }: {
 	input: ApiBalance | ApiBalanceBreakdown;
-	feature?: ApiFeature;
+	feature?: ApiFeatureV1;
 	unlimited: boolean;
 }): {
 	interval: EntInterval | "multiple" | null;
 	interval_count: number | null;
 	next_reset_at: number | null;
 } => {
-	const isBoolean = feature?.type === ApiFeatureType.Boolean;
+	const isBoolean = feature?.type === FeatureType.Boolean;
 
 	// 1. No reset
 	if (!input.reset)
@@ -72,10 +74,20 @@ const resetToV3IntervalParams = ({
 	};
 };
 
-const toV3Type = ({ feature }: { feature?: ApiFeature }) => {
-	if (feature?.type === ApiFeatureType.Boolean) {
+const toV3Type = ({ feature }: { feature?: ApiFeatureV1 }) => {
+	if (feature?.type === FeatureType.Boolean) {
 		return ApiFeatureType.Static;
-	} else return feature?.type ?? ApiFeatureType.SingleUsage;
+	} else if (feature?.type === FeatureType.Metered) {
+		if (feature.consumable) {
+			return ApiFeatureType.SingleUsage;
+		} else {
+			return ApiFeatureType.ContinuousUse;
+		}
+	} else if (feature?.type === FeatureType.CreditSystem) {
+		return ApiFeatureType.CreditSystem;
+	} else {
+		return ApiFeatureType.Static;
+	}
 };
 
 const toV3BalanceParams = ({
@@ -85,11 +97,11 @@ const toV3BalanceParams = ({
 	legacyData,
 }: {
 	input: ApiBalance | ApiBalanceBreakdown;
-	feature?: ApiFeature;
+	feature?: ApiFeatureV1;
 	unlimited: boolean;
 	legacyData?: CusFeatureLegacyData;
 }) => {
-	const isBoolean = feature?.type === ApiFeatureType.Boolean;
+	const isBoolean = feature?.type === FeatureType.Boolean;
 
 	if (isBoolean || unlimited) {
 		return {

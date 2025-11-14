@@ -8,6 +8,7 @@ import { createProducts } from "@tests/utils/productUtils.js";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { and, eq, inArray } from "drizzle-orm";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { deleteCachedApiCustomer } from "../../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
 
 export const createSharedProducts = async ({
 	products,
@@ -33,16 +34,30 @@ export const createSharedProducts = async ({
 		throw new Error("Too many customers under shared default free product");
 	}
 
-	await ctx.db.delete(customers).where(
-		and(
-			inArray(
-				customers.internal_id,
-				cusProducts.map((cp) => cp.internal_customer_id),
+	const deletedCustomers = await ctx.db
+		.delete(customers)
+		.where(
+			and(
+				inArray(
+					customers.internal_id,
+					cusProducts.map((cp) => cp.internal_customer_id),
+				),
+				eq(customers.env, ctx.env),
+				eq(customers.org_id, ctx.org.id),
 			),
-			eq(customers.env, ctx.env),
-			eq(customers.org_id, ctx.org.id),
-		),
-	);
+		)
+		.returning();
+	const clearCache = [];
+	for (const customer of deletedCustomers) {
+		clearCache.push(
+			deleteCachedApiCustomer({
+				customerId: customer.id ?? "",
+				orgId: ctx.org.id,
+				env: ctx.env,
+			}),
+		);
+	}
+	await Promise.all(clearCache);
 
 	const autumn = new AutumnInt({
 		secretKey: ctx.orgSecretKey,

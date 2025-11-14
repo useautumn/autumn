@@ -167,10 +167,10 @@ export const calcProrationAndExpectInvoice = async ({
 
 	expect(invoices.length).to.equal(
 		numInvoices,
-		`Should have ${numInvoices} invoices`,
+		`Should have ${numInvoices} invoices; got ${invoices.length}`,
 	);
 	expect(invoices[0].total).to.equal(
 		proratedAmount,
-		"Latest invoice should be equals to calculated prorated amount",
+		`Latest invoice should be equals to calculated prorated amount; got ${invoices[0].total}`,
 	);
 };

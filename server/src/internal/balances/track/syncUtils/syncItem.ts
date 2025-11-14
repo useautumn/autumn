@@ -80,6 +80,7 @@ export const syncItem = async ({
 	// For sync, we need the raw balance for that specific scope (not merged)
 	let redisEntity: ApiCustomer | ApiEntityV1;
 
+	ctx.skipCache = false;
 	if (entityId) {
 		const { apiEntity } = await getCachedApiEntity({
 			ctx,
@@ -96,6 +97,8 @@ export const syncItem = async ({
 		});
 		redisEntity = apiCustomer;
 	}
+
+	console.log("Redis entity: ", redisEntity);
 
 	// Get fresh customer from DB (no locking - let deduction handle it)
 	const fullCus = await CusService.getFull({
