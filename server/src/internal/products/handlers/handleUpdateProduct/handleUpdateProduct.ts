@@ -74,9 +74,10 @@ export const handleUpdateProductV2 = createRoute({
 		});
 
 		const newFreeTrial =
-			"free_trial" in body
+			"free_trial" in body && notNullish(body.free_trial)
 				? (body.free_trial as FreeTrial | undefined)
-				: curProductV2.free_trial;
+				: (curProductV2.free_trial ?? undefined);
+
 		const newProductV2: ProductV2 = {
 			...curProductV2,
 			...body,
@@ -94,7 +95,7 @@ export const handleUpdateProductV2 = createRoute({
 			db,
 			curProduct: fullProduct,
 			newProduct: UpdateProductSchema.parse(body),
-			newFreeTrial: newFreeTrial || undefined,
+			newFreeTrial: newFreeTrial,
 			items: body.items || curProductV2.items,
 			org,
 			rewardPrograms,

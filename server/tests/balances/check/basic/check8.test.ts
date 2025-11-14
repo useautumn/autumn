@@ -1,14 +1,21 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { ApiVersion, type CheckResponse, SuccessCode } from "@autumn/shared";
+import {
+	ApiVersion,
+	AppEnv,
+	type CheckResponse,
+	SuccessCode,
+} from "@autumn/shared";
 import chalk from "chalk";
 import { TestFeature } from "tests/setup/v2Features.js";
 import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { timeout } from "@/utils/genUtils.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
+import { generatePublishableKey } from "@/utils/encryptUtils.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { timeout } from "../../../utils/genUtils.js";
 
 const messagesFeature = constructFeatureItem({
 	featureId: TestFeature.Messages,
@@ -46,10 +53,30 @@ describe(`${chalk.yellowBright("check8: test public key & send_event")}`, () => 
 			product_id: freeProd.id,
 		});
 
+		// Ensure test_pkey is set on the org (needed for public key tests)
+		if (!ctx.org.test_pkey) {
+			const testPkey = generatePublishableKey(AppEnv.Sandbox);
+			await OrgService.update({
+				db: ctx.db,
+				orgId: ctx.org.id,
+				updates: {
+					test_pkey: testPkey,
+				},
+			});
+			// Update the context org object
+			ctx.org.test_pkey = testPkey;
+		}
+
+		if (!ctx.org.test_pkey.startsWith("am_pk")) {
+			throw new Error(
+				`test_pkey "${ctx.org.test_pkey}" does not start with "am_pk". Expected format: am_pk_test_...`,
+			);
+		}
+
 		// Initialize Autumn client with public key
 		autumnPublic = new AutumnInt({
 			version: ApiVersion.V1_2,
-			secretKey: ctx.org.test_pkey!,
+			secretKey: ctx.org.test_pkey,
 		});
 	});
 
