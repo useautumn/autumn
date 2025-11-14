@@ -69,7 +69,6 @@ export const getCachedApiCustomer = async ({
 						legacyData: CustomerLegacyData;
 					},
 				);
-				console.log("Cached:", cached);
 
 				const { legacyData, ...rest } = cached;
 
