@@ -154,5 +154,5 @@ export const migrationRouter = new Hono<HonoEnv>();
 
 honoProductRouter.post("", ...createProduct);
 honoProductRouter.post("/:productId", ...handleUpdateProductV2);
-honoProductRouter.post("/:productId/copy", ...handleCopyProductV2);
+honoProductRouter.post("/:product_id/copy", ...handleCopyProductV2);
 migrationRouter.post("migrations", ...handleMigrateProductV2);
