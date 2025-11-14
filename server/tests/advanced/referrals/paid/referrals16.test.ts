@@ -13,12 +13,12 @@
 // import { beforeAll, describe, expect, test } from "bun:test";
 // import chalk from "chalk";
 // import type { Stripe } from "stripe";
-// import { expectProductV1Attached } from "tests/utils/expectUtils/expectProductAttached.js";
+// import { expectProductV1Attached } from "@tests/utils/expectUtils/expectProductAttached.js";
 // import {
 //   advanceTestClock,
 //   completeCheckoutForm,
-// } from "tests/utils/stripeUtils.js";
-// import ctx from "tests/utils/testInitUtils/createTestContext.js";
+// } from "@tests/utils/stripeUtils.js";
+// import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 // import type { DrizzleCli } from "@/db/initDrizzle.js";
 // import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
 // import { CusService } from "@/internal/customers/CusService.js";

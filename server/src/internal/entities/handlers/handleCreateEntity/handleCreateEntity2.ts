@@ -98,12 +98,10 @@ export const createEntities = async ({
 		clonedFullCus.entity = entity;
 		const apiEntity = await getApiEntity({
 			ctx,
-			expand: [],
 			customerId,
 			entityId: entity.id,
 			fullCus: clonedFullCus,
 			withAutumnId,
-			skipCache: true,
 		});
 		apiEntities.push(apiEntity);
 	}
@@ -116,9 +114,12 @@ export const handleCreateEntity = createRoute({
 	body: CreateEntityParamsSchema.or(z.array(CreateEntityParamsSchema)),
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { customer_id } = c.req.param();
-
 		const body = c.req.valid("json");
+
+		// Skip cache for entity creation
+		ctx.skipCache = true;
+
+		const { customer_id } = c.req.param();
 		const { with_autumn_id } = c.req.valid("query");
 
 		let customerData: CustomerData | undefined;

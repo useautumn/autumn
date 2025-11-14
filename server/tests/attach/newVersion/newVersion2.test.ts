@@ -5,9 +5,9 @@ import {
 } from "@autumn/shared";
 import { beforeAll, describe, test } from "bun:test";
 import chalk from "chalk";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";

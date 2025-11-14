@@ -43,6 +43,7 @@ const CREATE_PRODUCT_EXAMPLE = {
 const descriptions = {
 	id: "The ID of the product. Used to identify the product in other API calls like checkout or update product.",
 	name: "The name of the product",
+	description: "The description of the product",
 	is_add_on:
 		"Whether the product is an add-on. Add-on products can be attached multiple times and don't to through upgrade / downgrade flows.",
 	is_default:
@@ -72,6 +73,10 @@ export const CreateProductV2ParamsSchema = z
 			.meta({
 				description: descriptions.name,
 			}),
+
+		description: z.string().nullish().meta({
+			description: descriptions.description,
+		}),
 
 		is_add_on: z.boolean().default(false).meta({
 			description: descriptions.is_add_on,
@@ -116,6 +121,10 @@ export const UpdateProductV2ParamsSchema = z.object({
 	}),
 	is_default: z.boolean().optional().meta({
 		description: descriptions.is_default,
+	}),
+
+	description: z.string().nullish().optional().meta({
+		description: descriptions.description,
 	}),
 	// version: z.number().optional().meta({
 	// 	internal: true,

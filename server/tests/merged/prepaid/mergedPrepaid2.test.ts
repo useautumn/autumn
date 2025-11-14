@@ -1,3 +1,4 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type AppEnv,
 	CusProductStatus,
@@ -6,14 +7,13 @@ import {
 	OnIncrease,
 	type Organization,
 } from "@autumn/shared";
-import { beforeAll, describe, expect, test } from "bun:test";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
+import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { addPrefixToProducts } from "@tests/utils/testProductUtils/testProductUtils.js";
 import chalk from "chalk";
 import type { Stripe } from "stripe";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { advanceToNextInvoice } from "tests/utils/testAttachUtils/testAttachUtils.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";

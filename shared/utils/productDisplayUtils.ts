@@ -1,10 +1,8 @@
 import { FeatureType } from "../models/featureModels/featureEnums.js";
 import type { Feature } from "../models/featureModels/featureModels.js";
+import { ProductItemInterval } from "../models/productModels/intervals/productItemInterval.js";
 import { Infinite } from "../models/productModels/productEnums.js";
-import {
-	type ProductItem,
-	ProductItemInterval,
-} from "../models/productV2Models/productItemModels/productItemModels.js";
+import type { ProductItem } from "../models/productV2Models/productItemModels/productItemModels.js";
 import {
 	formatAmount,
 	getFeatureName,
@@ -63,8 +61,6 @@ export const getIntervalString = ({
 	if (interval === ProductItemInterval.SemiAnnual) {
 		intervalStr = "half year";
 	}
-
-	console.log("intervalStr", intervalStr);
 
 	if (!interval) return "";
 	if (intervalCount === 1) {
@@ -169,7 +165,7 @@ export const getFeaturePriceItemDisplay = ({
 		includedUsageStr = `${numberWithCommas(includedUsage)} ${includedFeatureName}`;
 	}
 
-	const priceStr = formatTiers({ item, currency, amountFormatOptions });
+	const priceStr = formatTiers({ item, currency, amountFormatOptions }) ?? "";
 
 	const billingFeatureName = getFeatureName({
 		feature,
@@ -208,7 +204,7 @@ export const getFeaturePriceItemDisplay = ({
 
 	return {
 		primary_text: `${priceStr} per ${priceStr2} ${intervalStr}`,
-		secondary_text: "",
+		secondary_text: undefined,
 	};
 };
 
@@ -252,6 +248,6 @@ export const getProductItemDisplay = ({
 
 	return {
 		primary_text: "couldn't detect item type",
-		secondary_text: "",
+		secondary_text: undefined,
 	};
 };

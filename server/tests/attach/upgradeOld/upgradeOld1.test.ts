@@ -7,9 +7,9 @@ import {
 import chalk from "chalk";
 import { addDays } from "date-fns";
 import type Stripe from "stripe";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { expectCustomerV0Correct } from "tests/utils/expectUtils/expectCustomerV0Correct.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectCustomerV0Correct } from "@tests/utils/expectUtils/expectCustomerV0Correct.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";

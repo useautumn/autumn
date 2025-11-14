@@ -1,13 +1,40 @@
-import { dirname, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Try loading .env from current directory, then parent directory
-// dotenv.config({ path: resolve(__dirname, ".env") });
-dotenv.config({ path: resolve(__dirname, "..", "..", "..", ".env") });
+// Load local .env file similar to initInfisical.ts
+const loadLocalEnv = () => {
+	const processDir = process.cwd();
+	const serverDir = processDir.includes("server")
+		? processDir
+		: join(processDir, "server");
+
+	// Determine which env file to load based on ENV_FILE environment variable
+	// Defaults to .env if not specified
+	const envFileName = process.env.ENV_FILE || ".env";
+	const envPath = join(serverDir, envFileName);
+
+	// Load local .env file
+	const result = dotenv.config({ path: envPath });
+	if (result.parsed) {
+		console.log(
+			`📄 Loading ${Object.keys(result.parsed).length} variables from ${envFileName}`,
+		);
+		for (const [key, value] of Object.entries(result.parsed)) {
+			if (!process.env[key]) {
+				process.env[key] = value;
+			}
+		}
+	} else {
+		console.log(`ℹ️  No ${envFileName} file found at ${envPath}`);
+	}
+};
+
+// Load environment variables before initializing anything else
+loadLocalEnv();
 
 import { AppEnv, type Feature, type Organization } from "@autumn/shared";
 import type Stripe from "stripe";

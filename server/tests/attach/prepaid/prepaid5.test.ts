@@ -2,9 +2,9 @@ import { type Customer, LegacyVersion, OnDecrease, OnIncrease } from "@autumn/sh
 import { beforeAll, describe, expect, test } from "bun:test";
 import chalk from "chalk";
 import type Stripe from "stripe";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
 	constructFeatureItem,

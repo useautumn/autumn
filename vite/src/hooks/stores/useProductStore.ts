@@ -1,4 +1,8 @@
-import { type ProductV2, productsAreSame } from "@autumn/shared";
+import {
+	type ProductV2,
+	productsAreSame,
+	productV2ToBasePrice,
+} from "@autumn/shared";
 import { useMemo } from "react";
 import { create } from "zustand";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -99,6 +103,18 @@ export const useHasDetailsChanged = () => {
 			features,
 		});
 
-		return !comparison.detailsSame;
+		const basePrice1 = productV2ToBasePrice({
+			product: product as unknown as ProductV2,
+		});
+		const basePrice2 = productV2ToBasePrice({
+			product: baseProduct as unknown as ProductV2,
+		});
+
+		const basePricesSame =
+			basePrice1?.price === basePrice2?.price &&
+			basePrice1?.interval === basePrice2?.interval &&
+			basePrice1?.interval_count === basePrice2?.interval_count;
+
+		return !(comparison.detailsSame && basePricesSame);
 	}, [product, baseProduct, features]);
 };

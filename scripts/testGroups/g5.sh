@@ -33,5 +33,6 @@ BUN_PARALLEL_COMPACT \
 
 # BUN_PARALLEL_COMPACT \
 #   'server/tests/advanced/usage'
+#   'server/tests/crud/plan'
 
 # 'server/tests/advanced/referrals/paid' \

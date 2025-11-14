@@ -3,14 +3,17 @@ import {
 	getListResponseSchema,
 	SuccessResponseSchema,
 } from "../common/commonResponses.js";
-import { ApiFeatureSchema, FEATURE_EXAMPLE } from "./apiFeature.js";
+import {
+	ApiFeatureV0Schema,
+	FEATURE_EXAMPLE,
+} from "./prevVersions/apiFeatureV0.js";
 import {
 	CreateFeatureParamsSchema,
 	UpdateFeatureParamsSchema,
-} from "./featureOpModels.js";
+} from "./prevVersions/featureV0OpModels.js";
 
 // Register the schema with .meta() for OpenAPI spec generation
-export const ApiFeatureWithMeta = ApiFeatureSchema.extend({
+export const ApiFeatureWithMeta = ApiFeatureV0Schema.extend({
 	type: z.enum(["boolean", "single_use", "continuous_use", "credit_system"]),
 }).meta({
 	id: "Feature",

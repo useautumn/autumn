@@ -81,7 +81,7 @@ export const expectSubToBeCorrect = async ({
 				existingUsage: 0,
 				withEntity: true,
 				isCheckout: false,
-				apiVersion: ApiVersion.Beta,
+				apiVersion: ApiVersion.V1_Beta,
 			});
 
 			const lineItem: any = res?.lineItem;

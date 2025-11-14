@@ -8,14 +8,14 @@ import {
 } from "@autumn/shared";
 import { expect } from "chai";
 import chalk from "chalk";
-import { setupBefore } from "tests/before.js";
-import { features } from "tests/global.js";
+import { setupBefore } from "@tests/before.js";
+import { features } from "@tests/global.js";
 import {
 	getLifetimeFreeCusEnt,
 	getUsageCusEnt,
-} from "tests/utils/cusProductUtils/cusEntSearchUtils.js";
-import { getMainCusProduct } from "tests/utils/cusProductUtils/cusProductUtils.js";
-import { createProduct } from "tests/utils/productUtils.js";
+} from "@tests/utils/cusProductUtils/cusEntSearchUtils.js";
+import { getMainCusProduct } from "@tests/utils/cusProductUtils/cusProductUtils.js";
+import { createProduct } from "@tests/utils/productUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {

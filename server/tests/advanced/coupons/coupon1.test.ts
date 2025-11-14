@@ -7,22 +7,22 @@ import {
 	type Organization,
 	RewardType,
 } from "@autumn/shared";
-import chalk from "chalk";
-import { addHours, addMonths } from "date-fns";
-import type Stripe from "stripe";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
-import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { timeout } from "tests/utils/genUtils.js";
-import { createReward } from "tests/utils/productUtils.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
+import { getExpectedInvoiceTotal } from "@tests/utils/expectUtils/expectInvoiceUtils.js";
+import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
+import { timeout } from "@tests/utils/genUtils.js";
+import { createReward } from "@tests/utils/productUtils.js";
 import {
 	advanceTestClock,
 	completeCheckoutForm,
 	getDiscount,
-} from "tests/utils/stripeUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
-import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
+} from "@tests/utils/stripeUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { getBasePrice } from "@tests/utils/testProductUtils/testProductUtils.js";
+import chalk from "chalk";
+import { addHours, addMonths } from "date-fns";
+import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { getOriginalCouponId } from "@/internal/rewards/rewardUtils.js";

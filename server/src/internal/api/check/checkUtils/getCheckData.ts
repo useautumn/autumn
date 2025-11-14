@@ -1,7 +1,8 @@
 import {
 	type ApiCustomer,
-	type ApiEntity,
+	type ApiEntityV1,
 	type CheckParams,
+	type CustomerLegacyData,
 	ErrCode,
 	type Feature,
 	InternalError,
@@ -13,6 +14,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { getOrCreateApiCustomer } from "../../../customers/cusUtils/getOrCreateApiCustomer.js";
 import { getCachedApiEntity } from "../../../entities/entityUtils/apiEntityCacheUtils/getCachedApiEntity.js";
 import type { CheckData } from "../checkTypes/CheckData.js";
+import { apiBalanceToAllowed } from "./apiBalanceToAllowed.js";
 
 // Main functions
 const getFeatureAndCreditSystems = ({
@@ -38,10 +40,12 @@ export const getFeatureToUse = ({
 	creditSystems,
 	feature,
 	apiEntity,
+	requiredBalance,
 }: {
 	creditSystems: Feature[];
 	feature: Feature;
-	apiEntity: ApiCustomer | ApiEntity;
+	apiEntity: ApiCustomer | ApiEntityV1;
+	requiredBalance: number;
 }) => {
 	// 1. If there's a credit system & cusEnts for that credit system -> return credit system
 	// 2. If there's cusEnts for the feature -> return feature
@@ -50,63 +54,30 @@ export const getFeatureToUse = ({
 	if (creditSystems.length === 0) return feature;
 
 	// 1. Check if feature available
-	const mainCusFeature = apiEntity.features?.[feature.id];
+	const mainBalance = apiEntity?.balances?.[feature.id];
 
-	if (mainCusFeature?.balance && mainCusFeature.balance > 0) return feature;
+	if (
+		mainBalance &&
+		apiBalanceToAllowed({
+			apiBalance: mainBalance,
+			feature,
+			requiredBalance,
+		})
+	) {
+		return feature;
+	}
 
 	return creditSystems[0];
-
-	// const featureCusEnts = cusEnts.filter((cusEnt) =>
-	// 	cusEntMatchesFeature({ cusEnt, feature }),
-	// );
-
-	// if (creditSystems.length > 0) {
-	// 	const creditCusEnts = cusEnts.filter((cusEnt) =>
-	// 		cusEntMatchesFeature({ cusEnt, feature: creditSystems[0] }),
-	// 	);
-
-	// 	const totalFeatureCusEntBalance = sumValues(
-	// 		featureCusEnts
-	// 			.map((cusEnt) =>
-	// 				cusEntToBalance({
-	// 					cusEnt,
-	// 					withRollovers: true,
-	// 				}),
-	// 			)
-	// 			.filter(notNullish),
-	// 	);
-
-	// 	const totalCreditCusEntBalance = sumValues(
-	// 		creditCusEnts
-	// 			.map((cusEnt) =>
-	// 				cusEntToBalance({
-	// 					cusEnt,
-	// 					withRollovers: true,
-	// 				}),
-	// 			)
-	// 			.filter(notNullish),
-	// 	);
-
-	// 	if (featureCusEnts.length > 0 && totalFeatureCusEntBalance > 0) {
-	// 		return feature;
-	// 	}
-
-	// 	// if (creditCusEnts.length > 0) {
-	// 	// 	return creditSystems[0];
-	// 	// }
-
-	// 	return creditSystems[0];
-	// }
-
-	// return feature;
 };
 
 export const getCheckData = async ({
 	ctx,
 	body,
+	requiredBalance,
 }: {
 	ctx: AutumnContext;
 	body: CheckParams & { feature_id: string };
+	requiredBalance: number;
 }): Promise<CheckData> => {
 	const { customer_id, feature_id, entity_id, entity_data, customer_data } =
 		body;
@@ -124,16 +95,19 @@ export const getCheckData = async ({
 		});
 	}
 
-	let apiEntity: ApiCustomer | ApiEntity | undefined;
-	const { apiCustomer } = await getOrCreateApiCustomer({
-		ctx,
-		customerId: customer_id,
-		customerData: customer_data,
-		entityId: entity_id,
-		entityData: entity_data,
-	});
-	apiEntity = apiCustomer;
+	let apiEntity: ApiCustomer | ApiEntityV1 | undefined;
+	let legacyData: CustomerLegacyData | undefined;
+	const { apiCustomer, legacyData: legacyDataResult } =
+		await getOrCreateApiCustomer({
+			ctx,
+			customerId: customer_id,
+			customerData: customer_data,
+			entityId: entity_id,
+			entityData: entity_data,
+		});
 
+	apiEntity = apiCustomer;
+	legacyData = legacyDataResult;
 	if (entity_id) {
 		const { apiEntity: apiEntityResult } = await getCachedApiEntity({
 			ctx,
@@ -142,6 +116,7 @@ export const getCheckData = async ({
 		});
 
 		apiEntity = apiEntityResult;
+		legacyData = legacyDataResult;
 	}
 
 	if (!apiEntity) {
@@ -154,13 +129,19 @@ export const getCheckData = async ({
 		creditSystems,
 		feature,
 		apiEntity,
+		requiredBalance,
 	});
+
+	const apiBalance = apiEntity.balances?.[featureToUse.id];
+	const cusFeatureLegacyData =
+		legacyData?.cusFeatureLegacyData?.[featureToUse.id];
 
 	return {
 		customerId: customer_id,
 		entityId: entity_id,
-		cusFeature: apiEntity.features?.[featureToUse.id],
+		apiBalance,
 		originalFeature: feature,
 		featureToUse,
+		cusFeatureLegacyData,
 	};
 };

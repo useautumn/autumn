@@ -8,10 +8,10 @@ import {
 	validateCreditSystem,
 	validateMeteredConfig,
 } from "../featureUtils.js";
-import { getObjectsUsingFeature } from "../handlers/handleUpdateFeature/getObjectsUsingFeature.js";
-import { handleFeatureIdChanged } from "../handlers/handleUpdateFeature/handleFeatureIdChanged.js";
-import { handleFeatureTypeChanged } from "../handlers/handleUpdateFeature/handleFeatureTypeChanged.js";
-import { handleFeatureUsageTypeChanged } from "../handlers/handleUpdateFeature/handleFeatureUsageTypeChanged.js";
+import { getObjectsUsingFeature } from "../utils/updateFeatureUtils/getObjectsUsingFeature.js";
+import { handleFeatureIdChanged } from "../utils/updateFeatureUtils/handleFeatureIdChanged.js";
+import { handleFeatureTypeChanged } from "../utils/updateFeatureUtils/handleFeatureTypeChanged.js";
+import { handleFeatureUsageTypeChanged } from "../utils/updateFeatureUtils/handleFeatureUsageTypeChanged.js";
 
 interface UpdateFeatureParams {
 	ctx: AutumnContext;

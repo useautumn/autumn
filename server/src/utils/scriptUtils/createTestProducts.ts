@@ -165,7 +165,7 @@ export const constructProduct = ({
 				? (CreateFreeTrialSchema.parse({
 						length: freeTrialLength,
 						duration: FreeTrialDuration.Day,
-						unique_fingerprint: false,
+						unique_fingerprint: true,
 						card_required: true,
 					}) as any)
 				: null,

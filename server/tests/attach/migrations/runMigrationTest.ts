@@ -5,16 +5,16 @@ import { AppEnv } from "autumn-js";
 import {
 	expectSubItemsCorrect,
 	getSubsFromCusId,
-} from "tests/utils/expectUtils/expectSubUtils.js";
+} from "@tests/utils/expectUtils/expectSubUtils.js";
 import Stripe from "stripe";
 import { expect } from "bun:test";
-import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
-import { expectResetAtCorrect } from "tests/utils/expectUtils/expectAttach/expectResetAtCorrect.js";
+import { expectFeaturesCorrect } from "@tests/utils/expectUtils/expectFeaturesCorrect.js";
+import { expectResetAtCorrect } from "@tests/utils/expectUtils/expectAttach/expectResetAtCorrect.js";
 import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
-import { expectTrialEndsAtCorrect } from "tests/utils/expectUtils/expectAttach/expectTrialEndsAt.js";
+import { expectTrialEndsAtCorrect } from "@tests/utils/expectUtils/expectAttach/expectTrialEndsAt.js";
 import { timeout } from "@/utils/genUtils.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
-import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
+import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect.js";
 
 export const expectSubsSame = ({
 	subsBefore,

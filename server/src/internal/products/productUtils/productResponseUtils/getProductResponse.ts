@@ -1,6 +1,6 @@
 import {
-	type APIFreeTrial,
-	APIFreeTrialSchema,
+	type ApiFreeTrial,
+	ApiFreeTrialSchema,
 	ApiProductItemSchema,
 	ApiProductPropertiesSchema,
 	ApiProductSchema,
@@ -12,10 +12,10 @@ import {
 	type FullProduct,
 	type Price,
 	type ProductItem,
+	toApiFeature,
 	UsageModel,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { toApiFeature } from "@/internal/features/utils/mapFeatureUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { getFreeTrialAfterFingerprint } from "../../free-trials/freeTrialUtils.js";
 import { sortProductItems } from "../../pricecn/pricecnUtils.js";
@@ -106,7 +106,7 @@ export const getFreeTrialResponse = async ({
 		});
 
 		if (attachScenario === AttachScenario.Downgrade) trial = null;
-		return APIFreeTrialSchema.parse({
+		return ApiFreeTrialSchema.parse({
 			duration: product.free_trial?.duration,
 			length: product.free_trial?.length,
 			unique_fingerprint: product.free_trial?.unique_fingerprint,
@@ -116,7 +116,7 @@ export const getFreeTrialResponse = async ({
 	}
 
 	if (product.free_trial) {
-		return APIFreeTrialSchema.parse({
+		return ApiFreeTrialSchema.parse({
 			duration: product.free_trial?.duration,
 			length: product.free_trial?.length,
 			unique_fingerprint: product.free_trial?.unique_fingerprint,
@@ -132,7 +132,7 @@ export const getProductProperties = ({
 	freeTrial,
 }: {
 	product: FullProduct;
-	freeTrial?: APIFreeTrial | null;
+	freeTrial?: ApiFreeTrial | null;
 }) => {
 	const largestInterval = getLargestInterval({
 		prices: product.prices,
@@ -205,7 +205,7 @@ export const getProductResponse = async ({
 		product,
 		fullCus,
 		attachScenario,
-	})) as APIFreeTrial;
+	})) as ApiFreeTrial;
 
 	return ApiProductSchema.parse({
 		...product,

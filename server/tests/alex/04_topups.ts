@@ -7,10 +7,10 @@ import {
 } from "@autumn/shared";
 import { expect } from "chai";
 import chalk from "chalk";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { compareMainProduct } from "tests/utils/compare.js";
-import { timeout } from "tests/utils/genUtils.js";
-import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
+import { AutumnCli } from "@tests/cli/AutumnCli.js";
+import { compareMainProduct } from "@tests/utils/compare.js";
+import { timeout } from "@tests/utils/genUtils.js";
+import { completeCheckoutForm } from "@tests/utils/stripeUtils.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomerV2 } from "@/utils/scriptUtils/initCustomer.js";
 import { alexFeatures, alexProducts } from "./init.js";

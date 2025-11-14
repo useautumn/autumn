@@ -126,9 +126,7 @@ fi
 #     echo "✅ Copied migration files"
 # fi
 
-# Build shared workspace (required for other workspaces)
-echo "🔨 Building shared workspace..."
-bun -F @autumn/shared build
+# Shared workspace is now used directly from source (no build needed)
 
 # # Run database migrations if DATABASE_URL exists
 # if grep -q "DATABASE_URL=" server/.env 2>/dev/null; then

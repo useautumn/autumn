@@ -12,7 +12,7 @@ const __dirname = dirname(__filename);
  * Find server/.env file robustly - works whether running from root or scripts dir
  */
 function findEnvPath(): string {
-	// Try from script directory (scripts/setup-test.ts -> ../server/.env)
+	// Try from setupTestUtils directory (scripts/setupTestUtils/updateEnvFile.ts -> ../../server/.env)
 	const fromScriptDir = resolve(__dirname, "../../server/.env");
 	if (existsSync(fromScriptDir)) {
 		return fromScriptDir;
