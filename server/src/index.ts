@@ -264,7 +264,6 @@ async function gracefulShutdown() {
 		process.exit(1);
 	}
 }
-
 // Close connections gracefully?
 const closeConnections = async () => {
 	console.log("Closing connections");
