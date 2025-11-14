@@ -144,7 +144,7 @@ export const handleCustomPaymentMethodErrors = ({
 }) => {
 	const { paymentMethod } = attachParams;
 	if (
-		paymentMethod?.type === "custom" ||
+		paymentMethod?.type === "custom" &&
 		attachParams.customer.processors?.vercel?.custom_payment_method_id ===
 			paymentMethod?.custom?.type
 	) {
