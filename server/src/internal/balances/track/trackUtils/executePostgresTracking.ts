@@ -1,6 +1,5 @@
 import type { ApiBalance, TrackParams, TrackResponseV2 } from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
-import type { ExtendedRequest } from "../../../../utils/models/Request.js";
 import { getApiCustomerBase } from "../../../customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
 import { getOrCreateCustomer } from "../../../customers/cusUtils/getOrCreateCustomer.js";
 import type { FeatureDeduction } from "./getFeatureDeductions.js";
@@ -30,7 +29,7 @@ export const executePostgresTracking = async ({
 	};
 
 	const fullCus = await getOrCreateCustomer({
-		req: ctx as unknown as ExtendedRequest,
+		ctx,
 		customerId: body.customer_id,
 		customerData: body.customer_data,
 		entityId: body.entity_id,

@@ -82,3 +82,5 @@ export * from "./errors/index.js";
 export * from "./platform/platformModels.js";
 
 export * from "./products/planExpand.js";
+
+export * from "./products/planLegacyData.js";

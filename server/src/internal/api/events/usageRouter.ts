@@ -13,6 +13,7 @@ import { runUpdateUsageTask } from "@/trigger/updateUsageTask.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { generateId, nullish } from "@/utils/genUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { EventService } from "./EventService.js";
 import { getEventTimestamp } from "./eventUtils.js";
 
@@ -36,7 +37,7 @@ const getCusFeatureAndOrg = async ({
 	const { org, features } = req;
 
 	const customer = await getOrCreateCustomer({
-		req,
+		ctx: req as unknown as AutumnContext,
 		customerId,
 		customerData,
 		inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],

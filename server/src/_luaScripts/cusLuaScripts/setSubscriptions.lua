@@ -1,11 +1,11 @@
--- setCustomerProducts.lua
--- Updates only the products array in the customer cache
--- ARGV[1]: serialized products array JSON string
+-- setSubscriptions.lua
+-- Updates only the subscriptions array in the customer cache
+-- ARGV[1]: serialized subscriptions array JSON string (ApiSubscription[])
 -- ARGV[2]: org_id
 -- ARGV[3]: env
 -- ARGV[4]: customer_id
 
-local productsJson = ARGV[1]
+local subscriptionsJson = ARGV[1]
 local orgId = ARGV[2]
 local env = ARGV[3]
 local customerId = ARGV[4]
@@ -20,12 +20,12 @@ if not baseJson then
     return "OK" -- Customer doesn't exist, return early
 end
 
--- Decode the base customer and products
+-- Decode the base customer and subscriptions
 local baseCustomer = cjson.decode(baseJson)
-local products = cjson.decode(productsJson)
+local subscriptions = cjson.decode(subscriptionsJson)
 
--- Update only the products array
-baseCustomer.products = products
+-- Update the subscriptions field
+baseCustomer.subscriptions = subscriptions
 
 -- Store updated base customer as JSON and extend TTL
 redis.call("SET", baseKey, cjson.encode(baseCustomer))

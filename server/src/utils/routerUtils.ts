@@ -138,12 +138,12 @@ export const routeHandler = async <TLoad = undefined>({
 	req: any;
 	res: any;
 	action: string;
-	handler: <TResponse = unknown>(
+	handler: (
 		req: any,
 		res: any,
 		load: TLoad,
 		query?: any,
-	) => Promise<TResponse>;
+	) => Promise<void> | void;
 	validator?:
 		| ((req: any, res: any) => Promise<void>)
 		| ZodAny

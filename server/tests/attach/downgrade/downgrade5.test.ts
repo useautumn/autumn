@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { CusProductStatus } from "@autumn/shared";
+import { CusProductStatus, ProductItemInterval } from "@autumn/shared";
 import { AutumnCli } from "@tests/cli/AutumnCli.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
 import { expectCustomerV0Correct } from "@tests/utils/expectUtils/expectCustomerV0Correct.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
@@ -8,13 +9,44 @@ import chalk from "chalk";
 import { addHours, addMonths } from "date-fns";
 import type Stripe from "stripe";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-import {
-	initDowngradeSharedProducts,
-	sharedPremiumProduct,
-	sharedProProduct,
-} from "./sharedProducts.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+
+// Inline product definitions for downgrade5 test
+const proProduct = constructProduct({
+	type: "pro",
+
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Dashboard,
+			isBoolean: true,
+		}),
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 10,
+			interval: ProductItemInterval.Month,
+		}),
+		constructFeatureItem({
+			featureId: TestFeature.Admin,
+			unlimited: true,
+		}),
+	],
+});
+
+const premiumProduct = constructProduct({
+	type: "premium",
+
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 100,
+			interval: ProductItemInterval.Month,
+		}),
+	],
+});
 
 const testCase = "downgrade5";
 describe(`${chalk.yellowBright(`${testCase}: testing basic downgrade (paid to paid)`)}`, () => {
@@ -26,8 +58,13 @@ describe(`${chalk.yellowBright(`${testCase}: testing basic downgrade (paid to pa
 	beforeAll(async () => {
 		stripeCli = ctx.stripeCli;
 
-		// Explicitly ensure shared products exist
-		await initDowngradeSharedProducts();
+		// Initialize products for this test
+		await initProductsV0({
+			ctx,
+			products: [proProduct, premiumProduct],
+			prefix: testCase,
+			customerId,
+		});
 
 		const { testClockId: testClockId_ } = await initCustomerV3({
 			ctx,
@@ -43,14 +80,14 @@ describe(`${chalk.yellowBright(`${testCase}: testing basic downgrade (paid to pa
 	test("should attach premium", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
-			productId: sharedPremiumProduct.id,
+			productId: premiumProduct.id,
 		});
 	});
 
 	test("should attach pro", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
-			productId: sharedProProduct.id,
+			productId: proProduct.id,
 		});
 	});
 
@@ -58,7 +95,7 @@ describe(`${chalk.yellowBright(`${testCase}: testing basic downgrade (paid to pa
 		const res = await AutumnCli.getCustomer(customerId);
 
 		expectCustomerV0Correct({
-			sent: sharedPremiumProduct,
+			sent: premiumProduct,
 			cusRes: res,
 		});
 
@@ -66,7 +103,7 @@ describe(`${chalk.yellowBright(`${testCase}: testing basic downgrade (paid to pa
 
 		const resPro = resProducts.find(
 			(p: any) =>
-				p.id === sharedProProduct.id && p.status === CusProductStatus.Scheduled,
+				p.id === proProduct.id && p.status === CusProductStatus.Scheduled,
 		);
 
 		expect(resPro).toBeDefined();
@@ -75,19 +112,19 @@ describe(`${chalk.yellowBright(`${testCase}: testing basic downgrade (paid to pa
 	test("should attach premium and remove scheduled pro", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
-			productId: sharedPremiumProduct.id,
+			productId: premiumProduct.id,
 		});
 
 		const res = await AutumnCli.getCustomer(customerId);
 		const resPro = res.products.find(
 			(p: any) =>
-				p.id === sharedProProduct.id && p.status === CusProductStatus.Scheduled,
+				p.id === proProduct.id && p.status === CusProductStatus.Scheduled,
 		);
 
 		expect(resPro).toBeUndefined();
 
 		expectCustomerV0Correct({
-			sent: sharedPremiumProduct,
+			sent: premiumProduct,
 			cusRes: res,
 		});
 	});
@@ -96,7 +133,7 @@ describe(`${chalk.yellowBright(`${testCase}: testing basic downgrade (paid to pa
 	test("should attach pro, advance stripe clock and have pro is attached", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
-			productId: sharedProProduct.id,
+			productId: proProduct.id,
 		});
 
 		await advanceTestClock({
@@ -111,7 +148,7 @@ describe(`${chalk.yellowBright(`${testCase}: testing basic downgrade (paid to pa
 
 		const res = await AutumnCli.getCustomer(customerId);
 		expectCustomerV0Correct({
-			sent: sharedProProduct,
+			sent: proProduct,
 			cusRes: res,
 		});
 	});

@@ -1,19 +1,19 @@
 import {
-	type ApiVersionClass,
+	AffectedResource,
+	type ApiCustomer,
 	type AppEnv,
-	AuthType,
+	applyResponseVersionChanges,
 	CusExpand,
 	type CusProductStatus,
-	type Feature,
+	type CustomerLegacyData,
 	type FullCustomer,
 	type Organization,
 } from "@autumn/shared";
-import type { NodeClickHouseClient } from "@clickhouse/client/dist/client.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
-import { getApiCustomer } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomer.js";
-import { generateId } from "@/utils/genUtils.js";
-import { getPaginatedFullCusQuery } from "../../customers/getFullCusQuery.js";
+import type { RequestContext } from "@/honoUtils/HonoEnv.js";
+import { RELEVANT_STATUSES } from "./cusProducts/CusProductService.js";
+import { getApiCustomerBase } from "./cusUtils/apiCusUtils/getApiCustomerBase.js";
+import { getPaginatedFullCusQuery } from "./getFullCusQuery.js";
 
 export class CusBatchService {
 	static async getByInternalIds({
@@ -44,42 +44,29 @@ export class CusBatchService {
 	}
 
 	static async getPage({
-		db,
-		ch,
-		org,
-		env,
+		ctx,
 		limit,
 		offset,
-		features,
 		statuses,
-		expand = [],
-		logger = console,
-		apiVersion,
 	}: {
-		db: DrizzleCli;
-		ch: NodeClickHouseClient;
-		org: Organization;
-		env: AppEnv;
+		ctx: RequestContext;
 		limit: number;
 		offset: number;
-		features: Feature[];
 		statuses: CusProductStatus[];
-		expand?: CusExpand[];
-		logger?: any;
-		apiVersion: ApiVersionClass;
 	}) {
 		if (!limit) limit = 10;
 		if (!offset) offset = 0;
 
 		if (!statuses) statuses = RELEVANT_STATUSES;
 
+		const expand = ctx.expand || [];
 		const includeInvoices = expand.includes(CusExpand.Invoices);
 		const withEntities = expand.includes(CusExpand.Entities);
 		const withTrialsUsed = expand.includes(CusExpand.TrialsUsed);
 
 		const query = getPaginatedFullCusQuery({
-			orgId: org.id,
-			env,
+			orgId: ctx.org.id,
+			env: ctx.env,
 			inStatuses: statuses,
 			includeInvoices,
 			withEntities,
@@ -88,33 +75,35 @@ export class CusBatchService {
 			limit,
 			offset,
 		});
-		const results = await db.execute(query);
+		const results = await ctx.db.execute(query);
 		const finals = [];
+
 		for (const result of results) {
 			try {
 				const normalizedCustomer =
 					CusBatchService.normalizeCustomerData(result);
-				const customer = normalizedCustomer as FullCustomer;
-				const cusProducts = customer.customer_products || [];
+				const fullCus = normalizedCustomer as FullCustomer;
 
-				const apiCustomer = await getApiCustomer({
-					ctx: {
-						db,
-						org,
-						env,
-						features,
-						logger,
-						apiVersion,
-						id: generateId("local_req"),
-						isPublic: false,
-						authType: AuthType.Unknown,
-						timestamp: Date.now(),
-					},
-					fullCus: customer,
-					expand: expand,
+				// Since we already have fullCus from DB, call getApiCustomerBase directly
+				const { apiCustomer: baseCustomer, legacyData } =
+					await getApiCustomerBase({
+						ctx,
+						fullCus,
+						withAutumnId: false,
+					});
+
+				// Apply version changes
+				const versionedCustomer = applyResponseVersionChanges<
+					ApiCustomer,
+					CustomerLegacyData
+				>({
+					input: baseCustomer,
+					legacyData,
+					targetVersion: ctx.apiVersion,
+					resource: AffectedResource.Customer,
 				});
 
-				finals.push(apiCustomer);
+				finals.push(versionedCustomer);
 			} catch (error) {
 				console.error(`Failed to process customer ${result.id}:`, error);
 			}

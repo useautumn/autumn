@@ -21,6 +21,7 @@ export function useAxiosInstance(params?: { env?: AppEnv; isAuth?: boolean }) {
 		async (config: any) => {
 			config.headers.app_env = envToUse;
 			config.headers["x-api-version"] = "1.2";
+			// config.headers["Autumn-Version"] = "0.2.0";
 			config.headers["x-client-type"] = "dashboard";
 
 			return config;

@@ -17,6 +17,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
 import { getCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/getCachedApiCustomer.js";
+import { handleThresholdReached } from "../../../../trigger/handleThresholdReached.js";
 import { getCachedApiEntity } from "../../../entities/entityUtils/apiEntityCacheUtils/getCachedApiEntity.js";
 import type { FeatureDeduction } from "../trackUtils/getFeatureDeductions.js";
 import { deductFromCusEnts } from "../trackUtils/runDeductionTx.js";
@@ -178,5 +179,17 @@ export const syncItem = async ({
 	if (process.env.NODE_ENV === "production") {
 		console.log(`synced customer ${customerId}, feature ${featureId}`);
 		console.log(`org: ${org.slug}, env: ${env}`);
+	}
+
+	// Old full cus vs new full cus
+	if (result.fullCus) {
+		for (const relevantFeature of relevantFeatures) {
+			await handleThresholdReached({
+				ctx,
+				oldFullCus: result.oldFullCus,
+				newFullCus: result.fullCus,
+				feature: relevantFeature,
+			});
+		}
 	}
 };

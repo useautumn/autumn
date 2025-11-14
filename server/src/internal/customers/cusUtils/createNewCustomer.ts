@@ -9,7 +9,6 @@ import {
 	type FullProduct,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { addCustomerCreatedTask } from "@/internal/analytics/handlers/handleCustomerCreated.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { isDefaultTrialFullProduct } from "@/internal/products/productUtils/classifyProduct.js";
@@ -17,6 +16,7 @@ import { isFreeProduct } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import { handleAddProduct } from "../attach/attachFunctions/addProductFlow/handleAddProduct.js";
 import {
@@ -56,17 +56,17 @@ export const getGroupToDefaultProd = async ({
 };
 
 export const createNewCustomer = async ({
-	req,
+	ctx,
 	customer,
 	nextResetAt,
 	createDefaultProducts = true,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	customer: CreateCustomer;
 	nextResetAt?: number;
 	createDefaultProducts?: boolean;
 }) => {
-	const { db, org, env, logger } = req;
+	const { db, org, env, logger } = ctx;
 
 	logger.info(
 		`Creating customer: ${customer.email || customer.id}, org: ${org.slug}`,
@@ -133,13 +133,6 @@ export const createNewCustomer = async ({
 		return newCustomer;
 	}
 
-	await addCustomerCreatedTask({
-		req,
-		internalCustomerId: newCustomer.internal_id,
-		org,
-		env,
-	});
-
 	const groupToDefaultProd = await getGroupToDefaultProd({
 		defaultProds,
 	});
@@ -161,13 +154,13 @@ export const createNewCustomer = async ({
 			});
 
 			await handleAddProduct({
-				req,
+				req: ctx as unknown as ExtendedRequest,
 				config: {
 					...getDefaultAttachConfig(),
 					requirePaymentMethod: false,
 				},
 				attachParams: newCusToAttachParams({
-					req,
+					req: ctx as unknown as ExtendedRequest,
 					newCus: newCustomer as FullCustomer,
 					products: [defaultProd],
 					stripeCli,
@@ -178,7 +171,7 @@ export const createNewCustomer = async ({
 			await createFullCusProduct({
 				db,
 				attachParams: newCusToInsertParams({
-					req,
+					req: ctx as unknown as ExtendedRequest,
 					newCus: newCustomer,
 					product: defaultProd,
 					freeTrial: defaultProd?.free_trial || null,

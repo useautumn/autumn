@@ -10,6 +10,10 @@ export const apiBalanceToAllowed = ({
 	feature: Feature;
 	requiredBalance: number;
 }) => {
+	if (!apiBalance) {
+		return false;
+	}
+
 	// 1. Boolean
 	if (feature.type === FeatureType.Boolean) {
 		return true;

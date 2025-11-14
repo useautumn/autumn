@@ -5,16 +5,15 @@ import { StatusCodes } from "http-status-codes";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { CusSearchService } from "@/internal/customers/CusSearchService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
-import { handleBatchCustomers } from "../api/batch/handlers/handleBatchCustomers.js";
 import { toSuccessUrl } from "../orgs/orgUtils/convertOrgUtils.js";
 import { CusService } from "./CusService.js";
 import { handleAddCouponToCus } from "./handlers/handleAddCouponToCus.js";
 import { handleCreateBillingPortal } from "./handlers/handleCreateBillingPortal.js";
 import { handleDeleteCustomer } from "./handlers/handleDeleteCustomer.js";
 import { handleGetCustomerV2 } from "./handlers/handleGetCustomerV2.js";
+import { handleListCustomers } from "./handlers/handleListCustomers.js";
 import { handlePostCustomer } from "./handlers/handlePostCustomerV2.js";
 import { handleTransferProduct } from "./handlers/handleTransferProduct.js";
 import { handleUpdateBalances } from "./handlers/handleUpdateBalances.js";
@@ -22,29 +21,6 @@ import { handleUpdateCustomer } from "./handlers/handleUpdateCustomer.js";
 import { handleUpdateEntitlement } from "./handlers/handleUpdateEntitlement.js";
 
 export const expressCusRouter: Router = Router();
-
-expressCusRouter.get("", handleBatchCustomers);
-
-expressCusRouter.post("/all/search", async (req: any, res: any) => {
-	try {
-		const { search, page_size = 50, page = 1, last_item, filters } = req.body;
-
-		const { data: customers, count } = await CusSearchService.search({
-			db: req.db,
-			orgId: req.orgId,
-			env: req.env,
-			search,
-			filters,
-			lastItem: last_item,
-			pageNumber: page,
-			pageSize: page_size,
-		});
-
-		res.status(200).json({ customers, totalCount: Number(count) });
-	} catch (error) {
-		handleRequestError({ req, error, res, action: "search customers" });
-	}
-});
 
 // expressCusRouter.post("", handlePostCustomerRequest);
 
@@ -141,5 +117,6 @@ expressCusRouter.post("/:customer_id/transfer", handleTransferProduct);
 
 export const cusRouter = new Hono<HonoEnv>();
 
+cusRouter.get("", ...handleListCustomers);
 cusRouter.get("/:customer_id", ...handleGetCustomerV2);
 cusRouter.post("", ...handlePostCustomer);
