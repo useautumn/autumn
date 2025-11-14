@@ -257,14 +257,17 @@ export const handleNewProductItems = async ({
 		}
 	}
 
-	logPrices({ prices: newPrices, prefix: "New prices" });
-	logEnts({ ents: newEnts, prefix: "New entitlements" });
-	logPrices({ prices: updatedPrices, prefix: "Updated prices" });
-	logEnts({ ents: updatedEnts, prefix: "Updated entitlements" });
-	logPrices({ prices: deletedPrices, prefix: "Deleted prices" });
-	logEnts({ ents: deletedEnts, prefix: "Deleted entitlements" });
-	logPrices({ prices: samePrices, prefix: "Same prices" });
-	logEnts({ ents: sameEnts, prefix: "Same entitlements" });
+	const printLogs = false;
+	if (printLogs) {
+		logPrices({ prices: newPrices, prefix: "New prices" });
+		logEnts({ ents: newEnts, prefix: "New entitlements" });
+		logPrices({ prices: updatedPrices, prefix: "Updated prices" });
+		logEnts({ ents: updatedEnts, prefix: "Updated entitlements" });
+		logPrices({ prices: deletedPrices, prefix: "Deleted prices" });
+		logEnts({ ents: deletedEnts, prefix: "Deleted entitlements" });
+		logPrices({ prices: samePrices, prefix: "Same prices" });
+		logEnts({ ents: sameEnts, prefix: "Same entitlements" });
+	}
 	// throw new Error("test");
 
 	if (newFeatures.length > 0 && saveToDb) {

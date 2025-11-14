@@ -13,6 +13,7 @@ import {
 } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { expectFeaturesCorrect } from "../../utils/expectUtils/expectFeaturesCorrect.js";
 import { replaceItems } from "../utils.js";
 
 export const pro = constructProduct({
@@ -81,7 +82,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing free add on, and updating f
 
 		const customer = await autumn.customers.get(customerId);
 
-		expect(customer.products.length).toBe(3);
+		expect(customer.products.length).toBe(2);
 		expectProductAttached({
 			customer,
 			product: addOn,
@@ -118,10 +119,19 @@ describe(`${chalk.yellowBright(`${testCase}: Testing free add on, and updating f
 
 		const customer = await autumn.customers.get(customerId);
 
-		expect(customer.products.length).toBe(3);
+		expect(customer.products.length).toBe(2);
 		expectProductAttached({
 			customer,
 			product: addOn,
+		});
+
+		expectFeaturesCorrect({
+			customer,
+			product: {
+				...addOn,
+				items: customItems,
+			},
+			otherProducts: [pro],
 		});
 	});
 });

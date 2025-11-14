@@ -14,6 +14,7 @@ import { secretKeyMiddleware } from "./honoMiddlewares/secretKeyMiddleware.js";
 import { traceMiddleware } from "./honoMiddlewares/traceMiddleware.js";
 import type { HonoEnv } from "./honoUtils/HonoEnv.js";
 import { balancesRouter } from "./internal/balances/balancesRouter.js";
+import { billingRouter } from "./internal/billing/billingRouter.js";
 import { cusRouter } from "./internal/customers/cusRouter.js";
 import { internalCusRouter } from "./internal/customers/internalCusRouter.js";
 import { entityRouter } from "./internal/entities/entityRouter.js";
@@ -109,16 +110,8 @@ export const createHonoApp = () => {
 	// General org rate limiter for all other /v1/* routes
 	// app.use("/v1/*", generalRateLimiter);
 
-	// Track/Check endpoints use customer-specific rate limiters instead of general org limiter
-	// app.post("/v1/events", customerTrackRateLimiter, ...handleTrack);
-	// app.post("/v1/track", customerTrackRateLimiter, ...handleTrack);
-	// app.post("/v1/entitled", customerCheckRateLimiter, ...handleCheck);
-	// app.post("/v1/check", customerCheckRateLimiter, ...handleCheck);
-
-	// app.post("/v1/usage", ...handleSetUsage);
-	// app.post("/v1/usage", ...handleSetUsage);
+	app.route("v1", billingRouter);
 	app.route("v1", balancesRouter);
-
 	app.route("v1", entityRouter);
 	app.route("v1/customers", cusRouter);
 

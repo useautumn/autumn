@@ -77,7 +77,18 @@ export const handleSubscriptionUpdated = async ({
 
 	if (updatedCusProducts.length > 0) {
 		logger.info(
-			`✅ Updated ${updatedCusProducts.length} customer product${updatedCusProducts.length === 1 ? "" : "s"} (${updatedCusProducts.map((cp) => cp.id).join(", ")}) - Status: ${updatedCusProducts[0].status}${updatedCusProducts[0].canceled_at ? `, Canceled: ${new Date(updatedCusProducts[0].canceled_at).toISOString()}` : ""}`,
+			`✅ sub.updated: updated ${updatedCusProducts.length} customer product(s)} (${updatedCusProducts[0].status})`,
+			{
+				data: {
+					stripeSubId: subscription.id,
+					updatedCusProducts: updatedCusProducts.map((cp) => ({
+						id: cp.id,
+						status: cp.status,
+						canceled_at: cp.canceled_at,
+						ended_at: cp.ended_at,
+					})),
+				},
+			},
 		);
 	}
 

@@ -4,20 +4,20 @@ import {
 	filterOutEntitiesFromCusProducts,
 } from "@autumn/shared";
 import {
-	SET_CUSTOMER_PRODUCTS_SCRIPT,
 	SET_ENTITY_PRODUCTS_SCRIPT,
+	SET_SUBSCRIPTIONS_SCRIPT,
 } from "@lua/luaScripts.js";
 import { redis } from "../../../../external/redis/initRedis.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "../../../../utils/cacheUtils/cacheUtils.js";
-import { getApiCusProducts } from "../apiCusUtils/getApiCusProduct/getApiCusProducts.js";
+import { getApiSubscriptions } from "../apiCusUtils/getApiSubscription/getApiSubscriptions.js";
 
 /**
- * Set customer products cache in Redis with all entities
- * This function updates only the products array in the customer cache (customer-level products only)
- * and individual entity caches (entity-level products only)
+ * Set customer subscriptions cache in Redis with all entities
+ * This function updates only the subscriptions array in the customer cache (customer-level subscriptions only)
+ * and individual entity caches (entity-level subscriptions only)
  */
-export const setCachedApiCusProducts = async ({
+export const setCachedApiSubs = async ({
 	ctx,
 	fullCus,
 	customerId,
@@ -28,8 +28,8 @@ export const setCachedApiCusProducts = async ({
 }) => {
 	const { org, env, logger } = ctx;
 
-	// Build master api customer products (customer-level products only)
-	const { apiCusProducts: masterApiCusProducts } = await getApiCusProducts({
+	// Build master api customer subscriptions (customer-level products only)
+	const { data: masterApiSubs } = await getApiSubscriptions({
 		ctx,
 		fullCus: {
 			...structuredClone(fullCus),
@@ -39,22 +39,24 @@ export const setCachedApiCusProducts = async ({
 		},
 	});
 
+	// console.log(`Updating api subs for customer ${customerId}`, masterApiSubs);
+
 	// Then write to Redis
 	await tryRedisWrite(async () => {
-		// Update customer products
+		// Update customer subscriptions
 		await redis.eval(
-			SET_CUSTOMER_PRODUCTS_SCRIPT,
+			SET_SUBSCRIPTIONS_SCRIPT,
 			0, // No KEYS, all params in ARGV
-			JSON.stringify(masterApiCusProducts),
+			JSON.stringify(masterApiSubs),
 			org.id,
 			env,
 			customerId,
 		);
 		logger.info(
-			`Updated customer products cache for customer ${customerId} (${masterApiCusProducts.length} products)`,
+			`Updated customer subscriptions cache for customer ${customerId} (${masterApiSubs.length} subscriptions)`,
 		);
 
-		// Update entity products
+		// Update entity subscriptions
 		for (const entity of fullCus.entities) {
 			// Filter customer products for this specific entity
 			const entityCusProducts = filterCusProductsByEntity({
@@ -63,7 +65,7 @@ export const setCachedApiCusProducts = async ({
 				org,
 			});
 
-			const { apiCusProducts: entityProducts } = await getApiCusProducts({
+			const { data: entityProducts } = await getApiSubscriptions({
 				ctx,
 				fullCus: {
 					...fullCus,
@@ -82,7 +84,7 @@ export const setCachedApiCusProducts = async ({
 				entity.id,
 			);
 			logger.info(
-				`Updated entity products cache for entity ${entity.id} (${entityProducts.length} products)`,
+				`Updated entity subscriptions cache for entity ${entity.id} (${entityProducts.length} subscriptions)`,
 			);
 		}
 	});

@@ -125,10 +125,10 @@ export const UpdateCustomerParamsSchema = z.object({
 
 // List Customers Query (based on the docs)
 export const ListCustomersQuerySchema = z.object({
-	limit: z.number().int().min(10).max(100).default(10).optional().meta({
+	limit: z.coerce.number().int().min(10).max(100).default(10).optional().meta({
 		description: "Maximum number of customers to return",
 	}),
-	offset: z.number().int().min(0).default(0).optional().meta({
+	offset: z.coerce.number().int().min(0).default(0).optional().meta({
 		description: "Number of customers to skip before returning results",
 	}),
 });

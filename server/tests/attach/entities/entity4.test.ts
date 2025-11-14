@@ -100,8 +100,6 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing attach pro diff enti
 
 		const entity1Res = await autumn.entities.get(customerId, entity1.id);
 		const entity2Res = await autumn.entities.get(customerId, entity2.id);
-		console.log("entity1Res", entity1Res);
-		console.log("entity2Res", entity2Res);
 
 		expectFeaturesCorrect({
 			customer: entity1Res,

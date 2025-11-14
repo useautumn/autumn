@@ -1,5 +1,5 @@
+import type { AppEnv, Subscription } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
-import { AppEnv, Subscription } from "@autumn/shared";
 
 export const constructSub = ({
 	stripeId,
@@ -18,7 +18,7 @@ export const constructSub = ({
 	currentPeriodStart?: number;
 	currentPeriodEnd?: number;
 }) => {
-	let newSub: Subscription = {
+	const newSub: Subscription = {
 		id: generateId("sub"),
 		stripe_id: stripeId || null,
 		stripe_schedule_id: stripeScheduleId || null,

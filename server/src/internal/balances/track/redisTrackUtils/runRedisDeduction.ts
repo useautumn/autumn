@@ -65,6 +65,10 @@ const queueSyncAndEvent = ({
 	const { customer_id, entity_id } = trackParams;
 	const { org, env } = ctx;
 
+	ctx.logger.info(
+		`[queueSync]: customer changed: ${result.customerChanged}, changed entity ids: ${result.changedEntityIds}`,
+	);
+
 	for (const deduction of featureDeductions) {
 		// If customer was changed, queue customer-level sync
 		if (result.customerChanged) {

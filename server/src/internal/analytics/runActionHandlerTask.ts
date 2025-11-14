@@ -1,7 +1,5 @@
 import { JobName } from "@/queue/JobName.js";
-import type { HandleCustomerCreatedData } from "@/utils/workerUtils/jobTypes/HandleCustomerCreatedData.js";
 import type { AutumnContext } from "../../honoUtils/HonoEnv.js";
-import { handleCustomerCreated } from "./handlers/handleCustomerCreated.js";
 import { handleProductsUpdated } from "./handlers/handleProductsUpdated.js";
 
 export const runActionHandlerTask = async ({
@@ -27,12 +25,12 @@ export const runActionHandlerTask = async ({
 					data: payload,
 				});
 				break;
-			case JobName.HandleCustomerCreated:
-				await handleCustomerCreated({
-					ctx,
-					data: payload as HandleCustomerCreatedData,
-				});
-				break;
+			// case JobName.HandleCustomerCreated:
+			// 	await handleCustomerCreated({
+			// 		ctx,
+			// 		data: payload as HandleCustomerCreatedData,
+			// 	});
+			// 	break;
 		}
 	} catch (error: any) {
 		logger.error(`Error processing action handler job: ${error.message}`);

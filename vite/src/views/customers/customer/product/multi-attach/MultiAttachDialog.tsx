@@ -22,7 +22,6 @@ import {
 import { useOrg } from "@/hooks/common/useOrg";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useAxiosSWR } from "@/services/useAxiosSwr";
 import { useEnv } from "@/utils/envUtils";
 import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
 import { getBackendErr } from "@/utils/genUtils";
@@ -59,11 +58,11 @@ export const MultiAttachDialog = ({
 
 	const defaultCurrency = org?.default_currency || "usd";
 
-	const { data: subData } = useAxiosSWR({
-		url: `/customers/${customer.id}/sub`,
-	});
+	// const { data: subData } = useAxiosSWR({
+	// 	url: `/customers/${customer.id}/sub`,
+	// });
 
-	const subDiscounts = subData?.sub?.discounts || [];
+	const subDiscounts = [];
 
 	const getDefaultProductOptions = () => {
 		return [{ product_id: null, quantity: 1 }];
@@ -303,7 +302,6 @@ export const MultiAttachDialog = ({
 						<MultiAttachRewards
 							attachRewards={attachRewards}
 							setAttachRewards={setAttachRewards}
-							sub={subData?.sub}
 						/>
 						{checkoutResult && (
 							<div className="flex flex-col gap-2 text-sm mt-4">

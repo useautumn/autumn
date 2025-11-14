@@ -78,6 +78,7 @@ describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 			product_id: premiumProd.id,
 		});
 	});
+	return;
 
 	test("should have correct v1 response", async () => {
 		await autumnV1.track({

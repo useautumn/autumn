@@ -14,7 +14,7 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { initProductInStripe } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { createNewCustomer } from "../cusUtils/createNewCustomer.js";
 
 export const initStripeCusAndProducts = async ({
@@ -58,15 +58,15 @@ export const initStripeCusAndProducts = async ({
 };
 
 const handleIdIsNull = async ({
-	req,
+	ctx,
 	newCus,
 	createDefaultProducts,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	newCus: CreateCustomer;
 	createDefaultProducts?: boolean;
 }) => {
-	const { db, org, env, logger } = req;
+	const { db, org, env, logger } = ctx;
 
 	// 1. ID is null
 	if (!newCus.email) {
@@ -103,7 +103,7 @@ const handleIdIsNull = async ({
 	}
 
 	const createdCustomer = await createNewCustomer({
-		req,
+		ctx,
 		customer: newCus,
 		createDefaultProducts,
 	});
@@ -113,15 +113,15 @@ const handleIdIsNull = async ({
 
 // CAN ALSO USE DURING MIGRATION...
 export const handleCreateCustomerWithId = async ({
-	req,
+	ctx,
 	newCus,
 	createDefaultProducts = true,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	newCus: CreateCustomer;
 	createDefaultProducts?: boolean;
 }) => {
-	const { db, org, env, logger } = req;
+	const { db, org, env, logger } = ctx;
 
 	if (!newCus.id)
 		throw new Error("Calling handleCreateCustomerWithId with id null");
@@ -172,18 +172,18 @@ export const handleCreateCustomerWithId = async ({
 
 	// 2. Handle email step...
 	return await createNewCustomer({
-		req,
+		ctx,
 		customer: newCus,
 		createDefaultProducts,
 	});
 };
 
 export const handleCreateCustomer = async ({
-	req,
+	ctx,
 	cusData,
 	createDefaultProducts = true,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	cusData: CreateCustomer;
 	createDefaultProducts?: boolean;
 }) => {
@@ -196,13 +196,13 @@ export const handleCreateCustomer = async ({
 
 	if (newCus.id === null) {
 		createdCustomer = await handleIdIsNull({
-			req,
+			ctx,
 			newCus,
 			createDefaultProducts,
 		});
 	} else {
 		createdCustomer = await handleCreateCustomerWithId({
-			req,
+			ctx,
 			newCus,
 			createDefaultProducts,
 		});

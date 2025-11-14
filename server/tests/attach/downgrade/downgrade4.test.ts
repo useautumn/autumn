@@ -2,12 +2,9 @@ import { beforeAll, describe, test } from "bun:test";
 import {
 	type AppEnv,
 	BillingInterval,
-	type Customer,
 	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
-import chalk from "chalk";
-import type Stripe from "stripe";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
 import {
@@ -16,6 +13,8 @@ import {
 } from "@tests/utils/expectUtils/expectScheduleUtils.js";
 import { advanceMonths } from "@tests/utils/stripeUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
+import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
@@ -45,12 +44,9 @@ const premium = constructProduct({
 describe(`${chalk.yellowBright(`${testCase}: Testing downgrade: pro-quarter -> premium -> pro`)}`, () => {
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
-	let customer: Customer;
 	let testClockId: string;
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
-
-	const curUnix = new Date().getTime();
 
 	beforeAll(async () => {
 		db = ctx.db;
@@ -58,14 +54,13 @@ describe(`${chalk.yellowBright(`${testCase}: Testing downgrade: pro-quarter -> p
 		env = ctx.env;
 		stripeCli = ctx.stripeCli;
 
-		const { testClockId: testClockId1, customer: customer_ } =
-			await initCustomerV3({
-				ctx,
-				customerId,
-				customerData: {},
-				attachPm: "success",
-				withTestClock: true,
-			});
+		const { testClockId: testClockId1 } = await initCustomerV3({
+			ctx,
+			customerId,
+			customerData: {},
+			attachPm: "success",
+			withTestClock: true,
+		});
 
 		await initProductsV0({
 			ctx,
@@ -74,7 +69,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing downgrade: pro-quarter -> p
 		});
 
 		testClockId = testClockId1!;
-		customer = customer_!;
 	});
 
 	test("should attach pro quarterly product", async () => {

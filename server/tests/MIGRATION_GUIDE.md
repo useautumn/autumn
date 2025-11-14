@@ -21,6 +21,7 @@ Migrate test file [FILE_PATH] from global state to isolated test context.
 - Replace `compareMainProduct` with `expectCustomerV0Correct`
 - Use TestFeature enum (Messages, Dashboard, Admin) instead of global features
 - Products MUST be created with `initProductsV0` BEFORE customer creation
+- **Do NOT include price items (`constructPriceItem`) in test products - they are not needed**
 - Free trials use this exact structure:
   ```typescript
   freeTrial: {
@@ -77,6 +78,7 @@ Reference the migration guide at @server/tests/MIGRATION_GUIDE.md for the full p
 3. **Create Inline Product Definitions**
    - Use `constructProduct()` to define products directly in the test file
    - Use `constructFeatureItem()`, `constructPrepaidItem()`, etc. for items
+   - **Do NOT include price items (`constructPriceItem`) - they are not needed for tests**
    - Reference TestFeature enum instead of global features object
    - Add a unique prefix to product IDs (e.g., testCase name)
 
@@ -275,7 +277,7 @@ const freeProd = constructProduct({
 // - Boolean feature (Dashboard)
 // - Metered feature (Messages) with 10 allowance
 // - Unlimited feature (Admin)
-// - Monthly subscription price ($20)
+// NOTE: Do NOT include price items (constructPriceItem) in test products - they are not needed
 const proProd = constructProduct({
   type: "pro",
   items: [

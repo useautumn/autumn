@@ -130,6 +130,8 @@ const init = async () => {
 		req.clickhouseClient = await ClickHouseManager.getClient();
 		req.id = req.headers["rndr-id"] || generateId("local_req");
 		req.timestamp = Date.now();
+		req.expand = [];
+		req.skipCache = false;
 
 		const reqContext = {
 			id: req.id,

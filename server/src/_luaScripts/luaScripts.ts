@@ -70,12 +70,15 @@ const setCustomerScript = readFileSync(
 );
 export const SET_CUSTOMER_SCRIPT = `${CACHE_KEY_UTILS}\n${CACHE_BALANCE_UTILS}\n${CHECK_CACHE_EXISTS}\n${setCustomerScript}`;
 
-// Prepend cache key utils to SET_CUSTOMER_PRODUCTS_SCRIPT
-const setCustomerProductsScript = readFileSync(
-	join(__dirname, "cusLuaScripts/setCustomerProducts.lua"),
+// Prepend cache key utils to SET_SUBSCRIPTIONS_SCRIPT
+const setSubscriptionsScript = readFileSync(
+	join(__dirname, "cusLuaScripts/setSubscriptions.lua"),
 	"utf-8",
 );
-export const SET_CUSTOMER_PRODUCTS_SCRIPT = `${CACHE_KEY_UTILS}\n${setCustomerProductsScript}`;
+export const SET_SUBSCRIPTIONS_SCRIPT = `${CACHE_KEY_UTILS}\n${setSubscriptionsScript}`;
+
+// Legacy export for backwards compatibility
+export const SET_CUSTOMER_PRODUCTS_SCRIPT = SET_SUBSCRIPTIONS_SCRIPT;
 
 // Prepend cache key utils to SET_CUSTOMER_DETAILS_SCRIPT
 const setCustomerDetailsScript = readFileSync(

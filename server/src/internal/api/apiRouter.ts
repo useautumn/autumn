@@ -6,7 +6,6 @@ import { pricingMiddleware } from "@/middleware/pricingMiddleware.js";
 import { refreshCacheMiddleware } from "@/middleware/refreshCacheMiddleware.js";
 import { analyticsRouter } from "../analytics/analyticsRouter.js";
 import { attachRouter } from "../customers/attach/attachRouter.js";
-import { handleSetupPayment } from "../customers/attach/handleSetupPayment.js";
 import cancelRouter from "../customers/cancel/cancelRouter.js";
 import { expressCusRouter } from "../customers/cusRouter.js";
 import { handleCreateBillingPortal } from "../customers/handlers/handleCreateBillingPortal.js";
@@ -57,7 +56,6 @@ apiRouter.use("/cancel", cancelRouter);
 
 // apiRouter.use("/events", eventsRouter);
 // apiRouter.use("/track", eventsRouter);
-apiRouter.post("/setup_payment", handleSetupPayment);
 apiRouter.post("/billing_portal", handleCreateBillingPortal);
 
 // Analytics

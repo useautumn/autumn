@@ -65,6 +65,7 @@ export const deductFromCusEnts = async ({
 	fullCus,
 	sortParams,
 }: DeductionTxParams): Promise<{
+	oldFullCus: FullCustomer;
 	fullCus: FullCustomer | undefined;
 	isPaidAllocated: boolean;
 	actualDeductions: Record<string, number>;
@@ -84,6 +85,7 @@ export const deductFromCusEnts = async ({
 			withSubs: true,
 		});
 	}
+	const oldFullCus = structuredClone(fullCus);
 
 	const printLogs = true;
 
@@ -295,9 +297,6 @@ export const deductFromCusEnts = async ({
 				entities: update.entities,
 			});
 
-			console.log("Original balance:", originalGrpBalance);
-			console.log("New balance:", newGrpBalance);
-
 			const { newReplaceables, deletedReplaceables } = await adjustAllowance({
 				db,
 				env,
@@ -310,9 +309,6 @@ export const deductFromCusEnts = async ({
 				newBalance: newGrpBalance,
 				logger: ctx.logger,
 			});
-
-			console.log("New replaceables:", newReplaceables);
-			console.log("Deleted replaceables:", deletedReplaceables);
 
 			// Adjust balance based on replaceables
 			let reUpdatedBalance = update.balance;
@@ -353,6 +349,7 @@ export const deductFromCusEnts = async ({
 	}
 
 	return {
+		oldFullCus,
 		fullCus,
 		actualDeductions,
 		remainingAmounts,
