@@ -61,7 +61,6 @@ export const getApiSubscriptions = async ({
 			cusProduct,
 			ctx,
 			fullCus,
-			entities: fullCus.entities,
 		});
 
 		apiSubs.push(processed.data);

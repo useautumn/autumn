@@ -75,7 +75,7 @@ export const findCusEnt = ({
 		const featureMatch =
 			ce.entitlement.feature.internal_id === feature.internal_id;
 
-		const entityMatch = cusEntMatchesEntity({ cusEnt: ce, entity, features });
+		const entityMatch = cusEntMatchesEntity({ cusEnt: ce, entity });
 
 		const usageMatch = onlyUsageAllowed ? ce.usage_allowed : true;
 
@@ -98,7 +98,7 @@ export const filterCusEnts = ({
 		const featureMatch =
 			ce.entitlement.feature.internal_id === feature.internal_id;
 
-		const entityMatch = cusEntMatchesEntity({ cusEnt: ce, entity, features });
+		const entityMatch = cusEntMatchesEntity({ cusEnt: ce, entity });
 
 		return featureMatch && entityMatch;
 	});

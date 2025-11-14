@@ -18,6 +18,7 @@ import { handlePostCustomer } from "./handlers/handlePostCustomerV2.js";
 import { handleTransferProduct } from "./handlers/handleTransferProduct.js";
 import { handleUpdateBalances } from "./handlers/handleUpdateBalances.js";
 import { handleUpdateCustomer } from "./handlers/handleUpdateCustomer.js";
+import { handleUpdateCustomerV2 } from "./handlers/handleUpdateCustomerV2.js";
 import { handleUpdateEntitlement } from "./handlers/handleUpdateEntitlement.js";
 
 export const expressCusRouter: Router = Router();
@@ -27,8 +28,6 @@ export const expressCusRouter: Router = Router();
 // cusRouter.get("/:customer_id", handleGetCustomer);
 
 expressCusRouter.delete("/:customer_id", handleDeleteCustomer);
-
-expressCusRouter.post("/:customer_id", handleUpdateCustomer);
 
 // Update customer entitlement directly
 expressCusRouter.post(
@@ -120,3 +119,4 @@ export const cusRouter = new Hono<HonoEnv>();
 cusRouter.get("", ...handleListCustomers);
 cusRouter.get("/:customer_id", ...handleGetCustomerV2);
 cusRouter.post("", ...handlePostCustomer);
+cusRouter.post("/:customer_id", ...handleUpdateCustomerV2);
