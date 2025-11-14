@@ -11,8 +11,8 @@ import {
 import type { ApiCustomerV1 } from "@shared/api/customers/previousVersions/apiCustomerV1.js";
 // import { expect } from "chai";
 import { Decimal } from "decimal.js";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { creditSystems } from "tests/global.js";
+import { AutumnCli } from "@tests/cli/AutumnCli.js";
+import { creditSystems } from "@tests/global.js";
 
 export const checkProductIsScheduled = ({
 	cusRes,

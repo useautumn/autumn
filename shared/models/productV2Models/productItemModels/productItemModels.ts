@@ -1,24 +1,10 @@
 import { z } from "zod/v4";
+import { RolloverExpiryDurationType } from "../../productModels/durationTypes/rolloverExpiryDurationType.js";
+import { ProductItemInterval } from "../../productModels/intervals/productItemInterval.js";
 import { Infinite } from "../../productModels/productEnums.js";
 import { OnDecrease, OnIncrease } from "./productItemEnums.js";
 
 export const TierInfinite = "inf";
-
-export enum ProductItemInterval {
-	// None = "none",
-
-	// Reset interval
-	Minute = "minute",
-	Hour = "hour",
-	Day = "day",
-	Week = "week",
-
-	// Billing interval
-	Month = "month",
-	Quarter = "quarter",
-	SemiAnnual = "semi_annual",
-	Year = "year",
-}
 
 export enum ProductItemType {
 	Feature = "feature",
@@ -49,14 +35,11 @@ export enum ProductItemFeatureType {
 	Static = "static",
 }
 
-export enum RolloverDuration {
-	Month = "month",
-	Forever = "forever",
-}
-
 export const RolloverConfigSchema = z.object({
 	max: z.number().nullable(),
-	duration: z.nativeEnum(RolloverDuration).default(RolloverDuration.Month),
+	duration: z
+		.enum(RolloverExpiryDurationType)
+		.default(RolloverExpiryDurationType.Month),
 	length: z.number(),
 });
 

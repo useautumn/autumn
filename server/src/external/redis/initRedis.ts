@@ -5,8 +5,6 @@ if (!process.env.CACHE_URL) {
 	throw new Error("CACHE_URL (redis) is not set");
 }
 
-let redis: Redis;
-
 const regionToCacheUrl: Record<string, string | undefined> = {
 	"us-east-2": process.env.CACHE_URL_US_EAST,
 };
@@ -23,7 +21,7 @@ const caText = await loadCaCert({
 	type: "cache",
 });
 
-redis = new Redis(regionalCacheUrl || process.env.CACHE_URL, {
+const redis = new Redis(regionalCacheUrl || process.env.CACHE_URL, {
 	tls: caText ? { ca: caText } : undefined,
 });
 
@@ -32,8 +30,3 @@ redis.on("error", (error) => {
 });
 
 export { redis };
-// export const redis = new Redis(process.env.CACHE_URL, {
-// 	tls: {
-// 		ca: process.env.CACHE_CA,
-// 	},
-// });

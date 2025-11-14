@@ -5,16 +5,16 @@
 // import chalk from "chalk";
 // import Stripe from "stripe";
 // import { DrizzleCli } from "@/db/initDrizzle.js";
-// import { setupBefore } from "tests/before.js";
-// import { createProducts } from "tests/utils/productUtils.js";
+// import { setupBefore } from "@tests/before.js";
+// import { createProducts } from "@tests/utils/productUtils.js";
 // import { addPrefixToProducts } from "../utils.js";
 // import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
 // import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
-// import { TestFeature } from "tests/setup/v2Features.js";
+// import { TestFeature } from "@tests/setup/v2Features.js";
 // import { replaceItems } from "../utils.js";
-// import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-// import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
-// import { defaultApiVersion } from "tests/constants.js";
+// import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
+// import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect.js";
+// import { defaultApiVersion } from "@tests/constants.js";
 
 // export let pro = constructRawProduct({
 //   id: "pro",

@@ -1,7 +1,7 @@
 import { FreeTrialDuration } from "@models/productModels/freeTrialModels/freeTrialEnums.js";
 import { z } from "zod/v4";
 
-export const APIFreeTrialSchema = z.object({
+export const ApiFreeTrialSchema = z.object({
 	duration: z.enum(FreeTrialDuration).meta({
 		description: "The duration type of the free trial",
 	}),
@@ -25,4 +25,4 @@ export const APIFreeTrialSchema = z.object({
 	}),
 });
 
-export type APIFreeTrial = z.infer<typeof APIFreeTrialSchema>;
+export type ApiFreeTrial = z.infer<typeof ApiFreeTrialSchema>;

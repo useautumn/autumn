@@ -1,4 +1,5 @@
 import type { Entity } from "../../models/cusModels/entityModels/entityModels.js";
+import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import type { Feature } from "../../models/featureModels/featureModels.js";
 import { notNullish, nullish } from "../utils.js";
@@ -61,4 +62,14 @@ export const filterEntityProductCusEnts = ({
 	return cusEnts.filter((ce) =>
 		notNullish(ce.customer_product?.internal_entity_id),
 	);
+};
+
+export const cusEntMatchesFeature = ({
+	cusEnt,
+	feature,
+}: {
+	cusEnt: FullCustomerEntitlement;
+	feature: Feature;
+}) => {
+	return cusEnt.entitlement.feature.internal_id === feature.internal_id;
 };

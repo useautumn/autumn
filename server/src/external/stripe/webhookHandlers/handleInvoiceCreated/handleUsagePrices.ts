@@ -88,7 +88,7 @@ export const handleUsagePrices = async ({
 		const isVercelSubscription = !!usageSub.metadata?.vercel_installation_id;
 		const isNewUsageMethod =
 			activeProduct.internal_entity_id ||
-			activeProduct.api_semver === ApiVersion.Beta ||
+			activeProduct.api_semver === ApiVersion.V1_Beta ||
 			isVercelSubscription;
 
 		if (isNewUsageMethod) {

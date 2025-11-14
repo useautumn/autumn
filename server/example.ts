@@ -1,6 +1,132 @@
 // @ts-nocheck
 
-import { customers, } from "@autumn/shared";
+
+// Old customer object
+
+
+// Global namesapce:
+//
+// Coming up with a namespace to group operations
+autumn.billing.subscribe({
+  customer_id: "cus_123",
+  plan_id: "team_plan",
+
+  // For custom plan
+  plan_overrides: {
+    price: { amount: 100, interval: "month" },
+    features: [
+      { feature_id: "seats", granted: 10 },
+      { feature_id: "messages", deleted: true }
+    ],
+    free_trial: {
+      duration: "month",
+      duration_count: 1,
+    },
+  },
+
+  quantity: 3,
+  force_checkout: true,
+  setup_payment: true,
+  reward: "promo_code_123",
+})
+
+autumn.billing.cancel()
+autumn.billing.allocate()
+autumn.billing.openPortal()
+autumn.billing.manage([{
+  free_trial: [
+    {
+      duration_type: "day", // optional
+      duration_count: 1, // optional
+    }
+  ], // will apply X more days to the free trial. If no trial present, will add a trial to plan...?
+
+  reward: [
+    {
+      reward_id: "reward_123",
+      reward_id: "reward_123",
+      reward_id: "reward_123",
+    }
+  ]
+}])
+
+
+// Can also trigger payments?
+autumn.usage.check()
+autumn.usage.track()
+autumn.usage.override()
+
+
+
+// Regular (first time users will do this)
+// Will auto charge if payment method on file
+const { url } = await autumn.subscribe({ planId })
+if (url) {
+window.open(url, "_blank");
+}
+
+// Display preview information
+const { url } = await autumn.preview.subscribe({ planId })
+
+if (url) {
+window.open(url, "_blank");
+}
+
+await autumn.subscribe({ planId })
+
+// // When we launch checkout
+// const { url } = await autumn.checkout({ planId, autumnCheckout: true })
+// window.open(url, "_blank");
+
+
+
+// Customer object
+customer.plans.cancel()
+
+customer.licenses.check()
+customer.licenses.track()
+
+// Preview?
+customer.preview.plans.subscribe()
+customer.preview.track()
+
+
+// Create a customer / entity instance
+const customer = new Autumn({
+  secretKey: 'sk_test_123',
+  customerId: 'cus_123',
+})
+
+await customer.plans.checkout(planId);
+await customer.plans.create(planId);
+await customer.plans.cancel(planId);
+await customer.plans.update(planId, {
+  features: [{
+      featureId: 'credits',
+      value: 800,
+  }]
+})
+
+// Customer features
+await customer.features.check('credits');
+await customer.features.track({
+  featureId: 'credits', 
+  value: 1,
+});
+
+
+
+// Frontend
+const { plans, features } = useCustomer()
+
+```
+<Button onClick={() => plans.checkout({planId: 'pro'})}/>
+```
+
+
+
+
+import { customers, } from "@autumn/shared"
 
 const entitiesCTE = cte({
   name: 'entities',

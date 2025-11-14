@@ -1,4 +1,6 @@
 import type { IntervalConfig } from "@autumn/shared";
+import { UTCDate } from "@date-fns/utc";
+import { toMilliseconds } from "../../../utils/timeUtils.js";
 import {
 	addIntervalForProration,
 	subtractIntervalForProration,
@@ -31,6 +33,15 @@ export const addIntervalToAnchor = ({
 	});
 };
 
+const isLessThanEquals = ({ a, b }: { a: UTCDate; b: UTCDate }) => {
+	// Check if a is <= now. return true if a is ~ same as b (maybe by a couple of hours?)
+	const aUnix = a.getTime();
+	const bUnix = b.getTime();
+	if (aUnix < bUnix + toMilliseconds.hours(1)) return true;
+
+	return false;
+};
+
 export const subtractIntervalFromAnchor = ({
 	anchor,
 	intervalConfig,
@@ -45,13 +56,14 @@ export const subtractIntervalFromAnchor = ({
 
 	for (let i = 0; i < 50; i++) {
 		const newAnchor = subtractIntervalForProration({
-			unixTimestamp: anchor,
+			unixTimestamp: curAnchor,
 			interval: intervalConfig.interval,
 			intervalCount: intervalConfig.intervalCount ?? 1,
 		});
 
 		// Return anchor before it goes below now
-		if (newAnchor <= now) return curAnchor;
+		if (isLessThanEquals({ a: new UTCDate(newAnchor), b: new UTCDate(now) }))
+			return curAnchor;
 
 		curAnchor = newAnchor;
 	}

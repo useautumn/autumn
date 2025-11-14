@@ -1,27 +1,27 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type Customer,
 	LegacyVersion,
 	type LimitedItem,
-	RolloverDuration,
+	RolloverExpiryDurationType,
 } from "@autumn/shared";
-import { beforeAll, describe, expect, test } from "bun:test";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
 import type Stripe from "stripe";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
-import { TestFeature } from "tests/setup/v2Features.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
 import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 
 const rolloverConfig = {
 	max: 500,
 	length: 1,
-	duration: RolloverDuration.Month,
+	duration: RolloverExpiryDurationType.Month,
 };
 const messagesItem = constructArrearProratedItem({
 	featureId: TestFeature.Messages,
@@ -110,7 +110,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for usage price f
 		const nonCachedCustomer = await autumn.customers.get(customerId, {
 			skip_cache: "true",
 		});
-		const nonCachedMsgesFeature = nonCachedCustomer.features[TestFeature.Messages];
+		const nonCachedMsgesFeature =
+			nonCachedCustomer.features[TestFeature.Messages];
 		expect(nonCachedMsgesFeature?.balance).toBe(expectedBalance);
 		// @ts-expect-error
 		expect(nonCachedMsgesFeature?.rollovers[0].balance).toBe(rollover);

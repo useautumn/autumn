@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { TestFeature } from "tests/setup/v2Features.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -75,7 +75,7 @@ describe(`${chalk.yellowBright("track-entity-balances3: per-entity balance track
 	test("customer should have initial balance of 300 messages (100 per entity)", async () => {
 		const customer = await autumnV1.customers.get(customerId);
 
-		const balance = customer.features[TestFeature.Messages].balance;
+		const balance = customer.features[TestFeature.Messages]?.balance;
 
 		// 3 entities × 100 messages each = 300 total
 		expect(balance).toBe(300);

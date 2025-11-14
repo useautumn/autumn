@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { BillingInterval } from "../priceEnums.js";
+import { BillingInterval } from "../../intervals/billingInterval.js";
 import { UsageTierSchema } from "./usagePriceConfig.js";
 
 export const FixedPriceConfigSchema = z.object({

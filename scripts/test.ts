@@ -99,7 +99,7 @@ function detectTestFramework({
 		// Check first 20 lines for bun:test import
 		const lines = content.split("\n").slice(0, 20);
 		const hasBunTest = lines.some(
-			(line) =>
+			(line: string) =>
 				line.includes('from "bun:test"') || line.includes("from 'bun:test'"),
 		);
 		return hasBunTest ? "bun" : "mocha";
@@ -267,17 +267,40 @@ async function runTest() {
 	const frameworkLabel = framework === "bun" ? "Bun" : "Mocha";
 	console.log(chalk.cyan(`🧪 Running test file with ${frameworkLabel}...\n`));
 
-	// Run the test file with the appropriate framework
+	// Run the test file with the appropriate framework, wrapped with Infisical
 	const child =
 		framework === "bun"
-			? spawn("bun", ["test", "--timeout", "0", testFile.relative], {
-					cwd: serverDir,
-					stdio: "inherit",
-					env: { ...process.env, NODE_ENV: "production" },
-				})
+			? spawn(
+					"infisical",
+					[
+						"run",
+						"--env=dev",
+						"--",
+						"bun",
+						"test",
+						"--timeout",
+						"0",
+						testFile.relative,
+					],
+					{
+						cwd: serverDir,
+						stdio: "inherit",
+						env: { ...process.env, NODE_ENV: "production" },
+					},
+				)
 			: spawn(
-					"npx",
-					["mocha", "--bail", "--timeout", "10000000", testFile.relative],
+					"infisical",
+					[
+						"run",
+						"--env=dev",
+						"--",
+						"npx",
+						"mocha",
+						"--bail",
+						"--timeout",
+						"10000000",
+						testFile.relative,
+					],
 					{
 						cwd: serverDir,
 						stdio: "inherit",

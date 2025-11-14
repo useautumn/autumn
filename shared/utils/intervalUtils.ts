@@ -1,6 +1,6 @@
+import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
+import { EntInterval } from "@models/productModels/intervals/entitlementInterval.js";
 import { Decimal } from "decimal.js";
-import { EntInterval } from "../models/productModels/entModels/entEnums.js";
-import { BillingInterval } from "../models/productModels/priceModels/priceEnums.js";
 
 export const intervalToValue = (
 	interval: BillingInterval,

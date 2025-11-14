@@ -1,11 +1,11 @@
 import {
-	type Feature,
+	type CheckResponseV2,
+	cusProductToProduct,
 	FeaturePreviewScenario,
 	type FullCusProduct,
 	type FullEntitlement,
 	type FullProduct,
 } from "@autumn/shared";
-import { fullCusProductToProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import {
@@ -19,22 +19,24 @@ import {
 import { notNullish } from "@/utils/genUtils.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { CusService } from "../../customers/CusService.js";
+import type { CheckData } from "./checkTypes/CheckData.js";
 
 export const getCheckPreview = async ({
 	ctx,
-	allowed,
-	balance,
-	feature,
+	checkResponse,
+	checkData,
 	customerId,
 	entityId,
 }: {
 	ctx: AutumnContext;
-	allowed: boolean;
-	balance?: number | null;
-	feature: Feature;
+	checkResponse: CheckResponseV2;
+	checkData: CheckData;
 	customerId: string;
 	entityId?: string;
 }) => {
+	const { allowed } = checkResponse;
+	const { apiBalance, featureToUse: feature } = checkData;
+
 	if (allowed) return null;
 
 	const { db, org, env, features: allFeatures } = ctx;
@@ -53,7 +55,7 @@ export const getCheckPreview = async ({
 	);
 
 	const cusOwnedProducts = mainCusProds.map((cp: FullCusProduct) =>
-		fullCusProductToProduct(cp),
+		cusProductToProduct({ cusProduct: cp }),
 	);
 
 	sortProductsByPrice({ products: cusOwnedProducts });
@@ -119,7 +121,7 @@ export const getCheckPreview = async ({
 		),
 	);
 
-	const scenario = notNullish(balance)
+	const scenario = notNullish(apiBalance)
 		? FeaturePreviewScenario.UsageLimit
 		: FeaturePreviewScenario.FeatureFlag;
 
@@ -149,7 +151,7 @@ export const getCheckPreview = async ({
 
 	let msg = "";
 
-	if (notNullish(balance)) {
+	if (scenario === FeaturePreviewScenario.UsageLimit) {
 		msg = `You have reached the usage limit for ${feature.name.toLowerCase()}.`;
 
 		if (mainProds.length > 0) {

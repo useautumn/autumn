@@ -50,9 +50,6 @@ export const OnboardingPreview = ({
 	const allowAddFeature = currentStep >= 4;
 	const showPricingTable = currentStep === 5;
 
-	// Get the base price from the product (only if product exists and has proper structure)
-	const basePrice = product?.items ? productV2ToBasePrice({ product }) : null;
-
 	if (!product) {
 		return (
 			<Card className="min-w-sm max-w-xl mx-4 bg-card bg-card-border w-[80%] opacity-90">

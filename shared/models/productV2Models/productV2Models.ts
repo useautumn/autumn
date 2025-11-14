@@ -8,6 +8,7 @@ export const ProductV2Schema = z.object({
 
 	id: z.string(),
 	name: z.string(),
+	description: z.string().nullish(),
 	is_add_on: z.boolean(),
 	is_default: z.boolean(),
 	version: z.number().default(1),

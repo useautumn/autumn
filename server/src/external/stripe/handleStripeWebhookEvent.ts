@@ -7,6 +7,7 @@ import { unsetOrgStripeKeys } from "@/internal/orgs/orgUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import type { AutumnContext } from "../../honoUtils/HonoEnv.js";
 import { deleteCachedApiCustomer } from "../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
+import { setCachedApiSubs } from "../../internal/customers/cusUtils/apiCusCacheUtils/setCachedApiSubs.js";
 import type { Logger } from "../logtail/logtailUtils.js";
 import { handleCheckoutSessionCompleted } from "./webhookHandlers/handleCheckoutCompleted.js";
 import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
@@ -51,6 +52,7 @@ const handleStripeWebhookRefresh = async ({
 	ctx: AutumnContext;
 }) => {
 	const { db, logger, org, env } = ctx;
+
 	if (
 		coreEvents.includes(eventType) ||
 		updateProductEvents.includes(eventType)
@@ -81,38 +83,34 @@ const handleStripeWebhookRefresh = async ({
 			return;
 		}
 
-		logger.info(`Attempting delete cached api customer! ${eventType}`);
-		await deleteCachedApiCustomer({
-			customerId: cus.id!,
-			orgId: org.id,
-			env,
-			source: `handleStripeWebhookRefresh: ${eventType}`,
-		});
+		console.log(
+			`Attempting to refresh cache for customer: ${cus.id}, env: ${env}`,
+		);
 
-		// if (updateProductEvents.includes(eventType)) {
-		// 	const fullCus = await CusService.getFull({
-		// 		db,
-		// 		idOrInternalId: cus.id!,
-		// 		orgId: org.id,
-		// 		env,
-		// 		withEntities: true,
-		// 		withSubs: true,
-		// 	});
+		if (updateProductEvents.includes(eventType)) {
+			const fullCus = await CusService.getFull({
+				db,
+				idOrInternalId: cus.id!,
+				orgId: org.id,
+				env,
+				withEntities: true,
+				withSubs: true,
+			});
 
-		// 	await setCachedApiCusProducts({
-		// 		ctx,
-		// 		fullCus,
-		// 		customerId: cus.id!,
-		// 	});
-		// } else {
-		// 	logger.info(`Attempting delete cached api customer! ${eventType}`);
-		// 	await deleteCachedApiCustomer({
-		// 		customerId: cus.id!,
-		// 		orgId: org.id,
-		// 		env,
-		// 		source: `handleStripeWebhookRefresh: ${eventType}`,
-		// 	});
-		// }
+			await setCachedApiSubs({
+				ctx,
+				fullCus,
+				customerId: cus.id!,
+			});
+		} else {
+			logger.info(`Attempting delete cached api customer! ${eventType}`);
+			await deleteCachedApiCustomer({
+				customerId: cus.id!,
+				orgId: org.id,
+				env,
+				source: `handleStripeWebhookRefresh: ${eventType}`,
+			});
+		}
 	}
 };
 
@@ -155,7 +153,7 @@ export const handleStripeWebhookEvent = async ({
 			case "customer.subscription.updated": {
 				const subscription = event.data.object;
 				await handleSubscriptionUpdated({
-					req: ctx as ExtendedRequest,
+					req: ctx as unknown as ExtendedRequest,
 					db,
 					org,
 					subscription,
@@ -168,7 +166,7 @@ export const handleStripeWebhookEvent = async ({
 
 			case "customer.subscription.deleted":
 				await handleSubDeleted({
-					req: ctx as ExtendedRequest,
+					req: ctx as unknown as ExtendedRequest,
 					stripeCli,
 					data: event.data.object,
 					logger,
@@ -178,7 +176,7 @@ export const handleStripeWebhookEvent = async ({
 			case "checkout.session.completed": {
 				const checkoutSession = event.data.object;
 				await handleCheckoutSessionCompleted({
-					req: ctx as ExtendedRequest,
+					req: ctx as unknown as ExtendedRequest,
 					db,
 					data: checkoutSession,
 					org,
@@ -196,7 +194,7 @@ export const handleStripeWebhookEvent = async ({
 					invoiceData: invoice,
 					env,
 					event,
-					req: ctx as ExtendedRequest,
+					req: ctx as unknown as ExtendedRequest,
 				});
 				break;
 			}
@@ -206,7 +204,7 @@ export const handleStripeWebhookEvent = async ({
 					stripeCli,
 					env,
 					event,
-					req: ctx as ExtendedRequest,
+					req: ctx as unknown as ExtendedRequest,
 				});
 				break;
 

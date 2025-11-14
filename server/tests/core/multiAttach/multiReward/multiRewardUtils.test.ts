@@ -5,7 +5,7 @@ import {
 	LegacyVersion,
 	RewardType,
 } from "@autumn/shared";
-import { TestFeature } from "tests/setup/v2Features.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";

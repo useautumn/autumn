@@ -151,7 +151,6 @@ export const getContUseInvoiceItems = async ({
 		}
 
 		const ent = getPriceEntitlement(price, newEnts);
-
 		const prevCusEnt = findCusEnt({
 			cusEnts,
 			feature: ent.feature,

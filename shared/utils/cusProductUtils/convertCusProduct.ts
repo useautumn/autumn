@@ -53,6 +53,7 @@ export const cusProductsToCusEnts = ({
 	featureId,
 	featureIds,
 	entity,
+	sortParams,
 }: {
 	cusProducts: FullCusProduct[];
 	inStatuses?: CusProductStatus[];
@@ -60,6 +61,9 @@ export const cusProductsToCusEnts = ({
 	featureId?: string;
 	featureIds?: string[];
 	entity?: Entity;
+	sortParams?: {
+		cusEntId?: string;
+	};
 }) => {
 	let cusEnts: FullCusEntWithFullCusProduct[] = [];
 
@@ -95,7 +99,12 @@ export const cusProductsToCusEnts = ({
 		);
 	}
 
-	sortCusEntsForDeduction(cusEnts, reverseOrder, entity?.id);
+	sortCusEntsForDeduction({
+		cusEnts,
+		reverseOrder,
+		entityId: entity?.id,
+		sortParams,
+	});
 
 	return cusEnts as FullCusEntWithFullCusProduct[];
 };
