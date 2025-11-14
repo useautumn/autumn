@@ -8,19 +8,10 @@ import { checkStripeProductExists } from "@/internal/products/productUtils.js";
 import { handleRequestError } from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { CusProductService } from "../customers/cusProducts/CusProductService.js";
-import { handleCopyProduct } from "./handlers/handleCopyProduct.js";
+
 import { handleGetProductDeleteInfo } from "./handlers/handleGetProductDeleteInfo.js";
 
-// export const productBetaRouter: Router = Router();
-// productBetaRouter.get("", handleListProductsBeta);
-
 export const productRouter: Router = Router();
-
-// productRouter.get("", handleListProductsBeta);
-
-// productRouter.post("/:productId", handleUpdateProductV2);
-
-productRouter.post("/:productId/copy", handleCopyProduct);
 
 productRouter.post("/all/init_stripe", async (req: any, res) => {
 	try {
@@ -139,6 +130,7 @@ productRouter.get("/:productId/deletion_info", handleGetProductDeleteInfo);
 
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { handleCopyProductV2 } from "./handlers/handleCopyProduct/handleCopyProductV2.js";
 import { handleCreatePlan } from "./handlers/handleCreatePlan.js";
 import { handleDeleteProduct as handleDeleteProductHono } from "./handlers/handleDeleteProduct.js";
 import { handleGetPlan } from "./handlers/handleGetPlan.js";
@@ -150,6 +142,7 @@ honoProductBetaRouter.get("", ...handleListPlans);
 
 // Create a Hono app for products
 export const honoProductRouter = new Hono<HonoEnv>();
+export const migrationRouter = new Hono<HonoEnv>();
 
 // POST /products - Create a product
 honoProductRouter.get("", ...handleListPlans);
@@ -158,3 +151,4 @@ honoProductRouter.post("", ...handleCreatePlan);
 honoProductRouter.get("/:product_id", ...handleGetPlan);
 honoProductRouter.post("/:product_id", ...handleUpdatePlan); // will be deprecated
 honoProductRouter.delete("/:product_id", ...handleDeleteProductHono);
+honoProductRouter.post("/:product_id/copy", ...handleCopyProductV2);
