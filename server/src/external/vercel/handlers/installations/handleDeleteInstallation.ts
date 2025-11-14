@@ -2,7 +2,7 @@ import { AppEnv } from "@autumn/shared";
 import { sendCustomSvixEvent } from "@/external/svix/svixHelpers.js";
 import { VercelResourceService } from "@/external/vercel/services/VercelResourceService.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { deleteCusById } from "@/internal/customers/handlers/handleDeleteCustomer.js";
+import { deleteCusById } from "@/internal/customers/handlers/handleDeleteCustomerV2.js";
 import {
 	type VercelResourceDeletedEvent,
 	VercelWebhooks,
@@ -50,11 +50,8 @@ export const handleDeleteInstallation = createRoute({
 
 			// 2. Delete the customer/installation
 			await deleteCusById({
-				db: ctx.db,
-				org: ctx.org,
+				ctx,
 				customerId: integrationConfigurationId,
-				env: ctx.env,
-				logger: ctx.logger,
 				deleteInStripe: true,
 			});
 		} catch (error) {
