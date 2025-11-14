@@ -99,7 +99,6 @@ export * from "./models/otherModels/metadataModels.js";
 export * from "./models/otherModels/metadataTable.js";
 // Duration Types
 export * from "./models/productModels/durationTypes/rolloverExpiryDurationType.js";
-export * from "./models/productModels/entModels/entEnums.js";
 export * from "./models/productModels/entModels/entModels.js";
 // 3. Entitlement Models
 export * from "./models/productModels/entModels/entTable.js";

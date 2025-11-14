@@ -8,7 +8,6 @@ import {
 import { Router } from "express";
 import { Hono } from "hono";
 import { StatusCodes } from "http-status-codes";
-import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
@@ -192,10 +191,9 @@ cusRouter.get(
 export const internalCusRouter = new Hono<HonoEnv>();
 
 export const handleGetCustomerInternal = createRoute({
-	params: z.object({ customer_id: z.string() }),
 	handler: async (c) => {
 		const { db, org, env } = c.get("ctx");
-		const { customer_id } = c.req.valid("param");
+		const { customer_id } = c.req.param();
 
 		const fullCus = await CusService.getFull({
 			db,

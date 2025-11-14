@@ -102,14 +102,9 @@ export const UpdateCustomerParamsSchema = z.object({
 	name: z.string().nullish().meta({
 		description: "The customer's name.",
 	}),
-	email: z
-		.string()
-		.email({ message: "not a valid email address" })
-		.or(z.literal(""))
-		.nullish()
-		.meta({
-			description: "The customer's email address.",
-		}),
+	email: z.email({ message: "not a valid email address" }).nullish().meta({
+		description: "Customer's email address",
+	}),
 	fingerprint: z.string().nullish().meta({
 		description:
 			"Unique identifier (eg, serial number) to detect duplicate customers.",

@@ -7,16 +7,9 @@ import { refreshCacheMiddleware } from "@/middleware/refreshCacheMiddleware.js";
 import { analyticsRouter } from "../analytics/analyticsRouter.js";
 import { attachRouter } from "../customers/attach/attachRouter.js";
 import cancelRouter from "../customers/cancel/cancelRouter.js";
-import { expressCusRouter } from "../customers/cusRouter.js";
-import { handleCreateBillingPortal } from "../customers/handlers/handleCreateBillingPortal.js";
-import { featureRouter } from "../features/featureRouter.js";
-import { internalFeatureRouter } from "../features/internalFeatureRouter.js";
 import { handleGetOrg } from "../orgs/handlers/handleGetOrg.js";
 import { platformRouter } from "../platform/platformLegacy/platformRouter.js";
-import { productRouter } from "../products/productRouter.js";
 import { componentRouter } from "./components/componentRouter.js";
-
-import { usageRouter } from "./events/usageRouter.js";
 
 import { invoiceRouter } from "./invoiceRouter.js";
 import { redemptionRouter, referralRouter } from "./rewards/referralRouter.js";
@@ -31,15 +24,9 @@ apiRouter.use(analyticsMiddleware);
 apiRouter.use(expressApiVersionMiddleware as any);
 apiRouter.use(refreshCacheMiddleware);
 
-apiRouter.use("/customers", expressCusRouter);
 apiRouter.use("/invoices", invoiceRouter);
-apiRouter.use("/products", productRouter);
 apiRouter.use("/components", componentRouter);
 apiRouter.use("/rewards", rewardRouter);
-apiRouter.use("/features", featureRouter);
-apiRouter.use("/internal_features", internalFeatureRouter);
-
-apiRouter.use("/usage", usageRouter);
 
 // REWARDS
 apiRouter.use("/reward_programs", rewardProgramRouter);
@@ -49,14 +36,6 @@ apiRouter.use("/redemptions", redemptionRouter);
 // Cus Product
 apiRouter.use("", attachRouter);
 apiRouter.use("/cancel", cancelRouter);
-
-// apiRouter.use("/entitled", checkRouter);
-// apiRouter.use("/check", checkRouter);
-// apiRouter.use("/usage", usageRouter);
-
-// apiRouter.use("/events", eventsRouter);
-// apiRouter.use("/track", eventsRouter);
-apiRouter.post("/billing_portal", handleCreateBillingPortal);
 
 // Analytics
 apiRouter.use("/query", analyticsRouter);
@@ -68,3 +47,7 @@ apiRouter.use("/platform", platformRouter);
 apiRouter.get("/organization", handleGetOrg);
 
 export { apiRouter };
+
+// Features
+// type: boolean, metered or credit system
+// resets_periodically: true / false

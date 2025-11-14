@@ -6,11 +6,12 @@ import {
 	entToPrice,
 	getBillingType,
 	isFixedPrice,
+	itemToEntInterval,
 	type Price,
 	type ProductItem,
 	UsageModel,
 } from "@autumn/shared";
-import { itemToEntInterval } from "../itemIntervalUtils.js";
+
 import { isFeatureItem, isFeaturePriceItem } from "./getItemType.js";
 
 export const addIdsToProductItems = ({
@@ -56,10 +57,10 @@ export const addIdsToProductItems = ({
 
 			// Sort by interval
 			const aIntervalValue = entIntervalToValue(
-				itemToEntInterval(a) as EntInterval,
+				itemToEntInterval({ item: a }) as EntInterval,
 			);
 			const bIntervalValue = entIntervalToValue(
-				itemToEntInterval(b) as EntInterval,
+				itemToEntInterval({ item: b }) as EntInterval,
 			);
 			if (!aIntervalValue.eq(bIntervalValue)) {
 				return aIntervalValue.sub(bIntervalValue).toNumber();

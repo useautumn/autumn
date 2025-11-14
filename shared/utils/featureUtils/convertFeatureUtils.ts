@@ -4,6 +4,7 @@ import {
 } from "@models/featureModels/featureEnums.js";
 import type { Feature } from "@models/featureModels/featureModels.js";
 import { ProductItemFeatureType } from "@models/productV2Models/productItemModels/productItemModels.js";
+import { ApiFeatureType } from "../../api/models.js";
 
 export const featureToItemFeatureType = ({ feature }: { feature: Feature }) => {
 	let featureType: ProductItemFeatureType;
@@ -24,6 +25,30 @@ export const featureToItemFeatureType = ({ feature }: { feature: Feature }) => {
 	}
 
 	return featureType;
+};
+
+export const featureV0ToV1Type = ({
+	type,
+}: {
+	type: ApiFeatureType;
+}): { type: FeatureType; consumable?: boolean } => {
+	let featureType = type as unknown as FeatureType;
+	let consumable: boolean = false;
+	if (
+		type === ApiFeatureType.SingleUsage ||
+		type === ApiFeatureType.ContinuousUse
+	) {
+		featureType = FeatureType.Metered;
+		consumable = type === ApiFeatureType.SingleUsage;
+	} else if (type === ApiFeatureType.CreditSystem) {
+		featureType = FeatureType.CreditSystem;
+		consumable = true;
+	} else if (type === ApiFeatureType.Static) {
+		featureType = FeatureType.Boolean;
+		consumable = false;
+	}
+
+	return { type: featureType, consumable };
 };
 
 export const isContUseFeature = ({ feature }: { feature: Feature }) => {

@@ -60,5 +60,6 @@ export const createWorkerAutumnContext = async ({
 		authType: AuthType.Unknown,
 		apiVersion,
 		timestamp: Date.now(),
+		skipCache: false,
 	} satisfies AutumnContext;
 };

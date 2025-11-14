@@ -8,13 +8,13 @@ import {
 	OnDecrease,
 	OnIncrease,
 } from "../../../models/productV2Models/productItemModels/productItemEnums.js";
-import { ApiFeatureSchema } from "../../features/apiFeature.js";
+import { ApiFeatureV0Schema } from "../../features/prevVersions/apiFeatureV0.js";
 import { DisplaySchema } from "../components/display.js";
 
 export const ApiPlanFeatureSchema = z
 	.object({
 		feature_id: z.string(),
-		feature: ApiFeatureSchema.optional(),
+		feature: ApiFeatureV0Schema.optional(),
 
 		granted_balance: z.number(),
 		unlimited: z.boolean(),

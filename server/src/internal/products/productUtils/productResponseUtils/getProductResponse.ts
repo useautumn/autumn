@@ -12,10 +12,10 @@ import {
 	type FullProduct,
 	type Price,
 	type ProductItem,
+	toApiFeature,
 	UsageModel,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { toApiFeature } from "@/internal/features/utils/mapFeatureUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { getFreeTrialAfterFingerprint } from "../../free-trials/freeTrialUtils.js";
 import { sortProductItems } from "../../pricecn/pricecnUtils.js";

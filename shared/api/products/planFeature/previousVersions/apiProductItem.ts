@@ -1,4 +1,4 @@
-import { ApiFeatureSchema } from "@api/features/apiFeature.js";
+import { ApiFeatureV0Schema } from "@api/features/prevVersions/apiFeatureV0.js";
 import { ProductItemInterval } from "@models/productModels/intervals/productItemInterval.js";
 import { Infinite } from "@models/productModels/productEnums.js";
 import {
@@ -35,7 +35,7 @@ export const ApiProductItemSchema = z
 		}),
 
 		// Feature response
-		feature: ApiFeatureSchema.nullish().meta({
+		feature: ApiFeatureV0Schema.nullish().meta({
 			internal: true,
 		}),
 

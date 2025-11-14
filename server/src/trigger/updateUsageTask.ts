@@ -31,7 +31,6 @@ import RecaseError from "@/utils/errorUtils.js";
 import { deductFromAdditionalBalance } from "../internal/balances/deductUtils/deductFromAdditionalBalance.js";
 import { generateId } from "../utils/genUtils.js";
 
-import { handleThresholdReached } from "./handleThresholdReached.js";
 import {
 	deductAllowanceFromCusEnt,
 	deductFromUsageBasedCusEnt,
@@ -475,6 +474,7 @@ export const updateUsage = async ({
 					apiVersion: new ApiVersionClass(LATEST_VERSION),
 					timestamp: Date.now(),
 					expand: [],
+					skipCache: true,
 				},
 			});
 
@@ -520,18 +520,6 @@ export const updateUsage = async ({
 		};
 
 		await performFeatureDeduction();
-
-		handleThresholdReached({
-			org,
-			env,
-			features: allFeatures,
-			db,
-			feature,
-			cusEnts: originalCusEnts,
-			newCusEnts: cusEnts,
-			fullCus: customer,
-			logger,
-		});
 	}
 
 	return cusEnts;

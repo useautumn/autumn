@@ -25,6 +25,8 @@
 
 - Always prefer foo({ bar }) over foo(bar) method signatures - no matter if we are using only one argument or not, object as param are always better, as in the future when wanting to change the order of parameters, or add new ones - its easier.
 
+- **ALWAYS use `c.req.param()` to get route parameters in Hono handlers**, NOT `c.req.valid("param")`. Example: `const { customer_id } = c.req.param();`
+
 - When creating "hooks" folders, don't nest them under "components"
 
 - Functions (unless there's a very good reason) should always take in objects as arguments. Object params are named and easy to understand.

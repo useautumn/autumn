@@ -16,6 +16,7 @@ import {
 	cusEntToGrantedBalance,
 	cusEntToKey,
 	cusEntToPurchasedBalance,
+	dbToApiFeatureV1,
 	expandIncludes,
 	type Feature,
 	FeatureType,
@@ -23,7 +24,6 @@ import {
 	isPrepaidPrice,
 	notNullish,
 	sumValues,
-	toApiFeature,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
@@ -139,7 +139,7 @@ export const getApiBalance = ({
 		expand: ctx.expand,
 		includes: [CheckExpand.BalanceFeature, CusExpand.BalancesFeature],
 	})
-		? toApiFeature({ feature })
+		? dbToApiFeatureV1({ dbFeature: feature })
 		: undefined;
 
 	// 1. If feature is boolean

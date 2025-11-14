@@ -65,7 +65,7 @@ export function parseTestOutput(output: string): TestSummary {
 		}
 	}
 
-	passedFiles = totalFiles - failedFiles;
+	let passedFiles = totalFiles - failedFiles;
 
 	// Extract failure details
 	let currentTestFile = "";

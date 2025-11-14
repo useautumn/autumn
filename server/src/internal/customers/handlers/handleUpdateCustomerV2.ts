@@ -1,24 +1,21 @@
 import {
 	AffectedResource,
 	ApiVersion,
-	ErrCode,
+	CustomerAlreadyExistsError,
+	CustomerNotFoundError,
 	GetCustomerQuerySchema,
 	ProcessorType,
+	RecaseError,
 	UpdateCustomerParamsSchema,
 } from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
-import { z } from "zod/v4";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import RecaseError from "@/utils/errorUtils.js";
+
 import { notNullish } from "@/utils/genUtils.js";
 import { CusService } from "../CusService.js";
 import { getApiCustomer } from "../cusUtils/apiCusUtils/getApiCustomer.js";
 
 export const handleUpdateCustomerV2 = createRoute({
-	params: z.object({
-		customer_id: z.string(),
-	}),
 	body: UpdateCustomerParamsSchema,
 	versionedQuery: {
 		latest: GetCustomerQuerySchema,
@@ -28,9 +25,8 @@ export const handleUpdateCustomerV2 = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org, env, logger } = ctx;
-		const { customer_id } = c.req.valid("param");
+		const { customer_id } = c.req.param();
 		const newCusData = c.req.valid("json");
-		const { expand } = ctx;
 
 		const originalCustomer = await CusService.get({
 			db,
@@ -40,18 +36,12 @@ export const handleUpdateCustomerV2 = createRoute({
 		});
 
 		if (!originalCustomer) {
-			throw new RecaseError({
-				message: `Update customer: Customer ${customer_id} not found`,
-				code: ErrCode.CustomerNotFound,
-				statusCode: StatusCodes.NOT_FOUND,
-			});
+			throw new CustomerNotFoundError({ customerId: customer_id });
 		}
 
 		if (newCusData.id === null) {
 			throw new RecaseError({
 				message: `Update customer: Can't change customer ID to null`,
-				code: ErrCode.InvalidUpdateCustomerParams,
-				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -65,10 +55,9 @@ export const handleUpdateCustomerV2 = createRoute({
 			});
 
 			if (existingCustomer) {
-				throw new RecaseError({
-					message: `Update customer: Customer ${newCusData.id} already exists, can't change to this ID`,
-					code: ErrCode.DuplicateCustomerId,
-					statusCode: StatusCodes.CONFLICT,
+				throw new CustomerAlreadyExistsError({
+					message: `Customer with ID ${newCusData.id} already exists, can't change to this ID`,
+					customerId: newCusData.id,
 				});
 			}
 		}
@@ -138,20 +127,12 @@ export const handleUpdateCustomerV2 = createRoute({
 			update: updateData,
 		});
 
-		const finalCustomer = await CusService.getFull({
-			db,
-			idOrInternalId: originalCustomer.internal_id,
-			orgId: org.id,
-			env,
-			withEntities: true,
-		});
-
+		ctx.skipCache = true;
 		const customerDetails = await getApiCustomer({
 			ctx,
-			fullCus: finalCustomer,
+			customerId: customer_id,
 		});
 
 		return c.json(customerDetails);
 	},
 });
-

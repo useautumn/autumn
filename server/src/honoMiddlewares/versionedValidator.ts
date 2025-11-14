@@ -100,6 +100,7 @@ export const versionedValidator = ({
 			c.req.addValidatedData(target, validatedData);
 		} else {
 			// For other targets, use zValidator
+
 			const validatorMiddleware = zValidator(target, schema, (result, _c) => {
 				if (!result.success) {
 					// Validation errors reference fields from user's version ✅

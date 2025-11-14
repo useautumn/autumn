@@ -108,6 +108,7 @@ describe(`${chalk.yellowBright("basic8: Testing trial duplicates (same fingerpri
 		});
 
 		const customer = await AutumnCli.getCustomer(customerId2);
+		console.log(JSON.stringify(customer, null, 2));
 
 		await expectCustomerV0Correct({
 			sent: proWithTrial,

@@ -31,6 +31,8 @@
 - Do not run "npx tsc" - run "tsc" instead as it is installed globally.
 
 - **ALWAYS use `.meta()` for zod-openapi schema registration**, NOT `.openapi()`. Example: `ApiProductSchema.meta({ id: "Product" })`
+
+- **ALWAYS use `c.req.param()` to get route parameters in Hono handlers**, NOT `c.req.valid("param")`. Example: `const { customer_id } = c.req.param();`
 ## Error Handling in API Routes
 - NEVER use `c.json({ message: "...", code: "..." }, statusCode)` pattern for input validation or expected errors in Hono routes
 - ALWAYS throw `RecaseError` from `@autumn/shared` for all validation errors, not found errors, forbidden errors, etc.

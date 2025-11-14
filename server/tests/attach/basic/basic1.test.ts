@@ -10,8 +10,8 @@ import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { initCustomerV3 } from "../../../src/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { sharedDefaultFree } from "./sharedProducts.js";
 
 const free2 = constructProduct({

@@ -22,7 +22,7 @@ export const FEATURE_EXAMPLE = {
 };
 
 // Base schema without .meta() to avoid side effects during imports
-export const ApiFeatureSchema = z.object({
+export const ApiFeatureV0Schema = z.object({
 	id: z.string().meta({
 		description:
 			"The ID of the feature, used to refer to it in other API calls like /track or /check.",
@@ -69,4 +69,4 @@ export const ApiFeatureSchema = z.object({
 	}),
 });
 
-export type ApiFeature = z.infer<typeof ApiFeatureSchema>;
+export type ApiFeatureV0 = z.infer<typeof ApiFeatureV0Schema>;

@@ -2,7 +2,7 @@ import {
 	type ApiBalance,
 	type ApiBalanceReset,
 	type ApiBalanceRollover,
-	type ApiFeature,
+	type ApiFeatureV1,
 	entIntvToResetIntv,
 	type Feature,
 	type FullCusEntWithFullCusProduct,
@@ -94,7 +94,7 @@ export const getBooleanApiBalance = ({
 	apiFeature,
 }: {
 	cusEnts: FullCusEntWithFullCusProduct[];
-	apiFeature?: ApiFeature;
+	apiFeature?: ApiFeatureV1;
 }): ApiBalance => {
 	const feature = cusEnts[0].entitlement.feature;
 	return {
@@ -121,7 +121,7 @@ export const getUnlimitedApiBalance = ({
 	apiFeature,
 	cusEnts,
 }: {
-	apiFeature?: ApiFeature;
+	apiFeature?: ApiFeatureV1;
 	cusEnts: FullCusEntWithFullCusProduct[];
 }): ApiBalance => {
 	const feature = cusEnts[0].entitlement.feature;
@@ -150,7 +150,7 @@ export const getNoCusEntsApiBalance = ({
 	apiFeature,
 	featureId,
 }: {
-	apiFeature?: ApiFeature;
+	apiFeature?: ApiFeatureV1;
 	featureId: string;
 }): ApiBalance => {
 	return {

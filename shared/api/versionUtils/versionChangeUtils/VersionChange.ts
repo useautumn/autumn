@@ -12,6 +12,7 @@ export enum AffectedResource {
 	CusBalance = "cus_balance",
 	Invoice = "invoice",
 	Product = "product",
+	Feature = "feature",
 	Check = "check",
 	Track = "track",
 	// Add more as needed

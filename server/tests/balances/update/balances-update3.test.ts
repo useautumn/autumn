@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { type ApiCustomer, ApiVersion, type LimitedItem } from "@autumn/shared";
-import chalk from "chalk";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
@@ -113,7 +113,7 @@ describe(`${chalk.yellowBright("balances-update3: Balance decoupling tests")}`, 
 		expect(cusEnt?.additional_balance).toBe(10); // Added
 		expect(cusEnt?.additional_granted_balance).toBe(10); // Added
 
-		const customer = await autumnV2.customers.get(customerId);
+		const customer = await autumnV2.customers.get<ApiCustomer>(customerId);
 		const balance = customer.balances[TestFeature.Users];
 		// current = 0 + 0 + 10 = 10
 		expect(balance.current_balance).toBe(10);
@@ -141,10 +141,10 @@ describe(`${chalk.yellowBright("balances-update3: Balance decoupling tests")}`, 
 		expect(cusEnt?.additional_balance).toBe(5); // 10 - 5
 		expect(cusEnt?.additional_granted_balance).toBe(5); // 10 - 5
 
-		const customer = await autumnV2.customers.get(customerId);
-		const feature = customer.features[TestFeature.Users];
-		// current = 0 + 0 + 5 = 5
-		expect(feature.current_balance).toBe(5);
+		const customer = await autumnV2.customers.get<ApiCustomer>(customerId);
+		const balance = customer.balances[TestFeature.Users];
+
+		expect(balance.current_balance).toBe(5);
 	});
 
 	test("CASE C: balances.update REMOVE with insufficient additional_balance", async () => {
@@ -168,9 +168,9 @@ describe(`${chalk.yellowBright("balances-update3: Balance decoupling tests")}`, 
 		expect(cusEnt?.additional_balance).toBe(0); // Floored
 		expect(cusEnt?.additional_granted_balance).toBe(0); // 5 - 5
 
-		const customer = await autumnV2.customers.get(customerId);
-		const feature = customer.features[TestFeature.Users];
-		expect(feature.current_balance).toBe(0);
+		const customer = await autumnV2.customers.get<ApiCustomer>(customerId);
+		const balance = customer.balances[TestFeature.Users];
+		expect(balance.current_balance).toBe(0);
 	});
 
 	test("Track +5 then update REMOVE to trigger main balance deduction", async () => {
@@ -269,13 +269,12 @@ describe(`${chalk.yellowBright("balances-update3: Balance decoupling tests")}`, 
 		expect(cusEnt?.additional_balance).toBe(0); // Unchanged
 		expect(cusEnt?.additional_granted_balance).toBe(0); // Unchanged
 
-		const customer = await autumnV2.customers.get(customerId);
-		const feature = customer.features[TestFeature.Users];
-		// current = Math.max(0, 0) + 0 = 0
-		// purchased = 0
-		expect(feature.current_balance).toBe(0);
-		expect(feature.purchased_balance).toBe(0);
-		expect(feature.granted_balance).toBe(0);
-		expect(feature.usage).toBe(0);
+		const customer = await autumnV2.customers.get<ApiCustomer>(customerId);
+		const balance = customer.balances[TestFeature.Users];
+
+		expect(balance.current_balance).toBe(0);
+		expect(balance.purchased_balance).toBe(0);
+		expect(balance.granted_balance).toBe(0);
+		expect(balance.usage).toBe(0);
 	});
 });
