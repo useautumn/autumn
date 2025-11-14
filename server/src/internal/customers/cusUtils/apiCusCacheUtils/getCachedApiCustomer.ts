@@ -10,10 +10,8 @@ import { CACHE_CUSTOMER_VERSION } from "@lua/cacheConfig.js";
 import { GET_CUSTOMER_SCRIPT } from "@lua/luaScripts.js";
 import { redis } from "../../../../external/redis/initRedis.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
-import {
-	normalizeCachedData,
-	tryRedisRead,
-} from "../../../../utils/cacheUtils/cacheUtils.js";
+import { tryRedisRead } from "../../../../utils/cacheUtils/cacheUtils.js";
+import { normalizeCachedData } from "../../../../utils/cacheUtils/normalizeCacheUtils.js";
 import { CusService } from "../../CusService.js";
 import { getApiCustomerBase } from "../apiCusUtils/getApiCustomerBase.js";
 import { setCachedApiCustomer } from "./setCachedApiCustomer.js";
@@ -71,6 +69,7 @@ export const getCachedApiCustomer = async ({
 						legacyData: CustomerLegacyData;
 					},
 				);
+				console.log("Cached:", cached);
 
 				const { legacyData, ...rest } = cached;
 
