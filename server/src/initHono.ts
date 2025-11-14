@@ -25,6 +25,7 @@ import { internalProductRouter } from "./internal/products/internalProductRouter
 import {
 	honoProductBetaRouter,
 	honoProductRouter,
+	migrationRouter,
 } from "./internal/products/productRouter.js";
 import { auth } from "./utils/auth.js";
 
@@ -112,6 +113,7 @@ export const createHonoApp = () => {
 
 	app.route("v1", billingRouter);
 	app.route("v1", balancesRouter);
+	app.route("v1", migrationRouter);
 	app.route("v1", entityRouter);
 	app.route("v1/customers", cusRouter);
 

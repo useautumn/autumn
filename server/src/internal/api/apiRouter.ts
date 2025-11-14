@@ -11,12 +11,13 @@ import { expressCusRouter } from "../customers/cusRouter.js";
 import { handleCreateBillingPortal } from "../customers/handlers/handleCreateBillingPortal.js";
 import { featureRouter } from "../features/featureRouter.js";
 import { internalFeatureRouter } from "../features/internalFeatureRouter.js";
-import { migrationRouter } from "../migrations/migrationRouter.js";
 import { handleGetOrg } from "../orgs/handlers/handleGetOrg.js";
 import { platformRouter } from "../platform/platformLegacy/platformRouter.js";
 import { productRouter } from "../products/productRouter.js";
 import { componentRouter } from "./components/componentRouter.js";
-// import { checkRouter } from "./entitled/checkRouter.js";
+
+import { usageRouter } from "./events/usageRouter.js";
+
 import { invoiceRouter } from "./invoiceRouter.js";
 import { redemptionRouter, referralRouter } from "./rewards/referralRouter.js";
 import { rewardProgramRouter } from "./rewards/rewardProgramRouter.js";
@@ -38,8 +39,7 @@ apiRouter.use("/rewards", rewardRouter);
 apiRouter.use("/features", featureRouter);
 apiRouter.use("/internal_features", internalFeatureRouter);
 
-// apiRouter.use("/entities", entityRouter);
-apiRouter.use("/migrations", migrationRouter);
+apiRouter.use("/usage", usageRouter);
 
 // REWARDS
 apiRouter.use("/reward_programs", rewardProgramRouter);
