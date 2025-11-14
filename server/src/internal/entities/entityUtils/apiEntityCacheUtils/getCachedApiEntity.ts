@@ -13,10 +13,8 @@ import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
-import {
-	normalizeCachedData,
-	tryRedisRead,
-} from "@/utils/cacheUtils/cacheUtils.js";
+import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
+import { normalizeCachedData } from "@/utils/cacheUtils/normalizeCacheUtils.js";
 import { setCachedApiCustomer } from "../../../customers/cusUtils/apiCusCacheUtils/setCachedApiCustomer.js";
 import { getApiEntityBase } from "../apiEntityUtils/getApiEntityBase.js";
 

@@ -6,11 +6,9 @@ import {
 	type TrackParams,
 	type TrackQuery,
 } from "@autumn/shared";
+import { normalizeCachedBalance } from "@/utils/cacheUtils/normalizeCacheUtils.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
-import {
-	normalizeCachedBalance,
-	tryRedisWrite,
-} from "../../../../utils/cacheUtils/cacheUtils.js";
+import { tryRedisWrite } from "../../../../utils/cacheUtils/cacheUtils.js";
 import { getOrCreateApiCustomer } from "../../../customers/cusUtils/getOrCreateApiCustomer.js";
 import { globalEventBatchingManager } from "../eventUtils/EventBatchingManager.js";
 import { globalSyncBatchingManager } from "../syncUtils/SyncBatchingManager.js";
@@ -244,89 +242,4 @@ export const runRedisDeduction = async ({
 	}
 
 	return result;
-
-	// if (!result.success) {
-	// 	ctx.logger.info(
-	// 		`Track failed: ${result.error} for customer: ${customerId}`,
-	// 	);
-	// }
-
-	// // Redis deduction successful: queue sync jobs and event insertion
-
-	// if (result.success) {
-	// 	// Only queue sync pairs for scopes that were actually modified
-	// 	// This prevents unnecessary syncs and race conditions
-	// 	for (const deduction of featureDeductions) {
-	// 		// If customer was changed, queue customer-level sync
-	// 		if (result.customerChanged) {
-	// 			globalSyncBatchingManager.addSyncPair({
-	// 				customerId: customerId,
-	// 				featureId: deduction.feature.id,
-	// 				orgId: org.id,
-	// 				env,
-	// 				entityId: undefined, // Customer-level sync
-	// 			});
-	// 		}
-
-	// 		// For each changed entity, queue entity-level sync
-	// 		if (result.changedEntityIds && result.changedEntityIds.length > 0) {
-	// 			for (const changedEntityId of result.changedEntityIds) {
-	// 				globalSyncBatchingManager.addSyncPair({
-	// 					customerId: customerId,
-	// 					featureId: deduction.feature.id,
-	// 					orgId: org.id,
-	// 					env,
-	// 					entityId: changedEntityId,
-	// 				});
-	// 			}
-	// 		}
-	// 	}
-
-	// 	// Queue event insertion (skip if skip_event is true)
-
-	// 	if (!skipEvent && cachedCustomer?.autumn_id && eventInfo) {
-	// 		globalEventBatchingManager.addEvent(
-	// 			constructEvent({
-	// 				ctx,
-	// 				eventInfo: eventInfo,
-	// 				internalCustomerId: cachedCustomer?.autumn_id,
-
-	// 				internalEntityId:
-	// 					cachedCustomer?.entities?.find((entity) => entity.id === entityId)
-	// 						?.autumn_id ?? undefined,
-
-	// 				customerId: customerId,
-	// 				entityId: entityId,
-	// 			}),
-	// 		);
-	// 	}
-	// }
-
-	// // const apiCustomer = await getCachedApiCustomer({
-	// // 	ctx,
-	// // 	customerId,
-	// // });
-
-	// // const msgesFeature = apiCustomer.apiCustomer.features?.messages?.balance;
-	// // console.log(
-	// // 	`Feature deductions:`,
-	// // 	featureDeductions.map((d) => ({
-	// // 		featureId: d.feature.id,
-	// // 		deduction: d.deduction,
-	// // 	})),
-	// // );
-	// // console.log(`Post track, messages balance:`, msgesFeature);
-
-	// return {
-	// 	fallback: !result.success,
-	// 	code: result.success ? "success" : "insufficient_balance",
-	// 	balances: result.balances
-	// 		? result.balances.map((balance) => normalizeCachedBalance(balance))
-	// 		: undefined,
-	// };
 };
-
-// customerId,
-// 	customerData,
-// 	entityId,
-// 	entityData,
