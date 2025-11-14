@@ -246,7 +246,8 @@ export const ConfigureVercel = () => {
 					</FormLabel>
 					<p className="text-t3 text-sm mb-2">
 						This is the base URL for connecting to your Vercel project. You
-						should provide this to Vercel as the webhook URL.
+						should provide this to Vercel as the webhook URL and Partner API
+						Base URL.
 					</p>
 					<div className="grid grid-cols-2 grid-rows-1 gap-4">
 						<CodeGroup value={env} className="col-span-2">
