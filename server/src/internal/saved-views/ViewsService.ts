@@ -1,5 +1,5 @@
 import { ErrCode } from "@autumn/shared";
-import { type Response } from "express";
+import type { Response } from "express";
 import { nanoid } from "nanoid";
 import { CacheManager } from "@/utils/cacheUtils/CacheManager.js";
 import RecaseError from "@/utils/errorUtils.js";

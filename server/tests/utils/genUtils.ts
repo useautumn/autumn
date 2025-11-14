@@ -4,7 +4,7 @@ import {
 	FullCusProduct,
 	UsagePriceConfig,
 } from "@autumn/shared";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
+import { AutumnCli } from "@tests/cli/AutumnCli.js";
 
 export const timeout = (ms: number) => {
 	return new Promise((resolve) => setTimeout(resolve, ms));

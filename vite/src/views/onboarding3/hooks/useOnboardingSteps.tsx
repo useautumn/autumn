@@ -42,8 +42,8 @@ export const useOnboardingSteps = () => {
 				// If base price is unchecked (no price item), that's valid
 				if (!hasBasePriceItem) return true;
 
-				// If base price is checked, it needs a valid amount
-				return basePrice?.amount != null && basePrice.amount > 0;
+				// If base price is checked, it needs a valid price amount
+				return basePrice?.price != null && basePrice.price > 0;
 			}
 			case OnboardingStep.FeatureCreation:
 				return (

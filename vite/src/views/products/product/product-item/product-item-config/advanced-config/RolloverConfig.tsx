@@ -1,7 +1,11 @@
+import {
+	type ProductItem,
+	type RolloverConfig,
+	RolloverExpiryDurationType,
+} from "@autumn/shared";
 import { ToggleButton } from "@/components/general/ToggleButton";
 import { ToggleDisplayButton } from "@/components/general/ToggleDisplayButton";
 import { Input } from "@/components/ui/input";
-import { ProductItem, RolloverConfig, RolloverDuration } from "@autumn/shared";
 import {
 	Select,
 	SelectContent,
@@ -20,7 +24,7 @@ export const RolloverConfigView = ({
 	showRolloverConfig: boolean;
 }) => {
 	const defaultRollover: RolloverConfig = {
-		duration: RolloverDuration.Month,
+		duration: RolloverExpiryDurationType.Month,
 		length: 1,
 		max: null,
 	};
@@ -104,7 +108,7 @@ export const RolloverConfigView = ({
 					</div>
 
 					<div className="w-6/12 flex gap-1">
-						{rollover.duration === RolloverDuration.Month && (
+						{rollover.duration === RolloverExpiryDurationType.Month && (
 							<Input
 								value={rollover.length || ""}
 								onChange={(e) => {
@@ -116,14 +120,17 @@ export const RolloverConfigView = ({
 						<Select
 							value={rollover.duration}
 							onValueChange={(value) => {
-								setRolloverConfigKey("duration", value as RolloverDuration);
+								setRolloverConfigKey(
+									"duration",
+									value as RolloverExpiryDurationType,
+								);
 							}}
 						>
 							<SelectTrigger>
 								<SelectValue placeholder="Select a duration" />
 							</SelectTrigger>
 							<SelectContent>
-								{Object.values(RolloverDuration).map((duration) => (
+								{Object.values(RolloverExpiryDurationType).map((duration) => (
 									<SelectItem key={duration} value={duration}>
 										{duration}
 									</SelectItem>

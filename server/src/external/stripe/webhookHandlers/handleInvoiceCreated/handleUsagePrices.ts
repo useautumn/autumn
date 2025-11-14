@@ -84,7 +84,7 @@ export const handleUsagePrices = async ({
 
 	const isNewUsageMethod =
 		activeProduct.internal_entity_id ||
-		activeProduct.api_semver === ApiVersion.Beta;
+		activeProduct.api_semver === ApiVersion.V1_Beta;
 
 	if (isNewUsageMethod) {
 		const invoiceItem = getInvoiceItemForUsage({

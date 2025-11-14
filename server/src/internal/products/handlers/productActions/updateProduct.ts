@@ -22,7 +22,7 @@ import { ProductService } from "../../ProductService.js";
 import { handleNewProductItems } from "../../product-items/productItemUtils/handleNewProductItems.js";
 import { getProductResponse } from "../../productUtils/productResponseUtils/getProductResponse.js";
 import { initProductInStripe } from "../../productUtils.js";
-import { disableCurrentDefault } from "../handleCreateProduct.js";
+import { disableCurrentDefault } from "../handleCreatePlan.js";
 import { handleUpdateProductDetails } from "../handleUpdateProduct/updateProductDetails.js";
 import { handleVersionProductV2 } from "../handleVersionProduct.js";
 
@@ -81,8 +81,9 @@ export const updateProduct = async ({
 
 	const newFreeTrial =
 		"free_trial" in updates
-			? (updates.free_trial as FreeTrial | undefined)
-			: curProductV2.free_trial;
+			? ((updates.free_trial as FreeTrial | undefined) ?? undefined)
+			: (curProductV2.free_trial ?? undefined);
+
 	const newProductV2: ProductV2 = {
 		...curProductV2,
 		...updates,
@@ -100,7 +101,7 @@ export const updateProduct = async ({
 		db,
 		curProduct: fullProduct,
 		newProduct: UpdateProductSchema.parse(updates),
-		newFreeTrial: newFreeTrial || undefined,
+		newFreeTrial: newFreeTrial,
 		items: updates.items || curProductV2.items,
 		org,
 		rewardPrograms,

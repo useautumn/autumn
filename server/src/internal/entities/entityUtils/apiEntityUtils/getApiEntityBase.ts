@@ -1,14 +1,15 @@
 import {
-	type ApiEntity,
-	ApiEntitySchema,
+	type ApiEntityV1,
+	ApiEntityV1Schema,
 	type Entity,
+	type EntityLegacyData,
 	type FullCustomer,
 	filterCusProductsByEntity,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
-import { getApiCusFeatures } from "@/internal/customers/cusUtils/apiCusUtils/getApiCusFeature/getApiCusFeatures.js";
-import { getApiCusProducts } from "@/internal/customers/cusUtils/apiCusUtils/getApiCusProduct/getApiCusProducts.js";
+import { getApiBalances } from "@/internal/customers/cusUtils/apiCusUtils/getApiBalance/getApiBalances.js";
+import { getApiSubscriptions } from "../../../customers/cusUtils/apiCusUtils/getApiSubscription/getApiSubscriptions.js";
 
 /**
  * Get base ApiEntity without expand fields
@@ -24,7 +25,7 @@ export const getApiEntityBase = async ({
 	entity: Entity;
 	fullCus: FullCustomer;
 	withAutumnId?: boolean;
-}): Promise<{ apiEntity: ApiEntity; legacyData: undefined }> => {
+}): Promise<{ apiEntity: ApiEntityV1; legacyData: EntityLegacyData }> => {
 	const { org } = ctx;
 
 	// Filter customer products for this entity
@@ -42,17 +43,19 @@ export const getApiEntityBase = async ({
 	};
 
 	// Reuse existing customer functions with filtered products
-	const apiEntityFeatures = await getApiCusFeatures({
-		ctx,
-		fullCus: filteredFullCus,
-	});
+	const { data: apiBalances, legacyData: cusFeatureLegacyData } =
+		await getApiBalances({
+			ctx,
+			fullCus: filteredFullCus,
+		});
 
-	const { apiCusProducts: apiEntityProducts } = await getApiCusProducts({
-		ctx,
-		fullCus: filteredFullCus,
-	});
+	const { data: apiSubscriptions, legacyData: cusProductLegacyData } =
+		await getApiSubscriptions({
+			ctx,
+			fullCus: filteredFullCus,
+		});
 
-	const apiEntity = ApiEntitySchema.extend({
+	const apiEntity = ApiEntityV1Schema.extend({
 		autumn_id: z.string().optional(),
 	}).parse({
 		autumn_id: withAutumnId ? entity.internal_id : undefined,
@@ -60,16 +63,18 @@ export const getApiEntityBase = async ({
 		id: entity.id || null,
 		name: entity.name || null,
 		customer_id: fullCus.id || fullCus.internal_id,
-		// feature_id: entity.feature_id || null,
 		created_at: entity.created_at,
 		env: fullCus.env,
 
-		products: apiEntityProducts,
-		features: apiEntityFeatures,
+		subscriptions: apiSubscriptions,
+		balances: apiBalances,
 	});
 
 	return {
 		apiEntity,
-		legacyData: undefined,
+		legacyData: {
+			cusProductLegacyData,
+			cusFeatureLegacyData,
+		},
 	};
 };

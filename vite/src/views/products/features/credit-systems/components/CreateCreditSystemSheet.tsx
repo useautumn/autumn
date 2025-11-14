@@ -1,4 +1,4 @@
-import type { CreateFeature } from "@autumn/shared";
+import type { CreateFeature, CreditSchemaItem } from "@autumn/shared";
 import { FeatureType, FeatureUsageType } from "@autumn/shared";
 import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
@@ -61,7 +61,12 @@ export function CreateCreditSystemSheet() {
 				name: creditSystem.name,
 				id: creditSystem.id,
 				type: FeatureType.CreditSystem,
-				config: creditSystem.config,
+				credit_schema: creditSystem.config?.schema?.map(
+					(x: CreditSchemaItem) => ({
+						metered_feature_id: x.metered_feature_id,
+						credit_cost: x.credit_amount,
+					}),
+				),
 				event_names: creditSystem.event_names,
 			});
 			await refetch();

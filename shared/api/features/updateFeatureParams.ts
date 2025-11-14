@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { ApiFeatureType } from "./apiFeature.js";
+import { ApiFeatureType } from "./prevVersions/apiFeatureV0.js";
 
 export const UpdateFeatureParamsSchema = z.object({
 	id: z.string().optional(),

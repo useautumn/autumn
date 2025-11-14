@@ -7,7 +7,6 @@ import {
 import { StatusCodes } from "http-status-codes";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import RecaseError from "@/utils/errorUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 
 export const validateAndGetInputEntities = async ({
@@ -25,7 +24,7 @@ export const validateAndGetInputEntities = async ({
 
 	// 1. Get customer
 	const customer = await getOrCreateCustomer({
-		req: ctx as unknown as ExtendedRequest,
+		ctx,
 		customerId,
 		customerData,
 		withEntities: true,

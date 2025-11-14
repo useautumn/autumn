@@ -1,23 +1,22 @@
+import { beforeAll, describe, expect, it } from "bun:test";
 import {
 	type AppEnv,
 	CusProductStatus,
 	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
-import { expect } from "chai";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { advanceTestClock } from "@tests/utils/stripeUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { addDays } from "date-fns";
 import type { Stripe } from "stripe";
-import { setupBefore } from "tests/before.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
 // Premium, Premium
 // Cancel End, Cancel Immediately
@@ -42,39 +41,26 @@ describe(`${chalk.yellowBright("mergedTrial1: Testing trial")}`, () => {
 	let org: Organization;
 	let env: AppEnv;
 
-	beforeAll(async function () {
-		await setupBefore(this);
-		const { autumnJs } = this;
-		db = this.db;
-		org = this.org;
-		env = this.env;
-
-		stripeCli = this.stripeCli;
-
-		addPrefixToProducts({
+	beforeAll(async () => {
+		await initProductsV0({
+			ctx,
 			products: [premium],
 			prefix: testCase,
-		});
-
-		await createProducts({
-			autumn: autumnJs,
-			products: [premium],
-			db,
-			orgId: org.id,
-			env,
 			customerId,
 		});
 
-		const { testClockId: testClockId1 } = await initCustomer({
-			autumn: autumnJs,
+		const res = await initCustomerV3({
+			ctx,
 			customerId,
-			db,
-			org,
-			env,
 			attachPm: "success",
+			withTestClock: true,
 		});
 
-		testClockId = testClockId1!;
+		stripeCli = ctx.stripeCli;
+		db = ctx.db;
+		org = ctx.org;
+		env = ctx.env;
+		testClockId = res.testClockId!;
 	});
 
 	const entities = [
@@ -106,7 +92,7 @@ describe(`${chalk.yellowBright("mergedTrial1: Testing trial")}`, () => {
 		});
 
 		const entity1 = await autumn.entities.get(customerId, "1");
-		const premium1 = entity1.products.find((p: any) => p.id == premium.id);
+		const premium1 = entity1.products.find((p: any) => p.id === premium.id);
 
 		const checkout = await autumn.checkout({
 			customer_id: customerId,
@@ -115,11 +101,12 @@ describe(`${chalk.yellowBright("mergedTrial1: Testing trial")}`, () => {
 		});
 
 		const nextCycle = checkout.next_cycle;
-		expect(nextCycle?.starts_at);
-		expect(nextCycle?.starts_at).to.approximately(
-			premium1?.current_period_end,
-			60000,
-		); // 1 min
+		expect(nextCycle?.starts_at).toBeDefined();
+		expect(
+			Math.abs(
+				(nextCycle?.starts_at ?? 0) - (premium1?.current_period_end ?? 0),
+			),
+		).toBeLessThanOrEqual(60000); // 1 min
 
 		await autumn.attach({
 			customer_id: customerId,
@@ -128,11 +115,13 @@ describe(`${chalk.yellowBright("mergedTrial1: Testing trial")}`, () => {
 		});
 
 		const entity2 = await autumn.entities.get(customerId, "2");
-		const premium2 = entity2.products.find((p: any) => p.id == premium.id);
-		expect(premium2?.status).to.equal(CusProductStatus.Trialing);
-		expect(premium2?.current_period_end).to.approximately(
-			premium1?.current_period_end,
-			60000,
-		); // 1 min
+		const premium2 = entity2.products.find((p: any) => p.id === premium.id);
+		expect(premium2?.status).toBe(CusProductStatus.Trialing);
+		expect(
+			Math.abs(
+				(premium2?.current_period_end ?? 0) -
+					(premium1?.current_period_end ?? 0),
+			),
+		).toBeLessThanOrEqual(60000); // 1 min
 	});
 });

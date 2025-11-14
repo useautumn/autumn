@@ -52,7 +52,7 @@ export function legacyToSemVer({
 			return ApiVersion.V1_2;
 		case LegacyVersion.v1_4:
 		case 1.4:
-			return ApiVersion.Beta;
+			return ApiVersion.V1_Beta;
 		default:
 			return null;
 	}
@@ -76,7 +76,7 @@ export function semVerToLegacy({
 			return LegacyVersion.v1_1;
 		case ApiVersion.V1_2:
 			return LegacyVersion.v1_2;
-		case ApiVersion.Beta:
+		case ApiVersion.V1_Beta:
 			return LegacyVersion.v1_4;
 		default:
 			return null;
@@ -86,7 +86,10 @@ export function semVerToLegacy({
 /**
  * Parse version string (CalVer, SemVer, or legacy)
  * Supports .clover suffix: "2025-04-17.clover"
+ * Supports partial SemVer: "2" → "2.0.0", "2.0" → "2.0.0"
  * @example parseVersion({ versionStr: "2025-04-17" }) // ApiVersion.V1_1
+ * @example parseVersion({ versionStr: "2" }) // ApiVersion.V2_0
+ * @example parseVersion({ versionStr: "2.0" }) // ApiVersion.V2_0
  */
 export function parseVersion({
 	versionStr,
@@ -98,7 +101,18 @@ export function parseVersion({
 		return calVerToSemVer({ calver: versionStr });
 	}
 
-	// SemVer (X.Y.Z)
+	// SemVer (X.Y.Z) - normalize partial versions
+	// Supports "2" → "2.0.0", "2.0" → "2.0.0", "2.0.0" → "2.0.0"
+	if (/^\d+(\.\d+)*$/.test(versionStr)) {
+		const parts = versionStr.split(".");
+		const normalizedVersion = `${parts[0] || "0"}.${parts[1] || "0"}.${parts[2] || "0"}`;
+
+		if (Object.values(ApiVersion).includes(normalizedVersion as ApiVersion)) {
+			return normalizedVersion as ApiVersion;
+		}
+	}
+
+	// Check for exact match (for special versions like "beta")
 	if (Object.values(ApiVersion).includes(versionStr as ApiVersion)) {
 		return versionStr as ApiVersion;
 	}
@@ -124,13 +138,16 @@ export function createdAtToVersion({
 }: {
 	createdAt?: number;
 }): ApiVersionClass {
+	const v2_0 = new Date("2025-10-15").getTime();
 	const v1_2 = new Date("2025-05-05").getTime();
 	const v1_1 = new Date("2025-04-17").getTime();
 	const v0_2 = new Date("2025-01-30").getTime();
 
 	let version: ApiVersion;
 
-	if (!createdAt || createdAt >= v1_2) {
+	if (!createdAt || createdAt >= v2_0) {
+		version = ApiVersion.V2_0;
+	} else if (createdAt >= v1_2) {
 		version = ApiVersion.V1_2;
 	} else if (createdAt >= v1_1) {
 		version = ApiVersion.V1_1;
@@ -141,6 +158,7 @@ export function createdAtToVersion({
 	}
 
 	return new ApiVersionClass(version);
+	// return new ApiVersionClass(ApiVersion.V2_0);
 }
 
 // Convert org creation date

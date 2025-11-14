@@ -1,3 +1,4 @@
+import type { ApiBalance } from "@autumn/shared";
 import { redis } from "../../../../external/redis/initRedis.js";
 import { buildCachedApiCustomerKey } from "../../../customers/cusUtils/apiCusCacheUtils/getCachedApiCustomer.js";
 import { buildCachedApiEntityKey } from "../../../entities/entityUtils/apiEntityCacheUtils/getCachedApiEntity.js";
@@ -8,11 +9,12 @@ interface FeatureDeduction {
 	amount: number;
 }
 
-interface DeductionResult {
+export interface DeductionResult {
 	success: boolean;
 	error?: string;
 	customerChanged?: boolean;
 	changedEntityIds?: string[];
+	balances?: Record<string, ApiBalance>; // Object of changed balances keyed by featureId
 }
 
 interface BatchRequest {
@@ -177,6 +179,7 @@ export class BatchingManager {
 						error: requestResult?.error,
 						customerChanged: result.customerChanged,
 						changedEntityIds: result.changedEntityIds,
+						balances: result.balances,
 					});
 				}
 			} else {

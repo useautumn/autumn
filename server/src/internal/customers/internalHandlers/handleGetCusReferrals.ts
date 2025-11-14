@@ -10,7 +10,7 @@ export const handleGetCusReferrals = createRoute({
 	params: z.object({ customer_id: z.string() }),
 	handler: async (c) => {
 		const { env, db, org } = c.get("ctx");
-		const { customer_id } = c.req.valid("param");
+		const { customer_id } = c.req.param();
 
 		const internalCustomer = await CusService.get({
 			db,

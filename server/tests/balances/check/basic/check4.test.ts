@@ -1,13 +1,14 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	ApiVersion,
-	type CheckResponse,
 	type CheckResponseV0,
+	type CheckResponseV1,
+	type CheckResponseV2,
 	SuccessCode,
 } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { TestFeature } from "tests/setup/v2Features.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -31,6 +32,7 @@ describe(`${chalk.yellowBright("check4: test /check on unlimited feature")}`, ()
 	const customerId = "check4";
 	const autumnV0: AutumnInt = new AutumnInt({ version: ApiVersion.V0_2 });
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
+	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2_0 });
 
 	beforeAll(async () => {
 		await initCustomerV3({
@@ -51,21 +53,27 @@ describe(`${chalk.yellowBright("check4: test /check on unlimited feature")}`, ()
 		});
 	});
 
-	test("v0 response", async () => {
-		const res = (await autumnV0.check({
+	test("v2 response", async () => {
+		const res = (await autumnV2.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
-		})) as unknown as CheckResponseV0;
+		})) as unknown as CheckResponseV2;
 
-		expect(res.allowed).toBe(true);
-		expect(res.balances).toBeDefined();
-		expect(res.balances).toHaveLength(1);
-		expect(res.balances[0]).toStrictEqual({
-			balance: null,
-			feature_id: TestFeature.Messages,
-			unlimited: true,
-			usage_allowed: false,
-			required: null,
+		expect(res).toEqual({
+			allowed: true,
+			customer_id: "check4",
+			required_balance: 1,
+			balance: {
+				feature_id: "messages",
+				unlimited: true,
+				granted_balance: 0,
+				purchased_balance: 0,
+				current_balance: 0,
+				usage: 0,
+				overage_allowed: false,
+				max_purchase: null,
+				reset: null,
+			},
 		});
 	});
 
@@ -73,7 +81,7 @@ describe(`${chalk.yellowBright("check4: test /check on unlimited feature")}`, ()
 		const res = (await autumnV1.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
-		})) as unknown as CheckResponse;
+		})) as unknown as CheckResponseV1;
 
 		const expectedRes = {
 			allowed: true,
@@ -94,5 +102,23 @@ describe(`${chalk.yellowBright("check4: test /check on unlimited feature")}`, ()
 		};
 
 		expect(expectedRes).toMatchObject(res);
+	});
+
+	test("v0 response", async () => {
+		const res = (await autumnV0.check({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+		})) as unknown as CheckResponseV0;
+
+		expect(res.allowed).toBe(true);
+		expect(res.balances).toBeDefined();
+		expect(res.balances).toHaveLength(1);
+		expect(res.balances[0]).toStrictEqual({
+			balance: null,
+			feature_id: TestFeature.Messages,
+			unlimited: true,
+			usage_allowed: false,
+			required: null,
+		});
 	});
 });

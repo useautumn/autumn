@@ -41,7 +41,12 @@ if (cluster.isPrimary) {
 		console.log(
 			`⚠️  Worker ${worker.process.pid} died (${signal || code}). Restarting...`,
 		);
-		cluster.fork();
+
+		if (process.env.NODE_ENV === "development") {
+			process.exit(1);
+		} else {
+			cluster.fork();
+		}
 	});
 } else {
 	// Worker process

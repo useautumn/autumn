@@ -53,6 +53,9 @@ autumnWebhookRouter.post(
 			console.log("Received webhook from autumn");
 			const { type, data } = evt;
 
+			// console.log("Event:", evt);
+			// console.log("Data:", data);
+
 			switch (type) {
 				case WebhookEventType.CustomerProductsUpdated:
 					console.log(

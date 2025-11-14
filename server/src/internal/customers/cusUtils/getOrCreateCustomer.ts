@@ -7,14 +7,13 @@ import {
 	type FullCustomer,
 } from "@autumn/shared";
 import { autoCreateEntity } from "@/internal/entities/handlers/handleCreateEntity/autoCreateEntity.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { CusService } from "../CusService.js";
 import { handleCreateCustomer } from "../handlers/handleCreateCustomer.js";
 import { updateCustomerDetails } from "./cusUtils.js";
 
 export const getOrCreateCustomer = async ({
-	req,
+	ctx,
 	customerId,
 	customerData,
 	inStatuses = [
@@ -29,9 +28,8 @@ export const getOrCreateCustomer = async ({
 	// Entity stuff
 	entityId,
 	entityData,
-	withCache = false,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	customerId: string | null;
 	customerData?: CustomerData;
 	inStatuses?: CusProductStatus[];
@@ -40,11 +38,10 @@ export const getOrCreateCustomer = async ({
 	expand?: CusExpand[];
 	entityId?: string;
 	entityData?: EntityData;
-	withCache?: boolean;
 }): Promise<FullCustomer> => {
 	let customer: FullCustomer | undefined;
 
-	const { db, org, env, logger } = req;
+	const { db, org, env, logger } = ctx;
 
 	if (!withEntities) {
 		withEntities = expand?.includes(CusExpand.Entities) || false;
@@ -63,25 +60,12 @@ export const getOrCreateCustomer = async ({
 			allowNotFound: true,
 			withSubs: true,
 		});
-		// if (withCache) {
-		// 	customer = await getCusWithCache({
-		// 		db,
-		// 		idOrInternalId: customerId,
-		// 		org,
-		// 		env,
-		// 		entityId,
-		// 		expand: expand as CusExpand[],
-		// 		logger,
-		// 	});
-		// } else {
-
-		// }
 	}
 
 	if (!customer) {
 		try {
 			customer = (await handleCreateCustomer({
-				req,
+				ctx,
 				cusData: {
 					id: customerId,
 					name: customerData?.name,
@@ -125,7 +109,7 @@ export const getOrCreateCustomer = async ({
 	}
 
 	const updated = await updateCustomerDetails({
-		ctx: req as AutumnContext,
+		ctx,
 		customer,
 		customerData,
 	});
@@ -151,7 +135,7 @@ export const getOrCreateCustomer = async ({
 		logger.info(`Auto creating entity ${entityId} for customer ${customerId}`);
 
 		const newEntity = (await autoCreateEntity({
-			ctx: req as AutumnContext,
+			ctx,
 			customerId: customer.id || customer.internal_id,
 			entityId,
 			entityData: {

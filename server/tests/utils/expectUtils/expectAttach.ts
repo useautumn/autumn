@@ -1,3 +1,4 @@
+import { expect } from "bun:test";
 import {
 	type AppEnv,
 	AttachBranch,
@@ -7,17 +8,16 @@ import {
 	type Organization,
 	type ProductV2,
 } from "@autumn/shared";
-import type { AttachParams, Customer } from "autumn-js";
-import { expect } from "chai";
-import { Decimal } from "decimal.js";
-import type Stripe from "stripe";
-import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
-import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
+import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect.js";
+import { expectFeaturesCorrect } from "@tests/utils/expectUtils/expectFeaturesCorrect.js";
 import {
 	expectInvoicesCorrect,
 	expectProductAttached,
-} from "tests/utils/expectUtils/expectProductAttached.js";
-import { getCurrentOptions } from "tests/utils/testAttachUtils/testAttachUtils.js";
+} from "@tests/utils/expectUtils/expectProductAttached.js";
+import { getCurrentOptions } from "@tests/utils/testAttachUtils/testAttachUtils.js";
+import type { AttachParams, Customer } from "autumn-js";
+import { Decimal } from "decimal.js";
+import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
@@ -132,8 +132,8 @@ export const attachAndExpectCorrect = async ({
 	const productCount = customer.products.reduce((acc: number, p: any) => {
 		if (
 			product.group === p.group &&
-			!p.is_add_on &&
-			(entityId ? p.entity_id === entityId : true)
+			!p.is_add_on
+			// && (entityId ? p.entity_id === entityId : true)
 		) {
 			return acc + 1;
 		} else return acc;
@@ -145,12 +145,12 @@ export const attachAndExpectCorrect = async ({
 		expect(
 			productCount,
 			`customer should only have 2 products (from this group: ${product.group})`,
-		).to.equal(2);
+		).toEqual(2);
 	} else {
 		expect(
 			productCount,
-			`customer should only have 1 product (from this group: ${product.group})`,
-		).to.equal(1);
+			`customer should only have 1 product, instead got ${productCount}`,
+		).toEqual(1);
 	}
 
 	expectProductAttached({

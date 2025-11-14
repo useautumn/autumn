@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion, CusExpand } from "@autumn/shared";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 
 const testCase = "create-customer1";

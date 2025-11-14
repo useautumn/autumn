@@ -1,20 +1,22 @@
 import {
+	AffectedResource,
+	ApiVersion,
 	backwardsChangeActive,
 	CreateCustomerParamsSchema,
 	CreateCustomerQuerySchema,
 	CusExpand,
 	V0_2_InvoicesAlwaysExpanded,
 } from "@autumn/shared";
-import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getApiCustomer } from "../cusUtils/apiCusUtils/getApiCustomer.js";
 import { getOrCreateApiCustomer } from "../cusUtils/getOrCreateApiCustomer.js";
 
 export const handlePostCustomer = createRoute({
-	query: CreateCustomerQuerySchema.extend({
-		with_autumn_id: z.boolean().optional(),
-	}),
-
+	versionedQuery: {
+		latest: CreateCustomerQuerySchema,
+		[ApiVersion.V1_2]: CreateCustomerQuerySchema,
+	},
+	resource: AffectedResource.Customer,
 	body: CreateCustomerParamsSchema,
 
 	handler: async (c) => {
@@ -42,41 +44,16 @@ export const handlePostCustomer = createRoute({
 		const apiCustomer = await getApiCustomer({
 			ctx,
 			customerId: createCusParams.id || "",
-			expand,
-			skipCache: false,
 			withAutumnId: with_autumn_id,
 			baseData: {
 				apiCustomer: baseData.apiCustomer,
 				legacyData: baseData.legacyData || {
 					cusProductLegacyData: {},
+					cusFeatureLegacyData: {},
 				},
 			},
 		});
 
 		return c.json(apiCustomer);
-
-		// // Check if cached customer exists
-		// const fullCus = await getOrCreateCustomer({
-		// 	req: ctx as ExtendedRequest,
-		// 	customerId: createCusParams.id,
-		// 	customerData: createCusParams,
-		// 	expand,
-		// 	entityId: createCusParams.entity_id,
-		// 	entityData: createCusParams.entity_data,
-		// 	withCache: true,
-		// });
-
-		// console.log("Full Cus:", fullCus);
-
-		// const customer = await getApiCustomer({
-		// 	ctx,
-		// 	fullCus: fullCus,
-		// 	expand,
-		// 	withAutumnId: with_autumn_id,
-		// });
-
-		// console.log("Customer:", customer);
-
-		// return c.json(customer);
 	},
 });

@@ -1,4 +1,10 @@
-import type { ApiEntity, EntityExpand, FullCustomer } from "@autumn/shared";
+import {
+	AffectedResource,
+	type ApiEntityV1,
+	applyResponseVersionChanges,
+	type EntityLegacyData,
+	type FullCustomer,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getCachedApiEntity } from "../apiEntityCacheUtils/getCachedApiEntity.js";
 import { getApiEntityExpand } from "./getApiEntityExpand.js";
@@ -8,32 +14,28 @@ import { getApiEntityExpand } from "./getApiEntityExpand.js";
  */
 export const getApiEntity = async ({
 	ctx,
-	expand,
 	customerId,
 	entityId,
 	fullCus,
 	withAutumnId = false,
-	skipCache = false,
 }: {
 	ctx: AutumnContext;
-	expand: EntityExpand[];
 	customerId: string;
 	entityId: string;
 	fullCus?: FullCustomer;
 	withAutumnId?: boolean;
-	skipCache?: boolean;
-}): Promise<ApiEntity> => {
+}): Promise<ApiEntityV1> => {
 	// Get base entity (cacheable or direct from DB)
-	let { apiEntity: baseEntity } = await getCachedApiEntity({
-		ctx,
-		customerId,
-		entityId,
-		skipCache,
-		fullCus,
-	});
+	const { apiEntity: baseEntity, legacyData: entityLegacyData } =
+		await getCachedApiEntity({
+			ctx,
+			customerId,
+			entityId,
+			fullCus,
+		});
 
 	// Clean api entity
-	baseEntity = {
+	const cleanedEntity = {
 		...baseEntity,
 		autumn_id: withAutumnId ? baseEntity.autumn_id : undefined,
 	};
@@ -43,23 +45,19 @@ export const getApiEntity = async ({
 		ctx,
 		customerId,
 		entityId,
-		expand,
 		fullCus,
 	});
 
 	// Merge expand fields
 	const apiEntity = {
-		...baseEntity,
+		...cleanedEntity,
 		...apiEntityExpand,
 	};
 
-	// When entities have version changes, add this:
-	// return applyResponseVersionChanges<EntityResponse, EntityLegacyData>({
-	// 	input: apiEntity,
-	// 	legacyData: entityLegacyData,
-	// 	targetVersion: ctx.apiVersion,
-	// 	resource: AffectedResource.Entity,
-	// });
-
-	return apiEntity;
+	return applyResponseVersionChanges<ApiEntityV1, EntityLegacyData>({
+		input: apiEntity,
+		legacyData: entityLegacyData,
+		targetVersion: ctx.apiVersion,
+		resource: AffectedResource.Entity,
+	});
 };

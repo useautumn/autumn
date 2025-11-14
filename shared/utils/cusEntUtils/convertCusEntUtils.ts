@@ -12,10 +12,16 @@ import { getRolloverFields } from "./getRolloverFields.js";
 export const cusEntToKey = ({
 	cusEnt,
 }: {
-	cusEnt: FullCustomerEntitlement;
+	cusEnt: FullCusEntWithFullCusProduct;
 }) => {
-	const ent = cusEnt.entitlement;
-	return `${ent.interval || "null"}-${ent.interval_count || 1}-${ent.feature.id}`;
+	// Interval
+	const interval = `${cusEnt.entitlement.interval_count ?? 1}:${cusEnt.entitlement.interval}`;
+
+	const planId = `${cusEnt.customer_product.product_id}`;
+
+	const usageModel = `${cusEnt.usage_allowed}`;
+
+	return `${interval}:${planId}:${usageModel}`;
 };
 
 export const cusEntToBalance = ({
@@ -93,18 +99,36 @@ export const cusEntToIncludedUsage = ({
 	// }
 };
 
-export const cusEntToUsageLimit = ({
+// NEW CUS ENT UTILS
+export const cusEntToGrantedBalance = ({
 	cusEnt,
 	entityId,
+	withRollovers = false,
 }: {
 	cusEnt: FullCusEntWithFullCusProduct;
 	entityId?: string;
+	withRollovers?: boolean;
 }) => {
-	const startingBalance = cusEntToIncludedUsage({
+	const rollover = getRolloverFields({
 		cusEnt,
 		entityId,
 	});
 
-	if (cusEnt.entitlement.usage_limit) return cusEnt.entitlement.usage_limit;
-	return startingBalance;
+	const { count: entityCount } = getCusEntBalance({
+		cusEnt,
+		entityId,
+	});
+
+	const grantedBalance = cusEnt.entitlement.allowance || 0;
+
+	const total = new Decimal(grantedBalance).mul(entityCount).toNumber();
+
+	if (withRollovers && rollover) {
+		return new Decimal(total)
+			.add(rollover.balance)
+			.add(rollover.usage)
+			.toNumber();
+	}
+
+	return total;
 };

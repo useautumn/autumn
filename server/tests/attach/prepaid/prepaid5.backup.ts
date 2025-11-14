@@ -9,10 +9,10 @@ import {
 import { expect } from "chai";
 import chalk from "chalk";
 import type Stripe from "stripe";
-import { setupBefore } from "tests/before.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { createProducts } from "tests/utils/productUtils.js";
+import { setupBefore } from "@tests/before.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
+import { createProducts } from "@tests/utils/productUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {

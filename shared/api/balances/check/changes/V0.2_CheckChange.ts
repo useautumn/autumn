@@ -5,7 +5,7 @@ import {
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
 import type { z } from "zod/v4";
 import { FeatureType } from "../../../../models/featureModels/featureEnums.js";
-import { CheckResultSchema } from "../../../core/checkModels.js";
+
 import {
 	type CheckLegacyData,
 	CheckLegacyDataSchema,
@@ -13,7 +13,8 @@ import {
 import {
 	type CheckResponseV0,
 	CheckResponseV0Schema,
-} from "../previousVersions/CheckResponseV0.js";
+} from "../prevVersions/CheckResponseV0.js";
+import { CheckResponseV1Schema } from "../prevVersions/CheckResponseV1.js";
 
 /**
  * V0_2_CheckChange: Transforms check response TO V0_2 format
@@ -43,7 +44,7 @@ export const V0_2_CheckChange = defineVersionChange({
 		"Single check result object → { allowed, balances: [...] }",
 	],
 	affectedResources: [AffectedResource.Check],
-	newSchema: CheckResultSchema,
+	newSchema: CheckResponseV1Schema,
 	oldSchema: CheckResponseV0Schema,
 	legacyDataSchema: CheckLegacyDataSchema,
 	affectsResponse: true,
@@ -53,7 +54,7 @@ export const V0_2_CheckChange = defineVersionChange({
 		input,
 		legacyData,
 	}: {
-		input: z.infer<typeof CheckResultSchema>;
+		input: z.infer<typeof CheckResponseV1Schema>;
 		legacyData?: CheckLegacyData;
 	}): CheckResponseV0 => {
 		const {

@@ -1,8 +1,8 @@
 import {
 	formatAmount,
 	getIntervalString,
-	mapToProductV3,
 	type Organization,
+	productV2ToBasePrice,
 } from "@autumn/shared";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useProductStore } from "@/hooks/stores/useProductStore";
@@ -12,13 +12,13 @@ import { useOnboardingStore } from "@/views/onboarding3/store/useOnboardingStore
 
 export const BasePriceDisplay = () => {
 	const product = useProductStore((s) => s.product);
-	const productV3 = mapToProductV3({ product });
 	const isOnboarding = useOnboardingStore((s) => s.isOnboarding);
+	const basePrice = productV2ToBasePrice({ product });
 	const { org } = useOrg();
 
 	const formattedAmount = formatAmount({
 		org: org as unknown as Organization,
-		amount: productV3.price?.amount ?? 0,
+		amount: basePrice?.price ?? 0,
 		amountFormatOptions: {
 			style: "currency",
 			currency: org?.default_currency || "USD",
@@ -26,11 +26,11 @@ export const BasePriceDisplay = () => {
 		},
 	});
 
-	const secondaryText = productV3.price?.interval
-		? `${getIntervalString({ interval: productV3.price.interval, intervalCount: productV3.price.intervalCount })}`
+	const secondaryText = basePrice?.interval
+		? `${getIntervalString({ interval: basePrice.interval, intervalCount: basePrice.interval_count })}`
 		: "once";
 
-	const priceExists = notNullish(productV3.price) && productV3.price.amount > 0;
+	const priceExists = notNullish(basePrice) && basePrice.price > 0;
 	return (
 		<div className={cn(isOnboarding && "mt-1")}>
 			{priceExists ? (

@@ -2,12 +2,12 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	ApiVersion,
 	AppEnv,
-	type CheckResponse,
+	type CheckResponseV1,
 	SuccessCode,
 } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { TestFeature } from "tests/setup/v2Features.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { generatePublishableKey } from "@/utils/encryptUtils.js";
@@ -85,7 +85,7 @@ describe(`${chalk.yellowBright("check8: test public key & send_event")}`, () => 
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			required_balance: 100,
-		})) as unknown as CheckResponse;
+		})) as unknown as CheckResponseV1;
 
 		expect(res).toMatchObject({
 			allowed: true,
@@ -115,7 +115,7 @@ describe(`${chalk.yellowBright("check8: test public key & send_event")}`, () => 
 			feature_id: TestFeature.Messages,
 			required_balance: 50,
 			send_event: true,
-		})) as unknown as CheckResponse;
+		})) as unknown as CheckResponseV1;
 
 		expect(checkRes.allowed).toBe(true);
 
@@ -137,7 +137,7 @@ describe(`${chalk.yellowBright("check8: test public key & send_event")}`, () => 
 			feature_id: TestFeature.Messages,
 			required_balance: 150,
 			send_event: true,
-		})) as unknown as CheckResponse;
+		})) as unknown as CheckResponseV1;
 
 		expect(checkRes.allowed).toBe(true);
 		expect(checkRes.balance).toBe(1000);
@@ -164,7 +164,7 @@ describe(`${chalk.yellowBright("check8: test public key & send_event")}`, () => 
 			feature_id: TestFeature.Messages,
 			required_balance: 900, // More than available (850)
 			send_event: true,
-		})) as unknown as CheckResponse;
+		})) as unknown as CheckResponseV1;
 
 		expect(checkRes.allowed).toBe(false);
 

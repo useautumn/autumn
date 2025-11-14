@@ -57,6 +57,8 @@ export const initCusEntEntities = ({
 			id: entity.id,
 			balance: resetBalance || 0,
 			adjustment: 0,
+			additional_balance: 0,
+			additional_granted_balance: 0,
 		};
 	}
 

@@ -1,38 +1,117 @@
-import type { CustomerData, EntityData } from "@autumn/shared";
+import {
+	type ApiBalance,
+	type ApiCustomer,
+	InsufficientBalanceError,
+	isContUseFeature,
+	type TrackParams,
+	type TrackQuery,
+} from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
-import { getCachedApiCustomer } from "../../../customers/cusUtils/apiCusCacheUtils/getCachedApiCustomer.js";
+import {
+	normalizeCachedBalance,
+	tryRedisWrite,
+} from "../../../../utils/cacheUtils/cacheUtils.js";
 import { getOrCreateApiCustomer } from "../../../customers/cusUtils/getOrCreateApiCustomer.js";
 import { globalEventBatchingManager } from "../eventUtils/EventBatchingManager.js";
 import { globalSyncBatchingManager } from "../syncUtils/SyncBatchingManager.js";
 import { constructEvent, type EventInfo } from "../trackUtils/eventUtils.js";
-import { globalBatchingManager } from "./BatchingManager.js";
+import type { FeatureDeduction } from "../trackUtils/getFeatureDeductions.js";
+import {
+	type DeductionResult,
+	globalBatchingManager,
+} from "./BatchingManager.js";
 
-interface FeatureDeduction {
-	feature: {
-		id: string;
-		[key: string]: any;
-	};
-	deduction: number;
-}
-
-interface RunRedisDeductionParams {
+type RunRedisDeductionParams = {
 	ctx: AutumnContext;
-	customerId: string;
-	customerData?: CustomerData;
-	entityId?: string;
-	entityData?: EntityData;
+	// customerId: string;
+	// customerData?: CustomerData;
+	// entityId?: string;
+	// entityData?: EntityData;
+	query: TrackQuery;
+	trackParams: TrackParams;
 	featureDeductions: FeatureDeduction[];
 	overageBehavior: "cap" | "reject";
 	skipEvent?: boolean;
 	eventInfo?: EventInfo;
-}
+};
 
-interface DeductionResult {
-	success: boolean;
-	error?: string;
+interface RunRedisDeductionResult {
+	fallback: boolean;
+	code:
+		| "success"
+		| "insufficient_balance"
+		| "idempotency_key"
+		| "allocated_feature"
+		| "skip_cache"
+		| "redis_write_failed";
+
 	internalCustomerId?: string;
 	internalEntityId?: string;
+	balances?: Record<string, ApiBalance>; // Object of changed balances keyed by featureId
 }
+
+const queueSyncAndEvent = ({
+	ctx,
+	trackParams,
+	featureDeductions,
+	skipEvent,
+	eventInfo,
+	result,
+	apiCustomer,
+}: RunRedisDeductionParams & {
+	result: DeductionResult;
+	apiCustomer: ApiCustomer;
+}) => {
+	const { customer_id, entity_id } = trackParams;
+	const { org, env } = ctx;
+
+	ctx.logger.info(
+		`[queueSync]: customer changed: ${result.customerChanged}, changed entity ids: ${result.changedEntityIds}`,
+	);
+
+	for (const deduction of featureDeductions) {
+		// If customer was changed, queue customer-level sync
+		if (result.customerChanged) {
+			globalSyncBatchingManager.addSyncPair({
+				customerId: customer_id,
+				featureId: deduction.feature.id,
+				orgId: org.id,
+				env,
+				entityId: undefined, // Customer-level sync
+			});
+		}
+
+		// For each changed entity, queue entity-level sync
+		if (result.changedEntityIds && result.changedEntityIds.length > 0) {
+			for (const changedEntityId of result.changedEntityIds) {
+				globalSyncBatchingManager.addSyncPair({
+					customerId: customer_id,
+					featureId: deduction.feature.id,
+					orgId: org.id,
+					env,
+					entityId: changedEntityId,
+				});
+			}
+		}
+	}
+
+	if (!skipEvent && apiCustomer?.autumn_id && eventInfo) {
+		globalEventBatchingManager.addEvent(
+			constructEvent({
+				ctx,
+				eventInfo: eventInfo,
+				internalCustomerId: apiCustomer?.autumn_id,
+
+				internalEntityId:
+					apiCustomer?.entities?.find((entity) => entity.id === entity_id)
+						?.autumn_id ?? undefined,
+
+				customerId: customer_id,
+				entityId: entity_id,
+			}),
+		);
+	}
+};
 
 /**
  * Executes deductions against cached customer data in Redis
@@ -40,120 +119,214 @@ interface DeductionResult {
  */
 export const runRedisDeduction = async ({
 	ctx,
-	customerId,
-	customerData,
-	entityId,
-	entityData,
+	query,
+	trackParams,
 	featureDeductions,
 	overageBehavior,
 	skipEvent = false,
 	eventInfo,
-}: RunRedisDeductionParams): Promise<DeductionResult> => {
+}: RunRedisDeductionParams): Promise<RunRedisDeductionResult> => {
 	const { org, env } = ctx;
 
-	// Ensure customer is in cache
-	const { apiCustomer: cachedCustomer } = await getOrCreateApiCustomer({
-		ctx,
-		customerId,
-		customerData,
-		entityId,
-		entityData,
-	});
+	const hasContUseFeature = featureDeductions.some((deduction) =>
+		isContUseFeature({ feature: deduction.feature }),
+	);
 
-	// Map feature deductions to the format expected by batching manager
-	const mappedDeductions = featureDeductions.map(({ feature, deduction }) => ({
-		featureId: feature.id,
-		amount: deduction,
-	}));
+	// 1. Check for idempotency key
+	if (trackParams.idempotency_key) {
+		return {
+			fallback: true,
+			code: "idempotency_key",
+		};
+	}
 
-	const result = await globalBatchingManager.deduct({
-		customerId,
-		featureDeductions: mappedDeductions,
-		orgId: org.id,
-		env,
-		entityId,
-		overageBehavior,
-	});
+	// 2. Check for continuous use feature
+	if (hasContUseFeature) {
+		return {
+			fallback: true,
+			code: "allocated_feature",
+		};
+	}
 
-	if (!result.success) {
-		ctx.logger.info(
-			`Track failed: ${result.error} for customer: ${customerId}`,
+	if (query.skip_cache) {
+		return {
+			fallback: true,
+			code: "skip_cache",
+		};
+	}
+
+	const result = await tryRedisWrite<RunRedisDeductionResult>(async () => {
+		const {
+			customer_id: customerId,
+			customer_data: customerData,
+			entity_id: entityId,
+			entity_data: entityData,
+		} = trackParams;
+
+		const { apiCustomer } = await getOrCreateApiCustomer({
+			ctx,
+			customerId,
+			customerData,
+			entityId,
+			entityData,
+		});
+
+		// Map feature deductions to the format expected by batching manager
+		const mappedDeductions = featureDeductions.map(
+			({ feature, deduction }) => ({
+				featureId: feature.id,
+				amount: deduction,
+			}),
 		);
-	}
 
-	// Fallback to PostgreSQL for continuous_use + overage features
-	if (!result.success && result.error === "REQUIRES_POSTGRES_TRACKING") {
-		throw new Error(result.error);
-	}
+		const result = await globalBatchingManager.deduct({
+			customerId,
+			featureDeductions: mappedDeductions,
+			orgId: org.id,
+			env,
+			entityId,
+			overageBehavior,
+		});
 
-	// Redis deduction successful: queue sync jobs and event insertion
-
-	if (result.success) {
-		// Only queue sync pairs for scopes that were actually modified
-		// This prevents unnecessary syncs and race conditions
-		for (const deduction of featureDeductions) {
-			// If customer was changed, queue customer-level sync
-			if (result.customerChanged) {
-				globalSyncBatchingManager.addSyncPair({
-					customerId: customerId,
-					featureId: deduction.feature.id,
-					orgId: org.id,
-					env,
-					entityId: undefined, // Customer-level sync
-				});
-			}
-
-			// For each changed entity, queue entity-level sync
-			if (result.changedEntityIds && result.changedEntityIds.length > 0) {
-				for (const changedEntityId of result.changedEntityIds) {
-					globalSyncBatchingManager.addSyncPair({
-						customerId: customerId,
-						featureId: deduction.feature.id,
-						orgId: org.id,
-						env,
-						entityId: changedEntityId,
-					});
-				}
-			}
-		}
-
-		// Queue event insertion (skip if skip_event is true)
-
-		if (!skipEvent && cachedCustomer?.autumn_id && eventInfo) {
-			globalEventBatchingManager.addEvent(
-				constructEvent({
-					ctx,
-					eventInfo: eventInfo,
-					internalCustomerId: cachedCustomer?.autumn_id,
-
-					internalEntityId:
-						cachedCustomer?.entities?.find((entity) => entity.id === entityId)
-							?.autumn_id ?? undefined,
-
-					customerId: customerId,
-					entityId: entityId,
-				}),
+		if (result.balances) {
+			result.balances = Object.fromEntries(
+				Object.entries(result.balances).map(([featureId, balance]) => [
+					featureId,
+					normalizeCachedBalance(balance),
+				]),
 			);
 		}
-	}
 
-	const apiCustomer = await getCachedApiCustomer({
-		ctx,
-		customerId,
+		if (result.success) {
+			try {
+				queueSyncAndEvent({
+					ctx,
+					query,
+					trackParams,
+					featureDeductions,
+					overageBehavior,
+					skipEvent,
+					eventInfo,
+					result,
+					apiCustomer,
+				});
+			} catch (error) {
+				ctx.logger.error(`Failed to queue sync and event! ${error}`);
+			}
+		}
+
+		return {
+			fallback: false,
+			code:
+				result.error === "INSUFFICIENT_BALANCE"
+					? "insufficient_balance"
+					: !result.success
+						? "redis_write_failed"
+						: "success",
+
+			balances: result.balances,
+		};
 	});
 
-	const msgesFeature = apiCustomer.apiCustomer.features?.messages?.balance;
-	console.log(
-		`Feature deductions:`,
-		featureDeductions.map((d) => ({
-			featureId: d.feature.id,
-			deduction: d.deduction,
-		})),
-	);
-	console.log(`Post track, messages balance:`, msgesFeature);
+	if (result === null) {
+		return {
+			fallback: true,
+			code: "redis_write_failed",
+		};
+	}
 
-	return {
-		success: result.success,
-		error: result.error,
-	};
+	if (result.code === "insufficient_balance") {
+		throw new InsufficientBalanceError({
+			value: trackParams.value ?? 1,
+			featureId: trackParams.feature_id,
+			eventName: trackParams.event_name,
+		});
+	}
+
+	return result;
+
+	// if (!result.success) {
+	// 	ctx.logger.info(
+	// 		`Track failed: ${result.error} for customer: ${customerId}`,
+	// 	);
+	// }
+
+	// // Redis deduction successful: queue sync jobs and event insertion
+
+	// if (result.success) {
+	// 	// Only queue sync pairs for scopes that were actually modified
+	// 	// This prevents unnecessary syncs and race conditions
+	// 	for (const deduction of featureDeductions) {
+	// 		// If customer was changed, queue customer-level sync
+	// 		if (result.customerChanged) {
+	// 			globalSyncBatchingManager.addSyncPair({
+	// 				customerId: customerId,
+	// 				featureId: deduction.feature.id,
+	// 				orgId: org.id,
+	// 				env,
+	// 				entityId: undefined, // Customer-level sync
+	// 			});
+	// 		}
+
+	// 		// For each changed entity, queue entity-level sync
+	// 		if (result.changedEntityIds && result.changedEntityIds.length > 0) {
+	// 			for (const changedEntityId of result.changedEntityIds) {
+	// 				globalSyncBatchingManager.addSyncPair({
+	// 					customerId: customerId,
+	// 					featureId: deduction.feature.id,
+	// 					orgId: org.id,
+	// 					env,
+	// 					entityId: changedEntityId,
+	// 				});
+	// 			}
+	// 		}
+	// 	}
+
+	// 	// Queue event insertion (skip if skip_event is true)
+
+	// 	if (!skipEvent && cachedCustomer?.autumn_id && eventInfo) {
+	// 		globalEventBatchingManager.addEvent(
+	// 			constructEvent({
+	// 				ctx,
+	// 				eventInfo: eventInfo,
+	// 				internalCustomerId: cachedCustomer?.autumn_id,
+
+	// 				internalEntityId:
+	// 					cachedCustomer?.entities?.find((entity) => entity.id === entityId)
+	// 						?.autumn_id ?? undefined,
+
+	// 				customerId: customerId,
+	// 				entityId: entityId,
+	// 			}),
+	// 		);
+	// 	}
+	// }
+
+	// // const apiCustomer = await getCachedApiCustomer({
+	// // 	ctx,
+	// // 	customerId,
+	// // });
+
+	// // const msgesFeature = apiCustomer.apiCustomer.features?.messages?.balance;
+	// // console.log(
+	// // 	`Feature deductions:`,
+	// // 	featureDeductions.map((d) => ({
+	// // 		featureId: d.feature.id,
+	// // 		deduction: d.deduction,
+	// // 	})),
+	// // );
+	// // console.log(`Post track, messages balance:`, msgesFeature);
+
+	// return {
+	// 	fallback: !result.success,
+	// 	code: result.success ? "success" : "insufficient_balance",
+	// 	balances: result.balances
+	// 		? result.balances.map((balance) => normalizeCachedBalance(balance))
+	// 		: undefined,
+	// };
 };
+
+// customerId,
+// 	customerData,
+// 	entityId,
+// 	entityData,

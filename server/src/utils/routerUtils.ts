@@ -2,11 +2,9 @@ import { ErrCode } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import qs from "qs";
 import { ZodAny, ZodError, ZodObject } from "zod";
+import { formatZodError } from "@/errors/formatZodError.js";
 import { withSpan as withSpanTracer } from "@/internal/analytics/tracer/spanUtils.js";
-import RecaseError, {
-	formatZodError,
-	handleRequestError,
-} from "./errorUtils.js";
+import RecaseError, { handleRequestError } from "./errorUtils.js";
 import type { ExtendedRequest } from "./models/Request.js";
 import { handleExpressErrorSkip } from "./routerUtils/expressErrorSkip.js";
 
@@ -140,7 +138,12 @@ export const routeHandler = async <TLoad = undefined>({
 	req: any;
 	res: any;
 	action: string;
-	handler: (req: any, res: any, load: TLoad, query?: any) => Promise<void>;
+	handler: (
+		req: any,
+		res: any,
+		load: TLoad,
+		query?: any,
+	) => Promise<void> | void;
 	validator?:
 		| ((req: any, res: any) => Promise<void>)
 		| ZodAny
