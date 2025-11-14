@@ -91,6 +91,11 @@ export const initNextResetAt = ({
 			},
 			now,
 		});
+
+		console.log(
+			"Next reset at aligned: ",
+			formatUnixToDateTime(nextResetAtCalculated),
+		);
 	}
 
 	return nextResetAtCalculated;
