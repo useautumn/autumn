@@ -1,5 +1,5 @@
+import { BATCH_DEDUCTION_SCRIPT } from "@lua/luaScripts.js";
 import type { Redis } from "ioredis";
-import { BATCH_DEDUCTION_SCRIPT } from "./luaScripts.js";
 
 interface BatchDeductionResult {
 	success: boolean;

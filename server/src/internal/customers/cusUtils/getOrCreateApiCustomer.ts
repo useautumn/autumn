@@ -7,7 +7,6 @@ import {
 	type EntityData,
 } from "@autumn/shared";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
-import type { ExtendedRequest } from "../../../utils/models/Request.js";
 import { autoCreateEntity } from "../../entities/handlers/handleCreateEntity/autoCreateEntity.js";
 import { handleCreateCustomer } from "../handlers/handleCreateCustomer.js";
 import { deleteCachedApiCustomer } from "./apiCusCacheUtils/deleteCachedApiCustomer.js";
@@ -36,7 +35,7 @@ export const getOrCreateApiCustomer = async ({
 	// Path A: customerId is NULL - always create new customer
 	if (!customerId) {
 		const newCustomer = await handleCreateCustomer({
-			req: ctx as unknown as ExtendedRequest,
+			ctx,
 			cusData: {
 				id: null,
 				name: customerData?.name,
@@ -81,7 +80,7 @@ export const getOrCreateApiCustomer = async ({
 		if (!apiCustomerOrUndefined) {
 			try {
 				const newCustomer = await handleCreateCustomer({
-					req: ctx as unknown as ExtendedRequest,
+					ctx,
 					cusData: {
 						id: customerId,
 						name: customerData?.name,
