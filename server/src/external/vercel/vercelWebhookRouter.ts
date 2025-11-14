@@ -4,7 +4,6 @@ import { analyticsMiddleware } from "@/honoMiddlewares/analyticsMiddleware.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { sendCustomSvixEvent } from "../svix/svixHelpers.js";
 import { handleListBillingPlansPerInstall } from "./handlers/handleListBillingPlans.js";
-import { handleUpdateBillingPlan } from "./handlers/handleUpdateBillingPlan.js";
 import { handleDeleteInstallation } from "./handlers/installations/handleDeleteInstallation.js";
 import { handleGetInstallation } from "./handlers/installations/handleGetInstallation.js";
 import { handleUpsertInstallation } from "./handlers/installations/handleUpsertInstallation.js";
@@ -25,6 +24,7 @@ import {
 	type VercelWebhookEvent,
 	VercelWebhooks,
 } from "./misc/vercelWebhookTypes.js";
+import { handleUpdateVercelBillingPlan } from "./handlers/handleUpdateBillingPlan.js";
 
 export const vercelWebhookRouter = new Hono<HonoEnv>();
 
@@ -66,7 +66,7 @@ vercelWebhookRouter.patch(
 	"/:orgId/:env/v1/installations/:integrationConfigurationId",
 	vercelSeederMiddleware,
 	vercelOidcAuthMiddleware,
-	...handleUpdateBillingPlan,
+	...handleUpdateVercelBillingPlan,
 );
 
 vercelWebhookRouter.post(

@@ -7,26 +7,22 @@
 	"scripts": {
 		"email": "email dev -p 3001",
 		"start": "bun src/index.ts",
-
 		"d": "ENV_FILE=.env infisical run --env=dev -- bun dev",
 		"p": "ENV_FILE=.env.prod infisical run --env=prod -- bun dev",
 		"w": "ENV_FILE=.env infisical run --env=dev -- bun workers:dev",
 		"c": "ENV_FILE=.env infisical run --env=dev -- bun cron",
-
 		"dev": "cross-env NODE_ENV=development bunx nodemon",
 		"workers:dev": "cross-env NODE_ENV=development bunx nodemon --exec bun src/workers.ts --signal SIGTERM --delay 500ms",
 		"workers": "bun src/workers.ts",
 		"cron": "bun src/cron.ts",
 		"check": "bun src/check.ts",
 		"build:check": "tsc -b tsconfig.build.json --noEmit",
-		
 		"t": "ENV_FILE=.env infisical run --env=dev -- bun tests/testRunner/runParallelGroupsV3.ts",
 		"parallel-tests": "ENV_FILE=.env infisical run --env=dev -- bun tests/testRunner/runParallelGroupsV3.ts",
 		"parallel-tests:v1": "ENV_FILE=.env infisical run --env=dev -- bun tests/testRunner/runParallelGroups.ts",
 		"parallel-tests:verbose": "ENV_FILE=.env infisical run --env=dev -- bun tests/testRunner/runParallelGroups.ts --verbose",
 		"parallel-tests:debug": "ENV_FILE=.env infisical run --env=dev -- bun tests/testRunner/runParallelGroups.ts --debug",
 		"clear-master": "ENV_FILE=.env infisical run --env=dev -- bun tests/clearMasterOrg.ts",
-
 		"ts": "bunx tsgo --build --noEmit"
 	},
 	"mocha": {
@@ -69,6 +65,7 @@
 		"@supabase/supabase-js": "^2.46.2",
 		"@types/qs": "^6.14.0",
 		"@types/semver": "^7.7.1",
+		"@typescript/native-preview": "^7.0.0-dev.20251114.1",
 		"@upstash/redis": "^1.35.1",
 		"@vercel/sdk": "^1.17.0",
 		"ai": "^4.3.10",

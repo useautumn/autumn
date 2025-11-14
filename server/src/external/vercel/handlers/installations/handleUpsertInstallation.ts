@@ -30,13 +30,6 @@ export const handleUpsertInstallation = createRoute({
 		let createdCustomer: Customer | null = null;
 
 		try {
-			// Create a compatible request object for handleCreateCustomer
-			const req = {
-				...ctx,
-				logtail: ctx.logger,
-				orgId: ctx.org.id,
-			};
-
 			const token = getAuthorizationToken(
 				c.req.header("Authorization") as string,
 			);
@@ -54,7 +47,7 @@ export const handleUpsertInstallation = createRoute({
 			}
 
 			createdCustomer = await handleCreateCustomer({
-				req: req as any,
+				ctx,
 				cusData: {
 					id: integrationConfigurationId,
 					email: body.account.contact.email,

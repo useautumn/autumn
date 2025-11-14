@@ -9,7 +9,7 @@ import { CusService } from "@/internal/customers/CusService.js";
 import type { VercelError, VercelNotification } from "../misc/vercelTypes.js";
 import { productToBillingPlan } from "./handleListBillingPlans.js";
 
-export const handleUpdateBillingPlan = createRoute({
+export const handleUpdateVercelBillingPlan = createRoute({
 	body: z.object({
 		billingPlanId: z.string().min(1),
 	}),

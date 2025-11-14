@@ -1,5 +1,5 @@
-import { ApiProductItemSchema } from "@api/products/apiProductItem.js";
 import { z } from "zod/v4";
+import { ApiProductItemSchema } from "../../products/planFeature/previousVersions/apiProductItem.js";
 
 export const ApiCusProductSchema = z.object({
 	id: z.string().meta({
