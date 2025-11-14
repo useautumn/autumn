@@ -2,16 +2,16 @@
 // import Stripe from "stripe";
 
 // import { expect } from "chai";
-// import { AutumnCli } from "tests/cli/AutumnCli.js";
-// import { advanceProducts, features } from "tests/global.js";
-// import { compareMainProduct } from "tests/utils/compare.js";
-// import { advanceTestClock } from "tests/utils/stripeUtils.js";
-// import { timeout } from "tests/utils/genUtils.js";
+// import { AutumnCli } from "@tests/cli/AutumnCli.js";
+// import { advanceProducts, features } from "@tests/global.js";
+// import { compareMainProduct } from "@tests/utils/compare.js";
+// import { advanceTestClock } from "@tests/utils/stripeUtils.js";
+// import { timeout } from "@tests/utils/genUtils.js";
 
 // import { addDays, addMonths, format } from "date-fns";
 
-// import { initCustomerWithTestClock } from "tests/utils/testInitUtils.js";
-// import { checkSubscriptionContainsProducts } from "tests/utils/scheduleCheckUtils.js";
+// import { initCustomerWithTestClock } from "@tests/utils/testInitUtils.js";
+// import { checkSubscriptionContainsProducts } from "@tests/utils/scheduleCheckUtils.js";
 // import { CacheManager } from "@/external/caching/CacheManager.js";
 // import { CacheType } from "@/external/caching/cacheActions.js";
 // import { hashApiKey } from "@/internal/dev/api-keys/apiKeyUtils.js";

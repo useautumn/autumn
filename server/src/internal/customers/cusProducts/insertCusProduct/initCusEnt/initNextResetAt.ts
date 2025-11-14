@@ -39,7 +39,7 @@ export const initNextResetAt = ({
 	// 2. If nextResetAt is provided, return it...
 	if (nextResetAt) return nextResetAt;
 
-	// 3. Calculate next reset at...
+	// 3. Get next reset at:
 	let nextResetAtCalculated = null;
 	const trialEndTimestamp = trialEndsAt
 		? Math.round(trialEndsAt / 1000)
@@ -47,21 +47,32 @@ export const initNextResetAt = ({
 			? freeTrialToStripeTimestamp({ freeTrial, now })
 			: null;
 
-	if (
-		freeTrial &&
-		applyTrialToEntitlement(entitlement, freeTrial) &&
-		trialEndTimestamp
-	) {
+	const shouldApplyTrial = applyTrialToEntitlement(entitlement, freeTrial);
+
+	// console.log(
+	// 	"Trial end timestamp: ",
+	// 	formatUnixToDateTime(trialEndTimestamp! * 1000),
+	// );
+	// console.log("Should apply trial: ", shouldApplyTrial);
+	// console.log("Anchor to unix: ", formatUnixToDateTime(anchorToUnix!));
+
+	if (freeTrial && shouldApplyTrial && trialEndTimestamp) {
 		nextResetAtCalculated = new UTCDate(trialEndTimestamp! * 1000);
 	}
 
 	const resetInterval = entitlement.interval as EntInterval;
 
+	const startDate = nextResetAtCalculated || new UTCDate(now);
 	nextResetAtCalculated = getNextEntitlementReset(
-		nextResetAtCalculated || new UTCDate(now),
+		startDate,
 		resetInterval,
 		entitlement.interval_count || 1,
 	).getTime();
+
+	// console.log(
+	// 	"Next reset at calculated: ",
+	// 	formatUnixToDateTime(nextResetAtCalculated),
+	// );
 
 	// If anchorToUnix, align next reset at to anchorToUnix...
 	if (
@@ -69,7 +80,8 @@ export const initNextResetAt = ({
 		nextResetAtCalculated &&
 		Object.values(BillingInterval).includes(
 			entitlement.interval as unknown as BillingInterval,
-		)
+		) &&
+		!shouldApplyTrial
 	) {
 		nextResetAtCalculated = getAlignedUnix({
 			anchor: anchorToUnix,
@@ -79,6 +91,11 @@ export const initNextResetAt = ({
 			},
 			now,
 		});
+
+		console.log(
+			"Next reset at aligned: ",
+			formatUnixToDateTime(nextResetAtCalculated),
+		);
 	}
 
 	return nextResetAtCalculated;

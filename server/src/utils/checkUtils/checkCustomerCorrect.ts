@@ -9,9 +9,9 @@ import {
 	type FullCustomer,
 	type Organization,
 } from "@autumn/shared";
+import { defaultApiVersion } from "@tests/constants.js";
+import { cusProductToSubIds } from "@tests/merged/mergeUtils.test.js";
 import type Stripe from "stripe";
-import { defaultApiVersion } from "tests/constants.js";
-import { cusProductToSubIds } from "tests/merged/mergeUtils.test.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { priceToStripeItem } from "@/external/stripe/priceToStripeItem/priceToStripeItem.js";
 import { subIsCanceled } from "@/external/stripe/stripeSubUtils.js";

@@ -1,24 +1,23 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type AppEnv,
 	CusProductStatus,
 	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
-import { expect } from "chai";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
+import { getExpectedInvoiceTotal } from "@tests/utils/expectUtils/expectInvoiceUtils.js";
+import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import type { Stripe } from "stripe";
-import { setupBefore } from "tests/before.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { advanceToNextInvoice } from "tests/utils/testAttachUtils/testAttachUtils.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
 const premium = constructProduct({
 	id: "premium",
@@ -46,39 +45,26 @@ describe(`${chalk.yellowBright("cancel2: Testing cancel at period end (with usag
 	let org: Organization;
 	let env: AppEnv;
 
-	beforeAll(async function () {
-		await setupBefore(this);
-		const { autumnJs } = this;
-		db = this.db;
-		org = this.org;
-		env = this.env;
-
-		stripeCli = this.stripeCli;
-
-		addPrefixToProducts({
+	beforeAll(async () => {
+		await initProductsV0({
+			ctx,
 			products: [premium],
 			prefix: testCase,
-		});
-
-		await createProducts({
-			autumn: autumnJs,
-			products: [premium],
-			db,
-			orgId: org.id,
-			env,
 			customerId,
 		});
 
-		const { testClockId: testClockId1 } = await initCustomer({
-			autumn: autumnJs,
+		const res = await initCustomerV3({
+			ctx,
 			customerId,
-			db,
-			org,
-			env,
 			attachPm: "success",
+			withTestClock: true,
 		});
 
-		testClockId = testClockId1!;
+		stripeCli = ctx.stripeCli;
+		db = ctx.db;
+		org = ctx.org;
+		env = ctx.env;
+		testClockId = res.testClockId!;
 	});
 
 	const entities = [
@@ -94,7 +80,7 @@ describe(`${chalk.yellowBright("cancel2: Testing cancel at period end (with usag
 		},
 	];
 
-	it("should run operations", async () => {
+	test("should run operations", async () => {
 		await autumn.entities.create(customerId, entities);
 
 		for (let index = 0; index < ops.length; index++) {
@@ -116,12 +102,12 @@ describe(`${chalk.yellowBright("cancel2: Testing cancel at period end (with usag
 		}
 	});
 
-	it("should track usage cancel, advance test clock and have correct invoice", async () => {
+	test("should track usage cancel, advance test clock and have correct invoice", async () => {
 		const cus1 = await autumn.customers.get(customerId);
 		const prod = cus1.products.find((p) => p.id === premium.id);
 		const proration = {
-			start: prod?.current_period_start!,
-			end: prod?.current_period_end!,
+			start: prod?.current_period_start || Date.now(),
+			end: prod?.current_period_end || Date.now(),
 		};
 
 		await autumn.track({
@@ -159,10 +145,10 @@ describe(`${chalk.yellowBright("cancel2: Testing cancel at period end (with usag
 		});
 
 		const cus = await autumn.customers.get(customerId);
-		const prods = cus.products.filter((p) => p.group == premium.group);
-		expect(prods.length).to.equal(0);
+		const prods = cus.products.filter((p) => p.group === premium.group);
+		expect(prods.length).toBe(0);
 
-		expect(cus.invoices.length).to.equal(2);
-		expect(cus.invoices[0].total).to.equal(wordsAmount);
+		expect(cus.invoices.length).toBe(2);
+		expect(cus.invoices[0].total).toBe(wordsAmount);
 	});
 });

@@ -1,16 +1,16 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { features, oneTimeProducts } from "tests/global.js";
-import { compareMainProduct } from "tests/utils/compare.js";
+import { AutumnCli } from "@tests/cli/AutumnCli.js";
+import { features, oneTimeProducts } from "@tests/global.js";
+import { compareMainProduct } from "@tests/utils/compare.js";
 import {
 	getFixedPriceAmount,
 	getUsagePriceTiers,
 	timeout,
-} from "tests/utils/genUtils.js";
-import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
+} from "@tests/utils/genUtils.js";
+import { completeCheckoutForm } from "@tests/utils/stripeUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 
 const testCase = "basic10";

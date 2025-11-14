@@ -1,5 +1,7 @@
 import {
-	type ApiEntity,
+	type ApiEntityV1,
+	addToExpand,
+	CusExpand,
 	type FullCustomer,
 	filterEntityLevelCusProducts,
 	filterOutEntitiesFromCusProducts,
@@ -32,10 +34,15 @@ export const setCachedApiCustomer = async ({
 }) => {
 	const { org, env, logger } = ctx;
 
+	const ctxWithExpand = addToExpand({
+		ctx,
+		add: [CusExpand.BalancesFeature, CusExpand.SubscriptionsPlan],
+	});
+
 	// Build master api customer (customer-level features only)
 	const { apiCustomer: masterApiCustomer, legacyData } =
 		await getApiCustomerBase({
-			ctx,
+			ctx: ctxWithExpand,
 			fullCus: {
 				...structuredClone(fullCus),
 				customer_products: filterOutEntitiesFromCusProducts({
@@ -51,7 +58,7 @@ export const setCachedApiCustomer = async ({
 	});
 
 	// Build entities first
-	const entityBatch: { entityId: string; entityData: ApiEntity }[] = [];
+	const entityBatch: { entityId: string; entityData: ApiEntityV1 }[] = [];
 	const entityFullCus = {
 		...fullCus,
 		customer_products: entityLevelCusProducts,
@@ -59,7 +66,7 @@ export const setCachedApiCustomer = async ({
 
 	for (const entity of fullCus.entities) {
 		const { apiEntity } = await getApiEntityBase({
-			ctx,
+			ctx: ctxWithExpand,
 			fullCus: entityFullCus,
 			entity,
 			withAutumnId: true,
@@ -72,15 +79,17 @@ export const setCachedApiCustomer = async ({
 	}
 
 	// Then write to Redis
+	const masterApiCustomerData = {
+		...masterApiCustomer,
+		entities: fullCus.entities,
+		legacyData,
+	};
+
 	await tryRedisWrite(async () => {
 		await redis.eval(
 			SET_CUSTOMER_SCRIPT,
 			0, // No KEYS, all params in ARGV
-			JSON.stringify({
-				...masterApiCustomer,
-				entities: fullCus.entities,
-				legacyData,
-			}),
+			JSON.stringify(masterApiCustomerData),
 			org.id,
 			env,
 			customerId,

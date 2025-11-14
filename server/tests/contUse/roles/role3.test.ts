@@ -1,15 +1,15 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
-	type CreateEntity,
+	type CreateEntityParams,
 	LegacyVersion,
 	type LimitedItem,
 } from "@autumn/shared";
-import { beforeAll, describe, expect, test } from "bun:test";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
+import { getExpectedInvoiceTotal } from "@tests/utils/expectUtils/expectInvoiceUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
@@ -69,7 +69,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing overages for per en
 	const user2 = "user2";
 	const admin1 = "admin1";
 	const admin2 = "admin2";
-	const firstEntities: CreateEntity[] = [
+	const firstEntities: CreateEntityParams[] = [
 		{
 			id: user1,
 			name: "test",

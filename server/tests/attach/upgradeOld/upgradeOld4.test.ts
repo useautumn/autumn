@@ -8,11 +8,11 @@ import {
 } from "@autumn/shared";
 import chalk from "chalk";
 import type Stripe from "stripe";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { expectCustomerV0Correct } from "tests/utils/expectUtils/expectCustomerV0Correct.js";
-import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
+import { AutumnCli } from "@tests/cli/AutumnCli.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectCustomerV0Correct } from "@tests/utils/expectUtils/expectCustomerV0Correct.js";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
 	attachFailedPaymentMethod,

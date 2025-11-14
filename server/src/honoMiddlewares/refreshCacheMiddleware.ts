@@ -49,6 +49,10 @@ const coreUrls = [
 		method: "POST",
 		url: "/cancel",
 	},
+	{
+		method: "POST",
+		url: "/balances/update",
+	},
 ];
 
 /**
@@ -68,7 +72,7 @@ export const refreshCacheMiddleware = async (
 	}
 
 	const ctx = c.get("ctx");
-	const { logger, db, org, env } = ctx;
+	const { logger, org, env } = ctx;
 
 	const pathname = new URL(c.req.url).pathname.replace("/v1", "");
 	const method = c.req.method;

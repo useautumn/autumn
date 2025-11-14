@@ -1,8 +1,9 @@
-import { type AffectedResource, type ApiVersion } from "@autumn/shared";
+import type { AffectedResource, ApiVersion } from "@autumn/shared";
 import type { Context, Env, Handler, MiddlewareHandler } from "hono";
 import type { ZodType, z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { expandMiddleware } from "./expandMiddleware.js";
 import { validator } from "./validatorMiddleware.js";
 import { versionedValidator } from "./versionedValidator.js";
 
@@ -55,7 +56,7 @@ type VersionedSchemas<T extends ZodType> = Partial<
  *   handler: async (c) => {
  *     const body = c.req.valid("json");   // ✅ Fully typed!
  *     const query = c.req.valid("query"); // ✅ Fully typed!
- *     const params = c.req.valid("param"); // ✅ Fully typed!
+ *     const params = c.req.param(); // ✅ Fully typed!
  *     return c.json({ success: true });
  *   }
  * });
@@ -151,6 +152,10 @@ export function createRoute<
 	// 		return await next();
 	// 	});
 	// }
+	// Add expand middleware after query validation
+	if (opts.query || opts.versionedQuery) {
+		middlewares.push(expandMiddleware());
+	}
 
 	const wrappedHandler = async (
 		c: ValidatedContext<HonoEnv, Body, Query, Params>,

@@ -40,8 +40,8 @@ export const toFeatureItem = ({ ent }: { ent: EntitlementWithFeature }) => {
 	if (ent.feature.type === FeatureType.Boolean) {
 		return {
 			feature_id: ent.feature.id,
-			entitlement_id: ent.id,
 			entity_feature_id: ent.entity_feature_id,
+			entitlement_id: ent.id,
 		};
 	}
 

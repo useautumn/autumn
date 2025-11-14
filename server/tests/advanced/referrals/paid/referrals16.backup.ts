@@ -10,12 +10,12 @@
 // import { assert } from "chai";
 // import chalk from "chalk";
 // import type { Stripe } from "stripe";
-// import { setupBefore } from "tests/before.js";
-// import { expectProductV1Attached } from "tests/utils/expectUtils/expectProductAttached.js";
+// import { setupBefore } from "@tests/before.js";
+// import { expectProductV1Attached } from "@tests/utils/expectUtils/expectProductAttached.js";
 // import {
 //   advanceTestClock,
 //   completeCheckoutForm,
-// } from "tests/utils/stripeUtils.js";
+// } from "@tests/utils/stripeUtils.js";
 // import type { DrizzleCli } from "@/db/initDrizzle.js";
 // import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
 // import { CusService } from "@/internal/customers/CusService.js";

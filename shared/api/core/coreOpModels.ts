@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { CustomerDataSchema } from "../models.js";
 
 // Cancel Schemas
 export const CancelBodySchema = z.object({
@@ -70,12 +71,12 @@ export const QueryResultSchema = z.object({
 export const SetupPaymentParamsSchema = z.object({
 	customer_id: z.string().meta({
 		description: "The ID of the customer",
-		example: "cus_123",
 	}),
 	success_url: z.string().optional().meta({
-		description: "URL to redirect to after successful payment setup",
-		example: "https://example.com/success",
+		description:
+			"URL to redirect to after successful payment setup. Must start with either http:// or https://",
 	}),
+	customer_data: CustomerDataSchema.optional(),
 	checkout_session_params: z.record(z.string(), z.unknown()).optional().meta({
 		description: "Additional parameters for the checkout session",
 	}),
@@ -84,34 +85,25 @@ export const SetupPaymentParamsSchema = z.object({
 export const SetupPaymentResultSchema = z.object({
 	customer_id: z.string().meta({
 		description: "The ID of the customer",
-		example: "cus_123",
 	}),
 	url: z.string().meta({
 		description: "URL to the payment setup page",
-		example: "https://checkout.stripe.com/...",
 	}),
 });
 
 export const BillingPortalParamsSchema = z.object({
-	customer_id: z.string().meta({
-		description: "The ID of the customer",
-		example: "cus_123",
-	}),
 	return_url: z.string().optional().meta({
 		description:
-			"Time range for the query (defaults to last_cycle if not provided)",
-		example: "7d",
+			"URL to redirect to when back button is clicked in the billing portal.",
 	}),
 });
 
 export const BillingPortalResultSchema = z.object({
 	customer_id: z.string().meta({
 		description: "The ID of the customer",
-		example: "cus_123",
 	}),
 	url: z.string().meta({
 		description: "URL to the billing portal",
-		example: "https://billing.stripe.com/...",
 	}),
 });
 

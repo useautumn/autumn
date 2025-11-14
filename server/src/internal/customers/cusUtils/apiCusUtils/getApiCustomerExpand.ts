@@ -1,12 +1,14 @@
 import {
 	ApiBaseEntitySchema,
-	type ApiCustomerExpand,
+	type ApiCusExpand,
 	CusExpand,
 	type FullCusProduct,
 	type FullCustomer,
+	filterExpand,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { invoicesToResponse } from "@/internal/invoices/invoiceUtils.js";
+import { InvoiceService } from "../../../invoices/InvoiceService.js";
 import { CusService } from "../../CusService.js";
 import { getCusPaymentMethodRes } from "../cusResponseUtils/getCusPaymentMethodRes.js";
 import { getCusReferrals } from "../cusResponseUtils/getCusReferrals.js";
@@ -17,16 +19,20 @@ export const getApiCustomerExpand = async ({
 	ctx,
 	customerId,
 	fullCus,
-	expand,
 }: {
 	ctx: AutumnContext;
 	customerId?: string;
 	fullCus?: FullCustomer;
-	expand: CusExpand[];
-}): Promise<ApiCustomerExpand> => {
-	const { org, env, db, logger } = ctx;
+}): Promise<ApiCusExpand> => {
+	const { org, env, db, logger, expand } = ctx;
 
-	if (expand.length === 0) return {};
+	// Filter out balances.feature and subscriptions.plan
+	const filteredExpand = filterExpand({
+		expand,
+		filter: [CusExpand.BalancesFeature, CusExpand.SubscriptionsPlan],
+	});
+
+	if (filteredExpand.length === 0) return {};
 
 	if (!fullCus) {
 		fullCus = await CusService.getFull({
@@ -34,7 +40,7 @@ export const getApiCustomerExpand = async ({
 			idOrInternalId: customerId || "",
 			orgId: org.id,
 			env,
-			expand,
+			expand: expand as CusExpand[],
 			withEntities: expand.includes(CusExpand.Entities),
 			withSubs: true,
 		});
@@ -54,14 +60,26 @@ export const getApiCustomerExpand = async ({
 		return undefined;
 	};
 
-	const invoices = expand.includes(CusExpand.Invoices)
-		? invoicesToResponse({
-				invoices: fullCus.invoices || [],
-				logger,
-			})
-		: undefined;
+	const getInvoices = async () => {
+		if (!expand.includes(CusExpand.Invoices)) {
+			return undefined;
+		}
 
-	const [rewards, upcomingInvoice, referrals, paymentMethod] =
+		const invoices = await InvoiceService.list({
+			db,
+			internalCustomerId: fullCus.internal_id,
+			internalEntityId: fullCus.entity?.internal_id,
+		});
+
+		return invoicesToResponse({
+			invoices,
+			logger,
+		});
+	};
+
+	const cusExpand = expand as CusExpand[];
+
+	const [rewards, upcomingInvoice, referrals, paymentMethod, invoices] =
 		await Promise.all([
 			getCusRewards({
 				org,
@@ -70,26 +88,27 @@ export const getApiCustomerExpand = async ({
 				subIds: fullCus.customer_products.flatMap(
 					(cp: FullCusProduct) => cp.subscription_ids || [],
 				),
-				expand,
+				expand: cusExpand,
 			}),
 			getCusUpcomingInvoice({
 				db,
 				org,
 				env,
 				fullCus,
-				expand,
+				expand: cusExpand,
 			}),
 			getCusReferrals({
 				db,
 				fullCus,
-				expand,
+				expand: cusExpand,
 			}),
 			getCusPaymentMethodRes({
 				org,
 				env,
 				fullCus,
-				expand,
+				expand: cusExpand,
 			}),
+			getInvoices(),
 		]);
 
 	return {

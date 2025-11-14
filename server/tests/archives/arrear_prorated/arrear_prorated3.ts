@@ -3,13 +3,13 @@ import chalk from "chalk";
 import { addDays, addMonths, format } from "date-fns";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { advanceProducts, features } from "tests/global.js";
-import { compareMainProduct } from "tests/utils/compare.js";
-import { timeout } from "tests/utils/genUtils.js";
-import { checkSubscriptionContainsProducts } from "tests/utils/scheduleCheckUtils.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { initCustomerWithTestClock } from "tests/utils/testInitUtils.js";
+import { AutumnCli } from "@tests/cli/AutumnCli.js";
+import { advanceProducts, features } from "@tests/global.js";
+import { compareMainProduct } from "@tests/utils/compare.js";
+import { timeout } from "@tests/utils/genUtils.js";
+import { checkSubscriptionContainsProducts } from "@tests/utils/scheduleCheckUtils.js";
+import { advanceTestClock } from "@tests/utils/stripeUtils.js";
+import { initCustomerWithTestClock } from "@tests/utils/testInitUtils.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 
 const advanceAPThroughBalances = async ({

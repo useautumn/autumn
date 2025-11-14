@@ -279,7 +279,7 @@ export const getPriceAmount = ({
 		const config = price.config as FixedPriceConfig;
 		return Number(config.amount.toFixed(2));
 	} else if (billingType === BillingType.UsageInAdvance) {
-		const quantity = options?.quantity!;
+		const quantity = options?.quantity ?? 1;
 		const config = price.config as UsagePriceConfig;
 
 		const overage = new Decimal(quantity)

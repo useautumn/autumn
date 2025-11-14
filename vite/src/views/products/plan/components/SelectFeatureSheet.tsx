@@ -49,7 +49,6 @@ export function SelectFeatureSheet({
 			const timer = setTimeout(() => setSelectOpen(true), 250);
 			return () => clearTimeout(timer);
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	const handleFeatureSelect = (featureId: string) => {

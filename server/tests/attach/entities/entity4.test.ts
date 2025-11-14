@@ -1,10 +1,10 @@
 import { beforeAll, describe, test } from "bun:test";
+import { defaultApiVersion } from "@tests/constants.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
+import { expectFeaturesCorrect } from "@tests/utils/expectUtils/expectFeaturesCorrect.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { defaultApiVersion } from "tests/constants.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -100,8 +100,6 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing attach pro diff enti
 
 		const entity1Res = await autumn.entities.get(customerId, entity1.id);
 		const entity2Res = await autumn.entities.get(customerId, entity2.id);
-		console.log("entity1Res", entity1Res);
-		console.log("entity2Res", entity2Res);
 
 		expectFeaturesCorrect({
 			customer: entity1Res,

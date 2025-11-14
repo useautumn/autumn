@@ -1,9 +1,13 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { ApiVersion, type LimitedItem } from "@autumn/shared";
+import {
+	ApiVersion,
+	type LimitedItem,
+	type TrackResponseV2,
+} from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { timeout } from "@tests/utils/genUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { timeout } from "tests/utils/genUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
 	constructArrearItem,
@@ -40,6 +44,7 @@ const monthlyProduct = constructProduct({
 
 describe(`${chalk.yellowBright(`${testCase}: Testing deduction order with monthly pay-per-use and lifetime one-off`)}`, () => {
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
+	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2_0 });
 
 	beforeAll(async () => {
 		await initProductsV0({
@@ -93,23 +98,46 @@ describe(`${chalk.yellowBright(`${testCase}: Testing deduction order with monthl
 	const currentUsage = 40;
 
 	test("should deduct from monthly first", async () => {
-		await autumnV1.track({
+		const trackRes: TrackResponseV2 = await autumnV2.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: currentUsage,
 			overage_behavior: "reject",
 		});
 
+		// 1. Verify track response
+		const totalBalance =
+			monthlyMsges.included_usage + lifetimeMsges.included_usage;
+		expect(trackRes.balance).toMatchObject({
+			granted_balance: totalBalance,
+			purchased_balance: 0,
+			current_balance: totalBalance - currentUsage,
+			usage: currentUsage,
+		});
+		const trackMonthlyBreakdown = trackRes.balance?.breakdown?.[0];
+		expect(trackMonthlyBreakdown).toMatchObject({
+			granted_balance: monthlyMsges.included_usage,
+			purchased_balance: 0,
+			current_balance: monthlyMsges.included_usage - currentUsage,
+			usage: currentUsage,
+		});
+		const trackLifetimeBreakdown = trackRes.balance?.breakdown?.[1];
+		expect(trackLifetimeBreakdown).toMatchObject({
+			granted_balance: lifetimeMsges.included_usage,
+			purchased_balance: 0,
+			current_balance: lifetimeMsges.included_usage,
+			usage: 0,
+		});
+
+		// Check top-level balance and usage
 		const customer = await autumnV1.customers.get(customerId);
 		const msgesFeature = customer.features[TestFeature.Messages];
 
-		// Check top-level balance and usage
 		expect(msgesFeature.balance).toBe(
 			monthlyMsges.included_usage + lifetimeMsges.included_usage - currentUsage,
 		);
 		expect(msgesFeature.usage).toBe(currentUsage);
 
-		// Check breakdown balances and usage
 		const monthlyBreakdown = msgesFeature.breakdown?.find(
 			(b: any) => b.interval === "month",
 		);
@@ -132,30 +160,43 @@ describe(`${chalk.yellowBright(`${testCase}: Testing deduction order with monthl
 
 	const usage2 = 50; // 10 from monthly, 40 from lifetime
 	test("should deduct from monthly and lifetime in correct order", async () => {
-		await autumnV1.track({
+		const trackRes: TrackResponseV2 = await autumnV2.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: usage2,
 			overage_behavior: "reject",
 		});
 
+		// 1. Verify track response
+		const trackMonthlyBreakdown = trackRes.balance?.breakdown?.[0];
+		expect(trackMonthlyBreakdown).toMatchObject({
+			granted_balance: monthlyMsges.included_usage,
+			purchased_balance: 0,
+			current_balance: 0,
+			usage: monthlyMsges.included_usage,
+		});
+		const trackLifetimeBreakdown = trackRes.balance?.breakdown?.[1];
+		expect(trackLifetimeBreakdown).toMatchObject({
+			granted_balance: lifetimeMsges.included_usage,
+			purchased_balance: 0,
+			current_balance: 10,
+			usage: 40,
+		});
+
+		// 2. Verify customer balances
 		const customer = await autumnV1.customers.get(customerId);
 		const msgesFeature = customer.features[TestFeature.Messages];
-
-		// Check top-level balance and usage
 		expect(msgesFeature.balance).toBe(10);
 		expect(msgesFeature.usage).toBe(currentUsage + usage2);
-
-		// Check breakdown balances and usage
 		const monthlyBreakdown = msgesFeature.breakdown?.find(
 			(b: any) => b.interval === "month",
 		);
+		expect(monthlyBreakdown?.balance).toBe(0);
+		expect(monthlyBreakdown?.usage).toBe(monthlyMsges.included_usage);
+
 		const lifetimeBreakdown = msgesFeature.breakdown?.find(
 			(b: any) => b.interval === "lifetime",
 		);
-
-		expect(monthlyBreakdown?.balance).toBe(0);
-		expect(monthlyBreakdown?.usage).toBe(monthlyMsges.included_usage);
 		expect(lifetimeBreakdown?.balance).toBe(10);
 		expect(lifetimeBreakdown?.usage).toBe(40);
 
@@ -167,21 +208,37 @@ describe(`${chalk.yellowBright(`${testCase}: Testing deduction order with monthl
 
 	const usage3 = 50; // 10 from lifetime, 40 from monthly overage
 	test("should deduct from lifetime and monthly in correct order", async () => {
-		await autumnV1.track({
+		const trackRes: TrackResponseV2 = await autumnV2.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: usage3,
 			overage_behavior: "reject",
 		});
 
+		// 1. Verify track response
+		// 1. Verify track response
+		const trackMonthlyBreakdown = trackRes.balance?.breakdown?.[0];
+		expect(trackMonthlyBreakdown).toMatchObject({
+			granted_balance: monthlyMsges.included_usage,
+			purchased_balance: 40,
+			current_balance: 0,
+			usage: monthlyMsges.included_usage + 40,
+		});
+		const trackLifetimeBreakdown = trackRes.balance?.breakdown?.[1];
+		expect(trackLifetimeBreakdown).toMatchObject({
+			granted_balance: lifetimeMsges.included_usage,
+			purchased_balance: 0,
+			current_balance: 0,
+			usage: 40 + 10,
+		});
+
+		// 2. Verify customer response
 		const customer = await autumnV1.customers.get(customerId);
 		const msgesFeature = customer.features[TestFeature.Messages];
 
-		// Check top-level balance and usage
 		expect(msgesFeature.balance).toBe(-40);
 		expect(msgesFeature.usage).toBe(currentUsage + usage2 + usage3);
 
-		// Check breakdown balances and usage
 		const monthlyBreakdown = msgesFeature.breakdown?.find(
 			(b: any) => b.interval === "month",
 		);

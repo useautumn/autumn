@@ -3,22 +3,19 @@ import {
 	CusProductStatus,
 	cusProductToProduct,
 	ErrCode,
-	type FullCusProduct,
 	productToCusProduct,
 } from "@autumn/shared";
 import { Router } from "express";
 import { Hono } from "hono";
 import { StatusCodes } from "http-status-codes";
-import { z } from "zod/v4";
-import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { CusBatchService } from "../api/batch/CusBatchService.js";
 import { EventService } from "../api/events/EventService.js";
 import { ProductService } from "../products/ProductService.js";
 import { mapToProductV2 } from "../products/productV2Utils.js";
+import { CusBatchService } from "./CusBatchService.js";
 import { CusSearchService } from "./CusSearchService.js";
 import { CusService } from "./CusService.js";
 import { ACTIVE_STATUSES } from "./cusProducts/CusProductService.js";
@@ -194,10 +191,9 @@ cusRouter.get(
 export const internalCusRouter = new Hono<HonoEnv>();
 
 export const handleGetCustomerInternal = createRoute({
-	params: z.object({ customer_id: z.string() }),
 	handler: async (c) => {
 		const { db, org, env } = c.get("ctx");
-		const { customer_id } = c.req.valid("param");
+		const { customer_id } = c.req.param();
 
 		const fullCus = await CusService.getFull({
 			db,
@@ -220,44 +216,5 @@ export const handleGetCustomerInternal = createRoute({
 	},
 });
 
-export const handleGetCustomerSub = createRoute({
-	params: z.object({
-		customer_id: z.string(),
-	}),
-
-	handler: async (c) => {
-		const ctx = c.get("ctx");
-		const { org, env, db, logger } = ctx;
-		const { customer_id } = c.req.valid("param");
-		const orgId = org.id;
-
-		const fullCus = await CusService.getFull({
-			db,
-			orgId,
-			env,
-			idOrInternalId: customer_id,
-		});
-
-		const subId = fullCus.customer_products.flatMap(
-			(cp: FullCusProduct) => cp.subscription_ids || [],
-		)?.[0];
-
-		if (!subId) return c.json({ sub: undefined });
-
-		try {
-			const stripeCli = createStripeCli({ org, env });
-			const sub = await stripeCli.subscriptions.retrieve(subId, {
-				expand: ["discounts.coupon"],
-			});
-
-			return c.json({ sub });
-		} catch (error) {
-			logger.warn(`failed to get customers sub: ${error}`);
-			return c.json({ sub: undefined });
-		}
-	},
-});
-
 internalCusRouter.get("/:customer_id", ...handleGetCustomerInternal);
-internalCusRouter.get("/:customer_id/sub", ...handleGetCustomerSub);
 internalCusRouter.get("/:customer_id/referrals", ...handleGetCusReferrals);

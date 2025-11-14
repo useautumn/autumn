@@ -16,11 +16,13 @@
 -- ARGV[2]: org_id
 -- ARGV[3]: env
 -- ARGV[4]: customer_id
+-- ARGV[5]: adjust_granted_balance (optional, "true" to decrement granted_balance instead of incrementing usage)
 
 local requestsJson = ARGV[1]
 local orgId = ARGV[2]
 local env = ARGV[3]
 local customerId = ARGV[4]
+local adjustGrantedBalance = ARGV[5] == "true"
 
 -- Build versioned customer cache key using shared utility
 local cacheKey = buildCustomerCacheKey(orgId, env, customerId)
@@ -73,6 +75,13 @@ local changedEntityIds = {}
 -- Track if customer (base customer, not entity) was modified
 local customerChanged = false
 
+-- Track which featureIds were changed (for reloading balances)
+-- { [featureId] = true } for customer-level changes
+local changedCustomerFeatureIds = {}
+
+-- Track which entity featureIds were changed: { [entityId] = { [featureId] = true } }
+local changedEntityFeatureIds = {}
+
 -- ============================================================================
 -- HELPER FUNCTIONS
 -- ============================================================================
@@ -85,90 +94,6 @@ local function addDelta(key, field, delta)
     keyDeltas[key][field] = (keyDeltas[key][field] or 0) + delta
 end
 
--- Helper: Load a customer feature from Redis
-local function loadCusFeature(featureId)
-    local featureKey = cacheKey .. ":features:" .. featureId
-    local featureHash = redis.call("HGETALL", featureKey)
-    
-    if #featureHash == 0 then
-        return nil
-    end
-    
-    -- Parse customer feature fields
-    local cusFeature = { id = featureId, _key = featureKey }
-    for i = 1, #featureHash, 2 do
-        local key = featureHash[i]
-        local value = featureHash[i + 1]
-        
-        if key == "balance" or key == "usage" or key == "usage_limit" or key == "included_usage" or key == "_breakdown_count" or key == "_rollover_count" then
-            cusFeature[key] = tonumber(value)
-        elseif key == "unlimited" or key == "overage_allowed" then
-            cusFeature[key] = (value == "true")
-        elseif key == "type" then
-            cusFeature[key] = value
-        elseif key == "credit_schema" then
-            if value ~= "null" and value ~= "" then
-                cusFeature[key] = cjson.decode(value)
-            else
-                cusFeature[key] = nil
-            end
-        elseif value == "null" then
-            cusFeature[key] = nil
-        else
-            cusFeature[key] = value
-        end
-    end
-    
-    -- Load breakdowns if they exist
-    local breakdownCount = cusFeature._breakdown_count or 0
-    cusFeature.breakdowns = {}
-    for i = 0, breakdownCount - 1 do
-        local breakdownKey = cacheKey .. ":features:" .. featureId .. ":breakdown:" .. i
-        local breakdownHash = redis.call("HGETALL", breakdownKey)
-        
-        if #breakdownHash > 0 then
-            local breakdown = { _index = i, _key = breakdownKey }
-            for j = 1, #breakdownHash, 2 do
-                local key = breakdownHash[j]
-                local value = breakdownHash[j + 1]
-                
-                if key == "balance" or key == "usage" or key == "usage_limit" then
-                    breakdown[key] = tonumber(value)
-                elseif key == "overage_allowed" then
-                    breakdown[key] = (value == "true")
-                else
-                    breakdown[key] = value
-                end
-            end
-            table.insert(cusFeature.breakdowns, breakdown)
-        end
-    end
-    
-    -- Load rollovers if they exist
-    local rolloverCount = cusFeature._rollover_count or 0
-    cusFeature.rollovers = {}
-    for i = 0, rolloverCount - 1 do
-        local rolloverKey = cacheKey .. ":features:" .. featureId .. ":rollover:" .. i
-        local rolloverHash = redis.call("HGETALL", rolloverKey)
-        
-        if #rolloverHash > 0 then
-            local rollover = { _index = i, _key = rolloverKey }
-            for j = 1, #rolloverHash, 2 do
-                local key = rolloverHash[j]
-                local value = rolloverHash[j + 1]
-                
-                if key == "balance" or key == "expires_at" then
-                    rollover[key] = tonumber(value)
-                else
-                    rollover[key] = value
-                end
-            end
-            table.insert(cusFeature.rollovers, rollover)
-        end
-    end
-    
-    return cusFeature
-end
 
 -- ============================================================================
 -- VALIDATION
@@ -181,8 +106,12 @@ end
 -- ============================================================================
 
 -- Deduct from rollover balances - returns deltas without modifying cusFeature
+-- Parameters:
+--   cusFeature: Balance object to deduct from
+--   amount: Amount to deduct
+--   adjustGrantedBalance: If true, decrement granted_balance instead of incrementing usage
 -- Returns: { remaining: number, deltas: [{key, field, delta}], stateChanges: [{type, index, field, newValue}] }
-local function deductFromRollovers(cusFeature, amount)
+local function deductFromRollovers(cusFeature, amount, adjustGrantedBalance)
     local remaining = amount
     local deltas = {}
     local stateChanges = {}
@@ -197,8 +126,14 @@ local function deductFromRollovers(cusFeature, amount)
             
             -- Collect Redis deltas
             table.insert(deltas, {key = rollover._key, field = "balance", delta = -toDeduct})
-            table.insert(deltas, {key = cusFeature._key, field = "balance", delta = -toDeduct})
-            table.insert(deltas, {key = cusFeature._key, field = "usage", delta = toDeduct})
+            table.insert(deltas, {key = cusFeature._key, field = "current_balance", delta = -toDeduct})
+            
+            -- Either increment usage or decrement granted_balance based on flag
+            if adjustGrantedBalance then
+                table.insert(deltas, {key = cusFeature._key, field = "granted_balance", delta = -toDeduct})
+            else
+                table.insert(deltas, {key = cusFeature._key, field = "usage", delta = toDeduct})
+            end
             
             -- Collect state changes
             table.insert(stateChanges, {
@@ -209,14 +144,22 @@ local function deductFromRollovers(cusFeature, amount)
             })
             table.insert(stateChanges, {
                 type = "cusFeature",
-                field = "balance",
+                field = "current_balance",
                 delta = -toDeduct
             })
-            table.insert(stateChanges, {
-                type = "cusFeature",
-                field = "usage",
-                delta = toDeduct
-            })
+            if adjustGrantedBalance then
+                table.insert(stateChanges, {
+                    type = "cusFeature",
+                    field = "granted_balance",
+                    delta = -toDeduct
+                })
+            else
+                table.insert(stateChanges, {
+                    type = "cusFeature",
+                    field = "usage",
+                    delta = toDeduct
+                })
+            end
             
             remaining = remaining - toDeduct
         end
@@ -229,223 +172,377 @@ local function deductFromRollovers(cusFeature, amount)
     }
 end
 
--- Deduct from main balance (handles both breakdown and non-breakdown scenarios)
--- Handles both positive (deduct) and negative (refund) amounts
+-- Deduct from current_balance (first pass - only deducts from positive balances)
+-- current_balance can NEVER go below 0
+-- Parameters:
+--   cusFeature: Balance object to deduct from
+--   amount: Amount to deduct (can be negative for refunds)
+--   adjustGrantedBalance: If true, decrement granted_balance instead of incrementing usage
 -- Returns: { remaining: number, deltas: [{key, field, delta}], stateChanges: [{type, index, field, newValue/delta}] }
-local function deductFromMainBalance(cusFeature, amount)
+local function deductFromCurrentBalance(cusFeature, amount, adjustGrantedBalance)
     local remaining = amount
     local deltas = {}
     local stateChanges = {}
     
-    -- If cusFeature has breakdowns, deduct from breakdowns
-    if #cusFeature.breakdowns > 0 then
-        -- Pass 1: Deduct from breakdown balances (or refund to breakdown)
-        for index, breakdown in ipairs(cusFeature.breakdowns) do
+    -- If cusFeature has breakdowns, deduct from breakdown current_balances
+    if cusFeature.breakdown and #cusFeature.breakdown > 0 then
+        for index, breakdown in ipairs(cusFeature.breakdown) do
             if remaining == 0 then break end
             
-            local breakdownBalance = breakdown.balance or 0
+            local breakdownCurrentBalance = breakdown.current_balance or 0
             -- For refunds (negative amount), always apply. For deductions, only if balance > 0
-            if remaining < 0 or breakdownBalance > 0 then
-                local toDeduct = math.min(remaining, breakdownBalance)
+            if remaining < 0 or breakdownCurrentBalance > 0 then
+                -- Calculate how much we can deduct (ensure current_balance never goes below 0)
+                local maxDeductible = breakdownCurrentBalance
+                local toDeduct = math.min(remaining, maxDeductible)
                 
                 -- Collect Redis deltas
-                table.insert(deltas, {key = breakdown._key, field = "balance", delta = -toDeduct})
-                table.insert(deltas, {key = breakdown._key, field = "usage", delta = toDeduct})
-                table.insert(deltas, {key = cusFeature._key, field = "balance", delta = -toDeduct})
-                table.insert(deltas, {key = cusFeature._key, field = "usage", delta = toDeduct})
+                table.insert(deltas, {key = breakdown._key, field = "current_balance", delta = -toDeduct})
+                table.insert(deltas, {key = cusFeature._key, field = "current_balance", delta = -toDeduct})
+                
+                -- Either increment usage or decrement granted_balance based on flag
+                if adjustGrantedBalance then
+                    table.insert(deltas, {key = breakdown._key, field = "granted_balance", delta = -toDeduct})
+                    table.insert(deltas, {key = cusFeature._key, field = "granted_balance", delta = -toDeduct})
+                else
+                    table.insert(deltas, {key = breakdown._key, field = "usage", delta = toDeduct})
+                    table.insert(deltas, {key = cusFeature._key, field = "usage", delta = toDeduct})
+                end
                 
                 -- Collect state changes
+                local newBalance = breakdownCurrentBalance - toDeduct
+                -- Ensure current_balance never goes below 0
+                if newBalance < 0 then
+                    newBalance = 0
+                end
+                
                 table.insert(stateChanges, {
                     type = "breakdown",
                     index = index,
-                    field = "balance",
-                    newValue = breakdownBalance - toDeduct
+                    field = "current_balance",
+                    newValue = newBalance
                 })
-                table.insert(stateChanges, {
-                    type = "breakdown",
-                    index = index,
-                    field = "usage",
-                    delta = toDeduct
-                })
+                if adjustGrantedBalance then
+                    table.insert(stateChanges, {
+                        type = "breakdown",
+                        index = index,
+                        field = "granted_balance",
+                        delta = -toDeduct
+                    })
+                    table.insert(stateChanges, {
+                        type = "cusFeature",
+                        field = "granted_balance",
+                        delta = -toDeduct
+                    })
+                else
+                    table.insert(stateChanges, {
+                        type = "breakdown",
+                        index = index,
+                        field = "usage",
+                        delta = toDeduct
+                    })
+                    table.insert(stateChanges, {
+                        type = "cusFeature",
+                        field = "usage",
+                        delta = toDeduct
+                    })
+                end
                 table.insert(stateChanges, {
                     type = "cusFeature",
-                    field = "balance",
+                    field = "current_balance",
                     delta = -toDeduct
-                })
-                table.insert(stateChanges, {
-                    type = "cusFeature",
-                    field = "usage",
-                    delta = toDeduct
                 })
                 
                 remaining = remaining - toDeduct
-            end
-        end
-        
-        -- Pass 2: Deduct from breakdown overage (if allowed)
-        if remaining > 0 then
-            for index, breakdown in ipairs(cusFeature.breakdowns) do
-                if remaining == 0 then break end
-                
-                -- Continuous use features automatically allow overage
-                local allowOverage = breakdown.overage_allowed or cusFeature.type == "continuous_use"
-                
-                if allowOverage then
-                    -- Get current balance AFTER deducting from breakdown balance
-                    local currentBalance = breakdown.balance or 0
-                    -- Apply state changes to get updated balance
-                    for _, change in ipairs(stateChanges) do
-                        if change.type == "breakdown" and change.index == index and change.field == "balance" then
-                            if change.newValue then
-                                currentBalance = change.newValue
-                            elseif change.delta then
-                                currentBalance = currentBalance + change.delta
-                            end
-                        end
-                    end
-                    local toDeduct = remaining
-                    
-                    -- If usage_limit is defined, cap the overage
-                    if breakdown.usage_limit then
-                        local breakdownIncludedUsage = breakdown.included_usage or cusFeature.included_usage or 0
-                        local minNegativeBalance = breakdownIncludedUsage - breakdown.usage_limit
-                        
-                        -- If min_negative_balance is 0 or positive, skip limit check
-                        if minNegativeBalance < 0 then
-                            local availableOverage = currentBalance - minNegativeBalance
-                            if availableOverage > 0 then
-                                toDeduct = math.min(remaining, availableOverage)
-                            else
-                                toDeduct = 0
-                            end
-                        end
-                    end
-                    
-                    if toDeduct > 0 then
-                        -- Collect Redis deltas
-                        table.insert(deltas, {key = breakdown._key, field = "balance", delta = -toDeduct})
-                        table.insert(deltas, {key = breakdown._key, field = "usage", delta = toDeduct})
-                        table.insert(deltas, {key = cusFeature._key, field = "balance", delta = -toDeduct})
-                        table.insert(deltas, {key = cusFeature._key, field = "usage", delta = toDeduct})
-                        
-                        -- Collect state changes
-                        table.insert(stateChanges, {
-                            type = "breakdown",
-                            index = index,
-                            field = "balance",
-                            delta = -toDeduct
-                        })
-                        table.insert(stateChanges, {
-                            type = "breakdown",
-                            index = index,
-                            field = "usage",
-                            delta = toDeduct
-                        })
-                        table.insert(stateChanges, {
-                            type = "cusFeature",
-                            field = "balance",
-                            delta = -toDeduct
-                        })
-                        table.insert(stateChanges, {
-                            type = "cusFeature",
-                            field = "usage",
-                            delta = toDeduct
-                        })
-                        
-                        remaining = remaining - toDeduct
-                    end
-                end
             end
         end
     else
-        -- No breakdowns: deduct from top-level balance (or refund to top-level)
-        local topLevelBalance = cusFeature.balance or 0
+        -- No breakdowns: deduct from top-level current_balance
+        local topLevelCurrentBalance = cusFeature.current_balance or 0
         -- For refunds (negative amount), always apply. For deductions, only if balance > 0
-        if remaining < 0 or topLevelBalance > 0 then
-            local toDeduct = math.min(remaining, topLevelBalance)
+        if remaining < 0 or topLevelCurrentBalance > 0 then
+            -- Calculate how much we can deduct (ensure current_balance never goes below 0)
+            local maxDeductible = topLevelCurrentBalance
+            local toDeduct = math.min(remaining, maxDeductible)
             
             -- Collect Redis deltas
-            table.insert(deltas, {key = cusFeature._key, field = "balance", delta = -toDeduct})
-            table.insert(deltas, {key = cusFeature._key, field = "usage", delta = toDeduct})
+            table.insert(deltas, {key = cusFeature._key, field = "current_balance", delta = -toDeduct})
+            
+            -- Either increment usage or decrement granted_balance based on flag
+            if adjustGrantedBalance then
+                table.insert(deltas, {key = cusFeature._key, field = "granted_balance", delta = -toDeduct})
+            else
+                table.insert(deltas, {key = cusFeature._key, field = "usage", delta = toDeduct})
+            end
             
             -- Collect state changes
-            table.insert(stateChanges, {
-                type = "cusFeature",
-                field = "balance",
-                newValue = topLevelBalance - toDeduct
-            })
-            table.insert(stateChanges, {
-                type = "cusFeature",
-                field = "usage",
-                delta = toDeduct
-            })
-            
-            remaining = remaining - toDeduct
-        end
-        
-        -- Deduct from top-level overage (if allowed)
-        -- Continuous use features automatically allow overage
-        local allowOverage = cusFeature.overage_allowed or cusFeature.type == "continuous_use"
-        
-        if remaining > 0 and allowOverage then
-            -- Get current balance AFTER deducting from main balance
-            local currentBalance = cusFeature.balance or 0
-            -- Apply state changes to get updated balance
-            for _, change in ipairs(stateChanges) do
-                if change.type == "cusFeature" and change.field == "balance" then
-                    if change.newValue then
-                        currentBalance = change.newValue
-                    elseif change.delta then
-                        currentBalance = currentBalance + change.delta
-                    end
-                end
-            end
-            local toDeduct = remaining
-            
-            -- If usage_limit is defined, cap the overage
-            if cusFeature.usage_limit then
-                local includedUsage = cusFeature.included_usage or 0
-                local minNegativeBalance = includedUsage - cusFeature.usage_limit
-                
-                -- If min_negative_balance is 0 or positive, skip limit check
-                if minNegativeBalance < 0 then
-                    local availableOverage = currentBalance - minNegativeBalance
-                    if availableOverage > 0 then
-                        toDeduct = math.min(remaining, availableOverage)
-                    else
-                        toDeduct = 0
-                    end
-                end
+            local newBalance = topLevelCurrentBalance - toDeduct
+            -- Ensure current_balance never goes below 0
+            if newBalance < 0 then
+                newBalance = 0
             end
             
-            if toDeduct > 0 then
-                -- Collect Redis deltas
-                table.insert(deltas, {key = cusFeature._key, field = "balance", delta = -toDeduct})
-                table.insert(deltas, {key = cusFeature._key, field = "usage", delta = toDeduct})
-                
-                -- Collect state changes
+            table.insert(stateChanges, {
+                type = "cusFeature",
+                field = "current_balance",
+                newValue = newBalance
+            })
+            if adjustGrantedBalance then
                 table.insert(stateChanges, {
                     type = "cusFeature",
-                    field = "balance",
+                    field = "granted_balance",
                     delta = -toDeduct
                 })
+            else
                 table.insert(stateChanges, {
                     type = "cusFeature",
                     field = "usage",
                     delta = toDeduct
                 })
-                
-                remaining = remaining - toDeduct
             end
+            
+            remaining = remaining - toDeduct
         end
     end
     
-        return {
+    return {
         remaining = remaining,
         deltas = deltas,
         stateChanges = stateChanges
     }
 end
+
+-- Deduct from overage (second pass - increments purchased_balance up to max_purchase)
+-- Only applies if overage_allowed is true
+-- Parameters:
+--   cusFeature: Balance object to deduct from
+--   amount: Remaining amount to cover with overage
+--   adjustGrantedBalance: If true, decrement granted_balance instead of incrementing usage
+-- Returns: { remaining: number, deltas: [{key, field, delta}], stateChanges: [{type, index, field, newValue/delta}] }
+local function deductFromOverage(cusFeature, amount, adjustGrantedBalance)
+    local remaining = amount
+    local deltas = {}
+    local stateChanges = {}
+    
+    -- If adjustGrantedBalance is true, overage is not allowed
+    if adjustGrantedBalance then
+        return {
+            remaining = remaining,
+            deltas = deltas,
+            stateChanges = stateChanges
+        }
+    end
+    
+    -- Only proceed if there's remaining amount and overage is allowed
+    if remaining <= 0 then
+        return {
+            remaining = remaining,
+            deltas = deltas,
+            stateChanges = stateChanges
+        }
+    end
+    
+    -- Check if overage is allowed
+    -- Continuous use features automatically allow overage
+    local allowOverage = cusFeature.overage_allowed or (cusFeature.feature and cusFeature.feature.type == "continuous_use")
+    
+    if not allowOverage then
+        return {
+            remaining = remaining,
+            deltas = deltas,
+            stateChanges = stateChanges
+        }
+    end
+    
+    -- If cusFeature has breakdowns, deduct from breakdown overage
+    if cusFeature.breakdown and #cusFeature.breakdown > 0 then
+        for index, breakdown in ipairs(cusFeature.breakdown) do
+            if remaining <= 0 then break end
+            
+            -- Check if this breakdown explicitly allows overage
+            -- Only deduct from breakdowns that have overage_allowed=true
+            -- Don't fall back to top-level allowOverage - each breakdown controls its own overage
+            local breakdownAllowOverage = breakdown.overage_allowed == true
+            
+            if breakdownAllowOverage then
+                local breakdownPurchasedBalance = breakdown.purchased_balance or 0
+                -- Calculate availableCapacity: nil if breakdown.max_purchase is nil/null (unlimited), otherwise max_purchase - purchased_balance
+                local availableCapacity
+                if breakdown.max_purchase == nil or breakdown.max_purchase == cjson.null then
+                    -- No max_purchase limit - unlimited capacity
+                    availableCapacity = nil
+                else
+                    -- Use breakdown max_purchase limit
+                    local breakdownMaxPurchase = toNum(breakdown.max_purchase)
+                    availableCapacity = breakdownMaxPurchase - breakdownPurchasedBalance
+                end
+                
+                if availableCapacity == nil or availableCapacity > 0 then
+                    local toIncrement = availableCapacity == nil and remaining or math.min(remaining, availableCapacity)
+                    
+                    -- Collect Redis deltas
+                    table.insert(deltas, {key = breakdown._key, field = "purchased_balance", delta = toIncrement})
+                    table.insert(deltas, {key = cusFeature._key, field = "purchased_balance", delta = toIncrement})
+                    
+                    -- Either increment usage or decrement granted_balance based on flag
+                    if adjustGrantedBalance then
+                        table.insert(deltas, {key = breakdown._key, field = "granted_balance", delta = -toIncrement})
+                        table.insert(deltas, {key = cusFeature._key, field = "granted_balance", delta = -toIncrement})
+                    else
+                        table.insert(deltas, {key = breakdown._key, field = "usage", delta = toIncrement})
+                        table.insert(deltas, {key = cusFeature._key, field = "usage", delta = toIncrement})
+                    end
+                    
+                    -- Collect state changes
+                    table.insert(stateChanges, {
+                        type = "breakdown",
+                        index = index,
+                        field = "purchased_balance",
+                        delta = toIncrement
+                    })
+                    if adjustGrantedBalance then
+                        table.insert(stateChanges, {
+                            type = "breakdown",
+                            index = index,
+                            field = "granted_balance",
+                            delta = -toIncrement
+                        })
+                        table.insert(stateChanges, {
+                            type = "cusFeature",
+                            field = "granted_balance",
+                            delta = -toIncrement
+                        })
+                    else
+                        table.insert(stateChanges, {
+                            type = "breakdown",
+                            index = index,
+                            field = "usage",
+                            delta = toIncrement
+                        })
+                        table.insert(stateChanges, {
+                            type = "cusFeature",
+                            field = "usage",
+                            delta = toIncrement
+                        })
+                    end
+                    table.insert(stateChanges, {
+                        type = "cusFeature",
+                        field = "purchased_balance",
+                        delta = toIncrement
+                    })
+                    
+                    remaining = remaining - toIncrement
+                end
+            end
+        end
+    else
+        -- No breakdowns: deduct from top-level overage
+        local topLevelPurchasedBalance = cusFeature.purchased_balance or 0
+        -- Calculate availableCapacity: nil if max_purchase is nil/null (unlimited), otherwise max_purchase - purchased_balance
+        local availableCapacity
+        if cusFeature.max_purchase == nil or cusFeature.max_purchase == cjson.null then
+            -- No max_purchase limit - unlimited capacity
+            availableCapacity = nil
+        else
+            -- Use max_purchase limit
+            local topLevelMaxPurchase = toNum(cusFeature.max_purchase)
+            availableCapacity = topLevelMaxPurchase - topLevelPurchasedBalance
+        end
+        
+        if availableCapacity == nil or availableCapacity > 0 then
+            local toIncrement = availableCapacity == nil and remaining or math.min(remaining, availableCapacity)
+            
+            -- Collect Redis deltas
+            table.insert(deltas, {key = cusFeature._key, field = "purchased_balance", delta = toIncrement})
+            
+            -- Either increment usage or decrement granted_balance based on flag
+            if adjustGrantedBalance then
+                table.insert(deltas, {key = cusFeature._key, field = "granted_balance", delta = -toIncrement})
+            else
+                table.insert(deltas, {key = cusFeature._key, field = "usage", delta = toIncrement})
+            end
+            
+            -- Collect state changes
+            table.insert(stateChanges, {
+                type = "cusFeature",
+                field = "purchased_balance",
+                delta = toIncrement
+            })
+            if adjustGrantedBalance then
+                table.insert(stateChanges, {
+                    type = "cusFeature",
+                    field = "granted_balance",
+                    delta = -toIncrement
+                })
+            else
+                table.insert(stateChanges, {
+                    type = "cusFeature",
+                    field = "usage",
+                    delta = toIncrement
+                })
+            end
+            
+            remaining = remaining - toIncrement
+        end
+    end
+    
+    return {
+        remaining = remaining,
+        deltas = deltas,
+        stateChanges = stateChanges
+    }
+end
+
+-- Deduct from main balance (handles both breakdown and non-breakdown scenarios)
+-- Handles both positive (deduct) and negative (refund) amounts
+-- Parameters:
+--   cusFeature: Balance object to deduct from
+--   amount: Amount to deduct (can be negative for refunds)
+--   adjustGrantedBalance: If true, decrement granted_balance instead of incrementing usage
+-- Returns: { remaining: number, deltas: [{key, field, delta}], stateChanges: [{type, index, field, newValue/delta}] }
+local function deductFromMainBalance(cusFeature, amount, adjustGrantedBalance)
+    local allDeltas = {}
+    local allStateChanges = {}
+    local remaining = amount
+    
+    -- Pass 1: Deduct from current_balance (only deducts from positive balances)
+    local currentBalanceResult = deductFromCurrentBalance(cusFeature, remaining, adjustGrantedBalance)
+    remaining = currentBalanceResult.remaining
+    
+    -- Collect current balance deltas and state changes
+    for _, delta in ipairs(currentBalanceResult.deltas) do
+        table.insert(allDeltas, delta)
+    end
+    for _, stateChange in ipairs(currentBalanceResult.stateChanges) do
+        table.insert(allStateChanges, stateChange)
+    end
+    
+    -- Pass 2: Deduct from overage (increments purchased_balance up to max_purchase)
+    if remaining > 0 then
+        local overageResult = deductFromOverage(cusFeature, remaining, adjustGrantedBalance)
+        remaining = overageResult.remaining
+        
+        -- Collect overage deltas and state changes
+        for _, delta in ipairs(overageResult.deltas) do
+            table.insert(allDeltas, delta)
+        end
+        for _, stateChange in ipairs(overageResult.stateChanges) do
+            table.insert(allStateChanges, stateChange)
+        end
+    end
+    
+    return {
+        remaining = remaining,
+        deltas = allDeltas,
+        stateChanges = allStateChanges
+    }
+end
+
+
+
+-- ============================================================================
+-- DEDUCTION COORDINATION FUNCTIONS
+-- ============================================================================
 
 -- Deduct from a single customer feature (handles rollovers + main balance)
 -- Returns: { remaining: number, deltas: array, stateChanges: array }
@@ -454,7 +551,7 @@ local function deductFromCusFeature(cusFeature, amount)
     local allStateChanges = {}
     
     -- Step 1: Deduct from rollovers first
-    local rolloverResult = deductFromRollovers(cusFeature, amount)
+    local rolloverResult = deductFromRollovers(cusFeature, amount, adjustGrantedBalance)
     local remaining = rolloverResult.remaining
     
     -- Collect rollover deltas and state changes
@@ -467,7 +564,7 @@ local function deductFromCusFeature(cusFeature, amount)
     
     -- Step 2: Deduct remaining from main balance
     if remaining ~= 0 then
-        local mainResult = deductFromMainBalance(cusFeature, remaining)
+        local mainResult = deductFromMainBalance(cusFeature, remaining, adjustGrantedBalance)
         remaining = mainResult.remaining
         
         -- Collect main balance deltas and state changes
@@ -485,6 +582,7 @@ local function deductFromCusFeature(cusFeature, amount)
         stateChanges = allStateChanges
     }
 end
+
 
 -- Deduct from customer feature AND entity features
 -- If targetEntityId is provided, only deduct from that entity (entity-level tracking)
@@ -505,7 +603,7 @@ local function deductFromFeatureWithEntities(customerFeature, entityFeaturesMap,
         if entityFeatures then
             local entityFeature = entityFeatures[customerFeature.id]
             if entityFeature and remaining > 0 then
-                local entityRolloverResult = deductFromRollovers(entityFeature, remaining)
+                local entityRolloverResult = deductFromRollovers(entityFeature, remaining, adjustGrantedBalance)
                 remaining = entityRolloverResult.remaining
                 for _, delta in ipairs(entityRolloverResult.deltas) do
                     table.insert(allDeltas, delta)
@@ -523,7 +621,7 @@ local function deductFromFeatureWithEntities(customerFeature, entityFeaturesMap,
         if entityFeatures then
             local entityFeature = entityFeatures[customerFeature.id]
             if entityFeature and remaining ~= 0 then
-                local entityMainResult = deductFromMainBalance(entityFeature, remaining)
+                local entityMainResult = deductFromMainBalance(entityFeature, remaining, adjustGrantedBalance)
                 remaining = entityMainResult.remaining
                 for _, delta in ipairs(entityMainResult.deltas) do
                     table.insert(allDeltas, delta)
@@ -539,7 +637,7 @@ local function deductFromFeatureWithEntities(customerFeature, entityFeaturesMap,
         
         -- Step 3: Deduct from customer rollovers
         if remaining > 0 then
-            local customerRolloverResult = deductFromRollovers(customerFeature, remaining)
+            local customerRolloverResult = deductFromRollovers(customerFeature, remaining, adjustGrantedBalance)
             remaining = customerRolloverResult.remaining
             for _, delta in ipairs(customerRolloverResult.deltas) do
                 table.insert(allDeltas, delta)
@@ -551,7 +649,7 @@ local function deductFromFeatureWithEntities(customerFeature, entityFeaturesMap,
         
         -- Step 4: Deduct from customer main balance
         if remaining ~= 0 then
-            local customerMainResult = deductFromMainBalance(customerFeature, remaining)
+            local customerMainResult = deductFromMainBalance(customerFeature, remaining, adjustGrantedBalance)
             remaining = customerMainResult.remaining
             for _, delta in ipairs(customerMainResult.deltas) do
                 table.insert(allDeltas, delta)
@@ -564,7 +662,7 @@ local function deductFromFeatureWithEntities(customerFeature, entityFeaturesMap,
         -- Customer-level tracking: deduct from customer FIRST, then all entities
         
         -- Step 1: Deduct from customer rollovers
-        local customerRolloverResult = deductFromRollovers(customerFeature, remaining)
+        local customerRolloverResult = deductFromRollovers(customerFeature, remaining, adjustGrantedBalance)
         remaining = customerRolloverResult.remaining
         for _, delta in ipairs(customerRolloverResult.deltas) do
             table.insert(allDeltas, delta)
@@ -575,7 +673,7 @@ local function deductFromFeatureWithEntities(customerFeature, entityFeaturesMap,
         
         -- Step 2: Deduct from customer main balance
         if remaining ~= 0 then
-            local customerMainResult = deductFromMainBalance(customerFeature, remaining)
+            local customerMainResult = deductFromMainBalance(customerFeature, remaining, adjustGrantedBalance)
             remaining = customerMainResult.remaining
             for _, delta in ipairs(customerMainResult.deltas) do
                 table.insert(allDeltas, delta)
@@ -597,7 +695,7 @@ local function deductFromFeatureWithEntities(customerFeature, entityFeaturesMap,
                 local entityFeatures = entityFeaturesMap[entityId]
                 local entityFeature = entityFeatures[customerFeature.id]
                 if entityFeature and remaining > 0 then
-                    local entityRolloverResult = deductFromRollovers(entityFeature, remaining)
+                    local entityRolloverResult = deductFromRollovers(entityFeature, remaining, adjustGrantedBalance)
                     remaining = entityRolloverResult.remaining
                     for _, delta in ipairs(entityRolloverResult.deltas) do
                         table.insert(allDeltas, delta)
@@ -624,7 +722,7 @@ local function deductFromFeatureWithEntities(customerFeature, entityFeaturesMap,
                 local entityFeatures = entityFeaturesMap[entityId]
                 local entityFeature = entityFeatures[customerFeature.id]
                 if entityFeature and remaining ~= 0 then
-                    local entityMainResult = deductFromMainBalance(entityFeature, remaining)
+                    local entityMainResult = deductFromMainBalance(entityFeature, remaining, adjustGrantedBalance)
                     remaining = entityMainResult.remaining
                     for _, delta in ipairs(entityMainResult.deltas) do
                         table.insert(allDeltas, delta)
@@ -654,11 +752,11 @@ end
 
 -- Helper: Calculate sync deltas for sync mode requests
 -- In sync mode, we want to adjust cache to match the target balance from Postgres
--- If entityId is provided, loads entity-level features (entity + customer)
--- If entityId is nil, loads customer-level features (customer + all entities)
+-- If entityId is provided, loads entity-level balances (entity + customer)
+-- If entityId is nil, loads customer-level balances (customer + all entities)
 local function calculateSyncDeltas(featureDeductions, targetBalance, entityId)
-    -- Load merged features based on perspective (entity-level or customer-level)
-    local mergedFeatures = loadCusFeatures(cacheKey, orgId, env, customerId, entityId)
+    -- Load merged balances based on perspective (entity-level or customer-level)
+    local mergedFeatures = loadBalances(cacheKey, orgId, env, customerId, entityId)
     
     if not mergedFeatures then
         return -- Customer/entity not in cache, no-op
@@ -670,7 +768,7 @@ local function calculateSyncDeltas(featureDeductions, targetBalance, entityId)
         
         if mergedFeature and not mergedFeature.unlimited then
             -- Get current MERGED balance (from entity-level or customer-level perspective)
-            local currentBalance = mergedFeature.balance or 0
+            local currentBalance = mergedFeature.current_balance or 0
             
             -- Calculate delta (positive means deduct, negative means refund)
             -- Example: currentBalance=10, targetBalance=7 → delta=3 (need to deduct 3)
@@ -693,7 +791,7 @@ local function applyStateChanges(cusFeature, stateChanges)
                 cusFeature[change.field] = (cusFeature[change.field] or 0) + change.delta
             end
         elseif change.type == "breakdown" then
-            local breakdown = cusFeature.breakdowns[change.index]
+            local breakdown = cusFeature.breakdown[change.index]
             if breakdown then
                 if change.newValue then
                     breakdown[change.field] = change.newValue
@@ -848,12 +946,13 @@ local function processRequest(request, loadedCusFeatures, entityFeatureStates)
         if remainingAmount ~= 0 then
             -- Find credit system cusFeatures that reference this feature
             for _, otherCusFeature in pairs(loadedCusFeatures) do
-                if otherCusFeature.credit_schema then
+                -- Check if this balance has a feature with credit_schema
+                if otherCusFeature.feature and otherCusFeature.feature.credit_schema then
                     -- Check if this credit system references our feature
-                    for _, creditItem in ipairs(otherCusFeature.credit_schema) do
-                        if creditItem.feature_id == featureId then
+                    for _, creditItem in ipairs(otherCusFeature.feature.credit_schema) do
+                        if creditItem.metered_feature_id == featureId then
                             -- Calculate credit amount needed for remaining
-                            local creditAmount = remainingAmount * creditItem.credit_amount
+                            local creditAmount = remainingAmount * creditItem.credit_cost
                             
                             if not otherCusFeature.unlimited then
                                 local result = deductFromFeatureWithEntities(otherCusFeature, entityFeatureStates, creditAmount, entityId)
@@ -884,7 +983,7 @@ local function processRequest(request, loadedCusFeatures, entityFeatureStates)
                                 -- If credit system couldn't cover all, calculate how much of original remains
                                 if result.remaining ~= 0 then
                                     local creditCovered = creditAmount - result.remaining
-                                    local originalCovered = creditCovered / creditItem.credit_amount
+                                    local originalCovered = creditCovered / creditItem.credit_cost
                                     remainingAmount = remainingAmount - originalCovered
                                 else
                                     -- Credit system covered everything
@@ -926,8 +1025,19 @@ local function processRequest(request, loadedCusFeatures, entityFeatureStates)
         -- Track which scopes were modified (customer vs entity)
         if stateChange.target == "customer" then
             customerChanged = true
+            -- Track which customer feature was changed
+            if stateChange.cusFeature and stateChange.cusFeature.id then
+                changedCustomerFeatureIds[stateChange.cusFeature.id] = true
+            end
         elseif stateChange.target == "entity" and stateChange.entityId then
             changedEntityIds[stateChange.entityId] = true
+            -- Track which entity feature was changed
+            if stateChange.cusFeature and stateChange.cusFeature.id then
+                if not changedEntityFeatureIds[stateChange.entityId] then
+                    changedEntityFeatureIds[stateChange.entityId] = {}
+                end
+                changedEntityFeatureIds[stateChange.entityId][stateChange.cusFeature.id] = true
+            end
         end
     end
     
@@ -949,20 +1059,40 @@ for _, request in ipairs(requests) do
     end
 end
 
+-- Helper function to apply legacy continuous_use logic
+-- Legacy case: continuous_use features always allow overage
+local function applyContinuousUseLegacy(balance)
+    if balance.feature and balance.feature.type == "continuous_use" then
+        balance.overage_allowed = true
+        -- Apply to breakdowns as well
+        if balance.breakdown then
+            for _, breakdown in ipairs(balance.breakdown) do
+                breakdown.overage_allowed = true
+            end
+        end
+    end
+end
+
 -- Get list of all customer feature IDs
 local baseJson = redis.call("GET", cacheKey)
 local allFeatureIds = {}
 if baseJson then
     local baseCustomer = cjson.decode(baseJson)
-    allFeatureIds = baseCustomer._featureIds or {}
+    allFeatureIds = baseCustomer._balanceFeatureIds or {}
 end
 
--- Load all customer features (so we can find credit systems)
+-- Load all customer balances (so we can find credit systems)
 local loadedCusFeatures = {}
 for _, featureId in ipairs(allFeatureIds) do
-    local cusFeature = loadCusFeature(featureId)
-    if cusFeature then
-        loadedCusFeatures[featureId] = cusFeature
+    local balance = loadBalance(cacheKey, featureId)
+    if balance then
+        -- Add id field for compatibility with existing code
+        balance.id = featureId
+        
+        -- Apply legacy continuous_use logic
+        applyContinuousUseLegacy(balance)
+        
+        loadedCusFeatures[featureId] = balance
     end
 end
 
@@ -978,90 +1108,20 @@ for _, entityId in ipairs(entityIds) do
     
     if entityBaseJson then
         local entityBase = cjson.decode(entityBaseJson)
-        local entityFeatureIds = entityBase._featureIds or {}
+        local entityFeatureIds = entityBase._balanceFeatureIds or {}
         entityFeatureStates[entityId] = {}
         
         for _, featureId in ipairs(entityFeatureIds) do
-            -- Load entity feature inline (similar to loadCusFeature but with entity keys)
-            local entityFeatureKey = entityCacheKey .. ":features:" .. featureId
-            local entityFeatureHash = redis.call("HGETALL", entityFeatureKey)
-            
-            if #entityFeatureHash > 0 then
-                local entityFeature = { id = featureId, _key = entityFeatureKey }
+            -- Load entity balance using shared utility function
+            local balance = loadBalance(entityCacheKey, featureId)
+            if balance then
+                -- Add id field for compatibility with existing code
+                balance.id = featureId
                 
-                -- Parse entity feature fields
-                for i = 1, #entityFeatureHash, 2 do
-                    local key = entityFeatureHash[i]
-                    local value = entityFeatureHash[i + 1]
-                    
-                    if key == "balance" or key == "usage" or key == "usage_limit" or key == "included_usage" or key == "_breakdown_count" or key == "_rollover_count" then
-                        entityFeature[key] = tonumber(value)
-                    elseif key == "unlimited" or key == "overage_allowed" then
-                        entityFeature[key] = (value == "true")
-                    elseif key == "type" then
-                        entityFeature[key] = value
-                    elseif key == "credit_schema" then
-                        if value ~= "null" and value ~= "" then
-                            entityFeature[key] = cjson.decode(value)
-                        else
-                            entityFeature[key] = nil
-                        end
-                    elseif value == "null" then
-                        entityFeature[key] = nil
-                    else
-                        entityFeature[key] = value
-                    end
-                end
+                -- Apply legacy continuous_use logic
+                applyContinuousUseLegacy(balance)
                 
-                -- Load entity breakdowns
-                local breakdownCount = entityFeature._breakdown_count or 0
-                entityFeature.breakdowns = {}
-                for i = 0, breakdownCount - 1 do
-                    local breakdownKey = entityCacheKey .. ":features:" .. featureId .. ":breakdown:" .. i
-                    local breakdownHash = redis.call("HGETALL", breakdownKey)
-                    
-                    if #breakdownHash > 0 then
-                        local breakdown = { _index = i, _key = breakdownKey }
-                        for j = 1, #breakdownHash, 2 do
-                            local key = breakdownHash[j]
-                            local value = breakdownHash[j + 1]
-                            
-                            if key == "balance" or key == "usage" or key == "usage_limit" then
-                                breakdown[key] = tonumber(value)
-                            elseif key == "overage_allowed" then
-                                breakdown[key] = (value == "true")
-                            else
-                                breakdown[key] = value
-                            end
-                        end
-                        table.insert(entityFeature.breakdowns, breakdown)
-                    end
-                end
-                
-                -- Load entity rollovers
-                local rolloverCount = entityFeature._rollover_count or 0
-                entityFeature.rollovers = {}
-                for i = 0, rolloverCount - 1 do
-                    local rolloverKey = entityCacheKey .. ":features:" .. featureId .. ":rollover:" .. i
-                    local rolloverHash = redis.call("HGETALL", rolloverKey)
-                    
-                    if #rolloverHash > 0 then
-                        local rollover = { _index = i, _key = rolloverKey }
-                        for j = 1, #rolloverHash, 2 do
-                            local key = rolloverHash[j]
-                            local value = rolloverHash[j + 1]
-                            
-                            if key == "balance" or key == "expires_at" then
-                                rollover[key] = tonumber(value)
-                            else
-                                rollover[key] = value
-                            end
-                        end
-                        table.insert(entityFeature.rollovers, rollover)
-                    end
-                end
-                
-                entityFeatureStates[entityId][featureId] = entityFeature
+                entityFeatureStates[entityId][featureId] = balance
             end
         end
     end
@@ -1090,12 +1150,71 @@ for entityId, _ in pairs(changedEntityIds) do
     table.insert(changedEntityIdsArray, entityId)
 end
 
--- Return results with changed scopes
+-- Calculate actual deductions per feature from keyDeltas
+-- Sum up usage deltas (or granted_balance deltas if adjustGrantedBalance is true)
+local featureDeductions = {}
+for key, deltas in pairs(keyDeltas) do
+    -- Extract featureId from key (format: "{orgId}:env:customer:{version}:customerId:balances:featureId" or with ":entity:entityId:balances:featureId")
+    local featureId = key:match(":balances:([^:]+)$")
+    if featureId then
+        local deductionAmount = 0
+        if adjustGrantedBalance then
+            -- When adjustGrantedBalance is true, we decrement granted_balance (negative delta = deduction)
+            deductionAmount = -(deltas.granted_balance or 0)
+        else
+            -- Normal case: increment usage (positive delta = deduction)
+            deductionAmount = deltas.usage or 0
+        end
+        
+        if deductionAmount ~= 0 then
+            featureDeductions[featureId] = (featureDeductions[featureId] or 0) + deductionAmount
+        end
+    end
+end
+
+-- ============================================================================
+-- LOAD CHANGED BALANCES AFTER DEDUCTIONS (MERGED VERSIONS)
+-- ============================================================================
+
+-- Collect all changed balances (customer + entities) as object keyed by featureId
+local changedBalances = {}
+
+-- Load merged customer balances if customer was changed
+if customerChanged then
+    local customerObject = getCustomerObject(orgId, env, customerId, false)
+    if customerObject and customerObject.balances then
+        -- Extract only the changed customer balances
+        for featureId, _ in pairs(changedCustomerFeatureIds) do
+            local balance = customerObject.balances[featureId]
+            if balance then
+                changedBalances[featureId] = balance
+            end
+        end
+    end
+end
+
+-- Load merged entity balances for each changed entity
+for entityId, featureIds in pairs(changedEntityFeatureIds) do
+    local entityObject = getEntityObject(orgId, env, customerId, entityId, false)
+    if entityObject and entityObject.balances then
+        -- Extract only the changed entity balances
+        for featureId, _ in pairs(featureIds) do
+            local balance = entityObject.balances[featureId]
+            if balance then
+                changedBalances[featureId] = balance
+            end
+        end
+    end
+end
+
+-- Return results with changed scopes and changed balances
 return cjson.encode({
     success = true,
     results = results,
     customerChanged = customerChanged,
-    changedEntityIds = changedEntityIdsArray
+    changedEntityIds = changedEntityIdsArray,
+    balances = changedBalances,
+    featureDeductions = featureDeductions
 })
 
 

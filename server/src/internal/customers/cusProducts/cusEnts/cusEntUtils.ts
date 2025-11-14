@@ -157,46 +157,6 @@ export const updateCusEntInStripe = async ({
 	console.log(`   ✅ Stripe event sent, amount: (${amountUsed})`);
 };
 
-// Get balance
-// export const getResetBalance = ({
-// 	entitlement,
-// 	options,
-// 	relatedPrice,
-// 	productQuantity,
-// }: {
-// 	entitlement: Entitlement;
-// 	options: FeatureOptions | undefined | null;
-// 	relatedPrice?: Price | null;
-// 	productQuantity?: number;
-// }) => {
-// 	// 1. No related price
-// 	if (!relatedPrice) {
-// 		return (entitlement.allowance || 0) * (productQuantity || 1);
-// 	}
-
-// 	let config = relatedPrice.config as UsagePriceConfig;
-
-// 	let billingType = getBillingType(config);
-// 	if (billingType != BillingType.UsageInAdvance) {
-// 		return entitlement.allowance || 0;
-// 	}
-
-// 	let quantity = options?.quantity;
-// 	let billingUnits = (relatedPrice.config as UsagePriceConfig).billing_units;
-// 	if (nullish(quantity) || nullish(billingUnits)) {
-// 		return entitlement.allowance || 0;
-// 	}
-
-// 	try {
-// 		return (entitlement.allowance || 0) + quantity! * billingUnits!;
-// 	} catch (error) {
-// 		console.log(
-// 			"WARNING: Failed to return quantity * billing units, returning allowance...",
-// 		);
-// 		return entitlement.allowance || 0;
-// 	}
-// };
-
 export const getUnlimitedAndUsageAllowed = ({
 	cusEnts,
 	internalFeatureId,
@@ -216,10 +176,10 @@ export const getUnlimitedAndUsageAllowed = ({
 	);
 
 	const usageAllowed = cusEnts.some(
-		(ent) =>
-			ent.internal_feature_id === internalFeatureId &&
-			ent.usage_allowed &&
-			(includeUsageLimit ? nullish(ent.entitlement.usage_limit) : true),
+		(ce) =>
+			ce.internal_feature_id === internalFeatureId &&
+			ce.usage_allowed &&
+			(includeUsageLimit ? nullish(ce.entitlement.usage_limit) : true),
 	);
 
 	return { unlimited, usageAllowed };
@@ -353,7 +313,7 @@ export const getTotalNegativeBalance = ({
 		}
 	}
 
-	if (totalNegative == 0) {
+	if (totalNegative === 0) {
 		if (Object.values(entities).length > 0) {
 			const entityBalances = Object.values(entities).map((e) => e.balance || 0);
 			return Math.min(...entityBalances);

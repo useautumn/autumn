@@ -1,10 +1,14 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { ApiVersion } from "@autumn/shared";
+import {
+	ApiVersion,
+	type LimitedItem,
+	type TrackResponseV2,
+} from "@autumn/shared";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { timeout } from "tests/utils/genUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { timeout } from "@tests/utils/genUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -14,12 +18,12 @@ import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js"
 const action1Feature = constructFeatureItem({
 	featureId: TestFeature.Action1,
 	includedUsage: 200,
-});
+}) as LimitedItem;
 
 const action3Feature = constructFeatureItem({
 	featureId: TestFeature.Action3,
 	includedUsage: 150,
-});
+}) as LimitedItem;
 
 const freeProd = constructProduct({
 	type: "free",
@@ -32,6 +36,7 @@ const testCase = "track-basic4";
 describe(`${chalk.yellowBright("track-basic4: track with event_name deducts from multiple features")}`, () => {
 	const customerId = "track-basic4";
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
+	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2_0 });
 
 	beforeAll(async () => {
 		await initCustomerV3({
@@ -62,12 +67,26 @@ describe(`${chalk.yellowBright("track-basic4: track with event_name deducts from
 	test("should deduct from both action1 and action3 using event_name", async () => {
 		const deductValue = 45.67;
 
-		await autumnV1.track({
+		const trackRes: TrackResponseV2 = await autumnV2.track({
 			customer_id: customerId,
 			event_name: "action-event",
 			value: deductValue,
 		});
 
+		// Check the track response for correct balance/usage for both features
+		expect(trackRes.value).toBe(deductValue);
+		expect(trackRes.balance).toBeNull();
+		expect(trackRes.balances).toBeDefined();
+		expect(trackRes.balances?.[TestFeature.Action1]?.current_balance).toBe(
+			new Decimal(action1Feature.included_usage).sub(deductValue).toNumber(),
+		);
+		expect(trackRes.balances?.[TestFeature.Action1]?.usage).toBe(deductValue);
+		expect(trackRes.balances?.[TestFeature.Action3]?.current_balance).toBe(
+			new Decimal(action3Feature.included_usage).sub(deductValue).toNumber(),
+		);
+		expect(trackRes.balances?.[TestFeature.Action3]?.usage).toBe(deductValue);
+
+		// Verify customer features after deduction
 		const customer = await autumnV1.customers.get(customerId);
 
 		const action1Balance = customer.features[TestFeature.Action1].balance;

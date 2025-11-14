@@ -1,6 +1,6 @@
 import { ApiVersion } from "@autumn/shared";
+import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import type { CustomerData } from "autumn-js";
-import type { TestContext } from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { attachPaymentMethod } from "../initCustomer.js";

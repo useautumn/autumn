@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
 
+// Note: IDs removed to avoid duplicate registration when exported through main index
 export const CreateReferralCodeResponseSchema = z.object({
 	code: z.string().meta({
 		description: "The referral code that can be shared with customers",

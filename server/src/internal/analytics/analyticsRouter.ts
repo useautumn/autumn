@@ -80,7 +80,7 @@ analyticsRouter.post("", (req, res) =>
 			}
 
 			events.data.forEach((event: any) => {
-				event["period"] = parseInt(format(new Date(event["period"]), "T"));
+				event.period = parseInt(format(new Date(event.period), "T"));
 			});
 
 			const usageList = events.data.filter(

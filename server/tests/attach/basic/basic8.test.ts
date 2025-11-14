@@ -5,11 +5,11 @@ import {
 	FreeTrialDuration,
 	ProductItemInterval,
 } from "@autumn/shared";
+import { AutumnCli } from "@tests/cli/AutumnCli.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectCustomerV0Correct } from "@tests/utils/expectUtils/expectCustomerV0Correct.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { expectCustomerV0Correct } from "tests/utils/expectUtils/expectCustomerV0Correct.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -108,6 +108,7 @@ describe(`${chalk.yellowBright("basic8: Testing trial duplicates (same fingerpri
 		});
 
 		const customer = await AutumnCli.getCustomer(customerId2);
+		console.log(JSON.stringify(customer, null, 2));
 
 		await expectCustomerV0Correct({
 			sent: proWithTrial,

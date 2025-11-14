@@ -13,18 +13,21 @@
 		"w": "ENV_FILE=.env infisical run --env=dev -- bun workers:dev",
 		"c": "ENV_FILE=.env infisical run --env=dev -- bun cron",
 
-		"dev": "cross-env NODE_ENV=development bunx nodemon -w ../shared/dist -w src --ext js,ts --ignore '../shared/dist/**/*.d.ts' --ignore scripts --ignore tests --exec bun src/index.ts",
-		"workers:dev": "cross-env NODE_ENV=development bunx nodemon --signal SIGTERM --delay 500ms -w ../shared/dist -w src/workers.ts -w src/queue -w src/internal --ext js,ts --ignore '../shared/dist/**/*.d.ts' --ignore scripts --ignore tests --exec bun src/workers.ts",
+		"dev": "cross-env NODE_ENV=development bunx nodemon",
+		"workers:dev": "cross-env NODE_ENV=development bunx nodemon --exec bun src/workers.ts --signal SIGTERM --delay 500ms",
 		"workers": "bun src/workers.ts",
 		"cron": "bun src/cron.ts",
 		"check": "bun src/check.ts",
 		"build:check": "tsc -b tsconfig.build.json --noEmit",
-		"t": "bun tests/testRunner/runParallelGroupsV3.ts",
-		"parallel-tests": "bun tests/testRunner/runParallelGroupsV3.ts",
-		"parallel-tests:v1": "bun tests/testRunner/runParallelGroups.ts",
-		"parallel-tests:verbose": "bun tests/testRunner/runParallelGroups.ts --verbose",
-		"parallel-tests:debug": "bun tests/testRunner/runParallelGroups.ts --debug",
-		"clear-master": "bun tests/clearMasterOrg.ts"
+		
+		"t": "ENV_FILE=.env infisical run --env=dev -- bun tests/testRunner/runParallelGroupsV3.ts",
+		"parallel-tests": "ENV_FILE=.env infisical run --env=dev -- bun tests/testRunner/runParallelGroupsV3.ts",
+		"parallel-tests:v1": "ENV_FILE=.env infisical run --env=dev -- bun tests/testRunner/runParallelGroups.ts",
+		"parallel-tests:verbose": "ENV_FILE=.env infisical run --env=dev -- bun tests/testRunner/runParallelGroups.ts --verbose",
+		"parallel-tests:debug": "ENV_FILE=.env infisical run --env=dev -- bun tests/testRunner/runParallelGroups.ts --debug",
+		"clear-master": "ENV_FILE=.env infisical run --env=dev -- bun tests/clearMasterOrg.ts",
+
+		"ts": "bunx tsgo --build --noEmit"
 	},
 	"mocha": {
 		"node-option": [

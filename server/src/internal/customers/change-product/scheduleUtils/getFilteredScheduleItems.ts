@@ -1,8 +1,6 @@
+import { cusProductToProduct, type FullCusProduct } from "@autumn/shared";
 import { getPricesForCusProduct } from "../scheduleUtils.js";
-
-import { FullCusProduct } from "@autumn/shared";
-import { ScheduleObj } from "./ScheduleObj.js";
-import { fullCusProductToProduct } from "../../cusProducts/cusProductUtils.js";
+import type { ScheduleObj } from "./ScheduleObj.js";
 export const getFilteredScheduleItems = ({
 	scheduleObj,
 	cusProducts,
@@ -11,7 +9,7 @@ export const getFilteredScheduleItems = ({
 	cusProducts: (FullCusProduct | undefined)[];
 }) => {
 	const { schedule, prices } = scheduleObj;
-	let scheduleItems = schedule.phases[0].items;
+	const scheduleItems = schedule.phases[0].items;
 
 	let curPrices: any[] = [];
 	for (const cusProduct of cusProducts) {
@@ -20,14 +18,14 @@ export const getFilteredScheduleItems = ({
 		}
 	}
 
-	let products = cusProducts
+	const products = cusProducts
 		.filter((cp): cp is FullCusProduct => !!cp)
-		.map((cp: FullCusProduct) => fullCusProductToProduct(cp));
+		.map((cp: FullCusProduct) => cusProductToProduct({ cusProduct: cp }));
 
 	return scheduleItems.filter((scheduleItem: any) => {
-		let stripePrice = prices.find((price) => price.id === scheduleItem.price);
+		const stripePrice = prices.find((price) => price.id === scheduleItem.price);
 
-		let inCurProduct =
+		const inCurProduct =
 			curPrices.some(
 				(price) =>
 					price.config?.stripe_price_id === scheduleItem.price ||
