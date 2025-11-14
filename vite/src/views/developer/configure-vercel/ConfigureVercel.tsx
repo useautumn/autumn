@@ -195,41 +195,10 @@ export const ConfigureVercel = () => {
 					/>
 				</div>
 
-				<div></div>
-				{/* <div className="col-span-2 w-full">
-					<FormLabel className="mb-1">
-						<span className="text-t2">Marketplace Mode</span>
-					</FormLabel>
-					<p className="text-t3 text-sm mb-2">
-						This is the marketplace mode for your Vercel integration in {env}{" "}
-						mode.
-					</p>
-					<Select
-						value={
-							vercelConfig.marketplace_mode ||
-							org?.processor_configs?.vercel?.marketplace_mode ||
-							"installation"
-						}
-						onValueChange={(value) =>
-							setVercelConfig({
-								...vercelConfig,
-								marketplace_mode: value as VercelMarkeplaceMode,
-							})
-						}
-					>
-						<SelectTrigger>
-							<SelectValue placeholder="Select marketplace mode" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="installation">Installation</SelectItem>
-							<SelectItem value="resource">Resource</SelectItem>
-						</SelectContent>
-					</Select>
-				</div> */}
-
+			
 				<div className="flex gap-2 mt-2">
 					<Button
-						className="w-6/12"
+						className="w-32"
 						disabled={false}
 						onClick={() => handleSaveVercelConfig(axiosInstance, vercelConfig)}
 						isLoading={false}

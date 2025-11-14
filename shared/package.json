@@ -29,7 +29,8 @@
 		"drizzle-orm": "catalog:",
 		"drizzle-zod": "^0.8.2",
 		"yaml": "^2.8.1",
-		"zod-openapi": "^5.4.1"
+		"zod-openapi": "^5.4.1",
+		"stripe": "catalog:"
 	},
 	"peerDependencies": {
 		"zod": "^3.25.23"

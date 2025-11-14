@@ -7,7 +7,7 @@ import { coreOps } from "./coreOpenApi.js";
 import { ApiCustomerWithMeta, customersOpenApi } from "./customersOpenApi.js";
 import { ApiEntityWithMeta, entitiesOpenApi } from "./entitiesOpenApi.js";
 import { ApiPlanWithMeta, plansOpenApi } from "./plansOpenApi.js";
-import { referralsOpenApi } from "./referralsOpenApi.js";
+import { referralOps } from "./referralsOpenApi.js";
 
 const openapi2_0 = createDocument(
 	{
@@ -50,7 +50,7 @@ const openapi2_0 = createDocument(
 			...plansOpenApi,
 			...customersOpenApi,
 			...entitiesOpenApi,
-			...referralsOpenApi,
+			...referralOps,
 			...coreOps,
 		},
 	},

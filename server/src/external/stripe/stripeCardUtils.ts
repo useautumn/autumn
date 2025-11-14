@@ -1,6 +1,10 @@
-import type { AppEnv, ProcessorConfigs } from "@autumn/shared";
-import type { Customer } from "@shared/models/cusModels/cusModels.js";
-import type { Organization } from "@shared/models/orgModels/orgTable.js";
+import type {
+	AppEnv,
+	Customer,
+	Organization,
+	ProcessorConfigs,
+} from "@autumn/shared";
+
 import { createStripeCli } from "../connect/createStripeCli.js";
 
 export const isStripeCardDeclined = (error: any) => {
