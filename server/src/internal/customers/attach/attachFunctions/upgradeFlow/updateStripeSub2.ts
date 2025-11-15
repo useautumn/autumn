@@ -79,6 +79,7 @@ export const updateStripeSub2 = async ({
 		}) as any),
 		payment_behavior: "error_if_incomplete",
 		expand: ["latest_invoice"],
+		discounts: attachParams.rewards?.map((r) => ({ coupon: r.id })),
 	});
 
 	let latestInvoice = updatedSub.latest_invoice as Stripe.Invoice | null;
