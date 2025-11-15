@@ -8,6 +8,7 @@ const ProductFormItemSchema = z.object({
 const PrepaidOptionSchema = z.object({
 	feature_id: z.string(),
 	quantity: z.number(),
+	billing_units: z.number(),
 });
 
 export const AttachProductFormSchema = z.object({
