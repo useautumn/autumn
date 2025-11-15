@@ -37,9 +37,10 @@ export * from "./models/chatResultModels/chatResultFeature.js";
 export * from "./models/chatResultModels/chatResultTable.js";
 export * from "./models/checkModels/checkPreviewModels.js";
 export * from "./models/cusModels/cusExpand.js";
-
 // 8. Customer Models
 export * from "./models/cusModels/cusModels.js";
+// Processor Models
+export * from "./models/processorModels/processorModels.js";
 
 // Cus response
 
@@ -88,12 +89,18 @@ export * from "./api/products/planOpModels.js";
 export * from "./models/featureModels/featureTable.js";
 // Gen Models
 export * from "./models/genModels/genEnums.js";
+export * from "./models/genModels/processorSchemas.js";
+// Idempotency Models
+export * from "./models/idempotencyModels/idempotencyTable.js";
 export * from "./models/migrationModels/migrationErrorTable.js";
 export * from "./models/migrationModels/migrationJobTable.js";
 export * from "./models/migrationModels/migrationModels.js";
+
+export * from "./models/orgModels/frontendOrg.js";
+// 1. Org Models
 export * from "./models/orgModels/frontendOrg.js";
 export * from "./models/orgModels/orgConfig.js";
-// 1. Org Models
+export * from "./models/orgModels/orgConfig.js";
 export * from "./models/orgModels/orgTable.js";
 export * from "./models/otherModels/metadataModels.js";
 export * from "./models/otherModels/metadataTable.js";

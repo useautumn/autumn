@@ -8,6 +8,7 @@ webhooksRouter.use("/stripe", stripeWebhookRouter);
 
 webhooksRouter.use("/autumn", autumnWebhookRouter);
 
+// Vercel webhooks are now handled in Hono (see initHono.ts)
 // webhooksRouter.use("/connect", connectWebhookRouter);
 
 export default webhooksRouter;

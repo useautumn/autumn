@@ -3,8 +3,72 @@ import chalk from "chalk";
 import { z } from "zod/v4";
 import { deleteStripeCustomer } from "@/external/stripe/stripeCusUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { CusService } from "../CusService.js";
 import { deleteCachedApiCustomer } from "../cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
+
+export const deleteCusById = async ({
+	ctx,
+	customerId,
+	deleteInStripe = false,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+	deleteInStripe?: boolean;
+}) => {
+	const { org, env } = ctx;
+
+	const customer = await CusService.get({
+		db: ctx.db,
+		idOrInternalId: customerId,
+		orgId: org.id,
+		env,
+	});
+
+	if (!customer) {
+		throw new CustomerNotFoundError({ customerId });
+	}
+
+	const response = {
+		customer,
+		success: true,
+	};
+
+	try {
+		if (customer.processor?.id && deleteInStripe) {
+			await deleteStripeCustomer({
+				org,
+				env: env,
+				stripeId: customer.processor.id,
+			});
+		}
+	} catch (error: any) {
+		console.log(
+			`Couldn't delete ${chalk.yellow("stripe customer")} ${
+				customer.processor.id
+			}`,
+			error?.message || error,
+		);
+
+		response.success = false;
+	}
+
+	await CusService.deleteByInternalId({
+		db: ctx.db,
+		internalId: customer.internal_id,
+		orgId: org.id,
+		env: env,
+	});
+
+	// Delete customer and all entity caches atomically
+	await deleteCachedApiCustomer({
+		customerId: customer.id ?? "",
+		orgId: org.id,
+		env,
+	});
+
+	return response;
+};
 
 const DeleteCustomerQuerySchema = z.object({
 	delete_in_stripe: z.boolean().optional().default(false),

@@ -1,14 +1,18 @@
+import { sql } from "drizzle-orm";
 import {
+	foreignKey,
+	jsonb,
+	numeric,
 	pgTable,
 	text,
-	numeric,
-	jsonb,
 	unique,
-	foreignKey,
 } from "drizzle-orm/pg-core";
 import { collatePgColumn } from "../../db/utils.js";
+import type {
+	ExternalProcessors,
+	VercelProcessor,
+} from "../genModels/processorSchemas.js";
 import { organizations } from "../orgModels/orgTable.js";
-import { sql } from "drizzle-orm";
 
 export type CustomerProcessor = {
 	type: "stripe";
@@ -26,9 +30,11 @@ export const customers = pgTable(
 		email: text(),
 		fingerprint: text().default(sql`null`),
 		metadata: jsonb().$type<Record<string, unknown>>(),
-
 		env: text().notNull(),
 		processor: jsonb().$type<CustomerProcessor>(),
+		processors: jsonb()
+			.$type<ExternalProcessors>()
+			.default({} as ExternalProcessors),
 	},
 	(table) => [
 		unique("cus_id_constraint").on(table.org_id, table.id, table.env),

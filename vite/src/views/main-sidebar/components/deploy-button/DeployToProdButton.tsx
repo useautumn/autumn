@@ -22,7 +22,7 @@ export const DeployToProdButton = ({ expanded }: DeployToProdButtonProps) => {
 					onClick={() => setShowDeployDialog(true)}
 					className={cn(
 						"w-full overflow-hidden",
-						expanded ? "justify-between" : "justify-center !pl-3",
+						expanded ? "justify-between" : "justify-center pl-3!",
 					)}
 				>
 					<span

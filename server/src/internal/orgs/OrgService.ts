@@ -384,7 +384,6 @@ export class OrgService {
 	static async findByStripeAccountId({
 		db,
 		accountId,
-		env,
 	}: {
 		db: DrizzleCli;
 		accountId: string;

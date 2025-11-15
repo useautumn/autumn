@@ -135,7 +135,10 @@ export const setupPaymentJsDoc = createJSDocDescription({
 		"Creates a session for a customer to add or update their payment method.",
 	whenToUse:
 		"Use this to collect payment information without immediately charging the customer.",
-	body: SetupPaymentParamsSchema,
+	body: SetupPaymentParamsSchema.meta({
+		id: "SetupPaymentParams",
+		description: "Parameters for setting up a payment method",
+	}),
 	examples: [
 		example({
 			values: {
@@ -183,7 +186,10 @@ export const queryJsDoc = createJSDocDescription({
 		"Query usage analytics for a customer's features over a specified time range.",
 	whenToUse:
 		"Use this to retrieve historical usage data for dashboards, reports, or usage displays.",
-	body: QueryParamsSchema,
+	body: QueryParamsSchema.meta({
+		id: "QueryParams",
+		description: "Parameters for querying analytics data",
+	}),
 	examples: [
 		example({
 			values: {

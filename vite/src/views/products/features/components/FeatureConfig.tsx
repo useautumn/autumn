@@ -1,5 +1,4 @@
 import {
-	type Expression,
 	FeatureType,
 	FeatureUsageType,
 	type MeteredConfig,
@@ -271,7 +270,7 @@ export const FilterInput = ({
 				</div>
 			))}
 			<input
-				className="outline-none w-[10px] flex-grow"
+				className="outline-none w-[10px] grow"
 				placeholder="eg. chat-messages"
 				onFocus={() => setInputFocused(true)}
 				onBlur={() => setInputFocused(false)}

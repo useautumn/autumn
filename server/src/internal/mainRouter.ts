@@ -91,6 +91,7 @@ if (process.env.AUTUMN_SECRET_KEY) {
 		"/api/autumn",
 		withOrgAuth,
 		autumnHandler({
+			// url: `${process.env.BETTER_AUTH_URL}/v1`,
 			identify: async (req: any) => {
 				return {
 					customerId: req.org?.id,

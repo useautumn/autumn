@@ -177,6 +177,8 @@ export const sendUsageAndReset = async ({
 	invoice,
 	stripeSubs,
 	logger,
+	submitUsage = true,
+	resetBalance = true,
 }: {
 	db: DrizzleCli;
 	activeProduct: FullCusProduct;
@@ -185,6 +187,8 @@ export const sendUsageAndReset = async ({
 	invoice: Stripe.Invoice;
 	stripeSubs: Stripe.Subscription[];
 	logger: any;
+	submitUsage?: boolean;
+	resetBalance?: boolean;
 }) => {
 	const stripeCli = createStripeCli({ org, env });
 
@@ -235,6 +239,8 @@ export const sendUsageAndReset = async ({
 				usageSub: usageBasedSub,
 				logger,
 				activeProduct,
+				submitUsage,
+				resetBalance,
 			});
 
 			handled.push(handledUsage);
@@ -249,6 +255,7 @@ export const sendUsageAndReset = async ({
 				invoice,
 				usageSub: usageBasedSub,
 				logger,
+				resetBalance,
 			});
 
 			handled.push(handledContUse);
@@ -264,6 +271,7 @@ export const sendUsageAndReset = async ({
 				customer,
 				invoice,
 				logger,
+				resetBalance,
 			});
 
 			handled.push(handledPrepaid);
@@ -373,6 +381,9 @@ export const handleInvoiceCreated = async ({
 		});
 
 		for (const activeProduct of activeProducts) {
+			const subId = invoiceToSubId({ invoice });
+			const subscription = stripeSubs.find((s) => s.id === subId);
+
 			await sendUsageAndReset({
 				db,
 				activeProduct,
@@ -381,7 +392,27 @@ export const handleInvoiceCreated = async ({
 				stripeSubs,
 				invoice,
 				logger,
+				submitUsage: true, // Always submit usage during invoice.created
+				resetBalance: validateProductShouldReset({
+					subscription,
+					_invoice: invoice,
+				}), // Skip balance reset for Vercel (wait for payment confirmation)
 			});
 		}
 	}
+};
+
+export const validateProductShouldReset = ({
+	subscription,
+	_invoice,
+}: {
+	subscription?: Stripe.Subscription;
+	_invoice: Stripe.Invoice;
+}) => {
+	/**
+	 * This was separated so as to give us headroom to add further Custom Payment Methods in the future.
+	 * e.g RevenueCat etc...
+	 */
+	if (subscription?.metadata?.vercel_installation_id) return false;
+	return true;
 };

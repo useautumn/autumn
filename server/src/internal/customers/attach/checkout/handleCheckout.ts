@@ -24,6 +24,7 @@ import { attachParamsToProduct } from "../attachUtils/convertAttachParams.js";
 import { getAttachBranch } from "../attachUtils/getAttachBranch.js";
 import { getAttachConfig } from "../attachUtils/getAttachConfig.js";
 import { getAttachFunction } from "../attachUtils/getAttachFunction.js";
+import { handleCheckoutErrors } from "../attachUtils/handleAttachErrors/handleCheckoutErrors.js";
 import { attachParamsToPreview } from "../handleAttachPreview/attachParamsToPreview.js";
 import { getHasProrations } from "./getHasProrations.js";
 import { previewToCheckoutRes } from "./previewToCheckoutRes.js";
@@ -120,6 +121,11 @@ export const handleCheckout = (req: any, res: any) =>
 			});
 
 			let checkoutUrl = null;
+
+			handleCheckoutErrors({
+				attachParams,
+				branch,
+			});
 
 			if (func === AttachFunction.CreateCheckout) {
 				await checkStripeConnections({
