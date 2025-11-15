@@ -14,7 +14,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
 import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
-import { normalizeCachedData } from "@/utils/cacheUtils/normalizeCacheUtils.js";
+import { normalizeFromSchema } from "@/utils/cacheUtils/normalizeFromSchema.js";
 import { setCachedApiCustomer } from "../../../customers/cusUtils/apiCusCacheUtils/setCachedApiCustomer.js";
 import { getApiEntityBase } from "../apiEntityUtils/getApiEntityBase.js";
 
@@ -69,16 +69,21 @@ export const getCachedApiEntity = async ({
 
 			// If found in cache, parse and return
 			if (cachedResult) {
-				const cached = normalizeCachedData(
-					JSON.parse(cachedResult as string) as ApiEntityV1 & {
-						legacyData: EntityLegacyData;
-					},
-				);
+				const parsed = JSON.parse(cachedResult as string) as ApiEntityV1 & {
+					legacyData: EntityLegacyData;
+				};
 
-				const { legacyData, ...rest } = cached;
+				// Extract legacyData before normalization (not in schema)
+				const { legacyData, ...rest } = parsed;
+
+				// Normalize the data based on schema
+				const normalized = normalizeFromSchema<ApiEntityV1>({
+					schema: ApiEntityV1Schema,
+					data: rest,
+				});
 
 				return {
-					apiEntity: ApiEntityV1Schema.parse(rest),
+					apiEntity: ApiEntityV1Schema.parse(normalized),
 					legacyData,
 				};
 			}

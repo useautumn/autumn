@@ -11,7 +11,7 @@ import { GET_CUSTOMER_SCRIPT } from "@lua/luaScripts.js";
 import { redis } from "../../../../external/redis/initRedis.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { tryRedisRead } from "../../../../utils/cacheUtils/cacheUtils.js";
-import { normalizeCachedData } from "../../../../utils/cacheUtils/normalizeCacheUtils.js";
+import { normalizeFromSchema } from "../../../../utils/cacheUtils/normalizeFromSchema.js";
 import { CusService } from "../../CusService.js";
 import { getApiCustomerBase } from "../apiCusUtils/getApiCustomerBase.js";
 import { setCachedApiCustomer } from "./setCachedApiCustomer.js";
@@ -64,17 +64,22 @@ export const getCachedApiCustomer = async ({
 			);
 
 			if (cachedResult) {
-				const cached = normalizeCachedData(
-					JSON.parse(cachedResult as string) as ApiCustomer & {
-						legacyData: CustomerLegacyData;
-					},
-				);
+				const parsed = JSON.parse(cachedResult as string) as ApiCustomer & {
+					legacyData: CustomerLegacyData;
+				};
 
-				const { legacyData, ...rest } = cached;
+				// Extract legacyData before normalization (not in schema)
+				const { legacyData, ...rest } = parsed;
+
+				// Normalize the data based on schema
+				const normalized = normalizeFromSchema<ApiCustomer>({
+					schema: ApiCustomerSchema,
+					data: rest,
+				});
 
 				return {
 					// ← This returns from getCachedApiCustomer!
-					apiCustomer: ApiCustomerSchema.parse(rest),
+					apiCustomer: ApiCustomerSchema.parse(normalized),
 					legacyData,
 				};
 			}
