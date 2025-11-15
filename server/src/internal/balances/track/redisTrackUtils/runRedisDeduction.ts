@@ -1,12 +1,13 @@
 import {
 	type ApiBalance,
+	ApiBalanceSchema,
 	type ApiCustomer,
 	InsufficientBalanceError,
 	isContUseFeature,
 	type TrackParams,
 	type TrackQuery,
 } from "@autumn/shared";
-import { normalizeCachedBalance } from "@/utils/cacheUtils/normalizeCacheUtils.js";
+import { normalizeFromSchema } from "@/utils/cacheUtils/normalizeFromSchema.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "../../../../utils/cacheUtils/cacheUtils.js";
 import { getOrCreateApiCustomer } from "../../../customers/cusUtils/getOrCreateApiCustomer.js";
@@ -190,7 +191,7 @@ export const runRedisDeduction = async ({
 			result.balances = Object.fromEntries(
 				Object.entries(result.balances).map(([featureId, balance]) => [
 					featureId,
-					normalizeCachedBalance(balance),
+					normalizeFromSchema({ schema: ApiBalanceSchema, data: balance }),
 				]),
 			);
 		}
