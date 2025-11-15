@@ -1,24 +1,26 @@
 import { UsageModel } from "@autumn/shared";
 import type { AnyFieldApi } from "@tanstack/react-form";
-import { Input } from "@/components/v2/inputs/Input";
+import { useEffect } from "react";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import type {
 	PrepaidOption,
 	ProductFormItem,
 } from "./attach-product-form-schema";
+import type { UseAttachProductForm } from "./use-attach-product-form";
 
 interface PrepaidOptionsFieldProps {
 	field: AnyFieldApi;
+	form: UseAttachProductForm;
 }
 
 export function AttachProductPrepaidOptions({
 	field,
+	form,
 }: PrepaidOptionsFieldProps) {
 	const { products } = useProductsQuery();
 
 	const activeProducts = products.filter((p) => !p.archived);
-	const selectedProducts = field.form.state.values
-		.products as ProductFormItem[];
+	const selectedProducts = form.state.values.products as ProductFormItem[];
 
 	const prepaidFeatures = selectedProducts
 		.filter((item: { productId: string }) => item.productId)
@@ -43,38 +45,33 @@ export function AttachProductPrepaidOptions({
 			}));
 		});
 
-	const getFeatureQuantity = (featureId: string): number => {
-		const option = field.state.value.find(
-			(opt: PrepaidOption) => opt.feature_id === featureId,
-		);
-		return option?.quantity || 0;
-	};
+	useEffect(() => {
+		const currentOptions = field.state.value as PrepaidOption[];
 
-	const updateFeatureQuantity = ({
-		featureId,
-		quantity,
-	}: {
-		featureId: string;
-		quantity: number;
-	}) => {
-		const currentOptions = field.state.value;
-		const existingIndex = currentOptions.findIndex(
-			(opt: PrepaidOption) => opt.feature_id === featureId,
+		const existingOptionsMap = new Map(
+			currentOptions.map((opt) => [opt.feature_id, opt]),
 		);
 
-		if (existingIndex !== -1) {
-			const updatedOptions = currentOptions.map(
-				(opt: PrepaidOption, idx: number) =>
-					idx === existingIndex ? { ...opt, quantity } : opt,
-			);
-			field.handleChange(updatedOptions);
-		} else {
-			field.handleChange([
-				...currentOptions,
-				{ feature_id: featureId, quantity },
-			]);
+		const syncedOptions = prepaidFeatures.map((feature) => {
+			const existingOpt = existingOptionsMap.get(feature.feature_id);
+			return {
+				feature_id: feature.feature_id,
+				quantity: existingOpt?.quantity || 0,
+				billing_units: feature.billing_units,
+			};
+		});
+
+		if (
+			syncedOptions.length !== currentOptions.length ||
+			!syncedOptions.every(
+				(opt, i) =>
+					currentOptions[i]?.feature_id === opt.feature_id &&
+					currentOptions[i]?.quantity === opt.quantity,
+			)
+		) {
+			field.handleChange(syncedOptions);
 		}
-	};
+	}, [prepaidFeatures.map((f) => f.feature_id).join(","), field]);
 
 	if (prepaidFeatures.length === 0) {
 		return null;
@@ -96,14 +93,14 @@ export function AttachProductPrepaidOptions({
 				</div>
 
 				{prepaidFeatures.map(
-					(feature: {
-						feature_id: string;
-						product_name: string;
-						billing_units: number;
-					}) => {
-						const quantity = getFeatureQuantity(feature.feature_id);
-						const displayQuantity = quantity / feature.billing_units;
-
+					(
+						feature: {
+							feature_id: string;
+							product_name: string;
+							billing_units: number;
+						},
+						i: number,
+					) => {
 						return (
 							<div
 								key={feature.feature_id}
@@ -113,51 +110,15 @@ export function AttachProductPrepaidOptions({
 									{feature.product_name}
 								</div>
 
-								<div className="flex items-center gap-2">
-									<button
-										type="button"
-										onClick={() =>
-											updateFeatureQuantity({
-												featureId: feature.feature_id,
-												quantity: Math.max(0, quantity - feature.billing_units),
-											})
-										}
-										className="flex h-input w-8 items-center justify-center rounded-md border border-border bg-background text-sm hover:bg-accent"
-										aria-label="Decrease quantity"
-									>
-										−
-									</button>
-
-									<Input
-										variant="headless"
-										type="number"
-										value={displayQuantity || ""}
-										onChange={(e) => {
-											const value = Number.parseInt(e.target.value) || 0;
-											updateFeatureQuantity({
-												featureId: feature.feature_id,
-												quantity: value * feature.billing_units,
-											});
-										}}
-										className="h-input w-16 text-center text-sm"
-										min={0}
-										aria-label={`Quantity for ${feature.product_name}`}
-									/>
-
-									<button
-										type="button"
-										onClick={() =>
-											updateFeatureQuantity({
-												featureId: feature.feature_id,
-												quantity: quantity + feature.billing_units,
-											})
-										}
-										className="flex h-input w-8 items-center justify-center rounded-md border border-border bg-background text-sm hover:bg-accent"
-										aria-label="Increase quantity"
-									>
-										+
-									</button>
-								</div>
+								<form.AppField name={`prepaidOptions[${i}].quantity`}>
+									{(quantityField) => (
+										<quantityField.QuantityField
+											label=""
+											placeholder="0"
+											min={0}
+										/>
+									)}
+								</form.AppField>
 							</div>
 						);
 					},

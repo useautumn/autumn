@@ -13,7 +13,6 @@ export function AttachProductSummary({
 			const product = products.find((p) => p.id === item.productId);
 			if (!product) return null;
 
-			// Calculate product price from all items
 			const productPrice =
 				product.items?.reduce((sum, productItem) => {
 					return sum + (productItem.price || 0);

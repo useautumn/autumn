@@ -1,6 +1,6 @@
 import { ArrowUpRightFromSquare } from "lucide-react";
-import { useState } from "react";
 import { toast } from "sonner";
+import { useAttachProductMutation } from "@/components/forms/attach-product/use-attach-product-mutation";
 import {
 	Popover,
 	PopoverContent,
@@ -8,8 +8,6 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/v2/buttons/Button";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
-import { CusService } from "@/services/customers/CusService";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import type { UseAttachProductForm } from "./use-attach-product-form";
@@ -25,24 +23,26 @@ export function AttachProductActions({
 	customerId,
 	onSuccess,
 }: AttachProductActionsProps) {
-	const [attachLoading, setAttachLoading] = useState(false);
-	const [invoiceLoading, setInvoiceLoading] = useState(false);
-	const axiosInstance = useAxiosInstance();
 	const { stripeAccount } = useOrgStripeQuery();
 	const env = useEnv();
+
+	const attachMutation = useAttachProductMutation({
+		customerId,
+		onSuccess: () => {
+			form.reset();
+			onSuccess?.();
+		},
+	});
 
 	const handleAttach = async ({
 		useInvoice,
 		enableProductImmediately,
-		setLoading,
 	}: {
 		useInvoice: boolean;
 		enableProductImmediately?: boolean;
-		setLoading: (loading: boolean) => void;
 	}) => {
 		const formValues = form.state.values.products;
-		const prepaidOptions: { feature_id: string; quantity: number }[] =
-			form.state.values.prepaidOptions || [];
+		const prepaidOptions = form.state.values.prepaidOptions || [];
 		const validProducts = formValues.filter((p) => p.productId);
 
 		if (validProducts.length === 0) {
@@ -50,58 +50,31 @@ export function AttachProductActions({
 			return;
 		}
 
-		setLoading(true);
+		const results = await attachMutation.mutateAsync({
+			products: validProducts,
+			prepaidOptions,
+			useInvoice,
+			enableProductImmediately,
+		});
 
-		try {
-			const attachPromises = validProducts.map(async (item) => {
-				const attachBody = {
-					customer_id: customerId,
-					product_id: item.productId,
-					options:
-						prepaidOptions.length > 0
-							? prepaidOptions.map((opt) => ({
-									feature_id: opt.feature_id,
-									quantity: opt.quantity,
-								}))
-							: undefined,
-					invoice: useInvoice,
-					enable_product_immediately: useInvoice
-						? enableProductImmediately
-						: undefined,
-					finalize_invoice: useInvoice ? false : undefined,
-					success_url: window.location.href,
-				};
-
-				return await CusService.attach(axiosInstance, attachBody);
-			});
-
-			const results = await Promise.all(attachPromises);
-
-			for (const result of results) {
-				if (result.data.checkout_url) {
-					window.open(result.data.checkout_url, "_blank");
-				} else if (result.data.invoice) {
-					window.open(
-						getStripeInvoiceLink({
-							stripeInvoice: result.data.invoice,
-							env,
-							accountId: stripeAccount?.id,
-						}),
-						"_blank",
-					);
-				}
+		// Handle checkout URLs and invoice links
+		for (const result of results) {
+			if (result.data.checkout_url) {
+				window.open(result.data.checkout_url, "_blank");
+			} else if (result.data.invoice) {
+				window.open(
+					getStripeInvoiceLink({
+						stripeInvoice: result.data.invoice,
+						env,
+						accountId: stripeAccount?.id,
+					}),
+					"_blank",
+				);
 			}
-
-			toast.success(`Successfully attached ${validProducts.length} product(s)`);
-			form.reset();
-			onSuccess?.();
-		} catch (error) {
-			toast.error("Failed to attach products");
-			console.error(error);
-		} finally {
-			setLoading(false);
 		}
 	};
+
+	const isLoading = attachMutation.isPending;
 
 	return (
 		<div className="flex flex-col gap-2">
@@ -110,8 +83,8 @@ export function AttachProductActions({
 					<Button
 						variant="secondary"
 						className="w-full"
-						isLoading={invoiceLoading}
-						disabled={attachLoading || invoiceLoading}
+						isLoading={isLoading}
+						disabled={isLoading}
 						type="button"
 					>
 						Invoice Customer
@@ -125,7 +98,6 @@ export function AttachProductActions({
 								handleAttach({
 									useInvoice: true,
 									enableProductImmediately: true,
-									setLoading: setInvoiceLoading,
 								})
 							}
 							className="px-4 py-3 text-left text-sm hover:bg-accent"
@@ -142,7 +114,6 @@ export function AttachProductActions({
 								handleAttach({
 									useInvoice: true,
 									enableProductImmediately: false,
-									setLoading: setInvoiceLoading,
 								})
 							}
 							className="px-4 py-3 text-left text-sm hover:bg-accent border-t"
@@ -160,12 +131,11 @@ export function AttachProductActions({
 			<Button
 				variant="primary"
 				className="w-full flex items-center gap-2"
-				isLoading={attachLoading}
-				disabled={attachLoading || invoiceLoading}
+				isLoading={isLoading}
+				disabled={isLoading}
 				onClick={() =>
 					handleAttach({
 						useInvoice: false,
-						setLoading: setAttachLoading,
 					})
 				}
 			>
