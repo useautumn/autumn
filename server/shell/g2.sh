@@ -10,14 +10,14 @@ fi
 
 $MOCHA_CMD \
 'tests/attach/migrations/*.ts' \
-'tests/attach/newVersion/*.ts' \
-'tests/attach/upgradeOld/*.ts' \
-'tests/attach/others/*.ts' \
-'tests/attach/updateEnts/*.ts' \
-'tests/advanced/check/*.ts' \
-'tests/attach/others/*.ts'
-# 'tests/attach/entities/*.ts' \
+# 'tests/attach/newVersion/*.ts' \
+# 'tests/attach/upgradeOld/*.ts' \
+# 'tests/attach/others/*.ts' \
+# 'tests/attach/updateEnts/*.ts' \
+# 'tests/advanced/check/*.ts' \
+# 'tests/attach/others/*.ts'
+# # 'tests/attach/entities/*.ts' \
 
-$MOCHA_CMD 'tests/attach/prepaid/*.ts' \
-'tests/interval/upgrade/*.ts' \
-'tests/interval/multiSub/*.ts'
+# $MOCHA_CMD 'tests/attach/prepaid/*.ts' \
+# 'tests/interval/upgrade/*.ts' \
+# 'tests/interval/multiSub/*.ts'

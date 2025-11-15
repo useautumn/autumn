@@ -7,10 +7,22 @@ import {
 	ProductItemInterval,
 	productV2ToBasePrice,
 } from "@autumn/shared";
+import {
+	ArrowsClockwiseIcon,
+	BarcodeIcon,
+	CheckCircleIcon,
+} from "@phosphor-icons/react";
+import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
 import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
+import {
+	InputGroup,
+	InputGroupAddon,
+	InputGroupInput,
+} from "@/components/v2/inputs/InputGroup";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useProductStore } from "@/hooks/stores/useProductStore";
+import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { SelectBillingCycle } from "./SelectBillingCycle";
 
 export const BasePriceSection = ({
@@ -21,7 +33,12 @@ export const BasePriceSection = ({
 	const product = useProductStore((s) => s.product);
 	const setProduct = useProductStore((s) => s.setProduct);
 
+	const basePriceType = product.basePriceType;
+	const { org } = useOrg();
+	const defaultCurrency = org?.default_currency?.toUpperCase() ?? "USD";
+
 	if (!product.items) return null;
+	if (product.planType !== "paid") return null;
 
 	const basePrice = productV2ToBasePrice({ product });
 
@@ -90,67 +107,205 @@ export const BasePriceSection = ({
 
 	const disabled = nullish(basePrice);
 
+	// if (nullish(basePrice?.interval)) return null;
+
 	return (
 		<SheetSection
-			title="Base Price"
+			title="Plan Price"
 			withSeparator={withSeparator}
-			checked={!disabled}
-			setChecked={(checked) => {
-				if (checked) {
-					setProduct({
-						...product,
-						items: [
-							...product.items,
-							{
-								price: 10,
-								interval: ProductItemInterval.Month,
-							},
-						],
-					});
-				} else {
-					handleDeleteBasePrice();
-				}
-			}}
-			description={
-				<span>
-					A fixed price to charge for the plan. Uncheck this section if the plan
-					is free or only has usage-based prices.
-				</span>
-			}
+			// checked={!disabled}
+			// setChecked={(checked) => {
+			// 	if (checked) {
+			// 		setProduct({
+			// 			...product,
+			// 			items: [
+			// 				...product.items,
+			// 				{
+			// 					price: 10,
+			// 					interval: ProductItemInterval.Month,
+			// 				},
+			// 			],
+			// 		});
+			// 	} else {
+			// 		handleDeleteBasePrice();
+			// 	}
+			// }}
+			// description={
+			// 	<span>
+			// 		Choose whether to add a fixed base price to this plan. You can add
+			// 		usage-based prices later.
+			// 	</span>
+			// }
 		>
 			<div className="space-y-4">
-				<div className="grid grid-cols-2 gap-2">
-					<div>
-						<FormLabel disabled={disabled}>Price</FormLabel>
-						<Input
-							type="number"
-							placeholder="eg. $100"
-							disabled={disabled}
-							value={basePrice?.amount ?? ""}
-							onKeyDown={(e) => {
-								// Prevent typing minus sign
-								if (e.key === "-" || e.key === "Minus") {
-									e.preventDefault();
+				<div className="space-y-2">
+					<GroupedTabButton
+						value={basePriceType ?? "recurring"}
+						className="w-full"
+						onValueChange={(value) => {
+							//if usage based, remove the base price item
+							if (value === "usage") {
+								setProduct({
+									...product,
+									basePriceType: value as "recurring" | "one-off" | "usage",
+									items: product.items.filter((item) => !isPriceItem(item)),
+								});
+								return;
+							}
+
+							// Check if there's already a price item
+							const hasPriceItem = product.items.some((item) =>
+								isPriceItem(item),
+							);
+
+							if (!hasPriceItem) {
+								// Recreate the price item with default price of 0
+								const newPriceItem: ProductItem = {
+									price: "" as unknown as number,
+									interval:
+										value === "one-off" ? null : ProductItemInterval.Month,
+									interval_count: 1,
+								};
+
+								setProduct({
+									...product,
+									basePriceType: value as "recurring" | "one-off" | "usage",
+									items: [...product.items, newPriceItem],
+								});
+								return;
+							}
+
+							// Update existing price item
+							setProduct({
+								...product,
+								basePriceType: value as "recurring" | "one-off" | "usage",
+								items: product.items.map((item) => {
+									if (isPriceItem(item)) {
+										return {
+											...item,
+											interval:
+												value === "one-off" ? null : ProductItemInterval.Month,
+										};
+									}
+									return item;
+								}),
+							});
+						}}
+						options={[
+							{
+								value: "recurring",
+								label: "Recurring",
+								icon: (
+									<ArrowsClockwiseIcon
+										className="size-[14px]"
+										weight="regular"
+									/>
+								),
+							},
+							{
+								value: "one-off",
+								label: "One-off",
+								icon: (
+									<CheckCircleIcon className="size-[14px]" weight="regular" />
+								),
+							},
+							{
+								value: "usage",
+								label: "Usage-based",
+								icon: <BarcodeIcon className="size-[14px]" weight="regular" />,
+							},
+						]}
+					/>
+					{/* <p className="text-body-secondary">
+						Add a fixed price to charge for the whole plan. You can add
+						usage-based prices later.
+					</p> */}
+				</div>
+				{/* <FormLabel>Price Type</FormLabel>
+				<Select
+					value={basePriceType ?? "recurring"}
+					onValueChange={(value) => {
+						setProduct({
+							...product,
+							basePriceType: value as "recurring" | "one-off" | "usage",
+							items: product.items.map((item) => {
+								if (isPriceItem(item)) {
+									return {
+										...item,
+										interval:
+											value === "one-off" ? null : ProductItemInterval.Month,
+									};
 								}
+								return item;
+							}),
+						});
+					}}
+				>
+					<SelectTrigger className="w-full">
+						<SelectValue placeholder="Select price type" />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="recurring">Recurring</SelectItem>
+						<SelectItem value="one-off">One-off</SelectItem>
+						<SelectItem value="usage" className="text-body-secondary">
+							This plan has usage-based prices only
+						</SelectItem>
+					</SelectContent>
+				</Select> */}
+				<div className="h-13">
+					{basePriceType !== "usage" ? (
+						<div className="flex gap-2">
+							<div className="w-full">
+								<FormLabel disabled={disabled}>Price</FormLabel>
+								<InputGroup>
+									<InputGroupInput
+										type="number"
+										placeholder="eg. 100"
+										disabled={disabled}
+										value={basePrice?.amount ?? ""}
+										onKeyDown={(e) => {
+											// Prevent typing minus sign
+											if (e.key === "-" || e.key === "Minus") {
+												e.preventDefault();
+											}
+										}}
+										onChange={(e) => {
+											// extra guard in case value changes programmatically
+											const cleanedValue = e.target.value.replace(/-/g, "");
+											if (Number(cleanedValue) >= 0) {
+												handleUpdateBasePrice({
+													amount: cleanedValue,
+												});
+											}
+										}}
+									/>
+									<InputGroupAddon align="inline-end">
+										<span className="text-t3 text-xs">{defaultCurrency}</span>
+									</InputGroupAddon>
+								</InputGroup>
+							</div>
+							{basePriceType === "recurring" && (
+								<div className="w-full">
+									<SelectBillingCycle
+										item={basePrice?.item}
+										setItem={setItem}
+										disabled={disabled}
+										filterOneOff={basePriceType === "recurring"}
+									/>
+								</div>
+							)}
+						</div>
+					) : (
+						<InfoBox
+							classNames={{
+								infoIcon: "text-t3",
+								infoBox: "text-sm py-2",
 							}}
-							onChange={(e) => {
-								// extra guard in case value changes programmatically
-								const cleanedValue = e.target.value.replace(/-/g, "");
-								if (Number(cleanedValue) >= 0) {
-									handleUpdateBasePrice({
-										amount: cleanedValue,
-									});
-								}
-							}}
-						/>
-					</div>
-					<div>
-						<SelectBillingCycle
-							item={basePrice?.item}
-							setItem={setItem}
-							disabled={disabled}
-						/>
-					</div>
+						>
+							You can add usage-based prices (eg, per seat, per credit) when you
+							link a feature to this plan.
+						</InfoBox>
+					)}
 				</div>
 			</div>
 		</SheetSection>

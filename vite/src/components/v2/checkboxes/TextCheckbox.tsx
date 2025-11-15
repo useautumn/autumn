@@ -19,7 +19,7 @@ export const TextCheckbox = ({
 		<label
 			htmlFor={id}
 			className={cn(
-				"flex items-center gap-2 w-fit",
+				"flex items-center gap-2 w-fit whitespace-nowrap",
 				disabled ? "cursor-not-allowed opacity-50" : "cursor-default",
 			)}
 		>

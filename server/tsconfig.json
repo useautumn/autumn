@@ -24,6 +24,7 @@
       "@emails/*": ["emails/*"],
       "@scripts/*": ["scripts/*"],
       "@lua/*": ["src/_luaScripts/*"],
+      "@tests/*": ["tests/*"]
     }
   },
   "include": ["src", "tests", "scripts", "emails", "experiments"],

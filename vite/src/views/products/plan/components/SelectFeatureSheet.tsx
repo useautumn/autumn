@@ -83,12 +83,12 @@ export function SelectFeatureSheet({
 			{!isOnboarding && (
 				<SheetHeader
 					title="Select Feature"
-					description="Choose a feature to add to this plan"
+					description="Add a feature that customers on this plan can access"
 				/>
 			)}
 
 			<div className="flex-1 overflow-y-auto">
-				<SheetSection title="Feature" withSeparator={false}>
+				<SheetSection withSeparator={false}>
 					<FormLabel>Select a feature</FormLabel>
 					<Select
 						onValueChange={handleFeatureSelect}

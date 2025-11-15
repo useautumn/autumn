@@ -21,4 +21,14 @@ export const ProductV2Schema = z.object({
 	archived: z.boolean().default(false).nullish(),
 });
 
+// 1. Create a new type called FrontendProduct
+export const FrontendProductSchema = ProductV2Schema.extend({
+	planType: z.enum(["free", "paid"]).nullable(),
+	basePriceType: z
+		.enum(["recurring", "one-off", "usage"])
+		.default("recurring")
+		.nullable(),
+});
+
 export type ProductV2 = z.infer<typeof ProductV2Schema>;
+export type FrontendProduct = z.infer<typeof FrontendProductSchema>;

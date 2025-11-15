@@ -31,8 +31,6 @@ export const PlanFeatureList = ({
 
 	const filteredItems = productV2ToFeatureItems({ items: product.items });
 
-	console.log("Filtered items:", filteredItems);
-
 	// Group items by entity_feature_id
 	const groupedItems = filteredItems.reduce(
 		(acc, item) => {

@@ -1,3 +1,4 @@
+import { isFeaturePriceItem, productV2ToBasePrice } from "@autumn/shared";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/v2/buttons/Button";
@@ -39,12 +40,24 @@ export const SaveChangesBar = ({
 	const { counts, isLoading } = useProductCountsQuery();
 	const { refetch: queryRefetch } = useProductQuery();
 
+	const basePrice = productV2ToBasePrice({ product });
+
 	useProductChangedAlert({
 		hasChanges,
 		disabled: isOnboarding, // Disable navigation blocking in onboarding mode
 	});
 
 	const handleSaveClicked = async () => {
+		if (
+			product.planType === "paid" &&
+			product.basePriceType !== "usage" &&
+			!basePrice?.amount
+		) {
+			toast.error("Please add a plan price greater than 0, or remove it.");
+			setSaving(false);
+			return;
+		}
+
 		if (!isOnboarding && isLoading) {
 			toast.error("Plan counts are loading");
 			return;
@@ -58,6 +71,15 @@ export const SaveChangesBar = ({
 		}
 
 		setSaving(true);
+
+		// If the plan type is free and user is adding a priced feature, set plan to usage-based
+		if (product.planType === "free" && product.items.some(isFeaturePriceItem)) {
+			setProduct({
+				...product,
+				planType: "paid",
+				basePriceType: "usage",
+			});
+		}
 		const result = await updateProduct({
 			axiosInstance,
 			productId: product.id,
