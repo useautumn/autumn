@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
+import { AttachProductForm } from "@/components/forms/attach-product/attach-product-form";
 import { pushPage } from "@/utils/genUtils";
 import ErrorScreen from "@/views/general/ErrorScreen";
 import LoadingScreen from "@/views/general/LoadingScreen";
@@ -72,6 +73,10 @@ export default function CustomerView2() {
 					<CustomerUsageAnalyticsTable />
 					<CustomerInvoicesTable />
 				</div>
+				<AttachProductForm
+					customerId={customer.id || customer.internal_id}
+					onSuccess={() => {}}
+				/>
 			</div>
 		</CustomerContext.Provider>
 	);

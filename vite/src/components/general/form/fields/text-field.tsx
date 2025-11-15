@@ -1,4 +1,4 @@
-import { FieldInfo } from "@/components/general/form/fields/field-info";
+import { FieldInfo } from "@/components/general/form/field-info";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useFieldContext } from "@/hooks/form/form-context";
