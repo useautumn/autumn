@@ -33,6 +33,7 @@ export * from "./productV2Utils/productItemUtils/getItemType.js";
 // Item utils
 export * from "./productV2Utils/productItemUtils/mapToItem.js";
 export * from "./productV2Utils/productItemUtils/productItemUtils.js";
+export * from "./productV2Utils/productV2ToFrontendProduct.js";
 export * from "./productV2Utils/productV2ToV1.js";
 export * from "./productV3Utils/productItemUtils/productV3ItemUtils.js";
 export * from "./utils.js";

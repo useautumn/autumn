@@ -9,7 +9,7 @@ export function SheetContainer({ children, className }: SheetContainerProps) {
 	return (
 		<div
 			className={cn(
-				"flex flex-col overflow-y-auto [scrollbar-gutter:stable]",
+				"flex flex-col overflow-y-auto [scrollbar-gutter:stable] border-border-table",
 				className,
 			)}
 		>

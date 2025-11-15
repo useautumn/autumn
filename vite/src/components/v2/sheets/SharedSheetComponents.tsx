@@ -50,7 +50,7 @@ interface SheetSectionProps {
 }
 
 export function SheetSection({
-	title = "",
+	title,
 	description,
 	checked = true,
 	setChecked,
@@ -64,22 +64,24 @@ export function SheetSection({
 	return (
 		<>
 			<div className="p-4">
-				<label htmlFor={id} className="flex items-center gap-2 mb-2 w-fit">
-					{withTogle && (
-						<div className="flex items-center gap-2">
-							<Checkbox
-								id={id}
-								checked={checked}
-								onCheckedChange={setChecked}
-							/>
-						</div>
-					)}
-					{title && (
-						<div className={cn("flex items-center gap-2")}>
-							<h3 className={cn("text-sub select-none")}>{title}</h3>
-						</div>
-					)}
-				</label>
+				{title && (
+					<label htmlFor={id} className="flex items-center gap-2 mb-2 w-fit">
+						{withTogle && (
+							<div className="flex items-center gap-2">
+								<Checkbox
+									id={id}
+									checked={checked}
+									onCheckedChange={setChecked}
+								/>
+							</div>
+						)}
+						{title && (
+							<div className={cn("flex items-center gap-2")}>
+								<h3 className={cn("text-sub select-none")}>{title}</h3>
+							</div>
+						)}
+					</label>
+				)}
 				{description && (
 					<p
 						className={cn(

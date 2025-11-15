@@ -1,4 +1,5 @@
 import type { ProductV2 } from "@autumn/shared";
+import { productV2ToFrontendProduct } from "@autumn/shared";
 import { useEffect, useRef } from "react";
 import { useProductStore } from "./useProductStore";
 
@@ -20,18 +21,22 @@ export const useProductSync = ({
 
 		// Check if this is a new product (ID changed) or if product data changed
 		const isNewProduct = lastProductRef.current?.id !== product.id;
-		const isVersionChanged = lastProductRef.current?.version !== product.version;
+		const isVersionChanged =
+			lastProductRef.current?.version !== product.version;
 		const isProductUpdated = lastProductRef.current !== product;
 
 		if (isNewProduct || isProductUpdated) {
 			lastProductRef.current = product;
 
+			// Convert ProductV2 to FrontendProduct
+			const frontendProduct = productV2ToFrontendProduct({ product });
+
 			// Always update baseProduct to reflect backend state
-			setBaseProduct(product);
+			setBaseProduct(frontendProduct);
 
 			// Update product on initial load, when switching products, or when version changes
 			if (!hasInitialized.current || isNewProduct || isVersionChanged) {
-				setProduct(product);
+				setProduct(frontendProduct);
 				hasInitialized.current = true;
 			}
 		}
