@@ -7,7 +7,7 @@ const ProductFormItemSchema = z.object({
 
 export const AttachProductFormSchema = z.object({
 	products: z.array(ProductFormItemSchema),
-	prepaidQuantities: z.record(z.string(), z.number()),
+	prepaidOptions: z.record(z.string(), z.number()),
 });
 
 export type AttachProductForm = z.infer<typeof AttachProductFormSchema>;

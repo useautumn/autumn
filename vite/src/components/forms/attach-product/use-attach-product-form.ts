@@ -9,7 +9,7 @@ export function useAttachProductForm() {
 	return useAppForm({
 		defaultValues: {
 			products: [] as ProductFormItem[],
-			prepaidQuantities: {} as Record<string, number>,
+			prepaidOptions: {} as Record<string, number>,
 		} satisfies AttachProductForm,
 		validators: {
 			onChange: AttachProductFormSchema,

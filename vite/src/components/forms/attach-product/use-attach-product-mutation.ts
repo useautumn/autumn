@@ -7,7 +7,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 interface AttachProductParams {
 	products: Array<{ productId: string }>;
-	prepaidQuantities: Record<string, number>;
+	prepaidOptions: Record<string, number>;
 	useInvoice: boolean;
 	enableProductImmediately?: boolean;
 }
@@ -26,7 +26,7 @@ export function useAttachProductMutation({
 	return useMutation({
 		mutationFn: async (params: AttachProductParams) => {
 			// Build prepaid options by joining quantities with product data to get billing_units
-			const prepaidOptions = Object.entries(params.prepaidQuantities)
+			const prepaidOptions = Object.entries(params.prepaidOptions)
 				.filter(([, quantity]) => quantity > 0)
 				.map(([featureId, quantity]) => {
 					// Find the product that contains this feature
