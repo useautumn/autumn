@@ -1,6 +1,6 @@
 import {
+	ACTIVE_STATUSES,
 	type AppEnv,
-	CusProductStatus,
 	type FullCustomerPrice,
 	type InvoiceStatus,
 	type Organization,
@@ -163,7 +163,7 @@ export const handleInvoiceFinalized = async ({
 			stripeSubId: subId,
 			orgId: org.id,
 			env,
-			inStatuses: [CusProductStatus.Active],
+			inStatuses: ACTIVE_STATUSES,
 		});
 
 		if (activeProducts.length === 0) {
@@ -175,9 +175,7 @@ export const handleInvoiceFinalized = async ({
 			invoice,
 		});
 
-		if (updated) {
-			return;
-		}
+		if (updated) return;
 
 		const prices = activeProducts.flatMap((cp) =>
 			cp.customer_prices.map((cpr: FullCustomerPrice) => cpr.price),

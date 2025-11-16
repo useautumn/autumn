@@ -52,9 +52,9 @@ export const handleInvoicePaidDiscount = async ({
 				continue;
 			}
 
-			const curCoupon = discount.coupon;
+			const curCoupon = discount.source.coupon;
 
-			if (!curCoupon) {
+			if (!curCoupon || typeof curCoupon === "string") {
 				continue;
 			}
 
@@ -85,8 +85,7 @@ export const handleInvoicePaidDiscount = async ({
 				expand: ["applies_to"],
 			});
 
-			// 1. New amount:
-			const curAmount = discount.coupon.amount_off;
+			const curAmount = curCoupon.amount_off;
 
 			const amountUsed = totalDiscountAmounts?.find(
 				(item) => item.discount === discount.id,
@@ -141,7 +140,7 @@ export const handleInvoicePaidDiscount = async ({
 
 			const newCoupon = await stripeCli.coupons.create({
 				id: `${couponId}_${generateId("roll")}`,
-				name: discount.coupon.name as string,
+				name: curCoupon.name as string,
 				amount_off: newAmount,
 				currency: expandedInvoice.currency,
 				duration: "once",

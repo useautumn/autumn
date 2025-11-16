@@ -60,6 +60,7 @@ export const priceToStripeItem = ({
 	isCheckout = false,
 	apiVersion,
 	productOptions,
+	fromVercel = false,
 }: {
 	price: Price;
 	relatedEnt: EntitlementWithFeature;
@@ -71,13 +72,14 @@ export const priceToStripeItem = ({
 	isCheckout: boolean;
 	apiVersion?: ApiVersion;
 	productOptions?: ProductOptions | undefined;
+	fromVercel?: boolean;
 }) => {
 	// TODO: Implement this
 	const billingType = getBillingType(price.config!);
 	const stripeProductId = product.processor?.id;
 
 	const quantityMultiplier = notNullish(productOptions?.quantity)
-		? productOptions?.quantity!
+		? productOptions?.quantity
 		: 1;
 
 	if (!stripeProductId) {
@@ -131,19 +133,12 @@ export const priceToStripeItem = ({
 		const config = price.config as UsagePriceConfig;
 		const priceId = config.stripe_price_id;
 
-		if (withEntity && !isCheckout) {
-			return {
-				lineItem: {
-					price: config.stripe_empty_price_id,
-					quantity: 0,
-				},
-			};
-		}
+		const newUsageMethod =
+			withEntity || apiVersion === ApiVersion.V1_Beta || fromVercel;
 
-		if (apiVersion === ApiVersion.V1_Beta && !isCheckout) {
+		if (newUsageMethod && !isCheckout) {
 			return {
 				lineItem: {
-					// lineItem: getEmptyPriceItem({ price, org }),
 					price: config.stripe_empty_price_id,
 					quantity: 0,
 				},

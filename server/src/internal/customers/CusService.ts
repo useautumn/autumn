@@ -1,5 +1,5 @@
 import {
-	type AppEnv,
+	AppEnv,
 	CusExpand,
 	type CusProductStatus,
 	type Customer,
@@ -312,6 +312,9 @@ export class CusService {
 		orgId: string;
 		env: AppEnv;
 	}) {
+		if (env === AppEnv.Live)
+			throw new Error("Cannot delete all customers under org in live mode");
+
 		const results = await db
 			.delete(customers)
 			.where(and(eq(customers.org_id, orgId), eq(customers.env, env)))

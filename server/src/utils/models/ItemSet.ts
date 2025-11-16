@@ -1,6 +1,5 @@
-import { BillingInterval, Price } from "@autumn/shared";
-import Stripe from "stripe";
-import { z } from "zod";
+import { type Price } from "@autumn/shared";
+import type Stripe from "stripe";
 
 // export const ItemSetSchema = z.object({
 //   items: z.array(z.any()),

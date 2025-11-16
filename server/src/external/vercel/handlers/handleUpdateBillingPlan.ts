@@ -52,7 +52,7 @@ export const handleUpdateVercelBillingPlan = createRoute({
 				);
 			}
 
-			const stripeCli = await createStripeCli({
+			const stripeCli = createStripeCli({
 				org,
 				env: env as AppEnv,
 			});
@@ -129,13 +129,19 @@ export const handleUpdateVercelBillingPlan = createRoute({
 			// TODO: Handle upgrade/downgrade when existingSubscription exists
 			// Compare billingPlanId with existingSubscription.metadata.vercel_billing_plan_id
 			// If higher tier → upgrade (updateStripeSub2), if lower tier → downgrade
-			return c.json({
-				notification: {
-					level: "error",
-					title: "Plan changes are not supported",
-					message: `Plan upgrades/downgrades are unsupported. Please contact support.`,
+			logger.info(
+				`Returning 400 for Vercel plan change request -- not supported`,
+			);
+			return c.json(
+				{
+					notification: {
+						level: "error",
+						title: "Plan changes are not supported",
+						message: `Plan upgrades/downgrades are unsupported. Please contact support.`,
+					},
 				},
-			});
+				400,
+			);
 		}
 	},
 });

@@ -54,7 +54,7 @@ export const handleCreateResource = createRoute({
 			});
 		}
 
-		const stripeCli = await createStripeCli({ org, env: env as AppEnv });
+		const stripeCli = createStripeCli({ org, env: env as AppEnv });
 		const stripeCustomer = await stripeCli.customers.retrieve(
 			customer.processor.id,
 			{

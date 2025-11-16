@@ -35,7 +35,7 @@ export const getFullStripeInvoice = async ({
 	expand?: string[];
 }) => {
 	const invoice = await stripeCli.invoices.retrieve(stripeId, {
-		expand: [...expand, "discounts", "discounts.coupon"],
+		expand: [...expand, "discounts", "discounts.source.coupon"],
 	});
 
 	return invoice;
@@ -195,9 +195,19 @@ export const getInvoiceDiscounts = ({
 				currency: expandedInvoice.currency,
 			});
 
+			let stripeCouponId = "";
+			let couponName = "";
+			if (typeof discount.source.coupon === "string") {
+				stripeCouponId = discount.source.coupon;
+				couponName = discount.source.coupon;
+			} else {
+				stripeCouponId = discount.source.coupon?.id || "";
+				couponName = discount.source.coupon?.name || "";
+			}
+
 			const autumnDiscount: InvoiceDiscount = {
-				stripe_coupon_id: discount.coupon?.id,
-				coupon_name: discount.coupon?.name || "",
+				stripe_coupon_id: stripeCouponId,
+				coupon_name: couponName,
 				amount_off: atmnAmountOff,
 				amount_used: atmnAmountUsed,
 			};

@@ -24,7 +24,7 @@ export const handleCheckoutSub = async ({
 	attachParams: AttachParams;
 	logger: any;
 }) => {
-	const { org, customer } = attachParams;
+	const { org } = attachParams;
 
 	if (!subscription) return;
 
@@ -95,18 +95,6 @@ export const handleCheckoutSub = async ({
 			);
 		}
 	}
-
-	// let deletedCount = itemsUpdate.filter((item) => item.deleted).length;
-	// if (deletedCount === curSubItems.length) {
-	//   itemsUpdate = itemsUpdate.concat(
-	//     getArrearItems({
-	//       prices: attachParams.prices,
-	//       interval: attachParams.itemSets?.[0]?.interval,
-	//       intervalCount: attachParams.itemSets?.[0]?.intervalCount,
-	//       org,
-	//     })
-	//   );
-	// }
 
 	if (itemsUpdate.length > 0) {
 		await stripeCli.subscriptions.update(subscription.id, {
