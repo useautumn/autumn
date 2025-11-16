@@ -31,8 +31,8 @@ BUN_PARALLEL_COMPACT \
   --max=6
 
 
-# BUN_PARALLEL_COMPACT \
-#   'server/tests/advanced/usage'
-#   'server/tests/crud/plan'
+BUN_PARALLEL_COMPACT \
+  'server/tests/advanced/usage'
+  # 'server/tests/crud/plan'
 
 # 'server/tests/advanced/referrals/paid' \

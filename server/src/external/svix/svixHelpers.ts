@@ -65,7 +65,9 @@ export const sendSvixEvent = safeSvix({
 
 export const sendCustomSvixEvent = safeSvix({
 	fn: async ({
+		// biome-ignore lint/correctness/noUnusedFunctionParameters: Might be useful in the future
 		org,
+		// biome-ignore lint/correctness/noUnusedFunctionParameters: Might be useful in the future
 		env,
 		eventType,
 		data,

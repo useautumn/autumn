@@ -1,5 +1,5 @@
-import { getTableColumns, sql, SQL } from "drizzle-orm";
-import { PgTable } from "drizzle-orm/pg-core";
+import { getTableColumns, type SQL, sql } from "drizzle-orm";
+import type { PgTable } from "drizzle-orm/pg-core";
 
 export const buildConflictUpdateColumns = <T extends PgTable>(
 	table: T,

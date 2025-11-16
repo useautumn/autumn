@@ -265,7 +265,7 @@ export const getVercelAttachBody = ({
 	const attachParams: AttachParams = {
 		stripeCli,
 		stripeCus: stripeCustomer,
-		now: Date.now(),
+		now: now ?? Date.now(),
 		paymentMethod: customPaymentMethod, // Pass Vercel custom payment method
 		org,
 		customer,

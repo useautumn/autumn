@@ -6,13 +6,14 @@
 	"type": "module",
 	"scripts": {
 		"email": "email dev -p 3001",
-		"start": "bun src/index.ts",
 		"d": "ENV_FILE=.env infisical run --env=dev -- bun dev",
 		"p": "ENV_FILE=.env.prod infisical run --env=prod -- bun dev",
 		"w": "ENV_FILE=.env infisical run --env=dev -- bun workers:dev",
 		"c": "ENV_FILE=.env infisical run --env=dev -- bun cron",
 		"dev": "cross-env NODE_ENV=development bunx nodemon",
 		"workers:dev": "cross-env NODE_ENV=development bunx nodemon --exec bun src/workers.ts --signal SIGTERM --delay 500ms",
+		
+		"start": "bun src/index.ts",
 		"workers": "bun src/workers.ts",
 		"cron": "bun src/cron.ts",
 		"check": "bun src/check.ts",

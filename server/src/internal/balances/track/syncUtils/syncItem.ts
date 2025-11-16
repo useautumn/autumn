@@ -98,8 +98,6 @@ export const syncItem = async ({
 		redisEntity = apiCustomer;
 	}
 
-	console.log("Redis entity: ", redisEntity);
-
 	// Get fresh customer from DB (no locking - let deduction handle it)
 	const fullCus = await CusService.getFull({
 		db,

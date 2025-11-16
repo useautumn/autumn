@@ -2,6 +2,7 @@ import {
 	type ApiEntityV1,
 	addToExpand,
 	CusExpand,
+	type EntityLegacyData,
 	type FullCustomer,
 	filterEntityLevelCusProducts,
 	filterOutEntitiesFromCusProducts,
@@ -58,14 +59,17 @@ export const setCachedApiCustomer = async ({
 	});
 
 	// Build entities first
-	const entityBatch: { entityId: string; entityData: ApiEntityV1 }[] = [];
+	const entityBatch: {
+		entityId: string;
+		entityData: ApiEntityV1 & { legacyData: EntityLegacyData };
+	}[] = [];
 	const entityFullCus = {
 		...fullCus,
 		customer_products: entityLevelCusProducts,
 	};
 
 	for (const entity of fullCus.entities) {
-		const { apiEntity } = await getApiEntityBase({
+		const { apiEntity, legacyData: entityLegacyData } = await getApiEntityBase({
 			ctx: ctxWithExpand,
 			fullCus: entityFullCus,
 			entity,
@@ -74,16 +78,26 @@ export const setCachedApiCustomer = async ({
 
 		entityBatch.push({
 			entityId: entity.id,
-			entityData: apiEntity,
+			entityData: {
+				...apiEntity,
+				legacyData: entityLegacyData,
+			},
 		});
 	}
 
 	// Then write to Redis
 	const masterApiCustomerData = {
 		...masterApiCustomer,
-		entities: fullCus.entities,
+		entities: fullCus.entities.filter((e) => e.id !== null),
 		legacyData,
 	};
+
+	if (masterApiCustomerData.id === null) return;
+
+	// console.log(
+	// 	`Setting cached api customer ${customerId}, masterApiCustomerData: `,
+	// 	masterApiCustomerData,
+	// );
 
 	await tryRedisWrite(async () => {
 		await redis.eval(
@@ -95,11 +109,15 @@ export const setCachedApiCustomer = async ({
 			customerId,
 		);
 
+		const filteredEntityBatch = entityBatch.filter(
+			(e) => e.entityData.id !== null,
+		);
+
 		if (entityBatch.length > 0) {
 			await redis.eval(
 				SET_ENTITIES_BATCH_SCRIPT,
 				0,
-				JSON.stringify(entityBatch),
+				JSON.stringify(filteredEntityBatch),
 				org.id,
 				env,
 			);

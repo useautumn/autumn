@@ -1,7 +1,6 @@
-import RecaseError from "@/utils/errorUtils.js";
-import Stripe from "stripe";
 import { Decimal } from "decimal.js";
-import { notNullish, nullish } from "@/utils/genUtils.js";
+import type Stripe from "stripe";
+import { notNullish } from "@/utils/genUtils.js";
 
 const calculateTieredAmount = ({
 	tiers,
@@ -40,12 +39,12 @@ export const getSubItemAmount = ({
 }: {
 	subItem: Stripe.SubscriptionItem;
 }) => {
-	let price = subItem.price;
+	const price = subItem.price;
 
 	const quantity = subItem.quantity || 0;
 
-	if (price.billing_scheme == "tiered") {
-		let tieredAmount = calculateTieredAmount({
+	if (price.billing_scheme === "tiered") {
+		const tieredAmount = calculateTieredAmount({
 			tiers: price.tiers!,
 			quantity,
 		});
@@ -53,7 +52,7 @@ export const getSubItemAmount = ({
 		return tieredAmount;
 	}
 
-	if (price.billing_scheme == "per_unit") {
+	if (price.billing_scheme === "per_unit") {
 		if (price.unit_amount_decimal) {
 			return new Decimal(price.unit_amount_decimal).mul(quantity).toNumber();
 		} else {

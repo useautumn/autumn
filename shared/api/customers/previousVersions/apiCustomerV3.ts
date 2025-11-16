@@ -146,6 +146,9 @@ export const ApiCusExpandV3Schema = z.object({
 
 export const ApiCustomerV3Schema = z.object({
 	// Internal fields
+	autumn_id: z.string().nullish().meta({
+		internal: true,
+	}),
 	id: z.string().nullable().meta({
 		description: cusDescriptions.id,
 	}),

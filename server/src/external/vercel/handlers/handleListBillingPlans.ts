@@ -137,6 +137,7 @@ export const listVercelPlansForOrg = async ({
 	org,
 	env,
 	metadata,
+	// biome-ignore lint/correctness/noUnusedFunctionParameters: Might be useful in the future
 	canCancel = true,
 }: {
 	db: DrizzleCli;

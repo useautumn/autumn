@@ -34,7 +34,6 @@ export const resetAndGetCusEnt = async ({
 			...cusEnt!,
 			customer,
 		},
-		cacheEnabledOrgs: [],
 	});
 
 	if (updatedCusEnt) {

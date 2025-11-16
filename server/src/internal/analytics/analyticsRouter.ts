@@ -11,7 +11,6 @@ import { routeHandler } from "@/utils/routerUtils.js";
 const analyticsRouter = Router();
 
 const RangeEnum = z.enum(["24h", "7d", "30d", "90d", "last_cycle"]);
-type Range = z.infer<typeof RangeEnum>;
 
 analyticsRouter.post("", (req, res) =>
 	routeHandler({

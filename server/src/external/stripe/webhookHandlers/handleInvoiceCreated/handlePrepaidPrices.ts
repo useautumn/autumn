@@ -1,5 +1,4 @@
 import {
-	type Customer,
 	EntInterval,
 	type FeatureOptions,
 	type FullCusProduct,
@@ -20,21 +19,17 @@ import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
 
 export const handlePrepaidPrices = async ({
 	db,
-	stripeCli,
 	cusProduct,
 	cusPrice,
 	usageSub,
-	customer,
 	invoice,
 	logger,
 	resetBalance = true,
 }: {
 	db: DrizzleCli;
-	stripeCli: Stripe;
 	cusProduct: FullCusProduct;
 	cusPrice: FullCustomerPrice;
 	usageSub: Stripe.Subscription;
-	customer: Customer;
 	invoice: Stripe.Invoice;
 	logger: any;
 	resetBalance?: boolean;
@@ -60,7 +55,7 @@ export const handlePrepaidPrices = async ({
 
 	const options = getEntOptions(cusProduct.options, cusEnt.entitlement);
 
-	const resetQuantity = options?.upcoming_quantity || options?.quantity!;
+	const resetQuantity = (options?.upcoming_quantity || options?.quantity) ?? 0;
 	const config = cusPrice.price.config as UsagePriceConfig;
 	const billingUnits = config.billing_units || 1;
 	const newAllowance =
@@ -106,7 +101,8 @@ export const handlePrepaidPrices = async ({
 		});
 
 		if (ent.interval === EntInterval.Lifetime) {
-			const difference = options?.quantity! - options?.upcoming_quantity!;
+			const difference =
+				(options?.quantity ?? 0) - (options?.upcoming_quantity ?? 0);
 			await CusEntService.decrement({
 				db,
 				id: cusEnt.id,

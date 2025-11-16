@@ -47,7 +47,7 @@ export const logVercelWebhook = ({
 };
 
 export const vercelLogMiddleware = async (c: Context<HonoEnv>, next: Next) => {
-	const { db, logger, org } = c.get("ctx");
+	const { logger, org } = c.get("ctx");
 	const body = await c.req.json();
 
 	logVercelWebhook({ logger, org, event: body });

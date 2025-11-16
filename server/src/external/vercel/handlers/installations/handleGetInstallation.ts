@@ -8,7 +8,7 @@ export const handleGetInstallation = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { integrationConfigurationId } = c.req.param();
-		const { db, org, logger } = ctx;
+		const { db, org } = ctx;
 
 		const customer = await CusService.getByVercelId({
 			db,

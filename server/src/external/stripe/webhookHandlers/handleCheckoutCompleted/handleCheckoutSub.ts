@@ -16,13 +16,11 @@ export const handleCheckoutSub = async ({
 	db,
 	subscription,
 	attachParams,
-	logger,
 }: {
 	stripeCli: Stripe;
 	db: DrizzleCli;
 	subscription: Stripe.Subscription | null;
 	attachParams: AttachParams;
-	logger: any;
 }) => {
 	const { org } = attachParams;
 
