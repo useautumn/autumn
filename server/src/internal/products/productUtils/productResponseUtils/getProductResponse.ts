@@ -10,6 +10,7 @@ import {
 	type FeatureOptions,
 	type FullCustomer,
 	type FullProduct,
+	getProductItemDisplay,
 	type Price,
 	type ProductItem,
 	toApiFeature,
@@ -26,7 +27,6 @@ import { itemToPriceOrTiers } from "../../product-items/productItemUtils.js";
 import { isFreeProduct, isOneOff } from "../../productUtils.js";
 import { mapToProductItems } from "../../productV2Utils.js";
 import { getAttachScenario } from "./getAttachScenario.js";
-import { getProductItemDisplay } from "./getProductItemDisplay.js";
 
 export const getProductItemResponse = ({
 	item,
@@ -51,7 +51,7 @@ export const getProductItemResponse = ({
 		item,
 		features,
 		currency,
-		isMainPrice,
+		fullDisplay: isMainPrice,
 	});
 
 	const priceData = itemToPriceOrTiers({ item });

@@ -5,7 +5,7 @@ import RecaseError from "@/utils/errorUtils.js";
 
 export const autumnWebhookRouter: Router = express.Router();
 
-const verifyAutumnWebhook = async (req: any, res: any) => {
+const verifyAutumnWebhook = async (req: any) => {
 	const wh = new Webhook(process.env.AUTUMN_WEBHOOK_SECRET!);
 
 	const headers = req.headers;
@@ -49,7 +49,7 @@ autumnWebhookRouter.post(
 	express.raw({ type: "application/json" }),
 	async (req, res) => {
 		try {
-			const evt = await verifyAutumnWebhook(req, res);
+			const evt = await verifyAutumnWebhook(req);
 			console.log("Received webhook from autumn");
 			const { type, data } = evt;
 

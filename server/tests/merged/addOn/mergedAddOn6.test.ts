@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, test } from "bun:test";
 import {
 	type AppEnv,
 	CusProductStatus,
@@ -115,7 +115,7 @@ const ops = [
 		entityId: "1",
 		product: addOn,
 		results: [
-			{ product: pro, status: CusProductStatus.Active },
+			{ product: premium, status: CusProductStatus.Active },
 			{ product: addOn, status: CusProductStatus.Active },
 		],
 		options: [
@@ -124,7 +124,7 @@ const ops = [
 				quantity: billingUnits * 5,
 			},
 		],
-		otherProducts: [pro],
+		otherProducts: [premium],
 	},
 ];
 
@@ -227,6 +227,7 @@ describe(`${chalk.yellowBright("mergedAddOn6: testing update add on quantities o
 					quantity: billingUnits * 3,
 				},
 			],
+			otherProducts: [premium],
 		});
 	});
 });

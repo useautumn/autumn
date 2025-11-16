@@ -201,8 +201,6 @@ export const handleStripeWebhookEvent = async ({
 
 			case "invoice.updated":
 				await handleInvoiceUpdated({
-					stripeCli,
-					env,
 					event,
 					req: ctx as unknown as ExtendedRequest,
 				});
@@ -232,6 +230,18 @@ export const handleStripeWebhookEvent = async ({
 				break;
 			}
 
+			// case "invoice.payment_attempt_required": {
+			// 	const invoice = event.data.object;
+			// 	await handleInvoicePaymentAttemptRequired({
+			// 		db,
+			// 		org,
+			// 		invoice,
+			// 		env,
+			// 		logger,
+			// 	});
+			// 	break;
+			// }
+
 			case "subscription_schedule.canceled": {
 				const canceledSchedule = event.data.object;
 				await handleSubscriptionScheduleCanceled({
@@ -239,7 +249,6 @@ export const handleStripeWebhookEvent = async ({
 					org,
 					env,
 					schedule: canceledSchedule,
-					logger,
 				});
 				break;
 			}

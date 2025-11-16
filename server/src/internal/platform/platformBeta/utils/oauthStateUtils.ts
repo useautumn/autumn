@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { InternalError } from "@autumn/shared";
-import { initUpstash } from "@/internal/customers/cusCache/upstashUtils.js";
+import { CacheManager } from "../../../../utils/cacheUtils/CacheManager";
 
 const STATE_KEY_PREFIX = "oauth_state:";
 const STATE_EXPIRY_SECONDS = 10 * 60; // 10 minutes
@@ -27,14 +27,6 @@ export const generateOAuthState = async ({
 	redirectUri: string;
 	masterOrgId: string | null;
 }): Promise<string> => {
-	const upstash = await initUpstash();
-	if (!upstash) {
-		throw new InternalError({
-			message: "Upstash not configured",
-			code: "upstash_not_configured",
-		});
-	}
-
 	const maxAttempts = 3;
 
 	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -51,10 +43,10 @@ export const generateOAuthState = async ({
 		};
 
 		// Check if key exists first
-		const existing = await upstash.get(redisKey);
+		const existing = await CacheManager.getJson<OAuthState>(redisKey);
 		if (!existing) {
 			// Key doesn't exist, set it with expiry
-			await upstash.set(redisKey, stateData, { ex: STATE_EXPIRY_SECONDS });
+			await CacheManager.setJson(redisKey, stateData, STATE_EXPIRY_SECONDS);
 			return stateKey;
 		}
 
@@ -80,25 +72,17 @@ export const consumeOAuthState = async ({
 }: {
 	stateKey: string;
 }): Promise<OAuthState | null> => {
-	const upstash = await initUpstash();
-	if (!upstash) {
-		throw new InternalError({
-			message: "Upstash not configured",
-			code: "upstash_not_configured",
-		});
-	}
-
 	const redisKey = `${STATE_KEY_PREFIX}${stateKey}`;
 
 	// Get the data
-	const stateData = await upstash.get<OAuthState>(redisKey);
+	const stateData = await CacheManager.getJson<OAuthState>(redisKey);
 
 	if (!stateData) {
 		return null;
 	}
 
 	// Delete the key
-	await upstash.del(redisKey);
+	await CacheManager.del(redisKey);
 
 	return stateData;
 };

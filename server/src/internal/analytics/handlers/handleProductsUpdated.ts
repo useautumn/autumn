@@ -178,8 +178,6 @@ export const handleProductsUpdated = async ({
 	// 	});
 	// }
 
-	console.log("Sending svix event for products updated");
-
 	// 2. Send Svix event
 	await sendSvixEvent({
 		org,

@@ -97,8 +97,6 @@ export const afterOrgCreated = async ({
 		});
 
 		logger.info(`Initialized resources for org ${id} (${slug})`);
-
-		// biome-ignore lint/suspicious/noExplicitAny: fine
 	} catch (error: any) {
 		if (error?.data && error.data.code === ("23505" as string)) {
 			logger.error(

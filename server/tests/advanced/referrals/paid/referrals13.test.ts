@@ -1,26 +1,91 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type AppEnv,
+	CouponDurationType,
+	type CreateReward,
+	type CreateRewardProgram,
 	CusExpand,
 	CusProductStatus,
 	ErrCode,
 	type Organization,
 	type ReferralCode,
+	RewardReceivedBy,
 	type RewardRedemption,
+	RewardTriggerEvent,
+	RewardType,
 } from "@autumn/shared";
-import { beforeAll, describe, expect, test } from "bun:test";
-import chalk from "chalk";
-import type { Stripe } from "stripe";
-import { expectProductV1Attached } from "@tests/utils/expectUtils/expectProductAttached.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
+import { createReferralProgram } from "@tests/utils/productUtils.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
+import type { Stripe } from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionService.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-import { products, referralPrograms } from "../../../global.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
 export const group = "referrals13";
+
+const testCase = "referrals13";
+
+// Define products inline
+const freeProd = constructProduct({
+	id: "free",
+	type: "free",
+	isDefault: true,
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 5,
+		}),
+	],
+});
+
+const proProd = constructProduct({
+	id: "pro",
+	type: "pro",
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Dashboard,
+			isBoolean: true,
+		}),
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 10,
+		}),
+	],
+});
+
+// Reward: pro_amount discount (coupon-based)
+const proAmountReward: CreateReward = {
+	id: `${testCase}ProAmount`,
+	name: "Pro Amount Discount",
+	type: RewardType.PercentageDiscount,
+	promo_codes: [],
+	discount_config: {
+		discount_value: 10, // $10 off (pro_amount)
+		duration_type: CouponDurationType.Months,
+		duration_value: 1,
+		apply_to_all: true,
+		price_ids: [],
+	},
+};
+
+// Referral program: triggers immediately, applies to referrer only
+const paidProductImmediateReferrer: CreateRewardProgram = {
+	id: `${testCase}ImmediateReferrer`,
+	when: RewardTriggerEvent.CustomerCreation,
+	product_ids: [proProd.id],
+	internal_reward_id: proAmountReward.id,
+	max_redemptions: 10,
+	received_by: RewardReceivedBy.Referrer,
+};
 
 describe(`${chalk.yellowBright(
 	"referrals13: Testing referrals - referrer on Pro, gets discount on next cycle - coupon-based",
@@ -55,6 +120,24 @@ describe(`${chalk.yellowBright(
 			]);
 		} catch {}
 
+		// Initialize products first
+		await initProductsV0({
+			ctx,
+			products: [freeProd, proProd],
+			prefix: testCase,
+			customerId: mainCustomerId,
+		});
+
+		// Create referral program
+		await createReferralProgram({
+			db,
+			orgId: org.id,
+			env,
+			autumn: new AutumnInt({ secretKey: ctx.orgSecretKey }),
+			reward: proAmountReward,
+			rewardProgram: paidProductImmediateReferrer,
+		});
+
 		// Initialize main customer with Pro product already attached
 		const res = await initCustomerV3({
 			ctx,
@@ -67,7 +150,7 @@ describe(`${chalk.yellowBright(
 		// Attach Pro product to main customer first
 		await autumn.attach({
 			customer_id: mainCustomerId,
-			product_id: products.pro.id,
+			product_id: proProd.id,
 		});
 
 		const redeemerRes = await initCustomerV3({
@@ -97,7 +180,7 @@ describe(`${chalk.yellowBright(
 	test("should create code once", async () => {
 		referralCode = await autumn.referrals.createCode({
 			customerId: mainCustomerId,
-			referralId: referralPrograms.paidProductImmediateReferrer.id,
+			referralId: paidProductImmediateReferrer.id,
 		});
 
 		expect(referralCode.code).toBeDefined();
@@ -118,7 +201,9 @@ describe(`${chalk.yellowBright(
 			throw new Error("Should not be able to redeem again");
 		} catch (error) {
 			expect(error).toBeInstanceOf(AutumnError);
-			expect((error as AutumnError).code).toBe(ErrCode.CustomerAlreadyRedeemedReferralCode);
+			expect((error as AutumnError).code).toBe(
+				ErrCode.CustomerAlreadyRedeemedReferralCode,
+			);
 		}
 	});
 
@@ -131,22 +216,22 @@ describe(`${chalk.yellowBright(
 
 		// Main customer (referrer) should have the pro product (already attached)
 		expect(mainProds.length).toBe(1);
-		expect(mainProds[0].id).toBe(products.pro.id);
+		expect(mainProds[0].id).toBe(proProd.id);
 
 		// Redeemer should only have the free product (no pro product given in referrer-only program)
 		expect(redeemerProds.length).toBe(1);
-		expect(redeemerProds[0].id).toBe(products.free.id);
+		expect(redeemerProds[0].id).toBe(freeProd.id);
 
-		expectProductV1Attached({
+		expectProductAttached({
 			customer: await autumn.customers.get(mainCustomerId),
-			product: products.pro,
+			product: proProd,
 			status: CusProductStatus.Active,
 		});
 
 		// Verify redeemer only has free product
-		expectProductV1Attached({
+		expectProductAttached({
 			customer: await autumn.customers.get(redeemer),
-			product: products.free,
+			product: freeProd,
 			status: CusProductStatus.Active,
 		});
 	});
@@ -174,15 +259,15 @@ describe(`${chalk.yellowBright(
 		);
 
 		const proInvoice = mainCustomerWithInvoices.invoices.find((x) =>
-			x.product_ids.includes(products.pro.id),
+			x.product_ids.includes(proProd.id),
 		);
 
-		const expectedTotal = products.pro.prices[0].config.amount;
+		const expectedTotal = 20; // Pro product base price
 
 		const actualTotal = proInvoice?.total;
 
 		if (proInvoice) {
-			// Should have a discount applied - invoice total should be less than full Pro price ($10)
+			// Should have a discount applied - invoice total should be less than full Pro price
 			expect(actualTotal!).toBeLessThan(expectedTotal);
 
 			// For referrer-only reward, the discount should make it significantly cheaper or free
@@ -224,9 +309,6 @@ describe(`${chalk.yellowBright(
 					(cp) =>
 						cp.product.name === expectedProduct.name &&
 						cp.status === expectedProduct.status,
-				);
-				const unMatchedProduct = customer.customer_products.find(
-					(cp) => cp.product.name === expectedProduct.name,
 				);
 
 				expect(matchingProduct).toBeDefined();

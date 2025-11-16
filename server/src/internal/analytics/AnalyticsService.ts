@@ -73,7 +73,7 @@ export class AnalyticsService {
 	}
 
 	static async getTopUser({ req }: { req: ExtendedRequest }) {
-		const { clickhouseClient, org, env, db } = req;
+		const { clickhouseClient, org, env } = req;
 
 		const query = `
 SELECT 
@@ -136,7 +136,7 @@ WHERE
 		req: ExtendedRequest;
 		eventName?: string;
 	}) {
-		const { clickhouseClient, org, env, db } = req;
+		const { clickhouseClient, org, env } = req;
 
 		const query = `
 SELECT SUM(
@@ -165,7 +165,7 @@ WHERE event_name = {eventName:String}
 	}
 
 	static async getTotalCustomers({ req }: { req: ExtendedRequest }) {
-		const { clickhouseClient, org, env, db } = req;
+		const { clickhouseClient, org, env } = req;
 		const query = `SELECT COUNT(DISTINCT id) AS total_customers 
 FROM customers
 WHERE org_id = {org_id:String} 
@@ -213,8 +213,6 @@ WHERE org_id = {org_id:String}
 		const getBCResults =
 			isBillingCycle && !aggregateAll && customer
 				? ((await getBillingCycleStartDate(
-						env,
-						org?.id,
 						customer,
 						db,
 						intervalType as "1bc" | "3bc",
@@ -335,8 +333,6 @@ order by dr.period;
 		const getBCResults =
 			isBillingCycle && !aggregateAll && customer
 				? ((await getBillingCycleStartDate(
-						env,
-						org?.id,
 						customer,
 						db,
 						intervalType as "1bc" | "3bc",
@@ -379,15 +375,6 @@ order by dr.period;
     ORDER BY timestamp DESC
     limit 10000
     `;
-
-		const filledQuery = query
-			.replace("{organizationId:String}", org?.id ?? "")
-			.replace("{customerId:String}", params.customer_id ?? "")
-			.replace("{startDate:String}", finalStartDate)
-			.replace("{endDate:String}", finalEndDate)
-			.replace("{env:String}", env);
-
-		// console.log("filledQuery", filledQuery);
 
 		const result = await clickhouseClient.query({
 			query: query,

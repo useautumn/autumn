@@ -5,10 +5,7 @@ import { z } from "zod/v4";
 import { AppEnv } from "../../models/genModels/genEnums.js";
 
 // Use the full ProductItemSchema but mark backend fields as internal
-export const CreateProductItemParamsSchema = ProductItemSchema.meta({
-	id: "CreateProductItemParams",
-	description: "Product item defining features and pricing within a product",
-});
+export const CreateProductItemParamsSchema = ProductItemSchema;
 
 // Base product params
 

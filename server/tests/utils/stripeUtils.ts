@@ -19,34 +19,13 @@ import { timeout } from "./genUtils.js";
 
 const STRIPE_TEST_CLOCK_TIMING = 20000; // 30s
 
-import { Hyperbrowser } from "@hyperbrowser/sdk";
-
-const client = new Hyperbrowser({
-	apiKey: process.env.HYPERBROWSER_API_KEY || "123",
-});
-
 export const completeCheckoutForm = async (
 	url: string,
 	overrideQuantity?: number,
 	promoCode?: string,
-	isLocal?: boolean,
+	_isLocal?: boolean,
 ) => {
-	let browser;
-
-	// if (process.env.NODE_ENV === "development" && !isLocal) {
-	// 	const session = await client.sessions.create();
-	// 	browser = await puppeteer.connect({
-	// 		browserWSEndpoint: session!.wsEndpoint,
-	// 		defaultViewport: null,
-	// 	});
-	// } else {
-	// 	browser = await puppeteer.launch({
-	// 		headless: false,
-	// 		executablePath: "/Applications/Chromium.app/Contents/MacOS/Chromium",
-	// 		args: ["--no-sandbox", "--disable-setuid-sandbox"],
-	// 	});
-	// }
-	browser = await puppeteer.launch({
+	const browser = await puppeteer.launch({
 		headless: false,
 		executablePath: "/Applications/Chromium.app/Contents/MacOS/Chromium",
 		args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -64,7 +43,7 @@ export const completeCheckoutForm = async (
 			});
 			await page.click("#payment-method-accordion-item-title-card");
 			await timeout(500); // Brief wait for accordion to expand
-		} catch (e) {
+		} catch (_e) {
 			// Accordion doesn't exist or didn't appear, continue without clicking
 		}
 
@@ -131,7 +110,7 @@ export const deleteAllStripeProducts = async ({
 				console.log("Deleting stripe product", prod.id);
 				try {
 					await stripeCli.products.del(prod.id);
-				} catch (error) {
+				} catch (_error) {
 					await stripeCli.products.update(prod.id, {
 						active: false,
 					});
@@ -168,10 +147,9 @@ export const deleteStripeProduct = async ({
 	stripeCli: Stripe;
 	product: FullProduct;
 }) => {
-	let stripeProd;
 	try {
-		stripeProd = await stripeCli.products.retrieve(product.processor!.id);
-	} catch (error) {
+		await stripeCli.products.retrieve(product.processor!.id);
+	} catch (_error) {
 		return;
 	}
 
@@ -189,7 +167,7 @@ export const deleteStripeProduct = async ({
 			// Delete default product
 			try {
 				await stripeCli.products.del(stripePrice.product as string);
-			} catch (error) {
+			} catch (_error) {
 				await stripeCli.products.update(stripePrice.product as string, {
 					active: false,
 				});
@@ -206,7 +184,7 @@ export const deleteStripeProduct = async ({
 		const stripeProdId = product.processor.id;
 		try {
 			await stripeCli.products.del(stripeProdId);
-		} catch (error) {
+		} catch (_error) {
 			await stripeCli.products.update(stripeProdId, {
 				active: false,
 			});
@@ -277,7 +255,7 @@ export const advanceTestClock = async ({
 	}
 
 	console.log("   - Advancing to: ", format(advanceTo, "dd MMM yyyy HH:mm:ss"));
-	const res = await stripeCli.testHelpers.testClocks.advance(testClockId, {
+	await stripeCli.testHelpers.testClocks.advance(testClockId, {
 		frozen_time: Math.floor(advanceTo / 1000),
 	});
 
@@ -367,8 +345,7 @@ export const advanceMonths = async ({
 }) => {
 	let advanceTo = new Date();
 	for (let i = 0; i < numberOfMonths; i += 1) {
-		// let numMonths = Math.min(numberOfMonths - i, 2);
-		(advanceTo = addMonths(advanceTo, 1)), 10;
+		advanceTo = addMonths(advanceTo, 1);
 		console.log(
 			"   - Advancing to: ",
 			format(advanceTo, "dd MMM yyyy HH:mm:ss"),
@@ -428,11 +405,13 @@ export const getDiscount = async ({
 	stripeCli: Stripe;
 	customer?: Customer;
 	stripeId?: string;
-}) => {
+}): Promise<
+	(Stripe.Discount & { source: { coupon: Stripe.Coupon } }) | null
+> => {
 	const stripeCustomer: any = await stripeCli.customers.retrieve(
 		stripeId || customer!.processor!.id,
 		{
-			expand: ["discount.coupon"],
+			expand: ["discount.source.coupon"],
 		},
 	);
 

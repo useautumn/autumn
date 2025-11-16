@@ -1,5 +1,4 @@
 import {
-	type AppEnv,
 	type Invoice,
 	InvoiceStatus,
 	stripeToAtmnAmount,
@@ -13,6 +12,7 @@ import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import { MetadataService } from "@/internal/metadata/MetadataService.js";
 import { getFullStripeInvoice, invoiceToSubId } from "../stripeInvoiceUtils.js";
 
+// biome-ignore lint/correctness/noUnusedVariables: Might be useful in the future
 const handleInvoiceCheckoutVoided = async ({
 	db,
 	stripeCli,
@@ -81,14 +81,10 @@ const handleInvoiceCheckoutVoided = async ({
 };
 
 export const handleInvoiceUpdated = async ({
-	env,
 	event,
-	stripeCli,
 	req,
 }: {
-	env: AppEnv;
 	event: Stripe.Event;
-	stripeCli: Stripe;
 	req: any;
 }) => {
 	const invoiceObject = event.data.object as Stripe.Invoice;
@@ -96,13 +92,6 @@ export const handleInvoiceUpdated = async ({
 		db: req.db,
 		stripeId: invoiceObject.id!,
 	});
-
-	// const invoice = await getFullStripeInvoice({
-	//   stripeCli,
-	//   stripeId: invoiceObject.id!,
-	// });
-
-	const prevAttributes = event.data.previous_attributes as any;
 
 	const updates: Partial<Invoice> = {};
 

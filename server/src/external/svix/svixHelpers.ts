@@ -1,4 +1,4 @@
-import { AppEnv, Organization } from "@autumn/shared";
+import type { AppEnv, Organization } from "@autumn/shared";
 import { createSvixCli, getSvixAppId, safeSvix } from "./svixUtils.js";
 
 export const createSvixApp = safeSvix({
@@ -6,10 +6,12 @@ export const createSvixApp = safeSvix({
 		name,
 		orgId,
 		env,
+		meta = {},
 	}: {
 		name: string;
 		orgId: string;
 		env: AppEnv;
+		meta?: Record<string, any>;
 	}) => {
 		const svix = createSvixCli();
 		const app = await svix.application.create({
@@ -17,6 +19,7 @@ export const createSvixApp = safeSvix({
 			metadata: {
 				org_id: orgId,
 				env,
+				...meta,
 			},
 		});
 		return app;
@@ -49,6 +52,34 @@ export const sendSvixEvent = safeSvix({
 		if (!appId) {
 			return null;
 		}
+		return await svix.message.create(appId, {
+			eventType,
+			payload: {
+				type: eventType,
+				data,
+			},
+		});
+	},
+	action: "sendSvixEvent",
+});
+
+export const sendCustomSvixEvent = safeSvix({
+	fn: async ({
+		// biome-ignore lint/correctness/noUnusedFunctionParameters: Might be useful in the future
+		org,
+		// biome-ignore lint/correctness/noUnusedFunctionParameters: Might be useful in the future
+		env,
+		eventType,
+		data,
+		appId,
+	}: {
+		org: Organization;
+		env: AppEnv;
+		eventType: string;
+		data: any;
+		appId: string;
+	}) => {
+		const svix = createSvixCli();
 		return await svix.message.create(appId, {
 			eventType,
 			payload: {
