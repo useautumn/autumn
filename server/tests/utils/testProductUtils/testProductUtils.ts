@@ -1,14 +1,13 @@
-import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
-import { isPriceItem } from "@/internal/products/product-items/productItemUtils/getItemType.js";
-import { nullish } from "@/utils/genUtils.js";
-import {
+import type {
 	BillingInterval,
 	FixedPriceConfig,
-	FullProduct,
 	Price,
 	ProductItem,
 	ProductV2,
 } from "@autumn/shared";
+import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import { isPriceItem } from "@/internal/products/product-items/productItemUtils/getItemType.js";
+import { nullish } from "@/utils/genUtils.js";
 
 export const addPrefixToProducts = ({
 	products,
@@ -39,23 +38,23 @@ export const replaceItems = ({
 	newItem: ProductItem;
 	items: ProductItem[];
 }) => {
-	let newItems = structuredClone(items);
+	const newItems = structuredClone(items);
 
 	let index;
 	if (featureId) {
-		index = newItems.findIndex((item) => item.feature_id == featureId);
+		index = newItems.findIndex((item) => item.feature_id === featureId);
 	}
 
 	if (interval) {
 		index = newItems.findIndex(
 			(item) =>
-				item.interval == (interval as any) &&
-				(intervalCount ? item.interval_count == intervalCount : true) &&
+				item.interval === (interval as any) &&
+				(intervalCount ? item.interval_count === intervalCount : true) &&
 				nullish(item.feature_id),
 		);
 	}
 
-	if (index == -1) {
+	if (index === -1) {
 		throw new Error("Item not found");
 	}
 
@@ -69,7 +68,7 @@ export const getBasePrice = ({ product }: { product: ProductV2 }) => {
 };
 
 export const v1ProductToBasePrice = ({ prices }: { prices: Price[] }) => {
-	let fixedPrice = prices.find((price) => isFixedPrice({ price }));
+	const fixedPrice = prices.find((price) => isFixedPrice({ price }));
 	if (fixedPrice) {
 		return (fixedPrice.config as FixedPriceConfig).amount;
 	} else return 0;

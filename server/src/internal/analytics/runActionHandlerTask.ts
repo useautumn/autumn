@@ -1,40 +1,36 @@
-import type { Job, Queue } from "bullmq";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { JobName } from "@/queue/JobName.js";
-import { handleCustomerCreated } from "./handlers/handleCustomerCreated.js";
+import type { AutumnContext } from "../../honoUtils/HonoEnv.js";
 import { handleProductsUpdated } from "./handlers/handleProductsUpdated.js";
 
 export const runActionHandlerTask = async ({
-	queue,
-	job,
-	logger,
-	db,
+	jobName,
+	payload,
+	ctx,
 }: {
-	queue: Queue;
-	job: Job;
-	logger: any;
-	db: DrizzleCli;
+	jobName: JobName;
+	payload: any;
+	ctx?: AutumnContext;
 }) => {
-	const payload = job.data;
-	const internalCustomerId = payload.internalCustomerId;
-	const lockKey = `action:${internalCustomerId}`;
+	if (!ctx) {
+		throw new Error("Context is required for action handler tasks");
+	}
+
+	const { logger } = ctx;
 
 	try {
-		switch (job.name) {
+		switch (jobName) {
 			case JobName.HandleProductsUpdated:
 				await handleProductsUpdated({
-					db,
-					logger,
+					ctx,
 					data: payload,
 				});
 				break;
-			case JobName.HandleCustomerCreated:
-				await handleCustomerCreated({
-					db,
-					logger,
-					data: payload,
-				});
-				break;
+			// case JobName.HandleCustomerCreated:
+			// 	await handleCustomerCreated({
+			// 		ctx,
+			// 		data: payload as HandleCustomerCreatedData,
+			// 	});
+			// 	break;
 		}
 	} catch (error: any) {
 		logger.error(`Error processing action handler job: ${error.message}`);

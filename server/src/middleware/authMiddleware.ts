@@ -1,38 +1,9 @@
 import { AuthType, ErrCode } from "@autumn/shared";
-import { verifyToken } from "@clerk/express";
+
 import { fromNodeHeaders } from "better-auth/node";
 import type { NextFunction } from "express";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { auth } from "@/utils/auth.js";
-
-const getTokenData = async (req: any, res: any) => {
-	let token;
-
-	try {
-		token = req.headers["authorization"]?.split(" ")[1];
-		if (!token) {
-			throw new Error("authorization header has no token");
-		}
-	} catch (error) {
-		throw new Error("clerk token not found in request headers / invalid");
-	}
-
-	const secretKey = process.env.CLERK_SECRET_KEY;
-
-	try {
-		const verified = await verifyToken(token, {
-			secretKey: secretKey,
-		});
-
-		if (!verified) {
-			throw new Error("failed to verify clerk token");
-		}
-
-		return verified;
-	} catch (error: any) {
-		throw new Error("error verifying clerk token");
-	}
-};
 
 export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
 	const { logger } = req;

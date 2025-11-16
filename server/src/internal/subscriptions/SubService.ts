@@ -1,14 +1,19 @@
-import { AppEnv, ErrCode, Subscription, subscriptions } from "@autumn/shared";
-import { generateId } from "@/utils/genUtils.js";
-import Stripe from "stripe";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import RecaseError from "@/utils/errorUtils.js";
+import {
+	type AppEnv,
+	ErrCode,
+	type Subscription,
+	subscriptions,
+} from "@autumn/shared";
 import { and, eq, inArray } from "drizzle-orm";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { generateId } from "@/utils/genUtils.js";
 
 export class SubService {
 	static async createSub({ db, sub }: { db: DrizzleCli; sub: Subscription }) {
-		let data = await db.insert(subscriptions).values(sub).returning();
+		const data = await db.insert(subscriptions).values(sub).returning();
 
 		if (data.length === 0) {
 			throw new RecaseError({
@@ -40,7 +45,7 @@ export class SubService {
 			throw new Error("Either stripeId or scheduleId must be provided");
 		}
 
-		let data = await db
+		const data = await db
 			.select()
 			.from(subscriptions)
 			.where(
@@ -52,7 +57,7 @@ export class SubService {
 				),
 			);
 
-		if (data.length == 0) {
+		if (data.length === 0) {
 			return await SubService.createSub({
 				db,
 				sub: {
@@ -69,8 +74,8 @@ export class SubService {
 			});
 		}
 
-		let curSub = data[0];
-		let updateResult = await db
+		const curSub = data[0];
+		const updateResult = await db
 			.update(subscriptions)
 			.set({
 				usage_features: [
@@ -99,7 +104,7 @@ export class SubService {
 		stripeSub: Stripe.Subscription;
 	}) {
 		const { start, end } = subToPeriodStartEnd({ sub: stripeSub });
-		let results = await db
+		const results = await db
 			.update(subscriptions)
 			.set({
 				current_period_start: start,
@@ -122,7 +127,7 @@ export class SubService {
 		db: DrizzleCli;
 		scheduleId: string;
 	}) {
-		let data = await db
+		const data = await db
 			.select()
 			.from(subscriptions)
 			.where(eq(subscriptions.stripe_schedule_id, scheduleId));
@@ -157,7 +162,7 @@ export class SubService {
 		scheduleId: string;
 		updates: any;
 	}) {
-		let results = await db
+		const results = await db
 			.update(subscriptions)
 			.set(updates)
 			.where(eq(subscriptions.stripe_schedule_id, scheduleId))

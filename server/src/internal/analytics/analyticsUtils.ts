@@ -1,23 +1,17 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
 import {
-	ErrCode,
-	FullCustomer,
-	FullCusProduct,
-	CusProductStatus,
-	Subscription,
-	AppEnv,
-	FullProduct,
-	CustomerEntitlement,
-	FullCustomerEntitlement,
+	cusProductToProduct,
 	EntInterval,
+	type FullCusProduct,
+	type FullCustomer,
+	type FullCustomerEntitlement,
+	type FullProduct,
+	type Subscription,
 } from "@autumn/shared";
-import { cusProductToProduct } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { ACTIVE_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
 import { isFreeProduct } from "../products/productUtils.js";
 
 export async function getBillingCycleStartDate(
-	env: AppEnv,
-	orgId: string,
 	customer?: FullCustomer,
 	db?: DrizzleCli,
 	intervalType?: "1bc" | "3bc",
@@ -199,22 +193,26 @@ export function calculateStartDateFromInterval(
 			return formatDateToString(
 				new Date(nextResetAt! - 7 * 24 * 60 * 60 * 1000),
 			);
-		case EntInterval.Month:
+		case EntInterval.Month: {
 			const monthResetDate = new Date(nextResetAt!);
 			monthResetDate.setMonth(monthResetDate.getMonth() - 1);
 			return formatDateToString(monthResetDate);
-		case EntInterval.Quarter:
+		}
+		case EntInterval.Quarter: {
 			const quarterResetDate = new Date(nextResetAt!);
 			quarterResetDate.setMonth(quarterResetDate.getMonth() - 3);
 			return formatDateToString(quarterResetDate);
-		case EntInterval.SemiAnnual:
+		}
+		case EntInterval.SemiAnnual: {
 			const semiAnnualResetDate = new Date(nextResetAt!);
 			semiAnnualResetDate.setMonth(semiAnnualResetDate.getMonth() - 6);
 			return formatDateToString(semiAnnualResetDate);
-		case EntInterval.Year:
+		}
+		case EntInterval.Year: {
 			const yearResetDate = new Date(nextResetAt!);
 			yearResetDate.setFullYear(yearResetDate.getFullYear() - 1);
 			return formatDateToString(yearResetDate);
+		}
 		default:
 			return null;
 	}

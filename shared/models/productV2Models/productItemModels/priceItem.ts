@@ -5,6 +5,9 @@ export const PriceItemSchema = ProductItemSchema.pick({
 	price: true,
 	interval: true,
 	interval_count: true,
+
+	price_id: true,
+	price_config: true,
 }).extend({
 	price: z.number().nonnegative(),
 });

@@ -2,6 +2,7 @@ import {
 	type FrontendProduct,
 	type ProductItem,
 	productsAreSame,
+	productV2ToBasePrice,
 	productV2ToFeatureItems,
 } from "@autumn/shared";
 import { useMemo } from "react";
@@ -108,7 +109,19 @@ export const useHasDetailsChanged = () => {
 			features,
 		});
 
-		return !comparison.detailsSame;
+		const basePrice1 = productV2ToBasePrice({
+			product: product as unknown as FrontendProduct,
+		});
+		const basePrice2 = productV2ToBasePrice({
+			product: baseProduct as unknown as FrontendProduct,
+		});
+
+		const basePricesSame =
+			basePrice1?.price === basePrice2?.price &&
+			basePrice1?.interval === basePrice2?.interval &&
+			basePrice1?.interval_count === basePrice2?.interval_count;
+
+		return !(comparison.detailsSame && basePricesSame);
 	}, [product, baseProduct, features]);
 };
 

@@ -1,5 +1,8 @@
 import {
-	type ApiEntity,
+	type ApiEntityV1,
+	addToExpand,
+	CusExpand,
+	type EntityLegacyData,
 	type FullCustomer,
 	filterEntityLevelCusProducts,
 	filterOutEntitiesFromCusProducts,
@@ -32,10 +35,15 @@ export const setCachedApiCustomer = async ({
 }) => {
 	const { org, env, logger } = ctx;
 
+	const ctxWithExpand = addToExpand({
+		ctx,
+		add: [CusExpand.BalancesFeature, CusExpand.SubscriptionsPlan],
+	});
+
 	// Build master api customer (customer-level features only)
 	const { apiCustomer: masterApiCustomer, legacyData } =
 		await getApiCustomerBase({
-			ctx,
+			ctx: ctxWithExpand,
 			fullCus: {
 				...structuredClone(fullCus),
 				customer_products: filterOutEntitiesFromCusProducts({
@@ -51,15 +59,18 @@ export const setCachedApiCustomer = async ({
 	});
 
 	// Build entities first
-	const entityBatch: { entityId: string; entityData: ApiEntity }[] = [];
+	const entityBatch: {
+		entityId: string;
+		entityData: ApiEntityV1 & { legacyData: EntityLegacyData };
+	}[] = [];
 	const entityFullCus = {
 		...fullCus,
 		customer_products: entityLevelCusProducts,
 	};
 
 	for (const entity of fullCus.entities) {
-		const { apiEntity } = await getApiEntityBase({
-			ctx,
+		const { apiEntity, legacyData: entityLegacyData } = await getApiEntityBase({
+			ctx: ctxWithExpand,
 			fullCus: entityFullCus,
 			entity,
 			withAutumnId: true,
@@ -67,30 +78,46 @@ export const setCachedApiCustomer = async ({
 
 		entityBatch.push({
 			entityId: entity.id,
-			entityData: apiEntity,
+			entityData: {
+				...apiEntity,
+				legacyData: entityLegacyData,
+			},
 		});
 	}
 
 	// Then write to Redis
+	const masterApiCustomerData = {
+		...masterApiCustomer,
+		entities: fullCus.entities.filter((e) => e.id !== null),
+		legacyData,
+	};
+
+	if (masterApiCustomerData.id === null) return;
+
+	// console.log(
+	// 	`Setting cached api customer ${customerId}, masterApiCustomerData: `,
+	// 	masterApiCustomerData,
+	// );
+
 	await tryRedisWrite(async () => {
 		await redis.eval(
 			SET_CUSTOMER_SCRIPT,
 			0, // No KEYS, all params in ARGV
-			JSON.stringify({
-				...masterApiCustomer,
-				entities: fullCus.entities,
-				legacyData,
-			}),
+			JSON.stringify(masterApiCustomerData),
 			org.id,
 			env,
 			customerId,
+		);
+
+		const filteredEntityBatch = entityBatch.filter(
+			(e) => e.entityData.id !== null,
 		);
 
 		if (entityBatch.length > 0) {
 			await redis.eval(
 				SET_ENTITIES_BATCH_SCRIPT,
 				0,
-				JSON.stringify(entityBatch),
+				JSON.stringify(filteredEntityBatch),
 				org.id,
 				env,
 			);

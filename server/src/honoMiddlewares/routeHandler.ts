@@ -3,6 +3,7 @@ import type { Context, Env, Handler, MiddlewareHandler } from "hono";
 import type { ZodType, z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { expandMiddleware } from "./expandMiddleware.js";
 import { validator } from "./validatorMiddleware.js";
 import { versionedValidator } from "./versionedValidator.js";
 
@@ -55,7 +56,7 @@ type VersionedSchemas<T extends ZodType> = Partial<
  *   handler: async (c) => {
  *     const body = c.req.valid("json");   // ✅ Fully typed!
  *     const query = c.req.valid("query"); // ✅ Fully typed!
- *     const params = c.req.valid("param"); // ✅ Fully typed!
+ *     const params = c.req.param(); // ✅ Fully typed!
  *     return c.json({ success: true });
  *   }
  * });
@@ -93,6 +94,7 @@ export function createRoute<
 	handler: (
 		c: ValidatedContext<HonoEnv, Body, Query, Params>,
 	) => Response | Promise<Response>;
+	assertIdempotence?: string | undefined;
 }) {
 	const middlewares: MiddlewareHandler[] = [];
 
@@ -126,6 +128,33 @@ export function createRoute<
 	// Params validator (no versioned variant)
 	if (opts.params) {
 		middlewares.push(validator("param", opts.params));
+	}
+
+	// if (
+	// 	opts.assertIdempotence !== undefined &&
+	// 	opts.assertIdempotence !== null &&
+	// 	opts.assertIdempotence?.trim() !== ""
+	// ) {
+	// 	middlewares.push(async (c, next) => {
+	// 		const db = c.get("ctx").db;
+	// 		const id = c.req.header(opts.assertIdempotence as string);
+	// 		if (!id) {
+	// 			throw new RecaseError({
+	// 				message: "Idempotency key not found",
+	// 				code: ErrCode.IdempotencyKeyNotFound,
+	// 				statusCode: StatusCodes.NOT_FOUND,
+	// 			});
+	// 		}
+	// 		await IdempotencyService.validate({
+	// 			db,
+	// 			id,
+	// 		});
+	// 		return await next();
+	// 	});
+	// }
+	// Add expand middleware after query validation
+	if (opts.query || opts.versionedQuery) {
+		middlewares.push(expandMiddleware());
 	}
 
 	const wrappedHandler = async (

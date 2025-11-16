@@ -13,6 +13,9 @@ export const beforeSessionCreated = async (session: Session) => {
 		});
 
 		if (membership) {
+			// console.log(
+			// 	`Active membership found for user ${session.userId}, org ${membership.organizationId}`,
+			// );
 			return {
 				data: {
 					...session,

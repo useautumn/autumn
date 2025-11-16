@@ -1,14 +1,16 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import {
+	type ApiCusProductV3,
+	type ApiCustomerV3,
 	CreateFreeTrialSchema,
 	CusProductStatus,
 	FreeTrialDuration,
 	LegacyVersion,
 } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { addDays } from "date-fns";
-import { TestFeature } from "tests/setup/v2Features.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -85,7 +87,9 @@ describe(`${chalk.yellowBright(`${testCase}: Testing free product with trial and
 		});
 
 		const customer = await autumn.customers.get(customerId);
-		const freeProduct = customer.products.find((p) => p.id === free.id);
+		const freeProduct = customer.products.find(
+			(p) => p.id === free.id,
+		) as ApiCusProductV3;
 
 		expect(freeProduct).toBeDefined();
 		expect(freeProduct?.status).toBe(CusProductStatus.Trialing);
@@ -118,7 +122,9 @@ describe(`${chalk.yellowBright(`${testCase}: Testing free product with trial and
 		});
 
 		const customer = await autumn.customers.get(customerId);
-		const freeProduct = customer.products.find((p) => p.id === free.id);
+		const freeProduct = customer.products.find(
+			(p) => p.id === free.id,
+		) as ApiCusProductV3;
 
 		expect(freeProduct?.status).toBe(CusProductStatus.Trialing);
 		expect(freeProduct?.current_period_end).toBeGreaterThanOrEqual(
@@ -140,7 +146,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing free product with trial and
 			product_id: addOn.id,
 		});
 
-		const customer = await autumn.customers.get(customerId);
+		const customer = (await autumn.customers.get(customerId)) as ApiCustomerV3;
 		const addOnProduct = customer.products.find((p) => p.id === addOn.id);
 		const freeProduct = customer.products.find((p) => p.id === free.id);
 

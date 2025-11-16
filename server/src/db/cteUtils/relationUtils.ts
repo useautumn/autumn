@@ -1,4 +1,4 @@
-import type { Many, One, Relations } from "drizzle-orm";
+import type { Relations } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 
 export interface RelationPath {

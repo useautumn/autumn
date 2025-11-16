@@ -10,6 +10,7 @@ import {
 	type FullProduct,
 	getFeatureName,
 	getFeatureNameWithCapital,
+	getIntervalString,
 	type Organization,
 	type Price,
 	type ProductItemInterval,
@@ -21,7 +22,6 @@ import {
 	getBillingType,
 	getPriceEntitlement,
 } from "../products/prices/priceUtils.js";
-import { getIntervalString } from "../products/productUtils/productResponseUtils/getProductItemDisplay.js";
 
 const getSingularAndPlural = (feature: Feature) => {
 	const singular = getFeatureName({

@@ -73,17 +73,17 @@ export const getCreditSystemDeduction = ({
 export const performDeduction = ({
 	cusEntBalance,
 	toDeduct,
-	allowNegativeBalance = false,
 	ent,
 	resetBalance,
 	blockUsageLimit = true,
+	allowNegativeBalance = false,
 }: {
 	cusEntBalance: Decimal;
 	toDeduct: number;
-	allowNegativeBalance?: boolean;
 	ent: Entitlement;
 	resetBalance: number;
 	blockUsageLimit?: boolean;
+	allowNegativeBalance?: boolean;
 }) => {
 	// Either deduct from balance or entity balance
 	if (allowNegativeBalance) {
@@ -91,6 +91,7 @@ export const performDeduction = ({
 		const minBalance = usageLimit
 			? new Decimal(resetBalance).minus(usageLimit).toNumber()
 			: undefined;
+
 		let newBalance = cusEntBalance.minus(toDeduct).toNumber();
 
 		if (

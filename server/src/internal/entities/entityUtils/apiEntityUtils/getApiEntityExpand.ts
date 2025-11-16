@@ -1,7 +1,8 @@
-import type { EntityExpand, FullCustomer } from "@autumn/shared";
+import { CusExpand, type FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { invoicesToResponse } from "@/internal/invoices/invoiceUtils.js";
+import { InvoiceService } from "../../../invoices/InvoiceService";
+import { invoicesToResponse } from "../../../invoices/invoiceUtils";
 
 export type ApiEntityExpand = {
 	invoices?: any[];
@@ -12,17 +13,17 @@ export const getApiEntityExpand = async ({
 	customerId,
 	entityId,
 	fullCus,
-	expand,
 }: {
 	ctx: AutumnContext;
 	customerId?: string;
 	entityId?: string;
 	fullCus?: FullCustomer;
-	expand: EntityExpand[];
 }): Promise<ApiEntityExpand> => {
 	const { org, env, db, logger } = ctx;
 
-	if (expand.length === 0) return {};
+	if (!ctx.expand.includes(CusExpand.Invoices)) {
+		return {};
+	}
 
 	if (!fullCus) {
 		fullCus = await CusService.getFull({
@@ -30,19 +31,20 @@ export const getApiEntityExpand = async ({
 			idOrInternalId: customerId || "",
 			orgId: org.id,
 			env,
-			expand: expand as any, // EntityExpand is compatible with CusExpand for 'invoices'
 			entityId,
 		});
 	}
 
-	const invoices = expand.includes("invoices" as EntityExpand)
-		? invoicesToResponse({
-				invoices: fullCus.invoices || [],
-				logger,
-			})
-		: undefined;
+	const invoices = await InvoiceService.list({
+		db,
+		internalCustomerId: fullCus.internal_id,
+		internalEntityId: fullCus.entity?.internal_id,
+	});
 
 	return {
-		invoices,
+		invoices: invoicesToResponse({
+			invoices,
+			logger,
+		}),
 	};
 };

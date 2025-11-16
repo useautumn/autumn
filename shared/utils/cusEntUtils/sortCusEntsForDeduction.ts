@@ -1,15 +1,31 @@
+import type { SortCusEntParams } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import { FeatureType } from "../../models/featureModels/featureEnums.js";
 import { AllowanceType } from "../../models/productModels/entModels/entModels.js";
 import { entIntervalToValue } from "../intervalUtils.js";
 import { isEntityCusEnt } from "./cusEntUtils.js";
 
-export const sortCusEntsForDeduction = (
-	cusEnts: FullCusEntWithFullCusProduct[],
-	reverseOrder: boolean = false,
-	entityId?: string,
-) => {
+export const sortCusEntsForDeduction = ({
+	cusEnts,
+	reverseOrder = false,
+	entityId,
+	sortParams,
+}: {
+	cusEnts: FullCusEntWithFullCusProduct[];
+	reverseOrder?: boolean;
+	entityId?: string;
+	sortParams?: SortCusEntParams;
+}) => {
 	cusEnts.sort((a, b) => {
+		if (sortParams?.cusEntId) {
+			if (a.id === sortParams.cusEntId) {
+				return -1;
+			}
+			if (b.id === sortParams.cusEntId) {
+				return 1;
+			}
+		}
+
 		const aEnt = a.entitlement;
 		const bEnt = b.entitlement;
 
@@ -101,6 +117,15 @@ export const sortCusEntsForDeduction = (
 				return aVal.sub(bVal).toNumber();
 				// return intervalOrder[aEnt.interval] - intervalOrder[bEnt.interval];
 			}
+		}
+
+		// If one has a usage_allowed, it should go last
+		if (a.usage_allowed && !b.usage_allowed) {
+			return 1;
+		}
+
+		if (!a.usage_allowed && b.usage_allowed) {
+			return -1;
 		}
 
 		// 0a. If both are entity products (attached to entities), sort by entity_id for consistent ordering

@@ -24,13 +24,8 @@ export const priceToOneOffAndTiered = ({
 	stripeProductId: string;
 }) => {
 	const config = price.config as UsagePriceConfig;
-	const quantity = options?.quantity!;
+	const quantity = options?.quantity ?? 0;
 	const overage = new Decimal(quantity).mul(config.billing_units!).toNumber();
-	// let overage = quantity * config.billing_units! - relatedEnt.allowance!;
-
-	// if (overage <= 0) {
-	//   return null;
-	// }
 
 	const amount = getPriceForOverage(price, overage);
 	if (!config.stripe_product_id) {
@@ -53,12 +48,10 @@ export const priceToOneOffAndTiered = ({
 
 export const priceToUsageInAdvance = ({
 	price,
-	relatedEnt,
 	options,
 	isCheckout,
 }: {
 	price: Price;
-	relatedEnt: EntitlementWithFeature;
 	options: FeatureOptions | undefined | null;
 	isCheckout: boolean;
 }) => {
@@ -69,9 +62,7 @@ export const priceToUsageInAdvance = ({
 	// 1. If adjustable quantity is set, use that, else if quantity is undefined, adjustable is true, else false
 	const adjustable = notNullish(options?.adjustable_quantity)
 		? options!.adjustable_quantity
-		: nullish(optionsQuantity)
-			? true
-			: false;
+		: nullish(optionsQuantity);
 
 	if (optionsQuantity === 0 && isCheckout) {
 		// 1. If quantity is 0 and is checkout, skip over line item
@@ -80,12 +71,6 @@ export const priceToUsageInAdvance = ({
 		// 2. If quantity is nullish and is checkout, default to 1
 		finalQuantity = 1;
 	}
-
-	// Divide final quantity by billing units...?
-
-	// let minimum = new Decimal(relatedEnt.allowance!)
-	//   .div(config.billing_units || 1)
-	//   .toNumber();
 
 	const adjustableQuantity =
 		isCheckout && adjustable

@@ -22,7 +22,7 @@ export const getStripeCus = async ({
 	try {
 		const stripeCus = await stripeCli.customers.retrieve(stripeId);
 		return stripeCus as Stripe.Customer;
-	} catch (error) {
+	} catch (_error) {
 		return undefined;
 	}
 };
@@ -57,7 +57,7 @@ export const createStripeCusIfNotExists = async ({
 			} else {
 				createNew = true;
 			}
-		} catch (error) {
+		} catch (_error) {
 			createNew = true;
 		}
 	}
@@ -97,11 +97,13 @@ export const createStripeCustomer = async ({
 	env,
 	customer,
 	testClockId,
+	metadata,
 }: {
 	org: Organization;
 	env: AppEnv;
 	customer: Customer;
 	testClockId?: string;
+	metadata?: Record<string, unknown>;
 }) => {
 	const stripeCli = createStripeCli({ org, env });
 
@@ -110,6 +112,7 @@ export const createStripeCustomer = async ({
 			name: customer.name || undefined,
 			email: customer.email || undefined,
 			metadata: {
+				...(metadata || {}),
 				autumn_id: customer.id || null,
 				autumn_internal_id: customer.internal_id,
 			},
@@ -163,10 +166,12 @@ export const getCusPaymentMethod = async ({
 	stripeCli,
 	stripeId,
 	errorIfNone = false,
+	typeFilter,
 }: {
 	stripeCli: Stripe;
 	stripeId?: string;
 	errorIfNone?: boolean;
+	typeFilter?: string;
 }) => {
 	if (!stripeId) {
 		return null;
@@ -184,10 +189,13 @@ export const getCusPaymentMethod = async ({
 			customer: stripeId,
 		});
 
-		const paymentMethods = res.data;
+		let paymentMethods = res.data;
 		paymentMethods.sort((a, b) => b.created - a.created);
+		if (typeFilter) {
+			paymentMethods = paymentMethods.filter((pm) => pm.type === typeFilter);
+		}
 
-		if (res.data.length === 0) {
+		if (paymentMethods.length === 0) {
 			if (errorIfNone) {
 				throw new RecaseError({
 					code: ErrCode.StripeGetPaymentMethodFailed,

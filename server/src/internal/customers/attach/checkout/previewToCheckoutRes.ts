@@ -80,14 +80,6 @@ export const previewToCheckoutRes = async ({
 			.filter(notNullish) as CheckoutLine[];
 	}
 
-	const newProduct = await getProductResponse({
-		product,
-		features,
-		currency: org.default_currency,
-		options: attachParams.optionsList,
-		fullCus: attachParams.customer,
-	});
-
 	const curProduct = curCusProduct
 		? await getProductResponse({
 				product: cusProductToProduct({ cusProduct: curCusProduct }),
@@ -97,6 +89,13 @@ export const previewToCheckoutRes = async ({
 			})
 		: null;
 
+	const newProduct = await getProductResponse({
+		product,
+		features,
+		currency: org.default_currency,
+		options: attachParams.optionsList,
+		fullCus: attachParams.customer,
+	});
 	const total = lines.reduce((acc, line) => acc + line.amount, 0);
 
 	let nextCycle:

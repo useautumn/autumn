@@ -1,63 +1,54 @@
-// import { beforeAll, describe, expect, test } from "bun:test";
-// import { ApiVersion } from "@autumn/shared";
-// import chalk from "chalk";
-// import { TestFeature } from "tests/setup/v2Features.js";
-// import ctx from "tests/utils/testInitUtils/createTestContext.js";
-// import { AutumnInt } from "@/external/autumn/autumnCli.js";
-// import { EventService } from "../../../../src/internal/api/events/EventService.js";
-// import { constructFeatureItem } from "../../../../src/utils/scriptUtils/constructItem.js";
-// import { constructProduct } from "../../../../src/utils/scriptUtils/createTestProducts.js";
-// import { timeout } from "../../../utils/genUtils.js";
+import { beforeAll, describe, expect, test } from "bun:test";
+import { ApiVersion } from "@autumn/shared";
+import chalk from "chalk";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { EventService } from "../../../../src/internal/api/events/EventService.js";
+import { initCustomerV3 } from "../../../../src/utils/scriptUtils/testUtils/initCustomerV3.js";
 
-// const proProduct = constructProduct({
-// 	type: "pro",
-// 	items: [constructFeatureItem({ featureId: TestFeature.Messages })],
-// });
+describe(`${chalk.yellowBright("track-misc3: testing track when customer balance is empty")}`, () => {
+	const customerId = "track-misc3";
+	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
-// describe(`${chalk.yellowBright("track-misc3: testing track auto creates customer and entity")}`, () => {
-// 	const customerId = "track-misc3";
-// 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
+	beforeAll(async () => {
+		await initCustomerV3({
+			ctx,
+			customerId,
+			withTestClock: false,
+		});
+	});
 
-// 	beforeAll(async () => {
-// 		try {
-// 			await autumnV1.customers.delete(customerId);
-// 		} catch {
-// 			// Ignore if customer doesn't exist
-// 		}
-// 	});
+	test("should track and have event created", async () => {
+		const trackRand = Math.floor(Math.random() * 10);
 
-// 	test("should track event for customer / entity and have properties set", async () => {
-// 		await autumnV1.track({
-// 			customer_id: customerId,
-// 			customer_data: {
-// 				name: "track-misc2",
-// 				email: "track-misc2@test.com",
-// 			},
-// 			feature_id: TestFeature.Messages,
-// 			value: 5,
-// 			properties: {
-// 				hello: "world",
-// 				foo: "bar",
-// 			},
-// 		});
+		let totalValue = 0;
+		await Promise.all(
+			Array.from({ length: trackRand }, () => {
+				const trackValue = Math.random() * 10;
+				totalValue += trackValue;
+				return autumnV1.track({
+					customer_id: customerId,
+					feature_id: TestFeature.Messages,
+					value: trackValue,
+				});
+			}),
+		);
 
-// 		const customer = await autumnV1.customers.get(customerId, {
-// 			with_autumn_id: true,
-// 		});
+		const customer = await autumnV1.customers.get(customerId, {
+			with_autumn_id: true,
+		});
 
-// 		await timeout(2000);
+		const events = await EventService.getByCustomerId({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			internalCustomerId: customer.autumn_id ?? "",
+			env: ctx.env,
+		});
 
-// 		const events = await EventService.getByCustomerId({
-// 			db: ctx.db,
-// 			orgId: ctx.org.id,
-// 			internalCustomerId: customer.autumn_id!,
-// 			env: ctx.env,
-// 		});
-
-// 		expect(events).toHaveLength(1);
-// 		expect(events?.[0].properties).toMatchObject({
-// 			hello: "world",
-// 			foo: "bar",
-// 		});
-// 	});
-// });
+		expect(events).toHaveLength(trackRand);
+		expect(events.reduce((acc, event) => acc + (event.value ?? 0), 0)).toBe(
+			totalValue,
+		);
+	});
+});

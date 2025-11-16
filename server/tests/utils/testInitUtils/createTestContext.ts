@@ -1,13 +1,6 @@
-import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import dotenv from "dotenv";
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// Try loading .env from current directory, then parent directory
-// dotenv.config({ path: resolve(__dirname, ".env") });
-dotenv.config({ path: resolve(__dirname, "..", "..", "..", ".env") });
 
 import { AppEnv, type Feature, type Organization } from "@autumn/shared";
 import type Stripe from "stripe";

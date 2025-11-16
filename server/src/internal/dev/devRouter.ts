@@ -158,7 +158,7 @@ export const handleCreateOtp = async (req: any, res: any) =>
 		res,
 		action: "Create OTP",
 		handler: async () => {
-			const { orgId, env, db } = req;
+			const { orgId } = req;
 
 			// Check if there's already an OTP to use
 			const maybeCacheKey = `orgOTPExists:${orgId}`;
@@ -208,7 +208,10 @@ export const handleGetOtp = async (req: any, res: any) =>
 			const { db, env } = req;
 			const { otp } = req.params;
 			const cacheKey = `otp:${otp}`;
-			const cacheData = await CacheManager.getJson(cacheKey);
+			const cacheData = await CacheManager.getJson<{
+				orgId: string;
+				stripeFlowAuthKey: string;
+			}>(cacheKey);
 			if (!cacheData) {
 				res.status(404).json({ error: "OTP not found" });
 				return;
@@ -291,7 +294,7 @@ devRouter.post("/cli/stripe", async (req: any, res: any) => {
 				return;
 			}
 
-			const cacheData = await CacheManager.getJson(key);
+			const cacheData = await CacheManager.getJson<{ orgId: string }>(key);
 			if (!cacheData) {
 				res.status(404).json({ message: "Key not found" });
 				return;
