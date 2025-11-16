@@ -102,7 +102,6 @@ export const handleScheduleFunction2 = async ({
 		});
 
 		const currentPhaseIndex = getCurrentPhaseIndex({
-			// biome-ignore lint/suspicious/noExplicitAny: ok
 			schedule: { phases: newItems.phases } as any,
 			now: attachParams.now,
 		});

@@ -11,7 +11,19 @@ import type {
 const changes = new Map<ApiVersion, VersionChangeConstructor[]>();
 const instances = new Map<string, VersionChange>();
 
-export const VersionChangeRegistryClass = {
+export const VersionChangeRegistryClass: {
+	register(args: {
+		version: ApiVersion;
+		changes: VersionChangeConstructor[];
+	}): void;
+	getChangesForVersion(args: { version: ApiVersion }): VersionChange[];
+	getRegisteredVersions(): ApiVersion[];
+	isChangeActive(args: {
+		targetVersion: ApiVersion;
+		changeClass: VersionChangeConstructor;
+	}): boolean;
+	clear(): void;
+} = {
 	register({
 		version,
 		changes: versionChanges,

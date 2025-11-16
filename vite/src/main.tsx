@@ -14,7 +14,11 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 
 const queryClient = new QueryClient({
-	defaultOptions: {},
+	defaultOptions: {
+		queries: {
+			refetchOnWindowFocus: false,
+		},
+	},
 });
 
 const shouldInitializePostHog = process.env.NODE_ENV === "production";

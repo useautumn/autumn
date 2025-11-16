@@ -46,11 +46,11 @@ function AreaCheckbox({
 				className="mt-[3px]"
 			/>
 
-			<div className="flex flex-col gap-[4px]">
+			<div className="flex flex-col gap-[4px] w-full">
 				<label
 					htmlFor={id}
 					className={cn(
-						"text-checkbox-label font-medium select-none",
+						"text-checkbox-label font-medium select-none w-fit",
 						!disabled && "hover:!text-t1",
 						// !checked && "opacity-50",
 						disabled && "cursor-not-allowed",

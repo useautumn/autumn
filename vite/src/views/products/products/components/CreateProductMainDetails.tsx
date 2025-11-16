@@ -9,18 +9,17 @@ export const CreateProductMainDetails = () => {
 	const setProduct = useProductStore((s) => s.setProduct);
 
 	const { setSource, setTarget } = useAutoSlug({
-		state: product,
 		setState: setProduct,
 		sourceKey: "name",
 		targetKey: "id",
 	});
 
 	return (
-		<SheetSection title="Plan Details">
+		<SheetSection>
 			<div className="space-y-4">
 				<div className="grid grid-cols-2 gap-2">
 					<div>
-						<FormLabel>Name</FormLabel>
+						<FormLabel>Plan Name</FormLabel>
 						<Input
 							placeholder="eg. Pro Plan"
 							value={product.name}

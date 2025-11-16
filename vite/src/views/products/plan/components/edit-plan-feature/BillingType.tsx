@@ -6,18 +6,21 @@ import {
 	isContUseItem,
 	isFeaturePriceItem,
 	ProductItemInterval,
+	UsageModel,
 } from "@autumn/shared";
+import { CoinsIcon } from "@phosphor-icons/react";
 import { PanelButton } from "@/components/v2/buttons/PanelButton";
-import {
-	CoinsIcon,
-	IncludedUsageIcon,
-} from "@/components/v2/icons/AutumnIcons";
+import { IncludedUsageIcon } from "@/components/v2/icons/AutumnIcons";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
 export function BillingType() {
 	const { features } = useFeaturesQuery();
 	const { item, setItem } = useProductItemContext();
+
+	const product = useProductStore((s) => s.product);
+	const setProduct = useProductStore((s) => s.setProduct);
 
 	if (!item) return null;
 
@@ -45,17 +48,15 @@ export function BillingType() {
 		};
 
 		if (type === "included") {
-			// Only switch if not already included
-			if (isFeaturePrice) {
-				// Remove tiers to switch to included
-				setItem({
-					...item,
-					tiers: null,
-					billing_units: undefined,
-					usage_model: undefined,
-					interval: isContUseItem({ item, features }) ? null : item.interval,
-				});
-			}
+			// Remove tiers to switch to included
+			setItem({
+				...item,
+				tiers: null,
+				billing_units: undefined,
+				usage_model: undefined,
+				included_usage: item.included_usage ?? 0,
+				interval: isContUseItem({ item, features }) ? null : item.interval,
+			});
 		} else {
 			// Only switch if not already priced
 			if (!isFeaturePrice) {
@@ -64,6 +65,7 @@ export function BillingType() {
 					...item,
 					tiers: [{ to: Infinite, amount: 0 }],
 					billing_units: 1,
+					usage_model: UsageModel.PayPerUse,
 					included_usage:
 						item.included_usage === Infinite ? 0 : item.included_usage || 0,
 					interval: getPricedInterval(),
@@ -96,14 +98,16 @@ export function BillingType() {
 			<div className="flex w-full items-center gap-4">
 				<PanelButton
 					isSelected={shouldPreselect && !isFeaturePrice}
-					onClick={() => setBillingType("included")}
+					onClick={() => {
+						setBillingType("included");
+					}}
 					icon={<IncludedUsageIcon size={18} color="currentColor" />}
 				/>
 				<div className="flex-1">
 					<div className="text-body-highlight mb-1">Included</div>
 					<div className="text-body-secondary leading-tight">
 						{isConsumable
-							? `Set a usage limit and reset interval for this feature (e.g. 100 ${featureName} per month).`
+							? `Set an included usage limit for this feature (e.g. 100 ${featureName} per month).`
 							: isAllocated
 								? `Set a usage limit for this feature (e.g. 5 ${featureName}).`
 								: "Set a usage limit for this feature."}
@@ -114,14 +118,16 @@ export function BillingType() {
 			<div className="flex w-full items-center gap-4">
 				<PanelButton
 					isSelected={shouldPreselect && isFeaturePrice}
-					onClick={() => setBillingType("priced")}
-					icon={<CoinsIcon size={20} color="currentColor" />}
+					onClick={() => {
+						setBillingType("priced");
+					}}
+					icon={<CoinsIcon size={16} color="currentColor" />}
 				/>
 				<div className="flex-1">
-					<div className="text-body-highlight mb-1">Priced</div>
+					<div className="text-body-highlight mb-1">Paid</div>
 					<div className="text-body-secondary leading-tight">
 						{isConsumable
-							? `Charge a price based on the usage or overage of this feature (e.g. $0.05 per ${singleFeatureName}).`
+							? `Charge a price for usage of this feature (e.g. $0.05 per ${singleFeatureName}).`
 							: isAllocated
 								? `Charge a price based on usage of this feature (e.g. $10 per ${singleFeatureName}).`
 								: "Charge a price based on usage of this feature."}

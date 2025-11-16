@@ -301,8 +301,6 @@ export const handleInvoiceCreated = async ({
 
 	const subId = invoiceToSubId({ invoice });
 
-	console.log("HANDLING INVOICE CREATED", invoice.id);
-
 	if (subId) {
 		const activeProducts = await CusProductService.getByStripeSubId({
 			db,
