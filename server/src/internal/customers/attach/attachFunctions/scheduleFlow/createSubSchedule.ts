@@ -1,9 +1,10 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { sanitizeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { generateId } from "@/utils/genUtils.js";
-import { ItemSet } from "@/utils/models/ItemSet.js";
+import type { ItemSet } from "@/utils/models/ItemSet.js";
 
 export const createSubSchedule = async ({
 	db,
@@ -40,7 +41,8 @@ export const createSubSchedule = async ({
 			{
 				items: sanitizeSubItems(subItems),
 				default_payment_method: paymentMethod?.id,
-				add_invoice_items: invoiceItems,
+				add_invoice_items:
+					invoiceItems as Stripe.SubscriptionScheduleCreateParams.Phase.AddInvoiceItem[],
 			},
 		],
 	});

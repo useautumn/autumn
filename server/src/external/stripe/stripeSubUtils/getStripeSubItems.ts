@@ -290,6 +290,7 @@ export const getStripeSubItems2 = async ({
 			withEntity: notNullish(internalEntityId),
 			apiVersion: attachParams.apiVersion,
 			productOptions: prodOptions,
+			fromVercel: attachParams.paymentMethod?.type === "custom",
 		});
 
 		if (isUsagePrice({ price })) {

@@ -154,7 +154,7 @@ export const submitInvoiceToVercel = async ({
 					name: product.name,
 					price: totalAmount.toFixed(2), // Total price including usage
 					quantity: 1,
-					units: price.interval.toString(),
+					units: price.interval?.toString() ?? "month",
 					total: totalAmount.toFixed(2), // Same as price since quantity=1
 				},
 			],

@@ -54,6 +54,8 @@ export const handleUpdateResource = createRoute({
 		if (body.name) updates.name = body.name;
 		if (body.status) updates.status = body.status;
 
+		console.log(`Vercel, updating resource: `, body);
+
 		const resource = await VercelResourceService.update({
 			db,
 			resourceId,

@@ -2,6 +2,7 @@ import {
 	AppEnv,
 	type Customer,
 	cusProductToProduct,
+	InternalError,
 	ProcessorType,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
@@ -16,10 +17,7 @@ import {
 	verifyClaims,
 	verifyToken,
 } from "../../misc/vercelAuth.js";
-import type {
-	VercelBillingPlan,
-	VercelUpsertInstallation,
-} from "../../misc/vercelTypes.js";
+import type { VercelUpsertInstallation } from "../../misc/vercelTypes.js";
 import { productToBillingPlan } from "../handleListBillingPlans.js";
 
 export const handleUpsertInstallation = createRoute({
@@ -27,6 +25,7 @@ export const handleUpsertInstallation = createRoute({
 		const body = await c.req.json<VercelUpsertInstallation>();
 		const ctx = c.get("ctx");
 		const { integrationConfigurationId } = c.req.param();
+		const { logger } = ctx;
 		let createdCustomer: Customer | null = null;
 
 		try {
@@ -62,76 +61,89 @@ export const handleUpsertInstallation = createRoute({
 				},
 			});
 
-			if (createdCustomer) {
-				// Create test clock for sandbox/development environments
-				let testClockId: string | undefined;
-				if (ctx.env === AppEnv.Sandbox) {
-					const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
-					const testClock = await stripeCli.testHelpers.testClocks.create({
-						frozen_time: Math.floor(Date.now() / 1000),
-					});
-					testClockId = testClock.id;
-				}
+			if (!createdCustomer) {
+				throw new InternalError({
+					message: "Failed to create customer",
+				});
+			}
 
-				const stripeCustomer = await createStripeCustomer({
+			// Create test clock for sandbox/development environments
+			let testClockId: string | undefined;
+			if (ctx.env === AppEnv.Sandbox) {
+				const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+				const testClock = await stripeCli.testHelpers.testClocks.create({
+					frozen_time: Math.floor(Date.now() / 1000),
+				});
+				testClockId = testClock.id;
+			}
+
+			const stripeCustomer = await createStripeCustomer({
+				org: ctx.org,
+				env: ctx.env,
+				customer: createdCustomer,
+				testClockId,
+				metadata: {
+					vercel_installation_id: integrationConfigurationId,
+				},
+			});
+
+			if (stripeCustomer) {
+				// Create custom payment method for Vercel marketplace
+				const customPaymentMethod = await createCustomStripeCard({
 					org: ctx.org,
 					env: ctx.env,
-					customer: createdCustomer,
-					testClockId,
-					metadata: {
-						vercel_installation_id: integrationConfigurationId,
+					customer: {
+						...createdCustomer,
+						processor: {
+							id: stripeCustomer.id,
+							type: ProcessorType.Stripe,
+						},
+					},
+					processor: "vercel",
+					processorData: {
+						name: body.account.contact.name,
+						email: body.account.contact.email,
+					},
+					defaultPaymentMethod: true,
+				});
+
+				await CusService.update({
+					db: ctx.db,
+					idOrInternalId: createdCustomer.internal_id,
+					orgId: ctx.org.id,
+					env: ctx.env,
+					update: {
+						processor: {
+							id: stripeCustomer.id,
+							type: ProcessorType.Stripe,
+						},
+						processors: {
+							vercel: {
+								installation_id: integrationConfigurationId,
+								access_token: body.credentials.access_token,
+								account_id: claims.account_id,
+								custom_payment_method_id: customPaymentMethod?.id,
+							},
+						},
 					},
 				});
 
-				if (stripeCustomer) {
-					// Create custom payment method for Vercel marketplace
-					const customPaymentMethod = await createCustomStripeCard({
-						org: ctx.org,
-						env: ctx.env,
-						customer: {
-							...createdCustomer,
-							processor: {
-								id: stripeCustomer.id,
-								type: ProcessorType.Stripe,
-							},
+				logger.info(
+					`Successfully created vercel customer, installation ID: ${integrationConfigurationId}`,
+					{
+						data: {
+							customPaymentMethodId: customPaymentMethod?.id,
+							customPaymentMethodType: customPaymentMethod?.type,
+							customPaymentMethodBillingDetails:
+								customPaymentMethod?.billing_details,
 						},
-						processor: "vercel",
-						processorData: {
-							name: body.account.contact.name,
-							email: body.account.contact.email,
-						},
-						defaultPaymentMethod: true,
-					});
-
-					await CusService.update({
-						db: ctx.db,
-						idOrInternalId: createdCustomer.internal_id,
-						orgId: ctx.org.id,
-						env: ctx.env,
-						update: {
-							processor: {
-								id: stripeCustomer.id,
-								type: ProcessorType.Stripe,
-							},
-							processors: {
-								vercel: {
-									installation_id: integrationConfigurationId,
-									access_token: body.credentials.access_token,
-									account_id: claims.account_id,
-									custom_payment_method_id: customPaymentMethod?.id,
-								},
-							},
-						},
-					});
-				}
+					},
+				);
 			}
-		} catch (_) {
-			ctx.logger.error(
-				"ERROR: Error creating customer: --------------------------------",
-			);
-			ctx.logger.error(_);
-			ctx.logger.error(ctx.org);
-			ctx.logger.error("--------------------------------");
+		} catch (error) {
+			logger.error(`Error creating vercel customer ${error}`, {
+				error,
+			});
 		}
 
 		if (createdCustomer) {
@@ -141,20 +153,20 @@ export const handleUpsertInstallation = createRoute({
 				orgId: ctx.org.id,
 				env: ctx.env,
 			});
-			return c.json(
-				{
-					billingPlan:
-						fullCreatedCustomer.customer_products[0] !== undefined
-							? (productToBillingPlan({
-									product: cusProductToProduct({
-										cusProduct: fullCreatedCustomer.customer_products[0],
-									}),
-									orgCurrency: ctx.org.default_currency ?? "usd",
-								}) as unknown as VercelBillingPlan)
-							: null,
-				},
-				200,
-			);
+
+			const installation = {
+				billingPlan:
+					fullCreatedCustomer.customer_products[0] !== undefined
+						? productToBillingPlan({
+								product: cusProductToProduct({
+									cusProduct: fullCreatedCustomer.customer_products[0],
+								}),
+								orgCurrency: ctx.org.default_currency ?? "usd",
+							})
+						: null,
+			};
+
+			return c.json(installation, 200);
 		}
 
 		return c.body(null, 500);

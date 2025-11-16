@@ -1,8 +1,9 @@
 import {
 	type AppEnv,
 	type FullProduct,
-	isOneOffPrice,
+	getProductItemDisplay,
 	isPriceItem,
+	isUsagePrice,
 	mapToProductV2,
 	type Organization,
 	productV2ToBasePrice,
@@ -15,9 +16,10 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
-import { getProductItemDisplay } from "@/internal/products/productUtils/productResponseUtils/getProductItemDisplay.js";
-import { isOneOff } from "@/internal/products/productUtils.js";
+
 import { formatAmount } from "@/utils/formatUtils.js";
+import { sortProductsByPrice } from "../../../internal/products/productUtils/sortProductUtils.js";
+import { isOneOff } from "../../../internal/products/productUtils.js";
 import type { VercelBillingPlan } from "../misc/vercelTypes.js";
 
 /**
@@ -79,10 +81,7 @@ export function productToBillingPlan({
 	product: FullProduct;
 	orgCurrency: string;
 	metadata?: Record<string, any>;
-}) {
-	const hasRecurringPrice = product.prices.some(
-		(x) => !isOneOffPrice({ price: x }),
-	);
+}): VercelBillingPlan {
 	// const paymentMethodRequired = false;
 	const productV2 = mapToProductV2({ product });
 	const basePrice = productV2ToBasePrice({ product: productV2 });
@@ -94,7 +93,25 @@ export function productToBillingPlan({
 	}
 
 	// Total cost = base recurring + prepaid quantities
-	const totalAmount = (basePrice?.amount || 0) + prepaidCosts;
+	const totalAmount = (basePrice?.price || 0) + prepaidCosts;
+
+	const highlightedDetails = productV2.items
+		.filter((x) => !isPriceItem(x))
+		.map((x) => {
+			const d = getProductItemDisplay({
+				item: x,
+				features: product.entitlements.map((e) => e.feature),
+				// fullDisplay: true,
+			});
+
+			return {
+				label: d.primary_text,
+				value:
+					d.secondary_text?.trim() !== ""
+						? d.secondary_text?.trim()
+						: undefined,
+			};
+		});
 
 	const bp = {
 		cost:
@@ -107,21 +124,7 @@ export function productToBillingPlan({
 		name: product.name,
 		scope: "installation",
 		description: "",
-		highlightedDetails: productV2.items
-			.filter((x) => !isPriceItem(x))
-			.map((x) => {
-				const d = getProductItemDisplay({
-					item: x,
-					features: product.entitlements.map((e) => e.feature),
-				});
-				return {
-					label: d.primary_text,
-					value:
-						d.secondary_text?.trim() !== ""
-							? d.secondary_text?.trim()
-							: undefined,
-				};
-			}),
+		highlightedDetails,
 		paymentMethodRequired: false,
 		// paymentMethodRequired: totalAmount > 0,
 		disabled: !!product.archived,
@@ -149,25 +152,28 @@ export const listVercelPlansForOrg = async ({
 		archived: false,
 	});
 
+	sortProductsByPrice({ products });
+
+	// 1. Get rid of products that have usage prices
+	// 2. Get rid of products that are archived
+	const filteredProducts = products
+		.filter((p) => !p.prices.some((price) => isUsagePrice({ price })))
+		.filter(
+			(p) =>
+				!p.is_add_on &&
+				!isOneOff(p.prices) &&
+				!p.archived &&
+				(p.entitlements.length > 0 || p.is_default),
+		);
+
 	return [
-		...products
-			.filter(
-				// Can't be an add-on, can't be archived, can't be one off
-				// Can be default, can be usage-based, can be prepaid.
-				// Can't have 0 entitlements, unless it's the default product.
-				(p) =>
-					!p.is_add_on &&
-					!p.archived &&
-					!isOneOff(p.prices) &&
-					(p.entitlements.length > 0 || p.is_default),
-			)
-			.map((product) =>
-				productToBillingPlan({
-					product,
-					orgCurrency: org?.default_currency ?? "usd",
-					metadata,
-				}),
-			),
+		...filteredProducts.map((product) =>
+			productToBillingPlan({
+				product,
+				orgCurrency: org?.default_currency ?? "usd",
+				metadata,
+			}),
+		),
 		// ...((canCancel
 		// 	? [
 		// 			{
