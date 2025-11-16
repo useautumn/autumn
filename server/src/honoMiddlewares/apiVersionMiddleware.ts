@@ -47,6 +47,7 @@ export const apiVersionMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 		finalVersion = new ApiVersionClass(parsedVersion);
 	}
+
 	// 2. Calculate from org creation date
 	else if (org?.created_at) {
 		finalVersion = createdAtToVersion({

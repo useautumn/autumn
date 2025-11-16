@@ -1,6 +1,9 @@
 import { SuccessResponseSchema } from "@api/common/commonResponses.js";
 import { z } from "zod/v4";
-import { ApiProductSchema, PRODUCT_EXAMPLE } from "./apiProduct.js";
+import {
+	ApiProductSchema,
+	PRODUCT_EXAMPLE,
+} from "./previousVersions/apiProduct.js";
 import {
 	CreateProductV2ParamsSchema,
 	UpdateProductV2ParamsSchema,

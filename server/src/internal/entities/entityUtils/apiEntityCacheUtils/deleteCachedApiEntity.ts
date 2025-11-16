@@ -3,7 +3,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildCachedApiEntityKey } from "./getCachedApiEntity.js";
 
 /**
- * Delete ApiEntity from Redis cache
+ * Delete entity from Redis cache
  */
 export const deleteCachedApiEntity = async ({
 	ctx,

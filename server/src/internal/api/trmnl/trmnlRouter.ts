@@ -3,10 +3,10 @@ import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { AnalyticsService } from "@/internal/analytics/AnalyticsService.js";
 import { RevenueService } from "@/internal/analytics/RevenueService.js";
-import { initUpstash } from "@/internal/customers/cusCache/upstashUtils.js";
 import { withOrgAuth } from "@/middleware/authMiddleware.js";
 import { trmnlAuthMiddleware } from "@/middleware/trmnlAuthMiddleware.js";
 import { routeHandler } from "@/utils/routerUtils.js";
+import { CacheManager } from "../../../utils/cacheUtils/CacheManager";
 
 const trmnlLimiter = rateLimit({
 	windowMs: 60 * 1000 * 30,
@@ -28,22 +28,14 @@ trmnlRouter.get("/device_id", withOrgAuth, async (req: any, res: any) => {
 		res,
 		action: "get trmnl data",
 		handler: async () => {
-			const upstash = await initUpstash();
-
-			if (!upstash)
-				res.status(500).json({ error: "Failed to connect to upstash" });
-
 			const orgId = req.org.id;
-			const trmnlConfig = await upstash?.get(`trmnl:org:${orgId}`);
+
+			const trmnlConfig = await CacheManager.getJson<{
+				deviceId: string;
+				hideRevenue: boolean;
+			}>(`trmnl:org:${orgId}`);
 
 			res.status(200).json({ trmnlConfig });
-			// let trmnlJson = await getTrmnlJson();
-
-			// let deviceId = Object.keys(trmnlJson).find((deviceId: string) => {
-			//   return trmnlJson[deviceId] === req.org.id;
-			// });
-
-			// res.status(200).json({ deviceId });
 		},
 	});
 });
@@ -54,68 +46,32 @@ trmnlRouter.post("/device_id", withOrgAuth, async (req: any, res: any) => {
 		res,
 		action: "save trmnl device id",
 		handler: async () => {
-			let upstash = await initUpstash();
-
-			if (!upstash)
-				res.status(500).json({ error: "Failed to connect to upstash" });
-
-			// 1. Get upstash data
-			upstash = upstash!;
-
-			const trmnlConfig = (await upstash.get(
-				`trmnl:device:${req.body.deviceId}`,
-			)) as {
+			const trmnlConfig = await CacheManager.getJson<{
 				orgId: string;
 				hideRevenue: boolean;
-			};
+			}>(`trmnl:device:${req.body.deviceId}`);
+
 			if (trmnlConfig && trmnlConfig.orgId !== req.org.id) {
 				return res.status(400).json({ error: "Device ID already taken" });
 			}
 
-			// Get current device ID:
-			const curTrmnlConfig = (await upstash.get(`trmnl:org:${req.org.id}`)) as {
+			const curTrmnlConfig = await CacheManager.getJson<{
 				deviceId: string;
 				hideRevenue: boolean;
-			};
+			}>(`trmnl:org:${req.org.id}`);
 			if (curTrmnlConfig) {
-				await upstash.del(`trmnl:device:${curTrmnlConfig.deviceId}`);
+				await CacheManager.del(`trmnl:device:${curTrmnlConfig.deviceId}`);
 			}
 
-			await upstash.set(`trmnl:device:${req.body.deviceId}`, {
+			await CacheManager.setJson(`trmnl:device:${req.body.deviceId}`, {
 				orgId: req.org.id,
 				hideRevenue: req.body.hideRevenue,
 			});
 
-			await upstash.set(`trmnl:org:${req.org.id}`, {
+			await CacheManager.setJson(`trmnl:org:${req.org.id}`, {
 				deviceId: req.body.deviceId,
 				hideRevenue: req.body.hideRevenue,
 			});
-
-			// const trmnlJson = await upstash.get(`trmnl:${req.org.id}`);
-
-			// if (!trmnlJson) {
-			//   res.status(400).json({ error: "Device ID not found" });
-			// }
-
-			// 2. Check if device ID is already taken
-			// await upstash?.set(`trmnl:${req.org.id}`, req.body.deviceId);
-
-			// let trmnlJson = await getTrmnlJson();
-
-			// let existingOrgId = trmnlJson[req.body.deviceId];
-
-			// if (existingOrgId && existingOrgId !== req.org.id) {
-			//   return res.status(400).json({ error: "Device ID already taken" });
-			// }
-
-			// trmnlJson[req.body.deviceId] = req.org.id;
-			// // console.log("Trmnl JSON")
-			// const sb = createSupabaseClient();
-			// await sb.storage
-			//   .from("private")
-			//   .upload("trmnl.json", JSON.stringify(trmnlJson), {
-			//     upsert: true,
-			//   });
 
 			res.status(200).json({ message: "Device ID saved" });
 		},
@@ -203,15 +159,8 @@ trmnlRouter.post(
 					};
 				}
 
-				// console.log({
-				//   rowData: `[${results.data.map((row: any) => `['${row.period}', ${row[topEvent[0] + "_count"]}]`).join(",")}]`,
-				//   revenue: numberWithCommas(monthlyRevenue.total_payment_volume),
-				//   totalEvent: numberWithCommas(totalEvents),
-				//   totalCustomers: numberWithCommas(totalCustomers),
-				//   topEvent: topEvent[0],
-				// });
 				res.status(200).json({
-					rowData: `[${results.data.map((row: any) => `['${row.period}', ${row[topEvent + "_count"]}]`).join(",")}]`,
+					rowData: `[${results.data.map((row: any) => `['${row.period}', ${row[`${topEvent}_count`]}]`).join(",")}]`,
 					revenue: numberWithCommas(monthlyRevenue.total_payment_volume),
 					totalEvents: numberWithCommas(totalEvents),
 					totalCustomers: numberWithCommas(totalCustomers),

@@ -31,7 +31,6 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	};
 
 	const method = c.req.method;
-	const path = c.req.path;
 
 	let body = null;
 	if (method === "POST" || method === "PUT" || method === "PATCH") {
@@ -68,6 +67,10 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		userId: undefined,
 		authType: AuthType.Unknown,
 		env: AppEnv.Sandbox, // maybe use app_env headers
+
+		// Query params
+		expand: [],
+		skipCache: false,
 	});
 
 	// childLogger.info(`${method} ${path}`);

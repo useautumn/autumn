@@ -1,14 +1,15 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	ApiVersion,
-	type CheckResponse,
 	type CheckResponseV0,
+	type CheckResponseV1,
+	type CheckResponseV2,
 	type LimitedItem,
 	SuccessCode,
 } from "@autumn/shared";
 import chalk from "chalk";
-import { TestFeature } from "tests/setup/v2Features.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -34,7 +35,7 @@ describe(`${chalk.yellowBright("check7: test /check on feature with usage limits
 	const customerId = "check7";
 	const autumnV0: AutumnInt = new AutumnInt({ version: ApiVersion.V0_2 });
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
-
+	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2_0 });
 	beforeAll(async () => {
 		await initCustomerV3({
 			ctx,
@@ -55,20 +56,34 @@ describe(`${chalk.yellowBright("check7: test /check on feature with usage limits
 		});
 	});
 
-	test("v0 response", async () => {
-		const res = (await autumnV0.check({
+	test("v2 response", async () => {
+		const res = (await autumnV2.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			required_balance: messagesFeature.usage_limit! + 1,
-		})) as unknown as CheckResponseV0;
+		})) as unknown as CheckResponseV2;
 
-		expect(res.allowed).toBe(false);
-		expect(res.balances).toBeDefined();
-		expect(res.balances).toHaveLength(1);
-		expect(res.balances[0]).toMatchObject({
-			balance: messagesFeature.included_usage,
-			required: messagesFeature.usage_limit! + 1,
-			feature_id: TestFeature.Messages,
+		expect(res).toMatchObject({
+			allowed: false,
+			customer_id: customerId,
+			required_balance: messagesFeature.usage_limit! + 1,
+			balance: {
+				feature_id: "messages",
+				unlimited: false,
+				granted_balance: messagesFeature.included_usage,
+				purchased_balance: 0,
+				current_balance: messagesFeature.included_usage,
+				usage: 0,
+				max_purchase:
+					messagesFeature.usage_limit! - messagesFeature.included_usage,
+
+				overage_allowed: true,
+
+				reset: {
+					interval: "month",
+					// resets_at: 1765393465000,
+				},
+			},
 		});
 	});
 
@@ -77,7 +92,7 @@ describe(`${chalk.yellowBright("check7: test /check on feature with usage limits
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			required_balance: messagesFeature.usage_limit! + 1,
-		})) as unknown as CheckResponse;
+		})) as unknown as CheckResponseV1;
 
 		const expectedRes = {
 			allowed: false,
@@ -98,5 +113,22 @@ describe(`${chalk.yellowBright("check7: test /check on feature with usage limits
 
 		expect(res).toMatchObject(expectedRes);
 		expect(res.next_reset_at).toBeDefined();
+	});
+
+	test("v0 response", async () => {
+		const res = (await autumnV0.check({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			required_balance: messagesFeature.usage_limit! + 1,
+		})) as unknown as CheckResponseV0;
+
+		expect(res.allowed).toBe(false);
+		expect(res.balances).toBeDefined();
+		expect(res.balances).toHaveLength(1);
+		expect(res.balances[0]).toMatchObject({
+			balance: messagesFeature.included_usage,
+			required: messagesFeature.usage_limit! + 1,
+			feature_id: TestFeature.Messages,
+		});
 	});
 });

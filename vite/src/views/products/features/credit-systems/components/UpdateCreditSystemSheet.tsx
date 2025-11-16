@@ -1,4 +1,4 @@
-import type { CreateFeature, Feature } from "@autumn/shared";
+import type { CreateFeature, CreditSchemaItem, Feature } from "@autumn/shared";
 import { FeatureType } from "@autumn/shared";
 import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
@@ -42,6 +42,7 @@ function UpdateCreditSystemSheet({
 				},
 			],
 		},
+		event_names: [],
 	});
 
 	const axiosInstance = useAxiosInstance();
@@ -55,6 +56,7 @@ function UpdateCreditSystemSheet({
 				id: selectedCreditSystem.id,
 				type: selectedCreditSystem.type,
 				config: selectedCreditSystem.config,
+				event_names: selectedCreditSystem.event_names,
 			});
 		}
 	}, [open, selectedCreditSystem]);
@@ -70,9 +72,23 @@ function UpdateCreditSystemSheet({
 
 		setLoading(true);
 		try {
-			await FeatureService.updateFeature(axiosInstance, selectedCreditSystem.id, {
-				...creditSystem,
-			});
+			await FeatureService.updateFeature(
+				axiosInstance,
+				selectedCreditSystem.id,
+				{
+					id: creditSystem.id,
+					name: creditSystem.name,
+					type: creditSystem.type,
+					credit_schema: creditSystem.config?.schema?.map(
+						(x: CreditSchemaItem) => ({
+							metered_feature_id: x.metered_feature_id,
+							credit_cost: Number(x.credit_amount),
+						}),
+					),
+					event_names: creditSystem.event_names,
+					display: undefined,
+				},
+			);
 
 			await refetch();
 			toast.success("Credit system updated successfully");

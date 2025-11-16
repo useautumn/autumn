@@ -1,4 +1,4 @@
-import { type SQL } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import type { CTEConfig } from "../buildCte.js";
 import { CTEBuilder } from "../buildCte.js";
@@ -80,12 +80,10 @@ export function parseJoinCondition({
  */
 export function buildRelationGraph({
 	config,
-	parentTable,
 	relations,
 	extractJoinCondition,
 }: {
 	config: CTEConfig;
-	parentTable?: PgTable;
 	relations: Record<string, any>;
 	extractJoinCondition: (params: {
 		parentTable: PgTable;
@@ -128,7 +126,6 @@ export function buildRelationGraph({
 		// Recursively build nested nodes
 		const nestedNode = buildRelationGraph({
 			config: nested,
-			parentTable: table,
 			relations,
 			extractJoinCondition,
 		});

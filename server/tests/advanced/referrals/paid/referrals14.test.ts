@@ -1,26 +1,110 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type AppEnv,
+	CouponDurationType,
+	type CreateReward,
+	type CreateRewardProgram,
 	CusExpand,
 	CusProductStatus,
 	ErrCode,
 	type Organization,
 	type ReferralCode,
+	RewardReceivedBy,
 	type RewardRedemption,
+	RewardTriggerEvent,
+	RewardType,
 } from "@autumn/shared";
-import { beforeAll, describe, expect, test } from "bun:test";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
+import { createReferralProgram } from "@tests/utils/productUtils.js";
+import { advanceTestClock } from "@tests/utils/stripeUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import type { Stripe } from "stripe";
-import { expectProductV1Attached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionService.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-import { products, referralPrograms } from "../../../global.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
 export const group = "referrals14";
+
+const testCase = "referrals14";
+
+// Define products inline
+const freeProd = constructProduct({
+	id: "free",
+	type: "free",
+	isDefault: true,
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 5,
+		}),
+	],
+});
+
+const proProd = constructProduct({
+	id: "pro",
+	type: "pro",
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Dashboard,
+			isBoolean: true,
+		}),
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 10,
+		}),
+	],
+});
+
+const premiumProd = constructProduct({
+	id: "premium",
+	type: "premium",
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Dashboard,
+			isBoolean: true,
+		}),
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 50,
+		}),
+		constructFeatureItem({
+			featureId: TestFeature.Admin,
+			unlimited: true,
+		}),
+	],
+});
+
+// Reward: pro_amount discount (coupon-based)
+const proAmountReward: CreateReward = {
+	id: `${testCase}ProAmount`,
+	name: "Pro Amount Discount",
+	type: RewardType.PercentageDiscount,
+	promo_codes: [],
+	discount_config: {
+		discount_value: 10, // $10 off (pro_amount)
+		duration_type: CouponDurationType.Months,
+		duration_value: 1,
+		apply_to_all: true,
+		price_ids: [],
+	},
+};
+
+// Referral program: triggers immediately, applies to referrer only
+const paidProductImmediateReferrer: CreateRewardProgram = {
+	id: `${testCase}ImmediateReferrer`,
+	when: RewardTriggerEvent.CustomerCreation,
+	product_ids: [proProd.id, premiumProd.id],
+	internal_reward_id: proAmountReward.id,
+	max_redemptions: 10,
+	received_by: RewardReceivedBy.Referrer,
+};
 
 describe(`${chalk.yellowBright(
 	"referrals14: Testing referrals - referrer on Premium (higher tier), gets pro_amount discount - coupon-based",
@@ -55,6 +139,24 @@ describe(`${chalk.yellowBright(
 			]);
 		} catch {}
 
+		// Initialize products first
+		await initProductsV0({
+			ctx,
+			products: [freeProd, proProd, premiumProd],
+			prefix: testCase,
+			customerId: mainCustomerId,
+		});
+
+		// Create referral program
+		await createReferralProgram({
+			db,
+			orgId: org.id,
+			env,
+			autumn: new AutumnInt({ secretKey: ctx.orgSecretKey }),
+			reward: proAmountReward,
+			rewardProgram: paidProductImmediateReferrer,
+		});
+
 		// Initialize main customer with Premium product already attached
 		const res = await initCustomerV3({
 			ctx,
@@ -67,7 +169,7 @@ describe(`${chalk.yellowBright(
 		// Attach Premium product to main customer first (higher tier than Pro)
 		await autumn.attach({
 			customer_id: mainCustomerId,
-			product_id: products.premium.id,
+			product_id: premiumProd.id,
 		});
 
 		const redeemerRes = await initCustomerV3({
@@ -95,7 +197,7 @@ describe(`${chalk.yellowBright(
 	test("should create code once", async () => {
 		referralCode = await autumn.referrals.createCode({
 			customerId: mainCustomerId,
-			referralId: referralPrograms.paidProductImmediateReferrer.id,
+			referralId: paidProductImmediateReferrer.id,
 		});
 
 		expect(referralCode.code).toBeDefined();
@@ -103,7 +205,7 @@ describe(`${chalk.yellowBright(
 		// Get referral code again
 		const referralCode2 = await autumn.referrals.createCode({
 			customerId: mainCustomerId,
-			referralId: referralPrograms.paidProductImmediateReferrer.id,
+			referralId: paidProductImmediateReferrer.id,
 		});
 
 		expect(referralCode2.code).toBe(referralCode.code);
@@ -124,7 +226,9 @@ describe(`${chalk.yellowBright(
 			throw new Error("Should not be able to redeem again");
 		} catch (error) {
 			expect(error).toBeInstanceOf(AutumnError);
-			expect((error as AutumnError).code).toBe(ErrCode.CustomerAlreadyRedeemedReferralCode);
+			expect((error as AutumnError).code).toBe(
+				ErrCode.CustomerAlreadyRedeemedReferralCode,
+			);
 		}
 	});
 
@@ -139,22 +243,26 @@ describe(`${chalk.yellowBright(
 
 		// Main customer (referrer) should have the premium product (already attached)
 		expect(mainProds.length).toBe(1);
-		expect(mainProds[0].id).toBe(products.premium.id);
+		expect(mainProds[0].id).toBe(premiumProd.id);
 
 		// Redeemer should only have the free product (no pro product given in referrer-only program)
 		expect(redeemerProds.length).toBe(1);
-		expect(redeemerProds[0].id).toBe(products.free.id);
+		expect(redeemerProds[0].id).toBe(freeProd.id);
 
-		expectProductV1Attached({
+		// expectProductV1Attached({
+		// 	customer: mainCus,
+		// 	product: premiumProd,
+		// 	status: CusProductStatus.Active,
+		// });
+		expectProductAttached({
 			customer: mainCus,
-			product: products.premium,
+			product: premiumProd,
 			status: CusProductStatus.Active,
 		});
 
-		// Verify redeemer only has free product
-		expectProductV1Attached({
+		expectProductAttached({
 			customer: redeemerCus,
-			product: products.free,
+			product: freeProd,
 			status: CusProductStatus.Active,
 		});
 	});
@@ -182,13 +290,13 @@ describe(`${chalk.yellowBright(
 		);
 
 		const premiumInvoice = mainCustomerWithInvoices.invoices.find((x) =>
-			x.product_ids.includes(products.premium.id),
+			x.product_ids.includes(premiumProd.id),
 		);
 		if (premiumInvoice) {
-			// Premium costs $50, Pro costs $10 - so referrer should get $10 discount on Premium
-			// Expected: Premium ($50) - Pro amount ($10) = $40
-			const premiumPrice = products.premium.prices[0].config.amount; // $50
-			const proAmount = products.pro.prices[0].config.amount; // $10 (pro_amount discount)
+			// Premium costs $50, Pro costs $20 - so referrer should get $10 discount on Premium
+			// Expected: Premium ($50) - discount amount ($10) = $40
+			const premiumPrice = 50; // Premium product base price
+			const proAmount = 10; // Discount amount (pro_amount)
 			const expectedTotal = premiumPrice - proAmount; // $40
 
 			// The invoice total should be exactly Premium price minus pro_amount
@@ -233,9 +341,6 @@ describe(`${chalk.yellowBright(
 					(cp) =>
 						cp.product.name === expectedProduct.name &&
 						cp.status === expectedProduct.status,
-				);
-				const unMatchedProduct = customer.customer_products.find(
-					(cp) => cp.product.name === expectedProduct.name,
 				);
 
 				expect(matchingProduct).toBeDefined();

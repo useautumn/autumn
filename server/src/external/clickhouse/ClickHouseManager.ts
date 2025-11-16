@@ -1,6 +1,6 @@
-import fs from "fs";
-import path from "path";
-import { ClickHouseClient, QueryParams } from "@clickhouse/client";
+import fs from "node:fs";
+import path from "node:path";
+import type { ClickHouseClient, QueryParams } from "@clickhouse/client";
 import { clickhouseClient } from "../../db/initClickHouse.js";
 
 export enum ClickHouseQuery {
@@ -115,6 +115,7 @@ export class ClickHouseManager {
 		}
 	}
 
+	// biome-ignore lint/correctness/noUnusedPrivateClassMembers: Might comment this back in in the future
 	private async ensureQueriesExist() {
 		if (!this.client) {
 			throw new Error("ClickHouse client not initialized");

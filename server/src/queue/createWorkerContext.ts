@@ -57,6 +57,8 @@ export const createWorkerContext = async ({
 		authType: AuthType.Unknown,
 		apiVersion: createdAtToVersion({ createdAt: org.created_at! }),
 		clickhouseClient: null as any,
+		expand: [],
+		skipCache: true,
 	};
 
 	return ctx;

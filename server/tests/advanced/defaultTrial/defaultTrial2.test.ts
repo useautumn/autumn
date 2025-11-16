@@ -1,28 +1,49 @@
 // Manual customer creation - not using initCustomer to control test clock properly
+import { beforeAll, describe, it } from "bun:test";
 import {
-	type AppEnv,
 	CusProductStatus,
+	FreeTrialDuration,
 	LegacyVersion,
-	type Organization,
+	ProductItemInterval,
 } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
+import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
+import { advanceTestClock } from "@tests/utils/stripeUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { addDays, addHours } from "date-fns";
 import type Stripe from "stripe";
-import { setupBefore } from "tests/before.js";
-import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomerV2 } from "@/utils/scriptUtils/initCustomer.js";
-import {
-	defaultTrialPro,
-	setupDefaultTrialBefore,
-} from "./defaultTrialBefore.test.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
 // 2.2:
 // -> Creating a new customer with a payment method should attach the pro product with default trial
 // --> Advancing the test clock should cancel the trial and attach the pro product
+
+const defaultTrialPro = constructProduct({
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Words,
+			includedUsage: 1500,
+			interval: ProductItemInterval.Month,
+		}),
+	],
+	isDefault: true,
+	forcePaidDefault: true,
+	id: "defaultTrial_pro",
+	group: "defaultTrial",
+	type: "pro",
+	freeTrial: {
+		length: 7,
+		duration: FreeTrialDuration.Day,
+		unique_fingerprint: false,
+		card_required: false,
+	},
+});
 
 const testCase = "defaultTrial2";
 
@@ -30,30 +51,26 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trial transitions i
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockID: string;
-	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
 
-	const curUnix = Math.floor(new Date().getTime() / 1000);
+	beforeAll(async () => {
+		// Products must be initialized BEFORE customer creation for default products
+		await initProductsV0({
+			ctx,
+			products: [defaultTrialPro],
+			prefix: testCase,
+			customerId,
+		});
 
-	beforeAll(async function () {
-		await setupBefore(this);
-		await setupDefaultTrialBefore({});
-		const { autumnJs } = this;
-		stripeCli = this.stripeCli;
-		db = this.db;
-		org = this.org;
-		env = this.env;
-
-		const res = await initCustomerV2({
-			autumn: autumnJs,
-			customerId: testCase,
-			db,
-			org,
-			env,
+		const res = await initCustomerV3({
+			ctx,
+			customerId,
 			attachPm: "success",
+			withTestClock: true,
 		});
 
 		testClockID = res.testClockId;
+		stripeCli = ctx.stripeCli;
 	});
 
 	it("should create a customer with the paid default trial", async () => {

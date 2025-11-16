@@ -1,14 +1,15 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	ApiVersion,
-	type CheckResponse,
 	type CheckResponseV0,
+	type CheckResponseV1,
+	type CheckResponseV2,
 	type LimitedItem,
 	SuccessCode,
 } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { TestFeature } from "tests/setup/v2Features.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
 	featureToCreditSystem,
@@ -36,6 +37,7 @@ describe(`${chalk.yellowBright("credit-systems1: test /check on action that uses
 	const customerId = "credit-systems1";
 	const autumnV0: AutumnInt = new AutumnInt({ version: ApiVersion.V0_2 });
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
+	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2_0 });
 
 	const creditFeature = ctx.features.find((f) => f.id === TestFeature.Credits);
 
@@ -57,6 +59,109 @@ describe(`${chalk.yellowBright("credit-systems1: test /check on action that uses
 			customer_id: customerId,
 			product_id: proProd.id,
 		});
+	});
+
+	for (const action of [TestFeature.Action1, TestFeature.Action2]) {
+		test(`v2 response - ${action} within credit balance`, async () => {
+			const requiredActionUnits = 50.75;
+
+			const res = (await autumnV2.check({
+				customer_id: customerId,
+				feature_id: action,
+				required_balance: requiredActionUnits,
+			})) as unknown as CheckResponseV2;
+
+			const creditCost = getCreditCost({
+				featureId: action,
+				creditSystem: creditFeature!,
+				amount: requiredActionUnits,
+			});
+
+			expect(res).toMatchObject({
+				allowed: true,
+				customer_id: customerId,
+				required_balance: creditCost,
+				balance: {
+					feature_id: TestFeature.Credits,
+					unlimited: false,
+					granted_balance: creditsFeature.included_usage,
+					purchased_balance: 0,
+					current_balance: creditsFeature.included_usage,
+					usage: 0,
+					max_purchase: null,
+					overage_allowed: false,
+					reset: {
+						interval: "month",
+					},
+				},
+			});
+
+			expect(res.balance?.reset?.resets_at).toBeDefined();
+		});
+	}
+
+	test("v1 response - action1 within credit balance", async () => {
+		const requiredAction1Units = 50.75;
+		const res = (await autumnV1.check({
+			customer_id: customerId,
+			feature_id: TestFeature.Action1,
+			required_balance: requiredAction1Units,
+		})) as unknown as CheckResponseV1;
+
+		const convertedCreditCost = featureToCreditSystem({
+			featureId: TestFeature.Action1,
+			creditSystem: creditFeature!,
+			amount: requiredAction1Units,
+		});
+
+		expect(res).toMatchObject({
+			allowed: true,
+			customer_id: customerId,
+			balance: creditsFeature.included_usage,
+			feature_id: TestFeature.Credits,
+			required_balance: convertedCreditCost,
+			code: SuccessCode.FeatureFound,
+			unlimited: false,
+			usage: 0,
+			included_usage: creditsFeature.included_usage,
+			overage_allowed: false,
+			interval: "month",
+			interval_count: 1,
+		});
+
+		expect(res.next_reset_at).toBeDefined();
+	});
+
+	test("v1 response - action2 exceeds credit balance", async () => {
+		const requiredAction2Units = 167.33;
+		const res = (await autumnV1.check({
+			customer_id: customerId,
+			feature_id: TestFeature.Action2,
+			required_balance: requiredAction2Units,
+		})) as unknown as CheckResponseV1;
+
+		const convertedCreditCost = featureToCreditSystem({
+			featureId: TestFeature.Action2,
+			creditSystem: creditFeature!,
+			amount: requiredAction2Units,
+		});
+
+		expect(res).toMatchObject({
+			allowed: false,
+			customer_id: customerId,
+			balance: creditsFeature.included_usage,
+			feature_id: TestFeature.Credits,
+			required_balance: convertedCreditCost,
+			code: SuccessCode.FeatureFound,
+			unlimited: false,
+			usage: 0,
+			included_usage: creditsFeature.included_usage,
+			overage_allowed: false,
+			interval: "month",
+			interval_count: 1,
+		});
+
+		expect(res.next_reset_at).toBeDefined();
 	});
 
 	test("v0 response - action1 within credit balance", async () => {
@@ -83,39 +188,6 @@ describe(`${chalk.yellowBright("credit-systems1: test /check on action that uses
 		});
 	});
 
-	test("v1 response - action1 within credit balance", async () => {
-		const requiredAction1Units = 50.75;
-		const res = (await autumnV1.check({
-			customer_id: customerId,
-			feature_id: TestFeature.Action1,
-			required_balance: requiredAction1Units,
-		})) as unknown as CheckResponse;
-
-		const convertedCreditCost = featureToCreditSystem({
-			featureId: TestFeature.Action1,
-			creditSystem: creditFeature!,
-			amount: requiredAction1Units,
-		});
-
-		expect(res).toMatchObject({
-			allowed: true,
-			customer_id: customerId,
-			balance: creditsFeature.included_usage,
-			feature_id: TestFeature.Credits,
-			required_balance: convertedCreditCost,
-			code: SuccessCode.FeatureFound,
-			unlimited: false,
-			usage: 0,
-			included_usage: creditsFeature.included_usage,
-			overage_allowed: false,
-			interval: "month",
-			interval_count: 1,
-		});
-
-		expect(res.next_reset_at).toBeDefined();
-	});
-	return;
-
 	test("v0 response - action2 exceeds credit balance", async () => {
 		const requiredAction2Units = 167.33;
 		const res = (await autumnV0.check({
@@ -138,37 +210,5 @@ describe(`${chalk.yellowBright("credit-systems1: test /check on action that uses
 			required: meteredCost,
 			feature_id: TestFeature.Credits,
 		});
-	});
-
-	test("v1 response - action2 exceeds credit balance", async () => {
-		const requiredAction2Units = 167.33;
-		const res = (await autumnV1.check({
-			customer_id: customerId,
-			feature_id: TestFeature.Action2,
-			required_balance: requiredAction2Units,
-		})) as unknown as CheckResponse;
-
-		const convertedCreditCost = featureToCreditSystem({
-			featureId: TestFeature.Action2,
-			creditSystem: creditFeature!,
-			amount: requiredAction2Units,
-		});
-
-		expect(res).toMatchObject({
-			allowed: false,
-			customer_id: customerId,
-			balance: creditsFeature.included_usage,
-			feature_id: TestFeature.Credits,
-			required_balance: convertedCreditCost,
-			code: SuccessCode.FeatureFound,
-			unlimited: false,
-			usage: 0,
-			included_usage: creditsFeature.included_usage,
-			overage_allowed: false,
-			interval: "month",
-			interval_count: 1,
-		});
-
-		expect(res.next_reset_at).toBeDefined();
 	});
 });

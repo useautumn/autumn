@@ -1,19 +1,17 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type AppEnv,
 	CusProductStatus,
 	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
-import { expect } from "chai";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
+import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
+import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import type { Stripe } from "stripe";
-import { setupBefore } from "tests/before.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { advanceToNextInvoice } from "tests/utils/testAttachUtils/testAttachUtils.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
@@ -25,7 +23,8 @@ import {
 	constructProduct,
 	constructRawProduct,
 } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 import { expectSubToBeCorrect } from "../mergeUtils/expectSubCorrect.js";
 
 // UNCOMMENT FROM HERE
@@ -102,39 +101,26 @@ describe(`${chalk.yellowBright("mergedAddOn1: Adding an add on")}`, () => {
 	let org: Organization;
 	let env: AppEnv;
 
-	beforeAll(async function () {
-		await setupBefore(this);
-		const { autumnJs } = this;
-		db = this.db;
-		org = this.org;
-		env = this.env;
-
-		stripeCli = this.stripeCli;
-
-		addPrefixToProducts({
+	beforeAll(async () => {
+		await initProductsV0({
+			ctx,
 			products: [pro, addOn],
 			prefix: testCase,
-		});
-
-		await createProducts({
-			autumn: autumnJs,
-			products: [pro, addOn],
-			db,
-			orgId: org.id,
-			env,
 			customerId,
 		});
 
-		const { testClockId: testClockId1 } = await initCustomer({
-			autumn: autumnJs,
+		const res = await initCustomerV3({
+			ctx,
 			customerId,
-			db,
-			org,
-			env,
 			attachPm: "success",
+			withTestClock: true,
 		});
 
-		testClockId = testClockId1!;
+		stripeCli = ctx.stripeCli;
+		db = ctx.db;
+		org = ctx.org;
+		env = ctx.env;
+		testClockId = res.testClockId!;
 	});
 
 	const entities = [
@@ -150,7 +136,7 @@ describe(`${chalk.yellowBright("mergedAddOn1: Adding an add on")}`, () => {
 		},
 	];
 
-	it("should run operations", async () => {
+	test("should run operations", async () => {
 		await autumn.entities.create(customerId, entities);
 
 		for (let index = 0; index < ops.length; index++) {
@@ -180,7 +166,7 @@ describe(`${chalk.yellowBright("mergedAddOn1: Adding an add on")}`, () => {
 		}
 	});
 
-	it("should cancel add on product and have correct sub items", async () => {
+	test("should cancel add on product and have correct sub items", async () => {
 		await autumn.cancel({
 			customer_id: customerId,
 			product_id: addOn.id,
@@ -208,8 +194,7 @@ describe(`${chalk.yellowBright("mergedAddOn1: Adding an add on")}`, () => {
 		});
 	});
 
-	// return;
-	it("should advance to next invoice and have no add on product", async () => {
+	test("should advance to next invoice and have no add on product", async () => {
 		await advanceToNextInvoice({
 			stripeCli,
 			testClockId,
@@ -222,6 +207,6 @@ describe(`${chalk.yellowBright("mergedAddOn1: Adding an add on")}`, () => {
 			status: CusProductStatus.Active,
 		});
 		const products = customer.products.filter((p) => p.group === addOn.group);
-		expect(products.length).to.equal(1);
+		expect(products.length).toBe(1);
 	});
 });

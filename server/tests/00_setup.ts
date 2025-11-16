@@ -3,19 +3,8 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { AppEnv } from "@autumn/shared";
-import { clearOrg, setupOrg } from "tests/utils/setup.js";
+import { clearOrg, setupOrg } from "@tests/utils/setup.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
-import {
-	advanceProducts,
-	attachProducts,
-	creditSystems,
-	entityProducts,
-	features,
-	oneTimeProducts,
-	products,
-	referralPrograms,
-	rewards,
-} from "./global.js";
 
 const ORG_SLUG = process.env.TESTS_ORG!;
 const DEFAULT_ENV = AppEnv.Sandbox;
@@ -33,16 +22,6 @@ describe("Initialize org for tests", () => {
 		await setupOrg({
 			orgId: this.org.id,
 			env: DEFAULT_ENV,
-			features: { ...features, ...creditSystems } as any,
-			products: {
-				...products,
-				...advanceProducts,
-				...attachProducts,
-				...oneTimeProducts,
-				...entityProducts,
-			} as any,
-			rewards: { ...rewards } as any,
-			rewardTriggers: { ...referralPrograms } as any,
 		});
 
 		console.log("--------------------------------");

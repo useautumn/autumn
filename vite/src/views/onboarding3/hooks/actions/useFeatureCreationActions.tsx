@@ -1,5 +1,9 @@
-import type { CreateFeature, ProductV2 } from "@autumn/shared";
-import { apiFeatureToDbFeature, CreateFeatureSchema } from "@autumn/shared";
+import type { CreateFeature, Feature, ProductV2 } from "@autumn/shared";
+import {
+	CreateFeatureSchema,
+	FeatureUsageType,
+	featureV1ToDbFeature,
+} from "@autumn/shared";
 import type { AxiosError } from "axios";
 import { useCallback } from "react";
 import { toast } from "sonner";
@@ -57,12 +61,12 @@ export const useFeatureCreationActions = () => {
 						name: feature.name,
 						id: feature.id,
 						type: feature.type,
-						config: feature.config,
+						consumable: feature.config?.usage_type === FeatureUsageType.Single,
 						event_names: feature.event_names,
 					},
 				);
 
-				updatedFeature = apiFeatureToDbFeature({ apiFeature: data });
+				updatedFeature = featureV1ToDbFeature({ apiFeature: data });
 
 				toast.success(`Feature "${feature.name}" updated successfully!`);
 			} else {
@@ -71,10 +75,10 @@ export const useFeatureCreationActions = () => {
 					name: feature.name,
 					id: feature.id,
 					type: feature.type,
-					config: feature.config,
+					consumable: feature.config?.usage_type === FeatureUsageType.Single,
 					event_names: feature.event_names,
 				});
-				updatedFeature = apiFeatureToDbFeature({ apiFeature: data });
+				updatedFeature = featureV1ToDbFeature({ apiFeature: data });
 				toast.success(`Feature "${feature.name}" created successfully!`);
 
 				// Track feature creation in onboarding
@@ -89,7 +93,7 @@ export const useFeatureCreationActions = () => {
 			await refetchFeatures(); // Refresh features list
 
 			// Update both base and working copy after successful save
-			setBaseFeature(updatedFeature);
+			setBaseFeature(updatedFeature as Feature);
 			setFeature(updatedFeature);
 
 			// Refetch product from backend to sync changes (e.g., entitlement updates when feature type changes)

@@ -1,4 +1,6 @@
 import {
+	AffectedResource,
+	ApiVersion,
 	backwardsChangeActive,
 	CusExpand,
 	GetCustomerQuerySchema,
@@ -8,15 +10,16 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getApiCustomer } from "../cusUtils/apiCusUtils/getApiCustomer.js";
 
 export const handleGetCustomerV2 = createRoute({
-	query: GetCustomerQuerySchema,
+	versionedQuery: {
+		latest: GetCustomerQuerySchema,
+		[ApiVersion.V1_2]: GetCustomerQuerySchema,
+	},
+	resource: AffectedResource.Customer,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const customerId = c.req.param("customer_id");
-		const {
-			expand = [],
-			skip_cache = false,
-			with_autumn_id,
-		} = c.req.valid("query");
+		const { expand } = ctx;
+		const { with_autumn_id } = c.req.valid("query");
 
 		// SIDE EFFECT
 		if (
@@ -31,8 +34,6 @@ export const handleGetCustomerV2 = createRoute({
 		const customer = await getApiCustomer({
 			ctx,
 			customerId,
-			expand,
-			skipCache: skip_cache,
 			withAutumnId: with_autumn_id,
 		});
 

@@ -1,10 +1,9 @@
-import { CouponDurationType, RewardType } from "@autumn/shared";
+import { CouponDurationType } from "@autumn/shared";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
 import {
 	InputGroup,
 	InputGroupAddon,
-	InputGroupInput,
 	InputGroupText,
 } from "@/components/v2/inputs/InputGroup";
 import {
@@ -38,8 +37,7 @@ export function DiscountRewardConfig({
 		});
 	};
 
-	const showDurationValue =
-		config.duration_type === CouponDurationType.Months;
+	const showDurationValue = config.duration_type === CouponDurationType.Months;
 
 	return (
 		<SheetSection title="Discount Configuration" withSeparator={false}>
@@ -60,7 +58,11 @@ export function DiscountRewardConfig({
 							<SelectContent>
 								<SelectItem value="percentage">Percentage</SelectItem>
 								<SelectItem value="fixed">Fixed</SelectItem>
-								<SelectItem value="invoice_credits">Invoice Credits</SelectItem>
+								{reward.discountType === "invoice_credits" && (
+									<SelectItem value="invoice_credits">
+										Invoice Credits
+									</SelectItem>
+								)}
 							</SelectContent>
 						</Select>
 					</div>
@@ -114,7 +116,9 @@ export function DiscountRewardConfig({
 									type="number"
 									placeholder="eg. 3"
 									className="w-20"
-									value={config.duration_value === 0 ? "" : config.duration_value}
+									value={
+										config.duration_value === 0 ? "" : config.duration_value
+									}
 									onChange={(e) => {
 										const value =
 											e.target.value === "" ? 0 : Number(e.target.value);
@@ -135,7 +139,9 @@ export function DiscountRewardConfig({
 									<SelectItem value={CouponDurationType.OneOff}>
 										One-off
 									</SelectItem>
-									<SelectItem value={CouponDurationType.Months}>Months</SelectItem>
+									<SelectItem value={CouponDurationType.Months}>
+										Months
+									</SelectItem>
 									<SelectItem value={CouponDurationType.Forever}>
 										Forever
 									</SelectItem>

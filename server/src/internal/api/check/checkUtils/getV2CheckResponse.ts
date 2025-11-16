@@ -1,32 +1,17 @@
-import {
-	ApiFeatureType,
-	type CheckResult,
-	CheckResultSchema,
-	FeatureType,
-	SuccessCode,
-} from "@autumn/shared";
-import { Decimal } from "decimal.js";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { CheckResponseV2Schema, FeatureType } from "@autumn/shared";
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
-import { notNullish } from "@/utils/genUtils.js";
 import type { CheckData } from "../checkTypes/CheckData.js";
+import { apiBalanceToAllowed } from "./apiBalanceToAllowed.js";
 
 export const getV2CheckResponse = async ({
-	ctx,
 	checkData,
 	requiredBalance,
 }: {
-	ctx: AutumnContext;
 	checkData: CheckData;
 	requiredBalance: number;
 }) => {
-	const {
-		customerId,
-		entityId,
-		cusFeature: apiCusFeature,
-		originalFeature,
-		featureToUse,
-	} = checkData;
+	const { customerId, entityId, apiBalance, originalFeature, featureToUse } =
+		checkData;
 
 	// If credit system used, need to convert required balance to credit system required balance
 	if (
@@ -40,161 +25,27 @@ export const getV2CheckResponse = async ({
 		});
 	}
 
-	if (!apiCusFeature) {
-		return CheckResultSchema.parse({
+	if (!apiBalance) {
+		return CheckResponseV2Schema.parse({
 			allowed: false,
 			customer_id: customerId || "",
-			feature_id: featureToUse.id,
+			entity_id: entityId,
 			required_balance: requiredBalance,
-			code: SuccessCode.FeatureFound,
+			balance: null,
 		});
 	}
 
-	// const apiCusFeature = getApiCusFeature({
-	// 	ctx,
-	// 	fullCus,
-	// 	cusEnts,
-	// 	feature: featureToUse,
-	// });
+	const allowed = apiBalanceToAllowed({
+		apiBalance,
+		feature: featureToUse,
+		requiredBalance,
+	});
 
-	// 1. Boolean or static
-	let allowed = false;
-
-	// Case 1: Boolean or static
-	if (
-		apiCusFeature.type === ApiFeatureType.Boolean ||
-		apiCusFeature.type === ApiFeatureType.Static
-	) {
-		// console.log("Boolean or static");
-		allowed = true;
-	}
-
-	// Case 2: Unlimited or overage allowed
-	if (apiCusFeature.unlimited) {
-		// console.log("Unlimited or overage allowed");
-		allowed = true;
-	}
-
-	// Case 3: Required balance is negative
-	if (requiredBalance < 0) {
-		// console.log("Required balance is negative");
-		allowed = true;
-	}
-
-	// Case 4: Balance + total paid usage allowance >= required balance [does this fail for prepaid...]
-	// const totalPaidUsageAllowance = cusEnts.reduce((acc, ce) => {
-	// 	const ent = ce.entitlement;
-	// 	if (notNullish(ent.usage_limit)) {
-	// 		return acc + ent.usage_limit - (ent.allowance || 0);
-	// 	}
-	// 	return acc;
-	// }, 0);
-
-	if (apiCusFeature.overage_allowed) {
-		if (!apiCusFeature.usage_limit) {
-			allowed = true;
-		}
-
-		const usageLimit = apiCusFeature.usage_limit || 0;
-		const usage = apiCusFeature.usage || 0;
-		if (new Decimal(usage).plus(requiredBalance).lt(usageLimit)) {
-			allowed = true;
-		}
-	}
-
-	if (
-		notNullish(apiCusFeature.balance) &&
-		new Decimal(apiCusFeature.balance).gte(requiredBalance)
-	) {
-		allowed = true;
-	}
-
-	// // Case 4: No customer entitlements, should be false
-	// if (cusEnts.length === 0) {
-	// 	allowed = false;
-	// }
-
-	const apiOverageAllowed = notNullish(apiCusFeature.usage_limit)
-		? false
-		: apiCusFeature.overage_allowed;
-
-	return CheckResultSchema.parse({
+	return CheckResponseV2Schema.parse({
 		allowed,
-		customer_id: customerId,
-		feature_id: featureToUse.id,
+		customer_id: customerId || "",
 		entity_id: entityId,
 		required_balance: requiredBalance,
-		code: SuccessCode.FeatureFound,
-		...apiCusFeature,
-		overage_allowed: apiOverageAllowed,
-	} satisfies CheckResult);
-
-	// return;
-
-	// const featureCusEnts = cusEnts.filter((cusEnt) =>
-	// 	cusEntMatchesFeature({ cusEnt, feature: featureToUse }),
-	// );
-
-	// const { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
-	// 	cusEnts: featureCusEnts,
-	// 	internalFeatureId: featureToUse.internal_id!,
-	// });
-
-	// const cusPrices = cusProducts.flatMap(
-	// 	(cusProduct) => cusProduct.customer_prices,
-	// );
-
-	// const balances = await getCusBalances({
-	// 	cusEntsWithCusProduct: featureCusEnts,
-	// 	cusPrices,
-	// 	org,
-	// 	entity: fullCus.entity,
-	// 	apiVersion,
-	// });
-
-	// const cusFeatures = balancesToFeatureResponse({
-	// 	cusEnts: featureCusEnts,
-	// 	balances,
-	// });
-
-	// const cusFeature = cusFeatures[featureToUse.id] || {};
-
-	// let allowed = false;
-
-	// // const totalPaidUsageAllowance = featureCusEnts.reduce((acc, ce) => {
-	// // 	const ent = ce.entitlement;
-	// // 	if (notNullish(ent.usage_limit)) {
-	// // 		return acc + ent.usage_limit - (ent.allowance || 0);
-	// // 	}
-	// // 	return acc;
-	// // }, 0);
-
-	// if (
-	// 	(cusFeature && unlimited) ||
-	// 	usageAllowed ||
-	// 	(requiredBalance && requiredBalance < 0) ||
-	// 	cusFeature.balance + totalPaidUsageAllowance >= (requiredBalance || 1)
-	// ) {
-	// 	allowed = true;
-	// }
-
-	// let finalRequired = notNullish(requiredBalance) ? requiredBalance : 1;
-	// if (featureToUse.type === FeatureType.CreditSystem) {
-	// 	finalRequired = featureToCreditSystem({
-	// 		featureId: feature.id,
-	// 		creditSystem: featureToUse,
-	// 		amount: finalRequired,
-	// 	});
-	// }
-
-	// return CheckResultSchema.parse({
-	// 	customer_id: fullCus.id,
-	// 	feature_id: featureToUse.id,
-	// 	entity_id: fullCus.entity?.id,
-	// 	// required_balance: notNullish(requiredBalance) ? requiredBalance : 1,
-	// 	required_balance: finalRequired,
-	// 	code: SuccessCode.FeatureFound,
-	// 	allowed,
-	// 	...cusFeature,
-	// });
+		balance: apiBalance,
+	});
 };

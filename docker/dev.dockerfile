@@ -21,32 +21,25 @@ WORKDIR /app
 COPY localtunnel-start.sh ./
 CMD ["sh", "localtunnel-start.sh"]
 
-#  Stage 2: /shared
-FROM base AS shared
-COPY shared/ ./shared/
-WORKDIR /app/shared
-RUN bun run build
-CMD ["bun", "dev"]
-
-# Stage 3: /vite
+# Stage 2: /vite
 FROM base AS vite
-COPY --from=shared /app/shared/dist ./shared/dist
+COPY shared/ ./shared/
 WORKDIR /app/vite
 COPY vite/ ./
 EXPOSE 3000
 CMD ["bun", "dev"]
 
-# Stage 4: /server
+# Stage 3: /server
 FROM base AS server
-COPY --from=shared /app/shared/dist ./shared/dist
+COPY shared/ ./shared/
 COPY server/ ./server/
 WORKDIR /app/server
 EXPOSE 8080
 CMD ["bun", "dev"]
 
-# Stage 5: Workers
+# Stage 4: Workers
 FROM base AS workers
-COPY --from=shared /app/shared/dist ./shared/dist
+COPY shared/ ./shared/
 COPY server/ ./server/
 WORKDIR /app/server
 CMD ["bun", "workers:dev"]

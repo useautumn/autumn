@@ -1,11 +1,11 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { LegacyVersion } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import type { Customer } from "autumn-js";
 import chalk from "chalk";
 import type Stripe from "stripe";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
@@ -86,7 +86,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing multi interval features wit
 		const customer = await autumn.customers.get(customerId);
 		const wordsFeature = customer.features[TestFeature.Words];
 		// @ts-expect-error
-		expect(wordsFeature.interval_count).toBe(null);
+		expect(wordsFeature.interval_count).toBe(1);
 		expect(wordsFeature.breakdown?.length).toBe(2);
 
 		expect(

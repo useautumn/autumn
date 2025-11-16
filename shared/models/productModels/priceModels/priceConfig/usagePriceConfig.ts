@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
+import { BillingInterval } from "../../intervals/billingInterval.js";
 import { Infinite } from "../../productEnums.js";
-import { BillingInterval } from "../priceEnums.js";
 
 export enum BillWhen {
 	InAdvance = "in_advance",

@@ -1,6 +1,9 @@
 // Cus ent utils
 
+export * from "./cusEntUtils/balanceUtils/cusEntToPrepaidQuantity.js";
+export * from "./cusEntUtils/balanceUtils/cusEntToPurchasedBalance.js";
 export * from "./cusEntUtils/balanceUtils.js";
+export * from "./cusEntUtils/convertCusEntUtils/cusEntsToMaxPurchase.js";
 export * from "./cusEntUtils/convertCusEntUtils.js";
 export * from "./cusEntUtils/cusEntUtils.js";
 export * from "./cusEntUtils/filterCusEntUtils.js";
@@ -17,6 +20,9 @@ export * from "./cusProductUtils/filterCusProductUtils.js";
 export * from "./cusProductUtils/filterCusProductUtils.js";
 export * from "./cusProductUtils/formatCusProductUtils.js";
 export * from "./cusProductUtils/productIdToCusProduct.js";
+// Cus utils
+export * from "./cusUtils/cusPlanUtils/cusPlanUtils.js";
+export * from "./expandUtils.js";
 export * from "./featureUtils/apiFeatureToDbFeature.js";
 export * from "./featureUtils/convertFeatureUtils.js";
 // Feature utils
@@ -25,7 +31,9 @@ export * from "./featureUtils.js";
 export * from "./orgUtils/convertOrgUtils.js";
 // Product utils
 export * from "./productUtils/convertUtils.js";
+export * from "./productUtils/entUtils/formatEntUtils.js";
 export * from "./productUtils/priceUtils/convertAmountUtils.js";
+export * from "./productUtils/priceUtils/formatPriceUtils.js";
 export * from "./productUtils/priceUtils.js";
 export * from "./productV2Utils/mapToProductV2.js";
 export * from "./productV2Utils/productItemUtils/classifyItemUtils.js";

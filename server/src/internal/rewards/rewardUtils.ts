@@ -18,7 +18,6 @@ import RecaseError from "@/utils/errorUtils.js";
 import { generateId, getUnique, nullish } from "@/utils/genUtils.js";
 import { ProductService } from "../products/ProductService.js";
 import { isFixedPrice } from "../products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
-import { formatPrice } from "../products/prices/priceUtils.js";
 import { initProductInStripe } from "../products/productUtils.js";
 
 export const constructReward = ({
@@ -198,7 +197,14 @@ export const getAmountAfterReward = ({
 	subDiscounts: Stripe.Discount[];
 	currency?: string;
 }) => {
-	if (subDiscounts.find((d) => d.coupon?.id === reward.id)) {
+	if (
+		subDiscounts.find(
+			(d) =>
+				d.source.coupon &&
+				typeof d.source.coupon !== "string" &&
+				d.source.coupon.id === reward.id,
+		)
+	) {
 		return amount;
 	}
 
@@ -233,7 +239,12 @@ export const discountAppliesToPrice = ({
 	product: Product;
 	price: Price;
 }) => {
-	const appliesTo = discount.coupon?.applies_to?.products;
+	const coupon = discount.source.coupon;
+	if (!coupon || typeof coupon === "string") {
+		return true;
+	}
+
+	const appliesTo = coupon.applies_to?.products;
 
 	if (nullish(appliesTo)) return true;
 
@@ -289,10 +300,11 @@ export const getAmountAfterStripeDiscounts = ({
 	for (const discount of stripeDiscounts) {
 		if (!discountAppliesToPrice({ discount, product, price })) continue;
 
-		console.log(
-			`Coupon: ${discount.coupon?.id} applies to price (${formatPrice({ price, product })})`,
-		);
-		const coupon: Stripe.Coupon = discount.coupon;
+		const coupon = discount.source.coupon;
+		if (!coupon || typeof coupon === "string") {
+			continue;
+		}
+
 		if (coupon.percent_off) {
 			const ratio = new Decimal(1).minus(
 				new Decimal(coupon.percent_off).div(100),

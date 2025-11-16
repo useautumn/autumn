@@ -1,13 +1,12 @@
 import {
 	type ApiCustomer,
-	ApiEntitySchema,
+	ApiEntityV1Schema,
 	type CustomerData,
 	type CustomerLegacyData,
 	CustomerNotFoundError,
 	type EntityData,
 } from "@autumn/shared";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
-import type { ExtendedRequest } from "../../../utils/models/Request.js";
 import { autoCreateEntity } from "../../entities/handlers/handleCreateEntity/autoCreateEntity.js";
 import { handleCreateCustomer } from "../handlers/handleCreateCustomer.js";
 import { deleteCachedApiCustomer } from "./apiCusCacheUtils/deleteCachedApiCustomer.js";
@@ -36,7 +35,7 @@ export const getOrCreateApiCustomer = async ({
 	// Path A: customerId is NULL - always create new customer
 	if (!customerId) {
 		const newCustomer = await handleCreateCustomer({
-			req: ctx as ExtendedRequest,
+			ctx,
 			cusData: {
 				id: null,
 				name: customerData?.name,
@@ -45,6 +44,7 @@ export const getOrCreateApiCustomer = async ({
 				metadata: customerData?.metadata || {},
 				stripe_id: customerData?.stripe_id,
 			},
+			createDefaultProducts: customerData?.disable_default !== true,
 		});
 
 		const res = await getCachedApiCustomer({
@@ -65,6 +65,7 @@ export const getOrCreateApiCustomer = async ({
 				ctx,
 				customerId,
 			});
+
 			apiCustomerOrUndefined = res?.apiCustomer;
 			legacyData = res?.legacyData;
 		} catch (_error) {
@@ -79,7 +80,7 @@ export const getOrCreateApiCustomer = async ({
 		if (!apiCustomerOrUndefined) {
 			try {
 				const newCustomer = await handleCreateCustomer({
-					req: ctx as ExtendedRequest,
+					ctx,
 					cusData: {
 						id: customerId,
 						name: customerData?.name,
@@ -88,6 +89,7 @@ export const getOrCreateApiCustomer = async ({
 						metadata: customerData?.metadata || {},
 						stripe_id: customerData?.stripe_id,
 					},
+					createDefaultProducts: customerData?.disable_default !== true,
 				});
 
 				const res = await getCachedApiCustomer({
@@ -166,7 +168,7 @@ export const getOrCreateApiCustomer = async ({
 			customerId,
 		});
 
-		const apiEntity = ApiEntitySchema.parse(newEntity);
+		const apiEntity = ApiEntityV1Schema.parse(newEntity);
 		apiCustomer.entities = [...(apiCustomer.entities || []), apiEntity];
 	}
 
