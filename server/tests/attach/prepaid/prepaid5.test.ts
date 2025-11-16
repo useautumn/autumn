@@ -1,10 +1,9 @@
-import { type Customer, LegacyVersion, OnDecrease, OnIncrease } from "@autumn/shared";
 import { beforeAll, describe, expect, test } from "bun:test";
-import chalk from "chalk";
-import type Stripe from "stripe";
-import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { LegacyVersion, OnDecrease, OnIncrease } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
 	constructFeatureItem,
@@ -56,10 +55,6 @@ export const premium = constructProduct({
 describe(`${chalk.yellowBright(`attach/${testCase}: prepaid add on, with entities`)}`, () => {
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
-	let testClockId: string;
-
-	const curUnix = new Date().getTime();
-	let customer: Customer;
 
 	beforeAll(async () => {
 		await initProductsV0({
@@ -69,7 +64,7 @@ describe(`${chalk.yellowBright(`attach/${testCase}: prepaid add on, with entitie
 			customerId,
 		});
 
-		const res = await initCustomerV3({
+		await initCustomerV3({
 			ctx,
 			customerId,
 			customerData: {},
@@ -77,7 +72,6 @@ describe(`${chalk.yellowBright(`attach/${testCase}: prepaid add on, with entitie
 			withTestClock: false,
 		});
 
-		customer = res.customer;
 		// testClockId = res.testClockId!;
 	});
 
@@ -96,7 +90,7 @@ describe(`${chalk.yellowBright(`attach/${testCase}: prepaid add on, with entitie
 		},
 	];
 
-	test("should attach pro product to entity1", async () => {
+	test("should attach pro + prepaid add on product to entity1", async () => {
 		await autumn.entities.create(customerId, entities);
 
 		await attachAndExpectCorrect({
@@ -131,7 +125,7 @@ describe(`${chalk.yellowBright(`attach/${testCase}: prepaid add on, with entitie
 	});
 
 	const oldEntity2Quantity = 300;
-	test("should advance test clock and attach top up to entity2", async () => {
+	test("should attach premium + prepaid add on product to entity2", async () => {
 		// await advanceTestClock({
 		//   stripeCli,
 		//   testClockId,
@@ -218,17 +212,16 @@ describe(`${chalk.yellowBright(`attach/${testCase}: prepaid add on, with entitie
 		const entity2 = await autumn.entities.get(customerId, entity2Id);
 		expect(entity2.invoices.length).toBe(2);
 		const creditProd = entity2.products.find(
-			(p: any) => p.id == prepaidAddOn.id,
+			(p: any) => p.id === prepaidAddOn.id,
 		);
+
 		expect(creditProd).toBeDefined();
 		const messagesItem = creditProd!.items.find(
-			(i: any) => i.feature_id == TestFeature.Messages,
+			(i: any) => i.feature_id === TestFeature.Messages,
 		);
 
 		expect(messagesItem).toBeDefined();
 		expect(messagesItem.quantity).toBe(oldEntity2Quantity);
 		expect(messagesItem.next_cycle_quantity).toBe(newEntity2Quantity);
 	});
-
-	return;
 });

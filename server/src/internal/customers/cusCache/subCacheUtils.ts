@@ -1,4 +1,8 @@
-import { initUpstash } from "./upstashUtils.js";
+import { redis } from "../../../external/redis/initRedis.js";
+import {
+	tryRedisRead,
+	tryRedisWrite,
+} from "../../../utils/cacheUtils/cacheUtils.js";
 
 export const addSubIdToCache = async ({
 	subId,
@@ -7,15 +11,12 @@ export const addSubIdToCache = async ({
 	subId: string;
 	scenario: string;
 }) => {
-	const upstash = await initUpstash();
-	if (!upstash) return;
-
-	await upstash.set(`sub:${subId}`, scenario, {
-		ex: 180, // 3 minutes
+	await tryRedisWrite(async () => {
+		await redis.set(`sub:${subId}`, scenario, "EX", 180); // 3 minutes
 	});
 };
 export const getSubScenarioFromCache = async ({ subId }: { subId: string }) => {
-	const upstash = await initUpstash();
-	if (!upstash) return null;
-	return (await upstash.get(`sub:${subId}`)) as string | null;
+	return await tryRedisRead(async () => {
+		return await redis.get(`sub:${subId}`);
+	});
 };

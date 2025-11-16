@@ -15,19 +15,18 @@ export const handleContUsePrices = async ({
 	db,
 	cusEnts,
 	cusPrice,
-	stripeCli,
 	invoice,
 	usageSub,
 	logger,
+	resetBalance = true,
 }: {
 	db: DrizzleCli;
 	cusEnts: FullCustomerEntitlement[];
 	cusPrice: FullCustomerPrice;
-	stripeCli: Stripe;
-
 	invoice: Stripe.Invoice;
 	usageSub: Stripe.Subscription;
 	logger: any;
+	resetBalance?: boolean;
 }): Promise<boolean> => {
 	const cusEnt = getRelatedCusEnt({
 		cusPrice,
@@ -45,6 +44,10 @@ export const handleContUsePrices = async ({
 	});
 	const isNewPeriod = invoice.period_start !== start;
 	if (!isNewPeriod) {
+		return false;
+	}
+
+	if (!resetBalance) {
 		return false;
 	}
 

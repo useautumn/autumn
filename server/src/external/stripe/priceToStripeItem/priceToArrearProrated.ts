@@ -1,5 +1,4 @@
-import { UsagePriceConfig } from "@autumn/shared";
-import { Price } from "@autumn/shared";
+import type { Price, UsagePriceConfig } from "@autumn/shared";
 
 export const priceToInArrearProrated = ({
 	price,
@@ -11,9 +10,9 @@ export const priceToInArrearProrated = ({
 	existingUsage: number;
 }) => {
 	const config = price.config as UsagePriceConfig;
-	let quantity = existingUsage || 0;
+	const quantity = existingUsage || 0;
 
-	if (quantity == 0 && isCheckout) {
+	if (quantity === 0 && isCheckout) {
 		return {
 			price: config.stripe_placeholder_price_id,
 		};

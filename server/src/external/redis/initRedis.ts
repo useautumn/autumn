@@ -25,6 +25,7 @@ const redis = new Redis(regionalCacheUrl || process.env.CACHE_URL, {
 	tls: caText ? { ca: caText } : undefined,
 });
 
+// biome-ignore lint/correctness/noUnusedFunctionParameters: Might uncomment this back in in the future
 redis.on("error", (error) => {
 	// logger.error(`redis (cache) error: ${error.message}`);
 });

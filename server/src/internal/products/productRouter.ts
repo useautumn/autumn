@@ -6,6 +6,7 @@ import { handleDeleteProduct as handleDeleteProductHono } from "./handlers/handl
 import { handleGetPlan } from "./handlers/handleGetPlan.js";
 import { handleGetPlanDeleteInfo } from "./handlers/handleGetPlanDeleteInfo.js";
 import { handleListPlans } from "./handlers/handleListPlans.js";
+import { handleMigrateProductV2 } from "./handlers/handleMigrateProductV2.js";
 import { handlePlanHasCustomers } from "./handlers/handlePlanHasCustomers.js";
 import { handleUpdatePlan } from "./handlers/handleUpdateProduct/handleUpdatePlan.js";
 
@@ -16,11 +17,15 @@ honoProductBetaRouter.get("", ...handleListPlans);
 export const honoProductRouter = new Hono<HonoEnv>();
 export const migrationRouter = new Hono<HonoEnv>();
 
+// Migrations
+migrationRouter.post("/migrations", ...handleMigrateProductV2);
+
 // CRUD
 honoProductRouter.get("", ...handleListPlans);
 honoProductRouter.post("", ...handleCreatePlan);
 honoProductRouter.get("/:product_id", ...handleGetPlan);
 honoProductRouter.post("/:product_id", ...handleUpdatePlan); // will be deprecated
+honoProductRouter.patch("/:product_id", ...handleUpdatePlan); // will be deprecated
 honoProductRouter.delete("/:product_id", ...handleDeleteProductHono);
 
 // Others

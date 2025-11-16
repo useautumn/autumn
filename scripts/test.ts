@@ -2,7 +2,10 @@
 import { spawn } from "node:child_process";
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
+import { loadLocalEnv } from "@server/utils/envUtils.js";
 import chalk from "chalk";
+
+loadLocalEnv();
 
 /**
  * Recursively finds all test files in a directory
@@ -267,46 +270,17 @@ async function runTest() {
 	const frameworkLabel = framework === "bun" ? "Bun" : "Mocha";
 	console.log(chalk.cyan(`🧪 Running test file with ${frameworkLabel}...\n`));
 
+	if (framework !== "bun") {
+		console.error(chalk.red("❌ Mocha tests are deprecated"));
+		process.exit(1);
+	}
+
 	// Run the test file with the appropriate framework, wrapped with Infisical
-	const child =
-		framework === "bun"
-			? spawn(
-					"infisical",
-					[
-						"run",
-						"--env=dev",
-						"--",
-						"bun",
-						"test",
-						"--timeout",
-						"0",
-						testFile.relative,
-					],
-					{
-						cwd: serverDir,
-						stdio: "inherit",
-						env: { ...process.env, NODE_ENV: "production" },
-					},
-				)
-			: spawn(
-					"infisical",
-					[
-						"run",
-						"--env=dev",
-						"--",
-						"npx",
-						"mocha",
-						"--bail",
-						"--timeout",
-						"10000000",
-						testFile.relative,
-					],
-					{
-						cwd: serverDir,
-						stdio: "inherit",
-						env: { ...process.env, NODE_ENV: "production" },
-					},
-				);
+	const child = spawn("bun", ["test", "--timeout", "0", testFile.relative], {
+		cwd: serverDir,
+		stdio: "inherit",
+		env: { ...process.env, NODE_ENV: "production" },
+	});
 
 	// Store the process group ID
 	const pgid = child.pid;
@@ -363,3 +337,25 @@ async function runTest() {
 }
 
 runTest();
+
+// framework === "bun"
+// ?
+// : spawn(
+// 		"infisical",
+// 		[
+// 			"run",
+// 			"--env=dev",
+// 			"--",
+// 			"npx",
+// 			"mocha",
+// 			"--bail",
+// 			"--timeout",
+// 			"10000000",
+// 			testFile.relative,
+// 		],
+// 		{
+// 			cwd: serverDir,
+// 			stdio: "inherit",
+// 			env: { ...process.env, NODE_ENV: "production" },
+// 		},
+// 	);

@@ -27,12 +27,10 @@ const parseCustomerIdFromUrl = ({
 const logResponse = async ({
 	ctx,
 	c,
-	method,
 	skipUrls,
 }: {
 	ctx: any;
 	c: Context<HonoEnv>;
-	method: string;
 	skipUrls: string[];
 }) => {
 	try {
@@ -116,7 +114,7 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 	// Log response asynchronously without blocking (runs after response is sent)
 	Promise.resolve()
-		.then(() => logResponse({ ctx, c, method, skipUrls }))
+		.then(() => logResponse({ ctx, c, skipUrls }))
 		.catch((error) => {
 			console.error("Failed to log response to logtail");
 			console.error(error);

@@ -52,9 +52,11 @@ export const formatTiers = ({
 export const getIntervalString = ({
 	interval,
 	intervalCount = 1,
+	prefix = "per ",
 }: {
 	interval: ProductItemInterval | null | undefined;
 	intervalCount?: number | null;
+	prefix?: string;
 }) => {
 	let intervalStr: string = interval || "";
 
@@ -64,9 +66,9 @@ export const getIntervalString = ({
 
 	if (!interval) return "";
 	if (intervalCount === 1) {
-		return `per ${intervalStr}`;
+		return `${prefix}${intervalStr}`;
 	}
-	return `per ${intervalCount} ${intervalStr}s`;
+	return `${prefix}${intervalCount} ${intervalStr}s`;
 };
 
 export const getFeatureItemDisplay = ({

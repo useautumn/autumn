@@ -1,22 +1,23 @@
 "use client";
 
 import "svix-react/style.css";
-import LoadingScreen from "../general/LoadingScreen";
-import { ApiKeysPage } from "./api-keys/ApiKeysPage";
 import { AppPortal } from "svix-react";
 import { PageSectionHeader } from "@/components/general/PageSectionHeader";
-import { PublishableKeySection } from "./publishable-key";
-import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
-import { ConfigureStripe } from "./configure-stripe/ConfigureStripe";
 import { useAppQueryStates } from "@/hooks/common/useAppQueryStates";
+import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
+import LoadingScreen from "../general/LoadingScreen";
+import { ApiKeysPage } from "./api-keys/ApiKeysPage";
+import { ConfigureStripe } from "./configure-stripe/ConfigureStripe";
+import { ConfigureVercel } from "./configure-vercel/ConfigureVercel";
+import { PublishableKeySection } from "./publishable-key";
 
 export default function DevScreen() {
 	const { apiKeys, svixDashboardUrl, isLoading, error } = useDevQuery();
 	const { queryStates } = useAppQueryStates({ defaultTab: "api_keys" });
 
 	const tab = queryStates.tab;
-	const { pkey, webhooks } = useAutumnFlags();
+	const { pkey, webhooks, vercel } = useAutumnFlags();
 
 	if (isLoading) return <LoadingScreen />;
 
@@ -35,6 +36,8 @@ export default function DevScreen() {
 			{tab === "webhooks" && webhooks && svixDashboardUrl && (
 				<ConfigureWebhookSection dashboardUrl={svixDashboardUrl} />
 			)}
+
+			{tab === "vercel" && vercel && <ConfigureVercel />}
 		</div>
 	);
 }

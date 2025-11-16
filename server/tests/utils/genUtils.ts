@@ -1,9 +1,4 @@
-import { CusService } from "@/internal/customers/CusService.js";
-import {
-	CusProductStatus,
-	FullCusProduct,
-	UsagePriceConfig,
-} from "@autumn/shared";
+import type { CusProductStatus, FullCusProduct } from "@autumn/shared";
 import { AutumnCli } from "@tests/cli/AutumnCli.js";
 
 export const timeout = (ms: number) => {
@@ -78,31 +73,4 @@ export const getUsagePriceTiers = ({
 		}
 	}
 	return [];
-};
-
-export const getFeaturePrice = ({
-	product,
-	featureId,
-	cusProducts,
-	subId,
-}: {
-	product: any;
-	featureId: string;
-	cusProducts: FullCusProduct[];
-	subId?: string;
-}) => {
-	if (cusProducts.length == 0) {
-		return null;
-	}
-
-	let mainProduct = cusProducts[0];
-
-	for (const cusPrice of mainProduct.customer_prices) {
-		let price = cusPrice.price;
-		if ((price.config! as UsagePriceConfig).feature_id === featureId) {
-			return price;
-		}
-	}
-
-	return null;
 };

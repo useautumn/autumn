@@ -96,7 +96,7 @@ export const handleCreatePlan = createRoute({
 	// body: CreateProductV2ParamsSchema,
 	versionedBody: {
 		latest: CreatePlanParamsSchema,
-		[ApiVersion.V1_2]: CreateProductV2ParamsSchema,
+		[ApiVersion.V1_Beta]: CreateProductV2ParamsSchema,
 	},
 	resource: AffectedResource.Product,
 	handler: async (c) => {

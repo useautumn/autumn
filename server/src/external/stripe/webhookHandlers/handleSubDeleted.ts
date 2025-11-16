@@ -1,10 +1,10 @@
-import Stripe from "stripe";
+import type Stripe from "stripe";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 import {
 	getFullStripeSub,
 	subIsPrematurelyCanceled,
 } from "../stripeSubUtils.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
 import { handleCusProductDeleted } from "./handleSubDeleted/handleCusProductDeleted.js";
 
 export const handleSubDeleted = async ({
@@ -60,7 +60,7 @@ export const handleSubDeleted = async ({
 	}
 
 	// Prematurely canceled if cancel_at_period_end is false or cancel_at is more than 20 seconds apart from current_period_end
-	let prematurelyCanceled = subIsPrematurelyCanceled(subscription);
+	const prematurelyCanceled = subIsPrematurelyCanceled(subscription);
 
 	// const batchUpdate = [];
 	for (const cusProduct of activeCusProducts) {

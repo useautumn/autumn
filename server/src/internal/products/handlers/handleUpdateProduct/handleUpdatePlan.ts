@@ -39,11 +39,11 @@ import { handleUpdateProductDetails } from "./updateProductDetails.js";
 export const handleUpdatePlan = createRoute({
 	versionedBody: {
 		latest: UpdatePlanParamsSchema,
-		[ApiVersion.V1_2]: UpdateProductV2ParamsSchema,
+		[ApiVersion.V1_Beta]: UpdateProductV2ParamsSchema,
 	},
 	versionedQuery: {
 		latest: UpdatePlanQuerySchema,
-		[ApiVersion.V1_2]: UpdateProductQuerySchema,
+		[ApiVersion.V1_Beta]: UpdateProductQuerySchema,
 	},
 	resource: AffectedResource.Product,
 	handler: async (c) => {
@@ -57,6 +57,7 @@ export const handleUpdatePlan = createRoute({
 
 		// Convert to ProductV2 format only if client sent V2 Plan format
 		// V1.2 clients already send ProductV2, no conversion needed
+
 		const v1_2Body = ctx.apiVersion.gte(new ApiVersionClass(ApiVersion.V2_0))
 			? planToProductV2({ plan: body as ApiPlan, features: ctx.features })
 			: (body as UpdateProductV2Params);
