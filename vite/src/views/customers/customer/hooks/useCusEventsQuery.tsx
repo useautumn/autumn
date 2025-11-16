@@ -7,7 +7,7 @@ export const useCusEventsQuery = () => {
 	const { customer_id } = useParams();
 
 	const fetcher = async () => {
-		console.log("Fetching events for customer:", customer_id);
+		// console.log("Fetching events for customer:", customer_id);
 		const { data } = await axiosInstance.get(
 			`/customers/${customer_id}/events`,
 		);

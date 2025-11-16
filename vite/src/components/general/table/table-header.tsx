@@ -75,7 +75,7 @@ export function TableHeader({ className }: { className?: string }) {
 		<ShadcnTableHeader className={className}>
 			{headerGroups.map((headerGroup) => (
 				<TableRow
-					className="hover:bg-transparent border-b border-border-table"
+					className="border-b border-border-table bg-card pointer-events-none"
 					key={headerGroup.id}
 				>
 					{enableSelection && table && (
@@ -92,7 +92,7 @@ export function TableHeader({ className }: { className?: string }) {
 					{headerGroup.headers.map((header, index) => (
 						<TableHead
 							className={cn(
-								"h-7 px-2 font-medium text-t4 text-tiny",
+								"h-7 px-2 text-t4 text-tiny font-medium!",
 								index === 0 && "pl-4",
 							)}
 							key={header.id}

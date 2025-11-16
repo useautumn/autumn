@@ -161,7 +161,7 @@ const MainContent = () => {
 					)}
 					<div
 						className={cn(
-							"w-full h-full overflow-auto flex justify-center bg-stone-50",
+							"w-full h-full overflow-auto flex justify-center bg-background",
 						)}
 					>
 						<div className="w-full h-full justify-center">

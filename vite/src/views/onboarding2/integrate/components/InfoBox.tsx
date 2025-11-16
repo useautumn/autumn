@@ -21,7 +21,7 @@ export const InfoBox = ({
 			<div className={cn("pt-0.5 mr-1", classNames?.infoIcon)}>
 				<InfoIcon size={16} className="text-t8" weight="fill" />
 			</div>
-			{children}
+			<span className="whitespace-pre-wrap">{children}</span>
 		</div>
 	);
 };

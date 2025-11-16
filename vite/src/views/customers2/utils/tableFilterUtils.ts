@@ -15,11 +15,19 @@ export function filterByExpiredStatus<
 			return item.status !== CusProductStatus.Expired;
 		})
 		.sort((a, b) => {
-			// Sort by status first (Active items first)
+			// Sort by status priority: Active > Trialing > Scheduled > PastDue > Expired
 			if (a.status !== b.status) {
-				if (a.status === CusProductStatus.Active) return -1;
-				if (b.status === CusProductStatus.Active) return 1;
-				return 0;
+				const statusPriority = {
+					[CusProductStatus.Active]: 1,
+					[CusProductStatus.Trialing]: 2,
+					[CusProductStatus.Scheduled]: 3,
+					[CusProductStatus.PastDue]: 4,
+					[CusProductStatus.Expired]: 5,
+					[CusProductStatus.Unknown]: 6,
+				};
+				return (
+					(statusPriority[a.status] || 99) - (statusPriority[b.status] || 99)
+				);
 			}
 
 			// Then sort by created_at (newest first)

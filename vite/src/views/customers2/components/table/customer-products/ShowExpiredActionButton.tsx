@@ -17,7 +17,7 @@ export function ShowExpiredActionButton({
 			checked={showExpired}
 			onCheckedChange={handleToggle}
 		>
-			Show expired
+			Show Expired
 		</CheckboxButton>
 	);
 }

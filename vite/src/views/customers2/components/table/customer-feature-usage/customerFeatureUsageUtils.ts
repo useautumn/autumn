@@ -36,13 +36,25 @@ export function createFeaturesMap({
 }
 
 /**
+ * Result of deduplicating entitlements, including the mapping of aggregated entitlements
+ */
+export interface DeduplicatedEntitlementsResult {
+	/** Combined entitlements (one per feature) */
+	entitlements: FullCusEntWithFullCusProduct[];
+	/** Mapping of featureId -> array of original entitlements that were aggregated */
+	aggregatedMap: Map<string, FullCusEntWithFullCusProduct[]>;
+}
+
+/**
  * Deduplicates entitlements by combining multiple entitlements for the same feature
  */
 export function deduplicateEntitlements({
 	entitlements,
+	entityId,
 }: {
 	entitlements: FullCusEntWithFullCusProduct[];
-}): FullCusEntWithFullCusProduct[] {
+	entityId?: string | null;
+}): DeduplicatedEntitlementsResult {
 	const featureMap = new Map<string, FullCusEntWithFullCusProduct[]>();
 
 	for (const ent of entitlements) {
@@ -54,15 +66,38 @@ export function deduplicateEntitlements({
 	}
 
 	const combined: FullCusEntWithFullCusProduct[] = [];
+	const aggregatedMap = new Map<string, FullCusEntWithFullCusProduct[]>();
 
-	for (const ents of featureMap.values()) {
+	for (const [featureId, ents] of featureMap.entries()) {
 		if (ents.length === 1) {
-			// No duplicates, use as-is
-			combined.push(ents[0]);
+			// No duplicates, use as-is but use entity-specific balance if available
+			const ent = ents[0];
+			if (entityId && ent.entities?.[entityId]) {
+				combined.push({
+					...ent,
+					balance: ent.entities[entityId].balance ?? ent.balance ?? 0,
+				});
+			} else {
+				combined.push(ent);
+			}
 		} else {
 			// Combine multiple entitlements
 			const first = ents[0];
-			const summedBalance = ents.reduce((sum, e) => sum + (e.balance ?? 0), 0);
+
+			// Store the original entitlements for this aggregated feature
+			aggregatedMap.set(featureId, ents);
+
+			// When entityId is present, use entity-specific balances
+			let summedBalance: number;
+			if (entityId) {
+				summedBalance = ents.reduce((sum, e) => {
+					const entityBalance = e.entities?.[entityId]?.balance;
+					return sum + (entityBalance ?? e.balance ?? 0);
+				}, 0);
+			} else {
+				summedBalance = ents.reduce((sum, e) => sum + (e.balance ?? 0), 0);
+			}
+
 			const summedAllowance = ents.reduce(
 				(sum, e) => sum + (e.entitlement.allowance ?? 0),
 				0,
@@ -96,7 +131,10 @@ export function deduplicateEntitlements({
 		}
 	}
 
-	return combined;
+	return {
+		entitlements: combined,
+		aggregatedMap,
+	};
 }
 
 /**

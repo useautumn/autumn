@@ -5,7 +5,7 @@ import { Checkbox } from "../checkboxes/Checkbox";
 
 interface SheetHeaderProps {
 	title: string;
-	description: string;
+	description: string | React.ReactNode;
 	children?: React.ReactNode;
 	noSeparator?: boolean;
 	className?: string;

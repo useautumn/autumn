@@ -37,7 +37,7 @@ export const handleGetCusReferrals = createRoute({
 				withReferralCode: true,
 				limit: 100,
 			}),
-			async () => {
+			(async () => {
 				if (isStripeConnected({ org, env }) && internalCustomer.processor?.id) {
 					const stripeCli = createStripeCli({ org, env });
 					const stripeCus: any = await stripeCli.customers.retrieve(
@@ -46,7 +46,7 @@ export const handleGetCusReferrals = createRoute({
 					return stripeCus;
 				}
 				return null;
-			},
+			})(),
 		]);
 
 		const redeemedCustomerIds = redeemed.map(

@@ -57,7 +57,7 @@ export function CustomerFeatureConfiguration({
 		<div>
 			<Tooltip>
 				<TooltipTrigger asChild>
-					<span className="inline-flex items-center justify-center size-4 rounded-lg">
+					<span className="inline-flex items-center justify-center size-6 rounded-lg bg-muted">
 						<FeatureIcon feature={feature} />
 					</span>
 				</TooltipTrigger>

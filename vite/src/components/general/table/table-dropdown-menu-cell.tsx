@@ -16,7 +16,12 @@ export function TableDropdownMenuCell({
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<Button variant="ghost" size="icon" className="p-0 size-4">
+				<Button
+					variant="ghost"
+					size="icon"
+					className="p-0 size-4"
+					onClick={(e) => e.stopPropagation()}
+				>
 					<EllipsisVertical size={12} />
 				</Button>
 			</DropdownMenuTrigger>

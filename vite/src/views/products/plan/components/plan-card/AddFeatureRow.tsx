@@ -44,7 +44,7 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 			aria-label="Add new feature"
 		>
 			<PlusIcon className="size-3 !text-primary" weight="bold" />
-			<span className="!text-primary">Add Feature</span>
+			<span className="!text-primary">Add Feature to Plan</span>
 		</Button>
 	);
 };

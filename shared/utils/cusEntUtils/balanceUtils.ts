@@ -1,3 +1,4 @@
+import { AllowanceType } from "@models/productModels/entModels/entModels.js";
 import { Decimal } from "decimal.js";
 import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
@@ -37,6 +38,14 @@ export const getCusEntBalance = ({
 	entityId?: string | null;
 }) => {
 	const entitlement = cusEnt.entitlement;
+	if (cusEnt.entitlement.allowance_type === AllowanceType.Unlimited) {
+		return {
+			balance: 0,
+			adjustment: 0,
+			unused: 0,
+			count: 1,
+		};
+	}
 
 	if (notNullish(entitlement.entity_feature_id)) {
 		if (nullish(entityId)) {
