@@ -1,6 +1,6 @@
-import dotenv from "dotenv";
+import { loadLocalEnv } from "../src/utils/envUtils";
 
-dotenv.config();
+loadLocalEnv();
 
 import { AppEnv } from "@autumn/shared";
 import { setupOrg } from "@tests/utils/setupUtils/setupOrg.js";

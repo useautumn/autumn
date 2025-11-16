@@ -102,7 +102,7 @@ export const handleSchedulePhaseCompleted = async ({
 
 			// Maybe activate default product?
 			await deleteCachedApiCustomer({
-				customerId: cusProduct.internal_customer_id || "",
+				customerId: cusProduct.customer?.id || "",
 				orgId: org.id,
 				env,
 				source: "handleSchedulePhaseCompleted",

@@ -38,8 +38,8 @@ export const ApiBalanceSchema = z.object({
 	max_purchase: z.number().nullable(),
 	reset: ApiBalanceResetSchema.nullable(),
 
-	breakdown: z.array(ApiBalanceBreakdownSchema).nullish(),
-	rollovers: z.array(ApiBalanceRolloverSchema).nullish(),
+	breakdown: z.array(ApiBalanceBreakdownSchema).optional(),
+	rollovers: z.array(ApiBalanceRolloverSchema).optional(),
 });
 
 export type ApiBalanceReset = z.infer<typeof ApiBalanceResetSchema>;

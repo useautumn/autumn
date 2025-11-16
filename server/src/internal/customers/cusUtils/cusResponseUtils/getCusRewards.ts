@@ -10,6 +10,7 @@ import {
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
+import { getOriginalCouponId } from "../../../rewards/rewardUtils";
 
 export const getCusRewards = async ({
 	org,
@@ -35,16 +36,17 @@ export const getCusRewards = async ({
 	const stripeCli = createStripeCli({
 		org,
 		env,
+		legacyVersion: true,
 	});
 
 	const [stripeCus, stripeSubs] = await Promise.all([
-		stripeCli.customers.retrieve(
-			fullCus.processor?.id,
-		) as Promise<Stripe.Customer>,
+		stripeCli.customers.retrieve(fullCus.processor?.id, {
+			expand: ["discount.coupon"],
+		}) as Promise<Stripe.Customer>,
 		getStripeSubs({
 			stripeCli,
 			subIds,
-			expand: ["discounts", "discounts.source.coupon"],
+			expand: ["discounts", "discounts.coupon"],
 		}),
 	]);
 
@@ -59,14 +61,12 @@ export const getCusRewards = async ({
 	const rewards = {
 		discounts: stripeDiscounts
 			.map((d) => {
-				if (typeof d.source.coupon === "string") {
+				if (!("coupon" in d) || typeof d.coupon === "string") {
 					return null;
 				}
 
-				const coupon = d.source.coupon;
-				if (!coupon) {
-					return null;
-				}
+				const coupon = d.coupon as Stripe.Coupon;
+				const couponId = getOriginalCouponId(coupon.id);
 
 				let duration_type: CouponDurationType;
 				let duration_value = 0;
@@ -81,7 +81,7 @@ export const getCusRewards = async ({
 					duration_type = CouponDurationType.OneOff;
 				}
 				return {
-					id: coupon.id,
+					id: couponId,
 					name: coupon.name ?? "",
 					type: coupon.amount_off
 						? RewardType.FixedDiscount

@@ -26,13 +26,7 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 		invoiceDate: string;
 	};
 }) => {
-	const {
-		installationId,
-		invoiceId,
-		externalInvoiceId,
-		invoiceTotal,
-		invoiceDate,
-	} = payload;
+	const { installationId, invoiceId, externalInvoiceId, invoiceDate } = payload;
 
 	const stripeCli = createStripeCli({ org, env });
 

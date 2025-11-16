@@ -22,7 +22,7 @@ export const getStripeCus = async ({
 	try {
 		const stripeCus = await stripeCli.customers.retrieve(stripeId);
 		return stripeCus as Stripe.Customer;
-	} catch (error) {
+	} catch (_error) {
 		return undefined;
 	}
 };
@@ -57,7 +57,7 @@ export const createStripeCusIfNotExists = async ({
 			} else {
 				createNew = true;
 			}
-		} catch (error) {
+		} catch (_error) {
 			createNew = true;
 		}
 	}

@@ -69,7 +69,6 @@ export const createProrationInvoice = async ({
 }) => {
 	const { stripeCli, customer, paymentMethod } = attachParams;
 
-	const proratedItems = [];
 	// How to retrieve upcoming invoice items?
 	const items = await stripeCli.invoiceItems.list({
 		customer: customer.processor.id,

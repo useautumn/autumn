@@ -35,7 +35,6 @@ export const initFeature = ({
 	type,
 	creditSchema = [],
 	aggregateType = AggregateType.Sum,
-	groupBy = "",
 	eventName,
 	usageType = FeatureUsageType.Single,
 }: {
@@ -47,7 +46,6 @@ export const initFeature = ({
 		credit_amount: number;
 	}[];
 	aggregateType?: AggregateType;
-	groupBy?: string;
 	eventName?: string;
 	usageType?: FeatureUsageType;
 }): (Feature & { eventName: string }) | any => {

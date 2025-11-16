@@ -123,7 +123,7 @@ export const getCachedApiEntity = async ({
 			ctx,
 			entity,
 			fullCus: fullCus,
-			withAutumnId: !skipCache,
+			withAutumnId: true,
 		});
 
 		const { apiEntity: pureApiEntity } = await getApiEntityBase({

@@ -124,7 +124,6 @@ export const priceToStripeItem = ({
 			price,
 			options,
 			isCheckout,
-			relatedEnt,
 		});
 	}
 

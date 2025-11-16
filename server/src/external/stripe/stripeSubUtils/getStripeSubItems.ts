@@ -232,7 +232,6 @@ export const getStripeSubItems2 = async ({
 		cusProducts,
 		customer,
 		internalEntityId,
-		apiVersion,
 		products,
 	} = attachParams;
 
@@ -320,7 +319,7 @@ export const getStripeSubItems2 = async ({
 
 export const sanitizeSubItems = (subItems: any[]) => {
 	return subItems.map((si) => {
-		const { autumnPrice, ...rest } = si;
+		const { autumnPrice: _autumnPrice, ...rest } = si;
 		return {
 			...rest,
 		};

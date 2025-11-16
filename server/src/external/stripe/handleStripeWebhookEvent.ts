@@ -201,8 +201,6 @@ export const handleStripeWebhookEvent = async ({
 
 			case "invoice.updated":
 				await handleInvoiceUpdated({
-					stripeCli,
-					env,
 					event,
 					req: ctx as unknown as ExtendedRequest,
 				});
@@ -251,7 +249,6 @@ export const handleStripeWebhookEvent = async ({
 					org,
 					env,
 					schedule: canceledSchedule,
-					logger,
 				});
 				break;
 			}

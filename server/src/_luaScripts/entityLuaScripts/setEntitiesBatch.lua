@@ -41,6 +41,7 @@ for _, entityWrapper in ipairs(entities) do
         created_at = entityData.created_at,
         env = entityData.env,
         subscriptions = entityData.subscriptions,
+        legacyData = entityData.legacyData,
         _balanceFeatureIds = balanceFeatureIds
     }
     

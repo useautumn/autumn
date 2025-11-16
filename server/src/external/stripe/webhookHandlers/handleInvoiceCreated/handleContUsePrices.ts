@@ -15,7 +15,6 @@ export const handleContUsePrices = async ({
 	db,
 	cusEnts,
 	cusPrice,
-	stripeCli,
 	invoice,
 	usageSub,
 	logger,
@@ -24,8 +23,6 @@ export const handleContUsePrices = async ({
 	db: DrizzleCli;
 	cusEnts: FullCustomerEntitlement[];
 	cusPrice: FullCustomerPrice;
-	stripeCli: Stripe;
-
 	invoice: Stripe.Invoice;
 	usageSub: Stripe.Subscription;
 	logger: any;

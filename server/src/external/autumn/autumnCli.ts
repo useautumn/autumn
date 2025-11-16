@@ -128,6 +128,40 @@ export class AutumnInt {
 
 		return response.json();
 	}
+	async patch(path: string, body: any) {
+		const response = await fetch(`${this.baseUrl}${path}`, {
+			method: "PATCH",
+			headers: this.headers,
+			body: JSON.stringify(body),
+		});
+
+		if (response.status !== 200) {
+			// Handle rate limit errors
+			if (response.status === 429) {
+				throw new AutumnError({
+					message: `request failed, rate limit exceeded`,
+					code: "rate_limit_exceeded",
+				});
+			}
+
+			let error: any;
+			try {
+				error = await response.json();
+			} catch (error) {
+				throw new AutumnError({
+					message: `request failed, error: ${error}`,
+					code: ErrCode.InternalError,
+				});
+			}
+
+			throw new AutumnError({
+				message: error.message,
+				code: error.code,
+			});
+		}
+
+		return response.json();
+	}
 
 	async delete(
 		path: string,
@@ -418,7 +452,7 @@ export class AutumnInt {
 			// if (product.items && typeof product.items === "object") {
 			//   product.items = Object.values(product.items);
 			// }
-			const data = await this.post(`/products/${productId}`, product);
+			const data = await this.patch(`/products/${productId}`, product);
 			return data;
 		},
 

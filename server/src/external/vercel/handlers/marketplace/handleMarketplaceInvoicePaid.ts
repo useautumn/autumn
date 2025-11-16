@@ -37,13 +37,7 @@ export const handleMarketplaceInvoicePaid = async ({
 		invoiceDate: string;
 	};
 }) => {
-	const {
-		installationId,
-		invoiceId,
-		externalInvoiceId,
-		invoiceTotal,
-		invoiceDate,
-	} = payload;
+	const { installationId, invoiceId, externalInvoiceId, invoiceDate } = payload;
 
 	const stripeCli = createStripeCli({ org, env });
 
@@ -160,7 +154,6 @@ export const handleMarketplaceInvoicePaid = async ({
 		}
 
 		if (isRenewal) {
-			// Call sendUsageAndReset which handles all balance resets
 			const activeProduct = existingCusProducts[0];
 
 			await sendUsageAndReset({
@@ -169,7 +162,6 @@ export const handleMarketplaceInvoicePaid = async ({
 				org,
 				env,
 				invoice,
-				stripeSubs: [subscription],
 				logger,
 				submitUsage: false, // Usage already submitted in invoice.created
 				resetBalance: true, // Payment confirmed - now safe to reset balance

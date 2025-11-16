@@ -146,7 +146,7 @@ export const vercelOidcAuthMiddleware = async (c: any, next: any) => {
 	let token: string;
 	try {
 		token = getAuthorizationToken(authHeader);
-	} catch (error) {
+	} catch (_error) {
 		return c.json(
 			{ error: "Unauthorized", code: "invalid_auth_header_format" },
 			401,
@@ -160,7 +160,7 @@ export const vercelOidcAuthMiddleware = async (c: any, next: any) => {
 	} catch (error: any) {
 		return c.json(
 			{
-				error: "Unauthorized" + error.message,
+				error: `Unauthorized: ${error.message}`,
 				code:
 					error instanceof AuthError
 						? "auth_failed"

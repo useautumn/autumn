@@ -22,7 +22,7 @@
 
 		"setup": "node scripts/setup/setup.js",
 		"setup:test": "bun scripts/setup/setup-test.ts",
-		"tests": "bun scripts/test.ts",
+		"tests": "infisical run --env=dev -- bun scripts/test.ts",
 
 		"setupci": "node scripts/setup/setupci.js",
 		"replicate": "bun scripts/db/replicate.ts",

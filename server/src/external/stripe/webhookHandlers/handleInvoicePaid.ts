@@ -28,12 +28,10 @@ import { handleInvoicePaidDiscount } from "./handleInvoicePaidDiscount.js";
 const handleOneOffInvoicePaid = async ({
 	db,
 	stripeInvoice,
-	logger,
 }: {
 	db: DrizzleCli;
 	stripeInvoice: Stripe.Invoice;
 	event: Stripe.Event;
-	logger: any;
 }) => {
 	// Search for invoice
 	const invoice = await InvoiceService.getByStripeId({
@@ -285,7 +283,6 @@ export const handleInvoicePaid = async ({
 			db,
 			stripeInvoice: invoice,
 			event,
-			logger,
 		});
 	}
 };
