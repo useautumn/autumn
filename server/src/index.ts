@@ -10,14 +10,6 @@ import { initInfisical } from "./external/infisical/initInfisical.js";
 // Infisical will NOT override existing env vars (from .env above)
 if (cluster.isPrimary) {
 	await initInfisical();
-<<<<<<< HEAD
-=======
-
-	// const { initializeDatabaseFunctions } = await import(
-	// 	"./db/initializeDatabaseFunctions.js"
-	// );
-	// await initializeDatabaseFunctions();
->>>>>>> 15e575d321caa00a3027270e896c4ff9ceb762dd
 }
 
 // Now dynamically import and run the main app
