@@ -67,7 +67,7 @@ export function AttachProductPrepaidOptions({
 								{feature.product_name}
 							</div>
 
-							<form.AppField name={`prepaidQuantities.${feature.feature_id}`}>
+							<form.AppField name={`prepaidOptions.${feature.feature_id}`}>
 								{(quantityField) => (
 									<quantityField.QuantityField
 										label=""

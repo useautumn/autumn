@@ -42,7 +42,7 @@ export function AttachProductActions({
 		enableProductImmediately?: boolean;
 	}) => {
 		const formValues = form.state.values.products;
-		const prepaidQuantities = form.state.values.prepaidQuantities || {};
+		const prepaidOptions = form.state.values.prepaidOptions || {};
 		const validProducts = formValues.filter((p) => p.productId);
 
 		if (validProducts.length === 0) {
@@ -52,7 +52,7 @@ export function AttachProductActions({
 
 		const results = await attachMutation.mutateAsync({
 			products: validProducts,
-			prepaidQuantities,
+			prepaidOptions,
 			useInvoice,
 			enableProductImmediately,
 		});
