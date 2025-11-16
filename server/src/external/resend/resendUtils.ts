@@ -24,7 +24,7 @@ export const sendTextEmail = async ({
 
 	try {
 		logger.info(`Sending email to ${to} with subject ${subject}`);
-		const { data, error } = await resend.emails.send({
+		const { error } = await resend.emails.send({
 			from: from,
 			to: to,
 			subject: subject,

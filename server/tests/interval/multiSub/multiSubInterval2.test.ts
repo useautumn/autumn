@@ -1,11 +1,11 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { LegacyVersion } from "@autumn/shared";
-import chalk from "chalk";
-import { addMonths, addYears, differenceInDays } from "date-fns";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
+import { addMonths, addYears, differenceInDays } from "date-fns";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -13,6 +13,7 @@ import { getCusSub } from "@/utils/scriptUtils/testUtils/cusTestUtils.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 import { toMilliseconds } from "@/utils/timeUtils.js";
+import { getLatestPeriodEnd } from "../../../src/external/stripe/stripeSubUtils/convertSubUtils";
 
 const pro = constructProduct({
 	id: "pro",
@@ -94,11 +95,17 @@ describe(`${chalk.yellowBright("multiSubInterval2: Should attach pro and pro ann
 
 		expect(checkoutRes.next_cycle).toBeDefined();
 		const expectedDate = addYears(Date.now(), 1).getTime();
-		const actualDate = checkoutRes.next_cycle?.starts_at!;
+		const actualDate = checkoutRes.next_cycle?.starts_at ?? 0;
 
 		const daysDiff = Math.abs(differenceInDays(expectedDate, actualDate));
 
 		expect(daysDiff).toBeLessThanOrEqual(1);
+
+		// console.log(
+		// 	`Next cycle starts at: ${formatUnixToDateTime(checkoutRes.next_cycle?.starts_at ?? 0)}`,
+		// );
+		// console.log(`Expected date: ${formatUnixToDateTime(expectedDate)}`);
+		// console.log(`Days diff: ${daysDiff}`);
 
 		await autumn.attach({
 			customer_id: customerId,
@@ -113,9 +120,13 @@ describe(`${chalk.yellowBright("multiSubInterval2: Should attach pro and pro ann
 			productId: proAnnual.id,
 		});
 
-		const subItem = sub!.items.data[0];
-		expect(subItem.current_period_end * 1000).toBeCloseTo(
-			checkoutRes.next_cycle?.starts_at!,
+		// Get period end of annual item
+		const latestPeriodEnd = getLatestPeriodEnd({
+			sub: sub,
+		});
+
+		expect(latestPeriodEnd * 1000).toBeCloseTo(
+			checkoutRes.next_cycle?.starts_at ?? 0,
 			-Math.log10(toMilliseconds.days(1)), // +- 1 day
 		);
 	});

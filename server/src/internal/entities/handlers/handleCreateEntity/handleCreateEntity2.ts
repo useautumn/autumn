@@ -96,6 +96,7 @@ export const createEntities = async ({
 
 		const clonedFullCus = structuredClone(fullCus);
 		clonedFullCus.entity = entity;
+
 		const apiEntity = await getApiEntity({
 			ctx,
 			customerId,

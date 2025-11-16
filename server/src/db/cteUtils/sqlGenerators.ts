@@ -34,7 +34,6 @@ export function generateArrayAggSQL({
 	alias,
 	filter,
 	orderBy,
-	limit,
 	distinct = false,
 }: ArrayAggregationConfig): SQL {
 	const tableAlias = alias || getTableAlias(table);
@@ -81,34 +80,33 @@ export function generateRowSubquerySQL({
 	return query;
 }
 
-/**
- * Generate SQL for many-to-many join through junction table
- * Example:
- * SELECT json_agg(o)
- * FROM member m
- * INNER JOIN organizations o ON o.id = m.organization_id
- * WHERE m.user_id = ${userId}
- */
-export function generateJunctionJoinSQL({
-	junctionTable,
-	fromField,
-	toField,
-	fromTable,
-	toTable,
-	fromId,
-}: JunctionJoinConfig): SQL {
-	const junctionAlias = getTableAlias(junctionTable);
-	const toAlias = getTableAlias(toTable);
-	const junctionTableName = getTableName(junctionTable);
-	const toTableName = getTableName(toTable);
+// /**
+//  * Generate SQL for many-to-many join through junction table
+//  * Example:
+//  * SELECT json_agg(o)
+//  * FROM member m
+//  * INNER JOIN organizations o ON o.id = m.organization_id
+//  * WHERE m.user_id = ${userId}
+//  */
+// export function generateJunctionJoinSQL({
+// 	junctionTable,
+// 	fromField,
+// 	toField,
+// 	toTable,
+// 	fromId,
+// }: JunctionJoinConfig): SQL {
+// 	const junctionAlias = getTableAlias(junctionTable);
+// 	const toAlias = getTableAlias(toTable);
+// 	const junctionTableName = getTableName(junctionTable);
+// 	const toTableName = getTableName(toTable);
 
-	return sql`
-		FROM ${sql.identifier(junctionTableName)} ${sql.identifier(junctionAlias)}
-		INNER JOIN ${sql.identifier(toTableName)} ${sql.identifier(toAlias)}
-			ON ${sql.identifier(toAlias)}.${sql.identifier("id")} = ${sql.identifier(junctionAlias)}.${sql.identifier(toField)}
-		WHERE ${sql.identifier(junctionAlias)}.${sql.identifier(fromField)} = ${fromId}
-	`;
-}
+// 	return sql`
+// 		FROM ${sql.identifier(junctionTableName)} ${sql.identifier(junctionAlias)}
+// 		INNER JOIN ${sql.identifier(toTableName)} ${sql.identifier(toAlias)}
+// 			ON ${sql.identifier(toAlias)}.${sql.identifier("id")} = ${sql.identifier(junctionAlias)}.${sql.identifier(toField)}
+// 		WHERE ${sql.identifier(junctionAlias)}.${sql.identifier(fromField)} = ${fromId}
+// 	`;
+// }
 
 /**
  * Generate SQL for limiting results per parent using window functions

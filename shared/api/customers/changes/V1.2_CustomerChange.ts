@@ -69,6 +69,7 @@ export const V1_2_CustomerChange = defineVersionChange({
 
 		// Step 3: Return V1.2 customer format
 		return {
+			autumn_id: input.autumn_id,
 			id: input.id,
 			name: input.name,
 			email: input.email,

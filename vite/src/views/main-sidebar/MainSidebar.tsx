@@ -12,19 +12,36 @@ import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { useOrg } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
+import { CollapsibleNavGroup } from "./CollapsibleNavGroup";
 import { DeployToProdButton } from "./components/deploy-button/DeployToProdButton";
 import { OrgDropdown } from "./components/OrgDropdown";
 import { EnvDropdown } from "./EnvDropdown";
 import { NavButton } from "./NavButton";
 import SidebarBottom from "./SidebarBottom";
 import { SidebarContext } from "./SidebarContext";
-import { CollapsibleNavGroup } from "./CollapsibleNavGroup";
+
+export const buildDevSubTabs = ({
+	flags,
+}: {
+	flags: {
+		webhooks: boolean;
+		vercel: boolean;
+	};
+}) => {
+	return [
+		{ title: "API Keys", value: "api_keys" },
+		{ title: "Stripe", value: "stripe" },
+		...(flags.vercel ? [{ title: "Vercel", value: "vercel" }] : []),
+		...(flags.webhooks ? [{ title: "Webhooks", value: "webhooks" }] : []),
+	];
+};
 
 export const MainSidebar = () => {
 	const env = useEnv();
 	const { org } = useOrg();
 
-	const { webhooks } = useAutumnFlags();
+	const flags = useAutumnFlags();
+	console.log();
 
 	const [expanded, setExpanded] = useLocalStorage<boolean>(
 		"sidebar.expanded",
@@ -116,18 +133,7 @@ export const MainSidebar = () => {
 							env={env}
 							isOpen={devGroupOpen}
 							onToggle={() => setDevGroupOpen((prev) => !prev)}
-							subTabs={
-								webhooks
-									? [
-											{ title: "API Keys", value: "api_keys" },
-											{ title: "Stripe", value: "stripe" },
-											{ title: "Webhooks", value: "webhooks" },
-										]
-									: [
-											{ title: "API Keys", value: "api_keys" },
-											{ title: "Stripe", value: "stripe" },
-										]
-							}
+							subTabs={buildDevSubTabs({ flags })}
 						/>
 					</div>
 				</div>

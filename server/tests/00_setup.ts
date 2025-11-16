@@ -5,17 +5,6 @@ dotenv.config();
 import { AppEnv } from "@autumn/shared";
 import { clearOrg, setupOrg } from "@tests/utils/setup.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
-import {
-	advanceProducts,
-	attachProducts,
-	creditSystems,
-	entityProducts,
-	features,
-	oneTimeProducts,
-	products,
-	referralPrograms,
-	rewards,
-} from "./global.js";
 
 const ORG_SLUG = process.env.TESTS_ORG!;
 const DEFAULT_ENV = AppEnv.Sandbox;

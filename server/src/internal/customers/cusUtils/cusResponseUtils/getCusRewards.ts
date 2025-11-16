@@ -3,12 +3,14 @@ import {
 	CouponDurationType,
 	CusExpand,
 	type FullCustomer,
+	notNullish,
 	type Organization,
 	RewardType,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
+import { getOriginalCouponId } from "../../../rewards/rewardUtils";
 
 export const getCusRewards = async ({
 	org,
@@ -34,16 +36,17 @@ export const getCusRewards = async ({
 	const stripeCli = createStripeCli({
 		org,
 		env,
+		legacyVersion: true,
 	});
 
 	const [stripeCus, stripeSubs] = await Promise.all([
-		stripeCli.customers.retrieve(
-			fullCus.processor?.id,
-		) as Promise<Stripe.Customer>,
+		stripeCli.customers.retrieve(fullCus.processor?.id, {
+			expand: ["discount.coupon"],
+		}) as Promise<Stripe.Customer>,
 		getStripeSubs({
 			stripeCli,
 			subIds,
-			expand: ["discounts"],
+			expand: ["discounts", "discounts.coupon"],
 		}),
 	]);
 
@@ -56,34 +59,43 @@ export const getCusRewards = async ({
 	}
 
 	const rewards = {
-		discounts: stripeDiscounts.map((d) => {
-			let duration_type: CouponDurationType;
-			let duration_value = 0;
-			if (d.coupon?.duration === "forever") {
-				duration_type = CouponDurationType.Forever;
-			} else if (d.coupon?.duration === "once") {
-				duration_type = CouponDurationType.OneOff;
-			} else if (d.coupon?.duration === "repeating") {
-				duration_type = CouponDurationType.Months;
-				duration_value = d.coupon?.duration_in_months || 0;
-			} else {
-				duration_type = CouponDurationType.OneOff;
-			}
-			return {
-				id: d.coupon?.id,
-				name: d.coupon?.name ?? "",
-				type: d.coupon?.amount_off
-					? RewardType.FixedDiscount
-					: RewardType.PercentageDiscount,
-				discount_value: d.coupon?.amount_off || d.coupon?.percent_off || 0,
-				currency: d.coupon?.currency ?? null,
-				start: d.start ?? null,
-				end: d.end ?? null,
-				subscription_id: d.subscription ?? null,
-				duration_type,
-				duration_value,
-			};
-		}),
+		discounts: stripeDiscounts
+			.map((d) => {
+				if (!("coupon" in d) || typeof d.coupon === "string") {
+					return null;
+				}
+
+				const coupon = d.coupon as Stripe.Coupon;
+				const couponId = getOriginalCouponId(coupon.id);
+
+				let duration_type: CouponDurationType;
+				let duration_value = 0;
+				if (coupon.duration === "forever") {
+					duration_type = CouponDurationType.Forever;
+				} else if (coupon.duration === "once") {
+					duration_type = CouponDurationType.OneOff;
+				} else if (coupon.duration === "repeating") {
+					duration_type = CouponDurationType.Months;
+					duration_value = coupon.duration_in_months || 0;
+				} else {
+					duration_type = CouponDurationType.OneOff;
+				}
+				return {
+					id: couponId,
+					name: coupon.name ?? "",
+					type: coupon.amount_off
+						? RewardType.FixedDiscount
+						: RewardType.PercentageDiscount,
+					discount_value: coupon.amount_off || coupon.percent_off || 0,
+					currency: coupon.currency ?? null,
+					start: d.start ?? null,
+					end: d.end ?? null,
+					subscription_id: d.subscription ?? null,
+					duration_type,
+					duration_value,
+				};
+			})
+			.filter(notNullish),
 	};
 
 	return rewards;

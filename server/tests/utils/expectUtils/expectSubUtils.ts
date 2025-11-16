@@ -1,28 +1,26 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
+import {
+	type AppEnv,
+	BillingType,
+	CusProductStatus,
+	cusProductToPrices,
+	type FullCusProduct,
+	type Organization,
+	type ProductV2,
+	type UsagePriceConfig,
+} from "@autumn/shared";
+import { expect } from "chai";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import {
 	findStripeItemForPrice,
 	isLicenseItem,
 } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
-import { cusProductToPrices } from "@autumn/shared";
+import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { isV4Usage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
-import {
-	AppEnv,
-	BillingType,
-	CusProductStatus,
-	FullCusProduct,
-	Organization,
-	ProductV2,
-	UsagePriceConfig,
-} from "@autumn/shared";
-import { expect } from "chai";
-import { getDate } from "date-fns";
-
-import Stripe from "stripe";
 
 export const getSubsFromCusId = async ({
 	stripeCli,
@@ -57,7 +55,7 @@ export const getSubsFromCusId = async ({
 	});
 
 	const cusProduct = fullCus.customer_products.find(
-		(cp: FullCusProduct) => cp.product.id == productId,
+		(cp: FullCusProduct) => cp.product.id === productId,
 	)!;
 
 	const subs: Stripe.Subscription[] = await getStripeSubs({
@@ -71,59 +69,6 @@ export const getSubsFromCusId = async ({
 		subs,
 	};
 };
-
-// export const expectSubAnchorsSame = async ({
-//   stripeCli,
-//   customerId,
-//   productId,
-//   db,
-//   org,
-//   env,
-// }: {
-//   stripeCli: Stripe;
-//   customerId: string;
-//   productId: string;
-//   db: DrizzleCli;
-//   org: Organization;
-//   env: AppEnv;
-// }) => {
-//   const fullCus = await CusService.getFull({
-//     db,
-//     idOrInternalId: customerId,
-//     orgId: org.id,
-//     env,
-//   });
-
-//   const cusProduct = fullCus.customer_products.find(
-//     (cp: FullCusProduct) => cp.product.id == productId
-//   );
-
-//   const sub = await cusProductToSub({
-//     cusProduct,
-//     stripeCli,
-//   });
-
-//   // const subs: Stripe.Subscription[] = await getStripeSubs({
-//   //   stripeCli,
-//   //   subIds: cusProduct?.subscription_ids,
-//   // });
-
-//   // let periodEnd = subs[0].current_period_end * 1000;
-//   // let firstDate = getDate(periodEnd);
-
-//   // for (const sub of subs.slice(1)) {
-//   //   let dateOfAnchor = getDate(sub.current_period_end * 1000);
-//   //   expect(dateOfAnchor).to.equal(
-//   //     firstDate,
-//   //     `subscription anchors are the same`,
-//   //   );
-//   // }
-
-//   return {
-//     fullCus,
-//     // subs,
-//   };
-// };
 
 const subIsCanceled = ({ sub }: { sub: Stripe.Subscription }) => {
 	return (
@@ -162,13 +107,15 @@ export const expectSubItemsCorrect = async ({
 		withEntities: true,
 	});
 
-	let entity = entityId ? fullCus.entities.find((e) => e.id == entityId) : null;
+	const entity = entityId
+		? fullCus.entities.find((e) => e.id === entityId)
+		: null;
 
 	const productId = product.id;
 	const cusProduct = fullCus.customer_products.find(
 		(cp: FullCusProduct) =>
-			cp.product.id == productId &&
-			(entity ? cp.internal_entity_id == entity.internal_id : true),
+			cp.product.id === productId &&
+			(entity ? cp.internal_entity_id === entity.internal_id : true),
 	)!;
 
 	if (isCanceled) {
@@ -237,7 +184,7 @@ export const expectSubItemsCorrect = async ({
 				nullish(subItem) ||
 					(subItem?.quantity === 0 &&
 						isLicenseItem({ stripeItem: subItem! })) ||
-					subItem?.price.id == usagePriceConfig.stripe_empty_price_id,
+					subItem?.price.id === usagePriceConfig.stripe_empty_price_id,
 			).to.be.true;
 			continue;
 		} else {
@@ -248,10 +195,12 @@ export const expectSubItemsCorrect = async ({
 		}
 
 		// 2. If prepaid...
-		let billingType = getBillingType(price.config);
-		if (billingType == BillingType.UsageInAdvance) {
+		const billingType = getBillingType(price.config);
+		if (billingType === BillingType.UsageInAdvance) {
 			const featureId = (price.config as any).feature_id;
-			const options = cusProduct.options.find((o) => o.feature_id == featureId);
+			const options = cusProduct.options.find(
+				(o) => o.feature_id === featureId,
+			);
 
 			expect(
 				options,
@@ -263,7 +212,6 @@ export const expectSubItemsCorrect = async ({
 				subItem?.quantity,
 				`sub item quantity for prepaid price (featureId: ${featureId}) should be ${expectedQuantity}`,
 			).to.equal(expectedQuantity);
-			continue;
 		}
 	}
 

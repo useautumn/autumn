@@ -1,12 +1,7 @@
 import { type SQL, sql } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import type { CTEConfig } from "../buildCte.js";
-import {
-	buildRelationGraph,
-	getTableName,
-	parseJoinCondition,
-	type RelationNode,
-} from "./relationGraph.js";
+import { buildRelationGraph, type RelationNode } from "./relationGraph.js";
 
 /**
  * Build the optimized query using JOIN + GROUP BY strategy
@@ -26,7 +21,6 @@ export function buildJoinGroupByQuery({
 	}) => SQL | undefined;
 }): SQL {
 	// Build relation graph
-	const rootTable = getSourceTable(config.from);
 	const graph = buildRelationGraph({
 		config,
 		relations,
@@ -34,7 +28,7 @@ export function buildJoinGroupByQuery({
 	});
 
 	// Step 1: Build aggregation CTEs for array (one-to-many) relations
-	const aggregationCTEs = buildAggregationCTEs({ graph, rootTable });
+	const aggregationCTEs = buildAggregationCTEs({ graph });
 
 	// Step 2: Build main query with row (one-to-one) relations as direct JOINs
 	const mainQuery = buildMainQuery({ graph, config });
@@ -181,10 +175,8 @@ function addNestedJoins({
  */
 function buildAggregationCTEs({
 	graph,
-	rootTable,
 }: {
 	graph: RelationNode;
-	rootTable: PgTable;
 }): Array<{ name: string; definition: SQL }> {
 	const ctes: Array<{ name: string; definition: SQL }> = [];
 
@@ -300,14 +292,4 @@ function buildAggregationCTEs({
 	});
 
 	return ctes;
-}
-
-/**
- * Get source table from config (unwrap CTEBuilder if needed)
- */
-function getSourceTable(from: any): PgTable {
-	if (from?.config?.from) {
-		return getSourceTable(from.config.from);
-	}
-	return from;
 }

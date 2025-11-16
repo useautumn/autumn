@@ -20,7 +20,6 @@ stripeWebhookRouter.post(
 		let event: Stripe.Event;
 
 		const { orgId, env } = request.params;
-		const { db } = request;
 
 		let org: Organization;
 

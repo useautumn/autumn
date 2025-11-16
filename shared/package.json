@@ -22,14 +22,15 @@
 		"db:studio": "cross-env NODE_OPTIONS=\"--import tsx\" bunx drizzle-kit studio --config drizzle.config.ts"
 	},
 	"dependencies": {
-		"stripe": "catalog:",
 		"date-fns": "^4.1.0",
 		"decimal.js": "^10.5.0",
 		"dotenv": "^16.5.0",
 		"drizzle-kit": "catalog:",
 		"drizzle-orm": "catalog:",
+		"drizzle-zod": "^0.8.2",
 		"yaml": "^2.8.1",
-		"zod-openapi": "^5.4.1"
+		"zod-openapi": "^5.4.1",
+		"stripe": "catalog:"
 	},
 	"peerDependencies": {
 		"zod": "^3.25.23"

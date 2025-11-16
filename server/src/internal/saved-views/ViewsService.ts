@@ -48,7 +48,8 @@ export class ViewsService {
 
 				// Also save to a list for easy retrieval
 				const listKey = `saved_views_list:${orgId}:${env}`;
-				const existingViews = (await CacheManager.getJson(listKey)) || [];
+				const existingViews =
+					(await CacheManager.getJson<string[]>(listKey)) || [];
 				existingViews.push(viewId);
 				await CacheManager.setJson(listKey, existingViews, "forever"); // No TTL
 
@@ -74,12 +75,18 @@ export class ViewsService {
 				const env = req.env;
 
 				const listKey = `saved_views_list:${orgId}:${env}`;
-				const viewIds = (await CacheManager.getJson(listKey)) || [];
+				const viewIds = (await CacheManager.getJson<string[]>(listKey)) || [];
 
 				const views = [];
 				for (const viewId of viewIds) {
 					const key = `saved_views:${orgId}:${env}:${viewId}`;
-					const view = await CacheManager.getJson(key);
+					const view = await CacheManager.getJson<{
+						id: string;
+						name: string;
+						filters: any;
+						created_at: string;
+					}>(key);
+
 					if (view) {
 						views.push({
 							id: view.id,
@@ -120,7 +127,8 @@ export class ViewsService {
 
 				// Remove from list
 				const listKey = `saved_views_list:${orgId}:${env}`;
-				const existingViews = (await CacheManager.getJson(listKey)) || [];
+				const existingViews =
+					(await CacheManager.getJson<string[]>(listKey)) || [];
 				const updatedViews = existingViews.filter(
 					(id: string) => id !== viewId,
 				);

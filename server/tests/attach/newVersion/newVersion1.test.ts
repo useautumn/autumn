@@ -30,8 +30,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach with new version`)}`
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
 
-	const curUnix = new Date().getTime();
-
 	beforeAll(async () => {
 		await initProductsV0({
 			ctx,

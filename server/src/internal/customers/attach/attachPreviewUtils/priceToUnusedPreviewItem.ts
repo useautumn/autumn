@@ -88,7 +88,7 @@ export const priceToUnusedPreviewItem = ({
 	const config = price.config as UsagePriceConfig;
 
 	let quantity = notNullish(options?.quantity)
-		? options?.quantity! * config.billing_units!
+		? (options?.quantity ?? 1) * (config.billing_units ?? 1)
 		: 1;
 
 	if (isFixedPrice({ price })) {

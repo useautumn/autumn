@@ -1,12 +1,10 @@
+import assert from "node:assert";
 import type { Feature, ProductV2 } from "@autumn/shared";
-import assert from "assert";
-import { Decimal } from "decimal.js";
 import { AutumnCli } from "@tests/cli/AutumnCli.js";
-import { creditSystems, features } from "@tests/global.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { Decimal } from "decimal.js";
 import { getPriceForOverage } from "@/internal/products/prices/priceUtils.js";
 import { convertProductV2ToV1 } from "@/internal/products/productUtils/productV2Utils/convertProductV2ToV1.js";
-import { timeout } from "./genUtils.js";
 
 const PRECISION = 10;
 const CREDIT_MULTIPLIER = 100000;
@@ -118,48 +116,6 @@ export const checkUsageInvoiceAmount = async ({
 		console.group();
 		throw error;
 	}
-};
-
-export const sendGPUEvents = async ({
-	customerId,
-	eventCount,
-	groupObj = {},
-}: {
-	customerId: string;
-	eventCount: number;
-	groupObj?: any;
-}) => {
-	let totalCreditsUsed = 0;
-	const batchEvents = [];
-	for (let i = 0; i < eventCount; i++) {
-		const randomVal = new Decimal(Math.random().toFixed(PRECISION))
-			.mul(CREDIT_MULTIPLIER)
-			.toNumber();
-		const gpuId = i % 2 === 0 ? features.gpu1.id : features.gpu2.id;
-
-		const creditsUsed = getCreditsUsed(
-			creditSystems.gpuCredits,
-			gpuId,
-			randomVal,
-		);
-
-		totalCreditsUsed = new Decimal(totalCreditsUsed)
-			.plus(creditsUsed)
-			.toNumber();
-
-		batchEvents.push(
-			AutumnCli.sendEvent({
-				customerId: customerId,
-				eventName: gpuId,
-				properties: { value: randomVal, ...groupObj },
-			}),
-		);
-	}
-
-	await Promise.all(batchEvents);
-	await timeout(15000);
-
-	return { creditsUsed: totalCreditsUsed };
 };
 
 /**

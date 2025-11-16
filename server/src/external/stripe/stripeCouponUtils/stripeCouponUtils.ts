@@ -202,7 +202,10 @@ export const createStripeCoupon = async ({
 	// Create promo codes
 	for (const promoCode of reward.promo_codes) {
 		await stripeCli.promotionCodes.create({
-			coupon: stripeCoupon.id,
+			promotion: {
+				type: "coupon",
+				coupon: stripeCoupon.id,
+			},
 			code: promoCode.code,
 		});
 	}
