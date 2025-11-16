@@ -63,10 +63,12 @@ mainRouter.use(
 		try {
 			const org = invoice.customer.org;
 			const env = invoice.customer.env;
+
 			const stripeCli = createStripeCli({
 				org,
 				env,
 			});
+
 			const stripeInvoice = await stripeCli.invoices.retrieve(
 				invoice.stripe_id,
 			);

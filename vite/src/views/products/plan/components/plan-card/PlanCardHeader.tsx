@@ -3,8 +3,12 @@ import { AdminHover } from "@/components/general/AdminHover";
 import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
 import { CardHeader } from "@/components/v2/cards/Card";
 import { useOrg } from "@/hooks/common/useOrg";
-import { useProductStore } from "@/hooks/stores/useProductStore";
+import {
+	useCurrentItem,
+	useProductStore,
+} from "@/hooks/stores/useProductStore";
 import { useIsEditingPlan, useSheetStore } from "@/hooks/stores/useSheetStore";
+import { checkItemIsValid } from "@/utils/product/entitlementUtils";
 import { BasePriceDisplay } from "./BasePriceDisplay";
 import { PlanCardToolbar } from "./PlanCardToolbar";
 
@@ -15,6 +19,8 @@ export const PlanCardHeader = () => {
 	const product = useProductStore((s) => s.product);
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const isPlanBeingEdited = useIsEditingPlan();
+
+	const item = useCurrentItem();
 
 	const productV3 = mapToProductV3({ product });
 	const adminHoverText = () => {
@@ -48,6 +54,9 @@ export const PlanCardHeader = () => {
 				</div>
 				<PlanCardToolbar
 					onEdit={() => {
+						if (item && !checkItemIsValid(item)) {
+							return;
+						}
 						setSheet({ type: "edit-plan", itemId: product.id });
 					}}
 					editDisabled={isPlanBeingEdited}

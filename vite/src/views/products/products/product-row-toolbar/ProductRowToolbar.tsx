@@ -1,7 +1,6 @@
 import type { ProductCounts, ProductV2 } from "@autumn/shared";
 import { Archive, ArchiveRestore, Copy, Delete, Pen } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router";
 import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 import {
 	DropdownMenu,
@@ -28,7 +27,6 @@ export const ProductRowToolbar = ({
 	const [updateOpen, setUpdateOpen] = useState(false);
 	const [copyOpen, setCopyOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
-	const navigate = useNavigate();
 
 	const allCount = productCounts?.all || 0;
 	let deleteText = allCount > 0 ? "Archive" : "Delete";
