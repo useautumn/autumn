@@ -1,14 +1,14 @@
 import { CusProductStatus, type FullCusProduct } from "@autumn/shared";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/v2/buttons/Button";
 import {
 	Dialog,
 	DialogContent,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/components/v2/dialogs/Dialog";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { getBackendErr } from "@/utils/genUtils";
@@ -78,29 +78,32 @@ export const CancelProductDialog = ({
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogContent className="w-md" onClick={(e) => e.stopPropagation()}>
+			<DialogContent
+				className="w-md bg-card"
+				onClick={(e) => e.stopPropagation()}
+			>
 				<DialogHeader>
-					<DialogTitle>Cancel Product</DialogTitle>
+					<DialogTitle>Cancel Plan</DialogTitle>
 				</DialogHeader>
 
 				<div className="mb-2 text-sm">
 					{isScheduled ? (
 						<p className="text-t2">
-							This product is scheduled to start on{" "}
+							This plan is scheduled to start on{" "}
 							{formatUnixToDateTime(cusProduct.starts_at).date}.
 							{currentMain
-								? ` Are you sure you want to remove this schedule and renew the current product (${currentMain.product.name})?`
+								? ` Are you sure you want to remove this schedule and renew the current plan (${currentMain.product.name})?`
 								: " Are you sure you want to remove this schedule?"}
 						</p>
 					) : isDefault ? (
 						<p className="text-t2">
-							This is a default product. Cancelling it will simply reset the
-							feature usages for this customer.
+							This is the default plan. Cancelling it means this customer will
+							be left without a plan. You can re-enable manually afterwards.
 						</p>
 					) : (
 						<p className="text-t2">
-							Are you sure you want to cancel this product? This action cannot
-							be undone.
+							Are you sure you want to cancel this plan? This action cannot be
+							undone.
 						</p>
 					)}
 				</div>
@@ -113,7 +116,7 @@ export const CancelProductDialog = ({
 								variant="destructive"
 								isLoading={immediateLoading}
 							>
-								Cancel scheduled product
+								Cancel scheduled plan
 							</Button>
 						) : isDefault ? (
 							<Button
@@ -121,14 +124,14 @@ export const CancelProductDialog = ({
 								variant="destructive"
 								isLoading={immediateLoading}
 							>
-								Cancel default product
+								Cancel default plan
 							</Button>
 						) : (
 							<>
 								{hasSubscription && (
 									<Button
 										onClick={() => handleClicked(false)}
-										variant="outline"
+										variant="secondary"
 										isLoading={endOfCycleLoading}
 									>
 										Cancel at end of cycle

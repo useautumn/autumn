@@ -1,50 +1,58 @@
-import {
-	FeatureType,
-	FeatureUsageType,
-	type FullCustomerEntitlement,
-} from "@autumn/shared";
+import type { Entity } from "@autumn/shared";
+import { FeatureType, type FullCusProduct } from "@autumn/shared";
 import { PuzzlePiece } from "@phosphor-icons/react";
 import { type ExpandedState, getExpandedRowModel } from "@tanstack/react-table";
-import { parseAsBoolean, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
 import { cn } from "@/lib/utils";
-import { formatUnixToDateTimeString } from "@/utils/formatUtils/formatDateUtils";
-import UpdateCusEntitlement from "@/views/customers/customer/entitlements/UpdateCusEntitlement";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
-import { ShowExpiredActionButton } from "../customer-products/ShowExpiredActionButton";
-import { CustomerFeatureUsageBar } from "./CustomerFeatureUsageBar";
+import { MeteredFeatureBalanceCard } from "../../card/MeteredFeatureBalanceCard";
+import { CustomerFeatureConfiguration } from "./CustomerFeatureConfiguration";
 import { CustomerFeatureUsageColumns } from "./CustomerFeatureUsageColumns";
 import { filterCustomerFeatureUsage } from "./customerFeatureUsageTableFilters";
 import type { CustomerFeatureUsageRowData } from "./customerFeatureUsageTypes";
 import {
 	createFeaturesMap,
 	deduplicateEntitlements,
-	filterBooleanEntitlements,
 	flattenCustomerEntitlements,
 	processNonBooleanEntitlements,
 } from "./customerFeatureUsageUtils";
 
 export function CustomerFeatureUsageTable() {
 	const { customer, features, isLoading } = useCusQuery();
-
-	const [showExpired, setShowExpired] = useQueryState(
-		"customerFeatureUsageShowExpired",
-		parseAsBoolean.withDefault(false),
-	);
+	const { entityId } = useCustomerContext();
 
 	const [expanded, setExpanded] = useState<ExpandedState>({});
 
-	const [selectedCusEntitlement, setSelectedCusEntitlement] =
-		useState<FullCustomerEntitlement | null>(null);
+	const filteredCustomerProducts = useMemo(() => {
+		if (!entityId) {
+			return customer?.customer_products ?? [];
+		}
+
+		const selectedEntity = customer?.entities.find(
+			(e: Entity) => e.id === entityId || e.internal_id === entityId,
+		);
+
+		if (!selectedEntity) {
+			return customer?.customer_products ?? [];
+		}
+
+		return (customer?.customer_products ?? []).filter(
+			(cp: FullCusProduct) =>
+				(!cp.internal_entity_id && !cp.entity_id) ||
+				cp.internal_entity_id === selectedEntity.internal_id ||
+				cp.entity_id === selectedEntity.id,
+		);
+	}, [customer?.customer_products, customer?.entities, entityId]);
 
 	const cusEnts = useMemo(
 		() =>
 			flattenCustomerEntitlements({
-				customerProducts: customer?.customer_products ?? [],
+				customerProducts: filteredCustomerProducts,
 			}),
-		[customer],
+		[filteredCustomerProducts],
 	);
 
 	const featuresMap = useMemo(
@@ -56,46 +64,54 @@ export function CustomerFeatureUsageTable() {
 		() =>
 			filterCustomerFeatureUsage({
 				entitlements: cusEnts,
-				showExpired: showExpired ?? true,
+				showExpired: false,
 			}),
-		[cusEnts, showExpired],
+		[cusEnts],
 	);
 
-	const deduplicatedCusEnts = useMemo(
-		() => deduplicateEntitlements({ entitlements: filteredCusEnts }),
-		[filteredCusEnts],
+	const { entitlements: deduplicatedCusEnts, aggregatedMap } = useMemo(
+		() => deduplicateEntitlements({ entitlements: filteredCusEnts, entityId }),
+		[filteredCusEnts, entityId],
 	);
 
-	const nonBooleanEnts = useMemo(
+	const allEnts = useMemo(
 		() =>
 			processNonBooleanEntitlements({
 				entitlements: deduplicatedCusEnts,
-				cusEnts,
+				cusEnts: deduplicatedCusEnts,
 				featuresMap,
-			}).sort((a, b) => {
-				const aAllowance = a.entitlement.allowance ?? 0;
-				const bAllowance = b.entitlement.allowance ?? 0;
-				const aHasAllowance = aAllowance > 0;
-				const bHasAllowance = bAllowance > 0;
+			})
+				.concat(
+					deduplicatedCusEnts.filter(
+						(ent) => ent.entitlement.feature.type === FeatureType.Boolean,
+					),
+				)
+				.sort((a, b) => {
+					const aIsBoolean = a.entitlement.feature.type === FeatureType.Boolean;
+					const bIsBoolean = b.entitlement.feature.type === FeatureType.Boolean;
+					const aAllowance = a.entitlement.allowance ?? 0;
+					const bAllowance = b.entitlement.allowance ?? 0;
+					const aHasAllowance = aAllowance > 0;
+					const bHasAllowance = bAllowance > 0;
 
-				// Items with allowance > 0 come first
-				if (aHasAllowance && !bHasAllowance) return -1;
-				if (!aHasAllowance && bHasAllowance) return 1;
-				return 0;
-			}),
-		[cusEnts, deduplicatedCusEnts, featuresMap],
-	);
-
-	// console.log("nonBooleanEnts", nonBooleanEnts);
-
-	const booleanEnts = useMemo(
-		() => filterBooleanEntitlements({ entitlements: deduplicatedCusEnts }),
-		[deduplicatedCusEnts],
+					// Non-boolean items with allowance > 0 come first
+					if (!aIsBoolean && aHasAllowance && (bIsBoolean || !bHasAllowance))
+						return -1;
+					if (!bIsBoolean && bHasAllowance && (aIsBoolean || !aHasAllowance))
+						return 1;
+					// Then non-boolean items without allowance
+					if (!aIsBoolean && !bIsBoolean) return 0;
+					// Boolean items come last
+					if (aIsBoolean && !bIsBoolean) return 1;
+					if (!aIsBoolean && bIsBoolean) return -1;
+					return 0;
+				}),
+		[deduplicatedCusEnts, featuresMap],
 	);
 
 	const enableSorting = false;
 	const table = useCustomerTable<CustomerFeatureUsageRowData>({
-		data: nonBooleanEnts,
+		data: allEnts,
 		columns: CustomerFeatureUsageColumns,
 		options: {
 			getExpandedRowModel: getExpandedRowModel(),
@@ -110,40 +126,16 @@ export function CustomerFeatureUsageTable() {
 		},
 	});
 
-	console.log("table", table);
-
-	const booleanTable = useCustomerTable<CustomerFeatureUsageRowData>({
-		data: booleanEnts,
-		columns: CustomerFeatureUsageColumns,
-	});
-
-	const shouldShowOutOfBalance = (ent: FullCustomerEntitlement) =>
-		(ent.entitlement.allowance ?? 0) > 0 || (ent.balance ?? 0) > 0;
-
-	const shouldShowUsed = (ent: FullCustomerEntitlement) =>
-		(ent.balance ?? 0) < 0 ||
-		((ent.balance ?? 0) === 0 && (ent.entitlement.allowance ?? 0) <= 0);
+	const hasBalances = allEnts.length > 0;
 
 	return (
-		<>
-			<UpdateCusEntitlement
-				selectedCusEntitlement={selectedCusEntitlement}
-				setSelectedCusEntitlement={setSelectedCusEntitlement}
-			/>
+		<div className="flex flex-col gap-8">
 			<Table.Provider
 				config={{
 					table,
 					numberOfColumns: CustomerFeatureUsageColumns.length,
 					enableSorting,
 					isLoading,
-					onRowClick: (row) => {
-						if ("isSubRow" in row && row.isSubRow) {
-							// Handle subrow case - maybe extract parent entitlement?
-							return;
-						}
-						setSelectedCusEntitlement(row as FullCustomerEntitlement);
-						// console.log(row);
-					},
 				}}
 			>
 				<Table.Container>
@@ -152,135 +144,69 @@ export function CustomerFeatureUsageTable() {
 							<PuzzlePiece size={16} weight="fill" className="text-t5" />
 							Balances
 						</Table.Heading>
-						<Table.Actions>
+						{/* <Table.Actions>
 							<ShowExpiredActionButton
 								showExpired={showExpired}
 								setShowExpired={setShowExpired}
 							/>
-						</Table.Actions>
+						</Table.Actions> */}
 					</Table.Toolbar>
-					<div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-2">
-						{/* <div className="flex flex-col divide-y bg-white border border-border-table rounded-2xl shadow-sm overflow-hidden"> */}
-						{nonBooleanEnts.map((ent) => (
-							<div
-								key={ent.entitlement.feature.id}
-								className="flex flex-col items-start gap-2 pt-3 min-w-60 text-t2 text-sm hover:bg-stone-100 whitespace-nowrap bg-white border border-border-table rounded-xl shadow-sm overflow-hidden"
-								onClick={() => {
-									setSelectedCusEntitlement(ent);
-								}}
-							>
-								<div className="flex justify-between w-full items-center h-4 px-4">
-									<span className="font-semibold">
-										{ent.entitlement.feature.name}
-									</span>
-									{/* <CustomerFeatureConfiguration
-										feature={ent.entitlement.feature}
-									/> */}
-									{ent.next_reset_at ? (
-										<span className="text-t3 text-tiny text-start ">
-											Resets&nbsp;
-											{ent.next_reset_at
-												? formatUnixToDateTimeString(ent.next_reset_at)
-												: "-"}
-										</span>
-									) : (
-										<span className="text-t3 text-tiny text-start ">
-											No Reset
-										</span>
-									)}
-								</div>
-								<div className="flex justify-between w-full items-end px-4">
-									<div className="flex items-center gap-4 w-full">
-										{ent.unlimited ? (
-											<span className="text-t4">Unlimited</span>
-										) : (
-											<div className="flex gap-1">
-												{shouldShowOutOfBalance(ent) && (
-													<div className="flex gap-1">
-														<span className="">
-															{ent.balance && ent.balance < 0
-																? 0
-																: new Intl.NumberFormat().format(
-																		ent.balance ?? 0,
-																	)}
-														</span>{" "}
-														<p className="text-t4 flex items-end text-tiny">
-															{(ent.entitlement?.allowance ?? 0) > 0 && (
-																<span>
-																	/&nbsp;
-																	{new Intl.NumberFormat().format(
-																		ent.entitlement.allowance ?? 0,
-																	)}
-																</span>
-															)}{" "}
-															&nbsp;
-															<span className="text-t4 text-tiny"></span>
-														</p>
-													</div>
-												)}
-												{shouldShowUsed(ent) && (
-													<p className="">
-														{shouldShowOutOfBalance(ent) &&
-															shouldShowUsed(ent) &&
-															"+"}
-														{new Intl.NumberFormat().format(
-															ent.balance && ent.balance < 0
-																? ent.balance * -1
-																: 0,
-														)}{" "}
-														<span className="text-t4 text-tiny">
-															{ent.entitlement.feature.config?.usage_type ===
-															FeatureUsageType.Continuous
-																? "in use"
-																: "used"}
-														</span>
-													</p>
-												)}
-											</div>
-										)}
-									</div>
-								</div>
-								<div
-									className={cn(
-										"w-full",
-										(ent.entitlement.allowance ?? 0) > 0
-											? "opacity-100"
-											: "opacity-0",
-									)}
-								>
-									<CustomerFeatureUsageBar
-										allowance={ent.entitlement.allowance ?? 0}
-										balance={ent.balance ?? 0}
-										quantity={ent.customer_product.quantity ?? 1}
-										horizontal={true}
+					{hasBalances ? (
+						<div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-2">
+							{allEnts.map((ent) => {
+								const featureId = ent.entitlement.feature.id;
+								const isBoolean =
+									ent.entitlement.feature.type === FeatureType.Boolean;
+
+								// Boolean entitlements: simplified card
+								if (isBoolean) {
+									return (
+										<div
+											key={ent.entitlement.feature.id}
+											className={cn(
+												"flex items-center justify-between gap-2 px-4 min-w-60 text-t2 text-sm whitespace-nowrap bg-white border border-border-table rounded-lg shadow-sm overflow-hidden relative h-16",
+												allEnts.length === 1 && "max-w-[50%]",
+											)}
+										>
+											<span className="font-medium text-t1">
+												{ent.entitlement.feature.name}
+											</span>
+											<CustomerFeatureConfiguration
+												feature={ent.entitlement.feature}
+											/>
+										</div>
+									);
+								}
+
+								//if not a boolean, return a metered feature balance card
+								return (
+									<MeteredFeatureBalanceCard
+										key={ent.entitlement.feature.id}
+										ent={ent}
+										filteredCustomerProducts={filteredCustomerProducts}
+										featureId={featureId}
+										entityId={entityId}
+										aggregatedMap={aggregatedMap}
+										allEnts={allEnts}
 									/>
-								</div>
+								);
+							})}
+						</div>
+					) : (
+						!isLoading && (
+							<div className="flex justify-center items-center py-4">
+								<p className="text-sm text-t4">
+									Enable a plan to grant access to features
+								</p>
 							</div>
-						))}
-					</div>
+						)
+					)}
 					{/* <Table.Content>
 						<Table.Header />
 						<Table.Body />
 					</Table.Content> */}
 				</Table.Container>
 			</Table.Provider>
-			{booleanEnts.length > 0 && (
-				<Table.Provider
-					config={{
-						table: booleanTable,
-						numberOfColumns: CustomerFeatureUsageColumns.length,
-						enableSorting,
-						isLoading,
-					}}
-				>
-					<Table.Container className="!pt-0">
-						<Table.Content>
-							<Table.Header className="!h-0 opacity-0 pointer-events-none overflow-hidden border-none [&_tr]:h-0 [&_tr]:border-none [&_th]:h-0 [&_th]:p-0 [&_th]:leading-[0] [&_th]:border-none" />
-							<Table.Body />
-						</Table.Content>
-					</Table.Container>
-				</Table.Provider>
-			)}
-		</>
+		</div>
 	);
 }

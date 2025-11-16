@@ -1,12 +1,10 @@
-import type { FullCusProduct } from "@autumn/shared";
+import { type FullCusProduct, isTrialing } from "@autumn/shared";
 import type { Row, Table } from "@tanstack/react-table";
 import { Delete } from "lucide-react";
 import { TableDropdownMenuCell } from "@/components/general/table/table-dropdown-menu-cell";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import {
-	createDateTimeColumn,
-	createIdCopyColumn,
-} from "@/views/customers2/utils/ColumnHelpers";
+import { createDateTimeColumn } from "@/views/customers2/utils/ColumnHelpers";
+import { CustomerProductPrice } from "./CustomerProductPrice";
 import { CustomerProductsStatus } from "./CustomerProductsStatus";
 
 export const CustomerProductsColumns = [
@@ -14,18 +12,42 @@ export const CustomerProductsColumns = [
 		header: "Name",
 		accessorKey: "name",
 		cell: ({ row }: { row: Row<FullCusProduct> }) => {
-			return <div className="font-semibold">{row.original.product.name}</div>;
+			const quantity = row.original.quantity;
+			const showQuantity = quantity && quantity > 1;
+
+			return (
+				<div className="font-medium text-t1 flex items-center gap-2">
+					{row.original.product.name}
+					{showQuantity && (
+						<div className="text-t3 bg-muted rounded-sm p-1 py-0">
+							{quantity}
+						</div>
+					)}
+				</div>
+			);
 		},
 	},
-	createIdCopyColumn<FullCusProduct>({
-		accessorKey: "id",
-		displayKey: "product_id",
-	}),
+	{
+		header: "Price",
+		accessorKey: "price",
+		cell: ({ row }: { row: Row<FullCusProduct> }) => {
+			return <CustomerProductPrice cusProduct={row.original} />;
+		},
+	},
 	{
 		header: "Status",
 		accessorKey: "status",
 		cell: ({ row }: { row: Row<FullCusProduct> }) => {
-			return <CustomerProductsStatus status={row.original.status} />;
+			return (
+				<CustomerProductsStatus
+					status={row.original.status}
+					canceled={row.original.canceled}
+					trialing={
+						isTrialing({ cusProduct: row.original, now: Date.now() }) || false
+					}
+					trial_ends_at={row.original.trial_ends_at}
+				/>
+			);
 		},
 	},
 	createDateTimeColumn<FullCusProduct>({
@@ -54,7 +76,10 @@ export const CustomerProductsColumns = [
 				<TableDropdownMenuCell>
 					<DropdownMenuItem
 						className="flex items-center gap-2 text-xs text-red-500 dark:text-red-400"
-						onClick={() => meta.onCancelClick?.(row.original)}
+						onClick={(e) => {
+							e.stopPropagation();
+							meta.onCancelClick?.(row.original);
+						}}
 					>
 						<Delete size={16} /> Cancel
 					</DropdownMenuItem>

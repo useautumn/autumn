@@ -10,8 +10,14 @@ import SmallSpinner from "../SmallSpinner";
 import { useTableContext } from "./table-context";
 
 export function TableBody() {
-	const { table, numberOfColumns, enableSelection, isLoading, onRowClick } =
-		useTableContext();
+	const {
+		table,
+		numberOfColumns,
+		enableSelection,
+		isLoading,
+		onRowClick,
+		rowClassName,
+	} = useTableContext();
 	const rows = table.getRowModel().rows;
 
 	if (!rows.length) {
@@ -36,7 +42,10 @@ export function TableBody() {
 		<ShadcnTableBody className="divide-y divide-border-table">
 			{rows.map((row) => (
 				<TableRow
-					className={cn("h-16 py-4 hover:bg-muted/50 text-t3")}
+					className={cn(
+						rowClassName || "h-14 py-4",
+						"hover:bg-muted/50 text-t3 transition-none",
+					)}
 					data-state={row.getIsSelected() && "selected"}
 					key={row.id}
 					onClick={() => onRowClick?.(row.original)}
@@ -57,6 +66,7 @@ export function TableBody() {
 								index === 0 && "pl-4 text-t2 font-semibold",
 							)}
 							key={cell.id}
+							style={{ width: `${cell.column.getSize()}px` }}
 						>
 							{flexRender(cell.column.columnDef.cell, cell.getContext())}
 						</TableCell>

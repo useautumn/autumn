@@ -69,7 +69,10 @@ export const DeleteCustomerDialog = ({
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogContent className="w-md" onClick={(e) => e.stopPropagation()}>
+			<DialogContent
+				className="w-md bg-card"
+				onClick={(e) => e.stopPropagation()}
+			>
 				<DialogHeader>
 					<DialogTitle>Delete Customer</DialogTitle>
 				</DialogHeader>

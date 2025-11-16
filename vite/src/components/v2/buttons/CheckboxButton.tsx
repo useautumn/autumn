@@ -19,7 +19,7 @@ export const CheckboxButton = React.forwardRef<
 			size="mini"
 			onClick={handleClick}
 			className={cn(
-				"bg-transparent flex items-center gap-1.5 rounded-lg !shadow-none h-6 pr-1.5 pl-[7px] py-[5px] border-none text-t4  hover:text-t1 active:bg-transparent",
+				"bg-transparent flex items-center gap-1.5 rounded-lg !shadow-none h-6 pr-1.5 pl-[7px] py-[5px] border-none text-t4  hover:text-t1 active:bg-transparent hover:bg-transparent",
 				className,
 			)}
 		>
@@ -27,7 +27,7 @@ export const CheckboxButton = React.forwardRef<
 				checked={checked}
 				ref={ref}
 				onClick={(e) => e.preventDefault()}
-				className="data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:shadow-none size-3 shadow-[0_2px_4px_0_#00000005,inset_0_2px_1px_0_#FFFFFF] rounded-md border-t4 bg-t14"
+				className="data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:shadow-none size-3.5 shadow-[0_2px_4px_0_#00000005,inset_0_2px_1px_0_#FFFFFF] rounded-md border-t6 bg-t14"
 				iconClassName="size-2"
 				{...props}
 			/>

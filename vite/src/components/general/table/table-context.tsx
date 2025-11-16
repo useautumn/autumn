@@ -8,6 +8,7 @@ export interface TableProps<T> {
 	enableSelection?: boolean;
 	enableSorting?: boolean;
 	onRowClick?: (row: T) => void;
+	rowClassName?: string;
 }
 
 //biome-ignore lint/suspicious/noExplicitAny: type could be any here

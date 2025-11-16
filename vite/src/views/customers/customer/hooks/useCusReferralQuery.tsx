@@ -7,7 +7,6 @@ export const useCusReferralQuery = () => {
 	const axiosInstance = useAxiosInstance();
 
 	const referralFetcher = async () => {
-		console.log("referralFetcher");
 		const { data } = await axiosInstance.get(
 			`/customers/${customer_id}/referrals`,
 		);

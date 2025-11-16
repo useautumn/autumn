@@ -18,7 +18,7 @@ html {
 	overscroll-behavior: none;
 }
 
-::-webkit-scrollbar {
+/* ::-webkit-scrollbar {
 	width: 0.5rem;
 }
 ::-webkit-scrollbar-track {
@@ -32,7 +32,7 @@ html {
 }
 .dark ::-webkit-scrollbar-thumb {
 	background-color: var(--color-neutral-500);
-}
+} */
 
 :root {
 	/* font-family: system-ui, Avenir, Helvetica, Arial, sans-serif; */
@@ -48,6 +48,7 @@ html {
 	/* Editted */
 	background-color: #fafaf9;
 	--foreground: #121212;
+	--background: #fafaf9;
 	--muted-foreground: #444;
 	--t1: #121212;
 	--t2: #444;
@@ -97,7 +98,7 @@ html {
 	text-rendering: optimizeLegibility;
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
-	--background: oklch(1 0 0);
+	/* --background: oklch(1 0 0); */
 
 	--card-foreground: oklch(0.141 0.005 285.823);
 
