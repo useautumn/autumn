@@ -189,7 +189,7 @@ const init = async () => {
 	app.use("/webhooks", webhooksRouter);
 
 	app.use(express.json());
-	app.use(async (req: any, res: any, next: any) => {
+	app.use(async (req: any, _res: any, next: any) => {
 		req.logger.info(`${req.method} ${req.originalUrl}`, {
 			context: {
 				body: req.body,
@@ -228,7 +228,7 @@ if (process.env.NODE_ENV === "development") {
 			cluster.fork();
 		}
 
-		cluster.on("exit", (worker, code, signal) => {
+		cluster.on("exit", (worker, _code, _signal) => {
 			logger.error(`WORKER DIED: ${worker.process.pid}`);
 			cluster.fork();
 		});

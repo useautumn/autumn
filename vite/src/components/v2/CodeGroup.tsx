@@ -378,6 +378,18 @@ const CodeGroupCode = React.forwardRef<HTMLPreElement, CodeGroupCodeProps>(
 );
 CodeGroupCode.displayName = "CodeGroupCode";
 
+const CodeGroupCodeSolidColour = React.forwardRef<
+	HTMLPreElement,
+	React.ComponentPropsWithoutRef<"pre">
+>(({ className, children, ...props }, ref) => {
+	return (
+		<pre ref={ref} className={cn("text-t8", className)} {...props}>
+			{children}
+		</pre>
+	);
+});
+CodeGroupCodeSolidColour.displayName = "CodeGroupCodeSolidColour";
+
 export {
 	CodeGroup,
 	CodeGroupList,
@@ -385,4 +397,5 @@ export {
 	CodeGroupCopyButton,
 	CodeGroupContent,
 	CodeGroupCode,
+	CodeGroupCodeSolidColour,
 };

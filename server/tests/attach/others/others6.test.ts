@@ -9,6 +9,7 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { timeout } from "../../utils/genUtils";
 
 export const pro = constructProduct({
 	items: [constructArrearItem({ featureId: TestFeature.Words })],
@@ -50,6 +51,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach with customer ID and
 			id: null,
 			email: `${customerId}@test.com`,
 			name: customerId,
+			withAutumnId: true,
 		});
 
 		expect(customer.autumn_id).toBeDefined();
@@ -94,19 +96,30 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach with customer ID and
 
 		expect(customer.autumn_id).toBe(internalCustomerId);
 
-		const entity = await autumn.entities.create(customer.autumn_id, {
+		const entity = await autumn.entities.create(customer.id, {
 			id: entityId,
 			feature_id: TestFeature.Users,
 		});
 
 		internalEntityId = entity.autumn_id;
 
+		// console.log("Customer: ", customer);
+		// console.log("Entity: ", entity);
+
+		await timeout(2000);
+
 		const customer2 = await autumn.customers.get(customerId);
 
 		expectAttachCorrect({
 			customer: customer2,
 			product: pro,
-			entityId,
+		});
+
+		const entity2 = await autumn.entities.get(customerId, entityId);
+
+		expectAttachCorrect({
+			customer: entity2,
+			product: pro,
 		});
 	});
 });

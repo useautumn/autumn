@@ -1,8 +1,12 @@
-import { Customer, Feature } from "@autumn/shared";
+import {
+	BillingType,
+	type Customer,
+	type Feature,
+	type Price,
+	type UsagePriceConfig,
+} from "@autumn/shared";
+import type Stripe from "stripe";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-import { BillingType, Price, UsagePriceConfig } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
-import Stripe from "stripe";
 
 export const submitUsageToStripe = async ({
 	price,
@@ -21,10 +25,10 @@ export const submitUsageToStripe = async ({
 	feature: Feature;
 	logger: any;
 }) => {
-	let config = price.config as UsagePriceConfig;
-	let billingType = getBillingType(config);
+	const config = price.config as UsagePriceConfig;
+	const billingType = getBillingType(config);
 
-	if (billingType != BillingType.UsageInArrear) {
+	if (billingType !== BillingType.UsageInArrear) {
 		logger.warn(
 			`Price ${price.id} is not usage in arrear type, can't send usage`,
 		);

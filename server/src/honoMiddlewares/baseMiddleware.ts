@@ -31,7 +31,6 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	};
 
 	const method = c.req.method;
-	const path = c.req.path;
 
 	let body = null;
 	if (method === "POST" || method === "PUT" || method === "PATCH") {

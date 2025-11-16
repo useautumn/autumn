@@ -9,7 +9,7 @@
 			"scripts"
 		],
 		"catalog": {
-			"stripe": "18.4.0-beta.2",
+			"stripe": "19.3.0-beta.1",
 			"drizzle-orm": "0.43.1",
 			"drizzle-kit": "^0.31.1"
 		}
@@ -22,7 +22,7 @@
 
 		"setup": "node scripts/setup/setup.js",
 		"setup:test": "bun scripts/setup/setup-test.ts",
-		"tests": "bun scripts/test.ts",
+		"tests": "infisical run --env=dev -- bun scripts/test.ts",
 
 		"setupci": "node scripts/setup/setupci.js",
 		"replicate": "bun scripts/db/replicate.ts",

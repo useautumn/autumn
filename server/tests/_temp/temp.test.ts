@@ -5,22 +5,23 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
-	constructArrearProratedItem,
+	constructArrearItem,
 	constructFeatureItem,
+	constructPrepaidItem,
 } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { CusService } from "../../src/internal/customers/CusService";
 
 const freeProd = constructProduct({
 	type: "free",
-	isDefault: false,
+	isDefault: true,
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
-			includedUsage: 300,
+			includedUsage: 500,
 		}),
-		constructFeatureItem({ featureId: TestFeature.Users, includedUsage: 10 }),
 	],
 });
 
@@ -32,22 +33,31 @@ const proProd = constructProduct({
 			featureId: TestFeature.Messages,
 			includedUsage: 300,
 		}),
-		constructFeatureItem({ featureId: TestFeature.Users, includedUsage: 10 }),
 	],
 });
-const premiumProd = constructProduct({
-	type: "premium",
+const proWithUsage = constructProduct({
+	type: "pro",
+	id: "pro-with-usage",
 	isDefault: false,
 	items: [
-		constructFeatureItem({
+		constructArrearItem({
 			featureId: TestFeature.Messages,
-			includedUsage: 300,
+			includedUsage: 0,
+			billingUnits: 1,
+			price: 0.5,
 		}),
-		// constructFeatureItem({ featureId: TestFeature.Users, includedUsage: 10 }),
-		constructArrearProratedItem({
-			featureId: TestFeature.Users,
-			includedUsage: 1,
-			pricePerUnit: 10,
+	],
+});
+const proWithPrepaid = constructProduct({
+	type: "pro",
+	id: "pro-with-prepaid",
+	isDefault: false,
+	items: [
+		constructPrepaidItem({
+			featureId: TestFeature.Messages,
+			billingUnits: 100,
+			price: 10,
+			includedUsage: 100,
 		}),
 	],
 });
@@ -60,6 +70,12 @@ describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
 	beforeAll(async () => {
+		await CusService.deleteByOrgId({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		});
+
 		await initCustomerV3({
 			ctx,
 			customerId,
@@ -69,13 +85,8 @@ describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [freeProd, proProd, premiumProd],
+			products: [freeProd, proProd, proWithUsage, proWithPrepaid],
 			// prefix: testCase,
-		});
-
-		await autumnV1.attach({
-			customer_id: customerId,
-			product_id: premiumProd.id,
 		});
 	});
 	return;

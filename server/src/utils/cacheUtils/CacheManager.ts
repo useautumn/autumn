@@ -1,7 +1,7 @@
 import { redis } from "../../external/redis/initRedis.js";
 
 export class CacheManager {
-	public static async getJson(key: string) {
+	public static async getJson<T>(key: string): Promise<T | null> {
 		if (redis.status !== "ready") {
 			console.warn("Cache client is not in ready state");
 			return null;
@@ -31,6 +31,15 @@ export class CacheManager {
 		} else if (typeof ttl === "string" && ttl.toLowerCase() === "forever") {
 			await redis.set(key, JSON.stringify(value));
 		}
+	}
+
+	public static async del(key: string) {
+		if (redis.status !== "ready") {
+			console.warn("Cache client is not in ready state");
+			return;
+		}
+
+		await redis.del(key);
 	}
 
 	public static async invalidate({

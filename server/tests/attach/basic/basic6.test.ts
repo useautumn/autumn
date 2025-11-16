@@ -5,14 +5,14 @@ import {
 	type Customer,
 	ProductItemInterval,
 } from "@autumn/shared";
-import chalk from "chalk";
-import { addHours, addMonths } from "date-fns";
-import type Stripe from "stripe";
 import { AutumnCli } from "@tests/cli/AutumnCli.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
+import { addHours, addMonths } from "date-fns";
+import type Stripe from "stripe";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { attachFailedPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
@@ -101,9 +101,7 @@ describe(`${chalk.yellowBright("basic6: Testing subscription past_due")}`, () =>
 
 	test("should have pro product in past due status", async () => {
 		const cusRes: any = await AutumnCli.getCustomer(customerId);
-		const proProduct = cusRes.products.find(
-			(p: any) => p.id === proProd.id,
-		);
+		const proProduct = cusRes.products.find((p: any) => p.id === proProd.id);
 		expect(proProduct).toBeDefined();
 		expect(proProduct.status).toBe(CusProductStatus.PastDue);
 	});

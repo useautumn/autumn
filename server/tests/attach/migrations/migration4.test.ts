@@ -1,9 +1,9 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import chalk from "chalk";
 import { defaultApiVersion } from "@tests/constants.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
@@ -30,6 +30,7 @@ const newWordsItem = constructArrearItem({
 
 const proWithTrial = constructProduct({
 	items: [newWordsItem],
+	id: "migrations4_pro",
 	type: "pro",
 	isDefault: false,
 	trial: true,

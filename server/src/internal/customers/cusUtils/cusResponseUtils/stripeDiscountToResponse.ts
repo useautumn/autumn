@@ -35,7 +35,12 @@ export const stripeDiscountToResponse = ({
 }) => {
 	const d = discount;
 
-	const { duration_type, duration_value } = parseStripeCouponDuration(d.coupon);
+	const coupon = d.source.coupon;
+	if (!coupon || typeof coupon === "string") {
+		return null;
+	}
+
+	const { duration_type, duration_value } = parseStripeCouponDuration(coupon);
 
 	const totalDiscountAmount = totalDiscountAmounts?.find(
 		(t) => t.discount === d.id,
@@ -43,17 +48,17 @@ export const stripeDiscountToResponse = ({
 
 	const totalAtmnDiscountAmount = stripeToAtmnAmount({
 		amount: totalDiscountAmount?.amount || 0,
-		currency: d.coupon?.currency ?? undefined,
+		currency: coupon.currency ?? undefined,
 	});
 
 	return {
-		id: d.coupon?.id,
-		name: d.coupon?.name ?? "",
-		type: d.coupon?.amount_off
+		id: coupon.id,
+		name: coupon.name ?? "",
+		type: coupon.amount_off
 			? RewardType.FixedDiscount
 			: RewardType.PercentageDiscount,
-		discount_value: d.coupon?.amount_off || d.coupon?.percent_off || 0,
-		currency: d.coupon?.currency ?? null,
+		discount_value: coupon.amount_off || coupon.percent_off || 0,
+		currency: coupon.currency ?? null,
 		start: d.start ?? null,
 		end: d.end ?? null,
 		// subscription_id: d.subscription ?? null,

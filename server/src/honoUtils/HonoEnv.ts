@@ -8,6 +8,7 @@ import type {
 import type { ClickHouseClient } from "@clickhouse/client";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
+import type { OidcClaims } from "@/external/vercel/misc/vercelAuth.js";
 
 export type RequestContext = {
 	// Variables
@@ -36,5 +37,9 @@ export type RequestContext = {
 export type AutumnContext = RequestContext;
 
 export type HonoEnv = {
-	Variables: { ctx: AutumnContext; validated: boolean };
+	Variables: {
+		ctx: AutumnContext;
+		validated: boolean;
+		vercelClaims?: OidcClaims;
+	};
 };

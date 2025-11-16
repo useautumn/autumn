@@ -8,8 +8,8 @@ import {
 	FEATURE_EXAMPLE,
 } from "./prevVersions/apiFeatureV0.js";
 import {
-	CreateFeatureParamsSchema,
-	UpdateFeatureParamsSchema,
+	CreateFeatureV0ParamsSchema,
+	UpdateFeatureV0ParamsSchema,
 } from "./prevVersions/featureV0OpModels.js";
 
 // Register the schema with .meta() for OpenAPI spec generation
@@ -42,7 +42,7 @@ export const featureOps = {
 			tags: ["features"],
 			requestBody: {
 				content: {
-					"application/json": { schema: CreateFeatureParamsSchema },
+					"application/json": { schema: CreateFeatureV0ParamsSchema },
 				},
 			},
 			responses: {
@@ -79,7 +79,7 @@ export const featureOps = {
 			},
 			requestBody: {
 				content: {
-					"application/json": { schema: UpdateFeatureParamsSchema },
+					"application/json": { schema: UpdateFeatureV0ParamsSchema },
 				},
 			},
 			responses: {

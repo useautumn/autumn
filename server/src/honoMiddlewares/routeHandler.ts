@@ -94,6 +94,7 @@ export function createRoute<
 	handler: (
 		c: ValidatedContext<HonoEnv, Body, Query, Params>,
 	) => Response | Promise<Response>;
+	assertIdempotence?: string | undefined;
 }) {
 	const middlewares: MiddlewareHandler[] = [];
 
@@ -129,6 +130,28 @@ export function createRoute<
 		middlewares.push(validator("param", opts.params));
 	}
 
+	// if (
+	// 	opts.assertIdempotence !== undefined &&
+	// 	opts.assertIdempotence !== null &&
+	// 	opts.assertIdempotence?.trim() !== ""
+	// ) {
+	// 	middlewares.push(async (c, next) => {
+	// 		const db = c.get("ctx").db;
+	// 		const id = c.req.header(opts.assertIdempotence as string);
+	// 		if (!id) {
+	// 			throw new RecaseError({
+	// 				message: "Idempotency key not found",
+	// 				code: ErrCode.IdempotencyKeyNotFound,
+	// 				statusCode: StatusCodes.NOT_FOUND,
+	// 			});
+	// 		}
+	// 		await IdempotencyService.validate({
+	// 			db,
+	// 			id,
+	// 		});
+	// 		return await next();
+	// 	});
+	// }
 	// Add expand middleware after query validation
 	if (opts.query || opts.versionedQuery) {
 		middlewares.push(expandMiddleware());

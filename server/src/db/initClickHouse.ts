@@ -1,4 +1,4 @@
-import { ClickHouseClient, createClient } from "@clickhouse/client";
+import { type ClickHouseClient, createClient } from "@clickhouse/client";
 
 export const clickhouseClient: ClickHouseClient = createClient({
 	url: process.env.CLICKHOUSE_URL!,
