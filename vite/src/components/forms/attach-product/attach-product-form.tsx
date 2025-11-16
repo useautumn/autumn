@@ -28,9 +28,7 @@ export function AttachProductForm({
 				{(field) => <AttachProductSelection field={field} form={form} />}
 			</form.AppField>
 
-			<form.AppField name="prepaidOptions" mode="array">
-				{(field) => <AttachProductPrepaidOptions field={field} form={form} />}
-			</form.AppField>
+			<AttachProductPrepaidOptions form={form} />
 
 			<form.Subscribe selector={(state) => state.values.products}>
 				{(products) => (

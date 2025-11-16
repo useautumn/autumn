@@ -5,17 +5,10 @@ const ProductFormItemSchema = z.object({
 	quantity: z.number().min(1),
 });
 
-const PrepaidOptionSchema = z.object({
-	feature_id: z.string(),
-	quantity: z.number(),
-	billing_units: z.number(),
-});
-
 export const AttachProductFormSchema = z.object({
 	products: z.array(ProductFormItemSchema),
-	prepaidOptions: z.array(PrepaidOptionSchema),
+	prepaidQuantities: z.record(z.string(), z.number()),
 });
 
 export type AttachProductForm = z.infer<typeof AttachProductFormSchema>;
 export type ProductFormItem = z.infer<typeof ProductFormItemSchema>;
-export type PrepaidOption = z.infer<typeof PrepaidOptionSchema>;
