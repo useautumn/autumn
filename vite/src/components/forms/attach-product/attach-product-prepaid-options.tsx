@@ -1,20 +1,13 @@
 import { UsageModel } from "@autumn/shared";
-import type { AnyFieldApi } from "@tanstack/react-form";
-import { useEffect } from "react";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import type {
-	PrepaidOption,
-	ProductFormItem,
-} from "./attach-product-form-schema";
+import type { ProductFormItem } from "./attach-product-form-schema";
 import type { UseAttachProductForm } from "./use-attach-product-form";
 
 interface PrepaidOptionsFieldProps {
-	field: AnyFieldApi;
 	form: UseAttachProductForm;
 }
 
 export function AttachProductPrepaidOptions({
-	field,
 	form,
 }: PrepaidOptionsFieldProps) {
 	const { products } = useProductsQuery();
@@ -45,34 +38,6 @@ export function AttachProductPrepaidOptions({
 			}));
 		});
 
-	useEffect(() => {
-		const currentOptions = field.state.value as PrepaidOption[];
-
-		const existingOptionsMap = new Map(
-			currentOptions.map((opt) => [opt.feature_id, opt]),
-		);
-
-		const syncedOptions = prepaidFeatures.map((feature) => {
-			const existingOpt = existingOptionsMap.get(feature.feature_id);
-			return {
-				feature_id: feature.feature_id,
-				quantity: existingOpt?.quantity || 0,
-				billing_units: feature.billing_units,
-			};
-		});
-
-		if (
-			syncedOptions.length !== currentOptions.length ||
-			!syncedOptions.every(
-				(opt, i) =>
-					currentOptions[i]?.feature_id === opt.feature_id &&
-					currentOptions[i]?.quantity === opt.quantity,
-			)
-		) {
-			field.handleChange(syncedOptions);
-		}
-	}, [prepaidFeatures.map((f) => f.feature_id).join(","), field]);
-
 	if (prepaidFeatures.length === 0) {
 		return null;
 	}
@@ -92,37 +57,28 @@ export function AttachProductPrepaidOptions({
 					<div className="text-xs font-medium text-t3">Quantity</div>
 				</div>
 
-				{prepaidFeatures.map(
-					(
-						feature: {
-							feature_id: string;
-							product_name: string;
-							billing_units: number;
-						},
-						i: number,
-					) => {
-						return (
-							<div
-								key={feature.feature_id}
-								className="grid grid-cols-[1fr_auto] gap-2 items-center"
-							>
-								<div className="text-sm text-foreground">
-									{feature.product_name}
-								</div>
-
-								<form.AppField name={`prepaidOptions[${i}].quantity`}>
-									{(quantityField) => (
-										<quantityField.QuantityField
-											label=""
-											placeholder="0"
-											min={0}
-										/>
-									)}
-								</form.AppField>
+				{prepaidFeatures.map((feature) => {
+					return (
+						<div
+							key={feature.feature_id}
+							className="grid grid-cols-[1fr_auto] gap-2 items-center"
+						>
+							<div className="text-sm text-foreground">
+								{feature.product_name}
 							</div>
-						);
-					},
-				)}
+
+							<form.AppField name={`prepaidQuantities.${feature.feature_id}`}>
+								{(quantityField) => (
+									<quantityField.QuantityField
+										label=""
+										placeholder="0"
+										min={0}
+									/>
+								)}
+							</form.AppField>
+						</div>
+					);
+				})}
 			</div>
 		</div>
 	);
