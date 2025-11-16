@@ -117,6 +117,7 @@ export const handleSubscriptionUpdated = async ({
 	}
 
 	// Cancel subscription immediately
+
 	if (subscription.status === "past_due" && org.config.cancel_on_past_due) {
 		const stripeCli = createStripeCli({
 			org,
@@ -130,14 +131,11 @@ export const handleSubscriptionUpdated = async ({
 		logger.info(
 			`Latest invoice billing reason: ${latestInvoice.billing_reason}`,
 		);
-		logger.info(`Latest invoice status: ${latestInvoice.status}`);
 
-		if (
-			latestInvoice.status !== "open" ||
-			latestInvoice.billing_reason !== "subscription_cycle"
-		) {
+		const validInvoiceReasons = ["subscription_cycle", "subscription_create"];
+		if (!validInvoiceReasons.includes(latestInvoice.billing_reason ?? "")) {
 			logger.info(
-				"sub.updated, latest invoice isn't open or billing reason isn't subscription_update, past_due not forcing cancel",
+				"sub.updated, latest invoice billing reason isn't subscription_cycle / subscription_create, past_due not forcing cancel",
 				{
 					data: {
 						subscriptionId: subscription.id,
@@ -165,7 +163,9 @@ export const handleSubscriptionUpdated = async ({
 				},
 			);
 			await stripeCli.subscriptions.cancel(subscription.id);
-			await stripeCli.invoices.voidInvoice(subscription.latest_invoice);
+			if (latestInvoice.status === "open") {
+				await stripeCli.invoices.voidInvoice(subscription.latest_invoice);
+			}
 		} catch (error: any) {
 			logger.error(
 				`subscription.updated: error cancelling / voiding: ${error.message}`,
@@ -183,48 +183,3 @@ export const handleSubscriptionUpdated = async ({
 		}
 	}
 };
-
-// server-1       | subscription.updated, previous attributes: { status: 'active' }
-// server-1       | current period start: 8 Jul 2025
-// server-1       | current period end: 8 Aug 2025
-// server-1       | subscription.updated: past due, cancelling: sub_1Rig399mx3u0jkgOquNmw5fM
-
-// server-1       | subscription.updated, previous attributes: { status: 'active' }
-// server-1       | current period start: 8 Aug 2025
-// server-1       | current period end: 8 Sep 2025
-// server-1       | subscription.updated: past due, cancelling: sub_1Rig3z9mx3u0jkgOzJTci91r
-
-// const lockKey = `sub_updated_${subscription.id}`;
-// // Create a lock to prevent race conditions
-// let lockAcquired = false;
-// try {
-//   let attempts = 0;
-
-//   while (!lockAcquired && attempts < 3) {
-//     lockAcquired = await getWebhookLock({ lockKey, logger });
-//     if (!lockAcquired) {
-//       attempts++;
-//       console.log(
-//         `sub.updated: failed to acquire lock for ${subscription.id}, attempt ${attempts}`,
-//       );
-//       if (attempts < 3) {
-//         await new Promise((resolve) => setTimeout(resolve, 1000));
-//       }
-//     } else {
-//       break;
-//     }
-//   }
-// } catch (error) {
-//   logger.error("lock error, setting lockAcquired to true");
-//   lockAcquired = true;
-// }
-
-// if (!lockAcquired) {
-//   throw new RecaseError({
-//     message: `Failed to acquire lock for stripe webhook, sub.updated.`,
-//     code: ErrCode.InvalidRequest,
-//     statusCode: 400,
-//   });
-// }
-
-// await releaseWebhookLock({ lockKey, logger });
