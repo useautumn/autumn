@@ -1,3 +1,4 @@
+import { beforeAll, describe, expect, it } from "bun:test";
 import {
 	type AppEnv,
 	CusProductStatus,
@@ -5,22 +6,20 @@ import {
 	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
-import { expect } from "chai";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
+import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import type { Stripe } from "stripe";
-import { setupBefore } from "tests/before.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
 // Pro Trial
 // Trial Finishes
@@ -64,39 +63,26 @@ describe(`${chalk.yellowBright("trial3: Testing cancel trial product")}`, () => 
 	let org: Organization;
 	let env: AppEnv;
 
-	beforeAll(async function () {
-		await setupBefore(this);
-		const { autumnJs } = this;
-		db = this.db;
-		org = this.org;
-		env = this.env;
-
-		stripeCli = this.stripeCli;
-
-		addPrefixToProducts({
+	beforeAll(async () => {
+		await initProductsV0({
+			ctx,
 			products: [pro],
 			prefix: testCase,
-		});
-
-		await createProducts({
-			autumn: autumnJs,
-			products: [pro],
-			db,
-			orgId: org.id,
-			env,
 			customerId,
 		});
 
-		const { testClockId: testClockId1 } = await initCustomer({
-			autumn: autumnJs,
+		const res = await initCustomerV3({
+			ctx,
 			customerId,
-			db,
-			org,
-			env,
 			attachPm: "success",
+			withTestClock: true,
 		});
 
-		testClockId = testClockId1!;
+		stripeCli = ctx.stripeCli;
+		db = ctx.db;
+		org = ctx.org;
+		env = ctx.env;
+		testClockId = res.testClockId!;
 	});
 
 	it("should attach first trial, and advance clock past trial", async () => {
@@ -146,7 +132,7 @@ describe(`${chalk.yellowBright("trial3: Testing cancel trial product")}`, () => 
 		// console.log(`cancel at: ${sub?.cancel_at}`);
 		// console.log(`canceled at: ${sub?.canceled_at}`);
 		const canceled = sub?.canceled_at || sub?.cancel_at;
-		expect(canceled).to.exist;
+		expect(canceled).toBeDefined();
 	});
 
 	it("should have sub not canceled if renew product", async () => {
@@ -159,7 +145,7 @@ describe(`${chalk.yellowBright("trial3: Testing cancel trial product")}`, () => 
 			cusProduct,
 			stripeCli,
 		});
-		expect(sub?.cancel_at_period_end).to.equal(false);
+		expect(sub?.cancel_at_period_end).toBe(false);
 	});
 	it("should be canceled completely", async () => {
 		await autumn.cancel({
@@ -169,13 +155,13 @@ describe(`${chalk.yellowBright("trial3: Testing cancel trial product")}`, () => 
 		});
 
 		const customer = await autumn.customers.get(customerId);
-		const proProduct = customer.products.find((p) => p.id === pro.id)!;
-		expect(proProduct).to.not.exist;
+		const proProduct = customer.products.find((p) => p.id === pro.id);
+		expect(proProduct).toBeUndefined();
 
 		const sub = await cusProductToSub({
 			cusProduct,
 			stripeCli,
 		});
-		expect(sub?.status).to.equal("canceled");
+		expect(sub?.status).toBe("canceled");
 	});
 });

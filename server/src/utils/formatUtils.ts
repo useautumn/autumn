@@ -1,4 +1,4 @@
-import { Organization } from "@autumn/shared";
+import type { Organization } from "@autumn/shared";
 
 export const formatAmount = ({
 	org,

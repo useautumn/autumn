@@ -6,10 +6,10 @@ import {
 	type ProductOptions,
 	type ProductV2,
 } from "@autumn/shared";
+import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect.js";
+import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
 import type { Customer, Entity } from "autumn-js";
 import { expect } from "chai";
-import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
@@ -51,7 +51,6 @@ export const expectMultiAttachCorrect = async ({
 		customer_id: customerId,
 		products: products,
 		entity_id: entityId,
-		// @ts-expect-error
 		reward: rewards,
 		...attachParams,
 	});
@@ -60,7 +59,6 @@ export const expectMultiAttachCorrect = async ({
 		customer_id: customerId,
 		products: products,
 		entity_id: entityId,
-		// @ts-expect-error
 		reward: rewards,
 		...attachParams,
 	});

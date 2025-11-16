@@ -1,13 +1,13 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
+import { defaultApiVersion } from "@tests/constants.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
+import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
+import { advanceTestClock } from "@tests/utils/stripeUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { addHours, addMonths } from "date-fns";
-import { defaultApiVersion } from "tests/constants.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -111,7 +111,7 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing downgrade entity pro
 		});
 
 		const entity = await autumn.entities.get(customerId, entity1.id);
-		const proProd = entity.products.find((p: any) => p.id == pro.id);
+		const proProd = entity.products.find((p: any) => p.id === pro.id);
 		expect(proProd).toBeDefined();
 		expect(proProd.status).toBe(CusProductStatus.Scheduled);
 	});
@@ -128,10 +128,10 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing downgrade entity pro
 		});
 
 		const entity = await autumn.entities.get(customerId, entity1.id);
-		const proProd = entity.products.find((p: any) => p.id == pro.id);
+		const proProd = entity.products.find((p: any) => p.id === pro.id);
 		expect(proProd).toBeDefined();
 		expect(proProd.status).toBe(CusProductStatus.Active);
-		expect(entity.products.length).toBe(2);
+		expect(entity.products.length).toBe(1);
 
 		const entity2Res = await autumn.entities.get(customerId, entity2.id);
 		const premiumProd = entity2Res.products.find(
@@ -139,6 +139,6 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing downgrade entity pro
 		);
 		expect(premiumProd).toBeDefined();
 		expect(premiumProd.status).toBe(CusProductStatus.Active);
-		expect(entity2Res.products.length).toBe(2);
+		expect(entity2Res.products.length).toBe(1);
 	});
 });

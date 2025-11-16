@@ -3,11 +3,11 @@
 import { beforeAll, describe, test } from "bun:test";
 import { LegacyVersion, OnDecrease, OnIncrease } from "@autumn/shared";
 import chalk from "chalk";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { expectSubQuantityCorrect } from "tests/utils/expectUtils/expectContUseUtils.js";
-import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
+import { expectSubQuantityCorrect } from "@tests/utils/expectUtils/expectContUseUtils.js";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { attachFailedPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";

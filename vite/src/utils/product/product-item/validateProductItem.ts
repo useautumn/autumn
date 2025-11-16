@@ -3,7 +3,7 @@ import {
 	FeatureUsageType,
 	type FrontendProductItem,
 	type RolloverConfig,
-	RolloverDuration,
+	RolloverExpiryDurationType,
 } from "@autumn/shared";
 import { toast } from "sonner";
 import { invalidNumber, notNullish, nullish } from "@/utils/genUtils";
@@ -165,7 +165,7 @@ export const validateProductItem = ({
 			rollover.max = parseFloat(rollover.max.toString());
 		}
 
-		if (rollover.duration !== RolloverDuration.Forever) {
+		if (rollover.duration !== RolloverExpiryDurationType.Forever) {
 			rollover.length = parseFloat(rollover.length.toString());
 		} else {
 			rollover.length = 0;
@@ -197,7 +197,10 @@ export const validateProductItem = ({
 			return null;
 		}
 
-		if (rollover.duration === RolloverDuration.Month && rollover.length < 0) {
+		if (
+			rollover.duration === RolloverExpiryDurationType.Month &&
+			rollover.length < 0
+		) {
 			toast.error("Please enter a positive rollover length");
 			item.config.rollover = undefined;
 			return null;

@@ -76,7 +76,7 @@ export const EditProductDetails = () => {
 							id: details.id,
 						});
 					}}
-					placeholder="Eg. Free Plan"
+					placeholder="Eg. Free Product"
 					value={details.name}
 					onChange={(e) => {
 						const newIdData = allowCreate

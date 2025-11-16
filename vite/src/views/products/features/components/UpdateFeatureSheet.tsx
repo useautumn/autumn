@@ -1,4 +1,4 @@
-import type { Feature } from "@autumn/shared";
+import { type Feature, FeatureUsageType } from "@autumn/shared";
 import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -54,10 +54,11 @@ function UpdateFeatureSheet({
 			await FeatureService.updateFeature(axiosInstance, selectedFeature.id, {
 				...feature,
 				id: feature.id,
-				type: feature.type,
 				name: feature.name,
-				config: feature.config,
+				type: feature.type,
+				consumable: feature.config?.usage_type === FeatureUsageType.Single,
 				event_names: feature.event_names,
+				display: undefined,
 			});
 
 			await refetch();

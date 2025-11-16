@@ -19,7 +19,7 @@ export const loadCaCert = async ({
 		const ca = Bun.file(caPath || `/etc/secrets/${type}-cert.pem`);
 		const caText = await ca.text();
 
-		return undefined;
+		return caText;
 	} catch (_error) {
 		return;
 	}

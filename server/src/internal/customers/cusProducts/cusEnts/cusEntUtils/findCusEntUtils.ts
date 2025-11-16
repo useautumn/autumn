@@ -1,19 +1,17 @@
-import {
-	type Entity,
-	type Feature,
-	type FullCusEntWithFullCusProduct,
-	type FullCustomerEntitlement,
+import type {
+	Entity,
+	Feature,
+	FullCusEntWithFullCusProduct,
+	FullCustomerEntitlement,
 } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
 
 export const cusEntMatchesEntity = ({
 	cusEnt,
 	entity,
-	features,
 }: {
 	cusEnt: FullCusEntWithFullCusProduct;
 	entity?: Entity;
-	features?: Feature[];
 }) => {
 	if (!entity) return true;
 
@@ -25,9 +23,6 @@ export const cusEntMatchesEntity = ({
 	}
 
 	let entityFeatureIdMatch = true;
-	// let feature = features?.find(
-	//   (f) => f.id == cusEnt.entitlement.entity_feature_id,
-	// );
 
 	if (notNullish(cusEnt.entitlement.entity_feature_id)) {
 		entityFeatureIdMatch =
@@ -35,16 +30,6 @@ export const cusEntMatchesEntity = ({
 	}
 
 	return cusProductMatch && entityFeatureIdMatch;
-};
-
-export const cusEntMatchesFeature = ({
-	cusEnt,
-	feature,
-}: {
-	cusEnt: FullCustomerEntitlement;
-	feature: Feature;
-}) => {
-	return cusEnt.entitlement.feature.internal_id === feature.internal_id;
 };
 
 export const findMainCusEntForFeature = ({
@@ -90,10 +75,31 @@ export const findCusEnt = ({
 		const featureMatch =
 			ce.entitlement.feature.internal_id === feature.internal_id;
 
-		const entityMatch = cusEntMatchesEntity({ cusEnt: ce, entity, features });
+		const entityMatch = cusEntMatchesEntity({ cusEnt: ce, entity });
 
 		const usageMatch = onlyUsageAllowed ? ce.usage_allowed : true;
 
 		return featureMatch && entityMatch && usageMatch;
+	});
+};
+
+export const filterCusEnts = ({
+	feature,
+	cusEnts,
+	entity,
+	features,
+}: {
+	feature: Feature;
+	cusEnts: FullCustomerEntitlement[];
+	entity?: Entity;
+	features?: Feature[];
+}) => {
+	return cusEnts.filter((ce: any) => {
+		const featureMatch =
+			ce.entitlement.feature.internal_id === feature.internal_id;
+
+		const entityMatch = cusEntMatchesEntity({ cusEnt: ce, entity });
+
+		return featureMatch && entityMatch;
 	});
 };

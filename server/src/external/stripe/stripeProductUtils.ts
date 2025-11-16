@@ -52,7 +52,7 @@ export const deleteStripeProduct = async (
 
 	try {
 		await stripe.products.del(product.processor.id);
-	} catch (error) {
+	} catch (_error) {
 		throw new RecaseError({
 			message: "Failed to delete stripe product",
 			code: ErrCode.DeleteStripeProductFailed,
@@ -136,7 +136,7 @@ export const deleteAllStripeProducts = async ({
 			batch.map(async (p) => {
 				try {
 					await stripeCli.products.del(p.id);
-				} catch (error) {
+				} catch (_error) {
 					await stripeCli.products.update(p.id, {
 						active: false,
 					});

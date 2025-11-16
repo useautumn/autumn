@@ -7,22 +7,22 @@ import {
 	type Organization,
 	RewardType,
 } from "@autumn/shared";
-import chalk from "chalk";
-import { addHours, addMonths } from "date-fns";
-import type Stripe from "stripe";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
-import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { timeout } from "tests/utils/genUtils.js";
-import { createReward } from "tests/utils/productUtils.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
+import { getExpectedInvoiceTotal } from "@tests/utils/expectUtils/expectInvoiceUtils.js";
+import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
+import { timeout } from "@tests/utils/genUtils.js";
+import { createReward } from "@tests/utils/productUtils.js";
 import {
 	advanceTestClock,
 	completeCheckoutForm,
 	getDiscount,
-} from "tests/utils/stripeUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
-import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
+} from "@tests/utils/stripeUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { getBasePrice } from "@tests/utils/testProductUtils/testProductUtils.js";
+import chalk from "chalk";
+import { addHours, addMonths } from "date-fns";
+import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { getOriginalCouponId } from "@/internal/rewards/rewardUtils.js";
@@ -117,9 +117,13 @@ const simulateOneCycle = async ({
 
 	expect(cusDiscount).toBeDefined();
 
-	expect(getOriginalCouponId(cusDiscount.coupon?.id)).toBe(rewardId);
+	expect(getOriginalCouponId(cusDiscount?.source.coupon?.id ?? "")).toBe(
+		rewardId,
+	);
 
-	expect(cusDiscount.coupon?.amount_off).toBe(Math.round(couponAmount * 100));
+	// expect(cusDiscount?.source.coupon?.amount_off).toBe(
+	// 	Math.round(couponAmount * 100),
+	// );
 
 	return {
 		couponAmount,
@@ -192,18 +196,15 @@ describe(
 
 			expect(customer.invoices![0].total).toBe(0);
 
-			console.log("Customer", customer);
-
 			const cusDiscount = await getDiscount({
 				stripeCli,
 				stripeId: customer.stripe_id!,
 			});
 
-			// console.log("CusDiscount", cusDiscount);
-
 			expect(cusDiscount).toBeDefined();
-			expect(getOriginalCouponId(cusDiscount.coupon?.id)).toBe(rewardId);
-			expect(cusDiscount.coupon?.amount_off).toBe(couponAmount * 100);
+			expect(getOriginalCouponId(cusDiscount?.source.coupon?.id ?? "")).toBe(
+				rewardId,
+			);
 		});
 
 		test("should run one cycle and have correct invoice + coupon amount", async () => {

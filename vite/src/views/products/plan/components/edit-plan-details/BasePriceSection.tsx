@@ -52,7 +52,7 @@ export const BasePriceSection = ({
 	const getBasePriceIndex = () => {
 		return product.items.findIndex(
 			(item: ProductItem) =>
-				item.price === basePrice?.amount && isPriceItem(item),
+				item.price === basePrice?.price && isPriceItem(item),
 		);
 	};
 
@@ -87,7 +87,7 @@ export const BasePriceSection = ({
 					? amount
 					: notNullish(amount)
 						? Number.parseFloat(amount ?? "")
-						: basePrice?.amount;
+						: basePrice?.price;
 
 			newItems[basePriceIndex] = {
 				...newItems[basePriceIndex],
@@ -95,7 +95,7 @@ export const BasePriceSection = ({
 				// interval: interval
 				// 	? billingToItemInterval({ billingInterval: interval })
 				// 	: basePrice?.interval,
-				interval_count: interval ? intervalCount : basePrice?.intervalCount,
+				interval_count: interval ? intervalCount : basePrice?.interval_count,
 			};
 		}
 
@@ -262,7 +262,7 @@ export const BasePriceSection = ({
 										type="number"
 										placeholder="eg. 100"
 										disabled={disabled}
-										value={basePrice?.amount ?? ""}
+										value={basePrice?.price ?? ""}
 										onKeyDown={(e) => {
 											// Prevent typing minus sign
 											if (e.key === "-" || e.key === "Minus") {
@@ -287,7 +287,7 @@ export const BasePriceSection = ({
 							{basePriceType === "recurring" && (
 								<div className="w-full">
 									<SelectBillingCycle
-										item={basePrice?.item}
+										item={basePrice}
 										setItem={setItem}
 										disabled={disabled}
 										filterOneOff={basePriceType === "recurring"}

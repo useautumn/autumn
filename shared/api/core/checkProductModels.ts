@@ -13,97 +13,82 @@ export const ProductScenarioSchema = z.enum([
 ]);
 
 // Check Product Schemas
-export const CheckProductParamsSchema = z
-	.object({
-		customer_id: z.string().meta({
-			description: "The ID of the customer",
-			example: "cus_123",
-		}),
-		product_id: z.string().meta({
-			description: "The ID of the product to check",
-			example: "pro_plan",
-		}),
-		entity_id: z.string().optional().meta({
-			description: "The ID of the entity (optional)",
-			example: "entity_123",
-		}),
-		customer_data: CustomerDataSchema.optional().meta({
-			description:
-				"Customer data to create or update the customer if they don't exist",
-		}),
-		entity_data: EntityDataSchema.optional().meta({
-			description: "Entity data to create the entity if it doesn't exist",
-		}),
-		with_preview: z.boolean().optional().meta({
-			description: "Whether to include preview information in the response",
-			example: true,
-		}),
-	})
-	.meta({
-		id: "CheckProductParams",
-		description: "Parameters for checking product availability",
-	});
+export const CheckProductParamsSchema = z.object({
+	customer_id: z.string().meta({
+		description: "The ID of the customer",
+		example: "cus_123",
+	}),
+	product_id: z.string().meta({
+		description: "The ID of the product to check",
+		example: "pro_plan",
+	}),
+	entity_id: z.string().optional().meta({
+		description: "The ID of the entity (optional)",
+		example: "entity_123",
+	}),
+	customer_data: CustomerDataSchema.optional().meta({
+		description:
+			"Customer data to create or update the customer if they don't exist",
+	}),
+	entity_data: EntityDataSchema.optional().meta({
+		description: "Entity data to create the entity if it doesn't exist",
+	}),
+	with_preview: z.boolean().optional().meta({
+		description: "Whether to include preview information in the response",
+		example: true,
+	}),
+});
 
-export const CheckProductPreviewItemSchema = z
-	.object({
-		price: z.string().meta({
-			description: "Formatted price string",
-			example: "$10.00",
-		}),
-		description: z.string().meta({
-			description: "Description of the item",
-			example: "Base subscription",
-		}),
-		usage_model: z.enum(["prepaid", "pay_per_use"]).optional().meta({
-			description: "The usage model for this item",
-			example: "prepaid",
-		}),
-	})
-	.meta({
-		id: "CheckProductPreviewItem",
-		description: "Individual item in product preview",
-	});
+export const CheckProductPreviewItemSchema = z.object({
+	price: z.string().meta({
+		description: "Formatted price string",
+		example: "$10.00",
+	}),
+	description: z.string().meta({
+		description: "Description of the item",
+		example: "Base subscription",
+	}),
+	usage_model: z.enum(["prepaid", "pay_per_use"]).optional().meta({
+		description: "The usage model for this item",
+		example: "prepaid",
+	}),
+});
 
-export const CheckProductPreviewOptionSchema = z
-	.object({
-		feature_id: z.string().meta({
-			description: "The ID of the feature",
-			example: "api_calls",
-		}),
-		feature_name: z.string().meta({
-			description: "The name of the feature",
-			example: "API Calls",
-		}),
-		billing_units: z.number().meta({
-			description: "Number of billing units",
-			example: 1000,
-		}),
-		price: z.number().optional().meta({
-			description: "Price per billing unit",
-			example: 0.01,
-		}),
-		tiers: z
-			.array(
-				z.object({
-					to: z.union([z.number(), z.string()]).meta({
-						description: "Upper limit of this tier (can be 'inf' for infinite)",
-						example: 1000,
-					}),
-					amount: z.number().meta({
-						description: "Price amount for this tier",
-						example: 10,
-					}),
+export const CheckProductPreviewOptionSchema = z.object({
+	feature_id: z.string().meta({
+		description: "The ID of the feature",
+		example: "api_calls",
+	}),
+	feature_name: z.string().meta({
+		description: "The name of the feature",
+		example: "API Calls",
+	}),
+	billing_units: z.number().meta({
+		description: "Number of billing units",
+		example: 1000,
+	}),
+	price: z.number().optional().meta({
+		description: "Price per billing unit",
+		example: 0.01,
+	}),
+	tiers: z
+		.array(
+			z.object({
+				to: z.union([z.number(), z.string()]).meta({
+					description: "Upper limit of this tier (can be 'inf' for infinite)",
+					example: 1000,
 				}),
-			)
-			.optional()
-			.meta({
-				description: "Tiered pricing structure",
+				amount: z.number().meta({
+					description: "Price amount for this tier",
+					example: 10,
+				}),
 			}),
-	})
-	.meta({
-		id: "CheckProductPreviewOption",
-		description: "Feature option in product preview",
-	});
+		)
+		.optional()
+		.meta({
+			description: "Tiered pricing structure",
+		}),
+});
 
 export const CheckProductPreviewSchema = z
 	.object({
@@ -168,42 +153,33 @@ export const CheckProductPreviewSchema = z
 			.meta({
 				description: "Payment due in the next cycle",
 			}),
-	})
-	.meta({
-		id: "CheckProductPreview",
-		description: "Preview information for a product check",
 	});
 
-export const CheckProductResultSchema = z
-	.object({
-		allowed: z.boolean().meta({
-			description: "Whether the customer can attach the product",
-			example: true,
-		}),
-		customer_id: z.string().meta({
-			description: "The ID of the customer",
-			example: "cus_123",
-		}),
-		product_id: z.string().meta({
-			description: "The ID of the product",
-			example: "pro_plan",
-		}),
-		entity_id: z.string().optional().meta({
-			description: "The ID of the entity (if provided)",
-			example: "entity_123",
-		}),
-		status: z.string().optional().meta({
-			description: "Status code for the check result",
-			example: "upgrade_available",
-		}),
-		preview: CheckProductPreviewSchema.optional().meta({
-			description: "Preview information if with_preview was true",
-		}),
-	})
-	.meta({
-		id: "CheckProductResult",
-		description: "Result of a product check",
-	});
+export const CheckProductResultSchema = z.object({
+	allowed: z.boolean().meta({
+		description: "Whether the customer can attach the product",
+		example: true,
+	}),
+	customer_id: z.string().meta({
+		description: "The ID of the customer",
+		example: "cus_123",
+	}),
+	product_id: z.string().meta({
+		description: "The ID of the product",
+		example: "pro_plan",
+	}),
+	entity_id: z.string().optional().meta({
+		description: "The ID of the entity (if provided)",
+		example: "entity_123",
+	}),
+	status: z.string().optional().meta({
+		description: "Status code for the check result",
+		example: "upgrade_available",
+	}),
+	preview: CheckProductPreviewSchema.optional().meta({
+		description: "Preview information if with_preview was true",
+	}),
+});
 
 export type CheckProductParams = z.infer<typeof CheckProductParamsSchema>;
 export type CheckProductResult = z.infer<typeof CheckProductResultSchema>;

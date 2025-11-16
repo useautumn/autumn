@@ -94,11 +94,9 @@ const checkSubAnchor = async ({
 const handleShortDurationCusEnt = async ({
 	db,
 	cusEnt,
-	cacheEnabledOrgs,
 }: {
 	db: DrizzleCli;
 	cusEnt: ResetCusEnt;
-	cacheEnabledOrgs: any[];
 }) => {
 	const ent = cusEnt.entitlement as FullEntitlement;
 
@@ -155,11 +153,9 @@ const shortDurations = [EntInterval.Minute, EntInterval.Hour, EntInterval.Day];
 export const resetCustomerEntitlement = async ({
 	db,
 	cusEnt,
-	cacheEnabledOrgs,
 }: {
 	db: DrizzleCli;
 	cusEnt: ResetCusEnt;
-	cacheEnabledOrgs: any[];
 }) => {
 	try {
 		const ent = cusEnt.entitlement as FullEntitlement;
@@ -171,7 +167,6 @@ export const resetCustomerEntitlement = async ({
 			return await handleShortDurationCusEnt({
 				db,
 				cusEnt,
-				cacheEnabledOrgs,
 			});
 		}
 
@@ -298,10 +293,6 @@ export const resetCustomerEntitlement = async ({
 				format(new UTCDate(nextResetAt), "dd MMM yyyy HH:mm:ss"),
 			)}`,
 		);
-
-		// let cacheOrg = cacheEnabledOrgs.find(
-		//   (org) => org.id === cusEnt.customer.org_id
-		// );
 
 		const org = await OrgService.get({
 			db,

@@ -24,21 +24,18 @@ export const deductFromCache = async ({
 	featureId: string;
 	amount: number;
 	entityId?: string;
-}): Promise<void> => {
+}): Promise<Record<string, number> | undefined> => {
 	const { org, env } = ctx;
 
 	// Execute Redis deduction directly (no batching to avoid race conditions)
+	let featureDeductions: Record<string, number> | undefined;
+	
 	await tryRedisWrite(async () => {
 		const result = await executeBatchDeduction({
 			redis,
 			requests: [
 				{
-					featureDeductions: [
-						{
-							featureId,
-							amount,
-						},
-					],
+					featureDeductions: [{ featureId, amount }],
 					overageBehavior: "cap", // Cap since Postgres already handled validation
 					entityId,
 				},
@@ -53,7 +50,12 @@ export const deductFromCache = async ({
 				`Failed to deduct from cache for ${customerId}, feature ${featureId}: ${result.error}`,
 			);
 		}
+		
+		// Capture feature deductions for return
+		featureDeductions = result.featureDeductions;
 	});
+	
+	return featureDeductions;
 };
 
 // Keep the old name for backward compatibility

@@ -69,11 +69,10 @@ export const validateCreditSystem = (config: CreditSystemConfig) => {
 
 	const newConfig = { ...config, usage_type: FeatureUsageType.Single };
 	for (let i = 0; i < newConfig.schema.length; i++) {
-		newConfig.schema[i].feature_amount = 1;
-
 		const creditAmount = parseFloat(
 			newConfig.schema[i].credit_amount.toString(),
 		);
+
 		if (Number.isNaN(creditAmount)) {
 			throw new RecaseError({
 				message: `Credit amount should be a number`,
@@ -120,9 +119,10 @@ export const runSaveFeatureDisplayTask = async ({
 			},
 		});
 	} catch (error) {
-		logger.error("failed to generate feature display", {
-			error,
-			feature,
+		logger.error(`failed to generate feature display, ${error}`, {
+			data: {
+				feature,
+			},
 		});
 	}
 };

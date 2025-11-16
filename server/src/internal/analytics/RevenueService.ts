@@ -1,4 +1,4 @@
-import { ExtendedRequest } from "@/utils/models/Request.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 
 export class RevenueService {
 	static clickhouseAvailable =

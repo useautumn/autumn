@@ -1,7 +1,7 @@
 import { ApiVersion, type ProductV2 } from "@autumn/shared";
-import { addPrefixToProducts } from "tests/attach/utils.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import type { TestContext } from "tests/utils/testInitUtils/createTestContext.js";
+import { createProducts } from "@tests/utils/productUtils.js";
+import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
+import { addPrefixToProducts } from "@tests/utils/testProductUtils/testProductUtils.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 
 export const initProductsV0 = async ({

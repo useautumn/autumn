@@ -1,47 +1,50 @@
 -- Helper function: Perform deduction calculation for a single entitlement
 -- This handles both entity-scoped and regular balance deductions
-DROP FUNCTION IF EXISTS deduct_from_main_balance(numeric, jsonb, numeric, numeric, numeric, boolean, boolean, text, numeric, boolean);
+-- Also updates additional_granted_balance when alter_granted_balance is true
+DROP FUNCTION IF EXISTS deduct_from_main_balance(jsonb);
 
-CREATE FUNCTION deduct_from_main_balance(
-  -- Current state
-  current_balance numeric,
-  current_entities jsonb,
-  current_adjustment numeric,
-  
-  -- Deduction parameters
-  amount_to_deduct numeric,
-  credit_cost numeric,
-  
-  -- Behavior flags
-  allow_negative boolean,        -- false for Pass 1 (to zero), true for Pass 2 (can go negative)
-  has_entity_scope boolean,
-  target_entity_id text,
-  min_balance numeric,
-  add_to_adjustment boolean
-)
+CREATE FUNCTION deduct_from_main_balance(params jsonb)
 RETURNS TABLE (
   deducted numeric,
   new_balance numeric,
   new_entities jsonb,
-  new_adjustment numeric
+  new_additional_granted_balance numeric
 )
 LANGUAGE plpgsql
 AS $$
 DECLARE
+  -- Extract parameters from JSONB
+  current_balance numeric := (params->>'current_balance')::numeric;
+  current_entities jsonb := COALESCE(params->'current_entities', '{}'::jsonb);
+  current_additional_granted_balance numeric := COALESCE((params->>'current_additional_granted_balance')::numeric, 0);
+  amount_to_deduct numeric := (params->>'amount_to_deduct')::numeric;
+  credit_cost numeric := (params->>'credit_cost')::numeric;
+  allow_negative boolean := COALESCE((params->>'allow_negative')::boolean, false);
+  has_entity_scope boolean := COALESCE((params->>'has_entity_scope')::boolean, false);
+  target_entity_id text := NULLIF(params->>'target_entity_id', '');
+  min_balance numeric := CASE 
+    WHEN params->>'min_balance' IS NULL THEN NULL
+    ELSE (params->>'min_balance')::numeric
+  END;
+  alter_granted_balance boolean := COALESCE((params->>'alter_granted_balance')::boolean, false);
+  
   deducted_amount numeric := 0;
   result_balance numeric;
   result_entities jsonb;
-  result_adjustment numeric;
+  result_additional_granted_balance numeric;
   
   -- Variables for entity deduction
   remaining numeric;
   entity_key text;
   entity_balance numeric;
-  entity_adjustment numeric;
+  entity_additional_granted_balance numeric;
   deduct_amount numeric;
   new_balance numeric;
-  new_adjustment numeric;
+  new_entity_additional_granted_balance numeric;
 BEGIN
+  
+  -- Initialize return values
+  result_additional_granted_balance := current_additional_granted_balance;
   
   -- ============================================================================
   -- CASE 1: ENTITY-SCOPED - ALL ENTITIES (no specific entity_id)
@@ -57,7 +60,7 @@ BEGIN
       EXIT WHEN remaining = 0;
       
       entity_balance := COALESCE((result_entities->entity_key->>'balance')::numeric, 0);
-      entity_adjustment := COALESCE((result_entities->entity_key->>'adjustment')::numeric, 0);
+      entity_additional_granted_balance := COALESCE((result_entities->entity_key->>'additional_granted_balance')::numeric, 0);
       
       -- Calculate deduction respecting allow_negative and min_balance
       -- Handle negative amounts (adding credits) differently
@@ -82,13 +85,13 @@ BEGIN
           to_jsonb(new_balance)
         );
         
-        -- Update adjustment if needed
-        IF add_to_adjustment THEN
-          new_adjustment := entity_adjustment + deduct_amount;
+        -- If alter_granted_balance is true, also deduct from entity-level additional_granted_balance
+        IF alter_granted_balance THEN
+          new_entity_additional_granted_balance := entity_additional_granted_balance - deduct_amount;
           result_entities := jsonb_set(
             result_entities,
-            ARRAY[entity_key, 'adjustment'],
-            to_jsonb(new_adjustment)
+            ARRAY[entity_key, 'additional_granted_balance'],
+            to_jsonb(new_entity_additional_granted_balance)
           );
         END IF;
         
@@ -104,7 +107,7 @@ BEGIN
   -- ============================================================================
   ELSIF has_entity_scope AND target_entity_id IS NOT NULL THEN
     entity_balance := COALESCE((current_entities->target_entity_id->>'balance')::numeric, 0);
-    entity_adjustment := COALESCE((current_entities->target_entity_id->>'adjustment')::numeric, 0);
+    entity_additional_granted_balance := COALESCE((current_entities->target_entity_id->>'additional_granted_balance')::numeric, 0);
     
     -- Calculate deduction respecting allow_negative and min_balance
     -- Handle negative amounts (adding credits) differently
@@ -129,13 +132,13 @@ BEGIN
         to_jsonb(new_balance)
       );
       
-      -- Update adjustment if needed
-      IF add_to_adjustment THEN
-        new_adjustment := entity_adjustment + deducted_amount;
+      -- If alter_granted_balance is true, also deduct from entity-level additional_granted_balance
+      IF alter_granted_balance THEN
+        new_entity_additional_granted_balance := entity_additional_granted_balance - deducted_amount;
         result_entities := jsonb_set(
           result_entities,
-          ARRAY[target_entity_id, 'adjustment'],
-          to_jsonb(new_adjustment)
+          ARRAY[target_entity_id, 'additional_granted_balance'],
+          to_jsonb(new_entity_additional_granted_balance)
         );
       END IF;
     ELSE
@@ -167,17 +170,15 @@ BEGIN
     
     result_balance := current_balance - deducted_amount;
     result_entities := current_entities;  -- Entities unchanged for non-entity-scoped
-  END IF;
-  
-  -- Calculate new adjustment if needed
-  IF add_to_adjustment THEN
-    result_adjustment := current_adjustment + deducted_amount;
-  ELSE
-    result_adjustment := current_adjustment;
+    
+    -- If alter_granted_balance is true, also deduct from customer-level additional_granted_balance
+    IF alter_granted_balance THEN
+      result_additional_granted_balance := result_additional_granted_balance - deducted_amount;
+    END IF;
   END IF;
   
   -- Return results
-  RETURN QUERY SELECT deducted_amount, result_balance, result_entities, result_adjustment;
+  RETURN QUERY SELECT deducted_amount, result_balance, result_entities, result_additional_granted_balance;
 END;
 $$;
 

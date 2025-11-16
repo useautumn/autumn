@@ -1,3 +1,4 @@
+import { type UpsertVercelProcessorConfig } from "@autumn/shared";
 import type { AxiosInstance } from "axios";
 
 export class OrgService {
@@ -15,5 +16,12 @@ export class OrgService {
 
 	static async disconnectStripe(axiosInstance: AxiosInstance) {
 		return await axiosInstance.delete(`/v1/organization/stripe`);
+	}
+
+	static async upsertVercelConfig(
+		axiosInstance: AxiosInstance,
+		data: UpsertVercelProcessorConfig,
+	) {
+		return await axiosInstance.patch(`/v1/organization/vercel`, data);
 	}
 }

@@ -1,10 +1,30 @@
-import type { Feature } from "@autumn/shared";
+import { CreateFeatureSchema, type Feature, FeatureType } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import { FeatureService } from "../FeatureService.js";
-import { validateFeature } from "../internalFeatureRouter.js";
+import {
+	validateCreditSystem,
+	validateFeatureId,
+	validateMeteredConfig,
+} from "../featureUtils.js";
+
+export const validateFeature = (data: any) => {
+	const featureType = data.type;
+
+	validateFeatureId(data.id);
+
+	let config = data.config;
+	if (featureType === FeatureType.Metered) {
+		config = validateMeteredConfig(config);
+	} else if (featureType === FeatureType.CreditSystem) {
+		config = validateCreditSystem(config);
+	}
+
+	const parsedFeature = CreateFeatureSchema.parse({ ...data, config });
+	return parsedFeature;
+};
 
 interface CreateFeatureParams {
 	ctx: AutumnContext;
