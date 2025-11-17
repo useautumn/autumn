@@ -91,13 +91,13 @@ export function CustomerUsageAnalyticsTable() {
 				numberOfColumns: CustomerUsageAnalyticsColumns.length,
 				enableSorting,
 				isLoading,
-				rowClassName: "h-8 bg-white border-none",
+				rowClassName: "h-8 bg-interactive-secondary border-none",
 			}}
 		>
 			<Table.Container>
 				<Table.Toolbar>
 					<Table.Heading>
-						<ChartBar size={16} weight="fill" className="text-t5" />
+						<ChartBar size={16} weight="fill" className="text-subtle" />
 						Usage
 					</Table.Heading>
 					<Table.Actions>
@@ -126,7 +126,7 @@ export function CustomerUsageAnalyticsTable() {
 					) : hasEvents ? (
 						<>
 							<div className="flex max-w-3/8 w-full min-w-0 flex-col h-[250px]">
-								<div className="overflow-hidden flex flex-col border border-border-table bg-stone-100">
+								<div className="overflow-hidden flex flex-col border">
 									<div className="overflow-x-auto">
 										<table className="table-fixed p-0 w-full">
 											<Table.Header />

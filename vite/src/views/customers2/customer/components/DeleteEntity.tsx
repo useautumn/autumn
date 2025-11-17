@@ -72,7 +72,7 @@ export const DeleteEntity = ({
 						Are you sure you want to delete this entity? This action cannot be
 						undone.
 					</p>
-					<div className="flex flex-col gap-2 bg-secondary p-3 rounded-lg border border-border-table shrink-0">
+					<div className="flex flex-col gap-2 bg-secondary p-3 rounded-lg border shrink-0">
 						{entity.name && (
 							<div className="flex gap-2">
 								<span className="text-t3 text-sm font-medium">Name:</span>

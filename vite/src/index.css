@@ -49,12 +49,19 @@ html {
 	background-color: #fafaf9;
 	--foreground: #121212;
 	--background: #fafaf9;
+
+	--outer-background: #F5F5F4;
+
+	--interactive-secondary: #fff;
+	--interactive-secondary-hover: #FCFAFF;
+
+
 	--muted-foreground: #444;
 	--t1: #121212;
 	--t2: #444;
 	--t3: #666;
-	--t4: #707070;
-	--t5: #767676;
+	--t4: #767676;
+	--subtle: #767676;
 	--t6: #aaa;
 	--t7: #666666;
 	--t8: #0f9bff;
@@ -72,7 +79,7 @@ html {
 	--active-primary: #f6f0ff;
 	--radio-group-hover-primary: #fcfaff;
 
-	--border: #ddd;
+	--border: #e5e5e5;
 	--border-sheet: #eaeae9;
 	--border-table: #e5e5e5;
 	--card-border: #d1d1d1;
@@ -127,6 +134,8 @@ html {
 	--chart-9: #349eff;
 	--chart-10: #27a7ff;
 
+	--chart-grid-stroke: #d1d1d1;
+
 	--sidebar: oklch(0.985 0 0);
 	--sidebar-foreground: oklch(0.141 0.005 285.823);
 	--sidebar-primary: oklch(0.21 0.006 285.885);
@@ -138,14 +147,36 @@ html {
 }
 
 .dark {
-	--background: oklch(0.141 0.005 285.823);
+	--background: #161616;
 	--foreground: oklch(0.985 0 0);
-	--card: oklch(0.141 0.005 285.823);
+
+	--outer-background: #121212;
+
+	/* --interactive-secondary: #1d1d1d; */
+	--interactive-secondary: #1b1a1c;
+	--interactive-secondary-hover: #222;
+	/* --card: oklch(0.141 0.005 285.823); */
+
+	--t1: #fff;
+	--t2: #ccc;
+	--t3: #999;
+
+
+
+	--card: #121212;
+
+	--border: #262626;
+
+
+	--chart-grid-stroke: #262626;
+
+
 	--card-foreground: oklch(0.985 0 0);
 	--popover: oklch(0.141 0.005 285.823);
-	--popover-foreground: oklch(0.985 0 0);
+	--popover-foreground: white;
 	--primary: oklch(0.985 0 0);
-	--primary-foreground: oklch(0.21 0.006 285.885);
+	/* --primary-foreground: oklch(0.21 0.006 285.885); */
+	--primary-foreground: white;
 	--secondary: oklch(0.274 0.006 286.033);
 	--secondary-foreground: oklch(0.985 0 0);
 	--muted: oklch(0.274 0.006 286.033);
@@ -154,7 +185,7 @@ html {
 	--accent-foreground: oklch(0.985 0 0);
 	--destructive: oklch(0.396 0.141 25.723);
 	--destructive-foreground: oklch(0.637 0.237 25.331);
-	--border: oklch(0.274 0.006 286.033);
+	/* --border: oklch(0.274 0.006 286.033); */
 	--input: oklch(0.274 0.006 286.033);
 	--ring: oklch(0.442 0.017 285.786);
 	--chart-1: oklch(0.488 0.243 264.376);
@@ -178,7 +209,7 @@ html {
 	--color-t2: var(--t2);
 	--color-t3: var(--t3);
 	--color-t4: var(--t4);
-	--color-t5: var(--t5);
+	--color-subtle: var(--subtle);
 	--color-t6: var(--t6);
 	--color-t7: var(--t7);
 	--color-t8: var(--t8);
@@ -188,6 +219,11 @@ html {
 	--color-t12: var(--t12);
 	--color-t13: var(--t13);
 	--color-t14: var(--t14);
+
+	--color-outer-background: var(--outer-background);
+
+	--color-interactive-secondary: var(--interactive-secondary);
+	--color-interactive-secondary-hover: var(--interactive-secondary-hover);
 
 	--color-input: var(--input);
 	--color-icon1: var(--icon1);
@@ -252,6 +288,8 @@ html {
 	--color-chart-3: var(--chart-3);
 	--color-chart-4: var(--chart-4);
 	--color-chart-5: var(--chart-5);
+
+	--color-chart-grid-stroke: var(--chart-grid-stroke);
 
 	--radius-sm: calc(var(--radius) - 4px);
 	--radius-md: calc(var(--radius) - 2px);

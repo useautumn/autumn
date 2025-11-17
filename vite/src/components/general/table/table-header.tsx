@@ -75,7 +75,7 @@ export function TableHeader({ className }: { className?: string }) {
 		<ShadcnTableHeader className={className}>
 			{headerGroups.map((headerGroup) => (
 				<TableRow
-					className="border-b border-border-table bg-card pointer-events-none"
+					className="border-b bg-card pointer-events-none text-t4"
 					key={headerGroup.id}
 				>
 					{enableSelection && table && (

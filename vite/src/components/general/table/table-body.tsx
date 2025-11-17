@@ -39,12 +39,12 @@ export function TableBody() {
 	}
 
 	return (
-		<ShadcnTableBody className="divide-y divide-border-table">
+		<ShadcnTableBody className="divide-y">
 			{rows.map((row) => (
 				<TableRow
 					className={cn(
-						rowClassName || "h-14 py-4",
-						"hover:bg-muted/50 text-t3 transition-none",
+						rowClassName || "h-10 py-4",
+						"text-t3 transition-none hover:bg-interactive-secondary-hover dark:hover:bg-interactive-secondary-hover",
 					)}
 					data-state={row.getIsSelected() && "selected"}
 					key={row.id}

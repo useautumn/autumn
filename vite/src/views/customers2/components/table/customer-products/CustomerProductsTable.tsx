@@ -97,7 +97,7 @@ export function CustomerProductsTable() {
 						<Button
 							variant="skeleton"
 							onClick={handleEntityClick}
-							className="text-t1 font-medium hover:text-purple-600 cursor-pointer max-w-full"
+							className="text-t1 font-medium hover:text-purple-600 cursor-pointer max-w-full !px-0 hover:bg-transparent active:bg-transparent active:border-none"
 						>
 							<span className="truncate w-full">
 								{entity.name || entity.id || entity.internal_id}
@@ -210,7 +210,7 @@ export function CustomerProductsTable() {
 				<Table.Container>
 					<Table.Toolbar>
 						<Table.Heading>
-							<Cube size={16} weight="fill" className="text-t5" />
+							<Cube size={16} weight="fill" className="text-subtle" />
 							Subscriptions
 						</Table.Heading>
 						<Table.Actions>
@@ -222,8 +222,8 @@ export function CustomerProductsTable() {
 						</Table.Actions>
 					</Table.Toolbar>
 					{hasEntityProducts && (
-						<div className="text-t3 text-sm py-0 px-2 rounded-lg flex gap-2 items-center mb-2 w-fit">
-							<User size={14} weight="fill" className="text-t5" />
+						<div className="text-t3 text-sm py-0 px-2 rounded-lg flex gap-2 items-center mb-3 w-fit">
+							<User size={14} weight="fill" className="text-subtle" />
 							Customer Plans
 						</div>
 					)}
@@ -247,8 +247,8 @@ export function CustomerProductsTable() {
 			</Table.Provider>
 			{hasEntityProducts && (
 				<div>
-					<div className="text-t3 text-sm py-0 px-2 rounded-lg flex gap-2 items-center mb-2 w-fit">
-						<Subtract size={14} weight="fill" className="text-t5" />
+					<div className="text-t3 text-sm py-0 px-2 rounded-lg flex gap-2 items-center mb-3 w-fit">
+						<Subtract size={14} weight="fill" className="text-subtle" />
 						Entity Plans
 					</div>
 					<Table.Provider

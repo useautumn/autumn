@@ -20,7 +20,7 @@ import { useProductItemContext } from "@/views/products/product/product-item/Pro
 import { PlanFeatureIcon } from "./PlanFeatureIcon";
 
 // Custom dot component with bigger height but smaller width
-const CustomDotIcon = () => {
+export const CustomDotIcon = () => {
 	return <div className="w-[2px] h-[2px] mx-0.5 bg-current rounded-full" />;
 };
 

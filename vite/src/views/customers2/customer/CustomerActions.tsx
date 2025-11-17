@@ -1,6 +1,7 @@
 import type { Feature } from "@autumn/shared";
 import { FeatureUsageType } from "@autumn/shared";
 import {
+	ArrowSquareOutIcon,
 	DotsThreeVertical,
 	PencilIcon,
 	Subtract,
@@ -17,6 +18,9 @@ import {
 import { Button } from "@/components/v2/buttons/Button";
 import { Dialog } from "@/components/v2/dialogs/Dialog";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
+import { useEnv } from "@/utils/envUtils";
+import { getStripeCusLink } from "@/utils/linkUtils";
 import { DeleteCustomerDialog } from "@/views/customers/customer/components/DeleteCustomerDialog";
 import UpdateCustomerDialog from "@/views/customers/customer/components/UpdateCustomerDialog";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -30,6 +34,8 @@ export function CustomerActions() {
 	const [addCouponOpen, setAddCouponOpen] = useState(false);
 	const { customer } = useCusQuery();
 	const { features } = useFeaturesQuery();
+	const env = useEnv();
+	const { stripeAccount } = useOrgStripeQuery();
 
 	const hasContinuousUseFeatures = features?.some(
 		(feature: Feature) =>
@@ -86,6 +92,24 @@ export function CustomerActions() {
 						<Ticket size={12} />
 						Add coupon
 					</DropdownMenuItem>
+					{customer?.processor?.id && (
+						<DropdownMenuItem
+							onClick={() => {
+								window.open(
+									getStripeCusLink({
+										customerId: customer.processor.id,
+										env,
+										accountId: stripeAccount?.id,
+									}),
+									"_blank",
+								);
+							}}
+							className="flex gap-3"
+						>
+							<ArrowSquareOutIcon size={12} />
+							Open in Stripe
+						</DropdownMenuItem>
+					)}
 				</DropdownMenuContent>
 			</DropdownMenu>
 

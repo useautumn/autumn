@@ -4,12 +4,11 @@ import { PuzzlePiece } from "@phosphor-icons/react";
 import { type ExpandedState, getExpandedRowModel } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
-import { cn } from "@/lib/utils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
-import { MeteredFeatureBalanceCard } from "../../card/MeteredFeatureBalanceCard";
-import { CustomerFeatureConfiguration } from "./CustomerFeatureConfiguration";
+import { CustomerBalanceTable } from "../customer-balance/CustomerBalanceTable";
+import { CustomerBooleanBalanceTable } from "../customer-boolean-balance/CustomerBooleanBalanceTable";
 import { CustomerFeatureUsageColumns } from "./CustomerFeatureUsageColumns";
 import { filterCustomerFeatureUsage } from "./customerFeatureUsageTableFilters";
 import type { CustomerFeatureUsageRowData } from "./customerFeatureUsageTypes";
@@ -141,7 +140,7 @@ export function CustomerFeatureUsageTable() {
 				<Table.Container>
 					<Table.Toolbar>
 						<Table.Heading>
-							<PuzzlePiece size={16} weight="fill" className="text-t5" />
+							<PuzzlePiece size={16} weight="fill" className="text-subtle" />
 							Balances
 						</Table.Heading>
 						{/* <Table.Actions>
@@ -152,46 +151,72 @@ export function CustomerFeatureUsageTable() {
 						</Table.Actions> */}
 					</Table.Toolbar>
 					{hasBalances ? (
-						<div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-2">
-							{allEnts.map((ent) => {
-								const featureId = ent.entitlement.feature.id;
-								const isBoolean =
-									ent.entitlement.feature.type === FeatureType.Boolean;
+						<>
+							{/* <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-2">
+								{allEnts.map((ent) => {
+									const featureId = ent.entitlement.feature.id;
+									const isBoolean =
+										ent.entitlement.feature.type === FeatureType.Boolean;
 
-								// Boolean entitlements: simplified card
-								if (isBoolean) {
+									// Boolean entitlements: simplified card
+									if (isBoolean) {
+										return (
+											<div
+												key={ent.entitlement.feature.id}
+												className={cn(
+													"flex items-center justify-between gap-2 px-4 min-w-60 text-t2 text-sm whitespace-nowrap bg-interactive-secondary border rounded-lg shadow-sm overflow-hidden relative h-16",
+													allEnts.length === 1 && "max-w-[50%]",
+												)}
+											>
+												<span className="font-medium text-t1">
+													{ent.entitlement.feature.name}
+												</span>
+												<CustomerFeatureConfiguration
+													feature={ent.entitlement.feature}
+												/>
+											</div>
+										);
+									}
+
+									//if not a boolean, return a metered feature balance card
 									return (
-										<div
+										<MeteredFeatureBalanceCard
 											key={ent.entitlement.feature.id}
-											className={cn(
-												"flex items-center justify-between gap-2 px-4 min-w-60 text-t2 text-sm whitespace-nowrap bg-white border border-border-table rounded-lg shadow-sm overflow-hidden relative h-16",
-												allEnts.length === 1 && "max-w-[50%]",
-											)}
-										>
-											<span className="font-medium text-t1">
-												{ent.entitlement.feature.name}
-											</span>
-											<CustomerFeatureConfiguration
-												feature={ent.entitlement.feature}
-											/>
-										</div>
+											ent={ent}
+											filteredCustomerProducts={filteredCustomerProducts}
+											featureId={featureId}
+											entityId={entityId}
+											aggregatedMap={aggregatedMap}
+											allEnts={allEnts}
+										/>
 									);
-								}
-
-								//if not a boolean, return a metered feature balance card
-								return (
-									<MeteredFeatureBalanceCard
-										key={ent.entitlement.feature.id}
-										ent={ent}
-										filteredCustomerProducts={filteredCustomerProducts}
-										featureId={featureId}
-										entityId={entityId}
+								})}
+							</div> */}
+							<div className="flex flex-col gap-3">
+								<CustomerBalanceTable
+									allEnts={allEnts.filter(
+										(ent) =>
+											ent.entitlement.feature.type !== FeatureType.Boolean,
+									)}
+									filteredCustomerProducts={filteredCustomerProducts}
+									entityId={entityId}
+									aggregatedMap={aggregatedMap}
+									isLoading={isLoading}
+								/>
+								{allEnts.some(
+									(ent) => ent.entitlement.feature.type === FeatureType.Boolean,
+								) && (
+									<CustomerBooleanBalanceTable
+										allEnts={allEnts.filter(
+											(ent) =>
+												ent.entitlement.feature.type === FeatureType.Boolean,
+										)}
 										aggregatedMap={aggregatedMap}
-										allEnts={allEnts}
+										isLoading={isLoading}
 									/>
-								);
-							})}
-						</div>
+								)}
+							</div>
+						</>
 					) : (
 						!isLoading && (
 							<div className="flex justify-center items-center py-4">

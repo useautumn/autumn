@@ -67,30 +67,33 @@ export default function CustomerView2() {
 		>
 			<div className="flex w-full h-full overflow-hidden relative">
 				<div className="flex flex-col overflow-x-hidden overflow-y-auto absolute inset-0 pb-8 [&>*:not([data-slot=separator-root])]:px-12 [&>*:not([data-slot=separator-root])]:pt-8 [&>*:not([data-slot=separator-root])]:max-w-4xl [&>*:not([data-slot=separator-root])]:mx-auto">
-					<div className="flex flex-col gap-4 w-full">
-						<div className="flex flex-col w-full gap-1">
-							<CustomerBreadcrumbs />
+					<div className="flex flex-col gap-2 w-full">
+						<div className="flex flex-col w-full">
 							<div className="flex items-center justify-between w-full gap-4">
+								<CustomerBreadcrumbs />
+								<CustomerActions />
+							</div>
+							<div className="flex items-center justify-between w-full pt-2">
 								<h3
-									className={`text-md font-semibold pt-2.5 pb-1 ${
+									className={`text-md font-semibold ${
 										customer.name
-											? "text-t2"
+											? "text-t1"
 											: customer.email
-												? "text-t4"
+												? "text-t3"
 												: "text-t4 font-mono font-medium!"
 									}`}
 								>
 									{customer.name || customer.email || customer.id}
 								</h3>
-								<CustomerActions />
+
+								<CustomerPageDetails />
 							</div>
-							<CustomerPageDetails />
 						</div>
 						<SelectedEntityDetails />
 					</div>
 					{/* <Separator /> */}
 					{/* <Separator className="my-2" /> */}
-					<div className="flex flex-col gap-12 w-full">
+					<div className="flex flex-col gap-10 w-full">
 						<CustomerProductsTable />
 						{/* <Separator /> */}
 						<CustomerFeatureUsageTable />

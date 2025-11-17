@@ -53,7 +53,7 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
 				case "secondary":
 				case "muted":
 				case "skeleton":
-					return "text-t3";
+					return "text-t3 hover:text-primary";
 				case "primary":
 					return "text-table-hover";
 				case "destructive":

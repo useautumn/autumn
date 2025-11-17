@@ -61,8 +61,8 @@ export function ExitButton({ position = "absolute" }: ExitButtonProps) {
 				</TooltipTrigger>
 				<TooltipContent className="ml-5">
 					<span className="text-sm block whitespace-pre-line max-w-48">
-						You can come back at any time by clicking in the top right
-						corner&apos;s &quot;Onboarding&quot; button.
+						You can come back at any time by clicking the Onboarding button in
+						the sidebar.
 					</span>
 				</TooltipContent>
 			</Tooltip>

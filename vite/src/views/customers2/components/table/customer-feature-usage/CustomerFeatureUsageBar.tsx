@@ -2,10 +2,10 @@ import { cn } from "@/lib/utils";
 import { calculateUsageMetrics } from "./calculateUsageMetrics";
 
 const getUsageBarColor = (percentage: number): string => {
-	if (percentage >= 90) return "bg-red-500 dark:bg-red-600";
-	if (percentage >= 80) return "bg-orange-500 dark:bg-orange-600";
+	if (percentage >= 90) return "bg-red-500 dark:bg-red-700";
+	if (percentage >= 75) return "bg-orange-500 dark:bg-orange-700";
 	if (percentage >= 50) return "bg-yellow-500 dark:bg-yellow-600";
-	return "bg-green-600 dark:bg-gray-600";
+	return "bg-green-600 dark:bg-green-600";
 };
 
 export function CustomerFeatureUsageBar({
@@ -36,9 +36,9 @@ export function CustomerFeatureUsageBar({
 	return (
 		<div
 			className={cn(
-				"w-0.5 h-full rounded-full bg-gray-200 dark:bg-gray-700 flex items-end overflow-hidden",
+				"w-0.5 h-full rounded-full bg-gray-200 dark:bg-zinc-800 flex items-end overflow-hidden",
 				// "w-0.5 h-full rounded-full flex items-end overflow-hidden",
-				horizontal ? "w-28 h-1 justify-start" : "",
+				horizontal ? "w-full h-1 justify-start" : "",
 			)}
 		>
 			<div
