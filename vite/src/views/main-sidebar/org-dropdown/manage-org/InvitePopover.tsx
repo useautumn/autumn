@@ -10,8 +10,13 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { Mail, PlusIcon } from "lucide-react";
 import { useState } from "react";
+import { z } from "zod";
 import { toast } from "sonner";
 import { useMemberships } from "../hooks/useMemberships";
+
+export const emailSchema = z.email();
+
+
 
 export const InvitePopover = () => {
 	const [email, setEmail] = useState("");
@@ -21,6 +26,11 @@ export const InvitePopover = () => {
 	const handleInvite = async () => {
 		try {
 			setLoading(true);
+			if (!email || !emailSchema.safeParse(email).success) {
+				toast.error("Please enter a valid email address.");
+				setEmail("");
+				return;
+			}
 			const { data, error } = await authClient.organization.inviteMember({
 				email: email,
 				role: "admin",
