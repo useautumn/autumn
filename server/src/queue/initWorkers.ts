@@ -35,11 +35,9 @@ interface SqsJob {
 const processMessage = async ({
 	message,
 	db,
-	workerId,
 }: {
 	message: Message;
 	db: DrizzleCli;
-	workerId: number;
 }) => {
 	if (!message.Body) {
 		console.warn("Received message without body");
@@ -58,12 +56,7 @@ const processMessage = async ({
 		},
 	});
 
-	const ctx = await createWorkerContext({
-		db,
-		orgId: job.data.orgId,
-		env: job.data.env,
-		logger: workerLogger,
-	});
+	workerLogger.info(`Processing message: ${job.name}`);
 
 	try {
 		if (job.name === JobName.DetectBaseVariant) {
@@ -92,6 +85,14 @@ const processMessage = async ({
 			});
 			return;
 		}
+
+		// Jobs below need worker context
+		const ctx = await createWorkerContext({
+			db,
+			orgId: job.data.orgId,
+			env: job.data.env,
+			logger: workerLogger,
+		});
 
 		if (actionHandlers.includes(job.name as JobName)) {
 			// Note: action handlers need BullMQ queue for nested jobs
@@ -167,7 +168,7 @@ const startPollingLoop = async ({ db }: { db: DrizzleCli }) => {
 				QueueUrl: QUEUE_URL,
 				MaxNumberOfMessages: 10, // Receive up to 10 messages at once
 				WaitTimeSeconds: 20, // Long polling
-				VisibilityTimeout: 60, // 60 seconds to process the message
+				VisibilityTimeout: 43200, // 12 hours (max) - prevents duplicate processing of long-running jobs
 				// For FIFO queues, add ReceiveRequestAttemptId for deduplication
 				...(isFifoQueue && {
 					ReceiveRequestAttemptId: generateId("receive"),
@@ -183,10 +184,24 @@ const startPollingLoop = async ({ db }: { db: DrizzleCli }) => {
 				await Promise.allSettled(
 					response.Messages.map(async (message) => {
 						// Check if we should stop before processing
-						if (!isRunning) return;
+						if (!isRunning || !message.Body) return;
+
+						// If migration job, return success immediately to avoid duplicate processing
+						const job: SqsJob = JSON.parse(message.Body);
+						if (job.name === JobName.Migration) {
+							logger.info(
+								`Returning success immediately for migration job ${job.data.migrationJobId}`,
+							);
+							await sqs.send(
+								new DeleteMessageCommand({
+									QueueUrl: QUEUE_URL,
+									ReceiptHandle: message.ReceiptHandle,
+								}),
+							);
+						}
 
 						try {
-							await processMessage({ message, db, workerId: 1 });
+							await processMessage({ message, db });
 						} catch (error: any) {
 							logger.error(
 								`Failed to process message ${message.MessageId}: ${error.message}`,
@@ -246,11 +261,18 @@ export const initWorkers = async () => {
 			abortController.abort();
 		}
 
-		// Give 5 seconds to finish current message processing
-		setTimeout(() => {
-			console.log("Shutdown timeout reached, forcing exit");
+		// In production, give 5 seconds to finish current message processing
+		// In development, exit immediately for faster hot reloads
+		const isProd = process.env.NODE_ENV === "production";
+		if (isProd) {
+			setTimeout(() => {
+				console.log("Shutdown timeout reached, forcing exit");
+				process.exit(0);
+			}, 5000);
+		} else {
+			console.log("Development mode: exiting immediately");
 			process.exit(0);
-		}, 5000);
+		}
 	};
 
 	process.on("SIGTERM", shutdown);

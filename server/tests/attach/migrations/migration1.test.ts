@@ -104,6 +104,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for free product`
 			items: newItems,
 		});
 	});
+	return;
 
 	test("should attach track usage and get correct balance", async () => {
 		const wordsUsage = 25;

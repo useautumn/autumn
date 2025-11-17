@@ -4,7 +4,7 @@ import { notNullish } from "@/utils/genUtils.js";
 
 const DEFAULT_VALUE = 1;
 
-export const getMeteredDeduction = (meteredFeature: Feature, event: Event) => {
+export const getMeteredDeduction = (_meteredFeature: Feature, event: Event) => {
 	// const config = meteredFeature.config;
 	// const aggregate = config.aggregate;
 
@@ -21,7 +21,7 @@ export const getMeteredDeduction = (meteredFeature: Feature, event: Event) => {
 	const floatVal = parseFloat(value);
 	if (Number.isNaN(floatVal)) return 0;
 
-	return value;
+	return floatVal;
 	// if (
 	// 	meteredFeature.type === FeatureType.CreditSystem ||
 	// 	aggregate.type === AggregateType.Sum

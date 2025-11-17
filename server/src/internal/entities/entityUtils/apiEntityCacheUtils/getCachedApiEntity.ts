@@ -3,6 +3,7 @@ import {
 	ApiEntityV1Schema,
 	type AppEnv,
 	type EntityLegacyData,
+	EntityLegacyDataSchema,
 	EntityNotFoundError,
 	type FullCustomer,
 	filterEntityLevelCusProducts,
@@ -83,9 +84,14 @@ export const getCachedApiEntity = async ({
 					data: rest,
 				});
 
+				const normalizedLegacyData = normalizeFromSchema<EntityLegacyData>({
+					schema: EntityLegacyDataSchema,
+					data: legacyData,
+				});
+
 				return {
 					apiEntity: ApiEntityV1Schema.parse(normalized),
-					legacyData,
+					legacyData: normalizedLegacyData,
 				};
 			}
 		}
