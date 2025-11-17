@@ -1,4 +1,4 @@
-import { ErrCode } from "@autumn/shared";
+import { ErrCode, ProductNotFoundError } from "@autumn/shared";
 import Stripe from "stripe";
 import RecaseError from "../errorUtils.js";
 
@@ -44,6 +44,13 @@ export const handleExpressErrorSkip = ({
 				code: error.code,
 			});
 		}
+	}
+
+	if (error instanceof ProductNotFoundError) {
+		return res.status(404).json({
+			message: error.message,
+			code: error.code,
+		});
 	}
 
 	// Handle Stripe errors

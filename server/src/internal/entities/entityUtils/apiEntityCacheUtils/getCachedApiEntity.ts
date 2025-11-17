@@ -3,6 +3,7 @@ import {
 	ApiEntityV1Schema,
 	type AppEnv,
 	type EntityLegacyData,
+	EntityNotFoundError,
 	type FullCustomer,
 	filterEntityLevelCusProducts,
 	filterPlanAndFeatureExpand,
@@ -105,7 +106,8 @@ export const getCachedApiEntity = async ({
 
 		const entity = fullCus.entity;
 		if (!entity) {
-			throw new Error(`Entity ${entityId} not found`);
+			// throw new Error(`Entity ${entityId} not found`);
+			throw new EntityNotFoundError({ entityId });
 		}
 
 		// Store in cache (only if not skipping cache)
