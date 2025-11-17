@@ -13,7 +13,7 @@ import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutRewa
 import { generateId } from "@/utils/genUtils.js";
 import { createWorkerContext } from "../createWorkerContext.js";
 import { JobName } from "../JobName.js";
-import { queue, workerRedis } from "./initBullMq.js";
+import { workerRedis } from "./initBullMq.js";
 
 const NUM_WORKERS = 10;
 

@@ -87,7 +87,7 @@ export const deductFromCusEnts = async ({
 	}
 	const oldFullCus = structuredClone(fullCus);
 
-	const printLogs = true;
+	const printLogs = false;
 
 	// if (printLogs) {
 	// 	console.log(
