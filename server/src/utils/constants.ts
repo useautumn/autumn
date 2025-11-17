@@ -8,14 +8,18 @@ export const getActiveCusProductStatuses = () => [
 	CusProductStatus.PastDue,
 ];
 
-export const ADMIN_USER_IDs =
-	process.env.ENV == "production" || process.env.NODE_ENV == "production"
-		? [
-				"user_2tMgAiPsQzX8JTHjZZh9m0VdvUv", // a
-				"user_2sB3tBXsnVVLlTKliQIqvvM2xfB", // j
-				"ZsDswIXyOGMP9y1V1At4dAZNaiggClSs", // t
-			]
-		: ["user_2rypooIKyMQx81vMS8FFGx24UHU"];
+export const ADMIN_USER_IDs = [
+	"user_2tMgAiPsQzX8JTHjZZh9m0VdvUv", // a
+	"user_2sB3tBXsnVVLlTKliQIqvvM2xfB", // j
+	"ZsDswIXyOGMP9y1V1At4dAZNaiggClSs", // t
+];
+// process.env.ENV === "production" || process.env.NODE_ENV === "production"
+// 	? [
+// 			"user_2tMgAiPsQzX8JTHjZZh9m0VdvUv", // a
+// 			"user_2sB3tBXsnVVLlTKliQIqvvM2xfB", // j
+// 			"ZsDswIXyOGMP9y1V1At4dAZNaiggClSs", // t
+// 		]
+// 	: ["user_2rypooIKyMQx81vMS8FFGx24UHU"];
 
 export const dashboardOrigins = [
 	"http://localhost:3000",
