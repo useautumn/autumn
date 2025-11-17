@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, test } from "bun:test";
 import { BillingInterval, LegacyVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
@@ -15,7 +15,6 @@ import {
 } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "../../src/utils/scriptUtils/testUtils/initProductsV0.js";
-import { expectProductAttached } from "../utils/expectUtils/expectProductAttached.js";
 import { replaceItems } from "../utils/testProductUtils/testProductUtils.js";
 
 // UNCOMMENT FROM HERE
@@ -23,10 +22,14 @@ const pro = constructProduct({
 	type: "pro",
 
 	items: [
-		constructArrearItem({
-			featureId: TestFeature.Words,
-			includedUsage: 0,
-			price: 0.2,
+		// constructArrearItem({
+		// 	featureId: TestFeature.Words,
+		// 	includedUsage: 0,
+		// 	price: 0.2,
+		// }),
+		constructFeatureItem({
+			featureId: TestFeature.Users,
+			includedUsage: 5,
 		}),
 	],
 });
@@ -72,11 +75,12 @@ describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 			product_id: pro.id,
 		});
 
-		await autumn.attach({
-			customer_id: customerId,
-			product_id: basic.id,
-		});
+		// await autumn.attach({
+		// 	customer_id: customerId,
+		// 	product_id: basic.id,
+		// });
 	});
+	return;
 
 	test("should attach pro product", async () => {
 		// newPro = structuredClone(pro);
@@ -101,30 +105,5 @@ describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 		await autumn.products.update(pro.id, {
 			items: newItems,
 		});
-	});
-
-	test("should checkout and have correct scenario", async () => {
-		const res = await autumn.checkout({
-			customer_id: customerId,
-			product_id: pro.id,
-		});
-
-		expect(res.current_product?.scenario).toBe("renew");
-
-		await autumn.attach({
-			customer_id: customerId,
-			product_id: pro.id,
-		});
-
-		const customer = await autumn.customers.get(customerId);
-		expectProductAttached({
-			customer,
-			product: pro,
-		});
-
-		const products = customer.products;
-		expect(products.length).toBe(1);
-		expect(products[0].id).toBe(pro.id);
-		expect(products[0].version).toBe(1);
 	});
 });
