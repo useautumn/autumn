@@ -99,12 +99,12 @@ export const handleVersionProductV2 = async ({
 		data: customPrices,
 	});
 
-	// Handle new free trial
+	// Handle new free trial (create new)
 	if (newProductV2.free_trial || latestProduct.free_trial) {
 		await handleNewFreeTrial({
 			db,
 			newFreeTrial: newProductV2.free_trial || null,
-			curFreeTrial: latestProduct.free_trial,
+			curFreeTrial: null,
 			internalProductId: newProduct.internal_id,
 			isCustom: false,
 			newVersion: true, // This is a new product version

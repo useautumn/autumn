@@ -3,17 +3,17 @@ import { expect } from "chai";
 import chalk from "chalk";
 import { addHours, addMonths } from "date-fns";
 import type Stripe from "stripe";
-import { setupBefore } from "tests/before.js";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { features, products, rewards } from "tests/global.js";
-import { compareMainProduct } from "tests/utils/compare.js";
-import { getFixedPriceAmount, timeout } from "tests/utils/genUtils.js";
+import { setupBefore } from "@tests/before.js";
+import { AutumnCli } from "@tests/cli/AutumnCli.js";
+import { features, products, rewards } from "@tests/global.js";
+import { compareMainProduct } from "@tests/utils/compare.js";
+import { getFixedPriceAmount, timeout } from "@tests/utils/genUtils.js";
 import {
 	advanceClockForInvoice,
 	advanceTestClock,
 	completeCheckoutForm,
 	getDiscount,
-} from "tests/utils/stripeUtils.js";
+} from "@tests/utils/stripeUtils.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { getPriceForOverage } from "@/internal/products/prices/priceUtils.js";
 import { getOriginalCouponId } from "@/internal/rewards/rewardUtils.js";

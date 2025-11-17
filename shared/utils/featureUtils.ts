@@ -1,4 +1,4 @@
-import { ApiFeatureSchema } from "@api/features/apiFeature.js";
+import { ApiFeatureV0Schema } from "@api/features/prevVersions/apiFeatureV0.js";
 import type { CreditSchemaItem } from "../models/featureModels/featureConfig/creditConfig.js";
 import { FeatureType } from "../models/featureModels/featureEnums.js";
 import type { Feature } from "../models/featureModels/featureModels.js";
@@ -25,7 +25,7 @@ export const toApiFeature = ({ feature }: { feature: Feature }) => {
 		}));
 	}
 
-	return ApiFeatureSchema.parse({
+	return ApiFeatureV0Schema.parse({
 		id: feature.id,
 		name: feature.name,
 		type: featureType,

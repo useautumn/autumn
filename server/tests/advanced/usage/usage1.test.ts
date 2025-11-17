@@ -7,10 +7,10 @@ import {
 } from "@autumn/shared";
 import chalk from "chalk";
 import type Stripe from "stripe";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { expectCustomerV0Correct } from "tests/utils/expectUtils/expectCustomerV0Correct.js";
-import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectCustomerV0Correct } from "@tests/utils/expectUtils/expectCustomerV0Correct.js";
+import { getExpectedInvoiceTotal } from "@tests/utils/expectUtils/expectInvoiceUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
 import { convertProductV2ToV1 } from "@/internal/products/productUtils/productV2Utils/convertProductV2ToV1.js";
 import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";

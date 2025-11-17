@@ -97,10 +97,9 @@ const processMessage = async ({
 			// Note: action handlers need BullMQ queue for nested jobs
 			// This will need to be refactored when migrating action handlers to SQS
 			await runActionHandlerTask({
-				queue: null as any,
-				job: { name: job.name, data: job.data } as any,
-				logger: workerLogger,
-				db,
+				ctx,
+				jobName: job.name as JobName,
+				payload: job.data,
 			});
 			return;
 		}

@@ -1,18 +1,43 @@
-import { handleFrontendReqError } from "@/utils/errorUtils.js";
-import { createFeature } from "../featureActions/createFeature.js";
+import {
+	AffectedResource,
+	ApiVersion,
+	CreateFeatureV0ParamsSchema,
+	CreateFeatureV1ParamsSchema,
+	dbToApiFeatureV1,
+	featureV1ToDbFeature,
+	InternalError,
+} from "@autumn/shared";
+import { createRoute } from "../../../honoMiddlewares/routeHandler";
+import { createFeature } from "../featureActions/createFeature";
 
-export const handleCreateFeature = async (req: any, res: any) => {
-	try {
-		console.log("Trying to create feature");
-		const data = req.body;
+export const handleCreateFeature = createRoute({
+	versionedBody: {
+		latest: CreateFeatureV1ParamsSchema,
+		[ApiVersion.V1_Beta]: CreateFeatureV0ParamsSchema,
+	},
+	resource: AffectedResource.Feature,
+	handler: async (c) => {
+		const body = c.req.valid("json");
+		const ctx = c.get("ctx");
 
-		const insertedFeature = await createFeature({
-			ctx: req,
-			data,
+		// Get backend feature
+		const feature = featureV1ToDbFeature({
+			apiFeature: body,
+			originalFeature: undefined,
 		});
 
-		res.status(200).json(insertedFeature);
-	} catch (error) {
-		handleFrontendReqError({ req, error, res, action: "Create feature" });
-	}
-};
+		// Body is now always in the latest V1 format, regardless of API version
+		const dbFeature = await createFeature({
+			ctx,
+			data: feature,
+		});
+
+		if (!dbFeature) {
+			throw new InternalError({ message: "Insert feature returned null" });
+		}
+
+		return c.json(
+			dbToApiFeatureV1({ dbFeature, targetVersion: ctx.apiVersion }),
+		);
+	},
+});

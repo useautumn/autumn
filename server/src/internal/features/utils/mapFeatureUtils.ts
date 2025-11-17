@@ -1,10 +1,7 @@
 import {
-	type ApiFeature,
-	ApiFeatureSchema,
 	ApiFeatureType,
+	type ApiFeatureV0,
 	type AppEnv,
-	type CreditSchemaItem,
-	type Feature,
 	FeatureType,
 	type FeatureUsageType,
 } from "@autumn/shared";
@@ -15,41 +12,12 @@ import {
 	constructMeteredFeature,
 } from "./constructFeatureUtils.js";
 
-export const toApiFeature = ({ feature }: { feature: Feature }) => {
-	// return FeatureResponseSchema.parse(feature);
-	// 1. Get feature type
-	let featureType = feature.type;
-	if (feature.type === FeatureType.Metered) {
-		featureType = feature.config.usage_type;
-	}
-
-	let creditSchema;
-	if (feature.type === FeatureType.CreditSystem) {
-		creditSchema = feature.config.schema.map((s: CreditSchemaItem) => ({
-			metered_feature_id: s.metered_feature_id,
-			credit_cost: s.credit_amount,
-		}));
-	}
-
-	return ApiFeatureSchema.parse({
-		id: feature.id,
-		name: feature.name,
-		type: featureType,
-		display: {
-			singular: feature.display?.singular || feature.name,
-			plural: feature.display?.plural || feature.name,
-		},
-		credit_schema: creditSchema,
-		archived: feature.archived,
-	});
-};
-
 export const fromApiFeature = ({
 	apiFeature,
 	orgId,
 	env,
 }: {
-	apiFeature: ApiFeature;
+	apiFeature: ApiFeatureV0;
 	orgId: string;
 	env: AppEnv;
 }) => {

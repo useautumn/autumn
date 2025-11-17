@@ -51,32 +51,76 @@ export const versionedValidator = ({
 		const ctx = c.get("ctx");
 		const userVersion = ctx.apiVersion;
 
-		// Select schema for user's version, fallback to latest
+		// Select schema for user's version
 		const versionKey = userVersion.value as ApiVersion;
-		const schema = schemas[versionKey] ?? schemas.latest;
+		let schema = schemas[versionKey];
 
-		// Validate with version-specific schema using zValidator
-		const validatorMiddleware = zValidator(target, schema, (result, _c) => {
+		// If version not found, find the closest matching version
+		if (!schema) {
+			// Get all defined versions (excluding 'latest'), sorted ascending (oldest first)
+			const definedVersions = Object.keys(schemas)
+				.filter((v) => v !== "latest")
+				.map((v) => new ApiVersionClass(v as ApiVersion))
+				.sort((a, b) => (a.lt(b) ? -1 : 1));
+
+			// Find the first version that is >= user's version
+			// If user is older than all versions, this returns the earliest
+			// If user is between versions, this returns the next version
+			for (const definedVersion of definedVersions) {
+				if (userVersion.lte(definedVersion)) {
+					schema = schemas[definedVersion.value as ApiVersion];
+					break;
+				}
+			}
+
+			// If no matching version found (user is newer than all), use latest
+			if (!schema) {
+				schema = schemas.latest;
+			}
+		}
+
+		// Debug: log which schema version is being used
+		// const schemaVersion = Object.entries(schemas).find(
+		// 	([_, s]) => s === schema,
+		// )?.[0];
+		// console.log(
+		// 	`[Validator] User version: ${userVersion.value}, Using schema: ${schemaVersion}`,
+		// );
+
+		let validatedData: Record<string, unknown>;
+
+		// For query validation, use the parsed query from queryMiddleware
+		if (target === "query") {
+			const parsedQuery = c.req.query();
+			const result = schema.safeParse(parsedQuery);
 			if (!result.success) {
-				// Validation errors reference fields from user's version ✅
 				throw result.error;
 			}
-		});
+			validatedData = result.data as Record<string, unknown>;
+			c.req.addValidatedData(target, validatedData);
+		} else {
+			// For other targets, use zValidator
 
-		// Run validation
-		await validatorMiddleware(c, async () => {});
+			const validatorMiddleware = zValidator(target, schema, (result, _c) => {
+				if (!result.success) {
+					// Validation errors reference fields from user's version ✅
+					throw result.error;
+				}
+			});
 
-		// Get validated data - type assertion needed due to Hono's dynamic validation target typing
-		type ValidData = Record<string, unknown>;
-		// biome-ignore lint/suspicious/noExplicitAny: Hono's typing requires dynamic target access
-		const validatedData = (c.req as any).valid(target) as ValidData;
+			// Run validation
+			await validatorMiddleware(c, async () => {});
+
+			// Get validated data - type assertion needed due to Hono's dynamic validation target typing
+			validatedData = (c.req as any).valid(target) as Record<string, unknown>;
+		}
 
 		// If user is on older version, transform to latest
 		if (!userVersion.eq(new ApiVersionClass(LATEST_VERSION))) {
 			const transformed = applyRequestVersionChanges({
 				input: validatedData,
-				targetVersion: userVersion,
-				currentVersion: new ApiVersionClass(LATEST_VERSION),
+				fromVersion: userVersion,
+				toVersion: new ApiVersionClass(LATEST_VERSION),
 				resource,
 			});
 

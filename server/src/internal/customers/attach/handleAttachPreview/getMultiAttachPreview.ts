@@ -1,29 +1,21 @@
-import Stripe from "stripe";
-
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { AttachParams } from "../../cusProducts/AttachParams.js";
-import { AttachBody, AttachBranch, PreviewLineItem } from "@autumn/shared";
-import { cusProductsToPrices } from "@autumn/shared";
-
-import { getCustomerSub } from "../attachUtils/convertAttachParams.js";
-
-import { priceToUnusedPreviewItem } from "../attachPreviewUtils/priceToUnusedPreviewItem.js";
-import { handleMultiAttachErrors } from "../attachUtils/handleAttachErrors/handleMultiAttachErrors.js";
-import { getAddAndRemoveProducts } from "../attachFunctions/multiAttach/getAddAndRemoveProducts.js";
-
-import { priceToNewPreviewItem } from "../attachPreviewUtils/priceToNewPreviewItem.js";
 import {
-	getEarliestPeriodEnd,
-	getLatestPeriodStart,
-} from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
-import { getLargestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
-import { addIntervalForProration } from "@/internal/products/prices/billingIntervalUtils.js";
-
+	type AttachBody,
+	type AttachBranch,
+	cusProductsToPrices,
+	type PreviewLineItem,
+} from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import { notNullish } from "@/utils/genUtils.js";
-
+import type Stripe from "stripe";
+import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-import { formatPrice } from "@/internal/products/prices/priceUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AttachParams } from "../../cusProducts/AttachParams.js";
+import { getAddAndRemoveProducts } from "../attachFunctions/multiAttach/getAddAndRemoveProducts.js";
+import { priceToNewPreviewItem } from "../attachPreviewUtils/priceToNewPreviewItem.js";
+import { priceToUnusedPreviewItem } from "../attachPreviewUtils/priceToUnusedPreviewItem.js";
+import { getCustomerSub } from "../attachUtils/convertAttachParams.js";
+import { handleMultiAttachErrors } from "../attachUtils/handleAttachErrors/handleMultiAttachErrors.js";
 
 export const getMultiAttachPreview = async ({
 	req,
@@ -46,7 +38,7 @@ export const getMultiAttachPreview = async ({
 	const cusProducts = customer.customer_products;
 	const { sub } = await getCustomerSub({ attachParams });
 
-	let items: PreviewLineItem[] = [];
+	const items: PreviewLineItem[] = [];
 	const subItems = sub?.items.data || [];
 
 	// 1. Get remove cus products...
@@ -59,7 +51,7 @@ export const getMultiAttachPreview = async ({
 
 	for (const price of prices) {
 		const cusProduct = cusProducts.find(
-			(cp) => cp.internal_product_id == price.internal_product_id,
+			(cp) => cp.internal_product_id === price.internal_product_id,
 		)!;
 
 		const previewLineItem = priceToUnusedPreviewItem({
@@ -88,13 +80,13 @@ export const getMultiAttachPreview = async ({
 		)!;
 
 		// Anchor to unix...
-		let anchor = sub ? sub.billing_cycle_anchor * 1000 : undefined;
+		const anchor = sub ? sub.billing_cycle_anchor * 1000 : undefined;
 		if (config.disableTrial) {
 			attachParams.freeTrial = null;
 		}
 
 		const onTrial =
-			notNullish(attachParams?.freeTrial) || sub?.status == "trialing";
+			notNullish(attachParams?.freeTrial) || sub?.status === "trialing";
 
 		for (const price of product.prices) {
 			const newItem = priceToNewPreviewItem({
@@ -140,8 +132,8 @@ export const getMultiAttachPreview = async ({
 	);
 
 	const freeTrial = attachParams.freeTrial;
-	let dueNextCycle = undefined;
-	if (freeTrial || sub?.status == "trialing") {
+	let dueNextCycle;
+	if (freeTrial || sub?.status === "trialing") {
 		const nextCycleAt = freeTrial
 			? freeTrialToStripeTimestamp({ freeTrial, now: attachParams.now })! * 1000
 			: sub

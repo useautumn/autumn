@@ -1,9 +1,9 @@
-import { EntInterval } from "../../../models/productModels/entModels/entEnums.js";
-import { BillingInterval } from "../../../models/productModels/priceModels/priceEnums.js";
+import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
+import { EntInterval } from "@models/productModels/intervals/entitlementInterval.js";
+import type { ProductItemInterval } from "@models/productModels/intervals/productItemInterval.js";
 import {
 	type ProductItem,
 	ProductItemFeatureType,
-	type ProductItemInterval,
 } from "../../../models/productV2Models/productItemModels/productItemModels.js";
 import { nullish } from "../../utils.js";
 import { isFeatureItem } from "./getItemType.js";

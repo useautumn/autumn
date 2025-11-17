@@ -40,9 +40,7 @@ export const createStripeCli = ({
 
 		const decrypted = decryptData(encrypted);
 		return new Stripe(decrypted, {
-			apiVersion: legacyVersion
-				? ("2025-02-24.acacia" as any)
-				: "2025-07-30.basil",
+			apiVersion: legacyVersion ? ("2025-02-24.acacia" as any) : undefined,
 		});
 	}
 

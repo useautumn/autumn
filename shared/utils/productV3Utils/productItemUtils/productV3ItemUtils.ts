@@ -1,8 +1,5 @@
-import type { FixedPriceConfig } from "../../../models/productModels/priceModels/priceConfig/fixedPriceConfig.js";
-import type {
-	ProductItem,
-	ProductItemInterval,
-} from "../../../models/productV2Models/productItemModels/productItemModels.js";
+import type { PriceItem } from "../../../models/productV2Models/productItemModels/priceItem.js";
+import type { ProductItem } from "../../../models/productV2Models/productItemModels/productItemModels.js";
 import type { ProductV2 } from "../../../models/productV2Models/productV2Models.js";
 import {
 	isFeatureItem,
@@ -10,28 +7,14 @@ import {
 	isPriceItem,
 } from "../../productV2Utils/productItemUtils/getItemType.js";
 
-export function productV2ToBasePrice({ product }: { product: ProductV2 }): {
-	amount: number;
-	interval: ProductItemInterval;
-	intervalCount: number;
-	item: ProductItem;
-	config: FixedPriceConfig;
-	priceId: string;
-} | null {
+export function productV2ToBasePrice({
+	product,
+}: {
+	product: ProductV2;
+}): PriceItem {
 	const item = product.items.find((x) => isPriceItem(x));
 
-	if (item) {
-		return {
-			amount: item.price ?? 0,
-			interval: (item.interval as unknown as ProductItemInterval) || null,
-			intervalCount: item.interval_count || 1,
-			item: item,
-			config: item.price_config as FixedPriceConfig,
-			priceId: item.price_id || "",
-		};
-	}
-
-	return null;
+	return item as PriceItem;
 }
 
 export const productV2ToFeatureItems = ({

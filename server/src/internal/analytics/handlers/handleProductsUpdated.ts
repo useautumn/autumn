@@ -1,30 +1,30 @@
 import {
-	ActionType,
+	AffectedResource,
+	type ApiCustomer,
+	type ApiPlan,
+	ApiVersion,
 	type AppEnv,
 	type AuthType,
-	createdAtToVersion,
+	addToExpand,
+	applyResponseVersionChanges,
+	CusExpand,
+	type CustomerLegacyData,
 	cusProductToProduct,
 	type FullCusProduct,
 	type FullProduct,
-	notNullish,
 	type Organization,
+	type PlanLegacyData,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
-import { ActionService } from "@/internal/analytics/ActionService.js";
-import {
-	constructAction,
-	parseReqForAction,
-} from "@/internal/analytics/actionUtils.js";
-import { getSingleEntityResponse } from "@/internal/api/entities/getEntityUtils.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { parseReqForAction } from "@/internal/analytics/actionUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
-import { getCustomerDetails } from "@/internal/customers/cusUtils/getCustomerDetails.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { getApiCustomerBase } from "../../customers/cusUtils/apiCusUtils/getApiCustomerBase";
+import { getPlanResponse } from "../../products/productUtils/productResponseUtils/getPlanResponse";
 
 interface ActionDetails {
 	request_id: string;
@@ -66,8 +66,10 @@ export const addProductsUpdatedWebhookTask = async ({
 			payload: {
 				req: req ? parseReqForAction(req) : undefined,
 				internalCustomerId,
-				org,
+				orgId: org.id,
 				env,
+				// org,
+				// env,
 				customerId,
 				cusProduct,
 				scheduledCusProduct,
@@ -90,18 +92,16 @@ export const addProductsUpdatedWebhookTask = async ({
 };
 
 export const handleProductsUpdated = async ({
-	db,
-	logger,
+	ctx,
 	data,
 }: {
-	db: DrizzleCli;
-	logger: any;
+	ctx: AutumnContext;
 	data: {
 		req: Partial<ExtendedRequest>;
 		actionDetails: ActionDetails;
 		internalCustomerId: string;
-		org: Organization;
-		env: AppEnv;
+		// org: Organization;
+		// env: AppEnv;
 		customerId: string;
 		product: FullProduct;
 		scenario: string;
@@ -110,25 +110,15 @@ export const handleProductsUpdated = async ({
 		deletedCusProduct?: FullCusProduct;
 	};
 }) => {
-	const {
-		req,
-		org,
-		env,
-		scenario,
-		cusProduct,
-		scheduledCusProduct,
-		deletedCusProduct,
-	} = data;
+	const { scenario, cusProduct } = data;
+	const { db, org, env } = ctx;
 
-	// Product:
-	const product = cusProduct.product;
 	const fullProduct: FullProduct = cusProductToProduct({ cusProduct });
-	const customer = await CusService.getFull({
+	const fullCus = await CusService.getFull({
 		db,
 		idOrInternalId: data.customerId || data.internalCustomerId,
-		orgId: data.org.id,
-		env: data.env,
-		inStatuses: RELEVANT_STATUSES,
+		orgId: org.id,
+		env: env,
 		entityId: cusProduct.internal_entity_id || undefined,
 	});
 
@@ -138,75 +128,55 @@ export const handleProductsUpdated = async ({
 		env,
 	});
 
-	const apiVersion = createdAtToVersion({
-		createdAt: org.created_at || Date.now(),
+	if (ctx.apiVersion.lte(ApiVersion.V1_2)) {
+		addToExpand({
+			ctx,
+			add: [CusExpand.BalancesFeature, CusExpand.SubscriptionsPlan],
+		});
+	}
+
+	const { apiCustomer, legacyData: cusLegacyData } = await getApiCustomerBase({
+		ctx,
+		fullCus,
 	});
 
-	const cusDetails = await getCustomerDetails({
-		db,
-		customer: customer,
-		org,
-		env,
-		features,
-		logger,
-		cusProducts: customer.customer_products,
-		expand: [],
-		apiVersion,
+	const versionedCustomer = applyResponseVersionChanges<
+		ApiCustomer,
+		CustomerLegacyData
+	>({
+		input: apiCustomer,
+		targetVersion: ctx.apiVersion,
+		resource: AffectedResource.Customer,
+		legacyData: cusLegacyData,
 	});
 
-	const productRes = await getProductResponse({
+	const apiPlan = await getPlanResponse({
 		product: fullProduct,
 		features,
 	});
 
-	try {
-		if (req) {
-			const action = constructAction({
-				org,
-				env,
-				customer,
-				entity: customer.entity,
-				type: ActionType.CustomerProductsUpdated,
-				req,
-				properties: {
-					product_id: product.id,
-					customer_product_id: cusProduct.id,
-					scenario,
+	const versionedPlan = applyResponseVersionChanges<ApiPlan, PlanLegacyData>({
+		input: apiPlan,
+		targetVersion: ctx.apiVersion,
+		resource: AffectedResource.Product,
+		legacyData: {
+			features: ctx.features,
+		},
+	});
 
-					deleted_product_id: deletedCusProduct?.product.id,
-					scheduled_product_id: scheduledCusProduct?.product.id,
+	// console.log(`API version: ${ctx.apiVersion.value}`);
+	// console.log(`Versioned customer:`, versionedCustomer);
+	// console.log(`Versioned plan:`, versionedPlan);
 
-					body: req.body,
-				},
-			});
-
-			await ActionService.insert(db, action);
-		} else {
-			logger.warn(
-				"products.updated, no req object found, skipping action insert",
-			);
-		}
-	} catch (error: any) {
-		// 23503 is for internal_customer_id not found
-		if (error?.code !== "23503") {
-			logger.error("Failed to log action to DB", {
-				message: error.message,
-				error: error,
-			});
-		}
-	}
-
-	let entityRes = null;
-	if (notNullish(customer?.entity)) {
-		entityRes = await getSingleEntityResponse({
-			entityId: customer.entity!.id,
-			org,
-			env,
-			fullCus: customer,
-			entity: customer.entity!,
-			features,
-		});
-	}
+	// let entityRes = null;
+	// if (notNullish(customer?.entity)) {
+	// 	entityRes = await getSingleEntityResponse({
+	// 		ctx,
+	// 		entityId: customer.entity!.id,
+	// 		fullCus: customer,
+	// 		entity: customer.entity!,
+	// 	});
+	// }
 
 	// 2. Send Svix event
 	await sendSvixEvent({
@@ -215,9 +185,8 @@ export const handleProductsUpdated = async ({
 		eventType: "customer.products.updated",
 		data: {
 			scenario,
-			customer: cusDetails,
-			entity: entityRes,
-			updated_product: productRes,
+			customer: versionedCustomer,
+			updated_product: versionedPlan,
 		},
 	});
 };

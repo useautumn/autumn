@@ -149,7 +149,7 @@ export const getCusEntsInFeatures = async ({
 		);
 	}
 
-	sortCusEntsForDeduction(cusEnts, reverseOrder);
+	sortCusEntsForDeduction({ cusEnts, reverseOrder });
 
 	return { cusEnts, cusPrices };
 };

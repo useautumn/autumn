@@ -1,10 +1,12 @@
-import type {
-	AppEnv,
-	Entitlement,
-	Feature,
-	Price,
-	Product,
-	ProductItem,
+import {
+	type AppEnv,
+	type Entitlement,
+	type Feature,
+	logEnts,
+	logPrices,
+	type Price,
+	type Product,
+	type ProductItem,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
@@ -194,6 +196,7 @@ export const handleNewProductItems = async ({
 	const updatedEnts: Entitlement[] = [];
 
 	const deletedPrices: Price[] = curPrices.filter((price) => {
+		// Check if this price matches any new item (by ID or feature+interval)
 		const item = newItems.find((item) => item.price_id === price.id);
 		if (!item) {
 			return true;
@@ -211,10 +214,11 @@ export const handleNewProductItems = async ({
 
 	for (const item of newItems) {
 		const feature = features.find((f) => f.id === item.feature_id);
+
 		const curEnt = curEnts.find((ent) => ent.id === item.entitlement_id);
 		const curPrice = curPrices.find((price) => price.id === item.price_id);
 
-		// 2. Update price and entitlement?
+		// 3. Update price and entitlement?
 		const { newPrice, newEnt, updatedPrice, updatedEnt, samePrice, sameEnt } =
 			itemToPriceAndEnt({
 				item,
@@ -252,6 +256,19 @@ export const handleNewProductItems = async ({
 			sameEnts.push(sameEnt);
 		}
 	}
+
+	const printLogs = false;
+	if (printLogs) {
+		logPrices({ prices: newPrices, prefix: "New prices" });
+		logEnts({ ents: newEnts, prefix: "New entitlements" });
+		logPrices({ prices: updatedPrices, prefix: "Updated prices" });
+		logEnts({ ents: updatedEnts, prefix: "Updated entitlements" });
+		logPrices({ prices: deletedPrices, prefix: "Deleted prices" });
+		logEnts({ ents: deletedEnts, prefix: "Deleted entitlements" });
+		logPrices({ prices: samePrices, prefix: "Same prices" });
+		logEnts({ ents: sameEnts, prefix: "Same entitlements" });
+	}
+	// throw new Error("test");
 
 	if (newFeatures.length > 0 && saveToDb) {
 		await FeatureService.insert({

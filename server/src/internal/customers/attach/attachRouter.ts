@@ -25,11 +25,7 @@ import {
 	isFreeProduct,
 } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
-import {
-	notNullish,
-	notNullOrUndefined,
-	nullOrUndefined,
-} from "@/utils/genUtils.js";
+import { notNullish, nullOrUndefined } from "@/utils/genUtils.js";
 import { handleCheckout } from "./checkout/handleCheckout.js";
 import { handleAttach } from "./handleAttach.js";
 import { handleAttachPreview } from "./handleAttachPreview/handleAttachPreview.js";
@@ -79,7 +75,7 @@ export const handlePrepaidErrors = async ({
 			}
 
 			// 3. Quantity cannot be negative
-			if (notNullish(options?.quantity) && options?.quantity! < 0) {
+			if (notNullish(options?.quantity) && options?.quantity < 0) {
 				throw new RecaseError({
 					message: `Quantity cannot be negative`,
 					code: ErrCode.InvalidOptions,
@@ -249,7 +245,7 @@ export const customerHasPm = async ({
 		stripeId: attachParams.customer.processor?.id,
 	});
 
-	return notNullOrUndefined(paymentMethod) ? true : false;
+	return notNullish(paymentMethod);
 };
 
 attachRouter.post("/attach", handleAttach);

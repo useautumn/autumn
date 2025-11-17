@@ -14,15 +14,15 @@ fi
 
 
 
-# BUN_PARALLEL_COMPACT \
-#   'server/tests/attach/migrations' \
-#   'server/tests/attach/others' \
-#   'server/tests/attach/newVersion' \
-#   'server/tests/attach/upgradeOld' \
-#   'server/tests/attach/updateEnts' \
-#   'server/tests/advanced/check' \
-#   'server/tests/attach/prepaid' \
-#   'server/tests/interval/upgrade' \
-#   'server/tests/interval/multiSub' \
-#   --max=6
+BUN_PARALLEL_COMPACT \
+  'server/tests/attach/migrations' \
+  'server/tests/attach/others' \
+  'server/tests/attach/newVersion' \
+  'server/tests/attach/upgradeOld' \
+  'server/tests/attach/updateEnts' \
+  'server/tests/advanced/check' \
+  'server/tests/attach/prepaid' \
+  'server/tests/interval/upgrade' \
+  'server/tests/interval/multiSub' \
+  --max=6
 

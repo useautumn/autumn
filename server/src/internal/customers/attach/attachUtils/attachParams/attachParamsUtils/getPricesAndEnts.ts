@@ -30,7 +30,7 @@ export const getPricesAndEnts = async ({
 	customer: FullCustomer;
 	products: FullProduct[];
 }) => {
-	const { options: optionsInput, is_custom, items, free_trial } = attachBody;
+	const { options: optionsInput, is_custom, free_trial } = attachBody;
 	const { features, db, org, logger } = req;
 
 	const { curMainProduct, curSameProduct } = getExistingCusProducts({

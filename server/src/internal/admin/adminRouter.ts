@@ -12,7 +12,7 @@ adminRouter.get("/users", async (req: any, res: any) => {
 	try {
 		const { db } = req as ExtendedRequest;
 
-		let { sortKey, search, after, before } = req.query;
+		let { search, after, before } = req.query;
 
 		if (after) {
 			after = {

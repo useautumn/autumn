@@ -1,14 +1,15 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { LegacyVersion } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectAttachCorrect } from "@tests/utils/expectUtils/expectAttach.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { expectAttachCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { timeout } from "../../utils/genUtils";
 
 export const pro = constructProduct({
 	items: [constructArrearItem({ featureId: TestFeature.Words })],
@@ -47,10 +48,10 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach with customer ID and
 	const entityId = "1";
 	test("should attach create customer with no ID", async () => {
 		const customer = await autumn.customers.create({
-			// @ts-expect-error
 			id: null,
 			email: `${customerId}@test.com`,
 			name: customerId,
+			withAutumnId: true,
 		});
 
 		expect(customer.autumn_id).toBeDefined();
@@ -95,19 +96,30 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach with customer ID and
 
 		expect(customer.autumn_id).toBe(internalCustomerId);
 
-		const entity = await autumn.entities.create(customer.autumn_id, {
+		const entity = await autumn.entities.create(customer.id, {
 			id: entityId,
 			feature_id: TestFeature.Users,
 		});
 
 		internalEntityId = entity.autumn_id;
 
+		// console.log("Customer: ", customer);
+		// console.log("Entity: ", entity);
+
+		await timeout(2000);
+
 		const customer2 = await autumn.customers.get(customerId);
 
 		expectAttachCorrect({
 			customer: customer2,
 			product: pro,
-			entityId,
+		});
+
+		const entity2 = await autumn.entities.get(customerId, entityId);
+
+		expectAttachCorrect({
+			customer: entity2,
+			product: pro,
 		});
 	});
 });

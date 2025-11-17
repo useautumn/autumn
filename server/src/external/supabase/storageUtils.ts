@@ -1,4 +1,3 @@
-import { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseClient } from "../supabaseUtils.js";
 
 export const readFile = async ({

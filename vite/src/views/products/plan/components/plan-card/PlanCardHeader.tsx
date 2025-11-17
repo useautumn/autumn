@@ -1,8 +1,7 @@
-import { mapToProductV3 } from "@autumn/shared";
+import { productV2ToBasePrice } from "@autumn/shared";
 import { AdminHover } from "@/components/general/AdminHover";
 import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
 import { CardHeader } from "@/components/v2/cards/Card";
-import { useOrg } from "@/hooks/common/useOrg";
 import {
 	useCurrentItem,
 	useProductStore,
@@ -15,23 +14,22 @@ import { PlanCardToolbar } from "./PlanCardToolbar";
 const MAX_PLAN_NAME_LENGTH = 20;
 
 export const PlanCardHeader = () => {
-	const { org } = useOrg();
 	const product = useProductStore((s) => s.product);
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const isPlanBeingEdited = useIsEditingPlan();
 
 	const item = useCurrentItem();
 
-	const productV3 = mapToProductV3({ product });
+	const basePrice = productV2ToBasePrice({ product });
 	const adminHoverText = () => {
 		return [
 			{
 				key: "Price ID",
-				value: productV3.price?.priceId || "N/A",
+				value: basePrice?.price_id || "N/A",
 			},
 			{
 				key: "Stripe Price ID",
-				value: productV3.price?.config?.stripe_price_id || "N/A",
+				value: basePrice?.price_config?.stripe_price_id || "N/A",
 			},
 		];
 	};
@@ -63,24 +61,13 @@ export const PlanCardHeader = () => {
 				/>
 			</div>
 
-			{productV3.description && (
+			{product.description && (
 				<span className="text-sm text-t3 max-w-[80%] line-clamp-2">
-					{productV3.description}
+					{product.description}
 				</span>
 			)}
 
 			<BasePriceDisplay />
-			{/* <IconButton
-				variant="secondary"
-				icon={<CrosshairSimpleIcon />}
-				onClick={() => {
-					setSheet({ type: "edit-plan", itemId: product.id });
-				}}
-				disabled={true}
-				className="mt-2 !opacity-100 pointer-events-none"
-			>
-				{renderBasePrice()}
-			</IconButton> */}
 		</CardHeader>
 	);
 };

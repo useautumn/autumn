@@ -1,4 +1,8 @@
-import { CreateFeatureSchema } from "@autumn/shared";
+import {
+	CreateFeatureSchema,
+	type CreditSchemaItem,
+	FeatureUsageType,
+} from "@autumn/shared";
 import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -46,6 +50,7 @@ function CreateFeatureSheet({
 	const reset = useFeatureStore((s) => s.reset);
 
 	const axiosInstance = useAxiosInstance();
+
 	const { refetch } = useFeaturesQuery();
 
 	const handleCreateFeature = async () => {
@@ -65,7 +70,13 @@ function CreateFeatureSheet({
 						name: feature.name,
 						id: feature.id,
 						type: feature.type,
-						config: feature.config,
+						consumable: feature.config?.usage_type === FeatureUsageType.Single,
+						credit_schema: feature.config?.schema?.map(
+							(x: CreditSchemaItem) => ({
+								metered_feature_id: x.metered_feature_id,
+								credit_cost: x.credit_amount,
+							}),
+						),
 						event_names: feature.event_names,
 					},
 				);
@@ -78,6 +89,7 @@ function CreateFeatureSheet({
 					onSuccess(createdFeature.id);
 				}
 			} catch (error: unknown) {
+				console.error("Error creating feature", error);
 				toast.error(
 					getBackendErr(error as AxiosError, "Failed to create feature"),
 				);

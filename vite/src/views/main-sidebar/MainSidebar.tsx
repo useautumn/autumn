@@ -10,7 +10,7 @@ import {
 	UserCircleIcon,
 	WebhooksLogoIcon,
 } from "@phosphor-icons/react";
-import { PanelLeft } from "lucide-react";
+import { PanelLeft, ServerIcon } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { Button } from "@/components/ui/button";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
@@ -26,11 +26,38 @@ import { NavButton } from "./NavButton";
 import SidebarBottom from "./SidebarBottom";
 import { SidebarContext } from "./SidebarContext";
 
+export const buildDevSubTabs = ({
+	flags,
+}: {
+	flags: {
+		webhooks: boolean;
+		vercel: boolean;
+	};
+}) => {
+	return [
+		{ title: "API Keys", value: "api_keys", icon: <OptionIcon size={16} /> },
+		{ title: "Stripe", value: "stripe", icon: <CoinVerticalIcon size={16} /> },
+		...(flags.vercel
+			? [{ title: "Vercel", value: "vercel", icon: <ServerIcon size={16} /> }]
+			: []),
+		...(flags.webhooks
+			? [
+					{
+						title: "Webhooks",
+						value: "webhooks",
+						icon: <WebhooksLogoIcon size={16} />,
+					},
+				]
+			: []),
+	];
+};
+
 export const MainSidebar = () => {
 	const env = useEnv();
 	const { org } = useOrg();
 
-	const { webhooks } = useAutumnFlags();
+	const flags = useAutumnFlags();
+	console.log();
 
 	const [expanded, setExpanded] = useLocalStorage<boolean>(
 		"sidebar.expanded",
@@ -132,38 +159,7 @@ export const MainSidebar = () => {
 							env={env}
 							isOpen={devGroupOpen}
 							onToggle={() => setDevGroupOpen((prev) => !prev)}
-							subTabs={
-								webhooks
-									? [
-											{
-												title: "API Keys",
-												value: "api_keys",
-												icon: <OptionIcon size={16} />,
-											},
-											{
-												title: "Stripe",
-												value: "stripe",
-												icon: <CoinVerticalIcon size={16} />,
-											},
-											{
-												title: "Webhooks",
-												value: "webhooks",
-												icon: <WebhooksLogoIcon size={16} />,
-											},
-										]
-									: [
-											{
-												title: "API Keys",
-												value: "api_keys",
-												icon: <OptionIcon size={16} />,
-											},
-											{
-												title: "Stripe",
-												value: "stripe",
-												icon: <CoinVerticalIcon size={16} />,
-											},
-										]
-							}
+							subTabs={buildDevSubTabs({ flags })}
 						/>
 					</div>
 				</div>

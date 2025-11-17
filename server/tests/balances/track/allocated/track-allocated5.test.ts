@@ -1,13 +1,15 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { LegacyVersion, type LimitedItem } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { TestFeature } from "tests/setup/v2Features.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { timeout } from "../../../utils/genUtils";
+import { getCustomerEvents } from "../../testBalanceUtils";
 
 const userItem = constructFeatureItem({
 	featureId: TestFeature.Users,
@@ -51,10 +53,13 @@ describe(`${chalk.yellowBright(`${testCase}: Tracking allocated feature with con
 		});
 
 		const promises = [];
+		let totalUsage = 0;
+		let numberOfTracks = 0;
 		for (let i = 0; i < 2; i++) {
 			console.log("--------------------------------");
 			console.log(`Cycle ${i}`);
 			console.log(`Starting balance: ${startingBalance}`);
+
 			const values = [];
 			for (let i = 0; i < 10; i++) {
 				const randomVal =
@@ -66,11 +71,15 @@ describe(`${chalk.yellowBright(`${testCase}: Tracking allocated feature with con
 						value: randomVal,
 					}),
 				);
+				totalUsage += randomVal;
 				startingBalance -= randomVal;
 				values.push(randomVal);
+
+				numberOfTracks++;
 			}
 
 			console.log(`New balance: ${startingBalance}`);
+			console.log(`Total usage: ${totalUsage}`);
 
 			const results = await Promise.all(promises);
 			const customer = await autumn.customers.get(customerId);
@@ -81,6 +90,11 @@ describe(`${chalk.yellowBright(`${testCase}: Tracking allocated feature with con
 				}
 			}
 			expect(userFeature.balance).toBe(startingBalance);
+
+			// Check that there are X events in the database
+			await timeout(2000);
+			const events = await getCustomerEvents({ customerId });
+			expect(events.length).toBe(numberOfTracks);
 		}
 	});
 });

@@ -9,10 +9,9 @@ import {
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import type { ApiCustomerV1 } from "@shared/api/customers/previousVersions/apiCustomerV1.js";
+import { AutumnCli } from "@tests/cli/AutumnCli.js";
 // import { expect } from "chai";
 import { Decimal } from "decimal.js";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { creditSystems } from "tests/global.js";
 
 export const checkProductIsScheduled = ({
 	cusRes,
@@ -211,31 +210,4 @@ export const checkFeatureHasCorrectBalance = async ({
 		cusEnt.balance,
 		`Balance for ${feature.id} does not match expected balance`,
 	).toStrictEqual(expectedBalance);
-};
-
-export const compareProductEntitlements = ({
-	customerId,
-	product,
-	features,
-	quantity = 1,
-}: {
-	customerId: string;
-	product: any;
-	features: Record<string, Feature>;
-	quantity?: number;
-}) => {
-	for (const entitlement of Object.values(
-		product.entitlements,
-	) as Entitlement[]) {
-		const feature =
-			features[entitlement.feature_id!] ||
-			creditSystems[entitlement.feature_id as keyof typeof creditSystems];
-
-		checkFeatureHasCorrectBalance({
-			customerId,
-			feature,
-			entitlement,
-			expectedBalance: (entitlement.allowance || 0) * quantity,
-		});
-	}
 };

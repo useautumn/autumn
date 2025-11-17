@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion, ProductItemFeatureType } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { TestFeature } from "tests/setup/v2Features.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
 	constructArrearItem,
@@ -12,7 +12,6 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 import { timeout } from "../../../utils/genUtils.js";
-import { trackWasSuccessful } from "../trackTestUtils.js";
 
 const testCase = "concurrentTrack5";
 const customerId = testCase;
@@ -152,16 +151,12 @@ describe(`${chalk.yellowBright(`${testCase}: Testing per-entity track with concu
 			}),
 		];
 
-		const results = await Promise.all(promises);
+		const results = await Promise.allSettled(promises);
 
-		const successCount = results.filter((r) =>
-			trackWasSuccessful({ res: r }),
-		).length;
-		const rejectedCount = results.filter(
-			(r) => !trackWasSuccessful({ res: r }),
-		).length;
+		const successCount = results.filter((r) => r.status === "fulfilled").length;
+		const rejectedCount = results.filter((r) => r.status === "rejected").length;
 		console.log(
-			`\n📈 Summary: ${successCount} HTTP 200 responses, ${rejectedCount} HTTP errors`,
+			`\n📈 Summary: ${successCount} successful tracks, ${rejectedCount} rejected tracks`,
 		);
 
 		expect(successCount).toBe(3);

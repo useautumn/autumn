@@ -34,29 +34,28 @@ export const handleInvoicePaidDiscount = async ({
 	logger: any;
 }) => {
 	// Handle coupon
-	const stripeCli = createStripeCli({ org, env });
-	if (expandedInvoice.discounts.length === 0) {
-		return;
-	}
+	const stripeCli = createStripeCli({ org, env, legacyVersion: true });
+	if (expandedInvoice.discounts.length === 0) return;
 
 	const stripeCus = await stripeCli.customers.retrieve(
 		expandedInvoice.customer as string,
 	);
 
+	const legacyInvoice = await stripeCli.invoices.retrieve(expandedInvoice.id, {
+		expand: ["total_discount_amounts", "discounts.coupon"],
+	});
+
 	try {
 		const totalDiscountAmounts = expandedInvoice.total_discount_amounts;
 
 		// Log coupon information for debugging
-		for (const discount of expandedInvoice.discounts) {
-			if (typeof discount === "string") {
-				continue;
-			}
+		for (const discount of legacyInvoice.discounts) {
+			if (typeof discount === "string" || !("coupon" in discount)) continue;
 
-			const curCoupon = discount.coupon;
+			const curCoupon = discount.coupon as Stripe.Coupon;
 
-			if (!curCoupon) {
+			if (!curCoupon || typeof curCoupon === "string" || !curCoupon.amount_off)
 				continue;
-			}
 
 			const rollSuffixIndex = curCoupon.id.indexOf("_roll_");
 			const couponId =
@@ -76,17 +75,14 @@ export const handleInvoicePaidDiscount = async ({
 				(autumnReward.type === RewardType.InvoiceCredits ||
 					autumnReward.type === RewardType.FreeProduct);
 
-			if (!shouldRollover) {
-				continue;
-			}
+			if (!shouldRollover) continue;
 
 			// Get ID of coupon
 			const originalCoupon = await stripeCli.coupons.retrieve(couponId, {
 				expand: ["applies_to"],
 			});
 
-			// 1. New amount:
-			const curAmount = discount.coupon.amount_off;
+			const curAmount = curCoupon.amount_off;
 
 			const amountUsed = totalDiscountAmounts?.find(
 				(item) => item.discount === discount.id,
@@ -141,7 +137,7 @@ export const handleInvoicePaidDiscount = async ({
 
 			const newCoupon = await stripeCli.coupons.create({
 				id: `${couponId}_${generateId("roll")}`,
-				name: discount.coupon.name as string,
+				name: curCoupon.name as string,
 				amount_off: newAmount,
 				currency: expandedInvoice.currency,
 				duration: "once",
@@ -151,13 +147,7 @@ export const handleInvoicePaidDiscount = async ({
 				},
 			});
 
-			const legacyStripeCli = createStripeCli({
-				org,
-				env,
-				legacyVersion: true,
-			});
-
-			await legacyStripeCli.rawRequest(
+			await stripeCli.rawRequest(
 				"POST",
 				`/v1/customers/${expandedInvoice.customer}`,
 				{

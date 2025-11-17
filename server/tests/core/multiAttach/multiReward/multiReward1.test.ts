@@ -1,16 +1,17 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type AppEnv,
 	CusProductStatus,
 	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
+import { expectMultiAttachCorrect } from "@tests/utils/expectUtils/expectMultiAttach.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import type { Stripe } from "stripe";
-import { setupBefore } from "tests/before.js";
-import { expectMultiAttachCorrect } from "tests/utils/expectUtils/expectMultiAttach.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import {
 	multiRewardPremium,
 	multiRewardPro,
@@ -31,48 +32,28 @@ describe(`${chalk.yellowBright("multiReward1: Testing multi attach with rewards"
 	let org: Organization;
 	let env: AppEnv;
 
-	beforeAll(async function () {
-		await setupBefore(this);
-		const { autumnJs } = this;
-		db = this.db;
-		org = this.org;
-		env = this.env;
-
-		stripeCli = this.stripeCli;
-
-		const { testClockId: testClockId1 } = await initCustomer({
-			autumn: autumnJs,
+	beforeAll(async () => {
+		const res = await initCustomerV3({
+			ctx,
 			customerId,
-			db,
-			org,
-			env,
 			attachPm: "success",
+			withTestClock: true,
 		});
+
+		stripeCli = ctx.stripeCli;
+		db = ctx.db;
+		org = ctx.org;
+		env = ctx.env;
+		testClockId = res.testClockId!;
 
 		await setupMultiRewardBefore({
 			orgId: org.id,
 			db,
 			env,
 		});
-
-		// addPrefixToProducts({
-		//   products: [pro, premium, growth],
-		//   prefix: testCase,
-		// });
-
-		// await createProducts({
-		//   autumn: autumnJs,
-		//   products: [pro, premium, growth],
-		//   db,
-		//   orgId: org.id,
-		//   env,
-		//   customerId,
-		// });
-
-		testClockId = testClockId1!;
 	});
 
-	it("should run multi attach through checkout and have correct sub", async () => {
+	test("should run multi attach through checkout and have correct sub", async () => {
 		const productsList = [
 			{
 				product_id: multiRewardPro.id,

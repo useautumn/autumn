@@ -1,8 +1,8 @@
 import {
 	formatAmount,
 	getIntervalString,
-	mapToProductV3,
 	type Organization,
+	productV2ToBasePrice,
 } from "@autumn/shared";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useProductStore } from "@/hooks/stores/useProductStore";
@@ -12,8 +12,8 @@ import { useOnboardingStore } from "@/views/onboarding3/store/useOnboardingStore
 
 export const BasePriceDisplay = () => {
 	const product = useProductStore((s) => s.product);
-	const productV3 = mapToProductV3({ product });
 	const isOnboarding = useOnboardingStore((s) => s.isOnboarding);
+	const basePrice = productV2ToBasePrice({ product });
 	const { org } = useOrg();
 
 	const renderPriceContent = () => {
@@ -21,12 +21,11 @@ export const BasePriceDisplay = () => {
 			return <span className="text-main-sec inline-block">Free</span>;
 		}
 
-		const price = productV3.price;
-		const priceExists = notNullish(price) && price.amount > 0;
-		if (priceExists && price) {
+		const priceExists = notNullish(basePrice) && basePrice.price > 0;
+		if (priceExists && basePrice) {
 			const formattedAmount = formatAmount({
 				org: org as unknown as Organization,
-				amount: price.amount,
+				amount: basePrice.price,
 				amountFormatOptions: {
 					style: "currency",
 					currency: org?.default_currency || "USD",
@@ -34,8 +33,8 @@ export const BasePriceDisplay = () => {
 				},
 			});
 
-			const secondaryText = price.interval
-				? `${getIntervalString({ interval: price.interval, intervalCount: price.intervalCount })}`
+			const secondaryText = basePrice.interval
+				? `${getIntervalString({ interval: basePrice.interval, intervalCount: basePrice.interval_count })}`
 				: "one-off";
 
 			return (

@@ -1,18 +1,16 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type AppEnv,
 	CusProductStatus,
 	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
-import { expect } from "chai";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
+import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import type { Stripe } from "stripe";
-import { setupBefore } from "tests/before.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts } from "tests/utils/testProductUtils/testProductUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
@@ -20,7 +18,8 @@ import {
 	constructFeatureItem,
 } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
 const premium = constructProduct({
 	id: "premium",
@@ -60,37 +59,25 @@ describe(`${chalk.yellowBright("cancel4: Cancelling free add on product")}`, () 
 	let org: Organization;
 	let env: AppEnv;
 
-	beforeAll(async function () {
-		await setupBefore(this);
-		const { autumnJs } = this;
-		db = this.db;
-		org = this.org;
-		env = this.env;
-
-		stripeCli = this.stripeCli;
-
-		addPrefixToProducts({
+	beforeAll(async () => {
+		await initProductsV0({
+			ctx,
 			products: [premium, addOn],
 			prefix: testCase,
-		});
-
-		await createProducts({
-			autumn: autumnJs,
-			products: [premium, addOn],
-			db,
-			orgId: org.id,
-			env,
 			customerId,
 		});
 
-		await initCustomer({
-			autumn: autumnJs,
+		await initCustomerV3({
+			ctx,
 			customerId,
-			db,
-			org,
-			env,
 			attachPm: "success",
+			withTestClock: false,
 		});
+
+		stripeCli = ctx.stripeCli;
+		db = ctx.db;
+		org = ctx.org;
+		env = ctx.env;
 	});
 
 	const entities = [
@@ -106,7 +93,7 @@ describe(`${chalk.yellowBright("cancel4: Cancelling free add on product")}`, () 
 		},
 	];
 
-	it("should run operations", async () => {
+	test("should run operations", async () => {
 		await autumn.entities.create(customerId, entities);
 
 		for (let index = 0; index < ops.length; index++) {
@@ -129,7 +116,7 @@ describe(`${chalk.yellowBright("cancel4: Cancelling free add on product")}`, () 
 		}
 	});
 
-	it("should track usage cancel, advance test clock and have correct invoice", async () => {
+	test("should track usage cancel, advance test clock and have correct invoice", async () => {
 		await autumn.cancel({
 			customer_id: customerId,
 			product_id: addOn.id,
@@ -143,6 +130,6 @@ describe(`${chalk.yellowBright("cancel4: Cancelling free add on product")}`, () 
 		});
 
 		const products = cus.products.filter((p) => p.group === addOn.group);
-		expect(products.length).to.equal(1);
+		expect(products.length).toBe(1);
 	});
 });
