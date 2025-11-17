@@ -138,7 +138,7 @@ export function createdAtToVersion({
 }: {
 	createdAt?: number;
 }): ApiVersionClass {
-	const v2_0 = new Date("2025-10-15").getTime();
+	const v2_0 = new Date("2025-12-20").getTime();
 	const v1_2 = new Date("2025-05-05").getTime();
 	const v1_1 = new Date("2025-04-17").getTime();
 	const v0_2 = new Date("2025-01-30").getTime();
