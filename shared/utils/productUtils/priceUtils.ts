@@ -2,13 +2,13 @@ import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
+import { BillingInterval } from "../../models/productModels/intervals/billingInterval.js";
 import type { FixedPriceConfig } from "../../models/productModels/priceModels/priceConfig/fixedPriceConfig.js";
 import {
 	BillWhen,
 	type UsagePriceConfig,
 } from "../../models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import {
-	BillingInterval,
 	BillingType,
 	PriceType,
 } from "../../models/productModels/priceModels/priceEnums.js";
@@ -119,7 +119,7 @@ export const isV4Usage = ({
 
 	return (
 		billingType === BillingType.UsageInArrear &&
-		(cusProduct.api_semver === ApiVersion.Beta ||
+		(cusProduct.api_semver === ApiVersion.V1_Beta ||
 			notNullish(cusProduct.internal_entity_id))
 	);
 };

@@ -1,4 +1,8 @@
 export const ErrCode = {
+	// Idempotency
+	IdempotencyKeyAlreadyExists: "idempotency_key_already_exists",
+	IdempotencyKeyNotFound: "idempotency_key_not_found",
+
 	// Auth
 	InvalidApiVersion: "invalid_api_version",
 	NoSecretKey: "no_secret_key",
@@ -155,4 +159,12 @@ export const ErrCode = {
 
 	// ClickHouse
 	ClickHouseDisabled: "clickhouse_disabled",
+
+	// Payment method
+	PaymentMethodNotFound: "payment_method_not_found",
+
+	// Vercel
+	VercelSubscriptionAlreadyExists: "vercel_subscription_already_exists",
+	VercelSubscriptionNotFound: "vercel_subscription_not_found",
+	VercelResourceNotFound: "vercel_resource_not_found",
 };

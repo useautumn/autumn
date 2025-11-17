@@ -1,27 +1,28 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
+	type ApiCusFeatureV3,
 	type Customer,
 	LegacyVersion,
 	type LimitedItem,
-	RolloverDuration,
+	RolloverExpiryDurationType,
 } from "@autumn/shared";
-import { beforeAll, describe, expect, test } from "bun:test";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
 import type Stripe from "stripe";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
-import { TestFeature } from "tests/setup/v2Features.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
 import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 
 const rolloverConfig = {
 	max: 400,
 	length: 1,
-	duration: RolloverDuration.Month,
+	duration: RolloverExpiryDurationType.Month,
 };
 const messagesItem = constructPrepaidItem({
 	featureId: TestFeature.Messages,
@@ -105,25 +106,24 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for usage price f
 		});
 
 		const cus = await autumn.customers.get(customerId);
-		const msgesFeature = cus.features[TestFeature.Messages];
+		const msgesFeature = cus.features[TestFeature.Messages] as ApiCusFeatureV3;
 
-		// @ts-expect-error
 		const rollovers = msgesFeature?.rollovers;
-
 		expect(msgesFeature).toBeDefined();
 		expect(msgesFeature?.balance).toBe(balance + rollover);
-		expect(rollovers[0].balance).toBe(rollover);
+		expect(rollovers?.[0].balance).toBe(rollover);
 
 		// Verify non-cached customer balance
 		await timeout(2000);
 		const nonCachedCustomer = await autumn.customers.get(customerId, {
 			skip_cache: "true",
 		});
-		const nonCachedMsgesFeature = nonCachedCustomer.features[TestFeature.Messages];
-		// @ts-expect-error
+		const nonCachedMsgesFeature = nonCachedCustomer.features[
+			TestFeature.Messages
+		] as ApiCusFeatureV3;
 		const nonCachedRollovers = nonCachedMsgesFeature?.rollovers;
 		expect(nonCachedMsgesFeature?.balance).toBe(balance + rollover);
-		expect(nonCachedRollovers[0].balance).toBe(rollover);
+		expect(nonCachedRollovers?.[0].balance).toBe(rollover);
 	});
 
 	// let usage2 = 50;
@@ -137,25 +137,27 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for usage price f
 
 		const newRollover = Math.min(balance + rollover, rolloverConfig.max);
 		const cus = await autumn.customers.get(customerId);
-		const msgesFeature = cus.features[TestFeature.Messages];
-		// @ts-expect-error
+		const msgesFeature = cus.features[TestFeature.Messages] as ApiCusFeatureV3;
+
 		const rollovers = msgesFeature?.rollovers;
 
 		expect(msgesFeature).toBeDefined();
 		expect(msgesFeature?.balance).toBe(balance + newRollover);
-		expect(rollovers[0].balance).toBe(0);
-		expect(rollovers[1].balance).toBe(400);
+		expect(rollovers?.[0].balance).toBe(0);
+		expect(rollovers?.[1].balance).toBe(400);
 
 		// Verify non-cached customer balance
 		await timeout(2000);
 		const nonCachedCustomer = await autumn.customers.get(customerId, {
 			skip_cache: "true",
 		});
-		const nonCachedMsgesFeature = nonCachedCustomer.features[TestFeature.Messages];
-		// @ts-expect-error
-		const nonCachedRollovers = nonCachedMsgesFeature?.rollovers;
+		const nonCachedMsgesFeature =
+			nonCachedCustomer.features[TestFeature.Messages];
+
+		const nonCachedRollovers =
+			nonCachedMsgesFeature?.rollovers as ApiCusFeatureV3["rollovers"];
 		expect(nonCachedMsgesFeature?.balance).toBe(balance + newRollover);
-		expect(nonCachedRollovers[0].balance).toBe(0);
-		expect(nonCachedRollovers[1].balance).toBe(400);
+		expect(nonCachedRollovers?.[0].balance).toBe(0);
+		expect(nonCachedRollovers?.[1].balance).toBe(400);
 	});
 });

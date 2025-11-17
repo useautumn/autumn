@@ -1,23 +1,31 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { ApiVersion } from "@autumn/shared";
+import {
+	type ApiCustomer,
+	ApiVersion,
+	ErrCode,
+	type TrackResponseV2,
+} from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { timeout } from "@tests/utils/genUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { timeout } from "tests/utils/genUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { trackWasSuccessful } from "../trackTestUtils.js";
+import { expectAutumnError } from "../../../utils/expectUtils/expectErrUtils.js";
 
 const testCase = "track-basic8";
 const customerId = testCase;
 
 // Prepaid feature: 5 included, no overage allowed
-const prepaidItem = constructFeatureItem({
+
+const prepaidItem = constructPrepaidItem({
 	featureId: TestFeature.Messages,
-	includedUsage: 5,
+	includedUsage: 2,
+	billingUnits: 1,
+	price: 1,
 });
 
 const prepaidProduct = constructProduct({
@@ -26,9 +34,10 @@ const prepaidProduct = constructProduct({
 	type: "pro",
 });
 
-describe(`${chalk.yellowBright(`${testCase}: Testing prepaid (no overage) with reject behavior`)}`, () => {
+const prepaidQuantity = 3;
+describe(`${chalk.yellowBright(`${testCase}: Testing prepaid tracking`)}`, () => {
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
-
+	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2_0 });
 	beforeAll(async () => {
 		await initCustomerV3({
 			ctx,
@@ -46,6 +55,12 @@ describe(`${chalk.yellowBright(`${testCase}: Testing prepaid (no overage) with r
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: prepaidProduct.id,
+			options: [
+				{
+					feature_id: TestFeature.Messages,
+					quantity: prepaidQuantity,
+				},
+			],
 		});
 	});
 
@@ -57,15 +72,17 @@ describe(`${chalk.yellowBright(`${testCase}: Testing prepaid (no overage) with r
 	});
 
 	test("should reject tracking 7 units when balance is 5 (no overage)", async () => {
-		const res = await autumnV1.track({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			value: 7,
-			overage_behavior: "reject",
+		expectAutumnError({
+			errCode: ErrCode.InsufficientBalance,
+			func: async () => {
+				await autumnV1.track({
+					customer_id: customerId,
+					feature_id: TestFeature.Messages,
+					value: 7,
+					overage_behavior: "reject",
+				});
+			},
 		});
-
-		expect(trackWasSuccessful({ res })).toBe(false);
-		expect(res.code).toBe("insufficient_balance");
 
 		// Verify balance remains unchanged
 		const customer = await autumnV1.customers.get(customerId);
@@ -74,16 +91,36 @@ describe(`${chalk.yellowBright(`${testCase}: Testing prepaid (no overage) with r
 		expect(balance).toBe(5);
 	});
 
+	test("should track 4 units and have correct balance", async () => {
+		const trackRes: TrackResponseV2 = await autumnV2.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 4,
+		});
+
+		expect(trackRes.balance).toMatchObject({
+			granted_balance: 2,
+			purchased_balance: 3,
+			current_balance: 1,
+			usage: 4,
+		});
+	});
+
 	test("should reflect unchanged balance in non-cached customer after 2s", async () => {
 		// Wait 2 seconds for DB sync
 		await timeout(2000);
 
 		// Fetch customer with skip_cache=true
-		const customer = await autumnV1.customers.get(customerId, {
+		const customer = (await autumnV2.customers.get(customerId, {
 			skip_cache: "true",
-		});
-		const balance = customer.features[TestFeature.Messages].balance;
+		})) as unknown as ApiCustomer;
+		const feature = customer.balances[TestFeature.Messages];
 
-		expect(balance).toBe(5);
+		expect(feature).toMatchObject({
+			granted_balance: 2,
+			purchased_balance: 3,
+			current_balance: 1,
+			usage: 4,
+		});
 	});
 });

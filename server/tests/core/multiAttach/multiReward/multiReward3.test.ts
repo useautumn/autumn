@@ -1,22 +1,22 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type AppEnv,
 	CusProductStatus,
 	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
-import { expect } from "chai";
+import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect.js";
+import { expectMultiAttachCorrect } from "@tests/utils/expectUtils/expectMultiAttach.js";
+import { advanceTestClock } from "@tests/utils/stripeUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { getBasePrice } from "@tests/utils/testProductUtils/testProductUtils.js";
 import chalk from "chalk";
 import { addDays } from "date-fns";
 import { Decimal } from "decimal.js";
 import type { Stripe } from "stripe";
-import { setupBefore } from "tests/before.js";
-import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
-import { expectMultiAttachCorrect } from "tests/utils/expectUtils/expectMultiAttach.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import {
 	premiumReward,
 	premiumTrial,
@@ -37,34 +37,28 @@ describe(`${chalk.yellowBright("multiReward3: Testing multi attach with rewards 
 	let org: Organization;
 	let env: AppEnv;
 
-	beforeAll(async function () {
-		await setupBefore(this);
-		const { autumnJs } = this;
-		db = this.db;
-		org = this.org;
-		env = this.env;
-
-		stripeCli = this.stripeCli;
-
-		const { testClockId: testClockId1 } = await initCustomer({
-			autumn: autumnJs,
+	beforeAll(async () => {
+		const res = await initCustomerV3({
+			ctx,
 			customerId,
-			db,
-			org,
-			env,
 			attachPm: "success",
+			withTestClock: true,
 		});
+
+		stripeCli = ctx.stripeCli;
+		db = ctx.db;
+		org = ctx.org;
+		env = ctx.env;
+		testClockId = res.testClockId!;
 
 		await setupMultiRewardBefore({
 			orgId: org.id,
 			db,
 			env,
 		});
-
-		testClockId = testClockId1!;
 	});
 
-	it("should run multi attach through checkout and have correct sub", async () => {
+	test("should run multi attach through checkout and have correct sub", async () => {
 		const productsList = [
 			{
 				product_id: proTrial.id,
@@ -93,7 +87,7 @@ describe(`${chalk.yellowBright("multiReward3: Testing multi attach with rewards 
 
 	let checkoutRes: any;
 
-	it("should advance clock and update pro quantity", async () => {
+	test("should advance clock and update pro quantity", async () => {
 		const productsList = [
 			{
 				product_id: proTrial.id,
@@ -129,7 +123,7 @@ describe(`${chalk.yellowBright("multiReward3: Testing multi attach with rewards 
 		checkoutRes = res.checkoutRes;
 	});
 
-	it("should advance to trial end and have correct quantity", async () => {
+	test("should advance to trial end and have correct quantity", async () => {
 		await advanceTestClock({
 			stripeCli,
 			testClockId,
@@ -158,7 +152,7 @@ describe(`${chalk.yellowBright("multiReward3: Testing multi attach with rewards 
 
 		console.log("Premium price: ", premiumPrice);
 		console.log("Checkout next cycle total: ", checkoutNextCycleTotal);
-		expect(latestInvoice.total).to.equal(
+		expect(latestInvoice.total).toBe(
 			checkoutRes.next_cycle?.total + premiumPrice,
 		);
 	});

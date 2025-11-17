@@ -18,6 +18,8 @@ export const runSyncBalanceBatch = async ({
 }) => {
 	const { items } = payload;
 
+	console.log(`Running sync balance batch with ${items.length} items`);
+
 	if (!items || !ctx || items.length === 0) return;
 
 	const { logger } = ctx;

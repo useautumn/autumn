@@ -7,7 +7,6 @@ import { resetCustomerEntitlement } from "./cron/cronUtils.js";
 import { runProductCron } from "./cron/productCron/runProductCron.js";
 import { initDrizzle } from "./db/initDrizzle.js";
 import { CusEntService } from "./internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import { OrgService } from "./internal/orgs/OrgService.js";
 import { notNullish } from "./utils/genUtils.js";
 
 dotenv.config();
@@ -26,8 +25,6 @@ export const cronTask = async () => {
 			batchSize: 500,
 		});
 
-		const cacheEnabledOrgs = await OrgService.getCacheEnabledOrgs({ db });
-
 		const batchSize = 100;
 		for (let i = 0; i < cusEnts.length; i += batchSize) {
 			const batch = cusEnts.slice(i, i + batchSize);
@@ -37,7 +34,6 @@ export const cronTask = async () => {
 					resetCustomerEntitlement({
 						db,
 						cusEnt: cusEnt,
-						cacheEnabledOrgs,
 					}),
 				);
 			}

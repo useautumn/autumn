@@ -20,7 +20,6 @@ import { billingIntervalToStripe } from "../stripePriceUtils.js";
 import { priceToInArrearTiers } from "./createStripeInArrear.js";
 
 export interface StripeMeteredPriceParams {
-	db: DrizzleCli;
 	stripeCli: Stripe;
 	price: Price;
 	entitlements: EntitlementWithFeature[];
@@ -29,7 +28,6 @@ export interface StripeMeteredPriceParams {
 }
 
 export const createStripeMeteredPrice = async ({
-	db,
 	stripeCli,
 	price,
 	entitlements,
@@ -225,7 +223,6 @@ export const createStripeArrearProrated = async ({
 	// CREATE PLACEHOLDER PRICE FOR INARREAR PRORATED PRICING
 	if (billingType === BillingType.InArrearProrated) {
 		const placeholderPrice = await createStripeMeteredPrice({
-			db,
 			stripeCli,
 			price,
 			entitlements,

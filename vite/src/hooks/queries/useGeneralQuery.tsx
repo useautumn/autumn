@@ -19,6 +19,7 @@ export const useGeneralQuery = ({
 			method,
 			url,
 		});
+
 		return data;
 	};
 

@@ -1,5 +1,6 @@
-import { Autumn } from "@/external/autumn/autumnCli.js";
+import type { ApiCustomerV1 } from "@shared/api/customers/previousVersions/apiCustomerV1";
 import { expect } from "chai";
+import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 
 export const checkBalance = async ({
 	autumn,
@@ -7,13 +8,15 @@ export const checkBalance = async ({
 	customerId,
 	expectedBalance,
 }: {
-	autumn: Autumn;
+	autumn: AutumnInt;
 	featureId: string;
 	customerId: string;
 	expectedBalance: number;
 }) => {
-	let { entitlements } = await autumn.customers.get(customerId);
-	let entitlement = entitlements.find((e: any) => e.feature_id == featureId);
+	const { entitlements } = (await autumn.customers.get(
+		customerId,
+	)) as unknown as ApiCustomerV1;
+	const entitlement = entitlements.find((e: any) => e.feature_id === featureId);
 
-	expect(entitlement.balance).to.equal(expectedBalance);
+	expect(entitlement?.balance).to.equal(expectedBalance);
 };

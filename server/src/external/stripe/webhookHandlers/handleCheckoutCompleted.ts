@@ -78,7 +78,6 @@ export const handleCheckoutSessionCompleted = async ({
 	if (attachParams.setupPayment) {
 		await handleSetupCheckout({
 			req,
-			db,
 			attachParams,
 		});
 		return;
@@ -107,18 +106,15 @@ export const handleCheckoutSessionCompleted = async ({
 		db,
 		subscription: checkoutSub,
 		attachParams,
-		logger,
 	});
 
 	// Create other subscriptions
 	const { invoiceIds } = await handleRemainingSets({
 		stripeCli,
-		db,
 		org,
 		checkoutSession,
 		attachParams,
 		checkoutSub,
-		logger,
 	});
 
 	const anchorToUnix = checkoutSub
@@ -147,7 +143,7 @@ export const handleCheckoutSessionCompleted = async ({
 					product,
 					productOptions.entity_id || undefined,
 				),
-				subscriptionIds: checkoutSub ? [checkoutSub?.id!] : undefined,
+				subscriptionIds: checkoutSub ? [checkoutSub.id] : undefined,
 				anchorToUnix,
 				scenario: AttachScenario.New,
 				logger,
@@ -160,7 +156,7 @@ export const handleCheckoutSessionCompleted = async ({
 			await createFullCusProduct({
 				db,
 				attachParams: attachToInsertParams(attachParams, product),
-				subscriptionIds: checkoutSub ? [checkoutSub?.id!] : undefined,
+				subscriptionIds: checkoutSub ? [checkoutSub.id] : undefined,
 				anchorToUnix,
 				scenario: AttachScenario.New,
 				logger,

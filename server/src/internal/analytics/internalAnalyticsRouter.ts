@@ -74,7 +74,7 @@ analyticsRouter.get("/event_names", async (req: any, res: any) =>
 );
 
 const getTopEvents = async ({ req }: { req: ExtendedRequest }) => {
-	const { org, env, features } = req;
+	const { features } = req;
 
 	const topEventNamesRes = await AnalyticsService.getTopEventNames({
 		req,

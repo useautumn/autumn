@@ -1,11 +1,14 @@
 #!/usr/bin/env bun
 
+import { readdir } from "node:fs/promises";
+import { basename, resolve } from "node:path";
+import { loadLocalEnv } from "@server/utils/envUtils.js";
 import { spawn } from "bun";
 import chalk from "chalk";
 import dotenv from "dotenv";
-import { readdir } from "fs/promises";
 import pLimit from "p-limit";
-import { basename, resolve } from "path";
+
+loadLocalEnv();
 
 // Load environment variables from server/.env
 dotenv.config({ path: resolve(process.cwd(), "server", ".env") });

@@ -7,13 +7,13 @@ import {
 	type Organization,
 	ProductItemInterval,
 } from "@autumn/shared";
+import { resetAndGetCusEnt } from "@tests/advanced/rollovers/rolloverTestUtils.js";
+import { addPrefixToProducts } from "@tests/attach/utils.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { addDays, addMonths } from "date-fns";
 import type Stripe from "stripe";
-import { resetAndGetCusEnt } from "tests/advanced/rollovers/rolloverTestUtils.js";
-import { addPrefixToProducts } from "tests/attach/utils.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
@@ -104,7 +104,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom reset intervals`)}`,
 		await resetAndGetCusEnt({
 			db,
 			customer,
-			productGroup: free.group,
+			productGroup: free.group || "",
 			featureId: TestFeature.Messages,
 		});
 
@@ -121,7 +121,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom reset intervals`)}`,
 		await resetAndGetCusEnt({
 			db,
 			customer,
-			productGroup: free.group,
+			productGroup: free.group || "",
 			featureId: TestFeature.Words,
 		});
 

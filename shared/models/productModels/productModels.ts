@@ -8,6 +8,7 @@ import { PriceSchema } from "./priceModels/priceModels.js";
 export const ProductSchema = z.object({
 	id: z.string(),
 	name: z.string().min(1, "Product name cannot be empty"),
+	description: z.string().nullable(),
 	is_add_on: z.boolean(),
 	is_default: z.boolean(),
 	version: z.number(),
@@ -50,12 +51,9 @@ export const UpdateProductSchema = z.object({
 });
 
 export const FullProductSchema = ProductSchema.extend({
+	description: z.string().nullable().optional().default(null),
 	prices: z.array(PriceSchema),
-	entitlements: z.array(
-		EntitlementSchema.extend({
-			feature: FeatureSchema,
-		}),
-	),
+	entitlements: z.array(EntitlementSchema.extend({ feature: FeatureSchema })),
 	free_trial: FreeTrialSchema.nullish(),
 	free_trials: z.array(FreeTrialSchema).nullish(),
 	free_trial_ids: z.array(z.string()).nullish(),

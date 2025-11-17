@@ -1,7 +1,7 @@
 import {
 	FeatureUsageType,
 	type RolloverConfig as RolloverConfigType,
-	RolloverDuration,
+	RolloverExpiryDurationType,
 } from "@autumn/shared";
 import { InfinityIcon } from "@phosphor-icons/react";
 import { AreaCheckbox } from "@/components/v2/checkboxes/AreaCheckbox";
@@ -36,14 +36,14 @@ export function RolloverConfig() {
 		hasCreditSystem || usageType === FeatureUsageType.Single;
 
 	const defaultRollover: RolloverConfigType = {
-		duration: RolloverDuration.Month,
+		duration: RolloverExpiryDurationType.Month,
 		length: 1 as number,
 		max: null,
 	};
 
 	const setRolloverConfigKey = (
 		key: keyof RolloverConfigType,
-		value: null | number | RolloverDuration,
+		value: null | number | RolloverExpiryDurationType,
 	) => {
 		setItem({
 			...item,
@@ -141,7 +141,7 @@ export function RolloverConfig() {
 						<div className="space-y-2">
 							<FormLabel>Rollover duration</FormLabel>
 							<div className="flex items-center gap-2">
-								{rollover?.duration === RolloverDuration.Month && (
+								{rollover?.duration === RolloverExpiryDurationType.Month && (
 									<Input
 										type="number"
 										value={rollover?.length === 0 ? "" : rollover?.length || ""}
@@ -158,7 +158,10 @@ export function RolloverConfig() {
 								<Select
 									value={rollover?.duration}
 									onValueChange={(value) => {
-										setRolloverConfigKey("duration", value as RolloverDuration);
+										setRolloverConfigKey(
+											"duration",
+											value as RolloverExpiryDurationType,
+										);
 									}}
 								>
 									<SelectTrigger
@@ -168,11 +171,13 @@ export function RolloverConfig() {
 										<SelectValue placeholder="Select duration" />
 									</SelectTrigger>
 									<SelectContent>
-										{Object.values(RolloverDuration).map((duration) => (
-											<SelectItem key={duration} value={duration}>
-												{duration}
-											</SelectItem>
-										))}
+										{Object.values(RolloverExpiryDurationType).map(
+											(duration) => (
+												<SelectItem key={duration} value={duration}>
+													{duration}
+												</SelectItem>
+											),
+										)}
 									</SelectContent>
 								</Select>
 							</div>

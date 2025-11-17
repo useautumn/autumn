@@ -14,3 +14,14 @@ export class CustomerNotFoundError extends RecaseError {
 		this.name = "CustomerNotFoundError";
 	}
 }
+
+export class CustomerAlreadyExistsError extends RecaseError {
+	constructor(opts: { message?: string; customerId: string }) {
+		super({
+			message: opts.message || `Customer ${opts.customerId} already exists`,
+			code: CusErrorCode.CustomerAlreadyExists,
+			statusCode: 409,
+		});
+		this.name = "CustomerAlreadyExistsError";
+	}
+}

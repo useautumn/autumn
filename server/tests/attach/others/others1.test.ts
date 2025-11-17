@@ -2,12 +2,12 @@ import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
 import { beforeAll, describe, expect, test } from "bun:test";
 import chalk from "chalk";
 import type Stripe from "stripe";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
 import {
 	expectDowngradeCorrect,
 	expectNextCycleCorrect,
-} from "tests/utils/expectUtils/expectScheduleUtils.js";
+} from "@tests/utils/expectUtils/expectScheduleUtils.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";

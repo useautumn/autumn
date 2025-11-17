@@ -19,7 +19,6 @@ import { getCusPriceUsage } from "@/internal/customers/cusProducts/cusPrices/cus
 import { submitUsageToStripe } from "../../stripeMeterUtils.js";
 import { getInvoiceItemForUsage } from "../../stripePriceUtils.js";
 import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
-import { findStripeItemForPrice } from "../../stripeSubUtils/stripeSubItemUtils.js";
 
 export const handleUsagePrices = async ({
 	db,
@@ -32,6 +31,8 @@ export const handleUsagePrices = async ({
 	usageSub,
 	logger,
 	activeProduct,
+	submitUsage = true,
+	resetBalance = true,
 }: {
 	db: DrizzleCli;
 	org: Organization;
@@ -43,6 +44,8 @@ export const handleUsagePrices = async ({
 	usageSub: Stripe.Subscription;
 	logger: any;
 	activeProduct: FullCusProduct;
+	submitUsage?: boolean;
+	resetBalance?: boolean;
 }): Promise<boolean> => {
 	const invoiceCreatedRecently =
 		Math.abs(
@@ -77,57 +80,64 @@ export const handleUsagePrices = async ({
 		return false;
 	}
 
-	const subItem = findStripeItemForPrice({
-		price,
-		stripeItems: usageSub.items.data,
-	});
+	if (submitUsage) {
+		// Use new invoice items method (not Stripe Meters) for:
+		// - Entity-based customers
+		// - Beta API customers
+		// - Vercel custom payment method subscriptions (meter timing issue with invoice.created)
+		const isVercelSubscription = !!usageSub.metadata?.vercel_installation_id;
+		const isNewUsageMethod =
+			activeProduct.internal_entity_id ||
+			activeProduct.api_semver === ApiVersion.V1_Beta ||
+			isVercelSubscription;
 
-	const isNewUsageMethod =
-		activeProduct.internal_entity_id ||
-		activeProduct.api_semver === ApiVersion.Beta;
+		if (isNewUsageMethod) {
+			const invoiceItem = getInvoiceItemForUsage({
+				stripeInvoiceId: invoice.id!,
+				price,
+				customer,
+				currency: invoice.currency,
+				cusProduct: activeProduct,
+				logger,
+				periodStart: invoice.period_start,
+				periodEnd: invoice.period_end,
+			});
 
-	if (isNewUsageMethod) {
-		const invoiceItem = getInvoiceItemForUsage({
-			stripeInvoiceId: invoice.id!,
-			price,
-			customer,
-			currency: invoice.currency,
-			cusProduct: activeProduct,
-			logger,
-			periodStart: invoice.period_start,
-			periodEnd: invoice.period_end,
-		});
+			if (invoiceItem.price_data!.unit_amount! > 0) {
+				await stripeCli.invoiceItems.create(invoiceItem);
+			}
+		} else {
+			if (!config.stripe_meter_id) {
+				logger.warn(
+					`Price ${price.id} has no stripe meter id, skipping invoice.created for usage in arrear`,
+				);
+				return false;
+			}
 
-		if (invoiceItem.price_data!.unit_amount! > 0) {
-			await stripeCli.invoiceItems.create(invoiceItem);
-		}
-	} else {
-		if (!config.stripe_meter_id) {
-			logger.warn(
-				`Price ${price.id} has no stripe meter id, skipping invoice.created for usage in arrear`,
+			const { roundedUsage } = getCusPriceUsage({
+				price,
+				cusProduct: activeProduct,
+				logger,
+			});
+
+			const usageTimestamp = Math.round(
+				subDays(new Date(invoice.created * 1000), 1).getTime() / 1000,
 			);
-			return false;
+
+			await submitUsageToStripe({
+				price,
+				stripeCli,
+				usage: roundedUsage,
+				customer,
+				usageTimestamp,
+				feature: relatedCusEnt.entitlement.feature,
+				logger,
+			});
 		}
+	}
 
-		const { roundedUsage } = getCusPriceUsage({
-			price,
-			cusProduct: activeProduct,
-			logger,
-		});
-
-		const usageTimestamp = Math.round(
-			subDays(new Date(invoice.created * 1000), 1).getTime() / 1000,
-		);
-
-		await submitUsageToStripe({
-			price,
-			stripeCli,
-			usage: roundedUsage,
-			customer,
-			usageTimestamp,
-			feature: relatedCusEnt.entitlement.feature,
-			logger,
-		});
+	if (!resetBalance) {
+		return false;
 	}
 
 	if (relatedCusEnt.entitlement.interval === EntInterval.Lifetime) {

@@ -2,36 +2,35 @@
 	"name": "@autumn/shared",
 	"type": "module",
 	"version": "1.0.0",
-	"main": "./dist/index.js",
-	"types": "./dist/index.d.ts",
+	"main": "./index.ts",
+	"types": "./index.ts",
 	"exports": {
 		".": {
-			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js",
-			"default": "./dist/index.js"
+			"types": "./index.ts",
+			"import": "./index.ts",
+			"default": "./index.ts"
 		}
 	},
 	"author": "Recase Inc.",
 	"license": "Apache-2.0",
 	"scripts": {
-		"api": "bun api/openapi.ts",
-		"build": "tsc --emitDeclarationOnly --outDir dist && bun build ./index.ts --outdir dist --format esm --target bun --external zod",
-		"dev": "bunx nodemon --ext ts --ignore dist --exec \"tsc --emitDeclarationOnly --outDir dist && bun build ./index.ts --outdir dist --format esm --target bun --external zod\"",
-		"dev:watch": "bun scripts/watch.js",
+		"api": "bun api/api.ts",
+		"ts": "bunx tsgo --build --noEmit",
 		"db:push": "bun db:generate && bun db:migrate",
 		"db:generate": "cross-env NODE_OPTIONS=\"--import tsx\" bunx drizzle-kit generate --config drizzle.config.ts",
 		"db:migrate": "cross-env NODE_OPTIONS=\"--import tsx\" bunx drizzle-kit migrate --config drizzle.config.ts",
 		"db:studio": "cross-env NODE_OPTIONS=\"--import tsx\" bunx drizzle-kit studio --config drizzle.config.ts"
 	},
 	"dependencies": {
-		"stripe": "catalog:",
 		"date-fns": "^4.1.0",
 		"decimal.js": "^10.5.0",
 		"dotenv": "^16.5.0",
 		"drizzle-kit": "catalog:",
 		"drizzle-orm": "catalog:",
+		"drizzle-zod": "^0.8.2",
 		"yaml": "^2.8.1",
-		"zod-openapi": "^5.4.1"
+		"zod-openapi": "^5.4.1",
+		"stripe": "catalog:"
 	},
 	"peerDependencies": {
 		"zod": "^3.25.23"
@@ -39,7 +38,7 @@
 	"devDependencies": {
 		"@types/bun": "latest",
 		"@types/node": "^24.0.3",
-		"@typescript/native-preview": "^7.0.0-dev.20250731.1",
+
 		"cross-env": "^7.0.3",
 		"nodemon": "^3.1.7",
 		"tsx": "^4.19.4",

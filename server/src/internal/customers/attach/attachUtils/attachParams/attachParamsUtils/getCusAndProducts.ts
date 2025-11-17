@@ -10,6 +10,7 @@ import { isOneOff } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../../../../honoUtils/HonoEnv";
 
 const getProductsForAttach = async ({
 	req,
@@ -77,7 +78,7 @@ export const getCustomerAndProducts = async ({
 }) => {
 	const [customer, products] = await Promise.all([
 		getOrCreateCustomer({
-			req,
+			ctx: req as unknown as AutumnContext,
 			customerId: attachBody.customer_id,
 			customerData: {
 				...attachBody.customer_data,

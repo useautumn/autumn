@@ -15,19 +15,18 @@ export const handleContUsePrices = async ({
 	db,
 	cusEnts,
 	cusPrice,
-	stripeCli,
 	invoice,
 	usageSub,
 	logger,
+	resetBalance = true,
 }: {
 	db: DrizzleCli;
 	cusEnts: FullCustomerEntitlement[];
 	cusPrice: FullCustomerPrice;
-	stripeCli: Stripe;
-
 	invoice: Stripe.Invoice;
 	usageSub: Stripe.Subscription;
 	logger: any;
+	resetBalance?: boolean;
 }): Promise<boolean> => {
 	const cusEnt = getRelatedCusEnt({
 		cusPrice,
@@ -48,6 +47,10 @@ export const handleContUsePrices = async ({
 		return false;
 	}
 
+	if (!resetBalance) {
+		return false;
+	}
+
 	const feature = cusEnt.entitlement.feature;
 	logger.info(
 		`Handling invoice.created for in arrear prorated, feature: ${feature.id}`,
@@ -55,9 +58,7 @@ export const handleContUsePrices = async ({
 
 	const replaceables = cusEnt.replaceables.filter((r) => r.delete_next_cycle);
 
-	if (replaceables.length === 0) {
-		return false;
-	}
+	if (replaceables.length === 0) return false;
 
 	logger.info(`🚀 Deleting replaceables for ${feature.id}`);
 

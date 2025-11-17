@@ -7,16 +7,15 @@ import {
 	type Organization,
 	RewardType,
 } from "@autumn/shared";
-import chalk from "chalk";
-import type Stripe from "stripe";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { expectAttachCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { createProducts, createReward } from "tests/utils/productUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectAttachCorrect } from "@tests/utils/expectUtils/expectAttach.js";
+import { createProducts, createReward } from "@tests/utils/productUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import {
 	addPrefixToProducts,
 	getBasePrice,
-} from "tests/utils/testProductUtils/testProductUtils.js";
+} from "@tests/utils/testProductUtils/testProductUtils.js";
+import chalk from "chalk";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
@@ -63,8 +62,6 @@ const reward: CreateReward = {
 const testCase = "coupon3";
 describe(chalk.yellow(`${testCase} - Testing attach coupon`), () => {
 	const customerId = testCase;
-	let stripeCli: Stripe;
-	let testClockId: string;
 
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let org: Organization;
@@ -77,15 +74,12 @@ describe(chalk.yellow(`${testCase} - Testing attach coupon`), () => {
 		org = ctx.org;
 		env = ctx.env;
 		db = ctx.db;
-		stripeCli = ctx.stripeCli;
 
-		const { testClockId: testClockId1 } = await initCustomerV3({
+		await initCustomerV3({
 			ctx,
 			customerId,
 			attachPm: "success",
 		});
-
-		testClockId = testClockId1;
 
 		addPrefixToProducts({
 			products: [pro, oneOff],
@@ -112,7 +106,7 @@ describe(chalk.yellow(`${testCase} - Testing attach coupon`), () => {
 
 	// CYCLE 0
 	test("should attach pro with reward ID", async () => {
-		const res = await autumn.attach({
+		await autumn.attach({
 			customer_id: customerId,
 			product_id: pro.id,
 			reward: rewardId,

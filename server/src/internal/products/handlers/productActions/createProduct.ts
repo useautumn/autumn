@@ -18,7 +18,7 @@ import { ProductService } from "../../ProductService.js";
 import { handleNewProductItems } from "../../product-items/productItemUtils/handleNewProductItems.js";
 import { getProductResponse } from "../../productUtils/productResponseUtils/getProductResponse.js";
 import { constructProduct, initProductInStripe } from "../../productUtils.js";
-import { disableCurrentDefault } from "../handleCreateProduct.js";
+import { disableCurrentDefault } from "../handleCreatePlan.js";
 
 export const createProduct = async ({
 	ctx,

@@ -2,7 +2,6 @@ import {
 	AffectedResource,
 	type ApiCustomer,
 	applyResponseVersionChanges,
-	type CusExpand,
 	type CustomerLegacyData,
 	type FullCustomer,
 } from "@autumn/shared";
@@ -15,19 +14,15 @@ import { getApiCustomerExpand } from "./getApiCustomerExpand.js";
  */
 export const getApiCustomer = async ({
 	ctx,
-	expand,
 	withAutumnId = false,
 	customerId,
 	fullCus,
-	skipCache = false,
 	baseData,
 }: {
 	ctx: RequestContext;
-	expand: CusExpand[];
 	withAutumnId?: boolean;
 	customerId?: string;
 	fullCus?: FullCustomer;
-	skipCache?: boolean;
 	baseData?: { apiCustomer: ApiCustomer; legacyData: CustomerLegacyData };
 }) => {
 	let baseCustomer: ApiCustomer;
@@ -37,7 +32,6 @@ export const getApiCustomer = async ({
 		const { apiCustomer, legacyData } = await getCachedApiCustomer({
 			ctx,
 			customerId: customerId || "",
-			skipCache,
 		});
 		baseCustomer = apiCustomer;
 		cusLegacyData = legacyData;
@@ -57,7 +51,6 @@ export const getApiCustomer = async ({
 	const apiCusExpand = await getApiCustomerExpand({
 		ctx,
 		customerId,
-		expand,
 		fullCus,
 	});
 
@@ -67,6 +60,7 @@ export const getApiCustomer = async ({
 		...apiCusExpand,
 	};
 
+	// Get legacy data for version changes
 	return applyResponseVersionChanges<ApiCustomer, CustomerLegacyData>({
 		input: apiCustomer,
 		legacyData: cusLegacyData,

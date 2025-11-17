@@ -1,6 +1,5 @@
 import { AttachScenario, type FullCusProduct } from "@autumn/shared";
 import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { isMultiProductSub } from "@/internal/customers/attach/mergeUtils/mergeUtils.js";
 import { getSubScenarioFromCache } from "@/internal/customers/cusCache/subCacheUtils.js";
@@ -30,26 +29,6 @@ const isSubRenewed = ({
 		renewed: uncanceledAtPreviousEnd || uncancelAt || uncanceledAt,
 		renewedAt: Date.now(),
 	};
-};
-
-const updateCusProductRenewed = async ({
-	db,
-	sub,
-}: {
-	db: DrizzleCli;
-	sub: Stripe.Subscription;
-}) => {
-	if (sub.schedule) {
-		return;
-	}
-
-	await CusProductService.updateByStripeSubId({
-		db,
-		stripeSubId: sub.id,
-		updates: { canceled_at: null, canceled: false },
-	});
-
-	return;
 };
 
 export const handleSubRenewed = async ({
@@ -131,5 +110,5 @@ export const handleSubRenewed = async ({
 				),
 			});
 		}
-	} catch (error) {}
+	} catch (_error) {}
 };

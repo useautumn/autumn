@@ -1,7 +1,7 @@
 import { AppEnv, ErrCode } from "@autumn/shared";
-import { initUpstash } from "@/internal/customers/cusCache/upstashUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import type { ExtendedResponse } from "@/utils/models/Request.js";
+import { CacheManager } from "../utils/cacheUtils/CacheManager";
 
 export const trmnlExclusions = ["/trmnl/screen"];
 
@@ -10,17 +10,6 @@ export const trmnlAuthMiddleware = async (
 	res: ExtendedResponse,
 	next: any,
 ) => {
-	const upstash = await initUpstash();
-
-	if (!upstash) {
-		res.status(500).json({
-			message: "Upstash not found",
-			code: ErrCode.InvalidSecretKey,
-			statusCode: 401,
-		});
-		return;
-	}
-
 	req.logger.info(
 		`received trmnl request, device id: ${req.headers["x-trmnl-id"]}`,
 	);
@@ -35,10 +24,10 @@ export const trmnlAuthMiddleware = async (
 		return;
 	}
 
-	const trmnlConfig = (await upstash!.get(`trmnl:device:${deviceId}`)) as {
+	const trmnlConfig = await CacheManager.getJson<{
 		orgId: string;
 		hideRevenue: boolean;
-	};
+	}>(`trmnl:device:${deviceId}`);
 
 	if (!trmnlConfig) {
 		res.status(401).json({
@@ -51,7 +40,7 @@ export const trmnlAuthMiddleware = async (
 
 	req.logger.info(`trmnl config: ${JSON.stringify(trmnlConfig)}`);
 
-	req.env = req.headers["env"] || AppEnv.Live;
+	req.env = req.headers.env || AppEnv.Live;
 	const features = await FeatureService.list({
 		db: req.db,
 		orgId: trmnlConfig.orgId as string,
@@ -64,35 +53,6 @@ export const trmnlAuthMiddleware = async (
 		hideRevenue: trmnlConfig.hideRevenue,
 	};
 	req.features = features;
-
-	// const file = await readFile({ bucket: "private", path: "trmnl.json" });
-	// const fileString = await file.text();
-	// const fileJson = JSON.parse(fileString);
-
-	// let trmnlId = req.headers["x-trmnl-id"];
-	// if (!trmnlId)
-	//   return res.status(401).json({
-	//     message: "Trmnl ID not found",
-	//     code: ErrCode.InvalidSecretKey,
-	//     statusCode: 401,
-	//   });
-
-	// if (!fileJson[trmnlId]) {
-	//   return res.status(401).json({
-	//     message: "Trmnl ID not found",
-	//     code: ErrCode.InvalidSecretKey,
-	//     statusCode: 401,
-	//   });
-	// }
-
-	// req.env = req.headers["env"] || AppEnv.Live;
-	// const features = await FeatureService.list({
-	//   db: req.db,
-	//   orgId: fileJson[trmnlId],
-	//   env: req.env,
-	// });
-
-	// req.features = features;
 
 	next();
 };

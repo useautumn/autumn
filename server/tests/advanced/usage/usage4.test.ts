@@ -4,12 +4,12 @@ import {
 	ProductItemInterval,
 	UsageModel,
 } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectCustomerV0Correct } from "@tests/utils/expectUtils/expectCustomerV0Correct.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { expectCustomerV0Correct } from "tests/utils/expectUtils/expectCustomerV0Correct.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
 import { convertProductV2ToV1 } from "@/internal/products/productUtils/productV2Utils/convertProductV2ToV1.js";
 import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -136,7 +136,13 @@ describe(`${chalk.yellowBright("usage4: GPU starter annual")}`, () => {
 
 		const originalAllowance = Object.values(productV1.entitlements).find(
 			(ent: any) => ent.feature_id === TestFeature.Credits,
-		)?.allowance!;
+		)?.allowance;
+
+		if (!originalAllowance) {
+			throw new Error("Original allowance not found");
+		}
+
+		console.log(`Total credits used: ${totalCreditsUsed}`);
 
 		await checkCreditBalance({
 			customerId,
@@ -187,7 +193,11 @@ describe(`${chalk.yellowBright("usage4: GPU starter annual")}`, () => {
 
 		const originalAllowance = Object.values(productV1.entitlements).find(
 			(ent: any) => ent.feature_id === TestFeature.Credits,
-		)?.allowance!;
+		)?.allowance;
+
+		if (!originalAllowance) {
+			throw new Error("Original allowance not found");
+		}
 
 		await checkCreditBalance({
 			customerId,

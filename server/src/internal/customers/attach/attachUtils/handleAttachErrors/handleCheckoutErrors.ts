@@ -1,5 +1,6 @@
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import { AttachBranch } from "@autumn/shared";
+import type { AttachBranch } from "@autumn/shared";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { handleCustomPaymentMethodErrors } from "../handleAttachErrors.js";
 
 export const handleCheckoutErrors = ({
 	attachParams,
@@ -8,7 +9,11 @@ export const handleCheckoutErrors = ({
 	attachParams: AttachParams;
 	branch: AttachBranch;
 }) => {
-	if (attachParams.setupPayment) {
-		// Make sure only usage prices are added?
-	}
+	handleCustomPaymentMethodErrors({
+		attachParams,
+	});
+
+	// if (attachParams.setupPayment) {
+	// 	// Make sure only usage prices are added?
+	// }
 };

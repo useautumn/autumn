@@ -1,4 +1,4 @@
-import { Stripe } from "stripe";
+import type { Stripe } from "stripe";
 
 export const deleteCouponFromSub = async ({
 	stripeCli,
@@ -12,23 +12,14 @@ export const deleteCouponFromSub = async ({
 	logger: any;
 }) => {
 	try {
-		let stripeSub = await stripeCli.subscriptions.retrieve(stripeSubId);
-
-		let newDiscounts = stripeSub.discounts
-			?.filter((d: any) => d !== discountId)
-			.map((d: any) => ({
-				discount: d,
-			}));
+		const stripeSub = await stripeCli.subscriptions.retrieve(stripeSubId);
 
 		if (stripeSub.discounts.some((d: any) => d === discountId)) {
 			await stripeCli.subscriptions.deleteDiscount(stripeSubId);
-			// console.log("DELETED DISCOUNT FROM SUB", stripeSubId);
 		}
 	} catch (error: any) {
-		// if (!error.message.includes("no active discount for subscription")) {
 		logger.error(`Failed to delete discount from subscription ${stripeSubId}`);
 		logger.error(error.message);
-		// }
 	}
 };
 
@@ -46,7 +37,7 @@ export const deleteCouponFromCus = async ({
 	logger: any;
 }) => {
 	try {
-		let stripeSub = await stripeCli.subscriptions.retrieve(stripeSubId);
+		const stripeSub = await stripeCli.subscriptions.retrieve(stripeSubId);
 		if (stripeSub.discounts.some((d: any) => d === discountId)) {
 			await stripeCli.subscriptions.deleteDiscount(stripeSubId);
 		}
@@ -56,7 +47,7 @@ export const deleteCouponFromCus = async ({
 	}
 
 	try {
-		let stripeCus = (await stripeCli.customers.retrieve(
+		const stripeCus = (await stripeCli.customers.retrieve(
 			stripeCusId,
 		)) as Stripe.Customer;
 		if (stripeCus.discount?.id === discountId) {

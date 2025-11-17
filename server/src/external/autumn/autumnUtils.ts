@@ -1,7 +1,7 @@
-import { AppEnv, ErrCode, Organization } from "@autumn/shared";
+import { AppEnv, ErrCode, type Organization } from "@autumn/shared";
+import { Autumn } from "autumn-js";
 // import { Autumn } from "./autumnCli.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { Autumn } from "autumn-js";
 
 export enum FeatureId {
 	Products = "products",

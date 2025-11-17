@@ -1,7 +1,7 @@
-import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@autumn/shared";
 import { differenceInMonths, differenceInYears } from "date-fns";
 import { StatusCodes } from "http-status-codes";
+import RecaseError from "@/utils/errorUtils.js";
 
 export const getEventTimestamp = (timestamp?: number | null) => {
 	// 1. If timestamp is not provided, return now
@@ -10,7 +10,7 @@ export const getEventTimestamp = (timestamp?: number | null) => {
 	}
 
 	try {
-		let date = new Date(timestamp);
+		const date = new Date(timestamp);
 
 		if (differenceInYears(new Date(), date) >= 2) {
 			throw new RecaseError({

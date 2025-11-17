@@ -11,24 +11,22 @@ export const CustomerDataSchema = z
 			description: "Customer's email address",
 		}),
 		fingerprint: z.string().nullish().meta({
-			description:
-				"Unique identifier (eg, serial number) to detect duplicate customers and prevent free trial abuse",
+			internal: true,
 		}),
 		metadata: z.record(z.any(), z.any()).nullish().meta({
-			description: "Additional metadata for the customer",
+			internal: true,
 		}),
 		stripe_id: z.string().nullish().meta({
-			description: "Stripe customer ID if you already have one",
+			internal: true,
 		}),
 		disable_default: z.boolean().optional().meta({
-			description:
-				"Disable default products from being attached to the customer",
+			internal: true,
 		}),
 	})
 	.meta({
 		id: "CustomerData",
 		description:
-			"Used to add customer details like name or email when auto-creating a customer.",
+			"Unique identifier (eg, serial number) to detect duplicate customers and prevent free trial abuse",
 	});
 
 export type CustomerData = z.infer<typeof CustomerDataSchema>;
