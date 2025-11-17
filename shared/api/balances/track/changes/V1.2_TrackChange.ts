@@ -65,7 +65,7 @@ export const V1_2_TrackChange = defineVersionChange({
 		feature_id = feature_id || legacyData?.feature_id;
 
 		return {
-			id: "",
+			id: "placeholder",
 			code: "event_received",
 			customer_id: input.customer_id,
 			entity_id: input.entity_id,
