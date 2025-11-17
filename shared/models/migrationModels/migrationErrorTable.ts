@@ -1,14 +1,13 @@
 import {
-	pgTable,
-	text,
-	numeric,
-	jsonb,
 	foreignKey,
+	jsonb,
+	numeric,
+	pgTable,
 	primaryKey,
+	text,
 } from "drizzle-orm/pg-core";
-
-import { migrationJobs } from "./migrationJobTable.js";
 import { customers } from "../cusModels/cusTable.js";
+import { migrationJobs } from "./migrationJobTable.js";
 
 export const migrationErrors = pgTable(
 	"migration_errors",

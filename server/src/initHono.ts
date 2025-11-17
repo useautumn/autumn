@@ -14,6 +14,7 @@ import { refreshCacheMiddleware } from "./honoMiddlewares/refreshCacheMiddleware
 import { secretKeyMiddleware } from "./honoMiddlewares/secretKeyMiddleware.js";
 import { traceMiddleware } from "./honoMiddlewares/traceMiddleware.js";
 import type { HonoEnv } from "./honoUtils/HonoEnv.js";
+import { handleHealthCheck } from "./honoUtils/handleHealthCheck.js";
 import { balancesRouter } from "./internal/balances/balancesRouter.js";
 import { billingRouter } from "./internal/billing/billingRouter.js";
 import { cusRouter } from "./internal/customers/cusRouter.js";
@@ -83,15 +84,14 @@ export const createHonoApp = () => {
 
 	// OAuth callback (needs to be before middleware)
 	// Health check endpoint for AWS/ECS load balancer
-	app.get("/", (c) => {
-		return c.text("Hello from Autumn 🍂🍂🍂");
-	});
 
 	app.get("/stripe/oauth_callback", handleOAuthCallback);
 
 	// Step 1: Base middleware - sets up ctx (db, logger, etc.)
 	app.use("*", baseMiddleware);
 	app.use("*", traceMiddleware);
+
+	app.get("/", handleHealthCheck);
 
 	// Add Render region identifier header for load balancer verification
 	app.use("*", async (c, next) => {

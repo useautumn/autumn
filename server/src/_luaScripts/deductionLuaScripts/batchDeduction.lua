@@ -344,7 +344,7 @@ local function deductFromOverage(cusFeature, amount, adjustGrantedBalance)
     
     -- Check if overage is allowed
     -- Continuous use features automatically allow overage
-    local allowOverage = cusFeature.overage_allowed or (cusFeature.feature and cusFeature.feature.type == "continuous_use")
+    local allowOverage = cusFeature.overage_allowed or (cusFeature.feature and cusFeature.feature.type == "metered" and cusFeature.feature.consumable == false)
     
     if not allowOverage then
         return {
@@ -1062,7 +1062,7 @@ end
 -- Helper function to apply legacy continuous_use logic
 -- Legacy case: continuous_use features always allow overage
 local function applyContinuousUseLegacy(balance)
-    if balance.feature and balance.feature.type == "continuous_use" then
+    if balance.feature and balance.feature.type == "metered" and balance.feature.consumable == false then
         balance.overage_allowed = true
         -- Apply to breakdowns as well
         if balance.breakdown then
