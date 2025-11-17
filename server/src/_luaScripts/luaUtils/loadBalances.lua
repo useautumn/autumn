@@ -281,8 +281,9 @@ local function mergeFeatureBalances(targetBalance, sourceBalance)
     end
     
     -- Merge rollover balances
-    if targetBalance.rollovers and sourceBalance.rollovers then
-        for i, targetRollover in ipairs(targetBalance.rollovers) do
+    if sourceBalance.rollovers and #sourceBalance.rollovers > 0 then
+         -- Both have rollovers, merge them
+         for i, targetRollover in ipairs(targetBalance.rollovers) do
             local sourceRollover = sourceBalance.rollovers[i]
             if sourceRollover then
                 targetRollover.balance = toNum(targetRollover.balance) + toNum(sourceRollover.balance)
@@ -676,8 +677,7 @@ local function loadBalances(cacheKey, orgId, env, customerId, entityId)
                     max_purchase = entityBalance.max_purchase or 0,
                     overage_allowed = entityBalance.overage_allowed,
                     reset = entityBalance.reset,
-                    breakdown = {},
-                    rollovers = {}
+                    breakdown = {}
                 }
             end
         end
@@ -693,6 +693,13 @@ local function loadBalances(cacheKey, orgId, env, customerId, entityId)
                     mergeFeatureBalances(customerBalance, entityBalance)
                 end
             end
+        end
+    end
+
+    -- Clean up empty rollovers arrays before returning
+    for featureId, balance in pairs(balances) do
+        if balance.rollovers and #balance.rollovers == 0 then
+            balance.rollovers = nil
         end
     end
 

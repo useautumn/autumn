@@ -87,6 +87,7 @@ describe(`${chalk.yellowBright(`track-allocated1: Tracking allocated feature `)}
 
 		// Check final balance
 		const customer = await autumnV1.customers.get(customerId);
+
 		const finalBalance = customer.features[TestFeature.Users].balance;
 		expect(finalBalance).toBe(-4);
 

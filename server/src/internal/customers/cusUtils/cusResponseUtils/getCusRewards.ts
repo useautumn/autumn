@@ -68,6 +68,8 @@ export const getCusRewards = async ({
 				const coupon = d.coupon as Stripe.Coupon;
 				const couponId = getOriginalCouponId(coupon.id);
 
+				if (couponId === null) return null;
+
 				let duration_type: CouponDurationType;
 				let duration_value = 0;
 				if (coupon.duration === "forever") {
