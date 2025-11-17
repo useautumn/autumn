@@ -69,18 +69,16 @@ export const executeBatchDeduction = async ({
 			console.log("🔍 Lua debug info:", JSON.stringify(parsed.debug, null, 2));
 		}
 
-		// Log actual feature deductions
-		if (
-			parsed.featureDeductions &&
-			Object.keys(parsed.featureDeductions).length > 0
-		) {
-			console.log(
-				"✅ Feature deductions from Redis:",
-				parsed.featureDeductions,
-			);
-		}
-
-		console.log("Requests: ", requests?.[0].featureDeductions);
+		// // Log actual feature deductions
+		// if (
+		// 	parsed.featureDeductions &&
+		// 	Object.keys(parsed.featureDeductions).length > 0
+		// ) {
+		// 	console.log(
+		// 		"✅ Feature deductions from Redis:",
+		// 		parsed.featureDeductions,
+		// 	);
+		// }
 
 		return parsed;
 	} catch (error) {
