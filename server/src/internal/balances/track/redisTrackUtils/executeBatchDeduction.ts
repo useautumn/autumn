@@ -80,6 +80,8 @@ export const executeBatchDeduction = async ({
 			);
 		}
 
+		console.log("Requests: ", requests?.[0].featureDeductions);
+
 		return parsed;
 	} catch (error) {
 		console.error("Error executing batch deduction:", error);

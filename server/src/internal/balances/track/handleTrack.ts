@@ -25,7 +25,10 @@ export const handleTrack = createRoute({
 
 		// Legacy: support value in properties
 		if (body.properties?.value) {
-			body.value = body.properties.value;
+			const parsedValue = Number(body.properties.value);
+			if (!Number.isNaN(parsedValue)) {
+				body.value = parsedValue;
+			}
 		}
 
 		// Validate: event_name cannot be used with overage_behavior: "reject"
