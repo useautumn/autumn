@@ -28,6 +28,8 @@
 		"migrate-functions:prod": "infisical run --env=prod -- bun scripts/migrations/migrate-functions.ts",
 		"validate-schema": "infisical run --env=prod -- bun scripts/migrations/validate-schema.ts",
 
+		"vite:build": "cd shared && bun ts && cd ../vite && bun run build",
+
 		"setupci": "node scripts/setup/setupci.js",
 		"replicate": "bun scripts/db/replicate.ts",
 		"db:push": " bun -F @autumn/shared db:push",
