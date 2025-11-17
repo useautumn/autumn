@@ -24,6 +24,9 @@
 		"setup:test": "bun scripts/setup/setup-test.ts",
 		"tests": "infisical run --env=dev -- bun scripts/test.ts",
 
+		"migrate-functions": "infisical run --env=dev -- bun scripts/migrations/migrate-functions.ts",
+		"migrate-functions:prod": "infisical run --env=prod -- bun scripts/migrations/migrate-functions.ts",
+
 		"setupci": "node scripts/setup/setupci.js",
 		"replicate": "bun scripts/db/replicate.ts",
 		"db:push": " bun -F @autumn/shared db:push",
