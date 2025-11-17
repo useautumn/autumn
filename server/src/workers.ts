@@ -10,14 +10,10 @@ console.warn = (...args: any[]) => {
 
 import "dotenv/config";
 import cluster from "node:cluster";
-import os from "node:os";
 import { initInfisical } from "./external/infisical/initInfisical.js";
 
 // Number of worker processes (defaults to CPU cores)
-const NUM_PROCESSES =
-	process.env.NODE_ENV === "development"
-		? 1
-		: Number.parseInt(process.env.WORKER_PROCESSES || String(os.cpus().length));
+const NUM_PROCESSES = process.env.NODE_ENV === "development" ? 1 : 4;
 
 if (cluster.isPrimary) {
 	await initInfisical();
