@@ -1,6 +1,7 @@
 import type { AppEnv } from "@autumn/shared";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { logger } from "../../../../external/logtail/logtailUtils";
 
 interface SyncPairContext {
 	customerId: string;
@@ -132,10 +133,17 @@ export class SyncBatchingManager {
 				},
 				messageGroupId: customerId,
 			});
-			console.log(
-				`Queued sync batch for customer ${customerId} with ${items.length} items`,
-			);
+			// console.log(
+			// 	`Queued sync batch for customer ${customerId} with ${items.length} items`,
+			// );
 		} catch (error) {
+			logger.error(
+				`❌ Failed to queue sync batch for customer ${customerId}, error: ${error instanceof Error ? error.message : "unknown"}`,
+				{
+					error: error instanceof Error ? error : new Error(String(error)),
+					customerId,
+				},
+			);
 			console.error(
 				`❌ Failed to queue sync batch for customer ${customerId}:`,
 				error,
