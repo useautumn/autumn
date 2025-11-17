@@ -17,6 +17,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "bun scripts/dev.ts",
+		"vite:build": "bun -F @autumn/vite build:bun",
 		"d": "ENV_FILE=.env infisical run --env=dev -- bun scripts/dev.ts",
 		"p": "ENV_FILE=.env.prod infisical run --env=prod -- bun scripts/dev.ts",
 
