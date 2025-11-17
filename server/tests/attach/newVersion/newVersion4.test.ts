@@ -1,7 +1,9 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { BillingInterval, LegacyVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { replaceItems } from "@tests/utils/testProductUtils/testProductUtils.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
@@ -13,10 +15,8 @@ import {
 	constructProduct,
 	constructRawProduct,
 } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3.js";
-import { initProductsV0 } from "../../src/utils/scriptUtils/testUtils/initProductsV0.js";
-import { expectProductAttached } from "../utils/expectUtils/expectProductAttached.js";
-import { replaceItems } from "../utils/testProductUtils/testProductUtils.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
 // UNCOMMENT FROM HERE
 const pro = constructProduct({
