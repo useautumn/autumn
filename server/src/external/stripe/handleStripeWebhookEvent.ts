@@ -300,7 +300,11 @@ export const handleStripeWebhookEvent = async ({
 			ctx,
 		});
 	} catch (error) {
-		logger.error(`Stripe webhook, error refreshing cache!`, { error });
+		logger.error(`Stripe webhook, error refreshing cache: ${error}`, {
+			error: {
+				message: error instanceof Error ? error.message : String(error),
+			},
+		});
 		return { success: true };
 	}
 
