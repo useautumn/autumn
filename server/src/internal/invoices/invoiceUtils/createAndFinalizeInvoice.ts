@@ -26,7 +26,6 @@ export const createAndFinalizeInvoice = async ({
 		customer: stripeCusId,
 		auto_advance: false,
 		subscription: stripeSubId,
-
 		collection_method: chargeAutomatically
 			? "charge_automatically"
 			: "send_invoice",
