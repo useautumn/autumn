@@ -142,14 +142,6 @@ export class BatchingManager {
 		this.batches.delete(batchKey);
 
 		const requests = batch.requests;
-		const batchSize = requests.length;
-
-		const batchType = batch.entityId
-			? `entity ${batch.entityId}`
-			: "customer-level";
-		console.log(
-			`🚀 Executing batch with ${batchSize} requests for customer ${batch.customerId} (${batchType})`,
-		);
 
 		try {
 			// Execute batch Lua script (Lua builds cache key internally)
@@ -165,8 +157,6 @@ export class BatchingManager {
 				env: batch.env,
 				customerId: batch.customerId,
 			});
-
-			console.log(`✅ Batch completed (${batchSize} requests)`);
 
 			// Resolve each request based on its individual result
 			if (result.success && result.results) {
