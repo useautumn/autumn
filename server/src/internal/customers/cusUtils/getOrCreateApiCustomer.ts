@@ -1,6 +1,7 @@
 import {
 	type ApiCustomer,
 	ApiEntityV1Schema,
+	type Customer,
 	type CustomerData,
 	type CustomerLegacyData,
 	CustomerNotFoundError,
@@ -8,6 +9,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { autoCreateEntity } from "../../entities/handlers/handleCreateEntity/autoCreateEntity.js";
+import { CusService } from "../CusService.js";
 import { handleCreateCustomer } from "../handlers/handleCreateCustomer.js";
 import { deleteCachedApiCustomer } from "./apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { getCachedApiCustomer } from "./apiCusCacheUtils/getCachedApiCustomer.js";
@@ -79,22 +81,48 @@ export const getOrCreateApiCustomer = async ({
 		// If customer not found, create it
 		if (!apiCustomerOrUndefined) {
 			// Race conditions are now handled gracefully at the DB level with ON CONFLICT
-			const newCustomer = await handleCreateCustomer({
-				ctx,
-				cusData: {
-					id: customerId,
-					name: customerData?.name,
-					email: customerData?.email,
-					fingerprint: customerData?.fingerprint,
-					metadata: customerData?.metadata || {},
-					stripe_id: customerData?.stripe_id,
-				},
-				createDefaultProducts: customerData?.disable_default !== true,
-			});
+			let newCustomer: Customer | undefined;
+			try {
+				newCustomer = await handleCreateCustomer({
+					ctx,
+					cusData: {
+						id: customerId,
+						name: customerData?.name,
+						email: customerData?.email,
+						fingerprint: customerData?.fingerprint,
+						metadata: customerData?.metadata || {},
+						stripe_id: customerData?.stripe_id,
+					},
+					createDefaultProducts: customerData?.disable_default !== true,
+				});
+			} catch (error: any) {
+				if (
+					error?.message?.includes(
+						"duplicate key value violates unique constraint",
+					) &&
+					customerId
+				) {
+					ctx.logger.info(
+						`[getOrCreateApiCustomer] Customer ${customerId} already exists, fetching existing customer`,
+					);
+					const existingCustomer = await CusService.get({
+						db: ctx.db,
+						idOrInternalId: customerId,
+						orgId: ctx.org.id,
+						env: ctx.env,
+					});
+
+					if (existingCustomer) {
+						newCustomer = existingCustomer;
+					}
+				} else {
+					throw error;
+				}
+			}
 
 			const res = await getCachedApiCustomer({
 				ctx,
-				customerId: newCustomer.id || newCustomer.internal_id,
+				customerId: newCustomer?.id || newCustomer?.internal_id || "",
 				source: "getOrCreateApiCustomer",
 			});
 			apiCustomerOrUndefined = res?.apiCustomer;

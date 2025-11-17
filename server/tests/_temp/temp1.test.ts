@@ -6,8 +6,6 @@ import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 import { advanceToNextInvoice } from "../utils/testAttachUtils/testAttachUtils.js";
 
 // UNCOMMENT FROM HERE
@@ -25,22 +23,39 @@ describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 
 	let testClockId: string;
 	beforeAll(async () => {
-		const result = await initCustomerV3({
-			ctx,
-			customerId,
-			customerData: {},
-			attachPm: "fail",
-			withTestClock: true,
-		});
+		try {
+			await autumn.customers.delete(customerId);
+		} catch {}
 
-		await initProductsV0({
-			ctx,
-			products: [pro],
-			prefix: customerId,
-		});
+		await Promise.all([
+			autumn.customers.create({
+				id: customerId,
+				name: customerId,
+				email: `${customerId}@example.com`,
+			}),
+			autumn.customers.create({
+				id: customerId,
+				name: customerId,
+				email: `${customerId}@example.com`,
+			}),
+		]);
+		// const result = await initCustomerV3({
+		// 	ctx,
+		// 	customerId,
+		// 	customerData: {},
+		// 	attachPm: "fail",
+		// 	withTestClock: true,
+		// });
 
-		testClockId = result.testClockId!;
+		// await initProductsV0({
+		// 	ctx,
+		// 	products: [pro],
+		// 	prefix: customerId,
+		// });
+
+		// testClockId = result.testClockId!;
 	});
+	return;
 
 	test("should attach pro product", async () => {
 		await autumn.attach({

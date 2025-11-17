@@ -12,7 +12,6 @@ import {
 	type Organization,
 } from "@autumn/shared";
 import { and, eq, ilike, or, sql, type Table } from "drizzle-orm";
-import { StatusCodes } from "http-status-codes";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
@@ -207,7 +206,6 @@ export class CusService {
 		const results = await db
 			.insert(customers)
 			.values(data as any)
-			.onConflictDoNothing()
 			.returning();
 
 		// If insert succeeded, return the new customer
