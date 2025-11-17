@@ -60,7 +60,7 @@ export const deductFromCusEnts = async ({
 	deductions,
 	overageBehaviour = "cap",
 	addToAdjustment = false,
-	skipAdditionalBalance = false,
+	skipAdditionalBalance = true,
 	alterGrantedBalance = false,
 	fullCus,
 	sortParams,

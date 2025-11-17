@@ -52,6 +52,7 @@ export const executePostgresTracking = async ({
 		},
 		refreshCache: true,
 		fullCus,
+		skipAdditionalBalance: true,
 	});
 
 	if (updatedFullCus) {
