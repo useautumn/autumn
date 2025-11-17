@@ -78,40 +78,27 @@ export const getOrCreateApiCustomer = async ({
 
 		// If customer not found, create it
 		if (!apiCustomerOrUndefined) {
-			try {
-				const newCustomer = await handleCreateCustomer({
-					ctx,
-					cusData: {
-						id: customerId,
-						name: customerData?.name,
-						email: customerData?.email,
-						fingerprint: customerData?.fingerprint,
-						metadata: customerData?.metadata || {},
-						stripe_id: customerData?.stripe_id,
-					},
-					createDefaultProducts: customerData?.disable_default !== true,
-				});
+			// Race conditions are now handled gracefully at the DB level with ON CONFLICT
+			const newCustomer = await handleCreateCustomer({
+				ctx,
+				cusData: {
+					id: customerId,
+					name: customerData?.name,
+					email: customerData?.email,
+					fingerprint: customerData?.fingerprint,
+					metadata: customerData?.metadata || {},
+					stripe_id: customerData?.stripe_id,
+				},
+				createDefaultProducts: customerData?.disable_default !== true,
+			});
 
-				const res = await getCachedApiCustomer({
-					ctx,
-					customerId: newCustomer.id || newCustomer.internal_id,
-					source: "getOrCreateApiCustomer",
-				});
-				apiCustomerOrUndefined = res?.apiCustomer;
-				legacyData = res?.legacyData;
-			} catch (error: any) {
-				// Handle race condition: another request created the customer
-				if (error?.data?.code === "23505") {
-					const res = await getCachedApiCustomer({
-						ctx,
-						customerId,
-					});
-					apiCustomerOrUndefined = res?.apiCustomer;
-					legacyData = res?.legacyData;
-				} else {
-					throw error;
-				}
-			}
+			const res = await getCachedApiCustomer({
+				ctx,
+				customerId: newCustomer.id || newCustomer.internal_id,
+				source: "getOrCreateApiCustomer",
+			});
+			apiCustomerOrUndefined = res?.apiCustomer;
+			legacyData = res?.legacyData;
 		}
 
 		apiCustomer = apiCustomerOrUndefined;
