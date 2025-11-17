@@ -555,9 +555,7 @@ local function deductFromMainBalance(cusFeature, amount, adjustGrantedBalance)
     local remaining = amount
     
     -- POSITIVE AMOUNT (DEDUCTION): current_balance → overage
-    local isPaidAllocated = cusFeature.feature and cusFeature.feature.type == "metered" and cusFeature.feature.consumable == false and cusFeature.overage_allowed == true
-    
-    if remaining > 0 or isPaidAllocated then
+    if remaining > 0 then
         -- Pass 1: Deduct from current_balance
         local currentBalanceResult = deductFromCurrentBalance(cusFeature, remaining, adjustGrantedBalance)
         remaining = currentBalanceResult.remaining
