@@ -1,8 +1,6 @@
 import { faStripe } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ArrowUpRightFromSquare } from "lucide-react";
-import { Link } from "react-router";
-import Stripe from "stripe";
 import CopyButton from "@/components/general/CopyButton";
 import { SideAccordion } from "@/components/general/SideAccordion";
 import { SidebarLabel } from "@/components/general/sidebar/sidebar-label";

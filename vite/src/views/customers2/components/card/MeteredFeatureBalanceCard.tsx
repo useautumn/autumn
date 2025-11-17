@@ -72,7 +72,7 @@ export const MeteredFeatureBalanceCard = ({
 		<div
 			key={ent.entitlement.feature.id}
 			className={cn(
-				"flex flex-col items-center justify-center gap-2 px-4 min-w-60 text-t2 text-sm hover:bg-stone-100 whitespace-nowrap bg-white border border-border-table rounded-lg shadow-sm overflow-hidden relative h-16",
+				"flex flex-col items-center justify-center gap-2 px-4 min-w-60 text-t2 text-sm hover:bg-interactive-secondary-hover whitespace-nowrap bg-interactive-secondary border rounded-lg shadow-sm overflow-hidden relative h-16",
 				allEnts.length === 1 && "max-w-[50%]",
 			)}
 			onClick={(e) => {
@@ -154,7 +154,7 @@ export const MeteredFeatureBalanceCard = ({
 				</div>
 				<div
 					className={cn(
-						"w-full flex justify-end pt-2",
+						"flex justify-end pt-2 w-36",
 						(ent.entitlement.allowance ?? 0) > 0 ? "opacity-100" : "opacity-0",
 					)}
 				>

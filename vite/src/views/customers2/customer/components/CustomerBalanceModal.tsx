@@ -156,7 +156,7 @@ export function CustomerBalanceModal() {
 									key={cusEnt.id}
 									type="button"
 									onClick={() => setSelectedCusEntId(cusEnt.id)}
-									className="flex flex-col gap-2 bg-secondary p-3 rounded-lg border border-border-table hover:border-border-hover hover:bg-muted transition-colors text-left"
+									className="flex flex-col gap-2 bg-secondary p-3 rounded-lg border hover:border-border-hover hover:bg-muted transition-colors text-left"
 								>
 									{cusProduct?.name && (
 										<div className="text-sm font-medium text-t1">
@@ -258,7 +258,7 @@ export function CustomerBalanceModal() {
 									</div>
 								)} */}
 
-								<div className="flex flex-col gap-2 bg-secondary p-3 rounded-lg border border-border-table">
+								<div className="flex flex-col gap-2 bg-secondary p-3 rounded-lg border">
 									<div className="flex gap-2">
 										<span className="text-t3 text-sm font-medium">
 											Plan ID:

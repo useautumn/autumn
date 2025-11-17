@@ -1,11 +1,9 @@
 import { AppEnv } from "@autumn/shared";
 import { AutumnProvider } from "autumn-js/react";
-import { ArrowUpRightFromSquare } from "lucide-react";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { useEffect } from "react";
 import { Outlet, useNavigate } from "react-router";
 import { CustomToaster } from "@/components/general/CustomToaster";
-import { Button } from "@/components/ui/button";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useGlobalErrorHandler } from "@/hooks/common/useGlobalErrorHandler";
 import { useOrg } from "@/hooks/common/useOrg";
@@ -15,7 +13,6 @@ import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
-import { navigateTo } from "@/utils/genUtils";
 import CommandBar from "@/views/command-bar/CommandBar";
 import { useCusSearchQuery } from "@/views/customers/hooks/useCusSearchQuery";
 import LoadingScreen from "@/views/general/LoadingScreen";
@@ -74,16 +71,6 @@ export function MainLayout() {
 									<p className="font-medium text-t8 font-mono">
 										You&apos;re in sandbox
 									</p>
-									<Button
-										variant="default"
-										className="h-6 border border-t8 bg-transparent text-t8 hover:bg-t8 hover:text-white font-mono rounded-xs ml-auto absolute right-4"
-										onClick={() => {
-											navigateTo("/onboarding", navigate, AppEnv.Sandbox);
-										}}
-									>
-										Onboarding
-										<ArrowUpRightFromSquare size={12} className="inline ml-1" />
-									</Button>
 								</div>
 							)}
 							<div className="flex bg-stone-50 flex-col h-full">
@@ -108,7 +95,7 @@ export function MainLayout() {
 			includeCredentials={true}
 		>
 			<NuqsAdapter>
-				<main className="w-screen h-screen flex bg-stone-100">
+				<main className="w-screen h-screen flex bg-outer-background">
 					<CustomToaster />
 					<MainSidebar />
 					<InviteNotifications />
@@ -123,7 +110,6 @@ export function MainLayout() {
 
 const MainContent = () => {
 	const env = useEnv();
-	const navigate = useNavigate();
 
 	useDevQuery();
 	useAutumnFlags();
@@ -141,22 +127,10 @@ const MainContent = () => {
 					"font-normal",
 				)}
 			>
-				<div className="w-full h-full flex flex-col overflow-hidden rounded-lg border">
+				<div className="w-full h-full flex flex-col overflow-hidden rounded-xl border">
 					{env === AppEnv.Sandbox && (
-						<div className="w-full min-h-10 h-10 bg-t8/10 text-sm flex items-center justify-center relative px-4 text-t8 ">
+						<div className="w-full min-h-10 h-10 bg-t8/10 text-sm flex items-center justify-center relative px-4 text-t8 border-b border-t8/20">
 							<p className="font-medium font-mono">You&apos;re in sandbox</p>
-							{!window.location.pathname.includes("/onboarding") && (
-								<Button
-									variant="default"
-									className="h-6 border border-t8 bg-transparent text-t8 hover:bg-t8 hover:text-white font-mono rounded-xs ml-auto absolute right-4"
-									onClick={() => {
-										navigateTo("/onboarding", navigate, AppEnv.Sandbox);
-									}}
-								>
-									Onboarding
-									<ArrowUpRightFromSquare size={12} className="inline ml-1" />
-								</Button>
-							)}
 						</div>
 					)}
 					<div

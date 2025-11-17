@@ -94,7 +94,7 @@ export function CustomerInvoicesTable() {
 			<Table.Container>
 				<Table.Toolbar>
 					<Table.Heading>
-						<Receipt size={16} weight="fill" className="text-t5" />
+						<Receipt size={16} weight="fill" className="text-subtle" />
 						Invoices
 					</Table.Heading>
 					{/* <Table.Actions>

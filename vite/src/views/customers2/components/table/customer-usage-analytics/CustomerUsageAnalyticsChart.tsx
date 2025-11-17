@@ -59,7 +59,7 @@ export function CustomerUsageAnalyticsChart({
 	return (
 		<ChartContainer
 			config={chartConfig}
-			className="h-full pt-3 pr-2 w-full relative bg-card border border-border-table"
+			className="h-full pt-3 pr-2 w-full relative bg-card border"
 		>
 			<BarChart
 				// accessibilityLayer
@@ -70,7 +70,7 @@ export function CustomerUsageAnalyticsChart({
 				<CartesianGrid
 					vertical={false}
 					className="fill-white dark:fill-gray-900"
-					stroke="#d1d1d1"
+					stroke="var(--chart-grid-stroke)"
 					strokeWidth={1}
 					strokeDasharray="2 2"
 					// verticalPoints={[20]}
