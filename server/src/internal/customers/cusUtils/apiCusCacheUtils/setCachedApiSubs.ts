@@ -1,4 +1,6 @@
 import {
+	addToExpand,
+	CusExpand,
 	type FullCustomer,
 	filterCusProductsByEntity,
 	filterOutEntitiesFromCusProducts,
@@ -29,8 +31,12 @@ export const setCachedApiSubs = async ({
 	const { org, env, logger } = ctx;
 
 	// Build master api customer subscriptions (customer-level products only)
-	const { data: masterApiSubs } = await getApiSubscriptions({
+	const ctxWithExpand = addToExpand({
 		ctx,
+		add: [CusExpand.SubscriptionsPlan],
+	});
+	const { data: masterApiSubs } = await getApiSubscriptions({
+		ctx: ctxWithExpand,
 		fullCus: {
 			...structuredClone(fullCus),
 			customer_products: filterOutEntitiesFromCusProducts({
@@ -66,7 +72,7 @@ export const setCachedApiSubs = async ({
 			});
 
 			const { data: entityProducts } = await getApiSubscriptions({
-				ctx,
+				ctx: ctxWithExpand,
 				fullCus: {
 					...fullCus,
 					customer_products: entityCusProducts,

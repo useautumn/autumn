@@ -2,6 +2,11 @@
 -- Atomically processes a batch of track requests for a customer
 -- Each request can deduct from multiple features
 --
+-- Error codes:
+--   CUSTOMER_NOT_FOUND: Customer not in cache
+--   INSUFFICIENT_BALANCE: Overage behavior is "reject" and balance insufficient
+--   PAID_ALLOCATED: Feature is continuous use with overage (should use Postgres)
+--
 -- ARGV[1]: JSON array of requests:
 --   [
 --     {
@@ -312,11 +317,13 @@ local function deductFromCurrentBalance(cusFeature, amount, adjustGrantedBalance
     }
 end
 
--- Deduct from overage (second pass - increments purchased_balance up to max_purchase)
+-- Deduct from overage (handles purchased_balance adjustments)
+-- For positive amounts: increments purchased_balance up to max_purchase
+-- For negative amounts (refunds): decrements purchased_balance down to 0
 -- Only applies if overage_allowed is true
 -- Parameters:
 --   cusFeature: Balance object to deduct from
---   amount: Remaining amount to cover with overage
+--   amount: Amount to handle (positive for deduction, negative for refund)
 --   adjustGrantedBalance: If true, decrement granted_balance instead of incrementing usage
 -- Returns: { remaining: number, deltas: [{key, field, delta}], stateChanges: [{type, index, field, newValue/delta}] }
 local function deductFromOverage(cusFeature, amount, adjustGrantedBalance)
@@ -333,8 +340,8 @@ local function deductFromOverage(cusFeature, amount, adjustGrantedBalance)
         }
     end
     
-    -- Only proceed if there's remaining amount and overage is allowed
-    if remaining <= 0 then
+    -- Early return if no amount to process
+    if remaining == 0 then
         return {
             remaining = remaining,
             deltas = deltas,
@@ -344,7 +351,7 @@ local function deductFromOverage(cusFeature, amount, adjustGrantedBalance)
     
     -- Check if overage is allowed
     -- Continuous use features automatically allow overage
-    local allowOverage = cusFeature.overage_allowed or (cusFeature.feature and cusFeature.feature.type == "continuous_use")
+    local allowOverage = cusFeature.overage_allowed or (cusFeature.feature and cusFeature.feature.type == "metered" and cusFeature.feature.consumable == false)
     
     if not allowOverage then
         return {
@@ -354,8 +361,10 @@ local function deductFromOverage(cusFeature, amount, adjustGrantedBalance)
         }
     end
     
-    -- If cusFeature has breakdowns, deduct from breakdown overage
-    if cusFeature.breakdown and #cusFeature.breakdown > 0 then
+    -- POSITIVE AMOUNT: Increment purchased_balance up to max_purchase
+    if remaining > 0 then
+        -- If cusFeature has breakdowns, deduct from breakdown overage
+        if cusFeature.breakdown and #cusFeature.breakdown > 0 then
         for index, breakdown in ipairs(cusFeature.breakdown) do
             if remaining <= 0 then break end
             
@@ -484,6 +493,49 @@ local function deductFromOverage(cusFeature, amount, adjustGrantedBalance)
             
             remaining = remaining - toIncrement
         end
+        end
+    -- NEGATIVE AMOUNT (REFUND): Decrement purchased_balance down to 0
+    else
+        -- If cusFeature has breakdowns, refund from breakdown overage
+        if cusFeature.breakdown and #cusFeature.breakdown > 0 then
+            for index, breakdown in ipairs(cusFeature.breakdown) do
+                if remaining >= 0 then break end
+                
+                local breakdownAllowOverage = breakdown.overage_allowed == true
+                if breakdownAllowOverage then
+                    local breakdownPurchasedBalance = breakdown.purchased_balance or 0
+                    local toDecrement = math.min(-remaining, breakdownPurchasedBalance)
+                    
+                    if toDecrement > 0 then
+                        table.insert(deltas, {key = breakdown._key, field = "purchased_balance", delta = -toDecrement})
+                        table.insert(deltas, {key = cusFeature._key, field = "purchased_balance", delta = -toDecrement})
+                        table.insert(deltas, {key = breakdown._key, field = "usage", delta = -toDecrement})
+                        table.insert(deltas, {key = cusFeature._key, field = "usage", delta = -toDecrement})
+                        
+                        table.insert(stateChanges, {type = "breakdown", index = index, field = "purchased_balance", delta = -toDecrement})
+                        table.insert(stateChanges, {type = "breakdown", index = index, field = "usage", delta = -toDecrement})
+                        table.insert(stateChanges, {type = "cusFeature", field = "purchased_balance", delta = -toDecrement})
+                        table.insert(stateChanges, {type = "cusFeature", field = "usage", delta = -toDecrement})
+                        
+                        remaining = remaining + toDecrement
+                    end
+                end
+            end
+        else
+            -- No breakdowns: refund from top-level overage
+            local topLevelPurchasedBalance = cusFeature.purchased_balance or 0
+            local toDecrement = math.min(-remaining, topLevelPurchasedBalance)
+            
+            if toDecrement > 0 then
+                table.insert(deltas, {key = cusFeature._key, field = "purchased_balance", delta = -toDecrement})
+                table.insert(deltas, {key = cusFeature._key, field = "usage", delta = -toDecrement})
+                
+                table.insert(stateChanges, {type = "cusFeature", field = "purchased_balance", delta = -toDecrement})
+                table.insert(stateChanges, {type = "cusFeature", field = "usage", delta = -toDecrement})
+                
+                remaining = remaining + toDecrement
+            end
+        end
     end
     
     return {
@@ -495,6 +547,8 @@ end
 
 -- Deduct from main balance (handles both breakdown and non-breakdown scenarios)
 -- Handles both positive (deduct) and negative (refund) amounts
+-- For positive amounts: deducts from current_balance, then overage
+-- For negative amounts: refunds from overage (purchased_balance), then current_balance
 -- Parameters:
 --   cusFeature: Balance object to deduct from
 --   amount: Amount to deduct (can be negative for refunds)
@@ -505,29 +559,55 @@ local function deductFromMainBalance(cusFeature, amount, adjustGrantedBalance)
     local allStateChanges = {}
     local remaining = amount
     
-    -- Pass 1: Deduct from current_balance (only deducts from positive balances)
-    local currentBalanceResult = deductFromCurrentBalance(cusFeature, remaining, adjustGrantedBalance)
-    remaining = currentBalanceResult.remaining
-    
-    -- Collect current balance deltas and state changes
-    for _, delta in ipairs(currentBalanceResult.deltas) do
-        table.insert(allDeltas, delta)
-    end
-    for _, stateChange in ipairs(currentBalanceResult.stateChanges) do
-        table.insert(allStateChanges, stateChange)
-    end
-    
-    -- Pass 2: Deduct from overage (increments purchased_balance up to max_purchase)
+    -- POSITIVE AMOUNT (DEDUCTION): current_balance → overage
     if remaining > 0 then
+        -- Pass 1: Deduct from current_balance
+        local currentBalanceResult = deductFromCurrentBalance(cusFeature, remaining, adjustGrantedBalance)
+        remaining = currentBalanceResult.remaining
+        
+        for _, delta in ipairs(currentBalanceResult.deltas) do
+            table.insert(allDeltas, delta)
+        end
+        for _, stateChange in ipairs(currentBalanceResult.stateChanges) do
+            table.insert(allStateChanges, stateChange)
+        end
+        
+        -- Pass 2: Deduct from overage (increments purchased_balance up to max_purchase)
+        if remaining > 0 then
+            local overageResult = deductFromOverage(cusFeature, remaining, adjustGrantedBalance)
+            remaining = overageResult.remaining
+            
+            for _, delta in ipairs(overageResult.deltas) do
+                table.insert(allDeltas, delta)
+            end
+            for _, stateChange in ipairs(overageResult.stateChanges) do
+                table.insert(allStateChanges, stateChange)
+            end
+        end
+    -- NEGATIVE AMOUNT (REFUND): overage → current_balance
+    else
+        -- Pass 1: Refund from overage (decrements purchased_balance down to 0)
         local overageResult = deductFromOverage(cusFeature, remaining, adjustGrantedBalance)
         remaining = overageResult.remaining
         
-        -- Collect overage deltas and state changes
         for _, delta in ipairs(overageResult.deltas) do
             table.insert(allDeltas, delta)
         end
         for _, stateChange in ipairs(overageResult.stateChanges) do
             table.insert(allStateChanges, stateChange)
+        end
+        
+        -- Pass 2: Refund to current_balance (increments current_balance)
+        if remaining < 0 then
+            local currentBalanceResult = deductFromCurrentBalance(cusFeature, remaining, adjustGrantedBalance)
+            remaining = currentBalanceResult.remaining
+            
+            for _, delta in ipairs(currentBalanceResult.deltas) do
+                table.insert(allDeltas, delta)
+            end
+            for _, stateChange in ipairs(currentBalanceResult.stateChanges) do
+                table.insert(allStateChanges, stateChange)
+            end
         end
     end
     
@@ -837,6 +917,21 @@ local function processRequest(request, loadedCusFeatures, entityFeatureStates)
         local amount = featureDeduction.amount
         local cusFeature = loadedCusFeatures[featureId]
         
+        -- Check for paid allocated features (continuous use with overage)
+        -- These should use Postgres-based tracking, not Redis
+        if cusFeature and cusFeature.feature then
+            local isPaidAllocated = cusFeature.feature.type == "metered" 
+                and cusFeature.feature.consumable == false 
+                and cusFeature.overage_allowed == true
+            
+            if isPaidAllocated then
+                return {
+                    success = false,
+                    error = "PAID_ALLOCATED"
+                }
+            end
+        end
+        
         -- Step 1: Try to deduct from primary cusFeature first
         local remainingAmount = amount
         
@@ -1059,19 +1154,19 @@ for _, request in ipairs(requests) do
     end
 end
 
--- Helper function to apply legacy continuous_use logic
--- Legacy case: continuous_use features always allow overage
-local function applyContinuousUseLegacy(balance)
-    if balance.feature and balance.feature.type == "continuous_use" then
-        balance.overage_allowed = true
-        -- Apply to breakdowns as well
-        if balance.breakdown then
-            for _, breakdown in ipairs(balance.breakdown) do
-                breakdown.overage_allowed = true
-            end
-        end
-    end
-end
+-- -- Helper function to apply legacy continuous_use logic
+-- -- Legacy case: continuous_use features always allow overage
+-- local function applyContinuousUseLegacy(balance)
+--     if balance.feature and balance.feature.type == "metered" and balance.feature.consumable == false and remaining > 0 then
+--         balance.overage_allowed = true
+--         -- Apply to breakdowns as well
+--         if balance.breakdown then
+--             for _, breakdown in ipairs(balance.breakdown) do
+--                 breakdown.overage_allowed = true
+--             end
+--         end
+--     end
+-- end
 
 -- Get list of all customer feature IDs
 local baseJson = redis.call("GET", cacheKey)
@@ -1089,8 +1184,8 @@ for _, featureId in ipairs(allFeatureIds) do
         -- Add id field for compatibility with existing code
         balance.id = featureId
         
-        -- Apply legacy continuous_use logic
-        applyContinuousUseLegacy(balance)
+        -- -- Apply legacy continuous_use logic
+        -- applyContinuousUseLegacy(balance)
         
         loadedCusFeatures[featureId] = balance
     end
@@ -1118,8 +1213,8 @@ for _, entityId in ipairs(entityIds) do
                 -- Add id field for compatibility with existing code
                 balance.id = featureId
                 
-                -- Apply legacy continuous_use logic
-                applyContinuousUseLegacy(balance)
+                -- -- Apply legacy continuous_use logic
+                -- applyContinuousUseLegacy(balance)
                 
                 entityFeatureStates[entityId][featureId] = balance
             end

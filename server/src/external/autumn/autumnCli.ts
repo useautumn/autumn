@@ -593,12 +593,13 @@ export class AutumnInt {
 	};
 
 	check = async <T = CheckResult>(
-		params: CheckParams & CheckQuery,
+		params: CheckParams & CheckQuery & { skip_event?: boolean },
 	): Promise<T> => {
 		const queryParams = new URLSearchParams();
 		if (params.skip_cache) {
 			queryParams.append("skip_cache", "true");
 		}
+
 		const data = await this.post(`/check?${queryParams.toString()}`, params);
 		return data;
 	};

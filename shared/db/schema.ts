@@ -30,7 +30,6 @@ import { apiKeys } from "../models/devModels/apiKeyTable.js";
 import { events } from "../models/eventModels/eventTable.js";
 import { featureRelations } from "../models/featureModels/featureRelations.js";
 import { features } from "../models/featureModels/featureTable.js";
-import { idempotency } from "../models/idempotencyModels/idempotencyTable.js";
 // Migration Relations
 import { migrationErrorRelations } from "../models/migrationModels/migrationErrorRelations.js";
 import { migrationErrors } from "../models/migrationModels/migrationErrorTable.js";
@@ -135,5 +134,4 @@ export {
 	userRelations,
 	memberRelations,
 	inviteRelations,
-	idempotency,
 };

@@ -1,6 +1,7 @@
 import { getRequestListener } from "@hono/node-server";
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
 import { cors } from "hono/cors";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { vercelWebhookRouter } from "./external/vercel/vercelWebhookRouter.js";
 import { handleConnectWebhook } from "./external/webhooks/connectWebhookRouter.js";
 import { analyticsMiddleware } from "./honoMiddlewares/analyticsMiddleware.js";
@@ -14,6 +15,7 @@ import { refreshCacheMiddleware } from "./honoMiddlewares/refreshCacheMiddleware
 import { secretKeyMiddleware } from "./honoMiddlewares/secretKeyMiddleware.js";
 import { traceMiddleware } from "./honoMiddlewares/traceMiddleware.js";
 import type { HonoEnv } from "./honoUtils/HonoEnv.js";
+import { handleHealthCheck } from "./honoUtils/handleHealthCheck.js";
 import { balancesRouter } from "./internal/balances/balancesRouter.js";
 import { billingRouter } from "./internal/billing/billingRouter.js";
 import { cusRouter } from "./internal/customers/cusRouter.js";
@@ -83,15 +85,14 @@ export const createHonoApp = () => {
 
 	// OAuth callback (needs to be before middleware)
 	// Health check endpoint for AWS/ECS load balancer
-	app.get("/", (c) => {
-		return c.text("Hello from Autumn 🍂🍂🍂");
-	});
 
 	app.get("/stripe/oauth_callback", handleOAuthCallback);
 
 	// Step 1: Base middleware - sets up ctx (db, logger, etc.)
 	app.use("*", baseMiddleware);
 	app.use("*", traceMiddleware);
+
+	app.get("/", handleHealthCheck);
 
 	// Add Render region identifier header for load balancer verification
 	app.use("*", async (c, next) => {
@@ -113,6 +114,9 @@ export const createHonoApp = () => {
 
 	// General org rate limiter for all other /v1/* routes
 	// app.use("/v1/*", generalRateLimiter);
+	app.get("/v1/test-incident", (c: Context<HonoEnv>) => {
+		return c.json({ message: "Hello, world!" }, 520 as ContentfulStatusCode);
+	});
 
 	app.route("v1", billingRouter);
 	app.route("v1", balancesRouter);

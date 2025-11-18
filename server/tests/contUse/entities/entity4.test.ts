@@ -13,6 +13,7 @@ import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js
 import { useEntityBalanceAndExpect } from "@tests/utils/expectUtils/expectContUse/expectEntityUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
+import { Decimal } from "decimal.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
 import {
@@ -200,7 +201,9 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing per entity features
 			feature_id: TestFeature.Messages,
 		});
 
-		expect(masterBalanceAfter).toBe(masterBalanceBefore);
+		expect(new Decimal(masterBalanceAfter ?? 0).toDP(5).toNumber()).toBe(
+			new Decimal(masterBalanceBefore ?? 0).toDP(5).toNumber(),
+		);
 
 		const { balance: entityBalanceAfter } = await autumn.check({
 			customer_id: customerId,

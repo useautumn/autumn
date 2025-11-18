@@ -91,7 +91,7 @@ export * from "./models/featureModels/featureTable.js";
 export * from "./models/genModels/genEnums.js";
 export * from "./models/genModels/processorSchemas.js";
 // Idempotency Models
-export * from "./models/idempotencyModels/idempotencyTable.js";
+
 export * from "./models/migrationModels/migrationErrorTable.js";
 export * from "./models/migrationModels/migrationJobTable.js";
 export * from "./models/migrationModels/migrationModels.js";

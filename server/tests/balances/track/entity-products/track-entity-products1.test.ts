@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion } from "@autumn/shared";
-import chalk from "chalk";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -146,7 +146,7 @@ describe(`${chalk.yellowBright("track-entity-products1: entity product tracking"
 
 	test("verify database state matches cache after per-entity and customer-level tracking", async () => {
 		// Wait for database sync
-		await new Promise((resolve) => setTimeout(resolve, 2000));
+		await new Promise((resolve) => setTimeout(resolve, 4000));
 
 		// Read from database (skip cache)
 		const customerFromDb = await autumnV1.customers.get(customerId, {

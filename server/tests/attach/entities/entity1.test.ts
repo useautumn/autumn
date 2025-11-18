@@ -65,7 +65,7 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing attach to entity via
 		});
 
 		const customer = await autumn.customers.get(customerId);
-		console.log("Customer:", customer);
+
 		expectProductAttached({
 			customer,
 			product: pro,
