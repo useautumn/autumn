@@ -19,19 +19,21 @@ interface CustomerBatch {
 
 /**
  * Batching manager for syncing Redis balance deductions to PostgreSQL
- * Maintains separate batches per customer for proper FIFO ordering in SQS
+ * Collects sync items within a time window, then queues each item individually to SQS
  *
  * Benefits:
- * - Deduplication: Same pair only synced once per batch window
- * - Per-customer ordering: Each customer's updates maintain FIFO order
- * - Reduced DB load: Multiple pairs batched together per customer
+ * - In-memory deduplication: Same pair only queued once per batch window (500ms)
+ * - SQS deduplication: MessageDeduplicationId prevents duplicate processing (5 min window)
+ * - Per-customer FIFO ordering: MessageGroupId ensures ordered processing per customer
  * - Non-blocking: Track endpoint returns immediately
+ * - Simple: Each sync item is a separate SQS message, easy to retry and monitor
  */
 export class SyncBatchingManager {
 	// Map of customerId -> batch
 	private customerBatches: Map<string, CustomerBatch> = new Map();
 
-	private readonly BATCH_WINDOW_MS = 500; // 100ms batching window
+	private readonly BATCH_WINDOW_MS =
+		process.env.NODE_ENV === "development" ? 500 : 1000; // 1000ms batching window
 	private readonly MAX_BATCH_SIZE_PER_CUSTOMER = 1000; // Max unique pairs per customer batch
 
 	/**
@@ -96,6 +98,7 @@ export class SyncBatchingManager {
 
 	/**
 	 * Execute the batch for a specific customer - flush to SQS
+	 * Queues each sync item individually with deduplication
 	 */
 	private async executeCustomerBatch({
 		customerId,
@@ -120,32 +123,47 @@ export class SyncBatchingManager {
 		}
 
 		try {
-			// Convert Map to array for job payload
+			// Queue each sync item individually with deduplication
 			const items = Array.from(currentPairs.values());
 
-			// Queue the sync job with customer ID as MessageGroupId (for SQS FIFO)
-			await addTaskToQueue({
-				jobName: JobName.SyncBalanceBatch,
-				payload: {
-					orgId: items?.[0]?.orgId,
-					env: items?.[0]?.env,
-					items,
-				},
-				messageGroupId: customerId,
-			});
-			console.log(
-				`Queued sync batch for customer ${customerId} with ${items.length} items`,
-			);
+			for (const item of items) {
+				// Create deterministic deduplication key from sync item fields
+				const dedupKey = item.entityId
+					? `${item.orgId}:${item.env}:${item.customerId}:${item.featureId}:${item.entityId}`
+					: `${item.orgId}:${item.env}:${item.customerId}:${item.featureId}`;
+
+				// Deduplicate messages in a 10ms window
+				const dedupTimestamp = Math.floor(Date.now() / 10);
+
+				// Hash to create AWS-friendly alphanumeric ID
+				const dedupHash = Bun.hash(`${dedupKey}:${dedupTimestamp}`).toString(
+					36,
+				);
+
+				await addTaskToQueue({
+					jobName: JobName.SyncBalanceBatch,
+					payload: {
+						orgId: item.orgId,
+						env: item.env,
+						item, // Single item
+					},
+					messageGroupId: customerId, // FIFO ordering per customer
+					messageDeduplicationId: dedupHash, // SQS deduplication (1-second window)
+				});
+				logger.info(
+					`Queued sync item for customer ${customerId}, feature: ${item.featureId}${item.entityId ? `, entity: ${item.entityId}` : ""}`,
+				);
+			}
 		} catch (error) {
 			logger.error(
-				`❌ Failed to queue sync batch for customer ${customerId}, error: ${error instanceof Error ? error.message : "unknown"}`,
+				`❌ Failed to queue sync items for customer ${customerId}, error: ${error instanceof Error ? error.message : "unknown"}`,
 				{
 					error: error instanceof Error ? error : new Error(String(error)),
 					customerId,
 				},
 			);
 			console.error(
-				`❌ Failed to queue sync batch for customer ${customerId}:`,
+				`❌ Failed to queue sync items for customer ${customerId}:`,
 				error,
 			);
 			// TODO: Consider retry logic or dead letter queue

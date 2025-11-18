@@ -115,6 +115,5 @@ export const getCustomerAndProducts = async ({
 			}
 		}
 	}
-
 	return { customer, products };
 };

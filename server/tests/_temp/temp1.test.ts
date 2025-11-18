@@ -7,12 +7,10 @@ import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
 import {
 	constructArrearItem,
+	constructArrearProratedItem,
 	constructFeatureItem,
 } from "@/utils/scriptUtils/constructItem.js";
-import {
-	constructProduct,
-	constructRawProduct,
-} from "@/utils/scriptUtils/createTestProducts.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "../../src/utils/scriptUtils/testUtils/initProductsV0.js";
 import { replaceItems } from "../utils/testProductUtils/testProductUtils.js";
@@ -22,33 +20,14 @@ const pro = constructProduct({
 	type: "pro",
 
 	items: [
-		// constructArrearItem({
-		// 	featureId: TestFeature.Words,
-		// 	includedUsage: 0,
-		// 	price: 0.2,
-		// }),
 		constructFeatureItem({
 			featureId: TestFeature.Users,
 			includedUsage: 5,
 		}),
-		constructFeatureItem({
-			featureId: TestFeature.Messages,
-			includedUsage: 100,
-		}),
-	],
-});
-
-const basic = constructRawProduct({
-	id: "basic",
-
-	items: [
-		constructFeatureItem({
-			featureId: TestFeature.Messages,
-			includedUsage: 100,
-		}),
-		constructPriceItem({
-			price: 10,
-			interval: BillingInterval.Month,
+		constructArrearProratedItem({
+			featureId: TestFeature.Workflows,
+			includedUsage: 0,
+			pricePerUnit: 10,
 		}),
 	],
 });
@@ -69,7 +48,7 @@ describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [pro, basic],
+			products: [pro],
 			prefix: customerId,
 		});
 
@@ -79,11 +58,6 @@ describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 			customer_id: customerId,
 			product_id: pro.id,
 		});
-
-		// await autumn.attach({
-		// 	customer_id: customerId,
-		// 	product_id: basic.id,
-		// });
 	});
 	return;
 

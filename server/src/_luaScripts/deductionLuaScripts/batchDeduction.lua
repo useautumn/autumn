@@ -2,6 +2,11 @@
 -- Atomically processes a batch of track requests for a customer
 -- Each request can deduct from multiple features
 --
+-- Error codes:
+--   CUSTOMER_NOT_FOUND: Customer not in cache
+--   INSUFFICIENT_BALANCE: Overage behavior is "reject" and balance insufficient
+--   PAID_ALLOCATED: Feature is continuous use with overage (should use Postgres)
+--
 -- ARGV[1]: JSON array of requests:
 --   [
 --     {
@@ -911,6 +916,21 @@ local function processRequest(request, loadedCusFeatures, entityFeatureStates)
         local featureId = featureDeduction.featureId
         local amount = featureDeduction.amount
         local cusFeature = loadedCusFeatures[featureId]
+        
+        -- Check for paid allocated features (continuous use with overage)
+        -- These should use Postgres-based tracking, not Redis
+        if cusFeature and cusFeature.feature then
+            local isPaidAllocated = cusFeature.feature.type == "metered" 
+                and cusFeature.feature.consumable == false 
+                and cusFeature.overage_allowed == true
+            
+            if isPaidAllocated then
+                return {
+                    success = false,
+                    error = "PAID_ALLOCATED"
+                }
+            end
+        end
         
         -- Step 1: Try to deduct from primary cusFeature first
         local remainingAmount = amount

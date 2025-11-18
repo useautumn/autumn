@@ -3,7 +3,6 @@ import {
 	ApiBalanceSchema,
 	type ApiCustomer,
 	InsufficientBalanceError,
-	isContUseFeature,
 	type TrackParams,
 	type TrackQuery,
 } from "@autumn/shared";
@@ -122,11 +121,11 @@ export const runRedisDeduction = async ({
 	overageBehavior,
 	eventInfo,
 }: RunRedisDeductionParams): Promise<RunRedisDeductionResult> => {
-	const { org, env } = ctx;
+	const { org, env, skipCache } = ctx;
 
-	const hasContUseFeature = featureDeductions.some((deduction) =>
-		isContUseFeature({ feature: deduction.feature }),
-	);
+	// const hasContUseFeature = featureDeductions.some((deduction) =>
+	// 	isContUseFeature({ feature: deduction.feature }),
+	// );
 
 	// 1. Check for idempotency key
 	if (trackParams.idempotency_key) {
@@ -136,15 +135,15 @@ export const runRedisDeduction = async ({
 		};
 	}
 
-	// 2. Check for continuous use feature
-	if (hasContUseFeature) {
-		return {
-			fallback: true,
-			code: "allocated_feature",
-		};
-	}
+	// // 2. Check for continuous use feature
+	// if (hasContUseFeature) {
+	// 	return {
+	// 		fallback: true,
+	// 		code: "allocated_feature",
+	// 	};
+	// }
 
-	if (query.skip_cache) {
+	if (query.skip_cache || skipCache) {
 		return {
 			fallback: true,
 			code: "skip_cache",
@@ -208,6 +207,17 @@ export const runRedisDeduction = async ({
 			} catch (error) {
 				ctx.logger.error(`Failed to queue sync and event! ${error}`);
 			}
+		}
+
+		// Handle PAID_ALLOCATED error - fallback to Postgres
+		if (result.error === "PAID_ALLOCATED") {
+			ctx.logger.info(
+				`Paid allocated feature detected, falling back to Postgres: ${featureDeductions.map((d) => d.feature.id).join(", ")}`,
+			);
+			return {
+				fallback: true,
+				code: "allocated_feature",
+			};
 		}
 
 		return {
