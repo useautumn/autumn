@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/node";
+
 const handleResFinish = (req: any, res: any) => {
 	const skipUrls = ["/v1/customers/all/search"];
 
@@ -50,6 +52,11 @@ export const analyticsMiddleware = async (req: any, res: any, next: any) => {
 			req?.body?.customer_id || parseCustomerIdFromUrl(req.originalUrl),
 		user_id: req.userId || null,
 	};
+
+	Sentry.setUser({
+		...reqContext,
+		body: undefined,
+	});
 
 	if (req.span) {
 		req.span.setAttributes({
