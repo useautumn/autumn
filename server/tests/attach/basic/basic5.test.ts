@@ -1,11 +1,11 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
+import { AutumnCli } from "@tests/cli/AutumnCli.js";
+import { compareMainProduct } from "@tests/utils/compare.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import type Stripe from "stripe";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { products } from "tests/global.js";
-import { compareMainProduct } from "tests/utils/compare.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { timeout } from "@/utils/genUtils.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
