@@ -23,7 +23,7 @@ const buttonVariants = cva(
         active:bg-primary-btn-active active:border-primary-btn-border
 				focus-visible:bg-primary-btn-active focus-visible:border-primary-btn-border
 
-				dark:bg-[#1F004D] btn-custom-purple-shadow
+				btn-primary-dark
 				`,
 
 				secondary: `bg-interactive-secondary border border-[var(--color-input)] hover:bg-interactive-secondary-hover btn-secondary-shadow
