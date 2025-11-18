@@ -1,4 +1,3 @@
-import { productV2ToBasePrice } from "@autumn/shared";
 import { PricingTableContainer } from "@/components/autumn/PricingTableContainer";
 import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
 import { Card, CardContent, CardHeader } from "@/components/v2/cards/Card";
@@ -78,7 +77,7 @@ export const OnboardingPreview = ({
 	return (
 		<Card
 			className={cn(
-				"min-w-[28rem] max-w-xl mx-4 bg-card border-border border-[0.5px] p-4",
+				"min-w-[28rem] max-w-xl mx-4 bg-card shadow-none p-4",
 				showDummyFeature && !showFeatures && "pb-0",
 				currentStep === 1 && "!gap-0",
 			)}

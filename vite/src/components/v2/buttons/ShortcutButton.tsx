@@ -44,7 +44,7 @@ export const ShortcutButton = ({
 		const variantClasses =
 			variant === "secondary"
 				? "bg-muted text-body-secondary"
-				: "bg-purple-medium dark:bg-interactive-secondary !text-primary-foreground";
+				: "bg-purple-medium dark:bg-interactive-secondary";
 
 		return (
 			<div className={`${baseClasses} ${variantClasses}`}>

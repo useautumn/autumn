@@ -23,7 +23,6 @@ export function SheetHeader({
 	return (
 		<div className={cn("p-4 pb-0", className)}>
 			<h2 className="text-main">{title}</h2>
-
 			{/* check typography */}
 			<p
 				className={cn(
