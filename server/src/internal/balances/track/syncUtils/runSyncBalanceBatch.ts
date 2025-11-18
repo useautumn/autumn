@@ -2,50 +2,54 @@ import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { type SyncItem, syncItem } from "./syncItem.js";
 
 interface SyncBatchPayload {
-	items: SyncItem[];
+	item: SyncItem;
 }
 
 /**
- * Worker that syncs Redis balance deductions back to PostgreSQL
- * Groups items by org to minimize DB queries and optimize transactions
+ * Worker that syncs a single Redis balance deduction back to PostgreSQL
+ * Each SQS message contains one sync item (deduplicated by SQS)
  */
 export const runSyncBalanceBatch = async ({
 	ctx,
 	payload,
 }: {
 	ctx?: AutumnContext;
-	payload: SyncBatchPayload;
+	payload: SyncBatchPayload | any; // Allow any for backwards compatibility
 }) => {
-	const { items } = payload;
+	// Backwards compatibility: handle both old (items array) and new (item object) formats
+	let item = payload.item;
 
-	console.log(`Running sync balance batch with ${items.length} items`);
+	// Old format: { items: [...] }
+	if (!item && payload.items && Array.isArray(payload.items)) {
+		item = payload.items[0];
+		console.warn(
+			"⚠️  Received old format sync message with items array, using first item",
+		);
+	}
 
-	if (!items || !ctx || items.length === 0) return;
+	if (!item || !ctx) {
+		console.warn("⚠️  No sync item provided");
+		return;
+	}
 
 	const { logger } = ctx;
 
-	// All items belong to the same customer (grouped by messageGroupId in SQS)
-	const firstItem = items[0];
-	const { customerId } = firstItem;
+	// Log what we're syncing
+	const itemDescription = item.entityId
+		? `customer: ${item.customerId}, entity: ${item.entityId}, feature: ${item.featureId}`
+		: `customer: ${item.customerId}, feature: ${item.featureId}`;
 
-	// Sort items by timestamp (oldest first) to maintain chronological order
-	const sortedItems = items.sort((a, b) => a.timestamp - b.timestamp);
+	logger.info(`🔄 Starting sync: ${itemDescription}`);
 
-	// Process each item sequentially for this customer
-	let successCount = 0;
-
-	for (const item of sortedItems) {
-		try {
-			await syncItem({ item, ctx });
-			successCount++;
-		} catch (error) {
-			logger.error(
-				`❌ Failed to sync item ${item.customerId}:${item.featureId}: ${error instanceof Error ? error.message : String(error)}`,
-			);
-		}
+	try {
+		await syncItem({ item, ctx });
+		logger.info(`✅ Successfully synced: ${itemDescription}`);
+	} catch (error) {
+		logger.error(`❌ Failed to sync: ${itemDescription}`, {
+			error: error instanceof Error ? error : new Error(String(error)),
+			item,
+		});
+		// Re-throw to trigger SQS retry
+		throw error;
 	}
-
-	logger.info(
-		`Synced ${successCount}/${items.length} items for customer ${customerId}`,
-	);
 };

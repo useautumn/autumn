@@ -55,6 +55,7 @@ DECLARE
   deducted numeric;
   new_balance numeric;
   new_entities jsonb;
+  new_adjustment numeric;  -- LEGACY: can be removed when no longer needed
   -- Tracking
   updates_json jsonb := '{}'::jsonb;
   result_json jsonb;
@@ -154,7 +155,7 @@ BEGIN
     remaining_amount := remaining_amount - additional_deducted;
 
     -- STEP 3: Perform deduction from main balance (Pass 1: allow_negative = false)
-    SELECT * INTO deducted, new_balance, new_entities, new_additional_granted_balance
+    SELECT * INTO deducted, new_balance, new_entities, new_additional_granted_balance, new_adjustment
     FROM deduct_from_main_balance(jsonb_build_object(
       'current_balance', current_balance,
       'current_entities', current_entities,
@@ -176,7 +177,8 @@ BEGIN
           balance = new_balance,
           additional_balance = new_additional_balance,
           additional_granted_balance = new_additional_granted_balance,
-          entities = new_entities
+          entities = new_entities,
+          adjustment = COALESCE(adjustment, 0) + new_adjustment  -- LEGACY: can be removed when no longer needed
         WHERE ce.id = ent_id;
       ELSE
         -- Don't update entities for non-entity-scoped entitlements (keep NULL)
@@ -184,7 +186,8 @@ BEGIN
         SET
           balance = new_balance,
           additional_balance = new_additional_balance,
-          additional_granted_balance = new_additional_granted_balance
+          additional_granted_balance = new_additional_granted_balance,
+          adjustment = COALESCE(adjustment, 0) + new_adjustment  -- LEGACY: can be removed when no longer needed
         WHERE ce.id = ent_id;
       END IF;
 
@@ -244,7 +247,7 @@ BEGIN
       new_additional_balance := current_additional_balance;
       
       -- Perform deduction (Pass 2: allow_negative = true)
-      SELECT * INTO deducted, new_balance, new_entities, new_additional_granted_balance
+      SELECT * INTO deducted, new_balance, new_entities, new_additional_granted_balance, new_adjustment
       FROM deduct_from_main_balance(jsonb_build_object(
         'current_balance', current_balance,
         'current_entities', current_entities,
@@ -266,7 +269,8 @@ BEGIN
             balance = new_balance,
             additional_balance = new_additional_balance,
             additional_granted_balance = new_additional_granted_balance,
-            entities = new_entities
+            entities = new_entities,
+            adjustment = COALESCE(adjustment, 0) + new_adjustment  -- LEGACY: can be removed when no longer needed
           WHERE ce.id = ent_id;
         ELSE
           -- Don't update entities for non-entity-scoped entitlements (keep NULL)
@@ -274,7 +278,8 @@ BEGIN
           SET
             balance = new_balance,
             additional_balance = new_additional_balance,
-            additional_granted_balance = new_additional_granted_balance
+            additional_granted_balance = new_additional_granted_balance,
+            adjustment = COALESCE(adjustment, 0) + new_adjustment  -- LEGACY: can be removed when no longer needed
           WHERE ce.id = ent_id;
         END IF;
 
