@@ -7,7 +7,7 @@ import "./styles/form/states.css";
 
 import "./styles/typography.css";
 import "./styles/custom.css";
-import * as Sentry from "@sentry/node";
+import * as Sentry from "@sentry/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PostHogProvider } from "posthog-js/react";
 import { StrictMode } from "react";
@@ -15,7 +15,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 
 Sentry.init({
-	dsn: import.meta.env.VITE_PUBLIC_SENTRY_DSN,
+	dsn: import.meta.env.VITE_SENTRY_DSN,
 	sendDefaultPii: true,
 });
 
