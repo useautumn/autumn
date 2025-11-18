@@ -1,13 +1,11 @@
 import { getRequestListener } from "@hono/node-server";
-import { type Context, Hono } from "hono";
+import { Hono } from "hono";
 import { cors } from "hono/cors";
-import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { vercelWebhookRouter } from "./external/vercel/vercelWebhookRouter.js";
 import { handleConnectWebhook } from "./external/webhooks/connectWebhookRouter.js";
 import { analyticsMiddleware } from "./honoMiddlewares/analyticsMiddleware.js";
 import { apiVersionMiddleware } from "./honoMiddlewares/apiVersionMiddleware.js";
 import { baseMiddleware } from "./honoMiddlewares/baseMiddleware.js";
-import { betterAuthMiddleware } from "./honoMiddlewares/betterAuthMiddleware.js";
 import { errorMiddleware } from "./honoMiddlewares/errorMiddleware.js";
 import { orgConfigMiddleware } from "./honoMiddlewares/orgConfigMiddleware.js";
 import { queryMiddleware } from "./honoMiddlewares/queryMiddleware.js";
@@ -19,18 +17,17 @@ import { handleHealthCheck } from "./honoUtils/handleHealthCheck.js";
 import { balancesRouter } from "./internal/balances/balancesRouter.js";
 import { billingRouter } from "./internal/billing/billingRouter.js";
 import { cusRouter } from "./internal/customers/cusRouter.js";
-import { internalCusRouter } from "./internal/customers/internalCusRouter.js";
 import { entityRouter } from "./internal/entities/entityRouter.js";
 import { featureRouter } from "./internal/features/featureRouter.js";
 import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
 import { honoOrgRouter } from "./internal/orgs/orgRouter.js";
 import { platformBetaRouter } from "./internal/platform/platformBeta/platformBetaRouter.js";
-import { internalProductRouter } from "./internal/products/internalProductRouter.js";
 import {
 	honoProductBetaRouter,
 	honoProductRouter,
 	migrationRouter,
 } from "./internal/products/productRouter.js";
+import { internalRouter } from "./routers/internalRouter.js";
 import { auth } from "./utils/auth.js";
 
 const ALLOWED_ORIGINS = [
@@ -112,12 +109,6 @@ export const createHonoApp = () => {
 	app.use("/v1/*", refreshCacheMiddleware);
 	app.use("/v1/*", queryMiddleware());
 
-	// General org rate limiter for all other /v1/* routes
-	// app.use("/v1/*", generalRateLimiter);
-	app.get("/v1/test-incident", (c: Context<HonoEnv>) => {
-		return c.json({ message: "Hello, world!" }, 520 as ContentfulStatusCode);
-	});
-
 	app.route("v1", billingRouter);
 	app.route("v1", balancesRouter);
 	app.route("v1", migrationRouter);
@@ -134,11 +125,7 @@ export const createHonoApp = () => {
 	app.route("v1/platform/beta", platformBetaRouter);
 	app.route("v1/organization", honoOrgRouter);
 
-	// Internal/dashboard routes - use betterAuthMiddleware for session auth
-	app.use("/products/*", betterAuthMiddleware);
-	app.route("/products", internalProductRouter);
-	app.use("/customers/*", betterAuthMiddleware);
-	app.route("/customers", internalCusRouter);
+	app.route("", internalRouter);
 
 	app.onError(errorMiddleware);
 
