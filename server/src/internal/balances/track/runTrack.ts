@@ -31,7 +31,6 @@ export const runTrack = async ({
 			statusCode: 400,
 		});
 	}
-	// ctx.skipCache = true;
 
 	const { fallback, balances } = await runRedisDeduction({
 		ctx,
