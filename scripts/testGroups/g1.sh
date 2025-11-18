@@ -21,5 +21,3 @@ BUN_PARALLEL_COMPACT \
   'server/tests/balances/track/allocated' \
   'server/tests/balances/track/entity-balances' \
   'server/tests/balances/track/concurrency' \
-
-
