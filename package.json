@@ -12,7 +12,7 @@
 			"stripe": "19.3.0-beta.1",
 			"drizzle-orm": "0.43.1",
 			"drizzle-kit": "^0.31.1",
-			"@sentry/node": "10.25.0"
+			"@sentry/bun": "10.25.0"
 		}
 	},
 	"type": "module",

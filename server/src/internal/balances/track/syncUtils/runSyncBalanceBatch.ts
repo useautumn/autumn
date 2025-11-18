@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/bun";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { type SyncItem, syncItem } from "./syncItem.js";
 
@@ -39,6 +40,7 @@ export const runSyncBalanceBatch = async ({
 			await syncItem({ item, ctx });
 			successCount++;
 		} catch (error) {
+			Sentry.captureException(error);
 			logger.error(
 				`❌ Failed to sync item ${item.customerId}:${item.featureId}: ${error instanceof Error ? error.message : String(error)}`,
 			);

@@ -1,5 +1,5 @@
 import { ErrCode } from "@autumn/shared";
-import * as Sentry from "@sentry/node";
+import * as Sentry from "@sentry/bun";
 import chalk from "chalk";
 import { StatusCodes } from "http-status-codes";
 import Stripe from "stripe";
@@ -60,6 +60,7 @@ export const handleRequestError = ({
 	action: string;
 }) => {
 	try {
+		Sentry.captureException(error);
 		const logger = req.logger;
 		if (error instanceof RecaseError) {
 			logger.warn(
@@ -120,8 +121,6 @@ export const handleRequestError = ({
 				},
 			);
 
-			Sentry.captureException(error);
-
 			res.status(500).json({
 				message: error.message || "Unknown error",
 				code: error.code || "unknown_error",
@@ -167,8 +166,6 @@ export const handleFrontendReqError = ({
 				error,
 			},
 		);
-
-		Sentry.captureException(error);
 
 		res.status(400).json({
 			message: error.message || "Unknown error",

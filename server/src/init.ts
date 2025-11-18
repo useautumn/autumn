@@ -1,17 +1,16 @@
 // Suppress BullMQ eviction policy warnings BEFORE any imports
 
 // Skip OpenTelemetry instrumentation in development for faster startup
-// if (process.env.NODE_ENV !== "development") {
-await import("./instrumentation.js");
-
-// }
+if (process.env.NODE_ENV !== "development") {
+	await import("./instrumentation.js");
+	await import("./sentry.js");
+}
 
 import cluster from "node:cluster";
 import http from "node:http";
 import os from "node:os";
 import { AppEnv } from "@autumn/shared";
 import { context, trace } from "@opentelemetry/api";
-import * as Sentry from "@sentry/node";
 import { toNodeHandler } from "better-auth/node";
 import cors from "cors";
 import express from "express";
@@ -212,8 +211,6 @@ const init = async () => {
 	server.listen(PORT, "0.0.0.0", () => {
 		console.log(`Server running on port ${PORT}`);
 	});
-
-	Sentry.setupExpressErrorHandler(app);
 };
 
 if (process.env.NODE_ENV === "development") {

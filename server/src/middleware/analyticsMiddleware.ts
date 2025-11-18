@@ -1,4 +1,4 @@
-import * as Sentry from "@sentry/node";
+import * as Sentry from "@sentry/bun";
 
 const handleResFinish = (req: any, res: any) => {
 	const skipUrls = ["/v1/customers/all/search"];
