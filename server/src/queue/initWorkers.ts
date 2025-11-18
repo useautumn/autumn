@@ -139,13 +139,16 @@ const processMessage = async ({
 			});
 		}
 	} catch (error: any) {
-		workerLogger.error(`Failed to process SQS job: ${job.name}`, {
-			jobName: job.name,
-			error: {
-				message: error.message,
-				stack: error.stack,
+		workerLogger.error(
+			`Failed to process SQS job: ${job.name}, error: ${error}`,
+			{
+				jobName: job.name,
+				error: {
+					message: error.message,
+					stack: error.stack,
+				},
 			},
-		});
+		);
 		// Don't delete the message on error - it will become visible again for retry
 		throw error;
 	}
@@ -168,7 +171,7 @@ const startPollingLoop = async ({ db }: { db: DrizzleCli }) => {
 				QueueUrl: QUEUE_URL,
 				MaxNumberOfMessages: 10, // Receive up to 10 messages at once
 				WaitTimeSeconds: 20, // Long polling
-				VisibilityTimeout: 43200, // 12 hours (max) - prevents duplicate processing of long-running jobs
+				VisibilityTimeout: 30, // 12 hours (max) - prevents duplicate processing of long-running jobs
 				// For FIFO queues, add ReceiveRequestAttemptId for deduplication
 				...(isFifoQueue && {
 					ReceiveRequestAttemptId: generateId("receive"),

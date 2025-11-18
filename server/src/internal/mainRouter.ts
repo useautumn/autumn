@@ -13,7 +13,6 @@ import { trmnlRouter } from "./api/trmnl/trmnlRouter.js";
 import { cusRouter } from "./customers/internalCusRouter.js";
 import { devRouter } from "./dev/devRouter.js";
 import { InvoiceService } from "./invoices/InvoiceService.js";
-import { handlePostOrg } from "./orgs/handlers/handlePostOrg.js";
 import { onboardingRouter } from "./orgs/onboarding/onboardingRouter.js";
 import { orgRouter } from "./orgs/orgRouter.js";
 import { expressProductRouter } from "./products/internalProductRouter.js";
@@ -26,7 +25,6 @@ mainRouter.get("", async (req: any, res) => {
 	res.status(200).json({ message: "Hello World" });
 });
 
-mainRouter.post("/organization", withAuth, handlePostOrg);
 mainRouter.use("/admin", withAdminAuth, adminRouter);
 mainRouter.use("/users", withAuth, userRouter);
 mainRouter.use("/onboarding", withOrgAuth, onboardingRouter);
