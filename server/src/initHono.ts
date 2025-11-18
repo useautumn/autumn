@@ -1,6 +1,7 @@
 import { getRequestListener } from "@hono/node-server";
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
 import { cors } from "hono/cors";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { vercelWebhookRouter } from "./external/vercel/vercelWebhookRouter.js";
 import { handleConnectWebhook } from "./external/webhooks/connectWebhookRouter.js";
 import { analyticsMiddleware } from "./honoMiddlewares/analyticsMiddleware.js";
@@ -113,6 +114,9 @@ export const createHonoApp = () => {
 
 	// General org rate limiter for all other /v1/* routes
 	// app.use("/v1/*", generalRateLimiter);
+	app.get("/v1/test-incident", (c: Context<HonoEnv>) => {
+		return c.json({ message: "Hello, world!" }, 520 as ContentfulStatusCode);
+	});
 
 	app.route("v1", billingRouter);
 	app.route("v1", balancesRouter);
