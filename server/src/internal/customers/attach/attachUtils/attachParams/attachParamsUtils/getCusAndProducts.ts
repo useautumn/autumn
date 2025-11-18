@@ -12,7 +12,7 @@ import { isOneOff } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
-import { getExistingCusProducts } from "../../../../cusProducts/cusProductUtils/getExistingCusProducts";
+import { getExistingCusProducts } from "../../../../cusProducts/cusProductUtils/getExistingCusProducts.js";
 
 const getProductsForAttach = async ({
 	req,
