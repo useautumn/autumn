@@ -8,7 +8,8 @@ RETURNS TABLE (
   deducted numeric,
   new_balance numeric,
   new_entities jsonb,
-  new_additional_granted_balance numeric
+  new_additional_granted_balance numeric,
+  new_adjustment numeric  -- LEGACY: can be removed when no longer needed
 )
 LANGUAGE plpgsql
 AS $$
@@ -32,6 +33,7 @@ DECLARE
   result_balance numeric;
   result_entities jsonb;
   result_additional_granted_balance numeric;
+  result_adjustment numeric := 0;  -- LEGACY: can be removed when no longer needed
   
   -- Variables for entity deduction
   remaining numeric;
@@ -93,6 +95,13 @@ BEGIN
             ARRAY[entity_key, 'additional_granted_balance'],
             to_jsonb(new_entity_additional_granted_balance)
           );
+          
+          -- LEGACY: Update adjustment field to track the change (can be removed when no longer needed)
+          result_entities := jsonb_set(
+            result_entities,
+            ARRAY[entity_key, 'adjustment'],
+            to_jsonb(COALESCE((result_entities->entity_key->>'adjustment')::numeric, 0) - deduct_amount)
+          );
         END IF;
         
         remaining := remaining - deduct_amount;
@@ -140,6 +149,13 @@ BEGIN
           ARRAY[target_entity_id, 'additional_granted_balance'],
           to_jsonb(new_entity_additional_granted_balance)
         );
+        
+        -- LEGACY: Update adjustment field to track the change (can be removed when no longer needed)
+        result_entities := jsonb_set(
+          result_entities,
+          ARRAY[target_entity_id, 'adjustment'],
+          to_jsonb(COALESCE((result_entities->target_entity_id->>'adjustment')::numeric, 0) - deducted_amount)
+        );
       END IF;
     ELSE
       result_entities := current_entities;
@@ -174,11 +190,13 @@ BEGIN
     -- If alter_granted_balance is true, also deduct from customer-level additional_granted_balance
     IF alter_granted_balance THEN
       result_additional_granted_balance := result_additional_granted_balance - deducted_amount;
+      -- LEGACY: Update adjustment field to track the change (can be removed when no longer needed)
+      result_adjustment := result_adjustment - deducted_amount;
     END IF;
   END IF;
   
   -- Return results
-  RETURN QUERY SELECT deducted_amount, result_balance, result_entities, result_additional_granted_balance;
+  RETURN QUERY SELECT deducted_amount, result_balance, result_entities, result_additional_granted_balance, result_adjustment;
 END;
 $$;
 
