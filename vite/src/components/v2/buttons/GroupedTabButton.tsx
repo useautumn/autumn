@@ -33,7 +33,7 @@ export const GroupedTabButton = ({
 						type="button"
 						onClick={() => onValueChange(option.value)}
 						className={cn(
-							"w-full flex items-center justify-center gap-1 px-[6px] py-1 h-6 text-body border transition-none outline-none whitespace-nowrap",
+							"w-full flex items-center justify-center gap-1 px-[6px] py-1 h-6 text-body border transition-none outline-none whitespace-nowrap !bg-interactive-secondary",
 							"hover:text-primary focus-visible:text-primary",
 							isActive &&
 								" text-primary shadow-[0px_3px_4px_0px_inset_rgba(0,0,0,0.04)]",

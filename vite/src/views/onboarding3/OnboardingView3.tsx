@@ -100,16 +100,16 @@ export default function OnboardingContent() {
 				{/* Standard layout for all steps - NO PROP DRILLING! */}
 				<div
 					className={cn(
-						"relative w-full h-full flex bg-gray-medium [scrollbar-gutter:stable]",
+						"relative w-full h-full flex bg-background [scrollbar-gutter:stable]",
 						step === OnboardingStep.Integration
-							? "overflow-y-auto bg-t13"
+							? "overflow-y-auto"
 							: "overflow-y-hidden",
 					)}
 				>
 					{/* Exit button */}
 					<ExitButton />
 
-					<div className="w-4/5 flex items-center justify-center relative ">
+					<div className="w-4/5 flex items-center justify-center relative">
 						{/* Components access Zustand directly - no props! */}
 						{step === OnboardingStep.Integration ? (
 							<div className="w-full h-full flex items-start justify-center py-8 pl-10">
@@ -139,15 +139,15 @@ export default function OnboardingContent() {
 						)}
 					>
 						<div className="rounded-lg h-full flex flex-col p-1 gap-[0.625rem] overflow-x-hidden">
-							<div className="bg-card border-base border overflow-x-hidden rounded-[12px] mt-1 p-4 shrink-0">
+							<div className=" overflow-x-hidden rounded-[12px] mt-1 p-4 shrink-0">
 								<StepHeader />
 							</div>
 							{step !== OnboardingStep.Integration && (
-								<SheetContainer className="bg-card border-base border overflow-x-hidden rounded-[12px] p-0 flex-1 pr-0">
+								<SheetContainer className="bg-card border overflow-x-hidden rounded-[12px] p-0 flex-1 pr-0">
 									<OnboardingStepRenderer />
 								</SheetContainer>
 							)}
-							<div className="bg-card border-base border rounded-[12px] flex flex-col p-4 shrink-0">
+							<div className=" rounded-[12px] flex flex-col p-4 shrink-0">
 								<div className="flex items-center justify-center">
 									<OnboardingSteps />
 								</div>
