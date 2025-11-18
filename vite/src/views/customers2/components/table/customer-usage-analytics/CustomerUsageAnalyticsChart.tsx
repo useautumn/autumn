@@ -59,7 +59,7 @@ export function CustomerUsageAnalyticsChart({
 	return (
 		<ChartContainer
 			config={chartConfig}
-			className="h-full pt-3 pr-2 w-full relative bg-card border"
+			className="h-full pt-3 pr-2 w-full relative bg-interactive-secondary border"
 		>
 			<BarChart
 				// accessibilityLayer

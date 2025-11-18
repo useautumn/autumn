@@ -62,18 +62,18 @@ export function MainLayout() {
 				backendUrl={import.meta.env.VITE_BACKEND_URL}
 				includeCredentials={true}
 			>
-				<div className="w-screen h-screen flex bg-stone-100">
+				<div className="w-screen h-screen flex bg-outer-background">
 					<MainSidebar />
 					<div className="w-full h-screen flex flex-col overflow-hidden py-3 pr-3">
 						<div className="w-full h-full flex flex-col overflow-hidden rounded-lg border">
 							{env === AppEnv.Sandbox && (
-								<div className="w-full min-h-10 h-10 bg-t8/10 text-white text-sm flex items-center justify-center relative px-4">
+								<div className="w-full min-h-10 h-10 bg-t8/10 border-t8/20 border-b text-white text-sm flex items-center justify-center relative px-4">
 									<p className="font-medium text-t8 font-mono">
 										You&apos;re in sandbox
 									</p>
 								</div>
 							)}
-							<div className="flex bg-stone-50 flex-col h-full">
+							<div className="flex bg-background flex-col h-full">
 								<LoadingScreen />
 							</div>
 						</div>

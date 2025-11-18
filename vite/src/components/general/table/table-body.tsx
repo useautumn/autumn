@@ -17,6 +17,7 @@ export function TableBody() {
 		isLoading,
 		onRowClick,
 		rowClassName,
+		emptyStateText,
 	} = useTableContext();
 	const rows = table.getRowModel().rows;
 
@@ -24,13 +25,18 @@ export function TableBody() {
 		return (
 			<ShadcnTableBody>
 				<TableRow>
-					<TableCell className="h-16 text-center" colSpan={numberOfColumns}>
+					<TableCell
+						className="h-12 text-center py-0"
+						colSpan={numberOfColumns}
+					>
 						{isLoading ? (
 							<div className="flex justify-center items-center">
 								<SmallSpinner />
 							</div>
 						) : (
-							"No results"
+							<div className="text-t4 text-center w-full h-full bg-interactive-secondary items-center justify-center flex">
+								{emptyStateText}
+							</div>
 						)}
 					</TableCell>
 				</TableRow>
@@ -43,8 +49,8 @@ export function TableBody() {
 			{rows.map((row) => (
 				<TableRow
 					className={cn(
-						rowClassName || "h-10 py-4",
-						"text-t3 transition-none hover:bg-interactive-secondary-hover dark:hover:bg-interactive-secondary-hover",
+						"text-t3 transition-none hover:bg-interactive-secondary-hover dark:hover:bg-interactive-secondary-hover h-12 py-4",
+						rowClassName,
 					)}
 					data-state={row.getIsSelected() && "selected"}
 					key={row.id}

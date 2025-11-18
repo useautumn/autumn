@@ -116,7 +116,10 @@ export const DeleteFeatureDialog = ({
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogContent onClick={(e) => e.stopPropagation()}>
+			<DialogContent
+				className="bg-background"
+				onClick={(e) => e.stopPropagation()}
+			>
 				<DialogHeader className="max-w-full">
 					<DialogTitle className="truncate max-w-[400px]">
 						{feature.archived
@@ -126,7 +129,7 @@ export const DeleteFeatureDialog = ({
 								: "Delete"}{" "}
 						{feature.name}
 					</DialogTitle>
-					<DialogDescription className="max-w-[400px] break-words">
+					<DialogDescription className="max-w-[400px] wrap-break-word">
 						{getDeleteMessage()
 							.split("\n")
 							.map((line, index) => (

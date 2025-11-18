@@ -18,6 +18,7 @@ import {
 	flattenCustomerEntitlements,
 	processNonBooleanEntitlements,
 } from "./customerFeatureUsageUtils";
+import { EmptyState } from "../EmptyState";
 
 export function CustomerFeatureUsageTable() {
 	const { customer, features, isLoading } = useCusQuery();
@@ -219,11 +220,7 @@ export function CustomerFeatureUsageTable() {
 						</>
 					) : (
 						!isLoading && (
-							<div className="flex justify-center items-center py-4">
-								<p className="text-sm text-t4">
-									Enable a plan to grant access to features
-								</p>
-							</div>
+							<EmptyState text="Enable a plan to grant access to features" />
 						)
 					)}
 					{/* <Table.Content>

@@ -45,7 +45,7 @@ export const CustomerProductsColumns = [
 					trialing={
 						isTrialing({ cusProduct: row.original, now: Date.now() }) || false
 					}
-					trial_ends_at={row.original.trial_ends_at}
+					trial_ends_at={row.original.trial_ends_at ?? undefined}
 				/>
 			);
 		},

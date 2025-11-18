@@ -1,7 +1,7 @@
 import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/v2/buttons/Button";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	SheetFooter,
@@ -114,7 +114,9 @@ export function CreateRewardSheet({
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
 			<SheetTrigger asChild>
-				<Button variant="add">Reward</Button>
+				<Button variant="primary" size="default">
+					Create Reward
+				</Button>
 			</SheetTrigger>
 			<SheetContent className="flex flex-col overflow-hidden">
 				<SheetHeader

@@ -43,7 +43,7 @@
 
 .btn-secondary-active {
 	border: 1px solid var(--primary);
-	background-color: var(--color-active-primary);
+	background-color: var(--color-interactive-secondary-hover);
 	box-shadow: 0 0 0 0.2px var(--primary);
 }
 

@@ -52,7 +52,9 @@ export const CopyButton = ({
 						onClick={handleCopy}
 						icon={<CopyIcon className="size-3.5" />}
 					>
-						<span className={cn("text-tiny-id", innerClassName)}>{text}</span>
+						<span className={cn("text-tiny-id truncate", innerClassName)}>
+							{text}
+						</span>
 					</IconButton>
 				</TooltipTrigger>
 				<TooltipContent

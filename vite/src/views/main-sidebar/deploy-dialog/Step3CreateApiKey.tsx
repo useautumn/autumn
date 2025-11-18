@@ -41,7 +41,7 @@ export const Step3CreateApiKey = () => {
 	};
 
 	return (
-		<div className="flex flex-col gap-3">
+		<div className="flex gap-3">
 			<SectionHeader
 				stepNumber={3}
 				title="Create a production secret key"
@@ -99,9 +99,9 @@ export const Step3CreateApiKey = () => {
 								isLoading={loading}
 								onClick={handleCreate}
 								variant="secondary"
-								className="w-32"
+								className="w-36"
 							>
-								Generate Key
+								Generate API Key
 							</Button>
 						</motion.div>
 					)}

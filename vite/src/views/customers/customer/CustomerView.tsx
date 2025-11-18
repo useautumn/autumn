@@ -1,20 +1,20 @@
 "use client";
 
-import LoadingScreen from "@/views/general/LoadingScreen";
 import { CusProductStatus } from "@autumn/shared";
-import { CustomerContext } from "./CustomerContext";
-import { notNullish, pushPage } from "@/utils/genUtils";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
-import { useCusQuery } from "./hooks/useCusQuery";
-import { CustomerSidebar } from "./components/customer-sidebar/CustomerSidebar";
+import { notNullish, pushPage } from "@/utils/genUtils";
+import ErrorScreen from "@/views/general/ErrorScreen";
+import LoadingScreen from "@/views/general/LoadingScreen";
+import { CustomerContext } from "./CustomerContext";
+import { CustomerEventsList } from "./CustomerEventsList";
 import { CustomerPageHeader } from "./components/customer-header/CustomerPageHeader";
+import { CustomerSidebar } from "./components/customer-sidebar/CustomerSidebar";
 import { CustomerProductList } from "./customer-product-list/CustomerProductList";
 import { CustomerEntitlementsList } from "./entitlements/CustomerEntitlementsList";
+import { useCusQuery } from "./hooks/useCusQuery";
 import { useCusReferralQuery } from "./hooks/useCusReferralQuery";
 import { InvoicesTable } from "./InvoicesTable";
-import { CustomerEventsList } from "./CustomerEventsList";
-import ErrorScreen from "@/views/general/ErrorScreen";
 
 export default function CustomerView() {
 	// const { customer_id } = useParams();

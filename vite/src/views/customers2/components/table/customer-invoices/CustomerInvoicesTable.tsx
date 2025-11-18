@@ -88,6 +88,7 @@ export function CustomerInvoicesTable() {
 				enableSorting,
 				isLoading,
 				onRowClick: handleRowClick,
+				emptyStateText: "Invoices will display when a customer makes a payment",
 				// rowClassName: "h-14 py-4 cursor-pointer",
 			}}
 		>
@@ -101,23 +102,19 @@ export function CustomerInvoicesTable() {
 						<CustomerInvoicesShowAllButton />
 					</Table.Actions> */}
 				</Table.Toolbar>
-				{hasInvoices ? (
-					<>
-						<Table.Content>
-							<Table.Header />
-							<Table.Body />
-						</Table.Content>
-						{/* <Table.Pagination /> */}
-					</>
-				) : (
+				{/* {hasInvoices ? ( */}
+
+				<Table.Content>
+					<Table.Header />
+					<Table.Body />
+				</Table.Content>
+				{/* <Table.Pagination /> */}
+
+				{/* ) : (
 					!isLoading && (
-						<div className="flex justify-center items-center py-4">
-							<p className="text-sm text-t4">
-								Invoices will display when a customer makes a payment
-							</p>
-						</div>
+						<EmptyState text="Invoices will display when a customer makes a payment" />
 					)
-				)}
+				)} */}
 			</Table.Container>
 		</Table.Provider>
 	);

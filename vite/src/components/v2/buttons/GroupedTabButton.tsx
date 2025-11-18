@@ -21,7 +21,7 @@ export const GroupedTabButton = ({
 	// const isTwoTab = options.length === 2;
 
 	return (
-		<div className={cn("flex items-center", className)}>
+		<div className={cn("flex items-center ", className)}>
 			{options.map((option, index) => {
 				const isActive = value === option.value;
 				const isFirst = index === 0;
@@ -33,12 +33,12 @@ export const GroupedTabButton = ({
 						type="button"
 						onClick={() => onValueChange(option.value)}
 						className={cn(
-							"w-full flex items-center justify-center gap-1 px-[6px] py-1 h-6 text-body border border-t10 transition-none outline-none whitespace-nowrap",
+							"w-full flex items-center justify-center gap-1 px-[6px] py-1 h-6 text-body border transition-none outline-none whitespace-nowrap",
 							"hover:text-primary focus-visible:text-primary",
 							isActive &&
 								" text-primary shadow-[0px_3px_4px_0px_inset_rgba(0,0,0,0.04)]",
 							!isActive &&
-								"bg-white shadow-[0px_-3px_4px_0px_inset_rgba(0,0,0,0.04)]",
+								"bg-interative-secondary shadow-[0px_-3px_4px_0px_inset_rgba(0,0,0,0.04)]",
 							isFirst && "rounded-l-lg border-l",
 							!isFirst && "border-l-0",
 							isLast && "rounded-r-lg",

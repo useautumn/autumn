@@ -21,7 +21,7 @@ export const CustomerPageDetails = () => {
 					<CopyButton
 						text={customer.email ?? placeholderText}
 						size="mini"
-						className=""
+						className="!text-t3"
 						innerClassName="max-w-30 truncate !font-normal"
 					>
 						{/* <EnvelopeIcon className="!w-4 mt-0.5" weight="regular" /> */}
@@ -30,7 +30,7 @@ export const CustomerPageDetails = () => {
 				<CopyButton
 					text={customer.id ?? placeholderText}
 					size="mini"
-					className=""
+					className="!text-t3"
 					innerClassName="max-w-30 truncate !font-normal"
 				>
 					{/* <UserCircleIcon

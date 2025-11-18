@@ -205,6 +205,7 @@ export function CustomerProductsTable() {
 					enableSorting,
 					isLoading,
 					onRowClick: handleRowClick,
+					emptyStateText: "Enable a plan to start a subscription",
 				}}
 			>
 				<Table.Container>
@@ -227,22 +228,22 @@ export function CustomerProductsTable() {
 							Customer Plans
 						</div>
 					)}
-					{hasProducts ? (
-						<Table.Content>
-							<Table.Header />
-							<Table.Body />
-						</Table.Content>
-					) : (
+					{/* {hasProducts ? ( */}
+					<Table.Content>
+						<Table.Header />
+						<Table.Body />
+					</Table.Content>
+					{/* ) : (
 						!isLoading && (
-							<div className="flex justify-center items-center py-4">
-								<p className="text-sm text-t4">
-									{entityProducts.length > 0
+							<EmptyState
+								text={
+									entityProducts.length > 0
 										? "No customer-level plans."
-										: "Enable a plan to start a subscription."}
-								</p>
-							</div>
+										: "Enable a plan to start a subscription"
+								}
+							/>
 						)
-					)}
+					)} */}
 				</Table.Container>
 			</Table.Provider>
 			{hasEntityProducts && (

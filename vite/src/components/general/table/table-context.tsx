@@ -9,6 +9,7 @@ export interface TableProps<T> {
 	enableSorting?: boolean;
 	onRowClick?: (row: T) => void;
 	rowClassName?: string;
+	emptyStateText?: string;
 }
 
 //biome-ignore lint/suspicious/noExplicitAny: type could be any here

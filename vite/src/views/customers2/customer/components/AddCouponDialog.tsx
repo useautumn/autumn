@@ -67,9 +67,10 @@ export const AddCouponDialog = ({
 	const existingDiscount = stripeCus?.discount;
 
 	const getExistingCoupon = () => {
-		if (existingDiscount) {
+		if (existingDiscount?.coupon?.id) {
 			return rewards.find(
-				(c: Reward) => c.id === getOriginalCouponId(existingDiscount.coupon.id),
+				(c: Reward) =>
+					c?.internal_id === getOriginalCouponId(existingDiscount.coupon.id),
 			);
 		}
 		return null;

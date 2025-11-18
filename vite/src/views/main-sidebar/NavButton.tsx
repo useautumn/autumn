@@ -94,7 +94,8 @@ export const NavButton = ({
 			"hover:bg-interactive-secondary-hover hover:text-t1 text-t3",
 		isActive &&
 			"bg-interactive-secondary border !text-t1 hover:bg-interactive-secondary-hover",
-		isSubNav && "pl-4 font-normal rounded-none rounded-tr-md rounded-br-md",
+		isSubNav &&
+			"pl-4 font-normal rounded-none rounded-tr-md rounded-br-md border-l-0",
 		className,
 	);
 

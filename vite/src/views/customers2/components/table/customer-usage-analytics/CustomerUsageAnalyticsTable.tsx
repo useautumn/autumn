@@ -1,11 +1,14 @@
 import { ChartBar } from "@phosphor-icons/react";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo } from "react";
+import SmallSpinner from "@/components/general/SmallSpinner";
 import { Table } from "@/components/general/table";
+import { cn } from "@/lib/utils";
 import { useCusEventsQuery } from "@/views/customers/customer/hooks/useCusEventsQuery";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { useCustomerTimeseriesEvents } from "@/views/customers2/hooks/useCustomerTimeseriesEvents";
+import { EmptyState } from "../EmptyState";
 import { CustomerUsageAnalyticsChart } from "./CustomerUsageAnalyticsChart";
 import { CustomerUsageAnalyticsColumns } from "./CustomerUsageAnalyticsColumns";
 import { CustomerUsageAnalyticsFullButton } from "./CustomerUsageAnalyticsFullButton";
@@ -91,7 +94,7 @@ export function CustomerUsageAnalyticsTable() {
 				numberOfColumns: CustomerUsageAnalyticsColumns.length,
 				enableSorting,
 				isLoading,
-				rowClassName: "h-8 bg-interactive-secondary border-none",
+				rowClassName: "h-8 bg-interactive-secondary",
 			}}
 		>
 			<Table.Container>
@@ -113,11 +116,14 @@ export function CustomerUsageAnalyticsTable() {
 						<CustomerUsageAnalyticsFullButton />
 					</Table.Actions>
 				</Table.Toolbar>
-				<div className="flex overflow-hidden w-full gap-2 ">
+				<div className="flex w-full gap-2 ">
 					{isLoading ? (
-						<div className="flex justify-center py-4 w-full h-full relative overflow-visible text-sm">
+						<div className="flex justify-center py-4 w-full h-full relative overflow-visible text-sm bg-interactive-secondary rounded-lg border shadow-sm">
 							<div className="text-sm text-t4 text-center overflow-visible flex flex-col gap-2 shimmer">
-								<span>Loading usage events</span>
+								<span className="flex items-center gap-2">
+									<SmallSpinner size={14} />
+									Loading events
+								</span>
 							</div>
 							{/* <div className="font-mono text-t6 absolute top-8.5">
 								{customer.name || customer.email || customer.id}
@@ -126,13 +132,18 @@ export function CustomerUsageAnalyticsTable() {
 					) : hasEvents ? (
 						<>
 							<div className="flex max-w-3/8 w-full min-w-0 flex-col h-[250px]">
-								<div className="overflow-hidden flex flex-col border">
-									<div className="overflow-x-auto">
-										<table className="table-fixed p-0 w-full">
+								<div className="overflow-hidden flex flex-col border h-full bg-card">
+									<div className="">
+										<table className="table-fixed p-0 w-full h-full">
 											<Table.Header />
 										</table>
 									</div>
-									<div className="overflow-auto flex-1">
+									<div
+										className={cn(
+											"overflow-auto",
+											rawEvents?.length < 6 ? "border-b" : "",
+										)}
+									>
 										<table className="table-fixed p-0 w-full">
 											<Table.Body />
 										</table>
@@ -148,11 +159,7 @@ export function CustomerUsageAnalyticsTable() {
 							</div>
 						</>
 					) : (
-						<div className="flex justify-center items-center py-4 w-full h-full">
-							<p className="text-sm text-t4">
-								Events will display here when tracked
-							</p>
-						</div>
+						<EmptyState text="Record events to display feature usage" />
 					)}
 				</div>
 			</Table.Container>

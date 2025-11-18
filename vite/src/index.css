@@ -147,15 +147,20 @@ html {
 }
 
 .dark {
-	--background: #161616;
+	--background: #141414;
 	--foreground: oklch(0.985 0 0);
+
+	--primary: #8838ff;
 
 	--outer-background: #121212;
 
 	/* --interactive-secondary: #1d1d1d; */
-	--interactive-secondary: #1b1a1c;
+	--interactive-secondary: #181818;
+	/* --interactive-secondary: #1b1a1c; */
 	--interactive-secondary-hover: #222;
 	/* --card: oklch(0.141 0.005 285.823); */
+
+
 
 	--t1: #fff;
 	--t2: #ccc;
@@ -174,7 +179,7 @@ html {
 	--card-foreground: oklch(0.985 0 0);
 	--popover: oklch(0.141 0.005 285.823);
 	--popover-foreground: white;
-	--primary: oklch(0.985 0 0);
+	/* --primary: oklch(0.985 0 0); */
 	/* --primary-foreground: oklch(0.21 0.006 285.885); */
 	--primary-foreground: white;
 	--secondary: oklch(0.274 0.006 286.033);

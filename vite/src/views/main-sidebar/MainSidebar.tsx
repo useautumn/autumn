@@ -1,16 +1,17 @@
 import {
+	BalloonIcon,
 	BasketIcon,
 	ChartBarIcon,
 	CoinVerticalIcon,
 	CubeIcon,
 	LegoIcon,
 	OptionIcon,
-	RainbowCloudIcon,
 	TerminalWindowIcon,
+	TriangleIcon,
 	UserCircleIcon,
 	WebhooksLogoIcon,
 } from "@phosphor-icons/react";
-import { PanelLeft, ServerIcon } from "lucide-react";
+import { PanelLeft } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { Button } from "@/components/ui/button";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
@@ -35,17 +36,31 @@ export const buildDevSubTabs = ({
 	};
 }) => {
 	return [
-		{ title: "API Keys", value: "api_keys", icon: <OptionIcon size={16} /> },
-		{ title: "Stripe", value: "stripe", icon: <CoinVerticalIcon size={16} /> },
+		{
+			title: "API Keys",
+			value: "api_keys",
+			icon: <OptionIcon size={16} />,
+		},
+		{
+			title: "Stripe",
+			value: "stripe",
+			icon: <CoinVerticalIcon size={16} weight="fill" />,
+		},
 		...(flags.vercel
-			? [{ title: "Vercel", value: "vercel", icon: <ServerIcon size={16} /> }]
+			? [
+					{
+						title: "Vercel",
+						value: "vercel",
+						icon: <TriangleIcon size={16} weight="fill" />,
+					},
+				]
 			: []),
 		...(flags.webhooks
 			? [
 					{
 						title: "Webhooks",
 						value: "webhooks",
-						icon: <WebhooksLogoIcon size={16} />,
+						icon: <WebhooksLogoIcon size={16} weight="fill" />,
 					},
 				]
 			: []),
@@ -136,7 +151,7 @@ export const MainSidebar = () => {
 								{
 									title: "Rewards",
 									value: "rewards",
-									icon: <RainbowCloudIcon size={16} weight="fill" />,
+									icon: <BalloonIcon size={16} weight="fill" />,
 								},
 							]}
 						/>
