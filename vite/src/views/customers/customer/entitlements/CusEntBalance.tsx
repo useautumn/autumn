@@ -35,7 +35,7 @@ export const CusEntBalance = ({
 	if (entityId && cusEnt.entities?.[entityId]) {
 		const entityBalance = cusEnt.entities?.[entityId]?.balance;
 		const rolloverAmount = rollovers
-			.filter((x) => x.entities && x.entities[entityId])
+			.filter((x) => x?.entities?.[entityId])
 			.reduce(
 				(sum, rollover) => sum + (rollover.entities?.[entityId]?.balance || 0),
 				0,
@@ -44,11 +44,11 @@ export const CusEntBalance = ({
 		return (
 			<BalanceWrapper>
 				<p>
-					{entityBalance}
+					{entityBalance?.toLocaleString()}
 					{rolloverAmount > 0 && (
 						<span className="text-t3">
 							{" + "}
-							{rolloverAmount} (rolled over)
+							{rolloverAmount.toLocaleString()} (rolled over)
 						</span>
 					)}
 				</p>
@@ -80,11 +80,11 @@ export const CusEntBalance = ({
 		return (
 			<BalanceWrapper>
 				<p>
-					{totalBalance}
+					{totalBalance.toLocaleString()}
 					{rolloverAmount > 0 && (
 						<span className="text-t3">
 							{" + "}
-							{rolloverAmount} (rolled over)
+							{rolloverAmount.toLocaleString()} (rolled over)
 						</span>
 					)}
 				</p>
@@ -101,9 +101,13 @@ export const CusEntBalance = ({
 			<p>
 				{new Decimal(cusEnt.balance ?? 0)
 					.add(cusEnt.additional_balance)
-					.toNumber()}
+					.toNumber()
+					.toLocaleString()}
 				{rolloverAmount > 0 && (
-					<span className="text-t3"> + {rolloverAmount} (rolled over)</span>
+					<span className="text-t3">
+						{" + "}
+						{rolloverAmount.toLocaleString()} (rolled over)
+					</span>
 				)}
 				{cusEnt.replaceables.length > 0 && (
 					<span className="text-t3">

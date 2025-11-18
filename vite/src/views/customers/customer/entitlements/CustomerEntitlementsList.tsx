@@ -118,7 +118,7 @@ export const CustomerEntitlementsList = () => {
 				.map((e: any) => {
 					const entity = entities.find((ee: any) => ee.id === e);
 					const balance = cusEnt.entities![e].balance;
-					return `${entity?.id} (${entity?.name}): ${balance}`;
+					return `${entity?.id} (${entity?.name}): ${balance?.toLocaleString()}`;
 				})
 				.join("\n");
 			hoverTexts.push({
@@ -135,12 +135,12 @@ export const CustomerEntitlementsList = () => {
 						if (Object.values(r.entities).length > 0) {
 							return (
 								Object.values(r.entities)
-									.map((e: any) => `${e.balance} (${e.id})`)
+									.map((e: any) => `${e.balance?.toLocaleString()} (${e.id})`)
 									.join(", ") +
 								` (expires: ${r.expires_at ? formatUnixToDate(r.expires_at) : "N/A"})`
 							);
 						} else {
-							return `${r.balance} (ex: ${r.expires_at ? formatUnixToDate(r.expires_at) : "N/A"})`;
+							return `${r.balance?.toLocaleString()} (ex: ${r.expires_at ? formatUnixToDate(r.expires_at) : "N/A"})`;
 						}
 					})
 					.join("\n"),
@@ -205,7 +205,6 @@ export const CustomerEntitlementsList = () => {
 					</p>
 				</div>
 			) : (
-				<>
 					<Row
 						type="header"
 						className={cn(
@@ -224,7 +223,6 @@ export const CustomerEntitlementsList = () => {
 						</Item>
 						<Item className="col-span-1" />
 					</Row>
-				</>
 			)}
 
 			{filteredEntitlements.map((cusEnt: FullCusEntWithFullCusProduct) => {
