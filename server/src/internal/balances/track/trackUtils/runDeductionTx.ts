@@ -34,6 +34,7 @@ import {
 import { deleteCachedApiCustomer } from "../../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { getCreditCost } from "../../../features/creditSystemUtils.js";
 import { isPaidContinuousUse } from "../../../features/featureUtils.js";
+import { deductFromCache } from "../redisTrackUtils/deductFromCache.js";
 import { constructEvent, type EventInfo } from "./eventUtils.js";
 import type { FeatureDeduction } from "./getFeatureDeductions.js";
 
@@ -371,7 +372,7 @@ export const runDeductionTx = async (
 	let event: Event | undefined;
 	let actualDeductions: Record<string, number> = {};
 
-	await db.transaction(
+	const result = await db.transaction(
 		async (tx) => {
 			// Pass tx as the db connection
 			const txParams = {
@@ -403,48 +404,43 @@ export const runDeductionTx = async (
 					event: newEvent,
 				});
 			}
-
-			if (params?.refreshCache && fullCus) {
-				// 1. If paid allocated, delete cache
-				if (result.isPaidAllocated) {
-					await deleteCachedApiCustomer({
-						customerId: fullCus.id ?? "",
-						orgId: ctx.org.id,
-						env: ctx.env,
-					});
-				} else {
-					// Deduct the actual amounts from Redis cache (if exists)
-					// This prevents race conditions by directly deducting the exact Postgres amount
-					const { deductFromCache } = await import(
-						"../redisTrackUtils/deductFromCache.js"
-					);
-
-					for (const [featureId, deductedAmount] of Object.entries(
-						actualDeductions,
-					)) {
-						if (deductedAmount !== 0) {
-							// Only deduct if something was actually deducted
-							console.log(
-								`Deducting from Redis cache: ${featureId}, ${deductedAmount}`,
-							);
-							await deductFromCache({
-								ctx,
-								customerId: fullCus.id ?? "",
-								featureId,
-								amount: deductedAmount,
-								entityId: params.entityId,
-							});
-						}
-					}
-
-					// Log summary comparison
-				}
-			}
+			return result;
 		},
 		{
 			isolationLevel: "read committed",
 		},
 	);
+
+	if (params?.refreshCache && fullCus) {
+		// 1. If paid allocated, delete cache
+		if (result?.isPaidAllocated) {
+			await deleteCachedApiCustomer({
+				customerId: fullCus.id ?? "",
+				orgId: ctx.org.id,
+				env: ctx.env,
+			});
+		} else {
+			for (const [featureId, deductedAmount] of Object.entries(
+				actualDeductions,
+			)) {
+				if (deductedAmount !== 0) {
+					// Only deduct if something was actually deducted
+					// console.log(
+					// 	`Deducting from Redis cache: ${featureId}, ${deductedAmount}`,
+					// );
+					await deductFromCache({
+						ctx,
+						customerId: fullCus.id ?? "",
+						featureId,
+						amount: deductedAmount,
+						entityId: params.entityId,
+					});
+				}
+			}
+
+			// Log summary comparison
+		}
+	}
 
 	return {
 		fullCus,
