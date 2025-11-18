@@ -184,7 +184,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 					</div>
 				</div>
 
-				<div className="h-full">
+				<div className="h-full mb-8">
 					{/* <PageSectionHeader
 						title="Event Logs"
 						className="h-10"
@@ -213,7 +213,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 					)}
 
 					{rawEvents && !rawQueryLoading && (
-						<Card className="w-full h-full border-none rounded-none shadow-none py-0 pb-4">
+						<Card className="w-full h-full border-none rounded-none shadow-none py-0">
 							<CardContent className="p-0 h-full bg-transparent overflow-hidden">
 								<EventsAGGrid data={rawEvents} />
 							</CardContent>

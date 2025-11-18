@@ -44,7 +44,7 @@ export const ShortcutButton = ({
 		const variantClasses =
 			variant === "secondary"
 				? "bg-muted text-body-secondary"
-				: "bg-purple-medium dark:bg-interactive-secondary";
+				: "bg-transparent border border-t4 border-[0.5px] text-t2";
 
 		return (
 			<div className={`${baseClasses} ${variantClasses}`}>
@@ -73,7 +73,12 @@ export const ShortcutButton = ({
 	};
 
 	return (
-		<Button isLoading={isLoading} variant={variant} {...props}>
+		<Button
+			isLoading={isLoading}
+			variant={variant}
+			{...props}
+			className="gap-1 items-center"
+		>
 			{children}
 			{(metaShortcut || singleShortcut) && (
 				<span className="flex items-center gap-0.5">
