@@ -138,7 +138,12 @@ export const getCheckData = async ({
 
 	const cusProducts = customer.customer_products;
 
-	let cusEnts = cusProductsToCusEnts({ cusProducts });
+	let cusEnts = cusProductsToCusEnts({
+		cusProducts,
+		inStatuses: org.config.include_past_due
+			? [CusProductStatus.Active, CusProductStatus.PastDue]
+			: [CusProductStatus.Active],
+	});
 
 	if (customer.entity) {
 		cusEnts = cusEnts.filter((cusEnt) =>
