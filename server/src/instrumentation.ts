@@ -5,7 +5,6 @@ import { resourceFromAttributes } from "@opentelemetry/resources";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
 import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions";
-import * as Sentry from "@sentry/node";
 
 // Initialize OTLP trace exporter with the endpoint URL and headers
 
@@ -33,11 +32,4 @@ if (process.env.AXIOM_TOKEN) {
 	// Starting the OpenTelemetry SDK to begin collecting telemetry data
 	console.log("Starting OpenTelemetry");
 	sdk.start();
-}
-
-if (process.env.SENTRY_DSN) {
-	Sentry.init({
-		dsn: process.env.SENTRY_DSN,
-		sendDefaultPii: false,
-	});
 }

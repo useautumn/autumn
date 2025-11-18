@@ -1,5 +1,5 @@
 import { ErrCode, RecaseError as SharedRecaseError } from "@autumn/shared";
-import * as Sentry from "@sentry/node";
+import * as Sentry from "@sentry/bun";
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import Stripe from "stripe";
@@ -16,11 +16,10 @@ export const errorMiddleware = (err: Error, c: Context<HonoEnv>) => {
 	const ctx = c.get("ctx");
 	const logger = ctx?.logger;
 
-	Sentry.captureException(err);
-
 	// If no context/logger available, fallback to console
 	if (!logger) {
 		console.error("Error occurred before context was set:", err);
+		Sentry.captureException(err);
 		return c.json(
 			{
 				message: "Internal server error",
@@ -30,9 +29,12 @@ export const errorMiddleware = (err: Error, c: Context<HonoEnv>) => {
 		);
 	}
 
-	// Check for error skip cases first (warn-level errors)
+	// Check for error skip cases first (warn-level errors that don't need Sentry)
 	const skipResponse = handleErrorSkip(err, c);
 	if (skipResponse) return skipResponse;
+
+	// If we got here, it's an error worth tracking - capture to Sentry
+	Sentry.captureException(err);
 
 	// 1. Handle RecaseError (our custom errors)
 	if (err instanceof RecaseError || err instanceof SharedRecaseError) {
@@ -77,39 +79,24 @@ export const errorMiddleware = (err: Error, c: Context<HonoEnv>) => {
 	}
 
 	// 3. Handle Zod validation errors
-
+	// Note: User input validation errors are already handled by errorSkipMiddleware
+	// If we get here, it's an internal Zod error (bug in our code)
 	if (err instanceof ZodError) {
 		const formattedError = formatZodError(err);
 
-		// 1. If it's validation error
-		if (c.get("validated")) {
-			logger.error(
-				`INTERNAL ZOD ERROR (${ctx.org?.slug || "unknown"}): ${formattedError}`,
-			);
-			logger.error(err);
+		logger.error(
+			`INTERNAL ZOD ERROR (${ctx.org?.slug || "unknown"}): ${formattedError}`,
+		);
+		logger.error(err);
 
-			return c.json(
-				{
-					message: formattedError,
-					code: ErrCode.InvalidInputs,
-					env: ctx.env,
-				},
-				500,
-			);
-		} else {
-			logger.warn(
-				`ZOD ERROR (${ctx.org?.slug || "unknown"}): ${formattedError}`,
-			);
-
-			return c.json(
-				{
-					message: formattedError,
-					code: ErrCode.InvalidInputs,
-					env: ctx.env,
-				},
-				400,
-			);
-		}
+		return c.json(
+			{
+				message: formattedError,
+				code: ErrCode.InvalidInputs,
+				env: ctx.env,
+			},
+			500,
+		);
 	}
 
 	// 4. Handle unknown errors

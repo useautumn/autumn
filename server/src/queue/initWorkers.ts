@@ -1,8 +1,13 @@
+await import("../sentry.js");
+
+import { AuthType } from "@autumn/shared";
+
 import {
 	DeleteMessageCommand,
 	type Message,
 	ReceiveMessageCommand,
 } from "@aws-sdk/client-sqs";
+import * as Sentry from "@sentry/bun";
 import type { Logger } from "pino";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
@@ -94,6 +99,17 @@ const processMessage = async ({
 			logger: workerLogger,
 		});
 
+		if (ctx) {
+			Sentry.setUser({
+				org_id: ctx.org?.id,
+				org_slug: ctx.org?.slug,
+				env: ctx.env,
+				authType: AuthType.Worker,
+				jobName: job.name,
+				messageId: message.MessageId,
+			});
+		}
+
 		if (actionHandlers.includes(job.name as JobName)) {
 			// Note: action handlers need BullMQ queue for nested jobs
 			// This will need to be refactored when migrating action handlers to SQS
@@ -139,6 +155,7 @@ const processMessage = async ({
 			});
 		}
 	} catch (error: any) {
+		Sentry.captureException(error);
 		workerLogger.error(`Failed to process SQS job: ${job.name}`, {
 			jobName: job.name,
 			error: {
