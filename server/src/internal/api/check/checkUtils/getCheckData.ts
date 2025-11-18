@@ -19,6 +19,7 @@ import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCu
 import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
+import { getUnlimitedAndUsageAllowed } from "../../../customers/cusProducts/cusEnts/cusEntUtils.js";
 import type { CheckData } from "../checkTypes/CheckData.js";
 
 // Main functions
@@ -74,6 +75,11 @@ export const getFeatureToUse = ({
 				.filter(notNullish),
 		);
 
+		const { usageAllowed: featureUsageAllowed } = getUnlimitedAndUsageAllowed({
+			cusEnts: featureCusEnts,
+			internalFeatureId: feature.internal_id,
+		});
+
 		const totalCreditCusEntBalance = sumValues(
 			creditCusEnts
 				.map((cusEnt) =>
@@ -85,7 +91,10 @@ export const getFeatureToUse = ({
 				.filter(notNullish),
 		);
 
-		if (featureCusEnts.length > 0 && totalFeatureCusEntBalance > 0) {
+		if (
+			featureCusEnts.length > 0 &&
+			(totalFeatureCusEntBalance > 0 || featureUsageAllowed)
+		) {
 			return feature;
 		}
 
