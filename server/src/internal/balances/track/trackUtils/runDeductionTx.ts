@@ -103,7 +103,7 @@ export const deductFromCusEnts = async ({
 	const isPaidAllocated = deductions.some((d) =>
 		isPaidContinuousUse({
 			feature: d.feature,
-			fullCus,
+			fullCus: fullCus!,
 		}),
 	);
 
@@ -374,6 +374,10 @@ export const runDeductionTx = async (
 
 	const result = await db.transaction(
 		async (tx) => {
+			// Set statement timeout to cancel query at database level if it takes too long
+			// This will automatically rollback the transaction and free the connection
+			await tx.execute(sql`SET LOCAL statement_timeout = '1000ms'`);
+
 			// Pass tx as the db connection
 			const txParams = {
 				...params,
