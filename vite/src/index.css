@@ -147,17 +147,19 @@ html {
 }
 
 .dark {
-	--background: #141414;
+	--background: #161616;
 	--foreground: oklch(0.985 0 0);
 
 	--primary: #8838ff;
 
 	--outer-background: #121212;
 
-	/* --interactive-secondary: #1d1d1d; */
-	--interactive-secondary: #181818;
+	--interactive-secondary: #1d1d1d;
+	/* --interactive-secondary: #181818; */
+	/* --interactive-secondary: #222; */
 	/* --interactive-secondary: #1b1a1c; */
-	--interactive-secondary-hover: #222;
+	/* --interactive-secondary-hover: #222; */
+	--interactive-secondary-hover: #292929;
 	/* --card: oklch(0.141 0.005 285.823); */
 
 
@@ -170,7 +172,8 @@ html {
 
 	--card: #121212;
 
-	--border: #262626;
+	/* --border: #262626; */
+	--border: #2c2c2c;
 
 
 	--chart-grid-stroke: #262626;
@@ -461,6 +464,7 @@ input[type="number"]::-webkit-inner-spin-button {
 	opacity: 0;
 	transition: opacity 0.2s;
 }
+
 
 .shimmer-hover:hover::after {
 	animation: shimmer-once 0.8s;
