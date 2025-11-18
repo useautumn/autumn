@@ -27,7 +27,7 @@ export const CheckboxButton = React.forwardRef<
 				checked={checked}
 				ref={ref}
 				onClick={(e) => e.preventDefault()}
-				className="data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:shadow-none size-3.5 shadow-[0_2px_4px_0_#00000005,inset_0_2px_1px_0_#FFFFFF] rounded-md border-t6 bg-t14"
+				className="data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:shadow-none size-3.5 shadow-[0_2px_4px_0_#00000005,inset_0_2px_1px_0_#FFFFFF] rounded-md border border-border bg-interactive-secondary dark:shadow-none"
 				iconClassName="size-2"
 				{...props}
 			/>
