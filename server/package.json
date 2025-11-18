@@ -112,7 +112,8 @@
 		"svix": "^1.45.1",
 		"tsc-alias": "^1.8.16",
 		"ws": "^8.18.0",
-		"zod": "^3.25.23"
+		"zod": "^3.25.23",
+		"@sentry/bun": "catalog:"
 	},
 	"devDependencies": {
 		"@types/bun": "^1.3.1",

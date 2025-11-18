@@ -3,6 +3,7 @@
 // Skip OpenTelemetry instrumentation in development for faster startup
 if (process.env.NODE_ENV !== "development") {
 	await import("./instrumentation.js");
+	await import("./sentry.js");
 }
 
 import cluster from "node:cluster";
