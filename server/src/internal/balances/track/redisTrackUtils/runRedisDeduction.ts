@@ -122,7 +122,7 @@ export const runRedisDeduction = async ({
 	overageBehavior,
 	eventInfo,
 }: RunRedisDeductionParams): Promise<RunRedisDeductionResult> => {
-	const { org, env } = ctx;
+	const { org, env, skipCache } = ctx;
 
 	const hasContUseFeature = featureDeductions.some((deduction) =>
 		isContUseFeature({ feature: deduction.feature }),
@@ -144,7 +144,7 @@ export const runRedisDeduction = async ({
 		};
 	}
 
-	if (query.skip_cache) {
+	if (query.skip_cache || skipCache) {
 		return {
 			fallback: true,
 			code: "skip_cache",
