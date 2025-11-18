@@ -35,6 +35,7 @@ const defaultCreditSystem: CreateFeature = {
 
 export function CreateCreditSystemSheet() {
 	const { refetch } = useFeaturesQuery();
+	const { features } = useFeaturesQuery();
 	const axiosInstance = useAxiosInstance();
 
 	const [loading, setLoading] = useState(false);
@@ -84,12 +85,25 @@ export function CreateCreditSystemSheet() {
 	const handleCancel = () => {
 		setOpen(false);
 	};
+	
+const OpenCreditModal = () => {
+	try{
+       if (!features || features.length === 0) {
+		toast.error("Add at least one feature to continue with credit allocation.");
+		return;
+	}
 
+	setOpen(true);
+	}catch(error){
+		console.error("Error opening credit system modal:", error);
+		toast.error("An unexpected error occurred while opening the credit system modal.");
+	}
+	};
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetTrigger asChild>
-				<Button variant="add">Credit System</Button>
-			</SheetTrigger>
+				
+				<Button variant="add" onClick={OpenCreditModal}>Credit System</Button>
+
 			<SheetContent className="flex flex-col overflow-hidden">
 				<SheetHeader
 					title="Create Credit System"
