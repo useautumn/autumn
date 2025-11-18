@@ -9,7 +9,7 @@
 
 	border: 1px solid var(--color-border);
 	border-radius: var(--radius);
-	background-color: var(--color-input-background);
+	background-color: var(--color-interactive-secondary);
 	color: var(--color-t2);
 
 	/* Placeholder styling - applies to both placeholder: and data-placeholder: */

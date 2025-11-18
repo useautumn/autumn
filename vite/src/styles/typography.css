@@ -61,7 +61,7 @@
 }
 
 .text-tiny-id {
-	color: var(--color-t3);
+	/* color: var(--color-t3); */
 
 	/* Tiny ID */
 	font-family: "JetBrains Mono", "JetBrains Mono Fallback", monospace;

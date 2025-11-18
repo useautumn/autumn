@@ -1,17 +1,15 @@
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Mail } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
+import { Button } from "@/components/v2/buttons/Button";
+import { Input } from "@/components/v2/inputs/Input";
 import { authClient } from "@/lib/auth-client";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
-import { Mail, PlusIcon } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
-import { useMemberships } from "../hooks/useMemberships";
 
 export const InvitePopover = () => {
 	const [email, setEmail] = useState("");
@@ -43,12 +41,9 @@ export const InvitePopover = () => {
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild>
-				<Button variant="add">Invite</Button>
+				<Button variant="primary">Invite</Button>
 			</PopoverTrigger>
-			<PopoverContent
-				align="end"
-				className="border border-zinc-200 bg-stone-50 flex flex-col gap-2 pt-3"
-			>
+			<PopoverContent align="end" className=" flex flex-col gap-2 pt-3">
 				<div className="flex items-center gap-1 text-t3">
 					<Mail size={12} />
 					<p className="text-t3 text-sm">Invite by email</p>
@@ -62,13 +57,13 @@ export const InvitePopover = () => {
 						onChange={(e) => setEmail(e.target.value)}
 					/>
 					<Button
-						variant="gradientPrimary"
+						variant="primary"
 						className="!h-6.5 !mt-0"
-						startIcon={<PlusIcon size={10} />}
+						// endIcon={<Plus size={10} />}
 						onClick={handleInvite}
 						isLoading={loading}
 					>
-						Add
+						Send
 					</Button>
 				</div>
 			</PopoverContent>

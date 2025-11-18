@@ -35,7 +35,7 @@ export function CustomerBooleanBalanceTable({
 				numberOfColumns: columns.length,
 				enableSorting,
 				isLoading,
-				rowClassName: "pointer-events-none h-10",
+				rowClassName: "pointer-events-none",
 			}}
 		>
 			<Table.Container>

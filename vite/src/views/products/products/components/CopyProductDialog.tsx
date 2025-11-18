@@ -73,7 +73,10 @@ export const CopyProductDialog = ({
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogContent onClick={(e) => e.stopPropagation()}>
+			<DialogContent
+				className="bg-background"
+				onClick={(e) => e.stopPropagation()}
+			>
 				<DialogHeader>
 					<DialogTitle>Copy Product</DialogTitle>
 				</DialogHeader>

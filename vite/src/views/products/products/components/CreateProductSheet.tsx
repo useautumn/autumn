@@ -3,17 +3,12 @@ import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	SheetFooter,
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
-import {
-	Sheet,
-	SheetContent,
-	SheetTrigger,
-} from "@/components/v2/sheets/Sheet";
+import { Sheet, SheetContent } from "@/components/v2/sheets/Sheet";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -93,12 +88,12 @@ function CreateProductSheet({
 
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetTrigger asChild>
+			{/* <SheetTrigger asChild>
 				<Button variant="add" className="w-full">
 					Plan
 				</Button>
-			</SheetTrigger>
-			<SheetContent className="flex flex-col overflow-hidden">
+			</SheetTrigger> */}
+			<SheetContent className="flex flex-col overflow-hidden bg-background">
 				<SheetHeader
 					title="Create Plan"
 					description="Create a new free or paid plan for your application"
@@ -125,7 +120,7 @@ function CreateProductSheet({
 						disabled={
 							(product.planType === "paid" &&
 								product.basePriceType !== "usage" &&
-								!basePrice?.amount) ||
+								!basePrice?.price) ||
 							!product.name ||
 							!product.id ||
 							!product.planType

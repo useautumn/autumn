@@ -32,9 +32,8 @@ const buttonVariants = cva(
 				`,
 
 				skeleton: `text-body border border-transparent
-				hover:bg-muted-hover
 				focus-visible:bg-muted-active focus-visible:border-primary
-				active:bg-muted-active active:border-primary`,
+				active:bg-interactive-secondary-hover active:border-primary`,
 
 				muted: `bg-muted hover:bg-interactive-secondary-hover border border-transparent
 				focus-visible:bg-muted-active focus-visible:border-primary

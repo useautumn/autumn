@@ -26,7 +26,7 @@ export const AdditionalOptions = ({
 	if (!product.planType) return null;
 	if (
 		product.planType === "paid" &&
-		!basePrice?.amount &&
+		!basePrice?.price &&
 		product.basePriceType !== "usage"
 	)
 		return null;

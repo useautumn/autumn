@@ -45,7 +45,7 @@ export const CustomerProductPrice = ({
 	if (basePrice) {
 		const formattedAmount = formatAmount({
 			org: org as unknown as Organization,
-			amount: basePrice.amount,
+			amount: basePrice.price,
 			amountFormatOptions: {
 				style: "currency",
 				currency: org?.default_currency || "USD",
