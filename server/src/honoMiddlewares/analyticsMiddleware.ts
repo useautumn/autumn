@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/node";
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 
@@ -108,6 +109,11 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	});
 
 	ctx.logger.info(`${method} ${c.req.path} (${ctx.org?.slug})`);
+
+	Sentry.setUser({
+		...reqContext,
+		body: undefined,
+	});
 
 	// Execute the request
 	await next();

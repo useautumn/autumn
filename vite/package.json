@@ -91,7 +91,8 @@
 		"tailwindcss-animate": "^1.0.7",
 		"vaul": "^1.1.2",
 		"zod": "^4",
-		"zustand": "^5.0.8"
+		"zustand": "^5.0.8",
+		"@sentry/node": "catalog:"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.21.0",

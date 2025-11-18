@@ -1,4 +1,5 @@
 import { ErrCode, RecaseError as SharedRecaseError } from "@autumn/shared";
+import * as Sentry from "@sentry/node";
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import Stripe from "stripe";
@@ -7,7 +8,6 @@ import { formatZodError } from "@/errors/formatZodError.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { handleErrorSkip } from "./errorSkipMiddleware.js";
-
 /**
  * Hono error handler middleware
  * Handles different error types and responds appropriately with proper logging
@@ -15,6 +15,8 @@ import { handleErrorSkip } from "./errorSkipMiddleware.js";
 export const errorMiddleware = (err: Error, c: Context<HonoEnv>) => {
 	const ctx = c.get("ctx");
 	const logger = ctx?.logger;
+
+	Sentry.captureException(err);
 
 	// If no context/logger available, fallback to console
 	if (!logger) {
