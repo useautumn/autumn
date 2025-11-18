@@ -128,6 +128,7 @@ export const handleSubscriptionUpdated = async ({
 	}
 
 	// Cancel subscription immediately
+
 	if (subscription.status === "past_due" && org.config.cancel_on_past_due) {
 		const stripeCli = createStripeCli({
 			org,
@@ -141,14 +142,11 @@ export const handleSubscriptionUpdated = async ({
 		logger.info(
 			`Latest invoice billing reason: ${latestInvoice.billing_reason}`,
 		);
-		logger.info(`Latest invoice status: ${latestInvoice.status}`);
 
-		if (
-			latestInvoice.status !== "open" ||
-			latestInvoice.billing_reason !== "subscription_cycle"
-		) {
+		const validInvoiceReasons = ["subscription_cycle", "subscription_create"];
+		if (!validInvoiceReasons.includes(latestInvoice.billing_reason ?? "")) {
 			logger.info(
-				"sub.updated, latest invoice isn't open or billing reason isn't subscription_update, past_due not forcing cancel",
+				"sub.updated, latest invoice billing reason isn't subscription_cycle / subscription_create, past_due not forcing cancel",
 				{
 					data: {
 						subscriptionId: subscription.id,
@@ -176,7 +174,9 @@ export const handleSubscriptionUpdated = async ({
 				},
 			);
 			await stripeCli.subscriptions.cancel(subscription.id);
-			await stripeCli.invoices.voidInvoice(subscription.latest_invoice);
+			if (latestInvoice.status === "open") {
+				await stripeCli.invoices.voidInvoice(subscription.latest_invoice);
+			}
 		} catch (error: any) {
 			logger.error(
 				`subscription.updated: error cancelling / voiding: ${error.message}`,

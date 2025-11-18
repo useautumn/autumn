@@ -17,7 +17,7 @@
 		"workers": "bun src/workers.ts",
 		"cron": "bun src/cron.ts",
 		"check": "bun src/check.ts",
-		"build:check": "tsc -b tsconfig.build.json --noEmit",
+
 		"t": "ENV_FILE=.env infisical run --env=dev -- bun tests/testRunner/runParallelGroupsV3.ts",
 		"parallel-tests": "ENV_FILE=.env infisical run --env=dev -- bun tests/testRunner/runParallelGroupsV3.ts",
 		"parallel-tests:v1": "ENV_FILE=.env infisical run --env=dev -- bun tests/testRunner/runParallelGroups.ts",

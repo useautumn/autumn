@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { ApiFeatureV0Schema } from "../../../api/features/prevVersions/apiFeatureV0.js";
 import { RolloverExpiryDurationType } from "../../productModels/durationTypes/rolloverExpiryDurationType.js";
 import { ProductItemInterval } from "../../productModels/intervals/productItemInterval.js";
 import { Infinite } from "../../productModels/productEnums.js";
@@ -50,6 +51,10 @@ const ProductItemConfigSchema = z.object({
 });
 
 export const ProductItemSchema = z.object({
+	type: z.enum(ProductItemType).nullish().meta({
+		description: "The type of the product item.",
+	}),
+
 	// Feature stuff
 	feature_id: z.string().nullish().meta({
 		description:
@@ -57,6 +62,10 @@ export const ProductItemSchema = z.object({
 	}),
 
 	feature_type: z.enum(ProductItemFeatureType).nullish().meta({
+		internal: true,
+	}),
+
+	feature: ApiFeatureV0Schema.nullish().meta({
 		internal: true,
 	}),
 

@@ -1,6 +1,7 @@
 import { FeatureNotFoundError, notNullish } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "../../../honoMiddlewares/routeHandler.js";
+import { deleteCachedApiCustomer } from "../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { runDeductionTx } from "../track/trackUtils/runDeductionTx.js";
 
 export const handleUpdateBalance = createRoute({
@@ -39,6 +40,11 @@ export const handleUpdateBalance = createRoute({
 			throw new FeatureNotFoundError({ featureId: body.feature_id });
 		}
 
+		console.log(
+			"Prioritising customer entitlement: ",
+			body.customer_entitlement_id,
+		);
+
 		// Update balance using SQL with alter_granted=true
 		if (notNullish(body.current_balance)) {
 			await runDeductionTx({
@@ -57,9 +63,16 @@ export const handleUpdateBalance = createRoute({
 				sortParams: {
 					cusEntId: body.customer_entitlement_id,
 				},
-				refreshCache: true,
+				refreshCache: false,
 			});
 		}
+
+		await deleteCachedApiCustomer({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId: body.customer_id,
+			source: "handleUpdateBalance",
+		});
 
 		return c.json({ success: true });
 	},

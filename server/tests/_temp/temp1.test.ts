@@ -1,27 +1,35 @@
 import { beforeAll, describe, test } from "bun:test";
-import { FreeTrialDuration, LegacyVersion } from "@autumn/shared";
+import { BillingInterval, LegacyVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
+import {
+	constructArrearItem,
+	constructArrearProratedItem,
+	constructFeatureItem,
+} from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "../../src/utils/scriptUtils/testUtils/initProductsV0.js";
+import { replaceItems } from "../utils/testProductUtils/testProductUtils.js";
 
 // UNCOMMENT FROM HERE
 const pro = constructProduct({
 	type: "pro",
 
 	items: [
-		constructFeatureItem({ featureId: TestFeature.Words, includedUsage: 100 }),
+		constructFeatureItem({
+			featureId: TestFeature.Users,
+			includedUsage: 5,
+		}),
+		constructArrearProratedItem({
+			featureId: TestFeature.Workflows,
+			includedUsage: 0,
+			pricePerUnit: 10,
+		}),
 	],
-	freeTrial: {
-		length: 7,
-		duration: FreeTrialDuration.Day,
-		unique_fingerprint: false,
-		card_required: true,
-	},
 });
 
 describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
@@ -44,27 +52,37 @@ describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 			prefix: customerId,
 		});
 
-		testClockId = result.testClockId!;
-	});
+		// testClockId = result.testClockId!;
 
-	test("should attach pro product", async () => {
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: pro.id,
 		});
 	});
+	return;
 
-	// test("should cancel one add on", async () => {
-	// 	await autumn.cancel({
-	// 		customer_id: customerId,
-	// 		product_id: addOn.id,
-	// 	});
+	test("should attach pro product", async () => {
+		// newPro = structuredClone(pro);
+		let newItems = replaceItems({
+			items: pro.items,
+			interval: BillingInterval.Month,
+			newItem: constructPriceItem({
+				price: 100,
+				interval: BillingInterval.Month,
+			}),
+		});
 
-	// 	await expectSubToBeCorrect({
-	// 		customerId,
-	// 		db,
-	// 		org,
-	// 		env,
-	// 	});
-	// });
+		newItems = replaceItems({
+			items: newItems,
+			featureId: TestFeature.Words,
+			newItem: constructArrearItem({
+				featureId: TestFeature.Words,
+				price: 0.5,
+			}),
+		});
+
+		await autumn.products.update(pro.id, {
+			items: newItems,
+		});
+	});
 });

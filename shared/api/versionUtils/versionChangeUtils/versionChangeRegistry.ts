@@ -20,6 +20,7 @@ import { V1_2_ProductChanges } from "@api/products/changes/V1.2_ProductChanges.j
 import { V0_2_CheckChange } from "../../balances/check/changes/V0.2_CheckChange.js";
 import { V1_2_CheckChange } from "../../balances/check/changes/V1.2_CheckChange.js";
 import { V1_2_CheckQueryChange } from "../../balances/check/changes/V1.2_CheckQueryChange.js";
+import { V1_2_TrackChange } from "../../balances/track/changes/V1.2_TrackChange.js";
 import { ApiVersion } from "../ApiVersion.js";
 import type { VersionChangeConstructor } from "./VersionChange.js";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
@@ -32,6 +33,7 @@ export const V2_CHANGES: VersionChangeConstructor[] = [
 	V1_2_ProductChanges, // Transforms Product TO V1.2 format from V2 Plan format
 	V1_2_CheckChange, // Transforms Check TO V1.2 format from V0.2 format
 	V1_2_CheckQueryChange, // Transforms Check Query TO V2.0 format (adds expand options)
+	V1_2_TrackChange, // Transforms Track TO V1.2 format from V0.2 format
 
 	V1_2_FeatureChange, // Transforms Feature TO V1_Beta format (V0) from V2 format (V1)
 	V1_2_CreateFeatureChange, // Transforms Create Feature params TO V1_Beta
