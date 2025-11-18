@@ -30,7 +30,6 @@ type RunRedisDeductionParams = {
 	trackParams: TrackParams;
 	featureDeductions: FeatureDeduction[];
 	overageBehavior: "cap" | "reject";
-	skipEvent?: boolean;
 	eventInfo?: EventInfo;
 };
 
@@ -53,7 +52,6 @@ const queueSyncAndEvent = ({
 	ctx,
 	trackParams,
 	featureDeductions,
-	skipEvent,
 	eventInfo,
 	result,
 	apiCustomer,
@@ -65,7 +63,7 @@ const queueSyncAndEvent = ({
 	const { org, env } = ctx;
 
 	ctx.logger.info(
-		`[queueSync]: customer changed: ${result.customerChanged}, changed entity ids: ${result.changedEntityIds}`,
+		`[queueSync] (${customer_id}): customer changed: ${result.customerChanged}, changed entity ids: ${Array.isArray(result.changedEntityIds) ? result.changedEntityIds.join(", ") : "none"}`,
 	);
 
 	for (const deduction of featureDeductions) {
@@ -94,7 +92,7 @@ const queueSyncAndEvent = ({
 		}
 	}
 
-	if (!skipEvent && apiCustomer?.autumn_id && eventInfo) {
+	if (!trackParams.skip_event && apiCustomer?.autumn_id && eventInfo) {
 		globalEventBatchingManager.addEvent(
 			constructEvent({
 				ctx,
@@ -122,7 +120,6 @@ export const runRedisDeduction = async ({
 	trackParams,
 	featureDeductions,
 	overageBehavior,
-	skipEvent = false,
 	eventInfo,
 }: RunRedisDeductionParams): Promise<RunRedisDeductionResult> => {
 	const { org, env } = ctx;
@@ -204,7 +201,6 @@ export const runRedisDeduction = async ({
 					trackParams,
 					featureDeductions,
 					overageBehavior,
-					skipEvent,
 					eventInfo,
 					result,
 					apiCustomer,

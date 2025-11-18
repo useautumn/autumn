@@ -70,6 +70,10 @@ export const CheckParamsSchema = ExtCheckParamsSchema.extend({
 
 	// Legacy 2: required_balance used to be called required_quantity
 	required_quantity: z.number().optional(),
+
+	skip_event: z.boolean().optional().meta({
+		internal: true,
+	}),
 }).refine(
 	(data) => {
 		if (data.product_id && data.feature_id) {

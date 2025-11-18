@@ -133,9 +133,9 @@ export class SyncBatchingManager {
 				},
 				messageGroupId: customerId,
 			});
-			// console.log(
-			// 	`Queued sync batch for customer ${customerId} with ${items.length} items`,
-			// );
+			console.log(
+				`Queued sync batch for customer ${customerId} with ${items.length} items`,
+			);
 		} catch (error) {
 			logger.error(
 				`❌ Failed to queue sync batch for customer ${customerId}, error: ${error instanceof Error ? error.message : "unknown"}`,

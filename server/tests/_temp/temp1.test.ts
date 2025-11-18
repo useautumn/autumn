@@ -31,8 +31,13 @@ const pro = constructProduct({
 			featureId: TestFeature.Users,
 			includedUsage: 5,
 		}),
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 100,
+		}),
 	],
 });
+
 const basic = constructRawProduct({
 	id: "basic",
 
