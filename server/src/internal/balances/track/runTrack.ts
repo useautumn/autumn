@@ -7,9 +7,12 @@ import {
 	type TrackParams,
 	type TrackResponseV2,
 } from "@autumn/shared";
+import { db } from "../../../db/initDrizzle";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv";
-
+import { EventService } from "../../api/events/EventService";
+import { CusService } from "../../customers/CusService";
 import { runRedisDeduction } from "./redisTrackUtils/runRedisDeduction";
+import { constructEvent, type EventInfo } from "./trackUtils/eventUtils";
 import { executePostgresTracking } from "./trackUtils/executePostgresTracking";
 import type { FeatureDeduction } from "./trackUtils/getFeatureDeductions";
 
@@ -32,6 +35,41 @@ export const runTrack = async ({
 		});
 	}
 
+	const eventInfo: EventInfo = {
+		event_name: body.feature_id || body.event_name || "",
+		value: body.value ?? 1,
+		properties: body.properties,
+		timestamp: body.timestamp,
+		idempotency_key: body.idempotency_key,
+	};
+
+	// If idempotency key is provided, insert event first
+	if (body.idempotency_key) {
+		const customer = await CusService.getFull({
+			db,
+			idOrInternalId: body.customer_id,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			entityId: body.entity_id,
+		});
+
+		const newEvent = constructEvent({
+			ctx,
+			eventInfo,
+			internalCustomerId: customer?.internal_id ?? "",
+			internalEntityId: customer?.entity?.internal_id ?? undefined,
+			customerId: body.customer_id,
+			entityId: body.entity_id,
+		});
+
+		await EventService.insert({
+			db,
+			event: newEvent,
+		});
+
+		body.skip_event = true;
+	}
+
 	const { fallback, balances } = await runRedisDeduction({
 		ctx,
 		query: {
@@ -41,13 +79,7 @@ export const runTrack = async ({
 		trackParams: body,
 		featureDeductions,
 		overageBehavior: body.overage_behavior || "cap",
-		eventInfo: {
-			event_name: body.feature_id || body.event_name || "",
-			value: body.value ?? 1,
-			properties: body.properties,
-			timestamp: body.timestamp,
-			idempotency_key: body.idempotency_key,
-		},
+		eventInfo,
 	});
 
 	let response: TrackResponseV2;

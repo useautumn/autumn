@@ -123,26 +123,6 @@ export const runRedisDeduction = async ({
 }: RunRedisDeductionParams): Promise<RunRedisDeductionResult> => {
 	const { org, env, skipCache } = ctx;
 
-	// const hasContUseFeature = featureDeductions.some((deduction) =>
-	// 	isContUseFeature({ feature: deduction.feature }),
-	// );
-
-	// 1. Check for idempotency key
-	if (trackParams.idempotency_key) {
-		return {
-			fallback: true,
-			code: "idempotency_key",
-		};
-	}
-
-	// // 2. Check for continuous use feature
-	// if (hasContUseFeature) {
-	// 	return {
-	// 		fallback: true,
-	// 		code: "allocated_feature",
-	// 	};
-	// }
-
 	if (query.skip_cache || skipCache) {
 		return {
 			fallback: true,
@@ -150,22 +130,22 @@ export const runRedisDeduction = async ({
 		};
 	}
 
+	const {
+		customer_id: customerId,
+		customer_data: customerData,
+		entity_id: entityId,
+		entity_data: entityData,
+	} = trackParams;
+
+	const { apiCustomer } = await getOrCreateApiCustomer({
+		ctx,
+		customerId,
+		customerData,
+		entityId,
+		entityData,
+	});
+
 	const result = await tryRedisWrite<RunRedisDeductionResult>(async () => {
-		const {
-			customer_id: customerId,
-			customer_data: customerData,
-			entity_id: entityId,
-			entity_data: entityData,
-		} = trackParams;
-
-		const { apiCustomer } = await getOrCreateApiCustomer({
-			ctx,
-			customerId,
-			customerData,
-			entityId,
-			entityData,
-		});
-
 		// Map feature deductions to the format expected by batching manager
 		const mappedDeductions = featureDeductions.map(
 			({ feature, deduction }) => ({

@@ -1,6 +1,6 @@
-import * as Sentry from "@sentry/bun";
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { setSentryTags } from "../external/sentry/sentryUtils";
 
 export const parseCustomerIdFromUrl = ({
 	url,
@@ -137,9 +137,9 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 	ctx.logger.info(`${method} ${c.req.path} (${ctx.org?.slug})`);
 
-	Sentry.setUser({
-		...reqContext,
-		body: undefined,
+	setSentryTags({
+		ctx,
+		customerId,
 	});
 
 	// Execute the request

@@ -43,7 +43,9 @@ export default function App() {
 				email: data.user.email ?? "unknown_email",
 				name: data.user.name ?? "unknown_name",
 				id: data.user.id ?? "unknown_user",
-				orgId: data.session.activeOrganizationId ?? "unknown_org",
+			});
+			Sentry.setTags({
+				org_id: data.session.activeOrganizationId ?? "unknown_org",
 			});
 		}
 	}, [data]);
