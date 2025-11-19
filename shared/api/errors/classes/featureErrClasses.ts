@@ -5,9 +5,9 @@ import { FeatureErrorCode } from "../codes/featureErrCodes.js";
  * Product not found error
  */
 export class FeatureAlreadyExistsError extends RecaseError {
-	constructor(opts: { productId: string; version?: string }) {
+	constructor(opts: { featureId: string }) {
 		super({
-			message: `Product ${opts.productId} ${opts.version ? ` (version ${opts.version})` : ""} not found`,
+			message: `Feature ${opts.featureId} already exists`,
 			code: FeatureErrorCode.FeatureAlreadyExists,
 			statusCode: 404,
 		});

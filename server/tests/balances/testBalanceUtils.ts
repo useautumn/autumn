@@ -24,7 +24,7 @@ export const getCustomerEvents = async ({
 	customerId: string;
 }) => {
 	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2_0 });
-	console.log("Fetching customer with autumn id");
+
 	const customer = await autumnV2.customers.get(customerId, {
 		with_autumn_id: true,
 	});

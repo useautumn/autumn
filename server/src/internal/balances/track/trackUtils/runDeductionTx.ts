@@ -7,12 +7,10 @@ import {
 	CusProductStatus,
 	cusEntToCusPrice,
 	cusProductsToCusEnts,
-	cusProductsToCusPrices,
 	FeatureUsageType,
 	type FullCustomer,
 	getMaxOverage,
 	getRelevantFeatures,
-	InsufficientBalanceError,
 	InternalError,
 	notNullish,
 	nullish,
@@ -21,22 +19,17 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { sql } from "drizzle-orm";
-import type { DrizzleCli } from "../../../../db/initDrizzle.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
-import { adjustAllowance } from "../../../../trigger/adjustAllowance.js";
 import { EventService } from "../../../api/events/EventService.js";
 import { CusService } from "../../../customers/CusService.js";
-import { CusEntService } from "../../../customers/cusProducts/cusEnts/CusEntitlementService.js";
-import {
-	getTotalNegativeBalance,
-	getUnlimitedAndUsageAllowed,
-} from "../../../customers/cusProducts/cusEnts/cusEntUtils.js";
+import { getUnlimitedAndUsageAllowed } from "../../../customers/cusProducts/cusEnts/cusEntUtils.js";
 import { deleteCachedApiCustomer } from "../../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { getCreditCost } from "../../../features/creditSystemUtils.js";
 import { isPaidContinuousUse } from "../../../features/featureUtils.js";
-import { deductFromCache } from "../redisTrackUtils/deductFromCache.js";
 import { constructEvent, type EventInfo } from "./eventUtils.js";
 import type { FeatureDeduction } from "./getFeatureDeductions.js";
+import { handlePaidAllocatedCusEnt } from "./handlePaidAllocatedCusEnt.js";
+import { rollbackDeduction } from "./rollbackDeduction.js";
 
 export type DeductionTxParams = {
 	ctx: AutumnContext;
@@ -89,16 +82,6 @@ export const deductFromCusEnts = async ({
 	const oldFullCus = structuredClone(fullCus);
 
 	const printLogs = false;
-
-	// if (printLogs) {
-	// 	console.log(
-	// 		`Deductions: 	`,
-	// 		deductions.map((d) => ({
-	// 			feature_id: d.feature.id,
-	// 			deduction: d.deduction,
-	// 		})),
-	// 	);
-	// }
 
 	const isPaidAllocated = deductions.some((d) =>
 		isPaidContinuousUse({
@@ -169,7 +152,9 @@ export const deductFromCusEnts = async ({
 				customer_entitlement_id: ce.id,
 				credit_cost: creditCost,
 				entity_feature_id: ce.entitlement.entity_feature_id,
-				usage_allowed: ce.usage_allowed || isFreeAllocated,
+				usage_allowed:
+					ce.usage_allowed ||
+					(isFreeAllocated && overageBehaviour !== "reject"),
 				min_balance: notNullish(maxOverage) ? -maxOverage : undefined,
 				add_to_adjustment: addToAdjustment,
 			};
@@ -202,6 +187,8 @@ export const deductFromCusEnts = async ({
 					cus_ent_ids: cusEntIds.length > 0 ? cusEntIds : null,
 					skip_additional_balance: skipAdditionalBalance,
 					alter_granted_balance: alterGrantedBalance,
+					overage_behaviour: overageBehaviour ?? "cap",
+					feature_id: feature.id,
 				})}::jsonb
 			)`,
 		);
@@ -224,13 +211,6 @@ export const deductFromCusEnts = async ({
 		}
 
 		const { updates, remaining: featureRemaining } = resultJson;
-
-		if (featureRemaining > 0 && overageBehaviour === "reject") {
-			throw new InsufficientBalanceError({
-				value: toDeduct ?? 1,
-				featureId: feature.id,
-			});
-		}
 
 		// Track the maximum remaining amount across all deductions
 		remainingAmounts[feature.id] = featureRemaining;
@@ -274,73 +254,34 @@ export const deductFromCusEnts = async ({
 		}
 
 		// Bill on Stripe for each updated entitlement
-		const cusPrices = cusProductsToCusPrices({
-			cusProducts: fullCus.customer_products,
-		});
 
-		for (const cusEntId of Object.keys(updates)) {
-			const update = updates[cusEntId];
-			const cusEnt = cusEnts.find((ce) => ce.id === cusEntId);
+		try {
+			for (const cusEntId of Object.keys(updates)) {
+				const update = updates[cusEntId];
+				const cusEnt = cusEnts.find((ce) => ce.id === cusEntId);
 
-			if (!cusEnt) continue;
+				if (!cusEnt) continue;
 
-			// Calculate original negative balance
-			const originalGrpBalance = getTotalNegativeBalance({
-				cusEnt,
-				balance: cusEnt.balance!,
-				entities: cusEnt.entities!,
-			});
-
-			// Calculate new negative balance from updates
-			const newGrpBalance = getTotalNegativeBalance({
-				cusEnt,
-				balance: update.balance,
-				entities: update.entities,
-			});
-
-			const { newReplaceables, deletedReplaceables } = await adjustAllowance({
-				db,
-				env,
-				org,
-				cusPrices: cusPrices as any,
-				customer: fullCus,
-				affectedFeature: feature,
-				cusEnt: cusEnt as any,
-				originalBalance: originalGrpBalance,
-				newBalance: newGrpBalance,
-				logger: ctx.logger,
-			});
-
-			// Adjust balance based on replaceables
-			let reUpdatedBalance = update.balance;
-
-			if (newReplaceables && newReplaceables.length > 0) {
-				reUpdatedBalance = reUpdatedBalance - newReplaceables.length;
-			} else if (deletedReplaceables && deletedReplaceables.length > 0) {
-				reUpdatedBalance = reUpdatedBalance + deletedReplaceables.length;
-			}
-
-			if (reUpdatedBalance !== update.balance) {
-				await CusEntService.update({
-					db,
-					id: cusEntId,
-					updates: {
-						balance: reUpdatedBalance,
-					},
+				await handlePaidAllocatedCusEnt({
+					ctx,
+					cusEnt,
+					fullCus,
+					updates,
 				});
 
-				// Update the updates object with the new balance
-				updates[cusEntId].balance = reUpdatedBalance;
-				updates[cusEntId].newReplaceables = newReplaceables ?? undefined;
-				updates[cusEntId].deletedReplaceables =
-					deletedReplaceables ?? undefined;
+				updateCusEntInFullCus({
+					fullCus,
+					cusEntId,
+					update,
+				});
 			}
-
-			updateCusEntInFullCus({
-				fullCus,
-				cusEntId,
-				update,
+		} catch (error) {
+			await rollbackDeduction({
+				ctx,
+				oldFullCus,
+				updates,
 			});
+			throw error;
 		}
 	}
 
@@ -372,78 +313,62 @@ export const runDeductionTx = async (
 	let event: Event | undefined;
 	let actualDeductions: Record<string, number> = {};
 
-	const result = await db.transaction(
-		async (tx) => {
-			// Set statement timeout to cancel query at database level if it takes too long
-			// This will automatically rollback the transaction and free the connection
-			await tx.execute(sql`SET LOCAL statement_timeout = '1000ms'`);
+	const result = await deductFromCusEnts(params);
+	fullCus = result.fullCus;
+	actualDeductions = result.actualDeductions;
 
-			// Pass tx as the db connection
-			const txParams = {
-				...params,
-				ctx: {
-					...ctx,
-					db: tx as unknown as typeof db,
-				},
-			};
+	if (!fullCus) {
+		return {
+			fullCus,
+			event,
+			actualDeductions,
+		};
+	}
 
-			const result = await deductFromCusEnts(txParams);
-			fullCus = result.fullCus;
-			actualDeductions = result.actualDeductions;
+	if (params.eventInfo) {
+		const newEvent = constructEvent({
+			ctx,
+			eventInfo: params.eventInfo,
+			internalCustomerId: fullCus.internal_id,
+			internalEntityId: fullCus.entity?.internal_id,
+			customerId: fullCus.id ?? "",
+			entityId: fullCus.entity?.id,
+		});
 
-			if (!fullCus) return;
-
-			if (params.eventInfo) {
-				const newEvent = constructEvent({
-					ctx: txParams.ctx,
-					eventInfo: params.eventInfo,
-					internalCustomerId: fullCus.internal_id,
-					internalEntityId: fullCus.entity?.internal_id,
-					customerId: fullCus.id ?? "",
-					entityId: fullCus.entity?.id,
-				});
-
-				event = await EventService.insert({
-					db: tx as unknown as DrizzleCli,
-					event: newEvent,
-				});
-			}
-			return result;
-		},
-		{
-			isolationLevel: "read committed",
-		},
-	);
+		event = await EventService.insert({
+			db,
+			event: newEvent,
+		});
+	}
 
 	if (params?.refreshCache && fullCus) {
-		// 1. If paid allocated, delete cache
-		if (result?.isPaidAllocated) {
-			await deleteCachedApiCustomer({
-				customerId: fullCus.id ?? "",
-				orgId: ctx.org.id,
-				env: ctx.env,
-			});
-		} else {
-			for (const [featureId, deductedAmount] of Object.entries(
-				actualDeductions,
-			)) {
-				if (deductedAmount !== 0) {
-					// Only deduct if something was actually deducted
-					// console.log(
-					// 	`Deducting from Redis cache: ${featureId}, ${deductedAmount}`,
-					// );
-					await deductFromCache({
-						ctx,
-						customerId: fullCus.id ?? "",
-						featureId,
-						amount: deductedAmount,
-						entityId: params.entityId,
-					});
-				}
-			}
-
-			// Log summary comparison
-		}
+		await deleteCachedApiCustomer({
+			customerId: fullCus.id ?? "",
+			orgId: ctx.org.id,
+			env: ctx.env,
+		});
+		// // 1. If paid allocated, delete cache
+		// if (result?.isPaidAllocated) {
+		// 	await deleteCachedApiCustomer({
+		// 		customerId: fullCus.id ?? "",
+		// 		orgId: ctx.org.id,
+		// 		env: ctx.env,
+		// 	});
+		// } else {
+		// 	for (const [featureId, deductedAmount] of Object.entries(
+		// 		actualDeductions,
+		// 	)) {
+		// 		if (deductedAmount !== 0) {
+		// 			await deductFromCache({
+		// 				ctx,
+		// 				customerId: fullCus.id ?? "",
+		// 				featureId,
+		// 				amount: deductedAmount,
+		// 				entityId: params.entityId,
+		// 			});
+		// 		}
+		// 	}
+		// }
 	}
 
 	return {

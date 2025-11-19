@@ -3,9 +3,10 @@ import {
 	ErrCode,
 	FeatureNotFoundError,
 	type FullCustomer,
+	RecaseError,
 } from "@autumn/shared";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
-import RecaseError from "@/utils/errorUtils.js";
+
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import type { ExtendedRequest } from "../../../../utils/models/Request.js";
 import { CusService } from "../../../customers/CusService.js";

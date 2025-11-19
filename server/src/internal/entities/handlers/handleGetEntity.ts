@@ -17,12 +17,15 @@ export const handleGetEntity = createRoute({
 		const ctx = c.get("ctx");
 		const { with_autumn_id } = c.req.valid("query");
 
+		const start = Date.now();
 		const apiEntity = await getApiEntity({
 			ctx,
 			customerId: customer_id,
 			entityId: entity_id,
 			withAutumnId: with_autumn_id,
 		});
+		const duration = Date.now() - start;
+		console.debug(`[get-entity] duration: ${duration}ms`);
 
 		return c.json(apiEntity);
 	},

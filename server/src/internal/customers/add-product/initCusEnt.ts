@@ -41,11 +41,7 @@ export const initCusEntEntities = ({
 	for (const entity of entities) {
 		if (!entitlementLinkedToEntity({ entitlement, entity })) continue;
 
-		if (
-			existingCusEnt &&
-			existingCusEnt.entities &&
-			existingCusEnt.entities[entity.id]
-		) {
+		if (existingCusEnt?.entities?.[entity.id]) {
 			continue;
 		}
 
@@ -58,7 +54,6 @@ export const initCusEntEntities = ({
 			balance: resetBalance || 0,
 			adjustment: 0,
 			additional_balance: 0,
-			additional_granted_balance: 0,
 		};
 	}
 
