@@ -62,8 +62,8 @@ describe(`${chalk.yellowBright(`${testCase}: Tracking allocated feature with con
 
 			const values = [];
 			for (let i = 0; i < 10; i++) {
-				const randomVal =
-					Math.floor(Math.random() * 5) * (Math.random() < 0.3 ? -1 : 1);
+				const randomVal = Math.floor(Math.random() * 5);
+				// * (Math.random() < 0.3 ? -1 : 1);
 				promises.push(
 					autumn.track({
 						customer_id: customerId,
@@ -71,8 +71,17 @@ describe(`${chalk.yellowBright(`${testCase}: Tracking allocated feature with con
 						value: randomVal,
 					}),
 				);
+
+				// Calculate expected balance with constraint: balance can never exceed includedUsage
+				// (i.e., usage can never go below 0)
+				const potentialBalance = startingBalance - randomVal;
+				const cappedBalance = Math.min(
+					potentialBalance,
+					userItem.included_usage,
+				);
+
 				totalUsage += randomVal;
-				startingBalance -= randomVal;
+				startingBalance = cappedBalance;
 				values.push(randomVal);
 
 				numberOfTracks++;

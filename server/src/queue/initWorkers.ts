@@ -1,7 +1,5 @@
 await import("../sentry.js");
 
-import { AuthType } from "@autumn/shared";
-
 import {
 	DeleteMessageCommand,
 	type Message,
@@ -20,6 +18,7 @@ import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigration
 import { detectBaseVariant } from "@/internal/products/productUtils/detectProductVariant.js";
 import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutReward.js";
 import { generateId } from "@/utils/genUtils.js";
+import { setSentryTags } from "../external/sentry/sentryUtils.js";
 import { createWorkerContext } from "./createWorkerContext.js";
 import { QUEUE_URL, sqs } from "./initSqs.js";
 import { JobName } from "./JobName.js";
@@ -100,12 +99,8 @@ const processMessage = async ({
 		});
 
 		if (ctx) {
-			Sentry.setUser({
-				org_id: ctx.org?.id,
-				org_slug: ctx.org?.slug,
-				env: ctx.env,
-				authType: AuthType.Worker,
-				jobName: job.name,
+			setSentryTags({
+				ctx,
 				messageId: message.MessageId,
 			});
 		}

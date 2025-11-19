@@ -76,13 +76,15 @@ export const executePostgresTracking = async ({
 			entityId: body.entity_id,
 			deductions: featureDeductions,
 			overageBehaviour: body.overage_behavior,
-			eventInfo: {
-				event_name: body.feature_id || body.event_name || "",
-				value: body.value ?? 1,
-				properties: body.properties,
-				timestamp: body.timestamp,
-				idempotency_key: body.idempotency_key,
-			},
+			eventInfo: body.idempotency_key
+				? undefined
+				: {
+						event_name: body.feature_id || body.event_name || "",
+						value: body.value ?? 1,
+						properties: body.properties,
+						timestamp: body.timestamp,
+						idempotency_key: body.idempotency_key,
+					},
 			refreshCache: true,
 			fullCus,
 			skipAdditionalBalance: true,

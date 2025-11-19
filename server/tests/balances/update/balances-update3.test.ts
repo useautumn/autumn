@@ -59,7 +59,7 @@ describe(`${chalk.yellowBright("balances-update3: Balance decoupling tests")}`, 
 		console.log("DB:", {
 			bal: cusEnt?.balance,
 			add_bal: cusEnt?.additional_balance,
-			add_grant: cusEnt?.additional_granted_balance,
+			add_grant: cusEnt?.adjustment,
 		});
 		console.log("API:", {
 			granted: balance.granted_balance,
@@ -111,7 +111,7 @@ describe(`${chalk.yellowBright("balances-update3: Balance decoupling tests")}`, 
 		const cusEnt = await getRawCusEnt();
 		expect(cusEnt?.balance).toBe(0); // Unchanged
 		expect(cusEnt?.additional_balance).toBe(10); // Added
-		expect(cusEnt?.additional_granted_balance).toBe(10); // Added
+		expect(cusEnt?.adjustment).toBe(10); // Added
 
 		const customer = await autumnV2.customers.get<ApiCustomer>(customerId);
 		const balance = customer.balances[TestFeature.Users];
@@ -139,7 +139,7 @@ describe(`${chalk.yellowBright("balances-update3: Balance decoupling tests")}`, 
 		const cusEnt = await getRawCusEnt();
 		expect(cusEnt?.balance).toBe(0); // Unchanged (all came from add_bal)
 		expect(cusEnt?.additional_balance).toBe(5); // 10 - 5
-		expect(cusEnt?.additional_granted_balance).toBe(5); // 10 - 5
+		expect(cusEnt?.adjustment).toBe(5); // 10 - 5
 
 		const customer = await autumnV2.customers.get<ApiCustomer>(customerId);
 		const balance = customer.balances[TestFeature.Users];
@@ -166,7 +166,7 @@ describe(`${chalk.yellowBright("balances-update3: Balance decoupling tests")}`, 
 		const cusEnt = await getRawCusEnt();
 		expect(cusEnt?.balance).toBe(0);
 		expect(cusEnt?.additional_balance).toBe(0); // Floored
-		expect(cusEnt?.additional_granted_balance).toBe(0); // 5 - 5
+		expect(cusEnt?.adjustment).toBe(0); // 5 - 5
 
 		const customer = await autumnV2.customers.get<ApiCustomer>(customerId);
 		const balance = customer.balances[TestFeature.Users];
@@ -203,7 +203,7 @@ describe(`${chalk.yellowBright("balances-update3: Balance decoupling tests")}`, 
 		// add_bal = 0 + 10 = 10, add_grant = 0 + 10 = 10, balance = -5
 		expect(cusEnt?.balance).toBe(-5); // Unchanged
 		expect(cusEnt?.additional_balance).toBe(10);
-		expect(cusEnt?.additional_granted_balance).toBe(10);
+		expect(cusEnt?.adjustment).toBe(10);
 
 		// Now remove: update to 3
 		// current = Math.max(0, -5) + 10 = 10
@@ -222,7 +222,7 @@ describe(`${chalk.yellowBright("balances-update3: Balance decoupling tests")}`, 
 		cusEnt = await getRawCusEnt();
 		expect(cusEnt?.balance).toBe(-5); // Unchanged
 		expect(cusEnt?.additional_balance).toBe(3); // 10 - 7
-		expect(cusEnt?.additional_granted_balance).toBe(3); // 10 - 7
+		expect(cusEnt?.adjustment).toBe(3); // 10 - 7
 	});
 
 	test("CASE D: balances.update from negative to positive preserves paid credits", async () => {
@@ -246,7 +246,7 @@ describe(`${chalk.yellowBright("balances-update3: Balance decoupling tests")}`, 
 		const cusEnt = await getRawCusEnt();
 		expect(cusEnt?.balance).toBe(-5); // Unchanged (still in debt)
 		expect(cusEnt?.additional_balance).toBe(0); // 3 - 3
-		expect(cusEnt?.additional_granted_balance).toBe(0); // 3 - 3
+		expect(cusEnt?.adjustment).toBe(0); // 3 - 3
 	});
 
 	test("CASE E: Track negative to fully return debt", async () => {
@@ -267,7 +267,7 @@ describe(`${chalk.yellowBright("balances-update3: Balance decoupling tests")}`, 
 		const cusEnt = await getRawCusEnt();
 		expect(cusEnt?.balance).toBe(0); // -5 + 5 = 0
 		expect(cusEnt?.additional_balance).toBe(0); // Unchanged
-		expect(cusEnt?.additional_granted_balance).toBe(0); // Unchanged
+		expect(cusEnt?.adjustment).toBe(0); // Unchanged
 
 		const customer = await autumnV2.customers.get<ApiCustomer>(customerId);
 		const balance = customer.balances[TestFeature.Users];

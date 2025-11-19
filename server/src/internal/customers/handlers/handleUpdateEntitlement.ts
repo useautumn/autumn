@@ -47,7 +47,7 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
 		const { customer_entitlement_id } = req.params;
 		const { balance, next_reset_at, entity_id } = req.body;
 
-		if (isNaN(parseFloat(balance))) {
+		if (Number.isNaN(parseFloat(balance))) {
 			throw new RecaseError({
 				message: "Invalid balance",
 				code: ErrCode.InvalidRequest,
