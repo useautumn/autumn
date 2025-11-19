@@ -26,10 +26,14 @@ if (process.env.AXIOM_TOKEN) {
 	const sdk = new NodeSDK({
 		spanProcessor: new BatchSpanProcessor(traceExporter),
 		resource: resource,
-		instrumentations: [getNodeAutoInstrumentations()],
+		instrumentations: [
+			// Then add other auto-instrumentations
+			getNodeAutoInstrumentations(),
+		],
 	});
 
 	// Starting the OpenTelemetry SDK to begin collecting telemetry data
 	console.log("Starting OpenTelemetry");
 	sdk.start();
+	console.log("OpenTelemetry started with IORedis instrumentation");
 }

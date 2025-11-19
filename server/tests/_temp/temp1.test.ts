@@ -7,12 +7,14 @@ import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
 import {
 	constructArrearItem,
-	constructArrearProratedItem,
 	constructFeatureItem,
 } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { attachFailedPaymentMethod } from "../../src/external/stripe/stripeCusUtils.js";
+import { CusService } from "../../src/internal/customers/CusService.js";
 import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "../../src/utils/scriptUtils/testUtils/initProductsV0.js";
+import { advanceClockForInvoice } from "../utils/stripeUtils.js";
 import { replaceItems } from "../utils/testProductUtils/testProductUtils.js";
 
 // UNCOMMENT FROM HERE
@@ -28,11 +30,7 @@ const pro = constructProduct({
 			featureId: TestFeature.Words,
 			includedUsage: 300,
 		}),
-		constructArrearProratedItem({
-			featureId: TestFeature.Workflows,
-			includedUsage: 0,
-			pricePerUnit: 10,
-		}),
+
 		// constructFeatureItem({
 		// 	featureId: TestFeature.Words,
 		// 	includedUsage: 100,
@@ -61,25 +59,29 @@ describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 			prefix: customerId,
 		});
 
-		// testClockId = result.testClockId!;
+		testClockId = result.testClockId!;
 
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: pro.id,
 		});
 
-		await autumn.entities.create(customerId, [
-			{
-				id: "1",
-				name: "Entity 1",
-				feature_id: TestFeature.Users,
-			},
-			{
-				id: "2",
-				name: "Entity 2",
-				feature_id: TestFeature.Users,
-			},
-		]);
+		const cus = await CusService.get({
+			db: ctx.db,
+			idOrInternalId: customerId,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		});
+
+		await attachFailedPaymentMethod({
+			stripeCli: ctx.stripeCli,
+			customer: cus!,
+		});
+
+		await advanceClockForInvoice({
+			stripeCli: ctx.stripeCli,
+			testClockId: testClockId,
+		});
 	});
 	return;
 

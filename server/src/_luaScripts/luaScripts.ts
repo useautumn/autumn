@@ -87,6 +87,13 @@ const setCustomerDetailsScript = readFileSync(
 );
 export const SET_CUSTOMER_DETAILS_SCRIPT = `${CACHE_KEY_UTILS}\n${setCustomerDetailsScript}`;
 
+// Prepend cache key utils to SET_INVOICES_SCRIPT
+const setInvoicesScript = readFileSync(
+	join(__dirname, "cusLuaScripts/setInvoices.lua"),
+	"utf-8",
+);
+export const SET_INVOICES_SCRIPT = `${CACHE_KEY_UTILS}\n${setInvoicesScript}`;
+
 // Prepend cache key utils to DELETE_CUSTOMER_SCRIPT
 const deleteCustomerScript = readFileSync(
 	join(__dirname, "cusLuaScripts/deleteCustomer.lua"),

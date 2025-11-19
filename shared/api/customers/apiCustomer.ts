@@ -1,22 +1,22 @@
 import { ApiBaseEntitySchema } from "@api/entities/apiBaseEntity.js";
 import { ApiCusRewardsSchema } from "@api/others/apiDiscount.js";
-import { ApiInvoiceSchema } from "@api/others/apiInvoice.js";
+import { ApiInvoiceV1Schema } from "@api/others/apiInvoice/apiInvoiceV1.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
 import { z } from "zod/v4";
 import { ApiCusReferralSchema } from "./components/apiCusReferral.js";
-import { ApiCusUpcomingInvoiceSchema } from "./components/apiCusUpcomingInvoice.js";
-import { ApiTrialsUsedSchema } from "./components/apiTrialsUsed.js";
+import { ApiTrialsUsedV1Schema } from "./components/apiTrialsUsed/apiTrialsUsedV1.js";
+// import { ApiCusUpcomingInvoiceSchema } from "./components/apiCusUpcomingInvoice.js";
 import { ApiBalanceSchema } from "./cusFeatures/apiBalance.js";
 import { ApiSubscriptionSchema } from "./cusPlans/apiSubscription.js";
 
 export const ApiCusExpandSchema = z.object({
-	invoices: z.array(ApiInvoiceSchema).optional(),
+	invoices: z.array(ApiInvoiceV1Schema).optional(),
 	entities: z.array(ApiBaseEntitySchema).optional(),
-	trials_used: z.array(ApiTrialsUsedSchema).optional(),
+	trials_used: z.array(ApiTrialsUsedV1Schema).optional(),
 	rewards: ApiCusRewardsSchema.nullish(),
 	referrals: z.array(ApiCusReferralSchema).optional(),
-	upcoming_invoice: ApiCusUpcomingInvoiceSchema.nullish(),
 	payment_method: z.any().nullish(),
+	// upcoming_invoice: ApiCusUpcomingInvoiceSchema.nullish(),
 });
 
 export const ApiCustomerSchema = z.object({

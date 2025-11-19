@@ -9,8 +9,8 @@ import {
 	type Organization,
 } from "@autumn/shared";
 import { notNullish } from "@shared/utils/utils.js";
-import type Stripe from "stripe";
 import { defaultApiVersion } from "@tests/constants.js";
+import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { priceToStripeItem } from "@/external/stripe/priceToStripeItem/priceToStripeItem.js";
@@ -117,9 +117,7 @@ const compareActualItems = async ({
 			console.log("--------------------------------");
 		}
 
-		expect(actualItem?.quantity).toBe(
-			(expectedItem as any).quantity,
-		);
+		expect(actualItem?.quantity).toBe((expectedItem as any).quantity);
 	}
 
 	expect(actualItems.length).toBe(expectedItems.length);
@@ -163,6 +161,7 @@ export const expectSubToBeCorrect = async ({
 
 	// 1. Only 1 sub ID available
 	let cusProducts = fullCus.customer_products;
+
 	if (!subId) {
 		const subIds = cusProductToSubIds({ cusProducts });
 		subId = subIds[0];
@@ -220,7 +219,8 @@ export const expectSubToBeCorrect = async ({
 				cusProduct.status === CusProductStatus.Scheduled &&
 				cusProductInPhase({ phaseStartMillis: unix, cusProduct })
 			) {
-				return scheduleIndexes.push(index);
+				scheduleIndexes.push(index);
+				return;
 			}
 
 			if (cusProduct.status === CusProductStatus.Scheduled) return;
@@ -228,9 +228,11 @@ export const expectSubToBeCorrect = async ({
 			if (cusProduct.product.is_add_on) {
 				// 1. If it's canceled
 				if (cusProduct.canceled && (cusProduct.ended_at || 0) > unix) {
-					return scheduleIndexes.push(index);
+					scheduleIndexes.push(index);
+					return;
 				} else if (!cusProduct.canceled) {
-					return scheduleIndexes.push(index);
+					scheduleIndexes.push(index);
+					return;
 				}
 
 				return;
@@ -246,7 +248,10 @@ export const expectSubToBeCorrect = async ({
 						: nullish(cp.internal_entity_id)),
 			);
 
-			if (!curScheduledProduct) return scheduleIndexes.push(index);
+			if (!curScheduledProduct) {
+				scheduleIndexes.push(index);
+				return;
+			}
 
 			// If scheduled product NOT in phase, add main product to schedule
 			if (
