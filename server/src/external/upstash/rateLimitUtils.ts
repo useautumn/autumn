@@ -11,6 +11,11 @@ import {
 	RateLimitType,
 	trackRateLimiter,
 } from "./initUpstash";
+import {
+	CHECK_RATE_LIMIT,
+	GENERAL_RATE_LIMIT,
+	TRACK_RATE_LIMIT,
+} from "./rateLimitConstants";
 
 export const getRateLimitType = (c: Context<HonoEnv>) => {
 	const method = c.req.method;
@@ -120,5 +125,29 @@ export const getRateLimitKey = async ({
 
 		case RateLimitType.General:
 			return `general:${orgId}:${env}`;
+	}
+};
+
+export const getRateLimitConfig = ({
+	rateLimitType,
+}: {
+	rateLimitType: RateLimitType;
+}) => {
+	switch (rateLimitType) {
+		case RateLimitType.Track:
+			return {
+				windowMs: 1000, // 1 second window
+				limit: TRACK_RATE_LIMIT,
+			};
+		case RateLimitType.Check:
+			return {
+				windowMs: 1000, // 1 second window
+				limit: CHECK_RATE_LIMIT,
+			};
+		case RateLimitType.General:
+			return {
+				windowMs: 1000, // 1 second window
+				limit: GENERAL_RATE_LIMIT,
+			};
 	}
 };
