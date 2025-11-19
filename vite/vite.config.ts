@@ -1,11 +1,22 @@
 import path from "node:path";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import tsconfigPaths from "vite-tsconfig-paths";
 
 // https://vite.dev/config/
 export default defineConfig({
-	plugins: [react(), tailwindcss()],
+	plugins: [
+		react(),
+		tailwindcss(), // Automatically reads paths from tsconfig.json
+		tsconfigPaths(),
+		sentryVitePlugin({
+			org: process.env.VITE_SENTRY_ORG,
+			project: process.env.VITE_SENTRY_PROJECT,
+		}),
+	],
+
 	resolve: {
 		alias: {
 			"@": path.resolve(__dirname, "./src"),
@@ -26,6 +37,7 @@ export default defineConfig({
 			"@radix/tooltip": "@radix-ui/react-tooltip",
 		},
 	},
+
 	optimizeDeps: {
 		// Exclude workspace dependencies from pre-bundling to avoid cache issues
 		exclude: [
@@ -34,10 +46,14 @@ export default defineConfig({
 			"better-auth/react",
 			"@better-auth/stripe",
 			"zod/v4",
+			"drizzle-orm/pg-core",
+			"drizzle-orm",
 		],
 	},
+
 	// Clear cache on config change
 	cacheDir: "node_modules/.vite",
+
 	server: {
 		host: "0.0.0.0", // Required for Docker
 		port: process.env.VITE_PORT
@@ -62,5 +78,9 @@ export default defineConfig({
 			// Allow serving files from workspace root (monorepo support)
 			allow: [".."],
 		},
+	},
+
+	build: {
+		sourcemap: true,
 	},
 });

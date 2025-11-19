@@ -1,9 +1,8 @@
-import { type AppEnv, AuthType, ErrCode } from "@autumn/shared";
+import { type AppEnv, AuthType, ErrCode, RecaseError } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { auth } from "@/utils/auth.js";
-import RecaseError from "@/utils/errorUtils.js";
 
 /**
  * Better Auth middleware for dashboard/session authentication
@@ -26,7 +25,6 @@ export const betterAuthMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 	// Step 2: Validate session exists
 	if (!session) {
-		ctx.logger.info(`Unauthorized - no session found (${c.req.url})`);
 		throw new RecaseError({
 			message: "Unauthorized - no session found",
 			code: ErrCode.NoAuthHeader,
@@ -39,7 +37,6 @@ export const betterAuthMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const userId = session?.user?.id;
 
 	if (!orgId) {
-		ctx.logger.info("Unauthorized - no org id found");
 		throw new RecaseError({
 			message: "Unauthorized - no org id found",
 			code: ErrCode.InvalidAuthHeader,
@@ -48,7 +45,6 @@ export const betterAuthMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	}
 
 	if (!userId) {
-		ctx.logger.info("Unauthorized - no user id found");
 		throw new RecaseError({
 			message: "Unauthorized - no user id found",
 			code: ErrCode.InvalidAuthHeader,
@@ -68,7 +64,6 @@ export const betterAuthMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	});
 
 	if (!data) {
-		ctx.logger.warn(`Org ${orgId} not found in DB`);
 		throw new RecaseError({
 			message: "Org not found",
 			code: ErrCode.OrgNotFound,

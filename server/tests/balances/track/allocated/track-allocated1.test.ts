@@ -1,13 +1,14 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion, ProductItemFeatureType } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { TestFeature } from "tests/setup/v2Features.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { timeout } from "../../../utils/genUtils";
 
 const testCase = "track-allocated1";
 const customerId = testCase;
@@ -87,14 +88,16 @@ describe(`${chalk.yellowBright(`track-allocated1: Tracking allocated feature `)}
 
 		// Check final balance
 		const customer = await autumnV1.customers.get(customerId);
-		const finalBalance = customer.features[TestFeature.Users].balance;
 
+		const finalBalance = customer.features[TestFeature.Users].balance;
 		expect(finalBalance).toBe(-4);
 
 		// Get non-cached customer
+		await timeout(2000);
 		const nonCachedCustomer = await autumnV1.customers.get(customerId, {
 			skip_cache: "true",
 		});
+
 		const nonCachedFinalBalance =
 			nonCachedCustomer.features[TestFeature.Users].balance;
 

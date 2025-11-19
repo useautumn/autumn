@@ -1,367 +1,34 @@
 import { writeFileSync } from "node:fs";
-import {
-	getListResponseSchema,
-	SuccessResponseSchema,
-} from "@api/common/commonResponses.js";
+import { SuccessResponseSchema } from "@api/common/commonResponses.js";
 import yaml from "yaml";
-import { z } from "zod/v4";
 import { createDocument, type ZodOpenApiPathsObject } from "zod-openapi";
-import { UpdateBalancesParamsSchema } from "../balances/updateBalanceModels.js";
+// import { UpdateBalancesParamsSchema } from "../balances/updateBalanceModels.js";
 import { SetUsageParamsSchema } from "../balances/usageModels.js";
 import { CustomerDataSchema } from "../common/customerData.js";
 import { EntityDataSchema } from "../common/entityData.js";
 import { setUsageJsDoc } from "../common/jsDocs.js";
-import { ApiEntityWithMeta } from "../entities/entitiesOpenApi.js";
+
+// import { ApiEntityWithMeta } from "../entities/entitiesOpenApi.js";
+
 import {
-	ApiCusFeatureSchema,
-	ApiCusProductSchema,
-	ApiCustomerSchema,
-	ApiFeatureSchema,
-	ApiProductItemSchema,
-	CreateCustomerParamsSchema,
-	CreateCustomerQuerySchema,
-	CreateFeatureParamsSchema,
-	FEATURE_EXAMPLE,
-	GetCustomerQuerySchema,
-	ListCustomersResponseSchema,
-	UpdateCustomerParamsSchema,
-	UpdateFeatureParamsSchema,
-} from "../models.js";
-import { ApiProductSchema, PRODUCT_EXAMPLE } from "../products/apiProduct.js";
+	ApiEntityWithMeta,
+	entitiesOpenApi,
+} from "../_openapi/prevVersions/entitiesOpenApi.js";
 import {
-	CreateProductV2ParamsSchema,
-	UpdateProductV2ParamsSchema,
-} from "../products/productOpModels.js";
-
-// Register schema with .meta() for OpenAPI spec generation
-export const ApiProductWithMeta = ApiProductSchema.meta({
-	id: "Product",
-	examples: [PRODUCT_EXAMPLE],
-});
-
-// Register the schema with .meta() for OpenAPI spec generation
-const ApiFeatureWithMeta = ApiFeatureSchema.extend({
-	type: z.enum(["boolean", "single_use", "continuous_use", "credit_system"]),
-}).meta({
-	id: "Feature",
-	examples: [FEATURE_EXAMPLE],
-});
-
-// Register schema with .meta() for OpenAPI spec generation
-const ApiCustomerWithMeta = ApiCustomerSchema.meta({
-	id: "Customer",
-});
-
-const productOps = {
-	"/products": {
-		get: {
-			summary: "List Products",
-			tags: ["products"],
-			responses: {
-				"200": {
-					description: "",
-					content: {
-						"application/json": {
-							schema: z.object({
-								list: z.array(ApiProductWithMeta),
-							}),
-						},
-					},
-				},
-			},
-		},
-		post: {
-			summary: "Create Product",
-			tags: ["products"],
-			requestBody: {
-				content: {
-					"application/json": { schema: CreateProductV2ParamsSchema },
-				},
-			},
-			responses: {
-				"200": {
-					description: "",
-					content: { "application/json": { schema: ApiProductWithMeta } },
-				},
-			},
-		},
-	},
-	"/products/{product_id}": {
-		get: {
-			summary: "Get Product",
-			tags: ["products"],
-			requestParams: {
-				path: z.object({
-					product_id: z.string(),
-				}),
-			},
-			responses: {
-				"200": {
-					description: "",
-					content: { "application/json": { schema: ApiProductWithMeta } },
-				},
-			},
-		},
-		post: {
-			summary: "Update Product",
-			tags: ["products"],
-			requestParams: {
-				path: z.object({
-					product_id: z.string(),
-				}),
-			},
-			requestBody: {
-				content: {
-					"application/json": { schema: UpdateProductV2ParamsSchema },
-				},
-			},
-			responses: {
-				"200": {
-					description: "",
-					content: { "application/json": { schema: ApiProductWithMeta } },
-				},
-			},
-		},
-		delete: {
-			summary: "Delete Product",
-			tags: ["products"],
-			requestParams: {
-				path: z.object({
-					product_id: z.string(),
-				}),
-				query: z.object({
-					all_versions: z.boolean().optional(),
-				}),
-			},
-			responses: {
-				"200": {
-					description: "",
-					content: {
-						"application/json": {
-							schema: SuccessResponseSchema,
-						},
-					},
-				},
-			},
-		},
-	},
-};
-
-const featureOps = {
-	"/features": {
-		get: {
-			summary: "List Features",
-			tags: ["features"],
-			responses: {
-				"200": {
-					description: "",
-					content: {
-						"application/json": {
-							schema: getListResponseSchema({ schema: ApiFeatureWithMeta }),
-						},
-					},
-				},
-			},
-		},
-		post: {
-			summary: "Create Feature",
-			tags: ["features"],
-			requestBody: {
-				content: {
-					"application/json": { schema: CreateFeatureParamsSchema },
-				},
-			},
-			responses: {
-				"200": {
-					description: "",
-					content: { "application/json": { schema: ApiFeatureWithMeta } },
-				},
-			},
-		},
-	},
-	"/features/{feature_id}": {
-		get: {
-			summary: "Get Feature",
-			tags: ["features"],
-			requestParams: {
-				path: z.object({
-					feature_id: z.string(),
-				}),
-			},
-			responses: {
-				"200": {
-					description: "",
-					content: { "application/json": { schema: ApiFeatureWithMeta } },
-				},
-			},
-		},
-		post: {
-			summary: "Update Feature",
-			tags: ["features"],
-			requestParams: {
-				path: z.object({
-					feature_id: z.string(),
-				}),
-			},
-			requestBody: {
-				content: {
-					"application/json": { schema: UpdateFeatureParamsSchema },
-				},
-			},
-			responses: {
-				"200": {
-					description: "",
-					content: { "application/json": { schema: ApiFeatureWithMeta } },
-				},
-			},
-		},
-		delete: {
-			summary: "Delete Feature",
-			tags: ["features"],
-			requestParams: {
-				path: z.object({
-					feature_id: z.string(),
-				}),
-			},
-			responses: {
-				"200": {
-					description: "",
-					content: {
-						"application/json": {
-							schema: SuccessResponseSchema,
-						},
-					},
-				},
-			},
-		},
-	},
-};
-
-const customerOps = {
-	"/customers": {
-		get: {
-			summary: "List Customers",
-			tags: ["customers"],
-			requestParams: {
-				query: z.object({
-					limit: z.number().int().min(10).max(100).optional(),
-					offset: z.number().int().min(0).optional(),
-				}),
-			},
-			responses: {
-				"200": {
-					description: "200 OK",
-					content: {
-						"application/json": { schema: ListCustomersResponseSchema },
-					},
-				},
-			},
-		},
-		post: {
-			summary: "Create Customer",
-			tags: ["customers"],
-			requestParams: {
-				query: CreateCustomerQuerySchema,
-			},
-			requestBody: {
-				content: {
-					"application/json": { schema: CreateCustomerParamsSchema },
-				},
-			},
-			responses: {
-				"200": {
-					description: "200 OK",
-					content: { "application/json": { schema: ApiCustomerWithMeta } },
-				},
-			},
-		},
-	},
-	"/customers/{customer_id}": {
-		get: {
-			summary: "Get Customer",
-			tags: ["customers"],
-			requestParams: {
-				path: z.object({
-					customer_id: z.string(),
-				}),
-				query: GetCustomerQuerySchema,
-			},
-			responses: {
-				"200": {
-					description: "200 OK",
-					content: { "application/json": { schema: ApiCustomerWithMeta } },
-				},
-			},
-		},
-		post: {
-			summary: "Update Customer",
-			tags: ["customers"],
-			requestParams: {
-				path: z.object({
-					customer_id: z.string(),
-				}),
-				query: z.object({
-					expand: z.string().optional(),
-				}),
-			},
-			requestBody: {
-				content: {
-					"application/json": { schema: UpdateCustomerParamsSchema },
-				},
-			},
-			responses: {
-				"200": {
-					description: "200 OK",
-					content: { "application/json": { schema: ApiCustomerWithMeta } },
-				},
-			},
-		},
-		delete: {
-			summary: "Delete Customer",
-			tags: ["customers"],
-			requestParams: {
-				path: z.object({
-					customer_id: z.string(),
-				}),
-			},
-			responses: {
-				"200": {
-					description: "200 OK",
-					content: {
-						"application/json": {
-							schema: SuccessResponseSchema,
-						},
-					},
-				},
-			},
-		},
-	},
-	"/customers/{customer_id}/balances": {
-		post: {
-			summary: "Set Feature Balances",
-			description: "Set the balance of a feature for a specific customer",
-			tags: ["customers"],
-			requestParams: {
-				path: z.object({
-					customer_id: z.string(),
-				}),
-			},
-			requestBody: {
-				content: {
-					"application/json": { schema: UpdateBalancesParamsSchema },
-				},
-			},
-			responses: {
-				"200": {
-					description: "",
-					content: {
-						"application/json": { schema: SuccessResponseSchema },
-					},
-				},
-			},
-		},
-	},
-};
+	ApiCustomerWithMeta,
+	customersOpenApi,
+} from "../_openapi/prevVersions/openapi1.2/customersOpenApi.js";
+import {
+	ApiFeatureWithMeta,
+	featuresOpenApi,
+} from "../_openapi/prevVersions/openapi1.2/featuresOpenApi.js";
+import {
+	ApiProductWithMeta,
+	productsOpenApi,
+} from "../_openapi/prevVersions/openapi1.2/productsOpenApi.js";
+import { ApiCusFeatureV3Schema } from "../customers/cusFeatures/previousVersions/apiCusFeatureV3.js";
+import { ApiCusProductV3Schema } from "../customers/cusPlans/previousVersions/apiCusProductV3.js";
+import { ApiProductItemSchema } from "../products/planFeature/previousVersions/apiProductItem.js";
 
 const coreOps: ZodOpenApiPathsObject = {
 	"/usage": {
@@ -406,19 +73,30 @@ const OPENAPI_1_2_0 = createDocument(
 		],
 		components: {
 			schemas: {
-				CustomerData: CustomerDataSchema,
+				CustomerData: CustomerDataSchema.meta({
+					id: "CustomerData",
+					description:
+						"Used to add customer details like name or email when auto-creating a customer.",
+				}),
 				EntityData: EntityDataSchema.meta({
 					id: "EntityData",
 					description: "Entity data for creating an entity",
 				}),
 				Customer: ApiCustomerWithMeta,
-				CustomerProduct: ApiCusProductSchema,
-				CustomerFeature: ApiCusFeatureSchema.meta({
+				CustomerProduct: ApiCusProductV3Schema.meta({
+					id: "CustomerProduct",
+					description: "Customer product object returned by the API",
+				}),
+				CustomerFeature: ApiCusFeatureV3Schema.meta({
 					id: "CustomerFeature",
 					description: "Customer feature object returned by the API",
 				}),
 				Product: ApiProductWithMeta,
-				ProductItem: ApiProductItemSchema,
+				ProductItem: ApiProductItemSchema.meta({
+					id: "ProductItem",
+					description:
+						"Product item defining features and pricing within a product",
+				}),
 				Feature: ApiFeatureWithMeta,
 				Entity: ApiEntityWithMeta,
 			},
@@ -432,9 +110,10 @@ const OPENAPI_1_2_0 = createDocument(
 		},
 
 		paths: {
-			...productOps,
-			...featureOps,
-			...customerOps,
+			...productsOpenApi,
+			...featuresOpenApi,
+			...customersOpenApi,
+			...entitiesOpenApi,
 			...coreOps,
 		},
 	},

@@ -4,8 +4,6 @@
 filename="$1"
 
 
-# Check if the file path contains "shell"
-
 
 if [[ "$filename" == *"shell"* ]]; then
     "$filename" "${@:2}"
@@ -15,10 +13,13 @@ elif [[ "$filename" == *"/tests/"* ]]; then
     # Remove .ts extension if present
     path_after_tests="${path_after_tests%.ts}"
     # Use scripts/test.ts which auto-detects framework
-    bun ../scripts/test.ts "$path_after_tests"
+    infisical run --env=dev -- bun ../scripts/test.ts "$path_after_tests"
 
 elif [[ "$filename" == *".sh"* ]]; then
     "$filename"
+elif [[ "$filename" == *"/scripts/"* ]]; then
+    # Run scripts with infisical prod environment
+    infisical run --env=prod -- bun "$filename"
 else
     # NODE_ENV=development npx tsx $filename
     NODE_ENV=development bun "$filename"

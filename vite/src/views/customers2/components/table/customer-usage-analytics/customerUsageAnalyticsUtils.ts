@@ -1,6 +1,84 @@
 import type { Event } from "@autumn/shared";
 import type { ChartConfig } from "@/components/ui/chart";
 
+type TimeseriesMeta = {
+	name: string;
+	type?: string;
+};
+
+type TimeseriesRow = Record<string, string | number>;
+
+export type TimeseriesData = {
+	meta: TimeseriesMeta[];
+	rows: number;
+	data: TimeseriesRow[];
+};
+
+/**
+ * Prepares chart data from pre-aggregated timeseries data
+ */
+export function prepareTimeseriesChartData({
+	timeseriesEvents,
+}: {
+	timeseriesEvents: TimeseriesData;
+}): {
+	chartData: Record<string, string | number>[];
+	chartConfig: ChartConfig;
+	eventNames: string[];
+	maxValue: number;
+} {
+	// Extract event names from meta (excluding 'period')
+	const eventNames = timeseriesEvents.meta
+		.filter((m) => m.name !== "period")
+		.map((m) => m.name.replace("_count", ""));
+
+	// Build chart config
+	const config: ChartConfig = {};
+	eventNames.forEach((name: string, index: number) => {
+		config[name] = {
+			label: name,
+			color: `var(--chart-${(index % 5) + 1})`,
+		};
+	});
+
+	// Transform timeseries data to chart format
+	const chartData = timeseriesEvents.data.map((row) => {
+		const date = new Date(row.period);
+		const dayKey = date.toLocaleDateString("en-US", {
+			month: "short",
+			day: "numeric",
+		});
+
+		const dataPoint: Record<string, string | number> = { date: dayKey };
+
+		// Add counts for each event (remove _count suffix for consistency)
+		eventNames.forEach((eventName: string) => {
+			const countKey = `${eventName}_count`;
+			dataPoint[eventName] = row[countKey] || 0;
+		});
+
+		return dataPoint;
+	});
+
+	// Calculate max value for Y-axis
+	const max = Math.max(
+		...chartData.map((day) =>
+			eventNames.reduce((sum, eventName) => {
+				const value = (day as Record<string, number | string>)[eventName];
+				return sum + (typeof value === "number" ? value : 0);
+			}, 0),
+		),
+		0,
+	);
+
+	return {
+		chartData,
+		chartConfig: config,
+		eventNames,
+		maxValue: max,
+	};
+}
+
 /**
  * Extracts unique event names from events
  */
@@ -76,7 +154,7 @@ export function prepareChartData({
 
 	const allDates: Record<string, Record<string, number>> = {};
 
-	for (let i = daysToShow - 1; i >= 0; i--) {
+	for (let i = daysToShow; i >= 0; i--) {
 		const date = new Date();
 		date.setDate(date.getDate() - i);
 		const dayKey = date.toLocaleDateString("en-US", {
@@ -86,29 +164,29 @@ export function prepareChartData({
 		allDates[dayKey] = {};
 	}
 
-	if (events && events.length > 0) {
-		events.forEach((event) => {
-			const date =
-				typeof event.timestamp === "number"
-					? new Date(event.timestamp * 1000)
-					: // type is Date but actually comes as a string
-						new Date(event.timestamp as unknown as string);
+	// if (events && events.length > 0) {
+	// 	events.forEach((event) => {
+	// 		const date =
+	// 			typeof event.timestamp === "number"
+	// 				? new Date(event.timestamp * 1000)
+	// 				: // type is Date but actually comes as a string
+	// 					new Date(event.timestamp as unknown as string);
 
-			const dayKey = date.toLocaleDateString("en-US", {
-				month: "short",
-				day: "numeric",
-			});
+	// 		const dayKey = date.toLocaleDateString("en-US", {
+	// 			month: "short",
+	// 			day: "numeric",
+	// 		});
 
-			if (allDates[dayKey] !== undefined) {
-				const eventName = event.event_name;
-				allDates[dayKey][eventName] = (allDates[dayKey][eventName] || 0) + 1;
-			}
-		});
-	}
+	// 		if (allDates[dayKey] !== undefined) {
+	// 			const eventName = event.event_name;
+	// 			allDates[dayKey][eventName] = (allDates[dayKey][eventName] || 0) + 1;
+	// 		}
+	// 	});
+	// }
 
 	const data = Object.entries(allDates).map(([day, counts]) => ({
 		date: day,
-		...counts,
+		default: 0,
 	}));
 
 	const max = Math.max(

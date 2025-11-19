@@ -65,9 +65,12 @@ const updateCusProductCanceled = async ({
 		return;
 	}
 
-	logger.info(
-		`Updating cus products for sub ${sub.id} to canceled | canceled_at: ${canceledAt}`,
-	);
+	logger.info(`sub.updated: updating cus products for to canceled`, {
+		data: {
+			stripeSubId: sub.id,
+			canceledAt,
+		},
+	});
 
 	const cancelsAt = sub.cancel_at ? sub.cancel_at * 1000 : undefined;
 

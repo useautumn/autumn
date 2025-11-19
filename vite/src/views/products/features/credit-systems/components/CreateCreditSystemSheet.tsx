@@ -1,19 +1,14 @@
-import type { CreateFeature } from "@autumn/shared";
+import type { CreateFeature, CreditSchemaItem } from "@autumn/shared";
 import { FeatureType, FeatureUsageType } from "@autumn/shared";
 import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	SheetFooter,
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
-import {
-	Sheet,
-	SheetContent,
-	SheetTrigger,
-} from "@/components/v2/sheets/Sheet";
+import { Sheet, SheetContent } from "@/components/v2/sheets/Sheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { FeatureService } from "@/services/FeatureService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -33,14 +28,24 @@ const defaultCreditSystem: CreateFeature = {
 	event_names: [],
 };
 
-export function CreateCreditSystemSheet() {
+export function CreateCreditSystemSheet({
+	open: controlledOpen,
+	onOpenChange: controlledOnOpenChange,
+}: {
+	open?: boolean;
+	onOpenChange?: (open: boolean) => void;
+} = {}) {
 	const { refetch } = useFeaturesQuery();
 	const axiosInstance = useAxiosInstance();
 
 	const [loading, setLoading] = useState(false);
-	const [open, setOpen] = useState(false);
+	const [internalOpen, setInternalOpen] = useState(false);
 	const [creditSystem, setCreditSystem] =
 		useState<CreateFeature>(defaultCreditSystem);
+
+	// Use controlled or internal state
+	const open = controlledOpen ?? internalOpen;
+	const setOpen = controlledOnOpenChange ?? setInternalOpen;
 
 	useEffect(() => {
 		if (open) {
@@ -61,7 +66,12 @@ export function CreateCreditSystemSheet() {
 				name: creditSystem.name,
 				id: creditSystem.id,
 				type: FeatureType.CreditSystem,
-				config: creditSystem.config,
+				credit_schema: creditSystem.config?.schema?.map(
+					(x: CreditSchemaItem) => ({
+						metered_feature_id: x.metered_feature_id,
+						credit_cost: x.credit_amount,
+					}),
+				),
 				event_names: creditSystem.event_names,
 			});
 			await refetch();
@@ -82,9 +92,6 @@ export function CreateCreditSystemSheet() {
 
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetTrigger asChild>
-				<Button variant="add">Credit System</Button>
-			</SheetTrigger>
 			<SheetContent className="flex flex-col overflow-hidden">
 				<SheetHeader
 					title="Create Credit System"

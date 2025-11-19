@@ -1,8 +1,11 @@
+await import("../sentry.js");
+
 import {
 	DeleteMessageCommand,
 	type Message,
 	ReceiveMessageCommand,
 } from "@aws-sdk/client-sqs";
+import * as Sentry from "@sentry/bun";
 import type { Logger } from "pino";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
@@ -15,6 +18,7 @@ import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigration
 import { detectBaseVariant } from "@/internal/products/productUtils/detectProductVariant.js";
 import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutReward.js";
 import { generateId } from "@/utils/genUtils.js";
+import { setSentryTags } from "../external/sentry/sentryUtils.js";
 import { createWorkerContext } from "./createWorkerContext.js";
 import { QUEUE_URL, sqs } from "./initSqs.js";
 import { JobName } from "./JobName.js";
@@ -35,11 +39,9 @@ interface SqsJob {
 const processMessage = async ({
 	message,
 	db,
-	workerId,
 }: {
 	message: Message;
 	db: DrizzleCli;
-	workerId: number;
 }) => {
 	if (!message.Body) {
 		console.warn("Received message without body");
@@ -58,12 +60,7 @@ const processMessage = async ({
 		},
 	});
 
-	const ctx = await createWorkerContext({
-		db,
-		orgId: job.data.orgId,
-		env: job.data.env,
-		logger: workerLogger,
-	});
+	workerLogger.info(`Processing message: ${job.name}`);
 
 	try {
 		if (job.name === JobName.DetectBaseVariant) {
@@ -93,14 +90,28 @@ const processMessage = async ({
 			return;
 		}
 
+		// Jobs below need worker context
+		const ctx = await createWorkerContext({
+			db,
+			orgId: job.data.orgId,
+			env: job.data.env,
+			logger: workerLogger,
+		});
+
+		if (ctx) {
+			setSentryTags({
+				ctx,
+				messageId: message.MessageId,
+			});
+		}
+
 		if (actionHandlers.includes(job.name as JobName)) {
 			// Note: action handlers need BullMQ queue for nested jobs
 			// This will need to be refactored when migrating action handlers to SQS
 			await runActionHandlerTask({
-				queue: null as any,
-				job: { name: job.name, data: job.data } as any,
-				logger: workerLogger,
-				db,
+				ctx,
+				jobName: job.name as JobName,
+				payload: job.data,
 			});
 			return;
 		}
@@ -139,6 +150,7 @@ const processMessage = async ({
 			});
 		}
 	} catch (error: any) {
+		Sentry.captureException(error);
 		workerLogger.error(`Failed to process SQS job: ${job.name}`, {
 			jobName: job.name,
 			error: {
@@ -168,7 +180,7 @@ const startPollingLoop = async ({ db }: { db: DrizzleCli }) => {
 				QueueUrl: QUEUE_URL,
 				MaxNumberOfMessages: 10, // Receive up to 10 messages at once
 				WaitTimeSeconds: 20, // Long polling
-				VisibilityTimeout: 60, // 60 seconds to process the message
+				VisibilityTimeout: 30, // 12 hours (max) - prevents duplicate processing of long-running jobs
 				// For FIFO queues, add ReceiveRequestAttemptId for deduplication
 				...(isFifoQueue && {
 					ReceiveRequestAttemptId: generateId("receive"),
@@ -184,10 +196,24 @@ const startPollingLoop = async ({ db }: { db: DrizzleCli }) => {
 				await Promise.allSettled(
 					response.Messages.map(async (message) => {
 						// Check if we should stop before processing
-						if (!isRunning) return;
+						if (!isRunning || !message.Body) return;
+
+						// If migration job, return success immediately to avoid duplicate processing
+						const job: SqsJob = JSON.parse(message.Body);
+						if (job.name === JobName.Migration) {
+							logger.info(
+								`Returning success immediately for migration job ${job.data.migrationJobId}`,
+							);
+							await sqs.send(
+								new DeleteMessageCommand({
+									QueueUrl: QUEUE_URL,
+									ReceiptHandle: message.ReceiptHandle,
+								}),
+							);
+						}
 
 						try {
-							await processMessage({ message, db, workerId: 1 });
+							await processMessage({ message, db });
 						} catch (error: any) {
 							logger.error(
 								`Failed to process message ${message.MessageId}: ${error.message}`,
@@ -247,11 +273,18 @@ export const initWorkers = async () => {
 			abortController.abort();
 		}
 
-		// Give 5 seconds to finish current message processing
-		setTimeout(() => {
-			console.log("Shutdown timeout reached, forcing exit");
+		// In production, give 5 seconds to finish current message processing
+		// In development, exit immediately for faster hot reloads
+		const isProd = process.env.NODE_ENV === "production";
+		if (isProd) {
+			setTimeout(() => {
+				console.log("Shutdown timeout reached, forcing exit");
+				process.exit(0);
+			}, 5000);
+		} else {
+			console.log("Development mode: exiting immediately");
 			process.exit(0);
-		}, 5000);
+		}
 	};
 
 	process.on("SIGTERM", shutdown);

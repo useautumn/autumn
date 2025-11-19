@@ -43,14 +43,14 @@ export function AdvancedSettings() {
 		Number(item.included_usage) > 0;
 
 	// const defaultRollover: RolloverConfig = {
-	// 	duration: RolloverDuration.Month,
+	// 	duration: RolloverExpiryDurationType.Month,
 	// 	length: 1 as number,
 	// 	max: null,
 	// };
 
 	// const setRolloverConfigKey = (
 	// 	key: keyof RolloverConfig,
-	// 	value: null | number | RolloverDuration,
+	// 	value: null | number | RolloverExpiryDurationType,
 	// ) => {
 	// 	setItem({
 	// 		...item,

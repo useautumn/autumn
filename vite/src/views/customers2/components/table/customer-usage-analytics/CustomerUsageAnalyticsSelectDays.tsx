@@ -7,7 +7,7 @@ import {
 import { Button } from "@/components/v2/buttons/Button";
 import { cn } from "@/lib/utils";
 
-const DAY_OPTIONS = [7, 14, 21, 28];
+const DAY_OPTIONS = [7, 30];
 
 export function CustomerUsageAnalyticsSelectDays({
 	selectedDays,
@@ -25,7 +25,7 @@ export function CustomerUsageAnalyticsSelectDays({
 					variant="secondary"
 					role="combobox"
 					size="mini"
-					className="justify-between font-normal !px-2 gap-3"
+					className="justify-between font-normal px-2! gap-3"
 				>
 					<span className="truncate">{displayText}</span>
 					<ChevronDown className="h-4 w-4 shrink-0 text-t3" />

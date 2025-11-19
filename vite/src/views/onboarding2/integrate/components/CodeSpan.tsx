@@ -10,7 +10,7 @@ export const CodeSpan = ({
 	return (
 		<span
 			className={cn(
-				"bg-stone-200 font-mono text-t2 px-1 py-0.5 rounded-md",
+				"bg-interactive-secondary font-mono text-t2 px-1 py-0.5 rounded-md",
 				className,
 			)}
 		>

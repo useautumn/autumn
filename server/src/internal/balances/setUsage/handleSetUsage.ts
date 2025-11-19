@@ -22,13 +22,8 @@ export const handleSetUsage = createRoute({
 			customerId: body.customer_id,
 			entityId: body.entity_id,
 			deductions: featureDeductions,
-			// eventInfo: {
-			// 	event_name: body.feature_id || body.event_name!,
-			// 	value: body.value ?? 1,
-			// 	properties: body.properties,
-			// 	timestamp: body.timestamp,
-			// 	idempotency_key: body.idempotency_key,
-			// },
+
+			refreshCache: true,
 		});
 
 		const elapsed = Date.now() - start;

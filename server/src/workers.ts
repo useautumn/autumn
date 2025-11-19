@@ -10,14 +10,14 @@ console.warn = (...args: any[]) => {
 
 import "dotenv/config";
 import cluster from "node:cluster";
-import os from "node:os";
+
 import { initInfisical } from "./external/infisical/initInfisical.js";
 
 // Number of worker processes (defaults to CPU cores)
-const NUM_PROCESSES =
-	process.env.NODE_ENV === "development"
-		? 1
-		: Number.parseInt(process.env.WORKER_PROCESSES || String(os.cpus().length));
+const NUM_PROCESSES = process.env.NODE_ENV === "development" ? 1 : 4;
+
+// Track if we're shutting down
+let isShuttingDown = false;
 
 if (cluster.isPrimary) {
 	await initInfisical();
@@ -36,12 +36,57 @@ if (cluster.isPrimary) {
 		cluster.fork();
 	}
 
-	// Handle worker exits and restart them
-	cluster.on("exit", (worker, code, signal) => {
+	// Graceful shutdown handler for primary process
+	const shutdown = async () => {
+		if (isShuttingDown) return;
+		isShuttingDown = true;
+
 		console.log(
-			`⚠️  Worker ${worker.process.pid} died (${signal || code}). Restarting...`,
+			"\n🛑 Received shutdown signal, gracefully shutting down workers...",
 		);
-		cluster.fork();
+
+		// Send SIGTERM to all workers
+		for (const id in cluster.workers) {
+			cluster.workers[id]?.kill("SIGTERM");
+		}
+
+		// Give workers 10 seconds to finish, then force exit
+		const shutdownTimeout = setTimeout(() => {
+			console.log("⚠️  Shutdown timeout reached, forcing exit");
+			process.exit(0);
+		}, 10000);
+
+		// Wait for all workers to exit gracefully
+		const checkWorkers = setInterval(() => {
+			const aliveWorkers = Object.keys(cluster.workers || {}).length;
+			if (aliveWorkers === 0) {
+				clearInterval(checkWorkers);
+				clearTimeout(shutdownTimeout);
+				console.log("✅ All workers shut down gracefully");
+				process.exit(0);
+			}
+		}, 100);
+	};
+
+	process.on("SIGTERM", shutdown);
+	process.on("SIGINT", shutdown);
+
+	// Handle worker exits
+	cluster.on("exit", (worker, code, signal) => {
+		if (isShuttingDown) {
+			console.log(`[Worker ${worker.process.pid}] Exited gracefully`);
+			return;
+		}
+
+		console.log(
+			`⚠️  Worker ${worker.process.pid} died unexpectedly (${signal || code}). Restarting...`,
+		);
+
+		if (process.env.NODE_ENV === "development") {
+			process.exit(1);
+		} else {
+			cluster.fork();
+		}
 	});
 } else {
 	// Worker process
@@ -52,10 +97,12 @@ if (cluster.isPrimary) {
 		console.log(`[Worker ${process.pid}] Using SQS queue implementation`);
 		const { initWorkers } = await import("./queue/initWorkers.js");
 		await initWorkers();
+		// SQS implementation handles its own SIGTERM/SIGINT
 	} else if (process.env.QUEUE_URL) {
 		console.log(`[Worker ${process.pid}] Using BullMQ queue implementation`);
 		const { initWorkers } = await import("./queue/bullmq/initBullMqWorkers.js");
 		await initWorkers();
+		// BullMQ implementation handles its own SIGTERM/SIGINT
 	} else {
 		console.error("No queue configured. Set either SQS_QUEUE_URL or QUEUE_URL");
 		process.exit(1);

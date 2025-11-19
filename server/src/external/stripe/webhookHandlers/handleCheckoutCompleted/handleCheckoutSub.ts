@@ -16,15 +16,13 @@ export const handleCheckoutSub = async ({
 	db,
 	subscription,
 	attachParams,
-	logger,
 }: {
 	stripeCli: Stripe;
 	db: DrizzleCli;
 	subscription: Stripe.Subscription | null;
 	attachParams: AttachParams;
-	logger: any;
 }) => {
-	const { org, customer } = attachParams;
+	const { org } = attachParams;
 
 	if (!subscription) return;
 
@@ -75,7 +73,7 @@ export const handleCheckoutSub = async ({
 		if (
 			arrearPrice &&
 			(attachParams.internalEntityId ||
-				attachParams.apiVersion === ApiVersion.Beta)
+				attachParams.apiVersion === ApiVersion.V1_Beta)
 		) {
 			itemsUpdate.push({
 				id: item.id,
@@ -95,18 +93,6 @@ export const handleCheckoutSub = async ({
 			);
 		}
 	}
-
-	// let deletedCount = itemsUpdate.filter((item) => item.deleted).length;
-	// if (deletedCount === curSubItems.length) {
-	//   itemsUpdate = itemsUpdate.concat(
-	//     getArrearItems({
-	//       prices: attachParams.prices,
-	//       interval: attachParams.itemSets?.[0]?.interval,
-	//       intervalCount: attachParams.itemSets?.[0]?.intervalCount,
-	//       org,
-	//     })
-	//   );
-	// }
 
 	if (itemsUpdate.length > 0) {
 		await stripeCli.subscriptions.update(subscription.id, {

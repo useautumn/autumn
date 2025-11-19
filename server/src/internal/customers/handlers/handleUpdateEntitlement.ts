@@ -2,6 +2,7 @@ import {
 	ErrCode,
 	type FullCustomerEntitlement,
 	getCusEntBalance,
+	notNullish,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
@@ -46,7 +47,7 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
 		const { customer_entitlement_id } = req.params;
 		const { balance, next_reset_at, entity_id } = req.body;
 
-		if (isNaN(parseFloat(balance))) {
+		if (Number.isNaN(parseFloat(balance))) {
 			throw new RecaseError({
 				message: "Invalid balance",
 				code: ErrCode.InvalidRequest,
@@ -55,7 +56,7 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
 		}
 
 		if (
-			next_reset_at !== null &&
+			notNullish(next_reset_at) &&
 			(!Number.isInteger(next_reset_at) || next_reset_at < 0)
 		) {
 			throw new RecaseError({

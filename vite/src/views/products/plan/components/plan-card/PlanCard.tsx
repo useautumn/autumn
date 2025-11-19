@@ -18,7 +18,7 @@ export default function PlanCard() {
 	return (
 		<Card
 			className="min-w-sm max-w-xl mx-4 bg-card w-full"
-			onClick={(e) => e.stopPropagation()}
+			onMouseDown={(e) => e.stopPropagation()}
 		>
 			<PlanCardHeader />
 

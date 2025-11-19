@@ -137,7 +137,9 @@ export const getCustomerSub = async ({
 	const sub = await stripeCli.subscriptions.retrieve(subId, {
 		expand: [
 			"items.data.price.tiers",
-			"discounts.coupon.applies_to",
+			"discounts.source.coupon",
+			"discounts.source.coupon.applies_to",
+			// "discounts.coupon.applies_to",
 			"latest_invoice",
 		],
 	});
@@ -239,7 +241,9 @@ export const paramsToCurSub = async ({
 		expand: [
 			"items.data.price.tiers",
 			"latest_invoice",
-			"discounts.coupon.applies_to",
+			// "discounts.coupon.applies_to",
+			"discounts.source.coupon",
+			"discounts.source.coupon.applies_to",
 		],
 	});
 

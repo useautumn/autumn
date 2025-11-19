@@ -1,3 +1,4 @@
+import type { ProcessorConfigs } from "@models/genModels/processorSchemas.js";
 import { sql } from "drizzle-orm";
 import {
 	boolean,
@@ -26,11 +27,6 @@ export type StripeConfig = {
 	test_connect_webhook_secret?: string;
 	live_connect_webhook_secret?: string;
 };
-
-export type OrgProcessorConfig = {
-	success_url: string;
-};
-
 export interface VersionConfig {
 	sandbox?: string;
 	live?: string;
@@ -74,6 +70,8 @@ export const organizations = pgTable(
 		// 	.$type<StripeConnectConfig>()
 		// 	.default({} as StripeConnectConfig)
 		// 	.notNull(),
+
+		processor_configs: jsonb("processor_configs").$type<ProcessorConfigs>(),
 
 		test_pkey: text("test_pkey"),
 		live_pkey: text("live_pkey"),

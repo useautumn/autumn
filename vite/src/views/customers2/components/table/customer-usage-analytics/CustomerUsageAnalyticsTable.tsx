@@ -1,67 +1,90 @@
 import { ChartBar } from "@phosphor-icons/react";
-import {
-	parseAsArrayOf,
-	parseAsInteger,
-	parseAsString,
-	useQueryState,
-} from "nuqs";
-import { useEffect, useMemo } from "react";
+import { parseAsInteger, useQueryState } from "nuqs";
+import { useMemo } from "react";
 import { Table } from "@/components/general/table";
+import { cn } from "@/lib/utils";
 import { useCusEventsQuery } from "@/views/customers/customer/hooks/useCusEventsQuery";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
+import { useCustomerTimeseriesEvents } from "@/views/customers2/hooks/useCustomerTimeseriesEvents";
+import { EmptyState } from "../EmptyState";
 import { CustomerUsageAnalyticsChart } from "./CustomerUsageAnalyticsChart";
 import { CustomerUsageAnalyticsColumns } from "./CustomerUsageAnalyticsColumns";
 import { CustomerUsageAnalyticsFullButton } from "./CustomerUsageAnalyticsFullButton";
 import { CustomerUsageAnalyticsSelectDays } from "./CustomerUsageAnalyticsSelectDays";
-import { CustomerUsageAnalyticsSelectFeatures } from "./CustomerUsageAnalyticsSelectFeatures";
-import {
-	filterEventsByTimeAndFeatures,
-	getAvailableFeatures,
-} from "./customerUsageAnalyticsUtils";
 
 export function CustomerUsageAnalyticsTable() {
-	const { events, isLoading } = useCusEventsQuery();
-
 	const [selectedDays, setSelectedDays] = useQueryState(
 		"analyticsTimeRange",
 		parseAsInteger.withDefault(7),
 	);
 
-	const [selectedFeatures, setSelectedFeatures] = useQueryState(
-		"analyticsFeatures",
-		parseAsArrayOf(parseAsString).withDefault([]),
-	);
+	const { customer } = useCusQuery();
 
-	const availableFeatures = useMemo(
-		() => getAvailableFeatures({ events: events ?? [] }),
-		[events],
-	);
+	// Map selectedDays to interval for API
+	const interval = useMemo(() => {
+		if (selectedDays <= 7) return "7d";
+		return "30d";
+	}, [selectedDays]);
 
-	useEffect(() => {
-		if (
-			availableFeatures.length > 0 &&
-			selectedFeatures &&
-			selectedFeatures.length === 0
-		) {
-			setSelectedFeatures(availableFeatures as string[]);
-		}
-	}, [availableFeatures, selectedFeatures, setSelectedFeatures]);
+	// const [selectedFeatures, setSelectedFeatures] = useQueryState(
+	// 	"analyticsFeatures",
+	// 	parseAsArrayOf(parseAsString).withDefault([]),
+	// );
 
-	const filteredEvents = useMemo(
-		() =>
-			filterEventsByTimeAndFeatures({
-				events: events ?? [],
-				selectedDays,
-				selectedFeatures,
-			}),
-		[events, selectedDays, selectedFeatures],
-	);
+	// Fetch raw events for the table via clickhouse
+	// const { rawEvents, isLoading: rawEventsLoading } = useCustomerRawEvents({
+	// 	interval,
+	// });
+
+	// Fetch raw events for the table via API
+	const { events: rawEvents, isLoading: rawEventsLoading } =
+		useCusEventsQuery();
+
+	// Fetch pre-aggregated timeseries data for the chart
+	const { timeseriesEvents, isLoading: timeseriesLoading } =
+		useCustomerTimeseriesEvents({
+			interval,
+			// eventNames: selectedFeatures || [],
+		});
+
+	const isLoading = rawEventsLoading || timeseriesLoading;
+
+	// const availableFeatures = useMemo(
+	// 	() => getAvailableFeatures({ events: rawEvents ?? [] }),
+	// 	[rawEvents],
+	// );
+
+	// useEffect(() => {
+	// 	if (
+	// 		availableFeatures.length > 0 &&
+	// 		selectedFeatures &&
+	// 		selectedFeatures.length === 0
+	// 	) {
+	// 		setSelectedFeatures(availableFeatures as string[]);
+	// 	}
+	// }, [availableFeatures, selectedFeatures, setSelectedFeatures]);
+
+	// const filteredEvents = useMemo(
+	// 	() =>
+	// 		filterEventsByTimeAndFeatures({
+	// 			events: rawEvents ?? [],
+	// 			selectedDays,
+	// 			selectedFeatures,
+	// 		}),
+	// 	[rawEvents, selectedDays, selectedFeatures],
+	// );
+
+	// Limit to 100 most recent events for the table
+	// const limitedEvents = useMemo(() => rawEvents.slice(0, 100), [rawEvents]);
 
 	const enableSorting = false;
 	const table = useCustomerTable({
-		data: filteredEvents,
+		data: rawEvents,
 		columns: CustomerUsageAnalyticsColumns,
 	});
+
+	const hasEvents = rawEvents?.length > 0;
 
 	return (
 		<Table.Provider
@@ -70,20 +93,21 @@ export function CustomerUsageAnalyticsTable() {
 				numberOfColumns: CustomerUsageAnalyticsColumns.length,
 				enableSorting,
 				isLoading,
+				rowClassName: "h-8 bg-interactive-secondary",
 			}}
 		>
 			<Table.Container>
 				<Table.Toolbar>
 					<Table.Heading>
-						<ChartBar size={16} weight="fill" className="text-t5" />
-						Usage Analytics
+						<ChartBar size={16} weight="fill" className="text-subtle" />
+						Usage
 					</Table.Heading>
 					<Table.Actions>
-						<CustomerUsageAnalyticsSelectFeatures
+						{/* <CustomerUsageAnalyticsSelectFeatures
 							availableFeatures={availableFeatures as string[]}
 							selectedFeatures={selectedFeatures}
 							setSelectedFeatures={setSelectedFeatures}
-						/>
+						/> */}
 						<CustomerUsageAnalyticsSelectDays
 							selectedDays={selectedDays}
 							setSelectedDays={setSelectedDays}
@@ -91,14 +115,52 @@ export function CustomerUsageAnalyticsTable() {
 						<CustomerUsageAnalyticsFullButton />
 					</Table.Actions>
 				</Table.Toolbar>
-				<CustomerUsageAnalyticsChart
-					events={filteredEvents}
-					daysToShow={selectedDays ?? 7}
-				/>
-				<Table.Content>
-					<Table.Header />
-					<Table.Body />
-				</Table.Content>
+				<div className="flex w-full gap-2 ">
+					{isLoading ? (
+						<div className="flex justify-center py-4 w-full h-full relative overflow-visible text-sm bg-interactive-secondary rounded-lg border shadow-sm">
+							<div className="text-sm text-t4 text-center overflow-visible flex flex-col gap-2 shimmer">
+								<span className="flex items-center gap-2">
+									{/* <SmallSpinner size={14} /> */}
+									Loading events
+								</span>
+							</div>
+							{/* <div className="font-mono text-t6 absolute top-8.5">
+								{customer.name || customer.email || customer.id}
+							</div> */}
+						</div>
+					) : hasEvents ? (
+						<>
+							<div className="flex max-w-3/8 w-full min-w-0 flex-col h-[250px]">
+								<div className="overflow-hidden flex flex-col border h-full bg-card">
+									<div className="">
+										<table className="table-fixed p-0 w-full h-full">
+											<Table.Header />
+										</table>
+									</div>
+									<div
+										className={cn(
+											"overflow-auto",
+											rawEvents?.length < 6 ? "border-b" : "",
+										)}
+									>
+										<table className="table-fixed p-0 w-full">
+											<Table.Body />
+										</table>
+									</div>
+								</div>
+							</div>
+							<div className="flex max-w-5/8 w-full min-w-0 h-[250px]">
+								<CustomerUsageAnalyticsChart
+									timeseriesEvents={timeseriesEvents}
+									// events={filteredEvents}
+									daysToShow={selectedDays ?? 7}
+								/>
+							</div>
+						</>
+					) : (
+						<EmptyState text="Record events to display feature usage" />
+					)}
+				</div>
 			</Table.Container>
 		</Table.Provider>
 	);

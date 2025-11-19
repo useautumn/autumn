@@ -1,6 +1,5 @@
 import {
-	type ApiInvoice,
-	ApiInvoiceItemSchema,
+	type ApiInvoiceV1,
 	type Customer,
 	type Feature,
 	type Invoice,
@@ -25,32 +24,33 @@ export const processInvoice = ({
 	invoice: Invoice;
 	withItems?: boolean;
 	features?: Feature[];
-}) => {
+}): ApiInvoiceV1 => {
 	return {
-		product_ids: invoice.product_ids,
+		// product_ids: invoice.product_ids,
+		plan_ids: invoice.product_ids,
 		stripe_id: invoice.stripe_id,
-		status: invoice.status,
+		status: invoice.status ?? "",
 		total: invoice.total,
 		currency: invoice.currency,
 		created_at: invoice.created_at,
-		// hosted_invoice_url: invoice.hosted_invoice_url,
 		hosted_invoice_url: `${process.env.BETTER_AUTH_URL}/invoices/hosted_invoice_url/${invoice.id}`,
-		items: withItems
-			? (invoice.items || []).map((i) => {
-					const feature = features?.find(
-						(f) => f.internal_id === i.internal_feature_id,
-					);
+		// hosted_invoice_url: invoice.hosted_invoice_url,
+		// items: withItems
+		// 	? (invoice.items || []).map((i) => {
+		// 			const feature = features?.find(
+		// 				(f) => f.internal_id === i.internal_feature_id,
+		// 			);
 
-					return ApiInvoiceItemSchema.parse({
-						description: i.description,
-						period_start: i.period_start,
-						period_end: i.period_end,
-						feature_id: feature?.id,
-						feature_name: feature?.name,
-					});
-				})
-			: undefined,
-	} as ApiInvoice;
+		// 			return ApiInvoiceItemSchema.parse({
+		// 				description: i.description,
+		// 				period_start: i.period_start,
+		// 				period_end: i.period_end,
+		// 				feature_id: feature?.id,
+		// 				feature_name: feature?.name,
+		// 			});
+		// 		})
+		// 	: undefined,
+	};
 };
 
 export class InvoiceService {
@@ -91,7 +91,7 @@ export class InvoiceService {
 					? eq(invoices.internal_entity_id, internalEntityId)
 					: undefined,
 			),
-			orderBy: [desc(invoices.created_at)],
+			orderBy: [desc(invoices.created_at), desc(invoices.id)],
 			limit,
 		})) as Invoice[];
 	}

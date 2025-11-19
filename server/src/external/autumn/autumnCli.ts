@@ -4,8 +4,10 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import {
-	type ApiEntity,
+	type ApiBaseEntity,
 	type AttachBody,
+	type BalancesUpdateParams,
+	type CheckQuery,
 	type CreateCustomerParams,
 	type CreateEntityParams,
 	type CreateRewardProgram,
@@ -17,6 +19,7 @@ import {
 	type RewardRedemption,
 	type TrackParams,
 } from "@autumn/shared";
+import { defaultApiVersion } from "@tests/constants.js";
 import type {
 	CancelParams,
 	CheckoutParams,
@@ -26,7 +29,6 @@ import type {
 	Customer,
 	UsageParams,
 } from "autumn-js";
-import { defaultApiVersion } from "tests/constants.js";
 
 export default class AutumnError extends Error {
 	message: string;
@@ -89,12 +91,72 @@ export class AutumnInt {
 		const response = await fetch(`${this.baseUrl}${path}`, {
 			headers: this.headers,
 		});
+
+		if (response.status !== 200) {
+			// Handle rate limit errors
+			if (response.status === 429) {
+				throw new AutumnError({
+					message: `request failed, rate limit exceeded`,
+					code: "rate_limit_exceeded",
+				});
+			}
+
+			let error: any;
+			try {
+				error = await response.json();
+			} catch (error) {
+				throw new AutumnError({
+					message: `request failed, error: ${error}`,
+					code: ErrCode.InternalError,
+				});
+			}
+
+			throw new AutumnError({
+				message: error.message,
+				code: error.code,
+			});
+		}
+
 		return response.json();
 	}
 
 	async post(path: string, body: any) {
 		const response = await fetch(`${this.baseUrl}${path}`, {
 			method: "POST",
+			headers: this.headers,
+			body: JSON.stringify(body),
+		});
+
+		if (response.status !== 200) {
+			// Handle rate limit errors
+			if (response.status === 429) {
+				throw new AutumnError({
+					message: `request failed, rate limit exceeded`,
+					code: "rate_limit_exceeded",
+				});
+			}
+
+			let error: any;
+			try {
+				error = await response.json();
+			} catch (error) {
+				throw new AutumnError({
+					message: `request failed, error: ${error}`,
+					code: ErrCode.InternalError,
+				});
+			}
+
+			throw new AutumnError({
+				message: error.message,
+				code: error.code,
+			});
+		}
+
+		return response.json();
+	}
+	async patch(path: string, body: any) {
+		const response = await fetch(`${this.baseUrl}${path}`, {
+			method: "PATCH",
 			headers: this.headers,
 			body: JSON.stringify(body),
 		});
@@ -194,6 +256,27 @@ export class AutumnInt {
 
 		return data;
 	}
+
+	async updateCusEnt({
+		customerId,
+		customerEntitlementId,
+		updates,
+	}: {
+		customerId: string;
+		customerEntitlementId: string;
+		updates: {
+			balance?: number;
+			next_reset_at?: number;
+			entity_id?: string;
+		};
+	}) {
+		const data = await this.post(
+			`/customers/${customerId}/entitlements/${customerEntitlementId}`,
+			updates,
+		);
+		return data;
+	}
+
 	async checkout(
 		params: CheckoutParams & { invoice?: boolean; force_checkout?: boolean },
 	) {
@@ -267,20 +350,20 @@ export class AutumnInt {
 			return data;
 		},
 
-		get: async (
+		get: async <
+			T = Customer & {
+				invoices: any[];
+				autumn_id?: string;
+				entities?: ApiBaseEntity[];
+			},
+		>(
 			customerId: string,
 			params?: {
 				expand?: CusExpand[];
 				skip_cache?: string;
 				with_autumn_id?: boolean;
 			},
-		): Promise<
-			Customer & {
-				invoices: any[];
-				autumn_id?: string;
-				entities?: ApiEntity[];
-			}
-		> => {
+		): Promise<T> => {
 			const queryParams = new URLSearchParams();
 			const defaultParams = {
 				expand: [CusExpand.Invoices],
@@ -395,7 +478,7 @@ export class AutumnInt {
 			// if (product.items && typeof product.items === "object") {
 			//   product.items = Object.values(product.items);
 			// }
-			const data = await this.post(`/products/${productId}`, product);
+			const data = await this.patch(`/products/${productId}`, product);
 			return data;
 		},
 
@@ -525,8 +608,16 @@ export class AutumnInt {
 		},
 	};
 
-	track = async (params: TrackParams) => {
-		const data = await this.post(`/track`, params);
+	track = async (
+		params: TrackParams,
+		{ skipCache = false }: { skipCache?: boolean } = {},
+	) => {
+		const queryParams = new URLSearchParams();
+		if (skipCache) {
+			queryParams.append("skip_cache", "true");
+		}
+
+		const data = await this.post(`/track?${queryParams.toString()}`, params);
 		return data;
 	};
 
@@ -535,8 +626,15 @@ export class AutumnInt {
 		return data;
 	};
 
-	check = async (params: CheckParams): Promise<CheckResult> => {
-		const data = await this.post(`/check`, params);
+	check = async <T = CheckResult>(
+		params: CheckParams & CheckQuery & { skip_event?: boolean },
+	): Promise<T> => {
+		const queryParams = new URLSearchParams();
+		if (params.skip_cache) {
+			queryParams.append("skip_cache", "true");
+		}
+
+		const data = await this.post(`/check?${queryParams.toString()}`, params);
 		return data;
 	};
 
@@ -560,7 +658,10 @@ export class AutumnInt {
 		return data;
 	};
 
-	initStripe = async () => {
-		await this.post(`/products/all/init_stripe`, {});
+	balances = {
+		update: async (params: BalancesUpdateParams) => {
+			const data = await this.post(`/balances/update`, params);
+			return data;
+		},
 	};
 }

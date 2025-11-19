@@ -6,10 +6,29 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { initNewFeature } from "@/internal/features/internalFeatureRouter.js";
+
 import { ProductService } from "@/internal/products/ProductService.js";
 import { copyProduct } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { generateId } from "../../../../utils/genUtils";
+
+export const initNewFeature = ({
+	data,
+	orgId,
+	env,
+}: {
+	data: any;
+	orgId: string;
+	env: any;
+}) => {
+	return {
+		...data,
+		org_id: orgId,
+		env,
+		created_at: Date.now(),
+		internal_id: generateId("fe"),
+	};
+};
 
 /**
  * Route: POST /v1/products/:productId/copy - Copy a product

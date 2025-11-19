@@ -1,15 +1,14 @@
 import {
-	AttachParams,
-	InsertCusProductParams,
-} from "@/internal/customers/cusProducts/AttachParams.js";
-import {
 	cusProductToEnts,
 	cusProductToPrices,
 	cusProductToProduct,
+	type Entity,
+	type FullCusProduct,
+	type FullCustomer,
 } from "@autumn/shared";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { Entity, FullCusProduct, FullCustomer } from "@autumn/shared";
-import Stripe from "stripe";
+import type Stripe from "stripe";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const webhookToAttachParams = ({
 	req,

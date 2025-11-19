@@ -4,7 +4,9 @@ import {
 	FeatureUsageType,
 	isPriceItem,
 	productV2ToBasePrice,
+	productV2ToPlanType,
 } from "@autumn/shared";
+import { useHasChanges } from "@/hooks/stores/useProductStore";
 import { OnboardingStep } from "../utils/onboardingUtils";
 import { useOnboarding3QueryState } from "./useOnboarding3QueryState";
 
@@ -12,6 +14,7 @@ export const useOnboardingSteps = () => {
 	// Use query state instead of local state
 	const { queryStates } = useOnboarding3QueryState();
 	const step = queryStates.step;
+	const hasChanges = useHasChanges();
 
 	// Step validation
 	const validateStep = (
@@ -32,6 +35,9 @@ export const useOnboardingSteps = () => {
 				// Base price validation - safely check if product has items
 				if (!product.items) return false;
 
+				const planType = productV2ToPlanType({ product });
+				if (!planType) return false;
+
 				const basePrice = productV2ToBasePrice({
 					product: product as unknown as ProductV2,
 				});
@@ -42,8 +48,8 @@ export const useOnboardingSteps = () => {
 				// If base price is unchecked (no price item), that's valid
 				if (!hasBasePriceItem) return true;
 
-				// If base price is checked, it needs a valid amount
-				return basePrice?.amount != null && basePrice.amount > 0;
+				// If base price is checked, it needs a valid price amount
+				return basePrice?.price != null && basePrice.price > 0;
 			}
 			case OnboardingStep.FeatureCreation:
 				return (
@@ -59,7 +65,7 @@ export const useOnboardingSteps = () => {
 			case OnboardingStep.FeatureConfiguration:
 				return true;
 			case OnboardingStep.Playground:
-				return true;
+				return !hasChanges;
 			case OnboardingStep.Integration:
 				return true;
 			default:

@@ -41,11 +41,7 @@ export const initCusEntEntities = ({
 	for (const entity of entities) {
 		if (!entitlementLinkedToEntity({ entitlement, entity })) continue;
 
-		if (
-			existingCusEnt &&
-			existingCusEnt.entities &&
-			existingCusEnt.entities[entity.id]
-		) {
+		if (existingCusEnt?.entities?.[entity.id]) {
 			continue;
 		}
 
@@ -57,6 +53,7 @@ export const initCusEntEntities = ({
 			id: entity.id,
 			balance: resetBalance || 0,
 			adjustment: 0,
+			additional_balance: 0,
 		};
 	}
 
@@ -178,7 +175,7 @@ export const initCusEntitlement = ({
 
 	if (notNullish(productOptions?.quantity) && notNullish(newBalance)) {
 		newBalance = new Decimal(newBalance!)
-			.mul(productOptions?.quantity!)
+			.mul(productOptions?.quantity || 1)
 			.toNumber();
 	}
 

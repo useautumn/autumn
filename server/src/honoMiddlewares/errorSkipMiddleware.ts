@@ -1,15 +1,11 @@
-import {
-	CusErrorCode,
-	ErrCode,
-	ProductErrorCode,
-	RecaseError as SharedRecaseError,
-} from "@autumn/shared";
+import { ErrCode, RecaseError as SharedRecaseError } from "@autumn/shared";
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import Stripe from "stripe";
 import { ZodError } from "zod/v4";
+import { formatZodError } from "@/errors/formatZodError.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import RecaseError, { formatZodError } from "@/utils/errorUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
 import { matchRoute } from "./middlewareUtils.js";
 
 // ============================================================================
@@ -33,20 +29,29 @@ const ROUTE_ERROR_SKIP_MAP = [
 	},
 ] as const;
 
-/** Global error codes that should be logged as warnings instead of errors (all routes) */
-const GLOBAL_WARN_ERROR_CODES: string[] = [
-	ProductErrorCode.ProductNotFound,
-	CusErrorCode.CustomerNotFound,
-	ErrCode.CustomerNotFound,
-	ErrCode.EntityNotFound,
-];
+// /** Global error codes that should be logged as warnings instead of errors (all routes) */
+// const GLOBAL_WARN_ERROR_CODES: string[] = [
+// 	ProductErrorCode.ProductNotFound,
+// 	CusErrorCode.CustomerNotFound,
+// 	ErrCode.CustomerNotFound,
+// 	ErrCode.EntityNotFound,
+// ];
 
 /** Advanced route-specific error handling rules (for complex matching logic) */
 const ROUTE_SPECIFIC_RULES: Array<{
 	name: string;
 	match: (err: Error, c: Context<HonoEnv>) => boolean;
 	statusCode: ContentfulStatusCode;
-}> = [];
+}> = [
+	{
+		name: "Stripe webhook secret not set in development",
+		match: (err: Error) =>
+			err.message.includes(
+				"STRIPE_WEBHOOK_SECRET env variable is not set (live)",
+			) && process.env.NODE_ENV === "development",
+		statusCode: 500,
+	},
+];
 
 /** Stripe-specific error handling rules */
 const STRIPE_RULES = [
@@ -126,6 +131,13 @@ const STRIPE_RULES = [
 /** Zod-specific error handling rules */
 const ZOD_RULES = [
 	{
+		name: "Zod user input validation error",
+		match: (err: Error, c: Context<HonoEnv>) =>
+			err instanceof ZodError && !c.get("validated"),
+		statusCode: 400,
+		format: (err: ZodError) => formatZodError(err),
+	},
+	{
 		name: "Zod error on /attach",
 		match: (err: Error, c: Context<HonoEnv>) =>
 			err instanceof ZodError && c.req.url.includes("/attach"),
@@ -172,8 +184,19 @@ export const handleErrorSkip = (err: Error, c: Context<HonoEnv>) => {
 	const ctx = c.get("ctx");
 	const logger = ctx?.logger;
 
-	if (!logger) {
-		return null; // Let main error handler deal with this
+	if (!logger) return null; // Let main error handler deal with this
+
+	if (err instanceof SharedRecaseError) {
+		logger.warn(
+			`${err.message}, org: ${ctx.org?.slug || "unknown"}, path: ${c.req.path}`,
+		);
+		return createErrorResponse({
+			c,
+			ctx,
+			message: err.message,
+			code: err.code,
+			statusCode: (err.statusCode || 400) as ContentfulStatusCode,
+		});
 	}
 
 	// 1. Check route-based error code skipping (simplest case)
@@ -203,33 +226,36 @@ export const handleErrorSkip = (err: Error, c: Context<HonoEnv>) => {
 		}
 	}
 
-	// 2. Check global warn-level error codes
-	if (
-		(err instanceof RecaseError || err instanceof SharedRecaseError) &&
-		GLOBAL_WARN_ERROR_CODES.includes(err.code)
-	) {
-		logger.warn(
-			`${err.message}, org: ${ctx.org?.slug || "unknown"}, path: ${c.req.path}`,
-		);
-		return createErrorResponse({
-			c,
-			ctx,
-			message: err.message,
-			code: err.code,
-			statusCode: 404,
-		});
-	}
+	// // 2. Check global warn-level error codes
+	// if (
+	// 	(err instanceof RecaseError || err instanceof SharedRecaseError) &&
+	// 	GLOBAL_WARN_ERROR_CODES.includes(err.code)
+	// ) {
+	// 	logger.warn(
+	// 		`${err.message}, org: ${ctx.org?.slug || "unknown"}, path: ${c.req.path}`,
+	// 	);
+	// 	return createErrorResponse({
+	// 		c,
+	// 		ctx,
+	// 		message: err.message,
+	// 		code: err.code,
+	// 		statusCode: 404,
+	// 	});
+	// }
 
 	// 3. Check advanced route-specific rules
 	for (const rule of ROUTE_SPECIFIC_RULES) {
 		if (rule.match(err, c)) {
-			const recaseErr = err as RecaseError;
-			logger.warn(`${recaseErr.message}, org: ${ctx.org?.slug || "unknown"}`);
+			const errorCode =
+				err instanceof RecaseError || err instanceof SharedRecaseError
+					? err.code
+					: ErrCode.InternalError;
+			logger.warn(`${rule.name}, org: ${ctx.org?.slug || "unknown"}`);
 			return createErrorResponse({
 				c,
 				ctx,
-				message: recaseErr.message,
-				code: recaseErr.code,
+				message: err.message,
+				code: errorCode,
 				statusCode: rule.statusCode,
 			});
 		}

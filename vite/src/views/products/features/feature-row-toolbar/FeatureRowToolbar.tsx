@@ -1,13 +1,13 @@
+import type { Feature } from "@autumn/shared";
+import { ArchiveRestore, Delete } from "lucide-react";
+import { useState } from "react";
+import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 import {
 	DropdownMenu,
-	DropdownMenuTrigger,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState } from "react";
-import { Feature } from "@autumn/shared";
-import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
-import { Delete, ArchiveRestore } from "lucide-react";
 import { DeleteFeatureDialog } from "./DeleteFeatureDialog";
 
 export const FeatureRowToolbar = ({ feature }: { feature: Feature }) => {
@@ -24,7 +24,7 @@ export const FeatureRowToolbar = ({ feature }: { feature: Feature }) => {
 			/>
 			<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
 				<DropdownMenuTrigger asChild>
-					<ToolbarButton className="!h-5 !w-5" />
+					<ToolbarButton className="h-5! w-5!" />
 				</DropdownMenuTrigger>
 				<DropdownMenuContent className="text-t2" align="end">
 					<DropdownMenuItem

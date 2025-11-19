@@ -1,6 +1,6 @@
 import {
 	type ApiCustomer,
-	type ApiInvoice,
+	type ApiInvoiceV1,
 	CusExpand,
 	type Customer,
 	type CustomerData,
@@ -88,7 +88,7 @@ export const getCusInvoices = async ({
 	limit?: number;
 	withItems?: boolean;
 	features?: Feature[];
-}): Promise<ApiInvoice[]> => {
+}): Promise<ApiInvoiceV1[]> => {
 	const finalInvoices = notNullish(invoices)
 		? invoices
 		: await InvoiceService.list({
@@ -149,7 +149,7 @@ export const getCusEntsInFeatures = async ({
 		);
 	}
 
-	sortCusEntsForDeduction(cusEnts, reverseOrder);
+	sortCusEntsForDeduction({ cusEnts, reverseOrder });
 
 	return { cusEnts, cusPrices };
 };

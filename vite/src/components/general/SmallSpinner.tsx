@@ -5,7 +5,7 @@ function SmallSpinner({ size = 18 }: { size?: number }) {
 		<LucideLoaderCircle
 			className="animate-spin text-t3"
 			size={size}
-			color="#c4c4c4"
+			color="#9D9D9D"
 		/>
 	);
 }

@@ -19,6 +19,7 @@ import { decryptData, generatePublishableKey } from "@/utils/encryptUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { FeatureService } from "../features/FeatureService.js";
+import { getVercelConfigDisplay } from "./handlers/handleVercelConfig.js";
 import { OrgService } from "./OrgService.js";
 import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
 import { toSuccessUrl } from "./orgUtils/convertOrgUtils.js";
@@ -195,6 +196,8 @@ export const createOrgResponse = ({
 		throughSecretKey: true,
 	});
 
+	const vercelConnection = getVercelConfigDisplay({ org, env });
+
 	const stripeConnection = secretKeyConnected
 		? "secret_key"
 		: accountId
@@ -229,6 +232,16 @@ export const createOrgResponse = ({
 		default_currency: org.default_currency || "usd",
 		stripe_connection: stripeConnection,
 		through_master: throughMaster,
+		processor_configs: {
+			vercel: {
+				connected: vercelConnection.connected,
+				client_integration_id: vercelConnection.client_integration_id,
+				client_secret: vercelConnection.client_secret,
+				webhook_url: vercelConnection.webhook_url,
+				custom_payment_method: vercelConnection.custom_payment_method,
+				marketplace_mode: vercelConnection.marketplace_mode,
+			},
+		},
 
 		created_at: new Date(org.createdAt).getTime(),
 		test_pkey: org.test_pkey,
@@ -239,8 +252,6 @@ export const createOrgResponse = ({
 };
 
 export const getOrgAndFeatures = async ({ req }: { req: any }) => {
-	const { orgId, env } = req;
-
 	const [org, features] = await Promise.all([
 		OrgService.getFromReq(req),
 		FeatureService.getFromReq(req),

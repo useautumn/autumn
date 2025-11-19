@@ -10,21 +10,33 @@ import SmallSpinner from "../SmallSpinner";
 import { useTableContext } from "./table-context";
 
 export function TableBody() {
-	const { table, numberOfColumns, enableSelection, isLoading, onRowClick } =
-		useTableContext();
+	const {
+		table,
+		numberOfColumns,
+		enableSelection,
+		isLoading,
+		onRowClick,
+		rowClassName,
+		emptyStateText,
+	} = useTableContext();
 	const rows = table.getRowModel().rows;
 
 	if (!rows.length) {
 		return (
 			<ShadcnTableBody>
 				<TableRow>
-					<TableCell className="h-16 text-center" colSpan={numberOfColumns}>
+					<TableCell
+						className="h-12 text-center py-0"
+						colSpan={numberOfColumns}
+					>
 						{isLoading ? (
 							<div className="flex justify-center items-center">
 								<SmallSpinner />
 							</div>
 						) : (
-							"No results"
+							<div className="text-t4 text-center w-full h-full bg-interactive-secondary items-center justify-center flex">
+								{emptyStateText}
+							</div>
 						)}
 					</TableCell>
 				</TableRow>
@@ -33,10 +45,13 @@ export function TableBody() {
 	}
 
 	return (
-		<ShadcnTableBody className="divide-y divide-border-table">
+		<ShadcnTableBody className="divide-y">
 			{rows.map((row) => (
 				<TableRow
-					className={cn("h-16 py-4 hover:bg-muted/50 text-t3")}
+					className={cn(
+						"text-t3 transition-none hover:bg-interactive-secondary-hover dark:hover:bg-interactive-secondary-hover h-12 py-4",
+						rowClassName,
+					)}
 					data-state={row.getIsSelected() && "selected"}
 					key={row.id}
 					onClick={() => onRowClick?.(row.original)}
@@ -57,6 +72,7 @@ export function TableBody() {
 								index === 0 && "pl-4 text-t2 font-semibold",
 							)}
 							key={cell.id}
+							style={{ width: `${cell.column.getSize()}px` }}
 						>
 							{flexRender(cell.column.columnDef.cell, cell.getContext())}
 						</TableCell>

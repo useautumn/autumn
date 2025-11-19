@@ -23,7 +23,11 @@ export const getResetBalancesUpdate = ({
 		}
 		update = { entities: newEntities };
 	} else {
-		update = { balance: newBalance };
+		update = {
+			balance: newBalance,
+			additional_balance: 0,
+			adjustment: 0,
+		};
 	}
 
 	return update;

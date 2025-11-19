@@ -4,6 +4,7 @@ import { AppEnv } from "../genModels/genEnums.js";
 export enum MigrationJobStep {
 	// Pending = "pending",
 	Queued = "queued",
+	Received = "received",
 	// InsertCustomers = "insert_customers",
 	GetCustomers = "get_customers",
 	MigrateCustomers = "migrate_customers",

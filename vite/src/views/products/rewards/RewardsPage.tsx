@@ -1,14 +1,12 @@
+import { GiftIcon, UsersThreeIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
-import { PageSectionHeader } from "@/components/general/PageSectionHeader";
-import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
-import LoadingScreen from "@/views/general/LoadingScreen";
+import { Table } from "@/components/general/table";
 import { RewardsTable } from "./components/RewardsTable";
 import { CreateRewardSheet } from "./reward-config/components/CreateRewardSheet";
 import { CreateRewardProgramSheet } from "./reward-programs/CreateRewardProgramSheet";
 import { RewardProgramsTable } from "./reward-programs/RewardProgramsTable";
 
 export const RewardsPage = () => {
-	const { rewards, rewardPrograms } = useRewardsQuery();
 	const [createSheetOpen, setCreateSheetOpen] = useState(false);
 
 	useEffect(() => {
@@ -38,38 +36,46 @@ export const RewardsPage = () => {
 	}, []);
 
 	return (
-		<div className="flex flex-col gap-16">
-			<div>
-				<PageSectionHeader
-					title="Rewards"
-					titleComponent={
-						<span className="text-t2 px-1 rounded-md bg-stone-200 mr-2">
-							{rewards?.length}
-						</span>
-					}
-					endContent={
-						<CreateRewardSheet
-							open={createSheetOpen}
-							onOpenChange={setCreateSheetOpen}
-						/>
-					}
-				/>
+		<div className="h-fit max-h-full px-10">
+			<div className="flex flex-col gap-8">
+				{/* Rewards Table */}
+				<div>
+					<Table.Toolbar>
+						<div className="flex w-full justify-between items-center">
+							<Table.Heading>
+								<GiftIcon size={16} weight="fill" className="text-subtle" />
+								Rewards
+							</Table.Heading>
+							<Table.Actions>
+								<CreateRewardSheet
+									open={createSheetOpen}
+									onOpenChange={setCreateSheetOpen}
+								/>
+							</Table.Actions>
+						</div>
+					</Table.Toolbar>
+					<RewardsTable />
+				</div>
 
-				<RewardsTable />
-			</div>
-
-			<div>
-				<PageSectionHeader
-					title="Referral Programs"
-					titleComponent={
-						<span className="text-t2 px-1 rounded-md bg-stone-200 mr-2">
-							{rewardPrograms?.length}
-						</span>
-					}
-					endContent={<CreateRewardProgramSheet />}
-					isSecondary
-				/>
-				<RewardProgramsTable />
+				{/* Referral Programs Table */}
+				<div>
+					<Table.Toolbar>
+						<div className="flex w-full justify-between items-center">
+							<Table.Heading>
+								<UsersThreeIcon
+									size={16}
+									weight="fill"
+									className="text-subtle"
+								/>
+								Referral Programs
+							</Table.Heading>
+							<Table.Actions>
+								<CreateRewardProgramSheet />
+							</Table.Actions>
+						</div>
+					</Table.Toolbar>
+					<RewardProgramsTable />
+				</div>
 			</div>
 		</div>
 	);

@@ -1,25 +1,20 @@
 import { ApiVersion, isUsagePrice, type Organization } from "@autumn/shared";
 import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { getEmptyPriceItem } from "../../priceToStripeItem/priceToStripeItem.js";
 
 export const handleRemainingSets = async ({
 	stripeCli,
-	db,
 	org,
 	checkoutSession,
 	attachParams,
 	checkoutSub,
-	logger,
 }: {
 	stripeCli: Stripe;
-	db: DrizzleCli;
 	org: Organization;
 	checkoutSession: Stripe.Checkout.Session;
 	attachParams: AttachParams;
 	checkoutSub: Stripe.Subscription | null;
-	logger: any;
 }) => {
 	const itemSets = attachParams.itemSets;
 	const remainingSets = itemSets ? itemSets.slice(1) : [];
@@ -38,7 +33,7 @@ export const handleRemainingSets = async ({
 
 		if (
 			attachParams.internalEntityId ||
-			attachParams.apiVersion === ApiVersion.Beta
+			attachParams.apiVersion === ApiVersion.V1_Beta
 		) {
 			const replaceIndex = remainingItems.findIndex(
 				(item) => item.price === config.stripe_price_id,

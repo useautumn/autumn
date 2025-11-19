@@ -1,31 +1,28 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type AppEnv,
 	CusProductStatus,
 	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
-import { expect } from "chai";
-import chalk from "chalk";
-import { addDays } from "date-fns";
-import type { Stripe } from "stripe";
-import { setupBefore } from "tests/before.js";
-import { expectSubToBeCorrect } from "tests/merged/mergeUtils/expectSubCorrect.js";
-import { TestFeature } from "tests/setup/v2Features.js";
+import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
 import {
 	expectMultiAttachCorrect,
 	expectResultsCorrect,
-} from "tests/utils/expectUtils/expectMultiAttach.js";
-import { createProducts } from "tests/utils/productUtils.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import {
-	addPrefixToProducts,
-	getBasePrice,
-} from "tests/utils/testProductUtils/testProductUtils.js";
+} from "@tests/utils/expectUtils/expectMultiAttach.js";
+import { advanceTestClock } from "@tests/utils/stripeUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { getBasePrice } from "@tests/utils/testProductUtils/testProductUtils.js";
+import chalk from "chalk";
+import { addDays } from "date-fns";
+import type { Stripe } from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
 const premium = constructProduct({
 	id: "premium",
@@ -69,42 +66,29 @@ describe(`${chalk.yellowBright("multiAttach4: Testing multi attach for annual pr
 	let org: Organization;
 	let env: AppEnv;
 
-	beforeAll(async function () {
-		await setupBefore(this);
-		const { autumnJs } = this;
-		db = this.db;
-		org = this.org;
-		env = this.env;
-
-		stripeCli = this.stripeCli;
-
-		addPrefixToProducts({
+	beforeAll(async () => {
+		await initProductsV0({
+			ctx,
 			products: [pro, premium, proAnnual],
 			prefix: testCase,
-		});
-
-		await createProducts({
-			autumn: autumnJs,
-			products: [pro, premium, proAnnual],
-			db,
-			orgId: org.id,
-			env,
 			customerId,
 		});
 
-		const { testClockId: testClockId1 } = await initCustomer({
-			autumn: autumnJs,
+		const res = await initCustomerV3({
+			ctx,
 			customerId,
-			db,
-			org,
-			env,
 			attachPm: "success",
+			withTestClock: true,
 		});
 
-		testClockId = testClockId1!;
+		stripeCli = ctx.stripeCli;
+		db = ctx.db;
+		org = ctx.org;
+		env = ctx.env;
+		testClockId = res.testClockId!;
 	});
 
-	it("should run multi attach through checkout and have correct sub", async () => {
+	test("should run multi attach through checkout and have correct sub", async () => {
 		const productsList = [
 			{
 				product_id: pro.id,
@@ -176,7 +160,7 @@ describe(`${chalk.yellowBright("multiAttach4: Testing multi attach for annual pr
 		},
 	];
 
-	it("should transfer to entity and have correct sub", async () => {
+	test("should transfer to entity and have correct sub", async () => {
 		await autumn.entities.create(customerId, entities);
 
 		await autumn.transfer(customerId, {
@@ -201,7 +185,7 @@ describe(`${chalk.yellowBright("multiAttach4: Testing multi attach for annual pr
 		});
 	});
 
-	it("should cancel one entity's sub at end of cycle and have correct schedule...", async () => {
+	test("should cancel one entity's sub at end of cycle and have correct schedule...", async () => {
 		await autumn.cancel({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -216,7 +200,7 @@ describe(`${chalk.yellowBright("multiAttach4: Testing multi attach for annual pr
 		});
 	});
 
-	it("should cancel one entity's sub immediately", async () => {
+	test("should cancel one entity's sub immediately", async () => {
 		await autumn.cancel({
 			customer_id: customerId,
 			product_id: premium.id,
@@ -234,7 +218,7 @@ describe(`${chalk.yellowBright("multiAttach4: Testing multi attach for annual pr
 		});
 	});
 
-	it("should advance test clock to end of trial and have correct sub", async () => {
+	test("should advance test clock to end of trial and have correct sub", async () => {
 		await advanceTestClock({
 			stripeCli,
 			testClockId,
@@ -257,7 +241,7 @@ describe(`${chalk.yellowBright("multiAttach4: Testing multi attach for annual pr
 			getBasePrice({ product: pro }) * 4 +
 			getBasePrice({ product: premium }) * 2;
 
-		expect(invoiceTotal).to.equal(latestInvoice.total);
+		expect(invoiceTotal).toBe(latestInvoice.total);
 
 		await expectSubToBeCorrect({
 			db,

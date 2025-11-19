@@ -1,24 +1,8 @@
 -- Helper function: Perform deduction calculation for a single entitlement
 -- This handles both entity-scoped and regular balance deductions
-DROP FUNCTION IF EXISTS deduct_from_main_balance(numeric, jsonb, numeric, numeric, numeric, boolean, boolean, text, numeric, boolean);
+DROP FUNCTION IF EXISTS deduct_from_main_balance(jsonb);
 
-CREATE FUNCTION deduct_from_main_balance(
-  -- Current state
-  current_balance numeric,
-  current_entities jsonb,
-  current_adjustment numeric,
-  
-  -- Deduction parameters
-  amount_to_deduct numeric,
-  credit_cost numeric,
-  
-  -- Behavior flags
-  allow_negative boolean,        -- false for Pass 1 (to zero), true for Pass 2 (can go negative)
-  has_entity_scope boolean,
-  target_entity_id text,
-  min_balance numeric,
-  add_to_adjustment boolean
-)
+CREATE FUNCTION deduct_from_main_balance(params jsonb)
 RETURNS TABLE (
   deducted numeric,
   new_balance numeric,
@@ -28,6 +12,21 @@ RETURNS TABLE (
 LANGUAGE plpgsql
 AS $$
 DECLARE
+  -- Extract parameters from JSONB
+  current_balance numeric := (params->>'current_balance')::numeric;
+  current_entities jsonb := COALESCE(params->'current_entities', '{}'::jsonb);
+  current_adjustment numeric := COALESCE((params->>'current_adjustment')::numeric, 0);
+  amount_to_deduct numeric := (params->>'amount_to_deduct')::numeric;
+  credit_cost numeric := (params->>'credit_cost')::numeric;
+  allow_negative boolean := COALESCE((params->>'allow_negative')::boolean, false);
+  has_entity_scope boolean := COALESCE((params->>'has_entity_scope')::boolean, false);
+  target_entity_id text := NULLIF(params->>'target_entity_id', '');
+  min_balance numeric := CASE 
+    WHEN params->>'min_balance' IS NULL THEN NULL
+    ELSE (params->>'min_balance')::numeric
+  END;
+  alter_granted_balance boolean := COALESCE((params->>'alter_granted_balance')::boolean, false);
+  
   deducted_amount numeric := 0;
   result_balance numeric;
   result_entities jsonb;
@@ -37,11 +36,12 @@ DECLARE
   remaining numeric;
   entity_key text;
   entity_balance numeric;
-  entity_adjustment numeric;
   deduct_amount numeric;
   new_balance numeric;
-  new_adjustment numeric;
 BEGIN
+  
+  -- Initialize return values
+  result_adjustment := current_adjustment;
   
   -- ============================================================================
   -- CASE 1: ENTITY-SCOPED - ALL ENTITIES (no specific entity_id)
@@ -57,7 +57,6 @@ BEGIN
       EXIT WHEN remaining = 0;
       
       entity_balance := COALESCE((result_entities->entity_key->>'balance')::numeric, 0);
-      entity_adjustment := COALESCE((result_entities->entity_key->>'adjustment')::numeric, 0);
       
       -- Calculate deduction respecting allow_negative and min_balance
       -- Handle negative amounts (adding credits) differently
@@ -82,13 +81,12 @@ BEGIN
           to_jsonb(new_balance)
         );
         
-        -- Update adjustment if needed
-        IF add_to_adjustment THEN
-          new_adjustment := entity_adjustment + deduct_amount;
+        -- If alter_granted_balance is true, update adjustment field to track the change
+        IF alter_granted_balance THEN
           result_entities := jsonb_set(
             result_entities,
             ARRAY[entity_key, 'adjustment'],
-            to_jsonb(new_adjustment)
+            to_jsonb(COALESCE((result_entities->entity_key->>'adjustment')::numeric, 0) - deduct_amount)
           );
         END IF;
         
@@ -104,7 +102,6 @@ BEGIN
   -- ============================================================================
   ELSIF has_entity_scope AND target_entity_id IS NOT NULL THEN
     entity_balance := COALESCE((current_entities->target_entity_id->>'balance')::numeric, 0);
-    entity_adjustment := COALESCE((current_entities->target_entity_id->>'adjustment')::numeric, 0);
     
     -- Calculate deduction respecting allow_negative and min_balance
     -- Handle negative amounts (adding credits) differently
@@ -129,13 +126,12 @@ BEGIN
         to_jsonb(new_balance)
       );
       
-      -- Update adjustment if needed
-      IF add_to_adjustment THEN
-        new_adjustment := entity_adjustment + deducted_amount;
+      -- If alter_granted_balance is true, update adjustment field to track the change
+      IF alter_granted_balance THEN
         result_entities := jsonb_set(
           result_entities,
           ARRAY[target_entity_id, 'adjustment'],
-          to_jsonb(new_adjustment)
+          to_jsonb(COALESCE((result_entities->target_entity_id->>'adjustment')::numeric, 0) - deducted_amount)
         );
       END IF;
     ELSE
@@ -167,13 +163,11 @@ BEGIN
     
     result_balance := current_balance - deducted_amount;
     result_entities := current_entities;  -- Entities unchanged for non-entity-scoped
-  END IF;
-  
-  -- Calculate new adjustment if needed
-  IF add_to_adjustment THEN
-    result_adjustment := current_adjustment + deducted_amount;
-  ELSE
-    result_adjustment := current_adjustment;
+    
+    -- If alter_granted_balance is true, update adjustment field to track the change
+    IF alter_granted_balance THEN
+      result_adjustment := result_adjustment - deducted_amount;
+    END IF;
   END IF;
   
   -- Return results

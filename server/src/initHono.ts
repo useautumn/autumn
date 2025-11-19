@@ -1,37 +1,16 @@
 import { getRequestListener } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { vercelWebhookRouter } from "./external/vercel/vercelWebhookRouter.js";
 import { handleConnectWebhook } from "./external/webhooks/connectWebhookRouter.js";
-import { analyticsMiddleware } from "./honoMiddlewares/analyticsMiddleware.js";
-import { apiVersionMiddleware } from "./honoMiddlewares/apiVersionMiddleware.js";
 import { baseMiddleware } from "./honoMiddlewares/baseMiddleware.js";
-import { betterAuthMiddleware } from "./honoMiddlewares/betterAuthMiddleware.js";
 import { errorMiddleware } from "./honoMiddlewares/errorMiddleware.js";
-import { orgConfigMiddleware } from "./honoMiddlewares/orgConfigMiddleware.js";
-import { queryMiddleware } from "./honoMiddlewares/queryMiddleware.js";
-import {
-	customerCheckRateLimiter,
-	customerTrackRateLimiter,
-	generalRateLimiter,
-} from "./honoMiddlewares/rateLimitMiddleware.js";
-import { refreshCacheMiddleware } from "./honoMiddlewares/refreshCacheMiddleware.js";
-import { secretKeyMiddleware } from "./honoMiddlewares/secretKeyMiddleware.js";
 import { traceMiddleware } from "./honoMiddlewares/traceMiddleware.js";
 import type { HonoEnv } from "./honoUtils/HonoEnv.js";
-import { handleCheck } from "./internal/api/check/handleCheck.js";
-import { handleSetUsage } from "./internal/balances/setUsage/handleSetUsage.js";
-import { handleTrack } from "./internal/balances/track/handleTrack.js";
-import { cusRouter } from "./internal/customers/cusRouter.js";
-import { internalCusRouter } from "./internal/customers/internalCusRouter.js";
-import { entityRouter } from "./internal/entities/entityRouter.js";
+import { handleHealthCheck } from "./honoUtils/handleHealthCheck.js";
 import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
-import { honoOrgRouter } from "./internal/orgs/orgRouter.js";
-import { platformBetaRouter } from "./internal/platform/platformBeta/platformBetaRouter.js";
-import { internalProductRouter } from "./internal/products/internalProductRouter.js";
-import {
-	honoProductRouter,
-	migrationRouter,
-} from "./internal/products/productRouter.js";
+import { apiRouter } from "./routers/apiRouter.js";
+import { internalRouter } from "./routers/internalRouter.js";
 import { auth } from "./utils/auth.js";
 
 const ALLOWED_ORIGINS = [
@@ -86,15 +65,14 @@ export const createHonoApp = () => {
 
 	// OAuth callback (needs to be before middleware)
 	// Health check endpoint for AWS/ECS load balancer
-	app.get("/", (c) => {
-		return c.text("Hello from Autumn 🍂🍂🍂");
-	});
 
 	app.get("/stripe/oauth_callback", handleOAuthCallback);
 
 	// Step 1: Base middleware - sets up ctx (db, logger, etc.)
 	app.use("*", baseMiddleware);
 	app.use("*", traceMiddleware);
+
+	app.get("/", handleHealthCheck);
 
 	// Add Render region identifier header for load balancer verification
 	app.use("*", async (c, next) => {
@@ -104,39 +82,11 @@ export const createHonoApp = () => {
 
 	// Webhook routes
 	app.post("/webhooks/connect/:env", handleConnectWebhook);
+	app.route("/webhooks/vercel", vercelWebhookRouter);
 
 	// API Middleware
-	app.use("/v1/*", secretKeyMiddleware);
-	app.use("/v1/*", orgConfigMiddleware);
-	app.use("/v1/*", apiVersionMiddleware);
-	app.use("/v1/*", analyticsMiddleware);
-	app.use("/v1/*", refreshCacheMiddleware);
-	app.use("/v1/*", queryMiddleware());
-
-	// General org rate limiter for all other /v1/* routes
-	app.use("/v1/*", generalRateLimiter);
-
-	// Track/Check endpoints use customer-specific rate limiters instead of general org limiter
-	app.post("/v1/events", customerTrackRateLimiter, ...handleTrack);
-	app.post("/v1/track", customerTrackRateLimiter, ...handleTrack);
-	app.post("/v1/entitled", customerCheckRateLimiter, ...handleCheck);
-	app.post("/v1/check", customerCheckRateLimiter, ...handleCheck);
-	app.post("/v1/usage", ...handleSetUsage);
-
-	// API Routes
-	app.route("v1", migrationRouter);
-	app.route("v1", entityRouter);
-	app.route("v1/customers", cusRouter);
-	app.route("v1/products", honoProductRouter);
-	app.route("v1/platform", platformBetaRouter);
-	app.route("v1/platform/beta", platformBetaRouter);
-	app.route("v1/organization", honoOrgRouter);
-
-	// Internal/dashboard routes - use betterAuthMiddleware for session auth
-	app.use("/products/*", betterAuthMiddleware);
-	app.route("/products", internalProductRouter);
-	app.use("/customers/*", betterAuthMiddleware);
-	app.route("/customers", internalCusRouter);
+	app.route("/v1", apiRouter);
+	app.route("", internalRouter);
 
 	app.onError(errorMiddleware);
 

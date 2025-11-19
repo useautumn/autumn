@@ -1,87 +1,13 @@
-import {
-	ApiVersion,
-	ErrCode,
-	InsufficientBalanceError,
-	isContUseFeature,
-	RecaseError,
-	SuccessCode,
-	type TrackParams,
-	TrackParamsSchema,
-	type TrackResponse,
-} from "@autumn/shared";
-import type { RequestContext } from "@/honoUtils/HonoEnv.js";
+import { TrackParamsSchema, TrackQuerySchema } from "@autumn/shared";
 import { createRoute } from "../../../honoMiddlewares/routeHandler.js";
-import { tryRedisWrite } from "../../../utils/cacheUtils/cacheUtils.js";
-import type { ExtendedRequest } from "../../../utils/models/Request.js";
-import { getOrCreateCustomer } from "../../customers/cusUtils/getOrCreateCustomer.js";
-import { runRedisDeduction } from "./redisTrackUtils/runRedisDeduction.js";
-import type { FeatureDeduction } from "./trackUtils/getFeatureDeductions.js";
+import { runTrack } from "./runTrack.js";
 import {
 	getTrackEventNameDeductions,
 	getTrackFeatureDeductions,
 } from "./trackUtils/getFeatureDeductions.js";
-import { runDeductionTx } from "./trackUtils/runDeductionTx.js";
-
-/**
- * Execute PostgreSQL-based tracking with full transaction support
- */
-const executePostgresTracking = async ({
-	ctx,
-	body,
-	featureDeductions,
-}: {
-	ctx: RequestContext;
-	body: TrackParams;
-	featureDeductions: FeatureDeduction[];
-}) => {
-	const response: TrackResponse = {
-		id: "",
-		code: SuccessCode.EventReceived,
-		customer_id: body.customer_id,
-		entity_id: body.entity_id,
-		feature_id: body.feature_id,
-		event_name: body.event_name,
-	};
-
-	const fullCus = await getOrCreateCustomer({
-		req: ctx as unknown as ExtendedRequest,
-		customerId: body.customer_id,
-		customerData: body.customer_data,
-		entityId: body.entity_id,
-		entityData: body.entity_data,
-		withEntities: true,
-	});
-
-	try {
-		const { event } = await runDeductionTx({
-			ctx,
-			customerId: body.customer_id,
-			entityId: body.entity_id,
-			deductions: featureDeductions,
-			overageBehaviour: body.overage_behavior,
-			eventInfo: {
-				event_name: body.feature_id || body.event_name!,
-				value: body.value ?? 1,
-				properties: body.properties,
-				timestamp: body.timestamp,
-				idempotency_key: body.idempotency_key,
-			},
-			refreshCache: true,
-			fullCus,
-		});
-		response.id = event?.id || "";
-	} catch (error) {
-		if (error instanceof InsufficientBalanceError) {
-			response.code = "insufficient_balance";
-		} else {
-			throw error;
-		}
-	}
-
-	return response;
-};
 
 export const handleTrack = createRoute({
+	query: TrackQuerySchema,
 	body: TrackParamsSchema,
 	handler: async (c) => {
 		const body = c.req.valid("json");
@@ -89,17 +15,10 @@ export const handleTrack = createRoute({
 
 		// Legacy: support value in properties
 		if (body.properties?.value) {
-			body.value = body.properties.value;
-		}
-
-		// Validate: event_name cannot be used with overage_behavior: "reject"
-		if (body.event_name && body.overage_behavior === "reject") {
-			throw new RecaseError({
-				message:
-					'overage_behavior "reject" is not supported with event_name. Use feature_id or set overage_behavior to "cap".',
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
+			const parsedValue = Number(body.properties.value);
+			if (!Number.isNaN(parsedValue)) {
+				body.value = parsedValue;
+			}
 		}
 
 		// Build feature deductions
@@ -115,75 +34,13 @@ export const handleTrack = createRoute({
 					value: body.value,
 				});
 
-		const hasContUseFeature = featureDeductions.some((deduction) =>
-			isContUseFeature({ feature: deduction.feature }),
-		);
-
-		// Scenario 1: idempotency_key requires PostgreSQL (for event persistence)
-		if (body.idempotency_key || hasContUseFeature) {
-			const response = await executePostgresTracking({
-				ctx,
-				body,
-				featureDeductions,
-			});
-
-			if (ctx.apiVersion.gte(ApiVersion.V1_1)) return c.json(response);
-			return c.json({ success: true });
-		}
-
-		let code: string = SuccessCode.EventReceived;
-
-		// Scenario 2: Try Redis first, fallback to PostgreSQL if needed
-		const success = await tryRedisWrite(async () => {
-			const { error } = await runRedisDeduction({
-				ctx,
-				customerId: body.customer_id,
-				entityId: body.entity_id,
-				customerData: body.customer_data,
-				entityData: body.entity_data,
-				featureDeductions,
-				overageBehavior: body.overage_behavior || "cap",
-				eventInfo: {
-					event_name: body.feature_id || body.event_name!,
-					value: body.value ?? 1,
-					properties: body.properties,
-					timestamp: body.timestamp,
-					idempotency_key: body.idempotency_key,
-				},
-			});
-
-			if (error) {
-				console.log(`Redis deduction error: ${error}`);
-				code = "insufficient_balance";
-			}
+		const response = await runTrack({
+			ctx,
+			body,
+			featureDeductions,
 		});
 
-		if (!success) {
-			console.log(`Falling back to postgres tracking`);
-			const response = await executePostgresTracking({
-				ctx,
-				body,
-				featureDeductions,
-			});
-
-			console.log(`Response: ${JSON.stringify(response)}`);
-
-			if (ctx.apiVersion.gte(ApiVersion.V1_1)) return c.json(response);
-			return c.json({ success: true });
-		}
-
-		// Redis deduction failed (e.g., insufficient balance)
-		const response = {
-			id: "",
-			code: code,
-			customer_id: body.customer_id,
-			entity_id: body.entity_id,
-			feature_id: body.feature_id,
-			event_name: body.event_name,
-		};
-
-		if (ctx.apiVersion.gte(ApiVersion.V1_1)) return c.json(response);
-		return c.json({ success: false });
+		return c.json(response);
 	},
 });
 
@@ -233,4 +90,16 @@ export const handleTrack = createRoute({
 // 		});
 // 	}
 // 	throw error;
+// }
+
+// // Scenario 1: idempotency_key requires PostgreSQL (for event persistence)
+// if (body.idempotency_key || hasContUseFeature) {
+// 	const response = await executePostgresTracking({
+// 		ctx,
+// 		body,
+// 		featureDeductions,
+// 	});
+
+// 	if (ctx.apiVersion.gte(ApiVersion.V1_1)) return c.json(response);
+// 	return c.json({ success: true });
 // }

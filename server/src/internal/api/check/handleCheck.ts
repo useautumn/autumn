@@ -1,14 +1,16 @@
 import {
 	AffectedResource,
+	ApiVersion,
 	applyResponseVersionChanges,
 	type CheckParams,
 	CheckParamsSchema,
-	type CheckResult,
-	notNullish,
+	CheckQuerySchema,
+	type CheckResponseV2,
+	type TrackParams,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { runTrack } from "../../balances/track/runTrack.js";
 import { getTrackFeatureDeductions } from "../../balances/track/trackUtils/getFeatureDeductions.js";
-import { runDeductionTx } from "../../balances/track/trackUtils/runDeductionTx.js";
 import { getCheckData } from "./checkUtils/getCheckData.js";
 import { getV2CheckResponse } from "./checkUtils/getV2CheckResponse.js";
 import { getCheckPreview } from "./getCheckPreview.js";
@@ -16,10 +18,16 @@ import { handleProductCheck } from "./handlers/handleProductCheck.js";
 
 const DEFAULT_REQUIRED_BALANCE = 1;
 export const handleCheck = createRoute({
+	versionedQuery: {
+		latest: CheckQuerySchema,
+		[ApiVersion.V1_2]: CheckQuerySchema,
+	},
+	resource: AffectedResource.Check,
 	body: CheckParamsSchema,
 	handler: async (c) => {
 		const body = c.req.valid("json");
 		const ctx = c.get("ctx");
+
 		const {
 			customer_id,
 			feature_id,
@@ -46,10 +54,10 @@ export const handleCheck = createRoute({
 		const checkData = await getCheckData({
 			ctx,
 			body: body as CheckParams & { feature_id: string },
+			requiredBalance,
 		});
 
 		const v2Response = await getV2CheckResponse({
-			ctx,
 			checkData,
 			requiredBalance,
 		});
@@ -57,11 +65,8 @@ export const handleCheck = createRoute({
 		const preview = with_preview
 			? await getCheckPreview({
 					ctx,
-					allowed: v2Response.allowed,
-					balance: notNullish(v2Response.balance)
-						? v2Response.balance
-						: undefined,
-					feature: checkData.featureToUse!,
+					checkResponse: v2Response,
+					checkData,
 					customerId: customer_id,
 					entityId: entity_id,
 				})
@@ -69,36 +74,40 @@ export const handleCheck = createRoute({
 
 		if (v2Response.allowed && ctx.isPublic !== true) {
 			if (send_event && feature_id) {
+				// console.log(
+				// 	`Allowed is true, sending event for customer ${customer_id}, feature ${feature_id}`,
+				// );
 				const featureDeductions = getTrackFeatureDeductions({
 					ctx,
 					featureId: feature_id,
 					value: requiredBalance,
 				});
 
-				await runDeductionTx({
+				await runTrack({
 					ctx,
-					customerId: body.customer_id,
-					entityId: body.entity_id,
-					deductions: featureDeductions,
-					overageBehaviour: "cap",
-					refreshCache: true,
-					eventInfo: {
-						event_name: feature_id,
+					body: {
+						customer_id,
+						entity_id,
+						feature_id,
 						value: requiredBalance,
 						properties: body.properties,
-					},
+						skip_event: body.skip_event,
+					} satisfies TrackParams,
+					featureDeductions,
 				});
 			}
 		}
 
 		// Apply version transformations based on API version
-		const transformedResponse = applyResponseVersionChanges<CheckResult>({
+
+		const transformedResponse = applyResponseVersionChanges<CheckResponseV2>({
 			input: v2Response,
 			targetVersion: ctx.apiVersion,
 			resource: AffectedResource.Check,
 			legacyData: {
-				noCusEnts: checkData.cusFeature === undefined,
+				noCusEnts: checkData.apiBalance === undefined,
 				featureToUse: checkData.featureToUse,
+				cusFeatureLegacyData: checkData.cusFeatureLegacyData,
 			},
 		});
 
@@ -108,57 +117,6 @@ export const handleCheck = createRoute({
 		});
 	},
 });
-
-// // 2. If boolean, return true
-// if (feature.type === FeatureType.Boolean) {
-// 	return await getBooleanEntitledResult({
-// 		db,
-// 		fullCus,
-// 		res,
-// 		cusEnts,
-// 		feature,
-// 		apiVersion: req.apiVersion,
-// 		withPreview: req.body.with_preview,
-// 		cusProducts,
-// 		allFeatures,
-// 	});
-// }
-
-// const v1Response = getV1CheckResponse({
-// 	originalFeature: feature,
-// 	creditSystems,
-// 	cusEnts: cusEnts!,
-// 	quantity,
-// 	entityId: entity_id,
-// 	org,
-// });
-
-// let quantity = 1;
-// if (notNullish(requiredBalance)) {
-// 	const floatQuantity = parseFloat(requiredBalance);
-
-// 	if (Number.isNaN(floatQuantity)) {
-// 		throw new RecaseError({
-// 			message: "Invalid required_balance",
-// 			code: ErrCode.InvalidRequest,
-// 			statusCode: StatusCodes.BAD_REQUEST,
-// 		});
-// 	}
-// 	quantity = floatQuantity;
-// }
-
-// else if (notNullish(event_data)) {
-// 	await handleEventSent({
-// 		req,
-// 		customer_id: customer_id,
-// 		customer_data: customer_data,
-// 		event_data: {
-// 			customer_id: customer_id,
-// 			feature_id: feature_id,
-// 			...event_data,
-// 		},
-// 	});
-// }
 
 // await handleEventSent({
 // 	req: {

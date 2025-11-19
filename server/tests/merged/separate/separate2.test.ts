@@ -1,10 +1,10 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { completeCheckoutForm } from "@tests/utils/stripeUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import type Stripe from "stripe";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -161,6 +161,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing separate subscriptions beca
 				product_id: premium.id,
 				entity_id: id,
 			});
+
 			await expectSubToBeCorrect({
 				db,
 				customerId,

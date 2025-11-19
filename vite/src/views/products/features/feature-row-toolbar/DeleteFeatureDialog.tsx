@@ -37,9 +37,10 @@ export const DeleteFeatureDialog = ({
 		isLoading,
 		refetch: refetchFeatureInfo,
 	} = useGeneralQuery({
-		url: `/features/data/deletion_text/${feature.id}`,
+		url: `/v1/features/${feature.id}/deletion_info`,
 		queryKey: ["featureInfo", feature.id],
 		enabled: dropdownOpen,
+		method: "GET",
 	});
 
 	useEffect(() => {
@@ -81,9 +82,7 @@ export const DeleteFeatureDialog = ({
 			toast.success("Feature deleted successfully");
 			setOpen(false);
 		} catch (error: unknown) {
-			toast.error(
-				getBackendErr(error as AxiosError, "Error deleting feature"),
-			);
+			toast.error(getBackendErr(error as AxiosError, "Error deleting feature"));
 		} finally {
 			setLoading(false);
 		}
@@ -117,13 +116,20 @@ export const DeleteFeatureDialog = ({
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogContent onClick={(e) => e.stopPropagation()}>
+			<DialogContent
+				className="bg-background"
+				onClick={(e) => e.stopPropagation()}
+			>
 				<DialogHeader className="max-w-full">
 					<DialogTitle className="truncate max-w-[400px]">
-						{feature.archived ? "Unarchive" : hasProducts ? "Archive" : "Delete"}{" "}
+						{feature.archived
+							? "Unarchive"
+							: hasProducts
+								? "Archive"
+								: "Delete"}{" "}
 						{feature.name}
 					</DialogTitle>
-					<DialogDescription className="max-w-[400px] break-words">
+					<DialogDescription className="max-w-[400px] wrap-break-word">
 						{getDeleteMessage()
 							.split("\n")
 							.map((line, index) => (
@@ -149,7 +155,11 @@ export const DeleteFeatureDialog = ({
 						</Button>
 					)}
 					{hasProducts && !feature.archived && (
-						<Button variant="primary" onClick={handleArchive} isLoading={loading}>
+						<Button
+							variant="primary"
+							onClick={handleArchive}
+							isLoading={loading}
+						>
 							Archive
 						</Button>
 					)}

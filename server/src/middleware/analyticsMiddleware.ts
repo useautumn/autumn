@@ -1,3 +1,5 @@
+import { setSentryTags } from "../external/sentry/sentryUtils";
+
 const handleResFinish = (req: any, res: any) => {
 	const skipUrls = ["/v1/customers/all/search"];
 
@@ -40,16 +42,23 @@ const parseCustomerIdFromUrl = (url: string): string | undefined => {
 };
 
 export const analyticsMiddleware = async (req: any, res: any, next: any) => {
+	const customerId =
+		req?.body?.customer_id || parseCustomerIdFromUrl(req.originalUrl);
+
 	const reqContext = {
 		org_id: req.org?.id,
 		org_slug: req.org?.slug,
 		env: req.env,
 		authType: req.authType,
 		body: req.body,
-		customer_id:
-			req?.body?.customer_id || parseCustomerIdFromUrl(req.originalUrl),
+		customer_id: customerId,
 		user_id: req.userId || null,
 	};
+
+	setSentryTags({
+		ctx: req,
+		customerId,
+	});
 
 	if (req.span) {
 		req.span.setAttributes({

@@ -1,18 +1,17 @@
-import { CreateFeatureSchema } from "@autumn/shared";
+import {
+	CreateFeatureSchema,
+	type CreditSchemaItem,
+	FeatureUsageType,
+} from "@autumn/shared";
 import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	SheetFooter,
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
-import {
-	Sheet,
-	SheetContent,
-	SheetTrigger,
-} from "@/components/v2/sheets/Sheet";
+import { Sheet, SheetContent } from "@/components/v2/sheets/Sheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
 import { FeatureService } from "@/services/FeatureService";
@@ -46,6 +45,7 @@ function CreateFeatureSheet({
 	const reset = useFeatureStore((s) => s.reset);
 
 	const axiosInstance = useAxiosInstance();
+
 	const { refetch } = useFeaturesQuery();
 
 	const handleCreateFeature = async () => {
@@ -65,7 +65,13 @@ function CreateFeatureSheet({
 						name: feature.name,
 						id: feature.id,
 						type: feature.type,
-						config: feature.config,
+						consumable: feature.config?.usage_type === FeatureUsageType.Single,
+						credit_schema: feature.config?.schema?.map(
+							(x: CreditSchemaItem) => ({
+								metered_feature_id: x.metered_feature_id,
+								credit_cost: x.credit_amount,
+							}),
+						),
 						event_names: feature.event_names,
 					},
 				);
@@ -78,6 +84,7 @@ function CreateFeatureSheet({
 					onSuccess(createdFeature.id);
 				}
 			} catch (error: unknown) {
+				console.error("Error creating feature", error);
 				toast.error(
 					getBackendErr(error as AxiosError, "Failed to create feature"),
 				);
@@ -101,13 +108,13 @@ function CreateFeatureSheet({
 
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
-			{!isControlled && (
+			{/* {!isControlled && (
 				<SheetTrigger asChild>
 					<Button variant="add" className="w-full">
 						Feature
 					</Button>
 				</SheetTrigger>
-			)}
+			)} */}
 			<SheetContent className="flex flex-col overflow-hidden">
 				<SheetHeader
 					title="Create new feature"

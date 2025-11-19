@@ -2,7 +2,6 @@ import { AppEnv } from "@autumn/shared";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { PageSectionHeader } from "@/components/general/PageSectionHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/v2/buttons/Button";
 import {
@@ -189,9 +188,9 @@ export const ConfigureStripe = () => {
 
 	return (
 		<div className="flex flex-col gap-4">
-			<PageSectionHeader title="Stripe Settings" />
+			{/* <PageSectionHeader title="Stripe Settings" /> */}
 			<div className="px-10 max-w-[600px] flex flex-col gap-4">
-				<Card className="shadow-none bg-white">
+				<Card className="shadow-none bg-interactive-secondary">
 					<CardHeader>
 						<CardTitle>Connect your Stripe account</CardTitle>
 						{isLoadingStripeAccount ? (

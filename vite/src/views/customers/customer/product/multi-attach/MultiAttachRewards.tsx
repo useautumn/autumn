@@ -1,7 +1,8 @@
+import { type Reward, RewardType } from "@autumn/shared";
+import { Plus, X } from "lucide-react";
+import { toast } from "sonner";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { Button } from "@/components/ui/button";
-import { Plus, X } from "lucide-react";
-import { useCustomerContext } from "../../CustomerContext";
 import {
 	Select,
 	SelectContent,
@@ -9,10 +10,8 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
-import { Reward, RewardType } from "@autumn/shared";
-import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useOrg } from "@/hooks/common/useOrg";
+import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 
 export const AddRewardButton = ({
 	setAttachRewards,
@@ -40,15 +39,13 @@ export const AddRewardButton = ({
 export const MultiAttachRewards = ({
 	attachRewards,
 	setAttachRewards,
-	sub,
 }: {
 	attachRewards: any;
 	setAttachRewards: (rewards: any) => void;
-	sub: any;
 }) => {
 	const { org } = useOrg();
 	const { rewards } = useRewardsQuery();
-	const subDiscounts = sub?.discounts || [];
+	const subDiscounts: any[] = [];
 
 	const noRewards = attachRewards.length === 0 && subDiscounts.length === 0;
 
@@ -149,7 +146,7 @@ export const MultiAttachRewards = ({
 											formatReward(
 												rewards.find(
 													(r: any) => r.id === attachReward.reward_id,
-												),
+												) as Reward,
 											)
 										) : (
 											<span className="text-t3">Select a reward</span>

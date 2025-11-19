@@ -5,6 +5,7 @@
 - JS Doc comments should be SHORT and SWEET. Don't need examples unless ABSOLUTELY necessary
 - When writing DB queries, for the `customers`, `products` and `features` tables (and others possibly not mentioned here), the primary key when updating is `internal_id`, not `id`
 - When using db schemas in Drizzle, import them from '@autumn/shared', and don't do schemas.
+- Do NOT use "any" type.
 
 # Testing
 - When writing tests, ALWAYS read:
@@ -23,6 +24,8 @@
 - **ALWAYS use `.meta()` for zod-openapi schema registration**, NOT `.openapi()`. Example: `ApiProductSchema.meta({ id: "Product" })`
 
 - Always prefer foo({ bar }) over foo(bar) method signatures - no matter if we are using only one argument or not, object as param are always better, as in the future when wanting to change the order of parameters, or add new ones - its easier.
+
+- **ALWAYS use `c.req.param()` to get route parameters in Hono handlers**, NOT `c.req.valid("param")`. Example: `const { customer_id } = c.req.param();`
 
 - When creating "hooks" folders, don't nest them under "components"
 

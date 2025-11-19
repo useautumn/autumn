@@ -5,34 +5,26 @@ import { autumnHandler } from "autumn-js/express";
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { withAuth, withOrgAuth } from "../middleware/authMiddleware.js";
-import { adminRouter } from "./admin/adminRouter.js";
-import { withAdminAuth } from "./admin/withAdminAuth.js";
+import { withOrgAuth } from "../middleware/authMiddleware.js";
 import { analyticsRouter } from "./analytics/internalAnalyticsRouter.js";
 import { trmnlRouter } from "./api/trmnl/trmnlRouter.js";
 import { cusRouter } from "./customers/internalCusRouter.js";
 import { devRouter } from "./dev/devRouter.js";
-import { internalFeatureRouter } from "./features/internalFeatureRouter.js";
 import { InvoiceService } from "./invoices/InvoiceService.js";
-import { handlePostOrg } from "./orgs/handlers/handlePostOrg.js";
 import { onboardingRouter } from "./orgs/onboarding/onboardingRouter.js";
-import { orgRouter } from "./orgs/orgRouter.js";
+
 import { expressProductRouter } from "./products/internalProductRouter.js";
 import { viewsRouter } from "./saved-views/savedViewsRouter.js";
-import { userRouter } from "./users/userRouter.js";
 
 const mainRouter: Router = Router();
 
-mainRouter.get("", async (req: any, res) => {
-	res.status(200).json({ message: "Hello World" });
-});
+// mainRouter.get("", async (req: any, res) => {
+// 	res.status(200).json({ message: "Hello World" });
+// });
 
-mainRouter.post("/organization", withAuth, handlePostOrg);
-mainRouter.use("/admin", withAdminAuth, adminRouter);
-mainRouter.use("/users", withAuth, userRouter);
+// mainRouter.use("/users", withAuth, userRouter);
 mainRouter.use("/onboarding", withOrgAuth, onboardingRouter);
-mainRouter.use("/organization", withOrgAuth, orgRouter);
-mainRouter.use("/features", withOrgAuth, internalFeatureRouter);
+
 mainRouter.use("/products", withOrgAuth, expressProductRouter);
 mainRouter.use("/dev", devRouter);
 mainRouter.use("/customers", withOrgAuth, cusRouter);
@@ -93,6 +85,7 @@ if (process.env.AUTUMN_SECRET_KEY) {
 		"/api/autumn",
 		withOrgAuth,
 		autumnHandler({
+			// url: `${process.env.BETTER_AUTH_URL}/v1`,
 			identify: async (req: any) => {
 				return {
 					customerId: req.org?.id,

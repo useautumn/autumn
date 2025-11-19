@@ -1,5 +1,5 @@
+import { Writable } from "node:stream";
 import pino from "pino";
-import { Writable } from "stream";
 
 // Custom log formatter for Bun compatibility
 const createDevLogStream = () => {
@@ -53,7 +53,7 @@ const createDevLogStream = () => {
 	};
 
 	return new Writable({
-		write(chunk, encoding, callback) {
+		write(chunk, _encoding, callback) {
 			try {
 				const log = JSON.parse(chunk.toString());
 				const timestamp = new Date(log.time)

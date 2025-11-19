@@ -1,10 +1,10 @@
-import { compareMainProduct } from "tests/utils/compare.js";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { initCustomer } from "tests/utils/init.js";
+import { compareMainProduct } from "@tests/utils/compare.js";
+import { AutumnCli } from "@tests/cli/AutumnCli.js";
+import { initCustomer } from "@tests/utils/init.js";
 import { alexProducts } from "./init.js";
 import { CusProductStatus } from "@autumn/shared";
-import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
-import { timeout } from "tests/utils/genUtils.js";
+import { completeCheckoutForm } from "@tests/utils/stripeUtils.js";
+import { timeout } from "@tests/utils/genUtils.js";
 import { runEventsAndCheckBalances } from "./utils.js";
 import chalk from "chalk";
 

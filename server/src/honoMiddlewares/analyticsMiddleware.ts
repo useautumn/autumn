@@ -1,7 +1,8 @@
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { setSentryTags } from "../external/sentry/sentryUtils";
 
-const parseCustomerIdFromUrl = ({
+export const parseCustomerIdFromUrl = ({
 	url,
 }: {
 	url: string;
@@ -21,18 +22,43 @@ const parseCustomerIdFromUrl = ({
 	return undefined;
 };
 
+export const parseCustomerIdFromBody = async (
+	c: Context<HonoEnv>,
+): Promise<
+	{ customerId: string | undefined; sendEvent: boolean | undefined } | undefined
+> => {
+	const method = c.req.method;
+	if (method === "POST" || method === "PUT" || method === "PATCH") {
+		try {
+			// Clone the request to read body without consuming it
+			const body = await c.req.json();
+
+			const isCreateCustomerPath =
+				c.req.path.startsWith("/v1/customers") && method === "POST";
+
+			return {
+				customerId: isCreateCustomerPath ? body?.id : body?.customer_id,
+				sendEvent: body?.send_event,
+			};
+		} catch (_error) {
+			// Body might not be JSON, that's okay
+			return undefined;
+		}
+	}
+
+	return undefined;
+};
+
 /**
  * Logs response details asynchronously without blocking
  */
 const logResponse = async ({
 	ctx,
 	c,
-	method,
 	skipUrls,
 }: {
 	ctx: any;
 	c: Context<HonoEnv>;
-	method: string;
 	skipUrls: string[];
 }) => {
 	try {
@@ -111,12 +137,17 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 	ctx.logger.info(`${method} ${c.req.path} (${ctx.org?.slug})`);
 
+	setSentryTags({
+		ctx,
+		customerId,
+	});
+
 	// Execute the request
 	await next();
 
 	// Log response asynchronously without blocking (runs after response is sent)
 	Promise.resolve()
-		.then(() => logResponse({ ctx, c, method, skipUrls }))
+		.then(() => logResponse({ ctx, c, skipUrls }))
 		.catch((error) => {
 			console.error("Failed to log response to logtail");
 			console.error(error);

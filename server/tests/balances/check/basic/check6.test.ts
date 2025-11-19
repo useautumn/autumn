@@ -1,14 +1,17 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import {
+	type ApiBalanceBreakdown,
 	ApiVersion,
-	type CheckResponse,
 	type CheckResponseV0,
+	type CheckResponseV1,
+	type CheckResponseV2,
 	type LimitedItem,
+	ResetInterval,
 	SuccessCode,
 } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { TestFeature } from "tests/setup/v2Features.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
 	constructArrearItem,
@@ -42,7 +45,7 @@ describe(`${chalk.yellowBright("check6: test /check on feature with multiple bal
 	const customerId = "check6";
 	const autumnV0: AutumnInt = new AutumnInt({ version: ApiVersion.V0_2 });
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
-
+	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2_0 });
 	beforeAll(async () => {
 		await initCustomerV3({
 			ctx,
@@ -63,21 +66,63 @@ describe(`${chalk.yellowBright("check6: test /check on feature with multiple bal
 		});
 	});
 
-	test("v0 response", async () => {
-		const res = (await autumnV0.check({
+	test("v2 response", async () => {
+		const res = (await autumnV2.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
-		})) as unknown as CheckResponseV0;
+		})) as unknown as CheckResponseV2;
 
-		expect(res.allowed).toBe(true);
-		expect(res.balances).toBeDefined();
-		expect(res.balances).toHaveLength(1);
-		expect(res.balances[0]).toMatchObject({
-			balance: monthlyMessages.included_usage + lifetimeMessages.included_usage,
-			feature_id: TestFeature.Messages,
-			required: null,
-			unlimited: false,
-			usage_allowed: true,
+		const expectedLifetimeBreadown: ApiBalanceBreakdown = {
+			granted_balance: 1000,
+			purchased_balance: 0,
+			current_balance: 1000,
+			usage: 0,
+			max_purchase: null,
+			overage_allowed: false,
+			reset: {
+				interval: ResetInterval.OneOff,
+				resets_at: null,
+			},
+		};
+
+		const expectedMonthlyBreadown = {
+			granted_balance: 100,
+			purchased_balance: 0,
+			current_balance: 100,
+			usage: 0,
+			max_purchase: null,
+			reset: {
+				interval: ResetInterval.Month,
+			},
+		};
+
+		const actualMonthlyBreakdown = res.balance?.breakdown?.[0];
+		const actualLifetimeBreakdown = res.balance?.breakdown?.[1];
+
+		expect(actualMonthlyBreakdown).toMatchObject(expectedMonthlyBreadown);
+		expect(actualLifetimeBreakdown).toMatchObject(expectedLifetimeBreadown);
+		expect(actualMonthlyBreakdown?.reset?.resets_at).toBeDefined();
+
+		expect(res).toMatchObject({
+			allowed: true,
+			customer_id: customerId,
+			required_balance: 1,
+			balance: {
+				feature_id: TestFeature.Messages,
+				unlimited: false,
+				granted_balance:
+					monthlyMessages.included_usage + lifetimeMessages.included_usage,
+				purchased_balance: 0,
+				current_balance:
+					monthlyMessages.included_usage + lifetimeMessages.included_usage,
+				usage: 0,
+				max_purchase: null,
+				overage_allowed: true,
+				reset: {
+					interval: "multiple",
+					resets_at: null,
+				},
+			},
 		});
 	});
 
@@ -85,7 +130,7 @@ describe(`${chalk.yellowBright("check6: test /check on feature with multiple bal
 		const res = (await autumnV1.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
-		})) as unknown as CheckResponse;
+		})) as unknown as CheckResponseV1;
 
 		const totalIncludedUsage =
 			monthlyMessages.included_usage + lifetimeMessages.included_usage;
@@ -127,5 +172,23 @@ describe(`${chalk.yellowBright("check6: test /check on feature with multiple bal
 		expect(res.breakdown).toHaveLength(2);
 		expect(res.breakdown?.[0]).toMatchObject(monthlyBreakdown);
 		expect(res.breakdown?.[1]).toMatchObject(lifetimeBreakdown);
+	});
+
+	test("v0 response", async () => {
+		const res = (await autumnV0.check({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+		})) as unknown as CheckResponseV0;
+
+		expect(res.allowed).toBe(true);
+		expect(res.balances).toBeDefined();
+		expect(res.balances).toHaveLength(1);
+		expect(res.balances[0]).toMatchObject({
+			balance: monthlyMessages.included_usage + lifetimeMessages.included_usage,
+			feature_id: TestFeature.Messages,
+			required: null,
+			unlimited: false,
+			usage_allowed: true,
+		});
 	});
 });

@@ -1,14 +1,17 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { ApiVersion } from "@autumn/shared";
+import { ApiVersion, ErrCode } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { expectAutumnError } from "../../../utils/expectUtils/expectErrUtils";
+import { timeout } from "../../../utils/genUtils";
+import { getCustomerEvents } from "../../testBalanceUtils";
 
 const messagesFeature = constructFeatureItem({
 	featureId: TestFeature.Messages,
@@ -72,6 +75,11 @@ describe(`${chalk.yellowBright("track-basic6: test idempotency key prevents dupl
 
 		expect(balance).toBe(expectedBalance);
 		expect(usage).toBe(deductValue);
+
+		const eventsList = await getCustomerEvents({ customerId });
+		expect(eventsList).toHaveLength(1);
+		expect(eventsList?.[0].idempotency_key).toBe(idempotencyKey);
+		expect(eventsList?.[0].value).toBe(deductValue);
 	});
 
 	test("should reject second track with same idempotency key", async () => {
@@ -81,28 +89,35 @@ describe(`${chalk.yellowBright("track-basic6: test idempotency key prevents dupl
 		// Get balance before attempting duplicate track
 		const customerBefore = await autumnV1.customers.get(customerId);
 		const balanceBefore = customerBefore.features[TestFeature.Messages].balance;
-
 		// This should fail or be rejected due to duplicate idempotency key
-		let errorThrown = false;
-		try {
-			await autumnV1.track({
-				customer_id: customerId,
-				feature_id: TestFeature.Messages,
-				value: deductValue,
-				idempotency_key: idempotencyKey,
-			});
-		} catch (error) {
-			errorThrown = true;
-			// Optionally check error type/message
-		}
-
-		expect(errorThrown).toBe(true);
+		await expectAutumnError({
+			errCode: ErrCode.DuplicateEvent,
+			func: async () => {
+				await autumnV1.track({
+					customer_id: customerId,
+					feature_id: TestFeature.Messages,
+					value: deductValue,
+					idempotency_key: idempotencyKey,
+				});
+			},
+		});
 
 		// Balance should remain unchanged
 		const customerAfter = await autumnV1.customers.get(customerId);
-		const balanceAfter = customerAfter.features[TestFeature.Messages].balance;
 
+		const balanceAfter = customerAfter.features[TestFeature.Messages].balance;
 		expect(balanceAfter).toBe(balanceBefore);
+
+		await timeout(2000);
+		const customerAfter2 = await autumnV1.customers.get(customerId, {
+			skip_cache: "true",
+		});
+		const balanceAfter2 = customerAfter2.features[TestFeature.Messages].balance;
+		expect(balanceAfter2).toBe(balanceBefore);
+
+		const eventsList = await getCustomerEvents({ customerId });
+		expect(eventsList).toHaveLength(1);
+		expect(eventsList?.[0].idempotency_key).toBe(idempotencyKey);
 	});
 
 	test("should process track with different idempotency key", async () => {

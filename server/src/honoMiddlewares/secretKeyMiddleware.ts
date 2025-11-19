@@ -1,8 +1,7 @@
-import { AuthType, ErrCode } from "@autumn/shared";
+import { AuthType, ErrCode, RecaseError } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { betterAuthMiddleware } from "./betterAuthMiddleware.js";
 import { publicKeyMiddleware } from "./publicKeyMiddleware.js";
 

@@ -33,6 +33,8 @@ export interface ExtendedRequest extends ExpressRequest {
 	apiVersion: ApiVersionClass;
 
 	timestamp?: number;
+	expand: string[];
+	skipCache: boolean;
 }
 
 export interface ActionRequest {
