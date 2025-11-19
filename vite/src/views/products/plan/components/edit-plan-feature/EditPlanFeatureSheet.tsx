@@ -55,7 +55,7 @@ export function EditPlanFeatureSheet({
 					{hasChosenBillingType && (
 						<>
 							<SheetSection
-								title={`Allowance ${isFeaturePrice ? "(optional)" : ""}`}
+								title={`Included Amount ${isFeaturePrice ? "(optional)" : ""}`}
 							>
 								<IncludedUsage />
 							</SheetSection>

@@ -56,6 +56,11 @@ export const useHasChanges = () => {
 	const baseProduct = useProductStore((s) => s.baseProduct);
 	const { features = [] } = useFeaturesQuery();
 
+	console.log("product", product);
+	console.log("baseProduct", baseProduct);
+
+	// console.log("has changes", product, baseProduct);
+
 	return useMemo(() => {
 		if (!baseProduct) return false;
 

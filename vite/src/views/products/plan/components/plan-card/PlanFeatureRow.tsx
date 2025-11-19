@@ -3,7 +3,7 @@
 import type { ProductItem } from "@autumn/shared";
 import { getProductItemDisplay, productV2ToFeatureItems } from "@autumn/shared";
 import { TrashIcon } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AdminHover } from "@/components/general/AdminHover";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useOrg } from "@/hooks/common/useOrg";
@@ -31,7 +31,7 @@ interface PlanFeatureRowProps {
 
 export const PlanFeatureRow = ({
 	item: itemProp,
-	onDelete,
+	onDelete: _onDelete,
 	index,
 }: PlanFeatureRowProps) => {
 	const { org } = useOrg();
@@ -45,6 +45,7 @@ export const PlanFeatureRow = ({
 	const playgroundMode = useOnboardingStore((s) => s.playgroundMode);
 	const { queryStates } = useOnboarding3QueryState();
 
+	const ref = useRef<HTMLDivElement>(null);
 	const [isPressed, setIsPressed] = useState(false);
 
 	// Disable interaction if in onboarding and not in playground edit mode
@@ -159,17 +160,21 @@ export const PlanFeatureRow = ({
 		];
 	};
 
-	return (
+	const renderContent = (contentRef?: React.Ref<HTMLDivElement>) => (
 		<div
+			ref={contentRef}
 			role="button"
 			tabIndex={0}
-			data-state={isSelected ? "open" : "closed"}
+			// data-state={isSelected ? "open" : "closed"}
 			{...(isDisabled && { "data-disabled": true })}
 			data-pressed={isPressed}
 			className={cn(
-				"flex items-center w-full group !h-8 group/row select-none outline-none",
+				"flex items-center w-full group h-10! group/row select-none rounded-xl hover:relative hover:z-95",
 				"input-base input-state-open-tiny",
 				isDisabled && "pointer-events-none cursor-default",
+				isSelected &&
+					"border-transparent z-95 relative bg-interative-secondary !outline-4 !outline-outer-background",
+				isOnboarding && isSelected && "!border-primary",
 			)}
 			onMouseDown={(e) => {
 				if (isDisabled) return;
@@ -196,7 +201,7 @@ export const PlanFeatureRow = ({
 			{/* Left side - Icons and text */}
 			<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
 				<AdminHover texts={adminHoverText()}>
-					<div className="flex flex-row items-center gap-1 flex-shrink-0">
+					<div className="flex flex-row items-center gap-1 shrink-0">
 						<PlanFeatureIcon item={item} position="left" />
 
 						<CustomDotIcon />
@@ -206,7 +211,7 @@ export const PlanFeatureRow = ({
 				</AdminHover>
 
 				<p className="whitespace-nowrap truncate flex-1 min-w-0">
-					<span className={cn("text-body", !hasFeatureName && "!text-t4")}>
+					<span className={cn("text-body", !hasFeatureName && "text-t4!")}>
 						{displayText}
 					</span>
 
@@ -215,7 +220,7 @@ export const PlanFeatureRow = ({
 
 				<div
 					className={cn(
-						"flex items-center max-w-0 opacity-0 overflow-hidden group-hover:max-w-[200px] group-hover:opacity-100 flex-shrink-0",
+						"flex items-center max-w-0 opacity-0 overflow-hidden group-hover:max-w-[200px] group-hover:opacity-100 shrink-0",
 						isSelected && "max-w-[200px] opacity-100",
 					)}
 				>
@@ -227,6 +232,7 @@ export const PlanFeatureRow = ({
 						className="bg-transparent hover:text-primary max-w-24 text-t3"
 						tabIndex={-1}
 						side="bottom"
+						
 					/> */}
 					<IconButton
 						icon={
@@ -258,4 +264,6 @@ export const PlanFeatureRow = ({
 			</div>
 		</div>
 	);
+
+	return renderContent(ref);
 };

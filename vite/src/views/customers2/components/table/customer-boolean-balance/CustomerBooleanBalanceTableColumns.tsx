@@ -34,7 +34,7 @@ export const CustomerBooleanBalanceTableColumns = ({
 	},
 	{
 		header: "Type",
-		size: 80,
+		size: 200,
 		accessorKey: "type",
 		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => {
 			const ent = row.original;

@@ -2,7 +2,6 @@ import type {
 	FullCusEntWithFullCusProduct,
 	FullCusProduct,
 } from "@autumn/shared";
-import { useMemo } from "react";
 import { Table } from "@/components/general/table";
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
@@ -23,15 +22,11 @@ export function CustomerBalanceTable({
 }) {
 	const setSheet = useCustomerBalanceSheetStore((s) => s.setSheet);
 
-	const columns = useMemo(
-		() =>
-			CustomerBalanceTableColumns({
-				filteredCustomerProducts,
-				entityId,
-				aggregatedMap,
-			}),
-		[filteredCustomerProducts, entityId, aggregatedMap],
-	);
+	const columns = CustomerBalanceTableColumns({
+		filteredCustomerProducts,
+		entityId,
+		aggregatedMap,
+	});
 
 	const enableSorting = false;
 	const table = useCustomerTable<FullCusEntWithFullCusProduct>({

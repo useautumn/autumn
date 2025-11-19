@@ -1,5 +1,6 @@
 import { useHotkeys } from "react-hotkeys-hook";
 import { Button, type ButtonProps } from "@/components/v2/buttons/Button";
+import { cn } from "@/lib/utils";
 
 export const ShortcutButton = ({
 	metaShortcut,
@@ -44,7 +45,7 @@ export const ShortcutButton = ({
 		const variantClasses =
 			variant === "secondary"
 				? "bg-muted text-body-secondary"
-				: "bg-purple-medium dark:bg-transparent dark:text-t3";
+				: "bg-purple-medium dark:bg-[#5611BA]";
 
 		return (
 			<div className={`${baseClasses} ${variantClasses}`}>
@@ -77,11 +78,11 @@ export const ShortcutButton = ({
 			isLoading={isLoading}
 			variant={variant}
 			{...props}
-			className="gap-1 items-center"
+			className={cn("gap-1 items-center", props.className)}
 		>
 			{children}
 			{(metaShortcut || singleShortcut) && (
-				<span className="flex items-center gap-0.5 dark:gap-0">
+				<span className="flex items-center gap-0.5">
 					{metaShortcut && keystrokeContainer(getMetaKey())}
 					{keystrokeContainer(getShortcutDisplay(), metaShortcut === "enter")}
 				</span>

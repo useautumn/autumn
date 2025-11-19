@@ -2,7 +2,7 @@
 
 import "svix-react/style.css";
 import { AppPortal } from "svix-react";
-import { PageSectionHeader } from "@/components/general/PageSectionHeader";
+import { useTheme } from "@/contexts/ThemeProvider";
 import { useAppQueryStates } from "@/hooks/common/useAppQueryStates";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
@@ -43,13 +43,14 @@ export default function DevScreen() {
 }
 
 const ConfigureWebhookSection = ({ dashboardUrl }: any) => {
+	const { isDark } = useTheme();
+
 	return (
 		<div className="h-full">
-			<PageSectionHeader title="Webhooks" />
-
 			{dashboardUrl ? (
 				<AppPortal
 					url={dashboardUrl}
+					darkMode={isDark}
 					style={{
 						height: "100%",
 						borderRadius: "none",
