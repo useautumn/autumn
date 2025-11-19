@@ -24,11 +24,20 @@ const pro = constructProduct({
 			featureId: TestFeature.Users,
 			includedUsage: 5,
 		}),
+		constructFeatureItem({
+			featureId: TestFeature.Words,
+			includedUsage: 300,
+		}),
 		constructArrearProratedItem({
 			featureId: TestFeature.Workflows,
 			includedUsage: 0,
 			pricePerUnit: 10,
 		}),
+		// constructFeatureItem({
+		// 	featureId: TestFeature.Words,
+		// 	includedUsage: 100,
+		// 	entityFeatureId: TestFeature.Users,
+		// }) as LimitedItem,
 	],
 });
 
@@ -58,6 +67,19 @@ describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 			customer_id: customerId,
 			product_id: pro.id,
 		});
+
+		await autumn.entities.create(customerId, [
+			{
+				id: "1",
+				name: "Entity 1",
+				feature_id: TestFeature.Users,
+			},
+			{
+				id: "2",
+				name: "Entity 2",
+				feature_id: TestFeature.Users,
+			},
+		]);
 	});
 	return;
 

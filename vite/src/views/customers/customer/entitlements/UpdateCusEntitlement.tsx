@@ -97,6 +97,7 @@ function UpdateCusEntitlement({
 				feature_id: feature.id,
 				current_balance: balanceInt,
 				customer_entitlement_id: cusEnt.id,
+				entity_id: entityId ?? undefined,
 				// usage: 0,
 			});
 

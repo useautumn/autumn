@@ -1,92 +1,50 @@
-import type { Context } from "hono";
-import { rateLimiter } from "hono-rate-limiter";
-import type { HonoEnv } from "../honoUtils/HonoEnv.js";
+import type { Context, Next } from "hono";
+import { StatusCodes } from "http-status-codes";
+import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { upstash } from "../external/upstash/initUpstash";
+import {
+	getRateLimiter,
+	getRateLimitKey,
+	getRateLimitType,
+} from "../external/upstash/rateLimitUtils";
 
 /**
- * General rate limiter for all API routes: 50k requests/second per organization
+ * Analytics middleware for Hono
+ * Enriches logger context and logs responses
  */
-export const generalRateLimiter = rateLimiter({
-	windowMs: 1000, // 1 second
-	limit: 100_000,
-	standardHeaders: "draft-6",
-	keyGenerator: (c: Context<HonoEnv>) => {
-		const ctx = c.var.ctx;
-		if (!ctx?.org?.id) {
-			return "anonymous";
-		}
-		return `org:${ctx.org.id}:${ctx.env}`;
-	},
-	handler: (c: Context<HonoEnv>) => {
-		return c.json(
-			{
-				message: "Too many requests. Please try again later.",
-				code: "rate_limit_exceeded",
-			},
-			429,
-		);
-	},
-});
+export const rateLimitMiddleware = async (c: Context<HonoEnv>, next: Next) => {
+	if (!upstash) {
+		await next();
+		return;
+	}
 
-/**
- * Factory function to create customer-based rate limiters
- * Key format: customer_id:org_id:env
- */
-const createCustomerRateLimiter = ({ limit }: { limit: number }) => {
-	return rateLimiter({
-		windowMs: 1000, // 1 second
-		limit,
+	const ctx = c.get("ctx");
+	try {
+		// 1. Check method.
+		const rateLimitType = getRateLimitType(c);
 
-		standardHeaders: "draft-6",
-		keyGenerator: async (c: Context<HonoEnv>) => {
-			const ctx = c.var.ctx;
+		// 2. Get rate limit key
+		const rateLimitKey = await getRateLimitKey({ c, rateLimitType });
+		const rateLimiter = getRateLimiter({ rateLimitType });
 
-			// Try to get customer_id from request body
-			let customerId: string | undefined;
+		// 3. Check rate limit
+		const result = await rateLimiter?.limit(rateLimitKey);
 
-			try {
-				const bodyObj = await c.req.json();
-				customerId = bodyObj?.customer_id;
-			} catch {
-				// If we can't parse the body, fall back to org-level limiting
-			}
-
-			if (!customerId || !ctx?.org?.id || !ctx?.env) {
-				// Fall back to org-level limiting if customer info not available
-				return ctx?.org?.id
-					? `org:${ctx.org.id}:${ctx.env || "unknown"}`
-					: "anonymous";
-			}
-
-			return `customer:${customerId}:${ctx.org.id}:${ctx.env}`;
-		},
-		handler: (c: Context<HonoEnv>) => {
-			return c.json(
-				{
-					message: "Too many requests. Please try again later.",
-					code: "rate_limit_exceeded",
-				},
-				429,
+		if (!result?.success) {
+			ctx.logger.warn(
+				`${rateLimitType} - Rate limit exceeded: ${rateLimitKey}`,
 			);
-		},
-		// store: new RedisStore({
-		// 	client: new Redis({
-		// 		url: process.env.UPSTASH_URL!,
-		// 		token: process.env.UPSTASH_TOKEN!,
-		// 	}),
-		// }),
-	});
+			return c.json(
+				{ error: "Rate limit exceeded" },
+				StatusCodes.TOO_MANY_REQUESTS,
+			);
+		}
+	} catch (error) {
+		ctx.logger.error(
+			`Error checking rate limit, error: ${error}. Bypassing for now`,
+		);
+	}
+
+	// 4. Execute the request
+	await next();
 };
-
-/**
- * Rate limiter for /track and /events endpoints: 1k requests/second per customer
- */
-export const customerTrackRateLimiter = createCustomerRateLimiter({
-	limit: 10_000,
-});
-
-/**
- * Rate limiter for /check and /entitled endpoints: 100k requests/second per customer
- */
-export const customerCheckRateLimiter = createCustomerRateLimiter({
-	limit: 100_000,
-});

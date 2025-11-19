@@ -25,6 +25,8 @@ DECLARE
   END;
   skip_additional_balance boolean := COALESCE((params->>'skip_additional_balance')::boolean, false);
   alter_granted_balance boolean := COALESCE((params->>'alter_granted_balance')::boolean, false);
+  overage_behaviour text := NULLIF(params->>'overage_behaviour', '');
+  feature_id text := NULLIF(params->>'feature_id', '');
   
   remaining_amount numeric;
   rollover_deducted numeric := 0;
@@ -39,7 +41,7 @@ DECLARE
   -- Current state from DB
   current_balance numeric;
   current_additional_balance numeric;
-  current_additional_granted_balance numeric;
+  current_adjustment numeric;
   current_entities jsonb;
 
   -- Balance update (alter_granted) variables
@@ -49,13 +51,12 @@ DECLARE
   -- Additional balance deduction
   additional_deducted numeric;
   new_additional_balance numeric;
-  new_additional_granted_balance numeric;
 
   -- Results from deduction helper
   deducted numeric;
   new_balance numeric;
   new_entities jsonb;
-  new_adjustment numeric;  -- LEGACY: can be removed when no longer needed
+  new_adjustment numeric;
   -- Tracking
   updates_json jsonb := '{}'::jsonb;
   result_json jsonb;
@@ -127,21 +128,21 @@ BEGIN
     SELECT
       ce.balance,
       COALESCE(ce.additional_balance, 0),
-      COALESCE(ce.additional_granted_balance, 0),
+      COALESCE(ce.adjustment, 0),
       COALESCE(ce.entities, '{}'::jsonb)
     INTO
       current_balance,
       current_additional_balance,
-      current_additional_granted_balance,
+      current_adjustment,
       current_entities
     FROM customer_entitlements ce
     WHERE ce.id = ent_id;
 
     -- STEP 2: Deduct from additional_balance (customer-level and entity-level)
-    SELECT * INTO additional_deducted, new_additional_balance, new_additional_granted_balance, current_entities
+    SELECT * INTO additional_deducted, new_additional_balance, new_adjustment, current_entities
     FROM deduct_from_additional_balance(jsonb_build_object(
       'current_additional_balance', current_additional_balance,
-      'current_additional_granted_balance', current_additional_granted_balance,
+      'current_adjustment', current_adjustment,
       'current_entities', current_entities,
       'remaining_amount', remaining_amount,
       'credit_cost', credit_cost,
@@ -155,11 +156,11 @@ BEGIN
     remaining_amount := remaining_amount - additional_deducted;
 
     -- STEP 3: Perform deduction from main balance (Pass 1: allow_negative = false)
-    SELECT * INTO deducted, new_balance, new_entities, new_additional_granted_balance, new_adjustment
+    SELECT * INTO deducted, new_balance, new_entities, new_adjustment
     FROM deduct_from_main_balance(jsonb_build_object(
       'current_balance', current_balance,
       'current_entities', current_entities,
-      'current_additional_granted_balance', new_additional_granted_balance,
+      'current_adjustment', new_adjustment,
       'amount_to_deduct', remaining_amount,
       'credit_cost', credit_cost,
       'allow_negative', false,
@@ -176,9 +177,8 @@ BEGIN
         SET
           balance = new_balance,
           additional_balance = new_additional_balance,
-          additional_granted_balance = new_additional_granted_balance,
           entities = new_entities,
-          adjustment = COALESCE(adjustment, 0) + new_adjustment  -- LEGACY: can be removed when no longer needed
+          adjustment = new_adjustment
         WHERE ce.id = ent_id;
       ELSE
         -- Don't update entities for non-entity-scoped entitlements (keep NULL)
@@ -186,8 +186,7 @@ BEGIN
         SET
           balance = new_balance,
           additional_balance = new_additional_balance,
-          additional_granted_balance = new_additional_granted_balance,
-          adjustment = COALESCE(adjustment, 0) + new_adjustment  -- LEGACY: can be removed when no longer needed
+          adjustment = new_adjustment
         WHERE ce.id = ent_id;
       END IF;
 
@@ -198,7 +197,7 @@ BEGIN
         jsonb_build_object(
           'balance', new_balance,
           'additional_balance', new_additional_balance,
-          'additional_granted_balance', new_additional_granted_balance,
+          'adjustment', new_adjustment,
           'entities', new_entities,
           'deducted', deducted + additional_deducted,
           'additional_deducted', additional_deducted
@@ -233,12 +232,12 @@ BEGIN
       SELECT
         ce.balance,
         COALESCE(ce.additional_balance, 0),
-        COALESCE(ce.additional_granted_balance, 0),
+        COALESCE(ce.adjustment, 0),
         COALESCE(ce.entities, '{}'::jsonb)
       INTO
         current_balance,
         current_additional_balance,
-        current_additional_granted_balance,
+        current_adjustment,
         current_entities
       FROM customer_entitlements ce
       WHERE ce.id = ent_id;
@@ -247,11 +246,11 @@ BEGIN
       new_additional_balance := current_additional_balance;
       
       -- Perform deduction (Pass 2: allow_negative = true)
-      SELECT * INTO deducted, new_balance, new_entities, new_additional_granted_balance, new_adjustment
+      SELECT * INTO deducted, new_balance, new_entities, new_adjustment
       FROM deduct_from_main_balance(jsonb_build_object(
         'current_balance', current_balance,
         'current_entities', current_entities,
-        'current_additional_granted_balance', current_additional_granted_balance,
+        'current_adjustment', current_adjustment,
         'amount_to_deduct', remaining_amount,
         'credit_cost', credit_cost,
         'allow_negative', true,
@@ -268,9 +267,8 @@ BEGIN
           SET
             balance = new_balance,
             additional_balance = new_additional_balance,
-            additional_granted_balance = new_additional_granted_balance,
             entities = new_entities,
-            adjustment = COALESCE(adjustment, 0) + new_adjustment  -- LEGACY: can be removed when no longer needed
+            adjustment = new_adjustment
           WHERE ce.id = ent_id;
         ELSE
           -- Don't update entities for non-entity-scoped entitlements (keep NULL)
@@ -278,8 +276,7 @@ BEGIN
           SET
             balance = new_balance,
             additional_balance = new_additional_balance,
-            additional_granted_balance = new_additional_granted_balance,
-            adjustment = COALESCE(adjustment, 0) + new_adjustment  -- LEGACY: can be removed when no longer needed
+            adjustment = new_adjustment
           WHERE ce.id = ent_id;
         END IF;
 
@@ -293,7 +290,7 @@ BEGIN
             jsonb_build_object(
               'balance', new_balance,
               'additional_balance', new_additional_balance,
-              'additional_granted_balance', new_additional_granted_balance,
+              'adjustment', new_adjustment,
               'entities', new_entities,
               'deducted', (updates_json->ent_id->>'deducted')::numeric + deducted,
               'additional_deducted', COALESCE((updates_json->ent_id->>'additional_deducted')::numeric, 0)
@@ -307,7 +304,7 @@ BEGIN
             jsonb_build_object(
               'balance', new_balance,
               'additional_balance', new_additional_balance,
-              'additional_granted_balance', new_additional_granted_balance,
+              'adjustment', new_adjustment,
               'entities', new_entities,
               'deducted', deducted,
               'additional_deducted', 0
@@ -318,6 +315,14 @@ BEGIN
         remaining_amount := remaining_amount - (deducted / credit_cost);
       END IF;
     END LOOP;
+  END IF;
+  
+  -- Check overage behaviour
+  IF remaining_amount > 0 AND overage_behaviour = 'reject' THEN
+    RAISE EXCEPTION 'INSUFFICIENT_BALANCE|featureId:%|value:%|remaining:%', 
+      feature_id,
+      COALESCE(amount_to_deduct::text, '0'),
+      remaining_amount;
   END IF;
   
   -- Build final result

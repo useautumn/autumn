@@ -33,9 +33,6 @@ export const customerEntitlements = pgTable(
 
 		// New field, free_balance: how much balance can be deducted
 		additional_balance: numeric({ mode: "number" }).notNull().default(0),
-		additional_granted_balance: numeric({ mode: "number" })
-			.notNull()
-			.default(0),
 
 		// Need to work on free balance...
 		entities: jsonb("entities").$type<Record<string, EntityBalance>>(),
