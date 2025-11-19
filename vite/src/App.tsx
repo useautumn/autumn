@@ -1,4 +1,5 @@
 import { AppEnv } from "@autumn/shared";
+import * as Sentry from "@sentry/react";
 import { init } from "@squircle/core";
 import * as React from "react";
 import { useEffect } from "react";
@@ -37,6 +38,12 @@ export default function App() {
 			identifyUser({
 				email: data.user.email,
 				name: data.user.name,
+			});
+			Sentry.setUser({
+				email: data.user.email ?? "unknown_email",
+				name: data.user.name ?? "unknown_name",
+				id: data.user.id ?? "unknown_user",
+				orgId: data.session.activeOrganizationId ?? "unknown_org",
 			});
 		}
 	}, [data]);

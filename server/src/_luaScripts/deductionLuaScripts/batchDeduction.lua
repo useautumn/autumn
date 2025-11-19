@@ -325,8 +325,9 @@ end
 --   cusFeature: Balance object to deduct from
 --   amount: Amount to handle (positive for deduction, negative for refund)
 --   adjustGrantedBalance: If true, decrement granted_balance instead of incrementing usage
+--   overageBehavior: "cap" or "reject" - affects allocatedFeatureBypass logic
 -- Returns: { remaining: number, deltas: [{key, field, delta}], stateChanges: [{type, index, field, newValue/delta}] }
-local function deductFromOverage(cusFeature, amount, adjustGrantedBalance)
+local function deductFromOverage(cusFeature, amount, adjustGrantedBalance, overageBehavior)
     local remaining = amount
     local deltas = {}
     local stateChanges = {}
@@ -350,8 +351,11 @@ local function deductFromOverage(cusFeature, amount, adjustGrantedBalance)
     end
     
     -- Check if overage is allowed
-    -- Continuous use features automatically allow overage
-    local allowOverage = cusFeature.overage_allowed or (cusFeature.feature and cusFeature.feature.type == "metered" and cusFeature.feature.consumable == false)
+    -- Continuous use features automatically allow overage (unless overageBehavior is "reject")
+    local allocatedFeatureBypass = cusFeature.feature and cusFeature.feature.type == "metered" and cusFeature.feature.consumable == false and overageBehavior ~= "reject"
+    local allowOverage = cusFeature.overage_allowed or allocatedFeatureBypass
+    
+    
     
     if not allowOverage then
         return {
@@ -553,8 +557,9 @@ end
 --   cusFeature: Balance object to deduct from
 --   amount: Amount to deduct (can be negative for refunds)
 --   adjustGrantedBalance: If true, decrement granted_balance instead of incrementing usage
+--   overageBehavior: "cap" or "reject" - passed to deductFromOverage
 -- Returns: { remaining: number, deltas: [{key, field, delta}], stateChanges: [{type, index, field, newValue/delta}] }
-local function deductFromMainBalance(cusFeature, amount, adjustGrantedBalance)
+local function deductFromMainBalance(cusFeature, amount, adjustGrantedBalance, overageBehavior)
     local allDeltas = {}
     local allStateChanges = {}
     local remaining = amount
@@ -574,7 +579,7 @@ local function deductFromMainBalance(cusFeature, amount, adjustGrantedBalance)
         
         -- Pass 2: Deduct from overage (increments purchased_balance up to max_purchase)
         if remaining > 0 then
-            local overageResult = deductFromOverage(cusFeature, remaining, adjustGrantedBalance)
+            local overageResult = deductFromOverage(cusFeature, remaining, adjustGrantedBalance, overageBehavior)
             remaining = overageResult.remaining
             
             for _, delta in ipairs(overageResult.deltas) do
@@ -587,7 +592,7 @@ local function deductFromMainBalance(cusFeature, amount, adjustGrantedBalance)
     -- NEGATIVE AMOUNT (REFUND): overage → current_balance
     else
         -- Pass 1: Refund from overage (decrements purchased_balance down to 0)
-        local overageResult = deductFromOverage(cusFeature, remaining, adjustGrantedBalance)
+        local overageResult = deductFromOverage(cusFeature, remaining, adjustGrantedBalance, overageBehavior)
         remaining = overageResult.remaining
         
         for _, delta in ipairs(overageResult.deltas) do
@@ -626,7 +631,7 @@ end
 
 -- Deduct from a single customer feature (handles rollovers + main balance)
 -- Returns: { remaining: number, deltas: array, stateChanges: array }
-local function deductFromCusFeature(cusFeature, amount)
+local function deductFromCusFeature(cusFeature, amount, overageBehavior)
     local allDeltas = {}
     local allStateChanges = {}
     
@@ -644,7 +649,7 @@ local function deductFromCusFeature(cusFeature, amount)
     
     -- Step 2: Deduct remaining from main balance
     if remaining ~= 0 then
-        local mainResult = deductFromMainBalance(cusFeature, remaining, adjustGrantedBalance)
+        local mainResult = deductFromMainBalance(cusFeature, remaining, adjustGrantedBalance, overageBehavior)
         remaining = mainResult.remaining
         
         -- Collect main balance deltas and state changes
@@ -668,7 +673,7 @@ end
 -- If targetEntityId is provided, only deduct from that entity (entity-level tracking)
 -- If targetEntityId is nil, deduct from ALL entities (customer-level tracking)
 -- Returns: { remaining: number, deltas: array, customerStateChanges: array, entityStateChanges: { [entityId] = array } }
-local function deductFromFeatureWithEntities(customerFeature, entityFeaturesMap, amount, targetEntityId)
+local function deductFromFeatureWithEntities(customerFeature, entityFeaturesMap, amount, targetEntityId, overageBehavior)
     local allDeltas = {}
     local customerStateChanges = {}
     local entityStateChanges = {}
@@ -701,7 +706,7 @@ local function deductFromFeatureWithEntities(customerFeature, entityFeaturesMap,
         if entityFeatures then
             local entityFeature = entityFeatures[customerFeature.id]
             if entityFeature and remaining ~= 0 then
-                local entityMainResult = deductFromMainBalance(entityFeature, remaining, adjustGrantedBalance)
+                local entityMainResult = deductFromMainBalance(entityFeature, remaining, adjustGrantedBalance, overageBehavior)
                 remaining = entityMainResult.remaining
                 for _, delta in ipairs(entityMainResult.deltas) do
                     table.insert(allDeltas, delta)
@@ -729,7 +734,7 @@ local function deductFromFeatureWithEntities(customerFeature, entityFeaturesMap,
         
         -- Step 4: Deduct from customer main balance
         if remaining ~= 0 then
-            local customerMainResult = deductFromMainBalance(customerFeature, remaining, adjustGrantedBalance)
+            local customerMainResult = deductFromMainBalance(customerFeature, remaining, adjustGrantedBalance, overageBehavior)
             remaining = customerMainResult.remaining
             for _, delta in ipairs(customerMainResult.deltas) do
                 table.insert(allDeltas, delta)
@@ -753,7 +758,7 @@ local function deductFromFeatureWithEntities(customerFeature, entityFeaturesMap,
         
         -- Step 2: Deduct from customer main balance
         if remaining ~= 0 then
-            local customerMainResult = deductFromMainBalance(customerFeature, remaining, adjustGrantedBalance)
+            local customerMainResult = deductFromMainBalance(customerFeature, remaining, adjustGrantedBalance, overageBehavior)
             remaining = customerMainResult.remaining
             for _, delta in ipairs(customerMainResult.deltas) do
                 table.insert(allDeltas, delta)
@@ -802,7 +807,7 @@ local function deductFromFeatureWithEntities(customerFeature, entityFeaturesMap,
                 local entityFeatures = entityFeaturesMap[entityId]
                 local entityFeature = entityFeatures[customerFeature.id]
                 if entityFeature and remaining ~= 0 then
-                    local entityMainResult = deductFromMainBalance(entityFeature, remaining, adjustGrantedBalance)
+                    local entityMainResult = deductFromMainBalance(entityFeature, remaining, adjustGrantedBalance, overageBehavior)
                     remaining = entityMainResult.remaining
                     for _, delta in ipairs(entityMainResult.deltas) do
                         table.insert(allDeltas, delta)
@@ -901,6 +906,7 @@ local function processRequest(request, loadedCusFeatures, entityFeatureStates)
     local syncMode = request.syncMode or false
     local targetBalance = request.targetBalance
     
+    
     -- Collect all deltas and state changes for this request
     local requestDeltas = {}
     local requestStateChanges = {}
@@ -938,7 +944,7 @@ local function processRequest(request, loadedCusFeatures, entityFeatureStates)
         if cusFeature then
             -- Customer has this feature - deduct from customer + entities
             if not cusFeature.unlimited then
-                local result = deductFromFeatureWithEntities(cusFeature, entityFeatureStates, amount, entityId)
+                local result = deductFromFeatureWithEntities(cusFeature, entityFeatureStates, amount, entityId, overageBehavior)
                 
                 -- Collect deltas
                 for _, delta in ipairs(result.deltas) do
@@ -977,7 +983,7 @@ local function processRequest(request, loadedCusFeatures, entityFeatureStates)
                 if entityFeatures and entityFeatures[featureId] then
                     local entityFeature = entityFeatures[featureId]
                     if not entityFeature.unlimited then
-                        local result = deductFromCusFeature(entityFeature, amount)
+                        local result = deductFromCusFeature(entityFeature, amount, overageBehavior)
                         
                         -- Collect deltas
                         for _, delta in ipairs(result.deltas) do
@@ -1011,7 +1017,7 @@ local function processRequest(request, loadedCusFeatures, entityFeatureStates)
                     local entityFeature = entityFeatures[featureId]
                     if entityFeature and remainingAmount ~= 0 then
                         if not entityFeature.unlimited then
-                            local result = deductFromCusFeature(entityFeature, remainingAmount)
+                            local result = deductFromCusFeature(entityFeature, remainingAmount, overageBehavior)
                             
                             -- Collect deltas
                             for _, delta in ipairs(result.deltas) do
@@ -1050,7 +1056,7 @@ local function processRequest(request, loadedCusFeatures, entityFeatureStates)
                             local creditAmount = remainingAmount * creditItem.credit_cost
                             
                             if not otherCusFeature.unlimited then
-                                local result = deductFromFeatureWithEntities(otherCusFeature, entityFeatureStates, creditAmount, entityId)
+                                local result = deductFromFeatureWithEntities(otherCusFeature, entityFeatureStates, creditAmount, entityId, overageBehavior)
                                 
                                 -- Collect deltas
                                 for _, delta in ipairs(result.deltas) do

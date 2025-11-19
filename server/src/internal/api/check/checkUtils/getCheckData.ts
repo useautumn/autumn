@@ -3,14 +3,12 @@ import {
 	type ApiEntityV1,
 	type CheckParams,
 	type CustomerLegacyData,
-	ErrCode,
 	type Feature,
+	FeatureNotFoundError,
 	InternalError,
 } from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { getOrCreateApiCustomer } from "../../../customers/cusUtils/getOrCreateApiCustomer.js";
 import { getCachedApiEntity } from "../../../entities/entityUtils/apiEntityCacheUtils/getCachedApiEntity.js";
 import type { CheckData } from "../checkTypes/CheckData.js";
@@ -88,11 +86,7 @@ export const getCheckData = async ({
 	});
 
 	if (!feature) {
-		throw new RecaseError({
-			message: `feature with id ${feature_id} not found`,
-			code: ErrCode.FeatureNotFound,
-			statusCode: StatusCodes.NOT_FOUND,
-		});
+		throw new FeatureNotFoundError({ featureId: feature_id });
 	}
 
 	let apiEntity: ApiCustomer | ApiEntityV1 | undefined;

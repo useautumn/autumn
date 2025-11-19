@@ -1,8 +1,6 @@
 import {
 	AllowanceType,
-	ApiVersionClass,
 	type AppEnv,
-	AuthType,
 	CusProductStatus,
 	type Customer,
 	cusEntToIncludedUsage,
@@ -14,7 +12,6 @@ import {
 	FeatureUsageType,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomerEntitlement,
-	LATEST_VERSION,
 	type Organization,
 	sumValues,
 } from "@autumn/shared";
@@ -28,8 +25,6 @@ import { deductFromApiCusRollovers } from "@/internal/customers/cusProducts/cusE
 import { getCusEntsInFeatures } from "@/internal/customers/cusUtils/cusUtils.js";
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { deductFromAdditionalBalance } from "../internal/balances/deductUtils/deductFromAdditionalBalance.js";
-import { generateId } from "../utils/genUtils.js";
 
 import {
 	deductAllowanceFromCusEnt,
@@ -453,30 +448,6 @@ export const updateUsage = async ({
 					},
 				});
 			}
-
-			if (toDeduct === 0) return;
-
-			// 2. Deduct from additional balance
-			toDeduct = await deductFromAdditionalBalance({
-				toDeduct,
-				cusEnts,
-				feature,
-				entity: customer.entity,
-				ctx: {
-					db,
-					features,
-					org,
-					env,
-					logger,
-					id: generateId("test"),
-					isPublic: false,
-					authType: AuthType.SecretKey,
-					apiVersion: new ApiVersionClass(LATEST_VERSION),
-					timestamp: Date.now(),
-					expand: [],
-					skipCache: true,
-				},
-			});
 
 			if (toDeduct === 0) return;
 
