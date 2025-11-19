@@ -39,7 +39,7 @@ import { migrationJobs } from "../models/migrationModels/migrationJobTable.js";
 import { organizationsRelations } from "../models/orgModels/orgRelations.js";
 import { organizations } from "../models/orgModels/orgTable.js";
 import { metadata } from "../models/otherModels/metadataTable.js";
-
+import { vercelResources } from "../models/processorModels/vercelModels/vercelResourcesTable.js";
 // Product Relations
 import { entitlementsRelations } from "../models/productModels/entModels/entRelations.js";
 import { entitlements } from "../models/productModels/entModels/entTable.js";
@@ -102,6 +102,7 @@ export {
 	events,
 	replaceables,
 	rollovers,
+	vercelResources,
 	// Auth
 	user,
 	session,

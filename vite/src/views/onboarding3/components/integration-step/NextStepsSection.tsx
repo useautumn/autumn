@@ -27,11 +27,11 @@ const NextStepCard = ({ title, description, href }: NextStepCardProps) => {
 			<Card
 				className={cn(
 					"group gap-1 my-0 cursor-pointer",
-					"hover:!bg-hover-primary hover:border-primary",
+					"hover:!bg-interactive-secondary-hover hover:border-primary",
 				)}
 			>
 				<CardHeader className="flex flex-row items-center justify-between">
-					<CardTitle className="text-sub text-t9">{title}</CardTitle>
+					<CardTitle className="text-sub text-t2">{title}</CardTitle>
 					<IconButton
 						icon={<ArrowSquareOutIcon className="ml-auto" />}
 						variant="skeleton"
@@ -53,7 +53,7 @@ export const NextStepsSection = () => {
 			<SectionHeader
 				stepNumber={7}
 				title={<span>Next Steps</span>}
-				description="Congrats on setting up Autumn! The next steps are to learn how to use Autumn to check if a user has access to features in your application, and track usage for those features. Learn how to do so here.√"
+				description="Congrats on setting up Autumn! The next steps are to learn how to use Autumn to check if a user has access to features in your application, and track usage for those features. Learn how to do so here."
 			/>
 
 			<div className="pl-[32px] flex flex-col gap-6">

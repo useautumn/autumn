@@ -1,6 +1,6 @@
 import { notNullish, productV2ToBasePrice } from "@autumn/shared";
-import { Input } from "@/components/ui/input";
 import { AreaCheckbox } from "@/components/v2/checkboxes/AreaCheckbox";
+import { Input } from "@/components/v2/inputs/Input";
 import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
 import {
 	SheetAccordion,
@@ -24,7 +24,7 @@ export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 
 	const showAdvanced =
 		product.planType === "paid" &&
-		!basePrice?.amount &&
+		!basePrice?.price &&
 		product.basePriceType !== "usage";
 
 	return (
@@ -37,8 +37,8 @@ export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 				/>
 			)}
 			<MainDetailsSection />
-			<PlanTypeSection />
-			<BasePriceSection />
+			{/* <PlanTypeSection /> */}
+			{/* <BasePriceSection /> */}
 
 			{/* <FreeTrialSection /> */}
 			<AdditionalOptions />

@@ -1,13 +1,12 @@
-import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import {
-	BillingInterval,
+	type BillingInterval,
 	BillingType,
 	intervalsDifferent,
-	Organization,
-	UsagePriceConfig,
+	type Organization,
+	type Price,
+	type UsagePriceConfig,
 } from "@autumn/shared";
-
-import { Price } from "@autumn/shared";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { billingIntervalToStripe } from "../../stripePriceUtils.js";
 
 export const getArrearItems = ({
@@ -21,9 +20,9 @@ export const getArrearItems = ({
 	intervalCount: number;
 	org: Organization;
 }) => {
-	let placeholderItems: any[] = [];
+	const placeholderItems: any[] = [];
 	for (const price of prices) {
-		let billingType = getBillingType(price.config!);
+		const billingType = getBillingType(price.config!);
 		if (
 			intervalsDifferent({
 				intervalA: {
@@ -36,8 +35,8 @@ export const getArrearItems = ({
 			continue;
 		}
 
-		if (billingType == BillingType.UsageInArrear) {
-			let config = price.config! as UsagePriceConfig;
+		if (billingType === BillingType.UsageInArrear) {
+			const config = price.config! as UsagePriceConfig;
 			placeholderItems.push({
 				price_data: {
 					product: config.stripe_product_id!,

@@ -31,7 +31,8 @@ export const StepHeader = () => {
 
 	return (
 		<SheetHeader
-			title={`Step ${stepNum}: ${config.title}`}
+			// title={`Step ${stepNum}: ${config.title}`}
+			title={`${config.title}`}
 			description={config.description}
 			noSeparator={true}
 			className="p-0 sticky"

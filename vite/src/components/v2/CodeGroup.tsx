@@ -45,11 +45,11 @@ const CodeGroupTab = React.forwardRef<
 		ref={ref}
 		className={cn(
 			"flex items-center justify-center flex-1 min-w-0 h-6 px-2 py-1 text-[13px] font-semibold tracking-[-0.039px] leading-normal whitespace-nowrap",
-			"bg-white border border-t10 border-r-0",
-			"text-t12 transition-none outline-none",
+			"bg-interactive-secondary border border-r-0",
+			"text-t3 transition-none outline-none",
 			"hover:text-primary",
 			"focus-visible:text-primary",
-			"data-[state=active]:bg-neutral-50  data-[state=active]:shadow-[0px_3px_4px_0px_inset_rgba(0,0,0,0.04)]",
+			"data-[state=active]:bg-interactive-secondary-hover  data-[state=active]:shadow-[0px_3px_4px_0px_inset_rgba(0,0,0,0.04)]",
 			"data-[state=inactive]:shadow-[0px_-3px_4px_0px_inset_rgba(0,0,0,0.04)]",
 			"first:rounded-tl-md first:border-l",
 			className,
@@ -87,7 +87,7 @@ const CodeGroupCopyButton = React.forwardRef<
 			onClick={handleClick}
 			className={cn(
 				"flex items-center justify-center h-6 px-2 py-1",
-				"bg-white border border-t10 rounded-tr-md",
+				"bg-interactive-secondary border rounded-tr-md",
 				"shadow-[0px_-3px_4px_0px_inset_rgba(0,0,0,0.04)]",
 				"hover:text-primary transition-none outline-none",
 				"focus-visible:text-primary",
@@ -180,7 +180,7 @@ const CodeGroupContent = React.forwardRef<
 			<TabsPrimitive.Content
 				ref={ref}
 				className={cn(
-					"bg-white border border-t10 border-t-0 rounded-bl-lg rounded-br-lg",
+					"bg-white dark:bg-background border border-t-0 rounded-bl-lg rounded-br-lg",
 					"p-4 outline-none",
 					"cursor-pointer transition-colors",
 					"hover:bg-neutral-50/50",
@@ -378,6 +378,18 @@ const CodeGroupCode = React.forwardRef<HTMLPreElement, CodeGroupCodeProps>(
 );
 CodeGroupCode.displayName = "CodeGroupCode";
 
+const CodeGroupCodeSolidColour = React.forwardRef<
+	HTMLPreElement,
+	React.ComponentPropsWithoutRef<"pre">
+>(({ className, children, ...props }, ref) => {
+	return (
+		<pre ref={ref} className={cn("text-t8", className)} {...props}>
+			{children}
+		</pre>
+	);
+});
+CodeGroupCodeSolidColour.displayName = "CodeGroupCodeSolidColour";
+
 export {
 	CodeGroup,
 	CodeGroupList,
@@ -385,4 +397,5 @@ export {
 	CodeGroupCopyButton,
 	CodeGroupContent,
 	CodeGroupCode,
+	CodeGroupCodeSolidColour,
 };

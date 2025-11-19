@@ -24,15 +24,15 @@ export const AdditionalOptions = ({
 	const hasGroup = notNullish(product.group);
 
 	if (!product.planType) return null;
-	if (
-		product.planType === "paid" &&
-		!basePrice?.amount &&
-		product.basePriceType !== "usage"
-	)
-		return null;
+	// if (
+	// 	product.planType === "paid" &&
+	// 	!basePrice?.price &&
+	// 	product.basePriceType !== "usage"
+	// )
+	// 	return null;
 
 	return (
-		<SheetSection title="Additional Options" withSeparator={withSeparator}>
+		<SheetSection withSeparator={withSeparator}>
 			<div className="space-y-4">
 				{(product.planType === "free" ||
 					product.free_trial?.card_required === false) && (

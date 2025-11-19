@@ -2,7 +2,7 @@ import {
 	AffectedResource,
 	type ApiCustomer,
 	applyResponseVersionChanges,
-	type CusExpand,
+	CusExpand,
 	type CustomerLegacyData,
 	type FullCustomer,
 } from "@autumn/shared";
@@ -15,58 +15,67 @@ import { getApiCustomerExpand } from "./getApiCustomerExpand.js";
  */
 export const getApiCustomer = async ({
 	ctx,
-	expand,
 	withAutumnId = false,
 	customerId,
 	fullCus,
-	skipCache = false,
 	baseData,
 }: {
 	ctx: RequestContext;
-	expand: CusExpand[];
 	withAutumnId?: boolean;
 	customerId?: string;
 	fullCus?: FullCustomer;
-	skipCache?: boolean;
 	baseData?: { apiCustomer: ApiCustomer; legacyData: CustomerLegacyData };
 }) => {
-	let baseCustomer: ApiCustomer;
-	let cusLegacyData: CustomerLegacyData;
+	const getBaseCustomer = async () => {
+		let baseCustomer: ApiCustomer;
+		let cusLegacyData: CustomerLegacyData;
+		if (!baseData) {
+			const { apiCustomer, legacyData } = await getCachedApiCustomer({
+				ctx,
+				customerId: customerId || "",
+			});
 
-	if (!baseData) {
-		const { apiCustomer, legacyData } = await getCachedApiCustomer({
-			ctx,
-			customerId: customerId || "",
-			skipCache,
-		});
-		baseCustomer = apiCustomer;
-		cusLegacyData = legacyData;
-	} else {
-		baseCustomer = baseData.apiCustomer;
-		cusLegacyData = baseData.legacyData;
-	}
+			baseCustomer = apiCustomer;
+			cusLegacyData = legacyData;
+		} else {
+			baseCustomer = baseData.apiCustomer;
+			cusLegacyData = baseData.legacyData;
+		}
 
-	// Clean api customer
-	baseCustomer = {
-		...baseCustomer,
-		entities: undefined,
-		autumn_id: withAutumnId ? baseCustomer.autumn_id : undefined,
+		// Clean api customer
+		baseCustomer = {
+			...baseCustomer,
+			entities: undefined,
+			autumn_id: withAutumnId ? baseCustomer.autumn_id : undefined,
+			invoices: ctx.expand.includes(CusExpand.Invoices)
+				? baseCustomer.invoices
+				: undefined,
+		};
+
+		return { baseCustomer, cusLegacyData };
 	};
 
-	// Get expand fields (not cacheable)
-	const apiCusExpand = await getApiCustomerExpand({
-		ctx,
-		customerId,
-		expand,
-		fullCus,
-	});
+	const getExpandParams = async () => {
+		const apiCusExpand = await getApiCustomerExpand({
+			ctx,
+			customerId,
+			fullCus: fullCus || undefined,
+		});
 
-	// Merge expand fields
+		return apiCusExpand;
+	};
+
+	const [{ baseCustomer, cusLegacyData }, apiCusExpand] = await Promise.all([
+		getBaseCustomer(),
+		getExpandParams(),
+	]);
+
 	const apiCustomer = {
 		...baseCustomer,
 		...apiCusExpand,
 	};
 
+	// Get legacy data for version changes
 	return applyResponseVersionChanges<ApiCustomer, CustomerLegacyData>({
 		input: apiCustomer,
 		legacyData: cusLegacyData,

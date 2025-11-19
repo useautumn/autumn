@@ -10,6 +10,5 @@ export enum OnDecrease {
 	ProrateImmediately = "prorate_immediately",
 	ProrateNextCycle = "prorate_next_cycle",
 	None = "none", // replaceable strategy
-	// KeepUsage = "keep_usage",
 	NoProrations = "no_prorations",
 }

@@ -1,22 +1,13 @@
-import {
-	useNavigate,
-	useParams,
-	useSearchParams,
-	useLocation,
-} from "react-router";
-import { useEffect } from "react";
-import { AppEnv } from "@autumn/shared";
-
+import { CaretDownIcon } from "@phosphor-icons/react";
+import { Check } from "lucide-react";
+import { useLocation, useNavigate } from "react-router";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-	DropdownMenuCheckboxItem,
-	DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { Check, ChevronDown } from "lucide-react";
+import { IconButton } from "@/components/v2/buttons/IconButton";
 
 import { useAnalyticsContext } from "../AnalyticsContext";
 import { CustomerComboBox } from "./CustomerComboBox";
@@ -44,7 +35,7 @@ export const QueryTopbar = () => {
 	};
 
 	return (
-		<div className="flex items-center py-0 h-full">
+		<div className="flex items-center py-0 h-full gap-2">
 			<CustomerComboBox
 				classNames={{
 					trigger: "h-full border-y-0 border-l border-r-0",
@@ -52,13 +43,15 @@ export const QueryTopbar = () => {
 			/>
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild value={selectedInterval}>
-					<Button
-						variant="outline"
-						className="px-3 text-xs h-full border-y-0 border-x"
+					<IconButton
+						variant="secondary"
+						size="default"
+						icon={<CaretDownIcon size={12} weight="bold" />}
+						iconOrientation="right"
+						// iconPosition="right"
 					>
 						{INTERVALS[selectedInterval]}
-						<ChevronDown className="ml-2 h-3 w-3" />
-					</Button>
+					</IconButton>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-[160px]">
 					{Object.keys(INTERVALS)

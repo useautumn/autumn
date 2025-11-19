@@ -4,9 +4,9 @@ import {
 	type FullCustomer,
 	type Organization,
 } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
 import { expect } from "chai";
 import type Stripe from "stripe";
-import { TestFeature } from "tests/setup/v2Features.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
@@ -167,10 +167,10 @@ export const calcProrationAndExpectInvoice = async ({
 
 	expect(invoices.length).to.equal(
 		numInvoices,
-		`Should have ${numInvoices} invoices`,
+		`Should have ${numInvoices} invoices; got ${invoices.length}`,
 	);
 	expect(invoices[0].total).to.equal(
 		proratedAmount,
-		"Latest invoice should be equals to calculated prorated amount",
+		`Latest invoice should be equals to calculated prorated amount; got ${invoices[0].total}`,
 	);
 };

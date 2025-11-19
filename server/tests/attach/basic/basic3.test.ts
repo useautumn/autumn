@@ -1,15 +1,19 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion, CusProductStatus } from "@autumn/shared";
+import { AutumnCli } from "@tests/cli/AutumnCli.js";
+import { expectCustomerV0Correct } from "@tests/utils/expectUtils/expectCustomerV0Correct.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import type Stripe from "stripe";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { expectCustomerV0Correct } from "tests/utils/expectUtils/expectCustomerV0Correct.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { timeout } from "@/utils/genUtils.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-import { sharedDefaultFree, sharedProProduct, initBasicSharedProducts } from "./sharedProducts.js";
+import {
+	initBasicSharedProducts,
+	sharedDefaultFree,
+	sharedProProduct,
+} from "./sharedProducts.js";
 
 const testCase = "basic3";
 const customerId = testCase;
@@ -95,7 +99,7 @@ describe(`${chalk.yellowBright("basic3: Testing cancel through Stripe at period 
 		for (const subId of proProduct.subscription_ids) {
 			await stripeCli.subscriptions.cancel(subId);
 		}
-		await timeout(5000);
+		await timeout(8000);
 	});
 
 	test("should have free product active, and no pro product", async () => {

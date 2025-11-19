@@ -8,47 +8,102 @@ import {
 	ChartTooltip,
 	ChartTooltipContent,
 } from "@/components/ui/chart";
-import { prepareChartData } from "./customerUsageAnalyticsUtils";
+import {
+	prepareChartData,
+	prepareTimeseriesChartData,
+	type TimeseriesData,
+} from "./customerUsageAnalyticsUtils";
 
 export function CustomerUsageAnalyticsChart({
-	events,
+	timeseriesEvents,
+	events = [],
 	daysToShow = 7,
 }: {
-	events: Event[];
+	timeseriesEvents?: TimeseriesData;
+	events?: Event[];
 	daysToShow?: number;
 }) {
-	const { chartData, chartConfig, eventNames, maxValue } = useMemo(
-		() => prepareChartData({ events, daysToShow }),
-		[events, daysToShow],
-	);
+	function formatYAxisTick(value: number): string {
+		// if (value === 0) return "";
+
+		const absValue = Math.abs(value);
+
+		if (absValue >= 1_000_000_000) {
+			return `${(value / 1_000_000_000).toFixed(1).replace(/\.0$/, "")}B`;
+		}
+		if (absValue >= 1_000_000) {
+			return `${(value / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+		}
+		if (absValue >= 1_000) {
+			return `${(value / 1_000).toFixed(1).replace(/\.0$/, "")}K`;
+		}
+
+		return value.toString();
+	}
+
+	const { chartData, chartConfig, eventNames, maxValue } = useMemo(() => {
+		// Prefer timeseries data if available
+		if (timeseriesEvents?.data && timeseriesEvents.data.length > 0) {
+			const preparedData = prepareTimeseriesChartData({ timeseriesEvents });
+			if (preparedData.eventNames.length !== 0) return preparedData;
+			//if no event names return default data
+			else return prepareChartData({ events, daysToShow });
+		}
+		//otherwise this is default data
+		return prepareChartData({ events, daysToShow });
+	}, [timeseriesEvents, events, daysToShow]);
+
+	const yAxisTicks = maxValue === 0 ? [0, 50, 100, 150, 200] : undefined;
+	// console.log("yAxisTicks: ", yAxisTicks);
 
 	return (
 		<ChartContainer
 			config={chartConfig}
-			className="max-h-[300px] border border-border-table pl-0 mb-4 p-2 rounded-2xl"
+			className="h-full pt-3 pr-2 w-full relative bg-interactive-secondary border"
 		>
 			<BarChart
-				accessibilityLayer
+				// accessibilityLayer
 				data={chartData}
-				className="[&_.recharts-cartesian-grid-bg]:fill-white dark:[&_.recharts-cartesian-grid-bg]:fill-gray-900 [&_.recharts-cartesian-grid-bg]:stroke-border [&_.recharts-cartesian-grid-bg]:stroke-1 [&_.recharts-cartesian-grid-bg]:[rx:8px]"
+				className="[&_.recharts-cartesian-grid-bg]:fill-white dark:[&_.recharts-cartesian-grid-bg]:fill-gray-900 [&_.recharts-cartesian-grid-bg]:stroke-border [&_.recharts-cartesian-grid-bg]:stroke-1 [&_.recharts-cartesian-grid-bg]:[rx:8px] absolute top-1"
 				barCategoryGap={4}
 			>
 				<CartesianGrid
 					vertical={false}
-					className="fill-white dark:fill-gray-900 "
+					className="fill-white dark:fill-gray-900"
+					stroke="var(--chart-grid-stroke)"
+					strokeWidth={1}
+					strokeDasharray="2 2"
+					// verticalPoints={[20]}
+					horizontalPoints={[5, 50, 100, 150, 200]}
 				/>
 				<XAxis
 					dataKey="date"
 					tickLine={false}
-					tickMargin={10}
+					tickMargin={4}
 					axisLine={false}
+					strokeWidth={1}
+					// interval={3}
+					interval="equidistantPreserveStart"
+					stroke="#f7f7f7"
+					tick={{ fontSize: 11, fill: "#666" }}
 				/>
 				<YAxis
-					domain={[0, Math.round(maxValue * 1.2)]}
+					// domain={[0, Math.round(maxValue * 1.2)]}
+					dataKey={eventNames[0] ?? "default"}
+					ticks={yAxisTicks}
 					tickCount={5}
 					tickLine={false}
 					axisLine={false}
-					width={16}
+					width={40}
+					tickMargin={0}
+					tick={{
+						fontSize: 11,
+						fill: "#666",
+						textAnchor: "middle",
+						dx: -15,
+						dy: -3,
+					}}
+					tickFormatter={formatYAxisTick}
 				/>
 				<ChartTooltip content={<ChartTooltipContent />} />
 				{eventNames.map((eventName: string, index: number) => (
@@ -56,10 +111,11 @@ export function CustomerUsageAnalyticsChart({
 						key={eventName}
 						dataKey={eventName}
 						stackId="a"
+						barSize={20}
 						fill={`var(--color-${eventName})`}
-						radius={
-							index === eventNames.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]
-						}
+						// radius={
+						// 	index === eventNames.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]
+						// }
 					/>
 				))}
 			</BarChart>

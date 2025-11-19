@@ -1,35 +1,35 @@
-import type { Event } from "@autumn/shared";
+import type {
+	Event,
+	PgDeductionUpdate,
+	SortCusEntParams,
+} from "@autumn/shared";
 import {
 	CusProductStatus,
 	cusEntToCusPrice,
 	cusProductsToCusEnts,
-	cusProductsToCusPrices,
 	FeatureUsageType,
 	type FullCustomer,
 	getMaxOverage,
 	getRelevantFeatures,
-	InsufficientBalanceError,
 	InternalError,
 	notNullish,
 	nullish,
 	orgToInStatuses,
 	updateCusEntInFullCus,
 } from "@autumn/shared";
+import { Decimal } from "decimal.js";
 import { sql } from "drizzle-orm";
-import type { DrizzleCli } from "../../../../db/initDrizzle.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
-import { adjustAllowance } from "../../../../trigger/adjustAllowance.js";
 import { EventService } from "../../../api/events/EventService.js";
 import { CusService } from "../../../customers/CusService.js";
-import { CusEntService } from "../../../customers/cusProducts/cusEnts/CusEntitlementService.js";
-import {
-	getTotalNegativeBalance,
-	getUnlimitedAndUsageAllowed,
-} from "../../../customers/cusProducts/cusEnts/cusEntUtils.js";
+import { getUnlimitedAndUsageAllowed } from "../../../customers/cusProducts/cusEnts/cusEntUtils.js";
+import { deleteCachedApiCustomer } from "../../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { getCreditCost } from "../../../features/creditSystemUtils.js";
 import { isPaidContinuousUse } from "../../../features/featureUtils.js";
 import { constructEvent, type EventInfo } from "./eventUtils.js";
 import type { FeatureDeduction } from "./getFeatureDeductions.js";
+import { handlePaidAllocatedCusEnt } from "./handlePaidAllocatedCusEnt.js";
+import { rollbackDeduction } from "./rollbackDeduction.js";
 
 export type DeductionTxParams = {
 	ctx: AutumnContext;
@@ -39,12 +39,12 @@ export type DeductionTxParams = {
 	eventInfo?: EventInfo;
 	overageBehaviour?: "cap" | "reject";
 	addToAdjustment?: boolean;
+	skipAdditionalBalance?: boolean;
+	alterGrantedBalance?: boolean;
 	fullCus?: FullCustomer; // if provided from function above!
 	refreshCache?: boolean; // Whether to refresh Redis cache after deduction (default: true for track, false for sync)
-};
 
-export type ActualDeductions = {
-	[featureId: string]: number; // Actual amount deducted from Postgres
+	sortParams?: SortCusEntParams;
 };
 
 export const deductFromCusEnts = async ({
@@ -54,10 +54,16 @@ export const deductFromCusEnts = async ({
 	deductions,
 	overageBehaviour = "cap",
 	addToAdjustment = false,
+	skipAdditionalBalance = true,
+	alterGrantedBalance = false,
 	fullCus,
+	sortParams,
 }: DeductionTxParams): Promise<{
+	oldFullCus: FullCustomer;
 	fullCus: FullCustomer | undefined;
-	actualDeductions: ActualDeductions;
+	isPaidAllocated: boolean;
+	actualDeductions: Record<string, number>;
+	remainingAmounts: Record<string, number>;
 }> => {
 	const { db, org, env } = ctx;
 
@@ -73,32 +79,25 @@ export const deductFromCusEnts = async ({
 			withSubs: true,
 		});
 	}
+	const oldFullCus = structuredClone(fullCus);
 
 	const printLogs = false;
-
-	if (printLogs) {
-		console.log(
-			`Deductions: 	`,
-			deductions.map((d) => ({
-				feature_id: d.feature.id,
-				deduction: d.deduction,
-			})),
-		);
-	}
 
 	const isPaidAllocated = deductions.some((d) =>
 		isPaidContinuousUse({
 			feature: d.feature,
-			fullCus,
+			fullCus: fullCus!,
 		}),
 	);
 
-	console.log(`Is paid allocated: ${isPaidAllocated}`);
-
-	if (isPaidAllocated) overageBehaviour = "reject";
+	if (isPaidAllocated) {
+		overageBehaviour = "reject";
+		skipAdditionalBalance = true;
+	}
 
 	// Track actual deductions per feature
-	const actualDeductions: ActualDeductions = {};
+	const actualDeductions: Record<string, number> = {};
+	const remainingAmounts: Record<string, number> = {};
 
 	// Need to deduct from customer entitlement...
 	for (const deduction of deductions) {
@@ -109,28 +108,25 @@ export const deductFromCusEnts = async ({
 			featureId: feature.id,
 		});
 
-		if (printLogs) {
-			console.log(`Entity Mode: ${entityId ? "Yes" : "No"}`);
-		}
-
 		const cusEnts = cusProductsToCusEnts({
 			cusProducts: fullCus.customer_products,
 			featureIds: relevantFeatures.map((f) => f.id),
 			reverseOrder: org.config?.reverse_deduction_order,
 			entity: fullCus.entity,
 			inStatuses: orgToInStatuses({ org }),
+			sortParams,
 		});
 
-		if (printLogs) {
-			console.log(
-				`Cus Ents: `,
-				cusEnts.map((ce) => ({
-					balance: ce.balance,
-					entity_id: ce.customer_product.entity_id,
-					cus_ent_id: ce.id,
-				})),
-			);
-		}
+		// if (printLogs) {
+		// 	console.log(
+		// 		`Cus Ents: `,
+		// 		cusEnts.map((ce) => ({
+		// 			balance: ce.balance,
+		// 			entity_id: ce.customer_product.entity_id,
+		// 			cus_ent_id: ce.id,
+		// 		})),
+		// 	);
+		// }
 
 		const { unlimited } = getUnlimitedAndUsageAllowed({
 			cusEnts,
@@ -156,7 +152,9 @@ export const deductFromCusEnts = async ({
 				customer_entitlement_id: ce.id,
 				credit_cost: creditCost,
 				entity_feature_id: ce.entitlement.entity_feature_id,
-				usage_allowed: ce.usage_allowed || isFreeAllocated,
+				usage_allowed:
+					ce.usage_allowed ||
+					(isFreeAllocated && overageBehaviour !== "reject"),
 				min_balance: notNullish(maxOverage) ? -maxOverage : undefined,
 				add_to_adjustment: addToAdjustment,
 			};
@@ -179,33 +177,31 @@ export const deductFromCusEnts = async ({
 
 		// Call the stored function to deduct from entitlements with credit costs
 		const result = await db.execute(
-			sql`SELECT * FROM deduct_allowance_from_entitlements(
-				${JSON.stringify(cusEntInput)}::jsonb, 
-				${toDeduct},
-				${targetBalance ?? null},
-				${entityId || null},
-				${rolloverIds.length > 0 ? sql.raw(`ARRAY[${rolloverIds.map((id) => `'${id}'`).join(",")}]`) : null},
-				${cusEntIds.length > 0 ? sql.raw(`ARRAY[${cusEntIds.map((id) => `'${id}'`).join(",")}]`) : null}
+			sql`SELECT * FROM deduct_from_cus_ents(
+				${JSON.stringify({
+					sorted_entitlements: cusEntInput,
+					amount_to_deduct: toDeduct ?? null,
+					target_balance: targetBalance ?? null,
+					target_entity_id: entityId || null,
+					rollover_ids: rolloverIds.length > 0 ? rolloverIds : null,
+					cus_ent_ids: cusEntIds.length > 0 ? cusEntIds : null,
+					skip_additional_balance: skipAdditionalBalance,
+					alter_granted_balance: alterGrantedBalance,
+					overage_behaviour: overageBehaviour ?? "cap",
+					feature_id: feature.id,
+				})}::jsonb
 			)`,
 		);
 
 		// Parse the JSONB result
-		const resultJson = result[0]?.deduct_allowance_from_entitlements as {
-			updates: Record<
-				string,
-				{
-					balance: number;
-					entities: any;
-					adjustment: number;
-					deducted: number;
-				}
-			>;
+		const resultJson = result[0]?.deduct_from_cus_ents as {
+			updates: Record<string, PgDeductionUpdate>;
 			remaining: number;
 		};
 
 		// log updates
 		if (printLogs) {
-			console.log(`Updates: `, resultJson.updates);
+			console.log(`📊 Postgres updates for ${feature.id}:`, resultJson.updates);
 		}
 
 		if (!resultJson) {
@@ -214,14 +210,10 @@ export const deductFromCusEnts = async ({
 			});
 		}
 
-		const { updates, remaining } = resultJson;
+		const { updates, remaining: featureRemaining } = resultJson;
 
-		// Check if deduction was rejected due to limits
-		if (remaining > 0 && overageBehaviour === "reject") {
-			throw new InsufficientBalanceError({
-				message: `Insufficient balance to deduct ${toDeduct}. Remaining: ${remaining}`,
-			});
-		}
+		// Track the maximum remaining amount across all deductions
+		remainingAmounts[feature.id] = featureRemaining;
 
 		// Calculate total deducted from the updates (sum of all deducted amounts)
 		const totalDeducted = Object.values(updates).reduce(
@@ -229,106 +221,81 @@ export const deductFromCusEnts = async ({
 			0,
 		);
 
-		// Store actual deduction for this feature
-		actualDeductions[feature.id] = totalDeducted;
+		// Convert updates to actual deduction
+		for (const [cusEntId, update] of Object.entries(updates)) {
+			const cusEnt = cusEnts.find((ce) => ce.id === cusEntId);
+			const deductedFeature = cusEnt?.entitlement.feature;
+			if (!deductedFeature) continue;
+
+			const currentDeduction = actualDeductions[deductedFeature.id] || 0;
+			actualDeductions[deductedFeature.id] = new Decimal(update.deducted)
+				.add(currentDeduction)
+				.toNumber();
+		}
 
 		// Log deduction details
 		if (targetBalance !== undefined) {
 			const entityInfo = entityId
-				? `Entity: ${entityId}`
+				? `; Entity: ${entityId}`
 				: "Entity: customer-level";
-			ctx.logger.info(`[Sync] Feature ${feature.id} | ${entityInfo}`, {
+			ctx.logger.info(`[Sync]; Feature ${feature.id} | ${entityInfo}`, {
 				data: {
 					featureId: feature.id,
 					entityInfo,
 					totalDeducted,
 					updates: Object.keys(updates).length,
-					remaining,
+					remaining: featureRemaining,
 				},
 			});
 		} else {
 			ctx.logger.info(
-				`[Track] Deducted ${totalDeducted} from feature ${feature.id}. Updated ${
-					Object.keys(updates).length
-				} entitlements. Remaining: ${remaining}`,
+				`[Track]; Deducted ${totalDeducted} from feature ${feature.id}. Updated ${Object.keys(updates).length} entitlements. Remaining: ${featureRemaining}`,
 			);
 		}
 
 		// Bill on Stripe for each updated entitlement
-		const cusPrices = cusProductsToCusPrices({
-			cusProducts: fullCus.customer_products,
-		});
 
-		for (const cusEntId of Object.keys(updates)) {
-			const update = updates[cusEntId];
-			const cusEnt = cusEnts.find((ce) => ce.id === cusEntId);
+		try {
+			for (const cusEntId of Object.keys(updates)) {
+				const update = updates[cusEntId];
+				const cusEnt = cusEnts.find((ce) => ce.id === cusEntId);
 
-			if (!cusEnt) continue;
+				if (!cusEnt) continue;
 
-			// Calculate original negative balance
-			const originalGrpBalance = getTotalNegativeBalance({
-				cusEnt,
-				balance: cusEnt.balance!,
-				entities: cusEnt.entities!,
-			});
-
-			// Calculate new negative balance from updates
-			const newGrpBalance = getTotalNegativeBalance({
-				cusEnt,
-				balance: update.balance,
-				entities: update.entities,
-			});
-
-			const { newReplaceables, deletedReplaceables } = await adjustAllowance({
-				db,
-				env,
-				org,
-				cusPrices: cusPrices as any,
-				customer: fullCus,
-				affectedFeature: feature,
-				cusEnt: cusEnt as any,
-				originalBalance: originalGrpBalance,
-				newBalance: newGrpBalance,
-				logger: ctx.logger,
-			});
-
-			// Adjust balance based on replaceables
-			let reUpdatedBalance = update.balance;
-			let replaceableAdjustment = 0;
-
-			if (newReplaceables && newReplaceables.length > 0) {
-				reUpdatedBalance = reUpdatedBalance - newReplaceables.length;
-				replaceableAdjustment = newReplaceables.length;
-			} else if (deletedReplaceables && deletedReplaceables.length > 0) {
-				reUpdatedBalance = reUpdatedBalance + deletedReplaceables.length;
-				replaceableAdjustment = -deletedReplaceables.length;
-			}
-
-			if (reUpdatedBalance !== update.balance) {
-				await CusEntService.update({
-					db,
-					id: cusEntId,
-					updates: {
-						balance: reUpdatedBalance,
-					},
+				await handlePaidAllocatedCusEnt({
+					ctx,
+					cusEnt,
+					fullCus,
+					updates,
 				});
 
-				// Adjust the actual deduction to reflect replaceables
-				actualDeductions[feature.id] =
-					(actualDeductions[feature.id] || 0) + replaceableAdjustment;
+				updateCusEntInFullCus({
+					fullCus,
+					cusEntId,
+					update,
+				});
 			}
-
-			updateCusEntInFullCus({
-				fullCus,
-				cusEntId,
-				update,
+		} catch (error) {
+			await rollbackDeduction({
+				ctx,
+				oldFullCus,
+				updates,
 			});
+			throw error;
 		}
 	}
 
+	// Log summary of all Postgres deductions
+	if (printLogs && Object.keys(actualDeductions).length > 0) {
+		console.log("📊 Total Postgres deductions:", actualDeductions);
+	}
+
 	return {
+		oldFullCus,
 		fullCus,
 		actualDeductions,
+		remainingAmounts,
+		isPaidAllocated,
 	};
 };
 
@@ -337,86 +304,72 @@ export const runDeductionTx = async (
 ): Promise<{
 	fullCus: FullCustomer | undefined;
 	event: Event | undefined;
-	actualDeductions: ActualDeductions;
+	actualDeductions: Record<string, number>;
 }> => {
 	const ctx = params.ctx;
-	const { db, logger } = ctx;
+	const { db } = ctx;
 
 	let fullCus: FullCustomer | undefined;
 	let event: Event | undefined;
-	let actualDeductions: ActualDeductions = {};
+	let actualDeductions: Record<string, number> = {};
 
-	await db.transaction(
-		async (tx) => {
-			// Pass tx as the db connection
-			const txParams = {
-				...params,
-				ctx: {
-					...ctx,
-					db: tx as unknown as typeof db,
-				},
-			};
+	const result = await deductFromCusEnts(params);
+	fullCus = result.fullCus;
+	actualDeductions = result.actualDeductions;
 
-			const result = await deductFromCusEnts(txParams);
-			fullCus = result.fullCus;
-			actualDeductions = result.actualDeductions;
+	if (!fullCus) {
+		return {
+			fullCus,
+			event,
+			actualDeductions,
+		};
+	}
 
-			if (!fullCus) return;
+	if (params.eventInfo) {
+		const newEvent = constructEvent({
+			ctx,
+			eventInfo: params.eventInfo,
+			internalCustomerId: fullCus.internal_id,
+			internalEntityId: fullCus.entity?.internal_id,
+			customerId: fullCus.id ?? "",
+			entityId: fullCus.entity?.id,
+		});
 
-			if (params.eventInfo) {
-				const newEvent = constructEvent({
-					ctx: txParams.ctx,
-					eventInfo: params.eventInfo,
-					internalCustomerId: fullCus.internal_id,
-					internalEntityId: fullCus.entity?.internal_id,
-					customerId: fullCus.id ?? "",
-					entityId: fullCus.entity?.id,
-				});
+		event = await EventService.insert({
+			db,
+			event: newEvent,
+		});
+	}
 
-				event = await EventService.insert({
-					db: tx as unknown as DrizzleCli,
-					event: newEvent,
-				});
-			}
-
-			if (params?.refreshCache && fullCus) {
-				// Deduct the actual amounts from Redis cache (if exists)
-				// This prevents race conditions by directly deducting the exact Postgres amount
-				const { deductFromCache } = await import(
-					"../redisTrackUtils/deductFromCache.js"
-				);
-
-				const printLogs = false;
-
-				for (const [featureId, deductedAmount] of Object.entries(
-					actualDeductions,
-				)) {
-					if (deductedAmount !== 0) {
-						// Only deduct if something was actually deducted
-						await deductFromCache({
-							ctx,
-							customerId: fullCus.id ?? "",
-							featureId,
-							amount: deductedAmount,
-							entityId: params.entityId,
-						});
-
-						if (printLogs) {
-							console.log("Deducted from Redis cache", {
-								featureId,
-								deductedAmount,
-							});
-						}
-					}
-				}
-			}
-		},
-		{
-			isolationLevel: "read committed",
-		},
-	);
-
-	// Deduct from Redis cache if requested (default: true for track, false for sync)
+	if (params?.refreshCache && fullCus) {
+		await deleteCachedApiCustomer({
+			customerId: fullCus.id ?? "",
+			orgId: ctx.org.id,
+			env: ctx.env,
+		});
+		// // 1. If paid allocated, delete cache
+		// if (result?.isPaidAllocated) {
+		// 	await deleteCachedApiCustomer({
+		// 		customerId: fullCus.id ?? "",
+		// 		orgId: ctx.org.id,
+		// 		env: ctx.env,
+		// 	});
+		// } else {
+		// 	for (const [featureId, deductedAmount] of Object.entries(
+		// 		actualDeductions,
+		// 	)) {
+		// 		if (deductedAmount !== 0) {
+		// 			await deductFromCache({
+		// 				ctx,
+		// 				customerId: fullCus.id ?? "",
+		// 				featureId,
+		// 				amount: deductedAmount,
+		// 				entityId: params.entityId,
+		// 			});
+		// 		}
+		// 	}
+		// }
+	}
 
 	return {
 		fullCus,

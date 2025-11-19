@@ -1,13 +1,15 @@
 import {
 	type ApiCustomer,
 	ApiCustomerSchema,
+	CusExpand,
 	type CustomerLegacyData,
 	type FullCustomer,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
-import { getApiCusFeatures } from "./getApiCusFeature/getApiCusFeatures.js";
-import { getApiCusProducts } from "./getApiCusProduct/getApiCusProducts.js";
+import { invoicesToResponse } from "../../../invoices/invoiceUtils.js";
+import { getApiBalances } from "./getApiBalance/getApiBalances.js";
+import { getApiSubscriptions } from "./getApiSubscription/getApiSubscriptions.js";
 
 /**
  * Get base ApiCustomer without expand fields
@@ -23,13 +25,14 @@ export const getApiCustomerBase = async ({
 	fullCus: FullCustomer;
 	withAutumnId?: boolean;
 }): Promise<{ apiCustomer: ApiCustomer; legacyData: CustomerLegacyData }> => {
-	const apiCusFeatures = await getApiCusFeatures({
-		ctx,
-		fullCus,
-	});
+	const { data: apiBalances, legacyData: cusFeatureLegacyData } =
+		await getApiBalances({
+			ctx,
+			fullCus,
+		});
 
-	const { apiCusProducts, legacyData: cusProductLegacyData } =
-		await getApiCusProducts({
+	const { data: apiSubscriptions, legacyData: cusProductLegacyData } =
+		await getApiSubscriptions({
 			ctx,
 			fullCus,
 		});
@@ -49,14 +52,23 @@ export const getApiCustomerBase = async ({
 		env: fullCus.env,
 		metadata: fullCus.metadata,
 
-		products: apiCusProducts,
-		features: apiCusFeatures,
+		subscriptions: apiSubscriptions,
+		balances: apiBalances,
+
+		invoices:
+			fullCus.invoices && ctx.expand.includes(CusExpand.Invoices)
+				? invoicesToResponse({
+						invoices: fullCus.invoices,
+						logger: ctx.logger,
+					})
+				: undefined,
 	});
 
 	return {
 		apiCustomer,
 		legacyData: {
 			cusProductLegacyData,
+			cusFeatureLegacyData,
 		},
 	};
 };

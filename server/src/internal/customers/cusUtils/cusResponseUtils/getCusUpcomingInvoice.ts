@@ -51,7 +51,7 @@ export const getCusUpcomingInvoice = async ({
 	const upcomingInvoice = await stripeCli.invoices.createPreview({
 		customer: fullCus.processor?.id,
 		subscription: sub.id,
-		expand: ["discounts.coupon"],
+		expand: ["discounts.source.coupon"],
 	});
 
 	const lines = [];
@@ -79,12 +79,15 @@ export const getCusUpcomingInvoice = async ({
 
 	// Get reward in IDs
 
-	const discounts = stripeDiscounts.map((d) =>
-		stripeDiscountToResponse({
-			discount: d,
-			totalDiscountAmounts: upcomingInvoice.total_discount_amounts || undefined,
-		}),
-	);
+	const discounts = stripeDiscounts
+		.map((d) =>
+			stripeDiscountToResponse({
+				discount: d,
+				totalDiscountAmounts:
+					upcomingInvoice.total_discount_amounts || undefined,
+			}),
+		)
+		.filter((d) => d !== null);
 
 	const atmnSubtotal = stripeToAtmnAmount({
 		amount: upcomingInvoice.subtotal,

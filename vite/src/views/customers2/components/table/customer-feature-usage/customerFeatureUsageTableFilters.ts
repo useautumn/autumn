@@ -15,7 +15,11 @@ export function filterCustomerFeatureUsage({
 			if (showExpired) {
 				return true;
 			}
-			return ent.customer_product.status !== CusProductStatus.Expired;
+			// Exclude expired and scheduled products from balance calculations
+			return (
+				ent.customer_product.status !== CusProductStatus.Expired &&
+				ent.customer_product.status !== CusProductStatus.Scheduled
+			);
 		})
 		.sort(
 			(a: FullCusEntWithFullCusProduct, b: FullCusEntWithFullCusProduct) => {

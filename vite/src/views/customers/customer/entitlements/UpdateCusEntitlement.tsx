@@ -3,13 +3,13 @@ import {
 	type FullCustomerEntitlement,
 	getCusEntBalance,
 } from "@autumn/shared";
-import { AlertCircle, Info, InfoIcon } from "lucide-react";
+import { Decimal } from "decimal.js";
+import { AlertCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import CopyButton from "@/components/general/CopyButton";
 import { DateInputUnix } from "@/components/general/DateInputUnix";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
-
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -20,7 +20,6 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, notNullish } from "@/utils/genUtils";
 // import { useCustomerContext } from "../../customers2/customer/CustomerContext";
@@ -39,28 +38,8 @@ function UpdateCusEntitlement({
 
 	const cusEnt = selectedCusEntitlement;
 
-	console.log(
-		"Balance: ",
-		cusEnt
-			? getCusEntBalance({
-					cusEnt: cusEnt!,
-					entityId,
-				}).balance
-			: null,
-	);
-
 	const [updateLoading, setUpdateLoading] = useState(false);
 	const axiosInstance = useAxiosInstance();
-
-	console.log(
-		`Cus ent: ${cusEnt?.entitlement.feature_id}, Balances: `,
-		cusEnt
-			? getCusEntBalance({
-					cusEnt: cusEnt!,
-					entityId,
-				})
-			: null,
-	);
 
 	const [updateFields, setUpdateFields] = useState<any>({
 		balance: cusEnt
@@ -81,13 +60,13 @@ function UpdateCusEntitlement({
 	};
 
 	useEffect(() => {
+		if (!cusEnt) return;
+		const { balance, additional_balance } = getCusEntBalance({
+			cusEnt: cusEnt,
+			entityId,
+		});
 		setUpdateFields({
-			balance: cusEnt
-				? getCusEntBalance({
-						cusEnt: cusEnt!,
-						entityId,
-					}).balance
-				: null,
+			balance: new Decimal(balance).add(additional_balance).toNumber(),
 			next_reset_at: cusEnt?.next_reset_at,
 		});
 	}, [selectedCusEntitlement]);
@@ -107,23 +86,31 @@ function UpdateCusEntitlement({
 			return;
 		}
 
-		if (cusPrice && updateFields.next_reset_at != cusEnt.next_reset_at) {
+		if (cusPrice && updateFields.next_reset_at !== cusEnt.next_reset_at) {
 			toast.error(`Not allowed to change reset at for paid features`);
 			return;
 		}
 
 		setUpdateLoading(true);
 		try {
-			await CusService.updateCusEntitlement(
-				axiosInstance,
-				customer.id || customer.internal_id,
-				cusEnt.id,
+			// await axiosInstance.post("/v1/balances/update", {
+			// 	customer_id: customer.id || customer.internal_id,
+			// 	feature_id: feature.id,
+			// 	current_balance: balanceInt,
+			// 	customer_entitlement_id: cusEnt.id,
+			// 	entity_id: entityId ?? undefined,
+			// 	// usage: 0,
+			// });
+			const customerId = customer.id || customer.internal_id;
+			await axiosInstance.post(
+				`/v1/customers/${customerId}/entitlements/${cusEnt.id}`,
 				{
 					balance: balanceInt,
 					next_reset_at: updateFields.next_reset_at,
-					entity_id: entityId,
+					entity_id: entityId ?? undefined,
 				},
 			);
+
 			toast.success("Entitlement updated successfully");
 			await refetch();
 			setSelectedCusEntitlement(null);

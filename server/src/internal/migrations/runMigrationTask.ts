@@ -26,6 +26,21 @@ export const runMigrationTask = async ({
 			id: migrationJobId,
 		});
 
+		if (migrationJob.current_step !== MigrationJobStep.Queued) {
+			logger.info(
+				`Migration job ${migrationJobId} already in progress or completed (status: ${migrationJob.current_step}). Skipping.`,
+			);
+			return;
+		}
+
+		await MigrationService.updateJob({
+			db,
+			migrationJobId,
+			updates: {
+				current_step: MigrationJobStep.Received,
+			},
+		});
+
 		const { org_id: orgId, env } = migrationJob;
 
 		// Get from and to products

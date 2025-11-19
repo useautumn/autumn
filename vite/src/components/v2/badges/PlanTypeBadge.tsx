@@ -50,7 +50,7 @@ export const PlanTypeBadge = ({
 	const getLabel = () => {
 		switch (variant) {
 			case "default":
-				return "Default";
+				return "Auto-enable";
 			case "freeTrial":
 				return "Free Trial";
 			case "addon":

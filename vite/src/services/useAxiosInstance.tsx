@@ -1,5 +1,5 @@
 // import { endpoint } from "@/utils/constants/constants";
-import { AppEnv } from "@autumn/shared";
+import { type ApiVersion, AppEnv } from "@autumn/shared";
 import axios from "axios";
 import { authClient } from "@/lib/auth-client";
 import { useEnv } from "@/utils/envUtils";
@@ -8,7 +8,11 @@ const defaultParams = {
 	isAuth: true,
 };
 
-export function useAxiosInstance(params?: { env?: AppEnv; isAuth?: boolean }) {
+export function useAxiosInstance(params?: {
+	version?: ApiVersion;
+	env?: AppEnv;
+	isAuth?: boolean;
+}) {
 	const currentEnv = useEnv();
 	const envToUse = params?.env ?? currentEnv;
 
@@ -20,7 +24,11 @@ export function useAxiosInstance(params?: { env?: AppEnv; isAuth?: boolean }) {
 	axiosInstance.interceptors.request.use(
 		async (config: any) => {
 			config.headers.app_env = envToUse;
-			config.headers["x-api-version"] = "1.2";
+			// Only set x-api-version if not already set by the request
+			if (!config.headers["x-api-version"]) {
+				config.headers["x-api-version"] = params?.version ?? "1.2";
+			}
+			// config.headers["Autumn-Version"] = "0.2.0";
 			config.headers["x-client-type"] = "dashboard";
 
 			return config;

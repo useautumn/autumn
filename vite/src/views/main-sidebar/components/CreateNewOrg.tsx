@@ -1,5 +1,8 @@
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/v2/buttons/Button";
 import {
 	Dialog,
 	DialogContent,
@@ -7,14 +10,11 @@ import {
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+} from "@/components/v2/dialogs/Dialog";
+import { Input } from "@/components/v2/inputs/Input";
 import { useOrg } from "@/hooks/common/useOrg";
 import { authClient } from "@/lib/auth-client";
 import { slugify } from "@/utils/formatUtils/formatTextUtils";
-import { useState } from "react";
-import { useNavigate } from "react-router";
-import { toast } from "sonner";
 
 export const CreateNewOrg = ({
 	dialogType,
@@ -96,8 +96,12 @@ export const CreateNewOrg = ({
 						</div>
 					</div>
 				</div>
-				<DialogFooter variant="new">
-					<Button variant="add" onClick={handleCreate} isLoading={isLoading}>
+				<DialogFooter className="px-4 pb-4">
+					<Button
+						variant="primary"
+						onClick={handleCreate}
+						isLoading={isLoading}
+					>
 						Create
 					</Button>
 				</DialogFooter>

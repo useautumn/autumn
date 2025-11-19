@@ -1,3 +1,4 @@
+import { AllowanceType } from "@models/productModels/entModels/entModels.js";
 import { Decimal } from "decimal.js";
 import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
@@ -11,6 +12,7 @@ export const getSummedEntityBalances = ({
 	if (nullish(cusEnt.entities)) {
 		return {
 			balance: 0,
+			additional_balance: 0,
 			adjustment: 0,
 			unused: 0,
 			count: 0,
@@ -18,12 +20,19 @@ export const getSummedEntityBalances = ({
 	}
 
 	return {
-		balance: Object.values(cusEnt.entities)
-			.reduce((acc, curr) => acc.add(curr.balance), new Decimal(0))
-			.toNumber(),
-		adjustment: Object.values(cusEnt.entities)
-			.reduce((acc, curr) => acc.add(curr.adjustment), new Decimal(0))
-			.toNumber(),
+		additional_balance: Object.values(cusEnt.entities).reduce(
+			(acc, curr) => acc + (curr.additional_balance ?? 0),
+			0,
+		),
+
+		balance: Object.values(cusEnt.entities).reduce(
+			(acc, curr) => acc + curr.balance,
+			0,
+		),
+		adjustment: Object.values(cusEnt.entities).reduce(
+			(acc, curr) => acc + (curr.adjustment ?? 0),
+			0,
+		),
 		unused: 0,
 		count: Object.values(cusEnt.entities).length,
 	};
@@ -35,8 +44,22 @@ export const getCusEntBalance = ({
 }: {
 	cusEnt: FullCustomerEntitlement;
 	entityId?: string | null;
-}) => {
+}): {
+	balance: number;
+	additional_balance: number;
+	adjustment: number;
+	unused: number;
+	count: number;
+} => {
 	const entitlement = cusEnt.entitlement;
+	if (cusEnt.entitlement.allowance_type === AllowanceType.Unlimited) {
+		return {
+			balance: 0,
+			adjustment: 0,
+			unused: 0,
+			count: 1,
+		};
+	}
 
 	if (notNullish(entitlement.entity_feature_id)) {
 		if (nullish(entityId)) {
@@ -48,11 +71,19 @@ export const getCusEntBalance = ({
 			const adjustment = cusEnt.entities?.[entityId]?.adjustment || 0;
 
 			if (nullish(entityBalance)) {
-				return { balance: 0, adjustment: 0, unused: 0, count: 1 };
+				return {
+					balance: 0,
+					additional_balance: 0,
+					adjustment: 0,
+					unused: 0,
+					count: 1,
+				};
 			}
 
 			return {
 				balance: entityBalance || 0,
+				additional_balance:
+					cusEnt.entities?.[entityId]?.additional_balance || 0,
 				adjustment,
 				unused: 0,
 				count: 1,
@@ -62,6 +93,7 @@ export const getCusEntBalance = ({
 
 	return {
 		balance: cusEnt.balance || 0,
+		additional_balance: cusEnt.additional_balance || 0,
 		adjustment: cusEnt.adjustment || 0,
 		unused: cusEnt.replaceables?.length || 0,
 		count: 1,

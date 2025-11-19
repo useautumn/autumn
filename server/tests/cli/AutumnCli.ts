@@ -3,7 +3,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { getAxiosInstance } from "../utils/setup.js";
 
 const handleAxiosError = (error: any) => {
-	if (error.response.data) {
+	if (error.response?.data) {
 		throw new RecaseError({
 			message: error.response.data.message,
 			code: error.response.data.code,

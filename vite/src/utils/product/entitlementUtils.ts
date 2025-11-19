@@ -1,6 +1,7 @@
 import {
 	type Feature,
 	FeatureType,
+	isBooleanFeatureItem,
 	isFeatureItem,
 	isFeaturePriceItem,
 	type ProductItem,
@@ -43,11 +44,22 @@ export const getFeatureCreditSystem = ({
 	return feature?.type === FeatureType.CreditSystem;
 };
 
-export const checkItemIsValid = (item: ProductItem) => {
+export const checkItemIsValid = (item: ProductItem, showToast = true) => {
+	if (item && isBooleanFeatureItem(item)) return true;
+
 	if (item && isFeatureItem(item) && !item.included_usage) {
-		toast.error(
-			`Balance of ${item.feature_id} to grant must be greater than 0`,
-		);
+		showToast &&
+			toast.error(
+				`Please finish configuring ${item.feature_id} or remove it from the plan (granted balance is required)`,
+			);
+		return false;
+	}
+
+	if (item && !isFeatureItem(item) && !isFeaturePriceItem(item)) {
+		showToast &&
+			toast.error(
+				`Please finish configuring ${item.feature_id}, or remove it from the plan (price is required)`,
+			);
 		return false;
 	}
 
@@ -57,9 +69,10 @@ export const checkItemIsValid = (item: ProductItem) => {
 		!item.price &&
 		item.tiers?.every?.((tier) => tier.amount === 0)
 	) {
-		toast.error(
-			`Price of paid feature ${item.feature_id} must be greater than 0`,
-		);
+		showToast &&
+			toast.error(
+				`Please finish configuring ${item.feature_id}, or remove it from the plan (price is required)`,
+			);
 		return false;
 	}
 

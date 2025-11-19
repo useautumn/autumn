@@ -1,6 +1,7 @@
 import { AppEnv, type ProductV2 } from "@autumn/shared";
 import type { AxiosError } from "axios";
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/v2/buttons/Button";
 import {
@@ -23,20 +24,23 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
-import { getBackendErr } from "@/utils/genUtils";
+import { getBackendErr, navigateTo } from "@/utils/genUtils";
 
 export const CopyProductDialog = ({
 	open,
 	setOpen,
 	product,
+	onSuccess,
 }: {
 	open: boolean;
 	setOpen: (open: boolean) => void;
 	product: ProductV2;
+	onSuccess?: (copiedProduct: ProductV2) => Promise<void>;
 }) => {
 	const env = useEnv();
 	const axiosInstance = useAxiosInstance({ env });
 	const { refetch } = useProductsQuery();
+	const navigate = useNavigate();
 
 	const [loading, setLoading] = useState(false);
 	const [name, setName] = useState(product.name);
@@ -63,6 +67,19 @@ export const CopyProductDialog = ({
 
 			toast.success("Successfully copied plan");
 			setOpen(false);
+
+			// Construct the copied product with the new ID
+			const copiedProduct: ProductV2 = {
+				...product,
+				id: id,
+				name: name,
+			};
+
+			if (onSuccess) {
+				await onSuccess(copiedProduct);
+			} else {
+				navigateTo(`/products/${id}`, navigate);
+			}
 		} catch (error: unknown) {
 			console.log("Error copying product", error);
 			toast.error(getBackendErr(error as AxiosError, "Failed to copy plan"));
@@ -73,7 +90,10 @@ export const CopyProductDialog = ({
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogContent onClick={(e) => e.stopPropagation()}>
+			<DialogContent
+				className="bg-background"
+				onClick={(e) => e.stopPropagation()}
+			>
 				<DialogHeader>
 					<DialogTitle>Copy Product</DialogTitle>
 				</DialogHeader>

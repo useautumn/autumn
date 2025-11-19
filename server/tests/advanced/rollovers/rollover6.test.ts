@@ -3,14 +3,14 @@ import {
 	type Customer,
 	LegacyVersion,
 	type LimitedItem,
-	RolloverDuration,
+	RolloverExpiryDurationType,
 } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { addHours, addMonths } from "date-fns";
 import type Stripe from "stripe";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -20,8 +20,16 @@ import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js"
 import { timeout } from "../../utils/genUtils.js";
 import { resetAndGetCusEnt } from "./rolloverTestUtils.js";
 
-const freeRollover = { max: 600, length: 1, duration: RolloverDuration.Month };
-const proRollover = { max: 1000, length: 1, duration: RolloverDuration.Month };
+const freeRollover = {
+	max: 600,
+	length: 1,
+	duration: RolloverExpiryDurationType.Month,
+};
+const proRollover = {
+	max: 1000,
+	length: 1,
+	duration: RolloverExpiryDurationType.Month,
+};
 
 const freeMsges = constructFeatureItem({
 	featureId: TestFeature.Messages,

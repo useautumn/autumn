@@ -5,7 +5,7 @@ import { Checkbox } from "../checkboxes/Checkbox";
 
 interface SheetHeaderProps {
 	title: string;
-	description: string;
+	description: string | React.ReactNode;
 	children?: React.ReactNode;
 	noSeparator?: boolean;
 	className?: string;
@@ -22,19 +22,15 @@ export function SheetHeader({
 }: SheetHeaderProps) {
 	return (
 		<div className={cn("p-4 pb-0", className)}>
-			<h2 className="text-main">{title}</h2>
-
+			<h2 className="text-main mb-1">{title}</h2>
 			{/* check typography */}
 			<p
-				className={cn(
-					"text-form-text",
-					isOnboarding && "text-body-secondary mt-2",
-				)}
+				className={cn("text-t3 text-sm", isOnboarding && "text-body-secondary")}
 			>
 				{description}
 			</p>
 			{children}
-			{!noSeparator && <Separator className="mt-6" />}
+			{!noSeparator && <Separator className="mt-4" />}
 		</div>
 	);
 }

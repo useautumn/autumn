@@ -13,6 +13,11 @@ async function main() {
 	console.log(chalk.blue("\n🧹 Clearing Master Org...\n"));
 
 	try {
+		if (!process.env.TESTS_ORG) {
+			console.error(chalk.red("\n❌ TESTS_ORG is not set\n"));
+			process.exit(1);
+		}
+
 		const org = await clearOrg({
 			orgSlug: process.env.TESTS_ORG ?? "",
 			env: AppEnv.Sandbox,
@@ -20,19 +25,12 @@ async function main() {
 
 		console.log(chalk.green("\n✅ Master org cleared successfully!\n"));
 
-		// Ask if user wants to set up features
-		const shouldSetup = confirm(
-			"Do you want to set up v2 features for the master org?",
-		);
-
-		if (shouldSetup) {
-			console.log(chalk.blue("\n🏗️  Setting up master org...\n"));
-			await setupOrg({
-				orgId: org.id,
-				env: AppEnv.Sandbox,
-			});
-			console.log(chalk.green("\n✅ Master org setup complete!\n"));
-		}
+		console.log(chalk.blue("\n🏗️  Setting up master org...\n"));
+		await setupOrg({
+			orgId: org.id,
+			env: AppEnv.Sandbox,
+		});
+		console.log(chalk.green("\n✅ Master org setup complete!\n"));
 	} catch (error) {
 		console.error(chalk.red("\n❌ Error:"), error);
 		process.exit(1);

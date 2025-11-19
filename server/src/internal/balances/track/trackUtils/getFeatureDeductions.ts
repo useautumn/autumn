@@ -4,7 +4,6 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
-import { getCreditSystemsFromFeature } from "../../../features/creditSystemUtils.js";
 
 export type FeatureDeduction = {
 	feature: Feature;
@@ -35,28 +34,11 @@ export const getTrackFeatureDeductions = ({
 			featureId,
 		});
 	}
-	const creditSystems = getCreditSystemsFromFeature({
-		featureId: mainFeature.id,
-		features,
-	});
 
 	featureDeductions.push({
 		feature: mainFeature,
 		deduction: mainFeatureDeduction,
 	});
-
-	// for (const creditSystem of creditSystems) {
-	// 	const creditSystemDeduction = getCreditCost({
-	// 		featureId: mainFeature.id,
-	// 		creditSystem,
-	// 		amount: mainFeatureDeduction,
-	// 	});
-
-	// 	featureDeductions.push({
-	// 		feature: creditSystem,
-	// 		deduction: creditSystemDeduction,
-	// 	});
-	// }
 
 	return featureDeductions;
 };

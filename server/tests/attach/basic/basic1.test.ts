@@ -1,17 +1,17 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion } from "@autumn/shared";
+import { AutumnCli } from "@tests/cli/AutumnCli.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectCustomerV0Correct } from "@tests/utils/expectUtils/expectCustomerV0Correct.js";
+import { expectFeaturesCorrect } from "@tests/utils/expectUtils/expectFeaturesCorrect.js";
+import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { expectCustomerV0Correct } from "tests/utils/expectUtils/expectCustomerV0Correct.js";
-import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { initCustomerV3 } from "../../../src/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { sharedDefaultFree } from "./sharedProducts.js";
 
 const free2 = constructProduct({
@@ -36,9 +36,6 @@ describe(`${chalk.yellowBright("basic1: Testing attach free, default product")}`
 	});
 
 	beforeAll(async () => {
-		console.log(`[basic1] Using org: ${ctx.org.slug} (${ctx.org.id})`);
-		console.log("Customer ID: ", customerId);
-
 		// Create products FIRST so default product can be attached to customer
 		await initProductsV0({
 			ctx,
@@ -51,7 +48,6 @@ describe(`${chalk.yellowBright("basic1: Testing attach free, default product")}`
 		await initCustomerV3({
 			ctx,
 			customerId,
-			customerData: { fingerprint: "test" },
 			withTestClock: false,
 			withDefault: true,
 		});
@@ -72,7 +68,7 @@ describe(`${chalk.yellowBright("basic1: Testing attach free, default product")}`
 			customerId,
 			TestFeature.Messages,
 		)) as any;
-		console.log("Entitled response:", entitled);
+
 		const metered1Balance = entitled.balances.find(
 			(balance: any) => balance.feature_id === TestFeature.Messages,
 		);

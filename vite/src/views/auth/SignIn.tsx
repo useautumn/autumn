@@ -6,11 +6,10 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { z } from "zod";
 import { CustomToaster } from "@/components/general/CustomToaster";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { IconButton } from "@/components/v2/buttons/IconButton";
+import { Input } from "@/components/v2/inputs/Input";
 import { useOrg } from "@/hooks/common/useOrg";
 import { authClient, signIn } from "@/lib/auth-client";
-import { cn } from "@/lib/utils";
 import { getBackendErr } from "@/utils/genUtils";
 import { OTPSignIn } from "./components/OTPSignIn";
 
@@ -117,17 +116,16 @@ export const SignIn = () => {
 				{!otpSent && (
 					<div className="space-y-6">
 						{/* Google Sign In Button */}
-						<Button
-							variant="auth"
+						<IconButton
+							variant="primary"
 							onClick={handleGoogleSignIn}
 							isLoading={googleLoading}
-							startIcon={
-								<FontAwesomeIcon icon={faGoogle} className="text-stone-400" />
-							}
-							className={height}
+							icon={<FontAwesomeIcon icon={faGoogle} />}
+							className={"w-full gap-2"}
 						>
+							{" "}
 							Continue with Google
-						</Button>
+						</IconButton>
 
 						{/* Divider */}
 						<div className="relative">
@@ -141,30 +139,28 @@ export const SignIn = () => {
 							</div>
 						</div>
 
-						<div className="space-y-4">
-							<div className="space-y-2">
-								<Input
-									type="email"
-									placeholder="Email"
-									value={email}
-									onChange={(e) => setEmail(e.target.value)}
-									required
-									className="text-base"
-									autoComplete="email"
-								/>
-							</div>
+						<div className="flex flex-col gap-2 w-full">
+							<Input
+								type="email"
+								placeholder="Email"
+								value={email}
+								onChange={(e) => setEmail(e.target.value)}
+								required
+								className="text-base !w-full"
+								autoComplete="email"
+							/>
 
 							{/* Sign In Button */}
-							<Button
+							<IconButton
 								type="submit"
-								variant="auth"
+								variant="secondary"
 								isLoading={sendOtpLoading}
 								onClick={handleEmailSignIn}
-								className={cn(height)}
-								startIcon={<Mail size={14} className="text-stone-500" />}
+								className={"gap-2 w-full"}
+								icon={<Mail size={14} className="text-t4" />}
 							>
-								Continue with email
-							</Button>
+								Continue with Email
+							</IconButton>
 						</div>
 					</div>
 				)}

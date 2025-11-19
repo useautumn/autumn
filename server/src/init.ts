@@ -1,21 +1,19 @@
 // Suppress BullMQ eviction policy warnings BEFORE any imports
 
 // Skip OpenTelemetry instrumentation in development for faster startup
-if (process.env.NODE_ENV !== "development") {
-	await import("./instrumentation.js");
-}
+// if (process.env.NODE_ENV !== "development") {
+await import("./instrumentation.js");
+await import("./sentry.js");
+
+// }
 
 import cluster from "node:cluster";
-import { readFileSync } from "node:fs";
 import http from "node:http";
 import os from "node:os";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { AppEnv } from "@autumn/shared";
 import { context, trace } from "@opentelemetry/api";
 import { toNodeHandler } from "better-auth/node";
 import cors from "cors";
-import { sql } from "drizzle-orm";
 import express from "express";
 import { client, db } from "./db/initDrizzle.js";
 import { ClickHouseManager } from "./external/clickhouse/ClickHouseManager.js";
@@ -28,41 +26,10 @@ import { auth } from "./utils/auth.js";
 import { generateId } from "./utils/genUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
 const tracer = trace.getTracer("express");
 
 checkEnvVars();
 // subscribeToOrgUpdates({ db });
-
-const initializeDatabaseFunctions = async () => {
-	try {
-		console.log("Initializing database functions...");
-
-		const deductRpcPath = join(
-			__dirname,
-			"internal/balances/track/trackUtils/deductRpc",
-		);
-
-		// Load SQL files in order: helpers first, then main function
-		const sqlFiles = [
-			"deductFromRollovers.sql",
-			"deductFromMainBalance.sql",
-			"performDeductionV2.sql",
-		];
-
-		for (const file of sqlFiles) {
-			const sqlContent = readFileSync(join(deductRpcPath, file), "utf-8");
-			await db.execute(sql.raw(sqlContent));
-			console.log(`  ✓ Loaded ${file}`);
-		}
-
-		console.log("Database functions initialized successfully");
-	} catch (error) {
-		console.error("Failed to initialize database functions:", error);
-		throw error;
-	}
-};
 
 const init = async () => {
 	const app = express();
@@ -153,9 +120,6 @@ const init = async () => {
 	// Initialize managers in parallel for faster startup
 	await Promise.all([ClickHouseManager.getInstance()]);
 
-	// Initialize database functions
-	await initializeDatabaseFunctions();
-
 	app.use(async (req: any, res: any, next: any) => {
 		// Add Render region identifier headers for load balancer verification
 		const serviceName = process.env.RENDER_SERVICE_NAME || "unknown";
@@ -168,6 +132,8 @@ const init = async () => {
 		req.clickhouseClient = await ClickHouseManager.getClient();
 		req.id = req.headers["rndr-id"] || generateId("local_req");
 		req.timestamp = Date.now();
+		req.expand = [];
+		req.skipCache = false;
 
 		const reqContext = {
 			id: req.id,
@@ -225,7 +191,7 @@ const init = async () => {
 	app.use("/webhooks", webhooksRouter);
 
 	app.use(express.json());
-	app.use(async (req: any, res: any, next: any) => {
+	app.use(async (req: any, _res: any, next: any) => {
 		req.logger.info(`${req.method} ${req.originalUrl}`, {
 			context: {
 				body: req.body,
@@ -264,7 +230,7 @@ if (process.env.NODE_ENV === "development") {
 			cluster.fork();
 		}
 
-		cluster.on("exit", (worker, code, signal) => {
+		cluster.on("exit", (worker, _code, _signal) => {
 			logger.error(`WORKER DIED: ${worker.process.pid}`);
 			cluster.fork();
 		});

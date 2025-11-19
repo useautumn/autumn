@@ -1,12 +1,11 @@
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { BillingType, type UsagePriceConfig } from "@autumn/shared";
+import type Stripe from "stripe";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import {
-	formatPrice,
 	getBillingType,
 	getPriceEntitlement,
 	priceIsOneOffAndTiered,
 } from "@/internal/products/prices/priceUtils.js";
-import { BillingType, UsagePriceConfig } from "@autumn/shared";
-import Stripe from "stripe";
 import { findStripeItemForPrice } from "../../stripeSubUtils/stripeSubItemUtils.js";
 
 export const getOptionsFromCheckoutSession = async ({
@@ -18,7 +17,7 @@ export const getOptionsFromCheckoutSession = async ({
 }) => {
 	const usageInAdvanceExists = attachParams.prices.some(
 		(price) =>
-			getBillingType(price.config as UsagePriceConfig) ==
+			getBillingType(price.config as UsagePriceConfig) ===
 			BillingType.UsageInAdvance,
 	);
 
@@ -31,9 +30,9 @@ export const getOptionsFromCheckoutSession = async ({
 
 	// Should still work with old method?
 	for (const price of prices) {
-		let config = price.config as UsagePriceConfig;
+		const config = price.config as UsagePriceConfig;
 
-		if (getBillingType(config) != BillingType.UsageInAdvance) continue;
+		if (getBillingType(config) !== BillingType.UsageInAdvance) continue;
 
 		const lineItem = findStripeItemForPrice({
 			price,
@@ -43,7 +42,7 @@ export const getOptionsFromCheckoutSession = async ({
 		let quantity = 0;
 
 		if (lineItem) {
-			let relatedEnt = getPriceEntitlement(price, ents);
+			const relatedEnt = getPriceEntitlement(price, ents);
 
 			if (priceIsOneOffAndTiered(price, relatedEnt)) {
 				// quantity = lineItem.quantity || 0;
@@ -54,10 +53,10 @@ export const getOptionsFromCheckoutSession = async ({
 		}
 
 		const index = optionsList.findIndex(
-			(feature) => feature.internal_feature_id == config.internal_feature_id,
+			(feature) => feature.internal_feature_id === config.internal_feature_id,
 		);
 
-		if (index == -1) {
+		if (index === -1) {
 			attachParams.optionsList.push({
 				feature_id: config.feature_id,
 				internal_feature_id: config.internal_feature_id,

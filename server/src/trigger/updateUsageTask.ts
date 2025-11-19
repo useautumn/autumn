@@ -25,7 +25,7 @@ import { deductFromApiCusRollovers } from "@/internal/customers/cusProducts/cusE
 import { getCusEntsInFeatures } from "@/internal/customers/cusUtils/cusUtils.js";
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { handleThresholdReached } from "./handleThresholdReached.js";
+
 import {
 	deductAllowanceFromCusEnt,
 	deductFromUsageBasedCusEnt,
@@ -430,43 +430,50 @@ export const updateUsage = async ({
 	for (const obj of featureDeductions) {
 		let { feature, deduction: toDeduct } = obj;
 
-		for (const cusEnt of cusEnts) {
-			if (cusEnt.entitlement.internal_feature_id !== feature.internal_id) {
-				continue;
+		const performFeatureDeduction = async () => {
+			// 1. Deduct from rollovers
+			for (const cusEnt of cusEnts) {
+				if (cusEnt.entitlement.internal_feature_id !== feature.internal_id) {
+					continue;
+				}
+
+				toDeduct = await deductFromApiCusRollovers({
+					toDeduct,
+					cusEnt,
+					deductParams: {
+						db,
+						feature,
+						env,
+						entity: customer.entity ? customer.entity : undefined,
+					},
+				});
 			}
 
-			toDeduct = await deductFromApiCusRollovers({
-				toDeduct,
-				cusEnt,
-				deductParams: {
-					db,
-					feature,
-					env,
-					entity: customer.entity ? customer.entity : undefined,
-				},
-			});
+			if (toDeduct === 0) return;
 
-			if (toDeduct === 0) continue;
+			// 3. Deduct from allowance
+			for (const cusEnt of cusEnts) {
+				toDeduct = await deductAllowanceFromCusEnt({
+					toDeduct,
+					cusEnt,
+					deductParams: {
+						db,
+						feature,
+						env,
+						org,
+						cusPrices: cusPrices as any[],
+						customer,
+						entity: customer.entity,
+					},
+					featureDeductions,
+					willDeductCredits: true,
+					setZeroAdjustment: true,
+				});
+			}
 
-			toDeduct = await deductAllowanceFromCusEnt({
-				toDeduct,
-				cusEnt,
-				deductParams: {
-					db,
-					feature,
-					env,
-					org,
-					cusPrices: cusPrices as any[],
-					customer,
-					entity: customer.entity,
-				},
-				featureDeductions,
-				willDeductCredits: true,
-				setZeroAdjustment: true,
-			});
-		}
+			if (toDeduct === 0) return;
 
-		if (toDeduct !== 0) {
+			// 4. Deduct from usage-based entitlement
 			await deductFromUsageBasedCusEnt({
 				toDeduct,
 				cusEnts,
@@ -481,20 +488,9 @@ export const updateUsage = async ({
 				},
 				setZeroAdjustment: true,
 			});
-		}
+		};
 
-		handleThresholdReached({
-			org,
-			env,
-			features: allFeatures,
-			db,
-
-			feature,
-			cusEnts: originalCusEnts,
-			newCusEnts: cusEnts,
-			fullCus: customer,
-			logger,
-		});
+		await performFeatureDeduction();
 	}
 
 	return cusEnts;
@@ -579,9 +575,25 @@ export const runUpdateUsageTask = async ({
 				isolationLevel: "read committed",
 			},
 		);
+
+		if (!cusEnts || cusEnts.length === 0) {
+			return;
+		}
+		console.log("   ✅ Usage updated");
 	} catch (error) {
-		logger.error(`ERROR UPDATING USAGE`);
-		logger.error(error);
+		if (logger) {
+			logger.use((log: any) => {
+				return {
+					...log,
+					data: payload,
+				};
+			});
+
+			logger.error(`ERROR UPDATING USAGE`);
+			logger.error(error);
+		} else {
+			console.log(error);
+		}
 
 		if (throwError) {
 			throw error;

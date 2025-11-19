@@ -178,7 +178,6 @@ export const createStripePriceIFNotExist = async ({
 		} else if (!config.stripe_placeholder_price_id) {
 			logger.info(`Creating stripe placeholder price`);
 			const placeholderPrice = await createStripeMeteredPrice({
-				db,
 				stripeCli,
 				price,
 				entitlements,

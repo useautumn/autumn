@@ -1,18 +1,19 @@
+import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type AppEnv,
 	CusProductStatus,
 	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
+import { expectMultiAttachCorrect } from "@tests/utils/expectUtils/expectMultiAttach.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import type { Stripe } from "stripe";
-import { setupBefore } from "tests/before.js";
-import { expectMultiAttachCorrect } from "tests/utils/expectUtils/expectMultiAttach.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import {
 	multiRewardPremium,
 	multiRewardPro,
@@ -33,34 +34,28 @@ describe(`${chalk.yellowBright("multiReward2: Testing multi attach with rewards 
 	let org: Organization;
 	let env: AppEnv;
 
-	beforeAll(async function () {
-		await setupBefore(this);
-		const { autumnJs } = this;
-		db = this.db;
-		org = this.org;
-		env = this.env;
-
-		stripeCli = this.stripeCli;
-
-		const { testClockId: testClockId1 } = await initCustomer({
-			autumn: autumnJs,
+	beforeAll(async () => {
+		const res = await initCustomerV3({
+			ctx,
 			customerId,
-			db,
-			org,
-			env,
 			attachPm: "success",
+			withTestClock: true,
 		});
+
+		stripeCli = ctx.stripeCli;
+		db = ctx.db;
+		org = ctx.org;
+		env = ctx.env;
+		testClockId = res.testClockId!;
 
 		await setupMultiRewardBefore({
 			orgId: org.id,
 			db,
 			env,
 		});
-
-		testClockId = testClockId1!;
 	});
 
-	it("should run multi attach through checkout and have correct sub", async () => {
+	test("should run multi attach through checkout and have correct sub", async () => {
 		const productsList = [
 			{
 				product_id: multiRewardPro.id,
@@ -87,7 +82,7 @@ describe(`${chalk.yellowBright("multiReward2: Testing multi attach with rewards 
 		});
 	});
 
-	it("should delete discounts from subscription and prorate correctly", async () => {
+	test("should delete discounts from subscription and prorate correctly", async () => {
 		const fullCus = await CusService.getFull({
 			db,
 			orgId: org.id,
@@ -105,7 +100,7 @@ describe(`${chalk.yellowBright("multiReward2: Testing multi attach with rewards 
 		});
 	});
 
-	it("should update pro quantity and have correct checkout amount", async () => {
+	test("should update pro quantity and have correct checkout amount", async () => {
 		const productsList = [
 			{
 				product_id: multiRewardPro.id,

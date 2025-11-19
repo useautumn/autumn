@@ -1,32 +1,25 @@
 import { ErrCode } from "@autumn/shared";
-import { logger } from "@/external/logtail/logtailUtils.js";
 import { getUploadUrl } from "@/external/supabase/storageUtils.js";
-import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { createRoute } from "../../../honoMiddlewares/routeHandler";
 
-export const handleGetUploadUrl = async (req: any, res: any) => {
-	try {
-		const { org } = req;
+export const handleGetUploadUrl = createRoute({
+	handler: async (c) => {
+		const ctx = c.get("ctx");
+		const { org } = ctx;
 
 		const path = `logo/${org.id}`;
 
 		if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
-			logger.warn("Supabase storage not set up");
-			res.status(400).json({
+			throw new RecaseError({
 				message: "Supabase storage not set up",
 				code: ErrCode.SupabaseNotFound,
+				statusCode: 400,
 			});
-			return;
 		}
 
 		const data = await getUploadUrl({ path });
 
-		res.status(200).json(data);
-	} catch (error) {
-		handleFrontendReqError({
-			req,
-			error,
-			res,
-			action: "get upload url",
-		});
-	}
-};
+		return c.json(data);
+	},
+});

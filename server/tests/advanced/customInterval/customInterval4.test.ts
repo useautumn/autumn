@@ -3,14 +3,14 @@ import { LegacyVersion } from "@autumn/shared";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
 import type Stripe from "stripe";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
 import {
 	expectDowngradeCorrect,
 	expectNextCycleCorrect,
-} from "tests/utils/expectUtils/expectScheduleUtils.js";
-import ctx from "tests/utils/testInitUtils/createTestContext.js";
-import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
+} from "@tests/utils/expectUtils/expectScheduleUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { getBasePrice } from "@tests/utils/testProductUtils/testProductUtils.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";

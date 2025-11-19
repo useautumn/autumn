@@ -194,7 +194,7 @@ export const addExistingUsagesToCusEnts = ({
 	}) as FullCusEntWithFullCusProduct[];
 
 	// Sort cusEnts
-	sortCusEntsForDeduction(fullCusEnts);
+	sortCusEntsForDeduction({ cusEnts: fullCusEnts });
 
 	printLogs = false;
 	if (printLogs) {

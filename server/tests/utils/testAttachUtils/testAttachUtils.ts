@@ -1,14 +1,13 @@
-import { notNullish } from "@/utils/genUtils.js";
-import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 import {
 	AttachBranch,
-	AttachPreview,
+	type AttachPreview,
 	OnIncrease,
 	UsageModel,
 } from "@autumn/shared";
 import { addHours, addMonths } from "date-fns";
 import { Decimal } from "decimal.js";
-import Stripe from "stripe";
+import type Stripe from "stripe";
+import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 import { hoursToFinalizeInvoice } from "../constants.js";
 
 export const getCurrentOptions = ({
@@ -22,7 +21,7 @@ export const getCurrentOptions = ({
 	if (!options) return currentOptions;
 
 	const isUpdatePrepaidQuantity =
-		preview?.branch == AttachBranch.UpdatePrepaidQuantity;
+		preview?.branch === AttachBranch.UpdatePrepaidQuantity;
 
 	for (const option of currentOptions || []) {
 		const previewOption = preview?.options.find(
@@ -38,7 +37,7 @@ export const getCurrentOptions = ({
 		const isDecrease = newQuantity < currentQuantity;
 		const isIncrease = newQuantity > currentQuantity;
 
-		if (isDecrease && previewOption.config.on_decrease == "none") {
+		if (isDecrease && previewOption.config.on_decrease === "none") {
 			option.quantity = currentQuantity;
 			continue;
 		}
@@ -46,9 +45,8 @@ export const getCurrentOptions = ({
 		if (
 			isUpdatePrepaidQuantity &&
 			isIncrease &&
-			previewOption.config.on_increase == OnIncrease.ProrateNextCycle
+			previewOption.config.on_increase === OnIncrease.ProrateNextCycle
 		) {
-			continue;
 		}
 	}
 
@@ -69,8 +67,8 @@ export const getAttachTotal = ({
 		dueToday?.line_items.reduce((acc: any, item: any) => {
 			// Skip prepaid items that are already in the options
 			if (
-				item.usage_model == UsageModel.Prepaid &&
-				options.some((o: any) => o.feature_id == item.feature_id)
+				item.usage_model === UsageModel.Prepaid &&
+				options.some((o: any) => o.feature_id === item.feature_id)
 			) {
 				return acc;
 			}
@@ -82,7 +80,7 @@ export const getAttachTotal = ({
 		}, new Decimal(0)) || new Decimal(0);
 
 	const isUpdatePrepaidQuantity =
-		preview?.branch == AttachBranch.UpdatePrepaidQuantity;
+		preview?.branch === AttachBranch.UpdatePrepaidQuantity;
 	if (isUpdatePrepaidQuantity) {
 		dueTodayTotal = new Decimal(0);
 	}
@@ -101,7 +99,7 @@ export const getAttachTotal = ({
 		const isDecrease = newQuantity < currentQuantity;
 		const isIncrease = newQuantity > currentQuantity;
 
-		if (isDecrease && previewOption.config.on_decrease == "none") {
+		if (isDecrease && previewOption.config.on_decrease === "none") {
 			option.quantity = currentQuantity;
 			continue;
 		}
@@ -109,7 +107,7 @@ export const getAttachTotal = ({
 		if (
 			isUpdatePrepaidQuantity &&
 			isIncrease &&
-			previewOption.config.on_increase == OnIncrease.ProrateNextCycle
+			previewOption.config.on_increase === OnIncrease.ProrateNextCycle
 		) {
 			continue;
 		}

@@ -36,11 +36,7 @@ export function inferMode(config: ModeDetectionConfig): CTEMode {
 
 	// 5. Plural field name? → array (entities, organizations, products)
 	// Exclude words ending in 'ss' (address, process, etc.)
-	if (
-		config.fieldName &&
-		config.fieldName.endsWith("s") &&
-		!config.fieldName.endsWith("ss")
-	) {
+	if (config.fieldName?.endsWith("s") && !config.fieldName.endsWith("ss")) {
 		return "array";
 	}
 

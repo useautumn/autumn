@@ -13,7 +13,7 @@ import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutRewa
 import { generateId } from "@/utils/genUtils.js";
 import { createWorkerContext } from "../createWorkerContext.js";
 import { JobName } from "../JobName.js";
-import { queue, workerRedis } from "./initBullMq.js";
+import { workerRedis } from "./initBullMq.js";
 
 const NUM_WORKERS = 10;
 
@@ -74,10 +74,9 @@ const initWorker = ({ id, db }: { id: number; db: DrizzleCli }) => {
 
 				if (actionHandlers.includes(job.name as JobName)) {
 					await runActionHandlerTask({
-						queue: queue,
-						job,
-						logger: workerLogger,
-						db,
+						jobName: job.name as JobName,
+						payload: job.data,
+						ctx,
 					});
 					return;
 				}

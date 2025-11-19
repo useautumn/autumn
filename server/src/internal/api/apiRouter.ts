@@ -6,19 +6,11 @@ import { pricingMiddleware } from "@/middleware/pricingMiddleware.js";
 import { refreshCacheMiddleware } from "@/middleware/refreshCacheMiddleware.js";
 import { analyticsRouter } from "../analytics/analyticsRouter.js";
 import { attachRouter } from "../customers/attach/attachRouter.js";
-import { handleSetupPayment } from "../customers/attach/handleSetupPayment.js";
 import cancelRouter from "../customers/cancel/cancelRouter.js";
 import { expressCusRouter } from "../customers/cusRouter.js";
-import { handleCreateBillingPortal } from "../customers/handlers/handleCreateBillingPortal.js";
-import { featureRouter } from "../features/featureRouter.js";
-import { internalFeatureRouter } from "../features/internalFeatureRouter.js";
-import { handleGetOrg } from "../orgs/handlers/handleGetOrg.js";
 import { platformRouter } from "../platform/platformLegacy/platformRouter.js";
-import { productBetaRouter, productRouter } from "../products/productRouter.js";
+import { expressProductRouter } from "../products/productRouter.js";
 import { componentRouter } from "./components/componentRouter.js";
-
-import { usageRouter } from "./events/usageRouter.js";
-
 import { invoiceRouter } from "./invoiceRouter.js";
 import { redemptionRouter, referralRouter } from "./rewards/referralRouter.js";
 import { rewardProgramRouter } from "./rewards/rewardProgramRouter.js";
@@ -32,16 +24,9 @@ apiRouter.use(analyticsMiddleware);
 apiRouter.use(expressApiVersionMiddleware as any);
 apiRouter.use(refreshCacheMiddleware);
 
-apiRouter.use("/customers", expressCusRouter);
 apiRouter.use("/invoices", invoiceRouter);
-apiRouter.use("/products", productRouter);
-apiRouter.use("/products_beta", productBetaRouter);
 apiRouter.use("/components", componentRouter);
 apiRouter.use("/rewards", rewardRouter);
-apiRouter.use("/features", featureRouter);
-apiRouter.use("/internal_features", internalFeatureRouter);
-
-apiRouter.use("/usage", usageRouter);
 
 // REWARDS
 apiRouter.use("/reward_programs", rewardProgramRouter);
@@ -52,16 +37,14 @@ apiRouter.use("/redemptions", redemptionRouter);
 apiRouter.use("", attachRouter);
 apiRouter.use("/cancel", cancelRouter);
 
-apiRouter.post("/setup_payment", handleSetupPayment);
-apiRouter.post("/billing_portal", handleCreateBillingPortal);
-
 // Analytics
 apiRouter.use("/query", analyticsRouter);
 apiRouter.use("/platform", platformRouter);
-
-// // Used for tests...
-// apiRouter.post("/organization/stripe", ...handleConnectStripe);
-// apiRouter.delete("/organization/stripe", ...handleDeleteStripe);
-apiRouter.get("/organization", handleGetOrg);
+apiRouter.use("/products", expressProductRouter);
+apiRouter.use("/customers", expressCusRouter);
 
 export { apiRouter };
+
+// Features
+// type: boolean, metered or credit system
+// resets_periodically: true / false

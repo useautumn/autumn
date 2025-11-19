@@ -4,9 +4,9 @@
 	"type": "module",
 	"private": true,
 	"scripts": {
-		"setup": "tsx setup.js",
-		"setup-test": "tsx setup-test.ts",
-		"replicate": "bun run replicate.ts"
+		"setup": "tsx setup/setup.js",
+		"setup-test": "tsx setup/setup-test.ts",
+		"replicate": "bun run db/replicate.ts"
 	},
 	"dependencies": {
 		"@autumn/shared": "workspace:*",

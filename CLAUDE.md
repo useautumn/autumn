@@ -31,6 +31,8 @@
 - Do not run "npx tsc" - run "tsc" instead as it is installed globally.
 
 - **ALWAYS use `.meta()` for zod-openapi schema registration**, NOT `.openapi()`. Example: `ApiProductSchema.meta({ id: "Product" })`
+
+- **ALWAYS use `c.req.param()` to get route parameters in Hono handlers**, NOT `c.req.valid("param")`. Example: `const { customer_id } = c.req.param();`
 ## Error Handling in API Routes
 - NEVER use `c.json({ message: "...", code: "..." }, statusCode)` pattern for input validation or expected errors in Hono routes
 - ALWAYS throw `RecaseError` from `@autumn/shared` for all validation errors, not found errors, forbidden errors, etc.
@@ -65,11 +67,18 @@
 / root
 -> components
 |-> hooks
-
 ## Good example
 / root
 -> components
 -> hooks
+
+- Functions (unless there's a very good reason) should always take in objects as arguments. Object params are named and easy to understand.
+
+- This codebase uses Bun for all of its operations in `/server`, `/vite` and `/shared`. It uses Bun for the package management, Bun for the workspace management and Bun for the runtime. Prefer Bun over PNPM. If you ever want to trace a package dependency tree, run `bun why <package name>` which will tell you why a certain package was installed and by who.
+
+- Prefer Guard clauses "if(!admin) return;" over explicity "if(admin) do X;" Early returns are better
+
+- Do not run "npx tsc" - run "tsc" instead as it is installed globally.
 
 # Figma MCP guidance
 - When you are using the Figma MCP server, you **must** follow our design system. Below is an example implementation of CVA with out design system

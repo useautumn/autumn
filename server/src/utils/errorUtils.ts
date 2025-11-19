@@ -1,8 +1,10 @@
 import { ErrCode } from "@autumn/shared";
+import * as Sentry from "@sentry/bun";
 import chalk from "chalk";
 import { StatusCodes } from "http-status-codes";
 import Stripe from "stripe";
-import { ZodError, type ZodIssue } from "zod/v4";
+import { ZodError } from "zod/v4";
+import { formatZodError } from "../errors/formatZodError.js";
 
 export const isPaymentDeclined = (error: any) => {
 	return (
@@ -46,51 +48,6 @@ export default class RecaseError extends Error {
 	}
 }
 
-export function formatZodError(error: ZodError): string {
-	const formatMessage = (issue: ZodIssue): string => {
-		const path = issue.path.length ? issue.path.join(".") : "input";
-
-		// Clean up common Zod error messages
-		let message = issue.message;
-
-		// Handle common patterns and make them more user-friendly
-		if (
-			message.includes("Too small") &&
-			message.includes("expected string to have >=1 characters")
-		) {
-			message = "cannot be empty";
-		} else if (message.includes("Invalid string: must match pattern")) {
-			// Extract the pattern and make it more readable
-			if (message.includes("/^[a-zA-Z0-9_-]+$/")) {
-				message =
-					"must contain only letters, numbers, underscores, and hyphens";
-			} else {
-				message = "has invalid format";
-			}
-		} else if (message.includes("Invalid input: expected string, received")) {
-			const receivedType = message.split("received ")[1];
-			message = `must be a string (received ${receivedType})`;
-		} else if (message.includes("Invalid input: expected number, received")) {
-			const receivedType = message.split("received ")[1];
-			message = `must be a number (received ${receivedType})`;
-		} else if (message.includes("Invalid input: expected boolean, received")) {
-			const receivedType = message.split("received ")[1];
-			message = `must be a boolean (received ${receivedType})`;
-		}
-
-		return `${path}: ${message}`;
-	};
-
-	const formattedIssues = error.issues.map(formatMessage);
-
-	// If there are multiple issues, format them nicely
-	if (formattedIssues.length === 1) {
-		return formattedIssues[0];
-	} else {
-		return `[Validation Errors] ${formattedIssues.join("; ")}`;
-	}
-}
-
 export const handleRequestError = ({
 	error,
 	req,
@@ -103,6 +60,7 @@ export const handleRequestError = ({
 	action: string;
 }) => {
 	try {
+		Sentry.captureException(error);
 		const logger = req.logger;
 		if (error instanceof RecaseError) {
 			logger.warn(

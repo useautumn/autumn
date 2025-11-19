@@ -1,15 +1,20 @@
 import {
 	type AttachBody,
 	CusProductStatus,
+	cusProductToProduct,
 	ErrCode,
 	nullish,
 } from "@autumn/shared";
+
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { isOneOff } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
+
+import type { AutumnContext } from "../../../../../../honoUtils/HonoEnv";
+import { getExistingCusProducts } from "../../../../cusProducts/cusProductUtils/getExistingCusProducts";
 
 const getProductsForAttach = async ({
 	req,
@@ -77,7 +82,7 @@ export const getCustomerAndProducts = async ({
 }) => {
 	const [customer, products] = await Promise.all([
 		getOrCreateCustomer({
-			req,
+			ctx: req as unknown as AutumnContext,
 			customerId: attachBody.customer_id,
 			customerData: {
 				...attachBody.customer_data,
@@ -94,5 +99,23 @@ export const getCustomerAndProducts = async ({
 		getProductsForAttach({ req, attachBody }),
 	]);
 
+	// if customer is on product v3, products[0] should just be the customer's product if version isn't explicitly passed in.
+	if (nullish(attachBody.version)) {
+		for (let i = 0; i < products.length; i++) {
+			// Check if customer has active product
+			const { curSameProduct } = getExistingCusProducts({
+				product: products[i],
+				cusProducts: customer.customer_products,
+				internalEntityId: customer.entity?.internal_id,
+			});
+
+			// console.log(
+			// 	`Product ${product.id} (${product.version}), curSameProduct: ${curSameProduct?.product.id} (version: ${curSameProduct?.product.version})`,
+			// );
+			if (curSameProduct) {
+				products[i] = cusProductToProduct({ cusProduct: curSameProduct });
+			}
+		}
+	}
 	return { customer, products };
 };

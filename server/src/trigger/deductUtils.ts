@@ -4,7 +4,7 @@ import { notNullish } from "@/utils/genUtils.js";
 
 const DEFAULT_VALUE = 1;
 
-export const getMeteredDeduction = (meteredFeature: Feature, event: Event) => {
+export const getMeteredDeduction = (_meteredFeature: Feature, event: Event) => {
 	// const config = meteredFeature.config;
 	// const aggregate = config.aggregate;
 
@@ -21,7 +21,7 @@ export const getMeteredDeduction = (meteredFeature: Feature, event: Event) => {
 	const floatVal = parseFloat(value);
 	if (Number.isNaN(floatVal)) return 0;
 
-	return value;
+	return floatVal;
 	// if (
 	// 	meteredFeature.type === FeatureType.CreditSystem ||
 	// 	aggregate.type === AggregateType.Sum
@@ -73,17 +73,17 @@ export const getCreditSystemDeduction = ({
 export const performDeduction = ({
 	cusEntBalance,
 	toDeduct,
-	allowNegativeBalance = false,
 	ent,
 	resetBalance,
 	blockUsageLimit = true,
+	allowNegativeBalance = false,
 }: {
 	cusEntBalance: Decimal;
 	toDeduct: number;
-	allowNegativeBalance?: boolean;
 	ent: Entitlement;
 	resetBalance: number;
 	blockUsageLimit?: boolean;
+	allowNegativeBalance?: boolean;
 }) => {
 	// Either deduct from balance or entity balance
 	if (allowNegativeBalance) {
@@ -91,6 +91,7 @@ export const performDeduction = ({
 		const minBalance = usageLimit
 			? new Decimal(resetBalance).minus(usageLimit).toNumber()
 			: undefined;
+
 		let newBalance = cusEntBalance.minus(toDeduct).toNumber();
 
 		if (

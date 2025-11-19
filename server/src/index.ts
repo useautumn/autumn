@@ -3,6 +3,7 @@
 import "dotenv/config";
 
 import cluster from "node:cluster";
+
 import { initInfisical } from "./external/infisical/initInfisical.js";
 
 // Load Infisical secrets into process.env ONLY in master/primary process
