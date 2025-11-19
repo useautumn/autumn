@@ -113,7 +113,7 @@ export const SelectedEntityDetails = () => {
 				</PopoverTrigger>
 				<PopoverContent
 					className="w-[320px] p-1 max-h-[300px] overflow-y-auto"
-					align="end"
+					align="start"
 				>
 					{entities.map((e: Entity) => {
 						const isSelected = entityId === e.id || entityId === e.internal_id;
@@ -127,12 +127,6 @@ export const SelectedEntityDetails = () => {
 								)}
 								onClick={() => handleValueChange(entityValue)}
 							>
-								<Check
-									className={cn(
-										"h-4 w-4 shrink-0",
-										isSelected ? "opacity-100" : "opacity-0",
-									)}
-								/>
 								<div className="flex gap-2 items-center min-w-0 flex-1">
 									{e.name && (
 										<span className="text-sm truncate max-w-[120px]">
@@ -143,6 +137,12 @@ export const SelectedEntityDetails = () => {
 										{entityValue}
 									</span>
 								</div>
+								<Check
+									className={cn(
+										"h-4 w-4 shrink-0",
+										isSelected ? "opacity-100" : "opacity-0",
+									)}
+								/>
 							</div>
 						);
 					})}
@@ -201,7 +201,7 @@ export const SelectedEntityDetails = () => {
 						</Button>
 					</div>
 				) : (
-					<div className="text-t3 text-sm">
+					<div className="text-t3 text-sm pr-2">
 						{entities.length} {getEntityTypeText()} active
 					</div>
 				)}

@@ -1,6 +1,6 @@
 import type { Feature } from "@autumn/shared";
 import type { ColumnDef, Row } from "@tanstack/react-table";
-import { CopyButton } from "@/components/v2/buttons/CopyButton";
+import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { getFeatureIcon } from "../utils/getFeatureIcon";
 import { FeatureListRowToolbar } from "./FeatureListRowToolbar";
 
@@ -26,11 +26,7 @@ export const createFeatureListColumns = ({
 			return (
 				<div className="font-mono justify-start flex w-full group overflow-hidden">
 					{feature.id ? (
-						<CopyButton
-							text={feature.id}
-							size="mini"
-							className="w-fit bg-transparent justify-end px-0! border-none shadow-none hover:text-primary [&_svg]:opacity-0 group-hover:[&_svg]:opacity-100 max-w-full"
-						/>
+						<MiniCopyButton text={feature.id} />
 					) : (
 						<span className="px-1 text-t3">NULL</span>
 					)}

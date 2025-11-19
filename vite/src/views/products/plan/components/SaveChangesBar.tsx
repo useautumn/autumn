@@ -107,17 +107,19 @@ export const SaveChangesBar = ({
 			setProduct(baseProduct);
 		}
 		// If we're editing or creating a feature, go back to edit-plan
-		if (sheetType === "edit-feature" || sheetType === "new-feature") {
-			setSheet({ type: "edit-plan", itemId: null });
-		}
+		// if (sheetType === "edit-feature" || sheetType === "new-feature") {
+		// 	setSheet({ type: "edit-plan", itemId: null });
+		// }
 	};
 
 	if (!hasChanges) return null;
+	//hide if sheet is open
+	if (sheetType && !isOnboarding) return null;
 
 	return (
-		<div className="w-full flex justify-center items-center h-20 mb-10 mt-10">
+		<div className="absolute bottom-0 left-0 right-0 flex justify-center items-center h-20 pb-4 pointer-events-none z-50 animate-in fade-in-0 slide-in-from-bottom-10 duration-300">
 			<div
-				className={`flex items-center gap-2 p-2 pl-3 rounded-xl border border-input bg-outer-background ${
+				className={`flex items-center gap-2 p-2 pl-3 rounded-xl border border-input bg-outer-background pointer-events-auto shadow-xl ${
 					isOnboarding ? "shadow-lg" : ""
 				}`}
 			>

@@ -1,5 +1,6 @@
 import { type ProductItem, productV2ToFeatureItems } from "@autumn/shared";
 import { AnimatePresence, motion } from "motion/react";
+import { createPortal } from "react-dom";
 import { SheetContainer } from "@/components/v2/sheets/InlineSheet";
 import { SheetCloseButton } from "@/components/v2/sheets/SheetCloseButton";
 import { useProductStore } from "@/hooks/stores/useProductStore";
@@ -79,7 +80,7 @@ export const ProductSheets = () => {
 		}
 	};
 
-	return (
+	return createPortal(
 		<AnimatePresence mode="wait">
 			{sheetType && (
 				<motion.div
@@ -87,14 +88,16 @@ export const ProductSheets = () => {
 					animate={{ x: 0 }}
 					exit={{ x: "100%" }}
 					transition={SHEET_ANIMATION}
-					className="h-full w-[28rem] absolute right-0 top-0 bottom-0"
+					className="fixed right-0 top-0 bottom-0"
+					style={{ width: "28rem", zIndex: 100 }}
 				>
-					<SheetContainer className="w-full bg-card z-50 border-l shadow-sm h-full relative">
+					<SheetContainer className="w-full bg-background z-50 border-l h-full relative">
 						<SheetCloseButton onClose={closeSheet} />
 						{renderSheet()}
 					</SheetContainer>
 				</motion.div>
 			)}
-		</AnimatePresence>
+		</AnimatePresence>,
+		document.body,
 	);
 };

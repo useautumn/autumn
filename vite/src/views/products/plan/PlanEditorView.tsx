@@ -1,6 +1,7 @@
 import { AxiosError } from "axios";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useParams } from "react-router";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useCurrentItem } from "@/hooks/stores/useProductStore";
@@ -38,6 +39,7 @@ function shouldCloseSheetOnMouseDown({
 		| null;
 }): boolean {
 	// Don't close if item is invalid
+
 	if (item && !checkItemIsValid(item, false)) {
 		return false;
 	}
@@ -58,7 +60,6 @@ function shouldCloseSheetOnMouseDown({
 
 		if (!isInputElement) {
 			// Not an input, proceed with normal close behavior
-			console.log("Closing sheet");
 			return !!sheetType;
 		}
 
@@ -137,29 +138,50 @@ export default function PlanEditorView() {
 			/>
 			<div className="flex w-full h-full overflow-hidden relative">
 				<motion.div
-					className="flex flex-col justify-between h-full overflow-x-hidden overflow-y-auto absolute inset-0"
+					className="h-full overflow-hidden absolute inset-0"
 					animate={{
 						width: sheetType ? "calc(100% - 28rem)" : "100%",
 					}}
 					transition={SHEET_ANIMATION}
 				>
-					<div onClick={(e) => e.stopPropagation()}>
-						<EditPlanHeader />
+					<div className="flex flex-col justify-start h-full w-full overflow-x-hidden overflow-y-auto pb-20">
+						<div onClick={(e) => e.stopPropagation()}>
+							<EditPlanHeader />
+						</div>
+						{/* <ManagePlan /> */}
+						<div
+							className="flex flex-col w-full h-fit items-center justify-start pt-20 px-10"
+							// onMouseDown={(e) => {
+							// 	if (shouldCloseSheetOnMouseDown({ e, item, sheetType })) {
+							// 		closeSheet();
+							// 	}
+							// }}
+						>
+							<PlanCard />
+						</div>
+						<div onClick={(e) => e.stopPropagation()}>
+							<SaveChangesBar />
+						</div>
 					</div>
-					{/* <ManagePlan /> */}
-					<div
-						className="flex flex-col w-full h-full items-center justify-start pt-20 px-10"
-						onMouseDown={(e) => {
-							if (shouldCloseSheetOnMouseDown({ e, item, sheetType })) {
-								closeSheet();
-							}
-						}}
-					>
-						<PlanCard />
-					</div>
-					<div onClick={(e) => e.stopPropagation()}>
-						<SaveChangesBar />
-					</div>
+					{createPortal(
+						<AnimatePresence>
+							{sheetType && (
+								<motion.div
+									initial={{ opacity: 0 }}
+									animate={{ opacity: 1 }}
+									exit={{ opacity: 0 }}
+									className="fixed inset-0 bg-background/70"
+									style={{ zIndex: 40 }}
+									onMouseDown={(e) => {
+										if (shouldCloseSheetOnMouseDown({ e, item, sheetType })) {
+											closeSheet();
+										}
+									}}
+								/>
+							)}
+						</AnimatePresence>,
+						document.body,
+					)}
 				</motion.div>
 
 				<ProductSheets />
