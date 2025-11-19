@@ -109,7 +109,7 @@ export const EditPlanHeader = () => {
 				startMigration={migrateCustomers}
 				version={version}
 			/>
-			<div className="flex flex-col gap-2 p-4 px-10 pb-3  border-none shadow-none w-full">
+			<div className="flex flex-col gap-2 p-4 pb-3  border-none shadow-none w-full max-w-5xl mx-auto pt-8 px-12">
 				<V2Breadcrumb
 					className="p-0"
 					items={[
@@ -147,8 +147,6 @@ export const EditPlanHeader = () => {
 						<IconBadge variant="muted" icon={<UserIcon />}>
 							{counts?.active || 0}
 						</IconBadge>
-
-						<PlanToolbar />
 					</div>
 
 					<div className="flex flex-row gap-2 items-center">
@@ -179,6 +177,7 @@ export const EditPlanHeader = () => {
 								</SelectContent>
 							</Select>
 						)}
+						<PlanToolbar />
 					</div>
 				</div>
 			</div>

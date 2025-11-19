@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useProductStore } from "@/hooks/stores/useProductStore";
+import { cn } from "@/lib/utils";
 import { pushPage } from "@/utils/genUtils";
 import { CopyProductDialog } from "../../products/components/CopyProductDialog";
 import { DeletePlanDialog } from "./DeletePlanDialog";
@@ -18,6 +19,7 @@ export const PlanToolbar = () => {
 	const [copyOpen, setCopyOpen] = useState(false);
 	const navigate = useNavigate();
 	const product = useProductStore((s) => s.product);
+	const [dropdownOpen, setDropdownOpen] = useState(false);
 
 	return (
 		<>
@@ -40,16 +42,16 @@ export const PlanToolbar = () => {
 					});
 				}}
 			/>
-			<DropdownMenu>
+			<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
 				<DropdownMenuTrigger asChild>
 					<IconButton
 						icon={<EllipsisVerticalIcon />}
-						size="sm"
-						variant="muted"
+						variant="secondary"
 						iconOrientation="center"
+						className={cn("!h-7", dropdownOpen && "btn-secondary-active")}
 					/>
 				</DropdownMenuTrigger>
-				<DropdownMenuContent align="start">
+				<DropdownMenuContent align="end">
 					<DropdownMenuItem
 						className="flex items-center text-xs"
 						onClick={(e) => {

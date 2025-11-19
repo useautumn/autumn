@@ -157,9 +157,9 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 						<QueryTopbar />
 					</div>
 					{(queryLoading || topEventsLoading) && (
-						<div className="flex-1 pt-6">
+						<div className="flex-1">
 							<p className="text-t3 text-sm shimmer w-fit">
-								Fetching usage {customerId ? `for ${customerId}` : ""}
+								Loading chart {customerId ? `for ${customerId}` : ""}
 							</p>
 						</div>
 					)}
@@ -205,9 +205,9 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 					</div>
 
 					{rawQueryLoading && (
-						<div className="flex-1 pt-6">
+						<div className="flex-1">
 							<p className="text-t3 text-sm shimmer w-fit">
-								Fetching raw events {customerId ? `for ${customerId}` : ""}
+								Loading events {customerId ? `for ${customerId}` : ""}
 							</p>
 						</div>
 					)}

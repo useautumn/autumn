@@ -36,14 +36,13 @@ export function IncludedUsage() {
 		<div className="space-y-4">
 			<div className="w-full h-auto flex items-end gap-2">
 				<div className="flex-1">
-					<div className="text-form-label block mb-2">
+					<div className="text-t3 text-sm block mb-2">
 						Quantity of&nbsp;
 						{getFeatureName({
 							feature: features.find((f) => f.id === item.feature_id),
 							plural: true,
 						})}
-						&nbsp;granted before&nbsp;
-						{!isFeaturePrice ? "hitting the limit" : "billing"}.
+						{!isFeaturePrice ? " that can be used" : " granted before billing"}
 					</div>
 					<div className="flex items-center gap-2">
 						<Input

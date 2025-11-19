@@ -1,14 +1,15 @@
 import type { ProductItem } from "@autumn/shared";
 import { ProductItemFeatureType, UsageModel } from "@autumn/shared";
-import React from "react";
 import {
-	BooleanIcon,
+	BatteryHighIcon,
+	BoxArrowDownIcon,
 	CoinsIcon,
-	ContinuousUseIcon,
-	IncludedUsageIcon,
-	PrepaidUsageIcon,
-	UsageBasedIcon,
-} from "@/components/v2/icons/AutumnIcons";
+	PiggyBankIcon,
+	PowerIcon,
+	TicketIcon,
+	XIcon,
+} from "@phosphor-icons/react";
+import type React from "react";
 import {
 	Tooltip,
 	TooltipContent,
@@ -60,22 +61,22 @@ const getBillingType = (
 // Helper function to get the left icon (feature type)
 const getLeftIcon = (
 	item: ProductItem,
-): { icon: React.ComponentType; color: string; size?: number } => {
+): { icon: React.ReactNode; color: string; size?: number } => {
 	const featureType = getFeatureType(item);
 
 	switch (featureType) {
 		case ProductItemFeatureType.Boolean:
-			return { icon: BooleanIcon, color: "text-primary" }; // On/Off - pink
+			return { icon: <PowerIcon />, color: "text-orange-500" }; // On/Off - pink
 		case ProductItemFeatureType.SingleUse:
-			return { icon: UsageBasedIcon, color: "text-primary" }; // Usage-based - pink
+			return { icon: <BatteryHighIcon />, color: "text-red-500" }; // Usage-based - pink
 		case ProductItemFeatureType.ContinuousUse:
-			return { icon: ContinuousUseIcon, color: "text-primary" }; // Allocated Usage - pink
+			return { icon: <TicketIcon />, color: "text-primary" }; // Allocated Usage - pink
 		case ProductItemFeatureType.Static:
-			return { icon: BooleanIcon, color: "text-primary", size: 2 }; // Static - pink
+			return { icon: <PowerIcon />, color: "text-orange-500" }; // Static - pink
 		case "metered" as unknown: // Handle metered features from FeatureType enum
-			return { icon: UsageBasedIcon, color: "text-primary" }; // Metered - pink
+			return { icon: <BatteryHighIcon />, color: "text-primary" }; // Metered - pink
 		default:
-			return { icon: UsageBasedIcon, color: "text-primary" }; // Default - pink
+			return { icon: <BatteryHighIcon />, color: "text-primary" }; // Default - pink
 	}
 };
 
@@ -83,7 +84,7 @@ const getLeftIcon = (
 const getRightIcon = (
 	item: ProductItem,
 ): {
-	icon: React.ComponentType;
+	icon: React.ReactNode;
 	color: string;
 	size?: number;
 } => {
@@ -91,15 +92,15 @@ const getRightIcon = (
 
 	switch (billingType) {
 		case "included":
-			return { icon: IncludedUsageIcon, color: "text-success" }; // Included/Free - green
+			return { icon: <BoxArrowDownIcon />, color: "text-green-500" }; // Included/Free - green
 		case "prepaid":
-			return { icon: PrepaidUsageIcon, color: "text-blue-500" }; // Prepaid - blue
+			return { icon: <PiggyBankIcon />, color: "text-blue-500" }; // Prepaid - blue
 		case "paid":
-			return { icon: CoinsIcon, color: "text-warning" }; // Paid - orange
+			return { icon: <CoinsIcon />, color: "text-yellow-500" }; // Paid - orange
 		case "none":
-			return { icon: React.Fragment, color: "text-t4" }; // None - gray
+			return { icon: <XIcon />, color: "text-t4" }; // None - gray
 		default:
-			return { icon: React.Fragment, color: "text-t4" }; // Default - gray
+			return { icon: <XIcon />, color: "text-t4" }; // Default - gray
 	}
 };
 
@@ -142,25 +143,16 @@ const getTooltipContent = (item: ProductItem, position: "left" | "right") => {
 
 export const PlanFeatureIcon = ({ item, position }: PlanFeatureIconProps) => {
 	const iconData = position === "left" ? getLeftIcon(item) : getRightIcon(item);
-	const Icon = iconData.icon;
-
-	// Handle both Autumn icons (no props) and Phosphor icons (with props)
-	if (Icon === React.Fragment) {
-		return null;
-	}
+	const icon = iconData.icon as React.ReactNode;
 
 	return getTooltipContent(item, position) !== null ? (
 		<Tooltip>
 			<TooltipTrigger asChild>
-				<div className={iconData.color}>
-					<Icon />
-				</div>
+				<div className={iconData.color}>{icon}</div>
 			</TooltipTrigger>
 			<TooltipContent>{getTooltipContent(item, position)}</TooltipContent>
 		</Tooltip>
 	) : (
-		<div className={iconData.color}>
-			<Icon />
-		</div>
+		<div className={iconData.color}>{icon}</div>
 	);
 };

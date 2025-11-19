@@ -12,7 +12,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { CopyButton } from "@/components/v2/buttons/CopyButton";
+import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { CustomerProductsStatus } from "../customer-products/CustomerProductsStatus";
 import { CustomerListRowToolbar } from "./CustomerListRowToolbar";
@@ -180,11 +180,7 @@ export const createCustomerListColumns = () => [
 			return (
 				<div className="font-mono justify-start flex w-full group">
 					{customer.id ? (
-						<CopyButton
-							text={customer.id}
-							size="mini"
-							className="w-full bg-transparent justify-end px-0! border-none shadow-none hover:text-primary [&_svg]:opacity-0 group-hover:[&_svg]:opacity-100"
-						/>
+						<MiniCopyButton text={customer.id} />
 					) : (
 						<span className="px-1 text-t3">NULL</span>
 					)}
