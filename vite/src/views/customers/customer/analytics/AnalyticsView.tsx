@@ -130,12 +130,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 			}}
 		>
 			<div className="flex flex-col gap-4 h-full relative w-full text-sm pb-0">
-				<h1
-					className={cn(
-						"text-xl font-medium shrink-0 pl-10",
-						env === AppEnv.Sandbox ? "pt-4" : "pt-6",
-					)}
-				>
+				<h1 className="text-xl font-medium shrink-0 pt-6 pl-10">
 					Analytics
 				</h1>
 				<div className="max-h-[400px] min-h-[400px] pb-6">
@@ -145,8 +140,8 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 						className="h-10"
 					/>
 					{(queryLoading || topEventsLoading) && (
-						<div className="flex-1 px-10 pt-6">
-							<p className="text-t3 text-sm shimmer w-fit">
+						<div className="flex justify-start items-center h-10 text-t3 text-sm px-10">
+							<p className="shimmer w-fit">
 								Fetching usage {customerId ? `for ${customerId}` : ""}
 							</p>
 						</div>
@@ -162,13 +157,13 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 						)}
 
 						{!events && !queryLoading && (
-							<div className="flex-1 px-10 pt-6">
-								<p className="text-t3 text-sm">
+							<div className="flex justify-start items-center h-10 text-t3 text-sm px-10">
+								<span>
 									No events found. Please widen your filters.{" "}
 									{eventNames.length === 0
 										? "Try to select some events in the dropdown above."
 										: ""}
-								</p>
+								</span>
 							</div>
 						)}
 					</div>
@@ -182,8 +177,8 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 					/>
 
 					{rawQueryLoading && (
-						<div className="flex-1 px-10 pt-6">
-							<p className="text-t3 text-sm shimmer w-fit">
+						<div className="flex justify-start items-center h-10 text-t3 text-sm px-10">
+							<p className="shimmer w-fit">
 								Fetching raw events {customerId ? `for ${customerId}` : ""}
 							</p>
 						</div>
@@ -195,6 +190,12 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 								<EventsAGGrid data={rawEvents} />
 							</CardContent>
 						</Card>
+					)}
+
+					{!rawEvents && !rawQueryLoading && (
+						<div className="flex justify-start items-center h-10 text-t3 text-sm px-10">
+							<span>No events found. Please widen your filters.</span>
+						</div>
 					)}
 				</div>
 			</div>
