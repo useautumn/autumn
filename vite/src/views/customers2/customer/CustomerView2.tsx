@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
+import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
 import { pushPage } from "@/utils/genUtils";
 import ErrorScreen from "@/views/general/ErrorScreen";
 import LoadingScreen from "@/views/general/LoadingScreen";
@@ -12,9 +13,11 @@ import { CustomerInvoicesTable } from "../components/table/customer-invoices/Cus
 import { CustomerProductsTable } from "../components/table/customer-products/CustomerProductsTable";
 import { CustomerUsageAnalyticsTable } from "../components/table/customer-usage-analytics/CustomerUsageAnalyticsTable";
 import { CustomerActions } from "./CustomerActions";
+import { CustomerBalanceSheets } from "./CustomerBalanceSheets";
 import { CustomerBreadcrumbs } from "./CustomerBreadcrumbs2";
 import { CustomerContext } from "./CustomerContext";
 import { CustomerPageDetails } from "./CustomerPageDetails";
+import { SelectedEntityDetails } from "./components/SelectedEntityDetails";
 
 export default function CustomerView2() {
 	const [searchParams] = useSearchParams();
@@ -25,6 +28,7 @@ export default function CustomerView2() {
 	useCusReferralQuery();
 
 	const [entityId, setEntityId] = useState(entityIdParam);
+	const closeSheet = useCustomerBalanceSheetStore((s) => s.closeSheet);
 
 	useEffect(() => {
 		if (entityIdParam) {
@@ -33,6 +37,11 @@ export default function CustomerView2() {
 			setEntityId(null);
 		}
 	}, [entityIdParam]);
+
+	// Close modal on mount
+	useEffect(() => {
+		closeSheet();
+	}, [closeSheet]);
 
 	if (cusLoading) return <LoadingScreen />;
 
@@ -50,28 +59,51 @@ export default function CustomerView2() {
 		);
 	}
 
+	console.log("customer", customer);
+
 	return (
 		<CustomerContext.Provider
 			value={{ customer, entityId: entityId, setEntityId }}
 		>
-			<div className="flex flex-col [&>*:not([data-slot=separator-root])]:px-4 [&>*:not([data-slot=separator-root])]:py-8 [&>*:not([data-slot=separator-root])]:max-w-4xl [&>*:not([data-slot=separator-root])]:mx-auto">
-				<div className="flex items-end justify-between w-full gap-4">
-					<div className="flex flex-col w-full">
-						<CustomerBreadcrumbs />
-						<h3 className="text-md font-semibold text-t2 pt-2.5 pb-2">
-							{customer.name}
-						</h3>
-						<CustomerPageDetails />
+			<div className="flex w-full h-full overflow-hidden relative">
+				<div className="flex flex-col overflow-x-hidden overflow-y-auto absolute inset-0 pb-8 [&>*:not([data-slot=separator-root])]:px-12 [&>*:not([data-slot=separator-root])]:pt-8 [&>*:not([data-slot=separator-root])]:max-w-5xl [&>*:not([data-slot=separator-root])]:mx-auto">
+					<div className="flex flex-col gap-2 w-full">
+						<div className="flex flex-col w-full">
+							<div className="flex items-center justify-between w-full gap-4">
+								<CustomerBreadcrumbs />
+								<CustomerActions />
+							</div>
+							<div className="flex items-center justify-between w-full pt-2">
+								<h3
+									className={`text-md font-semibold ${
+										customer.name
+											? "text-t1"
+											: customer.email
+												? "text-t3"
+												: "text-t4 font-mono font-medium!"
+									}`}
+								>
+									{customer.name || customer.email || customer.id}
+								</h3>
+
+								<CustomerPageDetails />
+							</div>
+						</div>
+						<SelectedEntityDetails />
 					</div>
-					<CustomerActions />
+					{/* <Separator /> */}
+					{/* <Separator className="my-2" /> */}
+					<div className="flex flex-col gap-10 w-full">
+						<CustomerProductsTable />
+						{/* <Separator /> */}
+						<CustomerFeatureUsageTable />
+						{/* <Separator /> */}
+						<CustomerUsageAnalyticsTable />
+						{/* <Separator /> */}
+						<CustomerInvoicesTable />
+					</div>
 				</div>
-				{/* <Separator className="my-2" /> */}
-				<div className="flex flex-col gap-20 mt-4">
-					<CustomerProductsTable />
-					<CustomerFeatureUsageTable />
-					<CustomerUsageAnalyticsTable />
-					<CustomerInvoicesTable />
-				</div>
+				<CustomerBalanceSheets />
 			</div>
 		</CustomerContext.Provider>
 	);

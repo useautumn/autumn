@@ -87,11 +87,32 @@ export default function CustomerProductView() {
 	}, [entityIdParam]);
 
 	useEffect(() => {
+		const root = document.documentElement;
+		const previousTheme = root.classList.contains("dark") ? "dark" : "light";
+
+		// Force light mode
+		root.classList.remove("dark");
+		root.classList.add("light");
+
+		// Cleanup: restore previous theme when component unmounts
+		return () => {
+			root.classList.remove("light");
+			if (previousTheme === "dark") {
+				root.classList.add("dark");
+			}
+		};
+	}, []);
+
+	useEffect(() => {
 		if (!originalProduct) return;
 
 		const product = originalProduct;
 
-		console.log('[CPV] effect', { prodId: originalProduct.id, v: originalProduct.version, cusId: cusProduct?.id });
+		console.log("[CPV] effect", {
+			prodId: originalProduct.id,
+			v: originalProduct.version,
+			cusId: cusProduct?.id,
+		});
 
 		// Update initialProductRef BEFORE setProduct to ensure useAttachState
 		// effect has the correct baseline when it runs

@@ -1,47 +1,59 @@
 import type { Event } from "@autumn/shared";
 import type { Row } from "@tanstack/react-table";
-import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
+import { format } from "date-fns";
 
 export const CustomerUsageAnalyticsColumns = [
 	{
-		header: "Event Name",
+		header: "Feature",
 		accessorKey: "event_name",
+		size: 100,
 		cell: ({ row }: { row: Row<Event> }) => {
-			return <div>{row.original.event_name}</div>;
-		},
-	},
-	{
-		header: "Value",
-		accessorKey: "value",
-		cell: ({ row }: { row: Row<Event> }) => {
-			const event = row.original;
-			return <div>{event.value || event.properties?.value || 1}</div>;
-		},
-	},
-	{
-		header: "Status",
-		accessorKey: "status",
-		cell: () => {
 			return (
-				<div className="font-mono">
-					<span className="text-t3">POST </span>
-					<span className="text-lime-600 dark:text-lime-400">200</span>
+				<div className="text-tiny font-mono truncate text-t2!">
+					{row.original.event_name}
 				</div>
 			);
 		},
 	},
 	{
+		header: "Value",
+		accessorKey: "value",
+		size: 60,
+		cell: ({ row }: { row: Row<Event> }) => {
+			const event = row.original;
+			return (
+				<div className="text-t3 text-tiny truncate">
+					{event.value || event.properties?.value || 1}
+				</div>
+			);
+		},
+	},
+	// {
+	// 	header: "Status",
+	// 	accessorKey: "status",
+	// 	size: 60,
+	// 	cell: () => {
+	// 		return (
+	// 			<div className="font-mono text-tiny">
+	// 				<span className="text-t3">POST </span>
+	// 				<span className="text-lime-600 dark:text-lime-400">200</span>
+	// 			</div>
+	// 		);
+	// 	},
+	// },
+	{
 		header: "Timestamp",
 		accessorKey: "timestamp",
+		size: 100,
 		cell: ({ row }: { row: Row<Event> }) => {
 			// type is Date but actually comes as a string
 			const dateObj = new Date(row.original.timestamp as unknown as string);
 			const dateAsNumber = dateObj.getTime();
 
-			const { date, time } = formatUnixToDateTime(dateAsNumber);
 			return (
-				<div className="text-xs text-t3">
-					{date} {time}
+				<div className="text-tiny text-t3">
+					{/* {formatUnixToDateTimeWithMs(dateAsNumber)} */}
+					{format(new Date(dateAsNumber), "d MMM HH:mm:ss")}
 				</div>
 			);
 		},

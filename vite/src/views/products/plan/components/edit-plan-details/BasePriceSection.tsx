@@ -211,7 +211,7 @@ export const BasePriceSection = ({
 							},
 							{
 								value: "usage",
-								label: "Usage-based",
+								label: "Variable",
 								icon: <BarcodeIcon className="size-[14px]" weight="regular" />,
 							},
 						]}
@@ -302,8 +302,8 @@ export const BasePriceSection = ({
 								infoBox: "text-sm py-2",
 							}}
 						>
-							You can add usage-based prices (eg, per seat, per credit) when you
-							link a feature to this plan.
+							You can charge based on the quantity of a feature (eg per seat,
+							per credit) when you link features to this plan.
 						</InfoBox>
 					)}
 				</div>

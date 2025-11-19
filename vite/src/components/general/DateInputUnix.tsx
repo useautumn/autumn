@@ -1,14 +1,14 @@
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { useState } from "react";
+import { Calendar } from "@/components/ui/calendar";
 import {
 	Popover,
-	PopoverTrigger,
 	PopoverContent,
+	PopoverTrigger,
 } from "@/components/ui/popover";
+import { Button } from "@/components/v2/buttons/Button";
 import { cn } from "@/lib/utils";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 
 export const DateInputUnix = ({
 	unixDate,
@@ -24,9 +24,9 @@ export const DateInputUnix = ({
 		<Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
 			<PopoverTrigger asChild>
 				<Button
-					variant={"outline"}
+					variant={"secondary"}
 					className={cn(
-						"w-full rounded-md h-8 justify-start text-left font-normal",
+						"w-full justify-start text-left font-normal",
 						!unixDate && "text-muted-foreground",
 						// Add a border on active...
 						popoverOpen &&

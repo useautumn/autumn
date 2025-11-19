@@ -37,7 +37,7 @@ export const PlanTypeSection = ({
 	const getBasePriceIndex = () => {
 		return product.items.findIndex(
 			(item: ProductItem) =>
-				item.price === basePrice?.amount && isPriceItem(item),
+				item.price === basePrice?.price && isPriceItem(item),
 		);
 	};
 
@@ -72,7 +72,7 @@ export const PlanTypeSection = ({
 					? amount
 					: notNullish(amount)
 						? Number.parseFloat(amount ?? "")
-						: basePrice?.amount;
+						: basePrice?.price;
 
 			newItems[basePriceIndex] = {
 				...newItems[basePriceIndex],
@@ -80,7 +80,7 @@ export const PlanTypeSection = ({
 				interval: interval as unknown as ProductItemInterval,
 				// 	? billingToItemInterval({ billingInterval: interval })
 				// 	: basePrice?.interval,
-				interval_count: interval ? intervalCount : basePrice?.intervalCount,
+				interval_count: interval ? intervalCount : basePrice?.interval_count,
 			};
 		} else {
 			newItems.push({

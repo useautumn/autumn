@@ -109,7 +109,7 @@ export const EditPlanHeader = () => {
 				startMigration={migrateCustomers}
 				version={version}
 			/>
-			<div className="flex flex-col gap-2 p-4 pb-3 bg-card border-none shadow-none w-full">
+			<div className="flex flex-col gap-2 p-4 px-10 pb-3  border-none shadow-none w-full">
 				<V2Breadcrumb
 					className="p-0"
 					items={[

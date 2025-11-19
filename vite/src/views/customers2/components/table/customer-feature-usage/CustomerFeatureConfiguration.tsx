@@ -1,7 +1,8 @@
-import { type Feature, FeatureType } from "@autumn/shared";
+import { type Feature, FeatureType, FeatureUsageType } from "@autumn/shared";
 import {
 	BooleanIcon,
 	CoinsIcon,
+	ContinuousUseIcon,
 	UsageBasedIcon,
 } from "@/components/v2/icons/AutumnIcons";
 import {
@@ -14,13 +15,16 @@ interface CustomerFeatureConfigurationProps {
 	feature: Feature | undefined;
 }
 
-const FeatureIcon = ({ type }: { type: FeatureType }) => {
+const FeatureIcon = ({ feature }: { feature: Feature }) => {
 	const iconClassName = "text-gray-600 dark:text-gray-400";
 
-	switch (type) {
+	switch (feature.type) {
 		case FeatureType.Boolean:
 			return <BooleanIcon className={iconClassName} />;
 		case FeatureType.Metered:
+			if (feature?.config?.usage_type === FeatureUsageType.Continuous) {
+				return <ContinuousUseIcon className={iconClassName} />;
+			}
 			return <UsageBasedIcon className={iconClassName} />;
 		case FeatureType.CreditSystem:
 			return <CoinsIcon className={iconClassName} />;
@@ -53,8 +57,8 @@ export function CustomerFeatureConfiguration({
 		<div>
 			<Tooltip>
 				<TooltipTrigger asChild>
-					<span className="inline-flex items-center justify-center size-6 rounded-lg bg-gray-100 dark:bg-gray-800">
-						<FeatureIcon type={feature.type} />
+					<span className="inline-flex items-center justify-center size-6 rounded-lg bg-muted">
+						<FeatureIcon feature={feature} />
 					</span>
 				</TooltipTrigger>
 				<TooltipContent>

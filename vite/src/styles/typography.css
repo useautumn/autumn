@@ -57,11 +57,11 @@
 .text-tiny {
 	font-size: 11px;
 	font-weight: var(--font-weight-normal);
-	color: var(--color-t4);
+	/* color: var(--color-t4); */
 }
 
 .text-tiny-id {
-	color: var(--color-t3);
+	/* color: var(--color-t3); */
 
 	/* Tiny ID */
 	font-family: "JetBrains Mono", "JetBrains Mono Fallback", monospace;

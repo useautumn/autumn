@@ -3,6 +3,7 @@ import {
 	type FullCustomerEntitlement,
 	getCusEntBalance,
 } from "@autumn/shared";
+import { Decimal } from "decimal.js";
 import { AlertCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";

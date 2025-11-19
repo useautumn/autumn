@@ -79,8 +79,10 @@ export function IncludedUsage() {
 									interval: checked ? null : item.interval, // Set interval to null when unlimited
 								})
 							}
-							className="py-1 px-2"
-						/>
+							className="py-1 px-2 w-26 text-t4 gap-2"
+						>
+							Unlimited
+						</IconCheckbox>
 					</div>
 				</div>
 			</div>

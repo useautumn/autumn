@@ -1,6 +1,7 @@
 "use client";
 
-import { type AppEnv, keyToTitle } from "@autumn/shared";
+import type { AppEnv } from "@autumn/shared";
+import { keyToTitle } from "@autumn/shared";
 import { useAppQueryStates } from "@/hooks/common/useAppQueryStates";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -11,8 +12,8 @@ import { ProductsContext } from "./ProductsContext";
 import { ProductsPage } from "./products/ProductsPage";
 import { RewardsPage } from "./rewards/RewardsPage";
 
-function ProductsView({ env }: { env: AppEnv }) {
-	const { queryStates, setQueryStates } = useAppQueryStates({
+function ProductsView({ env: _env }: { env: AppEnv }) {
+	const { queryStates } = useAppQueryStates({
 		defaultTab: "products",
 	});
 
@@ -26,7 +27,7 @@ function ProductsView({ env }: { env: AppEnv }) {
 	const tab = queryStates.tab;
 	return (
 		<ProductsContext.Provider value={{}}>
-			<div className="flex flex-col gap-4 h-fit relative w-full text-sm">
+			<div className="flex flex-col gap-4 h-fit relative w-full pb-8 max-w-5xl mx-auto">
 				<h1 className="text-xl font-medium shrink-0 pt-6 pl-10">
 					{keyToTitle(tab, { exclusionMap: { products: "Plans" } })}
 				</h1>
