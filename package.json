@@ -17,12 +17,17 @@
 	"type": "module",
 	"scripts": {
 		"dev": "bun scripts/dev.ts",
+		"vite:build": "bun -F @autumn/vite build:bun",
 		"d": "ENV_FILE=.env infisical run --env=dev -- bun scripts/dev.ts",
 		"p": "ENV_FILE=.env.prod infisical run --env=prod -- bun scripts/dev.ts",
 
 		"setup": "node scripts/setup/setup.js",
 		"setup:test": "bun scripts/setup/setup-test.ts",
 		"tests": "infisical run --env=dev -- bun scripts/test.ts",
+
+		"migrate-functions": "infisical run --env=dev -- bun scripts/migrations/migrate-functions.ts",
+		"migrate-functions:prod": "infisical run --env=prod -- bun scripts/migrations/migrate-functions.ts",
+		"validate-schema": "infisical run --env=prod -- bun scripts/migrations/validate-schema.ts",
 
 		"setupci": "node scripts/setup/setupci.js",
 		"replicate": "bun scripts/db/replicate.ts",

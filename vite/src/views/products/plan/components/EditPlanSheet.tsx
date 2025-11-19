@@ -37,8 +37,8 @@ export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 				/>
 			)}
 			<MainDetailsSection />
-			<PlanTypeSection />
-			<BasePriceSection />
+			{/* <PlanTypeSection /> */}
+			{/* <BasePriceSection /> */}
 
 			{/* <FreeTrialSection /> */}
 			<AdditionalOptions />

@@ -13,13 +13,14 @@ export interface Payloads {
 	[JobName.SyncBalanceBatch]: {
 		orgId: string;
 		env: AppEnv;
-		items: Array<{
+		item: {
 			customerId: string;
 			featureId: string;
 			orgId: string;
 			env: string;
 			entityId?: string;
-		}>;
+			timestamp: number;
+		};
 	};
 	[JobName.InsertEventBatch]: {
 		events: EventInsert[];
@@ -60,10 +61,12 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 	jobName,
 	payload,
 	messageGroupId,
+	messageDeduplicationId,
 }: {
 	jobName: T;
 	payload: Payloads[T];
 	messageGroupId?: string;
+	messageDeduplicationId?: string;
 }) => {
 	await initializeQueue();
 
@@ -81,7 +84,8 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 			// FIFO queues require MessageGroupId and MessageDeduplicationId
 			...(isFifoQueue && {
 				MessageGroupId: messageGroupId || generateId("msg"),
-				MessageDeduplicationId: generateId("dedup"),
+				// Use provided deduplication ID or generate random (fallback)
+				MessageDeduplicationId: messageDeduplicationId || generateId("dedup"),
 			}),
 		});
 

@@ -1,30 +1,29 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
 import {
-	ACTIVE_STATUSES,
-	RELEVANT_STATUSES,
-} from "@/internal/customers/cusProducts/CusProductService.js";
-import {
-	AppEnv,
-	CusProductStatus,
-	Customer,
+	type AppEnv,
+	type CusProductStatus,
+	type Customer,
 	customers,
+	type Entity,
 	entities,
-	Entity,
-	FullCusProduct,
-	FullCustomer,
+	type FullCusProduct,
+	type FullCustomer,
 } from "@autumn/shared";
-import { and, desc, eq, gt, lt, sql } from "drizzle-orm";
+import { and, desc, eq, lt, sql } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
 
-let cusProductsQuery = ({
+const cusProductsQuery = ({
 	orgId,
 	env,
 	inStatuses = RELEVANT_STATUSES,
+	internalIds,
 	lastProductId,
 	pageSize = 250,
 }: {
 	orgId: string;
 	env: AppEnv;
 	inStatuses?: CusProductStatus[];
+	internalIds?: string[];
 	lastProductId?: string;
 	pageSize?: number;
 }) => {
@@ -32,6 +31,15 @@ let cusProductsQuery = ({
 		return inStatuses
 			? sql`AND cp.status = ANY(ARRAY[${sql.join(
 					inStatuses.map((status) => sql`${status}`),
+					sql`, `,
+				)}])`
+			: sql``;
+	};
+
+	const withInternalIdsFilter = () => {
+		return internalIds && internalIds.length > 0
+			? sql`AND cp.internal_customer_id = ANY(ARRAY[${sql.join(
+					internalIds.map((id) => sql`${id}`),
 					sql`, `,
 				)}])`
 			: sql``;
@@ -90,6 +98,7 @@ let cusProductsQuery = ({
       LEFT JOIN customer_entitlements ce ON ce.customer_product_id = cp.id
       WHERE prod.org_id = ${orgId} AND prod.env = ${env}
       ${withStatusFilter()}
+      ${withInternalIdsFilter()}
       ${lastProductId ? sql`AND cp.id < ${lastProductId}` : sql``}
       GROUP BY cp.id, prod.*
       ORDER BY cp.id DESC
@@ -101,15 +110,17 @@ export const getAllFullCusProducts = async ({
 	orgId,
 	env,
 	inStatuses = RELEVANT_STATUSES,
+	internalIds,
 }: {
 	db: DrizzleCli;
 	orgId: string;
 	env: AppEnv;
 	inStatuses?: CusProductStatus[];
+	internalIds?: string[];
 }) => {
 	let lastProductId = "";
-	let allData: any[] = [];
-	let pageSize = 500;
+	const allData: any[] = [];
+	const pageSize = 500;
 
 	while (true) {
 		const data = await db.execute(
@@ -117,6 +128,7 @@ export const getAllFullCusProducts = async ({
 				orgId,
 				env,
 				inStatuses,
+				internalIds,
 				lastProductId,
 				pageSize,
 			}),
@@ -136,20 +148,28 @@ export const getAllCustomers = async ({
 	db,
 	orgId,
 	env,
+	internalIds,
 }: {
 	db: DrizzleCli;
 	orgId: string;
 	env: AppEnv;
+	internalIds?: string[];
 }) => {
 	let lastCustomerId = "";
-	let allData: any[] = [];
-	let pageSize = 500;
+	const allData: any[] = [];
+	const pageSize = 500;
 
 	while (true) {
 		const data = await db.query.customers.findMany({
 			where: and(
 				eq(customers.org_id, orgId),
 				eq(customers.env, env),
+				internalIds && internalIds.length > 0
+					? sql`${customers.internal_id} = ANY(ARRAY[${sql.join(
+							internalIds.map((id) => sql`${id}`),
+							sql`, `,
+						)}])`
+					: undefined,
 				lastCustomerId ? lt(customers.internal_id, lastCustomerId) : undefined,
 			),
 			orderBy: [desc(customers.internal_id)],
@@ -170,19 +190,21 @@ export const getAllFullCustomers = async ({
 	db,
 	orgId,
 	env,
+	internalIds,
 }: {
 	db: DrizzleCli;
 	orgId: string;
 	env: AppEnv;
+	internalIds?: string[];
 }) => {
-	let [customers, fullCusProducts] = await Promise.all([
-		getAllCustomers({ db, orgId, env }),
-		getAllFullCusProducts({ db, orgId, env }),
+	const [customers, fullCusProducts] = await Promise.all([
+		getAllCustomers({ db, orgId, env, internalIds }),
+		getAllFullCusProducts({ db, orgId, env, internalIds }),
 	]);
 
-	let cusProdMap: Record<string, FullCusProduct[]> = {};
+	const cusProdMap: Record<string, FullCusProduct[]> = {};
 	for (const cp of fullCusProducts) {
-		let internalCusId = cp.internal_customer_id;
+		const internalCusId = cp.internal_customer_id;
 		if (!cusProdMap[internalCusId]) {
 			cusProdMap[internalCusId] = [];
 		}
@@ -207,8 +229,8 @@ export const getAllEntities = async ({
 	env: AppEnv;
 }) => {
 	let lastEntityId = "";
-	let allData: any[] = [];
-	let pageSize = 500;
+	const allData: any[] = [];
+	const pageSize = 500;
 
 	while (true) {
 		const data = await db.query.entities.findMany({

@@ -44,7 +44,7 @@ export const ShortcutButton = ({
 		const variantClasses =
 			variant === "secondary"
 				? "bg-muted text-body-secondary"
-				: "bg-transparent border border-t4 border-[0.5px] text-t2";
+				: "bg-purple-medium dark:bg-transparent dark:text-t3";
 
 		return (
 			<div className={`${baseClasses} ${variantClasses}`}>
@@ -81,7 +81,7 @@ export const ShortcutButton = ({
 		>
 			{children}
 			{(metaShortcut || singleShortcut) && (
-				<span className="flex items-center gap-0.5">
+				<span className="flex items-center gap-0.5 dark:gap-0">
 					{metaShortcut && keystrokeContainer(getMetaKey())}
 					{keystrokeContainer(getShortcutDisplay(), metaShortcut === "enter")}
 				</span>

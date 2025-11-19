@@ -2,10 +2,10 @@ import "dotenv/config";
 import Stripe from "stripe";
 
 const main = async () => {
-	const stripe = new Stripe(process.env.STRIPE_LIVE_SECRET_KEY || "");
+	const stripe = new Stripe(process.env.STRIPE_SANDBOX_SECRET_KEY || "");
 
 	const result = await stripe.webhookEndpoints.create({
-		url: "https://express.dev.useautumn.com/webhooks/connect/live",
+		url: "https://express.dev.useautumn.com/webhooks/connect/sandbox",
 		enabled_events: [
 			"checkout.session.completed",
 			"customer.subscription.created",

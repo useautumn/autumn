@@ -6,10 +6,11 @@ import {
 	CheckParamsSchema,
 	CheckQuerySchema,
 	type CheckResponseV2,
+	type TrackParams,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { runTrack } from "../../balances/track/runTrack.js";
 import { getTrackFeatureDeductions } from "../../balances/track/trackUtils/getFeatureDeductions.js";
-import { runDeductionTx } from "../../balances/track/trackUtils/runDeductionTx.js";
 import { getCheckData } from "./checkUtils/getCheckData.js";
 import { getV2CheckResponse } from "./checkUtils/getV2CheckResponse.js";
 import { getCheckPreview } from "./getCheckPreview.js";
@@ -72,24 +73,26 @@ export const handleCheck = createRoute({
 
 		if (v2Response.allowed && ctx.isPublic !== true) {
 			if (send_event && feature_id) {
+				// console.log(
+				// 	`Allowed is true, sending event for customer ${customer_id}, feature ${feature_id}`,
+				// );
 				const featureDeductions = getTrackFeatureDeductions({
 					ctx,
 					featureId: feature_id,
 					value: requiredBalance,
 				});
 
-				await runDeductionTx({
+				await runTrack({
 					ctx,
-					customerId: body.customer_id,
-					entityId: body.entity_id,
-					deductions: featureDeductions,
-					overageBehaviour: "cap",
-					refreshCache: true,
-					eventInfo: {
-						event_name: feature_id,
+					body: {
+						customer_id,
+						entity_id,
+						feature_id,
 						value: requiredBalance,
 						properties: body.properties,
-					},
+						skip_event: body.skip_event,
+					} satisfies TrackParams,
+					featureDeductions,
 				});
 			}
 		}

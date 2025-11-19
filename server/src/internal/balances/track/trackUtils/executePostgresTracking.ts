@@ -37,7 +37,7 @@ export const executePostgresTracking = async ({
 		withEntities: true,
 	});
 
-	const { fullCus: updatedFullCus } = await runDeductionTx({
+	const { fullCus: updatedFullCus, actualDeductions } = await runDeductionTx({
 		ctx,
 		customerId: body.customer_id,
 		entityId: body.entity_id,
@@ -52,6 +52,7 @@ export const executePostgresTracking = async ({
 		},
 		refreshCache: true,
 		fullCus,
+		skipAdditionalBalance: true,
 	});
 
 	if (updatedFullCus) {
@@ -61,14 +62,14 @@ export const executePostgresTracking = async ({
 		});
 
 		const balancesRes: Record<string, ApiBalance> = {};
-		for (const featureId of Object.keys(apiCustomer.balances)) {
+		for (const featureId of Object.keys(actualDeductions)) {
 			balancesRes[featureId] = apiCustomer.balances[featureId];
 		}
 
 		if (Object.keys(balancesRes).length > 1) {
 			response.balances = balancesRes;
 		} else {
-			response.balance = Object.values(apiCustomer.balances)[0];
+			response.balance = Object.values(balancesRes)?.[0];
 		}
 	}
 

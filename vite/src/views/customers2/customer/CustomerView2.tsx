@@ -66,7 +66,7 @@ export default function CustomerView2() {
 			value={{ customer, entityId: entityId, setEntityId }}
 		>
 			<div className="flex w-full h-full overflow-hidden relative">
-				<div className="flex flex-col overflow-x-hidden overflow-y-auto absolute inset-0 pb-8 [&>*:not([data-slot=separator-root])]:px-12 [&>*:not([data-slot=separator-root])]:pt-8 [&>*:not([data-slot=separator-root])]:max-w-4xl [&>*:not([data-slot=separator-root])]:mx-auto">
+				<div className="flex flex-col overflow-x-hidden overflow-y-auto absolute inset-0 pb-8 [&>*:not([data-slot=separator-root])]:px-12 [&>*:not([data-slot=separator-root])]:pt-8 [&>*:not([data-slot=separator-root])]:max-w-5xl [&>*:not([data-slot=separator-root])]:mx-auto">
 					<div className="flex flex-col gap-2 w-full">
 						<div className="flex flex-col w-full">
 							<div className="flex items-center justify-between w-full gap-4">

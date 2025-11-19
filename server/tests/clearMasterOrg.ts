@@ -6,7 +6,6 @@ dotenv.config();
 
 import { AppEnv } from "@autumn/shared";
 import chalk from "chalk";
-import { redis } from "../src/external/redis/initRedis.js";
 import { clearOrg } from "./utils/setupUtils/clearOrg.js";
 import { setupOrg } from "./utils/setupUtils/setupOrg.js";
 
@@ -32,9 +31,6 @@ async function main() {
 			env: AppEnv.Sandbox,
 		});
 		console.log(chalk.green("\n✅ Master org setup complete!\n"));
-
-		await redis.flushall();
-		console.log(chalk.green("\n✅ Redis flushed successfully!\n"));
 	} catch (error) {
 		console.error(chalk.red("\n❌ Error:"), error);
 		process.exit(1);

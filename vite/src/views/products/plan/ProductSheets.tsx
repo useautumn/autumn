@@ -7,6 +7,7 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { getItemId } from "@/utils/product/productItemUtils";
 
 import { ProductItemContext } from "../product/product-item/ProductItemContext";
+import { EditPlanPriceSheet } from "./components/EditPlanPriceSheet";
 import { EditPlanSheet } from "./components/EditPlanSheet";
 import { EditPlanFeatureSheet } from "./components/edit-plan-feature/EditPlanFeatureSheet";
 import { NewFeatureSheet } from "./components/new-feature/NewFeatureSheet";
@@ -51,6 +52,8 @@ export const ProductSheets = () => {
 		switch (sheetType) {
 			case "edit-plan":
 				return <EditPlanSheet />;
+			case "edit-plan-price":
+				return <EditPlanPriceSheet />;
 			case "edit-feature":
 				return (
 					<ProductItemContext.Provider
