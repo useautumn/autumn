@@ -18,4 +18,4 @@ export const CACHE_CUSTOMER_VERSION = ApiVersion.V1_2;
  * Cache time-to-live in seconds (7 days)
  * All customer and entity caches will expire after this duration
  */
-export const CACHE_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days = 604800 seconds
+export const CACHE_TTL_SECONDS = 3 * 24 * 60 * 60; // 7 days = 604800 seconds

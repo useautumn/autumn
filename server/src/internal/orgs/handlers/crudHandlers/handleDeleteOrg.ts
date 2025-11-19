@@ -1,15 +1,14 @@
 import { AppEnv, customers, ErrCode, type Organization } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
-import type { Response } from "express";
 import {
 	deauthorizeAccount,
 	deleteConnectedAccount,
 } from "@/external/connect/connectUtils.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { deleteSvixApp } from "@/external/svix/svixHelpers.js";
-import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
-import { deleteStripeWebhook } from "../orgUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { createRoute } from "../../../../honoMiddlewares/routeHandler.js";
+import { deleteStripeWebhook } from "../../orgUtils.js";
 
 const deleteSvixWebhooks = async ({
 	org,
@@ -98,9 +97,10 @@ export const deleteStripeAccounts = async ({
 	}
 };
 
-export const handleDeleteOrg = async (req: ExtendedRequest, res: Response) => {
-	try {
-		const { org, db, logger } = req;
+export const handleDeleteOrg = createRoute({
+	handler: async (c) => {
+		const ctx = c.get("ctx");
+		const { org, db, logger } = ctx;
 
 		// 1. Check if any customers
 		const hasCustomers = await db.query.customers.findFirst({
@@ -134,15 +134,8 @@ export const handleDeleteOrg = async (req: ExtendedRequest, res: Response) => {
 				and(eq(customers.org_id, org.id), eq(customers.env, AppEnv.Sandbox)),
 			);
 
-		res.status(200).json({
+		return c.json({
 			message: "Org deleted",
 		});
-	} catch (error) {
-		handleFrontendReqError({
-			res,
-			error,
-			req,
-			action: "delete-org",
-		});
-	}
-};
+	},
+});

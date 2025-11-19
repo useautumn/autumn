@@ -1,7 +1,6 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: ok */
 import { MigrationJobStep } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { timeout } from "../../utils/genUtils.js";
 import { FeatureService } from "../features/FeatureService.js";
 import { ProductService } from "../products/ProductService.js";
 import { MigrationService } from "./MigrationService.js";
@@ -41,8 +40,6 @@ export const runMigrationTask = async ({
 				current_step: MigrationJobStep.Received,
 			},
 		});
-
-		await timeout(10000);
 
 		const { org_id: orgId, env } = migrationJob;
 

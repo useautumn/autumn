@@ -161,6 +161,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing separate subscriptions beca
 				product_id: premium.id,
 				entity_id: id,
 			});
+
 			await expectSubToBeCorrect({
 				db,
 				customerId,

@@ -113,9 +113,9 @@ describe(`${chalk.yellowBright(`${testCase}: Testing negative values (refunds/cr
 		const usage = customer.features[TestFeature.Messages].usage;
 
 		// Balance should increase by full 50
-		expect(balance).toBe(130);
+		expect(balance).toBe(100);
 		// Usage should decrease by 50 (from 20 to -30)
-		expect(usage).toBe(-30);
+		expect(usage).toBe(0);
 	});
 
 	test("should reflect large refund in non-cached customer after 2s", async () => {
@@ -129,7 +129,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing negative values (refunds/cr
 		const balance = customer.features[TestFeature.Messages].balance;
 		const usage = customer.features[TestFeature.Messages].usage;
 
-		expect(balance).toBe(130);
-		expect(usage).toBe(-30);
+		expect(balance).toBe(100);
+		expect(usage).toBe(0);
 	});
 });

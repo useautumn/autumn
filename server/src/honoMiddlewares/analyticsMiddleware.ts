@@ -1,7 +1,8 @@
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { setSentryTags } from "../external/sentry/sentryUtils";
 
-const parseCustomerIdFromUrl = ({
+export const parseCustomerIdFromUrl = ({
 	url,
 }: {
 	url: string;
@@ -16,6 +17,33 @@ const parseCustomerIdFromUrl = ({
 
 	if (customersIndex !== -1 && segments[customersIndex + 1]) {
 		return segments[customersIndex + 1];
+	}
+
+	return undefined;
+};
+
+export const parseCustomerIdFromBody = async (
+	c: Context<HonoEnv>,
+): Promise<
+	{ customerId: string | undefined; sendEvent: boolean | undefined } | undefined
+> => {
+	const method = c.req.method;
+	if (method === "POST" || method === "PUT" || method === "PATCH") {
+		try {
+			// Clone the request to read body without consuming it
+			const body = await c.req.json();
+
+			const isCreateCustomerPath =
+				c.req.path.startsWith("/v1/customers") && method === "POST";
+
+			return {
+				customerId: isCreateCustomerPath ? body?.id : body?.customer_id,
+				sendEvent: body?.send_event,
+			};
+		} catch (_error) {
+			// Body might not be JSON, that's okay
+			return undefined;
+		}
 	}
 
 	return undefined;
@@ -108,6 +136,11 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	});
 
 	ctx.logger.info(`${method} ${c.req.path} (${ctx.org?.slug})`);
+
+	setSentryTags({
+		ctx,
+		customerId,
+	});
 
 	// Execute the request
 	await next();
