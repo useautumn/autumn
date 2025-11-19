@@ -1,6 +1,6 @@
 import { ApiBalanceSchema } from "@api/customers/cusFeatures/apiBalance.js";
 import { ApiSubscriptionSchema } from "@api/customers/cusPlans/apiSubscription.js";
-import { ApiInvoiceSchema } from "@api/others/apiInvoice.js";
+import { ApiInvoiceV1Schema } from "@api/others/apiInvoice/apiInvoiceV1.js";
 import { z } from "zod/v4";
 import { ApiBaseEntitySchema } from "./apiBaseEntity.js";
 
@@ -15,7 +15,7 @@ export const ApiEntityV1Schema = ApiBaseEntitySchema.extend({
 	balances: z.record(z.string(), ApiBalanceSchema).optional().meta({
 		description: "Features associated with this entity",
 	}),
-	invoices: z.array(ApiInvoiceSchema).optional().meta({
+	invoices: z.array(ApiInvoiceV1Schema).optional().meta({
 		description:
 			"Invoices for this entity (only included when expand=invoices)",
 	}),

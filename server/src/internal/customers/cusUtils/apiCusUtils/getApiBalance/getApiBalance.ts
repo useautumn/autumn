@@ -167,13 +167,6 @@ export const getApiBalance = ({
 		};
 	}
 
-	const totalAdjustment = sumValues(
-		cusEnts.map((cusEnt) => {
-			const { adjustment } = getCusEntBalance({ cusEnt, entityId });
-			return adjustment;
-		}),
-	);
-
 	const totalUnused = sumValues(
 		cusEnts.map((cusEnt) => {
 			const { unused } = getCusEntBalance({ cusEnt, entityId });
@@ -197,18 +190,18 @@ export const getApiBalance = ({
 		),
 	);
 
-	const totalAdditionalGrantedBalance = sumValues(
+	const totalAdjustment = sumValues(
 		cusEnts.map((cusEnt) => {
-			const { additional_granted_balance } = getCusEntBalance({
+			const { adjustment } = getCusEntBalance({
 				cusEnt,
 				entityId,
 			});
-			return additional_granted_balance;
+			return adjustment;
 		}),
 	);
 
 	const grantedBalance = new Decimal(totalGrantedBalanceWithRollovers)
-		.add(totalAdditionalGrantedBalance)
+		.add(totalAdjustment)
 		.toNumber();
 
 	// 2. Purchased balance
@@ -285,7 +278,6 @@ export const getApiBalance = ({
 		data: apiBalance,
 		legacyData: {
 			prepaid_quantity: totalPrepaidQuantity,
-			total_adjustment: totalAdjustment,
 		},
 	};
 };

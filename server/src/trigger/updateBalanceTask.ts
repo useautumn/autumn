@@ -207,7 +207,7 @@ export const performDeductionOnCusEnt = ({
 	addAdjustment?: boolean;
 	setZeroAdjustment?: boolean;
 	blockUsageLimit?: boolean;
-	field?: "balance" | "additional_balance" | "additional_granted_balance";
+	field?: "balance" | "additional_balance";
 }): {
 	newBalance: number;
 	newEntities: Record<string, EntityBalance> | undefined;

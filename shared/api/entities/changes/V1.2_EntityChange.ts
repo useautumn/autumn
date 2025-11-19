@@ -9,6 +9,8 @@ import type { ApiCusFeatureV3 } from "../../customers/cusFeatures/previousVersio
 import type { ApiSubscription } from "../../customers/cusPlans/apiSubscription.js";
 import { transformSubscriptionToCusProductV3 } from "../../customers/cusPlans/changes/V1.2_CusPlanChange.js";
 import type { ApiCusProductV3 } from "../../customers/cusPlans/previousVersions/apiCusProductV3.js";
+import type { ApiInvoiceV1 } from "../../others/apiInvoice/apiInvoiceV1.js";
+import { transformInvoiceToV0 } from "../../others/apiInvoice/changes/V1.2_InvoiceChange.js";
 import { ApiEntityV1Schema } from "../apiEntity.js";
 import { EntityLegacyDataSchema } from "../entityLegacyData.js";
 import { ApiEntityV0Schema } from "../prevVersions/apiEntityV0.js";
@@ -83,7 +85,10 @@ export const V1_2_EntityChange = defineVersionChange({
 			env: input.env,
 			products: v0CusProducts,
 			features: v0_features,
-			invoices: input.invoices,
+			invoices:
+				input.invoices?.map((invoice: ApiInvoiceV1) =>
+					transformInvoiceToV0({ input: invoice }),
+				) ?? undefined,
 		} satisfies z.infer<typeof ApiEntityV0Schema>;
 	},
 });

@@ -1,5 +1,8 @@
+import { trace } from "@opentelemetry/api";
 import { redis } from "@/external/redis/initRedis.js";
 import { logger } from "../../external/logtail/logtailUtils.js";
+
+const tracer = trace.getTracer("redis");
 
 /**
  * Executes a Redis write operation with automatic fallback handling.
@@ -12,20 +15,30 @@ import { logger } from "../../external/logtail/logtailUtils.js";
 export const tryRedisWrite = async <T>(
 	operation: () => Promise<T>,
 ): Promise<T extends void ? true : T | null> => {
-	if (redis.status !== "ready") {
-		logger.error("Redis not ready, skipping write");
-		return null as T extends void ? true : T | null;
-	}
+	const span = tracer.startSpan("redis.write");
 
 	try {
+		if (redis.status !== "ready") {
+			logger.error("Redis not ready, skipping write");
+			span.setStatus({ code: 2, message: "Redis not ready" });
+			return null as T extends void ? true : T | null;
+		}
+
 		const result = await operation();
+		span.setStatus({ code: 1 }); // OK
 		// If operation returns void/undefined, return true; otherwise return the result
 		return (result === undefined ? true : result) as T extends void
 			? true
 			: T | null;
 	} catch (error) {
 		logger.error(`Redis write failed: ${error}`);
+		span.setStatus({
+			code: 2,
+			message: error instanceof Error ? error.message : String(error),
+		});
 		return null as T extends void ? true : T | null;
+	} finally {
+		span.end();
 	}
 };
 
@@ -39,15 +52,26 @@ export const tryRedisWrite = async <T>(
 export const tryRedisRead = async <T>(
 	operation: () => Promise<T>,
 ): Promise<T | null> => {
-	if (redis.status !== "ready") {
-		logger.error("Redis not ready, skipping read");
-		return null;
-	}
+	const span = tracer.startSpan("redis.read");
 
 	try {
-		return await operation();
+		if (redis.status !== "ready") {
+			logger.error("Redis not ready, skipping read");
+			span.setStatus({ code: 2, message: "Redis not ready" });
+			return null;
+		}
+
+		const result = await operation();
+		span.setStatus({ code: 1 }); // OK
+		return result;
 	} catch (error) {
 		logger.error(`Redis read failed: ${error}`);
+		span.setStatus({
+			code: 2,
+			message: error instanceof Error ? error.message : String(error),
+		});
 		return null;
+	} finally {
+		span.end();
 	}
 };

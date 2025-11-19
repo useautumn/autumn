@@ -2,6 +2,8 @@ import {
 	type ApiCustomer,
 	ApiCustomerSchema,
 	type AppEnv,
+	addToExpand,
+	CusExpand,
 	type CustomerLegacyData,
 	CustomerLegacyDataSchema,
 	filterOutEntitiesFromCusProducts,
@@ -92,7 +94,7 @@ export const getCachedApiCustomer = async ({
 		}
 
 		// Cache miss or skipCache - fetch from DB
-
+		// Include invoices:
 		const fullCus = await CusService.getFull({
 			db,
 			idOrInternalId: customerId,
@@ -100,12 +102,16 @@ export const getCachedApiCustomer = async ({
 			env: env as AppEnv,
 			withEntities: true,
 			withSubs: true,
+			expand: [CusExpand.Invoices],
 		});
 
 		// Build ApiCustomer (base only, no expand) to return
-
-		const { apiCustomer, legacyData } = await getApiCustomerBase({
+		const ctxWithExpand = addToExpand({
 			ctx,
+			add: [CusExpand.Invoices],
+		});
+		const { apiCustomer, legacyData } = await getApiCustomerBase({
+			ctx: ctxWithExpand,
 			fullCus,
 			withAutumnId: true,
 		});
@@ -147,7 +153,12 @@ export const getCachedApiCustomer = async ({
 	});
 
 	return {
-		apiCustomer: filteredApiCustomer,
+		apiCustomer: {
+			...filteredApiCustomer,
+			rewards: filteredApiCustomer.rewards ?? undefined,
+			referrals: filteredApiCustomer.referrals ?? undefined,
+			payment_method: filteredApiCustomer.payment_method ?? undefined,
+		},
 		legacyData,
 	};
 };

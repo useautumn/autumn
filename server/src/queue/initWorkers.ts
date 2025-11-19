@@ -1,8 +1,11 @@
+await import("../sentry.js");
+
 import {
 	DeleteMessageCommand,
 	type Message,
 	ReceiveMessageCommand,
 } from "@aws-sdk/client-sqs";
+import * as Sentry from "@sentry/bun";
 import type { Logger } from "pino";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
@@ -15,6 +18,7 @@ import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigration
 import { detectBaseVariant } from "@/internal/products/productUtils/detectProductVariant.js";
 import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutReward.js";
 import { generateId } from "@/utils/genUtils.js";
+import { setSentryTags } from "../external/sentry/sentryUtils.js";
 import { createWorkerContext } from "./createWorkerContext.js";
 import { QUEUE_URL, sqs } from "./initSqs.js";
 import { JobName } from "./JobName.js";
@@ -94,6 +98,13 @@ const processMessage = async ({
 			logger: workerLogger,
 		});
 
+		if (ctx) {
+			setSentryTags({
+				ctx,
+				messageId: message.MessageId,
+			});
+		}
+
 		if (actionHandlers.includes(job.name as JobName)) {
 			// Note: action handlers need BullMQ queue for nested jobs
 			// This will need to be refactored when migrating action handlers to SQS
@@ -139,6 +150,7 @@ const processMessage = async ({
 			});
 		}
 	} catch (error: any) {
+		Sentry.captureException(error);
 		workerLogger.error(`Failed to process SQS job: ${job.name}`, {
 			jobName: job.name,
 			error: {
@@ -168,7 +180,7 @@ const startPollingLoop = async ({ db }: { db: DrizzleCli }) => {
 				QueueUrl: QUEUE_URL,
 				MaxNumberOfMessages: 10, // Receive up to 10 messages at once
 				WaitTimeSeconds: 20, // Long polling
-				VisibilityTimeout: 43200, // 12 hours (max) - prevents duplicate processing of long-running jobs
+				VisibilityTimeout: 30, // 12 hours (max) - prevents duplicate processing of long-running jobs
 				// For FIFO queues, add ReceiveRequestAttemptId for deduplication
 				...(isFifoQueue && {
 					ReceiveRequestAttemptId: generateId("receive"),

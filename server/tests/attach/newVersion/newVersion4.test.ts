@@ -45,13 +45,12 @@ const basic = constructRawProduct({
 	],
 });
 
-describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
-	const customerId = "temp";
+describe(`${chalk.yellowBright("newVersion4: Testing add ons")}`, () => {
+	const customerId = "newVersion4";
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
-	let testClockId: string;
 	beforeAll(async () => {
-		const result = await initCustomerV3({
+		await initCustomerV3({
 			ctx,
 			customerId,
 			customerData: {},
@@ -109,7 +108,7 @@ describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 			product_id: pro.id,
 		});
 
-		expect(res.current_product?.scenario).toBe("renew");
+		expect(res.product?.scenario).toBe("renew");
 
 		await autumn.attach({
 			customer_id: customerId,
