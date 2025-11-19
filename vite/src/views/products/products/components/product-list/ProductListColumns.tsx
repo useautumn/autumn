@@ -1,7 +1,7 @@
 import type { ProductV2 } from "@autumn/shared";
 import type { Row } from "@tanstack/react-table";
 import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
-import { CopyButton } from "@/components/v2/buttons/CopyButton";
+import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { ProductListRowToolbar } from "./ProductListRowToolbar";
 
 export const createProductListColumns = ({
@@ -26,11 +26,7 @@ export const createProductListColumns = ({
 			return (
 				<div className="font-mono justify-start flex w-full group overflow-hidden">
 					{product.id ? (
-						<CopyButton
-							text={product.id}
-							size="mini"
-							className="w-fit bg-transparent justify-end px-0! border-none shadow-none hover:text-primary [&_svg]:opacity-0 group-hover:[&_svg]:opacity-100 max-w-full"
-						/>
+						<MiniCopyButton text={product.id} />
 					) : (
 						<span className="px-1 text-t3">NULL</span>
 					)}

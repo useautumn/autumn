@@ -164,7 +164,7 @@ html {
 
 
 
-	--t1: #fff;
+	--t1: #ddd;
 	--t2: #ccc;
 	--t3: #999;
 
@@ -422,7 +422,15 @@ input[type="number"]::-webkit-inner-spin-button {
 	/* left: -150%; */
 	/* width: 100%; */
 	/* height: 100%; */
-	background: linear-gradient(130deg, #666, #3b3b3b, #666);
+	background: linear-gradient(130deg, var(--color-t4), #d2d2d2, var(--color-t4));
+	color: transparent;
+	background-clip: text;
+	background-size: 200% 100%;
+	animation: shimmer 1s infinite linear;
+}
+
+.dark .shimmer {
+	background: linear-gradient(130deg, var(--color-t4), #b7b7b7, var(--color-t4));
 	color: transparent;
 	background-clip: text;
 	background-size: 200% 100%;
