@@ -25,36 +25,51 @@ export const getApiCustomer = async ({
 	fullCus?: FullCustomer;
 	baseData?: { apiCustomer: ApiCustomer; legacyData: CustomerLegacyData };
 }) => {
-	let baseCustomer: ApiCustomer;
-	let cusLegacyData: CustomerLegacyData;
+	const getBaseCustomer = async () => {
+		let baseCustomer: ApiCustomer;
+		let cusLegacyData: CustomerLegacyData;
+		if (!baseData) {
+			const start = Date.now();
+			const { apiCustomer, legacyData } = await getCachedApiCustomer({
+				ctx,
+				customerId: customerId || "",
+			});
 
-	if (!baseData) {
-		const { apiCustomer, legacyData } = await getCachedApiCustomer({
-			ctx,
-			customerId: customerId || "",
-		});
-		baseCustomer = apiCustomer;
-		cusLegacyData = legacyData;
-	} else {
-		baseCustomer = baseData.apiCustomer;
-		cusLegacyData = baseData.legacyData;
-	}
+			ctx.logger.info(`getCachedApiCustomer: ${Date.now() - start}ms`);
 
-	// Clean api customer
-	baseCustomer = {
-		...baseCustomer,
-		entities: undefined,
-		autumn_id: withAutumnId ? baseCustomer.autumn_id : undefined,
+			baseCustomer = apiCustomer;
+			cusLegacyData = legacyData;
+		} else {
+			baseCustomer = baseData.apiCustomer;
+			cusLegacyData = baseData.legacyData;
+		}
+
+		// Clean api customer
+		baseCustomer = {
+			...baseCustomer,
+			entities: undefined,
+			autumn_id: withAutumnId ? baseCustomer.autumn_id : undefined,
+		};
+
+		return { baseCustomer, cusLegacyData };
 	};
 
-	// Get expand fields (not cacheable)
-	const apiCusExpand = await getApiCustomerExpand({
-		ctx,
-		customerId,
-		fullCus,
-	});
+	const getExpandParams = async () => {
+		const expandStart = Date.now();
+		const apiCusExpand = await getApiCustomerExpand({
+			ctx,
+			customerId,
+			fullCus: fullCus || undefined,
+		});
+		ctx.logger.info(`getApiCustomerExpand: ${Date.now() - expandStart}ms`);
+		return apiCusExpand;
+	};
 
-	// Merge expand fields
+	const [{ baseCustomer, cusLegacyData }, apiCusExpand] = await Promise.all([
+		getBaseCustomer(),
+		getExpandParams(),
+	]);
+
 	const apiCustomer = {
 		...baseCustomer,
 		...apiCusExpand,
