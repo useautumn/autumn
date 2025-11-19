@@ -93,13 +93,23 @@ function UpdateCusEntitlement({
 
 		setUpdateLoading(true);
 		try {
-			await axiosInstance.post("/v1/balances/update", {
-				customer_id: customer.id || customer.internal_id,
-				feature_id: feature.id,
-				current_balance: balanceInt,
-				customer_entitlement_id: cusEnt.id,
-				// usage: 0,
-			});
+			// await axiosInstance.post("/v1/balances/update", {
+			// 	customer_id: customer.id || customer.internal_id,
+			// 	feature_id: feature.id,
+			// 	current_balance: balanceInt,
+			// 	customer_entitlement_id: cusEnt.id,
+			// 	entity_id: entityId ?? undefined,
+			// 	// usage: 0,
+			// });
+			const customerId = customer.id || customer.internal_id;
+			await axiosInstance.post(
+				`/v1/customers/${customerId}/entitlements/${cusEnt.id}`,
+				{
+					balance: balanceInt,
+					next_reset_at: updateFields.next_reset_at,
+					entity_id: entityId ?? undefined,
+				},
+			);
 
 			toast.success("Entitlement updated successfully");
 			await refetch();

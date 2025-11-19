@@ -41,6 +41,7 @@ export const getApiEntity = async ({
 	};
 
 	// Get expand fields (not cacheable)
+
 	const apiEntityExpand = await getApiEntityExpand({
 		ctx,
 		customerId,

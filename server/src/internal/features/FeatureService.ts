@@ -1,7 +1,14 @@
-import { type AppEnv, ErrCode, type Feature, features } from "@autumn/shared";
+import {
+	type AppEnv,
+	ErrCode,
+	type Feature,
+	FeatureAlreadyExistsError,
+	features,
+	RecaseError,
+} from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import RecaseError from "@/utils/errorUtils.js";
+
 import { notNullish } from "@/utils/genUtils.js";
 import { clearOrgCache } from "../orgs/orgUtils/clearOrgCache.js";
 
@@ -151,11 +158,11 @@ export class FeatureService {
 			return insertedData as Feature[]; // DRIZZLE TYPE REFACTOR
 		} catch (error: any) {
 			if (error.code === "23505") {
-				const id = Array.isArray(data) ? data.map((f) => f.id) : data.id;
-				throw new RecaseError({
-					message: `Feature ${id} already exists`,
-					code: ErrCode.DuplicateFeatureId,
-					statusCode: 400,
+				const id = Array.isArray(data)
+					? data.map((f) => f.id)?.join(",")
+					: data.id;
+				throw new FeatureAlreadyExistsError({
+					featureId: id,
 				});
 			}
 		}

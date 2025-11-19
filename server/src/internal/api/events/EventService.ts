@@ -1,8 +1,7 @@
-import { ErrCode, type EventInsert, events } from "@autumn/shared";
+import { ErrCode, type EventInsert, events, RecaseError } from "@autumn/shared";
 import { and, desc, eq } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import RecaseError from "@/utils/errorUtils.js";
 
 export class EventService {
 	static async insert({ db, event }: { db: DrizzleCli; event: EventInsert }) {
@@ -12,24 +11,14 @@ export class EventService {
 				.values(event as any)
 				.returning();
 
-			if (results.length === 0) {
-				throw new RecaseError({
-					message: "Failed to insert event",
-					code: ErrCode.CreateEventFailed,
-					data: results,
-					statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-				});
-			}
-
-			return results[0];
+			return results?.[0];
 		} catch (error: any) {
 			if (error.code === "23505") {
 				throw new RecaseError({
 					message:
 						"Event (event_name, customer_id, idempotency_key) already exists.",
 					code: ErrCode.DuplicateEvent,
-					// data: error,
-					statusCode: StatusCodes.BAD_REQUEST,
+					statusCode: StatusCodes.CONFLICT,
 				});
 			} else throw error;
 		}

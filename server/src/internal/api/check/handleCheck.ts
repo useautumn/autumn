@@ -27,6 +27,7 @@ export const handleCheck = createRoute({
 	handler: async (c) => {
 		const body = c.req.valid("json");
 		const ctx = c.get("ctx");
+
 		const {
 			customer_id,
 			feature_id,

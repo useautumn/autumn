@@ -73,8 +73,10 @@ local function getCustomerObject(orgId, env, customerId, skipEntityMerge)
     
     -- Merge subscriptions by plan ID and normalized status
     baseCustomer.subscriptions = mergeSubscriptions(allSubscriptions)
-    
+
+    -- Merge invoices
     -- Build final customer object
+    baseCustomer.invoices = baseCustomer.invoices or nil
     baseCustomer._balanceFeatureIds = nil -- Remove tracking field
     baseCustomer._entityIds = nil -- Remove tracking field
     baseCustomer.balances = balances

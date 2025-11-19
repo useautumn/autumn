@@ -3,6 +3,7 @@ import {
 	ErrCode,
 	MigrateProductParamsSchema,
 	ProductNotFoundError,
+	RecaseError,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -16,7 +17,6 @@ import {
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { findPrepaidPrice } from "../prices/priceUtils/findPriceUtils.js";
 
 /**
@@ -47,6 +47,18 @@ export const handleMigrateProductV2 = createRoute({
 			idOrInternalId: to_product_id,
 			version: to_version,
 		});
+
+		const currentMigrations = await MigrationService.getExistingJobs({
+			db,
+			orgId: org.id,
+			env,
+		});
+
+		if (currentMigrations.length > 0) {
+			throw new RecaseError({
+				message: "Another migration is ongoing, cannot create a new migration",
+			});
+		}
 
 		if (!fromProduct || !toProduct) {
 			throw new ProductNotFoundError({
@@ -124,6 +136,7 @@ export const handleMigrateProductV2 = createRoute({
 		});
 
 		// Add task to queue for processing
+
 		await addTaskToQueue({
 			jobName: JobName.Migration,
 			payload: {

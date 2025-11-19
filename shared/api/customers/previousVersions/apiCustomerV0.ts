@@ -1,9 +1,9 @@
 import { ApiCusFeatureV0Schema } from "@api/customers/cusFeatures/previousVersions/apiCusFeatureV0.js";
 import { ApiCusProductV0Schema } from "@api/customers/cusPlans/previousVersions/apiCusProductV0.js";
-import { ApiInvoiceSchema } from "@api/others/apiInvoice.js";
+import { ApiInvoiceV0Schema } from "@api/others/apiInvoice/prevVersions/apiInvoiceV0.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
 import { z } from "zod/v4";
-import { ApiTrialsUsedSchema } from "../components/apiTrialsUsed.js";
+import { ApiTrialsUsedV0Schema } from "../components/apiTrialsUsed/prevVersions/apiTrialsUsedV0.js";
 
 /**
  * ApiCustomerV0Schema - Customer response format for API V0_1
@@ -47,8 +47,8 @@ export const ApiCustomerV0Schema = z.object({
 	products: z.array(ApiCusProductV0Schema),
 	add_ons: z.array(ApiCusProductV0Schema),
 	entitlements: z.array(ApiCusFeatureV0Schema),
-	invoices: z.array(ApiInvoiceSchema),
-	trials_used: z.array(ApiTrialsUsedSchema).optional(),
+	invoices: z.array(ApiInvoiceV0Schema),
+	trials_used: z.array(ApiTrialsUsedV0Schema).optional(),
 });
 
 export type ApiCustomerV0 = z.infer<typeof ApiCustomerV0Schema>;

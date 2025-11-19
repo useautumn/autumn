@@ -41,15 +41,16 @@ export const runSyncBalanceBatch = async ({
 
 	logger.info(`🔄 Starting sync: ${itemDescription}`);
 
-	try {
-		await syncItem({ item, ctx });
-		logger.info(`✅ Successfully synced: ${itemDescription}`);
-	} catch (error) {
-		logger.error(`❌ Failed to sync: ${itemDescription}`, {
-			error: error instanceof Error ? error : new Error(String(error)),
-			item,
-		});
-		// Re-throw to trigger SQS retry
-		throw error;
-	}
+	await syncItem({ item, ctx });
+	logger.info(`✅ Successfully synced: ${itemDescription}`);
+	// try {
+
+	// } catch (error) {
+	// 	logger.error(`❌ Failed to sync: ${itemDescription}`, {
+	// 		error: error instanceof Error ? error : new Error(String(error)),
+	// 		item,
+	// 	});
+	// 	// Re-throw to trigger SQS retry
+	// 	throw error;
+	// }
 };
