@@ -3,9 +3,11 @@ import {
 	CusProductStatus,
 	customerPrices,
 	customerProducts,
+	customers,
 } from "@autumn/shared";
 import { and, eq, inArray, isNotNull, lt, notExists, sql } from "drizzle-orm";
 import { db } from "@/db/initDrizzle.js";
+import { deleteCachedApiCustomer } from "../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
 
 export const runProductCron = async () => {
 	console.log("Running product cron");
@@ -13,7 +15,10 @@ export const runProductCron = async () => {
 	const results = await db
 		.select()
 		.from(customerProducts)
-
+		.innerJoin(
+			customers,
+			eq(customerProducts.internal_customer_id, customers.internal_id),
+		)
 		.where(
 			and(
 				// No customer_prices exist for this customer_product
@@ -41,29 +46,7 @@ export const runProductCron = async () => {
 		`Found ${results.length} customer products with no prices and active trials`,
 	);
 
-	// fs.writeFileSync(
-	// 	`${process.cwd()}/scripts/expired_free_trials.json`,
-	// 	JSON.stringify(results, null, 2),
-	// );
-	// return;
-
-	// for (const result of results) {
-	// 	console.log(
-	// 		`Customer ${result.customers.id} product: ${result.customer_products.product_id}`,
-	// 	);
-	// }
-
-	// const uniqueOrgIds = [...new Set(results.map((r) => r.customers.org_id))];
-	// console.log("Unique org IDs:", uniqueOrgIds);
-
-	// for (const result of results) {
-	// 	console.log(
-	// 		`Customer ${result.customers.id} product: ${result.customer_products.product_id}`,
-	// 	);
-	// }
 	const expireCusProducts = async (ids: string[]) => {
-		// console.log("Expiring:", ids);
-		// Save the ids to scripts/json
 		await db
 			.update(customerProducts)
 			.set({
@@ -73,12 +56,25 @@ export const runProductCron = async () => {
 	};
 
 	const batchSize = 250;
+
 	for (let i = 0; i < results.length; i += batchSize) {
 		const batch = results.slice(i, i + batchSize);
-		await expireCusProducts(batch.map((r) => r.id));
+		await expireCusProducts(batch.map((r) => r.customer_products.id));
 		console.log(
 			`Expired batch of ${i + batch.length}/${results.length} customer products`,
 		);
+
+		const clearCachePromises = [];
+		for (const result of batch) {
+			clearCachePromises.push(
+				deleteCachedApiCustomer({
+					customerId: result.customers.id ?? "",
+					orgId: result.customers.org_id,
+					env: result.customers.env,
+				}),
+			);
+		}
+		await Promise.all(clearCachePromises);
 	}
 
 	return results;

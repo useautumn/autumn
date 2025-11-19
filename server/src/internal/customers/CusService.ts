@@ -12,7 +12,6 @@ import {
 	type Organization,
 } from "@autumn/shared";
 import { and, eq, ilike, or, sql, type Table } from "drizzle-orm";
-import { StatusCodes } from "http-status-codes";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
@@ -204,38 +203,31 @@ export class CusService {
 	}
 
 	static async insert({ db, data }: { db: DrizzleCli; data: Customer }) {
-		try {
-			const results = await db
-				.insert(customers)
-				.values(data as any)
-				.returning();
-			if (results && results.length > 0) {
-				return results[0] as Customer;
-			} else {
-				return null;
-			}
-		} catch (error: any) {
-			// Log the full error details for debugging
-			console.error("CusService.insert error details:", {
-				message: error.message,
-				code: error.code,
-				detail: error.detail,
-				constraint: error.constraint,
-				table: error.table,
-				cause: error.cause,
-				stack: error.stack,
-			});
+		const results = await db
+			.insert(customers)
+			.values(data as any)
+			.returning();
 
-			if (error.code === "23505") {
-				throw new RecaseError({
-					code: ErrCode.DuplicateCustomerId,
-					message: "Customer ID already exists",
-					statusCode: StatusCodes.BAD_REQUEST,
-					data: error,
-				});
-			}
-			throw error;
+		// If insert succeeded, return the new customer
+		if (results && results.length > 0) {
+			return results[0] as Customer;
 		}
+
+		// If no results, conflict occurred - fetch and return existing customer
+		// This handles race conditions gracefully without error logs
+		const existingCustomer = await CusService.get({
+			db,
+			idOrInternalId: data.id || data.internal_id,
+			orgId: data.org_id,
+			env: data.env,
+		});
+
+		if (existingCustomer) {
+			return existingCustomer;
+		}
+
+		// Should never reach here, but handle gracefully
+		return null;
 	}
 
 	static async update({

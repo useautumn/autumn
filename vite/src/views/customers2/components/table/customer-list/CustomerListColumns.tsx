@@ -36,10 +36,11 @@ const getCusProductsInfo = ({
 		return <span className="text-t3"></span>;
 	}
 
-	// Filter out expired products first
+	// Filter out expired and scheduled products first
 	const activeProducts = customer.customer_products.filter(
 		(cusProduct: (typeof customer.customer_products)[number]) =>
-			(cusProduct as FullCusProduct).status !== CusProductStatus.Expired,
+			(cusProduct as FullCusProduct).status !== CusProductStatus.Expired &&
+			(cusProduct as FullCusProduct).status !== CusProductStatus.Scheduled,
 	);
 
 	if (activeProducts.length === 0) {

@@ -1,4 +1,4 @@
-import { type AxiosInstance } from "axios";
+import type { AxiosInstance } from "axios";
 import { notNullish } from "@/utils/genUtils";
 
 export class ProductService {
@@ -53,6 +53,10 @@ export class ProductService {
 		productId: string,
 		data: any,
 	) {
-		await axiosInstance.post(`/v1/products/${productId}/copy`, data);
+		const response = await axiosInstance.post(
+			`/v1/products/${productId}/copy`,
+			data,
+		);
+		return response.data;
 	}
 }

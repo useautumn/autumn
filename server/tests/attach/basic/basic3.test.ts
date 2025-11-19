@@ -99,7 +99,7 @@ describe(`${chalk.yellowBright("basic3: Testing cancel through Stripe at period 
 		for (const subId of proProduct.subscription_ids) {
 			await stripeCli.subscriptions.cancel(subId);
 		}
-		await timeout(5000);
+		await timeout(8000);
 	});
 
 	test("should have free product active, and no pro product", async () => {

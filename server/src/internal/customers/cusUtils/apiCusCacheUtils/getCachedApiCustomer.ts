@@ -3,6 +3,7 @@ import {
 	ApiCustomerSchema,
 	type AppEnv,
 	type CustomerLegacyData,
+	CustomerLegacyDataSchema,
 	filterOutEntitiesFromCusProducts,
 	filterPlanAndFeatureExpand,
 } from "@autumn/shared";
@@ -77,10 +78,15 @@ export const getCachedApiCustomer = async ({
 					data: rest,
 				});
 
+				const normalizedLegacyData = normalizeFromSchema<CustomerLegacyData>({
+					schema: CustomerLegacyDataSchema,
+					data: legacyData,
+				});
+
 				return {
 					// ← This returns from getCachedApiCustomer!
 					apiCustomer: ApiCustomerSchema.parse(normalized),
-					legacyData,
+					legacyData: normalizedLegacyData,
 				};
 			}
 		}

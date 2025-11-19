@@ -4,6 +4,7 @@ import { create } from "zustand";
 // Sheet types that can be displayed
 export type SheetType =
 	| "edit-plan"
+	| "edit-plan-price"
 	| "edit-feature"
 	| "new-feature"
 	| "select-feature"
@@ -56,6 +57,8 @@ export const useIsEditingFeature = () =>
 	useSheetStore((s) => s.type === "edit-feature");
 export const useIsCreatingFeature = () =>
 	useSheetStore((s) => s.type === "new-feature" || s.itemId === "new");
+export const useIsEditingPlanPrice = () =>
+	useSheetStore((s) => s.type === "edit-plan-price");
 
 /**
  * Hook to handle Escape key to close sheet and unfocus active elements

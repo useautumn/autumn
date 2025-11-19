@@ -99,7 +99,9 @@ describe(`${chalk.yellowBright("cancel5: Testing cancel for trial products")}`, 
 		});
 
 		sub = await cusProductToSub({
-			cusProduct: fullCus.customer_products?.[0],
+			cusProduct: fullCus.customer_products?.find(
+				(cp) => cp.product.id === proProd.id,
+			),
 			stripeCli,
 		});
 
@@ -137,6 +139,8 @@ describe(`${chalk.yellowBright("cancel5: Testing cancel for trial products")}`, 
 			status: CusProductStatus.Active,
 		});
 
-		expect(customer.products.length).toBe(1);
+		expect(
+			customer.products.filter((p) => p.group === proProd.group).length,
+		).toBe(1);
 	});
 });

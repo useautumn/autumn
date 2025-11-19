@@ -10,6 +10,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { IconButton } from "@/components/v2/buttons/IconButton";
+import { cn } from "@/lib/utils";
 import { FilterStatusSubMenu } from "@/views/customers/components/filter-dropdown/FilterStatusSubMenu";
 import { ProductsSubMenu } from "@/views/customers/components/filter-dropdown/ProductsSubMenu";
 import { SaveViewPopover } from "@/views/customers/components/filter-dropdown/SavedViewPopover";
@@ -43,7 +44,7 @@ export function CustomerListFilterButton() {
 				<IconButton
 					variant="secondary"
 					size="default"
-					className="gap-2"
+					className={cn("gap-2", open && "btn-secondary-active")}
 					icon={<FunnelSimpleIcon size={14} className="text-t3" />}
 				>
 					Filter

@@ -17,6 +17,9 @@ elif [[ "$filename" == *"/tests/"* ]]; then
 
 elif [[ "$filename" == *".sh"* ]]; then
     "$filename"
+elif [[ "$filename" == *"/scripts/"* ]]; then
+    # Run scripts with infisical prod environment
+    infisical run --env=prod -- bun "$filename"
 else
     # NODE_ENV=development npx tsx $filename
     NODE_ENV=development bun "$filename"

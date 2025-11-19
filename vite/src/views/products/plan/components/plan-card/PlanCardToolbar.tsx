@@ -59,7 +59,7 @@ export const PlanCardToolbar = ({
 					)}
 				>
 					<PencilSimpleIcon />
-					Edit Plan
+					Plan Settings
 				</Button>
 			</div>
 		</>

@@ -2,7 +2,7 @@ import type { Feature } from "@autumn/shared";
 import { FeatureUsageType } from "@autumn/shared";
 import {
 	ArrowSquareOutIcon,
-	DotsThreeVertical,
+	DotsThreeVerticalIcon,
 	PencilIcon,
 	Subtract,
 	Ticket,
@@ -19,6 +19,7 @@ import { Button } from "@/components/v2/buttons/Button";
 import { Dialog } from "@/components/v2/dialogs/Dialog";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
+import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { getStripeCusLink } from "@/utils/linkUtils";
 import { DeleteCustomerDialog } from "@/views/customers/customer/components/DeleteCustomerDialog";
@@ -36,6 +37,7 @@ export function CustomerActions() {
 	const { features } = useFeaturesQuery();
 	const env = useEnv();
 	const { stripeAccount } = useOrgStripeQuery();
+	const [ellipsisOpen, setEllipsisOpen] = useState(false);
 
 	const hasContinuousUseFeatures = features?.some(
 		(feature: Feature) =>
@@ -69,10 +71,14 @@ export function CustomerActions() {
 				Edit Customer
 			</Button>
 
-			<DropdownMenu>
+			<DropdownMenu open={ellipsisOpen} onOpenChange={setEllipsisOpen}>
 				<DropdownMenuTrigger asChild>
-					<Button size="icon" variant="secondary">
-						<DotsThreeVertical size={16} className="text-t2" />
+					<Button
+						size="icon"
+						variant="secondary"
+						className={cn(ellipsisOpen && "btn-secondary-active")}
+					>
+						<DotsThreeVerticalIcon size={16} className="text-t2" />
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end">

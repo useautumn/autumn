@@ -1,58 +1,46 @@
-import {
-	AffectedResource,
-	ProductNotFoundError,
-	type ProductV2,
-	productsAreSame,
-} from "@autumn/shared";
-import { z } from "zod/v4";
-import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { ProductNotFoundError, productsAreSame } from "@autumn/shared";
+import { routeHandler } from "../../../utils/routerUtils.js";
 import { CusProductService } from "../../customers/cusProducts/CusProductService.js";
 import { ProductService } from "../ProductService.js";
 
-const HasCustomersBodySchema = z.object({
-	id: z.string().optional(),
-	items: z.array(z.any()).optional(),
-	free_trial: z.any().optional(),
-});
+export const handlePlanHasCustomers = (req: any, res: any) =>
+	routeHandler({
+		req,
+		res,
+		action: "Get product has customers",
+		handler: async (req: any, res: any) => {
+			const { product_id } = req.params;
+			const { db, features } = req;
 
-export const handlePlanHasCustomers = createRoute({
-	body: HasCustomersBodySchema,
-	resource: AffectedResource.Product,
-	handler: async (c) => {
-		const ctx = c.get("ctx");
-		const { db, features, org, env } = ctx;
-		const { product_id } = c.req.param();
-		const body = c.req.valid("json");
-
-		const product = await ProductService.getFull({
-			db,
-			idOrInternalId: product_id,
-			orgId: org.id,
-			env,
-		});
-
-		if (!product) {
-			throw new ProductNotFoundError({ productId: product_id });
-		}
-
-		const cusProductsCurVersion =
-			await CusProductService.getByInternalProductId({
+			const product = await ProductService.getFull({
 				db,
-				internalProductId: product.internal_id,
+				idOrInternalId: product_id,
+				orgId: req.orgId,
+				env: req.env,
 			});
 
-		const { itemsSame, freeTrialsSame } = productsAreSame({
-			newProductV2: body as ProductV2,
-			curProductV1: product,
-			features,
-		});
+			if (!product) {
+				throw new ProductNotFoundError({ productId: product_id });
+			}
 
-		const productSame = itemsSame && freeTrialsSame;
+			const cusProductsCurVersion =
+				await CusProductService.getByInternalProductId({
+					db,
+					internalProductId: product.internal_id,
+				});
 
-		return c.json({
-			current_version: product.version,
-			will_version: !productSame && cusProductsCurVersion.length > 0,
-			archived: product.archived,
-		});
-	},
-});
+			const { itemsSame, freeTrialsSame } = productsAreSame({
+				newProductV2: req.body,
+				curProductV1: product,
+				features,
+			});
+
+			const productSame = itemsSame && freeTrialsSame;
+
+			res.status(200).json({
+				current_version: product.version,
+				will_version: !productSame && cusProductsCurVersion.length > 0,
+				archived: product.archived,
+			});
+		},
+	});

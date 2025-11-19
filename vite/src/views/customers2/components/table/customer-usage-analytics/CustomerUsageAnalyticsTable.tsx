@@ -1,7 +1,6 @@
 import { ChartBar } from "@phosphor-icons/react";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo } from "react";
-import SmallSpinner from "@/components/general/SmallSpinner";
 import { Table } from "@/components/general/table";
 import { cn } from "@/lib/utils";
 import { useCusEventsQuery } from "@/views/customers/customer/hooks/useCusEventsQuery";
@@ -121,7 +120,7 @@ export function CustomerUsageAnalyticsTable() {
 						<div className="flex justify-center py-4 w-full h-full relative overflow-visible text-sm bg-interactive-secondary rounded-lg border shadow-sm">
 							<div className="text-sm text-t4 text-center overflow-visible flex flex-col gap-2 shimmer">
 								<span className="flex items-center gap-2">
-									<SmallSpinner size={14} />
+									{/* <SmallSpinner size={14} /> */}
 									Loading events
 								</span>
 							</div>
