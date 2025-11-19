@@ -4,6 +4,8 @@ import { V0_1_CustomerChange } from "@api/customers/changes/V0.1_CustomerChange.
 import { V0_2_CustomerChange } from "@api/customers/changes/V0.2_CustomerChange.js";
 import { V0_2_InvoicesAlwaysExpanded } from "@api/customers/changes/V0.2_InvoicesAlwaysExpanded.js";
 import { V1_1_FeaturesArrayToObject } from "@api/customers/changes/V1.1_FeaturesArrayToObject.js";
+// Import trials used changes
+import { V1_2_TrialsUsedChange } from "@api/customers/components/apiTrialsUsed/changes/V1.2_TrialsUsedChange.js";
 
 // Import customer product changes
 
@@ -15,6 +17,8 @@ import { V1_2_EntityQueryChange } from "@api/entities/requestChanges/V1.2_Entity
 // Import feature changes
 import { V1_2_FeatureChange } from "@api/features/changes/V1.2_FeatureChange.js";
 import { V1_2_CreateFeatureChange } from "@api/features/changes/V1.2_FeatureParamsChange.js";
+// Import invoice changes
+import { V1_2_InvoiceChange } from "@api/others/apiInvoice/changes/V1.2_InvoiceChange.js";
 // Import product changes
 import { V1_2_ProductChanges } from "@api/products/changes/V1.2_ProductChanges.js";
 import { V0_2_CheckChange } from "../../balances/check/changes/V0.2_CheckChange.js";
@@ -31,6 +35,8 @@ export const V2_CHANGES: VersionChangeConstructor[] = [
 	V1_2_EntityChange, // Transforms Entity TO V0 format from V1 format
 	V1_2_EntityQueryChange, // Transforms Entity Query TO V2.0 format (adds expand options)
 	V1_2_ProductChanges, // Transforms Product TO V1.2 format from V2 Plan format
+	V1_2_InvoiceChange, // Transforms Invoice TO V1.2 format from V2 format (plan_ids → product_ids)
+	V1_2_TrialsUsedChange, // Transforms TrialsUsed TO V1.2 format from V2 format (plan_id → product_id)
 	V1_2_CheckChange, // Transforms Check TO V1.2 format from V0.2 format
 	V1_2_CheckQueryChange, // Transforms Check Query TO V2.0 format (adds expand options)
 	V1_2_TrackChange, // Transforms Track TO V1.2 format from V0.2 format

@@ -1,11 +1,13 @@
 import {
 	type ApiCustomer,
 	ApiCustomerSchema,
+	CusExpand,
 	type CustomerLegacyData,
 	type FullCustomer,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
+import { invoicesToResponse } from "../../../invoices/invoiceUtils.js";
 import { getApiBalances } from "./getApiBalance/getApiBalances.js";
 import { getApiSubscriptions } from "./getApiSubscription/getApiSubscriptions.js";
 
@@ -52,6 +54,14 @@ export const getApiCustomerBase = async ({
 
 		subscriptions: apiSubscriptions,
 		balances: apiBalances,
+
+		invoices:
+			fullCus.invoices && ctx.expand.includes(CusExpand.Invoices)
+				? invoicesToResponse({
+						invoices: fullCus.invoices,
+						logger: ctx.logger,
+					})
+				: undefined,
 	});
 
 	return {

@@ -3,7 +3,7 @@ import type { Context, Next } from "hono";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 
-const tracer = trace.getTracer("hono");
+const tracer = trace.getTracer("express");
 
 /**
  * Tracing middleware for OpenTelemetry spans

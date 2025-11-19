@@ -1,5 +1,6 @@
 import {
 	ErrCode,
+	RecaseError,
 	RewardCategory,
 	type RewardRedemption,
 	RewardTriggerEvent,
@@ -13,7 +14,6 @@ import { RewardService } from "@/internal/rewards/RewardService.js";
 import { triggerFreeProduct } from "@/internal/rewards/referralUtils/triggerFreeProduct.js";
 import { triggerRedemption } from "@/internal/rewards/referralUtils.js";
 import { getRewardCat } from "@/internal/rewards/rewardUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { generateId, notNullish } from "@/utils/genUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
@@ -200,20 +200,3 @@ export default async (req: any, res: any) =>
 			});
 		},
 	});
-
-// res.status(200).json({
-//   id: redemption.id,
-//   customer_id: customer.id,
-//   reward_id: reward_program.reward.id,
-//   referrer: {
-//     id: codeCustomer.id,
-//     name: codeCustomer.name,
-//     email: codeCustomer.email,
-//     created_at: codeCustomer.created_at,
-//     code: applications.referrer.cause,
-//   },
-//   redeemer: {
-//     code: applications.redeemer.cause,
-//     ...applications.redeemer.meta,
-//   },
-// });

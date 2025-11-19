@@ -1,4 +1,8 @@
-import type { Organization } from "@autumn/shared";
+import {
+	CusExpand,
+	type FullCustomer,
+	type Organization,
+} from "@autumn/shared";
 import chalk from "chalk";
 import { Stripe } from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
@@ -7,6 +11,7 @@ import { unsetOrgStripeKeys } from "@/internal/orgs/orgUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import type { AutumnContext } from "../../honoUtils/HonoEnv.js";
 import { deleteCachedApiCustomer } from "../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
+import { setCachedApiInvoices } from "../../internal/customers/cusUtils/apiCusCacheUtils/setCachedApiInvoices.js";
 import { setCachedApiSubs } from "../../internal/customers/cusUtils/apiCusCacheUtils/setCachedApiSubs.js";
 import type { Logger } from "../logtail/logtailUtils.js";
 import { handleCheckoutSessionCompleted } from "./webhookHandlers/handleCheckoutCompleted.js";
@@ -42,6 +47,13 @@ const coreEvents = [
 	"checkout.session.completed",
 ];
 
+const updateInvoiceEvents = [
+	"invoice.paid",
+	"invoice.updated",
+	"invoice.created",
+	"invoice.finalized",
+];
+
 const handleStripeWebhookRefresh = async ({
 	eventType,
 	data,
@@ -55,7 +67,8 @@ const handleStripeWebhookRefresh = async ({
 
 	if (
 		coreEvents.includes(eventType) ||
-		updateProductEvents.includes(eventType)
+		updateProductEvents.includes(eventType) ||
+		updateInvoiceEvents.includes(eventType)
 	) {
 		const stripeCusId = data.object.customer;
 		if (!stripeCusId) {
@@ -83,25 +96,40 @@ const handleStripeWebhookRefresh = async ({
 			return;
 		}
 
-		console.log(
-			`Attempting to refresh cache for customer: ${cus.id}, env: ${env}`,
-		);
+		// console.log(
+		// 	`Attempting to refresh cache for customer: ${cus.id}, env: ${env}`,
+		// );
 
-		if (updateProductEvents.includes(eventType)) {
-			const fullCus = await CusService.getFull({
+		let fullCus: FullCustomer | undefined;
+		if (
+			updateProductEvents.includes(eventType) ||
+			updateInvoiceEvents.includes(eventType)
+		) {
+			fullCus = await CusService.getFull({
 				db,
 				idOrInternalId: cus.id!,
 				orgId: org.id,
 				env,
 				withEntities: true,
 				withSubs: true,
+				expand: [CusExpand.Invoices],
 			});
 
-			await setCachedApiSubs({
-				ctx,
-				fullCus,
-				customerId: cus.id!,
-			});
+			if (updateProductEvents.includes(eventType)) {
+				await setCachedApiSubs({
+					ctx,
+					fullCus,
+					customerId: cus.id!,
+				});
+			}
+
+			if (updateInvoiceEvents.includes(eventType)) {
+				await setCachedApiInvoices({
+					ctx,
+					fullCus,
+					customerId: cus.id!,
+				});
+			}
 		} else {
 			logger.info(`Attempting delete cached api customer! ${eventType}`);
 			await deleteCachedApiCustomer({

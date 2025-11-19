@@ -39,7 +39,7 @@ export * from "./features/prevVersions/featureV0OpModels.js";
 
 // Others
 export * from "./others/apiDiscount.js";
-export * from "./others/apiInvoice.js";
+export * from "./others/apiInvoice/apiInvoiceV1.js";
 // Product
 export * from "./products/apiFreeTrial.js";
 export * from "./products/apiPlan.js";
@@ -81,6 +81,8 @@ export * from "./features/apiFeatureV1.js";
 export * from "./features/featureV1OpModels.js";
 export * from "./features/prevVersions/apiFeatureV0.js";
 export * from "./features/prevVersions/featureV0OpModels.js";
+export * from "./others/apiInvoice/apiInvoiceItem.js";
+export * from "./others/apiInvoice/apiInvoiceV1.js";
 // Models
 export * from "./platform/platformModels.js";
 export * from "./products/planLegacyData.js";

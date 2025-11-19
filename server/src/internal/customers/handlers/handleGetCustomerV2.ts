@@ -32,11 +32,14 @@ export const handleGetCustomerV2 = createRoute({
 			expand.push(CusExpand.Invoices);
 		}
 
+		const start = Date.now();
 		const customer = await getApiCustomer({
 			ctx,
 			customerId,
 			withAutumnId: with_autumn_id,
 		});
+		const duration = Date.now() - start;
+		console.debug(`[get-customer] getApiCustomer duration: ${duration}ms`);
 
 		return c.json(customer);
 	},
