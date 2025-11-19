@@ -91,6 +91,7 @@ export const getCheckData = async ({
 
 	let apiEntity: ApiCustomer | ApiEntityV1 | undefined;
 	let legacyData: CustomerLegacyData | undefined;
+	const start = Date.now();
 	const { apiCustomer, legacyData: legacyDataResult } =
 		await getOrCreateApiCustomer({
 			ctx,
@@ -99,6 +100,9 @@ export const getCheckData = async ({
 			entityId: entity_id,
 			entityData: entity_data,
 		});
+	ctx.logger.debug(
+		`[check] getOrCreateApiCustomer took ${Date.now() - start}ms`,
+	);
 
 	apiEntity = apiCustomer;
 	legacyData = legacyDataResult;

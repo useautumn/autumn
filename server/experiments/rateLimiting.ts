@@ -1,11 +1,12 @@
+import { ApiVersion } from "@autumn/shared";
 import AutumnError, { AutumnInt } from "../src/external/autumn/autumnCli";
 
 export const main = async () => {
 	console.log("🚀 Starting rate limit test...\n");
 
 	// Initialize client
-	const autumn = new AutumnInt();
-	const numRequests = 200;
+	const autumn = new AutumnInt({version: ApiVersion.V1_2});
+	const numRequests = 100;
 
   const customerId1 = "test1";
   const customerId2 = "test2";
@@ -18,16 +19,12 @@ export const main = async () => {
 	const cusId2Promises = [];
 	for (let i = 0; i < numRequests; i++) {
 		cusId1Promises.push(
-			autumn.customers.create({
-				id: customerId1,
-			}),
+			autumn.customers.get(customerId1),
 		);
 		cusId2Promises.push(
-			autumn.customers.create({
-				id: customerId2,
-			}),
+			autumn.customers.get(customerId2),
 		);
-	}
+	} 
 
 	// Execute all requests concurrently for both customers
 	const startTime = Date.now();
@@ -56,6 +53,8 @@ export const main = async () => {
 		).length;
 		return { succeeded, rateLimited, otherErrors };
 	};
+
+
 
 	const cus1Stats = analyzeResults(cusId1Results);
 	const cus2Stats = analyzeResults(cusId2Results);

@@ -3,6 +3,7 @@ import { analyticsMiddleware } from "../honoMiddlewares/analyticsMiddleware.js";
 import { apiVersionMiddleware } from "../honoMiddlewares/apiVersionMiddleware.js";
 import { orgConfigMiddleware } from "../honoMiddlewares/orgConfigMiddleware.js";
 import { queryMiddleware } from "../honoMiddlewares/queryMiddleware.js";
+import { rateLimitMiddleware } from "../honoMiddlewares/rateLimitMiddleware.js";
 import { refreshCacheMiddleware } from "../honoMiddlewares/refreshCacheMiddleware.js";
 import { secretKeyMiddleware } from "../honoMiddlewares/secretKeyMiddleware.js";
 import type { HonoEnv } from "../honoUtils/HonoEnv.js";
@@ -25,7 +26,7 @@ apiRouter.use("*", secretKeyMiddleware);
 apiRouter.use("*", orgConfigMiddleware);
 apiRouter.use("*", apiVersionMiddleware);
 apiRouter.use("*", analyticsMiddleware);
-// apiRouter.use("*", rateLimitMiddleware);
+apiRouter.use("*", rateLimitMiddleware);
 apiRouter.use("*", refreshCacheMiddleware);
 apiRouter.use("*", queryMiddleware());
 

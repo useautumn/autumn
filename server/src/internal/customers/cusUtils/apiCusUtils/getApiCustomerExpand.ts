@@ -61,9 +61,7 @@ export const getApiCustomerExpand = async ({
 	};
 
 	const getInvoices = async () => {
-		if (!expand.includes(CusExpand.Invoices)) {
-			return undefined;
-		}
+		if (!expand.includes(CusExpand.Invoices)) return undefined;
 
 		const invoices = await InvoiceService.list({
 			db,

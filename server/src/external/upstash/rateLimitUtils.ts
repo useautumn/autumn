@@ -5,15 +5,11 @@ import {
 } from "../../honoMiddlewares/analyticsMiddleware";
 import { matchRoute } from "../../honoMiddlewares/middlewareUtils";
 import type { HonoEnv } from "../../honoUtils/HonoEnv";
-import {
-	checkRateLimiter,
-	generalRateLimiter,
-	RateLimitType,
-	trackRateLimiter,
-} from "./initUpstash";
+
 import {
 	CHECK_RATE_LIMIT,
 	GENERAL_RATE_LIMIT,
+	RateLimitType,
 	TRACK_RATE_LIMIT,
 } from "./rateLimitConstants";
 
@@ -76,21 +72,6 @@ export const getRateLimitType = (c: Context<HonoEnv>) => {
 	return RateLimitType.General;
 };
 
-export const getRateLimiter = ({
-	rateLimitType,
-}: {
-	rateLimitType: RateLimitType;
-}) => {
-	switch (rateLimitType) {
-		case RateLimitType.Track:
-			return trackRateLimiter;
-		case RateLimitType.Check:
-			return checkRateLimiter;
-		case RateLimitType.General:
-			return generalRateLimiter;
-	}
-};
-
 export const getRateLimitKey = async ({
 	c,
 	rateLimitType,
@@ -114,11 +95,11 @@ export const getRateLimitKey = async ({
 			const urlCustomerId = parseCustomerIdFromUrl({ url: c.req.path });
 
 			const customerId = res?.customerId || urlCustomerId;
-			const sendEvent = res?.sendEvent;
+			// const sendEvent = res?.sendEvent;
 
-			if (customerId && sendEvent) {
-				return `track:${orgId}:${env}:${customerId}`;
-			}
+			// if (customerId && sendEvent) {
+			// 	return `track:${orgId}:${env}:${customerId}`;
+			// }
 
 			return `check:${orgId}:${env}:${customerId}`;
 		}
