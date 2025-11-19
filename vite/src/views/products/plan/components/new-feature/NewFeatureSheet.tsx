@@ -1,4 +1,9 @@
-import { CreateFeatureSchema, productV2ToFeatureItems } from "@autumn/shared";
+import {
+	CreateFeatureSchema,
+	FeatureUsageType,
+	featureV1ToDbFeature,
+	productV2ToFeatureItems,
+} from "@autumn/shared";
 import type { AxiosError } from "axios";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -50,7 +55,7 @@ export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 						name: feature.name,
 						id: feature.id,
 						type: feature.type,
-						config: feature.config,
+						consumable: feature.config?.usage_type === FeatureUsageType.Single,
 						event_names: feature.event_names,
 					},
 				);
@@ -61,7 +66,7 @@ export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 
 				// Create a new item with the created feature
 				const newItem = getDefaultItem({
-					feature: newFeature,
+					feature: featureV1ToDbFeature({ apiFeature: newFeature }),
 				});
 
 				// Add the new item to the product

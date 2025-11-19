@@ -51,7 +51,7 @@ export const SaveChangesBar = ({
 		if (
 			product.planType === "paid" &&
 			product.basePriceType !== "usage" &&
-			!basePrice?.amount
+			!basePrice?.price
 		) {
 			toast.error("Please add a plan price greater than 0, or remove it.");
 			setSaving(false);
@@ -117,7 +117,7 @@ export const SaveChangesBar = ({
 	return (
 		<div className="w-full flex justify-center items-center h-20 mb-10 mt-10">
 			<div
-				className={`flex items-center gap-2 p-2 pl-3 rounded-xl border border-input bg-white ${
+				className={`flex items-center gap-2 p-2 pl-3 rounded-xl border border-input bg-outer-background ${
 					isOnboarding ? "shadow-lg" : ""
 				}`}
 			>

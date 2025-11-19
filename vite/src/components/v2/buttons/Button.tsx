@@ -22,24 +22,25 @@ const buttonVariants = cva(
 				primary: `btn-primary-shadow !text-primary-foreground bg-primary border border-transparent hover:bg-primary-btn-hover 
         active:bg-primary-btn-active active:border-primary-btn-border
 				focus-visible:bg-primary-btn-active focus-visible:border-primary-btn-border
+
+				btn-primary-dark
 				`,
 
-				secondary: `bg-input-background border border-[var(--color-input)] hover:border-primary hover:bg-hover-primary btn-secondary-shadow
-				focus-visible:bg-active-primary focus-visible:border-primary 
-				active:bg-active-primary active:border-primary
+				secondary: `bg-interactive-secondary border border-[var(--color-input)] hover:bg-interactive-secondary-hover btn-secondary-shadow
+				focus-visible:bg-active-primary focus-visible:border-primary active:border-primary
+			
 				`,
 
 				skeleton: `text-body border border-transparent
-				hover:bg-muted-hover
 				focus-visible:bg-muted-active focus-visible:border-primary
-				active:bg-muted-active active:border-primary`,
+				active:bg-interactive-secondary-hover active:border-primary`,
 
-				muted: `bg-muted hover:bg-muted-hover border border-transparent
+				muted: `bg-muted hover:bg-interactive-secondary-hover border border-transparent
 				focus-visible:bg-muted-active focus-visible:border-primary
-				active:bg-muted-active active:border-primary
+				active:bg-interactive-secondary-hover active:border-primary
 				`,
 
-				destructive: `bg-destructive !text-destructive-foreground border-[1.2px] border-transparent
+				destructive: `bg-destructive !text-primary-foreground border-[1.2px] border-transparent
 					hover:bg-destructive-hover btn-destructive-shadow
 					focus-visible:border-destructive-border
 					active:border-destructive-border

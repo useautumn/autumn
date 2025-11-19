@@ -25,10 +25,6 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 			product.items?.map((item) => item.feature_id).filter(Boolean) || [],
 		);
 
-		if (item && !checkItemIsValid(item)) {
-			return;
-		}
-
 		// Filter out features that are already on the plan
 		const availableFeatures = features.filter(
 			(feature) => !addedFeatureIds.has(feature.id),
@@ -47,13 +43,16 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 	return (
 		<Button
 			variant="dotted"
-			className="group input-base input-shadow-tiny input-state-open-tiny w-full !h-8 !bg-[#FDFDFC] !border-dashed !text-primary [&_svg]:text-primary hover:!border-solid hover:!border-primary [&:not(:hover)]:!border-neutral-300 active:!bg-[#FDFDFC] active:!border-dashed focus-visible:!bg-[#FDFDFC] focus-visible:!border-dashed [data-state='open']:!bg-[#FDFDFC]"
+			className="group input-base input-state-open-tiny w-full !h-8 !border-dashed !text-primary [&_svg]:text-primary hover:!border-solid active:!border-primary focus-visible:!bg-[#FDFDFC] focus-visible:!border-dashed [data-state='open']:!bg-[#FDFDFC] "
 			disabled={disabled}
-			onClick={handleAddFeatureClick}
+			onClick={() => {
+				if (!checkItemIsValid(item!)) return;
+				handleAddFeatureClick();
+			}}
 			aria-label="Add new feature"
 		>
 			<PlusIcon className="size-3 !text-primary" weight="bold" />
-			<span className="!text-primary">Add Feature</span>
+			<span className="!text-primary">Add Feature to Plan</span>
 		</Button>
 	);
 };

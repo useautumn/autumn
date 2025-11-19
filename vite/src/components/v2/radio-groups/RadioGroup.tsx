@@ -30,11 +30,11 @@ const RadioGroupItem = React.forwardRef<
 			className={cn(
 				"w-[13px] h-[13px] px-0.5 py-[3px] rounded-xl inline-flex flex-col justify-center items-center gap-2.5 overflow-hidden transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
 
-				"bg-zinc-100 shadow-[0px_2px_4px_0px_rgba(0,0,0,0.02)] border-[0.70px] border-neutral-400",
+				"bg-interactive-secondary shadow-[0px_2px_4px_0px_rgba(0,0,0,0.02)] border-[0.70px] border",
 				"data-[state=checked]:bg-violet-600 data-[state=checked]:shadow-none data-[state=checked]:border-none",
 
 				// Custom
-				"hover:bg-radio-group-hover-primary hover:border-primary hover:border-[1px]",
+				"hover:bg-interactive-secondary-hover hover:border-primary hover:border-[1px]",
 				className,
 			)}
 			{...props}

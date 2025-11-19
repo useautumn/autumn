@@ -10,8 +10,8 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/v2/buttons/Button";
+import { Input } from "@/components/v2/inputs/Input";
 import { navigateTo } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
@@ -55,8 +55,9 @@ export function AttachProductDropdown() {
 					<Search size={12} className="text-t3" />
 					<Input
 						type="search"
+						variant="headless"
 						placeholder="Search plans"
-						className="h-7 rounded-none shadow-none border-0 focus:ring-0 focus-visible:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:border-none focus-visible:shadow-none"
+						className="h-7 !pl-2"
 						value={searchQuery}
 						onChange={(e) => setSearchQuery(e.target.value)}
 						onClick={(e) => e.stopPropagation()}

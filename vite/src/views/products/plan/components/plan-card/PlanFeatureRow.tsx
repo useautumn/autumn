@@ -5,7 +5,6 @@ import { getProductItemDisplay, productV2ToFeatureItems } from "@autumn/shared";
 import { TrashIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { AdminHover } from "@/components/general/AdminHover";
-import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -20,7 +19,7 @@ import { useProductItemContext } from "@/views/products/product/product-item/Pro
 import { PlanFeatureIcon } from "./PlanFeatureIcon";
 
 // Custom dot component with bigger height but smaller width
-const CustomDotIcon = () => {
+export const CustomDotIcon = () => {
 	return <div className="w-[2px] h-[2px] mx-0.5 bg-current rounded-full" />;
 };
 
@@ -90,14 +89,13 @@ export const PlanFeatureRow = ({
 		if (isDisabled) return;
 		const currentItemId = getItemId({ item, itemIndex: index });
 
-		if (isSelected) {
-			// If already selected, deselect by going back to edit-plan
-			setSheet({ type: "edit-plan" });
-		} else {
-			// If not selected, select it
-			setItem(item);
-			setSheet({ type: "edit-feature", itemId: currentItemId });
-		}
+		// if (isSelected) {
+		// 	// If already selected, deselect by going back to edit-plan
+		// 	setSheet({ type: "edit-plan" });
+		// } else {
+		// If not selected, select it
+		setItem(item);
+		setSheet({ type: "edit-feature", itemId: currentItemId });
 	};
 
 	const handleDeleteRow = () => {
@@ -169,8 +167,8 @@ export const PlanFeatureRow = ({
 			{...(isDisabled && { "data-disabled": true })}
 			data-pressed={isPressed}
 			className={cn(
-				"flex items-center w-full group !h-9 group/row select-none outline-none",
-				"input-base input-shadow-tiny input-state-open-tiny",
+				"flex items-center w-full group !h-8 group/row select-none outline-none",
+				"input-base input-state-open-tiny",
 				isDisabled && "pointer-events-none cursor-default",
 			)}
 			onMouseDown={(e) => {
@@ -212,26 +210,33 @@ export const PlanFeatureRow = ({
 						{displayText}
 					</span>
 
-					<span className="text-body-secondary">
-						{" "}
-						{display.secondary_text}
-					</span>
+					<span className="text-body-secondary"> {display.secondary_text}</span>
 				</p>
 
-				<div className={cn(
-					"flex items-center gap-2 max-w-0 opacity-0 overflow-hidden group-hover:max-w-[200px] group-hover:opacity-100 transition-all duration-200 flex-shrink-0",
-					isSelected && "max-w-[200px] opacity-100"
-				)}>
-					<CopyButton
+				<div
+					className={cn(
+						"flex items-center max-w-0 opacity-0 overflow-hidden group-hover:max-w-[200px] group-hover:opacity-100 flex-shrink-0",
+						isSelected && "max-w-[200px] opacity-100",
+					)}
+				>
+					{/* <CopyButton
 						text={item.feature_id || ""}
 						disableActive={true}
 						size="sm"
-						variant="skeleton"
+						// variant="skeleton"
+						className="bg-transparent hover:text-primary max-w-24 text-t3"
 						tabIndex={-1}
 						side="bottom"
-					/>
+					/> */}
 					<IconButton
-						icon={<TrashIcon size={16} weight="regular" />}
+						icon={
+							<TrashIcon
+								size={16}
+								weight="regular"
+								className=" group-hover/btn:text-red-500"
+							/>
+						}
+						className="hover:text-red-500"
 						iconOrientation="center"
 						onClick={(e) => {
 							e.stopPropagation();

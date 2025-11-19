@@ -4,17 +4,35 @@ import {
 	type Organization,
 	productV2ToBasePrice,
 } from "@autumn/shared";
+import { Button } from "@/components/v2/buttons/Button";
 import { useOrg } from "@/hooks/common/useOrg";
-import { useProductStore } from "@/hooks/stores/useProductStore";
+import {
+	useCurrentItem,
+	useProductStore,
+} from "@/hooks/stores/useProductStore";
+import {
+	useIsEditingPlanPrice,
+	useSheetStore,
+} from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { notNullish } from "@/utils/genUtils";
+import { checkItemIsValid } from "@/utils/product/entitlementUtils";
 import { useOnboardingStore } from "@/views/onboarding3/store/useOnboardingStore";
 
 export const BasePriceDisplay = () => {
 	const product = useProductStore((s) => s.product);
+	const setSheet = useSheetStore((s) => s.setSheet);
 	const isOnboarding = useOnboardingStore((s) => s.isOnboarding);
 	const basePrice = productV2ToBasePrice({ product });
 	const { org } = useOrg();
+
+	const item = useCurrentItem();
+
+	const isEditingPlanPrice = useIsEditingPlanPrice();
+
+	const handleClick = () => {
+		setSheet({ type: "edit-plan-price", itemId: product.id });
+	};
 
 	const renderPriceContent = () => {
 		if (product.planType === "free") {
@@ -38,7 +56,7 @@ export const BasePriceDisplay = () => {
 				: "one-off";
 
 			return (
-				<span className="text-body-secondary">
+				<span className="text-body-secondary text-main-sec flex items-center gap-1">
 					<span className="text-main-sec">{formattedAmount}</span>{" "}
 					{secondaryText}
 				</span>
@@ -46,21 +64,31 @@ export const BasePriceDisplay = () => {
 		}
 
 		if (product.basePriceType === "usage") {
-			return (
-				<span className="text-t4 text-body-secondary inline-block mt-[4.5px]">
-					Usage-based
-				</span>
-			);
+			return <span className=" !text-t3">Variable</span>;
 		}
 
 		return (
-			<span className="text-t4 text-body-secondary inline-block mt-[4.5px]">
-				No base price
+			<span className="text-t4 text-body-secondary inline-block">
+				Enter price
 			</span>
 		);
 	};
 
 	return (
-		<div className={cn(isOnboarding && "mt-1")}>{renderPriceContent()}</div>
+		<Button
+			variant="secondary"
+			size="default"
+			className={cn(
+				isOnboarding && "mt-1",
+				"items-center !h-8 gap-1",
+				isEditingPlanPrice && "btn-secondary-active",
+			)}
+			onClick={() => {
+				if (!checkItemIsValid(item!)) return;
+				handleClick();
+			}}
+		>
+			{renderPriceContent()}
+		</Button>
 	);
 };

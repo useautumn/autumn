@@ -32,7 +32,7 @@ const PlanFeatureRowPreview = ({ item }: { item: ProductItem }) => {
 	const display = item.display || { primary_text: "", secondary_text: "" };
 
 	return (
-		<div className="flex w-full h-9 items-center px-2 rounded-lg border border-border bg-card">
+		<div className="flex w-full h-9 items-center px-2 rounded-lg border bg-card">
 			{/* Left side - Icons and text */}
 			<div className="flex flex-row items-center flex-1 gap-3 min-w-0">
 				<div className="flex flex-row items-center gap-1 flex-shrink-0">
@@ -73,7 +73,7 @@ export const PlanCardPreview = ({
 	return (
 		<Card
 			className={cn(
-				"min-w-[280px] max-w-md bg-card flex flex-col border-none shadow-[inset_0_0_0_0.5px_var(--t10)] !gap-0",
+				"min-w-[280px] max-w-md bg-card flex flex-col border !gap-0",
 				recommended && "ring-2 ring-primary",
 			)}
 		>
@@ -81,7 +81,6 @@ export const PlanCardPreview = ({
 				<div className="flex flex-col gap-2">
 					{/* Title */}
 					<h3 className="text-sub">{product.name}</h3>
-
 					{/* Price */}
 					{product.items.filter((x) => isFeaturePriceItem(x as ProductItem))
 						.length > 0 &&
@@ -97,7 +96,6 @@ export const PlanCardPreview = ({
 					) : (
 						<span className="text-main">Free</span>
 					)}
-
 					{/* Description */}
 					{product.description && (
 						<p className="text-body-secondary line-clamp-2">
@@ -121,7 +119,6 @@ export const PlanCardPreview = ({
 						))}
 					</div>
 				)}
-
 				{/* Action button */}
 				{/* <Tooltip> */}
 				{/* <TooltipTrigger asChild> */}

@@ -1,8 +1,10 @@
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
+import type { Feature } from "@autumn/shared";
+import { FeatureType, FeatureUsageType } from "@autumn/shared";
+import { CaretDownIcon } from "@phosphor-icons/react";
+import { useState } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
+import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Command,
 	CommandEmpty,
@@ -12,19 +14,18 @@ import {
 	CommandList,
 	CommandSeparator,
 } from "@/components/ui/command";
-import { Button } from "@/components/ui/button";
-import { ChevronDown, Check, X, Loader2 } from "lucide-react";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
+import { Button } from "@/components/v2/buttons/Button";
+import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useAnalyticsContext } from "../AnalyticsContext";
-import { Feature, FeatureType, FeatureUsageType } from "@autumn/shared";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import { useSearchParams, useNavigate, useLocation } from "react-router";
 import {
 	eventNameBelongsToFeature,
 	getAllEventNames,
 } from "../utils/getAllEventNames";
-import { useEffect, useState } from "react";
-import { Checkbox } from "@/components/ui/checkbox";
 
 const MAX_NUM_SELECTED = 10;
 
@@ -35,8 +36,7 @@ export const SelectFeatureDropdown = ({
 		trigger?: string;
 	};
 }) => {
-	const { features, hasCleared, setHasCleared, topEventsLoading, topEvents } =
-		useAnalyticsContext();
+	const { features, setHasCleared } = useAnalyticsContext();
 	const [open, setOpen] = useState(false);
 	const [searchValue, setSearchValue] = useState("");
 
@@ -73,13 +73,6 @@ export const SelectFeatureDropdown = ({
 	};
 
 	const numSelected = currentFeatureIds.length + currentEventNames.length;
-	const isDefault =
-		currentFeatureIds?.length === 0 && currentEventNames?.length === 0;
-
-	const allTopEventNames = [
-		...(topEvents?.featureIds || []),
-		...(topEvents?.eventNames || []),
-	];
 
 	// Create combined options for search
 	const featureOptions = features
@@ -168,18 +161,15 @@ export const SelectFeatureDropdown = ({
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild>
-				<Button
-					variant="outline"
-					role="combobox"
-					aria-expanded={open}
-					className={cn(
-						"h-8 px-3 text-xs justify-between",
-						classNames?.trigger,
-					)}
+				<IconButton
+					variant="secondary"
+					size="default"
+					icon={<CaretDownIcon size={12} weight="bold" />}
+					iconOrientation="right"
+					// className={cn(classNames?.trigger)}
 				>
 					{numSelected > 0 ? `${numSelected} Selected` : "Default Features"}
-					<ChevronDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-				</Button>
+				</IconButton>
 			</PopoverTrigger>
 			<PopoverContent className="w-[240px] p-0" align="end">
 				<Command>
@@ -240,18 +230,13 @@ export const SelectFeatureDropdown = ({
 
 					<div className="border-t p-2">
 						<div className="flex items-center justify-between gap-2">
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={handleClear}
-								className="h-7 px-3 text-xs"
-							>
+							<Button variant="secondary" size="sm" onClick={handleClear}>
 								Clear
 							</Button>
 							<Button
+								variant="primary"
 								size="sm"
 								onClick={() => setOpen(false)}
-								className="h-7 px-3 text-xs"
 							>
 								Close
 							</Button>

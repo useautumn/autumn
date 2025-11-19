@@ -21,7 +21,7 @@
 	&:hover:not([data-disabled]):not(:focus-visible):not([data-state="open"]) {
 		box-shadow: var(--input-shadow-hover);
 		border-color: var(--primary);
-		background-color: var(--color-hover-primary);
+		background-color: var(--color-interactive-secondary-hover);
 	}
 
 	&:focus-visible {
@@ -33,15 +33,15 @@
 	&[data-state="open"] {
 		box-shadow: var(--input-shadow-focus);
 		border-color: var(--primary);
-		background-color: var(--color-active-primary);
+		background-color: var(--color-interactive-secondary-hover);
 	}
 }
 
 .input-state-open-tiny {
 	&:hover:not([data-disabled]):not(:focus-visible):not([data-state="open"]) {
 		box-shadow: var(--input-shadow-hover);
-		border-color: var(--primary);
-		background-color: var(--color-hover-primary);
+		/* border-color: var(--primary); */
+		background-color: var(--color-interactive-secondary-hover);
 	}
 
 	&:focus-visible {
@@ -52,7 +52,7 @@
 	/* Open state */
 	&[data-state="open"] {
 		border-color: var(--primary);
-		background-color: var(--color-active-primary);
+		background-color: var(--color-interactive-secondary-hover);
 		box-shadow: var(--input-shadow-focus-tiny);
 	}
 }
