@@ -158,8 +158,6 @@ const processMessage = async ({
 				stack: error.stack,
 			},
 		});
-		// Don't delete the message on error - it will become visible again for retry
-		throw error;
 	}
 };
 
