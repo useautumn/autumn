@@ -1,3 +1,4 @@
+import "../sentry.ts";
 import type { CustomerEntitlement, ResetCusEnt } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import { CronJob } from "cron";
