@@ -126,7 +126,7 @@ export const CopyProductDialog = ({
 								<SelectValue placeholder="Select environment" />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem value={AppEnv.Live}>Live</SelectItem>
+								<SelectItem value={AppEnv.Live}>Production</SelectItem>
 								<SelectItem value={AppEnv.Sandbox}>Sandbox</SelectItem>
 							</SelectContent>
 						</Select>

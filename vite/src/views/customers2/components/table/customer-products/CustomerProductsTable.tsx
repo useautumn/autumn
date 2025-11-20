@@ -189,6 +189,11 @@ export function CustomerProductsTable() {
 	const hasProducts = displayedProducts.length > 0;
 	const hasEntityProducts = entityProducts.length > 0 && !entityId;
 
+	const emptyStateText =
+		!entityId && entityProducts.length > 0
+			? "No customer-level plans found"
+			: "Enable a plan to start a subscription";
+
 	return (
 		<div className="flex flex-col gap-4">
 			{selectedProduct && (
@@ -205,7 +210,7 @@ export function CustomerProductsTable() {
 					enableSorting,
 					isLoading,
 					onRowClick: handleRowClick,
-					emptyStateText: "Enable a plan to start a subscription",
+					emptyStateText,
 				}}
 			>
 				<Table.Container>

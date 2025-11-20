@@ -1,6 +1,5 @@
 import type { ApiKey } from "@autumn/shared";
 import type { ColumnDef, Row } from "@tanstack/react-table";
-import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { APIKeyToolbar } from "./APIKeyToolbar";
 
 export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
@@ -21,11 +20,7 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 			return (
 				<div className="font-mono justify-start flex w-full group overflow-hidden">
 					{apiKey.prefix ? (
-						<CopyButton
-							text={apiKey.prefix}
-							size="mini"
-							className="w-fit bg-transparent justify-end px-0! border-none shadow-none hover:text-primary [&_svg]:opacity-0 group-hover:[&_svg]:opacity-100 max-w-full"
-						/>
+						<span className="text-tiny-id"> {apiKey.prefix}</span>
 					) : (
 						<span className="px-1 text-t3">—</span>
 					)}
@@ -50,4 +45,3 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 		},
 	},
 ];
-

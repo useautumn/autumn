@@ -137,7 +137,7 @@ export function EventsBarChart({
 			},
 		},
 		legend: {
-			enabled: true,
+			enabled: false,
 			item: {
 				label: {
 					color: "#52525b",

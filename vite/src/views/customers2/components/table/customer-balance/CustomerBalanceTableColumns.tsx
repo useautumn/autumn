@@ -24,7 +24,7 @@ export const CustomerBalanceTableColumns = ({
 }) => [
 	{
 		header: "Feature",
-		size: 200,
+		size: 160,
 		accessorKey: "feature",
 		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => {
 			const ent = row.original;
@@ -35,7 +35,7 @@ export const CustomerBalanceTableColumns = ({
 
 			return (
 				<div className="flex items-center gap-2">
-					<span className="font-medium text-t1">
+					<span className="font-medium text-t1 truncate">
 						{ent.entitlement.feature.name}
 					</span>
 					{isAggregated && (
@@ -158,7 +158,7 @@ export const CustomerBalanceTableColumns = ({
 	},
 	{
 		header: "Bar",
-		size: 150,
+		size: 220,
 		accessorKey: "bar",
 		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => {
 			const ent = row.original;
@@ -192,18 +192,23 @@ export const CustomerBalanceTableColumns = ({
 			);
 
 			return (
-				<div
-					className={cn(
-						"w-full flex justify-center pr-2 h-full items-center",
-						(ent.entitlement.allowance ?? 0) > 0 ? "opacity-100" : "opacity-0",
-					)}
-				>
-					<CustomerFeatureUsageBar
-						allowance={allowance ?? 0}
-						balance={balance ?? 0}
-						quantity={ent.customer_product.quantity ?? 1}
-						horizontal={true}
-					/>
+				<div className="flex gap-3 items-center">
+					{/* <span className="text-t3 text-tiny flex justify-center !px-1 bg-muted w-fit rounded-md">
+						Resets {formatUnixToDateTimeString(ent.next_reset_at)}
+					</span> */}
+					<div
+						className={cn(
+							"w-full max-w-50 flex justify-center pr-2 h-full items-center",
+							(allowance ?? 0) > 0 ? "opacity-100" : "opacity-0",
+						)}
+					>
+						<CustomerFeatureUsageBar
+							allowance={allowance ?? 0}
+							balance={balance ?? 0}
+							quantity={ent.customer_product.quantity ?? 1}
+							horizontal={true}
+						/>
+					</div>
 				</div>
 			);
 		},

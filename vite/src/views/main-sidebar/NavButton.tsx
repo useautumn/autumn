@@ -89,13 +89,11 @@ export const NavButton = ({
 
 	const outerDivClass = cn(
 		`!cursor-default font-medium
-           text-sm flex items-center text-t2 px-2 h-7 rounded-lg w-full hover:text-t1`,
-		(!isGroup || !expanded) &&
-			"hover:bg-interactive-secondary-hover hover:text-t1 text-t3",
-		isActive &&
-			"bg-interactive-secondary border !text-t1 hover:bg-interactive-secondary-hover",
+           text-sm flex items-center text-t2 px-2 h-7 rounded-lg w-full hover:text-t1 border border-transparent`,
+		(!isGroup || !expanded) && " hover:text-t1 text-t2",
+		isActive && "border border-border !text-t1 bg-muted",
 		isSubNav &&
-			"pl-4 font-normal rounded-none rounded-tr-md rounded-br-md border-l-0",
+			"pl-4 font-normal rounded-none rounded-tr-md rounded-br-md border-l-0 text-t3",
 		className,
 	);
 

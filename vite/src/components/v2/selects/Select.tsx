@@ -77,7 +77,7 @@ function SelectTrigger({
 			data-size={size}
 			className={cn(
 				// Essential functionality only - no layout-shifting selectors
-				"[&_svg:not([class*='text-'])]:text-muted-foreground flex items-center justify-between gap-2 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+				"[&_svg:not([class*='text-'])]:text-muted-foreground rounded-lg flex items-center justify-between gap-2 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 
 				// Use only custom styles for visual appearance
 				`h-input input-base input-shadow-default input-state-open`,
@@ -104,7 +104,8 @@ function SelectContent({
 			<SelectPrimitive.Content
 				data-slot="select-content"
 				className={cn(
-					"bg-popover text-popover-foreground relative z-50 max-h-(--radix-select-content-available-height) min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border shadow-md",
+					// Change z-50 to z-[101] or higher to beat the sheet's z-100
+					"bg-popover text-popover-foreground relative z-[101] max-h-(--radix-select-content-available-height) min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border shadow-md",
 
 					position === "popper" &&
 						"data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
