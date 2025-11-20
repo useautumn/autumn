@@ -10,7 +10,6 @@ import {
 	filterPlanAndFeatureExpand,
 } from "@autumn/shared";
 import { CACHE_CUSTOMER_VERSION } from "@lua/cacheConfig.js";
-import { GET_CUSTOMER_SCRIPT } from "@lua/luaScripts.js";
 import { redis } from "../../../../external/redis/initRedis.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { tryRedisRead } from "../../../../utils/cacheUtils/cacheUtils.js";
@@ -56,9 +55,7 @@ export const getCachedApiCustomer = async ({
 		// Try to get from cache using Lua script (unless skipCache is true)
 		if (!skipCache) {
 			const cachedResult = await tryRedisRead(() =>
-				redis.eval(
-					GET_CUSTOMER_SCRIPT,
-					0, // No KEYS, all params in ARGV
+				redis.getCustomer(
 					org.id,
 					env,
 					customerId,
