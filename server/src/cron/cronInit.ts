@@ -25,11 +25,13 @@ export const cronTask = async () => {
 		for (let i = 0; i < cusEnts.length; i += batchSize) {
 			const batch = cusEnts.slice(i, i + batchSize);
 			const batchResets = [];
+			const updatedCusEnts: ResetCusEnt[] = [];
 			for (const cusEnt of batch) {
 				batchResets.push(
 					resetCustomerEntitlement({
 						db,
 						cusEnt: cusEnt,
+						updatedCusEnts,
 					}),
 				);
 			}
@@ -43,7 +45,7 @@ export const cronTask = async () => {
 			});
 			console.log(`Upserted ${toUpsert.length} short entitlements`);
 
-			await clearCusEntsFromCache({ cusEnts: batch });
+			await clearCusEntsFromCache({ cusEnts: updatedCusEnts });
 		}
 
 		console.log(
