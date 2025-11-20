@@ -5,10 +5,6 @@ import {
 	filterCusProductsByEntity,
 	filterOutEntitiesFromCusProducts,
 } from "@autumn/shared";
-import {
-	SET_ENTITY_PRODUCTS_SCRIPT,
-	SET_SUBSCRIPTIONS_SCRIPT,
-} from "@lua/luaScripts.js";
 import { redis } from "../../../../external/redis/initRedis.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "../../../../utils/cacheUtils/cacheUtils.js";
@@ -50,9 +46,7 @@ export const setCachedApiSubs = async ({
 	// Then write to Redis
 	await tryRedisWrite(async () => {
 		// Update customer subscriptions
-		await redis.eval(
-			SET_SUBSCRIPTIONS_SCRIPT,
-			0, // No KEYS, all params in ARGV
+		await redis.setSubscriptions(
 			JSON.stringify(masterApiSubs),
 			org.id,
 			env,
@@ -80,9 +74,7 @@ export const setCachedApiSubs = async ({
 				},
 			});
 
-			await redis.eval(
-				SET_ENTITY_PRODUCTS_SCRIPT,
-				0, // No KEYS, all params in ARGV
+			await redis.setEntityProducts(
 				JSON.stringify(entityProducts),
 				org.id,
 				env,
