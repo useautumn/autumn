@@ -5,10 +5,7 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
-import {
-	constructArrearItem,
-	constructFeatureItem,
-} from "@/utils/scriptUtils/constructItem.js";
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { attachFailedPaymentMethod } from "../../src/external/stripe/stripeCusUtils.js";
 import { CusService } from "../../src/internal/customers/CusService.js";
@@ -22,15 +19,53 @@ const pro = constructProduct({
 	type: "pro",
 
 	items: [
-		constructFeatureItem({
-			featureId: TestFeature.Users,
-			includedUsage: 5,
-		}),
-		constructFeatureItem({
-			featureId: TestFeature.Words,
-			includedUsage: 300,
+		// constructFeatureItem({
+		// 	featureId: TestFeature.Users,
+		// 	includedUsage: 5,
+		// }),
+		// constructFeatureItem({
+		// 	featureId: TestFeature.Words,
+		// 	includedUsage: 300,
+		// }),
+
+		constructArrearItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 0,
+			price: 0.5,
 		}),
 
+		// constructPrepaidItem({
+		// 	featureId: TestFeature.Messages,
+		// 	includedUsage: 100,
+		// 	price: 10,
+		// 	billingUnits: 100,
+		// }),
+	],
+});
+
+const premium = constructProduct({
+	type: "premium",
+
+	items: [
+		constructArrearItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 0,
+			price: 0.5,
+		}),
+		// constructFeatureItem({
+		// 	featureId: TestFeature.Users,
+		// 	includedUsage: 5,
+		// }),
+		// constructFeatureItem({
+		// 	featureId: TestFeature.Words,
+		// 	includedUsage: 300,
+		// }),
+		// constructPrepaidItem({
+		// 	featureId: TestFeature.Messages,
+		// 	includedUsage: 100,
+		// 	price: 10,
+		// 	billingUnits: 100,
+		// }),
 		// constructFeatureItem({
 		// 	featureId: TestFeature.Words,
 		// 	includedUsage: 100,
@@ -55,7 +90,7 @@ describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [pro],
+			products: [pro, premium],
 			prefix: customerId,
 		});
 
@@ -66,6 +101,13 @@ describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 			product_id: pro.id,
 		});
 
+		await autumn.track({
+			customer_id: customerId,
+			value: 100,
+			feature_id: TestFeature.Messages,
+		});
+
+		return;
 		const cus = await CusService.get({
 			db: ctx.db,
 			idOrInternalId: customerId,
