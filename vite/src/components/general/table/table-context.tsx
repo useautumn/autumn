@@ -1,5 +1,5 @@
 import type { Table as TanstackTable } from "@tanstack/react-table";
-import { createContext, useContext } from "react";
+import { createContext, type ReactNode, useContext } from "react";
 
 export interface TableProps<T> {
 	table: TanstackTable<T>;
@@ -9,6 +9,7 @@ export interface TableProps<T> {
 	enableSorting?: boolean;
 	onRowClick?: (row: T) => void;
 	rowClassName?: string;
+	emptyStateChildren?: ReactNode;
 	emptyStateText?: string;
 }
 

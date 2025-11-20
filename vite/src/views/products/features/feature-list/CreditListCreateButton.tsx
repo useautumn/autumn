@@ -28,7 +28,7 @@ export function CreditListCreateButton() {
 	return (
 		<>
 			<CreateCreditSystemSheet open={open} onOpenChange={setOpen} />
-			<Button variant="primary" size="default" onClick={handleClick}>
+			<Button variant="secondary" size="default" onClick={handleClick}>
 				Create Credit System
 			</Button>
 		</>
