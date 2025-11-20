@@ -1,3 +1,4 @@
+import "../sentry.ts";
 import type { CustomerEntitlement, ResetCusEnt } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import { CronJob } from "cron";
@@ -5,17 +6,15 @@ import { format } from "date-fns";
 import { initDrizzle } from "../db/initDrizzle.js";
 import { CusEntService } from "../internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { notNullish } from "../utils/genUtils.js";
-import { resetCustomerEntitlement } from "./cronUtils.js";
+import {
+	clearCusEntsFromCache,
+	resetCustomerEntitlement,
+} from "./cronUtils.js";
 import { runProductCron } from "./productCron/runProductCron.js";
 
 const { db, client } = initDrizzle();
 
 export const cronTask = async () => {
-	console.log(
-		"\n----------------------------------\nRUNNING RESET CRON:",
-		format(new UTCDate(), "yyyy-MM-dd HH:mm:ss"),
-	);
-
 	try {
 		const cusEnts: ResetCusEnt[] = await CusEntService.getActiveResetPassed({
 			db,
@@ -26,11 +25,13 @@ export const cronTask = async () => {
 		for (let i = 0; i < cusEnts.length; i += batchSize) {
 			const batch = cusEnts.slice(i, i + batchSize);
 			const batchResets = [];
+			const updatedCusEnts: ResetCusEnt[] = [];
 			for (const cusEnt of batch) {
 				batchResets.push(
 					resetCustomerEntitlement({
 						db,
 						cusEnt: cusEnt,
+						updatedCusEnts,
 					}),
 				);
 			}
@@ -43,6 +44,8 @@ export const cronTask = async () => {
 				data: toUpsert as CustomerEntitlement[],
 			});
 			console.log(`Upserted ${toUpsert.length} short entitlements`);
+
+			await clearCusEntsFromCache({ cusEnts: updatedCusEnts });
 		}
 
 		console.log(
