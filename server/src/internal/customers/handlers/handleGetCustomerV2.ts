@@ -40,7 +40,7 @@ export const handleGetCustomerV2 = createRoute({
 		});
 
 		const duration = Date.now() - start;
-		console.debug(`[get-customer] getApiCustomer duration: ${duration}ms`);
+		ctx.logger.debug(`[get-customer] getApiCustomer duration: ${duration}ms`);
 
 		return c.json(customer);
 	},
