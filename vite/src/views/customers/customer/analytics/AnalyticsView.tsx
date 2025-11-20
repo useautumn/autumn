@@ -9,7 +9,6 @@ import type { AgGridReact } from "ag-grid-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 import { AnalyticsContext } from "./AnalyticsContext";
 import { EventsAGGrid, EventsBarChart } from "./AnalyticsGraph";
 import { colors } from "./components/AGGrid";
@@ -134,15 +133,15 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 				topEvents,
 			}}
 		>
-			<div className="flex flex-col gap-4 h-full relative w-full text-sm pb-8 max-w-5xl mx-auto px-10">
-				<h1
+			<div className="flex flex-col gap-4 h-full relative w-full text-sm pb-8 max-w-5xl mx-auto px-10 pt-8">
+				{/* <h1
 					className={cn(
 						"text-xl font-medium shrink-0 pt-6",
 						// env === AppEnv.Sandbox ? "pt-4" : "pt-6",
 					)}
 				>
 					Analytics
-				</h1>
+				</h1> */}
 				<div className="max-h-[400px] min-h-[400px] pb-6">
 					{/* <PageSectionHeader
 						title="Usage Analytics"

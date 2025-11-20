@@ -2,6 +2,7 @@ import { type Feature, FeatureType } from "@autumn/shared";
 import { CoinsIcon, LegoIcon } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
+import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQueryState } from "@/views/products/hooks/useProductsQueryState";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
@@ -82,9 +83,7 @@ export function FeatureListTable() {
 
 	const enableSorting = false;
 
-	const featureEmptyStateText = queryStates.showArchivedFeatures
-		? "You haven't archived any features yet."
-		: "Create features for the things in your application that users get access to with plans";
+	const hasFeatureRows = featureTable.getRowModel().rows.length > 0;
 
 	const creditEmptyStateText = queryStates.showArchivedFeatures
 		? "You haven't archived any credit systems yet."
@@ -105,89 +104,102 @@ export function FeatureListTable() {
 
 			<div className="flex flex-col gap-8">
 				{/* Features Table */}
-				<div>
-					<Table.Provider
-						config={{
-							table: featureTable,
-							numberOfColumns: featureColumns.length,
-							enableSorting,
-							isLoading: false,
-							onRowClick: handleFeatureRowClick,
-							emptyStateText: featureEmptyStateText,
-							rowClassName: "h-10",
-						}}
-					>
-						<Table.Toolbar>
-							<div className="flex w-full justify-between items-center">
-								<Table.Heading>
-									<LegoIcon size={16} weight="fill" className="text-subtle" />
-									Features
-								</Table.Heading>
-								<Table.Actions>
-									<div className="flex w-full justify-between items-center">
-										<div className="flex items-center gap-2">
-											{/* Add search and other filters here in the future if needed */}
+				{hasFeatureRows ? (
+					<div>
+						<Table.Provider
+							config={{
+								table: featureTable,
+								numberOfColumns: featureColumns.length,
+								enableSorting,
+								isLoading: false,
+								onRowClick: handleFeatureRowClick,
+								emptyStateText: "You haven't archived any features yet.",
+								rowClassName: "h-10",
+							}}
+						>
+							<Table.Toolbar>
+								<div className="flex w-full justify-between items-center">
+									<Table.Heading>
+										<LegoIcon size={16} weight="fill" className="text-subtle" />
+										Features
+									</Table.Heading>
+									<Table.Actions>
+										<div className="flex w-full justify-between items-center">
+											<div className="flex items-center gap-2">
+												{/* Add search and other filters here in the future if needed */}
+											</div>
+											<div className="flex items-center gap-2">
+												<FeatureListCreateButton />
+												<FeatureListMenuButton />
+											</div>
 										</div>
-										<div className="flex items-center gap-2">
-											<FeatureListCreateButton />
-											<FeatureListMenuButton />
-										</div>
-									</div>
-								</Table.Actions>
+									</Table.Actions>
+								</div>
+							</Table.Toolbar>
+							<div>
+								<Table.Container>
+									<Table.Content>
+										<Table.Header />
+										<Table.Body />
+									</Table.Content>
+								</Table.Container>
 							</div>
-						</Table.Toolbar>
-						<div>
-							<Table.Container>
-								<Table.Content>
-									<Table.Header />
-									<Table.Body />
-								</Table.Content>
-							</Table.Container>
-						</div>
-					</Table.Provider>
-				</div>
+						</Table.Provider>
+					</div>
+				) : (
+					<EmptyState
+						type="features"
+						actionButton={<FeatureListCreateButton />}
+					/>
+				)}
 
-				{/* Credits Table - Always shown */}
-				<div>
-					<Table.Provider
-						config={{
-							table: creditTable,
-							numberOfColumns: creditColumns.length,
-							enableSorting,
-							isLoading: false,
-							onRowClick: handleCreditRowClick,
-							emptyStateText: creditEmptyStateText,
-							rowClassName: "h-10",
-						}}
-					>
-						<Table.Toolbar>
-							<div className="flex w-full justify-between items-center">
-								<Table.Heading>
-									<CoinsIcon size={16} weight="fill" className="text-subtle" />
-									Credits
-								</Table.Heading>
-								<Table.Actions>
-									<div className="flex w-full justify-between items-center">
-										<div className="flex items-center gap-2">
-											{/* Add search and other filters here in the future if needed */}
+				{/* Credits Table - Only shown if there's at least one feature */}
+				{hasFeatureRows && (
+					<div>
+						<Table.Provider
+							config={{
+								table: creditTable,
+								numberOfColumns: creditColumns.length,
+								enableSorting,
+								isLoading: false,
+								onRowClick: handleCreditRowClick,
+								emptyStateText: creditEmptyStateText,
+								rowClassName: "h-10",
+							}}
+						>
+							<Table.Toolbar>
+								<div className="flex w-full justify-between items-center">
+									<Table.Heading>
+										<CoinsIcon
+											size={16}
+											weight="fill"
+											className="text-subtle"
+										/>
+										Credits
+									</Table.Heading>
+									<Table.Actions>
+										<div className="flex w-full justify-between items-center">
+											<div className="flex items-center gap-2">
+												{/* Add search and other filters here in the future if needed */}
+											</div>
+											<div className="flex items-center gap-2">
+												<CreditListCreateButton />
+											</div>
 										</div>
-										<div className="flex items-center gap-2">
-											<CreditListCreateButton />
-										</div>
-									</div>
-								</Table.Actions>
+									</Table.Actions>
+								</div>
+							</Table.Toolbar>
+							<div>
+								<Table.Container>
+									<Table.Content>
+										<Table.Header />
+										<Table.Body />
+									</Table.Content>
+								</Table.Container>
 							</div>
-						</Table.Toolbar>
-						<div>
-							<Table.Container>
-								<Table.Content>
-									<Table.Header />
-									<Table.Body />
-								</Table.Content>
-							</Table.Container>
-						</div>
-					</Table.Provider>
-				</div>
+						</Table.Provider>
+					</div>
+				)}
 			</div>
 		</>
 	);
