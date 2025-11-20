@@ -4,6 +4,8 @@ import { Delete } from "lucide-react";
 import { TableDropdownMenuCell } from "@/components/general/table/table-dropdown-menu-cell";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { createDateTimeColumn } from "@/views/customers2/utils/ColumnHelpers";
+import { AdminHover } from "../../../../../components/general/AdminHover";
+import { getCusProductHoverTexts } from "../../../../admin/adminUtils";
 import { CustomerProductPrice } from "./CustomerProductPrice";
 import { CustomerProductsStatus } from "./CustomerProductsStatus";
 
@@ -17,7 +19,9 @@ export const CustomerProductsColumns = [
 
 			return (
 				<div className="font-medium text-t1 flex items-center gap-2">
-					{row.original.product.name}
+					<AdminHover texts={getCusProductHoverTexts(row.original)}>
+						{row.original.product.name}
+					</AdminHover>
 					{showQuantity && (
 						<div className="text-t3 bg-muted rounded-sm p-1 py-0">
 							{quantity}
