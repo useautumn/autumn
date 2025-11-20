@@ -17,24 +17,12 @@ export const runActionHandlerTask = async ({
 
 	const { logger } = ctx;
 
-	try {
-		switch (jobName) {
-			case JobName.HandleProductsUpdated:
-				await handleProductsUpdated({
-					ctx,
-					data: payload,
-				});
-				break;
-			// case JobName.HandleCustomerCreated:
-			// 	await handleCustomerCreated({
-			// 		ctx,
-			// 		data: payload as HandleCustomerCreatedData,
-			// 	});
-			// 	break;
-		}
-	} catch (error: any) {
-		logger.error(`Error processing action handler job: ${error.message}`);
-	} finally {
-		// await clearLock({ lockKey });
+	switch (jobName) {
+		case JobName.HandleProductsUpdated:
+			await handleProductsUpdated({
+				ctx,
+				data: payload,
+			});
+			break;
 	}
 };

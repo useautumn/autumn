@@ -38,8 +38,9 @@ export const handleGetCustomerV2 = createRoute({
 			customerId,
 			withAutumnId: with_autumn_id,
 		});
+
 		const duration = Date.now() - start;
-		console.debug(`[get-customer] getApiCustomer duration: ${duration}ms`);
+		ctx.logger.debug(`[get-customer] getApiCustomer duration: ${duration}ms`);
 
 		return c.json(customer);
 	},

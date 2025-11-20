@@ -47,6 +47,10 @@ export const getRateLimitType = (c: Context<HonoEnv>) => {
 			url: "/v1/customers/:customer_id",
 		},
 		{
+			method: "GET",
+			url: "/v1/customers/:customer_id/entities/:entity_id",
+		},
+		{
 			method: "POST",
 			url: "/v1/customers",
 		},

@@ -48,7 +48,7 @@ export const getApiCustomer = async ({
 			entities: undefined,
 			autumn_id: withAutumnId ? baseCustomer.autumn_id : undefined,
 			invoices: ctx.expand.includes(CusExpand.Invoices)
-				? baseCustomer.invoices
+				? (baseCustomer.invoices ?? [])
 				: undefined,
 		};
 
