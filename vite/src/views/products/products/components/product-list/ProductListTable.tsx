@@ -3,6 +3,7 @@ import { CubeIcon } from "@phosphor-icons/react";
 import { useMemo } from "react";
 import { useNavigate } from "react-router";
 import { Table } from "@/components/general/table";
+import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { pushPage } from "@/utils/genUtils";
 import { useProductsQueryState } from "@/views/products/hooks/useProductsQueryState";
@@ -114,60 +115,54 @@ export function ProductListTable() {
 
 	const enableSorting = false;
 
-	const baseEmptyStateText = queryStates.showArchivedProducts
-		? "You haven't archived any plans yet."
-		: "Create your first plan to get started. Each plan defines features your customers get access to and how much they cost.";
-
-	const addOnEmptyStateText = queryStates.showArchivedProducts
-		? "You haven't archived any add-on plans yet."
-		: "No add-on plans yet.";
-
+	const hasBaseRows = baseTable.getRowModel().rows.length > 0;
 	const hasAddOns = addOnPlans && addOnPlans.length > 0;
 
 	return (
 		<div className="flex flex-col gap-8">
 			{/* Base Plans Table */}
-			<div>
-				<Table.Provider
-					config={{
-						table: baseTable,
-						numberOfColumns: columns.length,
-						enableSorting,
-						isLoading: false,
-						onRowClick: handleRowClick,
-						emptyStateText: baseEmptyStateText,
-						rowClassName: "h-10",
-					}}
-				>
-					<Table.Toolbar>
-						<div className="flex w-full justify-between items-center">
-							<Table.Heading>
-								<CubeIcon size={16} weight="fill" className="text-subtle" />
-								Base Plans
-							</Table.Heading>
-							<Table.Actions>
-								<div className="flex w-full justify-between items-center">
-									<div className="flex items-center gap-2">
-										{/* Add search and other filters here in the future if needed */}
+			{hasBaseRows ? (
+				<div>
+					<Table.Provider
+						config={{
+							table: baseTable,
+							numberOfColumns: columns.length,
+							enableSorting,
+							isLoading: false,
+							onRowClick: handleRowClick,
+							emptyStateText: "You haven't archived any plans yet.",
+							rowClassName: "h-10",
+						}}
+					>
+						<Table.Toolbar>
+							<div className="flex w-full justify-between items-center">
+								<Table.Heading>
+									<CubeIcon size={16} weight="fill" className="text-subtle" />
+									Base Plans
+								</Table.Heading>
+								<Table.Actions>
+									<div className="flex w-full justify-between items-center">
+										<div className="flex items-center gap-2">
+											<ProductListCreateButton />
+											<ProductListMenuButton />
+										</div>
 									</div>
-									<div className="flex items-center gap-2">
-										<ProductListCreateButton />
-										<ProductListMenuButton />
-									</div>
-								</div>
-							</Table.Actions>
+								</Table.Actions>
+							</div>
+						</Table.Toolbar>
+						<div>
+							<Table.Container>
+								<Table.Content>
+									<Table.Header />
+									<Table.Body />
+								</Table.Content>
+							</Table.Container>
 						</div>
-					</Table.Toolbar>
-					<div>
-						<Table.Container>
-							<Table.Content>
-								<Table.Header />
-								<Table.Body />
-							</Table.Content>
-						</Table.Container>
-					</div>
-				</Table.Provider>
-			</div>
+					</Table.Provider>
+				</div>
+			) : (
+				<EmptyState type="plans" actionButton={<ProductListCreateButton />} />
+			)}
 			{/* Add-on Plans Table */}
 			{hasAddOns && (
 				<div>
@@ -178,7 +173,6 @@ export function ProductListTable() {
 							enableSorting,
 							isLoading: false,
 							onRowClick: handleRowClick,
-							emptyStateText: addOnEmptyStateText,
 							rowClassName: "h-10",
 						}}
 					>

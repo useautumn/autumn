@@ -17,6 +17,7 @@ export function TableBody() {
 		isLoading,
 		onRowClick,
 		rowClassName,
+		emptyStateChildren,
 		emptyStateText,
 	} = useTableContext();
 	const rows = table.getRowModel().rows;
@@ -26,7 +27,7 @@ export function TableBody() {
 			<ShadcnTableBody>
 				<TableRow>
 					<TableCell
-						className="h-12 text-center py-0"
+						className="h-10 text-center py-0"
 						colSpan={numberOfColumns}
 					>
 						{isLoading ? (
@@ -34,8 +35,8 @@ export function TableBody() {
 								<SmallSpinner />
 							</div>
 						) : (
-							<div className="text-t4 text-center w-full h-full bg-interactive-secondary items-center justify-center flex">
-								{emptyStateText}
+							<div className="text-t4 text-center w-full bg-interactive-secondary h-full items-center justify-center flex">
+								{emptyStateChildren || emptyStateText}
 							</div>
 						)}
 					</TableCell>

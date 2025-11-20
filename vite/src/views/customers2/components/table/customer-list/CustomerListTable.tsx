@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router";
 import { Table } from "@/components/general/table";
+import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { pushPage } from "@/utils/genUtils";
 import { useCustomersQueryStates } from "@/views/customers/hooks/useCustomersQueryStates";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
@@ -43,41 +44,52 @@ export function CustomerListTable({
 
 	const { queryStates } = useCustomersQueryStates();
 
-	const emptyStateText = queryStates.q?.trim()
-		? "No matching results found. Try a different search."
-		: "Create your first customer by using the Autumn API";
+	// const emptyStateText = queryStates.q?.trim()
+	// 	? "No matching results found. Try a different search."
+	// 	: "Create your first customer by using the Autumn API";
+
+	const hasRows = table.getRowModel().rows.length > 0 || queryStates.q?.trim();
 
 	return (
-		<Table.Provider
-			config={{
-				table,
-				numberOfColumns: columns.length,
-				enableSorting,
-				isLoading: false,
-				onRowClick: handleRowClick,
-				emptyStateText,
-				rowClassName: "h-10",
-			}}
-		>
-			<div className="flex w-full justify-between items-center h-10 pb-4">
-				<div className="flex items-center gap-2">
-					<CustomerListFilterButton />
-					<CustomerListSearchBar />
-					<CustomerListPagination />
-					{/* <div className="text-t2 px-2 py-0.5 rounded-md bg-muted text-sm font-medium">
+		<>
+			{hasRows ? (
+				<Table.Provider
+					config={{
+						table,
+						numberOfColumns: columns.length,
+						enableSorting,
+						isLoading: false,
+						onRowClick: handleRowClick,
+						emptyStateText: "No matching results found.",
+						rowClassName: "h-10",
+					}}
+				>
+					<div className="flex w-full justify-between items-center h-10 pb-4">
+						<div className="flex items-center gap-2">
+							<CustomerListFilterButton />
+							<CustomerListSearchBar />
+							<CustomerListPagination />
+							{/* <div className="text-t2 px-2 py-0.5 rounded-md bg-muted text-sm font-medium">
 						{totalCount}
 					</div> */}
-				</div>
-				<CustomerListCreateButton />
-			</div>
-			<div>
-				<Table.Container>
-					<Table.Content>
-						<Table.Header />
-						<Table.Body />
-					</Table.Content>
-				</Table.Container>
-			</div>
-		</Table.Provider>
+						</div>
+						{hasRows && <CustomerListCreateButton />}
+					</div>
+					<div>
+						<Table.Container>
+							<Table.Content>
+								<Table.Header />
+								<Table.Body />
+							</Table.Content>
+						</Table.Container>
+					</div>
+				</Table.Provider>
+			) : (
+				<EmptyState
+					type="customers"
+					actionButton={<CustomerListCreateButton />}
+				/>
+			)}
+		</>
 	);
 }
