@@ -1,8 +1,10 @@
 import { writeFileSync } from "node:fs";
+import { ApiPlanFeatureWithMeta } from "@api/products/planFeature/apiPlanFeature.js";
 import yaml from "yaml";
 import { createDocument } from "zod-openapi";
 import { CustomerDataSchema } from "../common/customerData.js";
 import { EntityDataSchema } from "../models.js";
+import { balancesOpenApi } from "./balancesOpenApi.js";
 import { coreOps } from "./coreOpenApi.js";
 import { ApiCustomerWithMeta, customersOpenApi } from "./customersOpenApi.js";
 import { ApiEntityWithMeta, entitiesOpenApi } from "./entitiesOpenApi.js";
@@ -34,6 +36,7 @@ const openapi2_0 = createDocument(
 				CustomerData: CustomerDataSchema,
 				EntityData: EntityDataSchema,
 				Plan: ApiPlanWithMeta,
+				PlanFeature: ApiPlanFeatureWithMeta,
 				Customer: ApiCustomerWithMeta,
 				Entity: ApiEntityWithMeta,
 			},
@@ -52,6 +55,7 @@ const openapi2_0 = createDocument(
 			...entitiesOpenApi,
 			...referralOps,
 			...coreOps,
+			...balancesOpenApi,
 		},
 	},
 	{
