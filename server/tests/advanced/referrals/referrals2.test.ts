@@ -102,6 +102,7 @@ describe(`${chalk.yellowBright(
 		const { testClockId: testClockId1, customer } = await initCustomerV3({
 			ctx,
 			customerId: mainCustomerId,
+			attachPm: "success",
 		});
 		testClockId = testClockId1;
 		mainCustomer = customer;
