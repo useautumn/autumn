@@ -3,8 +3,7 @@
 # Source shared configuration
 source "$(dirname "$0")/config.sh"
 
-
-BUN_PARALLEL_COMPACT 'server/tests/advanced/referrals' 
+BUN_PARALLEL_COMPACT 'server/tests/advanced/rollovers' 
 
 # BUN_PARALLEL_COMPACT \
 #   'server/tests/advanced/coupons' \

@@ -84,7 +84,7 @@ const toV3Type = ({ feature }: { feature?: ApiFeatureV1 }) => {
 			return ApiFeatureType.ContinuousUse;
 		}
 	} else if (feature?.type === FeatureType.CreditSystem) {
-		return ApiFeatureType.CreditSystem;
+		return ApiFeatureType.SingleUsage;
 	} else {
 		return ApiFeatureType.Static;
 	}
