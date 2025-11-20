@@ -23,6 +23,7 @@ const caText = await loadCaCert({
 
 const redis = new Redis(regionalCacheUrl || process.env.CACHE_URL, {
 	tls: caText ? { ca: caText } : undefined,
+	family: 4,
 });
 
 // biome-ignore lint/correctness/noUnusedFunctionParameters: Might uncomment this back in in the future
