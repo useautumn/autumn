@@ -68,6 +68,12 @@ export function UsageReset({ showBillingLabel = false }: UsageResetProps) {
 				<SelectContent>
 					{Object.values(isFeaturePrice ? BillingInterval : EntInterval)
 						.filter((i) => {
+							if (
+								i === EntInterval.Minute &&
+								itemToEntInterval({ item }) !== EntInterval.Minute
+							) {
+								return false;
+							}
 							if (isFeaturePrice && item.usage_model === UsageModel.PayPerUse) {
 								return i !== BillingInterval.OneOff;
 							}

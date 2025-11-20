@@ -5,6 +5,7 @@ import {
 	type FullCusEntWithProduct,
 	type FullEntitlement,
 	getStartingBalance,
+	notNullish,
 	type Organization,
 	type ResetCusEnt,
 } from "@autumn/shared";
@@ -19,12 +20,11 @@ import { getRelatedCusPrice } from "@/internal/customers/cusProducts/cusEnts/cus
 import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils.js";
 import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils.js";
 import { CusPriceService } from "@/internal/customers/cusProducts/cusPrices/CusPriceService.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { getNextResetAt } from "@/utils/timeUtils.js";
 import type { DrizzleCli } from "../db/initDrizzle.js";
 import { RolloverService } from "../internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService.js";
-import { deleteCachedApiCustomer } from "../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
+import { batchDeleteCachedCustomers } from "../internal/customers/cusUtils/apiCusCacheUtils/batchDeleteCachedCustomers.js";
 
 const checkSubAnchor = async ({
 	db,
@@ -134,16 +134,16 @@ const handleShortDurationCusEnt = async ({
 		`Reseting short cus ent (${cusEnt.feature_id}) [${ent.interval}], customer: ${cusEnt.customer_id}, org: ${cusEnt.customer.org_id}`,
 	);
 
-	const org = await OrgService.get({
-		db,
-		orgId: cusEnt.customer.org_id,
-	});
+	// const org = await OrgService.get({
+	// 	db,
+	// 	orgId: cusEnt.customer.org_id,
+	// });
 
-	await deleteCachedApiCustomer({
-		customerId: cusEnt.customer.id!,
-		orgId: org.id,
-		env: cusEnt.customer.env,
-	});
+	// await deleteCachedApiCustomer({
+	// 	customerId: cusEnt.customer.id!,
+	// 	orgId: org.id,
+	// 	env: cusEnt.customer.env,
+	// });
 
 	return newCusEnt;
 };
@@ -294,19 +294,37 @@ export const resetCustomerEntitlement = async ({
 			)}`,
 		);
 
-		const org = await OrgService.get({
-			db,
-			orgId: cusEnt.customer.org_id,
-		});
+		// const org = await OrgService.get({
+		// 	db,
+		// 	orgId: cusEnt.customer.org_id,
+		// });
 
-		await deleteCachedApiCustomer({
-			customerId: cusEnt.customer.id!,
-			orgId: org.id,
-			env: cusEnt.customer.env,
-		});
+		// await deleteCachedApiCustomer({
+		// 	customerId: cusEnt.customer.id!,
+		// 	orgId: org.id,
+		// 	env: cusEnt.customer.env,
+		// });
 	} catch (error: any) {
 		console.log(
 			`Failed to reset ${cusEnt.id} | ${cusEnt.customer_id} | ${cusEnt.feature_id}, error: ${error}`,
 		);
 	}
+};
+
+export const clearCusEntsFromCache = async ({
+	cusEnts,
+}: {
+	cusEnts: ResetCusEnt[];
+}) => {
+	const customersToDelete = cusEnts
+		.filter((ce) => notNullish(ce.customer.id))
+		.map((cusEnt) => ({
+			orgId: cusEnt.customer.org_id,
+			env: cusEnt.customer.env,
+			customerId: cusEnt.customer.id!,
+		}));
+
+	if (customersToDelete.length === 0) return;
+
+	await batchDeleteCachedCustomers({ customers: customersToDelete });
 };
