@@ -8,8 +8,8 @@ export const main = async () => {
 	const autumn = new AutumnInt({version: ApiVersion.V1_2});
 	const numRequests = 100;
 
-  const customerId1 = "test1";
-  const customerId2 = "test2";
+  const customerId1 = "trial1";
+  const customerId2 = "temp";
 
 	console.log(`Testing with ${numRequests} concurrent requests to /track endpoint`);
 	console.log(`Using base URL: ${autumn.baseUrl}\n`);
@@ -19,10 +19,10 @@ export const main = async () => {
 	const cusId2Promises = [];
 	for (let i = 0; i < numRequests; i++) {
 		cusId1Promises.push(
-			autumn.customers.get(customerId1),
+			autumn.entities.get(customerId1, "1"),
 		);
 		cusId2Promises.push(
-			autumn.customers.get(customerId2),
+			autumn.entities.get(customerId2, "1"),
 		);
 	} 
 
