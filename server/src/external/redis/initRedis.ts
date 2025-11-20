@@ -1,4 +1,10 @@
 import { Redis } from "ioredis";
+import {
+	GET_CUSTOMER_SCRIPT,
+	getBatchDeductionScript,
+	SET_CUSTOMER_SCRIPT,
+	SET_ENTITIES_BATCH_SCRIPT,
+} from "../../_luaScripts/luaScripts.js";
 import { loadCaCert } from "./loadCaCert.js";
 
 if (!process.env.CACHE_URL) {
@@ -24,7 +30,62 @@ const caText = await loadCaCert({
 const redis = new Redis(regionalCacheUrl || process.env.CACHE_URL, {
 	tls: caText ? { ca: caText } : undefined,
 	family: 4,
+	keepAlive: 10000,
 });
+
+// Load Lua scripts using the builder functions that include dependencies
+const batchDeductionScript = getBatchDeductionScript();
+
+// Define commands
+redis.defineCommand("batchDeduction", {
+	numberOfKeys: 0,
+	lua: batchDeductionScript,
+});
+
+redis.defineCommand("getCustomer", {
+	numberOfKeys: 0,
+	lua: GET_CUSTOMER_SCRIPT,
+});
+
+redis.defineCommand("setCustomer", {
+	numberOfKeys: 0,
+	lua: SET_CUSTOMER_SCRIPT,
+});
+
+redis.defineCommand("setEntitiesBatch", {
+	numberOfKeys: 0,
+	lua: SET_ENTITIES_BATCH_SCRIPT,
+});
+
+// Add type definitions
+declare module "ioredis" {
+	interface RedisCommander {
+		batchDeduction(
+			requestsJson: string,
+			orgId: string,
+			env: string,
+			customerId: string,
+			adjustGrantedBalance?: string,
+		): Promise<string>;
+		getCustomer(
+			orgId: string,
+			env: string,
+			customerId: string,
+			skipEntityMerge: string,
+		): Promise<string>;
+		setCustomer(
+			customerData: string,
+			orgId: string,
+			env: string,
+			customerId: string,
+		): Promise<string>;
+		setEntitiesBatch(
+			entityBatch: string,
+			orgId: string,
+			env: string,
+		): Promise<string>;
+	}
+}
 
 // biome-ignore lint/correctness/noUnusedFunctionParameters: Might uncomment this back in in the future
 redis.on("error", (error) => {
