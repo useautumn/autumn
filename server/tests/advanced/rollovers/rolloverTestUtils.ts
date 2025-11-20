@@ -39,6 +39,7 @@ export const resetAndGetCusEnt = async ({
 	const updatedCusEnt = await resetCustomerEntitlement({
 		db,
 		cusEnt: resetCusEnt,
+		updatedCusEnts: [],
 	});
 
 	await clearCusEntsFromCache({ cusEnts: [resetCusEnt] });

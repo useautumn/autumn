@@ -94,9 +94,11 @@ const checkSubAnchor = async ({
 const handleShortDurationCusEnt = async ({
 	db,
 	cusEnt,
+	updatedCusEnts,
 }: {
 	db: DrizzleCli;
 	cusEnt: ResetCusEnt;
+	updatedCusEnts: ResetCusEnt[];
 }) => {
 	const ent = cusEnt.entitlement as FullEntitlement;
 
@@ -145,6 +147,8 @@ const handleShortDurationCusEnt = async ({
 	// 	env: cusEnt.customer.env,
 	// });
 
+	updatedCusEnts.push(newCusEnt);
+
 	return newCusEnt;
 };
 
@@ -153,9 +157,11 @@ const shortDurations = [EntInterval.Minute, EntInterval.Hour, EntInterval.Day];
 export const resetCustomerEntitlement = async ({
 	db,
 	cusEnt,
+	updatedCusEnts,
 }: {
 	db: DrizzleCli;
 	cusEnt: ResetCusEnt;
+	updatedCusEnts: ResetCusEnt[];
 }) => {
 	try {
 		const ent = cusEnt.entitlement as FullEntitlement;
@@ -167,6 +173,7 @@ export const resetCustomerEntitlement = async ({
 			return await handleShortDurationCusEnt({
 				db,
 				cusEnt,
+				updatedCusEnts,
 			});
 		}
 
@@ -282,6 +289,8 @@ export const resetCustomerEntitlement = async ({
 			});
 		}
 
+		updatedCusEnts.push(cusEnt);
+
 		console.log(
 			`Reset ${cusEnt.id} | customer: ${chalk.yellow(
 				cusEnt.customer_id,
@@ -293,17 +302,6 @@ export const resetCustomerEntitlement = async ({
 				format(new UTCDate(nextResetAt), "dd MMM yyyy HH:mm:ss"),
 			)}`,
 		);
-
-		// const org = await OrgService.get({
-		// 	db,
-		// 	orgId: cusEnt.customer.org_id,
-		// });
-
-		// await deleteCachedApiCustomer({
-		// 	customerId: cusEnt.customer.id!,
-		// 	orgId: org.id,
-		// 	env: cusEnt.customer.env,
-		// });
 	} catch (error: any) {
 		console.log(
 			`Failed to reset ${cusEnt.id} | ${cusEnt.customer_id} | ${cusEnt.feature_id}, error: ${error}`,
