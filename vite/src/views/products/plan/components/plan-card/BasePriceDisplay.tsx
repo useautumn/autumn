@@ -17,12 +17,14 @@ import {
 import { cn } from "@/lib/utils";
 import { notNullish } from "@/utils/genUtils";
 import { checkItemIsValid } from "@/utils/product/entitlementUtils";
-import { useOnboardingStore } from "@/views/onboarding3/store/useOnboardingStore";
 
-export const BasePriceDisplay = () => {
+export const BasePriceDisplay = ({
+	isOnboarding,
+}: {
+	isOnboarding?: boolean;
+}) => {
 	const product = useProductStore((s) => s.product);
 	const setSheet = useSheetStore((s) => s.setSheet);
-	const isOnboarding = useOnboardingStore((s) => s.isOnboarding);
 	const basePrice = productV2ToBasePrice({ product });
 	const { org } = useOrg();
 
@@ -56,9 +58,11 @@ export const BasePriceDisplay = () => {
 				: "one-off";
 
 			return (
-				<span className="text-body-secondary text-main-sec flex items-center gap-1">
-					<span className="text-main-sec">{formattedAmount}</span>{" "}
-					{secondaryText}
+				<span className="text-body-secondary flex items-center gap-1">
+					<span className="text-main-sec !text-t2 !font-semibold">
+						{formattedAmount}
+					</span>{" "}
+					<span className="mt-0.5">{secondaryText}</span>
 				</span>
 			);
 		}
@@ -79,9 +83,10 @@ export const BasePriceDisplay = () => {
 			variant="secondary"
 			size="default"
 			className={cn(
-				isOnboarding && "mt-1",
-				"items-center !h-8 gap-1",
-				isEditingPlanPrice && "btn-secondary-active",
+				"items-center !h-9 gap-1 rounded-xl !px-2.5 hover:z-95",
+				isEditingPlanPrice && !isOnboarding && "btn-secondary-active z-95",
+				isOnboarding &&
+					"!bg-transparent !border-none !outline-0 !border-transparent pointer-events-none !shadow-none !p-0 !h-fit mt-1",
 			)}
 			onClick={() => {
 				if (!checkItemIsValid(item!)) return;

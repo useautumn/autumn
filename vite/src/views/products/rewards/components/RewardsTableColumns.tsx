@@ -1,7 +1,7 @@
 import type { Reward } from "@autumn/shared";
 import { type ProductV2, RewardType } from "@autumn/shared";
 import type { ColumnDef, Row } from "@tanstack/react-table";
-import { CopyButton } from "@/components/v2/buttons/CopyButton";
+import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { RewardRowToolbar } from "./RewardRowToolbar";
@@ -28,11 +28,7 @@ export const createRewardsTableColumns = (): ColumnDef<Reward, unknown>[] => {
 				return (
 					<div className="font-mono justify-start flex w-full group overflow-hidden">
 						{promoCodes ? (
-							<CopyButton
-								text={promoCodes}
-								size="mini"
-								className="w-fit bg-transparent justify-end px-0! border-none shadow-none hover:text-primary [&_svg]:opacity-0 group-hover:[&_svg]:opacity-100 max-w-full"
-							/>
+							<MiniCopyButton text={promoCodes} />
 						) : (
 							<span className="px-1 text-t3">—</span>
 						)}
@@ -106,4 +102,3 @@ const RewardValueCell = ({ reward }: { reward: Reward }) => {
 		</div>
 	);
 };
-
