@@ -117,12 +117,11 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with 500 concurrent req
 				// Create track request for Messages feature with timing
 				const requestStart = Date.now();
 				const promise = autumnV1
-					.check({
+					.track({
 						customer_id: customerId,
 						feature_id: TestFeature.Users,
-						send_event: true,
-						required_balance: value,
-						skip_event: true, // Skip event insertion for stress test
+						value: value,
+						skip_event: true,
 					})
 					.then(() => Date.now() - requestStart);
 

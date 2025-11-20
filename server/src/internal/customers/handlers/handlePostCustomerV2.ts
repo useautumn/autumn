@@ -55,7 +55,7 @@ export const handlePostCustomer = createRoute({
 			},
 		});
 		const duration = Date.now() - start;
-		console.debug(`[post-customer] duration: ${duration}ms`);
+		ctx.logger.debug(`[post-customer] duration: ${duration}ms`);
 
 		return c.json(apiCustomer);
 	},
