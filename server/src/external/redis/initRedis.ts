@@ -1,5 +1,6 @@
 import { Redis } from "ioredis";
 import {
+	BATCH_DELETE_CUSTOMERS_SCRIPT,
 	DELETE_CUSTOMER_SCRIPT,
 	GET_CUSTOMER_SCRIPT,
 	GET_ENTITY_SCRIPT,
@@ -93,6 +94,11 @@ redis.defineCommand("deleteCustomer", {
 	lua: DELETE_CUSTOMER_SCRIPT,
 });
 
+redis.defineCommand("batchDeleteCustomers", {
+	numberOfKeys: 0,
+	lua: BATCH_DELETE_CUSTOMERS_SCRIPT,
+});
+
 // Add type definitions
 declare module "ioredis" {
 	interface RedisCommander {
@@ -157,6 +163,7 @@ declare module "ioredis" {
 			env: string,
 			customerId: string,
 		): Promise<number>;
+		batchDeleteCustomers(customersJson: string): Promise<number>;
 	}
 }
 
