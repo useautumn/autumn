@@ -1,9 +1,15 @@
 import { Redis } from "ioredis";
 import {
+	DELETE_CUSTOMER_SCRIPT,
 	GET_CUSTOMER_SCRIPT,
+	GET_ENTITY_SCRIPT,
 	getBatchDeductionScript,
+	SET_CUSTOMER_DETAILS_SCRIPT,
 	SET_CUSTOMER_SCRIPT,
 	SET_ENTITIES_BATCH_SCRIPT,
+	SET_ENTITY_PRODUCTS_SCRIPT,
+	SET_INVOICES_SCRIPT,
+	SET_SUBSCRIPTIONS_SCRIPT,
 } from "../../_luaScripts/luaScripts.js";
 import { loadCaCert } from "./loadCaCert.js";
 
@@ -57,6 +63,36 @@ redis.defineCommand("setEntitiesBatch", {
 	lua: SET_ENTITIES_BATCH_SCRIPT,
 });
 
+redis.defineCommand("getEntity", {
+	numberOfKeys: 0,
+	lua: GET_ENTITY_SCRIPT,
+});
+
+redis.defineCommand("setSubscriptions", {
+	numberOfKeys: 0,
+	lua: SET_SUBSCRIPTIONS_SCRIPT,
+});
+
+redis.defineCommand("setEntityProducts", {
+	numberOfKeys: 0,
+	lua: SET_ENTITY_PRODUCTS_SCRIPT,
+});
+
+redis.defineCommand("setInvoices", {
+	numberOfKeys: 0,
+	lua: SET_INVOICES_SCRIPT,
+});
+
+redis.defineCommand("setCustomerDetails", {
+	numberOfKeys: 0,
+	lua: SET_CUSTOMER_DETAILS_SCRIPT,
+});
+
+redis.defineCommand("deleteCustomer", {
+	numberOfKeys: 0,
+	lua: DELETE_CUSTOMER_SCRIPT,
+});
+
 // Add type definitions
 declare module "ioredis" {
 	interface RedisCommander {
@@ -84,6 +120,43 @@ declare module "ioredis" {
 			orgId: string,
 			env: string,
 		): Promise<string>;
+		getEntity(
+			orgId: string,
+			env: string,
+			customerId: string,
+			entityId: string,
+			skipCustomerMerge: string,
+		): Promise<string>;
+		setSubscriptions(
+			subscriptionsJson: string,
+			orgId: string,
+			env: string,
+			customerId: string,
+		): Promise<string>;
+		setEntityProducts(
+			productsJson: string,
+			orgId: string,
+			env: string,
+			customerId: string,
+			entityId: string,
+		): Promise<string>;
+		setInvoices(
+			invoicesJson: string,
+			orgId: string,
+			env: string,
+			customerId: string,
+		): Promise<string>;
+		setCustomerDetails(
+			updatesJson: string,
+			orgId: string,
+			env: string,
+			customerId: string,
+		): Promise<string>;
+		deleteCustomer(
+			orgId: string,
+			env: string,
+			customerId: string,
+		): Promise<number>;
 	}
 }
 
