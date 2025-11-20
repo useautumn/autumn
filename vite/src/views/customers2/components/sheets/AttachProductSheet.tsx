@@ -1,6 +1,8 @@
+import { AttachProductForm } from "@/components/forms/attach-product/attach-product-form";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 
 export function AttachProductSheet() {
+	// need to get the customer id from the context and pass
 	return (
 		<div className="flex flex-col h-full">
 			<SheetHeader
@@ -10,8 +12,7 @@ export function AttachProductSheet() {
 
 			<div className="flex-1 overflow-y-auto">
 				<SheetSection title="Product Selection" withSeparator={false}>
-					{/* TODO: Add product selection and configuration form */}
-					<p className="text-sm text-t3">Form content goes here</p>
+					<AttachProductForm customerId="asdf" />
 				</SheetSection>
 			</div>
 		</div>
