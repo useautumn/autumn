@@ -1,4 +1,5 @@
 import {
+	ApiBaseEntitySchema,
 	type ApiCustomer,
 	ApiCustomerSchema,
 	type AppEnv,
@@ -105,13 +106,23 @@ export const getCachedApiCustomer = async ({
 		// Build ApiCustomer (base only, no expand) to return
 		const ctxWithExpand = addToExpand({
 			ctx,
-			add: [CusExpand.Invoices],
+			add: [CusExpand.Invoices, CusExpand.Entities],
 		});
 		const { apiCustomer, legacyData } = await getApiCustomerBase({
 			ctx: ctxWithExpand,
 			fullCus,
 			withAutumnId: true,
 		});
+
+		try {
+			apiCustomer.entities = fullCus.entities.map((e) =>
+				ApiBaseEntitySchema.parse(e),
+			);
+		} catch (error) {
+			ctx.logger.error(
+				`[getCachedApiCustomer] Error parsing entities: ${error}`,
+			);
+		}
 
 		const { apiCustomer: masterApiCustomer } = await getApiCustomerBase({
 			ctx,
