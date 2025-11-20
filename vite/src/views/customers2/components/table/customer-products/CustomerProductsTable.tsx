@@ -12,6 +12,8 @@ import { useFullCusSearchQuery } from "@/views/customers/hooks/useFullCusSearchQ
 import { useSavedViewsQuery } from "@/views/customers/hooks/useSavedViewsQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
+import { AdminHover } from "../../../../../components/general/AdminHover";
+import { getCusProductHoverTexts } from "../../../../admin/adminUtils";
 import { AttachProductDropdown } from "./AttachProductDropdown";
 import { CancelProductDialog } from "./CancelProductDialog";
 import { CustomerProductPrice } from "./CustomerProductPrice";
@@ -97,7 +99,7 @@ export function CustomerProductsTable() {
 						<Button
 							variant="skeleton"
 							onClick={handleEntityClick}
-							className="text-t1 font-medium hover:text-purple-600 cursor-pointer max-w-full !px-0 hover:bg-transparent active:bg-transparent active:border-none"
+							className="text-t1 font-medium hover:text-purple-600 cursor-pointer max-w-full px-0! hover:bg-transparent active:bg-transparent active:border-none"
 						>
 							<span className="truncate w-full">
 								{entity.name || entity.id || entity.internal_id}
@@ -115,7 +117,10 @@ export function CustomerProductsTable() {
 
 					return (
 						<div className="font-semibold flex items-center gap-2">
-							{row.original.product.name}
+							<AdminHover texts={getCusProductHoverTexts(row.original)}>
+								{row.original.product.name}
+							</AdminHover>
+
 							{showQuantity && (
 								<div className="text-t3 bg-muted rounded-sm p-1 py-0">
 									{quantity}
@@ -186,7 +191,6 @@ export function CustomerProductsTable() {
 		},
 	});
 
-	const hasProducts = displayedProducts.length > 0;
 	const hasEntityProducts = entityProducts.length > 0 && !entityId;
 
 	const emptyStateText =
