@@ -3,13 +3,16 @@ import {
 	type CheckParams,
 	type CheckResponseV2,
 	CheckResponseV2Schema,
+	FeatureType,
 	InsufficientBalanceError,
 	InternalError,
+	RecaseError,
 	type TrackParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv";
 import { runTrack } from "../../balances/track/runTrack";
 import { getTrackFeatureDeductions } from "../../balances/track/trackUtils/getFeatureDeductions";
+import { featureToCreditSystem } from "../../features/creditSystemUtils";
 import type { CheckData } from "./checkTypes/CheckData";
 
 export const runCheckWithTrack = async ({
@@ -29,18 +32,23 @@ export const runCheckWithTrack = async ({
 		});
 	}
 
-	const { feature_id } = body;
+	if (ctx.isPublic) {
+		throw new RecaseError({
+			message:
+				"Can't pass in 'send_event: true' when using publishable key for Autumn",
+		});
+	}
 
 	const featureDeductions = getTrackFeatureDeductions({
 		ctx,
-		featureId: feature_id,
+		featureId: body.feature_id,
 		value: requiredBalance,
 	});
 
 	const trackBody: TrackParams = {
 		customer_id: body.customer_id,
 		entity_id: body.entity_id,
-		feature_id,
+		feature_id: body.feature_id,
 		value: requiredBalance,
 		properties: body.properties,
 		skip_event: body.skip_event,
@@ -56,6 +64,7 @@ export const runCheckWithTrack = async ({
 			featureDeductions,
 			apiVersion: ApiVersion.V2_0,
 		});
+
 		checkData.apiBalance = response.balance ?? undefined;
 	} catch (error) {
 		if (error instanceof InsufficientBalanceError) {
@@ -65,11 +74,25 @@ export const runCheckWithTrack = async ({
 		}
 	}
 
-	return CheckResponseV2Schema.parse({
+	const { featureToUse, originalFeature } = checkData;
+	if (
+		featureToUse.type === FeatureType.CreditSystem &&
+		featureToUse.id !== originalFeature.id
+	) {
+		requiredBalance = featureToCreditSystem({
+			featureId: originalFeature.id,
+			creditSystem: featureToUse,
+			amount: requiredBalance,
+		});
+	}
+
+	const checkResponse = CheckResponseV2Schema.parse({
 		allowed,
 		customer_id: checkData.customerId || "",
 		entity_id: checkData.entityId,
 		required_balance: requiredBalance,
 		balance: checkData.apiBalance ?? null,
 	});
+
+	return checkResponse;
 };

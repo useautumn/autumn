@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { ApiVersion } from "@autumn/shared";
+import { type ApiCustomer, ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
@@ -116,16 +116,17 @@ describe(`${chalk.yellowBright("send-event1: Testing send event")}`, () => {
 
 	test("should have correct non-cached customer balance", async () => {
 		await timeout(2000);
-		const customer = await autumn.customers.get(customerId, {
+		const customer = await autumn.customers.get<ApiCustomer>(customerId, {
 			skip_cache: "true",
 		});
-		const messagesBalance = customer.features[TestFeature.Messages].balance;
+
+		const messagesBalance = customer.balances[TestFeature.Messages];
 		expect(messagesBalance).toMatchObject({
 			granted_balance: 200,
 			current_balance: 0,
 			usage: 200,
 		});
-		const workflowsBalance = customer.features[TestFeature.Workflows].balance;
+		const workflowsBalance = customer.balances[TestFeature.Workflows];
 		expect(workflowsBalance).toMatchObject({
 			granted_balance: 5,
 			current_balance: 0,

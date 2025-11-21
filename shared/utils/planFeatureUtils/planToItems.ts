@@ -62,7 +62,7 @@ export const convertPlanToItems = ({
 	if (plan.price) {
 		const priceItem = planToProductV2PriceItem({ price: plan.price, features });
 
-		items.push(priceItem);
+		items.splice(0, 0, priceItem);
 	}
 
 	return items;
