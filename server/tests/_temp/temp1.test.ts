@@ -15,13 +15,18 @@ const pro = constructProduct({
 	isDefault: true,
 
 	items: [
+		// constructFeatureItem({
+		// 	featureId: TestFeature.Action1,
+		// 	includedUsage: 5,
+		// }),
 		constructFeatureItem({
-			featureId: TestFeature.Workflows,
-			includedUsage: 5,
+			featureId: TestFeature.Credits,
+			// includedUsage: 200,
+			unlimited: true,
 		}),
 		constructFeatureItem({
-			featureId: TestFeature.Messages,
-			includedUsage: 200,
+			featureId: TestFeature.Words,
+			unlimited: true,
 		}),
 	],
 });

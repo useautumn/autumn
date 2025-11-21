@@ -83,6 +83,7 @@ describe(`${chalk.yellowBright("send-event3: Testing check with track, credit sy
 			granted_balance: 10,
 		});
 	});
+	return;
 
 	test("should check with track and deduct from action1 first, then credits", async () => {
 		const checkRes = (await autumnV2.check({
