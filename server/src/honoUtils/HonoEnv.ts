@@ -4,6 +4,7 @@ import type {
 	AuthType,
 	Feature,
 	Organization,
+	User,
 } from "@autumn/shared";
 import type { ClickHouseClient } from "@clickhouse/client";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -15,6 +16,7 @@ export type RequestContext = {
 	org: Organization;
 	env: AppEnv;
 	features: Feature[];
+	user?: User;
 	userId?: string;
 
 	// Objects

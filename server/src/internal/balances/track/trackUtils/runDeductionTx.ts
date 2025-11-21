@@ -276,6 +276,11 @@ export const deductFromCusEnts = async ({
 				});
 			}
 		} catch (error) {
+			if (error instanceof Error && !error?.message?.includes("declined")) {
+				ctx.logger.error(
+					`[deductFromCusEnts] Attempting rollback due to error: ${error}`,
+				);
+			}
 			await rollbackDeduction({
 				ctx,
 				oldFullCus,

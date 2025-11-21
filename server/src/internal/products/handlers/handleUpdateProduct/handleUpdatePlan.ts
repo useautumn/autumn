@@ -32,8 +32,8 @@ import { ProductService } from "../../ProductService.js";
 import { handleNewProductItems } from "../../product-items/productItemUtils/handleNewProductItems.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
 import { initProductInStripe } from "../../productUtils.js";
-import { disableCurrentDefault } from "../handleCreatePlan.js";
 import { handleVersionProductV2 } from "../handleVersionProduct.js";
+import { validateDefaultFlag } from "../productActions/validateDefaultFlag.js";
 import { handleUpdateProductDetails } from "./updateProductDetails.js";
 
 export const handleUpdatePlan = createRoute({
@@ -106,9 +106,16 @@ export const handleUpdatePlan = createRoute({
 			free_trial: newFreeTrial || curProductV2.free_trial || undefined,
 		};
 
-		await disableCurrentDefault({
-			req: ctx,
-			newProduct: newProductV2,
+		await validateDefaultFlag({
+			ctx,
+			body: v1_2Body,
+			curProduct: fullProduct,
+		});
+
+		validateDefaultFlag({
+			ctx,
+			body: v1_2Body,
+			curProduct: fullProduct,
 		});
 
 		await handleUpdateProductDetails({
