@@ -1,13 +1,10 @@
 import { AnimatePresence, motion } from "motion/react";
+import { createPortal } from "react-dom";
 import { SheetContainer } from "@/components/v2/sheets/InlineSheet";
 import { SheetCloseButton } from "@/components/v2/sheets/SheetCloseButton";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { AttachProductSheet } from "../components/sheets/AttachProductSheet";
-
-const SHEET_ANIMATION = {
-	duration: 0.5,
-	ease: [0.32, 0.72, 0, 1] as const,
-} as const;
+import { SHEET_ANIMATION } from "./customerAnimations";
 
 export function CustomerSheets() {
 	const sheetType = useSheetStore((s) => s.type);
@@ -22,24 +19,24 @@ export function CustomerSheets() {
 		}
 	};
 
-	return (
+	return createPortal(
 		<AnimatePresence mode="wait">
 			{sheetType && (
 				<motion.div
-					initial={{ width: 0 }}
-					animate={{ width: "28rem" }}
-					exit={{ width: 0 }}
+					initial={{ x: "100%" }}
+					animate={{ x: 0 }}
+					exit={{ x: "100%" }}
 					transition={SHEET_ANIMATION}
-					className="h-full overflow-hidden"
+					className="fixed right-0 top-0 bottom-0"
+					style={{ width: "28rem", zIndex: 100 }}
 				>
-					<div className="w-[28rem] h-full">
-						<SheetContainer className="w-full bg-card border-l shadow-sm h-full relative">
-							<SheetCloseButton onClose={closeSheet} />
-							{renderSheet()}
-						</SheetContainer>
-					</div>
+					<SheetContainer className="w-full bg-background z-50 border-l h-full relative">
+						<SheetCloseButton onClose={closeSheet} />
+						{renderSheet()}
+					</SheetContainer>
 				</motion.div>
 			)}
-		</AnimatePresence>
+		</AnimatePresence>,
+		document.body,
 	);
 }

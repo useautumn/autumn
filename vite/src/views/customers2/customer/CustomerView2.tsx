@@ -1,9 +1,12 @@
 "use client";
 
+import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useSearchParams } from "react-router";
 
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
 
 import { pushPage } from "@/utils/genUtils";
 import ErrorScreen from "@/views/general/ErrorScreen";
@@ -21,8 +24,8 @@ import { CustomerContext } from "./CustomerContext";
 import { CustomerPageDetails } from "./CustomerPageDetails";
 
 import { CustomerSheets } from "./CustomerSheets";
-
 import { SelectedEntityDetails } from "./components/SelectedEntityDetails";
+import { SHEET_ANIMATION } from "./customerAnimations";
 
 export default function CustomerView2() {
 	const [searchParams] = useSearchParams();
@@ -34,6 +37,8 @@ export default function CustomerView2() {
 
 	const [entityId, setEntityId] = useState(entityIdParam);
 	const closeSheet = useCustomerBalanceSheetStore((s) => s.closeSheet);
+	const sheetType = useSheetStore((s) => s.type);
+	const closeProductSheet = useSheetStore((s) => s.closeSheet);
 
 	useEffect(() => {
 		if (entityIdParam) {
@@ -71,43 +76,69 @@ export default function CustomerView2() {
 			value={{ customer, entityId: entityId, setEntityId }}
 		>
 			<div className="flex w-full h-full overflow-hidden relative">
-				<div className="flex flex-col overflow-x-hidden overflow-y-auto absolute inset-0 pb-8 [&>*:not([data-slot=separator-root])]:px-12 [&>*:not([data-slot=separator-root])]:pt-8 [&>*:not([data-slot=separator-root])]:max-w-5xl [&>*:not([data-slot=separator-root])]:mx-auto">
-					<div className="flex flex-col gap-2 w-full">
-						<div className="flex flex-col w-full">
-							<div className="flex items-center justify-between w-full gap-4">
-								<CustomerBreadcrumbs />
-								<CustomerActions />
-							</div>
-							<div className="flex items-center justify-between w-full pt-2">
-								<h3
-									className={`text-md font-semibold ${
-										customer.name
-											? "text-t1"
-											: customer.email
-												? "text-t3"
-												: "text-t4 font-mono font-medium!"
-									}`}
-								>
-									{customer.name || customer.email || customer.id}
-								</h3>
+				<motion.div
+					className="h-full overflow-hidden absolute inset-0"
+					animate={{
+						width: sheetType ? "calc(100% - 28rem)" : "100%",
+					}}
+					transition={SHEET_ANIMATION}
+				>
+					<div className="flex flex-col overflow-x-hidden overflow-y-auto absolute inset-0 pb-8 [&>*:not([data-slot=separator-root])]:px-12 [&>*:not([data-slot=separator-root])]:pt-8 [&>*:not([data-slot=separator-root])]:max-w-5xl [&>*:not([data-slot=separator-root])]:mx-auto">
+						<div className="flex flex-col gap-2 w-full">
+							<div className="flex flex-col w-full">
+								<div className="flex items-center justify-between w-full gap-4">
+									<CustomerBreadcrumbs />
+									<CustomerActions />
+								</div>
+								<div className="flex items-center justify-between w-full pt-2">
+									<h3
+										className={`text-md font-semibold ${
+											customer.name
+												? "text-t1"
+												: customer.email
+													? "text-t3"
+													: "text-t4 font-mono font-medium!"
+										}`}
+									>
+										{customer.name || customer.email || customer.id}
+									</h3>
 
-								<CustomerPageDetails />
+									<CustomerPageDetails />
+								</div>
 							</div>
+							<SelectedEntityDetails />
 						</div>
-						<SelectedEntityDetails />
+						{/* <Separator /> */}
+						{/* <Separator className="my-2" /> */}
+						<div className="flex flex-col gap-10 w-full">
+							<CustomerProductsTable />
+							{/* <Separator /> */}
+							<CustomerFeatureUsageTable />
+							{/* <Separator /> */}
+							<CustomerUsageAnalyticsTable />
+							{/* <Separator /> */}
+							<CustomerInvoicesTable />
+						</div>
 					</div>
-					{/* <Separator /> */}
-					{/* <Separator className="my-2" /> */}
-					<div className="flex flex-col gap-10 w-full">
-						<CustomerProductsTable />
-						{/* <Separator /> */}
-						<CustomerFeatureUsageTable />
-						{/* <Separator /> */}
-						<CustomerUsageAnalyticsTable />
-						{/* <Separator /> */}
-						<CustomerInvoicesTable />
-					</div>
-				</div>
+					{createPortal(
+						<AnimatePresence>
+							{sheetType && (
+								<motion.div
+									initial={{ opacity: 0 }}
+									animate={{ opacity: 1 }}
+									exit={{ opacity: 0 }}
+									className="fixed inset-0 bg-background/70"
+									style={{ zIndex: 40 }}
+									onMouseDown={() => {
+										closeProductSheet();
+									}}
+								/>
+							)}
+						</AnimatePresence>,
+						document.body,
+					)}
+				</motion.div>
+
 				<CustomerBalanceSheets />
 				<CustomerSheets />
 			</div>

@@ -59,7 +59,7 @@ export function QuantityField({
 		<div className={className}>
 			{label && <Label>{label}</Label>}
 			<div className="relative flex items-center">
-				<div className="inline-flex rounded-lg overflow-hidden border border-border w-fit">
+				<div className="inline-flex rounded-lg overflow-hidden border border-border w-fit h-6 items-center">
 					<Button
 						type="button"
 						aria-label="Decrease quantity"
