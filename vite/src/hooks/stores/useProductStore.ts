@@ -6,6 +6,7 @@ import {
 	productV2ToFeatureItems,
 } from "@autumn/shared";
 import { useMemo } from "react";
+import { useParams } from "react-router";
 import { create } from "zustand";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { getItemId } from "@/utils/product/productItemUtils";
@@ -49,6 +50,12 @@ export const useProductStore = create<ProductState>((set) => ({
 
 	reset: () => set(initialState),
 }));
+
+// Custom hook to determine if we're in customer product view based on URL
+export const useIsCusPlanEditor = () => {
+	const { customer_id } = useParams();
+	return !!customer_id;
+};
 
 // Custom hooks for computed values
 export const useHasChanges = () => {

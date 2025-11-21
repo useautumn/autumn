@@ -6,18 +6,16 @@ import { Link, useParams, useSearchParams } from "react-router";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useProductSync } from "@/hooks/stores/useProductSync";
 import { notNullish } from "@/utils/genUtils";
 import { sortProductItems } from "@/utils/productUtils";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useAttachState } from "@/views/customers/customer/product/hooks/useAttachState";
+import { useCusProductQuery } from "@/views/customers/customer/product/hooks/useCusProductQuery";
 import ErrorScreen from "@/views/general/ErrorScreen";
 import LoadingScreen from "@/views/general/LoadingScreen";
-import { ManageProduct } from "@/views/products/product/ManageProduct";
+import { PlanEditor } from "@/views/products/plan/components/PlanEditor";
 import { ProductContext } from "@/views/products/product/ProductContext";
-import ProductSidebar from "@/views/products/product/ProductSidebar";
-import { useCusQuery } from "../hooks/useCusQuery";
-import { CustomerProductBreadcrumbs } from "./components/CustomerProductBreadcrumbs";
-import { useAttachState } from "./hooks/useAttachState";
-import { useCusProductQuery } from "./hooks/useCusProductQuery";
-import { ProductOptions } from "./ProductOptions";
 
 interface OptionValue {
 	feature_id: string;
@@ -68,6 +66,8 @@ export default function CustomerProductView() {
 	const [product, setProduct] = useState<ProductV2 | null>(
 		originalProduct ?? null,
 	);
+
+	useProductSync({ product: originalProduct });
 
 	const { isLoading: cusLoading } = useCusQuery();
 
@@ -163,22 +163,16 @@ export default function CustomerProductView() {
 			}}
 		>
 			<CustomToaster />
-			<div className="flex w-full">
-				<div className="flex flex-col gap-4 w-full">
-					<CustomerProductBreadcrumbs />
-					<div className="flex">
-						<div className="flex-1 w-full min-w-sm">
-							{product && <ManageProduct />}
-							{options.length > 0 && (
+
+			<PlanEditor />
+
+			{/* {product && <ManageProduct />} */}
+			{/* {options.length > 0 && (
 								<ProductOptions options={options} setOptions={setOptions} />
-							)}
-						</div>
-					</div>
-				</div>
-				<div className="max-w-[300px] w-1/3 shrink-1 hidden lg:block">
+
+				{/* <div className="max-w-[300px] w-1/3 shrink-1 hidden lg:block">
 					<ProductSidebar />
-				</div>
-			</div>
+				</div> */}
 		</ProductContext.Provider>
 	);
 }

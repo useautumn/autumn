@@ -139,6 +139,7 @@ export const PlanTypeSection = ({
 									basePriceType: "recurring",
 									is_default: false,
 									items: [
+										...product.items,
 										{
 											price: "" as unknown as number,
 											interval: ProductItemInterval.Month,

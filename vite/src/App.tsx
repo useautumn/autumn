@@ -15,9 +15,8 @@ import { SignIn } from "./views/auth/SignIn";
 import { Otp } from "./views/cli/Otp";
 import CustomersPage from "./views/customers/CustomersPage";
 import { AnalyticsView } from "./views/customers/customer/analytics/AnalyticsView";
-import CustomerView from "./views/customers/customer/CustomerView";
-import CustomerProductView from "./views/customers/customer/product/CustomerProductView";
 import CustomerView2 from "./views/customers2/customer/CustomerView2";
+import CustomerPlanEditor from "./views/customers2/customer-plan/CustomerPlanEditor";
 import { DefaultView } from "./views/DefaultView";
 import DevScreen from "./views/developer/DevView";
 import { CloseScreen } from "./views/general/CloseScreen";
@@ -102,11 +101,13 @@ export default function App() {
 					/>
 					<Route
 						path="/customers/:customer_id/:product_id"
-						element={<CustomerProductView />}
+						// element={<CustomerProductView />}
+						element={<CustomerPlanEditor />}
 					/>
 					<Route
 						path="/sandbox/customers/:customer_id/:product_id"
-						element={<CustomerProductView />}
+						// element={<CustomerProductView />}
+						element={<CustomerPlanEditor />}
 					/>
 					<Route path="/dev" element={<DevScreen />} />
 					<Route path="/sandbox/dev" element={<DevScreen />} />
