@@ -174,7 +174,7 @@ export const handleGetBillingPortalV2 = createRoute({
 
 		const portal = await stripeCli.billingPortal.sessions.create({
 			customer: stripeCusId,
-			return_url: returnUrl,
+			return_url: returnUrl ?? toSuccessUrl({ org, env }),
 			configuration: configuration?.id ?? undefined,
 		});
 
