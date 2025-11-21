@@ -1,3 +1,4 @@
+FROM oven/bun:1.3.2
 WORKDIR /app
 
 # Install Node.js to fix Bun bug with msgpackr-extract postinstall scripts
