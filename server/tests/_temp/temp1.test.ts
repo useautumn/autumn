@@ -5,7 +5,11 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import {
+	constructProduct,
+	constructRawProduct,
+} from "@/utils/scriptUtils/createTestProducts.js";
+import { constructPriceItem } from "../../src/internal/products/product-items/productItemUtils.js";
 import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "../../src/utils/scriptUtils/testUtils/initProductsV0.js";
 
@@ -15,18 +19,24 @@ const pro = constructProduct({
 	isDefault: true,
 
 	items: [
-		// constructFeatureItem({
-		// 	featureId: TestFeature.Action1,
-		// 	includedUsage: 5,
-		// }),
 		constructFeatureItem({
 			featureId: TestFeature.Credits,
-			// includedUsage: 200,
-			unlimited: true,
+			includedUsage: 200,
+			// unlimited: true,
+		}),
+	],
+});
+
+const oneOff = constructRawProduct({
+	id: "one-off",
+	items: [
+		constructPriceItem({
+			price: 10,
+			interval: null,
 		}),
 		constructFeatureItem({
-			featureId: TestFeature.Words,
-			unlimited: true,
+			featureId: TestFeature.Messages,
+			includedUsage: 100,
 		}),
 	],
 });
@@ -46,7 +56,7 @@ describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [pro],
+			products: [pro, oneOff],
 			prefix: customerId,
 		});
 
@@ -57,17 +67,9 @@ describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 	});
 
 	test("should attach pro product", async () => {
-		const res = await Promise.all(
-			Array.from({ length: 7 }, () =>
-				autumn.check({
-					customer_id: customerId,
-					feature_id: TestFeature.Workflows,
-					send_event: true,
-				}),
-			),
-		);
-
-		const allowedCount = res.filter((r) => r.allowed).length;
-		console.log("Allowed count", allowedCount);
+		await autumn.attach({
+			customer_id: customerId,
+			product_id: oneOff.id,
+		});
 	});
 });
