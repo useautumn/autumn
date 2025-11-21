@@ -55,6 +55,7 @@ export function AttachProductSelection({
 											value: p.id,
 										}))}
 										placeholder="Select Product"
+										hideFieldInfo
 									/>
 								)}
 							</form.AppField>
@@ -69,7 +70,7 @@ export function AttachProductSelection({
 								<Button
 									size="sm"
 									variant="secondary"
-									className="h-input px-3 disabled:pointer-events-none disabled:opacity-50"
+									className="size-6 disabled:pointer-events-none disabled:opacity-50"
 									onClick={() => {
 										if (field.state.value.length === 1) {
 											return;
