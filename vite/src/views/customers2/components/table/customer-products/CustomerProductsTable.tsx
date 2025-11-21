@@ -12,7 +12,7 @@ import { useFullCusSearchQuery } from "@/views/customers/hooks/useFullCusSearchQ
 import { useSavedViewsQuery } from "@/views/customers/hooks/useSavedViewsQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
-import { AttachProductDropdown } from "./AttachProductDropdown";
+import { AttachProductSheetTrigger } from "./AttachProductSheetTrigger";
 import { CancelProductDialog } from "./CancelProductDialog";
 import { CustomerProductPrice } from "./CustomerProductPrice";
 import { CustomerProductsColumns } from "./CustomerProductsColumns";
@@ -224,7 +224,7 @@ export function CustomerProductsTable() {
 								showExpired={showExpired}
 								setShowExpired={setShowExpired}
 							/>
-							<AttachProductDropdown />
+							<AttachProductSheetTrigger />
 						</Table.Actions>
 					</Table.Toolbar>
 					{hasEntityProducts && (
