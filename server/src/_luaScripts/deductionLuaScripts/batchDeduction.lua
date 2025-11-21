@@ -998,6 +998,9 @@ local function processRequest(request, loadedCusFeatures, entityFeatureStates)
                 remainingAmount = result.remaining
             else
                 -- Unlimited feature covers everything
+                -- Mark as "changed" so balance gets returned
+                customerChanged = true
+                changedCustomerFeatureIds[cusFeature.id] = true
                 remainingAmount = 0
             end
         else
@@ -1026,6 +1029,13 @@ local function processRequest(request, loadedCusFeatures, entityFeatureStates)
                         
                         remainingAmount = result.remaining
                     else
+                        -- Unlimited entity feature covers everything
+                        -- Mark as "changed" so balance gets returned
+                        changedEntityIds[entityId] = true
+                        if not changedEntityFeatureIds[entityId] then
+                            changedEntityFeatureIds[entityId] = {}
+                        end
+                        changedEntityFeatureIds[entityId][entityFeature.id] = true
                         remainingAmount = 0
                     end
                 end
@@ -1061,6 +1071,13 @@ local function processRequest(request, loadedCusFeatures, entityFeatureStates)
                             totalDeducted = totalDeducted + (amount - result.remaining)
                             remainingAmount = result.remaining
                         else
+                            -- Unlimited entity feature covers everything
+                            -- Mark as "changed" so balance gets returned
+                            changedEntityIds[entId] = true
+                            if not changedEntityFeatureIds[entId] then
+                                changedEntityFeatureIds[entId] = {}
+                            end
+                            changedEntityFeatureIds[entId][entityFeature.id] = true
                             remainingAmount = 0
                             break
                         end
@@ -1118,6 +1135,9 @@ local function processRequest(request, loadedCusFeatures, entityFeatureStates)
                                 end
                             else
                                 -- Unlimited credit system covers everything
+                                -- Mark as "changed" so balance gets returned
+                                customerChanged = true
+                                changedCustomerFeatureIds[otherCusFeature.id] = true
                                 remainingAmount = 0
                             end
                             break

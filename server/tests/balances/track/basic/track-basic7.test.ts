@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion, type TrackResponseV2 } from "@autumn/shared";
-import chalk from "chalk";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -60,7 +60,13 @@ describe(`${chalk.yellowBright("track-basic7: track with unlimited balance")}`, 
 			feature_id: TestFeature.Messages,
 		});
 
-		expect(trackRes.balance).toBeNull();
+		expect(trackRes.balance).toMatchObject({
+			feature_id: TestFeature.Messages,
+			unlimited: true,
+			current_balance: 0,
+			usage: 0,
+			granted_balance: 0,
+		});
 		expect(trackRes.value).toBe(1);
 
 		const customer = await autumnV1.customers.get(customerId);
