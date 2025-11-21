@@ -90,3 +90,14 @@ export const ApiPlanFeatureSchema = z
 	});
 
 export type ApiPlanFeature = z.infer<typeof ApiPlanFeatureSchema>;
+
+export const ApiPlanFeatureWithMeta = ApiPlanFeatureSchema.meta({
+	id: "PlanFeature",
+	description: "Plan feature object returned by the API",
+	example: {
+		feature_id: "123",
+		granted_balance: 100,
+		unlimited: false,
+		price: null,
+	},
+});

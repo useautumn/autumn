@@ -24,7 +24,6 @@ cusRouter.get("/:customer_id", ...handleGetCustomerV2);
 cusRouter.post("/:customer_id", ...handleUpdateCustomerV2);
 cusRouter.patch("/:customer_id", ...handleUpdateCustomerV2);
 cusRouter.delete("/:customer_id", ...handleDeleteCustomerV2);
-
 cusRouter.post("/:customer_id/coupons/:coupon_id", ...handleAddCouponToCusV2);
 cusRouter.post("/:customer_id/transfer", ...handleTransferProductV2);
 

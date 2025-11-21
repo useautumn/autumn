@@ -1,7 +1,5 @@
 import {
 	AttachResultSchema,
-	BillingPortalParamsSchema,
-	BillingPortalResultSchema,
 	CancelBodySchema,
 	CancelResultSchema,
 	CheckoutResponseSchema,
@@ -16,6 +14,7 @@ import {
 	TrackParamsSchema,
 	TrackResponseV2Schema,
 } from "@api/models.js";
+import { z } from "zod/v4";
 import type { ZodOpenApiPathsObject } from "zod-openapi";
 import {
 	attachJsDoc,
@@ -25,6 +24,11 @@ import {
 	queryJsDoc,
 	setupPaymentJsDoc,
 } from "../common/jsDocs.js";
+import {
+	GetBillingPortalBodySchema,
+	GetBillingPortalQuerySchema,
+	GetBillingPortalResponseSchema,
+} from "../customers/customerOpModels.js";
 
 export const coreOps: ZodOpenApiPathsObject = {
 	"/attach": {
@@ -169,21 +173,51 @@ export const coreOps: ZodOpenApiPathsObject = {
 			},
 		},
 	},
-	"/billing_portal": {
+	// "/billing_portal": {
+	// 	post: {
+	// 		summary: "Create Billing Portal Session",
+	// 		description: billingPortalJsDoc,
+	// 		tags: ["core"],
+	// 		requestBody: {
+	// 			content: {
+	// 				"application/json": { schema: BillingPortalParamsSchema },
+	// 			},
+	// 		},
+	// 		responses: {
+	// 			"200": {
+	// 				description: "200 OK",
+	// 				content: {
+	// 					"application/json": { schema: BillingPortalResultSchema },
+	// 				},
+	// 			},
+	// 		},
+	// 	},
+	// },
+	"/customers/{customer_id}/billing_portal": {
 		post: {
 			summary: "Create Billing Portal Session",
 			description: billingPortalJsDoc,
 			tags: ["core"],
+			requestParams: {
+				path: z.object({
+					customer_id: z.string(),
+				}),
+				query: GetBillingPortalQuerySchema,
+			},
 			requestBody: {
 				content: {
-					"application/json": { schema: BillingPortalParamsSchema },
+					"application/json": {
+						schema: GetBillingPortalBodySchema,
+					},
 				},
 			},
 			responses: {
 				"200": {
 					description: "200 OK",
 					content: {
-						"application/json": { schema: BillingPortalResultSchema },
+						"application/json": {
+							schema: GetBillingPortalResponseSchema,
+						},
 					},
 				},
 			},
