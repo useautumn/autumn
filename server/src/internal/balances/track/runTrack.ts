@@ -17,6 +17,7 @@ import { runRedisDeduction } from "./redisTrackUtils/runRedisDeduction";
 import { constructEvent, type EventInfo } from "./trackUtils/eventUtils";
 import { executePostgresTracking } from "./trackUtils/executePostgresTracking";
 import type { FeatureDeduction } from "./trackUtils/getFeatureDeductions";
+import { getTrackBalancesResponse } from "./trackUtils/getTrackBalancesResponse";
 
 export const runTrack = async ({
 	ctx,
@@ -27,7 +28,7 @@ export const runTrack = async ({
 	ctx: AutumnContext;
 	body: TrackParams;
 	featureDeductions: FeatureDeduction[];
-	apiVersion: ApiVersion;
+	apiVersion?: ApiVersion;
 }) => {
 	// Validate: event_name cannot be used with overage_behavior: "reject"
 	if (body.event_name && body.overage_behavior === "reject") {
@@ -96,29 +97,28 @@ export const runTrack = async ({
 	} else {
 		// Clean balances
 
-		if (balances && Object.keys(balances).length > 0) {
-			for (const balance of Object.values(balances)) {
-				balance.feature = undefined;
-			}
-		}
+		// console.log("Balances:", balances);
+		const finalBalances = getTrackBalancesResponse({
+			featureDeductions,
+			features: ctx.features,
+			balances,
+		});
 
 		response = {
 			customer_id: body.customer_id,
 			entity_id: body.entity_id,
 			event_name: body.event_name,
 			value: body.value ?? 1,
-			balance:
-				balances && Object.keys(balances).length === 1
-					? Object.values(balances)[0]
-					: null,
-			balances:
-				balances && Object.keys(balances).length > 1 ? balances : undefined,
+			balance: finalBalances.balance,
+			balances: finalBalances.balances,
 		};
 	}
 
 	const transformedResponse = applyResponseVersionChanges<TrackResponseV2>({
 		input: response,
-		targetVersion: new ApiVersionClass(apiVersion) || ctx.apiVersion,
+		targetVersion: apiVersion
+			? new ApiVersionClass(apiVersion)
+			: ctx.apiVersion,
 		resource: AffectedResource.Track,
 		legacyData: {
 			feature_id: body.feature_id || body.event_name,

@@ -137,7 +137,7 @@ export const syncItem = async ({
 
 		const cusEnts = cusProductsToCusEnts({
 			cusProducts: fullCus.customer_products,
-			featureIds: relevantFeatures.map((f) => f.id),
+			featureId: relevantFeature.id,
 			reverseOrder: org.config?.reverse_deduction_order,
 			entity: fullCus.entity,
 			inStatuses: orgToInStatuses({ org }),
@@ -146,7 +146,7 @@ export const syncItem = async ({
 		const backendBalance = apiToBackendBalance({
 			apiBalance: redisBalance,
 			cusEnts,
-			features: relevantFeatures,
+			features: [relevantFeature],
 		});
 
 		featureDeductions.push({
@@ -167,9 +167,6 @@ export const syncItem = async ({
 		refreshCache: false, // CRITICAL: Don't refresh cache after sync (Redis is the source of truth)
 	});
 
-	// const logText = `sync complete | customer: ${customerId}, feature:${featureId}${entityId ? `, entity:${entityId}` : ""} [${org.slug}, ${env}]`;
-	// console.log(logText);
-	// ctx.logger.info(logText);
 	ctx.logger.info(
 		`[SYNC COMPLETE] (${customerId}${entityId ? `, ${entityId}` : ""}) feature ${featureId}, target: ${chalk.yellow(featureDeductions?.[0]?.targetBalance)}`,
 	);

@@ -62,10 +62,9 @@ export const disableCurrentDefault = async ({
 		// }
 	} else if (type === "free") {
 		const curDefault = defaults?.free;
-
 		if (curDefault) {
 			throw new RecaseError({
-				message: `You have another default free product (${curDefault.id}). Please remove default from that product first.`,
+				message: `You have another default product (${curDefault.id}). Please remove default from that product first.`,
 			});
 		}
 		// if (curDefault) {
