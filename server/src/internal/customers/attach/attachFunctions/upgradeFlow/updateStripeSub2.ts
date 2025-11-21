@@ -1,11 +1,14 @@
-import { type AttachConfig, ProrationBehavior } from "@autumn/shared";
+import {
+	type AttachConfig,
+	ProrationBehavior,
+	RecaseError,
+} from "@autumn/shared";
 import type Stripe from "stripe";
 import { sanitizeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { createProrationInvoice } from "@/external/stripe/stripeSubUtils/updateStripeSub/createProrationinvoice.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { nullish } from "@/utils/genUtils.js";
 import type { ItemSet } from "@/utils/models/ItemSet.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
@@ -102,7 +105,7 @@ export const updateStripeSub2 = async ({
 	const { curMainProduct } = attachParamToCusProducts({ attachParams });
 
 	// 2. Create prorations for single use items
-	const { invoiceItems, cusEntIds } = await createUsageInvoiceItems({
+	const { cusEntIds } = await createUsageInvoiceItems({
 		db,
 		attachParams,
 		cusProduct: curMainProduct!,
