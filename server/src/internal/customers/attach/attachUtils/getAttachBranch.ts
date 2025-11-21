@@ -9,6 +9,7 @@ import {
 	type FeatureOptions,
 	type FullCusProduct,
 	productsAreSame,
+	RecaseError,
 } from "@autumn/shared";
 import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import { hasPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
@@ -17,7 +18,6 @@ import {
 	isFreeProduct,
 	isProductUpgrade,
 } from "@/internal/products/productUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import type { AttachParams } from "../../cusProducts/AttachParams.js";
