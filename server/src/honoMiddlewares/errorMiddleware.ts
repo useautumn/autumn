@@ -7,6 +7,7 @@ import { ZodError } from "zod/v4";
 import { formatZodError } from "@/errors/formatZodError.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { getSentryTags } from "../external/sentry/sentryUtils.js";
 import { handleErrorSkip } from "./errorSkipMiddleware.js";
 /**
  * Hono error handler middleware
@@ -34,7 +35,13 @@ export const errorMiddleware = (err: Error, c: Context<HonoEnv>) => {
 	if (skipResponse) return skipResponse;
 
 	// If we got here, it's an error worth tracking - capture to Sentry
-	Sentry.captureException(err);
+	Sentry.captureException(err, {
+		tags: getSentryTags({
+			ctx,
+			path: c.req.path,
+			method: c.req.method,
+		}),
+	});
 
 	// 1. Handle RecaseError (our custom errors)
 	if (err instanceof RecaseError || err instanceof SharedRecaseError) {

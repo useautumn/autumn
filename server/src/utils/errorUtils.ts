@@ -5,6 +5,7 @@ import { StatusCodes } from "http-status-codes";
 import Stripe from "stripe";
 import { ZodError } from "zod/v4";
 import { formatZodError } from "../errors/formatZodError.js";
+import { getSentryTags } from "../external/sentry/sentryUtils.js";
 
 export const isPaymentDeclined = (error: any) => {
 	return (
@@ -60,7 +61,14 @@ export const handleRequestError = ({
 	action: string;
 }) => {
 	try {
-		Sentry.captureException(error);
+		Sentry.captureException(error, {
+			tags: getSentryTags({
+				ctx: req,
+				path: req.originalUrl,
+				method: req.method,
+			}),
+		});
+
 		const logger = req.logger;
 		if (error instanceof RecaseError) {
 			logger.warn(
