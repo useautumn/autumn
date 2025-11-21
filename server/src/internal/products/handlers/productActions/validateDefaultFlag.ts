@@ -62,9 +62,12 @@ export const disableCurrentDefault = async ({
 		// }
 	} else if (type === "free") {
 		const curDefault = defaults?.free;
-		throw new RecaseError({
-			message: `You have another default product (${curDefault.id}). Please remove default from that product first.`,
-		});
+
+		if (curDefault) {
+			throw new RecaseError({
+				message: `You have another default free product (${curDefault.id}). Please remove default from that product first.`,
+			});
+		}
 		// if (curDefault) {
 		// 	logger.info(`Disabling trial on cur default product: ${curDefault.id}`);
 		// 	await ProductService.updateByInternalId({
