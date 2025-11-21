@@ -22,9 +22,9 @@ import { ProductService } from "../../ProductService.js";
 import { handleNewProductItems } from "../../product-items/productItemUtils/handleNewProductItems.js";
 import { getProductResponse } from "../../productUtils/productResponseUtils/getProductResponse.js";
 import { initProductInStripe } from "../../productUtils.js";
-import { disableCurrentDefault } from "../handleCreatePlan.js";
 import { handleUpdateProductDetails } from "../handleUpdateProduct/updateProductDetails.js";
 import { handleVersionProductV2 } from "../handleVersionProduct.js";
+import { validateDefaultFlag } from "./validateDefaultFlag.js";
 
 export interface UpdateProductParams {
 	ctx: AutumnContext;
@@ -92,9 +92,10 @@ export const updateProduct = async ({
 		free_trial: newFreeTrial,
 	};
 
-	await disableCurrentDefault({
-		req: ctx,
-		newProduct: newProductV2,
+	await validateDefaultFlag({
+		ctx,
+		body: updates,
+		curProduct: fullProduct,
 	});
 
 	await handleUpdateProductDetails({

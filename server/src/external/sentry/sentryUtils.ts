@@ -44,10 +44,13 @@ export const getSentryTags = ({
 		org_id: ctx.org?.id,
 		org_slug: ctx.org?.slug,
 		env: ctx.env || "unknown",
+		auth_type: ctx.authType,
 		request_id: ctx.id || "",
 		customer_id: customerId,
 		message_id: messageId,
 		path: path,
 		method: method,
+
+		email: ctx.user?.email,
 	};
 };
