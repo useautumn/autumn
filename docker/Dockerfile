@@ -1,8 +1,8 @@
 FROM oven/bun:1.3.2
 WORKDIR /app
 
-# Install Node.js to fix Bun bug with msgpackr-extract postinstall scripts
-RUN apt-get update && apt-get install -y nodejs npm && rm -rf /var/lib/apt/lists/*
+# # Install Node.js to fix Bun bug with msgpackr-extract postinstall scripts
+# RUN apt-get update && apt-get install -y nodejs npm && rm -rf /var/lib/apt/lists/*
 
 # Copy root package files
 COPY package.json .
