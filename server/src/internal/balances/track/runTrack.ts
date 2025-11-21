@@ -1,5 +1,7 @@
 import {
 	AffectedResource,
+	type ApiVersion,
+	ApiVersionClass,
 	applyResponseVersionChanges,
 	type CheckExpand,
 	ErrCode,
@@ -20,10 +22,12 @@ export const runTrack = async ({
 	ctx,
 	body,
 	featureDeductions,
+	apiVersion,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	featureDeductions: FeatureDeduction[];
+	apiVersion: ApiVersion;
 }) => {
 	// Validate: event_name cannot be used with overage_behavior: "reject"
 	if (body.event_name && body.overage_behavior === "reject") {
@@ -114,7 +118,7 @@ export const runTrack = async ({
 
 	const transformedResponse = applyResponseVersionChanges<TrackResponseV2>({
 		input: response,
-		targetVersion: ctx.apiVersion,
+		targetVersion: new ApiVersionClass(apiVersion) || ctx.apiVersion,
 		resource: AffectedResource.Track,
 		legacyData: {
 			feature_id: body.feature_id || body.event_name,
