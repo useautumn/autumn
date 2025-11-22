@@ -12,6 +12,7 @@ export const ADMIN_USER_IDs = [
 	"user_2tMgAiPsQzX8JTHjZZh9m0VdvUv", // a
 	"user_2sB3tBXsnVVLlTKliQIqvvM2xfB", // j
 	"ZsDswIXyOGMP9y1V1At4dAZNaiggClSs", // t
+	"NqNuL3MtS7MR2WYoqx2b28iY9vmfAs8h", // c
 ];
 // process.env.ENV === "production" || process.env.NODE_ENV === "production"
 // 	? [

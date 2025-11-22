@@ -71,5 +71,12 @@ describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 			customer_id: customerId,
 			product_id: oneOff.id,
 		});
+		await autumn.attach({
+			customer_id: customerId,
+			product_id: oneOff.id,
+		});
+
+		const customer = await autumn.customers.get(customerId);
+		console.log("Customer:", customer);
 	});
 });
