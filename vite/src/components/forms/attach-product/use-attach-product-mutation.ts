@@ -1,12 +1,15 @@
-import { UsageModel } from "@autumn/shared";
+import { type ProductV2, UsageModel } from "@autumn/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useHasChanges, useProductStore } from "@/hooks/stores/useProductStore";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { getAttachBody } from "@/views/customers/customer/product/components/attachProductUtils";
 
 interface AttachProductParams {
-	products: Array<{ productId: string }>;
+	productId: string;
 	prepaidOptions: Record<string, number>;
 	useInvoice: boolean;
 	enableProductImmediately?: boolean;
@@ -22,9 +25,18 @@ export function useAttachProductMutation({
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
 	const { products: allProducts } = useProductsQuery();
+	const { closeSheet } = useSheetStore();
+	const isCustom = useHasChanges();
+	const { product: customProduct } = useProductStore();
 
 	return useMutation({
 		mutationFn: async (params: AttachProductParams) => {
+			// Use custom product from store if there are changes, otherwise fetch from products list
+			const product =
+				isCustom && customProduct
+					? customProduct
+					: allProducts.find((p) => p.id === params.productId);
+
 			// Build prepaid options by joining quantities with product data to get billing_units
 			const prepaidOptions = Object.entries(params.prepaidOptions)
 				.filter(([, quantity]) => quantity > 0)
@@ -47,26 +59,19 @@ export function useAttachProductMutation({
 				})
 				.filter(Boolean) as Array<{ feature_id: string; quantity: number }>;
 
-			const attachPromises = params.products.map(async (item) => {
-				const attachBody = {
-					customer_id: customerId,
-					product_id: item.productId,
-					options: prepaidOptions.length > 0 ? prepaidOptions : undefined,
-					invoice: params.useInvoice,
-					enable_product_immediately: params.useInvoice
-						? params.enableProductImmediately
-						: undefined,
-					finalize_invoice: params.useInvoice ? false : undefined,
-					success_url: window.location.href,
-				};
-
-				return await CusService.attach(axiosInstance, attachBody);
+			const attachBody = getAttachBody({
+				customerId: customerId,
+				product: product as ProductV2,
+				optionsInput: prepaidOptions,
+				isCustom,
 			});
 
-			return await Promise.all(attachPromises);
+			return await CusService.attach(axiosInstance, attachBody);
 		},
-		onSuccess: (results) => {
-			toast.success(`Successfully attached ${results.length} product(s)`);
+		onSuccess: () => {
+			toast.success("Successfully attached product");
+			//close sheet
+			closeSheet();
 
 			// Invalidate customer queries to refresh data
 			queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
@@ -74,7 +79,7 @@ export function useAttachProductMutation({
 			onSuccess?.();
 		},
 		onError: (error) => {
-			toast.error("Failed to attach products");
+			toast.error("Failed to attach product");
 			console.error(error);
 		},
 	});

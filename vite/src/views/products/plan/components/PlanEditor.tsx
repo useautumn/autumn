@@ -20,13 +20,7 @@ function shouldCloseSheetOnMouseDown({
 }: {
 	e: React.MouseEvent<HTMLDivElement>;
 	item: ReturnType<typeof useCurrentItem>;
-	sheetType:
-		| "edit-plan"
-		| "edit-plan-price"
-		| "edit-feature"
-		| "new-feature"
-		| "select-feature"
-		| null;
+	sheetType: string | null;
 }): boolean {
 	// Don't close if item is invalid
 

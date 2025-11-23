@@ -1,6 +1,5 @@
 import { UsageModel } from "@autumn/shared";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import type { ProductFormItem } from "./attach-product-form-schema";
 import type { UseAttachProductForm } from "./use-attach-product-form";
 
 interface PrepaidOptionsFieldProps {
@@ -13,30 +12,26 @@ export function AttachProductPrepaidOptions({
 	const { products } = useProductsQuery();
 
 	const activeProducts = products.filter((p) => !p.archived);
-	const selectedProducts = form.state.values.products as ProductFormItem[];
+	const selectedProductId = form.state.values.productId;
 
-	const prepaidFeatures = selectedProducts
-		.filter((item: { productId: string }) => item.productId)
-		.flatMap((item: { productId: string }) => {
-			const product = activeProducts.find((p) => p.id === item.productId);
-			if (!product) return [];
+	const product = activeProducts.find((p) => p.id === selectedProductId);
 
-			const prepaidItems =
+	const prepaidFeatures = product
+		? (
 				product.items?.filter(
 					(productItem) =>
 						productItem.usage_model === UsageModel.Prepaid &&
 						productItem.feature_id,
-				) || [];
-
-			return prepaidItems.map((productItem) => ({
+				) || []
+			).map((productItem) => ({
 				product_name: product.name,
 				feature_id: productItem.feature_id as string,
 				feature_type: productItem.feature_type,
 				price: productItem.price || 0,
 				billing_units: productItem.billing_units || 1,
 				tiers: productItem.tiers,
-			}));
-		});
+			}))
+		: [];
 
 	if (prepaidFeatures.length === 0) {
 		return null;

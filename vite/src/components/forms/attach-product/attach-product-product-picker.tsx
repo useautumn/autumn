@@ -29,7 +29,7 @@ export function AttachProductProductPicker({
 	);
 
 	const handleProductSelect = (productId: string) => {
-		form.setFieldValue("products", [{ productId, quantity: 1 }]);
+		form.setFieldValue("productId", productId);
 	};
 
 	return (

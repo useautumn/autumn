@@ -1,66 +1,68 @@
 import type { ProductV2 } from "@autumn/shared";
+import SmallSpinner from "@/components/general/SmallSpinner";
+import { AttachConfirmationInfo } from "./attach-confirmation-info";
+import { AttachFeaturePreview } from "./attach-feature-preview";
+import { useAttachPreview } from "./use-attach-preview";
 
 export function AttachProductSummary({
-	selectedProducts,
+	productId,
 	products,
+	customerId,
 }: {
-	selectedProducts: { productId: string; quantity: number }[];
+	productId: string;
 	products: ProductV2[];
+	customerId: string;
 }) {
-	const lineItems = selectedProducts
-		.filter((item) => item.productId)
-		.map((item) => {
-			const product = products.find((p) => p.id === item.productId);
-			if (!product) return null;
+	const { data: previewData, isLoading } = useAttachPreview();
 
-			const productPrice =
-				product.items?.reduce((sum, productItem) => {
-					return sum + (productItem.price || 0);
-				}, 0) || 0;
-
-			const lineTotal = productPrice * item.quantity;
-
-			return {
-				name: product.name,
-				quantity: item.quantity,
-				unitPrice: productPrice,
-				total: lineTotal,
-			};
-		})
-		.filter(Boolean);
-
-	const total = lineItems.reduce((sum, item) => sum + (item?.total || 0), 0);
-
-	if (lineItems.length === 0) {
+	if (!productId) {
 		return null;
 	}
+
+	if (isLoading) {
+		return (
+			<div className="flex items-center justify-center py-6">
+				<SmallSpinner />
+			</div>
+		);
+	}
+
+	console.log("previewData", previewData);
+
+	const product = products.find((p) => p.id === productId);
+
+	// Use preview data if available, otherwise calculate from product prices
+	const lineItems =
+		previewData?.lines?.map((line) => {
+			return {
+				name: line.description || product?.name || "Unknown",
+				total: line.amount,
+			};
+		}) || [];
+
+	const total = previewData?.total || 0;
 
 	return (
 		<div className="space-y-3">
 			<div className="space-y-2">
 				{lineItems.map((item, index) => (
 					<div key={index} className="flex items-center justify-between">
+						<div className="text-sm text-foreground">{item.name}</div>
 						<div className="text-sm text-foreground">
-							{item?.name}
-							{item && item.quantity > 1 && (
-								<span className="text-t3"> x{item.quantity}</span>
-							)}
-						</div>
-						<div className="text-sm text-foreground">
-							${((item?.total || 0) / 100).toFixed(2)}
+							${item.total.toFixed(2)}
 						</div>
 					</div>
 				))}
 			</div>
-
 			<div className="border-t border-border" />
-
 			<div className="flex items-center justify-between">
 				<div className="text-sm font-semibold text-foreground">Total:</div>
 				<div className="text-sm font-semibold text-foreground">
-					${(total / 100).toFixed(2)}
+					${total.toFixed(2)}
 				</div>
 			</div>
+			<AttachConfirmationInfo />
+			<AttachFeaturePreview customerId={customerId} />
 		</div>
 	);
 }
