@@ -2,13 +2,16 @@ import { useAppForm } from "@/hooks/form/form";
 import {
 	type AttachProductForm,
 	AttachProductFormSchema,
-	type ProductFormItem,
 } from "./attach-product-form-schema";
 
-export function useAttachProductForm() {
+export function useAttachProductForm({
+	initialProductId,
+}: {
+	initialProductId?: string;
+} = {}) {
 	return useAppForm({
 		defaultValues: {
-			products: [] as ProductFormItem[],
+			productId: initialProductId || "",
 			prepaidOptions: {} as Record<string, number>,
 		} satisfies AttachProductForm,
 		validators: {

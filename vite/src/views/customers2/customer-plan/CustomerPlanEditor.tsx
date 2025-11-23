@@ -7,6 +7,7 @@ import { CustomToaster } from "@/components/general/CustomToaster";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductSync } from "@/hooks/stores/useProductSync";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { notNullish } from "@/utils/genUtils";
 import { sortProductItems } from "@/utils/productUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -45,6 +46,12 @@ export default function CustomerProductView() {
 	const { customer_id, product_id } = useParams();
 	const [searchParams] = useSearchParams();
 	const entityIdParam = searchParams.get("entity_id");
+	const closeSheet = useSheetStore((s) => s.closeSheet);
+	//Close the subscription detail / attach product sheet when navigating to this page (prevents jank closing animation)
+	// useSheetCleanup();
+	useEffect(() => {
+		closeSheet();
+	}, []);
 
 	const { isLoading: orgLoading } = useOrg();
 	const { isLoading: featuresLoading } = useFeaturesQuery();

@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { Table } from "@/components/general/table";
 import { Button } from "@/components/v2/buttons/Button";
-import { pushPage } from "@/utils/genUtils";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useFullCusSearchQuery } from "@/views/customers/hooks/useFullCusSearchQuery";
 import { useSavedViewsQuery } from "@/views/customers/hooks/useSavedViewsQuery";
@@ -97,7 +97,7 @@ export function CustomerProductsTable() {
 						<Button
 							variant="skeleton"
 							onClick={handleEntityClick}
-							className="text-t1 font-medium hover:text-purple-600 cursor-pointer max-w-full !px-0 hover:bg-transparent active:bg-transparent active:border-none"
+							className="text-t1 font-medium hover:text-purple-600 cursor-pointer max-w-full px-0! hover:bg-transparent active:bg-transparent active:border-none"
 						>
 							<span className="truncate w-full">
 								{entity.name || entity.id || entity.internal_id}
@@ -139,25 +139,17 @@ export function CustomerProductsTable() {
 		[customer.entities, location.pathname, location.search, navigate],
 	);
 
+	const setSheet = useSheetStore((s) => s.setSheet);
+
 	const handleCancelClick = (product: FullCusProduct) => {
 		setSelectedProduct(product);
 		setCancelOpen(true);
 	};
 
 	const handleRowClick = (cusProduct: FullCusProduct) => {
-		const entity = customer.entities.find(
-			(e: Entity) =>
-				e.internal_id === cusProduct.internal_entity_id ||
-				e.id === cusProduct.entity_id,
-		);
-
-		pushPage({
-			path: `/customers/${customer.id || customer.internal_id}/${cusProduct.product_id}`,
-			queryParams: {
-				id: cusProduct.id,
-				entity_id: entity ? entity.id || entity.internal_id : undefined,
-			},
-			navigate,
+		setSheet({
+			type: "subscription-detail",
+			itemId: cusProduct.id,
 		});
 	};
 
@@ -186,7 +178,6 @@ export function CustomerProductsTable() {
 		},
 	});
 
-	const hasProducts = displayedProducts.length > 0;
 	const hasEntityProducts = entityProducts.length > 0 && !entityId;
 
 	const emptyStateText =

@@ -1,6 +1,10 @@
+import type { ProductItem, ProductV2 } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useAttachProductStore } from "@/hooks/stores/useAttachProductStore";
+import { useHasChanges, useProductStore } from "@/hooks/stores/useProductStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import type { ProductFormItem } from "./attach-product-form-schema";
+import { getAttachBody } from "@/views/customers/customer/product/components/attachProductUtils";
 
 interface CheckoutResponse {
 	url?: string | null;
@@ -13,25 +17,34 @@ interface CheckoutResponse {
 	total?: number | null;
 	currency?: string | null;
 	has_prorations?: boolean | null;
+	product?: ProductV2 & {
+		items: ProductItem[];
+	};
+	current_product?: ProductV2 & {
+		items: ProductItem[];
+	};
+	options?: unknown[];
 }
 
-interface UseAttachPreviewParams {
-	customerId: string;
-	products: ProductFormItem[];
-	prepaidOptions: Record<string, number>;
-}
-
-export function useAttachPreview({
-	customerId,
-	products,
-	prepaidOptions,
-}: UseAttachPreviewParams) {
+export function useAttachPreview() {
 	const axiosInstance = useAxiosInstance();
+	const { products } = useProductsQuery();
+	const isCustom = useHasChanges();
+	const { product: customProduct } = useProductStore();
 
-	// Filter to only products with IDs selected
-	const validProducts = products.filter((p) => p.productId);
+	// Get form values from store
+	const customerId = useAttachProductStore((s) => s.customerId);
+	const productId = useAttachProductStore((s) => s.productId);
+	const prepaidOptions = useAttachProductStore((s) => s.prepaidOptions);
 
-	// Build options array for prepaid quantities
+	// Use custom product from store if there are changes, otherwise fetch from products list
+	const product =
+		isCustom && customProduct
+			? customProduct
+			: products.find((p) => p.id === productId);
+
+	// console.log("product", product);
+
 	const options = Object.entries(prepaidOptions)
 		.filter(([, quantity]) => quantity > 0)
 		.map(([featureId, quantity]) => ({
@@ -39,33 +52,37 @@ export function useAttachPreview({
 			quantity: quantity,
 		}));
 
+	const attachBody =
+		product && customerId
+			? getAttachBody({
+					customerId: customerId,
+					product,
+					optionsInput: options,
+					isCustom,
+				})
+			: null;
+
 	return useQuery({
 		queryKey: [
 			"attach-checkout",
 			customerId,
-			validProducts.map((p) => ({ id: p.productId, qty: p.quantity })),
+			product?.items,
 			options,
+			isCustom,
 		],
 		queryFn: async () => {
-			if (validProducts.length === 0) {
+			if (!productId || !attachBody || !customerId) {
 				return null;
 			}
 
 			const response = await axiosInstance.post<CheckoutResponse>(
 				"/v1/checkout",
-				{
-					customer_id: customerId,
-					products: validProducts.map((p) => ({
-						product_id: p.productId,
-						quantity: p.quantity,
-					})),
-					options: options.length > 0 ? options : undefined,
-				},
+				attachBody,
 			);
 
 			return response.data;
 		},
-		enabled: !!customerId && validProducts.length > 0,
+		enabled: !!customerId && !!productId && !!product,
 		staleTime: 0, // Always fetch fresh pricing
 	});
 }
