@@ -294,12 +294,13 @@ export function defineVersionChange<
 			if (config.transformRequest) {
 				const result = config.transformRequest(params);
 				// Validate with safeParse - gracefully handles failures without throwing
-				const parsed = this.newSchema.safeParse(result);
-				if (!parsed.success) {
-					// Return unvalidated result to avoid breaking the request
-					return result as z.infer<TNewSchema>;
-				}
-				return parsed.data;
+				// const parsed = this.newSchema.safeParse(result);
+				// if (!parsed.success) {
+				// 	// Return unvalidated result to avoid breaking the request
+				// 	return result as z.infer<TNewSchema>;
+				// }
+				// return parsed.data;
+				return result;
 			}
 			return super.transformRequest(params);
 		}
