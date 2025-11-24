@@ -93,6 +93,7 @@ export const handleTransferProductV2 = createRoute({
 			throw new CusProductAlreadyExistsError({
 				productId: product_id,
 				entityId: toEntity?.id,
+				customerId: (from_entity_id && !to_entity_id) ? customer_id : undefined,
 			});
 		}
 
