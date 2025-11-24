@@ -62,6 +62,10 @@ export const cronTask = async () => {
 };
 
 const main = async () => {
+	if (process.env.DISABLE_CRON === "true") {
+		console.log(`Cron disabled!`);
+		return;
+	}
 	await Promise.all([cronTask(), runProductCron()]);
 };
 
