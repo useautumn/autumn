@@ -77,11 +77,13 @@ export const getPlanResponse = async ({
 	features,
 	fullCus,
 	db,
+	currency = "usd",
 }: {
 	product: FullProduct;
 	features: Feature[];
 	fullCus?: FullCustomer;
 	db?: DrizzleCli;
+	currency?: string;
 }): Promise<ApiPlan> => {
 	// 1. Convert prices/entitlements to items
 	const rawItems = mapToProductItems({
@@ -106,7 +108,11 @@ export const getPlanResponse = async ({
 					basePriceItem.interval_count !== 1
 						? (basePriceItem.interval_count ?? undefined)
 						: undefined,
-				display: getProductItemDisplay({ item: basePriceItem, features }),
+				display: getProductItemDisplay({
+					item: basePriceItem,
+					features,
+					currency,
+				}),
 			}
 		: null;
 

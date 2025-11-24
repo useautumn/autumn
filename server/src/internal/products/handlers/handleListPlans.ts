@@ -55,6 +55,7 @@ export const handleListPlans = createRoute({
 					features,
 					fullCus: customer ? customer : undefined,
 					db,
+					currency: org.default_currency || undefined,
 				}),
 				// getProductResponse({
 				// 	product: p,
