@@ -31,7 +31,7 @@ export const planToProductV2PriceItem = ({
 		price: price?.amount ?? 0,
 	} satisfies ProductItem;
 
-	const display = getProductItemDisplay({ item, features });
+	const display = price?.display ?? getProductItemDisplay({ item, features });
 
 	return {
 		...item,
