@@ -100,16 +100,23 @@ export const handleVersionProductV2 = async ({
 	});
 
 	// Handle new free trial (create new)
-	if (newProductV2.free_trial || latestProduct.free_trial) {
-		await handleNewFreeTrial({
-			db,
-			newFreeTrial: newProductV2.free_trial || null,
-			curFreeTrial: null,
-			internalProductId: newProduct.internal_id,
-			isCustom: false,
-			newVersion: true, // This is a new product version
-		});
-	}
+	// newProductV2.free_trial can be:
+	// - undefined: not changed, use latestProduct.free_trial
+	// - null: explicitly unset (no free trial for new version)
+	// - FreeTrial object: set to that value
+	const freeTrialForNewVersion =
+		newProductV2.free_trial !== undefined // if the new ft is not undefined
+			? (newProductV2.free_trial ?? null) // use the new free trial value, or null to unset
+			: (latestProduct.free_trial ?? null); // use the latest product's free trial, or null to keep unset
+
+	await handleNewFreeTrial({
+		db,
+		newFreeTrial: freeTrialForNewVersion,
+		curFreeTrial: null,
+		internalProductId: newProduct.internal_id,
+		isCustom: false,
+		newVersion: true, // This is a new product version
+	});
 
 	await initProductInStripe({
 		db,
