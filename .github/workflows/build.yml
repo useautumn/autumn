@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - staging
       
   workflow_dispatch:
     inputs:
@@ -19,7 +20,7 @@ env:
 jobs:
   build-and-push:
     name: Build and Push Docker Image
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-16vcpu-ubuntu-2404
     
     permissions:
       id-token: write
