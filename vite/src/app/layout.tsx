@@ -3,7 +3,7 @@ import { AutumnProvider } from "autumn-js/react";
 import { ArrowUpRightFromSquare } from "lucide-react";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { useEffect } from "react";
-import { Outlet, useNavigate } from "react-router";
+import { Navigate, Outlet, useNavigate } from "react-router";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { Button } from "@/components/ui/button";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
@@ -24,11 +24,29 @@ import { MainSidebar } from "@/views/main-sidebar/MainSidebar";
 import { AppContext } from "./AppContext";
 
 export function MainLayout() {
-	const env = useEnv();
 	const { data, isPending } = useSession();
+
+	// 1. If loading, show loading screen
+	if (isPending) {
+		return (
+			<div className="w-screen h-screen flex bg-stone-100 items-center justify-center">
+				<LoadingScreen />
+			</div>
+		);
+	}
+
+	// 2. If no user, redirect to sign in
+	if (!data?.user) {
+		return <Navigate to="/sign-in" replace />;
+	}
+
+	// 3. User is authenticated, render authenticated layout
+	return <AuthenticatedLayout />;
+}
+
+function AuthenticatedLayout() {
 	const { org, isLoading: orgLoading } = useOrg();
 	const { handleApiError } = useGlobalErrorHandler();
-
 	const navigate = useNavigate();
 
 	// Global error handler for API errors
@@ -58,48 +76,13 @@ export function MainLayout() {
 		}
 	}, [org, orgLoading, navigate]);
 
-	// 1. If not loaded, show loading screen
-	if (isPending || orgLoading) {
+	// Show loading while fetching org
+	if (orgLoading) {
 		return (
-			<AutumnProvider
-				backendUrl={import.meta.env.VITE_BACKEND_URL}
-				includeCredentials={true}
-			>
-				<div className="w-screen h-screen flex bg-stone-100">
-					<MainSidebar />
-					<div className="w-full h-screen flex flex-col overflow-hidden py-3 pr-3">
-						<div className="w-full h-full flex flex-col overflow-hidden rounded-lg border">
-							{env === AppEnv.Sandbox && (
-								<div className="w-full min-h-10 h-10 bg-t8/10 text-white text-sm flex items-center justify-center relative px-4">
-									<p className="font-medium text-t8 font-mono">
-										You&apos;re in sandbox
-									</p>
-									<Button
-										variant="default"
-										className="h-6 border border-t8 bg-transparent text-t8 hover:bg-t8 hover:text-white font-mono rounded-xs ml-auto absolute right-4"
-										onClick={() => {
-											navigateTo("/onboarding", navigate, AppEnv.Sandbox);
-										}}
-									>
-										Onboarding
-										<ArrowUpRightFromSquare size={12} className="inline ml-1" />
-									</Button>
-								</div>
-							)}
-							<div className="flex bg-stone-50 flex-col h-full">
-								<LoadingScreen />
-							</div>
-						</div>
-					</div>
-				</div>
-			</AutumnProvider>
+			<div className="w-screen h-screen flex bg-stone-100 items-center justify-center">
+				<LoadingScreen />
+			</div>
 		);
-	}
-
-	// 2. If no user, redirect to sign in
-	if (!data) {
-		navigate("/sign-in");
-		return;
 	}
 
 	return (
@@ -130,7 +113,6 @@ const MainContent = () => {
 	useFeaturesQuery();
 	useRewardsQuery();
 	useCusSearchQuery();
-	useOrg();
 
 	return (
 		<AppContext.Provider value={{}}>

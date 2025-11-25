@@ -21,6 +21,7 @@ export const UserButton = () => {
 		setIsLoading(true);
 		try {
 			await signOut();
+			window.location.href = "/sign-in";
 		} catch (error) {
 			console.error("Sign out failed:", error);
 		} finally {
