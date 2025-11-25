@@ -97,7 +97,6 @@ export const handleUpdatePlan = createRoute({
 			features,
 		});
 
-		logger.info("curProductV2", { curProductV2 });
 		// Handle free_trial: distinguish between not provided, null (unset), and value (set)
 		const freeTrialExplicitlyProvided = "free_trial" in v1_2Body;
 		const newFreeTrial = freeTrialExplicitlyProvided
@@ -111,7 +110,6 @@ export const handleUpdatePlan = createRoute({
 			free_trial: newFreeTrial,
 		};
 
-		logger.info("newProductV2", { newProductV2 });
 		await validateDefaultFlag({
 			ctx,
 			body: v1_2Body,
