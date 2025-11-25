@@ -97,13 +97,17 @@ export const handleUpdatePlan = createRoute({
 			features,
 		});
 
-		const newFreeTrial = v1_2Body.free_trial as FreeTrial | undefined;
+		// Handle free_trial: distinguish between not provided, null (unset), and value (set)
+		const freeTrialExplicitlyProvided = "free_trial" in v1_2Body;
+		const newFreeTrial = freeTrialExplicitlyProvided
+			? ((v1_2Body.free_trial as FreeTrial | null | undefined) ?? null)
+			: (curProductV2.free_trial ?? undefined);
 		const newProductV2: ProductV2 = {
 			...curProductV2,
 			...v1_2Body,
 			group: v1_2Body.group || curProductV2.group || "",
 			items: v1_2Body.items || [],
-			free_trial: newFreeTrial || curProductV2.free_trial || undefined,
+			free_trial: newFreeTrial,
 		};
 
 		await validateDefaultFlag({
@@ -122,7 +126,7 @@ export const handleUpdatePlan = createRoute({
 			db,
 			curProduct: fullProduct,
 			newProduct: UpdateProductSchema.parse(v1_2Body),
-			newFreeTrial: v1_2Body.free_trial || curProductV2.free_trial || undefined,
+			newFreeTrial,
 			items: v1_2Body.items || curProductV2.items,
 			org,
 			rewardPrograms,
@@ -145,6 +149,7 @@ export const handleUpdatePlan = createRoute({
 			const { itemsSame, freeTrialsSame } = productsAreSame({
 				newProductV2: newProductV2,
 				curProductV1: fullProduct,
+				curProductV2: curProductV2,
 				features,
 			});
 
