@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import {
-	type AttachBody,
+	type AttachBodyV0,
 	type CreateEntityParams,
 	type CreateRewardProgram,
 	CusExpand,
@@ -197,7 +197,7 @@ export class AutumnCliV2 {
 		});
 	}
 
-	async attach(params: AttachBody) {
+	async attach(params: AttachBodyV0) {
 		return await this.post(`/attach`, params);
 	}
 
@@ -480,7 +480,7 @@ export class AutumnCliV2 {
 		return await this.post(`/check`, params);
 	};
 
-	attachPreview = async (params: AttachBody) => {
+	attachPreview = async (params: AttachBodyV0) => {
 		return await this.post(`/attach/preview`, params);
 	};
 
