@@ -19,7 +19,10 @@ import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPric
 
 import { formatAmount } from "@/utils/formatUtils.js";
 import { sortProductsByPrice } from "../../../internal/products/productUtils/sortProductUtils.js";
-import { isOneOff } from "../../../internal/products/productUtils.js";
+import {
+	isFreeProduct,
+	isOneOff,
+} from "../../../internal/products/productUtils.js";
 import type { VercelBillingPlan } from "../misc/vercelTypes.js";
 
 /**
@@ -157,12 +160,13 @@ export const listVercelPlansForOrg = async ({
 
 	// 1. Get rid of products that have usage prices
 	// 2. Get rid of products that are archived
+	// 3. Get rid of products that are one off, only if they are not free
 	const filteredProducts = products
 		.filter((p) => !p.prices.some((price) => isUsagePrice({ price })))
 		.filter(
 			(p) =>
 				!p.is_add_on &&
-				!isOneOff(p.prices) &&
+				(!isOneOff(p.prices) || isFreeProduct(p.prices)) &&
 				!p.archived &&
 				(p.entitlements.length > 0 || p.is_default),
 		);

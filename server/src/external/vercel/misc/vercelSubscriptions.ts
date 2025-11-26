@@ -15,7 +15,10 @@ import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { createStripeSub2 } from "@/internal/customers/attach/attachFunctions/addProductFlow/createStripeSub2.js";
+import { handleFreeProduct } from "@/internal/customers/attach/attachFunctions/addProductFlow/handleAddProduct.js";
+import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { isFreeProduct } from "@/internal/products/productUtils.js";
 import {
 	getVercelAttachBody,
 	parseVercelPrepaidQuantities,
@@ -64,7 +67,7 @@ export const createVercelSubscription = async ({
 	c: Context<HonoEnv>;
 	metadata?: Record<string, any>;
 	resourceId?: string;
-}): Promise<{ subscription: Stripe.Subscription; product: FullProduct }> => {
+}): Promise<{ product: FullProduct }> => {
 	// 1. Check for existing non-incomplete subscription (only allow one per installation)
 	const existingSubscription = stripeCustomer.subscriptions?.data.find(
 		(s) =>
@@ -100,6 +103,13 @@ export const createVercelSubscription = async ({
 			statusCode: StatusCodes.NOT_FOUND,
 		});
 	}
+
+	const refreshedCustomer = await CusService.getFull({
+		db,
+		idOrInternalId: customer.internal_id,
+		orgId: org.id,
+		env,
+	});
 
 	// 3. Get custom payment method (created in handleUpsertInstallation)
 	const customPaymentMethod = await getCusPaymentMethod({
@@ -148,21 +158,34 @@ export const createVercelSubscription = async ({
 		resourceId,
 	});
 
-	// 6. Get subscription items
-	const itemSet = await getStripeSubItems2({
-		attachParams,
-		config,
-	});
+	if (isFreeProduct(product.prices)) {
+		if (
+			!refreshedCustomer?.customer_products.find(
+				(cp) => cp.product_id === billingPlanId,
+			)
+		) {
+			await handleFreeProduct({
+				ctx: c.get("ctx"),
+				attachParams,
+			});
+		}
+	} else {
+		// 6. Get subscription items
+		const itemSet = await getStripeSubItems2({
+			attachParams,
+			config,
+		});
 
-	// 7. Create Stripe subscription
-	const subscription = await createStripeSub2({
-		db,
-		stripeCli,
-		attachParams,
-		config,
-		itemSet,
-		logger,
-	});
+		// 7. Create Stripe subscription
+		await createStripeSub2({
+			db,
+			stripeCli,
+			attachParams,
+			config,
+			itemSet,
+			logger,
+		});
+	}
 
 	// Subscription will be 'incomplete' initially with an 'open' invoice
 	// Payment flow:
@@ -174,5 +197,5 @@ export const createVercelSubscription = async ({
 	//      - Attaches payment record to invoice
 	//   4. Invoice becomes 'paid' → Subscription becomes 'active'
 
-	return { subscription, product };
+	return { product };
 };

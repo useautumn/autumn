@@ -31,7 +31,8 @@ export const ApiCustomerSchema = z.object({
 	metadata: z.record(z.any(), z.any()),
 
 	subscriptions: z.array(ApiSubscriptionSchema),
-	// scheduled_subscriptions: z.array(ApiSubscriptionSchema),
+
+	scheduled_subscriptions: z.array(ApiSubscriptionSchema),
 
 	balances: z.record(z.string(), ApiBalanceSchema),
 	...ApiCusExpandSchema.shape,
