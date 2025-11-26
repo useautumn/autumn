@@ -1,5 +1,5 @@
 import {
-	type AttachBody,
+	type AttachBodyV0,
 	CusProductStatus,
 	cusProductToProduct,
 	ErrCode,
@@ -20,26 +20,24 @@ const getProductsForAttach = async ({
 	attachBody,
 }: {
 	ctx: AutumnContext;
-	attachBody: AttachBody;
+	attachBody: AttachBodyV0;
 }) => {
 	const {
 		product_id,
 		product_ids,
 		version,
-		products: inputProducts,
+		// products: inputProducts,
 	} = attachBody;
 
 	const products = await ProductService.listFull({
 		db: ctx.db,
 		orgId: ctx.org.id,
 		env: ctx.env,
-		inIds: inputProducts
-			? inputProducts.map((p) => p.product_id)
-			: product_ids || [product_id!],
+		inIds: product_ids || [product_id!],
 		version,
 	});
 
-	if (notNullish(product_ids) && nullish(inputProducts)) {
+	if (notNullish(product_ids)) {
 		const freeTrialProds = products.filter((prod) =>
 			notNullish(prod.free_trial),
 		);
@@ -77,7 +75,7 @@ export const getCustomerAndProducts = async ({
 	attachBody,
 }: {
 	ctx: AutumnContext;
-	attachBody: AttachBody;
+	attachBody: AttachBodyV0;
 }) => {
 	const [customer, products] = await Promise.all([
 		getOrCreateCustomer({

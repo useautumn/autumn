@@ -1,5 +1,5 @@
 import {
-	type AttachBody,
+	type AttachBodyV0,
 	type CreateFreeTrial,
 	cusProductToEnts,
 	cusProductToPrices,
@@ -26,7 +26,7 @@ export const getPricesAndEnts = async ({
 	products,
 }: {
 	ctx: AutumnContext;
-	attachBody: AttachBody;
+	attachBody: AttachBodyV0;
 	customer: FullCustomer;
 	products: FullProduct[];
 }) => {

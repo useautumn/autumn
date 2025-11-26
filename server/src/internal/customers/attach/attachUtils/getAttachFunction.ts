@@ -1,5 +1,5 @@
 import {
-	type AttachBody,
+	type AttachBodyV0,
 	AttachBranch,
 	type AttachConfig,
 	AttachFunction,
@@ -37,7 +37,7 @@ export const getAttachFunction = async ({
 }: {
 	branch: AttachBranch;
 	attachParams: AttachParams;
-	attachBody: AttachBody;
+	attachBody: AttachBodyV0;
 	config: AttachConfig;
 }) => {
 	const { onlyCheckout } = config;
@@ -117,7 +117,7 @@ export const runAttachFunction = async ({
 	res: any;
 	branch: AttachBranch;
 	attachParams: AttachParams;
-	attachBody: AttachBody;
+	attachBody: AttachBodyV0;
 	config: AttachConfig;
 }) => {
 	const { logger, db } = req;
@@ -129,9 +129,6 @@ export const runAttachFunction = async ({
 		attachBody,
 		config,
 	});
-
-	// console.log("Attach Function:", attachFunction);
-	// throw new Error("Attach Function:");
 
 	const customer = attachParams.customer;
 	const org = attachParams.org;

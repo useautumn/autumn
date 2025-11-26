@@ -1,41 +1,44 @@
-import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import {
-	AttachParams,
-	AttachResultSchema,
-} from "@/internal/customers/cusProducts/AttachParams.js";
-import { attachToInsertParams } from "@/internal/products/productUtils.js";
-import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
-import {
-	AttachBody,
-	AttachBranch,
-	AttachConfig,
+	type AttachBodyV0,
+	type AttachBranch,
+	type AttachConfig,
 	AttachScenario,
 	CusProductStatus,
+	isTrialing,
 	SuccessCode,
 } from "@autumn/shared";
+import type Stripe from "stripe";
+import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import {
-	getCustomerSub,
-	paramsToCurSubSchedule,
-} from "../../attachUtils/convertAttachParams.js";
+	type AttachParams,
+	AttachResultSchema,
+} from "@/internal/customers/cusProducts/AttachParams.js";
 
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import { updateStripeSub2 } from "../upgradeFlow/updateStripeSub2.js";
-import Stripe from "stripe";
-import { createStripeSub2 } from "../addProductFlow/createStripeSub2.js";
-import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import {
 	attachToInvoiceResponse,
 	insertInvoiceFromAttach,
 } from "@/internal/invoices/invoiceUtils.js";
+import { attachToInsertParams } from "@/internal/products/productUtils.js";
+import type {
+	ExtendedRequest,
+	ExtendedResponse,
+} from "@/utils/models/Request.js";
+import {
+	getCustomerSub,
+	paramsToCurSubSchedule,
+} from "../../attachUtils/convertAttachParams.js";
+import { handleMultiAttachErrors } from "../../attachUtils/handleAttachErrors/handleMultiAttachErrors.js";
 
 import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
+import { createStripeSub2 } from "../addProductFlow/createStripeSub2.js";
+import { handleUpgradeFlowSchedule } from "../upgradeFlow/handleUpgradeFlowSchedule.js";
+import { updateStripeSub2 } from "../upgradeFlow/updateStripeSub2.js";
 import {
 	getAddAndRemoveProducts,
 	getProdListWithoutEntities,
 } from "./getAddAndRemoveProducts.js";
-import { handleUpgradeFlowSchedule } from "../upgradeFlow/handleUpgradeFlowSchedule.js";
-import { isTrialing } from "@autumn/shared";
-import { handleMultiAttachErrors } from "../../attachUtils/handleAttachErrors/handleMultiAttachErrors.js";
 
 export const handleMultiAttachFlow = async ({
 	req,
@@ -48,7 +51,7 @@ export const handleMultiAttachFlow = async ({
 	req: ExtendedRequest;
 	res: ExtendedResponse;
 	attachParams: AttachParams;
-	attachBody: AttachBody;
+	attachBody: AttachBodyV0;
 	branch: AttachBranch;
 	config: AttachConfig;
 }) => {

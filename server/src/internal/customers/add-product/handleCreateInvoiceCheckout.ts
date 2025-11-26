@@ -1,5 +1,5 @@
 import {
-	type AttachBody,
+	type AttachBodyV0,
 	type AttachBranch,
 	type AttachConfig,
 	SuccessCode,
@@ -26,7 +26,7 @@ export const handleCreateInvoiceCheckout = async ({
 	req: any;
 	res?: any;
 	attachParams: AttachParams;
-	attachBody: AttachBody;
+	attachBody: AttachBodyV0;
 	config: AttachConfig;
 	branch: AttachBranch;
 }) => {

@@ -1,5 +1,5 @@
 // import {
-// 	type AttachBody,
+// 	type AttachBodyV0,
 // 	AttachBodySchema,
 // 	AttachFunction,
 // 	type FeatureOptions,
@@ -35,7 +35,7 @@
 // 	attachBody,
 // }: {
 // 	req: ExtendedRequest;
-// 	attachBody: AttachBody;
+// 	attachBody: AttachBodyV0;
 // }) => {
 // 	const { attachParams } = await getAttachParams({
 // 		req,
