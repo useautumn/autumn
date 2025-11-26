@@ -4,16 +4,16 @@ import { FeatureOptionsSchema } from "@models/cusProductModels/cusProductModels.
 import { z } from "zod/v4";
 
 // RESULT
-export const CheckoutLineSchema = z.object({
+export const CheckoutLineV0Schema = z.object({
 	description: z.string(),
 	amount: z.number(),
 	item: ApiProductItemSchema.nullish(),
 });
 
-export const CheckoutResponseSchema = z.object({
+export const CheckoutResponseV0Schema = z.object({
 	url: z.string().nullish(),
 	customer_id: z.string(),
-	lines: z.array(CheckoutLineSchema),
+	lines: z.array(CheckoutLineV0Schema),
 
 	product: ApiProductSchema.nullish(),
 	current_product: ApiProductSchema.nullish(),
@@ -30,4 +30,5 @@ export const CheckoutResponseSchema = z.object({
 		.nullish(),
 });
 
-export type CheckoutLine = z.infer<typeof CheckoutLineSchema>;
+export type CheckoutLineV0 = z.infer<typeof CheckoutLineV0Schema>;
+export type CheckoutResponseV0 = z.infer<typeof CheckoutResponseV0Schema>;
