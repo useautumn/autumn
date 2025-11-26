@@ -27,7 +27,7 @@ export const handleCreateCheckout = async ({
 	returnCheckout = false,
 }: {
 	req: any;
-	res: any;
+	res?: any;
 	attachParams: AttachParams;
 	config: AttachConfig;
 	returnCheckout?: boolean;
@@ -182,7 +182,7 @@ export const handleCreateCheckout = async ({
 		}
 	}
 
-	if (returnCheckout) {
+	if (returnCheckout || !res) {
 		return checkout;
 	}
 

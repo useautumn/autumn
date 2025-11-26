@@ -12,6 +12,7 @@ import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingInter
 import { getAlignedUnix } from "@/internal/products/prices/billingIntervalUtils2.js";
 import { getLargestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
+import type { Logger } from "../../../../external/logtail/logtailUtils.js";
 import type { AttachParams } from "../../cusProducts/AttachParams.js";
 import {
 	attachParamsToProduct,
@@ -86,7 +87,7 @@ export const getNewProductPreview = async ({
 }: {
 	branch: AttachBranch;
 	attachParams: AttachParams;
-	logger: any;
+	logger: Logger;
 	config: AttachConfig;
 	withPrepaid?: boolean;
 }) => {

@@ -4,9 +4,9 @@ import type {
 	ExtendedResponse,
 } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
+import { attachParamsToPreview } from "../../../billing/attachPreview/attachParamsToPreview.js";
 import { getAttachParams } from "../attachUtils/attachParams/getAttachParams.js";
-
-import { attachParamsToPreview } from "./attachParamsToPreview.js";
 
 export const handleAttachPreview = (req: any, res: any) =>
 	routeHandler({
@@ -14,20 +14,19 @@ export const handleAttachPreview = (req: any, res: any) =>
 		res,
 		action: "attach-preview",
 		handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
-			const { logger } = req;
 			const attachBody = AttachBodySchema.parse(req.body);
 
 			// console.log("attachBody", attachBody);
+			const ctx = req as AutumnContext;
 			const { attachParams } = await getAttachParams({
-				req,
+				ctx,
 				attachBody,
 			});
 
 			const attachPreview = await attachParamsToPreview({
-				req,
+				ctx,
 				attachParams,
 				attachBody,
-				logger,
 			});
 
 			res.status(200).json(attachPreview);
