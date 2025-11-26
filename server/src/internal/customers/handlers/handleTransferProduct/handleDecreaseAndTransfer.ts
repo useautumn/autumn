@@ -25,7 +25,7 @@ export const handleDecreaseAndTransfer = async ({
 	ctx: AutumnContext;
 	fullCus: FullCustomer;
 	cusProduct: FullCusProduct;
-	toEntity: Entity;
+	toEntity?: Entity | null;
 }) => {
 	// 1. Create new cus product for entity...
 	const { org, env, db, logger, features } = ctx;
@@ -90,8 +90,8 @@ export const handleDecreaseAndTransfer = async ({
 				replaceables: [],
 				entities: fullCus.entities,
 				features,
-				internalEntityId: toEntity.internal_id,
-				entityId: toEntity.id,
+				internalEntityId: toEntity?.internal_id ? toEntity.internal_id : undefined,
+				entityId: toEntity?.id ? toEntity.id : undefined,
 			},
 			product,
 		),
