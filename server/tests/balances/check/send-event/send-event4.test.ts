@@ -13,7 +13,7 @@ import { getCreditCost } from "../../../../src/internal/features/creditSystemUti
 // UNCOMMENT FROM HERE
 const pro = constructProduct({
 	type: "free",
-	isDefault: true,
+	isDefault: false,
 
 	items: [
 		constructFeatureItem({

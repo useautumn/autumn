@@ -15,7 +15,7 @@ import { initProductsV0 } from "../../src/utils/scriptUtils/testUtils/initProduc
 
 // UNCOMMENT FROM HERE
 const pro = constructProduct({
-	type: "free",
+	type: "pro",
 	isDefault: true,
 
 	items: [
@@ -59,24 +59,37 @@ describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 			products: [pro, oneOff],
 			prefix: customerId,
 		});
-
-		await autumn.attach({
-			customer_id: customerId,
-			product_id: pro.id,
-		});
 	});
 
 	test("should attach pro product", async () => {
-		await autumn.attach({
+		// await autumn.customers.get(customerId);
+
+		const res = await autumn.attach({
 			customer_id: customerId,
-			product_id: oneOff.id,
-		});
-		await autumn.attach({
-			customer_id: customerId,
-			product_id: oneOff.id,
+			product_id: pro.id,
 		});
 
+		await autumn.attach({
+			customer_id: customerId,
+			product_id: oneOff.id,
+		});
+		await autumn.attach({
+			customer_id: customerId,
+			product_id: oneOff.id,
+		});
 		const customer = await autumn.customers.get(customerId);
 		console.log("Customer:", customer);
+
+		// await autumn.attach({
+		// 	customer_id: customerId,
+		// 	product_id: oneOff.id,
+		// });
+		// await autumn.attach({
+		// 	customer_id: customerId,
+		// 	product_id: oneOff.id,
+		// });
+
+		// const customer = await autumn.customers.get(customerId);
+		// console.log("Customer:", customer);
 	});
 });

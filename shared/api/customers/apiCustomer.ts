@@ -29,7 +29,10 @@ export const ApiCustomerSchema = z.object({
 	stripe_id: z.string().nullable(),
 	env: z.enum(AppEnv),
 	metadata: z.record(z.any(), z.any()),
+
 	subscriptions: z.array(ApiSubscriptionSchema),
+	// scheduled_subscriptions: z.array(ApiSubscriptionSchema),
+
 	balances: z.record(z.string(), ApiBalanceSchema),
 	...ApiCusExpandSchema.shape,
 });
