@@ -4,14 +4,14 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import {
-	constructProduct,
-	constructRawProduct,
-} from "@/utils/scriptUtils/createTestProducts.js";
-import { constructPriceItem } from "../../src/internal/products/product-items/productItemUtils.js";
+	constructArrearItem,
+	constructPrepaidItem,
+} from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "../../src/utils/scriptUtils/testUtils/initProductsV0.js";
+import { replaceItems } from "../attach/utils.js";
 
 // UNCOMMENT FROM HERE
 const pro = constructProduct({
@@ -19,27 +19,26 @@ const pro = constructProduct({
 	isDefault: true,
 
 	items: [
-		constructFeatureItem({
+		constructArrearItem({
 			featureId: TestFeature.Credits,
-			includedUsage: 200,
-			// unlimited: true,
+			includedUsage: 0,
+			billingUnits: 1,
+			price: 0.5,
 		}),
 	],
 });
 
-const oneOff = constructRawProduct({
-	id: "one-off",
-	items: [
-		constructPriceItem({
-			price: 10,
-			interval: null,
-		}),
-		constructFeatureItem({
-			featureId: TestFeature.Messages,
-			includedUsage: 100,
-		}),
-	],
-});
+// const oneOff = constructRawProduct({
+// 	id: "pro-prepaid",
+// 	items: [
+// 		constructPrepaidItem({
+// 			featureId: TestFeature.Credits,
+// 			includedUsage: 0,
+// 			billingUnits: 1,
+// 			price: 0.5,
+// 		}),
+// 	],
+// });
 
 describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 	const customerId = "temp";
@@ -56,40 +55,30 @@ describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [pro, oneOff],
+			products: [pro],
 			prefix: customerId,
 		});
 	});
 
 	test("should attach pro product", async () => {
-		// await autumn.customers.get(customerId);
-
-		const res = await autumn.attach({
+		await autumn.attach({
 			customer_id: customerId,
 			product_id: pro.id,
 		});
 
-		await autumn.attach({
-			customer_id: customerId,
-			product_id: oneOff.id,
+		const newItems = replaceItems({
+			items: pro.items,
+			featureId: TestFeature.Credits,
+			newItem: constructPrepaidItem({
+				featureId: TestFeature.Credits,
+				includedUsage: 0,
+				billingUnits: 1,
+				price: 0.5,
+			}),
 		});
-		await autumn.attach({
-			customer_id: customerId,
-			product_id: oneOff.id,
+
+		await autumn.products.update(pro.id, {
+			items: newItems,
 		});
-		const customer = await autumn.customers.get(customerId);
-		console.log("Customer:", customer);
-
-		// await autumn.attach({
-		// 	customer_id: customerId,
-		// 	product_id: oneOff.id,
-		// });
-		// await autumn.attach({
-		// 	customer_id: customerId,
-		// 	product_id: oneOff.id,
-		// });
-
-		// const customer = await autumn.customers.get(customerId);
-		// console.log("Customer:", customer);
 	});
 });
