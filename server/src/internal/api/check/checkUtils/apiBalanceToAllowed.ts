@@ -47,6 +47,7 @@ export const apiBalanceToAllowed = ({
 	}
 
 	// 4. Balance >= required balance
+
 	if (new Decimal(apiBalance.current_balance).gte(requiredBalance)) {
 		return true;
 	}

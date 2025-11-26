@@ -56,7 +56,9 @@ export const handleConnectWebhook = async (c: Context<HonoEnv>) => {
 			webhookSecret,
 		);
 	} catch (err: any) {
-		logger.error(`Webhook verification error: ${err.message}`);
+		if (process.env.NODE_ENV !== "development") {
+			logger.warn(`Webhook verification error: ${err.message}`);
+		}
 		return c.json({ error: err.message }, 400);
 	}
 

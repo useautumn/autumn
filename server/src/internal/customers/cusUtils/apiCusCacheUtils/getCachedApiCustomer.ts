@@ -1,13 +1,16 @@
 import {
+	ApiBaseEntitySchema,
 	type ApiCustomer,
 	ApiCustomerSchema,
 	type AppEnv,
+	addToExpand,
+	CusExpand,
 	type CustomerLegacyData,
+	CustomerLegacyDataSchema,
 	filterOutEntitiesFromCusProducts,
 	filterPlanAndFeatureExpand,
 } from "@autumn/shared";
 import { CACHE_CUSTOMER_VERSION } from "@lua/cacheConfig.js";
-import { GET_CUSTOMER_SCRIPT } from "@lua/luaScripts.js";
 import { redis } from "../../../../external/redis/initRedis.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { tryRedisRead } from "../../../../utils/cacheUtils/cacheUtils.js";
@@ -53,9 +56,7 @@ export const getCachedApiCustomer = async ({
 		// Try to get from cache using Lua script (unless skipCache is true)
 		if (!skipCache) {
 			const cachedResult = await tryRedisRead(() =>
-				redis.eval(
-					GET_CUSTOMER_SCRIPT,
-					0, // No KEYS, all params in ARGV
+				redis.getCustomer(
 					org.id,
 					env,
 					customerId,
@@ -77,16 +78,21 @@ export const getCachedApiCustomer = async ({
 					data: rest,
 				});
 
+				const normalizedLegacyData = normalizeFromSchema<CustomerLegacyData>({
+					schema: CustomerLegacyDataSchema,
+					data: legacyData,
+				});
+
 				return {
 					// ← This returns from getCachedApiCustomer!
 					apiCustomer: ApiCustomerSchema.parse(normalized),
-					legacyData,
+					legacyData: normalizedLegacyData,
 				};
 			}
 		}
 
 		// Cache miss or skipCache - fetch from DB
-
+		// Include invoices:
 		const fullCus = await CusService.getFull({
 			db,
 			idOrInternalId: customerId,
@@ -94,15 +100,29 @@ export const getCachedApiCustomer = async ({
 			env: env as AppEnv,
 			withEntities: true,
 			withSubs: true,
+			expand: [CusExpand.Invoices],
 		});
 
 		// Build ApiCustomer (base only, no expand) to return
-
-		const { apiCustomer, legacyData } = await getApiCustomerBase({
+		const ctxWithExpand = addToExpand({
 			ctx,
+			add: [CusExpand.Invoices, CusExpand.Entities],
+		});
+		const { apiCustomer, legacyData } = await getApiCustomerBase({
+			ctx: ctxWithExpand,
 			fullCus,
 			withAutumnId: true,
 		});
+
+		try {
+			apiCustomer.entities = fullCus.entities.map((e) =>
+				ApiBaseEntitySchema.parse(e),
+			);
+		} catch (error) {
+			ctx.logger.error(
+				`[getCachedApiCustomer] Error parsing entities: ${error}`,
+			);
+		}
 
 		const { apiCustomer: masterApiCustomer } = await getApiCustomerBase({
 			ctx,
@@ -141,7 +161,12 @@ export const getCachedApiCustomer = async ({
 	});
 
 	return {
-		apiCustomer: filteredApiCustomer,
+		apiCustomer: {
+			...filteredApiCustomer,
+			rewards: filteredApiCustomer.rewards ?? undefined,
+			referrals: filteredApiCustomer.referrals ?? undefined,
+			payment_method: filteredApiCustomer.payment_method ?? undefined,
+		},
 		legacyData,
 	};
 };

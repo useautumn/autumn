@@ -3,10 +3,13 @@ import {
 	type ProductItem,
 	type ProductItemConfig,
 	ProductItemSchema,
+	ProductItemType,
 	type RolloverConfig,
 } from "@models/productV2Models/productItemModels/productItemModels.js";
-import { FeatureNotFoundError } from "../../api/models.js";
+import { type ApiFeatureV0, FeatureNotFoundError } from "../../api/models.js";
 import type { UpdatePlanFeatureParams } from "../../api/products/planFeature/planFeatureOpModels.js";
+import { ApiVersion } from "../../api/versionUtils/ApiVersion.js";
+import { ApiVersionClass } from "../../api/versionUtils/ApiVersionClass.js";
 import type { Feature } from "../../models/featureModels/featureModels.js";
 import type { ProrationConfig } from "../../models/productModels/priceModels/priceModels.js";
 import { Infinite } from "../../models/productModels/productEnums.js";
@@ -14,6 +17,7 @@ import {
 	OnDecrease,
 	OnIncrease,
 } from "../../models/productV2Models/productItemModels/productItemEnums.js";
+import { dbToApiFeatureV1 } from "../featureUtils/apiFeatureToDbFeature.js";
 import { featureToItemFeatureType } from "../featureUtils/convertFeatureUtils.js";
 import { billingToItemInterval } from "../productV2Utils/productItemUtils/itemIntervalUtils.js";
 import { hasPrice, hasResetInterval } from "./classifyPlanFeature.js";
@@ -98,9 +102,19 @@ export const planFeaturesToItems = ({
 		const interval = planFeatureToItemInterval({ planFeature });
 		const config = planFeatureToItemConfig({ planFeature });
 
+		const type = planFeature.price
+			? ProductItemType.FeaturePrice
+			: ProductItemType.Feature;
+
 		return ProductItemSchema.parse({
+			type,
+
 			feature_id: planFeature.feature_id,
 			feature_type: featureToItemFeatureType({ feature }),
+			feature: dbToApiFeatureV1({
+				dbFeature: feature,
+				targetVersion: new ApiVersionClass(ApiVersion.V1_2),
+			}) as unknown as ApiFeatureV0,
 
 			included_usage: planFeature.unlimited
 				? Infinite

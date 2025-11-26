@@ -22,6 +22,7 @@ export const handleGetCustomerV2 = createRoute({
 		const { with_autumn_id } = c.req.valid("query");
 
 		// SIDE EFFECT
+		// !ctx.org.config.disable_v1_invoices &&
 		if (
 			backwardsChangeActive({
 				apiVersion: ctx.apiVersion,
@@ -31,11 +32,15 @@ export const handleGetCustomerV2 = createRoute({
 			expand.push(CusExpand.Invoices);
 		}
 
+		const start = Date.now();
 		const customer = await getApiCustomer({
 			ctx,
 			customerId,
 			withAutumnId: with_autumn_id,
 		});
+
+		const duration = Date.now() - start;
+		ctx.logger.debug(`[get-customer] getApiCustomer duration: ${duration}ms`);
 
 		return c.json(customer);
 	},

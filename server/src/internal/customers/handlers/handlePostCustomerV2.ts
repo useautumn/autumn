@@ -35,6 +35,7 @@ export const handlePostCustomer = createRoute({
 			expand.push(CusExpand.Invoices);
 		}
 
+		const start = Date.now();
 		const baseData = await getOrCreateApiCustomer({
 			ctx,
 			customerId: createCusParams.id,
@@ -53,6 +54,8 @@ export const handlePostCustomer = createRoute({
 				},
 			},
 		});
+		const duration = Date.now() - start;
+		ctx.logger.debug(`[post-customer] duration: ${duration}ms`);
 
 		return c.json(apiCustomer);
 	},

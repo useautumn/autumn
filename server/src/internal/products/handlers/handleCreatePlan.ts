@@ -11,12 +11,10 @@ import {
 	type FullProduct,
 	type Price,
 	ProductAlreadyExistsError,
-	type ProductV2,
 	planToProductV2,
 } from "@autumn/shared";
 
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { getEntsWithFeature } from "../entitlements/entitlementUtils.js";
@@ -26,68 +24,9 @@ import {
 } from "../free-trials/freeTrialUtils.js";
 import { ProductService } from "../ProductService.js";
 import { handleNewProductItems } from "../product-items/productItemUtils/handleNewProductItems.js";
-import { isDefaultTrial } from "../productUtils/classifyProduct.js";
 import { getPlanResponse } from "../productUtils/productResponseUtils/getPlanResponse.js";
-import {
-	constructProduct,
-	getGroupToDefaults,
-	initProductInStripe,
-} from "../productUtils.js";
-
-export const disableCurrentDefault = async ({
-	req,
-	newProduct,
-	// items,
-	// freeTrial,
-}: {
-	req: AutumnContext;
-	newProduct: CreateProductV2Params | ProductV2;
-	// items: ProductItem[];
-	// freeTrial: FreeTrial;
-}) => {
-	const { db, org, env, logger } = req;
-
-	let defaultProds = await ProductService.listDefault({
-		db,
-		orgId: org.id,
-		env,
-	});
-
-	defaultProds = defaultProds.filter((prod) => prod.id !== newProduct.id);
-
-	if (defaultProds.length === 0) return;
-
-	const defaults = getGroupToDefaults({
-		defaultProds,
-	})?.[newProduct.group || ""];
-
-	const willBeDefaultTrial = isDefaultTrial({ product: newProduct });
-
-	if (willBeDefaultTrial) {
-		// Disable current default trial
-		const curDefault = defaults?.defaultTrial;
-		if (curDefault) {
-			logger.info(
-				`Disabling trial on cur default trial product: ${curDefault.id}`,
-			);
-			await ProductService.updateByInternalId({
-				db,
-				internalId: curDefault.internal_id,
-				update: { is_default: false },
-			});
-		}
-	} else if (newProduct.is_default) {
-		const curDefault = defaults?.free;
-		if (curDefault) {
-			logger.info(`Disabling trial on cur default product: ${curDefault.id}`);
-			await ProductService.updateByInternalId({
-				db,
-				internalId: curDefault.internal_id,
-				update: { is_default: false },
-			});
-		}
-	}
-};
+import { constructProduct, initProductInStripe } from "../productUtils.js";
+import { validateDefaultFlag } from "./productActions/validateDefaultFlag.js";
 
 /**
  * Route: POST /products - Create a product
@@ -121,9 +60,9 @@ export const handleCreatePlan = createRoute({
 		// 1. If existing product, throw error
 		if (existing) throw new ProductAlreadyExistsError({ productId: body.id });
 
-		await disableCurrentDefault({
-			req: ctx,
-			newProduct: v1_2Body as CreateProductV2Params,
+		await validateDefaultFlag({
+			ctx,
+			body: v1_2Body,
 		});
 
 		const backendProduct = constructProduct({

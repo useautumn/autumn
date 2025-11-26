@@ -120,7 +120,15 @@ export const handleProductsUpdated = async ({
 		orgId: org.id,
 		env: env,
 		entityId: cusProduct.internal_entity_id || undefined,
+		allowNotFound: true,
 	});
+
+	if (!fullCus) {
+		ctx.logger.warn(
+			`[handleProductsUpdated] Customer ${data.customerId} not found, skipping webhook`,
+		);
+		return;
+	}
 
 	const features = await FeatureService.list({
 		db,
@@ -131,7 +139,11 @@ export const handleProductsUpdated = async ({
 	if (ctx.apiVersion.lte(ApiVersion.V1_2)) {
 		addToExpand({
 			ctx,
-			add: [CusExpand.BalancesFeature, CusExpand.SubscriptionsPlan],
+			add: [
+				CusExpand.BalancesFeature,
+				CusExpand.SubscriptionsPlan,
+				CusExpand.ScheduledSubscriptionsPlan,
+			],
 		});
 	}
 

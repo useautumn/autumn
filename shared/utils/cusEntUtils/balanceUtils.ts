@@ -12,7 +12,6 @@ export const getSummedEntityBalances = ({
 		return {
 			balance: 0,
 			additional_balance: 0,
-			additional_granted_balance: 0,
 			adjustment: 0,
 			unused: 0,
 			count: 0,
@@ -24,16 +23,13 @@ export const getSummedEntityBalances = ({
 			(acc, curr) => acc + (curr.additional_balance ?? 0),
 			0,
 		),
-		additional_granted_balance: Object.values(cusEnt.entities).reduce(
-			(acc, curr) => acc + (curr.additional_granted_balance ?? 0),
-			0,
-		),
+
 		balance: Object.values(cusEnt.entities).reduce(
 			(acc, curr) => acc + curr.balance,
 			0,
 		),
 		adjustment: Object.values(cusEnt.entities).reduce(
-			(acc, curr) => acc + curr.adjustment,
+			(acc, curr) => acc + (curr.adjustment ?? 0),
 			0,
 		),
 		unused: 0,
@@ -50,7 +46,6 @@ export const getCusEntBalance = ({
 }): {
 	balance: number;
 	additional_balance: number;
-	additional_granted_balance: number;
 	adjustment: number;
 	unused: number;
 	count: number;
@@ -70,7 +65,6 @@ export const getCusEntBalance = ({
 				return {
 					balance: 0,
 					additional_balance: 0,
-					additional_granted_balance: 0,
 					adjustment: 0,
 					unused: 0,
 					count: 1,
@@ -81,8 +75,6 @@ export const getCusEntBalance = ({
 				balance: entityBalance || 0,
 				additional_balance:
 					cusEnt.entities?.[entityId]?.additional_balance || 0,
-				additional_granted_balance:
-					cusEnt.entities?.[entityId]?.additional_granted_balance || 0,
 				adjustment,
 				unused: 0,
 				count: 1,
@@ -93,7 +85,6 @@ export const getCusEntBalance = ({
 	return {
 		balance: cusEnt.balance || 0,
 		additional_balance: cusEnt.additional_balance || 0,
-		additional_granted_balance: cusEnt.additional_granted_balance || 0,
 		adjustment: cusEnt.adjustment || 0,
 		unused: cusEnt.replaceables?.length || 0,
 		count: 1,

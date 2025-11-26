@@ -1,13 +1,16 @@
-import { BillingInterval, ProductItemInterval, type ProductV2 } from "@autumn/shared";
-import { beforeAll, describe, expect, test } from "bun:test";
-import chalk from "chalk";
-import { addDays } from "date-fns";
-import type Stripe from "stripe";
-import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { beforeAll, describe, test } from "bun:test";
+import {
+	BillingInterval,
+	ProductItemInterval,
+	type ProductV2,
+} from "@autumn/shared";
 import { defaultApiVersion } from "@tests/constants.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
+import { addDays } from "date-fns";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -33,8 +36,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro with tria
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt({ version: defaultApiVersion });
 	let testClockId: string;
-
-	const curUnix = new Date().getTime();
 
 	beforeAll(async () => {
 		await initProductsV0({

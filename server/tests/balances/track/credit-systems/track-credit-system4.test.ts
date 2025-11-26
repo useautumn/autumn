@@ -1,5 +1,9 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { ApiVersion, type LimitedItem } from "@autumn/shared";
+import {
+	ApiVersion,
+	type LimitedItem,
+	type TrackResponseV2,
+} from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { timeout } from "@tests/utils/genUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
@@ -43,6 +47,7 @@ const testCase = "track-credit-system4";
 describe(`${chalk.yellowBright("track-credit-system4: test deduction with two credit system pairs")}`, () => {
 	const customerId = "track-credit-system4";
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
+	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2_0 });
 	const creditFeature = ctx.features.find((f) => f.id === TestFeature.Credits);
 	const credit2Feature = ctx.features.find(
 		(f) => f.id === TestFeature.Credits2,
@@ -79,11 +84,16 @@ describe(`${chalk.yellowBright("track-credit-system4: test deduction with two cr
 	test("should deduct from both action1 and action3 using event_name", async () => {
 		const deductValue = 25.5;
 
-		await autumnV1.track({
+		const trackRes: TrackResponseV2 = await autumnV2.track({
 			customer_id: customerId,
 			event_name: "action-event",
 			value: deductValue,
 		});
+
+		expect(trackRes.balances?.[TestFeature.Action1]).toBeDefined();
+		expect(trackRes.balances?.[TestFeature.Action3]).toBeDefined();
+		expect(trackRes.balances?.[TestFeature.Credits]).toBeUndefined();
+		expect(trackRes.balances?.[TestFeature.Credits2]).toBeUndefined();
 
 		const customer = await autumnV1.customers.get(customerId);
 
@@ -130,11 +140,16 @@ describe(`${chalk.yellowBright("track-credit-system4: test deduction with two cr
 			amount: overflowAction3,
 		});
 
-		await autumnV1.track({
+		const trackRes: TrackResponseV2 = await autumnV2.track({
 			customer_id: customerId,
 			event_name: "action-event",
 			value: deductValue,
 		});
+
+		expect(trackRes.balances?.[TestFeature.Action1]).toBeUndefined();
+		expect(trackRes.balances?.[TestFeature.Action3]).toBeUndefined();
+		expect(trackRes.balances?.[TestFeature.Credits]).toBeDefined();
+		expect(trackRes.balances?.[TestFeature.Credits2]).toBeDefined();
 
 		const customer = await autumnV1.customers.get(customerId);
 
@@ -180,11 +195,16 @@ describe(`${chalk.yellowBright("track-credit-system4: test deduction with two cr
 			amount: deductValue,
 		});
 
-		await autumnV1.track({
+		const trackRes: TrackResponseV2 = await autumnV2.track({
 			customer_id: customerId,
 			event_name: "action-event",
 			value: deductValue,
 		});
+
+		expect(trackRes.balances?.[TestFeature.Action1]).toBeUndefined();
+		expect(trackRes.balances?.[TestFeature.Action3]).toBeUndefined();
+		expect(trackRes.balances?.[TestFeature.Credits]).toBeDefined();
+		expect(trackRes.balances?.[TestFeature.Credits2]).toBeDefined();
 
 		const customer = await autumnV1.customers.get(customerId);
 

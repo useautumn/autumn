@@ -1,6 +1,6 @@
 import type { ApiBalance } from "@autumn/shared";
-import { getBatchDeductionScript } from "@lua/luaScripts.js";
 import type { Redis } from "ioredis";
+import { logger } from "../../../../external/logtail/logtailUtils";
 
 interface FeatureDeduction {
 	featureId: string;
@@ -51,9 +51,7 @@ export const executeBatchDeduction = async ({
 }): Promise<BatchDeductionResult> => {
 	try {
 		// Execute Lua script (hot reload in dev)
-		const result = await redis.eval(
-			getBatchDeductionScript(),
-			0, // No KEYS, all params in ARGV
+		const result = await redis.batchDeduction(
 			JSON.stringify(requests), // ARGV[1]
 			orgId, // ARGV[2]
 			env, // ARGV[3]
@@ -68,20 +66,32 @@ export const executeBatchDeduction = async ({
 			console.log("🔍 Lua debug info:", JSON.stringify(parsed.debug, null, 2));
 		}
 
-		// Log actual feature deductions
-		if (
-			parsed.featureDeductions &&
-			Object.keys(parsed.featureDeductions).length > 0
-		) {
-			console.log(
-				"✅ Feature deductions from Redis:",
-				parsed.featureDeductions,
-			);
-		}
+		// // Log actual feature deductions
+		// if (
+		// 	parsed.featureDeductions &&
+		// 	Object.keys(parsed.featureDeductions).length > 0
+		// ) {
+		// 	console.log(
+		// 		"✅ Feature deductions from Redis:",
+		// 		parsed.featureDeductions,
+		// 	);
+		// }
 
 		return parsed;
 	} catch (error) {
 		console.error("Error executing batch deduction:", error);
+
+		logger.error(`Error executing batch deduction: ${error}`, {
+			data: {
+				orgId,
+				env,
+				customerId,
+				requests,
+			},
+			error: {
+				message: error instanceof Error ? error.message : "UNKNOWN_ERROR",
+			},
+		});
 		return {
 			success: false,
 			results: [],

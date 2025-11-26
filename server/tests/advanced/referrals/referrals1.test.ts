@@ -12,14 +12,14 @@ import {
 	RewardTriggerEvent,
 	RewardType,
 } from "@autumn/shared";
-import chalk from "chalk";
-import { addDays } from "date-fns";
-import type { Stripe } from "stripe";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { timeout } from "@tests/utils/genUtils.js";
 import { createReferralProgram } from "@tests/utils/productUtils.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
+import { addDays } from "date-fns";
+import type { Stripe } from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
@@ -231,7 +231,7 @@ describe(`${chalk.yellowBright(
 				product_id: pro.id,
 			});
 
-			await timeout(3000);
+			await timeout(5000);
 
 			// Get redemption object
 			const redemption = await autumn.redemptions.get(redemptions[i].id);

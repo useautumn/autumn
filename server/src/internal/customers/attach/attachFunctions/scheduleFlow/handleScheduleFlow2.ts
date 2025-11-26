@@ -2,11 +2,9 @@ import {
 	ApiVersion,
 	type AttachConfig,
 	AttachScenario,
-	ErrCode,
 	InternalError,
 	SuccessCode,
 } from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
@@ -20,7 +18,6 @@ import {
 	attachToInsertParams,
 	isFreeProduct,
 } from "@/internal/products/productUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
 import {
 	attachParamsToCurCusProduct,
 	getCustomerSchedule,
@@ -62,18 +59,14 @@ export const handleScheduleFunction2 = async ({
 	});
 
 	if (!curSub) {
-		throw new RecaseError({
+		throw new InternalError({
 			message: `SCHEDULE FLOW, curSub is undefined`,
-			code: ErrCode.InvalidRequest,
-			statusCode: StatusCodes.BAD_REQUEST,
 		});
 	}
 
 	if (!curCusProduct) {
-		throw new RecaseError({
+		throw new InternalError({
 			message: `SCHEDULE FLOW, curCusProduct is undefined`,
-			code: ErrCode.InvalidRequest,
-			statusCode: StatusCodes.BAD_REQUEST,
 		});
 	}
 

@@ -7,13 +7,10 @@ import {
 	filterExpand,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { invoicesToResponse } from "@/internal/invoices/invoiceUtils.js";
-import { InvoiceService } from "../../../invoices/InvoiceService.js";
 import { CusService } from "../../CusService.js";
 import { getCusPaymentMethodRes } from "../cusResponseUtils/getCusPaymentMethodRes.js";
 import { getCusReferrals } from "../cusResponseUtils/getCusReferrals.js";
 import { getCusRewards } from "../cusResponseUtils/getCusRewards.js";
-import { getCusUpcomingInvoice } from "../cusResponseUtils/getCusUpcomingInvoice.js";
 
 export const getApiCustomerExpand = async ({
 	ctx,
@@ -29,7 +26,12 @@ export const getApiCustomerExpand = async ({
 	// Filter out balances.feature and subscriptions.plan
 	const filteredExpand = filterExpand({
 		expand,
-		filter: [CusExpand.BalancesFeature, CusExpand.SubscriptionsPlan],
+		filter: [
+			CusExpand.BalancesFeature,
+			CusExpand.SubscriptionsPlan,
+			CusExpand.ScheduledSubscriptionsPlan,
+			CusExpand.Invoices,
+		],
 	});
 
 	if (filteredExpand.length === 0) return {};
@@ -48,7 +50,11 @@ export const getApiCustomerExpand = async ({
 
 	const getCusTrialsUsed = () => {
 		if (expand.includes(CusExpand.TrialsUsed)) {
-			return fullCus.trials_used;
+			return fullCus.trials_used?.map((t) => ({
+				plan_id: t.product_id,
+				customer_id: t.customer_id,
+				fingerprint: t.fingerprint,
+			}));
 		}
 		return undefined;
 	};
@@ -60,64 +66,46 @@ export const getApiCustomerExpand = async ({
 		return undefined;
 	};
 
-	const getInvoices = async () => {
-		if (!expand.includes(CusExpand.Invoices)) {
-			return undefined;
-		}
-
-		const invoices = await InvoiceService.list({
-			db,
-			internalCustomerId: fullCus.internal_id,
-			internalEntityId: fullCus.entity?.internal_id,
-		});
-
-		return invoicesToResponse({
-			invoices,
-			logger,
-		});
-	};
-
 	const cusExpand = expand as CusExpand[];
 
-	const [rewards, upcomingInvoice, referrals, paymentMethod, invoices] =
-		await Promise.all([
-			getCusRewards({
-				org,
-				env,
-				fullCus,
-				subIds: fullCus.customer_products.flatMap(
-					(cp: FullCusProduct) => cp.subscription_ids || [],
-				),
-				expand: cusExpand,
-			}),
-			getCusUpcomingInvoice({
-				db,
-				org,
-				env,
-				fullCus,
-				expand: cusExpand,
-			}),
-			getCusReferrals({
-				db,
-				fullCus,
-				expand: cusExpand,
-			}),
-			getCusPaymentMethodRes({
-				org,
-				env,
-				fullCus,
-				expand: cusExpand,
-			}),
-			getInvoices(),
-		]);
+	const [rewards, referrals, paymentMethod] = await Promise.all([
+		getCusRewards({
+			org,
+			env,
+			fullCus,
+			subIds: fullCus.customer_products.flatMap(
+				(cp: FullCusProduct) => cp.subscription_ids || [],
+			),
+			expand: cusExpand,
+		}),
+
+		getCusReferrals({
+			db,
+			fullCus,
+			expand: cusExpand,
+		}),
+		getCusPaymentMethodRes({
+			org,
+			env,
+			fullCus,
+			expand: cusExpand,
+		}),
+	]);
 
 	return {
-		trials_used: getCusTrialsUsed(),
-		entities: getApiCusEntities(),
-		rewards,
-		upcoming_invoice: upcomingInvoice,
-		referrals,
-		payment_method: paymentMethod,
-		invoices,
+		trials_used: getCusTrialsUsed() ?? undefined,
+		entities: getApiCusEntities() ?? undefined,
+		rewards: rewards ?? undefined,
+		// upcoming_invoice: upcomingInvoice,
+		referrals: referrals ?? undefined,
+		payment_method: paymentMethod ?? undefined,
 	};
 };
+
+// getCusUpcomingInvoice({
+// 	db,
+// 	org,
+// 	env,
+// 	fullCus,
+// 	expand: cusExpand,
+// }),

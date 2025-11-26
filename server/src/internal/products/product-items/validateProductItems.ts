@@ -10,12 +10,13 @@ import {
 	type ProductItem,
 	ProductItemInterval,
 	ProductItemSchema,
+	RecaseError,
 	type RolloverConfig,
 	RolloverExpiryDurationType,
 	UsageModel,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import RecaseError from "@/utils/errorUtils.js";
+
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import { createFeaturesFromItems } from "./createFeaturesFromItems.js";
 import {

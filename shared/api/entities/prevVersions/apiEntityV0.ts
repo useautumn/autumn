@@ -1,6 +1,6 @@
 import { ApiCusFeatureV3Schema } from "@api/customers/cusFeatures/previousVersions/apiCusFeatureV3.js";
 import { ApiCusProductV3Schema } from "@api/customers/cusPlans/previousVersions/apiCusProductV3.js";
-import { ApiInvoiceSchema } from "@api/others/apiInvoice.js";
+import { ApiInvoiceV0Schema } from "@api/others/apiInvoice/prevVersions/apiInvoiceV0.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
 import { z } from "zod/v4";
 
@@ -98,7 +98,7 @@ export const ApiEntityV0Schema = z.object({
 	features: z.record(z.string(), ApiCusFeatureV3Schema).optional().meta({
 		description: entityDescriptions.features,
 	}),
-	invoices: z.array(ApiInvoiceSchema).optional().meta({
+	invoices: z.array(ApiInvoiceV0Schema).optional().meta({
 		description: entityDescriptions.invoices,
 	}),
 });

@@ -1,4 +1,8 @@
-import { ErrCode } from "@autumn/shared";
+import {
+	ErrCode,
+	ProductNotFoundError,
+	RecaseError as SharedRecaseError,
+} from "@autumn/shared";
 import Stripe from "stripe";
 import RecaseError from "../errorUtils.js";
 
@@ -35,6 +39,14 @@ export const handleExpressErrorSkip = ({
 }) => {
 	const originalUrl = req.originalUrl;
 
+	if (error instanceof SharedRecaseError) {
+		req.logger.warn(`${error.message}, path: ${originalUrl}`);
+		return res.status(error.statusCode).json({
+			message: error.message,
+			code: error.code,
+		});
+	}
+
 	// Handle RecaseError with EntityNotFound code
 	if (error instanceof RecaseError) {
 		if (error.code === ErrCode.EntityNotFound) {
@@ -44,6 +56,13 @@ export const handleExpressErrorSkip = ({
 				code: error.code,
 			});
 		}
+	}
+
+	if (error instanceof ProductNotFoundError) {
+		return res.status(404).json({
+			message: error.message,
+			code: error.code,
+		});
 	}
 
 	// Handle Stripe errors

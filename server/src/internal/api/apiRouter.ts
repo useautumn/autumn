@@ -7,12 +7,11 @@ import { refreshCacheMiddleware } from "@/middleware/refreshCacheMiddleware.js";
 import { analyticsRouter } from "../analytics/analyticsRouter.js";
 import { attachRouter } from "../customers/attach/attachRouter.js";
 import cancelRouter from "../customers/cancel/cancelRouter.js";
-import { handleGetOrg } from "../orgs/handlers/handleGetOrg.js";
+import { expressCusRouter } from "../customers/cusRouter.js";
 import { platformRouter } from "../platform/platformLegacy/platformRouter.js";
+import { expressProductRouter } from "../products/productRouter.js";
 import { componentRouter } from "./components/componentRouter.js";
-
 import { invoiceRouter } from "./invoiceRouter.js";
-import { redemptionRouter, referralRouter } from "./rewards/referralRouter.js";
 import { rewardProgramRouter } from "./rewards/rewardProgramRouter.js";
 import rewardRouter from "./rewards/rewardRouter.js";
 
@@ -30,8 +29,6 @@ apiRouter.use("/rewards", rewardRouter);
 
 // REWARDS
 apiRouter.use("/reward_programs", rewardProgramRouter);
-apiRouter.use("/referrals", referralRouter);
-apiRouter.use("/redemptions", redemptionRouter);
 
 // Cus Product
 apiRouter.use("", attachRouter);
@@ -40,11 +37,8 @@ apiRouter.use("/cancel", cancelRouter);
 // Analytics
 apiRouter.use("/query", analyticsRouter);
 apiRouter.use("/platform", platformRouter);
-
-// // Used for tests...
-// apiRouter.post("/organization/stripe", ...handleConnectStripe);
-// apiRouter.delete("/organization/stripe", ...handleDeleteStripe);
-apiRouter.get("/organization", handleGetOrg);
+apiRouter.use("/products", expressProductRouter);
+apiRouter.use("/customers", expressCusRouter);
 
 export { apiRouter };
 

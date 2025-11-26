@@ -74,7 +74,30 @@ local function getCustomerObject(orgId, env, customerId, skipEntityMerge)
     -- Merge subscriptions by plan ID and normalized status
     baseCustomer.subscriptions = mergeSubscriptions(allSubscriptions)
     
+    -- Collect all scheduled_subscriptions: start with customer's scheduled_subscriptions, then add all entity scheduled_subscriptions
+    local allScheduledSubscriptions = {}
+    if baseCustomer.scheduled_subscriptions then
+        for _, subscription in ipairs(baseCustomer.scheduled_subscriptions) do
+            table.insert(allScheduledSubscriptions, subscription)
+        end
+    end
+    
+    -- Add scheduled_subscriptions from each entity
+    for _, entityId in ipairs(entityIds) do
+        local entityBase = entityBaseData[entityId]
+        if entityBase and entityBase.scheduled_subscriptions then
+            for _, subscription in ipairs(entityBase.scheduled_subscriptions) do
+                table.insert(allScheduledSubscriptions, subscription)
+            end
+        end
+    end
+    
+    -- Merge scheduled_subscriptions by plan ID and normalized status
+    baseCustomer.scheduled_subscriptions = mergeSubscriptions(allScheduledSubscriptions)
+
+    -- Merge invoices
     -- Build final customer object
+    baseCustomer.invoices = baseCustomer.invoices or nil
     baseCustomer._balanceFeatureIds = nil -- Remove tracking field
     baseCustomer._entityIds = nil -- Remove tracking field
     baseCustomer.balances = balances
@@ -133,21 +156,26 @@ local function getEntityObject(orgId, env, customerId, entityId, skipCustomerMer
     
     -- Get entity subscriptions (start with entity's own subscriptions)
     local entitySubscriptions = baseEntity.subscriptions or {}
+    local entityScheduledSubscriptions = baseEntity.scheduled_subscriptions or {}
     
     if not skipCustomerMerge then
-        -- Get customer subscriptions
+        -- Get customer subscriptions and scheduled_subscriptions
         local customerSubscriptions = nil
+        local customerScheduledSubscriptions = nil
         local customerBaseJson = redis.call("GET", customerCacheKey)
         if customerBaseJson then
             local customerBase = cjson.decode(customerBaseJson)
             customerSubscriptions = customerBase.subscriptions
+            customerScheduledSubscriptions = customerBase.scheduled_subscriptions
         end
         
         -- Merge customer subscriptions into entity subscriptions (only add if not exists)
         baseEntity.subscriptions = mergeCustomerSubscriptionsIntoEntity(entitySubscriptions, customerSubscriptions)
+        baseEntity.scheduled_subscriptions = mergeCustomerSubscriptionsIntoEntity(entityScheduledSubscriptions, customerScheduledSubscriptions)
     else
         -- No merging - just use entity's own subscriptions
         baseEntity.subscriptions = entitySubscriptions
+        baseEntity.scheduled_subscriptions = entityScheduledSubscriptions
     end
     
     -- Build final entity object
