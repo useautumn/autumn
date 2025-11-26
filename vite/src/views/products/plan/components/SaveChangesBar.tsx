@@ -1,6 +1,5 @@
 import { isFeaturePriceItem, productV2ToBasePrice } from "@autumn/shared";
 import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/v2/buttons/Button";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
@@ -13,14 +12,12 @@ import {
 } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { pushPage } from "@/utils/genUtils";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { useCusProductQuery } from "@/views/customers/customer/product/hooks/useCusProductQuery";
 import { useProductCountsQuery } from "../../product/hooks/queries/useProductCountsQuery";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
 import { useProductContext } from "../../product/ProductContext";
 import { updateProduct } from "../../product/utils/updateProduct";
 import { useProductChangedAlert } from "../hooks/useProductChangedAlert";
+import { PlanEditorBar } from "./PlanEditorBar";
 
 interface SaveChangesBarProps {
 	isOnboarding?: boolean;
@@ -31,17 +28,13 @@ export const SaveChangesBar = ({
 }: SaveChangesBarProps) => {
 	const axiosInstance = useAxiosInstance();
 	const { setShowNewVersionDialog } = useProductContext();
-	const [searchParams] = useSearchParams();
-	const returnTo = searchParams.get("returnTo");
 
 	// Get product state from store
 	const product = useProductStore((s) => s.product);
 	const setProduct = useProductStore((s) => s.setProduct);
-	const { type: sheetType, setSheet } = useSheetStore();
+	const { type: sheetType } = useSheetStore();
 	const hasChanges = useHasChanges();
 	const willVersion = useWillVersion();
-
-	const navigate = useNavigate();
 
 	const [saving, setSaving] = useState(false);
 
@@ -49,8 +42,6 @@ export const SaveChangesBar = ({
 	const { counts, isLoading } = useProductCountsQuery();
 	const { refetch: queryRefetch } = useProductQuery();
 
-	const { customer } = useCusQuery();
-	const { cusProduct } = useCusProductQuery();
 	// const { }
 
 	const basePrice = productV2ToBasePrice({ product });
@@ -71,31 +62,6 @@ export const SaveChangesBar = ({
 		) {
 			toast.error("Please add a plan price greater than 0, or remove it.");
 			setSaving(false);
-			return;
-		}
-
-		if (isCusPlanEditor) {
-			console.log("save and return");
-
-			// Open the appropriate sheet based on returnTo parameter
-			if (returnTo === "attach-product") {
-				setSheet({
-					type: "attach-product",
-					itemId: product.id, // Pass the product ID being customized
-				});
-			} else if (cusProduct?.id) {
-				setSheet({
-					type: "subscription-detail",
-					itemId: cusProduct.id,
-				});
-			}
-
-			//navigate back to the customer plan page
-			pushPage({
-				path: `/customers/${customer.id}/`,
-				navigate,
-			});
-
 			return;
 		}
 
@@ -158,26 +124,20 @@ export const SaveChangesBar = ({
 	if (sheetType && !isOnboarding) return null;
 
 	return (
-		<div className="absolute bottom-0 left-0 right-0 flex justify-center items-center h-20 pb-4 pointer-events-none z-50 animate-in fade-in-0 slide-in-from-bottom-10 duration-300">
-			<div
-				className={`flex items-center gap-2 p-2 pl-3 rounded-xl border border-input bg-outer-background pointer-events-auto shadow-xl ${
-					isOnboarding ? "shadow-lg" : ""
-				}`}
+		<PlanEditorBar>
+			<p className="text-body whitespace-nowrap truncate">
+				You have unsaved changes
+			</p>
+			<Button variant="secondary" onClick={handleDiscardClicked}>
+				Discard
+			</Button>
+			<ShortcutButton
+				metaShortcut="s"
+				onClick={handleSaveClicked}
+				isLoading={saving}
 			>
-				<p className="text-body whitespace-nowrap truncate">
-					You have unsaved changes
-				</p>
-				<Button variant="secondary" onClick={handleDiscardClicked}>
-					Discard
-				</Button>
-				<ShortcutButton
-					metaShortcut="s"
-					onClick={handleSaveClicked}
-					isLoading={saving}
-				>
-					{saveButtonText}
-				</ShortcutButton>
-			</div>
-		</div>
+				{saveButtonText}
+			</ShortcutButton>
+		</PlanEditorBar>
 	);
 };

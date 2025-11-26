@@ -1,16 +1,150 @@
+import type { ReactNode } from "react";
+import {
+	useHasChanges,
+	useIsLatestVersion,
+} from "@/hooks/stores/useProductStore";
+import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { useAttachPreview } from "./use-attach-preview";
 
 export const AttachConfirmationInfo = () => {
 	const { data: previewData } = useAttachPreview();
+	const hasChanges = useHasChanges();
+	const isLatestVersion = useIsLatestVersion(previewData?.product);
 
-	if (previewData?.url) {
-		return <InfoBox>A payment method is required to enable this plan</InfoBox>;
+	const renderInfoBoxes = (): ReactNode[] => {
+		const boxes: ReactNode[] = [];
+
+		if (!previewData) {
+			return boxes;
+		}
+		console.log("hasChanges", hasChanges);
+		if (hasChanges) {
+			boxes.push(
+				<InfoBox key="changes" variant="success">
+					This plan has been customized for this customer
+				</InfoBox>,
+			);
+		}
+
+		if (!isLatestVersion) {
+			boxes.push(
+				<InfoBox key="latest-version" variant="info">
+					You're enabling a previous version (v{previewData.product.version}) of
+					this plan.
+				</InfoBox>,
+			);
+		}
+
+		// Payment method required
+		if (previewData.url) {
+			let secondaryText = "";
+			if (previewData.product.free_trial?.card_required === true) {
+				secondaryText = "to start this trial";
+			} else {
+				secondaryText = "as this plan has prices";
+			}
+
+			boxes.push(
+				<InfoBox key="payment-required" variant="warning">
+					A payment method is required {secondaryText}
+				</InfoBox>,
+			);
+		}
+
+		if (previewData.product.free_trial) {
+			let secondaryText = "";
+			if (previewData.product.free_trial?.card_required === true) {
+				secondaryText = " and the customer will be charged";
+			} else {
+				secondaryText = " and this plan will expire";
+			}
+
+			boxes.push(
+				<InfoBox key="free-trial" variant="info">
+					Trial ends {formatUnixToDate(previewData.next_cycle?.starts_at)}
+					{secondaryText}
+				</InfoBox>,
+			);
+		}
+
+		// Show scenario-based info if switching from another plan and not attaching add-on
+		if (
+			previewData.current_product &&
+			previewData.product &&
+			!previewData.product.is_add_on
+		) {
+			const scenario = previewData.product.scenario as
+				| "upgrade"
+				| "downgrade"
+				| "cancel"
+				| string;
+
+			switch (scenario) {
+				case "upgrade":
+					boxes.push(
+						<InfoBox key="product-upgrade" variant="note">
+							This upgrade will replace the customer's current plan:{" "}
+							{previewData.current_product.name}
+						</InfoBox>,
+					);
+					break;
+				case "downgrade":
+					boxes.push(
+						<InfoBox key="product-downgrade" variant="warning">
+							This downgrade will replace the customer's current plan:{" "}
+							{previewData.current_product.name}
+						</InfoBox>,
+					);
+					break;
+				case "cancel":
+					boxes.push(
+						<InfoBox key="product-cancel" variant="error">
+							This will cancel the customer's current billing subscription:{" "}
+							{previewData.current_product.name}
+						</InfoBox>,
+					);
+					break;
+				default:
+					boxes.push(
+						<InfoBox key="product-switch" variant="info">
+							This will replace the customer's current plan:{" "}
+							{previewData.current_product.name}
+						</InfoBox>,
+					);
+			}
+		}
+
+		if (
+			previewData.next_cycle?.starts_at &&
+			previewData.product?.scenario === "downgrade"
+		) {
+			const startsAtString = formatUnixToDate(previewData.next_cycle.starts_at);
+
+			boxes.push(
+				<InfoBox key="downgrade" variant="warning">
+					Plan change will take effect next cycle, on{" "}
+					<span className="font-semibold">{startsAtString}</span>
+				</InfoBox>,
+			);
+		}
+
+		// If switching products, show info about current product
+
+		return boxes;
+	};
+
+	const infoBoxes = renderInfoBoxes();
+
+	if (infoBoxes.length === 0) {
+		return null;
 	}
 
 	return (
-		<div>
-			<h1>Attach Confirmation</h1>
+		<div className="space-y-2">
+			{infoBoxes.map((box, index) => (
+				<div key={index}>{box}</div>
+			))}
 		</div>
 	);
 };

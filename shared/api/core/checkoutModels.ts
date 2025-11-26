@@ -43,3 +43,4 @@ export const CheckoutResponseSchema = z.object({
 
 export type CheckoutLine = z.infer<typeof CheckoutLineSchema>;
 export type CheckoutParams = z.infer<typeof CheckoutParamsSchema>;
+export type CheckoutResponse = z.infer<typeof CheckoutResponseSchema>;

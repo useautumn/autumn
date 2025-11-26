@@ -1,5 +1,4 @@
 import { ArrowUpRightFromSquare } from "lucide-react";
-import { toast } from "sonner";
 import { useAttachProductMutation } from "@/components/forms/attach-product/use-attach-product-mutation";
 import {
 	Popover,
@@ -8,65 +7,55 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/v2/buttons/Button";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
-import { useEntity } from "@/hooks/stores/useSubscriptionStore";
+import { useAttachProductStore } from "@/hooks/stores/useSubscriptionStore";
 import { useEnv } from "@/utils/envUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import { useAttachPreview } from "./use-attach-preview";
-import type { UseAttachProductForm } from "./use-attach-product-form";
 
-interface AttachProductActionsProps {
-	form: UseAttachProductForm;
+interface UpdateProductActionsProps {
 	customerId: string;
+	entityId?: string;
 	onSuccess?: () => void;
 	isPreviewLoading: boolean;
 }
 
-export function AttachProductActions({
-	form,
+export function UpdateProductActions({
 	customerId,
+	entityId,
 	onSuccess,
 	isPreviewLoading,
-}: AttachProductActionsProps) {
+}: UpdateProductActionsProps) {
 	const { stripeAccount } = useOrgStripeQuery();
 	const env = useEnv();
-	const { data: previewData, isLoading: isAttachPreviewLoading } =
-		useAttachPreview();
-	const { entityId } = useEntity();
+	const { data: previewData } = useAttachPreview();
+	const customizedProduct = useAttachProductStore((s) => s.customizedProduct);
 
 	const attachMutation = useAttachProductMutation({
 		customerId,
+		successMessage: "Plan updated successfully",
 		onSuccess: () => {
-			form.reset();
 			onSuccess?.();
 		},
 	});
 
-	const handleAttach = async ({
+	const handleUpdate = async ({
 		useInvoice,
 		enableProductImmediately,
 	}: {
 		useInvoice: boolean;
 		enableProductImmediately?: boolean;
 	}) => {
-		const { productId, prepaidOptions } = form.state.values;
-
-		if (!productId) {
-			toast.error("Please select a product");
-			return;
-		}
-
 		if (previewData?.url) {
 			window.open(previewData.url, "_blank");
 			return;
 		}
 
-		//does the attach
+		// Does the update
 		const result = await attachMutation.mutateAsync({
-			productId,
-			prepaidOptions: prepaidOptions || {},
+			product: customizedProduct ?? undefined,
+			entityId,
 			useInvoice,
 			enableProductImmediately,
-			entityId: entityId ?? undefined,
 		});
 
 		// Handle checkout URLs and invoice links
@@ -82,18 +71,14 @@ export function AttachProductActions({
 		}
 	};
 
-	if (isAttachPreviewLoading) {
-		return null;
-	}
-
 	const isLoading = attachMutation.isPending;
 
 	// Don't show buttons if preview is loading
-	if (isPreviewLoading || !form.state.values.productId) {
+	if (isPreviewLoading || !customizedProduct) {
 		return null;
 	}
 
-	const attachText = previewData?.url ? "Checkout" : "Attach Product";
+	const updateText = previewData?.url ? "Checkout" : "Update Plan";
 
 	return (
 		<div className="flex flex-col gap-2">
@@ -114,7 +99,7 @@ export function AttachProductActions({
 						<button
 							type="button"
 							onClick={() =>
-								handleAttach({
+								handleUpdate({
 									useInvoice: true,
 									enableProductImmediately: true,
 								})
@@ -130,7 +115,7 @@ export function AttachProductActions({
 						<button
 							type="button"
 							onClick={() =>
-								handleAttach({
+								handleUpdate({
 									useInvoice: true,
 									enableProductImmediately: false,
 								})
@@ -153,12 +138,12 @@ export function AttachProductActions({
 				isLoading={isLoading}
 				disabled={isLoading}
 				onClick={() =>
-					handleAttach({
+					handleUpdate({
 						useInvoice: false,
 					})
 				}
 			>
-				{attachText || "Attach Product"}
+				{updateText}
 				<ArrowUpRightFromSquare className="size-3.5" />
 			</Button>
 		</div>

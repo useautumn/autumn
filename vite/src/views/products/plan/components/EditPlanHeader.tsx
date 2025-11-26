@@ -13,6 +13,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/v2/selects/Select";
+import {
+	useIsCusPlanEditor,
+	useProductStore,
+} from "@/hooks/stores/useProductStore.ts";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
@@ -27,7 +31,8 @@ import { ConfirmMigrationDialog } from "./ConfirmMigrationDialog";
 import { PlanToolbar } from "./PlanToolbar.tsx";
 
 export const EditPlanHeader = () => {
-	const { product, numVersions } = useProductQuery();
+	const { numVersions } = useProductQuery();
+	const product = useProductStore((s) => s.product);
 	const { counts } = useProductCountsQuery(
 		product.version ? { version: product.version } : {},
 	);
@@ -35,7 +40,7 @@ export const EditPlanHeader = () => {
 	const { queryStates, setQueryStates } = useProductQueryState();
 	const axiosInstance = useAxiosInstance();
 	const sheetType = useSheetStore((s) => s.type);
-
+	const isCusPlanEditor = useIsCusPlanEditor();
 	const [confirmMigrateOpen, setConfirmMigrateOpen] = useState(false);
 
 	const versionOptions = Array.from(
@@ -46,7 +51,7 @@ export const EditPlanHeader = () => {
 
 	const handleVersionChange = (version: string) => {
 		const versionNumber = parseInt(version, 10);
-		if (versionNumber === numVersions) {
+		if (versionNumber === numVersions && !isCusPlanEditor) {
 			// Remove version param for latest version
 			setQueryStates({ version: null });
 		} else {
@@ -83,7 +88,7 @@ export const EditPlanHeader = () => {
 			},
 			{
 				key: "customer_product_id",
-				value: product.cusProductId || "N/A",
+				value: product.id || "N/A",
 			},
 		];
 	};
@@ -99,7 +104,8 @@ export const EditPlanHeader = () => {
 		migrateCount > 0 &&
 		!fromIsOneOff &&
 		version &&
-		version < numVersions;
+		version < numVersions &&
+		!isCusPlanEditor;
 
 	return (
 		<>
@@ -125,7 +131,7 @@ export const EditPlanHeader = () => {
 				/>
 				<div className="col-span-2 flex">
 					<div className="flex flex-row items-baseline justify-start gap-2 w-full whitespace-nowrap">
-						<AdminHover texts={getProductAdminHover()}>
+						<AdminHover texts={getProductAdminHover() as any}>
 							<span className="text-lg font-medium w-fit whitespace-nowrap">
 								{product.name}
 							</span>
@@ -177,7 +183,7 @@ export const EditPlanHeader = () => {
 								</SelectContent>
 							</Select>
 						)}
-						<PlanToolbar />
+						{!isCusPlanEditor && <PlanToolbar />}
 					</div>
 				</div>
 			</div>

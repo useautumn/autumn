@@ -13,6 +13,7 @@ export function QuantityField({
 	min = 1,
 	max,
 	className,
+	hideFieldInfo,
 }: {
 	label: string;
 	placeholder?: string;
@@ -20,6 +21,7 @@ export function QuantityField({
 	min?: number;
 	max?: number;
 	className?: string;
+	hideFieldInfo?: boolean;
 }) {
 	const field = useFieldContext<number>();
 
@@ -39,8 +41,13 @@ export function QuantityField({
 
 	const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const value = e.target.value;
+		// if (value === "") {
+		// 	field.handleChange(min);
+		// 	return;
+		// }
 		if (value === "") {
-			field.handleChange(min);
+			// Allow empty state temporarily - could use undefined or a special value
+			field.handleChange(undefined as unknown as number);
 			return;
 		}
 		const numValue = Number.parseInt(value);
@@ -77,9 +84,9 @@ export function QuantityField({
 							variant="headless"
 							className="text-sm text-center w-16 h-input p-2"
 							onChange={handleInputChange}
-							placeholder={placeholder}
+							// placeholder={placeholder}
 							type="number"
-							value={field.state.value}
+							value={field.state.value ?? ""}
 							min={min}
 							max={max}
 						/>
@@ -111,7 +118,7 @@ export function QuantityField({
 					{textAfter}
 				</section>
 			)}
-			<FieldInfo field={field} />
+			{!hideFieldInfo && <FieldInfo field={field} />}
 		</div>
 	);
 }

@@ -10,6 +10,7 @@ export type SheetType =
 	| "select-feature"
 	| "attach-product"
 	| "subscription-detail"
+	| "subscription-update"
 	| null;
 
 // Store state interface
@@ -65,6 +66,8 @@ export const useIsEditingPlanPrice = () =>
 	useSheetStore((s) => s.type === "edit-plan-price");
 export const useIsViewingSubscriptionDetail = () =>
 	useSheetStore((s) => s.type === "subscription-detail");
+export const useIsUpdatingSubscription = () =>
+	useSheetStore((s) => s.type === "subscription-update");
 
 /**
  * Hook to handle Escape key to close sheet and unfocus active elements

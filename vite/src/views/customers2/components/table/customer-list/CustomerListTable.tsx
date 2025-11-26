@@ -36,6 +36,7 @@ export function CustomerListTable({
 		navigate(
 			pushPage({
 				path: `/customers/${customer.id || customer.internal_id}`,
+				preserveParams: false,
 			}),
 		);
 	};

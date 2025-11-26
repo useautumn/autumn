@@ -6,6 +6,7 @@ import {
 } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { checkItemIsValid } from "@/utils/product/entitlementUtils";
+import { CustomerPlanEditorBar } from "@/views/customers2/customer-plan/CustomerPlanEditorBar";
 import { CustomerPlanInfoBox } from "@/views/customers2/customer-plan/CustomerPlanInfoBox";
 import { ProductSheets } from "../ProductSheets";
 import { SHEET_ANIMATION } from "../planAnimations";
@@ -93,7 +94,11 @@ export const PlanEditor = () => {
 						<PlanCard />
 					</div>
 					<div onClick={(e) => e.stopPropagation()}>
-						<SaveChangesBar />
+						{useIsCusPlanEditor() ? (
+							<CustomerPlanEditorBar />
+						) : (
+							<SaveChangesBar />
+						)}
 					</div>
 				</div>
 				{createPortal(

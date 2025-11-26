@@ -1,13 +1,15 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Link, useSearchParams } from "react-router";
-
+import { Link } from "react-router";
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-
+import {
+	useAttachProductStore,
+	useEntity,
+} from "@/hooks/stores/useSubscriptionStore";
 import { pushPage } from "@/utils/genUtils";
 import ErrorScreen from "@/views/general/ErrorScreen";
 import LoadingScreen from "@/views/general/LoadingScreen";
@@ -22,36 +24,32 @@ import { CustomerBalanceSheets } from "./CustomerBalanceSheets";
 import { CustomerBreadcrumbs } from "./CustomerBreadcrumbs2";
 import { CustomerContext } from "./CustomerContext";
 import { CustomerPageDetails } from "./CustomerPageDetails";
-
 import { CustomerSheets } from "./CustomerSheets";
 import { SelectedEntityDetails } from "./components/SelectedEntityDetails";
 import { SHEET_ANIMATION } from "./customerAnimations";
 
 export default function CustomerView2() {
-	const [searchParams] = useSearchParams();
-	const entityIdParam = searchParams.get("entity_id");
-
 	const { customer, isLoading: cusLoading } = useCusQuery();
 
 	useCusReferralQuery();
+	const { entityId, setEntityId } = useEntity();
 
-	const [entityId, setEntityId] = useState(entityIdParam);
 	const closeSheet = useCustomerBalanceSheetStore((s) => s.closeSheet);
 	const sheetType = useSheetStore((s) => s.type);
 	const closeProductSheet = useSheetStore((s) => s.closeSheet);
-
-	useEffect(() => {
-		if (entityIdParam) {
-			setEntityId(entityIdParam);
-		} else {
-			setEntityId(null);
-		}
-	}, [entityIdParam]);
+	const customizedProduct = useAttachProductStore((s) => s.customizedProduct);
 
 	// Close modal on mount
 	useEffect(() => {
 		closeSheet();
 	}, [closeSheet]);
+
+	// Clear selected entity on unmount (when navigating away)
+	// useEffect(() => {
+	// 	return () => {
+	// 		setEntityId(null);
+	// 	};
+	// }, [setEntityId]);
 
 	if (cusLoading) return <LoadingScreen />;
 
@@ -68,8 +66,6 @@ export default function CustomerView2() {
 			</ErrorScreen>
 		);
 	}
-
-	console.log("customer", customer);
 
 	return (
 		<CustomerContext.Provider
@@ -127,10 +123,10 @@ export default function CustomerView2() {
 									initial={{ opacity: 0 }}
 									animate={{ opacity: 1 }}
 									exit={{ opacity: 0 }}
-									className="fixed inset-0 bg-background/70"
+									className="fixed inset-0 bg-background/90"
 									style={{ zIndex: 40 }}
 									onMouseDown={() => {
-										closeProductSheet();
+										!customizedProduct && closeProductSheet();
 									}}
 								/>
 							)}

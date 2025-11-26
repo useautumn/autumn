@@ -1,5 +1,5 @@
 import { CusProductStatus } from "@autumn/shared";
-import { ExclamationMarkIcon, XIcon } from "@phosphor-icons/react";
+import { DotIcon, ExclamationMarkIcon, XIcon } from "@phosphor-icons/react";
 import { formatDistanceToNow } from "date-fns";
 import { BanIcon, CalendarIcon, CheckIcon, ClockIcon } from "lucide-react";
 import {
@@ -21,7 +21,7 @@ const StatusItem = ({
 	tooltip?: boolean;
 }) => {
 	return (
-		<div className="flex items-center gap-1.5 text-t3">
+		<div className="flex items-center text-t3">
 			{tooltip ? (
 				<TooltipProvider>
 					<Tooltip>
@@ -38,12 +38,17 @@ const StatusItem = ({
 				</TooltipProvider>
 			) : (
 				<>
-					{children}
-					<span className="text-sm">{text}</span>
+					<div className="flex items-center gap-1.5">
+						{children}
+						<span className="text-sm">{text}</span>
+					</div>
 					{trial_ends_at && (
-						<span className="text-sm">
-							({formatDistanceToNow(trial_ends_at)})
-						</span>
+						<>
+							<DotIcon size={16} />
+							<span className="text-sm">
+								{formatDistanceToNow(trial_ends_at)} left
+							</span>
+						</>
 					)}
 				</>
 			)}

@@ -1,17 +1,13 @@
 "use client";
 
-import type { ProductItem, ProductV2 } from "@autumn/shared";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductSync } from "@/hooks/stores/useProductSync";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { notNullish } from "@/utils/genUtils";
-import { sortProductItems } from "@/utils/productUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { useAttachState } from "@/views/customers/customer/product/hooks/useAttachState";
 import { useCusProductQuery } from "@/views/customers/customer/product/hooks/useCusProductQuery";
 import ErrorScreen from "@/views/general/ErrorScreen";
 import LoadingScreen from "@/views/general/LoadingScreen";
@@ -47,8 +43,8 @@ export default function CustomerProductView() {
 	const [searchParams] = useSearchParams();
 	const entityIdParam = searchParams.get("entity_id");
 	const closeSheet = useSheetStore((s) => s.closeSheet);
+
 	//Close the subscription detail / attach product sheet when navigating to this page (prevents jank closing animation)
-	// useSheetCleanup();
 	useEffect(() => {
 		closeSheet();
 	}, []);
@@ -56,13 +52,9 @@ export default function CustomerProductView() {
 	const { isLoading: orgLoading } = useOrg();
 	const { isLoading: featuresLoading } = useFeaturesQuery();
 
-	const initialProductRef = useRef<ProductV2 | null>(null);
-
 	const [options, setOptions] = useState<OptionValue[]>([]);
 	const [entityId, setEntityId] = useState<string | null>(entityIdParam);
 	const [entityFeatureIds, setEntityFeatureIds] = useState<string[]>([]);
-
-	const version = searchParams.get("version");
 
 	const {
 		product: originalProduct,
@@ -70,65 +62,57 @@ export default function CustomerProductView() {
 		isLoading,
 		error,
 	} = useCusProductQuery();
-	const [product, setProduct] = useState<ProductV2 | null>(
-		originalProduct ?? null,
-	);
 
 	useProductSync({ product: originalProduct });
 
 	const { isLoading: cusLoading } = useCusQuery();
 
-	const attachState = useAttachState({
-		product,
-		setProduct,
-		initialProductRef,
-		cusProduct,
-	});
+	//probs not needed anymore? used to pass entityId into the ProductContext
+	//now we can get it from CusProductQuery?
+	// useEffect(() => {
+	// 	if (entityIdParam) {
+	// 		setEntityId(entityIdParam);
+	// 	} else {
+	// 		setEntityId(null);
+	// 	}
+	// }, [entityIdParam]);
 
-	useEffect(() => {
-		if (entityIdParam) {
-			setEntityId(entityIdParam);
-		} else {
-			setEntityId(null);
-		}
-	}, [entityIdParam]);
+	// useEffect(() => {
+	// 	if (!originalProduct) return;
 
-	useEffect(() => {
-		if (!originalProduct) return;
+	// 	const product = originalProduct;
 
-		const product = originalProduct;
+	// 	console.log("[CPV] effect", {
+	// 		prodId: originalProduct.id,
+	// 		v: originalProduct.version,
+	// 		cusId: cusProduct?.id,
+	// 	});
 
-		console.log("[CPV] effect", {
-			prodId: originalProduct.id,
-			v: originalProduct.version,
-			cusId: cusProduct?.id,
-		});
+	// 	// Update initialProductRef BEFORE setProduct to ensure useAttachState
+	// 	// effect has the correct baseline when it runs
+	// 	initialProductRef.current = structuredClone({
+	// 		...product,
+	// 		items: sortProductItems(product.items),
+	// 	});
 
-		// Update initialProductRef BEFORE setProduct to ensure useAttachState
-		// effect has the correct baseline when it runs
-		initialProductRef.current = structuredClone({
-			...product,
-			items: sortProductItems(product.items),
-		});
+	// 	setProduct(product);
 
-		setProduct(product);
+	// 	setEntityFeatureIds(
+	// 		Array.from(
+	// 			new Set(
+	// 				product.items
+	// 					.filter((item: ProductItem) => notNullish(item.entity_feature_id))
+	// 					.map((item: ProductItem) => item.entity_feature_id!),
+	// 			),
+	// 		),
+	// 	);
 
-		setEntityFeatureIds(
-			Array.from(
-				new Set(
-					product.items
-						.filter((item: ProductItem) => notNullish(item.entity_feature_id))
-						.map((item: ProductItem) => item.entity_feature_id!),
-				),
-			),
-		);
-
-		if (cusProduct?.options) {
-			setOptions(cusProduct.options);
-		} else {
-			setOptions([]);
-		}
-	}, [originalProduct, cusProduct]);
+	// 	if (cusProduct?.options) {
+	// 		setOptions(cusProduct.options);
+	// 	} else {
+	// 		setOptions([]);
+	// 	}
+	// }, [originalProduct, cusProduct]);
 
 	if (error) {
 		return (
@@ -140,7 +124,7 @@ export default function CustomerProductView() {
 		);
 	}
 
-	if (isLoading || cusLoading || orgLoading || featuresLoading || !product)
+	if (isLoading || cusLoading || orgLoading || featuresLoading)
 		return <LoadingScreen />;
 
 	if (!customer_id || !product_id) {
@@ -150,21 +134,13 @@ export default function CustomerProductView() {
 	return (
 		<ProductContext.Provider
 			value={{
-				// ...data,
-				// features,
-				// setFeatures,
-
-				// mutate,
-				// env,
-
-				isCusProductView: true,
-				product,
-				setProduct,
+				// isCusProductView: true,
+				// product,
+				// setProduct,
 
 				entityId,
 				setEntityId,
-				attachState,
-				version,
+				// attachState,
 				entityFeatureIds,
 				setEntityFeatureIds,
 			}}
@@ -172,14 +148,6 @@ export default function CustomerProductView() {
 			<CustomToaster />
 
 			<PlanEditor />
-
-			{/* {product && <ManageProduct />} */}
-			{/* {options.length > 0 && (
-								<ProductOptions options={options} setOptions={setOptions} />
-
-				{/* <div className="max-w-[300px] w-1/3 shrink-1 hidden lg:block">
-					<ProductSidebar />
-				</div> */}
 		</ProductContext.Provider>
 	);
 }

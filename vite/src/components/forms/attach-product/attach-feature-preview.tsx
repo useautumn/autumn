@@ -159,8 +159,6 @@ export function AttachFeaturePreview({ customerId }: { customerId: string }) {
 
 	if (!featureChanges.length) return null;
 
-	console.log("featureChanges", featureChanges);
-
 	return (
 		<div className="space-y-2 pt-3 border-t border-border">
 			<div className="text-xs font-medium text-t2 uppercase tracking-wide">

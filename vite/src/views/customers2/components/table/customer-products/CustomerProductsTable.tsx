@@ -7,10 +7,10 @@ import { useLocation, useNavigate } from "react-router";
 import { Table } from "@/components/general/table";
 import { Button } from "@/components/v2/buttons/Button";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useFullCusSearchQuery } from "@/views/customers/hooks/useFullCusSearchQuery";
 import { useSavedViewsQuery } from "@/views/customers/hooks/useSavedViewsQuery";
-import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { AttachProductSheetTrigger } from "./AttachProductSheetTrigger";
 import { CancelProductDialog } from "./CancelProductDialog";
@@ -21,8 +21,8 @@ import { ShowExpiredActionButton } from "./ShowExpiredActionButton";
 
 export function CustomerProductsTable() {
 	const { customer, isLoading } = useCusQuery();
-	const { entityId } = useCustomerContext();
 
+	const { entityId } = useEntity();
 	const [showExpired, setShowExpired] = useQueryState(
 		"customerProductsShowExpired",
 		parseAsBoolean.withDefault(false),
@@ -32,6 +32,8 @@ export function CustomerProductsTable() {
 	const [selectedProduct, setSelectedProduct] = useState<FullCusProduct | null>(
 		null,
 	);
+
+	const { setEntityId } = useEntity();
 
 	useSavedViewsQuery();
 	useFullCusSearchQuery();
@@ -46,21 +48,25 @@ export function CustomerProductsTable() {
 	);
 
 	const displayedProducts = useMemo(() => {
+		// Always just show regular products, never combine with entity products
+		return regularProducts;
+	}, [regularProducts]);
+
+	const displayedEntityProducts = useMemo(() => {
 		if (entityId) {
 			const selectedEntity = customer.entities.find(
 				(e: Entity) => e.id === entityId || e.internal_id === entityId,
 			);
 			if (selectedEntity) {
-				const matchingEntityProducts = entityProducts.filter(
+				return entityProducts.filter(
 					(product) =>
 						product.internal_entity_id === selectedEntity.internal_id ||
 						product.entity_id === selectedEntity.id,
 				);
-				return [...regularProducts, ...matchingEntityProducts];
 			}
 		}
-		return regularProducts;
-	}, [regularProducts, entityProducts, entityId, customer.entities]);
+		return entityProducts;
+	}, [entityProducts, entityId, customer.entities]);
 
 	const attachedProductsTableColumns = useMemo(
 		() => CustomerProductsColumns,
@@ -86,9 +92,7 @@ export function CustomerProductsTable() {
 					const handleEntityClick = (e: React.MouseEvent) => {
 						e.stopPropagation();
 						if (!entity) return;
-						const params = new URLSearchParams(location.search);
-						params.set("entity_id", entity.id || entity.internal_id);
-						navigate(`${location.pathname}?${params.toString()}`);
+						setEntityId(entity.id || entity.internal_id);
 					};
 
 					if (!entity) return <span className="text-t3">—</span>;
@@ -167,7 +171,7 @@ export function CustomerProductsTable() {
 	});
 
 	const entityTable = useCustomerTable({
-		data: entityProducts,
+		data: displayedEntityProducts, // Changed from entityProducts to displayedEntityProducts
 		columns: entityProductsTableColumns,
 		options: {
 			globalFilterFn: "includesString",
@@ -178,10 +182,10 @@ export function CustomerProductsTable() {
 		},
 	});
 
-	const hasEntityProducts = entityProducts.length > 0 && !entityId;
+	const hasEntityProducts = entityProducts.length > 0; // Removed && !entityId
 
 	const emptyStateText =
-		!entityId && entityProducts.length > 0
+		entityProducts.length > 0
 			? "No customer-level plans found"
 			: "Enable a plan to start a subscription";
 
