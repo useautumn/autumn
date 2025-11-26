@@ -19,7 +19,7 @@ import {
 	isProductUpgrade,
 } from "@/internal/products/productUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import type { AttachParams } from "../../cusProducts/AttachParams.js";
 import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { isMainTrialBranch } from "./attachUtils.js";
@@ -291,12 +291,13 @@ const getChangeProductBranch = async ({
 };
 
 export const getAttachBranch = async ({
-	req,
+	// biome-ignore lint/correctness/noUnusedFunctionParameters: might be used in the future
+	ctx,
 	attachBody,
 	attachParams,
 	fromPreview,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	attachBody: AttachBody;
 	attachParams: AttachParams;
 	fromPreview?: boolean;
