@@ -26,6 +26,7 @@ import { EnvDropdown } from "./EnvDropdown";
 import { NavButton } from "./NavButton";
 import SidebarBottom from "./SidebarBottom";
 import { SidebarContext } from "./SidebarContext";
+import { SidebarRail } from "./SidebarRail";
 
 export const buildDevSubTabs = ({
 	flags,
@@ -101,7 +102,7 @@ export const MainSidebar = () => {
 		<SidebarContext.Provider value={{ expanded, setExpanded }}>
 			<div
 				className={cn(
-					`h-full py-4 flex flex-col justify-between transition-all duration-150`,
+					`h-full py-4 flex flex-col justify-between transition-all duration-150 relative`,
 					expanded
 						? "min-w-[200px] max-w-[200px]"
 						: "min-w-[50px] max-w-[50px]",
@@ -180,6 +181,7 @@ export const MainSidebar = () => {
 				</div>
 
 				<SidebarBottom />
+				<SidebarRail />
 			</div>
 		</SidebarContext.Provider>
 	);
