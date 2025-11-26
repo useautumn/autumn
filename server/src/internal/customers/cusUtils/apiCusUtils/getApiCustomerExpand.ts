@@ -29,6 +29,7 @@ export const getApiCustomerExpand = async ({
 		filter: [
 			CusExpand.BalancesFeature,
 			CusExpand.SubscriptionsPlan,
+			CusExpand.ScheduledSubscriptionsPlan,
 			CusExpand.Invoices,
 		],
 	});
