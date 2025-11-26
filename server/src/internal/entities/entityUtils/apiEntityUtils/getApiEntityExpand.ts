@@ -44,7 +44,6 @@ export const getApiEntityExpand = async ({
 	return {
 		invoices: invoicesToResponse({
 			invoices,
-			logger,
 		}),
 	};
 };

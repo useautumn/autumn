@@ -1,39 +1,32 @@
 import {
-	type AppEnv,
 	type CollectionMethod,
 	CusProductStatus,
-	type Organization,
+	InternalError,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { handleSchedulePhaseCompleted } from "./handleSubUpdated/handleSchedulePhaseCompleted.js";
 import { handleSubCanceled } from "./handleSubUpdated/handleSubCanceled.js";
 import { handleSubPastDue } from "./handleSubUpdated/handleSubPastDue.js";
 import { handleSubRenewed } from "./handleSubUpdated/handleSubRenewed.js";
 
 export const handleSubscriptionUpdated = async ({
-	req,
-	db,
-	org,
+	ctx,
 	subscription,
 	previousAttributes,
-	env,
-	logger,
 }: {
-	req: ExtendedRequest;
-	db: DrizzleCli;
-	org: Organization;
-	env: AppEnv;
-	subscription: any;
+	ctx: AutumnContext;
+	subscription: Stripe.Subscription;
+	// biome-ignore lint/suspicious/noExplicitAny: Don't know the type of previousAttributes
 	previousAttributes: any;
-	logger: any;
 }) => {
+	const { db, org, env, logger } = ctx;
 	// handle scheduled updated
 	await handleSchedulePhaseCompleted({
-		req,
+		ctx,
 		subObject: subscription,
 		prevAttributes: previousAttributes,
 	});
@@ -93,7 +86,7 @@ export const handleSubscriptionUpdated = async ({
 	}
 
 	await handleSubCanceled({
-		req,
+		ctx,
 		previousAttributes,
 		sub: fullSub,
 		updatedCusProducts,
@@ -101,7 +94,7 @@ export const handleSubscriptionUpdated = async ({
 	});
 
 	await handleSubPastDue({
-		req,
+		ctx,
 		previousAttributes,
 		sub: fullSub,
 		updatedCusProducts,
@@ -109,7 +102,7 @@ export const handleSubscriptionUpdated = async ({
 	});
 
 	await handleSubRenewed({
-		req,
+		ctx,
 		prevAttributes: previousAttributes,
 		sub: fullSub,
 		updatedCusProducts,
@@ -130,6 +123,15 @@ export const handleSubscriptionUpdated = async ({
 	// Cancel subscription immediately
 
 	if (subscription.status === "past_due" && org.config.cancel_on_past_due) {
+		if (
+			!subscription.latest_invoice ||
+			typeof subscription.latest_invoice !== "string"
+		) {
+			throw new InternalError({
+				message: "subscription.latest_invoice is not a string",
+			});
+		}
+
 		const stripeCli = createStripeCli({
 			org,
 			env,

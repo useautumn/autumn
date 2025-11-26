@@ -5,13 +5,14 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { deleteCachedApiCustomer } from "../../../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 
 export const isSubPastDue = ({
 	previousAttributes,
 	sub,
 }: {
+	// biome-ignore lint/suspicious/noExplicitAny: Don't know the type of previousAttributes
 	previousAttributes: any;
 	sub: Stripe.Subscription;
 }) => {
@@ -24,13 +25,14 @@ export const isSubPastDue = ({
 };
 
 export const handleSubPastDue = async ({
-	req,
+	ctx,
 	previousAttributes,
 	org,
 	sub,
 	updatedCusProducts,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
+	// biome-ignore lint/suspicious/noExplicitAny: Don't know the type of previousAttributes
 	previousAttributes: any;
 	sub: Stripe.Subscription;
 	org: Organization;
@@ -41,7 +43,7 @@ export const handleSubPastDue = async ({
 		sub,
 	});
 
-	const { env, logger } = req;
+	const { env, logger } = ctx;
 
 	if (!pastDue || updatedCusProducts.length === 0) return;
 
@@ -54,12 +56,11 @@ export const handleSubPastDue = async ({
 	for (const cusProd of updatedCusProducts) {
 		try {
 			await addProductsUpdatedWebhookTask({
-				req,
+				ctx,
 				internalCustomerId: cusProd.internal_customer_id,
 				org,
 				env,
 				customerId: null,
-				logger,
 				scenario: AttachScenario.PastDue,
 				cusProduct: cusProd,
 			});

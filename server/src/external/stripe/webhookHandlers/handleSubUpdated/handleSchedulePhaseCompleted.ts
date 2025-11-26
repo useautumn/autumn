@@ -10,20 +10,22 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
 import { activateFutureProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { deleteCachedApiCustomer } from "../../../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 
 export const handleSchedulePhaseCompleted = async ({
-	req,
+	ctx,
 	subObject,
 	prevAttributes,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	subObject: Stripe.Subscription;
+	// biome-ignore lint/suspicious/noExplicitAny: Don't know the type of prevAttributes
 	prevAttributes: any;
 }) => {
-	const { db, org, env, logger } = req;
+	const { db, org, env, logger } = ctx;
+
 	const phasePossiblyChanged =
 		notNullish(prevAttributes?.items) && notNullish(subObject.schedule);
 
@@ -58,25 +60,24 @@ export const handleSchedulePhaseCompleted = async ({
 				`Expiring cus product: ${cusProduct.product.name} (entity ID: ${cusProduct.entity_id})`,
 			);
 			await CusProductService.update({
-				db: req.db,
+				db,
 				cusProductId: cusProduct.id,
 				updates: { status: CusProductStatus.Expired },
 			});
 
 			await addProductsUpdatedWebhookTask({
-				req,
+				ctx,
 				internalCustomerId: cusProduct.internal_customer_id,
 				org,
 				env,
 				customerId: null,
 				scenario: AttachScenario.Expired,
 				cusProduct: cusProduct,
-				logger,
 			});
 
 			// ACTIVATING FUTURE PRODUCT
 			const futureCusProduct = await activateFutureProduct({
-				req,
+				ctx,
 				cusProduct,
 			});
 
@@ -90,7 +91,7 @@ export const handleSchedulePhaseCompleted = async ({
 					!isOneOff(fullFutureProduct.prices)
 				) {
 					await CusProductService.update({
-						db: req.db,
+						db,
 						cusProductId: futureCusProduct.id,
 						updates: {
 							subscription_ids: [subObject.id],
@@ -124,21 +125,23 @@ export const handleSchedulePhaseCompleted = async ({
 			// Last phase, cancel schedule
 			await stripeCli.subscriptionSchedules.release(schedule.id);
 			await CusProductService.updateByStripeScheduledId({
-				db: req.db,
+				db,
 				stripeScheduledId: schedule.id,
 				updates: {
 					scheduled_ids: [],
 				},
 			});
-		} catch (error: any) {
-			if (process.env.NODE_ENV === "development") {
-				logger.warn(
-					`schedule.phase.completed: failed to cancel schedule ${schedule.id}, error: ${error.message}`,
-				);
-			} else {
-				logger.error(
-					`schedule.phase.completed: failed to cancel schedule ${schedule.id}, error: ${error.message}`,
-				);
+		} catch (error: unknown) {
+			if (error instanceof Error) {
+				if (process.env.NODE_ENV === "development") {
+					logger.warn(
+						`schedule.phase.completed: failed to cancel schedule ${schedule.id}, error: ${error.message}`,
+					);
+				} else {
+					logger.error(
+						`schedule.phase.completed: failed to cancel schedule ${schedule.id}, error: ${error.message}`,
+					);
+				}
 			}
 		}
 	}

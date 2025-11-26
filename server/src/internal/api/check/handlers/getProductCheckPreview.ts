@@ -17,7 +17,6 @@ import { getProductResponse } from "@/internal/products/productUtils/productResp
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { formatAmount } from "@/utils/formatUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { getAttachScenario } from "./attachToCheckPreview/getAttachScenario.js";
 
@@ -136,24 +135,21 @@ export const attachToCheckPreview = async ({
 };
 
 export const getProductCheckPreview = async ({
-	req,
+	ctx,
 	customer,
 	product,
-	logger,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	customer: FullCustomer;
 	product: FullProduct;
-	logger: any;
 }) => {
-	const { org, features, db } = req;
+	const { org, features, db } = ctx;
 
 	// Build attach params
 	const attachParams = await checkToAttachParams({
-		req,
+		ctx,
 		customer,
 		product,
-		logger,
 	});
 
 	const attachBody: AttachBodyV0 = {
@@ -163,7 +159,7 @@ export const getProductCheckPreview = async ({
 	};
 
 	const preview = await attachParamsToPreview({
-		ctx: req as AutumnContext,
+		ctx,
 		attachParams,
 		attachBody,
 	});

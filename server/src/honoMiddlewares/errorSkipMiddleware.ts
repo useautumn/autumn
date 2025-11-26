@@ -137,20 +137,6 @@ const ZOD_RULES = [
 		statusCode: 400,
 		format: (err: ZodError) => formatZodError(err),
 	},
-	{
-		name: "Zod error on /attach",
-		match: (err: Error, c: Context<HonoEnv>) =>
-			err instanceof ZodError && c.req.url.includes("/attach"),
-		statusCode: 400,
-		format: (err: ZodError) => formatZodError(err),
-	},
-	{
-		name: "Zod error on /checkout (email validation)",
-		match: (err: Error, c: Context<HonoEnv>) =>
-			err instanceof ZodError && c.req.url.includes("/checkout"),
-		statusCode: 400,
-		format: (err: ZodError) => formatZodError(err),
-	},
 ] as const;
 
 const createErrorResponse = ({

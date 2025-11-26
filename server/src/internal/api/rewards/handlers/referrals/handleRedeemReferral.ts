@@ -8,7 +8,7 @@ import {
 	RewardTriggerEvent,
 } from "@autumn/shared";
 import { z } from "zod/v4";
-import { parseReqForAction } from "@/internal/analytics/actionUtils.js";
+import { parseCtxForAction } from "@/internal/analytics/actionUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
 import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionService.js";
@@ -149,7 +149,7 @@ export const handleRedeemReferral = createRoute({
 			const rewardCat = getRewardCat(reward);
 			if (rewardCat === RewardCategory.FreeProduct) {
 				await triggerFreeProduct({
-					req: parseReqForAction(ctx as ExtendedRequest) as ExtendedRequest,
+					req: parseCtxForAction({ ctx }) as ExtendedRequest,
 					db,
 					referralCode,
 					redeemer: customer,
