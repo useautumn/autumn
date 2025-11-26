@@ -3,17 +3,17 @@ import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { RewardService } from "@/internal/rewards/RewardService.js";
 import RecaseError from "@/utils/errorUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 import { getCustomerAndProducts } from "./attachParamsUtils/getCusAndProducts.js";
 import { getPricesAndEnts } from "./attachParamsUtils/getPricesAndEnts.js";
 import { getStripeCusData } from "./attachParamsUtils/getStripeCusData.js";
 
 export const getRewards = async ({
-	req,
+	ctx,
 	attachBody,
 	stripeCli,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	attachBody: AttachBody;
 	stripeCli: Stripe;
 }) => {
@@ -31,10 +31,10 @@ export const getRewards = async ({
 
 	// 1. Get reward by id or promo code
 	const rewards = await RewardService.getByIdOrCode({
-		db: req.db,
+		db: ctx.db,
 		codes: rewardArray,
-		orgId: req.org.id,
-		env: req.env,
+		orgId: ctx.org.id,
+		env: ctx.env,
 	});
 
 	for (const reward of rewardArray) {
@@ -62,33 +62,33 @@ export const getRewards = async ({
 };
 
 export const processAttachBody = async ({
-	req,
+	ctx,
 	attachBody,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	attachBody: AttachBody;
 }) => {
 	// 1. Get customer and products
-	const { org, env, logger } = req;
+	const { org, env, logger } = ctx;
 
 	const stripeCli = createStripeCli({ org, env });
 
 	const { customer, products } = await getCustomerAndProducts({
-		req,
+		ctx,
 		attachBody,
 	});
 
 	const [stripeCusData, rewardData] = await Promise.all([
 		getStripeCusData({
 			stripeCli,
-			db: req.db,
+			db: ctx.db,
 			org,
 			env,
 			customer,
 			logger,
 		}),
 		getRewards({
-			req,
+			ctx,
 			attachBody,
 			stripeCli,
 		}),
@@ -104,7 +104,7 @@ export const processAttachBody = async ({
 		customPrices,
 		customEnts,
 	} = await getPricesAndEnts({
-		req,
+		ctx,
 		attachBody,
 		customer,
 		products,
