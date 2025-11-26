@@ -1,10 +1,15 @@
+import { type AttachResponseV1, AttachResponseV1Schema } from "@autumn/shared";
 import { AttachBodyV0Schema } from "../../../../../shared/api/billing/attach/prevVersions/attachBodyV0";
-import { AffectedResource } from "../../../../../shared/api/versionUtils/versionUtils";
+import {
+	AffectedResource,
+	applyResponseVersionChanges,
+} from "../../../../../shared/api/versionUtils/versionUtils";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
 import { checkStripeConnections } from "../../customers/attach/attachRouter";
 import { getAttachParams } from "../../customers/attach/attachUtils/attachParams/getAttachParams";
 import { getAttachBranch } from "../../customers/attach/attachUtils/getAttachBranch";
 import { getAttachConfig } from "../../customers/attach/attachUtils/getAttachConfig";
+import { runAttachFunction } from "../../customers/attach/attachUtils/getAttachFunction";
 import { handleAttachErrors } from "../../customers/attach/attachUtils/handleAttachErrors";
 import { insertCustomItems } from "../../customers/attach/attachUtils/insertCustomItems";
 
@@ -77,17 +82,38 @@ export const handleAttachV2 = createRoute({
 			});
 		} catch (_error) {}
 
-		// const response = await runAttachFunction({
-		//   req,
-		//   res,
-		//   attachParams,
-		//   branch,
-		//   attachBody,
-		//   config,
-		// });
-
-		return c.json({
-			message: "Hello, world!",
+		const response = await runAttachFunction({
+			ctx,
+			attachParams,
+			branch,
+			attachBody,
+			config,
 		});
+
+		const { products, customer } = attachParams;
+
+		const responseV1 = AttachResponseV1Schema.parse({
+			success: true,
+			product_ids: products.map((p) => p.id),
+			customer_id: customer.id || customer.internal_id,
+			...response,
+		});
+
+		return c.json(
+			applyResponseVersionChanges<AttachResponseV1>({
+				input: responseV1,
+				targetVersion: ctx.apiVersion,
+				resource: AffectedResource.Attach,
+			}),
+		);
 	},
 });
+
+// success: true,
+// message: `Successfully purchased ${productNames} and attached to ${customerName}`,
+// invoice: invoiceOnly
+// 	? attachToInvoiceResponse({ invoice: stripeInvoice })
+// 	: undefined,
+// code: SuccessCode.OneOffProductAttached,
+
+// scenario: AttachScenario.New,

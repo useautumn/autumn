@@ -27,7 +27,6 @@ import {
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish, nullOrUndefined } from "@/utils/genUtils.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
-import { handleAttach } from "./handleAttach.js";
 import { handleAttachPreview } from "./handleAttachPreview/handleAttachPreview.js";
 
 export const attachRouter: Router = Router();
@@ -249,6 +248,5 @@ export const customerHasPm = async ({
 	return notNullish(paymentMethod);
 };
 
-attachRouter.post("/attach", handleAttach);
 attachRouter.post("/attach/preview", handleAttachPreview);
 // attachRouter.post("/checkout", handleCheckout);

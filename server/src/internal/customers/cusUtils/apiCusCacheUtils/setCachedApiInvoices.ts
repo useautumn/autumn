@@ -38,7 +38,6 @@ export const setCachedApiInvoices = async ({
 	// Build master api customer invoices (customer-level only)
 	const masterApiInvoices = invoicesToResponse({
 		invoices: customerLevelInvoices,
-		logger,
 	});
 
 	// Then write to Redis

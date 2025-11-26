@@ -17,12 +17,11 @@ import {
 } from "@autumn/shared";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { parseReqForAction } from "@/internal/analytics/actionUtils.js";
+import { parseCtxForAction } from "@/internal/analytics/actionUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { getApiCustomerBase } from "../../customers/cusUtils/apiCusUtils/getApiCustomerBase";
 import { getPlanResponse } from "../../products/productUtils/productResponseUtils/getPlanResponse";
 
@@ -36,7 +35,7 @@ interface ActionDetails {
 }
 
 export const addProductsUpdatedWebhookTask = async ({
-	req,
+	ctx,
 	org,
 	env,
 	customerId,
@@ -45,9 +44,8 @@ export const addProductsUpdatedWebhookTask = async ({
 	scheduledCusProduct,
 	deletedCusProduct,
 	scenario,
-	logger,
 }: {
-	req?: ExtendedRequest;
+	ctx?: AutumnContext;
 	org: Organization;
 	env: AppEnv;
 	customerId: string | null;
@@ -56,7 +54,6 @@ export const addProductsUpdatedWebhookTask = async ({
 	scheduledCusProduct?: FullCusProduct;
 	deletedCusProduct?: FullCusProduct;
 	scenario: string;
-	logger: any;
 }) => {
 	// Build action
 
@@ -64,12 +61,10 @@ export const addProductsUpdatedWebhookTask = async ({
 		await addTaskToQueue({
 			jobName: JobName.HandleProductsUpdated,
 			payload: {
-				req: req ? parseReqForAction(req) : undefined,
+				reqCtx: ctx ? parseCtxForAction({ ctx }) : undefined,
 				internalCustomerId,
 				orgId: org.id,
 				env,
-				// org,
-				// env,
 				customerId,
 				cusProduct,
 				scheduledCusProduct,
@@ -78,16 +73,9 @@ export const addProductsUpdatedWebhookTask = async ({
 			},
 		});
 	} catch (error) {
-		logger.error("Failed to add products updated webhook task to queue", {
-			error,
-			org_slug: org.slug,
-			org_id: org.id,
-			env,
-			internalCustomerId,
-			productId: cusProduct.product.id,
-			cusProductId: cusProduct.id,
-			// productId: product.id,
-		});
+		ctx?.logger.error(
+			`Failed to add products updated webhook task to queue: ${error}`,
+		);
 	}
 };
 
@@ -97,7 +85,7 @@ export const handleProductsUpdated = async ({
 }: {
 	ctx: AutumnContext;
 	data: {
-		req: Partial<ExtendedRequest>;
+		reqCtx?: Partial<AutumnContext>;
 		actionDetails: ActionDetails;
 		internalCustomerId: string;
 		// org: Organization;

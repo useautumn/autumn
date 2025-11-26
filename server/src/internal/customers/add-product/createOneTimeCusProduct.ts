@@ -15,6 +15,7 @@ import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/han
 import { getEntRelatedPrice } from "@/internal/products/entitlements/entitlementUtils.js";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { nullish } from "@/utils/genUtils.js";
+import type { Logger } from "../../../external/logtail/logtailUtils.js";
 import type { InsertCusProductParams } from "../cusProducts/AttachParams.js";
 import { CusProductService } from "../cusProducts/CusProductService.js";
 import { CusEntService } from "../cusProducts/cusEnts/CusEntitlementService.js";
@@ -83,7 +84,7 @@ export const updateOneTimeCusProduct = async ({
 }: {
 	db: DrizzleCli;
 	attachParams: InsertCusProductParams;
-	logger: any;
+	logger: Logger;
 }) => {
 	// 1. Sort cus products by created_at
 	attachParams.cusProducts?.sort((a, b) => b.created_at - a.created_at);
@@ -93,9 +94,18 @@ export const updateOneTimeCusProduct = async ({
 		(cp) =>
 			cp.product.internal_id === attachParams.product.internal_id &&
 			cp.status === CusProductStatus.Active,
-	)!;
+	);
 
-	const existingCusEnts = existingCusProduct.customer_entitlements;
+	if (!existingCusProduct) {
+		// logger.warn("No existing cus product found", {
+		// 	data: {
+		// 		attachParams,
+		// 	},
+		// });
+		return;
+	}
+
+	const existingCusEnts = existingCusProduct?.customer_entitlements || [];
 
 	// 3. Update existing entitlements
 	for (const entitlement of attachParams.entitlements) {
@@ -169,7 +179,7 @@ export const updateOneTimeCusProduct = async ({
 	// Send webhook
 	const { customer, org } = attachParams;
 	await addProductsUpdatedWebhookTask({
-		req: attachParams.req,
+		ctx: attachParams.req,
 		internalCustomerId: customer.internal_id,
 		org,
 		env: customer.env,
@@ -177,6 +187,5 @@ export const updateOneTimeCusProduct = async ({
 		cusProduct: existingCusProduct,
 		scheduledCusProduct: undefined,
 		scenario: AttachScenario.New,
-		logger,
 	});
 };

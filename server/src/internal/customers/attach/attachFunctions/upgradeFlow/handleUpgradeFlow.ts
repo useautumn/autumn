@@ -1,11 +1,12 @@
 import {
-	ApiVersion,
 	AttachBranch,
 	type AttachConfig,
+	AttachFunctionResponseSchema,
 	AttachScenario,
 	CusProductStatus,
 	cusProductToProduct,
 	ProrationBehavior,
+	SuccessCode,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
@@ -13,10 +14,7 @@ import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSu
 import { subIsCanceled } from "@/external/stripe/stripeSubUtils.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
-import {
-	type AttachParams,
-	AttachResultSchema,
-} from "@/internal/customers/cusProducts/AttachParams.js";
+import { type AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import {
@@ -24,7 +22,7 @@ import {
 	insertInvoiceFromAttach,
 } from "@/internal/invoices/invoiceUtils.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 import {
 	attachParamsToCurCusProduct,
 	paramsToCurSub,
@@ -36,14 +34,12 @@ import { updateStripeSub2 } from "./updateStripeSub2.js";
 import { shouldCancelSub } from "./upgradeFlowUtils.js";
 
 export const handleUpgradeFlow = async ({
-	req,
-	res,
+	ctx,
 	attachParams,
 	config,
 	branch,
 }: {
-	req: ExtendedRequest;
-	res?: any;
+	ctx: AutumnContext;
 	attachParams: AttachParams;
 	config: AttachConfig;
 	branch: AttachBranch;
@@ -51,7 +47,7 @@ export const handleUpgradeFlow = async ({
 	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
 	const curSub = await paramsToCurSub({ attachParams });
 
-	const logger = req.logger;
+	const { logger, db } = ctx;
 
 	if (curCusProduct?.api_semver) {
 		attachParams.apiVersion = curCusProduct.api_semver;
@@ -66,7 +62,7 @@ export const handleUpgradeFlow = async ({
 	});
 
 	const newItemSet = await paramsToSubItems({
-		req,
+		ctx,
 		sub: curSub,
 		attachParams,
 		config,
@@ -95,7 +91,7 @@ export const handleUpgradeFlow = async ({
 
 		if (curScheduledProduct) {
 			await CusProductService.delete({
-				db: req.db,
+				db,
 				cusProductId: curScheduledProduct.id,
 			});
 		}
@@ -133,7 +129,7 @@ export const handleUpgradeFlow = async ({
 		// });
 
 		const res = await updateStripeSub2({
-			req,
+			ctx,
 			attachParams,
 			config,
 			curSub: curSub,
@@ -144,7 +140,7 @@ export const handleUpgradeFlow = async ({
 		if (res?.latestInvoice) {
 			logger.info(`UPGRADE FLOW: inserting invoice ${res.latestInvoice.id}`);
 			await insertInvoiceFromAttach({
-				db: req.db,
+				db,
 				attachParams,
 				stripeInvoice: res.latestInvoice,
 				logger,
@@ -155,8 +151,7 @@ export const handleUpgradeFlow = async ({
 
 		if (schedule) {
 			await handleUpgradeFlowSchedule({
-				req,
-				logger,
+				ctx,
 				attachParams,
 				config,
 				schedule,
@@ -172,7 +167,7 @@ export const handleUpgradeFlow = async ({
 	if (curCusProduct) {
 		logger.info(`UPGRADE FLOW: expiring previous cus product`);
 		await CusProductService.update({
-			db: req.db,
+			db,
 			cusProductId: curCusProduct.id,
 			updates: {
 				subscription_ids: canceled ? undefined : [],
@@ -183,7 +178,7 @@ export const handleUpgradeFlow = async ({
 
 		try {
 			await addProductsUpdatedWebhookTask({
-				req,
+				ctx,
 				internalCustomerId: curCusProduct.internal_customer_id,
 				org: attachParams.org,
 				env: attachParams.customer.env,
@@ -191,7 +186,6 @@ export const handleUpgradeFlow = async ({
 					attachParams.customer.id || attachParams.customer.internal_id,
 				scenario: AttachScenario.Expired,
 				cusProduct: curCusProduct,
-				logger,
 			});
 		} catch (error) {
 			logger.error("UPGRADE FLOW: failed to add to webhook queue", { error });
@@ -211,7 +205,7 @@ export const handleUpgradeFlow = async ({
 		}
 
 		await createFullCusProduct({
-			db: req.db,
+			db,
 			attachParams: attachToInsertParams(
 				attachParams,
 				attachParams.products[0],
@@ -229,24 +223,32 @@ export const handleUpgradeFlow = async ({
 		});
 	}
 
-	if (res) {
-		if (req.apiVersion.gte(ApiVersion.V1_1)) {
-			res.status(200).json(
-				AttachResultSchema.parse({
-					customer_id: attachParams.customer.id,
-					product_ids: attachParams.products.map((p) => p.id),
-					invoice: attachParams.invoiceOnly
-						? attachToInvoiceResponse({ invoice: latestInvoice || undefined })
-						: undefined,
-					code: "updated_product_successfully",
-					message: `Successfully updated product`,
-				}),
-			);
-		} else {
-			res.status(200).json({
-				success: true,
-				message: `Successfully updated product`,
-			});
-		}
-	}
+	return AttachFunctionResponseSchema.parse({
+		code: SuccessCode.UpgradedToNewProduct,
+		message: `Successfully updated product`,
+		invoice: attachParams.invoiceOnly
+			? attachToInvoiceResponse({ invoice: latestInvoice || undefined })
+			: undefined,
+	});
+
+	// if (res) {
+	// 	if (req.apiVersion.gte(ApiVersion.V1_1)) {
+	// 		res.status(200).json(
+	// 			AttachResultSchema.parse({
+	// 				customer_id: attachParams.customer.id,
+	// 				product_ids: attachParams.products.map((p) => p.id),
+	// 				invoice: attachParams.invoiceOnly
+	// 					? attachToInvoiceResponse({ invoice: latestInvoice || undefined })
+	// 					: undefined,
+	// 				code: "updated_product_successfully",
+	// 				message: `Successfully updated product`,
+	// 			}),
+	// 		);
+	// 	} else {
+	// 		res.status(200).json({
+	// 			success: true,
+	// 			message: `Successfully updated product`,
+	// 		});
+	// 	}
+	// }
 };

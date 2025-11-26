@@ -2,6 +2,7 @@ import {
 	type AttachBodyV0,
 	type AttachBranch,
 	type AttachConfig,
+	AttachFunctionResponseSchema,
 	AttachScenario,
 	CusProductStatus,
 	isTrialing,
@@ -10,10 +11,7 @@ import {
 import type Stripe from "stripe";
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
-import {
-	type AttachParams,
-	AttachResultSchema,
-} from "@/internal/customers/cusProducts/AttachParams.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import {
@@ -21,16 +19,12 @@ import {
 	insertInvoiceFromAttach,
 } from "@/internal/invoices/invoiceUtils.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
-import type {
-	ExtendedRequest,
-	ExtendedResponse,
-} from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 import {
 	getCustomerSub,
 	paramsToCurSubSchedule,
 } from "../../attachUtils/convertAttachParams.js";
 import { handleMultiAttachErrors } from "../../attachUtils/handleAttachErrors/handleMultiAttachErrors.js";
-
 import { paramsToSubItems } from "../../mergeUtils/paramsToSubItems.js";
 import { createStripeSub2 } from "../addProductFlow/createStripeSub2.js";
 import { handleUpgradeFlowSchedule } from "../upgradeFlow/handleUpgradeFlowSchedule.js";
@@ -41,22 +35,20 @@ import {
 } from "./getAddAndRemoveProducts.js";
 
 export const handleMultiAttachFlow = async ({
-	req,
-	res,
+	ctx,
 	attachParams,
 	attachBody,
 	branch,
 	config,
 }: {
-	req: ExtendedRequest;
-	res: ExtendedResponse;
+	ctx: AutumnContext;
 	attachParams: AttachParams;
 	attachBody: AttachBodyV0;
 	branch: AttachBranch;
 	config: AttachConfig;
 }) => {
 	await handleMultiAttachErrors({ attachParams, attachBody, branch });
-	const { db, logger } = req;
+	const { db, logger } = ctx;
 	const { stripeCli } = attachParams;
 	const productsList = attachParams.productsList!;
 
@@ -72,7 +64,7 @@ export const handleMultiAttachFlow = async ({
 		});
 
 	const mergedItemSet = await paramsToSubItems({
-		req,
+		ctx,
 		attachParams,
 		config,
 		removeCusProducts,
@@ -109,7 +101,7 @@ export const handleMultiAttachFlow = async ({
 		config.disableTrial = true;
 
 		const updateResult = await updateStripeSub2({
-			req,
+			ctx,
 			attachParams,
 			config,
 			curSub: curSub!,
@@ -122,13 +114,12 @@ export const handleMultiAttachFlow = async ({
 		const schedule = await paramsToCurSubSchedule({ attachParams });
 		if (schedule) {
 			await handleUpgradeFlowSchedule({
-				req,
+				ctx,
 				attachParams,
 				config,
 				schedule,
 				curSub,
 				removeCusProducts,
-				logger,
 			});
 		}
 
@@ -166,7 +157,7 @@ export const handleMultiAttachFlow = async ({
 	}
 
 	// Expire all existing cus products at the customer level
-	const batchInsert: any[] = [];
+	const batchInsert: unknown[] = [];
 	const newProdList = getProdListWithoutEntities({
 		attachParams,
 		productsList,
@@ -190,35 +181,42 @@ export const handleMultiAttachFlow = async ({
 					product,
 					productOptions.entity_id || undefined,
 				),
-				subscriptionIds: curSub ? [curSub?.id!] : undefined,
+				subscriptionIds: curSub ? [curSub.id] : undefined,
 				anchorToUnix,
 				scenario: AttachScenario.New,
 				logger,
 				productOptions,
 				trialEndsAt:
 					mergeCusProduct && isTrialing({ cusProduct: mergeCusProduct })
-						? mergeCusProduct?.trial_ends_at!
+						? mergeCusProduct?.trial_ends_at || undefined
 						: undefined,
 			}),
 		);
 	}
 
 	console.log("Running multi attach flow!");
-	if (res) {
-		const invoice = latestInvoice;
-		res.status(200).json(
-			AttachResultSchema.parse(
-				AttachResultSchema.parse({
-					message: `Successfully created subscriptions and attached ${attachParams.products.map((p) => p.name).join(", ")} to ${attachParams.customer.name}`,
-					code: SuccessCode.NewProductAttached,
-					product_ids: attachParams.products.map((p) => p.id),
-					customer_id:
-						attachParams.customer.id || attachParams.customer.internal_id,
-					invoice: attachParams.invoiceOnly
-						? attachToInvoiceResponse({ invoice })
-						: undefined,
-				}),
-			),
-		);
-	}
+	return AttachFunctionResponseSchema.parse({
+		message: `Successfully created subscriptions and attached ${attachParams.products.map((p) => p.name).join(", ")} to ${attachParams.customer.name}`,
+		code: SuccessCode.NewProductAttached,
+		invoice: attachParams.invoiceOnly
+			? attachToInvoiceResponse({ invoice: latestInvoice })
+			: undefined,
+	});
+	// if (res) {
+	// 	const invoice = latestInvoice;
+	// 	res.status(200).json(
+	// 		AttachResultSchema.parse(
+	// 			AttachResultSchema.parse({
+	// 				message: `Successfully created subscriptions and attached ${attachParams.products.map((p) => p.name).join(", ")} to ${attachParams.customer.name}`,
+	// 				code: SuccessCode.NewProductAttached,
+	// 				product_ids: attachParams.products.map((p) => p.id),
+	// 				customer_id:
+	// 					attachParams.customer.id || attachParams.customer.internal_id,
+	// 				invoice: attachParams.invoiceOnly
+	// 					? attachToInvoiceResponse({ invoice })
+	// 					: undefined,
+	// 			}),
+	// 		),
+	// 	);
+	// }
 };
