@@ -1,5 +1,5 @@
 import {
-	type AttachBody,
+	type AttachBodyV0,
 	type AttachBranch,
 	type AttachConfig,
 	cusProductsToPrices,
@@ -27,7 +27,7 @@ export const getMultiAttachPreview = async ({
 	branch,
 }: {
 	ctx: AutumnContext;
-	attachBody: AttachBody;
+	attachBody: AttachBodyV0;
 	attachParams: AttachParams;
 	config: AttachConfig;
 	branch: AttachBranch;
