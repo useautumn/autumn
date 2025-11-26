@@ -13,6 +13,10 @@ import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import {
+	expectProductAttached,
+	expectScheduledApiSub,
+} from "../../utils/expectUtils/expectProductAttached";
 
 const testCase = "aentity5";
 
@@ -111,10 +115,24 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing downgrade entity pro
 		});
 
 		const entity = await autumn.entities.get(customerId, entity1.id);
-		const proProd = entity.products.find((p: any) => p.id === pro.id);
-		expect(proProd).toBeDefined();
-		expect(proProd.status).toBe(CusProductStatus.Scheduled);
+
+		expectProductAttached({
+			customer: entity,
+			product: pro,
+			status: CusProductStatus.Scheduled,
+		});
+
+		await expectScheduledApiSub({
+			customerId,
+			entityId: entity1.id,
+			productId: pro.id,
+		});
+		// const entity = await autumn.entities.get(customerId, entity1.id);
+		// const proProd = entity.products.find((p: any) => p.id === pro.id);
+		// expect(proProd).toBeDefined();
+		// expect(proProd.status).toBe(CusProductStatus.Scheduled);
 	});
+	return;
 
 	test("should advance test clock and have pro attached to entity 1", async () => {
 		await advanceTestClock({

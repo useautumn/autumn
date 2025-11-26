@@ -37,6 +37,7 @@ export const setCachedApiCustomer = async ({
 			CusExpand.BalancesFeature,
 			CusExpand.SubscriptionsPlan,
 			CusExpand.Invoices,
+			CusExpand.ScheduledSubscriptionsPlan,
 		],
 	});
 
