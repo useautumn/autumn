@@ -3,12 +3,13 @@ import {
 	ApiEntityV1Schema,
 	type AppEnv,
 	type EntityLegacyData,
+	EntityLegacyDataSchema,
+	EntityNotFoundError,
 	type FullCustomer,
 	filterEntityLevelCusProducts,
 	filterPlanAndFeatureExpand,
 } from "@autumn/shared";
 import { CACHE_CUSTOMER_VERSION } from "@lua/cacheConfig.js";
-import { GET_ENTITY_SCRIPT } from "@lua/luaScripts.js";
 import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -56,14 +57,12 @@ export const getCachedApiEntity = async ({
 		// Try to get from cache using Lua script (unless skipCache is true)
 		if (!skipCache) {
 			const cachedResult = await tryRedisRead(() =>
-				redis.eval(
-					GET_ENTITY_SCRIPT,
-					0, // No KEYS, all params in ARGV
-					org.id, // ARGV[1]
-					env, // ARGV[2]
-					customerId, // ARGV[3]
-					entityId, // ARGV[4]
-					skipCustomerMerge ? "true" : "false", // ARGV[5]
+				redis.getEntity(
+					org.id,
+					env,
+					customerId,
+					entityId,
+					skipCustomerMerge ? "true" : "false",
 				),
 			);
 
@@ -82,9 +81,14 @@ export const getCachedApiEntity = async ({
 					data: rest,
 				});
 
+				const normalizedLegacyData = normalizeFromSchema<EntityLegacyData>({
+					schema: EntityLegacyDataSchema,
+					data: legacyData,
+				});
+
 				return {
 					apiEntity: ApiEntityV1Schema.parse(normalized),
-					legacyData,
+					legacyData: normalizedLegacyData,
 				};
 			}
 		}
@@ -105,7 +109,8 @@ export const getCachedApiEntity = async ({
 
 		const entity = fullCus.entity;
 		if (!entity) {
-			throw new Error(`Entity ${entityId} not found`);
+			// throw new Error(`Entity ${entityId} not found`);
+			throw new EntityNotFoundError({ entityId });
 		}
 
 		// Store in cache (only if not skipping cache)

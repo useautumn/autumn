@@ -8,7 +8,6 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { addHours, addMonths } from "date-fns";
 import type Stripe from "stripe";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
@@ -51,7 +50,6 @@ const premiumProduct = constructProduct({
 const testCase = "downgrade5";
 describe(`${chalk.yellowBright(`${testCase}: testing basic downgrade (paid to paid)`)}`, () => {
 	const customerId = testCase;
-	const autumn: AutumnInt = new AutumnInt();
 	let testClockId: string;
 	let stripeCli: Stripe;
 

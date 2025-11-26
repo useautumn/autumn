@@ -7,10 +7,6 @@ import {
 	filterEntityLevelCusProducts,
 	filterOutEntitiesFromCusProducts,
 } from "@autumn/shared";
-import {
-	SET_CUSTOMER_SCRIPT,
-	SET_ENTITIES_BATCH_SCRIPT,
-} from "@lua/luaScripts.js";
 import { redis } from "../../../../external/redis/initRedis.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "../../../../utils/cacheUtils/cacheUtils.js";
@@ -37,7 +33,11 @@ export const setCachedApiCustomer = async ({
 
 	const ctxWithExpand = addToExpand({
 		ctx,
-		add: [CusExpand.BalancesFeature, CusExpand.SubscriptionsPlan],
+		add: [
+			CusExpand.BalancesFeature,
+			CusExpand.SubscriptionsPlan,
+			CusExpand.ScheduledSubscriptionsPlan,
+		],
 	});
 
 	// Build master api customer (customer-level features only)
@@ -100,9 +100,7 @@ export const setCachedApiCustomer = async ({
 	// );
 
 	await tryRedisWrite(async () => {
-		await redis.eval(
-			SET_CUSTOMER_SCRIPT,
-			0, // No KEYS, all params in ARGV
+		await redis.setCustomer(
 			JSON.stringify(masterApiCustomerData),
 			org.id,
 			env,
@@ -114,9 +112,7 @@ export const setCachedApiCustomer = async ({
 		);
 
 		if (entityBatch.length > 0) {
-			await redis.eval(
-				SET_ENTITIES_BATCH_SCRIPT,
-				0,
+			await redis.setEntitiesBatch(
 				JSON.stringify(filteredEntityBatch),
 				org.id,
 				env,

@@ -72,6 +72,7 @@ export const V1_2_ProductChanges = defineVersionChange({
 		legacyData?: PlanLegacyData;
 	}): ApiProduct => {
 		// Convert plan to items using shared utility (handles base price + features)
+
 		const items = convertPlanToItems({
 			plan: input,
 			features: legacyData?.features || [],

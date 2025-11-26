@@ -5,17 +5,39 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { advanceToNextInvoice } from "../utils/testAttachUtils/testAttachUtils.js";
+import {
+	constructProduct,
+	constructRawProduct,
+} from "@/utils/scriptUtils/createTestProducts.js";
+import { constructPriceItem } from "../../src/internal/products/product-items/productItemUtils.js";
+import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "../../src/utils/scriptUtils/testUtils/initProductsV0.js";
 
 // UNCOMMENT FROM HERE
 const pro = constructProduct({
-	type: "pro",
+	type: "free",
+	isDefault: true,
 
 	items: [
-		constructFeatureItem({ featureId: TestFeature.Words, includedUsage: 100 }),
+		constructFeatureItem({
+			featureId: TestFeature.Credits,
+			includedUsage: 200,
+			// unlimited: true,
+		}),
+	],
+});
+
+const oneOff = constructRawProduct({
+	id: "one-off",
+	items: [
+		constructPriceItem({
+			price: 10,
+			interval: null,
+		}),
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 100,
+		}),
 	],
 });
 
@@ -23,50 +45,38 @@ describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 	const customerId = "temp";
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
-	let testClockId: string;
 	beforeAll(async () => {
-		const result = await initCustomerV3({
+		await initCustomerV3({
 			ctx,
 			customerId,
 			customerData: {},
-			attachPm: "fail",
+			attachPm: "success",
 			withTestClock: true,
 		});
 
 		await initProductsV0({
 			ctx,
-			products: [pro],
+			products: [pro, oneOff],
 			prefix: customerId,
 		});
 
-		testClockId = result.testClockId!;
+		await autumn.attach({
+			customer_id: customerId,
+			product_id: pro.id,
+		});
 	});
 
 	test("should attach pro product", async () => {
 		await autumn.attach({
 			customer_id: customerId,
-			product_id: pro.id,
-			invoice: true,
-			enable_product_immediately: true,
+			product_id: oneOff.id,
+		});
+		await autumn.attach({
+			customer_id: customerId,
+			product_id: oneOff.id,
 		});
 
-		await advanceToNextInvoice({
-			stripeCli: ctx.stripeCli,
-			testClockId,
-		});
+		const customer = await autumn.customers.get(customerId);
+		console.log("Customer:", customer);
 	});
-
-	// test("should cancel one add on", async () => {
-	// 	await autumn.cancel({
-	// 		customer_id: customerId,
-	// 		product_id: addOn.id,
-	// 	});
-
-	// 	await expectSubToBeCorrect({
-	// 		customerId,
-	// 		db,
-	// 		org,
-	// 		env,
-	// 	});
-	// });
 });

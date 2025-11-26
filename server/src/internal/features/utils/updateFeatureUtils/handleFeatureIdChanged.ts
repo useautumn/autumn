@@ -2,6 +2,7 @@ import {
 	type Entitlement,
 	ErrCode,
 	type Feature,
+	FeatureAlreadyExistsError,
 	type Price,
 	RecaseError,
 	type UsagePriceConfig,
@@ -30,6 +31,10 @@ export const handleFeatureIdChanged = async ({
 	newId: string;
 }) => {
 	const { db, org, env } = ctx;
+	const curFeature = ctx.features.find((f) => f.id === feature.id);
+	if (curFeature) {
+		throw new FeatureAlreadyExistsError({ featureId: feature.id });
+	}
 
 	// 1. Check if any customer entitlement linked to this feature
 	const cusEnts = await CusEntService.getByFeature({

@@ -9,6 +9,8 @@ import type { ApiCusFeatureV3 } from "../../customers/cusFeatures/previousVersio
 import type { ApiSubscription } from "../../customers/cusPlans/apiSubscription.js";
 import { transformSubscriptionToCusProductV3 } from "../../customers/cusPlans/changes/V1.2_CusPlanChange.js";
 import type { ApiCusProductV3 } from "../../customers/cusPlans/previousVersions/apiCusProductV3.js";
+import type { ApiInvoiceV1 } from "../../others/apiInvoice/apiInvoiceV1.js";
+import { transformInvoiceToV0 } from "../../others/apiInvoice/changes/V1.2_InvoiceChange.js";
 import { ApiEntityV1Schema } from "../apiEntity.js";
 import { EntityLegacyDataSchema } from "../entityLegacyData.js";
 import { ApiEntityV0Schema } from "../prevVersions/apiEntityV0.js";
@@ -60,6 +62,22 @@ export const V1_2_EntityChange = defineVersionChange({
 				)
 			: undefined;
 
+		const scheduledCusProducts: ApiCusProductV3[] | undefined =
+			input.scheduled_subscriptions
+				? input.scheduled_subscriptions.map((subscription: ApiSubscription) =>
+						transformSubscriptionToCusProductV3({
+							input: subscription,
+							legacyData:
+								legacyData?.cusProductLegacyData[subscription.plan_id],
+						}),
+					)
+				: undefined;
+
+		const finalCusProducts = [
+			...(v0CusProducts || []),
+			...(scheduledCusProducts || []),
+		];
+
 		// Step 2: Transform features V1 → V0
 		let v0_features: Record<string, ApiCusFeatureV3> | undefined;
 		if (input.balances) {
@@ -81,9 +99,12 @@ export const V1_2_EntityChange = defineVersionChange({
 			feature_id: input.feature_id,
 			created_at: input.created_at,
 			env: input.env,
-			products: v0CusProducts,
+			products: finalCusProducts,
 			features: v0_features,
-			invoices: input.invoices,
+			invoices:
+				input.invoices?.map((invoice: ApiInvoiceV1) =>
+					transformInvoiceToV0({ input: invoice }),
+				) ?? undefined,
 		} satisfies z.infer<typeof ApiEntityV0Schema>;
 	},
 });

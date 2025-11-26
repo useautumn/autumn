@@ -1,9 +1,9 @@
 import "dotenv/config";
-import { NodeSDK } from "@opentelemetry/sdk-node";
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
-import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
 import { resourceFromAttributes } from "@opentelemetry/resources";
+import { NodeSDK } from "@opentelemetry/sdk-node";
+import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
 import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions";
 
 // Initialize OTLP trace exporter with the endpoint URL and headers
@@ -26,7 +26,14 @@ if (process.env.AXIOM_TOKEN) {
 	const sdk = new NodeSDK({
 		spanProcessor: new BatchSpanProcessor(traceExporter),
 		resource: resource,
-		instrumentations: [getNodeAutoInstrumentations()],
+		instrumentations: [
+			// Then add other auto-instrumentations
+			getNodeAutoInstrumentations({
+				"@opentelemetry/instrumentation-ioredis": {
+					enabled: false,
+				},
+			}),
+		],
 	});
 
 	// Starting the OpenTelemetry SDK to begin collecting telemetry data

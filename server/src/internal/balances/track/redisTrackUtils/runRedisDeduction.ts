@@ -3,7 +3,6 @@ import {
 	ApiBalanceSchema,
 	type ApiCustomer,
 	InsufficientBalanceError,
-	isContUseFeature,
 	type TrackParams,
 	type TrackQuery,
 } from "@autumn/shared";
@@ -30,7 +29,6 @@ type RunRedisDeductionParams = {
 	trackParams: TrackParams;
 	featureDeductions: FeatureDeduction[];
 	overageBehavior: "cap" | "reject";
-	skipEvent?: boolean;
 	eventInfo?: EventInfo;
 };
 
@@ -53,7 +51,6 @@ const queueSyncAndEvent = ({
 	ctx,
 	trackParams,
 	featureDeductions,
-	skipEvent,
 	eventInfo,
 	result,
 	apiCustomer,
@@ -65,7 +62,7 @@ const queueSyncAndEvent = ({
 	const { org, env } = ctx;
 
 	ctx.logger.info(
-		`[queueSync]: customer changed: ${result.customerChanged}, changed entity ids: ${result.changedEntityIds}`,
+		`[queueSync] (${customer_id}): customer changed: ${result.customerChanged}, changed entity ids: ${Array.isArray(result.changedEntityIds) ? result.changedEntityIds.join(", ") : "none"}`,
 	);
 
 	for (const deduction of featureDeductions) {
@@ -94,7 +91,7 @@ const queueSyncAndEvent = ({
 		}
 	}
 
-	if (!skipEvent && apiCustomer?.autumn_id && eventInfo) {
+	if (!trackParams.skip_event && apiCustomer?.autumn_id && eventInfo) {
 		globalEventBatchingManager.addEvent(
 			constructEvent({
 				ctx,
@@ -122,54 +119,33 @@ export const runRedisDeduction = async ({
 	trackParams,
 	featureDeductions,
 	overageBehavior,
-	skipEvent = false,
 	eventInfo,
 }: RunRedisDeductionParams): Promise<RunRedisDeductionResult> => {
-	const { org, env } = ctx;
+	const { org, env, skipCache } = ctx;
 
-	const hasContUseFeature = featureDeductions.some((deduction) =>
-		isContUseFeature({ feature: deduction.feature }),
-	);
-
-	// 1. Check for idempotency key
-	if (trackParams.idempotency_key) {
-		return {
-			fallback: true,
-			code: "idempotency_key",
-		};
-	}
-
-	// 2. Check for continuous use feature
-	if (hasContUseFeature) {
-		return {
-			fallback: true,
-			code: "allocated_feature",
-		};
-	}
-
-	if (query.skip_cache) {
+	if (query.skip_cache || skipCache) {
 		return {
 			fallback: true,
 			code: "skip_cache",
 		};
 	}
 
+	const {
+		customer_id: customerId,
+		customer_data: customerData,
+		entity_id: entityId,
+		entity_data: entityData,
+	} = trackParams;
+
+	const { apiCustomer } = await getOrCreateApiCustomer({
+		ctx,
+		customerId,
+		customerData,
+		entityId,
+		entityData,
+	});
+
 	const result = await tryRedisWrite<RunRedisDeductionResult>(async () => {
-		const {
-			customer_id: customerId,
-			customer_data: customerData,
-			entity_id: entityId,
-			entity_data: entityData,
-		} = trackParams;
-
-		const { apiCustomer } = await getOrCreateApiCustomer({
-			ctx,
-			customerId,
-			customerData,
-			entityId,
-			entityData,
-		});
-
 		// Map feature deductions to the format expected by batching manager
 		const mappedDeductions = featureDeductions.map(
 			({ feature, deduction }) => ({
@@ -204,7 +180,6 @@ export const runRedisDeduction = async ({
 					trackParams,
 					featureDeductions,
 					overageBehavior,
-					skipEvent,
 					eventInfo,
 					result,
 					apiCustomer,
@@ -212,6 +187,17 @@ export const runRedisDeduction = async ({
 			} catch (error) {
 				ctx.logger.error(`Failed to queue sync and event! ${error}`);
 			}
+		}
+
+		// Handle PAID_ALLOCATED error - fallback to Postgres
+		if (result.error === "PAID_ALLOCATED") {
+			ctx.logger.info(
+				`Paid allocated feature detected, falling back to Postgres: ${featureDeductions.map((d) => d.feature.id).join(", ")}`,
+			);
+			return {
+				fallback: true,
+				code: "allocated_feature",
+			};
 		}
 
 		return {

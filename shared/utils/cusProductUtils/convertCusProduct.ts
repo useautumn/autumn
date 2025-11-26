@@ -103,8 +103,12 @@ export const cusProductsToCusEnts = ({
 		cusEnts,
 		reverseOrder,
 		entityId: entity?.id,
-		sortParams,
+		// sortParams,
 	});
+
+	if (sortParams?.cusEntId) {
+		cusEnts = cusEnts.filter((cusEnt) => cusEnt.id === sortParams.cusEntId);
+	}
 
 	return cusEnts as FullCusEntWithFullCusProduct[];
 };

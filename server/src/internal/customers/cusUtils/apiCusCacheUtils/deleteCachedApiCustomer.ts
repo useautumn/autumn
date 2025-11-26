@@ -1,4 +1,3 @@
-import { DELETE_CUSTOMER_SCRIPT } from "@lua/luaScripts.js";
 import { redis } from "@/external/redis/initRedis.js";
 import { logger } from "../../../../external/logtail/logtailUtils.js";
 
@@ -29,13 +28,7 @@ export const deleteCachedApiCustomer = async ({
 	if (!customerId) return;
 
 	try {
-		const deletedCount = await redis.eval(
-			DELETE_CUSTOMER_SCRIPT,
-			0, // No KEYS, all params in ARGV
-			orgId,
-			env,
-			customerId,
-		);
+		const deletedCount = await redis.deleteCustomer(orgId, env, customerId);
 
 		logger.info(
 			`Deleted ${deletedCount} cache keys for customer ${customerId}, source: ${source}`,

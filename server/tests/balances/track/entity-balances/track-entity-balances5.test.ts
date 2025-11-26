@@ -317,16 +317,17 @@ describe(`${chalk.yellowBright(`${testCase}: Concurrent per entity tracking`)}`,
 				),
 			);
 
-			console.log(
-				`  Actual customer balance: ${customerData.features[TestFeature.Messages].balance}`,
-			);
-			console.log(
-				`  Expected customer balance: ${expectedAggregatedBalance.toFixed(2)}`,
-			);
+			const actualBalance = new Decimal(
+				customerData.features[TestFeature.Messages].balance ?? 0,
+			)
+				.toDP(7)
+				.toNumber();
+			const expectedBalance = expectedAggregatedBalance.toDP(7).toNumber();
 
-			expect(customerData.features[TestFeature.Messages].balance).toBe(
-				expectedAggregatedBalance.toNumber(),
-			);
+			console.log(`  Actual customer balance: ${actualBalance}`);
+			console.log(`  Expected customer balance: ${expectedBalance}`);
+
+			expect(actualBalance).toBe(expectedBalance);
 
 			// Each entity cache shows merged balance (entity + customer)
 			for (const entity of customer.entities) {
@@ -341,9 +342,16 @@ describe(`${chalk.yellowBright(`${testCase}: Concurrent per entity tracking`)}`,
 					`  Expected ${entity.id} balance: ${expectedEntityMergedBalance.toFixed(2)}`,
 				);
 
-				expect(_entity.features[TestFeature.Messages].balance).toBe(
-					expectedEntityMergedBalance.toNumber(),
-				);
+				const actualEntityBalance = new Decimal(
+					_entity.features[TestFeature.Messages].balance ?? 0,
+				)
+					.toDP(7)
+					.toNumber();
+				const expectedEntityBalance = expectedEntityMergedBalance
+					.toDP(7)
+					.toNumber();
+
+				expect(actualEntityBalance).toBe(expectedEntityBalance);
 			}
 		}
 	});

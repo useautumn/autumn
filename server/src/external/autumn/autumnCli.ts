@@ -91,6 +91,32 @@ export class AutumnInt {
 		const response = await fetch(`${this.baseUrl}${path}`, {
 			headers: this.headers,
 		});
+
+		if (response.status !== 200) {
+			// Handle rate limit errors
+			if (response.status === 429) {
+				throw new AutumnError({
+					message: `request failed, rate limit exceeded`,
+					code: "rate_limit_exceeded",
+				});
+			}
+
+			let error: any;
+			try {
+				error = await response.json();
+			} catch (error) {
+				throw new AutumnError({
+					message: `request failed, error: ${error}`,
+					code: ErrCode.InternalError,
+				});
+			}
+
+			throw new AutumnError({
+				message: error.message,
+				code: error.code,
+			});
+		}
+
 		return response.json();
 	}
 
@@ -582,8 +608,16 @@ export class AutumnInt {
 		},
 	};
 
-	track = async (params: TrackParams) => {
-		const data = await this.post(`/track`, params);
+	track = async (
+		params: TrackParams,
+		{ skipCache = false }: { skipCache?: boolean } = {},
+	) => {
+		const queryParams = new URLSearchParams();
+		if (skipCache) {
+			queryParams.append("skip_cache", "true");
+		}
+
+		const data = await this.post(`/track?${queryParams.toString()}`, params);
 		return data;
 	};
 
@@ -593,12 +627,13 @@ export class AutumnInt {
 	};
 
 	check = async <T = CheckResult>(
-		params: CheckParams & CheckQuery,
+		params: CheckParams & CheckQuery & { skip_event?: boolean },
 	): Promise<T> => {
 		const queryParams = new URLSearchParams();
 		if (params.skip_cache) {
 			queryParams.append("skip_cache", "true");
 		}
+
 		const data = await this.post(`/check?${queryParams.toString()}`, params);
 		return data;
 	};

@@ -1,15 +1,16 @@
-import { and, arrayContains, count, eq, inArray, or } from "drizzle-orm";
-import RecaseError from "@/utils/errorUtils.js";
 import {
 	ErrCode,
-	Reward,
-	RewardProgram,
-	rewardPrograms,
+	RecaseError,
+	type ReferralCode,
+	type Reward,
+	type RewardProgram,
 	RewardTriggerEvent,
+	referralCodes,
+	rewardPrograms,
+	rewardRedemptions,
 } from "@autumn/shared";
-import { ReferralCode } from "@autumn/shared";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { referralCodes, rewardRedemptions } from "@autumn/shared";
+import { and, arrayContains, count, eq, or } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export class RewardProgramService {
 	static async get({
@@ -25,7 +26,7 @@ export class RewardProgramService {
 		env: string;
 		errorIfNotFound?: boolean;
 	}) {
-		let result = await db.query.rewardPrograms.findFirst({
+		const result = await db.query.rewardPrograms.findFirst({
 			where: and(
 				or(
 					eq(rewardPrograms.id, idOrInternalId),
@@ -59,7 +60,7 @@ export class RewardProgramService {
 		orgId: string;
 		env: string;
 	}) {
-		let result = await db.query.rewardPrograms.findMany({
+		const result = await db.query.rewardPrograms.findMany({
 			where: and(eq(rewardPrograms.org_id, orgId), eq(rewardPrograms.env, env)),
 		});
 
@@ -77,7 +78,7 @@ export class RewardProgramService {
 		orgId: string;
 		env: string;
 	}) {
-		let result = await db.query.rewardPrograms.findMany({
+		const result = await db.query.rewardPrograms.findMany({
 			where: and(
 				eq(rewardPrograms.org_id, orgId),
 				eq(rewardPrograms.env, env),
@@ -102,7 +103,7 @@ export class RewardProgramService {
 		internalCustomerId: string;
 		internalRewardProgramId: string;
 	}) {
-		let result = await db.query.referralCodes.findFirst({
+		const result = await db.query.referralCodes.findFirst({
 			where: and(
 				eq(referralCodes.internal_customer_id, internalCustomerId),
 				eq(referralCodes.internal_reward_program_id, internalRewardProgramId),
@@ -125,7 +126,7 @@ export class RewardProgramService {
 		db: DrizzleCli;
 		data: RewardProgram | RewardProgram[];
 	}) {
-		let result = await db
+		const result = await db
 			.insert(rewardPrograms)
 			.values(data as any)
 			.returning();
@@ -151,7 +152,7 @@ export class RewardProgramService {
 		orgId: string;
 		env: string;
 	}) {
-		let result = await db
+		const result = await db
 			.delete(rewardPrograms)
 			.where(
 				and(
@@ -189,7 +190,7 @@ export class RewardProgramService {
 		code: string;
 		withRewardProgram?: boolean;
 	}) {
-		let result = await db.query.referralCodes.findFirst({
+		const result = await db.query.referralCodes.findFirst({
 			where: and(
 				eq(referralCodes.code, code),
 				eq(referralCodes.org_id, orgId),
@@ -228,7 +229,7 @@ export class RewardProgramService {
 		db: DrizzleCli;
 		data: ReferralCode;
 	}) {
-		let result = await db.insert(referralCodes).values(data).returning();
+		const result = await db.insert(referralCodes).values(data).returning();
 
 		if (result.length === 0) {
 			throw new RecaseError({
@@ -247,7 +248,7 @@ export class RewardProgramService {
 		db: DrizzleCli;
 		referralCodeId: string;
 	}) {
-		let result = await db
+		const result = await db
 			.select({ count: count() })
 			.from(rewardRedemptions)
 			.where(
@@ -273,7 +274,7 @@ export class RewardProgramService {
 		env: string;
 		data: RewardProgram;
 	}) {
-		let result = await db
+		const result = await db
 			.update(rewardPrograms)
 			.set(data as any)
 			.where(

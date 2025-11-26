@@ -1,5 +1,4 @@
 import type { ApiCustomer, FullCustomer } from "@autumn/shared";
-import { SET_CUSTOMER_DETAILS_SCRIPT } from "@lua/luaScripts.js";
 import { redis } from "../../../../external/redis/initRedis.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "../../../../utils/cacheUtils/cacheUtils.js";
@@ -30,9 +29,7 @@ export const setCachedApiCusDetails = async ({
 
 	// Try to update cache
 	await tryRedisWrite(async () => {
-		const result = await redis.eval(
-			SET_CUSTOMER_DETAILS_SCRIPT,
-			0, // No KEYS, all params in ARGV
+		const result = await redis.setCustomerDetails(
 			JSON.stringify(updates),
 			org.id,
 			env,

@@ -1,12 +1,13 @@
 import { ApiCusReferralSchema } from "@api/customers/components/apiCusReferral.js";
 import { ApiCusUpcomingInvoiceSchema } from "@api/customers/components/apiCusUpcomingInvoice.js";
-import { ApiTrialsUsedSchema } from "@api/customers/components/apiTrialsUsed.js";
+import { ApiTrialsUsedV0Schema } from "@api/customers/components/apiTrialsUsed/prevVersions/apiTrialsUsedV0.js";
 import { ApiCusFeatureV2Schema } from "@api/customers/cusFeatures/previousVersions/apiCusFeatureV2.js";
 import { ApiCusProductV2Schema } from "@api/customers/cusPlans/previousVersions/apiCusProductV2.js";
 import { ApiBaseEntitySchema } from "@api/entities/apiBaseEntity.js";
 import { ApiCusRewardsSchema } from "@api/models.js";
-import { ApiInvoiceSchema } from "@api/others/apiInvoice.js";
+import { ApiInvoiceV0Schema } from "@api/others/apiInvoice/prevVersions/apiInvoiceV0.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
+
 import { z } from "zod/v4";
 
 /**
@@ -43,8 +44,8 @@ export const ApiCustomerV2Schema = z.object({
 
 	products: z.array(ApiCusProductV2Schema),
 	features: z.array(ApiCusFeatureV2Schema),
-	invoices: z.array(ApiInvoiceSchema).optional(),
-	trials_used: z.array(ApiTrialsUsedSchema).optional(),
+	invoices: z.array(ApiInvoiceV0Schema).optional(),
+	trials_used: z.array(ApiTrialsUsedV0Schema).optional(),
 
 	rewards: ApiCusRewardsSchema.nullish(),
 	metadata: z.record(z.any(), z.any()).default({}),

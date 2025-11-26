@@ -10,6 +10,7 @@ console.warn = (...args: any[]) => {
 
 import "dotenv/config";
 import cluster from "node:cluster";
+
 import { initInfisical } from "./external/infisical/initInfisical.js";
 
 // Number of worker processes (defaults to CPU cores)

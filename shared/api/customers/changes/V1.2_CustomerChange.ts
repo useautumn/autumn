@@ -4,7 +4,11 @@ import {
 	defineVersionChange,
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
 import type { z } from "zod/v4";
+import type { ApiInvoiceV1 } from "../../others/apiInvoice/apiInvoiceV1.js";
+import { transformInvoiceToV0 } from "../../others/apiInvoice/changes/V1.2_InvoiceChange.js";
 import { ApiCustomerSchema } from "../apiCustomer.js";
+import type { ApiTrialsUsedV1 } from "../components/apiTrialsUsed/apiTrialsUsedV1.js";
+import { transformTrialsUsedToV0 } from "../components/apiTrialsUsed/changes/V1.2_TrialsUsedChange.js";
 import { transformBalanceToCusFeatureV3 } from "../cusFeatures/changes/V1.2_CusFeatureChange.js";
 import type { ApiCusFeatureV3 } from "../cusFeatures/previousVersions/apiCusFeatureV3.js";
 import type { ApiSubscription } from "../cusPlans/apiSubscription.js";
@@ -50,13 +54,22 @@ export const V1_2_CustomerChange = defineVersionChange({
 	// Response: V2.0 → V1.2
 	transformResponse: ({ input, legacyData }) => {
 		// Step 1: Transform plans V2.0 → V1.2 (products)
-		const v3CusProducts: ApiCusProductV3[] = input.subscriptions.map(
-			(subscription: ApiSubscription) =>
-				transformSubscriptionToCusProductV3({
-					input: subscription,
-					legacyData: legacyData?.cusProductLegacyData[subscription.plan_id],
-				}),
+		const v3CusProducts: ApiCusProductV3[] = [
+			...input.subscriptions,
+			...input.scheduled_subscriptions,
+		].map((subscription: ApiSubscription) =>
+			transformSubscriptionToCusProductV3({
+				input: subscription,
+				legacyData: legacyData?.cusProductLegacyData[subscription.plan_id],
+			}),
 		);
+
+		v3CusProducts.sort((a, b) => {
+			if (a.is_add_on === b.is_add_on) {
+				return 0;
+			}
+			return a.is_add_on ? 1 : -1;
+		});
 
 		// Step 2: Transform features V2.0 → V1.2
 		const v3_features: Record<string, ApiCusFeatureV3> = {};
@@ -82,13 +95,18 @@ export const V1_2_CustomerChange = defineVersionChange({
 			features: v3_features,
 
 			// The others
-			invoices: input.invoices,
-			entities: input.entities,
-			trials_used: input.trials_used,
-			rewards: input.rewards,
-			upcoming_invoice: input.upcoming_invoice,
-			referrals: input.referrals,
-			payment_method: input.payment_method,
+			invoices:
+				input.invoices?.map((invoice: ApiInvoiceV1) =>
+					transformInvoiceToV0({ input: invoice }),
+				) ?? undefined,
+			entities: input.entities ?? undefined,
+			trials_used:
+				input.trials_used?.map((trial: ApiTrialsUsedV1) =>
+					transformTrialsUsedToV0({ input: trial }),
+				) ?? undefined,
+			rewards: input.rewards ?? undefined,
+			referrals: input.referrals ?? undefined,
+			payment_method: input.payment_method ?? undefined,
 		} satisfies z.infer<typeof ApiCustomerV3Schema>;
 	},
 });

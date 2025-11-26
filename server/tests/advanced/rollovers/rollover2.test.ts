@@ -9,7 +9,6 @@ import {
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import type Stripe from "stripe";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
@@ -44,15 +43,9 @@ const testCase = "rollover2";
 describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item (per entity)`)}`, () => {
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
-	let testClockId: string;
 	let customer: Customer;
-	let stripeCli: Stripe;
-
-	const curUnix = new Date().getTime();
 
 	beforeAll(async () => {
-		stripeCli = ctx.stripeCli;
-
 		await initProductsV0({
 			ctx,
 			products: [free],
@@ -67,8 +60,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item 
 			attachPm: "success",
 			withTestClock: true,
 		});
-
-		testClockId = res.testClockId!;
 		customer = res.customer;
 	});
 
