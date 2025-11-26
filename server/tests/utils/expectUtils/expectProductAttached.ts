@@ -1,4 +1,7 @@
 import {
+	type ApiCustomer,
+	type ApiSubscription,
+	ApiVersion,
 	type CreateFreeTrial,
 	CusProductStatus,
 	type Entitlement,
@@ -6,6 +9,7 @@ import {
 } from "@autumn/shared";
 import type { Customer, ProductItem } from "autumn-js";
 import { expect } from "chai";
+import { AutumnInt } from "../../../src/external/autumn/autumnCli";
 
 export const expectProductAttached = ({
 	customer,
@@ -61,6 +65,31 @@ export const expectProductAttached = ({
 		expect(productAttached?.canceled_at).to.exist;
 		// expect(productAttached?.canceled).to.be.true;
 	}
+};
+
+export const expectScheduledApiSub = async ({
+	customerId,
+	entityId,
+	productId,
+}: {
+	customerId: string;
+	entityId?: string;
+	productId: string;
+}) => {
+	const autumnV2 = new AutumnInt({
+		version: ApiVersion.V2_0,
+		secretKey: process.env.UNIT_TEST_AUTUMN_SECRET_KEY,
+	});
+
+	const entity = entityId
+		? await autumnV2.entities.get(customerId, entityId)
+		: await autumnV2.customers.get<ApiCustomer>(customerId);
+
+	const scheduledSub = entity.scheduled_subscriptions.find(
+		(s: ApiSubscription) => s.plan_id === productId,
+	);
+	expect(scheduledSub, `scheduled subscription ${productId} is attached`).to
+		.exist;
 };
 
 export const expectProductV1Attached = ({
