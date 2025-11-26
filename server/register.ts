@@ -1,11 +1,15 @@
 import "dotenv/config";
+import { loadLocalEnv } from "./src/utils/envUtils";
 import Stripe from "stripe";
+
+loadLocalEnv();
 
 const main = async () => {
 	const stripe = new Stripe(process.env.STRIPE_SANDBOX_SECRET_KEY || "");
+	
 
 	const result = await stripe.webhookEndpoints.create({
-		url: "https://express.dev.useautumn.com/webhooks/connect/sandbox",
+		url: `${process.env.STRIPE_WEBHOOK_URL}/webhooks/connect/sandbox`,
 		enabled_events: [
 			"checkout.session.completed",
 			"customer.subscription.created",

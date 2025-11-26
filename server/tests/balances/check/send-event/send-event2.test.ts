@@ -13,7 +13,7 @@ import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js"
 // UNCOMMENT FROM HERE
 const pro = constructProduct({
 	type: "free",
-	isDefault: true,
+	isDefault: false,
 
 	items: [
 		constructFeatureItem({

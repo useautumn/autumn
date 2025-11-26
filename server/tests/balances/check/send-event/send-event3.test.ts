@@ -19,7 +19,7 @@ import { timeout } from "../../../utils/genUtils";
 // UNCOMMENT FROM HERE
 const pro = constructProduct({
 	type: "free",
-	isDefault: true,
+	isDefault: false,
 
 	items: [
 		constructFeatureItem({
