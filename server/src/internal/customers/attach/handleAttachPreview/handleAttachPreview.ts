@@ -1,4 +1,4 @@
-import { AttachBodySchema } from "@autumn/shared";
+import { AttachBodyV0Schema } from "@autumn/shared";
 import type {
 	ExtendedRequest,
 	ExtendedResponse,
@@ -14,7 +14,7 @@ export const handleAttachPreview = (req: any, res: any) =>
 		res,
 		action: "attach-preview",
 		handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
-			const attachBody = AttachBodySchema.parse(req.body);
+			const attachBody = AttachBodyV0Schema.parse(req.body);
 
 			// console.log("attachBody", attachBody);
 			const ctx = req as AutumnContext;
