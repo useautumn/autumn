@@ -80,7 +80,7 @@ export const cusProductsToCusEnts = ({
 
 	if (featureId) {
 		cusEnts = cusEnts.filter(
-			(cusEnt) => cusEnt.entitlement.feature_id === featureId,
+			(cusEnt) => cusEnt.entitlement.feature.id === featureId,
 		);
 	}
 

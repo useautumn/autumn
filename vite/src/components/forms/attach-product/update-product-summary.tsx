@@ -1,25 +1,19 @@
-import type { ProductV2 } from "@autumn/shared";
 import SmallSpinner from "@/components/general/SmallSpinner";
 import { Separator } from "@/components/v2/separator";
 import {
 	SheetAccordion,
 	SheetAccordionItem,
 } from "@/components/v2/sheets/SheetAccordion";
+import { useAttachProductStore } from "@/hooks/stores/useSubscriptionStore";
 import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
-import { AttachConfirmationInfo } from "./attach-confirmation-info";
-import { AttachFeaturePreview } from "./attach-feature-preview";
+import { UpdateConfirmationInfo } from "./update-confirmation-info";
 import { useAttachPreview } from "./use-attach-preview";
 
-export function AttachProductSummary({
-	productId,
-	products,
-	customerId,
-}: {
-	productId: string;
-	products: ProductV2[];
-	customerId: string;
-}) {
+export function UpdateProductSummary() {
 	const { data: previewData, isLoading } = useAttachPreview();
+	const customizedProduct = useAttachProductStore((s) => s.customizedProduct);
+
+	const storeProductId = useAttachProductStore((s) => s.productId);
 
 	if (isLoading) {
 		return (
@@ -29,13 +23,11 @@ export function AttachProductSummary({
 		);
 	}
 
-	const product = products.find((p) => p.id === productId);
-
 	// Use preview data if available, otherwise calculate from product prices
 	const lineItems =
 		previewData?.lines?.map((line) => {
 			return {
-				name: line.description || product?.name || "Unknown",
+				name: line.description || customizedProduct?.name || "Unknown",
 				total: line.amount,
 			};
 		}) || [];
@@ -48,9 +40,8 @@ export function AttachProductSummary({
 
 	return (
 		<div className="space-y-3 text-sm">
-			<AttachConfirmationInfo />
+			<UpdateConfirmationInfo />
 
-			<AttachFeaturePreview customerId={customerId} />
 			<Separator />
 			<SheetAccordion type="single" withSeparator={false} collapsible={true}>
 				{lineItems.length > 0 && (

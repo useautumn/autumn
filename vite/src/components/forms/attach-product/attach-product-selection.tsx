@@ -1,7 +1,10 @@
 import { PencilSimpleIcon } from "@phosphor-icons/react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useHasChanges } from "@/hooks/stores/useProductStore";
+import { useAttachProductStore } from "@/hooks/stores/useSubscriptionStore";
 import { pushPage } from "@/utils/genUtils";
 import type { UseAttachProductForm } from "./use-attach-product-form";
 
@@ -17,6 +20,20 @@ export function AttachProductSelection({
 	const { products } = useProductsQuery();
 	const activeProducts = products.filter((p) => !p.archived);
 	const navigate = useNavigate();
+	const setCustomizedProduct = useAttachProductStore(
+		(s) => s.setCustomizedProduct,
+	);
+	const productId = form.state.values.productId;
+	const customizedProduct = useAttachProductStore((s) => s.customizedProduct);
+	const hasChanges = useHasChanges();
+
+	//reset customized product to prevent any stale edited products (from SubscriptionDetailSheet)
+	useEffect(() => {
+		// Only reset if productId is not undefined/null (meaning user changed it)
+		if (productId !== undefined && customizedProduct?.id !== productId) {
+			setCustomizedProduct(null);
+		}
+	}, [productId, setCustomizedProduct]);
 
 	const handleCustomize = ({ productId }: { productId: string }) => {
 		if (!productId || !customerId) {
@@ -25,9 +42,6 @@ export function AttachProductSelection({
 
 		pushPage({
 			path: `/customers/${customerId}/${productId}`,
-			queryParams: {
-				returnTo: "attach-product",
-			},
 			navigate,
 		});
 	};
@@ -45,6 +59,13 @@ export function AttachProductSelection({
 							}))}
 							placeholder="Select Product"
 							hideFieldInfo
+							selectValueAfter={
+								hasChanges && productId ? (
+									<span className="text-xs bg-green-500/10 text-green-500 px-1 py-0 rounded-md">
+										Custom
+									</span>
+								) : undefined
+							}
 						/>
 					)}
 				</form.AppField>

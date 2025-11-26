@@ -108,7 +108,7 @@ export const CustomerBalanceTableColumns = ({
 									<>
 										<span>/</span>
 										<span>
-											{new Intl.NumberFormat().format(allowance ?? 0)}
+											{new Intl.NumberFormat().format(allowance ?? 0)} left
 										</span>
 									</>
 								)}{" "}

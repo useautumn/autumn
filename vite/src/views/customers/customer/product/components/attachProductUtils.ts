@@ -8,7 +8,6 @@ import type { FeatureOptions, ProductV2 } from "@autumn/shared";
 
 export const getAttachBody = ({
 	customerId,
-	attachState,
 	product,
 	entityId,
 	optionsInput,
@@ -19,7 +18,6 @@ export const getAttachBody = ({
 	isCustom = false,
 }: {
 	customerId: string;
-	attachState?: any;
 	product: ProductV2;
 	entityId?: string;
 	optionsInput?: FeatureOptions[];

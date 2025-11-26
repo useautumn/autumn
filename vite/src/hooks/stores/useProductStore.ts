@@ -1,6 +1,8 @@
 import {
 	type FrontendProduct,
+	getProductItemDisplay,
 	type ProductItem,
+	type ProductV2,
 	productsAreSame,
 	productV2ToBasePrice,
 	productV2ToFeatureItems,
@@ -9,7 +11,10 @@ import { useMemo } from "react";
 import { useParams } from "react-router";
 import { create } from "zustand";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { getItemId } from "@/utils/product/productItemUtils";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { getItemId, getPrepaidItems } from "@/utils/product/productItemUtils";
+import { itemToFeature } from "@/utils/product/productItemUtils/convertItem";
+import { getVersionCounts } from "@/utils/productUtils";
 import { DEFAULT_PRODUCT } from "@/views/products/plan/utils/defaultProduct";
 import { useSheetStore } from "./useSheetStore";
 
@@ -78,6 +83,28 @@ export const useHasChanges = () => {
 			!comparison.freeTrialsSame
 		);
 	}, [product, baseProduct, features]);
+};
+
+export const useHasBillingChanges = ({
+	baseProduct,
+	newProduct,
+}: {
+	baseProduct: FrontendProduct;
+	newProduct: FrontendProduct;
+}) => {
+	const { features = [] } = useFeaturesQuery();
+
+	return useMemo(() => {
+		if (!baseProduct || !newProduct) return false;
+
+		const comparison = productsAreSame({
+			newProductV2: newProduct as unknown as FrontendProduct,
+			curProductV2: baseProduct as unknown as FrontendProduct,
+			features,
+		});
+
+		return !comparison.onlyEntsChanged;
+	}, [baseProduct, newProduct, features]);
 };
 
 export const useWillVersion = () => {
@@ -188,4 +215,53 @@ export const useSetCurrentItem = () => {
 		updatedItems[originalIndex] = updatedItem;
 		setProduct({ ...product, items: updatedItems });
 	};
+};
+
+/**
+ * Hook to check if the current product is the latest version.
+ * Checks customizedProduct first, then fallbacks to product from store.
+ */
+export const useIsLatestVersion = (product: FrontendProduct) => {
+	const { products = [] } = useProductsQuery();
+
+	return useMemo(() => {
+		if (!product?.id) return true;
+
+		const versionCounts = getVersionCounts(products);
+		const latestVersion = versionCounts[product.id];
+
+		return !latestVersion || product.version === latestVersion;
+	}, [product, products]);
+};
+
+/**
+ * Hook to get prepaid items from a product with feature information and display
+ */
+export const usePrepaidItems = ({
+	product,
+}: {
+	product?: ProductV2 | FrontendProduct;
+}) => {
+	const { features = [] } = useFeaturesQuery();
+
+	return useMemo(() => {
+		if (!product) return [];
+
+		const prepaidItems = getPrepaidItems(product);
+
+		return prepaidItems.map((item) => {
+			const feature = itemToFeature({ item, features });
+			const display = getProductItemDisplay({
+				item,
+				features,
+				currency: "usd",
+			});
+
+			return {
+				...item,
+				feature,
+				display,
+			};
+		});
+	}, [product, features]);
 };

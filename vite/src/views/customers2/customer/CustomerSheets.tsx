@@ -5,6 +5,7 @@ import { SheetCloseButton } from "@/components/v2/sheets/SheetCloseButton";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { AttachProductSheet } from "../components/sheets/AttachProductSheet";
 import { SubscriptionDetailSheet } from "../components/sheets/SubscriptionDetailSheet";
+import { SubscriptionUpdateSheet } from "../components/sheets/SubscriptionUpdateSheet";
 import { SHEET_ANIMATION } from "./customerAnimations";
 
 export function CustomerSheets() {
@@ -17,6 +18,8 @@ export function CustomerSheets() {
 				return <AttachProductSheet />;
 			case "subscription-detail":
 				return <SubscriptionDetailSheet />;
+			case "subscription-update":
+				return <SubscriptionUpdateSheet />;
 			default:
 				return null;
 		}

@@ -1,16 +1,14 @@
 import {
-	cusProductToProduct,
 	type Entity,
 	type FeatureOptions,
-	type FullCusProduct,
 	getProductItemDisplay,
-	mapToProductV2,
 	ProductItemType,
 } from "@autumn/shared";
 import {
 	Calendar,
 	CheckCircle,
 	CreditCard,
+	Hash,
 	Info,
 	Package,
 	PencilSimple,
@@ -18,7 +16,6 @@ import {
 	XCircle,
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
-import { useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router";
 // import { Badge } from "@/components/v2/Badge";
 import { Button } from "@/components/v2/buttons/Button";
@@ -26,8 +23,12 @@ import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { SheetFooter } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useHasChanges, useProductStore } from "@/hooks/stores/useProductStore";
+import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import {
+	useAttachProductStore,
+	useSubscriptionById,
+} from "@/hooks/stores/useSubscriptionStore";
 import { cn } from "@/lib/utils";
 import { pushPage } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -39,65 +40,25 @@ export function SubscriptionDetailSheet() {
 	const { org } = useOrg();
 	const { features } = useFeaturesQuery();
 	const itemId = useSheetStore((s) => s.itemId);
-	const sheetType = useSheetStore((s) => s.type);
+	const setSheet = useSheetStore((s) => s.setSheet);
 	const navigate = useNavigate();
 
 	// Get edited product from store
-	const editedProduct = useProductStore((s) => s.product);
-	const hasChanges = useHasChanges();
-	const resetProductStore = useProductStore((s) => s.reset);
+	const customizedProduct = useAttachProductStore((s) => s.customizedProduct);
+	const editedCustomerProductId = useAttachProductStore(
+		(s) => s.customerProductId,
+	);
 
-	// Track the previous itemId to detect when user switches subscriptions
-	const previousItemIdRef = useRef<string | null>(null);
-	const previousSheetTypeRef = useRef<typeof sheetType>(null);
+	// Check if the edited product is for this subscription
+	const shouldShowEditedProduct =
+		customizedProduct && editedCustomerProductId === itemId;
 
-	// Clear product store when sheet closes or when switching to a different subscription
-	useEffect(() => {
-		// If sheet closed (went from subscription-detail to null), clear the store
-		if (
-			previousSheetTypeRef.current === "subscription-detail" &&
-			sheetType === null
-		) {
-			resetProductStore();
-			previousItemIdRef.current = null;
-		}
+	// Get customer product and productV2 by itemId
+	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
 
-		// If sheet changed to a different type (not subscription-detail), clear the store
-		if (sheetType !== "subscription-detail" && sheetType !== null) {
-			resetProductStore();
-			previousItemIdRef.current = null;
-		}
-
-		// If switching to a different subscription, clear the store
-		if (
-			sheetType === "subscription-detail" &&
-			itemId &&
-			previousItemIdRef.current &&
-			previousItemIdRef.current !== itemId
-		) {
-			resetProductStore();
-		}
-
-		// Update the tracked values
-		if (itemId && sheetType === "subscription-detail") {
-			previousItemIdRef.current = itemId;
-		}
-		previousSheetTypeRef.current = sheetType;
-	}, [itemId, sheetType, resetProductStore]);
-
-	const cusProduct = useMemo(() => {
-		if (!itemId || !customer?.customer_products) return null;
-		return customer.customer_products.find(
-			(p: FullCusProduct) =>
-				p.id === itemId || p.internal_product_id === itemId,
-		);
-	}, [itemId, customer?.customer_products]);
-
-	const productV2 = useMemo(() => {
-		if (!cusProduct) return null;
-		const fullProduct = cusProductToProduct({ cusProduct });
-		return mapToProductV2({ product: fullProduct });
-	}, [cusProduct]);
+	// Check for prepaid items in the product (must be called before any returns)
+	const prepaidItems = usePrepaidItems({ product: productV2 ?? undefined });
+	const hasPrepaidItems = prepaidItems.length > 0;
 
 	if (!cusProduct) {
 		return (
@@ -135,10 +96,16 @@ export function SubscriptionDetailSheet() {
 			queryParams: {
 				id: cusProduct.id,
 				entity_id: entity ? entity.id || entity.internal_id : undefined,
+				version: cusProduct.product.version,
 			},
 			navigate,
 		});
 		// closeSheet();
+	};
+
+	const handleUpdateQuantities = () => {
+		// Open the subscription update sheet
+		setSheet({ type: "subscription-update", itemId });
 	};
 
 	return (
@@ -162,6 +129,11 @@ export function SubscriptionDetailSheet() {
 							label="Product ID"
 							value={cusProduct.product_id}
 							mono
+						/>
+						<InfoRow
+							icon={<Info size={16} weight="duotone" />}
+							label="Version"
+							value={cusProduct.product.version}
 						/>
 						{cusProduct.quantity && cusProduct.quantity > 1 && (
 							<InfoRow
@@ -276,72 +248,70 @@ export function SubscriptionDetailSheet() {
 				)}
 
 				{/* Edited Plan Items - Show pending changes */}
-				{hasChanges &&
-					editedProduct?.items &&
-					editedProduct.items.length > 0 && (
-						<SheetSection title="Edited Plan Items (Pending)">
-							<div className="space-y-2">
-								<div className="flex items-center gap-2 mb-2 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
-									<Info size={16} weight="duotone" className="text-blue-600" />
-									<span className="text-xs text-t2">
-										These changes are pending and will be applied when you save.
-									</span>
-								</div>
-								{editedProduct.items.map((item, index) => {
-									const display = getProductItemDisplay({
-										item,
-										features,
-										currency: org?.default_currency || "USD",
-										fullDisplay: true,
-										amountFormatOptions: { currencyDisplay: "narrowSymbol" },
-									});
+				{shouldShowEditedProduct && customizedProduct.items.length > 0 && (
+					<SheetSection title="Edited Plan Items (Pending)">
+						<div className="space-y-2">
+							<div className="flex items-center gap-2 mb-2 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+								<Info size={16} weight="duotone" className="text-blue-600" />
+								<span className="text-xs text-t2">
+									These changes are pending and will be applied when you save.
+								</span>
+							</div>
+							{customizedProduct.items.map((item, index) => {
+								const display = getProductItemDisplay({
+									item,
+									features,
+									currency: org?.default_currency || "USD",
+									fullDisplay: true,
+									amountFormatOptions: { currencyDisplay: "narrowSymbol" },
+								});
 
-									const isFeatureItem =
-										item.type === ProductItemType.Feature ||
-										item.type === ProductItemType.FeaturePrice;
+								const isFeatureItem =
+									item.type === ProductItemType.Feature ||
+									item.type === ProductItemType.FeaturePrice;
 
-									// Find prepaid quantity from cusProduct.options
-									const prepaidOption = cusProduct?.options?.find(
-										(opt: FeatureOptions) => opt.feature_id === item.feature_id,
-									);
-									const prepaidQuantity = prepaidOption
-										? prepaidOption.quantity / (item.billing_units || 1)
-										: null;
+								// Find prepaid quantity from cusProduct.options
+								const prepaidOption = cusProduct?.options?.find(
+									(opt: FeatureOptions) => opt.feature_id === item.feature_id,
+								);
+								const prepaidQuantity = prepaidOption
+									? prepaidOption.quantity / (item.billing_units || 1)
+									: null;
 
-									return (
-										<div
-											key={item.feature_id || item.price_id || index}
-											className="flex items-start gap-2 p-2 rounded-lg bg-blue-500/5 border border-blue-500/20"
-										>
-											<CheckCircle
-												size={16}
-												weight="fill"
-												className={cn(
-													"text-blue-600 mt-0.5 shrink-0",
-													!isFeatureItem && "opacity-0",
-												)}
-											/>
-											<div className="flex-1 min-w-0">
-												<div className="text-sm font-medium text-t1 flex items-center gap-2 flex-wrap">
-													<span>{display.primary_text}</span>
-													{prepaidQuantity !== null && (
-														<span className="text-t3 bg-background/50 rounded-sm px-2 py-0.5 text-xs font-normal">
-															Qty: {prepaidQuantity}
-														</span>
-													)}
-												</div>
-												{display.secondary_text && (
-													<div className="text-xs text-t3 mt-0.5">
-														{display.secondary_text}
-													</div>
+								return (
+									<div
+										key={item.feature_id || item.price_id || index}
+										className="flex items-start gap-2 p-2 rounded-lg bg-blue-500/5 border border-blue-500/20"
+									>
+										<CheckCircle
+											size={16}
+											weight="fill"
+											className={cn(
+												"text-blue-600 mt-0.5 shrink-0",
+												!isFeatureItem && "opacity-0",
+											)}
+										/>
+										<div className="flex-1 min-w-0">
+											<div className="text-sm font-medium text-t1 flex items-center gap-2 flex-wrap">
+												<span>{display.primary_text}</span>
+												{prepaidQuantity !== null && (
+													<span className="text-t3 bg-background/50 rounded-sm px-2 py-0.5 text-xs font-normal">
+														Qty: {prepaidQuantity}
+													</span>
 												)}
 											</div>
+											{display.secondary_text && (
+												<div className="text-xs text-t3 mt-0.5">
+													{display.secondary_text}
+												</div>
+											)}
 										</div>
-									);
-								})}
-							</div>
-						</SheetSection>
-					)}
+									</div>
+								);
+							})}
+						</div>
+					</SheetSection>
+				)}
 
 				{/* Pricing Summary */}
 				<SheetSection title="Pricing">
@@ -387,35 +357,6 @@ export function SubscriptionDetailSheet() {
 					</div>
 				</SheetSection>
 
-				{/* Entitlements */}
-				{/* {cusProduct.customer_entitlements &&
-					cusProduct.customer_entitlements.length > 0 && (
-						<SheetSection title="Entitlements">
-							<div className="space-y-2">
-								{cusProduct.customer_entitlements.map((ent) => (
-									<div
-										key={ent.id}
-										className="flex items-center gap-2 p-2 rounded-lg bg-muted/50"
-									>
-										<CheckCircle
-											size={16}
-											weight="fill"
-											className="text-green-600"
-										/>
-										<span className="text-sm font-medium">
-											{ent.feature.name}
-										</span>
-										{ent.quantity && (
-											<span className="text-t3 text-sm ml-auto">
-												{ent.quantity}
-											</span>
-										)}
-									</div>
-								))}
-							</div>
-						</SheetSection>
-					)} */}
-
 				{/* Free Trial Info */}
 				{cusProduct.free_trial && (
 					<SheetSection title="Free Trial">
@@ -438,7 +379,7 @@ export function SubscriptionDetailSheet() {
 			</div>
 
 			<SheetFooter>
-				{hasChanges && editedProduct ? (
+				{shouldShowEditedProduct ? (
 					<>
 						<Button variant="secondary" onClick={handleEditPlan}>
 							<PencilSimple size={16} weight="duotone" />
@@ -446,21 +387,26 @@ export function SubscriptionDetailSheet() {
 						</Button>
 						<UpdatePlanButton
 							cusProduct={cusProduct}
-							editedProduct={editedProduct}
-							onSuccess={() => {
-								resetProductStore();
-							}}
+							customizedProduct={customizedProduct}
 						/>
 					</>
 				) : (
-					<Button
-						variant="primary"
-						onClick={handleEditPlan}
-						className="col-span-2"
-					>
-						<PencilSimple size={16} weight="duotone" />
-						Edit Plan
-					</Button>
+					<>
+						<Button
+							variant="primary"
+							onClick={handleEditPlan}
+							className={hasPrepaidItems ? "" : "col-span-2"}
+						>
+							<PencilSimple size={16} weight="duotone" />
+							Edit Plan
+						</Button>
+						{hasPrepaidItems && (
+							<Button variant="secondary" onClick={handleUpdateQuantities}>
+								<Hash size={16} weight="duotone" />
+								Update Quantities
+							</Button>
+						)}
+					</>
 				)}
 			</SheetFooter>
 		</div>

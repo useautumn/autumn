@@ -35,8 +35,6 @@ export default function PlanEditorView() {
 
 	const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
 	const setSheet = useSheetStore((s) => s.setSheet);
-	const closeSheet = useSheetStore((s) => s.closeSheet);
-	const sheetType = useSheetStore((s) => s.type);
 
 	// Handle Escape key to close sheet and unfocus
 	useSheetEscapeHandler();

@@ -1,5 +1,6 @@
-import { UsageModel } from "@autumn/shared";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { usePrepaidItems } from "@/hooks/stores/useProductStore";
+import { useAttachProductStore } from "@/hooks/stores/useSubscriptionStore";
 import type { UseAttachProductForm } from "./use-attach-product-form";
 
 interface PrepaidOptionsFieldProps {
@@ -9,65 +10,45 @@ interface PrepaidOptionsFieldProps {
 export function AttachProductPrepaidOptions({
 	form,
 }: PrepaidOptionsFieldProps) {
-	const { products } = useProductsQuery();
-
-	const activeProducts = products.filter((p) => !p.archived);
+	const customizedProduct = useAttachProductStore((s) => s.customizedProduct);
+	const { products = [] } = useProductsQuery();
 	const selectedProductId = form.state.values.productId;
 
-	const product = activeProducts.find((p) => p.id === selectedProductId);
+	// Use customizedProduct if available, otherwise find from products by productId
+	const product =
+		customizedProduct ??
+		products.find((p) => p.id === selectedProductId && !p.archived);
 
-	const prepaidFeatures = product
-		? (
-				product.items?.filter(
-					(productItem) =>
-						productItem.usage_model === UsageModel.Prepaid &&
-						productItem.feature_id,
-				) || []
-			).map((productItem) => ({
-				product_name: product.name,
-				feature_id: productItem.feature_id as string,
-				feature_type: productItem.feature_type,
-				price: productItem.price || 0,
-				billing_units: productItem.billing_units || 1,
-				tiers: productItem.tiers,
-			}))
-		: [];
+	const prepaidItems = usePrepaidItems({ product });
 
-	if (prepaidFeatures.length === 0) {
+	if (prepaidItems.length === 0 || !selectedProductId) {
 		return null;
 	}
 
 	return (
 		<div className="space-y-3">
 			<div className="text-sm font-semibold text-foreground">
-				Select Prepaid Quantity
+				Prepaid Quantities
 			</div>
-			<p className="text-sm text-t2">
-				Select the quantity for prepaid features added by attached plans
-			</p>
 
 			<div className="space-y-2">
-				<div className="grid grid-cols-[1fr_auto] gap-2">
-					<div className="text-xs font-medium text-t3">Feature</div>
-					<div className="text-xs font-medium text-t3">Quantity</div>
-				</div>
-
-				{prepaidFeatures.map((feature) => {
+				{prepaidItems.map((item) => {
 					return (
 						<div
-							key={feature.feature_id}
+							key={item.feature_id}
 							className="grid grid-cols-[1fr_auto] gap-2 items-center"
 						>
 							<div className="text-sm text-foreground">
-								{feature.product_name}
+								{item.display?.primary_text}
 							</div>
 
-							<form.AppField name={`prepaidOptions.${feature.feature_id}`}>
+							<form.AppField name={`prepaidOptions.${item.feature_id}`}>
 								{(quantityField) => (
 									<quantityField.QuantityField
 										label=""
 										placeholder="0"
 										min={0}
+										hideFieldInfo={true}
 									/>
 								)}
 							</form.AppField>
