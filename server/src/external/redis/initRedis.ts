@@ -135,12 +135,14 @@ declare module "ioredis" {
 		): Promise<string>;
 		setSubscriptions(
 			subscriptionsJson: string,
+			scheduledSubscriptionsJson: string,
 			orgId: string,
 			env: string,
 			customerId: string,
 		): Promise<string>;
 		setEntityProducts(
-			productsJson: string,
+			subscriptionsJson: string,
+			scheduledSubscriptionsJson: string,
 			orgId: string,
 			env: string,
 			customerId: string,
