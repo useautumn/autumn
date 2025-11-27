@@ -1,6 +1,8 @@
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { usePrepaidItems } from "@/hooks/stores/useProductStore";
-import { useAttachProductStore } from "@/hooks/stores/useSubscriptionStore";
+import {
+	usePrepaidItems,
+	useProductStore,
+} from "@/hooks/stores/useProductStore";
 import type { UseAttachProductForm } from "./use-attach-product-form";
 
 interface PrepaidOptionsFieldProps {
@@ -10,14 +12,14 @@ interface PrepaidOptionsFieldProps {
 export function AttachProductPrepaidOptions({
 	form,
 }: PrepaidOptionsFieldProps) {
-	const customizedProduct = useAttachProductStore((s) => s.customizedProduct);
+	const storeProduct = useProductStore((s) => s.product);
 	const { products = [] } = useProductsQuery();
 	const selectedProductId = form.state.values.productId;
 
-	// Use customizedProduct if available, otherwise find from products by productId
-	const product =
-		customizedProduct ??
-		products.find((p) => p.id === selectedProductId && !p.archived);
+	// Use customized product if it has changes, otherwise find by form productId
+	const product = storeProduct?.id
+		? storeProduct
+		: products.find((p) => p.id === selectedProductId && !p.archived);
 
 	const prepaidItems = usePrepaidItems({ product });
 

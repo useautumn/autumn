@@ -18,6 +18,7 @@ import { CustomerProductPrice } from "./CustomerProductPrice";
 import { CustomerProductsColumns } from "./CustomerProductsColumns";
 import { filterCustomerProductsByEntity } from "./customerProductsTableFilters";
 import { ShowExpiredActionButton } from "./ShowExpiredActionButton";
+import { TransferProductDialog } from "./TransferProductDialog";
 
 export function CustomerProductsTable() {
 	const { customer, isLoading } = useCusQuery();
@@ -29,6 +30,7 @@ export function CustomerProductsTable() {
 	);
 
 	const [cancelOpen, setCancelOpen] = useState(false);
+	const [transferOpen, setTransferOpen] = useState(false);
 	const [selectedProduct, setSelectedProduct] = useState<FullCusProduct | null>(
 		null,
 	);
@@ -79,6 +81,25 @@ export function CustomerProductsTable() {
 	const entityProductsTableColumns = useMemo(
 		() => [
 			{
+				header: "Plan",
+				accessorKey: "plan",
+				cell: ({ row }: { row: Row<FullCusProduct> }) => {
+					const quantity = row.original.quantity;
+					const showQuantity = quantity && quantity > 1;
+
+					return (
+						<div className="font-semibold flex items-center gap-2 text-t1">
+							{row.original.product.name}
+							{showQuantity && (
+								<div className="text-t3 bg-muted rounded-sm p-1 py-0">
+									{quantity}
+								</div>
+							)}
+						</div>
+					);
+				},
+			},
+			{
 				header: "Entity",
 				accessorKey: "entity",
 				cell: ({ row }: { row: Row<FullCusProduct> }) => {
@@ -101,7 +122,7 @@ export function CustomerProductsTable() {
 						<Button
 							variant="skeleton"
 							onClick={handleEntityClick}
-							className="text-t1 font-medium hover:text-purple-600 cursor-pointer max-w-full px-0! hover:bg-transparent active:bg-transparent active:border-none"
+							className="font-medium hover:text-purple-600 cursor-pointer max-w-full px-0! hover:bg-transparent active:bg-transparent active:border-none"
 						>
 							<span className="truncate w-full">
 								{entity.name || entity.id || entity.internal_id}
@@ -110,25 +131,7 @@ export function CustomerProductsTable() {
 					);
 				},
 			},
-			{
-				header: "Name",
-				accessorKey: "name",
-				cell: ({ row }: { row: Row<FullCusProduct> }) => {
-					const quantity = row.original.quantity;
-					const showQuantity = quantity && quantity > 1;
 
-					return (
-						<div className="font-semibold flex items-center gap-2">
-							{row.original.product.name}
-							{showQuantity && (
-								<div className="text-t3 bg-muted rounded-sm p-1 py-0">
-									{quantity}
-								</div>
-							)}
-						</div>
-					);
-				},
-			},
 			{
 				header: "Price",
 				accessorKey: "price",
@@ -150,12 +153,19 @@ export function CustomerProductsTable() {
 		setCancelOpen(true);
 	};
 
+	const handleTransferClick = (product: FullCusProduct) => {
+		setSelectedProduct(product);
+		setTransferOpen(true);
+	};
+
 	const handleRowClick = (cusProduct: FullCusProduct) => {
 		setSheet({
 			type: "subscription-detail",
 			itemId: cusProduct.id,
 		});
 	};
+
+	const hasEntities = customer.entities.length > 0;
 
 	const enableSorting = false;
 	const table = useCustomerTable({
@@ -166,6 +176,8 @@ export function CustomerProductsTable() {
 			enableGlobalFilter: true,
 			meta: {
 				onCancelClick: handleCancelClick,
+				onTransferClick: handleTransferClick,
+				hasEntities,
 			},
 		},
 	});
@@ -178,6 +190,8 @@ export function CustomerProductsTable() {
 			enableGlobalFilter: true,
 			meta: {
 				onCancelClick: handleCancelClick,
+				onTransferClick: handleTransferClick,
+				hasEntities,
 			},
 		},
 	});
@@ -192,11 +206,18 @@ export function CustomerProductsTable() {
 	return (
 		<div className="flex flex-col gap-4">
 			{selectedProduct && (
-				<CancelProductDialog
-					cusProduct={selectedProduct}
-					open={cancelOpen}
-					setOpen={setCancelOpen}
-				/>
+				<>
+					<CancelProductDialog
+						cusProduct={selectedProduct}
+						open={cancelOpen}
+						setOpen={setCancelOpen}
+					/>
+					<TransferProductDialog
+						cusProduct={selectedProduct}
+						open={transferOpen}
+						setOpen={setTransferOpen}
+					/>
+				</>
 			)}
 			<Table.Provider
 				config={{
@@ -259,6 +280,7 @@ export function CustomerProductsTable() {
 							enableSorting,
 							isLoading,
 							onRowClick: handleRowClick,
+							emptyStateText: "No entity-level plans found",
 						}}
 					>
 						<Table.Container>

@@ -6,13 +6,13 @@ import {
 } from "@autumn/shared";
 import type { Row } from "@tanstack/react-table";
 import type { z } from "zod/v4";
+import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
+} from "@/components/v2/tooltips/Tooltip";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { CustomerProductsStatus } from "../customer-products/CustomerProductsStatus";
 import { CustomerListRowToolbar } from "./CustomerListRowToolbar";
@@ -46,66 +46,6 @@ const getCusProductsInfo = ({
 	if (activeProducts.length === 0) {
 		return <span className="text-t3">—</span>;
 	}
-
-	// const getProductBadge = ({
-	// 	cusProduct,
-	// 	versionCounts,
-	// }: {
-	// 	cusProduct: FullCusProduct;
-	// 	versionCounts: Record<string, number>;
-	// }) => {
-	// 	const name = cusProduct.product.name;
-	// 	const status = cusProduct.status;
-
-	// 	const versionCount = versionCounts[cusProduct.product.id];
-	// 	const version = cusProduct.product.version;
-
-	// 	const prodName = (
-	// 		<>
-	// 			{name}
-	// 			{versionCount > 1 && (
-	// 				<Badge
-	// 					variant="outline"
-	// 					className="text-xs bg-stone-50 text-t3 px-2 ml-2 font-mono py-0"
-	// 				>
-	// 					v{version}
-	// 				</Badge>
-	// 			)}
-	// 		</>
-	// 	);
-
-	// 	if (status === CusProductStatus.PastDue) {
-	// 		return (
-	// 			<>
-	// 				<span>{prodName}</span>{" "}
-	// 				<Badge variant="status" className="bg-red-500">
-	// 					Past Due
-	// 				</Badge>
-	// 			</>
-	// 		);
-	// 	}
-	// 	if (cusProduct.canceled_at) {
-	// 		return (
-	// 			<>
-	// 				<span>{prodName}</span>{" "}
-	// 				<Badge variant="status" className="bg-yellow-500">
-	// 					Canceled
-	// 				</Badge>
-	// 			</>
-	// 		);
-	// 	}
-	// 	if (cusProduct.trial_ends_at && !unixHasPassed(cusProduct.trial_ends_at)) {
-	// 		return (
-	// 			<>
-	// 				<span>{prodName}</span>{" "}
-	// 				<Badge variant="status" className="bg-lime-500">
-	// 					Trial
-	// 				</Badge>
-	// 			</>
-	// 		);
-	// 	}
-	// 	return <span>{prodName}</span>;
-	// };
 
 	return (
 		<div className="flex ">

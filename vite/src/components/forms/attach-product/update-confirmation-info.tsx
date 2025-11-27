@@ -1,3 +1,4 @@
+import type { CheckoutResponse } from "@autumn/shared";
 import type { ReactNode } from "react";
 import {
 	useHasBillingChanges,
@@ -5,10 +6,12 @@ import {
 } from "@/hooks/stores/useProductStore";
 import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
-import { useAttachPreview } from "./use-attach-preview";
 
-export const UpdateConfirmationInfo = () => {
-	const { data: previewData } = useAttachPreview();
+export const UpdateConfirmationInfo = ({
+	previewData,
+}: {
+	previewData?: CheckoutResponse | null;
+}) => {
 	const hasChanges = useHasChanges();
 	const hasBillingChanges = useHasBillingChanges({
 		baseProduct: previewData?.current_product,
@@ -45,13 +48,7 @@ export const UpdateConfirmationInfo = () => {
 		if (!hasBillingChanges) {
 			boxes.push(
 				<InfoBox key="no-billing-changes" variant="success">
-					No billing changes will be made
-				</InfoBox>,
-			);
-		} else {
-			boxes.push(
-				<InfoBox key="billing-changes" variant="warning">
-					Billing changes will be made
+					No changes to billing will be made
 				</InfoBox>,
 			);
 		}

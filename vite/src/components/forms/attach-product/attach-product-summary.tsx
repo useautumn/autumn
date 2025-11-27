@@ -1,4 +1,4 @@
-import type { ProductV2 } from "@autumn/shared";
+import type { CheckoutResponse, ProductV2 } from "@autumn/shared";
 import SmallSpinner from "@/components/general/SmallSpinner";
 import { Separator } from "@/components/v2/separator";
 import {
@@ -8,28 +8,23 @@ import {
 import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
 import { AttachConfirmationInfo } from "./attach-confirmation-info";
 import { AttachFeaturePreview } from "./attach-feature-preview";
-import { useAttachPreview } from "./use-attach-preview";
 
 export function AttachProductSummary({
-	productId,
-	products,
-	customerId,
+	product,
+	previewData,
+	isLoading,
 }: {
-	productId: string;
-	products: ProductV2[];
-	customerId: string;
+	product: ProductV2;
+	previewData?: CheckoutResponse | null;
+	isLoading?: boolean;
 }) {
-	const { data: previewData, isLoading } = useAttachPreview();
-
 	if (isLoading) {
 		return (
-			<div className="flex items-center justify-center py-6">
+			<div className="flex items-center justify-center py-2">
 				<SmallSpinner />
 			</div>
 		);
 	}
-
-	const product = products.find((p) => p.id === productId);
 
 	// Use preview data if available, otherwise calculate from product prices
 	const lineItems =
@@ -48,9 +43,9 @@ export function AttachProductSummary({
 
 	return (
 		<div className="space-y-3 text-sm">
-			<AttachConfirmationInfo />
+			<AttachConfirmationInfo previewData={previewData} />
 
-			<AttachFeaturePreview customerId={customerId} />
+			<AttachFeaturePreview previewData={previewData} />
 			<Separator />
 			<SheetAccordion type="single" withSeparator={false} collapsible={true}>
 				{lineItems.length > 0 && (

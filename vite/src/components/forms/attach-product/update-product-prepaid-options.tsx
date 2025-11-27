@@ -1,9 +1,9 @@
-import { usePrepaidItems } from "@/hooks/stores/useProductStore";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import {
-	useAttachProductStore,
-	useSubscriptionById,
-} from "@/hooks/stores/useSubscriptionStore";
+	usePrepaidItems,
+	useProductStore,
+} from "@/hooks/stores/useProductStore";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
 import type { UseAttachProductForm } from "./use-attach-product-form";
 
 export function UpdateProductPrepaidOptions({
@@ -11,14 +11,15 @@ export function UpdateProductPrepaidOptions({
 }: {
 	form: UseAttachProductForm;
 }) {
-	const customizedProduct = useAttachProductStore((s) => s.customizedProduct);
+	const storeProduct = useProductStore((s) => s.product);
 	const itemId = useSheetStore((s) => s.itemId);
 
-	const { productV2: product } = useSubscriptionById({ itemId });
+	const { productV2 } = useSubscriptionById({ itemId });
 
-	const prepaidItems = usePrepaidItems({
-		product: product ?? customizedProduct ?? undefined,
-	});
+	// Use store product if it has a real ID, otherwise use productV2 from subscription
+	const product = storeProduct?.id ? storeProduct : (productV2 ?? undefined);
+
+	const prepaidItems = usePrepaidItems({ product });
 
 	if (prepaidItems.length === 0) {
 		return null;

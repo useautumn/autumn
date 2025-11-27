@@ -1,20 +1,22 @@
+import type { CheckoutResponse, ProductV2 } from "@autumn/shared";
 import SmallSpinner from "@/components/general/SmallSpinner";
 import { Separator } from "@/components/v2/separator";
 import {
 	SheetAccordion,
 	SheetAccordionItem,
 } from "@/components/v2/sheets/SheetAccordion";
-import { useAttachProductStore } from "@/hooks/stores/useSubscriptionStore";
 import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
 import { UpdateConfirmationInfo } from "./update-confirmation-info";
-import { useAttachPreview } from "./use-attach-preview";
 
-export function UpdateProductSummary() {
-	const { data: previewData, isLoading } = useAttachPreview();
-	const customizedProduct = useAttachProductStore((s) => s.customizedProduct);
-
-	const storeProductId = useAttachProductStore((s) => s.productId);
-
+export function UpdateProductSummary({
+	product,
+	previewData,
+	isLoading,
+}: {
+	product?: ProductV2;
+	previewData?: CheckoutResponse | null;
+	isLoading?: boolean;
+}) {
 	if (isLoading) {
 		return (
 			<div className="flex items-center justify-center py-6">
@@ -23,11 +25,12 @@ export function UpdateProductSummary() {
 		);
 	}
 
+	console.log("previewData", previewData);
 	// Use preview data if available, otherwise calculate from product prices
 	const lineItems =
 		previewData?.lines?.map((line) => {
 			return {
-				name: line.description || customizedProduct?.name || "Unknown",
+				name: line.description || product?.name || "Unknown",
 				total: line.amount,
 			};
 		}) || [];
@@ -40,7 +43,7 @@ export function UpdateProductSummary() {
 
 	return (
 		<div className="space-y-3 text-sm">
-			<UpdateConfirmationInfo />
+			<UpdateConfirmationInfo previewData={previewData} />
 
 			<Separator />
 			<SheetAccordion type="single" withSeparator={false} collapsible={true}>

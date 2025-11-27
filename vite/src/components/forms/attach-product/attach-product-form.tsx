@@ -36,25 +36,32 @@ function FormContent({
 	form,
 	onSuccess,
 }: FormContentProps) {
-	const { isLoading: isPreviewLoading } = useAttachPreview();
-	const customizedProduct = useAttachProductStore((s) => s.customizedProduct);
+	const storeProduct = useProductStore((s) => s.product);
 
-	// Use customizedProduct if available, otherwise find from products by productId
-	const product =
-		customizedProduct ??
-		products.find((p) => p.id === productId && !p.archived);
+	// Use customized product if it exists and has changes, otherwise find by form productId
+	const product = storeProduct?.id
+		? storeProduct
+		: products.find((p) => p.id === productId && !p.archived);
 
 	const prepaidItems = usePrepaidItems({ product });
-	const prepaidOptions = useAttachProductStore((s) => s.prepaidOptions);
+	const prepaidOptions = form.state.values.prepaidOptions;
 
-	//get is loading from useAttachPreview
-	const { isLoading } = useAttachPreview();
+	const { entityId } = useEntity();
+
+	// Call preview once here and pass data down to children
+	const previewQuery = useAttachPreview({
+		customerId,
+		product,
+		entityId: entityId ?? undefined,
+		prepaidOptions: prepaidOptions ?? undefined,
+		version: product?.version,
+	});
 
 	// Check if there are prepaid items and if any are not set (undefined/null)
 	// Note: 0 is a valid quantity value
 	if (prepaidItems.length > 0) {
 		const hasUnsetPrepaidQuantity = prepaidItems.some((item) => {
-			const quantity = prepaidOptions[item.feature_id as string];
+			const quantity = prepaidOptions?.[item.feature_id as string];
 			return quantity === undefined || quantity === null;
 		});
 
@@ -63,23 +70,25 @@ function FormContent({
 		}
 	}
 
-	if (!form.state.values.productId) {
+	if (!form.state.values.productId || !product) {
 		return null;
 	}
 
 	return (
 		<>
 			<AttachProductSummary
-				productId={productId}
-				products={products}
-				customerId={customerId}
+				previewData={previewQuery.data}
+				isLoading={previewQuery.isLoading}
+				product={product}
 			/>
 
 			<AttachProductActions
 				form={form}
+				product={product}
 				customerId={customerId}
 				onSuccess={onSuccess}
-				isPreviewLoading={isPreviewLoading}
+				previewData={previewQuery.data}
+				isPreviewLoading={previewQuery.isLoading}
 			/>
 		</>
 	);
@@ -93,12 +102,9 @@ export function AttachProductForm({
 	onSuccess?: () => void;
 }) {
 	const itemId = useSheetStore((s) => s.itemId); // The productId being customized
-	const form = useAttachProductForm({ initialProductId: itemId || undefined }); //load from cusplaneditorbar if its being customized
+	const form = useAttachProductForm({ initialProductId: itemId || undefined });
 	const { products, isLoading } = useProductsQuery();
 	const resetProductStore = useProductStore((s) => s.reset);
-
-	// Get store setters
-	const setFormValues = useAttachProductStore((s) => s.setFormValues);
 	const setCustomerId = useAttachProductStore((s) => s.setCustomerId);
 
 	const activeProducts = products.filter((p) => !p.archived);
@@ -115,33 +121,19 @@ export function AttachProductForm({
 	useEffect(() => {
 		// Set customerId on mount
 		setCustomerId(customerId);
+	}, [customerId, setCustomerId]);
 
-		// Subscribe to form changes
+	useEffect(() => {
+		// Reset product store when productId changes (unless it matches itemId from customization)
 		const subscription = form.store.subscribe(() => {
-			const values = form.store.state.values;
-			const productId = values.productId;
-
-			// Sync form values to store (no need to pass customerId again)
-			setFormValues({
-				productId: values.productId,
-				prepaidOptions: values.prepaidOptions ?? {},
-			});
-
-			// Reset product store when productId changes (unless it matches itemId from customization)
+			const productId = form.store.state.values.productId;
 			if (productId && productId !== itemId) {
 				resetProductStore();
 			}
 		});
 
 		return () => subscription();
-	}, [
-		customerId,
-		form.store,
-		itemId,
-		resetProductStore,
-		setFormValues,
-		setCustomerId,
-	]);
+	}, [form.store, itemId, resetProductStore]);
 
 	if (isLoading) {
 		return <div className="text-sm text-t3">Loading products...</div>;
@@ -172,6 +164,7 @@ export function AttachProductForm({
 			<form.Subscribe
 				selector={(state) => ({
 					productId: state.values.productId,
+					prepaidOptions: state.values.prepaidOptions,
 				})}
 			>
 				{(values) => (
