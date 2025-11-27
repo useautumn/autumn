@@ -58,7 +58,7 @@ export const featureToCreditSystem = ({
 	for (const schemaItem of schema) {
 		if (schemaItem.metered_feature_id === featureId) {
 			const creditAmount = schemaItem.credit_amount;
-			const featureAmount = schemaItem.feature_amount;
+			const featureAmount = schemaItem.feature_amount ?? 1;
 
 			return new Decimal(creditAmount)
 				.div(featureAmount)

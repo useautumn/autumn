@@ -129,7 +129,11 @@ const init = async () => {
 		req.env = req.env = req.headers.app_env || AppEnv.Sandbox;
 		req.db = db;
 		req.clickhouseClient = await ClickHouseManager.getClient();
-		req.id = req.headers["rndr-id"] || generateId("local_req");
+		req.id =
+			req.headers["rndr-id"] ||
+			req.headers["X-Amzn-Trace-Id"] ||
+			req.headers["x-amzn-trace-id"] ||
+			generateId("local_req");
 		req.timestamp = Date.now();
 		req.expand = [];
 		req.skipCache = false;

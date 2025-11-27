@@ -69,7 +69,7 @@ describe(`${chalk.yellowBright("credit-systems4: test send_event with credit sys
 
 		expect(checkRes.allowed).toBe(true);
 		expect(checkRes.feature_id).toBe(TestFeature.Credits);
-		expect(checkRes.balance).toBe(1000);
+		expect(checkRes.balance).toBe(1000 - expectedCreditCost);
 		expect(checkRes.code).toBe(SuccessCode.FeatureFound);
 
 		// Wait for event to be processed

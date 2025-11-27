@@ -95,22 +95,24 @@ export const SelectResetCycle = () => {
 							<span className="block truncate overflow-hidden text-ellipsis max-w-full">
 								{getIntervalText({
 									interval,
-									intervalCount: item!.interval_count,
+									intervalCount: item?.interval_count ?? 1,
 								})}
 							</span>
 						</SelectValue>
 					</SelectTrigger>
 					<SelectContent className="w-48">
-						{Object.values(EntInterval).map((intervalOption) => {
-							const isSelected = intervalOption === interval;
-							return (
-								<SelectIntervalItem
-									key={intervalOption}
-									interval={intervalOption}
-									isSelected={isSelected}
-								/>
-							);
-						})}
+						{Object.values(EntInterval)
+							.filter((i) => i !== EntInterval.Minute)
+							.map((intervalOption) => {
+								const isSelected = intervalOption === interval;
+								return (
+									<SelectIntervalItem
+										key={intervalOption}
+										interval={intervalOption}
+										isSelected={isSelected}
+									/>
+								);
+							})}
 						<CustomiseIntervalPopover />
 					</SelectContent>
 				</Select>

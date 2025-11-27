@@ -1,10 +1,14 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { ApiVersion, type LimitedItem } from "@autumn/shared";
-import chalk from "chalk";
-import { Decimal } from "decimal.js";
+import {
+	ApiVersion,
+	type LimitedItem,
+	type TrackResponseV2,
+} from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { timeout } from "@tests/utils/genUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
+import { Decimal } from "decimal.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
@@ -33,6 +37,7 @@ const testCase = "track-credit-system3";
 describe(`${chalk.yellowBright("track-credit-system3: test deduction order - action1 first, then credits")}`, () => {
 	const customerId = "track-credit-system3";
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
+	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2_0 });
 	const creditFeature = ctx.features.find((f) => f.id === TestFeature.Credits);
 
 	beforeAll(async () => {
@@ -64,13 +69,22 @@ describe(`${chalk.yellowBright("track-credit-system3: test deduction order - act
 	test("should deduct from action1 first (not credits)", async () => {
 		const deductValue = 40.5;
 
-		await autumnV1.track({
+		const trackRes: TrackResponseV2 = await autumnV2.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,
 			value: deductValue,
 		});
 
-		const customer = await autumnV1.customers.get(customerId);
+		expect(trackRes.balance).toMatchObject({
+			feature_id: TestFeature.Action1,
+			current_balance: 100 - deductValue,
+			usage: deductValue,
+		});
+
+		await timeout(2000);
+		const customer = await autumnV1.customers.get(customerId, {
+			skip_cache: "true",
+		});
 
 		// Action1 should be deducted
 		expect(customer.features[TestFeature.Action1].balance).toBe(
@@ -96,13 +110,22 @@ describe(`${chalk.yellowBright("track-credit-system3: test deduction order - act
 			amount: overflowAmount,
 		});
 
-		await autumnV1.track({
+		const trackRes: TrackResponseV2 = await autumnV2.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,
 			value: deductValue,
 		});
 
-		const customer = await autumnV1.customers.get(customerId);
+		expect(trackRes.balance).toMatchObject({
+			feature_id: TestFeature.Credits,
+			current_balance: 200 - creditCostForOverflow,
+			usage: creditCostForOverflow,
+		});
+
+		await timeout(2000);
+		const customer = await autumnV1.customers.get(customerId, {
+			skip_cache: "true",
+		});
 
 		// Action1 should be fully depleted
 		expect(customer.features[TestFeature.Action1].balance).toBe(0);
@@ -128,13 +151,21 @@ describe(`${chalk.yellowBright("track-credit-system3: test deduction order - act
 			amount: deductValue,
 		});
 
-		await autumnV1.track({
+		const trackRes: TrackResponseV2 = await autumnV2.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,
 			value: deductValue,
 		});
 
-		const customer = await autumnV1.customers.get(customerId);
+		expect(trackRes.balance).toMatchObject({
+			feature_id: TestFeature.Credits,
+			current_balance: new Decimal(creditsBefore!).minus(creditCost).toNumber(),
+		});
+
+		await timeout(2000);
+		const customer = await autumnV1.customers.get(customerId, {
+			skip_cache: "true",
+		});
 
 		// Action1 should still be 0
 		expect(customer.features[TestFeature.Action1].balance).toBe(0);

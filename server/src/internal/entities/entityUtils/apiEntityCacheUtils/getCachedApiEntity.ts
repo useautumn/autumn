@@ -10,7 +10,6 @@ import {
 	filterPlanAndFeatureExpand,
 } from "@autumn/shared";
 import { CACHE_CUSTOMER_VERSION } from "@lua/cacheConfig.js";
-import { GET_ENTITY_SCRIPT } from "@lua/luaScripts.js";
 import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -58,14 +57,12 @@ export const getCachedApiEntity = async ({
 		// Try to get from cache using Lua script (unless skipCache is true)
 		if (!skipCache) {
 			const cachedResult = await tryRedisRead(() =>
-				redis.eval(
-					GET_ENTITY_SCRIPT,
-					0, // No KEYS, all params in ARGV
-					org.id, // ARGV[1]
-					env, // ARGV[2]
-					customerId, // ARGV[3]
-					entityId, // ARGV[4]
-					skipCustomerMerge ? "true" : "false", // ARGV[5]
+				redis.getEntity(
+					org.id,
+					env,
+					customerId,
+					entityId,
+					skipCustomerMerge ? "true" : "false",
 				),
 			);
 

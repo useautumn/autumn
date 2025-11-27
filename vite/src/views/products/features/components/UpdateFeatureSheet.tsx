@@ -53,8 +53,8 @@ function UpdateFeatureSheet({
 		try {
 			await FeatureService.updateFeature(axiosInstance, selectedFeature.id, {
 				...feature,
-				id: feature.id,
-				name: feature.name,
+				id: feature.id || undefined,
+				name: feature.name || undefined,
 				type: feature.type,
 				consumable: feature.config?.usage_type === FeatureUsageType.Single,
 				event_names: feature.event_names,

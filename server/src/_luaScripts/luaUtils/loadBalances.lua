@@ -282,11 +282,13 @@ local function mergeFeatureBalances(targetBalance, sourceBalance)
     
     -- Merge rollover balances
     if sourceBalance.rollovers and #sourceBalance.rollovers > 0 then
-         -- Both have rollovers, merge them
-         for i, targetRollover in ipairs(targetBalance.rollovers) do
-            local sourceRollover = sourceBalance.rollovers[i]
-            if sourceRollover then
-                targetRollover.balance = toNum(targetRollover.balance) + toNum(sourceRollover.balance)
+        -- Both have rollovers, merge them
+        if targetBalance.rollovers and #targetBalance.rollovers > 0 then
+            for i, targetRollover in ipairs(targetBalance.rollovers) do
+                local sourceRollover = sourceBalance.rollovers[i]
+                if sourceRollover then
+                    targetRollover.balance = toNum(targetRollover.balance) + toNum(sourceRollover.balance)
+                end
             end
         end
     end

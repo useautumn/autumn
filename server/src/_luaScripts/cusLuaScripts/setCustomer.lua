@@ -56,6 +56,7 @@ local baseCustomer = {
     env = customerData.env,
     metadata = customerData.metadata,
     subscriptions = customerData.subscriptions,
+    scheduled_subscriptions = customerData.scheduled_subscriptions,
     invoices = customerData.invoices,
     legacyData = customerData.legacyData,
     entities = customerData.entities,

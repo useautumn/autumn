@@ -1,36 +1,95 @@
-name: Build
+name: Build and Push to ECR
 
 on:
-  pull_request:
-    branches: [main, staging, dev]
   push:
-    branches: [main, staging, dev]
+    branches:
+      - main
+      - staging
+      
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Manual deploy'
+        required: false
+        default: 'manual'
+
+env:
+  AWS_REGION: us-west-2  # Change to your AWS region
+  ECR_REPOSITORY: autumn  # Change to your ECR repository name
 
 jobs:
-  build:
-    name: Build All Packages
-    runs-on: ubuntu-latest
-
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: blacksmith-16vcpu-ubuntu-2404
+    
+    permissions:
+      id-token: write
+      contents: read
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Build shared package
-        run: bun run build
-        working-directory: shared
-
-      - name: Build server package
-        run: bun run build
-        working-directory: server
-
-      - name: Build vite package
-        run: bun run build
-        working-directory: vite
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      
+      - name: Extract metadata for Docker
+        id: meta
+        run: |
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          COMMIT_SHA=${GITHUB_SHA::8}
+          
+          # Sanitize branch name for Docker tag (replace / with -)
+          SAFE_BRANCH=$(echo $BRANCH_NAME | sed 's/\//-/g')
+          
+          echo "branch=$SAFE_BRANCH" >> $GITHUB_OUTPUT
+          echo "sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
+          
+          # Set custom tag if provided
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.tag }}" ]; then
+            echo "custom_tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build and push Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG_SHA: ${{ steps.meta.outputs.sha }}
+          IMAGE_TAG_BRANCH: ${{ steps.meta.outputs.branch }}
+        run: |
+          # Build single combined tag: branch-sha
+          COMBINED_TAG="${IMAGE_TAG_BRANCH}-${IMAGE_TAG_SHA}"
+          TAGS="${ECR_REGISTRY}/${ECR_REPOSITORY}:${COMBINED_TAG}"
+          
+          # Build and push
+          docker buildx build \
+            --platform linux/amd64 \
+            --push \
+            --provenance=false \
+            --sbom=false \
+            --cache-from type=registry,ref=${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG_BRANCH} \
+            --cache-to type=inline \
+            --tag ${TAGS//,/ --tag } \
+            -f docker/Dockerfile \
+            .
+      
+      - name: Output image details
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG_SHA: ${{ steps.meta.outputs.sha }}
+          IMAGE_TAG_BRANCH: ${{ steps.meta.outputs.branch }}
+        run: |
+          COMBINED_TAG="${IMAGE_TAG_BRANCH}-${IMAGE_TAG_SHA}"
+          echo "✅ Image pushed successfully!"
+          echo "📦 Repository: ${ECR_REGISTRY}/${ECR_REPOSITORY}"
+          echo "🏷️  Tag: ${COMBINED_TAG}"

@@ -17,7 +17,12 @@ import { generateId } from "@/utils/genUtils.js";
  */
 export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	// const env = (c.req.header("app_env") as AppEnv) || AppEnv.Sandbox;
-	const id = c.req.header("rndr-id") || generateId("local_req");
+	const id =
+		c.req.header("rndr-id") ||
+		c.req.header("X-Amzn-Trace-Id") ||
+		c.req.header("x-amzn-trace-id") ||
+		generateId("local_req");
+
 	const timestamp = Date.now();
 
 	const clickhouseClient = await ClickHouseManager.getClient();
