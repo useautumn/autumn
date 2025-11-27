@@ -26,7 +26,6 @@ export type StripeConfig = {
 
 	test_connect_webhook_secret?: string;
 	live_connect_webhook_secret?: string;
-	billing_portal_configuration_id?: string;
 };
 export interface VersionConfig {
 	sandbox?: string;
