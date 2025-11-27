@@ -4,14 +4,10 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import {
-	constructArrearItem,
-	constructPrepaidItem,
-} from "@/utils/scriptUtils/constructItem.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "../../src/utils/scriptUtils/testUtils/initProductsV0.js";
-import { replaceItems } from "../attach/utils.js";
 
 // UNCOMMENT FROM HERE
 const pro = constructProduct({
@@ -19,11 +15,22 @@ const pro = constructProduct({
 	isDefault: true,
 
 	items: [
-		constructArrearItem({
+		// constructArrearItem({
+		// 	featureId: TestFeature.Credits,
+		// 	includedUsage: 0,
+		// 	billingUnits: 1,
+		// 	price: 0.5,
+		// }),
+	],
+});
+
+const premium = constructProduct({
+	type: "premium",
+	isDefault: false,
+	isAddOn: true,
+	items: [
+		constructFeatureItem({
 			featureId: TestFeature.Credits,
-			includedUsage: 0,
-			billingUnits: 1,
-			price: 0.5,
 		}),
 	],
 });
@@ -55,7 +62,7 @@ describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [pro],
+			products: [pro, premium],
 			prefix: customerId,
 		});
 	});
@@ -65,20 +72,12 @@ describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 			customer_id: customerId,
 			product_id: pro.id,
 		});
-
-		const newItems = replaceItems({
-			items: pro.items,
-			featureId: TestFeature.Credits,
-			newItem: constructPrepaidItem({
-				featureId: TestFeature.Credits,
-				includedUsage: 0,
-				billingUnits: 1,
-				price: 0.5,
-			}),
-		});
-
-		await autumn.products.update(pro.id, {
-			items: newItems,
-		});
 	});
 });
+
+// stripe subscriptions create \
+//   --customer=cus_123456789 \
+//   --items[0][price]=price_123456789 \
+//   --collection_method=send_invoice \
+//   --days_until_due=30 \
+//   --payment_settings[payment_method_types][0]=us_bank_account
