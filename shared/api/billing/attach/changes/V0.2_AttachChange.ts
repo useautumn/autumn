@@ -47,8 +47,22 @@ export const V0_2_AttachChange = defineVersionChange({
 	}: {
 		input: z.infer<typeof AttachResponseV1Schema>;
 	}): z.infer<typeof AttachResponseV0Schema> => {
+		// 1. If there's checkout_url, don't return success
+		if (input.checkout_url) {
+			return {
+				checkout_url: input.checkout_url,
+			};
+		}
+
+		// if (input.code === SuccessCode.OneOffProductAttached) {
+		// 	// For one off products, just return v2 response...
+		// 	return input as z.infer<typeof AttachResponseV0Schema>;
+		// }
+
+		// 2. If there's no checkout_url, return success: false
 		return {
 			success: input.success,
+			message: input.message,
 			checkout_url: input.checkout_url,
 			invoice: input.invoice ?? undefined,
 		};

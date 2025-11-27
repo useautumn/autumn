@@ -1,7 +1,8 @@
 import { z } from "zod/v4";
 
 export const AttachResponseV0Schema = z.object({
-	success: z.boolean(),
+	success: z.boolean().optional(),
+	message: z.string().optional(),
 	checkout_url: z.string().nullish(),
 	invoice: z.any().nullish(),
 });
