@@ -1,17 +1,16 @@
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { AttachParams } from "../../cusProducts/AttachParams.js";
-import Stripe from "stripe";
-import { CusProductService } from "../../cusProducts/CusProductService.js";
-import { ItemSet } from "@/utils/models/ItemSet.js";
+import type Stripe from "stripe";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
+import type { AttachParams } from "../../cusProducts/AttachParams.js";
 
 export const updateCurSchedule = async ({
-	req,
+	// biome-ignore lint/correctness/noUnusedFunctionParameters: Might be used in the future
+	ctx,
 	attachParams,
 	schedule,
 	sub,
 	newPhases,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	attachParams: AttachParams;
 	schedule: Stripe.SubscriptionSchedule;
 	sub: Stripe.Subscription;

@@ -1,78 +1,61 @@
 import {
-	type AttachBodyV0,
-	type AttachBranch,
 	type AttachConfig,
+	type AttachFunctionResponse,
+	AttachFunctionResponseSchema,
 	SuccessCode,
 } from "@autumn/shared";
-import type Stripe from "stripe";
 import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
 import { isOneOff } from "@/internal/products/productUtils.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { handleOneOffFunction } from "../attach/attachFunctions/addProductFlow/handleOneOffFunction.js";
 import { handlePaidProduct } from "../attach/attachFunctions/addProductFlow/handlePaidProduct.js";
-import { handleMultiAttachFlow } from "../attach/attachFunctions/multiAttach/handleMultiAttachFlow.js";
-import {
-	type AttachParams,
-	AttachResultSchema,
-} from "../cusProducts/AttachParams.js";
+import type { AttachParams } from "../cusProducts/AttachParams.js";
 
 export const handleCreateInvoiceCheckout = async ({
-	req,
-	res,
+	ctx,
 	attachParams,
-	attachBody,
 	config,
-	branch,
 }: {
-	req: any;
-	res?: any;
+	ctx: AutumnContext;
 	attachParams: AttachParams;
-	attachBody: AttachBodyV0;
 	config: AttachConfig;
-	branch: AttachBranch;
-}) => {
+}): Promise<AttachFunctionResponse> => {
 	// if one off
 	const { stripeCli } = attachParams;
 
-	let invoiceResult;
+	let invoiceResult: AttachFunctionResponse;
 
-	if (attachParams.productsList) {
-		invoiceResult = await handleMultiAttachFlow({
-			req,
-			res,
-			attachParams,
-			attachBody,
-			branch,
-			config,
-		});
-	} else if (isOneOff(attachParams.prices)) {
+	if (isOneOff(attachParams.prices)) {
 		invoiceResult = await handleOneOffFunction({
-			req,
-			res,
+			ctx,
 			attachParams,
 			config,
 		});
 	} else {
 		invoiceResult = await handlePaidProduct({
-			req,
-			res,
+			ctx,
 			attachParams,
 			config,
 		});
 	}
 
-	const { invoices, anchorToUnix, subs }: any = invoiceResult;
+	// const { invoices, anchorToUnix, subs } = invoiceResult;
+	const { invoice, stripeSub, anchorToUnix } = invoiceResult;
+
+	// console.log("finalize invoice:", config.finalizeInvoice);
+	// console.log("invoice hosted url:", invoice?.hosted_invoice_url);
 
 	const metadataId = await createCheckoutMetadata({
-		db: req.db,
+		db: ctx.db,
 		attachParams: {
 			...attachParams,
 			anchorToUnix,
-			subIds: subs.map((s: Stripe.Subscription) => s.id),
+			subId: stripeSub?.id,
 			config,
-		} as any,
+		},
 	});
 
-	for (const invoice of invoices) {
+	if (invoice) {
 		await stripeCli.invoices.update(invoice.id, {
 			metadata: {
 				autumn_metadata_id: metadataId,
@@ -80,35 +63,62 @@ export const handleCreateInvoiceCheckout = async ({
 		});
 	}
 
-	if (res) {
-		if (!config.finalizeInvoice) {
-			res.status(200).json(
-				AttachResultSchema.parse({
-					invoice: invoices[0],
-					code: SuccessCode.CheckoutCreated,
-					message: `Successfully created invoice for customer ${
-						attachParams.customer.id || attachParams.customer.internal_id
-					}, product(s) ${attachParams.products.map((p) => p.name).join(", ")}`,
-					product_ids: attachParams.products.map((p) => p.id),
-					customer_id:
-						attachParams.customer.id || attachParams.customer.internal_id,
-				}),
-			);
-			return;
-		}
-		res.status(200).json(
-			AttachResultSchema.parse({
-				checkout_url: invoices[0].hosted_invoice_url,
-				code: SuccessCode.CheckoutCreated,
-				message: `Successfully created invoice checkout for customer ${
-					attachParams.customer.id || attachParams.customer.internal_id
-				}, product(s) ${attachParams.products.map((p) => p.name).join(", ")}`,
-				product_ids: attachParams.products.map((p) => p.id),
-				customer_id:
-					attachParams.customer.id || attachParams.customer.internal_id,
-			}),
-		);
-	}
+	const customerId =
+		attachParams.customer.id || attachParams.customer.internal_id;
+	const productNames = attachParams.products.map((p) => p.name).join(", ");
+	return AttachFunctionResponseSchema.parse({
+		checkout_url: config.finalizeInvoice
+			? invoice?.hosted_invoice_url
+			: undefined,
+		message: `Successfully created invoice checkout for customer ${customerId}, product(s) ${productNames}`,
+		code: SuccessCode.CheckoutCreated,
+		invoice: config.finalizeInvoice ? undefined : invoice, // if finalizeInvoice, checkout_url is used
+		// invoice,
+		// stripeSub,
+		// anchorToUnix,
+		// config,
+	});
 
-	return { invoices };
+	// if (res) {
+	// 	if (!config.finalizeInvoice) {
+	// 		res.status(200).json(
+	// 			AttachResultSchema.parse({
+	// 				invoice: invoices[0],
+	// 				code: SuccessCode.CheckoutCreated,
+	// 				message: `Successfully created invoice for customer ${
+	// 					attachParams.customer.id || attachParams.customer.internal_id
+	// 				}, product(s) ${attachParams.products.map((p) => p.name).join(", ")}`,
+	// 				product_ids: attachParams.products.map((p) => p.id),
+	// 				customer_id:
+	// 					attachParams.customer.id || attachParams.customer.internal_id,
+	// 			}),
+	// 		);
+	// 		return;
+	// 	}
+	// 	res.status(200).json(
+	// 		AttachResultSchema.parse({
+	// 			checkout_url: invoices[0].hosted_invoice_url,
+	// 			code: SuccessCode.CheckoutCreated,
+	// 			message: `Successfully created invoice checkout for customer ${
+	// 				attachParams.customer.id || attachParams.customer.internal_id
+	// 			}, product(s) ${attachParams.products.map((p) => p.name).join(", ")}`,
+	// 			product_ids: attachParams.products.map((p) => p.id),
+	// 			customer_id:
+	// 				attachParams.customer.id || attachParams.customer.internal_id,
+	// 		}),
+	// 	);
+	// }
+
+	// return { invoices };
 };
+
+// if (attachParams.productsList) {
+// 	invoiceResult = await handleMultiAttachFlow({
+// 		req,
+// 		res,
+// 		attachParams,
+// 		attachBody,
+// 		branch,
+// 		config,
+// 	});
+// } else

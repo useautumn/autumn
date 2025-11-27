@@ -1,6 +1,7 @@
 import {
 	type AttachConfig,
-	AttachScenario,
+	type AttachFunctionResponse,
+	AttachFunctionResponseSchema,
 	SuccessCode,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -8,10 +9,7 @@ import { Decimal } from "decimal.js";
 import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
-import {
-	type AttachParams,
-	AttachResultSchema,
-} from "@/internal/customers/cusProducts/AttachParams.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { newPriceToInvoiceDescription } from "@/internal/invoices/invoiceFormatUtils.js";
 import { buildInvoiceMemoFromEntitlements } from "@/internal/invoices/invoiceMemoUtils.js";
 import {
@@ -24,19 +22,20 @@ import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/pric
 import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { getPriceOptions } from "@/internal/products/prices/priceUtils.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
+import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
+import { getCustomerDisplay } from "../../../../billing/attach/utils/getCustomerDisplay";
 
 export const handleOneOffFunction = async ({
-	req,
+	ctx,
 	attachParams,
 	config,
-	res,
 }: {
-	req: any;
+	ctx: AutumnContext;
 	attachParams: AttachParams;
 	config: AttachConfig;
-	res: any;
-}) => {
-	const logger = req.logger;
+}): Promise<AttachFunctionResponse> => {
+	const { logger } = ctx;
+
 	logger.info("Scenario 4A: One-off prices");
 
 	const {
@@ -101,7 +100,7 @@ export const handleOneOffFunction = async ({
 				price_data: {
 					unit_amount: new Decimal(amount).mul(100).round().toNumber(),
 					currency: orgToCurrency({ org }),
-					product: price.config?.stripe_product_id || product?.processor?.id!,
+					product: price.config?.stripe_product_id || product?.processor?.id,
 				},
 			};
 		}
@@ -149,7 +148,7 @@ export const handleOneOffFunction = async ({
 			...invoiceItem,
 			customer: customer.processor.id!,
 			invoice: stripeInvoice.id,
-		} as any);
+		});
 	}
 
 	if (config.invoiceCheckout) {
@@ -160,13 +159,15 @@ export const handleOneOffFunction = async ({
 		}
 
 		await insertInvoiceFromAttach({
-			db: req.db,
+			db: ctx.db,
 			attachParams,
 			invoiceId: stripeInvoice.id,
 			logger,
 		});
 
-		return { invoices: [stripeInvoice], subs: [], anchorToUnix: undefined };
+		return AttachFunctionResponseSchema.parse({
+			invoice: stripeInvoice,
+		});
 	}
 
 	// Create invoice items
@@ -186,8 +187,7 @@ export const handleOneOffFunction = async ({
 		if (!paid) {
 			if (org.config.checkout_on_failed_payment) {
 				return await handleCreateCheckout({
-					req,
-					res,
+					ctx,
 					attachParams,
 					config,
 				});
@@ -201,7 +201,7 @@ export const handleOneOffFunction = async ({
 	for (const product of products) {
 		batchInsert.push(
 			createFullCusProduct({
-				db: req.db,
+				db: ctx.db,
 				attachParams: attachToInsertParams(attachParams, product),
 				logger,
 			}),
@@ -211,27 +211,38 @@ export const handleOneOffFunction = async ({
 
 	logger.info("5. Creating invoice from stripe");
 	await insertInvoiceFromAttach({
-		db: req.db,
+		db: ctx.db,
 		attachParams,
 		invoiceId: stripeInvoice.id,
 		logger,
 	});
 
-	if (res) {
-		const productNames = products.map((p) => p.name).join(", ");
-		const customerName = customer.name || customer.email || customer.id;
-		res.status(200).json(
-			AttachResultSchema.parse({
-				success: true,
-				message: `Successfully purchased ${productNames} and attached to ${customerName}`,
-				invoice: invoiceOnly
-					? attachToInvoiceResponse({ invoice: stripeInvoice })
-					: undefined,
-				code: SuccessCode.OneOffProductAttached,
-				product_ids: products.map((p) => p.id),
-				customer_id: customer.id || customer.internal_id,
-				scenario: AttachScenario.New,
-			}),
-		);
-	}
+	const customerName = getCustomerDisplay({ customer });
+	const productNames = products.map((p) => p.name).join(", ");
+	return AttachFunctionResponseSchema.parse({
+		// success: true,
+		message: `Successfully purchased product(s) ${productNames} and attached to customer ${customerName}`,
+		invoice: invoiceOnly
+			? attachToInvoiceResponse({ invoice: stripeInvoice })
+			: undefined,
+		code: SuccessCode.OneOffProductAttached,
+		// product_ids: products.map((p) => p.id),
+		// customer_id: customer.id || customer.internal_id,
+		// scenario: AttachScenario.New,
+	});
+	// if (res) {
+	// 	res.status(200).json(
+	// 		AttachResultSchema.parse({
+	// 			success: true,
+	// 			message: `Successfully purchased ${productNames} and attached to ${customerName}`,
+	// 			invoice: invoiceOnly
+	// 				? attachToInvoiceResponse({ invoice: stripeInvoice })
+	// 				: undefined,
+	// 			code: SuccessCode.OneOffProductAttached,
+	// 			product_ids: products.map((p) => p.id),
+	// 			customer_id: customer.id || customer.internal_id,
+	// 			scenario: AttachScenario.New,
+	// 		}),
+	// 	);
+	// }
 };

@@ -15,7 +15,7 @@ import { isArrearPrice } from "@/internal/products/prices/priceUtils/usagePriceU
 import { formatPrice } from "@/internal/products/prices/priceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import type { ItemSet } from "@/utils/models/ItemSet.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import type { AttachParams } from "../../cusProducts/AttachParams.js";
 import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { mergeNewSubItems } from "./mergeNewSubItems.js";
@@ -91,14 +91,15 @@ export const getCusProductsToRemove = ({
 };
 
 export const paramsToSubItems = async ({
-	req,
+	// biome-ignore lint/correctness/noUnusedFunctionParameters: Might be used in the future
+	ctx,
 	sub,
 	attachParams,
 	config,
 	removeCusProducts,
 	addItemSet,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	sub?: Stripe.Subscription;
 	attachParams: AttachParams;
 	config: AttachConfig;

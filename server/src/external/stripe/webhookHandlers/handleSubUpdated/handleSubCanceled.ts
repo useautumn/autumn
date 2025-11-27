@@ -13,7 +13,7 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { formatUnixToDateTime, nullish } from "@/utils/genUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import {
 	getLatestPeriodEnd,
 	subToPeriodStartEnd,
@@ -86,13 +86,14 @@ const updateCusProductCanceled = async ({
 };
 
 export const handleSubCanceled = async ({
-	req,
+	ctx,
 	previousAttributes,
 	org,
 	sub,
 	updatedCusProducts,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
+	// biome-ignore lint/suspicious/noExplicitAny: Don't know the type of previousAttributes
 	previousAttributes: any;
 	sub: Stripe.Subscription;
 	org: Organization;
@@ -111,7 +112,7 @@ export const handleSubCanceled = async ({
 
 	const canceledFromPortal = canceled && !isAutumnDowngrade;
 
-	const { db, env, logger } = req;
+	const { db, env, logger } = ctx;
 
 	if (!canceledFromPortal || updatedCusProducts.length === 0) return;
 
@@ -171,7 +172,7 @@ export const handleSubCanceled = async ({
 		}
 
 		const insertParams = productToInsertParams({
-			req,
+			ctx,
 			fullCus,
 			newProduct: product,
 			entities,
@@ -194,12 +195,11 @@ export const handleSubCanceled = async ({
 	for (const cusProd of updatedCusProducts) {
 		try {
 			await addProductsUpdatedWebhookTask({
-				req,
+				ctx,
 				internalCustomerId: cusProd.internal_customer_id,
 				org,
 				env,
 				customerId: null,
-				logger,
 				scenario: AttachScenario.Cancel,
 				cusProduct: cusProd,
 				scheduledCusProduct: scheduledCusProducts.find(

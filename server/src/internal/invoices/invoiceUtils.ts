@@ -1,10 +1,16 @@
-import Stripe from "stripe";
-import { AttachParams } from "../customers/cusProducts/AttachParams.js";
-import { InvoiceService, processInvoice } from "./InvoiceService.js";
+import type {
+	Invoice,
+	InvoiceItem,
+	Price,
+	UsagePriceConfig,
+} from "@autumn/shared";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getStripeExpandedInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
-import { Invoice, InvoiceItem, Price, UsagePriceConfig } from "@autumn/shared";
-import { DrizzleCli } from "@/db/initDrizzle.js";
 import { findPriceInStripeItems } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
+import type { Logger } from "../../external/logtail/logtailUtils.js";
+import type { AttachParams } from "../customers/cusProducts/AttachParams.js";
+import { InvoiceService, processInvoice } from "./InvoiceService.js";
 
 // Purpose of this function is to insert an invoice from attach params when sub is updated -> Correct product ID is set...
 export const insertInvoiceFromAttach = async ({
@@ -18,7 +24,7 @@ export const insertInvoiceFromAttach = async ({
 	attachParams: AttachParams;
 	invoiceId?: string;
 	stripeInvoice?: Stripe.Invoice;
-	logger: any;
+	logger: Logger;
 }) => {
 	try {
 		if (!stripeInvoice) {
@@ -29,12 +35,12 @@ export const insertInvoiceFromAttach = async ({
 		}
 
 		// Create or update
-		let invoice = await InvoiceService.getByStripeId({
+		const invoice = await InvoiceService.getByStripeId({
 			db,
 			stripeId: stripeInvoice.id!,
 		});
 
-		let autumnInvoiceItems = await getInvoiceItems({
+		const autumnInvoiceItems = await getInvoiceItems({
 			stripeInvoice,
 			prices: attachParams.prices,
 			logger,
@@ -88,13 +94,7 @@ export const insertInvoiceFromAttach = async ({
 	}
 };
 
-export const invoicesToResponse = ({
-	invoices,
-	logger,
-}: {
-	invoices: Invoice[];
-	logger: any;
-}) => {
+export const invoicesToResponse = ({ invoices }: { invoices: Invoice[] }) => {
 	return invoices.map((i) =>
 		processInvoice({
 			invoice: i,
@@ -111,13 +111,13 @@ export const getInvoiceItems = async ({
 }: {
 	stripeInvoice: Stripe.Invoice;
 	prices: Price[];
-	logger: any;
+	logger: Logger;
 }) => {
-	let invoiceItems: InvoiceItem[] = [];
+	const invoiceItems: InvoiceItem[] = [];
 
 	try {
 		for (const line of stripeInvoice.lines.data) {
-			let price = findPriceInStripeItems({
+			const price = findPriceInStripeItems({
 				prices,
 				lineItem: line,
 			});
@@ -126,7 +126,7 @@ export const getInvoiceItems = async ({
 				continue;
 			}
 
-			let usageConfig = price.config as UsagePriceConfig;
+			const usageConfig = price.config as UsagePriceConfig;
 			invoiceItems.push({
 				price_id: price.id!,
 				stripe_id: line.id,

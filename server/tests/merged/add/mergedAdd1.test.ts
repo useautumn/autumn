@@ -1,13 +1,13 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
-import chalk from "chalk";
-import type { Stripe } from "stripe";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { getExpectedInvoiceTotal } from "@tests/utils/expectUtils/expectInvoiceUtils.js";
 import { getAttachPreviewTotal } from "@tests/utils/testAttachUtils/getAttachPreviewTotal.js";
 import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { getBasePrice } from "@tests/utils/testProductUtils/testProductUtils.js";
+import chalk from "chalk";
+import type { Stripe } from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
