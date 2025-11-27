@@ -1,4 +1,4 @@
-import type { AttachBody } from "@autumn/shared";
+import type { AttachBodyV0 } from "@autumn/shared";
 import { nullish } from "@/utils/genUtils.js";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 import type { ExtendedRequest } from "../../../../../utils/models/Request.js";
@@ -10,7 +10,7 @@ export const getAttachParams = async ({
 	attachBody,
 }: {
 	ctx: AutumnContext;
-	attachBody: AttachBody;
+	attachBody: AttachBodyV0;
 }) => {
 	const {
 		customer,
@@ -63,7 +63,7 @@ export const getAttachParams = async ({
 
 		successUrl: attachBody.success_url,
 		invoiceOnly: attachBody.invoice,
-		productsList: attachBody.products || undefined,
+		// productsList: attachBody.products || undefined,
 		// || attachBody.invoice_only
 
 		billingAnchor: attachBody.billing_cycle_anchor,

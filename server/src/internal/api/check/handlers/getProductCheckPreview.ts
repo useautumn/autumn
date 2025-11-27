@@ -1,5 +1,5 @@
 import {
-	type AttachBody,
+	type AttachBodyV0,
 	AttachFunction,
 	type AttachPreview,
 	type CheckProductPreview,
@@ -156,7 +156,7 @@ export const getProductCheckPreview = async ({
 		logger,
 	});
 
-	const attachBody: AttachBody = {
+	const attachBody: AttachBodyV0 = {
 		customer_id: customer.id!,
 		product_id: product.id,
 		entity_id: customer.entity?.id,

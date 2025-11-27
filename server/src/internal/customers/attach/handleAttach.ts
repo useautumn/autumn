@@ -1,4 +1,4 @@
-import { AttachBodySchema } from "@autumn/shared";
+import { AttachBodyV0Schema } from "@autumn/shared";
 import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
 import type {
 	ExtendedRequest,
@@ -22,7 +22,7 @@ export const handleAttach = async (req: any, res: any) =>
 		handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
 			await handleAttachRaceCondition({ req, res });
 
-			const attachBody = AttachBodySchema.parse(req.body);
+			const attachBody = AttachBodyV0Schema.parse(req.body);
 
 			const ctx = req as AutumnContext;
 

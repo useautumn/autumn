@@ -1,5 +1,5 @@
 import {
-	type AttachBody,
+	type AttachBodyV0,
 	AttachBranch,
 	type AttachConfig,
 	cusProductToPrices,
@@ -63,7 +63,7 @@ export const getAttachConfig = async ({
 }: {
 	ctx: AutumnContext;
 	attachParams: AttachParams;
-	attachBody: AttachBody;
+	attachBody: AttachBodyV0;
 	branch: AttachBranch;
 }) => {
 	const { org, prices, paymentMethod } = attachParams;
