@@ -1,14 +1,39 @@
 import {
+	AffectedResource,
+	type ApiCustomer,
+	ApiVersion,
+	addToExpand,
+	applyResponseVersionChanges,
+	CusExpand,
+	type CustomerLegacyData,
 	dbToApiFeatureV1,
 	type Feature,
 	type FullCustomer,
-	toApiFeature,
 	WebhookEventType,
 } from "@autumn/shared";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
 import type { AutumnContext } from "../honoUtils/HonoEnv.js";
 import { apiBalanceToAllowed } from "../internal/api/check/checkUtils/apiBalanceToAllowed.js";
 import { getApiCustomerBase } from "../internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
+
+const cleanApiCustomer = ({
+	ctx,
+	apiCustomer,
+	legacyData,
+}: {
+	ctx: AutumnContext;
+	apiCustomer: ApiCustomer;
+	legacyData: CustomerLegacyData;
+}) => {
+	const { autumn_id: _autumn_id, invoices: _invoices, ...rest } = apiCustomer;
+	const cleanedApiCustomer: ApiCustomer = rest;
+	return applyResponseVersionChanges({
+		input: cleanedApiCustomer,
+		targetVersion: ctx.apiVersion,
+		resource: AffectedResource.Customer,
+		legacyData,
+	});
+};
 
 export const handleAllowanceUsed = async ({
 	ctx,
@@ -32,10 +57,11 @@ export const handleAllowanceUsed = async ({
 		fullCus: oldFullCus,
 	});
 
-	const { apiCustomer: newApiCustomer } = await getApiCustomerBase({
-		ctx,
-		fullCus: newFullCus,
-	});
+	const { apiCustomer: newApiCustomer, legacyData: newLegacyData } =
+		await getApiCustomerBase({
+			ctx,
+			fullCus: newFullCus,
+		});
 
 	const prevCusFeature = prevApiCustomer.balances[feature.id];
 	const newCusFeature = newApiCustomer.balances[feature.id];
@@ -59,7 +85,11 @@ export const handleAllowanceUsed = async ({
 			eventType: WebhookEventType.CustomerThresholdReached,
 			data: {
 				threshold_type: "allowance_used",
-				customer: newApiCustomer,
+				customer: cleanApiCustomer({
+					ctx,
+					apiCustomer: newApiCustomer,
+					legacyData: newLegacyData,
+				}),
 				feature: dbToApiFeatureV1({
 					dbFeature: feature,
 					targetVersion: ctx.apiVersion,
@@ -80,16 +110,25 @@ export const handleThresholdReached = async ({
 	newFullCus: FullCustomer;
 	feature: Feature;
 }) => {
+	// Alter ctx expand if needed.
+	if (ctx.apiVersion.lte(ApiVersion.V1_2)) {
+		ctx = addToExpand({
+			ctx,
+			add: [CusExpand.BalancesFeature, CusExpand.SubscriptionsPlan],
+		});
+	}
+
 	try {
 		const { apiCustomer: prevApiCustomer } = await getApiCustomerBase({
 			ctx,
 			fullCus: oldFullCus,
 		});
 
-		const { apiCustomer: newApiCustomer } = await getApiCustomerBase({
-			ctx,
-			fullCus: newFullCus,
-		});
+		const { apiCustomer: newApiCustomer, legacyData: newLegacyData } =
+			await getApiCustomerBase({
+				ctx,
+				fullCus: newFullCus,
+			});
 
 		const oldAllowed = apiBalanceToAllowed({
 			apiBalance: prevApiCustomer.balances[feature.id],
@@ -110,8 +149,15 @@ export const handleThresholdReached = async ({
 				eventType: WebhookEventType.CustomerThresholdReached,
 				data: {
 					threshold_type: "limit_reached",
-					customer: newApiCustomer,
-					feature: toApiFeature({ feature }),
+					customer: cleanApiCustomer({
+						ctx,
+						apiCustomer: newApiCustomer,
+						legacyData: newLegacyData,
+					}),
+					feature: dbToApiFeatureV1({
+						dbFeature: feature,
+						targetVersion: ctx.apiVersion,
+					}),
 				},
 			});
 
