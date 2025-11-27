@@ -9,7 +9,7 @@ import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubU
 import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
-import { type AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import {
 	attachToInsertParams,
@@ -225,6 +225,7 @@ export const handleScheduleFunction2 = async ({
 	// 	} else {
 	// 		res.status(200).json({
 	// 			success: true,
+	// 			message: `Successfully downgraded from ${curCusProduct.product.name} to ${product.name}`,
 	// 		});
 	// 	}
 	// }

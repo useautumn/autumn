@@ -1,11 +1,11 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
-import chalk from "chalk";
-import type { Stripe } from "stripe";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { getMainCusProduct } from "@tests/utils/cusProductUtils/cusProductUtils.js";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
+import type { Stripe } from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
@@ -63,6 +63,7 @@ describe(`${chalk.yellowBright(
 		});
 
 		expect(res.invoice).toBeDefined();
+
 		const customer = await autumn.customers.get(customerId);
 		expectProductAttached({
 			customer,

@@ -12,6 +12,7 @@ import { getAttachConfig } from "../../customers/attach/attachUtils/getAttachCon
 import { runAttachFunction } from "../../customers/attach/attachUtils/getAttachFunction";
 import { handleAttachErrors } from "../../customers/attach/attachUtils/handleAttachErrors";
 import { insertCustomItems } from "../../customers/attach/attachUtils/insertCustomItems";
+import { attachToInvoiceResponse } from "../../invoices/invoiceUtils";
 
 export const handleAttachV2 = createRoute({
 	body: AttachBodyV0Schema,
@@ -97,6 +98,9 @@ export const handleAttachV2 = createRoute({
 			product_ids: products.map((p) => p.id),
 			customer_id: customer.id || customer.internal_id,
 			...response,
+			invoice: response.invoice
+				? attachToInvoiceResponse({ invoice: response.invoice })
+				: undefined,
 		});
 
 		return c.json(
