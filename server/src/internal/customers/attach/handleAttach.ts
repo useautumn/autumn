@@ -31,6 +31,11 @@ export const handleAttach = async (req: any, res: any) =>
 				attachBody,
 			});
 
+			// console.log("Options list: ", attachParams.optionsList);
+			// throw new Error(
+			// 	"Options list: " + JSON.stringify(attachParams.optionsList),
+			// );
+
 			// Handle existing product
 			const branch = await getAttachBranch({
 				ctx,
