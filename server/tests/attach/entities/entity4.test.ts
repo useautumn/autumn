@@ -149,7 +149,6 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing attach pro diff enti
 			product: pro,
 		});
 	});
-	return;
 
 	const entity2Usage = Math.random() * 1000000;
 	test("should track usage on entity 2", async () => {

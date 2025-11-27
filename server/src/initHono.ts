@@ -72,6 +72,15 @@ export const createHonoApp = () => {
 	app.use("*", baseMiddleware);
 	app.use("*", traceMiddleware);
 
+	// app.get("/debug", (c) => {
+	// 	return c.json({
+	// 		region: process.env.AWS_REGION,
+	// 		amazonId:
+	// 			c.req.header("x-amzn-trace-id") || c.req.header("X-Amzn-Trace-Id"),
+	// 		reqId: c.get("ctx").id,
+	// 	});
+	// });
+
 	app.get("/", handleHealthCheck);
 
 	// Add Render region identifier header for load balancer verification

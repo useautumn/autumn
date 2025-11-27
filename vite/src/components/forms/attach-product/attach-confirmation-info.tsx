@@ -1,4 +1,4 @@
-import type { CheckoutResponse } from "@autumn/shared";
+import type { CheckoutResponseV0 } from "@autumn/shared";
 import type { ReactNode } from "react";
 import { useIsLatestVersion } from "@/hooks/stores/useProductStore";
 import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
@@ -7,7 +7,7 @@ import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 export const AttachConfirmationInfo = ({
 	previewData,
 }: {
-	previewData?: CheckoutResponse | null;
+	previewData?: CheckoutResponseV0 | null;
 }) => {
 	const isLatestVersion = useIsLatestVersion(previewData?.product);
 

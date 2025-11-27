@@ -7,6 +7,10 @@ import { rateLimitMiddleware } from "../honoMiddlewares/rateLimitMiddleware.js";
 import { refreshCacheMiddleware } from "../honoMiddlewares/refreshCacheMiddleware.js";
 import { secretKeyMiddleware } from "../honoMiddlewares/secretKeyMiddleware.js";
 import type { HonoEnv } from "../honoUtils/HonoEnv.js";
+import {
+	redemptionRouter,
+	referralRouter,
+} from "../internal/api/rewards/referralRouter.js";
 import { balancesRouter } from "../internal/balances/balancesRouter.js";
 import { billingRouter } from "../internal/billing/billingRouter.js";
 import { cusRouter } from "../internal/customers/cusRouter.js";
@@ -45,3 +49,6 @@ apiRouter.route("", balancesRouter);
 apiRouter.route("/platform", platformBetaRouter);
 apiRouter.route("/platform/beta", platformBetaRouter);
 apiRouter.route("/organization", honoOrgRouter);
+
+apiRouter.route("/referrals", referralRouter);
+apiRouter.route("/redemptions", redemptionRouter);

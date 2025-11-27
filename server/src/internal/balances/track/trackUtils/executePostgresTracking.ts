@@ -4,6 +4,7 @@ import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { getApiCustomerBase } from "../../../customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
 import { getOrCreateCustomer } from "../../../customers/cusUtils/getOrCreateCustomer.js";
 import type { FeatureDeduction } from "./getFeatureDeductions.js";
+import { getTrackBalancesResponse } from "./getTrackBalancesResponse.js";
 import { runDeductionTx } from "./runDeductionTx.js";
 
 const catchInsufficientBalanceError = ({
@@ -106,11 +107,21 @@ export const executePostgresTracking = async ({
 			balancesRes[featureId] = apiCustomer.balances[featureId];
 		}
 
-		if (Object.keys(balancesRes).length > 1) {
-			response.balances = balancesRes;
-		} else {
-			response.balance = Object.values(balancesRes)?.[0];
-		}
+		// if (Object.keys(balancesRes).length > 0) {
+		// 	response.balance =
+		// 		balancesRes[
+		// 			Object.keys(balancesRes)[Object.keys(balancesRes).length - 1]
+		// 		];
+		// }
+
+		const finalBalances = getTrackBalancesResponse({
+			featureDeductions,
+			features: ctx.features,
+			balances: balancesRes,
+		});
+
+		response.balance = finalBalances.balance;
+		response.balances = finalBalances.balances;
 	}
 
 	return response;

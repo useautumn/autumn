@@ -1,10 +1,11 @@
-import { AttachBodySchema } from "@autumn/shared";
+import { AttachBodyV0Schema } from "@autumn/shared";
 import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
 import type {
 	ExtendedRequest,
 	ExtendedResponse,
 } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { checkStripeConnections } from "./attachRouter.js";
 import { getAttachParams } from "./attachUtils/attachParams/getAttachParams.js";
 import { getAttachBranch } from "./attachUtils/getAttachBranch.js";
@@ -21,22 +22,29 @@ export const handleAttach = async (req: any, res: any) =>
 		handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
 			await handleAttachRaceCondition({ req, res });
 
-			const attachBody = AttachBodySchema.parse(req.body);
+			const attachBody = AttachBodyV0Schema.parse(req.body);
+
+			const ctx = req as AutumnContext;
 
 			const { attachParams, customPrices, customEnts } = await getAttachParams({
-				req,
+				ctx,
 				attachBody,
 			});
 
+			// console.log("Options list: ", attachParams.optionsList);
+			// throw new Error(
+			// 	"Options list: " + JSON.stringify(attachParams.optionsList),
+			// );
+
 			// Handle existing product
 			const branch = await getAttachBranch({
-				req,
+				ctx,
 				attachBody,
 				attachParams,
 			});
 
 			const { flags, config } = await getAttachConfig({
-				req,
+				ctx,
 				attachParams,
 				attachBody,
 				branch,
@@ -51,7 +59,7 @@ export const handleAttach = async (req: any, res: any) =>
 			});
 
 			await checkStripeConnections({
-				req,
+				ctx,
 				attachParams,
 				useCheckout: config.onlyCheckout,
 			});
@@ -82,7 +90,7 @@ export const handleAttach = async (req: any, res: any) =>
 						freeTrial: attachParams.freeTrial,
 					},
 				});
-			} catch (error) {}
+			} catch (_error) {}
 
 			await runAttachFunction({
 				req,

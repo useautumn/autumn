@@ -1,4 +1,4 @@
-import type { CheckoutResponse, ProductV2 } from "@autumn/shared";
+import type { CheckoutResponseV0, ProductV2 } from "@autumn/shared";
 import { ArrowUpRightFromSquare } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -21,7 +21,7 @@ interface AttachProductActionsProps {
 	product: ProductV2;
 	customerId: string;
 	onSuccess?: () => void;
-	previewData?: CheckoutResponse | null;
+	previewData?: CheckoutResponseV0 | null;
 	isPreviewLoading?: boolean;
 }
 

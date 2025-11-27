@@ -5,6 +5,7 @@ import {
 	CusProductStatus,
 	cusProductToPlanStatus,
 	cusProductToProduct,
+	expandIncludes,
 	type FullCusProduct,
 	type FullCustomer,
 	isTrialing,
@@ -61,9 +62,17 @@ export const getApiSubscription = async ({
 	const status = cusProductToPlanStatus({ status: cusProduct.status });
 
 	// Check if we should expand the plan object
-	const shouldExpandPlan = (ctx.expand ?? []).includes(
-		CusExpand.SubscriptionsPlan,
-	);
+
+	const shouldExpandPlan =
+		status === "scheduled"
+			? expandIncludes({
+					expand: ctx.expand,
+					includes: [CusExpand.ScheduledSubscriptionsPlan],
+				})
+			: expandIncludes({
+					expand: ctx.expand,
+					includes: [CusExpand.SubscriptionsPlan],
+				});
 
 	const apiPlan = shouldExpandPlan
 		? await getPlanResponse({

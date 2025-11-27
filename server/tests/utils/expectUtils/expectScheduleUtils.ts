@@ -9,10 +9,10 @@ import {
 	type Organization,
 	type ProductV2,
 } from "@autumn/shared";
+import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect.js";
 import { expect } from "chai";
 import { addHours } from "date-fns";
 import type Stripe from "stripe";
-import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { findStripePriceFromPrices } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
@@ -22,7 +22,10 @@ import { isV4Usage } from "@/internal/products/prices/priceUtils/usagePriceUtils
 import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
 import { hoursToFinalizeInvoice } from "../constants.js";
 import { advanceTestClock } from "../stripeUtils.js";
-import { expectProductAttached } from "./expectProductAttached.js";
+import {
+	expectProductAttached,
+	expectScheduledApiSub,
+} from "./expectProductAttached.js";
 import { expectSubItemsCorrect } from "./expectSubUtils.js";
 
 export const expectNextCycleCorrect = async ({
@@ -124,38 +127,17 @@ export const expectDowngradeCorrect = async ({
 		isCanceled: true,
 	});
 
-	// const { fullCus } = await expectSubItemsCorrect({
-	//   stripeCli,
-	//   customerId,
-	//   product: curProduct,
-	//   db,
-	//   org,
-	//   env,
-	//   subCanceled: isFreeProductV2({ product: newProduct }),
-	//   isCanceled: true,
-	// });
-
 	const newProductIsFree = isFreeProductV2({ product: newProduct });
 
-	if (newProductIsFree) {
-		// let res = await stripeCli.subscriptionSchedules.list({
-		//   customer: fullCus.processor?.id,
-		// });
-		// let data = res.data.filter((s) => s.status != "canceled");
-		// expect(data.length, "should have no sub schedules").to.equal(0);
-		// await expectSubScheduleCorrect({
-		//   stripeCli,
-		//   customerId,
-		//   productId: newProduct.id,
-		//   db,
-		//   org,
-		//   env,
-		// });
-	}
 	expectProductAttached({
 		customer,
 		product: newProduct,
 		status: CusProductStatus.Scheduled,
+	});
+
+	await expectScheduledApiSub({
+		customerId,
+		productId: newProduct.id,
 	});
 
 	await expectSubToBeCorrect({

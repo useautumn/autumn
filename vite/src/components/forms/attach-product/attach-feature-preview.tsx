@@ -1,5 +1,5 @@
 import type {
-	CheckoutResponse,
+	CheckoutResponseV0,
 	FullCusEntWithFullCusProduct,
 	FullCusProduct,
 	ProductItem,
@@ -27,7 +27,7 @@ interface FeatureBalanceChange {
 export function AttachFeaturePreview({
 	previewData,
 }: {
-	previewData?: CheckoutResponse | null;
+	previewData?: CheckoutResponseV0 | null;
 }) {
 	const { customer } = useCusQuery();
 

@@ -18,7 +18,7 @@ import { ProductService } from "../../ProductService.js";
 import { handleNewProductItems } from "../../product-items/productItemUtils/handleNewProductItems.js";
 import { getProductResponse } from "../../productUtils/productResponseUtils/getProductResponse.js";
 import { constructProduct, initProductInStripe } from "../../productUtils.js";
-import { disableCurrentDefault } from "../handleCreatePlan.js";
+import { validateDefaultFlag } from "./validateDefaultFlag.js";
 
 export const createProduct = async ({
 	ctx,
@@ -39,9 +39,9 @@ export const createProduct = async ({
 	// 1. If existing product, throw error
 	if (existing) throw new ProductAlreadyExistsError({ productId: data.id });
 
-	await disableCurrentDefault({
-		req: ctx,
-		newProduct: data,
+	await validateDefaultFlag({
+		ctx,
+		body: data,
 	});
 
 	const product = await ProductService.insert({

@@ -17,10 +17,14 @@ import { handleDecreaseAndTransfer } from "./handleTransferProduct/handleDecreas
 
 const TransferProductSchema = z.object({
 	from_entity_id: z.string().nullish(),
-	to_entity_id: z.string(),
+	to_entity_id: z.string().nullish(),
 	product_id: z.string(),
 });
 
+// Supports:
+// - Transfer from entity to entity
+// - Transfer from entity to org
+// - Transfer from org to entity
 export const handleTransferProductV2 = createRoute({
 	body: TransferProductSchema,
 	resource: AffectedResource.Customer,
@@ -29,6 +33,12 @@ export const handleTransferProductV2 = createRoute({
 		const { db, org, env } = ctx;
 		const { customer_id } = c.req.param();
 		const { from_entity_id, to_entity_id, product_id } = c.req.valid("json");
+
+		if (!from_entity_id && !to_entity_id) {
+			throw new RecaseError({
+				message: "Must specify atleast one of: from_entity_id, to_entity_id",
+			});
+		}
 
 		const customer = await CusService.getFull({
 			idOrInternalId: customer_id,
@@ -56,9 +66,11 @@ export const handleTransferProductV2 = createRoute({
 			(e: any) => e.id === from_entity_id,
 		);
 
-		const toEntity = customer.entities.find((e: any) => e.id === to_entity_id);
+		const toEntity = to_entity_id
+			? customer.entities.find((e: any) => e.id === to_entity_id)
+			: null;
 
-		if (!toEntity) {
+		if (to_entity_id && !toEntity) {
 			throw new RecaseError({
 				message: `Entity ${to_entity_id} not found`,
 			});
@@ -75,13 +87,19 @@ export const handleTransferProductV2 = createRoute({
 			const productMatch = cusProduct?.product.is_add_on
 				? cp.product.product_id === product.id
 				: cp.product.group === product.group;
-			return cp.internal_entity_id === toEntity.internal_id && productMatch;
+
+			const entityMatch = toEntity?.internal_id
+				? cp.internal_entity_id === toEntity.internal_id
+				: nullish(cp.internal_entity_id);
+
+			return entityMatch && productMatch;
 		});
 
 		if (toCusProduct) {
 			throw new CusProductAlreadyExistsError({
 				productId: product_id,
-				entityId: toEntity.id,
+				entityId: toEntity?.id,
+				customerId: from_entity_id && !to_entity_id ? customer_id : undefined,
 			});
 		}
 
@@ -106,8 +124,8 @@ export const handleTransferProductV2 = createRoute({
 				db,
 				cusProductId: cusProduct.id,
 				updates: {
-					entity_id: toEntity.id,
-					internal_entity_id: toEntity.internal_id,
+					entity_id: toEntity?.id || null,
+					internal_entity_id: toEntity?.internal_id || null,
 				},
 			});
 
@@ -120,8 +138,8 @@ export const handleTransferProductV2 = createRoute({
 				scenario: AttachScenario.New,
 				cusProduct: {
 					...cusProduct,
-					entity_id: toEntity.id,
-					internal_entity_id: toEntity.internal_id,
+					entity_id: toEntity?.id || null,
+					internal_entity_id: toEntity?.internal_id || null,
 				},
 				logger: ctx.logger,
 			});

@@ -11,7 +11,6 @@ export const handleListCustomers = createRoute({
 		latest: ListCustomersQuerySchema,
 		[ApiVersion.V1_2]: ListCustomersQuerySchema,
 	},
-	query: ListCustomersQuerySchema,
 	resource: AffectedResource.Customer,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

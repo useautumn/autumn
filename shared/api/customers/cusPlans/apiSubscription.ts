@@ -19,6 +19,14 @@ export const ApiSubscriptionSchema = z.object({
 	current_period_start: z.number().nullable(),
 	current_period_end: z.number().nullable(),
 	quantity: z.number(),
+
+	// feature_quantities: z.array(
+	// 	z.object({
+	// 		feature_id: z.string(),
+	// 		quantity: z.number(),
+	// 		upcoming_quantity: z.number().nullable(),
+	// 	}),
+	// ),
 });
 
 export type ApiSubscription = z.infer<typeof ApiSubscriptionSchema>;

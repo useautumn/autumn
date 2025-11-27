@@ -1,4 +1,4 @@
-import type { CheckoutResponse, ProductV2 } from "@autumn/shared";
+import type { CheckoutResponseV0, ProductV2 } from "@autumn/shared";
 import { ArrowUpRightFromSquare } from "lucide-react";
 import { useAttachProductMutation } from "@/components/forms/attach-product/use-attach-product-mutation";
 import {
@@ -17,7 +17,7 @@ interface UpdateProductActionsProps {
 	customerId?: string;
 	entityId?: string;
 	onSuccess?: () => void;
-	previewData?: CheckoutResponse | null;
+	previewData?: CheckoutResponseV0 | null;
 	isPreviewLoading?: boolean;
 	version?: number;
 	form: UseAttachProductForm;

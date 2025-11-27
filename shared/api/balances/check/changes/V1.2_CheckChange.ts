@@ -65,7 +65,7 @@ export const V1_2_CheckChange = defineVersionChange({
 		const baseData = {
 			allowed: input.allowed,
 			customer_id: input.customer_id,
-			feature_id: featureToUse.id,
+			feature_id: input.balance?.feature_id ?? featureToUse.id,
 			entity_id: input.entity_id,
 			required_balance: input.required_balance,
 			code: "feature_found",

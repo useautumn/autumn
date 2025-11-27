@@ -28,12 +28,15 @@ if (process.env.AXIOM_TOKEN) {
 		resource: resource,
 		instrumentations: [
 			// Then add other auto-instrumentations
-			getNodeAutoInstrumentations(),
+			getNodeAutoInstrumentations({
+				"@opentelemetry/instrumentation-ioredis": {
+					enabled: false,
+				},
+			}),
 		],
 	});
 
 	// Starting the OpenTelemetry SDK to begin collecting telemetry data
 	console.log("Starting OpenTelemetry");
 	sdk.start();
-	console.log("OpenTelemetry started with IORedis instrumentation");
 }

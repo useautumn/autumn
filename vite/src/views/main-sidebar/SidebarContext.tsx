@@ -1,11 +1,16 @@
 import { createContext, useContext } from "react";
 
-export const SidebarContext = createContext<any>(null);
+interface SidebarContextType {
+	expanded: boolean;
+	setExpanded: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+export const SidebarContext = createContext<SidebarContextType | null>(null);
 
 export const useSidebarContext = () => {
 	const context = useContext(SidebarContext);
 
-	if (context === undefined) {
+	if (context === null) {
 		throw new Error(
 			"useSidebarContext must be used within a SidebarContextProvider",
 		);
