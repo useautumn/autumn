@@ -57,23 +57,15 @@ export const ProductsTable = ({
 				</Row>
 			) : (
 				!onboarding && (
-					<div
-						className={cn(
-							"flex flex-col justify-center items-center h-10 px-10 text-t3 min-h-[60vh] gap-4",
-							"justify-start items-start mt-3",
-							onboarding && "px-2 mt-4",
-						)}
-					>
+					<div className="flex justify-start items-center h-10 text-t3 text-sm px-10">
 						{queryStates.showArchivedProducts ? (
 							<span>You haven't archived any products yet.</span>
 						) : (
-							<>
-								<span>
-									Each product defines features your customers get access to and
-									how much they cost. Create separate products for any free
-									plans, paid plans and any add-on or top up products ☝️
-								</span>
-							</>
+							<span>
+								Each product defines features your customers get access to and
+								how much they cost. Create separate products for any free
+								plans, paid plans and any add-on or top up products ☝️
+							</span>
 						)}
 					</div>
 				)
