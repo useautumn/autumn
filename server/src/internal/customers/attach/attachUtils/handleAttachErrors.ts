@@ -1,5 +1,5 @@
 import {
-	type AttachBody,
+	type AttachBodyV0,
 	AttachBranch,
 	type AttachConfig,
 	BillingType,
@@ -166,7 +166,7 @@ export const handleAttachErrors = async ({
 	config,
 }: {
 	attachParams: AttachParams;
-	attachBody: AttachBody;
+	attachBody: AttachBodyV0;
 	branch: AttachBranch;
 	flags: AttachFlags;
 	config: AttachConfig;
