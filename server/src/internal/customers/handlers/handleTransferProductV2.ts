@@ -10,7 +10,6 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { nullish } from "@/utils/genUtils.js";
-import type { ExtendedRequest } from "../../../utils/models/Request.js";
 import { CusService } from "../CusService.js";
 import { CusProductService } from "../cusProducts/CusProductService.js";
 import { handleDecreaseAndTransfer } from "./handleTransferProduct/handleDecreaseAndTransfer.js";
@@ -34,7 +33,7 @@ export const handleTransferProductV2 = createRoute({
 		const { customer_id } = c.req.param();
 		const { from_entity_id, to_entity_id, product_id } = c.req.valid("json");
 
-		if(!from_entity_id && !to_entity_id) {
+		if (!from_entity_id && !to_entity_id) {
 			throw new RecaseError({
 				message: "Must specify atleast one of: from_entity_id, to_entity_id",
 			});
@@ -93,7 +92,7 @@ export const handleTransferProductV2 = createRoute({
 			throw new CusProductAlreadyExistsError({
 				productId: product_id,
 				entityId: toEntity?.id,
-				customerId: (from_entity_id && !to_entity_id) ? customer_id : undefined,
+				customerId: from_entity_id && !to_entity_id ? customer_id : undefined,
 			});
 		}
 
@@ -124,7 +123,7 @@ export const handleTransferProductV2 = createRoute({
 			});
 
 			await addProductsUpdatedWebhookTask({
-				req: ctx as ExtendedRequest,
+				ctx,
 				internalCustomerId: customer.internal_id,
 				org: ctx.org,
 				env: ctx.env,
@@ -135,7 +134,6 @@ export const handleTransferProductV2 = createRoute({
 					entity_id: toEntity?.id || null,
 					internal_entity_id: toEntity?.internal_id || null,
 				},
-				logger: ctx.logger,
 			});
 		}
 

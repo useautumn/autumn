@@ -12,7 +12,7 @@ import {
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { handleRenewProduct } from "../attach/attachFunctions/handleRenewProduct.js";
 import { handleScheduleFunction2 } from "../attach/attachFunctions/scheduleFlow/handleScheduleFlow2.js";
 import { handleUpgradeFlow } from "../attach/attachFunctions/upgradeFlow/handleUpgradeFlow.js";
@@ -24,19 +24,19 @@ import {
 } from "../cusProducts/cusProductUtils.js";
 
 export const handleCancelProduct = async ({
-	req,
+	ctx,
 	cusProduct, // cus product to expire
 	fullCus,
 	expireImmediately = true,
 	prorate,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	cusProduct: FullCusProduct;
 	fullCus: FullCustomer;
 	expireImmediately: boolean;
 	prorate: boolean;
 }) => {
-	const { org, env, logger } = req;
+	const { org, env, logger, features } = ctx;
 	logger.info("--------------------------------");
 	logger.info(
 		`🔔 Expiring cutomer product (${
@@ -68,8 +68,7 @@ export const handleCancelProduct = async ({
 		const product = cusProductToProduct({ cusProduct: curMainProduct! });
 
 		await handleRenewProduct({
-			req,
-			res: null,
+			ctx,
 			attachParams: {
 				stripeCli,
 				customer: fullCus,
@@ -84,7 +83,7 @@ export const handleCancelProduct = async ({
 				optionsList: curMainProduct?.options || [],
 				replaceables: [],
 				entities: fullCus.entities,
-				features: req.features,
+				features,
 			},
 			config: getDefaultAttachConfig(),
 		});
@@ -116,7 +115,7 @@ export const handleCancelProduct = async ({
 	// 2. If expire at cycle end, just cancel subscriptions
 	if (!expireImmediately && !isFree) {
 		const defaultProduct = await getDefaultProduct({
-			req,
+			ctx,
 			productGroup: product.group,
 		});
 
@@ -136,8 +135,7 @@ export const handleCancelProduct = async ({
 		}
 
 		await handleScheduleFunction2({
-			req,
-			res: null,
+			ctx,
 			attachParams: {
 				stripeCli,
 				customer: fullCus,
@@ -152,7 +150,7 @@ export const handleCancelProduct = async ({
 				optionsList: [],
 				replaceables: [],
 				entities: fullCus.entities,
-				features: req.features,
+				features,
 				fromCancel: true,
 			},
 			config: getDefaultAttachConfig(),
@@ -166,8 +164,7 @@ export const handleCancelProduct = async ({
 
 	// Cancel product immediately
 	await handleUpgradeFlow({
-		req,
-		res: null,
+		ctx,
 		attachParams: {
 			stripeCli,
 			customer: fullCus,
@@ -183,7 +180,7 @@ export const handleCancelProduct = async ({
 			optionsList: [],
 			replaceables: [],
 			entities: fullCus.entities,
-			features: req.features,
+			features,
 			fromCancel: true,
 		},
 		config: {
@@ -199,7 +196,7 @@ export const handleCancelProduct = async ({
 	// Activate default product
 	if (!product.is_add_on && !isOneOff(product.prices)) {
 		await activateDefaultProduct({
-			req,
+			ctx,
 			productGroup: cusProduct.product.group,
 			fullCus,
 			curCusProduct: cusProduct,

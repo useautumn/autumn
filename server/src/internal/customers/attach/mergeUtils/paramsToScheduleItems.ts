@@ -1,23 +1,26 @@
-import Stripe from "stripe";
-import { mergeNewScheduleItems } from "./mergeNewSubItems.js";
-import { getCusProductsToRemove } from "./paramsToSubItems.js";
-import { ItemSet } from "@/utils/models/ItemSet.js";
-import { AttachParams } from "../../cusProducts/AttachParams.js";
+import {
+	type AttachConfig,
+	cusProductToPrices,
+	type FullCusProduct,
+} from "@autumn/shared";
+import { differenceInDays } from "date-fns";
+import type Stripe from "stripe";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
-import { AttachConfig, FullCusProduct } from "@autumn/shared";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { cusProductToPrices } from "@autumn/shared";
-import { isArrearPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import {
 	priceToScheduleItem,
 	scheduleItemInCusProduct,
 } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
+import { isArrearPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { formatPrice } from "@/internal/products/prices/priceUtils.js";
-import { differenceInDays } from "date-fns";
 import { formatUnixToDateTime } from "@/utils/genUtils.js";
+import type { ItemSet } from "@/utils/models/ItemSet.js";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
+import type { AttachParams } from "../../cusProducts/AttachParams.js";
+import { mergeNewScheduleItems } from "./mergeNewSubItems.js";
+import { getQuantityToRemove } from "./mergeUtils.js";
+import { getCusProductsToRemove } from "./paramsToSubItems.js";
 import { mergeAdjacentPhasesWithSameItems } from "./phaseUtils/mergeSimilarPhases.js";
 import { preparePhasesForBillingPeriod } from "./phaseUtils/upsertNewPhase.js";
-import { getQuantityToRemove } from "./mergeUtils.js";
 
 export const removeCusProductFromScheduleItems = async ({
 	curScheduleItems,
@@ -92,7 +95,7 @@ export const removeCusProductFromScheduleItems = async ({
 
 			if (
 				itemSet?.subItems.some(
-					(si) => si.price == (existingScheduleItem.price as Stripe.Price)?.id,
+					(si) => si.price === (existingScheduleItem.price as Stripe.Price)?.id,
 				)
 			) {
 				continue;
@@ -151,7 +154,7 @@ const logScheduleItems = ({
 		for (const cusProduct of cusProducts) {
 			const prices = cusProductToPrices({ cusProduct });
 			const price = prices.find((p) => {
-				return p.config.stripe_price_id == item.price;
+				return p.config.stripe_price_id === item.price;
 			});
 
 			if (price) {
@@ -225,7 +228,8 @@ const computeUpdatedScheduleItems = async ({
 };
 
 export const paramsToScheduleItems = async ({
-	req,
+	// biome-ignore lint/correctness/noUnusedFunctionParameters: Might be used in the future
+	ctx,
 	sub,
 	schedule,
 	attachParams,
@@ -233,7 +237,7 @@ export const paramsToScheduleItems = async ({
 	removeCusProducts,
 	billingPeriodEnd,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	sub?: Stripe.Subscription;
 	schedule?: Stripe.SubscriptionSchedule;
 	attachParams: AttachParams;
@@ -241,14 +245,11 @@ export const paramsToScheduleItems = async ({
 	removeCusProducts?: FullCusProduct[];
 	billingPeriodEnd?: number;
 }) => {
-	const { logger } = req;
-
 	const itemSet = await getStripeSubItems2({
 		attachParams,
 		config,
 	});
 
-	let curScheduleItems: any[] = [];
 	let phaseIndex = -1;
 
 	if (billingPeriodEnd && schedule && schedule.phases.length > 1) {
