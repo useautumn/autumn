@@ -231,7 +231,7 @@ export const ConfigureStripe = () => {
 										<span className="text-muted-foreground">
 											{" "}
 											Visit the Stripe dashboard{" "}
-											
+											<a
 												href={dashboardUrl}
 												target="_blank"
 												rel="noopener noreferrer"
