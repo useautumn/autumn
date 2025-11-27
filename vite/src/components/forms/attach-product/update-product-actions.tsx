@@ -1,3 +1,4 @@
+import type { CheckoutResponse, ProductV2 } from "@autumn/shared";
 import { ArrowUpRightFromSquare } from "lucide-react";
 import { useAttachProductMutation } from "@/components/forms/attach-product/use-attach-product-mutation";
 import {
@@ -7,31 +8,36 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/v2/buttons/Button";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
-import { useAttachProductStore } from "@/hooks/stores/useSubscriptionStore";
 import { useEnv } from "@/utils/envUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
-import { useAttachPreview } from "./use-attach-preview";
+import type { UseAttachProductForm } from "./use-attach-product-form";
 
 interface UpdateProductActionsProps {
-	customerId: string;
+	product?: ProductV2;
+	customerId?: string;
 	entityId?: string;
 	onSuccess?: () => void;
-	isPreviewLoading: boolean;
+	previewData?: CheckoutResponse | null;
+	isPreviewLoading?: boolean;
+	version?: number;
+	form: UseAttachProductForm;
 }
 
 export function UpdateProductActions({
+	form,
+	product,
 	customerId,
 	entityId,
 	onSuccess,
+	previewData,
 	isPreviewLoading,
+	version,
 }: UpdateProductActionsProps) {
 	const { stripeAccount } = useOrgStripeQuery();
 	const env = useEnv();
-	const { data: previewData } = useAttachPreview();
-	const customizedProduct = useAttachProductStore((s) => s.customizedProduct);
 
 	const attachMutation = useAttachProductMutation({
-		customerId,
+		customerId: customerId ?? "",
 		successMessage: "Plan updated successfully",
 		onSuccess: () => {
 			onSuccess?.();
@@ -52,10 +58,12 @@ export function UpdateProductActions({
 
 		// Does the update
 		const result = await attachMutation.mutateAsync({
-			product: customizedProduct ?? undefined,
+			product,
 			entityId,
 			useInvoice,
 			enableProductImmediately,
+			prepaidOptions: form.state.values.prepaidOptions ?? undefined,
+			version,
 		});
 
 		// Handle checkout URLs and invoice links
@@ -74,7 +82,7 @@ export function UpdateProductActions({
 	const isLoading = attachMutation.isPending;
 
 	// Don't show buttons if preview is loading
-	if (isPreviewLoading || !customizedProduct) {
+	if (isPreviewLoading || !product) {
 		return null;
 	}
 

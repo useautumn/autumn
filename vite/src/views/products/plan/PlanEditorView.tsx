@@ -67,10 +67,6 @@ export default function PlanEditorView() {
 			<ConfirmNewVersionDialog
 				open={showNewVersionDialog}
 				setOpen={setShowNewVersionDialog}
-				onVersionCreated={() => {
-					// Reset sheet when new version is created
-					setSheet({ type: "edit-plan" });
-				}}
 			/>
 			<PlanEditor />
 		</ProductContext.Provider>

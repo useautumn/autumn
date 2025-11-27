@@ -71,11 +71,12 @@ export const handleTransferProductV2 = createRoute({
 					: nullish(cp.internal_entity_id)) && cp.product.id === product_id,
 		);
 
-		const toCusProduct = customer.customer_products.find(
-			(cp: any) =>
-				cp.internal_entity_id === toEntity.internal_id &&
-				cp.product.group === product.group,
-		);
+		const toCusProduct = customer.customer_products.find((cp: any) => {
+			const productMatch = cusProduct?.product.is_add_on
+				? cp.product.product_id === product.id
+				: cp.product.group === product.group;
+			return cp.internal_entity_id === toEntity.internal_id && productMatch;
+		});
 
 		if (toCusProduct) {
 			throw new CusProductAlreadyExistsError({

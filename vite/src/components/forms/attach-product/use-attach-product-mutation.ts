@@ -1,5 +1,6 @@
 import type { ProductV2 } from "@autumn/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 import { toast } from "sonner";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { CusService } from "@/services/customers/CusService";
@@ -73,7 +74,10 @@ export function useAttachProductMutation({
 			if (onError) {
 				onError(error);
 			} else {
-				toast.error("Failed to attach product");
+				toast.error(
+					(error as AxiosError<{ message: string }>)?.response?.data?.message ??
+						"Failed to attach product",
+				);
 				console.error(error);
 			}
 		},

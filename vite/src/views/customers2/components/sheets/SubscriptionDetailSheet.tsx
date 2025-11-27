@@ -16,6 +16,7 @@ import {
 	XCircle,
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
+import { useEffect } from "react";
 import { useNavigate } from "react-router";
 // import { Badge } from "@/components/v2/Badge";
 import { Button } from "@/components/v2/buttons/Button";
@@ -23,12 +24,13 @@ import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { SheetFooter } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { usePrepaidItems } from "@/hooks/stores/useProductStore";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import {
-	useAttachProductStore,
-	useSubscriptionById,
-} from "@/hooks/stores/useSubscriptionStore";
+	useHasChanges,
+	usePrepaidItems,
+	useProductStore,
+} from "@/hooks/stores/useProductStore";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
 import { cn } from "@/lib/utils";
 import { pushPage } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -42,19 +44,26 @@ export function SubscriptionDetailSheet() {
 	const itemId = useSheetStore((s) => s.itemId);
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const navigate = useNavigate();
-
+	const resetProductStore = useProductStore((s) => s.reset);
+	const sheetType = useSheetStore((s) => s.type);
 	// Get edited product from store
-	const customizedProduct = useAttachProductStore((s) => s.customizedProduct);
-	const editedCustomerProductId = useAttachProductStore(
-		(s) => s.customerProductId,
-	);
+	const hasChanges = useHasChanges();
+	const storeProduct = useProductStore((s) => s.product);
 
-	// Check if the edited product is for this subscription
-	const shouldShowEditedProduct =
-		customizedProduct && editedCustomerProductId === itemId;
+	// Check if there are changes in the product store
+	const shouldShowEditedProduct = hasChanges && !!storeProduct;
 
 	// Get customer product and productV2 by itemId
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
+
+	useEffect(() => {
+		if (
+			sheetType !== "subscription-detail" &&
+			sheetType !== "subscription-update"
+		) {
+			resetProductStore();
+		}
+	}, [sheetType, resetProductStore]);
 
 	// Check for prepaid items in the product (must be called before any returns)
 	const prepaidItems = usePrepaidItems({ product: productV2 ?? undefined });
@@ -248,70 +257,72 @@ export function SubscriptionDetailSheet() {
 				)}
 
 				{/* Edited Plan Items - Show pending changes */}
-				{shouldShowEditedProduct && customizedProduct.items.length > 0 && (
-					<SheetSection title="Edited Plan Items (Pending)">
-						<div className="space-y-2">
-							<div className="flex items-center gap-2 mb-2 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
-								<Info size={16} weight="duotone" className="text-blue-600" />
-								<span className="text-xs text-t2">
-									These changes are pending and will be applied when you save.
-								</span>
-							</div>
-							{customizedProduct.items.map((item, index) => {
-								const display = getProductItemDisplay({
-									item,
-									features,
-									currency: org?.default_currency || "USD",
-									fullDisplay: true,
-									amountFormatOptions: { currencyDisplay: "narrowSymbol" },
-								});
+				{shouldShowEditedProduct &&
+					storeProduct &&
+					storeProduct.items.length > 0 && (
+						<SheetSection title="Edited Plan Items (Pending)">
+							<div className="space-y-2">
+								<div className="flex items-center gap-2 mb-2 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+									<Info size={16} weight="duotone" className="text-blue-600" />
+									<span className="text-xs text-t2">
+										These changes are pending and will be applied when you save.
+									</span>
+								</div>
+								{storeProduct.items.map((item, index) => {
+									const display = getProductItemDisplay({
+										item,
+										features,
+										currency: org?.default_currency || "USD",
+										fullDisplay: true,
+										amountFormatOptions: { currencyDisplay: "narrowSymbol" },
+									});
 
-								const isFeatureItem =
-									item.type === ProductItemType.Feature ||
-									item.type === ProductItemType.FeaturePrice;
+									const isFeatureItem =
+										item.type === ProductItemType.Feature ||
+										item.type === ProductItemType.FeaturePrice;
 
-								// Find prepaid quantity from cusProduct.options
-								const prepaidOption = cusProduct?.options?.find(
-									(opt: FeatureOptions) => opt.feature_id === item.feature_id,
-								);
-								const prepaidQuantity = prepaidOption
-									? prepaidOption.quantity / (item.billing_units || 1)
-									: null;
+									// Find prepaid quantity from cusProduct.options
+									const prepaidOption = cusProduct?.options?.find(
+										(opt: FeatureOptions) => opt.feature_id === item.feature_id,
+									);
+									const prepaidQuantity = prepaidOption
+										? prepaidOption.quantity / (item.billing_units || 1)
+										: null;
 
-								return (
-									<div
-										key={item.feature_id || item.price_id || index}
-										className="flex items-start gap-2 p-2 rounded-lg bg-blue-500/5 border border-blue-500/20"
-									>
-										<CheckCircle
-											size={16}
-											weight="fill"
-											className={cn(
-												"text-blue-600 mt-0.5 shrink-0",
-												!isFeatureItem && "opacity-0",
-											)}
-										/>
-										<div className="flex-1 min-w-0">
-											<div className="text-sm font-medium text-t1 flex items-center gap-2 flex-wrap">
-												<span>{display.primary_text}</span>
-												{prepaidQuantity !== null && (
-													<span className="text-t3 bg-background/50 rounded-sm px-2 py-0.5 text-xs font-normal">
-														Qty: {prepaidQuantity}
-													</span>
+									return (
+										<div
+											key={item.feature_id || item.price_id || index}
+											className="flex items-start gap-2 p-2 rounded-lg bg-blue-500/5 border border-blue-500/20"
+										>
+											<CheckCircle
+												size={16}
+												weight="fill"
+												className={cn(
+													"text-blue-600 mt-0.5 shrink-0",
+													!isFeatureItem && "opacity-0",
+												)}
+											/>
+											<div className="flex-1 min-w-0">
+												<div className="text-sm font-medium text-t1 flex items-center gap-2 flex-wrap">
+													<span>{display.primary_text}</span>
+													{prepaidQuantity !== null && (
+														<span className="text-t3 bg-background/50 rounded-sm px-2 py-0.5 text-xs font-normal">
+															Qty: {prepaidQuantity}
+														</span>
+													)}
+												</div>
+												{display.secondary_text && (
+													<div className="text-xs text-t3 mt-0.5">
+														{display.secondary_text}
+													</div>
 												)}
 											</div>
-											{display.secondary_text && (
-												<div className="text-xs text-t3 mt-0.5">
-													{display.secondary_text}
-												</div>
-											)}
 										</div>
-									</div>
-								);
-							})}
-						</div>
-					</SheetSection>
-				)}
+									);
+								})}
+							</div>
+						</SheetSection>
+					)}
 
 				{/* Pricing Summary */}
 				<SheetSection title="Pricing">
@@ -385,10 +396,7 @@ export function SubscriptionDetailSheet() {
 							<PencilSimple size={16} weight="duotone" />
 							Edit Plan
 						</Button>
-						<UpdatePlanButton
-							cusProduct={cusProduct}
-							customizedProduct={customizedProduct}
-						/>
+						<UpdatePlanButton cusProduct={cusProduct} />
 					</>
 				) : (
 					<>

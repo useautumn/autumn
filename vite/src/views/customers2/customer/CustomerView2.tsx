@@ -5,11 +5,9 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
+import { useHasChanges } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import {
-	useAttachProductStore,
-	useEntity,
-} from "@/hooks/stores/useSubscriptionStore";
+import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { pushPage } from "@/utils/genUtils";
 import ErrorScreen from "@/views/general/ErrorScreen";
 import LoadingScreen from "@/views/general/LoadingScreen";
@@ -37,7 +35,7 @@ export default function CustomerView2() {
 	const closeSheet = useCustomerBalanceSheetStore((s) => s.closeSheet);
 	const sheetType = useSheetStore((s) => s.type);
 	const closeProductSheet = useSheetStore((s) => s.closeSheet);
-	const customizedProduct = useAttachProductStore((s) => s.customizedProduct);
+	const hasChanges = useHasChanges();
 
 	// Close modal on mount
 	useEffect(() => {
@@ -123,10 +121,10 @@ export default function CustomerView2() {
 									initial={{ opacity: 0 }}
 									animate={{ opacity: 1 }}
 									exit={{ opacity: 0 }}
-									className="fixed inset-0 bg-background/90"
+									className="fixed inset-0 bg-background/60"
 									style={{ zIndex: 40 }}
 									onMouseDown={() => {
-										!customizedProduct && closeProductSheet();
+										!hasChanges && closeProductSheet();
 									}}
 								/>
 							)}

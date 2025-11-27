@@ -1,15 +1,14 @@
+import type { CheckoutResponse } from "@autumn/shared";
 import type { ReactNode } from "react";
-import {
-	useHasChanges,
-	useIsLatestVersion,
-} from "@/hooks/stores/useProductStore";
+import { useIsLatestVersion } from "@/hooks/stores/useProductStore";
 import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
-import { useAttachPreview } from "./use-attach-preview";
 
-export const AttachConfirmationInfo = () => {
-	const { data: previewData } = useAttachPreview();
-	const hasChanges = useHasChanges();
+export const AttachConfirmationInfo = ({
+	previewData,
+}: {
+	previewData?: CheckoutResponse | null;
+}) => {
 	const isLatestVersion = useIsLatestVersion(previewData?.product);
 
 	const renderInfoBoxes = (): ReactNode[] => {
@@ -17,14 +16,6 @@ export const AttachConfirmationInfo = () => {
 
 		if (!previewData) {
 			return boxes;
-		}
-		console.log("hasChanges", hasChanges);
-		if (hasChanges) {
-			boxes.push(
-				<InfoBox key="changes" variant="success">
-					This plan has been customized for this customer
-				</InfoBox>,
-			);
 		}
 
 		if (!isLatestVersion) {
@@ -78,13 +69,14 @@ export const AttachConfirmationInfo = () => {
 				| "upgrade"
 				| "downgrade"
 				| "cancel"
+				| "new"
 				| string;
 
 			switch (scenario) {
 				case "upgrade":
 					boxes.push(
 						<InfoBox key="product-upgrade" variant="note">
-							This upgrade will replace the customer's current plan:{" "}
+							This upgrade will immediately replace the customer's current plan:{" "}
 							{previewData.current_product.name}
 						</InfoBox>,
 					);
@@ -105,11 +97,10 @@ export const AttachConfirmationInfo = () => {
 						</InfoBox>,
 					);
 					break;
-				default:
+				case "new":
 					boxes.push(
-						<InfoBox key="product-switch" variant="info">
-							This will replace the customer's current plan:{" "}
-							{previewData.current_product.name}
+						<InfoBox key="new-product" variant="info">
+							This will be enabled alongside existing plans{" "}
 						</InfoBox>,
 					);
 			}

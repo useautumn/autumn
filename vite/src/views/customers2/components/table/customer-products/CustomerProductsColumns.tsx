@@ -1,6 +1,6 @@
 import { type FullCusProduct, isTrialing } from "@autumn/shared";
 import type { Row, Table } from "@tanstack/react-table";
-import { Delete } from "lucide-react";
+import { ArrowRightLeft, Delete } from "lucide-react";
 import { TableDropdownMenuCell } from "@/components/general/table/table-dropdown-menu-cell";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { createDateTimeColumn } from "@/views/customers2/utils/ColumnHelpers";
@@ -68,12 +68,25 @@ export const CustomerProductsColumns = [
 		}) => {
 			const meta = table.options.meta as {
 				onCancelClick?: (product: FullCusProduct) => void;
+				onTransferClick?: (product: FullCusProduct) => void;
+				hasEntities?: boolean;
 			};
 
 			if (!meta?.onCancelClick) return null;
 
 			return (
 				<TableDropdownMenuCell>
+					{meta.hasEntities && meta.onTransferClick && (
+						<DropdownMenuItem
+							className="flex items-center gap-2 text-xs"
+							onClick={(e) => {
+								e.stopPropagation();
+								meta.onTransferClick?.(row.original);
+							}}
+						>
+							<ArrowRightLeft size={16} /> Transfer
+						</DropdownMenuItem>
+					)}
 					<DropdownMenuItem
 						className="flex items-center gap-2 text-xs text-red-500 dark:text-red-400"
 						onClick={(e) => {

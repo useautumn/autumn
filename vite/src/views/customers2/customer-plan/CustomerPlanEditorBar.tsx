@@ -8,7 +8,6 @@ import {
 	useProductStore,
 } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { useAttachProductStore } from "@/hooks/stores/useSubscriptionStore";
 import { pushPage } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCusProductQuery } from "@/views/customers/customer/product/hooks/useCusProductQuery";
@@ -24,9 +23,6 @@ export const CustomerPlanEditorBar = () => {
 	const { customer } = useCusQuery();
 	const hasChanges = useHasChanges();
 	const isLatestVersion = useIsLatestVersion(product);
-	const setCustomizedProduct = useAttachProductStore(
-		(s) => s.setCustomizedProduct,
-	);
 	const { type: sheetType } = useSheetStore();
 
 	const [queryStates, setQueryStates] = useQueryStates({
@@ -72,23 +68,16 @@ export const CustomerPlanEditorBar = () => {
 			{ history: "replace" },
 		);
 	};
+	if (sheetType) return null;
 
 	if (!changesMade) {
 		return <GoBackBar returnToCustomer={returnToCustomer} />;
 	}
 
-	// const selectedEntity = useSelectedEntity();
-
 	const handleSaveClicked = async () => {
-		setCustomizedProduct({
-			product,
-			customer_product_id: queryStates.id || null,
-		});
+		// Product is already in store, just navigate back
 		returnToCustomer();
 	};
-
-	if (sheetType) return null;
-	if (isLoading) return null;
 
 	// if (!hasChanges && activeVersion === product.version) {
 	// 	return null;

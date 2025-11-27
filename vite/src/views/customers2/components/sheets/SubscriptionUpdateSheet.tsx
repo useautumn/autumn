@@ -1,140 +1,149 @@
-import type { FrontendProduct } from "@autumn/shared";
+import type { FullCusProduct, ProductV2 } from "@autumn/shared";
 import { ArrowLeft } from "@phosphor-icons/react";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { UpdateProductActions } from "@/components/forms/attach-product/update-product-actions";
 import { UpdateProductPrepaidOptions } from "@/components/forms/attach-product/update-product-prepaid-options";
 import { UpdateProductSummary } from "@/components/forms/attach-product/update-product-summary";
 import { useAttachPreview } from "@/components/forms/attach-product/use-attach-preview";
-import { useAttachProductForm } from "@/components/forms/attach-product/use-attach-product-form";
+import {
+	type UseAttachProductForm,
+	useAttachProductForm,
+} from "@/components/forms/attach-product/use-attach-product-form";
 import { FormWrapper } from "@/components/general/form/form-wrapper";
 import { Button } from "@/components/v2/buttons/Button";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
-import { usePrepaidItems } from "@/hooks/stores/useProductStore";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import {
-	useAttachProductStore,
-	useSubscriptionById,
-} from "@/hooks/stores/useSubscriptionStore";
+	usePrepaidItems,
+	useProductStore,
+} from "@/hooks/stores/useProductStore";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 
-export function SubscriptionUpdateSheet() {
+const FormContent = ({
+	productV2,
+	cusProduct,
+	form,
+	initialPrepaidOptions,
+}: {
+	productV2: ProductV2;
+	cusProduct: FullCusProduct;
+	form: UseAttachProductForm;
+	initialPrepaidOptions: Record<string, number>;
+}) => {
 	const { customer } = useCusQuery();
-	const itemId = useSheetStore((s) => s.itemId);
-	const setSheet = useSheetStore((s) => s.setSheet);
+	const customerId = customer?.id;
+	const storeProduct = useProductStore((s) => s.product);
+	const product = storeProduct?.id ? storeProduct : (productV2 ?? undefined);
+	const entityId = cusProduct?.entity_id ?? undefined;
+	const prepaidItems = usePrepaidItems({ product });
 
-	// Get edited product from store
-	const customizedProduct = useAttachProductStore((s) => s.customizedProduct);
-	const setCustomerId = useAttachProductStore((s) => s.setCustomerId);
-	const setFormValues = useAttachProductStore((s) => s.setFormValues);
-	const setProductId = useAttachProductStore((s) => s.setProductId);
-	const productId = useAttachProductStore((s) => s.productId);
-	const setCustomizedProduct = useAttachProductStore(
-		(s) => s.setCustomizedProduct,
+	const prepaidOptions = form.state.values.prepaidOptions;
+
+	const previewQuery = useAttachPreview({
+		customerId,
+		product,
+		entityId,
+		prepaidOptions: prepaidOptions ?? undefined,
+		version: product?.version,
+	});
+
+	if (prepaidItems.length > 0) {
+		const hasUnsetPrepaidQuantity = prepaidItems.some((item) => {
+			const quantity = prepaidOptions?.[item.feature_id as string];
+			return quantity === undefined || quantity === null;
+		});
+
+		if (hasUnsetPrepaidQuantity) {
+			return null;
+		}
+
+		// Check if there are any changes from initial values
+		const hasQuantityChanges = prepaidItems.some((item) => {
+			const currentQuantity = prepaidOptions?.[item.feature_id as string];
+			const initialQuantity = initialPrepaidOptions[item.feature_id as string];
+			return currentQuantity !== initialQuantity;
+		});
+
+		if (!hasQuantityChanges && !storeProduct?.id) {
+			return null;
+		}
+	}
+
+	return (
+		<>
+			<UpdateProductSummary
+				previewData={previewQuery.data}
+				isLoading={previewQuery.isLoading}
+				product={product}
+			/>
+			<UpdateProductActions
+				product={product}
+				customerId={customerId}
+				entityId={entityId}
+				previewData={previewQuery.data}
+				isPreviewLoading={previewQuery.isLoading}
+				form={form}
+			/>
+		</>
+	);
+};
+
+function SheetContent({
+	cusProduct,
+	productV2,
+
+	itemId,
+}: {
+	cusProduct: FullCusProduct;
+	productV2: ProductV2;
+	itemId: string | null;
+}) {
+	const setSheet = useSheetStore((s) => s.setSheet);
+	const storeProduct = useProductStore((s) => s.product);
+
+	const form = useAttachProductForm({
+		initialProductId: cusProduct?.product.id ?? undefined,
+	});
+
+	// Memoize initial prepaid options from cusProduct
+	const initialPrepaidOptions = useMemo(
+		() =>
+			cusProduct.options.reduce(
+				(acc, option) => {
+					acc[option.feature_id] = option.quantity;
+					return acc;
+				},
+				{} as Record<string, number>,
+			),
+		[cusProduct.options],
 	);
 
-	const { cusProduct, productV2: product } = useSubscriptionById({ itemId });
+	const product = storeProduct?.id ? storeProduct : (productV2 ?? undefined);
+	const prepaidItems = usePrepaidItems({ product });
 
-	setProductId(cusProduct?.product.id ?? "");
+	// This gets the prepaid items from the product, sees if there are existing quantities from the cusProduct/subscription, and sets them if so
+	useEffect(() => {
+		// Build prepaid options based on current product's prepaid items
+		const newPrepaidOptions = prepaidItems.reduce(
+			(acc, item) => {
+				const featureId = item.feature_id as string;
+				// Use initial value if this feature existed in original, otherwise undefined
+				acc[featureId] = initialPrepaidOptions[featureId] ?? undefined;
+				return acc;
+			},
+			{} as Record<string, number | undefined>,
+		);
 
-	const { isLoading: isPreviewLoading } = useAttachPreview();
+		form.setFieldValue(
+			"prepaidOptions",
+			newPrepaidOptions as Record<string, number>,
+		);
+	}, [prepaidItems, initialPrepaidOptions, form]);
 
 	const handleBackToDetail = () => {
 		setSheet({ type: "subscription-detail", itemId });
-
-		setCustomizedProduct({
-			product: product as unknown as FrontendProduct,
-		});
 	};
-	const form = useAttachProductForm({
-		initialProductId: cusProduct?.id ?? undefined,
-	});
-
-	useEffect(() => {
-		if (!customer?.id && !customer?.internal_id) return;
-
-		const customerId = customer.id || customer.internal_id;
-		setCustomerId(customerId);
-
-		// Subscribe to form changes
-		const subscription = form.store.subscribe(() => {
-			const values = form.store.state.values;
-
-			// Sync form values to store
-			setFormValues({
-				productId: values.productId ?? productId,
-				prepaidOptions: values.prepaidOptions ?? {},
-			});
-		});
-
-		return () => subscription();
-	}, [customer, form.store, setCustomerId, setFormValues, productId]);
-	// const cusProduct = useMemo(() => {
-	// 	if (!itemId || !customer?.customer_products) return null;
-	// 	return customer.customer_products.find(
-	// 		(p: FullCusProduct) =>
-	// 			p.id === itemId || p.internal_product_id === itemId,
-	// 	);
-	// }, [itemId, customer?.customer_products]);
-
-	// const entity = customer?.entities?.find(
-	// 	(e: Entity) =>
-	// 		e.internal_id === cusProduct?.internal_entity_id ||
-	// 		e.id === cusProduct?.entity_id,
-	// );
-
-	// const customerId = customer?.id || customer?.internal_id;
-	// const entityId = entity ? entity.id || entity.internal_id : undefined;
-
-	// Get prepaid items from the customized product
-	const prepaidItems = usePrepaidItems({
-		product: product ?? undefined,
-	});
-
-	// Create form with prepopulated values
-
-	// Initialize store and form on mount
-	// useEffect(() => {
-	// 	if (customerId && customizedProduct) {
-	// 		setCustomerId(customerId);
-	// 		setFormValues({
-	// 			productId: customizedProduct.id,
-	// 			prepaidOptions: initialPrepaidOptions,
-	// 		});
-
-	// 		// Set form values
-	// 		form.setFieldValue("productId", customizedProduct.id);
-	// 		form.setFieldValue("prepaidOptions", initialPrepaidOptions);
-	// 	}
-	// }, [
-	// 	customerId,
-	// 	customizedProduct,
-	// 	setCustomerId,
-	// 	setFormValues,
-	// 	initialPrepaidOptions,
-	// ]);
-
-	// Sync form changes to store
-
-	if (!cusProduct) {
-		return (
-			<div className="flex flex-col h-full">
-				<SheetHeader
-					title="Update Plan"
-					description="Loading plan information..."
-				>
-					<Button
-						variant="skeleton"
-						size="sm"
-						onClick={handleBackToDetail}
-						className="mt-2 w-fit"
-					>
-						<ArrowLeft size={16} />
-						Back to Details
-					</Button>
-				</SheetHeader>
-			</div>
-		);
-	}
 
 	return (
 		<FormWrapper form={form}>
@@ -155,22 +164,87 @@ export function SubscriptionUpdateSheet() {
 				</SheetHeader>
 
 				<div className="flex-1 overflow-y-auto">
-					{prepaidItems.length > 0 && (
-						<SheetSection title="Prepaid Quantities" withSeparator={false}>
-							<UpdateProductPrepaidOptions form={form} />
-						</SheetSection>
-					)}
-					<UpdateProductSummary />
-					<UpdateProductActions
-						customerId={customer?.id || customer?.internal_id}
-						entityId={cusProduct.entity_id ?? undefined}
-						isPreviewLoading={isPreviewLoading}
-					/>
+					<form.Subscribe
+						selector={(state) => ({
+							prepaidOptions: state.values.prepaidOptions,
+						})}
+					>
+						{() => (
+							<>
+								{prepaidItems.length > 0 && (
+									<SheetSection
+										title="Prepaid Quantities"
+										withSeparator={false}
+									>
+										<UpdateProductPrepaidOptions form={form} />
+									</SheetSection>
+								)}
+								<FormContent
+									productV2={productV2}
+									cusProduct={cusProduct}
+									form={form}
+									initialPrepaidOptions={initialPrepaidOptions}
+								/>
+							</>
+						)}
+					</form.Subscribe>
 				</div>
 			</div>
 		</FormWrapper>
 	);
 }
-function resetProductStore() {
-	throw new Error("Function not implemented.");
+
+export function SubscriptionUpdateSheet() {
+	const itemId = useSheetStore((s) => s.itemId);
+	const setSheet = useSheetStore((s) => s.setSheet);
+
+	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
+
+	const entityId = cusProduct?.entity_id ?? undefined;
+	const sheetType = useSheetStore((s) => s.type);
+	const resetProductStore = useProductStore((s) => s.reset);
+
+	useEffect(() => {
+		if (
+			sheetType !== "subscription-detail" &&
+			sheetType !== "subscription-update"
+		) {
+			resetProductStore();
+		}
+	}, [sheetType, resetProductStore]);
+
+	// Load subscription's product into store on mount
+
+	if (!cusProduct) {
+		return (
+			<div className="flex flex-col h-full">
+				<SheetHeader
+					title="Update Plan"
+					description="Loading plan information..."
+				>
+					<Button
+						variant="skeleton"
+						size="sm"
+						onClick={() => setSheet({ type: "subscription-detail", itemId })}
+						className="mt-2 w-fit"
+					>
+						<ArrowLeft size={16} />
+						Back to Details
+					</Button>
+				</SheetHeader>
+			</div>
+		);
+	}
+
+	if (!productV2) {
+		return null;
+	}
+
+	return (
+		<SheetContent
+			cusProduct={cusProduct}
+			productV2={productV2}
+			itemId={itemId}
+		/>
+	);
 }

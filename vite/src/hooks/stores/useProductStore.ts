@@ -103,7 +103,12 @@ export const useHasBillingChanges = ({
 			features,
 		});
 
-		return !comparison.onlyEntsChanged;
+		console.log("comparison", comparison);
+
+		const hasBillingChanges =
+			!comparison.onlyEntsChanged || !comparison.freeTrialsSame;
+
+		return hasBillingChanges;
 	}, [baseProduct, newProduct, features]);
 };
 
@@ -219,7 +224,6 @@ export const useSetCurrentItem = () => {
 
 /**
  * Hook to check if the current product is the latest version.
- * Checks customizedProduct first, then fallbacks to product from store.
  */
 export const useIsLatestVersion = (product: FrontendProduct) => {
 	const { products = [] } = useProductsQuery();

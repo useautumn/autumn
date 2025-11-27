@@ -1,14 +1,12 @@
 import type { CheckoutResponse, ProductV2 } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { useAttachProductStore } from "@/hooks/stores/useSubscriptionStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useAttachBodyBuilder } from "./use-attach-body-builder";
 
 interface AttachPreviewParams {
-	// Override store values
+	// Required params - no fallbacks
 	customerId?: string;
-	productId?: string;
 	product?: ProductV2;
 	entityId?: string;
 	prepaidOptions?: Record<string, number>;
@@ -21,38 +19,25 @@ interface AttachPreviewParams {
 export function useAttachPreview(params: AttachPreviewParams = {}) {
 	const axiosInstance = useAxiosInstance();
 
-	// Get form values from store (can be overridden by params)
-	const storeCustomerId = useAttachProductStore((s) => s.customerId);
-	const storeProductId = useAttachProductStore((s) => s.productId);
-	const storePrepaidOptions = useAttachProductStore((s) => s.prepaidOptions);
-
-	// Use params if provided, otherwise fall back to store
-	const customerId = params.customerId ?? storeCustomerId;
-	const productId = params.productId ?? storeProductId;
-	const prepaidOptions = params.prepaidOptions ?? storePrepaidOptions;
-
-	// Build attach body using shared hook
+	// Build attach body using shared hook with explicit params
 	const { attachBody } = useAttachBodyBuilder({
-		customerId: customerId ?? undefined,
-		productId: productId ?? undefined,
-		product: params.product, //customizedProduct is accessed within the hook, but can be overridden here
+		customerId: params.customerId,
+		product: params.product,
 		entityId: params.entityId,
-		prepaidOptions: prepaidOptions ?? undefined,
+		prepaidOptions: params.prepaidOptions,
 		version: params.version,
 	});
-
-	console.log("attachBody", attachBody);
 
 	// Auto-enable if not explicitly set and all required data is present
 	const shouldEnable =
 		params.enabled !== undefined
 			? params.enabled
-			: !!(customerId && (productId || params.product) && attachBody);
+			: !!(params.customerId && params.product && attachBody);
 
 	// Create a stable serialized key from attachBody (which already captures all dependencies)
 	const queryKeyDeps = useMemo(() => JSON.stringify(attachBody), [attachBody]);
 
-	// Debounce the query key to delay API calls by 200ms
+	// Debounce the query key to delay API calls by 150ms
 	const [debouncedQueryKey, setDebouncedQueryKey] = useState(queryKeyDeps);
 
 	useEffect(() => {
@@ -65,7 +50,7 @@ export function useAttachPreview(params: AttachPreviewParams = {}) {
 	return useQuery({
 		queryKey: ["attach-checkout", debouncedQueryKey],
 		queryFn: async () => {
-			if (!attachBody || !customerId) {
+			if (!attachBody || !params.customerId) {
 				return null;
 			}
 

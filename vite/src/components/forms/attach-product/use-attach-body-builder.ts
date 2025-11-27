@@ -1,11 +1,8 @@
 import type { ProductV2 } from "@autumn/shared";
 import { useMemo } from "react";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { useHasChanges } from "@/hooks/stores/useProductStore";
-import {
-	useAttachProductStore,
-	useEntity,
-} from "@/hooks/stores/useSubscriptionStore";
+import { useHasChanges, useProductStore } from "@/hooks/stores/useProductStore";
+import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { getAttachBody } from "@/views/customers/customer/product/components/attachProductUtils";
 
 interface AttachBodyBuilderParams {
@@ -20,30 +17,35 @@ interface AttachBodyBuilderParams {
 }
 
 /**
- * Shared hook to build attach body from various sources (params, store, products list)
+ * Shared hook to build attach body from explicit params
  * Used by both useAttachPreview and useAttachProductMutation to keep logic DRY
  */
 export function useAttachBodyBuilder(params: AttachBodyBuilderParams = {}) {
 	const { products } = useProductsQuery();
-	const customizedProduct = useAttachProductStore((s) => s.customizedProduct);
 	const hasChanges = useHasChanges();
+	const storeProduct = useProductStore((s) => s.product);
 	const { entityId: storeEntityId } = useEntity();
-	const storeProductId = useAttachProductStore((s) => s.productId);
 
 	// Memoized builder function that can be called with runtime params
 	const buildAttachBody = useMemo(
 		() => (runtimeParams?: AttachBodyBuilderParams) => {
 			const mergedParams = { ...params, ...runtimeParams };
 
-			// Resolve the product: use provided product, or customized product from store, or find by ID
+			// Resolve the product: use provided product or find by ID
 			const product =
 				mergedParams.product ||
-				customizedProduct ||
 				products.find((p) => p.id === mergedParams.productId);
 
 			if (!product || !mergedParams.customerId) {
 				return null;
 			}
+
+			// Determine if this is a custom product (from store with changes)
+			const isCustom =
+				hasChanges && !!storeProduct?.id && product === storeProduct
+					? true
+					: undefined;
+			const version = storeProduct?.id ? storeProduct.version : undefined;
 
 			// Convert prepaidOptions to options array
 			const options = mergedParams.prepaidOptions
@@ -61,13 +63,13 @@ export function useAttachBodyBuilder(params: AttachBodyBuilderParams = {}) {
 				product,
 				entityId: mergedParams.entityId ?? storeEntityId ?? undefined,
 				optionsInput: options.length > 0 ? options : undefined,
-				isCustom: !!customizedProduct,
-				version: mergedParams.version ?? product.version,
+				isCustom,
+				version,
 				useInvoice: mergedParams.useInvoice,
 				enableProductImmediately: mergedParams.enableProductImmediately,
 			});
 		},
-		[customizedProduct, products, hasChanges, storeEntityId, params],
+		[products, hasChanges, storeProduct, storeEntityId, params],
 	);
 
 	// For simple usage, return the built body with current params

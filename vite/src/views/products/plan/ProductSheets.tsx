@@ -75,8 +75,8 @@ export const ProductSheets = () => {
 				return <NewFeatureSheet />;
 			case "select-feature":
 				return <SelectFeatureSheet />;
-			default:
-				return <EditPlanSheet />;
+			// default:
+			// 	return <EditPlanSheet />;
 		}
 	};
 

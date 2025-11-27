@@ -1,11 +1,10 @@
-import type { FullCusProduct, ProductV2 } from "@autumn/shared";
+import type { FullCusProduct } from "@autumn/shared";
 import { CheckCircle } from "@phosphor-icons/react";
 import { Button } from "@/components/v2/buttons/Button";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 
 interface UpdatePlanButtonProps {
 	cusProduct: FullCusProduct;
-	customizedProduct: ProductV2;
 }
 
 export function UpdatePlanButton({ cusProduct }: UpdatePlanButtonProps) {

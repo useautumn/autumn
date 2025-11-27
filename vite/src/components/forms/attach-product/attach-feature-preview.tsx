@@ -1,4 +1,9 @@
-import type { FullCusProduct, ProductItem } from "@autumn/shared";
+import type {
+	CheckoutResponse,
+	FullCusEntWithFullCusProduct,
+	FullCusProduct,
+	ProductItem,
+} from "@autumn/shared";
 import { getCusEntBalance, ProductItemFeatureType } from "@autumn/shared";
 import { useMemo } from "react";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -6,7 +11,6 @@ import {
 	deduplicateEntitlements,
 	flattenCustomerEntitlements,
 } from "@/views/customers2/components/table/customer-feature-usage/customerFeatureUsageUtils";
-import { useAttachPreview } from "./use-attach-preview";
 
 interface FeatureBalanceChange {
 	featureId: string;
@@ -20,9 +24,12 @@ interface FeatureBalanceChange {
 	};
 }
 
-export function AttachFeaturePreview({ customerId }: { customerId: string }) {
-	const { customer } = useCusQuery({ enabled: !!customerId });
-	const { data: previewData } = useAttachPreview();
+export function AttachFeaturePreview({
+	previewData,
+}: {
+	previewData?: CheckoutResponse | null;
+}) {
+	const { customer } = useCusQuery();
 
 	const featureChanges = useMemo((): FeatureBalanceChange[] => {
 		if (!previewData?.product || !customer) return [];
@@ -91,7 +98,14 @@ export function AttachFeaturePreview({ customerId }: { customerId: string }) {
 				]),
 		);
 
-		const newFeaturesMap = new Map(
+		const newFeaturesMap = new Map<
+			string,
+			{
+				includedUsage: number;
+				feature: ProductItem["feature"];
+				display: Record<string, unknown>;
+			}
+		>(
 			newFeatureItems
 				.filter((item: ProductItem) => item.feature_id)
 				.map((item: ProductItem) => [
@@ -99,7 +113,7 @@ export function AttachFeaturePreview({ customerId }: { customerId: string }) {
 					{
 						includedUsage: item.included_usage || 0,
 						feature: item.feature,
-						display: item.feature?.display || {},
+						display: (item.feature?.display as Record<string, unknown>) || {},
 					},
 				]),
 		);
@@ -113,14 +127,18 @@ export function AttachFeaturePreview({ customerId }: { customerId: string }) {
 		const changes: FeatureBalanceChange[] = [];
 
 		for (const featureId of allFeatureIds) {
-			const currentIncludedUsage = currentFeaturesMap.get(featureId);
-			const newFeatureData = newFeaturesMap.get(featureId);
-			const currentBalanceData = currentBalanceMap.get(featureId);
+			const featureIdStr = String(featureId);
+			const currentIncludedUsage = currentFeaturesMap.get(featureIdStr);
+			const newFeatureData = newFeaturesMap.get(featureIdStr);
+			const currentBalanceData = currentBalanceMap.get(featureIdStr);
 
 			// Use actual current balance if available, otherwise use included usage from product
-			const currentBalance =
-				currentBalanceData?.balance ?? currentIncludedUsage ?? null;
-			const newBalance = newFeatureData?.includedUsage ?? null;
+			const currentBalance: number | null =
+				currentBalanceData?.balance ??
+				(typeof currentIncludedUsage === "number"
+					? currentIncludedUsage
+					: null);
+			const newBalance: number | null = newFeatureData?.includedUsage ?? null;
 
 			// Determine status
 			let status: "changed" | "added" | "removed";
@@ -133,24 +151,25 @@ export function AttachFeaturePreview({ customerId }: { customerId: string }) {
 			}
 
 			// Get feature name and display info
-			let featureName = "";
-			let display = {};
-
-			if (newFeatureData?.feature) {
-				featureName = newFeatureData.feature.name;
-				display = newFeatureData.display;
-			} else if (currentBalanceData) {
-				featureName = currentBalanceData.feature.entitlement.feature.name;
-				display = currentBalanceData.feature.entitlement.feature.display || {};
-			}
+			const featureName =
+				newFeatureData?.feature?.name ??
+				currentBalanceData?.feature.entitlement.feature.name ??
+				"";
+			const display =
+				newFeatureData?.display ??
+				(currentBalanceData?.feature.entitlement.feature.display as Record<
+					string,
+					unknown
+				>) ??
+				{};
 
 			changes.push({
-				featureId,
-				featureName,
+				featureId: featureIdStr,
+				featureName: featureName ?? "",
 				currentBalance,
 				newBalance,
 				status,
-				display,
+				display: display as { singular?: string; plural?: string },
 			});
 		}
 
