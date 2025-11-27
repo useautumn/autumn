@@ -91,7 +91,7 @@ export const NavButton = ({
 		`!cursor-default font-medium
            text-sm flex items-center text-t2 px-2 h-7 rounded-lg w-full hover:text-t1 border border-transparent`,
 		(!isGroup || !expanded) && " hover:text-t1 text-t2",
-		isActive && "border border-border !text-t1 bg-muted",
+		isActive && "border border-border !text-t1 bg-interactive-secondary",
 		isSubNav &&
 			"pl-4 font-normal rounded-none rounded-tr-md rounded-br-md border-l-0 text-t3",
 		className,

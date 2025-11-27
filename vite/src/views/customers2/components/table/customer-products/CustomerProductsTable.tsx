@@ -12,9 +12,13 @@ import { useFullCusSearchQuery } from "@/views/customers/hooks/useFullCusSearchQ
 import { useSavedViewsQuery } from "@/views/customers/hooks/useSavedViewsQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
+<<<<<<< HEAD
 import { AdminHover } from "../../../../../components/general/AdminHover";
 import { getCusProductHoverTexts } from "../../../../admin/adminUtils";
 import { AttachProductDropdown } from "./AttachProductDropdown";
+=======
+import { AttachProductSheetTrigger } from "./AttachProductSheetTrigger";
+>>>>>>> d5005b5e71e54cb3fadec68820bc156f1966918a
 import { CancelProductDialog } from "./CancelProductDialog";
 import { CustomerProductPrice } from "./CustomerProductPrice";
 import { CustomerProductsColumns } from "./CustomerProductsColumns";
@@ -228,7 +232,7 @@ export function CustomerProductsTable() {
 								showExpired={showExpired}
 								setShowExpired={setShowExpired}
 							/>
-							<AttachProductDropdown />
+							<AttachProductSheetTrigger />
 						</Table.Actions>
 					</Table.Toolbar>
 					{hasEntityProducts && (
