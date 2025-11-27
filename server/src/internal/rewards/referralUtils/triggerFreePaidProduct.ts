@@ -21,6 +21,7 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { RewardRedemptionService } from "../RewardRedemptionService.js";
 import { ReferralResponseCodes } from "../referralUtils.js";
 
@@ -100,7 +101,7 @@ export const triggerFreePaidProduct = async ({
 
 		const fullCus = [fullReferrer, fullRedeemer][i];
 		const attachParams = rewardProgramToAttachParams({
-			req,
+			ctx: req as unknown as AutumnContext,
 			rewardProgram,
 			customer: fullCus,
 			product: fullProduct,
@@ -144,7 +145,7 @@ export const triggerFreePaidProduct = async ({
 			});
 
 			await handleAddProduct({
-				req,
+				ctx: req as unknown as AutumnContext,
 				attachParams,
 				branch: AttachBranch.New,
 				config: {

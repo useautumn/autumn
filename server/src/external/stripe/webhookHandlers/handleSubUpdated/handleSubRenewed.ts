@@ -6,7 +6,7 @@ import { getSubScenarioFromCache } from "@/internal/customers/cusCache/subCacheU
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
 
 const isSubRenewed = ({
 	previousAttributes,
@@ -32,17 +32,18 @@ const isSubRenewed = ({
 };
 
 export const handleSubRenewed = async ({
-	req,
+	ctx,
 	prevAttributes,
 	sub,
 	updatedCusProducts,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
+	// biome-ignore lint/suspicious/noExplicitAny: Don't know the type of prevAttributes
 	prevAttributes: any;
 	sub: Stripe.Subscription;
 	updatedCusProducts: FullCusProduct[];
 }) => {
-	const { db, org, env, logger } = req;
+	const { db, org, env, logger } = ctx;
 
 	const { renewed } = isSubRenewed({
 		previousAttributes: prevAttributes,
@@ -97,12 +98,11 @@ export const handleSubRenewed = async ({
 	try {
 		for (const cusProd of updatedCusProducts) {
 			await addProductsUpdatedWebhookTask({
-				req,
+				ctx,
 				internalCustomerId: cusProd.internal_customer_id,
 				org,
 				env,
 				customerId: null,
-				logger,
 				scenario: AttachScenario.Renew,
 				cusProduct: cusProd,
 				deletedCusProduct: deletedCusProducts.find(

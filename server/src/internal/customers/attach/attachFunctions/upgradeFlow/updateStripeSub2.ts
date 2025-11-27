@@ -11,7 +11,7 @@ import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/free
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { nullish } from "@/utils/genUtils.js";
 import type { ItemSet } from "@/utils/models/ItemSet.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 import { attachParamToCusProducts } from "../../attachUtils/convertAttachParams.js";
 import { createAndFilterContUseItems } from "../../attachUtils/getContUseItems/createContUseInvoiceItems.js";
 import {
@@ -20,21 +20,21 @@ import {
 } from "../upgradeDiffIntFlow/createUsageInvoiceItems.js";
 
 export const updateStripeSub2 = async ({
-	req,
+	ctx,
 	attachParams,
 	config,
 	curSub,
 	itemSet,
 	fromCreate = false,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	attachParams: AttachParams;
 	config: AttachConfig;
 	curSub: Stripe.Subscription;
 	itemSet: ItemSet;
 	fromCreate?: boolean;
 }) => {
-	const { db, logger } = req;
+	const { db, logger } = ctx;
 
 	const { stripeCli, paymentMethod } = attachParams;
 	const { invoiceOnly, proration } = config;
@@ -72,14 +72,14 @@ export const updateStripeSub2 = async ({
 				: fromCreate
 					? "always_invoice"
 					: "create_prorations",
-		// proration_behavior: "create_prorations",
+
 		trial_end: trialEnd,
-		// default_payment_method: paymentMethod?.id,
+
 		add_invoice_items: itemSet.invoiceItems,
-		...((invoiceOnly && {
+		...(invoiceOnly && {
 			collection_method: "send_invoice",
 			days_until_due: 30,
-		}) as any),
+		}),
 		payment_behavior: "error_if_incomplete",
 		expand: ["latest_invoice"],
 	});

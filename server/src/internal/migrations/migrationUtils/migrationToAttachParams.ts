@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { getStripeCusData } from "@/internal/customers/attach/attachUtils/attachParams/attachParamsUtils/getStripeCusData.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv";
 
 export const migrationToAttachParams = async ({
 	req,
@@ -30,6 +31,8 @@ export const migrationToAttachParams = async ({
 		allowNoStripe: true,
 	});
 
+	const ctx = req as unknown as AutumnContext;
+
 	const attachParams: AttachParams = {
 		stripeCli,
 		stripeCus,
@@ -44,10 +47,10 @@ export const migrationToAttachParams = async ({
 		freeTrial: newProduct.free_trial || null,
 		replaceables: [],
 
-		req,
+		req: ctx,
 		org,
 		entities: customer.entities,
-		features: req.features,
+		features: ctx.features,
 		internalEntityId,
 		cusProducts: customer.customer_products,
 

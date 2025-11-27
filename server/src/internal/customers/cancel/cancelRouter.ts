@@ -8,6 +8,7 @@ import { CusService } from "@/internal/customers/CusService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { RELEVANT_STATUSES } from "../cusProducts/CusProductService.js";
 import { handleCancelProduct } from "./handleCancelProduct.js";
 
@@ -68,16 +69,8 @@ cancelRouter.post("", async (req, res) =>
 				});
 			}
 
-			// await expireCusProduct({
-			//   req,
-			//   cusProduct,
-			//   fullCus,
-			//   expireImmediately,
-			//   prorate,
-			// });
-
 			await handleCancelProduct({
-				req,
+				ctx: req as unknown as AutumnContext,
 				cusProduct,
 				fullCus,
 				expireImmediately,
