@@ -1,45 +1,41 @@
 import {
-	type AttachBody,
-	AttachBranch,
+	type AttachBodyV0,
 	AttachFunction,
 	cusProductToProduct,
 } from "@autumn/shared";
-import { notNullish } from "@/utils/genUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
-import type { AttachParams } from "../../cusProducts/AttachParams.js";
-import { attachParamToCusProducts } from "../attachUtils/convertAttachParams.js";
-import { getAttachBranch } from "../attachUtils/getAttachBranch.js";
-import { getAttachConfig } from "../attachUtils/getAttachConfig.js";
-import { getAttachFunction } from "../attachUtils/getAttachFunction.js";
-import { getDowngradeProductPreview } from "./getDowngradeProductPreview.js";
-import { getMultiAttachPreview } from "./getMultiAttachPreview.js";
-import { getNewProductPreview } from "./getNewProductPreview.js";
-import { getUpgradeProductPreview } from "./getUpgradeProductPreview.js";
+import { attachParamToCusProducts } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
+import { getAttachBranch } from "@/internal/customers/attach/attachUtils/getAttachBranch.js";
+import { getAttachConfig } from "@/internal/customers/attach/attachUtils/getAttachConfig.js";
+import { getAttachFunction } from "@/internal/customers/attach/attachUtils/getAttachFunction.js";
+import { getDowngradeProductPreview } from "@/internal/customers/attach/handleAttachPreview/getDowngradeProductPreview.js";
+import { getNewProductPreview } from "@/internal/customers/attach/handleAttachPreview/getNewProductPreview.js";
+import { getUpgradeProductPreview } from "@/internal/customers/attach/handleAttachPreview/getUpgradeProductPreview.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv";
 
 export const attachParamsToPreview = async ({
-	req,
+	ctx,
 	attachParams,
 	attachBody,
-	logger,
 	withPrepaid = false,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	attachParams: AttachParams;
-	attachBody: AttachBody;
-	logger: any;
+	attachBody: AttachBodyV0;
 	withPrepaid?: boolean;
 }) => {
+	const { logger } = ctx;
 	// Handle existing product
 
 	const branch = await getAttachBranch({
-		req,
+		ctx,
 		attachBody,
 		attachParams,
 		fromPreview: true,
 	});
 
-	const { flags, config } = await getAttachConfig({
-		req,
+	const { config } = await getAttachConfig({
+		ctx,
 		attachParams,
 		attachBody,
 		branch,
@@ -61,18 +57,6 @@ export const attachParamsToPreview = async ({
 	let preview: any = null;
 
 	if (
-		branch === AttachBranch.MultiAttach ||
-		notNullish(attachParams.productsList)
-	) {
-		preview = await getMultiAttachPreview({
-			req,
-			attachBody,
-			attachParams,
-			logger,
-			config,
-			branch,
-		});
-	} else if (
 		func === AttachFunction.AddProduct ||
 		func === AttachFunction.CreateCheckout ||
 		func === AttachFunction.OneOff
@@ -103,7 +87,7 @@ export const attachParamsToPreview = async ({
 		func === AttachFunction.UpdatePrepaidQuantity
 	) {
 		preview = await getUpgradeProductPreview({
-			req,
+			ctx,
 			attachParams,
 			branch,
 			now,

@@ -1,10 +1,46 @@
 import { Decimal } from "decimal.js";
-import type { ProductItem, ProductV2 } from "../index.js";
+import type {
+	CreateFreeTrial,
+	FreeTrial,
+	Price,
+	ProductItem,
+	ProductV2,
+} from "../index.js";
 import {
 	isFeaturePriceItem,
 	isPriceItem,
 } from "./productV2Utils/productItemUtils/getItemType.js";
 import { nullish } from "./utils.js";
+
+export const isDefaultTrialV2 = ({
+	freeTrial,
+	items,
+	isDefault,
+}: {
+	freeTrial?: CreateFreeTrial;
+	items: ProductItem[];
+	isDefault: boolean;
+}) => {
+	if (!freeTrial) return false;
+
+	return (
+		freeTrial.card_required === false &&
+		isDefault &&
+		!isFreeProductV2({ items })
+	);
+};
+
+export const isOneOffProductV2 = ({ items }: { items: ProductItem[] }) => {
+	return (
+		items.some((i) => isPriceItem(i) || isFeaturePriceItem(i)) &&
+		items.every((i) => {
+			if (isPriceItem(i) || isFeaturePriceItem(i)) {
+				return i.interval === null;
+			}
+			return true;
+		})
+	);
+};
 
 export const isFreeProductV2 = ({ items }: { items: ProductItem[] }) => {
 	return items.every((item) => nullish(item.price) && nullish(item.tiers));
@@ -75,4 +111,38 @@ export const sortProductsV2 = ({ products }: { products: ProductV2[] }) => {
 
 		return isUpgrade ? -1 : 1;
 	});
+};
+
+export const isFreeProduct = ({ prices }: { prices: Price[] }) => {
+	if (prices.length === 0) {
+		return true;
+	}
+
+	let totalPrice = 0;
+	for (const price of prices) {
+		if ("usage_tiers" in price.config) {
+			const tiers = price.config.usage_tiers;
+			if (nullish(tiers) || tiers.length === 0) continue;
+			totalPrice += tiers.reduce((acc, tier) => acc + tier.amount, 0);
+		} else {
+			totalPrice += price.config.amount;
+		}
+	}
+	return totalPrice === 0;
+};
+
+export const isDefaultTrial = ({
+	freeTrial,
+	isDefault,
+	prices,
+}: {
+	freeTrial?: CreateFreeTrial | FreeTrial;
+	isDefault: boolean;
+	prices: Price[];
+}) => {
+	if (!freeTrial) return false;
+
+	return (
+		freeTrial.card_required === false && isDefault && !isFreeProduct({ prices })
+	);
 };

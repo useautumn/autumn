@@ -32,8 +32,8 @@ import { ProductService } from "../../ProductService.js";
 import { handleNewProductItems } from "../../product-items/productItemUtils/handleNewProductItems.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
 import { initProductInStripe } from "../../productUtils.js";
-import { disableCurrentDefault } from "../handleCreatePlan.js";
 import { handleVersionProductV2 } from "../handleVersionProduct.js";
+import { validateDefaultFlag } from "../productActions/validateDefaultFlag.js";
 import { handleUpdateProductDetails } from "./updateProductDetails.js";
 
 export const handleUpdatePlan = createRoute({
@@ -97,25 +97,36 @@ export const handleUpdatePlan = createRoute({
 			features,
 		});
 
-		const newFreeTrial = v1_2Body.free_trial as FreeTrial | undefined;
+		// Handle free_trial: distinguish between not provided, null (unset), and value (set)
+		const freeTrialExplicitlyProvided = "free_trial" in v1_2Body;
+		const newFreeTrial = freeTrialExplicitlyProvided
+			? ((v1_2Body.free_trial as FreeTrial | null | undefined) ?? null)
+			: (curProductV2.free_trial ?? undefined);
 		const newProductV2: ProductV2 = {
 			...curProductV2,
 			...v1_2Body,
 			group: v1_2Body.group || curProductV2.group || "",
 			items: v1_2Body.items || [],
-			free_trial: newFreeTrial || curProductV2.free_trial || undefined,
+			free_trial: newFreeTrial,
 		};
 
-		await disableCurrentDefault({
-			req: ctx,
-			newProduct: newProductV2,
+		await validateDefaultFlag({
+			ctx,
+			body: v1_2Body,
+			curProduct: fullProduct,
+		});
+
+		validateDefaultFlag({
+			ctx,
+			body: v1_2Body,
+			curProduct: fullProduct,
 		});
 
 		await handleUpdateProductDetails({
 			db,
 			curProduct: fullProduct,
 			newProduct: UpdateProductSchema.parse(v1_2Body),
-			newFreeTrial: v1_2Body.free_trial || curProductV2.free_trial || undefined,
+			newFreeTrial,
 			items: v1_2Body.items || curProductV2.items,
 			org,
 			rewardPrograms,
@@ -138,6 +149,7 @@ export const handleUpdatePlan = createRoute({
 			const { itemsSame, freeTrialsSame } = productsAreSame({
 				newProductV2: newProductV2,
 				curProductV1: fullProduct,
+				curProductV2: curProductV2,
 				features,
 			});
 

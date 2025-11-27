@@ -101,6 +101,13 @@ const deleteCustomerScript = readFileSync(
 );
 export const DELETE_CUSTOMER_SCRIPT = `${CACHE_KEY_UTILS}\n${deleteCustomerScript}`;
 
+// Prepend cache key utils to BATCH_DELETE_CUSTOMERS_SCRIPT
+const batchDeleteCustomersScript = readFileSync(
+	join(__dirname, "cusLuaScripts/batchDeleteCustomers.lua"),
+	"utf-8",
+);
+export const BATCH_DELETE_CUSTOMERS_SCRIPT = `${CACHE_KEY_UTILS}\n${batchDeleteCustomersScript}`;
+
 // ============================================================================
 // ENTITY SCRIPTS
 // ============================================================================

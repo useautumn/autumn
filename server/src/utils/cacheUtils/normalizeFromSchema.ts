@@ -156,10 +156,18 @@ export const normalizeFromSchema = <T>({
 		};
 
 		for (const key in shape) {
-			normalized[key] = normalizeFromSchema({
-				schema: shape[key],
-				data: normalized[key],
-			});
+			// Hardcoded fix: scheduled_subscriptions should be an array, never null/undefined
+			if (
+				key === "scheduled_subscriptions" &&
+				(normalized[key] === undefined || normalized[key] === null)
+			) {
+				normalized[key] = [];
+			} else {
+				normalized[key] = normalizeFromSchema({
+					schema: shape[key],
+					data: normalized[key],
+				});
+			}
 		}
 
 		return normalized as T;

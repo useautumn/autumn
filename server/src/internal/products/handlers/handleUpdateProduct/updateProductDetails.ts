@@ -125,7 +125,7 @@ const willBeDefaultTrial = ({
 }: {
 	newProduct: UpdateProduct;
 	curProduct: FullProduct;
-	newFreeTrial?: FreeTrial | CreateFreeTrial;
+	newFreeTrial?: FreeTrial | CreateFreeTrial | null;
 	newItems: ProductItem[];
 }) => {
 	// 1. Get final default
@@ -157,7 +157,7 @@ export const handleUpdateProductDetails = async ({
 	db: DrizzleCli;
 	curProduct: FullProduct;
 	newProduct: UpdateProduct;
-	newFreeTrial?: FreeTrial | CreateFreeTrial;
+	newFreeTrial?: FreeTrial | CreateFreeTrial | null;
 	items: ProductItem[];
 	org: Organization;
 	rewardPrograms: RewardProgram[];

@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { CustomerDataSchema } from "../models.js";
+import { CustomerDataSchema } from "../common/customerData.js";
 
 // Cancel Schemas
 export const CancelBodySchema = z.object({

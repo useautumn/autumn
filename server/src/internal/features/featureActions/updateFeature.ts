@@ -80,6 +80,7 @@ export const updateFeature = async ({
 			objectsUsingFeature;
 
 		// Handle ID change
+
 		if (isChangingId && updates.id) {
 			await handleFeatureIdChanged({
 				ctx,

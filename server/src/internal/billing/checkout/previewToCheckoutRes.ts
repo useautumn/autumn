@@ -1,8 +1,8 @@
 import {
 	type AttachBranch,
 	type AttachPreview,
-	type CheckoutLine,
-	CheckoutResponseSchema,
+	type CheckoutLineV0,
+	CheckoutResponseV0Schema,
 	cusProductToEnts,
 	cusProductToPrices,
 	cusProductToProduct,
@@ -12,6 +12,11 @@ import {
 	UsageModel,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import {
+	attachParamsToProduct,
+	attachParamToCusProducts,
+} from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
 import { isPriceItem } from "@/internal/products/product-items/productItemUtils/getItemType.js";
 import {
@@ -20,11 +25,6 @@ import {
 } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import { notNullish } from "@/utils/genUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
-import type { AttachParams } from "../../cusProducts/AttachParams.js";
-import {
-	attachParamsToProduct,
-	attachParamToCusProducts,
-} from "../attachUtils/convertAttachParams.js";
 
 export const previewToCheckoutRes = async ({
 	req,
@@ -52,7 +52,7 @@ export const previewToCheckoutRes = async ({
 	const newEnts = attachParams.entitlements;
 	const allPrices = [...curPrices, ...newPrices];
 	const allEnts = [...curEnts, ...newEnts];
-	let lines: CheckoutLine[] = [];
+	let lines: CheckoutLineV0[] = [];
 
 	if (preview.due_today && preview.due_today.line_items.length > 0) {
 		lines = preview.due_today.line_items
@@ -77,7 +77,7 @@ export const previewToCheckoutRes = async ({
 					}),
 				};
 			})
-			.filter(notNullish) as CheckoutLine[];
+			.filter(notNullish) as CheckoutLineV0[];
 	}
 
 	const curProduct = curCusProduct
@@ -172,7 +172,7 @@ export const previewToCheckoutRes = async ({
 		})
 		.filter(notNullish);
 
-	return CheckoutResponseSchema.parse({
+	return CheckoutResponseV0Schema.parse({
 		customer_id: attachParams.customer.id,
 		lines,
 		product: newProduct,

@@ -69,5 +69,16 @@ export const filterPlanAndFeatureExpand = <
 		}
 	}
 
+	const expandScheduledSubscriptionPlan = expandIncludes({
+		expand,
+		includes: [CusExpand.ScheduledSubscriptionsPlan],
+	});
+
+	if (!expandScheduledSubscriptionPlan && target.scheduled_subscriptions) {
+		for (let i = 0; i < target.scheduled_subscriptions?.length; i++) {
+			target.scheduled_subscriptions[i].plan = undefined;
+		}
+	}
+
 	return target as T;
 };

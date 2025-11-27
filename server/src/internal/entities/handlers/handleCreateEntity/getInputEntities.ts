@@ -2,11 +2,13 @@ import {
 	type CreateEntityParams,
 	type CustomerData,
 	type Entity,
+	EntityAlreadyExistsError,
 	ErrCode,
+	FeatureNotFoundError,
+	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
-import RecaseError from "@/utils/errorUtils.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 
 export const validateAndGetInputEntities = async ({
@@ -30,13 +32,6 @@ export const validateAndGetInputEntities = async ({
 		withEntities: true,
 	});
 
-	if (!customer) {
-		throw new RecaseError({
-			message: `Customer ${customerId} not found`,
-			code: ErrCode.CustomerNotFound,
-		});
-	}
-
 	// 2. Get input entities
 	let inputEntities: any[] = [];
 	if (Array.isArray(createEntityData)) {
@@ -48,10 +43,7 @@ export const validateAndGetInputEntities = async ({
 	for (const entity of inputEntities) {
 		const feature = features.find((f: any) => f.id === entity.feature_id);
 		if (!feature) {
-			throw new RecaseError({
-				message: `Feature ${entity.feature_id} not found`,
-				code: ErrCode.FeatureNotFound,
-			});
+			throw new FeatureNotFoundError({ featureId: entity.feature_id });
 		}
 	}
 
@@ -73,14 +65,7 @@ export const validateAndGetInputEntities = async ({
 
 	for (const entity of existingEntities) {
 		if (inputEntities.some((e: any) => e.id === entity.id) && !entity.deleted) {
-			throw new RecaseError({
-				message: `Entity ${entity.id} already exists`,
-				code: "ENTITY_ALREADY_EXISTS",
-				data: {
-					entity,
-				},
-				statusCode: StatusCodes.CONFLICT,
-			});
+			throw new EntityAlreadyExistsError({ entityId: entity.id });
 		}
 	}
 

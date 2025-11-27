@@ -31,6 +31,7 @@ export class ApiKeyService {
 						master: true,
 					},
 				},
+				user: true,
 			},
 		});
 
@@ -51,6 +52,7 @@ export class ApiKeyService {
 			features: (data.org.features || []) as Feature[],
 			env,
 			userId: data.user_id,
+			user: data.user || null,
 		};
 
 		return result;

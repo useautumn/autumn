@@ -4,6 +4,11 @@ import { z } from "zod/v4";
 import { ApiFreeTrialV2Schema } from "./apiPlan.js";
 import { UpdatePlanFeatureSchema } from "./planFeature/planFeatureOpModels.js";
 
+export const PlanPriceSchema = z.object({
+	amount: z.number(),
+	interval: z.enum(BillingInterval),
+});
+
 export const CreatePlanParamsSchema = z.object({
 	id: z.string().nonempty().regex(idRegex),
 	group: z.string().default(""),

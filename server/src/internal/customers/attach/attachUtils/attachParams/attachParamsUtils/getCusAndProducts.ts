@@ -1,5 +1,5 @@
 import {
-	type AttachBody,
+	type AttachBodyV0,
 	CusProductStatus,
 	cusProductToProduct,
 	ErrCode,
@@ -11,36 +11,33 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { isOneOff } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
 
 import type { AutumnContext } from "../../../../../../honoUtils/HonoEnv";
 import { getExistingCusProducts } from "../../../../cusProducts/cusProductUtils/getExistingCusProducts";
 
 const getProductsForAttach = async ({
-	req,
+	ctx,
 	attachBody,
 }: {
-	req: ExtendedRequest;
-	attachBody: AttachBody;
+	ctx: AutumnContext;
+	attachBody: AttachBodyV0;
 }) => {
 	const {
 		product_id,
 		product_ids,
 		version,
-		products: inputProducts,
+		// products: inputProducts,
 	} = attachBody;
 
 	const products = await ProductService.listFull({
-		db: req.db,
-		orgId: req.orgId,
-		env: req.env,
-		inIds: inputProducts
-			? inputProducts.map((p) => p.product_id)
-			: product_ids || [product_id!],
+		db: ctx.db,
+		orgId: ctx.org.id,
+		env: ctx.env,
+		inIds: product_ids || [product_id!],
 		version,
 	});
 
-	if (notNullish(product_ids) && nullish(inputProducts)) {
+	if (notNullish(product_ids)) {
 		const freeTrialProds = products.filter((prod) =>
 			notNullish(prod.free_trial),
 		);
@@ -74,15 +71,15 @@ const getProductsForAttach = async ({
 };
 
 export const getCustomerAndProducts = async ({
-	req,
+	ctx,
 	attachBody,
 }: {
-	req: ExtendedRequest;
-	attachBody: AttachBody;
+	ctx: AutumnContext;
+	attachBody: AttachBodyV0;
 }) => {
 	const [customer, products] = await Promise.all([
 		getOrCreateCustomer({
-			ctx: req as unknown as AutumnContext,
+			ctx,
 			customerId: attachBody.customer_id,
 			customerData: {
 				...attachBody.customer_data,
@@ -96,7 +93,7 @@ export const getCustomerAndProducts = async ({
 			entityId: attachBody.entity_id || undefined,
 			entityData: attachBody.entity_data || undefined,
 		}),
-		getProductsForAttach({ req, attachBody }),
+		getProductsForAttach({ ctx, attachBody }),
 	]);
 
 	// if customer is on product v3, products[0] should just be the customer's product if version isn't explicitly passed in.
@@ -109,13 +106,11 @@ export const getCustomerAndProducts = async ({
 				internalEntityId: customer.entity?.internal_id,
 			});
 
-			// console.log(
-			// 	`Product ${product.id} (${product.version}), curSameProduct: ${curSameProduct?.product.id} (version: ${curSameProduct?.product.version})`,
-			// );
 			if (curSameProduct) {
 				products[i] = cusProductToProduct({ cusProduct: curSameProduct });
 			}
 		}
 	}
+
 	return { customer, products };
 };
