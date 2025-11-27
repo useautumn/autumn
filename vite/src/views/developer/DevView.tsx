@@ -22,8 +22,8 @@ export default function DevScreen() {
 	if (isLoading) return <LoadingScreen />;
 
 	return (
-		<div className="flex flex-col gap-4 h-fit relative max-w-5xl mx-auto text-sm">
-			<h1 className="text-xl font-medium shrink-0 pt-6 pl-10">Developer</h1>
+		<div className="flex flex-col gap-4 h-fit relative max-w-5xl mx-auto text-sm pt-8">
+			{/* <h1 className="text-xl font-medium shrink-0 pt-6 pl-10">Developer</h1> */}
 
 			{(tab === "api_keys" || !tab) && (
 				<div className="flex flex-col gap-16">
