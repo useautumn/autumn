@@ -23,6 +23,7 @@ export const GetEntityQuerySchema = z.object({
 		z.enum([
 			CusExpand.Invoices,
 			CusExpand.SubscriptionsPlan,
+			CusExpand.ScheduledSubscriptionsPlan,
 			CusExpand.BalancesFeature,
 		]),
 	).default([]),

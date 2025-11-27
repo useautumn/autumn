@@ -1,5 +1,4 @@
-import { ErrCode } from "@autumn/shared";
-import RecaseError from "@/utils/errorUtils.js";
+import { ErrCode, RecaseError } from "@autumn/shared";
 import { redis } from "./initRedis.js";
 
 export const handleAttachRaceCondition = async ({

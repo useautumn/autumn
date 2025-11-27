@@ -20,6 +20,7 @@ import {
 } from "@/internal/products/prices/priceUtils/prorationConfigUtils.js";
 import { formatUnixToDate } from "@/utils/genUtils.js";
 import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
+import type { Logger } from "../../external/logtail/logtailUtils";
 
 export const getUpgradeProrationInvoiceItem = ({
 	prevPrice,
@@ -33,6 +34,7 @@ export const getUpgradeProrationInvoiceItem = ({
 	product,
 	stripeSub,
 	subItem,
+	logger,
 }: {
 	prevPrice: number;
 	newPrice: number;
@@ -45,6 +47,7 @@ export const getUpgradeProrationInvoiceItem = ({
 	product: Product;
 	stripeSub: Stripe.Subscription;
 	subItem: Stripe.SubscriptionItem;
+	logger: Logger;
 }) => {
 	const billingUnits = (price.config as UsagePriceConfig).billing_units;
 	let invoiceAmount = new Decimal(newPrice).minus(prevPrice).toNumber();
@@ -55,8 +58,8 @@ export const getUpgradeProrationInvoiceItem = ({
 		prodName: product.name,
 	});
 
-	console.log("Invoice amount: ", invoiceAmount);
-	console.log("Invoice description:", invoiceDescription);
+	logger.info(`Invoice amount before proration: ${invoiceAmount}`);
+	logger.info(`Invoice description: ${invoiceDescription}`);
 
 	if (shouldProrate(onIncrease)) {
 		invoiceAmount = calculateProrationAmount({
@@ -68,6 +71,7 @@ export const getUpgradeProrationInvoiceItem = ({
 
 		const start = formatUnixToDate(now);
 		const end = formatUnixToDate(subItem.current_period_end * 1000);
+
 		invoiceDescription = `${invoiceDescription} (from ${start} to ${end})`;
 	}
 
@@ -81,6 +85,10 @@ export const getUpgradeProrationInvoiceItem = ({
 		stripeCustomerId: stripeSub.customer as string,
 		periodStart: Math.floor(now / 1000),
 		periodEnd: Math.floor(subItem.current_period_end * 1000),
+	});
+
+	logger.info(`Final invoice item (amount: ${invoiceItem?.amount})`, {
+		data: invoiceItem,
 	});
 
 	return invoiceItem;
@@ -113,7 +121,7 @@ export const createUpgradeProrationInvoice = async ({
 	product: Product;
 	config: UsagePriceConfig;
 	onIncrease: OnIncrease;
-	logger: any;
+	logger: Logger;
 }) => {
 	const now = await getStripeNow({ stripeCli, stripeSub: sub });
 
@@ -134,6 +142,7 @@ export const createUpgradeProrationInvoice = async ({
 		product,
 		stripeSub: sub,
 		subItem,
+		logger,
 	});
 
 	const invoiceAmount =

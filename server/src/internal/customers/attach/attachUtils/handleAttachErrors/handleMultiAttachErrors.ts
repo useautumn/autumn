@@ -1,5 +1,5 @@
 import {
-	type AttachBody,
+	type AttachBodyV0,
 	type AttachBranch,
 	isUsagePrice,
 	notNullish,
@@ -15,7 +15,7 @@ export const handleMultiAttachErrors = async ({
 	branch,
 }: {
 	attachParams: AttachParams;
-	attachBody: AttachBody;
+	attachBody: AttachBodyV0;
 	branch: AttachBranch;
 }) => {
 	const { products, prices, productsList } = attachParams;

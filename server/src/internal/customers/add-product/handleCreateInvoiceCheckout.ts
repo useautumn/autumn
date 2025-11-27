@@ -1,22 +1,19 @@
 import {
-	AttachParams,
-	AttachResultSchema,
-} from "../cusProducts/AttachParams.js";
-
-import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
-
-import { isOneOff } from "@/internal/products/productUtils.js";
-
-import { handlePaidProduct } from "../attach/attachFunctions/addProductFlow/handlePaidProduct.js";
-import {
-	AttachBody,
-	AttachBranch,
-	AttachConfig,
+	type AttachBodyV0,
+	type AttachBranch,
+	type AttachConfig,
 	SuccessCode,
 } from "@autumn/shared";
-import Stripe from "stripe";
+import type Stripe from "stripe";
+import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
+import { isOneOff } from "@/internal/products/productUtils.js";
 import { handleOneOffFunction } from "../attach/attachFunctions/addProductFlow/handleOneOffFunction.js";
+import { handlePaidProduct } from "../attach/attachFunctions/addProductFlow/handlePaidProduct.js";
 import { handleMultiAttachFlow } from "../attach/attachFunctions/multiAttach/handleMultiAttachFlow.js";
+import {
+	type AttachParams,
+	AttachResultSchema,
+} from "../cusProducts/AttachParams.js";
 
 export const handleCreateInvoiceCheckout = async ({
 	req,
@@ -29,7 +26,7 @@ export const handleCreateInvoiceCheckout = async ({
 	req: any;
 	res?: any;
 	attachParams: AttachParams;
-	attachBody: AttachBody;
+	attachBody: AttachBodyV0;
 	config: AttachConfig;
 	branch: AttachBranch;
 }) => {

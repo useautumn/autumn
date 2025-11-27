@@ -1,4 +1,4 @@
-import type { CheckoutResponse } from "@autumn/shared";
+import type { CheckoutResponseV0 } from "@autumn/shared";
 import type { ReactNode } from "react";
 import {
 	useHasBillingChanges,
@@ -10,7 +10,7 @@ import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 export const UpdateConfirmationInfo = ({
 	previewData,
 }: {
-	previewData?: CheckoutResponse | null;
+	previewData?: CheckoutResponseV0 | null;
 }) => {
 	const hasChanges = useHasChanges();
 	const hasBillingChanges = useHasBillingChanges({

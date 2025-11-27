@@ -22,6 +22,8 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, notNullish } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
+import { AdminHover } from "../../../../components/general/AdminHover";
+import { getCusEntHoverTexts } from "../../../admin/adminUtils";
 import { useCustomerContext } from "../CustomerContext";
 
 export function CustomerBalanceModal() {
@@ -260,9 +262,17 @@ export function CustomerBalanceModal() {
 
 								<div className="flex flex-col gap-2 bg-secondary p-3 rounded-lg border">
 									<div className="flex gap-2">
-										<span className="text-t3 text-sm font-medium">
-											Plan ID:
-										</span>
+										<AdminHover
+											texts={getCusEntHoverTexts({
+												cusEnt,
+												entities: customer.entities,
+											})}
+											asChild
+										>
+											<span className="text-t3 text-sm font-medium">
+												Plan ID:
+											</span>
+										</AdminHover>
 										<span className="text-t1 text-sm font-mono truncate">
 											{cusProduct?.product_id || "N/A"}
 										</span>

@@ -34,6 +34,7 @@ export const handleUpdateQuantityFunction = async ({
 	});
 
 	const invoices: Stripe.Invoice[] = [];
+
 	for (const options of optionsToUpdate) {
 		const result = await handleUpdateFeatureQuantity({
 			req,

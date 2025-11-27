@@ -11,3 +11,14 @@ export class EntityNotFoundError extends RecaseError {
 		this.name = "EntityNotFoundError";
 	}
 }
+
+export class EntityAlreadyExistsError extends RecaseError {
+	constructor(opts: { message?: string; entityId: string }) {
+		super({
+			message: opts.message || `Entity ${opts.entityId} already exists`,
+			code: EntityErrorCode.EntityAlreadyExists,
+			statusCode: 409,
+		});
+		this.name = "EntityAlreadyExistsError";
+	}
+}

@@ -1,4 +1,4 @@
-import type { CheckoutResponse, ProductV2 } from "@autumn/shared";
+import type { CheckoutResponseV0, ProductV2 } from "@autumn/shared";
 import SmallSpinner from "@/components/general/SmallSpinner";
 import { Separator } from "@/components/v2/separator";
 import {
@@ -14,7 +14,7 @@ export function UpdateProductSummary({
 	isLoading,
 }: {
 	product?: ProductV2;
-	previewData?: CheckoutResponse | null;
+	previewData?: CheckoutResponseV0 | null;
 	isLoading?: boolean;
 }) {
 	if (isLoading) {

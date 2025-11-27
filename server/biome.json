@@ -21,8 +21,8 @@
 			"recommended": true,
 			"suspicious": {
 				"noExportsInTest": "off",
-				"noExplicitAny": "off",
-				"noImplicitAnyLet": "off"
+				"noExplicitAny": "on",
+				"noImplicitAnyLet": "on"
 			},
 			"complexity": {
 				"noStaticOnlyClass": "off"

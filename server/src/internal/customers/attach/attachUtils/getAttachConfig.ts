@@ -1,5 +1,5 @@
 import {
-	type AttachBody,
+	type AttachBodyV0,
 	AttachBranch,
 	type AttachConfig,
 	cusProductToPrices,
@@ -10,6 +10,7 @@ import {
 import { isDefaultTrialFullProduct } from "@/internal/products/productUtils/classifyProduct.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import type { AttachParams } from "../../cusProducts/AttachParams.js";
 import { willMergeSub } from "../mergeUtils/mergeUtils.js";
 import type { AttachFlags } from "../models/AttachFlags.js";
@@ -55,20 +56,20 @@ export const intervalsAreSame = ({
 };
 
 export const getAttachConfig = async ({
-	req,
+	ctx,
 	attachParams,
 	attachBody,
 	branch,
 }: {
-	req: any;
+	ctx: AutumnContext;
 	attachParams: AttachParams;
-	attachBody: AttachBody;
+	attachBody: AttachBodyV0;
 	branch: AttachBranch;
 }) => {
 	const { org, prices, paymentMethod } = attachParams;
 
 	const flags: AttachFlags = {
-		isPublic: req.isPublic,
+		isPublic: ctx.isPublic,
 		forceCheckout: attachBody.force_checkout || false,
 		invoiceOnly: attachParams.invoiceOnly || false,
 		isFree: isFreeProduct(prices),

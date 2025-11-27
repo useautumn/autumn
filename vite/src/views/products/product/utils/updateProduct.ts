@@ -28,6 +28,7 @@ export const updateProduct = async ({
 	if (!validated) {
 		return false;
 	}
+
 	try {
 		const updateData = UpdateProductV2ParamsSchema.parse({
 			...product,

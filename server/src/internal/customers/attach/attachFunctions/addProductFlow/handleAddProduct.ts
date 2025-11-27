@@ -5,6 +5,7 @@ import {
 	SuccessCode,
 } from "@autumn/shared";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { createFullCusProduct } from "../../../add-product/createFullCusProduct.js";
@@ -107,4 +108,65 @@ export const handleAddProduct = async ({
 			});
 		}
 	}
+};
+
+export const handleFreeProduct = async ({
+	ctx,
+	attachParams,
+	config,
+}: {
+	ctx: AutumnContext;
+	attachParams: AttachParams;
+	config?: AttachConfig;
+}) => {
+	const { logger } = ctx;
+	const { products, prices } = attachParams;
+
+	const defaultConfig: AttachConfig = getDefaultAttachConfig();
+
+	// 1. If paid product
+
+	if (prices.length < 0) {
+		return;
+	}
+
+	logger.info("Inserting free product in handleFreeProduct");
+
+	const batchInsert = [];
+
+	const { mergeSub } = await getMergeCusProduct({
+		attachParams,
+		config: config || defaultConfig,
+		products,
+	});
+
+	for (const product of products) {
+		const curCusProduct = attachParamsToCurCusProduct({ attachParams });
+		let anchorToUnix;
+
+		if (curCusProduct && config?.branch === AttachBranch.NewVersion) {
+			anchorToUnix = curCusProduct.created_at;
+		}
+
+		if (mergeSub) {
+			const { end } = subToPeriodStartEnd({ sub: mergeSub });
+			anchorToUnix = end * 1000;
+		}
+
+		// Expire previous product
+
+		batchInsert.push(
+			createFullCusProduct({
+				db: ctx.db,
+				attachParams: attachToInsertParams(attachParams, product),
+				billLaterOnly: true,
+				carryExistingUsages: config?.carryUsage || false,
+				anchorToUnix,
+				logger,
+			}),
+		);
+	}
+	await Promise.all(batchInsert);
+
+	logger.info("Successfully created full cus product");
 };

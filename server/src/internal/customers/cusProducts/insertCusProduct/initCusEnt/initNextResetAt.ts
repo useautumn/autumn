@@ -53,8 +53,6 @@ export const initNextResetAt = ({
 	// 	"Trial end timestamp: ",
 	// 	formatUnixToDateTime(trialEndTimestamp! * 1000),
 	// );
-	// console.log("Should apply trial: ", shouldApplyTrial);
-	// console.log("Anchor to unix: ", formatUnixToDateTime(anchorToUnix!));
 
 	if (freeTrial && shouldApplyTrial && trialEndTimestamp) {
 		nextResetAtCalculated = new UTCDate(trialEndTimestamp! * 1000);

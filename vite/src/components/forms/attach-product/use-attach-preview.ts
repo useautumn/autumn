@@ -1,4 +1,4 @@
-import type { CheckoutResponse, ProductV2 } from "@autumn/shared";
+import type { CheckoutResponseV0, ProductV2 } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -54,7 +54,7 @@ export function useAttachPreview(params: AttachPreviewParams = {}) {
 				return null;
 			}
 
-			const response = await axiosInstance.post<CheckoutResponse>(
+			const response = await axiosInstance.post<CheckoutResponseV0>(
 				"/v1/checkout",
 				attachBody,
 			);

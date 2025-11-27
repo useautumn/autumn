@@ -170,14 +170,18 @@ export const handleProratedUpgrade = async ({
 		ids: reps.map((r) => r.id),
 	});
 
+	const newQuantity = roundUsage({
+		usage: newUsage,
+		price: cusPrice.price,
+	});
+
+	logger.info(`New sub item quantity: ${newQuantity}`);
+
 	await stripeCli.subscriptionItems.update(subItem.id, {
-		quantity: roundUsage({
-			usage: newUsage,
-			price: cusPrice.price,
-		}),
+		quantity: newQuantity,
 		proration_behavior: "none",
 	});
 
-	logger.info(`Updated sub item ${subItem.id} to quantity: ${newRoundedUsage}`);
+	logger.info(`Updated sub item ${subItem.id} successfully!`);
 	return { deletedReplaceables: deleted, invoice, newReplaceables: [] };
 };
