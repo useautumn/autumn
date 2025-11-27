@@ -50,9 +50,10 @@ describe(`${chalk.yellowBright(`${testCase}: Testing v0.2 / v1.2 response for at
 		});
 
 		expect(attachResponse).toMatchObject({
-			customer_id: customerId,
-			product_ids: [oneOff.id],
-			code: expect.any(String),
+			// customer_id: customerId,
+			// product_ids: [oneOff.id],
+			// code: expect.any(String),
+			success: true,
 			message: expect.any(String),
 		});
 	});
@@ -66,6 +67,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing v0.2 / v1.2 response for at
 		});
 
 		expect(attachResponse).toMatchObject({
+			success: true,
 			customer_id: customerId,
 			product_ids: [oneOff.id],
 			code: expect.any(String),

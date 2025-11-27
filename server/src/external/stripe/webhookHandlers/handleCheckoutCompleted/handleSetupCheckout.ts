@@ -5,17 +5,17 @@ import { handleOneOffFunction } from "@/internal/customers/attach/attachFunction
 import { getDefaultAttachConfig } from "@/internal/customers/attach/attachUtils/getAttachConfig.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { isOneOff } from "@/internal/products/productUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { getCusPaymentMethod } from "../../stripeCusUtils.js";
 
 export const handleSetupCheckout = async ({
-	req,
+	ctx,
 	attachParams,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	attachParams: AttachParams;
 }) => {
-	const logger = req.logger;
+	const { logger } = ctx;
 
 	const { org, customer } = attachParams;
 
@@ -31,16 +31,15 @@ export const handleSetupCheckout = async ({
 
 	if (isOneOff(attachParams.prices)) {
 		await handleOneOffFunction({
-			req,
+			ctx,
 			attachParams,
 			config: getDefaultAttachConfig(),
-			res: undefined,
 		});
 		return;
 	}
 	// 1. Check attach prices...
 	await handleAddProduct({
-		req,
+		ctx,
 		attachParams: {
 			...attachParams,
 			stripeCli: createStripeCli({ org, env: customer.env }),

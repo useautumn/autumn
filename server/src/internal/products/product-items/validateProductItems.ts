@@ -103,15 +103,15 @@ const validateProductItem = ({
 		}
 	}
 
-	if (isFeatureItem(item)) {
-		if (item.included_usage === 0 && feature?.type !== FeatureType.Boolean) {
-			throw new RecaseError({
-				message: `Included usage for feature ${item.feature_id} must be greater than 0`,
-				code: ErrCode.InvalidInputs,
-				statusCode: StatusCodes.BAD_REQUEST,
-			});
-		}
-	}
+	// if (isFeatureItem(item)) {
+	// 	if (item.included_usage === 0 && feature?.type !== FeatureType.Boolean) {
+	// 		throw new RecaseError({
+	// 			message: `Included usage for feature ${item.feature_id} must be greater than 0`,
+	// 			code: ErrCode.InvalidInputs,
+	// 			statusCode: StatusCodes.BAD_REQUEST,
+	// 		});
+	// 	}
+	// }
 
 	// 5. If it's a price, can't have day, minute or hour interval
 	if (isFeaturePriceItem(item) || isPriceItem(item)) {

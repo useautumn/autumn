@@ -64,7 +64,6 @@ export const getApiCustomerBase = async ({
 			fullCus.invoices && ctx.expand.includes(CusExpand.Invoices)
 				? invoicesToResponse({
 						invoices: fullCus.invoices,
-						logger: ctx.logger,
 					})
 				: undefined,
 	});

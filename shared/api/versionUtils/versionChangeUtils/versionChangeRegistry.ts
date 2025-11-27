@@ -25,6 +25,8 @@ import { V0_2_CheckChange } from "../../balances/check/changes/V0.2_CheckChange.
 import { V1_2_CheckChange } from "../../balances/check/changes/V1.2_CheckChange.js";
 import { V1_2_CheckQueryChange } from "../../balances/check/changes/V1.2_CheckQueryChange.js";
 import { V1_2_TrackChange } from "../../balances/track/changes/V1.2_TrackChange.js";
+// Import attach changes
+import { V0_2_AttachChange } from "../../billing/attach/changes/V0.2_AttachChange.js";
 import { ApiVersion } from "../ApiVersion.js";
 import type { VersionChangeConstructor } from "./VersionChange.js";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
@@ -57,6 +59,7 @@ export const V1_1_CHANGES: VersionChangeConstructor[] = [
 	V0_2_CustomerChange, // Transforms TO V0_2: splits structure + transforms features
 	V0_2_InvoicesAlwaysExpanded, // Side effect: invoices always expanded for V0_2 and older
 	V0_2_CheckChange, // Transforms TO V0_2: check response to balances array format
+	V0_2_AttachChange, // Transforms TO V0_2: minimal attach response format
 ];
 
 export const V0_2_CHANGES: VersionChangeConstructor[] = [
