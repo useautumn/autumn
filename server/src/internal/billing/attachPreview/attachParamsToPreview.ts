@@ -1,16 +1,13 @@
 import {
-	type AttachBody,
-	AttachBranch,
+	type AttachBodyV0,
 	AttachFunction,
 	cusProductToProduct,
-	notNullish,
 } from "@autumn/shared";
 import { attachParamToCusProducts } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
 import { getAttachBranch } from "@/internal/customers/attach/attachUtils/getAttachBranch.js";
 import { getAttachConfig } from "@/internal/customers/attach/attachUtils/getAttachConfig.js";
 import { getAttachFunction } from "@/internal/customers/attach/attachUtils/getAttachFunction.js";
 import { getDowngradeProductPreview } from "@/internal/customers/attach/handleAttachPreview/getDowngradeProductPreview.js";
-import { getMultiAttachPreview } from "@/internal/customers/attach/handleAttachPreview/getMultiAttachPreview.js";
 import { getNewProductPreview } from "@/internal/customers/attach/handleAttachPreview/getNewProductPreview.js";
 import { getUpgradeProductPreview } from "@/internal/customers/attach/handleAttachPreview/getUpgradeProductPreview.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
@@ -24,7 +21,7 @@ export const attachParamsToPreview = async ({
 }: {
 	ctx: AutumnContext;
 	attachParams: AttachParams;
-	attachBody: AttachBody;
+	attachBody: AttachBodyV0;
 	withPrepaid?: boolean;
 }) => {
 	const { logger } = ctx;
@@ -60,17 +57,6 @@ export const attachParamsToPreview = async ({
 	let preview: any = null;
 
 	if (
-		branch === AttachBranch.MultiAttach ||
-		notNullish(attachParams.productsList)
-	) {
-		preview = await getMultiAttachPreview({
-			ctx,
-			attachBody,
-			attachParams,
-			config,
-			branch,
-		});
-	} else if (
 		func === AttachFunction.AddProduct ||
 		func === AttachFunction.CreateCheckout ||
 		func === AttachFunction.OneOff

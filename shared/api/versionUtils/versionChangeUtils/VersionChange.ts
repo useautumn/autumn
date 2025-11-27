@@ -16,6 +16,7 @@ export enum AffectedResource {
 	Check = "check",
 	Track = "track",
 	Checkout = "checkout",
+	Attach = "attach",
 	// Add more as needed
 }
 
