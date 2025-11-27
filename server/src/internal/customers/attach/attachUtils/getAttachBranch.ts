@@ -1,5 +1,5 @@
 import {
-	type AttachBody,
+	type AttachBodyV0,
 	AttachBranch,
 	AttachErrCode,
 	BillingInterval,
@@ -23,10 +23,7 @@ import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import type { AttachParams } from "../../cusProducts/AttachParams.js";
 import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { isMainTrialBranch } from "./attachUtils.js";
-import {
-	attachParamToCusProducts,
-	getCustomerSub,
-} from "./convertAttachParams.js";
+import { attachParamToCusProducts } from "./convertAttachParams.js";
 
 const handleMultiProductErrors = async ({
 	attachParams,
@@ -92,6 +89,8 @@ const getOptionsToUpdate = ({
 }) => {
 	const optionsToUpdate: { new: FeatureOptions; old: FeatureOptions }[] = [];
 	const prices = cusProductToPrices({ cusProduct: curSameProduct });
+	console.log("Old options list: ", oldOptionsList);
+	console.log("New options list: ", newOptionsList);
 
 	for (const newOptions of newOptionsList) {
 		const internalFeatureId = newOptions.internal_feature_id;
@@ -298,20 +297,10 @@ export const getAttachBranch = async ({
 	fromPreview,
 }: {
 	ctx: AutumnContext;
-	attachBody: AttachBody;
+	attachBody: AttachBodyV0;
 	attachParams: AttachParams;
 	fromPreview?: boolean;
 }) => {
-	if (notNullish(attachBody.products)) {
-		// 1.
-		const { subId } = await getCustomerSub({ attachParams, onlySubId: true });
-
-		if (subId) {
-			return AttachBranch.MultiAttachUpdate;
-		}
-		return AttachBranch.MultiAttach;
-	}
-
 	if (pricesOnlyOneOff(attachParams.prices)) {
 		return AttachBranch.OneOff;
 	}

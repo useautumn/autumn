@@ -10,7 +10,6 @@ import { UTCDate } from "@date-fns/utc";
 import { applyTrialToEntitlement } from "@/internal/products/entitlements/entitlementUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { getNextEntitlementReset } from "@/utils/timeUtils.js";
-import { formatUnixToDateTime } from "../../../../../utils/genUtils.js";
 import { getAlignedUnix } from "../../../../products/prices/billingIntervalUtils2.js";
 
 export const initNextResetAt = ({
@@ -54,9 +53,6 @@ export const initNextResetAt = ({
 	// 	"Trial end timestamp: ",
 	// 	formatUnixToDateTime(trialEndTimestamp! * 1000),
 	// );
-	console.log("Should apply trial: ", shouldApplyTrial);
-	console.log("Anchor to unix: ", anchorToUnix);
-	console.log("Anchor to unix formatted: ", formatUnixToDateTime(anchorToUnix));
 
 	if (freeTrial && shouldApplyTrial && trialEndTimestamp) {
 		nextResetAtCalculated = new UTCDate(trialEndTimestamp! * 1000);

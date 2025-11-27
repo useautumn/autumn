@@ -225,6 +225,7 @@ export const handleScheduleFunction2 = async ({
 		} else {
 			res.status(200).json({
 				success: true,
+				message: `Successfully downgraded from ${curCusProduct.product.name} to ${product.name}`,
 			});
 		}
 	}

@@ -1,4 +1,4 @@
-import { type AttachBody, ErrCode } from "@autumn/shared";
+import { type AttachBodyV0, ErrCode } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { RewardService } from "@/internal/rewards/RewardService.js";
@@ -14,7 +14,7 @@ export const getRewards = async ({
 	stripeCli,
 }: {
 	ctx: AutumnContext;
-	attachBody: AttachBody;
+	attachBody: AttachBodyV0;
 	stripeCli: Stripe;
 }) => {
 	const { reward: idOrCode } = attachBody;
@@ -66,7 +66,7 @@ export const processAttachBody = async ({
 	attachBody,
 }: {
 	ctx: AutumnContext;
-	attachBody: AttachBody;
+	attachBody: AttachBodyV0;
 }) => {
 	// 1. Get customer and products
 	const { org, env, logger } = ctx;
