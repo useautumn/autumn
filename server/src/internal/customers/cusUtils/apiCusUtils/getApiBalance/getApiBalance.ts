@@ -190,6 +190,12 @@ export const getApiBalance = ({
 		),
 	);
 
+	// console.log(
+	// 	"totalGrantedBalanceWithRollovers",
+	// 	totalGrantedBalanceWithRollovers,
+	// );
+	// console.log("--------------------------------");
+
 	const totalAdjustment = sumValues(
 		cusEnts.map((cusEnt) => {
 			const { adjustment } = getCusEntBalance({

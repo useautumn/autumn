@@ -36,10 +36,6 @@ export function UsageReset({ showBillingLabel = false }: UsageResetProps) {
 	) => {
 		setItem({
 			...item,
-			usage_model:
-				value === BillingInterval.OneOff
-					? UsageModel.Prepaid
-					: item.usage_model,
 			interval: isFeaturePrice
 				? billingToItemInterval({
 						billingInterval: value as BillingInterval,
@@ -71,12 +67,18 @@ export function UsageReset({ showBillingLabel = false }: UsageResetProps) {
 				</SelectTrigger>
 				<SelectContent>
 					{Object.values(isFeaturePrice ? BillingInterval : EntInterval)
-						// .filter((i) => {
-						// 	if (isFeaturePrice && item.usage_model === UsageModel.PayPerUse) {
-						// 		return i !== BillingInterval.OneOff;
-						// 	}
-						// 	return true;
-						// })
+						.filter((i) => {
+							if (
+								i === EntInterval.Minute &&
+								itemToEntInterval({ item }) !== EntInterval.Minute
+							) {
+								return false;
+							}
+							if (isFeaturePrice && item.usage_model === UsageModel.PayPerUse) {
+								return i !== BillingInterval.OneOff;
+							}
+							return true;
+						})
 						.map((interval) => (
 							<SelectItem key={interval} value={interval}>
 								{formatIntervalText({

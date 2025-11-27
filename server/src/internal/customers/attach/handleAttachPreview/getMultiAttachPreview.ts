@@ -1,6 +1,7 @@
 import {
-	type AttachBody,
+	type AttachBodyV0,
 	type AttachBranch,
+	type AttachConfig,
 	cusProductsToPrices,
 	type PreviewLineItem,
 } from "@autumn/shared";
@@ -9,7 +10,7 @@ import type Stripe from "stripe";
 import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import type { AttachParams } from "../../cusProducts/AttachParams.js";
 import { getAddAndRemoveProducts } from "../attachFunctions/multiAttach/getAddAndRemoveProducts.js";
 import { priceToNewPreviewItem } from "../attachPreviewUtils/priceToNewPreviewItem.js";
@@ -18,18 +19,17 @@ import { getCustomerSub } from "../attachUtils/convertAttachParams.js";
 import { handleMultiAttachErrors } from "../attachUtils/handleAttachErrors/handleMultiAttachErrors.js";
 
 export const getMultiAttachPreview = async ({
-	req,
+	// biome-ignore lint/correctness/noUnusedFunctionParameters: might be used in the future
+	ctx,
 	attachBody,
 	attachParams,
-	logger,
 	config,
 	branch,
 }: {
-	req: ExtendedRequest;
-	attachBody: AttachBody;
+	ctx: AutumnContext;
+	attachBody: AttachBodyV0;
 	attachParams: AttachParams;
-	logger: any;
-	config: any;
+	config: AttachConfig;
 	branch: AttachBranch;
 }) => {
 	await handleMultiAttachErrors({ attachParams, attachBody, branch });

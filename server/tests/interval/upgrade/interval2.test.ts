@@ -1,11 +1,11 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { LegacyVersion } from "@autumn/shared";
-import chalk from "chalk";
-import { addMonths, addWeeks, addYears } from "date-fns";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
+import { addMonths, addWeeks, addYears } from "date-fns";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -96,7 +96,7 @@ describe(`${chalk.yellowBright("interval2: Should upgrade from pro to pro annual
 
 		const subItem = sub!.items.data[0];
 		expect(subItem.current_period_end * 1000).toBeCloseTo(
-			checkoutRes.next_cycle?.starts_at!,
+			checkoutRes.next_cycle?.starts_at ?? 0,
 			-Math.log10(toMilliseconds.days(1)), // +- 1 day
 		);
 	});

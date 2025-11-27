@@ -12,6 +12,7 @@ export const ApiEntityV1Schema = ApiBaseEntitySchema.extend({
 		description: "Plans associated with this entity",
 		example: [],
 	}),
+	scheduled_subscriptions: z.array(ApiSubscriptionSchema),
 	balances: z.record(z.string(), ApiBalanceSchema).optional().meta({
 		description: "Features associated with this entity",
 	}),

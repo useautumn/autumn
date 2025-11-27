@@ -58,18 +58,18 @@ export const runTriggerCheckoutReward = async ({
 				};
 			const { reward } = reward_program;
 
-			console.info(`--------------------------------`);
-			console.info(`CHECKING FOR CHECKOUT REWARD, ORG: ${org.slug}`);
-			console.info(
+			logger.info(`--------------------------------`);
+			logger.info(`CHECKING FOR CHECKOUT REWARD, ORG: ${org.slug}`);
+			logger.info(
 				`Redeemed by: ${customer.name} (${customer.id}) for referral program: ${reward_program.id}`,
 			);
-			console.info(`Referral code: ${referralCode.code} (${referralCode.id})`);
-			console.info(
+			logger.info(`Referral code: ${referralCode.code} (${referralCode.id})`);
+			logger.info(
 				`Products: ${reward_program.product_ids?.join(", ")}, ${reward_program.reward.free_product_id}`,
 			);
 
 			if (!reward_program.product_ids?.includes(product.id)) {
-				console.info(
+				logger.info(
 					`Product ${product.name} (${product.id}) not included in referral program, skipping`,
 				);
 				if (reward_program.reward.free_product_id !== product.id) {
@@ -86,7 +86,7 @@ export const runTriggerCheckoutReward = async ({
 			}
 
 			if (hasTrial) {
-				console.info(`Subscription is on trial, not triggering reward`);
+				logger.info(`Subscription is on trial, not triggering reward`);
 				return;
 			}
 
@@ -99,7 +99,7 @@ export const runTriggerCheckoutReward = async ({
 			);
 
 			if (redemptionCount >= reward_program.max_redemptions!) {
-				console.info(
+				logger.info(
 					`Max redemptions reached, not triggering latest redemption`,
 				);
 				return;

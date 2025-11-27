@@ -15,6 +15,7 @@ import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { expectAutumnError } from "../../../utils/expectUtils/expectErrUtils.js";
 import { timeout } from "../../../utils/genUtils.js";
 
 const messagesFeature = constructFeatureItem({
@@ -108,19 +109,16 @@ describe(`${chalk.yellowBright("check8: test public key & send_event")}`, () => 
 		const balanceBefore = customerBefore.features[TestFeature.Messages].balance;
 		const usedBefore = customerBefore.features[TestFeature.Messages].used;
 
-		// Call check with public key and send_event: true
-		// This should succeed but NOT send events (silently skipped)
-		const checkRes = (await autumnPublic.check({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			required_balance: 50,
-			send_event: true,
-		})) as unknown as CheckResponseV1;
-
-		expect(checkRes.allowed).toBe(true);
-
-		// Wait for potential event processing
-		await new Promise((resolve) => setTimeout(resolve, 2000));
+		await expectAutumnError({
+			func: async () => {
+				await autumnPublic.check({
+					customer_id: customerId,
+					feature_id: TestFeature.Messages,
+					required_balance: 50,
+					send_event: true,
+				});
+			},
+		});
 
 		// Get customer and verify balance stayed the same
 		const customerAfter: any = await autumnV1.customers.get(customerId);
@@ -140,7 +138,7 @@ describe(`${chalk.yellowBright("check8: test public key & send_event")}`, () => 
 		})) as unknown as CheckResponseV1;
 
 		expect(checkRes.allowed).toBe(true);
-		expect(checkRes.balance).toBe(1000);
+		expect(checkRes.balance).toBe(1000 - 150);
 
 		// Wait for event to be processed
 		await timeout(2000);

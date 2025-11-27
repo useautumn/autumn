@@ -1,17 +1,13 @@
-import express, { type Router } from "express";
-import {
-	handleGetRedemption,
-	handleGetReferralCode,
-	handleRedeemReferral,
-} from "./handlers/referrals/index.js";
+import { Hono } from "hono";
+import type { HonoEnv } from "../../../honoUtils/HonoEnv.js";
+import { handleGetRedemption } from "./handlers/referrals/handleGetRedemption.js";
+import { handleGetReferralCode } from "./handlers/referrals/handleGetReferralCode.js";
+import { handleRedeemReferral } from "./handlers/referrals/handleRedeemReferral.js";
 
-export const referralRouter: Router = express.Router();
+export const redemptionRouter = new Hono<HonoEnv>();
 
-// 1. Get referral code
-referralRouter.post("/code", handleGetReferralCode);
+redemptionRouter.get("/:redemption_id", ...handleGetRedemption);
 
-referralRouter.post("/redeem", handleRedeemReferral);
-
-export const redemptionRouter: Router = express.Router();
-
-redemptionRouter.get("/:redemptionId", handleGetRedemption);
+export const referralRouter = new Hono<HonoEnv>();
+referralRouter.post("/code", ...handleGetReferralCode);
+referralRouter.post("/redeem", ...handleRedeemReferral);

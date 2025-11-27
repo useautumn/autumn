@@ -24,8 +24,9 @@ export const handleGetEntity = createRoute({
 			entityId: entity_id,
 			withAutumnId: with_autumn_id,
 		});
+
 		const duration = Date.now() - start;
-		console.debug(`[get-entity] duration: ${duration}ms`);
+		ctx.logger.debug(`[get-entity] duration: ${duration}ms`);
 
 		return c.json(apiEntity);
 	},

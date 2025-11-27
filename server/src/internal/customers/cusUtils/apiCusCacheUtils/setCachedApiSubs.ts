@@ -5,10 +5,6 @@ import {
 	filterCusProductsByEntity,
 	filterOutEntitiesFromCusProducts,
 } from "@autumn/shared";
-import {
-	SET_ENTITY_PRODUCTS_SCRIPT,
-	SET_SUBSCRIPTIONS_SCRIPT,
-} from "@lua/luaScripts.js";
 import { redis } from "../../../../external/redis/initRedis.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "../../../../utils/cacheUtils/cacheUtils.js";
@@ -16,8 +12,8 @@ import { getApiSubscriptions } from "../apiCusUtils/getApiSubscription/getApiSub
 
 /**
  * Set customer subscriptions cache in Redis with all entities
- * This function updates only the subscriptions array in the customer cache (customer-level subscriptions only)
- * and individual entity caches (entity-level subscriptions only)
+ * This function updates subscriptions and scheduled_subscriptions arrays in the customer cache (customer-level only)
+ * and individual entity caches (entity-level only)
  */
 export const setCachedApiSubs = async ({
 	ctx,
@@ -33,7 +29,7 @@ export const setCachedApiSubs = async ({
 	// Build master api customer subscriptions (customer-level products only)
 	const ctxWithExpand = addToExpand({
 		ctx,
-		add: [CusExpand.SubscriptionsPlan],
+		add: [CusExpand.SubscriptionsPlan, CusExpand.ScheduledSubscriptionsPlan],
 	});
 	const { data: masterApiSubs } = await getApiSubscriptions({
 		ctx: ctxWithExpand,
@@ -45,21 +41,28 @@ export const setCachedApiSubs = async ({
 		},
 	});
 
+	// Split subscriptions by status
+	const activeSubscriptions = masterApiSubs.filter(
+		(s) => s.status === "active",
+	);
+	const scheduledSubscriptions = masterApiSubs.filter(
+		(s) => s.status === "scheduled",
+	);
+
 	// console.log(`Updating api subs for customer ${customerId}`, masterApiSubs);
 
 	// Then write to Redis
 	await tryRedisWrite(async () => {
-		// Update customer subscriptions
-		await redis.eval(
-			SET_SUBSCRIPTIONS_SCRIPT,
-			0, // No KEYS, all params in ARGV
-			JSON.stringify(masterApiSubs),
+		// Update customer subscriptions and scheduled_subscriptions
+		await redis.setSubscriptions(
+			JSON.stringify(activeSubscriptions),
+			JSON.stringify(scheduledSubscriptions),
 			org.id,
 			env,
 			customerId,
 		);
 		logger.info(
-			`Updated customer subscriptions cache for customer ${customerId} (${masterApiSubs.length} subscriptions)`,
+			`Updated customer subscriptions cache for customer ${customerId} (${activeSubscriptions.length} active, ${scheduledSubscriptions.length} scheduled)`,
 		);
 
 		// Update entity subscriptions
@@ -71,7 +74,7 @@ export const setCachedApiSubs = async ({
 				org,
 			});
 
-			const { data: entityProducts } = await getApiSubscriptions({
+			const { data: entitySubscriptions } = await getApiSubscriptions({
 				ctx: ctxWithExpand,
 				fullCus: {
 					...fullCus,
@@ -80,17 +83,24 @@ export const setCachedApiSubs = async ({
 				},
 			});
 
-			await redis.eval(
-				SET_ENTITY_PRODUCTS_SCRIPT,
-				0, // No KEYS, all params in ARGV
-				JSON.stringify(entityProducts),
+			// Split entity subscriptions by status
+			const entityActiveSubscriptions = entitySubscriptions.filter(
+				(s) => s.status === "active",
+			);
+			const entityScheduledSubscriptions = entitySubscriptions.filter(
+				(s) => s.status === "scheduled",
+			);
+
+			await redis.setEntityProducts(
+				JSON.stringify(entityActiveSubscriptions),
+				JSON.stringify(entityScheduledSubscriptions),
 				org.id,
 				env,
 				customerId,
 				entity.id,
 			);
 			logger.info(
-				`Updated entity subscriptions cache for entity ${entity.id} (${entityProducts.length} subscriptions)`,
+				`Updated entity subscriptions cache for entity ${entity.id} (${entityActiveSubscriptions.length} active, ${entityScheduledSubscriptions.length} scheduled)`,
 			);
 		}
 	});

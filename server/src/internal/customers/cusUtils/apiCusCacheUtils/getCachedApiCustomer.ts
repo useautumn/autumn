@@ -1,4 +1,5 @@
 import {
+	ApiBaseEntitySchema,
 	type ApiCustomer,
 	ApiCustomerSchema,
 	type AppEnv,
@@ -10,7 +11,6 @@ import {
 	filterPlanAndFeatureExpand,
 } from "@autumn/shared";
 import { CACHE_CUSTOMER_VERSION } from "@lua/cacheConfig.js";
-import { GET_CUSTOMER_SCRIPT } from "@lua/luaScripts.js";
 import { redis } from "../../../../external/redis/initRedis.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { tryRedisRead } from "../../../../utils/cacheUtils/cacheUtils.js";
@@ -56,9 +56,7 @@ export const getCachedApiCustomer = async ({
 		// Try to get from cache using Lua script (unless skipCache is true)
 		if (!skipCache) {
 			const cachedResult = await tryRedisRead(() =>
-				redis.eval(
-					GET_CUSTOMER_SCRIPT,
-					0, // No KEYS, all params in ARGV
+				redis.getCustomer(
 					org.id,
 					env,
 					customerId,
@@ -108,13 +106,23 @@ export const getCachedApiCustomer = async ({
 		// Build ApiCustomer (base only, no expand) to return
 		const ctxWithExpand = addToExpand({
 			ctx,
-			add: [CusExpand.Invoices],
+			add: [CusExpand.Invoices, CusExpand.Entities],
 		});
 		const { apiCustomer, legacyData } = await getApiCustomerBase({
 			ctx: ctxWithExpand,
 			fullCus,
 			withAutumnId: true,
 		});
+
+		try {
+			apiCustomer.entities = fullCus.entities.map((e) =>
+				ApiBaseEntitySchema.parse(e),
+			);
+		} catch (error) {
+			ctx.logger.error(
+				`[getCachedApiCustomer] Error parsing entities: ${error}`,
+			);
+		}
 
 		const { apiCustomer: masterApiCustomer } = await getApiCustomerBase({
 			ctx,

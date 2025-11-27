@@ -139,7 +139,11 @@ export const handleProductsUpdated = async ({
 	if (ctx.apiVersion.lte(ApiVersion.V1_2)) {
 		addToExpand({
 			ctx,
-			add: [CusExpand.BalancesFeature, CusExpand.SubscriptionsPlan],
+			add: [
+				CusExpand.BalancesFeature,
+				CusExpand.SubscriptionsPlan,
+				CusExpand.ScheduledSubscriptionsPlan,
+			],
 		});
 	}
 
