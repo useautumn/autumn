@@ -155,14 +155,10 @@ export const GetBillingPortalQuerySchema = z.object({
 // Get Billing Portal Body
 export const GetBillingPortalBodySchema = z
 	.object({
-		billing_portal_params: z
-			.record(z.any(), z.any())
-			.optional()
-			.default({})
-			.meta({
-				description:
-					"Additional parameters for the billing portal configuration",
-			}),
+		configuration_id: z.string().optional().meta({
+			description:
+				"Stripe billing portal configuration ID. Create configurations in your Stripe dashboard.",
+		}),
 	})
 	.optional();
 
