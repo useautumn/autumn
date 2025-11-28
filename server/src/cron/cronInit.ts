@@ -4,13 +4,16 @@ import { UTCDate } from "@date-fns/utc";
 import { CronJob } from "cron";
 import { format } from "date-fns";
 import { initDrizzle } from "../db/initDrizzle.js";
+import { logger } from "../external/logtail/logtailUtils.js";
 import { CusEntService } from "../internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { notNullish } from "../utils/genUtils.js";
 import {
 	clearCusEntsFromCache,
 	resetCustomerEntitlement,
 } from "./cronUtils.js";
+import { runInvoiceCron } from "./invoiceCron/runInvoiceCron.js";
 import { runProductCron } from "./productCron/runProductCron.js";
+import type { CronContext } from "./utils/CronContext.js";
 
 const { db, client } = initDrizzle();
 
@@ -66,7 +69,17 @@ const main = async () => {
 		console.log(`Cron disabled!`);
 		return;
 	}
-	await Promise.all([cronTask(), runProductCron()]);
+
+	const ctx: CronContext = {
+		db,
+		logger,
+	};
+	await Promise.all([
+		cronTask(),
+		runProductCron(),
+		runInvoiceCron({ ctx }),
+		// TODO: Add runUsageCron({ ctx })
+	]);
 };
 
 new CronJob(

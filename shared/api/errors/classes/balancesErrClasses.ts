@@ -1,4 +1,4 @@
-import { RecaseError } from "../../../index.js";
+import { RecaseError } from "../base/RecaseError.js";
 import { BalancesErrorCode } from "../codes/balancesErrCodes.js";
 
 export class InsufficientBalanceError extends RecaseError {

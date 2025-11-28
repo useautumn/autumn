@@ -81,6 +81,7 @@ export const updateStripeSub2 = async ({
 			days_until_due: 30,
 		}),
 		payment_behavior: "error_if_incomplete",
+
 		expand: ["latest_invoice"],
 	});
 
@@ -120,8 +121,10 @@ export const updateStripeSub2 = async ({
 		logger,
 	});
 
+	let url = null;
 	if (proration === ProrationBehavior.Immediately) {
-		latestInvoice = await createProrationInvoice({
+		const res = await createProrationInvoice({
+			ctx,
 			attachParams,
 			invoiceOnly,
 			curSub,
@@ -129,20 +132,30 @@ export const updateStripeSub2 = async ({
 			logger,
 		});
 
+		latestInvoice = res.invoice;
+		url = res.url;
+
 		console.log(`FINALIZED INVOICE ${latestInvoice?.id}`);
 		console.log(latestInvoice?.lines.data.map((line) => line.description));
 	}
 
-	await resetUsageBalances({
-		db,
-		cusEntIds,
-		cusProduct: curMainProduct!,
-	});
+	// If url is returned, it means invoice action is required, so don't reset balances.
+	if (!url) {
+		await resetUsageBalances({
+			db,
+			cusEntIds,
+			cusProduct: curMainProduct!,
+		});
+	} else {
+		// reset balances later when invoice is paid
+		attachParams.cusEntIds = cusEntIds;
+	}
 
 	return {
 		updatedSub,
 		latestInvoice: latestInvoice,
 		cusEntIds,
 		replaceables,
+		url,
 	};
 };

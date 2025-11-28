@@ -8,13 +8,13 @@ import type {
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { handleInvoiceCheckoutPaid } from "@/internal/customers/attach/attachFunctions/invoiceCheckoutPaid/handleInvoiceCheckoutPaid.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { nullish } from "@/utils/genUtils.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import {
 	getFullStripeInvoice,
 	getInvoiceDiscounts,
@@ -23,6 +23,7 @@ import {
 } from "../stripeInvoiceUtils.js";
 import { lineItemInCusProduct } from "../stripeSubUtils/stripeSubItemUtils.js";
 import { getStripeSubs } from "../stripeSubUtils.js";
+import { handleInvoicePaidMetadata } from "./handleInvoicePaid/handleInvoicePaidMetadata.js";
 import { handleInvoicePaidDiscount } from "./handleInvoicePaidDiscount.js";
 
 const handleOneOffInvoicePaid = async ({
@@ -137,21 +138,15 @@ const convertToChargeAutomatically = async ({
 };
 
 export const handleInvoicePaid = async ({
-	db,
-	req,
-	org,
+	ctx,
 	invoiceData,
-	env,
 	event,
 }: {
-	db: DrizzleCli;
-	req: any;
-	org: Organization;
+	ctx: AutumnContext;
 	invoiceData: Stripe.Invoice;
-	env: AppEnv;
 	event: Stripe.Event;
 }) => {
-	const logger = req.logger;
+	const { logger, org, env, db } = ctx;
 	const stripeCli = createStripeCli({ org, env });
 	const invoice = await getFullStripeInvoice({
 		stripeCli,
@@ -160,12 +155,8 @@ export const handleInvoicePaid = async ({
 	});
 
 	if (invoice.metadata?.autumn_metadata_id) {
-		await handleInvoiceCheckoutPaid({
-			req,
-			org,
-			env,
-			db,
-			stripeCli,
+		await handleInvoicePaidMetadata({
+			ctx,
 			invoice,
 		});
 	}

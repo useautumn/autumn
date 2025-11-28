@@ -17,7 +17,7 @@ export const initCustomerV3 = async ({
 }: {
 	ctx: TestContext;
 	customerId: string;
-	attachPm?: "success" | "fail";
+	attachPm?: "success" | "fail" | "authenticate";
 	customerData?: CustomerData;
 	withTestClock?: boolean;
 	withDefault?: boolean;
