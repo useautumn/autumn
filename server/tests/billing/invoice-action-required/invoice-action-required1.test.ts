@@ -1,17 +1,17 @@
-import { beforeAll, describe, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
+import { expectSubItemsCorrect } from "@tests/utils/expectUtils/expectSubUtils.js";
+import { completeInvoiceConfirmation } from "@tests/utils/stripeUtils/completeInvoiceConfirmation.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { attachAuthenticatePaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { attachAuthenticatePaymentMethod } from "../../src/external/stripe/stripeCusUtils.js";
-import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3.js";
-import { initProductsV0 } from "../../src/utils/scriptUtils/testUtils/initProductsV0.js";
-import { expectProductAttached } from "../utils/expectUtils/expectProductAttached.js";
-import { expectSubItemsCorrect } from "../utils/expectUtils/expectSubUtils.js";
-import { completeInvoiceConfirmation } from "../utils/stripeUtils/completeInvoiceConfirmation.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
 // UNCOMMENT FROM HERE
 const pro = constructProduct({
@@ -37,8 +37,8 @@ const premium = constructProduct({
 	],
 });
 
-describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
-	const customerId = "temp";
+describe(`${chalk.yellowBright("invoice-action-required1: Testing invoice action required")}`, () => {
+	const customerId = "invoice-action-required1";
 	const autumn: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
 	beforeAll(async () => {
@@ -57,7 +57,8 @@ describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 		});
 	});
 
-	test("should attach pro product", async () => {
+	let checkoutUrl: string;
+	test("should attach pro product, then upgrade to premium and get checkout_url", async () => {
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -73,6 +74,8 @@ describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 			product_id: premium.id,
 		});
 
+		expect(res.checkout_url).toBeDefined();
+
 		const customer = await autumn.customers.get(customerId);
 		expectProductAttached({
 			customer,
@@ -88,12 +91,14 @@ describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 			env: ctx.env,
 		});
 
-		await completeInvoiceConfirmation({
-			url: res.checkout_url,
-		});
+		checkoutUrl = res.checkout_url;
 	});
 
-	test("should have premium product attached", async () => {
+	test("should complete invoice action required and have premium product attached", async () => {
+		await completeInvoiceConfirmation({
+			url: checkoutUrl,
+		});
+
 		const customer = await autumn.customers.get(customerId);
 		expectProductAttached({
 			customer,
@@ -107,6 +112,17 @@ describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 			db: ctx.db,
 			org: ctx.org,
 			env: ctx.env,
+		});
+
+		// Cleared cache
+		const nonCachedCustomer = await autumn.customers.get(customerId, {
+			skip_cache: "true",
+		});
+		expect(nonCachedCustomer.invoices?.[0].status).toBe("paid");
+
+		expectProductAttached({
+			customer: nonCachedCustomer,
+			product: premium,
 		});
 	});
 });

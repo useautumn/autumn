@@ -1,9 +1,21 @@
-import { pgTable, text, numeric, jsonb } from "drizzle-orm/pg-core";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+import { jsonb, numeric, pgTable, text } from "drizzle-orm/pg-core";
 import { sqlNow } from "../../db/utils.js";
+
+export enum MetadataType {
+	InvoiceActionRequired = "invoice_action_required",
+	InvoiceCheckout = "invoice_checkout",
+	CheckoutSessionCompleted = "checkout_session_completed",
+}
 
 export const metadata = pgTable("metadata", {
 	id: text().primaryKey().notNull(),
 	created_at: numeric({ mode: "number" }).notNull().default(sqlNow),
 	expires_at: numeric({ mode: "number" }),
 	data: jsonb(),
+	type: text("type").$type<MetadataType>(),
+	stripe_invoice_id: text("stripe_invoice_id"),
 });
+
+export type Metadata = InferSelectModel<typeof metadata>;
+export type MetadataInsert = InferInsertModel<typeof metadata>;
