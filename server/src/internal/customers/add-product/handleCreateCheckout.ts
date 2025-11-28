@@ -1,13 +1,13 @@
 import {
 	type AttachConfig,
 	AttachFunctionResponseSchema,
+	MetadataType,
 	RecaseError,
 	SuccessCode,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
-import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
 import { toSuccessUrl } from "@/internal/orgs/orgUtils/convertOrgUtils.js";
 import { orgToCurrency } from "@/internal/orgs/orgUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
@@ -15,6 +15,7 @@ import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingInter
 import { pricesContainRecurring } from "@/internal/products/prices/priceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
+import { attachParamsToMetadata } from "../../billing/attach/utils/attachParamsToMetadata.js";
 import type { AttachParams } from "../cusProducts/AttachParams.js";
 
 export const handleCreateCheckout = async ({
@@ -57,9 +58,10 @@ export const handleCreateCheckout = async ({
 	const isRecurring = pricesContainRecurring(attachParams.prices);
 
 	// Insert metadata
-	const metaId = await createCheckoutMetadata({
+	const metadata = await attachParamsToMetadata({
 		db,
 		attachParams,
+		type: MetadataType.CheckoutSessionCompleted,
 	});
 
 	let billingCycleAnchorUnixSeconds = org.config.anchor_start_of_month
@@ -136,7 +138,7 @@ export const handleCreateCheckout = async ({
 		metadata: {
 			...(attachParams.metadata ? attachParams.metadata : {}),
 			...(checkoutParams?.metadata || {}),
-			autumn_metadata_id: metaId,
+			autumn_metadata_id: metadata.id,
 		},
 		payment_method_collection:
 			freeTrial &&
@@ -155,7 +157,7 @@ export const handleCreateCheckout = async ({
 			...checkoutParams,
 			metadata: {
 				...(checkoutParams?.metadata || {}),
-				autumn_metadata_id: metaId,
+				autumn_metadata_id: metadata.id,
 			},
 		};
 	}

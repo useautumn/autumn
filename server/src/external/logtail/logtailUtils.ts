@@ -1,8 +1,6 @@
-import dotenv from "dotenv";
+import "dotenv/config";
 
-dotenv.config();
-
-import { initLogger } from "@/errors/logger.js";
+import { initLogger } from "@server/errors/logger.js";
 
 const pinoLogger = initLogger();
 

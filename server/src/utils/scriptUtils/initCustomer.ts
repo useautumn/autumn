@@ -150,10 +150,27 @@ export const attachPaymentMethod = async ({
 }: {
 	stripeCli: Stripe;
 	stripeCusId: string;
-	type: "success" | "fail";
+	type: "success" | "fail" | "authenticate";
 }) => {
 	try {
 		const token = type === "fail" ? "tok_chargeCustomerFail" : "tok_visa";
+
+		if (type === "authenticate") {
+			await stripeCli.paymentMethods.attach("pm_card_authenticationRequired", {
+				customer: stripeCusId,
+			});
+
+			const pms = await stripeCli.paymentMethods.list({
+				customer: stripeCusId,
+			});
+
+			await stripeCli.customers.update(stripeCusId, {
+				invoice_settings: {
+					default_payment_method: pms.data[0].id,
+				},
+			});
+			return;
+		}
 		const pm = await stripeCli.paymentMethods.create({
 			type: "card",
 			card: {

@@ -1,4 +1,5 @@
 export enum SuccessCode {
+	InvoiceActionRequired = "invoice_action_required",
 	// Track
 	SuccessfullyDeducted = "successfully_deducted",
 	EventReceived = "event_received",

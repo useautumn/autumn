@@ -11,6 +11,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import RecaseError from "@/utils/errorUtils.js";
+import type { TestContext } from "../../../tests/utils/testInitUtils/createTestContext";
 
 export const getStripeCus = async ({
 	stripeCli,
@@ -310,6 +311,38 @@ export const attachFailedPaymentMethod = async ({
 	});
 	await stripeCli.paymentMethods.attach(pm.id, {
 		customer: customer.processor?.id,
+	});
+};
+
+export const attachAuthenticatePaymentMethod = async ({
+	ctx,
+	customerId,
+}: {
+	ctx: TestContext;
+	customerId: string;
+}) => {
+	const { org, env, db } = ctx;
+	const stripeCli = createStripeCli({ org, env });
+	const autumnCustomer = await CusService.get({
+		db,
+		idOrInternalId: customerId,
+		orgId: org.id,
+		env: env,
+	});
+
+	const stripeCustomer = await stripeCli.customers.retrieve(
+		autumnCustomer!.processor?.id,
+	);
+	// Delete existing payment method
+	const paymentMethods = await stripeCli.paymentMethods.list({
+		customer: stripeCustomer.id,
+	});
+	for (const pm of paymentMethods.data) {
+		await stripeCli.paymentMethods.detach(pm.id);
+	}
+
+	await stripeCli.paymentMethods.attach("pm_card_authenticationRequired", {
+		customer: stripeCustomer.id,
 	});
 };
 
