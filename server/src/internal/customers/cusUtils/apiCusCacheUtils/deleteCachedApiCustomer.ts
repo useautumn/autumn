@@ -1,5 +1,5 @@
-import { redis } from "@/external/redis/initRedis.js";
 import { logger } from "../../../../external/logtail/logtailUtils.js";
+import { redis } from "../../../../external/redis/initRedis.js";
 
 /**
  * Delete all cached ApiCustomer data from Redis
