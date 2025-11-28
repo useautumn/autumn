@@ -67,7 +67,7 @@ export const PlanCardHeader = () => {
 				</span>
 			)}
 
-			<BasePriceDisplay />
+			<BasePriceDisplay product={product} />
 		</CardHeader>
 	);
 };

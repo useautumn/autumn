@@ -128,7 +128,10 @@ export const OnboardingPreview = ({
 				</div>
 
 				{showPricing && (
-					<BasePriceDisplay isOnboarding={currentStep !== 4} />
+					<BasePriceDisplay
+						product={product}
+						isOnboarding={currentStep !== 4}
+					/>
 					// <IconButton
 					// 	variant="secondary"
 					// 	icon={<CrosshairSimpleIcon />}

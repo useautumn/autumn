@@ -8,20 +8,23 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/v2/tooltips/Tooltip";
+import { cn } from "@/lib/utils";
 
 const StatusItem = ({
 	children,
 	text,
 	trial_ends_at,
 	tooltip,
+	className,
 }: {
 	children: React.ReactNode;
 	text: string;
 	trial_ends_at?: number;
 	tooltip?: boolean;
+	className?: string;
 }) => {
 	return (
-		<div className="flex items-center text-t3">
+		<div className={cn("flex items-center", className)}>
 			{tooltip ? (
 				<TooltipProvider>
 					<Tooltip>
@@ -29,7 +32,7 @@ const StatusItem = ({
 						<TooltipContent>
 							<span className="text-sm">{text} </span>
 							{trial_ends_at && (
-								<span className="text-sm">
+								<span className="text-sm text-t3">
 									({formatDistanceToNow(trial_ends_at)} left)
 								</span>
 							)}
@@ -45,7 +48,7 @@ const StatusItem = ({
 					{trial_ends_at && (
 						<>
 							<DotIcon size={16} />
-							<span className="text-sm">
+							<span className="text-sm text-t3">
 								{formatDistanceToNow(trial_ends_at)} left
 							</span>
 						</>
