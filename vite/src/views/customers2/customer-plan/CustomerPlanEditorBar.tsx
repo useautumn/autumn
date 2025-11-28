@@ -12,6 +12,7 @@ import { pushPage } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCusProductQuery } from "@/views/customers/customer/product/hooks/useCusProductQuery";
 import { PlanEditorBar } from "@/views/products/plan/components/PlanEditorBar";
+import { DEFAULT_PRODUCT } from "@/views/products/plan/utils/defaultProduct";
 
 export const CustomerPlanEditorBar = () => {
 	const navigate = useNavigate();
@@ -70,12 +71,7 @@ export const CustomerPlanEditorBar = () => {
 	};
 	if (sheetType) return null;
 
-	if (!changesMade) {
-		return <GoBackBar returnToCustomer={returnToCustomer} />;
-	}
-
 	const handleSaveClicked = async () => {
-		// Product is already in store, just navigate back
 		returnToCustomer();
 	};
 
@@ -90,6 +86,16 @@ export const CustomerPlanEditorBar = () => {
 			setProduct(baseProduct);
 		}
 	};
+
+	const handleReturnWithoutSaving = () => {
+		if (baseProduct) {
+			setProduct(DEFAULT_PRODUCT);
+		}
+		returnToCustomer();
+	};
+	if (!changesMade) {
+		return <GoBackBar handleReturnWithoutSaving={handleReturnWithoutSaving} />;
+	}
 
 	return (
 		<PlanEditorBar>
@@ -108,10 +114,14 @@ export const CustomerPlanEditorBar = () => {
 	);
 };
 
-const GoBackBar = ({ returnToCustomer }: { returnToCustomer: () => void }) => {
+const GoBackBar = ({
+	handleReturnWithoutSaving,
+}: {
+	handleReturnWithoutSaving: () => void;
+}) => {
 	return (
 		<PlanEditorBar>
-			<Button variant="secondary" onClick={returnToCustomer}>
+			<Button variant="secondary" onClick={handleReturnWithoutSaving}>
 				Return to Customer
 			</Button>
 		</PlanEditorBar>

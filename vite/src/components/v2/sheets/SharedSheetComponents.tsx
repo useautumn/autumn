@@ -40,9 +40,9 @@ interface SheetSectionProps {
 	description?: string | React.ReactNode;
 	checked?: boolean;
 	setChecked?: (checked: boolean) => void;
-	actions?: React.ReactNode;
 	children: React.ReactNode;
 	withSeparator?: boolean;
+	actions?: React.ReactNode;
 }
 
 export function SheetSection({
@@ -50,9 +50,9 @@ export function SheetSection({
 	description,
 	checked = true,
 	setChecked,
-	actions,
 	children,
 	withSeparator = true,
+	actions,
 }: SheetSectionProps) {
 	const id = useId();
 
@@ -61,11 +61,11 @@ export function SheetSection({
 		<>
 			<div className="p-4">
 				{title && (
-					<label
-						htmlFor={id}
-						className="flex items-center gap-2 mb-2 w-full justify-between h-6"
-					>
-						<div>
+					<div className="flex items-center justify-between h-6 mb-2">
+						<label
+							htmlFor={id}
+							className="flex items-center gap-2 w-full justify-between h-6"
+						>
 							{withTogle && (
 								<div className="flex items-center gap-2">
 									<Checkbox
@@ -80,12 +80,15 @@ export function SheetSection({
 									<h3 className={cn("text-sub select-none")}>{title}</h3>
 								</div>
 							)}
-						</div>
+						</label>
 						{actions && (
-							<div className="flex items-center gap-2">{actions}</div>
+							<div className="flex items-center gap-2 justify-end">
+								{actions}
+							</div>
 						)}
-					</label>
+					</div>
 				)}
+
 				{description && (
 					<p
 						className={cn(

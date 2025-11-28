@@ -1,5 +1,5 @@
 import type { FullCusProduct } from "@autumn/shared";
-import { CheckCircle } from "@phosphor-icons/react";
+import { ArrowRightIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/v2/buttons/Button";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 
@@ -19,9 +19,9 @@ export function UpdatePlanButton({ cusProduct }: UpdatePlanButtonProps) {
 	};
 
 	return (
-		<Button variant="primary" onClick={handleUpdateClick}>
-			<CheckCircle size={16} weight="duotone" />
-			Update Plan
+		<Button variant="skeleton" onClick={handleUpdateClick}>
+			<ArrowRightIcon size={16} weight="duotone" />
+			Go to Checkout
 		</Button>
 	);
 }
