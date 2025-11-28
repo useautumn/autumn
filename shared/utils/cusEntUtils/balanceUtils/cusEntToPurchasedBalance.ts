@@ -44,7 +44,13 @@ export const cusEntToPurchasedBalance = ({
 			.mul(billingUnits)
 			.toNumber();
 
-		return quantityWithBillingUnits;
+		// Add negative cus ent balance too
+		const { balance } = getCusEntBalance({
+			cusEnt,
+			entityId,
+		});
+
+		return quantityWithBillingUnits + Math.max(0, -balance);
 	}
 
 	const { balance } = getCusEntBalance({
