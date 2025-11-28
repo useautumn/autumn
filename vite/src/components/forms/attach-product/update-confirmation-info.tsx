@@ -1,22 +1,31 @@
-import type { CheckoutResponseV0 } from "@autumn/shared";
+import type { CheckoutResponseV0, ProductV2 } from "@autumn/shared";
 import type { ReactNode } from "react";
+import { useMemo } from "react";
 import {
 	useHasBillingChanges,
 	useHasChanges,
+	usePrepaidItems,
 } from "@/hooks/stores/useProductStore";
 import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
+import type { UseAttachProductForm } from "./use-attach-product-form";
 
 export const UpdateConfirmationInfo = ({
 	previewData,
+	product,
+	form,
 }: {
 	previewData?: CheckoutResponseV0 | null;
+	product?: ProductV2;
+	form: UseAttachProductForm;
 }) => {
 	const hasChanges = useHasChanges();
 	const hasBillingChanges = useHasBillingChanges({
 		baseProduct: previewData?.current_product,
 		newProduct: previewData?.product,
 	});
+
+	const hasPrepaidQuantityChanges = useHasPrepaidQuantityChanges(product, form);
 
 	const renderInfoBoxes = (): ReactNode[] => {
 		const boxes: ReactNode[] = [];
@@ -44,8 +53,17 @@ export const UpdateConfirmationInfo = ({
 			);
 		}
 
+		// Prepaid quantity changes notice
+		if (hasPrepaidQuantityChanges) {
+			boxes.push(
+				<InfoBox key="prepaid-quantity-changes" variant="info">
+					Prepaid quantities have been updated
+				</InfoBox>,
+			);
+		}
+
 		// No billing changes notice
-		if (!hasBillingChanges) {
+		if (!hasBillingChanges && !hasPrepaidQuantityChanges) {
 			boxes.push(
 				<InfoBox key="no-billing-changes" variant="success">
 					No changes to billing will be made
@@ -88,4 +106,29 @@ export const UpdateConfirmationInfo = ({
 			))}
 		</div>
 	);
+};
+
+const useHasPrepaidQuantityChanges = (
+	product: ProductV2 | undefined,
+	form: UseAttachProductForm,
+) => {
+	const prepaidItems = usePrepaidItems({ product });
+	const currentPrepaidOptions = form.state.values.prepaidOptions;
+	const initialPrepaidOptions = form.state.values.initialPrepaidOptions;
+
+	return useMemo(() => {
+		if (
+			prepaidItems.length === 0 ||
+			!currentPrepaidOptions ||
+			!initialPrepaidOptions
+		) {
+			return false;
+		}
+
+		return prepaidItems.some((item) => {
+			const currentQuantity = currentPrepaidOptions[item.feature_id as string];
+			const initialQuantity = initialPrepaidOptions[item.feature_id as string];
+			return currentQuantity !== initialQuantity;
+		});
+	}, [prepaidItems, currentPrepaidOptions, initialPrepaidOptions]);
 };

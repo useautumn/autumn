@@ -2,7 +2,6 @@ import { ChartBar } from "@phosphor-icons/react";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import { Table } from "@/components/general/table";
-import { cn } from "@/lib/utils";
 import { useCusEventsQuery } from "@/views/customers/customer/hooks/useCusEventsQuery";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
@@ -93,7 +92,8 @@ export function CustomerUsageAnalyticsTable() {
 				numberOfColumns: CustomerUsageAnalyticsColumns.length,
 				enableSorting,
 				isLoading,
-				rowClassName: "h-8 bg-interactive-secondary",
+				rowClassName: "h-8 bg-interactive-secondary dark:bg-card",
+				flexibleTableColumns: true,
 			}}
 		>
 			<Table.Container>
@@ -130,26 +130,15 @@ export function CustomerUsageAnalyticsTable() {
 						</div>
 					) : hasEvents ? (
 						<>
-							<div className="flex max-w-3/8 w-full min-w-0 flex-col h-[250px]">
-								<div className="overflow-hidden flex flex-col border h-full bg-card">
-									<div className="">
-										<table className="table-fixed p-0 w-full h-full">
-											<Table.Header />
-										</table>
-									</div>
-									<div
-										className={cn(
-											"overflow-auto",
-											rawEvents?.length < 6 ? "border-b" : "",
-										)}
-									>
-										<table className="table-fixed p-0 w-full">
-											<Table.Body />
-										</table>
-									</div>
+							<div className="flex max-w-1/2 w-full min-w-0 flex-col h-[250px]">
+								<div className="overflow-hidden flex flex-col border h-full bg-card rounded-lg">
+									<Table.Content className="border-none overflow-auto">
+										<Table.Header />
+										<Table.Body />
+									</Table.Content>
 								</div>
 							</div>
-							<div className="flex max-w-5/8 w-full min-w-0 h-[250px]">
+							<div className="flex max-w-1/2 w-full min-w-0 h-[250px]">
 								<CustomerUsageAnalyticsChart
 									timeseriesEvents={timeseriesEvents}
 									// events={filteredEvents}

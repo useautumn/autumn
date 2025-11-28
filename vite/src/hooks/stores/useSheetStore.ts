@@ -11,6 +11,8 @@ export type SheetType =
 	| "attach-product"
 	| "subscription-detail"
 	| "subscription-update"
+	| "balance-selection"
+	| "balance-edit"
 	| null;
 
 // Store state interface
@@ -109,8 +111,6 @@ export const useSheetCleanup = () => {
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 
 	useEffect(() => {
-		return () => {
-			closeSheet();
-		};
+		closeSheet();
 	}, [closeSheet]);
 };

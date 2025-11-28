@@ -11,8 +11,8 @@ export class CusProductNotFoundError extends RecaseError {
 		entityId?: string;
 	}) {
 		const message = opts.entityId
-			? `Product ${opts.productId} not found for entity ${opts.entityId}`
-			: `Product ${opts.productId} not found for customer ${opts.customerId}`;
+			? `Plan ${opts.productId} not found for entity ${opts.entityId}`
+			: `Plan ${opts.productId} not found for customer ${opts.customerId}`;
 
 		super({
 			message,
@@ -30,8 +30,8 @@ export class CusProductAlreadyExistsError extends RecaseError {
 		entityId?: string;
 	}) {
 		const message = opts.entityId
-			? `Entity ${opts.entityId} already has product ${opts.productId}`
-			: `Customer ${opts.customerId} already has product ${opts.productId}`;
+			? `Entity ${opts.entityId} already has plan ${opts.productId}`
+			: `Customer ${opts.customerId} already has plan ${opts.productId}`;
 
 		super({
 			message,

@@ -1,9 +1,12 @@
+import { isProductAlreadyEnabled } from "@autumn/shared";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { useNavigate } from "react-router";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useHasChanges } from "@/hooks/stores/useProductStore";
+import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { pushPage } from "@/utils/genUtils";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import type { UseAttachProductForm } from "./use-attach-product-form";
 
 interface AttachProductSelectionProps {
@@ -16,10 +19,12 @@ export function AttachProductSelection({
 	customerId,
 }: AttachProductSelectionProps) {
 	const { products } = useProductsQuery();
-	const activeProducts = products.filter((p) => !p.archived);
+	const availableProducts = products.filter((p) => !p.archived);
 	const navigate = useNavigate();
 	const productId = form.state.values.productId;
 	const hasChanges = useHasChanges();
+	const { customer } = useCusQuery();
+	const { entityId } = useEntity();
 
 	const handleCustomize = ({ productId }: { productId: string }) => {
 		if (!productId || !customerId) {
@@ -39,9 +44,16 @@ export function AttachProductSelection({
 					{(field) => (
 						<field.SelectField
 							label=""
-							options={activeProducts.map((p) => ({
+							options={availableProducts.map((p) => ({
 								label: p.name,
 								value: p.id,
+								disabledValue: isProductAlreadyEnabled({
+									productId: p.id,
+									customer,
+									entityId: entityId ?? undefined,
+								})
+									? "Already Enabled"
+									: undefined,
 							}))}
 							placeholder="Select Product"
 							hideFieldInfo

@@ -1,4 +1,5 @@
 import { UserIcon } from "@phosphor-icons/react";
+import { parseAsString, useQueryStates } from "nuqs";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AdminHover } from "@/components/general/AdminHover";
@@ -17,10 +18,11 @@ import {
 	useIsCusPlanEditor,
 	useProductStore,
 } from "@/hooks/stores/useProductStore.ts";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { isOneOffProduct } from "@/utils/product/priceUtils";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery.tsx";
+import { useCusProductQuery } from "@/views/customers/customer/product/hooks/useCusProductQuery.tsx";
 import { useMigrationsQuery } from "../../product/hooks/queries/useMigrationsQuery.tsx.tsx";
 import { useProductCountsQuery } from "../../product/hooks/queries/useProductCountsQuery";
 import {
@@ -39,7 +41,6 @@ export const EditPlanHeader = () => {
 	const { refetch: refetchMigrations } = useMigrationsQuery();
 	const { queryStates, setQueryStates } = useProductQueryState();
 	const axiosInstance = useAxiosInstance();
-	const sheetType = useSheetStore((s) => s.type);
 	const isCusPlanEditor = useIsCusPlanEditor();
 	const [confirmMigrateOpen, setConfirmMigrateOpen] = useState(false);
 
@@ -116,19 +117,24 @@ export const EditPlanHeader = () => {
 				version={version}
 			/>
 			<div className="flex flex-col gap-2 p-4 pb-3  border-none shadow-none w-full max-w-5xl mx-auto pt-8 px-12">
-				<V2Breadcrumb
-					className="p-0"
-					items={[
-						{
-							name: "Plans",
-							href: "/products?tab=products",
-						},
-						{
-							name: `${product.name}`,
-							href: `/products/${product.id}`,
-						},
-					]}
-				/>
+				{isCusPlanEditor ? (
+					<CustomerBreadcrumbs />
+				) : (
+					<V2Breadcrumb
+						className="p-0"
+						items={[
+							{
+								name: "Plans",
+								href: "/products?tab=products",
+							},
+							{
+								name: `${product.name}`,
+								href: `/products/${product.id}`,
+							},
+						]}
+					/>
+				)}
+
 				<div className="col-span-2 flex">
 					<div className="flex flex-row items-baseline justify-start gap-2 w-full whitespace-nowrap">
 						<AdminHover texts={getProductAdminHover() as any}>
@@ -171,7 +177,7 @@ export const EditPlanHeader = () => {
 								value={currentVersion.toString()}
 								onValueChange={handleVersionChange}
 							>
-								<SelectTrigger className="w-fit min-w-28">
+								<SelectTrigger className="w-fit min-w-28 !h-6" size="sm">
 									<SelectValue placeholder="Version" />
 								</SelectTrigger>
 								<SelectContent>
@@ -188,5 +194,43 @@ export const EditPlanHeader = () => {
 				</div>
 			</div>
 		</>
+	);
+};
+
+const CustomerBreadcrumbs = () => {
+	const { customer } = useCusQuery();
+	const { product } = useCusProductQuery();
+	const [{ entity_id }] = useQueryStates({
+		entity_id: parseAsString,
+	});
+	//find entity name
+	const entity = customer.entities.find((e: any) => e.id === entity_id);
+
+	return (
+		<V2Breadcrumb
+			className="p-0"
+			items={[
+				{
+					name: "Customers",
+					href: "/products?tab=products",
+				},
+				{
+					name: customer.name || customer.email || customer.id,
+					href: `/customers/${customer.id}`,
+				},
+				...(entity_id
+					? [
+							{
+								name: (entity?.name || entity_id) ?? "",
+								href: `/customers/${customer.id}?entity_id=${entity_id}`,
+							},
+						]
+					: []),
+
+				{
+					name: product?.name || "",
+				},
+			]}
+		/>
 	);
 };

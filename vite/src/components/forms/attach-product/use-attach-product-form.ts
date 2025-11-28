@@ -6,17 +6,20 @@ import {
 
 export function useAttachProductForm({
 	initialProductId,
+	initialPrepaidOptions,
 }: {
 	initialProductId?: string;
+	initialPrepaidOptions?: Record<string, number>;
 } = {}) {
 	return useAppForm({
 		defaultValues: {
 			productId: initialProductId || "",
 			prepaidOptions: {} as Record<string, number>,
-		} satisfies AttachProductForm,
+			initialPrepaidOptions: initialPrepaidOptions ?? undefined,
+		} as AttachProductForm,
 		validators: {
-			onChange: AttachProductFormSchema,
-			onSubmit: AttachProductFormSchema,
+			onChange: AttachProductFormSchema.passthrough(),
+			onSubmit: AttachProductFormSchema.passthrough(),
 		},
 	});
 }

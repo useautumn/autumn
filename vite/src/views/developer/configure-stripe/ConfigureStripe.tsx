@@ -231,7 +231,7 @@ export const ConfigureStripe = () => {
 										<span className="text-muted-foreground">
 											{" "}
 											Visit the Stripe dashboard{" "}
-											
+											<a
 												href={dashboardUrl}
 												target="_blank"
 												rel="noopener noreferrer"
@@ -289,9 +289,7 @@ export const ConfigureStripe = () => {
 						placeholder="eg. https://useautumn.com"
 						className={urlError ? "border-red-500" : ""}
 					/>
-					{urlError && (
-						<p className="text-red-500 text-sm mt-1">{urlError}</p>
-					)}
+					{urlError && <p className="text-red-500 text-sm mt-1">{urlError}</p>}
 				</div>
 
 				<div>

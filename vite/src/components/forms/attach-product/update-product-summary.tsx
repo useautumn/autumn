@@ -7,15 +7,18 @@ import {
 } from "@/components/v2/sheets/SheetAccordion";
 import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
 import { UpdateConfirmationInfo } from "./update-confirmation-info";
+import type { UseAttachProductForm } from "./use-attach-product-form";
 
 export function UpdateProductSummary({
 	product,
 	previewData,
 	isLoading,
+	form,
 }: {
 	product?: ProductV2;
 	previewData?: CheckoutResponseV0 | null;
 	isLoading?: boolean;
+	form: UseAttachProductForm;
 }) {
 	if (isLoading) {
 		return (
@@ -43,7 +46,11 @@ export function UpdateProductSummary({
 
 	return (
 		<div className="space-y-3 text-sm">
-			<UpdateConfirmationInfo previewData={previewData} />
+			<UpdateConfirmationInfo
+				previewData={previewData}
+				product={product}
+				form={form}
+			/>
 
 			<Separator />
 			<SheetAccordion type="single" withSeparator={false} collapsible={true}>

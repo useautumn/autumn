@@ -1,4 +1,5 @@
 import {
+	CusProductStatus,
 	type Entity,
 	type FeatureOptions,
 	getProductItemDisplay,
@@ -8,10 +9,13 @@ import {
 	Calendar,
 	CheckCircle,
 	CreditCard,
+	CubeIcon,
+	GitBranchIcon,
 	Hash,
+	HashIcon,
 	Info,
-	Package,
 	PencilSimple,
+	PencilSimpleIcon,
 	Tag,
 	XCircle,
 } from "@phosphor-icons/react";
@@ -20,12 +24,12 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router";
 // import { Badge } from "@/components/v2/Badge";
 import { Button } from "@/components/v2/buttons/Button";
+import { IconButton } from "@/components/v2/buttons/IconButton";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { SheetFooter } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import {
-	useHasChanges,
 	usePrepaidItems,
 	useProductStore,
 } from "@/hooks/stores/useProductStore";
@@ -47,14 +51,18 @@ export function SubscriptionDetailSheet() {
 	const resetProductStore = useProductStore((s) => s.reset);
 	const sheetType = useSheetStore((s) => s.type);
 	// Get edited product from store
-	const hasChanges = useHasChanges();
+
 	const storeProduct = useProductStore((s) => s.product);
 
 	// Check if there are changes in the product store
-	const shouldShowEditedProduct = hasChanges && !!storeProduct;
+	const showUpdateProduct = storeProduct?.id;
 
 	// Get customer product and productV2 by itemId
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
+	const isExpired = cusProduct?.status === CusProductStatus.Expired;
+
+	console.log("cusProduct", cusProduct);
+	console.log("productV2", productV2);
 
 	useEffect(() => {
 		if (
@@ -120,42 +128,67 @@ export function SubscriptionDetailSheet() {
 	return (
 		<div className="flex flex-col h-full">
 			<SheetHeader
-				title="Subscription Details"
-				description={`Details for ${cusProduct.product.name}`}
+				title={`${cusProduct.product.name ?? "Subscription Details"}`}
+				description={`Subscription details for ${cusProduct.product.name}`}
 			/>
 
 			<div className="flex-1 overflow-y-auto">
 				{/* Product Information */}
-				<SheetSection title="Product" withSeparator={false}>
-					<div className="space-y-3">
-						<InfoRow
-							icon={<Package size={16} weight="duotone" />}
-							label="Product Name"
-							value={cusProduct.product.name}
-						/>
-						<InfoRow
-							icon={<Tag size={16} weight="duotone" />}
-							label="Product ID"
-							value={cusProduct.product_id}
-							mono
-						/>
-						<InfoRow
-							icon={<Info size={16} weight="duotone" />}
-							label="Version"
-							value={cusProduct.product.version}
-						/>
-						{cusProduct.quantity && cusProduct.quantity > 1 && (
+				<SheetSection
+					// title="Plan"
+					withSeparator={false}
+					actions={
+						!isExpired && (
+							<IconButton
+								variant="secondary"
+								onClick={handleEditPlan}
+								icon={<PencilSimpleIcon size={16} weight="duotone" />}
+							>
+								Edit Plan
+							</IconButton>
+						)
+					}
+				>
+					<div className="flex gap-2 justify-between">
+						<div className="space-y-3">
 							<InfoRow
-								icon={<Info size={16} weight="duotone" />}
-								label="Quantity"
-								value={cusProduct.quantity.toString()}
+								icon={<CubeIcon size={16} weight="duotone" />}
+								label="Plan"
+								value={cusProduct.product.name}
 							/>
+							<InfoRow
+								icon={<HashIcon size={16} />}
+								label="ID"
+								value={cusProduct.product_id}
+								mono
+							/>
+							<InfoRow
+								icon={<GitBranchIcon size={16} />}
+								label="Version"
+								value={cusProduct.product.version}
+							/>
+							{cusProduct.quantity && cusProduct.quantity > 1 && (
+								<InfoRow
+									icon={<Info size={16} weight="duotone" />}
+									label="Quantity"
+									value={cusProduct.quantity.toString()}
+								/>
+							)}
+						</div>
+						{!isExpired && (
+							<IconButton
+								// variant="secondary"
+								onClick={handleEditPlan}
+								icon={<PencilSimpleIcon size={16} weight="duotone" />}
+							>
+								Edit Plan
+							</IconButton>
 						)}
 					</div>
 				</SheetSection>
 
 				{/* Status & Dates */}
-				<SheetSection title="Status & Timeline">
+				<SheetSection>
 					<div className="space-y-3">
 						<InfoRow
 							icon={<Info size={16} weight="duotone" />}
@@ -257,72 +290,70 @@ export function SubscriptionDetailSheet() {
 				)}
 
 				{/* Edited Plan Items - Show pending changes */}
-				{shouldShowEditedProduct &&
-					storeProduct &&
-					storeProduct.items.length > 0 && (
-						<SheetSection title="Edited Plan Items (Pending)">
-							<div className="space-y-2">
-								<div className="flex items-center gap-2 mb-2 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
-									<Info size={16} weight="duotone" className="text-blue-600" />
-									<span className="text-xs text-t2">
-										These changes are pending and will be applied when you save.
-									</span>
-								</div>
-								{storeProduct.items.map((item, index) => {
-									const display = getProductItemDisplay({
-										item,
-										features,
-										currency: org?.default_currency || "USD",
-										fullDisplay: true,
-										amountFormatOptions: { currencyDisplay: "narrowSymbol" },
-									});
+				{showUpdateProduct && storeProduct && storeProduct.items.length > 0 && (
+					<SheetSection title="Edited Plan Items (Pending)">
+						<div className="space-y-2">
+							<div className="flex items-center gap-2 mb-2 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+								<Info size={16} weight="duotone" className="text-blue-600" />
+								<span className="text-xs text-t2">
+									These changes are pending and will be applied when you save.
+								</span>
+							</div>
+							{storeProduct.items.map((item, index) => {
+								const display = getProductItemDisplay({
+									item,
+									features,
+									currency: org?.default_currency || "USD",
+									fullDisplay: true,
+									amountFormatOptions: { currencyDisplay: "narrowSymbol" },
+								});
 
-									const isFeatureItem =
-										item.type === ProductItemType.Feature ||
-										item.type === ProductItemType.FeaturePrice;
+								const isFeatureItem =
+									item.type === ProductItemType.Feature ||
+									item.type === ProductItemType.FeaturePrice;
 
-									// Find prepaid quantity from cusProduct.options
-									const prepaidOption = cusProduct?.options?.find(
-										(opt: FeatureOptions) => opt.feature_id === item.feature_id,
-									);
-									const prepaidQuantity = prepaidOption
-										? prepaidOption.quantity / (item.billing_units || 1)
-										: null;
+								// Find prepaid quantity from cusProduct.options
+								const prepaidOption = cusProduct?.options?.find(
+									(opt: FeatureOptions) => opt.feature_id === item.feature_id,
+								);
+								const prepaidQuantity = prepaidOption
+									? prepaidOption.quantity / (item.billing_units || 1)
+									: null;
 
-									return (
-										<div
-											key={item.feature_id || item.price_id || index}
-											className="flex items-start gap-2 p-2 rounded-lg bg-blue-500/5 border border-blue-500/20"
-										>
-											<CheckCircle
-												size={16}
-												weight="fill"
-												className={cn(
-													"text-blue-600 mt-0.5 shrink-0",
-													!isFeatureItem && "opacity-0",
-												)}
-											/>
-											<div className="flex-1 min-w-0">
-												<div className="text-sm font-medium text-t1 flex items-center gap-2 flex-wrap">
-													<span>{display.primary_text}</span>
-													{prepaidQuantity !== null && (
-														<span className="text-t3 bg-background/50 rounded-sm px-2 py-0.5 text-xs font-normal">
-															Qty: {prepaidQuantity}
-														</span>
-													)}
-												</div>
-												{display.secondary_text && (
-													<div className="text-xs text-t3 mt-0.5">
-														{display.secondary_text}
-													</div>
+								return (
+									<div
+										key={item.feature_id || item.price_id || index}
+										className="flex items-start gap-2 p-2 rounded-lg bg-blue-500/5 border border-blue-500/20"
+									>
+										<CheckCircle
+											size={16}
+											weight="fill"
+											className={cn(
+												"text-blue-600 mt-0.5 shrink-0",
+												!isFeatureItem && "opacity-0",
+											)}
+										/>
+										<div className="flex-1 min-w-0">
+											<div className="text-sm font-medium text-t1 flex items-center gap-2 flex-wrap">
+												<span>{display.primary_text}</span>
+												{prepaidQuantity !== null && (
+													<span className="text-t3 bg-background/50 rounded-sm px-2 py-0.5 text-xs font-normal">
+														Qty: {prepaidQuantity}
+													</span>
 												)}
 											</div>
+											{display.secondary_text && (
+												<div className="text-xs text-t3 mt-0.5">
+													{display.secondary_text}
+												</div>
+											)}
 										</div>
-									);
-								})}
-							</div>
-						</SheetSection>
-					)}
+									</div>
+								);
+							})}
+						</div>
+					</SheetSection>
+				)}
 
 				{/* Pricing Summary */}
 				<SheetSection title="Pricing">
@@ -389,34 +420,21 @@ export function SubscriptionDetailSheet() {
 				)}
 			</div>
 
-			<SheetFooter>
-				{shouldShowEditedProduct ? (
-					<>
-						<Button variant="secondary" onClick={handleEditPlan}>
-							<PencilSimple size={16} weight="duotone" />
-							Edit Plan
+			{!isExpired && (
+				<SheetFooter>
+					<Button variant="secondary" onClick={handleEditPlan}>
+						<PencilSimple size={16} weight="duotone" />
+						Edit Plan
+					</Button>
+					{hasPrepaidItems && !showUpdateProduct && (
+						<Button variant="secondary" onClick={handleUpdateQuantities}>
+							<Hash size={16} weight="duotone" />
+							Update Quantities
 						</Button>
-						<UpdatePlanButton cusProduct={cusProduct} />
-					</>
-				) : (
-					<>
-						<Button
-							variant="primary"
-							onClick={handleEditPlan}
-							className={hasPrepaidItems ? "" : "col-span-2"}
-						>
-							<PencilSimple size={16} weight="duotone" />
-							Edit Plan
-						</Button>
-						{hasPrepaidItems && (
-							<Button variant="secondary" onClick={handleUpdateQuantities}>
-								<Hash size={16} weight="duotone" />
-								Update Quantities
-							</Button>
-						)}
-					</>
-				)}
-			</SheetFooter>
+					)}
+					{showUpdateProduct && <UpdatePlanButton cusProduct={cusProduct} />}
+				</SheetFooter>
+			)}
 		</div>
 	);
 }
@@ -431,10 +449,12 @@ interface InfoRowProps {
 
 function InfoRow({ icon, label, value, className, mono }: InfoRowProps) {
 	return (
-		<div className="flex items-start gap-3">
-			<div className="text-subtle mt-0.5">{icon}</div>
-			<div className="flex-1 min-w-0">
-				<div className="text-t3 text-sm font-medium mb-0.5">{label}</div>
+		<div className="flex items-center gap-2">
+			<div className="text-t4/60">{icon}</div>
+			<div className="flex min-w-0 items-center">
+				<div className="text-t3 text-sm font-medium w-16 whitespace-nowrap">
+					{label}
+				</div>
 				<div
 					className={cn(
 						"text-t1 text-sm wrap-break-word",

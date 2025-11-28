@@ -5,4 +5,7 @@ export const AttachProductFormSchema = z.object({
 	prepaidOptions: z.record(z.string(), z.number()),
 });
 
-export type AttachProductForm = z.infer<typeof AttachProductFormSchema>;
+// Extended type with initialPrepaidOptions (not validated, just for state tracking)
+export type AttachProductForm = z.infer<typeof AttachProductFormSchema> & {
+	initialPrepaidOptions?: Record<string, number>;
+};

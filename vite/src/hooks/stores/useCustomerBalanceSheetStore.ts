@@ -15,12 +15,15 @@ interface CustomerBalanceSheetState {
 	featureId: string | null;
 	// Original entitlements that were aggregated for this feature
 	originalEntitlements: FullCusEntWithFullCusProduct[];
+	// Selected customer entitlement ID (for multi-balance selection)
+	selectedCusEntId: string | null;
 
 	// Actions
 	setSheet: (params: {
 		type: CustomerBalanceSheetType;
 		featureId?: string | null;
 		originalEntitlements?: FullCusEntWithFullCusProduct[];
+		selectedCusEntId?: string | null;
 	}) => void;
 	closeSheet: () => void;
 	reset: () => void;
@@ -32,6 +35,7 @@ const initialState = {
 	previousType: null as CustomerBalanceSheetType,
 	featureId: null as string | null,
 	originalEntitlements: [] as FullCusEntWithFullCusProduct[],
+	selectedCusEntId: null as string | null,
 };
 
 export const useCustomerBalanceSheetStore = create<CustomerBalanceSheetState>(
@@ -39,12 +43,18 @@ export const useCustomerBalanceSheetStore = create<CustomerBalanceSheetState>(
 		...initialState,
 
 		// Set the sheet type and optional featureId/entitlements
-		setSheet: ({ type, featureId = null, originalEntitlements = [] }) => {
+		setSheet: ({
+			type,
+			featureId = null,
+			originalEntitlements = [],
+			selectedCusEntId = null,
+		}) => {
 			set((state) => ({
 				previousType: state.type,
 				type,
 				featureId,
 				originalEntitlements,
+				selectedCusEntId,
 			}));
 		},
 
@@ -55,6 +65,7 @@ export const useCustomerBalanceSheetStore = create<CustomerBalanceSheetState>(
 				type: null,
 				featureId: null,
 				originalEntitlements: [],
+				selectedCusEntId: null,
 			}));
 		},
 
