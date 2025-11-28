@@ -24,12 +24,10 @@ const FormContent = ({
 	productV2,
 	cusProduct,
 	form,
-	initialPrepaidOptions,
 }: {
 	productV2: ProductV2;
 	cusProduct: FullCusProduct;
 	form: UseAttachProductForm;
-	initialPrepaidOptions: Record<string, number>;
 }) => {
 	const { customer } = useCusQuery();
 	const customerId = customer?.id;
@@ -39,6 +37,7 @@ const FormContent = ({
 	const prepaidItems = usePrepaidItems({ product });
 
 	const prepaidOptions = form.state.values.prepaidOptions;
+	const initialPrepaidOptions = form.state.values.initialPrepaidOptions;
 
 	const previewQuery = useAttachPreview({
 		customerId,
@@ -61,7 +60,8 @@ const FormContent = ({
 		// Check if there are any changes from initial values
 		const hasQuantityChanges = prepaidItems.some((item) => {
 			const currentQuantity = prepaidOptions?.[item.feature_id as string];
-			const initialQuantity = initialPrepaidOptions[item.feature_id as string];
+			const initialQuantity =
+				initialPrepaidOptions?.[item.feature_id as string];
 			return currentQuantity !== initialQuantity;
 		});
 
@@ -76,6 +76,7 @@ const FormContent = ({
 				previewData={previewQuery.data}
 				isLoading={previewQuery.isLoading}
 				product={product}
+				form={form}
 			/>
 			<UpdateProductActions
 				product={product}
@@ -102,10 +103,6 @@ function SheetContent({
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const storeProduct = useProductStore((s) => s.product);
 
-	const form = useAttachProductForm({
-		initialProductId: cusProduct?.product.id ?? undefined,
-	});
-
 	// Memoize initial prepaid options from cusProduct
 	const initialPrepaidOptions = useMemo(
 		() =>
@@ -118,6 +115,11 @@ function SheetContent({
 			),
 		[cusProduct.options],
 	);
+
+	const form = useAttachProductForm({
+		initialProductId: cusProduct?.product.id ?? undefined,
+		initialPrepaidOptions,
+	});
 
 	const product = storeProduct?.id ? storeProduct : (productV2 ?? undefined);
 	const prepaidItems = usePrepaidItems({ product });
@@ -183,7 +185,6 @@ function SheetContent({
 									productV2={productV2}
 									cusProduct={cusProduct}
 									form={form}
-									initialPrepaidOptions={initialPrepaidOptions}
 								/>
 							</>
 						)}
@@ -200,7 +201,6 @@ export function SubscriptionUpdateSheet() {
 
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
 
-	const entityId = cusProduct?.entity_id ?? undefined;
 	const sheetType = useSheetStore((s) => s.type);
 	const resetProductStore = useProductStore((s) => s.reset);
 

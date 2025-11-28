@@ -78,7 +78,7 @@ export function CustomerInvoicesTable() {
 		},
 	});
 
-	const hasInvoices = invoices.length > 0;
+	// const hasInvoices = invoices.length > 0;
 
 	return (
 		<Table.Provider
@@ -89,6 +89,7 @@ export function CustomerInvoicesTable() {
 				isLoading,
 				onRowClick: handleRowClick,
 				emptyStateText: "Invoices will display when a customer makes a payment",
+				flexibleTableColumns: true,
 				// rowClassName: "h-14 py-4 cursor-pointer",
 			}}
 		>

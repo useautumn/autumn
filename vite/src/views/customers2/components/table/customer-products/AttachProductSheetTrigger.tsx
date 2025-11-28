@@ -6,27 +6,28 @@ import {
 	useSheetStore,
 } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
+import { cn } from "@/lib/utils";
 
 export function AttachProductSheetTrigger() {
 	const { setSheet, closeSheet } = useSheetStore();
 	const isAttachingProduct = useIsAttachingProduct();
 	const { entity } = useEntity();
 	const features = useFeaturesQuery();
+	const sheetType = useSheetStore((s) => s.type);
 
 	const feature = features.features.find((f) => f.id === entity?.feature_id);
 
 	const handleClick = () => {
-		if (isAttachingProduct) {
-			closeSheet();
-		} else {
-			setSheet({ type: "attach-product" });
-		}
+		setSheet({ type: "attach-product" });
 	};
 	return (
 		<Button
 			variant="primary"
 			size="mini"
-			className="gap-1 font-medium"
+			className={cn(
+				"gap-1 font-medium",
+				isAttachingProduct && "z-90 opacity-70",
+			)}
 			onClick={handleClick}
 		>
 			<PlusIcon className="size-3.5" />

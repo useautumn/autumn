@@ -53,7 +53,7 @@ export const CustomerBreadcrumbs = () => {
 					</BreadcrumbLink>
 				</BreadcrumbItem>
 				<BreadcrumbSeparator />
-				<BreadcrumbItem className="truncate max-w-48">
+				<BreadcrumbItem className="truncate max-w-36">
 					{entityId ? (
 						<BreadcrumbLink
 							className="cursor-pointer"
@@ -72,7 +72,7 @@ export const CustomerBreadcrumbs = () => {
 				{entityId && (
 					<>
 						<BreadcrumbSeparator />
-						<BreadcrumbItem className="truncate max-w-48">
+						<BreadcrumbItem className="truncate max-w-36">
 							{entity?.name || entityId}
 						</BreadcrumbItem>
 					</>

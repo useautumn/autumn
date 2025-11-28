@@ -12,6 +12,7 @@ import { useFieldContext } from "@/hooks/form/form-context";
 export type SelectFieldOption = {
 	label: string;
 	value: string;
+	disabledValue?: string;
 };
 
 export function SelectField({
@@ -45,8 +46,19 @@ export function SelectField({
 				</SelectTrigger>
 				<SelectContent>
 					{options.map((option) => (
-						<SelectItem key={option.value} value={option.value}>
+						<SelectItem
+							key={option.value}
+							value={option.value}
+							className={
+								option.disabledValue ? "text-t4 pointer-events-none" : ""
+							}
+						>
 							{option.label}
+							{option.disabledValue && (
+								<span className="text-xs text-t3 bg-muted px-1 py-0 rounded-md">
+									{option.disabledValue}
+								</span>
+							)}
 						</SelectItem>
 					))}
 				</SelectContent>

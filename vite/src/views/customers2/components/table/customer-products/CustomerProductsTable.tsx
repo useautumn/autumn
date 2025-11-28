@@ -34,6 +34,9 @@ export function CustomerProductsTable() {
 	const [selectedProduct, setSelectedProduct] = useState<FullCusProduct | null>(
 		null,
 	);
+	const sheetType = useSheetStore((s) => s.type);
+	const selectedItemId = useSheetStore((s) => s.itemId);
+	const detailsOpen = sheetType === "subscription-detail";
 
 	const { setEntityId } = useEntity();
 
@@ -227,6 +230,8 @@ export function CustomerProductsTable() {
 					isLoading,
 					onRowClick: handleRowClick,
 					emptyStateText,
+					flexibleTableColumns: true,
+					selectedItemId: detailsOpen ? selectedItemId : undefined,
 				}}
 			>
 				<Table.Container>
@@ -281,6 +286,8 @@ export function CustomerProductsTable() {
 							isLoading,
 							onRowClick: handleRowClick,
 							emptyStateText: "No entity-level plans found",
+							flexibleTableColumns: true,
+							selectedItemId: detailsOpen ? selectedItemId : undefined,
 						}}
 					>
 						<Table.Container>

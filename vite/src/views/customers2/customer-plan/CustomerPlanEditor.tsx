@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router";
+import { useEffect } from "react";
+import { Link, useParams } from "react-router";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -12,7 +12,6 @@ import { useCusProductQuery } from "@/views/customers/customer/product/hooks/use
 import ErrorScreen from "@/views/general/ErrorScreen";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { PlanEditor } from "@/views/products/plan/components/PlanEditor";
-import { ProductContext } from "@/views/products/product/ProductContext";
 
 interface OptionValue {
 	feature_id: string;
@@ -40,8 +39,6 @@ function getProductUrlParams({
 
 export default function CustomerProductView() {
 	const { customer_id, product_id } = useParams();
-	const [searchParams] = useSearchParams();
-	const entityIdParam = searchParams.get("entity_id");
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 
 	//Close the subscription detail / attach product sheet when navigating to this page (prevents jank closing animation)
@@ -52,67 +49,11 @@ export default function CustomerProductView() {
 	const { isLoading: orgLoading } = useOrg();
 	const { isLoading: featuresLoading } = useFeaturesQuery();
 
-	const [options, setOptions] = useState<OptionValue[]>([]);
-	const [entityId, setEntityId] = useState<string | null>(entityIdParam);
-	const [entityFeatureIds, setEntityFeatureIds] = useState<string[]>([]);
-
-	const {
-		product: originalProduct,
-		cusProduct,
-		isLoading,
-		error,
-	} = useCusProductQuery();
+	const { product: originalProduct, isLoading, error } = useCusProductQuery();
 
 	useProductSync({ product: originalProduct });
 
 	const { isLoading: cusLoading } = useCusQuery();
-
-	//probs not needed anymore? used to pass entityId into the ProductContext
-	//now we can get it from CusProductQuery?
-	// useEffect(() => {
-	// 	if (entityIdParam) {
-	// 		setEntityId(entityIdParam);
-	// 	} else {
-	// 		setEntityId(null);
-	// 	}
-	// }, [entityIdParam]);
-
-	// useEffect(() => {
-	// 	if (!originalProduct) return;
-
-	// 	const product = originalProduct;
-
-	// 	console.log("[CPV] effect", {
-	// 		prodId: originalProduct.id,
-	// 		v: originalProduct.version,
-	// 		cusId: cusProduct?.id,
-	// 	});
-
-	// 	// Update initialProductRef BEFORE setProduct to ensure useAttachState
-	// 	// effect has the correct baseline when it runs
-	// 	initialProductRef.current = structuredClone({
-	// 		...product,
-	// 		items: sortProductItems(product.items),
-	// 	});
-
-	// 	setProduct(product);
-
-	// 	setEntityFeatureIds(
-	// 		Array.from(
-	// 			new Set(
-	// 				product.items
-	// 					.filter((item: ProductItem) => notNullish(item.entity_feature_id))
-	// 					.map((item: ProductItem) => item.entity_feature_id!),
-	// 			),
-	// 		),
-	// 	);
-
-	// 	if (cusProduct?.options) {
-	// 		setOptions(cusProduct.options);
-	// 	} else {
-	// 		setOptions([]);
-	// 	}
-	// }, [originalProduct, cusProduct]);
 
 	if (error) {
 		return (
@@ -132,23 +73,11 @@ export default function CustomerProductView() {
 	}
 
 	return (
-		<ProductContext.Provider
-			value={{
-				// isCusProductView: true,
-				// product,
-				// setProduct,
-
-				entityId,
-				setEntityId,
-				// attachState,
-				entityFeatureIds,
-				setEntityFeatureIds,
-			}}
-		>
+		<>
 			<CustomToaster />
 
 			<PlanEditor />
-		</ProductContext.Provider>
+		</>
 	);
 }
 

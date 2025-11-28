@@ -18,7 +18,7 @@ export const CustomerProductsColumns = [
 			const showQuantity = quantity && quantity > 1;
 
 			return (
-				<div className="font-medium text-t1 flex items-center gap-2">
+				<div className="font-medium text-t1 flex items-center gap-2 ">
 					<AdminHover texts={getCusProductHoverTexts(row.original)}>
 						{row.original.product.name}
 					</AdminHover>

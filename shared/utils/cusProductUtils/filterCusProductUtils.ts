@@ -1,3 +1,4 @@
+import { CusProductStatus, type FullCustomer } from "../../index.js";
 import type { Entity } from "../../models/cusModels/entityModels/entityModels.js";
 import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
@@ -93,4 +94,51 @@ export const filterOutEntitiesFromCusProducts = ({
 	}
 
 	return finalCusProducts;
+};
+
+export const getActiveCusProducts = ({
+	customer,
+}: {
+	customer: FullCustomer;
+}): FullCusProduct[] => {
+	return customer.customer_products.filter(
+		(p: FullCusProduct) => p.status === CusProductStatus.Active,
+	);
+};
+
+export const isProductAlreadyEnabled = ({
+	productId,
+	customer,
+	entityId,
+}: {
+	productId: string;
+	customer: FullCustomer;
+	entityId?: string;
+}) => {
+	return getActiveCusProducts({ customer }).some((cp: FullCusProduct) => {
+		// Check if product matches and is not an add-on
+		if (cp.product_id !== productId || cp.product.is_add_on) {
+			return false;
+		}
+
+		// If no entityId (attaching to customer), only consider customer-level products
+		if (!entityId) {
+			return !cp.internal_entity_id && !cp.entity_id;
+		}
+
+		// If entityId exists (attaching to entity), only consider products for that entity
+		const entities = customer?.entities || [];
+		const entity = entities.find(
+			(e: Entity) => e.id === entityId || e.internal_id === entityId,
+		);
+
+		if (entity) {
+			return (
+				cp.internal_entity_id === entity.internal_id ||
+				cp.entity_id === entity.id
+			);
+		}
+
+		return false;
+	});
 };

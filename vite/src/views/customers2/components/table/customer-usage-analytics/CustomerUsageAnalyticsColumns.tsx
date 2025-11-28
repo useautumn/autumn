@@ -6,7 +6,6 @@ export const CustomerUsageAnalyticsColumns = [
 	{
 		header: "Feature",
 		accessorKey: "event_name",
-		size: 100,
 		cell: ({ row }: { row: Row<Event> }) => {
 			return (
 				<div className="text-tiny font-mono truncate text-t2!">
@@ -18,7 +17,6 @@ export const CustomerUsageAnalyticsColumns = [
 	{
 		header: "Value",
 		accessorKey: "value",
-		size: 60,
 		cell: ({ row }: { row: Row<Event> }) => {
 			const event = row.original;
 			return (
@@ -44,14 +42,13 @@ export const CustomerUsageAnalyticsColumns = [
 	{
 		header: "Timestamp",
 		accessorKey: "timestamp",
-		size: 100,
 		cell: ({ row }: { row: Row<Event> }) => {
 			// type is Date but actually comes as a string
 			const dateObj = new Date(row.original.timestamp as unknown as string);
 			const dateAsNumber = dateObj.getTime();
 
 			return (
-				<div className="text-tiny text-t3">
+				<div className="text-tiny text-t3 font-mono min-w-fit">
 					{/* {formatUnixToDateTimeWithMs(dateAsNumber)} */}
 					{format(new Date(dateAsNumber), "d MMM HH:mm:ss")}
 				</div>

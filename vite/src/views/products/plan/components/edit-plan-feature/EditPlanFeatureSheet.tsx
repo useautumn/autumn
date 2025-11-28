@@ -52,25 +52,21 @@ export function EditPlanFeatureSheet({
 						<BillingType />
 					</SheetSection>
 
-					{hasChosenBillingType && (
-						<>
-							<SheetSection
-								title={`Included Amount ${isFeaturePrice ? "(optional)" : ""}`}
-							>
-								<IncludedUsage />
-							</SheetSection>
+					<SheetSection
+						title={`Grant Amount ${isFeaturePrice ? "(optional)" : ""}`}
+					>
+						<IncludedUsage />
+					</SheetSection>
 
-							{isFeaturePrice && (
-								<SheetSection title="Price">
-									<PriceTiers />
-									<UsageReset showBillingLabel={true} />
-									<PricedFeatureSettings />
-								</SheetSection>
-							)}
-
-							<AdvancedSettings />
-						</>
+					{isFeaturePrice && (
+						<SheetSection title="Price">
+							<PriceTiers />
+							<UsageReset showBillingLabel={true} />
+							<PricedFeatureSettings />
+						</SheetSection>
 					)}
+
+					<AdvancedSettings />
 				</>
 			)}
 

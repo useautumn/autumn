@@ -43,7 +43,6 @@ export function AttachProductActions({
 		null,
 	);
 
-	console.log("org", org);
 	const ownStripeAccount = org.org?.stripe_connection !== "default";
 
 	useEffect(() => {

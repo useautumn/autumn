@@ -81,15 +81,7 @@ export const PlanEditor = () => {
 					<div onClick={(e) => e.stopPropagation()}>
 						<EditPlanHeader />
 					</div>
-					{/* <ManagePlan /> */}
-					<div
-						className="flex flex-col w-full h-fit items-center justify-start pt-20 px-10 gap-4"
-						// onMouseDown={(e) => {
-						// 	if (shouldCloseSheetOnMouseDown({ e, item, sheetType })) {
-						// 		closeSheet();
-						// 	}
-						// }}
-					>
+					<div className="flex flex-col w-full h-fit items-center justify-start pt-20 px-10 gap-4">
 						{useIsCusPlanEditor() && <CustomerPlanInfoBox />}
 						<PlanCard />
 					</div>
@@ -108,7 +100,7 @@ export const PlanEditor = () => {
 								initial={{ opacity: 0 }}
 								animate={{ opacity: 1 }}
 								exit={{ opacity: 0 }}
-								className="fixed inset-0 bg-background/70"
+								className="fixed inset-0 bg-white/70 dark:bg-black/70"
 								style={{ zIndex: 40 }}
 								onMouseDown={(e) => {
 									if (shouldCloseSheetOnMouseDown({ e, item, sheetType })) {

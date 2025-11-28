@@ -1,10 +1,8 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
-import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
 import { useHasChanges } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
@@ -18,7 +16,6 @@ import { CustomerInvoicesTable } from "../components/table/customer-invoices/Cus
 import { CustomerProductsTable } from "../components/table/customer-products/CustomerProductsTable";
 import { CustomerUsageAnalyticsTable } from "../components/table/customer-usage-analytics/CustomerUsageAnalyticsTable";
 import { CustomerActions } from "./CustomerActions";
-import { CustomerBalanceSheets } from "./CustomerBalanceSheets";
 import { CustomerBreadcrumbs } from "./CustomerBreadcrumbs2";
 import { CustomerContext } from "./CustomerContext";
 import { CustomerPageDetails } from "./CustomerPageDetails";
@@ -32,22 +29,11 @@ export default function CustomerView2() {
 	useCusReferralQuery();
 	const { entityId, setEntityId } = useEntity();
 
-	const closeSheet = useCustomerBalanceSheetStore((s) => s.closeSheet);
 	const sheetType = useSheetStore((s) => s.type);
 	const closeProductSheet = useSheetStore((s) => s.closeSheet);
 	const hasChanges = useHasChanges();
 
-	// Close modal on mount
-	useEffect(() => {
-		closeSheet();
-	}, [closeSheet]);
-
-	// Clear selected entity on unmount (when navigating away)
-	// useEffect(() => {
-	// 	return () => {
-	// 		setEntityId(null);
-	// 	};
-	// }, [setEntityId]);
+	// useSheetCleanup();
 
 	if (cusLoading) return <LoadingScreen />;
 
@@ -104,7 +90,7 @@ export default function CustomerView2() {
 						</div>
 						{/* <Separator /> */}
 						{/* <Separator className="my-2" /> */}
-						<div className="flex flex-col gap-10 w-full">
+						<div className="flex flex-col gap-16 w-full">
 							<CustomerProductsTable />
 							{/* <Separator /> */}
 							<CustomerFeatureUsageTable />
@@ -121,7 +107,7 @@ export default function CustomerView2() {
 									initial={{ opacity: 0 }}
 									animate={{ opacity: 1 }}
 									exit={{ opacity: 0 }}
-									className="fixed inset-0 bg-background/60"
+									className="fixed inset-0 bg-white/60 dark:bg-black/60"
 									style={{ zIndex: 40 }}
 									onMouseDown={() => {
 										!hasChanges && closeProductSheet();
@@ -133,7 +119,6 @@ export default function CustomerView2() {
 					)}
 				</motion.div>
 
-				<CustomerBalanceSheets />
 				<CustomerSheets />
 			</div>
 		</CustomerContext.Provider>

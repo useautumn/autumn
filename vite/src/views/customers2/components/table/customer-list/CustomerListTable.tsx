@@ -21,6 +21,8 @@ export function CustomerListTable({
 }) {
 	const navigate = useNavigate();
 
+	// Close any open sheet on mount in useEffect
+
 	const columns = useMemo(() => createCustomerListColumns(), []);
 
 	const table = useCustomerTable({
