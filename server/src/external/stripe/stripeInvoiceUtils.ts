@@ -114,7 +114,11 @@ export const payForInvoice = async ({
 		}
 
 		if (errorOnFail) {
-			throw error;
+			throw new RecaseError({
+				message: error?.message,
+				code: ErrCode.PayInvoiceFailed,
+				data: invoice,
+			});
 		} else {
 			return {
 				paid: false,
@@ -122,7 +126,7 @@ export const payForInvoice = async ({
 					message: `Failed to pay invoice: ${error?.message || error}`,
 					code: ErrCode.PayInvoiceFailed,
 				}),
-				invoice: null,
+				invoice: invoice,
 			};
 		}
 	}

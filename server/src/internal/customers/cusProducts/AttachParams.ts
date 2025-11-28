@@ -82,6 +82,10 @@ export type AttachParams = {
 	anchorToUnix?: number;
 	subId?: string;
 	config?: AttachConfig;
+
+	// Invoice action required
+	stripeInvoiceId?: string;
+	cusEntIds?: string[];
 };
 
 export type InsertCusProductParams = {
