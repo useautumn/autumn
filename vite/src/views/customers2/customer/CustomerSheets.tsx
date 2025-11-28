@@ -4,6 +4,7 @@ import { SheetContainer } from "@/components/v2/sheets/InlineSheet";
 import { SheetCloseButton } from "@/components/v2/sheets/SheetCloseButton";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { AttachProductSheet } from "../components/sheets/AttachProductSheet";
+import { SubscriptionDetailSheet } from "../components/sheets/SubscriptionDetailSheet";
 import { SHEET_ANIMATION } from "./customerAnimations";
 
 export function CustomerSheets() {
@@ -14,6 +15,8 @@ export function CustomerSheets() {
 		switch (sheetType) {
 			case "attach-product":
 				return <AttachProductSheet />;
+			case "subscription-detail":
+				return <SubscriptionDetailSheet />;
 			default:
 				return null;
 		}
@@ -39,4 +42,15 @@ export function CustomerSheets() {
 		</AnimatePresence>,
 		document.body,
 	);
+
+	// return (
+	// 	<Sheet open={open} onOpenChange={closeSheet}>
+	// 		<SheetContent
+	// 			className="w-full bg-background border-l h-full"
+	// 			// side="right"
+	// 		>
+	// 			{renderSheet()}
+	// 		</SheetContent>
+	// 	</Sheet>
+	// );
 }

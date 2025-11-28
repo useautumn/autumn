@@ -14,7 +14,7 @@ export function AttachProductSheet() {
 
 			<div className="flex-1 overflow-y-auto">
 				<SheetSection title="Product Selection" withSeparator={false}>
-					<AttachProductForm customerId={customer.id} />
+					<AttachProductForm customerId={customer?.id ?? ""} />
 				</SheetSection>
 			</div>
 		</div>

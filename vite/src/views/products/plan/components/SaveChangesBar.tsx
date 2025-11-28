@@ -1,16 +1,21 @@
 import { isFeaturePriceItem, productV2ToBasePrice } from "@autumn/shared";
 import { useState } from "react";
+import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/v2/buttons/Button";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
 	useHasChanges,
+	useIsCusPlanEditor,
 	useProductStore,
 	useWillVersion,
 } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { pushPage } from "@/utils/genUtils";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCusProductQuery } from "@/views/customers/customer/product/hooks/useCusProductQuery";
 import { useProductCountsQuery } from "../../product/hooks/queries/useProductCountsQuery";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
 import { useProductContext } from "../../product/ProductContext";
@@ -26,6 +31,8 @@ export const SaveChangesBar = ({
 }: SaveChangesBarProps) => {
 	const axiosInstance = useAxiosInstance();
 	const { setShowNewVersionDialog } = useProductContext();
+	const [searchParams] = useSearchParams();
+	const returnTo = searchParams.get("returnTo");
 
 	// Get product state from store
 	const product = useProductStore((s) => s.product);
@@ -34,13 +41,22 @@ export const SaveChangesBar = ({
 	const hasChanges = useHasChanges();
 	const willVersion = useWillVersion();
 
+	const navigate = useNavigate();
+
 	const [saving, setSaving] = useState(false);
 
 	const { refetch } = useProductsQuery();
 	const { counts, isLoading } = useProductCountsQuery();
 	const { refetch: queryRefetch } = useProductQuery();
 
+	const { customer } = useCusQuery();
+	const { cusProduct } = useCusProductQuery();
+	// const { }
+
 	const basePrice = productV2ToBasePrice({ product });
+
+	const isCusPlanEditor = useIsCusPlanEditor();
+	const saveButtonText = isCusPlanEditor ? "Save and Return" : "Save";
 
 	useProductChangedAlert({
 		hasChanges,
@@ -55,6 +71,31 @@ export const SaveChangesBar = ({
 		) {
 			toast.error("Please add a plan price greater than 0, or remove it.");
 			setSaving(false);
+			return;
+		}
+
+		if (isCusPlanEditor) {
+			console.log("save and return");
+
+			// Open the appropriate sheet based on returnTo parameter
+			if (returnTo === "attach-product") {
+				setSheet({
+					type: "attach-product",
+					itemId: product.id, // Pass the product ID being customized
+				});
+			} else if (cusProduct?.id) {
+				setSheet({
+					type: "subscription-detail",
+					itemId: cusProduct.id,
+				});
+			}
+
+			//navigate back to the customer plan page
+			pushPage({
+				path: `/customers/${customer.id}/`,
+				navigate,
+			});
+
 			return;
 		}
 
@@ -134,7 +175,7 @@ export const SaveChangesBar = ({
 					onClick={handleSaveClicked}
 					isLoading={saving}
 				>
-					Save
+					{saveButtonText}
 				</ShortcutButton>
 			</div>
 		</div>

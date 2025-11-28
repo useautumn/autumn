@@ -17,7 +17,6 @@ export function AttachProductProductPicker({
 
 	const activeProducts = allProducts.filter((p) => !p.archived);
 
-	// Group products by group field
 	const groupedProducts = activeProducts.reduce(
 		(acc, product) => {
 			const group = product.group || "Other";
@@ -29,7 +28,7 @@ export function AttachProductProductPicker({
 	);
 
 	const handleProductSelect = (productId: string) => {
-		form.setFieldValue("products", [{ productId, quantity: 1 }]);
+		form.setFieldValue("productId", productId);
 	};
 
 	return (

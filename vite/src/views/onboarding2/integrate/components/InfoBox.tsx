@@ -14,7 +14,7 @@ export const InfoBox = ({
 	return (
 		<div
 			className={cn(
-				"bg-t8/10 p-4 text-t8 flex gap-2 rounded-lg",
+				"bg-t8/10 px-4 py-2 text-t8 flex gap-2 rounded-lg text-sm",
 				classNames?.infoBox,
 			)}
 		>

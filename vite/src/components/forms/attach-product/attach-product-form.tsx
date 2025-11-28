@@ -1,6 +1,8 @@
 import { FormWrapper } from "@/components/general/form/form-wrapper";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { AttachProductActions } from "./attach-product-actions";
+import { AttachProductFormProvider } from "./attach-product-form-context";
 import { AttachProductPrepaidOptions } from "./attach-product-prepaid-options";
 import { AttachProductSelection } from "./attach-product-selection";
 import { AttachProductSummary } from "./attach-product-summary";
@@ -13,37 +15,28 @@ export function AttachProductForm({
 	customerId: string;
 	onSuccess?: () => void;
 }) {
-	const form = useAttachProductForm();
+	const itemId = useSheetStore((s) => s.itemId);
+	const form = useAttachProductForm({
+		initialProductId: itemId || undefined,
+		initialCustomerId: customerId || undefined,
+	});
 	const { products, isLoading } = useProductsQuery();
-
-	const activeProducts = products.filter((p) => !p.archived);
 
 	if (isLoading) {
 		return <div className="text-sm text-t3">Loading products...</div>;
 	}
 
 	return (
-		<FormWrapper form={form}>
-			<form.AppField name="products" mode="array">
-				{(field) => <AttachProductSelection field={field} form={form} />}
-			</form.AppField>
+		<AttachProductFormProvider form={form}>
+			<FormWrapper form={form}>
+				<AttachProductSelection />
 
-			<AttachProductPrepaidOptions form={form} />
+				<AttachProductPrepaidOptions />
 
-			<form.Subscribe selector={(state) => state.values.products}>
-				{(products) => (
-					<AttachProductSummary
-						selectedProducts={products}
-						products={activeProducts}
-					/>
-				)}
-			</form.Subscribe>
+				<AttachProductSummary products={products} />
 
-			<AttachProductActions
-				form={form}
-				customerId={customerId}
-				onSuccess={onSuccess}
-			/>
-		</FormWrapper>
+				<AttachProductActions onSuccess={onSuccess} />
+			</FormWrapper>
+		</AttachProductFormProvider>
 	);
 }

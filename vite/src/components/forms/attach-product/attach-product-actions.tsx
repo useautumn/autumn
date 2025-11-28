@@ -1,3 +1,4 @@
+import { useStore } from "@tanstack/react-form";
 import { ArrowUpRightFromSquare } from "lucide-react";
 import { toast } from "sonner";
 import { useAttachProductMutation } from "@/components/forms/attach-product/use-attach-product-mutation";
@@ -10,21 +11,19 @@ import { Button } from "@/components/v2/buttons/Button";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useEnv } from "@/utils/envUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
-import type { UseAttachProductForm } from "./use-attach-product-form";
+import { useAttachProductFormContext } from "./attach-product-form-context";
+import { useAttachPreview } from "./use-attach-preview";
 
 interface AttachProductActionsProps {
-	form: UseAttachProductForm;
-	customerId: string;
 	onSuccess?: () => void;
 }
 
-export function AttachProductActions({
-	form,
-	customerId,
-	onSuccess,
-}: AttachProductActionsProps) {
+export function AttachProductActions({ onSuccess }: AttachProductActionsProps) {
+	const form = useAttachProductFormContext();
+	const { customerId } = useStore(form.store, (state) => state.values);
 	const { stripeAccount } = useOrgStripeQuery();
 	const env = useEnv();
+	const { data: previewData, isLoading: isPreviewLoading } = useAttachPreview();
 
 	const attachMutation = useAttachProductMutation({
 		customerId,
@@ -41,40 +40,47 @@ export function AttachProductActions({
 		useInvoice: boolean;
 		enableProductImmediately?: boolean;
 	}) => {
-		const formValues = form.state.values.products;
-		const prepaidOptions = form.state.values.prepaidOptions || {};
-		const validProducts = formValues.filter((p) => p.productId);
+		const { productId, prepaidOptions } = form.state.values;
 
-		if (validProducts.length === 0) {
-			toast.error("Please select at least one product");
+		if (!productId) {
+			toast.error("Please select a product");
 			return;
 		}
 
-		const results = await attachMutation.mutateAsync({
-			products: validProducts,
-			prepaidOptions,
+		if (previewData?.url) {
+			window.open(previewData.url, "_blank");
+			return;
+		}
+
+		//does the attach
+		const result = await attachMutation.mutateAsync({
+			productId,
+			prepaidOptions: prepaidOptions || {},
 			useInvoice,
 			enableProductImmediately,
 		});
 
 		// Handle checkout URLs and invoice links
-		for (const result of results) {
-			if (result.data.checkout_url) {
-				window.open(result.data.checkout_url, "_blank");
-			} else if (result.data.invoice) {
-				window.open(
-					getStripeInvoiceLink({
-						stripeInvoice: result.data.invoice,
-						env,
-						accountId: stripeAccount?.id,
-					}),
-					"_blank",
-				);
-			}
+		if (result.data.invoice) {
+			window.open(
+				getStripeInvoiceLink({
+					stripeInvoice: result.data.invoice,
+					env,
+					accountId: stripeAccount?.id,
+				}),
+				"_blank",
+			);
 		}
 	};
 
 	const isLoading = attachMutation.isPending;
+
+	// Don't show buttons if preview is loading
+	if (isPreviewLoading || !form.state.values.productId) {
+		return null;
+	}
+
+	const attachText = previewData?.url ? "Checkout" : "Attach Product";
 
 	return (
 		<div className="flex flex-col gap-2">
@@ -87,7 +93,7 @@ export function AttachProductActions({
 						disabled={isLoading}
 						type="button"
 					>
-						Invoice Customer
+						Send an Invoice
 					</Button>
 				</PopoverTrigger>
 				<PopoverContent className="w-80 p-0" align="start">
@@ -139,7 +145,7 @@ export function AttachProductActions({
 					})
 				}
 			>
-				Attach products
+				{attachText || "Attach Product"}
 				<ArrowUpRightFromSquare className="size-3.5" />
 			</Button>
 		</div>
