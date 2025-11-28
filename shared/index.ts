@@ -104,7 +104,6 @@ export * from "./models/orgModels/frontendOrg.js";
 export * from "./models/orgModels/orgConfig.js";
 export * from "./models/orgModels/orgConfig.js";
 export * from "./models/orgModels/orgTable.js";
-export * from "./models/otherModels/metadataModels.js";
 export * from "./models/otherModels/metadataTable.js";
 // Duration Types
 export * from "./models/productModels/durationTypes/rolloverExpiryDurationType.js";

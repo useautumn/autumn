@@ -120,10 +120,10 @@ export const paramsToSubItems = async ({
 		? removeCusProducts!
 		: getCusProductsToRemove({ attachParams });
 
-	console.log(
-		"Cus products to remove:",
-		cusProductsToRemove.map((cp) => cp.product.name),
-	);
+	// console.log(
+	// 	"Cus products to remove:",
+	// 	cusProductsToRemove.map((cp) => cp.product.name),
+	// );
 
 	const newSubItems = mergeNewSubItems({
 		itemSet,

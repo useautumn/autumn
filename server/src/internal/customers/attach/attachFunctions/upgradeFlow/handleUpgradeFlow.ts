@@ -14,7 +14,7 @@ import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSu
 import { subIsCanceled } from "@/external/stripe/stripeSubUtils.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
-import { type AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import {
@@ -123,11 +123,6 @@ export const handleUpgradeFlow = async ({
 		logger.info(`UPGRADE FLOW, updating sub ${curSub.id}`);
 		itemSet.subItems = subItems;
 
-		// await logPhaseItems({
-		//   db: req.db,
-		//   items: itemSet.subItems,
-		// });
-
 		const res = await updateStripeSub2({
 			ctx,
 			attachParams,
@@ -144,6 +139,14 @@ export const handleUpgradeFlow = async ({
 				attachParams,
 				stripeInvoice: res.latestInvoice,
 				logger,
+			});
+		}
+
+		if (res?.url) {
+			return AttachFunctionResponseSchema.parse({
+				checkout_url: res.url,
+				code: SuccessCode.InvoiceActionRequired,
+				message: `Payment action required`,
 			});
 		}
 
