@@ -1,20 +1,16 @@
 import { UsageModel } from "@autumn/shared";
+import { useStore } from "@tanstack/react-form";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import type { UseAttachProductForm } from "./use-attach-product-form";
+import { useAttachProductFormContext } from "./attach-product-form-context";
 
-interface PrepaidOptionsFieldProps {
-	form: UseAttachProductForm;
-}
-
-export function AttachProductPrepaidOptions({
-	form,
-}: PrepaidOptionsFieldProps) {
+export function AttachProductPrepaidOptions() {
+	const form = useAttachProductFormContext();
 	const { products } = useProductsQuery();
+	const { productId } = useStore(form.store, (state) => state.values);
 
 	const activeProducts = products.filter((p) => !p.archived);
-	const selectedProductId = form.state.values.productId;
 
-	const product = activeProducts.find((p) => p.id === selectedProductId);
+	const product = activeProducts.find((p) => p.id === productId);
 
 	const prepaidFeatures = product
 		? (

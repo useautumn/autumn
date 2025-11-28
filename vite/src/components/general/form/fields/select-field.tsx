@@ -22,7 +22,7 @@ export function SelectField({
 	className,
 	hideFieldInfo,
 }: {
-	label: string;
+	label?: string;
 	options: SelectFieldOption[];
 	placeholder: string;
 	textAfter?: string;
@@ -33,7 +33,7 @@ export function SelectField({
 
 	return (
 		<div className={className}>
-			<Label>{label}</Label>
+			{label && <Label>{label}</Label>}
 			<Select value={field.state.value} onValueChange={field.handleChange}>
 				<SelectTrigger className="w-full h-6!">
 					<SelectValue placeholder={placeholder} />

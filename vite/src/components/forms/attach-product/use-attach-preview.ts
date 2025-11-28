@@ -1,12 +1,13 @@
 import type { ProductItem, ProductV2 } from "@autumn/shared";
+import { useStore } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { useAttachProductStore } from "@/hooks/stores/useAttachProductStore";
 import { useHasChanges, useProductStore } from "@/hooks/stores/useProductStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getAttachBody } from "@/views/customers/customer/product/components/attachProductUtils";
+import { useAttachProductFormContext } from "./attach-product-form-context";
 
-interface CheckoutResponse {
+export interface CheckoutResponse {
 	url?: string | null;
 	customer_id: string;
 	lines: Array<{
@@ -26,26 +27,26 @@ interface CheckoutResponse {
 	options?: unknown[];
 }
 
+export type AttachPreviewData = CheckoutResponse;
+
 export function useAttachPreview() {
+	const form = useAttachProductFormContext();
 	const axiosInstance = useAxiosInstance();
 	const { products } = useProductsQuery();
 	const isCustom = useHasChanges();
 	const { product: customProduct } = useProductStore();
 
-	// Get form values from store
-	const customerId = useAttachProductStore((s) => s.customerId);
-	const productId = useAttachProductStore((s) => s.productId);
-	const prepaidOptions = useAttachProductStore((s) => s.prepaidOptions);
+	const { customerId, productId, prepaidOptions } = useStore(
+		form.store,
+		(state) => state.values,
+	);
 
-	// Use custom product from store if there are changes, otherwise fetch from products list
 	const product =
 		isCustom && customProduct
 			? customProduct
 			: products.find((p) => p.id === productId);
 
-	// console.log("product", product);
-
-	const options = Object.entries(prepaidOptions)
+	const options = (Object.entries(prepaidOptions) as [string, number][])
 		.filter(([, quantity]) => quantity > 0)
 		.map(([featureId, quantity]) => ({
 			feature_id: featureId,

@@ -1,18 +1,14 @@
 import type { ProductV2 } from "@autumn/shared";
+import { useStore } from "@tanstack/react-form";
 import SmallSpinner from "@/components/general/SmallSpinner";
 import { AttachConfirmationInfo } from "./attach-confirmation-info";
 import { AttachFeaturePreview } from "./attach-feature-preview";
+import { useAttachProductFormContext } from "./attach-product-form-context";
 import { useAttachPreview } from "./use-attach-preview";
 
-export function AttachProductSummary({
-	productId,
-	products,
-	customerId,
-}: {
-	productId: string;
-	products: ProductV2[];
-	customerId: string;
-}) {
+export function AttachProductSummary({ products }: { products: ProductV2[] }) {
+	const form = useAttachProductFormContext();
+	const { productId } = useStore(form.store, (state) => state.values);
 	const { data: previewData, isLoading } = useAttachPreview();
 
 	if (!productId) {
@@ -27,11 +23,8 @@ export function AttachProductSummary({
 		);
 	}
 
-	console.log("previewData", previewData);
-
 	const product = products.find((p) => p.id === productId);
 
-	// Use preview data if available, otherwise calculate from product prices
 	const lineItems =
 		previewData?.lines?.map((line) => {
 			return {
@@ -62,7 +55,7 @@ export function AttachProductSummary({
 				</div>
 			</div>
 			<AttachConfirmationInfo />
-			<AttachFeaturePreview customerId={customerId} />
+			<AttachFeaturePreview />
 		</div>
 	);
 }

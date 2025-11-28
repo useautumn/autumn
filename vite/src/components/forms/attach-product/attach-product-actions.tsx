@@ -1,3 +1,4 @@
+import { useStore } from "@tanstack/react-form";
 import { ArrowUpRightFromSquare } from "lucide-react";
 import { toast } from "sonner";
 import { useAttachProductMutation } from "@/components/forms/attach-product/use-attach-product-mutation";
@@ -10,25 +11,19 @@ import { Button } from "@/components/v2/buttons/Button";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useEnv } from "@/utils/envUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
+import { useAttachProductFormContext } from "./attach-product-form-context";
 import { useAttachPreview } from "./use-attach-preview";
-import type { UseAttachProductForm } from "./use-attach-product-form";
 
 interface AttachProductActionsProps {
-	form: UseAttachProductForm;
-	customerId: string;
 	onSuccess?: () => void;
-	isPreviewLoading: boolean;
 }
 
-export function AttachProductActions({
-	form,
-	customerId,
-	onSuccess,
-	isPreviewLoading,
-}: AttachProductActionsProps) {
+export function AttachProductActions({ onSuccess }: AttachProductActionsProps) {
+	const form = useAttachProductFormContext();
+	const { customerId } = useStore(form.store, (state) => state.values);
 	const { stripeAccount } = useOrgStripeQuery();
 	const env = useEnv();
-	const { data: previewData } = useAttachPreview();
+	const { data: previewData, isLoading: isPreviewLoading } = useAttachPreview();
 
 	const attachMutation = useAttachProductMutation({
 		customerId,

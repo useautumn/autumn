@@ -5,14 +5,17 @@ import {
 } from "./attach-product-form-schema";
 
 export function useAttachProductForm({
+	initialCustomerId,
 	initialProductId,
 }: {
+	initialCustomerId?: string;
 	initialProductId?: string;
 } = {}) {
 	return useAppForm({
 		defaultValues: {
+			customerId: initialCustomerId || "",
 			productId: initialProductId || "",
-			prepaidOptions: {} as Record<string, number>,
+			prepaidOptions: {},
 		} satisfies AttachProductForm,
 		validators: {
 			onChange: AttachProductFormSchema,

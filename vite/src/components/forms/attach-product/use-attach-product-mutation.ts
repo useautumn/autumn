@@ -70,10 +70,7 @@ export function useAttachProductMutation({
 		},
 		onSuccess: () => {
 			toast.success("Successfully attached product");
-			//close sheet
 			closeSheet();
-
-			// Invalidate customer queries to refresh data
 			queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
 
 			onSuccess?.();

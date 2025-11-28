@@ -17,7 +17,6 @@ export function AttachProductProductPicker({
 
 	const activeProducts = allProducts.filter((p) => !p.archived);
 
-	// Group products by group field
 	const groupedProducts = activeProducts.reduce(
 		(acc, product) => {
 			const group = product.group || "Other";
