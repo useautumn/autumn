@@ -10,10 +10,11 @@ import {
 	type FullCusProduct,
 	type FullCustomer,
 	type Organization,
+	RecaseError,
 } from "@autumn/shared";
 import { and, eq, ilike, or, sql, type Table } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import RecaseError from "@/utils/errorUtils.js";
+
 import { withSpan } from "../analytics/tracer/spanUtils.js";
 import { RELEVANT_STATUSES } from "./cusProducts/CusProductService.js";
 import { getFullCusQuery } from "./getFullCusQuery.js";

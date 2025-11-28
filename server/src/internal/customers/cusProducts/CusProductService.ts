@@ -8,10 +8,10 @@ import {
 	type FullCusProduct,
 	InternalError,
 	products,
+	RecaseError,
 } from "@autumn/shared";
 import { and, arrayContains, eq, inArray, isNotNull, or } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import RecaseError from "@/utils/errorUtils.js";
 
 export const ACTIVE_STATUSES = [
 	CusProductStatus.Active,
