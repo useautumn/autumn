@@ -46,7 +46,7 @@ export const handleCheckoutSessionCompleted = async ({
 
 	// Get options
 	const stripeCli = createStripeCli({ org, env });
-	const attachParams: AttachParams = metadata.data;
+	const attachParams: AttachParams = metadata.data as AttachParams;
 	const checkoutSession = await stripeCli.checkout.sessions.retrieve(data.id, {
 		expand: ["line_items", "subscription"],
 	});

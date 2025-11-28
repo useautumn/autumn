@@ -203,12 +203,9 @@ export const handleStripeWebhookEvent = async ({
 			case "invoice.paid": {
 				const invoice = event.data.object;
 				await handleInvoicePaid({
-					db,
-					org,
+					ctx,
 					invoiceData: invoice,
-					env,
 					event,
-					req: ctx as unknown as ExtendedRequest,
 				});
 				break;
 			}
