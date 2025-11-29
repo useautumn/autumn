@@ -127,7 +127,24 @@ export function CustomerFeatureUsageTable() {
 		},
 	});
 
-	const hasBalances = allEnts.length > 0;
+	const meteredEnts = useMemo(
+		() =>
+			allEnts.filter(
+				(ent) => ent.entitlement.feature.type !== FeatureType.Boolean,
+			),
+		[allEnts],
+	);
+
+	const booleanEnts = useMemo(
+		() =>
+			allEnts.filter(
+				(ent) => ent.entitlement.feature.type === FeatureType.Boolean,
+			),
+		[allEnts],
+	);
+
+	const hasMeteredBalances = meteredEnts.length > 0;
+	const hasBooleanBalances = booleanEnts.length > 0;
 
 	return (
 		<div className="flex flex-col gap-8">
@@ -152,25 +169,20 @@ export function CustomerFeatureUsageTable() {
 							/>
 						</Table.Actions> */}
 					</Table.Toolbar>
-					{hasBalances ? (
+					{hasMeteredBalances || hasBooleanBalances ? (
 						<div className="flex flex-col gap-3">
-							<CustomerBalanceTable
-								allEnts={allEnts.filter(
-									(ent) => ent.entitlement.feature.type !== FeatureType.Boolean,
-								)}
-								filteredCustomerProducts={filteredCustomerProducts}
-								entityId={entityId ?? null}
-								aggregatedMap={aggregatedMap}
-								isLoading={isLoading}
-							/>
-							{allEnts.some(
-								(ent) => ent.entitlement.feature.type === FeatureType.Boolean,
-							) && (
+							{hasMeteredBalances && (
+								<CustomerBalanceTable
+									allEnts={meteredEnts}
+									filteredCustomerProducts={filteredCustomerProducts}
+									entityId={entityId ?? null}
+									aggregatedMap={aggregatedMap}
+									isLoading={isLoading}
+								/>
+							)}
+							{hasBooleanBalances && (
 								<CustomerBooleanBalanceTable
-									allEnts={allEnts.filter(
-										(ent) =>
-											ent.entitlement.feature.type === FeatureType.Boolean,
-									)}
+									allEnts={booleanEnts}
 									aggregatedMap={aggregatedMap}
 									isLoading={isLoading}
 								/>
