@@ -4,42 +4,34 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { attachAuthenticatePaymentMethod } from "../../src/external/stripe/stripeCusUtils.js";
 import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "../../src/utils/scriptUtils/testUtils/initProductsV0.js";
-import { expectProductAttached } from "../utils/expectUtils/expectProductAttached.js";
-import { expectSubItemsCorrect } from "../utils/expectUtils/expectSubUtils.js";
-import { completeInvoiceConfirmation } from "../utils/stripeUtils/completeInvoiceConfirmation.js";
+import { replaceItems } from "../attach/utils.js";
 
 // UNCOMMENT FROM HERE
 const pro = constructProduct({
-	type: "pro",
+	type: "one_off",
 	isDefault: false,
+	isAddOn: true,
 
 	items: [
-		// constructArrearItem({
-		// 	featureId: TestFeature.Credits,
+		constructPrepaidItem({
+			featureId: TestFeature.Credits,
+			includedUsage: 0,
+			billingUnits: 100,
+			price: 10,
+		}),
+		// constructArrearProratedItem({
+		// 	featureId: TestFeature.Users,
+		// 	pricePerUnit: 40,
 		// 	includedUsage: 0,
-		// 	billingUnits: 1,
-		// 	price: 0.5,
 		// }),
 	],
 });
 
-const premium = constructProduct({
-	type: "premium",
-	isDefault: false,
-	isAddOn: true,
-	items: [
-		constructFeatureItem({
-			featureId: TestFeature.Credits,
-		}),
-	],
-});
-
-describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
+describe(`${chalk.yellowBright("temp: Testing prepaid and prorated")}`, () => {
 	const customerId = "temp";
 	const autumn: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
@@ -54,68 +46,36 @@ describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [pro, premium],
+			products: [pro],
 			prefix: customerId,
 		});
 	});
 
-	test("should attach pro product", async () => {
+	test("should create a subscription with prepaid and prorated", async () => {
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: pro.id,
+			options: [
+				{
+					feature_id: TestFeature.Credits,
+					quantity: 200,
+				},
+			],
 		});
 
-		await attachAuthenticatePaymentMethod({
-			ctx,
-			customerId,
+		const newItems = replaceItems({
+			featureId: TestFeature.Credits,
+			newItem: constructPrepaidItem({
+				featureId: TestFeature.Credits,
+				includedUsage: 0,
+				billingUnits: 80,
+				price: 10,
+			}),
+			items: pro.items,
 		});
 
-		const res = await autumn.attach({
-			customer_id: customerId,
-			product_id: premium.id,
-		});
-
-		const customer = await autumn.customers.get(customerId);
-		expectProductAttached({
-			customer,
-			product: pro,
-		});
-
-		await expectSubItemsCorrect({
-			customerId,
-			product: pro,
-			stripeCli: ctx.stripeCli,
-			db: ctx.db,
-			org: ctx.org,
-			env: ctx.env,
-		});
-
-		await completeInvoiceConfirmation({
-			url: res.checkout_url,
-		});
-	});
-
-	test("should have premium product attached", async () => {
-		const customer = await autumn.customers.get(customerId);
-		expectProductAttached({
-			customer,
-			product: premium,
-		});
-
-		await expectSubItemsCorrect({
-			customerId,
-			product: premium,
-			stripeCli: ctx.stripeCli,
-			db: ctx.db,
-			org: ctx.org,
-			env: ctx.env,
+		await autumn.products.update(pro.id, {
+			items: newItems,
 		});
 	});
 });
-
-// stripe subscriptions create \
-//   --customer=cus_123456789 \
-//   --items[0][price]=price_123456789 \
-//   --collection_method=send_invoice \
-//   --days_until_due=30 \
-//   --payment_settings[payment_method_types][0]=us_bank_account
