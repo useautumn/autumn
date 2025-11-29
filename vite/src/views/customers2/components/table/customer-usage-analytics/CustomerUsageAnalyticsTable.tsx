@@ -3,6 +3,7 @@ import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import { Table } from "@/components/general/table";
 import { LoadingShimmerText } from "@/components/v2/LoadingShimmerText";
+import { cn } from "@/lib/utils";
 import { useCusEventsQuery } from "@/views/customers/customer/hooks/useCusEventsQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { useCustomerTimeseriesEvents } from "@/views/customers2/hooks/useCustomerTimeseriesEvents";
@@ -62,7 +63,7 @@ export function CustomerUsageAnalyticsTable() {
 				numberOfColumns: CustomerUsageAnalyticsColumns.length,
 				enableSorting,
 				isLoading,
-				rowClassName: "h-8 bg-interactive-secondary dark:bg-card",
+				rowClassName: "h-8 bg-interactive-secondary dark:bg-card border-b",
 				flexibleTableColumns: true,
 			}}
 		>
@@ -97,7 +98,14 @@ export function CustomerUsageAnalyticsTable() {
 						<>
 							<div className="flex max-w-1/2 w-full min-w-0 flex-col h-[250px]">
 								<div className="overflow-hidden flex flex-col border h-full bg-card rounded-lg">
-									<Table.Content className="border-none overflow-auto">
+									<Table.Content
+										className={cn(
+											" overflow-auto rounded-none bg-card",
+											rawEvents.length <= 6
+												? "border-0 border-b-1"
+												: "border-none",
+										)}
+									>
 										<Table.Header />
 										<Table.Body />
 									</Table.Content>
