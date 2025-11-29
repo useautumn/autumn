@@ -54,9 +54,9 @@ export function TableBody() {
 				return (
 					<TableRow
 						className={cn(
-							"text-t3 transition-none hover:bg-interactive-secondary-hover dark:hover:bg-interactive-secondary-hover h-12 py-4 relative",
+							"text-t3 transition-none h-12 py-4 relative hover:z-95",
 							rowClassName,
-							isSelected ? "z-100 " : "",
+							isSelected ? "z-100" : "hover:bg-interactive-secondary-hover",
 						)}
 						data-state={row.getIsSelected() && "selected"}
 						key={row.id}

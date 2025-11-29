@@ -1,79 +1,30 @@
-import type { CheckoutResponseV0, ProductV2 } from "@autumn/shared";
-import SmallSpinner from "@/components/general/SmallSpinner";
-import { Separator } from "@/components/v2/separator";
-import {
-	SheetAccordion,
-	SheetAccordionItem,
-} from "@/components/v2/sheets/SheetAccordion";
-import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
+import type { CheckoutResponseV0 } from "@autumn/shared";
+import { LoadingShimmerText } from "@/components/v2/LoadingShimmerText";
 import { AttachConfirmationInfo } from "./attach-confirmation-info";
-import { AttachFeaturePreview } from "./attach-feature-preview";
+import { AttachProductLineItems } from "./attach-product-line-items";
+import { AttachProductTotals } from "./attach-product-totals";
 
 export function AttachProductSummary({
-	product,
 	previewData,
 	isLoading,
 }: {
-	product: ProductV2;
 	previewData?: CheckoutResponseV0 | null;
 	isLoading?: boolean;
 }) {
 	if (isLoading) {
 		return (
-			<div className="flex items-center justify-center py-2">
-				<SmallSpinner />
-			</div>
+			<LoadingShimmerText text="Calculating totals" className="py-2 px-6" />
 		);
 	}
 
-	// Use preview data if available, otherwise calculate from product prices
-	const lineItems =
-		previewData?.lines?.map((line) => {
-			return {
-				name: line.description || product?.name || "Unknown",
-				total: line.amount,
-			};
-		}) || [];
-
-	const total = previewData?.total || 0;
-	const nextCycleTotal = previewData?.next_cycle?.total || 0;
-	const nextCycleStartsAt = formatUnixToDate(
-		previewData?.next_cycle?.starts_at || 0,
-	);
-
 	return (
-		<div className="space-y-3 text-sm">
+		<div className="text-sm">
 			<AttachConfirmationInfo previewData={previewData} />
 
-			<AttachFeaturePreview previewData={previewData} />
-			<Separator />
-			<SheetAccordion type="single" withSeparator={false} collapsible={true}>
-				{lineItems.length > 0 && (
-					<SheetAccordionItem value="line-items" title="Line Items">
-						<div className="space-y-2">
-							{lineItems.map((item, index) => (
-								<div key={index} className="flex items-center justify-between">
-									<div className="text-sm text-foreground">{item.name}</div>
-									<div className="text-sm text-foreground">
-										${item.total.toFixed(2)}
-									</div>
-								</div>
-							))}
-						</div>
-					</SheetAccordionItem>
-				)}
-			</SheetAccordion>
-			<div className="flex items-center justify-between text-base">
-				<div className="font-medium text-foreground">Total</div>
-				<div className="font-semibold text-foreground">${total.toFixed(2)}</div>
-			</div>
-			<div className="flex items-center justify-between">
-				<div className="font-medium text-t4">
-					Next Cycle ({nextCycleStartsAt})
-				</div>
-				<div className="font-semibold text-t4">
-					${nextCycleTotal.toFixed(2)}
-				</div>
+			{/* <AttachFeaturePreview previewData={previewData} /> */}
+			<div className="py-4">
+				<AttachProductLineItems previewData={previewData} />
+				<AttachProductTotals previewData={previewData} />
 			</div>
 		</div>
 	);

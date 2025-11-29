@@ -23,18 +23,15 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router";
 // import { Badge } from "@/components/v2/Badge";
 import { IconButton } from "@/components/v2/buttons/IconButton";
+import { InfoRow } from "@/components/v2/InfoRow";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
-import { useOrg } from "@/hooks/common/useOrg";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import {
-	useHasChanges,
 	usePrepaidItems,
 	useProductStore,
 } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
-import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { pushPage } from "@/utils/genUtils";
 import { getStripeSubLink } from "@/utils/linkUtils";
@@ -46,8 +43,6 @@ import { UpdatePlanButton } from "./UpdatePlanButton";
 
 export function SubscriptionDetailSheet() {
 	const { customer } = useCusQuery();
-	const { org } = useOrg();
-	const { features } = useFeaturesQuery();
 	const { stripeAccount } = useOrgStripeQuery();
 	const env = useEnv();
 	const itemId = useSheetStore((s) => s.itemId);
@@ -58,7 +53,6 @@ export function SubscriptionDetailSheet() {
 	// Get edited product from store
 
 	const storeProduct = useProductStore((s) => s.product);
-	const hasChanges = useHasChanges();
 
 	// Check if there are changes in the product store
 	const showUpdateProduct = storeProduct?.id;
@@ -66,9 +60,6 @@ export function SubscriptionDetailSheet() {
 	// Get customer product and productV2 by itemId
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
 	const isExpired = cusProduct?.status === CusProductStatus.Expired;
-
-	console.log("cusProduct", cusProduct);
-	console.log("productV2", productV2);
 
 	useEffect(() => {
 		if (
@@ -343,45 +334,6 @@ export function SubscriptionDetailSheet() {
 				{showUpdateProduct && (
 					<div className="flex justify-end p-2">
 						<UpdatePlanButton cusProduct={cusProduct} />{" "}
-					</div>
-				)}
-			</div>
-		</div>
-	);
-}
-
-interface InfoRowProps {
-	icon: React.ReactNode;
-	label: string;
-	value: string | number | React.ReactNode;
-	className?: string;
-	mono?: boolean;
-}
-
-function InfoRow({ icon, label, value, className, mono }: InfoRowProps) {
-	const isReactNode =
-		typeof value !== "string" && typeof value !== "number" && value !== null;
-
-	return (
-		<div className="flex items-center gap-2">
-			<div className="text-t4/60">{icon}</div>
-			<div className="flex min-w-0 items-center">
-				<div className="text-t3 text-sm font-medium w-20 whitespace-nowrap">
-					{label}
-				</div>
-				{isReactNode ? (
-					<div className={cn("text-t1 text-sm wrap-break-word", className)}>
-						{value}
-					</div>
-				) : (
-					<div
-						className={cn(
-							"text-t1 text-sm wrap-break-word",
-							mono && "font-mono text-xs",
-							className,
-						)}
-					>
-						{value}
 					</div>
 				)}
 			</div>

@@ -1,5 +1,6 @@
 import type { CheckoutResponseV0, ProductV2 } from "@autumn/shared";
-import { ArrowUpRightFromSquare } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { ArrowUpRightFromSquare, CircleCheck } from "lucide-react";
 import { useAttachProductMutation } from "@/components/forms/attach-product/use-attach-product-mutation";
 import {
 	Popover,
@@ -7,10 +8,20 @@ import {
 	PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/v2/buttons/Button";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useEnv } from "@/utils/envUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import type { UseAttachProductForm } from "./use-attach-product-form";
+
+function getUpdateButtonConfig(isCheckout: boolean): {
+	text: string;
+	icon: LucideIcon;
+} {
+	return isCheckout
+		? { text: "Checkout", icon: ArrowUpRightFromSquare }
+		: { text: "Confirm Update", icon: CircleCheck };
+}
 
 interface UpdateProductActionsProps {
 	product?: ProductV2;
@@ -35,7 +46,9 @@ export function UpdateProductActions({
 }: UpdateProductActionsProps) {
 	const { stripeAccount } = useOrgStripeQuery();
 	const env = useEnv();
+	const org = useOrg();
 
+	const isOwnStripeAccount = stripeAccount?.id === org.org?.stripe_connection;
 	const attachMutation = useAttachProductMutation({
 		customerId: customerId ?? "",
 		successMessage: "Plan updated successfully",
@@ -86,17 +99,19 @@ export function UpdateProductActions({
 		return null;
 	}
 
-	const updateText = previewData?.url ? "Checkout" : "Update Plan";
+	const isCheckout = !!previewData?.url;
+	const { text: updateText, icon: UpdateIcon } =
+		getUpdateButtonConfig(isCheckout);
 
 	return (
-		<div className="flex flex-col gap-2">
+		<div className="flex flex-col px-4 mt-2">
 			<Popover>
 				<PopoverTrigger asChild>
 					<Button
 						variant="secondary"
 						className="w-full"
 						isLoading={isLoading}
-						disabled={isLoading}
+						disabled={isLoading || !isOwnStripeAccount}
 						type="button"
 					>
 						Send an Invoice
@@ -142,7 +157,7 @@ export function UpdateProductActions({
 
 			<Button
 				variant="primary"
-				className="w-full flex items-center gap-2"
+				className="w-full flex items-center gap-2 mt-2"
 				isLoading={isLoading}
 				disabled={isLoading}
 				onClick={() =>
@@ -152,7 +167,7 @@ export function UpdateProductActions({
 				}
 			>
 				{updateText}
-				<ArrowUpRightFromSquare className="size-3.5" />
+				<UpdateIcon className="size-3.5" />
 			</Button>
 		</div>
 	);

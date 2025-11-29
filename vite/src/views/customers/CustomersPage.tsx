@@ -1,6 +1,7 @@
 "use client";
 
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetCleanup } from "@/hooks/stores/useSheetStore";
 import { CustomerListTable } from "../customers2/components/table/customer-list/CustomerListTable";
 import LoadingScreen from "../general/LoadingScreen";
@@ -13,7 +14,9 @@ function CustomersPage() {
 	const { customers } = useCusSearchQuery();
 
 	const { isLoading: productsLoading } = useProductsQuery();
+	const resetProductStore = useProductStore((s) => s.reset);
 	useSheetCleanup();
+	resetProductStore();
 
 	useSavedViewsQuery();
 	useFullCusSearchQuery();

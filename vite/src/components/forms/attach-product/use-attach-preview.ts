@@ -47,7 +47,10 @@ export function useAttachPreview(params: AttachPreviewParams = {}) {
 		return () => clearTimeout(timer);
 	}, [queryKeyDeps]);
 
-	return useQuery({
+	// Track if we're in a debouncing state (query key has changed but debounce hasn't completed)
+	const isDebouncing = queryKeyDeps !== debouncedQueryKey;
+
+	const query = useQuery({
 		queryKey: ["attach-checkout", debouncedQueryKey],
 		queryFn: async () => {
 			if (!attachBody || !params.customerId) {
@@ -64,4 +67,11 @@ export function useAttachPreview(params: AttachPreviewParams = {}) {
 		enabled: shouldEnable,
 		staleTime: 0, // Always fetch fresh pricing
 	});
+
+	// Override isLoading to include debouncing state
+	// This prevents showing stale data during the transition between diff plans in the selector
+	return {
+		...query,
+		isLoading: query.isLoading || isDebouncing,
+	};
 }

@@ -90,7 +90,7 @@ export const ProductSheets = () => {
 					className="absolute right-0 top-0 bottom-0"
 					style={{ width: "28rem", zIndex: 100 }}
 				>
-					<SheetContainer className="w-full bg-background z-50 border-l dark:border-l-0 h-full relative">
+					<SheetContainer className="w-full bg-background z-50 border-l border-border/40 h-full relative">
 						<SheetCloseButton onClose={closeSheet} />
 						{renderSheet()}
 					</SheetContainer>

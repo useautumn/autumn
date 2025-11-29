@@ -90,7 +90,7 @@ export default function CustomerView2() {
 						</div>
 						{/* <Separator /> */}
 						{/* <Separator className="my-2" /> */}
-						<div className="flex flex-col gap-16 w-full">
+						<div className="flex flex-col gap-12 w-full">
 							<CustomerProductsTable />
 							{/* <Separator /> */}
 							<CustomerFeatureUsageTable />

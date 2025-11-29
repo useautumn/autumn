@@ -2,7 +2,10 @@ import { AnimatePresence, motion } from "motion/react";
 import { SheetContainer } from "@/components/v2/sheets/InlineSheet";
 import { SheetCloseButton } from "@/components/v2/sheets/SheetCloseButton";
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import {
+	useSheetEscapeHandler,
+	useSheetStore,
+} from "@/hooks/stores/useSheetStore";
 import { AttachProductSheet } from "../components/sheets/AttachProductSheet";
 import { BalanceEditSheet } from "../components/sheets/BalanceEditSheet";
 import { BalanceSelectionSheet } from "../components/sheets/BalanceSelectionSheet";
@@ -14,6 +17,7 @@ export function CustomerSheets() {
 	const sheetType = useSheetStore((s) => s.type);
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const closeBalanceSheet = useCustomerBalanceSheetStore((s) => s.closeSheet);
+	useSheetEscapeHandler();
 
 	const handleClose = () => {
 		closeSheet();
@@ -48,7 +52,7 @@ export function CustomerSheets() {
 					className="absolute right-0 top-0 bottom-0"
 					style={{ width: "28rem", zIndex: 100 }}
 				>
-					<SheetContainer className="w-full bg-background z-50 border-l dark:border-l-0 h-full relative">
+					<SheetContainer className="w-full bg-background z-50 border-l border-border/40 h-full relative">
 						<SheetCloseButton onClose={handleClose} />
 						{renderSheet()}
 					</SheetContainer>

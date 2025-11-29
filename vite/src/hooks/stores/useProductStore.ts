@@ -103,8 +103,6 @@ export const useHasBillingChanges = ({
 			features,
 		});
 
-		console.log("comparison", comparison);
-
 		const hasBillingChanges =
 			!comparison.onlyEntsChanged || !comparison.freeTrialsSame;
 

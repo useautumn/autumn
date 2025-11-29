@@ -1,5 +1,6 @@
 import type { CheckoutResponseV0, ProductV2 } from "@autumn/shared";
-import { ArrowUpRightFromSquare } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { ArrowUpRightFromSquare, CircleCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAttachProductMutation } from "@/components/forms/attach-product/use-attach-product-mutation";
@@ -11,10 +12,20 @@ import {
 import { Button } from "@/components/v2/buttons/Button";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useEnv } from "@/utils/envUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import type { UseAttachProductForm } from "./use-attach-product-form";
+
+function getAttachButtonConfig(isCheckout: boolean): {
+	text: string;
+	icon: LucideIcon;
+} {
+	return isCheckout
+		? { text: "Checkout", icon: ArrowUpRightFromSquare }
+		: { text: "Confirm", icon: CircleCheck };
+}
 
 interface AttachProductActionsProps {
 	form: UseAttachProductForm;
@@ -42,6 +53,7 @@ export function AttachProductActions({
 	const [activeAction, setActiveAction] = useState<"invoice" | "attach" | null>(
 		null,
 	);
+	const { closeSheet } = useSheetStore();
 
 	const ownStripeAccount = org.org?.stripe_connection !== "default";
 
@@ -75,6 +87,7 @@ export function AttachProductActions({
 		if (previewData?.url && action === "attach") {
 			window.open(previewData.url, "_blank");
 			setActiveAction(null);
+			closeSheet();
 			return;
 		}
 
@@ -87,8 +100,6 @@ export function AttachProductActions({
 				enableProductImmediately,
 				entityId: entityId ?? undefined,
 			});
-
-			console.log("result", result);
 
 			// Handle checkout URLs and invoice links
 			if (result.data.invoice) {
@@ -117,10 +128,12 @@ export function AttachProductActions({
 		return null;
 	}
 
-	const attachText = previewData?.url ? "Checkout" : "Attach Product";
+	const isCheckout = !!previewData?.url;
+	const { text: attachText, icon: AttachIcon } =
+		getAttachButtonConfig(isCheckout);
 
 	return (
-		<div className="flex flex-col gap-2">
+		<div className="flex flex-col gap-2 px-4">
 			<Popover>
 				<PopoverTrigger asChild>
 					<Button
@@ -192,8 +205,8 @@ export function AttachProductActions({
 					})
 				}
 			>
-				{attachText || "Attach Product"}
-				<ArrowUpRightFromSquare className="size-3.5" />
+				{attachText}
+				<AttachIcon className="size-3.5" />
 			</Button>
 		</div>
 	);

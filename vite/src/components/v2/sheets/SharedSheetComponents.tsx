@@ -1,5 +1,7 @@
+import { CaretRightIcon } from "@phosphor-icons/react";
 import { useId } from "react";
 import { Separator } from "@/components/v2/separator";
+import { type SheetType, useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "../checkboxes/Checkbox";
 
@@ -10,22 +12,36 @@ interface SheetHeaderProps {
 	noSeparator?: boolean;
 	className?: string;
 	isOnboarding?: boolean;
+	breadcrumbs?: { name: string; sheet?: string }[];
+	itemId?: string | null;
 }
 
 export function SheetHeader({
 	title,
 	description,
 	children,
+	breadcrumbs,
 	noSeparator = false,
 	className,
 	isOnboarding = false,
+	itemId,
 }: SheetHeaderProps) {
 	return (
 		<div className={cn("p-4 pb-0", className)}>
-			<h2 className="text-main mb-1">{title}</h2>
-			{/* check typography */}
+			{breadcrumbs ? (
+				<SheetBreadcrumbs
+					breadcrumbs={breadcrumbs}
+					title={title}
+					itemId={itemId ?? null}
+				/>
+			) : (
+				<h2 className="text-main">{title}</h2>
+			)}
 			<p
-				className={cn("text-t3 text-sm", isOnboarding && "text-body-secondary")}
+				className={cn(
+					"text-t3 text-sm mt-1",
+					isOnboarding && "text-body-secondary",
+				)}
 			>
 				{description}
 			</p>
@@ -42,24 +58,24 @@ interface SheetSectionProps {
 	setChecked?: (checked: boolean) => void;
 	children: React.ReactNode;
 	withSeparator?: boolean;
-	actions?: React.ReactNode;
+	className?: string;
 }
 
 export function SheetSection({
 	title,
+	className,
 	description,
 	checked = true,
 	setChecked,
 	children,
 	withSeparator = true,
-	actions,
 }: SheetSectionProps) {
 	const id = useId();
 
 	const withTogle = setChecked !== undefined;
 	return (
 		<>
-			<div className="p-4">
+			<div className={cn("p-4", className)}>
 				{title && (
 					<div className="flex items-center justify-between h-6 mb-2">
 						<label
@@ -81,11 +97,6 @@ export function SheetSection({
 								</div>
 							)}
 						</label>
-						{actions && (
-							<div className="flex items-center gap-2 justify-end">
-								{actions}
-							</div>
-						)}
 					</div>
 				)}
 
@@ -124,6 +135,38 @@ export function SheetFooter({ children, className }: SheetFooterProps) {
 			)}
 		>
 			{children}
+		</div>
+	);
+}
+
+export function SheetBreadcrumbs({
+	breadcrumbs,
+	title,
+	itemId,
+}: {
+	breadcrumbs: { name: string; sheet?: string }[];
+	title: string;
+	itemId: string | null;
+}) {
+	const setSheet = useSheetStore((s) => s.setSheet);
+	return (
+		<div className="flex items-center gap-1">
+			{breadcrumbs.map((breadcrumb) => (
+				<button
+					type="button"
+					key={breadcrumb.name}
+					className="flex items-center gap-1 text-t3 cursor-pointer"
+					onClick={() => {
+						if (breadcrumb.sheet) {
+							setSheet({ type: breadcrumb.sheet as SheetType, itemId: itemId });
+						}
+					}}
+				>
+					<h2 className="text-t3! text-main">{breadcrumb.name}</h2>
+					<CaretRightIcon size={14} />
+				</button>
+			))}
+			<h2 className="text-main">{title}</h2>
 		</div>
 	);
 }

@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { Table } from "@/components/general/table";
 import { Button } from "@/components/v2/buttons/Button";
+import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -34,9 +35,8 @@ export function CustomerProductsTable() {
 	const [selectedProduct, setSelectedProduct] = useState<FullCusProduct | null>(
 		null,
 	);
-	const sheetType = useSheetStore((s) => s.type);
+	const storeProduct = useProductStore((s) => s.product);
 	const selectedItemId = useSheetStore((s) => s.itemId);
-	const detailsOpen = sheetType === "subscription-detail";
 
 	const { setEntityId } = useEntity();
 
@@ -162,6 +162,12 @@ export function CustomerProductsTable() {
 	};
 
 	const handleRowClick = (cusProduct: FullCusProduct) => {
+		if (storeProduct?.id) {
+			// If there is a product being customized, don't open another sheet
+			//user must close manually -- could show some notification to user here
+			return;
+		}
+
 		setSheet({
 			type: "subscription-detail",
 			itemId: cusProduct.id,
@@ -231,7 +237,7 @@ export function CustomerProductsTable() {
 					onRowClick: handleRowClick,
 					emptyStateText,
 					flexibleTableColumns: true,
-					selectedItemId: detailsOpen ? selectedItemId : undefined,
+					selectedItemId: selectedItemId,
 				}}
 			>
 				<Table.Container>
@@ -287,7 +293,7 @@ export function CustomerProductsTable() {
 							onRowClick: handleRowClick,
 							emptyStateText: "No entity-level plans found",
 							flexibleTableColumns: true,
-							selectedItemId: detailsOpen ? selectedItemId : undefined,
+							selectedItemId: selectedItemId,
 						}}
 					>
 						<Table.Container>

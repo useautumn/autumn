@@ -4,25 +4,19 @@ import {
 	type FullCustomerPrice,
 	getCusEntBalance,
 } from "@autumn/shared";
-import { ArrowLeft } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { AdminHover } from "@/components/general/AdminHover";
 import { DateInputUnix } from "@/components/general/DateInputUnix";
 import { Button } from "@/components/v2/buttons/Button";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
+import { InfoRow } from "@/components/v2/InfoRow";
 import { LabelInput } from "@/components/v2/inputs/LabelInput";
-import {
-	SheetFooter,
-	SheetHeader,
-	SheetSection,
-} from "@/components/v2/sheets/InlineSheet";
+import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, notNullish } from "@/utils/genUtils";
-import { getCusEntHoverTexts } from "@/views/admin/adminUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { useCustomerContext } from "../../customer/CustomerContext";
@@ -37,8 +31,6 @@ export function BalanceEditSheet() {
 		closeSheet: closeBalanceSheet,
 	} = useCustomerBalanceSheetStore();
 	const closeSheet = useSheetStore((s) => s.closeSheet);
-	const setSheet = useSheetStore((s) => s.setSheet);
-	const setBalanceSheet = useCustomerBalanceSheetStore((s) => s.setSheet);
 
 	const axiosInstance = useAxiosInstance();
 	const [updateLoading, setUpdateLoading] = useState(false);
@@ -90,16 +82,6 @@ export function BalanceEditSheet() {
 	const handleClose = () => {
 		closeBalanceSheet();
 		closeSheet();
-	};
-
-	const handleBackToSelection = () => {
-		setBalanceSheet({
-			type: "edit-balance",
-			featureId,
-			originalEntitlements,
-			selectedCusEntId: null,
-		});
-		setSheet({ type: "balance-selection" });
 	};
 
 	const handleUpdateCusEntitlement = async (
@@ -191,59 +173,45 @@ export function BalanceEditSheet() {
 						{feature.id}
 					</CopyButton>
 				}
-			>
-				{hasMultipleBalances && (
-					<Button
-						variant="skeleton"
-						size="sm"
-						onClick={handleBackToSelection}
-						className="mt-2 w-fit"
-					>
-						<ArrowLeft size={16} />
-						Back to Selection
-					</Button>
-				)}
-			</SheetHeader>
+				breadcrumbs={
+					hasMultipleBalances
+						? [
+								{
+									name: "Balance List",
+									sheet: "balance-selection",
+								},
+							]
+						: undefined
+				}
+			/>
 
 			<div className="flex-1 overflow-y-auto">
-				<SheetSection title="Plan Details" withSeparator>
-					<div className="flex flex-col gap-2 bg-secondary p-3 rounded-lg border">
-						<div className="flex gap-2">
-							<AdminHover
-								texts={getCusEntHoverTexts({
-									cusEnt: selectedCusEnt,
-									entities: customer?.entities,
-								})}
-								asChild
-							>
-								<span className="text-t3 text-sm font-medium">Plan ID:</span>
-							</AdminHover>
-							<span className="text-t1 text-sm font-mono truncate">
-								{cusProduct?.product_id || "N/A"}
-							</span>
-						</div>
+				<SheetSection withSeparator>
+					<div className="flex flex-col gap-2 rounded-lg">
 						{cusProduct?.entity_id && (
-							<div className="flex gap-2">
-								<span className="text-t3 text-sm font-medium">Entity ID:</span>
-								<span className="text-t1 text-sm font-mono truncate">
-									{cusProduct.entity_id}
-								</span>
-							</div>
+							<InfoRow
+								label="Entity"
+								value={cusProduct.entity_name || cusProduct.entity_id}
+							/>
 						)}
-						<div className="flex gap-2">
-							<span className="text-t3 text-sm font-medium">
-								Reset Interval:
-							</span>
-							<span className="text-t1 text-sm">
-								{selectedCusEnt.entitlement.interval === "lifetime"
-									? "never"
-									: selectedCusEnt.entitlement.interval}
-							</span>
+						<div>
+							<InfoRow label="Plan" value={cusProduct?.product.name || "N/A"} />
 						</div>
+
+						<InfoRow
+							label="Interval"
+							value={
+								<span className="bg-muted px-1 py-0.5 rounded-md text-t3">
+									{selectedCusEnt.entitlement.interval === "lifetime"
+										? "never"
+										: selectedCusEnt.entitlement.interval}
+								</span>
+							}
+						/>
 					</div>
 				</SheetSection>
 
-				<SheetSection title="Update Balance" withSeparator={false}>
+				<SheetSection withSeparator={false}>
 					<div className="flex flex-col gap-3">
 						<div className="flex gap-3">
 							<LabelInput
@@ -294,21 +262,20 @@ export function BalanceEditSheet() {
 							</InfoBox>
 						)}
 					</div>
+					<Button
+						variant="primary"
+						className="w-full mt-3"
+						isLoading={updateLoading}
+						onClick={() => handleUpdateCusEntitlement(selectedCusEnt)}
+					>
+						Update Balance
+					</Button>
 				</SheetSection>
-			</div>
 
-			<SheetFooter>
-				<Button variant="secondary" onClick={handleClose}>
+				{/* <Button variant="secondary" onClick={handleClose}>
 					Cancel
-				</Button>
-				<Button
-					variant="primary"
-					isLoading={updateLoading}
-					onClick={() => handleUpdateCusEntitlement(selectedCusEnt)}
-				>
-					Update Balance
-				</Button>
-			</SheetFooter>
+				</Button> */}
+			</div>
 		</div>
 	);
 }

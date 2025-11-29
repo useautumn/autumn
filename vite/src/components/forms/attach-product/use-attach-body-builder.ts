@@ -3,6 +3,8 @@ import { useMemo } from "react";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useHasChanges, useProductStore } from "@/hooks/stores/useProductStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
+import { useEnv } from "@/utils/envUtils";
+import { getRedirectUrl } from "@/utils/genUtils";
 import { getAttachBody } from "@/views/customers/customer/product/components/attachProductUtils";
 
 interface AttachBodyBuilderParams {
@@ -25,11 +27,17 @@ export function useAttachBodyBuilder(params: AttachBodyBuilderParams = {}) {
 	const hasChanges = useHasChanges();
 	const storeProduct = useProductStore((s) => s.product);
 	const { entityId: storeEntityId } = useEntity();
+	const env = useEnv();
 
 	// Memoized builder function that can be called with runtime params
 	const buildAttachBody = useMemo(
 		() => (runtimeParams?: AttachBodyBuilderParams) => {
 			const mergedParams = { ...params, ...runtimeParams };
+
+			const redirectUrl = getRedirectUrl(
+				`/customers/${mergedParams.customerId}`,
+				env,
+			);
 
 			// Resolve the product: use provided product or find by ID
 			const product =
@@ -67,6 +75,7 @@ export function useAttachBodyBuilder(params: AttachBodyBuilderParams = {}) {
 				version,
 				useInvoice: mergedParams.useInvoice,
 				enableProductImmediately: mergedParams.enableProductImmediately,
+				successUrl: `${import.meta.env.VITE_FRONTEND_URL}${redirectUrl}`,
 			});
 		},
 		[products, hasChanges, storeProduct, storeEntityId, params],
