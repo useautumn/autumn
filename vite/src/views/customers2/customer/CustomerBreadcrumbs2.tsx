@@ -1,5 +1,5 @@
 import type { Entity } from "@autumn/shared";
-import { useLocation, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { AdminHover } from "@/components/general/AdminHover";
 import {
 	Breadcrumb,
@@ -8,18 +8,17 @@ import {
 	BreadcrumbList,
 	BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useEnv } from "@/utils/envUtils";
 import { navigateTo } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { useCustomerContext } from "./CustomerContext";
 
 export const CustomerBreadcrumbs = () => {
 	const env = useEnv();
 	const navigate = useNavigate();
-	const location = useLocation();
 
 	const { customer } = useCusQuery();
-	const { entityId, setEntityId } = useCustomerContext();
+	const { entityId, setEntityId } = useEntity();
 
 	const entity = customer.entities.find((e: Entity) => e.id === entityId);
 
@@ -54,15 +53,12 @@ export const CustomerBreadcrumbs = () => {
 					</BreadcrumbLink>
 				</BreadcrumbItem>
 				<BreadcrumbSeparator />
-				<BreadcrumbItem className="truncate max-w-48">
+				<BreadcrumbItem className="truncate max-w-36">
 					{entityId ? (
 						<BreadcrumbLink
 							className="cursor-pointer"
 							onClick={() => {
 								setEntityId(null);
-								const params = new URLSearchParams(location.search);
-								params.delete("entity_id");
-								navigate(`${location.pathname}?${params.toString()}`);
 							}}
 						>
 							{customer.name || customer.id || customer.email}
@@ -76,7 +72,7 @@ export const CustomerBreadcrumbs = () => {
 				{entityId && (
 					<>
 						<BreadcrumbSeparator />
-						<BreadcrumbItem className="truncate max-w-48">
+						<BreadcrumbItem className="truncate max-w-36">
 							{entity?.name || entityId}
 						</BreadcrumbItem>
 					</>

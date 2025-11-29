@@ -1,14 +1,20 @@
 import {
 	type FrontendProduct,
+	getProductItemDisplay,
 	type ProductItem,
+	type ProductV2,
 	productsAreSame,
 	productV2ToBasePrice,
 	productV2ToFeatureItems,
 } from "@autumn/shared";
 import { useMemo } from "react";
+import { useParams } from "react-router";
 import { create } from "zustand";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { getItemId } from "@/utils/product/productItemUtils";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { getItemId, getPrepaidItems } from "@/utils/product/productItemUtils";
+import { itemToFeature } from "@/utils/product/productItemUtils/convertItem";
+import { getVersionCounts } from "@/utils/productUtils";
 import { DEFAULT_PRODUCT } from "@/views/products/plan/utils/defaultProduct";
 import { useSheetStore } from "./useSheetStore";
 
@@ -50,16 +56,17 @@ export const useProductStore = create<ProductState>((set) => ({
 	reset: () => set(initialState),
 }));
 
+// Custom hook to determine if we're in customer product view based on URL
+export const useIsCusPlanEditor = () => {
+	const { customer_id } = useParams();
+	return !!customer_id;
+};
+
 // Custom hooks for computed values
 export const useHasChanges = () => {
 	const product = useProductStore((s) => s.product);
 	const baseProduct = useProductStore((s) => s.baseProduct);
 	const { features = [] } = useFeaturesQuery();
-
-	console.log("product", product);
-	console.log("baseProduct", baseProduct);
-
-	// console.log("has changes", product, baseProduct);
 
 	return useMemo(() => {
 		if (!baseProduct) return false;
@@ -76,6 +83,31 @@ export const useHasChanges = () => {
 			!comparison.freeTrialsSame
 		);
 	}, [product, baseProduct, features]);
+};
+
+export const useHasBillingChanges = ({
+	baseProduct,
+	newProduct,
+}: {
+	baseProduct: FrontendProduct;
+	newProduct: FrontendProduct;
+}) => {
+	const { features = [] } = useFeaturesQuery();
+
+	return useMemo(() => {
+		if (!baseProduct || !newProduct) return false;
+
+		const comparison = productsAreSame({
+			newProductV2: newProduct as unknown as FrontendProduct,
+			curProductV2: baseProduct as unknown as FrontendProduct,
+			features,
+		});
+
+		const hasBillingChanges =
+			!comparison.onlyEntsChanged || !comparison.freeTrialsSame;
+
+		return hasBillingChanges;
+	}, [baseProduct, newProduct, features]);
 };
 
 export const useWillVersion = () => {
@@ -186,4 +218,52 @@ export const useSetCurrentItem = () => {
 		updatedItems[originalIndex] = updatedItem;
 		setProduct({ ...product, items: updatedItems });
 	};
+};
+
+/**
+ * Hook to check if the current product is the latest version.
+ */
+export const useIsLatestVersion = (product: FrontendProduct) => {
+	const { products = [] } = useProductsQuery();
+
+	return useMemo(() => {
+		if (!product?.id) return true;
+
+		const versionCounts = getVersionCounts(products);
+		const latestVersion = versionCounts[product.id];
+
+		return !latestVersion || product.version === latestVersion;
+	}, [product, products]);
+};
+
+/**
+ * Hook to get prepaid items from a product with feature information and display
+ */
+export const usePrepaidItems = ({
+	product,
+}: {
+	product?: ProductV2 | FrontendProduct;
+}) => {
+	const { features = [] } = useFeaturesQuery();
+
+	return useMemo(() => {
+		if (!product) return [];
+
+		const prepaidItems = getPrepaidItems(product);
+
+		return prepaidItems.map((item) => {
+			const feature = itemToFeature({ item, features });
+			const display = getProductItemDisplay({
+				item,
+				features,
+				currency: "usd",
+			});
+
+			return {
+				...item,
+				feature,
+				display,
+			};
+		});
+	}, [product, features]);
 };

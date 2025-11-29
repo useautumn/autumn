@@ -27,12 +27,16 @@ interface PlanFeatureRowProps {
 	item: ProductItem;
 	onDelete?: (item: ProductItem) => void;
 	index: number;
+	readOnly?: boolean;
+	prepaidQuantity?: number | null;
 }
 
 export const PlanFeatureRow = ({
 	item: itemProp,
 	onDelete: _onDelete,
 	index,
+	readOnly = false,
+	prepaidQuantity, //used by subscription detail sheet
 }: PlanFeatureRowProps) => {
 	const { org } = useOrg();
 	const { features } = useFeaturesQuery();
@@ -173,8 +177,9 @@ export const PlanFeatureRow = ({
 				"input-base input-state-open-tiny",
 				isDisabled && "pointer-events-none cursor-default",
 				isSelected &&
-					"border-transparent z-95 relative bg-interative-secondary !outline-4 !outline-outer-background",
-				isOnboarding && isSelected && "!border-primary",
+					"border-transparent z-95 relative bg-interative-secondary outline-4! outline-outer-background!",
+				isOnboarding && isSelected && "border-primary!",
+				readOnly && "pointer-events-none cursor-default",
 			)}
 			onMouseDown={(e) => {
 				if (isDisabled) return;
@@ -201,7 +206,7 @@ export const PlanFeatureRow = ({
 			{/* Left side - Icons and text */}
 			<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
 				<AdminHover texts={adminHoverText()}>
-					<div className="flex flex-row items-center gap-1 shrink-0">
+					<div className="flex flex-row items-center gap-1 shrink-0 pointer-events-auto">
 						<PlanFeatureIcon item={item} position="left" />
 
 						<CustomDotIcon />
@@ -220,20 +225,11 @@ export const PlanFeatureRow = ({
 
 				<div
 					className={cn(
-						"flex items-center max-w-0 opacity-0 overflow-hidden group-hover:max-w-[200px] group-hover:opacity-100 shrink-0",
+						"flex items-center max-w-0 opacity-0 overflow-hidden group-hover:max-w-[200px] shrink-0",
 						isSelected && "max-w-[200px] opacity-100",
+						!readOnly && " group-hover:opacity-100",
 					)}
 				>
-					{/* <CopyButton
-						text={item.feature_id || ""}
-						disableActive={true}
-						size="sm"
-						// variant="skeleton"
-						className="bg-transparent hover:text-primary max-w-24 text-t3"
-						tabIndex={-1}
-						side="bottom"
-						
-					/> */}
 					<IconButton
 						icon={
 							<TrashIcon
@@ -255,12 +251,11 @@ export const PlanFeatureRow = ({
 						tabIndex={-1}
 					/>
 				</div>
-
-				{/* <div className="group/btn cursor-grab active:cursor-grabbing flex items-center justify-center p-1 w-6 h-6">
-					<div className="text-t3 group-hover/btn:text-primary transition-colors">
-						<DotsSixVerticalIcon size={16} weight="bold" />
-					</div>
-				</div> */}
+				{prepaidQuantity && (
+					<span className="bg-muted px-1 py-0.5 rounded-md">
+						x{prepaidQuantity}
+					</span>
+				)}
 			</div>
 		</div>
 	);

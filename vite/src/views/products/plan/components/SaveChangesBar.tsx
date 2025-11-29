@@ -6,6 +6,7 @@ import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
 	useHasChanges,
+	useIsCusPlanEditor,
 	useProductStore,
 	useWillVersion,
 } from "@/hooks/stores/useProductStore";
@@ -16,6 +17,7 @@ import { useProductQuery } from "../../product/hooks/useProductQuery";
 import { useProductContext } from "../../product/ProductContext";
 import { updateProduct } from "../../product/utils/updateProduct";
 import { useProductChangedAlert } from "../hooks/useProductChangedAlert";
+import { PlanEditorBar } from "./PlanEditorBar";
 
 interface SaveChangesBarProps {
 	isOnboarding?: boolean;
@@ -30,7 +32,7 @@ export const SaveChangesBar = ({
 	// Get product state from store
 	const product = useProductStore((s) => s.product);
 	const setProduct = useProductStore((s) => s.setProduct);
-	const { type: sheetType, setSheet } = useSheetStore();
+	const { type: sheetType } = useSheetStore();
 	const hasChanges = useHasChanges();
 	const willVersion = useWillVersion();
 
@@ -40,7 +42,12 @@ export const SaveChangesBar = ({
 	const { counts, isLoading } = useProductCountsQuery();
 	const { refetch: queryRefetch } = useProductQuery();
 
+	// const { }
+
 	const basePrice = productV2ToBasePrice({ product });
+
+	const isCusPlanEditor = useIsCusPlanEditor();
+	const saveButtonText = isCusPlanEditor ? "Save and Return" : "Save";
 
 	useProductChangedAlert({
 		hasChanges,
@@ -117,26 +124,20 @@ export const SaveChangesBar = ({
 	if (sheetType && !isOnboarding) return null;
 
 	return (
-		<div className="absolute bottom-0 left-0 right-0 flex justify-center items-center h-20 pb-4 pointer-events-none z-50 animate-in fade-in-0 slide-in-from-bottom-10 duration-300">
-			<div
-				className={`flex items-center gap-2 p-2 pl-3 rounded-xl border border-input bg-outer-background pointer-events-auto shadow-xl ${
-					isOnboarding ? "shadow-lg" : ""
-				}`}
+		<PlanEditorBar>
+			<p className="text-body whitespace-nowrap truncate">
+				You have unsaved changes
+			</p>
+			<Button variant="secondary" onClick={handleDiscardClicked}>
+				Discard
+			</Button>
+			<ShortcutButton
+				metaShortcut="s"
+				onClick={handleSaveClicked}
+				isLoading={saving}
 			>
-				<p className="text-body whitespace-nowrap truncate">
-					You have unsaved changes
-				</p>
-				<Button variant="secondary" onClick={handleDiscardClicked}>
-					Discard
-				</Button>
-				<ShortcutButton
-					metaShortcut="s"
-					onClick={handleSaveClicked}
-					isLoading={saving}
-				>
-					Save
-				</ShortcutButton>
-			</div>
-		</div>
+				{saveButtonText}
+			</ShortcutButton>
+		</PlanEditorBar>
 	);
 };

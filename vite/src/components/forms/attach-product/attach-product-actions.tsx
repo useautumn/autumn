@@ -1,4 +1,7 @@
-import { ArrowUpRightFromSquare } from "lucide-react";
+import type { CheckoutResponseV0, ProductV2 } from "@autumn/shared";
+import type { LucideIcon } from "lucide-react";
+import { ArrowUpRightFromSquare, CircleCheck } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAttachProductMutation } from "@/components/forms/attach-product/use-attach-product-mutation";
 import {
@@ -7,29 +10,64 @@ import {
 	PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/v2/buttons/Button";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useEnv } from "@/utils/envUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import type { UseAttachProductForm } from "./use-attach-product-form";
 
+function getAttachButtonConfig(isCheckout: boolean): {
+	text: string;
+	icon: LucideIcon;
+} {
+	return isCheckout
+		? { text: "Checkout", icon: ArrowUpRightFromSquare }
+		: { text: "Confirm", icon: CircleCheck };
+}
+
 interface AttachProductActionsProps {
 	form: UseAttachProductForm;
+	product: ProductV2;
 	customerId: string;
 	onSuccess?: () => void;
+	previewData?: CheckoutResponseV0 | null;
+	isPreviewLoading?: boolean;
 }
 
 export function AttachProductActions({
 	form,
+	product,
 	customerId,
 	onSuccess,
+	previewData,
+	isPreviewLoading,
 }: AttachProductActionsProps) {
 	const { stripeAccount } = useOrgStripeQuery();
 	const env = useEnv();
+	const org = useOrg();
+	const { entityId } = useEntity();
+	const buttonRef = useRef<HTMLButtonElement>(null);
+	const [buttonWidth, setButtonWidth] = useState<number>(0);
+	const [activeAction, setActiveAction] = useState<"invoice" | "attach" | null>(
+		null,
+	);
+	const { closeSheet } = useSheetStore();
+
+	const ownStripeAccount = org.org?.stripe_connection !== "default";
+
+	useEffect(() => {
+		if (buttonRef.current) {
+			setButtonWidth(buttonRef.current.offsetWidth);
+		}
+	}, []);
 
 	const attachMutation = useAttachProductMutation({
 		customerId,
 		onSuccess: () => {
 			form.reset();
+			setActiveAction(null);
 			onSuccess?.();
 		},
 	});
@@ -37,31 +75,34 @@ export function AttachProductActions({
 	const handleAttach = async ({
 		useInvoice,
 		enableProductImmediately,
+		action,
 	}: {
 		useInvoice: boolean;
 		enableProductImmediately?: boolean;
+		action: "invoice" | "attach";
 	}) => {
-		const formValues = form.state.values.products;
-		const prepaidOptions = form.state.values.prepaidOptions || {};
-		const validProducts = formValues.filter((p) => p.productId);
+		const { prepaidOptions } = form.state.values;
+		setActiveAction(action);
 
-		if (validProducts.length === 0) {
-			toast.error("Please select at least one product");
+		if (previewData?.url && action === "attach") {
+			window.open(previewData.url, "_blank");
+			setActiveAction(null);
+			closeSheet();
 			return;
 		}
 
-		const results = await attachMutation.mutateAsync({
-			products: validProducts,
-			prepaidOptions,
-			useInvoice,
-			enableProductImmediately,
-		});
+		try {
+			//does the attach
+			const result = await attachMutation.mutateAsync({
+				product,
+				prepaidOptions: prepaidOptions || {},
+				useInvoice,
+				enableProductImmediately,
+				entityId: entityId ?? undefined,
+			});
 
-		// Handle checkout URLs and invoice links
-		for (const result of results) {
-			if (result.data.checkout_url) {
-				window.open(result.data.checkout_url, "_blank");
-			} else if (result.data.invoice) {
+			// Handle checkout URLs and invoice links
+			if (result.data.invoice) {
 				window.open(
 					getStripeInvoiceLink({
 						stripeInvoice: result.data.invoice,
@@ -70,34 +111,56 @@ export function AttachProductActions({
 					}),
 					"_blank",
 				);
+				toast.success("Redirected to Stripe to finalize the invoice");
 			}
+		} catch (error) {
+			setActiveAction(null);
+			throw error;
 		}
 	};
 
 	const isLoading = attachMutation.isPending;
+	const isInvoiceLoading = isLoading && activeAction === "invoice";
+	const isAttachLoading = isLoading && activeAction === "attach";
+
+	// Don't show buttons if preview is loading
+	if (isPreviewLoading || !product) {
+		return null;
+	}
+
+	const isCheckout = !!previewData?.url;
+	const { text: attachText, icon: AttachIcon } =
+		getAttachButtonConfig(isCheckout);
 
 	return (
-		<div className="flex flex-col gap-2">
+		<div className="flex flex-col gap-2 px-4">
 			<Popover>
 				<PopoverTrigger asChild>
 					<Button
+						ref={buttonRef}
 						variant="secondary"
 						className="w-full"
-						isLoading={isLoading}
-						disabled={isLoading}
+						isLoading={isInvoiceLoading}
+						disabled={isLoading || !ownStripeAccount}
 						type="button"
 					>
-						Invoice Customer
+						Send an Invoice
 					</Button>
 				</PopoverTrigger>
-				<PopoverContent className="w-80 p-0" align="start">
+				<PopoverContent
+					className="p-0 z-100 rounded-lg"
+					align="start"
+					style={{ width: buttonWidth > 0 ? `${buttonWidth}px` : "auto" }}
+				>
 					<div className="flex flex-col">
 						<button
 							type="button"
+							disabled={isLoading}
 							onClick={() =>
 								handleAttach({
 									useInvoice: true,
 									enableProductImmediately: true,
+									action: "invoice",
 								})
 							}
 							className="px-4 py-3 text-left text-sm hover:bg-accent"
@@ -105,15 +168,17 @@ export function AttachProductActions({
 							<div className="font-medium">Enable plan immediately</div>
 							<div className="text-xs text-muted-foreground">
 								Enable the plan immediately and redirect to Stripe to finalize
-								the invoice
+								the invoice. Customer can pay by the invoice due date.
 							</div>
 						</button>
 						<button
 							type="button"
+							disabled={isLoading}
 							onClick={() =>
 								handleAttach({
 									useInvoice: true,
 									enableProductImmediately: false,
+									action: "invoice",
 								})
 							}
 							className="px-4 py-3 text-left text-sm hover:bg-accent border-t"
@@ -131,16 +196,17 @@ export function AttachProductActions({
 			<Button
 				variant="primary"
 				className="w-full flex items-center gap-2"
-				isLoading={isLoading}
+				isLoading={isAttachLoading}
 				disabled={isLoading}
 				onClick={() =>
 					handleAttach({
 						useInvoice: false,
+						action: "attach",
 					})
 				}
 			>
-				Attach products
-				<ArrowUpRightFromSquare className="size-3.5" />
+				{attachText}
+				<AttachIcon className="size-3.5" />
 			</Button>
 		</div>
 	);

@@ -72,7 +72,7 @@ function SheetAccordionItem({
 				</AccordionPrimitive.Trigger>
 			</AccordionPrimitive.Header>
 			<AccordionPrimitive.Content className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden">
-				<div className="px-4 pb-4">{children}</div>
+				<div className="px-4 pb-4 pt-2">{children}</div>
 			</AccordionPrimitive.Content>
 		</AccordionPrimitive.Item>
 	);

@@ -12,6 +12,7 @@ import { useFieldContext } from "@/hooks/form/form-context";
 export type SelectFieldOption = {
 	label: string;
 	value: string;
+	disabledValue?: string;
 };
 
 export function SelectField({
@@ -21,6 +22,7 @@ export function SelectField({
 	textAfter,
 	className,
 	hideFieldInfo,
+	selectValueAfter,
 }: {
 	label: string;
 	options: SelectFieldOption[];
@@ -28,6 +30,7 @@ export function SelectField({
 	textAfter?: string;
 	className?: string;
 	hideFieldInfo?: boolean;
+	selectValueAfter?: React.ReactNode;
 }) {
 	const field = useFieldContext<string>();
 
@@ -36,12 +39,26 @@ export function SelectField({
 			<Label>{label}</Label>
 			<Select value={field.state.value} onValueChange={field.handleChange}>
 				<SelectTrigger className="w-full h-6!">
-					<SelectValue placeholder={placeholder} />
+					<div className="flex items-center gap-2">
+						<SelectValue placeholder={placeholder} />
+						{selectValueAfter && selectValueAfter}
+					</div>
 				</SelectTrigger>
 				<SelectContent>
 					{options.map((option) => (
-						<SelectItem key={option.value} value={option.value}>
+						<SelectItem
+							key={option.value}
+							value={option.value}
+							className={
+								option.disabledValue ? "text-t4 pointer-events-none" : ""
+							}
+						>
 							{option.label}
+							{option.disabledValue && (
+								<span className="text-xs text-t3 bg-muted px-1 py-0 rounded-md">
+									{option.disabledValue}
+								</span>
+							)}
 						</SelectItem>
 					))}
 				</SelectContent>

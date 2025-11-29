@@ -2,9 +2,8 @@ import { ChartBar } from "@phosphor-icons/react";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import { Table } from "@/components/general/table";
-import { cn } from "@/lib/utils";
+import { LoadingShimmerText } from "@/components/v2/LoadingShimmerText";
 import { useCusEventsQuery } from "@/views/customers/customer/hooks/useCusEventsQuery";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { useCustomerTimeseriesEvents } from "@/views/customers2/hooks/useCustomerTimeseriesEvents";
 import { EmptyState } from "../EmptyState";
@@ -18,8 +17,6 @@ export function CustomerUsageAnalyticsTable() {
 		"analyticsTimeRange",
 		parseAsInteger.withDefault(7),
 	);
-
-	const { customer } = useCusQuery();
 
 	// Map selectedDays to interval for API
 	const interval = useMemo(() => {
@@ -50,34 +47,6 @@ export function CustomerUsageAnalyticsTable() {
 
 	const isLoading = rawEventsLoading || timeseriesLoading;
 
-	// const availableFeatures = useMemo(
-	// 	() => getAvailableFeatures({ events: rawEvents ?? [] }),
-	// 	[rawEvents],
-	// );
-
-	// useEffect(() => {
-	// 	if (
-	// 		availableFeatures.length > 0 &&
-	// 		selectedFeatures &&
-	// 		selectedFeatures.length === 0
-	// 	) {
-	// 		setSelectedFeatures(availableFeatures as string[]);
-	// 	}
-	// }, [availableFeatures, selectedFeatures, setSelectedFeatures]);
-
-	// const filteredEvents = useMemo(
-	// 	() =>
-	// 		filterEventsByTimeAndFeatures({
-	// 			events: rawEvents ?? [],
-	// 			selectedDays,
-	// 			selectedFeatures,
-	// 		}),
-	// 	[rawEvents, selectedDays, selectedFeatures],
-	// );
-
-	// Limit to 100 most recent events for the table
-	// const limitedEvents = useMemo(() => rawEvents.slice(0, 100), [rawEvents]);
-
 	const enableSorting = false;
 	const table = useCustomerTable({
 		data: rawEvents,
@@ -93,7 +62,8 @@ export function CustomerUsageAnalyticsTable() {
 				numberOfColumns: CustomerUsageAnalyticsColumns.length,
 				enableSorting,
 				isLoading,
-				rowClassName: "h-8 bg-interactive-secondary",
+				rowClassName: "h-8 bg-interactive-secondary dark:bg-card",
+				flexibleTableColumns: true,
 			}}
 		>
 			<Table.Container>
@@ -118,38 +88,22 @@ export function CustomerUsageAnalyticsTable() {
 				<div className="flex w-full gap-2 ">
 					{isLoading ? (
 						<div className="flex justify-center py-4 w-full h-full relative overflow-visible text-sm bg-interactive-secondary rounded-lg border shadow-sm">
-							<div className="text-sm text-t4 text-center overflow-visible flex flex-col gap-2 shimmer">
-								<span className="flex items-center gap-2">
-									{/* <SmallSpinner size={14} /> */}
-									Loading events
-								</span>
-							</div>
+							<LoadingShimmerText text="Loading events" />
 							{/* <div className="font-mono text-t6 absolute top-8.5">
 								{customer.name || customer.email || customer.id}
 							</div> */}
 						</div>
 					) : hasEvents ? (
 						<>
-							<div className="flex max-w-3/8 w-full min-w-0 flex-col h-[250px]">
-								<div className="overflow-hidden flex flex-col border h-full bg-card">
-									<div className="">
-										<table className="table-fixed p-0 w-full h-full">
-											<Table.Header />
-										</table>
-									</div>
-									<div
-										className={cn(
-											"overflow-auto",
-											rawEvents?.length < 6 ? "border-b" : "",
-										)}
-									>
-										<table className="table-fixed p-0 w-full">
-											<Table.Body />
-										</table>
-									</div>
+							<div className="flex max-w-1/2 w-full min-w-0 flex-col h-[250px]">
+								<div className="overflow-hidden flex flex-col border h-full bg-card rounded-lg">
+									<Table.Content className="border-none overflow-auto">
+										<Table.Header />
+										<Table.Body />
+									</Table.Content>
 								</div>
 							</div>
-							<div className="flex max-w-5/8 w-full min-w-0 h-[250px]">
+							<div className="flex max-w-1/2 w-full min-w-0 h-[250px]">
 								<CustomerUsageAnalyticsChart
 									timeseriesEvents={timeseriesEvents}
 									// events={filteredEvents}

@@ -12,15 +12,11 @@ import { CoinsIcon } from "@phosphor-icons/react";
 import { PanelButton } from "@/components/v2/buttons/PanelButton";
 import { IncludedUsageIcon } from "@/components/v2/icons/AutumnIcons";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
 export function BillingType() {
 	const { features } = useFeaturesQuery();
 	const { item, setItem } = useProductItemContext();
-
-	const product = useProductStore((s) => s.product);
-	const setProduct = useProductStore((s) => s.setProduct);
 
 	if (!item) return null;
 
@@ -97,7 +93,7 @@ export function BillingType() {
 		<div className="mt-3 space-y-4 billing-type-section">
 			<div className="flex w-full items-center gap-4">
 				<PanelButton
-					isSelected={shouldPreselect && !isFeaturePrice}
+					isSelected={!isFeaturePrice}
 					onClick={() => {
 						setBillingType("included");
 					}}
@@ -124,7 +120,7 @@ export function BillingType() {
 					icon={<CoinsIcon size={16} color="currentColor" />}
 				/>
 				<div className="flex-1">
-					<div className="text-body-highlight mb-1">Paid</div>
+					<div className="text-body-highlight mb-1">Priced</div>
 					<div className="text-body-secondary leading-tight">
 						{isConsumable
 							? `Charge a price for usage of this feature (e.g. $0.05 per ${singleFeatureName}).`

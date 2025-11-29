@@ -1,81 +1,85 @@
-import { UsageModel } from "@autumn/shared";
+import type { ProductV2 } from "@autumn/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 import { toast } from "sonner";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useAttachBodyBuilder } from "./use-attach-body-builder";
 
 interface AttachProductParams {
-	products: Array<{ productId: string }>;
-	prepaidOptions: Record<string, number>;
-	useInvoice: boolean;
+	// Product selection (provide one of these)
+	productId?: string;
+	product?: ProductV2;
+
+	// Optional overrides
+	entityId?: string;
+	prepaidOptions?: Record<string, number>;
+	version?: number;
+
+	// Invoice options
+	useInvoice?: boolean;
 	enableProductImmediately?: boolean;
 }
 
 export function useAttachProductMutation({
 	customerId,
 	onSuccess,
+	onError,
+	successMessage = "Successfully attached product",
 }: {
 	customerId: string;
-	onSuccess?: () => void;
+	onSuccess?: (data: unknown) => void | Promise<void>;
+	onError?: (error: unknown) => void;
+	successMessage?: string;
 }) {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
-	const { products: allProducts } = useProductsQuery();
+	const { closeSheet } = useSheetStore();
+
+	// Get builder function from shared hook
+	const { buildAttachBody } = useAttachBodyBuilder({ customerId });
 
 	return useMutation({
 		mutationFn: async (params: AttachProductParams) => {
-			// Build prepaid options by joining quantities with product data to get billing_units
-			const prepaidOptions = Object.entries(params.prepaidOptions)
-				.filter(([, quantity]) => quantity > 0)
-				.map(([featureId, quantity]) => {
-					// Find the product that contains this feature
-					for (const product of allProducts) {
-						const productItem = product.items?.find(
-							(item) =>
-								item.feature_id === featureId &&
-								item.usage_model === UsageModel.Prepaid,
-						);
-						if (productItem) {
-							return {
-								feature_id: featureId,
-								quantity: quantity * (productItem.billing_units || 1),
-							};
-						}
-					}
-					return null;
-				})
-				.filter(Boolean) as Array<{ feature_id: string; quantity: number }>;
-
-			const attachPromises = params.products.map(async (item) => {
-				const attachBody = {
-					customer_id: customerId,
-					product_id: item.productId,
-					options: prepaidOptions.length > 0 ? prepaidOptions : undefined,
-					invoice: params.useInvoice,
-					enable_product_immediately: params.useInvoice
-						? params.enableProductImmediately
-						: undefined,
-					finalize_invoice: params.useInvoice ? false : undefined,
-					success_url: window.location.href,
-				};
-
-				return await CusService.attach(axiosInstance, attachBody);
+			// Build attach body using shared builder function
+			const attachBody = buildAttachBody({
+				productId: params.productId,
+				product: params.product,
+				entityId: params.entityId,
+				prepaidOptions: params.prepaidOptions,
+				version: params.version,
+				useInvoice: params.useInvoice,
+				enableProductImmediately: params.enableProductImmediately,
 			});
 
-			return await Promise.all(attachPromises);
-		},
-		onSuccess: (results) => {
-			toast.success(`Successfully attached ${results.length} product(s)`);
+			if (!attachBody) {
+				throw new Error(
+					"Failed to build attach body - product not found or missing data",
+				);
+			}
 
-			// Invalidate customer queries to refresh data
+			return await CusService.attach(axiosInstance, attachBody);
+		},
+		onSuccess: async (response) => {
+			toast.success(successMessage);
+			closeSheet();
 			queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
 
-			onSuccess?.();
+			if (onSuccess) {
+				await onSuccess(response.data);
+			}
 		},
 		onError: (error) => {
-			toast.error("Failed to attach products");
-			console.error(error);
+			if (onError) {
+				onError(error);
+			} else {
+				toast.error(
+					(error as AxiosError<{ message: string }>)?.response?.data?.message ??
+						"Failed to attach product",
+				);
+				console.error(error);
+			}
 		},
 	});
 }

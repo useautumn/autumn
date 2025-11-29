@@ -6,38 +6,39 @@ import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { Table } from "@/components/general/table";
 import { Button } from "@/components/v2/buttons/Button";
-import { pushPage } from "@/utils/genUtils";
+import { useProductStore } from "@/hooks/stores/useProductStore";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useFullCusSearchQuery } from "@/views/customers/hooks/useFullCusSearchQuery";
 import { useSavedViewsQuery } from "@/views/customers/hooks/useSavedViewsQuery";
-import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
-<<<<<<< HEAD
-import { AdminHover } from "../../../../../components/general/AdminHover";
-import { getCusProductHoverTexts } from "../../../../admin/adminUtils";
-import { AttachProductDropdown } from "./AttachProductDropdown";
-=======
 import { AttachProductSheetTrigger } from "./AttachProductSheetTrigger";
->>>>>>> d5005b5e71e54cb3fadec68820bc156f1966918a
 import { CancelProductDialog } from "./CancelProductDialog";
 import { CustomerProductPrice } from "./CustomerProductPrice";
 import { CustomerProductsColumns } from "./CustomerProductsColumns";
 import { filterCustomerProductsByEntity } from "./customerProductsTableFilters";
 import { ShowExpiredActionButton } from "./ShowExpiredActionButton";
+import { TransferProductDialog } from "./TransferProductDialog";
 
 export function CustomerProductsTable() {
 	const { customer, isLoading } = useCusQuery();
-	const { entityId } = useCustomerContext();
 
+	const { entityId } = useEntity();
 	const [showExpired, setShowExpired] = useQueryState(
 		"customerProductsShowExpired",
 		parseAsBoolean.withDefault(false),
 	);
 
 	const [cancelOpen, setCancelOpen] = useState(false);
+	const [transferOpen, setTransferOpen] = useState(false);
 	const [selectedProduct, setSelectedProduct] = useState<FullCusProduct | null>(
 		null,
 	);
+	const storeProduct = useProductStore((s) => s.product);
+	const selectedItemId = useSheetStore((s) => s.itemId);
+
+	const { setEntityId } = useEntity();
 
 	useSavedViewsQuery();
 	useFullCusSearchQuery();
@@ -52,21 +53,25 @@ export function CustomerProductsTable() {
 	);
 
 	const displayedProducts = useMemo(() => {
+		// Always just show regular products, never combine with entity products
+		return regularProducts;
+	}, [regularProducts]);
+
+	const displayedEntityProducts = useMemo(() => {
 		if (entityId) {
 			const selectedEntity = customer.entities.find(
 				(e: Entity) => e.id === entityId || e.internal_id === entityId,
 			);
 			if (selectedEntity) {
-				const matchingEntityProducts = entityProducts.filter(
+				return entityProducts.filter(
 					(product) =>
 						product.internal_entity_id === selectedEntity.internal_id ||
 						product.entity_id === selectedEntity.id,
 				);
-				return [...regularProducts, ...matchingEntityProducts];
 			}
 		}
-		return regularProducts;
-	}, [regularProducts, entityProducts, entityId, customer.entities]);
+		return entityProducts;
+	}, [entityProducts, entityId, customer.entities]);
 
 	const attachedProductsTableColumns = useMemo(
 		() => CustomerProductsColumns,
@@ -78,6 +83,25 @@ export function CustomerProductsTable() {
 
 	const entityProductsTableColumns = useMemo(
 		() => [
+			{
+				header: "Plan",
+				accessorKey: "plan",
+				cell: ({ row }: { row: Row<FullCusProduct> }) => {
+					const quantity = row.original.quantity;
+					const showQuantity = quantity && quantity > 1;
+
+					return (
+						<div className="font-semibold flex items-center gap-2 text-t1">
+							{row.original.product.name}
+							{showQuantity && (
+								<div className="text-t3 bg-muted rounded-sm p-1 py-0">
+									{quantity}
+								</div>
+							)}
+						</div>
+					);
+				},
+			},
 			{
 				header: "Entity",
 				accessorKey: "entity",
@@ -92,9 +116,7 @@ export function CustomerProductsTable() {
 					const handleEntityClick = (e: React.MouseEvent) => {
 						e.stopPropagation();
 						if (!entity) return;
-						const params = new URLSearchParams(location.search);
-						params.set("entity_id", entity.id || entity.internal_id);
-						navigate(`${location.pathname}?${params.toString()}`);
+						setEntityId(entity.id || entity.internal_id);
 					};
 
 					if (!entity) return <span className="text-t3">—</span>;
@@ -103,7 +125,7 @@ export function CustomerProductsTable() {
 						<Button
 							variant="skeleton"
 							onClick={handleEntityClick}
-							className="text-t1 font-medium hover:text-purple-600 cursor-pointer max-w-full px-0! hover:bg-transparent active:bg-transparent active:border-none"
+							className="font-medium hover:text-purple-600 cursor-pointer max-w-full px-0! hover:bg-transparent active:bg-transparent active:border-none"
 						>
 							<span className="truncate w-full">
 								{entity.name || entity.id || entity.internal_id}
@@ -112,28 +134,7 @@ export function CustomerProductsTable() {
 					);
 				},
 			},
-			{
-				header: "Name",
-				accessorKey: "name",
-				cell: ({ row }: { row: Row<FullCusProduct> }) => {
-					const quantity = row.original.quantity;
-					const showQuantity = quantity && quantity > 1;
 
-					return (
-						<div className="font-semibold flex items-center gap-2">
-							<AdminHover texts={getCusProductHoverTexts(row.original)}>
-								{row.original.product.name}
-							</AdminHover>
-
-							{showQuantity && (
-								<div className="text-t3 bg-muted rounded-sm p-1 py-0">
-									{quantity}
-								</div>
-							)}
-						</div>
-					);
-				},
-			},
 			{
 				header: "Price",
 				accessorKey: "price",
@@ -148,27 +149,32 @@ export function CustomerProductsTable() {
 		[customer.entities, location.pathname, location.search, navigate],
 	);
 
+	const setSheet = useSheetStore((s) => s.setSheet);
+
 	const handleCancelClick = (product: FullCusProduct) => {
 		setSelectedProduct(product);
 		setCancelOpen(true);
 	};
 
-	const handleRowClick = (cusProduct: FullCusProduct) => {
-		const entity = customer.entities.find(
-			(e: Entity) =>
-				e.internal_id === cusProduct.internal_entity_id ||
-				e.id === cusProduct.entity_id,
-		);
+	const handleTransferClick = (product: FullCusProduct) => {
+		setSelectedProduct(product);
+		setTransferOpen(true);
+	};
 
-		pushPage({
-			path: `/customers/${customer.id || customer.internal_id}/${cusProduct.product_id}`,
-			queryParams: {
-				id: cusProduct.id,
-				entity_id: entity ? entity.id || entity.internal_id : undefined,
-			},
-			navigate,
+	const handleRowClick = (cusProduct: FullCusProduct) => {
+		if (storeProduct?.id) {
+			// If there is a product being customized, don't open another sheet
+			//user must close manually -- could show some notification to user here
+			return;
+		}
+
+		setSheet({
+			type: "subscription-detail",
+			itemId: cusProduct.id,
 		});
 	};
+
+	const hasEntities = customer.entities.length > 0;
 
 	const enableSorting = false;
 	const table = useCustomerTable({
@@ -179,37 +185,48 @@ export function CustomerProductsTable() {
 			enableGlobalFilter: true,
 			meta: {
 				onCancelClick: handleCancelClick,
+				onTransferClick: handleTransferClick,
+				hasEntities,
 			},
 		},
 	});
 
 	const entityTable = useCustomerTable({
-		data: entityProducts,
+		data: displayedEntityProducts, // Changed from entityProducts to displayedEntityProducts
 		columns: entityProductsTableColumns,
 		options: {
 			globalFilterFn: "includesString",
 			enableGlobalFilter: true,
 			meta: {
 				onCancelClick: handleCancelClick,
+				onTransferClick: handleTransferClick,
+				hasEntities,
 			},
 		},
 	});
 
-	const hasEntityProducts = entityProducts.length > 0 && !entityId;
+	const hasEntityProducts = entityProducts.length > 0; // Removed && !entityId
 
 	const emptyStateText =
-		!entityId && entityProducts.length > 0
+		entityProducts.length > 0
 			? "No customer-level plans found"
 			: "Enable a plan to start a subscription";
 
 	return (
 		<div className="flex flex-col gap-4">
 			{selectedProduct && (
-				<CancelProductDialog
-					cusProduct={selectedProduct}
-					open={cancelOpen}
-					setOpen={setCancelOpen}
-				/>
+				<>
+					<CancelProductDialog
+						cusProduct={selectedProduct}
+						open={cancelOpen}
+						setOpen={setCancelOpen}
+					/>
+					<TransferProductDialog
+						cusProduct={selectedProduct}
+						open={transferOpen}
+						setOpen={setTransferOpen}
+					/>
+				</>
 			)}
 			<Table.Provider
 				config={{
@@ -219,6 +236,8 @@ export function CustomerProductsTable() {
 					isLoading,
 					onRowClick: handleRowClick,
 					emptyStateText,
+					flexibleTableColumns: true,
+					selectedItemId: selectedItemId,
 				}}
 			>
 				<Table.Container>
@@ -272,6 +291,9 @@ export function CustomerProductsTable() {
 							enableSorting,
 							isLoading,
 							onRowClick: handleRowClick,
+							emptyStateText: "No entity-level plans found",
+							flexibleTableColumns: true,
+							selectedItemId: selectedItemId,
 						}}
 					>
 						<Table.Container>

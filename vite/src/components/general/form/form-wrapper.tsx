@@ -12,7 +12,7 @@ export function FormWrapper({
 }) {
 	return (
 		<form
-			className={cn("flex w-full max-w-xl flex-col gap-4", className)}
+			className={cn("flex w-full max-w-xl flex-col gap-2", className)}
 			onSubmit={(e) => {
 				e.preventDefault();
 				form.handleSubmit();

@@ -8,7 +8,6 @@ import type { FeatureOptions, ProductV2 } from "@autumn/shared";
 
 export const getAttachBody = ({
 	customerId,
-	attachState,
 	product,
 	entityId,
 	optionsInput,
@@ -16,20 +15,18 @@ export const getAttachBody = ({
 	enableProductImmediately = true,
 	successUrl,
 	version,
+	isCustom = false,
 }: {
 	customerId: string;
-	attachState: any;
 	product: ProductV2;
-	entityId: string;
+	entityId?: string;
 	optionsInput?: FeatureOptions[];
 	useInvoice?: boolean;
 	enableProductImmediately?: boolean;
 	successUrl?: string;
 	version?: number;
+	isCustom?: boolean;
 }) => {
-	const isCustom =
-		attachState.itemsChanged || attachState.cusProduct?.is_custom;
-
 	const customData = isCustom
 		? {
 				items: product.items,

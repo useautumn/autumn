@@ -1,6 +1,13 @@
-import { UsageModel } from "@autumn/shared";
+import {
+	type FrontendProductItem,
+	getFeaturePriceItemDisplay,
+} from "@autumn/shared";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import type { ProductFormItem } from "./attach-product-form-schema";
+import {
+	usePrepaidItems,
+	useProductStore,
+} from "@/hooks/stores/useProductStore";
 import type { UseAttachProductForm } from "./use-attach-product-form";
 
 interface PrepaidOptionsFieldProps {
@@ -10,69 +17,51 @@ interface PrepaidOptionsFieldProps {
 export function AttachProductPrepaidOptions({
 	form,
 }: PrepaidOptionsFieldProps) {
-	const { products } = useProductsQuery();
+	const storeProduct = useProductStore((s) => s.product);
+	const { products = [] } = useProductsQuery();
+	const selectedProductId = form.state.values.productId;
+	const { org } = useOrg();
+	// Use customized product if it has changes, otherwise find by form productId
+	const product = storeProduct?.id
+		? storeProduct
+		: products.find((p) => p.id === selectedProductId && !p.archived);
 
-	const activeProducts = products.filter((p) => !p.archived);
-	const selectedProducts = form.state.values.products as ProductFormItem[];
+	const prepaidItems = usePrepaidItems({ product });
 
-	const prepaidFeatures = selectedProducts
-		.filter((item: { productId: string }) => item.productId)
-		.flatMap((item: { productId: string }) => {
-			const product = activeProducts.find((p) => p.id === item.productId);
-			if (!product) return [];
-
-			const prepaidItems =
-				product.items?.filter(
-					(productItem) =>
-						productItem.usage_model === UsageModel.Prepaid &&
-						productItem.feature_id,
-				) || [];
-
-			return prepaidItems.map((productItem) => ({
-				product_name: product.name,
-				feature_id: productItem.feature_id as string,
-				feature_type: productItem.feature_type,
-				price: productItem.price || 0,
-				billing_units: productItem.billing_units || 1,
-				tiers: productItem.tiers,
-			}));
-		});
-
-	if (prepaidFeatures.length === 0) {
+	if (prepaidItems.length === 0 || !selectedProductId) {
 		return null;
 	}
 
 	return (
-		<div className="space-y-3">
-			<div className="text-sm font-semibold text-foreground">
-				Select Prepaid Quantity
-			</div>
-			<p className="text-sm text-t2">
-				Select the quantity for prepaid features added by attached plans
-			</p>
-
+		<div className="space-y-3 my-4">
 			<div className="space-y-2">
-				<div className="grid grid-cols-[1fr_auto] gap-2">
-					<div className="text-xs font-medium text-t3">Feature</div>
-					<div className="text-xs font-medium text-t3">Quantity</div>
-				</div>
-
-				{prepaidFeatures.map((feature) => {
+				{prepaidItems.map((item) => {
+					const display = getFeaturePriceItemDisplay({
+						item: item as FrontendProductItem,
+						feature: item.feature,
+						currency: org?.default_currency || "USD",
+						fullDisplay: true,
+						amountFormatOptions: {
+							currencyDisplay: "narrowSymbol",
+						},
+					});
 					return (
 						<div
-							key={feature.feature_id}
+							key={item.feature_id}
 							className="grid grid-cols-[1fr_auto] gap-2 items-center"
 						>
-							<div className="text-sm text-foreground">
-								{feature.product_name}
-							</div>
+							<span className="text-sm text-foreground truncate">
+								{display.primary_text}
+								{display.secondary_text && ` ${display.secondary_text}`}
+							</span>
 
-							<form.AppField name={`prepaidOptions.${feature.feature_id}`}>
+							<form.AppField name={`prepaidOptions.${item.feature_id}`}>
 								{(quantityField) => (
 									<quantityField.QuantityField
 										label=""
 										placeholder="0"
 										min={0}
+										hideFieldInfo={true}
 									/>
 								)}
 							</form.AppField>
