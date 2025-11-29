@@ -95,14 +95,14 @@ export function MainLayout() {
 			includeCredentials={true}
 		>
 			<NuqsAdapter>
-				<main className="w-screen h-screen flex bg-outer-background">
+				<body className="w-screen h-screen flex bg-outer-background">
 					<CustomToaster />
 					<MainSidebar />
 					<InviteNotifications />
 					<MainContent />
 					{/* <ChatWidget /> */}
 					<CommandBar />
-				</main>
+				</body>
 			</NuqsAdapter>
 		</AutumnProvider>
 	);
@@ -120,7 +120,7 @@ const MainContent = () => {
 
 	return (
 		<AppContext.Provider value={{}}>
-			<div
+			<main
 				className={cn(
 					"w-full h-screen flex flex-col justify-center overflow-hidden py-3 pr-3 relative",
 					// Default font
@@ -154,7 +154,7 @@ const MainContent = () => {
             </div> */}
 					</div>
 				</div>
-			</div>
+			</main>
 		</AppContext.Provider>
 	);
 };

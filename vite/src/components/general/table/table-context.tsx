@@ -11,6 +11,8 @@ export interface TableProps<T> {
 	rowClassName?: string;
 	emptyStateChildren?: ReactNode;
 	emptyStateText?: string;
+	flexibleTableColumns?: boolean;
+	selectedItemId?: string | null;
 }
 
 //biome-ignore lint/suspicious/noExplicitAny: type could be any here

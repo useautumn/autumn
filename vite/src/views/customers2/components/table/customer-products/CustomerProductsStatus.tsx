@@ -1,5 +1,5 @@
 import { CusProductStatus } from "@autumn/shared";
-import { ExclamationMarkIcon, XIcon } from "@phosphor-icons/react";
+import { DotIcon, ExclamationMarkIcon, XIcon } from "@phosphor-icons/react";
 import { formatDistanceToNow } from "date-fns";
 import { BanIcon, CalendarIcon, CheckIcon, ClockIcon } from "lucide-react";
 import {
@@ -8,20 +8,23 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/v2/tooltips/Tooltip";
+import { cn } from "@/lib/utils";
 
 const StatusItem = ({
 	children,
 	text,
 	trial_ends_at,
 	tooltip,
+	className,
 }: {
 	children: React.ReactNode;
 	text: string;
 	trial_ends_at?: number;
 	tooltip?: boolean;
+	className?: string;
 }) => {
 	return (
-		<div className="flex items-center gap-1.5 text-t3">
+		<div className={cn("flex items-center", className)}>
 			{tooltip ? (
 				<TooltipProvider>
 					<Tooltip>
@@ -29,7 +32,7 @@ const StatusItem = ({
 						<TooltipContent>
 							<span className="text-sm">{text} </span>
 							{trial_ends_at && (
-								<span className="text-sm">
+								<span className="text-sm text-t3">
 									({formatDistanceToNow(trial_ends_at)} left)
 								</span>
 							)}
@@ -38,12 +41,17 @@ const StatusItem = ({
 				</TooltipProvider>
 			) : (
 				<>
-					{children}
-					<span className="text-sm">{text}</span>
+					<div className="flex items-center gap-1.5">
+						{children}
+						<span className="text-sm">{text}</span>
+					</div>
 					{trial_ends_at && (
-						<span className="text-sm">
-							({formatDistanceToNow(trial_ends_at)})
-						</span>
+						<>
+							<DotIcon size={16} />
+							<span className="text-sm text-t3">
+								{formatDistanceToNow(trial_ends_at)} left
+							</span>
+						</>
 					)}
 				</>
 			)}

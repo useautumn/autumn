@@ -1,5 +1,8 @@
 import { initializeDatabaseFunctions } from "@server/db/initializeDatabaseFunctions";
+import { loadLocalEnv } from "@server/utils/envUtils";
 import inquirer from "inquirer";
+
+loadLocalEnv();
 
 export const migrateFunctions = async () => {
 	const databaseUrl = process.env.DATABASE_URL;

@@ -8,6 +8,7 @@ import {
 	ChartTooltip,
 	ChartTooltipContent,
 } from "@/components/ui/chart";
+import { useIsSheetOpen } from "@/hooks/stores/useSheetStore";
 import {
 	prepareChartData,
 	prepareTimeseriesChartData,
@@ -23,6 +24,7 @@ export function CustomerUsageAnalyticsChart({
 	events?: Event[];
 	daysToShow?: number;
 }) {
+	const isSheetOpen = useIsSheetOpen();
 	function formatYAxisTick(value: number): string {
 		// if (value === 0) return "";
 
@@ -59,7 +61,7 @@ export function CustomerUsageAnalyticsChart({
 	return (
 		<ChartContainer
 			config={chartConfig}
-			className="h-full pt-3 pr-2 w-full relative bg-interactive-secondary border"
+			className="h-full pt-3 pr-2 w-full relative bg-interactive-secondary dark:bg-card border rounded-lg"
 		>
 			<BarChart
 				// accessibilityLayer
@@ -113,6 +115,10 @@ export function CustomerUsageAnalyticsChart({
 						stackId="a"
 						barSize={20}
 						fill={`var(--color-${eventName})`}
+						isAnimationActive={!isSheetOpen}
+						// animationDuration={300}
+						// animationEasing="ease-out"
+						// animationBegin={1}
 						// radius={
 						// 	index === eventNames.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]
 						// }

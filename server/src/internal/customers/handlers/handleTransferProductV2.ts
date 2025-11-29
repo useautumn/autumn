@@ -34,7 +34,7 @@ export const handleTransferProductV2 = createRoute({
 		const { customer_id } = c.req.param();
 		const { from_entity_id, to_entity_id, product_id } = c.req.valid("json");
 
-		if(!from_entity_id && !to_entity_id) {
+		if (!from_entity_id && !to_entity_id) {
 			throw new RecaseError({
 				message: "Must specify atleast one of: from_entity_id, to_entity_id",
 			});
@@ -83,17 +83,23 @@ export const handleTransferProductV2 = createRoute({
 					: nullish(cp.internal_entity_id)) && cp.product.id === product_id,
 		);
 
-		const toCusProduct = customer.customer_products.find(
-			(cp: any) =>
-				cp.internal_entity_id === (toEntity?.internal_id || null) &&
-				cp.product.group === product.group,
-		);
+		const toCusProduct = customer.customer_products.find((cp: any) => {
+			const productMatch = cusProduct?.product.is_add_on
+				? cp.product.product_id === product.id
+				: cp.product.group === product.group && !cp.product.is_add_on;
+
+			const entityMatch = toEntity?.internal_id
+				? cp.internal_entity_id === toEntity.internal_id
+				: nullish(cp.internal_entity_id);
+
+			return entityMatch && productMatch;
+		});
 
 		if (toCusProduct) {
 			throw new CusProductAlreadyExistsError({
-				productId: product_id,
+				productId: toCusProduct.product?.id,
 				entityId: toEntity?.id,
-				customerId: (from_entity_id && !to_entity_id) ? customer_id : undefined,
+				customerId: from_entity_id && !to_entity_id ? customer_id : undefined,
 			});
 		}
 

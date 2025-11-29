@@ -109,7 +109,6 @@ export const NavButton = ({
 									queryParams: {
 										tab: subValue,
 									},
-									preserveParams: false,
 								})
 					}
 					className={outerDivClass}

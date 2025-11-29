@@ -22,7 +22,7 @@ export default function sPlanCard() {
 		>
 			{/* Overlay when sheet is open that lets you hover on plan card buttons */}
 			{sheetType && (
-				<div className="bg-background/40 absolute pointer-events-none rounded-2xl -inset-[1px]"></div>
+				<div className="bg-white/50 dark:bg-black/50 absolute pointer-events-none rounded-2xl -inset-[5px]"></div>
 			)}
 			<PlanCardHeader />
 

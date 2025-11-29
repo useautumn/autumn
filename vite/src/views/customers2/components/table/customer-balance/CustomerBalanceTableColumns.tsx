@@ -24,8 +24,9 @@ export const CustomerBalanceTableColumns = ({
 }) => [
 	{
 		header: "Feature",
-		size: 160,
 		accessorKey: "feature",
+		enableResizing: true,
+		minSize: 100,
 		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => {
 			const ent = row.original;
 			const featureId = ent.entitlement.feature.id;
@@ -49,7 +50,9 @@ export const CustomerBalanceTableColumns = ({
 	},
 	{
 		header: "Usage",
-		size: 200,
+		// enableResizing: true,
+		// size: 200,
+		// minSize: 100,
 		accessorKey: "usage",
 		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => {
 			const ent = row.original;
@@ -108,7 +111,7 @@ export const CustomerBalanceTableColumns = ({
 									<>
 										<span>/</span>
 										<span>
-											{new Intl.NumberFormat().format(allowance ?? 0)}
+											{new Intl.NumberFormat().format(allowance ?? 0)} left
 										</span>
 									</>
 								)}{" "}
@@ -136,29 +139,31 @@ export const CustomerBalanceTableColumns = ({
 			);
 		},
 	},
-	{
-		header: "Reset Date",
-		size: 120,
-		accessorKey: "reset_date",
-		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => {
-			const ent = row.original;
+	// {
+	// 	header: "Reset Date",
+	// 	size: 120,
+	// 	accessorKey: "reset_date",
+	// 	cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => {
+	// 		const ent = row.original;
 
-			if (!ent.next_reset_at) {
-				return <span className="text-t3"></span>;
-			}
+	// 		if (!ent.next_reset_at) {
+	// 			return <span className="text-t3"></span>;
+	// 		}
 
-			return (
-				<div className="flex justify-end w-full">
-					<span className="text-t3 text-tiny flex justify-center !px-1 bg-muted w-fit rounded-md">
-						Resets {formatUnixToDateTimeString(ent.next_reset_at)}
-					</span>
-				</div>
-			);
-		},
-	},
+	// 		return (
+	// 			<div className="flex justify-end w-full">
+	// 				<span className="text-t3 text-tiny flex justify-center !px-1 bg-muted w-fit rounded-md">
+	// 					Resets {formatUnixToDateTimeString(ent.next_reset_at)}
+	// 				</span>
+	// 			</div>
+	// 		);
+	// 	},
+	// },
 	{
 		header: "Bar",
 		size: 220,
+		// maxSize: 220,
+		// enableResizing: true,
 		accessorKey: "bar",
 		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => {
 			const ent = row.original;
@@ -193,12 +198,17 @@ export const CustomerBalanceTableColumns = ({
 
 			return (
 				<div className="flex gap-3 items-center">
-					{/* <span className="text-t3 text-tiny flex justify-center !px-1 bg-muted w-fit rounded-md">
+					<span
+						className={cn(
+							"text-t3 text-tiny flex justify-center !px-1 bg-muted  rounded-md min-w-30",
+							ent.next_reset_at ? "opacity-100" : "opacity-0",
+						)}
+					>
 						Resets {formatUnixToDateTimeString(ent.next_reset_at)}
-					</span> */}
+					</span>
 					<div
 						className={cn(
-							"w-full max-w-50 flex justify-center pr-2 h-full items-center",
+							"w-full max-w-50 flex justify-center pr-2 h-full items-center min-w-16",
 							(allowance ?? 0) > 0 ? "opacity-100" : "opacity-0",
 						)}
 					>

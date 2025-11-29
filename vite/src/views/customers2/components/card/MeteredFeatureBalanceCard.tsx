@@ -9,6 +9,7 @@ import {
 	sumValues,
 } from "@autumn/shared";
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { formatUnixToDateTimeString } from "@/utils/formatUtils/formatDateUtils";
 import { CustomerFeatureUsageBar } from "../table/customer-feature-usage/CustomerFeatureUsageBar";
@@ -28,7 +29,8 @@ export const MeteredFeatureBalanceCard = ({
 	aggregatedMap: Map<string, FullCusEntWithFullCusProduct[]>;
 	allEnts: FullCusEntWithFullCusProduct[];
 }) => {
-	const setSheet = useCustomerBalanceSheetStore((s) => s.setSheet);
+	const setBalanceSheet = useCustomerBalanceSheetStore((s) => s.setSheet);
+	const setSheet = useSheetStore((s) => s.setSheet);
 	const originalEnts = aggregatedMap.get(featureId);
 	const isAggregated = originalEnts && originalEnts.length > 1;
 	const balanceCount = originalEnts?.length || 1;
@@ -78,11 +80,22 @@ export const MeteredFeatureBalanceCard = ({
 			onClick={(e) => {
 				e.stopPropagation();
 				const ents = aggregatedMap.get(featureId) || [ent];
-				setSheet({
+				const hasMultipleBalances = ents.length > 1;
+
+				// Set balance data in balance store
+				setBalanceSheet({
 					type: "edit-balance",
 					featureId,
 					originalEntitlements: ents,
+					selectedCusEntId: hasMultipleBalances ? null : ents[0].id,
 				});
+
+				// Open the appropriate inline sheet
+				if (hasMultipleBalances) {
+					setSheet({ type: "balance-selection" });
+				} else {
+					setSheet({ type: "balance-edit" });
+				}
 			}}
 		>
 			<div className="flex justify-between w-full items-center h-4">

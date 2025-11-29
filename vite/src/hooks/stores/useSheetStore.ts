@@ -9,6 +9,10 @@ export type SheetType =
 	| "new-feature"
 	| "select-feature"
 	| "attach-product"
+	| "subscription-detail"
+	| "subscription-update"
+	| "balance-selection"
+	| "balance-edit"
 	| null;
 
 // Store state interface
@@ -62,6 +66,10 @@ export const useIsAttachingProduct = () =>
 	useSheetStore((s) => s.type === "attach-product");
 export const useIsEditingPlanPrice = () =>
 	useSheetStore((s) => s.type === "edit-plan-price");
+export const useIsViewingSubscriptionDetail = () =>
+	useSheetStore((s) => s.type === "subscription-detail");
+export const useIsUpdatingSubscription = () =>
+	useSheetStore((s) => s.type === "subscription-update");
 
 /**
  * Hook to handle Escape key to close sheet and unfocus active elements
@@ -103,8 +111,6 @@ export const useSheetCleanup = () => {
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 
 	useEffect(() => {
-		return () => {
-			closeSheet();
-		};
+		closeSheet();
 	}, [closeSheet]);
 };

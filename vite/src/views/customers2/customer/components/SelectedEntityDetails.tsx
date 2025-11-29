@@ -1,9 +1,8 @@
 import type { Entity, Feature, FullCustomer } from "@autumn/shared";
 import { FeatureUsageType, getFeatureName } from "@autumn/shared";
-import { TrashIcon, X } from "@phosphor-icons/react";
+import { TrashIcon, XIcon } from "@phosphor-icons/react";
 import { Check, ChevronDown } from "lucide-react";
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router";
 import {
 	Popover,
 	PopoverContent,
@@ -12,8 +11,9 @@ import {
 import { Button } from "@/components/v2/buttons/Button";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { cn } from "@/lib/utils";
-import { useCustomerContext } from "../CustomerContext";
+import { useCusQuery } from "../../../customers/customer/hooks/useCusQuery";
 import { DeleteEntity } from "./DeleteEntity";
 
 const mutedDivClassName =
@@ -22,35 +22,23 @@ const mutedDivClassName =
 const placeholderText = "NULL";
 
 export const SelectedEntityDetails = () => {
-	const { customer, entityId, setEntityId } = useCustomerContext();
+	const { customer } = useCusQuery();
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-	const navigate = useNavigate();
-	const location = useLocation();
 	const { features } = useFeaturesQuery();
 
-	const entities = (customer as FullCustomer).entities || [];
+	const { entityId, setEntityId } = useEntity();
 
-	const selectedEntity = entityId
-		? entities.find(
-				(e: Entity) => e.id === entityId || e.internal_id === entityId,
-			)
-		: null;
+	const entities = (customer as FullCustomer)?.entities || [];
 
-	const entity = entities.find(
+	const fullEntity = entities.find(
 		(e: Entity) => e.id === entityId || e.internal_id === entityId,
 	);
 
 	const handleValueChange = (value: string) => {
-		const params = new URLSearchParams(location.search);
-		params.set("entity_id", value);
-		navigate(`${location.pathname}?${params.toString()}`);
 		setEntityId(value);
 	};
 
 	const handleClearSelection = () => {
-		const params = new URLSearchParams(location.search);
-		params.delete("entity_id");
-		navigate(`${location.pathname}?${params.toString()}`);
 		setEntityId(null);
 	};
 
@@ -88,6 +76,9 @@ export const SelectedEntityDetails = () => {
 
 	// Render the entity selector
 	const renderEntitySelector = () => {
+		const entity = entities.find(
+			(e: Entity) => e.id === entityId || e.internal_id === entityId,
+		);
 		const displayText = entityId
 			? entity?.name || entity?.id || entity?.internal_id || entityId
 			: "Select entity";
@@ -164,11 +155,11 @@ export const SelectedEntityDetails = () => {
 							disabled={!entityId}
 							className="text-t3 hover:text-t1 h-5 w-5 disabled:opacity-50 -mx-1"
 						>
-							<X size={12} />
+							<XIcon size={12} />
 						</Button>
 					)}
 				</div>
-				{selectedEntity ? (
+				{entityId ? (
 					<div className="flex gap-2 items-center min-w-0 shrink">
 						{/* {selectedEntity.name && (
 							<div className={mutedDivClassName}>
@@ -176,18 +167,14 @@ export const SelectedEntityDetails = () => {
 							</div>
 						)} */}
 						<CopyButton
-							text={
-								selectedEntity.id ||
-								selectedEntity.internal_id ||
-								placeholderText
-							}
+							text={entityId || placeholderText}
 							size="mini"
 							innerClassName=" max-w-48 truncate"
 						/>
-						{selectedEntity.feature_id && (
+						{fullEntity?.feature_id && (
 							<div className={mutedDivClassName}>
 								<span className="font-mono text-tiny-id">
-									{selectedEntity.feature_id}
+									{fullEntity.feature_id}
 								</span>
 							</div>
 						)}
@@ -210,7 +197,7 @@ export const SelectedEntityDetails = () => {
 			<DeleteEntity
 				open={deleteDialogOpen}
 				setOpen={setDeleteDialogOpen}
-				entity={selectedEntity}
+				entity={fullEntity}
 			/>
 		</>
 	);
