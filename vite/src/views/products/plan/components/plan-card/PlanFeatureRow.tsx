@@ -177,8 +177,8 @@ export const PlanFeatureRow = ({
 				"input-base input-state-open-tiny",
 				isDisabled && "pointer-events-none cursor-default",
 				isSelected &&
-					"border-transparent z-95 relative bg-interative-secondary !outline-4 !outline-outer-background",
-				isOnboarding && isSelected && "!border-primary",
+					"border-transparent z-95 relative bg-interative-secondary outline-4! outline-outer-background!",
+				isOnboarding && isSelected && "border-primary!",
 				readOnly && "pointer-events-none cursor-default",
 			)}
 			onMouseDown={(e) => {

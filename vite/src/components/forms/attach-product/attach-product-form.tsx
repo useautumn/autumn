@@ -1,6 +1,7 @@
 import type { Entity, FullCustomer, ProductV2 } from "@autumn/shared";
 import { useEffect } from "react";
 import { FormWrapper } from "@/components/general/form/form-wrapper";
+import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
 	usePrepaidItems,
@@ -79,7 +80,6 @@ function FormContent({
 			<AttachProductSummary
 				previewData={previewQuery.data}
 				isLoading={previewQuery.isLoading}
-				product={product}
 			/>
 
 			<AttachProductActions
@@ -141,25 +141,28 @@ export function AttachProductForm({
 
 	return (
 		<FormWrapper form={form}>
-			<AttachProductSelection form={form} customerId={customerId} />
-			{entityId ? (
-				<InfoBox variant="info">
-					Attaching plan to entity{" "}
-					<span className="font-semibold">
-						{fullEntity?.name || fullEntity?.id}
-					</span>
-				</InfoBox>
-			) : entities.length > 0 ? (
-				<InfoBox variant="info">
-					Attaching plan to customer - all entities will get access
-				</InfoBox>
-			) : null}
-
-			<form.Subscribe
-				selector={(state) => ({ productId: state.values.productId })}
-			>
-				{() => <AttachProductPrepaidOptions form={form} />}
-			</form.Subscribe>
+			<SheetSection withSeparator={false} className="pb-0">
+				<div className="space-y-2">
+					<AttachProductSelection form={form} customerId={customerId} />
+					<form.Subscribe
+						selector={(state) => ({ productId: state.values.productId })}
+					>
+						{() => <AttachProductPrepaidOptions form={form} />}
+					</form.Subscribe>
+					{entityId ? (
+						<InfoBox variant="info">
+							Attaching plan to entity{" "}
+							<span className="font-semibold">
+								{fullEntity?.name || fullEntity?.id}
+							</span>
+						</InfoBox>
+					) : entities.length > 0 ? (
+						<InfoBox variant="info">
+							Attaching plan to customer - all entities will get access
+						</InfoBox>
+					) : null}
+				</div>
+			</SheetSection>
 
 			<form.Subscribe
 				selector={(state) => ({

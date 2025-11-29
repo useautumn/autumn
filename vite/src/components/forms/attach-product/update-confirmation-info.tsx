@@ -25,6 +25,8 @@ export const UpdateConfirmationInfo = ({
 		newProduct: previewData?.product,
 	});
 
+	console.log("previewData", previewData);
+
 	const hasPrepaidQuantityChanges = useHasPrepaidQuantityChanges(product, form);
 
 	const renderInfoBoxes = (): ReactNode[] => {
@@ -100,7 +102,7 @@ export const UpdateConfirmationInfo = ({
 	}
 
 	return (
-		<div className="space-y-2">
+		<div className="space-y-2 px-4 mt-4">
 			{infoBoxes.map((box, index) => (
 				<div key={index}>{box}</div>
 			))}

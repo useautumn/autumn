@@ -60,7 +60,7 @@ export const CopyButton = ({
 				<TooltipContent
 					side={side}
 					sideOffset={8}
-					className="bg-background text-body p-2 py-1 border rounded-lg shadow-sm"
+					className="bg-background text-body p-2 py-1 border rounded-lg shadow-sm z-100"
 				>
 					<div className="flex items-center gap-1">
 						<CheckIcon className="size-3" />

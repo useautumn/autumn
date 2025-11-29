@@ -100,7 +100,6 @@ function SheetContent({
 	productV2: ProductV2;
 	itemId: string | null;
 }) {
-	const setSheet = useSheetStore((s) => s.setSheet);
 	const storeProduct = useProductStore((s) => s.product);
 
 	// Memoize initial prepaid options from cusProduct
@@ -143,27 +142,20 @@ function SheetContent({
 		);
 	}, [prepaidItems, initialPrepaidOptions, form]);
 
-	const handleBackToDetail = () => {
-		setSheet({ type: "subscription-detail", itemId });
-	};
-
 	return (
 		<FormWrapper form={form}>
 			<div className="flex flex-col h-full">
 				<SheetHeader
-					title="Update Plan"
+					title="Update Subscription"
 					description={`Update ${cusProduct.product.name} for this customer`}
-				>
-					<Button
-						variant="skeleton"
-						size="sm"
-						onClick={handleBackToDetail}
-						className="mt-2 w-fit"
-					>
-						<ArrowLeft size={16} />
-						Back to Details
-					</Button>
-				</SheetHeader>
+					breadcrumbs={[
+						{
+							name: `${cusProduct.product.name}`,
+							sheet: "subscription-detail",
+						},
+					]}
+					itemId={itemId}
+				/>
 
 				<div className="flex-1 overflow-y-auto">
 					<form.Subscribe
@@ -174,12 +166,9 @@ function SheetContent({
 						{() => (
 							<>
 								{prepaidItems.length > 0 && (
-									<SheetSection
-										title="Prepaid Quantities"
-										withSeparator={false}
-									>
-										<UpdateProductPrepaidOptions form={form} />
-									</SheetSection>
+									// <SheetSection className="" withSeparator={false}>
+									<UpdateProductPrepaidOptions form={form} />
+									// </SheetSection>
 								)}
 								<FormContent
 									productV2={productV2}

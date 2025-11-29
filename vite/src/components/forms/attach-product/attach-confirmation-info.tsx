@@ -132,7 +132,7 @@ export const AttachConfirmationInfo = ({
 	}
 
 	return (
-		<div className="space-y-2">
+		<div className="space-y-2 px-4">
 			{infoBoxes.map((box, index) => (
 				<div key={index}>{box}</div>
 			))}

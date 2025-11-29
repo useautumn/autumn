@@ -422,19 +422,32 @@ input[type="number"]::-webkit-inner-spin-button {
 	/* left: -150%; */
 	/* width: 100%; */
 	/* height: 100%; */
-	background: linear-gradient(130deg, var(--color-t4), #d2d2d2, var(--color-t4));
+	/* background: linear-gradient(130deg, var(--color-t4), #d80101, var(--color-t4)); */
+	background: linear-gradient(
+	90deg, 
+	#959595 0%, 
+	#959595 20%, 
+	#e9e9e9 50%, 
+	#959595 80%, 
+	#959595 100%
+);
 	color: transparent;
 	background-clip: text;
 	background-size: 200% 100%;
-	animation: shimmer 1s infinite linear;
+	animation: shimmer 1.5s infinite linear;
 }
 
 .dark .shimmer {
-	background: linear-gradient(130deg, var(--color-t4), #b7b7b7, var(--color-t4));
+	background: linear-gradient(90deg, 
+	var(--color-t4) 0%,
+	var(--color-t4) 40%,
+	 #b7b7b7 50%,  
+	var(--color-t4) 60%,
+	 var(--color-t4) 100%);
 	color: transparent;
 	background-clip: text;
 	background-size: 200% 100%;
-	animation: shimmer 1s infinite linear;
+	animation: shimmer 1.5s infinite linear;
 }
 
 @keyframes shimmer {

@@ -1,3 +1,8 @@
+import {
+	type FrontendProductItem,
+	getFeaturePriceItemDisplay,
+} from "@autumn/shared";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
 	usePrepaidItems,
@@ -15,7 +20,7 @@ export function AttachProductPrepaidOptions({
 	const storeProduct = useProductStore((s) => s.product);
 	const { products = [] } = useProductsQuery();
 	const selectedProductId = form.state.values.productId;
-
+	const { org } = useOrg();
 	// Use customized product if it has changes, otherwise find by form productId
 	const product = storeProduct?.id
 		? storeProduct
@@ -28,21 +33,27 @@ export function AttachProductPrepaidOptions({
 	}
 
 	return (
-		<div className="space-y-3">
-			<div className="text-sm font-semibold text-foreground">
-				Prepaid Quantities
-			</div>
-
+		<div className="space-y-3 my-4">
 			<div className="space-y-2">
 				{prepaidItems.map((item) => {
+					const display = getFeaturePriceItemDisplay({
+						item: item as FrontendProductItem,
+						feature: item.feature,
+						currency: org?.default_currency || "USD",
+						fullDisplay: true,
+						amountFormatOptions: {
+							currencyDisplay: "narrowSymbol",
+						},
+					});
 					return (
 						<div
 							key={item.feature_id}
 							className="grid grid-cols-[1fr_auto] gap-2 items-center"
 						>
-							<div className="text-sm text-foreground">
-								{item.display?.primary_text}
-							</div>
+							<span className="text-sm text-foreground truncate">
+								{display.primary_text}
+								{display.secondary_text && ` ${display.secondary_text}`}
+							</span>
 
 							<form.AppField name={`prepaidOptions.${item.feature_id}`}>
 								{(quantityField) => (
