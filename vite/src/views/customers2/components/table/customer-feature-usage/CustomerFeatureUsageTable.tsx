@@ -1,6 +1,6 @@
 import type { Entity } from "@autumn/shared";
 import { FeatureType, type FullCusProduct } from "@autumn/shared";
-import { PuzzlePiece } from "@phosphor-icons/react";
+import { BatteryHighIcon } from "@phosphor-icons/react";
 import { type ExpandedState, getExpandedRowModel } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
@@ -159,7 +159,11 @@ export function CustomerFeatureUsageTable() {
 				<Table.Container>
 					<Table.Toolbar>
 						<Table.Heading>
-							<PuzzlePiece size={16} weight="fill" className="text-subtle" />
+							<BatteryHighIcon
+								size={16}
+								weight="fill"
+								className="text-subtle"
+							/>
 							Balances
 						</Table.Heading>
 						{/* <Table.Actions>
