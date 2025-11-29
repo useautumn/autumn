@@ -47,6 +47,9 @@ function FormContent({
 	const prepaidItems = usePrepaidItems({ product });
 	const prepaidOptions = form.state.values.prepaidOptions;
 
+	console.log("prepaidOptions", prepaidOptions);
+	console.log("prepaidItems", prepaidItems);
+
 	const { entityId } = useEntity();
 
 	// Call preview once here and pass data down to children
@@ -145,7 +148,10 @@ export function AttachProductForm({
 				<div className="space-y-2">
 					<AttachProductSelection form={form} customerId={customerId} />
 					<form.Subscribe
-						selector={(state) => ({ productId: state.values.productId })}
+						selector={(state) => ({
+							productId: state.values.productId,
+							prepaidOptions: state.values.prepaidOptions,
+						})}
 					>
 						{() => <AttachProductPrepaidOptions form={form} />}
 					</form.Subscribe>
