@@ -1,12 +1,31 @@
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { KeyIcon } from "@phosphor-icons/react";
+import { useEffect, useMemo, useState } from "react";
+import { Table } from "@/components/general/table";
+import { Button } from "@/components/v2/buttons/Button";
+import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
-import { APIKeyTable } from "./components/APIKeyTable";
+import { useProductTable } from "@/views/products/hooks/useProductTable";
+import { createAPIKeyTableColumns } from "./components/APIKeyTableColumns";
 import { CreateApiKeyDialog } from "./components/CreateApiKeyDialog";
 
 export const ApiKeysPage = () => {
 	const { apiKeys } = useDevQuery();
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
+
+	const columns = useMemo(() => createAPIKeyTableColumns(), []);
+
+	const apiKeyTable = useProductTable({
+		data: apiKeys || [],
+		columns,
+		options: {
+			globalFilterFn: "includesString",
+			enableGlobalFilter: true,
+		},
+	});
+
+	const enableSorting = false;
+
+	const hasRows = apiKeyTable.getRowModel().rows.length > 0;
 
 	// Add keyboard shortcut: N to open create API key dialog
 	useEffect(() => {
@@ -36,45 +55,61 @@ export const ApiKeysPage = () => {
 	}, []);
 
 	return (
-		<div>
-			<div className="sticky top-0 z-10 border-y bg-stone-100 pl-10 pr-7 h-10 flex justify-between items-center">
-				<div className="flex items-center gap-2">
-					<h2 className="text-sm text-t2 font-medium">Secret API Keys</h2>
-					<span className="text-t2 px-1 rounded-md bg-stone-200">
-						{apiKeys.length}
-					</span>
-				</div>
-				<Button variant="add" onClick={() => setCreateDialogOpen(true)}>
-					Secret Key
-				</Button>
-			</div>
-
+		<div className="h-fit max-h-full px-10">
 			<CreateApiKeyDialog
 				open={createDialogOpen}
 				onOpenChange={setCreateDialogOpen}
 			/>
+			{hasRows ? (
+				<>
+					<Table.Toolbar>
+						<div className="flex w-full justify-between items-center">
+							<Table.Heading>
+								<KeyIcon size={16} weight="fill" className="text-subtle" />
+								Secret API Keys
+							</Table.Heading>
+							<Table.Actions>
+								<Button
+									variant="primary"
+									size="default"
+									onClick={() => setCreateDialogOpen(true)}
+								>
+									Create Secret Key
+								</Button>
+							</Table.Actions>
+						</div>
+					</Table.Toolbar>
 
-			{apiKeys.length > 0 ? (
-				<APIKeyTable apiKeys={apiKeys} />
+					<Table.Provider
+						config={{
+							table: apiKeyTable,
+							numberOfColumns: columns.length,
+							enableSorting,
+							isLoading: false,
+							rowClassName: "h-10",
+						}}
+					>
+						<Table.Container>
+							<Table.Content>
+								<Table.Header />
+								<Table.Body />
+							</Table.Content>
+						</Table.Container>
+					</Table.Provider>
+				</>
 			) : (
-				<div
-					className="flex flex-col px-10 center text-t3 text-sm w-full
-        min-h-[60vh] gap-4 mt-3"
-				>
-					<p className="text-sm text-t3">
-						API keys are used to securely authenticate your requests from your
-						server. Learn more{" "}
-						<a
-							className="text-primary hover:text-primary/80 cursor-pointer"
-							href="https://docs.useautumn.com"
-							target="_blank"
-							rel="noopener"
+				<EmptyState
+					type="api-keys"
+					actionButton={
+						<Button
+							variant="primary"
+							size="default"
+							onClick={() => setCreateDialogOpen(true)}
 						>
-							here
-						</a>
-						.
-					</p>
-				</div>
+							Create Secret Key
+						</Button>
+					}
+				/>
 			)}
 		</div>
 	);

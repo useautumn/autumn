@@ -1,8 +1,9 @@
 import type { Feature } from "@autumn/shared";
-import { FeatureType } from "@autumn/shared";
+import { FeatureType, FeatureUsageType } from "@autumn/shared";
 import {
 	BooleanIcon,
 	CoinsIcon,
+	ContinuousUseIcon,
 	UsageBasedIcon,
 } from "@/components/v2/icons/AutumnIcons";
 
@@ -14,6 +15,9 @@ export const getFeatureIcon = ({ feature }: { feature: Feature }) => {
 		case FeatureType.Boolean:
 			return <BooleanIcon />;
 		case FeatureType.Metered:
+			if (feature.config?.usage_type === FeatureUsageType.Continuous) {
+				return <ContinuousUseIcon />;
+			}
 			return <UsageBasedIcon />;
 		case FeatureType.CreditSystem:
 			return <CoinsIcon />;

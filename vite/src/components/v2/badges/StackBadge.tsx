@@ -38,8 +38,8 @@ export default function StackBadge({
 			className={cn(
 				"pr-2 rounded-md shadow-[0px_4px_4px_0px_rgba(0,0,0,0.02)] shadow-[inset_0px_-3px_4px_0px_rgba(0,0,0,0.04)] outline outline-1 outline-offset-[-1px] inline-flex justify-start items-center gap-1.5 transition-none",
 				isSelected
-					? "bg-white outline-primary"
-					: "bg-white outline-neutral-300",
+					? "bg-interactive-secondary outline-primary"
+					: "bg-interactive-secondary outline-border",
 				isClickable && !isSelected && "hover:outline-primary cursor-pointer",
 				isClickable && "focus-visible:outline-primary focus-visible:outline-2",
 				className,
@@ -49,8 +49,8 @@ export default function StackBadge({
 				className={cn(
 					"size-auto p-1 rounded-tl rounded-bl shadow-[inset_0px_-3px_4px_0px_rgba(0,0,0,0.06)] shadow-[inset_0px_3px_4px_0px_rgba(255,255,255,0.10)] outline outline-1 outline-offset-[-1px] flex justify-center items-center gap-2.5",
 					isSelected
-						? "bg-light-purple outline-primary"
-						: "bg-neutral-50 outline-neutral-300",
+						? "bg-interactive-secondary outline-primary"
+						: "bg-interactive-secondary outline-border",
 				)}
 			>
 				{asset ? (
@@ -62,7 +62,7 @@ export default function StackBadge({
 			<div
 				className={cn(
 					"justify-start text-xs font-medium font-['Inter']",
-					isSelected ? "text-primary" : "text-neutral-700",
+					isSelected ? "text-primary" : "text-t2",
 				)}
 			>
 				{stack}

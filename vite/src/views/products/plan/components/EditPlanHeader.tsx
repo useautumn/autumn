@@ -1,4 +1,5 @@
 import { UserIcon } from "@phosphor-icons/react";
+import { parseAsString, useQueryStates } from "nuqs";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AdminHover } from "@/components/general/AdminHover";
@@ -13,10 +14,15 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/v2/selects/Select";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import {
+	useIsCusPlanEditor,
+	useProductStore,
+} from "@/hooks/stores/useProductStore.ts";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { isOneOffProduct } from "@/utils/product/priceUtils";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery.tsx";
+import { useCusProductQuery } from "@/views/customers/customer/product/hooks/useCusProductQuery.tsx";
 import { useMigrationsQuery } from "../../product/hooks/queries/useMigrationsQuery.tsx.tsx";
 import { useProductCountsQuery } from "../../product/hooks/queries/useProductCountsQuery";
 import {
@@ -27,15 +33,15 @@ import { ConfirmMigrationDialog } from "./ConfirmMigrationDialog";
 import { PlanToolbar } from "./PlanToolbar.tsx";
 
 export const EditPlanHeader = () => {
-	const { product, numVersions } = useProductQuery();
+	const { numVersions } = useProductQuery();
+	const product = useProductStore((s) => s.product);
 	const { counts } = useProductCountsQuery(
 		product.version ? { version: product.version } : {},
 	);
 	const { refetch: refetchMigrations } = useMigrationsQuery();
 	const { queryStates, setQueryStates } = useProductQueryState();
 	const axiosInstance = useAxiosInstance();
-	const sheetType = useSheetStore((s) => s.type);
-
+	const isCusPlanEditor = useIsCusPlanEditor();
 	const [confirmMigrateOpen, setConfirmMigrateOpen] = useState(false);
 
 	const versionOptions = Array.from(
@@ -46,7 +52,7 @@ export const EditPlanHeader = () => {
 
 	const handleVersionChange = (version: string) => {
 		const versionNumber = parseInt(version, 10);
-		if (versionNumber === numVersions) {
+		if (versionNumber === numVersions && !isCusPlanEditor) {
 			// Remove version param for latest version
 			setQueryStates({ version: null });
 		} else {
@@ -83,7 +89,7 @@ export const EditPlanHeader = () => {
 			},
 			{
 				key: "customer_product_id",
-				value: product.cusProductId || "N/A",
+				value: product.id || "N/A",
 			},
 		];
 	};
@@ -99,7 +105,8 @@ export const EditPlanHeader = () => {
 		migrateCount > 0 &&
 		!fromIsOneOff &&
 		version &&
-		version < numVersions;
+		version < numVersions &&
+		!isCusPlanEditor;
 
 	return (
 		<>
@@ -109,23 +116,28 @@ export const EditPlanHeader = () => {
 				startMigration={migrateCustomers}
 				version={version}
 			/>
-			<div className="flex flex-col gap-2 p-4 pb-3 bg-card border-none shadow-none w-full">
-				<V2Breadcrumb
-					className="p-0"
-					items={[
-						{
-							name: "Plans",
-							href: "/products?tab=products",
-						},
-						{
-							name: `${product.name}`,
-							href: `/products/${product.id}`,
-						},
-					]}
-				/>
+			<div className="flex flex-col gap-2 p-4 pb-3  border-none shadow-none w-full max-w-5xl mx-auto pt-8 px-12">
+				{isCusPlanEditor ? (
+					<CustomerBreadcrumbs />
+				) : (
+					<V2Breadcrumb
+						className="p-0"
+						items={[
+							{
+								name: "Plans",
+								href: "/products?tab=products",
+							},
+							{
+								name: `${product.name}`,
+								href: `/products/${product.id}`,
+							},
+						]}
+					/>
+				)}
+
 				<div className="col-span-2 flex">
 					<div className="flex flex-row items-baseline justify-start gap-2 w-full whitespace-nowrap">
-						<AdminHover texts={getProductAdminHover()}>
+						<AdminHover texts={getProductAdminHover() as any}>
 							<span className="text-lg font-medium w-fit whitespace-nowrap">
 								{product.name}
 							</span>
@@ -147,8 +159,6 @@ export const EditPlanHeader = () => {
 						<IconBadge variant="muted" icon={<UserIcon />}>
 							{counts?.active || 0}
 						</IconBadge>
-
-						<PlanToolbar />
 					</div>
 
 					<div className="flex flex-row gap-2 items-center">
@@ -167,7 +177,7 @@ export const EditPlanHeader = () => {
 								value={currentVersion.toString()}
 								onValueChange={handleVersionChange}
 							>
-								<SelectTrigger className="w-fit min-w-28">
+								<SelectTrigger className="w-fit min-w-28 !h-6" size="sm">
 									<SelectValue placeholder="Version" />
 								</SelectTrigger>
 								<SelectContent>
@@ -179,9 +189,48 @@ export const EditPlanHeader = () => {
 								</SelectContent>
 							</Select>
 						)}
+						{!isCusPlanEditor && <PlanToolbar />}
 					</div>
 				</div>
 			</div>
 		</>
+	);
+};
+
+const CustomerBreadcrumbs = () => {
+	const { customer } = useCusQuery();
+	const { product } = useCusProductQuery();
+	const [{ entity_id }] = useQueryStates({
+		entity_id: parseAsString,
+	});
+	//find entity name
+	const entity = customer.entities.find((e: any) => e.id === entity_id);
+
+	return (
+		<V2Breadcrumb
+			className="p-0"
+			items={[
+				{
+					name: "Customers",
+					href: "/products?tab=products",
+				},
+				{
+					name: customer.name || customer.email || customer.id,
+					href: `/customers/${customer.id}`,
+				},
+				...(entity_id
+					? [
+							{
+								name: (entity?.name || entity_id) ?? "",
+								href: `/customers/${customer.id}?entity_id=${entity_id}`,
+							},
+						]
+					: []),
+
+				{
+					name: product?.name || "",
+				},
+			]}
+		/>
 	);
 };

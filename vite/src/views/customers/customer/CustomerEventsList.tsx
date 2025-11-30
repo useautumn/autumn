@@ -1,21 +1,20 @@
-import { navigateTo } from "@/utils/genUtils";
+import { useState } from "react";
+import { useNavigate, useParams } from "react-router";
+import { Item, Row } from "@/components/general/TableGrid";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import {
 	formatUnixToDateTime,
 	formatUnixToDateTimeWithMs,
 } from "@/utils/formatUtils/formatDateUtils";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { useState } from "react";
-import { Row, Item } from "@/components/general/TableGrid";
-import {
-	Tooltip,
-	TooltipTrigger,
-	TooltipContent,
-} from "@/components/ui/tooltip";
-import { Button } from "@/components/ui/button";
-import { useNavigate, useParams } from "react-router";
+import { navigateTo } from "@/utils/genUtils";
 import { useCustomerContext } from "./CustomerContext";
-import { cn } from "@/lib/utils";
-import { useCusQuery } from "./hooks/useCusQuery";
 import { useCusEventsQuery } from "./hooks/useCusEventsQuery";
 
 export const CustomerEventsList = () => {
@@ -24,6 +23,8 @@ export const CustomerEventsList = () => {
 	const { customer_id } = useParams();
 	const { showEntityView } = useCustomerContext();
 	const { events, isLoading, error } = useCusEventsQuery();
+
+	console.log("events", events);
 
 	return (
 		<div>

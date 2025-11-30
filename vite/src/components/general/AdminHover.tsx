@@ -23,9 +23,9 @@ export const AdminHover = forwardRef<
 		{ children, texts, hide = false, asChild = false, side = "bottom" },
 		ref,
 	) => {
-		const { isAdmin } = useAdmin();
+		const { isAdmin, skipHover } = useAdmin();
 
-		if (!isAdmin || hide) return <>{children}</>;
+		if (!isAdmin || hide || skipHover) return <>{children}</>;
 
 		// Try to forward the ref to the child if possible
 		let triggerChild = children;
@@ -36,30 +36,27 @@ export const AdminHover = forwardRef<
 		return (
 			<TooltipProvider>
 				<Tooltip>
-					<TooltipTrigger className="w-fit !cursor-default" asChild={asChild}>
-						{triggerChild}
-					</TooltipTrigger>
+					<TooltipTrigger asChild={asChild}>{triggerChild}</TooltipTrigger>
 					{isAdmin && (
 						<TooltipContent
-							className="bg-white/50 backdrop-blur-sm shadow-sm border-1 px-2 pr-6 py-2 max-w-none"
+							className="bg-white/50 backdrop-blur-sm shadow-sm border px-2 pr-6 py-2 max-w-none z-[9999]"
 							align="start"
 							side={side}
 						>
 							<div className="text-xs text-gray-500 flex flex-col gap-2">
-								{texts.map((text: any) => {
-									if (!text) return;
+								{texts.map((text) => {
+									if (!text) return null;
 									if (typeof text === "object") {
 										return (
 											<div key={text.key}>
 												<p className="text-xs text-gray-500 font-medium">
 													{text.key}
 												</p>
-												<CopyText key={text.value} text={text.value} />
+												<CopyText text={text.value} />
 											</div>
 										);
-									} else {
-										return <CopyText key={text} text={text} />;
 									}
+									return <CopyText key={text} text={text} />;
 								})}
 							</div>
 						</TooltipContent>
@@ -90,7 +87,9 @@ const CopyText = ({ text }: { text: string }) => {
 					}, 1000);
 				}}
 			>
-				{text && text.split("\n").map((line, i) => <span key={i}>{line}</span>)}
+				{text?.split("\n").map((line, i) => (
+					<span key={i}>{line}</span>
+				))}
 			</p>
 			{isCopied || isHover ? (
 				<div

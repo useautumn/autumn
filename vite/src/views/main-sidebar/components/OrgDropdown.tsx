@@ -1,5 +1,13 @@
 import { DropdownMenuGroup } from "@radix-ui/react-dropdown-menu";
-import { ChevronDown, PanelRight, Plus, Settings } from "lucide-react";
+import {
+	ChevronDown,
+	Monitor,
+	Moon,
+	PanelRight,
+	Plus,
+	Settings,
+	Sun,
+} from "lucide-react";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
@@ -17,6 +25,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTheme } from "@/contexts/ThemeProvider";
 import { useOrg } from "@/hooks/common/useOrg";
 import {
 	authClient,
@@ -35,6 +44,7 @@ import { ManageOrg } from "./ManageOrg";
 export const OrgDropdown = () => {
 	const { org, isLoading, error } = useOrg();
 	const { expanded, setExpanded } = useSidebarContext();
+	const { theme, setTheme } = useTheme();
 
 	let { data: orgs } = useListOrganizations();
 	const { data: activeOrganization } = authClient.useActiveOrganization();
@@ -126,7 +136,7 @@ export const OrgDropdown = () => {
 							}}
 						>
 							<div className="flex justify-between w-full items-center gap-2 text-t2">
-								<span>Manage</span>
+								<span>Settings</span>
 								<Settings size={14} />
 							</div>
 						</DropdownMenuItem>
@@ -136,7 +146,7 @@ export const OrgDropdown = () => {
 							}}
 						>
 							<div className="flex justify-between w-full items-center gap-2 text-t2">
-								<span>Create New</span>
+								<span>Create Organization</span>
 								<Plus size={14} />
 							</div>
 						</DropdownMenuItem>
@@ -153,6 +163,41 @@ export const OrgDropdown = () => {
 								</div>
 							</DropdownMenuItem>
 						)}
+						<DropdownMenuSub>
+							<DropdownMenuSubTrigger className="text-t2">
+								<div className="flex justify-between w-full items-center gap-2">
+									<span>Theme</span>
+									{theme === "light" && <Sun size={14} />}
+									{theme === "dark" && <Moon size={14} />}
+									{theme === "system" && <Monitor size={14} />}
+								</div>
+							</DropdownMenuSubTrigger>
+							<DropdownMenuPortal>
+								<DropdownMenuSubContent className="w-36">
+									<DropdownMenuItem
+										onClick={() => setTheme("light")}
+										className="flex justify-between items-center"
+									>
+										<span className="text-t2">Light</span>
+										<Sun size={14} />
+									</DropdownMenuItem>
+									<DropdownMenuItem
+										onClick={() => setTheme("dark")}
+										className="flex justify-between items-center"
+									>
+										<span className="text-t2">Dark</span>
+										<Moon size={14} />
+									</DropdownMenuItem>
+									<DropdownMenuItem
+										onClick={() => setTheme("system")}
+										className="flex justify-between items-center"
+									>
+										<span className="text-t2">System</span>
+										<Monitor size={14} />
+									</DropdownMenuItem>
+								</DropdownMenuSubContent>
+							</DropdownMenuPortal>
+						</DropdownMenuSub>
 						{orgs && orgs.length > 0 && (
 							<>
 								<DropdownMenuSeparator />

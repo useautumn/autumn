@@ -31,13 +31,13 @@ export function PricedFeatureSettings() {
 			>
 				<AreaRadioGroupItem
 					value={UsageModel.PayPerUse}
-					label="Pay-per-use"
-					description="Charge for exactly how much is used"
+					label="Usage-based"
+					description={"Bill for how much the customer has used"}
 				/>
 				<AreaRadioGroupItem
 					value={UsageModel.Prepaid}
 					label="Prepaid"
-					description="Specify an upfront quantity during checkout"
+					description="Bill for a fixed upfront quantity during checkout"
 				/>
 			</RadioGroup>
 		</div>

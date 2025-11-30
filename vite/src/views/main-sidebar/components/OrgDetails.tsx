@@ -1,12 +1,12 @@
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/v2/buttons/Button";
+import { Input } from "@/components/v2/inputs/Input";
 import { useOrg } from "@/hooks/common/useOrg";
 import { authClient } from "@/lib/auth-client";
-import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
 import OrgLogoUploader from "@/views/main-sidebar/org-dropdown/manage-org/OrgLogoUploader";
-import { Separator } from "@/components/ui/separator";
 import { DeleteOrgPopover } from "../org-dropdown/manage-org/DeleteOrgPopover";
 
 export const OrgDetails = () => {
@@ -69,10 +69,10 @@ export const OrgDetails = () => {
 					<div>
 						<FieldLabel>&nbsp;</FieldLabel>
 						<Button
-							variant="outline"
+							variant="secondary"
 							disabled={!canSave}
 							onClick={handleSave}
-							shimmer={saving}
+							isLoading={saving}
 							className="min-w-16"
 						>
 							Save
