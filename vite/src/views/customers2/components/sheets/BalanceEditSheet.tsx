@@ -213,14 +213,16 @@ export function BalanceEditSheet() {
 								</span>
 							}
 						/>
-						<InfoRow
-							label="Balance"
-							value={
-								<span className="bg-muted px-1 py-0.5 rounded-md text-t3">
-									Unlimited
-								</span>
-							}
-						/>
+						{isUnlimited && (
+							<InfoRow
+								label="Balance"
+								value={
+									<span className="bg-muted px-1 py-0.5 rounded-md text-t3">
+										Unlimited
+									</span>
+								}
+							/>
+						)}
 					</div>
 				</SheetSection>
 
