@@ -1,7 +1,7 @@
 import type { CheckoutResponseV0, ProductV2 } from "@autumn/shared";
 import type { LucideIcon } from "lucide-react";
 import { ArrowUpRightFromSquare, CircleCheck } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { useAttachProductMutation } from "@/components/forms/attach-product/use-attach-product-mutation";
 import {
@@ -48,20 +48,12 @@ export function AttachProductActions({
 	const env = useEnv();
 	const org = useOrg();
 	const { entityId } = useEntity();
-	const buttonRef = useRef<HTMLButtonElement>(null);
-	const [buttonWidth, setButtonWidth] = useState<number>(0);
 	const [activeAction, setActiveAction] = useState<"invoice" | "attach" | null>(
 		null,
 	);
 	const { closeSheet } = useSheetStore();
 
 	const ownStripeAccount = org.org?.stripe_connection !== "default";
-
-	useEffect(() => {
-		if (buttonRef.current) {
-			setButtonWidth(buttonRef.current.offsetWidth);
-		}
-	}, []);
 
 	const attachMutation = useAttachProductMutation({
 		customerId,
@@ -137,7 +129,6 @@ export function AttachProductActions({
 			<Popover>
 				<PopoverTrigger asChild>
 					<Button
-						ref={buttonRef}
 						variant="secondary"
 						className="w-full"
 						isLoading={isInvoiceLoading}
@@ -148,9 +139,8 @@ export function AttachProductActions({
 					</Button>
 				</PopoverTrigger>
 				<PopoverContent
-					className="p-0 z-100 rounded-lg"
+					className="p-0 z-100 rounded-lg w-[--radix-popover-trigger-width]"
 					align="start"
-					style={{ width: buttonWidth > 0 ? `${buttonWidth}px` : "auto" }}
 				>
 					<div className="flex flex-col">
 						<button

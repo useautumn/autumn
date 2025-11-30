@@ -11,7 +11,7 @@ import {
 } from "@/components/forms/attach-product/use-attach-product-form";
 import { FormWrapper } from "@/components/general/form/form-wrapper";
 import { Button } from "@/components/v2/buttons/Button";
-import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
 import {
 	usePrepaidItems,
 	useProductStore,
@@ -34,10 +34,10 @@ const FormContent = ({
 	const storeProduct = useProductStore((s) => s.product);
 	const product = storeProduct?.id ? storeProduct : (productV2 ?? undefined);
 	const entityId = cusProduct?.entity_id ?? undefined;
-	const prepaidItems = usePrepaidItems({ product });
 
 	const prepaidOptions = form.state.values.prepaidOptions;
-	const initialPrepaidOptions = form.state.values.initialPrepaidOptions;
+	const initialPrepaidOptions =
+		form.options.defaultValues?.prepaidOptions ?? {};
 
 	const previewQuery = useAttachPreview({
 		customerId,
@@ -46,6 +46,14 @@ const FormContent = ({
 		prepaidOptions: prepaidOptions ?? undefined,
 		version: product?.version,
 	});
+
+	const { prepaidItems, isLoading } = usePrepaidItems({
+		product,
+	});
+
+	if (isLoading) {
+		return null;
+	}
 
 	if (prepaidItems.length > 0) {
 		const hasUnsetPrepaidQuantity = prepaidItems.some((item) => {
@@ -57,7 +65,6 @@ const FormContent = ({
 			return null;
 		}
 
-		// Check if there are any changes from initial values
 		const hasQuantityChanges = prepaidItems.some((item) => {
 			const currentQuantity = prepaidOptions?.[item.feature_id as string];
 			const initialQuantity =
@@ -101,9 +108,10 @@ function SheetContent({
 	itemId: string | null;
 }) {
 	const storeProduct = useProductStore((s) => s.product);
+	const product = storeProduct?.id ? storeProduct : (productV2 ?? undefined);
+	const { prepaidItems, isLoading } = usePrepaidItems({ product });
 
-	// Memoize initial prepaid options from cusProduct
-	const initialPrepaidOptions = useMemo(
+	const subscriptionPrepaidValues = useMemo(
 		() =>
 			cusProduct.options.reduce(
 				(acc, option) => {
@@ -115,32 +123,25 @@ function SheetContent({
 		[cusProduct.options],
 	);
 
+	const initialPrepaidOptions = useMemo(() => {
+		if (isLoading || prepaidItems.length === 0) {
+			return subscriptionPrepaidValues;
+		}
+
+		return prepaidItems.reduce(
+			(acc, item) => {
+				const featureId = item.feature_id as string;
+				acc[featureId] = subscriptionPrepaidValues[featureId] ?? undefined;
+				return acc;
+			},
+			{} as Record<string, number | undefined>,
+		) as Record<string, number>;
+	}, [prepaidItems, subscriptionPrepaidValues, isLoading]);
+
 	const form = useAttachProductForm({
 		initialProductId: cusProduct?.product.id ?? undefined,
 		initialPrepaidOptions,
 	});
-
-	const product = storeProduct?.id ? storeProduct : (productV2 ?? undefined);
-	const prepaidItems = usePrepaidItems({ product });
-
-	// This gets the prepaid items from the product, sees if there are existing quantities from the cusProduct/subscription, and sets them if so
-	useEffect(() => {
-		// Build prepaid options based on current product's prepaid items
-		const newPrepaidOptions = prepaidItems.reduce(
-			(acc, item) => {
-				const featureId = item.feature_id as string;
-				// Use initial value if this feature existed in original, otherwise undefined
-				acc[featureId] = initialPrepaidOptions[featureId] ?? undefined;
-				return acc;
-			},
-			{} as Record<string, number | undefined>,
-		);
-
-		form.setFieldValue(
-			"prepaidOptions",
-			newPrepaidOptions as Record<string, number>,
-		);
-	}, [prepaidItems, initialPrepaidOptions, form]);
 
 	return (
 		<FormWrapper form={form}>

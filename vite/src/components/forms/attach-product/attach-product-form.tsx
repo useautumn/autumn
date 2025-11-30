@@ -1,4 +1,5 @@
 import type { Entity, FullCustomer, ProductV2 } from "@autumn/shared";
+import { useStore } from "@tanstack/react-form";
 import { useEffect } from "react";
 import { FormWrapper } from "@/components/general/form/form-wrapper";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
@@ -8,10 +9,7 @@ import {
 	useProductStore,
 } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import {
-	useAttachProductStore,
-	useEntity,
-} from "@/hooks/stores/useSubscriptionStore";
+import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { AttachProductActions } from "./attach-product-actions";
@@ -23,7 +21,6 @@ import type { UseAttachProductForm } from "./use-attach-product-form";
 import { useAttachProductForm } from "./use-attach-product-form";
 
 interface FormContentProps {
-	productId: string;
 	products: ProductV2[];
 	customerId: string;
 	form: UseAttachProductForm;
@@ -31,21 +28,23 @@ interface FormContentProps {
 }
 
 function FormContent({
-	productId,
 	products,
 	customerId,
 	form,
 	onSuccess,
 }: FormContentProps) {
 	const storeProduct = useProductStore((s) => s.product);
+	const productId = useStore(form.store, (state) => state.values.productId);
+	const prepaidOptions = useStore(
+		form.store,
+		(state) => state.values.prepaidOptions,
+	);
 
-	// Use customized product if it exists and has changes, otherwise find by form productId
 	const product = storeProduct?.id
 		? storeProduct
 		: products.find((p) => p.id === productId && !p.archived);
 
-	const prepaidItems = usePrepaidItems({ product });
-	const prepaidOptions = form.state.values.prepaidOptions;
+	const { prepaidItems } = usePrepaidItems({ product });
 
 	const { entityId } = useEntity();
 
@@ -101,11 +100,10 @@ export function AttachProductForm({
 	customerId: string;
 	onSuccess?: () => void;
 }) {
-	const itemId = useSheetStore((s) => s.itemId); // The productId being customized
+	const itemId = useSheetStore((s) => s.itemId);
 	const form = useAttachProductForm({ initialProductId: itemId || undefined });
 	const { products, isLoading } = useProductsQuery();
 	const resetProductStore = useProductStore((s) => s.reset);
-	const setCustomerId = useAttachProductStore((s) => s.setCustomerId);
 
 	const activeProducts = products.filter((p) => !p.archived);
 
@@ -118,22 +116,13 @@ export function AttachProductForm({
 		(e: Entity) => e.id === entityId || e.internal_id === entityId,
 	);
 
-	useEffect(() => {
-		// Set customerId on mount
-		setCustomerId(customerId);
-	}, [customerId, setCustomerId]);
+	const productId = useStore(form.store, (state) => state.values.productId);
 
 	useEffect(() => {
-		// Reset product store when productId changes (unless it matches itemId from customization)
-		const subscription = form.store.subscribe(() => {
-			const productId = form.store.state.values.productId;
-			if (productId && productId !== itemId) {
-				resetProductStore();
-			}
-		});
-
-		return () => subscription();
-	}, [form.store, itemId, resetProductStore]);
+		if (productId && productId !== itemId) {
+			resetProductStore();
+		}
+	}, [productId, itemId, resetProductStore]);
 
 	if (isLoading) {
 		return <div className="text-sm text-t3">Loading products...</div>;
@@ -144,11 +133,7 @@ export function AttachProductForm({
 			<SheetSection withSeparator={false} className="pb-0">
 				<div className="space-y-2">
 					<AttachProductSelection form={form} customerId={customerId} />
-					<form.Subscribe
-						selector={(state) => ({ productId: state.values.productId })}
-					>
-						{() => <AttachProductPrepaidOptions form={form} />}
-					</form.Subscribe>
+					<AttachProductPrepaidOptions form={form} />
 					{entityId ? (
 						<InfoBox variant="info">
 							Attaching plan to entity{" "}
@@ -164,22 +149,12 @@ export function AttachProductForm({
 				</div>
 			</SheetSection>
 
-			<form.Subscribe
-				selector={(state) => ({
-					productId: state.values.productId,
-					prepaidOptions: state.values.prepaidOptions,
-				})}
-			>
-				{(values) => (
-					<FormContent
-						productId={values.productId}
-						products={activeProducts}
-						customerId={customerId}
-						form={form}
-						onSuccess={onSuccess}
-					/>
-				)}
-			</form.Subscribe>
+			<FormContent
+				products={activeProducts}
+				customerId={customerId}
+				form={form}
+				onSuccess={onSuccess}
+			/>
 		</FormWrapper>
 	);
 }

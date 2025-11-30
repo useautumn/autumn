@@ -244,14 +244,14 @@ export const usePrepaidItems = ({
 }: {
 	product?: ProductV2 | FrontendProduct;
 }) => {
-	const { features = [] } = useFeaturesQuery();
+	const { features, ...rest } = useFeaturesQuery();
 
 	return useMemo(() => {
-		if (!product) return [];
+		if (!product) return { prepaidItems: [], ...rest };
 
 		const prepaidItems = getPrepaidItems(product);
 
-		return prepaidItems.map((item) => {
+		const prepaidItemsWithFeatures = prepaidItems.map((item) => {
 			const feature = itemToFeature({ item, features });
 			const display = getProductItemDisplay({
 				item,
@@ -265,5 +265,9 @@ export const usePrepaidItems = ({
 				display,
 			};
 		});
-	}, [product, features]);
+		return {
+			prepaidItems: prepaidItemsWithFeatures,
+			...rest,
+		};
+	}, [product, features, rest]);
 };
