@@ -4,30 +4,33 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { constructFeatureItem } from "../../src/utils/scriptUtils/constructItem.js";
 import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "../../src/utils/scriptUtils/testUtils/initProductsV0.js";
 import { replaceItems } from "../attach/utils.js";
 
 // UNCOMMENT FROM HERE
 const pro = constructProduct({
-	type: "one_off",
+	type: "pro",
 	isDefault: false,
-	isAddOn: true,
 
 	items: [
-		constructPrepaidItem({
-			featureId: TestFeature.Credits,
-			includedUsage: 0,
-			billingUnits: 100,
-			price: 10,
+		constructFeatureItem({
+			featureId: TestFeature.Users,
+			includedUsage: 5,
 		}),
-		// constructArrearProratedItem({
-		// 	featureId: TestFeature.Users,
-		// 	pricePerUnit: 40,
-		// 	includedUsage: 0,
-		// }),
+	],
+});
+const premium = constructProduct({
+	type: "premium",
+	isDefault: false,
+
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Users,
+			includedUsage: 10,
+		}),
 	],
 });
 
@@ -46,7 +49,7 @@ describe(`${chalk.yellowBright("temp: Testing prepaid and prorated")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [pro],
+			products: [pro, premium],
 			prefix: customerId,
 		});
 	});
@@ -54,28 +57,23 @@ describe(`${chalk.yellowBright("temp: Testing prepaid and prorated")}`, () => {
 	test("should create a subscription with prepaid and prorated", async () => {
 		await autumn.attach({
 			customer_id: customerId,
+			product_id: premium.id,
+		});
+		await autumn.attach({
+			customer_id: customerId,
 			product_id: pro.id,
-			options: [
-				{
-					feature_id: TestFeature.Credits,
-					quantity: 200,
-				},
-			],
 		});
 
-		const newItems = replaceItems({
-			featureId: TestFeature.Credits,
-			newItem: constructPrepaidItem({
-				featureId: TestFeature.Credits,
-				includedUsage: 0,
-				billingUnits: 80,
-				price: 10,
-			}),
-			items: pro.items,
-		});
-
+		// Create new version of pro
 		await autumn.products.update(pro.id, {
-			items: newItems,
+			items: replaceItems({
+				featureId: TestFeature.Users,
+				newItem: constructFeatureItem({
+					featureId: TestFeature.Users,
+					includedUsage: 2,
+				}),
+				items: pro.items,
+			}),
 		});
 	});
 });
