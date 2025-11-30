@@ -46,6 +46,9 @@ function FormContent({
 
 	const { prepaidItems } = usePrepaidItems({ product });
 
+	console.log("prepaidOptions", prepaidOptions);
+	console.log("prepaidItems", prepaidItems);
+
 	const { entityId } = useEntity();
 
 	// Call preview once here and pass data down to children

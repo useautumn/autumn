@@ -24,6 +24,7 @@ export const CustomerPlanEditorBar = () => {
 	const { customer } = useCusQuery();
 	const hasChanges = useHasChanges();
 	const isLatestVersion = useIsLatestVersion(product);
+	const setBaseProduct = useProductStore((s) => s.setBaseProduct);
 	const { type: sheetType } = useSheetStore();
 
 	const [queryStates, setQueryStates] = useQueryStates({
@@ -90,6 +91,7 @@ export const CustomerPlanEditorBar = () => {
 	const handleReturnWithoutSaving = () => {
 		if (baseProduct) {
 			setProduct(DEFAULT_PRODUCT);
+			setBaseProduct(null);
 		}
 		returnToCustomer();
 	};

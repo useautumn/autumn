@@ -1,5 +1,5 @@
 import type { Entity, FullCusProduct } from "@autumn/shared";
-import { Cube, Subtract, User } from "@phosphor-icons/react";
+import { PackageIcon, Subtract, User } from "@phosphor-icons/react";
 import type { Row } from "@tanstack/react-table";
 import { parseAsBoolean, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
@@ -243,7 +243,7 @@ export function CustomerProductsTable() {
 				<Table.Container>
 					<Table.Toolbar>
 						<Table.Heading>
-							<Cube size={16} weight="fill" className="text-subtle" />
+							<PackageIcon size={16} weight="fill" className="text-subtle" />
 							Subscriptions
 						</Table.Heading>
 						<Table.Actions>
