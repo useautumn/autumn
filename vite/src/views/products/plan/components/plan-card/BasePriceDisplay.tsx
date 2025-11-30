@@ -1,48 +1,111 @@
 import {
+	type FrontendProduct,
 	formatAmount,
 	getIntervalString,
 	type Organization,
+	type ProductV2,
 	productV2ToBasePrice,
 } from "@autumn/shared";
+import { Button } from "@/components/v2/buttons/Button";
 import { useOrg } from "@/hooks/common/useOrg";
-import { useProductStore } from "@/hooks/stores/useProductStore";
+import {
+	useCurrentItem,
+	useProductStore,
+} from "@/hooks/stores/useProductStore";
+import {
+	useIsEditingPlanPrice,
+	useSheetStore,
+} from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { notNullish } from "@/utils/genUtils";
-import { useOnboardingStore } from "@/views/onboarding3/store/useOnboardingStore";
+import { checkItemIsValid } from "@/utils/product/entitlementUtils";
 
-export const BasePriceDisplay = () => {
-	const product = useProductStore((s) => s.product);
-	const isOnboarding = useOnboardingStore((s) => s.isOnboarding);
+export const BasePriceDisplay = ({
+	isOnboarding,
+	product: productProp,
+	readOnly = false,
+}: {
+	isOnboarding?: boolean;
+	product?: ProductV2 | FrontendProduct;
+	readOnly?: boolean;
+}) => {
+	const productFromStore = useProductStore((s) => s.product);
+	const product = productProp ?? productFromStore;
+	const setSheet = useSheetStore((s) => s.setSheet);
 	const basePrice = productV2ToBasePrice({ product });
 	const { org } = useOrg();
 
-	const formattedAmount = formatAmount({
-		org: org as unknown as Organization,
-		amount: basePrice?.price ?? 0,
-		amountFormatOptions: {
-			style: "currency",
-			currency: org?.default_currency || "USD",
-			currencyDisplay: "narrowSymbol",
-		},
-	});
+	const item = useCurrentItem();
 
-	const secondaryText = basePrice?.interval
-		? `${getIntervalString({ interval: basePrice.interval, intervalCount: basePrice.interval_count })}`
-		: "once";
+	const isEditingPlanPrice = useIsEditingPlanPrice();
 
-	const priceExists = notNullish(basePrice) && basePrice.price > 0;
+	const handleClick = () => {
+		setSheet({ type: "edit-plan-price", itemId: product.id });
+	};
+
+	const renderPriceContent = () => {
+		const frontendProduct = product as FrontendProduct;
+
+		if (frontendProduct.planType === "free") {
+			return <span className="text-main-sec inline-block">Free</span>;
+		}
+
+		const priceExists = notNullish(basePrice) && basePrice.price > 0;
+		if (priceExists && basePrice) {
+			const formattedAmount = formatAmount({
+				org: org as unknown as Organization,
+				amount: basePrice.price,
+				amountFormatOptions: {
+					style: "currency",
+					currency: org?.default_currency || "USD",
+					currencyDisplay: "narrowSymbol",
+				},
+			});
+
+			const secondaryText = basePrice.interval
+				? `${getIntervalString({ interval: basePrice.interval, intervalCount: basePrice.interval_count })}`
+				: "one-off";
+
+			return (
+				<span className="text-body-secondary flex items-center gap-1">
+					<span className="text-main-sec text-t2! font-semibold!">
+						{formattedAmount}
+					</span>{" "}
+					<span className="mt-0.5">{secondaryText}</span>
+				</span>
+			);
+		}
+
+		if (frontendProduct.basePriceType === "usage") {
+			return <span className="text-t3!">Variable</span>;
+		}
+
+		return (
+			<span className="text-t4 text-body-secondary inline-block">
+				Enter price
+			</span>
+		);
+	};
+
 	return (
-		<div className={cn(isOnboarding && "mt-1")}>
-			{priceExists ? (
-				<span className="text-body-secondary">
-					<span className="text-main-sec">{formattedAmount}</span>{" "}
-					{secondaryText}
-				</span>
-			) : (
-				<span className="text-t4 text-body-secondary inline-block mt-[4.5px]">
-					No base price
-				</span>
+		<Button
+			variant="secondary"
+			size="default"
+			className={cn(
+				"items-center h-9! gap-1 rounded-xl px-2.5! hover:z-95",
+				isEditingPlanPrice && !isOnboarding && "btn-secondary-active z-95",
+				isOnboarding &&
+					"bg-transparent! border-none! outline-0! border-transparent! pointer-events-none shadow-none! p-0! h-fit! mt-1",
+				readOnly &&
+					"pointer-events-none bg-transparent! border-none! shadow-none! p-0!",
 			)}
-		</div>
+			onClick={() => {
+				if (readOnly) return;
+				if (item && !checkItemIsValid(item)) return;
+				handleClick();
+			}}
+		>
+			{renderPriceContent()}
+		</Button>
 	);
 };

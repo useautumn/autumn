@@ -82,14 +82,14 @@ export const compareDetails = ({
 
 	const detailsSame = Object.values(checks).every((d) => d.condition);
 
-	if (!detailsSame) {
-		console.log(
-			"Product details different:",
-			Object.values(checks)
-				.filter((d) => !d.condition)
-				.map((d) => d.message),
-		);
-	}
+	// if (!detailsSame) {
+	// 	console.log(
+	// 		"Product details different:",
+	// 		Object.values(checks)
+	// 			.filter((d) => !d.condition)
+	// 			.map((d) => d.message),
+	// 	);
+	// }
 
 	return detailsSame;
 };

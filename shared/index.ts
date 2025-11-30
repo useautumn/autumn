@@ -183,6 +183,7 @@ export * from "./utils/productUtils/convertUtils.js";
 export * from "./utils/productUtils/priceToInvoiceAmount.js";
 export * from "./utils/productUtils.js";
 export * from "./utils/productV2Utils/compareProductUtils.ts/compareProductUtils.js";
+export * from "./utils/productV2Utils/productItemUtils/convertItemUtils.js";
 export * from "./utils/productV2Utils/productItemUtils/getProductItemRes.js";
 export * from "./utils/productV2Utils/productItemUtils/itemIntervalUtils.js";
 export * from "./utils/productV3Utils/productItemUtils/productV3ItemUtils.js";

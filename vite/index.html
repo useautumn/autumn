@@ -9,6 +9,34 @@
     /> -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Autumn</title>
+    <script>
+      // Apply theme immediately to prevent flash
+      (() => {
+        try {
+          const theme = localStorage.getItem('theme') || '"light"';
+          const parsedTheme = JSON.parse(theme);
+          
+          let resolvedTheme = parsedTheme;
+          if (parsedTheme === 'system') {
+            resolvedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          }
+          
+          // Add class for CSS variable definitions
+          document.documentElement.classList.add(resolvedTheme);
+          
+          // Set background color directly to prevent flash
+          if (resolvedTheme === 'dark') {
+            document.documentElement.style.backgroundColor = '#161616';
+          } else {
+            document.documentElement.style.backgroundColor = '#fafaf9';
+          }
+        } catch (e) {
+          // Fallback to light theme if there's an error
+          document.documentElement.classList.add('light');
+          document.documentElement.style.backgroundColor = '#fafaf9';
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

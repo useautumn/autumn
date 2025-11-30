@@ -20,20 +20,23 @@ export interface IRow {
 
 export const autumnTheme = themeQuartz.withParams({
 	accentColor: "var(--primary)",
-	backgroundColor: "#FAFAF9",
-	borderColor: "#00000000",
+	backgroundColor: "var(--interactive-secondary)",
+	borderColor: "var(--border)",
 	browserColorScheme: "light",
 	fontFamily: {
 		googleFont: "Inter",
 	},
-	fontSize: 13,
-	textColor: "#52525B",
+	fontSize: 11,
+	textColor: "var(--t2)",
 	foregroundColor: "#52525B",
-	headerBackgroundColor: "#00000000",
+	headerBackgroundColor: "var(--card)",
 	headerFontSize: 11,
 	headerTextColor: "#A1A1AA",
 	iconSize: 13,
 	spacing: "5.25px",
+	// rowBorder: "var(--border)",
+	wrapperBorderRadius: "0",
+	// wrapperBorder: "0",
 });
 
 export const colors = [

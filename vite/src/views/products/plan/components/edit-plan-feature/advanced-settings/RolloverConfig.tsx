@@ -33,10 +33,7 @@ export function RolloverConfig() {
 
 	// Rollover logic
 	const showRolloverConfig =
-		(hasCreditSystem || usageType === FeatureUsageType.Single) &&
-		item.interval !== null &&
-		item.included_usage &&
-		Number(item.included_usage) > 0;
+		hasCreditSystem || usageType === FeatureUsageType.Single;
 
 	const defaultRollover: RolloverConfigType = {
 		duration: RolloverExpiryDurationType.Month,
@@ -83,6 +80,7 @@ export function RolloverConfig() {
 					title="Rollovers"
 					tooltip="Rollovers carry unused credits to the next billing cycle. Set a maximum rollover amount and specify how many cycles before resetting."
 					checked={hasRollover}
+					disabled={!item.interval}
 					onCheckedChange={(checked) => {
 						if (checked) {
 							setItem({

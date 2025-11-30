@@ -10,6 +10,7 @@ export const useAdmin = () => {
 		if (
 			data?.user?.role === "admin" ||
 			notNullish(data?.session.impersonatedBy)
+
 		) {
 			setIsAdmin(true);
 		} else {
@@ -17,5 +18,5 @@ export const useAdmin = () => {
 		}
 	}, [data]);
 
-	return { isAdmin, isPending };
+	return { isAdmin, isPending, skipHover: data?.user?.id === "user_2tMgAiPsQzX8JTHjZZh9m0VdvUv" };
 };

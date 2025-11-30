@@ -12,7 +12,7 @@ import { navigateTo } from "@/utils/genUtils";
 
 interface BreadcrumbItemType {
 	name: string;
-	href: string;
+	href?: string;
 }
 
 export default function V2Breadcrumb({
@@ -34,10 +34,10 @@ export default function V2Breadcrumb({
 					<React.Fragment key={index}>
 						<BreadcrumbItem
 							key={item.name}
-							onClick={() => navigateTo(item.href, navigate, env)}
+							onClick={() => item.href && navigateTo(item.href, navigate, env)}
 							className="cursor-pointer"
 						>
-							{item.name}
+							<span className="truncate max-w-36">{item.name}</span>
 						</BreadcrumbItem>
 						{index < items.length - 1 && <BreadcrumbSeparator />}
 					</React.Fragment>

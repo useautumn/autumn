@@ -1,8 +1,8 @@
-import { FullCustomer } from "@autumn/shared";
+import type { FullCustomer } from "@autumn/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { useCustomersQueryStates } from "./useCustomersQueryStates";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useCustomersQueryStates } from "./useCustomersQueryStates";
 
 export const useFullCusSearchQuery = () => {
 	const { queryStates } = useCustomersQueryStates();
@@ -29,7 +29,7 @@ export const useFullCusSearchQuery = () => {
 				{ signal },
 			);
 
-			console.log(`Fetched ${data?.fullCustomers.length} full customers`);
+			// console.log(`Fetched ${data?.fullCustomers.length} full customers`);
 			return data;
 		},
 		placeholderData: keepPreviousData,

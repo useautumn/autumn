@@ -31,11 +31,13 @@ export const DeletePlanDialog = ({
 	open,
 	setOpen,
 	onDeleteSuccess,
+	dropdownOpen = false,
 }: {
 	propProduct?: ProductV2;
 	open: boolean;
 	setOpen: (open: boolean) => void;
 	onDeleteSuccess?: () => Promise<void>;
+	dropdownOpen?: boolean;
 }) => {
 	const axiosInstance = useAxiosInstance();
 	const storeProduct = useProductStore((s) => s.product);
@@ -56,7 +58,7 @@ export const DeletePlanDialog = ({
 	const { data: productInfo, isLoading } = useGeneralQuery({
 		url: `/products/${product.id}/info`,
 		queryKey: ["productInfo", product.id],
-		enabled: open,
+		enabled: dropdownOpen || open,
 	});
 
 	const handleDelete = async () => {
@@ -190,7 +192,10 @@ export const DeletePlanDialog = ({
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogContent onClick={(e) => e.stopPropagation()}>
+			<DialogContent
+				className="bg-background"
+				onClick={(e) => e.stopPropagation()}
+			>
 				<DialogHeader className="max-w-full">
 					<DialogTitle className="truncate max-w-[400px]">
 						{product.archived
@@ -200,7 +205,7 @@ export const DeletePlanDialog = ({
 								: "Delete"}{" "}
 						{product.name}
 					</DialogTitle>
-					<DialogDescription className="max-w-[400px] break-words">
+					<DialogDescription className="max-w-[400px] wrap-break-word">
 						{getDeleteMessage()
 							.split("\n")
 							.map((line, index) => (

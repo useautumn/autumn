@@ -81,7 +81,7 @@ export const Step1ConnectStripe = ({
 	};
 
 	return (
-		<div className="flex flex-col gap-3">
+		<div className="flex gap-3">
 			<div className="flex items-center gap-2">
 				<SectionHeader
 					stepNumber={1}
@@ -109,9 +109,9 @@ export const Step1ConnectStripe = ({
 							variant="secondary"
 							onClick={handleConnectStripe}
 							isLoading={isConnectingStripe}
-							className="w-32"
+							className="w-36"
 						>
-							Connect Stripe
+							Connect Live Stripe
 						</Button>
 					</div>
 				)}

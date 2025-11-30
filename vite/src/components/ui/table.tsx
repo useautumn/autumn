@@ -1,16 +1,24 @@
-import * as React from "react";
+import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+function Table({
+	className,
+	flexibleTableColumns,
+	...props
+}: React.ComponentProps<"table"> & { flexibleTableColumns?: boolean }) {
 	return (
 		<div
 			data-slot="table-container"
-			className={cn("relative w-full overflow-auto rounded-sm p-3 ", className)}
+			className={cn("relative max-w-full rounded-sm p-3 ", className)}
 		>
 			<table
 				data-slot="table"
-				className="w-full caption-bottom text-sm table-fixed"
+				// className="w-full caption-bottom text-sm table-fixed"
+				className={cn(
+					"w-full caption-bottom text-sm",
+					flexibleTableColumns ? "" : "table-fixed",
+				)}
 				{...props}
 			/>
 		</div>
@@ -22,10 +30,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
 		<thead
 			data-slot="table-header"
 			// className={cn("[&_tr]:border-b", className)}
-			className={cn(
-				"bg-stone-50 [&:hover_tr]:!bg-transparent [&_tr]:border-b",
-				className,
-			)}
+			className={cn("[&:hover_tr]:!bg-transparent border-b", className)}
 			{...props}
 		/>
 	);
@@ -59,7 +64,7 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
 		<tr
 			data-slot="table-row"
 			className={cn(
-				"border-none transition-colors hover:bg-fuchsia-100 data-[state=selected]:bg-zinc-100 dark:hover:bg-zinc-800/50 dark:data-[state=selected]:bg-zinc-800",
+				" data-[state=selected]:bg-zinc-100 dark:hover:bg-zinc-800/50 dark:data-[state=selected]:bg-zinc-800 ",
 				className,
 			)}
 			{...props}

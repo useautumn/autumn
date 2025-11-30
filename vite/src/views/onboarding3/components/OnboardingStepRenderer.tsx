@@ -5,8 +5,9 @@ import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { getItemId } from "@/utils/product/productItemUtils";
+import { EditPlanPriceSheet } from "@/views/products/plan/components/EditPlanPriceSheet";
+import { EditPlanSheet } from "@/views/products/plan/components/EditPlanSheet";
 import { ProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
-import { EditPlanSheet } from "../../products/plan/components/EditPlanSheet";
 import { EditPlanFeatureSheet } from "../../products/plan/components/edit-plan-feature/EditPlanFeatureSheet";
 import { NewFeatureSheet } from "../../products/plan/components/new-feature/NewFeatureSheet";
 import { SelectFeatureSheet } from "../../products/plan/components/SelectFeatureSheet";
@@ -71,6 +72,10 @@ export const OnboardingStepRenderer = () => {
 		// Select feature override
 		if (sheetType === "select-feature") {
 			return <SelectFeatureSheet isOnboarding />;
+		}
+
+		if (sheetType === "edit-plan-price") {
+			return <EditPlanPriceSheet isOnboarding />;
 		}
 
 		// Existing feature editing override

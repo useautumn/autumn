@@ -66,7 +66,7 @@ const UpdateCustomerDialog = ({
 	};
 
 	return (
-		<DialogContent className="w-md">
+		<DialogContent className="w-md bg-card">
 			<DialogTitle>Update Customer</DialogTitle>
 
 			<CustomerConfig

@@ -1,3 +1,4 @@
+import { productV2ToFrontendProduct } from "@autumn/shared";
 import { useEffect, useRef } from "react";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
@@ -45,9 +46,14 @@ export const useOnboardingProductSync = () => {
 			}
 		}
 
+		// Convert ProductV2 to FrontendProduct before setting in store
+		const frontendProduct = productV2ToFrontendProduct({
+			product: selectedProduct,
+		});
+
 		// Set both product and baseProduct
-		setBaseProduct(selectedProduct);
-		setProduct(selectedProduct);
+		setBaseProduct(frontendProduct);
+		setProduct(frontendProduct);
 
 		if (!hasInitialized.current) {
 			hasInitialized.current = true;

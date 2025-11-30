@@ -1,11 +1,9 @@
 import { AppEnv } from "@autumn/shared";
 import { AutumnProvider } from "autumn-js/react";
-import { ArrowUpRightFromSquare } from "lucide-react";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { useEffect } from "react";
 import { Outlet, useNavigate } from "react-router";
 import { CustomToaster } from "@/components/general/CustomToaster";
-import { Button } from "@/components/ui/button";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useGlobalErrorHandler } from "@/hooks/common/useGlobalErrorHandler";
 import { useOrg } from "@/hooks/common/useOrg";
@@ -15,7 +13,6 @@ import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
-import { navigateTo } from "@/utils/genUtils";
 import CommandBar from "@/views/command-bar/CommandBar";
 import { useCusSearchQuery } from "@/views/customers/hooks/useCusSearchQuery";
 import LoadingScreen from "@/views/general/LoadingScreen";
@@ -65,28 +62,18 @@ export function MainLayout() {
 				backendUrl={import.meta.env.VITE_BACKEND_URL}
 				includeCredentials={true}
 			>
-				<div className="w-screen h-screen flex bg-stone-100">
+				<div className="w-screen h-screen flex bg-outer-background">
 					<MainSidebar />
 					<div className="w-full h-screen flex flex-col overflow-hidden py-3 pr-3">
 						<div className="w-full h-full flex flex-col overflow-hidden rounded-lg border">
 							{env === AppEnv.Sandbox && (
-								<div className="w-full min-h-10 h-10 bg-t8/10 text-white text-sm flex items-center justify-center relative px-4">
+								<div className="w-full min-h-10 h-10 bg-t8/10 border-t8/20 border-b text-white text-sm flex items-center justify-center relative px-4">
 									<p className="font-medium text-t8 font-mono">
 										You&apos;re in sandbox
 									</p>
-									<Button
-										variant="default"
-										className="h-6 border border-t8 bg-transparent text-t8 hover:bg-t8 hover:text-white font-mono rounded-xs ml-auto absolute right-4"
-										onClick={() => {
-											navigateTo("/onboarding", navigate, AppEnv.Sandbox);
-										}}
-									>
-										Onboarding
-										<ArrowUpRightFromSquare size={12} className="inline ml-1" />
-									</Button>
 								</div>
 							)}
-							<div className="flex bg-stone-50 flex-col h-full">
+							<div className="flex bg-background flex-col h-full">
 								<LoadingScreen />
 							</div>
 						</div>
@@ -108,14 +95,14 @@ export function MainLayout() {
 			includeCredentials={true}
 		>
 			<NuqsAdapter>
-				<main className="w-screen h-screen flex bg-stone-100">
+				<body className="w-screen h-screen flex bg-outer-background">
 					<CustomToaster />
 					<MainSidebar />
 					<InviteNotifications />
 					<MainContent />
 					{/* <ChatWidget /> */}
 					<CommandBar />
-				</main>
+				</body>
 			</NuqsAdapter>
 		</AutumnProvider>
 	);
@@ -123,7 +110,6 @@ export function MainLayout() {
 
 const MainContent = () => {
 	const env = useEnv();
-	const navigate = useNavigate();
 
 	useDevQuery();
 	useAutumnFlags();
@@ -134,34 +120,22 @@ const MainContent = () => {
 
 	return (
 		<AppContext.Provider value={{}}>
-			<div
+			<main
 				className={cn(
 					"w-full h-screen flex flex-col justify-center overflow-hidden py-3 pr-3 relative",
 					// Default font
 					"font-normal",
 				)}
 			>
-				<div className="w-full h-full flex flex-col overflow-hidden rounded-lg border">
+				<div className="w-full h-full flex flex-col overflow-hidden rounded-xl border">
 					{env === AppEnv.Sandbox && (
-						<div className="w-full min-h-10 h-10 bg-t8/10 text-sm flex items-center justify-center relative px-4 text-t8 ">
+						<div className="w-full min-h-10 h-10 bg-t8/10 text-sm flex items-center justify-center relative px-4 text-t8 border-b border-t8/20">
 							<p className="font-medium font-mono">You&apos;re in sandbox</p>
-							{!window.location.pathname.includes("/onboarding") && (
-								<Button
-									variant="default"
-									className="h-6 border border-t8 bg-transparent text-t8 hover:bg-t8 hover:text-white font-mono rounded-xs ml-auto absolute right-4"
-									onClick={() => {
-										navigateTo("/onboarding", navigate, AppEnv.Sandbox);
-									}}
-								>
-									Onboarding
-									<ArrowUpRightFromSquare size={12} className="inline ml-1" />
-								</Button>
-							)}
 						</div>
 					)}
 					<div
 						className={cn(
-							"w-full h-full overflow-auto flex justify-center bg-stone-50",
+							"w-full h-full overflow-auto flex justify-center bg-background",
 						)}
 					>
 						<div className="w-full h-full justify-center">
@@ -180,7 +154,7 @@ const MainContent = () => {
             </div> */}
 					</div>
 				</div>
-			</div>
+			</main>
 		</AppContext.Provider>
 	);
 };

@@ -100,7 +100,7 @@ export function EventsBarChart({
 			},
 		},
 		background: {
-			fill: "#fafaf9",
+			fill: "#00000000",
 		},
 		axes: [
 			{
@@ -119,6 +119,9 @@ export function EventsBarChart({
 				label: {
 					color: "#52525b",
 				},
+				gridLine: {
+					enabled: false,
+				},
 			},
 		],
 		formatter: {
@@ -134,7 +137,12 @@ export function EventsBarChart({
 			},
 		},
 		legend: {
-			enabled: true,
+			enabled: false,
+			item: {
+				label: {
+					color: "#52525b",
+				},
+			},
 		},
 	});
 
@@ -146,7 +154,7 @@ export function EventsBarChart({
 		}));
 	}, [chartConfig, data]);
 
-	return <AgCharts options={options} className="h-full w-full" />;
+	return <AgCharts options={options} className="!h-full w-full" />;
 }
 
 export function EventsAGGrid({ data }: { data: any }) {
@@ -187,7 +195,7 @@ export function EventsAGGrid({ data }: { data: any }) {
 	}, [data]);
 
 	return (
-		<div className="w-full h-full overflow-hidden">
+		<div className="w-full h-full">
 			<AgGridReact
 				ref={gridRef}
 				rowData={rowData}

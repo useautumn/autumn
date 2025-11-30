@@ -48,10 +48,8 @@ export const DummyFeatureRow = ({ feature }: DummyFeatureRowProps) => {
 		reset_usage_when_enabled: null,
 	};
 
-	const displayText = feature.name || "Feature name";
-
 	return (
-		<div className="flex w-full !h-9 input-base input-shadow-tiny select-bg select-none pointer-events-none">
+		<div className="flex w-full !h-10 input-base input-shadow-tiny select-bg select-none pointer-events-none rounded-xl">
 			{/* Left side - Icons and text */}
 			<div className="flex flex-row items-center flex-1 gap-2 min-w-0 relative">
 				<div className="flex flex-row items-center flex-shrink-0">
@@ -60,7 +58,11 @@ export const DummyFeatureRow = ({ feature }: DummyFeatureRowProps) => {
 
 				<div className="flex items-center gap-2 flex-1 min-w-0 max-w-[90%]">
 					<p className="whitespace-nowrap truncate max-w-full">
-						<span className="text-body">{displayText}</span>
+						{feature.name ? (
+							<span className="text-body">{feature.name}</span>
+						) : (
+							<span className="text-t4">Feature Name</span>
+						)}
 					</p>
 				</div>
 			</div>

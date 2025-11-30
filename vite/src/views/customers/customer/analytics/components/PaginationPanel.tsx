@@ -1,41 +1,24 @@
+import { CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react";
+import type { AgGridReact } from "ag-grid-react";
+import SmallSpinner from "@/components/general/SmallSpinner";
 import {
 	Pagination,
 	PaginationContent,
 	PaginationItem,
-	PaginationLink,
-	PaginationPrevious,
-	PaginationNext,
 } from "@/components/ui/pagination";
+import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useAnalyticsContext } from "../AnalyticsContext";
-import { AgGridReact } from "ag-grid-react";
 import { useRawAnalyticsData } from "../hooks/useAnalyticsData";
-import {
-	DropdownMenu,
-	DropdownMenuItem,
-	DropdownMenuSeparator,
-	DropdownMenuLabel,
-	DropdownMenuContent,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ChevronDown, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { paginationOptions } from "./AGGrid";
 
 export default function PaginationPanel() {
 	const {
 		gridRef,
-		pageSize,
-		setPageSize,
 		currentPage,
 		totalPages,
-		totalRows,
 	}: {
 		gridRef: React.RefObject<AgGridReact>;
-		pageSize: number;
-		setPageSize: (size: number) => void;
 		currentPage: number;
 		totalPages: number;
-		totalRows: number;
 	} = useAnalyticsContext();
 	const { queryLoading } = useRawAnalyticsData();
 
@@ -66,90 +49,56 @@ export default function PaginationPanel() {
 
 	// If grid is not initialized yet or loading, show a simplified version
 	if (!gridRef.current?.api || queryLoading) {
-		return <></>;
 		return (
-			<div className="flex items-center py-0 h-full">
-				<Pagination className="w-fit h-8 text-xs">
-					<PaginationContent className="w-full flex justify-between">
-						<PaginationItem>
-							<PaginationPrevious className="text-xs cursor-not-allowed opacity-50 p-1 h-6" />
-						</PaginationItem>
-						<PaginationItem className="">
-							{queryLoading ? (
-								<Loader2 className="w-4 h-4 animate-spin" />
-							) : (
-								"0 / 0"
-							)}
-						</PaginationItem>
-						<PaginationItem>
-							<PaginationNext className="text-xs cursor-not-allowed opacity-50 p-1 h-6" />
-						</PaginationItem>
-					</PaginationContent>
-				</Pagination>
-			</div>
+			// <div className="flex items-center py-0 h-full">
+			// 	<div className="h-7 flex items-center justify-center">
+			// 		<SmallSpinner />
+			// 	</div>
+			// </div>
+			null
 		);
 	}
 
+	const canGoPrev = currentPage > 1;
+	const canGoNext = currentPage < totalPages;
+
 	return (
-		<div className="flex items-center py-0 h-full select-none">
-			<div className="flex items-center mr-4 text-xs text-t2">
-				<span>{totalRows} events</span>
-			</div>
-
-			<div className="w-[150px] border-x h-full text-t2">
-				<Pagination className="w-fit h-full text-xs select-none">
-					<PaginationContent className="w-full flex justify-between select-none">
-						<PaginationItem className="select-none">
-							<PaginationPrevious
-								onClick={handlePreviousPage}
-								isActive={currentPage !== 1}
-								className="text-xs cursor-pointer p-1 h-6 select-none"
-							/>
-						</PaginationItem>
-						<PaginationItem className="select-none">
-							{currentPage * pageSize - pageSize} -{" "}
-							{Math.min(currentPage * pageSize, totalRows)}
-						</PaginationItem>
-						<PaginationItem className="select-none">
-							<PaginationNext
-								onClick={handleNextPage}
-								isActive={currentPage !== totalPages}
-								className="text-xs cursor-pointer p-1 h-6 select-none"
-							/>
-						</PaginationItem>
-					</PaginationContent>
-				</Pagination>
-			</div>
-
-			{/* <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            className="ml-2 select-none h-full border-y-0"
-          >
-            {pageSize} <ChevronDown className="w-4 h-4 ml-1 select-none" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-full select-none">
-          <DropdownMenuLabel className="select-none">
-            Page Size
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {paginationOptions.map((size) => (
-            <DropdownMenuItem
-              key={size}
-              onClick={() => {
-                if (gridRef.current?.api) {
-                  setPageSize(size);
-                }
-              }}
-              className="select-none"
-            >
-              {size}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu> */}
+		<div className="flex items-center py-0 h-full">
+			<Pagination className="w-fit h-7 text-xs">
+				<PaginationContent className="w-full flex justify-between items-center gap-2">
+					<PaginationItem>
+						<IconButton
+							variant="secondary"
+							size="default"
+							icon={<CaretLeftIcon size={12} weight="bold" />}
+							onClick={(e) => {
+								e.preventDefault();
+								if (!canGoPrev) return;
+								handlePreviousPage();
+							}}
+							disabled={!canGoPrev}
+							className={!canGoPrev ? "pointer-events-none opacity-50" : ""}
+						/>
+					</PaginationItem>
+					<PaginationItem className="text-t2 font-medium">
+						{currentPage} / {Math.max(totalPages, 1)}
+					</PaginationItem>
+					<PaginationItem>
+						<IconButton
+							variant="secondary"
+							size="default"
+							icon={<CaretRightIcon size={12} weight="bold" />}
+							onClick={(e) => {
+								e.preventDefault();
+								if (!canGoNext) return;
+								handleNextPage();
+							}}
+							disabled={!canGoNext}
+							className={!canGoNext ? "pointer-events-none opacity-50" : ""}
+						/>
+					</PaginationItem>
+				</PaginationContent>
+			</Pagination>
 		</div>
 	);
 }

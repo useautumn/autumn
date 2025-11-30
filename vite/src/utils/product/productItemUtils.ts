@@ -6,6 +6,7 @@ import {
 	type ProductItem,
 	ProductItemFeatureType,
 	ProductItemType,
+	type ProductV2,
 	UsageModel,
 } from "@autumn/shared";
 import { notNullish, nullish } from "../genUtils";
@@ -125,4 +126,16 @@ export const getItemId = ({
 }) => {
 	// || item.entitlement_id || item.price_id;
 	return `item-${itemIndex}`;
+};
+
+export const getPrepaidItems = (product: ProductV2 | undefined) => {
+	if (!product) return [];
+
+	return (
+		product.items?.filter(
+			(productItem) =>
+				productItem.usage_model === UsageModel.Prepaid &&
+				productItem.feature_id,
+		) || []
+	);
 };
