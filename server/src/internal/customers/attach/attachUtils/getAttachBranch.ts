@@ -190,7 +190,10 @@ const getSameProductBranch = async ({
 
 	// 1. If new version?
 
-	if (curSameProduct.product.version !== product.version) {
+	if (
+		curSameProduct.product.version !== product.version &&
+		curScheduledProduct?.product.id !== product.id
+	) {
 		return AttachBranch.NewVersion;
 	}
 
@@ -217,6 +220,7 @@ const getSameProductBranch = async ({
 	}
 
 	// 3. If main product
+
 	if (curScheduledProduct && !product.is_add_on) {
 		if (curScheduledProduct.product.id === product.id) {
 			throw new RecaseError({
