@@ -25,7 +25,7 @@ export function UpdateProductPrepaidOptions({
 	// Use store product if it has a real ID, otherwise use productV2 from subscription
 	const product = storeProduct?.id ? storeProduct : (productV2 ?? undefined);
 
-	const prepaidItems = usePrepaidItems({ product });
+	const { prepaidItems } = usePrepaidItems({ product });
 
 	if (prepaidItems.length === 0) {
 		return null;

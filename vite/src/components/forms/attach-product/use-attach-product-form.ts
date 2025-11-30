@@ -14,12 +14,11 @@ export function useAttachProductForm({
 	return useAppForm({
 		defaultValues: {
 			productId: initialProductId || "",
-			prepaidOptions: {} as Record<string, number>,
-			initialPrepaidOptions: initialPrepaidOptions ?? undefined,
+			prepaidOptions: initialPrepaidOptions ?? {},
 		} as AttachProductForm,
 		validators: {
-			onChange: AttachProductFormSchema.passthrough(),
-			onSubmit: AttachProductFormSchema.passthrough(),
+			onChange: AttachProductFormSchema,
+			onSubmit: AttachProductFormSchema,
 		},
 	});
 }

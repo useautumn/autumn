@@ -2,6 +2,7 @@ import {
 	type FrontendProductItem,
 	getFeaturePriceItemDisplay,
 } from "@autumn/shared";
+import { useStore } from "@tanstack/react-form";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
@@ -19,14 +20,16 @@ export function AttachProductPrepaidOptions({
 }: PrepaidOptionsFieldProps) {
 	const storeProduct = useProductStore((s) => s.product);
 	const { products = [] } = useProductsQuery();
-	const selectedProductId = form.state.values.productId;
+	const selectedProductId = useStore(
+		form.store,
+		(state) => state.values.productId,
+	);
 	const { org } = useOrg();
-	// Use customized product if it has changes, otherwise find by form productId
 	const product = storeProduct?.id
 		? storeProduct
 		: products.find((p) => p.id === selectedProductId && !p.archived);
 
-	const prepaidItems = usePrepaidItems({ product });
+	const { prepaidItems } = usePrepaidItems({ product });
 
 	if (prepaidItems.length === 0 || !selectedProductId) {
 		return null;
