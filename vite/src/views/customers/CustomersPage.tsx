@@ -1,21 +1,22 @@
 "use client";
 
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useProductStore } from "@/hooks/stores/useProductStore";
+import { useSheetCleanup } from "@/hooks/stores/useSheetStore";
+import { CustomerListTable } from "../customers2/components/table/customer-list/CustomerListTable";
 import LoadingScreen from "../general/LoadingScreen";
 import { CustomersContext } from "./CustomersContext";
-import { CustomersTable } from "./components/CustomersTable";
-import { CustomersTopBar } from "./components/customers-top-bar/CustomersTopBar";
 import { useCusSearchQuery } from "./hooks/useCusSearchQuery";
-import { useCustomersQueryStates } from "./hooks/useCustomersQueryStates";
 import { useFullCusSearchQuery } from "./hooks/useFullCusSearchQuery";
 import { useSavedViewsQuery } from "./hooks/useSavedViewsQuery";
 
 function CustomersPage() {
 	const { customers } = useCusSearchQuery();
 
-	const { queryStates } = useCustomersQueryStates();
-
 	const { isLoading: productsLoading } = useProductsQuery();
+	const resetProductStore = useProductStore((s) => s.reset);
+	useSheetCleanup();
+	resetProductStore();
 
 	useSavedViewsQuery();
 	useFullCusSearchQuery();
@@ -30,23 +31,10 @@ function CustomersPage() {
 				customers,
 			}}
 		>
-			<div className="flex flex-col gap-4 h-fit relative w-full ">
-				<h1 className="text-xl font-medium shrink-0 pt-6 pl-10">Customers</h1>
-				<div>
-					<CustomersTopBar />
-					{customers?.length && customers?.length > 0 ? (
-						<div className="h-fit max-h-full">
-							<CustomersTable customers={customers} />
-						</div>
-					) : (
-						<div className="flex flex-col px-10 mt-3 text-t3 text-sm w-full min-h-[60vh] gap-4">
-							<span>
-								{queryStates.q?.trim()
-									? "No matching results found. Try a different search."
-									: "Create your first customer by interacting with an Autumn function via the API."}
-							</span>
-						</div>
-					)}
+			<div className="flex flex-col gap-4 h-fit relative w-full pb-8 max-w-5xl mx-auto pt-8">
+				{/* <h1 className="text-xl font-medium shrink-0 pt-6 pl-10">Customers</h1> */}
+				<div className="h-fit max-h-full px-10">
+					<CustomerListTable customers={customers} />
 				</div>
 			</div>
 		</CustomersContext.Provider>

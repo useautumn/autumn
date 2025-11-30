@@ -1,16 +1,14 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
 	Dialog,
 	DialogContent,
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
-} from "@/components/ui/dialog";
-
-import { OrgMembersList } from "../org-dropdown/manage-org/OrgMembersList";
-import { OrgInvitesList } from "../org-dropdown/manage-org/OrgInvitesList";
-import { PageSectionHeader } from "@/components/general/PageSectionHeader";
+} from "@/components/v2/dialogs/Dialog";
 import { InvitePopover } from "../org-dropdown/manage-org/InvitePopover";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { OrgInvitesList } from "../org-dropdown/manage-org/OrgInvitesList";
+import { OrgMembersList } from "../org-dropdown/manage-org/OrgMembersList";
 import { OrgDetails } from "./OrgDetails";
 
 export const ManageOrg = ({
@@ -30,27 +28,20 @@ export const ManageOrg = ({
 					</DialogHeader>
 					<div className="flex flex-col gap-6 h-full overflow-hidden">
 						<Tabs className="flex flex-col h-full" defaultValue="details">
-							<PageSectionHeader
-								titleComponent={
-									<TabsList className="p-0 flex gap-4">
-										<TabsTrigger className="px-0" value="details">
-											Details
-										</TabsTrigger>
-										<TabsTrigger className="px-0" value="members">
-											Members
-										</TabsTrigger>
-										<TabsTrigger className="px-0" value="invites">
-											Invites
-										</TabsTrigger>
-									</TabsList>
-								}
-								isOnboarding={true}
-								className="px-6"
-								classNames={{
-									title: "text-t3",
-								}}
-								endContent={<InvitePopover />}
-							/>
+							<div className="flex justify-between items-center px-6">
+								<TabsList className="p-0 flex gap-4 justify-start w-fit !bg-transparent">
+									<TabsTrigger className="" value="details">
+										Details
+									</TabsTrigger>
+									<TabsTrigger className="" value="members">
+										Members
+									</TabsTrigger>
+									<TabsTrigger className="" value="invites">
+										Invites
+									</TabsTrigger>
+								</TabsList>
+								<InvitePopover />
+							</div>
 
 							<TabsContent value="details" className="h-full overflow-y-auto">
 								<OrgDetails />

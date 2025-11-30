@@ -7,9 +7,8 @@
 	font-size: 13px;
 	font-weight: var(--font-weight-medium);
 
-	border: 1px solid var(--color-input);
-	border-radius: var(--radius);
-	background-color: var(--color-input-background);
+	border: 1px solid var(--color-border);
+	background-color: var(--color-interactive-secondary);
 	color: var(--color-t2);
 
 	/* Placeholder styling - applies to both placeholder: and data-placeholder: */

@@ -47,17 +47,18 @@ export const UpdateProductDialog = ({
 
 			toast.success(`Successfully updated plan ${product.id}`);
 		} catch (error: unknown) {
-			toast.error(
-				getBackendErr(error as AxiosError, "Failed to update plan"),
-			);
-		} finally{
+			toast.error(getBackendErr(error as AxiosError, "Failed to update plan"));
+		} finally {
 			setLoading(false);
 		}
 	};
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogContent onClick={(e) => e.stopPropagation()}>
+			<DialogContent
+				className="bg-background"
+				onClick={(e) => e.stopPropagation()}
+			>
 				<DialogHeader>
 					<DialogTitle>Edit Plan</DialogTitle>
 				</DialogHeader>

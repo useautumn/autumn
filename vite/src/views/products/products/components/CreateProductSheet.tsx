@@ -1,25 +1,21 @@
-import type { ProductV2 } from "@autumn/shared";
+import { type ProductV2, productV2ToBasePrice } from "@autumn/shared";
 import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	SheetFooter,
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
-import {
-	Sheet,
-	SheetContent,
-	SheetTrigger,
-} from "@/components/v2/sheets/Sheet";
+import { Sheet, SheetContent } from "@/components/v2/sheets/Sheet";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { AdditionalOptions } from "../../plan/components/edit-plan-details/AdditionalOptions";
 import { BasePriceSection } from "../../plan/components/edit-plan-details/BasePriceSection";
+import { PlanTypeSection } from "../../plan/components/edit-plan-details/PlanTypeSection";
 import { DEFAULT_PRODUCT } from "../../plan/utils/defaultProduct";
 import { CreateProductMainDetails } from "./CreateProductMainDetails";
 
@@ -39,6 +35,8 @@ function CreateProductSheet({
 	const setOpen = controlledOnOpenChange || setInternalOpen;
 
 	const product = useProductStore((s) => s.product);
+	const basePrice = productV2ToBasePrice({ product });
+
 	const setProduct = useProductStore((s) => s.setProduct);
 	const reset = useProductStore((s) => s.reset);
 
@@ -71,9 +69,7 @@ function CreateProductSheet({
 			}
 			setOpen(false);
 		} catch (error) {
-			toast.error(
-				getBackendErr(error as AxiosError, "Failed to create plan"),
-			);
+			toast.error(getBackendErr(error as AxiosError, "Failed to create plan"));
 		}
 		setLoading(false);
 	};
@@ -92,21 +88,23 @@ function CreateProductSheet({
 
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetTrigger asChild>
+			{/* <SheetTrigger asChild>
 				<Button variant="add" className="w-full">
 					Plan
 				</Button>
-			</SheetTrigger>
-			<SheetContent className="flex flex-col overflow-hidden">
+			</SheetTrigger> */}
+			<SheetContent className="flex flex-col overflow-hidden bg-background">
 				<SheetHeader
-					title="Create new plan"
-					description="Configure your plan details and pricing"
+					title="Create Plan"
+					description="Create a new free or paid plan for your application"
+					noSeparator={true}
 				/>
 
 				<div className="flex-1 overflow-y-auto">
 					<CreateProductMainDetails />
+					<PlanTypeSection />
 					<BasePriceSection />
-					<AdditionalOptions withSeparator={false} />
+					<AdditionalOptions withSeparator={false} hideAddOn={true} />
 				</div>
 
 				<SheetFooter>
@@ -119,6 +117,14 @@ function CreateProductSheet({
 						Cancel
 					</ShortcutButton>
 					<ShortcutButton
+						disabled={
+							(product.planType === "paid" &&
+								product.basePriceType !== "usage" &&
+								!basePrice?.price) ||
+							!product.name ||
+							!product.id ||
+							!product.planType
+						}
 						className="w-full"
 						onClick={handleCreateClicked}
 						metaShortcut="enter"

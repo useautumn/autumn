@@ -4,11 +4,12 @@ export const useHasEntityFeatureId = () => {
 	const { data, isLoading } = useGeneralQuery({
 		url: "/products/has_entity_feature_id",
 		queryKey: ["has_entity_feature_id"],
+		method: "GET",
 	});
 
 	return {
-		// hasEntityFeatureId: data?.hasEntityFeatureId ?? false,
-		hasEntityFeatureId: true,
+		hasEntityFeatureId: data?.hasEntityFeatureId ?? false,
+		// hasEntityFeatureId: true,
 		isLoading,
 	};
 };

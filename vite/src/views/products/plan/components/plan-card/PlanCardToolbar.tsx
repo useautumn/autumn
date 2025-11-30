@@ -47,18 +47,20 @@ export const PlanCardToolbar = ({
 			/>
 			<div className="flex flex-row items-center gap-1">
 				<IconButton
-					icon={<PencilSimpleIcon />}
+					// icon={<PencilSimpleIcon />}
 					onClick={onEdit}
 					aria-label="Edit plan"
-					variant="muted"
+					variant="secondary"
 					disabled={editDisabled}
-					// size="sm"
+					iconOrientation="left"
+					icon={<PencilSimpleIcon />}
+					size="mini"
 					className={cn(
-						// "text-body",
-						isEditingPlan && "btn-secondary-active !opacity-100 ",
+						"hover:z-95",
+						isEditingPlan && "btn-secondary-active !opacity-100 z-95",
 					)}
 				>
-					Plan Details
+					Plan Settings
 				</IconButton>
 			</div>
 		</>

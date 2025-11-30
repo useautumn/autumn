@@ -33,7 +33,7 @@ export function NewFeatureDetails({
 					<div>
 						<FormLabel>Name</FormLabel>
 						<Input
-							placeholder="eg. Messages"
+							placeholder="eg, Usage Credits"
 							value={feature.name}
 							onChange={(e) => setSource(e.target.value)}
 						/>
@@ -42,7 +42,7 @@ export function NewFeatureDetails({
 					<div>
 						<FormLabel>ID</FormLabel>
 						<Input
-							placeholder="eg. messages"
+							placeholder="usage_credits"
 							value={feature.id}
 							onChange={(e) => setTarget(e.target.value)}
 						/>

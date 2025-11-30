@@ -1,3 +1,4 @@
+import { isFeaturePriceItem, productV2ToBasePrice } from "@autumn/shared";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/v2/buttons/Button";
@@ -5,6 +6,7 @@ import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
 	useHasChanges,
+	useIsCusPlanEditor,
 	useProductStore,
 	useWillVersion,
 } from "@/hooks/stores/useProductStore";
@@ -15,6 +17,7 @@ import { useProductQuery } from "../../product/hooks/useProductQuery";
 import { useProductContext } from "../../product/ProductContext";
 import { updateProduct } from "../../product/utils/updateProduct";
 import { useProductChangedAlert } from "../hooks/useProductChangedAlert";
+import { PlanEditorBar } from "./PlanEditorBar";
 
 interface SaveChangesBarProps {
 	isOnboarding?: boolean;
@@ -29,7 +32,7 @@ export const SaveChangesBar = ({
 	// Get product state from store
 	const product = useProductStore((s) => s.product);
 	const setProduct = useProductStore((s) => s.setProduct);
-	const { type: sheetType, setSheet } = useSheetStore();
+	const { type: sheetType } = useSheetStore();
 	const hasChanges = useHasChanges();
 	const willVersion = useWillVersion();
 
@@ -39,12 +42,29 @@ export const SaveChangesBar = ({
 	const { counts, isLoading } = useProductCountsQuery();
 	const { refetch: queryRefetch } = useProductQuery();
 
+	// const { }
+
+	const basePrice = productV2ToBasePrice({ product });
+
+	const isCusPlanEditor = useIsCusPlanEditor();
+	const saveButtonText = isCusPlanEditor ? "Save and Return" : "Save";
+
 	useProductChangedAlert({
 		hasChanges,
 		disabled: isOnboarding, // Disable navigation blocking in onboarding mode
 	});
 
 	const handleSaveClicked = async () => {
+		if (
+			product.planType === "paid" &&
+			product.basePriceType !== "usage" &&
+			!basePrice?.price
+		) {
+			toast.error("Please add a plan price greater than 0, or remove it.");
+			setSaving(false);
+			return;
+		}
+
 		if (!isOnboarding && isLoading) {
 			toast.error("Plan counts are loading");
 			return;
@@ -58,6 +78,15 @@ export const SaveChangesBar = ({
 		}
 
 		setSaving(true);
+
+		// If the plan type is free and user is adding a priced feature, set plan to usage-based
+		if (product.planType === "free" && product.items.some(isFeaturePriceItem)) {
+			setProduct({
+				...product,
+				planType: "paid",
+				basePriceType: "usage",
+			});
+		}
 		const result = await updateProduct({
 			axiosInstance,
 			productId: product.id,
@@ -85,34 +114,30 @@ export const SaveChangesBar = ({
 			setProduct(baseProduct);
 		}
 		// If we're editing or creating a feature, go back to edit-plan
-		if (sheetType === "edit-feature" || sheetType === "new-feature") {
-			setSheet({ type: "edit-plan", itemId: null });
-		}
+		// if (sheetType === "edit-feature" || sheetType === "new-feature") {
+		// 	setSheet({ type: "edit-plan", itemId: null });
+		// }
 	};
 
 	if (!hasChanges) return null;
+	//hide if sheet is open
+	if (sheetType && !isOnboarding) return null;
 
 	return (
-		<div className="w-full flex justify-center items-center h-20 mb-10 mt-10">
-			<div
-				className={`flex items-center gap-2 p-2 pl-3 rounded-xl border border-input bg-white ${
-					isOnboarding ? "shadow-lg" : ""
-				}`}
+		<PlanEditorBar>
+			<p className="text-body whitespace-nowrap truncate">
+				You have unsaved changes
+			</p>
+			<Button variant="secondary" onClick={handleDiscardClicked}>
+				Discard
+			</Button>
+			<ShortcutButton
+				metaShortcut="s"
+				onClick={handleSaveClicked}
+				isLoading={saving}
 			>
-				<p className="text-body whitespace-nowrap truncate">
-					You have unsaved changes
-				</p>
-				<Button variant="secondary" onClick={handleDiscardClicked}>
-					Discard
-				</Button>
-				<ShortcutButton
-					metaShortcut="s"
-					onClick={handleSaveClicked}
-					isLoading={saving}
-				>
-					Save
-				</ShortcutButton>
-			</div>
-		</div>
+				{saveButtonText}
+			</ShortcutButton>
+		</PlanEditorBar>
 	);
 };

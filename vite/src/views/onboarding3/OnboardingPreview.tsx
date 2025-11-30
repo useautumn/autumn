@@ -1,4 +1,3 @@
-import { productV2ToBasePrice } from "@autumn/shared";
 import { PricingTableContainer } from "@/components/autumn/PricingTableContainer";
 import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
 import { Card, CardContent, CardHeader } from "@/components/v2/cards/Card";
@@ -78,7 +77,7 @@ export const OnboardingPreview = ({
 	return (
 		<Card
 			className={cn(
-				"min-w-[28rem] max-w-xl mx-4 bg-card border-border border-[0.5px] p-4",
+				"w-full max-w-xl mx-4 outline-4 outline-outer-background shadow-none p-4 rounded-2xl",
 				showDummyFeature && !showFeatures && "pb-0",
 				currentStep === 1 && "!gap-0",
 			)}
@@ -101,7 +100,9 @@ export const OnboardingPreview = ({
 				)}
 
 				{/* Left content with padding to avoid toolbar */}
-				<div className={cn("flex items-center gap-2", showToolbar && "pr-20")}>
+				<div
+					className={cn("flex items-center gap-2 pb-1", showToolbar && "pr-20")}
+				>
 					<div className="min-w-0 overflow-hidden">
 						{showBasicInfo && product?.name ? (
 							<div className="text-main-sec min-w-0 max-w-[50%]">
@@ -112,9 +113,7 @@ export const OnboardingPreview = ({
 								</span>
 							</div>
 						) : (
-							<div className="text-main-sec !text-t4 truncate">
-								Name your plan
-							</div>
+							<div className="text-main-sec !text-t4 truncate">Pro</div>
 						)}
 					</div>
 
@@ -129,7 +128,10 @@ export const OnboardingPreview = ({
 				</div>
 
 				{showPricing && (
-					<BasePriceDisplay />
+					<BasePriceDisplay
+						product={product}
+						isOnboarding={currentStep !== 4}
+					/>
 					// <IconButton
 					// 	variant="secondary"
 					// 	icon={<CrosshairSimpleIcon />}

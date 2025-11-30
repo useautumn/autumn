@@ -1,13 +1,14 @@
-import React, { useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import axios from "axios";
+import type React from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
+import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import { Button } from "@/components/ui/button";
+import { useOrg } from "@/hooks/common/useOrg";
 import { authClient } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import axios from "axios";
-import { useOrg } from "@/hooks/common/useOrg";
-import { getOrgLogoUrl } from "@/utils/orgUtils";
 import { getBackendErr } from "@/utils/genUtils";
+import { getOrgLogoUrl } from "@/utils/orgUtils";
 
 const MAX_SIZE_MB = 10;
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
@@ -99,7 +100,7 @@ const OrgLogoUploader: React.FC<OrgLogoUploaderProps> = ({
 	return (
 		<div className="flex flex-col items-start">
 			<FieldLabel>Logo</FieldLabel>
-			<div className="flex items-center gap-4 rounded bg-gray-50 w-full max-w-xs">
+			<div className="flex items-center gap-4 rounded w-full max-w-xs">
 				<input
 					ref={inputRef}
 					type="file"
@@ -114,7 +115,7 @@ const OrgLogoUploader: React.FC<OrgLogoUploaderProps> = ({
 						className="w-16 h-16 rounded object-cover border"
 					/>
 				) : (
-					<div className="w-16 h-16 rounded bg-stone-100 flex items-center justify-center text-stone-400 border">
+					<div className="w-16 h-16 rounded flex items-center justify-center text-stone-400 border">
 						<span className="text-2xl">+</span>
 					</div>
 				)}
