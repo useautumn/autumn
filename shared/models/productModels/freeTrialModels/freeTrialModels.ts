@@ -22,7 +22,7 @@ export const CreateFreeTrialSchema = z.object({
 			message: "Free trial length must be greater than 0",
 		}),
 	unique_fingerprint: z.boolean().default(false),
-	duration: z.nativeEnum(FreeTrialDuration).default(FreeTrialDuration.Day),
+	duration: z.enum(FreeTrialDuration).default(FreeTrialDuration.Day),
 	card_required: z.boolean().default(true),
 });
 
