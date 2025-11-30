@@ -43,6 +43,17 @@ const getCusProductsInfo = ({
 			(cusProduct as FullCusProduct).status !== CusProductStatus.Scheduled,
 	);
 
+	//put add ons last
+	activeProducts.sort((a, b) => {
+		const aIsAddOn = (a as FullCusProduct).product.is_add_on;
+		const bIsAddOn = (b as FullCusProduct).product.is_add_on;
+
+		if (aIsAddOn !== bIsAddOn) {
+			return aIsAddOn ? 1 : -1;
+		}
+		return 0;
+	});
+
 	if (activeProducts.length === 0) {
 		return <span className="text-t3">—</span>;
 	}
@@ -55,10 +66,6 @@ const getCusProductsInfo = ({
 					return (
 						<div key={index} className="flex items-center gap-2">
 							{(cusProduct as FullCusProduct).product.name}
-							{/* {getProductBadge({
-							cusProduct: cusProduct as FullCusProduct,
-							versionCounts,
-						})} */}
 
 							<CustomerProductsStatus
 								status={(cusProduct as FullCusProduct).status}
