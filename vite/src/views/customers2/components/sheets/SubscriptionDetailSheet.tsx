@@ -3,7 +3,7 @@ import {
 	type Entity,
 	type FeatureOptions,
 	isTrialing,
-	productV2ToFrontendProduct,
+	type ProductItem,
 } from "@autumn/shared";
 import {
 	ArrowSquareOutIcon,
@@ -160,10 +160,7 @@ export function SubscriptionDetailSheet() {
 					{productV2 && (
 						<div className="flex gap-2 justify-between items-center h-6 mb-3">
 							<div className="">
-								<BasePriceDisplay
-									product={productV2ToFrontendProduct({ product: productV2 })}
-									readOnly={true}
-								/>
+								<BasePriceDisplay product={productV2} readOnly={true} />
 							</div>
 							<div className="flex gap-2">
 								{hasPrepaidItems && !isExpired && (
@@ -189,7 +186,7 @@ export function SubscriptionDetailSheet() {
 					)}
 
 					<div className="space-y-2">
-						{productV2.items.map((item, index) => {
+						{productV2.items.map((item: ProductItem, index: number) => {
 							if (!item.feature_id) return null;
 
 							// Find prepaid quantity from cusProduct.options
