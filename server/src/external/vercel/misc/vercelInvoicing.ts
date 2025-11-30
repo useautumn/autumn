@@ -134,7 +134,7 @@ export const submitInvoiceToVercel = async ({
 	// Calculate total amount from invoice (includes subscription + usage charges)
 	const totalAmount = invoice.amount_due / 100;
 
-	let memo;
+	let memo: string | undefined;
 
 	if (org.config.invoice_memos) {
 		try {
@@ -293,13 +293,14 @@ export const getVercelAttachBody = ({
 			vercel_resource_id: resourceId || integrationConfigurationId,
 		},
 
-		req: {
-			db,
-			org,
-			env: env as AppEnv,
-			logger: c.get("ctx").logger,
-			features,
-		},
+		req: c.get("ctx"),
+		// req: {
+		// 	db,
+		// 	org,
+		// 	env: env as AppEnv,
+		// 	logger: c.get("ctx").logger,
+		// 	features,
+		// },
 		apiVersion: ApiVersion.V1_2,
 	};
 

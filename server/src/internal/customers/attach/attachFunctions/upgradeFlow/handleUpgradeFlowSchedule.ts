@@ -1,40 +1,36 @@
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { AttachConfig, FullCusProduct } from "@autumn/shared";
-
-import Stripe from "stripe";
-import { paramsToScheduleItems } from "../../mergeUtils/paramsToScheduleItems.js";
-import {
-	logPhases,
-	getCurrentPhaseIndex,
-} from "../../mergeUtils/phaseUtils/phaseUtils.js";
-import { updateCurSchedule } from "../../mergeUtils/updateCurSchedule.js";
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import type { AttachConfig, FullCusProduct } from "@autumn/shared";
+import type Stripe from "stripe";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import {
 	ACTIVE_STATUSES,
 	CusProductService,
 } from "@/internal/customers/cusProducts/CusProductService.js";
-import { attachParamsToCurCusProduct } from "../../attachUtils/convertAttachParams.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
+import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
+import { attachParamsToCurCusProduct } from "../../attachUtils/convertAttachParams.js";
+import { paramsToScheduleItems } from "../../mergeUtils/paramsToScheduleItems.js";
+import { getCurrentPhaseIndex } from "../../mergeUtils/phaseUtils/phaseUtils.js";
+import { updateCurSchedule } from "../../mergeUtils/updateCurSchedule.js";
 
 export const handleUpgradeFlowSchedule = async ({
-	req,
+	ctx,
 	attachParams,
 	config,
 	schedule,
 	curSub,
 	removeCusProducts,
-	logger,
 	fromAddProduct = false,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	attachParams: AttachParams;
 	config: AttachConfig;
 	schedule: Stripe.SubscriptionSchedule;
 	curSub: Stripe.Subscription;
 	removeCusProducts?: FullCusProduct[];
-	logger: any;
 	fromAddProduct?: boolean;
 }) => {
+	const { logger } = ctx;
+
 	if (fromAddProduct) {
 		logger.info(`ADD PRODUCT FLOW, updating schedule ${schedule?.id}`);
 	} else {
@@ -51,11 +47,11 @@ export const handleUpgradeFlowSchedule = async ({
 
 	const nextPhaseIndex = currentPhaseIndex + 1;
 
-	if (currentPhaseIndex == -1 || nextPhaseIndex >= schedule.phases.length)
+	if (currentPhaseIndex === -1 || nextPhaseIndex >= schedule.phases.length)
 		return;
 
 	const newItems = await paramsToScheduleItems({
-		req,
+		ctx,
 		schedule,
 		attachParams,
 		config,
@@ -72,13 +68,13 @@ export const handleUpgradeFlowSchedule = async ({
 	// If there are no subsequent phases, release schedule...
 	// Example: mergedUpgrade4.test.ts, mergedCancel2.test.ts
 	// pro, pro -> free, pro -> premium, pro (need to cancel initial schedule)
-	if (newCurPhaseIndex == newItems.phases.length - 1) {
+	if (newCurPhaseIndex === newItems.phases.length - 1) {
 		logger.info(
 			`UPGRADE FLOW: no subsequent phases, releasing schedule ${schedule?.id}`,
 		);
 		await stripeCli.subscriptionSchedules.release(schedule!.id);
 		await CusProductService.updateByStripeScheduledId({
-			db: req.db,
+			db: ctx.db,
 			stripeScheduledId: schedule!.id,
 			updates: { scheduled_ids: [] },
 		});
@@ -111,7 +107,7 @@ export const handleUpgradeFlowSchedule = async ({
 	// });
 
 	await updateCurSchedule({
-		req,
+		ctx,
 		attachParams,
 		schedule,
 		newPhases: newItems.phases,

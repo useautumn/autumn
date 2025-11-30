@@ -2,21 +2,19 @@ import type { FullCustomer, FullProduct } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { getFreeTrialAfterFingerprint } from "@/internal/products/free-trials/freeTrialUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 import { getStripeCusData } from "./attachParamsUtils/getStripeCusData.js";
 
 export const checkToAttachParams = async ({
-	req,
+	ctx,
 	customer,
 	product,
-	logger,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	customer: FullCustomer;
 	product: FullProduct;
-	logger: any;
 }) => {
-	const { org, env, db } = req;
+	const { org, env, db, logger } = ctx;
 
 	// const apiVersion =
 	// 	orgToVersion({
@@ -62,10 +60,10 @@ export const checkToAttachParams = async ({
 		replaceables: [],
 
 		// Others
-		req,
-		org: req.org,
+		req: ctx,
+		org: ctx.org,
 		entities: customer.entities,
-		features: req.features,
+		features: ctx.features,
 		internalEntityId: customer.entity?.internal_id,
 		cusProducts: customer.customer_products,
 

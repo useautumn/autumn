@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { Checkbox } from "../checkboxes/Checkbox";
 
 interface SheetHeaderProps {
-	title: string;
+	title: string | React.ReactNode;
 	description: string | React.ReactNode;
 	children?: React.ReactNode;
 	noSeparator?: boolean;
@@ -145,7 +145,7 @@ export function SheetBreadcrumbs({
 	itemId,
 }: {
 	breadcrumbs: { name: string; sheet?: string }[];
-	title: string;
+	title: string | React.ReactNode;
 	itemId: string | null;
 }) {
 	const setSheet = useSheetStore((s) => s.setSheet);

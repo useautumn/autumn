@@ -1,6 +1,6 @@
 import type Stripe from "stripe";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import {
 	getFullStripeSub,
 	subIsPrematurelyCanceled,
@@ -8,17 +8,15 @@ import {
 import { handleCusProductDeleted } from "./handleSubDeleted/handleCusProductDeleted.js";
 
 export const handleSubDeleted = async ({
-	req,
+	ctx,
 	stripeCli,
 	data,
-	logger,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	stripeCli: Stripe;
 	data: Stripe.Subscription;
-	logger: any;
 }) => {
-	const { db, org, env } = req;
+	const { db, org, env, logger } = ctx;
 
 	const activeCusProducts = await CusProductService.getByStripeSubId({
 		db,
@@ -65,12 +63,11 @@ export const handleSubDeleted = async ({
 	// const batchUpdate = [];
 	for (const cusProduct of activeCusProducts) {
 		await handleCusProductDeleted({
-			req,
+			ctx,
 			db,
 			stripeCli,
 			cusProduct,
 			subscription,
-			logger,
 			prematurelyCanceled,
 		});
 	}

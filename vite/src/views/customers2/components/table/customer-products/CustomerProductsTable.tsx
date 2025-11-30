@@ -4,11 +4,13 @@ import type { Row } from "@tanstack/react-table";
 import { parseAsBoolean, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
+import { AdminHover } from "@/components/general/AdminHover";
 import { Table } from "@/components/general/table";
 import { Button } from "@/components/v2/buttons/Button";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
+import { getCusProductHoverTexts } from "@/views/admin/adminUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useFullCusSearchQuery } from "@/views/customers/hooks/useFullCusSearchQuery";
 import { useSavedViewsQuery } from "@/views/customers/hooks/useSavedViewsQuery";
@@ -92,7 +94,9 @@ export function CustomerProductsTable() {
 
 					return (
 						<div className="font-semibold flex items-center gap-2 text-t1">
-							{row.original.product.name}
+							<AdminHover texts={getCusProductHoverTexts(row.original)}>
+								<span>{row.original.product.name}</span>
+							</AdminHover>
 							{showQuantity && (
 								<div className="text-t3 bg-muted rounded-sm p-1 py-0">
 									{quantity}

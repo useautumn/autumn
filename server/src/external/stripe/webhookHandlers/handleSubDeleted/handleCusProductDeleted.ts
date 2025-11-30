@@ -17,28 +17,26 @@ import {
 	activateDefaultProduct,
 	activateFutureProduct,
 } from "@/internal/customers/cusProducts/cusProductUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { getCusPaymentMethod } from "../../stripeCusUtils.js";
 import { webhookToAttachParams } from "../../webhookUtils/webhookUtils.js";
 
 export const handleCusProductDeleted = async ({
-	req,
+	ctx,
 	db,
 	stripeCli,
 	cusProduct,
 	subscription,
-	logger,
 	prematurelyCanceled,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	db: DrizzleCli;
 	stripeCli: Stripe;
 	cusProduct: FullCusProduct;
 	subscription: Stripe.Subscription;
-	logger: any;
 	prematurelyCanceled: boolean;
 }) => {
-	const { org, env } = req;
+	const { org, env, logger } = ctx;
 	const { scheduled_ids } = cusProduct;
 	const fullCus = await CusService.getFull({
 		db,
@@ -73,7 +71,7 @@ export const handleCusProductDeleted = async ({
 			await createUsageInvoice({
 				db,
 				attachParams: webhookToAttachParams({
-					req,
+					ctx,
 					stripeCli,
 					paymentMethod,
 					cusProduct,
@@ -114,20 +112,19 @@ export const handleCusProductDeleted = async ({
 	});
 
 	await addProductsUpdatedWebhookTask({
-		req,
+		ctx,
 		internalCustomerId: cusProduct.internal_customer_id,
 		org,
 		env,
 		customerId: null,
 		scenario: AttachScenario.Expired,
 		cusProduct,
-		logger,
 	});
 
 	if (cusProduct.product.is_add_on) return;
 
 	const activatedFuture = await activateFutureProduct({
-		req,
+		ctx,
 		cusProduct,
 	});
 
@@ -148,7 +145,7 @@ export const handleCusProductDeleted = async ({
 	});
 
 	await activateDefaultProduct({
-		req,
+		ctx,
 		productGroup: cusProduct.product.group,
 		fullCus,
 		curCusProduct: curMainProduct || undefined,

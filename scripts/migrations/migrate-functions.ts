@@ -1,11 +1,15 @@
-import { initializeDatabaseFunctions } from "@server/db/initializeDatabaseFunctions";
-import { loadLocalEnv } from "@server/utils/envUtils";
-import inquirer from "inquirer";
-
 loadLocalEnv();
 
+import { loadLocalEnv } from "@server/utils/envUtils";
+import inquirer from "inquirer";
 export const migrateFunctions = async () => {
+	// Dynamic import to ensure env is loaded first
+	const { initializeDatabaseFunctions } = await import(
+		"@server/db/initializeDatabaseFunctions"
+	);
+
 	const databaseUrl = process.env.DATABASE_URL;
+	console.log("databaseUrl", databaseUrl);
 	if (databaseUrl?.includes("us-west-3")) {
 		const { confirm } = await inquirer.prompt([
 			{

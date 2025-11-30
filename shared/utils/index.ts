@@ -3,6 +3,7 @@
 export * from "./cusEntUtils/balanceUtils/cusEntToPrepaidQuantity.js";
 export * from "./cusEntUtils/balanceUtils/cusEntToPurchasedBalance.js";
 export * from "./cusEntUtils/balanceUtils.js";
+export * from "./cusEntUtils/classifyCusEntUtils.js";
 export * from "./cusEntUtils/convertCusEntUtils/cusEntsToMaxPurchase.js";
 export * from "./cusEntUtils/convertCusEntUtils.js";
 export * from "./cusEntUtils/cusEntUtils.js";

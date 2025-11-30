@@ -11,4 +11,5 @@ BUN_PARALLEL_COMPACT \
   'server/tests/attach/addOn' \
   'server/tests/attach/checkout' \
   'server/tests/attach/misc' \
+  'server/tests/billing/invoice-action-required' \
   --max=6 \
