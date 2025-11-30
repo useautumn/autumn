@@ -6,35 +6,8 @@ import {
 	mapToProductV2,
 } from "@autumn/shared";
 import { parseAsString, useQueryStates } from "nuqs";
-import { useEffect, useMemo } from "react";
-import { create } from "zustand";
+import { useEffect, useMemo, useState } from "react";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-
-interface AttachProductFormValues {
-	customerId: string | null;
-	selectedEntityId: string | null;
-}
-
-interface AttachProductState extends AttachProductFormValues {
-	// Actions
-	setCustomerId: (customerId: string | null) => void;
-	setSelectedEntityId: (entityId: string | null) => void;
-	reset: () => void;
-}
-
-const initialState: AttachProductFormValues = {
-	customerId: null,
-	selectedEntityId: null,
-};
-
-export const useAttachProductStore = create<AttachProductState>((set) => ({
-	...initialState,
-
-	setCustomerId: (customerId) => set({ customerId }),
-	setSelectedEntityId: (selectedEntityId) => set({ selectedEntityId }),
-
-	reset: () => set(initialState),
-}));
 
 // Hook to sync entity_id between query params and store
 export const useEntity = () => {
@@ -42,10 +15,7 @@ export const useEntity = () => {
 		entity_id: parseAsString,
 	});
 
-	const setSelectedEntityId = useAttachProductStore(
-		(s) => s.setSelectedEntityId,
-	);
-	const selectedEntityId = useAttachProductStore((s) => s.selectedEntityId);
+	const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
 
 	const { customer } = useCusQuery();
 	const entities = (customer as FullCustomer)?.entities || [];

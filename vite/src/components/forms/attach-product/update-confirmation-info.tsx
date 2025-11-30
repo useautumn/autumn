@@ -114,23 +114,20 @@ const useHasPrepaidQuantityChanges = (
 	product: ProductV2 | undefined,
 	form: UseAttachProductForm,
 ) => {
-	const prepaidItems = usePrepaidItems({ product });
+	const { prepaidItems } = usePrepaidItems({ product });
 	const currentPrepaidOptions = form.state.values.prepaidOptions;
-	const initialPrepaidOptions = form.state.values.initialPrepaidOptions;
+	const defaultPrepaidOptions = form.options.defaultValues?.prepaidOptions;
 
 	return useMemo(() => {
-		if (
-			prepaidItems.length === 0 ||
-			!currentPrepaidOptions ||
-			!initialPrepaidOptions
-		) {
+		if (prepaidItems.length === 0 || !currentPrepaidOptions) {
 			return false;
 		}
 
 		return prepaidItems.some((item) => {
 			const currentQuantity = currentPrepaidOptions[item.feature_id as string];
-			const initialQuantity = initialPrepaidOptions[item.feature_id as string];
-			return currentQuantity !== initialQuantity;
+			const defaultQuantity =
+				defaultPrepaidOptions?.[item.feature_id as string];
+			return currentQuantity !== defaultQuantity;
 		});
-	}, [prepaidItems, currentPrepaidOptions, initialPrepaidOptions]);
+	}, [prepaidItems, currentPrepaidOptions, defaultPrepaidOptions]);
 };

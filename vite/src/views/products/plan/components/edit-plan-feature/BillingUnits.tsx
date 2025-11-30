@@ -64,7 +64,7 @@ export function BillingUnits() {
 						</span>
 					</Button>
 				</PopoverTrigger>
-				<PopoverContent className="max-w-[200px] p-3 pt-2" align="start">
+				<PopoverContent className="max-w-[200px] p-3 pt-2 z-100" align="start">
 					<LabelInput
 						label={`Billing units (${unitName})`}
 						type="number"

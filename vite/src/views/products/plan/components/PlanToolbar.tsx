@@ -48,7 +48,7 @@ export const PlanToolbar = () => {
 						icon={<EllipsisVerticalIcon />}
 						variant="secondary"
 						iconOrientation="center"
-						className={cn("!h-7", dropdownOpen && "btn-secondary-active")}
+						className={cn("!h-6", dropdownOpen && "btn-secondary-active")}
 					/>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end">
