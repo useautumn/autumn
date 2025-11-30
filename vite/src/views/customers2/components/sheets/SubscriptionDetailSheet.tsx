@@ -71,7 +71,7 @@ export function SubscriptionDetailSheet() {
 	}, [sheetType, resetProductStore]);
 
 	// Check for prepaid items in the product (must be called before any returns)
-	const prepaidItems = usePrepaidItems({ product: productV2 ?? undefined });
+	const { prepaidItems } = usePrepaidItems({ product: productV2 ?? undefined });
 	const hasPrepaidItems = prepaidItems.length > 0;
 
 	if (!cusProduct) {
