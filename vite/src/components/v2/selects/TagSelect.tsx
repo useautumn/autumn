@@ -60,7 +60,7 @@ export function TagSelect({
 						value.map((val) => (
 							<div
 								key={val}
-								className="flex items-center gap-1 border border-zinc-300 bg-zinc-50 rounded-lg pl-3 pr-2 py-1 text-xs pointer-events-auto"
+								className="flex items-center gap-1 border border-border bg-background rounded-lg pl-3 pr-2 py-1 text-xs pointer-events-auto"
 								onPointerDown={(e) => {
 									e.preventDefault();
 									e.stopPropagation();
