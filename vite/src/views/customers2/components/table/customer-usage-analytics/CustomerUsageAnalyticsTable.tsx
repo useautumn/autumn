@@ -97,7 +97,7 @@ export function CustomerUsageAnalyticsTable() {
 					) : hasEvents ? (
 						<>
 							<div className="flex max-w-1/2 w-full min-w-0 flex-col h-[250px]">
-								<div className="overflow-hidden flex flex-col border h-full bg-card rounded-lg">
+								<div className="overflow-hidden flex flex-col border h-full bg-background rounded-lg">
 									<Table.Content
 										className={cn(
 											" overflow-auto rounded-none bg-card",
