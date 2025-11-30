@@ -160,6 +160,9 @@ html {
 	/* --interactive-secondary: #1b1a1c; */
 	/* --interactive-secondary-hover: #222; */
 	--interactive-secondary-hover: #292929;
+
+	--active-primary: #292929;
+	--input-background: #1d1d1d;
 	/* --card: oklch(0.141 0.005 285.823); */
 
 
