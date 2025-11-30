@@ -3,11 +3,8 @@ import {
 	type Entity,
 	featureToOptions,
 	isTrialing,
-<<<<<<< HEAD
 	type ProductItem,
-=======
 	UsageModel,
->>>>>>> dev
 } from "@autumn/shared";
 import {
 	ArrowSquareOutIcon,
