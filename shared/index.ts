@@ -90,19 +90,20 @@ export * from "./models/featureModels/featureTable.js";
 // Gen Models
 export * from "./models/genModels/genEnums.js";
 export * from "./models/genModels/processorSchemas.js";
+
 // Idempotency Models
 
+// Attach Function Response
+export * from "./models/attachModels/attachFunctionResponse.js";
 export * from "./models/migrationModels/migrationErrorTable.js";
 export * from "./models/migrationModels/migrationJobTable.js";
 export * from "./models/migrationModels/migrationModels.js";
-
 export * from "./models/orgModels/frontendOrg.js";
 // 1. Org Models
 export * from "./models/orgModels/frontendOrg.js";
 export * from "./models/orgModels/orgConfig.js";
 export * from "./models/orgModels/orgConfig.js";
 export * from "./models/orgModels/orgTable.js";
-export * from "./models/otherModels/metadataModels.js";
 export * from "./models/otherModels/metadataTable.js";
 // Duration Types
 export * from "./models/productModels/durationTypes/rolloverExpiryDurationType.js";

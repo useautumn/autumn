@@ -72,7 +72,19 @@ export const CustomerProductsStatus = ({
 	trialing?: boolean;
 	trial_ends_at?: number;
 }) => {
-	// If product is canceled, show that status regardless of other status
+	// Expired status takes priority over canceled
+	if (status === CusProductStatus.Expired) {
+		return (
+			<StatusItem text="Expired" tooltip={tooltip}>
+				<XIcon
+					className="text-white bg-black dark:bg-black rounded-full p-0.5"
+					size={12}
+				/>
+			</StatusItem>
+		);
+	}
+
+	// If product is canceled, show that status
 	if (canceled) {
 		return (
 			<StatusItem text="Cancelling" tooltip={tooltip}>
@@ -135,15 +147,6 @@ export const CustomerProductsStatus = ({
 				</StatusItem>
 			);
 
-		case CusProductStatus.Expired:
-			return (
-				<StatusItem text="Expired" tooltip={tooltip}>
-					<XIcon
-						className="text-white bg-black dark:bg-black rounded-full p-0.5"
-						size={12}
-					/>
-				</StatusItem>
-			);
 		default:
 			return <div>Unknown</div>;
 	}

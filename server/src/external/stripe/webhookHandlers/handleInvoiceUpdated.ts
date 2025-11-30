@@ -38,11 +38,13 @@ const handleInvoiceCheckoutVoided = async ({
 		id: metadataId,
 	});
 
+	if (!metadata) return;
+
 	const {
 		anchorToUnix: _anchorToUnix,
 		config: _config,
 		...rest
-	} = metadata?.data || {};
+	} = metadata.data as AttachParams;
 
 	const attachParams = rest as AttachParams;
 

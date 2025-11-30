@@ -26,9 +26,10 @@ import {
 	shouldProrate,
 } from "@/internal/products/prices/priceUtils/prorationConfigUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
+import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
 
 export const handleQuantityUpgrade = async ({
-	req,
+	ctx,
 	attachParams,
 	cusProduct,
 	stripeSubs,
@@ -39,7 +40,7 @@ export const handleQuantityUpgrade = async ({
 	stripeSub,
 	subItem,
 }: {
-	req: any;
+	ctx: AutumnContext;
 	attachParams: AttachParams;
 	cusProduct: FullCusProduct;
 	attachConfig: AttachConfig;
@@ -51,7 +52,7 @@ export const handleQuantityUpgrade = async ({
 	subItem: Stripe.SubscriptionItem;
 }) => {
 	// Manually calculate prorations...
-	const { features, org, logger, db } = req;
+	const { features, org, logger, db } = ctx;
 	const { stripeCli, now, paymentMethod } = attachParams;
 
 	const difference = new Decimal(newOptions.quantity)

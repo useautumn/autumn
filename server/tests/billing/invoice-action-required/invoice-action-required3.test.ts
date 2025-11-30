@@ -1,8 +1,7 @@
-import { beforeAll, describe, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
-import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { expectFeaturesCorrect } from "@tests/utils/expectUtils/expectFeaturesCorrect.js";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
 import { expectSubItemsCorrect } from "@tests/utils/expectUtils/expectSubUtils.js";
@@ -22,7 +21,9 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
-const testCase = "upgrade6";
+import { completeInvoiceCheckout } from "../../utils/stripeUtils/completeInvoiceCheckout";
+
+const testCase = "invoice-action-required3";
 
 export const pro = constructProduct({
 	items: [
@@ -46,7 +47,7 @@ export const premium = constructProduct({
 	type: "premium",
 });
 
-describe(`${chalk.yellowBright(`${testCase}: Testing failed upgrades`)}`, () => {
+describe(`${chalk.yellowBright(`${testCase}: Testing upgrade, failed payment`)}`, () => {
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
@@ -89,6 +90,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing failed upgrades`)}`, () => 
 	});
 
 	const usage = 100012;
+
+	let checkoutUrl: string;
 	test("should upgrade to premium product and fail", async () => {
 		await autumn.track({
 			customer_id: customerId,
@@ -106,22 +109,14 @@ describe(`${chalk.yellowBright(`${testCase}: Testing failed upgrades`)}`, () => 
 		await attachFailedPaymentMethod({ stripeCli, customer: cus! });
 		await timeout(2000);
 
-		await expectAutumnError({
-			func: async () => {
-				await attachAndExpectCorrect({
-					autumn,
-					customerId,
-					product: premium,
-					stripeCli,
-					db,
-					org,
-					env,
-				});
-			},
-			errMessage: "Failed to update subscription. Your card was declined.",
+		const res = await autumn.attach({
+			customer_id: customerId,
+			product_id: premium.id,
 		});
 
-		await timeout(4000);
+		checkoutUrl = res.checkout_url;
+		expect(res.checkout_url).toBeDefined();
+
 		const customer = await autumn.customers.get(customerId);
 
 		expectProductAttached({
@@ -143,6 +138,32 @@ describe(`${chalk.yellowBright(`${testCase}: Testing failed upgrades`)}`, () => 
 		await expectSubItemsCorrect({
 			customerId,
 			product: pro,
+			stripeCli,
+			db,
+			org,
+			env,
+		});
+	});
+
+	test("should complete invoice and have premium product attached", async () => {
+		await completeInvoiceCheckout({
+			url: checkoutUrl,
+		});
+
+		const customer = await autumn.customers.get(customerId);
+		expectProductAttached({
+			customer,
+			product: premium,
+		});
+
+		expectFeaturesCorrect({
+			customer,
+			product: premium,
+		});
+
+		await expectSubItemsCorrect({
+			customerId,
+			product: premium,
 			stripeCli,
 			db,
 			org,

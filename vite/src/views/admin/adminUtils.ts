@@ -1,8 +1,12 @@
 import type {
 	Entity,
 	EntityRolloverBalance,
+	Feature,
 	FullCusProduct,
 	FullCustomerEntitlement,
+	Invoice,
+	Product,
+	ProductV2,
 	Rollover,
 } from "@autumn/shared";
 import { toast } from "sonner";
@@ -59,9 +63,10 @@ export const getCusEntHoverTexts = ({
 	cusEnt,
 	entities,
 }: {
-	cusEnt: FullCustomerEntitlement;
+	cusEnt?: FullCustomerEntitlement;
 	entities: Entity[];
 }) => {
+	if (!cusEnt) return [];
 	const entitlement = cusEnt.entitlement;
 	const featureEntities = entities.filter(
 		(e: Entity) => e.feature_id === entitlement.feature.id,
@@ -114,6 +119,57 @@ export const getCusEntHoverTexts = ({
 				.join("\n"),
 		});
 	}
+
+	return hoverTexts;
+};
+
+
+export const getFeatureHoverTexts = ({ feature }: { feature: Feature }) => {
+	const hoverTexts = [
+		{
+			key: "Internal ID",
+			value: feature.internal_id || "",
+		},
+	];
+
+
+	return hoverTexts;
+};
+
+export const getPlanHoverTexts = ({
+	plan,
+}: {
+	plan: Product | ProductV2;
+}) => {
+	const hoverTexts = [
+		{
+			key: "Internal ID",
+			value: plan.internal_id || "",
+		},
+	];
+
+	if ("version" in plan && plan.version) {
+		hoverTexts.push({
+			key: "Version",
+			value: plan.version.toString(),
+		});
+	}
+
+	return hoverTexts;
+};
+
+export const getInvoiceHoverTexts = ({ invoice }: { invoice: Invoice }) => {
+	const hoverTexts = [
+		{
+			key: "Invoice ID",
+			value: invoice.id,
+		},
+		{
+			key: "Stripe ID",
+			value: invoice.stripe_id,
+		},
+
+	];
 
 	return hoverTexts;
 };

@@ -1,6 +1,6 @@
 import {
+	ApiBaseEntitySchema,
 	type ApiCustomer,
-	ApiEntityV1Schema,
 	type Customer,
 	type CustomerData,
 	type CustomerLegacyData,
@@ -183,7 +183,7 @@ export const getOrCreateApiCustomer = async ({
 			customerId,
 		});
 
-		const apiEntity = ApiEntityV1Schema.parse(newEntity);
+		const apiEntity = ApiBaseEntitySchema.parse(newEntity);
 		apiCustomer.entities = [...(apiCustomer.entities || []), apiEntity];
 	}
 

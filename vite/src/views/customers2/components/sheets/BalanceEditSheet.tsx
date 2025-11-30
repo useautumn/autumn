@@ -3,6 +3,7 @@ import {
 	type FullCustomerEntitlement,
 	type FullCustomerPrice,
 	getCusEntBalance,
+	isUnlimitedCusEnt,
 } from "@autumn/shared";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -147,6 +148,10 @@ export function BalanceEditSheet() {
 		? originalEntitlements.find((ent) => ent.id === selectedCusEntId)
 		: originalEntitlements[0];
 
+	const isUnlimited = selectedCusEnt
+		? isUnlimitedCusEnt({ cusEnt: selectedCusEnt })
+		: false;
+
 	if (!selectedCusEnt) {
 		return (
 			<div className="flex flex-col h-full">
@@ -208,38 +213,30 @@ export function BalanceEditSheet() {
 								</span>
 							}
 						/>
+						<InfoRow
+							label="Balance"
+							value={
+								<span className="bg-muted px-1 py-0.5 rounded-md text-t3">
+									Unlimited
+								</span>
+							}
+						/>
 					</div>
 				</SheetSection>
 
-				<SheetSection withSeparator={false}>
-					<div className="flex flex-col gap-3">
-						<div className="flex gap-3">
-							<LabelInput
-								label="Balance"
-								placeholder="Enter balance"
-								type="number"
-								className="flex-1"
-								value={notNullish(fields.balance) ? String(fields.balance) : ""}
-								onChange={(e) => {
-									const newFields = new Map(updateFields);
-									const current = newFields.get(selectedCusEnt.id) || {
-										balance: null,
-										next_reset_at: null,
-									};
-									newFields.set(selectedCusEnt.id, {
-										...current,
-										balance: e.target.value ? parseFloat(e.target.value) : null,
-									});
-									setUpdateFields(newFields);
-								}}
-							/>
-
-							<div className="flex-1">
-								<div className="text-form-label block mb-1">Next Reset</div>
-								<DateInputUnix
-									disabled={!!cusPrice}
-									unixDate={fields.next_reset_at}
-									setUnixDate={(unixDate) => {
+				{!isUnlimited && (
+					<SheetSection withSeparator={false}>
+						<div className="flex flex-col gap-3">
+							<div className="flex gap-3">
+								<LabelInput
+									label="Balance"
+									placeholder="Enter balance"
+									type="number"
+									className="flex-1"
+									value={
+										notNullish(fields.balance) ? String(fields.balance) : ""
+									}
+									onChange={(e) => {
 										const newFields = new Map(updateFields);
 										const current = newFields.get(selectedCusEnt.id) || {
 											balance: null,
@@ -247,30 +244,52 @@ export function BalanceEditSheet() {
 										};
 										newFields.set(selectedCusEnt.id, {
 											...current,
-											next_reset_at: unixDate,
+											balance: e.target.value
+												? parseFloat(e.target.value)
+												: null,
 										});
 										setUpdateFields(newFields);
 									}}
 								/>
-							</div>
-						</div>
 
-						{cusPrice && (
-							<InfoBox classNames={{ infoBox: "text-sm p-2" }}>
-								Reset cycle cannot be changed for paid features, as it follows
-								the billing cycle.
-							</InfoBox>
-						)}
-					</div>
-					<Button
-						variant="primary"
-						className="w-full mt-3"
-						isLoading={updateLoading}
-						onClick={() => handleUpdateCusEntitlement(selectedCusEnt)}
-					>
-						Update Balance
-					</Button>
-				</SheetSection>
+								<div className="flex-1">
+									<div className="text-form-label block mb-1">Next Reset</div>
+									<DateInputUnix
+										disabled={!!cusPrice}
+										unixDate={fields.next_reset_at}
+										setUnixDate={(unixDate) => {
+											const newFields = new Map(updateFields);
+											const current = newFields.get(selectedCusEnt.id) || {
+												balance: null,
+												next_reset_at: null,
+											};
+											newFields.set(selectedCusEnt.id, {
+												...current,
+												next_reset_at: unixDate,
+											});
+											setUpdateFields(newFields);
+										}}
+									/>
+								</div>
+							</div>
+
+							{cusPrice && (
+								<InfoBox classNames={{ infoBox: "text-sm p-2" }}>
+									Reset cycle cannot be changed for paid features, as it follows
+									the billing cycle.
+								</InfoBox>
+							)}
+						</div>
+						<Button
+							variant="primary"
+							className="w-full mt-3"
+							isLoading={updateLoading}
+							onClick={() => handleUpdateCusEntitlement(selectedCusEnt)}
+						>
+							Update Balance
+						</Button>
+					</SheetSection>
+				)}
 
 				{/* <Button variant="secondary" onClick={handleClose}>
 					Cancel

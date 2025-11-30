@@ -8,6 +8,7 @@ import {
 import type { Stripe } from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
@@ -17,7 +18,6 @@ import { getMetadataFromCheckoutSession } from "@/internal/metadata/metadataUtil
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { getEarliestPeriodEnd } from "../stripeSubUtils/convertSubUtils.js";
 import { getOptionsFromCheckoutSession } from "./handleCheckoutCompleted/getOptionsFromCheckout.js";
 import { handleCheckoutSub } from "./handleCheckoutCompleted/handleCheckoutSub.js";
@@ -25,43 +25,42 @@ import { handleRemainingSets } from "./handleCheckoutCompleted/handleRemainingSe
 import { handleSetupCheckout } from "./handleCheckoutCompleted/handleSetupCheckout.js";
 
 export const handleCheckoutSessionCompleted = async ({
-	req,
+	ctx,
 	db,
 	org,
 	data,
 	env,
-	logger,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	db: DrizzleCli;
 	org: Organization;
 	data: Stripe.Checkout.Session;
 	env: AppEnv;
-	logger: any;
 }) => {
+	const { logger } = ctx;
 	const metadata = await getMetadataFromCheckoutSession(data, db);
 	if (!metadata) {
-		console.log("checkout.completed: metadata not found, skipping");
+		logger.info("checkout.completed: metadata not found, skipping");
 		return;
 	}
 
 	// Get options
 	const stripeCli = createStripeCli({ org, env });
-	const attachParams: AttachParams = metadata.data;
+	const attachParams: AttachParams = metadata.data as AttachParams;
 	const checkoutSession = await stripeCli.checkout.sessions.retrieve(data.id, {
 		expand: ["line_items", "subscription"],
 	});
 
-	attachParams.req = req;
+	attachParams.req = ctx as AutumnContext;
 	attachParams.stripeCli = stripeCli;
 
 	if (attachParams.org.id !== org.id) {
-		console.log("checkout.completed: org doesn't match, skipping");
+		logger.info("checkout.completed: org doesn't match, skipping");
 		return;
 	}
 
 	if (attachParams.customer.env !== env) {
-		console.log("checkout.completed: environments don't match, skipping");
+		logger.info("checkout.completed: environments don't match, skipping");
 		return;
 	}
 
@@ -70,14 +69,14 @@ export const handleCheckoutSessionCompleted = async ({
 		attachParams,
 	});
 
-	console.log(
+	logger.info(
 		"Handling checkout.completed: autumn metadata:",
 		checkoutSession.metadata?.autumn_metadata_id,
 	);
 
 	if (attachParams.setupPayment) {
 		await handleSetupCheckout({
-			req,
+			ctx,
 			attachParams,
 		});
 		return;
@@ -96,7 +95,7 @@ export const handleCheckoutSessionCompleted = async ({
 		});
 
 		if (activeCusProducts && activeCusProducts.length > 0) {
-			console.log("✅ checkout.completed: subscription already exists");
+			logger.info("✅ checkout.completed: subscription already exists");
 			return true;
 		}
 	}
@@ -121,14 +120,14 @@ export const handleCheckoutSessionCompleted = async ({
 		? getEarliestPeriodEnd({ sub: checkoutSub! }) * 1000
 		: undefined;
 	if (attachParams.productsList) {
-		console.log("Inserting products list");
+		logger.info("Inserting products list");
 		for (const productOptions of attachParams.productsList) {
 			const product = attachParams.products.find(
 				(p) => p.id === productOptions.product_id,
 			);
 
 			if (!product) {
-				logger.error(
+				ctx.logger.error(
 					`checkout.completed: product not found for productOptions: ${JSON.stringify(
 						productOptions,
 					)}`,
@@ -146,8 +145,8 @@ export const handleCheckoutSessionCompleted = async ({
 				subscriptionIds: checkoutSub ? [checkoutSub.id] : undefined,
 				anchorToUnix,
 				scenario: AttachScenario.New,
-				logger,
 				productOptions,
+				logger: ctx.logger,
 			});
 		}
 	} else {
@@ -159,12 +158,12 @@ export const handleCheckoutSessionCompleted = async ({
 				subscriptionIds: checkoutSub ? [checkoutSub.id] : undefined,
 				anchorToUnix,
 				scenario: AttachScenario.New,
-				logger,
+				logger: ctx.logger,
 			});
 		}
 	}
 
-	console.log("✅ checkout.completed: successfully created cus product");
+	logger.info("✅ checkout.completed: successfully created cus product");
 	const batchInsertInvoice: any = [];
 
 	for (const invoiceId of invoiceIds) {
@@ -179,11 +178,10 @@ export const handleCheckoutSessionCompleted = async ({
 	}
 
 	await Promise.all(batchInsertInvoice);
-	console.log("✅ checkout.completed: successfully inserted invoices");
+	logger.info("✅ checkout.completed: successfully inserted invoices");
 
 	for (const product of attachParams.products) {
-		console.log("Adding task to queue for trigger checkout reward");
-		console.log("Adding task to queue for trigger checkout reward");
+		logger.info("Adding task to queue for trigger checkout reward");
 		await addTaskToQueue({
 			jobName: JobName.TriggerCheckoutReward,
 			payload: {
@@ -222,6 +220,4 @@ export const handleCheckoutSessionCompleted = async ({
 			update: updates,
 		});
 	}
-
-	return;
 };

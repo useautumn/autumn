@@ -9,17 +9,20 @@ import {
 } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../honoUtils/HonoEnv";
 
-export const parseReqForAction = (
-	req: ExtendedRequest,
-): Partial<ExtendedRequest> => {
+export const parseCtxForAction = ({
+	ctx,
+}: {
+	ctx: AutumnContext;
+}): Partial<AutumnContext> => {
 	return {
-		id: req.id,
-		authType: req.authType,
-		originalUrl: req.originalUrl,
-		method: req.method,
-		body: req.body,
-		timestamp: Date.now(),
+		id: ctx.id,
+		authType: ctx.authType,
+		// originalUrl: ctx.originalUrl,
+		// method: ctx.method,
+		// body: ctx.body,
+		// timestamp: Date.now(),
 	} as Partial<ExtendedRequest>;
 };
 
