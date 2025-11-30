@@ -3,6 +3,7 @@ import { Input } from "@/components/v2/inputs/Input";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useAutoSlug } from "@/hooks/common/useAutoSlug";
 import { useProductStore } from "@/hooks/stores/useProductStore";
+import { PlanTypeSection } from "@/views/products/plan/components/edit-plan-details/PlanTypeSection";
 import { BasePriceSection } from "../../products/plan/components/edit-plan-details/BasePriceSection";
 
 export const PlanDetailsStep = () => {
@@ -35,7 +36,7 @@ export const PlanDetailsStep = () => {
 								className="mb-1"
 							/>
 
-							<span className="text-form-label block">
+							<span className="text-t4 text-sm block">
 								This name will be displayed on Stripe's checkout page
 							</span>
 						</div>
@@ -47,7 +48,7 @@ export const PlanDetailsStep = () => {
 								onChange={(e) => setTarget(e.target.value)}
 								className="mb-1"
 							/>
-							<span className="text-form-label block">
+							<span className="text-t4 text-sm block">
 								Used to refer to this plan when using Autumn's APIs or SDKs
 							</span>
 						</div>
@@ -69,7 +70,7 @@ export const PlanDetailsStep = () => {
 					</div>
 				</div>
 			</SheetSection>
-
+			<PlanTypeSection />
 			<BasePriceSection withSeparator={false} />
 		</>
 	);

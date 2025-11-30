@@ -97,28 +97,34 @@ export const pushPage = ({
 	queryParams,
 	navigate,
 	preserveParams = true,
+	debug = false,
 }: {
 	path: string;
 	queryParams?: Record<string, string | undefined>;
 	navigate?: NavigateFunction;
 	preserveParams?: boolean;
+	debug?: boolean;
 }) => {
 	const pathname = window.location.pathname;
 	const curEnv = getEnvFromPath(pathname);
 
-	const curQueryParams = new URLSearchParams(window.location.search);
-	if (!preserveParams) {
-		curQueryParams.forEach((value, key) => {
-			curQueryParams.delete(key);
-		});
-	}
+	// Start fresh or with current params based on whether new params are provided
+	let curQueryParams: URLSearchParams;
 
 	if (queryParams) {
+		// When queryParams are provided, start fresh (replace mode)
+		curQueryParams = new URLSearchParams();
 		for (const [key, value] of Object.entries(queryParams)) {
 			if (value) {
 				curQueryParams.set(key, value);
 			}
 		}
+	} else if (preserveParams) {
+		// No new params provided, preserve existing if requested
+		curQueryParams = new URLSearchParams(window.location.search);
+	} else {
+		// No new params and don't preserve - empty params
+		curQueryParams = new URLSearchParams();
 	}
 
 	path = path.replace("@", "%40");

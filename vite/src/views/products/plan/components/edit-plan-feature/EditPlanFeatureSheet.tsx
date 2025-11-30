@@ -42,35 +42,31 @@ export function EditPlanFeatureSheet({
 			{!isOnboarding && (
 				<SheetHeader
 					title={`Configure ${feature?.name}`}
-					description="Configure how this feature is used in your app"
+					description="How users access this feature when they're on this plan"
 				/>
 			)}
 
 			{feature?.type !== FeatureType.Boolean && (
 				<>
-					<SheetSection title="Configuration">
+					<SheetSection title="Feature Type">
 						<BillingType />
 					</SheetSection>
 
-					{hasChosenBillingType && (
-						<>
-							<SheetSection
-								title={`Allowance ${isFeaturePrice ? "(optional)" : ""}`}
-							>
-								<IncludedUsage />
-							</SheetSection>
+					<SheetSection
+						title={`Grant Amount ${isFeaturePrice ? "(optional)" : ""}`}
+					>
+						<IncludedUsage />
+					</SheetSection>
 
-							{isFeaturePrice && (
-								<SheetSection title="Price">
-									<PriceTiers />
-									<UsageReset showBillingLabel={true} />
-									<PricedFeatureSettings />
-								</SheetSection>
-							)}
-
-							<AdvancedSettings />
-						</>
+					{isFeaturePrice && (
+						<SheetSection title="Price">
+							<PriceTiers />
+							<UsageReset showBillingLabel={true} />
+							<PricedFeatureSettings />
+						</SheetSection>
 					)}
+
+					<AdvancedSettings />
 				</>
 			)}
 

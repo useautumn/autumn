@@ -124,7 +124,13 @@ export const PrepaidUsageIcon = () => {
 	);
 };
 
-export const UsageBasedIcon = ({ color = "#DE1779" }: { color?: string }) => {
+export const UsageBasedIcon = ({
+	color = "#DE1779",
+	className = "",
+}: {
+	color?: string;
+	className?: string;
+}) => {
 	return (
 		<svg
 			width="16"
@@ -132,32 +138,34 @@ export const UsageBasedIcon = ({ color = "#DE1779" }: { color?: string }) => {
 			viewBox="0 0 16 16"
 			fill="none"
 			xmlns="http://www.w3.org/2000/svg"
+			className={className}
+			color={className ? undefined : color}
 		>
 			<title>Usage Based</title>
 			<path
 				d="M13.46 3.84009H2.54C1.96562 3.84009 1.5 4.30571 1.5 4.88009V11.1201C1.5 11.6945 1.96562 12.1601 2.54 12.1601H13.46C14.0344 12.1601 14.5 11.6945 14.5 11.1201V4.88009C14.5 4.30571 14.0344 3.84009 13.46 3.84009Z"
-				stroke={color}
+				stroke={className ? "currentColor" : color}
 				strokeWidth="1.1"
 				strokeLinecap="round"
 				strokeLinejoin="round"
 			/>
 			<path
 				d="M9.30078 5.91992V10.0799"
-				stroke={color}
+				stroke={className ? "currentColor" : color}
 				strokeWidth="1.1"
 				strokeLinecap="round"
 				strokeLinejoin="round"
 			/>
 			<path
 				d="M6.69922 5.91992V10.0799"
-				stroke={color}
+				stroke={className ? "currentColor" : color}
 				strokeWidth="1.1"
 				strokeLinecap="round"
 				strokeLinejoin="round"
 			/>
 			<path
 				d="M4.09961 5.91992V10.0799"
-				stroke={color}
+				stroke={className ? "currentColor" : color}
 				strokeWidth="1.1"
 				strokeLinecap="round"
 				strokeLinejoin="round"
@@ -169,9 +177,11 @@ export const UsageBasedIcon = ({ color = "#DE1779" }: { color?: string }) => {
 export const CoinsIcon = ({
 	size = 16,
 	color = "#F59E0B",
+	className = "",
 }: {
 	size?: number;
 	color?: string;
+	className?: string;
 }) => {
 	return (
 		<svg
@@ -180,7 +190,8 @@ export const CoinsIcon = ({
 			viewBox="0 0 16 16"
 			fill="none"
 			xmlns="http://www.w3.org/2000/svg"
-			color={color}
+			className={className}
+			color={className ? undefined : color}
 		>
 			<title>Paid</title>
 			<path
@@ -218,9 +229,11 @@ export const CoinsIcon = ({
 export const BooleanIcon = ({
 	size = 16,
 	color = "#8A8A8A",
+	className = "",
 }: {
 	size?: number;
 	color?: string;
+	className?: string;
 }) => {
 	return (
 		<svg
@@ -229,18 +242,20 @@ export const BooleanIcon = ({
 			viewBox="0 0 16 16"
 			fill="none"
 			xmlns="http://www.w3.org/2000/svg"
+			className={className}
+			color={className ? undefined : color}
 		>
 			<title>Boolean</title>
 			<path
 				d="M8 2.84253V7.99253"
-				stroke={color}
+				stroke={className ? "currentColor" : color}
 				strokeWidth="1.2"
 				strokeLinecap="round"
 				strokeLinejoin="round"
 			/>
 			<path
 				d="M11.0909 3.35742C12.6411 4.36811 13.6659 6.00388 13.6659 7.99242C13.6659 9.49487 13.0691 10.9358 12.0067 11.9982C10.9443 13.0606 9.50339 13.6574 8.00094 13.6574C6.49849 13.6574 5.05757 13.0606 3.99518 11.9982C2.93278 10.9358 2.33594 9.49487 2.33594 7.99242C2.33594 6.00388 3.36079 4.36811 4.91094 3.35742"
-				stroke={color}
+				stroke={className ? "currentColor" : color}
 				strokeWidth="1.2"
 				strokeLinecap="round"
 				strokeLinejoin="round"
@@ -249,7 +264,13 @@ export const BooleanIcon = ({
 	);
 };
 
-export const ContinuousUseIcon = () => {
+export const ContinuousUseIcon = ({
+	color = "#9210B9",
+	className = "",
+}: {
+	color?: string;
+	className?: string;
+}) => {
 	return (
 		<svg
 			width="16"
@@ -257,18 +278,19 @@ export const ContinuousUseIcon = () => {
 			viewBox="0 0 16 16"
 			fill="none"
 			xmlns="http://www.w3.org/2000/svg"
+			color={className ? undefined : color}
 		>
 			<title>Allocated</title>
 			<path
 				d="M6 3.5V12.5"
-				stroke="#9210B9"
+				stroke={className ? "currentColor" : color}
 				strokeWidth="1.2"
 				strokeLinecap="round"
 				strokeLinejoin="round"
 			/>
 			<path
 				d="M1.5 10C2.03043 10 2.53914 9.78929 2.91421 9.41421C3.28929 9.03914 3.5 8.53043 3.5 8C3.5 7.46957 3.28929 6.96086 2.91421 6.58579C2.53914 6.21071 2.03043 6 1.5 6V4C1.5 3.86739 1.55268 3.74021 1.64645 3.64645C1.74021 3.55268 1.86739 3.5 2 3.5H14C14.1326 3.5 14.2598 3.55268 14.3536 3.64645C14.4473 3.74021 14.5 3.86739 14.5 4V6C13.9696 6 13.4609 6.21071 13.0858 6.58579C12.7107 6.96086 12.5 7.46957 12.5 8C12.5 8.53043 12.7107 9.03914 13.0858 9.41421C13.4609 9.78929 13.9696 10 14.5 10V12C14.5 12.1326 14.4473 12.2598 14.3536 12.3536C14.2598 12.4473 14.1326 12.5 14 12.5H2C1.86739 12.5 1.74021 12.4473 1.64645 12.3536C1.55268 12.2598 1.5 12.1326 1.5 12V10Z"
-				stroke="#9210B9"
+				stroke={className ? "currentColor" : color}
 				strokeWidth="1.2"
 				strokeLinecap="round"
 				strokeLinejoin="round"

@@ -1,21 +1,36 @@
-import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
-import { useState } from "react";
-import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import { Reward, RewardType, Product, ProductV2 } from "@autumn/shared";
-import { AdminHover } from "@/components/general/AdminHover";
-import { Item, Row } from "@/components/general/TableGrid";
+import type { Reward } from "@autumn/shared";
+import { useMemo, useState } from "react";
+import { Table } from "@/components/general/table";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useProductTable } from "@/views/products/hooks/useProductTable";
 import { UpdateRewardSheet } from "../reward-config/components/UpdateRewardSheet";
-import { RewardRowToolbar } from "./RewardRowToolbar";
-import { useOrg } from "@/hooks/common/useOrg";
+import { createRewardsTableColumns } from "./RewardsTableColumns";
 
 export const RewardsTable = () => {
 	const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
 	const [open, setOpen] = useState(false);
 	const { rewards } = useRewardsQuery();
-	const { products } = useProductsQuery();
-	const { org } = useOrg();
+
+	const columns = useMemo(() => createRewardsTableColumns(), []);
+
+	const rewardsTable = useProductTable({
+		data: rewards || [],
+		columns,
+		options: {
+			globalFilterFn: "includesString",
+			enableGlobalFilter: true,
+		},
+	});
+
+	const handleRowClick = (reward: Reward) => {
+		setSelectedReward(reward);
+		setOpen(true);
+	};
+
+	const enableSorting = false;
+
+	const emptyStateText =
+		"Create a coupon that customers can redeem for discounts, credits or free products.";
 
 	return (
 		<>
@@ -24,66 +39,24 @@ export const RewardsTable = () => {
 				setOpen={setOpen}
 				selectedReward={selectedReward}
 			/>
-			{rewards && rewards.length > 0 ? (
-				<Row type="header" className="grid-cols-18 -mb-1">
-					<Item className="col-span-4">Name</Item>
-					<Item className="col-span-4">Promo Codes</Item>
-					<Item className="col-span-4">Type</Item>
-					<Item className="col-span-3">Reward</Item>
-					<Item className="col-span-2">Created At</Item>
-					<Item className="col-span-1"></Item>
-				</Row>
-			) : (
-				<div className="flex justify-start items-center h-10 text-t3 px-10">
-					Create a coupon that customers can redeem for discounts, credits or
-					free products.
-				</div>
-			)}
-
-			{rewards.map((reward: Reward) => (
-				<Row
-					key={reward.internal_id}
-					// className="grid-cols-18 gap-2 items-center px-10 w-full text-sm h-8 cursor-pointer hover:bg-primary/5 text-t2 whitespace-nowrap"
-					onClick={() => {
-						setSelectedReward(reward);
-						setOpen(true);
-					}}
-				>
-					<Item className="col-span-4">
-						<AdminHover
-							texts={[{ key: "Internal ID", value: reward.internal_id }]}
-						>
-							<span className="truncate">{reward.name}</span>
-						</AdminHover>
-					</Item>
-					<Item className="col-span-4 font-mono">
-						<span className="truncate">
-							{reward.promo_codes.map((promoCode) => promoCode.code).join(", ")}
-						</span>
-					</Item>
-					<Item className="col-span-4">{keyToTitle(reward.type)}</Item>
-					<Item className="col-span-3">
-						{reward.type == RewardType.FreeProduct ? (
-							products.find((p: ProductV2) => p.id == reward.free_product_id)
-								?.name
-						) : (
-							<span>
-								{reward.discount_config?.discount_value}
-								{reward.type == RewardType.PercentageDiscount
-									? "%"
-									: ` ${org.default_currency || "USD"}`}{" "}
-								off
-							</span>
-						)}
-					</Item>
-					<Item className="col-span-2 text-t3 text-xs">
-						{formatUnixToDateTime(reward.created_at).date}
-					</Item>
-					<Item className="col-span-1 items-center justify-end">
-						<RewardRowToolbar reward={reward} />
-					</Item>
-				</Row>
-			))}
+			<Table.Provider
+				config={{
+					table: rewardsTable,
+					numberOfColumns: columns.length,
+					enableSorting,
+					isLoading: false,
+					onRowClick: handleRowClick,
+					emptyStateText,
+					rowClassName: "h-10",
+				}}
+			>
+				<Table.Container>
+					<Table.Content>
+						<Table.Header />
+						<Table.Body />
+					</Table.Content>
+				</Table.Container>
+			</Table.Provider>
 		</>
 	);
 };

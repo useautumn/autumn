@@ -36,14 +36,13 @@ export function IncludedUsage() {
 		<div className="space-y-4">
 			<div className="w-full h-auto flex items-end gap-2">
 				<div className="flex-1">
-					<div className="text-form-label block mb-1">
-						Quantity of '
+					<div className="text-t3 text-sm block mb-2">
+						Quantity of&nbsp;
 						{getFeatureName({
 							feature: features.find((f) => f.id === item.feature_id),
 							plural: true,
 						})}
-						' that this customer is granted before{" "}
-						{!isFeaturePrice ? "hitting the limit" : "being charged"}.
+						{!isFeaturePrice ? " that can be used" : " granted before billing"}
 					</div>
 					<div className="flex items-center gap-2">
 						<Input
@@ -79,8 +78,10 @@ export function IncludedUsage() {
 									interval: checked ? null : item.interval, // Set interval to null when unlimited
 								})
 							}
-							className="py-1 px-2"
-						/>
+							className="py-1 px-2 w-26 text-t4 gap-2"
+						>
+							Unlimited
+						</IconCheckbox>
 					</div>
 				</div>
 			</div>

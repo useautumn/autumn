@@ -13,6 +13,7 @@ import { PostHogProvider } from "posthog-js/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import { ThemeProvider } from "./contexts/ThemeProvider";
 
 Sentry.init({
 	dsn: import.meta.env.VITE_SENTRY_DSN,
@@ -32,23 +33,25 @@ const shouldInitializePostHog = process.env.NODE_ENV === "production";
 createRoot(document.getElementById("root")!).render(
 	<StrictMode>
 		<QueryClientProvider client={queryClient}>
-			{/* <App /> */}
-			{shouldInitializePostHog ? (
-				<PostHogProvider
-					apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
-					options={{
-						api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
-						autocapture: false,
-						capture_pageview: false,
-						capture_pageleave: false,
-					}}
-				>
+			<ThemeProvider>
+				{/* <App /> */}
+				{shouldInitializePostHog ? (
+					<PostHogProvider
+						apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
+						options={{
+							api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+							autocapture: false,
+							capture_pageview: false,
+							capture_pageleave: false,
+						}}
+					>
+						<App />
+					</PostHogProvider>
+				) : (
 					<App />
-				</PostHogProvider>
-			) : (
-				<App />
-			)}
-			{/* <ReactQueryDevtools initialIsOpen={false} /> */}
+				)}
+				{/* <ReactQueryDevtools initialIsOpen={false} /> */}
+			</ThemeProvider>
 		</QueryClientProvider>
 	</StrictMode>,
 );

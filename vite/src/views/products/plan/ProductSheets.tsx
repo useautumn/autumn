@@ -7,6 +7,7 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { getItemId } from "@/utils/product/productItemUtils";
 
 import { ProductItemContext } from "../product/product-item/ProductItemContext";
+import { EditPlanPriceSheet } from "./components/EditPlanPriceSheet";
 import { EditPlanSheet } from "./components/EditPlanSheet";
 import { EditPlanFeatureSheet } from "./components/edit-plan-feature/EditPlanFeatureSheet";
 import { NewFeatureSheet } from "./components/new-feature/NewFeatureSheet";
@@ -51,6 +52,8 @@ export const ProductSheets = () => {
 		switch (sheetType) {
 			case "edit-plan":
 				return <EditPlanSheet />;
+			case "edit-plan-price":
+				return <EditPlanPriceSheet />;
 			case "edit-feature":
 				return (
 					<ProductItemContext.Provider
@@ -71,8 +74,8 @@ export const ProductSheets = () => {
 				return <NewFeatureSheet />;
 			case "select-feature":
 				return <SelectFeatureSheet />;
-			default:
-				return <EditPlanSheet />;
+			// default:
+			// 	return <EditPlanSheet />;
 		}
 	};
 
@@ -84,9 +87,10 @@ export const ProductSheets = () => {
 					animate={{ x: 0 }}
 					exit={{ x: "100%" }}
 					transition={SHEET_ANIMATION}
-					className="h-full w-[28rem] absolute right-0 top-0 bottom-0"
+					className="absolute right-0 top-0 bottom-0"
+					style={{ width: "28rem", zIndex: 100 }}
 				>
-					<SheetContainer className="w-full bg-card z-50 border-l shadow-sm h-full relative">
+					<SheetContainer className="w-full bg-background z-50 border-l border-border/40 h-full relative">
 						<SheetCloseButton onClose={closeSheet} />
 						{renderSheet()}
 					</SheetContainer>

@@ -104,7 +104,7 @@ const IconBadge = React.forwardRef<HTMLSpanElement, IconBadgeProps>(
 				ref={ref}
 				variant={variant}
 				asChild={asChild}
-				className={cn(iconBadgeVariants({ position }), className)}
+				className={cn("h-6", iconBadgeVariants({ position }), className)}
 				{...props}
 			>
 				{renderContent()}

@@ -22,7 +22,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, notNullish } from "@/utils/genUtils";
-import { useCustomerContext } from "../CustomerContext";
+// import { useCustomerContext } from "../../customers2/customer/CustomerContext";
+import { useCustomerContext } from "../../../customers2/customer/CustomerContext";
 import { useCusQuery } from "../hooks/useCusQuery";
 
 function UpdateCusEntitlement({

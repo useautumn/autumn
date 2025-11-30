@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useBlocker } from "@/views/products/product/hooks/useBlocker";
+import { useIsCusPlanEditor } from "@/hooks/stores/useProductStore";
 
 const DEFAULT_MESSAGE =
 	"Are you sure you want to leave without updating the plan? Your changes will be lost.";
@@ -11,6 +12,7 @@ export const useProductChangedAlert = ({
 	hasChanges: boolean;
 	disabled?: boolean;
 }) => {
+	const isCusPlanEditor = useIsCusPlanEditor();
 	// Confirm function using native browser dialog
 	const showConfirm = useCallback((): boolean => {
 		return window.confirm(DEFAULT_MESSAGE);
@@ -18,7 +20,7 @@ export const useProductChangedAlert = ({
 
 	// Block client-side React Router navigation only
 	useBlocker({
-		shouldBlock: hasChanges && !disabled,
+		shouldBlock: hasChanges && !disabled && !isCusPlanEditor,
 		confirmFn: showConfirm,
 	});
 };

@@ -21,7 +21,7 @@ const FeatureTestRow = ({
 	return (
 		<div className="flex flex-col gap-1 w-full">
 			<label
-				className="text-[13px] font-medium text-t5 tracking-[-0.039px]"
+				className="text-[13px] font-medium text-subtle tracking-[-0.039px]"
 				htmlFor={label}
 			>
 				{label}
