@@ -64,7 +64,7 @@ export const Step3CreateApiKey = () => {
 							}}
 							className="flex flex-col gap-2"
 						>
-							<div className="flex justify-between bg-interactive-secondary border p-2 px-3 text-t2 rounded-md items-center w-36">
+							<div className="flex justify-between bg-interactive-secondary border p-2 px-3 text-t2 rounded-md items-center w-50 h-7">
 								<p className="text-sm font-mono truncate">{apiKey}</p>
 								<button
 									type="button"
