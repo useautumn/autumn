@@ -5,6 +5,7 @@ import type {
 import { Table } from "@/components/general/table";
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { CustomerBalanceTableColumns } from "./CustomerBalanceTableColumns";
 
@@ -21,6 +22,7 @@ export function CustomerBalanceTable({
 	aggregatedMap: Map<string, FullCusEntWithFullCusProduct[]>;
 	isLoading: boolean;
 }) {
+	const { customer } = useCusQuery();
 	const setBalanceSheet = useCustomerBalanceSheetStore((s) => s.setSheet);
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const sheetType = useSheetStore((s) => s.type);
@@ -35,6 +37,7 @@ export function CustomerBalanceTable({
 		filteredCustomerProducts,
 		entityId,
 		aggregatedMap,
+		entities: customer?.entities || [],
 	});
 
 	const enableSorting = false;

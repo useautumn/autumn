@@ -13,6 +13,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
+import { getInvoiceHoverTexts } from "@/views/admin/adminUtils";
 import { useCustomerContext } from "./CustomerContext";
 import { CusProductEntityItem } from "./components/CusProductEntityItem";
 import { useCusQuery } from "./hooks/useCusQuery";
@@ -109,18 +110,15 @@ export const InvoicesTable = () => {
 					}}
 				>
 					<Item className="col-span-3">
-						<AdminHover
-							texts={[
-								{ key: "ID", value: invoice.id },
-								{ key: "Stripe ID", value: invoice.stripe_id },
-							]}
-						>
-							{invoice.product_ids
-								.map((p: string) => {
-									return products.find((product: any) => product.id === p)
-										?.name;
-								})
-								.join(", ")}
+						<AdminHover texts={getInvoiceHoverTexts({ invoice })}>
+							<span>
+								{invoice.product_ids
+									.map((p: string) => {
+										return products.find((product: any) => product.id === p)
+											?.name;
+									})
+									.join(", ")}
+							</span>
 						</AdminHover>
 					</Item>
 					{showEntityView && (

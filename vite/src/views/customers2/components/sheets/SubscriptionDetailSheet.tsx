@@ -1,8 +1,8 @@
 import {
 	CusProductStatus,
-	type Entity,
-	type FeatureOptions,
+	type Entity, featureToOptions,
 	isTrialing,
+	UsageModel
 } from "@autumn/shared";
 import {
 	ArrowSquareOutIcon,
@@ -40,10 +40,12 @@ import { BasePriceDisplay } from "@/views/products/plan/components/plan-card/Bas
 import { PlanFeatureRow } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
 import { CustomerProductsStatus } from "../table/customer-products/CustomerProductsStatus";
 import { UpdatePlanButton } from "./UpdatePlanButton";
+import { useFeaturesQuery } from "../../../../hooks/queries/useFeaturesQuery";
 
 export function SubscriptionDetailSheet() {
 	const { customer } = useCusQuery();
 	const { stripeAccount } = useOrgStripeQuery();
+	const { features } = useFeaturesQuery();
 	const env = useEnv();
 	const itemId = useSheetStore((s) => s.itemId);
 	const setSheet = useSheetStore((s) => s.setSheet);
@@ -188,13 +190,19 @@ export function SubscriptionDetailSheet() {
 						{productV2.items.map((item, index) => {
 							if (!item.feature_id) return null;
 
-							// Find prepaid quantity from cusProduct.options
-							const prepaidOption = cusProduct?.options?.find(
-								(opt: FeatureOptions) => opt.feature_id === item.feature_id,
-							);
-							const prepaidQuantity = prepaidOption
-								? prepaidOption.quantity / (item.billing_units || 1)
-								: null;
+							const feature = features.find(f => f.id === item.feature_id);
+							const prepaidOption = featureToOptions({ feature, options: cusProduct.options });
+
+							// const prepaidQuantity = prepaidOption ? prepaidOption.quantity / (item.billing_units || 1) : null;
+							const prepaidQuantity = item.usage_model === UsageModel.Prepaid ? prepaidOption?.quantity : null;
+
+							// // Find prepaid quantity from cusProduct.options
+							// const prepaidOption = cusProduct?.options?.find(
+							// 	(opt: FeatureOptions) => opt.feature_id === item.feature_id,
+							// );
+							// const prepaidQuantity = prepaidOption
+							// 	? prepaidOption.quantity / (item.billing_units || 1)
+							// 	: null;
 
 							return (
 								<PlanFeatureRow

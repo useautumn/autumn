@@ -1,5 +1,7 @@
 import type { Invoice, InvoiceDiscount } from "@autumn/shared";
 import type { Row } from "@tanstack/react-table";
+import { AdminHover } from "@/components/general/AdminHover";
+import { getInvoiceHoverTexts } from "@/views/admin/adminUtils";
 import { createDateTimeColumn } from "@/views/customers2/utils/ColumnHelpers";
 import { CustomerInvoiceStatus } from "./CustomerInvoiceStatus";
 
@@ -16,7 +18,13 @@ export const CustomerInvoicesColumns = [
 		header: "Products",
 		accessorKey: "productNames",
 		cell: ({ row }: { row: Row<CustomerInvoice> }) => {
-			return <div>{row.original.productNames}</div>;
+			return (
+				<div>
+					<AdminHover texts={getInvoiceHoverTexts({ invoice: row.original })}>
+						<span>{row.original.productNames}</span>
+					</AdminHover>
+				</div>
+			);
 		},
 	},
 	{

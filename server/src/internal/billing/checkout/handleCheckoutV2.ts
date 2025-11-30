@@ -58,23 +58,21 @@ export const handleCheckoutV2 = createRoute({
 
 			if (config.invoiceCheckout) {
 				const result = await handleCreateInvoiceCheckout({
-					req: ctx as ExtendedRequest,
+					ctx,
 					attachParams,
-					attachBody: body,
-					branch,
 					config,
 				});
 
-				checkoutUrl = result?.invoices?.[0]?.hosted_invoice_url;
+				checkoutUrl = result?.checkout_url;
 			} else {
-				const checkout = await handleCreateCheckout({
-					req: ctx as ExtendedRequest,
+				const result = await handleCreateCheckout({
+					ctx,
 					attachParams,
 					config,
 					returnCheckout: true,
 				});
 
-				checkoutUrl = checkout?.url;
+				checkoutUrl = result?.checkout_url;
 			}
 		}
 

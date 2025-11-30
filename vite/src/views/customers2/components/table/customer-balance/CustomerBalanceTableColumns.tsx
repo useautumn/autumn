@@ -9,18 +9,22 @@ import {
 	sumValues,
 } from "@autumn/shared";
 import type { Row } from "@tanstack/react-table";
+import { AdminHover } from "@/components/general/AdminHover";
 import { cn } from "@/lib/utils";
 import { formatUnixToDateTimeString } from "@/utils/formatUtils/formatDateUtils";
+import { getCusEntHoverTexts } from "@/views/admin/adminUtils";
 import { CustomerFeatureUsageBar } from "../customer-feature-usage/CustomerFeatureUsageBar";
 
 export const CustomerBalanceTableColumns = ({
 	filteredCustomerProducts,
 	entityId,
 	aggregatedMap,
+	entities = [],
 }: {
 	filteredCustomerProducts: FullCusProduct[];
 	entityId: string | null;
 	aggregatedMap: Map<string, FullCusEntWithFullCusProduct[]>;
+	entities?: any[];
 }) => [
 	{
 		header: "Feature",
@@ -34,18 +38,27 @@ export const CustomerBalanceTableColumns = ({
 			const isAggregated = originalEnts && originalEnts.length > 1;
 			const balanceCount = originalEnts?.length || 1;
 
-			return (
-				<div className="flex items-center gap-2">
-					<span className="font-medium text-t1 truncate">
-						{ent.entitlement.feature.name}
-					</span>
-					{isAggregated && (
-						<div className="text-t3 bg-muted rounded-sm p-1 py-0">
-							{balanceCount}
-						</div>
-					)}
-				</div>
-			);
+		
+		
+		return (
+			<div className="flex items-center gap-2">
+				<AdminHover
+						texts={getCusEntHoverTexts({
+							cusEnt: row.original,
+							entities,
+						})}
+					>
+						<span className="font-medium text-t1 truncate">
+							{ent.entitlement.feature.name}
+						</span>
+					</AdminHover>
+				{isAggregated && (
+					<div className="text-t3 bg-muted rounded-sm p-1 py-0">
+						{balanceCount}
+					</div>
+				)}
+			</div>
+		);
 		},
 	},
 	{

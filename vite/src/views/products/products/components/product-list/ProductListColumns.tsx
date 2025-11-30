@@ -1,7 +1,9 @@
 import type { ProductV2 } from "@autumn/shared";
 import type { Row } from "@tanstack/react-table";
+import { AdminHover } from "@/components/general/AdminHover";
 import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
+import { getPlanHoverTexts } from "@/views/admin/adminUtils";
 import { ProductListRowToolbar } from "./ProductListRowToolbar";
 
 export const createProductListColumns = ({
@@ -14,7 +16,13 @@ export const createProductListColumns = ({
 		header: "Name",
 		accessorKey: "name",
 		cell: ({ row }: { row: Row<ProductV2> }) => {
-			return <div className="font-medium text-t1">{row.original.name}</div>;
+			return (
+				<div className="font-medium text-t1">
+					<AdminHover texts={getPlanHoverTexts({ plan: row.original })}>
+						{row.original.name}
+					</AdminHover>
+				</div>
+			);
 		},
 	},
 	{

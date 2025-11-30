@@ -11,7 +11,7 @@ import { checkSameCustom } from "@/internal/customers/attach/attachUtils/getAtta
 import { intervalsAreSame } from "@/internal/customers/attach/attachUtils/getAttachConfig.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv";
 
 const getAttachFunction = async ({
 	attachParams,
@@ -32,15 +32,15 @@ const getAttachFunction = async ({
 };
 
 export const runMigrationAttach = async ({
-	req,
+	ctx,
 	attachParams,
 	fromProduct,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	attachParams: AttachParams;
 	fromProduct: FullProduct;
 }) => {
-	const { logger } = req;
+	const { logger } = ctx;
 	const sameIntervals = intervalsAreSame({ attachParams });
 	const branch = AttachBranch.NewVersion;
 
@@ -88,13 +88,13 @@ export const runMigrationAttach = async ({
 
 	if (attachFunction === AttachFunction.AddProduct) {
 		return await handleAddProduct({
-			req,
+			ctx,
 			attachParams,
 			config,
 		});
 	} else if (attachFunction === AttachFunction.UpgradeSameInterval) {
 		await handleUpgradeFlow({
-			req,
+			ctx,
 			attachParams,
 			config,
 			branch:

@@ -1,28 +1,27 @@
 import type { AttachConfig, FullCusProduct } from "@autumn/shared";
 import type Stripe from "stripe";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import type { AttachParams } from "../../cusProducts/AttachParams.js";
 import { CusProductService } from "../../cusProducts/CusProductService.js";
 import { paramsToScheduleItems } from "./paramsToScheduleItems.js";
 import { getCusProductsToRemove } from "./paramsToSubItems.js";
 
 export const subToNewSchedule = async ({
-	req,
+	ctx,
 	sub,
 	attachParams,
 	config,
 	endOfBillingPeriod,
 	removeCusProducts,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	sub: Stripe.Subscription;
 	attachParams: AttachParams;
 	config: AttachConfig;
 	endOfBillingPeriod: number;
 	removeCusProducts?: FullCusProduct[];
 }) => {
-	const { logger } = req;
 	const itemSet = await getStripeSubItems2({
 		attachParams,
 		config,
@@ -39,7 +38,7 @@ export const subToNewSchedule = async ({
 	);
 
 	const res = await paramsToScheduleItems({
-		req,
+		ctx,
 		sub,
 		attachParams,
 		config,
@@ -66,7 +65,6 @@ export const subToNewSchedule = async ({
 
 	if (res.phases[0].items.length > 0) {
 		itemSet.subItems = res.phases[0].items;
-		const curSubItems = sub.items.data;
 
 		// Create schedule from existing subscription
 		newSchedule = await stripeCli.subscriptionSchedules.create({
@@ -97,7 +95,7 @@ export const subToNewSchedule = async ({
 		});
 
 		await CusProductService.updateByStripeSubId({
-			db: req.db,
+			db: ctx.db,
 			stripeSubId: sub.id!,
 			updates: {
 				scheduled_ids: [newSchedule!.id],
