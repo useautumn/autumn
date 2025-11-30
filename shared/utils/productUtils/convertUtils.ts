@@ -6,6 +6,7 @@ import type {
 	EntitlementWithFeature,
 } from "../../models/productModels/entModels/entModels.js";
 import type { Price } from "../../models/productModels/priceModels/priceModels.js";
+import type { FullProduct } from "../../models/productModels/productModels.js";
 
 // export const getEntRelatedPrice = (
 //   entitlement: Entitlement,
@@ -85,4 +86,12 @@ export const cusEntToCusPrice = ({
 
 		return productMatch && entMatch;
 	});
+};
+
+export const productsToPrices = ({ products }: { products: FullProduct[] }) => {
+	return products.flatMap((product) => product.prices);
+};
+
+export const productsToEnts = ({ products }: { products: FullProduct[] }) => {
+	return products.flatMap((product) => product.entitlements);
 };

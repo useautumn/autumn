@@ -151,7 +151,6 @@ export const handleNewFreeTrial = async ({
 	curFreeTrial,
 	internalProductId,
 	isCustom = false,
-	product,
 	newVersion = false,
 }: {
 	db: DrizzleCli;
@@ -159,7 +158,6 @@ export const handleNewFreeTrial = async ({
 	curFreeTrial: FreeTrial | null | undefined;
 	internalProductId: string;
 	isCustom: boolean;
-	product?: any;
 	newVersion?: boolean; // True if creating a new product version
 }) => {
 	// If new free trial is null

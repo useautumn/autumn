@@ -1,23 +1,27 @@
+import {
+	type AppEnv,
+	type FreeTrial,
+	freeTrials,
+	products,
+} from "@autumn/shared";
+import { and, eq, inArray } from "drizzle-orm";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { AppEnv, FreeTrial, freeTrials, products } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
-import { and, count, desc, eq, inArray } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export class FreeTrialService {
 	static async insert({ db, data }: { db: DrizzleCli; data: FreeTrial }) {
-		await db.insert(freeTrials).values(data as any);
+		await db.insert(freeTrials).values(data);
 	}
 
 	static async upsert({ db, data }: { db: DrizzleCli; data: FreeTrial }) {
-		let updateCols = buildConflictUpdateColumns(freeTrials, [
+		const updateCols = buildConflictUpdateColumns(freeTrials, [
 			"id",
 			"internal_product_id",
 		]);
 
 		await db
 			.insert(freeTrials)
-			.values(data as any)
+			.values(data)
 			.onConflictDoUpdate({
 				target: [freeTrials.id],
 				set: updateCols,

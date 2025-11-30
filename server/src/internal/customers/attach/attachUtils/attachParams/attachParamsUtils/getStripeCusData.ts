@@ -1,39 +1,35 @@
-import type { AppEnv, Customer, Organization } from "@autumn/shared";
+import type { Customer } from "@autumn/shared";
+import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import {
 	createStripeCusIfNotExists,
 	listCusPaymentMethods,
 } from "@/external/stripe/stripeCusUtils.js";
+import { createStripeCli } from "../../../../../../external/connect/createStripeCli";
 
 export const getStripeCusData = async ({
-	stripeCli,
-	db,
-	org,
-	env,
+	ctx,
 	customer,
-	logger,
 	allowNoStripe,
 }: {
-	stripeCli: Stripe;
-	db: DrizzleCli;
-	org: Organization;
-	env: AppEnv;
+	ctx: AutumnContext;
 	customer: Customer;
-	logger: any;
 	allowNoStripe?: boolean;
 }) => {
 	if (allowNoStripe && !customer.processor?.id) {
 		return { stripeCus: undefined, paymentMethod: null, now: undefined };
 	}
 
-	const stripeCus = (await createStripeCusIfNotExists({
+	const { logger, db, org, env } = ctx;
+	const stripeCli = createStripeCli({ org, env });
+
+	const stripeCus = await createStripeCusIfNotExists({
 		db,
 		org,
 		env,
 		customer,
 		logger,
-	})) as Stripe.Customer;
+	});
 
 	const testClock = stripeCus.test_clock as Stripe.TestHelpers.TestClock | null;
 

@@ -14,7 +14,7 @@ import { handleAttachErrors } from "../../customers/attach/attachUtils/handleAtt
 import { insertCustomItems } from "../../customers/attach/attachUtils/insertCustomItems";
 import { attachToInvoiceResponse } from "../../invoices/invoiceUtils";
 
-export const handleAttachV2 = createRoute({
+export const handleAttach = createRoute({
 	body: AttachBodyV0Schema,
 	resource: AffectedResource.Attach,
 	handler: async (c) => {

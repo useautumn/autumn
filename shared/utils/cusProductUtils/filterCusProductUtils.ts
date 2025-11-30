@@ -15,10 +15,10 @@ export const filterCusProductsByEntity = ({
 }: {
 	cusProducts: FullCusProduct[];
 	entity: Entity;
-	org: Organization;
+	org?: Organization;
 }): FullCusProduct[] => {
 	return cusProducts.filter((p: FullCusProduct) => {
-		if (org.config.entity_product) {
+		if (org?.config.entity_product) {
 			return (
 				notNullish(p.internal_entity_id) &&
 				p.internal_entity_id === entity.internal_id
