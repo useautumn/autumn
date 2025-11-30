@@ -139,8 +139,9 @@ export function AttachProductActions({
 					</Button>
 				</PopoverTrigger>
 				<PopoverContent
-					className="p-0 z-100 rounded-lg w-[--radix-popover-trigger-width]"
+					className="p-0 z-100 rounded-lg"
 					align="start"
+					style={{ width: "var(--radix-popover-trigger-width)" }}
 				>
 					<div className="flex flex-col">
 						<button
