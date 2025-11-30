@@ -8,7 +8,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { notNullish } from "@/utils/genUtils.js";
-import type { ExtendedRequest } from "../../../../utils/models/Request.js";
 import { getProductCheckPreview } from "./getProductCheckPreview.js";
 
 export const handleProductCheck = async ({
@@ -29,7 +28,7 @@ export const handleProductCheck = async ({
 		entity_data,
 	} = body;
 
-	const { org, env, logger, db } = ctx;
+	const { org, env, db } = ctx;
 
 	// 1. Get customer and org
 	const [customer, product] = await Promise.all([
@@ -69,10 +68,9 @@ export const handleProductCheck = async ({
 
 	const preview = with_preview
 		? await getProductCheckPreview({
-				req: ctx as ExtendedRequest,
+				ctx,
 				customer,
 				product,
-				logger,
 			})
 		: undefined;
 

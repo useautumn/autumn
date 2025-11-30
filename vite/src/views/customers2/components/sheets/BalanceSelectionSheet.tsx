@@ -3,7 +3,9 @@ import {
 	type Entity,
 	FeatureType,
 	getCusEntBalance,
+	isUnlimitedCusEnt,
 } from "@autumn/shared";
+import { AdminHover } from "@/components/general/AdminHover";
 import { Button } from "@/components/v2/buttons/Button";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { InfoRow } from "@/components/v2/InfoRow";
@@ -12,6 +14,7 @@ import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceS
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { notNullish } from "@/utils/genUtils";
+import { getCusEntHoverTexts } from "@/views/admin/adminUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "../../customer/CustomerContext";
 
@@ -112,7 +115,16 @@ export function BalanceSelectionSheet() {
 										)}
 										<InfoRow
 											label="Plan"
-											value={cusProduct?.product.name || "N/A"}
+											value={
+												<AdminHover
+													texts={getCusEntHoverTexts({
+														cusEnt,
+														entities: customer?.entities || [],
+													})}
+												>
+													<span>{cusProduct?.product.name || "N/A"}</span>
+												</AdminHover>
+											}
 										/>
 
 										{isConsumable && (
@@ -132,9 +144,11 @@ export function BalanceSelectionSheet() {
 									</div>
 
 									<span className="bg-muted px-1 py-0.5 rounded-md text-t1">
-										{notNullish(balance)
-											? new Intl.NumberFormat().format(balance)
-											: "N/A"}
+										{isUnlimitedCusEnt({ cusEnt })
+											? "Unlimited"
+											: notNullish(balance)
+												? new Intl.NumberFormat().format(balance)
+												: "N/A"}
 									</span>
 								</Button>
 							);

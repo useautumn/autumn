@@ -1,7 +1,6 @@
 import type { AttachBodyV0 } from "@autumn/shared";
 import { nullish } from "@/utils/genUtils.js";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
-import type { ExtendedRequest } from "../../../../../utils/models/Request.js";
 import type { AttachParams } from "../../../cusProducts/AttachParams.js";
 import { processAttachBody } from "./processAttachBody.js";
 
@@ -52,7 +51,7 @@ export const getAttachParams = async ({
 		replaceables: [],
 		rewards,
 		// From req
-		req: ctx as ExtendedRequest,
+		req: ctx,
 
 		org: ctx.org,
 		entities: customer.entities,

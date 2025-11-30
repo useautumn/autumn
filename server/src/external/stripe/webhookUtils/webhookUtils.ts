@@ -8,17 +8,17 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv";
 
 export const webhookToAttachParams = ({
-	req,
+	ctx,
 	stripeCli,
 	paymentMethod,
 	cusProduct,
 	fullCus,
 	entities,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	stripeCli: Stripe;
 	paymentMethod?: Stripe.PaymentMethod | null;
 	cusProduct: FullCusProduct;
@@ -26,16 +26,17 @@ export const webhookToAttachParams = ({
 	entities?: Entity[];
 }): AttachParams => {
 	const fullProduct = cusProductToProduct({ cusProduct });
+	const { org, features } = ctx;
 
 	const params: AttachParams = {
 		stripeCli,
 		paymentMethod,
 		customer: fullCus,
-		org: req.org,
+		org,
 		products: [fullProduct],
 		prices: cusProductToPrices({ cusProduct }),
 		entitlements: cusProductToEnts({ cusProduct }),
-		features: req.features,
+		features,
 		freeTrial: cusProduct.free_trial || null,
 		optionsList: cusProduct.options,
 		cusProducts: [cusProduct],

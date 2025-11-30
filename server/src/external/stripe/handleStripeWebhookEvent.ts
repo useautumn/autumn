@@ -3,6 +3,7 @@ import {
 	type FullCustomer,
 	type Organization,
 } from "@autumn/shared";
+import * as Sentry from "@sentry/bun";
 import chalk from "chalk";
 import { Stripe } from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
@@ -14,6 +15,7 @@ import { deleteCachedApiCustomer } from "../../internal/customers/cusUtils/apiCu
 import { setCachedApiInvoices } from "../../internal/customers/cusUtils/apiCusCacheUtils/setCachedApiInvoices.js";
 import { setCachedApiSubs } from "../../internal/customers/cusUtils/apiCusCacheUtils/setCachedApiSubs.js";
 import type { Logger } from "../logtail/logtailUtils.js";
+import { getSentryTags } from "../sentry/sentryUtils.js";
 import { handleCheckoutSessionCompleted } from "./webhookHandlers/handleCheckoutCompleted.js";
 import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
 import { handleInvoiceCreated } from "./webhookHandlers/handleInvoiceCreated/handleInvoiceCreated.js";
@@ -148,19 +150,9 @@ const handleStripeWebhookRefresh = async ({
 export const handleStripeWebhookEvent = async ({
 	ctx,
 	event,
-	// db,
-	// org,
-	// env,
-	// logger,
-	// req,
 }: {
 	ctx: AutumnContext;
 	event: Stripe.Event;
-	// db: DrizzleCli;
-	// org: Organization;
-	// env: AppEnv;
-	// logger: Logger;
-	// req: ExtendedRequest;
 }) => {
 	const { db, logger, org, env } = ctx;
 	logStripeWebhook({ logger, org, event });
@@ -181,35 +173,29 @@ export const handleStripeWebhookEvent = async ({
 			case "customer.subscription.updated": {
 				const subscription = event.data.object;
 				await handleSubscriptionUpdated({
-					req: ctx as unknown as ExtendedRequest,
-					db,
-					org,
+					ctx,
 					subscription,
 					previousAttributes: event.data.previous_attributes,
-					env,
-					logger,
 				});
 				break;
 			}
 
 			case "customer.subscription.deleted":
 				await handleSubDeleted({
-					req: ctx as unknown as ExtendedRequest,
+					ctx,
 					stripeCli,
 					data: event.data.object,
-					logger,
 				});
 				break;
 
 			case "checkout.session.completed": {
 				const checkoutSession = event.data.object;
 				await handleCheckoutSessionCompleted({
-					req: ctx as unknown as ExtendedRequest,
+					ctx,
 					db,
 					data: checkoutSession,
 					org,
 					env,
-					logger,
 				});
 				break;
 			}
@@ -217,12 +203,9 @@ export const handleStripeWebhookEvent = async ({
 			case "invoice.paid": {
 				const invoice = event.data.object;
 				await handleInvoicePaid({
-					db,
-					org,
+					ctx,
 					invoiceData: invoice,
-					env,
 					event,
-					req: ctx as unknown as ExtendedRequest,
 				});
 				break;
 			}
@@ -292,6 +275,13 @@ export const handleStripeWebhookEvent = async ({
 				break;
 		}
 	} catch (error) {
+		Sentry.captureException(error, {
+			tags: getSentryTags({
+				ctx,
+				method: event.type,
+			}),
+		});
+
 		if (error instanceof Stripe.errors.StripeError) {
 			if (error.message.includes("No such customer")) {
 				logger.warn(`stripe customer missing: ${error.message}`);

@@ -253,7 +253,7 @@ export const PlanFeatureRow = ({
 				</div>
 				{prepaidQuantity && (
 					<span className="bg-muted px-1 py-0.5 rounded-md">
-						x{prepaidQuantity}
+						x{parseFloat(Number(prepaidQuantity).toFixed(2))}
 					</span>
 				)}
 			</div>

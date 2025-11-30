@@ -9,11 +9,12 @@ import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeS
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { featureToCusPrice } from "@/internal/customers/cusProducts/cusPrices/convertCusPriceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
+import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 import { handleQuantityDowngrade } from "./handleQuantityDowngrade.js";
 import { handleQuantityUpgrade } from "./handleQuantityUpgrade.js";
 
 export const handleUpdateFeatureQuantity = async ({
-	req,
+	ctx,
 	attachParams,
 	attachConfig,
 	cusProduct,
@@ -21,7 +22,7 @@ export const handleUpdateFeatureQuantity = async ({
 	oldOptions,
 	newOptions,
 }: {
-	req: any;
+	ctx: AutumnContext;
 	attachParams: AttachParams;
 	attachConfig: AttachConfig;
 	cusProduct: FullCusProduct;
@@ -29,22 +30,7 @@ export const handleUpdateFeatureQuantity = async ({
 	oldOptions: FeatureOptions;
 	newOptions: FeatureOptions;
 }) => {
-	const { db, logger } = req;
-	const { stripeCli } = attachParams;
-
-	const prorationBehavior = "always_invoice";
-
 	const subToUpdate = stripeSubs?.[0];
-	// const subToUpdate = await getUsageBasedSub({
-	//   db,
-	//   stripeCli: stripeCli,
-	//   subIds: cusProduct.subscription_ids || [],
-	//   feature: {
-	//     internal_id: newOptions.internal_feature_id,
-	//     id: newOptions.feature_id,
-	//   } as Feature,
-	//   stripeSubs: stripeSubs,
-	// });
 
 	const cusPrice = featureToCusPrice({
 		internalFeatureId: newOptions.internal_feature_id!,
@@ -68,7 +54,7 @@ export const handleUpdateFeatureQuantity = async ({
 
 	if (newOptions.quantity < oldOptions.quantity) {
 		return await handleQuantityDowngrade({
-			req,
+			ctx,
 			attachParams,
 			attachConfig,
 			cusProduct,
@@ -79,7 +65,7 @@ export const handleUpdateFeatureQuantity = async ({
 		});
 	} else {
 		return await handleQuantityUpgrade({
-			req,
+			ctx,
 			attachParams,
 			attachConfig,
 			cusProduct,

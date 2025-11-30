@@ -532,7 +532,7 @@ export const createFullCusProduct = async ({
 	try {
 		if (sendWebhook && !attachParams.fromMigration) {
 			await addProductsUpdatedWebhookTask({
-				req: attachParams.req,
+				ctx: attachParams.req,
 				internalCustomerId: customer.internal_id,
 				org,
 				env: customer.env,
@@ -540,7 +540,6 @@ export const createFullCusProduct = async ({
 				cusProduct: isDowngrade ? curCusProduct! : fullCusProduct,
 				scheduledCusProduct: isDowngrade ? fullCusProduct : undefined,
 				scenario,
-				logger,
 			});
 		}
 	} catch (_error) {

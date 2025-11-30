@@ -1,5 +1,6 @@
 import type {
 	ApiVersion,
+	AttachConfig,
 	AttachReplaceable,
 	AttachScenario,
 	Customer,
@@ -17,8 +18,7 @@ import type {
 	Reward,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-
-import { z } from "zod";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv";
 
 // Get misc
 
@@ -68,19 +68,28 @@ export type AttachParams = {
 	entityId?: string;
 	internalEntityId?: string;
 
-	checkoutSessionParams?: any;
+	checkoutSessionParams?: unknown;
 	apiVersion?: ApiVersion;
 	scenario?: AttachScenario;
 
 	fromMigration?: boolean;
 	finalizeInvoice?: boolean;
-	req?: any;
+	req?: AutumnContext;
 	fromCancel?: boolean;
 	setupPayment?: boolean;
+
+	// For invoice checkout...
+	anchorToUnix?: number;
+	subId?: string;
+	config?: AttachConfig;
+
+	// Invoice action required
+	stripeInvoiceId?: string;
+	cusEntIds?: string[];
 };
 
 export type InsertCusProductParams = {
-	req?: any;
+	req?: AutumnContext;
 	now?: number;
 
 	customer: Customer;
@@ -113,14 +122,14 @@ export type InsertCusProductParams = {
 	finalizeInvoice?: boolean;
 };
 
-export const AttachResultSchema = z.object({
-	customer_id: z.string(),
-	product_ids: z.array(z.string()),
-	code: z.string(),
-	message: z.string(),
+// export const AttachResultSchema = z.object({
+// 	customer_id: z.string(),
+// 	product_ids: z.array(z.string()),
+// 	code: z.string(),
+// 	message: z.string(),
 
-	checkout_url: z.string().nullish(),
-	invoice: z.any().nullish(),
-});
+// 	checkout_url: z.string().nullish(),
+// 	invoice: z.any().nullish(),
+// });
 
-export type AttachResult = z.infer<typeof AttachResultSchema>;
+// export type AttachResult = z.infer<typeof AttachResultSchema>;

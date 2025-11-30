@@ -11,6 +11,8 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { Logger } from "../../../external/logtail/logtailUtils.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { deleteCachedApiCustomer } from "../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { migrationToAttachParams } from "../migrationUtils/migrationToAttachParams.js";
 import { runMigrationAttach } from "../migrationUtils/runMigrationAttach.js";
@@ -34,7 +36,7 @@ export const migrateCustomer = async ({
 	orgId: string;
 	fromProduct: FullProduct;
 	toProduct: FullProduct;
-	logger: any;
+	logger: Logger;
 	features: Feature[];
 	migrationJob?: MigrationJob;
 }) => {
@@ -75,7 +77,7 @@ export const migrateCustomer = async ({
 			});
 
 			await runMigrationAttach({
-				req,
+				ctx: req as unknown as AutumnContext,
 				attachParams,
 				fromProduct,
 			});

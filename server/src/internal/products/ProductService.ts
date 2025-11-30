@@ -219,12 +219,49 @@ export class ProductService {
 		archived?: boolean;
 		includeAll?: boolean;
 	}) {
+		// Optimization: Use a subquery to only fetch the latest version of each product
+		// This avoids fetching all versions and filtering in memory
+		const latestVersionsSubquery =
+			!returnAll && !version
+				? db
+						.select({
+							id: products.id,
+							maxVersion: sql<number>`MAX(${products.version})`.as(
+								"max_version",
+							),
+						})
+						.from(products)
+						.where(
+							and(
+								eq(products.org_id, orgId),
+								eq(products.env, env),
+								inIds ? inArray(products.id, inIds) : undefined,
+							),
+						)
+						.groupBy(products.id)
+						.as("latest_versions")
+				: undefined;
+
 		const data = (await db.query.products.findMany({
 			where: and(
 				eq(products.org_id, orgId),
 				eq(products.env, env),
 				inIds ? inArray(products.id, inIds) : undefined,
 				version ? eq(products.version, version) : undefined,
+				// Only apply the version filter when we're not returning all versions
+				latestVersionsSubquery
+					? exists(
+							db
+								.select()
+								.from(latestVersionsSubquery)
+								.where(
+									and(
+										eq(latestVersionsSubquery.id, products.id),
+										eq(latestVersionsSubquery.maxVersion, products.version),
+									),
+								),
+						)
+					: undefined,
 			),
 
 			with: {
@@ -239,7 +276,7 @@ export class ProductService {
 				prices: { where: eq(prices.is_custom, false) },
 				free_trials: { where: eq(freeTrials.is_custom, false) },
 			},
-			orderBy: [desc(products.internal_id)],
+			// orderBy: [desc(products.internal_id)],
 		})) as FullProduct[];
 
 		parseFreeTrials({ products: data });

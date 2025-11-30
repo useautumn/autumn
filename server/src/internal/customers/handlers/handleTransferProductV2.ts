@@ -10,7 +10,6 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { nullish } from "@/utils/genUtils.js";
-import type { ExtendedRequest } from "../../../utils/models/Request.js";
 import { CusService } from "../CusService.js";
 import { CusProductService } from "../cusProducts/CusProductService.js";
 import { handleDecreaseAndTransfer } from "./handleTransferProduct/handleDecreaseAndTransfer.js";
@@ -130,7 +129,7 @@ export const handleTransferProductV2 = createRoute({
 			});
 
 			await addProductsUpdatedWebhookTask({
-				req: ctx as ExtendedRequest,
+				ctx,
 				internalCustomerId: customer.internal_id,
 				org: ctx.org,
 				env: ctx.env,
@@ -141,7 +140,6 @@ export const handleTransferProductV2 = createRoute({
 					entity_id: toEntity?.id || null,
 					internal_entity_id: toEntity?.internal_id || null,
 				},
-				logger: ctx.logger,
 			});
 		}
 

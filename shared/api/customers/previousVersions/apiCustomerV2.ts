@@ -4,11 +4,11 @@ import { ApiTrialsUsedV0Schema } from "@api/customers/components/apiTrialsUsed/p
 import { ApiCusFeatureV2Schema } from "@api/customers/cusFeatures/previousVersions/apiCusFeatureV2.js";
 import { ApiCusProductV2Schema } from "@api/customers/cusPlans/previousVersions/apiCusProductV2.js";
 import { ApiBaseEntitySchema } from "@api/entities/apiBaseEntity.js";
-import { ApiCusRewardsSchema } from "@api/models.js";
 import { ApiInvoiceV0Schema } from "@api/others/apiInvoice/prevVersions/apiInvoiceV0.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
 
 import { z } from "zod/v4";
+import { ApiCusRewardsSchema } from "../../others/apiDiscount.js";
 
 /**
  * ApiCustomerV2Schema - Customer response format for API V1.1+ (merged format)

@@ -1,5 +1,6 @@
 import {
 	type AttachConfig,
+	AttachFunctionResponseSchema,
 	AttachScenario,
 	ErrCode,
 	SuccessCode,
@@ -9,12 +10,10 @@ import type Stripe from "stripe";
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
-import {
-	type AttachParams,
-	AttachResultSchema,
-} from "@/internal/customers/cusProducts/AttachParams.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import RecaseError from "@/utils/errorUtils.js";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { addSubIdToCache } from "../../cusCache/subCacheUtils.js";
 import {
 	cusProductToSchedule,
@@ -31,17 +30,15 @@ import { subToNewSchedule } from "../mergeUtils/subToNewSchedule.js";
 import { updateCurSchedule } from "../mergeUtils/updateCurSchedule.js";
 
 export const handleRenewProduct = async ({
-	req,
-	res,
+	ctx,
 	attachParams,
 	config,
 }: {
-	req: any;
-	res: any;
+	ctx: AutumnContext;
 	attachParams: AttachParams;
 	config: AttachConfig;
 }) => {
-	const logger = req.logger;
+	const { logger, db } = ctx;
 	const { stripeCli } = attachParams;
 	let { curScheduledProduct } = attachParamToCusProducts({ attachParams });
 
@@ -92,7 +89,7 @@ export const handleRenewProduct = async ({
 			await stripeCli.subscriptionSchedules.release(schedule.id);
 
 			await CusProductService.updateByStripeScheduledId({
-				db: req.db,
+				db,
 				stripeScheduledId: schedule.id,
 				updates: {
 					scheduled_ids: [],
@@ -114,7 +111,7 @@ export const handleRenewProduct = async ({
 		}
 
 		await CusProductService.update({
-			db: req.db,
+			db,
 			cusProductId: curCusProduct.id,
 			updates: {
 				canceled: false,
@@ -132,7 +129,7 @@ export const handleRenewProduct = async ({
 				`RENEW FLOW: adding cur cus product back to schedule ${schedule.id}`,
 			);
 			const newItems = await paramsToScheduleItems({
-				req,
+				ctx,
 				attachParams,
 				config,
 				schedule,
@@ -146,7 +143,7 @@ export const handleRenewProduct = async ({
 				})) as Stripe.Subscription;
 
 				await updateCurSchedule({
-					req,
+					ctx,
 					attachParams,
 					schedule,
 					newPhases: newItems.phases,
@@ -154,7 +151,7 @@ export const handleRenewProduct = async ({
 				});
 
 				await CusProductService.update({
-					db: req.db,
+					db,
 					cusProductId: curCusProduct.id,
 					updates: {
 						scheduled_ids: [schedule.id],
@@ -170,7 +167,7 @@ export const handleRenewProduct = async ({
 				await stripeCli.subscriptionSchedules.release(schedule.id);
 
 				await CusProductService.updateByStripeScheduledId({
-					db: req.db,
+					db,
 					stripeScheduledId: schedule.id,
 					updates: {
 						scheduled_ids: [],
@@ -178,7 +175,7 @@ export const handleRenewProduct = async ({
 				});
 
 				await CusProductService.update({
-					db: req.db,
+					db,
 					cusProductId: curCusProduct.id,
 					updates: {
 						canceled: false,
@@ -199,7 +196,7 @@ export const handleRenewProduct = async ({
 
 			const periodEnd = getLatestPeriodEnd({ sub: curSub });
 			await subToNewSchedule({
-				req,
+				ctx,
 				sub: curSub,
 				attachParams,
 				config,
@@ -207,7 +204,7 @@ export const handleRenewProduct = async ({
 			});
 
 			await CusProductService.update({
-				db: req.db,
+				db,
 				cusProductId: curCusProduct.id,
 				updates: {
 					canceled: false,
@@ -221,7 +218,7 @@ export const handleRenewProduct = async ({
 	if (curCusProduct) {
 		try {
 			await addProductsUpdatedWebhookTask({
-				req,
+				ctx,
 				internalCustomerId: curCusProduct.internal_customer_id,
 				org: attachParams.org,
 				env: attachParams.customer.env,
@@ -229,29 +226,32 @@ export const handleRenewProduct = async ({
 					attachParams.customer.id || attachParams.customer.internal_id,
 				scenario: AttachScenario.Renew,
 				cusProduct: curCusProduct,
-				logger,
 			});
 		} catch (error) {
-			logger.error("RENEW FLOW: failed to add to webhook queue", { error });
+			logger.error(`RENEW FLOW: failed to add to webhook queue: ${error}`);
 		}
 	}
 
 	if (curScheduledProduct) {
 		await CusProductService.delete({
-			db: req.db,
+			db,
 			cusProductId: curScheduledProduct.id,
 		});
 	}
 
-	if (res) {
-		res.status(200).json(
-			AttachResultSchema.parse({
-				code: SuccessCode.RenewedProduct,
-				message: `Successfully renewed product ${product.name}`,
-				product_ids: [product.id],
-				customer_id:
-					attachParams.customer.id || attachParams.customer.internal_id,
-			}),
-		);
-	}
+	return AttachFunctionResponseSchema.parse({
+		code: SuccessCode.RenewedProduct,
+		message: `Successfully renewed product ${product.name}`,
+	});
+	// if (res) {
+	// 	res.status(200).json(
+	// 		AttachResultSchema.parse({
+	// 			code: SuccessCode.RenewedProduct,
+	// 			message: `Successfully renewed product ${product.name}`,
+	// 			product_ids: [product.id],
+	// 			customer_id:
+	// 				attachParams.customer.id || attachParams.customer.internal_id,
+	// 		}),
+	// 	);
+	// }
 };

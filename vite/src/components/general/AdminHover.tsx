@@ -23,9 +23,9 @@ export const AdminHover = forwardRef<
 		{ children, texts, hide = false, asChild = false, side = "bottom" },
 		ref,
 	) => {
-		const { isAdmin } = useAdmin();
+		const { isAdmin, skipHover } = useAdmin();
 
-		if (!isAdmin || hide) return <>{children}</>;
+		if (!isAdmin || hide || skipHover) return <>{children}</>;
 
 		// Try to forward the ref to the child if possible
 		let triggerChild = children;
@@ -39,7 +39,7 @@ export const AdminHover = forwardRef<
 					<TooltipTrigger asChild={asChild}>{triggerChild}</TooltipTrigger>
 					{isAdmin && (
 						<TooltipContent
-							className="bg-white/50 backdrop-blur-sm shadow-sm border px-2 pr-6 py-2 max-w-none"
+							className="bg-white/50 backdrop-blur-sm shadow-sm border px-2 pr-6 py-2 max-w-none z-[9999]"
 							align="start"
 							side={side}
 						>

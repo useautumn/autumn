@@ -9,7 +9,6 @@ import {
 	type FullCustomer,
 	type FullProduct,
 	type FullRewardProgram,
-	type Organization,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
@@ -18,12 +17,8 @@ import type {
 	InsertCusProductParams,
 } from "@/internal/customers/cusProducts/AttachParams.js";
 import { newCusToFullCus } from "@/internal/customers/cusUtils/cusUtils.js";
-import {
-	isFreeProduct,
-	isOneOff,
-	itemsAreOneOff,
-} from "@/internal/products/productUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
 
 export const webhookToAttachParams = ({
 	req,
@@ -64,23 +59,24 @@ export const webhookToAttachParams = ({
 };
 
 export const productToInsertParams = ({
-	req,
+	ctx,
 	fullCus,
 	newProduct,
 	entities,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	fullCus: FullCustomer;
 	newProduct: FullProduct;
 	entities?: Entity[];
 }): InsertCusProductParams => {
+	const { org, features } = ctx;
 	const params: InsertCusProductParams = {
 		customer: fullCus,
-		org: req.org,
+		org,
 		product: newProduct,
 		prices: newProduct.prices,
 		entitlements: newProduct.entitlements,
-		features: req.features,
+		features,
 		cusProducts: fullCus.customer_products,
 		freeTrial: null,
 		optionsList: [],
@@ -93,18 +89,19 @@ export const productToInsertParams = ({
 };
 
 export const newCusToAttachParams = ({
-	req,
+	ctx,
 	newCus,
 	products,
 	stripeCli,
 	freeTrial = null,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	newCus: FullCustomer;
 	products: FullProduct[];
 	stripeCli: Stripe;
 	freeTrial?: FreeTrial | null;
 }) => {
+	const { org } = ctx;
 	if (!newCus.customer_products) {
 		newCus.customer_products = [];
 	}
@@ -118,8 +115,8 @@ export const newCusToAttachParams = ({
 	const attachParams: AttachParams = {
 		stripeCli,
 		paymentMethod: null,
-		req,
-		org: req.org,
+		req: ctx,
+		org,
 		customer: newCus,
 		products,
 		prices: products.flatMap((p) => p.prices),
@@ -136,19 +133,20 @@ export const newCusToAttachParams = ({
 };
 
 export const newCusToInsertParams = ({
-	req,
+	ctx,
 	newCus,
 	product,
 	freeTrial = null,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	newCus: Customer;
 	product: FullProduct;
 	freeTrial?: FreeTrial | null;
 }) => {
+	const { org } = ctx;
 	return {
-		req,
-		org: req.org,
+		req: ctx,
+		org,
 		customer: newCusToFullCus({ newCus }),
 		product,
 		prices: product.prices,
@@ -163,26 +161,23 @@ export const newCusToInsertParams = ({
 };
 
 export const rewardProgramToAttachParams = ({
-	req,
+	ctx,
 	rewardProgram,
 	customer,
 	product,
-	org,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	rewardProgram: FullRewardProgram;
 	customer: FullCustomer;
 	product: FullProduct;
-	org?: Organization;
 }): AttachParams => {
+	const { org, env, features } = ctx;
+
 	const reward = rewardProgram.reward;
-	const isPaid = !isFreeProduct(product.prices);
-	const isRecurring =
-		!isOneOff(product.prices) && !itemsAreOneOff(product.entitlements);
 
 	return {
-		req,
-		org: org || req.org,
+		req: ctx,
+		org,
 		customer,
 		products: [product],
 		prices: product.prices,
@@ -192,11 +187,8 @@ export const rewardProgramToAttachParams = ({
 		optionsList: [],
 		cusProducts: customer.customer_products,
 		entities: [],
-		features: req.features,
-		stripeCli: createStripeCli({
-			org: org || req.org,
-			env: req.env,
-		}),
+		features,
+		stripeCli: createStripeCli({ org, env }),
 		paymentMethod: null,
 		replaceables: [],
 	} satisfies AttachParams;

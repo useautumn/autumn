@@ -1,49 +1,42 @@
 import { beforeAll, describe, test } from "bun:test";
-import { LegacyVersion } from "@autumn/shared";
+import { ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import {
-	constructProduct,
-	constructRawProduct,
-} from "@/utils/scriptUtils/createTestProducts.js";
-import { constructPriceItem } from "../../src/internal/products/product-items/productItemUtils.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { constructFeatureItem } from "../../src/utils/scriptUtils/constructItem.js";
 import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "../../src/utils/scriptUtils/testUtils/initProductsV0.js";
+import { replaceItems } from "../attach/utils.js";
 
 // UNCOMMENT FROM HERE
 const pro = constructProduct({
 	type: "pro",
-	isDefault: true,
+	isDefault: false,
 
 	items: [
 		constructFeatureItem({
-			featureId: TestFeature.Credits,
-			includedUsage: 200,
-			// unlimited: true,
+			featureId: TestFeature.Users,
+			includedUsage: 5,
+		}),
+	],
+});
+const premium = constructProduct({
+	type: "premium",
+	isDefault: false,
+
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Users,
+			includedUsage: 10,
 		}),
 	],
 });
 
-const oneOff = constructRawProduct({
-	id: "one-off",
-	items: [
-		constructPriceItem({
-			price: 10,
-			interval: null,
-		}),
-		constructFeatureItem({
-			featureId: TestFeature.Messages,
-			includedUsage: 100,
-		}),
-	],
-});
-
-describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
+describe(`${chalk.yellowBright("temp: Testing prepaid and prorated")}`, () => {
 	const customerId = "temp";
-	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
+	const autumn: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
 	beforeAll(async () => {
 		await initCustomerV3({
@@ -56,40 +49,31 @@ describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [pro, oneOff],
+			products: [pro, premium],
 			prefix: customerId,
 		});
 	});
 
-	test("should attach pro product", async () => {
-		// await autumn.customers.get(customerId);
-
-		const res = await autumn.attach({
+	test("should create a subscription with prepaid and prorated", async () => {
+		await autumn.attach({
+			customer_id: customerId,
+			product_id: premium.id,
+		});
+		await autumn.attach({
 			customer_id: customerId,
 			product_id: pro.id,
 		});
 
-		await autumn.attach({
-			customer_id: customerId,
-			product_id: oneOff.id,
+		// Create new version of pro
+		await autumn.products.update(pro.id, {
+			items: replaceItems({
+				featureId: TestFeature.Users,
+				newItem: constructFeatureItem({
+					featureId: TestFeature.Users,
+					includedUsage: 2,
+				}),
+				items: pro.items,
+			}),
 		});
-		await autumn.attach({
-			customer_id: customerId,
-			product_id: oneOff.id,
-		});
-		const customer = await autumn.customers.get(customerId);
-		console.log("Customer:", customer);
-
-		// await autumn.attach({
-		// 	customer_id: customerId,
-		// 	product_id: oneOff.id,
-		// });
-		// await autumn.attach({
-		// 	customer_id: customerId,
-		// 	product_id: oneOff.id,
-		// });
-
-		// const customer = await autumn.customers.get(customerId);
-		// console.log("Customer:", customer);
 	});
 });

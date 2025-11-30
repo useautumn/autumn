@@ -63,7 +63,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing v0.2 / v1.2 response for at
 			product_id: pro.id,
 		});
 
-		console.log(attachResponse);
 		expect(Object.keys(attachResponse)).toEqual(["success", "message"]);
 	});
 
