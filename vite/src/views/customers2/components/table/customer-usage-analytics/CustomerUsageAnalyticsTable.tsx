@@ -1,6 +1,7 @@
+import type { Event } from "@autumn/shared";
 import { ChartBar } from "@phosphor-icons/react";
 import { parseAsInteger, useQueryState } from "nuqs";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
 import { LoadingShimmerText } from "@/components/v2/LoadingShimmerText";
 import { cn } from "@/lib/utils";
@@ -12,8 +13,12 @@ import { CustomerUsageAnalyticsChart } from "./CustomerUsageAnalyticsChart";
 import { CustomerUsageAnalyticsColumns } from "./CustomerUsageAnalyticsColumns";
 import { CustomerUsageAnalyticsFullButton } from "./CustomerUsageAnalyticsFullButton";
 import { CustomerUsageAnalyticsSelectDays } from "./CustomerUsageAnalyticsSelectDays";
+import { EventDetailsDialog } from "./EventDetailsDialog";
 
 export function CustomerUsageAnalyticsTable() {
+	const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+	const [eventDialogOpen, setEventDialogOpen] = useState(false);
+
 	const [selectedDays, setSelectedDays] = useQueryState(
 		"analyticsTimeRange",
 		parseAsInteger.withDefault(7),
@@ -54,76 +59,90 @@ export function CustomerUsageAnalyticsTable() {
 		columns: CustomerUsageAnalyticsColumns,
 	});
 
+	const handleRowClick = (event: Event) => {
+		setSelectedEvent(event);
+		setEventDialogOpen(true);
+	};
+
 	const hasEvents = rawEvents?.length > 0;
 
 	return (
-		<Table.Provider
-			config={{
-				table,
-				numberOfColumns: CustomerUsageAnalyticsColumns.length,
-				enableSorting,
-				isLoading,
-				rowClassName: "h-8 bg-interactive-secondary dark:bg-card border-b",
-				flexibleTableColumns: true,
-			}}
-		>
-			<Table.Container>
-				<Table.Toolbar>
-					<Table.Heading>
-						<ChartBar size={16} weight="fill" className="text-subtle" />
-						Usage
-					</Table.Heading>
-					<Table.Actions>
-						{/* <CustomerUsageAnalyticsSelectFeatures
+		<>
+			<EventDetailsDialog
+				event={selectedEvent}
+				open={eventDialogOpen}
+				setOpen={setEventDialogOpen}
+			/>
+			<Table.Provider
+				config={{
+					table,
+					numberOfColumns: CustomerUsageAnalyticsColumns.length,
+					enableSorting,
+					isLoading,
+					onRowClick: handleRowClick,
+					rowClassName:
+						"h-8 bg-interactive-secondary dark:bg-card border-b cursor-pointer hover:bg-interactive-secondary-hover",
+					flexibleTableColumns: true,
+				}}
+			>
+				<Table.Container>
+					<Table.Toolbar>
+						<Table.Heading>
+							<ChartBar size={16} weight="fill" className="text-subtle" />
+							Usage
+						</Table.Heading>
+						<Table.Actions>
+							{/* <CustomerUsageAnalyticsSelectFeatures
 							availableFeatures={availableFeatures as string[]}
 							selectedFeatures={selectedFeatures}
 							setSelectedFeatures={setSelectedFeatures}
 						/> */}
-						<CustomerUsageAnalyticsSelectDays
-							selectedDays={selectedDays}
-							setSelectedDays={setSelectedDays}
-						/>
-						<CustomerUsageAnalyticsFullButton />
-					</Table.Actions>
-				</Table.Toolbar>
-				<div className="flex w-full gap-2 ">
-					{isLoading ? (
-						<div className="flex justify-center py-4 w-full h-full relative overflow-visible text-sm bg-interactive-secondary rounded-lg border shadow-sm">
-							<LoadingShimmerText text="Loading events" />
-							{/* <div className="font-mono text-t6 absolute top-8.5">
+							<CustomerUsageAnalyticsSelectDays
+								selectedDays={selectedDays}
+								setSelectedDays={setSelectedDays}
+							/>
+							<CustomerUsageAnalyticsFullButton />
+						</Table.Actions>
+					</Table.Toolbar>
+					<div className="flex w-full gap-2 ">
+						{isLoading ? (
+							<div className="flex justify-center py-4 w-full h-full relative overflow-visible text-sm bg-interactive-secondary rounded-lg border shadow-sm">
+								<LoadingShimmerText text="Loading events" />
+								{/* <div className="font-mono text-t6 absolute top-8.5">
 								{customer.name || customer.email || customer.id}
 							</div> */}
-						</div>
-					) : hasEvents ? (
-						<>
-							<div className="flex max-w-1/2 w-full min-w-0 flex-col h-[250px]">
-								<div className="overflow-hidden flex flex-col border h-full bg-background rounded-lg">
-									<Table.Content
-										className={cn(
-											" overflow-auto rounded-none bg-card",
-											rawEvents.length <= 6
-												? "border-0 border-b-1"
-												: "border-none",
-										)}
-									>
-										<Table.Header />
-										<Table.Body />
-									</Table.Content>
+							</div>
+						) : hasEvents ? (
+							<>
+								<div className="flex max-w-1/2 w-full min-w-0 flex-col h-[250px]">
+									<div className="overflow-hidden flex flex-col border h-full bg-background rounded-lg">
+										<Table.Content
+											className={cn(
+												" overflow-auto rounded-none bg-card",
+												rawEvents.length <= 6
+													? "border-0 border-b"
+													: "border-none",
+											)}
+										>
+											<Table.Header />
+											<Table.Body />
+										</Table.Content>
+									</div>
 								</div>
-							</div>
-							<div className="flex max-w-1/2 w-full min-w-0 h-[250px]">
-								<CustomerUsageAnalyticsChart
-									timeseriesEvents={timeseriesEvents}
-									// events={filteredEvents}
-									daysToShow={selectedDays ?? 7}
-								/>
-							</div>
-						</>
-					) : (
-						<EmptyState text="Record events to display feature usage" />
-					)}
-				</div>
-			</Table.Container>
-		</Table.Provider>
+								<div className="flex max-w-1/2 w-full min-w-0 h-[250px]">
+									<CustomerUsageAnalyticsChart
+										timeseriesEvents={timeseriesEvents}
+										// events={filteredEvents}
+										daysToShow={selectedDays ?? 7}
+									/>
+								</div>
+							</>
+						) : (
+							<EmptyState text="Record events to display feature usage" />
+						)}
+					</div>
+				</Table.Container>
+			</Table.Provider>
+		</>
 	);
 }
