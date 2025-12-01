@@ -1,7 +1,6 @@
 import { AttachScenario, type FullCusProduct } from "@autumn/shared";
 import type Stripe from "stripe";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
-import { isMultiProductSub } from "@/internal/customers/attach/mergeUtils/mergeUtils.js";
 import { getSubScenarioFromCache } from "@/internal/customers/cusCache/subCacheUtils.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
@@ -12,18 +11,18 @@ const isSubRenewed = ({
 	previousAttributes,
 	sub,
 }: {
-	previousAttributes: any;
+	previousAttributes: unknown;
 	sub: Stripe.Subscription;
 }) => {
+	const prevAttrs = previousAttributes as Record<string, unknown>;
+
 	// 1. If previously canceled
 	const uncanceledAtPreviousEnd =
-		previousAttributes.cancel_at_period_end && !sub.cancel_at_period_end;
+		prevAttrs.cancel_at_period_end && !sub.cancel_at_period_end;
 
-	const uncancelAt =
-		notNullish(previousAttributes.cancel_at) && nullish(sub.cancel_at);
+	const uncancelAt = notNullish(prevAttrs.cancel_at) && nullish(sub.cancel_at);
 
-	const uncanceledAt =
-		notNullish(previousAttributes.canceled_at) && sub.canceled_at;
+	const uncanceledAt = notNullish(prevAttrs.canceled_at) && sub.canceled_at;
 
 	return {
 		renewed: uncanceledAtPreviousEnd || uncancelAt || uncanceledAt,
@@ -38,8 +37,7 @@ export const handleSubRenewed = async ({
 	updatedCusProducts,
 }: {
 	ctx: AutumnContext;
-	// biome-ignore lint/suspicious/noExplicitAny: Don't know the type of prevAttributes
-	prevAttributes: any;
+	prevAttributes: unknown;
 	sub: Stripe.Subscription;
 	updatedCusProducts: FullCusProduct[];
 }) => {
@@ -50,11 +48,20 @@ export const handleSubRenewed = async ({
 		sub,
 	});
 
-	if (!renewed || updatedCusProducts.length === 0) return;
+	logger.info(`sub.renewed: renewed=${renewed}`);
+	if (!renewed) return;
+
+	if (updatedCusProducts.length === 0) {
+		logger.info(`sub.renewed SKIP: renewed but no updatedCusProducts`);
+		return;
+	}
 
 	const subScenario = await getSubScenarioFromCache({ subId: sub.id });
-	console.log(`Renewed: ${renewed}, subScenario: ${subScenario}`);
-	if (subScenario === AttachScenario.Renew) return;
+	logger.info(`sub.renewed: renewed=${renewed}, subScenario=${subScenario}`);
+	if (subScenario === AttachScenario.Renew) {
+		logger.info(`sub.renewed SKIP: already handled by attach`);
+		return;
+	}
 
 	const customer = updatedCusProducts[0].customer;
 	const cusProducts = await CusProductService.list({
@@ -62,9 +69,7 @@ export const handleSubRenewed = async ({
 		internalCustomerId: customer!.internal_id,
 	});
 
-	console.log(`handling sub.renewed!`);
-
-	if (isMultiProductSub({ sub, cusProducts }) || sub.schedule) return;
+	logger.info(`handling sub.renewed!`);
 
 	await CusProductService.updateByStripeSubId({
 		db,
@@ -72,17 +77,32 @@ export const handleSubRenewed = async ({
 		updates: { canceled_at: null, canceled: false, ended_at: null },
 	});
 
-	if (!org.config.sync_status) return;
+	if (!org.config.sync_status) {
+		logger.info(`sub.renewed SKIP webhook: org.config.sync_status=false`);
+		return;
+	}
 
-	const { curScheduledProduct } = getExistingCusProducts({
-		product: updatedCusProducts[0].product,
-		cusProducts,
-		internalEntityId: updatedCusProducts[0].internal_entity_id,
-	});
+	const curScheduledProductsMap = new Map<string, FullCusProduct>();
+	for (const x of updatedCusProducts) {
+		const { curScheduledProduct } = getExistingCusProducts({
+			product: x.product,
+			cusProducts,
+			internalEntityId: x.internal_entity_id,
+		});
+		if (
+			curScheduledProduct &&
+			!curScheduledProductsMap.has(curScheduledProduct.id)
+		) {
+			curScheduledProductsMap.set(curScheduledProduct.id, curScheduledProduct);
+		}
+	}
+	const curScheduledProducts = Array.from(curScheduledProductsMap.values());
 
 	const deletedCusProducts: FullCusProduct[] = [];
 
-	if (curScheduledProduct) {
+	for (const curScheduledProduct of curScheduledProducts) {
+		if (!curScheduledProduct) continue;
+
 		logger.info(
 			`sub.updated: renewed -> removing scheduled: ${curScheduledProduct.product.name}, main product: ${updatedCusProducts[0].product.name}`,
 		);
@@ -95,8 +115,8 @@ export const handleSubRenewed = async ({
 		deletedCusProducts.push(curScheduledProduct);
 	}
 
-	try {
-		for (const cusProd of updatedCusProducts) {
+	for (const cusProd of updatedCusProducts) {
+		try {
 			await addProductsUpdatedWebhookTask({
 				ctx,
 				internalCustomerId: cusProd.internal_customer_id,
@@ -109,6 +129,12 @@ export const handleSubRenewed = async ({
 					(cp) => cp.product.group === cusProd.product.group,
 				),
 			});
+			logger.info(`sub.renewed ✅ SENT webhook for ${cusProd.product.name}`);
+		} catch (error) {
+			logger.error(
+				`sub.renewed ❌ FAILED webhook for ${cusProd.product.name}`,
+				error,
+			);
 		}
-	} catch (_error) {}
+	}
 };
