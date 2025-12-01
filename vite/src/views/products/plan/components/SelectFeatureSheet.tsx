@@ -1,6 +1,7 @@
 import { type Feature, productV2ToFeatureItems } from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/v2/buttons/Button";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import {
 	Select,
@@ -115,14 +116,14 @@ export function SelectFeatureSheet({
 								))}
 							</div>
 							<div className="border-t pt-2 pb-1 px-2.5 sticky bottom-0 bg-popover">
-								<button
-									type="button"
-									className="w-full px-[6px] py-[4px] rounded-[6px] bg-muted hover:bg-muted-hover transition-colors focus:outline-none text-sm font-medium flex items-center justify-center gap-[6px] text-t2"
+								<Button
+									variant="muted"
+									className="w-full"
 									onClick={handleCreateNew}
 								>
 									<PlusIcon className="size-[14px] text-t2" weight="regular" />
 									Create new feature
-								</button>
+								</Button>
 							</div>
 						</SelectContent>
 					</Select>

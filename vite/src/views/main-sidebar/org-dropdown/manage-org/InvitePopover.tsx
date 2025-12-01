@@ -1,6 +1,7 @@
 import { Mail } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod/v4";
 import {
 	Popover,
 	PopoverContent,
@@ -11,24 +12,34 @@ import { Input } from "@/components/v2/inputs/Input";
 import { authClient } from "@/lib/auth-client";
 import { getBackendErr } from "@/utils/genUtils";
 
+const emailSchema = z.email();
+
 export const InvitePopover = () => {
 	const [email, setEmail] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [open, setOpen] = useState(false);
 
 	const handleInvite = async () => {
+		if (!email || !emailSchema.safeParse(email).success) {
+			toast.error("Please enter a valid email address.");
+			return;
+		}
+
 		try {
 			setLoading(true);
-			const { data, error } = await authClient.organization.inviteMember({
+			const { error } = await authClient.organization.inviteMember({
 				email: email,
 				role: "admin",
 				resend: true,
 			});
 
-			if (error) throw error;
+			if (error) {
+				toast.error(error.message);
+				return;
+			}
 
 			toast.success(`Successfully sent invitation to ${email}`);
-
+			setEmail("");
 			setOpen(false);
 		} catch (error) {
 			console.error(error);
@@ -58,7 +69,7 @@ export const InvitePopover = () => {
 					/>
 					<Button
 						variant="primary"
-						className="!h-6.5 !mt-0"
+						className="h-6.5! mt-0!"
 						// endIcon={<Plus size={10} />}
 						onClick={handleInvite}
 						isLoading={loading}

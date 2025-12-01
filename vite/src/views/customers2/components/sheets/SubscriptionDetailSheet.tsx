@@ -3,6 +3,7 @@ import {
 	type Entity,
 	featureToOptions,
 	isTrialing,
+	type ProductItem,
 	UsageModel,
 } from "@autumn/shared";
 import {
@@ -190,7 +191,7 @@ export function SubscriptionDetailSheet() {
 					)}
 
 					<div className="space-y-2">
-						{productV2.items.map((item, index) => {
+						{productV2.items.map((item: ProductItem, index: number) => {
 							if (!item.feature_id) return null;
 
 							const feature = features.find((f) => f.id === item.feature_id);
