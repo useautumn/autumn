@@ -1,5 +1,6 @@
 "use client";
 
+import type { CustomerWithProducts } from "@autumn/shared";
 import { CaretDownIcon } from "@phosphor-icons/react";
 import { debounce } from "lodash";
 import { Loader2 } from "lucide-react";
@@ -20,10 +21,9 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
-import { useAxiosPostSWR } from "@/services/useAxiosSwr";
 import { useEnv } from "@/utils/envUtils";
 import { navigateTo } from "@/utils/genUtils";
-
+import { useCusSearchQueryV2 } from "@/views/customers/hooks/useCusSearchQuery";
 import { useAnalyticsContext } from "../AnalyticsContext";
 
 interface CustomerSearchResult {
@@ -48,13 +48,11 @@ export function CustomerComboBox({
 	const [value, setValue] = useState("");
 	const [isSearching, setIsSearching] = useState(false);
 
-	const { data, mutate } = useAxiosPostSWR({
-		url: `/v1/customers/all/search`,
-		env,
-		data: {
-			search: value || "",
-			page_size: 25,
-		},
+	const { customers: data, refetch: mutate } = useCusSearchQueryV2({
+		search: value || "",
+		filters: {},
+		page: 1,
+		page_size: 25,
 	});
 
 	const debouncedSearch = useCallback(
@@ -142,35 +140,33 @@ export function CustomerComboBox({
 								</CommandEmpty>
 								<CommandGroup>
 									{value &&
-										data?.customers &&
-										data?.customers?.map(
-											(c: CustomerSearchResult, idx: number) => {
-												if (c.name === customer?.name) {
-													return null;
-												}
-												return (
-													<CommandItem
-														key={idx}
-														value={c.id || c.internal_id}
-														onSelect={() => {
-															const params = new URLSearchParams(
-																location.search,
-															);
-															params.set("customer_id", c.id);
-															const path = `/analytics?${params.toString()}`;
-															navigateTo(path, navigate, env);
-															setOpen(false);
-														}}
-														className="w-full"
-													>
-														{c.name || c.email}{" "}
-														<span className="text-xs text-t3">
-															{c.id && `(${c.id.slice(0, 10)}...)`}
-														</span>
-													</CommandItem>
-												);
-											},
-										)}
+										data?.map((c: CustomerWithProducts, idx: number) => {
+											if (c.name === customer?.name) {
+												return null;
+											}
+											return (
+												<CommandItem
+													key={idx}
+													value={c.id || c.internal_id}
+													onSelect={() => {
+														const params = new URLSearchParams(location.search);
+														params.set(
+															"customer_id",
+															c.id || c.internal_id || "",
+														);
+														const path = `/analytics?${params.toString()}`;
+														navigateTo(path, navigate, env);
+														setOpen(false);
+													}}
+													className="w-full"
+												>
+													{c.name || c.email}{" "}
+													<span className="text-xs text-t3">
+														{c.id && `(${c.id.slice(0, 10)}...)`}
+													</span>
+												</CommandItem>
+											);
+										})}
 								</CommandGroup>
 							</>
 						)}
