@@ -1,9 +1,10 @@
 import { ChartBarIcon } from "@phosphor-icons/react";
+import { useNavigate } from "react-router";
 import { Button } from "@/components/v2/buttons/Button";
 import { pushPage } from "@/utils/genUtils";
 
 export function CustomerUsageAnalyticsFullButton() {
-	// const navigate = useNavigate();
+	const navigate = useNavigate();
 
 	return (
 		<Button
