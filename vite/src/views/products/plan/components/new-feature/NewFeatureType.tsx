@@ -2,7 +2,7 @@ import {
 	FeatureType as APIFeatureType,
 	type CreateFeature,
 } from "@autumn/shared";
-import { BarcodeIcon, InfoIcon } from "@phosphor-icons/react";
+import { BarcodeIcon } from "@phosphor-icons/react";
 import { WarningBox } from "@/components/general/modal-components/WarningBox";
 import { PanelButton } from "@/components/v2/buttons/PanelButton";
 import { BooleanIcon } from "@/components/v2/icons/AutumnIcons";
@@ -40,7 +40,6 @@ export function NewFeatureType({
 						<div className="flex-1">
 							<div className="text-body-highlight mb-1 flex-row flex items-center gap-1">
 								Metered
-								<InfoIcon size={8} weight="regular" color="#888888" />
 							</div>
 							<div className="text-body-secondary leading-tight">
 								A usage-based feature that you want to track
@@ -54,12 +53,11 @@ export function NewFeatureType({
 							onClick={() => {
 								setFeature({ ...feature, type: APIFeatureType.Boolean });
 							}}
-							icon={<BooleanIcon />}
+							icon={<BooleanIcon className="hover:text-primary" />}
 						/>
 						<div className="flex-1">
 							<div className="text-body-highlight mb-1 flex-row flex items-center gap-1">
 								Boolean
-								<InfoIcon size={8} weight="regular" color="#888888" />
 							</div>
 							<div className="text-body-secondary leading-tight">
 								A flag that can either be enabled or disabled.
