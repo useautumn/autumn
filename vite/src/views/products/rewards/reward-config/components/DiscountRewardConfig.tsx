@@ -70,7 +70,7 @@ export function DiscountRewardConfig({
 					<div>
 						<FormLabel>Promotional Code (Optional)</FormLabel>
 						<Input
-							placeholder="eg. SAVE20"
+							placeholder="SAVE20"
 							value={reward.promo_codes[0]?.code || ""}
 							onChange={(e) =>
 								setReward({
@@ -89,7 +89,7 @@ export function DiscountRewardConfig({
 						<InputGroup className="input-base p-2">
 							<input
 								type="number"
-								placeholder="eg. 20"
+								placeholder="20"
 								value={config.discount_value === 0 ? "" : config.discount_value}
 								onChange={(e) => {
 									const value =
@@ -102,7 +102,7 @@ export function DiscountRewardConfig({
 								<InputGroupText className="text-t3">
 									{reward.discountType === "percentage"
 										? "%"
-										: org?.default_currency || "USD"}
+										: org?.default_currency.toUpperCase() || "USD"}
 								</InputGroupText>
 							</InputGroupAddon>
 						</InputGroup>
@@ -114,7 +114,7 @@ export function DiscountRewardConfig({
 							{showDurationValue && (
 								<Input
 									type="number"
-									placeholder="eg. 3"
+									placeholder="3"
 									className="w-20"
 									value={
 										config.duration_value === 0 ? "" : config.duration_value
