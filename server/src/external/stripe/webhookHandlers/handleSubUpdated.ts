@@ -61,7 +61,7 @@ export const handleSubscriptionUpdated = async ({
 		db,
 		stripeSubId: subscription.id,
 		updates: {
-			status: subStatusMap[subscription.status] || CusProductStatus.Unknown,
+			status: subStatusMap[subscription.status] ?? undefined, // don't change status if it's unknown
 			collection_method: fullSub.collection_method as CollectionMethod,
 		},
 	});

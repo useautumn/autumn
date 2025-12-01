@@ -82,13 +82,7 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
 			env: req.env,
 		});
 
-		// if (balance < 0 && !cusEnt.usage_allowed) {
-		// 	throw new RecaseError({
-		// 		message: "Entitlement does not allow usage",
-		// 		code: ErrCode.InvalidRequest,
-		// 		statusCode: StatusCodes.BAD_REQUEST,
-		// 	});
-		// }
+		console.log(`Updating cus ent: ${cusEnt.id} to balance: ${balance}`);
 
 		if (cusEnt.unlimited) {
 			throw new RecaseError({

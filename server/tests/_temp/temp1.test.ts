@@ -22,8 +22,8 @@ const pro = constructProduct({
 		}),
 	],
 });
-const premium = constructProduct({
-	type: "premium",
+const free = constructProduct({
+	type: "free",
 	isDefault: false,
 
 	items: [
@@ -49,7 +49,7 @@ describe(`${chalk.yellowBright("temp: Testing prepaid and prorated")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [pro, premium],
+			products: [pro, free],
 			prefix: customerId,
 		});
 	});
@@ -57,7 +57,7 @@ describe(`${chalk.yellowBright("temp: Testing prepaid and prorated")}`, () => {
 	test("should create a subscription with prepaid and prorated", async () => {
 		await autumn.attach({
 			customer_id: customerId,
-			product_id: premium.id,
+			product_id: free.id,
 		});
 		await autumn.attach({
 			customer_id: customerId,
@@ -65,14 +65,14 @@ describe(`${chalk.yellowBright("temp: Testing prepaid and prorated")}`, () => {
 		});
 
 		// Create new version of pro
-		await autumn.products.update(pro.id, {
+		await autumn.products.update(free.id, {
 			items: replaceItems({
 				featureId: TestFeature.Users,
 				newItem: constructFeatureItem({
 					featureId: TestFeature.Users,
 					includedUsage: 2,
 				}),
-				items: pro.items,
+				items: free.items,
 			}),
 		});
 	});
