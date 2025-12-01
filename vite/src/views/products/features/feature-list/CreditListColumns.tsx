@@ -1,6 +1,8 @@
 import type { Feature } from "@autumn/shared";
 import type { ColumnDef, Row } from "@tanstack/react-table";
+import { AdminHover } from "@/components/general/AdminHover";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
+import { getFeatureHoverTexts } from "@/views/admin/adminUtils";
 import { FeatureListRowToolbar } from "./FeatureListRowToolbar";
 
 export const createCreditListColumns = (): ColumnDef<Feature, unknown>[] => [
@@ -9,7 +11,13 @@ export const createCreditListColumns = (): ColumnDef<Feature, unknown>[] => [
 		header: "Name",
 		accessorKey: "name",
 		cell: ({ row }: { row: Row<Feature> }) => {
-			return <div className="font-medium text-t1">{row.original.name}</div>;
+			return (
+				<div className="font-medium text-t1">
+					<AdminHover texts={getFeatureHoverTexts({ feature: row.original })}>
+						{row.original.name}
+					</AdminHover>
+				</div>
+			);
 		},
 	},
 	{
