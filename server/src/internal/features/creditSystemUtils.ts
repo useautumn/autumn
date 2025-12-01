@@ -87,7 +87,7 @@ export const getCreditCost = ({
 	for (const schemaItem of schema) {
 		if (schemaItem.metered_feature_id === featureId) {
 			return new Decimal(schemaItem.credit_amount)
-				.div(schemaItem.feature_amount)
+				.div(schemaItem.feature_amount ?? 1)
 				.mul(amount)
 				.toNumber();
 		}
