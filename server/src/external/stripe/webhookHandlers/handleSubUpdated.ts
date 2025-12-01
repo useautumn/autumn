@@ -20,8 +20,7 @@ export const handleSubscriptionUpdated = async ({
 }: {
 	ctx: AutumnContext;
 	subscription: Stripe.Subscription;
-	// biome-ignore lint/suspicious/noExplicitAny: Don't know the type of previousAttributes
-	previousAttributes: any;
+	previousAttributes: unknown;
 }) => {
 	const { db, org, env, logger } = ctx;
 	// handle scheduled updated
@@ -71,17 +70,6 @@ export const handleSubscriptionUpdated = async ({
 	if (updatedCusProducts.length > 0) {
 		logger.info(
 			`✅ sub.updated: updated ${updatedCusProducts.length} customer product(s)} (${updatedCusProducts[0].status})`,
-			{
-				data: {
-					stripeSubId: subscription.id,
-					updatedCusProducts: updatedCusProducts.map((cp) => ({
-						id: cp.id,
-						status: cp.status,
-						canceled_at: cp.canceled_at,
-						ended_at: cp.ended_at,
-					})),
-				},
-			},
 		);
 	}
 
@@ -148,16 +136,7 @@ export const handleSubscriptionUpdated = async ({
 		const validInvoiceReasons = ["subscription_cycle", "subscription_create"];
 		if (!validInvoiceReasons.includes(latestInvoice.billing_reason ?? "")) {
 			logger.info(
-				"sub.updated, latest invoice billing reason isn't subscription_cycle / subscription_create, past_due not forcing cancel",
-				{
-					data: {
-						subscriptionId: subscription.id,
-						stripeSubId: subscription.id,
-						latestInvoiceId: subscription.latest_invoice,
-						latestInvoiceStatus: latestInvoice.status,
-						latestInvoiceBillingReason: latestInvoice.billing_reason,
-					},
-				},
+				`sub.updated, latest invoice billing reason isn't subscription_cycle / subscription_create, past_due not forcing cancel`,
 			);
 			return;
 		}
@@ -165,33 +144,15 @@ export const handleSubscriptionUpdated = async ({
 		try {
 			logger.info(
 				`sub.updated (past_due), cancelling subscription: ${subscription.id}`,
-				{
-					data: {
-						subscriptionId: subscription.id,
-						stripeSubId: subscription.id,
-						latestInvoiceId: subscription.latest_invoice,
-						latestInvoiceStatus: latestInvoice.status,
-						latestInvoiceBillingReason: latestInvoice.billing_reason,
-					},
-				},
 			);
 			await stripeCli.subscriptions.cancel(subscription.id);
 			if (latestInvoice.status === "open") {
 				await stripeCli.invoices.voidInvoice(subscription.latest_invoice);
 			}
-		} catch (error: any) {
+		} catch (error: unknown) {
+			const errMsg = error instanceof Error ? error.message : String(error);
 			logger.error(
-				`subscription.updated: error cancelling / voiding: ${error.message}`,
-				{
-					data: {
-						subscriptionId: subscription.id,
-						stripeSubId: subscription.id,
-						error: error.message,
-						latestInvoiceId: subscription.latest_invoice,
-						latestInvoiceStatus: latestInvoice.status,
-						latestInvoiceBillingReason: latestInvoice.billing_reason,
-					},
-				},
+				`subscription.updated: error cancelling / voiding: ${errMsg}`,
 			);
 		}
 	}
