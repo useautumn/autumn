@@ -3,7 +3,7 @@ import {
 	FeatureType,
 	FeatureUsageType,
 } from "@autumn/shared";
-import { InfoIcon, TicketIcon } from "@phosphor-icons/react";
+import { TicketIcon } from "@phosphor-icons/react";
 import { PanelButton } from "@/components/v2/buttons/PanelButton";
 import { UsageBasedIcon } from "@/components/v2/icons/AutumnIcons";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
@@ -39,7 +39,6 @@ export function NewFeatureBehaviour({
 							<div className="flex-1">
 								<div className="text-body-highlight mb-1 flex-row flex items-center gap-1">
 									Consumable
-									<InfoIcon size={8} weight="regular" color="#888888" />
 								</div>
 								<div className="text-body-secondary leading-tight">
 									Used up and refreshed periodically (eg chat messages, video
@@ -67,7 +66,6 @@ export function NewFeatureBehaviour({
 							<div className="flex-1">
 								<div className="text-body-highlight mb-1 flex-row flex items-center gap-1">
 									Allocated
-									<InfoIcon size={8} weight="regular" color="#888888" />
 								</div>
 								<div className="text-body-secondary leading-tight">
 									Assigned and used on an ongoing basis (eg seats, storage)

@@ -37,7 +37,7 @@ export function NewFeatureAdvanced({
 									})
 								}
 							/>
-							<span className="text-tiny">
+							<span className="text-tiny text-t3">
 								Event names are only required if you want to link one event from
 								your application to multiple feature balances. Read more{" "}
 								<a

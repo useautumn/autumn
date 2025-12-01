@@ -4,6 +4,7 @@ import {
 	type FullCusProduct,
 	type FullCustomer,
 	mapToProductV2,
+	productV2ToFrontendProduct,
 } from "@autumn/shared";
 import { parseAsString, useQueryStates } from "nuqs";
 import { useEffect, useMemo, useState } from "react";
@@ -57,7 +58,8 @@ export const useSubscriptionById = ({ itemId }: { itemId: string | null }) => {
 	const productV2 = useMemo(() => {
 		if (!cusProduct) return null;
 		const fullProduct = cusProductToProduct({ cusProduct });
-		return mapToProductV2({ product: fullProduct });
+		const productV2 = mapToProductV2({ product: fullProduct });
+		return productV2ToFrontendProduct({ product: productV2 });
 	}, [cusProduct]);
 
 	return { cusProduct, productV2 };
