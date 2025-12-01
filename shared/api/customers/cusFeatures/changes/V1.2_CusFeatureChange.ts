@@ -95,11 +95,13 @@ const toV3BalanceParams = ({
 	feature,
 	unlimited,
 	legacyData,
+	isBreakdown = false,
 }: {
 	input: ApiBalance | ApiBalanceBreakdown;
 	feature?: ApiFeatureV1;
 	unlimited: boolean;
 	legacyData?: CusFeatureLegacyData;
+	isBreakdown?: boolean;
 }) => {
 	const isBoolean = feature?.type === FeatureType.Boolean;
 
@@ -114,9 +116,17 @@ const toV3BalanceParams = ({
 	}
 
 	const prepaidQuantity = legacyData?.prepaid_quantity ?? 0;
-	const overage = new Decimal(input.purchased_balance)
-		.sub(prepaidQuantity)
-		.toNumber();
+
+	let overage = 0;
+	if (isBreakdown) {
+		overage = input.overage_allowed
+			? new Decimal(input.purchased_balance).toNumber()
+			: 0;
+	} else {
+		overage = new Decimal(input.purchased_balance)
+			.sub(prepaidQuantity)
+			.toNumber();
+	}
 
 	// 1. Get included usage
 	const includedUsage = new Decimal(input.granted_balance)
@@ -188,6 +198,7 @@ export function transformBalanceToCusFeatureV3({
 					feature,
 					unlimited: isUnlimited,
 					legacyData,
+					isBreakdown: true,
 				});
 
 			return {
