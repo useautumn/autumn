@@ -1,11 +1,9 @@
-import { useAppContext } from "@/app/AppContext";
+import { ErrCode } from "@autumn/shared";
+import { useNavigate, useSearchParams } from "react-router";
 import { useOrg } from "@/hooks/common/useOrg";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useAxiosSWR, usePostSWR } from "@/services/useAxiosSwr";
 import { useEnv } from "@/utils/envUtils";
-import { navigateTo, nullish } from "@/utils/genUtils";
-import { ErrCode, FullCustomer, getFeatureName } from "@autumn/shared";
-import { useEffect, useRef } from "react";
-import { useNavigate, useSearchParams } from "react-router";
 import { useTopEventNames } from "./useTopEventNames";
 
 export const useAnalyticsData = ({
@@ -24,12 +22,14 @@ export const useAnalyticsData = ({
 
 	const { topEvents, isLoading: topEventsLoading } = useTopEventNames();
 
-	const { data: featuresData, isLoading: featuresLoading } = useAxiosSWR({
-		url: `/features`,
-		options: {
-			refreshInterval: 0,
-		},
-	});
+	// const { data: featuresData, isLoading: featuresLoading } = useAxiosSWR({
+	// 	url: `/features`,
+	// 	options: {
+	// 		refreshInterval: 0,
+	// 	},
+	// });
+	const { features: featuresData, isLoading: featuresLoading } =
+		useFeaturesQuery();
 
 	// Create a simple queryKey with the actual values that change
 	const queryKey = [
@@ -64,7 +64,7 @@ export const useAnalyticsData = ({
 
 	return {
 		customer: data?.customer,
-		features: featuresData?.features || [],
+		features: featuresData || [],
 		featuresLoading,
 		queryLoading,
 		events: data?.events,
