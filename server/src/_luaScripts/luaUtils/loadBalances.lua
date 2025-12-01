@@ -117,6 +117,10 @@ local function fetchBreakdown(cacheKey, featureId, breakdownCount)
         reset = true
     }
     
+    local breakdownStringFields = {
+        plan_id = true
+    }
+    
     for i = 0, breakdownCount - 1 do
         local breakdownKey = buildBreakdownCacheKey(cacheKey, featureId, i)
         local breakdownHash = redis.call("HGETALL", breakdownKey)
@@ -143,6 +147,13 @@ local function fetchBreakdown(cacheKey, featureId, breakdownCount)
                     breakdownData[key] = cjson.decode(value)
                 else
                     breakdownData[key] = cjson.null
+                end
+            elseif breakdownStringFields[key] then
+                -- Handle string fields (like plan_id)
+                if value == "null" then
+                    breakdownData[key] = cjson.null
+                else
+                    breakdownData[key] = value
                 end
             else
                 breakdownData[key] = value
