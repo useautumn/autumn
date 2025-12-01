@@ -111,14 +111,8 @@ export default function App() {
 					/>
 					<Route path="/dev" element={<DevScreen />} />
 					<Route path="/sandbox/dev" element={<DevScreen />} />
-					<Route
-						path="/analytics"
-						element={<AnalyticsView env={AppEnv.Live} />}
-					/>
-					<Route
-						path="/sandbox/analytics"
-						element={<AnalyticsView env={AppEnv.Sandbox} />}
-					/>
+					<Route path="/analytics" element={<AnalyticsView />} />
+					<Route path="/sandbox/analytics" element={<AnalyticsView />} />
 					<Route path="/dev/cli" element={<Otp />} />
 				</Route>
 			</Routes>
