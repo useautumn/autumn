@@ -17,6 +17,8 @@ export function AttachProductSummary({
 		);
 	}
 
+	console.log("previewData", previewData);
+
 	return (
 		<div className="text-sm">
 			<AttachConfirmationInfo previewData={previewData} />
