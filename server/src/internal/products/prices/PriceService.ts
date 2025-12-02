@@ -1,7 +1,7 @@
 import { type Price, type Product, prices } from "@autumn/shared";
+import { buildConflictUpdateColumns } from "@server/db/dbUtils";
+import type { DrizzleCli } from "@server/db/initDrizzle";
 import { and, eq, inArray, or, sql } from "drizzle-orm";
-import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export class PriceService {
 	static async get({ db, id }: { db: DrizzleCli; id: string }) {

@@ -7,16 +7,16 @@ import {
 	type FullCusProduct,
 	type Organization,
 } from "@autumn/shared";
-import { expect } from "chai";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { priceToStripeItem } from "@/external/stripe/priceToStripeItem/priceToStripeItem.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import type { DrizzleCli } from "@server/db/initDrizzle";
+import { createStripeCli } from "@server/external/connect/createStripeCli";
+import { priceToStripeItem } from "@server/external/stripe/priceToStripeItem/priceToStripeItem";
+import { CusService } from "@server/internal/customers/CusService";
 import {
 	getPriceEntitlement,
 	getPriceOptions,
-} from "@/internal/products/prices/priceUtils.js";
+} from "@server/internal/products/prices/priceUtils";
+import { isFixedPrice } from "@server/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice";
+import { expect } from "chai";
 
 export const cusProductToSubIds = ({
 	cusProducts,

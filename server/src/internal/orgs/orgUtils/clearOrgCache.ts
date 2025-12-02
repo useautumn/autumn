@@ -1,7 +1,7 @@
 import type { AppEnv } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { CacheManager } from "@/utils/cacheUtils/CacheManager.js";
-import { CacheType } from "@/utils/cacheUtils/CacheType.js";
+import type { DrizzleCli } from "@server/db/initDrizzle.js";
+import { CacheManager } from "@server/utils/cacheUtils/CacheManager.js";
+import { CacheType } from "@server/utils/cacheUtils/CacheType.js";
 import { OrgService } from "../OrgService.js";
 
 export const clearOrgCache = async ({
