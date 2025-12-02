@@ -19,6 +19,7 @@
     "forceConsistentCasingInFileNames": true,
     "paths": {
       "@/*": ["./src/*"],
+      "@server/*": ["./src/*"],
       "@shared/*": ["../shared/*"],
       "@emails/*": ["./emails/*"],
       "@scripts/*": ["./scripts/*"],

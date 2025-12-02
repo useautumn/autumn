@@ -103,10 +103,12 @@ export const deductFromCusEnts = async ({
 	for (const deduction of deductions) {
 		const { feature, deduction: toDeduct, targetBalance } = deduction;
 
-		const relevantFeatures = getRelevantFeatures({
-			features: ctx.features,
-			featureId: feature.id,
-		});
+		const relevantFeatures = notNullish(targetBalance)
+			? [feature]
+			: getRelevantFeatures({
+					features: ctx.features,
+					featureId: feature.id,
+				});
 
 		const cusEnts = cusProductsToCusEnts({
 			cusProducts: fullCus.customer_products,
@@ -116,17 +118,6 @@ export const deductFromCusEnts = async ({
 			inStatuses: orgToInStatuses({ org }),
 			sortParams,
 		});
-
-		// if (printLogs) {
-		// 	console.log(
-		// 		`Cus Ents: `,
-		// 		cusEnts.map((ce) => ({
-		// 			balance: ce.balance,
-		// 			entity_id: ce.customer_product.entity_id,
-		// 			cus_ent_id: ce.id,
-		// 		})),
-		// 	);
-		// }
 
 		const { unlimited } = getUnlimitedAndUsageAllowed({
 			cusEnts,
@@ -276,6 +267,11 @@ export const deductFromCusEnts = async ({
 				});
 			}
 		} catch (error) {
+			if (error instanceof Error && !error?.message?.includes("declined")) {
+				ctx.logger.error(
+					`[deductFromCusEnts] Attempting rollback due to error: ${error}`,
+				);
+			}
 			await rollbackDeduction({
 				ctx,
 				oldFullCus,

@@ -203,7 +203,7 @@ const ProductSelector = ({
 					variant="muted"
 					role="combobox"
 					aria-expanded={open}
-					className="w-full min-h-9 flex flex-wrap h-fit py-2 justify-start items-center gap-2 relative hover:bg-zinc-50 data-[state=open]:border-focus data-[state=open]:shadow-focus"
+					className="w-full min-h-9 flex flex-wrap h-fit py-2 justify-start items-center gap-2 relative data-[state=open]:border-focus data-[state=open]:shadow-focus"
 				>
 					{rewardProgram.product_ids?.length === 0
 						? "Select Plans"

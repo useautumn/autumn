@@ -1,25 +1,24 @@
-import { checkToAttachParams } from "@/internal/customers/attach/attachUtils/attachParams/checkToAttachParams.js";
-import { FullCustomer, FullProduct } from "@autumn/shared";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { AttachBody } from "@autumn/shared";
-import { attachParamsToPreview } from "@/internal/customers/attach/handleAttachPreview/attachParamsToPreview.js";
-
 import {
+	type AttachBodyV0,
 	AttachFunction,
-	AttachPreview,
-	CheckProductPreview,
-	Feature,
-	Organization,
+	type AttachPreview,
+	type CheckProductPreview,
+	type Feature,
+	type FullCustomer,
+	type FullProduct,
+	type Organization,
 } from "@autumn/shared";
-
-import { getAttachScenario } from "./attachToCheckPreview/getAttachScenario.js";
+import { Decimal } from "decimal.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { attachParamsToPreview } from "@/internal/billing/attachPreview/attachParamsToPreview.js";
+import { checkToAttachParams } from "@/internal/customers/attach/attachUtils/attachParams/checkToAttachParams.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { formatAmount } from "@/utils/formatUtils.js";
-import { Decimal } from "decimal.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
+import { getAttachScenario } from "./attachToCheckPreview/getAttachScenario.js";
 
 export const attachToCheckPreview = async ({
 	preview,
@@ -39,26 +38,26 @@ export const attachToCheckPreview = async ({
 	fullCus: FullCustomer;
 }) => {
 	// 1. If check
-	let attachFunc = preview.func;
+	const attachFunc = preview.func;
 
 	if (
-		attachFunc == AttachFunction.AddProduct &&
+		attachFunc === AttachFunction.AddProduct &&
 		isFreeProduct(product.prices)
 	) {
 		return null;
 	}
 
 	const noOptions = !preview.options || preview.options.length === 0;
-	if (attachFunc == AttachFunction.CreateCheckout && noOptions) {
+	if (attachFunc === AttachFunction.CreateCheckout && noOptions) {
 		return null;
 	}
 
-	let scenario = await getAttachScenario({
+	const scenario = await getAttachScenario({
 		preview,
 		product,
 	});
 
-	let items = preview.due_today?.line_items?.map((item) => {
+	const items = preview.due_today?.line_items?.map((item) => {
 		return {
 			price: notNullish(item.amount)
 				? formatAmount({
@@ -73,21 +72,26 @@ export const attachToCheckPreview = async ({
 		};
 	});
 
-	let options = preview.options?.map((option: any) => {
+	const options = preview.options?.map((option: any) => {
 		return {
 			...option,
 			price: new Decimal(option.price).toDecimalPlaces(2).toNumber(),
 		};
 	});
 
-	let due_today = preview.due_today
+	const due_today = preview.due_today
 		? {
 				price: preview.due_today.total,
 				currency: org.default_currency || "usd",
 			}
 		: undefined;
 
-	let due_next_cycle = undefined;
+	let due_next_cycle:
+		| {
+				price: number;
+				currency: string;
+		  }
+		| undefined;
 
 	if (preview.due_next_cycle) {
 		due_next_cycle = {
@@ -101,7 +105,7 @@ export const attachToCheckPreview = async ({
 		};
 	}
 
-	let checkPreview: CheckProductPreview = {
+	const checkPreview: CheckProductPreview = {
 		// title: "Check",
 		// message: "Check",
 		scenario,
@@ -131,37 +135,33 @@ export const attachToCheckPreview = async ({
 };
 
 export const getProductCheckPreview = async ({
-	req,
+	ctx,
 	customer,
 	product,
-	logger,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	customer: FullCustomer;
 	product: FullProduct;
-	logger: any;
 }) => {
-	const { org, features, db } = req;
+	const { org, features, db } = ctx;
 
 	// Build attach params
 	const attachParams = await checkToAttachParams({
-		req,
+		ctx,
 		customer,
 		product,
-		logger,
 	});
 
-	const attachBody: AttachBody = {
+	const attachBody: AttachBodyV0 = {
 		customer_id: customer.id!,
 		product_id: product.id,
 		entity_id: customer.entity?.id,
 	};
 
 	const preview = await attachParamsToPreview({
-		req,
+		ctx,
 		attachParams,
 		attachBody,
-		logger,
 	});
 
 	const checkPreview = await attachToCheckPreview({

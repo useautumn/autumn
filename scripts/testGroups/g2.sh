@@ -9,7 +9,7 @@ BUN_PARALLEL_COMPACT \
   'server/tests/attach/downgrade' \
   'server/tests/attach/free' \
   'server/tests/attach/addOn' \
-  'server/tests/attach/entities' \
   'server/tests/attach/checkout' \
   'server/tests/attach/misc' \
+  'server/tests/billing/invoice-action-required' \
   --max=6 \

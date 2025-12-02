@@ -4,10 +4,11 @@ import {
 	customerPrices,
 	customerProducts,
 	customers,
+	notNullish,
 } from "@autumn/shared";
 import { and, eq, inArray, isNotNull, lt, notExists, sql } from "drizzle-orm";
 import { db } from "@/db/initDrizzle.js";
-import { deleteCachedApiCustomer } from "../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
+import { batchDeleteCachedCustomers } from "../../internal/customers/cusUtils/apiCusCacheUtils/batchDeleteCachedCustomers";
 
 export const runProductCron = async () => {
 	console.log("Running product cron");
@@ -64,17 +65,26 @@ export const runProductCron = async () => {
 			`Expired batch of ${i + batch.length}/${results.length} customer products`,
 		);
 
-		const clearCachePromises = [];
-		for (const result of batch) {
-			clearCachePromises.push(
-				deleteCachedApiCustomer({
-					customerId: result.customers.id ?? "",
-					orgId: result.customers.org_id,
-					env: result.customers.env,
-				}),
-			);
-		}
-		await Promise.all(clearCachePromises);
+		await batchDeleteCachedCustomers({
+			customers: batch
+				.filter((r) => notNullish(r.customers.id))
+				.map((r) => ({
+					orgId: r.customers.org_id,
+					env: r.customers.env,
+					customerId: r.customers.id!,
+				})),
+		});
+		// const clearCachePromises = [];
+		// for (const result of batch) {
+		// 	clearCachePromises.push(
+		// 		deleteCachedApiCustomer({
+		// 			customerId: result.customers.id ?? "",
+		// 			orgId: result.customers.org_id,
+		// 			env: result.customers.env,
+		// 		}),
+		// 	);
+		// }
+		// await Promise.all(clearCachePromises);
 	}
 
 	return results;

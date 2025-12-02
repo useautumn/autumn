@@ -101,7 +101,7 @@ function CreateCustomer() {
 					Customer
 				</OldButton>
 			</DialogTrigger>
-			<DialogContent className="w-[400px]">
+			<DialogContent className="w-[400px] bg-card">
 				<DialogHeader>
 					<DialogTitle>Create Customer</DialogTitle>
 				</DialogHeader>

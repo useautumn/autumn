@@ -18,10 +18,10 @@ export const GroupedTabButton = ({
 	options,
 	className,
 }: GroupedTabButtonProps) => {
-	const isTwoTab = options.length === 2;
+	// const isTwoTab = options.length === 2;
 
 	return (
-		<div className={cn("flex items-center", className)}>
+		<div className={cn("flex items-center ", className)}>
 			{options.map((option, index) => {
 				const isActive = value === option.value;
 				const isFirst = index === 0;
@@ -33,33 +33,23 @@ export const GroupedTabButton = ({
 						type="button"
 						onClick={() => onValueChange(option.value)}
 						className={cn(
-							"flex items-center gap-1 px-[6px] py-1 h-6 text-body border border-t10 transition-none outline-none whitespace-nowrap",
+							"w-full flex items-center justify-center gap-1 px-[6px] py-1 h-6 text-body border transition-none outline-none whitespace-nowrap !bg-interactive-secondary",
 							"hover:text-primary focus-visible:text-primary",
 							isActive &&
-								"bg-light-purple text-primary shadow-[0px_3px_4px_0px_inset_rgba(0,0,0,0.04)]",
+								" text-primary shadow-[0px_3px_4px_0px_inset_rgba(0,0,0,0.04)]",
 							!isActive &&
-								"bg-white shadow-[0px_-3px_4px_0px_inset_rgba(0,0,0,0.04)]",
+								"bg-interative-secondary shadow-[0px_-3px_4px_0px_inset_rgba(0,0,0,0.04)]",
 							isFirst && "rounded-l-lg border-l",
 							!isFirst && "border-l-0",
 							isLast && "rounded-r-lg",
 						)}
 					>
-						{isTwoTab && isFirst && option.icon && (
+						{option.icon && (
 							<span className="size-[14px] flex items-center justify-center">
 								{option.icon}
 							</span>
 						)}
-						<span className="text-body">{option.label}</span>
-						{isTwoTab && isLast && option.icon && (
-							<span className="size-[14px] flex items-center justify-center">
-								{option.icon}
-							</span>
-						)}
-						{!isTwoTab && option.icon && (
-							<span className="size-[14px] flex items-center justify-center">
-								{option.icon}
-							</span>
-						)}
+						<span className="text-sm">{option.label}</span>
 					</button>
 				);
 			})}

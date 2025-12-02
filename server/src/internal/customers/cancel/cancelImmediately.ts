@@ -8,24 +8,24 @@ import {
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { isOneOff } from "@/internal/products/productUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { CusProductService } from "../cusProducts/CusProductService.js";
 import { cusProductToSub } from "../cusProducts/cusProductUtils/convertCusProduct.js";
 import { getExistingCusProducts } from "../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { activateDefaultProduct } from "../cusProducts/cusProductUtils.js";
 
 export const cancelImmediately = async ({
-	req,
+	ctx,
 	cusProduct,
 	fullCus,
 	prorate,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	cusProduct: FullCusProduct;
 	fullCus: FullCustomer;
 	prorate: boolean;
 }) => {
-	const { db, org, env, logger } = req;
+	const { db, org, env } = ctx;
 	const stripeCli = createStripeCli({ org, env });
 
 	const { curScheduledProduct } = getExistingCusProducts({
@@ -58,7 +58,7 @@ export const cancelImmediately = async ({
 		}
 
 		await activateDefaultProduct({
-			req,
+			ctx,
 			productGroup: cusProduct.product.group,
 			fullCus,
 		});
@@ -75,13 +75,12 @@ export const cancelImmediately = async ({
 
 	console.log("Sending webhook for expired product");
 	await addProductsUpdatedWebhookTask({
-		req,
+		ctx,
 		internalCustomerId: fullCus.internal_id,
 		org,
 		env,
 		customerId: fullCus.id || null,
 		cusProduct,
 		scenario: AttachScenario.Expired,
-		logger,
 	});
 };

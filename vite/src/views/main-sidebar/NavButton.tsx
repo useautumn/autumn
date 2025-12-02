@@ -53,7 +53,7 @@ export const NavButton = ({
 			<>
 				<div className="flex items-center gap-2">
 					{icon && (
-						<div className="flex justify-center !w-4 !h-4 items-center rounded-sm !text-t2">
+						<div className="flex justify-center !w-4 !h-4 items-center rounded-sm">
 							{icon}
 						</div>
 					)}
@@ -89,11 +89,11 @@ export const NavButton = ({
 
 	const outerDivClass = cn(
 		`!cursor-default font-medium
-           text-sm flex items-center text-t1 px-2 h-7 rounded-md w-full`,
-		(!isGroup || !expanded) && "hover:bg-zinc-200/50 hover:text-t1",
-		isActive && "bg-zinc-200/80 !text-t1 hover:bg-zinc-200",
+           text-sm flex items-center text-t2 px-2 h-7 rounded-lg w-full hover:text-t1 border border-transparent`,
+		(!isGroup || !expanded) && " hover:text-t1 text-t2",
+		isActive && "border border-border !text-t1 bg-interactive-secondary",
 		isSubNav &&
-			"text-t2 pl-4 font-normal rounded-none rounded-tr-md rounded-br-md",
+			"pl-4 font-normal rounded-none rounded-tr-md rounded-br-md border-l-0 text-t3",
 		className,
 	);
 
@@ -109,7 +109,6 @@ export const NavButton = ({
 									queryParams: {
 										tab: subValue,
 									},
-									preserveParams: false,
 								})
 					}
 					className={outerDivClass}

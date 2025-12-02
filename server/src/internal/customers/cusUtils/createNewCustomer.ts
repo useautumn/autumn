@@ -15,7 +15,6 @@ import { isDefaultTrialFullProduct } from "@/internal/products/productUtils/clas
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import { handleAddProduct } from "../attach/attachFunctions/addProductFlow/handleAddProduct.js";
@@ -154,13 +153,13 @@ export const createNewCustomer = async ({
 			});
 
 			await handleAddProduct({
-				req: ctx as unknown as ExtendedRequest,
+				ctx,
 				config: {
 					...getDefaultAttachConfig(),
 					requirePaymentMethod: false,
 				},
 				attachParams: newCusToAttachParams({
-					req: ctx as unknown as ExtendedRequest,
+					ctx,
 					newCus: newCustomer as FullCustomer,
 					products: [defaultProd],
 					stripeCli,
@@ -171,7 +170,7 @@ export const createNewCustomer = async ({
 			await createFullCusProduct({
 				db,
 				attachParams: newCusToInsertParams({
-					req: ctx as unknown as ExtendedRequest,
+					ctx,
 					newCus: newCustomer,
 					product: defaultProd,
 					freeTrial: defaultProd?.free_trial || null,

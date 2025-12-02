@@ -1,5 +1,4 @@
 import type { FullCustomer } from "@autumn/shared";
-import { SET_INVOICES_SCRIPT } from "@lua/luaScripts.js";
 import { redis } from "../../../../external/redis/initRedis.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "../../../../utils/cacheUtils/cacheUtils.js";
@@ -39,15 +38,12 @@ export const setCachedApiInvoices = async ({
 	// Build master api customer invoices (customer-level only)
 	const masterApiInvoices = invoicesToResponse({
 		invoices: customerLevelInvoices,
-		logger,
 	});
 
 	// Then write to Redis
 	await tryRedisWrite(async () => {
 		// Update customer invoices
-		await redis.eval(
-			SET_INVOICES_SCRIPT,
-			0, // No KEYS, all params in ARGV
+		await redis.setInvoices(
 			JSON.stringify(masterApiInvoices),
 			org.id,
 			env,

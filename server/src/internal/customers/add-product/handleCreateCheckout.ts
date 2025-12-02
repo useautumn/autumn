@@ -1,38 +1,36 @@
 import {
-	ApiVersion,
 	type AttachConfig,
+	AttachFunctionResponseSchema,
+	MetadataType,
 	RecaseError,
 	SuccessCode,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
-import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
 import { toSuccessUrl } from "@/internal/orgs/orgUtils/convertOrgUtils.js";
 import { orgToCurrency } from "@/internal/orgs/orgUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { pricesContainRecurring } from "@/internal/products/prices/priceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import {
-	type AttachParams,
-	AttachResultSchema,
-} from "../cusProducts/AttachParams.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
+import { attachParamsToMetadata } from "../../billing/attach/utils/attachParamsToMetadata.js";
+import type { AttachParams } from "../cusProducts/AttachParams.js";
 
 export const handleCreateCheckout = async ({
-	req,
-	res,
+	ctx,
 	attachParams,
+	// biome-ignore lint/correctness/noUnusedFunctionParameters: Might be used in the future
 	config,
 	returnCheckout = false,
 }: {
-	req: any;
-	res: any;
+	ctx: AutumnContext;
 	attachParams: AttachParams;
 	config: AttachConfig;
 	returnCheckout?: boolean;
 }) => {
-	const { db, logger } = req;
+	const { db, logger } = ctx;
 
 	const { customer, org, freeTrial, successUrl, rewards } = attachParams;
 
@@ -60,9 +58,10 @@ export const handleCreateCheckout = async ({
 	const isRecurring = pricesContainRecurring(attachParams.prices);
 
 	// Insert metadata
-	const metaId = await createCheckoutMetadata({
+	const metadata = await attachParamsToMetadata({
 		db,
 		attachParams,
+		type: MetadataType.CheckoutSessionCompleted,
 	});
 
 	let billingCycleAnchorUnixSeconds = org.config.anchor_start_of_month
@@ -100,11 +99,13 @@ export const handleCreateCheckout = async ({
 			}
 		: undefined;
 
-	const checkoutParams = attachParams.checkoutSessionParams || {};
+	const checkoutParams = attachParams.checkoutSessionParams as
+		| Partial<Stripe.Checkout.SessionCreateParams>
+		| undefined;
 	const allowPromotionCodes =
-		notNullish(checkoutParams.discounts) || notNullish(rewards)
+		notNullish(checkoutParams?.discounts) || notNullish(rewards)
 			? undefined
-			: checkoutParams.allow_promotion_codes || true;
+			: checkoutParams?.allow_promotion_codes || true;
 
 	let rewardData = {};
 	if (rewards) {
@@ -114,13 +115,13 @@ export const handleCreateCheckout = async ({
 	}
 
 	// Prepare checkout session parameters
-	let checkout: Stripe.Checkout.Session;
+	let checkout: Stripe.Checkout.Session | undefined;
 
 	const paymentMethodSet =
-		notNullish(checkoutParams.payment_method_types) ||
-		notNullish(checkoutParams.payment_method_configuration);
+		notNullish(checkoutParams?.payment_method_types) ||
+		notNullish(checkoutParams?.payment_method_configuration);
 
-	let sessionParams = {
+	let sessionParams: Stripe.Checkout.SessionCreateParams = {
 		customer: customer.processor.id,
 		line_items: items,
 		subscription_data: subscriptionData,
@@ -136,8 +137,8 @@ export const handleCreateCheckout = async ({
 		...(attachParams.checkoutSessionParams || {}),
 		metadata: {
 			...(attachParams.metadata ? attachParams.metadata : {}),
-			...(attachParams.checkoutSessionParams?.metadata || {}),
-			autumn_metadata_id: metaId,
+			...(checkoutParams?.metadata || {}),
+			autumn_metadata_id: metadata.id,
 		},
 		payment_method_collection:
 			freeTrial &&
@@ -145,7 +146,7 @@ export const handleCreateCheckout = async ({
 			freeTrial.card_required === false
 				? "if_required"
 				: undefined,
-	} satisfies Stripe.Checkout.SessionCreateParams;
+	};
 
 	if (attachParams.setupPayment) {
 		sessionParams = {
@@ -153,10 +154,10 @@ export const handleCreateCheckout = async ({
 			mode: "setup",
 			success_url: successUrl || toSuccessUrl({ org, env: customer.env }),
 			currency: org.default_currency || "usd",
-			...(checkoutParams as any),
+			...checkoutParams,
 			metadata: {
-				...(attachParams.checkoutSessionParams?.metadata || {}),
-				autumn_metadata_id: metaId,
+				...(checkoutParams?.metadata || {}),
+				autumn_metadata_id: metadata.id,
 			},
 		};
 	}
@@ -166,8 +167,8 @@ export const handleCreateCheckout = async ({
 		logger.info(
 			`✅ Successfully created checkout for customer ${customer.id || customer.internal_id}`,
 		);
-	} catch (error: any) {
-		const msg = error.message;
+	} catch (error) {
+		const msg = error instanceof Error ? error.message : undefined;
 		if (msg?.includes("No valid payment method types") && !paymentMethodSet) {
 			checkout = await stripeCli.checkout.sessions.create({
 				...sessionParams,
@@ -182,25 +183,35 @@ export const handleCreateCheckout = async ({
 		}
 	}
 
-	if (returnCheckout) {
-		return checkout;
-	}
+	const customerId = customer.id || customer.internal_id;
+	const productNames = attachParams.products.map((p) => p.name).join(", ");
+	return AttachFunctionResponseSchema.parse({
+		checkout_url: checkout?.url,
+		message: `Successfully created checkout for customer ${customerId}, product(s) ${productNames}`,
+		code: SuccessCode.CheckoutCreated,
 
-	if (req.apiVersion.gte(ApiVersion.V1_1)) {
-		res.status(200).json(
-			AttachResultSchema.parse({
-				checkout_url: checkout.url,
-				code: SuccessCode.CheckoutCreated,
-				message: `Successfully created checkout for customer ${
-					customer.id || customer.internal_id
-				}, product(s) ${attachParams.products.map((p) => p.name).join(", ")}`,
-				product_ids: attachParams.products.map((p) => p.id),
-				customer_id: customer.id || customer.internal_id,
-			}),
-		);
-	} else {
-		res.status(200).json({
-			checkout_url: checkout.url,
-		});
-	}
+		checkoutSession: checkout,
+	});
+
+	// if (returnCheckout || !res) {
+	// 	return checkout;
+	// }
+
+	// if (req.apiVersion.gte(ApiVersion.V1_1)) {
+	// 	res.status(200).json(
+	// 		AttachResultSchema.parse({
+	// 			checkout_url: checkout.url,
+	// 			code: SuccessCode.CheckoutCreated,
+	// 			message: `Successfully created checkout for customer ${
+	// 				customer.id || customer.internal_id
+	// 			}, product(s) ${attachParams.products.map((p) => p.name).join(", ")}`,
+	// 			product_ids: attachParams.products.map((p) => p.id),
+	// 			customer_id: customer.id || customer.internal_id,
+	// 		}),
+	// 	);
+	// } else {
+	// 	res.status(200).json({
+	// 		checkout_url: checkout.url,
+	// 	});
+	// }
 };

@@ -1,15 +1,15 @@
-import type { AttachBody } from "@autumn/shared";
+import type { AttachBodyV0 } from "@autumn/shared";
 import { nullish } from "@/utils/genUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 import type { AttachParams } from "../../../cusProducts/AttachParams.js";
 import { processAttachBody } from "./processAttachBody.js";
 
 export const getAttachParams = async ({
-	req,
+	ctx,
 	attachBody,
 }: {
-	req: ExtendedRequest;
-	attachBody: AttachBody;
+	ctx: AutumnContext;
+	attachBody: AttachBodyV0;
 }) => {
 	const {
 		customer,
@@ -23,7 +23,7 @@ export const getAttachParams = async ({
 		stripeVars,
 		rewards,
 	} = await processAttachBody({
-		req,
+		ctx,
 		attachBody,
 	});
 
@@ -51,17 +51,18 @@ export const getAttachParams = async ({
 		replaceables: [],
 		rewards,
 		// From req
-		req,
-		org: req.org,
+		req: ctx,
+
+		org: ctx.org,
 		entities: customer.entities,
-		features: req.features,
+		features: ctx.features,
 		internalEntityId,
 		entityId: entityId || undefined,
 		cusProducts: customer.customer_products,
 
 		successUrl: attachBody.success_url,
 		invoiceOnly: attachBody.invoice,
-		productsList: attachBody.products || undefined,
+		// productsList: attachBody.products || undefined,
 		// || attachBody.invoice_only
 
 		billingAnchor: attachBody.billing_cycle_anchor,
@@ -72,7 +73,7 @@ export const getAttachParams = async ({
 		setupPayment: attachBody.setup_payment,
 
 		// Others
-		apiVersion: req.apiVersion.value,
+		apiVersion: ctx.apiVersion.value,
 	};
 
 	return {

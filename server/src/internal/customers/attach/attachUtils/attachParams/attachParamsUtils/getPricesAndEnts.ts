@@ -1,5 +1,5 @@
 import {
-	type AttachBody,
+	type AttachBodyV0,
 	type CreateFreeTrial,
 	cusProductToEnts,
 	cusProductToPrices,
@@ -16,22 +16,22 @@ import {
 } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
 import { notNullish } from "@/utils/genUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../../../../honoUtils/HonoEnv.js";
 import { mapOptionsList } from "../../mapOptionsList.js";
 
 export const getPricesAndEnts = async ({
-	req,
+	ctx,
 	attachBody,
 	customer,
 	products,
 }: {
-	req: ExtendedRequest;
-	attachBody: AttachBody;
+	ctx: AutumnContext;
+	attachBody: AttachBodyV0;
 	customer: FullCustomer;
 	products: FullProduct[];
 }) => {
 	const { options: optionsInput, is_custom, free_trial } = attachBody;
-	const { features, db, org, logger } = req;
+	const { features, db, org, logger } = ctx;
 
 	const { curMainProduct, curSameProduct } = getExistingCusProducts({
 		product: products[0],

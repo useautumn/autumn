@@ -26,8 +26,7 @@ import {
 } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish, nullOrUndefined } from "@/utils/genUtils.js";
-import { handleCheckout } from "./checkout/handleCheckout.js";
-import { handleAttach } from "./handleAttach.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { handleAttachPreview } from "./handleAttachPreview/handleAttachPreview.js";
 
 export const attachRouter: Router = Router();
@@ -125,18 +124,18 @@ export const handlePublicAttachErrors = async ({
 };
 
 export const checkStripeConnections = async ({
-	req,
+	ctx,
 	attachParams,
 	createCus = true,
 	useCheckout = false,
 }: {
-	req: any;
+	ctx: AutumnContext;
 	attachParams: AttachParams;
 	createCus?: boolean;
 	useCheckout?: boolean;
 }) => {
 	const { org, customer, products, stripeCus, stripeCli } = attachParams;
-	const logger = req.logger;
+	const { logger, db } = ctx;
 	const env = customer.env;
 
 	// 2. If invoice only and no email, save email
@@ -144,7 +143,7 @@ export const checkStripeConnections = async ({
 		customer.email = `${customer.id}-${org.id}@invoices.useautumn.com`;
 		await Promise.all([
 			CusService.update({
-				db: req.db,
+				db,
 				idOrInternalId: customer.internal_id,
 				orgId: org.id,
 				env,
@@ -164,7 +163,7 @@ export const checkStripeConnections = async ({
 	if (createCus) {
 		batchProductUpdates.push(
 			createStripeCusIfNotExists({
-				db: req.db,
+				db,
 				org,
 				env,
 				customer,
@@ -176,7 +175,7 @@ export const checkStripeConnections = async ({
 	for (const product of products) {
 		batchProductUpdates.push(
 			checkStripeProductExists({
-				db: req.db,
+				db,
 				org,
 				env,
 				product,
@@ -189,23 +188,24 @@ export const checkStripeConnections = async ({
 	await createStripePrices({
 		attachParams,
 		useCheckout,
-		req,
+		ctx,
 		logger,
 	});
 };
 
 export const createStripePrices = async ({
+	ctx,
 	attachParams,
 	useCheckout,
-	req,
 	logger,
 }: {
+	ctx: AutumnContext;
 	attachParams: AttachParams;
 	useCheckout: boolean;
-	req: any;
 	logger: any;
 }) => {
 	const { prices, entitlements, products, org, stripeCli } = attachParams;
+	const { db } = ctx;
 
 	const batchPriceUpdates = [];
 
@@ -216,7 +216,7 @@ export const createStripePrices = async ({
 
 		batchPriceUpdates.push(
 			createStripePriceIFNotExist({
-				db: req.db,
+				db,
 				stripeCli,
 				price,
 				entitlements,
@@ -248,6 +248,5 @@ export const customerHasPm = async ({
 	return notNullish(paymentMethod);
 };
 
-attachRouter.post("/attach", handleAttach);
 attachRouter.post("/attach/preview", handleAttachPreview);
-attachRouter.post("/checkout", handleCheckout);
+// attachRouter.post("/checkout", handleCheckout);

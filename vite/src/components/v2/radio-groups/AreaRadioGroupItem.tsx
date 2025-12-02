@@ -1,6 +1,5 @@
 "use client";
 
-import type React from "react";
 import { useId } from "react";
 import { cn } from "@/lib/utils";
 import { RadioGroupItem } from "./RadioGroup";

@@ -5,9 +5,15 @@ import { CustomerDataSchema } from "../common/customerData.js";
 
 // Create Entity Params (based on CreateEntitySchema from shared/models)
 export const CreateEntityParamsSchema = z.object({
-	id: z.string().nullable().meta({
-		description: "The ID of the entity",
-	}),
+	id: z
+		.preprocess(
+			(val) => (typeof val === "number" ? String(val) : val),
+			z.string(),
+		)
+		.nullable()
+		.meta({
+			description: "The ID of the entity",
+		}),
 	name: z.string().nullish().meta({
 		description: "The name of the entity",
 	}),
@@ -23,6 +29,7 @@ export const GetEntityQuerySchema = z.object({
 		z.enum([
 			CusExpand.Invoices,
 			CusExpand.SubscriptionsPlan,
+			CusExpand.ScheduledSubscriptionsPlan,
 			CusExpand.BalancesFeature,
 		]),
 	).default([]),

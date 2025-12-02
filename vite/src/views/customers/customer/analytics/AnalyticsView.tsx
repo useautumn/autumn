@@ -1,10 +1,9 @@
-import { AppEnv, ErrCode, type Feature, FeatureType } from "@autumn/shared";
+import { ErrCode, type Feature, FeatureType } from "@autumn/shared";
+import { ChartBarIcon, DatabaseIcon } from "@phosphor-icons/react";
 import type { AgGridReact } from "ag-grid-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { PageSectionHeader } from "@/components/general/PageSectionHeader";
 import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 import { AnalyticsContext } from "./AnalyticsContext";
 import { EventsAGGrid, EventsBarChart } from "./AnalyticsGraph";
 import { colors } from "./components/AGGrid";
@@ -15,7 +14,7 @@ import {
 	useRawAnalyticsData,
 } from "./hooks/useAnalyticsData";
 
-export const AnalyticsView = ({ env }: { env: AppEnv }) => {
+export const AnalyticsView = () => {
 	const [searchParams] = useSearchParams();
 	const [eventNames, setEventNames] = useState<string[]>([]);
 	const [featureIds, setFeatureIds] = useState<string[]>([]);
@@ -41,14 +40,12 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 		topEvents,
 	} = useAnalyticsData({ hasCleared });
 
-	// console.log("Features: ", features);
-
 	const { rawEvents, queryLoading: rawQueryLoading } = useRawAnalyticsData();
 
 	const chartConfig = events?.meta
-		.filter((x: any) => x.name != "period")
-		.map((x: any, index: number) => {
-			if (x.name != "period") {
+		.filter((x: { name: string }) => x.name !== "period")
+		.map((x: { name: string }, index: number) => {
+			if (x.name !== "period") {
 				const colorIndex = index % colors.length;
 
 				return {
@@ -62,7 +59,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 
 							// console.log("Feature: ", feature, eventName);
 
-							if (feature.type == FeatureType.Boolean) return false;
+							if (feature.type === FeatureType.Boolean) return false;
 
 							if (feature.id === eventName) {
 								return true;
@@ -75,18 +72,12 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 						})?.name || x.name.replace("_count", ""),
 					fill: colors[colorIndex],
 				};
-			}
+			} else return null;
 		});
 
 	useEffect(() => {
-		if (error) {
-			if (
-				error.response &&
-				error.response.data &&
-				error.response.data.code === ErrCode.ClickHouseDisabled
-			) {
-				setClickHouseDisabled(true);
-			}
+		if (error?.response?.data?.code === ErrCode.ClickHouseDisabled) {
+			setClickHouseDisabled(true);
 		}
 	}, [error]);
 
@@ -129,36 +120,28 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 				topEvents,
 			}}
 		>
-			<div className="flex flex-col gap-4 h-full relative w-full text-sm pb-0">
-				<h1
-					className={cn(
-						"text-xl font-medium shrink-0 pl-10",
-						env === AppEnv.Sandbox ? "pt-4" : "pt-6",
-					)}
-				>
-					Analytics
-				</h1>
+			<div className="flex flex-col gap-4 h-full relative w-full text-sm pb-8 max-w-5xl mx-auto px-10 pt-8">
 				<div className="max-h-[400px] min-h-[400px] pb-6">
-					<PageSectionHeader
-						title="Usage Analytics"
-						endContent={<QueryTopbar />}
-						className="h-10"
-					/>
+					<div className="flex justify-between pb-4 h-10">
+						<div className="text-t3 text-md py-0 px-2 rounded-lg flex gap-2 items-center bg-secondary">
+							<ChartBarIcon size={16} weight="fill" className="text-subtle" />
+							Usage
+						</div>
+						<QueryTopbar />
+					</div>
 					{(queryLoading || topEventsLoading) && (
-						<div className="flex-1 px-10 pt-6">
+						<div className="flex-1">
 							<p className="text-t3 text-sm shimmer w-fit">
-								Fetching usage {customerId ? `for ${customerId}` : ""}
+								Loading chart {customerId ? `for ${customerId}` : ""}
 							</p>
 						</div>
 					)}
 
-					<div className="h-full">
+					<div className="h-full overflow-hidden">
 						{events && events.data.length > 0 && (
-							<Card className="h-full p-0 pt-6 w-full bg-transparent border-none rounded-none shadow-none">
-								<CardContent className="px-6 h-full bg-transparent">
-									<EventsBarChart data={events} chartConfig={chartConfig} />
-								</CardContent>
-							</Card>
+							<div className="h-full overflow-hidden bg-interactive-secondary border max-h-[350px]">
+								<EventsBarChart data={events} chartConfig={chartConfig} />
+							</div>
 						)}
 
 						{!events && !queryLoading && (
@@ -174,23 +157,31 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 					</div>
 				</div>
 
-				<div className="h-full">
-					<PageSectionHeader
-						title="Event Logs"
-						className="h-10"
-						endContent={<PaginationPanel />}
-					/>
+				<div className="h-full mb-8">
+					<div className="flex justify-between pb-4 h-10">
+						<div className="text-t3 text-md py-0 px-2 rounded-lg flex gap-2 items-center bg-secondary">
+							<DatabaseIcon size={16} weight="fill" className="text-subtle" />
+							Events
+						</div>
+						{/* event count  */}
+						<div className="flex items-center gap-2">
+							<span className="text-sm text-t3">
+								Showing {totalRows} events
+							</span>
+							<PaginationPanel />
+						</div>
+					</div>
 
 					{rawQueryLoading && (
-						<div className="flex-1 px-10 pt-6">
+						<div className="flex-1">
 							<p className="text-t3 text-sm shimmer w-fit">
-								Fetching raw events {customerId ? `for ${customerId}` : ""}
+								Loading events {customerId ? `for ${customerId}` : ""}
 							</p>
 						</div>
 					)}
 
 					{rawEvents && !rawQueryLoading && (
-						<Card className="w-full h-full bg-stone-50 border-none rounded-none shadow-none py-0 pb-4">
+						<Card className="w-full h-full border-none rounded-none shadow-none py-0">
 							<CardContent className="p-0 h-full bg-transparent overflow-hidden">
 								<EventsAGGrid data={rawEvents} />
 							</CardContent>

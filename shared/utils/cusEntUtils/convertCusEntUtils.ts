@@ -121,7 +121,10 @@ export const cusEntToGrantedBalance = ({
 
 	const grantedBalance = cusEnt.entitlement.allowance || 0;
 
-	const total = new Decimal(grantedBalance).mul(entityCount).toNumber();
+	const total = new Decimal(grantedBalance)
+		.mul(cusEnt.customer_product.quantity ?? 1)
+		.mul(entityCount)
+		.toNumber();
 
 	if (withRollovers && rollover) {
 		return new Decimal(total)

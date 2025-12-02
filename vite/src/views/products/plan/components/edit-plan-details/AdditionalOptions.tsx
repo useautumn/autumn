@@ -1,45 +1,82 @@
+import {
+	type FreeTrial,
+	notNullish,
+	productV2ToBasePrice,
+} from "@autumn/shared";
 import { AreaCheckbox } from "@/components/v2/checkboxes/AreaCheckbox";
-import { Input } from "@/components/v2/inputs/Input";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useProductStore } from "@/hooks/stores/useProductStore";
+import { getDefaultFreeTrial } from "../../utils/getDefaultFreeTrial";
+import { FreeTrialSection } from "./FreeTrialSection";
 
 export const AdditionalOptions = ({
-	withSeparator = true,
+	withSeparator = false,
+	hideAddOn = false,
 }: {
 	withSeparator?: boolean;
+	hideAddOn?: boolean;
 }) => {
 	const product = useProductStore((s) => s.product);
 	const setProduct = useProductStore((s) => s.setProduct);
 
-	const hasGroup = product.group !== null;
+	const basePrice = productV2ToBasePrice({ product });
+
+	const hasGroup = notNullish(product.group);
+
+	if (!product.planType) return null;
+	// if (
+	// 	product.planType === "paid" &&
+	// 	!basePrice?.price &&
+	// 	product.basePriceType !== "usage"
+	// )
+	// 	return null;
 
 	return (
-		<SheetSection title="Additional Options" withSeparator={withSeparator}>
+		<SheetSection withSeparator={withSeparator}>
 			<div className="space-y-4">
+				{(product.planType === "free" ||
+					product.free_trial?.card_required === false) && (
+					<AreaCheckbox
+						title="Auto-enable Plan"
+						description="This plan will be enabled automatically for new customers"
+						checked={product.is_default}
+						disabled={product.is_add_on}
+						onCheckedChange={(checked) =>
+							setProduct({ ...product, is_default: checked })
+						}
+					/>
+				)}
 				<AreaCheckbox
-					title="Enable by Default"
-					description="This product will be enabled by default for all new users,
-                        typically used for your free plan"
-					checked={product.is_default}
-					disabled={product.is_add_on}
-					onCheckedChange={(checked) =>
-						setProduct({ ...product, is_default: checked })
+					title={
+						product.planType === "free" ? "Limited-time Trial" : "Free Trial"
 					}
-				/>
-				<AreaCheckbox
-					title="Add On"
-					description="This plan is an add-on that can be bought together with your
+					checked={notNullish(product.free_trial)}
+					onCheckedChange={(checked) =>
+						setProduct({
+							...product,
+							free_trial: checked ? (getDefaultFreeTrial() as FreeTrial) : null,
+						})
+					}
+					description="Enable a free trial period for customers to try this plan "
+				>
+					{notNullish(product.free_trial) && <FreeTrialSection />}
+				</AreaCheckbox>
+				{(product.planType === "paid" || !hideAddOn) && (
+					<AreaCheckbox
+						title="Add-on Plan"
+						description="This plan can be bought together with
                         base plans (eg, top ups)"
-					checked={product.is_add_on}
-					disabled={product.is_default}
-					onCheckedChange={(checked) =>
-						setProduct({ ...product, is_add_on: checked })
-					}
-				/>
-				<div className="space-y-2">
+						checked={product.is_add_on}
+						disabled={product.is_default}
+						onCheckedChange={(checked) =>
+							setProduct({ ...product, is_add_on: checked })
+						}
+					/>
+				)}
+				{/* <div className="space-y-2">
 					<AreaCheckbox
 						title="Group"
-						description="This plan is part of a set of plans separate from your main plans"
+						description="If your app has multiple groups of subscription tiers, you can choose which group this plan belongs to."
 						checked={hasGroup}
 						onCheckedChange={(checked) =>
 							setProduct({ ...product, group: checked ? "" : null })
@@ -55,7 +92,7 @@ export const AdditionalOptions = ({
 							/>
 						)}
 					</AreaCheckbox>
-				</div>
+				</div> */}
 			</div>
 		</SheetSection>
 	);

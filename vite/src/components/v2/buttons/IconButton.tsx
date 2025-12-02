@@ -52,10 +52,11 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
 			switch (variant) {
 				case "secondary":
 				case "muted":
+					return "group-hover:text-inherit";
 				case "skeleton":
-					return "text-t3";
+					return "";
 				case "primary":
-					return "text-table-hover";
+					return "text-primary-foreground";
 				case "destructive":
 					return "text-error-light";
 				default:

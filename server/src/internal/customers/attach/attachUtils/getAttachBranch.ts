@@ -1,5 +1,5 @@
 import {
-	type AttachBody,
+	type AttachBodyV0,
 	AttachBranch,
 	AttachErrCode,
 	BillingInterval,
@@ -9,6 +9,7 @@ import {
 	type FeatureOptions,
 	type FullCusProduct,
 	productsAreSame,
+	RecaseError,
 } from "@autumn/shared";
 import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import { hasPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
@@ -17,16 +18,12 @@ import {
 	isFreeProduct,
 	isProductUpgrade,
 } from "@/internal/products/productUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import type { AttachParams } from "../../cusProducts/AttachParams.js";
 import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { isMainTrialBranch } from "./attachUtils.js";
-import {
-	attachParamToCusProducts,
-	getCustomerSub,
-} from "./convertAttachParams.js";
+import { attachParamToCusProducts } from "./convertAttachParams.js";
 
 const handleMultiProductErrors = async ({
 	attachParams,
@@ -92,6 +89,8 @@ const getOptionsToUpdate = ({
 }) => {
 	const optionsToUpdate: { new: FeatureOptions; old: FeatureOptions }[] = [];
 	const prices = cusProductToPrices({ cusProduct: curSameProduct });
+	console.log("Old options list: ", oldOptionsList);
+	console.log("New options list: ", newOptionsList);
 
 	for (const newOptions of newOptionsList) {
 		const internalFeatureId = newOptions.internal_feature_id;
@@ -191,7 +190,10 @@ const getSameProductBranch = async ({
 
 	// 1. If new version?
 
-	if (curSameProduct.product.version !== product.version) {
+	if (
+		curSameProduct.product.version !== product.version &&
+		curScheduledProduct?.product.id !== product.id
+	) {
 		return AttachBranch.NewVersion;
 	}
 
@@ -218,6 +220,7 @@ const getSameProductBranch = async ({
 	}
 
 	// 3. If main product
+
 	if (curScheduledProduct && !product.is_add_on) {
 		if (curScheduledProduct.product.id === product.id) {
 			throw new RecaseError({
@@ -291,26 +294,17 @@ const getChangeProductBranch = async ({
 };
 
 export const getAttachBranch = async ({
-	req,
+	// biome-ignore lint/correctness/noUnusedFunctionParameters: might be used in the future
+	ctx,
 	attachBody,
 	attachParams,
 	fromPreview,
 }: {
-	req: ExtendedRequest;
-	attachBody: AttachBody;
+	ctx: AutumnContext;
+	attachBody: AttachBodyV0;
 	attachParams: AttachParams;
 	fromPreview?: boolean;
 }) => {
-	if (notNullish(attachBody.products)) {
-		// 1.
-		const { subId } = await getCustomerSub({ attachParams, onlySubId: true });
-
-		if (subId) {
-			return AttachBranch.MultiAttachUpdate;
-		}
-		return AttachBranch.MultiAttach;
-	}
-
 	if (pricesOnlyOneOff(attachParams.prices)) {
 		return AttachBranch.OneOff;
 	}

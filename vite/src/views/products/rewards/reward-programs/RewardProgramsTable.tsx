@@ -1,14 +1,9 @@
-// import { useProductsContext } from "../ProductsContext";
-
-import { type RewardProgram, RewardTriggerEvent } from "@autumn/shared";
-import { useState } from "react";
-import { AdminHover } from "@/components/general/AdminHover";
-// import { RewardProgramRowToolbar } from "./RewardProgramRowToolbar";
-import { Item, Row } from "@/components/general/TableGrid";
+import type { RewardProgram } from "@autumn/shared";
+import { useMemo, useState } from "react";
+import { Table } from "@/components/general/table";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
-import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
-import { RewardProgramRowToolbar } from "./RewardProgramRowToolbar";
+import { useProductTable } from "@/views/products/hooks/useProductTable";
+import { createRewardProgramsTableColumns } from "./RewardProgramsTableColumns";
 import UpdateRewardProgram from "./UpdateRewardPrograms";
 
 export const RewardProgramsTable = () => {
@@ -16,6 +11,27 @@ export const RewardProgramsTable = () => {
 	const [selectedRewardProgram, setSelectedRewardProgram] =
 		useState<RewardProgram | null>(null);
 	const [open, setOpen] = useState(false);
+
+	const columns = useMemo(() => createRewardProgramsTableColumns(), []);
+
+	const programsTable = useProductTable({
+		data: rewardPrograms || [],
+		columns,
+		options: {
+			globalFilterFn: "includesString",
+			enableGlobalFilter: true,
+		},
+	});
+
+	const handleRowClick = (program: RewardProgram) => {
+		setSelectedRewardProgram(program);
+		setOpen(true);
+	};
+
+	const enableSorting = false;
+
+	const emptyStateText =
+		"Referral programs automatically grant rewards (defined above) to customers who invite new users.";
 
 	return (
 		<>
@@ -25,74 +41,24 @@ export const RewardProgramsTable = () => {
 				selectedRewardProgram={selectedRewardProgram}
 				setSelectedRewardProgram={setSelectedRewardProgram}
 			/>
-			{/* <UpdateRewardProgram component here /> */}
-
-			{rewardPrograms && rewardPrograms.length > 0 ? (
-				<Row type="header" className="grid-cols-18 -mb-1">
-					<Item className="col-span-4">ID</Item>
-					<Item className="col-span-4">Redeem On</Item>
-					<Item className="col-span-4">Max Redemptions</Item>
-					<Item className="col-span-3">Products</Item>
-					<Item className="col-span-2">Created At</Item>
-					<Item className="col-span-1"></Item>
-				</Row>
-			) : (
-				<div className="flex justify-start items-center h-10 text-t3 px-10">
-					Referral programs automatically grant rewards (defined above) to
-					customers who invite new users.
-				</div>
-			)}
-
-			{rewardPrograms.map((rewardProgram: RewardProgram) => (
-				<Row
-					key={rewardProgram.id}
-					onClick={() => {
-						setSelectedRewardProgram(rewardProgram);
-						setOpen(true);
-					}}
-				>
-					<Item className="col-span-4">
-						<AdminHover
-							texts={[{ key: "Internal ID", value: rewardProgram.internal_id }]}
-						>
-							<span className="font-mono truncate">{rewardProgram.id}</span>
-						</AdminHover>
-					</Item>
-					<Item className="col-span-4">
-						<span className="truncate">
-							{rewardProgram.when === RewardTriggerEvent.CustomerCreation
-								? "Customer Redemption"
-								: keyToTitle(rewardProgram.when)}
-						</span>
-					</Item>
-					<Item className="col-span-4">
-						<div className="flex items-center gap-1">
-							<p>
-								{rewardProgram.unlimited_redemptions
-									? "Unlimited"
-									: rewardProgram.max_redemptions}
-							</p>
-						</div>
-					</Item>
-					<Item className="col-span-3">
-						{rewardProgram.when === RewardTriggerEvent.CustomerCreation
-							? "Sign Up"
-							: rewardProgram.when === RewardTriggerEvent.Checkout
-								? "Checkout"
-								: keyToTitle(rewardProgram.when)}
-					</Item>
-					<Item className="col-span-2 text-t3 text-xs">
-						{formatUnixToDateTime(rewardProgram.created_at).date}
-						{/* <span className="text-t3">
-              {" "}
-              {formatUnixToDateTime(rewardProgram.created_at).time}
-            </span> */}
-					</Item>
-					<Item className="col-span-1 items-center justify-end">
-						<RewardProgramRowToolbar rewardProgram={rewardProgram} />
-					</Item>
-				</Row>
-			))}
+			<Table.Provider
+				config={{
+					table: programsTable,
+					numberOfColumns: columns.length,
+					enableSorting,
+					isLoading: false,
+					onRowClick: handleRowClick,
+					emptyStateText,
+					rowClassName: "h-10",
+				}}
+			>
+				<Table.Container>
+					<Table.Content>
+						<Table.Header />
+						<Table.Body />
+					</Table.Content>
+				</Table.Container>
+			</Table.Provider>
 		</>
 	);
 };

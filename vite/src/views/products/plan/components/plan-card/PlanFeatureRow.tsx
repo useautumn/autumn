@@ -3,9 +3,8 @@
 import type { ProductItem } from "@autumn/shared";
 import { getProductItemDisplay, productV2ToFeatureItems } from "@autumn/shared";
 import { TrashIcon } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AdminHover } from "@/components/general/AdminHover";
-import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -20,7 +19,7 @@ import { useProductItemContext } from "@/views/products/product/product-item/Pro
 import { PlanFeatureIcon } from "./PlanFeatureIcon";
 
 // Custom dot component with bigger height but smaller width
-const CustomDotIcon = () => {
+export const CustomDotIcon = () => {
 	return <div className="w-[2px] h-[2px] mx-0.5 bg-current rounded-full" />;
 };
 
@@ -28,12 +27,16 @@ interface PlanFeatureRowProps {
 	item: ProductItem;
 	onDelete?: (item: ProductItem) => void;
 	index: number;
+	readOnly?: boolean;
+	prepaidQuantity?: number | null;
 }
 
 export const PlanFeatureRow = ({
 	item: itemProp,
-	onDelete,
+	onDelete: _onDelete,
 	index,
+	readOnly = false,
+	prepaidQuantity, //used by subscription detail sheet
 }: PlanFeatureRowProps) => {
 	const { org } = useOrg();
 	const { features } = useFeaturesQuery();
@@ -46,6 +49,7 @@ export const PlanFeatureRow = ({
 	const playgroundMode = useOnboardingStore((s) => s.playgroundMode);
 	const { queryStates } = useOnboarding3QueryState();
 
+	const ref = useRef<HTMLDivElement>(null);
 	const [isPressed, setIsPressed] = useState(false);
 
 	// Disable interaction if in onboarding and not in playground edit mode
@@ -90,14 +94,13 @@ export const PlanFeatureRow = ({
 		if (isDisabled) return;
 		const currentItemId = getItemId({ item, itemIndex: index });
 
-		if (isSelected) {
-			// If already selected, deselect by going back to edit-plan
-			setSheet({ type: "edit-plan" });
-		} else {
-			// If not selected, select it
-			setItem(item);
-			setSheet({ type: "edit-feature", itemId: currentItemId });
-		}
+		// if (isSelected) {
+		// 	// If already selected, deselect by going back to edit-plan
+		// 	setSheet({ type: "edit-plan" });
+		// } else {
+		// If not selected, select it
+		setItem(item);
+		setSheet({ type: "edit-feature", itemId: currentItemId });
 	};
 
 	const handleDeleteRow = () => {
@@ -161,17 +164,22 @@ export const PlanFeatureRow = ({
 		];
 	};
 
-	return (
+	const renderContent = (contentRef?: React.Ref<HTMLDivElement>) => (
 		<div
+			ref={contentRef}
 			role="button"
 			tabIndex={0}
-			data-state={isSelected ? "open" : "closed"}
+			// data-state={isSelected ? "open" : "closed"}
 			{...(isDisabled && { "data-disabled": true })}
 			data-pressed={isPressed}
 			className={cn(
-				"flex items-center w-full group !h-9 group/row select-none outline-none",
-				"input-base input-shadow-tiny input-state-open-tiny",
+				"flex items-center w-full group h-10! group/row select-none rounded-xl hover:relative hover:z-95",
+				"input-base input-state-open-tiny",
 				isDisabled && "pointer-events-none cursor-default",
+				isSelected &&
+					"border-transparent z-95 relative bg-interative-secondary outline-4! outline-outer-background!",
+				isOnboarding && isSelected && "border-primary!",
+				readOnly && "pointer-events-none cursor-default",
 			)}
 			onMouseDown={(e) => {
 				if (isDisabled) return;
@@ -198,7 +206,7 @@ export const PlanFeatureRow = ({
 			{/* Left side - Icons and text */}
 			<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
 				<AdminHover texts={adminHoverText()}>
-					<div className="flex flex-row items-center gap-1 flex-shrink-0">
+					<div className="flex flex-row items-center gap-1 shrink-0 pointer-events-auto">
 						<PlanFeatureIcon item={item} position="left" />
 
 						<CustomDotIcon />
@@ -208,30 +216,29 @@ export const PlanFeatureRow = ({
 				</AdminHover>
 
 				<p className="whitespace-nowrap truncate flex-1 min-w-0">
-					<span className={cn("text-body", !hasFeatureName && "!text-t4")}>
+					<span className={cn("text-body", !hasFeatureName && "text-t4!")}>
 						{displayText}
 					</span>
 
-					<span className="text-body-secondary">
-						{" "}
-						{display.secondary_text}
-					</span>
+					<span className="text-body-secondary"> {display.secondary_text}</span>
 				</p>
 
-				<div className={cn(
-					"flex items-center gap-2 max-w-0 opacity-0 overflow-hidden group-hover:max-w-[200px] group-hover:opacity-100 transition-all duration-200 flex-shrink-0",
-					isSelected && "max-w-[200px] opacity-100"
-				)}>
-					<CopyButton
-						text={item.feature_id || ""}
-						disableActive={true}
-						size="sm"
-						variant="skeleton"
-						tabIndex={-1}
-						side="bottom"
-					/>
+				<div
+					className={cn(
+						"flex items-center max-w-0 opacity-0 overflow-hidden group-hover:max-w-[200px] shrink-0",
+						isSelected && "max-w-[200px] opacity-100",
+						!readOnly && " group-hover:opacity-100",
+					)}
+				>
 					<IconButton
-						icon={<TrashIcon size={16} weight="regular" />}
+						icon={
+							<TrashIcon
+								size={16}
+								weight="regular"
+								className=" group-hover/btn:text-red-500"
+							/>
+						}
+						className="hover:text-red-500"
 						iconOrientation="center"
 						onClick={(e) => {
 							e.stopPropagation();
@@ -244,13 +251,14 @@ export const PlanFeatureRow = ({
 						tabIndex={-1}
 					/>
 				</div>
-
-				{/* <div className="group/btn cursor-grab active:cursor-grabbing flex items-center justify-center p-1 w-6 h-6">
-					<div className="text-t3 group-hover/btn:text-primary transition-colors">
-						<DotsSixVerticalIcon size={16} weight="bold" />
-					</div>
-				</div> */}
+				{prepaidQuantity && (
+					<span className="bg-muted px-1 py-0.5 rounded-md">
+						x{parseFloat(Number(prepaidQuantity).toFixed(2))}
+					</span>
+				)}
 			</div>
 		</div>
 	);
+
+	return renderContent(ref);
 };

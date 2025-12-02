@@ -1,5 +1,4 @@
 import type { ApiBalance } from "@autumn/shared";
-import { getBatchDeductionScript } from "@lua/luaScripts.js";
 import type { Redis } from "ioredis";
 import { logger } from "../../../../external/logtail/logtailUtils";
 
@@ -52,9 +51,7 @@ export const executeBatchDeduction = async ({
 }): Promise<BatchDeductionResult> => {
 	try {
 		// Execute Lua script (hot reload in dev)
-		const result = await redis.eval(
-			getBatchDeductionScript(),
-			0, // No KEYS, all params in ARGV
+		const result = await redis.batchDeduction(
 			JSON.stringify(requests), // ARGV[1]
 			orgId, // ARGV[2]
 			env, // ARGV[3]
