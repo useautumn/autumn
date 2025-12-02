@@ -20,9 +20,10 @@ export const handleUpdateVercelBillingPlan = createRoute({
 
 		const { billingPlanId } = c.req.valid("json");
 
-		const customer = await CusService.getFull({
+		// Get customer by Vercel installation ID (not by customer.id which may differ)
+		const customer = await CusService.getByVercelId({
 			db,
-			idOrInternalId: integrationConfigurationId,
+			vercelInstallationId: integrationConfigurationId,
 			orgId,
 			env: env as AppEnv,
 			expand: [CusExpand.Entities],

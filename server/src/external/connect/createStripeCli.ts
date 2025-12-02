@@ -5,9 +5,9 @@ import {
 	type Organization,
 	RecaseError,
 } from "@autumn/shared";
+import { isStripeConnected } from "@server/internal/orgs/orgUtils.js";
+import { decryptData } from "@server/utils/encryptUtils.js";
 import Stripe from "stripe";
-import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
-import { decryptData } from "@/utils/encryptUtils.js";
 import { orgToAccountId, shouldUseMaster } from "./connectUtils.js";
 import { initMasterStripe, initPlatformStripe } from "./initStripeCli.js";
 

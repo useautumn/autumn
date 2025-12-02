@@ -21,16 +21,16 @@ import {
 	ProductSchema,
 	type UsagePriceConfig,
 } from "@autumn/shared";
-import { Decimal } from "decimal.js";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
+import type { DrizzleCli } from "@server/db/initDrizzle.js";
+import { createStripeCli } from "@server/external/connect/createStripeCli.js";
+import { createStripePriceIFNotExist } from "@server/external/stripe/createStripePrice/createStripePrice.js";
 import {
 	getBillingInterval,
 	getBillingType,
-} from "@/internal/products/prices/priceUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { generateId, notNullish } from "@/utils/genUtils.js";
+} from "@server/internal/products/prices/priceUtils.js";
+import RecaseError from "@server/utils/errorUtils.js";
+import { generateId, notNullish } from "@server/utils/genUtils.js";
+import { Decimal } from "decimal.js";
 import type {
 	AttachParams,
 	InsertCusProductParams,

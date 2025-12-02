@@ -6,6 +6,7 @@ import type {
 	EntitlementWithFeature,
 } from "../../models/productModels/entModels/entModels.js";
 import type { Price } from "../../models/productModels/priceModels/priceModels.js";
+import type { FullProduct } from "../../models/productModels/productModels.js";
 
 // export const getEntRelatedPrice = (
 //   entitlement: Entitlement,
@@ -85,4 +86,14 @@ export const cusEntToCusPrice = ({
 
 		return productMatch && entMatch;
 	});
+};
+
+export const productToEnt = ({
+	product,
+	featureId,
+}: {
+	product: FullProduct;
+	featureId: string;
+}) => {
+	return product.entitlements.find((ent) => ent.feature.id === featureId);
 };

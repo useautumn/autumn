@@ -26,6 +26,25 @@ export const cusEntToKey = ({
 	return `${interval}:${planId}:${usageModel}`;
 };
 
+export const cusEntsToPlanId = ({
+	cusEnts,
+}: {
+	cusEnts: FullCusEntWithFullCusProduct[];
+}) => {
+	// Get number of keys
+	const keys = new Set<string>();
+	for (const cusEnt of cusEnts) {
+		const key = cusEntToKey({ cusEnt });
+		keys.add(key);
+	}
+
+	if (keys.size > 1) {
+		return null;
+	}
+
+	return cusEnts[0].customer_product.product.id;
+};
+
 export const cusEntToBalance = ({
 	cusEnt,
 	entityId,

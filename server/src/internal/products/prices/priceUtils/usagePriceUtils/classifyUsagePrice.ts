@@ -8,10 +8,10 @@ import {
 	type Price,
 	type UsagePriceConfig,
 } from "@autumn/shared";
+import { notNullish } from "@server/utils/genUtils";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
-import { notNullish } from "@/utils/genUtils.js";
-import { getBillingType } from "../../priceUtils.js";
+import { getBillingType } from "../../priceUtils";
 
 export const isOneOffPrice = ({ price }: { price: Price }) => {
 	return price.config.interval === BillingInterval.OneOff;

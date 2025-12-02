@@ -212,6 +212,9 @@ export const dbToApiFeatureV1 = ({
 		input: result,
 		targetVersion: targetVersion ?? new ApiVersionClass(LATEST_VERSION),
 		resource: AffectedResource.Feature,
+		ctx: {
+			features: [dbFeature],
+		},
 	});
 };
 

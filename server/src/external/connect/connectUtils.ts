@@ -1,7 +1,7 @@
 import { AppEnv, InternalError, type Organization } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-import { decryptData } from "@/utils/encryptUtils.js";
+import type { DrizzleCli } from "@server/db/initDrizzle.js";
+import { OrgService } from "@server/internal/orgs/OrgService.js";
+import { decryptData } from "@server/utils/encryptUtils.js";
 import type { Logger } from "../logtail/logtailUtils.js";
 import { initMasterStripe } from "./initStripeCli.js";
 

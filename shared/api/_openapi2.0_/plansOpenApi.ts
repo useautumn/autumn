@@ -55,7 +55,7 @@ export const plansOpenApi = {
 			tags: ["plans"],
 			requestParams: {
 				path: z.object({
-					product_id: z.string(),
+					plan_id: z.string(),
 				}),
 			},
 			responses: {
@@ -70,7 +70,7 @@ export const plansOpenApi = {
 			tags: ["plans"],
 			requestParams: {
 				path: z.object({
-					product_id: z.string(),
+					plan_id: z.string(),
 				}),
 			},
 			requestBody: {

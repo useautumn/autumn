@@ -101,6 +101,7 @@ export class CusBatchService {
 					legacyData,
 					targetVersion: ctx.apiVersion,
 					resource: AffectedResource.Customer,
+					ctx,
 				});
 
 				finals.push(versionedCustomer);

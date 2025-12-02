@@ -8,16 +8,16 @@ import {
 	TierInfinite,
 	type UsagePriceConfig,
 } from "@autumn/shared";
-import { Decimal } from "decimal.js";
-import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { PriceService } from "@/internal/products/prices/PriceService.js";
+import type { DrizzleCli } from "@server/db/initDrizzle";
+import { PriceService } from "@server/internal/products/prices/PriceService";
 import {
 	getBillingType,
 	getPriceEntitlement,
-} from "@/internal/products/prices/priceUtils.js";
-import { billingIntervalToStripe } from "../stripePriceUtils.js";
-import { priceToInArrearTiers } from "./createStripeInArrear.js";
+} from "@server/internal/products/prices/priceUtils";
+import { Decimal } from "decimal.js";
+import type Stripe from "stripe";
+import { billingIntervalToStripe } from "../stripePriceUtils";
+import { priceToInArrearTiers } from "./createStripeInArrear";
 
 export interface StripeMeteredPriceParams {
 	stripeCli: Stripe;
