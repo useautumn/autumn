@@ -44,10 +44,10 @@ export const handleCreateResource = createRoute({
 		const { db, org, features, logger } = c.get("ctx");
 		const { productId, name, metadata, billingPlanId } = c.req.valid("json");
 
-		// 1. Get customer
-		const customer = await CusService.getFull({
+		// 1. Get customer by Vercel installation ID (not by customer.id which may differ)
+		const customer = await CusService.getByVercelId({
 			db,
-			idOrInternalId: integrationConfigurationId,
+			vercelInstallationId: integrationConfigurationId,
 			orgId,
 			env: env as AppEnv,
 			expand: [CusExpand.Entities],

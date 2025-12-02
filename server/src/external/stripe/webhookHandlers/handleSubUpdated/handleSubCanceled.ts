@@ -23,13 +23,10 @@ export const isSubCanceled = ({
 	previousAttributes,
 	sub,
 }: {
-	previousAttributes: any;
+	previousAttributes: unknown;
 	sub: Stripe.Subscription;
 }) => {
-	// console.log("Previous attributes:", previousAttributes);
-	// console.log("Cancel at:", sub.cancel_at);
-	// console.log("Cancel at period end:", sub.cancel_at_period_end);
-	// console.log("Canceled at:", sub.canceled_at);
+	const prevAttrs = previousAttributes as Record<string, unknown>;
 
 	if (!sub.cancel_at && !sub.cancel_at_period_end) {
 		return {
@@ -38,10 +35,10 @@ export const isSubCanceled = ({
 		};
 	}
 	const cancelAtPreviousEnd =
-		!previousAttributes.cancel_at_period_end && sub.cancel_at_period_end;
+		!prevAttrs.cancel_at_period_end && sub.cancel_at_period_end;
 
-	const cancelAt = nullish(previousAttributes.cancel_at) && sub.cancel_at;
-	const canceledAt = nullish(previousAttributes.canceled_at) && sub.canceled_at;
+	const cancelAt = nullish(prevAttrs.cancel_at) && sub.cancel_at;
+	const canceledAt = nullish(prevAttrs.canceled_at) && sub.canceled_at;
 
 	return {
 		canceled: cancelAtPreviousEnd || cancelAt || canceledAt,
@@ -58,19 +55,16 @@ const updateCusProductCanceled = async ({
 	db: DrizzleCli;
 	sub: Stripe.Subscription;
 	canceledAt?: number | null;
-	logger: any;
+	logger: { info: (msg: string) => void };
 }) => {
 	// 1. Check if sub has schedule
 	if (sub.schedule) {
 		return;
 	}
 
-	logger.info(`sub.updated: updating cus products for to canceled`, {
-		data: {
-			stripeSubId: sub.id,
-			canceledAt,
-		},
-	});
+	logger.info(
+		`sub.updated: updating cus products to canceled, stripeSubId=${sub.id}, canceledAt=${canceledAt}`,
+	);
 
 	const cancelsAt = sub.cancel_at ? sub.cancel_at * 1000 : undefined;
 
@@ -93,14 +87,11 @@ export const handleSubCanceled = async ({
 	updatedCusProducts,
 }: {
 	ctx: AutumnContext;
-	// biome-ignore lint/suspicious/noExplicitAny: Don't know the type of previousAttributes
-	previousAttributes: any;
+	previousAttributes: unknown;
 	sub: Stripe.Subscription;
 	org: Organization;
 	updatedCusProducts: FullCusProduct[];
 }) => {
-	// let isCanceled =
-	//   nullish(previousAttributes?.canceled_at) && !nullish(sub.canceled_at);
 	const { canceled, canceledAt } = isSubCanceled({
 		previousAttributes,
 		sub,
@@ -110,11 +101,19 @@ export const handleSubCanceled = async ({
 		sub.cancellation_details?.comment?.includes("autumn_downgrade") ||
 		sub.cancellation_details?.comment?.includes("autumn_cancel");
 
-	const canceledFromPortal = canceled && !isAutumnDowngrade;
-
 	const { db, env, logger } = ctx;
 
-	if (!canceledFromPortal || updatedCusProducts.length === 0) return;
+	if (!canceled) return;
+
+	if (isAutumnDowngrade) {
+		logger.info(`sub.canceled SKIP: isAutumnDowngrade`);
+		return;
+	}
+
+	if (updatedCusProducts.length === 0) {
+		logger.info(`sub.canceled SKIP: canceled but no updatedCusProducts`);
+		return;
+	}
 
 	await updateCusProductCanceled({
 		db,
@@ -123,7 +122,10 @@ export const handleSubCanceled = async ({
 		logger,
 	});
 
-	if (!org.config.sync_status) return;
+	if (!org.config.sync_status) {
+		logger.info(`sub.canceled SKIP webhook: org.config.sync_status=false`);
+		return;
+	}
 
 	const allDefaultProducts = await ProductService.listDefault({
 		db,
@@ -206,10 +208,12 @@ export const handleSubCanceled = async ({
 					(cp) => cp.product.group === cusProd.product.group,
 				),
 			});
+			logger.info(`sub.canceled ✅ SENT webhook for ${cusProd.product.name}`);
 		} catch (error) {
-			logger.error("Failed to add products updated webhook task to queue", {
+			logger.error(
+				`sub.canceled ❌ FAILED webhook for ${cusProd.product.name}`,
 				error,
-			});
+			);
 		}
 	}
 };

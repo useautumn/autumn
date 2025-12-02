@@ -12,6 +12,20 @@ local function getSubscriptionKey(subscription)
     return subscription.plan_id .. ":" .. status
 end
 
+-- Helper function to check if a plan has features
+local function planHasFeatures(plan)
+    if not plan or plan == cjson.null then
+        return false
+    end
+    if not plan.features or plan.features == cjson.null then
+        return false
+    end
+    if type(plan.features) == "table" and #plan.features > 0 then
+        return true
+    end
+    return false
+end
+
 -- Helper function to merge subscriptions array by plan ID and normalized status
 -- Groups subscriptions by key (plan_id:normalized_status) and merges quantities
 -- Used by getCustomer.lua to merge customer + entity subscriptions
@@ -69,6 +83,18 @@ local function mergeSubscriptions(subscriptionsArray)
             
             -- past_due: true if either is true
             mergedSubscription.past_due = (latest.past_due == true) or (curr.past_due == true)
+            
+            -- plan: prefer the plan with features
+            local latestHasFeatures = planHasFeatures(latest.plan)
+            local currHasFeatures = planHasFeatures(curr.plan)
+            
+            if currHasFeatures and not latestHasFeatures then
+                mergedSubscription.plan = curr.plan
+            elseif latestHasFeatures then
+                mergedSubscription.plan = latest.plan
+            elseif curr.plan and curr.plan ~= cjson.null then
+                mergedSubscription.plan = curr.plan
+            end
         else
             -- First subscription in group, ensure defaults
             mergedSubscription.canceled_at = curr.canceled_at or cjson.null
@@ -91,6 +117,7 @@ end
 
 -- Helper function to merge customer subscriptions into entity subscriptions
 -- Adds customer subscriptions that don't already exist in entity subscriptions (by subscription key)
+-- For existing subscriptions, uses customer's plan if customer has features and entity doesn't
 -- Does NOT merge quantities - only adds missing subscriptions
 -- Used by getEntity.lua to add customer subscriptions to entity subscriptions
 -- Parameters:
@@ -106,6 +133,13 @@ local function mergeCustomerSubscriptionsIntoEntity(entitySubscriptions, custome
         entitySubscriptions = {}
     end
     
+    -- Build a map of customer subscription keys to their subscriptions
+    local customerKeyToSubscription = {}
+    for _, customerSubscription in ipairs(customerSubscriptions) do
+        local key = getSubscriptionKey(customerSubscription)
+        customerKeyToSubscription[key] = customerSubscription
+    end
+    
     -- Build a set of existing subscription keys in entity subscriptions
     local existingKeys = {}
     for _, subscription in ipairs(entitySubscriptions) do
@@ -113,15 +147,26 @@ local function mergeCustomerSubscriptionsIntoEntity(entitySubscriptions, custome
         existingKeys[key] = true
     end
     
-    -- Add customer subscriptions that don't exist in entity subscriptions
+    -- Process entity subscriptions and use customer's plan if customer has features and entity doesn't
     local mergedSubscriptions = {}
-    
-    -- First, add all entity subscriptions
-    for _, subscription in ipairs(entitySubscriptions) do
-        table.insert(mergedSubscriptions, subscription)
+    for _, entitySubscription in ipairs(entitySubscriptions) do
+        local key = getSubscriptionKey(entitySubscription)
+        local customerSubscription = customerKeyToSubscription[key]
+        
+        -- If customer has plan.features but entity doesn't, use customer's plan
+        if customerSubscription then
+            local entityHasFeatures = planHasFeatures(entitySubscription.plan)
+            local customerHasFeatures = planHasFeatures(customerSubscription.plan)
+            
+            if customerHasFeatures and not entityHasFeatures then
+                entitySubscription.plan = customerSubscription.plan
+            end
+        end
+        
+        table.insert(mergedSubscriptions, entitySubscription)
     end
     
-    -- Then, add customer subscriptions that don't exist
+    -- Then, add customer subscriptions that don't exist in entity
     for _, customerSubscription in ipairs(customerSubscriptions) do
         local key = getSubscriptionKey(customerSubscription)
         if not existingKeys[key] then

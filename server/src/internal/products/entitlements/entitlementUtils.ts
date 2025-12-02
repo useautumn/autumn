@@ -17,8 +17,8 @@ import {
 	type RolloverConfig,
 	type UsagePriceConfig,
 } from "@autumn/shared";
+import RecaseError from "@server/utils/errorUtils";
 import { addDays } from "date-fns";
-import RecaseError from "@/utils/errorUtils.js";
 
 export const entIntervalToTrialDuration = ({
 	interval,

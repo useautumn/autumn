@@ -3,6 +3,7 @@ import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import {
 	AffectedResource,
 	defineVersionChange,
+	type VersionContext,
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
 import { CusProductStatus } from "@models/cusProductModels/cusProductEnums.js";
 import { convertPlanToItems } from "@utils/planFeatureUtils/planToItems.js";
@@ -12,10 +13,7 @@ import {
 	type ApiSubscription,
 	ApiSubscriptionSchema,
 } from "../apiSubscription.js";
-import {
-	type CusProductLegacyData,
-	CusProductLegacyDataSchema,
-} from "../cusProductLegacyData.js";
+import { CusProductLegacyDataSchema } from "../cusProductLegacyData.js";
 import { ApiCusProductV3Schema } from "../previousVersions/apiCusProductV3.js";
 
 /**
@@ -25,9 +23,11 @@ import { ApiCusProductV3Schema } from "../previousVersions/apiCusProductV3.js";
 export function transformSubscriptionToCusProductV3({
 	input,
 	legacyData,
+	ctx,
 }: {
 	input: z.infer<typeof ApiSubscriptionSchema>;
-	legacyData?: CusProductLegacyData;
+	legacyData?: z.infer<typeof CusProductLegacyDataSchema>;
+	ctx: VersionContext;
 }): z.infer<typeof ApiCusProductV3Schema> {
 	const cusPlanToCusProductV3Status = (plan: ApiSubscription) => {
 		if (plan.status === CusProductStatus.Active) {
@@ -48,17 +48,18 @@ export function transformSubscriptionToCusProductV3({
 
 	// Get features
 
-	if (input.plan && legacyData) {
+	// console.log("Features:", ctx.features);
+	if (input.plan && ctx.features) {
 		const productItems = convertPlanToItems({
 			plan: input.plan,
-			features: legacyData.features,
+			features: ctx.features,
 		});
 
 		const itemResponses = productItems.map((item) =>
 			getProductItemResponse({
 				item,
-				features: legacyData.features,
-				options: legacyData.options,
+				features: ctx.features,
+				options: legacyData?.options,
 			}),
 		);
 

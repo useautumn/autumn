@@ -37,6 +37,7 @@ export const getApiEntity = async ({
 	// Clean api entity
 	const cleanedEntity = {
 		...baseEntity,
+		feature_id: baseEntity.feature_id || undefined,
 		autumn_id: withAutumnId ? baseEntity.autumn_id : undefined,
 	};
 
@@ -60,5 +61,6 @@ export const getApiEntity = async ({
 		legacyData: entityLegacyData,
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Entity,
+		ctx,
 	});
 };

@@ -5,10 +5,10 @@ import {
 	type VercelMarketplaceMode,
 	type VercelProcessorConfig,
 } from "@autumn/shared";
+import { createSvixApp } from "@server/external/svix/svixHelpers.js";
+import { createSvixCli } from "@server/external/svix/svixUtils.js";
+import { createRoute } from "@server/honoMiddlewares/routeHandler.js";
 import type { ApplicationOut } from "svix";
-import { createSvixApp } from "@/external/svix/svixHelpers.js";
-import { createSvixCli } from "@/external/svix/svixUtils.js";
-import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { OrgService } from "../OrgService.js";
 
 export const getVercelConfigDisplay = ({
@@ -86,8 +86,6 @@ export const handleUpsertVercelConfig = createRoute({
 					}
 				: undefined;
 
-
-		
 		await OrgService.update({
 			db,
 			orgId: org.id,

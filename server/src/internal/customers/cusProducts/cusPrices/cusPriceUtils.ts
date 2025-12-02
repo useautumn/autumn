@@ -1,17 +1,16 @@
 import {
 	ErrCode,
-	FullCusProduct,
-	FullCustomerEntitlement,
-	FullCustomerPrice,
+	type FullCusProduct,
+	type FullCustomerEntitlement,
+	type FullCustomerPrice,
 	getFeatureInvoiceDescription,
-	OnDecrease,
-	Price,
-	UsagePriceConfig,
+	type Price,
+	type UsagePriceConfig,
 } from "@autumn/shared";
-import { getTotalNegativeBalance } from "../cusEnts/cusEntUtils.js";
+import { getPriceForOverage } from "@server/internal/products/prices/priceUtils";
+import RecaseError from "@server/utils/errorUtils";
 import { Decimal } from "decimal.js";
-import { getPriceForOverage } from "@/internal/products/prices/priceUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
+import { getTotalNegativeBalance } from "../cusEnts/cusEntUtils";
 
 export const getRelatedCusEnt = ({
 	cusPrice,
@@ -20,7 +19,7 @@ export const getRelatedCusEnt = ({
 	cusPrice: FullCustomerPrice;
 	cusEnts: FullCustomerEntitlement[];
 }) => {
-	let config = cusPrice.price.config as UsagePriceConfig;
+	const config = cusPrice.price.config as UsagePriceConfig;
 	if (!config) {
 		console.log("No config found for cusPrice", cusPrice);
 		return null;
