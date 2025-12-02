@@ -5,10 +5,10 @@ import type {
 	Product,
 } from "@autumn/shared";
 import { atmnToStripeAmount } from "@autumn/shared";
+import type { DrizzleCli } from "@server/db/initDrizzle";
+import { PriceService } from "@server/internal/products/prices/PriceService";
 import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { PriceService } from "@/internal/products/prices/PriceService.js";
-import { billingIntervalToStripe } from "../stripePriceUtils.js";
+import { billingIntervalToStripe } from "../stripePriceUtils";
 
 export const createStripeFixedPrice = async ({
 	db,

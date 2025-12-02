@@ -8,9 +8,8 @@ import {
 	type Price,
 	type UsagePriceConfig,
 } from "@autumn/shared";
-
+import { getCusPriceUsage } from "@server/internal/customers/cusProducts/cusPrices/cusPriceUtils";
 import type Stripe from "stripe";
-import { getCusPriceUsage } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
 
 export const createSubMeta = ({ features }: { features: Feature[] }) => {
 	const usageFeatures = features.map((f) => ({

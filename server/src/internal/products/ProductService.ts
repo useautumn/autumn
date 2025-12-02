@@ -11,12 +11,12 @@ import {
 	prices,
 	products,
 } from "@autumn/shared";
+import type { DrizzleCli } from "@server/db/initDrizzle";
+import RecaseError from "@server/utils/errorUtils";
+import { notNullish } from "@server/utils/genUtils";
 import { and, desc, eq, exists, inArray, ne, or, sql } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { notNullish } from "@/utils/genUtils.js";
-import { getLatestProducts } from "./productUtils.js";
+import { getLatestProducts } from "./productUtils";
 
 const parseFreeTrials = ({
 	products,
