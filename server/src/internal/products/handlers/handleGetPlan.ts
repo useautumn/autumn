@@ -64,6 +64,7 @@ export const handleGetPlan = createRoute({
 			legacyData: {
 				features: ctx.features,
 			},
+			ctx,
 		});
 
 		return c.json(versionedResponse);

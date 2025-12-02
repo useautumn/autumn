@@ -8,6 +8,7 @@ import { EntInterval } from "@models/productModels/intervals/entitlementInterval
 import { Decimal } from "decimal.js";
 import type { z } from "zod/v4";
 import { FeatureType } from "../../../../models/featureModels/featureEnums.js";
+import { apiBalanceToBreakdownKey } from "../../../../utils/cusEntUtils/convertCusEntUtils.js";
 import { resetIntvToEntIntv } from "../../../../utils/planFeatureUtils/planFeatureIntervals.js";
 import type { ApiFeatureV1 } from "../../../features/apiFeatureV1.js";
 import {
@@ -95,11 +96,13 @@ const toV3BalanceParams = ({
 	feature,
 	unlimited,
 	legacyData,
+	isBreakdown = false,
 }: {
 	input: ApiBalance | ApiBalanceBreakdown;
 	feature?: ApiFeatureV1;
 	unlimited: boolean;
 	legacyData?: CusFeatureLegacyData;
+	isBreakdown?: boolean;
 }) => {
 	const isBoolean = feature?.type === FeatureType.Boolean;
 
@@ -113,10 +116,36 @@ const toV3BalanceParams = ({
 		};
 	}
 
-	const prepaidQuantity = legacyData?.prepaid_quantity ?? 0;
-	const overage = new Decimal(input.purchased_balance)
-		.sub(prepaidQuantity)
-		.toNumber();
+	let prepaidQuantity = legacyData?.prepaid_quantity ?? 0;
+
+	if (isBreakdown) {
+		const breakdownKey = apiBalanceToBreakdownKey({
+			breakdown: input as ApiBalanceBreakdown,
+		});
+		prepaidQuantity =
+			legacyData?.breakdown_legacy_data?.find(
+				(item) => item.key === breakdownKey,
+			)?.prepaid_quantity ??
+			legacyData?.prepaid_quantity ??
+			0;
+	}
+
+	let overage = 0;
+	if (isBreakdown) {
+		overage = input.overage_allowed
+			? new Decimal(input.purchased_balance).toNumber()
+			: 0;
+	} else {
+		overage = new Decimal(input.purchased_balance)
+			.sub(prepaidQuantity)
+			.toNumber();
+	}
+
+	// console.log(`Is breakdown: ${isBreakdown}, legacyData:`, legacyData);
+	// console.log(`Granted balance: ${input.granted_balance}`);
+	// console.log(`Current Balance: ${input.current_balance}`);
+	// console.log(`Overage: ${overage}`);
+	// console.log("--------------------------------");
 
 	// 1. Get included usage
 	const includedUsage = new Decimal(input.granted_balance)
@@ -188,6 +217,7 @@ export function transformBalanceToCusFeatureV3({
 					feature,
 					unlimited: isUnlimited,
 					legacyData,
+					isBreakdown: true,
 				});
 
 			return {

@@ -46,6 +46,9 @@ export const handleGetOAuthUrl = createRoute({
 			serverUrl = `https://express.dev.useautumn.com`;
 		}
 
+		if (process.env.NGROK_URL) {
+			serverUrl = process.env.NGROK_URL;
+		}
 
 		// Add state + redirect_uri
 		baseUrl.searchParams.set("state", stateKey);

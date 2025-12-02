@@ -144,7 +144,40 @@ export const ListCustomersResponseSchema = z.object({
 	}),
 });
 
+// Get Billing Portal Query
+export const GetBillingPortalQuerySchema = z.object({
+	return_url: z.string().optional().meta({
+		description:
+			"URL to redirect to when back button is clicked in the billing portal",
+	}),
+});
+
+// Get Billing Portal Body
+export const GetBillingPortalBodySchema = z
+	.object({
+		configuration_id: z.string().optional().meta({
+			description:
+				"Stripe billing portal configuration ID. Create configurations in your Stripe dashboard.",
+		}),
+	})
+	.optional();
+
+// Get Billing Portal Response
+export const GetBillingPortalResponseSchema = z.object({
+	customer_id: z.string().nullable().meta({
+		description: "The ID of the customer",
+	}),
+	url: z.string().meta({
+		description: "URL to the billing portal",
+	}),
+});
+
 export type CreateCustomerParams = z.infer<typeof CreateCustomerParamsSchema>;
 export type UpdateCustomerParams = z.infer<typeof UpdateCustomerParamsSchema>;
 export type ListCustomersQuery = z.infer<typeof ListCustomersQuerySchema>;
 export type ListCustomersResponse = z.infer<typeof ListCustomersResponseSchema>;
+export type GetBillingPortalQuery = z.infer<typeof GetBillingPortalQuerySchema>;
+export type GetBillingPortalBody = z.infer<typeof GetBillingPortalBodySchema>;
+export type GetBillingPortalResponse = z.infer<
+	typeof GetBillingPortalResponseSchema
+>;

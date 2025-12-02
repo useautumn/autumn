@@ -52,17 +52,26 @@ export const V1_2_CustomerChange = defineVersionChange({
 	legacyDataSchema: CustomerLegacyDataSchema,
 
 	// Response: V2.0 → V1.2
-	transformResponse: ({ input, legacyData }) => {
+	transformResponse: ({ input, legacyData, ctx }) => {
 		// Step 1: Transform plans V2.0 → V1.2 (products)
 		const v3CusProducts: ApiCusProductV3[] = [
 			...input.subscriptions,
 			...input.scheduled_subscriptions,
-		].map((subscription: ApiSubscription) =>
-			transformSubscriptionToCusProductV3({
+		].map((subscription: ApiSubscription) => {
+			const cusPlanLegacyData = legacyData?.cusProductLegacyData[
+				subscription.plan_id
+			]
+				? {
+						...legacyData?.cusProductLegacyData[subscription.plan_id],
+					}
+				: undefined;
+
+			return transformSubscriptionToCusProductV3({
 				input: subscription,
-				legacyData: legacyData?.cusProductLegacyData[subscription.plan_id],
-			}),
-		);
+				legacyData: cusPlanLegacyData,
+				ctx,
+			});
+		});
 
 		v3CusProducts.sort((a, b) => {
 			if (a.is_add_on === b.is_add_on) {

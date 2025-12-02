@@ -1,8 +1,12 @@
-import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { AppEnv, FreeTrial, freeTrials, products } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
-import { and, count, desc, eq, inArray } from "drizzle-orm";
+import {
+	type AppEnv,
+	type FreeTrial,
+	freeTrials,
+	products,
+} from "@autumn/shared";
+import { buildConflictUpdateColumns } from "@server/db/dbUtils";
+import type { DrizzleCli } from "@server/db/initDrizzle";
+import { and, eq, inArray } from "drizzle-orm";
 
 export class FreeTrialService {
 	static async insert({ db, data }: { db: DrizzleCli; data: FreeTrial }) {
@@ -10,7 +14,7 @@ export class FreeTrialService {
 	}
 
 	static async upsert({ db, data }: { db: DrizzleCli; data: FreeTrial }) {
-		let updateCols = buildConflictUpdateColumns(freeTrials, [
+		const updateCols = buildConflictUpdateColumns(freeTrials, [
 			"id",
 			"internal_product_id",
 		]);

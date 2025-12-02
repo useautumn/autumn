@@ -109,6 +109,7 @@ export function BalanceEditSheet() {
 		}
 
 		setUpdateLoading(true);
+
 		try {
 			await CusService.updateCusEntitlement(
 				axiosInstance,

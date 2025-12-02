@@ -8,12 +8,12 @@ import {
 	TierInfinite,
 	type UsagePriceConfig,
 } from "@autumn/shared";
+import type { DrizzleCli } from "@server/db/initDrizzle";
+import { orgToCurrency } from "@server/internal/orgs/orgUtils";
+import { PriceService } from "@server/internal/products/prices/PriceService";
+import { getPriceEntitlement } from "@server/internal/products/prices/priceUtils";
 import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { orgToCurrency } from "@/internal/orgs/orgUtils.js";
-import { PriceService } from "@/internal/products/prices/PriceService.js";
-import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
-import { billingIntervalToStripe } from "../stripePriceUtils.js";
+import { billingIntervalToStripe } from "../stripePriceUtils";
 
 export const prepaidToStripeTiers = ({
 	price,
