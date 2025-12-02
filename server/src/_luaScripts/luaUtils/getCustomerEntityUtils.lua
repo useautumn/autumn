@@ -45,6 +45,72 @@ local function legacyDataToBreakdownItem(featureData)
     }
 end
 
+-- Helper function to merge cusProductLegacyData from source into target
+-- Merges by plan_id: keeps subscription_id from either, merges options arrays
+-- Mutates targetLegacyData
+local function mergeCusProductLegacyData(targetLegacyData, sourceLegacyData)
+    if not sourceLegacyData then return end
+    if not targetLegacyData then return end
+    
+    local targetCusProduct = targetLegacyData.cusProductLegacyData
+    local sourceCusProduct = sourceLegacyData.cusProductLegacyData
+    
+    if not sourceCusProduct then return end
+    
+    -- Initialize target cusProductLegacyData if nil
+    if not targetCusProduct then
+        targetLegacyData.cusProductLegacyData = {}
+        targetCusProduct = targetLegacyData.cusProductLegacyData
+    end
+    
+    -- Merge each plan_id from source into target
+    for planId, sourceProductData in pairs(sourceCusProduct) do
+        local targetProductData = targetCusProduct[planId]
+        
+        if targetProductData then
+            -- Plan exists in target - merge values
+            -- subscription_id: keep target's if exists, otherwise use source's
+            if not targetProductData.subscription_id or targetProductData.subscription_id == cjson.null then
+                targetProductData.subscription_id = sourceProductData.subscription_id
+            end
+            
+            -- options: merge by feature_id (add source options that don't exist in target)
+            if sourceProductData.options and #sourceProductData.options > 0 then
+                if not targetProductData.options then
+                    targetProductData.options = {}
+                end
+                
+                -- Build set of existing feature_ids in target options
+                local existingFeatureIds = {}
+                for _, option in ipairs(targetProductData.options) do
+                    if option.feature_id then
+                        existingFeatureIds[option.feature_id] = true
+                    end
+                end
+                
+                -- Add source options that don't exist in target
+                for _, sourceOption in ipairs(sourceProductData.options) do
+                    if sourceOption.feature_id and not existingFeatureIds[sourceOption.feature_id] then
+                        table.insert(targetProductData.options, sourceOption)
+                    end
+                end
+            end
+        else
+            -- Plan doesn't exist in target - add it (deep copy)
+            local newProductData = {
+                subscription_id = sourceProductData.subscription_id,
+                options = {}
+            }
+            if sourceProductData.options then
+                for _, option in ipairs(sourceProductData.options) do
+                    table.insert(newProductData.options, option)
+                end
+            end
+            targetCusProduct[planId] = newProductData
+        end
+    end
+end
+
 -- Helper function to merge cusFeatureLegacyData from source into target
 -- Merges by feature_id: sums prepaid_quantity, merges breakdown_legacy_data by key
 -- Similar to balance breakdown merging:
@@ -257,6 +323,7 @@ local function getCustomerObject(orgId, env, customerId, skipEntityMerge)
             local entityBase = entityBaseData[entityId]
             if entityBase and entityBase.legacyData then
                 mergeCusFeatureLegacyData(baseCustomer.legacyData, entityBase.legacyData)
+                mergeCusProductLegacyData(baseCustomer.legacyData, entityBase.legacyData)
             end
         end
     end
@@ -343,6 +410,7 @@ local function getEntityObject(orgId, env, customerId, entityId, skipCustomerMer
         -- ============================================================================
         if baseEntity.legacyData and customerBase and customerBase.legacyData then
             mergeCusFeatureLegacyData(baseEntity.legacyData, customerBase.legacyData)
+            mergeCusProductLegacyData(baseEntity.legacyData, customerBase.legacyData)
         end
     else
         -- No merging - just use entity's own subscriptions
