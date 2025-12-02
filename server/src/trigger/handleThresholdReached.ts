@@ -32,6 +32,7 @@ const cleanApiCustomer = ({
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Customer,
 		legacyData,
+		ctx,
 	});
 };
 

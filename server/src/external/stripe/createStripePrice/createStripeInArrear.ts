@@ -11,13 +11,13 @@ import {
 	TierInfinite,
 	type UsagePriceConfig,
 } from "@autumn/shared";
+import type { DrizzleCli } from "@server/db/initDrizzle";
+import { PriceService } from "@server/internal/products/prices/PriceService";
+import RecaseError from "@server/utils/errorUtils";
 import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
 import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { PriceService } from "@/internal/products/prices/PriceService.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { billingIntervalToStripe } from "../stripePriceUtils.js";
+import { billingIntervalToStripe } from "../stripePriceUtils";
 
 export const searchStripeMeter = async ({
 	stripeCli,

@@ -1,41 +1,53 @@
-import { expect } from "bun:test";
 import assert from "node:assert";
 import {
+	ApiVersion,
 	type AppEnv,
 	CusProductStatus,
 	cusProductToEnts,
 	cusProductToPrices,
 	cusProductToProduct,
+	type FullCusProduct,
 	type FullCustomer,
 	type Organization,
 } from "@autumn/shared";
-import { defaultApiVersion } from "@tests/constants.js";
-import { cusProductToSubIds } from "@tests/merged/mergeUtils.test.js";
-import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { priceToStripeItem } from "@/external/stripe/priceToStripeItem/priceToStripeItem.js";
-import { subIsCanceled } from "@/external/stripe/stripeSubUtils.js";
+import type { DrizzleCli } from "@server/db/initDrizzle";
+import { priceToStripeItem } from "@server/external/stripe/priceToStripeItem/priceToStripeItem";
+import { subIsCanceled } from "@server/external/stripe/stripeSubUtils";
 import {
 	cusProductInPhase,
 	logPhaseItems,
 	similarUnix,
-} from "@/internal/customers/attach/mergeUtils/phaseUtils/phaseUtils.js";
-import { ACTIVE_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
-import { getExistingUsageFromCusProducts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
-import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
-import { getUniqueUpcomingSchedulePairs } from "@/internal/customers/cusProducts/cusProductUtils/getUpcomingSchedules.js";
-import { PriceService } from "@/internal/products/prices/PriceService.js";
-import {
-	isFixedPrice,
-	isOneOffPrice,
-} from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+} from "@server/internal/customers/attach/mergeUtils/phaseUtils/phaseUtils";
+import { ACTIVE_STATUSES } from "@server/internal/customers/cusProducts/CusProductService";
+import { getExistingUsageFromCusProducts } from "@server/internal/customers/cusProducts/cusEnts/cusEntUtils";
+import { getExistingCusProducts } from "@server/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
+import { getUniqueUpcomingSchedulePairs } from "@server/internal/customers/cusProducts/cusProductUtils/getUpcomingSchedules";
+import { PriceService } from "@server/internal/products/prices/PriceService";
 import {
 	formatPrice,
 	getPriceEntitlement,
 	getPriceOptions,
-} from "@/internal/products/prices/priceUtils.js";
-import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
-import { formatUnixToDateTime, nullish } from "../genUtils.js";
+} from "@server/internal/products/prices/priceUtils";
+import {
+	isFixedPrice,
+	isOneOffPrice,
+} from "@server/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice";
+import {
+	isFreeProduct,
+	isOneOff,
+} from "@server/internal/products/productUtils";
+import type Stripe from "stripe";
+import { formatUnixToDateTime, nullish } from "../genUtils";
+
+const defaultApiVersion = ApiVersion.V1_2;
+
+const cusProductToSubIds = ({
+	cusProducts,
+}: {
+	cusProducts: FullCusProduct[];
+}) => {
+	return [...new Set(cusProducts.flatMap((cp) => cp.subscription_ids || []))];
+};
 
 const compareActualItems = async ({
 	actualItems,
@@ -194,10 +206,7 @@ const checkAllFreeProducts = async ({
 
 		if (fullCus.org_id === "6bWdIqEuRHBrReXbTb30l9beMFVZ3Ts3") return true;
 
-		assert(
-			!sub,
-			`no sub should exist for this customer (${fullCus.email}, ${fullCus.id})`,
-		);
+		assert(!sub, `no sub should exist for this customer`);
 		return true;
 	}
 
@@ -234,7 +243,7 @@ export const checkCusSubCorrect = async ({
 
 	assert(
 		subIds.length === 1,
-		`should only have 1 sub ID available, instead got ${subIds.join(", ")}`,
+		`should only have 1 sub ID available for product ${cusProducts[0].product.name}, instead got ${subIds.length}`,
 	);
 
 	cusProducts = cusProducts.filter((cp) =>
@@ -523,14 +532,18 @@ export const checkCusSubCorrect = async ({
 		if (supposedPhase.items.length === 0) continue;
 
 		const actualPhase = schedule?.phases?.[i + 1];
-		expect(schedule?.phases.length).toBeGreaterThan(i + 1);
+		assert(
+			(schedule?.phases.length ?? 0) > i + 1,
+			`Schedule should have more than ${i + 1} phases`,
+		);
 
-		expect(
+		assert(
 			similarUnix({
 				unix1: supposedPhase.start_date,
 				unix2: actualPhase!.start_date * 1000,
 			}),
-		).toBe(true);
+			`Phase ${i} start date mismatch`,
+		);
 
 		const actualItems =
 			actualPhase?.items.map((item) => ({

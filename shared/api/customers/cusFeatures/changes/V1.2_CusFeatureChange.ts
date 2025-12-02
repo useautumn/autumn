@@ -119,7 +119,9 @@ const toV3BalanceParams = ({
 	let prepaidQuantity = legacyData?.prepaid_quantity ?? 0;
 
 	if (isBreakdown) {
-		const breakdownKey = apiBalanceToBreakdownKey({ breakdown: input });
+		const breakdownKey = apiBalanceToBreakdownKey({
+			breakdown: input as ApiBalanceBreakdown,
+		});
 		prepaidQuantity =
 			legacyData?.breakdown_legacy_data?.find(
 				(item) => item.key === breakdownKey,
@@ -138,6 +140,12 @@ const toV3BalanceParams = ({
 			.sub(prepaidQuantity)
 			.toNumber();
 	}
+
+	// console.log(`Is breakdown: ${isBreakdown}, legacyData:`, legacyData);
+	// console.log(`Granted balance: ${input.granted_balance}`);
+	// console.log(`Current Balance: ${input.current_balance}`);
+	// console.log(`Overage: ${overage}`);
+	// console.log("--------------------------------");
 
 	// 1. Get included usage
 	const includedUsage = new Decimal(input.granted_balance)

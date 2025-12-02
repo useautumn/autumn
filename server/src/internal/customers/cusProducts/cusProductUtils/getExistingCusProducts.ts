@@ -4,8 +4,8 @@ import {
 	type Product,
 	RELEVANT_STATUSES,
 } from "@autumn/shared";
-import { isOneOff } from "@/internal/products/productUtils.js";
-import { nullish } from "@/utils/genUtils.js";
+import { isOneOff } from "@server/internal/products/productUtils";
+import { nullish } from "@server/utils/genUtils";
 
 export const getExistingCusProducts = ({
 	product,

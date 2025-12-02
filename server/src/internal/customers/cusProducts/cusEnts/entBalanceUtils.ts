@@ -1,6 +1,5 @@
-import RecaseError from "@/utils/errorUtils.js";
-import { nullish } from "@/utils/genUtils.js";
-import { FullCustomerEntitlement } from "@autumn/shared";
+import type { FullCustomerEntitlement } from "@autumn/shared";
+import { nullish } from "@server/utils/genUtils.js";
 
 export const getEntityBalance = ({
 	cusEnt,
@@ -9,8 +8,8 @@ export const getEntityBalance = ({
 	cusEnt: FullCustomerEntitlement;
 	entityId: string;
 }) => {
-	let entityBalance = cusEnt.entities?.[entityId!]?.balance;
-	let adjustment = cusEnt.entities?.[entityId!]?.adjustment || 0;
+	const entityBalance = cusEnt.entities?.[entityId!]?.balance;
+	const adjustment = cusEnt.entities?.[entityId!]?.adjustment || 0;
 
 	if (nullish(entityBalance)) return { balance: 0, adjustment: 0 };
 

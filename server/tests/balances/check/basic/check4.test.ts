@@ -64,6 +64,7 @@ describe(`${chalk.yellowBright("check4: test /check on unlimited feature")}`, ()
 			customer_id: "check4",
 			required_balance: 1,
 			balance: {
+				plan_id: freeProd.id,
 				feature_id: "messages",
 				unlimited: true,
 				granted_balance: 0,

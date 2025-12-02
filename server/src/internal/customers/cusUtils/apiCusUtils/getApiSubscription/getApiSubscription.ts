@@ -105,7 +105,7 @@ export const getApiSubscription = async ({
 		legacyData: {
 			subscription_id: subId || undefined,
 			options: cusProduct.options,
-			features: ctx.features,
+			// features: ctx.features,
 		} satisfies CusProductLegacyData,
 	};
 };
