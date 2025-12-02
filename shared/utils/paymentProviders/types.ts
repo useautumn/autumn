@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 import type { AppEnv, BillingInterval, Organization } from "@autumn/shared";
-import { ProcessorType } from "@autumn/shared/models/genModels/genEnums.js";
+import type { ProcessorType } from "@autumn/shared/models/genModels/genEnums.js";
 
 /**
  * Payment Provider Interface
@@ -134,14 +134,10 @@ export interface PaymentProvider {
 }
 
 /**
- * Provider Type Enum
+ * Re-export ProcessorType from genEnums for convenience
+ * The enum is defined in @autumn/shared/models/genModels/genEnums
  */
-export enum ProcessorType {
-	Stripe = "stripe",
-	// Future providers can be added here
-	// PayPal = "paypal",
-	// Paddle = "paddle",
-}
+export { ProcessorType } from "@autumn/shared/models/genModels/genEnums.js";
 
 /**
  * Type Definitions

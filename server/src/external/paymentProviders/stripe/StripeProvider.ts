@@ -169,16 +169,18 @@ export class StripeProvider implements PaymentProvider {
 	// Price Operations
 	prices = {
 		create: async (params: CreatePriceParams): Promise<Price> => {
+			const recurringConfig = params.recurring
+				? this.mapBillingIntervalToStripeRecurring({
+						interval: params.recurring.interval,
+						interval_count: params.recurring.interval_count,
+					})
+				: undefined;
+
 			const price = await this.stripeCli.prices.create({
 				product: params.product,
 				currency: params.currency,
 				unit_amount: params.unit_amount,
-				recurring: params.recurring
-					? {
-							interval: this.mapBillingIntervalToStripe(params.recurring.interval),
-							interval_count: params.recurring.interval_count || 1,
-						}
-					: undefined,
+				recurring: recurringConfig,
 				metadata: params.metadata,
 			});
 			return this.mapStripePrice(price);
@@ -614,7 +616,10 @@ export class StripeProvider implements PaymentProvider {
 			unit_amount: price.unit_amount,
 			recurring: price.recurring
 				? {
-						interval: this.mapStripeIntervalToBillingInterval(price.recurring.interval),
+						interval: this.mapStripeRecurringToBillingInterval({
+							interval: price.recurring.interval,
+							interval_count: price.recurring.interval_count,
+						}),
 						interval_count: price.recurring.interval_count,
 					}
 				: undefined,
@@ -795,30 +800,75 @@ export class StripeProvider implements PaymentProvider {
 		};
 	}
 
-	private mapBillingIntervalToStripe(interval: BillingInterval): Stripe.Price.Recurring.Interval {
+	/**
+	 * Maps BillingInterval to Stripe recurring configuration
+	 * Handles Quarter and SemiAnnual by converting to month interval with appropriate interval_count
+	 */
+	private mapBillingIntervalToStripeRecurring({
+		interval,
+		interval_count,
+	}: {
+		interval: BillingInterval;
+		interval_count?: number | null;
+	}): Stripe.PriceCreateParams.Recurring {
+		const baseCount = interval_count || 1;
+
 		switch (interval) {
 			case BillingInterval.Week:
-				return "week";
+				return {
+					interval: "week",
+					interval_count: baseCount,
+				};
 			case BillingInterval.Month:
-				return "month";
+				return {
+					interval: "month",
+					interval_count: baseCount,
+				};
 			case BillingInterval.Quarter:
-				return "month"; // Stripe uses month with interval_count
+				return {
+					interval: "month",
+					interval_count: baseCount * 3, // Quarter = 3 months
+				};
 			case BillingInterval.SemiAnnual:
-				return "month";
+				return {
+					interval: "month",
+					interval_count: baseCount * 6, // Semi-annual = 6 months
+				};
 			case BillingInterval.Year:
-				return "year";
+				return {
+					interval: "year",
+					interval_count: baseCount,
+				};
 			default:
-				return "month";
+				return {
+					interval: "month",
+					interval_count: baseCount,
+				};
 		}
 	}
 
-	private mapStripeIntervalToBillingInterval(
-		interval: Stripe.Price.Recurring.Interval,
-	): BillingInterval {
+	/**
+	 * Maps Stripe recurring configuration back to BillingInterval
+	 * Uses interval_count to reconstruct Quarter and SemiAnnual intervals
+	 */
+	private mapStripeRecurringToBillingInterval({
+		interval,
+		interval_count,
+	}: {
+		interval: Stripe.Price.Recurring.Interval;
+		interval_count: number;
+	}): BillingInterval {
 		switch (interval) {
 			case "week":
 				return BillingInterval.Week;
 			case "month":
+				// Use interval_count to determine if it's Quarter or SemiAnnual
+				if (interval_count === 3) {
+					return BillingInterval.Quarter;
+				}
+				if (interval_count === 6) {
+					return BillingInterval.SemiAnnual;
+				}
 				return BillingInterval.Month;
 			case "year":
 				return BillingInterval.Year;

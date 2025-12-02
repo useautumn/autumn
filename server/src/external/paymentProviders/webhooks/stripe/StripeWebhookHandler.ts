@@ -1,8 +1,8 @@
-import type { AppEnv, Organization } from "@autumn/shared";
+import type { AppEnv } from "@autumn/shared";
 import type { WebhookEvent } from "@autumn/shared/utils/paymentProviders/types.js";
 import { ProcessorType } from "@autumn/shared/utils/paymentProviders/types.js";
 import { BaseWebhookHandler, type WebhookContext } from "../WebhookHandler.js";
-import { StripeProvider } from "../../stripe/StripeProvider.js";
+import Stripe from "stripe";
 import { handleStripeWebhookEvent } from "@/external/stripe/handleStripeWebhookEvent.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
@@ -18,8 +18,27 @@ export class StripeWebhookHandler extends BaseWebhookHandler {
 		signature: string,
 		secret: string,
 	): Promise<WebhookEvent> {
-		const provider = this.createProvider({} as Organization, "sandbox" as AppEnv);
-		return provider.webhooks.verifySignature(payload, signature, secret);
+		// Webhook signature verification doesn't require organization context
+		// Use Stripe SDK directly for verification
+		const event = await Stripe.webhooks.constructEventAsync(
+			payload,
+			signature,
+			secret,
+		);
+		return this.mapStripeWebhookEvent(event);
+	}
+
+	private mapStripeWebhookEvent(event: Stripe.Event): WebhookEvent {
+		return {
+			id: event.id,
+			type: event.type,
+			data: {
+				object: event.data.object,
+				previous_attributes: event.data.previous_attributes,
+			},
+			created: event.created,
+			...event,
+		};
 	}
 
 	async handleEvent(event: WebhookEvent, context: WebhookContext): Promise<void> {
@@ -31,10 +50,6 @@ export class StripeWebhookHandler extends BaseWebhookHandler {
 			ctx: context as unknown as AutumnContext,
 			event: stripeEvent,
 		});
-	}
-
-	private createProvider(org: Organization, env: AppEnv): StripeProvider {
-		return new StripeProvider({ org, env });
 	}
 }
 

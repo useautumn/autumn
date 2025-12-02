@@ -37,7 +37,7 @@ export const createPaymentProviderCustomer = async ({
 		email: customer.email || undefined,
 		metadata: {
 			...(metadata || {}),
-			autumn_id: customer.id || null,
+			...(customer.id ? { autumn_id: customer.id } : {}),
 			autumn_internal_id: customer.internal_id,
 		},
 		testClockId,
