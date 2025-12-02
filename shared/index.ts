@@ -167,6 +167,7 @@ export * from "./models/subModels/subTable.js";
 export * from "./utils/displayUtils.js";
 export * from "./utils/index.js";
 export * from "./utils/intervalUtils.js";
+export * from "./utils/paymentProviders/types.js";
 export * from "./utils/planFeatureUtils/itemsToPlanFeatures.js";
 export * from "./utils/planFeatureUtils/itemsToPlanFeatures.js";
 export * from "./utils/planFeatureUtils/planFeatureIntervals.js";
