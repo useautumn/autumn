@@ -739,9 +739,11 @@ local function loadBalances(cacheKey, orgId, env, customerId, entityId)
         for featureId, entityBalance in pairs(entityBalances) do
             if not balances[featureId] then
                 -- This balance doesn't exist in customer, add it with zero values
+                -- Copy plan_id from entity so breakdown keys match when merging
                 balances[featureId] = {
                     feature_id = featureId,
                     feature = entityBalance.feature,
+                    plan_id = entityBalance.plan_id,
                     unlimited = entityBalance.unlimited,
                     granted_balance = 0,
                     purchased_balance = 0,
@@ -750,7 +752,7 @@ local function loadBalances(cacheKey, orgId, env, customerId, entityId)
                     max_purchase = entityBalance.max_purchase or 0,
                     overage_allowed = entityBalance.overage_allowed,
                     reset = entityBalance.reset,
-                    breakdown = {}
+                    breakdown = nil
                 }
             end
         end
