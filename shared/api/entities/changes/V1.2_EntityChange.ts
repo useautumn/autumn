@@ -51,26 +51,45 @@ export const V1_2_EntityChange = defineVersionChange({
 	legacyDataSchema: EntityLegacyDataSchema,
 
 	// Response: V1 → V0
-	transformResponse: ({ input, legacyData }) => {
+	transformResponse: ({ input, legacyData, ctx }) => {
 		// Step 1: Transform plans V1 → V0 (products)
 		const v0CusProducts: ApiCusProductV3[] | undefined = input.subscriptions
-			? input.subscriptions.map((subscription: ApiSubscription) =>
-					transformSubscriptionToCusProductV3({
+			? input.subscriptions.map((subscription: ApiSubscription) => {
+					const cusPlanLegacyData = legacyData?.cusProductLegacyData[
+						subscription.plan_id
+					]
+						? {
+								...legacyData?.cusProductLegacyData[subscription.plan_id],
+								features: ctx?.features || [],
+							}
+						: undefined;
+
+					return transformSubscriptionToCusProductV3({
 						input: subscription,
-						legacyData: legacyData?.cusProductLegacyData[subscription.plan_id],
-					}),
-				)
+						legacyData: cusPlanLegacyData,
+						ctx,
+					});
+				})
 			: undefined;
 
 		const scheduledCusProducts: ApiCusProductV3[] | undefined =
 			input.scheduled_subscriptions
-				? input.scheduled_subscriptions.map((subscription: ApiSubscription) =>
-						transformSubscriptionToCusProductV3({
+				? input.scheduled_subscriptions.map((subscription: ApiSubscription) => {
+						const cusPlanLegacyData = legacyData?.cusProductLegacyData[
+							subscription.plan_id
+						]
+							? {
+									...legacyData?.cusProductLegacyData[subscription.plan_id],
+									features: ctx?.features || [],
+								}
+							: undefined;
+
+						return transformSubscriptionToCusProductV3({
 							input: subscription,
-							legacyData:
-								legacyData?.cusProductLegacyData[subscription.plan_id],
-						}),
-					)
+							legacyData: cusPlanLegacyData,
+							ctx,
+						});
+					})
 				: undefined;
 
 		const finalCusProducts = [

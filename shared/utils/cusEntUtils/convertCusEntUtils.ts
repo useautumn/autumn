@@ -1,13 +1,15 @@
 import { Decimal } from "decimal.js";
+import type { ApiBalanceBreakdown } from "../../api/customers/cusFeatures/apiBalance.js";
+import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
+import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import { resetIntvToEntIntv } from "../planFeatureUtils/planFeatureIntervals.js";
 import {
+	cusEntToCusPrice,
 	entToOptions,
-	type FullCusEntWithFullCusProduct,
-	type FullCustomerEntitlement,
-	getCusEntBalance,
-	getStartingBalance,
-} from "../../index.js";
-import { cusEntToCusPrice } from "../productUtils/convertUtils.js";
+} from "../productUtils/convertUtils.js";
+import { getCusEntBalance } from "./balanceUtils.js";
 import { getRolloverFields } from "./getRolloverFields.js";
+import { getStartingBalance } from "./getStartingBalance.js";
 
 export const cusEntToKey = ({
 	cusEnt,
@@ -22,6 +24,25 @@ export const cusEntToKey = ({
 	const usageModel = `${cusEnt.usage_allowed}`;
 
 	return `${interval}:${planId}:${usageModel}`;
+};
+
+export const cusEntsToPlanId = ({
+	cusEnts,
+}: {
+	cusEnts: FullCusEntWithFullCusProduct[];
+}) => {
+	// Get number of keys
+	const keys = new Set<string>();
+	for (const cusEnt of cusEnts) {
+		const key = cusEntToKey({ cusEnt });
+		keys.add(key);
+	}
+
+	if (keys.size > 1) {
+		return null;
+	}
+
+	return cusEnts[0].customer_product.product.id;
 };
 
 export const cusEntToBalance = ({
@@ -134,4 +155,20 @@ export const cusEntToGrantedBalance = ({
 	}
 
 	return total;
+};
+
+export const apiBalanceToBreakdownKey = ({
+	breakdown,
+}: {
+	breakdown: ApiBalanceBreakdown;
+}) => {
+	const inteval =
+		breakdown.reset?.interval && breakdown.reset.interval !== "multiple"
+			? resetIntvToEntIntv({ resetIntv: breakdown.reset.interval })
+			: "lifetime";
+	const interval = `${breakdown.reset?.interval_count ?? 1}:${inteval}`;
+	const usageModel = `${breakdown.overage_allowed}`;
+	const planId = `${breakdown.plan_id}`;
+
+	return `${interval}:${planId}:${usageModel}`;
 };

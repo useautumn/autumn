@@ -1,5 +1,13 @@
 import type { ZodType, z } from "zod/v4";
+import type { Feature } from "../../../models/featureModels/featureModels.js";
 import type { ApiVersion } from "../ApiVersion.js";
+
+/**
+ * Context passed to version transforms for accessing runtime data
+ */
+export interface VersionContext {
+	features: Feature[];
+}
 
 /**
  * Resources that can be affected by version changes
@@ -136,16 +144,19 @@ export abstract class VersionChange<
 	 *
 	 * @param input - Response data in current version format (validated against newSchema)
 	 * @param legacyData - Legacy fields data for transformation (validated against legacyDataSchema if provided)
+	 * @param ctx - Optional runtime context for accessing additional data (e.g., features)
 	 * @returns Data in previous version format (should match oldSchema)
 	 */
 	transformResponse({
 		input,
 		legacyData: _legacyData,
+		ctx: _ctx,
 	}: {
 		input: z.infer<TNewSchema>;
 		legacyData?: TLegacyDataSchema extends ZodType
 			? z.infer<TLegacyDataSchema>
 			: never;
+		ctx?: VersionContext;
 	}): z.infer<TOldSchema> {
 		// Default: no-op (override if change affects responses)
 		return input as unknown as z.infer<TOldSchema>;
@@ -244,6 +255,7 @@ export interface VersionChangeConfig<
 		legacyData?: TLegacyDataSchema extends ZodType
 			? z.infer<TLegacyDataSchema>
 			: never;
+		ctx: VersionContext;
 	}) => z.infer<TOldSchema>;
 }
 
@@ -312,6 +324,7 @@ export function defineVersionChange<
 			legacyData?: TLegacyDataSchema extends ZodType
 				? z.infer<TLegacyDataSchema>
 				: never;
+			ctx: VersionContext;
 		}): z.infer<TOldSchema> {
 			if (config.transformResponse) {
 				const result = config.transformResponse(
