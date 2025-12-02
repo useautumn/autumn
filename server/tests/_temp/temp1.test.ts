@@ -5,34 +5,43 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import {
-	constructFeatureItem,
-	constructPrepaidItem,
-} from "../../src/utils/scriptUtils/constructItem.js";
+import { constructFeatureItem } from "../../src/utils/scriptUtils/constructItem.js";
 import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "../../src/utils/scriptUtils/testUtils/initProductsV0.js";
 
 // UNCOMMENT FROM HERE
+const premium = constructProduct({
+	type: "premium",
+	isDefault: false,
+
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 100,
+		}),
+	],
+});
+
 const pro = constructProduct({
 	type: "pro",
 	isDefault: false,
 
 	items: [
 		constructFeatureItem({
-			featureId: TestFeature.Credits,
-			includedUsage: 250,
+			featureId: TestFeature.Messages,
+			includedUsage: 50,
 		}),
 	],
 });
-const proEntity = constructProduct({
-	type: "pro",
-	id: "pro-entity",
-	isDefault: false,
+
+const free = constructProduct({
+	type: "free",
+	isDefault: true,
 
 	items: [
-		constructPrepaidItem({
-			featureId: TestFeature.Credits,
-			includedUsage: 0,
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 10,
 		}),
 	],
 });
@@ -52,7 +61,7 @@ describe(`${chalk.yellowBright("temp: Testing entity prorated")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [pro, proEntity],
+			products: [premium, pro, free],
 			prefix: customerId,
 		});
 
@@ -68,18 +77,11 @@ describe(`${chalk.yellowBright("temp: Testing entity prorated")}`, () => {
 	test("should create a subscription with prepaid and prorated", async () => {
 		await autumn.attach({
 			customer_id: customerId,
-			product_id: pro.id,
+			product_id: premium.id,
 		});
 		await autumn.attach({
 			customer_id: customerId,
-			product_id: proEntity.id,
-			entity_id: "1",
-			options: [
-				{
-					feature_id: TestFeature.Credits,
-					quantity: 300,
-				},
-			],
+			product_id: pro.id,
 		});
 	});
 });
