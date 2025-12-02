@@ -39,6 +39,8 @@ const FormContent = ({
 	const initialPrepaidOptions =
 		form.options.defaultValues?.prepaidOptions ?? {};
 
+	console.log("prepaidOptions", prepaidOptions);
+
 	const previewQuery = useAttachPreview({
 		customerId,
 		product,
@@ -109,7 +111,9 @@ function SheetContent({
 }) {
 	const storeProduct = useProductStore((s) => s.product);
 	const product = storeProduct?.id ? storeProduct : (productV2 ?? undefined);
-	const { prepaidItems, isLoading } = usePrepaidItems({ product });
+	const { prepaidItems } = usePrepaidItems({ product });
+
+	console.log("prepaidItems", prepaidItems);
 
 	const subscriptionPrepaidValues = useMemo(
 		() =>
@@ -124,8 +128,8 @@ function SheetContent({
 	);
 
 	const initialPrepaidOptions = useMemo(() => {
-		if (isLoading || prepaidItems.length === 0) {
-			return subscriptionPrepaidValues;
+		if (prepaidItems.length === 0) {
+			return {};
 		}
 
 		return prepaidItems.reduce(
@@ -136,12 +140,14 @@ function SheetContent({
 			},
 			{} as Record<string, number | undefined>,
 		) as Record<string, number>;
-	}, [prepaidItems, subscriptionPrepaidValues, isLoading]);
+	}, [prepaidItems, subscriptionPrepaidValues]);
 
 	const form = useAttachProductForm({
 		initialProductId: cusProduct?.product.id ?? undefined,
 		initialPrepaidOptions,
 	});
+
+	console.log("initialPrepaidOptions", initialPrepaidOptions);
 
 	return (
 		<FormWrapper form={form}>
