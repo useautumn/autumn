@@ -78,16 +78,18 @@ export const getMigrationCustomers = async ({
 	fromProduct,
 }: {
 	db: DrizzleCli;
-	migrationJobId: string;
+	migrationJobId?: string;
 	fromProduct: Product;
 }) => {
-	await MigrationService.updateJob({
-		db,
-		migrationJobId,
-		updates: {
-			current_step: MigrationJobStep.GetCustomers,
-		},
-	});
+	if (migrationJobId) {
+		await MigrationService.updateJob({
+			db,
+			migrationJobId,
+			updates: {
+				current_step: MigrationJobStep.GetCustomers,
+			},
+		});
+	}
 
 	const { cusProducts } = await getAllCustomersOnProduct({
 		db,
@@ -103,20 +105,22 @@ export const getMigrationCustomers = async ({
 	const filteredCusProducts = cusProducts.filter((cp) => !cp.is_custom);
 	const customers = filteredCusProducts.map((cusProd) => cusProd.customer);
 
-	await MigrationService.updateJob({
-		db,
-		migrationJobId,
-		updates: {
-			step_details: {
-				[MigrationJobStep.GetCustomers]: {
-					total_customers: totalCount,
-					canceled_customers: canceledCount,
-					custom_customers: customCount,
-					migration_customers: filteredCusProducts.length,
+	if (migrationJobId) {
+		await MigrationService.updateJob({
+			db,
+			migrationJobId,
+			updates: {
+				step_details: {
+					[MigrationJobStep.GetCustomers]: {
+						total_customers: totalCount,
+						canceled_customers: canceledCount,
+						custom_customers: customCount,
+						migration_customers: filteredCusProducts.length,
+					},
 				},
 			},
-		},
-	});
+		});
+	}
 
 	return customers;
 };

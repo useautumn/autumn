@@ -4,9 +4,9 @@ import {
 	entitlements,
 	features,
 } from "@autumn/shared";
+import { buildConflictUpdateColumns } from "@server/db/dbUtils";
+import type { DrizzleCli } from "@server/db/initDrizzle";
 import { and, eq, inArray } from "drizzle-orm";
-import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export class EntitlementService {
 	static async getByOrg({

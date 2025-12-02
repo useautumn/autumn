@@ -125,19 +125,23 @@ export const saveCusSubsAndProducts = async ({
 		fs.mkdirSync(path, { recursive: true });
 	}
 
+	console.log("Fetching products...");
+
 	const { data: products } = await stripeCli.products.list({
 		limit: 100,
 	});
 	fs.writeFileSync(`${path}/products.json`, JSON.stringify(products, null, 2));
 
-	const { customers } = await getAllStripeCustomers({
-		stripeCli,
-	});
-	fs.writeFileSync(
-		`${path}/customers.json`,
-		JSON.stringify(customers, null, 2),
-	);
+	// console.log("Fetching customers...");
+	// const { customers } = await getAllStripeCustomers({
+	// 	stripeCli,
+	// });
+	// fs.writeFileSync(
+	// 	`${path}/customers.json`,
+	// 	JSON.stringify(customers, null, 2),
+	// );
 
+	console.log("Fetching subscriptions...");
 	const { subscriptions } = await getAllStripeSubscriptions({
 		stripeCli,
 	});

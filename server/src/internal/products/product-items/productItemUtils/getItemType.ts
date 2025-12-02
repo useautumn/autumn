@@ -1,6 +1,5 @@
-import { notNullish } from "@/utils/genUtils.js";
-import { ProductItem, ProductItemType } from "@autumn/shared";
-import { nullish } from "@/utils/genUtils.js";
+import { type ProductItem, ProductItemType } from "@autumn/shared";
+import { notNullish, nullish } from "@server/utils/genUtils";
 
 export const isBooleanFeatureItem = (item: ProductItem) => {
 	return (
