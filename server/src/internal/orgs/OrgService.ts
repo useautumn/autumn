@@ -299,7 +299,7 @@ export class OrgService {
 	}: {
 		db: DrizzleCli;
 		orgId: string;
-		updates: any;
+		updates: Partial<Organization>;
 	}) {
 		try {
 			const result = await db

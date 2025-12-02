@@ -2,6 +2,7 @@ import { AppEnv } from "@autumn/shared";
 import { sendCustomSvixEvent } from "@/external/svix/svixHelpers.js";
 import { VercelResourceService } from "@/external/vercel/services/VercelResourceService.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { CusService } from "@/internal/customers/CusService.js";
 import { deleteCusById } from "@/internal/customers/handlers/handleDeleteCustomerV2.js";
 import {
 	type VercelResourceDeletedEvent,
@@ -48,12 +49,26 @@ export const handleDeleteInstallation = createRoute({
 				]),
 			);
 
-			// 2. Delete the customer/installation
-			await deleteCusById({
-				ctx,
-				customerId: integrationConfigurationId,
-				deleteInStripe: true,
+			// 2. Get customer by Vercel installation ID (customer.id may differ from installation_id)
+			const customer = await CusService.getByVercelId({
+				db,
+				vercelInstallationId: integrationConfigurationId,
+				orgId,
+				env: ctx.env,
 			});
+
+			// 3. Delete the customer/installation using the actual customer ID
+			if (customer) {
+				await deleteCusById({
+					ctx,
+					customerId: customer.internal_id,
+					deleteInStripe: true,
+				});
+			} else {
+				logger.warn(
+					`Customer not found for Vercel installation ${integrationConfigurationId}`,
+				);
+			}
 		} catch (error) {
 			logger.error("Error deleting installation", {
 				error,
