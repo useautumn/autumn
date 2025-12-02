@@ -26,10 +26,10 @@ export const MCPSection = () => {
 	};
 
 	return (
-		<div className="px-3 py-3.5 bg-gray-50 rounded-lg outline-[1.50px] outline-offset-[-1.50px] outline-violet-600 flex flex-col items-start gap-4">
+		<div className="px-3 py-3.5 bg-interactive-secondary rounded-lg outline-[1.50px] outline-offset-[-1.50px] outline-violet-600 flex flex-col items-start gap-4">
 			<div className="inline-flex justify-start items-center gap-1.5">
 				<InfoIcon fill="var(--primary)" size={16} weight="fill" />
-				<div className="justify-start text-zinc-800 text-xs font-semibold font-['Inter']">
+				<div className="justify-start text-t2 text-xs font-semibold font-['Inter']">
 					Install our MCP and prompt the model to use the `autumn-docs` MCP to
 					integrate Autumn
 				</div>

@@ -163,7 +163,7 @@ export const handleUpsertInstallation = createRoute({
 								}),
 								orgCurrency: ctx.org.default_currency ?? "usd",
 							})
-						: null,
+						: undefined,
 			};
 
 			return c.json(installation, 200);

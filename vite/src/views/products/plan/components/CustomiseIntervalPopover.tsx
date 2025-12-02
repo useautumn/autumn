@@ -33,11 +33,13 @@ export const CustomiseIntervalPopover = ({
 		<Popover open={open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild>
 				<Button
-					className="w-full justify-start px-2"
+					className="w-full justify-start px-2 group-hover:text-primary active:border-0"
 					variant="skeleton"
 					disabled={item.included_usage === Infinite || item.interval == null}
 				>
-					<p className="text-t3">Customise Interval</p>
+					<p className="text-t3 group-hover/btn:text-primary">
+						Customize Interval
+					</p>
 				</Button>
 			</PopoverTrigger>
 			<PopoverContent

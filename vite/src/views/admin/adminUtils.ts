@@ -1,5 +1,44 @@
-import { authClient } from "@/lib/auth-client";
+import type {
+	Entity,
+	EntityRolloverBalance,
+	Feature,
+	FullCusProduct,
+	FullCustomerEntitlement,
+	Invoice,
+	Product,
+	ProductV2,
+	Rollover,
+} from "@autumn/shared";
 import { toast } from "sonner";
+import { authClient } from "@/lib/auth-client";
+import { formatUnixToDate } from "../../utils/formatUtils/formatDateUtils";
+
+export const getCusProductHoverTexts = (cusProduct: FullCusProduct) => {
+	return [
+		{
+			key: "Cus Product ID",
+			value: cusProduct.id,
+		},
+		...(cusProduct.subscription_ids
+			? cusProduct.subscription_ids.map((id: string) => ({
+					key: "Stripe Subscription ID",
+					value: id,
+				}))
+			: []),
+		...(cusProduct.scheduled_ids
+			? [
+					{
+						key: "Stripe Scheduled IDs",
+						value: cusProduct.scheduled_ids.join(", "),
+					},
+				]
+			: []),
+		{
+			key: "Entity ID",
+			value: cusProduct.entity_id || "N/A",
+		},
+	];
+};
 
 export const impersonateUser = async (userId: string) => {
 	console.log("impersonating user", userId);
@@ -18,4 +57,119 @@ export const impersonateUser = async (userId: string) => {
 	}
 
 	window.location.reload();
+};
+
+export const getCusEntHoverTexts = ({
+	cusEnt,
+	entities,
+}: {
+	cusEnt?: FullCustomerEntitlement;
+	entities: Entity[];
+}) => {
+	if (!cusEnt) return [];
+	const entitlement = cusEnt.entitlement;
+	const featureEntities = entities.filter(
+		(e: Entity) => e.feature_id === entitlement.feature.id,
+	);
+
+	const hoverTexts = [
+		{
+			key: "Cus Ent ID",
+			value: cusEnt.id,
+		},
+	];
+
+	if (featureEntities.length > 0) {
+		hoverTexts.push({
+			key: "Entities",
+			value: featureEntities
+				.map((e: Entity) => `${e.id} (${e.name})${e.deleted ? " Deleted" : ""}`)
+				.join("\n"),
+		});
+	} else if (cusEnt.entities && Object.keys(cusEnt.entities).length > 0) {
+		const mappedEntities = Object.keys(cusEnt.entities)
+			.map((e: string) => {
+				const entity = entities.find((ee: Entity) => ee.id === e);
+				const balance = cusEnt.entities?.[e]?.balance;
+				return `${entity?.id} (${entity?.name}): ${balance ?? "N/A"}`;
+			})
+			.join("\n");
+		hoverTexts.push({
+			key: "Entities",
+			value: mappedEntities,
+		});
+	}
+
+	if (cusEnt.rollovers.length > 0) {
+		hoverTexts.push({
+			key: "Rollovers",
+			value: cusEnt.rollovers
+				.map((r: Rollover) => {
+					if (Object.values(r.entities).length > 0) {
+						return (
+							Object.values(r.entities)
+								.map((e: EntityRolloverBalance) => `${e.balance} (${e.id})`)
+								.join(", ") +
+							` (expires: ${r.expires_at ? formatUnixToDate(r.expires_at) : "N/A"})`
+						);
+					} else {
+						return `${r.balance} (ex: ${r.expires_at ? formatUnixToDate(r.expires_at) : "N/A"})`;
+					}
+				})
+				.join("\n"),
+		});
+	}
+
+	return hoverTexts;
+};
+
+
+export const getFeatureHoverTexts = ({ feature }: { feature: Feature }) => {
+	const hoverTexts = [
+		{
+			key: "Internal ID",
+			value: feature.internal_id || "",
+		},
+	];
+
+
+	return hoverTexts;
+};
+
+export const getPlanHoverTexts = ({
+	plan,
+}: {
+	plan: Product | ProductV2;
+}) => {
+	const hoverTexts = [
+		{
+			key: "Internal ID",
+			value: plan.internal_id || "",
+		},
+	];
+
+	if ("version" in plan && plan.version) {
+		hoverTexts.push({
+			key: "Version",
+			value: plan.version.toString(),
+		});
+	}
+
+	return hoverTexts;
+};
+
+export const getInvoiceHoverTexts = ({ invoice }: { invoice: Invoice }) => {
+	const hoverTexts = [
+		{
+			key: "Invoice ID",
+			value: invoice.id,
+		},
+		{
+			key: "Stripe ID",
+			value: invoice.stripe_id,
+		},
+
+	];
+
+	return hoverTexts;
 };

@@ -25,7 +25,7 @@ import { isPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePrice
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import { nullish } from "@/utils/genUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import type { AttachParams } from "../../cusProducts/AttachParams.js";
 import {
 	attachParamsToProduct,
@@ -132,21 +132,21 @@ const filterNoProratePrepaidItems = ({
 };
 
 export const getUpgradeProductPreview = async ({
-	req,
+	ctx,
 	attachParams,
 	branch,
 	now,
 	withPrepaid = false,
 	config,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	attachParams: AttachParams;
 	branch: AttachBranch;
 	now: number;
 	withPrepaid?: boolean;
 	config: AttachConfig;
 }) => {
-	const { logger } = req;
+	const { logger } = ctx;
 
 	const { curMainProduct, curSameProduct } = attachParamToCusProducts({
 		attachParams,

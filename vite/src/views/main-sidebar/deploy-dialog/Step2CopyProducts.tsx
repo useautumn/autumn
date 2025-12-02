@@ -28,7 +28,7 @@ export const Step2CopyProducts = () => {
 	};
 
 	return (
-		<div className="flex flex-col gap-3">
+		<div className="flex gap-3">
 			<div className="flex items-center gap-2">
 				<SectionHeader
 					stepNumber={2}
@@ -54,9 +54,9 @@ export const Step2CopyProducts = () => {
 							variant="secondary"
 							onClick={handleCopyProducts}
 							isLoading={isCopying}
-							className="w-32"
+							className="w-36"
 						>
-							Copy Plans
+							Copy Plans to Prod
 						</Button>
 					</div>
 				)}

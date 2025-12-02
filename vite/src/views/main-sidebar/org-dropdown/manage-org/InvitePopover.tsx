@@ -1,17 +1,18 @@
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Mail } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { z } from "zod/v4";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
+import { Button } from "@/components/v2/buttons/Button";
+import { Input } from "@/components/v2/inputs/Input";
 import { authClient } from "@/lib/auth-client";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
-import { Mail, PlusIcon } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
-import { useMemberships } from "../hooks/useMemberships";
+
+const emailSchema = z.email();
 
 export const InvitePopover = () => {
 	const [email, setEmail] = useState("");
@@ -19,18 +20,26 @@ export const InvitePopover = () => {
 	const [open, setOpen] = useState(false);
 
 	const handleInvite = async () => {
+		if (!email || !emailSchema.safeParse(email).success) {
+			toast.error("Please enter a valid email address.");
+			return;
+		}
+
 		try {
 			setLoading(true);
-			const { data, error } = await authClient.organization.inviteMember({
+			const { error } = await authClient.organization.inviteMember({
 				email: email,
 				role: "admin",
 				resend: true,
 			});
 
-			if (error) throw error;
+			if (error) {
+				toast.error(error.message);
+				return;
+			}
 
 			toast.success(`Successfully sent invitation to ${email}`);
-
+			setEmail("");
 			setOpen(false);
 		} catch (error) {
 			console.error(error);
@@ -43,12 +52,9 @@ export const InvitePopover = () => {
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild>
-				<Button variant="add">Invite</Button>
+				<Button variant="primary">Invite</Button>
 			</PopoverTrigger>
-			<PopoverContent
-				align="end"
-				className="border border-zinc-200 bg-stone-50 flex flex-col gap-2 pt-3"
-			>
+			<PopoverContent align="end" className=" flex flex-col gap-2 pt-3">
 				<div className="flex items-center gap-1 text-t3">
 					<Mail size={12} />
 					<p className="text-t3 text-sm">Invite by email</p>
@@ -62,13 +68,13 @@ export const InvitePopover = () => {
 						onChange={(e) => setEmail(e.target.value)}
 					/>
 					<Button
-						variant="gradientPrimary"
-						className="!h-6.5 !mt-0"
-						startIcon={<PlusIcon size={10} />}
+						variant="primary"
+						className="h-6.5! mt-0!"
+						// endIcon={<Plus size={10} />}
 						onClick={handleInvite}
 						isLoading={loading}
 					>
-						Add
+						Send
 					</Button>
 				</div>
 			</PopoverContent>

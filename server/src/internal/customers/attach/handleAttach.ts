@@ -1,96 +1,98 @@
-import { AttachBodySchema } from "@autumn/shared";
-import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
-import type {
-	ExtendedRequest,
-	ExtendedResponse,
-} from "@/utils/models/Request.js";
-import { routeHandler } from "@/utils/routerUtils.js";
-import { checkStripeConnections } from "./attachRouter.js";
-import { getAttachParams } from "./attachUtils/attachParams/getAttachParams.js";
-import { getAttachBranch } from "./attachUtils/getAttachBranch.js";
-import { getAttachConfig } from "./attachUtils/getAttachConfig.js";
-import { runAttachFunction } from "./attachUtils/getAttachFunction.js";
-import { handleAttachErrors } from "./attachUtils/handleAttachErrors.js";
-import { insertCustomItems } from "./attachUtils/insertCustomItems.js";
+// import { AttachBodyV0Schema } from "@autumn/shared";
+// import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
+// import type {
+// 	ExtendedRequest,
+// 	ExtendedResponse,
+// } from "@/utils/models/Request.js";
+// import { routeHandler } from "@/utils/routerUtils.js";
+// import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
+// import { checkStripeConnections } from "./attachRouter.js";
+// import { getAttachParams } from "./attachUtils/attachParams/getAttachParams.js";
+// import { getAttachBranch } from "./attachUtils/getAttachBranch.js";
+// import { getAttachConfig } from "./attachUtils/getAttachConfig.js";
+// import { runAttachFunction } from "./attachUtils/getAttachFunction.js";
+// import { handleAttachErrors } from "./attachUtils/handleAttachErrors.js";
+// import { insertCustomItems } from "./attachUtils/insertCustomItems.js";
 
-export const handleAttach = async (req: any, res: any) =>
-	routeHandler({
-		req,
-		res,
-		action: "attach",
-		handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
-			await handleAttachRaceCondition({ req, res });
+// export const handleAttach = async (req: any, res: any) =>
+// 	routeHandler({
+// 		req,
+// 		res,
+// 		action: "attach",
+// 		handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
+// 			await handleAttachRaceCondition({ req, res });
 
-			const attachBody = AttachBodySchema.parse(req.body);
+// 			const attachBody = AttachBodyV0Schema.parse(req.body);
 
-			const { attachParams, customPrices, customEnts } = await getAttachParams({
-				req,
-				attachBody,
-			});
+// 			const ctx = req as AutumnContext;
 
-			// Handle existing product
-			const branch = await getAttachBranch({
-				req,
-				attachBody,
-				attachParams,
-			});
+// 			const { attachParams, customPrices, customEnts } = await getAttachParams({
+// 				ctx,
+// 				attachBody,
+// 			});
 
-			const { flags, config } = await getAttachConfig({
-				req,
-				attachParams,
-				attachBody,
-				branch,
-			});
+// 			// Handle existing product
+// 			const branch = await getAttachBranch({
+// 				ctx,
+// 				attachBody,
+// 				attachParams,
+// 			});
 
-			await handleAttachErrors({
-				attachParams,
-				attachBody,
-				branch,
-				flags,
-				config,
-			});
+// 			const { flags, config } = await getAttachConfig({
+// 				ctx,
+// 				attachParams,
+// 				attachBody,
+// 				branch,
+// 			});
 
-			await checkStripeConnections({
-				req,
-				attachParams,
-				useCheckout: config.onlyCheckout,
-			});
+// 			await handleAttachErrors({
+// 				attachParams,
+// 				attachBody,
+// 				branch,
+// 				flags,
+// 				config,
+// 			});
 
-			await insertCustomItems({
-				db: req.db,
-				customPrices: customPrices || [],
-				customEnts: customEnts || [],
-			});
+// 			await checkStripeConnections({
+// 				ctx,
+// 				attachParams,
+// 				useCheckout: config.onlyCheckout,
+// 			});
 
-			try {
-				req.logger.info(`Attach params: `, {
-					data: {
-						products: attachParams.products.map((p) => ({
-							id: p.id,
-							name: p.name,
-							processor: p.processor,
-							version: p.version,
-						})),
-						prices: attachParams.prices.map((p) => ({
-							id: p.id,
-							config: p.config,
-						})),
-						entitlements: attachParams.entitlements.map((e) => ({
-							internal_feature_id: e.internal_feature_id,
-							feature_id: e.feature_id,
-						})),
-						freeTrial: attachParams.freeTrial,
-					},
-				});
-			} catch (error) {}
+// 			await insertCustomItems({
+// 				db: req.db,
+// 				customPrices: customPrices || [],
+// 				customEnts: customEnts || [],
+// 			});
 
-			await runAttachFunction({
-				req,
-				res,
-				attachParams,
-				branch,
-				attachBody,
-				config,
-			});
-		},
-	});
+// 			try {
+// 				req.logger.info(`Attach params: `, {
+// 					data: {
+// 						products: attachParams.products.map((p) => ({
+// 							id: p.id,
+// 							name: p.name,
+// 							processor: p.processor,
+// 							version: p.version,
+// 						})),
+// 						prices: attachParams.prices.map((p) => ({
+// 							id: p.id,
+// 							config: p.config,
+// 						})),
+// 						entitlements: attachParams.entitlements.map((e) => ({
+// 							internal_feature_id: e.internal_feature_id,
+// 							feature_id: e.feature_id,
+// 						})),
+// 						freeTrial: attachParams.freeTrial,
+// 					},
+// 				});
+// 			} catch (_error) {}
+
+// 			await runAttachFunction({
+// 				ctx,
+// 				attachParams,
+// 				branch,
+// 				attachBody,
+// 				config,
+// 			});
+// 		},
+// 	});

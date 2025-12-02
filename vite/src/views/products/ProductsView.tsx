@@ -1,20 +1,26 @@
 "use client";
 
-import { type AppEnv, keyToTitle } from "@autumn/shared";
+import type { AppEnv } from "@autumn/shared";
 import { useAppQueryStates } from "@/hooks/common/useAppQueryStates";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
+import { useProductStore } from "@/hooks/stores/useProductStore";
+import { useSheetCleanup } from "@/hooks/stores/useSheetStore";
 import LoadingScreen from "../general/LoadingScreen";
 import { FeaturesPage } from "./features/FeaturesPage";
 import { ProductsContext } from "./ProductsContext";
 import { ProductsPage } from "./products/ProductsPage";
 import { RewardsPage } from "./rewards/RewardsPage";
 
-function ProductsView({ env }: { env: AppEnv }) {
-	const { queryStates, setQueryStates } = useAppQueryStates({
+function ProductsView({ env: _env }: { env: AppEnv }) {
+	const { queryStates } = useAppQueryStates({
 		defaultTab: "products",
 	});
+
+	useSheetCleanup();
+	const resetProductStore = useProductStore((s) => s.reset);
+	resetProductStore();
 
 	const { isLoading: isProductsLoading } = useProductsQuery();
 	const { isLoading: isFeaturesLoading } = useFeaturesQuery();
@@ -26,10 +32,10 @@ function ProductsView({ env }: { env: AppEnv }) {
 	const tab = queryStates.tab;
 	return (
 		<ProductsContext.Provider value={{}}>
-			<div className="flex flex-col gap-4 h-fit relative w-full text-sm">
-				<h1 className="text-xl font-medium shrink-0 pt-6 pl-10">
+			<div className="flex flex-col gap-4 h-fit relative w-full pb-8 max-w-5xl mx-auto pt-8">
+				{/* <h1 className="text-xl font-medium shrink-0 pt-6 pl-10">
 					{keyToTitle(tab, { exclusionMap: { products: "Plans" } })}
-				</h1>
+				</h1> */}
 
 				{tab === "products" && <ProductsPage />}
 				{tab === "features" && <FeaturesPage />}

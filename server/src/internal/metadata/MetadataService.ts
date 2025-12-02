@@ -1,9 +1,14 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { AutumnMetadata, metadata } from "@autumn/shared";
-import { eq } from "drizzle-orm";
+import {
+	type Metadata,
+	type MetadataInsert,
+	type MetadataType,
+	metadata,
+} from "@autumn/shared";
+import { and, eq } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export class MetadataService {
-	static async insert({ db, data }: { db: DrizzleCli; data: AutumnMetadata }) {
+	static async insert({ db, data }: { db: DrizzleCli; data: MetadataInsert }) {
 		await db.insert(metadata).values(data);
 	}
 
@@ -18,6 +23,33 @@ export class MetadataService {
 			return null;
 		}
 
-		return data[0] as AutumnMetadata;
+		return data[0] as Metadata;
+	}
+
+	static async getByStripeInvoiceId({
+		db,
+		stripeInvoiceId,
+		type,
+	}: {
+		db: DrizzleCli;
+		stripeInvoiceId: string;
+		type?: MetadataType;
+	}) {
+		const meta = await db.query.metadata.findFirst({
+			where: and(
+				eq(metadata.stripe_invoice_id, stripeInvoiceId),
+				type ? eq(metadata.type, type) : undefined,
+			),
+		});
+
+		if (!meta) {
+			return null;
+		}
+
+		return meta as Metadata;
+	}
+
+	static async delete({ db, id }: { db: DrizzleCli; id: string }) {
+		await db.delete(metadata).where(eq(metadata.id, id));
 	}
 }

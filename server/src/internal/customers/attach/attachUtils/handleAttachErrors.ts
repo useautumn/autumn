@@ -1,9 +1,10 @@
 import {
-	type AttachBody,
+	type AttachBodyV0,
 	AttachBranch,
 	type AttachConfig,
 	BillingType,
 	ErrCode,
+	RecaseError,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
@@ -13,7 +14,6 @@ import {
 	getPriceEntitlement,
 	priceIsOneOffAndTiered,
 } from "@/internal/products/prices/priceUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { notNullish, nullOrUndefined } from "@/utils/genUtils.js";
 import type { AttachParams } from "../../cusProducts/AttachParams.js";
 import type { AttachFlags } from "../models/AttachFlags.js";
@@ -129,8 +129,6 @@ const handlePrepaidErrors = async ({
 			) {
 				throw new RecaseError({
 					message: `Quantity + included usage exceeds usage limit of ${usageLimit} for feature ${priceEnt.feature_id}`,
-					code: ErrCode.InvalidOptions,
-					statusCode: 400,
 				});
 			}
 		}
@@ -151,15 +149,11 @@ export const handleCustomPaymentMethodErrors = ({
 		throw new RecaseError({
 			message:
 				"This customer is billed outside of Stripe, please use the origin platform to manage their billing.",
-			code: ErrCode.InvalidRequest,
-			statusCode: StatusCodes.BAD_REQUEST,
 		});
 	} else if (attachParams.customer.processors?.vercel?.installation_id) {
 		throw new RecaseError({
 			message:
 				"This customer is billed outside of Stripe, please use the origin platform to manage their billing.",
-			code: ErrCode.InvalidRequest,
-			statusCode: StatusCodes.BAD_REQUEST,
 		});
 	}
 };
@@ -172,7 +166,7 @@ export const handleAttachErrors = async ({
 	config,
 }: {
 	attachParams: AttachParams;
-	attachBody: AttachBody;
+	attachBody: AttachBodyV0;
 	branch: AttachBranch;
 	flags: AttachFlags;
 	config: AttachConfig;
@@ -228,8 +222,6 @@ export const handleAttachErrors = async ({
 			throw new RecaseError({
 				message:
 					"Not allowed to update current product when using publishable key",
-				code: ErrCode.InvalidRequest,
-				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 	}

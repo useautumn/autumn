@@ -1,26 +1,21 @@
 import {
-	ApiVersion,
 	type AttachConfig,
+	AttachFunctionResponseSchema,
 	AttachScenario,
-	ErrCode,
 	InternalError,
 	SuccessCode,
 } from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
-import {
-	type AttachParams,
-	AttachResultSchema,
-} from "@/internal/customers/cusProducts/AttachParams.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import {
 	attachToInsertParams,
 	isFreeProduct,
 } from "@/internal/products/productUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
+import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 import {
 	attachParamsToCurCusProduct,
 	getCustomerSchedule,
@@ -32,19 +27,17 @@ import { subToNewSchedule } from "../../mergeUtils/subToNewSchedule.js";
 import { updateCurSchedule } from "../../mergeUtils/updateCurSchedule.js";
 
 export const handleScheduleFunction2 = async ({
-	req,
-	res,
+	ctx,
 	attachParams,
 	config,
 	skipInsertCusProduct = false,
 }: {
-	req: any;
-	res: any;
+	ctx: AutumnContext;
 	attachParams: AttachParams;
 	config: AttachConfig;
 	skipInsertCusProduct?: boolean;
 }) => {
-	const logger = req.logger;
+	const { logger, db } = ctx;
 	const product = attachParams.products[0];
 	const { stripeCli } = attachParams;
 
@@ -62,18 +55,14 @@ export const handleScheduleFunction2 = async ({
 	});
 
 	if (!curSub) {
-		throw new RecaseError({
+		throw new InternalError({
 			message: `SCHEDULE FLOW, curSub is undefined`,
-			code: ErrCode.InvalidRequest,
-			statusCode: StatusCodes.BAD_REQUEST,
 		});
 	}
 
 	if (!curCusProduct) {
-		throw new RecaseError({
+		throw new InternalError({
 			message: `SCHEDULE FLOW, curCusProduct is undefined`,
-			code: ErrCode.InvalidRequest,
-			statusCode: StatusCodes.BAD_REQUEST,
 		});
 	}
 
@@ -94,7 +83,7 @@ export const handleScheduleFunction2 = async ({
 
 	if (schedule) {
 		const newItems = await paramsToScheduleItems({
-			req,
+			ctx,
 			schedule: schedule,
 			attachParams,
 			config,
@@ -112,13 +101,13 @@ export const handleScheduleFunction2 = async ({
 			);
 			await stripeCli.subscriptionSchedules.release(schedule.id);
 			await CusProductService.updateByStripeScheduledId({
-				db: req.db,
+				db,
 				stripeScheduledId: schedule.id,
 				updates: { scheduled_ids: [] },
 			});
 
 			await CusProductService.update({
-				db: req.db,
+				db,
 				cusProductId: curCusProduct.id,
 				updates: {
 					canceled: true,
@@ -130,7 +119,7 @@ export const handleScheduleFunction2 = async ({
 		} else {
 			logger.info(`SCHEDULE FLOW: updating schedule ${schedule?.id}`);
 			schedule = await updateCurSchedule({
-				req,
+				ctx,
 				attachParams,
 				schedule,
 				newPhases: newItems.phases || [],
@@ -138,7 +127,7 @@ export const handleScheduleFunction2 = async ({
 			});
 
 			await CusProductService.update({
-				db: req.db,
+				db,
 				cusProductId: curCusProduct.id,
 				updates: {
 					scheduled_ids: [schedule.id],
@@ -151,7 +140,7 @@ export const handleScheduleFunction2 = async ({
 	} else {
 		logger.info(`SCHEDULE FLOW: no schedule, creating new schedule`);
 		schedule = await subToNewSchedule({
-			req,
+			ctx,
 			sub: curSub,
 			attachParams,
 			config,
@@ -159,7 +148,7 @@ export const handleScheduleFunction2 = async ({
 		});
 
 		await CusProductService.update({
-			db: req.db,
+			db,
 			cusProductId: curCusProduct.id,
 			updates: {
 				canceled: true,
@@ -181,7 +170,7 @@ export const handleScheduleFunction2 = async ({
 
 	if (!skipInsertCusProduct) {
 		await createFullCusProduct({
-			db: req.db,
+			db,
 			attachParams: attachToInsertParams(attachParams, product),
 			startsAt: expectedEnd * 1000,
 			subscriptionScheduleIds: schedule ? [schedule.id] : [],
@@ -199,7 +188,7 @@ export const handleScheduleFunction2 = async ({
 	if (curCusProduct) {
 		try {
 			await addProductsUpdatedWebhookTask({
-				req,
+				ctx,
 				internalCustomerId: curCusProduct.internal_customer_id,
 				org: attachParams.org,
 				env: attachParams.customer.env,
@@ -211,28 +200,33 @@ export const handleScheduleFunction2 = async ({
 					: AttachScenario.Downgrade,
 
 				cusProduct: curCusProduct,
-				logger,
 			});
 		} catch (error) {
 			logger.error("SCHEDULE FLOW: failed to add to webhook queue", { error });
 		}
 	}
 
-	if (res) {
-		if (req.apiVersion.gte(ApiVersion.V1_1)) {
-			res.status(200).json(
-				AttachResultSchema.parse({
-					code: SuccessCode.DowngradeScheduled,
-					message: `Successfully downgraded from ${curCusProduct.product.name} to ${product.name}`,
-					product_ids: [product.id],
-					customer_id:
-						attachParams.customer.id || attachParams.customer.internal_id,
-				}),
-			);
-		} else {
-			res.status(200).json({
-				success: true,
-			});
-		}
-	}
+	return AttachFunctionResponseSchema.parse({
+		code: SuccessCode.DowngradeScheduled,
+		message: `Successfully downgraded from ${curCusProduct.product.name} to ${product.name}`,
+	});
+
+	// if (res) {
+	// 	if (req.apiVersion.gte(ApiVersion.V1_1)) {
+	// 		res.status(200).json(
+	// 			AttachResultSchema.parse({
+	// 				code: SuccessCode.DowngradeScheduled,
+	// 				message: `Successfully downgraded from ${curCusProduct.product.name} to ${product.name}`,
+	// 				product_ids: [product.id],
+	// 				customer_id:
+	// 					attachParams.customer.id || attachParams.customer.internal_id,
+	// 			}),
+	// 		);
+	// 	} else {
+	// 		res.status(200).json({
+	// 			success: true,
+	// 			message: `Successfully downgraded from ${curCusProduct.product.name} to ${product.name}`,
+	// 		});
+	// 	}
+	// }
 };

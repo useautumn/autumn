@@ -2,7 +2,6 @@ import { AppEnv } from "@autumn/shared";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { PageSectionHeader } from "@/components/general/PageSectionHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/v2/buttons/Button";
 import {
@@ -49,6 +48,7 @@ export const ConfigureStripe = () => {
 	const [connecting, setConnecting] = useState(false);
 	const [showConnectDialog, setShowConnectDialog] = useState(false);
 	const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+	const [urlError, setUrlError] = useState<string>("");
 	const env = useEnv();
 
 	// Check if user can paste secret keys (feature flagged)
@@ -69,16 +69,28 @@ export const ConfigureStripe = () => {
 		}
 	}, [searchParams]);
 
+	// Validation function to check if URL has http:// or https://
+	const isValidUrl = (url: string): boolean => {
+		if (!url) return true; // Allow empty for optional field
+		return url.startsWith("http://") || url.startsWith("https://");
+	};
+
 	const allowSave = () => {
 		return (
-			newStripeConfig.success_url !== org?.success_url ||
-			newStripeConfig.default_currency !== org?.default_currency
+			(newStripeConfig.success_url !== org?.success_url ||
+				newStripeConfig.default_currency !== org?.default_currency) &&
+			isValidUrl(newStripeConfig.success_url || "")
 		);
 	};
 
 	const handleConnectStripe = async () => {
 		if (!newStripeConfig.success_url) {
 			toast.error("Success URL is required");
+			return;
+		}
+
+		if (!isValidUrl(newStripeConfig.success_url)) {
+			toast.error("Success URL must start with http:// or https://");
 			return;
 		}
 
@@ -106,6 +118,20 @@ export const ConfigureStripe = () => {
 		}
 	};
 
+	const handleUrlChange = (value: string) => {
+		setNewStripeConfig({
+			...newStripeConfig,
+			success_url: value,
+		});
+
+		// Set error message if URL is invalid
+		if (value && !isValidUrl(value)) {
+			setUrlError("URL must start with http:// or https://");
+		} else {
+			setUrlError("");
+		}
+	};
+
 	const getConnectionStatus = () => {
 		const connection = org?.stripe_connection;
 		const accountName =
@@ -120,7 +146,7 @@ export const ConfigureStripe = () => {
 
 		if (connection === "secret_key") {
 			return {
-				description: `${prefix} ${accountName ? ` (${accountName})` : ""} via secret key.`, // Will show dashboard link in the same line
+				description: `${prefix} ${accountName ? ` (${accountName})` : ""} via secret key.`,
 				showDisconnect: true,
 				showConnectButtons: false,
 				showDefaultAccountLink: true,
@@ -148,7 +174,7 @@ export const ConfigureStripe = () => {
 						: "You are using Autumn's default test account. To connect your own, click the button below",
 				showDisconnect: false,
 				showConnectButtons: true,
-				showDefaultAccountLink: false, // Don't show for default accounts
+				showDefaultAccountLink: false,
 			};
 		}
 
@@ -173,7 +199,6 @@ export const ConfigureStripe = () => {
 			});
 		}
 
-		// For secret_key, link to main dashboard (no account ID)
 		if (connection === "secret_key") {
 			return getStripeDashboardLink({
 				env,
@@ -189,9 +214,8 @@ export const ConfigureStripe = () => {
 
 	return (
 		<div className="flex flex-col gap-4">
-			<PageSectionHeader title="Stripe Settings" />
 			<div className="px-10 max-w-[600px] flex flex-col gap-4">
-				<Card className="shadow-none bg-white">
+				<Card className="shadow-none bg-interactive-secondary">
 					<CardHeader>
 						<CardTitle>Connect your Stripe account</CardTitle>
 						{isLoadingStripeAccount ? (
@@ -261,14 +285,11 @@ export const ConfigureStripe = () => {
 					</p>
 					<Input
 						value={newStripeConfig.success_url}
-						onChange={(e) =>
-							setNewStripeConfig({
-								...newStripeConfig,
-								success_url: e.target.value,
-							})
-						}
+						onChange={(e) => handleUrlChange(e.target.value)}
 						placeholder="eg. https://useautumn.com"
+						className={urlError ? "border-red-500" : ""}
 					/>
+					{urlError && <p className="text-red-500 text-sm mt-1">{urlError}</p>}
 				</div>
 
 				<div>
@@ -312,7 +333,6 @@ export const ConfigureStripe = () => {
 				onOpenChange={(open) => {
 					setShowDuplicateDialog(open);
 					if (!open) {
-						// Clear query params when closing dialog
 						searchParams.delete("error");
 						searchParams.delete("account_id");
 						searchParams.delete("account_name");

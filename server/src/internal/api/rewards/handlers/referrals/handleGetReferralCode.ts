@@ -1,85 +1,83 @@
-import { ErrCode } from "@autumn/shared";
+import { CustomerNotFoundError, ErrCode, RecaseError } from "@autumn/shared";
+import { z } from "zod/v4";
 import { CusService } from "@/internal/customers/CusService.js";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
 import { generateReferralCode } from "@/internal/rewards/referralUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";
-import { routeHandler } from "@/utils/routerUtils.js";
+import { createRoute } from "../../../../../honoMiddlewares/routeHandler";
 
-export default async (req: any, res: any) =>
-	routeHandler({
-		req,
-		res,
-		action: "get referral code",
-		handler: async (req, res) => {
-			const { orgId, env, db } = req;
-			const { program_id: rewardProgramId, customer_id: customerId } = req.body;
+export const handleGetReferralCode = createRoute({
+	body: z.object({
+		program_id: z.string(),
+		customer_id: z.string(),
+	}),
+	handler: async (c) => {
+		const ctx = c.get("ctx");
+		const { db, org, env } = ctx;
+		const { program_id: rewardProgramId, customer_id: customerId } =
+			c.req.valid("json");
 
-			const [rewardProgram, customer] = await Promise.all([
-				RewardProgramService.get({
-					db,
-					idOrInternalId: rewardProgramId,
-					orgId,
-					env,
-					errorIfNotFound: true,
-				}),
-				CusService.get({
-					db: req.db,
-					orgId,
-					env,
-					idOrInternalId: customerId,
-				}),
-			]);
+		const [rewardProgram, customer] = await Promise.all([
+			RewardProgramService.get({
+				db,
+				idOrInternalId: rewardProgramId,
+				orgId: org.id,
+				env,
+				errorIfNotFound: true,
+			}),
+			CusService.get({
+				db,
+				orgId: org.id,
+				env,
+				idOrInternalId: customerId,
+			}),
+		]);
 
-			if (!customer) {
-				throw new RecaseError({
-					message: "Customer not found",
-					statusCode: 404,
-					code: ErrCode.CustomerNotFound,
-				});
-			}
+		if (!customer) {
+			throw new CustomerNotFoundError({ customerId });
+		}
 
-			if (!rewardProgram) {
-				throw new RecaseError({
-					message: "Reward program not found",
-					statusCode: 404,
-					code: ErrCode.RewardProgramNotFound,
-				});
-			}
-
-			// Get referral code by customer and reward trigger
-			let referralCode =
-				await RewardProgramService.getCodeByCustomerAndRewardProgram({
-					db,
-					orgId,
-					env,
-					internalCustomerId: customer.internal_id,
-					internalRewardProgramId: rewardProgram.internal_id,
-				});
-
-			if (!referralCode) {
-				const code = generateReferralCode();
-
-				referralCode = {
-					code,
-					org_id: orgId,
-					env,
-					internal_customer_id: customer.internal_id,
-					internal_reward_program_id: rewardProgram.internal_id,
-					id: generateId("rc"),
-					created_at: Date.now(),
-				};
-
-				referralCode = await RewardProgramService.createReferralCode({
-					db,
-					data: referralCode,
-				});
-			}
-
-			res.status(200).json({
-				code: referralCode.code,
-				customer_id: customer.id,
-				created_at: referralCode.created_at,
+		if (!rewardProgram) {
+			throw new RecaseError({
+				message: "Reward program not found",
+				statusCode: 404,
+				code: ErrCode.RewardProgramNotFound,
 			});
-		},
-	});
+		}
+
+		// Get referral code by customer and reward trigger
+		let referralCode =
+			await RewardProgramService.getCodeByCustomerAndRewardProgram({
+				db,
+				orgId: org.id,
+				env,
+				internalCustomerId: customer.internal_id,
+				internalRewardProgramId: rewardProgram.internal_id,
+			});
+
+		if (!referralCode) {
+			const code = generateReferralCode();
+
+			referralCode = {
+				code,
+				org_id: org.id,
+				env,
+				internal_customer_id: customer.internal_id,
+				internal_reward_program_id: rewardProgram.internal_id,
+				id: generateId("rc"),
+				created_at: Date.now(),
+			};
+
+			referralCode = await RewardProgramService.createReferralCode({
+				db,
+				data: referralCode,
+			});
+		}
+
+		return c.json({
+			code: referralCode.code,
+			customer_id: customer.id,
+			created_at: referralCode.created_at,
+		});
+	},
+});

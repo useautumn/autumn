@@ -1,4 +1,4 @@
-import { FreeTrialDuration, notNullish } from "@autumn/shared";
+import { FreeTrialDuration } from "@autumn/shared";
 import { useId } from "react";
 import { TextCheckbox } from "@/components/v2/checkboxes/TextCheckbox";
 import { FormLabel } from "@/components/v2/form/FormLabel";
@@ -10,9 +10,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/v2/selects/Select";
-import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useProductStore } from "@/hooks/stores/useProductStore";
-import { getDefaultFreeTrial } from "../../utils/getDefaultFreeTrial";
 
 export const FreeTrialSection = () => {
 	const product = useProductStore((s) => s.product);
@@ -20,84 +18,92 @@ export const FreeTrialSection = () => {
 	const lengthId = useId();
 
 	return (
-		<SheetSection
-			title="Free Trial"
-			checked={notNullish(product.free_trial)}
-			setChecked={(checked) => {
-				if (checked) {
-					setProduct({ ...product, free_trial: getDefaultFreeTrial() });
-				} else {
-					setProduct({ ...product, free_trial: null });
-				}
-			}}
-			withSeparator={false}
-		>
-			<div className="flex flex-col gap-4 text-sm">
-				<div className="grid grid-cols-2 gap-2 w-full">
-					<div className="w-full">
-						<FormLabel disabled={!product.free_trial}>Length</FormLabel>
-						<Input
-							id={lengthId}
-							value={product.free_trial?.length || ""}
-							disabled={!product.free_trial}
-							onChange={(e) => {
-								const val = e.target.value;
-								setProduct({
-									...product,
-									free_trial: {
-										...product.free_trial,
-										length: val === "" ? 0 : parseInt(val),
-									},
-								});
-							}}
-							placeholder="eg. 7"
-						/>
-					</div>
-					<div className="w-full">
-						<FormLabel disabled={!product.free_trial}>Duration</FormLabel>
-						<Select
-							disabled={!product.free_trial}
-							value={product.free_trial?.duration || ""}
-							onValueChange={(value) => {
-								setProduct({
-									...product,
-									free_trial: {
-										...product.free_trial,
-										duration: value as FreeTrialDuration,
-									},
-								});
-							}}
-						>
-							<SelectTrigger className="w-full">
-								<SelectValue placeholder="Select a duration" />{" "}
-							</SelectTrigger>
-							<SelectContent>
-								{Object.values(FreeTrialDuration).map((duration) => (
-									<SelectItem key={duration} value={duration}>
-										{duration}s
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</div>
+		// <SheetSection
+		// 	title="Free Trial"
+		// 	checked={notNullish(product.free_trial)}
+		// 	setChecked={(checked) => {
+		// 		if (checked) {
+		// 			setProduct({ ...product, free_trial: getDefaultFreeTrial() });
+		// 		} else {
+		// 			setProduct({ ...product, free_trial: null });
+		// 		}
+		// 	}}
+		// 	withSeparator={false}
+		// >
+		<div className="flex flex-col gap-4 text-sm mt-2">
+			<div className="w-full">
+				<FormLabel disabled={!product.free_trial}>Duration</FormLabel>
+				<div className="flex items-center gap-1 w-full">
+					<Input
+						id={lengthId}
+						value={product.free_trial?.length || ""}
+						className="min-w-12 max-w-24"
+						disabled={!product.free_trial}
+						onChange={(e) => {
+							const val = e.target.value;
+							setProduct({
+								...product,
+								free_trial: product.free_trial
+									? {
+											...product.free_trial,
+											length: val === "" ? 0 : parseInt(val),
+										}
+									: null,
+							});
+						}}
+						placeholder="eg. 7"
+					/>
+					{/* <FormLabel disabled={!product.free_trial}>Duration</FormLabel> */}
+					<Select
+						disabled={!product.free_trial}
+						value={product.free_trial?.duration || ""}
+						onValueChange={(value) => {
+							setProduct({
+								...product,
+								free_trial: product.free_trial
+									? {
+											...product.free_trial,
+											duration: value as FreeTrialDuration,
+										}
+									: null,
+							});
+						}}
+					>
+						<SelectTrigger className="w-full max-w-32">
+							<SelectValue placeholder="days" />{" "}
+						</SelectTrigger>
+						<SelectContent>
+							{Object.values(FreeTrialDuration).map((duration) => (
+								<SelectItem key={duration} value={duration}>
+									{duration}s
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+					{product.planType === "paid" && (
+						<div className="mx-4">
+							<TextCheckbox
+								disabled={!product.free_trial}
+								checked={product.free_trial?.card_required || false}
+								onCheckedChange={(checked) => {
+									setProduct({
+										...product,
+										free_trial: product.free_trial
+											? {
+													...(product.free_trial || {}),
+													card_required: checked as boolean,
+												}
+											: null,
+									});
+								}}
+							>
+								Card Required
+							</TextCheckbox>
+						</div>
+					)}
 				</div>
-
-				<TextCheckbox
-					disabled={!product.free_trial}
-					checked={product.free_trial?.card_required || false}
-					onCheckedChange={(checked) => {
-						setProduct({
-							...product,
-							free_trial: {
-								...product.free_trial,
-								card_required: checked as boolean,
-							},
-						});
-					}}
-				>
-					Card Required
-				</TextCheckbox>
 			</div>
-		</SheetSection>
+		</div>
+		// </SheetSection>
 	);
 };

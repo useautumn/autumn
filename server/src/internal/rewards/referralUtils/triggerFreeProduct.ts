@@ -18,6 +18,7 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { deleteCachedApiCustomer } from "../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { RewardRedemptionService } from "../RewardRedemptionService.js";
 import { ReferralResponseCodes } from "../referralUtils.js";
@@ -117,7 +118,7 @@ export const triggerFreeProduct = async ({
 	}
 
 	const attachParams: InsertCusProductParams = {
-		req,
+		req: req as unknown as AutumnContext,
 		org,
 		product: fullProduct,
 		prices: fullProduct.prices,

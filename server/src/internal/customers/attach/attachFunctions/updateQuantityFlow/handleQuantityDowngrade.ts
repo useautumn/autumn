@@ -26,9 +26,10 @@ import {
 	shouldProrate,
 } from "@/internal/products/prices/priceUtils/prorationConfigUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
+import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
 
 export const handleQuantityDowngrade = async ({
-	req,
+	ctx,
 	attachParams,
 	attachConfig,
 	cusProduct,
@@ -37,7 +38,7 @@ export const handleQuantityDowngrade = async ({
 	newOptions,
 	subItem,
 }: {
-	req: any;
+	ctx: AutumnContext;
 	attachParams: AttachParams;
 	attachConfig: AttachConfig;
 	cusProduct: FullCusProduct;
@@ -46,7 +47,7 @@ export const handleQuantityDowngrade = async ({
 	newOptions: FeatureOptions;
 	subItem: Stripe.SubscriptionItem;
 }) => {
-	const { db, logger, org } = req;
+	const { db, logger, org, features } = ctx;
 	const { stripeCli, paymentMethod } = attachParams;
 
 	const cusPrice = featureToCusPrice({
@@ -98,13 +99,13 @@ export const handleQuantityDowngrade = async ({
 		});
 
 		const product = cusProductToProduct({ cusProduct });
-		const feature = req.features.find(
+		const feature = features.find(
 			(f: Feature) => f.internal_id === newOptions.internal_feature_id,
 		)!;
 		const invoiceItem = constructStripeInvoiceItem({
 			product,
 			amount: amount,
-			org: req.org,
+			org: org,
 			price: cusPrice.price,
 			description: getFeatureInvoiceDescription({
 				feature: feature,

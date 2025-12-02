@@ -8,7 +8,10 @@ import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { logger } from "../../../src/external/logtail/logtailUtils.js";
+import {
+	type Logger,
+	logger,
+} from "../../../src/external/logtail/logtailUtils.js";
 
 const DEFAULT_ENV = AppEnv.Sandbox;
 
@@ -19,6 +22,7 @@ export type TestContext = {
 	db: DrizzleCli;
 	orgSecretKey: string;
 	features: Feature[];
+	logger: Logger;
 };
 
 export const createTestContext = async () => {

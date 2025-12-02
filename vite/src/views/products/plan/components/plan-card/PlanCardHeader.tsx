@@ -2,19 +2,23 @@ import { productV2ToBasePrice } from "@autumn/shared";
 import { AdminHover } from "@/components/general/AdminHover";
 import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
 import { CardHeader } from "@/components/v2/cards/Card";
-import { useOrg } from "@/hooks/common/useOrg";
-import { useProductStore } from "@/hooks/stores/useProductStore";
+import {
+	useCurrentItem,
+	useProductStore,
+} from "@/hooks/stores/useProductStore";
 import { useIsEditingPlan, useSheetStore } from "@/hooks/stores/useSheetStore";
+import { checkItemIsValid } from "@/utils/product/entitlementUtils";
 import { BasePriceDisplay } from "./BasePriceDisplay";
 import { PlanCardToolbar } from "./PlanCardToolbar";
 
 const MAX_PLAN_NAME_LENGTH = 20;
 
 export const PlanCardHeader = () => {
-	const { org } = useOrg();
 	const product = useProductStore((s) => s.product);
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const isPlanBeingEdited = useIsEditingPlan();
+
+	const item = useCurrentItem();
 
 	const basePrice = productV2ToBasePrice({ product });
 	const adminHoverText = () => {
@@ -48,6 +52,9 @@ export const PlanCardHeader = () => {
 				</div>
 				<PlanCardToolbar
 					onEdit={() => {
+						if (item && !checkItemIsValid(item)) {
+							return;
+						}
 						setSheet({ type: "edit-plan", itemId: product.id });
 					}}
 					editDisabled={isPlanBeingEdited}
@@ -60,7 +67,7 @@ export const PlanCardHeader = () => {
 				</span>
 			)}
 
-			<BasePriceDisplay />
+			<BasePriceDisplay product={product} />
 		</CardHeader>
 	);
 };

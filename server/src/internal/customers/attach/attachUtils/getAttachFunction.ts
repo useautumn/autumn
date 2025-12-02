@@ -1,11 +1,14 @@
 import {
-	type AttachBody,
+	type AttachBodyV0,
 	AttachBranch,
 	type AttachConfig,
 	AttachFunction,
+	type AttachFunctionResponse,
+	AttachFunctionResponseSchema,
 	CusProductStatus,
 } from "@autumn/shared";
 import chalk from "chalk";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { handleCreateCheckout } from "../../add-product/handleCreateCheckout.js";
 import { handleCreateInvoiceCheckout } from "../../add-product/handleCreateInvoiceCheckout.js";
 import type { AttachParams } from "../../cusProducts/AttachParams.js";
@@ -37,7 +40,7 @@ export const getAttachFunction = async ({
 }: {
 	branch: AttachBranch;
 	attachParams: AttachParams;
-	attachBody: AttachBody;
+	attachBody: AttachBodyV0;
 	config: AttachConfig;
 }) => {
 	const { onlyCheckout } = config;
@@ -106,21 +109,19 @@ export const getAttachFunction = async ({
 };
 
 export const runAttachFunction = async ({
-	req,
-	res,
+	ctx,
 	branch,
 	attachParams,
 	attachBody,
 	config,
 }: {
-	req: any;
-	res: any;
+	ctx: AutumnContext;
 	branch: AttachBranch;
 	attachParams: AttachParams;
-	attachBody: AttachBody;
+	attachBody: AttachBodyV0;
 	config: AttachConfig;
-}) => {
-	const { logger, db } = req;
+}): Promise<AttachFunctionResponse> => {
+	const { logger, db } = ctx;
 	const { stripeCli } = attachParams;
 
 	const attachFunction = await getAttachFunction({
@@ -130,9 +131,6 @@ export const runAttachFunction = async ({
 		config,
 	});
 
-	// console.log("Attach Function:", attachFunction);
-	// throw new Error("Attach Function:");
-
 	const customer = attachParams.customer;
 	const org = attachParams.org;
 
@@ -141,8 +139,6 @@ export const runAttachFunction = async ({
 		attachParamToCusProducts({
 			attachParams,
 		});
-
-	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
 
 	logger.info(`--------------------------------`);
 	logger.info(
@@ -169,8 +165,7 @@ export const runAttachFunction = async ({
 
 	if (attachFunction === AttachFunction.OneOff) {
 		return await handleOneOffFunction({
-			req,
-			res,
+			ctx,
 			attachParams,
 			config,
 		});
@@ -178,8 +173,7 @@ export const runAttachFunction = async ({
 
 	if (attachFunction === AttachFunction.Renew) {
 		return await handleRenewProduct({
-			req,
-			res,
+			ctx,
 			attachParams,
 			config,
 		});
@@ -209,8 +203,7 @@ export const runAttachFunction = async ({
 
 	if (attachFunction === AttachFunction.MultiAttach) {
 		return await handleMultiAttachFlow({
-			req,
-			res,
+			ctx,
 			attachParams,
 			attachBody,
 			branch,
@@ -221,17 +214,13 @@ export const runAttachFunction = async ({
 	if (attachFunction === AttachFunction.CreateCheckout) {
 		if (config.invoiceCheckout) {
 			return await handleCreateInvoiceCheckout({
-				req,
-				res,
+				ctx,
 				attachParams,
-				attachBody,
 				config,
-				branch,
 			});
 		}
 		return await handleCreateCheckout({
-			req,
-			res,
+			ctx,
 			attachParams,
 			config,
 		});
@@ -239,8 +228,7 @@ export const runAttachFunction = async ({
 
 	if (attachFunction === AttachFunction.AddProduct) {
 		return await handleAddProduct({
-			req,
-			res,
+			ctx,
 			attachParams,
 			config,
 			branch,
@@ -249,8 +237,7 @@ export const runAttachFunction = async ({
 
 	if (attachFunction === AttachFunction.ScheduleProduct) {
 		return await handleScheduleFunction2({
-			req,
-			res,
+			ctx,
 			attachParams,
 			config,
 		});
@@ -261,8 +248,7 @@ export const runAttachFunction = async ({
 		attachFunction === AttachFunction.UpgradeSameInterval
 	) {
 		return await handleUpgradeFlow({
-			req,
-			res,
+			ctx,
 			attachParams,
 			config,
 			branch,
@@ -271,10 +257,14 @@ export const runAttachFunction = async ({
 
 	if (attachFunction === AttachFunction.UpdatePrepaidQuantity) {
 		return await handleUpdateQuantityFunction({
-			req,
-			res,
+			ctx,
 			attachParams,
 			config,
 		});
 	}
+
+	return AttachFunctionResponseSchema.parse({
+		code: "attach_function_not_found",
+		message: `Attach function not found: ${attachFunction}`,
+	});
 };

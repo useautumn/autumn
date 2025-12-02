@@ -91,7 +91,11 @@ export default function CustomerProductView() {
 
 		const product = originalProduct;
 
-		console.log('[CPV] effect', { prodId: originalProduct.id, v: originalProduct.version, cusId: cusProduct?.id });
+		console.log("[CPV] effect", {
+			prodId: originalProduct.id,
+			v: originalProduct.version,
+			cusId: cusProduct?.id,
+		});
 
 		// Update initialProductRef BEFORE setProduct to ensure useAttachState
 		// effect has the correct baseline when it runs

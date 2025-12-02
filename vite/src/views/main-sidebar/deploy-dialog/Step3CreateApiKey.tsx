@@ -41,7 +41,7 @@ export const Step3CreateApiKey = () => {
 	};
 
 	return (
-		<div className="flex flex-col gap-3">
+		<div className="flex gap-3">
 			<SectionHeader
 				stepNumber={3}
 				title="Create a production secret key"
@@ -64,8 +64,8 @@ export const Step3CreateApiKey = () => {
 							}}
 							className="flex flex-col gap-2"
 						>
-							<div className="flex justify-between bg-zinc-100 p-2 px-3 text-t2 rounded-md items-center w-fit">
-								<p className="text-sm font-mono">{apiKey}</p>
+							<div className="flex justify-between bg-interactive-secondary border p-2 px-3 text-t2 rounded-md items-center w-50 h-7">
+								<p className="text-sm font-mono truncate">{apiKey}</p>
 								<button
 									type="button"
 									className="text-t2 hover:text-t2/80 ml-4"
@@ -77,10 +77,10 @@ export const Step3CreateApiKey = () => {
 									{copied ? <Check size={15} /> : <Copy size={15} />}
 								</button>
 							</div>
-							<p className="text-xs text-t3">
+							{/* <p className="text-xs text-t3">
 								You won't be able to view this key anymore after closing the
 								dialog.
-							</p>
+							</p> */}
 						</motion.div>
 					) : (
 						<motion.div
@@ -99,9 +99,9 @@ export const Step3CreateApiKey = () => {
 								isLoading={loading}
 								onClick={handleCreate}
 								variant="secondary"
-								className="w-32"
+								className="w-36"
 							>
-								Generate Key
+								Generate API Key
 							</Button>
 						</motion.div>
 					)}

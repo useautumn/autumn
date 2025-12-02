@@ -1,9 +1,9 @@
-import type { CreateRewardProgram } from "@autumn/shared";
+import type { CreateRewardProgram, RewardProgram } from "@autumn/shared";
 import { RewardReceivedBy, RewardTriggerEvent } from "@autumn/shared";
 import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Button as OldButton } from "@/components/ui/button";
+import { Button } from "@/components/v2/buttons/Button";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	SheetFooter,
@@ -108,7 +108,9 @@ export function CreateRewardProgramSheet({
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
 			<SheetTrigger asChild>
-				<OldButton variant="add">Referral Program</OldButton>
+				<Button variant="primary" size="default">
+					Create Referral Program
+				</Button>
 			</SheetTrigger>
 			<SheetContent className="flex flex-col overflow-hidden">
 				<SheetHeader
@@ -119,8 +121,10 @@ export function CreateRewardProgramSheet({
 				<div className="flex-1 overflow-y-auto">
 					<SheetSection title="Program Configuration" withSeparator={false}>
 						<RewardProgramConfig
-							rewardProgram={rewardProgram as any}
-							setRewardProgram={setRewardProgram}
+							rewardProgram={rewardProgram as unknown as RewardProgram}
+							setRewardProgram={
+								setRewardProgram as (rewardProgram: RewardProgram) => void
+							}
 						/>
 					</SheetSection>
 				</div>

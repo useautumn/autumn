@@ -1,7 +1,10 @@
-import { ErrCode } from "@autumn/shared";
+import { InternalError, MetadataType } from "@autumn/shared";
+import { addMinutes } from "date-fns";
 import type Stripe from "stripe";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import RecaseError from "@/utils/errorUtils.js";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
+import { attachParamsToMetadata } from "../../../../internal/billing/attach/utils/attachParamsToMetadata.js";
+import type { Logger } from "../../../logtail/logtailUtils.js";
 import { payForInvoice } from "../../stripeInvoiceUtils.js";
 
 export const undoSubUpdate = async ({
@@ -55,17 +58,19 @@ export const undoSubUpdate = async ({
 };
 
 export const createProrationInvoice = async ({
+	ctx,
 	attachParams,
 	invoiceOnly,
 	curSub,
 	updatedSub,
 	logger,
 }: {
+	ctx: AutumnContext;
 	attachParams: AttachParams;
 	invoiceOnly: boolean;
 	curSub: Stripe.Subscription;
 	updatedSub: Stripe.Subscription;
-	logger: any;
+	logger: Logger;
 }) => {
 	const { stripeCli, customer, paymentMethod } = attachParams;
 
@@ -77,49 +82,78 @@ export const createProrationInvoice = async ({
 
 	if (items.data.length === 0) {
 		logger.info(`No items to prorate, skipping invoice creation`);
-		return null;
+		return {
+			invoice: null,
+			url: null,
+		};
 	}
-
-	// const shouldMemo = attachParams.org.config.invoice_memos && invoiceOnly;
-	// const invoiceMemo = shouldMemo
-	//   ? await buildInvoiceMemoFromEntitlements({
-	//       org: attachParams.org,
-	//       entitlements: attachParams.entitlements,
-	//       features: attachParams.features,
-	//     })
-	//   : undefined;
 
 	const invoice = await stripeCli.invoices.create({
 		customer: customer.processor.id,
-		subscription: curSub.id,
+		// subscription: curSub.id,
 		auto_advance: false,
-		// ...(shouldMemo ? { description: invoiceMemo } : {}),
+		pending_invoice_items_behavior: "include",
 	});
 
-	if (invoiceOnly) return invoice;
+	if (invoiceOnly)
+		return {
+			invoice,
+			url: null,
+		};
 
 	await stripeCli.invoices.finalizeInvoice(invoice.id!, {
 		auto_advance: false,
 	});
 
-	try {
-		const { invoice: subInvoice } = await payForInvoice({
-			stripeCli,
-			paymentMethod: paymentMethod || null,
-			invoiceId: invoice.id!,
-			logger,
-			voidIfFailed: true,
-		});
+	const {
+		paid,
+		error,
+		invoice: subInvoice,
+	} = await payForInvoice({
+		stripeCli,
+		paymentMethod: paymentMethod || null,
+		invoiceId: invoice.id!,
+		logger,
+		voidIfFailed: false,
+		errorOnFail: false,
+	});
 
-		return subInvoice;
-	} catch (error: any) {
+	if (!paid) {
 		await undoSubUpdate({ stripeCli, curSub, updatedSub });
 
-		throw new RecaseError({
-			code: ErrCode.UpdateSubscriptionFailed,
-			message: `Failed to update subscription. ${error.message}`,
-			statusCode: 500,
-			data: `Stripe error: ${error.message}`,
-		});
+		if (subInvoice && subInvoice.status === "open") {
+			logger.info(
+				`[update subscription] invoice action required: ${subInvoice.id}`,
+			);
+			const metadata = await attachParamsToMetadata({
+				db: ctx.db,
+				attachParams,
+				type: MetadataType.InvoiceActionRequired,
+				stripeInvoiceId: subInvoice.id,
+				expiresAt: addMinutes(Date.now(), 10).getTime(),
+			});
+
+			await stripeCli.invoices.update(subInvoice.id, {
+				metadata: {
+					autumn_metadata_id: metadata.id,
+				},
+			});
+			return {
+				invoice: subInvoice,
+				url: subInvoice?.hosted_invoice_url,
+			};
+		} else {
+			throw new InternalError({
+				message: `[update subscription] Failed to pay invoice: ${error?.message}`,
+				code: "update_subscription_failed",
+				statusCode: 500,
+				data: error,
+			});
+		}
 	}
+
+	return {
+		invoice: subInvoice,
+		url: null,
+	};
 };

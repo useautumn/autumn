@@ -19,8 +19,12 @@ const featureDescriptions = {
 // Create Feature Params
 export const CreateFeatureV1ParamsSchema = z
 	.object({
-		id: z.string().meta({ description: featureDescriptions.id }),
-		name: z.string().nullish().meta({ description: featureDescriptions.name }),
+		id: z.string().nonempty().meta({ description: featureDescriptions.id }),
+		name: z
+			.string()
+			.nonempty()
+			.nullish()
+			.meta({ description: featureDescriptions.name }),
 		type: z.enum(FeatureType).meta({ description: featureDescriptions.type }),
 		consumable: z.boolean().optional(),
 

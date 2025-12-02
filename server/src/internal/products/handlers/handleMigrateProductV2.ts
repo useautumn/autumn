@@ -54,7 +54,13 @@ export const handleMigrateProductV2 = createRoute({
 			env,
 		});
 
-		if (currentMigrations.length > 0) {
+		if (
+			currentMigrations.find(
+				(m) =>
+					m.from_internal_product_id === fromProduct.internal_id &&
+					m.to_internal_product_id === toProduct.internal_id,
+			)
+		) {
 			throw new RecaseError({
 				message: "Another migration is ongoing, cannot create a new migration",
 			});

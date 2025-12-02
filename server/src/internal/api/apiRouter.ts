@@ -12,7 +12,6 @@ import { platformRouter } from "../platform/platformLegacy/platformRouter.js";
 import { expressProductRouter } from "../products/productRouter.js";
 import { componentRouter } from "./components/componentRouter.js";
 import { invoiceRouter } from "./invoiceRouter.js";
-import { redemptionRouter, referralRouter } from "./rewards/referralRouter.js";
 import { rewardProgramRouter } from "./rewards/rewardProgramRouter.js";
 import rewardRouter from "./rewards/rewardRouter.js";
 
@@ -30,8 +29,6 @@ apiRouter.use("/rewards", rewardRouter);
 
 // REWARDS
 apiRouter.use("/reward_programs", rewardProgramRouter);
-apiRouter.use("/referrals", referralRouter);
-apiRouter.use("/redemptions", redemptionRouter);
 
 // Cus Product
 apiRouter.use("", attachRouter);

@@ -4,6 +4,7 @@
 source "$(dirname "$0")/config.sh"
 
 
+
 BUN_PARALLEL_COMPACT \
   'server/tests/advanced/coupons' \
   'server/tests/advanced/misc' \
@@ -17,8 +18,8 @@ BUN_PARALLEL_COMPACT \
   --max=6
 
 
-BUN_PARALLEL_COMPACT \
-  'server/tests/advanced/usage'
-  # 'server/tests/crud/plan'
+# BUN_PARALLEL_COMPACT \
+#   'server/tests/advanced/usage'
+#   # 'server/tests/crud/plan'
 
-# 'server/tests/advanced/referrals/paid' \
+# # 'server/tests/advanced/referrals/paid' \

@@ -122,7 +122,7 @@ export const attachAndExpectCorrect = async ({
 		await timeout(waitForInvoice);
 	}
 
-	let customer;
+	let customer: Customer;
 	if (entityId) {
 		customer = await autumn.entities.get(customerId, entityId);
 	} else {

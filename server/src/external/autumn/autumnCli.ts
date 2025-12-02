@@ -5,7 +5,7 @@ dotenv.config();
 
 import {
 	type ApiBaseEntity,
-	type AttachBody,
+	type AttachBodyV0,
 	type BalancesUpdateParams,
 	type CheckQuery,
 	type CreateCustomerParams,
@@ -246,7 +246,7 @@ export class AutumnInt {
 		return data;
 	}
 
-	async attach(params: AttachBody) {
+	async attach(params: AttachBodyV0) {
 		// const data = await this.post(`/attach`, {
 		//   customer_id: customerId,
 		//   product_id: productId,
@@ -638,7 +638,7 @@ export class AutumnInt {
 		return data;
 	};
 
-	attachPreview = async (params: AttachBody) => {
+	attachPreview = async (params: AttachBodyV0) => {
 		const data = await this.post(`/attach/preview`, params);
 		return data;
 	};

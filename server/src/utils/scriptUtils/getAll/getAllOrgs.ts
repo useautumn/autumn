@@ -1,10 +1,10 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
 import { organizations } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const getAllOrgs = async (db: DrizzleCli) => {
 	const orgs = [];
 	let offset = 0;
-	const limit = 200;
+	const limit = 1000;
 
 	while (true) {
 		const batch = await db

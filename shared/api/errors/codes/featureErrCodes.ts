@@ -1,6 +1,6 @@
 export const FeatureErrorCode = {
 	FeatureNotFound: "feature_not_found",
-	FeatureAlreadyExists: "feature_already_exists",
+	FeatureAlreadyExists: "duplicate_feature_id",
 } as const;
 
 export type FeatureErrorCode =

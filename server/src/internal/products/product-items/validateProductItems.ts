@@ -10,12 +10,13 @@ import {
 	type ProductItem,
 	ProductItemInterval,
 	ProductItemSchema,
+	RecaseError,
 	type RolloverConfig,
 	RolloverExpiryDurationType,
 	UsageModel,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import RecaseError from "@/utils/errorUtils.js";
+
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import { createFeaturesFromItems } from "./createFeaturesFromItems.js";
 import {
@@ -102,15 +103,15 @@ const validateProductItem = ({
 		}
 	}
 
-	if (isFeatureItem(item)) {
-		if (item.included_usage === 0 && feature?.type !== FeatureType.Boolean) {
-			throw new RecaseError({
-				message: `Included usage for feature ${item.feature_id} must be greater than 0`,
-				code: ErrCode.InvalidInputs,
-				statusCode: StatusCodes.BAD_REQUEST,
-			});
-		}
-	}
+	// if (isFeatureItem(item)) {
+	// 	if (item.included_usage === 0 && feature?.type !== FeatureType.Boolean) {
+	// 		throw new RecaseError({
+	// 			message: `Included usage for feature ${item.feature_id} must be greater than 0`,
+	// 			code: ErrCode.InvalidInputs,
+	// 			statusCode: StatusCodes.BAD_REQUEST,
+	// 		});
+	// 	}
+	// }
 
 	// 5. If it's a price, can't have day, minute or hour interval
 	if (isFeaturePriceItem(item) || isPriceItem(item)) {

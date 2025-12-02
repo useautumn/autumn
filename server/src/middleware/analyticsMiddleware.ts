@@ -1,5 +1,3 @@
-import { setSentryTags } from "../external/sentry/sentryUtils";
-
 const handleResFinish = (req: any, res: any) => {
 	const skipUrls = ["/v1/customers/all/search"];
 
@@ -54,11 +52,6 @@ export const analyticsMiddleware = async (req: any, res: any, next: any) => {
 		customer_id: customerId,
 		user_id: req.userId || null,
 	};
-
-	setSentryTags({
-		ctx: req,
-		customerId,
-	});
 
 	if (req.span) {
 		req.span.setAttributes({
