@@ -6,3 +6,5 @@ export const clickhouseClient: ClickHouseClient = createClient({
 	password: process.env.CLICKHOUSE_PASSWORD!,
 	max_open_connections: 10,
 });
+
+export const clickhouse = clickhouseClient;

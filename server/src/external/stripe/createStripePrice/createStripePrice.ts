@@ -6,23 +6,23 @@ import {
 	type Product,
 	type UsagePriceConfig,
 } from "@autumn/shared";
-import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { PriceService } from "@/internal/products/prices/PriceService.js";
+import type { DrizzleCli } from "@server/db/initDrizzle";
+import { PriceService } from "@server/internal/products/prices/PriceService";
 import {
 	getBillingType,
 	getPriceEntitlement,
 	priceIsOneOffAndTiered,
-} from "@/internal/products/prices/priceUtils.js";
+} from "@server/internal/products/prices/priceUtils";
+import type Stripe from "stripe";
 import { billingIntervalToStripe } from "../stripePriceUtils.js";
 import {
 	createStripeArrearProrated,
 	createStripeMeteredPrice,
-} from "./createStripeArrearProrated.js";
-import { createStripeFixedPrice } from "./createStripeFixedPrice.js";
-import { createStripeInArrearPrice } from "./createStripeInArrear.js";
-import { createStripeOneOffTieredProduct } from "./createStripeOneOffTiered.js";
-import { createStripePrepaid } from "./createStripePrepaid.js";
+} from "./createStripeArrearProrated";
+import { createStripeFixedPrice } from "./createStripeFixedPrice";
+import { createStripeInArrearPrice } from "./createStripeInArrear";
+import { createStripeOneOffTieredProduct } from "./createStripeOneOffTiered";
+import { createStripePrepaid } from "./createStripePrepaid";
 
 export const checkCurStripePrice = async ({
 	price,

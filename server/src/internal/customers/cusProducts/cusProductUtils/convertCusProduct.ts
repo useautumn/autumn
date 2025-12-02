@@ -1,5 +1,8 @@
-import Stripe from "stripe";
-import { FullCusEntWithFullCusProduct, FullCusProduct } from "@autumn/shared";
+import type {
+	FullCusEntWithFullCusProduct,
+	FullCusProduct,
+} from "@autumn/shared";
+import type Stripe from "stripe";
 
 import {
 	getStripeSchedules,
@@ -13,7 +16,7 @@ export const cusProductsToSchedules = ({
 	cusProducts: (FullCusProduct | undefined)[];
 	stripeCli: Stripe;
 }) => {
-	let scheduleIds: string[] = [];
+	const scheduleIds: string[] = [];
 	for (const cusProduct of cusProducts) {
 		if (cusProduct) {
 			scheduleIds.push(...(cusProduct.scheduled_ids || []));
@@ -45,7 +48,7 @@ export const cusProductToSchedule = async ({
 		},
 	);
 
-	if (schedule.status == "canceled" || schedule.status == "released") {
+	if (schedule.status === "canceled" || schedule.status === "released") {
 		return undefined;
 	}
 
@@ -90,10 +93,10 @@ export const cusProductToCusEnt = ({
 	cusProduct: FullCusProduct;
 	featureId: string;
 }) => {
-	let cusEnts = cusProduct.customer_entitlements;
+	const cusEnts = cusProduct.customer_entitlements;
 
-	let fullCusEnt = cusEnts.find(
-		(ce) => ce.entitlement.feature_id === featureId,
+	const fullCusEnt = cusEnts.find(
+		(ce) => ce.entitlement.feature.id === featureId,
 	);
 
 	if (fullCusEnt) {
