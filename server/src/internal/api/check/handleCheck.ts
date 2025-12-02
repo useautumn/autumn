@@ -89,6 +89,7 @@ export const handleCheck = createRoute({
 				featureToUse: checkData.featureToUse,
 				cusFeatureLegacyData: checkData.cusFeatureLegacyData,
 			},
+			ctx,
 		});
 
 		return c.json({

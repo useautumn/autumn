@@ -3,6 +3,7 @@ import {
 	type ApiBalanceReset,
 	type ApiBalanceRollover,
 	type ApiFeatureV1,
+	cusEntsToPlanId,
 	entIntvToResetIntv,
 	type Feature,
 	type FullCusEntWithFullCusProduct,
@@ -97,6 +98,7 @@ export const getBooleanApiBalance = ({
 	apiFeature?: ApiFeatureV1;
 }): ApiBalance => {
 	const feature = cusEnts[0].entitlement.feature;
+	const planId = cusEntsToPlanId({ cusEnts });
 	return {
 		feature: apiFeature,
 		feature_id: feature.id,
@@ -112,6 +114,7 @@ export const getBooleanApiBalance = ({
 		max_purchase: null,
 		reset: null,
 
+		plan_id: planId,
 		breakdown: undefined,
 		rollovers: undefined,
 	} satisfies ApiBalance;
@@ -125,6 +128,7 @@ export const getUnlimitedApiBalance = ({
 	cusEnts: FullCusEntWithFullCusProduct[];
 }): ApiBalance => {
 	const feature = cusEnts[0].entitlement.feature;
+	const planId = cusEntsToPlanId({ cusEnts });
 
 	return {
 		feature: apiFeature,
@@ -141,32 +145,7 @@ export const getUnlimitedApiBalance = ({
 		max_purchase: null,
 		overage_allowed: false,
 
-		breakdown: undefined,
-		rollovers: undefined,
-	};
-};
-
-export const getNoCusEntsApiBalance = ({
-	apiFeature,
-	featureId,
-}: {
-	apiFeature?: ApiFeatureV1;
-	featureId: string;
-}): ApiBalance => {
-	return {
-		feature: apiFeature,
-		feature_id: featureId,
-		unlimited: false,
-
-		granted_balance: 0,
-		purchased_balance: 0,
-		current_balance: 0,
-		usage: 0,
-
-		reset: null,
-		max_purchase: null,
-		overage_allowed: false,
-
+		plan_id: planId,
 		breakdown: undefined,
 		rollovers: undefined,
 	};
