@@ -1,20 +1,24 @@
-import { type Customer, LegacyVersion, OnDecrease, OnIncrease } from "@autumn/shared";
 import { beforeAll, describe, expect, test } from "bun:test";
-import chalk from "chalk";
-import { addHours, addMonths } from "date-fns";
-import type Stripe from "stripe";
-import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import {
+	type Customer,
+	LegacyVersion,
+	OnDecrease,
+	OnIncrease,
+} from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
 import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
+import { addHours, addMonths } from "date-fns";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
 import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 
 const userItem = constructPrepaidItem({
 	featureId: TestFeature.Users,
@@ -135,9 +139,9 @@ describe(`${chalk.yellowBright(`attach/${testCase}: update quantity, no proratio
 		const autumnCus = await autumn.customers.get(customerId);
 
 		expect(autumnCus.features[TestFeature.Users].balance).toBe(0);
-		const product = autumnCus.products.find((p: any) => p.id == pro.id) as any;
+		const product = autumnCus.products.find((p: any) => p.id === pro.id) as any;
 		const userItem = product.items.find(
-			(i: any) => i.feature_id == TestFeature.Users,
+			(i: any) => i.feature_id === TestFeature.Users,
 		);
 
 		expect(userItem?.quantity).toBe(newQuantity);
