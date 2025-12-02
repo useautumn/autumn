@@ -81,5 +81,6 @@ export const getApiCustomer = async ({
 		legacyData: cusLegacyData,
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Customer,
+		ctx,
 	});
 };

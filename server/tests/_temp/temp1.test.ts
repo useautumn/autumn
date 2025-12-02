@@ -5,10 +5,12 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { constructFeatureItem } from "../../src/utils/scriptUtils/constructItem.js";
+import {
+	constructFeatureItem,
+	constructPrepaidItem,
+} from "../../src/utils/scriptUtils/constructItem.js";
 import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "../../src/utils/scriptUtils/testUtils/initProductsV0.js";
-import { replaceItems } from "../attach/utils.js";
 
 // UNCOMMENT FROM HERE
 const pro = constructProduct({
@@ -17,24 +19,25 @@ const pro = constructProduct({
 
 	items: [
 		constructFeatureItem({
-			featureId: TestFeature.Users,
-			includedUsage: 5,
+			featureId: TestFeature.Credits,
+			includedUsage: 250,
 		}),
 	],
 });
-const premium = constructProduct({
-	type: "premium",
+const proEntity = constructProduct({
+	type: "pro",
+	id: "pro-entity",
 	isDefault: false,
 
 	items: [
-		constructFeatureItem({
-			featureId: TestFeature.Users,
-			includedUsage: 10,
+		constructPrepaidItem({
+			featureId: TestFeature.Credits,
+			includedUsage: 0,
 		}),
 	],
 });
 
-describe(`${chalk.yellowBright("temp: Testing prepaid and prorated")}`, () => {
+describe(`${chalk.yellowBright("temp: Testing entity prorated")}`, () => {
 	const customerId = "temp";
 	const autumn: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
@@ -49,31 +52,34 @@ describe(`${chalk.yellowBright("temp: Testing prepaid and prorated")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [pro, premium],
+			products: [pro, proEntity],
 			prefix: customerId,
 		});
+
+		await autumn.entities.create(customerId, [
+			{
+				id: "1",
+				name: "test",
+				feature_id: TestFeature.Users,
+			},
+		]);
 	});
 
 	test("should create a subscription with prepaid and prorated", async () => {
 		await autumn.attach({
 			customer_id: customerId,
-			product_id: premium.id,
+			product_id: pro.id,
 		});
 		await autumn.attach({
 			customer_id: customerId,
-			product_id: pro.id,
-		});
-
-		// Create new version of pro
-		await autumn.products.update(pro.id, {
-			items: replaceItems({
-				featureId: TestFeature.Users,
-				newItem: constructFeatureItem({
-					featureId: TestFeature.Users,
-					includedUsage: 2,
-				}),
-				items: pro.items,
-			}),
+			product_id: proEntity.id,
+			entity_id: "1",
+			options: [
+				{
+					feature_id: TestFeature.Credits,
+					quantity: 300,
+				},
+			],
 		});
 	});
 });

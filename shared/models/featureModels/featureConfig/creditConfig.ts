@@ -3,7 +3,7 @@ import { FeatureUsageType } from "../featureEnums.js";
 
 export const CreditSchemaItemSchema = z.object({
 	metered_feature_id: z.string(),
-	feature_amount: z.number(),
+	feature_amount: z.number().optional(),
 	credit_amount: z.number(),
 });
 

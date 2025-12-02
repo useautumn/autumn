@@ -56,6 +56,7 @@ local function storeBalances(cacheKey, balances)
         redis.call("HSET", balanceKey,
             "feature_id", toString(balanceData.feature_id),
             "feature", featureJson,
+            "plan_id", toString(balanceData.plan_id),
             "unlimited", toString(balanceData.unlimited),
             "granted_balance", toString(balanceData.granted_balance),
             "purchased_balance", toString(balanceData.purchased_balance),
@@ -97,7 +98,8 @@ local function storeBalances(cacheKey, balances)
                     "usage", toString(breakdownItem.usage),
                     "max_purchase", toString(breakdownItem.max_purchase),
                     "overage_allowed", toString(breakdownItem.overage_allowed),
-                    "reset", breakdownResetJson
+                    "reset", breakdownResetJson,
+                    "plan_id", toString(breakdownItem.plan_id)
                 )
                 redis.call("EXPIRE", breakdownKey, CACHE_TTL_SECONDS)
             end

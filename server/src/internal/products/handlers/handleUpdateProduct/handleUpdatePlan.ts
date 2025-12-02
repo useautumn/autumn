@@ -249,6 +249,7 @@ export const handleUpdatePlan = createRoute({
 			legacyData: {
 				features: ctx.features,
 			},
+			ctx,
 		});
 		return c.json(versionedResponse);
 	},
