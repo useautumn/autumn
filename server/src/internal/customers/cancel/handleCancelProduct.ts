@@ -1,14 +1,12 @@
 import {
 	AttachBranch,
 	CusProductStatus,
-	cusProductToPrices,
 	cusProductToProduct,
 	type EntitlementWithFeature,
 	type FullCusProduct,
 	type FullCustomer,
 	type Price,
 	ProrationBehavior,
-	RecaseError,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
@@ -17,6 +15,7 @@ import { handleRenewProduct } from "../attach/attachFunctions/handleRenewProduct
 import { handleScheduleFunction2 } from "../attach/attachFunctions/scheduleFlow/handleScheduleFlow2.js";
 import { handleUpgradeFlow } from "../attach/attachFunctions/upgradeFlow/handleUpgradeFlow.js";
 import { getDefaultAttachConfig } from "../attach/attachUtils/getAttachConfig.js";
+import { CusProductService } from "../cusProducts/CusProductService.js";
 import { getExistingCusProducts } from "../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import {
 	activateDefaultProduct,
@@ -96,20 +95,39 @@ export const handleCancelProduct = async ({
 	const isFree = isFreeProduct(product.prices || []);
 
 	if (isMain) {
-		if (cusProduct.canceled && !expireImmediately) {
-			throw new RecaseError({
-				message: `Product ${cusProduct.product.name} is already about to cancel at the end of cycle.`,
+		// Delete scheduled product
+		const { curScheduledProduct } = getExistingCusProducts({
+			product: product,
+			cusProducts: fullCus.customer_products,
+			internalEntityId: cusProduct.internal_entity_id,
+		});
+
+		console.log(
+			`Current scheduled product: ${curScheduledProduct?.product.name}`,
+		);
+
+		// Delete scheduled product.
+		if (curScheduledProduct) {
+			await CusProductService.delete({
+				db: ctx.db,
+				cusProductId: curScheduledProduct?.id,
 			});
 		}
 
-		if (
-			curScheduledProduct &&
-			!isFreeProduct(cusProductToPrices({ cusProduct: curScheduledProduct }))
-		) {
-			throw new RecaseError({
-				message: `Please delete scheduled product ${curScheduledProduct.product.name} first`,
-			});
-		}
+		// if (cusProduct.canceled && !expireImmediately) {
+		// 	throw new RecaseError({
+		// 		message: `Product ${cusProduct.product.name} is already about to cancel at the end of cycle.`,
+		// 	});
+		// }
+
+		// if (
+		// 	curScheduledProduct &&
+		// 	!isFreeProduct(cusProductToPrices({ cusProduct: curScheduledProduct }))
+		// ) {
+		// 	throw new RecaseError({
+		// 		message: `Please delete scheduled product ${curScheduledProduct.product.name} first`,
+		// 	});
+		// }
 	}
 
 	// 2. If expire at cycle end, just cancel subscriptions

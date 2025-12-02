@@ -67,6 +67,27 @@ export const expectProductAttached = ({
 	}
 };
 
+export const expectProductGroupCount = ({
+	customer,
+	group,
+	count,
+}: {
+	customer: Customer;
+	group: string;
+	count: number;
+}) => {
+	const productCount = customer.products.reduce((acc: number, product: any) => {
+		if (product.group === group) {
+			return acc + 1;
+		} else return acc;
+	}, 0);
+
+	expect(
+		productCount,
+		`customer should have ${count} products in group ${group}`,
+	).to.equal(count);
+};
+
 export const expectScheduledApiSub = async ({
 	customerId,
 	entityId,
