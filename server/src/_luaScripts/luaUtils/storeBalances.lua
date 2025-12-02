@@ -56,6 +56,7 @@ local function storeBalances(cacheKey, balances)
         redis.call("HSET", balanceKey,
             "feature_id", toString(balanceData.feature_id),
             "feature", featureJson,
+            "plan_id", toString(balanceData.plan_id),
             "unlimited", toString(balanceData.unlimited),
             "granted_balance", toString(balanceData.granted_balance),
             "purchased_balance", toString(balanceData.purchased_balance),

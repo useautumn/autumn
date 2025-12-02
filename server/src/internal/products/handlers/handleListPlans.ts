@@ -80,6 +80,7 @@ export const handleListPlans = createRoute({
 				legacyData: {
 					features: ctx.features,
 				},
+				ctx,
 			});
 		});
 

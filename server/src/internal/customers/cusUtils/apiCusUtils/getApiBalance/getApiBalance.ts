@@ -253,6 +253,7 @@ export const getApiBalance = ({
 	const rollovers = cusEntsToRollovers({ cusEnts, entityId });
 
 	const breakdownSet = cusEntsToBreakdown({ ctx, fullCus, cusEnts });
+	const masterKey = breakdownSet ? null : cusEntToKey({ cusEnt: cusEnts[0] });
 
 	const { data: apiBalance, error } = ApiBalanceSchema.safeParse({
 		feature: expandIncludes({
@@ -283,6 +284,8 @@ export const getApiBalance = ({
 
 		max_purchase: totalMaxPurchase,
 		reset: reset,
+
+		plan_id: breakdownSet ? null : cusEnts[0].customer_product.product.id,
 		breakdown: breakdownSet?.map((item) => item.breakdown),
 		rollovers,
 	} satisfies ApiBalance);
@@ -299,6 +302,7 @@ export const getApiBalance = ({
 	return {
 		data: apiBalance,
 		legacyData: {
+			key: masterKey,
 			prepaid_quantity: totalPrepaidQuantity,
 			breakdown_legacy_data: breakdownLegacyData ?? [],
 		},
