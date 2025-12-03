@@ -1,5 +1,6 @@
 import {
 	type FixedPriceConfig,
+	type Price,
 	type Product,
 	prices,
 	type UsagePriceConfig,
