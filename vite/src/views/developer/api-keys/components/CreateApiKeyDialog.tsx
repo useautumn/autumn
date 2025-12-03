@@ -2,6 +2,7 @@ import { Check, Copy } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod/v4";
 import { Button } from "@/components/v2/buttons/Button";
 import {
 	Dialog,
@@ -15,6 +16,10 @@ import { Input } from "@/components/v2/inputs/Input";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import { DevService } from "@/services/DevService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+
+const createApiKeySchema = z.object({
+	name: z.string().min(1, "Name is required"),
+});
 
 export const CreateApiKeyDialog = ({
 	open,
@@ -30,12 +35,14 @@ export const CreateApiKeyDialog = ({
 	const [name, setName] = useState("");
 	const [apiKey, setApiKey] = useState("");
 	const [copied, setCopied] = useState(false);
+	const [validationError, setValidationError] = useState<string | null>(null);
 
 	useEffect(() => {
 		if (open) {
 			setName("");
 			setApiKey("");
 			setCopied(false);
+			setValidationError(null);
 		} else if (!open) {
 			refetch();
 			setTimeout(() => {
@@ -45,12 +52,27 @@ export const CreateApiKeyDialog = ({
 	}, [open, refetch]);
 
 	useEffect(() => {
+		const result = createApiKeySchema.safeParse({ name });
+		if (!result.success) {
+			setValidationError(result.error.issues[0]?.message || null);
+		} else {
+			setValidationError(null);
+		}
+	}, [name]);
+
+	useEffect(() => {
 		if (copied) {
 			setTimeout(() => setCopied(false), 1000);
 		}
 	}, [copied]);
 
 	const handleCreate = async () => {
+		const result = createApiKeySchema.safeParse({ name });
+		if (!result.success) {
+			setValidationError(result.error.issues[0]?.message || null);
+			return;
+		}
+
 		setLoading(true);
 		try {
 			const { api_key } = await DevService.createAPIKey(axiosInstance, {
@@ -111,12 +133,12 @@ export const CreateApiKeyDialog = ({
 								bounce: 0.15,
 								duration: 0.3,
 							}}
-							className="flex justify-between bg-zinc-100 p-2 px-3 text-t2 rounded-md items-center"
+							className="flex justify-between bg-input/50 dark:bg-input/30 p-2 px-3 text-t2 rounded-md items-center"
 						>
 							<p className="text-sm">{apiKey}</p>
 							<button
 								type="button"
-								className="text-t2 hover:text-t2/80"
+								className="text-t2 hover:text-t2/80 cursor-pointer"
 								onClick={() => {
 									setCopied(true);
 									navigator.clipboard.writeText(apiKey);
@@ -142,7 +164,17 @@ export const CreateApiKeyDialog = ({
 								placeholder="Name"
 								value={name}
 								onChange={(e) => setName(e.target.value)}
+								variant={validationError ? "destructive" : undefined}
+								onKeyDown={(e) => {
+									if (e.key === "Enter" && name.trim() && !loading && !validationError) {
+										e.preventDefault();
+										handleCreate();
+									}
+								}}
 							/>
+							{validationError && (
+								<p className="mt-2 text-sm text-red-500">{validationError}</p>
+							)}
 						</motion.div>
 					)}
 				</AnimatePresence>
@@ -160,7 +192,7 @@ export const CreateApiKeyDialog = ({
 									duration: 0.2,
 								}}
 							>
-								<Button onClick={() => onOpenChange(false)}>Close</Button>
+								<Button onClick={() => onOpenChange(false)} className="cursor-pointer">Close</Button>
 							</motion.div>
 						) : (
 							<motion.div
@@ -178,6 +210,8 @@ export const CreateApiKeyDialog = ({
 									isLoading={loading}
 									onClick={handleCreate}
 									variant="primary"
+									className="cursor-pointer"
+									disabled={!!validationError || !name.trim()}
 								>
 									Create
 								</Button>

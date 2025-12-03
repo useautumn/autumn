@@ -1,5 +1,7 @@
 import type { ApiKey } from "@autumn/shared";
 import type { ColumnDef, Row } from "@tanstack/react-table";
+import { CalendarIcon } from "lucide-react";
+import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { APIKeyToolbar } from "./APIKeyToolbar";
 
 export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
@@ -24,6 +26,24 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 					) : (
 						<span className="px-1 text-t3">—</span>
 					)}
+				</div>
+			);
+		},
+	},
+	{
+		header: () => (
+			<div className="flex items-center gap-1.5">
+				<CalendarIcon size={14} className="text-t4" />
+				<span>Created</span>
+			</div>
+		),
+		accessorKey: "created_at",
+		size: 120,
+		cell: ({ row }: { row: Row<ApiKey> }) => {
+			const { date, time } = formatUnixToDateTime(row.original.created_at);
+			return (
+				<div className="text-xs text-t3 pr-4 w-full">
+					{date} <span className="truncate">{time}</span>
 				</div>
 			);
 		},
