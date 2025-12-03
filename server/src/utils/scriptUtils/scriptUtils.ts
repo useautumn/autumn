@@ -97,6 +97,65 @@ export const getAllStripeSubscriptions = async ({
 	};
 };
 
+export const getAllStripeProducts = async ({
+	numPages,
+	limit = 100,
+	stripeCli,
+	includeInactive = true,
+}: {
+	numPages?: number;
+	limit?: number;
+	stripeCli: Stripe;
+	includeInactive?: boolean;
+}) => {
+	const fetchProducts = async (active?: boolean) => {
+		let hasMore = true;
+		let startingAfter: string | null = null;
+		const products: Stripe.Product[] = [];
+
+		let pageCount = 0;
+		while (hasMore) {
+			const response: Stripe.ApiList<Stripe.Product> =
+				await stripeCli.products.list({
+					limit,
+					starting_after: startingAfter || undefined,
+					...(active !== undefined && { active }),
+				});
+
+			products.push(...response.data);
+
+			hasMore = response.has_more;
+			if (response.data.length > 0) {
+				startingAfter = response.data[response.data.length - 1].id;
+			} else {
+				hasMore = false;
+			}
+
+			pageCount++;
+			if (numPages && pageCount >= numPages) {
+				break;
+			}
+
+			console.log(
+				`Fetched ${products.length} ${active === false ? "inactive" : "active"} products`,
+			);
+			await timeout(500);
+		}
+
+		return products;
+	};
+
+	const activeProducts = await fetchProducts(true);
+	const inactiveProducts = includeInactive ? await fetchProducts(false) : [];
+
+	const allProducts = [...activeProducts, ...inactiveProducts];
+
+	return {
+		products: allProducts,
+		total: allProducts.length,
+	};
+};
+
 export const getCusSubsAndProducts = async (path: string) => {
 	const customers = JSON.parse(
 		fs.readFileSync(`${path}/customers.json`, "utf8"),
@@ -114,23 +173,33 @@ export const saveCusSubsAndProducts = async ({
 	path,
 	orgId,
 	env,
+	skipProducts = false,
+	skipSubs = false,
 }: {
 	stripeCli: Stripe;
 	path: string;
 	orgId: string;
 	env: AppEnv;
+	skipProducts?: boolean;
+	skipSubs?: boolean;
 }) => {
 	// Create directory if it doesn't exist
 	if (!fs.existsSync(path)) {
 		fs.mkdirSync(path, { recursive: true });
 	}
 
-	console.log("Fetching products...");
+	if (!skipProducts) {
+		console.log("Fetching products...");
 
-	const { data: products } = await stripeCli.products.list({
-		limit: 100,
-	});
-	fs.writeFileSync(`${path}/products.json`, JSON.stringify(products, null, 2));
+		const { products } = await getAllStripeProducts({
+			stripeCli,
+			includeInactive: true,
+		});
+		fs.writeFileSync(
+			`${path}/products.json`,
+			JSON.stringify(products, null, 2),
+		);
+	}
 
 	// console.log("Fetching customers...");
 	// const { customers } = await getAllStripeCustomers({
@@ -142,14 +211,16 @@ export const saveCusSubsAndProducts = async ({
 	// );
 
 	console.log("Fetching subscriptions...");
-	const { subscriptions } = await getAllStripeSubscriptions({
-		stripeCli,
-	});
+	if (!skipSubs) {
+		const { subscriptions } = await getAllStripeSubscriptions({
+			stripeCli,
+		});
 
-	fs.writeFileSync(
-		`${path}/subscriptions.json`,
-		JSON.stringify(subscriptions, null, 2),
-	);
+		fs.writeFileSync(
+			`${path}/subscriptions.json`,
+			JSON.stringify(subscriptions, null, 2),
+		);
+	}
 };
 
 export const initScript = async ({
