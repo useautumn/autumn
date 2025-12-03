@@ -159,6 +159,10 @@ export const GetBillingPortalBodySchema = z
 			description:
 				"Stripe billing portal configuration ID. Create configurations in your Stripe dashboard.",
 		}),
+		return_url: z.string().optional().meta({
+			description:
+				"URL to redirect to when back button is clicked in the billing portal",
+		}),
 	})
 	.optional();
 

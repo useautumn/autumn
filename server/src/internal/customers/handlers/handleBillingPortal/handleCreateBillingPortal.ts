@@ -19,7 +19,8 @@ export const handleCreateBillingPortal = createRoute({
 		const { db, org, env } = ctx;
 		const { return_url: returnUrl } = c.req.valid("query");
 		const { customer_id: customerId } = c.req.param();
-		const { configuration_id: configurationId } = c.req.valid("json") ?? {};
+		const { configuration_id: configurationId, return_url: returnUrl2 } =
+			c.req.valid("json") ?? {};
 
 		const customer = await CusService.get({
 			db,
@@ -35,7 +36,7 @@ export const handleCreateBillingPortal = createRoute({
 		const session = await createBillingPortalSession({
 			ctx,
 			customer,
-			returnUrl,
+			returnUrl: returnUrl2 || returnUrl,
 			configurationId,
 		});
 
