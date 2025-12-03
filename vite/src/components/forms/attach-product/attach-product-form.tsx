@@ -134,17 +134,22 @@ export function AttachProductForm({
 				<div className="space-y-2">
 					<AttachProductSelection form={form} customerId={customerId} />
 					<AttachProductPrepaidOptions form={form} />
+
 					{entityId ? (
-						<InfoBox variant="info">
-							Attaching plan to entity{" "}
-							<span className="font-semibold">
-								{fullEntity?.name || fullEntity?.id}
-							</span>
-						</InfoBox>
+						<div className="pt-2">
+							<InfoBox variant="info">
+								Attaching plan to entity{" "}
+								<span className="font-semibold">
+									{fullEntity?.name || fullEntity?.id}
+								</span>
+							</InfoBox>
+						</div>
 					) : entities.length > 0 ? (
-						<InfoBox variant="info">
-							Attaching plan to customer - all entities will get access
-						</InfoBox>
+						<div className="pt-2">
+							<InfoBox variant="info">
+								Attaching plan to customer - all entities will get access
+							</InfoBox>
+						</div>
 					) : null}
 				</div>
 			</SheetSection>
