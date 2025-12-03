@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: <> */
 import assert from "node:assert";
 import {
 	ApiVersion,
@@ -56,6 +57,7 @@ const compareActualItems = async ({
 	fullCus,
 	db,
 	phaseStartsAt,
+	subId,
 }: {
 	actualItems: any[];
 	expectedItems: any[];
@@ -63,6 +65,7 @@ const compareActualItems = async ({
 	fullCus: FullCustomer;
 	phaseStartsAt?: number;
 	db: DrizzleCli;
+	subId: string;
 }) => {
 	for (const expectedItem of expectedItems) {
 		let actualItem = actualItems.find((item: any) => {
@@ -176,7 +179,7 @@ const compareActualItems = async ({
 
 	assert(
 		actualItems.length === expectedItems.length,
-		`actual items length should be equals to expected items length`,
+		`actual items length should be equals to expected items length for sub ${subId}`,
 	);
 };
 
@@ -236,330 +239,343 @@ export const checkCusSubCorrect = async ({
 	if (allFree) return;
 
 	// 1. Only 1 sub ID available
-	let cusProducts = fullCus.customer_products;
+	const cusProducts = fullCus.customer_products;
 	const subIds = cusProductToSubIds({ cusProducts });
 
-	const subId = subIds[0];
+	for (const subId of subIds) {
+		// Filter to cusProducts with this specific subId (use const to avoid cumulative filtering)
+		const subCusProducts = cusProducts.filter((cp) =>
+			cp.subscription_ids?.includes(subId!),
+		);
 
-	assert(
-		subIds.length === 1,
-		`should only have 1 sub ID available for product ${cusProducts[0].product.name}, instead got ${subIds.length}`,
-	);
+		// Get the items that should be in the sub
+		const supposedSubItems = [];
 
-	cusProducts = cusProducts.filter((cp) =>
-		cp.subscription_ids?.includes(subId!),
-	);
-
-	// Get the items that should be in the sub
-	const supposedSubItems = [];
-
-	const scheduleUnixes = getUniqueUpcomingSchedulePairs({
-		cusProducts,
-		now: Date.now(),
-	});
-
-	const supposedPhases: any[] = scheduleUnixes.map((unix) => {
-		return {
-			start_date: unix, // milliseconds
-			items: [],
-		};
-	});
-
-	// console.log(`\n\nChecking sub correct`);
-	const printCusProduct = false;
-	if (printCusProduct) {
-		console.log(`\n\nChecking sub correct`);
-	}
-
-	for (const cusProduct of cusProducts) {
-		const prices = cusProductToPrices({ cusProduct });
-		const ents = cusProductToEnts({ cusProduct });
-		const product = cusProductToProduct({ cusProduct });
-
-		// Add to schedules
-		const scheduleIndexes: number[] = [];
-		const apiVersion = cusProduct.api_semver || defaultApiVersion;
-
-		if (isFreeProduct(product.prices)) {
-			assert(
-				cusProduct.subscription_ids?.length === 0,
-				"free product should have no subs",
-			);
-			continue;
-		}
-
-		if (printCusProduct) {
-			console.log(
-				`Cus product: ${cusProduct.product.name}, Status: ${cusProduct.status}, Entity ID: ${cusProduct.entity_id}`,
-			);
-			console.log(`Starts at: ${formatUnixToDateTime(cusProduct.starts_at)}`);
-		}
-
-		scheduleUnixes.forEach((unix, index) => {
-			if (
-				cusProduct.status === CusProductStatus.Scheduled &&
-				cusProductInPhase({ phaseStartMillis: unix, cusProduct })
-			) {
-				scheduleIndexes.push(index);
-				return;
-			}
-
-			if (cusProduct.status === CusProductStatus.Scheduled) return;
-
-			if (cusProduct.product.is_add_on) {
-				// 1. If it's canceled
-				if (cusProduct.canceled && (cusProduct.ended_at || 0) > unix) {
-					scheduleIndexes.push(index);
-					return;
-				} else if (!cusProduct.canceled) {
-					scheduleIndexes.push(index);
-					return;
-				}
-
-				return;
-			}
-
-			// 2. If main product, check that schedule is AFTER this phase
-			const curScheduledProduct = cusProducts.find(
-				(cp) =>
-					cp.product.group === product.group &&
-					cp.status === CusProductStatus.Scheduled &&
-					(cp.internal_entity_id
-						? cp.internal_entity_id === cusProduct.internal_entity_id
-						: nullish(cp.internal_entity_id)),
-			);
-
-			if (!curScheduledProduct) {
-				scheduleIndexes.push(index);
-				return;
-			}
-
-			// If scheduled product NOT in phase, add main product to schedule
-			if (
-				!cusProductInPhase({
-					phaseStartMillis: unix,
-					cusProduct: curScheduledProduct,
-				})
-			) {
-				scheduleIndexes.push(index);
-			}
+		const scheduleUnixes = getUniqueUpcomingSchedulePairs({
+			cusProducts: subCusProducts,
+			now: Date.now(),
 		});
 
+		const supposedPhases: any[] = scheduleUnixes.map((unix) => {
+			return {
+				start_date: unix, // milliseconds
+				items: [],
+			};
+		});
+
+		// console.log(`\n\nChecking sub correct`);
+		const printCusProduct = false;
 		if (printCusProduct) {
-			console.log(`Schedule indexes:`, scheduleIndexes);
-			console.log("--------------------------------");
+			console.log(`\n\nChecking sub correct`);
 		}
 
-		// const hasScheduledProduct =
-		cusProduct.status !== CusProductStatus.Scheduled &&
-			!cusProduct.product.is_add_on &&
-			cusProducts.some(
-				(cp) =>
-					cp.product.group === product.group &&
-					ACTIVE_STATUSES.includes(cp.status),
-			);
+		for (const cusProduct of subCusProducts) {
+			const prices = cusProductToPrices({ cusProduct });
+			const ents = cusProductToEnts({ cusProduct });
+			const product = cusProductToProduct({ cusProduct });
 
-		const addToSub = cusProduct.status !== CusProductStatus.Scheduled;
+			// Add to schedules
+			const scheduleIndexes: number[] = [];
+			const apiVersion = cusProduct.api_semver || defaultApiVersion;
 
-		for (const price of prices) {
-			if (isOneOffPrice({ price })) continue;
-
-			const relatedEnt = getPriceEntitlement(price, ents);
-			const options = getPriceOptions(price, cusProduct.options);
-			const existingUsage = getExistingUsageFromCusProducts({
-				entitlement: relatedEnt,
-				cusProducts,
-				entities: fullCus.entities,
-				carryExistingUsages: true,
-				internalEntityId: cusProduct.internal_entity_id || undefined,
-			});
-
-			const res = priceToStripeItem({
-				price,
-				relatedEnt,
-				product,
-				org,
-				options,
-				existingUsage,
-				withEntity: !!cusProduct.internal_entity_id,
-				isCheckout: false,
-				apiVersion,
-				productOptions: cusProduct.quantity
-					? {
-							product_id: product.id,
-							quantity: Number(cusProduct.quantity || 1),
-						}
-					: undefined,
-			});
-
-			if (res?.lineItem && nullish(res.lineItem.quantity)) {
-				res.lineItem.quantity = 0;
+			if (isFreeProduct(product.prices)) {
+				assert(
+					cusProduct.subscription_ids?.length === 0,
+					"free product should have no subs",
+				);
+				continue;
 			}
 
-			// console.log("API VERSION:", apiVersion);
-			// console.log("LINE ITEM:", res?.lineItem);
-			if (options?.upcoming_quantity && res?.lineItem) {
-				res.lineItem.quantity = options.upcoming_quantity;
+			if (printCusProduct) {
+				console.log(
+					`Cus product: ${cusProduct.product.name}, Status: ${cusProduct.status}, Entity ID: ${cusProduct.entity_id}`,
+				);
+				console.log(`Starts at: ${formatUnixToDateTime(cusProduct.starts_at)}`);
 			}
 
-			const lineItem: any = res?.lineItem;
-			if (lineItem && res?.lineItem) {
-				lineItem.quantity = Math.max(lineItem.quantity, 0);
-				if (addToSub) {
-					const existingIndex = supposedSubItems.findIndex(
-						(si: any) => si.price === lineItem.price,
-					);
-
-					if (existingIndex !== -1) {
-						supposedSubItems[existingIndex].quantity += lineItem.quantity;
-					} else {
-						supposedSubItems.push({
-							...res.lineItem,
-							priceStr: `${product.id}-${formatPrice({ price })}`,
-							stripeProdId: product.processor?.id,
-							autumnPrice: price,
-						});
-					}
+			scheduleUnixes.forEach((unix, index) => {
+				if (
+					cusProduct.status === CusProductStatus.Scheduled &&
+					cusProductInPhase({ phaseStartMillis: unix, cusProduct })
+				) {
+					scheduleIndexes.push(index);
+					return;
 				}
 
-				for (const scheduleIndex of scheduleIndexes) {
-					const phase = supposedPhases[scheduleIndex];
-					const existingIndex = phase.items.findIndex(
-						(item: any) => item.price === lineItem.price,
-					);
+				if (cusProduct.status === CusProductStatus.Scheduled) return;
 
-					if (existingIndex !== -1) {
-						phase.items[existingIndex].quantity += lineItem.quantity!;
-					} else {
-						phase.items.push({
-							price: lineItem.price,
-							quantity: lineItem.quantity!,
-						});
+				if (cusProduct.product.is_add_on) {
+					// 1. If it's canceled
+					if (cusProduct.canceled && (cusProduct.ended_at || 0) > unix) {
+						scheduleIndexes.push(index);
+						return;
+					} else if (!cusProduct.canceled) {
+						scheduleIndexes.push(index);
+						return;
 					}
+
+					return;
 				}
-			}
-		}
-	}
 
-	const sub = subs.find((sub) => sub.id === subId);
-	assert(!!sub, `Sub ${subId} should exist`);
+				// 2. If main product, check that schedule is AFTER this phase
+				const curScheduledProduct = subCusProducts.find(
+					(cp) =>
+						cp.product.group === product.group &&
+						cp.status === CusProductStatus.Scheduled &&
+						(cp.internal_entity_id
+							? cp.internal_entity_id === cusProduct.internal_entity_id
+							: nullish(cp.internal_entity_id)),
+				);
 
-	const actualItems = sub!.items.data.map((item: any) => ({
-		id: item.id,
-		price: item.price.id,
-		quantity: item.quantity || 0,
-		stripeProdId: item.price.product,
-	}));
+				if (!curScheduledProduct) {
+					scheduleIndexes.push(index);
+					return;
+				}
 
-	// console.log("Actual items:");
-	// await logPhaseItems({
-	//   db,
-	//   items: actualItems,
-	// });
-	// console.log("Expected items:");
-	// await logPhaseItems({
-	//   db,
-	//   items: actualItems,
-	// });
-
-	await compareActualItems({
-		actualItems,
-		expectedItems: supposedSubItems,
-		type: "sub",
-		fullCus,
-		db,
-	});
-
-	// Should be canceled
-
-	const cusSubShouldBeCanceled = cusProducts.every((cp) => {
-		if (cp.subscription_ids?.includes(subId!)) {
-			// 1. Get scheduled product
-
-			const { curScheduledProduct } = getExistingCusProducts({
-				cusProducts: fullCus.customer_products,
-				product: cp.product,
-				internalEntityId: cp.internal_entity_id,
+				// If scheduled product NOT in phase, add main product to schedule
+				if (
+					!cusProductInPhase({
+						phaseStartMillis: unix,
+						cusProduct: curScheduledProduct,
+					})
+				) {
+					scheduleIndexes.push(index);
+				}
 			});
 
-			if (curScheduledProduct) {
-				const scheduledProduct = cusProductToProduct({
-					cusProduct: curScheduledProduct,
+			if (printCusProduct) {
+				console.log(`Schedule indexes:`, scheduleIndexes);
+				console.log("--------------------------------");
+			}
+
+			// const hasScheduledProduct =
+			cusProduct.status !== CusProductStatus.Scheduled &&
+				!cusProduct.product.is_add_on &&
+				subCusProducts.some(
+					(cp) =>
+						cp.product.group === product.group &&
+						ACTIVE_STATUSES.includes(cp.status),
+				);
+
+			const addToSub = cusProduct.status !== CusProductStatus.Scheduled;
+
+			for (const price of prices) {
+				if (isOneOffPrice({ price })) continue;
+
+				const relatedEnt = getPriceEntitlement(price, ents);
+				const options = getPriceOptions(price, cusProduct.options);
+				const existingUsage = getExistingUsageFromCusProducts({
+					entitlement: relatedEnt,
+					cusProducts: subCusProducts,
+					entities: fullCus.entities,
+					carryExistingUsages: true,
+					internalEntityId: cusProduct.internal_entity_id || undefined,
 				});
 
-				if (!isFreeProduct(scheduledProduct.prices)) {
-					return false;
+				const res = priceToStripeItem({
+					price,
+					relatedEnt,
+					product,
+					org,
+					options,
+					existingUsage,
+					withEntity: !!cusProduct.internal_entity_id,
+					isCheckout: false,
+					apiVersion,
+					productOptions: cusProduct.quantity
+						? {
+								product_id: product.id,
+								quantity: Number(cusProduct.quantity || 1),
+							}
+						: undefined,
+				});
+
+				if (res?.lineItem && nullish(res.lineItem.quantity)) {
+					res.lineItem.quantity = 0;
+				}
+
+				// console.log("API VERSION:", apiVersion);
+				// console.log("LINE ITEM:", res?.lineItem);
+				if (options?.upcoming_quantity && res?.lineItem) {
+					res.lineItem.quantity = options.upcoming_quantity;
+				}
+
+				const lineItem: any = res?.lineItem;
+				if (lineItem && res?.lineItem) {
+					lineItem.quantity = Math.max(lineItem.quantity, 0);
+					if (addToSub) {
+						const existingIndex = supposedSubItems.findIndex(
+							(si: any) => si.price === lineItem.price,
+						);
+
+						if (existingIndex !== -1) {
+							supposedSubItems[existingIndex].quantity += lineItem.quantity;
+						} else {
+							supposedSubItems.push({
+								...res.lineItem,
+								priceStr: `${product.id}-${formatPrice({ price })}`,
+								stripeProdId: product.processor?.id,
+								autumnPrice: price,
+							});
+						}
+					}
+
+					for (const scheduleIndex of scheduleIndexes) {
+						const phase = supposedPhases[scheduleIndex];
+						const existingIndex = phase.items.findIndex(
+							(item: any) => item.price === lineItem.price,
+						);
+
+						if (existingIndex !== -1) {
+							phase.items[existingIndex].quantity += lineItem.quantity!;
+						} else {
+							phase.items.push({
+								price: lineItem.price,
+								quantity: lineItem.quantity!,
+							});
+						}
+					}
 				}
 			}
-
-			return cp.canceled;
 		}
 
-		return true;
-	});
+		const sub = subs.find((sub) => sub.id === subId);
+		assert(!!sub, `Sub ${subId} should exist`);
 
-	const finalShouldBeCanceled = cusSubShouldBeCanceled;
+		const actualItems = sub!.items.data.map((item: any) => ({
+			id: item.id,
+			price: item.price.id,
+			quantity: item.quantity || 0,
+			stripeProdId: item.price.product,
+		}));
 
-	if (finalShouldBeCanceled) {
-		assert(!sub!.schedule, `sub ${subId} should NOT have a schedule`);
-		assert(subIsCanceled({ sub: sub! }), `sub ${subId} should be canceled`);
-		return;
-	}
-
-	const schedule =
-		supposedPhases.length > 0
-			? schedules.find((s) => s.id === sub!.schedule)
-			: null;
-
-	// console.log("--------------------------------");
-	// console.log("Supposed phases:");
-	// await logPhases({
-	//   phases: supposedPhases,
-	//   db,
-	// });
-
-	// console.log("--------------------------------");
-	// console.log("Actual phases:");
-
-	// await logPhases({
-	//   phases: (schedule?.phases as any) || [],
-	//   db,
-	// });
-
-	for (let i = 0; i < supposedPhases.length; i++) {
-		const supposedPhase = supposedPhases[i];
-
-		if (supposedPhase.items.length === 0) continue;
-
-		const actualPhase = schedule?.phases?.[i + 1];
-		assert(
-			(schedule?.phases.length ?? 0) > i + 1,
-			`Schedule should have more than ${i + 1} phases`,
-		);
-
-		assert(
-			similarUnix({
-				unix1: supposedPhase.start_date,
-				unix2: actualPhase!.start_date * 1000,
-			}),
-			`Phase ${i} start date mismatch`,
-		);
-
-		const actualItems =
-			actualPhase?.items.map((item) => ({
-				price: (item.price as Stripe.Price).id,
-				quantity: item.quantity,
-			})) || [];
+		// console.log("Actual items:");
+		// await logPhaseItems({
+		//   db,
+		//   items: actualItems,
+		// });
+		// console.log("Expected items:");
+		// await logPhaseItems({
+		//   db,
+		//   items: actualItems,
+		// });
 
 		await compareActualItems({
 			actualItems,
-			expectedItems: supposedPhase.items,
-			type: "schedule",
+			expectedItems: supposedSubItems,
+			type: "sub",
 			fullCus,
 			db,
-			phaseStartsAt: supposedPhase.start_date,
+			subId,
 		});
-	}
 
-	assert(!sub!.cancel_at, `sub ${subId} should not be canceled`);
+		// Should be canceled
+
+		const cusSubShouldBeCanceled = subCusProducts.every((cp) => {
+			if (cp.subscription_ids?.includes(subId!)) {
+				// 1. Get scheduled product
+
+				const { curScheduledProduct } = getExistingCusProducts({
+					cusProducts: fullCus.customer_products,
+					product: cp.product,
+					internalEntityId: cp.internal_entity_id,
+				});
+
+				if (curScheduledProduct) {
+					const scheduledProduct = cusProductToProduct({
+						cusProduct: curScheduledProduct,
+					});
+
+					if (!isFreeProduct(scheduledProduct.prices)) {
+						return false;
+					}
+				}
+
+				return cp.canceled;
+			}
+
+			return true;
+		});
+
+		const finalShouldBeCanceled = cusSubShouldBeCanceled;
+
+		if (finalShouldBeCanceled) {
+			assert(!sub!.schedule, `sub ${subId} should NOT have a schedule`);
+			assert(subIsCanceled({ sub: sub! }), `sub ${subId} should be canceled`);
+			continue;
+		}
+
+		const schedule =
+			supposedPhases.length > 0
+				? schedules.find((s) => s.id === sub!.schedule)
+				: null;
+
+		// console.log("--------------------------------");
+		// console.log("Supposed phases:");
+		// await logPhases({
+		//   phases: supposedPhases,
+		//   db,
+		// });
+
+		// console.log("--------------------------------");
+		// console.log("Actual phases:");
+
+		// await logPhases({
+		//   phases: (schedule?.phases as any) || [],
+		//   db,
+		// });
+
+		for (let i = 0; i < supposedPhases.length; i++) {
+			const supposedPhase = supposedPhases[i];
+
+			if (supposedPhase.items.length === 0) continue;
+
+			const actualPhase = schedule?.phases?.[i + 1];
+			assert(
+				(schedule?.phases.length ?? 0) > i + 1,
+				`Schedule should have more than ${i + 1} phases`,
+			);
+
+			assert(
+				similarUnix({
+					unix1: supposedPhase.start_date,
+					unix2: actualPhase!.start_date * 1000,
+				}),
+				`Phase ${i} start date mismatch`,
+			);
+
+			const actualItems =
+				actualPhase?.items.map((item) => ({
+					price: (item.price as Stripe.Price).id,
+					quantity: item.quantity,
+				})) || [];
+
+			await compareActualItems({
+				actualItems,
+				expectedItems: supposedPhase.items,
+				type: "schedule",
+				fullCus,
+				db,
+				phaseStartsAt: supposedPhase.start_date,
+				subId,
+			});
+		}
+
+		assert(
+			!sub!.cancel_at,
+			`sub ${subId} should not be canceled, was cancelled at ${
+				sub!.cancel_at
+					? new Date(
+							sub!.cancel_at > 1e12 ? sub!.cancel_at : sub!.cancel_at * 1000,
+						).toLocaleString("en-GB", {
+							day: "numeric",
+							month: "short",
+							year: "numeric",
+							hour: "2-digit",
+							minute: "2-digit",
+						})
+					: sub!.cancel_at
+			}`,
+		);
+	}
 };
