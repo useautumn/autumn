@@ -18,7 +18,7 @@ import { OrgService } from "../orgs/OrgService.js";
 import { clearOrgCache } from "../orgs/orgUtils/clearOrgCache.js";
 import { isStripeConnected } from "../orgs/orgUtils.js";
 import { ApiKeyService } from "./ApiKeyService.js";
-import { createKey } from "./api-keys/apiKeyUtils.js";
+import { createApiKeyCreateSchema, createKey } from "./api-keys/apiKeyUtils.js";
 
 export const devRouter: Router = Router();
 
@@ -55,6 +55,12 @@ devRouter.post("/api_key", withOrgAuth, async (req: any, res) =>
 		handler: async (req: any, res: any) => {
 			const { db, env, orgId } = req;
 			const { name } = req.body;
+
+			const result = createApiKeyCreateSchema.safeParse(req.body);
+			if (!result.success) {
+				res.status(400).json({ error: result.error.message });
+				return;
+			}
 
 			// 1. Create API key
 			let prefix = "am_sk_test";

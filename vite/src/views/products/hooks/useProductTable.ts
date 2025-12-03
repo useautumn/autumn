@@ -2,6 +2,7 @@ import {
 	type ColumnDef,
 	getCoreRowModel,
 	getFilteredRowModel,
+	getSortedRowModel,
 	type TableOptions,
 	useReactTable,
 } from "@tanstack/react-table";
@@ -19,13 +20,14 @@ export function useProductTable<TData>({
 	columns: ColumnDef<TData, unknown>[];
 	options?: Partial<TableOptions<TData>>;
 }) {
-	const enableSorting = false;
+	const enableSorting = options.enableSorting ?? false;
 
 	return useReactTable({
 		data,
 		columns,
 		getCoreRowModel: getCoreRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
+		...(enableSorting && { getSortedRowModel: getSortedRowModel() }),
 		enableSorting,
 		...options,
 	});

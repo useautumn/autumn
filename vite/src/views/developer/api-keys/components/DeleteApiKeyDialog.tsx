@@ -61,7 +61,7 @@ export const DeleteApiKeyDialog = ({
 					<DialogTitle>Delete API Key</DialogTitle>
 					<DialogDescription>
 						To confirm the deletion of this API key, type{" "}
-						<span className="font-bold">{apiKey.name}</span> below
+						<span className="font-bold">"{apiKey.name}"</span> below
 					</DialogDescription>
 				</DialogHeader>
 				<Input
