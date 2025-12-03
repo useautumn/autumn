@@ -18,8 +18,27 @@ env:
   ECR_REPOSITORY: autumn  # Change to your ECR repository name
 
 jobs:
+  checks:
+    name: Type Check # To add: Lint check
+    runs-on: blacksmith-16vcpu-ubuntu-2404
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+      
+      - name: Install dependencies
+        run: bun install
+      
+      - name: Run TypeScript type check
+        run: |
+          cd server && bun ts
+
   build-and-push:
     name: Build and Push Docker Image
+    needs: checks
     runs-on: blacksmith-16vcpu-ubuntu-2404
     
     permissions:
