@@ -25,6 +25,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
+      pull-requests: read
     
     steps:
       - name: Checkout code
@@ -93,3 +94,29 @@ jobs:
           echo "✅ Image pushed successfully!"
           echo "📦 Repository: ${ECR_REGISTRY}/${ECR_REPOSITORY}"
           echo "🏷️  Tag: ${COMBINED_TAG}"
+
+      - name: Auto-deploy fix branches
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEPLOY_URL: ${{ secrets.INFRA_DEPLOY_URL }}
+          DEPLOY_SECRET: ${{ secrets.INFRA_DEPLOY_SECRET }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          # Get the PR that was merged (if any)
+          PR_DATA=$(gh pr list --state merged --search "$COMMIT_SHA" --json headRefName --limit 1)
+          BRANCH_NAME=$(echo "$PR_DATA" | jq -r '.[0].headRefName // empty')
+          
+          if [[ "$BRANCH_NAME" == fix/* ]]; then
+            echo "🚀 Detected merged fix/ branch: $BRANCH_NAME"
+            echo "🔄 Triggering auto-deploy..."
+            
+            curl -X POST "$DEPLOY_URL/api/deploy/github" \
+              -H "Content-Type: application/json" \
+              -H "x-deploy-secret: $DEPLOY_SECRET" \
+              -d "{\"commitSha\": \"$COMMIT_SHA\", \"deploymentType\": \"server\"}"
+            
+            echo "✅ Auto-deploy triggered!"
+          else
+            echo "ℹ️ Not a fix/ branch (branch: ${BRANCH_NAME:-direct push}), skipping auto-deploy"
+          fi

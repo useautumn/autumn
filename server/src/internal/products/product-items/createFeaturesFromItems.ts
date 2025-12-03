@@ -7,14 +7,14 @@ import {
 	type ProductItem,
 	ProductItemFeatureType,
 } from "@autumn/shared";
-import { validateFeatureId } from "@/internal/features/featureUtils.js";
+import { validateFeatureId } from "@server/internal/features/featureUtils";
 import {
 	constructBooleanFeature,
 	constructMeteredFeature,
-} from "@/internal/features/utils/constructFeatureUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { nullish } from "@/utils/genUtils.js";
-import { isBooleanFeatureItem } from "./productItemUtils/getItemType.js";
+} from "@server/internal/features/utils/constructFeatureUtils";
+import { isBooleanFeatureItem } from "@server/internal/products/product-items/productItemUtils/getItemType";
+import RecaseError from "@server/utils/errorUtils";
+import { nullish } from "@server/utils/genUtils";
 
 export const createFeaturesFromItems = ({
 	items,

@@ -1,6 +1,6 @@
 import type { AppEnv, EventInsert, Price } from "@autumn/shared";
 import { SendMessageCommand } from "@aws-sdk/client-sqs";
-import { generateId } from "@/utils/genUtils.js";
+import { generateId } from "@server/utils/genUtils";
 import { JobName } from "./JobName.js";
 
 export interface Payloads {
