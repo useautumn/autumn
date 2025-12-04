@@ -43,7 +43,7 @@ export function useAttachPreview(params: AttachPreviewParams = {}) {
 	useEffect(() => {
 		const timer = setTimeout(() => {
 			setDebouncedQueryKey(queryKeyDeps);
-		}, 150);
+		}, 300);
 		return () => clearTimeout(timer);
 	}, [queryKeyDeps]);
 
