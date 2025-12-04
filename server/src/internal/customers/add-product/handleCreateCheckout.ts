@@ -118,7 +118,7 @@ export const handleCreateCheckout = async ({
 			discounts: rewards.map((r) =>
 				shouldShowAsPromotionCode
 					? {
-							promotion_code: r.promo_codes[0].code,
+							promotion_code: r.promo_codes[0].code, // should be id which we don't store right now
 						}
 					: {
 							discounts: rewards.map((r) => ({ coupon: r.id })),
