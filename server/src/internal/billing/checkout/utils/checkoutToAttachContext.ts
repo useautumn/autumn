@@ -3,6 +3,8 @@ import type {
 	AttachConfig,
 	AttachFunction,
 	CheckoutParamsV0,
+	Entitlement,
+	Price,
 } from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
 import { getAttachParams } from "../../../customers/attach/attachUtils/attachParams/getAttachParams";
@@ -24,8 +26,10 @@ export const checkoutToAttachContext = async ({
 	branch: AttachBranch;
 	config: AttachConfig;
 	func: AttachFunction;
+	customPrices: Price[];
+	customEnts: Entitlement[];
 }> => {
-	const { attachParams } = await getAttachParams({
+	const { attachParams, customPrices, customEnts } = await getAttachParams({
 		ctx,
 		attachBody: checkoutParams,
 	});
@@ -57,5 +61,7 @@ export const checkoutToAttachContext = async ({
 		branch,
 		config,
 		func,
+		customPrices: customPrices || [],
+		customEnts: customEnts || [],
 	};
 };
