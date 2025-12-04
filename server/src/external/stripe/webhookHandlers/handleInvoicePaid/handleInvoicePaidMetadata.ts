@@ -23,6 +23,12 @@ export const handleInvoicePaidMetadata = async ({
 
 	if (!metadata) return;
 
+	const reqMatch =
+		metadata.data.org?.id === ctx.org.id &&
+		metadata.data.customer?.env === ctx.env;
+
+	if (!reqMatch) return;
+
 	if (metadata.type === MetadataType.InvoiceActionRequired) {
 		await handleInvoiceActionRequiredCompleted({
 			ctx,
@@ -36,10 +42,5 @@ export const handleInvoicePaidMetadata = async ({
 	await handleInvoiceCheckoutPaid({
 		ctx,
 		metadata,
-	});
-
-	await MetadataService.delete({
-		db: ctx.db,
-		id: metadata.id,
 	});
 };

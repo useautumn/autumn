@@ -98,9 +98,13 @@ const handleStripeWebhookRefresh = async ({
 			return;
 		}
 
-		// console.log(
-		// 	`Attempting to refresh cache for customer: ${cus.id}, env: ${env}`,
-		// );
+		const orgMatch = cus?.org_id === org.id && cus?.env === env;
+		if (!orgMatch) {
+			logger.warn(
+				`Customer org or env mismatch, skipping cache refresh: ${cus?.org_id} !== ${org.id} || ${cus?.env} !== ${env}`,
+			);
+			return;
+		}
 
 		let fullCus: FullCustomer | undefined;
 		if (
