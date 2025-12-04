@@ -1,6 +1,7 @@
 import { MetadataType } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
+import type { AttachParams } from "../../../../internal/customers/cusProducts/AttachParams";
 import { MetadataService } from "../../../../internal/metadata/MetadataService";
 import { handleInvoiceActionRequiredCompleted } from "./handleInvoiceActionRequiredCompleted";
 import { handleInvoiceCheckoutPaid } from "./handleInvoiceCheckoutPaid";
@@ -23,9 +24,9 @@ export const handleInvoicePaidMetadata = async ({
 
 	if (!metadata) return;
 
+	const data = metadata.data as unknown as AttachParams;
 	const reqMatch =
-		metadata.data.org?.id === ctx.org.id &&
-		metadata.data.customer?.env === ctx.env;
+		data.org?.id === ctx.org.id && data.customer?.env === ctx.env;
 
 	if (!reqMatch) return;
 
