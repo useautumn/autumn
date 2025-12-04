@@ -12,10 +12,7 @@ import { handleCreateCheckout } from "@/internal/customers/add-product/handleCre
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { newPriceToInvoiceDescription } from "@/internal/invoices/invoiceFormatUtils.js";
 import { buildInvoiceMemoFromEntitlements } from "@/internal/invoices/invoiceMemoUtils.js";
-import {
-	attachToInvoiceResponse,
-	insertInvoiceFromAttach,
-} from "@/internal/invoices/invoiceUtils.js";
+import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
 import { orgToCurrency } from "@/internal/orgs/orgUtils.js";
 import { priceToProduct } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
@@ -222,27 +219,7 @@ export const handleOneOffFunction = async ({
 	return AttachFunctionResponseSchema.parse({
 		// success: true,
 		message: `Successfully purchased product(s) ${productNames} and attached to customer ${customerName}`,
-		invoice: invoiceOnly
-			? attachToInvoiceResponse({ invoice: stripeInvoice })
-			: undefined,
+		invoice: invoiceOnly ? stripeInvoice : undefined,
 		code: SuccessCode.OneOffProductAttached,
-		// product_ids: products.map((p) => p.id),
-		// customer_id: customer.id || customer.internal_id,
-		// scenario: AttachScenario.New,
 	});
-	// if (res) {
-	// 	res.status(200).json(
-	// 		AttachResultSchema.parse({
-	// 			success: true,
-	// 			message: `Successfully purchased ${productNames} and attached to ${customerName}`,
-	// 			invoice: invoiceOnly
-	// 				? attachToInvoiceResponse({ invoice: stripeInvoice })
-	// 				: undefined,
-	// 			code: SuccessCode.OneOffProductAttached,
-	// 			product_ids: products.map((p) => p.id),
-	// 			customer_id: customer.id || customer.internal_id,
-	// 			scenario: AttachScenario.New,
-	// 		}),
-	// 	);
-	// }
 };
