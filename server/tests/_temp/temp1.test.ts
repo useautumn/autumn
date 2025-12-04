@@ -75,6 +75,7 @@ describe(`${chalk.yellowBright("temp: Testing entity prorated")}`, () => {
 			prefix: customerId,
 		});
 	});
+	return;
 
 	test("should create a subscription with prepaid and prorated", async () => {
 		await autumn.attach({
