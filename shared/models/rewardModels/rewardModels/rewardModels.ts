@@ -34,6 +34,8 @@ const RewardSchema = z.object({
 	org_id: z.string(),
 	env: z.string(),
 	created_at: z.number(),
+
+	show_as_promo_code_in_checkout: z.boolean().default(true),
 });
 
 export const CreateRewardSchema = z.object({

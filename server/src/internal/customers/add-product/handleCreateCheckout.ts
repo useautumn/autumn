@@ -3,6 +3,7 @@ import {
 	AttachFunctionResponseSchema,
 	MetadataType,
 	RecaseError,
+	RewardType,
 	SuccessCode,
 } from "@autumn/shared";
 import type Stripe from "stripe";
@@ -108,11 +109,27 @@ export const handleCreateCheckout = async ({
 			: checkoutParams?.allow_promotion_codes || true;
 
 	let rewardData = {};
+	const shouldShowAsPromotionCode = rewards?.some(
+		(r) => r.show_as_promo_code_in_checkout === true,
+	);
+
 	if (rewards) {
 		rewardData = {
-			discounts: rewards.map((r) => ({ coupon: r.id })),
+			discounts: rewards.map((r) =>
+				shouldShowAsPromotionCode
+					? {
+							promotion_code: r.promo_codes[0].code,
+						}
+					: {
+							discounts: rewards.map((r) => ({ coupon: r.id })),
+						},
+			),
 		};
 	}
+	// test hard coded promo code -- should delete once tested
+	// rewardData = {
+	// 	discounts: [{ promotion_code: "promo_1SaNVt3eK6UJHsh1AQlI4zVt" }],
+	// };
 
 	// Prepare checkout session parameters
 	let checkout: Stripe.Checkout.Session | undefined;

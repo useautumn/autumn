@@ -1,6 +1,7 @@
 import {
 	type AppEnv,
 	ErrCode,
+	notNullish,
 	type Reward,
 	type RewardType,
 	rewards,
@@ -70,7 +71,7 @@ export class RewardService {
 		orgId: string;
 		env: AppEnv;
 	}) {
-		const reward = await db.query.rewards.findMany({
+		const rewardResults = await db.query.rewards.findMany({
 			where: and(
 				eq(rewards.org_id, orgId),
 				eq(rewards.env, env),
@@ -86,7 +87,16 @@ export class RewardService {
 			),
 		});
 
-		return reward as Reward[];
+		const codesSet = new Set(codes);
+		return rewardResults.map((reward) => {
+			const matchedById = notNullish(reward.id)
+				? codesSet.has(reward.id)
+				: false;
+			return {
+				...reward,
+				show_as_promo_code_in_checkout: matchedById,
+			} as Reward;
+		});
 	}
 
 	static async insert({
