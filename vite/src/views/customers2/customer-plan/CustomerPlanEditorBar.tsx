@@ -59,7 +59,7 @@ export const CustomerPlanEditorBar = () => {
 
 		//navigate back to the customer plan page
 		pushPage({
-			path: `/customers/${customer?.id}/`,
+			path: `/customers/${customer?.id ?? customer?.internal_id}/`,
 			navigate,
 			preserveParams: false,
 		});
