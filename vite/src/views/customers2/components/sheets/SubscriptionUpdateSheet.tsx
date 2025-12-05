@@ -30,7 +30,7 @@ const FormContent = ({
 	form: UseAttachProductForm;
 }) => {
 	const { customer } = useCusQuery();
-	const customerId = customer?.id;
+	const customerId = customer?.id ?? customer?.internal_id;
 	const storeProduct = useProductStore((s) => s.product);
 	const product = storeProduct?.id ? storeProduct : (productV2 ?? undefined);
 	const entityId = cusProduct?.entity_id ?? undefined;
