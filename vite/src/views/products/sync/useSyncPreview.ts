@@ -45,6 +45,7 @@ export type SyncPreviewResponse = {
 	};
 	features: { new: { id: string; name: string }[] };
 	defaultConflict: { source: string; target: string } | null;
+	defaultWithPrices: { id: string; name: string }[];
 	customersAffected: { productId: string; productName: string; customerCount: number }[];
 };
 

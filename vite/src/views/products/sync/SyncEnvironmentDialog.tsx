@@ -73,6 +73,10 @@ export const SyncEnvironmentDialog = (props: SyncEnvironmentDialogProps) => {
 	const p = preview?.products;
 	const f = preview?.features;
 	const hasChangesToSync = (p?.new?.length ?? 0) > 0 || (p?.updated?.length ?? 0) > 0 || (f?.new?.length ?? 0) > 0;
+	const hasBlockingIssues =
+		!!preview?.defaultConflict ||
+		(preview?.defaultWithPrices?.length ?? 0) > 0 ||
+		(preview?.customersAffected?.length ?? 0) > 0;
 
 	return (
 		<Dialog open={props.open} onOpenChange={handleOpenChange}>
@@ -99,10 +103,15 @@ export const SyncEnvironmentDialog = (props: SyncEnvironmentDialogProps) => {
 										{preview.defaultConflict.target}" in {targetEnvName}.
 									</WarningBox>
 								)}
+								{preview?.defaultWithPrices?.map((product) => (
+									<WarningBox key={product.id}>
+										Cannot sync: "{product.name}" is default but has prices. Remove default or prices first.
+									</WarningBox>
+								))}
 								{preview?.customersAffected?.map((c) => (
 									<WarningBox key={c.productId}>
-										{c.customerCount} customer{c.customerCount === 1 ? "" : "s"} on product{" "}
-										{c.productName} will remain on the old version until migrated.
+										Cannot sync: {c.customerCount} customer{c.customerCount === 1 ? "" : "s"} on "{c.productName}".
+										Migrate customers first.
 									</WarningBox>
 								))}
 								{p?.new?.map((product) => {
@@ -233,7 +242,7 @@ export const SyncEnvironmentDialog = (props: SyncEnvironmentDialogProps) => {
 						onChange={(e) => setConfirmText(e.target.value)}
 						placeholder={confirmWord}
 						className="w-full"
-						disabled={!!preview?.defaultConflict}
+						disabled={hasBlockingIssues}
 					/>
 				)}
 
@@ -249,7 +258,7 @@ export const SyncEnvironmentDialog = (props: SyncEnvironmentDialogProps) => {
 						variant="primary"
 						onClick={handleSync}
 						isLoading={isLoading}
-						disabled={previewLoading || !hasChangesToSync || confirmText !== confirmWord || !!preview?.defaultConflict}
+						disabled={previewLoading || !hasChangesToSync || confirmText !== confirmWord || hasBlockingIssues}
 					>
 						Sync to {targetEnvName}
 					</Button>

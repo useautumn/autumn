@@ -201,6 +201,10 @@ export const handlePreviewSync = createRoute({
 				? { source: sourceDefault.name, target: targetDefault.name }
 				: null;
 
+		const defaultWithPrices = sourceProducts
+			.filter((p) => p.is_default && p.items.some((i) => !i.feature_id && i.price && i.price > 0))
+			.map((p) => ({ id: p.id, name: p.name }));
+
 		const customersAffected = await Promise.all(
 			updatedProducts.map(async (p) => {
 				const targetProduct = targetProductsFull.find((tp) => tp.id === p.id);
@@ -233,6 +237,7 @@ export const handlePreviewSync = createRoute({
 			},
 			features: { new: newFeatures },
 			defaultConflict,
+			defaultWithPrices,
 			customersAffected: customersAffected.filter(Boolean),
 		});
 	},
