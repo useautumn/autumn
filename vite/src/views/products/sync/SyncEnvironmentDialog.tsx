@@ -2,6 +2,12 @@ import { AppEnv } from "@autumn/shared";
 import { useState } from "react";
 import { toast } from "sonner";
 import { WarningBox } from "@/components/general/modal-components/WarningBox";
+import {
+	Accordion,
+	AccordionContent,
+	AccordionItem,
+	AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Button } from "@/components/v2/buttons/Button";
 import {
 	Dialog,
@@ -28,6 +34,7 @@ export const SyncEnvironmentDialog = (props: SyncEnvironmentDialogProps) => {
 	const [confirmText, setConfirmText] = useState("");
 	const { data: preview, isLoading: previewLoading } = useSyncPreview({
 		enabled: props.open,
+		from: props.from,
 	});
 
 	const targetEnvName = props.to === AppEnv.Live ? "Production" : "Sandbox";
@@ -42,7 +49,7 @@ export const SyncEnvironmentDialog = (props: SyncEnvironmentDialogProps) => {
 
 		setIsLoading(true);
 		try {
-			await axiosInstance.post("/products/copy_to_production");
+			await axiosInstance.post("/products/copy_to_production", { from: props.from });
 			toast.success(`Successfully synced to ${targetEnvName}`);
 			props.setOpen(false);
 			setConfirmText("");
@@ -73,44 +80,141 @@ export const SyncEnvironmentDialog = (props: SyncEnvironmentDialogProps) => {
 				<DialogHeader className="max-w-full">
 					<DialogTitle>Sync to {targetEnvName}</DialogTitle>
 					<DialogDescription className="max-w-[400px] break-words flex flex-col gap-3">
+						<p>
+							Sync all products and features from {sourceEnvName} to{" "}
+							{targetEnvName}?
+						</p>
 						{!previewLoading && (
 							<>
-								<p>
-									{hasChangesToSync
-										? [
-											p?.new?.length && `${p.new.length} new product${p.new.length > 1 ? "s" : ""}`,
-											p?.updated?.length && `${p.updated.length} updated`,
-											f?.new?.length && `${f.new.length} new feature${f.new.length > 1 ? "s" : ""}`,
-											p?.unchanged?.length && `${p.unchanged.length} in sync`,
-										]
-											.filter(Boolean)
-											.join(", ")
-										: "Everything is already in sync."}
-								</p>
-								{preview?.products?.targetOnly?.length > 0 && (
-									<WarningBox>
-										{preview.products.targetOnly.map((p) => p.name).join(", ")} is in{" "}
-										{targetEnvName} but not {sourceEnvName}, you can archive it.
+								{!hasChangesToSync && <p>Everything is already in sync.</p>}
+								{preview?.products?.targetOnly?.map((product) => (
+									<WarningBox key={product.id}>
+										{product.name} exists in {targetEnvName} but not in {sourceEnvName}. You may want to
+										archive it.
 									</WarningBox>
-								)}
+								))}
 								{preview?.defaultConflict && (
 									<WarningBox>
-										Default product conflict: "{preview.defaultConflict.source}"
-										({sourceEnvName}) vs "{preview.defaultConflict.target}" (
-										{targetEnvName}).
+										Default product conflict: "{preview.defaultConflict.source}" in {sourceEnvName} vs "
+										{preview.defaultConflict.target}" in {targetEnvName}.
 									</WarningBox>
 								)}
-								{preview?.customersAffected?.length > 0 && (
-									<WarningBox>
-										{preview.customersAffected.map((p) => (
-											<span key={p.productId}>
-												{p.customerCount} customer
-												{p.customerCount === 1 ? "" : "s"} on {p.productName}{" "}
-												will remain until migrated.
-											</span>
-										))}
+								{preview?.customersAffected?.map((c) => (
+									<WarningBox key={c.productId}>
+										{c.customerCount} customer{c.customerCount === 1 ? "" : "s"} on product{" "}
+										{c.productName} will remain on the old version until migrated.
 									</WarningBox>
-								)}
+								))}
+								{p?.new?.map((product) => {
+									const changes = product.changes;
+									const changeCount = changes
+										? changes.newItems.length +
+											(changes.priceChange ? 1 : 0) +
+											(changes.defaultChange ? 1 : 0) +
+											(changes.freeTrialChange ? 1 : 0)
+										: 0;
+									if (changeCount === 0) {
+										return (
+											<div key={product.id} className="text-sm">
+												Product <span className="font-medium">{product.name}</span>
+												<span className="text-t3"> (new)</span>
+											</div>
+										);
+									}
+									return (
+										<Accordion key={product.id} type="single" collapsible className="w-full">
+											<AccordionItem value={product.id} className="border-b-0">
+												<AccordionTrigger className="py-2 text-sm">
+													Product {product.name} (new, {changeCount} detail{changeCount > 1 ? "s" : ""})
+												</AccordionTrigger>
+												<AccordionContent className="text-xs text-t3">
+													<ul className="list-none space-y-1">
+														{changes?.newItems.map((item) => (
+															<li key={item.feature_id}>
+																{item.feature_name}: none -{">"} {item.new_usage ?? "enabled"}
+															</li>
+														))}
+														{changes?.priceChange && (
+															<li>
+																Price: none -{">"} ${changes.priceChange.new_price ?? 0}
+															</li>
+														)}
+														{changes?.defaultChange && (
+															<li>
+																Auto-enable: off -{">"} on
+															</li>
+														)}
+														{changes?.freeTrialChange && (
+															<li>
+																Free trial: none -{">"}{" "}
+																{changes.freeTrialChange.new_trial
+																	? `${changes.freeTrialChange.new_trial.length} ${changes.freeTrialChange.new_trial.duration}`
+																	: "none"}
+															</li>
+														)}
+													</ul>
+												</AccordionContent>
+											</AccordionItem>
+										</Accordion>
+									);
+								})}
+								{p?.updated?.map((product) => {
+									const changes = product.changes;
+									if (!changes) return null;
+									const changeCount =
+										changes.newItems.length +
+										changes.removedItems.length +
+										(changes.priceChange ? 1 : 0) +
+										(changes.defaultChange ? 1 : 0) +
+										(changes.freeTrialChange ? 1 : 0);
+									if (changeCount === 0) return null;
+									return (
+										<Accordion key={product.id} type="single" collapsible className="w-full">
+											<AccordionItem value={product.id} className="border-b-0">
+												<AccordionTrigger className="py-2 text-sm">
+													Product {product.name} ({changeCount} change{changeCount > 1 ? "s" : ""})
+												</AccordionTrigger>
+												<AccordionContent className="text-xs text-t3">
+													<ul className="list-none space-y-1">
+														{changes.newItems.map((item) => (
+															<li key={item.feature_id}>
+																{item.feature_name}: {item.old_usage ?? "none"} -{">"} {item.new_usage ?? "enabled"}
+															</li>
+														))}
+														{changes.removedItems.map((item) => (
+															<li key={item.feature_id}>
+																{item.feature_name}: {item.old_usage ?? "enabled"} -{">"} none
+															</li>
+														))}
+														{changes.priceChange && (
+															<li>
+																Price: ${changes.priceChange.old_price ?? 0} -{">"} ${changes.priceChange.new_price ?? 0}
+															</li>
+														)}
+														{changes.defaultChange && (
+															<li>
+																Auto-enable: {changes.defaultChange.old_default ? "on" : "off"} -{">"}{" "}
+																{changes.defaultChange.new_default ? "on" : "off"}
+															</li>
+														)}
+														{changes.freeTrialChange && (
+															<li>
+																Free trial:{" "}
+																{changes.freeTrialChange.old_trial
+																	? `${changes.freeTrialChange.old_trial.length} ${changes.freeTrialChange.old_trial.duration}`
+																	: "none"}{" "}
+																-{">"}{" "}
+																{changes.freeTrialChange.new_trial
+																	? `${changes.freeTrialChange.new_trial.length} ${changes.freeTrialChange.new_trial.duration}`
+																	: "none"}
+															</li>
+														)}
+													</ul>
+												</AccordionContent>
+											</AccordionItem>
+										</Accordion>
+									);
+								})}
 								{hasChangesToSync && (
 									<p>
 										Type{" "}
