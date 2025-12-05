@@ -55,14 +55,27 @@ async function startDev() {
 
 		console.log("🚀 Starting development servers in watch mode...\n");
 
-		// Start server, workers, and vite using Bun.spawn
-		// Use sh -c to run the shell command with cd
-		const concurrentlyProc = Bun.spawn(
-			[
+		const isWindows = process.platform === "win32";
+
+		let shellArgs: string[];
+		if (isWindows) {
+			const serverCmd = `cd server && set SERVER_PORT=${SERVER_PORT} && bun dev`;
+			const workersCmd = `cd server && bun workers:dev`;
+			const viteCmd = `cd vite && set VITE_PORT=${VITE_PORT} && bun dev`;
+			shellArgs = [
+				"cmd",
+				"/c",
+				`bunx concurrently -n server,workers,vite -c green,yellow,blue "${serverCmd}" "${workersCmd}" "${viteCmd}"`,
+			];
+		} else {
+			shellArgs = [
 				"sh",
 				"-c",
 				`bunx concurrently -n server,workers,vite -c green,yellow,blue "cd server && SERVER_PORT=${SERVER_PORT} bun dev" "cd server && bun workers:dev" "cd vite && VITE_PORT=${VITE_PORT} bun dev"`,
-			],
+			];
+		}
+
+		const concurrentlyProc = Bun.spawn(shellArgs,
 			{
 				cwd: projectRoot,
 				env: {
