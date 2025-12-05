@@ -233,6 +233,7 @@ export const SyncEnvironmentDialog = (props: SyncEnvironmentDialogProps) => {
 						onChange={(e) => setConfirmText(e.target.value)}
 						placeholder={confirmWord}
 						className="w-full"
+						disabled={!!preview?.defaultConflict}
 					/>
 				)}
 
@@ -248,7 +249,7 @@ export const SyncEnvironmentDialog = (props: SyncEnvironmentDialogProps) => {
 						variant="primary"
 						onClick={handleSync}
 						isLoading={isLoading}
-						disabled={previewLoading || !hasChangesToSync || confirmText !== confirmWord}
+						disabled={previewLoading || !hasChangesToSync || confirmText !== confirmWord || !!preview?.defaultConflict}
 					>
 						Sync to {targetEnvName}
 					</Button>
