@@ -63,54 +63,67 @@ export const SyncEnvironmentDialog = (props: SyncEnvironmentDialogProps) => {
 		}
 	};
 
+	const hasProductsToSync = (preview?.products?.toSync?.length ?? 0) > 0;
+
 	return (
 		<Dialog open={props.open} onOpenChange={handleOpenChange}>
 			<DialogContent onClick={(e) => e.stopPropagation()}>
 				<DialogHeader className="max-w-full">
 					<DialogTitle>Sync to {targetEnvName}</DialogTitle>
 					<DialogDescription className="max-w-[400px] break-words flex flex-col gap-3">
-						<p>
-							Sync all products and features from {sourceEnvName} to{" "}
-							{targetEnvName}?
-						</p>
-						{!previewLoading && preview?.products?.targetOnly?.length > 0 && (
-							<WarningBox>
-								{preview.products.targetOnly.map((p) => p.name).join(", ")}{" "}
-								exists only in {targetEnvName} and won't be modified by this
-								sync.
-							</WarningBox>
+						{!previewLoading && !hasProductsToSync ? (
+							<p>
+								No new products to sync from {sourceEnvName} to {targetEnvName}.
+							</p>
+						) : (
+							<>
+								<p>
+									Sync all products and features from {sourceEnvName} to{" "}
+									{targetEnvName}?
+								</p>
+								{!previewLoading &&
+									preview?.products?.targetOnly?.length > 0 && (
+										<WarningBox>
+											Product {preview.products.targetOnly.map((p) => p.name).join(", ")}{" "}
+											only exists in {targetEnvName} and will remain unchanged.
+										</WarningBox>
+									)}
+								{!previewLoading && preview?.defaultConflict && (
+									<WarningBox>
+										Default product conflict: "{preview.defaultConflict.source}"
+										({sourceEnvName}) vs "{preview.defaultConflict.target}" (
+										{targetEnvName}).
+									</WarningBox>
+								)}
+								{!previewLoading && preview?.customersAffected?.length > 0 && (
+									<WarningBox>
+										{preview.customersAffected.map((p) => (
+											<span key={p.productId}>
+												{p.customerCount} customer
+												{p.customerCount === 1 ? "" : "s"} on {p.productName}{" "}
+												will remain until migrated.
+											</span>
+										))}
+									</WarningBox>
+								)}
+								<p>
+									Type{" "}
+									<code className="font-mono font-semibold">{confirmWord}</code>{" "}
+									to continue.
+								</p>
+							</>
 						)}
-						{!previewLoading && preview?.defaultConflict && (
-							<WarningBox>
-								Default product conflict: "{preview.defaultConflict.source}" (
-								{sourceEnvName}) vs "{preview.defaultConflict.target}" (
-								{targetEnvName}).
-							</WarningBox>
-						)}
-						{!previewLoading && preview?.customersAffected?.length > 0 && (
-							<WarningBox>
-								{preview.customersAffected.map((p) => (
-									<span key={p.productId}>
-										{p.customerCount} customer
-										{p.customerCount === 1 ? "" : "s"} on {p.productName} will
-										remain until migrated.
-									</span>
-								))}
-							</WarningBox>
-						)}
-						<p>
-							Type <code className="font-mono font-semibold">{confirmWord}</code>{" "}
-							to continue.
-						</p>
 					</DialogDescription>
 				</DialogHeader>
 
-				<Input
-					value={confirmText}
-					onChange={(e) => setConfirmText(e.target.value)}
-					placeholder={confirmWord}
-					className="w-full"
-				/>
+				{hasProductsToSync && (
+					<Input
+						value={confirmText}
+						onChange={(e) => setConfirmText(e.target.value)}
+						placeholder={confirmWord}
+						className="w-full"
+					/>
+				)}
 
 				<DialogFooter>
 					<Button
@@ -118,16 +131,18 @@ export const SyncEnvironmentDialog = (props: SyncEnvironmentDialogProps) => {
 						onClick={() => props.setOpen(false)}
 						disabled={isLoading}
 					>
-						Cancel
+						{hasProductsToSync ? "Cancel" : "Close"}
 					</Button>
-					<Button
-						variant="primary"
-						onClick={handleSync}
-						isLoading={isLoading}
-						disabled={previewLoading || confirmText !== confirmWord}
-					>
-						Sync to {targetEnvName}
-					</Button>
+					{hasProductsToSync && (
+						<Button
+							variant="primary"
+							onClick={handleSync}
+							isLoading={isLoading}
+							disabled={previewLoading || confirmText !== confirmWord}
+						>
+							Sync to {targetEnvName}
+						</Button>
+					)}
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>
