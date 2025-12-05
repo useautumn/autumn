@@ -44,7 +44,7 @@ export const handleCopyProducts = async ({
 }) => {
 	const { db, org } = ctx;
 
-	const [sandboxFeatures, liveFeatures, sandboxProducts, liveProducts] =
+	const [sourceFeatures, targetFeatures, sourceProductsFull, targetProductsFull] =
 		await Promise.all([
 			FeatureService.list({ db, orgId: org.id, env: fromEnv }),
 			FeatureService.list({ db, orgId: org.id, env: toEnv }),
@@ -52,14 +52,14 @@ export const handleCopyProducts = async ({
 			ProductService.listFull({ db, orgId: org.id, env: toEnv }),
 		]);
 
-	const liveProductsV2 = liveProducts.map((p) =>
-		mapToProductV2({ product: p, features: liveFeatures }),
+	const targetProducts = targetProductsFull.map((p) =>
+		mapToProductV2({ product: p, features: targetFeatures }),
 	);
 
-	const sandboxProductsV2 = sandboxProducts.map((p) => {
+	const sourceProducts = sourceProductsFull.map((p) => {
 		const productV2 = mapToProductV2({
 			product: p,
-			features: sandboxFeatures,
+			features: sourceFeatures,
 		});
 		productV2.items = productV2.items.map((i) => {
 			const {
@@ -76,21 +76,21 @@ export const handleCopyProducts = async ({
 
 	const newContext = {
 		...ctx,
-		features: liveFeatures,
+		features: targetFeatures,
 		env: toEnv,
 	};
 
-	const operations = sandboxProductsV2.map((sandboxProductV2) => {
-		const liveProductV2 = liveProductsV2.find(
-			(p) => p.id === sandboxProductV2.id,
+	const operations = sourceProducts.map((sourceProduct) => {
+		const targetProduct = targetProducts.find(
+			(p) => p.id === sourceProduct.id,
 		);
 
-		const conformedProduct = conformProductToSchema(sandboxProductV2);
+		const conformedProduct = conformProductToSchema(sourceProduct);
 
-		if (liveProductV2) {
+		if (targetProduct) {
 			return updateProduct({
 				ctx: newContext,
-				productId: sandboxProductV2.id,
+				productId: sourceProduct.id,
 				query: { disable_version: true },
 				updates: conformedProduct,
 			});

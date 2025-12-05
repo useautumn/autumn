@@ -4,39 +4,24 @@ import { FeatureService } from "@/internal/features/FeatureService.js";
 import { handleCopyFeatures } from "./handleCopyFeatures.js";
 import { handleCopyProducts } from "./handleCopyProducts.js";
 
-/**
- * POST /copy_to_production
- * Copies all products and features from sandbox to production
- */
 export const handleCopyEnvironment = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org } = ctx;
+		const body = await c.req.json().catch(() => ({}));
+		const fromEnv = body.from === AppEnv.Live || body.from === "live" ? AppEnv.Live : AppEnv.Sandbox;
+		const toEnv = fromEnv === AppEnv.Live ? AppEnv.Sandbox : AppEnv.Live;
 
-		// Always copy from sandbox to live
-		const fromEnv = AppEnv.Sandbox;
-		const toEnv = AppEnv.Live;
-
-		// 1. Get all sandbox products and features
-		const [sandboxFeatures, liveFeatures] = await Promise.all([
-			FeatureService.list({
-				db,
-				orgId: org.id,
-				env: fromEnv,
-			}),
-
-			FeatureService.list({
-				db,
-				orgId: org.id,
-				env: toEnv,
-			}),
+		const [sourceFeatures, targetFeatures] = await Promise.all([
+			FeatureService.list({ db, orgId: org.id, env: fromEnv }),
+			FeatureService.list({ db, orgId: org.id, env: toEnv }),
 		]);
 
-		// 2. Copy features first
 		await handleCopyFeatures({
 			ctx,
-			sandboxFeatures,
-			liveFeatures,
+			sourceFeatures,
+			targetFeatures,
+			toEnv,
 		});
 
 		await handleCopyProducts({
@@ -45,8 +30,9 @@ export const handleCopyEnvironment = createRoute({
 			toEnv,
 		});
 
+		const targetEnvName = toEnv === AppEnv.Live ? "production" : "sandbox";
 		return c.json({
-			message: "Products copied to production",
+			message: `Products copied to ${targetEnvName}`,
 		});
 	},
 });

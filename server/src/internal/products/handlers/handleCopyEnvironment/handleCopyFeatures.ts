@@ -1,74 +1,72 @@
-import { AppEnv, type Feature, FeatureType } from "@autumn/shared";
+import { type AppEnv, type Feature, FeatureType } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { createFeature } from "@/internal/features/featureActions/createFeature.js";
 import { updateFeature } from "@/internal/features/featureActions/updateFeature.js";
 
 export const handleCopyFeatures = async ({
 	ctx,
-	sandboxFeatures,
-	liveFeatures,
+	sourceFeatures,
+	targetFeatures,
+	toEnv,
 }: {
 	ctx: AutumnContext;
-	sandboxFeatures: Feature[];
-	liveFeatures: Feature[];
+	sourceFeatures: Feature[];
+	targetFeatures: Feature[];
+	toEnv: AppEnv;
 }) => {
 	const newContext = {
 		...ctx,
-		features: liveFeatures,
-		env: AppEnv.Live,
+		features: targetFeatures,
+		env: toEnv,
 	};
 
-	// Separate features by type: Boolean/Metered must be created before CreditSystem
-	// since credit systems can reference metered features in their credit_schema
-	const booleanAndMeteredFeatures = sandboxFeatures.filter(
+	const booleanAndMeteredFeatures = sourceFeatures.filter(
 		(f) => f.type === FeatureType.Boolean || f.type === FeatureType.Metered,
 	);
-	const creditSystemFeatures = sandboxFeatures.filter(
+	const creditSystemFeatures = sourceFeatures.filter(
 		(f) => f.type === FeatureType.CreditSystem,
 	);
 
-	// First, process boolean and metered features
 	const firstBatchPromises = [];
-	for (const sandboxFeature of booleanAndMeteredFeatures) {
-		const liveFeature = liveFeatures.find((f) => f.id === sandboxFeature.id);
+	for (const sourceFeature of booleanAndMeteredFeatures) {
+		const targetFeature = targetFeatures.find((f) => f.id === sourceFeature.id);
 
-		if (liveFeature) {
+		if (targetFeature) {
 			firstBatchPromises.push(
 				updateFeature({
 					ctx: newContext,
-					featureId: sandboxFeature.id,
-					updates: sandboxFeature,
+					featureId: sourceFeature.id,
+					updates: sourceFeature,
 				}),
 			);
 		} else {
 			firstBatchPromises.push(
 				createFeature({
 					ctx: newContext,
-					data: sandboxFeature,
+					data: sourceFeature,
 				}),
 			);
 		}
 	}
 	await Promise.all(firstBatchPromises);
 
-	// Then, process credit system features
 	const secondBatchPromises = [];
-	for (const sandboxFeature of creditSystemFeatures) {
-		const liveFeature = liveFeatures.find((f) => f.id === sandboxFeature.id);
+	for (const sourceFeature of creditSystemFeatures) {
+		const targetFeature = targetFeatures.find((f) => f.id === sourceFeature.id);
 
-		if (liveFeature) {
+		if (targetFeature) {
 			secondBatchPromises.push(
 				updateFeature({
 					ctx: newContext,
-					featureId: sandboxFeature.id,
-					updates: sandboxFeature,
+					featureId: sourceFeature.id,
+					updates: sourceFeature,
 				}),
 			);
 		} else {
 			secondBatchPromises.push(
 				createFeature({
 					ctx: newContext,
-					data: sandboxFeature,
+					data: sourceFeature,
 				}),
 			);
 		}
