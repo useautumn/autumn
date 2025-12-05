@@ -9,6 +9,7 @@ import {
 	type Organization,
 	organizations,
 } from "../models/orgModels/orgTable.js";
+import { sqlNow } from "./utils.js";
 
 export const user = pgTable(
 	"user",
@@ -107,7 +108,10 @@ export const invitation = pgTable("invitation", {
 	email: text("email").notNull(),
 	role: text("role"),
 	status: text("status").default("pending").notNull(),
-	expiresAt: timestamp("expires_at").notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true })
+		.notNull()
+		.default(sqlNow),
+	expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 	inviterId: text("inviter_id")
 		.notNull()
 		.references(() => user.id, { onDelete: "cascade" }),

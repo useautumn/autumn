@@ -51,6 +51,7 @@ export const handleCreateInvoiceCheckout = async ({
 			config,
 		},
 		type: MetadataType.InvoiceCheckout,
+		stripeInvoiceId: invoice?.id,
 	});
 
 	if (invoice) {

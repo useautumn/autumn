@@ -10,12 +10,12 @@ import {
 	type MeteredConfig,
 	type UsagePriceConfig,
 } from "@autumn/shared";
+import type { DrizzleCli } from "@server/db/initDrizzle";
+import { generateFeatureDisplay } from "@server/external/llm/llmUtils";
+import { ACTIVE_STATUSES } from "@server/internal/customers/cusProducts/CusProductService";
+import { FeatureService } from "@server/internal/features/FeatureService";
+import RecaseError from "@server/utils/errorUtils";
 import { StatusCodes } from "http-status-codes";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { generateFeatureDisplay } from "@/external/llm/llmUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { ACTIVE_STATUSES } from "../customers/cusProducts/CusProductService.js";
-import { FeatureService } from "./FeatureService.js";
 
 export const validateFeatureId = (featureId: string) => {
 	if (!featureId.match(/^[a-zA-Z0-9_-]+$/)) {

@@ -24,3 +24,10 @@ export const keyToTitle = (
 		.replace(/[-_]/g, " ")
 		.replace(/\b\w/g, (char) => char.toUpperCase());
 };
+
+/** Fast hash using Bun's native hasher */
+export const hashString = (str: string): string => {
+	const hasher = new Bun.CryptoHasher("sha256");
+	hasher.update(str);
+	return hasher.digest("base64");
+};

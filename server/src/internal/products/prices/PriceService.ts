@@ -1,4 +1,10 @@
-import { type Price, type Product, prices } from "@autumn/shared";
+import {
+	type FixedPriceConfig,
+	type Price,
+	type Product,
+	prices,
+	type UsagePriceConfig,
+} from "@autumn/shared";
 import { buildConflictUpdateColumns } from "@server/db/dbUtils";
 import type { DrizzleCli } from "@server/db/initDrizzle";
 import { and, eq, inArray, or, sql } from "drizzle-orm";
@@ -128,5 +134,22 @@ export class PriceService {
 			for (const id of ids) byStripeId[id] = row;
 		}
 		return byStripeId;
+	}
+
+	static async updateConfig({
+		db,
+		id,
+		config,
+	}: {
+		db: DrizzleCli;
+		id: string;
+		config: FixedPriceConfig | UsagePriceConfig;
+	}) {
+		const curPrice = await PriceService.get({ db, id });
+		const newConfig = {
+			...curPrice.config,
+			...config,
+		};
+		await db.update(prices).set({ config: newConfig }).where(eq(prices.id, id));
 	}
 }

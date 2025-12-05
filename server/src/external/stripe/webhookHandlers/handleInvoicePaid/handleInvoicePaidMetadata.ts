@@ -1,6 +1,7 @@
 import { MetadataType } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
+import type { AttachParams } from "../../../../internal/customers/cusProducts/AttachParams";
 import { MetadataService } from "../../../../internal/metadata/MetadataService";
 import { handleInvoiceActionRequiredCompleted } from "./handleInvoiceActionRequiredCompleted";
 import { handleInvoiceCheckoutPaid } from "./handleInvoiceCheckoutPaid";
@@ -23,6 +24,12 @@ export const handleInvoicePaidMetadata = async ({
 
 	if (!metadata) return;
 
+	const data = metadata.data as unknown as AttachParams;
+	const reqMatch =
+		data.org?.id === ctx.org.id && data.customer?.env === ctx.env;
+
+	if (!reqMatch) return;
+
 	if (metadata.type === MetadataType.InvoiceActionRequired) {
 		await handleInvoiceActionRequiredCompleted({
 			ctx,
@@ -36,10 +43,5 @@ export const handleInvoicePaidMetadata = async ({
 	await handleInvoiceCheckoutPaid({
 		ctx,
 		metadata,
-	});
-
-	await MetadataService.delete({
-		db: ctx.db,
-		id: metadata.id,
 	});
 };
