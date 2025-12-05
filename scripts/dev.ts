@@ -55,6 +55,7 @@ async function startDev() {
 
 		console.log("🚀 Starting development servers in watch mode...\n");
 
+		// Use cmd on Windows, sh on Unix
 		const isWindows = process.platform === "win32";
 
 		let shellArgs: string[];
