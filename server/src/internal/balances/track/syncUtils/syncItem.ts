@@ -13,6 +13,7 @@ import {
 } from "@autumn/shared";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
+import { getRegionalRedis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
@@ -28,6 +29,7 @@ export interface SyncItem {
 	orgId: string;
 	env: string;
 	entityId?: string;
+	region?: string;
 	timestamp: number;
 }
 
@@ -73,8 +75,12 @@ export const syncItem = async ({
 	item: SyncItem;
 	ctx: AutumnContext;
 }) => {
-	const { customerId, featureId, entityId } = item;
+	const { customerId, featureId, entityId, region } = item;
 	const { db, org, env } = ctx;
+
+	// Get the correct regional Redis instance for this sync item
+	// This ensures we read from the same region where the data was written
+	const redisInstance = region ? getRegionalRedis(region) : undefined;
 
 	// Get cached customer/entity from Redis WITHOUT merging
 	// For sync, we need the raw balance for that specific scope (not merged)
@@ -87,6 +93,7 @@ export const syncItem = async ({
 			customerId,
 			entityId,
 			skipCustomerMerge: true, // Don't merge with customer - we want entity's own balance
+			redisInstance,
 		});
 		redisEntity = apiEntity;
 	} else {
@@ -94,6 +101,7 @@ export const syncItem = async ({
 			ctx,
 			customerId,
 			skipEntityMerge: true, // Don't merge with entities - we want customer's own balance
+			redisInstance,
 		});
 		redisEntity = apiCustomer;
 	}

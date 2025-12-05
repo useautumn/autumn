@@ -6,6 +6,7 @@ import {
 	type TrackParams,
 	type TrackQuery,
 } from "@autumn/shared";
+import { currentRegion } from "@/external/redis/initRedis.js";
 import { normalizeFromSchema } from "@/utils/cacheUtils/normalizeFromSchema.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "../../../../utils/cacheUtils/cacheUtils.js";
@@ -74,6 +75,7 @@ const queueSyncAndEvent = ({
 				orgId: org.id,
 				env,
 				entityId: undefined, // Customer-level sync
+				region: currentRegion,
 			});
 		}
 
@@ -86,6 +88,7 @@ const queueSyncAndEvent = ({
 					orgId: org.id,
 					env,
 					entityId: changedEntityId,
+					region: currentRegion,
 				});
 			}
 		}
