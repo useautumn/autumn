@@ -40,10 +40,7 @@ const handleOneOffInvoicePaid = async ({
 		stripeId: stripeInvoice.id!,
 	});
 
-	if (!invoice) {
-		console.log(`Invoice not found`);
-		return;
-	}
+	if (!invoice) return;
 
 	// Update invoice status
 	await InvoiceService.updateByStripeId({
