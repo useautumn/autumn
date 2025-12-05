@@ -11,6 +11,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/v2/dialogs/Dialog";
+import { Input } from "@/components/v2/inputs/Input";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useSyncPreview } from "./useSyncPreview";
 
@@ -24,19 +25,27 @@ type SyncEnvironmentDialogProps = {
 export const SyncEnvironmentDialog = (props: SyncEnvironmentDialogProps) => {
 	const axiosInstance = useAxiosInstance();
 	const [isLoading, setIsLoading] = useState(false);
+	const [confirmText, setConfirmText] = useState("");
 	const { data: preview, isLoading: previewLoading } = useSyncPreview({
 		enabled: props.open,
 	});
 
 	const targetEnvName = props.to === AppEnv.Live ? "Production" : "Sandbox";
 	const sourceEnvName = props.from === AppEnv.Live ? "Production" : "Sandbox";
+	const confirmWord = targetEnvName.toLowerCase();
 
 	const handleSync = async () => {
+		if (confirmText !== confirmWord) {
+			toast.error("Confirmation text is incorrect");
+			return;
+		}
+
 		setIsLoading(true);
 		try {
 			await axiosInstance.post("/products/copy_to_production");
 			toast.success(`Successfully synced to ${targetEnvName}`);
 			props.setOpen(false);
+			setConfirmText("");
 		} catch (error) {
 			toast.error("Failed to sync environments");
 			console.error("Sync error:", error);
@@ -48,44 +57,34 @@ export const SyncEnvironmentDialog = (props: SyncEnvironmentDialogProps) => {
 	const handleOpenChange = (newOpen: boolean) => {
 		if (!isLoading) {
 			props.setOpen(newOpen);
+			if (!newOpen) {
+				setConfirmText("");
+			}
 		}
 	};
-
-	const hasWarnings =
-		(preview?.products?.targetOnly?.length ?? 0) > 0 ||
-		preview?.defaultConflict ||
-		(preview?.customersAffected?.length ?? 0) > 0;
 
 	return (
 		<Dialog open={props.open} onOpenChange={handleOpenChange}>
 			<DialogContent onClick={(e) => e.stopPropagation()}>
 				<DialogHeader className="max-w-full">
 					<DialogTitle>Sync to {targetEnvName}</DialogTitle>
-					<DialogDescription
-						className={
-							hasWarnings
-								? "max-w-[400px] break-words flex flex-col gap-3"
-								: undefined
-						}
-					>
+					<DialogDescription className="max-w-[400px] break-words flex flex-col gap-3">
 						<p>
 							Sync all products and features from {sourceEnvName} to{" "}
-							{targetEnvName}? Matching products will be updated.
+							{targetEnvName}?
 						</p>
 						{!previewLoading && preview?.products?.targetOnly?.length > 0 && (
 							<WarningBox>
 								{preview.products.targetOnly.map((p) => p.name).join(", ")}{" "}
-								{preview.products.targetOnly.length === 1 ? "is" : "are"} in{" "}
-								{targetEnvName} but not {sourceEnvName}. You can archive{" "}
-								{preview.products.targetOnly.length === 1 ? "it" : "them"} after
-								syncing.
+								exists only in {targetEnvName} and won't be modified by this
+								sync.
 							</WarningBox>
 						)}
 						{!previewLoading && preview?.defaultConflict && (
 							<WarningBox>
-								Default product conflict: {sourceEnvName} has "
-								{preview.defaultConflict.source}" as default, but {targetEnvName}{" "}
-								has "{preview.defaultConflict.target}".
+								Default product conflict: "{preview.defaultConflict.source}" (
+								{sourceEnvName}) vs "{preview.defaultConflict.target}" (
+								{targetEnvName}).
 							</WarningBox>
 						)}
 						{!previewLoading && preview?.customersAffected?.length > 0 && (
@@ -94,13 +93,24 @@ export const SyncEnvironmentDialog = (props: SyncEnvironmentDialogProps) => {
 									<span key={p.productId}>
 										{p.customerCount} customer
 										{p.customerCount === 1 ? "" : "s"} on {p.productName} will
-										remain on their current version until migrated.
+										remain until migrated.
 									</span>
 								))}
 							</WarningBox>
 						)}
+						<p>
+							Type <code className="font-mono font-semibold">{confirmWord}</code>{" "}
+							to continue.
+						</p>
 					</DialogDescription>
 				</DialogHeader>
+
+				<Input
+					value={confirmText}
+					onChange={(e) => setConfirmText(e.target.value)}
+					placeholder={confirmWord}
+					className="w-full"
+				/>
 
 				<DialogFooter>
 					<Button
@@ -114,7 +124,7 @@ export const SyncEnvironmentDialog = (props: SyncEnvironmentDialogProps) => {
 						variant="primary"
 						onClick={handleSync}
 						isLoading={isLoading}
-						disabled={previewLoading}
+						disabled={previewLoading || confirmText !== confirmWord}
 					>
 						Sync to {targetEnvName}
 					</Button>
