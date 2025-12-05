@@ -12,92 +12,142 @@ import {
 	SET_INVOICES_SCRIPT,
 	SET_SUBSCRIPTIONS_SCRIPT,
 } from "../../_luaScripts/luaScripts.js";
-import { loadCaCert } from "./loadCaCert.js";
 
 if (!process.env.CACHE_URL) {
 	throw new Error("CACHE_URL (redis) is not set");
 }
 
+// Region constants
+export const REGION_US_EAST_2 = "us-east-2";
+export const REGION_US_WEST_2 = "us-west-2";
+
+// Current region this instance is running in
+export const currentRegion = process.env.AWS_REGION || REGION_US_WEST_2;
+
+// Map of region to cache URL
 const regionToCacheUrl: Record<string, string | undefined> = {
-	"us-east-2": process.env.CACHE_URL_US_EAST,
+	[REGION_US_EAST_2]: process.env.CACHE_URL_US_EAST,
+	[REGION_US_WEST_2]: process.env.CACHE_URL, // Default/us-west-2 URL
 };
 
-const awsRegion = process.env.AWS_REGION as keyof typeof regionToCacheUrl;
-const regionalCacheUrl = regionToCacheUrl[awsRegion];
-if (regionalCacheUrl) {
-	console.log(`Using regional cache: ${awsRegion}`);
+/** Configure a Redis instance with custom commands */
+const configureRedisInstance = (redisInstance: Redis): Redis => {
+	const batchDeductionScript = getBatchDeductionScript();
+
+	redisInstance.defineCommand("batchDeduction", {
+		numberOfKeys: 0,
+		lua: batchDeductionScript,
+	});
+
+	redisInstance.defineCommand("getCustomer", {
+		numberOfKeys: 0,
+		lua: GET_CUSTOMER_SCRIPT,
+	});
+
+	redisInstance.defineCommand("setCustomer", {
+		numberOfKeys: 0,
+		lua: SET_CUSTOMER_SCRIPT,
+	});
+
+	redisInstance.defineCommand("setEntitiesBatch", {
+		numberOfKeys: 0,
+		lua: SET_ENTITIES_BATCH_SCRIPT,
+	});
+
+	redisInstance.defineCommand("getEntity", {
+		numberOfKeys: 0,
+		lua: GET_ENTITY_SCRIPT,
+	});
+
+	redisInstance.defineCommand("setSubscriptions", {
+		numberOfKeys: 0,
+		lua: SET_SUBSCRIPTIONS_SCRIPT,
+	});
+
+	redisInstance.defineCommand("setEntityProducts", {
+		numberOfKeys: 0,
+		lua: SET_ENTITY_PRODUCTS_SCRIPT,
+	});
+
+	redisInstance.defineCommand("setInvoices", {
+		numberOfKeys: 0,
+		lua: SET_INVOICES_SCRIPT,
+	});
+
+	redisInstance.defineCommand("setCustomerDetails", {
+		numberOfKeys: 0,
+		lua: SET_CUSTOMER_DETAILS_SCRIPT,
+	});
+
+	redisInstance.defineCommand("deleteCustomer", {
+		numberOfKeys: 0,
+		lua: DELETE_CUSTOMER_SCRIPT,
+	});
+
+	redisInstance.defineCommand("batchDeleteCustomers", {
+		numberOfKeys: 0,
+		lua: BATCH_DELETE_CUSTOMERS_SCRIPT,
+	});
+
+	// biome-ignore lint/correctness/noUnusedFunctionParameters: Might uncomment this back in in the future
+	redisInstance.on("error", (error) => {
+		// logger.error(`redis (cache) error: ${error.message}`);
+	});
+
+	return redisInstance;
+};
+
+/** Create a Redis connection for a specific region */
+const createRedisConnection = (cacheUrl: string): Redis => {
+	const instance = new Redis(cacheUrl, {
+		tls: process.env.CACHE_CERT ? { ca: process.env.CACHE_CERT } : undefined,
+		family: 4,
+		keepAlive: 10000,
+	});
+	return configureRedisInstance(instance);
+};
+
+// Primary Redis instance (current region or default)
+const primaryCacheUrl =
+	regionToCacheUrl[currentRegion] || process.env.CACHE_URL;
+
+if (primaryCacheUrl && regionToCacheUrl[currentRegion]) {
+	console.log(`Using regional cache: ${currentRegion}`);
 }
 
-const caText = await loadCaCert({
-	caPath: process.env.CACHE_CERT_PATH,
-	caValue: process.env.CACHE_CERT,
-	type: "cache",
-});
+const redis = createRedisConnection(primaryCacheUrl!);
 
-const redis = new Redis(regionalCacheUrl || process.env.CACHE_URL, {
-	tls: caText ? { ca: caText } : undefined,
-	family: 4,
-	keepAlive: 10000,
-});
+// Lazy-loaded regional Redis instances for cross-region sync
+const regionalRedisInstances: Map<string, Redis> = new Map();
 
-// Load Lua scripts using the builder functions that include dependencies
-const batchDeductionScript = getBatchDeductionScript();
+/** Get Redis instance for a specific region (lazy-loaded) */
+export const getRegionalRedis = (region: string): Redis => {
+	// If requesting current region, return primary instance
+	if (region === currentRegion) {
+		return redis;
+	}
 
-// Define commands
-redis.defineCommand("batchDeduction", {
-	numberOfKeys: 0,
-	lua: batchDeductionScript,
-});
+	// Check if we already have a connection for this region
+	let regionalInstance = regionalRedisInstances.get(region);
+	if (regionalInstance) {
+		return regionalInstance;
+	}
 
-redis.defineCommand("getCustomer", {
-	numberOfKeys: 0,
-	lua: GET_CUSTOMER_SCRIPT,
-});
+	// Create new connection for the requested region
+	const cacheUrl = regionToCacheUrl[region];
+	if (!cacheUrl) {
+		console.warn(
+			`No cache URL configured for region ${region}, falling back to primary`,
+		);
+		return redis;
+	}
 
-redis.defineCommand("setCustomer", {
-	numberOfKeys: 0,
-	lua: SET_CUSTOMER_SCRIPT,
-});
+	console.log(`Creating Redis connection for region: ${region}`);
+	regionalInstance = createRedisConnection(cacheUrl);
+	regionalRedisInstances.set(region, regionalInstance);
 
-redis.defineCommand("setEntitiesBatch", {
-	numberOfKeys: 0,
-	lua: SET_ENTITIES_BATCH_SCRIPT,
-});
-
-redis.defineCommand("getEntity", {
-	numberOfKeys: 0,
-	lua: GET_ENTITY_SCRIPT,
-});
-
-redis.defineCommand("setSubscriptions", {
-	numberOfKeys: 0,
-	lua: SET_SUBSCRIPTIONS_SCRIPT,
-});
-
-redis.defineCommand("setEntityProducts", {
-	numberOfKeys: 0,
-	lua: SET_ENTITY_PRODUCTS_SCRIPT,
-});
-
-redis.defineCommand("setInvoices", {
-	numberOfKeys: 0,
-	lua: SET_INVOICES_SCRIPT,
-});
-
-redis.defineCommand("setCustomerDetails", {
-	numberOfKeys: 0,
-	lua: SET_CUSTOMER_DETAILS_SCRIPT,
-});
-
-redis.defineCommand("deleteCustomer", {
-	numberOfKeys: 0,
-	lua: DELETE_CUSTOMER_SCRIPT,
-});
-
-redis.defineCommand("batchDeleteCustomers", {
-	numberOfKeys: 0,
-	lua: BATCH_DELETE_CUSTOMERS_SCRIPT,
-});
+	return regionalInstance;
+};
 
 // Add type definitions
 declare module "ioredis" {
@@ -168,10 +218,5 @@ declare module "ioredis" {
 		batchDeleteCustomers(customersJson: string): Promise<number>;
 	}
 }
-
-// biome-ignore lint/correctness/noUnusedFunctionParameters: Might uncomment this back in in the future
-redis.on("error", (error) => {
-	// logger.error(`redis (cache) error: ${error.message}`);
-});
 
 export { redis };
