@@ -1,4 +1,4 @@
-import { AppEnv, mapToProductV2 } from "@autumn/shared";
+import { AppEnv, mapToProductV2, productsAreSame } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
@@ -28,14 +28,52 @@ export const handlePreviewSync = createRoute({
 			mapToProductV2({ product: p, features: liveFeatures }),
 		);
 
-		const sandboxIds = new Set(sandboxProductsV2.map((p) => p.id));
-		const liveIds = new Set(liveProductsV2.map((p) => p.id));
+		const sandboxProductIds = new Set(sandboxProductsV2.map((p) => p.id));
+		const sandboxFeatureIds = new Set(sandboxFeatures.map((f) => f.id));
+		const liveFeatureIds = new Set(liveFeatures.map((f) => f.id));
 
-		const toSync = sandboxProductsV2.map((p) => ({ id: p.id, name: p.name }));
+		const newFeatures = sandboxFeatures
+			.filter((f) => !liveFeatureIds.has(f.id))
+			.map((f) => ({ id: f.id, name: f.name }));
+
+		const existingFeatures = sandboxFeatures
+			.filter((f) => liveFeatureIds.has(f.id))
+			.map((f) => ({ id: f.id, name: f.name }));
+
+		const newProducts: { id: string; name: string }[] = [];
+		const updatedProducts: { id: string; name: string }[] = [];
+		const unchangedProducts: { id: string; name: string }[] = [];
+
+		for (const sandboxProd of sandboxProductsV2) {
+			const liveProd = liveProductsV2.find((p) => p.id === sandboxProd.id);
+
+			if (!liveProd) {
+				newProducts.push({ id: sandboxProd.id, name: sandboxProd.name });
+				continue;
+			}
+
+			const { itemsSame, detailsSame, freeTrialsSame, optionsSame } =
+				productsAreSame({
+					newProductV2: sandboxProd,
+					curProductV2: liveProd,
+					features: sandboxFeatures,
+				});
+
+			const arr =
+				itemsSame && detailsSame && freeTrialsSame && optionsSame
+					? unchangedProducts
+					: updatedProducts;
+
+			arr.push({ id: sandboxProd.id, name: sandboxProd.name });
+		}
 
 		const targetOnly = liveProductsV2
-			.filter((p) => !sandboxIds.has(p.id))
+			.filter((p) => !sandboxProductIds.has(p.id))
 			.map((p) => ({ id: p.id, name: p.name }));
+
+		const targetOnlyFeatures = liveFeatures
+			.filter((f) => !sandboxFeatureIds.has(f.id))
+			.map((f) => ({ id: f.id, name: f.name }));
 
 		const sandboxDefault = sandboxProductsV2.find((p) => p.is_default);
 		const liveDefault = liveProductsV2.find((p) => p.is_default);
@@ -52,9 +90,8 @@ export const handlePreviewSync = createRoute({
 			};
 		}
 
-		const productsToUpdate = sandboxProductsV2.filter((p) => liveIds.has(p.id));
 		const customersAffected = await Promise.all(
-			productsToUpdate.map(async (p) => {
+			updatedProducts.map(async (p) => {
 				const liveProduct = liveProducts.find((lp) => lp.id === p.id);
 				if (!liveProduct) return null;
 
@@ -78,8 +115,15 @@ export const handlePreviewSync = createRoute({
 
 		return c.json({
 			products: {
-				toSync,
+				new: newProducts,
+				updated: updatedProducts,
+				unchanged: unchangedProducts,
 				targetOnly,
+			},
+			features: {
+				new: newFeatures,
+				existing: existingFeatures,
+				targetOnly: targetOnlyFeatures,
 			},
 			defaultConflict,
 			customersAffected: customersAffected.filter(Boolean),
