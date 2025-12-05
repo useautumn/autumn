@@ -5,20 +5,20 @@ import {
 	type Organization,
 	type ProductV2,
 } from "@autumn/shared";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
-import { handleNewFreeTrial } from "@/internal/products/free-trials/freeTrialUtils.js";
-import { ProductService } from "@/internal/products/ProductService.js";
-import { PriceService } from "@/internal/products/prices/PriceService.js";
-import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
-import { validateProductItems } from "@/internal/products/product-items/validateProductItems.js";
+import type { AutumnContext } from "@server/honoUtils/HonoEnv.js";
+import { EntitlementService } from "@server/internal/products/entitlements/EntitlementService.js";
+import { getEntsWithFeature } from "@server/internal/products/entitlements/entitlementUtils.js";
+import { handleNewFreeTrial } from "@server/internal/products/free-trials/freeTrialUtils.js";
+import { ProductService } from "@server/internal/products/ProductService.js";
+import { PriceService } from "@server/internal/products/prices/PriceService.js";
+import { handleNewProductItems } from "@server/internal/products/product-items/productItemUtils/handleNewProductItems.js";
+import { validateProductItems } from "@server/internal/products/product-items/validateProductItems.js";
 import {
 	constructProduct,
 	initProductInStripe,
-} from "@/internal/products/productUtils.js";
-import { JobName } from "@/queue/JobName.js";
-import { addTaskToQueue } from "@/queue/queueUtils.js";
-import { getEntsWithFeature } from "../entitlements/entitlementUtils.js";
+} from "@server/internal/products/productUtils.js";
+import { JobName } from "@server/queue/JobName.js";
+import { addTaskToQueue } from "@server/queue/queueUtils.js";
 
 export const handleVersionProductV2 = async ({
 	ctx,
@@ -26,6 +26,7 @@ export const handleVersionProductV2 = async ({
 	latestProduct,
 	org,
 	env,
+	skipStripeInit = false,
 	// items,
 	// freeTrial,
 }: {
@@ -36,6 +37,7 @@ export const handleVersionProductV2 = async ({
 	env: AppEnv;
 	// items: ProductItem[];
 	// freeTrial: FreeTrial;
+	skipStripeInit?: boolean;
 }) => {
 	const { db, features } = ctx;
 
@@ -117,6 +119,10 @@ export const handleVersionProductV2 = async ({
 		isCustom: false,
 		newVersion: true, // This is a new product version
 	});
+
+	if (skipStripeInit) {
+		return newProduct;
+	}
 
 	await initProductInStripe({
 		db,

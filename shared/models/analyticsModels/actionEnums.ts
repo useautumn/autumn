@@ -1,4 +1,5 @@
 export enum AuthType {
+	Admin = "admin",
 	SecretKey = "secret_key",
 	PublicKey = "public_key",
 	Dashboard = "dashboard",

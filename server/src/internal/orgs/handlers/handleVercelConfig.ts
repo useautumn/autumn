@@ -1,5 +1,6 @@
 import {
 	AppEnv,
+	InternalError,
 	type Organization,
 	UpsertVercelProcessorConfigSchema,
 	type VercelMarketplaceMode,
@@ -140,6 +141,13 @@ export const handleGetVercelSink = createRoute({
 		const svixCli = createSvixCli();
 		let liveApp: ApplicationOut | undefined;
 		let sandboxApp: ApplicationOut | undefined;
+
+		if (!vercelConfig) {
+			throw new InternalError({
+				message: `Vercel config not found for org ${org.id}`,
+			});
+		}
+
 		if (!vercelConfig?.svix?.live_id || !vercelConfig?.svix?.sandbox_id) {
 			liveApp = await createSvixApp({
 				name: `${org.slug}_live_vercel_sink`,
