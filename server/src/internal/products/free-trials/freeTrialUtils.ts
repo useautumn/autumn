@@ -138,7 +138,6 @@ export const getFreeTrialAfterFingerprint = async ({
 	const exists = data && data.length > 0;
 
 	if (exists) {
-		console.log("Free trial fingerprint exists");
 		uniqueFreeTrial = null;
 	}
 
