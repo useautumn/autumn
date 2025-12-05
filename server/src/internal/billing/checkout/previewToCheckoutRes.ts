@@ -173,7 +173,7 @@ export const previewToCheckoutRes = async ({
 		.filter(notNullish);
 
 	return CheckoutResponseV0Schema.parse({
-		customer_id: attachParams.customer.id,
+		customer_id: attachParams.customer.id || attachParams.customer.internal_id,
 		lines,
 		product: newProduct,
 		current_product: curProduct,
