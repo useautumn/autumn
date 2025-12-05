@@ -63,39 +63,44 @@ export const SyncEnvironmentDialog = (props: SyncEnvironmentDialogProps) => {
 		}
 	};
 
-	const hasProductsToSync = (preview?.products?.toSync?.length ?? 0) > 0;
+	const p = preview?.products;
+	const f = preview?.features;
+	const hasChangesToSync = (p?.new?.length ?? 0) > 0 || (p?.updated?.length ?? 0) > 0 || (f?.new?.length ?? 0) > 0;
 
 	return (
 		<Dialog open={props.open} onOpenChange={handleOpenChange}>
-			<DialogContent onClick={(e) => e.stopPropagation()}>
+			<DialogContent>
 				<DialogHeader className="max-w-full">
 					<DialogTitle>Sync to {targetEnvName}</DialogTitle>
 					<DialogDescription className="max-w-[400px] break-words flex flex-col gap-3">
-						{!previewLoading && !hasProductsToSync ? (
-							<p>
-								No new products to sync from {sourceEnvName} to {targetEnvName}.
-							</p>
-						) : (
+						{!previewLoading && (
 							<>
 								<p>
-									Sync all products and features from {sourceEnvName} to{" "}
-									{targetEnvName}?
+									{hasChangesToSync
+										? [
+											p?.new?.length && `${p.new.length} new product${p.new.length > 1 ? "s" : ""}`,
+											p?.updated?.length && `${p.updated.length} updated`,
+											f?.new?.length && `${f.new.length} new feature${f.new.length > 1 ? "s" : ""}`,
+											p?.unchanged?.length && `${p.unchanged.length} in sync`,
+										]
+											.filter(Boolean)
+											.join(", ")
+										: "Everything is already in sync."}
 								</p>
-								{!previewLoading &&
-									preview?.products?.targetOnly?.length > 0 && (
-										<WarningBox>
-											Product {preview.products.targetOnly.map((p) => p.name).join(", ")}{" "}
-											only exists in {targetEnvName} and will remain unchanged.
-										</WarningBox>
-									)}
-								{!previewLoading && preview?.defaultConflict && (
+								{preview?.products?.targetOnly?.length > 0 && (
+									<WarningBox>
+										{preview.products.targetOnly.map((p) => p.name).join(", ")} is in{" "}
+										{targetEnvName} but not {sourceEnvName}, you can archive it.
+									</WarningBox>
+								)}
+								{preview?.defaultConflict && (
 									<WarningBox>
 										Default product conflict: "{preview.defaultConflict.source}"
 										({sourceEnvName}) vs "{preview.defaultConflict.target}" (
 										{targetEnvName}).
 									</WarningBox>
 								)}
-								{!previewLoading && preview?.customersAffected?.length > 0 && (
+								{preview?.customersAffected?.length > 0 && (
 									<WarningBox>
 										{preview.customersAffected.map((p) => (
 											<span key={p.productId}>
@@ -106,17 +111,19 @@ export const SyncEnvironmentDialog = (props: SyncEnvironmentDialogProps) => {
 										))}
 									</WarningBox>
 								)}
-								<p>
-									Type{" "}
-									<code className="font-mono font-semibold">{confirmWord}</code>{" "}
-									to continue.
-								</p>
+								{hasChangesToSync && (
+									<p>
+										Type{" "}
+										<code className="font-mono font-semibold">{confirmWord}</code>{" "}
+										to continue.
+									</p>
+								)}
 							</>
 						)}
 					</DialogDescription>
 				</DialogHeader>
 
-				{hasProductsToSync && (
+				{hasChangesToSync && (
 					<Input
 						value={confirmText}
 						onChange={(e) => setConfirmText(e.target.value)}
@@ -131,18 +138,16 @@ export const SyncEnvironmentDialog = (props: SyncEnvironmentDialogProps) => {
 						onClick={() => props.setOpen(false)}
 						disabled={isLoading}
 					>
-						{hasProductsToSync ? "Cancel" : "Close"}
+						Cancel
 					</Button>
-					{hasProductsToSync && (
-						<Button
-							variant="primary"
-							onClick={handleSync}
-							isLoading={isLoading}
-							disabled={previewLoading || confirmText !== confirmWord}
-						>
-							Sync to {targetEnvName}
-						</Button>
-					)}
+					<Button
+						variant="primary"
+						onClick={handleSync}
+						isLoading={isLoading}
+						disabled={previewLoading || !hasChangesToSync || confirmText !== confirmWord}
+					>
+						Sync to {targetEnvName}
+					</Button>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>
