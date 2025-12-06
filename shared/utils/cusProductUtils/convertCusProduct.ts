@@ -1,4 +1,5 @@
 import type { Entity } from "../../models/cusModels/entityModels/entityModels.js";
+import type { SortCusEntParams } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import type { FullCustomerPrice } from "../../models/cusProductModels/cusPriceModels/cusPriceModels.js";
 import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
@@ -8,6 +9,7 @@ import type { FullProduct } from "../../models/productModels/productModels.js";
 import { cusEntMatchesEntity } from "../cusEntUtils/filterCusEntUtils.js";
 import { sortCusEntsForDeduction } from "../cusEntUtils/sortCusEntsForDeduction.js";
 import { getBillingType } from "../productUtils/priceUtils.js";
+import { notNullish } from "../utils.js";
 
 export const cusProductsToPrices = ({
 	cusProducts,
@@ -61,9 +63,7 @@ export const cusProductsToCusEnts = ({
 	featureId?: string;
 	featureIds?: string[];
 	entity?: Entity;
-	sortParams?: {
-		cusEntId?: string;
-	};
+	sortParams?: SortCusEntParams;
 }) => {
 	let cusEnts: FullCusEntWithFullCusProduct[] = [];
 
@@ -110,6 +110,12 @@ export const cusProductsToCusEnts = ({
 		cusEnts = cusEnts.filter((cusEnt) => cusEnt.id === sortParams.cusEntId);
 	}
 
+	if (notNullish(sortParams?.interval)) {
+		cusEnts = cusEnts.filter(
+			(cusEnt) => cusEnt.entitlement.interval === sortParams.interval,
+		);
+	}
+
 	return cusEnts as FullCusEntWithFullCusProduct[];
 };
 
@@ -149,5 +155,3 @@ export const cusProductToProduct = ({
 		free_trial: cusProduct.free_trial,
 	} as FullProduct;
 };
-
-
