@@ -11,6 +11,7 @@ import { Button } from "@/components/v2/buttons/Button";
 import { Input } from "@/components/v2/inputs/Input";
 import { authClient } from "@/lib/auth-client";
 import { getBackendErr } from "@/utils/genUtils";
+import { useMemberships } from "../hooks/useMemberships";
 
 const emailSchema = z.email();
 
@@ -18,6 +19,7 @@ export const InvitePopover = () => {
 	const [email, setEmail] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [open, setOpen] = useState(false);
+	const { mutate } = useMemberships();
 
 	const handleInvite = async () => {
 		if (!email || !emailSchema.safeParse(email).success) {
@@ -38,6 +40,7 @@ export const InvitePopover = () => {
 				return;
 			}
 
+			await mutate();
 			toast.success(`Successfully sent invitation to ${email}`);
 			setEmail("");
 			setOpen(false);
@@ -54,7 +57,7 @@ export const InvitePopover = () => {
 			<PopoverTrigger asChild>
 				<Button variant="primary">Invite</Button>
 			</PopoverTrigger>
-			<PopoverContent align="end" className=" flex flex-col gap-2 pt-3">
+			<PopoverContent align="end" className="flex flex-col gap-2">
 				<div className="flex items-center gap-1 text-t3">
 					<Mail size={12} />
 					<p className="text-t3 text-sm">Invite by email</p>
