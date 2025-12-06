@@ -89,8 +89,8 @@ const getOptionsToUpdate = ({
 }) => {
 	const optionsToUpdate: { new: FeatureOptions; old: FeatureOptions }[] = [];
 	const prices = cusProductToPrices({ cusProduct: curSameProduct });
-	console.log("Old options list: ", oldOptionsList);
-	console.log("New options list: ", newOptionsList);
+	// console.log("Old options list: ", oldOptionsList);
+	// console.log("New options list: ", newOptionsList);
 
 	for (const newOptions of newOptionsList) {
 		const internalFeatureId = newOptions.internal_feature_id;

@@ -1,4 +1,5 @@
-import type { ProductV2 } from "@autumn/shared";
+import { type ProductV2, UsageModel } from "@autumn/shared";
+import Decimal from "decimal.js";
 import { useMemo } from "react";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useHasChanges, useProductStore } from "@/hooks/stores/useProductStore";
@@ -58,10 +59,27 @@ export function useAttachBodyBuilder(params: AttachBodyBuilderParams = {}) {
 			// Convert prepaidOptions to options array
 			const options = mergedParams.prepaidOptions
 				? Object.entries(mergedParams.prepaidOptions).map(
-						([featureId, quantity]) => ({
-							feature_id: featureId,
-							quantity: quantity,
-						}),
+						([featureId, quantity]) => {
+							const prepaidItem = product?.items.find(
+								(item) =>
+									item.feature_id === featureId &&
+									item.usage_model === UsageModel.Prepaid,
+							);
+
+							if (!prepaidItem) {
+								return {
+									feature_id: featureId,
+									quantity: quantity,
+								};
+							}
+
+							return {
+								feature_id: featureId,
+								quantity: new Decimal(quantity || 0)
+									.mul(prepaidItem.billing_units || 1)
+									.toNumber(),
+							};
+						},
 					)
 				: [];
 
