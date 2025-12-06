@@ -27,7 +27,7 @@ const OPENAPI_1_2_0 = createDocument(
 
 		servers: [
 			{
-				url: "https://api.useautumn.com",
+				url: "https://api.useautumn.com/v1",
 				description: "Production server",
 			},
 		],

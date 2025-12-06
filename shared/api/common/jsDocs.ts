@@ -1,4 +1,3 @@
-import { ExtAttachBodySchema, ExtCheckoutParamsSchema } from "@api/models.js";
 import {
 	createJSDocDescription,
 	docLink,
@@ -13,6 +12,7 @@ import {
 	QueryParamsSchema,
 	SetupPaymentParamsSchema,
 } from "../core/coreOpModels.js";
+import { ExtAttachBodyV0Schema, ExtCheckoutParamsV0Schema } from "../models.js";
 /**
  * Centralized JSDoc declarations for all core API methods.
  * These are used by the OpenAPI spec generator and propagate to SDK documentation.
@@ -23,7 +23,7 @@ export const attachJsDoc = createJSDocDescription({
 		"Enables a product for a customer and processes payment if their payment method is already on file.",
 	whenToUse:
 		"Use this when the customer already has a payment method saved. For new customers without payment info, use `checkout` instead.",
-	body: ExtAttachBodySchema,
+	body: ExtAttachBodyV0Schema,
 	examples: [
 		example({
 			values: {
@@ -47,7 +47,7 @@ export const checkoutJsDoc = createJSDocDescription({
 		"Creates a checkout session for a customer to purchase a product with payment collection.",
 	whenToUse:
 		"Use this for new customers or when payment info is needed. For customers with existing payment methods, use `attach` instead.",
-	body: ExtCheckoutParamsSchema,
+	body: ExtCheckoutParamsV0Schema,
 	examples: [
 		example({
 			values: {
