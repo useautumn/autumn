@@ -4,6 +4,7 @@ import type { AgGridReact } from "ag-grid-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { AnalyticsContext } from "./AnalyticsContext";
 import { EventsAGGrid, EventsBarChart } from "./AnalyticsGraph";
 import { colors } from "./components/AGGrid";
@@ -87,6 +88,18 @@ export const AnalyticsView = () => {
 				<h3 className="text-sm text-t2 font-bold">ClickHouse is disabled</h3>
 			</div>
 		);
+	}
+
+	// Show empty state if no actual analytics events (check rawEvents and totalRows)
+	const hasNoData =
+		!queryLoading &&
+		!rawQueryLoading &&
+		!topEventsLoading &&
+		(!rawEvents || !rawEvents.data || rawEvents.data.length === 0) &&
+		totalRows === 0;
+
+	if (hasNoData) {
+		return <EmptyState type="analytics" />;
 	}
 
 	return (
