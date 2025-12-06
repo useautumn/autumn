@@ -102,6 +102,8 @@ export const handleCheckoutV2 = createRoute({
 			branch,
 		});
 
+		
+
 		// Get has prorations
 		const hasProrations = await getHasProrations({
 			branch,

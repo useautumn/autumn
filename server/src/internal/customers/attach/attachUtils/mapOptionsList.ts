@@ -57,6 +57,10 @@ export const mapOptionsList = ({
 			.ceil()
 			.toNumber();
 
+		console.log(
+			`Quantity passed in: ${options.quantity}, billing units: ${config.billing_units}, divided quantity: ${dividedQuantity}`,
+		);
+
 		newOptionsList.push({
 			...options,
 			internal_feature_id: feature.internal_id,
