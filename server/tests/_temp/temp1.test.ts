@@ -1,5 +1,5 @@
 import { beforeAll, describe } from "bun:test";
-import { ApiVersion, ProductItemInterval } from "@autumn/shared";
+import { ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
@@ -22,8 +22,8 @@ const oneOff = constructRawProduct({
 	items: [
 		constructPrepaidItem({
 			featureId: TestFeature.Messages,
-			billingUnits: 100,
-			price: 10,
+			billingUnits: 1,
+			price: 1,
 		}),
 	],
 });
@@ -73,24 +73,14 @@ describe(`${chalk.yellowBright("temp: Testing entity prorated")}`, () => {
 			prefix: customerId,
 		});
 
-		await autumn.entities.create(customerId, entities);
-
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: pro.id,
-			entity_id: entities[0].id,
 		});
-
-		// await autumn.attach({
-		// 	customer_id: customerId,
-		// 	product_id: pro.id,
-		// 	entity_id: entities[1].id,
-		// });
 
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: oneOff.id,
-			entity_id: entities[0].id,
 			options: [
 				{
 					feature_id: TestFeature.Messages,
@@ -98,21 +88,10 @@ describe(`${chalk.yellowBright("temp: Testing entity prorated")}`, () => {
 				},
 			],
 		});
-
-		// await autumn.attach({
-		// 	customer_id: customerId,
-		// 	product_id: oneOff.id,
-		// 	entity_id: entities[1].id,
-		// 	options: [
-		// 		{
-		// 			feature_id: TestFeature.Messages,
-		// 			quantity: 100,
-		// 		},
-		// 	],
-		// });
 	});
+	return;
 
-	// test("should attach one off product to entity 1", async () => {
+	// test("should create a subscription with prepaid and prorated", async () => {
 	// 	await autumn.attach({
 	// 		customer_id: customerId,
 	// 		product_id: oneOff2.id,
