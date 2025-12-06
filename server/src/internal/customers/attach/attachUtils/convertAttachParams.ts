@@ -1,4 +1,4 @@
-import { cusProductToProduct } from "@autumn/shared";
+import { cusProductToProduct, type FullCusProduct } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
@@ -37,7 +37,16 @@ export const attachParamToCusProducts = ({
 			internalEntityId: attachParams.internalEntityId,
 		});
 
-	const curCusProduct = curMainProduct || curSameProduct;
+	let curCusProduct: FullCusProduct | undefined;
+	// 1. If same product
+	if (
+		curSameProduct &&
+		curSameProduct.product.id !== curScheduledProduct?.product.id
+	) {
+		curCusProduct = curSameProduct;
+	} else if (curMainProduct) {
+		curCusProduct = curMainProduct;
+	}
 
 	return { curMainProduct, curSameProduct, curScheduledProduct, curCusProduct };
 };
