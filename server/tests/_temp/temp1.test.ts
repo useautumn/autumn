@@ -1,5 +1,5 @@
 import { beforeAll, describe } from "bun:test";
-import { ApiVersion } from "@autumn/shared";
+import { ApiVersion, ProductItemInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
