@@ -218,23 +218,4 @@ export const handleScheduleFunction2 = async ({
 		code: SuccessCode.DowngradeScheduled,
 		message: `Successfully downgraded from ${curCusProduct.product.name} to ${product.name}`,
 	});
-
-	// if (res) {
-	// 	if (req.apiVersion.gte(ApiVersion.V1_1)) {
-	// 		res.status(200).json(
-	// 			AttachResultSchema.parse({
-	// 				code: SuccessCode.DowngradeScheduled,
-	// 				message: `Successfully downgraded from ${curCusProduct.product.name} to ${product.name}`,
-	// 				product_ids: [product.id],
-	// 				customer_id:
-	// 					attachParams.customer.id || attachParams.customer.internal_id,
-	// 			}),
-	// 		);
-	// 	} else {
-	// 		res.status(200).json({
-	// 			success: true,
-	// 			message: `Successfully downgraded from ${curCusProduct.product.name} to ${product.name}`,
-	// 		});
-	// 	}
-	// }
 };

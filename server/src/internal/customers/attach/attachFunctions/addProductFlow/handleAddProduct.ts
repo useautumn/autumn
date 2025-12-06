@@ -9,7 +9,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { createFullCusProduct } from "../../../add-product/createFullCusProduct.js";
 import type { AttachParams } from "../../../cusProducts/AttachParams.js";
-import { attachParamsToCurCusProduct } from "../../attachUtils/convertAttachParams.js";
+import { attachParamsToMergeCusProduct } from "../../attachUtils/convertAttachParams.js";
 import { getDefaultAttachConfig } from "../../attachUtils/getAttachConfig.js";
 import { getMergeCusProduct } from "./getMergeCusProduct.js";
 import { handlePaidProduct } from "./handlePaidProduct.js";
@@ -52,7 +52,7 @@ export const handleAddProduct = async ({
 	});
 
 	for (const product of products) {
-		const curCusProduct = attachParamsToCurCusProduct({ attachParams });
+		const curCusProduct = attachParamsToMergeCusProduct({ attachParams });
 		let anchorToUnix: number | undefined;
 
 		if (curCusProduct && config?.branch === AttachBranch.NewVersion) {
@@ -85,26 +85,6 @@ export const handleAddProduct = async ({
 		message: `Successfully attached ${products.map((p) => p.name).join(", ")} to ${customer.name}`,
 		code: SuccessCode.FreeProductAttached,
 	});
-
-	// if (res) {
-	// 	const productNames = products.map((p) => p.name).join(", ");
-	// 	const customerName = customer.name || customer.email || customer.id;
-	// 	if (req.apiVersion.gte(ApiVersion.V1_1)) {
-	// 		res.status(200).json(
-	// 			AttachResultSchema.parse({
-	// 				success: true,
-	// 				code: SuccessCode.FreeProductAttached,
-	// 				message: `Successfully attached ${productNames} to ${customerName}`,
-	// 				product_ids: products.map((p) => p.id),
-	// 				customer_id: customer.id || customer.internal_id,
-	// 			}),
-	// 		);
-	// 	} else {
-	// 		res.status(200).json({
-	// 			success: true,
-	// 		});
-	// 	}
-	// }
 };
 
 export const handleFreeProduct = async ({
@@ -138,7 +118,7 @@ export const handleFreeProduct = async ({
 	});
 
 	for (const product of products) {
-		const curCusProduct = attachParamsToCurCusProduct({ attachParams });
+		const curCusProduct = attachParamsToMergeCusProduct({ attachParams });
 		let anchorToUnix: number | undefined;
 
 		if (curCusProduct && config?.branch === AttachBranch.NewVersion) {

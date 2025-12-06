@@ -11,6 +11,28 @@ export const attachParamsToCurCusProduct = ({
 	const { curMainProduct, curSameProduct, curScheduledProduct } =
 		attachParamToCusProducts({ attachParams });
 
+	const product = attachParamsToProduct({ attachParams });
+
+	if (
+		curSameProduct &&
+		curSameProduct.product.id !== curScheduledProduct?.product.id
+	) {
+		return curSameProduct;
+	} else if (!product?.is_add_on && curMainProduct) {
+		return curMainProduct;
+	}
+
+	return undefined;
+};
+
+export const attachParamsToMergeCusProduct = ({
+	attachParams,
+}: {
+	attachParams: AttachParams;
+}) => {
+	const { curSameProduct, curMainProduct } = attachParamToCusProducts({
+		attachParams,
+	});
 	return curSameProduct || curMainProduct;
 };
 
@@ -141,8 +163,6 @@ export const getCustomerSub = async ({
 	}
 
 	// If there's only one customer product on sub, and it's still trialing, return undefined, because should just replace sub.
-	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
-
 	const sub = await stripeCli.subscriptions.retrieve(subId, {
 		expand: [
 			"items.data.price.tiers",
@@ -236,9 +256,7 @@ export const paramsToCurSub = async ({
 	attachParams: AttachParams;
 }) => {
 	const { stripeCli } = attachParams;
-	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
-	// console.log("Cur cus product:", curCusProduct);
-	// console.log("Sub IDs:", curCusProduct?.subscription_ids);
+	const curCusProduct = attachParamsToMergeCusProduct({ attachParams });
 
 	const subIds = curCusProduct?.subscription_ids || [];
 
@@ -265,7 +283,7 @@ export const paramsToCurSubSchedule = async ({
 	attachParams: AttachParams;
 }) => {
 	const { stripeCli } = attachParams;
-	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
+	const curCusProduct = attachParamsToMergeCusProduct({ attachParams });
 
 	const subScheduleIds = curCusProduct?.scheduled_ids || [];
 	if (subScheduleIds.length === 0) {

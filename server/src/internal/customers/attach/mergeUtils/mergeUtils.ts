@@ -1,19 +1,24 @@
 import {
-	getPriceEntitlement,
-	getPriceOptions,
-} from "@/internal/products/prices/priceUtils.js";
+	AttachBranch,
+	cusProductToEnts,
+	type Entity,
+	type FullCusProduct,
+	type Price,
+} from "@autumn/shared";
+import type Stripe from "stripe";
 import {
 	isContUsePrice,
 	isFixedPrice,
 	isPrepaidPrice,
 } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
-import { AttachBranch, Entity, FullCusProduct, Price } from "@autumn/shared";
-import Stripe from "stripe";
-import { getExistingUsageFromCusProducts } from "../../cusProducts/cusEnts/cusEntUtils.js";
-import { cusProductToEnts } from "@autumn/shared";
-import { AttachParams } from "../../cusProducts/AttachParams.js";
 import {
-	attachParamsToCurCusProduct,
+	getPriceEntitlement,
+	getPriceOptions,
+} from "@/internal/products/prices/priceUtils.js";
+import type { AttachParams } from "../../cusProducts/AttachParams.js";
+import { getExistingUsageFromCusProducts } from "../../cusProducts/cusEnts/cusEntUtils.js";
+import {
+	attachParamsToMergeCusProduct,
 	getCustomerSub,
 } from "../attachUtils/convertAttachParams.js";
 
@@ -55,7 +60,7 @@ export const getQuantityToRemove = ({
 	if (isContUsePrice({ price })) {
 		const ents = cusProductToEnts({ cusProduct });
 		const relatedEnt = getPriceEntitlement(price, ents);
-		let existingUsage = getExistingUsageFromCusProducts({
+		const existingUsage = getExistingUsageFromCusProducts({
 			entitlement: relatedEnt,
 			cusProducts: [cusProduct],
 			entities,
@@ -82,14 +87,14 @@ export const willMergeSub = async ({
 }) => {
 	const { subId } = await getCustomerSub({ attachParams, onlySubId: true });
 
-	if (branch == AttachBranch.MainIsTrial) {
+	if (branch === AttachBranch.MainIsTrial) {
 		return false;
 	}
 
 	const cusProducts = attachParams.customer.customer_products;
-	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
+	const curCusProduct = attachParamsToMergeCusProduct({ attachParams });
 
-	if (branch == AttachBranch.MultiAttachUpdate) {
+	if (branch === AttachBranch.MultiAttachUpdate) {
 		return true;
 	}
 
@@ -99,7 +104,7 @@ export const willMergeSub = async ({
 		curCusProduct?.subscription_ids?.includes(subId!) &&
 		!cusProducts.some(
 			(cp) =>
-				cp.subscription_ids?.includes(subId!) && cp.id != curCusProduct.id,
+				cp.subscription_ids?.includes(subId!) && cp.id !== curCusProduct.id,
 		) &&
 		attachParams.freeTrial
 	) {

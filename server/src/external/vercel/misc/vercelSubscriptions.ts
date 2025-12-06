@@ -1,6 +1,7 @@
 import {
 	type AppEnv,
 	type Feature,
+	type FeatureOptions,
 	type FullCustomer,
 	type FullProduct,
 	type Organization,
@@ -130,7 +131,7 @@ export const createVercelSubscription = async ({
 	}
 
 	// 4. Parse prepaid quantities from metadata if provided
-	let optionsList;
+	let optionsList: FeatureOptions[] = [];
 	if (metadata && Object.keys(metadata).length > 0) {
 		optionsList = parseVercelPrepaidQuantities({
 			metadata,

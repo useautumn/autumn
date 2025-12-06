@@ -1,5 +1,6 @@
 import {
 	type AttachConfig,
+	type AttachReplaceable,
 	ProrationBehavior,
 	RecaseError,
 } from "@autumn/shared";
@@ -67,11 +68,9 @@ export const updateStripeSub2 = async ({
 	const updatedSub = await stripeCli.subscriptions.update(curSub.id, {
 		items: sanitizeSubItems(itemSet.subItems),
 		proration_behavior:
-			proration === ProrationBehavior.None
-				? "none"
-				: fromCreate
-					? "always_invoice"
-					: "create_prorations",
+			proration === ProrationBehavior.None ? "none" : "create_prorations",
+		// : fromCreate
+		// 	? "always_invoice"
 
 		trial_end: trialEnd,
 
@@ -81,6 +80,7 @@ export const updateStripeSub2 = async ({
 			days_until_due: 30,
 		}),
 		payment_behavior: "error_if_incomplete",
+		// payment_behavior: "pending_if_incomplete",
 
 		expand: ["latest_invoice"],
 	});
@@ -96,30 +96,70 @@ export const updateStripeSub2 = async ({
 		};
 	}
 
-	if (fromCreate) {
-		return {
-			updatedSub,
-			latestInvoice: updatedSub.latest_invoice as Stripe.Invoice,
-		};
-	}
+	// if (fromCreate) {
+	// 	return {
+	// 		updatedSub,
+	// 		latestInvoice: updatedSub.latest_invoice as Stripe.Invoice,
+	// 	};
+	// 	// const latestInvoice = updatedSub.latest_invoice as Stripe.Invoice;
+
+	// 	// // Handle 3DS case: if invoice is open after subscription update, payment action is required
+	// 	// if (latestInvoice && latestInvoice.status === "open") {
+	// 	// 	logger.info(
+	// 	// 		`[updateStripeSub2] invoice action required: ${latestInvoice.id}`,
+	// 	// 	);
+
+	// 	// 	const metadata = await attachParamsToMetadata({
+	// 	// 		db,
+	// 	// 		attachParams,
+	// 	// 		type: MetadataType.InvoiceActionRequired,
+	// 	// 		stripeInvoiceId: latestInvoice.id,
+	// 	// 		expiresAt: addMinutes(Date.now(), 10).getTime(),
+	// 	// 	});
+
+	// 	// 	await stripeCli.invoices.update(latestInvoice.id, {
+	// 	// 		metadata: {
+	// 	// 			autumn_metadata_id: metadata.id,
+	// 	// 		},
+	// 	// 	});
+
+	// 	// 	return {
+	// 	// 		updatedSub,
+	// 	// 		latestInvoice,
+	// 	// 		url: latestInvoice.hosted_invoice_url,
+	// 	// 	};
+	// 	// }
+
+	// 	// return {
+	// 	// 	updatedSub,
+	// 	// 	latestInvoice,
+	// 	// };
+	// }
 
 	const { curMainProduct } = attachParamToCusProducts({ attachParams });
 
-	// 2. Create prorations for single use items
-	const { cusEntIds } = await createUsageInvoiceItems({
-		db,
-		attachParams,
-		cusProduct: curMainProduct!,
-		sub: curSub,
-		logger,
-	});
+	let cusEntIds: string[] = [];
+	let replaceables: AttachReplaceable[] = [];
+	if (curMainProduct) {
+		// 2. Create prorations for single use items
+		const { cusEntIds: _cusEntIds } = await createUsageInvoiceItems({
+			db,
+			attachParams,
+			cusProduct: curMainProduct!,
+			sub: curSub,
+			logger,
+		});
 
-	const { replaceables } = await createAndFilterContUseItems({
-		attachParams,
-		curMainProduct: curMainProduct!,
-		sub: curSub,
-		logger,
-	});
+		const { replaceables: _replaceables } = await createAndFilterContUseItems({
+			attachParams,
+			curMainProduct: curMainProduct!,
+			sub: curSub,
+			logger,
+		});
+
+		cusEntIds = _cusEntIds;
+		replaceables = _replaceables;
+	}
 
 	let url = null;
 	if (proration === ProrationBehavior.Immediately) {

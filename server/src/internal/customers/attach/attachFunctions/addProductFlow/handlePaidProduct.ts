@@ -13,7 +13,7 @@ import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSu
 import { subIsCanceled } from "@/external/stripe/stripeSubUtils.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
-import { type AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { addIntervalToAnchor } from "@/internal/products/prices/billingIntervalUtils2.js";
@@ -93,7 +93,7 @@ export const handlePaidProduct = async ({
 			config,
 		});
 
-		const { updatedSub, latestInvoice } = await updateStripeSub2({
+		const { updatedSub, latestInvoice, url } = await updateStripeSub2({
 			ctx,
 			attachParams,
 			curSub: mergeSub,
@@ -101,8 +101,6 @@ export const handlePaidProduct = async ({
 			config,
 			fromCreate: true,
 		});
-
-		sub = updatedSub;
 
 		if (latestInvoice) {
 			invoice = await insertInvoiceFromAttach({
@@ -112,6 +110,18 @@ export const handlePaidProduct = async ({
 				logger,
 			});
 		}
+
+		// Handle 3DS case: if url is returned, payment action is required
+		if (url) {
+			return AttachFunctionResponseSchema.parse({
+				checkout_url: url,
+				code: SuccessCode.InvoiceActionRequired,
+				message: "Payment action required",
+			});
+		}
+
+		sub = updatedSub;
+
 		if (subIsCanceled({ sub: mergeSub })) {
 			logger.info("ADD PRODUCT FLOW, CREATING NEW SCHEDULE");
 			schedule = await subToNewSchedule({

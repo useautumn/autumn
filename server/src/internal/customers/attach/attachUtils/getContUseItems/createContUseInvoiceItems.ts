@@ -142,7 +142,7 @@ export const createAndFilterContUseItems = async ({
 
 		const { start, end } = subToPeriodStartEnd({ sub });
 		await stripeCli.invoiceItems.create({
-			customer: customer.processor?.id!,
+			customer: customer.processor?.id ?? undefined,
 			amount: Math.round(item.amount * 100),
 			description: item.description,
 			currency: org.default_currency || "usd",
