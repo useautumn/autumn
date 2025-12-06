@@ -22,6 +22,8 @@ export async function handleCusDiscountDeleted({
 	const customer = await CusService.getByStripeId({
 		db,
 		stripeId: discount.customer,
+		orgId: org.id,
+		env,
 	});
 
 	if (!customer) {

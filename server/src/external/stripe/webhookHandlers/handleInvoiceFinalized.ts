@@ -95,6 +95,8 @@ export const handleInvoiceFinalized = async ({
 						const customer = await CusService.getByStripeId({
 							db,
 							stripeId: invoice.customer as string,
+							orgId: org.id,
+							env,
 						});
 
 						if (!customer) {
