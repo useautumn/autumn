@@ -41,6 +41,7 @@ export const previewToCheckoutRes = async ({
 	const product = attachParamsToProduct({ attachParams });
 
 	const { curCusProduct } = attachParamToCusProducts({ attachParams });
+
 	const curPrices = curCusProduct
 		? cusProductToPrices({ cusProduct: curCusProduct })
 		: [];

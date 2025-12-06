@@ -147,8 +147,6 @@ function SheetContent({
 		initialPrepaidOptions,
 	});
 
-	console.log("initialPrepaidOptions", initialPrepaidOptions);
-
 	return (
 		<FormWrapper form={form}>
 			<div className="flex flex-col h-full">
