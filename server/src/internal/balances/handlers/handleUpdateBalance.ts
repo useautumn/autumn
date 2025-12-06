@@ -1,6 +1,8 @@
 import {
 	FeatureNotFoundError,
 	notNullish,
+	ResetInterval,
+	resetIntvToEntIntv,
 	UpdateBalanceParamsSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
@@ -12,6 +14,7 @@ export const handleUpdateBalance = createRoute({
 	body: UpdateBalanceParamsSchema.extend({
 		// Internal
 		customer_entitlement_id: z.string().optional(),
+		interval: z.enum(ResetInterval).optional(),
 	}),
 
 	handler: async (c) => {
@@ -24,11 +27,6 @@ export const handleUpdateBalance = createRoute({
 		if (!feature) {
 			throw new FeatureNotFoundError({ featureId: body.feature_id });
 		}
-
-		console.log(
-			"Prioritising customer entitlement: ",
-			body.customer_entitlement_id,
-		);
 
 		// Update balance using SQL with alter_granted=true
 		if (notNullish(body.current_balance)) {
@@ -47,6 +45,9 @@ export const handleUpdateBalance = createRoute({
 				alterGrantedBalance: true,
 				sortParams: {
 					cusEntId: body.customer_entitlement_id,
+					interval: body.interval
+						? resetIntvToEntIntv({ resetIntv: body.interval })
+						: undefined,
 				},
 				refreshCache: false,
 			});
