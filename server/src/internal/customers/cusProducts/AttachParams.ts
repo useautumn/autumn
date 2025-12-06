@@ -114,6 +114,7 @@ export type InsertCusProductParams = {
 	isCustom?: boolean;
 	disableFreeTrial?: boolean;
 	features: Feature[];
+	fromCancel?: boolean;
 
 	entityId?: string;
 	internalEntityId?: string;

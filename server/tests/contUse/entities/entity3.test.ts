@@ -1,7 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { LegacyVersion, OnDecrease, OnIncrease } from "@autumn/shared";
-import chalk from "chalk";
-import { addHours, addMonths, addWeeks } from "date-fns";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
 import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
@@ -9,6 +7,8 @@ import { expectSubQuantityCorrect } from "@tests/utils/expectUtils/expectContUse
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { getBasePrice } from "@tests/utils/testProductUtils/testProductUtils.js";
+import chalk from "chalk";
+import { addHours, addMonths, addWeeks } from "date-fns";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";

@@ -88,8 +88,8 @@ export const afterOrgCreated = async ({
 			orgId: id,
 			updates: {
 				svix_config: {
-					sandbox_app_id: sandboxApp?.id,
-					live_app_id: liveApp?.id,
+					sandbox_app_id: sandboxApp?.id ?? "",
+					live_app_id: liveApp?.id ?? "",
 				},
 				test_pkey: generatePublishableKey(AppEnv.Sandbox),
 				live_pkey: generatePublishableKey(AppEnv.Live),

@@ -42,6 +42,26 @@ export const sharedProProduct = constructProduct({
 		}),
 	],
 });
+export const sharedPremiumProduct = constructProduct({
+	id: "shared-premium-product",
+	isDefault: false,
+	type: "premium",
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Dashboard,
+			isBoolean: true,
+		}),
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 100,
+			interval: ProductItemInterval.Month,
+		}),
+		constructFeatureItem({
+			featureId: TestFeature.Admin,
+			unlimited: true,
+		}),
+	],
+});
 
 export const initBasicSharedProducts = async () => {
 	await createSharedProducts({

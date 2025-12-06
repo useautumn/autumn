@@ -3,6 +3,7 @@ import { type Metadata, MetadataType, metadata } from "@autumn/shared";
 import { and, eq, lt } from "drizzle-orm";
 import { createStripeCli } from "../../external/connect/createStripeCli";
 import type { AttachParams } from "../../internal/customers/cusProducts/AttachParams";
+import { MetadataService } from "../../internal/metadata/MetadataService";
 import type { CronContext } from "../utils/CronContext";
 
 export const handleVoidInvoiceCron = async ({
@@ -12,7 +13,7 @@ export const handleVoidInvoiceCron = async ({
 	ctx: CronContext;
 	metadata: Metadata;
 }) => {
-	const { logger } = ctx;
+	const { logger, db } = ctx;
 	const data = metadata.data as AttachParams;
 	const { org, customer } = data;
 	const stripeCli = createStripeCli({ org, env: customer.env });
@@ -22,15 +23,28 @@ export const handleVoidInvoiceCron = async ({
 	}
 
 	const invoice = await stripeCli.invoices.retrieve(metadata.stripe_invoice_id);
+	console.log(
+		`Invoice: ${metadata.stripe_invoice_id} for customer ${customer.id} (org: ${org.slug})`,
+	);
 	if (invoice.status === "open") {
 		try {
 			await stripeCli.invoices.voidInvoice(metadata.stripe_invoice_id);
 			logger.info(
 				`voided invoice ${metadata.stripe_invoice_id} for customer ${customer.id} (org: ${org.slug})`,
 			);
+
+			await MetadataService.delete({
+				db,
+				id: metadata.id,
+			});
 		} catch (error) {
 			logger.error(`Error voiding invoice: ${error}`);
 		}
+	} else if (invoice.status === "void") {
+		await MetadataService.delete({
+			db,
+			id: metadata.id,
+		});
 	}
 };
 

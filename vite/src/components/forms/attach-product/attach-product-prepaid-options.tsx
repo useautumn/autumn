@@ -36,7 +36,7 @@ export function AttachProductPrepaidOptions({
 	}
 
 	return (
-		<div className="space-y-3 mt-4">
+		<div className="space-y-3 mt-4 mb-2">
 			<div className="space-y-2">
 				{prepaidItems.map((item) => {
 					const display = getFeaturePriceItemDisplay({

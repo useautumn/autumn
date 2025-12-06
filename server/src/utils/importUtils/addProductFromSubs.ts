@@ -55,9 +55,6 @@ export const addProductFromSubs = async ({
 	);
 
 	if (mainCusProduct && !force) {
-		const prices = mainCusProduct.customer_prices.map((cp) => cp.price);
-		// let isFree = isFreeProduct(prices);
-
 		if (mainCusProduct) {
 			logger.info(
 				`Customer ${
