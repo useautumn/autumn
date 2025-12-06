@@ -121,7 +121,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for prepaid seats
 			to_version: 2,
 		});
 
-		await timeout(3000);
+		await timeout(5000);
 		// await autumn.attach({
 		// 	customer_id: customerId,
 		// 	product_id: pro.id,

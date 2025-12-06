@@ -18,9 +18,9 @@ import { initProductsV0 } from "../../src/utils/scriptUtils/testUtils/initProduc
 // UNCOMMENT FROM HERE
 const oneOff = constructRawProduct({
 	id: "one_off",
+	isAddOn: true,
 	items: [
 		constructPrepaidItem({
-			isOneOff: true,
 			featureId: TestFeature.Messages,
 			billingUnits: 1,
 			price: 1,
@@ -35,10 +35,24 @@ const pro = constructProduct({
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
-			includedUsage: 100,
+			includedUsage: 1000,
+			interval: ProductItemInterval.Month,
 		}),
 	],
 });
+
+const entities = [
+	{
+		id: "1",
+		name: "entity1",
+		feature_id: TestFeature.Users,
+	},
+	// {
+	// 	id: "2",
+	// 	name: "entity2",
+	// 	feature_id: TestFeature.Users,
+	// },
+];
 
 describe(`${chalk.yellowBright("temp: Testing entity prorated")}`, () => {
 	const customerId = "temp";
