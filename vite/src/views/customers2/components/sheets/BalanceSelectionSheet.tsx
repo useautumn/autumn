@@ -6,6 +6,7 @@ import {
 	isUnlimitedCusEnt,
 } from "@autumn/shared";
 import { AdminHover } from "@/components/general/AdminHover";
+import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
 import { Button } from "@/components/v2/buttons/Button";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { InfoRow } from "@/components/v2/InfoRow";
@@ -99,6 +100,13 @@ export function BalanceSelectionSheet() {
 								return entitlement.interval;
 							};
 
+							const rolloversExist = cusEnt.rollovers.length > 0;
+
+							const rolloverBalance = cusEnt.rollovers.reduce(
+								(acc, rollover) => acc + rollover.balance,
+								0,
+							);
+
 							return (
 								<Button
 									variant="secondary"
@@ -143,13 +151,23 @@ export function BalanceSelectionSheet() {
 										/>
 									</div>
 
-									<span className="bg-muted px-1 py-0.5 rounded-md text-t1">
+									<div className="bg-muted px-1 py-0.5 rounded-md text-t1 w-fit flex items-center gap-1">
 										{isUnlimitedCusEnt({ cusEnt })
 											? "Unlimited"
 											: notNullish(balance)
 												? new Intl.NumberFormat().format(balance)
 												: "N/A"}
-									</span>
+										{rolloversExist && (
+											<span className="flex items-center gap-1">
+												+ {new Intl.NumberFormat().format(rolloverBalance)}
+												<InfoTooltip>
+													Rollover balance that has accumulated from previous
+													periods. <br />
+													This balance will be consumed first.
+												</InfoTooltip>
+											</span>
+										)}
+									</div>
 								</Button>
 							);
 						})}

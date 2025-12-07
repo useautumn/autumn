@@ -38,11 +38,9 @@ export const CustomerBalanceTableColumns = ({
 			const isAggregated = originalEnts && originalEnts.length > 1;
 			const balanceCount = originalEnts?.length || 1;
 
-		
-		
-		return (
-			<div className="flex items-center gap-2">
-				<AdminHover
+			return (
+				<div className="flex items-center gap-2">
+					<AdminHover
 						texts={getCusEntHoverTexts({
 							cusEnt: row.original,
 							entities,
@@ -52,13 +50,13 @@ export const CustomerBalanceTableColumns = ({
 							{ent.entitlement.feature.name}
 						</span>
 					</AdminHover>
-				{isAggregated && (
-					<div className="text-t3 bg-muted rounded-sm p-1 py-0">
-						{balanceCount}
-					</div>
-				)}
-			</div>
-		);
+					{isAggregated && (
+						<div className="text-t3 bg-muted rounded-sm p-1 py-0">
+							{balanceCount}
+						</div>
+					)}
+				</div>
+			);
 		},
 	},
 	{
