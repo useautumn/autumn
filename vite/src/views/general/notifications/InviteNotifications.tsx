@@ -1,5 +1,5 @@
-import { FullInvite } from "@autumn/shared";
-import { Check, X } from "lucide-react";
+import type { FullInvite } from "@autumn/shared";
+import { format, isSameYear } from "date-fns";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
@@ -8,11 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/v2/buttons/Button";
 import { useInvitesQuery } from "@/hooks/queries/useInvitesQuery";
 import { authClient } from "@/lib/auth-client";
-import { getBackendErr } from "@/utils/genUtils";
 
 export const InviteNotifications = () => {
 	const [loading, setLoading] = useState(false);
-	const [inviteStatus, setInviteStatus] = useState<Map<string, "unavailable" | "dismissed">>(new Map());
+	const [inviteStatus, setInviteStatus] = useState<
+		Map<string, "unavailable" | "dismissed">
+	>(new Map());
 	const { invites, refetch } = useInvitesQuery();
 
 	const handleRespondToRequest = async (
@@ -23,7 +24,7 @@ export const InviteNotifications = () => {
 			setLoading(true);
 
 			if (action === "accept") {
-				const { data, error } = await authClient.organization.acceptInvitation({
+				const { error } = await authClient.organization.acceptInvitation({
 					invitationId: invite.id,
 				});
 
@@ -42,7 +43,7 @@ export const InviteNotifications = () => {
 				toast.success(`Invitation rejected successfully`);
 			}
 			await refetch();
-		} catch (error) {
+		} catch (_error) {
 			setInviteStatus((prev) => new Map(prev).set(invite.id, "unavailable"));
 		} finally {
 			setLoading(false);
@@ -54,7 +55,7 @@ export const InviteNotifications = () => {
 	};
 
 	const visibleInvites = invites.filter(
-		(invite) => inviteStatus.get(invite.id) !== "dismissed"
+		(invite) => inviteStatus.get(invite.id) !== "dismissed",
 	);
 
 	if (visibleInvites.length === 0) return null;
@@ -64,6 +65,13 @@ export const InviteNotifications = () => {
 			<AnimatePresence mode="popLayout">
 				{visibleInvites.map((invite: FullInvite, index) => {
 					const isUnavailable = inviteStatus.get(invite.id) === "unavailable";
+					const expiresAt = new Date(invite.expiresAt);
+					const expiresAtFormatted = format(
+						expiresAt,
+						isSameYear(expiresAt, new Date())
+							? "MMM d, h:mm a"
+							: "MMM d, yyyy, h:mm a",
+					);
 
 					return (
 						<motion.div
@@ -97,7 +105,9 @@ export const InviteNotifications = () => {
 							<div className="rounded-md border bg-background p-4 shadow-lg">
 								{isUnavailable ? (
 									<div className="space-y-3">
-										<p className="text-sm font-medium">Invitation Unavailable</p>
+										<p className="text-sm font-medium">
+											Invitation Unavailable
+										</p>
 										<p className="text-sm text-t3">
 											This invitation has expired or been revoked.
 										</p>
@@ -112,15 +122,11 @@ export const InviteNotifications = () => {
 								) : (
 									<div className="space-y-3">
 										<div className="flex items-center justify-between">
-											<p className="text-sm font-medium">Organization Invitation</p>
+											<p className="text-sm font-medium">
+												Organization Invitation
+											</p>
 											<p className="text-xs text-t3">
-												Expires {new Date(invite.expiresAt).toLocaleString(undefined, {
-													month: "short",
-													day: "numeric",
-													hour: "numeric",
-													minute: "2-digit",
-													...(new Date(invite.expiresAt).getFullYear() !== new Date().getFullYear() && { year: "numeric" }),
-												})}
+												Expires {expiresAtFormatted}
 											</p>
 										</div>
 
@@ -141,7 +147,6 @@ export const InviteNotifications = () => {
 												className="flex-1"
 												onClick={() => handleRespondToRequest(invite, "reject")}
 												disabled={loading}
-												startIcon={<X size={14} />}
 											>
 												Decline
 											</Button>
@@ -150,7 +155,6 @@ export const InviteNotifications = () => {
 												className="flex-1"
 												onClick={() => handleRespondToRequest(invite, "accept")}
 												disabled={loading}
-												startIcon={<Check size={14} />}
 											>
 												Accept
 											</Button>
@@ -163,6 +167,6 @@ export const InviteNotifications = () => {
 				})}
 			</AnimatePresence>
 		</div>,
-		document.body
+		document.body,
 	);
 };

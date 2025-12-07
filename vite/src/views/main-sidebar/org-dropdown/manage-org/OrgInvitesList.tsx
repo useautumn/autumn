@@ -1,10 +1,11 @@
-import { Invite, Membership } from "@autumn/shared";
+import type { Invite, Membership } from "@autumn/shared";
+import { isFuture } from "date-fns";
 import { Item, Row } from "@/components/general/TableGrid";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "@/lib/auth-client";
 import { formatDateStr } from "@/utils/formatUtils/formatDateUtils";
-import { MemberRowToolbar } from "./MemberRowToolbar";
 import { useMemberships } from "../hooks/useMemberships";
+import { MemberRowToolbar } from "./MemberRowToolbar";
 
 export const OrgInvitesList = () => {
 	const {
@@ -23,7 +24,7 @@ export const OrgInvitesList = () => {
 
 	const pendingInvites = invites.filter((invite: Invite) => {
 		if (!invite.expiresAt) return false;
-		return new Date(invite.expiresAt).getTime() > Date.now();
+		return isFuture(new Date(invite.expiresAt));
 	});
 
 	if (pendingInvites.length === 0) {
@@ -37,32 +38,27 @@ export const OrgInvitesList = () => {
 	return (
 		<div className="h-full overflow-y-auto">
 			<Row type="header" className="flex px-6">
-				<Item className="flex-[6]">Email</Item>
-				<Item className="flex-[5]">Status</Item>
-				<Item className="flex-[3]">Role</Item>
-				<Item className="flex-[3]">Expires At</Item>
-				<Item className="flex-[1]"></Item>
+				<Item className="flex-6">Email</Item>
+				<Item className="flex-5">Status</Item>
+				<Item className="flex-3">Role</Item>
+				<Item className="flex-3">Expires At</Item>
+				<Item className="flex-1"></Item>
 			</Row>
 			{pendingInvites.map((invite: Invite) => {
-					return (
-						<Row
-							key={invite.id}
-							className="flex px-6 text-sm text-t2"
-						>
-							<Item className="flex-[6]">{invite.email}</Item>
-							<Item className="flex-[5]">{invite.status}</Item>
-							<Item className="flex-[3]">
-								<Badge variant="outline">{invite.role}</Badge>
-							</Item>
-							<Item className="flex-[3]">
-								{formatDateStr(invite.expiresAt)}
-							</Item>
-							<Item className="flex-[1] flex justify-end">
-								{isAdmin && <MemberRowToolbar invite={invite} />}
-							</Item>
-						</Row>
-					);
-				})}
+				return (
+					<Row key={invite.id} className="flex px-6 text-sm text-t2">
+						<Item className="flex-6">{invite.email}</Item>
+						<Item className="flex-5">{invite.status}</Item>
+						<Item className="flex-3">
+							<Badge variant="outline">{invite.role}</Badge>
+						</Item>
+						<Item className="flex-3">{formatDateStr(invite.expiresAt)}</Item>
+						<Item className="flex-1 flex justify-end">
+							{isAdmin && <MemberRowToolbar invite={invite} />}
+						</Item>
+					</Row>
+				);
+			})}
 		</div>
 	);
 };
