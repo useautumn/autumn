@@ -513,15 +513,17 @@ export class CusSearchService {
 			});
 		}
 
-		if (filters?.version && filters?.version.length > 0) {
+		const hasVersionFilters = filters?.version && filters?.version.length > 0;
+		const hasStatusFilters = filters?.status && filters?.status.length > 0;
+
+		if (hasVersionFilters || hasStatusFilters) {
 			return await this.searchByProduct({
 				db,
 				orgId,
 				env,
 				search,
-				filters,
+				filters: filters || {},
 				pageSize,
-				// lastItem: resolvedLastItem,
 				pageNumber,
 			});
 		}
