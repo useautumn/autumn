@@ -1,5 +1,9 @@
 import { beforeAll, describe } from "bun:test";
-import { ApiVersion, ProductItemInterval } from "@autumn/shared";
+import {
+	ApiVersion,
+	ProductItemInterval,
+	RolloverExpiryDurationType,
+} from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
@@ -8,22 +12,19 @@ import {
 	constructProduct,
 	constructRawProduct,
 } from "@/utils/scriptUtils/createTestProducts.js";
-import {
-	constructFeatureItem,
-	constructPrepaidItem,
-} from "../../src/utils/scriptUtils/constructItem.js";
+import { constructFeatureItem } from "../../src/utils/scriptUtils/constructItem.js";
 import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "../../src/utils/scriptUtils/testUtils/initProductsV0.js";
 
 // UNCOMMENT FROM HERE
-const oneOff = constructRawProduct({
-	id: "one_off",
-	isAddOn: true,
+const free = constructRawProduct({
+	id: "free",
+	group: "free_group",
 	items: [
-		constructPrepaidItem({
+		constructFeatureItem({
 			featureId: TestFeature.Messages,
-			billingUnits: 1,
-			price: 1,
+			includedUsage: 100,
+			interval: null,
 		}),
 	],
 });
@@ -31,28 +32,21 @@ const oneOff = constructRawProduct({
 const pro = constructProduct({
 	type: "pro",
 	isDefault: false,
+	group: "main",
 
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
 			includedUsage: 1000,
 			interval: ProductItemInterval.Month,
+			rolloverConfig: {
+				max: null,
+				length: 1,
+				duration: RolloverExpiryDurationType.Forever,
+			},
 		}),
 	],
 });
-
-const entities = [
-	{
-		id: "1",
-		name: "entity1",
-		feature_id: TestFeature.Users,
-	},
-	// {
-	// 	id: "2",
-	// 	name: "entity2",
-	// 	feature_id: TestFeature.Users,
-	// },
-];
 
 describe(`${chalk.yellowBright("temp: Testing entity prorated")}`, () => {
 	const customerId = "temp";
@@ -69,27 +63,20 @@ describe(`${chalk.yellowBright("temp: Testing entity prorated")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [pro, oneOff],
+			products: [pro, free],
 			prefix: customerId,
+		});
+
+		await autumn.attach({
+			customer_id: customerId,
+			product_id: free.id,
 		});
 
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: pro.id,
 		});
-
-		await autumn.attach({
-			customer_id: customerId,
-			product_id: oneOff.id,
-			options: [
-				{
-					feature_id: TestFeature.Messages,
-					quantity: 100,
-				},
-			],
-		});
 	});
-	return;
 
 	// test("should create a subscription with prepaid and prorated", async () => {
 	// 	await autumn.attach({
