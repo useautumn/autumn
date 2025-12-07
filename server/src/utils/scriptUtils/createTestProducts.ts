@@ -60,10 +60,12 @@ export const constructRawProduct = ({
 	id,
 	isAddOn = false,
 	items,
+	group = null,
 }: {
 	id: string;
 	isAddOn?: boolean;
 	items: ProductItem[];
+	group?: string | null;
 }) => {
 	return {
 		id,
@@ -72,7 +74,7 @@ export const constructRawProduct = ({
 		is_add_on: isAddOn,
 		is_default: false,
 		version: 1,
-		group: "",
+		group: group,
 		created_at: Date.now(),
 		env: AppEnv.Sandbox,
 	};
