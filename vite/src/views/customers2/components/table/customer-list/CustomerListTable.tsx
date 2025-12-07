@@ -51,7 +51,13 @@ export function CustomerListTable({
 	// 	? "No matching results found. Try a different search."
 	// 	: "Create your first customer by using the Autumn API";
 
-	const hasRows = table.getRowModel().rows.length > 0 || queryStates.q?.trim();
+	const hasFiltersActive =
+		queryStates.q?.trim() ||
+		queryStates.status.length > 0 ||
+		queryStates.version.length > 0 ||
+		queryStates.none;
+
+	const hasRows = table.getRowModel().rows.length > 0 || hasFiltersActive;
 
 	return (
 		<>
