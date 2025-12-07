@@ -1,15 +1,12 @@
-import { generateId, nullish } from "@/utils/genUtils.js";
 import {
-	CustomerEntitlement,
-	EntitlementWithFeature,
-	FullCusProduct,
-	FullCustomerEntitlement,
-	Rollover,
-	RolloverConfig,
+	type CustomerEntitlement,
+	type EntitlementWithFeature,
+	type FullCusProduct,
+	type FullCustomerEntitlement,
+	type Rollover,
 } from "@autumn/shared";
-import { RolloverService } from "./RolloverService.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { calculateNextExpiry } from "./rolloverUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { generateId } from "@/utils/genUtils.js";
 
 export const getNewProductRollovers = async ({
 	curCusProduct,
@@ -27,7 +24,7 @@ export const getNewProductRollovers = async ({
 	if (!curCusProduct) return [];
 	if (!curCusProduct.id) return [];
 	try {
-		let rolloverOperations: {
+		const rolloverOperations: {
 			// rolloverConfig: RolloverConfig;
 			toInsert: Rollover[];
 			cusEnt: FullCustomerEntitlement;
@@ -38,16 +35,18 @@ export const getNewProductRollovers = async ({
 
 		// let newRollovers: Rollover[] = [];
 
-		let oldCusEnts = curCusProduct.customer_entitlements;
+		const oldCusEnts = curCusProduct.customer_entitlements;
 
 		for (const newCusEnt of newCusEnts) {
-			let newRollovers: Rollover[] = [];
-			let newEnt = entitlements.find((e) => e.id === newCusEnt.entitlement_id);
-			let oldCusEnt = oldCusEnts.find(
+			const newRollovers: Rollover[] = [];
+			const newEnt = entitlements.find(
+				(e) => e.id === newCusEnt.entitlement_id,
+			);
+			const oldCusEnt = oldCusEnts.find(
 				(e) =>
 					e.entitlement.internal_feature_id === newEnt?.internal_feature_id,
 			);
-			let oldEnt = oldCusEnt?.entitlement;
+			const oldEnt = oldCusEnt?.entitlement;
 
 			if (!oldCusEnt || !newEnt?.rollover) continue;
 
@@ -105,7 +104,7 @@ export const getNewProductRollovers = async ({
 			//   }
 			// }
 
-			let curRollovers = oldCusEnt.rollovers;
+			const curRollovers = oldCusEnt.rollovers;
 
 			for (const curRollover of curRollovers) {
 				newRollovers.push({
