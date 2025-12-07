@@ -61,7 +61,7 @@ export const InviteNotifications = () => {
 	if (visibleInvites.length === 0) return null;
 
 	return createPortal(
-		<div className="fixed top-6 right-6 z-50 space-y-3 max-w-sm">
+		<div className="fixed bottom-6 right-6 z-50 space-y-3 max-w-sm">
 			<AnimatePresence mode="popLayout">
 				{visibleInvites.map((invite: FullInvite, index) => {
 					const isUnavailable = inviteStatus.get(invite.id) === "unavailable";
