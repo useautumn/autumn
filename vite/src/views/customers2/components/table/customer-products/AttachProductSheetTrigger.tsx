@@ -1,3 +1,4 @@
+import { getFeatureName } from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/v2/buttons/Button";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -31,7 +32,10 @@ export function AttachProductSheetTrigger() {
 			onClick={handleClick}
 		>
 			<PlusIcon className="size-3.5" />
-			Attach Plan {entity ? `to ${feature?.display?.singular}` : ""}
+			Attach Plan{" "}
+			{entity
+				? `to ${getFeatureName({ feature, plural: false, capitalize: false })}`
+				: ""}
 		</Button>
 	);
 }

@@ -16,8 +16,8 @@ export interface VersionMetadata {
 export const VERSION_REGISTRY: Record<ApiVersion, VersionMetadata> = {
 	[ApiVersion.V2_0]: {
 		semver: ApiVersion.V2_0,
-		calver: "2025-12-20",
-		releasedAt: new Date("2025-12-20").getTime(),
+		calver: "2026-03-31",
+		releasedAt: new Date("2026-03-31").getTime(),
 		description: "Plan features with max_purchase",
 	},
 

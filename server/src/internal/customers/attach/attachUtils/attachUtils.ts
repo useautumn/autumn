@@ -9,8 +9,8 @@ import {
 } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 import { ACTIVE_STATUSES } from "../../cusProducts/CusProductService.js";
 import {
+	attachParamsToCurCusProduct,
 	attachParamsToProduct,
-	attachParamToCusProducts,
 } from "./convertAttachParams.js";
 
 export const getCycleWillReset = ({
@@ -65,12 +65,11 @@ export const isMainTrialBranch = ({
 }: {
 	attachParams: AttachParams;
 }) => {
-	// 1. get cur main product
-	const { curMainProduct } = attachParamToCusProducts({ attachParams });
-	if (!isTrialing({ cusProduct: curMainProduct!, now: attachParams.now }))
+	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
+	if (!isTrialing({ cusProduct: curCusProduct!, now: attachParams.now }))
 		return false;
 
-	const subId = curMainProduct?.subscription_ids?.[0];
+	const subId = curCusProduct?.subscription_ids?.[0];
 
 	if (!subId) return true; // probably free product with trial, can just cancel and replace?
 
@@ -78,7 +77,7 @@ export const isMainTrialBranch = ({
 	const allCusProducts = attachParams.customer.customer_products;
 	const otherCusProductsOnSub = allCusProducts.filter(
 		(cp) =>
-			cp.id !== curMainProduct!.id &&
+			cp.id !== curCusProduct!.id &&
 			ACTIVE_STATUSES.includes(cp.status) &&
 			cp.subscription_ids?.includes(subId),
 	);

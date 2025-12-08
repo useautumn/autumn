@@ -166,6 +166,7 @@ describe(`${chalk.yellowBright("mergedUpgrade1: Testing merged subs, upgrade 1 &
 		await advanceToNextInvoice({
 			stripeCli,
 			testClockId,
+			withPause: true,
 		});
 
 		const expectedTotal = await getExpectedInvoiceTotal({

@@ -30,14 +30,9 @@ export const setCachedApiInvoices = async ({
 				limit: 10,
 			});
 
-	// Filter to only customer-level invoices (exclude entity-specific)
-	const customerLevelInvoices = invoices.filter(
-		(invoice) => !invoice.internal_entity_id,
-	);
-
 	// Build master api customer invoices (customer-level only)
 	const masterApiInvoices = invoicesToResponse({
-		invoices: customerLevelInvoices,
+		invoices,
 	});
 
 	// Then write to Redis

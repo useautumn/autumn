@@ -9,8 +9,8 @@ import {
 	unique,
 	bigint,
 	timestamp,
+	index,
 } from "drizzle-orm/pg-core";
-import { sqlNow } from "../../db/utils.js";
 import { customers } from "../cusModels/cusTable.js";
 
 export const events = pgTable(
@@ -48,6 +48,8 @@ export const events = pgTable(
 			table.event_name,
 			table.idempotency_key,
 		),
+		index("idx_events_internal_customer_id").on(table.internal_customer_id),
+		index("idx_events_internal_entity_id").on(table.internal_entity_id),
 	],
 );
 

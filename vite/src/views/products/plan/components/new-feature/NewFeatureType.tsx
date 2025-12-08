@@ -1,6 +1,7 @@
 import {
 	FeatureType as APIFeatureType,
 	type CreateFeature,
+	FeatureUsageType,
 } from "@autumn/shared";
 import { BarcodeIcon } from "@phosphor-icons/react";
 import { WarningBox } from "@/components/general/modal-components/WarningBox";
@@ -33,7 +34,14 @@ export function NewFeatureType({
 						<PanelButton
 							isSelected={feature.type === APIFeatureType.Metered}
 							onClick={() => {
-								setFeature({ ...feature, type: APIFeatureType.Metered });
+								setFeature({
+									...feature,
+									type: APIFeatureType.Metered,
+									config: {
+										...feature.config,
+										usage_type: FeatureUsageType.Single,
+									},
+								});
 							}}
 							icon={<BarcodeIcon size={16} color="currentColor" />}
 						/>

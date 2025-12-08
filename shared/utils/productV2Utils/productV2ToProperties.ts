@@ -2,7 +2,7 @@ import type {
 	ApiProduct,
 	ApiProductProperties,
 } from "../../api/products/previousVersions/apiProduct.js";
-import type { BillingInterval } from "../../models/productModels/intervals/billingInterval.js";
+import { BillingInterval } from "../../models/productModels/intervals/billingInterval.js";
 import { UsageModel } from "../../models/productV2Models/productItemModels/productItemModels.js";
 import type { ProductV2 } from "../../models/productV2Models/productV2Models.js";
 import { productV2ToBasePrice } from "../productV3Utils/productItemUtils/productV3ItemUtils.js";
@@ -38,7 +38,11 @@ export const productV2ToProperties = ({
 	});
 	let intervalGroup: BillingInterval | undefined;
 	if (basePriceItem) {
-		intervalGroup = itemToBillingInterval({ item: basePriceItem });
+		const billingInterval = itemToBillingInterval({ item: basePriceItem });
+
+		if (billingInterval !== BillingInterval.OneOff) {
+			intervalGroup = billingInterval;
+		}
 	}
 
 	// Updateable
