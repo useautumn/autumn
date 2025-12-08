@@ -130,7 +130,7 @@ export function ProductListTable() {
 							enableSorting,
 							isLoading: false,
 							onRowClick: handleRowClick,
-							emptyStateText: "You haven't archived any plans yet.",
+							emptyStateText: "No matching results found.",
 							rowClassName: "h-10",
 						}}
 					>
@@ -161,7 +161,10 @@ export function ProductListTable() {
 					</Table.Provider>
 				</div>
 			) : (
-				<EmptyState type="plans" actionButton={<ProductListCreateButton />} />
+				<EmptyState
+					type={queryStates.showArchivedProducts ? "archived-plans" : "plans"}
+					actionButton={<ProductListCreateButton />}
+				/>
 			)}
 			{/* Add-on Plans Table */}
 			{hasAddOns && (
