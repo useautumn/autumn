@@ -1,3 +1,4 @@
+import { expect } from "bun:test";
 import {
 	type ApiCustomer,
 	type ApiSubscription,
@@ -7,8 +8,7 @@ import {
 	type Entitlement,
 	type ProductV2,
 } from "@autumn/shared";
-import type { Customer, ProductItem } from "autumn-js";
-import { expect } from "chai";
+import type { Customer, ProductItem, ProductStatus } from "autumn-js";
 import { AutumnInt } from "../../../src/external/autumn/autumnCli";
 
 export const expectProductAttached = ({
@@ -38,33 +38,55 @@ export const expectProductAttached = ({
 	expect(
 		productAttached,
 		`product ${finalProductId} not attached to ${customer.id}`,
-	).to.exist;
+	).toBeDefined();
 
 	if (status) {
-		expect(productAttached?.status).to.equal(
-			status,
+		expect(
+			productAttached?.status,
 			`product ${finalProductId} should have status ${status}`,
-		);
+		).toEqual(status as unknown as ProductStatus);
 	} else {
 		expect(
 			productAttached?.status,
 			`product ${finalProductId} is not expired`,
-		).to.not.equal(CusProductStatus.Expired);
+		).not.toEqual(CusProductStatus.Expired);
 	}
 
 	if (quantity) {
-		// @ts-expect-error
-		expect(productAttached?.quantity).to.equal(quantity);
+		expect(
+			// biome-ignore lint/suspicious/noExplicitAny: Allow any type
+			(productAttached as any).quantity,
+			`product ${finalProductId} should have quantity ${quantity}`,
+		).toEqual(quantity);
 	}
-
-	// if (entityId) {
-	// 	expect(productAttached?.entity_id).to.equal(entityId);
-	// }
 
 	if (isCanceled) {
-		expect(productAttached?.canceled_at).to.exist;
-		// expect(productAttached?.canceled).to.be.true;
+		expect(
+			productAttached?.canceled_at,
+			`product ${finalProductId} should have canceled_at`,
+		).toBeDefined();
 	}
+};
+export const expectProductNotAttached = ({
+	customer,
+	product,
+	productId,
+}: {
+	customer: Customer;
+	product?: ProductV2;
+	productId?: string;
+}) => {
+	const cusProducts = customer.products;
+	const finalProductId = productId || product?.id;
+	const productAttached = cusProducts.find(
+		(p) => p.id === finalProductId,
+		// && (entityId ? p.entity_id === entityId : true),
+	);
+
+	expect(
+		productAttached,
+		`product ${finalProductId} is not attached to ${customer.id}`,
+	).toBeUndefined();
 };
 
 export const expectProductGroupCount = ({
@@ -85,7 +107,7 @@ export const expectProductGroupCount = ({
 	expect(
 		productCount,
 		`customer should have ${count} products in group ${group}`,
-	).to.equal(count);
+	).toEqual(count);
 };
 
 export const expectScheduledApiSub = async ({
@@ -109,8 +131,10 @@ export const expectScheduledApiSub = async ({
 	const scheduledSub = entity.scheduled_subscriptions.find(
 		(s: ApiSubscription) => s.plan_id === productId,
 	);
-	expect(scheduledSub, `scheduled subscription ${productId} is attached`).to
-		.exist;
+	expect(
+		scheduledSub,
+		`scheduled subscription ${productId} is attached`,
+	).toBeDefined();
 };
 
 export const expectProductV1Attached = ({
@@ -142,13 +166,16 @@ export const expectProductV1Attached = ({
 			p.id === finalProductId && (entityId ? p.entity_id === entityId : true),
 	);
 
-	expect(productAttached, `product ${finalProductId} is attached`).to.exist;
+	expect(
+		productAttached,
+		`product ${finalProductId} is attached`,
+	).toBeDefined();
 
 	if (status) {
-		expect(productAttached?.status).to.equal(
-			status,
+		expect(
+			productAttached?.status,
 			`product ${finalProductId} should have status ${status}`,
-		);
+		).toEqual(status as unknown as ProductStatus);
 	}
 };
 
@@ -167,13 +194,13 @@ export const expectAddOnAttached = ({
 	status?: CusProductStatus;
 }) => {
 	const addOn = customer.add_ons.find((a) => a.id === productId);
-	expect(addOn, `add on ${productId} is attached`).to.exist;
+	expect(addOn, `add on ${productId} is attached`).toBeDefined();
 
 	if (status) {
-		expect(addOn?.status).to.equal(
-			status,
+		expect(
+			addOn?.status,
 			`add on ${productId} should have status ${status}`,
-		);
+		).toEqual(status as unknown as CusProductStatus);
 	}
 };
 
@@ -198,16 +225,15 @@ export const expectInvoicesCorrect = ({
 	}
 
 	try {
-		expect(invoices![0].total).to.approximately(
-			first.total,
-			0.01,
+		expect(
+			invoices![0].total,
 			`invoice total is correct: ${first.total}`,
-		);
+		).toBeCloseTo(first.total, 0.01);
 
-		expect(invoices![0].product_ids).to.include(
-			first.productId,
+		expect(
+			invoices![0].product_ids,
 			`invoice includes product ${first.productId}`,
-		);
+		).toContain(first.productId);
 	} catch (error) {
 		console.log(`invoice for ${first.productId}, ${first.total} not found`);
 		throw error;

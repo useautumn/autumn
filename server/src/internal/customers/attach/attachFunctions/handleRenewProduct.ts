@@ -41,8 +41,8 @@ export const handleRenewProduct = async ({
 	const { logger, db } = ctx;
 	const { stripeCli } = attachParams;
 	let { curScheduledProduct } = attachParamToCusProducts({ attachParams });
-
 	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
+
 	const product = attachParams.products[0];
 	const cusProducts = attachParams.customer.customer_products;
 	const curSubId = curCusProduct?.subscription_ids?.[0];

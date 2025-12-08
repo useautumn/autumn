@@ -6,15 +6,13 @@ import { expectFeaturesCorrect } from "@tests/utils/expectUtils/expectFeaturesCo
 import { expectInvoiceAfterUsage } from "@tests/utils/expectUtils/expectSingleUse/expectUsageInvoice.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { addHours, addMonths } from "date-fns";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { hoursToFinalizeInvoice } from "../../utils/constants";
-import { advanceTestClock } from "../../utils/stripeUtils";
+import { advanceToNextInvoice } from "../../utils/testAttachUtils/testAttachUtils";
 
 const testCase = "aentity2";
 
@@ -117,20 +115,10 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing attach pro annual to
 	});
 
 	test("should have correct invoice after cycle", async () => {
-		// curUnix = await advanceToNextInvoice({
-		// 	stripeCli: ctx.stripeCli,
-		// 	testClockId,
-		// });
-		curUnix = await advanceTestClock({
+		curUnix = await advanceToNextInvoice({
 			stripeCli: ctx.stripeCli,
 			testClockId,
-			advanceTo: addMonths(new Date(), 1).getTime(),
-		});
-
-		curUnix = await advanceTestClock({
-			stripeCli: ctx.stripeCli,
-			testClockId,
-			advanceTo: addHours(curUnix, hoursToFinalizeInvoice).getTime(),
+			withPause: true,
 		});
 
 		await expectInvoiceAfterUsage({
