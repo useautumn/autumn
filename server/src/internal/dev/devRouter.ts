@@ -1,126 +1,27 @@
+import * as crypto from "node:crypto";
 import { AppEnv } from "@autumn/shared";
-import * as crypto from "crypto";
 import { Router } from "express";
+import { Hono } from "hono";
 import type Stripe from "stripe";
 import {
 	checkKeyValid,
 	createWebhookEndpoint,
 } from "@/external/stripe/stripeOnboardingUtils.js";
-import { getSvixDashboardUrl } from "@/external/svix/svixHelpers.js";
 import { withOrgAuth } from "@/middleware/authMiddleware.js";
 import { CacheManager } from "@/utils/cacheUtils/CacheManager.js";
-import { CacheType } from "@/utils/cacheUtils/CacheType.js";
 import { encryptData } from "@/utils/encryptUtils.js";
-import { handleRequestError } from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { redis } from "../../external/redis/initRedis.js";
+import type { HonoEnv } from "../../honoUtils/HonoEnv.js";
 import { OrgService } from "../orgs/OrgService.js";
 import { clearOrgCache } from "../orgs/orgUtils/clearOrgCache.js";
 import { isStripeConnected } from "../orgs/orgUtils.js";
-import { ApiKeyService } from "./ApiKeyService.js";
-import { createApiKeyCreateSchema, createKey } from "./api-keys/apiKeyUtils.js";
+import { createKey } from "./api-keys/apiKeyUtils.js";
+import { handleCreateSecretKey } from "./handlers/handleCreateSecretKey.js";
+import { handleDeleteSecretKey } from "./handlers/handleDeleteSecretKey.js";
+import { handleGetDevData } from "./handlers/handleGetDevData.js";
 
 export const devRouter: Router = Router();
-
-devRouter.get("/data", withOrgAuth, async (req: any, res) => {
-	try {
-		const { db, env, orgId } = req;
-		const apiKeys = await ApiKeyService.getByOrg({
-			db,
-			orgId,
-			env,
-		});
-
-		const org = await OrgService.getFromReq(req);
-		const dashboardUrl = await getSvixDashboardUrl({
-			env: req.env,
-			org: org,
-		});
-
-		res.status(200).json({
-			api_keys: apiKeys,
-			org,
-			svix_dashboard_url: dashboardUrl,
-		});
-	} catch (error) {
-		handleRequestError({ error, req, res, action: "Get /dev/data" });
-	}
-});
-
-devRouter.post("/api_key", withOrgAuth, async (req: any, res) =>
-	routeHandler({
-		req,
-		res,
-		action: "Create API key",
-		handler: async (req: any, res: any) => {
-			const { db, env, orgId } = req;
-			const { name } = req.body;
-
-			const result = createApiKeyCreateSchema.safeParse(req.body);
-			if (!result.success) {
-				res.status(400).json({ error: result.error.message });
-				return;
-			}
-
-			// 1. Create API key
-			let prefix = "am_sk_test";
-			if (env === AppEnv.Live) {
-				prefix = "am_sk_live";
-			}
-			const apiKey = await createKey({
-				db,
-				env,
-				name,
-				orgId,
-				userId: req.user?.id,
-				prefix,
-				meta: {},
-			});
-
-			res.status(200).json({
-				api_key: apiKey,
-			});
-		},
-	}),
-);
-
-devRouter.delete("/api_key/:id", withOrgAuth, async (req: any, res) => {
-	try {
-		const { db, orgId } = req;
-		const { id } = req.params;
-
-		const data = await ApiKeyService.delete({
-			db,
-			id,
-			orgId,
-		});
-
-		if (data.length === 0) {
-			console.error("API key not found");
-			res.status(404).json({ error: "API key not found" });
-			return;
-		}
-
-		const batchInvalidate = [];
-		for (const apiKey of data) {
-			batchInvalidate.push(
-				CacheManager.invalidate({
-					action: CacheType.SecretKey,
-					value: apiKey.hashed_key!,
-				}),
-			);
-		}
-		await Promise.all(batchInvalidate);
-
-		res
-			.status(200)
-			.json({ message: "API key deleted", code: "api_key_deleted" });
-	} catch (error) {
-		console.error("Failed to delete API key", error);
-		res.status(500).json({ error: "Failed to delete API key" });
-		return;
-	}
-});
 
 const generateOtp = (): string => {
 	// Use Web Crypto API if available for cryptographically-secure randomness
@@ -365,3 +266,8 @@ devRouter.post("/cli/stripe", async (req: any, res: any) => {
 });
 
 devRouter.get("/otp/:otp", handleGetOtp);
+
+export const internalDevRouter = new Hono<HonoEnv>();
+internalDevRouter.get("/data", ...handleGetDevData);
+internalDevRouter.post("/api_key", ...handleCreateSecretKey);
+internalDevRouter.delete("/api_key/:key_id", ...handleDeleteSecretKey);
