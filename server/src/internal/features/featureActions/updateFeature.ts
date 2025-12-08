@@ -1,4 +1,10 @@
-import { ErrCode, type Feature, FeatureType, notNullish } from "@autumn/shared";
+import {
+	type CreditSchemaItem,
+	ErrCode,
+	type Feature,
+	FeatureType,
+	notNullish,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
@@ -12,12 +18,44 @@ import { getObjectsUsingFeature } from "../utils/updateFeatureUtils/getObjectsUs
 import { handleFeatureIdChanged } from "../utils/updateFeatureUtils/handleFeatureIdChanged.js";
 import { handleFeatureTypeChanged } from "../utils/updateFeatureUtils/handleFeatureTypeChanged.js";
 import { handleFeatureUsageTypeChanged } from "../utils/updateFeatureUtils/handleFeatureUsageTypeChanged.js";
+import type { ClearCreditSystemCachePayload } from "./runClearCreditSystemCacheTask.js";
 
 interface UpdateFeatureParams {
 	ctx: AutumnContext;
 	featureId: string;
 	updates: Partial<Feature>;
 }
+
+/**
+ * Checks if the credit schema has changed between old and new config.
+ * Returns true if schema changed (different items or different credit amounts).
+ */
+const hasCreditSchemaChanged = ({
+	oldSchema,
+	newSchema,
+}: {
+	oldSchema: CreditSchemaItem[] | undefined;
+	newSchema: CreditSchemaItem[] | undefined;
+}): boolean => {
+	if (!oldSchema && !newSchema) return false;
+	if (!oldSchema || !newSchema) return true;
+	if (oldSchema.length !== newSchema.length) return true;
+
+	// Create a map of old schema for quick lookup
+	const oldSchemaMap = new Map(
+		oldSchema.map((item) => [item.metered_feature_id, item.credit_amount]),
+	);
+
+	// Check if any item has changed
+	for (const newItem of newSchema) {
+		const oldAmount = oldSchemaMap.get(newItem.metered_feature_id);
+		if (oldAmount === undefined || oldAmount !== newItem.credit_amount) {
+			return true;
+		}
+	}
+
+	return false;
+};
 
 /**
  * Updates an existing feature with full validation logic
@@ -142,6 +180,29 @@ export const updateFeature = async ({
 				org: ctx.org,
 			},
 		});
+	}
+
+	// Queue cache clear for credit system if schema changed
+	if (
+		feature.type === FeatureType.CreditSystem &&
+		updates.config?.schema &&
+		updatedFeature
+	) {
+		const schemaChanged = hasCreditSchemaChanged({
+			oldSchema: feature.config?.schema,
+			newSchema: updates.config.schema,
+		});
+
+		if (schemaChanged) {
+			await addTaskToQueue({
+				jobName: JobName.ClearCreditSystemCustomerCache,
+				payload: {
+					orgId: ctx.org.id,
+					env: ctx.env,
+					internalFeatureId: feature.internal_id,
+				} satisfies ClearCreditSystemCachePayload,
+			});
+		}
 	}
 
 	return updatedFeature;
