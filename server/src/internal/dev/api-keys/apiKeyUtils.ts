@@ -101,13 +101,3 @@ export const verifyKey = async ({
 		data: data,
 	};
 };
-
-// let data = await tryRedisRead(() => redis.get(buildSecretKeyCacheKey(hashedKey)));
-// if (!data) {
-// 	data = await ApiKeyService.verifyAndFetch({
-// 		db,
-// 		secretKey: key,
-// 		hashedKey,
-// 		env,
-// 	});
-// }

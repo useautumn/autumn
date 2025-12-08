@@ -59,6 +59,7 @@ export const DeletePlanDialog = ({
 		url: `/products/${product.id}/info`,
 		queryKey: ["productInfo", product.id],
 		enabled: dropdownOpen || open,
+		method: "GET",
 	});
 
 	const handleDelete = async () => {
@@ -116,7 +117,7 @@ export const DeletePlanDialog = ({
 			if (onDeleteSuccess) {
 				await onDeleteSuccess();
 			}
-			await refetchProduct();
+			await Promise.all([invalidateProducts(), invalidateProduct()]);
 			toast.success(`${product.name} unarchived successfully`);
 			setOpen(false);
 		} catch (error) {

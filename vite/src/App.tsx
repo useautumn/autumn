@@ -9,6 +9,7 @@ import { OnboardingLayout } from "./app/OnboardingLayout";
 import { useSession } from "./lib/auth-client";
 import { identifyUser } from "./utils/posthogTracking";
 import { AdminView } from "./views/admin/AdminView";
+import { ImpersonateRedirect } from "./views/admin/ImpersonateRedirect";
 import { AcceptInvitation } from "./views/auth/AcceptInvitation";
 import { PasswordSignIn } from "./views/auth/components/PasswordSignIn";
 import { SignIn } from "./views/auth/SignIn";
@@ -33,6 +34,8 @@ export function SquircleProvider({ children }: { children: React.ReactNode }) {
 export default function App() {
 	const { data } = useSession();
 
+
+
 	useEffect(() => {
 		if (data) {
 			identifyUser({
@@ -56,6 +59,7 @@ export default function App() {
 				<Route path="/pw-sign-in" element={<PasswordSignIn />} />
 				<Route path="/accept" element={<AcceptInvitation />} />
 				<Route path="/close" element={<CloseScreen />} />
+				<Route path="/impersonate-redirect" element={<ImpersonateRedirect />} />
 
 				{/* Onboarding routes without sidebar */}
 				<Route element={<OnboardingLayout />}>

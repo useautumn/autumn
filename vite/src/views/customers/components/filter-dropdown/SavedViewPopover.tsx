@@ -1,10 +1,11 @@
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/v2/buttons/Button";
+import { Input } from "@/components/v2/inputs/Input";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { Pin } from "lucide-react";
@@ -63,17 +64,21 @@ export const SaveViewPopover = ({ onClose }: SaveViewPopoverProps) => {
 		<Popover open={open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild>
 				<Button
-					variant="ghost"
-					className="text-t3 bg-transparent shadow-none w-full h-full flex items-center justify-center p-2"
+					variant="skeleton"
+					size="sm"
+					className={cn(
+						"w-full !h-full text-t3 text-sm hover:bg-accent hover:text-t2 rounded-none gap-0",
+						open && "bg-accent text-t1"
+					)}
 				>
-					<Pin size={12} className="mr-2 text-t3" />
+					<Pin size={12} className="mr-2" />
 					Save
 				</Button>
 			</PopoverTrigger>
 			<PopoverContent
 				sideOffset={2}
 				align="start"
-				className="border border-zinc-200 bg-stone-50 flex flex-col gap-3 pt-3 w-[350px]"
+				className="bg-interactive-secondary border flex flex-col gap-3 pt-3 w-[350px]"
 				onEscapeKeyDown={() => setOpen(false)}
 				onPointerDownOutside={() => setOpen(false)}
 			>
@@ -86,7 +91,6 @@ export const SaveViewPopover = ({ onClose }: SaveViewPopoverProps) => {
 
 				<div className="flex gap-2">
 					<Input
-						className="h-7"
 						placeholder="View name"
 						value={name}
 						onChange={(e) => setName(e.target.value)}
@@ -97,26 +101,12 @@ export const SaveViewPopover = ({ onClose }: SaveViewPopoverProps) => {
 						}}
 					/>
 					<Button
-						variant="gradientPrimary"
-						className="!h-6.5 !mt-0 text-xs"
+						variant="primary"
 						onClick={handleSave}
 						isLoading={loading}
 					>
 						Save
 					</Button>
-					{/* <div className="grid grid-cols-2 gap-2">
-            <Button
-              variant="ghost"
-              className="!h-6.5 !mt-0 text-xs"
-              onClick={() => {
-                setOpen(false);
-                onClose?.(); // Close the main filter modal
-              }}
-            >
-              Cancel
-            </Button>
-          
-          </div> */}
 				</div>
 			</PopoverContent>
 		</Popover>
