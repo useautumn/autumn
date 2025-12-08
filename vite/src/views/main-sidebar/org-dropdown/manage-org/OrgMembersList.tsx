@@ -1,13 +1,10 @@
-import { useMemberships } from "../hooks/useMemberships";
 import { Membership } from "@autumn/shared";
-import { PageSectionHeader } from "@/components/general/PageSectionHeader";
 import { Item, Row } from "@/components/general/TableGrid";
-import { cn } from "@/lib/utils";
-import { formatDateStr } from "@/utils/formatUtils/formatDateUtils";
 import { Badge } from "@/components/ui/badge";
-import { InvitePopover } from "./InvitePopover";
 import { useSession } from "@/lib/auth-client";
+import { formatDateStr } from "@/utils/formatUtils/formatDateUtils";
 import { MemberRowToolbar } from "./MemberRowToolbar";
+import { useMemberships } from "../hooks/useMemberships";
 
 export const OrgMembersList = () => {
 	const { memberships, isLoading: isMembersLoading } = useMemberships();
@@ -24,21 +21,10 @@ export const OrgMembersList = () => {
 
 	return (
 		<div className="h-full overflow-y-auto">
-			{/* <PageSectionHeader
-        title="Members"
-        isOnboarding={true}
-        className="px-6"
-        classNames={{
-          title: "text-t3",
-        }}
-        addButton={<InvitePopover />}
-      /> */}
-
 			<Row type="header" className="flex px-6">
 				<Item className="flex-[6]">Email</Item>
-				<Item className="flex-[5.1]">Name</Item>
-				<Item className="flex-[2.6]">Role</Item>
-				{/* <Item className="col-span-0"></Item> */}
+				<Item className="flex-[5]">Name</Item>
+				<Item className="flex-[3]">Role</Item>
 				<Item className="flex-[3]">Created At</Item>
 				<Item className="flex-[1]"></Item>
 			</Row>
@@ -48,14 +34,17 @@ export const OrgMembersList = () => {
 				return (
 					<Row key={membership.user.id} className="flex px-6 text-sm text-t2">
 						<Item className="flex-[6]">{user.email}</Item>
-						<Item className="flex-[4.7]">{user.name}</Item>
+						<Item className="flex-[5] text-t3">
+							{user.name || "No name"}
+						</Item>
 						<Item className="flex-[3]">
 							<Badge variant="outline">{member.role}</Badge>
 						</Item>
-						{/* <Item className="col-span-0"></Item> */}
 						<Item className="flex-[3]">{formatDateStr(member.createdAt)}</Item>
 						<Item className="flex-[1] flex justify-end">
-							{isAdmin && <MemberRowToolbar membership={membership} />}
+							{isAdmin && member.role !== "owner" && (
+								<MemberRowToolbar membership={membership} />
+							)}
 						</Item>
 					</Row>
 				);

@@ -1,19 +1,27 @@
 import { stripeToAtmnAmount } from "@autumn/shared";
 import type Stripe from "stripe";
 import { subItemToAutumnInterval } from "@/external/stripe/utils.js";
+import type { Logger } from "../../../external/logtail/logtailUtils";
 
 export const logSubItems = ({
 	sub,
 	subItems,
 	withPriceId = false,
 	withItemId = false,
+	logger,
 }: {
 	sub?: Stripe.Subscription;
 	subItems?: Stripe.SubscriptionItem[];
 	withPriceId?: boolean;
 	withItemId?: boolean;
+	logger?: Logger | Console;
 }) => {
 	const finalSubItems = subItems || sub!.items.data;
+
+	if (!logger) {
+		logger = console;
+	}
+
 	for (const item of finalSubItems) {
 		const isMetered = item.price.recurring?.usage_type === "metered";
 
@@ -23,11 +31,11 @@ export const logSubItems = ({
 		});
 
 		if (isMetered) {
-			console.log(`Usage price`);
+			logger.info(`Usage price`);
 		} else {
 			const price = atmnPrice;
 			const subInterval = subItemToAutumnInterval(item);
-			console.log(
+			logger.info(
 				`${price} ${item.price.currency}${item.quantity !== 1 ? ` x ${item.quantity}` : ""} / ${subInterval?.intervalCount} ${subInterval?.interval} ${withPriceId ? `(${item.price.id})` : ""} ${withItemId ? `(${item.id})` : ""}`,
 			);
 		}
