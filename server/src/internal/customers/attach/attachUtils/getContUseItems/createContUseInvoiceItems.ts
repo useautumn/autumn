@@ -12,6 +12,7 @@ import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSub
 import { findPriceInStripeItems } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { subToAutumnInterval } from "@/external/stripe/utils.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import type { Logger } from "../../../../../external/logtail/logtailUtils.js";
 import { attachParamsToProduct } from "../convertAttachParams.js";
 import { getContUseInvoiceItems } from "./getContUseInvoiceItems.js";
 
@@ -72,7 +73,6 @@ export const filterContUsageProrations = async ({
 export const createAndFilterContUseItems = async ({
 	attachParams,
 	curMainProduct,
-	// stripeSubs,
 	sub,
 	logger,
 	interval,
@@ -80,20 +80,15 @@ export const createAndFilterContUseItems = async ({
 }: {
 	attachParams: AttachParams;
 	curMainProduct: FullCusProduct;
-	// stripeSubs: Stripe.Subscription[];
 	sub: Stripe.Subscription;
-	logger: any;
+	logger: Logger;
 	interval?: BillingInterval;
 	intervalCount?: number;
 }) => {
 	const { stripeCli, customer, org } = attachParams;
 	const product = attachParamsToProduct({ attachParams });
-	// const sameIntervals = intervalsAreSame({ attachParams });
-	const now = attachParams.now || Date.now();
 
-	// if (!sameIntervals) {
-	//   return { newItems: [], oldItems: [], replaceables: [] };
-	// }
+	const now = attachParams.now || Date.now();
 
 	const { newItems, oldItems, replaceables } = await getContUseInvoiceItems({
 		attachParams,
@@ -142,7 +137,7 @@ export const createAndFilterContUseItems = async ({
 
 		const { start, end } = subToPeriodStartEnd({ sub });
 		await stripeCli.invoiceItems.create({
-			customer: customer.processor?.id!,
+			customer: customer.processor?.id ?? undefined,
 			amount: Math.round(item.amount * 100),
 			description: item.description,
 			currency: org.default_currency || "usd",

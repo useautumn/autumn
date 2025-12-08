@@ -131,7 +131,6 @@ export const getContUseInvoiceItems = async ({
 	const cusEnts = cusProduct ? cusProduct.customer_entitlements : [];
 
 	const product = attachParamsToProduct({ attachParams });
-	// const allIntervalsSame = intervalsAreSame({ attachParams });
 	const curItems = sub
 		? await getCurContUseItems({
 				sub,

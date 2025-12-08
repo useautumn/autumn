@@ -23,7 +23,10 @@ import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import type { AttachParams } from "../../cusProducts/AttachParams.js";
 import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { isMainTrialBranch } from "./attachUtils.js";
-import { attachParamToCusProducts } from "./convertAttachParams.js";
+import {
+	attachParamsToCurCusProduct,
+	attachParamToCusProducts,
+} from "./convertAttachParams.js";
 
 const handleMultiProductErrors = async ({
 	attachParams,
@@ -259,19 +262,14 @@ const getChangeProductBranch = async ({
 }: {
 	attachParams: AttachParams;
 }) => {
-	const { curMainProduct, curScheduledProduct } = attachParamToCusProducts({
-		attachParams,
-	});
-
-	// 1. If main product is free, it's the same as adding a new product
-
-	const mainProduct = cusProductToProduct({ cusProduct: curMainProduct! });
+	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
+	const mainProduct = cusProductToProduct({ cusProduct: curCusProduct! });
 	if (isFreeProduct(mainProduct.prices)) {
 		return AttachBranch.MainIsFree;
 	}
 
 	// 2. If main product is paid, check if upgrade or downgrade
-	const curPrices = cusProductToPrices({ cusProduct: curMainProduct! });
+	const curPrices = cusProductToPrices({ cusProduct: curCusProduct! });
 	const newPrices = attachParams.prices;
 
 	const isUpgrade = isProductUpgrade({
