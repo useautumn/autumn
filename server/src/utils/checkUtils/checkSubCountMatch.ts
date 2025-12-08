@@ -12,7 +12,7 @@ export const checkSubCountMatch = async ({
 	result: StateCheckResult;
 }) => {
 	const cusProducts = fullCus.customer_products;
-	const subIds = cusProducts.flatMap((cp) => cp.subscription_ids) || [];
+	const subIds = [...new Set(cusProducts.flatMap((cp) => cp.subscription_ids))];
 
 	const stripeSubs = subs.filter((sub) => {
 		const subCustomerId =

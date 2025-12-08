@@ -39,6 +39,32 @@ import {
 } from "@server/internal/products/productUtils";
 import type Stripe from "stripe";
 import { formatUnixToDateTime, nullish } from "../genUtils";
+import type { SubItemDetail } from "./stateCheckTypes";
+
+/** Error thrown when subscription items don't match expected items. Carries item details for debugging. */
+export class SubItemMismatchError extends Error {
+	subId: string;
+	actualItems: SubItemDetail[];
+	expectedItems: SubItemDetail[];
+
+	constructor({
+		message,
+		subId,
+		actualItems,
+		expectedItems,
+	}: {
+		message: string;
+		subId: string;
+		actualItems: SubItemDetail[];
+		expectedItems: SubItemDetail[];
+	}) {
+		super(message);
+		this.name = "SubItemMismatchError";
+		this.subId = subId;
+		this.actualItems = actualItems;
+		this.expectedItems = expectedItems;
+	}
+}
 
 const defaultApiVersion = ApiVersion.V1_2;
 
@@ -48,6 +74,31 @@ const cusProductToSubIds = ({
 	cusProducts: FullCusProduct[];
 }) => {
 	return [...new Set(cusProducts.flatMap((cp) => cp.subscription_ids || []))];
+};
+
+/** Converts raw items to SubItemDetail format with product/price names */
+const itemsToSubItemDetails = async ({
+	items,
+	db,
+}: {
+	items: { price: string; quantity: number; stripeProdId?: string }[];
+	db: DrizzleCli;
+}): Promise<SubItemDetail[]> => {
+	const priceIds = items.map((item) => item.price).filter(Boolean);
+	const autumnPrices = await PriceService.getByStripeIds({
+		db,
+		stripePriceIds: priceIds,
+	});
+
+	return items.map((item) => {
+		const autumnPrice = autumnPrices[item.price];
+		return {
+			priceId: item.price,
+			quantity: item.quantity || 0,
+			productName: autumnPrice?.product?.name,
+			priceName: autumnPrice ? formatPrice({ price: autumnPrice }) : undefined,
+		};
+	});
 };
 
 const compareActualItems = async ({
@@ -67,6 +118,18 @@ const compareActualItems = async ({
 	db: DrizzleCli;
 	subId: string;
 }) => {
+	/** Helper to throw SubItemMismatchError with item details */
+	const throwMismatchError = async (message: string) => {
+		const actualDetails = await itemsToSubItemDetails({ items: actualItems, db });
+		const expectedDetails = await itemsToSubItemDetails({ items: expectedItems, db });
+		throw new SubItemMismatchError({
+			message,
+			subId,
+			actualItems: actualDetails,
+			expectedItems: expectedDetails,
+		});
+	};
+
 	for (const expectedItem of expectedItems) {
 		let actualItem = actualItems.find((item: any) => {
 			if (item.price === (expectedItem as any).price) return true;
@@ -112,9 +175,9 @@ const compareActualItems = async ({
 				db,
 				items: expectedItems,
 			});
-		}
 
-		assert(!!actualItem, `actual item should exist`);
+			await throwMismatchError(`actual item should exist for price ${expectedItem.price}`);
+		}
 
 		// team manager...
 		if (actualItem.price !== "price_1RGod7JvAPTxxzlIEbN6ZnW1") {
@@ -154,12 +217,11 @@ const compareActualItems = async ({
 				}
 
 				console.log("--------------------------------");
-			}
 
-			assert(
-				actualItem?.quantity === (expectedItem as any).quantity,
-				`actual items quantity should be equals to ${expectedItem.quantity}`,
-			);
+				await throwMismatchError(
+					`actual items quantity (${actualItem?.quantity}) should be equals to ${expectedItem.quantity}`,
+				);
+			}
 		}
 	}
 
@@ -175,12 +237,11 @@ const compareActualItems = async ({
 			db,
 			items: expectedItems,
 		});
-	}
 
-	assert(
-		actualItems.length === expectedItems.length,
-		`actual items length should be equals to expected items length for sub ${subId}`,
-	);
+		await throwMismatchError(
+			`actual items length (${actualItems.length}) should be equals to expected items length (${expectedItems.length}) for sub ${subId}`,
+		);
+	}
 };
 
 // If all cus products are free, then should have no sub

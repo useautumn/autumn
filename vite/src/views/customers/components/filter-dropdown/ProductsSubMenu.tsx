@@ -4,8 +4,8 @@ import {
 	DropdownMenuSubTrigger,
 	DropdownMenuSeparator,
 	DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
-import { Checkbox } from "@/components/ui/checkbox";
+} from "@/components/v2/dropdowns/DropdownMenu";
+import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import { cn } from "@/lib/utils";
 import { useCustomersQueryStates } from "../../hooks/useCustomersQueryStates";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -63,20 +63,17 @@ export const ProductsSubMenu = () => {
 			allProductVersions.length > 0 &&
 			allProductVersions.every((pv) => selectedVersions.includes(pv.key));
 		if (allSelected) {
-			// Deselect all
-			// setFilters({
-			//   ...filters,
-			//   product_id: "",
-			//   version: "",
-			// });
+			setQueryStates({
+				...queryStates,
+				version: [],
+				none: false,
+			});
 		} else {
-			// Select all product:version combinations
-			// setFilters({
-			//   ...filters,
-			//   product_id: "", // Will be handled by version selections
-			//   version: allProductVersions.map((pv) => pv.key).join(","),
-			//   none: false,
-			// });
+			setQueryStates({
+				...queryStates,
+				version: allProductVersions.map((pv) => pv.key),
+				none: false,
+			});
 		}
 	};
 
@@ -149,36 +146,47 @@ export const ProductsSubMenu = () => {
 
 	return (
 		<DropdownMenuSub>
-			<DropdownMenuSubTrigger className="flex items-center justify-between cursor-pointer">
+			<DropdownMenuSubTrigger className="flex items-center gap-2 cursor-pointer">
 				Products
 				{hasSelections && (
-					<div className="flex items-center h-4 gap-1 p-1 py-0.5 bg-zinc-200 mt-0.5">
-						<span className="text-xs text-t3">{selectedProductsCount}</span>
-					</div>
+					<span className="text-xs text-t3 bg-muted px-1 py-0 rounded-md">
+						{selectedProductsCount}
+					</span>
 				)}
 			</DropdownMenuSubTrigger>
 			<DropdownMenuSubContent className="w-64">
-				<div className="flex items-center justify-between px-2 h-6">
-					<button
-						onClick={handleSelectAll}
-						className="text-t3 text-xs hover:text-t1 transition-colors cursor-pointer"
-					>
-						Select all
-					</button>
-					<button
-						onClick={handleSelectNone}
-						className={cn(
-							"px-1 h-5 flex items-center gap-1 text-t3 text-xs hover:text-t1 cursor-pointer",
-							queryStates.none &&
-								"bg-yellow-100 text-yellow-600 hover:text-yellow-500 rounded-md",
-						)}
-					>
-						No products
-					</button>
-				</div>
-				<DropdownMenuSeparator />
+				{uniqueProducts.length === 0 ? (
+					<div className="px-2 py-3 text-center text-t3 text-sm">
+						No products found
+					</div>
+				) : (
+					<>
+						<div className="flex items-center justify-between px-2 h-6">
+							<button
+								onClick={handleSelectAll}
+								className={cn(
+									"px-1 h-5 flex items-center gap-1 text-t2 text-xs hover:text-t1 bg-accent cursor-pointer rounded-md",
+									allProductVersions.length > 0 &&
+										allProductVersions.every((pv) => selectedVersions.includes(pv.key)) &&
+										"bg-primary/10 text-primary hover:text-primary/80",
+								)}
+							>
+								Select all
+							</button>
+							<button
+								onClick={handleSelectNone}
+								className={cn(
+									"px-1 h-5 flex items-center gap-1 text-t3 text-xs hover:text-t1 hover:bg-accent cursor-pointer rounded-md",
+									queryStates.none &&
+										"bg-primary/10 text-primary hover:text-primary/80",
+								)}
+							>
+								No products
+							</button>
+						</div>
+						<DropdownMenuSeparator />
 
-				<div className="max-h-64 overflow-y-auto">
+						<div className="max-h-64 overflow-y-auto">
 					{uniqueProducts?.map((product: any) => {
 						const versionCount = versionCounts?.[product.id] || 1;
 						const productVersionKeys = Array.from(
@@ -206,6 +214,7 @@ export const ProductsSubMenu = () => {
 									>
 										<Checkbox
 											checked={selectedVersions.includes(`${product.id}:1`)}
+											className="border-border"
 										/>
 										{product.name}
 									</DropdownMenuItem>
@@ -221,6 +230,7 @@ export const ProductsSubMenu = () => {
 										>
 											<Checkbox
 												checked={allProductVersionsSelected}
+												className="border-border"
 												ref={(ref: any) => {
 													if (
 														ref &&
@@ -242,7 +252,7 @@ export const ProductsSubMenu = () => {
 												onSelect={(e) => e.preventDefault()}
 												className="flex items-center gap-2 cursor-pointer font-medium"
 											>
-												<Checkbox checked={allProductVersionsSelected} />
+												<Checkbox checked={allProductVersionsSelected} className="border-border" />
 												All Versions
 											</DropdownMenuItem>
 											<DropdownMenuSeparator />
@@ -264,7 +274,7 @@ export const ProductsSubMenu = () => {
 														onSelect={(e) => e.preventDefault()}
 														className="flex items-center gap-2 cursor-pointer text-sm"
 													>
-														<Checkbox checked={isVersionSelected} />v{version}
+														<Checkbox checked={isVersionSelected} className="border-border" />v{version}
 													</DropdownMenuItem>
 												);
 											})}
@@ -274,7 +284,9 @@ export const ProductsSubMenu = () => {
 							</div>
 						);
 					})}
-				</div>
+					</div>
+				</>
+			)}
 			</DropdownMenuSubContent>
 		</DropdownMenuSub>
 	);
