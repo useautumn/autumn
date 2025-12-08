@@ -1,17 +1,19 @@
+import type { FullInvite } from "@autumn/shared";
+import { format, isSameYear } from "date-fns";
+import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
-import { getBackendErr } from "@/utils/genUtils";
-import { X, Check, UserPlus } from "lucide-react";
-import { FullInvite } from "@autumn/shared";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/v2/buttons/Button";
 import { useInvitesQuery } from "@/hooks/queries/useInvitesQuery";
 import { authClient } from "@/lib/auth-client";
-import { AnimatePresence } from "motion/react";
-import { motion } from "motion/react";
 
 export const InviteNotifications = () => {
 	const [loading, setLoading] = useState(false);
+	const [inviteStatus, setInviteStatus] = useState<
+		Map<string, "unavailable" | "dismissed">
+	>(new Map());
 	const { invites, refetch } = useInvitesQuery();
 
 	const handleRespondToRequest = async (
@@ -22,7 +24,7 @@ export const InviteNotifications = () => {
 			setLoading(true);
 
 			if (action === "accept") {
-				const { data, error } = await authClient.organization.acceptInvitation({
+				const { error } = await authClient.organization.acceptInvitation({
 					invitationId: invite.id,
 				});
 
@@ -33,7 +35,6 @@ export const InviteNotifications = () => {
 					organizationId: invite.organization.id,
 				});
 
-				// toast.success(`Invitation accepted successfully`);
 				window.location.reload();
 			} else {
 				await authClient.organization.rejectInvitation({
@@ -42,114 +43,130 @@ export const InviteNotifications = () => {
 				toast.success(`Invitation rejected successfully`);
 			}
 			await refetch();
-		} catch (error) {
-			toast.error(getBackendErr(error, `Failed to ${action} invitation`));
+		} catch (_error) {
+			setInviteStatus((prev) => new Map(prev).set(invite.id, "unavailable"));
 		} finally {
 			setLoading(false);
 		}
 	};
 
-	if (invites.length === 0) return null;
+	const handleDismiss = (inviteId: string) => {
+		setInviteStatus((prev) => new Map(prev).set(inviteId, "dismissed"));
+	};
 
-	return (
-		<div className="fixed top-6 right-6 z-50 space-y-3 max-w-md">
+	const visibleInvites = invites.filter(
+		(invite) => inviteStatus.get(invite.id) !== "dismissed",
+	);
+
+	if (visibleInvites.length === 0) return null;
+
+	return createPortal(
+		<div className="fixed bottom-6 right-6 z-50 space-y-3 max-w-sm">
 			<AnimatePresence mode="popLayout">
-				{invites.map((invite: FullInvite, index) => (
-					<motion.div
-						key={invite.id}
-						initial={{
-							opacity: 0,
-							scale: 0.8,
-							y: -50,
-							x: 100,
-						}}
-						animate={{
-							opacity: 1,
-							scale: 1,
-							y: 0,
-							x: 0,
-						}}
-						exit={{
-							opacity: 0,
-							scale: 0.8,
-							x: 100,
-							transition: { duration: 0.2 },
-						}}
-						transition={{
-							type: "spring",
-							bounce: 0.3,
-							duration: 0.6,
-							delay: index * 0.1,
-						}}
-						layout
-					>
-						<Card className="border-0 bg-white shadow-xl ring-1 ring-gray-200/50 backdrop-blur-sm">
-							<CardHeader className="px-4">
-								<div className="flex items-center justify-between">
-									<div className="flex items-center gap-3">
-										<motion.div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
-											<UserPlus size={16} className="text-blue-600" />
-										</motion.div>
-										<div>
-											<CardTitle className="text-sm font-semibold text-gray-900">
+				{visibleInvites.map((invite: FullInvite, index) => {
+					const isUnavailable = inviteStatus.get(invite.id) === "unavailable";
+					const expiresAt = new Date(invite.expiresAt);
+					const expiresAtFormatted = format(
+						expiresAt,
+						isSameYear(expiresAt, new Date())
+							? "MMM d, h:mm a"
+							: "MMM d, yyyy, h:mm a",
+					);
+
+					return (
+						<motion.div
+							key={invite.id}
+							initial={{
+								opacity: 0,
+								scale: 0.8,
+								y: -50,
+								x: 100,
+							}}
+							animate={{
+								opacity: 1,
+								scale: 1,
+								y: 0,
+								x: 0,
+							}}
+							exit={{
+								opacity: 0,
+								scale: 0.8,
+								x: 100,
+								transition: { duration: 0.2 },
+							}}
+							transition={{
+								type: "spring",
+								bounce: 0.3,
+								duration: 0.6,
+								delay: index * 0.1,
+							}}
+							layout
+						>
+							<div className="rounded-md border bg-background p-4 shadow-lg">
+								{isUnavailable ? (
+									<div className="space-y-3">
+										<p className="text-sm font-medium">
+											Invitation Unavailable
+										</p>
+										<p className="text-sm text-t3">
+											This invitation has expired or been revoked.
+										</p>
+										<Button
+											variant="secondary"
+											className="w-full"
+											onClick={() => handleDismiss(invite.id)}
+										>
+											Dismiss
+										</Button>
+									</div>
+								) : (
+									<div className="space-y-3">
+										<div className="flex items-center justify-between">
+											<p className="text-sm font-medium">
 												Organization Invitation
-											</CardTitle>
-											<p className="text-xs text-gray-500 mt-0.5">
-												{new Date(invite.expiresAt).toLocaleDateString()}
+											</p>
+											<p className="text-xs text-t3">
+												Expires {expiresAtFormatted}
 											</p>
 										</div>
-									</div>
-								</div>
-							</CardHeader>
-							<CardContent className="px-4">
-								<div className="space-y-4">
-									<div className="rounded-lg bg-gray-50 p-2">
-										<p className="text-sm text-gray-700 leading-relaxed">
-											<span className="font-medium text-gray-900">
-												{invite.inviter.name}
+
+										<p className="text-sm text-t2">
+											<span className="font-medium text-t1">
+												{invite.inviter.name || "Someone"}
 											</span>{" "}
-											has invited you to join{" "}
-											<span className="font-semibold text-gray-900">
+											invited you to join{" "}
+											<span className="font-medium text-t1">
 												{invite.organization.name}
 											</span>{" "}
-											as{" "}
-											<span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
-												{invite.role}
-											</span>
+											as <Badge variant="outline">{invite.role}</Badge>
 										</p>
-									</div>
 
-									<div className="flex gap-2">
-										<motion.div className="flex-1">
+										<div className="flex gap-2">
 											<Button
-												size="sm"
-												variant="outline"
-												className="w-full"
+												variant="secondary"
+												className="flex-1"
 												onClick={() => handleRespondToRequest(invite, "reject")}
 												disabled={loading}
 											>
-												<X size={14} className="mr-2" />
 												Decline
 											</Button>
-										</motion.div>
-										<motion.div className="flex-1">
 											<Button
-												size="sm"
-												className="w-full"
+												variant="primary"
+												className="flex-1"
 												onClick={() => handleRespondToRequest(invite, "accept")}
 												disabled={loading}
 											>
-												<Check size={14} className="mr-2" />
-												Accept Invitation
+												Accept
 											</Button>
-										</motion.div>
+										</div>
 									</div>
-								</div>
-							</CardContent>
-						</Card>
-					</motion.div>
-				))}
+								)}
+							</div>
+						</motion.div>
+					);
+				})}
 			</AnimatePresence>
-		</div>
+		</div>,
+		document.body,
 	);
 };
