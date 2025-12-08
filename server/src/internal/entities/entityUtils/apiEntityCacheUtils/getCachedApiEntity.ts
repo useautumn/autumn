@@ -10,6 +10,7 @@ import {
 	filterPlanAndFeatureExpand,
 } from "@autumn/shared";
 import { CACHE_CUSTOMER_VERSION } from "@lua/cacheConfig.js";
+import type { Redis } from "ioredis";
 import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -44,20 +45,23 @@ export const getCachedApiEntity = async ({
 	entityId,
 	skipCustomerMerge = false,
 	fullCus,
+	redisInstance,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	entityId: string;
 	skipCustomerMerge?: boolean; // If true, returns only entity's own features (no customer merging)
 	fullCus?: FullCustomer;
+	redisInstance?: Redis; // Optional redis instance for cross-region sync
 }): Promise<{ apiEntity: ApiEntityV1; legacyData: EntityLegacyData }> => {
 	const { org, env, db, skipCache } = ctx;
+	const redisClient = redisInstance || redis;
 
 	const getExpandedApiEntity = async () => {
 		// Try to get from cache using Lua script (unless skipCache is true)
 		if (!skipCache) {
 			const cachedResult = await tryRedisRead(() =>
-				redis.getEntity(
+				(redisClient as typeof redis).getEntity(
 					org.id,
 					env,
 					customerId,

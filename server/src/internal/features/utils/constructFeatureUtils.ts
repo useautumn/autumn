@@ -5,7 +5,7 @@ import {
 	FeatureType,
 	FeatureUsageType,
 } from "@autumn/shared";
-import { generateId, keyToTitle } from "@/utils/genUtils.js";
+import { generateId, keyToTitle } from "@server/utils/genUtils";
 
 export const constructFeature = ({
 	id,

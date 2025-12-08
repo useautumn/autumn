@@ -1,19 +1,19 @@
-import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { generateId } from "@/utils/genUtils.js";
 import {
 	AllowanceType,
 	BillingInterval,
 	BillingType,
-	Entitlement,
+	type Entitlement,
 	ErrCode,
-	FixedPriceConfig,
+	type FixedPriceConfig,
 	FixedPriceConfigSchema,
-	Price,
+	type Price,
 	PriceType,
-	UsagePriceConfig,
+	type UsagePriceConfig,
 	UsagePriceConfigSchema,
 } from "@autumn/shared";
+import { getBillingType } from "@server/internal/products/prices/priceUtils";
+import RecaseError from "@server/utils/errorUtils";
+import { generateId } from "@server/utils/genUtils";
 
 export const constructPrice = ({
 	name,
@@ -100,8 +100,8 @@ const validatePrice = (
 export const tiersAreSame = (tiers1: any[], tiers2: any[]) => {
 	if (tiers1.length !== tiers2.length) return false;
 	for (let i = 0; i < tiers1.length; i++) {
-		let tier1 = tiers1[i];
-		let tier2 = tiers2[i];
+		const tier1 = tiers1[i];
+		const tier2 = tiers2[i];
 		// if (tier1.to !== tier2.to) return false;
 
 		// Only compare to if not last tier
@@ -130,7 +130,7 @@ export const pricesAreSame = (
 		const fixedConfig2 = FixedPriceConfigSchema.parse(config2);
 
 		// 1. Check amount same
-		let diffs = {
+		const diffs = {
 			amount: {
 				condition: fixedConfig1.amount !== fixedConfig2.amount,
 				message: `Amount different: ${fixedConfig1.amount} !== ${fixedConfig2.amount}`,
@@ -145,7 +145,7 @@ export const pricesAreSame = (
 			},
 		};
 
-		let pricesAreDiff = Object.values(diffs).some((d) => d.condition);
+		const pricesAreDiff = Object.values(diffs).some((d) => d.condition);
 
 		if (pricesAreDiff) {
 			console.log("Fixed price different");
@@ -162,7 +162,7 @@ export const pricesAreSame = (
 		const usageConfig1 = UsagePriceConfigSchema.parse(config1);
 		const usageConfig2 = UsagePriceConfigSchema.parse(config2);
 
-		let diffs = {
+		const diffs = {
 			should_prorate: {
 				condition: usageConfig1.should_prorate !== usageConfig2.should_prorate,
 				message: `Should prorate different: ${usageConfig1.should_prorate} !== ${usageConfig2.should_prorate}`,
@@ -219,7 +219,7 @@ export const pricesAreSame = (
 			},
 		};
 
-		let pricesAreDiff =
+		const pricesAreDiff =
 			Object.values(diffs).some((d) => d.condition) ||
 			Object.values(prorationConfigDiff).some((d) => d.condition);
 

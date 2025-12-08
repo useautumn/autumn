@@ -24,7 +24,9 @@ export function AttachProductSheet() {
 			/>
 
 			<div className="flex-1 overflow-y-auto">
-				<AttachProductForm customerId={customer?.id ?? ""} />
+				<AttachProductForm
+					customerId={customer?.id ?? customer?.internal_id ?? ""}
+				/>
 			</div>
 		</div>
 	);

@@ -55,9 +55,6 @@ export const addProductFromSubs = async ({
 	);
 
 	if (mainCusProduct && !force) {
-		const prices = mainCusProduct.customer_prices.map((cp) => cp.price);
-		// let isFree = isFreeProduct(prices);
-
 		if (mainCusProduct) {
 			logger.info(
 				`Customer ${
@@ -72,8 +69,6 @@ export const addProductFromSubs = async ({
 
 	// Handle if trialing
 	const trialEndsAt = sub?.trial_end ? sub.trial_end * 1000 : null;
-
-	// throw new Error("test");
 
 	// 1. Insert custom prices...
 	const customPrices = prices?.filter((p) => p.is_custom);

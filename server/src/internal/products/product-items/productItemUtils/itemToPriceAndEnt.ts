@@ -22,13 +22,13 @@ import {
 	UsageModel,
 	type UsagePriceConfig,
 } from "@autumn/shared";
-import { pricesAreSame } from "@/internal/products/prices/priceInitUtils.js";
-import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
-import { entsAreSame } from "../../entitlements/entitlementUtils.js";
-import { shouldProrate } from "../../prices/priceUtils/prorationConfigUtils.js";
-import { itemCanBeProrated } from "./classifyItem.js";
+import { entsAreSame } from "@server/internal/products/entitlements/entitlementUtils";
+import { pricesAreSame } from "@server/internal/products/prices/priceInitUtils";
+import { getBillingType } from "@server/internal/products/prices/priceUtils";
+import { shouldProrate } from "@server/internal/products/prices/priceUtils/prorationConfigUtils";
+import { itemCanBeProrated } from "@server/internal/products/product-items/productItemUtils/classifyItem";
+import RecaseError from "@server/utils/errorUtils";
+import { generateId, notNullish, nullish } from "@server/utils/genUtils";
 import {
 	isFeatureItem,
 	isFeaturePriceItem,

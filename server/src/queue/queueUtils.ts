@@ -1,6 +1,7 @@
 import type { AppEnv, EventInsert, Price } from "@autumn/shared";
 import { SendMessageCommand } from "@aws-sdk/client-sqs";
-import { generateId } from "@/utils/genUtils.js";
+import { generateId } from "@server/utils/genUtils";
+import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import { JobName } from "./JobName.js";
 
 export interface Payloads {
@@ -25,7 +26,8 @@ export interface Payloads {
 	[JobName.InsertEventBatch]: {
 		events: EventInsert[];
 	};
-	[key: string]: any;
+	[JobName.ClearCreditSystemCustomerCache]: ClearCreditSystemCachePayload;
+	[key: string]: unknown;
 }
 
 // Lazy load queue implementations based on environment

@@ -30,7 +30,7 @@ const FormContent = ({
 	form: UseAttachProductForm;
 }) => {
 	const { customer } = useCusQuery();
-	const customerId = customer?.id;
+	const customerId = customer?.id ?? customer?.internal_id;
 	const storeProduct = useProductStore((s) => s.product);
 	const product = storeProduct?.id ? storeProduct : (productV2 ?? undefined);
 	const entityId = cusProduct?.entity_id ?? undefined;
@@ -38,6 +38,8 @@ const FormContent = ({
 	const prepaidOptions = form.state.values.prepaidOptions;
 	const initialPrepaidOptions =
 		form.options.defaultValues?.prepaidOptions ?? {};
+
+	console.log("prepaidOptions", prepaidOptions);
 
 	const previewQuery = useAttachPreview({
 		customerId,
@@ -109,7 +111,9 @@ function SheetContent({
 }) {
 	const storeProduct = useProductStore((s) => s.product);
 	const product = storeProduct?.id ? storeProduct : (productV2 ?? undefined);
-	const { prepaidItems, isLoading } = usePrepaidItems({ product });
+	const { prepaidItems } = usePrepaidItems({ product });
+
+	console.log("prepaidItems", prepaidItems);
 
 	const subscriptionPrepaidValues = useMemo(
 		() =>
@@ -124,8 +128,8 @@ function SheetContent({
 	);
 
 	const initialPrepaidOptions = useMemo(() => {
-		if (isLoading || prepaidItems.length === 0) {
-			return subscriptionPrepaidValues;
+		if (prepaidItems.length === 0) {
+			return {};
 		}
 
 		return prepaidItems.reduce(
@@ -136,7 +140,7 @@ function SheetContent({
 			},
 			{} as Record<string, number | undefined>,
 		) as Record<string, number>;
-	}, [prepaidItems, subscriptionPrepaidValues, isLoading]);
+	}, [prepaidItems, subscriptionPrepaidValues]);
 
 	const form = useAttachProductForm({
 		initialProductId: cusProduct?.product.id ?? undefined,

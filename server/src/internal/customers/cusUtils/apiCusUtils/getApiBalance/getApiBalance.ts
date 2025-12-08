@@ -77,6 +77,7 @@ const cusEntsToBreakdown = ({
 			fullCus,
 			cusEnts,
 			feature,
+			includeRollovers: false,
 		});
 
 		const prepaidQuantity = cusEntsToPrepaidQuantity({ cusEnts, feature });
@@ -143,11 +144,13 @@ export const getApiBalance = ({
 	fullCus,
 	cusEnts,
 	feature,
+	includeRollovers = true,
 }: {
 	ctx: RequestContext;
 	fullCus: FullCustomer;
 	cusEnts: FullCusEntWithFullCusProduct[];
 	feature: Feature;
+	includeRollovers?: boolean;
 }): { data: ApiBalance; legacyData?: CusFeatureLegacyData } => {
 	const entityId = fullCus.entity?.id;
 
@@ -202,7 +205,11 @@ export const getApiBalance = ({
 	// 1. Granted balance
 	const totalGrantedBalanceWithRollovers = sumValues(
 		cusEnts.map((cusEnt) =>
-			cusEntToGrantedBalance({ cusEnt, entityId, withRollovers: true }),
+			cusEntToGrantedBalance({
+				cusEnt,
+				entityId,
+				withRollovers: includeRollovers,
+			}),
 		),
 	);
 
@@ -232,7 +239,7 @@ export const getApiBalance = ({
 				cusEntToBalance({
 					cusEnt,
 					entityId,
-					withRollovers: true,
+					withRollovers: includeRollovers,
 				}),
 			)
 			.filter(notNullish),

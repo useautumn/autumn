@@ -114,7 +114,7 @@ const getTooltipContent = (item: ProductItem, position: "left" | "right") => {
 				case ProductItemFeatureType.SingleUse:
 					return "Consumable";
 				case ProductItemFeatureType.ContinuousUse:
-					return "Allocated";
+					return "Non-consumable";
 				case ProductItemFeatureType.Static:
 					return "Boolean";
 				default:

@@ -217,6 +217,7 @@ export const runAttachFunction = async ({
 				ctx,
 				attachParams,
 				config,
+				branch,
 			});
 		}
 		return await handleCreateCheckout({

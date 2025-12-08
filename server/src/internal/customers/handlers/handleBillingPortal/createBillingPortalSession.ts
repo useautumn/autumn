@@ -43,6 +43,7 @@ export const createBillingPortalSession = async ({
 	}
 
 	// 1. Try to create billing portal session
+
 	try {
 		return await stripeCli.billingPortal.sessions.create({
 			customer: stripeCustomerId,

@@ -10,8 +10,8 @@ import { orgToCurrency } from "@/internal/orgs/orgUtils.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import type { AttachParams } from "../../cusProducts/AttachParams.js";
 import {
+	attachParamsToCurCusProduct,
 	attachParamsToProduct,
-	attachParamToCusProducts,
 	paramsToCurSub,
 } from "../attachUtils/convertAttachParams.js";
 
@@ -32,7 +32,7 @@ export const getDowngradeProductPreview = async ({
 }) => {
 	const newProduct = attachParamsToProduct({ attachParams });
 
-	const { curCusProduct } = attachParamToCusProducts({ attachParams });
+	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
 	const sub = await paramsToCurSub({ attachParams });
 
 	let items = await getItemsForNewProduct({
