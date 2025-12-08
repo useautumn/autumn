@@ -1,20 +1,11 @@
 import { beforeAll, describe } from "bun:test";
-import {
-	ApiVersion,
-	BillingInterval,
-	ProductItemInterval,
-	RolloverExpiryDurationType,
-} from "@autumn/shared";
+import { ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import {
-	constructProduct,
-	constructRawProduct,
-} from "@/utils/scriptUtils/createTestProducts.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { attachAuthenticatePaymentMethod } from "../../src/external/stripe/stripeCusUtils.js";
-import { constructPriceItem } from "../../src/internal/products/product-items/productItemUtils.js";
 import { constructFeatureItem } from "../../src/utils/scriptUtils/constructItem.js";
 import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "../../src/utils/scriptUtils/testUtils/initProductsV0.js";
@@ -25,28 +16,7 @@ const pro = constructProduct({
 
 	items: [
 		constructFeatureItem({
-			featureId: TestFeature.Messages,
-			includedUsage: 1000,
-			interval: ProductItemInterval.Month,
-			rolloverConfig: {
-				max: null,
-				length: 1,
-				duration: RolloverExpiryDurationType.Forever,
-			},
-		}),
-	],
-});
-const monthlyAddOn = constructRawProduct({
-	id: "monthly_add_on",
-	isAddOn: true,
-
-	items: [
-		constructPriceItem({
-			price: 10,
-			interval: BillingInterval.Month,
-		}),
-		constructFeatureItem({
-			featureId: TestFeature.Messages,
+			featureId: TestFeature.Credits,
 			includedUsage: 1000,
 		}),
 	],
@@ -67,7 +37,7 @@ describe(`${chalk.yellowBright("temp: Testing entity prorated")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [pro, monthlyAddOn],
+			products: [pro],
 			prefix: customerId,
 		});
 

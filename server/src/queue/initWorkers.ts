@@ -12,6 +12,7 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 import { runInsertEventBatch } from "@/internal/balances/track/eventUtils/runInsertEventBatch.js";
 import { runSyncBalanceBatch } from "@/internal/balances/track/syncUtils/runSyncBalanceBatch.js";
+import { runClearCreditSystemCacheTask } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import { runSaveFeatureDisplayTask } from "@/internal/features/featureUtils.js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
 import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigrationTask.js";
@@ -83,6 +84,15 @@ const processMessage = async ({
 
 		if (job.name === JobName.Migration) {
 			await runMigrationTask({
+				db,
+				payload: job.data,
+				logger: workerLogger,
+			});
+			return;
+		}
+
+		if (job.name === JobName.ClearCreditSystemCustomerCache) {
+			await runClearCreditSystemCacheTask({
 				db,
 				payload: job.data,
 				logger: workerLogger,
