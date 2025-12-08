@@ -1,3 +1,4 @@
+import { Membership } from "@autumn/shared";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
@@ -5,12 +6,21 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/v2/buttons/Button";
 import { Input } from "@/components/v2/inputs/Input";
 import { useOrg } from "@/hooks/common/useOrg";
-import { authClient } from "@/lib/auth-client";
+import { authClient, useSession } from "@/lib/auth-client";
 import OrgLogoUploader from "@/views/main-sidebar/org-dropdown/manage-org/OrgLogoUploader";
 import { DeleteOrgPopover } from "../org-dropdown/manage-org/DeleteOrgPopover";
+import { LeaveOrgPopover } from "../org-dropdown/manage-org/LeaveOrgPopover";
+import { useMemberships } from "../org-dropdown/hooks/useMemberships";
 
 export const OrgDetails = () => {
 	const { org, mutate } = useOrg();
+	const { memberships } = useMemberships();
+	const { data: session } = useSession();
+
+	const membership = memberships.find(
+		(m: Membership) => m.user.id === session?.session?.userId,
+	);
+	const isOwner = membership?.member.role === "owner";
 
 	const [inputs, setInputs] = useState({
 		name: org?.name,
@@ -50,7 +60,7 @@ export const OrgDetails = () => {
 	};
 
 	return (
-		<div className="px-6 py-4 w-full h-full flex flex-col gap-4">
+		<div className="px-6 pt-1.5 w-full h-full flex flex-col gap-4">
 			<div className="flex flex-col gap-4">
 				<div className="w-full flex justify-between items-center">
 					<OrgLogoUploader />
@@ -81,7 +91,7 @@ export const OrgDetails = () => {
 				</div>
 			</div>
 			<Separator className="my-2" />
-			<DeleteOrgPopover />
+			{isOwner ? <DeleteOrgPopover /> : <LeaveOrgPopover />}
 		</div>
 	);
 };
