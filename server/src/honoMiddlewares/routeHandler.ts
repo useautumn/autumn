@@ -2,6 +2,7 @@ import type { AffectedResource, ApiVersion } from "@autumn/shared";
 import type { Context, Env, Handler, MiddlewareHandler } from "hono";
 import type { ZodType, z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { acquireLock, clearLock } from "@/external/redis/redisUtils.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { expandMiddleware } from "./expandMiddleware.js";
 import { validator } from "./validatorMiddleware.js";
@@ -95,6 +96,17 @@ export function createRoute<
 		c: ValidatedContext<HonoEnv, Body, Query, Params>,
 	) => Response | Promise<Response>;
 	assertIdempotence?: string | undefined;
+	/** Lock configuration to prevent concurrent requests */
+	lock?: {
+		/** Generate a lock key. Returns null to skip locking. */
+		getKey: (
+			c: ValidatedContext<HonoEnv, Body, Query, Params>,
+		) => string | null;
+		/** Lock TTL in milliseconds (default: 10000) */
+		ttlMs?: number;
+		/** Error message to show when lock is already held */
+		errorMessage?: string;
+	};
 }) {
 	const middlewares: MiddlewareHandler[] = [];
 
@@ -162,18 +174,38 @@ export function createRoute<
 	) => {
 		c.set("validated", true);
 
-		if (opts.withTx) {
-			const db = c.get("ctx").db;
-
-			return await db.transaction(async (tx) => {
-				c.set("ctx", {
-					...c.get("ctx"),
-					db: tx as unknown as DrizzleCli,
+		// Acquire lock if lock config provided
+		let lockKey: string | null = null;
+		if (opts.lock) {
+			lockKey = opts.lock.getKey(c);
+			if (lockKey) {
+				await acquireLock({
+					lockKey,
+					ttlMs: opts.lock.ttlMs,
+					errorMessage: opts.lock.errorMessage,
 				});
+			}
+		}
+
+		try {
+			if (opts.withTx) {
+				const db = c.get("ctx").db;
+
+				return await db.transaction(async (tx) => {
+					c.set("ctx", {
+						...c.get("ctx"),
+						db: tx as unknown as DrizzleCli,
+					});
+					return await opts.handler(c);
+				});
+			} else {
 				return await opts.handler(c);
-			});
-		} else {
-			return await opts.handler(c);
+			}
+		} finally {
+			// Always release lock
+			if (lockKey) {
+				await clearLock({ lockKey });
+			}
 		}
 	};
 
