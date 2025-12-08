@@ -6,6 +6,7 @@ import {
 	CreateFreeTrialSchema,
 	type CreateReward,
 	FeatureUsageType,
+	type FreeTrial,
 	FreeTrialDuration,
 	type ProductItem,
 	type ProductV2,
@@ -147,6 +148,17 @@ export const constructProduct = ({
 
 	const freeTrialLength = freeTrial?.length || 7;
 
+	const freeTrialConfig: CreateFreeTrial | undefined = freeTrial
+		? freeTrial
+		: trial
+			? CreateFreeTrialSchema.parse({
+					length: freeTrialLength,
+					duration: FreeTrialDuration.Day,
+					unique_fingerprint: true,
+					card_required: true,
+				})
+			: undefined;
+
 	const product: ProductV2 = {
 		id: id_,
 		name: id
@@ -162,15 +174,7 @@ export const constructProduct = ({
 		is_default: (type === "free" && isDefault) || forcePaidDefault,
 		version: 1,
 		group: group || "",
-		free_trial:
-			freeTrial || trial
-				? (CreateFreeTrialSchema.parse({
-						length: freeTrialLength,
-						duration: FreeTrialDuration.Day,
-						unique_fingerprint: true,
-						card_required: true,
-					}) as any)
-				: null,
+		free_trial: freeTrialConfig as FreeTrial,
 		created_at: Date.now(),
 	};
 
