@@ -3,6 +3,7 @@ import {
 	cusProductToEnts,
 	cusProductToPrices,
 	getFeatureInvoiceDescription,
+	InternalError,
 	type PreviewLineItem,
 	stripeToAtmnAmount,
 	type UsagePriceConfig,
@@ -10,7 +11,7 @@ import {
 import type Stripe from "stripe";
 import { getSubItemAmount } from "@/external/stripe/stripeSubUtils/getSubItemAmount.js";
 import { findPriceInStripeItems } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
-import { attachParamToCusProducts } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
+import { attachParamsToCurCusProduct } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { getExistingUsageFromCusProducts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import {
@@ -31,10 +32,13 @@ export const getCurContUseItems = async ({
 	attachParams: AttachParams;
 }) => {
 	const { features } = attachParams;
-	const { curMainProduct, curSameProduct } = attachParamToCusProducts({
-		attachParams,
-	});
-	const curCusProduct = curSameProduct || curMainProduct!;
+	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
+	if (!curCusProduct) {
+		throw new InternalError({
+			message: "current customer product is undefined",
+		});
+	}
+
 	const curPrices = cusProductToPrices({ cusProduct: curCusProduct });
 	const curEnts = cusProductToEnts({ cusProduct: curCusProduct });
 
@@ -93,7 +97,7 @@ export const getCurContUseItems = async ({
 				feature: feature!,
 				usage: existingUsage,
 				billingUnits: (price.config as UsagePriceConfig).billing_units,
-				prodName: curMainProduct?.product.name,
+				prodName: curCusProduct.product.name,
 			});
 
 			description = `Unused ${description} (from ${formatUnixToDate(now)})`;

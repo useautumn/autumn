@@ -56,8 +56,6 @@ describe(`${chalk.yellowBright("mergedTrial5: Testing cancel at end of cycle and
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	let stripeCli: Stripe;
-	let testClockId: string;
-	let curUnix: number;
 	let db: DrizzleCli;
 	let org: Organization;
 	let env: AppEnv;
@@ -70,7 +68,7 @@ describe(`${chalk.yellowBright("mergedTrial5: Testing cancel at end of cycle and
 			customerId,
 		});
 
-		const res = await initCustomerV3({
+		await initCustomerV3({
 			ctx,
 			customerId,
 			attachPm: "success",
@@ -81,7 +79,6 @@ describe(`${chalk.yellowBright("mergedTrial5: Testing cancel at end of cycle and
 		db = ctx.db;
 		org = ctx.org;
 		env = ctx.env;
-		testClockId = res.testClockId!;
 	});
 
 	const entities = [
@@ -115,9 +112,11 @@ describe(`${chalk.yellowBright("mergedTrial5: Testing cancel at end of cycle and
 				org,
 				env,
 				entityId: op.entityId,
+				waitForInvoice: 3000,
 			});
 		}
 	});
+	// return;
 
 	it("should cancel one sub end of cycle", async () => {
 		await autumn.cancel({

@@ -3,7 +3,10 @@ import {
 	AttachFunction,
 	cusProductToProduct,
 } from "@autumn/shared";
-import { attachParamToCusProducts } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
+import {
+	attachParamsToCurCusProduct,
+	attachParamToCusProducts,
+} from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
 import { getAttachBranch } from "@/internal/customers/attach/attachUtils/getAttachBranch.js";
 import { getAttachConfig } from "@/internal/customers/attach/attachUtils/getAttachConfig.js";
 import { getAttachFunction } from "@/internal/customers/attach/attachUtils/getAttachFunction.js";
@@ -96,17 +99,16 @@ export const attachParamsToPreview = async ({
 		});
 	}
 
-	const { curMainProduct, curScheduledProduct } = attachParamToCusProducts({
-		attachParams,
-	});
+	const { curScheduledProduct } = attachParamToCusProducts({ attachParams });
+	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
 
 	return {
 		branch,
 		func,
 		...preview,
-		current_product: curMainProduct
+		current_product: curCusProduct
 			? cusProductToProduct({
-					cusProduct: curMainProduct,
+					cusProduct: curCusProduct,
 				})
 			: null,
 		scheduled_product: curScheduledProduct,

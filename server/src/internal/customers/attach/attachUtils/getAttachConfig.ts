@@ -3,11 +3,9 @@ import {
 	AttachBranch,
 	type AttachConfig,
 	cusProductToPrices,
-	cusProductToProduct,
 	intervalToValue,
 	ProrationBehavior,
 } from "@autumn/shared";
-import { isDefaultTrialFullProduct } from "@/internal/products/productUtils/classifyProduct.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
@@ -113,18 +111,6 @@ export const getAttachConfig = async ({
 
 	const invoiceCheckout =
 		attachParams.invoiceOnly === true && !attachBody.enable_product_immediately;
-
-	// Check if upgrading from a default trial
-	const { curMainProduct } = attachParamToCusProducts({ attachParams });
-	let isUpgradingFromDefaultTrial = false;
-	if (curMainProduct && branch === AttachBranch.Upgrade) {
-		const product = cusProductToProduct({ cusProduct: curMainProduct });
-		isUpgradingFromDefaultTrial =
-			isDefaultTrialFullProduct({
-				product,
-				skipDefault: true,
-			}) || false;
-	}
 
 	const checkoutFlow =
 		isPublic ||

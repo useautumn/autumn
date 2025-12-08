@@ -1,4 +1,5 @@
 import {
+	type AttachBranch,
 	type AttachConfig,
 	type AttachFunctionResponse,
 	AttachFunctionResponseSchema,
@@ -13,7 +14,7 @@ import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSu
 import { subIsCanceled } from "@/external/stripe/stripeSubUtils.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
-import { type AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { addIntervalToAnchor } from "@/internal/products/prices/billingIntervalUtils2.js";
@@ -36,10 +37,12 @@ export const handlePaidProduct = async ({
 	ctx,
 	attachParams,
 	config,
+	branch,
 }: {
 	ctx: AutumnContext;
 	attachParams: AttachParams;
 	config: AttachConfig;
+	branch: AttachBranch;
 }): Promise<AttachFunctionResponse> => {
 	const { logger, db } = ctx;
 
@@ -93,12 +96,13 @@ export const handlePaidProduct = async ({
 			config,
 		});
 
-		const { updatedSub, latestInvoice } = await updateStripeSub2({
+		const { updatedSub, latestInvoice, url } = await updateStripeSub2({
 			ctx,
 			attachParams,
 			curSub: mergeSub,
 			itemSet: newItemSet,
 			config,
+			branch,
 			fromCreate: true,
 		});
 
@@ -112,6 +116,15 @@ export const handlePaidProduct = async ({
 				logger,
 			});
 		}
+
+		if (url) {
+			return AttachFunctionResponseSchema.parse({
+				checkout_url: url,
+				code: SuccessCode.InvoiceActionRequired,
+				message: "Payment action required",
+			});
+		}
+
 		if (subIsCanceled({ sub: mergeSub })) {
 			logger.info("ADD PRODUCT FLOW, CREATING NEW SCHEDULE");
 			schedule = await subToNewSchedule({
@@ -218,12 +231,6 @@ export const handlePaidProduct = async ({
 			anchorToUnix,
 			config,
 		});
-		// return {
-		// 	invoices: subscriptions.map((s) => s.latest_invoice as Stripe.Invoice),
-		// 	subs: subscriptions,
-		// 	anchorToUnix,
-		// 	config,
-		// };
 	}
 
 	// Add product and entitlements to customer
@@ -255,30 +262,4 @@ export const handlePaidProduct = async ({
 		customer_id: customer.id || customer.internal_id,
 		invoice: invoiceOnly ? invoice : undefined,
 	});
-
-	// if (res) {
-	// const productNames = products.map((p) => p.name).join(", ");
-	// const customerName = customer.name || customer.email || customer.id;
-	// if (req.apiVersion.gte(ApiVersion.V1_1)) {
-	// 	res.status(200).json(
-	// 		AttachResultSchema.parse({
-	// 			message: `Successfully created subscriptions and attached ${productNames} to ${customerName}`,
-	// 			code: SuccessCode.NewProductAttached,
-	// 			product_ids: products.map((p) => p.id),
-	// 			customer_id: customer.id || customer.internal_id,
-	// 			invoice: invoiceOnly
-	// 				? attachToInvoiceResponse({ invoice })
-	// 				: undefined,
-	// 		}),
-	// 	);
-	// } else {
-	// 	res.status(200).json({
-	// 		success: true,
-	// 		message: `Successfully created subscriptions and attached ${products
-	// 			.map((p) => p.name)
-	// 			.join(", ")} to ${customer.name}`,
-	// 		invoice: invoiceOnly ? invoice : undefined,
-	// 	});
-	// }
-	// }
 };
