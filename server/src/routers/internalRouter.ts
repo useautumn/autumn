@@ -9,6 +9,7 @@ import { refreshCacheMiddleware } from "../honoMiddlewares/refreshCacheMiddlewar
 import type { HonoEnv } from "../honoUtils/HonoEnv";
 import { honoAdminRouter } from "../internal/admin/adminRouter";
 import { internalCusRouter } from "../internal/customers/internalCusRouter";
+import { internalDevRouter } from "../internal/dev/devRouter";
 import { internalOrgRouter } from "../internal/orgs/orgRouter";
 import { internalProductRouter } from "../internal/products/internalProductRouter";
 
@@ -28,3 +29,4 @@ internalRouter.route("admin", honoAdminRouter);
 internalRouter.route("organization", internalOrgRouter);
 internalRouter.route("/products", internalProductRouter);
 internalRouter.route("/customers", internalCusRouter);
+internalRouter.route("/dev", internalDevRouter);

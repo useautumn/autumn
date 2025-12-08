@@ -5,7 +5,6 @@ import { queryWithCache } from "@/utils/cacheUtils/queryWithCache.js";
 import { generateId } from "@/utils/genUtils.js";
 import { ApiKeyService } from "../ApiKeyService.js";
 import { buildSecretKeyCacheKey } from "./cacheApiKeyUtils.js";
-import { z } from "zod";
 
 function generateApiKey(length = 32, prefix = "") {
 	try {
@@ -102,17 +101,3 @@ export const verifyKey = async ({
 		data: data,
 	};
 };
-
-// let data = await tryRedisRead(() => redis.get(buildSecretKeyCacheKey(hashedKey)));
-// if (!data) {
-// 	data = await ApiKeyService.verifyAndFetch({
-// 		db,
-// 		secretKey: key,
-// 		hashedKey,
-// 		env,
-// 	});
-// }
-
-export const createApiKeyCreateSchema = z.object({
-	name: z.string().min(1),
-});
