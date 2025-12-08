@@ -1,11 +1,11 @@
 import { LucideLoaderCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-function SmallSpinner({ size = 18 }: { size?: number }) {
+function SmallSpinner({ size = 18, className }: { size?: number; className?: string }) {
 	return (
 		<LucideLoaderCircle
-			className="animate-spin text-t3"
+			className={cn("animate-spin text-white", className)}
 			size={size}
-			color="#9D9D9D"
 		/>
 	);
 }
