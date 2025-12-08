@@ -43,7 +43,7 @@ const getCusProductsInfo = ({
 			(cusProduct as FullCusProduct).status !== CusProductStatus.Scheduled,
 	);
 
-	//put add ons last
+	//put add ons last THIS DOESNT WORK ATM BECAUSE NO ADD ON PARAM EXISTS
 	activeProducts.sort((a, b) => {
 		const aIsAddOn = (a as FullCusProduct).product.is_add_on;
 		const bIsAddOn = (b as FullCusProduct).product.is_add_on;
@@ -53,6 +53,9 @@ const getCusProductsInfo = ({
 		}
 		return 0;
 	});
+
+	// customer.id === "e526e698-6d5d-4f0e-89e7-632f375663fb" &&
+	// 	console.log("activeProducts", activeProducts, "customer", customer);
 
 	if (activeProducts.length === 0) {
 		return <span className="text-t3">—</span>;
@@ -66,7 +69,6 @@ const getCusProductsInfo = ({
 					return (
 						<div key={index} className="flex items-center gap-2">
 							{(cusProduct as FullCusProduct).product.name}
-
 							<CustomerProductsStatus
 								status={(cusProduct as FullCusProduct).status}
 								canceled={
@@ -83,7 +85,6 @@ const getCusProductsInfo = ({
 									(cusProduct as FullCusProduct).trial_ends_at ?? undefined
 								}
 							/>
-
 							{activeProducts.length > 1 && (
 								<TooltipProvider>
 									<Tooltip delayDuration={0}>
