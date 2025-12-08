@@ -1,13 +1,24 @@
+import analyticsSvg from "./analytics.svg";
 import apiKeysSvg from "./api-keys.svg";
 import customersSvg from "./customers.svg";
 import featuresSvg from "./features.svg";
 import plansSvg from "./plans.svg";
+import rewardsSvg from "./rewards.svg";
 
 export const EmptyState = ({
 	type,
 	actionButton,
 }: {
-	type: "plans" | "features" | "customers" | "api-keys";
+	type:
+		| "plans"
+		| "features"
+		| "customers"
+		| "api-keys"
+		| "rewards"
+		| "archived-plans"
+		| "no-customers-found"
+		| "analytics";
+
 	actionButton?: React.ReactNode;
 }) => {
 	const getEmptyStateContent = () => {
@@ -17,6 +28,12 @@ export const EmptyState = ({
 					title: "Create your first Plan",
 					description:
 						"Plans define your pricing tiers, usage limits and feature permissions",
+					svg: plansSvg,
+				};
+			case "archived-plans":
+				return {
+					title: "No archived plans",
+					description: "You haven't archived any plans yet.",
 					svg: plansSvg,
 				};
 			case "features":
@@ -32,6 +49,26 @@ export const EmptyState = ({
 					description:
 						"Create customers via the Autumn API for users or organizations that can purchase plans",
 					svg: customersSvg,
+				};
+			case "no-customers-found":
+				return {
+					title: "No customers found",
+					description: "No customers match your search criteria.",
+					svg: customersSvg,
+				};
+			case "rewards":
+				return {
+					title: "Rewards",
+					description:
+						"Create rewards to give to your customers. These can be discounts, promo codes & more.",
+					svg: rewardsSvg,
+				};
+			case "analytics":
+				return {
+					title: "No analytics data",
+					description:
+						"No analytics data found. Start recording events to see usage data.",
+					svg: analyticsSvg,
 				};
 			case "api-keys":
 				return {
