@@ -4,15 +4,14 @@ import { authClient } from "@/lib/auth-client";
 import { useAxiosInstance } from "../../services/useAxiosInstance";
 import { useAdmin } from "./hooks/useAdmin";
 
-
 export function ImpersonateRedirect() {
 	const [searchParams] = useSearchParams();
 	const navigate = useNavigate();
-  const { isAdmin } = useAdmin();
+	const { isAdmin, isPending } = useAdmin();
 	const [status, setStatus] = useState("Impersonating...");
 	const [error, setError] = useState<string | null>(null);
 
-  const axiosInstance = useAxiosInstance();
+	const axiosInstance = useAxiosInstance();
 
 	const orgId = searchParams.get("org_id");
 	const redirect = searchParams.get("redirect") || "/";
@@ -27,8 +26,10 @@ export function ImpersonateRedirect() {
 			try {
 				// Step 1: Get a user ID for this org from the API
 				setStatus("Finding org member...");
-				const { data} = await axiosInstance.get(`/admin/org-member?org_id=${orgId}`);
-        console.log("Data:", data);
+				const { data } = await axiosInstance.get(
+					`/admin/org-member?org_id=${orgId}`,
+				);
+				console.log("Data:", data);
 				if (!data.userId) {
 					setError("No member found for this org");
 					return;
@@ -62,8 +63,6 @@ export function ImpersonateRedirect() {
 				// Step 5: Navigate to the redirect path
 				setStatus("Redirecting...");
 
-
-
 				// Use window.location for a full page reload to ensure session is picked up
 				window.location.href = redirect;
 			} catch (err: unknown) {
@@ -73,14 +72,14 @@ export function ImpersonateRedirect() {
 			}
 		};
 
-    if (isAdmin) {
-      doImpersonate();
-    } 
-	}, [orgId, redirect, navigate, isAdmin]);
+		if (isAdmin) {
+			doImpersonate();
+		}
+	}, [orgId, redirect, navigate, isAdmin, isPending]);
 
-  if (!isAdmin) {
-    navigate("/");
-  }
+	if (!isAdmin && isPending) {
+		navigate("/");
+	}
 
 	return (
 		<div className="min-h-screen flex items-center justify-center bg-zinc-950">
@@ -91,7 +90,9 @@ export function ImpersonateRedirect() {
 						<p className="text-sm mt-2">{error}</p>
 						<button
 							type="button"
-							onClick={() => { window.location.href = redirect }}
+							onClick={() => {
+								window.location.href = redirect;
+							}}
 							className="mt-4 px-4 py-2 bg-zinc-800 text-white rounded hover:bg-zinc-700"
 						>
 							Continue anyway
