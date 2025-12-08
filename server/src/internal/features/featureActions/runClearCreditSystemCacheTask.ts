@@ -51,6 +51,8 @@ export const runClearCreditSystemCacheTask = async ({
 			and(
 				eq(customerEntitlements.internal_feature_id, internalFeatureId),
 				inArray(customerProducts.status, RELEVANT_STATUSES),
+				eq(customers.org_id, orgId),
+				eq(customers.env, env),
 			),
 		);
 
@@ -92,6 +94,8 @@ export const runClearCreditSystemCacheTask = async ({
 					and(
 						eq(customerEntitlements.internal_feature_id, internalFeatureId),
 						inArray(customerProducts.status, RELEVANT_STATUSES),
+						eq(customers.org_id, orgId),
+						eq(customers.env, env),
 						cursor ? gt(customers.internal_id, cursor) : undefined,
 					),
 				)
