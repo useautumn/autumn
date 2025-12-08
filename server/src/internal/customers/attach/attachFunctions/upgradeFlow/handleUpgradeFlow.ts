@@ -45,6 +45,7 @@ export const handleUpgradeFlow = async ({
 	branch: AttachBranch;
 }) => {
 	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
+
 	const curSub = await paramsToCurSub({ attachParams });
 
 	const { logger, db } = ctx;
@@ -129,6 +130,7 @@ export const handleUpgradeFlow = async ({
 			config,
 			curSub: curSub,
 			itemSet,
+			branch,
 			fromCreate: attachParams.products.length === 0, // just for now, if no products, it comes from cancel product...
 		});
 
