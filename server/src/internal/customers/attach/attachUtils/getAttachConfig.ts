@@ -100,6 +100,7 @@ export const getAttachConfig = async ({
 
 	const freeTrialWithoutCardRequired =
 		notNullish(attachParams.freeTrial) &&
+		!disableTrial &&
 		attachParams.freeTrial?.card_required === false;
 
 	const carryTrial = branch === AttachBranch.NewVersion || willMerge;
