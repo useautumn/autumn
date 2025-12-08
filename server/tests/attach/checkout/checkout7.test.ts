@@ -30,6 +30,7 @@ export const pro = constructProduct({
 
 export const addOn = constructRawProduct({
 	id: "addOn",
+	isAddOn: true,
 	items: [
 		constructPrepaidItem({
 			featureId: TestFeature.Messages,

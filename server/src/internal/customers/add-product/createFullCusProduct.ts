@@ -23,6 +23,10 @@ import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/free
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
+import {
+	attachParamsToCurCusProduct,
+	attachParamToCusProducts,
+} from "../attach/attachUtils/convertAttachParams.js";
 import type { InsertCusProductParams } from "../cusProducts/AttachParams.js";
 import { CusProductService } from "../cusProducts/CusProductService.js";
 import { CusEntService } from "../cusProducts/cusEnts/CusEntitlementService.js";
@@ -454,23 +458,52 @@ export const createFullCusProduct = async ({
 	});
 
 	// Expire previous product if not one off and add on...?
-	if (isFreeProduct(prices) && product.is_add_on) {
-		const { curSameProduct } = getExistingCusProducts({
-			product,
-			cusProducts: attachParams.cusProducts!,
-			internalEntityId: attachParams.internalEntityId,
-		});
+	// console.log("Checking whether to expire previous product...");
 
-		if (curSameProduct) {
+	if (startsAt && startsAt > Date.now()) {
+		const { curScheduledProduct } = attachParamToCusProducts({ attachParams });
+
+		if (curScheduledProduct) {
+			await CusProductService.delete({
+				db,
+				cusProductId: curScheduledProduct.id,
+			});
+		}
+	} else {
+		const curCusProduct_ = attachParamsToCurCusProduct({ attachParams });
+
+		if (curCusProduct_) {
 			await CusProductService.update({
 				db,
-				cusProductId: curSameProduct.id,
+				cusProductId: curCusProduct_.id,
 				updates: {
 					status: CusProductStatus.Expired,
 				},
 			});
 		}
 	}
+	// console.log(
+	// 	"[createFullCusProduct] curCusProduct",
+	// 	curCusProduct_?.product.id,
+	// );
+
+	// if (isFreeProduct(prices) && product.is_add_on) {
+	// 	const { curSameProduct } = getExistingCusProducts({
+	// 		product,
+	// 		cusProducts: attachParams.cusProducts!,
+	// 		internalEntityId: attachParams.internalEntityId,
+	// 	});
+
+	// 	if (curSameProduct) {
+	// 		await CusProductService.update({
+	// 			db,
+	// 			cusProductId: curSameProduct.id,
+	// 			updates: {
+	// 				status: CusProductStatus.Expired,
+	// 			},
+	// 		});
+	// 	}
+	// }
 
 	if (!isOneOff(prices) && !product.is_add_on) {
 		await expireOrDeleteCusProduct({

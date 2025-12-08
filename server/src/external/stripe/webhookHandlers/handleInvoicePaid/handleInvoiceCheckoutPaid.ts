@@ -29,6 +29,7 @@ export const handleInvoiceCheckoutPaid = async ({
 	if (!reqMatch) return;
 
 	const batchInsert = [];
+
 	for (const product of attachParams.products) {
 		batchInsert.push(
 			createFullCusProduct({

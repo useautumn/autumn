@@ -1,13 +1,11 @@
 import { beforeAll, describe, test } from "bun:test";
 import { defaultApiVersion } from "@tests/constants.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
 import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
 import { expectInvoiceAfterUsage } from "@tests/utils/expectUtils/expectSingleUse/expectUsageInvoice.js";
-import { advanceTestClock } from "@tests/utils/stripeUtils.js";
+import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { addHours, addMonths } from "date-fns";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
@@ -32,7 +30,7 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Attach pro annual to entity 
 	const autumn: AutumnInt = new AutumnInt({ version: defaultApiVersion });
 	let testClockId: string;
 
-	let curUnix = Date.now();
+	const curUnix = Date.now();
 
 	beforeAll(async () => {
 		const result = await initCustomerV3({
@@ -93,14 +91,19 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Attach pro annual to entity 
 
 		await timeout(5000);
 
-		curUnix = await advanceTestClock({
+		await advanceToNextInvoice({
 			stripeCli: ctx.stripeCli,
 			testClockId,
-			advanceTo: addHours(
-				addMonths(curUnix, 1),
-				hoursToFinalizeInvoice,
-			).getTime(),
+			withPause: true,
 		});
+		// curUnix = await advanceTestClock({
+		// 	stripeCli: ctx.stripeCli,
+		// 	testClockId,
+		// 	advanceTo: addHours(
+		// 		addMonths(curUnix, 1),
+		// 		hoursToFinalizeInvoice,
+		// 	).getTime(),
+		// });
 
 		await expectInvoiceAfterUsage({
 			autumn,

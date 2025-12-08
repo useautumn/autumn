@@ -152,7 +152,7 @@ export const handleSubCanceled = async ({
 		),
 	);
 
-	if (defaultProducts.length === 0) return;
+	// if (defaultProducts.length === 0) return;
 
 	if (defaultProducts.length > 0) {
 		const { end } = subToPeriodStartEnd({ sub });

@@ -1,13 +1,25 @@
-import { cusProductToProduct } from "@autumn/shared";
+import {
+	cusProductToPrices,
+	cusProductToProduct,
+	type FullCusProduct,
+} from "@autumn/shared";
 import type Stripe from "stripe";
-import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import type {
+	AttachParams,
+	InsertCusProductParams,
+} from "@/internal/customers/cusProducts/AttachParams.js";
+import { isOneOff } from "../../../products/productUtils.js";
 import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
 
 export const attachParamsToCurCusProduct = ({
 	attachParams,
 }: {
-	attachParams: AttachParams;
+	attachParams: AttachParams | InsertCusProductParams;
 }) => {
+	if (attachParams.fromCancel && attachParams.cusProduct) {
+		return attachParams.cusProduct;
+	}
+
 	const { curMainProduct, curSameProduct, curScheduledProduct } =
 		attachParamToCusProducts({ attachParams });
 
@@ -16,12 +28,21 @@ export const attachParamsToCurCusProduct = ({
 		curSameProduct &&
 		curSameProduct.product.id !== curScheduledProduct?.product.id
 	) {
+		const prices = cusProductToPrices({ cusProduct: curSameProduct });
+		if (isOneOff(prices) && !attachParams.fromCancel) {
+			return undefined;
+		}
 		return curSameProduct;
 	}
 
 	// 2. If main product, then return main product
-	const product = attachParamsToProduct({ attachParams });
-	if (!product.is_add_on && curMainProduct) {
+	// const product = attachParamsToProduct({ attachParams });
+	const product =
+		"products" in attachParams
+			? attachParams.products?.[0]
+			: attachParams.product;
+
+	if (!product?.is_add_on && curMainProduct) {
 		return curMainProduct;
 	}
 
@@ -49,18 +70,26 @@ export const attachParamsToMergeCusProduct = ({
 export const attachParamToCusProducts = ({
 	attachParams,
 }: {
-	attachParams: AttachParams;
-}) => {
-	if (attachParams.products.length === 0 && !attachParams.cusProduct) {
+	attachParams: AttachParams | InsertCusProductParams;
+}): {
+	curMainProduct: FullCusProduct | undefined;
+	curSameProduct: FullCusProduct | undefined;
+	curScheduledProduct: FullCusProduct | undefined;
+} => {
+	const products =
+		"products" in attachParams ? attachParams.products : [attachParams.product];
+	const cusProduct =
+		"cusProduct" in attachParams ? attachParams.cusProduct : undefined;
+	if (products.length === 0 && !cusProduct) {
 		throw new Error(
 			"attachParams.products should have at least one product OR attachParams.cusProduct should exist",
 		);
 	}
 
 	const product =
-		attachParams.products.length > 0
-			? attachParams.products[0]
-			: cusProductToProduct({ cusProduct: attachParams.cusProduct! });
+		products.length > 0
+			? products[0]
+			: cusProductToProduct({ cusProduct: cusProduct! });
 
 	const { curMainProduct, curSameProduct, curScheduledProduct } =
 		getExistingCusProducts({

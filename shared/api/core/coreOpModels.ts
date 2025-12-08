@@ -1,31 +1,6 @@
 import { z } from "zod/v4";
 import { CustomerDataSchema } from "../common/customerData.js";
 
-// Cancel Schemas
-export const CancelBodySchema = z.object({
-	customer_id: z.string().meta({
-		description: "The ID of the customer",
-		example: "cus_123",
-	}),
-	product_id: z.string().meta({
-		description: "The ID of the product to cancel",
-		example: "pro_plan",
-	}),
-	entity_id: z.string().nullish().meta({
-		description: "The ID of the entity (optional)",
-		example: "entity_123",
-	}),
-	cancel_immediately: z.boolean().optional().meta({
-		description: "Whether to cancel the product immediately or at period end",
-		example: false,
-	}),
-	prorate: z.boolean().nullish().meta({
-		description:
-			"Whether to prorate the cancellation (defaults to true if not specified)",
-		example: true,
-	}),
-});
-
 export const CancelResultSchema = z.object({
 	success: z.boolean().meta({
 		description: "Whether the cancellation was successful",
@@ -107,7 +82,6 @@ export const BillingPortalResultSchema = z.object({
 	}),
 });
 
-export type CancelBody = z.infer<typeof CancelBodySchema>;
 export type CancelResult = z.infer<typeof CancelResultSchema>;
 export type QueryParams = z.infer<typeof QueryParamsSchema>;
 export type QueryResult = z.infer<typeof QueryResultSchema>;

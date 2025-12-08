@@ -26,7 +26,7 @@ export const completeInvoiceCheckout = async ({
 
 	// }
 	browser = await puppeteer.launch({
-		headless: false,
+		headless: true,
 		executablePath: "/Applications/Chromium.app/Contents/MacOS/Chromium",
 		args: ["--no-sandbox", "--disable-setuid-sandbox"],
 	});

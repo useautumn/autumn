@@ -6,7 +6,6 @@ import { pricingMiddleware } from "@/middleware/pricingMiddleware.js";
 import { refreshCacheMiddleware } from "@/middleware/refreshCacheMiddleware.js";
 import { analyticsRouter } from "../analytics/analyticsRouter.js";
 import { attachRouter } from "../customers/attach/attachRouter.js";
-import cancelRouter from "../customers/cancel/cancelRouter.js";
 import { expressCusRouter } from "../customers/cusRouter.js";
 import { platformRouter } from "../platform/platformLegacy/platformRouter.js";
 import { expressProductRouter } from "../products/productRouter.js";
@@ -32,7 +31,7 @@ apiRouter.use("/reward_programs", rewardProgramRouter);
 
 // Cus Product
 apiRouter.use("", attachRouter);
-apiRouter.use("/cancel", cancelRouter);
+// apiRouter.use("/cancel", cancelRouter);
 
 // Analytics
 apiRouter.use("/query", analyticsRouter);

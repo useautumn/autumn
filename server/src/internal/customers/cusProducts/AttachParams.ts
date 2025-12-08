@@ -121,6 +121,8 @@ export type InsertCusProductParams = {
 	fromMigration?: boolean;
 	apiVersion?: ApiVersion;
 	finalizeInvoice?: boolean;
+
+	cusProduct?: FullCusProduct;
 };
 
 // export const AttachResultSchema = z.object({
