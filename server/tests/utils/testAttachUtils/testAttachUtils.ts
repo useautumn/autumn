@@ -144,10 +144,30 @@ export const getAttachTotal = ({
 export const advanceToNextInvoice = async ({
 	stripeCli,
 	testClockId,
+	withPause = false,
 }: {
 	stripeCli: Stripe;
 	testClockId: string;
+	withPause?: boolean;
 }) => {
+	if (withPause) {
+		// await timeout(3000);
+		const newUnix = await advanceTestClock({
+			stripeCli,
+			testClockId,
+			advanceTo: addMonths(new Date(), 1).getTime(),
+			waitForSeconds: 15,
+		});
+
+		await advanceTestClock({
+			stripeCli,
+			testClockId,
+			advanceTo: addHours(newUnix, hoursToFinalizeInvoice).getTime(),
+			waitForSeconds: 15,
+		});
+
+		return newUnix;
+	}
 	return await advanceTestClock({
 		stripeCli,
 		testClockId,

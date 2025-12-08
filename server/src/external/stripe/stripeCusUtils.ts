@@ -2,6 +2,7 @@ import {
 	type AppEnv,
 	type Customer,
 	ErrCode,
+	hashString,
 	type Organization,
 	ProcessorType,
 } from "@autumn/shared";
@@ -12,6 +13,7 @@ import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import type { TestContext } from "../../../tests/utils/testInitUtils/createTestContext";
+import type { Logger } from "../logtail/logtailUtils";
 
 export const getStripeCus = async ({
 	stripeCli,
@@ -39,13 +41,14 @@ export const createStripeCusIfNotExists = async ({
 	org: Organization;
 	env: AppEnv;
 	customer: Customer;
-	logger: any;
+	logger: Logger;
 }) => {
-	let createNew = false;
 	const stripeCli = createStripeCli({ org, env });
-	if (!customer.processor || !customer.processor.id) {
-		createNew = true;
-	} else {
+
+	const getCurrentStripeCus = async () => {
+		// 1. If no processor, create new customer
+		if (!customer.processor?.id) return null;
+
 		try {
 			const stripeCus = await stripeCli.customers.retrieve(
 				customer.processor.id,
@@ -53,44 +56,106 @@ export const createStripeCusIfNotExists = async ({
 					expand: ["test_clock", "invoice_settings.default_payment_method"],
 				},
 			);
-			if (!stripeCus.deleted) {
-				return stripeCus as Stripe.Customer;
-			} else {
-				createNew = true;
-			}
+
+			// 2. If customer is deleted, create new customer
+			if (stripeCus.deleted) return null;
+
+			// 3. If customer is not deleted, return customer
+			return stripeCus as Stripe.Customer;
 		} catch (_error) {
-			createNew = true;
+			// 4. If error, create new customer
+			return null;
 		}
-	}
+	};
 
-	if (createNew) {
-		logger.info(`Creating new stripe customer for ${customer.id}`);
-		const stripeCustomer = await createStripeCustomer({
-			org,
-			env,
-			customer,
-		});
+	// 1. Get current stripe customer
+	const stripeCus = await getCurrentStripeCus();
 
-		await CusService.update({
-			db,
-			idOrInternalId: customer.internal_id,
-			orgId: org.id,
-			env,
-			update: {
-				processor: {
-					id: stripeCustomer.id,
-					type: ProcessorType.Stripe,
-				},
+	if (stripeCus) return stripeCus;
+
+	// 2. If no current stripe customer, create new customer
+	logger.info(`Creating new stripe customer for ${customer.id}`);
+	const idempotencyKey = hashString(
+		`stripe-create-cus:${customer.id || customer.internal_id}:${org.id}:${env}:${Math.floor(Date.now() / 5000)}`,
+	);
+
+	const stripeCustomer = await createStripeCustomer({
+		org,
+		env,
+		customer,
+		idempotencyKey,
+	});
+
+	await CusService.update({
+		db,
+		idOrInternalId: customer.internal_id,
+		orgId: org.id,
+		env,
+		update: {
+			processor: {
+				id: stripeCustomer.id,
+				type: ProcessorType.Stripe,
 			},
-		});
+		},
+	});
 
-		customer.processor = {
-			id: stripeCustomer.id,
-			type: ProcessorType.Stripe,
-		};
+	customer.processor = {
+		id: stripeCustomer.id,
+		type: ProcessorType.Stripe,
+	};
 
-		return stripeCustomer;
-	}
+	return stripeCustomer;
+
+	// let createNew = false;
+	// const stripeCli = createStripeCli({ org, env });
+	// if (!customer.processor || !customer.processor.id) {
+	// 	createNew = true;
+	// } else {
+	// 	try {
+	// 		const stripeCus = await stripeCli.customers.retrieve(
+	// 			customer.processor.id,
+	// 			{
+	// 				expand: ["test_clock", "invoice_settings.default_payment_method"],
+	// 			},
+	// 		);
+	// 		if (!stripeCus.deleted) {
+	// 			return stripeCus as Stripe.Customer;
+	// 		} else {
+	// 			createNew = true;
+	// 		}
+	// 	} catch (_error) {
+	// 		createNew = true;
+	// 	}
+	// }
+
+	// if (createNew) {
+	// 	logger.info(`Creating new stripe customer for ${customer.id}`);
+	// 	const stripeCustomer = await createStripeCustomer({
+	// 		org,
+	// 		env,
+	// 		customer,
+	// 	});
+
+	// 	await CusService.update({
+	// 		db,
+	// 		idOrInternalId: customer.internal_id,
+	// 		orgId: org.id,
+	// 		env,
+	// 		update: {
+	// 			processor: {
+	// 				id: stripeCustomer.id,
+	// 				type: ProcessorType.Stripe,
+	// 			},
+	// 		},
+	// 	});
+
+	// 	customer.processor = {
+	// 		id: stripeCustomer.id,
+	// 		type: ProcessorType.Stripe,
+	// 	};
+
+	// 	return stripeCustomer;
+	// }
 };
 
 export const createStripeCustomer = async ({
@@ -99,26 +164,35 @@ export const createStripeCustomer = async ({
 	customer,
 	testClockId,
 	metadata,
+	idempotencyKey,
 }: {
 	org: Organization;
 	env: AppEnv;
 	customer: Customer;
 	testClockId?: string;
 	metadata?: Record<string, unknown>;
+	idempotencyKey?: string;
 }) => {
 	const stripeCli = createStripeCli({ org, env });
 
 	try {
-		const stripeCustomer = await stripeCli.customers.create({
-			name: customer.name || undefined,
-			email: customer.email || undefined,
-			metadata: {
-				...(metadata || {}),
-				autumn_id: customer.id || null,
-				autumn_internal_id: customer.internal_id,
+		const stripeCustomer = await stripeCli.customers.create(
+			{
+				name: customer.name || undefined,
+				email: customer.email || undefined,
+				metadata: {
+					...(metadata || {}),
+					autumn_id: customer.id || null,
+					autumn_internal_id: customer.internal_id,
+				},
+				test_clock: testClockId,
 			},
-			test_clock: testClockId,
-		});
+			idempotencyKey
+				? {
+						idempotencyKey,
+					}
+				: undefined,
+		);
 
 		return stripeCustomer;
 	} catch (error: any) {

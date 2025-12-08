@@ -15,6 +15,7 @@ import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { nullish } from "@/utils/genUtils.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
+import type { Logger } from "../../logtail/logtailUtils.js";
 import {
 	getFullStripeInvoice,
 	getInvoiceDiscounts,
@@ -40,10 +41,7 @@ const handleOneOffInvoicePaid = async ({
 		stripeId: stripeInvoice.id!,
 	});
 
-	if (!invoice) {
-		console.log(`Invoice not found`);
-		return;
-	}
+	if (!invoice) return;
 
 	// Update invoice status
 	await InvoiceService.updateByStripeId({
@@ -72,7 +70,7 @@ const convertToChargeAutomatically = async ({
 	env: AppEnv;
 	invoice: Stripe.Invoice;
 	activeCusProducts: FullCusProduct[];
-	logger: any;
+	logger: Logger;
 }) => {
 	const stripeCli = createStripeCli({ org, env });
 

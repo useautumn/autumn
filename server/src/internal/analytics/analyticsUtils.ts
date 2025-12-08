@@ -109,15 +109,6 @@ export function getDateRangesFromEntitlements(
 	const startDates: string[] = [];
 	const endDates: string[] = [];
 
-	console.log(
-		"customer_entitlements",
-		JSON.stringify(
-			customerProducts?.map((x) => x.customer_entitlements),
-			null,
-			4,
-		),
-	);
-
 	if (!customerProducts || customerProducts.length < 1) {
 		return { startDates, endDates };
 	}

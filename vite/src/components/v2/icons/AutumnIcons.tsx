@@ -280,7 +280,7 @@ export const ContinuousUseIcon = ({
 			xmlns="http://www.w3.org/2000/svg"
 			color={className ? undefined : color}
 		>
-			<title>Allocated</title>
+			<title>Non-consumable</title>
 			<path
 				d="M6 3.5V12.5"
 				stroke={className ? "currentColor" : color}

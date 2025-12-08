@@ -13,6 +13,7 @@ import {
 	handlePrepaidErrors,
 } from "../../customers/attach/attachRouter";
 import { handleCheckoutErrors } from "../../customers/attach/attachUtils/handleAttachErrors/handleCheckoutErrors";
+import { insertCustomItems } from "../../customers/attach/attachUtils/insertCustomItems";
 import { attachParamsToPreview } from "../attachPreview/attachParamsToPreview";
 import { getHasProrations } from "./getHasProrations";
 import { previewToCheckoutRes } from "./previewToCheckoutRes";
@@ -29,7 +30,7 @@ export const handleCheckoutV2 = createRoute({
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
 
-		const { attachParams, branch, func, config } =
+		const { attachParams, branch, func, config, customPrices, customEnts } =
 			await checkoutToAttachContext({
 				ctx,
 				checkoutParams: body,
@@ -50,6 +51,12 @@ export const handleCheckoutV2 = createRoute({
 				useCheckout: true,
 			});
 
+			await insertCustomItems({
+				db: ctx.db,
+				customPrices: customPrices || [],
+				customEnts: customEnts || [],
+			});
+
 			await handlePrepaidErrors({
 				attachParams,
 				config,
@@ -61,6 +68,7 @@ export const handleCheckoutV2 = createRoute({
 					ctx,
 					attachParams,
 					config,
+					branch,
 				});
 
 				checkoutUrl = result?.checkout_url;

@@ -51,8 +51,6 @@ describe(`${chalk.yellowBright("mergedTrial4: Testing cancel immediately on merg
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 
 	let stripeCli: Stripe;
-	let testClockId: string;
-	let curUnix: number;
 	let db: DrizzleCli;
 	let org: Organization;
 	let env: AppEnv;
@@ -65,7 +63,7 @@ describe(`${chalk.yellowBright("mergedTrial4: Testing cancel immediately on merg
 			customerId,
 		});
 
-		const res = await initCustomerV3({
+		await initCustomerV3({
 			ctx,
 			customerId,
 			attachPm: "success",
@@ -76,7 +74,6 @@ describe(`${chalk.yellowBright("mergedTrial4: Testing cancel immediately on merg
 		db = ctx.db;
 		org = ctx.org;
 		env = ctx.env;
-		testClockId = res.testClockId!;
 	});
 
 	const entities = [

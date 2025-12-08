@@ -1,10 +1,12 @@
 import { z } from "zod/v4";
 import { EntitlementWithFeatureSchema } from "../../productModels/entModels/entModels.js";
+import { EntInterval } from "../../productModels/intervals/entitlementInterval.js";
 import { ReplaceableSchema } from "./replaceableSchema.js";
 import { RolloverSchema } from "./rolloverModels/rolloverTable.js";
 
 export const SortCusEntParamsSchema = z.object({
 	cusEntId: z.string().optional(),
+	interval: z.enum(EntInterval).optional(),
 });
 
 export const EntityBalanceSchema = z.object({

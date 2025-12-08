@@ -54,6 +54,7 @@ export const handleSubscriptionUpdated = async ({
 		trialing: CusProductStatus.Active,
 		active: CusProductStatus.Active,
 		past_due: CusProductStatus.PastDue,
+		incomplete: CusProductStatus.PastDue, // temporary status for incomplete subscription
 	};
 
 	const updatedCusProducts = await CusProductService.updateByStripeSubId({

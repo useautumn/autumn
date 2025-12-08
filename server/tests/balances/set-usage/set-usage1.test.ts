@@ -139,8 +139,12 @@ const simulateOneCycle = async ({
 	const invoices = cusAfter.invoices;
 	const invoice = invoices[0];
 
-	expect(invoice.total).toBeLessThanOrEqual(totalPrice + 0.01);
-	expect(invoice.total).toBeGreaterThanOrEqual(totalPrice - 0.01);
+	expect(invoice.total).toBeLessThanOrEqual(
+		new Decimal(totalPrice).plus(0.01).toNumber(),
+	);
+	expect(invoice.total).toBeGreaterThanOrEqual(
+		new Decimal(totalPrice).minus(0.01).toNumber(),
+	);
 
 	return {
 		curUnix,

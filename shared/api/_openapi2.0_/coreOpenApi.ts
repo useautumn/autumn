@@ -1,11 +1,11 @@
 import {
-	AttachResultSchema,
+	AttachBodyV0Schema,
+	AttachResponseV0Schema,
 	CancelBodySchema,
 	CancelResultSchema,
-	CheckoutResponseSchema,
+	CheckoutParamsV0Schema,
+	CheckoutResponseV0Schema,
 	CheckResponseV2Schema,
-	ExtAttachBodySchema,
-	ExtCheckoutParamsSchema,
 	ExtCheckParamsSchema,
 	QueryParamsSchema,
 	QueryResultSchema,
@@ -40,7 +40,7 @@ export const coreOps: ZodOpenApiPathsObject = {
 			requestBody: {
 				content: {
 					"application/json": {
-						schema: ExtAttachBodySchema,
+						schema: AttachBodyV0Schema,
 						examples: {
 							basic: {
 								summary: "Attach a product immediately",
@@ -60,7 +60,7 @@ export const coreOps: ZodOpenApiPathsObject = {
 					description: "Product attached successfully",
 					content: {
 						"application/json": {
-							schema: AttachResultSchema,
+							schema: AttachResponseV0Schema,
 						},
 					},
 				},
@@ -73,12 +73,12 @@ export const coreOps: ZodOpenApiPathsObject = {
 			description: checkoutJsDoc,
 			tags: ["core"],
 			requestBody: {
-				content: { "application/json": { schema: ExtCheckoutParamsSchema } },
+				content: { "application/json": { schema: CheckoutParamsV0Schema } },
 			},
 			responses: {
 				"200": {
 					description: "200 OK",
-					content: { "application/json": { schema: CheckoutResponseSchema } },
+					content: { "application/json": { schema: CheckoutResponseV0Schema } },
 				},
 			},
 		},

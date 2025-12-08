@@ -57,8 +57,13 @@ export function BalanceEditSheet() {
 				entityId,
 			}).balance;
 
+			const rolloverBalance = cusEnt.rollovers.reduce(
+				(acc, rollover) => acc + rollover.balance,
+				0,
+			);
+
 			fields.set(cusEnt.id, {
-				balance,
+				balance: balance !== null ? balance + rolloverBalance : null,
 				next_reset_at: cusEnt.next_reset_at,
 			});
 		}

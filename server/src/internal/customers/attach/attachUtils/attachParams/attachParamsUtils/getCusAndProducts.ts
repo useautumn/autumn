@@ -100,6 +100,7 @@ export const getCustomerAndProducts = async ({
 	if (nullish(attachBody.version)) {
 		for (let i = 0; i < products.length; i++) {
 			// Check if customer has active product
+			if (isOneOff(products[i].prices)) continue;
 			const { curSameProduct } = getExistingCusProducts({
 				product: products[i],
 				cusProducts: customer.customer_products,

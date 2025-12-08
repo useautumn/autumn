@@ -117,11 +117,15 @@ export function ProductListTable() {
 
 	const hasBaseRows = baseTable.getRowModel().rows.length > 0;
 	const hasAddOns = addOnPlans && addOnPlans.length > 0;
+	const isArchivedMode = queryStates.showArchivedProducts;
+
+	// Show table when there are rows OR when in archived mode (so user can toggle back)
+	const showTable = hasBaseRows || isArchivedMode;
 
 	return (
 		<div className="flex flex-col gap-8">
 			{/* Base Plans Table */}
-			{hasBaseRows ? (
+			{showTable ? (
 				<div>
 					<Table.Provider
 						config={{
@@ -138,12 +142,12 @@ export function ProductListTable() {
 							<div className="flex w-full justify-between items-center">
 								<Table.Heading>
 									<CubeIcon size={16} weight="fill" className="text-subtle" />
-									Base Plans
+									{isArchivedMode ? "Archived Plans" : "Base Plans"}
 								</Table.Heading>
 								<Table.Actions>
 									<div className="flex w-full justify-between items-center">
 										<div className="flex items-center gap-2">
-											<ProductListCreateButton />
+											{!isArchivedMode && <ProductListCreateButton />}
 											<ProductListMenuButton />
 										</div>
 									</div>
