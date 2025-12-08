@@ -2,7 +2,7 @@ import type { AppEnv, FullCustomer, Organization } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import type Stripe from "stripe";
 import { checkCusProducts } from "./checkCusProducts.js";
-import { checkCusSubCorrect } from "./checkCustomerCorrect.js";
+import { checkCusSubCorrect, SubItemMismatchError } from "./checkCustomerCorrect.js";
 import { checkSubCountMatch } from "./checkSubCountMatch.js";
 import { saveCheckState } from "./saveCheckState.js";
 import type { StateCheckResult } from "./stateCheckTypes.js";
@@ -118,5 +118,14 @@ export const testSubscriptionCorrectness = async ({
 			passed: false,
 			message: errorMsg,
 		});
+
+		// Capture subscription item details if this is a SubItemMismatchError
+		if (error instanceof SubItemMismatchError) {
+			result.subscriptionDetails = {
+				subId: error.subId,
+				actualItems: error.actualItems,
+				expectedItems: error.expectedItems,
+			};
+		}
 	}
 };
