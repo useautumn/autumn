@@ -10,7 +10,9 @@ export function NewFeatureDetails({
 	setFeature,
 }: {
 	feature: CreateFeature;
-	setFeature: (feature: CreateFeature) => void;
+	setFeature: (
+		updater: CreateFeature | ((prev: CreateFeature) => CreateFeature),
+	) => void;
 }) {
 	const baseFeature = useFeatureStore((s) => s.baseFeature);
 
@@ -19,15 +21,15 @@ export function NewFeatureDetails({
 
 	const { setSource, setTarget } = useAutoSlug({
 		setState: setFeature,
-		sourceKey: "name" as keyof CreateFeature,
-		targetKey: "id" as keyof CreateFeature,
+		sourceKey: "name",
+		targetKey: "id",
 		disableAutoSlug: isExistingFeature,
 	});
 
 	if (!feature) return null;
 
 	return (
-		<SheetSection title="Feature Details">
+		<SheetSection>
 			<div className="space-y-4">
 				<div className="grid grid-cols-2 gap-2">
 					<div>

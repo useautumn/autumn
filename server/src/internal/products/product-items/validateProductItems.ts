@@ -6,6 +6,8 @@ import {
 	FeatureType,
 	Infinite,
 	itemToEntInterval,
+	notNullish,
+	nullish,
 	OnIncrease,
 	type ProductItem,
 	ProductItemInterval,
@@ -15,16 +17,15 @@ import {
 	RolloverExpiryDurationType,
 	UsageModel,
 } from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
+import { createFeaturesFromItems } from "@server/internal/products/product-items/createFeaturesFromItems";
 
-import { notNullish, nullish } from "@/utils/genUtils.js";
-import { createFeaturesFromItems } from "./createFeaturesFromItems.js";
+import { StatusCodes } from "http-status-codes";
 import {
 	isBooleanFeatureItem,
 	isFeatureItem,
 	isFeaturePriceItem,
 	isPriceItem,
-} from "./productItemUtils/getItemType.js";
+} from "./productItemUtils/getItemType";
 
 const validateProductItem = ({
 	item,

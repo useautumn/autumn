@@ -28,8 +28,8 @@ import { nullish } from "@/utils/genUtils.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import type { AttachParams } from "../../cusProducts/AttachParams.js";
 import {
+	attachParamsToCurCusProduct,
 	attachParamsToProduct,
-	attachParamToCusProducts,
 	paramsToCurSub,
 } from "../attachUtils/convertAttachParams.js";
 
@@ -148,11 +148,7 @@ export const getUpgradeProductPreview = async ({
 }) => {
 	const { logger } = ctx;
 
-	const { curMainProduct, curSameProduct } = attachParamToCusProducts({
-		attachParams,
-	});
-
-	const curCusProduct = curSameProduct || curMainProduct!;
+	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
 	const sub = await paramsToCurSub({ attachParams });
 
 	const curPreviewItems = await getItemsForCurProduct({
@@ -265,7 +261,7 @@ export const getUpgradeProductPreview = async ({
 		items = filterNoProratePrepaidItems({
 			items,
 			attachParams,
-			curSameProduct: curSameProduct!,
+			curSameProduct: curCusProduct!,
 		});
 	}
 
@@ -283,7 +279,7 @@ export const getUpgradeProductPreview = async ({
 		dueToday = undefined;
 	}
 
-	if (branch === AttachBranch.NewVersion && dueToday) {
+	if (branch === AttachBranch.NewVersion && dueToday && curCusProduct) {
 		const curProduct = cusProductToProduct({ cusProduct: curCusProduct });
 		const newProduct = attachParamsToProduct({ attachParams });
 

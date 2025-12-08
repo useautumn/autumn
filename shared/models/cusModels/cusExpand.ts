@@ -6,7 +6,7 @@ export enum CusExpandV0 {
 	Entities = "entities",
 	Referrals = "referrals",
 	PaymentMethod = "payment_method",
-	UpcomingInvoice = "upcoming_invoice",
+	// UpcomingInvoice = "upcoming_invoice",
 }
 
 // New customer expand options!

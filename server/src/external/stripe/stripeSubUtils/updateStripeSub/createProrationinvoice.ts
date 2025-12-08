@@ -1,4 +1,4 @@
-import { InternalError, MetadataType } from "@autumn/shared";
+import { AttachBranch, InternalError, MetadataType } from "@autumn/shared";
 import { addMinutes } from "date-fns";
 import type Stripe from "stripe";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
@@ -63,6 +63,7 @@ export const createProrationInvoice = async ({
 	invoiceOnly,
 	curSub,
 	updatedSub,
+	branch,
 	logger,
 }: {
 	ctx: AutumnContext;
@@ -70,6 +71,7 @@ export const createProrationInvoice = async ({
 	invoiceOnly: boolean;
 	curSub: Stripe.Subscription;
 	updatedSub: Stripe.Subscription;
+	branch: AttachBranch;
 	logger: Logger;
 }) => {
 	const { stripeCli, customer, paymentMethod } = attachParams;
@@ -90,7 +92,6 @@ export const createProrationInvoice = async ({
 
 	const invoice = await stripeCli.invoices.create({
 		customer: customer.processor.id,
-		// subscription: curSub.id,
 		auto_advance: false,
 		pending_invoice_items_behavior: "include",
 	});
@@ -101,9 +102,23 @@ export const createProrationInvoice = async ({
 			url: null,
 		};
 
-	await stripeCli.invoices.finalizeInvoice(invoice.id!, {
-		auto_advance: false,
-	});
+	const finalizedInvoice = await stripeCli.invoices.finalizeInvoice(
+		invoice.id!,
+		{
+			auto_advance: false,
+		},
+	);
+
+	logger.info(
+		`[UPGRADE FLOW] Finalized invoice amount: ${finalizedInvoice.total}, Status: ${finalizedInvoice.status}`,
+	);
+
+	if (finalizedInvoice.status === "paid") {
+		return {
+			invoice: finalizedInvoice,
+			url: null,
+		};
+	}
 
 	const {
 		paid,
@@ -118,7 +133,7 @@ export const createProrationInvoice = async ({
 		errorOnFail: false,
 	});
 
-	if (!paid) {
+	if (!paid && branch !== AttachBranch.Cancel) {
 		await undoSubUpdate({ stripeCli, curSub, updatedSub });
 
 		if (subInvoice && subInvoice.status === "open") {

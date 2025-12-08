@@ -41,6 +41,8 @@ export const getApiEntityExpand = async ({
 		internalEntityId: fullCus.entity?.internal_id,
 	});
 
+	// console.log("Entity invoices:", invoices);
+
 	return {
 		invoices: invoicesToResponse({
 			invoices,

@@ -1,4 +1,5 @@
 import type { AppEnv } from "@autumn/shared";
+import { currentRegion } from "@/external/redis/initRedis.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { logger } from "../../../../external/logtail/logtailUtils";
@@ -9,6 +10,7 @@ interface SyncPairContext {
 	orgId: string;
 	env: AppEnv;
 	entityId?: string;
+	region: string;
 	timestamp: number;
 }
 
@@ -46,6 +48,7 @@ export class SyncBatchingManager {
 		orgId,
 		env,
 		entityId,
+		region,
 	}: Omit<SyncPairContext, "timestamp">): void {
 		// Get or create batch for this customer
 		let customerBatch = this.customerBatches.get(customerId);
@@ -75,6 +78,7 @@ export class SyncBatchingManager {
 			orgId,
 			env,
 			entityId,
+			region: region || currentRegion,
 			timestamp: existingPair?.timestamp ?? Date.now(),
 		});
 
