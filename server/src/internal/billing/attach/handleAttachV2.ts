@@ -17,6 +17,19 @@ import { attachToInvoiceResponse } from "../../invoices/invoiceUtils";
 export const handleAttachV2 = createRoute({
 	body: AttachBodyV0Schema,
 	resource: AffectedResource.Attach,
+
+	lock: {
+		ttlMs: 5000,
+		errorMessage:
+			"Attach already in progress for this customer, try again in a few seconds",
+
+		getKey: (c) => {
+			const ctx = c.get("ctx");
+			const attachBody = c.req.valid("json");
+			return `lock:attach:${ctx.org.id}:${ctx.env}:${attachBody.customer_id}`;
+		},
+	},
+
 	handler: async (c) => {
 		// await handleAttachRaceCondition({ req, res });
 		const ctx = c.get("ctx");
@@ -113,12 +126,3 @@ export const handleAttachV2 = createRoute({
 		);
 	},
 });
-
-// success: true,
-// message: `Successfully purchased ${productNames} and attached to ${customerName}`,
-// invoice: invoiceOnly
-// 	? attachToInvoiceResponse({ invoice: stripeInvoice })
-// 	: undefined,
-// code: SuccessCode.OneOffProductAttached,
-
-// scenario: AttachScenario.New,
