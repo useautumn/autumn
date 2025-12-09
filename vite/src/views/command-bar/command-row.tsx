@@ -96,10 +96,10 @@ export const CommandRow = React.forwardRef<HTMLDivElement, CommandRowProps>(
 					className,
 				)}
 			>
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-2 min-w-0 flex-1">
 					{renderIcon(icon)}
-					<span className="text-body">{title}</span>
-					{subtext && <span className="text-tiny">{subtext}</span>}
+					<span className="text-body truncate shrink-0 max-w-[50%]">{title}</span>
+					{subtext && <span className="text-tiny truncate text-t3">{subtext}</span>}
 				</div>
 				{renderShortcuts()}
 			</CommandItem>

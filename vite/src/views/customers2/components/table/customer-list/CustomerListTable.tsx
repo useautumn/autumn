@@ -47,15 +47,35 @@ export function CustomerListTable({
 
 	const { queryStates } = useCustomersQueryStates();
 
-	// const emptyStateText = queryStates.q?.trim()
-	// 	? "No matching results found. Try a different search."
-	// 	: "Create your first customer by using the Autumn API";
+	const hasRows = table.getRowModel().rows.length > 0;
+	const hasSearchQuery = Boolean(queryStates.q?.trim());
 
-	const hasRows = table.getRowModel().rows.length > 0 || queryStates.q?.trim();
+	if (!hasRows && !hasSearchQuery) {
+		return (
+			<EmptyState
+				type="customers"
+				actionButton={<CustomerListCreateButton />}
+			/>
+		);
+	}
 
 	return (
 		<>
-			{hasRows ? (
+			<div className="flex w-full justify-between items-center h-10 pb-4">
+				<div className="flex items-center gap-2">
+					<CustomerListFilterButton />
+					<CustomerListSearchBar />
+					<CustomerListPagination />
+				</div>
+				<CustomerListCreateButton />
+			</div>
+
+			{!hasRows && hasSearchQuery ? (
+				<EmptyState
+					type="no-customers-found"
+					actionButton={<CustomerListCreateButton />}
+				/>
+			) : (
 				<Table.Provider
 					config={{
 						table,
@@ -67,31 +87,13 @@ export function CustomerListTable({
 						rowClassName: "h-10",
 					}}
 				>
-					<div className="flex w-full justify-between items-center h-10 pb-4">
-						<div className="flex items-center gap-2">
-							<CustomerListFilterButton />
-							<CustomerListSearchBar />
-							<CustomerListPagination />
-							{/* <div className="text-t2 px-2 py-0.5 rounded-md bg-muted text-sm font-medium">
-						{totalCount}
-					</div> */}
-						</div>
-						{hasRows && <CustomerListCreateButton />}
-					</div>
-					<div>
-						<Table.Container>
-							<Table.Content>
-								<Table.Header />
-								<Table.Body />
-							</Table.Content>
-						</Table.Container>
-					</div>
+					<Table.Container>
+						<Table.Content>
+							<Table.Header />
+							<Table.Body />
+						</Table.Content>
+					</Table.Container>
 				</Table.Provider>
-			) : (
-				<EmptyState
-					type="customers"
-					actionButton={<CustomerListCreateButton />}
-				/>
 			)}
 		</>
 	);

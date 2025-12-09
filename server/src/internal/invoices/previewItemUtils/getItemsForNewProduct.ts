@@ -246,7 +246,7 @@ export const getItemsForNewProduct = async ({
 
 		if (withPrepaid && isPrepaidPrice({ price })) {
 			const options = getPriceOptions(price, attachParams.optionsList);
-			const quantity = notNullish(options?.quantity) ? options?.quantity! : 1;
+			const quantity = notNullish(options?.quantity) ? options?.quantity : 1;
 
 			const quantityWithBillingUnits = new Decimal(quantity).mul(
 				(price.config as UsagePriceConfig).billing_units || 1,
@@ -284,9 +284,7 @@ export const getItemsForNewProduct = async ({
 		if (isUsagePrice({ price })) continue;
 	}
 
-	const cusProduct = attachParamsToCurCusProduct({
-		attachParams,
-	});
+	const cusProduct = attachParamsToCurCusProduct({ attachParams });
 
 	const { newItems } = await getContUseInvoiceItems({
 		cusProduct,

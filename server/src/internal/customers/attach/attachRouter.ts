@@ -209,8 +209,6 @@ export const createStripePrices = async ({
 
 	const batchPriceUpdates = [];
 
-	// const curCusProduct = attachParamsToCurCusProduct({ attachParams });
-
 	for (const price of prices) {
 		const product = getProductForPrice(price, products);
 

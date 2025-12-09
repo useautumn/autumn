@@ -70,8 +70,6 @@ export const addProductFromSubs = async ({
 	// Handle if trialing
 	const trialEndsAt = sub?.trial_end ? sub.trial_end * 1000 : null;
 
-	// throw new Error("test");
-
 	// 1. Insert custom prices...
 	const customPrices = prices?.filter((p) => p.is_custom);
 	if (customPrices && customPrices.length > 0) {

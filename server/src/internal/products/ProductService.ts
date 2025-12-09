@@ -181,7 +181,7 @@ export class ProductService {
 		env: AppEnv;
 		version?: number;
 	}) {
-		const data = await db.query.products.findMany({
+		return await db.query.products.findFirst({
 			where: and(
 				eq(products.id, id),
 				eq(products.org_id, orgId),
@@ -190,12 +190,6 @@ export class ProductService {
 			),
 			orderBy: [desc(products.version)],
 		});
-
-		if (!data || data.length === 0) {
-			return null;
-		}
-
-		return data[0];
 	}
 
 	static async listFull({
