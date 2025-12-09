@@ -1,8 +1,12 @@
 import type { AppEnv, FullCustomer, Organization } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import type Stripe from "stripe";
+import type { AutumnContext } from "../../honoUtils/HonoEnv.js";
 import { checkCusProducts } from "./checkCusProducts.js";
-import { checkCusSubCorrect, SubItemMismatchError } from "./checkCustomerCorrect.js";
+import {
+	checkCusSubCorrect,
+	SubItemMismatchError,
+} from "./checkCustomerCorrect.js";
 import { checkSubCountMatch } from "./checkSubCountMatch.js";
 import { saveCheckState } from "./saveCheckState.js";
 import type { StateCheckResult } from "./stateCheckTypes.js";
@@ -15,27 +19,27 @@ export type { RedisChecksState } from "./stateCheckTypes.js";
  * Does not throw - captures all errors in the result object.
  */
 export const runCustomerStateChecks = async ({
-	db,
+	// db,
+	ctx,
 	fullCus,
 	subs,
 	schedules,
-	org,
-	env,
+	// org,
+	// env,
 }: {
-	db: DrizzleCli;
+	// db: DrizzleCli;
+	ctx: AutumnContext;
 	fullCus: FullCustomer;
 	subs: Stripe.Subscription[];
 	schedules: Stripe.SubscriptionSchedule[];
-	org: Organization;
-	env: AppEnv;
 }): Promise<StateCheckResult> => {
+	const { db, org, env } = ctx;
 	const result: StateCheckResult = {
 		passed: true,
 		errors: [],
 		warnings: [],
 		checks: [],
 	};
-
 
 	// Check: Subscription correctness (from checkCusSubCorrect)
 	await testSubscriptionCorrectness({
@@ -56,6 +60,7 @@ export const runCustomerStateChecks = async ({
 
 	// Check: Subscription IDs match Stripe
 	await checkSubCountMatch({
+		ctx,
 		fullCus,
 		subs,
 		result,

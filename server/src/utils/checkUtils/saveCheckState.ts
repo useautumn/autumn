@@ -24,6 +24,7 @@ export const saveCheckState = async ({
 	if (newFailedChecks.length === 0) return;
 
 	const stateKey = `state:${org.id}:${env}:${fullCus.internal_id}`;
+	
 	const existingState = (await upstash.get(stateKey)) as RedisChecksState | null;
 
 	if (existingState) {
@@ -57,17 +58,14 @@ export const saveCheckState = async ({
 			}
 		}
 
-		// Status transition: "new" → "ongoing" if no changes but still failing
-		const noChanges = checksToRemove.size === 0 && checksToAdd.size === 0;
-		const newStatus =
-			noChanges && existingState.status === "new" ? "ongoing" : existingState.status;
+		// Keep existing status - all status changes should be done through the dashboard
 
 		const updatedState: RedisChecksState = {
 			...existingState,
-			status: newStatus,
 			checks: updatedChecks,
 		};
 		await upstash.set(stateKey, JSON.stringify(updatedState));
+
 	} else {
 		// Create new state
 		const newState: RedisChecksState = {
@@ -89,6 +87,7 @@ export const saveCheckState = async ({
 			})),
 		};
 		await upstash.set(stateKey, JSON.stringify(newState));
+
 	}
 };
 
