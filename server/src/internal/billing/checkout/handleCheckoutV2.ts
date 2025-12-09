@@ -68,6 +68,7 @@ export const handleCheckoutV2 = createRoute({
 					ctx,
 					attachParams,
 					config,
+					branch,
 				});
 
 				checkoutUrl = result?.checkout_url;
@@ -101,8 +102,6 @@ export const handleCheckoutV2 = createRoute({
 			preview,
 			branch,
 		});
-
-		
 
 		// Get has prorations
 		const hasProrations = await getHasProrations({

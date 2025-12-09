@@ -1,8 +1,9 @@
-import type {
-	Invoice,
-	InvoiceItem,
-	Price,
-	UsagePriceConfig,
+import {
+	cusProductToProduct,
+	type Invoice,
+	type InvoiceItem,
+	type Price,
+	type UsagePriceConfig,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -46,44 +47,36 @@ export const insertInvoiceFromAttach = async ({
 			logger,
 		});
 
-		if (invoice) {
-			// console.log("UPDATING INVOICE FROM ATTACH:");
-			// console.log(
-			//   "Product IDs:",
-			//   attachParams.products.map((p) => p.id)
-			// );
-			// console.log(
-			//   "Internal Product IDs:",
-			//   attachParams.products.map((p) => p.internal_id)
-			// );
+		const products =
+			attachParams.fromCancel && attachParams.cusProduct
+				? [cusProductToProduct({ cusProduct: attachParams.cusProduct })]
+				: attachParams.products;
 
+		const productIds = products.map((p) => p.id);
+		const internalProductIds = products.map((p) => p.internal_id);
+
+		logger.info(
+			`[insertInvoiceFromAttach] invoice: ${stripeInvoice?.id}, productIds: ${productIds.join(", ")}`,
+		);
+
+		if (invoice) {
 			await InvoiceService.updateByStripeId({
 				db,
 				stripeId: stripeInvoice.id!,
 				updates: {
-					product_ids: attachParams.products.map((p) => p.id),
-					internal_product_ids: attachParams.products.map((p) => p.internal_id),
+					product_ids: productIds,
+					internal_product_ids: internalProductIds,
 				},
 			});
 		} else {
-			// console.log("INSERTING INVOICE FROM ATTACH:");
-			// console.log(
-			//   "Product IDs:",
-			//   attachParams.products.map((p) => p.id)
-			// );
-			// console.log(
-			//   "Internal Product IDs:",
-			//   attachParams.products.map((p) => p.internal_id)
-			// );
-
 			await InvoiceService.createInvoiceFromStripe({
 				db,
 				stripeInvoice,
 				internalCustomerId: attachParams.customer.internal_id,
 				internalEntityId: attachParams.internalEntityId,
 				org: attachParams.org,
-				productIds: attachParams.products.map((p) => p.id),
-				internalProductIds: attachParams.products.map((p) => p.internal_id),
+				productIds,
+				internalProductIds,
 				items: autumnInvoiceItems,
 			});
 		}
@@ -95,13 +88,15 @@ export const insertInvoiceFromAttach = async ({
 };
 
 export const invoicesToResponse = ({ invoices }: { invoices: Invoice[] }) => {
-	return invoices.map((i) =>
+	const response = invoices.map((i) =>
 		processInvoice({
 			invoice: i,
 			withItems: false,
 			features: [],
 		}),
 	);
+
+	return response;
 };
 
 export const getInvoiceItems = async ({

@@ -84,6 +84,8 @@ export const stripeToAutumnSubStatus = (stripeSubStatus: string) => {
 			return CusProductStatus.Active;
 		case "past_due":
 			return CusProductStatus.PastDue;
+		case "incomplete":
+			return CusProductStatus.PastDue;
 
 		default:
 			return stripeSubStatus;

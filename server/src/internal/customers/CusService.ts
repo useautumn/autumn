@@ -188,12 +188,20 @@ export class CusService {
 	static async getByStripeId({
 		db,
 		stripeId,
+		orgId,
+		env,
 	}: {
 		db: DrizzleCli;
 		stripeId: string;
+		orgId: string;
+		env: AppEnv;
 	}) {
 		const customer = await db.query.customers.findFirst({
-			where: eq(sql`processor->>'id'`, stripeId),
+			where: and(
+				eq(sql`processor->>'id'`, stripeId),
+				eq(customers.org_id, orgId),
+				eq(customers.env, env),
+			),
 		});
 
 		if (!customer) {

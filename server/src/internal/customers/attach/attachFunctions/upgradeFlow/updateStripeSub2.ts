@@ -1,5 +1,7 @@
 import {
+	type AttachBranch,
 	type AttachConfig,
+	type AttachReplaceable,
 	ProrationBehavior,
 	RecaseError,
 } from "@autumn/shared";
@@ -12,7 +14,7 @@ import { SubService } from "@/internal/subscriptions/SubService.js";
 import { nullish } from "@/utils/genUtils.js";
 import type { ItemSet } from "@/utils/models/ItemSet.js";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
-import { attachParamToCusProducts } from "../../attachUtils/convertAttachParams.js";
+import { attachParamsToCurCusProduct } from "../../attachUtils/convertAttachParams.js";
 import { createAndFilterContUseItems } from "../../attachUtils/getContUseItems/createContUseInvoiceItems.js";
 import {
 	createUsageInvoiceItems,
@@ -25,6 +27,7 @@ export const updateStripeSub2 = async ({
 	config,
 	curSub,
 	itemSet,
+	branch,
 	fromCreate = false,
 }: {
 	ctx: AutumnContext;
@@ -32,6 +35,7 @@ export const updateStripeSub2 = async ({
 	config: AttachConfig;
 	curSub: Stripe.Subscription;
 	itemSet: ItemSet;
+	branch: AttachBranch;
 	fromCreate?: boolean;
 }) => {
 	const { db, logger } = ctx;
@@ -69,9 +73,9 @@ export const updateStripeSub2 = async ({
 		proration_behavior:
 			proration === ProrationBehavior.None
 				? "none"
-				: fromCreate
-					? "always_invoice"
-					: "create_prorations",
+				: // : fromCreate
+					// 	? "always_invoice"
+					"create_prorations",
 
 		trial_end: trialEnd,
 
@@ -96,35 +100,44 @@ export const updateStripeSub2 = async ({
 		};
 	}
 
-	if (fromCreate) {
-		return {
-			updatedSub,
-			latestInvoice: updatedSub.latest_invoice as Stripe.Invoice,
-		};
+	// if (fromCreate) {
+	// 	return {
+	// 		updatedSub,
+	// 		latestInvoice: updatedSub.latest_invoice as Stripe.Invoice,
+	// 	};
+	// }
+
+	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
+	const cusEntIds: string[] = [];
+	const replaceables: AttachReplaceable[] = [];
+
+	if (curCusProduct) {
+		const { cusEntIds: newCusEntIds } = await createUsageInvoiceItems({
+			db,
+			attachParams,
+			cusProduct: curCusProduct,
+			sub: curSub,
+			logger,
+		});
+
+		const { replaceables: newReplaceables } = await createAndFilterContUseItems(
+			{
+				attachParams,
+				curMainProduct: curCusProduct,
+				sub: curSub,
+				logger,
+			},
+		);
+
+		cusEntIds.push(...newCusEntIds);
+		replaceables.push(...newReplaceables);
 	}
-
-	const { curMainProduct } = attachParamToCusProducts({ attachParams });
-
-	// 2. Create prorations for single use items
-	const { cusEntIds } = await createUsageInvoiceItems({
-		db,
-		attachParams,
-		cusProduct: curMainProduct!,
-		sub: curSub,
-		logger,
-	});
-
-	const { replaceables } = await createAndFilterContUseItems({
-		attachParams,
-		curMainProduct: curMainProduct!,
-		sub: curSub,
-		logger,
-	});
 
 	let url = null;
 	if (proration === ProrationBehavior.Immediately) {
 		const res = await createProrationInvoice({
 			ctx,
+			branch,
 			attachParams,
 			invoiceOnly,
 			curSub,
@@ -132,23 +145,22 @@ export const updateStripeSub2 = async ({
 			logger,
 		});
 
-		latestInvoice = res.invoice;
+		latestInvoice =
+			res.invoice || (updatedSub.latest_invoice as Stripe.Invoice);
 		url = res.url;
-
-		console.log(`FINALIZED INVOICE ${latestInvoice?.id}`);
-		console.log(latestInvoice?.lines.data.map((line) => line.description));
 	}
 
 	// If url is returned, it means invoice action is required, so don't reset balances.
-	if (!url) {
-		await resetUsageBalances({
-			db,
-			cusEntIds,
-			cusProduct: curMainProduct!,
-		});
-	} else {
-		// reset balances later when invoice is paid
-		attachParams.cusEntIds = cusEntIds;
+	if (curCusProduct) {
+		if (!url) {
+			await resetUsageBalances({
+				db,
+				cusEntIds,
+				cusProduct: curCusProduct,
+			});
+		} else {
+			attachParams.cusEntIds = cusEntIds;
+		}
 	}
 
 	return {

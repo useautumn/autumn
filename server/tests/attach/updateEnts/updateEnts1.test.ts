@@ -1,19 +1,17 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { LegacyVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
 import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
 import { getExpectedInvoiceTotal } from "@tests/utils/expectUtils/expectInvoiceUtils.js";
-import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { addHours, addMonths } from "date-fns";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { advanceToNextInvoice } from "../../utils/testAttachUtils/testAttachUtils.js";
 import { replaceItems } from "../utils.js";
 import runUpdateEntsTest from "./expectUpdateEnts.js";
 
@@ -130,19 +128,25 @@ describe(`${chalk.yellowBright(`${testCase}: Testing update ents (changing inclu
 			],
 		});
 
-		let curUnix = Date.now();
-		curUnix = await advanceTestClock({
+		await advanceToNextInvoice({
 			stripeCli: ctx.stripeCli,
 			testClockId,
-			advanceTo: addMonths(curUnix, 1).getTime(),
+			withPause: true,
 		});
 
-		await advanceTestClock({
-			stripeCli: ctx.stripeCli,
-			testClockId,
-			advanceTo: addHours(curUnix, hoursToFinalizeInvoice).getTime(),
-			waitForSeconds: 10,
-		});
+		// let curUnix = Date.now();
+		// curUnix = await advanceTestClock({
+		// 	stripeCli: ctx.stripeCli,
+		// 	testClockId,
+		// 	advanceTo: addMonths(curUnix, 1).getTime(),
+		// });
+
+		// await advanceTestClock({
+		// 	stripeCli: ctx.stripeCli,
+		// 	testClockId,
+		// 	advanceTo: addHours(curUnix, hoursToFinalizeInvoice).getTime(),
+		// 	waitForSeconds: 10,
+		// });
 
 		const customer = await autumn.customers.get(customerId);
 		const invoice = customer.invoices![0];

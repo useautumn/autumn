@@ -89,6 +89,8 @@ const handleStripeWebhookRefresh = async ({
 		const cus = await CusService.getByStripeId({
 			db,
 			stripeId: stripeCusId,
+			orgId: org.id,
+			env,
 		});
 
 		if (!cus) {

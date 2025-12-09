@@ -13,8 +13,8 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import {
+	attachParamsToCurCusProduct,
 	attachParamsToProduct,
-	attachParamToCusProducts,
 } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
@@ -40,7 +40,7 @@ export const previewToCheckoutRes = async ({
 	const { logger, features, org } = req;
 	const product = attachParamsToProduct({ attachParams });
 
-	const { curCusProduct } = attachParamToCusProducts({ attachParams });
+	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
 
 	const curPrices = curCusProduct
 		? cusProductToPrices({ cusProduct: curCusProduct })
