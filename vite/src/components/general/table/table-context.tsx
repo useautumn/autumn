@@ -7,6 +7,8 @@ export interface TableProps<T> {
 	isLoading: boolean;
 	enableSelection?: boolean;
 	enableSorting?: boolean;
+	enableColumnVisibility?: boolean;
+	columnVisibilityStorageKey?: string;
 	onRowClick?: (row: T) => void;
 	rowClassName?: string;
 	emptyStateChildren?: ReactNode;

@@ -36,8 +36,8 @@ const buttonVariants = cva(
 				active:bg-interactive-secondary-hover active:border-primary`,
 
 				muted: `bg-muted hover:bg-interactive-secondary-hover border border-transparent
-				focus-visible:bg-muted-active focus-visible:border-primary
-				active:bg-interactive-secondary-hover active:border-primary
+				 focus-visible:border-primary hover:interactive-secondary-hover
+				active:bg-interactive-secondary-hover active:text-primary!
 				`,
 
 				destructive: `bg-destructive !text-primary-foreground border-[1.2px] border-transparent
