@@ -3,8 +3,8 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
-import { Checkbox } from "@/components/ui/checkbox";
+} from "@/components/v2/dropdowns/DropdownMenu";
+import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { useCustomersQueryStates } from "../../hooks/useCustomersQueryStates";
 
@@ -28,12 +28,12 @@ export const FilterStatusSubMenu = () => {
 
 	return (
 		<DropdownMenuSub>
-			<DropdownMenuSubTrigger className="flex items-center justify-between cursor-pointer">
+			<DropdownMenuSubTrigger className="flex items-center gap-2 cursor-pointer">
 				Status
 				{hasSelections && (
-					<div className="flex items-center h-4 gap-1 p-1 bg-zinc-200">
-						<span className="text-xs text-t3">{selectedStatuses.length}</span>
-					</div>
+					<span className="text-xs text-t3 bg-muted px-1 py-0 rounded-md">
+						{selectedStatuses.length}
+					</span>
 				)}
 			</DropdownMenuSubTrigger>
 			<DropdownMenuSubContent>
@@ -49,7 +49,7 @@ export const FilterStatusSubMenu = () => {
 							onSelect={(e) => e.preventDefault()}
 							className="flex items-center gap-2 cursor-pointer text-sm"
 						>
-							<Checkbox checked={isActive} />
+							<Checkbox checked={isActive} className="border-border" />
 							{keyToTitle(status)}
 						</DropdownMenuItem>
 					);
