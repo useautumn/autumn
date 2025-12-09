@@ -1,5 +1,15 @@
-import { FingerprintIcon, Ticket } from "@phosphor-icons/react";
+import { faStripe } from "@fortawesome/free-brands-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+	ArrowSquareOutIcon,
+	FingerprintIcon,
+	Ticket,
+} from "@phosphor-icons/react";
+import { Button } from "@/components/v2/buttons/Button";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
+import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
+import { useEnv } from "@/utils/envUtils";
+import { getStripeCusLink } from "@/utils/linkUtils";
 import { useCusReferralQuery } from "@/views/customers/customer/hooks/useCusReferralQuery";
 import { useCustomerContext } from "./CustomerContext";
 
@@ -11,8 +21,11 @@ const placeholderText = "NULL";
 export const CustomerPageDetails = () => {
 	const { customer } = useCustomerContext();
 	const { stripeCus } = useCusReferralQuery();
+	const env = useEnv();
+	const { stripeAccount } = useOrgStripeQuery();
 
 	const appliedCoupon = stripeCus?.discount?.coupon;
+	const stripeCustomerId = customer?.processor?.id;
 
 	return (
 		<div className="flex h-4 items-center">
@@ -51,6 +64,26 @@ export const CustomerPageDetails = () => {
 						<Ticket size={12} className="shrink-0" />
 						<span className="truncate">{appliedCoupon.name}</span>
 					</div>
+				)}
+				{stripeCustomerId && (
+					<Button
+						variant="muted"
+						size="mini"
+						onClick={() => {
+							window.open(
+								getStripeCusLink({
+									customerId: stripeCustomerId,
+									env,
+									accountId: stripeAccount?.id,
+								}),
+								"_blank",
+							);
+						}}
+						className="text-t3 flex items-center gap-1"
+					>
+						<FontAwesomeIcon icon={faStripe} size="xl" />
+						<ArrowSquareOutIcon className="size-3.5 mb-0.75" />
+					</Button>
 				)}
 			</div>
 		</div>
