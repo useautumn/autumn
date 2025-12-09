@@ -4,6 +4,7 @@ import { AdminHover } from "@/components/general/AdminHover";
 import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { getPlanHoverTexts } from "@/views/admin/adminUtils";
+import { ProductCountsTooltip } from "@/views/products/products/product-row-toolbar/ProductCountsTooltip";
 import { ProductListRowToolbar } from "./ProductListRowToolbar";
 
 export const createProductListColumns = ({
@@ -12,7 +13,7 @@ export const createProductListColumns = ({
 	showGroup?: boolean;
 } = {}) => [
 	{
-		size: 150,
+		size: 300,
 		header: "Name",
 		accessorKey: "name",
 		cell: ({ row }: { row: Row<ProductV2> }) => {
@@ -27,7 +28,6 @@ export const createProductListColumns = ({
 	},
 	{
 		header: "ID",
-		size: 150,
 		accessorKey: "id",
 		cell: ({ row }: { row: Row<ProductV2> }) => {
 			const product = row.original;
@@ -55,11 +55,13 @@ export const createProductListColumns = ({
 		: []),
 	{
 		header: "Customers",
-		size: 50,
 		accessorKey: "active_count",
 		cell: ({ row }: { row: Row<ProductV2 & { active_count?: number }> }) => {
-			// This will be populated from counts data
-			return <div className="text-t2">{row.original.active_count || 0}</div>;
+			return (
+				<div className="text-t2">
+					<ProductCountsTooltip product={row.original} />
+				</div>
+			);
 		},
 	},
 	{
