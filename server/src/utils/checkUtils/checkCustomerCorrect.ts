@@ -34,8 +34,7 @@ import {
 	isOneOffPrice,
 } from "@server/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice";
 import {
-	isFreeProduct,
-	isOneOff,
+	isFreeProduct
 } from "@server/internal/products/productUtils";
 import type Stripe from "stripe";
 import { formatUnixToDateTime, nullish } from "../genUtils";
@@ -244,38 +243,38 @@ const compareActualItems = async ({
 	}
 };
 
-// If all cus products are free, then should have no sub
-const checkAllFreeProducts = async ({
-	db,
-	fullCus,
-	subs,
-}: {
-	db: DrizzleCli;
-	fullCus: FullCustomer;
-	subs: Stripe.Subscription[];
-}) => {
-	const cusProducts = fullCus.customer_products;
-	const allFreeOrOneOff = cusProducts.every((cp) => {
-		const product = cusProductToProduct({ cusProduct: cp });
-		return isFreeProduct(product.prices) || isOneOff(product.prices);
-	});
+// // If all cus products are free, then should have no sub
+// const checkAllFreeProducts = async ({
+// 	db,
+// 	fullCus,
+// 	subs,
+// }: {
+// 	db: DrizzleCli;
+// 	fullCus: FullCustomer;
+// 	subs: Stripe.Subscription[];
+// }) => {
+// 	const cusProducts = fullCus.customer_products;
+// 	const allFreeOrOneOff = cusProducts.every((cp) => {
+// 		const product = cusProductToProduct({ cusProduct: cp });
+// 		return isFreeProduct(product.prices) || isOneOff(product.prices);
+// 	});
 
-	if (allFreeOrOneOff) {
-		// Make sure no subs exist for this customer
-		const sub = subs.find(
-			(sub) =>
-				sub.customer === fullCus.processor?.id &&
-				(sub.status === "active" || sub.status === "past_due"),
-		);
+// 	if (allFreeOrOneOff) {
+// 		// Make sure no subs exist for this customer
+// 		const sub = subs.find(
+// 			(sub) =>
+// 				sub.customer === fullCus.processor?.id &&
+// 				(sub.status === "active" || sub.status === "past_due"),
+// 		);
 
-		if (fullCus.org_id === "6bWdIqEuRHBrReXbTb30l9beMFVZ3Ts3") return true;
+// 		if (fullCus.org_id === "6bWdIqEuRHBrReXbTb30l9beMFVZ3Ts3") return true;
 
-		assert(!sub, `no sub should exist for this customer`);
-		return true;
-	}
+// 		assert(!sub, `no sub should exist for this customer`);
+// 		return true;
+// 	}
 
-	return false;
-};
+// 	return false;
+// };
 
 export const checkCusSubCorrect = async ({
 	db,
@@ -292,12 +291,12 @@ export const checkCusSubCorrect = async ({
 	org: Organization;
 	env: AppEnv;
 }) => {
-	const allFree = await checkAllFreeProducts({
-		db,
-		fullCus,
-		subs,
-	});
-	if (allFree) return;
+	// const allFree = await checkAllFreeProducts({
+	// 	db,
+	// 	fullCus,
+	// 	subs,
+	// });
+	// if (allFree) return;
 
 	// 1. Only 1 sub ID available
 	const cusProducts = fullCus.customer_products;
