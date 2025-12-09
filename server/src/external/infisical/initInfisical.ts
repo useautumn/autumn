@@ -32,6 +32,7 @@ export const initInfisical = async (params?: { secretPath?: string }) => {
 			environment,
 			projectId,
 			secretPath: params?.secretPath,
+			includeImports: true,
 		});
 
 		// Load secrets into process.env
@@ -42,6 +43,15 @@ export const initInfisical = async (params?: { secretPath?: string }) => {
 			if (!process.env[secret.secretKey]) {
 				process.env[secret.secretKey] = secret.secretValue;
 				loadedCount++;
+			}
+		}
+
+		for (const importSecrets of allSecrets?.imports ?? []) {
+			for (const importSecret of importSecrets.secrets) {
+				if (!process.env[importSecret.secretKey]) {
+					process.env[importSecret.secretKey] = importSecret.secretValue;
+					loadedCount++;
+				}
 			}
 		}
 
