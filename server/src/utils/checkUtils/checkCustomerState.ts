@@ -76,8 +76,8 @@ export const runCustomerStateChecks = async ({
 		});
 	}
 
-	// Save to Redis only if there are failures
-	await saveCheckState({ org, env, fullCus, result });
+	// // Save to Redis only if there are failures
+	// await saveCheckState({ org, env, fullCus, result });
 
 	return result;
 };
