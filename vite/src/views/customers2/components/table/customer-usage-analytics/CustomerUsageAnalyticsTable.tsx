@@ -119,7 +119,7 @@ export function CustomerUsageAnalyticsTable() {
 							<>
 								<Table.Content
 									className={cn(
-										"rounded-lg bg-card w-full !max-w-1/2 h-[250px]",
+										"rounded-lg bg-card w-full max-w-1/2 h-[250px]",
 									)}
 								>
 									<Table.Header />
