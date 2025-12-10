@@ -1,14 +1,10 @@
-import {
-	type AppEnv,
-	ErrCode,
-	type Feature,
-	FeatureType,
-} from "@autumn/shared";
+import { ErrCode, type Feature, FeatureType } from "@autumn/shared";
 import { ChartBarIcon, DatabaseIcon } from "@phosphor-icons/react";
 import type { AgGridReact } from "ag-grid-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { AnalyticsContext } from "./AnalyticsContext";
 import { EventsAGGrid, EventsBarChart } from "./AnalyticsGraph";
 import { colors } from "./components/AGGrid";
@@ -19,7 +15,7 @@ import {
 	useRawAnalyticsData,
 } from "./hooks/useAnalyticsData";
 
-export const AnalyticsView = ({ env }: { env: AppEnv }) => {
+export const AnalyticsView = () => {
 	const [searchParams] = useSearchParams();
 	const [eventNames, setEventNames] = useState<string[]>([]);
 	const [featureIds, setFeatureIds] = useState<string[]>([]);
@@ -45,14 +41,12 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 		topEvents,
 	} = useAnalyticsData({ hasCleared });
 
-	// console.log("Features: ", features);
-
 	const { rawEvents, queryLoading: rawQueryLoading } = useRawAnalyticsData();
 
 	const chartConfig = events?.meta
-		.filter((x: any) => x.name != "period")
-		.map((x: any, index: number) => {
-			if (x.name != "period") {
+		.filter((x: { name: string }) => x.name !== "period")
+		.map((x: { name: string }, index: number) => {
+			if (x.name !== "period") {
 				const colorIndex = index % colors.length;
 
 				return {
@@ -66,7 +60,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 
 							// console.log("Feature: ", feature, eventName);
 
-							if (feature.type == FeatureType.Boolean) return false;
+							if (feature.type === FeatureType.Boolean) return false;
 
 							if (feature.id === eventName) {
 								return true;
@@ -79,18 +73,12 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 						})?.name || x.name.replace("_count", ""),
 					fill: colors[colorIndex],
 				};
-			}
+			} else return null;
 		});
 
 	useEffect(() => {
-		if (error) {
-			if (
-				error.response &&
-				error.response.data &&
-				error.response.data.code === ErrCode.ClickHouseDisabled
-			) {
-				setClickHouseDisabled(true);
-			}
+		if (error?.response?.data?.code === ErrCode.ClickHouseDisabled) {
+			setClickHouseDisabled(true);
 		}
 	}, [error]);
 
@@ -100,6 +88,18 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 				<h3 className="text-sm text-t2 font-bold">ClickHouse is disabled</h3>
 			</div>
 		);
+	}
+
+	// Show empty state if no actual analytics events (check rawEvents and totalRows)
+	const hasNoData =
+		!queryLoading &&
+		!rawQueryLoading &&
+		!topEventsLoading &&
+		(!rawEvents || !rawEvents.data || rawEvents.data.length === 0) &&
+		totalRows === 0;
+
+	if (hasNoData) {
+		return <EmptyState type="analytics" />;
 	}
 
 	return (
@@ -134,20 +134,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 			}}
 		>
 			<div className="flex flex-col gap-4 h-full relative w-full text-sm pb-8 max-w-5xl mx-auto px-10 pt-8">
-				{/* <h1
-					className={cn(
-						"text-xl font-medium shrink-0 pt-6",
-						// env === AppEnv.Sandbox ? "pt-4" : "pt-6",
-					)}
-				>
-					Analytics
-				</h1> */}
 				<div className="max-h-[400px] min-h-[400px] pb-6">
-					{/* <PageSectionHeader
-						title="Usage Analytics"
-						endContent={<QueryTopbar />}
-						className="h-10"
-					/> */}
 					<div className="flex justify-between pb-4 h-10">
 						<div className="text-t3 text-md py-0 px-2 rounded-lg flex gap-2 items-center bg-secondary">
 							<ChartBarIcon size={16} weight="fill" className="text-subtle" />
@@ -184,11 +171,6 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 				</div>
 
 				<div className="h-full mb-8">
-					{/* <PageSectionHeader
-						title="Event Logs"
-						className="h-10"
-						endContent={}
-					/> */}
 					<div className="flex justify-between pb-4 h-10">
 						<div className="text-t3 text-md py-0 px-2 rounded-lg flex gap-2 items-center bg-secondary">
 							<DatabaseIcon size={16} weight="fill" className="text-subtle" />

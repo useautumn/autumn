@@ -65,6 +65,21 @@ export const getFeatureToUse = ({
 		return feature;
 	}
 
+	for (const creditSystem of creditSystems) {
+		const apiBalance = apiEntity?.balances?.[creditSystem.id];
+		if (!apiBalance) continue;
+
+		if (
+			apiBalanceToAllowed({
+				apiBalance,
+				feature: creditSystem,
+				requiredBalance,
+			})
+		) {
+			return creditSystem;
+		}
+	}
+
 	return creditSystems[0];
 };
 

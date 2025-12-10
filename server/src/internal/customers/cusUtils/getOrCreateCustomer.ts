@@ -28,6 +28,7 @@ export const getOrCreateCustomer = async ({
 	// Entity stuff
 	entityId,
 	entityData,
+	skipUpdate = false,
 }: {
 	ctx: AutumnContext;
 	customerId: string | null;
@@ -38,6 +39,7 @@ export const getOrCreateCustomer = async ({
 	expand?: CusExpand[];
 	entityId?: string;
 	entityData?: EntityData;
+	skipUpdate?: boolean;
 }): Promise<FullCustomer> => {
 	let customer: FullCustomer | undefined;
 
@@ -108,24 +110,26 @@ export const getOrCreateCustomer = async ({
 		}
 	}
 
-	const updated = await updateCustomerDetails({
-		ctx,
-		customer,
-		customerData,
-	});
-
-	if (updated) {
-		customer = await CusService.getFull({
-			db,
-			idOrInternalId: customer.id || customer.internal_id,
-			orgId: org.id,
-			env,
-			inStatuses,
-			withEntities,
-			entityId,
-			expand,
-			withSubs: true,
+	if (!skipUpdate) {
+		const updated = await updateCustomerDetails({
+			ctx,
+			customer,
+			customerData,
 		});
+
+		if (updated) {
+			customer = await CusService.getFull({
+				db,
+				idOrInternalId: customer.id || customer.internal_id,
+				orgId: org.id,
+				env,
+				inStatuses,
+				withEntities,
+				entityId,
+				expand,
+				withSubs: true,
+			});
+		}
 	}
 
 	// Customer is defined by this point!

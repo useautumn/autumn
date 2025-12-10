@@ -6,10 +6,9 @@ import {
 	features,
 	RecaseError,
 } from "@autumn/shared";
+import type { DrizzleCli } from "@server/db/initDrizzle.js";
+import { notNullish } from "@server/utils/genUtils.js";
 import { and, eq } from "drizzle-orm";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-
-import { notNullish } from "@/utils/genUtils.js";
 import { clearOrgCache } from "../orgs/orgUtils/clearOrgCache.js";
 
 export class FeatureService {

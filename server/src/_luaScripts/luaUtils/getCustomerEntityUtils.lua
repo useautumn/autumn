@@ -2,6 +2,225 @@
 -- GET CUSTOMER/ENTITY UTILITY FUNCTIONS
 -- ============================================================================
 
+-- ============================================================================
+-- LEGACY DATA MERGE UTILITIES
+-- ============================================================================
+
+-- Helper function to merge breakdown_legacy_data by key
+-- Sums prepaid_quantity for matching keys, adds new items for non-matching keys
+-- Mutates targetBreakdown by merging sourceBreakdown into it
+local function mergeBreakdownLegacyData(targetBreakdown, sourceBreakdown)
+    if not sourceBreakdown then return end
+    if not targetBreakdown then return end
+    
+    for _, sourceItem in ipairs(sourceBreakdown) do
+        local foundMatch = false
+        
+        -- Try to find matching item by key
+        for _, targetItem in ipairs(targetBreakdown) do
+            if sourceItem.key and targetItem.key and sourceItem.key == targetItem.key then
+                -- Found match - sum prepaid_quantity
+                targetItem.prepaid_quantity = (targetItem.prepaid_quantity or 0) + (sourceItem.prepaid_quantity or 0)
+                foundMatch = true
+                break
+            end
+        end
+        
+        -- If no match found, add as new item
+        if not foundMatch then
+            table.insert(targetBreakdown, {
+                key = sourceItem.key,
+                prepaid_quantity = sourceItem.prepaid_quantity or 0
+            })
+        end
+    end
+end
+
+-- Helper function to create a virtual breakdown item from top-level legacy data
+-- Used when legacy data has no breakdown_legacy_data array but needs to be merged
+local function legacyDataToBreakdownItem(featureData)
+    return {
+        key = featureData.key or "",
+        prepaid_quantity = featureData.prepaid_quantity or 0
+    }
+end
+
+-- Helper function to merge cusProductLegacyData from source into target
+-- Merges by plan_id: keeps subscription_id from either, merges options arrays
+-- Mutates targetLegacyData
+local function mergeCusProductLegacyData(targetLegacyData, sourceLegacyData)
+    if not sourceLegacyData then return end
+    if not targetLegacyData then return end
+    
+    local targetCusProduct = targetLegacyData.cusProductLegacyData
+    local sourceCusProduct = sourceLegacyData.cusProductLegacyData
+    
+    if not sourceCusProduct then return end
+    
+    -- Initialize target cusProductLegacyData if nil
+    if not targetCusProduct then
+        targetLegacyData.cusProductLegacyData = {}
+        targetCusProduct = targetLegacyData.cusProductLegacyData
+    end
+    
+    -- Merge each plan_id from source into target
+    for planId, sourceProductData in pairs(sourceCusProduct) do
+        local targetProductData = targetCusProduct[planId]
+        
+        if targetProductData then
+            -- Plan exists in target - merge values
+            -- subscription_id: keep target's if exists, otherwise use source's
+            if not targetProductData.subscription_id or targetProductData.subscription_id == cjson.null then
+                targetProductData.subscription_id = sourceProductData.subscription_id
+            end
+            
+            -- options: merge by feature_id (add source options that don't exist in target)
+            if sourceProductData.options and #sourceProductData.options > 0 then
+                if not targetProductData.options then
+                    targetProductData.options = {}
+                end
+                
+                -- Build set of existing feature_ids in target options
+                local existingFeatureIds = {}
+                for _, option in ipairs(targetProductData.options) do
+                    if option.feature_id then
+                        existingFeatureIds[option.feature_id] = true
+                    end
+                end
+                
+                -- Add source options that don't exist in target
+                for _, sourceOption in ipairs(sourceProductData.options) do
+                    if sourceOption.feature_id and not existingFeatureIds[sourceOption.feature_id] then
+                        table.insert(targetProductData.options, sourceOption)
+                    end
+                end
+            end
+        else
+            -- Plan doesn't exist in target - add it (deep copy)
+            local newProductData = {
+                subscription_id = sourceProductData.subscription_id,
+                options = {}
+            }
+            if sourceProductData.options then
+                for _, option in ipairs(sourceProductData.options) do
+                    table.insert(newProductData.options, option)
+                end
+            end
+            targetCusProduct[planId] = newProductData
+        end
+    end
+end
+
+-- Helper function to merge cusFeatureLegacyData from source into target
+-- Merges by feature_id: sums prepaid_quantity, merges breakdown_legacy_data by key
+-- Similar to balance breakdown merging:
+-- - Each legacy data without breakdown_legacy_data is treated as a single "virtual" breakdown item
+-- - Breakdown items are matched by key
+-- - If keys match: sum prepaid_quantity
+-- - If keys differ: create separate breakdown items
+-- Mutates targetLegacyData
+local function mergeCusFeatureLegacyData(targetLegacyData, sourceLegacyData)
+    if not sourceLegacyData then return end
+    if not targetLegacyData then return end
+    
+    local targetCusFeature = targetLegacyData.cusFeatureLegacyData
+    local sourceCusFeature = sourceLegacyData.cusFeatureLegacyData
+    
+    if not sourceCusFeature then return end
+    
+    -- Initialize target cusFeatureLegacyData if nil
+    if not targetCusFeature then
+        targetLegacyData.cusFeatureLegacyData = {}
+        targetCusFeature = targetLegacyData.cusFeatureLegacyData
+    end
+    
+    -- Merge each feature_id from source into target
+    for featureId, sourceFeatureData in pairs(sourceCusFeature) do
+        local targetFeatureData = targetCusFeature[featureId]
+        
+        if targetFeatureData then
+            -- Feature exists in target - merge values
+            
+            -- ============================================================================
+            -- CAPTURE VIRTUAL BREAKDOWN ITEMS BEFORE MUTATING TOP-LEVEL FIELDS
+            -- ============================================================================
+            -- Similar to balance merging: capture breakdown items BEFORE summing
+            
+            -- Get effective breakdown from target
+            local targetBreakdowns = targetFeatureData.breakdown_legacy_data
+            local targetHadBreakdown = targetBreakdowns and #targetBreakdowns > 0
+            
+            if not targetHadBreakdown then
+                -- Target has no breakdown - create virtual item from top-level fields
+                targetBreakdowns = { legacyDataToBreakdownItem(targetFeatureData) }
+            end
+            
+            -- Get effective breakdown from source
+            local sourceBreakdowns = sourceFeatureData.breakdown_legacy_data
+            if not sourceBreakdowns or #sourceBreakdowns == 0 then
+                -- Source has no breakdown - create virtual item from top-level fields
+                sourceBreakdowns = { legacyDataToBreakdownItem(sourceFeatureData) }
+            end
+            
+            -- ============================================================================
+            -- NOW MERGE TOP-LEVEL PREPAID_QUANTITY
+            -- ============================================================================
+            targetFeatureData.prepaid_quantity = (targetFeatureData.prepaid_quantity or 0) + (sourceFeatureData.prepaid_quantity or 0)
+            
+            -- ============================================================================
+            -- MERGE BREAKDOWN ITEMS BY KEY
+            -- ============================================================================
+            for _, sourceItem in ipairs(sourceBreakdowns) do
+                local foundMatch = false
+                
+                for _, targetItem in ipairs(targetBreakdowns) do
+                    if sourceItem.key and targetItem.key and sourceItem.key == targetItem.key then
+                        -- Found match - sum prepaid_quantity
+                        targetItem.prepaid_quantity = (targetItem.prepaid_quantity or 0) + (sourceItem.prepaid_quantity or 0)
+                        foundMatch = true
+                        break
+                    end
+                end
+                
+                -- If no match found, add as new item
+                if not foundMatch then
+                    table.insert(targetBreakdowns, {
+                        key = sourceItem.key,
+                        prepaid_quantity = sourceItem.prepaid_quantity or 0
+                    })
+                end
+            end
+            
+            -- Set breakdown_legacy_data if we have multiple items or originally had breakdown
+            if #targetBreakdowns > 1 or targetHadBreakdown then
+                targetFeatureData.breakdown_legacy_data = targetBreakdowns
+                -- Clear top-level key since it's now in breakdown items
+                targetFeatureData.key = nil
+            end
+        else
+            -- Feature doesn't exist in target - add it (deep copy)
+            local newFeatureData = {
+                key = sourceFeatureData.key,
+                prepaid_quantity = sourceFeatureData.prepaid_quantity or 0,
+                breakdown_legacy_data = {}
+            }
+            if sourceFeatureData.breakdown_legacy_data and #sourceFeatureData.breakdown_legacy_data > 0 then
+                for _, item in ipairs(sourceFeatureData.breakdown_legacy_data) do
+                    table.insert(newFeatureData.breakdown_legacy_data, {
+                        key = item.key,
+                        prepaid_quantity = item.prepaid_quantity or 0
+                    })
+                end
+            end
+            targetCusFeature[featureId] = newFeatureData
+        end
+    end
+end
+
+-- ============================================================================
+-- CUSTOMER/ENTITY RETRIEVAL FUNCTIONS
+-- ============================================================================
+
 -- Get customer object with merged balances and subscriptions
 -- Parameters:
 --   orgId: Organization ID
@@ -95,6 +314,20 @@ local function getCustomerObject(orgId, env, customerId, skipEntityMerge)
     -- Merge scheduled_subscriptions by plan ID and normalized status
     baseCustomer.scheduled_subscriptions = mergeSubscriptions(allScheduledSubscriptions)
 
+    -- ============================================================================
+    -- MERGE ENTITY LEGACY DATA INTO CUSTOMER LEGACY DATA
+    -- ============================================================================
+    
+    if not skipEntityMerge and baseCustomer.legacyData then
+        for _, entityId in ipairs(entityIds) do
+            local entityBase = entityBaseData[entityId]
+            if entityBase and entityBase.legacyData then
+                mergeCusFeatureLegacyData(baseCustomer.legacyData, entityBase.legacyData)
+                mergeCusProductLegacyData(baseCustomer.legacyData, entityBase.legacyData)
+            end
+        end
+    end
+
     -- Merge invoices
     -- Build final customer object
     baseCustomer.invoices = baseCustomer.invoices or nil
@@ -159,19 +392,26 @@ local function getEntityObject(orgId, env, customerId, entityId, skipCustomerMer
     local entityScheduledSubscriptions = baseEntity.scheduled_subscriptions or {}
     
     if not skipCustomerMerge then
-        -- Get customer subscriptions and scheduled_subscriptions
-        local customerSubscriptions = nil
-        local customerScheduledSubscriptions = nil
+        -- Get customer base data for subscriptions and legacy data
+        local customerBase = nil
         local customerBaseJson = redis.call("GET", customerCacheKey)
         if customerBaseJson then
-            local customerBase = cjson.decode(customerBaseJson)
-            customerSubscriptions = customerBase.subscriptions
-            customerScheduledSubscriptions = customerBase.scheduled_subscriptions
+            customerBase = cjson.decode(customerBaseJson)
         end
         
         -- Merge customer subscriptions into entity subscriptions (only add if not exists)
+        local customerSubscriptions = customerBase and customerBase.subscriptions or nil
+        local customerScheduledSubscriptions = customerBase and customerBase.scheduled_subscriptions or nil
         baseEntity.subscriptions = mergeCustomerSubscriptionsIntoEntity(entitySubscriptions, customerSubscriptions)
         baseEntity.scheduled_subscriptions = mergeCustomerSubscriptionsIntoEntity(entityScheduledSubscriptions, customerScheduledSubscriptions)
+        
+        -- ============================================================================
+        -- MERGE CUSTOMER LEGACY DATA INTO ENTITY LEGACY DATA
+        -- ============================================================================
+        if baseEntity.legacyData and customerBase and customerBase.legacyData then
+            mergeCusFeatureLegacyData(baseEntity.legacyData, customerBase.legacyData)
+            mergeCusProductLegacyData(baseEntity.legacyData, customerBase.legacyData)
+        end
     else
         -- No merging - just use entity's own subscriptions
         baseEntity.subscriptions = entitySubscriptions

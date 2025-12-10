@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/v2/buttons/Button";
+import { Input } from "@/components/v2/inputs/Input";
 import {
 	Popover,
 	PopoverContent,
@@ -89,7 +89,7 @@ export const DeleteOrgPopover = () => {
 						onChange={(e) => setConfirmText(e.target.value)}
 					/>
 					<Button
-						variant="outline"
+						variant="destructive"
 						className="w-fit"
 						isLoading={deleting}
 						onClick={handleDeleteClicked}

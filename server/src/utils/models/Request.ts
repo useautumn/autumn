@@ -10,7 +10,6 @@ import type {
 	Request as ExpressRequest,
 	Response as ExpressResponse,
 } from "express";
-import type { PostHog } from "posthog-node";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 
@@ -21,7 +20,7 @@ export interface ExtendedRequest extends ExpressRequest {
 	features: Feature[];
 	db: DrizzleCli;
 	logtail: Logger;
-	logger: any;
+	logger: Logger;
 	clickhouseClient: ClickHouseClient;
 
 	id?: string;
@@ -29,7 +28,6 @@ export interface ExtendedRequest extends ExpressRequest {
 	isPublic?: boolean;
 	authType?: AuthType;
 
-	posthog?: PostHog;
 	apiVersion: ApiVersionClass;
 
 	timestamp?: number;

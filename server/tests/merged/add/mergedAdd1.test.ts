@@ -127,6 +127,7 @@ describe(`${chalk.yellowBright("mergedAdd1: Testing merged subs, with track")}`,
 		await advanceToNextInvoice({
 			stripeCli,
 			testClockId,
+			withPause: true,
 		});
 
 		let total = 0;

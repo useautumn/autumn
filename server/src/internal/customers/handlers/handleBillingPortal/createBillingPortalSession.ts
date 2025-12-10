@@ -9,10 +9,12 @@ export const createBillingPortalSession = async ({
 	ctx,
 	customer,
 	returnUrl,
+	configurationId,
 }: {
 	ctx: AutumnContext;
 	customer: Customer;
 	returnUrl?: string;
+	configurationId?: string;
 }) => {
 	const { db, org, env, logger } = ctx;
 	const stripeCli = createStripeCli({ org, env });
@@ -41,12 +43,19 @@ export const createBillingPortalSession = async ({
 	}
 
 	// 1. Try to create billing portal session
+
 	try {
 		return await stripeCli.billingPortal.sessions.create({
 			customer: stripeCustomerId,
 			return_url: returnUrl || toSuccessUrl({ org, env }),
+			configuration: configurationId ?? undefined,
 		});
 	} catch (error: any) {
+		// If configurationId was provided, don't fall back to default
+		if (configurationId) {
+			throw error;
+		}
+
 		// If not a missing configuration error, rethrow
 		if (
 			!error.message?.includes("default configuration has not been created")

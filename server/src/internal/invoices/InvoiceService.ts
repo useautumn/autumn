@@ -9,12 +9,12 @@ import {
 	type Organization,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
+import type { DrizzleCli } from "@server/db/initDrizzle.js";
+import { getInvoiceDiscounts } from "@server/external/stripe/stripeInvoiceUtils.js";
+import { generateId } from "@server/utils/genUtils.js";
 import { Autumn } from "autumn-js";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull, or } from "drizzle-orm";
 import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { getInvoiceDiscounts } from "@/external/stripe/stripeInvoiceUtils.js";
-import { generateId } from "@/utils/genUtils.js";
 
 export const processInvoice = ({
 	invoice,
@@ -88,7 +88,10 @@ export class InvoiceService {
 			where: and(
 				eq(invoices.internal_customer_id, internalCustomerId),
 				internalEntityId
-					? eq(invoices.internal_entity_id, internalEntityId)
+					? or(
+							eq(invoices.internal_entity_id, internalEntityId),
+							isNull(invoices.internal_entity_id),
+						)
 					: undefined,
 			),
 			orderBy: [desc(invoices.created_at), desc(invoices.id)],

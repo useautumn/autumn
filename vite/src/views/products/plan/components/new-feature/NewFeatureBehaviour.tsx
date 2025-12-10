@@ -3,9 +3,10 @@ import {
 	FeatureType,
 	FeatureUsageType,
 } from "@autumn/shared";
-import { InfoIcon, TicketIcon } from "@phosphor-icons/react";
-import { PanelButton } from "@/components/v2/buttons/PanelButton";
-import { UsageBasedIcon } from "@/components/v2/icons/AutumnIcons";
+import {
+	RadioGroup,
+	RadioGroupItem,
+} from "@/components/v2/radio-groups/RadioGroup";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 
 export function NewFeatureBehaviour({
@@ -16,65 +17,53 @@ export function NewFeatureBehaviour({
 	setFeature: (feature: CreateFeature) => void;
 }) {
 	if (feature.type && feature.type !== FeatureType.Boolean) {
+		console.log("feature.config?.usage_type", feature);
 		return (
-			<SheetSection title="Feature Behavior">
+			<SheetSection>
 				<div className="space-y-4">
-					<div className="mt-3 space-y-4">
-						<div className="flex w-full items-center gap-4">
-							<PanelButton
-								isSelected={
-									feature.config?.usage_type === FeatureUsageType.Single
-								}
-								onClick={() => {
-									setFeature({
-										...feature,
-										config: {
-											...feature.config,
-											usage_type: FeatureUsageType.Single,
-										},
-									});
-								}}
-								icon={<UsageBasedIcon color="currentColor" />}
+					<RadioGroup
+						value={feature.config?.usage_type || FeatureUsageType.Single}
+						onValueChange={(value) => {
+							setFeature({
+								...feature,
+								config: {
+									...feature.config,
+									usage_type: value as FeatureUsageType,
+								},
+							});
+						}}
+						className="space-y-4"
+					>
+						<div className="flex w-full gap-2">
+							<RadioGroupItem
+								value={FeatureUsageType.Single}
+								className="mt-1"
 							/>
 							<div className="flex-1">
 								<div className="text-body-highlight mb-1 flex-row flex items-center gap-1">
 									Consumable
-									<InfoIcon size={8} weight="regular" color="#888888" />
 								</div>
 								<div className="text-body-secondary leading-tight">
-									Used up and refreshed periodically (eg chat messages, video
-									minutes)
+									Usage can reset periodically (eg messages, video minutes)
 								</div>
 							</div>
 						</div>
 
-						<div className="flex w-full items-center gap-4">
-							<PanelButton
-								isSelected={
-									feature.config?.usage_type === FeatureUsageType.Continuous
-								}
-								onClick={() => {
-									setFeature({
-										...feature,
-										config: {
-											...feature.config,
-											usage_type: FeatureUsageType.Continuous,
-										},
-									});
-								}}
-								icon={<TicketIcon size={16} color="currentColor" />}
+						<div className="flex w-full gap-2">
+							<RadioGroupItem
+								value={FeatureUsageType.Continuous}
+								className="mt-1"
 							/>
 							<div className="flex-1">
 								<div className="text-body-highlight mb-1 flex-row flex items-center gap-1">
-									Allocated
-									<InfoIcon size={8} weight="regular" color="#888888" />
+									Non-consumable
 								</div>
 								<div className="text-body-secondary leading-tight">
-									Assigned and used on an ongoing basis (eg seats, storage)
+									Usage is persistent and never resets (eg seats, storage)
 								</div>
 							</div>
 						</div>
-					</div>
+					</RadioGroup>
 				</div>
 			</SheetSection>
 		);

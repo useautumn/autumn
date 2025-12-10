@@ -57,8 +57,13 @@ export function BalanceEditSheet() {
 				entityId,
 			}).balance;
 
+			const rolloverBalance = cusEnt.rollovers.reduce(
+				(acc, rollover) => acc + rollover.balance,
+				0,
+			);
+
 			fields.set(cusEnt.id, {
-				balance,
+				balance: balance !== null ? balance + rolloverBalance : null,
 				next_reset_at: cusEnt.next_reset_at,
 			});
 		}
@@ -109,6 +114,7 @@ export function BalanceEditSheet() {
 		}
 
 		setUpdateLoading(true);
+
 		try {
 			await CusService.updateCusEntitlement(
 				axiosInstance,
@@ -213,14 +219,16 @@ export function BalanceEditSheet() {
 								</span>
 							}
 						/>
-						<InfoRow
-							label="Balance"
-							value={
-								<span className="bg-muted px-1 py-0.5 rounded-md text-t3">
-									Unlimited
-								</span>
-							}
-						/>
+						{isUnlimited && (
+							<InfoRow
+								label="Balance"
+								value={
+									<span className="bg-muted px-1 py-0.5 rounded-md text-t3">
+										Unlimited
+									</span>
+								}
+							/>
+						)}
 					</div>
 				</SheetSection>
 

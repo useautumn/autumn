@@ -19,6 +19,7 @@ export const handleListPlans = createRoute({
 
 		const { customer_id, entity_id, include_archived, v1_schema } = query;
 
+		const startedAt = Date.now();
 		const [products, customer] = await Promise.all([
 			ProductService.listFull({
 				db,
@@ -42,6 +43,9 @@ export const handleListPlans = createRoute({
 				});
 			})(),
 		]);
+
+		const endedAt = Date.now();
+		ctx.logger.info(`[handleListPlans] query took ${endedAt - startedAt}ms`);
 
 		if (v1_schema) return c.json({ list: products });
 
@@ -76,6 +80,7 @@ export const handleListPlans = createRoute({
 				legacyData: {
 					features: ctx.features,
 				},
+				ctx,
 			});
 		});
 

@@ -1,15 +1,15 @@
 import { AttachBranch, type Metadata, ProrationBehavior } from "@autumn/shared";
+import { createStripeCli } from "@server/external/connect/createStripeCli";
+import { getCusPaymentMethod } from "@server/external/stripe/stripeCusUtils";
+import type { AutumnContext } from "@server/honoUtils/HonoEnv";
+import { resetUsageBalances } from "@server/internal/customers/attach/attachFunctions/upgradeDiffIntFlow/createUsageInvoiceItems";
+import { handleUpgradeFlow } from "@server/internal/customers/attach/attachFunctions/upgradeFlow/handleUpgradeFlow";
+import { attachParamsToCurCusProduct } from "@server/internal/customers/attach/attachUtils/convertAttachParams";
+import { getDefaultAttachConfig } from "@server/internal/customers/attach/attachUtils/getAttachConfig";
+import type { AttachParams } from "@server/internal/customers/cusProducts/AttachParams";
+import { deleteCachedApiCustomer } from "@server/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
+import { MetadataService } from "@server/internal/metadata/MetadataService";
 import type Stripe from "stripe";
-import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
-import { resetUsageBalances } from "../../../../internal/customers/attach/attachFunctions/upgradeDiffIntFlow/createUsageInvoiceItems";
-import { handleUpgradeFlow } from "../../../../internal/customers/attach/attachFunctions/upgradeFlow/handleUpgradeFlow";
-import { attachParamToCusProducts } from "../../../../internal/customers/attach/attachUtils/convertAttachParams";
-import { getDefaultAttachConfig } from "../../../../internal/customers/attach/attachUtils/getAttachConfig";
-import type { AttachParams } from "../../../../internal/customers/cusProducts/AttachParams";
-import { deleteCachedApiCustomer } from "../../../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
-import { MetadataService } from "../../../../internal/metadata/MetadataService";
-import { createStripeCli } from "../../../connect/createStripeCli";
-import { getCusPaymentMethod } from "../../stripeCusUtils";
 
 export const handleInvoiceActionRequiredCompleted = async ({
 	ctx,
@@ -44,8 +44,6 @@ export const handleInvoiceActionRequiredCompleted = async ({
 
 	ctx.logger.info(`handling upgrade flow for invoice ${invoice.id}`);
 
-	const { curMainProduct } = attachParamToCusProducts({ attachParams });
-
 	await handleUpgradeFlow({
 		ctx,
 		attachParams,
@@ -53,11 +51,12 @@ export const handleInvoiceActionRequiredCompleted = async ({
 		branch: AttachBranch.Upgrade,
 	});
 
-	if (attachParams.cusEntIds && curMainProduct) {
+	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
+	if (attachParams.cusEntIds && curCusProduct) {
 		await resetUsageBalances({
 			db: ctx.db,
 			cusEntIds: attachParams.cusEntIds,
-			cusProduct: curMainProduct,
+			cusProduct: curCusProduct,
 		});
 	}
 

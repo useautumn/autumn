@@ -130,7 +130,7 @@ export const handleUpdateCustomerV2 = createRoute({
 		ctx.skipCache = true;
 		const customerDetails = await getApiCustomer({
 			ctx,
-			customerId: customer_id,
+			customerId: newCusData.id ?? customer_id,
 		});
 
 		return c.json(customerDetails);

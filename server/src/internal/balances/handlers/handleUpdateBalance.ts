@@ -1,33 +1,21 @@
-import { FeatureNotFoundError, notNullish } from "@autumn/shared";
+import {
+	FeatureNotFoundError,
+	notNullish,
+	ResetInterval,
+	resetIntvToEntIntv,
+	UpdateBalanceParamsSchema,
+} from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "../../../honoMiddlewares/routeHandler.js";
 import { deleteCachedApiCustomer } from "../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { runDeductionTx } from "../track/trackUtils/runDeductionTx.js";
 
 export const handleUpdateBalance = createRoute({
-	body: z
-		.object({
-			customer_id: z.string(),
-			entity_id: z.string().optional(),
-			feature_id: z.string(),
-
-			current_balance: z.number().optional(),
-			usage: z.number().optional(),
-
-			// Internal
-			customer_entitlement_id: z.string().optional(),
-		})
-		.refine(
-			(data) => {
-				if (notNullish(data.current_balance) && notNullish(data.usage)) {
-					return false;
-				}
-				return true;
-			},
-			{
-				message: "'balance' and 'usage' cannot both be provided",
-			},
-		),
+	body: UpdateBalanceParamsSchema.extend({
+		// Internal
+		customer_entitlement_id: z.string().optional(),
+		interval: z.enum(ResetInterval).optional(),
+	}),
 
 	handler: async (c) => {
 		const body = c.req.valid("json");
@@ -39,11 +27,6 @@ export const handleUpdateBalance = createRoute({
 		if (!feature) {
 			throw new FeatureNotFoundError({ featureId: body.feature_id });
 		}
-
-		console.log(
-			"Prioritising customer entitlement: ",
-			body.customer_entitlement_id,
-		);
 
 		// Update balance using SQL with alter_granted=true
 		if (notNullish(body.current_balance)) {
@@ -62,6 +45,9 @@ export const handleUpdateBalance = createRoute({
 				alterGrantedBalance: true,
 				sortParams: {
 					cusEntId: body.customer_entitlement_id,
+					interval: body.interval
+						? resetIntvToEntIntv({ resetIntv: body.interval })
+						: undefined,
 				},
 				refreshCache: false,
 			});

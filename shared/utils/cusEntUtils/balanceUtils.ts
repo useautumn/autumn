@@ -55,6 +55,7 @@ export const getCusEntBalance = ({
 	if (cusEnt.entitlement.allowance_type === AllowanceType.Unlimited) {
 		return {
 			balance: 0,
+			additional_balance: 0,
 			adjustment: 0,
 			unused: 0,
 			count: 1,

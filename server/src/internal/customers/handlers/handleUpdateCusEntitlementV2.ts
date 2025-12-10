@@ -33,6 +33,10 @@ export const handleUpdateCusEntitlementV2 = createRoute({
 				message: `[update cus entitlement] Customer entitlement not found: ${customer_entitlement_id}`,
 			});
 		}
+
+		console.log(
+			`Updating cus ent: ${cusEnt.id} to balance: ${balance}, entity ID: ${entity_id}`,
+		);
 		await runDeductionTx({
 			ctx,
 			customerId: customer_id,

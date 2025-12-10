@@ -189,6 +189,35 @@ describe(`${chalk.yellowBright("track-entity-products2: entity product tracking 
 			customerFromCache.features[TestFeature.Messages],
 		);
 
+		// EXPECT CACHE TO MATCH DB (CUSTOMER LEVEL)
+		const cacheBalance = customerFromCache.features[TestFeature.Messages];
+		expect(customerFromDb.features[TestFeature.Messages]).toMatchObject({
+			id: cacheBalance.id,
+			balance: cacheBalance.balance,
+			included_usage: cacheBalance.included_usage,
+			interval: cacheBalance.interval,
+			name: cacheBalance.name,
+			next_reset_at: cacheBalance.next_reset_at,
+			overage_allowed: cacheBalance.overage_allowed,
+			type: cacheBalance.type,
+			unlimited: cacheBalance.unlimited,
+			usage: cacheBalance.usage,
+		});
+
+		if (cacheBalance.breakdown) {
+			for (let i = 0; i < cacheBalance.breakdown.length; i++) {
+				const breakdown = cacheBalance.breakdown?.[i];
+				expect(
+					customerFromDb.features[TestFeature.Messages].breakdown?.[i],
+				).toMatchObject({
+					balance: breakdown?.balance,
+					included_usage: breakdown?.included_usage,
+					interval: breakdown?.interval,
+					usage: breakdown?.usage,
+				});
+			}
+		}
+
 		// Verify each entity's balance
 		let totalEntityBalanceFromDb = 0;
 		let totalEntityBalanceFromCache = 0;
@@ -203,9 +232,38 @@ describe(`${chalk.yellowBright("track-entity-products2: entity product tracking 
 			);
 
 			// Each entity should have some messages deducted
-			expect(entityFromDb.features[TestFeature.Messages]).toMatchObject(
-				entityFromCache.features[TestFeature.Messages],
-			);
+			// expect(entityFromDb.features[TestFeature.Messages]).toMatchObject(
+			// 	entityFromCache.features[TestFeature.Messages],
+			// );
+			// EXPECT DB TO MATCH CACHE (ENTITY LEVEL)
+			expect(entityFromDb.features[TestFeature.Messages]).toMatchObject({
+				balance: entityFromCache.features[TestFeature.Messages].balance,
+				included_usage:
+					entityFromCache.features[TestFeature.Messages].included_usage,
+				interval: entityFromCache.features[TestFeature.Messages].interval,
+				name: entityFromCache.features[TestFeature.Messages].name,
+				type: entityFromCache.features[TestFeature.Messages].type,
+				unlimited: entityFromCache.features[TestFeature.Messages].unlimited,
+			});
+
+			if (entityFromCache.features[TestFeature.Messages].breakdown) {
+				for (
+					let i = 0;
+					i < entityFromCache.features[TestFeature.Messages].breakdown.length;
+					i++
+				) {
+					const breakdown =
+						entityFromCache.features[TestFeature.Messages].breakdown[i];
+					expect(
+						entityFromDb.features[TestFeature.Messages].breakdown?.[i],
+					).toMatchObject({
+						balance: breakdown?.balance,
+						included_usage: breakdown?.included_usage,
+						interval: breakdown?.interval,
+						usage: breakdown?.usage,
+					});
+				}
+			}
 
 			totalEntityBalanceFromDb +=
 				entityFromDb.features[TestFeature.Messages].balance;

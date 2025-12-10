@@ -88,10 +88,12 @@ export const cusEntToCusPrice = ({
 	});
 };
 
-export const productsToPrices = ({ products }: { products: FullProduct[] }) => {
-	return products.flatMap((product) => product.prices);
-};
-
-export const productsToEnts = ({ products }: { products: FullProduct[] }) => {
-	return products.flatMap((product) => product.entitlements);
+export const productToEnt = ({
+	product,
+	featureId,
+}: {
+	product: FullProduct;
+	featureId: string;
+}) => {
+	return product.entitlements.find((ent) => ent.feature.id === featureId);
 };

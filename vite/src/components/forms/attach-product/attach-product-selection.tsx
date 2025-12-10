@@ -1,6 +1,5 @@
 import { isProductAlreadyEnabled } from "@autumn/shared";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
-import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -8,7 +7,10 @@ import { useHasChanges } from "@/hooks/stores/useProductStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { pushPage } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import type { UseAttachProductForm } from "./use-attach-product-form";
+import {
+	type UseAttachProductForm,
+	useResetPrepaidOnProductChange,
+} from "./use-attach-product-form";
 
 interface AttachProductSelectionProps {
 	form: UseAttachProductForm;
@@ -26,25 +28,8 @@ export function AttachProductSelection({
 	const hasChanges = useHasChanges();
 	const { customer } = useCusQuery();
 	const { entityId } = useEntity();
-	const previousProductIdRef = useRef<string | undefined>();
 
-	useEffect(() => {
-		// Subscribe to form changes and clear prepaid options when productId changes
-		// Prevents stale prepaid options from causing "no prepaid price found" in the `checkout` call
-		const subscription = form.store.subscribe(() => {
-			const currentProductId = form.store.state.values.productId;
-
-			if (
-				previousProductIdRef.current !== undefined &&
-				previousProductIdRef.current !== currentProductId
-			) {
-				form.setFieldValue("prepaidOptions", {});
-			}
-			previousProductIdRef.current = currentProductId;
-		});
-
-		return () => subscription();
-	}, [form.store]);
+	useResetPrepaidOnProductChange({ form });
 
 	const handleCustomize = ({ productId }: { productId: string }) => {
 		if (!productId || !customerId) {

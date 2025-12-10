@@ -1,14 +1,15 @@
 import {
 	AppEnv,
+	InternalError,
 	type Organization,
 	UpsertVercelProcessorConfigSchema,
 	type VercelMarketplaceMode,
 	type VercelProcessorConfig,
 } from "@autumn/shared";
+import { createSvixApp } from "@server/external/svix/svixHelpers.js";
+import { createSvixCli } from "@server/external/svix/svixUtils.js";
+import { createRoute } from "@server/honoMiddlewares/routeHandler.js";
 import type { ApplicationOut } from "svix";
-import { createSvixApp } from "@/external/svix/svixHelpers.js";
-import { createSvixCli } from "@/external/svix/svixUtils.js";
-import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { OrgService } from "../OrgService.js";
 
 export const getVercelConfigDisplay = ({
@@ -86,8 +87,6 @@ export const handleUpsertVercelConfig = createRoute({
 					}
 				: undefined;
 
-
-		
 		await OrgService.update({
 			db,
 			orgId: org.id,
@@ -142,6 +141,13 @@ export const handleGetVercelSink = createRoute({
 		const svixCli = createSvixCli();
 		let liveApp: ApplicationOut | undefined;
 		let sandboxApp: ApplicationOut | undefined;
+
+		if (!vercelConfig) {
+			throw new InternalError({
+				message: `Vercel config not found for org ${org.id}`,
+			});
+		}
+
 		if (!vercelConfig?.svix?.live_id || !vercelConfig?.svix?.sandbox_id) {
 			liveApp = await createSvixApp({
 				name: `${org.slug}_live_vercel_sink`,

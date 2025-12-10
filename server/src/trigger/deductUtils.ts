@@ -57,7 +57,7 @@ export const getCreditSystemDeduction = ({
 			const meteredDeduction = getMeteredDeduction(meteredFeature, event);
 
 			const meteredDeductionDecimal = new Decimal(meteredDeduction);
-			const featureAmountDecimal = new Decimal(schema.feature_amount);
+			const featureAmountDecimal = new Decimal(schema.feature_amount ?? 1);
 			const creditAmountDecimal = new Decimal(schema.credit_amount);
 			creditsUpdate += meteredDeductionDecimal
 				.div(featureAmountDecimal)

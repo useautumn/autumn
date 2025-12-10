@@ -169,6 +169,7 @@ export const attachAndExpectCorrect = async ({
 		preview.branch === AttachBranch.Downgrade;
 
 	const freeProduct = isFreeProductV2({ product });
+
 	if (!skipInvoiceCheck && !freeProduct) {
 		expectInvoicesCorrect({
 			customer,

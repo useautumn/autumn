@@ -108,6 +108,7 @@ export const handleAttach = createRoute({
 				input: responseV1,
 				targetVersion: ctx.apiVersion,
 				resource: AffectedResource.Attach,
+				ctx,
 			}),
 		);
 	},

@@ -69,6 +69,7 @@ describe(`${chalk.yellowBright("check2: test /check on boolean feature")}`, () =
 			customer_id: customerId,
 			required_balance: 1,
 			balance: {
+				plan_id: freeProd.id,
 				feature_id: TestFeature.Dashboard,
 				unlimited: false,
 				granted_balance: 0,

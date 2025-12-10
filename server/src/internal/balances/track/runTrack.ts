@@ -123,6 +123,7 @@ export const runTrack = async ({
 		legacyData: {
 			feature_id: body.feature_id || body.event_name,
 		},
+		ctx,
 	});
 	return transformedResponse;
 };

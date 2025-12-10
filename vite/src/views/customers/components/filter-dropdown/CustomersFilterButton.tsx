@@ -8,7 +8,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/v2/dropdowns/DropdownMenu";
 import { useCustomersQueryStates } from "../../hooks/useCustomersQueryStates";
 import { useSavedViewsQuery } from "../../hooks/useSavedViewsQuery";
 import { FilterStatusSubMenu } from "./FilterStatusSubMenu";
@@ -55,16 +55,18 @@ function CustomersFilterButton() {
 						setDropdownOpen={setOpen}
 					/>
 				)}
-				<div className="flex h-9 items-stretch">
+				<div className="flex h-9 items-stretch justify-between">
 					<DropdownMenuItem
 						onClick={(e) => clearFilters()}
-						className="cursor-pointer justify-center gap-0 w-full"
+						className="cursor-pointer justify-center gap-0 flex-1"
 					>
 						<X size={12} className="mr-2 text-t3" />
 						<p className="text-t3">Clear</p>
 					</DropdownMenuItem>
 
-					<SaveViewPopover onClose={closeFilterModal} />
+					<div className="flex-1">
+						<SaveViewPopover onClose={closeFilterModal} />
+					</div>
 				</div>
 			</DropdownMenuContent>
 		</DropdownMenu>

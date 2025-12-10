@@ -1,112 +1,96 @@
-import { beforeAll, describe, test } from "bun:test";
-import { ApiVersion } from "@autumn/shared";
+import { beforeAll, describe } from "bun:test";
+import { ApiVersion, FreeTrialDuration } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { attachAuthenticatePaymentMethod } from "../../src/external/stripe/stripeCusUtils.js";
-import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { constructFeatureItem } from "../../src/utils/scriptUtils/constructItem.js";
 import { initProductsV0 } from "../../src/utils/scriptUtils/testUtils/initProductsV0.js";
-import { expectProductAttached } from "../utils/expectUtils/expectProductAttached.js";
-import { expectSubItemsCorrect } from "../utils/expectUtils/expectSubUtils.js";
-import { completeInvoiceConfirmation } from "../utils/stripeUtils/completeInvoiceConfirmation.js";
 
-// UNCOMMENT FROM HERE
 const pro = constructProduct({
 	type: "pro",
-	isDefault: false,
+	forcePaidDefault: true,
 
 	items: [
 		constructFeatureItem({
-			featureId: TestFeature.Credits,
-			includedUsage: 200,
-			// unlimited: true,
+			featureId: TestFeature.Messages,
+			includedUsage: 1000,
 		}),
 	],
+	freeTrial: {
+		card_required: false,
+		duration: FreeTrialDuration.Day,
+		length: 7,
+		unique_fingerprint: false,
+	},
 });
 
 const premium = constructProduct({
 	type: "premium",
+	isDefault: false,
+
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
-			includedUsage: 100,
+			includedUsage: 1000,
 		}),
 	],
+	freeTrial: {
+		card_required: true,
+		duration: FreeTrialDuration.Day,
+		length: 7,
+		unique_fingerprint: false,
+	},
 });
 
-describe(`${chalk.yellowBright("temp: Testing add ons")}`, () => {
+console.log("Pro is default", pro.is_default);
+
+describe(`${chalk.yellowBright("temp: Testing entity prorated")}`, () => {
 	const customerId = "temp";
 	const autumn: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
 	beforeAll(async () => {
-		await initCustomerV3({
-			ctx,
-			customerId,
-			customerData: {},
-			attachPm: "success",
-			withTestClock: true,
-		});
-
 		await initProductsV0({
 			ctx,
 			products: [pro, premium],
 			prefix: customerId,
-		});
-	});
-
-	test("should attach pro product", async () => {
-		await autumn.attach({
-			customer_id: customerId,
-			product_id: pro.id,
-		});
-
-		await attachAuthenticatePaymentMethod({
-			ctx,
 			customerId,
 		});
 
-		const res = await autumn.attach({
-			customer_id: customerId,
-			product_id: premium.id,
-		});
-
-		const customer = await autumn.customers.get(customerId);
-		expectProductAttached({
-			customer,
-			product: pro,
-		});
-
-		await expectSubItemsCorrect({
-			customerId,
-			product: pro,
-			stripeCli: ctx.stripeCli,
-			db: ctx.db,
-			org: ctx.org,
-			env: ctx.env,
-		});
-
-		await completeInvoiceConfirmation({
-			url: res.checkout_url,
+		// await initCustomerV3({
+		// 	ctx,
+		// 	customerId,
+		// 	customerData: {},
+		// 	attachPm: "success",
+		// 	withTestClock: true,
+		// });
+		await autumn.customers.create({
+			id: customerId,
+			name: customerId,
 		});
 	});
 
-	test("should have premium product attached", async () => {
-		const customer = await autumn.customers.get(customerId);
-		expectProductAttached({
-			customer,
-			product: premium,
-		});
+	// test("should create a subscription with prepaid and prorated", async () => {
+	// 	await autumn.attach({
+	// 		customer_id: customerId,
+	// 		product_id: oneOff2.id,
+	// 	});
 
-		await expectSubItemsCorrect({
-			customerId,
-			product: premium,
-			stripeCli: ctx.stripeCli,
-			db: ctx.db,
-			org: ctx.org,
-			env: ctx.env,
-		});
-	});
+	// 	await autumn.products.update(oneOff2.id, {
+	// 		items: replaceItems({
+	// 			items: oneOff2.items,
+	// 			featureId: TestFeature.Messages,
+	// 			newItem: constructFeatureItem({
+	// 				featureId: TestFeature.Messages,
+	// 				includedUsage: 30,
+	// 			}),
+	// 		}),
+	// 	});
+
+	// 	await autumn.attach({
+	// 		customer_id: customerId,
+	// 		product_id: oneOff2.id,
+	// 	});
+	// });
 });
