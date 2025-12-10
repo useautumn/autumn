@@ -6,12 +6,15 @@ import type {
 import {
 	CusProductStatus,
 	cusEntToCusPrice,
+	cusEntToPrepaidQuantity,
 	cusProductsToCusEnts,
 	FeatureUsageType,
 	type FullCustomer,
 	getMaxOverage,
 	getRelevantFeatures,
+	getStartingBalance,
 	InternalError,
+	isPrepaidCusEnt,
 	notNullish,
 	nullish,
 	orgToInStatuses,
@@ -19,6 +22,8 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { sql } from "drizzle-orm";
+import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils.js";
+import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { EventService } from "../../../api/events/EventService.js";
 import { CusService } from "../../../customers/CusService.js";
@@ -139,6 +144,15 @@ export const deductFromCusEnts = async ({
 				ce.entitlement.feature.config?.usage_type ===
 					FeatureUsageType.Continuous && nullish(cusPrice);
 
+			const resetBalance = getStartingBalance({
+				entitlement: ce.entitlement,
+				options:
+					getEntOptions(ce.customer_product.options, ce.entitlement) ||
+					undefined,
+				relatedPrice: cusPrice?.price,
+				productQuantity: ce.customer_product.quantity,
+			});
+
 			return {
 				customer_entitlement_id: ce.id,
 				credit_cost: creditCost,
@@ -148,6 +162,7 @@ export const deductFromCusEnts = async ({
 					(isFreeAllocated && overageBehaviour !== "reject"),
 				min_balance: notNullish(maxOverage) ? -maxOverage : undefined,
 				add_to_adjustment: addToAdjustment,
+				max_balance: resetBalance,
 			};
 		});
 
