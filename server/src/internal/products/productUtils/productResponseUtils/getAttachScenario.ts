@@ -28,8 +28,6 @@ export const getAttachScenario = ({
 			internalEntityId: fullCus?.entity?.internal_id,
 		});
 
-	if (!curMainProduct) return AttachScenario.New;
-
 	if (isOneOff(fullProduct.prices)) {
 		return AttachScenario.New;
 	}
@@ -53,6 +51,8 @@ export const getAttachScenario = ({
 	} else if (fullProduct.is_add_on) {
 		return AttachScenario.New;
 	}
+
+	if (!curMainProduct) return AttachScenario.New;
 
 	// 1. If current product is the same as the product, return active
 	if (curMainProduct?.product.id === fullProduct.id) {
