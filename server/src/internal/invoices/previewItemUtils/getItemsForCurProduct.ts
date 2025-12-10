@@ -3,11 +3,12 @@ import {
 	type AttachConfig,
 	BillingType,
 	cusProductToPrices,
+	InternalError,
 	type PreviewLineItem,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { priceToUnusedPreviewItem } from "@/internal/customers/attach/attachPreviewUtils/priceToUnusedPreviewItem.js";
-import { attachParamToCusProducts } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
+import { attachParamsToCurCusProduct } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
 import { getContUseInvoiceItems } from "@/internal/customers/attach/attachUtils/getContUseItems/getContUseInvoiceItems.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 
@@ -19,11 +20,14 @@ import {
 } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { formatAmount } from "@/utils/formatUtils.js";
+import type { Logger } from "../../../external/logtail/logtailUtils";
 
 export const getItemsForCurProduct = async ({
 	sub,
 	attachParams,
+	// biome-ignore lint/correctness/noUnusedFunctionParameters: might be used in the future
 	branch,
+	// biome-ignore lint/correctness/noUnusedFunctionParameters: might be used in the future
 	config,
 	now,
 	logger,
@@ -33,13 +37,15 @@ export const getItemsForCurProduct = async ({
 	branch: AttachBranch;
 	config: AttachConfig;
 	now: number;
-	logger: any;
+	logger: Logger;
 }) => {
-	const { curMainProduct, curSameProduct } = attachParamToCusProducts({
-		attachParams,
-	});
+	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
 
-	const curCusProduct = curSameProduct || curMainProduct!;
+	if (!curCusProduct) {
+		throw new InternalError({
+			message: "current customer product is undefined",
+		});
+	}
 
 	let items: PreviewLineItem[] = [];
 	const subItems = sub?.items.data || [];

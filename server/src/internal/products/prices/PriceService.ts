@@ -1,7 +1,13 @@
-import { type Price, type Product, prices } from "@autumn/shared";
+import {
+	type FixedPriceConfig,
+	type Price,
+	type Product,
+	prices,
+	type UsagePriceConfig,
+} from "@autumn/shared";
+import { buildConflictUpdateColumns } from "@server/db/dbUtils";
+import type { DrizzleCli } from "@server/db/initDrizzle";
 import { and, eq, inArray, or, sql } from "drizzle-orm";
-import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export class PriceService {
 	static async get({ db, id }: { db: DrizzleCli; id: string }) {
@@ -128,5 +134,22 @@ export class PriceService {
 			for (const id of ids) byStripeId[id] = row;
 		}
 		return byStripeId;
+	}
+
+	static async updateConfig({
+		db,
+		id,
+		config,
+	}: {
+		db: DrizzleCli;
+		id: string;
+		config: FixedPriceConfig | UsagePriceConfig;
+	}) {
+		const curPrice = await PriceService.get({ db, id });
+		const newConfig = {
+			...curPrice.config,
+			...config,
+		};
+		await db.update(prices).set({ config: newConfig }).where(eq(prices.id, id));
 	}
 }

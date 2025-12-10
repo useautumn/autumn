@@ -1,4 +1,4 @@
-import { AuthType, ErrCode, RecaseError } from "@autumn/shared";
+import { AuthType, ErrCode, type Feature, RecaseError } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
@@ -75,6 +75,14 @@ export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 	// Step 5: Store auth data in context
 	const { org, features, env, userId } = data;
+
+	if (features) {
+		features.sort((a: Feature, b: Feature) => {
+			if (a.archived && !b.archived) return 1;
+			if (!a.archived && b.archived) return -1;
+			return 0;
+		});
+	}
 
 	ctx.org = org;
 	ctx.features = features;

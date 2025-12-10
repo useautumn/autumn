@@ -1,19 +1,17 @@
 import {
 	AttachBranch,
-	Feature,
-	features,
+	type Feature,
 	getAmountForQuantity,
-	Price,
+	getFeatureInvoiceDescription,
+	type Price,
 } from "@autumn/shared";
-
 import { PriceItem } from "@/components/pricing/attach-pricing-dialog";
-import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
-import { useProductContext } from "@/views/products/product/ProductContext";
-import { getFeatureInvoiceDescription } from "@autumn/shared";
-import { formatAmount } from "@/utils/formatUtils/formatTextUtils";
-import { AdjustableOptions } from "./AdjustQuantity";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
+import { formatAmount } from "@/utils/formatUtils/formatTextUtils";
+import { useProductContext } from "@/views/products/product/ProductContext";
+import { AdjustableOptions } from "./AdjustQuantity";
 
 export const DueNextCycle = () => {
 	const { org } = useOrg();
@@ -24,7 +22,8 @@ export const DueNextCycle = () => {
 	const currency = org.default_currency || "USD";
 
 	const getPrepaidPrice = ({ option }: { option: any }) => {
-		const quantity = (option.quantity || 0) / option.billing_units;
+		const quantity =
+			(option.quantity ?? option.current_quantity) / option.billing_units;
 
 		// Handle tiered pricing
 		if (option.tiers) {
@@ -35,7 +34,7 @@ export const DueNextCycle = () => {
 						billing_units: option.billing_units,
 					},
 				} as Price,
-				quantity: option.quantity || 0,
+				quantity: (option.quantity ?? option.current_quantity) || 0,
 			});
 
 			return formatAmount({
@@ -78,39 +77,38 @@ export const DueNextCycle = () => {
 					</PriceItem>
 				);
 			})}
-			{branch == AttachBranch.Downgrade ? (
+			{branch === AttachBranch.Downgrade ? (
 				<AdjustableOptions />
 			) : (
-				<>
-					{preview.options
-						.filter((option: any) => {
-							console.log("Option:", option);
-							if (!option.interval) return false;
-							return true;
-						})
-						.map((option: any) => {
-							const quantity = Math.ceil(
-								option.quantity / option.billing_units,
-							);
-							const description = getFeatureInvoiceDescription({
-								feature: features.find(
-									(f: Feature) => f.id === option.feature_id,
-								)!,
-								usage: quantity || 0,
-								billingUnits: option.billing_units,
-								isPrepaid: true,
-							});
+				preview.options
+					.filter((option: any) => {
+						console.log("Option:", option);
+						if (!option.interval) return false;
+						return true;
+					})
+					.map((option: any) => {
+						const quantity = Math.ceil(
+							(option.quantity ?? option.current_quantity) /
+								option.billing_units,
+						);
+						const description = getFeatureInvoiceDescription({
+							feature: features.find(
+								(f: Feature) => f.id === option.feature_id,
+							) as Feature,
+							usage: quantity || 0,
+							billingUnits: option.billing_units,
+							isPrepaid: true,
+						});
 
-							return (
-								<PriceItem key={option.feature_name}>
-									<span>
-										{product.name} - {description}
-									</span>
-									<span>{getPrepaidPrice({ option })}</span>
-								</PriceItem>
-							);
-						})}
-				</>
+						return (
+							<PriceItem key={option.feature_name}>
+								<span>
+									{product.name} - {description}
+								</span>
+								<span>{getPrepaidPrice({ option })}</span>
+							</PriceItem>
+						);
+					})
 			)}
 		</div>
 	);

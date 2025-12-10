@@ -1,4 +1,5 @@
 import {
+	type AttachBranch,
 	type AttachConfig,
 	type AttachFunctionResponse,
 	AttachFunctionResponseSchema,
@@ -16,10 +17,12 @@ export const handleCreateInvoiceCheckout = async ({
 	ctx,
 	attachParams,
 	config,
+	branch,
 }: {
 	ctx: AutumnContext;
 	attachParams: AttachParams;
 	config: AttachConfig;
+	branch: AttachBranch;
 }): Promise<AttachFunctionResponse> => {
 	// if one off
 	const { stripeCli } = attachParams;
@@ -37,6 +40,7 @@ export const handleCreateInvoiceCheckout = async ({
 			ctx,
 			attachParams,
 			config,
+			branch,
 		});
 	}
 
@@ -51,6 +55,7 @@ export const handleCreateInvoiceCheckout = async ({
 			config,
 		},
 		type: MetadataType.InvoiceCheckout,
+		stripeInvoiceId: invoice?.id,
 	});
 
 	if (invoice) {

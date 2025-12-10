@@ -1,10 +1,10 @@
+import { InfoIcon } from "@phosphor-icons/react";
 import type { TooltipContentProps } from "@radix-ui/react-tooltip";
-import { InfoIcon } from "lucide-react";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@/components/v2/tooltips/Tooltip";
 
 export const InfoTooltip = ({
 	children,
@@ -23,10 +23,10 @@ export const InfoTooltip = ({
 				onFocus={(e) => e.preventDefault()}
 			>
 				<button type="button" className="outline-none">
-					<InfoIcon size={12} className="text-t3/50" />
+					<InfoIcon className="text-t3/50 size-3" />
 				</button>
 			</TooltipTrigger>
-			<TooltipContent sideOffset={10} {...props}>
+			<TooltipContent sideOffset={10} {...props} className="">
 				{children}
 			</TooltipContent>
 		</Tooltip>

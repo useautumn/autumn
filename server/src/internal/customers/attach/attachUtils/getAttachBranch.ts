@@ -23,7 +23,10 @@ import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import type { AttachParams } from "../../cusProducts/AttachParams.js";
 import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { isMainTrialBranch } from "./attachUtils.js";
-import { attachParamToCusProducts } from "./convertAttachParams.js";
+import {
+	attachParamsToCurCusProduct,
+	attachParamToCusProducts,
+} from "./convertAttachParams.js";
 
 const handleMultiProductErrors = async ({
 	attachParams,
@@ -89,8 +92,8 @@ const getOptionsToUpdate = ({
 }) => {
 	const optionsToUpdate: { new: FeatureOptions; old: FeatureOptions }[] = [];
 	const prices = cusProductToPrices({ cusProduct: curSameProduct });
-	console.log("Old options list: ", oldOptionsList);
-	console.log("New options list: ", newOptionsList);
+	// console.log("Old options list: ", oldOptionsList);
+	// console.log("New options list: ", newOptionsList);
 
 	for (const newOptions of newOptionsList) {
 		const internalFeatureId = newOptions.internal_feature_id;
@@ -190,7 +193,10 @@ const getSameProductBranch = async ({
 
 	// 1. If new version?
 
-	if (curSameProduct.product.version !== product.version) {
+	if (
+		curSameProduct.product.version !== product.version &&
+		curScheduledProduct?.product.id !== product.id
+	) {
 		return AttachBranch.NewVersion;
 	}
 
@@ -217,6 +223,7 @@ const getSameProductBranch = async ({
 	}
 
 	// 3. If main product
+
 	if (curScheduledProduct && !product.is_add_on) {
 		if (curScheduledProduct.product.id === product.id) {
 			throw new RecaseError({
@@ -255,19 +262,14 @@ const getChangeProductBranch = async ({
 }: {
 	attachParams: AttachParams;
 }) => {
-	const { curMainProduct, curScheduledProduct } = attachParamToCusProducts({
-		attachParams,
-	});
-
-	// 1. If main product is free, it's the same as adding a new product
-
-	const mainProduct = cusProductToProduct({ cusProduct: curMainProduct! });
+	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
+	const mainProduct = cusProductToProduct({ cusProduct: curCusProduct! });
 	if (isFreeProduct(mainProduct.prices)) {
 		return AttachBranch.MainIsFree;
 	}
 
 	// 2. If main product is paid, check if upgrade or downgrade
-	const curPrices = cusProductToPrices({ cusProduct: curMainProduct! });
+	const curPrices = cusProductToPrices({ cusProduct: curCusProduct! });
 	const newPrices = attachParams.prices;
 
 	const isUpgrade = isProductUpgrade({

@@ -9,6 +9,7 @@ import { OnboardingLayout } from "./app/OnboardingLayout";
 import { useSession } from "./lib/auth-client";
 import { identifyUser } from "./utils/posthogTracking";
 import { AdminView } from "./views/admin/AdminView";
+import { ImpersonateRedirect } from "./views/admin/ImpersonateRedirect";
 import { AcceptInvitation } from "./views/auth/AcceptInvitation";
 import { PasswordSignIn } from "./views/auth/components/PasswordSignIn";
 import { SignIn } from "./views/auth/SignIn";
@@ -65,6 +66,10 @@ export default function App() {
 				<Route element={<MainLayout />}>
 					<Route path="*" element={<DefaultView />} />
 					<Route path="/admin" element={<AdminView />} />
+					<Route
+						path="/impersonate-redirect"
+						element={<ImpersonateRedirect />}
+					/>
 					<Route path="/trmnl" element={<TerminalView />} />
 
 					<Route
@@ -111,14 +116,8 @@ export default function App() {
 					/>
 					<Route path="/dev" element={<DevScreen />} />
 					<Route path="/sandbox/dev" element={<DevScreen />} />
-					<Route
-						path="/analytics"
-						element={<AnalyticsView env={AppEnv.Live} />}
-					/>
-					<Route
-						path="/sandbox/analytics"
-						element={<AnalyticsView env={AppEnv.Sandbox} />}
-					/>
+					<Route path="/analytics" element={<AnalyticsView />} />
+					<Route path="/sandbox/analytics" element={<AnalyticsView />} />
 					<Route path="/dev/cli" element={<Otp />} />
 				</Route>
 			</Routes>

@@ -4,6 +4,7 @@ import { analyticsMiddleware } from "@/honoMiddlewares/analyticsMiddleware.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { sendCustomSvixEvent } from "../svix/svixHelpers.js";
 import { handleListBillingPlansPerInstall } from "./handlers/handleListBillingPlans.js";
+import { handleUpdateVercelBillingPlan } from "./handlers/handleUpdateBillingPlan.js";
 import { handleDeleteInstallation } from "./handlers/installations/handleDeleteInstallation.js";
 import { handleGetInstallation } from "./handlers/installations/handleGetInstallation.js";
 import { handleUpsertInstallation } from "./handlers/installations/handleUpsertInstallation.js";
@@ -24,7 +25,6 @@ import {
 	type VercelWebhookEvent,
 	VercelWebhooks,
 } from "./misc/vercelWebhookTypes.js";
-import { handleUpdateVercelBillingPlan } from "./handlers/handleUpdateBillingPlan.js";
 
 export const vercelWebhookRouter = new Hono<HonoEnv>();
 
@@ -162,7 +162,7 @@ vercelWebhookRouter.post(
 			}
 		} catch (error: any) {
 			logger.error("Failed to process Vercel marketplace webhook", {
-				error: error.message,
+				error,
 				eventType,
 			});
 			return c.json({ error: error.message }, 500);

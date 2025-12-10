@@ -117,6 +117,10 @@ local function fetchBreakdown(cacheKey, featureId, breakdownCount)
         reset = true
     }
     
+    local breakdownStringFields = {
+        plan_id = true
+    }
+    
     for i = 0, breakdownCount - 1 do
         local breakdownKey = buildBreakdownCacheKey(cacheKey, featureId, i)
         local breakdownHash = redis.call("HGETALL", breakdownKey)
@@ -143,6 +147,13 @@ local function fetchBreakdown(cacheKey, featureId, breakdownCount)
                     breakdownData[key] = cjson.decode(value)
                 else
                     breakdownData[key] = cjson.null
+                end
+            elseif breakdownStringFields[key] then
+                -- Handle string fields (like plan_id)
+                if value == "null" then
+                    breakdownData[key] = cjson.null
+                else
+                    breakdownData[key] = value
                 end
             else
                 breakdownData[key] = value
@@ -203,81 +214,141 @@ local function mergeBalanceReset(target, source)
 end
 
 -- Helper function to generate breakdown item key for matching
--- Key format: "interval_count:interval:overage_allowed"
--- Example: "1:month:true" or "1:month:false"
+-- Key format: "interval_count:interval:plan_id:overage_allowed"
+-- Example: "1:month:plan_123:true" or "1:lifetime:plan_456:false"
 local function getBreakdownItemKey(breakdownItem)
     if not breakdownItem then
         return nil
     end
     
     local intervalCount = 1
-    local interval = "none"
+    local interval = "lifetime"
     
     -- Extract interval and interval_count from reset object
     if breakdownItem.reset and breakdownItem.reset ~= cjson.null and type(breakdownItem.reset) == "table" then
-        interval = breakdownItem.reset.interval or "none"
+        local resetInterval = breakdownItem.reset.interval
+        if resetInterval and resetInterval ~= "multiple" then
+            interval = resetInterval
+        end
         intervalCount = breakdownItem.reset.interval_count or 1
     end
+    
+    -- Get plan_id
+    local planId = breakdownItem.plan_id or ""
     
     -- Get overage_allowed (usage model)
     local overageAllowed = breakdownItem.overage_allowed or false
     
-    -- Return key in format: "interval_count:interval:overage_allowed"
-    return tostring(intervalCount) .. ":" .. interval .. ":" .. tostring(overageAllowed)
+    -- Return key in format: "interval_count:interval:plan_id:overage_allowed"
+    return tostring(intervalCount) .. ":" .. interval .. ":" .. planId .. ":" .. tostring(overageAllowed)
+end
+
+-- Helper function to create a breakdown item from a top-level balance
+-- Used when a balance has no breakdown array but needs to be merged with another balance
+local function balanceToBreakdownItem(balance)
+    return {
+        plan_id = balance.plan_id or "",
+        granted_balance = balance.granted_balance,
+        purchased_balance = balance.purchased_balance,
+        current_balance = balance.current_balance,
+        usage = balance.usage,
+        max_purchase = balance.max_purchase,
+        overage_allowed = balance.overage_allowed,
+        reset = balance.reset
+    }
 end
 
 -- Helper function to merge source balance into target balance
 -- Mutates targetBalance by adding sourceBalance's balances, usage, breakdowns, and rollovers
 -- Also handles minimum resets_at (earliest reset time) and overage_allowed (true if any is true)
+--
+-- Breakdown merging logic:
+-- - Each balance without a breakdown array is treated as having a single "virtual" breakdown item
+-- - Breakdown items are matched by key (interval_count:interval:plan_id:overage_allowed)
+-- - If keys match: merge numeric fields
+-- - If keys differ: create separate breakdown items
+--
+-- Examples:
+-- - Parent key1 (no breakdown) + Child key2 (no breakdown) → breakdown with 2 items
+-- - Parent [key1, key2] + Child key3 (no breakdown) → breakdown with 3 items
+-- - Parent [key1, key2] + Child key2 (no breakdown) → breakdown with 2 items (merged)
 local function mergeFeatureBalances(targetBalance, sourceBalance)
     if not sourceBalance then return end
     
-    -- Merge top-level balance fields
+    -- ============================================================================
+    -- CAPTURE VIRTUAL BREAKDOWNS BEFORE MUTATING TOP-LEVEL FIELDS
+    -- ============================================================================
+    -- IMPORTANT: We must create virtual breakdowns BEFORE merging top-level fields,
+    -- otherwise the virtual breakdown will contain the already-summed values
+    
+    -- Get effective breakdowns from target (use breakdown array if exists, otherwise create from top-level)
+    local targetBreakdowns = targetBalance.breakdown
+    local targetHadBreakdown = targetBreakdowns and #targetBreakdowns > 0
+    
+    if not targetHadBreakdown then
+        -- Target has no breakdown - create a virtual breakdown from top-level fields
+        -- Must do this BEFORE merging top-level fields
+        targetBreakdowns = { balanceToBreakdownItem(targetBalance) }
+    end
+    
+    -- Get effective breakdowns from source (use breakdown array if exists, otherwise create from top-level)
+    local sourceBreakdowns = sourceBalance.breakdown
+    if not sourceBreakdowns or #sourceBreakdowns == 0 then
+        -- Source has no breakdown - create a virtual breakdown from top-level fields
+        sourceBreakdowns = { balanceToBreakdownItem(sourceBalance) }
+    end
+    
+    -- ============================================================================
+    -- NOW MERGE TOP-LEVEL BALANCE FIELDS
+    -- ============================================================================
     mergeBalanceNumericFields(targetBalance, sourceBalance)
     mergeBalanceOverageAllowed(targetBalance, sourceBalance)
     mergeBalanceReset(targetBalance, sourceBalance)
     
-    -- Merge breakdown balances and usage
-    -- Breakdown items are matched by key (interval_count:interval:overage_allowed)
-    -- If a matching breakdown exists, merge it; otherwise, add as new breakdown item
-    if sourceBalance.breakdown then
-        for _, sourceBreakdown in ipairs(sourceBalance.breakdown) do
-            local sourceKey = getBreakdownItemKey(sourceBreakdown)
-            local foundMatch = false
-            
-            -- Try to find matching breakdown by key
-            if targetBalance.breakdown then
-                for _, targetBreakdown in ipairs(targetBalance.breakdown) do
-                    local targetKey = getBreakdownItemKey(targetBreakdown)
-                    if sourceKey and targetKey and sourceKey == targetKey then
-                        -- Found matching breakdown - merge it
-                        mergeBalanceNumericFields(targetBreakdown, sourceBreakdown)
-                        mergeBalanceOverageAllowed(targetBreakdown, sourceBreakdown)
-                        mergeBalanceReset(targetBreakdown, sourceBreakdown)
-                        foundMatch = true
-                        break
-                    end
-                end
-            end
-            
-            -- If no matching breakdown found, add as new breakdown item
-            if not foundMatch then
-                if not targetBalance.breakdown then
-                    targetBalance.breakdown = {}
-                end
-                -- Create a copy of the source breakdown to add
-                local newBreakdown = {
-                    granted_balance = sourceBreakdown.granted_balance,
-                    purchased_balance = sourceBreakdown.purchased_balance,
-                    current_balance = sourceBreakdown.current_balance,
-                    usage = sourceBreakdown.usage,
-                    max_purchase = sourceBreakdown.max_purchase,
-                    overage_allowed = sourceBreakdown.overage_allowed,
-                    reset = sourceBreakdown.reset
-                }
-                table.insert(targetBalance.breakdown, newBreakdown)
+    -- ============================================================================
+    -- MERGE BREAKDOWN BALANCES
+    -- ============================================================================
+    
+    -- Merge source breakdowns into target breakdowns
+    for _, sourceBreakdown in ipairs(sourceBreakdowns) do
+        local sourceKey = getBreakdownItemKey(sourceBreakdown)
+        local foundMatch = false
+        
+        -- Try to find matching breakdown by key
+        for _, targetBreakdown in ipairs(targetBreakdowns) do
+            local targetKey = getBreakdownItemKey(targetBreakdown)
+            if sourceKey and targetKey and sourceKey == targetKey then
+                -- Found matching breakdown - merge it
+                mergeBalanceNumericFields(targetBreakdown, sourceBreakdown)
+                mergeBalanceOverageAllowed(targetBreakdown, sourceBreakdown)
+                mergeBalanceReset(targetBreakdown, sourceBreakdown)
+                foundMatch = true
+                break
             end
         end
+        
+        -- If no matching breakdown found, add as new breakdown item
+        if not foundMatch then
+            local newBreakdown = {
+                plan_id = sourceBreakdown.plan_id,
+                granted_balance = sourceBreakdown.granted_balance,
+                purchased_balance = sourceBreakdown.purchased_balance,
+                current_balance = sourceBreakdown.current_balance,
+                usage = sourceBreakdown.usage,
+                max_purchase = sourceBreakdown.max_purchase,
+                overage_allowed = sourceBreakdown.overage_allowed,
+                reset = sourceBreakdown.reset
+            }
+            table.insert(targetBreakdowns, newBreakdown)
+        end
+    end
+    
+    -- Set target.breakdown to the merged result
+    -- Only create breakdown array if we have multiple items or if we already had a breakdown
+    if #targetBreakdowns > 1 or targetHadBreakdown then
+        targetBalance.breakdown = targetBreakdowns
+        -- Clear top-level plan_id since it's now stored at the breakdown level
+        targetBalance.plan_id = nil
     end
     
     -- Merge rollover balances
@@ -668,9 +739,11 @@ local function loadBalances(cacheKey, orgId, env, customerId, entityId)
         for featureId, entityBalance in pairs(entityBalances) do
             if not balances[featureId] then
                 -- This balance doesn't exist in customer, add it with zero values
+                -- Copy plan_id from entity so breakdown keys match when merging
                 balances[featureId] = {
                     feature_id = featureId,
                     feature = entityBalance.feature,
+                    plan_id = entityBalance.plan_id,
                     unlimited = entityBalance.unlimited,
                     granted_balance = 0,
                     purchased_balance = 0,
@@ -679,7 +752,7 @@ local function loadBalances(cacheKey, orgId, env, customerId, entityId)
                     max_purchase = entityBalance.max_purchase or 0,
                     overage_allowed = entityBalance.overage_allowed,
                     reset = entityBalance.reset,
-                    breakdown = {}
+                    breakdown = nil
                 }
             end
         end

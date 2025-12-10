@@ -14,6 +14,8 @@ export const ApiBalanceRolloverSchema = z.object({
 });
 
 export const ApiBalanceBreakdownSchema = z.object({
+	plan_id: z.string().optional(),
+
 	granted_balance: z.number(),
 	purchased_balance: z.number(),
 	current_balance: z.number(),
@@ -38,6 +40,7 @@ export const ApiBalanceSchema = z.object({
 	max_purchase: z.number().nullable(),
 	reset: ApiBalanceResetSchema.nullable(),
 
+	plan_id: z.string().nullable(),
 	breakdown: z.array(ApiBalanceBreakdownSchema).optional(),
 	rollovers: z.array(ApiBalanceRolloverSchema).optional(),
 });

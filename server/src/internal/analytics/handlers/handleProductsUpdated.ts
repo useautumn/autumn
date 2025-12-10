@@ -148,6 +148,7 @@ export const handleProductsUpdated = async ({
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Customer,
 		legacyData: cusLegacyData,
+		ctx,
 	});
 
 	const apiPlan = await getPlanResponse({
@@ -162,6 +163,7 @@ export const handleProductsUpdated = async ({
 		legacyData: {
 			features: ctx.features,
 		},
+		ctx,
 	});
 
 	// console.log(`API version: ${ctx.apiVersion.value}`);

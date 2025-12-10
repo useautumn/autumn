@@ -44,7 +44,13 @@ const cusEntsToBreakdown = ({
 	ctx: RequestContext;
 	cusEnts: FullCusEntWithFullCusProduct[];
 	fullCus: FullCustomer;
-}): ApiBalanceBreakdown[] | undefined => {
+}):
+	| {
+			key: string;
+			breakdown: ApiBalanceBreakdown;
+			prepaidQuantity: number;
+	  }[]
+	| undefined => {
 	const keyToCusEnts: Record<string, FullCusEntWithFullCusProduct[]> = {};
 	for (const cusEnt of cusEnts) {
 		const key = cusEntToKey({ cusEnt });
@@ -54,7 +60,11 @@ const cusEntsToBreakdown = ({
 	const cusEntCount = Object.keys(keyToCusEnts).length;
 	if (cusEntCount <= 1) return undefined;
 
-	const breakdown: ApiBalanceBreakdown[] = [];
+	const breakdown: {
+		key: string;
+		breakdown: ApiBalanceBreakdown;
+		prepaidQuantity: number;
+	}[] = [];
 
 	for (const key in keyToCusEnts) {
 		const cusEnts = keyToCusEnts[key];
@@ -67,10 +77,16 @@ const cusEntsToBreakdown = ({
 			fullCus,
 			cusEnts,
 			feature,
+			includeRollovers: false,
 		});
 
-		breakdown.push(
-			ApiBalanceBreakdownSchema.parse({
+		const prepaidQuantity = cusEntsToPrepaidQuantity({ cusEnts, feature });
+		const planId = cusEnts[0].customer_product.product.id;
+
+		breakdown.push({
+			key,
+			breakdown: ApiBalanceBreakdownSchema.parse({
+				plan_id: planId,
 				granted_balance: breakdownItem.granted_balance,
 				purchased_balance: breakdownItem.purchased_balance,
 				current_balance: breakdownItem.current_balance,
@@ -81,7 +97,8 @@ const cusEntsToBreakdown = ({
 
 				reset: reset,
 			}),
-		);
+			prepaidQuantity: prepaidQuantity,
+		});
 	}
 
 	return breakdown;
@@ -127,11 +144,13 @@ export const getApiBalance = ({
 	fullCus,
 	cusEnts,
 	feature,
+	includeRollovers = true,
 }: {
 	ctx: RequestContext;
 	fullCus: FullCustomer;
 	cusEnts: FullCusEntWithFullCusProduct[];
 	feature: Feature;
+	includeRollovers?: boolean;
 }): { data: ApiBalance; legacyData?: CusFeatureLegacyData } => {
 	const entityId = fullCus.entity?.id;
 
@@ -186,15 +205,13 @@ export const getApiBalance = ({
 	// 1. Granted balance
 	const totalGrantedBalanceWithRollovers = sumValues(
 		cusEnts.map((cusEnt) =>
-			cusEntToGrantedBalance({ cusEnt, entityId, withRollovers: true }),
+			cusEntToGrantedBalance({
+				cusEnt,
+				entityId,
+				withRollovers: includeRollovers,
+			}),
 		),
 	);
-
-	// console.log(
-	// 	"totalGrantedBalanceWithRollovers",
-	// 	totalGrantedBalanceWithRollovers,
-	// );
-	// console.log("--------------------------------");
 
 	const totalAdjustment = sumValues(
 		cusEnts.map((cusEnt) => {
@@ -222,7 +239,7 @@ export const getApiBalance = ({
 				cusEntToBalance({
 					cusEnt,
 					entityId,
-					withRollovers: true,
+					withRollovers: includeRollovers,
 				}),
 			)
 			.filter(notNullish),
@@ -241,6 +258,9 @@ export const getApiBalance = ({
 
 	const reset = cusEntsToReset({ cusEnts, feature });
 	const rollovers = cusEntsToRollovers({ cusEnts, entityId });
+
+	const breakdownSet = cusEntsToBreakdown({ ctx, fullCus, cusEnts });
+	const masterKey = breakdownSet ? null : cusEntToKey({ cusEnt: cusEnts[0] });
 
 	const { data: apiBalance, error } = ApiBalanceSchema.safeParse({
 		feature: expandIncludes({
@@ -271,7 +291,9 @@ export const getApiBalance = ({
 
 		max_purchase: totalMaxPurchase,
 		reset: reset,
-		breakdown: cusEntsToBreakdown({ ctx, fullCus, cusEnts }),
+
+		plan_id: breakdownSet ? null : cusEnts[0].customer_product.product.id,
+		breakdown: breakdownSet?.map((item) => item.breakdown),
 		rollovers,
 	} satisfies ApiBalance);
 
@@ -279,11 +301,17 @@ export const getApiBalance = ({
 
 	// Return in latest format - version transformation happens at Customer level
 	const totalPrepaidQuantity = cusEntsToPrepaidQuantity({ cusEnts, feature });
+	const breakdownLegacyData = breakdownSet?.map((item) => ({
+		key: item.key,
+		prepaid_quantity: item.prepaidQuantity,
+	}));
 
 	return {
 		data: apiBalance,
 		legacyData: {
+			key: masterKey,
 			prepaid_quantity: totalPrepaidQuantity,
+			breakdown_legacy_data: breakdownLegacyData ?? [],
 		},
 	};
 };

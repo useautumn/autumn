@@ -1,30 +1,32 @@
-import { CustomerNotFoundError } from "@autumn/shared";
-import { z } from "zod/v4";
+import {
+	CustomerNotFoundError,
+	GetBillingPortalBodySchema,
+	GetBillingPortalQuerySchema,
+} from "@autumn/shared";
+import z from "zod/v4";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { CusService } from "../../CusService";
 import { createBillingPortalSession } from "./createBillingPortalSession";
 
 export const handleCreateBillingPortal = createRoute({
-	query: z.object({
-		return_url: z.string().optional(),
+	query: GetBillingPortalQuerySchema,
+	params: z.object({
+		customer_id: z.string(),
 	}),
-	body: z.object({
-		return_url: z.string().optional(),
-	}),
+	body: GetBillingPortalBodySchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-
-		const { return_url: queryReturnUrl } = c.req.valid("query");
-		const { return_url: bodyReturnUrl } = c.req.valid("json");
-		const returnUrl = queryReturnUrl ?? bodyReturnUrl;
-
-		const customerId = c.req.param("customer_id");
+		const { db, org, env } = ctx;
+		const { return_url: returnUrl } = c.req.valid("query");
+		const { customer_id: customerId } = c.req.param();
+		const { configuration_id: configurationId, return_url: returnUrl2 } =
+			c.req.valid("json") ?? {};
 
 		const customer = await CusService.get({
-			db: ctx.db,
+			db,
 			idOrInternalId: customerId,
-			orgId: ctx.org.id,
-			env: ctx.env,
+			orgId: org.id,
+			env,
 		});
 
 		if (!customer) {
@@ -34,11 +36,12 @@ export const handleCreateBillingPortal = createRoute({
 		const session = await createBillingPortalSession({
 			ctx,
 			customer,
-			returnUrl,
+			returnUrl: returnUrl2 || returnUrl,
+			configurationId,
 		});
 
 		return c.json({
-			customer_id: customer.id,
+			customer_id: customer.id || null,
 			url: session.url,
 		});
 	},

@@ -2,6 +2,7 @@ import {
 	type AppEnv,
 	type Customer,
 	ErrCode,
+	hashString,
 	type Organization,
 	ProcessorType,
 } from "@autumn/shared";
@@ -41,7 +42,7 @@ export const createStripeCusIfNotExists = async ({
 	env: AppEnv;
 	customer: Customer;
 	logger: Logger;
-}): Promise<Stripe.Customer> => {
+}) => {
 	const stripeCli = createStripeCli({ org, env });
 
 	const getCurrentStripeCus = async () => {
@@ -74,10 +75,15 @@ export const createStripeCusIfNotExists = async ({
 
 	// 2. If no current stripe customer, create new customer
 	logger.info(`Creating new stripe customer for ${customer.id}`);
+	const idempotencyKey = hashString(
+		`stripe-create-cus:${customer.id || customer.internal_id}:${org.id}:${env}:${Math.floor(Date.now() / 5000)}`,
+	);
+
 	const stripeCustomer = await createStripeCustomer({
 		org,
 		env,
 		customer,
+		idempotencyKey,
 	});
 
 	await CusService.update({
@@ -99,6 +105,57 @@ export const createStripeCusIfNotExists = async ({
 	};
 
 	return stripeCustomer;
+
+	// let createNew = false;
+	// const stripeCli = createStripeCli({ org, env });
+	// if (!customer.processor || !customer.processor.id) {
+	// 	createNew = true;
+	// } else {
+	// 	try {
+	// 		const stripeCus = await stripeCli.customers.retrieve(
+	// 			customer.processor.id,
+	// 			{
+	// 				expand: ["test_clock", "invoice_settings.default_payment_method"],
+	// 			},
+	// 		);
+	// 		if (!stripeCus.deleted) {
+	// 			return stripeCus as Stripe.Customer;
+	// 		} else {
+	// 			createNew = true;
+	// 		}
+	// 	} catch (_error) {
+	// 		createNew = true;
+	// 	}
+	// }
+
+	// if (createNew) {
+	// 	logger.info(`Creating new stripe customer for ${customer.id}`);
+	// 	const stripeCustomer = await createStripeCustomer({
+	// 		org,
+	// 		env,
+	// 		customer,
+	// 	});
+
+	// 	await CusService.update({
+	// 		db,
+	// 		idOrInternalId: customer.internal_id,
+	// 		orgId: org.id,
+	// 		env,
+	// 		update: {
+	// 			processor: {
+	// 				id: stripeCustomer.id,
+	// 				type: ProcessorType.Stripe,
+	// 			},
+	// 		},
+	// 	});
+
+	// 	customer.processor = {
+	// 		id: stripeCustomer.id,
+	// 		type: ProcessorType.Stripe,
+	// 	};
+
+	// 	return stripeCustomer;
+	// }
 };
 
 export const createStripeCustomer = async ({
@@ -107,26 +164,35 @@ export const createStripeCustomer = async ({
 	customer,
 	testClockId,
 	metadata,
+	idempotencyKey,
 }: {
 	org: Organization;
 	env: AppEnv;
 	customer: Customer;
 	testClockId?: string;
 	metadata?: Record<string, unknown>;
+	idempotencyKey?: string;
 }) => {
 	const stripeCli = createStripeCli({ org, env });
 
 	try {
-		const stripeCustomer = await stripeCli.customers.create({
-			name: customer.name || undefined,
-			email: customer.email || undefined,
-			metadata: {
-				...(metadata || {}),
-				autumn_id: customer.id || null,
-				autumn_internal_id: customer.internal_id,
+		const stripeCustomer = await stripeCli.customers.create(
+			{
+				name: customer.name || undefined,
+				email: customer.email || undefined,
+				metadata: {
+					...(metadata || {}),
+					autumn_id: customer.id || null,
+					autumn_internal_id: customer.internal_id,
+				},
+				test_clock: testClockId,
 			},
-			test_clock: testClockId,
-		});
+			idempotencyKey
+				? {
+						idempotencyKey,
+					}
+				: undefined,
+		);
 
 		return stripeCustomer;
 	} catch (error: any) {

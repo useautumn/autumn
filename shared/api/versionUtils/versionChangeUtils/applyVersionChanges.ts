@@ -8,6 +8,7 @@ import type {
 	AffectedResource,
 	VersionChange,
 	VersionChangeConstructor,
+	VersionContext,
 } from "./VersionChange.js";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
 
@@ -31,12 +32,14 @@ export function applyResponseVersionChanges<T = any, TLegacyData = any>({
 	currentVersion,
 	targetVersion,
 	resource,
+	ctx,
 }: {
 	input: T;
 	legacyData?: TLegacyData;
 	currentVersion?: ApiVersionClass;
 	targetVersion: ApiVersionClass;
 	resource: AffectedResource;
+	ctx: VersionContext;
 }): T {
 	// Default currentVersion to latest if not provided
 	const _currentVersion = currentVersion || new ApiVersionClass(LATEST_VERSION);
@@ -106,6 +109,7 @@ export function applyResponseVersionChanges<T = any, TLegacyData = any>({
 			transformedData = change.transformResponse({
 				input: transformedData,
 				legacyData: legacyData,
+				ctx: ctx,
 			}) as T;
 		}
 	}
@@ -242,12 +246,14 @@ export function applyResponseVersionChangesToArray<T = any, TLegacyData = any>({
 	currentVersion,
 	targetVersion,
 	resource,
+	ctx,
 }: {
 	inputArray: T[];
 	legacyData?: TLegacyData;
 	currentVersion?: ApiVersionClass;
 	targetVersion: ApiVersionClass;
 	resource: AffectedResource;
+	ctx: VersionContext;
 }): T[] {
 	return inputArray.map((item) =>
 		applyResponseVersionChanges({
@@ -256,6 +262,7 @@ export function applyResponseVersionChangesToArray<T = any, TLegacyData = any>({
 			currentVersion,
 			targetVersion,
 			resource,
+			ctx,
 		}),
 	);
 }

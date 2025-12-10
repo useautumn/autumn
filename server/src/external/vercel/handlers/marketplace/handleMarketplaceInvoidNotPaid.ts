@@ -58,6 +58,8 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 		const partialCustomer = await CusService.getByStripeId({
 			db,
 			stripeId: invoice.customer as string,
+			orgId: org.id,
+			env,
 		});
 
 		if (!partialCustomer) {
