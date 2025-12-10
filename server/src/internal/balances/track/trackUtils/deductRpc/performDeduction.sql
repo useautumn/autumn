@@ -140,7 +140,7 @@ BEGIN
     FROM customer_entitlements ce
     WHERE ce.id = ent_id;
 
-    -- STEP 2: Deduct from additional_balance (customer-level and entity-level)
+    -- STEP 2: Deduct from additional_balance (customer-level and entity-level) [TODO: add max balance here?]
     SELECT * INTO additional_deducted, new_additional_balance, new_adjustment, current_entities
     FROM deduct_from_additional_balance(jsonb_build_object(
       'current_additional_balance', current_additional_balance,
