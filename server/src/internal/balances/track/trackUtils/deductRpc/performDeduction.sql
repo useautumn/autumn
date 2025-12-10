@@ -36,6 +36,7 @@ DECLARE
   credit_cost numeric;
   usage_allowed boolean;
   min_balance numeric;
+  max_balance numeric;
   has_entity_scope boolean;
 
   -- Current state from DB
@@ -110,6 +111,7 @@ BEGIN
     credit_cost := (ent_obj->>'credit_cost')::numeric;
     usage_allowed := COALESCE((ent_obj->>'usage_allowed')::boolean, false);
     min_balance := (ent_obj->>'min_balance')::numeric;
+    max_balance := (ent_obj->>'max_balance')::numeric;
     has_entity_scope := (ent_obj->>'entity_feature_id') IS NOT NULL;
     
     -- STEP 1: Handle rollovers (only on first entitlement)
@@ -167,6 +169,7 @@ BEGIN
       'has_entity_scope', has_entity_scope,
       'target_entity_id', target_entity_id,
       'min_balance', min_balance,
+      'max_balance', max_balance,
       'alter_granted_balance', alter_granted_balance
     ));
 
@@ -221,6 +224,7 @@ BEGIN
       credit_cost := (ent_obj->>'credit_cost')::numeric;
       usage_allowed := COALESCE((ent_obj->>'usage_allowed')::boolean, false);
       min_balance := (ent_obj->>'min_balance')::numeric;
+      max_balance := (ent_obj->>'max_balance')::numeric;
       has_entity_scope := (ent_obj->>'entity_feature_id') IS NOT NULL;
       
       -- Skip entitlements without usage_allowed
@@ -257,6 +261,7 @@ BEGIN
         'has_entity_scope', has_entity_scope,
         'target_entity_id', target_entity_id,
         'min_balance', min_balance,
+        'max_balance', max_balance,
         'alter_granted_balance', alter_granted_balance
       ));
       
