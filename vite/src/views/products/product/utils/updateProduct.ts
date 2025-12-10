@@ -45,6 +45,14 @@ export const updateProduct = async ({
 		await onSuccess();
 		return updatedProduct;
 	} catch (error) {
+		if (error instanceof Error && "issues" in error) {
+			// It's a ZodError
+			console.error(
+				"Zod validation failed:",
+				JSON.stringify((error as ZodError).issues, null, 2),
+			);
+		}
+		console.error("Failed to update product", error);
 		toast.error(
 			getBackendErr(error as AxiosError | ZodError, "Failed to update product"),
 		);

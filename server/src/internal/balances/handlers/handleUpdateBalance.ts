@@ -14,7 +14,6 @@ export const handleUpdateBalance = createRoute({
 	body: UpdateBalanceParamsSchema.extend({
 		// Internal
 		customer_entitlement_id: z.string().optional(),
-		interval: z.enum(ResetInterval).optional(),
 	}),
 
 	handler: async (c) => {

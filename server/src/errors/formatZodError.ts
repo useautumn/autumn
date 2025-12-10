@@ -28,10 +28,24 @@ export function formatZodError(error: ZodError): string {
 				message = `must be one of: ${options}`;
 			}
 		} else if (message.includes("Invalid string: must match pattern")) {
-			// Extract the pattern and make it more readable
-			if (message.includes("/^[a-zA-Z0-9_-]+$/")) {
-				message =
-					"must contain only letters, numbers, underscores, and hyphens";
+			// Try to extract character class from pattern like /^[a-zA-Z0-9_:-]+$/
+			const charClassMatch = message.match(/\[([a-zA-Z0-9_:\-\\]+)\]/);
+			if (charClassMatch) {
+				const charClass = charClassMatch[1];
+				const parts: string[] = [];
+				if (charClass.includes("a-z") || charClass.includes("A-Z"))
+					parts.push("letters");
+				if (charClass.includes("0-9")) parts.push("numbers");
+				if (charClass.includes("_")) parts.push("underscores");
+				if (charClass.includes("-")) parts.push("hyphens");
+				if (charClass.includes(":")) parts.push("colons");
+				if (charClass.includes(".")) parts.push("periods");
+
+				if (parts.length > 0) {
+					message = `must contain only ${parts.join(", ")}`;
+				} else {
+					message = "has invalid format";
+				}
 			} else {
 				message = "has invalid format";
 			}
