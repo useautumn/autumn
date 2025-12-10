@@ -26,10 +26,13 @@ export function FeatureUsageCell({
 		usageType,
 		quantity,
 		cusEntsCount,
+		initialAllowance,
 	} = useFeatureUsageBalance({
 		cusProducts: customerProducts ?? [],
 		featureId,
 	});
+
+	console.log("initialAllowance", initialAllowance);
 
 	if (isLoading) {
 		return (
@@ -56,13 +59,13 @@ export function FeatureUsageCell({
 		<div className="flex flex-col gap-1 w-full px-1">
 			<FeatureBalanceDisplay
 				allowance={allowance}
+				initialAllowance={initialAllowance}
 				balance={balance}
 				shouldShowOutOfBalance={shouldShowOutOfBalance}
 				shouldShowUsed={shouldShowUsed}
 				usageType={usageType}
 				className="text-tiny"
 			/>
-
 			{allowance > 0 && (
 				<CustomerFeatureUsageBar
 					allowance={allowance}
