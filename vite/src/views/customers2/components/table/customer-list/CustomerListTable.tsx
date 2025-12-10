@@ -25,12 +25,15 @@ export function CustomerListTable({
 	const { features } = useFeaturesQuery();
 
 	// Subscribe to full_customers query to get reactive updates
-	const { data: fullCustomersData, isLoading: isFullCustomersLoading } =
-		useQuery<{ fullCustomers: FullCustomer[] }>({
-			queryKey: ["full_customers"],
-			// Don't fetch - just subscribe to existing data from useFullCusSearchQuery
-			enabled: false,
-		});
+	const {
+		data: fullCustomersData,
+		isLoading: isFullCustomersLoading,
+		isFetching: isFullCustomersFetching,
+	} = useQuery<{ fullCustomers: FullCustomer[] }>({
+		queryKey: ["full_customers"],
+		// Don't fetch - just subscribe to existing data from useFullCusSearchQuery
+		enabled: false,
+	});
 
 	// Build map from full customers data for quick lookup
 	const fullCustomersMap = useMemo(() => {
@@ -44,9 +47,11 @@ export function CustomerListTable({
 		return map;
 	}, [fullCustomersData]);
 
-	// Determine if full data is still loading
+	// Determine if full data is still loading (includes refetches for search/pagination)
 	const isFullDataLoading =
-		isFullCustomersLoading || fullCustomersMap.size === 0;
+		isFullCustomersLoading ||
+		isFullCustomersFetching ||
+		fullCustomersMap.size === 0;
 
 	// Merge basic customer data with full customer data (for balance info)
 	const mergedCustomers = useMemo(() => {
