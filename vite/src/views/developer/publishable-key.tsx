@@ -1,16 +1,13 @@
-import { AppEnv, FrontendOrg } from "@autumn/shared";
+import { AppEnv } from "@autumn/shared";
 import CopyButton from "@/components/general/CopyButton";
-import { useEnv } from "@/utils/envUtils";
 import { useOrg } from "@/hooks/common/useOrg";
+import { useEnv } from "@/utils/envUtils";
 
 export const PublishableKeySection = () => {
 	const { org } = useOrg();
 	const env = useEnv();
 	return (
 		<div>
-			<div className="border-y bg-stone-100 px-10 h-10 flex items-center">
-				<h2 className="text-sm text-t2 font-medium">Publishable Key</h2>
-			</div>
 			<div className="px-10 py-4 flex flex-col gap-6">
 				<p className="text-sm text-t3">
 					You can safely use this from your frontend with certain endpoints,

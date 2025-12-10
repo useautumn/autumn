@@ -1,11 +1,11 @@
+import { CopyablePre } from "@/components/general/CopyablePre";
 import {
 	Dialog,
 	DialogContent,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/ui/dialog";
-import { IRow } from "./AGGrid";
-import { CopyablePre } from "@/components/general/CopyablePre";
+} from "@/components/v2/dialogs/Dialog";
+import type { IRow } from "./AGGrid";
 
 export function RowClickDialog({
 	event,

@@ -54,7 +54,7 @@ export function TableBody() {
 				return (
 					<TableRow
 						className={cn(
-							"text-t3 transition-none h-12 py-4 relative hover:z-95",
+							"text-t3 transition-none h-12 py-4 relative",
 							rowClassName,
 							isSelected ? "z-100" : "hover:bg-interactive-secondary-hover",
 						)}
@@ -81,8 +81,11 @@ export function TableBody() {
 								style={
 									flexibleTableColumns
 										? {
-												maxWidth: `${cell.column.getSize()}px`,
 												width: `${cell.column.getSize()}px`,
+												maxWidth: `${cell.column.getSize()}px`,
+												minWidth: cell.column.columnDef.minSize
+													? `${cell.column.columnDef.minSize}px`
+													: undefined,
 											}
 										: { width: `${cell.column.getSize()}px` }
 								}

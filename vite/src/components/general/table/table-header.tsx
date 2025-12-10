@@ -40,7 +40,11 @@ function HeaderContent<T>({
 	}
 
 	if (!header.column.getCanSort()) {
-		return flexRender(header.column.columnDef.header, header.getContext());
+		return (
+			<span className="truncate w-full">
+				{flexRender(header.column.columnDef.header, header.getContext())}
+			</span>
+		);
 	}
 
 	return (
@@ -69,13 +73,18 @@ function HeaderContent<T>({
 }
 
 export function TableHeader({ className }: { className?: string }) {
-	const { table, enableSelection } = useTableContext();
+	const {
+		table,
+		enableSelection,
+		enableColumnVisibility,
+		flexibleTableColumns,
+	} = useTableContext();
 	const headerGroups = table.getHeaderGroups();
 	return (
 		<ShadcnTableHeader className={className}>
 			{headerGroups.map((headerGroup) => (
 				<TableRow
-					className="border-b bg-card pointer-events-none text-t4"
+					className="border-b bg-card pointer-events-none text-t4 sticky top-0 z-20"
 					key={headerGroup.id}
 				>
 					{enableSelection && table && (
@@ -89,18 +98,34 @@ export function TableHeader({ className }: { className?: string }) {
 							/>
 						</TableHead>
 					)}
-					{headerGroup.headers.map((header, index) => (
-						<TableHead
-							className={cn(
-								"h-7 px-2 text-t4 text-tiny font-medium!",
-								index === 0 && "pl-4",
-							)}
-							key={header.id}
-							style={{ width: `${header.getSize()}px` }}
-						>
-							<HeaderContent header={header} />
-						</TableHead>
-					))}
+					{headerGroup.headers.map((header, index, arr) => {
+						const isLast = index === arr.length - 1;
+						return (
+							<TableHead
+								className={cn(
+									"h-7 px-2 text-t4 text-tiny font-medium!",
+									index === 0 && "pl-4",
+									isLast && enableColumnVisibility && "pr-8",
+								)}
+								key={header.id}
+								style={
+									flexibleTableColumns
+										? {
+												width: `${header.getSize()}px`,
+												maxWidth: `${header.getSize()}px`,
+												minWidth: header.column.columnDef.minSize
+													? `${header.column.columnDef.minSize}px`
+													: undefined,
+											}
+										: { width: `${header.getSize()}px` }
+								}
+							>
+								<div className="flex items-center justify-between w-full">
+									<HeaderContent header={header} />
+								</div>
+							</TableHead>
+						);
+					})}
 				</TableRow>
 			))}
 		</ShadcnTableHeader>
