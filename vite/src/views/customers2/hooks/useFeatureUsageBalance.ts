@@ -16,6 +16,7 @@ export interface FeatureUsageBalanceParams {
 
 export interface FeatureUsageBalanceResult {
 	allowance: number;
+	initialAllowance: number;
 	balance: number;
 	shouldShowOutOfBalance: boolean;
 	shouldShowUsed: boolean;
@@ -84,6 +85,7 @@ export function useFeatureUsageBalance({
 
 	return {
 		allowance: allowance ?? 0,
+		initialAllowance: initialAllowance ?? 0,
 		balance: balance ?? 0,
 		shouldShowOutOfBalance,
 		shouldShowUsed,

@@ -27,6 +27,7 @@ function UsageCell({
 		shouldShowOutOfBalance,
 		shouldShowUsed,
 		usageType,
+		initialAllowance,
 	} = useFeatureUsageBalance({
 		cusProducts: filteredCustomerProducts,
 		featureId: ent.entitlement.feature.id,
@@ -40,6 +41,7 @@ function UsageCell({
 	return (
 		<FeatureBalanceDisplay
 			allowance={allowance}
+			initialAllowance={initialAllowance}
 			balance={balance}
 			shouldShowOutOfBalance={shouldShowOutOfBalance}
 			shouldShowUsed={shouldShowUsed}
