@@ -45,6 +45,7 @@ const init = async () => {
 		"http://localhost:5174",
 		"https://app.useautumn.com",
 		"https://staging.useautumn.com",
+		"https://dev.useautumn.com",
 		"https://api.staging.useautumn.com",
 		"https://localhost:8080",
 		"https://www.alphalog.ai",
