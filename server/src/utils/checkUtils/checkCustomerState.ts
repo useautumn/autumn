@@ -41,6 +41,18 @@ export const runCustomerStateChecks = async ({
 		checks: [],
 	};
 
+	// If fullCus has no processor ID, unlinked from Stripe
+	if (!fullCus.processor?.id) {
+		result.passed = true;
+		result.warnings.push("Customer is unlinked from Stripe");
+		result.checks.push({
+			type: "overall_status",
+			name: "Overall Status",
+			passed: false,
+		});
+		return result;
+	}
+
 	// Check: Subscription correctness (from checkCusSubCorrect)
 	await testSubscriptionCorrectness({
 		db,
