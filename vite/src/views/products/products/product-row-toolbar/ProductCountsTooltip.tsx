@@ -49,10 +49,7 @@ export const ProductCountsTooltip = ({ product }: { product: ProductV2 }) => {
 					<div className="flex flex-col gap-1">
 						{allCounts?.[product.id] &&
 							Object.keys(allCounts[product.id])
-								.filter(
-									(key) =>
-										allCounts[product.id][key as keyof ProductCounts] > 0,
-								)
+								.filter((key) => key !== "all")
 								.map((key) => (
 									<InfoRow
 										key={key}

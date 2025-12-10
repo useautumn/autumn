@@ -1,14 +1,19 @@
 import { FadersHorizontalIcon } from "@phosphor-icons/react";
-import type { VisibilityState } from "@tanstack/react-table";
+import type { Column, VisibilityState } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
+import { Button } from "@/components/v2/buttons/Button";
+import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import {
 	DropdownMenu,
-	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
+	DropdownMenuItem,
 	DropdownMenuSeparator,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/v2/buttons/Button";
+} from "@/components/v2/dropdowns/DropdownMenu";
+import type { ColumnGroup } from "@/hooks/useColumnVisibility";
 import { cn } from "@/lib/utils";
 import { useTableContext } from "./table-context";
 
@@ -38,6 +43,79 @@ function saveToStorage(storageKey: string, state: VisibilityState): void {
 	}
 }
 
+/** Renders a single column checkbox item */
+function ColumnCheckboxItem<T>({ column }: { column: Column<T> }) {
+	const header = column.columnDef.header;
+	const label = typeof header === "string" ? header : column.id;
+
+	// Skip empty labels (like actions column)
+	if (!label || label === "actions") return null;
+
+	const isVisible = column.getIsVisible();
+
+	return (
+		<DropdownMenuItem
+			key={column.id}
+			onClick={(e) => {
+				e.preventDefault();
+				column.toggleVisibility(!isVisible);
+			}}
+			onSelect={(e) => e.preventDefault()}
+			className="flex items-center gap-2 cursor-pointer text-sm"
+		>
+			<Checkbox checked={isVisible} className="border-border" />
+			{label}
+		</DropdownMenuItem>
+	);
+}
+
+/** Renders a submenu for a column group */
+function ColumnGroupSubmenu<T>({
+	group,
+	columns,
+}: {
+	group: ColumnGroup;
+	columns: Column<T>[];
+}) {
+	// Filter columns that belong to this group
+	const groupColumns = columns.filter((col) =>
+		group.columnIds.includes(col.id),
+	);
+
+	// Count visible columns in this group
+	const visibleCount = groupColumns.filter((col) => col.getIsVisible()).length;
+
+	if (groupColumns.length === 0) {
+		return null;
+	}
+
+	return (
+		<DropdownMenuSub>
+			<DropdownMenuSubTrigger className="flex items-center gap-2 cursor-pointer text-sm">
+				{group.label}
+				{visibleCount > 0 && (
+					<span className="text-xs text-t3 bg-muted px-1 py-0 rounded-md">
+						{visibleCount}
+					</span>
+				)}
+			</DropdownMenuSubTrigger>
+			<DropdownMenuSubContent className="min-w-[200px]">
+				{groupColumns.length === 0 ? (
+					<div className="px-2 py-3 text-center text-t3 text-sm">
+						No columns available
+					</div>
+				) : (
+					<div className="max-h-64 overflow-y-auto">
+						{groupColumns.map((column) => (
+							<ColumnCheckboxItem key={column.id} column={column} />
+						))}
+					</div>
+				)}
+			</DropdownMenuSubContent>
+		</DropdownMenuSub>
+	);
+}
+
 export function TableColumnVisibility() {
 	const [isOpen, setIsOpen] = useState(false);
 
@@ -45,9 +123,7 @@ export function TableColumnVisibility() {
 		table,
 		enableColumnVisibility,
 		columnVisibilityStorageKey,
-		columnVisibilityExtras,
-		onColumnVisibilitySave,
-		hasUnsavedExtrasChanges,
+		columnGroups = [],
 	} = useTableContext();
 
 	// Load saved state synchronously on mount (for comparison to detect unsaved changes)
@@ -59,6 +135,17 @@ export function TableColumnVisibility() {
 
 	// Get current visibility from table for comparison
 	const currentVisibility = table.getState().columnVisibility;
+
+	// Collect all column IDs that belong to any group
+	const groupedColumnIds = useMemo(() => {
+		const ids = new Set<string>();
+		for (const group of columnGroups) {
+			for (const colId of group.columnIds) {
+				ids.add(colId);
+			}
+		}
+		return ids;
+	}, [columnGroups]);
 
 	// Check if current visibility differs from saved state
 	const hasUnsavedChanges = useMemo(() => {
@@ -110,18 +197,19 @@ export function TableColumnVisibility() {
 			saveToStorage(columnVisibilityStorageKey, currentVisibility);
 			setSavedVisibility({ ...currentVisibility });
 		}
-		// Also save custom extras (e.g., usage features)
-		onColumnVisibilitySave?.();
 	};
 
 	if (!enableColumnVisibility) {
 		return null;
 	}
 
-	// Filter out columns that are handled by custom extras (e.g., usage_ columns)
-	const columns = table
+	// All hideable columns
+	const allColumns = table
 		.getAllColumns()
-		.filter((column) => column.getCanHide() && !column.id.startsWith("usage_"));
+		.filter((column) => column.getCanHide());
+
+	// Base columns (not in any group)
+	const baseColumns = allColumns.filter((col) => !groupedColumnIds.has(col.id));
 
 	return (
 		<DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
@@ -145,41 +233,28 @@ export function TableColumnVisibility() {
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end" className="min-w-[150px] relative">
-				{columns.map((column) => {
-					const header = column.columnDef.header;
-					const label = typeof header === "string" ? header : column.id;
+				{/* Base columns (not in any group) */}
+				{baseColumns.map((column) => (
+					<ColumnCheckboxItem key={column.id} column={column} />
+				))}
 
-					// Skip empty labels (like actions column)
-					if (!label || label === "actions") return null;
-
-					return (
-						<DropdownMenuCheckboxItem
-							key={column.id}
-							checked={column.getIsVisible()}
-							onCheckedChange={(value) => column.toggleVisibility(!!value)}
-							onSelect={(e) => e.preventDefault()}
-							className="text-sm"
-						>
-							{label}
-						</DropdownMenuCheckboxItem>
-					);
-				})}
-
-				{/* Custom extras (e.g., usage feature submenu) */}
-				{columnVisibilityExtras && (
-					<>
-						<DropdownMenuSeparator />
-						{columnVisibilityExtras}
-					</>
+				{/* Column groups as submenus */}
+				{columnGroups.length > 0 && baseColumns.length > 0 && (
+					<DropdownMenuSeparator />
 				)}
+				{columnGroups.map((group) => (
+					<ColumnGroupSubmenu
+						key={group.key}
+						group={group}
+						columns={allColumns}
+					/>
+				))}
 
 				{/* Animate height using grid technique */}
 				<div
 					className={cn(
 						"grid transition-[grid-template-rows] duration-100 ease-in-out",
-						hasUnsavedChanges || hasUnsavedExtrasChanges
-							? "grid-rows-[1fr]"
-							: "grid-rows-[0fr]",
+						hasUnsavedChanges ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
 					)}
 				>
 					<div className="overflow-hidden">

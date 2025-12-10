@@ -57,6 +57,7 @@ export function CustomerUsageAnalyticsTable() {
 	const { columnVisibility, setColumnVisibility } = useColumnVisibility({
 		columns,
 		defaultVisibleColumnIds: BASE_COLUMN_IDS,
+		storageKey: "customer-usage-analytics",
 	});
 
 	const table = useCustomerTable({

@@ -1,5 +1,6 @@
 import type { Table as TanstackTable } from "@tanstack/react-table";
 import { createContext, type ReactNode, useContext } from "react";
+import type { ColumnGroup } from "@/hooks/useColumnVisibility";
 
 export interface TableProps<T> {
 	table: TanstackTable<T>;
@@ -9,12 +10,8 @@ export interface TableProps<T> {
 	enableSorting?: boolean;
 	enableColumnVisibility?: boolean;
 	columnVisibilityStorageKey?: string;
-	/** Custom content to render in the column visibility dropdown (e.g., usage feature submenu) */
-	columnVisibilityExtras?: ReactNode;
-	/** Callback when save is clicked - use for saving custom extras state */
-	onColumnVisibilitySave?: () => void;
-	/** Whether there are unsaved changes in custom extras (used to show Save button) */
-	hasUnsavedExtrasChanges?: boolean;
+	/** Column groups for UI organization (renders as submenus in visibility dropdown) */
+	columnGroups?: ColumnGroup[];
 	onRowClick?: (row: T) => void;
 	rowClassName?: string;
 	emptyStateChildren?: ReactNode;

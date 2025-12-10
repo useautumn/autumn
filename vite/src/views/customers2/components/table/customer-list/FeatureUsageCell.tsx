@@ -1,14 +1,7 @@
-import {
-	cusEntToBalance,
-	cusEntToIncludedUsage,
-	cusProductsToCusEnts,
-	FeatureUsageType,
-	type FullCusProduct,
-	notNullish,
-	sumValues,
-} from "@autumn/shared";
-import { cn } from "@/lib/utils";
+import type { FullCusProduct } from "@autumn/shared";
+import { useFeatureUsageBalance } from "@/views/customers2/hooks/useFeatureUsageBalance";
 import { CustomerFeatureUsageBar } from "../customer-feature-usage/CustomerFeatureUsageBar";
+import { FeatureBalanceDisplay } from "../customer-feature-usage/FeatureBalanceDisplay";
 
 interface FeatureUsageCellProps {
 	customerProducts: FullCusProduct[] | undefined;
@@ -24,104 +17,60 @@ export function FeatureUsageCell({
 	featureId,
 	isLoading = false,
 }: FeatureUsageCellProps) {
+	const {
+		allowance,
+		balance,
+		shouldShowOutOfBalance,
+		shouldShowUsed,
+		isUnlimited,
+		usageType,
+		quantity,
+		cusEntsCount,
+	} = useFeatureUsageBalance({
+		cusProducts: customerProducts ?? [],
+		featureId,
+	});
+
 	if (isLoading) {
 		return (
-			<div className="flex flex-col gap-1 w-full min-w-20">
-				<div className="h-4 w-12 bg-muted animate-pulse rounded" />
-				<div className="h-1 w-full bg-muted animate-pulse rounded-full" />
+			<div className="flex flex-col gap-1 w-full min-w-20 overflow-hidden">
+				<div className="h-3 w-12 bg-secondary animate-pulse rounded" />
+				<div className="h-1 w-full bg-secondary animate-pulse rounded-full animate-in fade-in-0 slide-in-from-left duration-1000" />
 			</div>
 		);
 	}
 
-	if (!customerProducts || customerProducts.length === 0) {
-		return <span className="text-t3 text-xs">—</span>;
+	if (
+		!customerProducts ||
+		customerProducts.length === 0 ||
+		cusEntsCount === 0
+	) {
+		return <span className="px-1"></span>;
 	}
-
-	const cusEnts = cusProductsToCusEnts({
-		cusProducts: customerProducts,
-		featureId,
-	});
-
-	if (cusEnts.length === 0) {
-		return <span className="text-t3 text-xs">—</span>;
-	}
-
-	const allowance = sumValues(
-		cusEnts.map((cusEnt) =>
-			cusEntToIncludedUsage({
-				cusEnt,
-				entityId: undefined,
-			}),
-		),
-	);
-
-	const balance = sumValues(
-		cusEnts
-			.map((cusEnt) =>
-				cusEntToBalance({
-					cusEnt,
-					entityId: undefined,
-					withRollovers: true,
-				}),
-			)
-			.filter(notNullish),
-	);
-
-	const firstEnt = cusEnts[0];
-	const isUnlimited = cusEnts.some((e) => e.unlimited);
-	const usageType = firstEnt?.entitlement?.feature?.config?.usage_type;
-	const quantity = cusEnts.reduce(
-		(sum, e) => sum + (e.customer_product.quantity ?? 1),
-		0,
-	);
-
-	const shouldShowOutOfBalance = allowance > 0 || (balance ?? 0) > 0;
-	const shouldShowUsed =
-		balance < 0 || ((balance ?? 0) === 0 && (allowance ?? 0) <= 0);
 
 	if (isUnlimited) {
-		return <span className="text-t3 text-xs">Unlimited</span>;
+		return <span className="text-t3 text-tiny px-1">Unlimited</span>;
 	}
 
 	return (
-		<div className="flex flex-col gap-1 w-full min-w-20">
-			<div className="flex items-center text-xs">
-				{shouldShowOutOfBalance && (
-					<div className="flex gap-0.5 items-baseline">
-						<span className="text-t1">
-							{balance < 0 ? 0 : new Intl.NumberFormat().format(balance ?? 0)}
-						</span>
-						{allowance > 0 && (
-							<span className="text-t4">
-								/{new Intl.NumberFormat().format(allowance)}
-							</span>
-						)}
-					</div>
-				)}
-				{shouldShowUsed && (
-					<span className="text-t2">
-						{shouldShowOutOfBalance && shouldShowUsed && " +"}
-						{new Intl.NumberFormat().format(balance < 0 ? balance * -1 : 0)}{" "}
-						<span className="text-t4">
-							{allowance > 0
-								? "overage"
-								: usageType === FeatureUsageType.Continuous
-									? "in use"
-									: "used"}
-						</span>
-					</span>
-				)}
-			</div>
-			<div
-				className={cn("w-full", allowance > 0 ? "opacity-100" : "opacity-0")}
-			>
+		<div className="flex flex-col gap-1 w-full px-1">
+			<FeatureBalanceDisplay
+				allowance={allowance}
+				balance={balance}
+				shouldShowOutOfBalance={shouldShowOutOfBalance}
+				shouldShowUsed={shouldShowUsed}
+				usageType={usageType}
+				className="text-tiny"
+			/>
+
+			{allowance > 0 && (
 				<CustomerFeatureUsageBar
-					allowance={allowance ?? 0}
-					balance={balance ?? 0}
+					allowance={allowance}
+					balance={balance}
 					quantity={quantity}
 					horizontal={true}
 				/>
-			</div>
+			)}
 		</div>
 	);
 }
