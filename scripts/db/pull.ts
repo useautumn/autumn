@@ -6,6 +6,8 @@ import { promisify } from "node:util";
 
 const execAsync = promisify(exec);
 
+const MAX_CUSTOMER_COUNT_LIMIT = 1000;
+
 /**
  * Execute command and show live output
  */
@@ -135,17 +137,25 @@ async function ensureDatabaseExists(
 
 /**
  * Clean up PostgreSQL URL for pg_dump/psql
- * - Removes query parameters after /postgres
+ * - Removes query parameters
  * - Changes port 6432 to 5432
  */
 function cleanUrl(url: string): string {
-	// Remove everything after /postgres (including query params)
-	let cleaned = url.replace(/\/postgres\?.*$/, "/postgres");
-
-	// Replace port 6432 with 5432
-	cleaned = cleaned.replace(/:6432\//, ":5432/");
-
-	return cleaned;
+	try {
+		const urlObj = new URL(url);
+		// Remove query parameters
+		urlObj.search = "";
+		// Replace port 6432 with 5432
+		if (urlObj.port === "6432") {
+			urlObj.port = "5432";
+		}
+		return urlObj.toString();
+	} catch {
+		// Fallback to regex-based cleaning if URL parsing fails
+		let cleaned = url.replace(/\?.*$/, "");
+		cleaned = cleaned.replace(/:6432\//, ":5432/");
+		return cleaned;
+	}
 }
 
 /**
@@ -206,7 +216,7 @@ async function pullDatabase({
 }: {
 	remoteUrl: string;
 	localUrl?: string;
-}) {
+}): Promise<void> {
 	console.log("\n📥 Pulling Remote Database to Local\n");
 
 	// Validate remote URL
@@ -261,11 +271,11 @@ async function pullDatabase({
 	} else {
 		console.log(`📊 Local database has ${customerResult.count} customers`);
 
-		// Protection: Don't allow overwriting databases with > 1000 customers
-		if (customerResult.count > 1000) {
+		// Protection: Don't allow overwriting databases with > MAX_CUSTOMER_COUNT_LIMIT customers
+		if (customerResult.count > MAX_CUSTOMER_COUNT_LIMIT) {
 			console.error("\n❌ PROTECTION: Local database has too many customers!");
 			console.error(
-				`   Customer count (${customerResult.count}) exceeds 1000 limit.`,
+				`   Customer count (${customerResult.count}) exceeds ${MAX_CUSTOMER_COUNT_LIMIT} limit.`,
 			);
 			console.error(
 				"   This safety check prevents accidental overwrites of production databases.\n",
@@ -304,7 +314,7 @@ async function pullDatabase({
 		// Step 2: Restore to local database
 		console.log("\n📥 Restoring to local database...\n");
 		await execWithOutput(
-			`psql "${cleanedLocalUrl}" -f "${tempFile}" --set ON_ERROR_STOP=off 2>&1 | grep -v "invalid command"`,
+			`psql "${cleanedLocalUrl}" -f "${tempFile}" --set ON_ERROR_STOP=off 2>&1`,
 		);
 		console.log("\n✅ Database restored successfully");
 
