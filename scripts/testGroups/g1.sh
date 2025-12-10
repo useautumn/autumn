@@ -23,3 +23,4 @@ BUN_PARALLEL_COMPACT \
   'server/tests/balances/track/entity-balances' \
   'server/tests/balances/track/concurrency' \
   'server/tests/balances/track/negative' \
+  'server/tests/balances/update' \
