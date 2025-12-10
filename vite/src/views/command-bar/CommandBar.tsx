@@ -179,8 +179,9 @@ const CommandBar = () => {
 			isAdmin,
 	});
 
-	// Initialize hotkeys
+	// Initialize hotkeys (only active when command bar is open)
 	useCommandBarHotkeys({
+		isOpen: open,
 		closeDialog,
 		switchToOrgsPage: () => switchToPage("orgs"),
 		switchToImpersonatePage: () => switchToPage("impersonate"),
@@ -189,18 +190,6 @@ const CommandBar = () => {
 	useHotkeys("meta+k", () => {
 		setOpen(true);
 	});
-
-	// Direct shortcut to open impersonation search (admin only)
-	useHotkeys(
-		"meta+6",
-		() => {
-			if (isAdmin) {
-				setOpen(true);
-				setCurrentPage("impersonate");
-			}
-		},
-		[isAdmin],
-	);
 
 	useHotkeys(
 		"escape",
