@@ -1,0 +1,1 @@
+export const handleProductChange = async () => {};
