@@ -73,7 +73,7 @@ const getCusProductsInfo = ({
 	// 	console.log("activeProducts", activeProducts, "customer", customer);
 
 	if (activeProducts.length === 0) {
-		return <span className="text-t3">—</span>;
+		return <span className="text-t3"></span>;
 	}
 
 	return (
@@ -82,8 +82,10 @@ const getCusProductsInfo = ({
 				.slice(0, 1)
 				.map((cusProduct: (typeof activeProducts)[number], index: number) => {
 					return (
-						<div key={index} className="flex items-center gap-2">
-							{(cusProduct as FullCusProduct).product.name}
+						<div key={index} className="flex items-center gap-2 w-full">
+							<span className="text-t3 truncate">
+								{(cusProduct as FullCusProduct).product.name}
+							</span>
 							<CustomerProductsStatus
 								status={(cusProduct as FullCusProduct).status}
 								canceled={
@@ -178,7 +180,7 @@ export const createCustomerListColumns = (): ColumnDef<
 		id: "created_at",
 		header: "Created At",
 		accessorKey: "created_at",
-		size: 80,
+		size: 100,
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
 			const { date, time } = formatUnixToDateTime(row.original.created_at);
 			return (

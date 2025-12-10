@@ -1,13 +1,21 @@
 import type { ColumnDef, VisibilityState } from "@tanstack/react-table";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 const STORAGE_PREFIX = "autumn:table-columns:";
 
-function loadVisibilityFromStorage(storageKey: string): VisibilityState | null {
+type StoredColumnValue = boolean | { visible: boolean; name: string };
+type StoredVisibility = Record<string, StoredColumnValue>;
+
+export interface ColumnMeta {
+	visible: boolean;
+	name?: string;
+}
+
+function loadFromStorage(storageKey: string): StoredVisibility | null {
 	try {
 		const saved = localStorage.getItem(`${STORAGE_PREFIX}${storageKey}`);
 		if (saved) {
-			return JSON.parse(saved) as VisibilityState;
+			return JSON.parse(saved) as StoredVisibility;
 		}
 	} catch {
 		// Ignore errors
@@ -15,78 +23,101 @@ function loadVisibilityFromStorage(storageKey: string): VisibilityState | null {
 	return null;
 }
 
+/** Parse stored value to get visibility boolean */
+function getVisibility(value: StoredColumnValue): boolean {
+	return typeof value === "boolean" ? value : value.visible;
+}
+
+/** Parse stored value to get column meta (visibility + optional name) */
+export function getColumnMeta(
+	stored: StoredVisibility,
+	columnId: string,
+): ColumnMeta | null {
+	const value = stored[columnId];
+	if (value === undefined) return null;
+
+	if (typeof value === "boolean") {
+		return { visible: value };
+	}
+	return { visible: value.visible, name: value.name };
+}
+
+/** Get all visible usage columns with their names from storage */
+export function getVisibleUsageColumnsFromStorage(
+	storageKey: string,
+): Array<{ featureId: string; featureName: string }> {
+	const stored = loadFromStorage(storageKey);
+	if (!stored) return [];
+
+	return Object.entries(stored)
+		.filter(([key, value]) => key.startsWith("usage_") && getVisibility(value))
+		.map(([key, value]) => {
+			const featureId = key.replace("usage_", "");
+			const name = typeof value === "object" ? value.name : featureId;
+			return { featureId, featureName: name };
+		});
+}
+
+/** Defines a group of columns to be rendered together in a submenu */
+export interface ColumnGroup {
+	key: string;
+	label: string;
+	columnIds: string[];
+}
+
 interface UseColumnVisibilityOptions<T> {
 	columns: ColumnDef<T, unknown>[];
 	defaultVisibleColumnIds: string[];
 	storageKey?: string;
+	columnGroups?: ColumnGroup[];
 }
 
-/**
- * Hook to manage column visibility state with sensible defaults.
- * Columns in `defaultVisibleColumnIds` are shown by default, all others are hidden.
- * Handles dynamic columns by initializing visibility when new columns appear.
- * If storageKey is provided, loads saved visibility from localStorage synchronously.
- */
 export function useColumnVisibility<T>({
 	columns,
 	defaultVisibleColumnIds,
 	storageKey,
+	columnGroups = [],
 }: UseColumnVisibilityOptions<T>) {
-	const initializedCols = useRef<Set<string>>(new Set());
-
-	// Load initial visibility from localStorage synchronously (no flash)
+	// Load from localStorage, converting to simple visibility state
 	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
 		() => {
-			if (storageKey) {
-				const saved = loadVisibilityFromStorage(storageKey);
-				if (saved) {
-					// Mark saved columns as initialized
-					for (const colId of Object.keys(saved)) {
-						initializedCols.current.add(colId);
-					}
-					return saved;
-				}
+			const stored = storageKey ? loadFromStorage(storageKey) : null;
+			if (!stored) return {};
+
+			// Convert stored format to simple visibility state
+			const visibility: VisibilityState = {};
+			for (const [key, value] of Object.entries(stored)) {
+				visibility[key] = getVisibility(value);
 			}
-			return {};
+			return visibility;
 		},
 	);
 
-	// Set visibility for new columns as they appear
+	// Add defaults for any columns not yet in visibility state
 	useEffect(() => {
 		setColumnVisibility((prev) => {
-			const newVisibilityState: VisibilityState = {};
 			let hasNewColumns = false;
+			const updated = { ...prev };
 
 			for (const col of columns) {
-				if (col.id && !initializedCols.current.has(col.id)) {
-					// Only set default visibility if not already set (avoids overriding explicit visibility)
-					if (!(col.id in prev)) {
-						newVisibilityState[col.id] = defaultVisibleColumnIds.includes(
-							col.id,
-						);
-					}
-					initializedCols.current.add(col.id);
+				if (col.id && !(col.id in prev)) {
 					hasNewColumns = true;
+					updated[col.id] = defaultVisibleColumnIds.includes(col.id);
 				}
 			}
 
-			if (hasNewColumns && Object.keys(newVisibilityState).length > 0) {
-				return { ...prev, ...newVisibilityState };
-			}
-			return prev;
+			return hasNewColumns ? updated : prev;
 		});
 	}, [columns, defaultVisibleColumnIds]);
 
-	// Check if any non-default columns are visible
-	const hasExtraVisibleColumns = useMemo(() => {
-		return Object.entries(columnVisibility).some(
-			([key, visible]) => !defaultVisibleColumnIds.includes(key) && visible,
-		);
-	}, [columnVisibility, defaultVisibleColumnIds]);
+	const hasExtraVisibleColumns = Object.entries(columnVisibility).some(
+		([key, visible]) => !defaultVisibleColumnIds.includes(key) && visible,
+	);
 
 	return {
 		columnVisibility,
 		setColumnVisibility,
 		hasExtraVisibleColumns,
+		columnGroups,
 	};
 }

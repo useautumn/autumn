@@ -48,7 +48,7 @@ export const createProductListColumns = ({
 					header: "Group",
 					accessorKey: "group",
 					cell: ({ row }: { row: Row<ProductV2> }) => {
-						return <div className="text-t2">{row.original.group || "—"}</div>;
+						return <div className="text-t2">{row.original.group || ""}</div>;
 					},
 				},
 			]

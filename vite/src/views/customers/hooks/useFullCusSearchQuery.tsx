@@ -18,7 +18,7 @@ export const useFullCusSearchQuery = () => {
 				`/customers/all/full_customers`,
 				{
 					search: queryStates.q,
-					page_size: 50,
+					page_size: 30,
 					page: queryStates.page,
 					filters: {
 						status: queryStates.status,

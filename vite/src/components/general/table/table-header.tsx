@@ -40,7 +40,11 @@ function HeaderContent<T>({
 	}
 
 	if (!header.column.getCanSort()) {
-		return flexRender(header.column.columnDef.header, header.getContext());
+		return (
+			<span className="truncate w-full">
+				{flexRender(header.column.columnDef.header, header.getContext())}
+			</span>
+		);
 	}
 
 	return (
