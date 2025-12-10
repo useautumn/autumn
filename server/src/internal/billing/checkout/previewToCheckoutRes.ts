@@ -97,6 +97,7 @@ export const previewToCheckoutRes = async ({
 		options: attachParams.optionsList,
 		fullCus: attachParams.customer,
 	});
+
 	const total = lines.reduce((acc, line) => acc + line.amount, 0);
 
 	let nextCycle:
