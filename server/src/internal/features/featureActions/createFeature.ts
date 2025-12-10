@@ -6,14 +6,13 @@ import { generateId } from "@/utils/genUtils.js";
 import { FeatureService } from "../FeatureService.js";
 import {
 	validateCreditSystem,
-	validateFeatureId,
 	validateMeteredConfig,
 } from "../featureUtils.js";
 
 export const validateFeature = (data: any) => {
 	const featureType = data.type;
 
-	validateFeatureId(data.id);
+	// validateFeatureId(data.id);
 
 	let config = data.config;
 	if (featureType === FeatureType.Metered) {

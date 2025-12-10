@@ -1,4 +1,4 @@
-import { notNullish } from "@autumn/shared";
+import { notNullish, ResetInterval } from "@autumn/shared";
 import { z } from "zod/v4";
 
 export const UpdateBalanceParamsSchema = z
@@ -18,6 +18,9 @@ export const UpdateBalanceParamsSchema = z
 		}),
 		usage: z.number().optional().meta({
 			description: "The new usage value to set.",
+		}),
+		interval: z.enum(ResetInterval).optional().meta({
+			description: "The interval to update balance for.",
 		}),
 	})
 	.refine(

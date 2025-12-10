@@ -26,6 +26,10 @@ DECLARE
     ELSE (params->>'min_balance')::numeric
   END;
   alter_granted_balance boolean := COALESCE((params->>'alter_granted_balance')::boolean, false);
+  max_balance numeric := CASE 
+    WHEN params->>'max_balance' IS NULL THEN NULL
+    ELSE (params->>'max_balance')::numeric
+  END;
   
   deducted_amount numeric := 0;
   result_balance numeric;
@@ -38,6 +42,11 @@ DECLARE
   entity_balance numeric;
   deduct_amount numeric;
   new_balance numeric;
+  
+  -- Variables for ceiling calculation (negative track)
+  entity_adjustment numeric;
+  ceiling numeric;
+  max_addable numeric;
 BEGIN
   
   -- Initialize return values
@@ -61,8 +70,21 @@ BEGIN
       -- Calculate deduction respecting allow_negative and min_balance
       -- Handle negative amounts (adding credits) differently
       IF remaining < 0 THEN
-        -- Adding credits: deduct the entire negative amount (which adds)
-        deduct_amount := remaining;
+        -- Adding credits: apply ceiling if alter_granted_balance is false and max_balance exists
+        IF NOT alter_granted_balance AND max_balance IS NOT NULL THEN
+          -- Get entity-level adjustment
+          entity_adjustment := COALESCE((result_entities->entity_key->>'adjustment')::numeric, 0);
+          -- Compute ceiling: max_balance + adjustment
+          ceiling := max_balance + entity_adjustment;
+          -- Cap addition so balance doesn't exceed ceiling
+          max_addable := GREATEST(0, ceiling - entity_balance);
+          -- remaining is negative, so -remaining is the amount to add
+          -- deduct_amount will be negative (adding to balance)
+          deduct_amount := -LEAST(-remaining, max_addable);
+        ELSE
+          -- No ceiling: deduct the entire negative amount (which adds)
+          deduct_amount := remaining;
+        END IF;
       ELSIF allow_negative THEN
         IF min_balance IS NULL THEN
           deduct_amount := remaining;
@@ -106,8 +128,21 @@ BEGIN
     -- Calculate deduction respecting allow_negative and min_balance
     -- Handle negative amounts (adding credits) differently
     IF amount_to_deduct < 0 THEN
-      -- Adding credits: deduct the entire negative amount (which adds)
-      deducted_amount := amount_to_deduct * credit_cost;
+      -- Adding credits: apply ceiling if alter_granted_balance is false and max_balance exists
+      IF NOT alter_granted_balance AND max_balance IS NOT NULL THEN
+        -- Get entity-level adjustment
+        entity_adjustment := COALESCE((current_entities->target_entity_id->>'adjustment')::numeric, 0);
+        -- Compute ceiling: max_balance + adjustment
+        ceiling := max_balance + entity_adjustment;
+        -- Cap addition so balance doesn't exceed ceiling
+        max_addable := GREATEST(0, ceiling - entity_balance);
+        -- amount_to_deduct is negative, so -amount_to_deduct is the amount to add
+        -- deducted_amount will be negative (adding to balance)
+        deducted_amount := -LEAST(-amount_to_deduct * credit_cost, max_addable);
+      ELSE
+        -- No ceiling: deduct the entire negative amount (which adds)
+        deducted_amount := amount_to_deduct * credit_cost;
+      END IF;
     ELSIF allow_negative THEN
       IF min_balance IS NULL THEN
         deducted_amount := amount_to_deduct * credit_cost;
@@ -147,8 +182,19 @@ BEGIN
     -- Calculate deduction based on allow_negative flag
     -- Handle negative amounts (adding credits) differently
     IF amount_to_deduct < 0 THEN
-      -- Adding credits: deduct the entire negative amount (which adds)
-      deducted_amount := amount_to_deduct * credit_cost;
+      -- Adding credits: apply ceiling if alter_granted_balance is false and max_balance exists
+      IF NOT alter_granted_balance AND max_balance IS NOT NULL THEN
+        -- Compute ceiling: max_balance + current_adjustment (customer-level)
+        ceiling := max_balance + current_adjustment;
+        -- Cap addition so balance doesn't exceed ceiling
+        max_addable := GREATEST(0, ceiling - current_balance);
+        -- amount_to_deduct is negative, so -amount_to_deduct is the amount to add
+        -- deducted_amount will be negative (adding to balance)
+        deducted_amount := -LEAST(-amount_to_deduct * credit_cost, max_addable);
+      ELSE
+        -- No ceiling: deduct the entire negative amount (which adds)
+        deducted_amount := amount_to_deduct * credit_cost;
+      END IF;
     ELSIF allow_negative THEN
       -- Pass 2: Can go negative (respecting min_balance)
       IF min_balance IS NULL THEN
