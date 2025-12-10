@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
-import { FeatureType } from "../../models/featureModels/featureEnums.js";
-import { nullish } from "../../utils/utils.js";
+import { FeatureType } from "../../models/featureModels/featureEnums";
+import { idRegex, nullish } from "../../utils/utils";
 
 const featureDescriptions = {
 	id: "The ID of the feature. This is used to refer to it in other API calls like /track or /check.",
@@ -19,7 +19,11 @@ const featureDescriptions = {
 // Create Feature Params
 export const CreateFeatureV1ParamsSchema = z
 	.object({
-		id: z.string().nonempty().meta({ description: featureDescriptions.id }),
+		id: z
+			.string()
+			.nonempty()
+			.regex(idRegex)
+			.meta({ description: featureDescriptions.id }),
 		name: z
 			.string()
 			.nonempty()

@@ -9,14 +9,18 @@ import {
 	constructFeatureItem,
 	constructPrepaidItem,
 } from "@/utils/scriptUtils/constructItem.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import {
+	constructProduct,
+	constructRawProduct,
+} from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 import { CusService } from "../../src/internal/customers/CusService";
 
-const freeProd = constructProduct({
-	type: "free",
-	isDefault: true,
+const freeProd = constructRawProduct({
+	id: "addOn",
+
+	isAddOn: true,
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
@@ -32,32 +36,6 @@ const proProd = constructProduct({
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
 			includedUsage: 300,
-		}),
-	],
-});
-const proWithUsage = constructProduct({
-	type: "pro",
-	id: "pro-with-usage",
-	isDefault: false,
-	items: [
-		constructArrearItem({
-			featureId: TestFeature.Messages,
-			includedUsage: 0,
-			billingUnits: 1,
-			price: 0.5,
-		}),
-	],
-});
-const proWithPrepaid = constructProduct({
-	type: "pro",
-	id: "pro-with-prepaid",
-	isDefault: false,
-	items: [
-		constructPrepaidItem({
-			featureId: TestFeature.Messages,
-			billingUnits: 100,
-			price: 10,
-			includedUsage: 100,
 		}),
 	],
 });
@@ -85,8 +63,18 @@ describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [freeProd, proProd, proWithUsage, proWithPrepaid],
-			// prefix: testCase,
+			products: [freeProd, proProd],
+			prefix: testCase,
+		});
+
+		await autumnV1.attach({
+			customer_id: customerId,
+			product_id: proProd.id,
+		});
+
+		await autumnV1.attach({
+			customer_id: customerId,
+			product_id: freeProd.id,
 		});
 	});
 	return;

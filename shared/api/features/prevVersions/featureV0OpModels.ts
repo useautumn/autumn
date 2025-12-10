@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
-import { ApiFeatureType } from "./apiFeatureV0.js";
+import { idRegex } from "../../../utils/utils";
+import { ApiFeatureType } from "./apiFeatureV0";
 
 const featureDescriptions = {
 	id: "The ID of the feature. This is used to refer to it in other API calls like /track or /check.",
@@ -17,7 +18,7 @@ const featureDescriptions = {
 
 // Create Feature Params
 export const CreateFeatureV0ParamsSchema = z.object({
-	id: z.string().meta({ description: featureDescriptions.id }),
+	id: z.string().regex(idRegex).meta({ description: featureDescriptions.id }),
 	name: z.string().nullish().meta({ description: featureDescriptions.name }),
 	type: z.enum(ApiFeatureType).meta({ description: featureDescriptions.type }),
 	display: z
@@ -41,7 +42,11 @@ export const CreateFeatureV0ParamsSchema = z.object({
 
 // Update Feature Params
 export const UpdateFeatureV0ParamsSchema = z.object({
-	id: z.string().optional().meta({ description: featureDescriptions.id }),
+	id: z
+		.string()
+		.regex(idRegex)
+		.optional()
+		.meta({ description: featureDescriptions.id }),
 	name: z.string().optional().meta({ description: featureDescriptions.name }),
 	type: z
 		.enum(ApiFeatureType)
