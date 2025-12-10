@@ -1,10 +1,11 @@
 import { FadersHorizontalIcon } from "@phosphor-icons/react";
 import type { VisibilityState } from "@tanstack/react-table";
-import { useLayoutEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/v2/buttons/Button";
@@ -40,22 +41,21 @@ function saveToStorage(storageKey: string, state: VisibilityState): void {
 export function TableColumnVisibility() {
 	const [isOpen, setIsOpen] = useState(false);
 
-	const { table, enableColumnVisibility, columnVisibilityStorageKey } =
-		useTableContext();
+	const {
+		table,
+		enableColumnVisibility,
+		columnVisibilityStorageKey,
+		columnVisibilityExtras,
+		onColumnVisibilitySave,
+		hasUnsavedExtrasChanges,
+	} = useTableContext();
 
-	// Load saved state synchronously on mount
+	// Load saved state synchronously on mount (for comparison to detect unsaved changes)
 	const [savedVisibility, setSavedVisibility] =
 		useState<VisibilityState | null>(() => {
 			if (!columnVisibilityStorageKey) return null;
 			return loadFromStorage(columnVisibilityStorageKey);
 		});
-
-	// Apply saved visibility to table before paint (no flash)
-	useLayoutEffect(() => {
-		if (savedVisibility && columnVisibilityStorageKey) {
-			table.setColumnVisibility(savedVisibility);
-		}
-	}, []);
 
 	// Get current visibility from table for comparison
 	const currentVisibility = table.getState().columnVisibility;
@@ -63,9 +63,15 @@ export function TableColumnVisibility() {
 	// Check if current visibility differs from saved state
 	const hasUnsavedChanges = useMemo(() => {
 		if (!columnVisibilityStorageKey) return false;
-		if (savedVisibility === null) return false;
 
 		const currentKeys = Object.keys(currentVisibility);
+
+		// If nothing saved yet, show save button if there are any visibility changes
+		if (savedVisibility === null) {
+			// Check if any column has explicit visibility set (not just defaults)
+			return currentKeys.length > 0;
+		}
+
 		const savedKeys = Object.keys(savedVisibility);
 
 		// Only compare keys that exist in both
@@ -88,21 +94,34 @@ export function TableColumnVisibility() {
 			}
 		}
 
+		// Check if there are new keys in current that weren't in saved
+		for (const key of currentKeys) {
+			if (!(key in savedVisibility)) {
+				return true;
+			}
+		}
+
 		return false;
 	}, [columnVisibilityStorageKey, currentVisibility, savedVisibility]);
 
 	// Save current visibility to localStorage
 	const handleSave = () => {
-		if (!columnVisibilityStorageKey) return;
-		saveToStorage(columnVisibilityStorageKey, currentVisibility);
-		setSavedVisibility({ ...currentVisibility });
+		if (columnVisibilityStorageKey) {
+			saveToStorage(columnVisibilityStorageKey, currentVisibility);
+			setSavedVisibility({ ...currentVisibility });
+		}
+		// Also save custom extras (e.g., usage features)
+		onColumnVisibilitySave?.();
 	};
 
 	if (!enableColumnVisibility) {
 		return null;
 	}
 
-	const columns = table.getAllColumns().filter((column) => column.getCanHide());
+	// Filter out columns that are handled by custom extras (e.g., usage_ columns)
+	const columns = table
+		.getAllColumns()
+		.filter((column) => column.getCanHide() && !column.id.startsWith("usage_"));
 
 	return (
 		<DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
@@ -130,6 +149,9 @@ export function TableColumnVisibility() {
 					const header = column.columnDef.header;
 					const label = typeof header === "string" ? header : column.id;
 
+					// Skip empty labels (like actions column)
+					if (!label || label === "actions") return null;
+
 					return (
 						<DropdownMenuCheckboxItem
 							key={column.id}
@@ -142,11 +164,22 @@ export function TableColumnVisibility() {
 						</DropdownMenuCheckboxItem>
 					);
 				})}
+
+				{/* Custom extras (e.g., usage feature submenu) */}
+				{columnVisibilityExtras && (
+					<>
+						<DropdownMenuSeparator />
+						{columnVisibilityExtras}
+					</>
+				)}
+
 				{/* Animate height using grid technique */}
 				<div
 					className={cn(
 						"grid transition-[grid-template-rows] duration-100 ease-in-out",
-						hasUnsavedChanges ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+						hasUnsavedChanges || hasUnsavedExtrasChanges
+							? "grid-rows-[1fr]"
+							: "grid-rows-[0fr]",
 					)}
 				>
 					<div className="overflow-hidden">

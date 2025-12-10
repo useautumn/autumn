@@ -4,7 +4,7 @@ import {
 	type FullCusProduct,
 	isTrialing,
 } from "@autumn/shared";
-import type { Row } from "@tanstack/react-table";
+import type { ColumnDef, Row } from "@tanstack/react-table";
 import type { z } from "zod/v4";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import {
@@ -16,6 +16,7 @@ import {
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { CustomerProductsStatus } from "../customer-products/CustomerProductsStatus";
 import { CustomerListRowToolbar } from "./CustomerListRowToolbar";
+import { FeatureUsageCell } from "./FeatureUsageCell";
 
 type CustomerWithProducts = z.infer<typeof CustomerSchema> & {
 	customer_products?: Array<{
@@ -25,7 +26,21 @@ type CustomerWithProducts = z.infer<typeof CustomerSchema> & {
 		trial_ends_at?: number | null;
 		[key: string]: unknown;
 	}>;
+	/** Full customer products with entitlements - merged from full_customers query */
+	fullCustomerProducts?: FullCusProduct[];
+	/** Whether the full customer data is still loading */
+	isFullDataLoading?: boolean;
 };
+
+/** Default column IDs that are visible by default */
+export const BASE_COLUMN_IDS = [
+	"name",
+	"customer_id",
+	"email",
+	"customer_products",
+	"created_at",
+	"actions",
+];
 
 const getCusProductsInfo = ({
 	customer,
@@ -112,8 +127,12 @@ const getCusProductsInfo = ({
 	);
 };
 
-export const createCustomerListColumns = () => [
+export const createCustomerListColumns = (): ColumnDef<
+	CustomerWithProducts,
+	unknown
+>[] => [
 	{
+		id: "name",
 		header: "Name",
 		accessorKey: "name",
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
@@ -121,6 +140,7 @@ export const createCustomerListColumns = () => [
 		},
 	},
 	{
+		id: "customer_id",
 		header: "ID",
 		accessorKey: "id",
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
@@ -137,6 +157,7 @@ export const createCustomerListColumns = () => [
 		},
 	},
 	{
+		id: "email",
 		header: "Email",
 		accessorKey: "email",
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
@@ -144,6 +165,7 @@ export const createCustomerListColumns = () => [
 		},
 	},
 	{
+		id: "customer_products",
 		header: "Products",
 		accessorKey: "customer_products",
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
@@ -153,6 +175,7 @@ export const createCustomerListColumns = () => [
 		},
 	},
 	{
+		id: "created_at",
 		header: "Created At",
 		accessorKey: "created_at",
 		size: 80,
@@ -166,10 +189,12 @@ export const createCustomerListColumns = () => [
 		},
 	},
 	{
+		id: "actions",
 		header: "",
 		accessorKey: "actions",
 		size: 40,
 		enableSorting: false,
+		enableHiding: false,
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
 			return (
 				<div
@@ -182,5 +207,30 @@ export const createCustomerListColumns = () => [
 		},
 	},
 ];
+
+/**
+ * Creates a usage column for a specific metered feature
+ */
+export const createUsageColumn = ({
+	featureId,
+	featureName,
+}: {
+	featureId: string;
+	featureName: string;
+}): ColumnDef<CustomerWithProducts, unknown> => ({
+	id: `usage_${featureId}`,
+	header: featureName,
+	size: 120,
+	cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
+		const customer = row.original;
+		return (
+			<FeatureUsageCell
+				customerProducts={customer.fullCustomerProducts}
+				featureId={featureId}
+				isLoading={customer.isFullDataLoading}
+			/>
+		);
+	},
+});
 
 export type { CustomerWithProducts };
