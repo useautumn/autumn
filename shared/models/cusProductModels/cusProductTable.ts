@@ -1,3 +1,4 @@
+import type { ExternalSubID } from "@models/genModels/processorSchemas.js";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
 	boolean,
@@ -14,7 +15,7 @@ import { freeTrials } from "../productModels/freeTrialModels/freeTrialTable.js";
 import { products } from "../productModels/productTable.js";
 
 export type CustomerProductProcessor = {
-	type: "stripe";
+	type: "stripe" | "revenuecat";
 	id: string;
 };
 
@@ -43,6 +44,9 @@ export const customerProducts = pgTable(
 			"charge_automatically",
 		),
 		subscription_ids: text("subscription_ids").array(),
+		external_sub_ids: jsonb("external_sub_ids")
+			.array()
+			.$type<ExternalSubID[]>(),
 		scheduled_ids: text("scheduled_ids").array(),
 		quantity: numeric({ mode: "number" }).default(1),
 

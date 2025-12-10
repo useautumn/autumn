@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { ProcessorType } from "./genEnums";
 
 /**
  * Customer-level Vercel processor
@@ -94,6 +95,23 @@ export const ProcessorConfigsSchema = z.object({
 	vercel: VercelProcessorConfigSchema.optional(),
 });
 
+/**
+ * Organization-level RevenueCat processor configuration
+ * Stores API key and webhook URL
+ */
+export const RevenueCatProcessorConfigSchema = z.object({
+	api_key: z.string(),
+	sandbox_api_key: z.string().optional(),
+	webhook_secret: z.string(),
+	sandbox_webhook_secret: z.string().optional(),
+});
+
+export const ExternalSubIDSchema = z.object({
+	type: z.enum(ProcessorType),
+	id: z.string(),
+});
+
+export type ExternalSubID = z.infer<typeof ExternalSubIDSchema>;
 // Export inferred types for backward compatibility
 export type VercelProcessor = z.infer<typeof VercelProcessorSchema>;
 export type ExternalProcessors = z.infer<typeof ExternalProcessorsSchema>;
