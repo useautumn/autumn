@@ -31,6 +31,8 @@ export function CustomerListTable({
 		isFetching: isFullCustomersFetching,
 	} = useQuery<{ fullCustomers: FullCustomer[] }>({
 		queryKey: ["full_customers"],
+		// Placeholder queryFn - actual fetching is done by useFullCusSearchQuery
+		queryFn: () => Promise.resolve({ fullCustomers: [] }),
 		// Don't fetch - just subscribe to existing data from useFullCusSearchQuery
 		enabled: false,
 	});

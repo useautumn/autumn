@@ -32,8 +32,6 @@ export function FeatureUsageCell({
 		featureId,
 	});
 
-	console.log("initialAllowance", initialAllowance);
-
 	if (isLoading) {
 		return (
 			<div className="flex flex-col gap-1 w-full min-w-20 overflow-hidden">
