@@ -21,16 +21,20 @@ export const handleListCustomers = createRoute({
 		// Note: expand and statuses are not exposed in the query params for list endpoint
 		const statuses: any[] = [];
 
-		const customers = await CusBatchService.getPage({
-			ctx,
-			limit,
-			offset,
-			statuses,
-		});
+		const [customers, totalAvailable] = await Promise.all([
+			CusBatchService.getPage({
+				ctx,
+				limit,
+				offset,
+				statuses,
+			}),
+			CusBatchService.getTotalCount({ ctx }),
+		]);
 
 		return c.json({
 			list: customers,
 			total: customers.length,
+			total_available: totalAvailable,
 			limit,
 			offset,
 		});
