@@ -25,8 +25,6 @@ export function FeatureBalanceDisplay({
 	const displayBalance = balance < 0 ? 0 : balance;
 	const overage = balance < 0 ? balance * -1 : 0;
 
-	console.log("allowance", allowance);
-
 	const getUsedLabel = () => {
 		if (allowance > 0) return "overage";
 		if (usageType === FeatureUsageType.Continuous) return "in use";
@@ -39,7 +37,7 @@ export function FeatureBalanceDisplay({
 				<>
 					<span className="text-t1">{formatNumber(displayBalance)}</span>
 					{allowance > 0 && (
-						<span className="text-t4 text-xs">/{formatNumber(allowance)}</span>
+						<span className="text-t4">/{formatNumber(allowance)}</span>
 					)}
 				</>
 			)}

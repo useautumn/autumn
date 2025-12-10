@@ -34,8 +34,8 @@ export function FeatureUsageCell({
 	if (isLoading) {
 		return (
 			<div className="flex flex-col gap-1 w-full min-w-20 overflow-hidden">
-				<div className="h-3 w-12 bg-secondary animate-pulse rounded" />
-				<div className="h-1 w-full bg-secondary animate-pulse rounded-full animate-in fade-in-0 slide-in-from-left duration-1000" />
+				<div className="h-2 w-12 bg-secondary animate-pulse rounded mb-1" />
+				<div className="h-1 w-full bg-secondary animate-pulse rounded-full animate-in slide-in-from-left ease-out duration-1000" />
 			</div>
 		);
 	}
