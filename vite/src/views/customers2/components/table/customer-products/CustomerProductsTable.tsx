@@ -7,7 +7,6 @@ import { useLocation, useNavigate } from "react-router";
 import { AdminHover } from "@/components/general/AdminHover";
 import { Table } from "@/components/general/table";
 import { Button } from "@/components/v2/buttons/Button";
-import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { getCusProductHoverTexts } from "@/views/admin/adminUtils";
@@ -37,7 +36,6 @@ export function CustomerProductsTable() {
 	const [selectedProduct, setSelectedProduct] = useState<FullCusProduct | null>(
 		null,
 	);
-	const storeProduct = useProductStore((s) => s.product);
 	const selectedItemId = useSheetStore((s) => s.itemId);
 
 	const { setEntityId } = useEntity();
@@ -166,12 +164,6 @@ export function CustomerProductsTable() {
 	};
 
 	const handleRowClick = (cusProduct: FullCusProduct) => {
-		if (storeProduct?.id) {
-			// If there is a product being customized, don't open another sheet
-			//user must close manually -- could show some notification to user here
-			return;
-		}
-
 		setSheet({
 			type: "subscription-detail",
 			itemId: cusProduct.id,

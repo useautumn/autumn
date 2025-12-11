@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
-import { useHasChanges, useProductStore } from "@/hooks/stores/useProductStore";
+import { useHasChanges } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { pushPage } from "@/utils/genUtils";
@@ -31,8 +31,9 @@ export default function CustomerView2() {
 
 	const sheetType = useSheetStore((s) => s.type);
 	const closeProductSheet = useSheetStore((s) => s.closeSheet);
+	const sheetData = useSheetStore((s) => s.data);
 	const hasChanges = useHasChanges();
-	const storeProduct = useProductStore((s) => s.product);
+	const hasCustomizedProduct = !!sheetData?.customizedProduct;
 
 	// useSheetCleanup();
 
@@ -111,7 +112,7 @@ export default function CustomerView2() {
 									className="fixed inset-0 bg-white/60 dark:bg-black/60"
 									style={{ zIndex: 40 }}
 									onMouseDown={() => {
-										!hasChanges && !storeProduct?.id && closeProductSheet();
+										!hasCustomizedProduct && closeProductSheet();
 									}}
 								/>
 							)}
