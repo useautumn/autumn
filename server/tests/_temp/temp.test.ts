@@ -1,5 +1,5 @@
-import { beforeAll, describe, test } from "bun:test";
-import { ApiVersion, BillingInterval, FreeTrialDuration } from "@autumn/shared";
+import { beforeAll, describe } from "bun:test";
+import { ApiVersion, BillingInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
@@ -7,11 +7,7 @@ import chalk from "chalk";
 import { addWeeks } from "date-fns";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils";
-import {
-	constructArrearItem,
-	constructFeatureItem,
-	constructPrepaidItem,
-} from "@/utils/scriptUtils/constructItem.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import {
 	constructProduct,
 	constructRawProduct,
