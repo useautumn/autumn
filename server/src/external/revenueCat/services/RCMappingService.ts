@@ -1,8 +1,39 @@
 import { type AppEnv, type RevcatMapping, revcatMappings } from "@shared/index";
-import { and, eq } from "drizzle-orm";
+import { and, arrayContains, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 
 export class RCMappingService {
+	/**
+	 * Find the Autumn product ID that maps to a given RevenueCat product ID
+	 */
+	static async getAutumnProductId({
+		db,
+		orgId,
+		env,
+		revcatProductId,
+	}: {
+		db: DrizzleCli;
+		orgId: string;
+		env: AppEnv;
+		revcatProductId: string;
+	}): Promise<string | null> {
+		const [mapping] = await db
+			.select({ autumn_product_id: revcatMappings.autumn_product_id })
+			.from(revcatMappings)
+			.where(
+				and(
+					eq(revcatMappings.org_id, orgId),
+					eq(revcatMappings.env, env),
+					arrayContains(revcatMappings.revenuecat_product_ids, [
+						revcatProductId,
+					]),
+				),
+			)
+			.limit(1);
+
+		return mapping?.autumn_product_id ?? null;
+	}
+
 	static async getAll({
 		db,
 		orgId,

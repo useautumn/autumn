@@ -9,6 +9,7 @@ import {
 import type { DrizzleCli } from "@/db/initDrizzle";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
+import { RCMappingService } from "@/external/revenueCat/services/RCMappingService";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct";
 import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
@@ -32,12 +33,27 @@ export const handleNonRenewingPurchase = async ({
 	logger: Logger;
 	features: Feature[];
 }) => {
+	// Look up Autumn product ID from RevenueCat mapping
+	const autumnProductId = await RCMappingService.getAutumnProductId({
+		db,
+		orgId: org.id,
+		env,
+		revcatProductId: event.product_id,
+	});
+
+	if (!autumnProductId) {
+		logger.error("No Autumn product mapped to RevenueCat product", {
+			revcatProductId: event.product_id,
+		});
+		return;
+	}
+
 	const [product, customer] = await Promise.all([
 		ProductService.getFull({
 			db,
 			orgId: org.id,
 			env,
-			idOrInternalId: event.product_id,
+			idOrInternalId: autumnProductId,
 		}),
 		CusService.getFull({
 			db,
@@ -49,14 +65,14 @@ export const handleNonRenewingPurchase = async ({
 
 	if (!product) {
 		logger.error("Product not found", {
-			productId: event.product_id,
+			productId: autumnProductId,
 		});
 		return;
 	}
 
 	if (!oneOffOrAddOn({ product, prices: product.prices })) {
 		logger.error("Non-renewing purchase is not a one-off or add-on", {
-			productId: event.product_id,
+			productId: autumnProductId,
 		});
 		return;
 	}
