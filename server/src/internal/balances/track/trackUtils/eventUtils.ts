@@ -47,8 +47,11 @@ export const constructEvent = (params: {
 		event_name: eventInfo.event_name,
 		created_at: timestampDate.getTime(),
 		timestamp: timestampDate,
-		value: eventInfo.value ?? 1,
-		properties: eventInfo.properties ?? {},
+		value: eventInfo.properties?.value ?? eventInfo.value ?? 1,
+		properties: {
+			...eventInfo.properties,
+			value: undefined,
+		},
 		idempotency_key: eventInfo.idempotency_key ?? null,
 		set_usage: false,
 	} satisfies EventInsert;

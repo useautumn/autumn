@@ -113,8 +113,11 @@ const createAndInsertEvent = async ({
 		idempotency_key: idempotencyKey,
 		customer_id: customer.id,
 		event_name: featureId,
-		properties,
-		value,
+		properties: {
+			...properties,
+			value: undefined,
+		},
+		value: properties?.value ?? value ?? 1,
 		set_usage: set_usage || false,
 		entity_id: req.body.entity_id,
 		internal_entity_id: internalEntityId,
