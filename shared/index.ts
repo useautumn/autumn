@@ -94,6 +94,9 @@ export * from "./models/genModels/processorSchemas.js";
 // Idempotency Models
 
 // Insights Models
+
+// Insights Models
+export * from "./api/analytics/aggregation/analyticsAggregationBody.js";
 export * from "./api/analytics/insights/query/insightsQueryBody.js";
 
 // Attach Function Response
