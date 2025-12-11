@@ -48,7 +48,9 @@ export const getAttachScenario = ({
 				return AttachScenario.Active;
 			}
 		}
-	} else if (fullProduct.is_add_on) {
+	}
+
+	if (fullProduct.is_add_on) {
 		return AttachScenario.New;
 	}
 
