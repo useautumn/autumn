@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { analyticsRouterV2 } from "@/internal/analytics/analyticsRouterV2.js";
 import { insightsRouter } from "@/internal/analytics/insightsRouter.js";
 import { analyticsMiddleware } from "../honoMiddlewares/analyticsMiddleware.js";
 import { apiVersionMiddleware } from "../honoMiddlewares/apiVersionMiddleware.js";
@@ -54,3 +55,4 @@ apiRouter.route("/organization", honoOrgRouter);
 apiRouter.route("/referrals", referralRouter);
 apiRouter.route("/redemptions", redemptionRouter);
 apiRouter.route("/insights", insightsRouter);
+apiRouter.route("/query", analyticsRouterV2);
