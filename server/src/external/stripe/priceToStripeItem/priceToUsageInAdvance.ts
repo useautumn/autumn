@@ -57,7 +57,8 @@ export const priceToUsageInAdvance = ({
 }) => {
 	const config = price.config as UsagePriceConfig;
 	const optionsQuantity = options?.quantity;
-	let finalQuantity = optionsQuantity;
+	// Default to 0 if quantity is nullish
+	let finalQuantity = optionsQuantity ?? 0;
 
 	// 1. If adjustable quantity is set, use that, else if quantity is undefined, adjustable is true, else false
 	const adjustable = notNullish(options?.adjustable_quantity)
