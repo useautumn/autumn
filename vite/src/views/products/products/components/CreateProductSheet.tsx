@@ -46,12 +46,8 @@ function CreateProductSheet({
 	const handleCreateClicked = async () => {
 		const productName = product.name?.trim() || "";
 
-		if (!/^[a-zA-Z0-9 _-]+$/.test(productName)) {
-			toast.error(
-				!productName
-					? "Plan name is required"
-					: "Plan name can only contain alphanumeric characters, dashes (-), and underscores (_)",
-			);
+		if (!productName) {
+			toast.error("Plan name is required");
 			return;
 		}
 
