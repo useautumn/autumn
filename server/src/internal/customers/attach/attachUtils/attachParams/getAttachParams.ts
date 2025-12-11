@@ -74,6 +74,8 @@ export const getAttachParams = async ({
 
 		// Others
 		apiVersion: ctx.apiVersion.value,
+
+		newBillingSubscription: attachBody.new_billing_subscription || false,
 	};
 
 	return {
