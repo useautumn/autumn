@@ -6,7 +6,7 @@ import type {
 	WebhookNonRenewingPurchase,
 	WebhookRenewal,
 } from "@puzzmo/revenue-cat-webhook-types";
-import type { AppEnv } from "@shared/models/genModels/genEnums";
+import { AppEnv } from "@shared/models/genModels/genEnums";
 import { type Context, Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv";
 import { handleCancellation } from "./handlers/handleCancellation";
@@ -28,12 +28,22 @@ rcWebhookRouter.post(
 	async (c: Context<HonoEnv>) => {
 		const ctx = c.get("ctx");
 		const { db, logger, org, features } = ctx;
-		const { orgId, env } = c.req.param() as { orgId: string; env: AppEnv };
+		const { env } = c.req.param() as { orgId: string; env: AppEnv };
+		const Authorization = c.req.header("Authorization");
 		const body = (await c.req.json()) as Webhook;
 
-		logger.info("RevenueCat webhook received", {
-			body,
-		});
+		const orgSecretKey =
+			env === AppEnv.Sandbox
+				? org.processor_configs?.revenuecat?.sandbox_webhook_secret
+				: org.processor_configs?.revenuecat?.webhook_secret;
+
+		if (Authorization !== orgSecretKey) {
+			logger.error("Invalid authorization for RevenueCat webhook", {
+				Authorization,
+				orgSecretKey,
+			});
+			return c.json({ error: "Unauthorized" }, 401);
+		}
 
 		switch (body.event.type) {
 			case "INITIAL_PURCHASE":

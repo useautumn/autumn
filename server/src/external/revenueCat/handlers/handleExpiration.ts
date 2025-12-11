@@ -5,6 +5,7 @@ import {
 	ErrCode,
 	type Feature,
 	type Organization,
+	ProcessorType,
 	RecaseError,
 } from "@shared/index";
 import type { DrizzleCli } from "@/db/initDrizzle";
@@ -94,6 +95,7 @@ export const handleExpiration = async ({
 		product,
 		cusProducts,
 		internalEntityId: undefined,
+		processorType: ProcessorType.RevenueCat,
 	});
 
 	if (!curSameProduct) {

@@ -97,6 +97,7 @@ export const handleInitialPurchase = async ({
 		product,
 		cusProducts,
 		internalEntityId: undefined,
+		processorType: ProcessorType.RevenueCat,
 	});
 
 	// If same product already exists, skip
