@@ -2,9 +2,11 @@ import type { WebhookNonRenewingPurchase } from "@puzzmo/revenue-cat-webhook-typ
 import {
 	type AppEnv,
 	AttachScenario,
+	ErrCode,
 	type Feature,
 	type Organization,
 	ProcessorType,
+	RecaseError,
 } from "@shared/index";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import { createStripeCli } from "@/external/connect/createStripeCli";
@@ -88,6 +90,16 @@ export const handleNonRenewingPurchase = async ({
 		db,
 		internalCustomerId: customer.internal_id,
 	});
+
+	if (
+		cusProducts.some((cp) => cp.processor?.type !== ProcessorType.RevenueCat)
+	) {
+		throw new RecaseError({
+			message: "Customer already has a product from a different processor.",
+			code: ErrCode.CustomerAlreadyHasProduct,
+			statusCode: 400,
+		});
+	}
 
 	const now = Date.now();
 	const scenario = AttachScenario.New;
