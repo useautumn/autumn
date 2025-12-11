@@ -4,6 +4,7 @@ import {
 	CusProductStatus,
 	ErrCode,
 	type Organization,
+	ProcessorType,
 	RecaseError,
 } from "@shared/index";
 import type { DrizzleCli } from "@/db/initDrizzle";
@@ -79,8 +80,11 @@ export const handleUncancellation = async ({
 	});
 
 	const cusProduct = cusProducts.find(
-		(cp) => cp.internal_product_id === product.internal_id,
+		(cp) =>
+			cp.internal_product_id === product.internal_id &&
+			cp.processor?.type === ProcessorType.RevenueCat,
 	);
+
 	if (cusProduct) {
 		await CusProductService.update({
 			db,

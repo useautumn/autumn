@@ -4,6 +4,7 @@ import {
 	ErrCode,
 	type Feature,
 	type Organization,
+	ProcessorType,
 	RecaseError,
 } from "@shared/index";
 import type { DrizzleCli } from "@/db/initDrizzle";
@@ -21,7 +22,6 @@ export const handleCancellation = async ({
 	org,
 	env,
 	logger,
-	features,
 }: {
 	event: WebhookCancellation;
 	db: DrizzleCli;
@@ -87,6 +87,7 @@ export const handleCancellation = async ({
 	const { curSameProduct } = getExistingCusProducts({
 		product,
 		cusProducts,
+		processorType: ProcessorType.RevenueCat,
 		internalEntityId: undefined,
 	});
 

@@ -97,6 +97,7 @@ export const handleRenewal = async ({
 		product,
 		cusProducts,
 		internalEntityId: undefined,
+		processorType: ProcessorType.RevenueCat,
 	});
 
 	const now = Date.now();
