@@ -73,3 +73,84 @@ export type RevCatWebhookPayload = {
 	event: RevCatEvent;
 	api_version: string;
 };
+
+export type RevenueCatOfferings = {
+	object: "list";
+	items: RevenueCatOffering[];
+	next_page: string | null;
+	url: string;
+};
+
+export type RevenueCatOffering = {
+	object: "offering";
+	id: string;
+	lookup_key: string | null;
+	display_name: string;
+	is_current: boolean;
+	created_at: number;
+	project_id: string;
+	metadata: {
+		[key: string]: string;
+	};
+	packages: RevenueCatOfferingPackageList;
+};
+
+export type RevenueCatOfferingPackageList = {
+	object: "list";
+	items: RevenueCatOfferingPackage[];
+	next_page: string | null;
+	url: string;
+};
+
+export type RevenueCatOfferingPackage = {
+	object: "package";
+	id: string;
+	lookup_key: string | null;
+	display_name: string;
+	position: number;
+	created_at: number;
+	products: RevenueCatOfferingProductList;
+};
+
+export type RevenueCatOfferingProductList = {
+	object: "list";
+	items: RevenueCatOfferingProductItem[];
+	next_page: string | null;
+	url: string;
+};
+
+export type RevenueCatOfferingProductItem = {
+	product: Record<string, unknown>;
+	eligibility_criteria: string;
+};
+
+// RevenueCat Products API Types
+
+export type RevenueCatProductSubscription = {
+	duration: string;
+	grace_period_duration?: string;
+	trial_duration?: string;
+};
+
+export type RevenueCatProductOneTime = {
+	is_consumable: boolean;
+};
+
+export type RevenueCatProduct = {
+	object: "product";
+	id: string;
+	store_identifier: string;
+	type: "subscription" | "one_time";
+	subscription?: RevenueCatProductSubscription;
+	one_time?: RevenueCatProductOneTime;
+	created_at: number;
+	app_id: string;
+	display_name: string;
+};
+
+export type RevenueCatProductsResponse = {
+	object: "list";
+	items: RevenueCatProduct[];
+	next_page: string | null;
+	url: string;
+};
