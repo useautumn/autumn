@@ -96,7 +96,7 @@ export * from "./models/genModels/processorSchemas.js";
 // Insights Models
 
 // Insights Models
-export * from "./api/analytics/aggregation/analyticsAggregationBody.js";
+export * from "./api/analytics/aggregation/analyticsAggregationSchema.js";
 export * from "./api/analytics/insights/query/insightsQueryBody.js";
 
 // Attach Function Response

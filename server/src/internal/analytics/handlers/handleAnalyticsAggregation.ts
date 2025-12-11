@@ -15,7 +15,7 @@ export const handleAnalyticsAggregation = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org, env } = ctx;
-		const { customer_id, feature_id, group_by, range, bucket_size } =
+		const { customer_id, feature_id, group_by, range, bin_size, custom_range } =
 			c.req.valid("json");
 
 		if (!customer_id || !feature_id) {
@@ -57,6 +57,8 @@ export const handleAnalyticsAggregation = createRoute({
 				no_count: true,
 				customer,
 				group_by,
+				bin_size,
+				custom_range,
 			},
 		});
 
@@ -72,9 +74,55 @@ export const handleAnalyticsAggregation = createRoute({
 			event.period = parseInt(format(new Date(event.period), "T"));
 		});
 
-		const usageList = events.data.filter(
+		let usageList = events.data.filter(
 			(event: any) => event.period <= Date.now(),
 		);
+
+		if (group_by) {
+			const allGroupValues = new Set<string>();
+			const allFeatureNames = new Set<string>();
+			for (const row of usageList) {
+				const { period, [group_by]: groupValue, ...metrics } = row;
+				if (groupValue != null && groupValue !== "") {
+					allGroupValues.add(groupValue);
+				}
+				for (const featureName of Object.keys(metrics)) {
+					allFeatureNames.add(featureName);
+				}
+			}
+
+			const grouped = new Map<number, Record<string, any>>();
+			for (const row of usageList) {
+				const { period, [group_by]: groupValue, ...metrics } = row;
+				if (groupValue == null || groupValue === "") continue;
+
+				if (!grouped.has(period)) {
+					grouped.set(period, { period });
+				}
+				const periodData = grouped.get(period)!;
+				for (const [featureName, value] of Object.entries(metrics)) {
+					if (!periodData[featureName]) {
+						periodData[featureName] = {};
+					}
+					periodData[featureName][groupValue] = value;
+				}
+			}
+
+			for (const periodData of grouped.values()) {
+				for (const featureName of allFeatureNames) {
+					if (!periodData[featureName]) {
+						periodData[featureName] = {};
+					}
+					for (const groupValue of allGroupValues) {
+						if (periodData[featureName][groupValue] === undefined) {
+							periodData[featureName][groupValue] = 0;
+						}
+					}
+				}
+			}
+
+			usageList = Array.from(grouped.values());
+		}
 
 		return c.json({
 			list: usageList,
