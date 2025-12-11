@@ -10,6 +10,7 @@ import {
 	ApiProductItemSchema,
 } from "../../../models.js";
 import { ApiEntityWithMeta, entitiesOpenApi } from "../entitiesOpenApi.js";
+import { analyticsOpenApi } from "./analyticsOpenApi.js";
 import { coreOpenApi } from "./coreOpenApi.js";
 import { ApiCustomerWithMeta, customersOpenApi } from "./customersOpenApi.js";
 import { ApiFeatureWithMeta, featuresOpenApi } from "./featuresOpenApi.js";
@@ -70,6 +71,7 @@ const OPENAPI_1_2_0 = createDocument(
 			...coreOpenApi,
 			...customersOpenApi,
 			...entitiesOpenApi,
+			...analyticsOpenApi,
 		},
 	},
 	{

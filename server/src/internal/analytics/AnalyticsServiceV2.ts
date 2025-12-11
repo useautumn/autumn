@@ -25,17 +25,23 @@ export class AnalyticsServiceV2 {
 			aggregateAll?: boolean;
 			customer?: FullCustomer;
 			group_by?: string;
+			bin_size?: "day" | "hour";
+			custom_range?: { start: number; end: number };
 		};
 	}) {
 		const { clickhouseClient, org, env, db } = ctx;
 
 		const intervalType: RangeEnum = params.interval;
 
-		const isBillingCycle = intervalType === "1bc" || intervalType === "3bc";
+		const useCustomDateQuery =
+			intervalType === "1bc" || intervalType === "3bc" || !!params.custom_range;
 
-		// Skip billing cycle calculation if aggregating all customers
+		// Skip billing cycle calculation if aggregating all customers or using custom_range
 		const getBCResults =
-			isBillingCycle && !params.aggregateAll && params.customer
+			useCustomDateQuery &&
+			!params.aggregateAll &&
+			params.customer &&
+			!params.custom_range
 				? ((await getBillingCycleStartDate(
 						params.customer,
 						db,
@@ -124,20 +130,36 @@ order by dr.period${groupBy.orderBy};
 			"3bc": (getBCResults?.gap ?? 0) + 1,
 		};
 
+		// Calculate days and end_date for custom_range
+		const customRangeDays = params.custom_range
+			? Math.ceil(
+					(params.custom_range.end - params.custom_range.start) /
+						(1000 * 60 * 60 * 24),
+				) + 1
+			: undefined;
+
+		const customRangeEndDate = params.custom_range
+			? new Date(params.custom_range.end).toISOString().split(".")[0]
+			: undefined;
+
 		const queryParams = {
 			org_id: org?.id,
 			env: env,
 			customer_id: params.customer_id,
-			days: intervalTypeToDaysMap[
-				intervalType as keyof typeof intervalTypeToDaysMap
-			],
-			bin_size: intervalType === "24h" ? "hour" : "day",
-			end_date: isBillingCycle ? getBCResults?.endDate : undefined,
+			days:
+				customRangeDays ??
+				intervalTypeToDaysMap[
+					intervalType as keyof typeof intervalTypeToDaysMap
+				],
+			bin_size: params.bin_size ?? (intervalType === "24h" ? "hour" : "day"),
+			end_date: customRangeEndDate ?? getBCResults?.endDate,
 		};
 
-		// Use regular query for aggregateAll or when no billing cycle data is available
+		// Use date_range_bc_view query for billing cycles or custom ranges
 		const queryToUse =
-			isBillingCycle && !params.aggregateAll && getBCResults?.startDate
+			useCustomDateQuery &&
+			!params.aggregateAll &&
+			(getBCResults?.startDate || params.custom_range)
 				? queryBillingCycle
 				: query;
 
