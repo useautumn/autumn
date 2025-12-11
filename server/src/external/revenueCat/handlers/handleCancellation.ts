@@ -84,6 +84,16 @@ export const handleCancellation = async ({
 		internalCustomerId: customer.internal_id,
 	});
 
+	if (
+		cusProducts.some((cp) => cp.processor?.type !== ProcessorType.RevenueCat)
+	) {
+		throw new RecaseError({
+			message: "Customer already has a product from a different processor.",
+			code: ErrCode.CustomerAlreadyHasProduct,
+			statusCode: 400,
+		});
+	}
+
 	const { curSameProduct } = getExistingCusProducts({
 		product,
 		cusProducts,
