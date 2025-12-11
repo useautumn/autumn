@@ -16,18 +16,6 @@ const CONFIG = {
 	// Default number of events to generate
 	defaultEventCount: 100,
 
-	// Array of event names to randomly choose from
-	eventNames: [
-		"api_call",
-		"page_view",
-		"file_upload",
-		"user_login",
-		"data_export",
-		"report_generated",
-		"email_sent",
-		"webhook_triggered",
-	],
-
 	// Time range configuration (in days)
 	// Events will be randomly distributed within this range from now
 	timeRangeDays: 30,
@@ -51,6 +39,7 @@ interface CliArgs {
 	count?: number;
 	env?: AppEnv;
 	org_id?: string;
+	feature_ids?: string;
 }
 
 // ============================================================================
@@ -72,6 +61,8 @@ function parseArgs(): CliArgs {
 				parsed.env = value as AppEnv;
 			} else if (key === "org_id") {
 				parsed.org_id = value;
+			} else if (key === "feature_ids") {
+				parsed.feature_ids = value;
 			}
 		}
 	}
@@ -80,13 +71,29 @@ function parseArgs(): CliArgs {
 		console.error(chalk.red("❌ Error: --customer_id is required"));
 		console.log(
 			chalk.yellow(
-				"\nUsage: bun run scripts/seed/seedEvents.ts --customer_id=<id> [--count=<number>] [--env=<sandbox|live>] [--org_id=<id>]",
+				"\nUsage: bun run scripts/seed/seedEvents.ts --customer_id=<id> --feature_ids=<id1,id2,id3> [--count=<number>] [--env=<sandbox|live>] [--org_id=<id>]",
 			),
 		);
 		console.log(chalk.gray("\nExample:"));
 		console.log(
 			chalk.gray(
-				"  bun run scripts/seed/seedEvents.ts --customer_id=cus_123 --count=50 --env=sandbox",
+				"  bun run scripts/seed/seedEvents.ts --customer_id=cus_123 --feature_ids=api_call,page_view --count=50 --env=sandbox",
+			),
+		);
+		process.exit(1);
+	}
+
+	if (!parsed.feature_ids) {
+		console.error(chalk.red("❌ Error: --feature_ids is required"));
+		console.log(
+			chalk.yellow(
+				"\nUsage: bun run scripts/seed/seedEvents.ts --customer_id=<id> --feature_ids=<id1,id2,id3> [--count=<number>] [--env=<sandbox|live>] [--org_id=<id>]",
+			),
+		);
+		console.log(chalk.gray("\nExample:"));
+		console.log(
+			chalk.gray(
+				"  bun run scripts/seed/seedEvents.ts --customer_id=cus_123 --feature_ids=api_call,page_view --count=50 --env=sandbox",
 			),
 		);
 		process.exit(1);
@@ -163,16 +170,18 @@ function generateEvents({
 	count,
 	customer,
 	env,
+	featureIds,
 }: {
 	count: number;
 	customer: Awaited<ReturnType<typeof validateCustomer>>;
 	env: AppEnv;
+	featureIds: string[];
 }): EventInsert[] {
 	const events: EventInsert[] = [];
 
 	for (let i = 0; i < count; i++) {
 		const eventName =
-			CONFIG.eventNames[Math.floor(Math.random() * CONFIG.eventNames.length)];
+			featureIds[Math.floor(Math.random() * featureIds.length)];
 		const timestamp = generateRandomTimestamp({
 			daysBack: CONFIG.timeRangeDays,
 		});
@@ -225,11 +234,13 @@ async function main() {
 	const args = parseArgs();
 	const eventCount = args.count || CONFIG.defaultEventCount;
 	const env = args.env || CONFIG.defaultEnv;
+	const featureIds = args.feature_ids!.split(",").map((id) => id.trim());
 
 	console.log(chalk.cyan("Configuration:"));
 	console.log(chalk.gray(`  Customer ID: ${args.customer_id}`));
 	console.log(chalk.gray(`  Event Count: ${eventCount}`));
 	console.log(chalk.gray(`  Environment: ${env}`));
+	console.log(chalk.gray(`  Feature IDs: ${featureIds.join(", ")}`));
 	if (args.org_id) {
 		console.log(chalk.gray(`  Organization ID: ${args.org_id}`));
 	}
@@ -260,7 +271,12 @@ async function main() {
 
 		// Generate events
 		console.log(chalk.cyan(`Generating ${eventCount} events...`));
-		const events = generateEvents({ count: eventCount, customer, env });
+		const events = generateEvents({
+			count: eventCount,
+			customer,
+			env,
+			featureIds,
+		});
 
 		console.log(chalk.green(`✅ Generated ${events.length} events`));
 		console.log(
