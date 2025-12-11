@@ -1,4 +1,5 @@
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
+import { useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Button } from "@/components/v2/buttons/Button";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
@@ -39,7 +40,13 @@ export const CustomerPlanEditorBar = () => {
 
 	const changesMade = hasChanges || differentVersion;
 
-	//if no hasChanges, and version is the current cusProduct version, then return null
+	// Reset product store to default when component unmounts
+	// useEffect(() => {
+	// 	return () => {
+	// 		setProduct(DEFAULT_PRODUCT);
+	// 		setBaseProduct(null);
+	// 	};
+	// }, [setProduct, setBaseProduct]);
 
 	const returnToCustomer = () => {
 		// Open the appropriate sheet based on whether we have a subscription ID
@@ -47,13 +54,15 @@ export const CustomerPlanEditorBar = () => {
 			// No subscription ID means we're attaching a new product
 			setSheet({
 				type: "attach-product",
-				itemId: product.id, // Pass the product ID being customized
+				itemId: product.id,
+				data: changesMade ? { customizedProduct: product } : null,
 			});
 		} else {
 			// We have a subscription ID, so we're editing an existing subscription
 			setSheet({
 				type: changesMade ? "subscription-update" : "subscription-detail",
 				itemId: queryStates.id,
+				data: changesMade ? { customizedProduct: product } : null,
 			});
 		}
 
