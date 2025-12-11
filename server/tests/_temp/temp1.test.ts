@@ -68,22 +68,22 @@ describe(`${chalk.yellowBright("temp1: Testing pro product")}`, () => {
 
 		await autumn.entities.create(customerId, [entity]);
 
-		await autumn.attach({
-			customer_id: customerId,
-			product_id: pro.id,
-			entity_id: entity.id,
-		});
+		// await autumn.attach({
+		// 	customer_id: customerId,
+		// 	product_id: pro.id,
+		// 	entity_id: entity.id,
+		// });
 
-		await autumn.attach({
-			customer_id: customerId,
-			product_id: free.id,
-			entity_id: entity.id,
-		});
+		// await autumn.attach({
+		// 	customer_id: customerId,
+		// 	product_id: free.id,
+		// 	entity_id: entity.id,
+		// });
 
-		await autumn.attach({
-			customer_id: customerId,
-			product_id: premium.id,
-			entity_id: entity.id,
-		});
+		// await autumn.attach({
+		// 	customer_id: customerId,
+		// 	product_id: premium.id,
+		// 	entity_id: entity.id,
+		// });
 	});
 });
