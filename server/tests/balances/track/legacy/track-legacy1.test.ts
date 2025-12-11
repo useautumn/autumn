@@ -9,6 +9,7 @@ import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { getCustomerEvents } from "../../testBalanceUtils.js";
 
 const messagesFeature = constructFeatureItem({
 	featureId: TestFeature.Messages,
@@ -76,5 +77,33 @@ describe(`${chalk.yellowBright("track-legacy1: test legacy properties format wit
 
 		expect(balance).toBe(expectedBalance);
 		expect(usage).toBe(deductValue);
+	});
+
+	test("should remove properties.value after migration", async () => {
+		const deductValue = 10.5;
+		const idempotencyKey = "test-legacy-properties-migration";
+
+		// Send event with legacy format
+		await autumnV1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			idempotency_key: idempotencyKey,
+			properties: {
+				value: deductValue,
+				custom_field: "test_data",
+			},
+		});
+
+		// Retrieve events to verify properties.value was removed
+		const events = await getCustomerEvents({ customerId });
+		const trackedEvent = events.find((e) => e.idempotency_key === idempotencyKey);
+
+		expect(trackedEvent).toBeDefined();
+		expect(trackedEvent?.value).toBe(deductValue);
+		expect(trackedEvent?.properties).toBeDefined();
+		// Verify properties.value was removed after migration
+		expect(trackedEvent?.properties?.value).toBeUndefined();
+		// Verify other properties are preserved
+		expect(trackedEvent?.properties?.custom_field).toBe("test_data");
 	});
 });

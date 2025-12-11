@@ -18,6 +18,8 @@ export const handleTrack = createRoute({
 			const parsedValue = Number(body.properties.value);
 			if (!Number.isNaN(parsedValue)) {
 				body.value = parsedValue;
+				// Remove the nested value after migration
+				delete body.properties.value;
 			}
 		}
 
