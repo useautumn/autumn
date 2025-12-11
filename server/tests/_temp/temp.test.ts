@@ -1,5 +1,5 @@
 import { beforeAll, describe, test } from "bun:test";
-import { ApiVersion, BillingInterval } from "@autumn/shared";
+import { ApiVersion, BillingInterval, FreeTrialDuration } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
@@ -33,15 +33,22 @@ const freeProd = constructRawProduct({
 	],
 });
 
-const proProd = constructProduct({
+export const defaultTrialProduct = constructProduct({
 	type: "pro",
-	isDefault: false,
+	forcePaidDefault: true,
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
 			includedUsage: 300,
 		}),
 	],
+
+	freeTrial: {
+		length: 7,
+		duration: FreeTrialDuration.Day,
+		unique_fingerprint: false,
+		card_required: false,
+	},
 });
 
 const entity = {
@@ -73,19 +80,8 @@ describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [freeProd, proProd],
+			products: [freeProd, defaultTrialProduct],
 			prefix: testCase,
 		});
-
-		await autumnV1.attach({
-			customer_id: customerId,
-			product_id: proProd.id,
-		});
-
-		await autumnV1.attach({
-			customer_id: customerId,
-			product_id: freeProd.id,
-		});
-		await autumnV1.entities.create(customerId, [entity]);
 	});
 });
