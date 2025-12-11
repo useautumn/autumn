@@ -93,6 +93,9 @@ export * from "./models/genModels/processorSchemas.js";
 
 // Idempotency Models
 
+// Insights Models
+export * from "./api/analytics/insights/query/insightsQueryBody.js";
+
 // Attach Function Response
 export * from "./models/attachModels/attachFunctionResponse.js";
 export * from "./models/migrationModels/migrationErrorTable.js";
