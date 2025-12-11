@@ -417,6 +417,7 @@ export const toPricecnProduct = async ({
 			freeTrial: product.free_trial,
 			fingerprint: fullCus.fingerprint,
 			internalCustomerId: fullCus.internal_id,
+			internalEntityId: fullCus.entity?.internal_id,
 			multipleAllowed: org.config.multiple_trials,
 			productId: product.id,
 		});
