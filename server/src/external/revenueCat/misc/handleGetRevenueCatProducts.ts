@@ -3,7 +3,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler";
 import type { RevenueCatProductsResponse } from "../revcatTypes";
 
 export type Resp = {
-	products: { id: string; name: string; storeIdentifier: string }[];
+	products: { id: string; name: string }[];
 };
 
 export const handleGetRevenueCatProducts = createRoute({
@@ -38,11 +38,21 @@ export const handleGetRevenueCatProducts = createRoute({
 
 		const data = (await response.json()) as RevenueCatProductsResponse;
 
+		// Group products by store_identifier and combine names
+		const productMap = new Map<string, string[]>();
+		for (const product of data.items) {
+			const existing = productMap.get(product.store_identifier);
+			if (existing) {
+				existing.push(product.display_name);
+			} else {
+				productMap.set(product.store_identifier, [product.display_name]);
+			}
+		}
+
 		return c.json({
-			products: data.items.map((product) => ({
-				id: product.store_identifier,
-				name: product.display_name,
-				storeIdentifier: product.store_identifier,
+			products: Array.from(productMap.entries()).map(([id, names]) => ({
+				id,
+				name: names.join(", "),
 			})),
 		} satisfies Resp);
 	},

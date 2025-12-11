@@ -9,14 +9,15 @@ import {
 } from "@shared/index";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import type { Logger } from "@/external/logtail/logtailUtils";
+import { RCMappingService } from "@/external/revenueCat/services/RCMappingService";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { activateDefaultProduct } from "@/internal/customers/cusProducts/cusProductUtils";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
 import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
-import { isOneOff } from "@/internal/products/productUtils";
 import { ProductService } from "@/internal/products/ProductService";
+import { isOneOff } from "@/internal/products/productUtils";
 
 export const handleExpiration = async ({
 	event,
@@ -37,12 +38,28 @@ export const handleExpiration = async ({
 }) => {
 	const { product_id, original_app_user_id, app_user_id } = event;
 
+	// Look up Autumn product ID from RevenueCat mapping
+	const autumnProductId = await RCMappingService.getAutumnProductId({
+		db,
+		orgId: org.id,
+		env,
+		revcatProductId: product_id,
+	});
+
+	if (!autumnProductId) {
+		throw new RecaseError({
+			message: `No Autumn product mapped to RevenueCat product: ${product_id}`,
+			code: ErrCode.ProductNotFound,
+			statusCode: 404,
+		});
+	}
+
 	const [product, customer] = await Promise.all([
 		ProductService.getFull({
 			db,
 			orgId: org.id,
 			env,
-			idOrInternalId: product_id,
+			idOrInternalId: autumnProductId,
 		}),
 		CusService.getFull({
 			db,

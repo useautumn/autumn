@@ -13,6 +13,7 @@ import {
 import type { DrizzleCli } from "@/db/initDrizzle";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { Logger } from "@/external/logtail/logtailUtils";
+import { RCMappingService } from "@/external/revenueCat/services/RCMappingService";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct";
 import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
@@ -40,12 +41,28 @@ export const handleRenewal = async ({
 	logger: Logger;
 	features: Feature[];
 }) => {
+	// Look up Autumn product ID from RevenueCat mapping
+	const autumnProductId = await RCMappingService.getAutumnProductId({
+		db,
+		orgId: org.id,
+		env,
+		revcatProductId: event.product_id,
+	});
+
+	if (!autumnProductId) {
+		throw new RecaseError({
+			message: `No Autumn product mapped to RevenueCat product: ${event.product_id}`,
+			code: ErrCode.ProductNotFound,
+			statusCode: 404,
+		});
+	}
+
 	const [product, customer] = await Promise.all([
 		ProductService.getFull({
 			db,
 			orgId: org.id,
 			env,
-			idOrInternalId: event.product_id,
+			idOrInternalId: autumnProductId,
 		}),
 		CusService.getFull({
 			db,
