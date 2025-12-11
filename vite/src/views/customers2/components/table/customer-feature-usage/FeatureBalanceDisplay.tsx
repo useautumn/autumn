@@ -9,6 +9,7 @@ export interface FeatureBalanceDisplayProps {
 	usageType?: string;
 	className?: string;
 	initialAllowance: number;
+	compact?: boolean;
 }
 
 /**
@@ -22,6 +23,7 @@ export function FeatureBalanceDisplay({
 	usageType,
 	className,
 	initialAllowance,
+	compact = false,
 }: FeatureBalanceDisplayProps) {
 	const formatNumber = (num: number) => new Intl.NumberFormat().format(num);
 	const displayBalance = balance < 0 ? 0 : balance;
@@ -42,7 +44,11 @@ export function FeatureBalanceDisplay({
 				<>
 					<span className="text-t1">{formatNumber(displayBalance)}</span>
 					{allowance > 0 && (
-						<span className="text-t4">/{formatNumber(allowance)}</span>
+						<span className="text-t4">
+							{compact
+								? `/ ${formatNumber(allowance)}`
+								: `/ ${formatNumber(allowance)} left`}
+						</span>
 					)}
 				</>
 			)}

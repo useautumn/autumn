@@ -63,6 +63,7 @@ export function FeatureUsageCell({
 				shouldShowUsed={shouldShowUsed}
 				usageType={usageType}
 				className="text-tiny"
+				compact={true}
 			/>
 			{allowance > 0 && (
 				<CustomerFeatureUsageBar
