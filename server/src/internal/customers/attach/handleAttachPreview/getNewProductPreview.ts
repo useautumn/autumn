@@ -94,9 +94,14 @@ export const getNewProductPreview = async ({
 	const { org } = attachParams;
 	const newProduct = attachParamsToProduct({ attachParams });
 
-	const { sub: mergeSub, cusProduct: mergeCusProduct } = await getCustomerSub({
+	let { sub: mergeSub, cusProduct: mergeCusProduct } = await getCustomerSub({
 		attachParams,
 	});
+
+	if (attachParams.newBillingSubscription) {
+		mergeSub = undefined;
+		mergeCusProduct = undefined;
+	}
 
 	let trialEnds: number | undefined;
 
