@@ -1,17 +1,86 @@
-import type { FullCustomer, RangeEnum } from "@autumn/shared";
+import type { BinSizeEnum, FullCustomer, RangeEnum } from "@autumn/shared";
 import type { ClickHouseClient } from "@clickhouse/client";
+import { UTCDate } from "@date-fns/utc";
+import { format, startOfDay, startOfHour, sub } from "date-fns";
 import { Decimal } from "decimal.js";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
+import type {
+	ClickHouseResult,
+	DateRangeResult,
+	TimeseriesEventsParams,
+	TotalEventsParams,
+} from "./analyticsTypes.js";
 import {
 	generateEventCountExpressions,
 	getBillingCycleStartDate,
 } from "./analyticsUtils.js";
 
-type ClickHouseResult = {
-	data: Array<Record<string, string | number>>;
-};
-
 export class AnalyticsServiceV2 {
+	private static async calculateDateRange({
+		ctx,
+		params,
+	}: {
+		ctx: RequestContext;
+		params: {
+			interval: RangeEnum;
+			bin_size?: BinSizeEnum;
+			custom_range?: { start: number; end: number };
+			customer?: FullCustomer;
+			aggregateAll?: boolean;
+		};
+	}): Promise<DateRangeResult> {
+		const { db } = ctx;
+		const intervalType = params.interval;
+		const binSize =
+			params.bin_size ?? (intervalType === "24h" ? "hour" : "day");
+
+		if (params.custom_range) {
+			return {
+				startDate: format(
+					new UTCDate(params.custom_range.start),
+					"yyyy-MM-dd'T'HH:mm:ss",
+				),
+				endDate: format(
+					new UTCDate(params.custom_range.end),
+					"yyyy-MM-dd'T'HH:mm:ss",
+				),
+			};
+		}
+
+		const isBillingCycle = intervalType === "1bc" || intervalType === "3bc";
+		const getBCResults =
+			isBillingCycle && !params.aggregateAll && params.customer
+				? ((await getBillingCycleStartDate(
+						params.customer,
+						db,
+						intervalType as "1bc" | "3bc",
+					)) as { startDate: string; endDate: string; gap: number } | null)
+				: null;
+
+		if (getBCResults) {
+			return {
+				startDate: getBCResults.startDate,
+				endDate: getBCResults.endDate,
+			};
+		}
+
+		const intervalTypeToDaysMap = AnalyticsServiceV2.intervalTypeToDaysMap({
+			gap: 0,
+		});
+		const days =
+			intervalTypeToDaysMap[intervalType as keyof typeof intervalTypeToDaysMap];
+
+		const now = new UTCDate();
+		const endDate = format(now, "yyyy-MM-dd'T'HH:mm:ss");
+
+		const startTime = sub(now, { days });
+		const truncatedStartTime =
+			binSize === "day" ? startOfDay(startTime) : startOfHour(startTime);
+		const startDate = format(truncatedStartTime, "yyyy-MM-dd'T'HH:mm:ss");
+
+		return { startDate, endDate };
+	}
+
 	static intervalTypeToDaysMap({
 		gap,
 	}: {
@@ -31,17 +100,7 @@ export class AnalyticsServiceV2 {
 		params,
 	}: {
 		ctx: RequestContext;
-		params: {
-			event_names: string[];
-			interval: RangeEnum;
-			customer_id?: string;
-			no_count?: boolean;
-			aggregateAll?: boolean;
-			customer?: FullCustomer;
-			group_by?: string;
-			bin_size?: "day" | "hour";
-			custom_range?: { start: number; end: number };
-		};
+		params: TimeseriesEventsParams;
 	}) {
 		const { clickhouseClient, org, env, db } = ctx;
 
@@ -144,7 +203,7 @@ order by dr.period${groupBy.orderBy};
 			: undefined;
 
 		const customRangeEndDate = params.custom_range
-			? new Date(params.custom_range.end).toISOString().split(".")[0]
+			? format(new UTCDate(params.custom_range.end), "yyyy-MM-dd'T'HH:mm:ss")
 			: undefined;
 
 		const intervalTypeToDaysMap = AnalyticsServiceV2.intervalTypeToDaysMap({
@@ -204,65 +263,20 @@ order by dr.period${groupBy.orderBy};
 		params,
 	}: {
 		ctx: RequestContext;
-		params: {
-			event_names: string[];
-			customer_id?: string;
-			aggregateAll?: boolean;
-			custom_range?: { start: number; end: number };
-			interval: RangeEnum;
-			customer?: FullCustomer;
-			bin_size?: "day" | "hour";
-		};
+		params: TotalEventsParams;
 	}) {
-		const { clickhouseClient, org, env, db } = ctx;
+		const { clickhouseClient, org, env } = ctx;
 
-		const intervalType: RangeEnum = params.interval;
-		const isBillingCycle = intervalType === "1bc" || intervalType === "3bc";
-		const binSize =
-			params.bin_size ?? (intervalType === "24h" ? "hour" : "day");
-
-		let startDate: string;
-		let endDate: string;
-
-		if (params.custom_range) {
-			startDate = new Date(params.custom_range.start)
-				.toISOString()
-				.split(".")[0];
-			endDate = new Date(params.custom_range.end).toISOString().split(".")[0];
-		} else {
-			const getBCResults =
-				isBillingCycle && !params.aggregateAll && params.customer
-					? ((await getBillingCycleStartDate(
-							params.customer,
-							db,
-							intervalType as "1bc" | "3bc",
-						)) as { startDate: string; endDate: string; gap: number } | null)
-					: null;
-
-			if (getBCResults) {
-				startDate = getBCResults.startDate;
-				endDate = getBCResults.endDate;
-			} else {
-				const intervalTypeToDaysMap = AnalyticsServiceV2.intervalTypeToDaysMap({
-					gap: 0,
-				});
-				const days =
-					intervalTypeToDaysMap[
-						intervalType as keyof typeof intervalTypeToDaysMap
-					];
-
-				const now = new Date();
-				endDate = now.toISOString().split(".")[0];
-
-				const startTime = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-				if (binSize === "day") {
-					startTime.setUTCHours(0, 0, 0, 0);
-				} else if (binSize === "hour") {
-					startTime.setUTCMinutes(0, 0, 0);
-				}
-				startDate = startTime.toISOString().split(".")[0];
-			}
-		}
+		const { startDate, endDate } = await AnalyticsServiceV2.calculateDateRange({
+			ctx,
+			params: {
+				interval: params.interval,
+				bin_size: params.bin_size,
+				custom_range: params.custom_range,
+				customer: params.customer,
+				aggregateAll: params.aggregateAll,
+			},
+		});
 
 		const eventNamesFilter = params.event_names
 			.map((name) => `'${name.replace(/'/g, "''")}'`)
