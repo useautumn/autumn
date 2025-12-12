@@ -11,13 +11,16 @@ export function TableContent({
 	children: React.ReactNode;
 	className?: string;
 }) {
-	const { flexibleTableColumns, enableColumnVisibility } = useTableContext();
+	const { flexibleTableColumns, enableColumnVisibility, table } =
+		useTableContext();
 	const sheetType = useSheetStore((s) => s.type);
+	const rows = table.getRowModel().rows;
 
 	return (
 		<div
 			className={cn(
-				"rounded-lg border bg-interactive-secondary shadow-sm relative z-50 min-w-0",
+				"rounded-lg border shadow-sm relative z-50 min-w-0",
+				!rows.length && "border-dashed",
 				className,
 			)}
 		>

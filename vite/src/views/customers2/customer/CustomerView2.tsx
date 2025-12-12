@@ -15,7 +15,6 @@ import { CustomerFeatureUsageTable } from "../components/table/customer-feature-
 import { CustomerInvoicesTable } from "../components/table/customer-invoices/CustomerInvoicesTable";
 import { CustomerProductsTable } from "../components/table/customer-products/CustomerProductsTable";
 import { CustomerUsageAnalyticsTable } from "../components/table/customer-usage-analytics/CustomerUsageAnalyticsTable";
-import { CustomerActions } from "./CustomerActions";
 import { CustomerBreadcrumbs } from "./CustomerBreadcrumbs2";
 import { CustomerContext } from "./CustomerContext";
 import { CustomerPageDetails } from "./CustomerPageDetails";
@@ -70,7 +69,7 @@ export default function CustomerView2() {
 							<div className="flex flex-col w-full">
 								<div className="flex items-center justify-between w-full gap-4">
 									<CustomerBreadcrumbs />
-									<CustomerActions />
+									{/* <CustomerActions /> */}
 								</div>
 								<div className="flex items-center justify-between w-full pt-2 gap-2">
 									<h3

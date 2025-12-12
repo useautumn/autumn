@@ -27,7 +27,7 @@ export function TableBody() {
 	if (!rows.length) {
 		return (
 			<ShadcnTableBody>
-				<TableRow>
+				<TableRow className="hover:bg-transparent dark:hover:bg-transparent">
 					<TableCell
 						className="h-10 text-center py-0"
 						colSpan={numberOfColumns}
@@ -37,7 +37,7 @@ export function TableBody() {
 								<SmallSpinner />
 							</div>
 						) : (
-							<div className="text-t4 text-center w-full bg-interactive-secondary h-full items-center justify-center flex">
+							<div className="text-t4 text-center w-full h-full items-center justify-center flex">
 								{emptyStateChildren || emptyStateText}
 							</div>
 						)}
@@ -48,7 +48,7 @@ export function TableBody() {
 	}
 
 	return (
-		<ShadcnTableBody className="divide-y">
+		<ShadcnTableBody className="divide-y bg-interactive-secondary">
 			{rows.map((row) => {
 				const isSelected = selectedItemId === (row.original as any).id;
 				return (
