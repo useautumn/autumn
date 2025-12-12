@@ -1,15 +1,16 @@
 import { useState } from "react";
-import LoadingScreen from "@/views/general/LoadingScreen";
+import { toast } from "sonner";
 import { useOrg } from "@/hooks/common/useOrg";
+import { useRevenueCatQuery } from "@/hooks/queries/revcat/useRevenueCatQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
-import { useRevenueCatQuery } from "@/hooks/queries/revcat/useRevenueCatQuery";
-import { RevenueCatConnectionCard } from "./components/RevenueCatConnectionCard";
-import { RevenueCatWebhookSecret } from "./components/RevenueCatWebhookSecret";
-import { RevenueCatWebhookUrl } from "./components/RevenueCatWebhookUrl";
+import LoadingScreen from "@/views/general/LoadingScreen";
 import { ApiKeyDialog } from "./components/ApiKeyDialog";
 import { ProjectIdDialog } from "./components/ProjectIdDialog";
+import { RevenueCatConnectionCard } from "./components/RevenueCatConnectionCard";
 import { RevenueCatMappingSheet } from "./components/RevenueCatMappingSheet";
+import { RevenueCatWebhookSecret } from "./components/RevenueCatWebhookSecret";
+import { RevenueCatWebhookUrl } from "./components/RevenueCatWebhookUrl";
 
 export const ConfigureRevenueCat = () => {
 	const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
@@ -36,7 +37,9 @@ export const ConfigureRevenueCat = () => {
 		setConnecting(true);
 		try {
 			const payload =
-				env === "live" ? { api_key: apiKeyInput } : { sandbox_api_key: apiKeyInput };
+				env === "live"
+					? { api_key: apiKeyInput }
+					: { sandbox_api_key: apiKeyInput };
 
 			await axiosInstance.patch("/v1/organization/revenuecat", payload);
 
@@ -109,10 +112,19 @@ export const ConfigureRevenueCat = () => {
 					env={env}
 					onApiKeyClick={() => setShowApiKeyDialog(true)}
 					onProjectIdClick={() => setShowProjectIdDialog(true)}
-					onMapProductsClick={() => setShowMappingSheet(true)}
+					onMapProductsClick={() => {
+						if (!currentApiKey) {
+							toast.error("You need to link your RevenueCat API Key first");
+							return;
+						}
+						setShowMappingSheet(true);
+					}}
 				/>
 
-				<RevenueCatWebhookSecret env={env} webhookSecret={currentWebhookSecret} />
+				<RevenueCatWebhookSecret
+					env={env}
+					webhookSecret={currentWebhookSecret}
+				/>
 
 				<RevenueCatWebhookUrl env={env} orgId={org?.id} />
 			</div>
