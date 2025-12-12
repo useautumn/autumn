@@ -4,9 +4,15 @@ import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { cva, type VariantProps } from "class-variance-authority";
 import { Check, ChevronRight, Circle } from "lucide-react";
 import * as React from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 
 import SmallSpinner from "@/components/general/SmallSpinner";
 import { cn } from "@/lib/utils";
+
+// Context for sharing menu open state with items
+const DropdownMenuContext = React.createContext<{ isOpen: boolean }>({
+	isOpen: false,
+});
 
 // CVA variants for menu items
 const dropdownMenuItemVariants = cva(
@@ -38,7 +44,12 @@ type DropdownMenuItemVariantProps = VariantProps<
 function DropdownMenu(
 	props: React.ComponentProps<typeof DropdownMenuPrimitive.Root>,
 ) {
-	return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
+	const isOpen = props.open ?? false;
+	return (
+		<DropdownMenuContext.Provider value={{ isOpen }}>
+			<DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />
+		</DropdownMenuContext.Provider>
+	);
 }
 
 // Trigger
@@ -177,13 +188,39 @@ type DropdownMenuItemProps = React.ComponentProps<
 	DropdownMenuItemVariantProps & {
 		isLoading?: boolean;
 		shimmer?: boolean;
+		/** Keyboard shortcut that triggers this item when the menu is open */
+		shortcut?: string;
 	};
 
 const DropdownMenuItem = React.forwardRef<
 	React.ElementRef<typeof DropdownMenuPrimitive.Item>,
 	DropdownMenuItemProps
 >(function DropdownMenuItem(props, ref) {
-	const { variant, inset, shimmer = false, isLoading, className, children, ...rest } = props;
+	const {
+		variant,
+		inset,
+		shimmer = false,
+		isLoading,
+		shortcut,
+		className,
+		children,
+		onClick,
+		...rest
+	} = props;
+	const { isOpen } = React.useContext(DropdownMenuContext);
+
+	useHotkeys(
+		shortcut ?? "",
+		(e) => {
+			e.preventDefault();
+			onClick?.(e as unknown as React.MouseEvent<HTMLDivElement>);
+		},
+		{
+			enabled: !!shortcut && isOpen,
+			enableOnFormTags: false,
+		},
+	);
+
 	return (
 		<DropdownMenuPrimitive.Item
 			ref={ref}
@@ -194,6 +231,7 @@ const DropdownMenuItem = React.forwardRef<
 				className,
 			)}
 			disabled={shimmer || isLoading}
+			onClick={onClick}
 			{...rest}
 		>
 			{isLoading ? (
@@ -202,7 +240,14 @@ const DropdownMenuItem = React.forwardRef<
 					<SmallSpinner />
 				</>
 			) : (
-				children
+				<>
+					{children}
+					{/* {shortcut && (
+						<span className="ml-auto text-xs tracking-widest text-t4 uppercase">
+							{shortcut}
+						</span>
+					)} */}
+				</>
 			)}
 		</DropdownMenuPrimitive.Item>
 	);

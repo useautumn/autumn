@@ -2,23 +2,25 @@ import type { Feature } from "@autumn/shared";
 import { FeatureUsageType } from "@autumn/shared";
 import {
 	ArrowSquareOutIcon,
-	DotsThreeVerticalIcon,
-	PencilIcon,
-	Subtract,
-	Ticket,
+	CaretDownIcon,
+	PencilSimpleIcon,
+	SubtractIcon,
+	TicketIcon,
 	TrashIcon,
 } from "@phosphor-icons/react";
 import { useState } from "react";
+import { Button } from "@/components/v2/buttons/Button";
+import { Dialog } from "@/components/v2/dialogs/Dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/v2/buttons/Button";
-import { Dialog } from "@/components/v2/dialogs/Dialog";
+} from "@/components/v2/dropdowns/DropdownMenu";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
+import { useDropdownShortcut } from "@/hooks/useDropdownShortcut";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { getStripeCusLink } from "@/utils/linkUtils";
@@ -33,16 +35,25 @@ export function CustomerActions() {
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [createEntityOpen, setCreateEntityOpen] = useState(false);
 	const [addCouponOpen, setAddCouponOpen] = useState(false);
+	const [actionsOpen, setActionsOpen] = useState(false);
 	const { customer } = useCusQuery();
 	const { features } = useFeaturesQuery();
-	const env = useEnv();
 	const { stripeAccount } = useOrgStripeQuery();
-	const [ellipsisOpen, setEllipsisOpen] = useState(false);
+	const env = useEnv();
+
+	const stripeCustomerId = customer?.processor?.id;
 
 	const hasContinuousUseFeatures = features?.some(
 		(feature: Feature) =>
 			feature.config?.usage_type === FeatureUsageType.Continuous,
 	);
+
+	// Open dropdown with "a" key
+	useDropdownShortcut({
+		shortcut: "a",
+		isOpen: actionsOpen,
+		setIsOpen: setActionsOpen,
+	});
 
 	return (
 		<div className="flex items-center gap-2">
@@ -61,53 +72,72 @@ export function CustomerActions() {
 			/>
 			<CreateEntity open={createEntityOpen} setOpen={setCreateEntityOpen} />
 			<AddCouponDialog open={addCouponOpen} setOpen={setAddCouponOpen} />
-			<Button
-				size="mini"
-				variant="secondary"
-				onClick={() => setIsModalOpen(true)}
-				className="gap-1"
-			>
-				<PencilIcon className="text-t3" />
-				Edit Customer
-			</Button>
 
-			<DropdownMenu open={ellipsisOpen} onOpenChange={setEllipsisOpen}>
+			<DropdownMenu open={actionsOpen} onOpenChange={setActionsOpen}>
 				<DropdownMenuTrigger asChild>
 					<Button
-						size="icon"
+						size="mini"
 						variant="secondary"
-						className={cn(ellipsisOpen && "btn-secondary-active")}
+						className={cn("gap-1", actionsOpen && "btn-secondary-active")}
 					>
-						<DotsThreeVerticalIcon size={16} className="text-t2" />
+						Actions
+						<CaretDownIcon className="size-3.5 text-t3" />
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end">
+					<DropdownMenuItem
+						onClick={() => setIsModalOpen(true)}
+						className="flex gap-2"
+					>
+						<PencilSimpleIcon />
+						Edit customer
+					</DropdownMenuItem>
 					{hasContinuousUseFeatures && (
 						<DropdownMenuItem
 							onClick={() => setCreateEntityOpen(true)}
-							className="flex gap-3"
+							className="flex gap-2"
 						>
-							<Subtract size={12} />
+							<SubtractIcon />
 							Create entity
 						</DropdownMenuItem>
 					)}
 					<DropdownMenuItem
 						onClick={() => setAddCouponOpen(true)}
-						className="flex gap-3"
+						className="flex gap-2"
 					>
-						<Ticket size={12} />
+						<TicketIcon />
 						Add coupon
+					</DropdownMenuItem>
+					{stripeCustomerId && (
+						<DropdownMenuItem
+							onClick={() => {
+								window.open(
+									getStripeCusLink({
+										customerId: stripeCustomerId,
+										env,
+										accountId: stripeAccount?.id,
+									}),
+									"_blank",
+								);
+							}}
+							className="flex gap-2"
+							shortcut="s"
+						>
+							<ArrowSquareOutIcon className="size-3.5" />
+							Open in Stripe
+						</DropdownMenuItem>
+					)}
+					<DropdownMenuSeparator />
+					<DropdownMenuItem
+						onClick={() => setDeleteOpen(true)}
+						variant="destructive"
+						className="flex gap-2 text-red-500 !hover:bg-red-500"
+					>
+						<TrashIcon />
+						Delete customer
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
-
-			<Button
-				size="icon"
-				variant="secondary"
-				onClick={() => setDeleteOpen(true)}
-			>
-				<TrashIcon className="text-t3" />
-			</Button>
 		</div>
 	);
 }
