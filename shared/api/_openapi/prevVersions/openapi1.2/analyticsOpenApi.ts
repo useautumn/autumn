@@ -1,6 +1,6 @@
 import {
-	AnalyticsAggregationBodySchema,
-	AnalyticsAggregationResponseSchema,
+	EventAggregationBodySchema,
+	EventAggregationResponseSchema,
 } from "../../../events/aggregation/eventAggregationSchema.js";
 
 export const analyticsOpenApi = {
@@ -11,7 +11,7 @@ export const analyticsOpenApi = {
 			requestBody: {
 				content: {
 					"application/json": {
-						schema: AnalyticsAggregationBodySchema,
+						schema: EventAggregationBodySchema,
 					},
 				},
 			},
@@ -20,7 +20,7 @@ export const analyticsOpenApi = {
 					description: "Analytics aggregation results",
 					content: {
 						"application/json": {
-							schema: AnalyticsAggregationResponseSchema,
+							schema: EventAggregationResponseSchema,
 						},
 					},
 				},
