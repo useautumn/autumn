@@ -6,12 +6,19 @@ export const RangeEnum = z
 
 export type RangeEnum = z.infer<typeof RangeEnum>;
 
+export const BinSizeEnum = z.enum(["day", "hour"]).default("day");
+
+export type BinSizeEnum = z.infer<typeof BinSizeEnum>;
+
 export const AnalyticsAggregationBodySchema = z.object({
-	customer_id: z.string(),
-	feature_id: z.string().or(z.array(z.string())),
+	customer_id: z.string().min(1),
+	feature_id: z
+		.string()
+		.min(1)
+		.or(z.array(z.string().min(1))),
 	group_by: z.string().optional(),
 	range: RangeEnum,
-	bin_size: z.enum(["day", "hour"]).optional(),
+	bin_size: BinSizeEnum,
 	custom_range: z
 		.object({
 			start: z.number(),
