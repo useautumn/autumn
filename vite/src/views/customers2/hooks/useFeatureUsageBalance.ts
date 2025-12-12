@@ -1,4 +1,5 @@
 import {
+	cusEntsToAdjustment,
 	cusEntsToAllowance,
 	cusEntsToBalance,
 	cusEntsToGrantedBalance,
@@ -50,6 +51,18 @@ export function useFeatureUsageBalance({
 		entityId: entityId ?? undefined,
 		withRollovers: true,
 	});
+
+	const adjustment = cusEntsToAdjustment({
+		cusEnts,
+		entityId: entityId ?? undefined,
+	});
+
+	if (featureId === "open_ai_input_tokens_gpt_51") {
+		console.log("Cus ents:", cusEnts);
+		// console.log("allowance", allowance);
+		// console.log("initialAllowance", initialAllowance);
+		// console.log("adjustment:", adjustment);
+	}
 
 	const balance = cusEntsToBalance({
 		cusEnts,
