@@ -1,12 +1,16 @@
-import { cusProductToProduct } from "@autumn/shared";
-import { AttachScenario, FullCustomer, FullProduct } from "@autumn/shared";
+import {
+	AttachScenario,
+	cusProductToProduct,
+	type FullCustomer,
+	type FullProduct,
+} from "@autumn/shared";
+import { isCanceled } from "@/internal/customers/cusProducts/cusProductUtils/classifyCusProduct.js";
+import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import {
 	isFreeProduct,
 	isOneOff,
 	isProductUpgrade,
 } from "../../productUtils.js";
-import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
-import { isCanceled } from "@/internal/customers/cusProducts/cusProductUtils/classifyCusProduct.js";
 
 export const getAttachScenario = ({
 	fullCus,
@@ -17,30 +21,51 @@ export const getAttachScenario = ({
 }) => {
 	if (!fullCus) return AttachScenario.New;
 
-	let { curMainProduct, curScheduledProduct } = getExistingCusProducts({
-		product: fullProduct,
-		cusProducts: fullCus?.customer_products || [],
-		internalEntityId: fullCus?.entity?.internal_id,
-	});
+	const { curMainProduct, curScheduledProduct, curSameProduct } =
+		getExistingCusProducts({
+			product: fullProduct,
+			cusProducts: fullCus?.customer_products || [],
+			internalEntityId: fullCus?.entity?.internal_id,
+		});
 
-	if (!curMainProduct || fullProduct.is_add_on) return AttachScenario.New;
+	if (!curMainProduct) return AttachScenario.New;
 
 	if (isOneOff(fullProduct.prices)) {
 		return AttachScenario.New;
 	}
 
+	if (
+		fullProduct.is_add_on &&
+		!isFreeProduct(fullProduct.prices) &&
+		!isOneOff(fullProduct.prices)
+	) {
+		// 1. If current same product is add on, and it's canceled
+		if (
+			curSameProduct &&
+			curSameProduct.product.id !== curScheduledProduct?.product.id
+		) {
+			if (isCanceled({ cusProduct: curSameProduct })) {
+				return AttachScenario.Renew;
+			} else {
+				return AttachScenario.Active;
+			}
+		}
+	} else if (fullProduct.is_add_on) {
+		return AttachScenario.New;
+	}
+
 	// 1. If current product is the same as the product, return active
-	if (curMainProduct?.product.id == fullProduct.id) {
+	if (curMainProduct?.product.id === fullProduct.id) {
 		if (isCanceled({ cusProduct: curMainProduct })) {
 			return AttachScenario.Renew;
 		} else return AttachScenario.Active;
 	}
 
-	if (curScheduledProduct?.product.id == fullProduct.id) {
+	if (curScheduledProduct?.product.id === fullProduct.id) {
 		return AttachScenario.Scheduled;
 	}
 
-	let curFullProduct = cusProductToProduct({ cusProduct: curMainProduct });
+	const curFullProduct = cusProductToProduct({ cusProduct: curMainProduct });
 
 	if (
 		isFreeProduct(curFullProduct.prices) &&
@@ -49,7 +74,7 @@ export const getAttachScenario = ({
 		return AttachScenario.New;
 	}
 
-	let isUpgrade = isProductUpgrade({
+	const isUpgrade = isProductUpgrade({
 		prices1: curFullProduct.prices,
 		prices2: fullProduct.prices,
 	});
