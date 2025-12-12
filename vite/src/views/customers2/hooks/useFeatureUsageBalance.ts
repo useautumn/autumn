@@ -1,11 +1,10 @@
 import {
-	cusEntToBalance,
-	cusEntToIncludedUsage,
+	cusEntsToAdjustment,
+	cusEntsToAllowance,
+	cusEntsToBalance,
+	cusEntsToGrantedBalance,
 	cusProductsToCusEnts,
 	type FullCusProduct,
-	getCusEntBalance,
-	notNullish,
-	sumValues,
 } from "@autumn/shared";
 
 export interface FeatureUsageBalanceParams {
@@ -39,38 +38,37 @@ export function useFeatureUsageBalance({
 		featureId,
 	});
 
-	const initialAllowance = sumValues(
-		cusEnts.map((cusEnt) =>
-			cusEntToIncludedUsage({
-				cusEnt,
-				entityId: entityId ?? undefined,
-			}),
-		),
-	);
+	//without adjustment, no rollovers
+	const initialAllowance = cusEntsToAllowance({
+		cusEnts,
+		entityId: entityId ?? undefined,
+		withRollovers: false,
+	});
 
-	const totalAdjustment = sumValues(
-		cusEnts.map((cusEnt) => {
-			const { adjustment } = getCusEntBalance({
-				cusEnt,
-				entityId,
-			});
-			return adjustment;
-		}),
-	);
+	//includes adjustment
+	const allowance = cusEntsToGrantedBalance({
+		cusEnts,
+		entityId: entityId ?? undefined,
+		withRollovers: true,
+	});
 
-	const allowance = initialAllowance + totalAdjustment;
+	const adjustment = cusEntsToAdjustment({
+		cusEnts,
+		entityId: entityId ?? undefined,
+	});
 
-	const balance = sumValues(
-		cusEnts
-			.map((cusEnt) =>
-				cusEntToBalance({
-					cusEnt,
-					entityId: entityId ?? undefined,
-					withRollovers: true,
-				}),
-			)
-			.filter(notNullish),
-	);
+	if (featureId === "open_ai_input_tokens_gpt_51") {
+		console.log("Cus ents:", cusEnts);
+		// console.log("allowance", allowance);
+		// console.log("initialAllowance", initialAllowance);
+		// console.log("adjustment:", adjustment);
+	}
+
+	const balance = cusEntsToBalance({
+		cusEnts,
+		entityId: entityId ?? undefined,
+		withRollovers: true,
+	});
 
 	const shouldShowOutOfBalance = allowance > 0 || (balance ?? 0) > 0;
 	const shouldShowUsed =

@@ -16,6 +16,9 @@ export const UpdateBalanceParamsSchema = z
 		current_balance: z.number().optional().meta({
 			description: "The new balance value to set.",
 		}),
+		granted_balance: z.number().optional().meta({
+			description: "The new granted balance value to set.",
+		}),
 		usage: z.number().optional().meta({
 			description: "The new usage value to set.",
 		}),

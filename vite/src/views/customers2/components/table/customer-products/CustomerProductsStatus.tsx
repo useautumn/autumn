@@ -48,7 +48,7 @@ const StatusItem = ({
 					{trial_ends_at && (
 						<>
 							<DotIcon size={16} />
-							<span className="text-sm text-t3">
+							<span className="text-sm text-t3 pl-1 truncate">
 								{formatDistanceToNow(trial_ends_at)} left
 							</span>
 						</>
