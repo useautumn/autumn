@@ -10,10 +10,11 @@ import {
 	CheckExpand,
 	CusExpand,
 	cusEntMatchesFeature,
+	cusEntsToAdjustment,
+	cusEntsToAllowance,
 	cusEntsToMaxPurchase,
 	cusEntToBalance,
 	cusEntToCusPrice,
-	cusEntToGrantedBalance,
 	cusEntToKey,
 	cusEntToPurchasedBalance,
 	dbToApiFeatureV1,
@@ -202,28 +203,18 @@ export const getApiBalance = ({
 
 	const totalMaxPurchase = cusEntsToMaxPurchase({ cusEnts, entityId });
 
-	// 1. Granted balance
-	const totalGrantedBalanceWithRollovers = sumValues(
-		cusEnts.map((cusEnt) =>
-			cusEntToGrantedBalance({
-				cusEnt,
-				entityId,
-				withRollovers: includeRollovers,
-			}),
-		),
-	);
+	const totalAllowanceWithRollovers = cusEntsToAllowance({
+		cusEnts,
+		entityId,
+		withRollovers: includeRollovers,
+	});
 
-	const totalAdjustment = sumValues(
-		cusEnts.map((cusEnt) => {
-			const { adjustment } = getCusEntBalance({
-				cusEnt,
-				entityId,
-			});
-			return adjustment;
-		}),
-	);
+	const totalAdjustment = cusEntsToAdjustment({
+		cusEnts,
+		entityId,
+	});
 
-	const grantedBalance = new Decimal(totalGrantedBalanceWithRollovers)
+	const grantedBalance = new Decimal(totalAllowanceWithRollovers)
 		.add(totalAdjustment)
 		.toNumber();
 

@@ -2,6 +2,10 @@
 
 export * from "./cusEntUtils/balanceUtils/cusEntToPrepaidQuantity.js";
 export * from "./cusEntUtils/balanceUtils/cusEntToPurchasedBalance.js";
+// Cus ent utils
+export * from "./cusEntUtils/balanceUtils/grantedBalanceUtils/cusEntsToAdjustment.js";
+export * from "./cusEntUtils/balanceUtils/grantedBalanceUtils/cusEntsToAllowance.js";
+export * from "./cusEntUtils/balanceUtils/grantedBalanceUtils/cusEntsToGrantedBalance.js";
 export * from "./cusEntUtils/balanceUtils.js";
 export * from "./cusEntUtils/classifyCusEntUtils.js";
 export * from "./cusEntUtils/convertCusEntUtils/cusEntsToMaxPurchase.js";
