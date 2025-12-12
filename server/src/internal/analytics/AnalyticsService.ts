@@ -1,6 +1,4 @@
-/** biome-ignore-all lint/complexity/noStaticOnlyClass: wrap it up buddy */
-
-import { ErrCode, type FullCustomer } from "@autumn/shared";
+import { ErrCode, type FullCustomer, type RangeEnum } from "@autumn/shared";
 import type { ClickHouseClient } from "@clickhouse/client";
 import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
@@ -194,7 +192,7 @@ WHERE org_id = {org_id:String}
 		req: ExtendedRequest;
 		params: {
 			event_names: string[];
-			interval: "24h" | "7d" | "30d" | "90d" | "1bc" | "3bc";
+			interval: RangeEnum;
 			customer_id?: string;
 			no_count?: boolean;
 		};
@@ -203,8 +201,7 @@ WHERE org_id = {org_id:String}
 	}) {
 		const { clickhouseClient, org, env, db } = req;
 
-		const intervalType: "24h" | "7d" | "30d" | "90d" | "1bc" | "3bc" =
-			params.interval || "24h";
+		const intervalType: RangeEnum = params.interval || "24h";
 
 		const isBillingCycle = intervalType === "1bc" || intervalType === "3bc";
 		AnalyticsService.handleEarlyExit();
@@ -394,22 +391,4 @@ order by dr.period;
 
 		return resultJson;
 	}
-
-	// private static async getSubscriptionsIfNeeded(
-	//   customer: FullCustomer,
-	//   customerHasSubscriptions: boolean,
-	//   db: DrizzleCli
-	// ): Promise<Subscription[]> {
-	//   if (customerHasSubscriptions) {
-	//     return [];
-	//   }
-
-	//   return await SubService.getInStripeIds({
-	//     db,
-	//     ids:
-	//       customer.customer_products?.flatMap(
-	//         (product: FullCusProduct) => product.subscription_ids ?? []
-	//       ) ?? [],
-	//   });
-	// }
 }
