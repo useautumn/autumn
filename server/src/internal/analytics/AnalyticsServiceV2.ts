@@ -1,10 +1,11 @@
-import type { BinSizeEnum, FullCustomer, RangeEnum } from "@autumn/shared";
 import type { ClickHouseClient } from "@clickhouse/client";
 import { UTCDate } from "@date-fns/utc";
 import { format, startOfDay, startOfHour, sub } from "date-fns";
 import { Decimal } from "decimal.js";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import type {
+	BillingCycleResult,
+	CalculateDateRangeParams,
 	ClickHouseResult,
 	DateRangeResult,
 	TimeseriesEventsParams,
@@ -21,13 +22,7 @@ export class AnalyticsServiceV2 {
 		params,
 	}: {
 		ctx: RequestContext;
-		params: {
-			interval: RangeEnum;
-			bin_size?: BinSizeEnum;
-			custom_range?: { start: number; end: number };
-			customer?: FullCustomer;
-			aggregateAll?: boolean;
-		};
+		params: CalculateDateRangeParams;
 	}): Promise<DateRangeResult> {
 		const { db } = ctx;
 		const intervalType = params.interval;
@@ -54,7 +49,7 @@ export class AnalyticsServiceV2 {
 						params.customer,
 						db,
 						intervalType as "1bc" | "3bc",
-					)) as { startDate: string; endDate: string; gap: number } | null)
+					)) as BillingCycleResult | null)
 				: null;
 
 		if (getBCResults) {
@@ -104,7 +99,7 @@ export class AnalyticsServiceV2 {
 	}) {
 		const { clickhouseClient, org, env, db } = ctx;
 
-		const intervalType: RangeEnum = params.interval;
+		const intervalType = params.interval;
 
 		const useCustomDateQuery =
 			intervalType === "1bc" || intervalType === "3bc" || !!params.custom_range;
@@ -119,7 +114,7 @@ export class AnalyticsServiceV2 {
 						params.customer,
 						db,
 						intervalType as "1bc" | "3bc",
-					)) as { startDate: string; endDate: string; gap: number } | null)
+					)) as BillingCycleResult | null)
 				: null;
 
 		const countExpressions = generateEventCountExpressions(

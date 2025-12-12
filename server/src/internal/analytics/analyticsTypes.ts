@@ -19,6 +19,11 @@ export type TimeseriesEventsParams = TotalEventsParams & {
 	no_count?: boolean;
 };
 
+export type CalculateDateRangeParams = Omit<
+	TotalEventsParams,
+	"event_names" | "customer_id"
+>;
+
 export type DateRangeResult = {
 	startDate: string;
 	endDate: string;
