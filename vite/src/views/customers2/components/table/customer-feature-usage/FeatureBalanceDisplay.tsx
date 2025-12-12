@@ -8,6 +8,8 @@ export interface FeatureBalanceDisplayProps {
 	shouldShowUsed: boolean;
 	usageType?: string;
 	className?: string;
+	initialAllowance: number;
+	compact?: boolean;
 }
 
 /**
@@ -20,15 +22,18 @@ export function FeatureBalanceDisplay({
 	shouldShowUsed,
 	usageType,
 	className,
+	initialAllowance,
+	compact = false,
 }: FeatureBalanceDisplayProps) {
 	const formatNumber = (num: number) => new Intl.NumberFormat().format(num);
 	const displayBalance = balance < 0 ? 0 : balance;
 	const overage = balance < 0 ? balance * -1 : 0;
 
-	console.log("allowance", allowance);
+	// console.log("initialAllowance", initialAllowance);
 
 	const getUsedLabel = () => {
-		if (allowance > 0) return "overage";
+		//change for feather
+		if (initialAllowance > 0) return "overage";
 		if (usageType === FeatureUsageType.Continuous) return "in use";
 		return "used";
 	};
@@ -39,7 +44,11 @@ export function FeatureBalanceDisplay({
 				<>
 					<span className="text-t1">{formatNumber(displayBalance)}</span>
 					{allowance > 0 && (
-						<span className="text-t4 text-xs">/{formatNumber(allowance)}</span>
+						<span className="text-t4">
+							{compact
+								? `/ ${formatNumber(allowance)}`
+								: `/ ${formatNumber(allowance)} left`}
+						</span>
 					)}
 				</>
 			)}

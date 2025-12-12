@@ -25,6 +25,7 @@ import {
 import { getDefaultAttachConfig } from "../attach/attachUtils/getAttachConfig.js";
 import { CusService } from "../CusService.js";
 import { initStripeCusAndProducts } from "../handlers/handleCreateCustomer.js";
+import { deleteCachedApiCustomer } from "./apiCusCacheUtils/deleteCachedApiCustomer.js";
 
 export const getGroupToDefaultProd = async ({
 	defaultProds,
@@ -121,6 +122,10 @@ export const createNewCustomer = async ({
 		data: customerData,
 	});
 
+	console.log(
+		`[createNewCustomer] Creating new customer with ID: ${newCustomer?.id}`,
+	);
+
 	if (!newCustomer) {
 		throw new RecaseError({
 			code: ErrCode.InternalError,
@@ -138,6 +143,9 @@ export const createNewCustomer = async ({
 
 	for (const group in groupToDefaultProd) {
 		const defaultProd = groupToDefaultProd[group];
+		console.log(
+			`[createNewCustomer] Creating default product with ID: ${defaultProd?.id}`,
+		);
 
 		if (!isFreeProduct(defaultProd.prices)) {
 			let stripeCli = null;
@@ -187,6 +195,13 @@ export const createNewCustomer = async ({
 			});
 		}
 	}
+
+	// // Clear the customer cache here
+	// await deleteCachedApiCustomer({
+	// 	customerId: newCustomer.id || newCustomer.internal_id,
+	// 	orgId: ctx.org.id,
+	// 	env: ctx.env,
+	// });
 
 	return newCustomer;
 };
