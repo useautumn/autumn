@@ -1,11 +1,11 @@
-import type { Feature } from "@autumn/shared";
-import { FeatureUsageType } from "@autumn/shared";
+import type { Feature, FullCusProduct } from "@autumn/shared";
+import { AppEnv, FeatureUsageType, ProcessorType } from "@autumn/shared";
 import {
 	ArrowSquareOutIcon,
 	DotsThreeVerticalIcon,
 	PencilIcon,
 	Subtract,
-	Ticket,
+	TicketIcon,
 	TrashIcon,
 } from "@phosphor-icons/react";
 import { useState } from "react";
@@ -17,11 +17,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/v2/buttons/Button";
 import { Dialog } from "@/components/v2/dialogs/Dialog";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
-import { getStripeCusLink } from "@/utils/linkUtils";
+import { getRevenueCatCusLink, getStripeCusLink } from "@/utils/linkUtils";
 import { DeleteCustomerDialog } from "@/views/customers/customer/components/DeleteCustomerDialog";
 import UpdateCustomerDialog from "@/views/customers/customer/components/UpdateCustomerDialog";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -36,6 +37,7 @@ export function CustomerActions() {
 	const { customer } = useCusQuery();
 	const { features } = useFeaturesQuery();
 	const env = useEnv();
+	const { org } = useOrg();
 	const { stripeAccount } = useOrgStripeQuery();
 	const [ellipsisOpen, setEllipsisOpen] = useState(false);
 
@@ -95,27 +97,61 @@ export function CustomerActions() {
 						onClick={() => setAddCouponOpen(true)}
 						className="flex gap-3"
 					>
-						<Ticket size={12} />
+						<TicketIcon size={12} />
 						Add coupon
 					</DropdownMenuItem>
-					{customer?.processor?.id && (
-						<DropdownMenuItem
-							onClick={() => {
-								window.open(
-									getStripeCusLink({
-										customerId: customer.processor.id,
-										env,
-										accountId: stripeAccount?.id,
-									}),
-									"_blank",
-								);
-							}}
-							className="flex gap-3"
-						>
-							<ArrowSquareOutIcon size={12} />
-							Open in Stripe
-						</DropdownMenuItem>
-					)}
+					{customer?.processor?.id &&
+						customer.processor.type === ProcessorType.Stripe && (
+							<DropdownMenuItem
+								onClick={() => {
+									window.open(
+										getStripeCusLink({
+											customerId: customer.processor.id,
+											env,
+											accountId: stripeAccount?.id,
+										}),
+										"_blank",
+									);
+								}}
+								className="flex gap-3"
+							>
+								<ArrowSquareOutIcon size={12} />
+								Open in Stripe
+							</DropdownMenuItem>
+						)}
+
+					{(customer?.processor?.id &&
+						customer.processor.type === ProcessorType.RevenueCat) ||
+						(customer.customer_products.some(
+							(cp: FullCusProduct) =>
+								cp.processor?.type === ProcessorType.RevenueCat,
+						) && (
+							<DropdownMenuItem
+								onClick={() => {
+									console.log(org?.processor_configs?.revenuecat);
+									window.open(
+										getRevenueCatCusLink({
+											customerId: customer.id,
+											projectId:
+												env === AppEnv.Live
+													? (org?.processor_configs?.revenuecat?.project_id?.replace(
+															"proj",
+															"",
+														) ?? "")
+													: (org?.processor_configs?.revenuecat?.sandbox_project_id?.replace(
+															"proj",
+															"",
+														) ?? ""),
+										}),
+										"_blank",
+									);
+								}}
+								className="flex gap-3"
+							>
+								<ArrowSquareOutIcon size={12} />
+								Open in RevenueCat
+							</DropdownMenuItem>
+						))}
 				</DropdownMenuContent>
 			</DropdownMenu>
 
