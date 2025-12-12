@@ -9,7 +9,7 @@ export type TotalEventsParams = {
 	customer_id?: string;
 	aggregateAll?: boolean;
 	custom_range?: { start: number; end: number };
-	interval: RangeEnum;
+	interval?: RangeEnum;
 	customer?: FullCustomer;
 	bin_size?: BinSizeEnum;
 };
