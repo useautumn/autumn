@@ -1,10 +1,12 @@
-import type {
-	BillingCycleResult,
-	CalculateDateRangeParams,
-	ClickHouseResult,
-	DateRangeResult,
-	TimeseriesEventsParams,
-	TotalEventsParams,
+import {
+	type BillingCycleResult,
+	type CalculateDateRangeParams,
+	type ClickHouseResult,
+	type DateRangeResult,
+	ErrCode,
+	RecaseError,
+	type TimeseriesEventsParams,
+	type TotalEventsParams,
 } from "@autumn/shared";
 import type { ClickHouseClient } from "@clickhouse/client";
 import { UTCDate } from "@date-fns/utc";
@@ -16,6 +18,7 @@ import {
 	sub,
 } from "date-fns";
 import { Decimal } from "decimal.js";
+import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	generateEventCountExpressions,
@@ -136,14 +139,32 @@ export class EventsAggregationService {
 			let field: string | null = null;
 			// Extract property path after 'properties.' and escape single quotes for SQL safety
 			const propertyPath = params.group_by.replace("properties.", "");
-			// Validate property path contains only safe characters (alphanumeric, dots, underscores)
-			if (!/^[a-zA-Z0-9._]+$/.test(propertyPath)) {
+			const pathSegments = propertyPath.split(".").map((segment) => {
+				// Validate each segment contains only safe characters (alphanumeric, underscores)
+				if (!/^[a-zA-Z0-9_]+$/.test(segment)) {
+					throw new RecaseError({
+						message:
+							"Invalid property path. Should only contain alphanumeric and underscore characters.",
+						code: ErrCode.InvalidInputs,
+						statusCode: StatusCodes.BAD_REQUEST,
+					});
+				}
+				// Escape single quotes for SQL safety
+				return segment.replace(/'/g, "''");
+			});
+
+			const validSegments = pathSegments.filter(
+				(segment): segment is string => segment !== null,
+			);
+
+			if (validSegments.length === 0) {
 				return { select: "", groupBy: "", orderBy: "", fieldName: null };
 			}
-			const escapedPath = propertyPath.replace(/'/g, "''");
-			// Support dot notation for nested properties (e.g., properties.user.id)
-			// ClickHouse JSONExtractString supports nested paths with dot notation
-			field = `JSONExtractString(e.properties, '${escapedPath}')`;
+
+			// Join segments as separate arguments: 'key1', 'key2', 'key3'
+			// ClickHouse JSONExtractString requires each key as a separate argument
+			const escapedPathArgs = validSegments.map((seg) => `'${seg}'`).join(", ");
+			field = `JSONExtractString(e.properties, ${escapedPathArgs})`;
 
 			if (!field)
 				return { select: "", groupBy: "", orderBy: "", fieldName: null };

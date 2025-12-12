@@ -204,6 +204,9 @@ function generateEvents({
 				...CONFIG.defaultProperties,
 				event_index: i + 1,
 				random_value: Math.floor(Math.random() * 1000),
+				user: {
+					id: Math.floor(Math.random() * 10) + 1,
+				},
 			},
 		};
 
