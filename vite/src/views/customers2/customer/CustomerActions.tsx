@@ -98,24 +98,6 @@ export function CustomerActions() {
 						<Ticket size={12} />
 						Add coupon
 					</DropdownMenuItem>
-					{customer?.processor?.id && (
-						<DropdownMenuItem
-							onClick={() => {
-								window.open(
-									getStripeCusLink({
-										customerId: customer.processor.id,
-										env,
-										accountId: stripeAccount?.id,
-									}),
-									"_blank",
-								);
-							}}
-							className="flex gap-3"
-						>
-							<ArrowSquareOutIcon size={12} />
-							Open in Stripe
-						</DropdownMenuItem>
-					)}
 				</DropdownMenuContent>
 			</DropdownMenu>
 

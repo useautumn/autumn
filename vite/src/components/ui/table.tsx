@@ -10,7 +10,7 @@ function Table({
 	return (
 		<div
 			data-slot="table-container"
-			className={cn("relative max-w-full rounded-sm p-3 ", className)}
+			className={cn("relative max-w-full rounded-sm p-3 h-full", className)}
 		>
 			<table
 				data-slot="table"

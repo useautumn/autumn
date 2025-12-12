@@ -8,6 +8,8 @@ import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { handleEnvChange } from "@/views/main-sidebar/EnvDropdown";
 
 interface UseCommandBarHotkeysProps {
+	/** Whether the command bar is open */
+	isOpen: boolean;
 	/** Callback to close the command bar */
 	closeDialog: () => void;
 	/** Callback to switch to orgs page */
@@ -17,9 +19,10 @@ interface UseCommandBarHotkeysProps {
 }
 
 /**
- * Hook to manage command bar hotkeys
+ * Hook to manage command bar hotkeys (only active when command bar is open)
  */
 export const useCommandBarHotkeys = ({
+	isOpen,
 	closeDialog,
 	switchToOrgsPage,
 	switchToImpersonatePage,
@@ -29,42 +32,42 @@ export const useCommandBarHotkeys = ({
 	const { data: orgs, isPending: isLoadingOrgs } = useListOrganizations();
 	const { isAdmin } = useAdmin();
 
-	// CMD+K: Open command bar
+	// CMD+K: Open command bar - handled in the component itself
 	useHotkeys("meta+k", () => {
 		// This is handled in the component itself
 	});
 
-	// CMD+1: Go to Products
+	// CMD+1: Go to Products (only when command bar is open)
 	useHotkeys(
 		"meta+1",
 		() => {
 			navigateTo("/products?tab=products", navigate, env);
 			closeDialog();
 		},
-		{ enableOnFormTags: true, preventDefault: true },
+		{ enableOnFormTags: true, preventDefault: true, enabled: isOpen },
 	);
 
-	// CMD+2: Go to Features
+	// CMD+2: Go to Features (only when command bar is open)
 	useHotkeys(
 		"meta+2",
 		() => {
 			navigateTo("/products?tab=features", navigate, env);
 			closeDialog();
 		},
-		{ enableOnFormTags: true, preventDefault: true },
+		{ enableOnFormTags: true, preventDefault: true, enabled: isOpen },
 	);
 
-	// CMD+3: Go to Customers
+	// CMD+3: Go to Customers (only when command bar is open)
 	useHotkeys(
 		"meta+3",
 		() => {
 			navigateTo("/customers", navigate, env);
 			closeDialog();
 		},
-		{ enableOnFormTags: true, preventDefault: true },
+		{ enableOnFormTags: true, preventDefault: true, enabled: isOpen },
 	);
 
-	// CMD+4: Switch Environment
+	// CMD+4: Switch Environment (only when command bar is open)
 	useHotkeys(
 		"meta+4",
 		() => {
@@ -74,10 +77,10 @@ export const useCommandBarHotkeys = ({
 			);
 			closeDialog();
 		},
-		{ enableOnFormTags: true, preventDefault: true },
+		{ enableOnFormTags: true, preventDefault: true, enabled: isOpen },
 	);
 
-	// CMD+5: Switch Organization (only if user has multiple orgs)
+	// CMD+5: Switch Organization (only when command bar is open and user has multiple orgs)
 	useHotkeys(
 		"meta+5",
 		() => {
@@ -85,17 +88,17 @@ export const useCommandBarHotkeys = ({
 				switchToOrgsPage();
 			}
 		},
-		{ enableOnFormTags: true, preventDefault: true },
+		{ enableOnFormTags: true, preventDefault: true, enabled: isOpen },
 	);
 
-	// CMD+6: Impersonate (only if user is admin)
+	// CMD+I: Impersonate (only when command bar is open and user is admin)
 	useHotkeys(
-		"meta+6",
+		"meta+i",
 		() => {
 			if (isAdmin) {
 				switchToImpersonatePage();
 			}
 		},
-		{ enableOnFormTags: true, preventDefault: true },
+		{ enableOnFormTags: true, preventDefault: true, enabled: isOpen },
 	);
 };

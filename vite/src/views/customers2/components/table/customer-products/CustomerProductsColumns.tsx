@@ -13,6 +13,8 @@ export const CustomerProductsColumns = [
 	{
 		header: "Name",
 		accessorKey: "name",
+		minSize: 10,
+		maxSize: 200,
 		cell: ({ row }: { row: Row<FullCusProduct> }) => {
 			const quantity = row.original.quantity;
 			const showQuantity = quantity && quantity > 1;
