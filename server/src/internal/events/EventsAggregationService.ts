@@ -1,3 +1,11 @@
+import type {
+	BillingCycleResult,
+	CalculateDateRangeParams,
+	ClickHouseResult,
+	DateRangeResult,
+	TimeseriesEventsParams,
+	TotalEventsParams,
+} from "@autumn/shared";
 import type { ClickHouseClient } from "@clickhouse/client";
 import { UTCDate } from "@date-fns/utc";
 import {
@@ -8,26 +16,18 @@ import {
 	sub,
 } from "date-fns";
 import { Decimal } from "decimal.js";
-import type { RequestContext } from "@/honoUtils/HonoEnv.js";
-import type {
-	BillingCycleResult,
-	CalculateDateRangeParams,
-	ClickHouseResult,
-	DateRangeResult,
-	TimeseriesEventsParams,
-	TotalEventsParams,
-} from "./analyticsTypes.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	generateEventCountExpressions,
 	getBillingCycleStartDate,
-} from "./analyticsUtils.js";
+} from "../analytics/analyticsUtils.js";
 
-export class AnalyticsServiceV2 {
+export class EventsAggregationService {
 	private static async calculateDateRange({
 		ctx,
 		params,
 	}: {
-		ctx: RequestContext;
+		ctx: AutumnContext;
 		params: CalculateDateRangeParams;
 	}): Promise<DateRangeResult> {
 		const { db } = ctx;
@@ -65,9 +65,10 @@ export class AnalyticsServiceV2 {
 			};
 		}
 
-		const intervalTypeToDaysMap = AnalyticsServiceV2.intervalTypeToDaysMap({
-			gap: 0,
-		});
+		const intervalTypeToDaysMap =
+			EventsAggregationService.intervalTypeToDaysMap({
+				gap: 0,
+			});
 		const days =
 			intervalTypeToDaysMap[intervalType as keyof typeof intervalTypeToDaysMap];
 
@@ -100,7 +101,7 @@ export class AnalyticsServiceV2 {
 		ctx,
 		params,
 	}: {
-		ctx: RequestContext;
+		ctx: AutumnContext;
 		params: TimeseriesEventsParams;
 	}) {
 		const { clickhouseClient, org, env, db } = ctx;
@@ -133,22 +134,16 @@ export class AnalyticsServiceV2 {
 				return { select: "", groupBy: "", orderBy: "", fieldName: null };
 
 			let field: string | null = null;
-			if (params.group_by === "event_name") {
-				field = "e.event_name";
-			} else if (params.group_by === "customer_id") {
-				field = "e.customer_id";
-			} else if (params.group_by.startsWith("properties.")) {
-				// Extract property path after 'properties.' and escape single quotes for SQL safety
-				const propertyPath = params.group_by.replace("properties.", "");
-				// Validate property path contains only safe characters (alphanumeric, dots, underscores)
-				if (!/^[a-zA-Z0-9._]+$/.test(propertyPath)) {
-					return { select: "", groupBy: "", orderBy: "", fieldName: null };
-				}
-				const escapedPath = propertyPath.replace(/'/g, "''");
-				// Support dot notation for nested properties (e.g., properties.user.id)
-				// ClickHouse JSONExtractString supports nested paths with dot notation
-				field = `JSONExtractString(e.properties, '${escapedPath}')`;
+			// Extract property path after 'properties.' and escape single quotes for SQL safety
+			const propertyPath = params.group_by.replace("properties.", "");
+			// Validate property path contains only safe characters (alphanumeric, dots, underscores)
+			if (!/^[a-zA-Z0-9._]+$/.test(propertyPath)) {
+				return { select: "", groupBy: "", orderBy: "", fieldName: null };
 			}
+			const escapedPath = propertyPath.replace(/'/g, "''");
+			// Support dot notation for nested properties (e.g., properties.user.id)
+			// ClickHouse JSONExtractString supports nested paths with dot notation
+			field = `JSONExtractString(e.properties, '${escapedPath}')`;
 
 			if (!field)
 				return { select: "", groupBy: "", orderBy: "", fieldName: null };
@@ -210,9 +205,10 @@ order by dr.period${groupBy.orderBy};
 			? format(new UTCDate(params.custom_range.end), "yyyy-MM-dd'T'HH:mm:ss")
 			: undefined;
 
-		const intervalTypeToDaysMap = AnalyticsServiceV2.intervalTypeToDaysMap({
-			gap: getBCResults?.gap,
-		});
+		const intervalTypeToDaysMap =
+			EventsAggregationService.intervalTypeToDaysMap({
+				gap: getBCResults?.gap,
+			});
 
 		const queryParams = {
 			org_id: org?.id,
@@ -266,21 +262,22 @@ order by dr.period${groupBy.orderBy};
 		ctx,
 		params,
 	}: {
-		ctx: RequestContext;
+		ctx: AutumnContext;
 		params: TotalEventsParams;
 	}) {
 		const { clickhouseClient, org, env } = ctx;
 
-		const { startDate, endDate } = await AnalyticsServiceV2.calculateDateRange({
-			ctx,
-			params: {
-				interval: params.interval,
-				bin_size: params.bin_size,
-				custom_range: params.custom_range,
-				customer: params.customer,
-				aggregateAll: params.aggregateAll,
-			},
-		});
+		const { startDate, endDate } =
+			await EventsAggregationService.calculateDateRange({
+				ctx,
+				params: {
+					interval: params.interval,
+					bin_size: params.bin_size,
+					custom_range: params.custom_range,
+					customer: params.customer,
+					aggregateAll: params.aggregateAll,
+				},
+			});
 
 		const query = `
 with customer_events as (
