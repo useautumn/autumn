@@ -201,8 +201,7 @@ WHERE org_id = {org_id:String}
 	}) {
 		const { clickhouseClient, org, env, db } = req;
 
-		const intervalType: RangeEnum = params.interval;
-		params.interval || "24h";
+		const intervalType: RangeEnum = params.interval || "24h";
 
 		const isBillingCycle = intervalType === "1bc" || intervalType === "3bc";
 		AnalyticsService.handleEarlyExit();
