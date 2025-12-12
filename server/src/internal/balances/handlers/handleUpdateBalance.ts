@@ -1,9 +1,13 @@
 import {
+	ErrCode,
 	FeatureNotFoundError,
 	notNullish,
+	nullish,
+	RecaseError,
 	resetIntvToEntIntv,
 	UpdateBalanceParamsSchema,
 } from "@autumn/shared";
+import { StatusCodes } from "http-status-codes";
 import { z } from "zod/v4";
 import { createRoute } from "../../../honoMiddlewares/routeHandler.js";
 import { CusService } from "../../customers/CusService.js";
@@ -53,6 +57,14 @@ export const handleUpdateBalance = createRoute({
 		}
 
 		if (notNullish(body.granted_balance)) {
+			if (nullish(body.current_balance)) {
+				throw new RecaseError({
+					message: "current_balance is required when updating granted balance",
+					code: ErrCode.InvalidRequest,
+					statusCode: StatusCodes.BAD_REQUEST,
+				});
+			}
+
 			ctx.logger.info(
 				`updating granted balance for feature ${feature.id} to ${body.granted_balance}`,
 			);
@@ -61,6 +73,7 @@ export const handleUpdateBalance = createRoute({
 				idOrInternalId: body.customer_id,
 				orgId: ctx.org.id,
 				env: ctx.env,
+				entityId: body.entity_id,
 			});
 
 			await updateGrantedBalance({
