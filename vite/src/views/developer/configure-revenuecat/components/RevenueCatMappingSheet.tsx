@@ -1,8 +1,7 @@
-import type { ColumnDef } from "@tanstack/react-table";
+import { isFeaturePriceItem } from "@autumn/shared";
 import { X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Table } from "@/components/general/table";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	Select,
@@ -19,7 +18,6 @@ import { Sheet, SheetContent } from "@/components/v2/sheets/Sheet";
 import { useRCMappings } from "@/hooks/queries/revcat/useRCMappings";
 import { useRCProducts } from "@/hooks/queries/revcat/useRCProducts";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { useProductTable } from "@/views/products/hooks/useProductTable";
 
 interface ProductMapping {
 	autumnProductId: string;
@@ -32,11 +30,105 @@ interface RevenueCatMappingSheetProps {
 	onOpenChange: (open: boolean) => void;
 }
 
+interface RCProduct {
+	id: string;
+	name: string;
+}
+
+function MappingRow({
+	mapping,
+	rcProducts,
+	getMappedRevenueCatProducts,
+	onAddProduct,
+	onRemoveProduct,
+}: {
+	mapping: ProductMapping;
+	rcProducts: RCProduct[];
+	getMappedRevenueCatProducts: (excludeAutumnProductId?: string) => string[];
+	onAddProduct: (autumnProductId: string, revenueCatProductId: string) => void;
+	onRemoveProduct: (
+		autumnProductId: string,
+		revenueCatProductId: string,
+	) => void;
+}) {
+	const mappedRevenueCatProducts = getMappedRevenueCatProducts(
+		mapping.autumnProductId,
+	);
+	const selectedProducts = mapping.revenueCatProductIds;
+	const availableProducts = rcProducts.filter(
+		(p) =>
+			!mappedRevenueCatProducts.includes(p.id) &&
+			!selectedProducts.includes(p.id),
+	);
+
+	return (
+		<div className="flex flex-col gap-2 p-3 border border-zinc-200 dark:border-zinc-800 rounded-lg">
+			<div className="font-medium text-t2">{mapping.autumnProductName}</div>
+
+			{/* Display selected products as tags */}
+			{selectedProducts.length > 0 && (
+				<div className="flex flex-wrap gap-1">
+					{selectedProducts.map((productId) => {
+						const product = rcProducts.find((p) => p.id === productId);
+						return (
+							<div
+								key={productId}
+								className="flex items-center gap-1 border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 rounded-lg pl-3 pr-2 py-1 text-xs"
+							>
+								<span className="text-tiny">{product?.name || productId}</span>
+								<button
+									type="button"
+									onClick={() =>
+										onRemoveProduct(mapping.autumnProductId, productId)
+									}
+									className="hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-sm p-0.5 transition-colors cursor-pointer"
+								>
+									<X size={12} className="size-3 text-t4" />
+								</button>
+							</div>
+						);
+					})}
+				</div>
+			)}
+
+			{/* Select to add more products */}
+			{availableProducts.length === 0 ? (
+				<div className="text-t3 text-xs py-1">All products mapped</div>
+			) : (
+				<Select
+					value=""
+					onValueChange={(value) => {
+						if (value) {
+							onAddProduct(mapping.autumnProductId, value);
+						}
+					}}
+				>
+					<SelectTrigger className="w-full">
+						<SelectValue placeholder="Add product..." />
+					</SelectTrigger>
+					<SelectContent>
+						{availableProducts.map((product) => (
+							<SelectItem key={product.id} value={product.id}>
+								{product.name}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+			)}
+		</div>
+	);
+}
+
 export function RevenueCatMappingSheet({
 	open,
 	onOpenChange,
 }: RevenueCatMappingSheetProps) {
-	const { products } = useProductsQuery();
+	const { products } = useProductsQuery({
+		filter(product) {
+			const isPrepaid = product.items.some(isFeaturePriceItem);
+			return !isPrepaid;
+		},
+	});
 	const { products: rcProducts } = useRCProducts();
 	const {
 		mappings: existingMappings,
@@ -44,9 +136,11 @@ export function RevenueCatMappingSheet({
 		isSaving,
 	} = useRCMappings();
 	const [mappings, setMappings] = useState<ProductMapping[]>([]);
+	const [initialized, setInitialized] = useState(false);
 
 	useEffect(() => {
-		if (open && products) {
+		// Only initialize once when opening the sheet
+		if (open && products && !initialized) {
 			// Group products by ID and get the latest version of each
 			const productMap = new Map<string, (typeof products)[0]>();
 
@@ -70,8 +164,14 @@ export function RevenueCatMappingSheet({
 				};
 			});
 			setMappings(initialMappings);
+			setInitialized(true);
 		}
-	}, [open, products, existingMappings]);
+
+		// Reset initialized flag when sheet closes
+		if (!open) {
+			setInitialized(false);
+		}
+	}, [open, products, existingMappings, initialized]);
 
 	const handleAddProduct = (
 		autumnProductId: string,
@@ -117,105 +217,6 @@ export function RevenueCatMappingSheet({
 			.flatMap((m) => m.revenueCatProductIds);
 	};
 
-	const columns: ColumnDef<ProductMapping>[] = useMemo(
-		() => [
-			{
-				header: "Autumn Product",
-				accessorKey: "autumnProductName",
-				size: 200,
-				cell: ({ row }) => {
-					return (
-						<div className="font-medium text-t2">
-							{row.original.autumnProductName}
-						</div>
-					);
-				},
-			},
-			{
-				header: "RevenueCat Products",
-				accessorKey: "revenueCatProductIds",
-				size: 350,
-				cell: ({ row }) => {
-					const mappedRevenueCatProducts = getMappedRevenueCatProducts(
-						row.original.autumnProductId,
-					);
-					const selectedProducts = row.original.revenueCatProductIds;
-
-					return (
-						<div className="flex flex-col gap-2 py-1 min-w-0 overflow-hidden">
-							{/* Display selected products as tags */}
-							{selectedProducts.length > 0 && (
-								<div className="flex flex-wrap gap-1 min-w-0">
-									{selectedProducts.map((productId) => {
-										const product = rcProducts.find((p) => p.id === productId);
-										return (
-											<div
-												key={productId}
-												className="flex items-center gap-1 border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 rounded-lg pl-3 pr-2 py-1 text-xs"
-											>
-												<span className="text-tiny">
-													{product?.name || productId}
-												</span>
-												<button
-													type="button"
-													onClick={() =>
-														handleRemoveProduct(
-															row.original.autumnProductId,
-															productId,
-														)
-													}
-													className="hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-sm p-0.5 transition-colors"
-												>
-													<X size={12} className="size-3 text-t4" />
-												</button>
-											</div>
-										);
-									})}
-								</div>
-							)}
-
-							{/* Select to add more products */}
-							<Select
-								value="__add__"
-								onValueChange={(value) => {
-									if (value !== "__add__") {
-										handleAddProduct(row.original.autumnProductId, value);
-									}
-								}}
-							>
-								<SelectTrigger className="w-full min-w-0">
-									<SelectValue placeholder="Add product..." />
-								</SelectTrigger>
-								<SelectContent>
-									{rcProducts
-										.filter(
-											(p) =>
-												!mappedRevenueCatProducts.includes(p.id) &&
-												!selectedProducts.includes(p.id),
-										)
-										.map((product) => (
-											<SelectItem key={product.id} value={product.id}>
-												{product.name}
-											</SelectItem>
-										))}
-								</SelectContent>
-							</Select>
-						</div>
-					);
-				},
-			},
-		],
-		[mappings, rcProducts],
-	);
-
-	const table = useProductTable({
-		data: mappings,
-		columns,
-		options: {
-			enableSorting: false,
-		},
-	});
-
 	const handleSaveCallback = async () => {
 		// Check for duplicate RevenueCat products across all mappings
 		const allRcProductIds = mappings.flatMap((m) => m.revenueCatProductIds);
@@ -256,24 +257,24 @@ export function RevenueCatMappingSheet({
 				/>
 
 				<div className="flex-1 overflow-y-auto px-4 pt-4">
-					<Table.Provider
-						config={{
-							table,
-							numberOfColumns: columns.length,
-							enableSorting: false,
-							isLoading: false,
-							flexibleTableColumns: true,
-							emptyStateText:
-								"No products found. Create products to map them to RevenueCat.",
-						}}
-					>
-						<Table.Container>
-							<Table.Content>
-								<Table.Header />
-								<Table.Body />
-							</Table.Content>
-						</Table.Container>
-					</Table.Provider>
+					{mappings.length === 0 ? (
+						<div className="text-t3 text-sm text-center py-8">
+							No products found. Create products to map them to RevenueCat.
+						</div>
+					) : (
+						<div className="flex flex-col gap-4">
+							{mappings.map((mapping) => (
+								<MappingRow
+									key={mapping.autumnProductId}
+									mapping={mapping}
+									rcProducts={rcProducts}
+									getMappedRevenueCatProducts={getMappedRevenueCatProducts}
+									onAddProduct={handleAddProduct}
+									onRemoveProduct={handleRemoveProduct}
+								/>
+							))}
+						</div>
+					)}
 				</div>
 
 				<SheetFooter>

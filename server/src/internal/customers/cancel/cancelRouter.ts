@@ -2,6 +2,7 @@ import {
 	CusProductNotFoundError,
 	ErrCode,
 	type FullCusProduct,
+	ProcessorType,
 } from "@autumn/shared";
 import { Router } from "express";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -58,7 +59,8 @@ cancelRouter.post("", async (req, res) =>
 					cusProduct.product.id === product_id &&
 					(entity
 						? cusProduct.internal_entity_id === entity.internal_id
-						: nullish(cusProduct.internal_entity_id)),
+						: nullish(cusProduct.internal_entity_id)) &&
+					cusProduct.processor?.type !== ProcessorType.RevenueCat,
 			);
 
 			if (!cusProduct) {
