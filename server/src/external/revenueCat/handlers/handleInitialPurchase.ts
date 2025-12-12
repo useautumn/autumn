@@ -41,17 +41,19 @@ export const handleInitialPurchase = async ({
 	logger: Logger;
 	features: Feature[];
 }) => {
+	const { product_id, app_user_id, original_transaction_id } = event;
+	console.log("event", event);
 	// Look up Autumn product ID from RevenueCat mapping
 	const autumnProductId = await RCMappingService.getAutumnProductId({
 		db,
 		orgId: org.id,
 		env,
-		revcatProductId: event.product_id,
+		revcatProductId: product_id,
 	});
 
 	if (!autumnProductId) {
 		throw new RecaseError({
-			message: `No Autumn product mapped to RevenueCat product: ${event.product_id}`,
+			message: `No Autumn product mapped to RevenueCat product: ${product_id}`,
 			code: ErrCode.ProductNotFound,
 			statusCode: 404,
 		});
@@ -66,7 +68,7 @@ export const handleInitialPurchase = async ({
 		}),
 		CusService.getFull({
 			db,
-			idOrInternalId: event.app_user_id,
+			idOrInternalId: app_user_id,
 			orgId: org.id,
 			env,
 		}),
@@ -160,7 +162,7 @@ export const handleInitialPurchase = async ({
 		scenario,
 		processorType: ProcessorType.RevenueCat,
 		externalSubIds: [
-			{ type: ProcessorType.RevenueCat, id: event.original_transaction_id },
+			{ type: ProcessorType.RevenueCat, id: original_transaction_id },
 		],
 		attachParams: attachToInsertParams(
 			{
