@@ -45,6 +45,7 @@ export const handleInsightsQuery = createRoute({
 				env: ctx.env,
 				limit: 1000,
 			},
+			format: "JSON",
 		});
 
 		const resultJson = await result.json();
@@ -55,7 +56,7 @@ export const handleInsightsQuery = createRoute({
 
 		return c.json(
 			applyResponseVersionChanges<InsightsQueryResponse>({
-				input: parsedResult,
+				input: parsedResult.data,
 				targetVersion: ctx.apiVersion,
 				resource: AffectedResource.Attach,
 				ctx,

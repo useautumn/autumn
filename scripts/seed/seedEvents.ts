@@ -180,8 +180,7 @@ function generateEvents({
 	const events: EventInsert[] = [];
 
 	for (let i = 0; i < count; i++) {
-		const eventName =
-			featureIds[Math.floor(Math.random() * featureIds.length)];
+		const eventName = featureIds[Math.floor(Math.random() * featureIds.length)];
 		const timestamp = generateRandomTimestamp({
 			daysBack: CONFIG.timeRangeDays,
 		});
@@ -205,6 +204,9 @@ function generateEvents({
 				...CONFIG.defaultProperties,
 				event_index: i + 1,
 				random_value: Math.floor(Math.random() * 1000),
+				user: {
+					id: Math.floor(Math.random() * 10) + 1,
+				},
 			},
 		};
 

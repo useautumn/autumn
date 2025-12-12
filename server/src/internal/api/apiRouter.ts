@@ -4,7 +4,6 @@ import { apiAuthMiddleware } from "@/middleware/apiAuthMiddleware.js";
 import { expressApiVersionMiddleware } from "@/middleware/expressApiVersionMiddleware.js";
 import { pricingMiddleware } from "@/middleware/pricingMiddleware.js";
 import { refreshCacheMiddleware } from "@/middleware/refreshCacheMiddleware.js";
-import { analyticsRouter } from "../analytics/analyticsRouter.js";
 import { attachRouter } from "../customers/attach/attachRouter.js";
 import cancelRouter from "../customers/cancel/cancelRouter.js";
 import { expressCusRouter } from "../customers/cusRouter.js";
@@ -35,7 +34,6 @@ apiRouter.use("", attachRouter);
 apiRouter.use("/cancel", cancelRouter);
 
 // Analytics
-apiRouter.use("/query", analyticsRouter);
 apiRouter.use("/platform", platformRouter);
 apiRouter.use("/products", expressProductRouter);
 apiRouter.use("/customers", expressCusRouter);
