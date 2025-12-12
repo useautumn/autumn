@@ -43,6 +43,8 @@ export const FrontendOrgSchema = z.object({
 			 */
 			api_key: z.string().optional(),
 			sandbox_api_key: z.string().optional(),
+			project_id: z.string().optional(),
+			sandbox_project_id: z.string().optional(),
 			webhook_secret: z.string().optional(),
 			sandbox_webhook_secret: z.string().optional(),
 		}),
