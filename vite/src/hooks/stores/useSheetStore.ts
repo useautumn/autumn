@@ -23,9 +23,15 @@ interface SheetState {
 	previousType: SheetType;
 	// Item ID being edited (e.g., "item-0", "item-1", product.id, or "new"/"select")
 	itemId: string | null;
+	// Explicit data payload for the sheet
+	data: Record<string, unknown> | null;
 
 	// Actions
-	setSheet: (params: { type: SheetType; itemId?: string | null }) => void;
+	setSheet: (params: {
+		type: SheetType;
+		itemId?: string | null;
+		data?: Record<string, unknown> | null;
+	}) => void;
 	closeSheet: () => void;
 	reset: () => void;
 }
@@ -35,19 +41,25 @@ const initialState = {
 	type: null as SheetType,
 	previousType: null as SheetType,
 	itemId: null as string | null,
+	data: null as Record<string, unknown> | null,
 };
 
 export const useSheetStore = create<SheetState>((set) => ({
 	...initialState,
 
 	// Set the sheet type and optional itemId
-	setSheet: ({ type, itemId = null }) => {
-		set((state) => ({ previousType: state.type, type, itemId }));
+	setSheet: ({ type, itemId = null, data = null }) => {
+		set((state) => ({ previousType: state.type, type, itemId, data }));
 	},
 
 	// Close the sheet
 	closeSheet: () => {
-		set((state) => ({ previousType: state.type, type: null, itemId: null }));
+		set((state) => ({
+			previousType: state.type,
+			type: null,
+			itemId: null,
+			data: null,
+		}));
 	},
 
 	// Reset to initial state

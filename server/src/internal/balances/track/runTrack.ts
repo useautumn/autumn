@@ -40,6 +40,8 @@ export const runTrack = async ({
 		});
 	}
 
+	// Clean properties
+
 	const eventInfo: EventInfo = {
 		event_name: body.feature_id || body.event_name || "",
 		value: body.value ?? 1,
