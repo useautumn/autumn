@@ -12,8 +12,8 @@ import {
 	cusEntMatchesFeature,
 	cusEntsToAdjustment,
 	cusEntsToAllowance,
+	cusEntsToBalance,
 	cusEntsToMaxPurchase,
-	cusEntToBalance,
 	cusEntToCusPrice,
 	cusEntToKey,
 	cusEntToPurchasedBalance,
@@ -23,7 +23,6 @@ import {
 	FeatureType,
 	getCusEntBalance,
 	isPrepaidPrice,
-	notNullish,
 	sumValues,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -224,17 +223,11 @@ export const getApiBalance = ({
 	);
 
 	// 3. Current balance
-	const totalBalanceWithRollovers = sumValues(
-		cusEnts
-			.map((cusEnt) =>
-				cusEntToBalance({
-					cusEnt,
-					entityId,
-					withRollovers: includeRollovers,
-				}),
-			)
-			.filter(notNullish),
-	);
+	const totalBalanceWithRollovers = cusEntsToBalance({
+		cusEnts,
+		entityId,
+		withRollovers: includeRollovers,
+	});
 
 	const currentBalance = new Decimal(Math.max(0, totalBalanceWithRollovers))
 		.add(totalAdditionalBalance)
