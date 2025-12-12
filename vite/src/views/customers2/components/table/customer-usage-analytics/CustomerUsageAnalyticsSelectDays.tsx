@@ -1,10 +1,12 @@
-import { Check, ChevronDown } from "lucide-react";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
+import { CaretDownIcon, CheckIcon } from "@phosphor-icons/react";
+import { useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/v2/dropdowns/DropdownMenu";
 import { cn } from "@/lib/utils";
 
 const DAY_OPTIONS = [7, 30];
@@ -16,44 +18,39 @@ export function CustomerUsageAnalyticsSelectDays({
 	selectedDays: number;
 	setSelectedDays: (days: number) => void;
 }) {
+	const [open, setOpen] = useState(false);
 	const displayText = `Last ${selectedDays} days`;
 
 	return (
-		<Popover>
-			<PopoverTrigger asChild>
+		<DropdownMenu open={open} onOpenChange={setOpen}>
+			<DropdownMenuTrigger asChild>
 				<Button
 					variant="secondary"
-					role="combobox"
 					size="mini"
-					className="justify-between font-normal px-2! gap-3"
+					className={cn("gap-1", open && "btn-secondary-active")}
 				>
-					<span className="truncate">{displayText}</span>
-					<ChevronDown className="h-4 w-4 shrink-0 text-t3" />
+					{displayText}
+					<CaretDownIcon className="size-3.5 text-t3" />
 				</Button>
-			</PopoverTrigger>
-			<PopoverContent className="w-[180px] p-1" align="end">
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align="end">
 				{DAY_OPTIONS.map((days) => {
 					const isSelected = selectedDays === days;
 					return (
-						<div
+						<DropdownMenuItem
 							key={days}
-							className={cn(
-								"relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground",
-								isSelected && "bg-accent/50",
-							)}
 							onClick={() => setSelectedDays(days)}
+							className="flex gap-3"
 						>
-							<Check
-								className={cn(
-									"mr-2 h-4 w-4",
-									isSelected ? "opacity-100" : "opacity-0",
-								)}
+							<CheckIcon
+								size={12}
+								className={isSelected ? "opacity-100" : "opacity-0"}
 							/>
-							<span>Last {days} days</span>
-						</div>
+							Last {days} days
+						</DropdownMenuItem>
 					);
 				})}
-			</PopoverContent>
-		</Popover>
+			</DropdownMenuContent>
+		</DropdownMenu>
 	);
 }
