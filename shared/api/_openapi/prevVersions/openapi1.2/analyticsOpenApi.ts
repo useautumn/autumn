@@ -1,8 +1,7 @@
 import {
 	AnalyticsAggregationBodySchema,
-	AnalyticsAggregationErrorResponseSchema,
 	AnalyticsAggregationResponseSchema,
-} from "../../../analytics/aggregation/analyticsAggregationSchema.js";
+} from "../../../events/aggregation/eventAggregationSchema.js";
 
 export const analyticsOpenApi = {
 	"/query": {
@@ -22,30 +21,6 @@ export const analyticsOpenApi = {
 					content: {
 						"application/json": {
 							schema: AnalyticsAggregationResponseSchema,
-						},
-					},
-				},
-				"400": {
-					description: "Bad Request",
-					content: {
-						"application/json": {
-							schema: AnalyticsAggregationErrorResponseSchema,
-						},
-					},
-				},
-				"404": {
-					description: "Not Found",
-					content: {
-						"application/json": {
-							schema: AnalyticsAggregationErrorResponseSchema,
-						},
-					},
-				},
-				"500": {
-					description: "Internal Server Error",
-					content: {
-						"application/json": {
-							schema: AnalyticsAggregationErrorResponseSchema,
 						},
 					},
 				},

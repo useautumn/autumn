@@ -10,13 +10,13 @@ export const BinSizeEnum = z.enum(["day", "hour"]).default("day");
 
 export type BinSizeEnum = z.infer<typeof BinSizeEnum>;
 
-export const AnalyticsAggregationBodySchema = z.object({
+export const EventAggregationBodySchema = z.object({
 	customer_id: z.string().min(1),
 	feature_id: z
 		.string()
 		.min(1)
 		.or(z.array(z.string().min(1))),
-	group_by: z.string().optional(),
+	group_by: z.string().startsWith("properties.").optional(),
 	range: RangeEnum,
 	bin_size: BinSizeEnum,
 	custom_range: z
@@ -30,12 +30,10 @@ export const AnalyticsAggregationBodySchema = z.object({
 		.optional(),
 });
 
-export type AnalyticsAggregationBody = z.infer<
-	typeof AnalyticsAggregationBodySchema
->;
+export type EventAggregationBody = z.infer<typeof EventAggregationBodySchema>;
 
 // Response without group_by: { period: number, [featureName]: number }
-const AnalyticsAggregationResponseFlatSchema = z.object({
+const EventAggregationResponseFlatSchema = z.object({
 	list: z.array(
 		z
 			.object({
@@ -46,7 +44,7 @@ const AnalyticsAggregationResponseFlatSchema = z.object({
 });
 
 // Response with group_by: { period: number, [featureName]: { [groupValue]: number } }
-const AnalyticsAggregationResponseGroupedSchema = z.object({
+const EventAggregationResponseGroupedSchema = z.object({
 	list: z.array(
 		z
 			.object({
@@ -56,7 +54,7 @@ const AnalyticsAggregationResponseGroupedSchema = z.object({
 	),
 });
 
-const AnalyticsAggregationResponseTotalSchema = z.object({
+const EventAggregationResponseTotalSchema = z.object({
 	total: z.record(
 		z.string(),
 		z.object({
@@ -66,24 +64,22 @@ const AnalyticsAggregationResponseTotalSchema = z.object({
 	),
 });
 
-export const AnalyticsAggregationResponseSchema = z.union([
-	AnalyticsAggregationResponseFlatSchema.and(
-		AnalyticsAggregationResponseTotalSchema,
-	),
-	AnalyticsAggregationResponseGroupedSchema.and(
-		AnalyticsAggregationResponseTotalSchema,
+export const EventAggregationResponseSchema = z.union([
+	EventAggregationResponseFlatSchema.and(EventAggregationResponseTotalSchema),
+	EventAggregationResponseGroupedSchema.and(
+		EventAggregationResponseTotalSchema,
 	),
 ]);
 
-export type AnalyticsAggregationResponse = z.infer<
-	typeof AnalyticsAggregationResponseSchema
+export type EventAggregationResponse = z.infer<
+	typeof EventAggregationResponseSchema
 >;
 
-export const AnalyticsAggregationErrorResponseSchema = z.object({
+export const EventAggregationErrorResponseSchema = z.object({
 	code: z.string(),
 	message: z.string(),
 });
 
-export type AnalyticsAggregationErrorResponse = z.infer<
-	typeof AnalyticsAggregationErrorResponseSchema
+export type EventAggregationErrorResponse = z.infer<
+	typeof EventAggregationErrorResponseSchema
 >;

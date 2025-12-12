@@ -1,25 +1,23 @@
+import type { AggregatedEventRow, ProcessedEventRow } from "@autumn/shared";
 import {
-	AnalyticsAggregationBodySchema,
+	CustomerNotFoundError,
 	ErrCode,
+	EventAggregationBodySchema,
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { CusService } from "@/internal/customers/CusService";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
-import { AnalyticsServiceV2 } from "../AnalyticsServiceV2";
-import type {
-	AggregatedEventRow,
-	ProcessedEventRow,
-} from "../analyticsTypes.js";
+import { EventsAggregationService } from "../EventsAggregationService";
 import {
 	backfillMissingGroupValues,
 	buildGroupedTimeseries,
 	collectGroupingMetadata,
 	convertPeriodsToEpoch,
-} from "../analyticsUtils.js";
+} from "../eventUtils.js";
 
-export const handleAnalyticsAggregation = createRoute({
-	body: AnalyticsAggregationBodySchema,
+export const handleEventsAggregation = createRoute({
+	body: EventAggregationBodySchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org, env } = ctx;
@@ -35,17 +33,13 @@ export const handleAnalyticsAggregation = createRoute({
 		});
 
 		if (!customer) {
-			throw new RecaseError({
-				message: "Customer not found",
-				code: ErrCode.CustomerNotFound,
-				statusCode: StatusCodes.NOT_FOUND,
-			});
+			throw new CustomerNotFoundError({ customerId: customer_id });
 		}
 
 		const featureIds = Array.isArray(feature_id) ? feature_id : [feature_id];
 
 		const [events, total] = await Promise.all([
-			AnalyticsServiceV2.getTimeseriesEvents({
+			EventsAggregationService.getTimeseriesEvents({
 				ctx,
 				params: {
 					aggregateAll: false,
@@ -59,7 +53,7 @@ export const handleAnalyticsAggregation = createRoute({
 					custom_range,
 				},
 			}),
-			AnalyticsServiceV2.getTotalEvents({
+			EventsAggregationService.getTotalEvents({
 				ctx,
 				params: {
 					aggregateAll: false,
