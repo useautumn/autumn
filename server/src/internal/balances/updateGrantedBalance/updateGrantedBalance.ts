@@ -50,7 +50,7 @@ export const updateGrantedBalance = async ({
 
 	if (cusEntsHavePrice({ cusEnts })) {
 		throw new InternalError({
-			message: `[updateGrantedBalance] Cus ent has price, cannot update granted balance`,
+			message: `This feature has a price, so you cannot update the granted balance`,
 		});
 	}
 

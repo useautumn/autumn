@@ -42,6 +42,7 @@ export function BalanceEditSheet() {
 		useState(false);
 
 	const hasMultipleBalances = originalEntitlements.length > 1;
+	const [grantedBalanceChanged, setGrantedBalanceChanged] = useState(false);
 
 	// Get the selected entitlement
 	const selectedCusEnt = originalEntitlements.find(
@@ -124,21 +125,11 @@ export function BalanceEditSheet() {
 		setUpdateLoading(true);
 
 		try {
-			// await CusService.updateCusEntitlement(
-			// 	axiosInstance,
-			// 	customer.id || customer.internal_id,
-			// 	cusEnt.id,
-			// 	{
-			// 		balance: balanceInt,
-			// 		next_reset_at: updateFields.next_reset_at,
-			// 		entity_id: entityId,
-			// 	},
-			// );
 			await axiosInstance.post("/v1/balances/update", {
 				customer_id: customer.id || customer.internal_id,
 				feature_id: featureId,
 				current_balance: balanceInt,
-				granted_balance: grantedBalanceInt ?? undefined,
+				granted_balance: grantedBalanceChanged ? grantedBalanceInt : undefined,
 				customer_entitlement_id: cusEnt.id,
 				entity_id: entityId ?? undefined,
 			});
@@ -283,55 +274,62 @@ export function BalanceEditSheet() {
 												}}
 											/>
 										</div>
-										{isGrantedBalanceUnlinked ? (
+										{(initialFields.grantedBalance ?? 0) > 0 && (
 											<>
-												<span className="text-t4 text-sm pb-1">/</span>
-												<div className="flex items-center gap-1 w-full">
-													<Input
-														type="number"
-														className="h-7 px-1.5"
-														value={
-															notNullish(updateFields.grantedBalance)
-																? String(updateFields.grantedBalance)
-																: ""
-														}
-														onChange={(e) => {
-															setUpdateFields({
-																...updateFields,
-																grantedBalance: e.target.value
-																	? parseFloat(e.target.value)
-																	: null,
-															});
-														}}
-													/>
-												</div>
-											</>
-										) : (
-											<div className="text-t4 text-sm inline-flex max-w-16 pb-1">
-												<span className="shrink-0">/&nbsp;</span>
-												<span className="truncate min-w-0">
-													{fields.grantedBalance}
-												</span>
-											</div>
-										)}
-										<IconButton
-											variant="skeleton"
-											icon={
-												<LinkBreakIcon
-													className={
-														isGrantedBalanceUnlinked
-															? "text-primary"
-															: "text-t4"
+												{isGrantedBalanceUnlinked ? (
+													<>
+														<span className="text-t4 text-sm pb-1">/</span>
+														<div className="flex items-center gap-1 w-full">
+															<Input
+																type="number"
+																className="h-7 px-1.5"
+																value={
+																	notNullish(updateFields.grantedBalance)
+																		? String(updateFields.grantedBalance)
+																		: ""
+																}
+																onChange={(e) => {
+																	setUpdateFields({
+																		...updateFields,
+																		grantedBalance: e.target.value
+																			? parseFloat(e.target.value)
+																			: null,
+																	});
+																	setGrantedBalanceChanged(true);
+																}}
+															/>
+														</div>
+													</>
+												) : (
+													<div className="text-t4 text-sm inline-flex max-w-16 pb-1 pl-3">
+														<span className="shrink-0">/&nbsp;</span>
+														<span className="truncate min-w-0">
+															{fields.grantedBalance}
+														</span>
+													</div>
+												)}
+												<IconButton
+													variant="skeleton"
+													icon={
+														<LinkBreakIcon
+															className={
+																isGrantedBalanceUnlinked
+																	? "text-primary"
+																	: "text-t4"
+															}
+														/>
+													}
+													onClick={() =>
+														setIsGrantedBalanceUnlinked(
+															!isGrantedBalanceUnlinked,
+														)
 													}
 												/>
-											}
-											onClick={() =>
-												setIsGrantedBalanceUnlinked(!isGrantedBalanceUnlinked)
-											}
-										/>
+											</>
+										)}
 									</div>
 								</div>
-								<div className="flex flex-col shrink-0 w-full max-w-36 min-w-36">
+								<div className="flex flex-col shrink-0 w-full max-w-40 min-w-40">
 									<div className="text-form-label block mb-1">Next Reset</div>
 									<DateInputUnix
 										disabled={
