@@ -250,6 +250,8 @@ export const createOrgResponse = ({
 				connected: revenueCatConnection.connected,
 				api_key: revenueCatConnection.api_key,
 				sandbox_api_key: revenueCatConnection.sandbox_api_key,
+				project_id: revenueCatConnection.project_id,
+				sandbox_project_id: revenueCatConnection.sandbox_project_id,
 				webhook_secret: revenueCatConnection.webhook_secret,
 				sandbox_webhook_secret: revenueCatConnection.sandbox_webhook_secret,
 			},
