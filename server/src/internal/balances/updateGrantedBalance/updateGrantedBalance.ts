@@ -1,7 +1,7 @@
 import type { FullCustomer, SortCusEntParams } from "@autumn/shared";
 import {
 	cusEntsHavePrice,
-	cusEntsToGrantedBalance,
+	cusEntsToAllowance,
 	cusProductsToCusEnts,
 	FeatureNotFoundError,
 	InternalError,
@@ -54,6 +54,16 @@ export const updateGrantedBalance = async ({
 		});
 	}
 
+	const currentAllowance = cusEntsToAllowance({
+		cusEnts,
+		entityId: fullCus.entity?.id,
+		withRollovers: false,
+	});
+
+	const requiredAdjustment = new Decimal(targetGrantedBalance)
+		.sub(currentAllowance)
+		.toNumber();
+
 	const targetCusEnt = cusEnts[0];
 	const isEntityScoped = isEntityScopedCusEnt({ cusEnt: targetCusEnt });
 	const entityId = fullCus.entity?.id;
@@ -72,24 +82,13 @@ export const updateGrantedBalance = async ({
 			});
 		}
 
-		// Calculate new adjustment: targetGrantedBalance - baseGrantedBalance
-		const baseGrantedBalance = cusEntsToGrantedBalance({
-			cusEnts: [targetCusEnt],
-			entityId: targetEntityId,
-			withRollovers: false,
-		});
-
-		const newAdjustment = new Decimal(targetGrantedBalance)
-			.sub(baseGrantedBalance)
-			.toNumber();
-
 		const currentEntity = targetCusEnt.entities[targetEntityId];
 		const newEntities = {
 			...targetCusEnt.entities,
 			[targetEntityId]: {
 				id: targetEntityId,
 				balance: currentEntity.balance,
-				adjustment: newAdjustment,
+				adjustment: requiredAdjustment,
 				additional_balance: currentEntity.additional_balance,
 			},
 		};
@@ -100,20 +99,10 @@ export const updateGrantedBalance = async ({
 			updates: { entities: newEntities },
 		});
 	} else {
-		// Regular: calculate new adjustment directly
-		const baseGrantedBalance = cusEntsToGrantedBalance({
-			cusEnts: [targetCusEnt],
-			entityId,
-			withRollovers: false,
-		});
-		const newAdjustment = new Decimal(targetGrantedBalance)
-			.sub(baseGrantedBalance)
-			.toNumber();
-
 		await CusEntService.update({
 			db: ctx.db,
 			id: targetCusEnt.id,
-			updates: { adjustment: newAdjustment },
+			updates: { adjustment: requiredAdjustment },
 		});
 	}
 };
