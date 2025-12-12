@@ -1,12 +1,9 @@
 import { beforeAll, describe } from "bun:test";
-import { ApiVersion, BillingInterval } from "@autumn/shared";
+import { ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { advanceTestClock } from "@tests/utils/stripeUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { addWeeks } from "date-fns";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { constructPriceItem } from "@/internal/products/product-items/productItemUtils";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import {
 	constructProduct,
@@ -20,10 +17,6 @@ const paidAddOn = constructRawProduct({
 	id: "addOn",
 	isAddOn: true,
 	items: [
-		constructPriceItem({
-			price: 10,
-			interval: BillingInterval.Month,
-		}),
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
 			includedUsage: 500,
@@ -38,6 +31,10 @@ const pro = constructProduct({
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
 			includedUsage: 300,
+		}),
+		constructFeatureItem({
+			featureId: TestFeature.Users,
+			includedUsage: 5,
 		}),
 	],
 });
@@ -74,11 +71,9 @@ describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 			product_id: pro.id,
 		});
 
-		await advanceTestClock({
-			stripeCli: ctx.stripeCli,
-			testClockId: result.testClockId,
-			advanceTo: addWeeks(new Date(), 3).getTime(),
-			waitForSeconds: 10,
+		await autumnV1.attach({
+			customer_id: customerId,
+			product_id: paidAddOn.id,
 		});
 	});
 });
