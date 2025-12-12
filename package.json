@@ -29,6 +29,7 @@
 		"validate-schema": "infisical run --env=prod -- bun scripts/migrations/validate-schema.ts",
 		"setupci": "node scripts/setup/setupci.js",
 		"replicate": "bun scripts/db/replicate.ts",
+		"db:pull": "bun scripts/db/pull.ts",
 		"db:push": " bun -F @autumn/shared db:push",
 		"db:generate": "bun -F @autumn/shared db:generate",
 		"db:migrate": " bun -F @autumn/shared db:migrate"
