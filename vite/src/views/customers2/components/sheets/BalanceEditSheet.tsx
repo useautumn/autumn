@@ -274,59 +274,53 @@ export function BalanceEditSheet() {
 												}}
 											/>
 										</div>
-										{(initialFields.grantedBalance ?? 0) > 0 && (
-											<>
-												{isGrantedBalanceUnlinked ? (
-													<>
-														<span className="text-t4 text-sm pb-1">/</span>
-														<div className="flex items-center gap-1 w-full">
-															<Input
-																type="number"
-																className="h-7 px-1.5"
-																value={
-																	notNullish(updateFields.grantedBalance)
-																		? String(updateFields.grantedBalance)
-																		: ""
-																}
-																onChange={(e) => {
-																	setUpdateFields({
-																		...updateFields,
-																		grantedBalance: e.target.value
-																			? parseFloat(e.target.value)
-																			: null,
-																	});
-																	setGrantedBalanceChanged(true);
-																}}
-															/>
-														</div>
-													</>
-												) : (
-													<div className="text-t4 text-sm inline-flex max-w-16 pb-1 pl-3">
-														<span className="shrink-0">/&nbsp;</span>
-														<span className="truncate min-w-0">
-															{fields.grantedBalance}
-														</span>
+										{(initialFields.grantedBalance ?? 0) > 0 &&
+											(isGrantedBalanceUnlinked ? (
+												<>
+													<span className="text-t4 text-sm pb-1">/</span>
+													<div className="flex items-center gap-1 w-full">
+														<Input
+															type="number"
+															className="h-7 px-1.5"
+															autoFocus
+															value={
+																notNullish(updateFields.grantedBalance)
+																	? String(updateFields.grantedBalance)
+																	: ""
+															}
+															onChange={(e) => {
+																setUpdateFields({
+																	...updateFields,
+																	grantedBalance: e.target.value
+																		? parseFloat(e.target.value)
+																		: null,
+																});
+																setGrantedBalanceChanged(true);
+															}}
+															onBlur={() => setIsGrantedBalanceUnlinked(false)}
+														/>
 													</div>
-												)}
+												</>
+											) : (
 												<IconButton
 													variant="skeleton"
-													icon={
-														<LinkBreakIcon
-															className={
-																isGrantedBalanceUnlinked
-																	? "text-primary"
-																	: "text-t4"
-															}
-														/>
-													}
+													iconOrientation="right"
+													className="gap-1.5 text-t3"
+													icon={<LinkBreakIcon className="size-3" />}
 													onClick={() =>
 														setIsGrantedBalanceUnlinked(
 															!isGrantedBalanceUnlinked,
 														)
 													}
-												/>
-											</>
-										)}
+												>
+													<div className="text-sm inline-flex max-w-16">
+														<span className="shrink-0">/&nbsp;</span>
+														<span className="truncate min-w-0">
+															{fields.grantedBalance}
+														</span>
+													</div>
+												</IconButton>
+											))}
 									</div>
 								</div>
 								<div className="flex flex-col shrink-0 w-full max-w-40 min-w-40">
