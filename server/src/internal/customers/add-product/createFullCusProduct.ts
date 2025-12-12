@@ -6,6 +6,7 @@ import {
 	type Customer,
 	type CustomerEntitlement,
 	type CustomerPrice,
+	type ExternalSubID,
 	type FeatureOptions,
 	type FreeTrial,
 	type FullCusProduct,
@@ -72,16 +73,19 @@ export const initCusProduct = ({
 	createdAt,
 	collectionMethod,
 	subscriptionIds,
+	externalSubIds,
 	subscriptionScheduleIds,
 	isCustom,
 	entityId,
 	internalEntityId,
 	apiVersion,
 	quantity,
+	processor = ProcessorType.Stripe,
 }: {
 	customer: Customer;
 	product: FullProduct;
 	// subscriptionId: string | undefined | null;
+	externalSubIds?: ExternalSubID[];
 	// subscriptionScheduleId?: string | null;
 	// lastInvoiceId?: string | null;
 	cusProdId: string;
@@ -100,6 +104,7 @@ export const initCusProduct = ({
 	internalEntityId?: string;
 	apiVersion?: ApiVersion;
 	quantity?: number;
+	processor?: ProcessorType;
 }) => {
 	const isFuture = startsAt && startsAt > Date.now();
 
@@ -124,7 +129,7 @@ export const initCusProduct = ({
 				: CusProductStatus.Active,
 
 		processor: {
-			type: ProcessorType.Stripe,
+			type: processor ?? ProcessorType.Stripe,
 			// subscription_id: subscriptionId,
 			// subscription_schedule_id: subscriptionScheduleId,
 			// last_invoice_id: lastInvoiceId,
@@ -137,6 +142,7 @@ export const initCusProduct = ({
 		canceled_at: canceledAt,
 		collection_method: collectionMethod || CollectionMethod.ChargeAutomatically,
 		subscription_ids: subscriptionIds,
+		external_sub_ids: externalSubIds || [],
 		scheduled_ids: subscriptionScheduleIds,
 		is_custom: isCustom || false,
 		quantity: quantity || 1,
@@ -276,6 +282,7 @@ export const createFullCusProduct = async ({
 	canceledAt = null,
 	createdAt = null,
 	subscriptionIds = [],
+	externalSubIds = [],
 	subscriptionScheduleIds = [],
 	anchorToUnix,
 	carryExistingUsages = false,
@@ -284,6 +291,7 @@ export const createFullCusProduct = async ({
 	scenario = "default",
 	sendWebhook = true,
 	logger,
+	processorType = ProcessorType.Stripe,
 }: {
 	db: DrizzleCli;
 	attachParams: InsertCusProductParams;
@@ -297,6 +305,7 @@ export const createFullCusProduct = async ({
 	canceledAt?: number | null;
 	createdAt?: number | null;
 	subscriptionIds?: string[];
+	externalSubIds?: ExternalSubID[];
 	subscriptionScheduleIds?: string[];
 	keepResetIntervals?: boolean;
 	anchorToUnix?: number;
@@ -306,6 +315,7 @@ export const createFullCusProduct = async ({
 	scenario?: string;
 	sendWebhook?: boolean;
 	logger: any;
+	processorType?: ProcessorType;
 }) => {
 	disableFreeTrial = attachParams.disableFreeTrial || disableFreeTrial;
 
@@ -433,6 +443,7 @@ export const createFullCusProduct = async ({
 	const cusProd = initCusProduct({
 		cusProdId,
 		customer,
+		processor: processorType ?? ProcessorType.Stripe,
 		product,
 		startsAt,
 		optionsList,
@@ -446,6 +457,7 @@ export const createFullCusProduct = async ({
 			: CollectionMethod.ChargeAutomatically,
 		subscriptionIds,
 		subscriptionScheduleIds,
+		externalSubIds,
 		isCustom: attachParams.isCustom || false,
 		internalEntityId: attachParams.internalEntityId,
 		entityId: attachParams.entityId,

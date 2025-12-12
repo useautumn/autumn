@@ -29,6 +29,15 @@ export const FrontendProductSchema = ProductV2Schema.extend({
 		.enum(["recurring", "one-off", "usage"])
 		.default("recurring")
 		.nullable(),
+	external_processors: z
+		.object({
+			revenuecat: z
+				.object({
+					linked_product_id: z.string().nullish(),
+				})
+				.nullish(),
+		})
+		.nullish(),
 });
 
 export type ProductV2 = z.infer<typeof ProductV2Schema>;

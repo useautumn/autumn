@@ -1,6 +1,8 @@
 import { getRequestListener } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { handleRevenueCatOauthCallback } from "./external/revenueCat/handleRCOAuthCallback.js";
+import { rcWebhookRouter } from "./external/revenueCat/rcWebhookRouter.js";
 import { vercelWebhookRouter } from "./external/vercel/vercelWebhookRouter.js";
 import { handleConnectWebhook } from "./external/webhooks/connectWebhookRouter.js";
 import { baseMiddleware } from "./honoMiddlewares/baseMiddleware.js";
@@ -67,6 +69,7 @@ export const createHonoApp = () => {
 	// Health check endpoint for AWS/ECS load balancer
 
 	app.get("/stripe/oauth_callback", handleOAuthCallback);
+	app.get("/revenuecat/oauth_callback", ...handleRevenueCatOauthCallback);
 
 	// Step 1: Base middleware - sets up ctx (db, logger, etc.)
 	app.use("*", baseMiddleware);
@@ -92,6 +95,7 @@ export const createHonoApp = () => {
 	// Webhook routes
 	app.post("/webhooks/connect/:env", handleConnectWebhook);
 	app.route("/webhooks/vercel", vercelWebhookRouter);
+	app.route("/webhooks/revenuecat", rcWebhookRouter);
 
 	// API Middleware
 	app.route("/v1", apiRouter);

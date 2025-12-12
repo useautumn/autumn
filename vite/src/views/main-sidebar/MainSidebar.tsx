@@ -6,6 +6,7 @@ import {
 	CubeIcon,
 	LegoIcon,
 	OptionIcon,
+	PawPrintIcon,
 	TerminalWindowIcon,
 	TriangleIcon,
 	UserCircleIcon,
@@ -34,6 +35,7 @@ export const buildDevSubTabs = ({
 	flags: {
 		webhooks: boolean;
 		vercel: boolean;
+		revenuecat: boolean;
 	};
 }) => {
 	return [
@@ -53,6 +55,15 @@ export const buildDevSubTabs = ({
 						title: "Vercel",
 						value: "vercel",
 						icon: <TriangleIcon size={16} weight="fill" />,
+					},
+				]
+			: []),
+		...(flags.revenuecat
+			? [
+					{
+						title: "RevenueCat",
+						value: "revenuecat",
+						icon: <PawPrintIcon size={16} weight="fill" />,
 					},
 				]
 			: []),

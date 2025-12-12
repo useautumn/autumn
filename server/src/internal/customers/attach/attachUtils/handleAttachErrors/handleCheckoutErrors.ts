@@ -1,6 +1,9 @@
 import type { AttachBranch } from "@autumn/shared";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import { handleCustomPaymentMethodErrors } from "../handleAttachErrors.js";
+import {
+	handleCustomPaymentMethodErrors,
+	handleExternalPSPErrors,
+} from "../handleAttachErrors.js";
 
 export const handleCheckoutErrors = ({
 	attachParams,
@@ -10,6 +13,10 @@ export const handleCheckoutErrors = ({
 	branch: AttachBranch;
 }) => {
 	handleCustomPaymentMethodErrors({
+		attachParams,
+	});
+
+	handleExternalPSPErrors({
 		attachParams,
 	});
 

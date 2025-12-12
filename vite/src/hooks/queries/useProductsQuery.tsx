@@ -2,7 +2,15 @@ import type { FullProduct, ProductCounts, ProductV2 } from "@autumn/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
-export const useProductsQuery = () => {
+/**
+ * Fetch all products for the current org.
+ * Optionally provide a filter function to filter results.
+ */
+export const useProductsQuery = ({
+	filter,
+}: {
+	filter?: (product: ProductV2) => boolean;
+} = {}) => {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
 
@@ -42,7 +50,8 @@ export const useProductsQuery = () => {
 	};
 
 	return {
-		products: (data?.products || []) as ProductV2[],
+		products: (data?.products.filter(filter ?? (() => true)) ||
+			[]) as ProductV2[],
 		counts: countsData || {},
 		groupToDefaults: data?.groupToDefaults || {},
 		isLoading,

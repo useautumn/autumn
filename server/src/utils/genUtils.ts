@@ -54,6 +54,14 @@ export const nullish = <T>(
 	return value === null || value === undefined;
 };
 
+export const mask = (v: string | undefined, p: number, s: number) => {
+	if (!v) return undefined;
+	const len = v.length;
+	if (len <= p + s) return v;
+	const maskLen = len - p - s;
+	return v.slice(0, p) + "*".repeat(maskLen) + v.slice(-s);
+};
+
 export const notNullish = <T>(value: T | null | undefined): value is T => {
 	return !nullish(value);
 };
