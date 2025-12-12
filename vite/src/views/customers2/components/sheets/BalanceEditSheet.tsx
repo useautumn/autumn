@@ -1,4 +1,5 @@
 import {
+	cusEntsToGrantedBalance,
 	type FullCusProduct,
 	type FullCustomerEntitlement,
 	type FullCustomerPrice,
@@ -58,7 +59,10 @@ export function BalanceEditSheet() {
 		});
 
 		const balance = balanceFields.balance;
-		const grantedBalance = balanceFields.balance + balanceFields.adjustment;
+		const grantedBalance = cusEntsToGrantedBalance({
+			cusEnts: [selectedCusEnt],
+			entityId: entityId ?? undefined,
+		});
 
 		const rolloverBalance = selectedCusEnt.rollovers.reduce(
 			(acc, rollover) => acc + rollover.balance,
