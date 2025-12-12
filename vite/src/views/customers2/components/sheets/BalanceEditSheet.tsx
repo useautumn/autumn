@@ -38,42 +38,42 @@ export function BalanceEditSheet() {
 
 	const hasMultipleBalances = originalEntitlements.length > 1;
 
+	// Get the selected entitlement
+	const selectedCusEnt = originalEntitlements.find(
+		(ent) => ent.id === selectedCusEntId,
+	);
+
+	// Get the initial fields for the selected entitlement
 	const initialFields = useMemo(() => {
-		if (!originalEntitlements.length) {
-			return new Map<
-				string,
-				{ balance: number | null; next_reset_at: number | null }
-			>();
+		if (!selectedCusEnt) {
+			return {
+				balance: null as number | null,
+				next_reset_at: null as number | null,
+			};
 		}
 
-		const fields = new Map<
-			string,
-			{ balance: number | null; next_reset_at: number | null }
-		>();
+		const balanceFields = getCusEntBalance({
+			cusEnt: selectedCusEnt,
+			entityId,
+		});
 
-		for (const cusEnt of originalEntitlements) {
-			const balance = getCusEntBalance({
-				cusEnt,
-				entityId,
-			}).balance;
+		const balance = balanceFields.balance;
+		const grantedBalance = balanceFields.balance + balanceFields.adjustment;
 
-			const rolloverBalance = cusEnt.rollovers.reduce(
-				(acc, rollover) => acc + rollover.balance,
-				0,
-			);
+		const rolloverBalance = selectedCusEnt.rollovers.reduce(
+			(acc, rollover) => acc + rollover.balance,
+			0,
+		);
 
-			fields.set(cusEnt.id, {
-				balance: balance !== null ? balance + rolloverBalance : null,
-				next_reset_at: cusEnt.next_reset_at,
-			});
-		}
-
-		return fields;
-	}, [originalEntitlements, entityId]);
+		return {
+			balance: balance !== null ? balance + rolloverBalance : null,
+			next_reset_at: selectedCusEnt.next_reset_at,
+		};
+	}, [selectedCusEnt, entityId]);
 
 	const [updateFields, setUpdateFields] = useState(initialFields);
 
-	// Reset fields when feature changes
+	// Reset fields when selected entitlement changes
 	useEffect(() => {
 		setUpdateFields(initialFields);
 	}, [initialFields]);
@@ -93,10 +93,7 @@ export function BalanceEditSheet() {
 	const handleUpdateCusEntitlement = async (
 		cusEnt: FullCustomerEntitlement,
 	) => {
-		const fields = updateFields.get(cusEnt.id);
-		if (!fields) return;
-
-		const balanceInt = parseFloat(String(fields.balance));
+		const balanceInt = parseFloat(String(updateFields.balance));
 		if (Number.isNaN(balanceInt)) {
 			toast.error("Balance not valid");
 			return;
@@ -108,7 +105,7 @@ export function BalanceEditSheet() {
 				cp.price.entitlement_id === cusEnt.entitlement.id,
 		);
 
-		if (cusPrice && fields.next_reset_at !== cusEnt.next_reset_at) {
+		if (cusPrice && updateFields.next_reset_at !== cusEnt.next_reset_at) {
 			toast.error("Not allowed to change reset at for paid features");
 			return;
 		}
@@ -122,7 +119,7 @@ export function BalanceEditSheet() {
 				cusEnt.id,
 				{
 					balance: balanceInt,
-					next_reset_at: fields.next_reset_at,
+					next_reset_at: updateFields.next_reset_at,
 					entity_id: entityId,
 				},
 			);
@@ -149,11 +146,6 @@ export function BalanceEditSheet() {
 	const firstEnt = originalEntitlements[0];
 	const feature = firstEnt.entitlement.feature;
 
-	// Get the selected entitlement
-	const selectedCusEnt = hasMultipleBalances
-		? originalEntitlements.find((ent) => ent.id === selectedCusEntId)
-		: originalEntitlements[0];
-
 	const isUnlimited = selectedCusEnt
 		? isUnlimitedCusEnt({ cusEnt: selectedCusEnt })
 		: false;
@@ -166,7 +158,9 @@ export function BalanceEditSheet() {
 		);
 	}
 
-	const fields = updateFields.get(selectedCusEnt.id);
+	console.log("selectedCusEnt", selectedCusEnt);
+
+	const fields = updateFields;
 	if (!fields) return null;
 
 	const cusProduct = getCusProduct(selectedCusEnt);
@@ -236,46 +230,36 @@ export function BalanceEditSheet() {
 					<SheetSection withSeparator={false}>
 						<div className="flex flex-col gap-3">
 							<div className="flex gap-3">
-								<LabelInput
-									label="Balance"
-									placeholder="Enter balance"
-									type="number"
-									className="flex-1"
-									value={
-										notNullish(fields.balance) ? String(fields.balance) : ""
-									}
-									onChange={(e) => {
-										const newFields = new Map(updateFields);
-										const current = newFields.get(selectedCusEnt.id) || {
-											balance: null,
-											next_reset_at: null,
-										};
-										newFields.set(selectedCusEnt.id, {
-											...current,
-											balance: e.target.value
-												? parseFloat(e.target.value)
-												: null,
-										});
-										setUpdateFields(newFields);
-									}}
-								/>
-
+								<div className="flex items-end gap-2 border border-blue-500">
+									<LabelInput
+										label="Balance"
+										placeholder="Enter balance"
+										type="number"
+										className="flex-1"
+										value={
+											notNullish(fields.balance) ? String(fields.balance) : ""
+										}
+										onChange={(e) => {
+											setUpdateFields({
+												...updateFields,
+												balance: e.target.value
+													? parseFloat(e.target.value)
+													: null,
+											});
+										}}
+									/>
+									<div className="text-t4 text-xs flex items-end">/ </div>
+								</div>
 								<div className="flex-1">
 									<div className="text-form-label block mb-1">Next Reset</div>
 									<DateInputUnix
 										disabled={!!cusPrice}
 										unixDate={fields.next_reset_at}
 										setUnixDate={(unixDate) => {
-											const newFields = new Map(updateFields);
-											const current = newFields.get(selectedCusEnt.id) || {
-												balance: null,
-												next_reset_at: null,
-											};
-											newFields.set(selectedCusEnt.id, {
-												...current,
+											setUpdateFields({
+												...updateFields,
 												next_reset_at: unixDate,
 											});
-											setUpdateFields(newFields);
 										}}
 									/>
 								</div>
