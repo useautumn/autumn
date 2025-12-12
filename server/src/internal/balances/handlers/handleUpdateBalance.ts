@@ -1,18 +1,18 @@
 import {
 	FeatureNotFoundError,
 	notNullish,
-	ResetInterval,
 	resetIntvToEntIntv,
 	UpdateBalanceParamsSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "../../../honoMiddlewares/routeHandler.js";
+import { CusService } from "../../customers/CusService.js";
 import { deleteCachedApiCustomer } from "../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { runDeductionTx } from "../track/trackUtils/runDeductionTx.js";
+import { updateGrantedBalance } from "../updateGrantedBalance/updateGrantedBalance.js";
 
 export const handleUpdateBalance = createRoute({
 	body: UpdateBalanceParamsSchema.extend({
-		// Internal
 		customer_entitlement_id: z.string().optional(),
 	}),
 
@@ -49,6 +49,31 @@ export const handleUpdateBalance = createRoute({
 						: undefined,
 				},
 				refreshCache: false,
+			});
+		}
+
+		if (notNullish(body.granted_balance)) {
+			ctx.logger.info(
+				`updating granted balance for feature ${feature.id} to ${body.granted_balance}`,
+			);
+			const fullCus = await CusService.getFull({
+				db: ctx.db,
+				idOrInternalId: body.customer_id,
+				orgId: ctx.org.id,
+				env: ctx.env,
+			});
+
+			await updateGrantedBalance({
+				ctx,
+				fullCus,
+				featureId: body.feature_id,
+				targetGrantedBalance: body.granted_balance,
+				sortParams: {
+					cusEntId: body.customer_entitlement_id,
+					interval: body.interval
+						? resetIntvToEntIntv({ resetIntv: body.interval })
+						: undefined,
+				},
 			});
 		}
 
