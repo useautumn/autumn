@@ -1,6 +1,12 @@
 import type { ClickHouseClient } from "@clickhouse/client";
 import { UTCDate } from "@date-fns/utc";
-import { format, startOfDay, startOfHour, sub } from "date-fns";
+import {
+	differenceInDays,
+	format,
+	startOfDay,
+	startOfHour,
+	sub,
+} from "date-fns";
 import { Decimal } from "decimal.js";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import type {
@@ -52,7 +58,7 @@ export class AnalyticsServiceV2 {
 					)) as BillingCycleResult | null)
 				: null;
 
-		if (getBCResults) {
+		if (getBCResults?.startDate && getBCResults?.endDate) {
 			return {
 				startDate: getBCResults.startDate,
 				endDate: getBCResults.endDate,
@@ -134,6 +140,10 @@ export class AnalyticsServiceV2 {
 			} else if (params.group_by.startsWith("properties.")) {
 				// Extract property path after 'properties.' and escape single quotes for SQL safety
 				const propertyPath = params.group_by.replace("properties.", "");
+				// Validate property path contains only safe characters (alphanumeric, dots, underscores)
+				if (!/^[a-zA-Z0-9._]+$/.test(propertyPath)) {
+					return { select: "", groupBy: "", orderBy: "", fieldName: null };
+				}
 				const escapedPath = propertyPath.replace(/'/g, "''");
 				// Support dot notation for nested properties (e.g., properties.user.id)
 				// ClickHouse JSONExtractString supports nested paths with dot notation
@@ -189,11 +199,10 @@ group by dr.period${groupBy.groupBy}
 order by dr.period${groupBy.orderBy};
       `;
 
-		// Calculate days and end_date for custom_range
 		const customRangeDays = params.custom_range
-			? Math.ceil(
-					(params.custom_range.end - params.custom_range.start) /
-						(1000 * 60 * 60 * 24),
+			? differenceInDays(
+					new UTCDate(params.custom_range.end),
+					new UTCDate(params.custom_range.start),
 				) + 1
 			: undefined;
 
@@ -273,10 +282,6 @@ order by dr.period${groupBy.orderBy};
 			},
 		});
 
-		const eventNamesFilter = params.event_names
-			.map((name) => `'${name.replace(/'/g, "''")}'`)
-			.join(", ");
-
 		const query = `
 with customer_events as (
     select *
@@ -290,7 +295,7 @@ select
 from customer_events e
 where e.timestamp >= {start_date:DateTime}
   and e.timestamp <= {end_date:DateTime}
-  and e.event_name IN (${eventNamesFilter})
+  and e.event_name IN {event_names:Array(String)}
 group by e.event_name;
 `;
 
@@ -302,6 +307,7 @@ group by e.event_name;
 				customer_id: params.customer_id,
 				start_date: startDate,
 				end_date: endDate,
+				event_names: params.event_names,
 			},
 			format: "JSON",
 		});

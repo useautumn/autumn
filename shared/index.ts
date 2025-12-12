@@ -93,10 +93,10 @@ export * from "./models/genModels/processorSchemas.js";
 
 // Idempotency Models
 
-// Insights Models
+// Analytics Aggregation Models
+export * from "./api/analytics/aggregation/analyticsAggregationSchema.js";
 
 // Insights Models
-export * from "./api/analytics/aggregation/analyticsAggregationSchema.js";
 export * from "./api/analytics/insights/query/insightsQueryBody.js";
 
 // Attach Function Response
