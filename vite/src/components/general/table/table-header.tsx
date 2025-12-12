@@ -80,11 +80,16 @@ export function TableHeader({ className }: { className?: string }) {
 		flexibleTableColumns,
 	} = useTableContext();
 	const headerGroups = table.getHeaderGroups();
+	const rows = table.getRowModel().rows;
+
 	return (
 		<ShadcnTableHeader className={className}>
 			{headerGroups.map((headerGroup) => (
 				<TableRow
-					className="border-b bg-card pointer-events-none text-t4 sticky top-0 z-20"
+					className={cn(
+						"border-b bg-card pointer-events-none text-t4 sticky top-0 z-20",
+						!rows.length && "border-dashed",
+					)}
 					key={headerGroup.id}
 				>
 					{enableSelection && table && (

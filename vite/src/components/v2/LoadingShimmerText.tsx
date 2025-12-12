@@ -12,7 +12,7 @@ export function LoadingShimmerText({
 }: LoadingShimmerTextProps) {
 	return (
 		<div className={cn("flex items-center justify-start gap-2", className)}>
-			<SmallSpinner size={13} />
+			<SmallSpinner size={12} className="text-t3" />
 			<span className="text-sm shimmer">{text}</span>
 		</div>
 	);
