@@ -12,6 +12,20 @@ type ClickHouseResult = {
 };
 
 export class AnalyticsServiceV2 {
+	static intervalTypeToDaysMap({
+		gap,
+	}: {
+		gap?: number;
+	} = {}): Record<string, number> {
+		return {
+			"24h": 1,
+			"7d": 7,
+			"30d": 30,
+			"90d": 90,
+			"1bc": (gap ?? 0) + 1,
+			"3bc": (gap ?? 0) + 1,
+		};
+	}
 	static async getTimeseriesEvents({
 		ctx,
 		params,
@@ -121,15 +135,6 @@ group by dr.period${groupBy.groupBy}
 order by dr.period${groupBy.orderBy};
       `;
 
-		const intervalTypeToDaysMap = {
-			"24h": 1,
-			"7d": 7,
-			"30d": 30,
-			"90d": 90,
-			"1bc": (getBCResults?.gap ?? 0) + 1,
-			"3bc": (getBCResults?.gap ?? 0) + 1,
-		};
-
 		// Calculate days and end_date for custom_range
 		const customRangeDays = params.custom_range
 			? Math.ceil(
@@ -141,6 +146,10 @@ order by dr.period${groupBy.orderBy};
 		const customRangeEndDate = params.custom_range
 			? new Date(params.custom_range.end).toISOString().split(".")[0]
 			: undefined;
+
+		const intervalTypeToDaysMap = AnalyticsServiceV2.intervalTypeToDaysMap({
+			gap: getBCResults?.gap,
+		});
 
 		const queryParams = {
 			org_id: org?.id,
@@ -188,5 +197,122 @@ order by dr.period${groupBy.orderBy};
 		});
 
 		return resultJson;
+	}
+
+	static async getTotalEvents({
+		ctx,
+		params,
+	}: {
+		ctx: RequestContext;
+		params: {
+			event_names: string[];
+			customer_id?: string;
+			aggregateAll?: boolean;
+			custom_range?: { start: number; end: number };
+			interval: RangeEnum;
+			customer?: FullCustomer;
+			bin_size?: "day" | "hour";
+		};
+	}) {
+		const { clickhouseClient, org, env, db } = ctx;
+
+		const intervalType: RangeEnum = params.interval;
+		const isBillingCycle = intervalType === "1bc" || intervalType === "3bc";
+		const binSize =
+			params.bin_size ?? (intervalType === "24h" ? "hour" : "day");
+
+		let startDate: string;
+		let endDate: string;
+
+		if (params.custom_range) {
+			startDate = new Date(params.custom_range.start)
+				.toISOString()
+				.split(".")[0];
+			endDate = new Date(params.custom_range.end).toISOString().split(".")[0];
+		} else {
+			const getBCResults =
+				isBillingCycle && !params.aggregateAll && params.customer
+					? ((await getBillingCycleStartDate(
+							params.customer,
+							db,
+							intervalType as "1bc" | "3bc",
+						)) as { startDate: string; endDate: string; gap: number } | null)
+					: null;
+
+			if (getBCResults) {
+				startDate = getBCResults.startDate;
+				endDate = getBCResults.endDate;
+			} else {
+				const intervalTypeToDaysMap = AnalyticsServiceV2.intervalTypeToDaysMap({
+					gap: 0,
+				});
+				const days =
+					intervalTypeToDaysMap[
+						intervalType as keyof typeof intervalTypeToDaysMap
+					];
+
+				const now = new Date();
+				endDate = now.toISOString().split(".")[0];
+
+				const startTime = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+				if (binSize === "day") {
+					startTime.setUTCHours(0, 0, 0, 0);
+				} else if (binSize === "hour") {
+					startTime.setUTCMinutes(0, 0, 0);
+				}
+				startDate = startTime.toISOString().split(".")[0];
+			}
+		}
+
+		const eventNamesFilter = params.event_names
+			.map((name) => `'${name.replace(/'/g, "''")}'`)
+			.join(", ");
+
+		const query = `
+with customer_events as (
+    select *
+    from org_events_view(org_id={org_id:String}, org_slug='', env={env:String})
+    ${params.aggregateAll ? "" : "where customer_id = {customer_id:String}"}
+)
+select
+    e.event_name,
+    COUNT(*) as count,
+    SUM(e.value) as sum
+from customer_events e
+where e.timestamp >= {start_date:DateTime}
+  and e.timestamp <= {end_date:DateTime}
+  and e.event_name IN (${eventNamesFilter})
+group by e.event_name;
+`;
+
+		const result = await (clickhouseClient as ClickHouseClient).query({
+			query,
+			query_params: {
+				org_id: org?.id,
+				env: env,
+				customer_id: params.customer_id,
+				start_date: startDate,
+				end_date: endDate,
+			},
+			format: "JSON",
+		});
+
+		const resultJson = (await result.json()) as ClickHouseResult;
+		const rows = resultJson.data as Array<{
+			event_name: string;
+			count: string;
+			sum: string;
+		}>;
+
+		return rows.reduce(
+			(acc, row) => {
+				acc[row.event_name] = {
+					count: Number(row.count),
+					sum: Number(row.sum ?? 0),
+				};
+				return acc;
+			},
+			{} as Record<string, { count: number; sum: number }>,
+		);
 	}
 }

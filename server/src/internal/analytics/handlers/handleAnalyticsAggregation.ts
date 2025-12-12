@@ -47,20 +47,34 @@ export const handleAnalyticsAggregation = createRoute({
 		if (Array.isArray(feature_id)) featureIds = feature_id;
 		else featureIds = [feature_id];
 
-		const events = await AnalyticsServiceV2.getTimeseriesEvents({
-			ctx,
-			params: {
-				aggregateAll: false,
-				interval: range,
-				event_names: featureIds,
-				customer_id: customer_id,
-				no_count: true,
-				customer,
-				group_by,
-				bin_size,
-				custom_range,
-			},
-		});
+		const [events, total] = await Promise.all([
+			AnalyticsServiceV2.getTimeseriesEvents({
+				ctx,
+				params: {
+					aggregateAll: false,
+					interval: range,
+					event_names: featureIds,
+					customer_id: customer_id,
+					no_count: true,
+					customer,
+					group_by,
+					bin_size,
+					custom_range,
+				},
+			}),
+			AnalyticsServiceV2.getTotalEvents({
+				ctx,
+				params: {
+					aggregateAll: false,
+					interval: range,
+					event_names: featureIds,
+					customer_id: customer_id,
+					customer,
+					custom_range,
+					bin_size,
+				},
+			}),
+		]);
 
 		if (!events) {
 			throw new RecaseError({
@@ -94,11 +108,13 @@ export const handleAnalyticsAggregation = createRoute({
 			const grouped = new Map<number, Record<string, any>>();
 			for (const row of usageList) {
 				const { period, [group_by]: groupValue, ...metrics } = row;
-				if (groupValue == null || groupValue === "") continue;
 
 				if (!grouped.has(period)) {
 					grouped.set(period, { period });
 				}
+
+				if (groupValue == null || groupValue === "") continue;
+
 				const periodData = grouped.get(period)!;
 				for (const [featureName, value] of Object.entries(metrics)) {
 					if (!periodData[featureName]) {
@@ -126,6 +142,7 @@ export const handleAnalyticsAggregation = createRoute({
 
 		return c.json({
 			list: usageList,
+			total,
 		});
 	},
 });

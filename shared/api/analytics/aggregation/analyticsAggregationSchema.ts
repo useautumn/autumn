@@ -49,9 +49,23 @@ const AnalyticsAggregationResponseGroupedSchema = z.object({
 	),
 });
 
+const AnalyticsAggregationResponseTotalSchema = z.object({
+	total: z.record(
+		z.string(),
+		z.object({
+			count: z.number(),
+			sum: z.number(),
+		}),
+	),
+});
+
 export const AnalyticsAggregationResponseSchema = z.union([
-	AnalyticsAggregationResponseFlatSchema,
-	AnalyticsAggregationResponseGroupedSchema,
+	AnalyticsAggregationResponseFlatSchema.and(
+		AnalyticsAggregationResponseTotalSchema,
+	),
+	AnalyticsAggregationResponseGroupedSchema.and(
+		AnalyticsAggregationResponseTotalSchema,
+	),
 ]);
 
 export type AnalyticsAggregationResponse = z.infer<
