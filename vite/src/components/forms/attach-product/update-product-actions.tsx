@@ -111,7 +111,7 @@ export function UpdateProductActions({
 						variant="secondary"
 						className="w-full"
 						isLoading={isLoading}
-						disabled={isLoading || !isOwnStripeAccount}
+						disabled={isLoading}
 						type="button"
 					>
 						Send an Invoice

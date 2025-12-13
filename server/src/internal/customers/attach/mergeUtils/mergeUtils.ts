@@ -85,6 +85,8 @@ export const willMergeSub = async ({
 	attachParams: AttachParams;
 	branch: AttachBranch;
 }) => {
+	if (attachParams.newBillingSubscription) return false;
+
 	const { subId } = await getCustomerSub({ attachParams, onlySubId: true });
 
 	if (branch === AttachBranch.MainIsTrial) return false;
