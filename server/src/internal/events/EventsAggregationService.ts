@@ -30,6 +30,7 @@ import {
 } from "../analytics/analyticsUtils.js";
 
 export class EventsAggregationService {
+	private static dateFormat = "yyyy-MM-dd'T'HH:mm:ss";
 	private static async calculateDateRange({
 		ctx,
 		params,
@@ -46,11 +47,11 @@ export class EventsAggregationService {
 			return {
 				startDate: format(
 					new UTCDate(params.custom_range.start),
-					"yyyy-MM-dd'T'HH:mm:ss",
+					EventsAggregationService.dateFormat,
 				),
 				endDate: format(
 					new UTCDate(params.custom_range.end),
-					"yyyy-MM-dd'T'HH:mm:ss",
+					EventsAggregationService.dateFormat,
 				),
 			};
 		}
@@ -80,12 +81,15 @@ export class EventsAggregationService {
 			intervalTypeToDaysMap[intervalType as keyof typeof intervalTypeToDaysMap];
 
 		const now = new UTCDate();
-		const endDate = format(now, "yyyy-MM-dd'T'HH:mm:ss");
+		const endDate = format(now, EventsAggregationService.dateFormat);
 
 		const startTime = sub(now, { days });
 		const truncatedStartTime =
 			binSize === "day" ? startOfDay(startTime) : startOfHour(startTime);
-		const startDate = format(truncatedStartTime, "yyyy-MM-dd'T'HH:mm:ss");
+		const startDate = format(
+			truncatedStartTime,
+			EventsAggregationService.dateFormat,
+		);
 
 		return { startDate, endDate };
 	}
@@ -112,8 +116,11 @@ export class EventsAggregationService {
 		const startDate = new UTCDate(customRange.start);
 		const endDate = new UTCDate(customRange.end);
 
-		const filterStartDate = format(startDate, "yyyy-MM-dd'T'HH:mm:ss");
-		const filterEndDate = format(endDate, "yyyy-MM-dd'T'HH:mm:ss");
+		const filterStartDate = format(
+			startDate,
+			EventsAggregationService.dateFormat,
+		);
+		const filterEndDate = format(endDate, EventsAggregationService.dateFormat);
 
 		if (binSize === "hour") {
 			const truncStart = startOfHour(startDate);
@@ -123,7 +130,7 @@ export class EventsAggregationService {
 
 			return {
 				binCount: hours,
-				binEndDate: format(endPlusOne, "yyyy-MM-dd'T'HH:mm:ss"),
+				binEndDate: format(endPlusOne, EventsAggregationService.dateFormat),
 				filterStartDate,
 				filterEndDate,
 			};
@@ -135,7 +142,7 @@ export class EventsAggregationService {
 
 		return {
 			binCount: differenceInDays(endPlusOne, truncStart),
-			binEndDate: format(endPlusOne, "yyyy-MM-dd'T'HH:mm:ss"),
+			binEndDate: format(endPlusOne, EventsAggregationService.dateFormat),
 			filterStartDate,
 			filterEndDate,
 		};
@@ -155,18 +162,19 @@ export class EventsAggregationService {
 		const useCustomDateQuery =
 			intervalType === "1bc" || intervalType === "3bc" || !!params.custom_range;
 
-		// Skip billing cycle calculation if aggregating all customers or using custom_range
-		const getBCResults =
+		const shouldCalculateBillingCycle =
 			useCustomDateQuery &&
 			!params.aggregateAll &&
 			params.customer &&
-			!params.custom_range
-				? ((await getBillingCycleStartDate(
-						params.customer,
-						db,
-						intervalType as "1bc" | "3bc",
-					)) as BillingCycleResult | null)
-				: null;
+			!params.custom_range;
+
+		const getBCResults = shouldCalculateBillingCycle
+			? ((await getBillingCycleStartDate(
+					params.customer,
+					db,
+					intervalType as "1bc" | "3bc",
+				)) as BillingCycleResult | null)
+			: null;
 
 		const countExpressions = generateEventCountExpressions(
 			params.event_names,
@@ -178,7 +186,6 @@ export class EventsAggregationService {
 				return { select: "", groupBy: "", orderBy: "", fieldName: null };
 
 			let field: string | null = null;
-			// Extract property path after 'properties.' and escape single quotes for SQL safety
 			const propertyPath = params.group_by.replace("properties.", "");
 			const pathSegments = propertyPath.split(".").map((segment) => {
 				// Validate each segment contains only safe characters (alphanumeric, underscores)
@@ -202,8 +209,6 @@ export class EventsAggregationService {
 				return { select: "", groupBy: "", orderBy: "", fieldName: null };
 			}
 
-			// Join segments as separate arguments: 'key1', 'key2', 'key3'
-			// ClickHouse JSONExtractString requires each key as a separate argument
 			const escapedPathArgs = validSegments.map((seg) => `'${seg}'`).join(", ");
 			field = `JSONExtractString(e.properties, ${escapedPathArgs})`;
 
