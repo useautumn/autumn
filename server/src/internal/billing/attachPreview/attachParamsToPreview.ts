@@ -99,6 +99,16 @@ export const attachParamsToPreview = async ({
 		});
 	}
 
+	if (func === AttachFunction.Renew) {
+		preview = await getNewProductPreview({
+			branch,
+			attachParams,
+			logger,
+			config,
+			withPrepaid,
+		});
+	}
+
 	const { curScheduledProduct } = attachParamToCusProducts({ attachParams });
 	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
 
