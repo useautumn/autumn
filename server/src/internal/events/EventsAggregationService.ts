@@ -112,7 +112,6 @@ export class EventsAggregationService {
 		const startDate = new UTCDate(customRange.start);
 		const endDate = new UTCDate(customRange.end);
 
-		// Original epoch times for filtering events (preserve exact user input)
 		const filterStartDate = format(startDate, "yyyy-MM-dd'T'HH:mm:ss");
 		const filterEndDate = format(endDate, "yyyy-MM-dd'T'HH:mm:ss");
 
@@ -121,7 +120,7 @@ export class EventsAggregationService {
 			const truncEnd = startOfHour(endDate);
 			const endPlusOne = add(truncEnd, { hours: 1 });
 			const hours = differenceInHours(endPlusOne, truncStart);
-			// Return exact number of hourly bins needed
+
 			return {
 				binCount: hours,
 				binEndDate: format(endPlusOne, "yyyy-MM-dd'T'HH:mm:ss"),
@@ -133,6 +132,7 @@ export class EventsAggregationService {
 		const truncStart = startOfDay(startDate);
 		const truncEnd = startOfDay(endDate);
 		const endPlusOne = add(truncEnd, { days: 1 });
+
 		return {
 			binCount: differenceInDays(endPlusOne, truncStart),
 			binEndDate: format(endPlusOne, "yyyy-MM-dd'T'HH:mm:ss"),
