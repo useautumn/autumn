@@ -32,7 +32,6 @@ function CustomersPage() {
 			}}
 		>
 			<div className="flex flex-col gap-4 h-fit relative w-full pb-8 max-w-5xl mx-auto pt-8">
-				{/* <h1 className="text-xl font-medium shrink-0 pt-6 pl-10">Customers</h1> */}
 				<div className="h-fit max-h-full px-10">
 					<CustomerListTable customers={customers} />
 				</div>

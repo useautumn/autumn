@@ -10,7 +10,7 @@ function Table({
 	return (
 		<div
 			data-slot="table-container"
-			className={cn("relative max-w-full rounded-sm p-3 ", className)}
+			className={cn("relative max-w-full rounded-sm p-3 h-full", className)}
 		>
 			<table
 				data-slot="table"
@@ -30,7 +30,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
 		<thead
 			data-slot="table-header"
 			// className={cn("[&_tr]:border-b", className)}
-			className={cn("[&:hover_tr]:!bg-transparent border-b", className)}
+			className={cn("[&:hover_tr]:!bg-transparent", className)}
 			{...props}
 		/>
 	);

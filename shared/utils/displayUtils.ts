@@ -149,7 +149,7 @@ export const formatAmount = ({
 	org,
 	currency,
 	amount,
-	maxFractionDigits = 2,
+	maxFractionDigits = 10,
 	minFractionDigits = 0,
 	amountFormatOptions,
 }: {
@@ -163,8 +163,8 @@ export const formatAmount = ({
 	return new Intl.NumberFormat(undefined, {
 		style: "currency",
 		currency: currency || org?.default_currency || "USD",
-		minimumFractionDigits: minFractionDigits || 0,
-		maximumFractionDigits: maxFractionDigits || 2,
+		minimumFractionDigits: minFractionDigits,
+		maximumFractionDigits: maxFractionDigits,
 		...amountFormatOptions,
 	}).format(amount);
 };
