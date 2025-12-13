@@ -11,7 +11,7 @@ export type TotalEventsParams = {
 	custom_range?: { start: number; end: number };
 	interval?: RangeEnum;
 	customer?: FullCustomer;
-	bin_size?: BinSizeEnum;
+	bin_size: BinSizeEnum;
 };
 
 export type TimeseriesEventsParams = TotalEventsParams & {
@@ -33,6 +33,18 @@ export type BillingCycleResult = {
 	startDate: string;
 	endDate: string;
 	gap: number;
+};
+
+export type CalculateCustomRangeParamsInput = {
+	customRange: { start: number; end: number };
+	binSize: BinSizeEnum;
+};
+
+export type CalculateCustomRangeParamsOutput = {
+	binCount: number;
+	binEndDate: string;
+	filterStartDate: string;
+	filterEndDate: string;
 };
 
 export type TimeseriesEventRow = Record<string, string | number>;
