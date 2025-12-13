@@ -1,6 +1,10 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import {
+	type AppEnv,
+	CusProductStatus,
+	type FullCusProduct,
+} from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { AppEnv, CusProductStatus, FullCusProduct } from "@autumn/shared";
 
 export const getMainCusProduct = async ({
 	db,
@@ -15,7 +19,7 @@ export const getMainCusProduct = async ({
 	env: AppEnv;
 	productGroup?: string;
 }) => {
-	let customer = await CusService.getFull({
+	const customer = await CusService.getFull({
 		db,
 		idOrInternalId: customerId,
 		orgId,
@@ -24,9 +28,9 @@ export const getMainCusProduct = async ({
 		inStatuses: [CusProductStatus.Active],
 	});
 
-	let cusProducts = customer.customer_products;
+	const cusProducts = customer.customer_products;
 
-	let mainCusProduct = cusProducts.find(
+	const mainCusProduct = cusProducts.find(
 		(cusProduct: FullCusProduct) =>
 			!cusProduct.product.is_add_on &&
 			(productGroup ? cusProduct.product.group === productGroup : true),

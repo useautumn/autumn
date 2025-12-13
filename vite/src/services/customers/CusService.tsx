@@ -1,5 +1,5 @@
-import axios, { AxiosInstance } from "axios";
 import { Customer } from "@autumn/shared";
+import axios, { type AxiosInstance } from "axios";
 
 export class CusService {
 	static async createCustomer(axios: AxiosInstance, data: any) {
@@ -11,7 +11,7 @@ export class CusService {
 	}
 
 	static async attach(axios: AxiosInstance, data: any) {
-		return await axios.post(`/v1/attach`, {
+		return await axios.post(`/v1/attach_v2`, {
 			...data,
 		});
 	}

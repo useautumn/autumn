@@ -33,14 +33,6 @@ export const isPrepaidPrice = ({ price }: { price: Price }) => {
 	return billingType === BillingType.UsageInAdvance;
 };
 
-export const isPayPerUse = ({ price }: { price: Price }) => {
-	const billingType = getBillingType(price.config);
-	return (
-		billingType === BillingType.UsageInArrear ||
-		billingType === BillingType.InArrearProrated
-	);
-};
-
 export const isFixedPrice = ({ price }: { price: Price }) => {
 	const billingType = getBillingType(price.config);
 

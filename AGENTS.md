@@ -23,6 +23,15 @@
 
 - **ALWAYS use `.meta()` for zod-openapi schema registration**, NOT `.openapi()`. Example: `ApiProductSchema.meta({ id: "Product" })`
 
+## Import Conventions
+- **DO NOT use `.js` extensions** in import paths. Example:
+  - ✅ `import { foo } from "@autumn/shared"`
+  - ❌ `import { foo } from "@autumn/shared/index.js"`
+- **Use aliased paths** where possible (e.g., `@autumn/shared`, `@api/`, `@models/`, `@/`)
+- **Import from the full path**, not barrel files (index.ts). Import directly from the source file:
+  - ✅ `import { CusProduct } from "@models/cusProductModels/cusProductModels"`
+  - ❌ `import { CusProduct } from "@models/cusProductModels"` (via index.ts re-export)
+
 - Always prefer foo({ bar }) over foo(bar) method signatures - no matter if we are using only one argument or not, object as param are always better, as in the future when wanting to change the order of parameters, or add new ones - its easier.
 
 - **ALWAYS use `c.req.param()` to get route parameters in Hono handlers**, NOT `c.req.valid("param")`. Example: `const { customer_id } = c.req.param();`

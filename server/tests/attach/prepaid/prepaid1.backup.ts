@@ -6,16 +6,16 @@ import {
 	OnIncrease,
 	type Organization,
 } from "@autumn/shared";
-import { expect } from "chai";
-import chalk from "chalk";
-import { addHours, addMonths } from "date-fns";
-import type Stripe from "stripe";
 import { setupBefore } from "@tests/before.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
 import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
 import { createProducts } from "@tests/utils/productUtils.js";
+import { expect } from "chai";
+import chalk from "chalk";
+import { addHours, addMonths } from "date-fns";
+import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { getMainCusProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
@@ -50,7 +50,6 @@ describe(`${chalk.yellowBright(`attach/${testCase}: update quantity, no proratio
 	let db: DrizzleCli, org: Organization, env: AppEnv;
 	let stripeCli: Stripe;
 
-	const curUnix = new Date().getTime();
 	let customer: Customer;
 
 	before(async function () {

@@ -11,7 +11,8 @@ import type {
 	ProductItemConfig,
 	RolloverConfig,
 } from "../../../models/productV2Models/productItemModels/productItemModels.js";
-import { entIntervalsSame, intervalsSame } from "../../intervalUtils.js";
+import { intervalsSame } from "../../intervalUtils/priceIntervalUtils.js";
+import { entIntervalsSame } from "../../intervalUtils.js";
 import { itemToFeature } from "../productItemUtils/convertItemUtils.js";
 import {
 	isFeatureItem,

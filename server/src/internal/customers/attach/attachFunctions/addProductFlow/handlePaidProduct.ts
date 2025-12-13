@@ -5,7 +5,7 @@ import {
 	AttachFunctionResponseSchema,
 	AttachScenario,
 	ErrCode,
-	isTrialing,
+	isCusProductTrialing,
 	SuccessCode,
 } from "@autumn/shared";
 import type Stripe from "stripe";
@@ -80,7 +80,7 @@ export const handlePaidProduct = async ({
 
 	if (mergeSub && !config.disableMerge) {
 		if (mergeCusProduct?.free_trial) {
-			trialEndsAt = isTrialing({
+			trialEndsAt = isCusProductTrialing({
 				cusProduct: mergeCusProduct,
 				now: attachParams.now,
 			})

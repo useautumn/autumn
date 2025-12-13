@@ -3,7 +3,7 @@ import {
 	type Feature,
 	type FreeTrial,
 	type FullCusProduct,
-	isTrialing,
+	isCusProductTrialing,
 	type ProductItem,
 	UsageModel,
 } from "@autumn/shared";
@@ -63,7 +63,8 @@ export const getOptions = ({
 			});
 
 			if (
-				(freeTrial || (cusProduct && isTrialing({ cusProduct, now }))) &&
+				(freeTrial ||
+					(cusProduct && isCusProductTrialing({ cusProduct, now }))) &&
 				notNullish(i.interval)
 			) {
 				priceData = {

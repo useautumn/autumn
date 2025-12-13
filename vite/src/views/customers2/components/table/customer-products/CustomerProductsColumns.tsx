@@ -1,4 +1,4 @@
-import { type FullCusProduct, isTrialing } from "@autumn/shared";
+import { type FullCusProduct, isCusProductTrialing } from "@autumn/shared";
 import type { Row, Table } from "@tanstack/react-table";
 import { ArrowRightLeft, Delete } from "lucide-react";
 import { TableDropdownMenuCell } from "@/components/general/table/table-dropdown-menu-cell";
@@ -47,7 +47,10 @@ export const CustomerProductsColumns = [
 					status={row.original.status}
 					canceled={row.original.canceled}
 					trialing={
-						isTrialing({ cusProduct: row.original, now: Date.now() }) || false
+						isCusProductTrialing({
+							cusProduct: row.original,
+							now: Date.now(),
+						}) || false
 					}
 					trial_ends_at={row.original.trial_ends_at ?? undefined}
 				/>

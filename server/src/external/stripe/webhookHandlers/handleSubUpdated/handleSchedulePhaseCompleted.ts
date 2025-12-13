@@ -2,13 +2,14 @@ import {
 	AttachScenario,
 	CusProductStatus,
 	cusProductToProduct,
+	isFreeProduct,
+	isOneOffProduct,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { activateFutureProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
-import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
@@ -87,8 +88,8 @@ export const handleSchedulePhaseCompleted = async ({
 				});
 
 				if (
-					!isFreeProduct(fullFutureProduct.prices) &&
-					!isOneOff(fullFutureProduct.prices)
+					!isFreeProduct({ prices: fullFutureProduct.prices }) &&
+					!isOneOffProduct({ prices: fullFutureProduct.prices })
 				) {
 					await CusProductService.update({
 						db,

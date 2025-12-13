@@ -5,7 +5,7 @@ import {
 	cusProductToProduct,
 	type FreeTrial,
 	type FullCusProduct,
-	isTrialing,
+	isCusProductTrialing,
 	OnDecrease,
 	OnIncrease,
 	type PreviewLineItem,
@@ -53,7 +53,7 @@ const getNextCycleAt = ({
 	if (
 		branch === AttachBranch.NewVersion &&
 		curCusProduct &&
-		isTrialing({ cusProduct: curCusProduct, now })
+		isCusProductTrialing({ cusProduct: curCusProduct, now })
 	) {
 		return curCusProduct.trial_ends_at;
 	}
@@ -170,7 +170,7 @@ export const getUpgradeProductPreview = async ({
 	if (
 		config?.carryTrial &&
 		curCusProduct?.free_trial &&
-		isTrialing({ cusProduct: curCusProduct, now })
+		isCusProductTrialing({ cusProduct: curCusProduct, now })
 	) {
 		freeTrial = curCusProduct.free_trial;
 	}

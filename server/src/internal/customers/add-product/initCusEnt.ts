@@ -6,6 +6,7 @@ import {
 	type EntitlementWithFeature,
 	type Entity,
 	type EntityBalance,
+	entitlementFeatureMatchesEntityFeature,
 	type FeatureOptions,
 	FeatureType,
 	type FreeTrial,
@@ -16,7 +17,6 @@ import {
 	type ProductOptions,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import { entitlementLinkedToEntity } from "@/internal/api/entities/entityUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { generateId, notNullish } from "@/utils/genUtils.js";
 import { initNextResetAt } from "../cusProducts/insertCusProduct/initCusEnt/initNextResetAt.js";
@@ -39,7 +39,8 @@ export const initCusEntEntities = ({
 		: null;
 
 	for (const entity of entities) {
-		if (!entitlementLinkedToEntity({ entitlement, entity })) continue;
+		if (!entitlementFeatureMatchesEntityFeature({ entitlement, entity }))
+			continue;
 
 		if (existingCusEnt?.entities?.[entity.id]) {
 			continue;
@@ -153,8 +154,6 @@ export const initCusEntitlement = ({
 	const nextResetAtValue = initNextResetAt({
 		entitlement,
 		nextResetAt,
-		// keepResetIntervals,
-		// existingCusEnt,
 		trialEndsAt,
 		freeTrial,
 		anchorToUnix,

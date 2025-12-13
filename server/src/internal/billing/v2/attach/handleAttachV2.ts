@@ -1,15 +1,28 @@
-import { AffectedResource, AttachBodyV1Schema } from "@autumn/shared";
+import {
+	AffectedResource,
+	ApiVersion,
+	AttachBodyV0Schema,
+	AttachBodyV1Schema,
+} from "@autumn/shared";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
+import { createAttachContext } from "../common/createAttachContext/createAttachContext";
 
 export const handleAttachV2 = createRoute({
-	body: AttachBodyV1Schema,
+	versionedBody: {
+		latest: AttachBodyV1Schema,
+		[ApiVersion.V2_0]: AttachBodyV0Schema,
+	},
 	resource: AffectedResource.Attach,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const attachBody = c.req.valid("json");
+		const body = c.req.valid("json");
 
-		// Step 1: Create attach params.
+		// Step 1: Create attach context
+		const attachContext = await createAttachContext({
+			ctx,
+			body,
+		});
 
-		return c.json({ success: true });
+		return c.json({ success: true }, 400);
 	},
 });
