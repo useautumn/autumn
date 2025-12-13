@@ -1,11 +1,13 @@
-import type { Event } from "@autumn/shared";
-import { ChartBarIcon } from "@phosphor-icons/react";
+import { AppEnv, type Event } from "@autumn/shared";
+import { ArrowSquareOutIcon, ChartBarIcon } from "@phosphor-icons/react";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
+import { IconButton } from "@/components/v2/buttons/IconButton";
 import { LoadingShimmerText } from "@/components/v2/LoadingShimmerText";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
 import { cn } from "@/lib/utils";
+import { useEnv } from "@/utils/envUtils";
 import { useCusEventsQuery } from "@/views/customers/customer/hooks/useCusEventsQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { useCustomerTimeseriesEvents } from "@/views/customers2/hooks/useCustomerTimeseriesEvents";
@@ -21,6 +23,7 @@ import { CustomerUsageAnalyticsSelectDays } from "./CustomerUsageAnalyticsSelect
 import { EventDetailsDialog } from "./EventDetailsDialog";
 
 export function CustomerUsageAnalyticsTable() {
+	const env = useEnv();
 	const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 	const [eventDialogOpen, setEventDialogOpen] = useState(false);
 
@@ -113,7 +116,7 @@ export function CustomerUsageAnalyticsTable() {
 					</Table.Toolbar>
 					<div className="flex w-full gap-2 ">
 						{isLoading ? (
-							<div className="flex justify-center py-4 w-full h-full relative overflow-visible text-sm bg-interactive-secondary rounded-lg border shadow-sm">
+							<div className="flex justify-center py-4 w-full h-full relative overflow-visible text-sm border-dashed rounded-lg border shadow-sm">
 								<LoadingShimmerText text="Loading events" />
 							</div>
 						) : hasEvents ? (
@@ -135,7 +138,35 @@ export function CustomerUsageAnalyticsTable() {
 								</div>
 							</>
 						) : (
-							<EmptyState text="Record events to display feature usage" />
+							<EmptyState
+								text={
+									<>
+										Track an event to display feature usage
+										{env === AppEnv.Sandbox && (
+											<IconButton
+												variant="muted"
+												size="sm"
+												iconOrientation="right"
+												icon={
+													<ArrowSquareOutIcon
+														size={16}
+														className="-translate-y-px"
+													/>
+												}
+												className="px-1! ml-2"
+												onClick={() =>
+													window.open(
+														"https://docs.useautumn.com/getting-started/gating",
+														"_blank",
+													)
+												}
+											>
+												Docs
+											</IconButton>
+										)}
+									</>
+								}
+							/>
 						)}
 					</div>
 				</Table.Container>
