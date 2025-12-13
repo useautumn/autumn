@@ -2,17 +2,20 @@ import { beforeAll, describe } from "bun:test";
 import { ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { toUnix } from "@tests/utils/testIntervalUtils/testUnixUtils";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
-	constructArrearItem,
 	constructFeatureItem,
 	constructPrepaidItem,
 } from "@/utils/scriptUtils/constructItem.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import {
+	constructProduct,
+	constructRawProduct,
+} from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { CusService } from "../../src/internal/customers/CusService";
+import { advanceTestClock } from "../../src/utils/scriptUtils/testClockUtils";
+import { initProductsV0 } from "../../src/utils/scriptUtils/testUtils/initProductsV0";
 
 const freeProd = constructProduct({
 	type: "free",
@@ -34,59 +37,104 @@ const proProd = constructProduct({
 			includedUsage: 300,
 		}),
 	],
+	intervalCount: 2,
 });
-const proWithUsage = constructProduct({
-	type: "pro",
-	id: "pro-with-usage",
+
+const premium = constructProduct({
+	type: "premium",
 	isDefault: false,
 	items: [
-		constructArrearItem({
+		constructFeatureItem({
 			featureId: TestFeature.Messages,
-			includedUsage: 0,
-			billingUnits: 1,
-			price: 0.5,
+			includedUsage: 1000,
 		}),
 	],
 });
-const proWithPrepaid = constructProduct({
-	type: "pro",
-	id: "pro-with-prepaid",
-	isDefault: false,
+const freeAddOn = constructRawProduct({
+	id: "freeAddOn",
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 1000,
+		}),
+	],
+	isAddOn: true,
+});
+
+const oneOffAddOn = constructRawProduct({
+	id: "oneOffAddOn",
 	items: [
 		constructPrepaidItem({
 			featureId: TestFeature.Messages,
 			billingUnits: 100,
 			price: 10,
-			includedUsage: 100,
+			isOneOff: true,
 		}),
 	],
+	isAddOn: true,
+});
+
+const monthlyAddOn = constructRawProduct({
+	id: "monthlyAddOn",
+	items: [
+		constructPrepaidItem({
+			featureId: TestFeature.Messages,
+			billingUnits: 100,
+			price: 10,
+		}),
+	],
+	isAddOn: true,
 });
 
 const testCase = "temp";
 
 describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 	const customerId = "temp";
-	const autumnV0: AutumnInt = new AutumnInt({ version: ApiVersion.V0_2 });
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
 	beforeAll(async () => {
-		await CusService.deleteByOrgId({
-			db: ctx.db,
-			orgId: ctx.org.id,
-			env: ctx.env,
-		});
-
-		await initCustomerV3({
+		const result = await initCustomerV3({
 			ctx,
 			customerId,
-			withTestClock: false,
+			withTestClock: true,
 			attachPm: "success",
 		});
 
 		await initProductsV0({
 			ctx,
-			products: [freeProd, proProd],
-			// prefix: testCase,
+			products: [freeProd, proProd, premium, freeAddOn, monthlyAddOn],
+			prefix: customerId,
+		});
+
+		await autumnV1.attach({
+			customer_id: customerId,
+			product_id: freeAddOn.id,
+		});
+
+		await autumnV1.attach({
+			customer_id: customerId,
+			product_id: proProd.id,
+		});
+
+		await autumnV1.attach({
+			customer_id: customerId,
+			product_id: monthlyAddOn.id,
+			options: [
+				{
+					feature_id: TestFeature.Messages,
+					quantity: 100,
+				},
+			],
+		});
+
+		await advanceTestClock({
+			stripeCli: ctx.stripeCli,
+			testClockId: result.testClockId,
+			advanceTo: toUnix({
+				year: 2026,
+				month: 1,
+				day: 15,
+			}),
 		});
 
 		await autumnV1.attach({

@@ -1,12 +1,12 @@
-import { cusProductToProduct } from "@autumn/shared";
-import { AttachScenario, FullCustomer, FullProduct } from "@autumn/shared";
 import {
-	isFreeProduct,
-	isOneOff,
-	isProductUpgrade,
-} from "../../productUtils.js";
-import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
-import { isCanceled } from "@/internal/customers/cusProducts/cusProductUtils/classifyCusProduct.js";
+	AttachScenario,
+	cusProductToProduct,
+	type FullCustomer,
+	type FullProduct,
+	isCusProductCanceled,
+} from "@autumn/shared";
+import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
+import { isFreeProduct, isOneOff, isProductUpgrade } from "../../productUtils";
 
 export const getAttachScenario = ({
 	fullCus,
@@ -17,7 +17,7 @@ export const getAttachScenario = ({
 }) => {
 	if (!fullCus) return AttachScenario.New;
 
-	let { curMainProduct, curScheduledProduct } = getExistingCusProducts({
+	const { curMainProduct, curScheduledProduct } = getExistingCusProducts({
 		product: fullProduct,
 		cusProducts: fullCus?.customer_products || [],
 		internalEntityId: fullCus?.entity?.internal_id,
@@ -30,17 +30,17 @@ export const getAttachScenario = ({
 	}
 
 	// 1. If current product is the same as the product, return active
-	if (curMainProduct?.product.id == fullProduct.id) {
-		if (isCanceled({ cusProduct: curMainProduct })) {
+	if (curMainProduct?.product.id === fullProduct.id) {
+		if (isCusProductCanceled({ cusProduct: curMainProduct })) {
 			return AttachScenario.Renew;
 		} else return AttachScenario.Active;
 	}
 
-	if (curScheduledProduct?.product.id == fullProduct.id) {
+	if (curScheduledProduct?.product.id === fullProduct.id) {
 		return AttachScenario.Scheduled;
 	}
 
-	let curFullProduct = cusProductToProduct({ cusProduct: curMainProduct });
+	const curFullProduct = cusProductToProduct({ cusProduct: curMainProduct });
 
 	if (
 		isFreeProduct(curFullProduct.prices) &&
@@ -49,7 +49,7 @@ export const getAttachScenario = ({
 		return AttachScenario.New;
 	}
 
-	let isUpgrade = isProductUpgrade({
+	const isUpgrade = isProductUpgrade({
 		prices1: curFullProduct.prices,
 		prices2: fullProduct.prices,
 	});

@@ -8,7 +8,7 @@ import {
 	expandIncludes,
 	type FullCusProduct,
 	type FullCustomer,
-	isTrialing,
+	isCusProductTrialing,
 	type Subscription,
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
@@ -93,7 +93,9 @@ export const getApiSubscription = async ({
 		canceled_at: cusProduct.canceled_at || null,
 		expires_at: cusProduct.ended_at || null,
 
-		trial_ends_at: isTrialing({ cusProduct }) ? cusProduct.trial_ends_at : null,
+		trial_ends_at: isCusProductTrialing({ cusProduct })
+			? cusProduct.trial_ends_at
+			: null,
 		started_at: cusProduct.starts_at,
 		quantity: cusProduct.quantity,
 		current_period_start: stripeSubData?.current_period_start || null,

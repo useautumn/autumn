@@ -1,9 +1,10 @@
-import type {
-	CreateProductV2Params,
-	FullProduct,
-	Price,
-	ProductItem,
-	ProductV2,
+import {
+	BillingInterval,
+	type CreateProductV2Params,
+	type FullProduct,
+	type Price,
+	type ProductItem,
+	type ProductV2,
 } from "@autumn/shared";
 import { pricesOnlyOneOff } from "../prices/priceUtils.js";
 import { isFeatureItem } from "../product-items/productItemUtils/getItemType.js";

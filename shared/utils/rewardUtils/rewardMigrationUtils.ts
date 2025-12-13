@@ -1,16 +1,13 @@
-import type {
-	FixedPriceConfig,
-	Price,
-	Reward,
-	RewardType,
-	UsagePriceConfig,
-	UsageTier,
-} from "../../index.js";
 import {
-	getBillingType,
-	isFixedPrice,
+	type FixedPriceConfig,
 	isUsagePrice,
-} from "../productUtils/priceUtils.js";
+	type Price,
+	type Reward,
+	type RewardType,
+	type UsagePriceConfig,
+	type UsageTier,
+} from "../../index.js";
+import { getBillingType, isFixedPrice } from "../productUtils/priceUtils.js";
 
 // Helper function to check if tier structures match
 const tiersMatch = (oldTiers: UsageTier[], newTiers: UsageTier[]): boolean => {

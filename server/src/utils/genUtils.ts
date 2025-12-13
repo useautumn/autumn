@@ -71,6 +71,14 @@ export const formatUnixToDateTime = (
 	);
 };
 
+export const formatUnixSecondsToDateTime = (unixSeconds?: number | null) => {
+	if (!unixSeconds) {
+		return "undefined";
+	}
+
+	return formatUnixToDateTime(unixSeconds * 1000);
+};
+
 export const formatUnixToUTCDateTime = (
 	unixDate?: number | null,
 	withTimezone?: boolean,

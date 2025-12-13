@@ -5,7 +5,7 @@ import {
 	AttachFunctionResponseSchema,
 	AttachScenario,
 	CusProductStatus,
-	isTrialing,
+	isCusProductTrialing,
 	SuccessCode,
 } from "@autumn/shared";
 import type Stripe from "stripe";
@@ -188,7 +188,8 @@ export const handleMultiAttachFlow = async ({
 				logger,
 				productOptions,
 				trialEndsAt:
-					mergeCusProduct && isTrialing({ cusProduct: mergeCusProduct })
+					mergeCusProduct &&
+					isCusProductTrialing({ cusProduct: mergeCusProduct })
 						? mergeCusProduct?.trial_ends_at || undefined
 						: undefined,
 			}),

@@ -1,10 +1,11 @@
 import { Decimal } from "decimal.js";
-import type {
-	CreateFreeTrial,
-	FreeTrial,
-	Price,
-	ProductItem,
-	ProductV2,
+import {
+	type CreateFreeTrial,
+	type FreeTrial,
+	isFreeProduct,
+	type Price,
+	type ProductItem,
+	type ProductV2,
 } from "../index.js";
 import {
 	isFeaturePriceItem,
@@ -111,24 +112,6 @@ export const sortProductsV2 = ({ products }: { products: ProductV2[] }) => {
 
 		return isUpgrade ? -1 : 1;
 	});
-};
-
-export const isFreeProduct = ({ prices }: { prices: Price[] }) => {
-	if (prices.length === 0) {
-		return true;
-	}
-
-	let totalPrice = 0;
-	for (const price of prices) {
-		if ("usage_tiers" in price.config) {
-			const tiers = price.config.usage_tiers;
-			if (nullish(tiers) || tiers.length === 0) continue;
-			totalPrice += tiers.reduce((acc, tier) => acc + tier.amount, 0);
-		} else {
-			totalPrice += price.config.amount;
-		}
-	}
-	return totalPrice === 0;
 };
 
 export const isDefaultTrial = ({

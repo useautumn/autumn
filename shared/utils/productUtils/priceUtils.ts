@@ -52,38 +52,9 @@ export const isOneOffPrice = ({ price }: { price: Price }) => {
 	return price.config.interval === BillingInterval.OneOff;
 };
 
-export const isUsagePrice = ({
-	price,
-	featureId,
-}: {
-	price: Price;
-	featureId?: string;
-}) => {
-	const billingType = getBillingType(price.config);
-
-	const isUsage =
-		billingType === BillingType.UsageInArrear ||
-		billingType === BillingType.InArrearProrated ||
-		billingType === BillingType.UsageInAdvance;
-
-	if (featureId) {
-		return isUsage && price.config.feature_id === featureId;
-	}
-
-	return isUsage;
-};
-
 export const isPrepaidPrice = ({ price }: { price: Price }) => {
 	const billingType = getBillingType(price.config);
 	return billingType === BillingType.UsageInAdvance;
-};
-
-export const isPayPerUse = ({ price }: { price: Price }) => {
-	const billingType = getBillingType(price.config);
-	return (
-		billingType === BillingType.UsageInArrear ||
-		billingType === BillingType.InArrearProrated
-	);
 };
 
 export const isFixedPrice = ({ price }: { price: Price }) => {

@@ -2,7 +2,7 @@ import {
 	CusProductStatus,
 	type Entity,
 	featureToOptions,
-	isTrialing,
+	isCusProductTrialing,
 	type ProductItem,
 	UsageModel,
 } from "@autumn/shared";
@@ -301,7 +301,10 @@ export function SubscriptionDetailSheet() {
 										status={cusProduct.status}
 										canceled={cusProduct.canceled}
 										trialing={
-											isTrialing({ cusProduct, now: Date.now() }) || false
+											isCusProductTrialing({
+												cusProduct,
+												now: Date.now(),
+											}) || false
 										}
 										trial_ends_at={cusProduct.trial_ends_at ?? undefined}
 									/>
