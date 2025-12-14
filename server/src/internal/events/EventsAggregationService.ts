@@ -1,4 +1,6 @@
 import {
+	BILLING_CYCLE_INTERVALS,
+	type BillingCycleIntervalEnum,
 	type BillingCycleResult,
 	type CalculateCustomRangeParamsInput,
 	type CalculateCustomRangeParamsOutput,
@@ -56,13 +58,15 @@ export class EventsAggregationService {
 			};
 		}
 
-		const isBillingCycle = intervalType === "1bc" || intervalType === "3bc";
+		const isBillingCycle = BILLING_CYCLE_INTERVALS.includes(
+			intervalType as BillingCycleIntervalEnum,
+		);
 		const getBCResults =
 			isBillingCycle && !params.aggregateAll && params.customer
 				? ((await getBillingCycleStartDate(
 						params.customer,
 						db,
-						intervalType as "1bc" | "3bc",
+						intervalType as "1bc" | "3bc" | "last_cycle",
 					)) as BillingCycleResult | null)
 				: null;
 
@@ -106,6 +110,7 @@ export class EventsAggregationService {
 			"90d": 90,
 			"1bc": (gap ?? 0) + 1,
 			"3bc": (gap ?? 0) + 1,
+			last_cycle: (gap ?? 0) + 1,
 		};
 	}
 
@@ -160,7 +165,9 @@ export class EventsAggregationService {
 		const intervalType = params.interval;
 
 		const useCustomDateQuery =
-			intervalType === "1bc" || intervalType === "3bc" || !!params.custom_range;
+			BILLING_CYCLE_INTERVALS.includes(
+				intervalType as BillingCycleIntervalEnum,
+			) || !!params.custom_range;
 
 		const shouldCalculateBillingCycle =
 			useCustomDateQuery &&
@@ -172,7 +179,7 @@ export class EventsAggregationService {
 			? ((await getBillingCycleStartDate(
 					params.customer,
 					db,
-					intervalType as "1bc" | "3bc",
+					intervalType as "1bc" | "3bc" | "last_cycle",
 				)) as BillingCycleResult | null)
 			: null;
 
@@ -238,7 +245,7 @@ with customer_events as (
 select
     dr.period${groupBy.select},
     ${countExpressions}
-from date_range_view(bin_size={bin_size:String}, bin_count={bin_count:UInt32}, interval_offset={interval_offset:UInt32}) dr
+from event_aggregation_date_range_view(bin_size={bin_size:String}, bin_count={bin_count:UInt32}, interval_offset={interval_offset:UInt32}) dr
     left join customer_events e
     on date_trunc({bin_size:String}, e.timestamp) = dr.period
 group by dr.period${groupBy.groupBy}
@@ -258,7 +265,7 @@ with customer_events as (
 select
     dr.period${groupBy.select},
     ${countExpressions}
-from date_range_bc_view(bin_size={bin_size:String}, start_date={end_date:DateTime}, bin_count={bin_count:UInt32}, interval_offset={interval_offset:UInt32}) dr
+from event_aggregation_date_range_bc_view(bin_size={bin_size:String}, start_date={end_date:DateTime}, bin_count={bin_count:UInt32}, interval_offset={interval_offset:UInt32}) dr
     left join customer_events e
     on date_trunc({bin_size:String}, e.timestamp) = dr.period
     ${customRangeFilter}
@@ -296,8 +303,21 @@ order by dr.period${groupBy.orderBy};
 		const standardIntervalBinCount =
 			intervalTypeToDaysMap[intervalType as keyof typeof intervalTypeToDaysMap];
 
+		// Billing cycles already have correct count (gap + 1), don't add another offset
+		const isBillingCycle =
+			BILLING_CYCLE_INTERVALS.includes(
+				intervalType as BillingCycleIntervalEnum,
+			) &&
+			!params.custom_range &&
+			getBCResults?.gap !== undefined;
+
+		const binMultiplier = binSize === "hour" ? 24 : 1;
+
 		const finalBinCount =
-			binCount ?? calculateBinCount(standardIntervalBinCount);
+			binCount ??
+			(isBillingCycle
+				? standardIntervalBinCount * binMultiplier
+				: calculateBinCount(standardIntervalBinCount));
 
 		// Use date_range_bc_view query for billing cycles or custom ranges
 		const useBillingCycleQuery =
@@ -308,12 +328,19 @@ order by dr.period${groupBy.orderBy};
 		const queryToUse = useBillingCycleQuery ? queryBillingCycle : query;
 
 		// Calculate interval offset based on query type:
+		// - Billing cycles: offset = gap (how far back from end_date to start_date)
 		// - Custom ranges: offset = bin_count (already calculated correctly with +1)
-		// - Billing cycles: offset = bin_count (gap already includes correct calculation)
 		// - Standard intervals: offset = bin_count - 1 (to include current period)
-		const intervalOffset = useBillingCycleQuery
-			? finalBinCount
-			: finalBinCount - 1;
+		let intervalOffset: number;
+		if (isBillingCycle) {
+			intervalOffset = getBCResults.gap * binMultiplier;
+		} else if (useBillingCycleQuery) {
+			// Custom ranges
+			intervalOffset = finalBinCount;
+		} else {
+			// Standard intervals (7d, 30d, 90d, 24h)
+			intervalOffset = finalBinCount - 1;
+		}
 
 		const queryParams = {
 			org_id: org?.id,
