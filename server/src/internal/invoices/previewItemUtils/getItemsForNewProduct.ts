@@ -5,6 +5,7 @@ import {
 	type Feature,
 	type FreeTrial,
 	type FullProduct,
+	formatAmount,
 	getFeatureInvoiceDescription,
 	type IntervalConfig,
 	isFixedPrice,
@@ -31,7 +32,6 @@ import {
 	priceToUsageModel,
 } from "@/internal/products/prices/priceUtils/convertPrice.js";
 import { sortPricesByType } from "@/internal/products/prices/priceUtils/sortPriceUtils.js";
-import { formatAmount } from "@/utils/formatUtils.js";
 import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
 import type { AttachParams } from "../../customers/cusProducts/AttachParams.js";
 import { getPricecnPrice } from "../../products/pricecn/pricecnUtils.js";

@@ -46,6 +46,8 @@ export const enrichAttachActions = async ({
 	// 4. Get trial ends at (either from current subscription that we're merging with, or from new product)*
 	// 5. Calculate line items for new product / upgrade* [let's do this]
 
+	// 1. Calculate line items for usages
+
 	// From billing cycle anchor, now, and interval, calculate latest cycle start:
 	if (largestInterval && billingCycleAnchor) {
 		const cycleStart = getCycleStart({

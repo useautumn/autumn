@@ -6,6 +6,7 @@ import {
 	type Feature,
 	type FullCustomer,
 	type FullProduct,
+	formatAmount,
 	type Organization,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -15,7 +16,6 @@ import { checkToAttachParams } from "@/internal/customers/attach/attachUtils/att
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
-import { formatAmount } from "@/utils/formatUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { getAttachScenario } from "./attachToCheckPreview/getAttachScenario.js";

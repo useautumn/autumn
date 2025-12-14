@@ -1,7 +1,7 @@
 import {
 	type FrontendProduct,
 	formatAmount,
-	getIntervalString,
+	formatInterval,
 	type Organization,
 	type ProductV2,
 	productV2ToBasePrice,
@@ -63,7 +63,7 @@ export const BasePriceDisplay = ({
 			});
 
 			const secondaryText = basePrice.interval
-				? `${getIntervalString({ interval: basePrice.interval, intervalCount: basePrice.interval_count })}`
+				? `${formatInterval({ interval: basePrice.interval, intervalCount: basePrice.interval_count ?? undefined })}`
 				: "one-off";
 
 			return (
