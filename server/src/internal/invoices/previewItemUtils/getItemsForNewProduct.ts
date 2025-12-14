@@ -7,10 +7,13 @@ import {
 	type FullProduct,
 	getFeatureInvoiceDescription,
 	type IntervalConfig,
+	isFixedPrice,
+	isOneOffPrice,
 	isUsagePrice,
 	type Organization,
 	type PreviewLineItem,
 	type Price,
+	priceToInvoiceAmount,
 	toProductItem,
 	UsageModel,
 	type UsagePriceConfig,
@@ -27,18 +30,13 @@ import {
 	priceToFeature,
 	priceToUsageModel,
 } from "@/internal/products/prices/priceUtils/convertPrice.js";
-import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import { sortPricesByType } from "@/internal/products/prices/priceUtils/sortPriceUtils.js";
 import { formatAmount } from "@/utils/formatUtils.js";
 import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
 import type { AttachParams } from "../../customers/cusProducts/AttachParams.js";
 import { getPricecnPrice } from "../../products/pricecn/pricecnUtils.js";
 import { subtractIntervalForProration } from "../../products/prices/billingIntervalUtils.js";
-import {
-	isFixedPrice,
-	isOneOffPrice,
-	isPrepaidPrice,
-} from "../../products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import { isPrepaidPrice } from "../../products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 
 import {
 	formatPrice,
@@ -166,7 +164,7 @@ export const getItemsForNewProduct = async ({
 	const printLogs = false;
 
 	for (const price of newProduct.prices) {
-		if (skipOneOff && isOneOffPrice({ price })) continue;
+		if (skipOneOff && isOneOffPrice(price)) continue;
 
 		const ent = getPriceEntitlement(price, newProduct.entitlements);
 		const billingType = getBillingType(price.config);
@@ -194,7 +192,7 @@ export const getItemsForNewProduct = async ({
 		}
 		if (printLogs) console.log("--------------------------------");
 
-		if (isFixedPrice({ price })) {
+		if (isFixedPrice(price)) {
 			let amount = finalProration
 				? calculateProrationAmount({
 						periodEnd: finalProration.end,

@@ -87,6 +87,8 @@ export const updateStripeSub2 = async ({
 		payment_behavior: "error_if_incomplete",
 
 		expand: ["latest_invoice"],
+
+		cancel_at_period_end: false,
 	});
 
 	let latestInvoice = updatedSub.latest_invoice as Stripe.Invoice | null;

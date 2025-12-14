@@ -3,12 +3,12 @@ import {
 	cusProductToEnts,
 	type Entity,
 	type FullCusProduct,
+	isFixedPrice,
 	type Price,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import {
 	isContUsePrice,
-	isFixedPrice,
 	isPrepaidPrice,
 } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import {
@@ -71,7 +71,7 @@ export const getQuantityToRemove = ({
 		finalQuantity = existingUsage || 0;
 	}
 
-	if (isFixedPrice({ price })) {
+	if (isFixedPrice(price)) {
 		finalQuantity = fixedPriceMultiplier * (finalQuantity || 1);
 	}
 
@@ -85,6 +85,8 @@ export const willMergeSub = async ({
 	attachParams: AttachParams;
 	branch: AttachBranch;
 }) => {
+	if (attachParams.newBillingSubscription) return false;
+
 	const { subId } = await getCustomerSub({ attachParams, onlySubId: true });
 
 	if (branch === AttachBranch.MainIsTrial) return false;

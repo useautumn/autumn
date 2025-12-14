@@ -48,21 +48,9 @@ export const getBillingType = (config: FixedPriceConfig | UsagePriceConfig) => {
 	return BillingType.UsageInArrear;
 };
 
-export const isOneOffPrice = ({ price }: { price: Price }) => {
-	return price.config.interval === BillingInterval.OneOff;
-};
-
 export const isPrepaidPrice = ({ price }: { price: Price }) => {
 	const billingType = getBillingType(price.config);
 	return billingType === BillingType.UsageInAdvance;
-};
-
-export const isFixedPrice = ({ price }: { price: Price }) => {
-	const billingType = getBillingType(price.config);
-
-	return (
-		billingType === BillingType.FixedCycle || billingType === BillingType.OneOff
-	);
 };
 
 export const hasPrepaidPrice = ({

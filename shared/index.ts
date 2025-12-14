@@ -71,6 +71,7 @@ export * from "./models/devModels/apiKeyTable.js";
 // 5. Others: events, apiKeys
 export * from "./models/eventModels/eventModels.js";
 export * from "./models/eventModels/eventTable.js";
+export * from "./models/eventModels/eventTypes.js";
 export * from "./models/featureModels/featureConfig/creditConfig.js";
 export * from "./models/featureModels/featureConfig/meteredConfig.js";
 export * from "./models/featureModels/featureEnums.js";
@@ -88,6 +89,12 @@ export * from "./models/genModels/genEnums.js";
 export * from "./models/genModels/processorSchemas.js";
 
 // Idempotency Models
+
+// Analytics Aggregation Models
+export * from "./api/events/aggregation/eventAggregationSchema.js";
+
+// Insights Models
+export * from "./api/events/insights/query/insightsQueryBody.js";
 
 // Attach Function Response
 export * from "./models/attachModels/attachFunctionResponse.js";

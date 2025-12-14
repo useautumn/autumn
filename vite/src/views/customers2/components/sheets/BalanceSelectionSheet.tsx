@@ -40,8 +40,6 @@ export function BalanceSelectionSheet() {
 		);
 	}
 
-	console.log("originalEntitlements", originalEntitlements);
-
 	const firstEnt = originalEntitlements[0];
 	const feature = firstEnt.entitlement.feature;
 

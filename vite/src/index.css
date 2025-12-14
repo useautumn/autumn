@@ -42,7 +42,7 @@ html {
 	line-height: 1.5;
 	font-weight: 500;
 
-	color-scheme: light dark;
+	color-scheme: light;
 	color: rgba(255, 255, 255, 0.87);
 
 	/* Editted */
@@ -163,6 +163,7 @@ html {
 
 	--active-primary: #292929;
 	--input-background: #1d1d1d;
+	--muted: #1c1c1d;
 	/* --card: oklch(0.141 0.005 285.823); */
 
 
@@ -190,7 +191,6 @@ html {
 	--primary-foreground: white;
 	--secondary: oklch(0.274 0.006 286.033);
 	--secondary-foreground: oklch(0.985 0 0);
-	--muted: oklch(0.274 0.006 286.033);
 	--muted-foreground: oklch(0.705 0.015 286.067);
 	--accent: oklch(0.274 0.006 286.033);
 	--accent-foreground: oklch(0.985 0 0);
@@ -212,6 +212,7 @@ html {
 	--sidebar-accent-foreground: oklch(0.985 0 0);
 	--sidebar-border: oklch(0.274 0.006 286.033);
 	--sidebar-ring: oklch(0.442 0.017 285.786);
+	color-scheme: dark;
 }
 
 @theme inline {

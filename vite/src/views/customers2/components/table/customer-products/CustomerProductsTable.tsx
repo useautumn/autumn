@@ -1,5 +1,10 @@
-import type { Entity, FullCusProduct } from "@autumn/shared";
-import { PackageIcon, Subtract, User } from "@phosphor-icons/react";
+import { AppEnv, type Entity, type FullCusProduct } from "@autumn/shared";
+import {
+	ArrowSquareOutIcon,
+	PackageIcon,
+	Subtract,
+	User,
+} from "@phosphor-icons/react";
 import type { Row } from "@tanstack/react-table";
 import { parseAsBoolean, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
@@ -7,9 +12,10 @@ import { useLocation, useNavigate } from "react-router";
 import { AdminHover } from "@/components/general/AdminHover";
 import { Table } from "@/components/general/table";
 import { Button } from "@/components/v2/buttons/Button";
-import { useProductStore } from "@/hooks/stores/useProductStore";
+import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
+import { useEnv } from "@/utils/envUtils";
 import { getCusProductHoverTexts } from "@/views/admin/adminUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useFullCusSearchQuery } from "@/views/customers/hooks/useFullCusSearchQuery";
@@ -24,6 +30,7 @@ import { ShowExpiredActionButton } from "./ShowExpiredActionButton";
 import { TransferProductDialog } from "./TransferProductDialog";
 
 export function CustomerProductsTable() {
+	const env = useEnv();
 	const { customer, isLoading } = useCusQuery();
 
 	const { entityId } = useEntity();
@@ -37,7 +44,6 @@ export function CustomerProductsTable() {
 	const [selectedProduct, setSelectedProduct] = useState<FullCusProduct | null>(
 		null,
 	);
-	const storeProduct = useProductStore((s) => s.product);
 	const selectedItemId = useSheetStore((s) => s.itemId);
 
 	const { setEntityId } = useEntity();
@@ -166,12 +172,6 @@ export function CustomerProductsTable() {
 	};
 
 	const handleRowClick = (cusProduct: FullCusProduct) => {
-		if (storeProduct?.id) {
-			// If there is a product being customized, don't open another sheet
-			//user must close manually -- could show some notification to user here
-			return;
-		}
-
 		setSheet({
 			type: "subscription-detail",
 			itemId: cusProduct.id,
@@ -211,10 +211,31 @@ export function CustomerProductsTable() {
 
 	const hasEntityProducts = entityProducts.length > 0; // Removed && !entityId
 
-	const emptyStateText =
-		entityProducts.length > 0
-			? "No customer-level plans found"
-			: "Enable a plan to start a subscription";
+	const emptyStateChildren =
+		entityProducts.length > 0 ? (
+			"No customer-level plans found"
+		) : (
+			<>
+				Enable a plan to start a subscription
+				{env === AppEnv.Sandbox && (
+					<IconButton
+						variant="muted"
+						size="sm"
+						iconOrientation="right"
+						icon={<ArrowSquareOutIcon size={16} className="-translate-y-px" />}
+						className="px-1! ml-2"
+						onClick={() =>
+							window.open(
+								"https://docs.useautumn.com/getting-started/setup/react",
+								"_blank",
+							)
+						}
+					>
+						Docs
+					</IconButton>
+				)}
+			</>
+		);
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -239,7 +260,7 @@ export function CustomerProductsTable() {
 					enableSorting,
 					isLoading,
 					onRowClick: handleRowClick,
-					emptyStateText,
+					emptyStateChildren,
 					flexibleTableColumns: true,
 					selectedItemId: selectedItemId,
 				}}

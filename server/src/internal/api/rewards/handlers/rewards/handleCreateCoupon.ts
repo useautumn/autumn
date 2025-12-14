@@ -78,7 +78,7 @@ export default async (req: any, res: any) =>
 					const isProductOneOff = pricesOnlyOneOff(fullProduct.prices);
 					const relevantPrices = isProductOneOff
 						? fullProduct.prices // Include all prices for one-off products
-						: fullProduct.prices.filter((price) => isFixedPrice({ price })); // Only fixed prices for recurring products
+						: fullProduct.prices.filter((price) => isFixedPrice(price)); // Only fixed prices for recurring products
 
 					await createStripeCoupon({
 						reward: newReward,

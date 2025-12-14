@@ -36,10 +36,10 @@ async function startDev() {
 		const backendUrl =
 			process.env.VITE_BACKEND_URL ||
 			getEnvVariable(viteEnvPath, "VITE_BACKEND_URL");
-		const isUsingRemoteBackend = backendUrl?.includes("api.useautumn.com");
+		const isUsingRemoteBackend = backendUrl?.includes(".useautumn.com");
 
 		if (isUsingRemoteBackend) {
-			console.log("\n🌐 Using remote backend (api.useautumn.com)");
+			console.log("\n🌐 Using remote backend (*.useautumn.com)");
 			console.log("⏭️  Skipping port cleanup...\n");
 		} else {
 			// Port cleanup disabled (detection is unreliable)
@@ -76,28 +76,26 @@ async function startDev() {
 			];
 		}
 
-		const concurrentlyProc = Bun.spawn(shellArgs,
-			{
-				cwd: projectRoot,
-				env: {
-					...process.env,
-					VITE_PORT: VITE_PORT.toString(),
-					SERVER_PORT: SERVER_PORT.toString(),
-				},
-				stdout: "inherit",
-				stderr: "inherit",
-				onExit(proc, exitCode, signalCode, error) {
-					if (error) {
-						console.error("Failed to start development servers:", error);
-						process.exit(1);
-					}
-					if (exitCode !== 0 && exitCode !== null) {
-						console.error(`Development servers exited with code ${exitCode}`);
-					}
-					process.exit(exitCode ?? 0);
-				},
+		const concurrentlyProc = Bun.spawn(shellArgs, {
+			cwd: projectRoot,
+			env: {
+				...process.env,
+				VITE_PORT: VITE_PORT.toString(),
+				SERVER_PORT: SERVER_PORT.toString(),
 			},
-		);
+			stdout: "inherit",
+			stderr: "inherit",
+			onExit(proc, exitCode, signalCode, error) {
+				if (error) {
+					console.error("Failed to start development servers:", error);
+					process.exit(1);
+				}
+				if (exitCode !== 0 && exitCode !== null) {
+					console.error(`Development servers exited with code ${exitCode}`);
+				}
+				process.exit(exitCode ?? 0);
+			},
+		});
 
 		// Handle termination signals
 		process.on("SIGINT", () => {

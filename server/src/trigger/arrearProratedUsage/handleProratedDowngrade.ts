@@ -8,6 +8,7 @@ import {
 	OnIncrease,
 	type Organization,
 	type Product,
+	priceToInvoiceAmount,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -18,7 +19,6 @@ import { constructStripeInvoiceItem } from "@/internal/invoices/invoiceItemUtils
 import { createAndFinalizeInvoice } from "@/internal/invoices/invoiceUtils/createAndFinalizeInvoice.js";
 import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
 import { getReplaceables } from "@/internal/products/prices/priceUtils/arrearProratedUtils/getContUsageDowngradeItem.js";
-import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import {
 	shouldProrate,
 	shouldProrateDowngradeNow,

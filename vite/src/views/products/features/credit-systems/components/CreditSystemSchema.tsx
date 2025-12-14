@@ -106,7 +106,9 @@ export function CreditSystemSchema({
 										)
 										.map((feature: Feature) => (
 											<SelectItem key={feature.id} value={feature.id || ""}>
-												<span className="truncate">{feature.name}</span>
+												<span className="block truncate max-w-40">
+													{feature.name}
+												</span>
 											</SelectItem>
 										))}
 								</SelectContent>
@@ -115,6 +117,7 @@ export function CreditSystemSchema({
 							<div className="flex gap-1">
 								<Input
 									type="number"
+									lang="en"
 									value={item.credit_amount || ""}
 									onChange={(e) =>
 										handleSchemaChange(index, "credit_amount", e.target.value)

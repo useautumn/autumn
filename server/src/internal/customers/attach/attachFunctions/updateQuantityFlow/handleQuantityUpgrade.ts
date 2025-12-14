@@ -8,6 +8,7 @@ import {
 	type FullCustomerPrice,
 	getFeatureInvoiceDescription,
 	OnIncrease,
+	priceToInvoiceAmount,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -20,7 +21,6 @@ import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import { constructStripeInvoiceItem } from "@/internal/invoices/invoiceItemUtils/invoiceItemUtils.js";
 import { createAndFinalizeInvoice } from "@/internal/invoices/invoiceUtils/createAndFinalizeInvoice.js";
 import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
-import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import {
 	shouldBillNow,
 	shouldProrate,

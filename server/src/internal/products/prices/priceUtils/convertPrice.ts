@@ -6,13 +6,13 @@ import {
 	type FullCustomerEntitlement,
 	type FullCustomerPrice,
 	type FullProduct,
+	isFixedPrice,
 	type Price,
 	type ProductOptions,
 	UsageModel,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { getBillingType, getPriceEntitlement } from "../priceUtils.js";
-import { isFixedPrice } from "./usagePriceUtils/classifyUsagePrice.js";
 
 export const priceToIntervalKey = (price: Price) => {
 	return toIntervalKey({
@@ -81,7 +81,7 @@ export const priceToFeature = ({
 
 export const priceToUsageModel = (price: Price) => {
 	const billingType = getBillingType(price.config);
-	if (isFixedPrice({ price })) {
+	if (isFixedPrice(price)) {
 		return undefined;
 	}
 	if (billingType === BillingType.UsageInAdvance) {

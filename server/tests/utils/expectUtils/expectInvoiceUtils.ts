@@ -2,18 +2,16 @@ import {
 	BillingInterval,
 	cusProductToEnts,
 	cusProductToPrices,
+	isFixedPrice,
 	type Organization,
+	priceToInvoiceAmount,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import type { AppEnv } from "autumn-js";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
-import {
-	isArrearPrice,
-	isFixedPrice,
-} from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import { isArrearPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
 import { getSubsFromCusId } from "./expectSubUtils.js";
 
@@ -65,7 +63,7 @@ export const getExpectedInvoiceTotal = async ({
 			continue;
 		}
 
-		if (onlyIncludeUsage && isFixedPrice({ price })) continue;
+		if (onlyIncludeUsage && isFixedPrice(price)) continue;
 
 		if (onlyIncludeArrear && !isArrearPrice({ price })) continue;
 
