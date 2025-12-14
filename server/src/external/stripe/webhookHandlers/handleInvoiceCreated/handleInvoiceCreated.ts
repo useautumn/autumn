@@ -3,6 +3,7 @@ import {
 	BillingType,
 	CusProductStatus,
 	type FullCusProduct,
+	isFixedPrice,
 	type Organization,
 } from "@autumn/shared";
 import type Stripe from "stripe";
@@ -12,7 +13,6 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
 import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
 import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { deleteCachedApiCustomer } from "../../../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import {
@@ -60,7 +60,7 @@ export const sendUsageAndReset = async ({
 		const price = cusPrice.price;
 		const billingType = getBillingType(price.config);
 
-		if (isFixedPrice({ price })) continue;
+		if (isFixedPrice(price)) continue;
 
 		const relatedCusEnt = getRelatedCusEnt({
 			cusPrice,

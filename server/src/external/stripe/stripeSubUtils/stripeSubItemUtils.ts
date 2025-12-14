@@ -2,12 +2,12 @@ import {
 	type BillingType,
 	cusProductToPrices,
 	type FullCusProduct,
+	isFixedPrice,
 	type Price,
 	PriceType,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 
@@ -97,10 +97,10 @@ export const findStripeItemForPrice = ({
 		if (stripeItem) return stripeItem;
 
 		// Fallback to fixed price
-		if (isFixedPrice({ price })) {
+		if (isFixedPrice(price)) {
 			return stripeItems.find(
 				(si: Stripe.SubscriptionItem | Stripe.LineItem) => {
-					const config = price.config as UsagePriceConfig;
+					const config = price.config;
 
 					return (
 						config.stripe_price_id === si.price?.id ||

@@ -9,6 +9,8 @@ import {
 	cusProductToProduct,
 	type FullCusProduct,
 	type FullCustomer,
+	isFixedPrice,
+	isOneOffPrice,
 	type Organization,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle";
@@ -29,11 +31,7 @@ import {
 	getPriceEntitlement,
 	getPriceOptions,
 } from "@server/internal/products/prices/priceUtils";
-import {
-	isFixedPrice,
-	isOneOffPrice,
-	isPrepaidPrice,
-} from "@server/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice";
+import { isPrepaidPrice } from "@server/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice";
 import { isFreeProduct } from "@server/internal/products/productUtils";
 import type Stripe from "stripe";
 import { formatUnixToDateTime, nullish } from "../genUtils";
@@ -150,7 +148,7 @@ const compareActualItems = async ({
 			return false;
 		});
 
-		if (isFixedPrice({ price: expectedItem.autumnPrice }) && !actualItem) {
+		if (isFixedPrice(expectedItem.autumnPrice) && !actualItem) {
 			actualItem = actualItems.find((item: any) => {
 				return item.stripeProdId === expectedItem.stripeProdId;
 			});
@@ -162,7 +160,6 @@ const compareActualItems = async ({
 				skippedCount++;
 				continue;
 			}
-
 
 			const { autumnPrice: _, ...rest } = expectedItem;
 			console.log(`(${type}) Missing item:`, rest);
@@ -255,7 +252,6 @@ const compareActualItems = async ({
 	}
 };
 
-
 export const checkCusSubCorrect = async ({
 	db,
 	fullCus,
@@ -271,8 +267,6 @@ export const checkCusSubCorrect = async ({
 	org: Organization;
 	env: AppEnv;
 }) => {
-
-
 	// 1. Only 1 sub ID available
 	const cusProducts = fullCus.customer_products;
 	const subIds = cusProductToSubIds({ cusProducts });
@@ -395,7 +389,7 @@ export const checkCusSubCorrect = async ({
 			const addToSub = cusProduct.status !== CusProductStatus.Scheduled;
 
 			for (const price of prices) {
-				if (isOneOffPrice({ price })) continue;
+				if (isOneOffPrice(price)) continue;
 
 				const relatedEnt = getPriceEntitlement(price, ents);
 				const options = getPriceOptions(price, cusProduct.options);
@@ -489,7 +483,6 @@ export const checkCusSubCorrect = async ({
 		}
 
 		assert(!!sub, `Sub ${subId} should exist`);
-		
 
 		if (sub) {
 			const actualItems = sub!.items.data.map((item: any) => ({
@@ -508,7 +501,6 @@ export const checkCusSubCorrect = async ({
 				subId,
 			});
 		}
-		
 
 		// Should be canceled
 
@@ -540,8 +532,6 @@ export const checkCusSubCorrect = async ({
 
 		const finalShouldBeCanceled = cusSubShouldBeCanceled;
 
-		
-
 		if (finalShouldBeCanceled) {
 			assert(!sub!.schedule, `sub ${subId} should NOT have a schedule`);
 			assert(subIsCanceled({ sub: sub! }), `sub ${subId} should be canceled`);
@@ -553,7 +543,6 @@ export const checkCusSubCorrect = async ({
 				? schedules.find((s) => s.id === sub!.schedule)
 				: null;
 
-		
 		for (let i = 0; i < supposedPhases.length; i++) {
 			const supposedPhase = supposedPhases[i];
 

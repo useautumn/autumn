@@ -1,11 +1,11 @@
-import type {
-	BillingInterval,
-	FixedPriceConfig,
-	Price,
-	ProductItem,
-	ProductV2,
+import {
+	type BillingInterval,
+	type FixedPriceConfig,
+	isFixedPrice,
+	type Price,
+	type ProductItem,
+	type ProductV2,
 } from "@autumn/shared";
-import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { isPriceItem } from "@/internal/products/product-items/productItemUtils/getItemType.js";
 import { nullish } from "@/utils/genUtils.js";
 
@@ -68,7 +68,7 @@ export const getBasePrice = ({ product }: { product: ProductV2 }) => {
 };
 
 export const v1ProductToBasePrice = ({ prices }: { prices: Price[] }) => {
-	const fixedPrice = prices.find((price) => isFixedPrice({ price }));
+	const fixedPrice = prices.find((price) => isFixedPrice(price));
 	if (fixedPrice) {
 		return (fixedPrice.config as FixedPriceConfig).amount;
 	} else return 0;

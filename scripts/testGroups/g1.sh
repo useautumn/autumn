@@ -8,7 +8,7 @@ source "$(dirname "$0")/config.sh"
 
 
 # Run tests using TypeScript runner with compact mode
-# Adjust --max to control concurrency (default: 6)
+# Adjust --max to control concurren.cy (default: 6)
 BUN_PARALLEL_COMPACT \
   'server/tests/balances/check/basic' \
   'server/tests/balances/check/credit-systems' \
@@ -23,3 +23,4 @@ BUN_PARALLEL_COMPACT \
   'server/tests/balances/track/entity-balances' \
   'server/tests/balances/track/concurrency' \
   'server/tests/balances/track/negative' \
+  'server/tests/balances/update' \

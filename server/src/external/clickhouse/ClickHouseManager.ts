@@ -1,6 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { ClickHouseClient, QueryParams } from "@clickhouse/client";
+import {
+	type ClickHouseClient,
+	createClient,
+	type QueryParams,
+} from "@clickhouse/client";
 import { clickhouseClient } from "../../db/initClickHouse.js";
 
 export enum ClickHouseQuery {
@@ -17,6 +21,7 @@ export enum ClickHouseQuery {
 export class ClickHouseManager {
 	private static instance: ClickHouseManager | null = null;
 	private client: ClickHouseClient | null = clickhouseClient;
+	private readonlyClient: ClickHouseClient | null = null;
 	private initialized = false;
 	private initPromise: Promise<void> | null = null;
 	static clickhouseAvailable =
@@ -73,6 +78,27 @@ export class ClickHouseManager {
 			throw new Error("ClickHouse client not initialized");
 		}
 		return manager.client;
+	}
+
+	public static async getReadonlyClient(): Promise<ClickHouseClient> {
+		const manager = await ClickHouseManager.getInstance();
+		if (!manager.readonlyClient) {
+			if (
+				!process.env.CLICKHOUSE_INSIGHTS_USERNAME ||
+				!process.env.CLICKHOUSE_INSIGHTS_PASSWORD
+			) {
+				throw new Error(
+					"CLICKHOUSE_INSIGHTS_USERNAME and CLICKHOUSE_INSIGHTS_PASSWORD must be set",
+				);
+			}
+
+			manager.readonlyClient = createClient({
+				url: process.env.CLICKHOUSE_URL,
+				username: process.env.CLICKHOUSE_INSIGHTS_USERNAME,
+				password: process.env.CLICKHOUSE_INSIGHTS_PASSWORD,
+			});
+		}
+		return manager.readonlyClient;
 	}
 
 	static async createDateRangeView() {}

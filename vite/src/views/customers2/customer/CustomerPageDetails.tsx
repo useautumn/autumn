@@ -1,6 +1,7 @@
 import { FingerprintIcon, Ticket } from "@phosphor-icons/react";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { useCusReferralQuery } from "@/views/customers/customer/hooks/useCusReferralQuery";
+import { CustomerActions } from "./CustomerActions";
 import { useCustomerContext } from "./CustomerContext";
 
 const mutedDivClassName =
@@ -52,6 +53,7 @@ export const CustomerPageDetails = () => {
 						<span className="truncate">{appliedCoupon.name}</span>
 					</div>
 				)}
+				<CustomerActions />
 			</div>
 		</div>
 	);

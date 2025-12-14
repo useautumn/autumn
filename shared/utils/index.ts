@@ -1,7 +1,5 @@
 // Billing utils
 
-// Billing utils
-
 export * from "./billingUtils/resolveAttachUtils/getUncancelAttachActions.js";
 export * from "./billingUtils/resolveAttachUtils/resolveAttachActions.js";
 export * from "./billingUtils/resolveAttachUtils/resolveNewProductTiming.js";
@@ -9,16 +7,20 @@ export * from "./billingUtils/resolveAttachUtils/resolveOngoingCusProductAction.
 export * from "./billingUtils/resolveAttachUtils/resolveScheduledCusProductAction.js";
 export * from "./common/timeUtils.js";
 export * from "./common/unixUtils.js";
-export * from "./common/unixUtils.js";
+
+export * from "./cusEntUtils/balanceUtils/cusEntsToBalance.js";
+export * from "./cusEntUtils/balanceUtils/cusEntToPrepaidQuantity.js";
+export * from "./cusEntUtils/balanceUtils/cusEntToPurchasedBalance.js";
 // Cus ent utils
-export * from "./cusEntUtils/balanceUtils";
-export * from "./cusEntUtils/balanceUtils/cusEntToPrepaidQuantity";
-export * from "./cusEntUtils/balanceUtils/cusEntToPurchasedBalance";
-export * from "./cusEntUtils/classifyCusEntUtils";
-export * from "./cusEntUtils/convertCusEntUtils";
-export * from "./cusEntUtils/convertCusEntUtils/cusEntsToMaxPurchase";
-export * from "./cusEntUtils/cusEntUtils";
-export * from "./cusEntUtils/filterCusEntUtils";
+export * from "./cusEntUtils/balanceUtils/grantedBalanceUtils/cusEntsToAdjustment.js";
+export * from "./cusEntUtils/balanceUtils/grantedBalanceUtils/cusEntsToAllowance.js";
+export * from "./cusEntUtils/balanceUtils/grantedBalanceUtils/cusEntsToGrantedBalance.js";
+export * from "./cusEntUtils/balanceUtils.js";
+export * from "./cusEntUtils/classifyCusEntUtils.js";
+export * from "./cusEntUtils/convertCusEntUtils/cusEntsToMaxPurchase.js";
+export * from "./cusEntUtils/convertCusEntUtils.js";
+export * from "./cusEntUtils/cusEntUtils.js";
+export * from "./cusEntUtils/filterCusEntUtils.js";
 // Cus ent utils
 export * from "./cusEntUtils/getRolloverFields.js";
 export * from "./cusEntUtils/getStartingBalance.js";
@@ -34,6 +36,7 @@ export * from "./cusProductUtils/getCusProductFromCustomer.js";
 export * from "./cusProductUtils/productIdToCusProduct.js";
 // Cus utils
 export * from "./cusUtils/cusPlanUtils/cusPlanUtils.js";
+export * from "./cusUtils/fullCusUtils/getCusStripeSubCount.js";
 export * from "./expandUtils.js";
 export * from "./featureUtils/apiFeatureToDbFeature.js";
 export * from "./featureUtils/convertFeatureUtils.js";

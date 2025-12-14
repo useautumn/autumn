@@ -1,19 +1,96 @@
-import {
-	cusEntToBalance,
-	cusEntToIncludedUsage,
-	cusProductsToCusEnts,
-	FeatureUsageType,
-	type FullCusEntWithFullCusProduct,
-	type FullCusProduct,
-	notNullish,
-	sumValues,
+import type {
+	Entity,
+	FullCusEntWithFullCusProduct,
+	FullCusProduct,
 } from "@autumn/shared";
 import type { Row } from "@tanstack/react-table";
 import { AdminHover } from "@/components/general/AdminHover";
 import { cn } from "@/lib/utils";
 import { formatUnixToDateTimeString } from "@/utils/formatUtils/formatDateUtils";
 import { getCusEntHoverTexts } from "@/views/admin/adminUtils";
+import { useFeatureUsageBalance } from "@/views/customers2/hooks/useFeatureUsageBalance";
 import { CustomerFeatureUsageBar } from "../customer-feature-usage/CustomerFeatureUsageBar";
+import { FeatureBalanceDisplay } from "../customer-feature-usage/FeatureBalanceDisplay";
+
+function UsageCell({
+	ent,
+	filteredCustomerProducts,
+	entityId,
+}: {
+	ent: FullCusEntWithFullCusProduct;
+	filteredCustomerProducts: FullCusProduct[];
+	entityId: string | null;
+}) {
+	const {
+		allowance,
+		balance,
+		shouldShowOutOfBalance,
+		shouldShowUsed,
+		usageType,
+		initialAllowance,
+	} = useFeatureUsageBalance({
+		cusProducts: filteredCustomerProducts,
+		featureId: ent.entitlement.feature.id,
+		entityId,
+	});
+
+	if (ent.unlimited) {
+		return <span className="text-t4">Unlimited</span>;
+	}
+
+	return (
+		<FeatureBalanceDisplay
+			allowance={allowance}
+			initialAllowance={initialAllowance}
+			balance={balance}
+			shouldShowOutOfBalance={shouldShowOutOfBalance}
+			shouldShowUsed={shouldShowUsed}
+			usageType={usageType}
+		/>
+	);
+}
+
+function BarCell({
+	ent,
+	filteredCustomerProducts,
+	entityId,
+}: {
+	ent: FullCusEntWithFullCusProduct;
+	filteredCustomerProducts: FullCusProduct[];
+	entityId: string | null;
+}) {
+	const { allowance, balance, quantity } = useFeatureUsageBalance({
+		cusProducts: filteredCustomerProducts,
+		featureId: ent.entitlement.feature.id,
+		entityId,
+	});
+
+	return (
+		<div className="flex gap-3 items-center">
+			<span
+				className={cn(
+					"text-t3 text-tiny flex justify-center !px-1 bg-muted rounded-md min-w-30",
+					ent.next_reset_at ? "opacity-100" : "opacity-0",
+				)}
+			>
+				Resets {formatUnixToDateTimeString(ent.next_reset_at)}
+			</span>
+			<div
+				className={cn(
+					"w-full max-w-50 flex justify-center pr-2 h-full items-center min-w-16",
+					(allowance ?? 0) > 0 ? "opacity-100" : "opacity-0",
+				)}
+			>
+				<CustomerFeatureUsageBar
+					allowance={allowance}
+					balance={balance}
+					quantity={quantity}
+					horizontal={true}
+				/>
+			</div>
+		</div>
+	);
+}
 
 export const CustomerBalanceTableColumns = ({
 	filteredCustomerProducts,
@@ -24,7 +101,7 @@ export const CustomerBalanceTableColumns = ({
 	filteredCustomerProducts: FullCusProduct[];
 	entityId: string | null;
 	aggregatedMap: Map<string, FullCusEntWithFullCusProduct[]>;
-	entities?: any[];
+	entities?: unknown[];
 }) => [
 	{
 		header: "Feature",
@@ -43,7 +120,7 @@ export const CustomerBalanceTableColumns = ({
 					<AdminHover
 						texts={getCusEntHoverTexts({
 							cusEnt: row.original,
-							entities,
+							entities: entities as Entity[],
 						})}
 					>
 						<span className="font-medium text-t1 truncate">
@@ -61,177 +138,25 @@ export const CustomerBalanceTableColumns = ({
 	},
 	{
 		header: "Usage",
-		// enableResizing: true,
-		// size: 200,
-		// minSize: 100,
 		accessorKey: "usage",
-		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => {
-			const ent = row.original;
-			const featureId = ent.entitlement.feature.id;
-
-			const cusEnts = cusProductsToCusEnts({
-				cusProducts: filteredCustomerProducts,
-				featureId,
-			});
-
-			const allowance = sumValues(
-				cusEnts.map((cusEnt) => {
-					const includedUsage = cusEntToIncludedUsage({
-						cusEnt,
-						entityId: entityId ?? undefined,
-					});
-					return includedUsage;
-				}),
-			);
-
-			const balance = sumValues(
-				cusEnts
-					.map((cusEnt) =>
-						cusEntToBalance({
-							cusEnt,
-							entityId: entityId ?? undefined,
-							withRollovers: true,
-						}),
-					)
-					.filter(notNullish),
-			);
-
-			const shouldShowOutOfBalance = () => {
-				return allowance > 0 || (balance ?? 0) > 0;
-			};
-
-			const shouldShowUsed = () => {
-				return balance < 0 || ((balance ?? 0) === 0 && (allowance ?? 0) <= 0);
-			};
-
-			if (ent.unlimited) {
-				return <span className="text-t4">Unlimited</span>;
-			}
-
-			return (
-				<div className="flex gap-1">
-					{shouldShowOutOfBalance() && (
-						<div className="flex gap-0.5">
-							<span className="">
-								{balance && balance < 0
-									? 0
-									: new Intl.NumberFormat().format(balance ?? 0)}
-							</span>
-							<p className="text-t4 flex items-end text-tiny gap-0.5">
-								{(allowance ?? 0) > 0 && (
-									<>
-										<span>/</span>
-										<span>
-											{new Intl.NumberFormat().format(allowance ?? 0)} left
-										</span>
-									</>
-								)}{" "}
-								<span className="text-t4 text-tiny"></span>
-							</p>
-						</div>
-					)}
-					{shouldShowUsed() && (
-						<p className="">
-							{shouldShowOutOfBalance() && shouldShowUsed() && "+"}
-							{new Intl.NumberFormat().format(
-								balance && balance < 0 ? balance * -1 : 0,
-							)}{" "}
-							<span className="text-t4 text-tiny">
-								{allowance > 0
-									? "overage"
-									: ent.entitlement.feature.config?.usage_type ===
-											FeatureUsageType.Continuous
-										? "in use"
-										: "used"}
-							</span>
-						</p>
-					)}
-				</div>
-			);
-		},
+		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => (
+			<UsageCell
+				ent={row.original}
+				filteredCustomerProducts={filteredCustomerProducts}
+				entityId={entityId}
+			/>
+		),
 	},
-	// {
-	// 	header: "Reset Date",
-	// 	size: 120,
-	// 	accessorKey: "reset_date",
-	// 	cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => {
-	// 		const ent = row.original;
-
-	// 		if (!ent.next_reset_at) {
-	// 			return <span className="text-t3"></span>;
-	// 		}
-
-	// 		return (
-	// 			<div className="flex justify-end w-full">
-	// 				<span className="text-t3 text-tiny flex justify-center !px-1 bg-muted w-fit rounded-md">
-	// 					Resets {formatUnixToDateTimeString(ent.next_reset_at)}
-	// 				</span>
-	// 			</div>
-	// 		);
-	// 	},
-	// },
 	{
 		header: "Bar",
 		size: 220,
-		// maxSize: 220,
-		// enableResizing: true,
 		accessorKey: "bar",
-		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => {
-			const ent = row.original;
-			const featureId = ent.entitlement.feature.id;
-
-			const cusEnts = cusProductsToCusEnts({
-				cusProducts: filteredCustomerProducts,
-				featureId,
-			});
-
-			const allowance = sumValues(
-				cusEnts.map((cusEnt) => {
-					const includedUsage = cusEntToIncludedUsage({
-						cusEnt,
-						entityId: entityId ?? undefined,
-					});
-					return includedUsage;
-				}),
-			);
-
-			const balance = sumValues(
-				cusEnts
-					.map((cusEnt) =>
-						cusEntToBalance({
-							cusEnt,
-							entityId: entityId ?? undefined,
-							withRollovers: true,
-						}),
-					)
-					.filter(notNullish),
-			);
-
-			return (
-				<div className="flex gap-3 items-center">
-					<span
-						className={cn(
-							"text-t3 text-tiny flex justify-center !px-1 bg-muted  rounded-md min-w-30",
-							ent.next_reset_at ? "opacity-100" : "opacity-0",
-						)}
-					>
-						Resets {formatUnixToDateTimeString(ent.next_reset_at)}
-					</span>
-					<div
-						className={cn(
-							"w-full max-w-50 flex justify-center pr-2 h-full items-center min-w-16",
-							(allowance ?? 0) > 0 ? "opacity-100" : "opacity-0",
-						)}
-					>
-						<CustomerFeatureUsageBar
-							allowance={allowance ?? 0}
-							balance={balance ?? 0}
-							quantity={ent.customer_product.quantity ?? 1}
-							horizontal={true}
-						/>
-					</div>
-				</div>
-			);
-		},
+		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => (
+			<BarCell
+				ent={row.original}
+				filteredCustomerProducts={filteredCustomerProducts}
+				entityId={entityId}
+			/>
+		),
 	},
 ];

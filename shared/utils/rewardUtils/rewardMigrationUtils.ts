@@ -7,7 +7,8 @@ import {
 	type UsagePriceConfig,
 	type UsageTier,
 } from "../../index.js";
-import { getBillingType, isFixedPrice } from "../productUtils/priceUtils.js";
+import { getBillingType } from "../productUtils/priceUtils";
+import { isFixedPrice } from "../productUtils/priceUtils/classifyPriceUtils";
 
 // Helper function to check if tier structures match
 const tiersMatch = (oldTiers: UsageTier[], newTiers: UsageTier[]): boolean => {
@@ -80,7 +81,7 @@ const findBestMatch = (oldPrice: Price, newPrices: Price[]): Price | null => {
 	if (candidates.length === 1) return candidates[0];
 
 	// If multiple candidates, use type-specific matching
-	if (isFixedPrice({ price: oldPrice })) {
+	if (isFixedPrice(oldPrice)) {
 		return findMatchingFixedPrice(oldPrice, candidates);
 	} else if (isUsagePrice({ price: oldPrice })) {
 		return findMatchingUsagePrice(oldPrice, candidates);

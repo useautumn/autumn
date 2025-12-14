@@ -5,8 +5,13 @@ import {
 	type FullProduct,
 	isCusProductCanceled,
 } from "@autumn/shared";
-import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
-import { isFreeProduct, isOneOff, isProductUpgrade } from "../../productUtils";
+
+import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
+import {
+	isFreeProduct,
+	isOneOff,
+	isProductUpgrade,
+} from "../../productUtils.js";
 
 export const getAttachScenario = ({
 	fullCus,
@@ -17,17 +22,40 @@ export const getAttachScenario = ({
 }) => {
 	if (!fullCus) return AttachScenario.New;
 
-	const { curMainProduct, curScheduledProduct } = getExistingCusProducts({
-		product: fullProduct,
-		cusProducts: fullCus?.customer_products || [],
-		internalEntityId: fullCus?.entity?.internal_id,
-	});
-
-	if (!curMainProduct || fullProduct.is_add_on) return AttachScenario.New;
+	const { curMainProduct, curScheduledProduct, curSameProduct } =
+		getExistingCusProducts({
+			product: fullProduct,
+			cusProducts: fullCus?.customer_products || [],
+			internalEntityId: fullCus?.entity?.internal_id,
+		});
 
 	if (isOneOff(fullProduct.prices)) {
 		return AttachScenario.New;
 	}
+
+	if (
+		fullProduct.is_add_on &&
+		!isFreeProduct(fullProduct.prices) &&
+		!isOneOff(fullProduct.prices)
+	) {
+		// 1. If current same product is add on, and it's canceled
+		if (
+			curSameProduct &&
+			curSameProduct.product.id !== curScheduledProduct?.product.id
+		) {
+			if (isCusProductCanceled({ cusProduct: curSameProduct })) {
+				return AttachScenario.Renew;
+			} else {
+				return AttachScenario.Active;
+			}
+		}
+	}
+
+	if (fullProduct.is_add_on) {
+		return AttachScenario.New;
+	}
+
+	if (!curMainProduct) return AttachScenario.New;
 
 	// 1. If current product is the same as the product, return active
 	if (curMainProduct?.product.id === fullProduct.id) {

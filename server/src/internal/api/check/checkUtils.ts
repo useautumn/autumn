@@ -5,12 +5,12 @@ import {
 	type FullCusProduct,
 	isCusProductTrialing,
 	type ProductItem,
+	priceToInvoiceAmount,
 	UsageModel,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { featureToCusPrice } from "@/internal/customers/cusProducts/cusPrices/convertCusPriceUtils.js";
 import { getProration } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
-import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import { isFeaturePriceItem } from "@/internal/products/product-items/productItemUtils/getItemType.js";
 import { itemToPriceOrTiers } from "@/internal/products/product-items/productItemUtils.js";
 import { notNullish } from "@/utils/genUtils.js";

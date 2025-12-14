@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
-import { useHasChanges, useProductStore } from "@/hooks/stores/useProductStore";
+import { useHasChanges } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { pushPage } from "@/utils/genUtils";
@@ -15,7 +15,6 @@ import { CustomerFeatureUsageTable } from "../components/table/customer-feature-
 import { CustomerInvoicesTable } from "../components/table/customer-invoices/CustomerInvoicesTable";
 import { CustomerProductsTable } from "../components/table/customer-products/CustomerProductsTable";
 import { CustomerUsageAnalyticsTable } from "../components/table/customer-usage-analytics/CustomerUsageAnalyticsTable";
-import { CustomerActions } from "./CustomerActions";
 import { CustomerBreadcrumbs } from "./CustomerBreadcrumbs2";
 import { CustomerContext } from "./CustomerContext";
 import { CustomerPageDetails } from "./CustomerPageDetails";
@@ -31,8 +30,9 @@ export default function CustomerView2() {
 
 	const sheetType = useSheetStore((s) => s.type);
 	const closeProductSheet = useSheetStore((s) => s.closeSheet);
+	const sheetData = useSheetStore((s) => s.data);
 	const hasChanges = useHasChanges();
-	const storeProduct = useProductStore((s) => s.product);
+	const hasCustomizedProduct = !!sheetData?.customizedProduct;
 
 	// useSheetCleanup();
 
@@ -69,11 +69,11 @@ export default function CustomerView2() {
 							<div className="flex flex-col w-full">
 								<div className="flex items-center justify-between w-full gap-4">
 									<CustomerBreadcrumbs />
-									<CustomerActions />
+									{/* <CustomerActions /> */}
 								</div>
-								<div className="flex items-center justify-between w-full pt-2">
+								<div className="flex items-center justify-between w-full pt-2 gap-2">
 									<h3
-										className={`text-md font-semibold ${
+										className={`text-md font-semibold truncate ${
 											customer.name
 												? "text-t1"
 												: customer.email
@@ -111,7 +111,7 @@ export default function CustomerView2() {
 									className="fixed inset-0 bg-white/60 dark:bg-black/60"
 									style={{ zIndex: 40 }}
 									onMouseDown={() => {
-										!hasChanges && !storeProduct?.id && closeProductSheet();
+										!hasCustomizedProduct && closeProductSheet();
 									}}
 								/>
 							)}

@@ -3,6 +3,7 @@ import {
 	type CreateReward,
 	DiscountConfigSchema,
 	ErrCode,
+	isFixedPrice,
 	type Organization,
 	type Price,
 	type Product,
@@ -17,7 +18,6 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { generateId, getUnique, nullish } from "@/utils/genUtils.js";
 import { ProductService } from "../products/ProductService.js";
-import { isFixedPrice } from "../products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { initProductInStripe } from "../products/productUtils.js";
 
 export const constructReward = ({
@@ -248,7 +248,7 @@ export const discountAppliesToPrice = ({
 
 	if (nullish(appliesTo)) return true;
 
-	if (isFixedPrice({ price })) {
+	if (isFixedPrice(price)) {
 		return appliesTo!.some(
 			(stripeProdId) => stripeProdId === product.processor?.id,
 		);

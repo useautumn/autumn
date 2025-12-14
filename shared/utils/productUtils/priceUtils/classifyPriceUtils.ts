@@ -1,6 +1,25 @@
+import { BillingInterval } from "../../../models/productModels/intervals/billingInterval";
+import type { FixedPriceConfig } from "../../../models/productModels/priceModels/priceConfig/fixedPriceConfig";
 import { BillingType } from "../../../models/productModels/priceModels/priceEnums";
 import type { Price } from "../../../models/productModels/priceModels/priceModels";
 import { getBillingType } from "../priceUtils";
+
+export const isOneOffPrice = (
+	price: Price,
+): price is Price & {
+	config: FixedPriceConfig & { interval: BillingInterval.OneOff };
+} => {
+	return price.config.interval === BillingInterval.OneOff;
+};
+
+export const isFixedPrice = (
+	price: Price,
+): price is Price & { config: FixedPriceConfig } => {
+	const billingType = getBillingType(price.config);
+	return (
+		billingType === BillingType.FixedCycle || billingType === BillingType.OneOff
+	);
+};
 
 export const isUsagePrice = ({
 	price,

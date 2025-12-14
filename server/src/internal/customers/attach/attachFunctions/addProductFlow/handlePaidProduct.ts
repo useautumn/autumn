@@ -67,9 +67,14 @@ export const handlePaidProduct = async ({
 
 	const subscriptions: Stripe.Subscription[] = [];
 
-	const { sub: mergeSub, cusProduct: mergeCusProduct } = await getCustomerSub({
+	let { sub: mergeSub, cusProduct: mergeCusProduct } = await getCustomerSub({
 		attachParams,
 	});
+
+	if (attachParams.newBillingSubscription) {
+		mergeSub = undefined;
+		mergeCusProduct = undefined;
+	}
 
 	let sub: Stripe.Subscription | null = null;
 	let schedule: Stripe.SubscriptionSchedule | null | undefined = null;

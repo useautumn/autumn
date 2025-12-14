@@ -1,21 +1,18 @@
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import { constructPreviewItem } from "@/internal/invoices/previewItemUtils/constructPreviewItem.js";
-import { Proration } from "@/internal/invoices/prorationUtils.js";
-import { getUsageFromBalance } from "@/internal/products/prices/priceUtils/arrearProratedUtils/getPrevAndNewUsages.js";
-
 import {
-	FullEntitlement,
-	FullCustomerEntitlement,
-	PreviewLineItem,
-	Price,
+	type FullCustomerEntitlement,
+	type FullEntitlement,
+	type PreviewLineItem,
+	type Price,
 	usageToFeatureName,
 } from "@autumn/shared";
-
-import { attachParamsToProduct } from "../convertAttachParams.js";
-import { priceToInvoiceItem } from "@/internal/products/prices/priceUtils/priceToInvoiceItem.js";
-import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import { Decimal } from "decimal.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { constructPreviewItem } from "@/internal/invoices/previewItemUtils/constructPreviewItem.js";
+import type { Proration } from "@/internal/invoices/prorationUtils.js";
+import { getUsageFromBalance } from "@/internal/products/prices/priceUtils/arrearProratedUtils/getPrevAndNewUsages.js";
+import { priceToInvoiceItem } from "@/internal/products/prices/priceUtils/priceToInvoiceItem.js";
 import { getPrevAndNewPriceForUpgrade } from "@/trigger/arrearProratedUsage/handleProratedUpgrade.js";
+import { attachParamsToProduct } from "../convertAttachParams.js";
 
 export const getContUseUpgradeItems = async ({
 	price,
@@ -36,27 +33,27 @@ export const getContUseUpgradeItems = async ({
 	proration?: Proration;
 	logger: any;
 }) => {
-	let prevInvoiceItem = curItem;
-	let prevBalance = prevCusEnt.entitlement.allowance! - curUsage;
-	let newBalance = ent.allowance! - curUsage;
-	let usageDiff = prevBalance - newBalance;
+	const prevInvoiceItem = curItem;
+	const prevBalance = prevCusEnt.entitlement.allowance! - curUsage;
+	const newBalance = ent.allowance! - curUsage;
+	const usageDiff = prevBalance - newBalance;
 
 	const product = attachParamsToProduct({ attachParams });
 	const feature = prevCusEnt.entitlement.feature;
 
-	let { usage: prevUsage } = getUsageFromBalance({
+	const { usage: prevUsage } = getUsageFromBalance({
 		ent: prevCusEnt.entitlement,
 		price,
 		balance: prevBalance,
 	});
 
-	let { usage: newUsage } = getUsageFromBalance({
+	const { usage: newUsage } = getUsageFromBalance({
 		ent,
 		price,
 		balance: prevBalance,
 	});
 
-	let { usage: totalUsage } = getUsageFromBalance({
+	const { usage: totalUsage } = getUsageFromBalance({
 		ent,
 		price,
 		balance: newBalance,

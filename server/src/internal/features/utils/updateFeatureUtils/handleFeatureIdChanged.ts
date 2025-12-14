@@ -31,9 +31,10 @@ export const handleFeatureIdChanged = async ({
 	newId: string;
 }) => {
 	const { db, org, env } = ctx;
-	const curFeature = ctx.features.find((f) => f.id === feature.id);
+	const curFeature = ctx.features.find((f) => f.id === newId);
+
 	if (curFeature) {
-		throw new FeatureAlreadyExistsError({ featureId: feature.id });
+		throw new FeatureAlreadyExistsError({ featureId: newId });
 	}
 
 	// 1. Check if any customer entitlement linked to this feature
@@ -44,7 +45,7 @@ export const handleFeatureIdChanged = async ({
 
 	if (cusEnts.length > 0) {
 		throw new RecaseError({
-			message: `Cannot change id of feature ${feature.id} because a customer is using it`,
+			message: `Cannot change id of feature ${feature.id} because a customer is using it or has used it before`,
 			code: ErrCode.InvalidFeature,
 			statusCode: 400,
 		});

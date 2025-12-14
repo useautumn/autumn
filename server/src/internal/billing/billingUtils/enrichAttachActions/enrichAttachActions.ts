@@ -40,7 +40,11 @@ export const enrichAttachActions = async ({
 		excludeOneOff: true,
 	});
 
-	console.log("Largest interval:", largestInterval);
+	// 1. Get the starts at if new product is scheduled
+	// 2. Get reset cycle anchor
+	// 3. Get usage to apply to new product
+	// 4. Get trial ends at (either from current subscription that we're merging with, or from new product)*
+	// 5. Calculate line items for new product / upgrade* [let's do this]
 
 	// From billing cycle anchor, now, and interval, calculate latest cycle start:
 	if (largestInterval && billingCycleAnchor) {

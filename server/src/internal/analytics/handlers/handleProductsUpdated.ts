@@ -1,8 +1,10 @@
 import {
 	AffectedResource,
 	type ApiCustomer,
+	type ApiEntityV1,
 	type ApiPlan,
 	ApiVersion,
+	ApiVersionClass,
 	type AppEnv,
 	type AuthType,
 	addToExpand,
@@ -10,6 +12,7 @@ import {
 	CusExpand,
 	type CustomerLegacyData,
 	cusProductToProduct,
+	type EntityLegacyData,
 	type FullCusProduct,
 	type FullProduct,
 	type Organization,
@@ -23,6 +26,7 @@ import { FeatureService } from "@/internal/features/FeatureService.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { getApiCustomerBase } from "../../customers/cusUtils/apiCusUtils/getApiCustomerBase";
+import { getApiEntityBase } from "../../entities/entityUtils/apiEntityUtils/getApiEntityBase";
 import { getPlanResponse } from "../../products/productUtils/productResponseUtils/getPlanResponse";
 
 interface ActionDetails {
@@ -124,8 +128,10 @@ export const handleProductsUpdated = async ({
 		env,
 	});
 
+	ctx.apiVersion = new ApiVersionClass(ApiVersion.V1_2);
+
 	if (ctx.apiVersion.lte(ApiVersion.V1_2)) {
-		addToExpand({
+		ctx = addToExpand({
 			ctx,
 			add: [
 				CusExpand.BalancesFeature,
@@ -166,21 +172,27 @@ export const handleProductsUpdated = async ({
 		ctx,
 	});
 
-	// console.log(`API version: ${ctx.apiVersion.value}`);
-	// console.log(`Versioned customer:`, versionedCustomer);
-	// console.log(`Versioned plan:`, versionedPlan);
+	let entity: unknown | undefined;
+	if (fullCus.entity) {
+		const { apiEntity, legacyData } = await getApiEntityBase({
+			ctx,
+			entity: fullCus.entity,
+			fullCus,
+		});
 
-	// let entityRes = null;
-	// if (notNullish(customer?.entity)) {
-	// 	entityRes = await getSingleEntityResponse({
-	// 		ctx,
-	// 		entityId: customer.entity!.id,
-	// 		fullCus: customer,
-	// 		entity: customer.entity!,
-	// 	});
-	// }
+		entity = applyResponseVersionChanges<ApiEntityV1, EntityLegacyData>({
+			input: apiEntity,
+			targetVersion: ctx.apiVersion,
+			resource: AffectedResource.Entity,
+			legacyData,
+			ctx,
+		});
+	}
 
 	// 2. Send Svix event
+	ctx.logger.info(
+		`sending customer.products.updated webhook, customer ID: ${data.customerId}, entity ID: ${fullCus.entity?.id || "none"}`,
+	);
 	await sendSvixEvent({
 		org,
 		env,
@@ -188,6 +200,7 @@ export const handleProductsUpdated = async ({
 		data: {
 			scenario,
 			customer: versionedCustomer,
+			entity,
 			updated_product: versionedPlan,
 		},
 	});
