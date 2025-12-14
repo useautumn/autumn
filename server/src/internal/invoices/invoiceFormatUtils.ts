@@ -1,22 +1,20 @@
 import {
 	BillingInterval,
 	BillingType,
-	billingToItemInterval,
 	cusProductToEnts,
 	type EntitlementWithFeature,
 	type Feature,
 	type FixedPriceConfig,
 	type FullCusProduct,
 	type FullProduct,
+	formatAmount,
+	formatInterval,
 	getFeatureName,
 	getFeatureNameWithCapital,
-	getIntervalString,
 	type Organization,
 	type Price,
-	type ProductItemInterval,
 	type UsagePriceConfig,
 } from "@autumn/shared";
-import { formatAmount } from "@/utils/formatUtils.js";
 import { getFeatureQuantity } from "../customers/cusProducts/cusProductUtils.js";
 import {
 	getBillingType,
@@ -72,10 +70,8 @@ export const formatFixedPrice = ({
 	const config = price.config as FixedPriceConfig;
 	const amount = formatAmount({ org, amount: config.amount });
 
-	const intervalStr = getIntervalString({
-		interval: billingToItemInterval({
-			billingInterval: config.interval,
-		}) as ProductItemInterval,
+	const intervalStr = formatInterval({
+		interval: config.interval,
 		intervalCount: config.interval_count || 1,
 		prefix: "",
 	});

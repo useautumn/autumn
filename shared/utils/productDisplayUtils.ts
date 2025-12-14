@@ -1,13 +1,10 @@
 import { FeatureType } from "../models/featureModels/featureEnums.js";
 import type { Feature } from "../models/featureModels/featureModels.js";
-import { ProductItemInterval } from "../models/productModels/intervals/productItemInterval.js";
 import { Infinite } from "../models/productModels/productEnums.js";
 import type { ProductItem } from "../models/productV2Models/productItemModels/productItemModels.js";
-import {
-	formatAmount,
-	getFeatureName,
-	numberWithCommas,
-} from "./displayUtils.js";
+import { formatAmount } from "./common/formatUtils/formatAmount.js";
+import { formatInterval } from "./common/formatUtils/formatInterval.js";
+import { getFeatureName, numberWithCommas } from "./displayUtils.js";
 import {
 	isFeatureItem,
 	isFeaturePriceItem,
@@ -49,28 +46,6 @@ export const formatTiers = ({
 	}
 };
 
-export const getIntervalString = ({
-	interval,
-	intervalCount = 1,
-	prefix = "per ",
-}: {
-	interval: ProductItemInterval | null | undefined;
-	intervalCount?: number | null;
-	prefix?: string;
-}) => {
-	let intervalStr: string = interval || "";
-
-	if (interval === ProductItemInterval.SemiAnnual) {
-		intervalStr = "half year";
-	}
-
-	if (!interval) return "";
-	if (intervalCount === 1) {
-		return `${prefix}${intervalStr}`;
-	}
-	return `${prefix}${intervalCount} ${intervalStr}s`;
-};
-
 export const getFeatureItemDisplay = ({
 	item,
 	feature,
@@ -98,9 +73,9 @@ export const getFeatureItemDisplay = ({
 				? "0 "
 				: `${numberWithCommas(item.included_usage)} `;
 
-	const intervalStr = getIntervalString({
-		interval: item.interval,
-		intervalCount: item.interval_count,
+	const intervalStr = formatInterval({
+		interval: item.interval ?? undefined,
+		intervalCount: item.interval_count ?? undefined,
 	});
 
 	return {
@@ -121,9 +96,9 @@ export const getPriceItemDisplay = ({
 		amount: item.price as number,
 	});
 
-	const intervalStr = getIntervalString({
-		interval: item.interval,
-		intervalCount: item.interval_count,
+	const intervalStr = formatInterval({
+		interval: item.interval ?? undefined,
+		intervalCount: item.interval_count ?? undefined,
 	});
 
 	const secondaryText = intervalStr || undefined;
@@ -184,9 +159,9 @@ export const getFeaturePriceItemDisplay = ({
 	// let intervalStr = isMainPrice && item.interval ? ` per ${item.interval}` : "";
 	const intervalStr =
 		isMainPrice || fullDisplay
-			? getIntervalString({
-					interval: item.interval,
-					intervalCount: item.interval_count,
+			? formatInterval({
+					interval: item.interval ?? undefined,
+					intervalCount: item.interval_count ?? undefined,
 				})
 			: "";
 

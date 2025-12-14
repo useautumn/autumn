@@ -2,6 +2,7 @@ import {
 	BillingType,
 	cusProductToEnts,
 	cusProductToPrices,
+	formatAmount,
 	getFeatureInvoiceDescription,
 	InternalError,
 	type PreviewLineItem,
@@ -19,7 +20,6 @@ import {
 	priceToUsageModel,
 } from "@/internal/products/prices/priceUtils/convertPrice.js";
 import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
-import { formatAmount } from "@/utils/formatUtils.js";
 import { formatUnixToDate } from "@/utils/genUtils.js";
 import { calculateProrationAmount } from "../prorationUtils.js";
 import { getProration } from "./getItemsForNewProduct.js";

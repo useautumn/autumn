@@ -1,7 +1,7 @@
 import { UTCDate } from "@date-fns/utc";
 import type { BillingInterval } from "@models/productModels/intervals/billingInterval";
 import type { EntInterval } from "@models/productModels/intervals/entitlementInterval";
-import { formatMs } from "../../common/timeUtils";
+import { formatMs } from "../../common/formatUtils/formatUnix";
 import { getCycleIntervalFunctions } from "./getCycleIntervalFunctions";
 
 /**

@@ -5,9 +5,9 @@ export * from "./billingUtils/resolveAttachUtils/resolveAttachActions.js";
 export * from "./billingUtils/resolveAttachUtils/resolveNewProductTiming.js";
 export * from "./billingUtils/resolveAttachUtils/resolveOngoingCusProductAction.js";
 export * from "./billingUtils/resolveAttachUtils/resolveScheduledCusProductAction.js";
-export * from "./common/timeUtils.js";
+// Common utils
+export * from "./common/formatUtils/index.js";
 export * from "./common/unixUtils.js";
-
 export * from "./cusEntUtils/balanceUtils/cusEntsToBalance.js";
 export * from "./cusEntUtils/balanceUtils/cusEntToPrepaidQuantity.js";
 export * from "./cusEntUtils/balanceUtils/cusEntToPurchasedBalance.js";
