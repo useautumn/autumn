@@ -335,10 +335,8 @@ order by dr.period${groupBy.orderBy};
 		if (isBillingCycle) {
 			intervalOffset = getBCResults.gap * binMultiplier;
 		} else if (useBillingCycleQuery) {
-			// Custom ranges
 			intervalOffset = finalBinCount;
 		} else {
-			// Standard intervals (7d, 30d, 90d, 24h)
 			intervalOffset = finalBinCount - 1;
 		}
 
