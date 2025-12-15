@@ -38,7 +38,6 @@ export function FeatureListTable() {
 				? feature.archived
 				: !feature.archived;
 		});
-
 		// Check if any feature has event names
 		const hasEventNames = regularFeatures?.some(
 			(feature) => feature.event_names && feature.event_names.length > 0,
@@ -83,7 +82,9 @@ export function FeatureListTable() {
 
 	const enableSorting = false;
 
-	const hasFeatureRows = featureTable.getRowModel().rows.length > 0;
+	const hasFeatureRows =
+		featureTable.getRowModel().rows.length > 0 ||
+		creditTable.getRowModel().rows.length > 0;
 
 	const creditEmptyStateText = queryStates.showArchivedFeatures
 		? "You haven't archived any credit systems yet."
