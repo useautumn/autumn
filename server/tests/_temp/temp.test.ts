@@ -31,13 +31,16 @@ const pro = constructProduct({
 	type: "pro",
 
 	items: [
-		constructPrepaidItem({
+		constructFeatureItem({
 			featureId: TestFeature.Messages,
 			includedUsage: 100,
-			price: 10,
-			billingUnits: 100,
+		}),
+		constructFeatureItem({
+			featureId: TestFeature.Workflows,
+			includedUsage: 10,
 		}),
 	],
+	trial: true,
 });
 const premium = constructProduct({
 	type: "premium",
@@ -70,7 +73,7 @@ describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 			ctx,
 			customerId,
 			withTestClock: true,
-			// attachPm: "success",
+			attachPm: "success",
 		});
 
 		await initProductsV0({
@@ -79,11 +82,31 @@ describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 			prefix: testCase,
 		});
 
+		// const entities = [
+		// 	{
+		// 		id: "1",
+		// 		name: "Entity 1",
+		// 		feature_id: TestFeature.Users,
+		// 	},
+		// 	{
+		// 		id: "2",
+		// 		name: "Entity 2",
+		// 		feature_id: TestFeature.Users,
+		// 	},
+		// ];
+
+		// await autumnV1.entities.create(customerId, entities);
 		const res = await autumnV1.attach({
 			customer_id: customerId,
 			product_id: pro.id,
-			options: [{ feature_id: TestFeature.Messages, quantity: 0 }],
+			// entity_id: entities[0].id,
 		});
+
+		// await autumnV1.attach({
+		// 	customer_id: customerId,
+		// 	product_id: pro.id,
+		// 	entity_id: entities[1].id,
+		// });
 
 		console.log(res);
 
