@@ -8,7 +8,7 @@ export const cusEntToInvoiceOverage = ({
 	cusEnt: FullCusEntWithFullCusProduct;
 }) => {
 	// 1. If entity scoped
-	if (isEntityScopedCusEnt({ cusEnt })) {
+	if (isEntityScopedCusEnt(cusEnt)) {
 		let totalOverage = new Decimal(0);
 		for (const [_, entity] of Object.entries(cusEnt.entities || {})) {
 			const overage = Decimal.max(0, new Decimal(-entity.balance));

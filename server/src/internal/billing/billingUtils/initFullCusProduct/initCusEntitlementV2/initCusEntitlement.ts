@@ -1,7 +1,7 @@
 import {
 	type CustomerEntitlement,
 	type EntitlementWithFeature,
-	type InsertFullCusProductContext,
+	type InitFullCusProductContext,
 	isBooleanEntitlement,
 	isUnlimitedEntitlement,
 } from "@autumn/shared";
@@ -9,23 +9,18 @@ import { generateId } from "@server/utils/genUtils";
 import { initCusEntitlementBalance } from "./initCusEntitlementBalance";
 import { initCusEntUsageAllowed } from "./initCusEntUsageAllowed";
 
-// Init cus ent context
-export interface InitCusEntContext {
-	insertContext: InsertFullCusProductContext;
-}
-
 // MAIN FUNCTION
 export const initCusEntitlement = ({
-	insertContext,
+	initContext,
 	entitlement,
 	cusProductId,
 }: {
-	insertContext: InsertFullCusProductContext;
+	initContext: InitFullCusProductContext;
 	entitlement: EntitlementWithFeature;
 	cusProductId: string;
 }): CustomerEntitlement => {
 	const { balance, entities } = initCusEntitlementBalance({
-		insertContext,
+		initContext,
 		entitlement,
 	});
 
@@ -35,7 +30,7 @@ export const initCusEntitlement = ({
 
 	// Usage allowed:
 	const usageAllowed = initCusEntUsageAllowed({
-		insertContext,
+		initContext,
 		entitlement,
 	});
 
@@ -55,7 +50,7 @@ export const initCusEntitlement = ({
 
 	const nextResetAt = Date.now();
 
-	const { fullCus, product } = insertContext;
+	const { fullCus, product } = initContext;
 
 	return {
 		id: generateId("cus_ent"),

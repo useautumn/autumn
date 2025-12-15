@@ -65,7 +65,7 @@ export const updateGrantedBalance = async ({
 		.toNumber();
 
 	const targetCusEnt = cusEnts[0];
-	const isEntityScoped = isEntityScopedCusEnt({ cusEnt: targetCusEnt });
+	const isEntityScoped = isEntityScopedCusEnt(targetCusEnt);
 	const entityId = fullCus.entity?.id;
 
 	if (isEntityScoped) {

@@ -18,7 +18,7 @@ export const cusEntToInvoiceUsage = ({
 	}
 
 	// 1. If entity scoped
-	if (isEntityScopedCusEnt({ cusEnt })) {
+	if (isEntityScopedCusEnt(cusEnt)) {
 		let maxUsage = new Decimal(0);
 		for (const [_, entity] of Object.entries(cusEnt.entities || {})) {
 			const usage = new Decimal(startingBalance).sub(entity.balance);

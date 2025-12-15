@@ -11,7 +11,9 @@ export * from "./common/unixUtils.js";
 export * from "./cusEntUtils/balanceUtils/cusEntsToBalance.js";
 export * from "./cusEntUtils/balanceUtils/cusEntsToPurchasedBalance.js";
 export * from "./cusEntUtils/balanceUtils/cusEntsToUsage.js";
+export * from "./cusEntUtils/balanceUtils/cusEntToMinBalance.js";
 export * from "./cusEntUtils/balanceUtils/cusEntToPrepaidQuantity.js";
+export * from "./cusEntUtils/balanceUtils/cusEntToUsageAllowed.js";
 // Cus ent utils
 export * from "./cusEntUtils/balanceUtils/grantedBalanceUtils/cusEntsToAdjustment.js";
 export * from "./cusEntUtils/balanceUtils/grantedBalanceUtils/cusEntsToAllowance.js";

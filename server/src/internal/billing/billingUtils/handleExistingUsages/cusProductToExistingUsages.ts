@@ -26,15 +26,27 @@ export const cusProductToExistingUsages = ({
 	> = {};
 
 	for (const cusEnt of cusEnts) {
-		const feature = cusEnt.entitlement.feature;
-
 		if (isBooleanCusEnt({ cusEnt })) continue;
 
 		if (cusEnts.some(isUnlimitedCusEnt)) continue;
 
+		const internalFeatureId = cusEnt.entitlement.internal_feature_id;
+
+		if (!existingUsages[internalFeatureId]) {
+			existingUsages[internalFeatureId] = {
+				usage: 0,
+				entityUsages: {},
+			};
+		}
+
+		const currentExistingUsage = existingUsages[internalFeatureId];
+
 		// 1. If it's entity scoped
-		if (isEntityScopedCusEnt({ cusEnt })) {
+		if (isEntityScopedCusEnt(cusEnt)) {
 			// const entityUsages = cusEnt.entities;
+			for (const [entityId, entityBalance] of Object.entries(cusEnt.entities)) {
+				currentExistingUsage.entityUsages![entityId] = entityBalance.balance;
+			}
 			continue;
 		}
 
@@ -48,15 +60,6 @@ export const cusProductToExistingUsages = ({
 			cusEnts: [cusEntWithCusProduct],
 			entityId,
 		});
-
-		const internalFeatureId = cusEnt.entitlement.internal_feature_id;
-
-		if (!existingUsages[internalFeatureId]) {
-			existingUsages[internalFeatureId] = {
-				usage: 0,
-				entityUsages: {},
-			};
-		}
 
 		existingUsages[internalFeatureId].usage = new Decimal(
 			existingUsages[internalFeatureId].usage,

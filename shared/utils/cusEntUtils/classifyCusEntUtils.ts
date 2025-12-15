@@ -1,4 +1,7 @@
-import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels";
+import type {
+	EntityBalance,
+	FullCustomerEntitlement,
+} from "../../models/cusProductModels/cusEntModels/cusEntModels";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct";
 import { FeatureType } from "../../models/featureModels/featureEnums";
 import { AllowanceType } from "../../models/productModels/entModels/entModels";
@@ -9,11 +12,13 @@ export const isUnlimitedCusEnt = (cusEnt: FullCustomerEntitlement) => {
 	return cusEnt.entitlement.allowance_type === AllowanceType.Unlimited;
 };
 
-export const isEntityScopedCusEnt = ({
-	cusEnt,
-}: {
-	cusEnt: FullCustomerEntitlement;
-}) => {
+/**
+ * Type guard that narrows cusEnt to have non-null entities.
+ * Use directly with cusEnt (not wrapped in object) for type narrowing to work.
+ */
+export const isEntityScopedCusEnt = <T extends FullCustomerEntitlement>(
+	cusEnt: T,
+): cusEnt is T & { entities: Record<string, EntityBalance> } => {
 	return notNullish(cusEnt.entitlement.entity_feature_id);
 };
 

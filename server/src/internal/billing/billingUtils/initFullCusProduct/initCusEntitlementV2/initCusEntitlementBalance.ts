@@ -4,7 +4,7 @@ import {
 	entToOptions,
 	entToPrice,
 	getStartingBalance,
-	type InsertFullCusProductContext,
+	type InitFullCusProductContext,
 	isBooleanEntitlement,
 	isUnlimitedEntitlement,
 } from "@autumn/shared";
@@ -17,10 +17,10 @@ export interface InitCusEntitlementBalanceResult {
 }
 
 export const initCusEntitlementBalance = ({
-	insertContext,
+	initContext,
 	entitlement,
 }: {
-	insertContext: InsertFullCusProductContext;
+	initContext: InitFullCusProductContext;
 	entitlement: EntitlementWithFeature;
 }): { balance: number; entities: Record<string, EntityBalance> | null } => {
 	// 1. If entitlement is boolean or unlimited, return 0
@@ -32,11 +32,11 @@ export const initCusEntitlementBalance = ({
 	}
 
 	// 2. Get starting balance
-	const { fullCus, featureQuantities, replaceables } = insertContext;
+	const { fullCus, featureQuantities, replaceables } = initContext;
 
 	const price = entToPrice({
 		ent: entitlement,
-		prices: insertContext.product.prices,
+		prices: initContext.product.prices,
 	});
 
 	const options = entToOptions({

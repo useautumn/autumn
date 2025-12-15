@@ -21,7 +21,7 @@ import { getCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheU
 import { handleThresholdReached } from "../../../../trigger/handleThresholdReached.js";
 import { getCachedApiEntity } from "../../../entities/entityUtils/apiEntityCacheUtils/getCachedApiEntity.js";
 import type { FeatureDeduction } from "../trackUtils/getFeatureDeductions.js";
-import { deductFromCusEnts } from "../trackUtils/runDeductionTx.js";
+import { deductFromCusEntsPostgres } from "../trackUtils/runDeductionTx.js";
 
 export interface SyncItem {
 	customerId: string;
@@ -166,7 +166,7 @@ export const syncItem = async ({
 
 	// Sync from Redis to Postgres - deduct using target balance
 
-	const result = await deductFromCusEnts({
+	const result = await deductFromCusEntsPostgres({
 		ctx,
 		customerId,
 		entityId,

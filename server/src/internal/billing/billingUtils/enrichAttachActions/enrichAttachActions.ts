@@ -10,7 +10,6 @@ import {
 } from "@autumn/shared";
 import { createStripeCli } from "../../../../external/connect/createStripeCli";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
-import { applyExistingUsages } from "../handleExistingUsages/applyExistingUsages";
 import { cusProductToExistingUsages } from "../handleExistingUsages/cusProductToExistingUsages";
 import { initFullCusProduct } from "../initFullCusProduct/initFullCusProduct";
 
@@ -40,29 +39,23 @@ export const enrichAttachActions = async ({
 		excludeOneOff: true,
 	});
 
-	// Initialize new cus product
-	const newCusProduct = await initFullCusProduct({
-		ctx,
-		fullCus,
-		insertContext: {
-			fullCus,
-			product,
-			featureQuantities: [],
-			replaceables: [],
-		},
-	});
-
 	// Get existing usages
 	const existingUsages = cusProductToExistingUsages({
 		cusProduct: ongoingCusProduct,
 		entityId: fullCus.entity?.id,
 	});
 
-	applyExistingUsages({
-		features: ctx.features,
-		cusProduct: newCusProduct,
-		existingUsages,
-		entities: fullCus.entities,
+	// Initialize new cus product
+	const newCusProduct = await initFullCusProduct({
+		ctx,
+		fullCus,
+		initContext: {
+			fullCus,
+			product,
+			featureQuantities: [],
+			replaceables: [],
+			existingUsages,
+		},
 	});
 
 	return actions;

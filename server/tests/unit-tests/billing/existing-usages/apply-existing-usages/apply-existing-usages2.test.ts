@@ -171,7 +171,6 @@ describe(
 				// Act
 				applyExistingUsages({ cusProduct, existingUsages, entities });
 
-				// Assert: First cusEnt depleted (balance 0), second cusEnt has 1 remaining
 				// Total usage = 3, distributed: first cusEnt uses 2, second cusEnt uses 1
 				const updatedCusEnts = cusProduct.customer_entitlements.filter(
 					(ce) => ce.feature_id === "feature_a",
@@ -179,8 +178,6 @@ describe(
 				expect(updatedCusEnts[0]?.balance).toBe(0);
 				expect(updatedCusEnts[1]?.balance).toBe(1);
 			});
-
-			return;
 		});
 	},
 );
