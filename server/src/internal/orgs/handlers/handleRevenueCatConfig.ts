@@ -45,28 +45,25 @@ export const getRevenueCatConfigDisplay = ({
 		};
 	}
 
-	const apiKeyEncrypted =
-		env === AppEnv.Live
-			? revenueCatConfig.api_key
-			: revenueCatConfig.sandbox_api_key;
+	const liveApiKeyDecrypted = revenueCatConfig.api_key
+		? decryptData(revenueCatConfig.api_key)
+		: undefined;
+	const sandboxApiKeyDecrypted = revenueCatConfig.sandbox_api_key
+		? decryptData(revenueCatConfig.sandbox_api_key)
+		: undefined;
+
 	const webhookSecret =
 		env === AppEnv.Live
 			? revenueCatConfig.webhook_secret
 			: revenueCatConfig.sandbox_webhook_secret;
 
-	let apiKey: string | undefined;
-	if (apiKeyEncrypted) {
-		try {
-			apiKey = decryptData(apiKeyEncrypted);
-		} catch {
-			apiKey = apiKeyEncrypted;
-		}
-	}
+	const apiKeyForEnv =
+		env === AppEnv.Live ? liveApiKeyDecrypted : sandboxApiKeyDecrypted;
 
 	return {
-		connected: !!apiKey && !!webhookSecret,
-		api_key: mask(apiKey, 3, 2),
-		sandbox_api_key: mask(revenueCatConfig.sandbox_api_key, 5, 5),
+		connected: !!apiKeyForEnv && !!webhookSecret,
+		api_key: mask(liveApiKeyDecrypted, 3, 2),
+		sandbox_api_key: mask(sandboxApiKeyDecrypted, 5, 5),
 		project_id: revenueCatConfig.project_id,
 		sandbox_project_id: revenueCatConfig.sandbox_project_id,
 		webhook_secret: revenueCatConfig.webhook_secret,
