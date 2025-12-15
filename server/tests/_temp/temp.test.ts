@@ -4,7 +4,10 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import {
+	constructFeatureItem,
+	constructPrepaidItem,
+} from "@/utils/scriptUtils/constructItem.js";
 import {
 	constructProduct,
 	constructRawProduct,
@@ -28,13 +31,23 @@ const pro = constructProduct({
 	type: "pro",
 
 	items: [
-		constructFeatureItem({
+		constructPrepaidItem({
 			featureId: TestFeature.Messages,
-			includedUsage: 300,
+			includedUsage: 100,
+			price: 10,
+			billingUnits: 100,
 		}),
-		constructFeatureItem({
-			featureId: TestFeature.Users,
-			includedUsage: 5,
+	],
+});
+const premium = constructProduct({
+	type: "premium",
+
+	items: [
+		constructPrepaidItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 100,
+			price: 12,
+			billingUnits: 100,
 		}),
 	],
 });
@@ -43,7 +56,7 @@ const testCase = "temp";
 
 describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 	const customerId = "temp";
-	const autumnV0: AutumnInt = new AutumnInt({ version: ApiVersion.V0_2 });
+
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
 	beforeAll(async () => {
@@ -57,23 +70,23 @@ describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 			ctx,
 			customerId,
 			withTestClock: true,
-			attachPm: "success",
+			// attachPm: "success",
 		});
 
 		await initProductsV0({
 			ctx,
-			products: [pro, paidAddOn],
+			products: [pro, premium],
 			prefix: testCase,
 		});
 
-		await autumnV1.attach({
+		const res = await autumnV1.attach({
 			customer_id: customerId,
 			product_id: pro.id,
+			options: [{ feature_id: TestFeature.Messages, quantity: 0 }],
 		});
 
-		await autumnV1.attach({
-			customer_id: customerId,
-			product_id: paidAddOn.id,
-		});
+		console.log(res);
+
+		// await autumnV1.attach({ customer_id: customerId, product_id: premium.id });
 	});
 });
