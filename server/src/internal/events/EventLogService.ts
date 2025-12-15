@@ -205,9 +205,9 @@ limit {limit:UInt32};
 		const events = EventLogService.transformRawEvents(rawEvents);
 
 		const hasMore = events.length > limit;
-		const data = hasMore ? events.slice(0, limit) : events;
+		const list = hasMore ? events.slice(0, limit) : events;
 
-		const lastEvent = data[data.length - 1];
+		const lastEvent = list[list.length - 1];
 		const hasNextCursor = hasMore && lastEvent;
 		const nextCursor = hasNextCursor
 			? encodeCursor({
@@ -217,7 +217,7 @@ limit {limit:UInt32};
 			: null;
 
 		return {
-			data,
+			list,
 			has_more: hasMore,
 			next_cursor: nextCursor,
 		};
