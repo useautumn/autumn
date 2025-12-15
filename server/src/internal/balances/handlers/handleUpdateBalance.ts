@@ -58,17 +58,6 @@ export const handleUpdateBalance = createRoute({
 			});
 		}
 
-		if (notNullish(body.next_reset_at)) {
-			if (body.customer_entitlement_id)
-				await CusEntService.update({
-					db: ctx.db,
-					id: body.customer_entitlement_id,
-					updates: {
-						next_reset_at: body.next_reset_at,
-					},
-				});
-		}
-
 		if (notNullish(body.granted_balance)) {
 			if (nullish(body.current_balance)) {
 				throw new RecaseError({
@@ -101,6 +90,17 @@ export const handleUpdateBalance = createRoute({
 						: undefined,
 				},
 			});
+		}
+
+		if (notNullish(body.next_reset_at)) {
+			if (body.customer_entitlement_id)
+				await CusEntService.update({
+					db: ctx.db,
+					id: body.customer_entitlement_id,
+					updates: {
+						next_reset_at: body.next_reset_at,
+					},
+				});
 		}
 
 		await deleteCachedApiCustomer({
