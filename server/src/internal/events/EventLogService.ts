@@ -18,19 +18,30 @@ export class EventLogService {
 	private static transformRawEvents(
 		rawEvents: RawEventFromClickHouse[],
 	): EventLog[] {
-		return rawEvents.map((event) => ({
-			id: event.id,
-			timestamp:
-				event.timestamp instanceof Date
-					? event.timestamp.getTime()
-					: typeof event.timestamp === "string"
-						? new Date(event.timestamp).getTime()
-						: Date.now(),
-			event_name: event.event_name,
-			customer_id: event.customer_id,
-			value: event.value ?? 0,
-			properties: event.properties ? JSON.parse(event.properties) : {},
-		}));
+		return rawEvents.map((event) => {
+			let properties = {};
+			if (event.properties) {
+				try {
+					properties = JSON.parse(event.properties);
+				} catch {
+					// Invalid JSON, use empty object
+				}
+			}
+
+			return {
+				id: event.id,
+				timestamp:
+					event.timestamp instanceof Date
+						? event.timestamp.getTime()
+						: typeof event.timestamp === "string"
+							? new Date(event.timestamp).getTime()
+							: Date.now(),
+				event_name: event.event_name,
+				customer_id: event.customer_id,
+				value: event.value ?? 0,
+				properties,
+			};
+		});
 	}
 
 	private static buildWhereConditions({
