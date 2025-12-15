@@ -27,7 +27,7 @@ export const createCursorPaginatedResponseSchema = <T extends z.ZodType>(
 	itemSchema: T,
 ) =>
 	z.object({
-		data: z.array(itemSchema).describe("Array of items for current page"),
+		list: z.array(itemSchema).describe("Array of items for current page"),
 		has_more: z
 			.boolean()
 			.describe("Whether more results exist after this page"),
