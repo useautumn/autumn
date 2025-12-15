@@ -8,7 +8,7 @@ import {
 	RecaseError,
 } from "@shared/index";
 import type { DrizzleCli } from "@/db/initDrizzle";
-import { RCMappingService } from "@/external/revenueCat/services/RCMappingService";
+import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService";
 import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
@@ -32,7 +32,7 @@ export const handleUncancellation = async ({
 		db,
 		orgId: org.id,
 		env,
-		revcatProductId: product_id,
+		revenuecatProductId: product_id,
 	});
 
 	if (!autumnProductId) {
@@ -108,7 +108,7 @@ export const handleUncancellation = async ({
 		});
 
 		await deleteCachedApiCustomer({
-			customerId: event.original_app_user_id ?? event.app_user_id,
+			customerId: original_app_user_id ?? app_user_id,
 			orgId: org.id,
 			env,
 		});

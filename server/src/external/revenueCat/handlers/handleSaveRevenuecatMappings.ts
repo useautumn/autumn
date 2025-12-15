@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
-import { RCMappingService } from "../services/RCMappingService";
+import { RCMappingService } from "../misc/RCMappingService";
 
 const MappingSchema = z.object({
 	autumn_product_id: z.string(),

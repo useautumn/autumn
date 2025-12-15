@@ -2,8 +2,9 @@ import type { AppEnv } from "@models/genModels/genEnums";
 import { organizations } from "@models/orgModels/orgTable.js";
 import { foreignKey, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
 
-export const revcatMappings = pgTable(
-	"revcat_mappings",
+// biome-ignore lint/suspicious/noExplicitAny: Drizzle table typing workaround for Bun TS2742 error
+export const revenuecatMappings: any = pgTable(
+	"revenuecat_mappings",
 	{
 		org_id: text("org_id").notNull(),
 		env: text("env").$type<AppEnv>().notNull(),
@@ -16,14 +17,14 @@ export const revcatMappings = pgTable(
 	(table) => [
 		primaryKey({
 			columns: [table.org_id, table.env, table.autumn_product_id],
-			name: "revcat_mappings_pkey",
+			name: "revenuecat_mappings_pkey",
 		}),
 		foreignKey({
 			columns: [table.org_id],
 			foreignColumns: [organizations.id],
-			name: "revcat_mappings_org_id_fkey",
+			name: "revenuecat_mappings_org_id_fkey",
 		}).onDelete("cascade"),
 	],
 );
 
-export type RevcatMapping = typeof revcatMappings.$inferSelect;
+export type RevenuecatMapping = typeof revenuecatMappings.$inferSelect;

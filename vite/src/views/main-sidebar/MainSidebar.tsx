@@ -6,7 +6,6 @@ import {
 	CubeIcon,
 	LegoIcon,
 	OptionIcon,
-	PawPrintIcon,
 	TerminalWindowIcon,
 	TriangleIcon,
 	UserCircleIcon,
@@ -15,6 +14,7 @@ import {
 import { PanelLeft } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { Button } from "@/components/ui/button";
+import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { useOrg } from "@/hooks/common/useOrg";
@@ -63,7 +63,8 @@ export const buildDevSubTabs = ({
 					{
 						title: "RevenueCat",
 						value: "revenuecat",
-						icon: <PawPrintIcon size={16} weight="fill" />,
+						// icon: <PawPrintIcon size={16} weight="fill" />,
+						icon: <RevenueCatIcon size={64} />,
 					},
 				]
 			: []),

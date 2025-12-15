@@ -93,7 +93,10 @@ function MappingRow({
 
 			{/* Select to add more products */}
 			{availableProducts.length === 0 ? (
-				<div className="text-t3 text-xs py-1">All products mapped</div>
+				<div className="text-t3 text-xs py-1">
+					All products mapped or none available. Please ensure you have created
+					products in RevenueCat before mapping.
+				</div>
 			) : (
 				<Select
 					value=""

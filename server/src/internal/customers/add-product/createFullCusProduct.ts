@@ -6,7 +6,6 @@ import {
 	type Customer,
 	type CustomerEntitlement,
 	type CustomerPrice,
-	type ExternalSubID,
 	type FeatureOptions,
 	type FreeTrial,
 	type FullCusProduct,
@@ -73,7 +72,6 @@ export const initCusProduct = ({
 	createdAt,
 	collectionMethod,
 	subscriptionIds,
-	externalSubIds,
 	subscriptionScheduleIds,
 	isCustom,
 	entityId,
@@ -85,7 +83,6 @@ export const initCusProduct = ({
 	customer: Customer;
 	product: FullProduct;
 	// subscriptionId: string | undefined | null;
-	externalSubIds?: ExternalSubID[];
 	// subscriptionScheduleId?: string | null;
 	// lastInvoiceId?: string | null;
 	cusProdId: string;
@@ -142,7 +139,6 @@ export const initCusProduct = ({
 		canceled_at: canceledAt,
 		collection_method: collectionMethod || CollectionMethod.ChargeAutomatically,
 		subscription_ids: subscriptionIds,
-		external_sub_ids: externalSubIds || [],
 		scheduled_ids: subscriptionScheduleIds,
 		is_custom: isCustom || false,
 		quantity: quantity || 1,
@@ -282,7 +278,6 @@ export const createFullCusProduct = async ({
 	canceledAt = null,
 	createdAt = null,
 	subscriptionIds = [],
-	externalSubIds = [],
 	subscriptionScheduleIds = [],
 	anchorToUnix,
 	carryExistingUsages = false,
@@ -305,7 +300,6 @@ export const createFullCusProduct = async ({
 	canceledAt?: number | null;
 	createdAt?: number | null;
 	subscriptionIds?: string[];
-	externalSubIds?: ExternalSubID[];
 	subscriptionScheduleIds?: string[];
 	keepResetIntervals?: boolean;
 	anchorToUnix?: number;
@@ -457,7 +451,6 @@ export const createFullCusProduct = async ({
 			: CollectionMethod.ChargeAutomatically,
 		subscriptionIds,
 		subscriptionScheduleIds,
-		externalSubIds,
 		isCustom: attachParams.isCustom || false,
 		internalEntityId: attachParams.internalEntityId,
 		entityId: attachParams.entityId,
