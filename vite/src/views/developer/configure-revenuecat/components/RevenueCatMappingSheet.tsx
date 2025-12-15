@@ -60,6 +60,7 @@ function MappingRow({
 			!mappedRevenueCatProducts.includes(p.id) &&
 			!selectedProducts.includes(p.id),
 	);
+	const hasNoRcProducts = rcProducts.length === 0;
 
 	return (
 		<div className="flex flex-col gap-2 p-3 border border-zinc-200 dark:border-zinc-800 rounded-lg">
@@ -92,10 +93,15 @@ function MappingRow({
 			)}
 
 			{/* Select to add more products */}
-			{availableProducts.length === 0 ? (
+			{hasNoRcProducts ? (
 				<div className="text-t3 text-xs py-1">
-					All products mapped or none available. Please ensure you have created
-					products in RevenueCat before mapping.
+					No RevenueCat products found. Create products in RevenueCat before
+					mapping.
+				</div>
+			) : availableProducts.length === 0 ? (
+				<div className="text-t3 text-xs py-1">
+					All RevenueCat products are already mapped to Autumn products. Remove
+					an existing mapping to change assignments.
 				</div>
 			) : (
 				<Select
