@@ -21,5 +21,6 @@ export const cusEntToStartingBalance = ({
 		entitlement: cusEnt.entitlement,
 		options,
 		relatedPrice: price,
+		productQuantity: cusEnt.customer_product.quantity,
 	});
 };

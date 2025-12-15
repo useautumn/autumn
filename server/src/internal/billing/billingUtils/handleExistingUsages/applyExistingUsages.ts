@@ -2,21 +2,18 @@ import {
 	cusProductsToCusEnts,
 	type Entity,
 	type ExistingUsages,
-	type Feature,
 	type FullCusProduct,
-	getRelevantFeatures,
 } from "@autumn/shared";
+import { deductFromCusEntsTypescript } from "../../../balances/track/deductUtils/deductFromCusEntsTypescript";
 import { mergeEntitiesWithExistingUsages } from "./mergeEntitiesWithExistingUsages";
 
 export const applyExistingUsages = ({
-	features,
 	cusProduct,
-	existingUsages,
+	existingUsages = {},
 	entities,
 }: {
-	features: Feature[];
 	cusProduct: FullCusProduct;
-	existingUsages: ExistingUsages;
+	existingUsages?: ExistingUsages;
 	entities: Entity[];
 }) => {
 	console.log(
@@ -37,41 +34,51 @@ export const applyExistingUsages = ({
 			existingUsage,
 		);
 
-		// 1. Get relevant features?
-
 		const cusEnts = cusProductsToCusEnts({
 			cusProducts: [cusProduct],
-			internalFeatureId: internalFeatureId,
+			internalFeatureId,
 		});
 
-		const relevatnFeatures = getRelevantFeatures({
-			features,
-			featureId: internalFeatureId,
+		// 1. Deduct entity usages
+		for (const [entityId, entityUsage] of Object.entries(
+			existingUsage.entityUsages,
+		)) {
+			deductFromCusEntsTypescript({
+				cusEnts,
+				amountToDeduct: entityUsage,
+				targetEntityId: entityId,
+			});
+		}
+
+		// 2. Deduct top level usages
+		deductFromCusEntsTypescript({
+			cusEnts,
+			amountToDeduct: existingUsage.usage,
 		});
 
-		// for (const cusEnt of cusEnts) {
-		// 	// 1. If it's entity scoped
-		// 	if (isEntityScopedCusEnt({ cusEnt })) {
-		// 		continue;
-		// 	}
+		for (const newCusEnt of cusEnts) {
+			const original = cusProduct.customer_entitlements.find(
+				(ce) => ce.id === newCusEnt.id,
+			);
+			if (original) {
+				original.balance = newCusEnt.balance;
+				original.entities = newCusEnt.entities;
+				original.adjustment = newCusEnt.adjustment;
+			}
+		}
 
-		// 	// 2. If it's not entity scoped
-		// 	const startingBalance = cusEntToStartingBalance({ cusEnt });
-		// 	const newBalance = new Decimal(startingBalance)
-		// 		.sub(existingUsage.usage)
-		// 		.toNumber();
-
-		// 	// Update the original cusEnt in the cusProduct (cusProductsToCusEnts returns copies)
-		// 	const originalCusEnt = cusProduct.customer_entitlements.find(
-		// 		(ce) => ce.id === cusEnt.id,
-		// 	);
-		// 	if (originalCusEnt) {
-		// 		originalCusEnt.balance = newBalance;
-		// 	}
-
-		// 	console.log(
-		// 		`Feature: ${originalCusEnt?.entitlement.feature.id}, Starting balance: ${startingBalance}, New balance: ${newBalance}`,
-		// 	);
-		// }
+		// console.log(
+		// 	"New cus ents:",
+		// 	JSON.stringify(
+		// 		cusProduct.customer_entitlements.map((ce) => ({
+		// 			feature_id: ce.feature_id,
+		// 			balance: ce.balance,
+		// 			entities: ce.entities,
+		// 			adjustment: ce.adjustment,
+		// 		})),
+		// 		null,
+		// 		2,
+		// 	),
+		// );
 	}
 };

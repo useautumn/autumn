@@ -2,45 +2,43 @@ import {
 	CollectionMethod,
 	type CusProduct,
 	CusProductStatus,
-	type InsertCusProductOptions,
-	type InsertFullCusProductContext,
+	type InitFullCusProductContext,
+	type InitFullCusProductOptions,
 	notNullish,
 } from "@autumn/shared";
 
 export const initCusProduct = ({
-	insertContext,
-	insertOptions,
+	initContext,
+	initOptions,
 	cusProductId,
 }: {
-	insertContext: InsertFullCusProductContext;
-	insertOptions?: InsertCusProductOptions;
+	initContext: InitFullCusProductContext;
+	initOptions?: InitFullCusProductOptions;
 	cusProductId: string;
 }): CusProduct => {
-	const { fullCus, product, featureQuantities } = insertContext;
+	const { fullCus, product, featureQuantities } = initContext;
+	const {
+		subscriptionId,
+		subscriptionScheduleId,
+		collectionMethod,
+		isCustom,
+		apiSemver,
+	} = initOptions ?? {};
 
 	const internalEntityId = fullCus.entity?.internal_id;
 	const entityId = fullCus.entity?.id;
 
-	const status = insertOptions?.status ?? CusProductStatus.Active;
-	const startsAt = insertOptions?.startsAt ?? Date.now();
+	const status = initOptions?.status ?? CusProductStatus.Active;
+	const startsAt = initOptions?.startsAt ?? Date.now();
 
-	const canceled = notNullish(insertOptions?.canceledAt);
-	const canceledAt = insertOptions?.canceledAt;
+	const canceled = notNullish(initOptions?.canceledAt);
+	const canceledAt = initOptions?.canceledAt;
 
-	const subscriptionIds = insertOptions?.subscriptionId
-		? [insertOptions.subscriptionId]
+	const subscriptionIds = subscriptionId ? [subscriptionId] : undefined;
+
+	const scheduleIds = subscriptionScheduleId
+		? [subscriptionScheduleId]
 		: undefined;
-
-	const scheduleIds = insertOptions?.subscriptionScheduleId
-		? [insertOptions.subscriptionScheduleId]
-		: undefined;
-
-	const collectionMethod =
-		insertOptions?.collectionMethod ?? CollectionMethod.ChargeAutomatically;
-
-	const isCustom = insertOptions?.isCustom ?? false;
-
-	const apiSemver = insertOptions?.apiSemver ?? null;
 
 	return {
 		id: cusProductId,
@@ -71,13 +69,13 @@ export const initCusProduct = ({
 
 		subscription_ids: subscriptionIds,
 		scheduled_ids: scheduleIds,
-		collection_method: collectionMethod,
+		collection_method: collectionMethod ?? CollectionMethod.ChargeAutomatically,
 
 		quantity: 1,
 
-		is_custom: isCustom,
+		is_custom: isCustom ?? false,
 
-		api_semver: apiSemver,
+		api_semver: apiSemver ?? null,
 	};
 };
 

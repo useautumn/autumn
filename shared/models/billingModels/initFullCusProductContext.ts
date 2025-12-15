@@ -7,12 +7,16 @@ import type {
 } from "../cusProductModels/cusProductEnums";
 import type { FeatureOptions } from "../cusProductModels/cusProductModels";
 import type { FullProduct } from "../productModels/productModels";
+import type { ExistingUsages } from "./existingUsages";
 
 export interface InitFullCusProductContext {
 	fullCus: FullCustomer;
 	product: FullProduct;
 	featureQuantities: FeatureOptions[];
 	replaceables: AttachReplaceable[];
+
+	// For customer entitlements
+	existingUsages?: ExistingUsages;
 }
 
 export interface InitFullCusProductOptions {

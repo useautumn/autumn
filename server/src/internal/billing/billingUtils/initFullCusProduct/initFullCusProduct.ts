@@ -6,6 +6,7 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import { generateId } from "@/utils/genUtils";
+import { applyExistingUsages } from "../handleExistingUsages/applyExistingUsages";
 import { initCusEntitlement } from "./initCusEntitlementV2/initCusEntitlement";
 import { initCusPrice } from "./initCusPrice";
 import { initCusProduct } from "./initCusProduct";
@@ -13,21 +14,21 @@ import { initCusProduct } from "./initCusProduct";
 export const initFullCusProduct = async ({
 	ctx,
 	fullCus,
-	insertContext,
-	insertOptions,
+	initContext,
+	initOptions,
 }: {
 	ctx: AutumnContext;
 	fullCus: FullCustomer;
-	insertContext: InitFullCusProductContext;
-	insertOptions?: InitFullCusProductOptions;
+	initContext: InitFullCusProductContext;
+	initOptions?: InitFullCusProductOptions;
 }): Promise<FullCusProduct> => {
-	const { product } = insertContext;
+	const { product } = initContext;
 
 	const cusProductId = generateId("cus_prod");
 
 	const newFullCusEnts = product.entitlements.map((entitlement) => ({
 		...initCusEntitlement({
-			insertContext,
+			initContext,
 			entitlement,
 			cusProductId,
 		}),
@@ -45,12 +46,8 @@ export const initFullCusProduct = async ({
 		price,
 	}));
 
-	// TODO: Add existing usage to customer entitlements
-
-	// TODO: Add rollovers to customer entitlements
-
 	const newCusProduct = initCusProduct({
-		insertContext,
+		initContext,
 		cusProductId,
 	});
 
@@ -59,12 +56,24 @@ export const initFullCusProduct = async ({
 	);
 
 	const { entitlements: _ents, prices: _prices, ...rawProduct } = product;
-	return {
+
+	const newFullCusProduct = {
 		...newCusProduct,
 		product: rawProduct,
 		customer_entitlements: newFullCusEnts,
 		customer_prices: newCusPrices,
 	};
+
+	// Finally, apply existing usages to new cus product
+	applyExistingUsages({
+		cusProduct: newFullCusProduct,
+		existingUsages: initContext.existingUsages,
+		entities: fullCus.entities,
+	});
+
+	// TODO: Add rollovers to customer entitlements
+
+	return newFullCusProduct;
 
 	// await CusProductService.insert({
 	// 	db,
