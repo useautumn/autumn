@@ -1,8 +1,8 @@
 import { z } from "zod/v4";
 
 export const PaginationDefaults = {
-	Limit: 50,
-	MaxLimit: 100,
+	Limit: 100,
+	MaxLimit: 1000,
 };
 
 export const CursorPaginationQuerySchema = z.object({
