@@ -99,6 +99,7 @@ export * from "./api/events/insights/query/insightsQueryBody.js";
 // Attach Function Response
 export * from "./models/attachModels/attachFunctionResponse.js";
 export * from "./models/billingModels/cusProductActions.js";
+export * from "./models/billingModels/existingRollovers.js";
 export * from "./models/billingModels/existingUsages.js";
 export * from "./models/billingModels/initFullCusProductContext.js";
 export * from "./models/billingModels/invoicingModels/lineItem.js";

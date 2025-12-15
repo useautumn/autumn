@@ -10,6 +10,8 @@ import {
 } from "@autumn/shared";
 import { createStripeCli } from "../../../../external/connect/createStripeCli";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
+import { applyExistingRollovers } from "../handleExistingRollovers/applyExistingRollovers";
+import { cusProductToExistingRollovers } from "../handleExistingRollovers/cusProductToExistingRollovers";
 import { cusProductToExistingUsages } from "../handleExistingUsages/cusProductToExistingUsages";
 import { initFullCusProduct } from "../initFullCusProduct/initFullCusProduct";
 
@@ -56,6 +58,15 @@ export const enrichAttachActions = async ({
 			replaceables: [],
 			existingUsages,
 		},
+	});
+
+	const existingRollovers = cusProductToExistingRollovers({
+		cusProduct: ongoingCusProduct,
+	});
+
+	applyExistingRollovers({
+		newCusProduct,
+		existingRollovers,
 	});
 
 	return actions;
