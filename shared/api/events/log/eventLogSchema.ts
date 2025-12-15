@@ -6,7 +6,7 @@ import {
 
 export const EventLogQuerySchema = CursorPaginationQuerySchema.extend({
 	customer_id: z.string().optional().describe("Filter events by customer ID"),
-	feature_ids: z
+	feature_id: z
 		.string()
 		.min(1)
 		.or(z.array(z.string().min(1)))

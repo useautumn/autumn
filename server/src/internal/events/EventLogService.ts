@@ -57,16 +57,20 @@ export class EventLogService {
 		}
 
 		if (startDate) {
-			conditions.push("timestamp >= {start_date:DateTime}");
+			conditions.push(
+				"timestamp >= fromUnixTimestamp64Milli({start_date:Int64})",
+			);
 		}
 
 		if (endDate) {
-			conditions.push("timestamp <= {end_date:DateTime}");
+			conditions.push(
+				"timestamp <= fromUnixTimestamp64Milli({end_date:Int64})",
+			);
 		}
 
 		if (cursor) {
 			conditions.push(
-				"(timestamp, id) < ({cursor_timestamp:DateTime64(3)}, {cursor_id:String})",
+				"(timestamp, id) < (fromUnixTimestamp64Milli({cursor_timestamp:Int64}), {cursor_id:String})",
 			);
 		}
 
@@ -107,17 +111,15 @@ export class EventLogService {
 		}
 
 		if (startDate) {
-			params.start_date = new Date(startDate).toISOString();
+			params.start_date = startDate;
 		}
 
 		if (endDate) {
-			params.end_date = new Date(endDate).toISOString();
+			params.end_date = endDate;
 		}
 
 		if (cursor) {
-			params.cursor_timestamp = new Date(cursor.timestamp)
-				.toISOString()
-				.replace("Z", "");
+			params.cursor_timestamp = cursor.timestamp;
 			params.cursor_id = cursor.id;
 		}
 
@@ -132,7 +134,7 @@ export class EventLogService {
 		params: EventLogQuery;
 	}) {
 		const { clickhouseClient, org, env } = ctx;
-		const { starting_after, limit, customer_id, feature_ids, time_range } =
+		const { starting_after, limit, customer_id, feature_id, time_range } =
 			params;
 
 		let cursor: DecodedCursorV1 | null = null;
@@ -148,10 +150,10 @@ export class EventLogService {
 			}
 		}
 
-		const eventNames = feature_ids
-			? Array.isArray(feature_ids)
-				? feature_ids
-				: [feature_ids]
+		const eventNames = feature_id
+			? Array.isArray(feature_id)
+				? feature_id
+				: [feature_id]
 			: undefined;
 
 		const whereClause = EventLogService.buildWhereConditions({
