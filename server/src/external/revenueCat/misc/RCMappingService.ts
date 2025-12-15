@@ -1,4 +1,8 @@
-import { type AppEnv, type RevcatMapping, revcatMappings } from "@shared/index";
+import {
+	type AppEnv,
+	type RevenuecatMapping,
+	revenuecatMappings,
+} from "@shared/index";
 import { and, arrayContains, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 
@@ -10,22 +14,22 @@ export class RCMappingService {
 		db,
 		orgId,
 		env,
-		revcatProductId,
+		revenuecatProductId,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
 		env: AppEnv;
-		revcatProductId: string;
+		revenuecatProductId: string;
 	}): Promise<string | null> {
 		const [mapping] = await db
-			.select({ autumn_product_id: revcatMappings.autumn_product_id })
-			.from(revcatMappings)
+			.select({ autumn_product_id: revenuecatMappings.autumn_product_id })
+			.from(revenuecatMappings)
 			.where(
 				and(
-					eq(revcatMappings.org_id, orgId),
-					eq(revcatMappings.env, env),
-					arrayContains(revcatMappings.revenuecat_product_ids, [
-						revcatProductId,
+					eq(revenuecatMappings.org_id, orgId),
+					eq(revenuecatMappings.env, env),
+					arrayContains(revenuecatMappings.revenuecat_product_ids, [
+						revenuecatProductId,
 					]),
 				),
 			)
@@ -45,21 +49,30 @@ export class RCMappingService {
 	}) {
 		return db
 			.select()
-			.from(revcatMappings)
+			.from(revenuecatMappings)
 			.where(
-				and(eq(revcatMappings.org_id, orgId), eq(revcatMappings.env, env)),
+				and(
+					eq(revenuecatMappings.org_id, orgId),
+					eq(revenuecatMappings.env, env),
+				),
 			);
 	}
 
-	static async upsert({ db, data }: { db: DrizzleCli; data: RevcatMapping }) {
+	static async upsert({
+		db,
+		data,
+	}: {
+		db: DrizzleCli;
+		data: RevenuecatMapping;
+	}) {
 		return db
-			.insert(revcatMappings)
+			.insert(revenuecatMappings)
 			.values(data)
 			.onConflictDoUpdate({
 				target: [
-					revcatMappings.org_id,
-					revcatMappings.env,
-					revcatMappings.autumn_product_id,
+					revenuecatMappings.org_id,
+					revenuecatMappings.env,
+					revenuecatMappings.autumn_product_id,
 				],
 				set: { revenuecat_product_ids: data.revenuecat_product_ids },
 			})
@@ -79,12 +92,12 @@ export class RCMappingService {
 	}) {
 		const mapping = await db
 			.select()
-			.from(revcatMappings)
+			.from(revenuecatMappings)
 			.where(
 				and(
-					eq(revcatMappings.org_id, orgId),
-					eq(revcatMappings.env, env),
-					eq(revcatMappings.autumn_product_id, autumnProductId),
+					eq(revenuecatMappings.org_id, orgId),
+					eq(revenuecatMappings.env, env),
+					eq(revenuecatMappings.autumn_product_id, autumnProductId),
 				),
 			);
 		return mapping;
@@ -101,16 +114,16 @@ export class RCMappingService {
 		orgId: string;
 		env: AppEnv;
 		autumnProductId: string;
-		data: Partial<RevcatMapping>;
+		data: Partial<RevenuecatMapping>;
 	}) {
 		const mapping = await db
-			.update(revcatMappings)
+			.update(revenuecatMappings)
 			.set(data)
 			.where(
 				and(
-					eq(revcatMappings.org_id, orgId),
-					eq(revcatMappings.env, env),
-					eq(revcatMappings.autumn_product_id, autumnProductId),
+					eq(revenuecatMappings.org_id, orgId),
+					eq(revenuecatMappings.env, env),
+					eq(revenuecatMappings.autumn_product_id, autumnProductId),
 				),
 			);
 		return mapping;
@@ -128,12 +141,12 @@ export class RCMappingService {
 		autumnProductId: string;
 	}) {
 		const mapping = await db
-			.delete(revcatMappings)
+			.delete(revenuecatMappings)
 			.where(
 				and(
-					eq(revcatMappings.org_id, orgId),
-					eq(revcatMappings.env, env),
-					eq(revcatMappings.autumn_product_id, autumnProductId),
+					eq(revenuecatMappings.org_id, orgId),
+					eq(revenuecatMappings.env, env),
+					eq(revenuecatMappings.autumn_product_id, autumnProductId),
 				),
 			);
 		return mapping;

@@ -1,7 +1,6 @@
-import type { WebhookExpiration } from "@puzzmo/revenue-cat-webhook-types";
+import type { WebhookCancellation } from "@puzzmo/revenue-cat-webhook-types";
 import {
 	type AppEnv,
-	CusProductStatus,
 	ErrCode,
 	type Feature,
 	type Organization,
@@ -10,41 +9,36 @@ import {
 } from "@shared/index";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import type { Logger } from "@/external/logtail/logtailUtils";
-import { RCMappingService } from "@/external/revenueCat/services/RCMappingService";
-import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService";
 import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
-import { activateDefaultProduct } from "@/internal/customers/cusProducts/cusProductUtils";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
 import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
 import { ProductService } from "@/internal/products/ProductService";
-import { isOneOff } from "@/internal/products/productUtils";
 
-export const handleExpiration = async ({
+export const handleCancellation = async ({
 	event,
 	db,
 	org,
 	env,
 	logger,
-	features,
-	ctx,
 }: {
-	event: WebhookExpiration;
+	event: WebhookCancellation;
 	db: DrizzleCli;
 	org: Organization;
 	env: AppEnv;
 	logger: Logger;
 	features: Feature[];
-	ctx: AutumnContext;
 }) => {
-	const { product_id, original_app_user_id, app_user_id } = event;
+	const { product_id, original_app_user_id, app_user_id, expiration_at_ms } =
+		event;
 
 	// Look up Autumn product ID from RevenueCat mapping
 	const autumnProductId = await RCMappingService.getAutumnProductId({
 		db,
 		orgId: org.id,
 		env,
-		revcatProductId: product_id,
+		revenuecatProductId: product_id,
 	});
 
 	if (!autumnProductId) {
@@ -91,11 +85,21 @@ export const handleExpiration = async ({
 		internalCustomerId: customer.internal_id,
 	});
 
+	if (
+		cusProducts.some((cp) => cp.processor?.type !== ProcessorType.RevenueCat)
+	) {
+		throw new RecaseError({
+			message: "Customer already has a product from a different processor.",
+			code: ErrCode.CustomerAlreadyHasProduct,
+			statusCode: 400,
+		});
+	}
+
 	const { curSameProduct } = getExistingCusProducts({
 		product,
 		cusProducts,
-		internalEntityId: undefined,
 		processorType: ProcessorType.RevenueCat,
+		internalEntityId: undefined,
 	});
 
 	if (!curSameProduct) {
@@ -106,47 +110,21 @@ export const handleExpiration = async ({
 		});
 	}
 
-	// Expire the cus_product
 	await CusProductService.update({
 		db,
 		cusProductId: curSameProduct.id,
 		updates: {
-			status: CusProductStatus.Expired,
-			ended_at: event.expiration_at_ms,
-			canceled: !!curSameProduct.canceled_at,
+			canceled_at: Date.now(),
+			ended_at: expiration_at_ms,
 		},
 	});
 
-	logger.info(`Expired cus_product: ${curSameProduct.id}`);
-
-	// Activate default product if this was a main product
-	const isMain = !product.is_add_on;
-	const isOneOffProduct = isOneOff(product.prices);
-
-	if (isMain && !isOneOffProduct) {
-		const fullCus = await CusService.getFull({
-			db,
-			idOrInternalId: customer.internal_id,
-			orgId: org.id,
-			env,
-		});
-
-		if (fullCus) {
-			await activateDefaultProduct({
-				ctx,
-				productGroup: product.group,
-				fullCus,
-				curCusProduct: curSameProduct,
-			});
-
-			logger.info(
-				`Attempted to activate default product for group: ${product.group}`,
-			);
-		}
-	}
+	logger.info(
+		`Marked cus_product ${curSameProduct.id} as cancelled, will expire at ${expiration_at_ms}`,
+	);
 
 	await deleteCachedApiCustomer({
-		customerId: event.original_app_user_id ?? event.app_user_id,
+		customerId: original_app_user_id ?? app_user_id,
 		orgId: org.id,
 		env,
 	});

@@ -8,6 +8,7 @@ import {
 import { createSvixApp } from "@server/external/svix/svixHelpers.js";
 import { createSvixCli } from "@server/external/svix/svixUtils.js";
 import { createRoute } from "@server/honoMiddlewares/routeHandler.js";
+import { decryptData, encryptData } from "@server/utils/encryptUtils.js";
 import { mask } from "@server/utils/genUtils.js";
 import type { ApplicationOut } from "svix";
 import { OrgService } from "../OrgService.js";
@@ -44,7 +45,7 @@ export const getRevenueCatConfigDisplay = ({
 		};
 	}
 
-	const apiKey =
+	const apiKeyEncrypted =
 		env === AppEnv.Live
 			? revenueCatConfig.api_key
 			: revenueCatConfig.sandbox_api_key;
@@ -52,6 +53,15 @@ export const getRevenueCatConfigDisplay = ({
 		env === AppEnv.Live
 			? revenueCatConfig.webhook_secret
 			: revenueCatConfig.sandbox_webhook_secret;
+
+	let apiKey: string | undefined;
+	if (apiKeyEncrypted) {
+		try {
+			apiKey = decryptData(apiKeyEncrypted);
+		} catch {
+			apiKey = apiKeyEncrypted;
+		}
+	}
 
 	return {
 		connected: !!apiKey && !!webhookSecret,
@@ -134,9 +144,9 @@ export const handleUpsertRevenueCatConfig = createRoute({
 					revenuecat: {
 						...existingRevenueCatConfig,
 						// Live fields
-						...(body.api_key ? { api_key: body.api_key } : {}),
+						...(body.api_key ? { api_key: encryptData(body.api_key) } : {}),
 						...(body.sandbox_api_key
-							? { sandbox_api_key: body.sandbox_api_key }
+							? { sandbox_api_key: encryptData(body.sandbox_api_key) }
 							: {}),
 						...(body.project_id ? { project_id: body.project_id } : {}),
 						...(body.sandbox_project_id

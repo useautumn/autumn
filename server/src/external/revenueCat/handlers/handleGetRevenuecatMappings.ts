@@ -1,5 +1,5 @@
 import { createRoute } from "@/honoMiddlewares/routeHandler";
-import { RCMappingService } from "../services/RCMappingService";
+import { RCMappingService } from "../misc/RCMappingService";
 
 export const handleGetRCMappings = createRoute({
 	handler: async (c) => {

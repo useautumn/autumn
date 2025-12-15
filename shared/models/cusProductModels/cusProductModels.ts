@@ -1,5 +1,4 @@
 import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
-import { ExternalSubIDSchema } from "@models/genModels/processorSchemas.js";
 import { z } from "zod/v4";
 import { CustomerSchema } from "../cusModels/cusModels.js";
 import { ProcessorType } from "../genModels/genEnums.js";
@@ -51,7 +50,6 @@ export const CusProductSchema = z.object({
 
 	// Fixed-cycle configuration
 	subscription_ids: z.array(z.string()).nullish(),
-	external_sub_ids: z.array(ExternalSubIDSchema).nullish(),
 	scheduled_ids: z.array(z.string()).nullish(),
 	processor: z
 		.object({

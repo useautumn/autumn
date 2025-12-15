@@ -5,26 +5,28 @@ import type {
 	WebhookInitialPurchase,
 	WebhookNonRenewingPurchase,
 	WebhookRenewal,
+	WebhookUnCancellation,
 } from "@puzzmo/revenue-cat-webhook-types";
 import { AppEnv } from "@shared/models/genModels/genEnums";
 import { type Context, Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv";
-import { handleCancellation } from "./handlers/handleCancellation";
-import { handleExpiration } from "./handlers/handleExpiration";
-import { handleInitialPurchase } from "./handlers/handleInitialPurchase";
-import { handleNonRenewingPurchase } from "./handlers/handleNonRenewingPurchase";
-import { handleRenewal } from "./handlers/handleRenewal";
 import {
-	revcatLogMiddleware,
-	revcatSeederMiddleware,
+	revenuecatLogMiddleware,
+	revenuecatSeederMiddleware,
 } from "./misc/revenueCatMiddleware";
+import { handleCancellation } from "./webhookHandlers/handleCancellation";
+import { handleExpiration } from "./webhookHandlers/handleExpiration";
+import { handleInitialPurchase } from "./webhookHandlers/handleInitialPurchase";
+import { handleNonRenewingPurchase } from "./webhookHandlers/handleNonRenewingPurchase";
+import { handleRenewal } from "./webhookHandlers/handleRenewal";
+import { handleUncancellation } from "./webhookHandlers/handleUncancellation";
 
-export const rcWebhookRouter = new Hono<HonoEnv>();
+export const revenuecatWebhookRouter = new Hono<HonoEnv>();
 
-rcWebhookRouter.post(
+revenuecatWebhookRouter.post(
 	"/:orgId/:env",
-	revcatSeederMiddleware,
-	revcatLogMiddleware,
+	revenuecatSeederMiddleware,
+	revenuecatLogMiddleware,
 	async (c: Context<HonoEnv>) => {
 		const ctx = c.get("ctx");
 		const { db, logger, org, features } = ctx;
@@ -95,6 +97,14 @@ rcWebhookRouter.post(
 					logger,
 					features,
 					ctx,
+				});
+				break;
+			case "UNCANCELLATION":
+				await handleUncancellation({
+					event: body.event as WebhookUnCancellation,
+					db,
+					org,
+					env,
 				});
 				break;
 		}

@@ -1,3 +1,3 @@
 // Vercel + RevenueCat
-export * from "./revcatModels/revcatMappingsTable.js";
+export * from "./revenuecatModels/revenuecatMappingsTable.js";
 export * from "./vercelModels/vercelResourcesTable.js";

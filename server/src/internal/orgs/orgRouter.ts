@@ -1,7 +1,7 @@
 import { Hono } from "hono";
-import { handleGetRCMappings } from "@/external/revenueCat/misc/handleGetRCMappings.js";
-import { handleGetRevenueCatProducts } from "@/external/revenueCat/misc/handleGetRevenueCatProducts.js";
-import { handleSaveRCMappings } from "@/external/revenueCat/misc/handleSaveRCMappings.js";
+import { handleGetRCMappings } from "@/external/revenueCat/handlers/handleGetRevenuecatMappings.js";
+import { handleGetRevenueCatProducts } from "@/external/revenueCat/handlers/handleGetRevenuecatProducts.js";
+import { handleSaveRCMappings } from "@/external/revenueCat/handlers/handleSaveRevenuecatMappings.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleDeleteOrg } from "./handlers/crudHandlers/handleDeleteOrg.js";
 import { handleGetOrg } from "./handlers/crudHandlers/handleGetOrg.js";

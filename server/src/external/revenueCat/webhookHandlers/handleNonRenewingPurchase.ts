@@ -11,7 +11,7 @@ import {
 import type { DrizzleCli } from "@/db/initDrizzle";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
-import { RCMappingService } from "@/external/revenueCat/services/RCMappingService";
+import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct";
 import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
@@ -40,12 +40,12 @@ export const handleNonRenewingPurchase = async ({
 		db,
 		orgId: org.id,
 		env,
-		revcatProductId: event.product_id,
+		revenuecatProductId: event.product_id,
 	});
 
 	if (!autumnProductId) {
 		logger.error("No Autumn product mapped to RevenueCat product", {
-			revcatProductId: event.product_id,
+			revenuecatProductId: event.product_id,
 		});
 		return;
 	}
@@ -110,9 +110,6 @@ export const handleNonRenewingPurchase = async ({
 		logger,
 		scenario,
 		processorType: ProcessorType.RevenueCat,
-		externalSubIds: [
-			{ type: ProcessorType.RevenueCat, id: event.original_transaction_id },
-		],
 		attachParams: attachToInsertParams(
 			{
 				customer,

@@ -1,4 +1,4 @@
-import type { WebhookInitialPurchase } from "@puzzmo/revenue-cat-webhook-types";
+import type { WebhookRenewal } from "@puzzmo/revenue-cat-webhook-types";
 import {
 	type AppEnv,
 	AttachScenario,
@@ -12,8 +12,8 @@ import {
 } from "@shared/index";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import { createStripeCli } from "@/external/connect/createStripeCli";
-import type { Logger } from "@/external/logtail/logtailUtils.js";
-import { RCMappingService } from "@/external/revenueCat/services/RCMappingService";
+import type { Logger } from "@/external/logtail/logtailUtils";
+import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct";
 import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
@@ -26,7 +26,7 @@ import {
 } from "@/internal/products/productUtils";
 import { isMainProduct } from "@/internal/products/productUtils/classifyProduct";
 
-export const handleInitialPurchase = async ({
+export const handleRenewal = async ({
 	event,
 	db,
 	org,
@@ -34,7 +34,7 @@ export const handleInitialPurchase = async ({
 	logger,
 	features,
 }: {
-	event: WebhookInitialPurchase;
+	event: WebhookRenewal;
 	db: DrizzleCli;
 	org: Organization;
 	env: AppEnv;
@@ -42,13 +42,12 @@ export const handleInitialPurchase = async ({
 	features: Feature[];
 }) => {
 	const { product_id, app_user_id, original_transaction_id } = event;
-	console.log("event", event);
 	// Look up Autumn product ID from RevenueCat mapping
 	const autumnProductId = await RCMappingService.getAutumnProductId({
 		db,
 		orgId: org.id,
 		env,
-		revcatProductId: product_id,
+		revenuecatProductId: product_id,
 	});
 
 	if (!autumnProductId) {
@@ -112,20 +111,19 @@ export const handleInitialPurchase = async ({
 		processorType: ProcessorType.RevenueCat,
 	});
 
-	// If same product already exists, skip
-	if (curSameProduct) {
-		throw new RecaseError({
-			message: "Cus product already exists",
-			code: ErrCode.CustomerAlreadyHasProduct,
-			statusCode: 400,
-		});
+	const now = Date.now();
+
+	// If same product exists and is active, this is just a renewal - nothing to do
+	if (curSameProduct && curSameProduct.status === CusProductStatus.Active) {
+		logger.info(
+			`Renewal for existing active product ${product.id}, no action needed`,
+		);
+		return;
 	}
 
-	const now = Date.now();
-	let scenario = AttachScenario.New;
-
-	// Handle upgrade/downgrade (only when both are main products)
+	// Check if this is an upgrade (renewing to a different/better product)
 	const isNewProductMain = isMainProduct({ product, prices: product.prices });
+	let scenario = AttachScenario.New;
 
 	if (curMainProduct && isNewProductMain) {
 		const curPrices = cusProductToPrices({ cusProduct: curMainProduct });
@@ -139,7 +137,7 @@ export const handleInitialPurchase = async ({
 		scenario = isUpgrade ? AttachScenario.Upgrade : AttachScenario.Downgrade;
 
 		logger.info(
-			`${isUpgrade ? "Upgrade" : "Downgrade"} detected: ${curMainProduct.product.id} -> ${product.id}`,
+			`Renewal with ${isUpgrade ? "upgrade" : "downgrade"}: ${curMainProduct.product.id} -> ${product.id}`,
 		);
 
 		// Expire old cus_product
@@ -153,17 +151,35 @@ export const handleInitialPurchase = async ({
 		});
 
 		logger.info(`Expired old cus_product: ${curMainProduct.id}`);
+	} else if (curSameProduct) {
+		// Reactivate the same product if it was expired/cancelled
+		await CusProductService.update({
+			db,
+			cusProductId: curSameProduct.id,
+			updates: {
+				status: CusProductStatus.Active,
+				canceled_at: null,
+				ended_at: null,
+				canceled: false,
+			},
+		});
+
+		logger.info(`Reactivated cus_product: ${curSameProduct.id}`);
+
+		await deleteCachedApiCustomer({
+			customerId: customer.id ?? "",
+			orgId: org.id,
+			env,
+		});
+		return;
 	}
 
-	// Create new cus_product
+	// Create new cus_product for upgrade or new product
 	await createFullCusProduct({
 		db,
 		logger,
 		scenario,
 		processorType: ProcessorType.RevenueCat,
-		externalSubIds: [
-			{ type: ProcessorType.RevenueCat, id: original_transaction_id },
-		],
 		attachParams: attachToInsertParams(
 			{
 				customer,
@@ -186,7 +202,7 @@ export const handleInitialPurchase = async ({
 	});
 
 	logger.info(
-		`Created cus_product for ${product.id} with scenario: ${scenario}`,
+		`Created cus_product for ${product.id} with scenario: ${scenario} (renewal)`,
 	);
 
 	await deleteCachedApiCustomer({
