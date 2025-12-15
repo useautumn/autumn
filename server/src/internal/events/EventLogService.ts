@@ -1,4 +1,9 @@
-import type { ClickHouseResult, EventLog, EventLogQuery } from "@autumn/shared";
+import type {
+	ClickHouseResult,
+	EventLog,
+	EventLogQuery,
+	RawEventFromClickHouse,
+} from "@autumn/shared";
 import { ErrCode, RecaseError } from "@autumn/shared";
 import {
 	type DecodedCursorV1,
@@ -11,14 +16,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
 export class EventLogService {
 	private static transformRawEvents(
-		rawEvents: Array<{
-			id: string;
-			timestamp: Date | string | null;
-			event_name: string;
-			customer_id: string;
-			value: number | null;
-			properties: string | null;
-		}>,
+		rawEvents: RawEventFromClickHouse[],
 	): EventLog[] {
 		return rawEvents.map((event) => ({
 			id: event.id,
@@ -198,15 +196,9 @@ limit {limit:UInt32};
 			format: "JSON",
 		});
 
-		const resultJson = (await result.json()) as ClickHouseResult;
-		const rawEvents = resultJson.data as Array<{
-			id: string;
-			timestamp: Date | string | null;
-			event_name: string;
-			customer_id: string;
-			value: number | null;
-			properties: string | null;
-		}>;
+		const resultJson =
+			(await result.json()) as ClickHouseResult<RawEventFromClickHouse>;
+		const rawEvents = resultJson.data;
 
 		const events = EventLogService.transformRawEvents(rawEvents);
 
