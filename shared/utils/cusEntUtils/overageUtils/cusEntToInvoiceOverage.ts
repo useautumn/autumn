@@ -2,7 +2,7 @@ import { Decimal } from "decimal.js";
 import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
 import { isEntityScopedCusEnt } from "../classifyCusEntUtils";
 
-export const cusEntToTotalOverage = ({
+export const cusEntToInvoiceOverage = ({
 	cusEnt,
 }: {
 	cusEnt: FullCusEntWithFullCusProduct;

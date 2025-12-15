@@ -1,28 +1,35 @@
-import { BillingInterval } from "../../../../models/productModels/intervals/billingInterval";
+import type { LineItemContext } from "../../../../models/billingModels/invoicingModels/lineItemContext";
 import type { FixedPriceConfig } from "../../../../models/productModels/priceModels/priceConfig/fixedPriceConfig";
 import type { Price } from "../../../../models/productModels/priceModels/priceModels";
 import { formatAmount } from "../../../common/formatUtils/formatAmount";
-import { formatInterval } from "../../../common/formatUtils/formatInterval";
+import { isOneOffPrice } from "../../../productUtils/priceUtils/classifyPriceUtils";
+import { lineItemToPeriodDescription } from "./lineItemToPeriodDescription";
 
 export const fixedPriceToDescription = ({
 	price,
 	currency,
+	context,
 }: {
 	price: Price; // must be fixed price
 	currency?: string;
+	context: LineItemContext;
 }): string => {
 	const config = price.config as FixedPriceConfig;
+
+	const { productName } = context;
+
+	// biome-ignore lint/correctness/noUnusedVariables: Might be used in the future
 	const amount = formatAmount({ currency, amount: config.amount });
 
-	if (config.interval === BillingInterval.OneOff) {
-		return amount;
+	let description = `${productName} - Base Price`;
+
+	if (isOneOffPrice(price)) {
+		const periodDescription = lineItemToPeriodDescription({
+			context,
+		});
+
+		description = `${description} (${periodDescription})`;
 	}
 
-	const intervalStr = formatInterval({
-		interval: config.interval,
-		intervalCount: config.interval_count || 1,
-		prefix: "",
-	});
-
-	return `${amount} / ${intervalStr}`; // "$10 / month"
+	return description;
 };

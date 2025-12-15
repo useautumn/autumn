@@ -2,6 +2,7 @@ import {
 	type AttachConfig,
 	cusProductToPrices,
 	type FullCusProduct,
+	isConsumablePrice,
 } from "@autumn/shared";
 import { differenceInDays } from "date-fns";
 import type Stripe from "stripe";
@@ -10,7 +11,6 @@ import {
 	priceToScheduleItem,
 	scheduleItemInCusProduct,
 } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
-import { isArrearPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { formatPrice } from "@/internal/products/prices/priceUtils.js";
 import { formatUnixToDateTime } from "@/utils/genUtils.js";
 import type { ItemSet } from "@/utils/models/ItemSet.js";
@@ -67,7 +67,7 @@ export const removeCusProductFromScheduleItems = async ({
 		if (!existingScheduleItem) continue;
 
 		// 1. If arrear price
-		if (isArrearPrice({ price })) {
+		if (isConsumablePrice(price)) {
 			if (
 				allCusProducts.some((cp) => {
 					if (cp.id === cusProduct.id) return false;

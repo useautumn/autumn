@@ -1,6 +1,6 @@
-import { isArrearPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
-import { ItemSet } from "@/utils/models/ItemSet.js";
-import Stripe from "stripe";
+import { isConsumablePrice } from "@autumn/shared";
+import type Stripe from "stripe";
+import type { ItemSet } from "@/utils/models/ItemSet.js";
 
 export const mergeNewSubItems = ({
 	itemSet,
@@ -15,7 +15,11 @@ export const mergeNewSubItems = ({
 
 	newSubItems = newSubItems.filter((newSi) => {
 		const existingItem = curSubItems.find((si) => si.price?.id === newSi.price);
-		if (isArrearPrice({ price: newSi.autumnPrice }) && existingItem) {
+		if (
+			newSi.autumnPrice &&
+			isConsumablePrice(newSi.autumnPrice) &&
+			existingItem
+		) {
 			newArrearSubItems.push(newSi);
 			return false;
 		}
@@ -50,10 +54,12 @@ export const mergeNewScheduleItems = ({
 	curScheduleItems: Stripe.SubscriptionSchedule.Phase.Item[];
 }) => {
 	const originalScheduleItems = structuredClone(curScheduleItems);
-	let newScheduleItems: any[] = structuredClone(curScheduleItems).map((si) => ({
-		price: (si.price as Stripe.Price).id,
-		quantity: si.quantity,
-	}));
+	const newScheduleItems: any[] = structuredClone(curScheduleItems).map(
+		(si) => ({
+			price: (si.price as Stripe.Price).id,
+			quantity: si.quantity,
+		}),
+	);
 
 	for (const newItem of itemSet.subItems) {
 		const existingIndex = newScheduleItems.findIndex(

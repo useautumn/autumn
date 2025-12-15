@@ -3,13 +3,13 @@ import {
 	type Feature,
 	type FreeTrial,
 	type FullCusProduct,
+	findCusPriceByFeature,
 	isCusProductTrialing,
 	type ProductItem,
 	priceToInvoiceAmount,
 	UsageModel,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import { featureToCusPrice } from "@/internal/customers/cusProducts/cusPrices/convertCusPriceUtils.js";
 import { getProration } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
 import { isFeaturePriceItem } from "@/internal/products/product-items/productItemUtils/getItemType.js";
 import { itemToPriceOrTiers } from "@/internal/products/product-items/productItemUtils.js";
@@ -84,7 +84,7 @@ export const getOptions = ({
 			if (currentQuantity && internalFeatureId) {
 				currentQuantity = currentQuantity * (i.billing_units || 1);
 
-				const curPrice = featureToCusPrice({
+				const curPrice = findCusPriceByFeature({
 					internalFeatureId: internalFeatureId,
 					cusPrices: cusProduct?.customer_prices ?? [],
 				})?.price;

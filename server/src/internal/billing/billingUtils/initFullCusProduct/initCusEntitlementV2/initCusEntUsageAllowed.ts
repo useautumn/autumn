@@ -4,7 +4,6 @@ import {
 	type InsertFullCusProductContext,
 	isPayPerUsePrice,
 } from "@autumn/shared";
-import { isArrearPrice } from "../../../../products/prices/priceUtils/usagePriceUtils/classifyUsagePrice";
 
 export const initCusEntUsageAllowed = ({
 	insertContext,
@@ -20,5 +19,5 @@ export const initCusEntUsageAllowed = ({
 
 	if (!price) return false;
 
-	return isArrearPrice({ price }) || isPayPerUsePrice({ price });
+	return isPayPerUsePrice({ price });
 };

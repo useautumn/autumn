@@ -119,4 +119,3 @@ describe("get-cycle-end: quarterly intervals", () => {
 		});
 	});
 });
-

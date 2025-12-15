@@ -2,6 +2,7 @@ import { Decimal } from "decimal.js";
 import type { Price } from "../../../../models/productModels/priceModels/priceModels";
 import { Infinite } from "../../../../models/productModels/productEnums";
 import { nullish } from "../../../utils";
+import { roundUsageToNearestBillingUnit } from "./roundUsageToNearestBillingUnit";
 
 export const tiersToLineAmount = ({
 	price,
@@ -12,12 +13,10 @@ export const tiersToLineAmount = ({
 	overage: number;
 	billingUnits?: number;
 }): number => {
-	// Round up to billing units
-	const roundedOverage = new Decimal(overage)
-		.div(billingUnits)
-		.ceil()
-		.mul(billingUnits)
-		.toNumber();
+	const roundedOverage = roundUsageToNearestBillingUnit({
+		usage: overage,
+		billingUnits,
+	});
 
 	let amount = new Decimal(0);
 	let remaining = new Decimal(roundedOverage);

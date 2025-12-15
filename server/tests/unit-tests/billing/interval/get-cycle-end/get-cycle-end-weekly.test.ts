@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { BillingInterval, getCycleEnd } from "@autumn/shared";
-import { DayOfWeek, fromUnix, toUnixWeekly } from "@tests/utils/testIntervalUtils/testUnixUtils";
+import {
+	DayOfWeek,
+	fromUnix,
+	toUnixWeekly,
+} from "@tests/utils/testIntervalUtils/testUnixUtils";
 
 /**
  * January 2025 calendar (Week 1 = first full Mon-Sun week):

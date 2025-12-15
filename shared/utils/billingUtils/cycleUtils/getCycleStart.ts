@@ -25,10 +25,8 @@ export const getCycleStart = ({
 	anchor: number;
 	interval: BillingInterval | EntInterval;
 	intervalCount?: number;
-	now?: number;
+	now: number; // milliseconds since epoch
 }): number => {
-	now = now ?? Date.now();
-
 	const anchorDate = new UTCDate(anchor);
 	const nowDate = new UTCDate(now);
 

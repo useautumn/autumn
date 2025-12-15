@@ -4,6 +4,7 @@ import {
 	cusProductToPrices,
 	cusProductToProduct,
 	type FullCusProduct,
+	isConsumablePrice,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
@@ -11,7 +12,6 @@ import {
 	findStripeItemForPrice,
 	subItemInCusProduct,
 } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
-import { isArrearPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { formatPrice } from "@/internal/products/prices/priceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import type { ItemSet } from "@/utils/models/ItemSet.js";
@@ -165,7 +165,7 @@ export const paramsToSubItems = async ({
 			if (!existingSubItem) continue;
 
 			// 1. If arrear price
-			if (isArrearPrice({ price })) {
+			if (isConsumablePrice(price)) {
 				if (
 					allCusProducts.some((cp) => {
 						if (cp.id === cusProduct.id) return false;

@@ -157,7 +157,7 @@ export function BalanceEditSheet() {
 	const feature = firstEnt.entitlement.feature;
 
 	const isUnlimited = selectedCusEnt
-		? isUnlimitedCusEnt({ cusEnt: selectedCusEnt })
+		? isUnlimitedCusEnt(selectedCusEnt)
 		: false;
 
 	if (!selectedCusEnt) {

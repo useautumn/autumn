@@ -5,6 +5,7 @@ import {
 	cusProductToPrices,
 	formatAmount,
 	InternalError,
+	isConsumablePrice,
 	type PreviewLineItem,
 } from "@autumn/shared";
 import type Stripe from "stripe";
@@ -12,13 +13,9 @@ import { priceToUnusedPreviewItem } from "@/internal/customers/attach/attachPrev
 import { attachParamsToCurCusProduct } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
 import { getContUseInvoiceItems } from "@/internal/customers/attach/attachUtils/getContUseItems/getContUseInvoiceItems.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-
 import { getCusPriceUsage } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
 import { priceToUsageModel } from "@/internal/products/prices/priceUtils/convertPrice.js";
-import {
-	isArrearPrice,
-	isContUsePrice,
-} from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import { isContUsePrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import type { Logger } from "../../../external/logtail/logtailUtils";
 
@@ -53,7 +50,7 @@ export const getItemsForCurProduct = async ({
 	// const anchor = sub?.billing_cycle_anchor ? sub.billing_cycle_anchor * 1000 : undefined;
 
 	for (const price of curPrices) {
-		if (isArrearPrice({ price }) || isContUsePrice({ price })) {
+		if (isConsumablePrice(price) || isContUsePrice({ price })) {
 			continue;
 		}
 

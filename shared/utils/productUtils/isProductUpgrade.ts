@@ -1,11 +1,14 @@
 import { Decimal } from "decimal.js";
-import { intervalsSame, isConsumablePayPerUsePrice, nullish } from "../..";
+
 import type { Price } from "../../models/productModels/priceModels/priceModels";
 import {
 	compareBillingIntervals,
 	getLargestInterval,
+	intervalsSame,
 } from "../intervalUtils/priceIntervalUtils";
+import { nullish } from "../utils";
 import { isFreeProduct } from "./classifyProductUtils";
+import { isConsumablePrice } from "./priceUtils/classifyPriceUtils";
 
 export const isProductUpgrade = ({
 	prices1,
@@ -25,8 +28,8 @@ export const isProductUpgrade = ({
 	if (!prod1IsFree && prod2IsFree) return false;
 
 	if (
-		prices1.every((p) => isConsumablePayPerUsePrice({ price: p })) &&
-		prices2.every((p) => isConsumablePayPerUsePrice({ price: p })) &&
+		prices1.every(isConsumablePrice) &&
+		prices2.every(isConsumablePrice) &&
 		usageAlwaysUpgrade
 	) {
 		return true;

@@ -1,5 +1,6 @@
 import { BillingInterval } from "../../../models/productModels/intervals/billingInterval";
 import type { FixedPriceConfig } from "../../../models/productModels/priceModels/priceConfig/fixedPriceConfig";
+import type { UsagePriceConfig } from "../../../models/productModels/priceModels/priceConfig/usagePriceConfig";
 import { BillingType } from "../../../models/productModels/priceModels/priceEnums";
 import type { Price } from "../../../models/productModels/priceModels/priceModels";
 import { getBillingType } from "../priceUtils";
@@ -50,8 +51,18 @@ export const isPayPerUsePrice = ({ price }: { price: Price }) => {
 	);
 };
 
-export const isConsumablePayPerUsePrice = ({ price }: { price?: Price }) => {
+export const isConsumablePrice = (
+	price: Price,
+): price is Price & { config: UsagePriceConfig } => {
 	if (!price) return false;
 	const billingType = getBillingType(price.config);
 	return billingType === BillingType.UsageInArrear;
+};
+
+export const isAllocatedPrice = (
+	price: Price,
+): price is Price & { config: UsagePriceConfig } => {
+	if (!price) return false;
+	const billingType = getBillingType(price.config);
+	return billingType === BillingType.InArrearProrated;
 };
