@@ -1,16 +1,32 @@
 import { format } from "date-fns/format";
 
-export const formatMs = (
+export const formatMsToDate = (
 	unixDate?: number | null,
 	options?: { withTimezone?: boolean },
 ) => {
 	if (!unixDate) {
 		return "undefined unix date";
 	}
-	return format(
-		new Date(unixDate),
-		options?.withTimezone ? "dd MMM yyyy HH:mm:ss z" : "dd MMM yyyy HH:mm:ss",
-	);
+	return format(new Date(unixDate), "dd MMM yyyy");
+};
+
+export const formatMs = (
+	unixDate?: number | null,
+	options?: { withTimezone?: boolean; excludeSeconds?: boolean },
+) => {
+	if (!unixDate) {
+		return "undefined unix date";
+	}
+
+	let formatString = options?.excludeSeconds
+		? "dd MMM yyyy HH:mm"
+		: "dd MMM yyyy HH:mm:ss";
+
+	if (options?.withTimezone) {
+		formatString = `${formatString} z`;
+	}
+
+	return format(new Date(unixDate), formatString);
 };
 
 /**

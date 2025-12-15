@@ -4,7 +4,7 @@ import type {
 	NewProductAction,
 } from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
-import { insertFullCusProduct } from "../insertFullCusProduct/insertFullCusProduct";
+import { initFullCusProduct } from "../initFullCusProduct/initFullCusProduct";
 
 export const applyNewProductAction = async ({
 	ctx,
@@ -23,6 +23,6 @@ export const applyNewProductAction = async ({
 	};
 
 	if (newProductAction.timing === "scheduled") {
-		return await insertFullCusProduct({ ctx, fullCus, insertContext });
+		return await initFullCusProduct({ ctx, fullCus, insertContext });
 	}
 };

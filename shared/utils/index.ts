@@ -9,8 +9,9 @@ export * from "./billingUtils/resolveAttachUtils/resolveScheduledCusProductActio
 export * from "./common/formatUtils/index.js";
 export * from "./common/unixUtils.js";
 export * from "./cusEntUtils/balanceUtils/cusEntsToBalance.js";
+export * from "./cusEntUtils/balanceUtils/cusEntsToPurchasedBalance.js";
+export * from "./cusEntUtils/balanceUtils/cusEntsToUsage.js";
 export * from "./cusEntUtils/balanceUtils/cusEntToPrepaidQuantity.js";
-export * from "./cusEntUtils/balanceUtils/cusEntToPurchasedBalance.js";
 // Cus ent utils
 export * from "./cusEntUtils/balanceUtils/grantedBalanceUtils/cusEntsToAdjustment.js";
 export * from "./cusEntUtils/balanceUtils/grantedBalanceUtils/cusEntsToAllowance.js";
@@ -25,6 +26,8 @@ export * from "./cusEntUtils/filterCusEntUtils.js";
 export * from "./cusEntUtils/getRolloverFields.js";
 export * from "./cusEntUtils/getStartingBalance.js";
 export * from "./cusEntUtils/sortCusEntsForDeduction.js";
+export * from "./cusPriceUtils/convertCusPriceUtils.js";
+export * from "./cusPriceUtils/findCusPriceUtils.js";
 // Cus product utils
 export * from "./cusProductUtils/classifyCusProduct.js";
 export * from "./cusProductUtils/convertCusProduct.js";

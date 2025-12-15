@@ -53,6 +53,7 @@ export const cusProductsToCusEnts = ({
 	inStatuses = [CusProductStatus.Active, CusProductStatus.PastDue],
 	reverseOrder = false,
 	featureId,
+	internalFeatureId,
 	featureIds,
 	entity,
 	sortParams,
@@ -61,6 +62,7 @@ export const cusProductsToCusEnts = ({
 	inStatuses?: CusProductStatus[];
 	reverseOrder?: boolean;
 	featureId?: string;
+	internalFeatureId?: string;
 	featureIds?: string[];
 	entity?: Entity;
 	sortParams?: SortCusEntParams;
@@ -81,6 +83,12 @@ export const cusProductsToCusEnts = ({
 	if (featureId) {
 		cusEnts = cusEnts.filter(
 			(cusEnt) => cusEnt.entitlement.feature.id === featureId,
+		);
+	}
+
+	if (internalFeatureId) {
+		cusEnts = cusEnts.filter(
+			(cusEnt) => cusEnt.entitlement.internal_feature_id === internalFeatureId,
 		);
 	}
 

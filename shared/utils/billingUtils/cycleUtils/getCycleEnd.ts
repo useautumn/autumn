@@ -26,11 +26,9 @@ export const getCycleEnd = ({
 	anchor: number;
 	interval: BillingInterval | EntInterval;
 	intervalCount?: number;
-	now?: number;
+	now: number; // milliseconds since epoch
 }): number => {
 	// EDGE CASE: anchor might be slightly before now due to network latency.
-
-	now = now ?? Date.now();
 
 	const anchorDate = new UTCDate(anchor);
 	const nowDate = new UTCDate(now);

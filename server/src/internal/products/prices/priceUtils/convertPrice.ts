@@ -3,8 +3,6 @@ import {
 	BillingType,
 	type EntitlementWithFeature,
 	type Feature,
-	type FullCustomerEntitlement,
-	type FullCustomerPrice,
 	type FullProduct,
 	isFixedPrice,
 	type Price,
@@ -88,18 +86,6 @@ export const priceToUsageModel = (price: Price) => {
 		return UsageModel.Prepaid;
 	}
 	return UsageModel.PayPerUse;
-};
-
-export const cusPriceToCusEnt = ({
-	cusPrice,
-	cusEnts,
-}: {
-	cusPrice: FullCustomerPrice;
-	cusEnts: FullCustomerEntitlement[];
-}) => {
-	return cusEnts.find(
-		(ce) => ce.entitlement?.id === cusPrice.price.entitlement_id,
-	);
 };
 
 export const priceToProductOptions = ({

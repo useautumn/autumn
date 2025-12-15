@@ -14,7 +14,7 @@ export default defineConfig({
 		sentryVitePlugin({
 			org: process.env.VITE_SENTRY_ORG,
 			project: process.env.VITE_SENTRY_PROJECT,
-			telemetry: false
+			telemetry: false,
 		}),
 	],
 
@@ -49,6 +49,8 @@ export default defineConfig({
 			"zod/v4",
 			"drizzle-orm/pg-core",
 			"drizzle-orm",
+			"@date-fns/utc",
+			"date-fns",
 		],
 	},
 

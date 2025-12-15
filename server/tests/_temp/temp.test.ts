@@ -6,6 +6,8 @@ import { toUnix } from "@tests/utils/testIntervalUtils/testUnixUtils";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
+	constructArrearItem,
+	constructArrearProratedItem,
 	constructFeatureItem,
 	constructPrepaidItem,
 } from "@/utils/scriptUtils/constructItem.js";
@@ -28,28 +30,58 @@ const freeProd = constructProduct({
 	],
 });
 
-const proProd = constructProduct({
+const pro = constructProduct({
 	type: "pro",
 	isDefault: false,
 	items: [
-		constructFeatureItem({
+		constructArrearProratedItem({
+			featureId: TestFeature.Users,
+			includedUsage: 1,
+			pricePerUnit: 10,
+		}),
+		constructArrearProratedItem({
+			featureId: TestFeature.Workflows,
+			includedUsage: 1,
+			pricePerUnit: 25,
+		}),
+		constructArrearItem({
+			featureId: TestFeature.Words,
+			billingUnits: 1,
+			price: 0.1,
+		}),
+		constructPrepaidItem({
 			featureId: TestFeature.Messages,
-			includedUsage: 300,
+			billingUnits: 100,
+			price: 8,
 		}),
 	],
-	intervalCount: 2,
+	// intervalCount: 2,
 });
 
 const premium = constructProduct({
 	type: "premium",
 	isDefault: false,
 	items: [
-		constructFeatureItem({
+		constructArrearItem({
+			featureId: TestFeature.Words,
+			billingUnits: 1,
+			price: 0.1,
+		}),
+
+		constructArrearProratedItem({
+			featureId: TestFeature.Users,
+			includedUsage: 1,
+			pricePerUnit: 15,
+		}),
+		constructPrepaidItem({
 			featureId: TestFeature.Messages,
-			includedUsage: 1000,
+			billingUnits: 100,
+			price: 12,
 		}),
 	],
+	// intervalCount: 2,
 });
+
 const freeAddOn = constructRawProduct({
 	id: "freeAddOn",
 	items: [
@@ -86,7 +118,16 @@ const monthlyAddOn = constructRawProduct({
 	isAddOn: true,
 });
 
-const testCase = "temp";
+const entities = [
+	{
+		id: "entity1",
+		feature_id: TestFeature.Users,
+	},
+	{
+		id: "entity2",
+		feature_id: TestFeature.Users,
+	},
+];
 
 describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 	const customerId = "temp";
@@ -102,44 +143,43 @@ describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [freeProd, proProd, premium, freeAddOn, monthlyAddOn],
+			products: [freeProd, pro, premium, freeAddOn, monthlyAddOn],
 			prefix: customerId,
 		});
 
 		await autumnV1.attach({
 			customer_id: customerId,
-			product_id: freeAddOn.id,
-		});
-
-		await autumnV1.attach({
-			customer_id: customerId,
-			product_id: proProd.id,
-		});
-
-		await autumnV1.attach({
-			customer_id: customerId,
-			product_id: monthlyAddOn.id,
+			product_id: pro.id,
 			options: [
 				{
 					feature_id: TestFeature.Messages,
-					quantity: 100,
+					quantity: 300,
 				},
 			],
+		});
+
+		await autumnV1.entities.create(customerId, entities);
+
+		await autumnV1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Workflows,
+			value: 4,
+		});
+
+		await autumnV1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Words,
+			value: 1000,
 		});
 
 		await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId: result.testClockId,
 			advanceTo: toUnix({
-				year: 2026,
-				month: 1,
-				day: 15,
+				year: 2025,
+				month: 12,
+				day: 22,
 			}),
-		});
-
-		await autumnV1.attach({
-			customer_id: customerId,
-			product_id: proProd.id,
 		});
 	});
 	return;

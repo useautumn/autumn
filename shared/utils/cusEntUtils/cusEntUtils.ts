@@ -2,6 +2,7 @@ import type { FullCustomerEntitlement } from "@models/cusProductModels/cusEntMod
 import type { PgDeductionUpdate } from "../../api/balances/track/trackTypes/pgDeductionUpdate.js";
 import type { FullCustomer } from "../../models/cusModels/fullCusModel.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 import { cusEntToCusPrice } from "../productUtils/convertUtils.js";
 import { isPrepaidPrice } from "../productUtils/priceUtils.js";
 
@@ -72,35 +73,6 @@ export const updateCusEntInFullCus = ({
 	}
 };
 
-// export const cusEntMatchesEntity = ({
-// 	cusEnt,
-// 	entity,
-// }: {
-// 	cusEnt: FullCusEntWithFullCusProduct;
-// 	entity?: Entity;
-// }) => {
-// 	if (!entity) return true;
-
-// 	let cusProductMatch = true;
-
-// 	if (notNullish(cusEnt.customer_product?.internal_entity_id)) {
-// 		cusProductMatch =
-// 			cusEnt.customer_product.internal_entity_id === entity.internal_id;
-// 	}
-
-// 	let entityFeatureIdMatch = true;
-// 	// let feature = features?.find(
-// 	//   (f) => f.id == cusEnt.entitlement.entity_feature_id,
-// 	// );
-
-// 	if (notNullish(cusEnt.entitlement.entity_feature_id)) {
-// 		entityFeatureIdMatch =
-// 			cusEnt.entitlement.entity_feature_id === entity.feature_id;
-// 	}
-
-// 	return cusProductMatch && entityFeatureIdMatch;
-// };
-
 export const isPrepaidCusEnt = ({
 	cusEnt,
 }: {
@@ -119,4 +91,17 @@ export const isPrepaidCusEnt = ({
 	if (!options) return false;
 
 	return true;
+};
+
+export const addCusProductToCusEnt = ({
+	cusEnt,
+	cusProduct,
+}: {
+	cusEnt: FullCustomerEntitlement;
+	cusProduct: FullCusProduct;
+}): FullCusEntWithFullCusProduct => {
+	return {
+		...cusEnt,
+		customer_product: cusProduct,
+	};
 };

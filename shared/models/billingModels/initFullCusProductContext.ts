@@ -8,14 +8,14 @@ import type {
 import type { FeatureOptions } from "../cusProductModels/cusProductModels";
 import type { FullProduct } from "../productModels/productModels";
 
-export interface InsertFullCusProductContext {
+export interface InitFullCusProductContext {
 	fullCus: FullCustomer;
 	product: FullProduct;
 	featureQuantities: FeatureOptions[];
 	replaceables: AttachReplaceable[];
 }
 
-export interface InsertCusProductOptions {
+export interface InitFullCusProductOptions {
 	subscriptionId?: string;
 	subscriptionScheduleId?: string;
 	isCustom?: boolean;
