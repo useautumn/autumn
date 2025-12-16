@@ -193,6 +193,10 @@ const getSameProductBranch = async ({
 
 	// 1. If new version?
 
+	if (attachParams.newBillingSubscription) {
+		return AttachBranch.New;
+	}
+
 	if (
 		curSameProduct.product.version !== product.version &&
 		curScheduledProduct?.product.id !== product.id
