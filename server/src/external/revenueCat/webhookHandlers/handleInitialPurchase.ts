@@ -42,7 +42,7 @@ export const handleInitialPurchase = async ({
 	features: Feature[];
 }) => {
 	const { product_id, app_user_id, original_transaction_id } = event;
-	console.log("event", event);
+	// Look up Autumn product ID from RevenueCat mapping
 	// Look up Autumn product ID from RevenueCat mapping
 	const autumnProductId = await RCMappingService.getAutumnProductId({
 		db,
