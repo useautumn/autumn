@@ -1,9 +1,11 @@
-import { type Feature, FeatureType } from "@autumn/shared";
-import { CoinsIcon, LegoIcon } from "@phosphor-icons/react";
+import { AppEnv, type Feature, FeatureType } from "@autumn/shared";
+import { ArrowSquareOutIcon, CoinsIcon, LegoIcon } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
+import { IconButton } from "@/components/v2/buttons/IconButton";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useEnv } from "@/utils/envUtils";
 import { useProductsQueryState } from "@/views/products/hooks/useProductsQueryState";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 import UpdateFeatureSheet from "../components/UpdateFeatureSheet";
@@ -15,6 +17,7 @@ import { FeatureListCreateButton } from "./FeatureListCreateButton";
 import { FeatureListMenuButton } from "./FeatureListMenuButton";
 
 export function FeatureListTable() {
+	const env = useEnv();
 	const { features } = useFeaturesQuery();
 	const { queryStates } = useProductsQueryState();
 	const [selectedFeature, setSelectedFeature] = useState<Feature | null>(null);
@@ -86,9 +89,28 @@ export function FeatureListTable() {
 		featureTable.getRowModel().rows.length > 0 ||
 		creditTable.getRowModel().rows.length > 0;
 
-	const creditEmptyStateText = queryStates.showArchivedFeatures
-		? "You haven't archived any credit systems yet."
-		: "Create a single pool of credits that can be drawn from by multiple features";
+	const creditEmptyStateChildren = queryStates.showArchivedFeatures ? (
+		"You haven't archived any credit systems yet."
+	) : (
+		<>
+			Credit systems let you assign different credit costs to features, and draw
+			usage from a common balance
+			{env === AppEnv.Sandbox && (
+				<IconButton
+					variant="muted"
+					size="sm"
+					iconOrientation="right"
+					icon={<ArrowSquareOutIcon size={16} className="-translate-y-px" />}
+					className="px-1! ml-2"
+					onClick={() =>
+						window.open("https://docs.useautumn.com/pricing/credits", "_blank")
+					}
+				>
+					Docs
+				</IconButton>
+			)}
+		</>
+	);
 
 	return (
 		<>
@@ -164,7 +186,7 @@ export function FeatureListTable() {
 								enableSorting,
 								isLoading: false,
 								onRowClick: handleCreditRowClick,
-								emptyStateText: creditEmptyStateText,
+								emptyStateChildren: creditEmptyStateChildren,
 								rowClassName: "h-10",
 							}}
 						>
@@ -176,7 +198,7 @@ export function FeatureListTable() {
 											weight="fill"
 											className="text-subtle"
 										/>
-										Credits
+										Credit Systems
 									</Table.Heading>
 									<Table.Actions>
 										<div className="flex w-full justify-between items-center">
