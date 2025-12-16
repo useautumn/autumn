@@ -9,7 +9,7 @@ import { V1_2_TrialsUsedChange } from "@api/customers/components/apiTrialsUsed/c
 
 // Import customer product changes
 
-import { V2_1_AttachBodyChange } from "@api/billing/attach/changes/V2.1_AttachBodyChange.js";
+import { V2_0_AttachBodyChange } from "@api/billing/attach/changes/V2.0_AttachBodyChange.js";
 import { V1_2_CustomerChange } from "@api/customers/changes/V1.2_CustomerChange.js";
 import { V1_2_CustomerQueryChange } from "@api/customers/requestChanges/V1.2_CustomerQueryChange.js";
 // Import entity changes
@@ -33,7 +33,7 @@ import type { VersionChangeConstructor } from "./VersionChange.js";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
 
 export const V2_1_CHANGES: VersionChangeConstructor[] = [
-	V2_1_AttachBodyChange, // Transforms Attach Body TO V2.1 format from V2.0 format
+	V2_0_AttachBodyChange, // Transforms Attach Body TO V2.0 format from V2.1 format
 ];
 
 export const V2_CHANGES: VersionChangeConstructor[] = [

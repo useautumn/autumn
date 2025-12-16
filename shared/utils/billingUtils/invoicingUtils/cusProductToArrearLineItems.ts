@@ -11,17 +11,15 @@ import { usagePriceToLineItem } from "./lineItemBuilders/usagePriceToLineItem";
 export const cusProductToArrearLineItems = ({
 	cusProduct,
 	billingCycleAnchor,
-	testClockFrozenTime,
+	now,
 	org,
 }: {
 	cusProduct: FullCusProduct;
 	billingCycleAnchor: number;
-	testClockFrozenTime?: number;
+	now: number;
 	org: Organization;
 }) => {
 	let lineItems: LineItem[] = [];
-	const productName = cusProduct.product.name;
-	const now = testClockFrozenTime ?? Date.now();
 
 	for (const cusPrice of cusProduct.customer_prices) {
 		const price = cusPrice.price;

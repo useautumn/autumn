@@ -12,9 +12,11 @@ export const cusProductToExistingUsages = ({
 	cusProduct,
 	entityId,
 }: {
-	cusProduct: FullCusProduct;
+	cusProduct?: FullCusProduct;
 	entityId?: string;
 }): ExistingUsages => {
+	if (!cusProduct) return {};
+
 	const cusEnts = cusProduct.customer_entitlements;
 
 	const existingUsages: Record<

@@ -24,7 +24,6 @@ export * from "./enums/WebhookEventType.js";
 export * from "./models/analyticsModels/actionEnums.js";
 export * from "./models/analyticsModels/actionTable.js";
 // Attach Models
-export * from "./models/attachModels/attachContext.js";
 export * from "./models/attachModels/attachEnums/AttachBranch.js";
 export * from "./models/attachModels/attachEnums/AttachConfig.js";
 export * from "./models/attachModels/attachEnums/AttachFunction.js";
@@ -99,7 +98,9 @@ export * from "./api/events/insights/query/insightsQueryBody.js";
 // Attach Function Response
 export * from "./models/attachModels/attachFunctionResponse.js";
 export * from "./models/billingModels/cusProductActions.js";
+export * from "./models/billingModels/existingRollovers.js";
 export * from "./models/billingModels/existingUsages.js";
+export * from "./models/billingModels/index.js";
 export * from "./models/billingModels/initFullCusProductContext.js";
 export * from "./models/billingModels/invoicingModels/lineItem.js";
 // Billing Models

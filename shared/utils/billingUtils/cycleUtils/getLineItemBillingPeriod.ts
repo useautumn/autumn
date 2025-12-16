@@ -1,5 +1,6 @@
 import type { BillingPeriod } from "../../../models/billingModels/invoicingModels/lineItemContext";
 import type { Price } from "../../../models/productModels/priceModels/priceModels";
+import { isOneOffPrice } from "../../productUtils/priceUtils/classifyPriceUtils";
 import { getCycleEnd } from "./getCycleEnd";
 import { getCycleStart } from "./getCycleStart";
 
@@ -11,7 +12,9 @@ export const getLineItemBillingPeriod = ({
 	anchor: number;
 	price: Price;
 	now: number;
-}): BillingPeriod => {
+}): BillingPeriod | undefined => {
+	if (isOneOffPrice(price)) return undefined;
+
 	const { interval, interval_count: intervalCount } = price.config;
 	return {
 		start: getCycleStart({

@@ -3,7 +3,7 @@ import type { HonoEnv } from "../../honoUtils/HonoEnv.js";
 import { handleAttach } from "./attach/handleAttach.js";
 import { handleCheckoutV2 } from "./checkout/handleCheckoutV2.js";
 import { handleSetupPayment } from "./handlers/handleSetupPayment.js";
-import { handleAttachV2 } from "./v2/attach/handleAttachV2.js";
+import { handleAttachV2 } from "./v2/handlers/handleAttachV2.js";
 
 export const billingRouter = new Hono<HonoEnv>();
 
