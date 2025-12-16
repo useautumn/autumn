@@ -3,11 +3,10 @@ import * as schemas from "./db/schema.js";
 export { schemas };
 
 export * from "./api/apiUtils.js";
-// API MODELS
-export * from "./api/models.js";
-
 // Cursor pagination utilities
 export * from "./api/common/cursorPaginationSchemas.js";
+// API MODELS
+export * from "./api/models.js";
 
 // API VERSIONING SYSTEM
 export * from "./api/versionUtils/versionUtils.js";
@@ -104,7 +103,7 @@ export * from "./api/events/aggregation/eventAggregationSchema.js";
 export * from "./api/events/insights/query/insightsQueryBody.js";
 
 // Event Log Models
-export * from "./api/events/log/eventLogSchema.js";
+export * from "./api/events/list/eventListSchema.js";
 
 // Attach Function Response
 export * from "./models/attachModels/attachFunctionResponse.js";

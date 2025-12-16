@@ -1,7 +1,7 @@
 import type {
 	ClickHouseResult,
-	EventLog,
-	EventLogQuery,
+	EventList,
+	EventListQuery,
 	RawEventFromClickHouse,
 } from "@autumn/shared";
 import { ErrCode, RecaseError } from "@autumn/shared";
@@ -14,10 +14,10 @@ import type { ClickHouseClient } from "@clickhouse/client";
 import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-export class EventLogService {
+export class EventListService {
 	private static transformRawEvents(
 		rawEvents: RawEventFromClickHouse[],
-	): EventLog[] {
+	): EventList[] {
 		return rawEvents.map((event) => {
 			let properties = {};
 			if (event.properties) {
@@ -142,7 +142,7 @@ export class EventLogService {
 		params,
 	}: {
 		ctx: AutumnContext;
-		params: EventLogQuery;
+		params: EventListQuery;
 	}) {
 		const { clickhouseClient, org, env } = ctx;
 		const { starting_after, limit, customer_id, feature_id, time_range } =
@@ -167,7 +167,7 @@ export class EventLogService {
 				: [feature_id]
 			: undefined;
 
-		const whereClause = EventLogService.buildWhereConditions({
+		const whereClause = EventListService.buildWhereConditions({
 			customerId: customer_id,
 			eventNames,
 			startDate: time_range?.start,
@@ -192,7 +192,7 @@ order by timestamp desc, id desc
 limit {limit:UInt32};
 `;
 
-		const queryParams = EventLogService.buildQueryParams({
+		const queryParams = EventListService.buildQueryParams({
 			orgId: org?.id,
 			env,
 			customerId: customer_id,
@@ -213,7 +213,7 @@ limit {limit:UInt32};
 			(await result.json()) as ClickHouseResult<RawEventFromClickHouse>;
 		const rawEvents = resultJson.data;
 
-		const events = EventLogService.transformRawEvents(rawEvents);
+		const events = EventListService.transformRawEvents(rawEvents);
 
 		const hasMore = events.length > limit;
 		const list = hasMore ? events.slice(0, limit) : events;

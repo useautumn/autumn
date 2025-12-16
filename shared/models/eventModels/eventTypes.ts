@@ -75,7 +75,7 @@ export type GroupedAggregatedRow = {
 
 export type AggregatedEventRow = FlatAggregatedRow | GroupedAggregatedRow;
 
-export type EventLogParams = {
+export type EventListParams = {
 	customer_id: string;
 	feature_id: string | string[];
 	time_range: { start: number; end: number };
