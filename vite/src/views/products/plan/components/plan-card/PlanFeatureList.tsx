@@ -75,10 +75,10 @@ export const PlanFeatureList = ({
 					{isCreatingNewFeature ? (
 						<DummyPlanFeatureRow />
 					) : (
-						<AddFeatureRow
-							onClick={handleAddFeature}
-							disabled={isAddButtonDisabled}
-						/>
+					<AddFeatureRow
+						onClick={handleAddFeature}
+						disabled={isAddButtonDisabled}
+					/>
 					)}
 				</div>
 			</div>
@@ -126,10 +126,10 @@ export const PlanFeatureList = ({
 				(isCreatingNewFeature ? (
 					<DummyPlanFeatureRow />
 				) : (
-					<AddFeatureRow
-						onClick={handleAddFeature}
-						disabled={isAddButtonDisabled}
-					/>
+				<AddFeatureRow
+					onClick={handleAddFeature}
+					disabled={isAddButtonDisabled}
+				/>
 				))}
 		</div>
 	);
