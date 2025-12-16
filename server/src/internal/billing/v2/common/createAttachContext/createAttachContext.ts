@@ -2,7 +2,6 @@ import {
 	type AttachBodyV1,
 	type AttachContext,
 	type CusProductActions,
-	type FullCustomer,
 	RELEVANT_STATUSES,
 	resolveAttachActions,
 } from "@autumn/shared";
@@ -100,6 +99,7 @@ export const createAttachContext = async ({
 
 		sub,
 		testClockFrozenTime,
+		paymentMethod,
 	};
 
 	const actions = resolveAttachActions({
@@ -151,43 +151,4 @@ export const createAttachContext = async ({
 	// 7. If expiring a product, need to figure out carrying usage over
 	// 8. If expiring a product, need to figure out carrying rollovers over
 	// 9. Updating one time product?
-
-	// NEXT: execute the actions
-	const applyCusProductActions = async ({
-		ctx,
-		fullCus,
-		cusProductActions,
-	}: {
-		ctx: AutumnContext;
-		fullCus: FullCustomer;
-		cusProductActions: CusProductActions;
-	}) => {
-		// // 1. Execute new product actions
-		// for (const newProductAction of newProductActions) {
-		// 	// await executeNewProductAction({
-		// 	// 	ctx,
-		// 	// 	newProductAction,
-		// 	// });
-		// }
-		// // 2. Execute active cus product action
-		// if (ongoingCusProductAction) {
-		// 	await executeActiveCusProductAction({
-		// 		ctx,
-		// 		ongoingCusProductAction,
-		// 	});
-		// }
-		// // 3. Execute scheduled cus product action
-		// if (scheduledCusProductAction) {
-		// 	await executeScheduledCusProductAction({
-		// 		ctx,
-		// 		scheduledCusProductAction,
-		// 	});
-		// }
-	};
-
-	await applyCusProductActions({
-		ctx,
-		fullCus,
-		cusProductActions: actions,
-	});
 };

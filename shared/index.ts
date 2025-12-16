@@ -104,6 +104,8 @@ export * from "./models/billingModels/initFullCusProductContext.js";
 export * from "./models/billingModels/invoicingModels/lineItem.js";
 // Billing Models
 export * from "./models/billingModels/newProductAction.js";
+export * from "./models/billingModels/stripeAdapterModels/stripeDiscountWithCoupon.js";
+export * from "./models/billingModels/stripeAdapterModels/stripeItemSpec.js";
 export * from "./models/migrationModels/migrationErrorTable.js";
 export * from "./models/migrationModels/migrationJobTable.js";
 export * from "./models/migrationModels/migrationModels.js";

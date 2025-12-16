@@ -28,7 +28,12 @@ export const getAttachSub = async ({
 
 	if (!subId) return { sub: undefined };
 
-	const sub = await stripeCli.subscriptions.retrieve(subId);
+	const sub = await stripeCli.subscriptions.retrieve(subId, {
+		expand: [
+			"discounts.source.coupon.applies_to",
+			"latest_invoice.lines.data.discount_amounts",
+		],
+	});
 
 	return { sub };
 };

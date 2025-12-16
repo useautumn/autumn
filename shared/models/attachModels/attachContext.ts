@@ -16,6 +16,7 @@ export type AttachContext = {
 	sub?: Stripe.Subscription;
 	schedule?: Stripe.SubscriptionSchedule;
 	testClockFrozenTime?: number; // in milliseconds since epoch
+	paymentMethod?: Stripe.PaymentMethod;
 };
 
 // stripeCli: Stripe;

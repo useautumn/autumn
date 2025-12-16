@@ -16,9 +16,9 @@ export const applyExistingUsages = ({
 	existingUsages?: ExistingUsages;
 	entities: Entity[];
 }) => {
-	console.log(
-		`applying existing usages to new cus product: ${cusProduct.product.name}`,
-	);
+	// console.log(
+	// 	`applying existing usages to new cus product: ${cusProduct.product.name}`,
+	// );
 
 	// 1. Merge entities with existing usages
 	const mergedExistingUsages = mergeEntitiesWithExistingUsages({
@@ -29,10 +29,10 @@ export const applyExistingUsages = ({
 	for (const [internalFeatureId, existingUsage] of Object.entries(
 		mergedExistingUsages,
 	)) {
-		console.log(
-			`Applying existing usage for feature: ${internalFeatureId}, usage: `,
-			existingUsage,
-		);
+		// console.log(
+		// 	`Applying existing usage for feature: ${internalFeatureId}, usage: `,
+		// 	existingUsage,
+		// );
 
 		const cusEnts = cusProductsToCusEnts({
 			cusProducts: [cusProduct],

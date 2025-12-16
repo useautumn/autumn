@@ -138,6 +138,16 @@ export const createReward = async ({
 		);
 
 		reward.discount_config!.price_ids = usagePrices?.map((price) => price.id);
+	} else if (productId) {
+		const fullProduct = await ProductService.getFull({
+			db,
+			orgId,
+			env,
+			idOrInternalId: productId,
+		});
+
+		reward.discount_config!.price_ids =
+			fullProduct?.prices.map((p) => p.id) ?? [];
 	}
 
 	try {

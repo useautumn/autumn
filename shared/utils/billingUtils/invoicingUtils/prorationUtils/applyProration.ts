@@ -14,7 +14,7 @@ export const applyProration = ({
 
 	const denom = new Decimal(end).minus(start);
 
-	const num = new Decimal(now).minus(start);
+	const num = new Decimal(end).minus(now);
 
 	return num.div(denom).mul(amount).toNumber();
 };

@@ -142,3 +142,17 @@ export const isProductAlreadyEnabled = ({
 		return false;
 	});
 };
+
+export const filterCusProductsBySubId = ({
+	cusProducts,
+	subId,
+}: {
+	cusProducts: FullCusProduct[];
+	subId?: string;
+}): FullCusProduct[] => {
+	if (!subId) return [];
+
+	return cusProducts.filter((cp: FullCusProduct) =>
+		cp.subscription_ids?.includes(subId),
+	);
+};
