@@ -44,9 +44,16 @@ export const DummyPlanFeatureRow = () => {
 		return <BoxArrowDownIcon className="text-green-500" />;
 	};
 
+	// Get placeholder name based on feature type
+	const getPlaceholderName = () => {
+		if (isBoolean) return "Premium Analytics";
+		if (isNonConsumable) return "Seats";
+		return "Chat Messages";
+	};
+
 	// Build display text based on feature type
 	const getDisplayText = () => {
-		const name = hasName ? featureName : "Chat Messages";
+		const name = hasName ? featureName : getPlaceholderName();
 
 		if (isBoolean) {
 			return { primary: name, secondary: "" };
@@ -81,9 +88,7 @@ export const DummyPlanFeatureRow = () => {
 				</div>
 
 				<p className="whitespace-nowrap truncate flex-1 min-w-0">
-                    <span className="text-body-secondary">
-                        eg, {" "}
-                    </span>
+					<span className="text-body-secondary">eg, </span>
 					<span className={cn("text-body", !hasName && "text-t4!")}>
 						{displayText.primary}
 					</span>
