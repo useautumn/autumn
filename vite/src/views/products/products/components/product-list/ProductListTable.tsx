@@ -126,84 +126,83 @@ export function ProductListTable() {
 		<div className="flex flex-col gap-8">
 			{/* Base Plans Table */}
 			{showTable ? (
-				<div>
-					<Table.Provider
-						config={{
-							table: baseTable,
-							numberOfColumns: columns.length,
-							enableSorting,
-							isLoading: false,
-							onRowClick: handleRowClick,
-							emptyStateText: "You haven't archived any plans yet.",
-							rowClassName: "h-10",
-						}}
-					>
-						<Table.Toolbar>
-							<div className="flex w-full justify-between items-center">
-								<Table.Heading>
-									<CubeIcon size={16} weight="fill" className="text-subtle" />
-									{isArchivedMode ? "Archived Plans" : "Base Plans"}
-								</Table.Heading>
-								<Table.Actions>
-									<div className="flex w-full justify-between items-center">
-										<div className="flex items-center gap-2">
-											{!isArchivedMode && <ProductListCreateButton />}
-											<ProductListMenuButton />
+				<>
+					<div>
+						<Table.Provider
+							config={{
+								table: baseTable,
+								numberOfColumns: columns.length,
+								enableSorting,
+								isLoading: false,
+								onRowClick: handleRowClick,
+								emptyStateText: "You haven't archived any plans yet.",
+								rowClassName: "h-10",
+							}}
+						>
+							<Table.Toolbar>
+								<div className="flex w-full justify-between items-center">
+									<Table.Heading>
+										<CubeIcon size={16} weight="fill" className="text-subtle" />
+										{isArchivedMode ? "Archived Plans" : "Base Plans"}
+									</Table.Heading>
+									<Table.Actions>
+										<div className="flex w-full justify-between items-center">
+											<div className="flex items-center gap-2">
+												{!isArchivedMode && <ProductListCreateButton />}
+												<ProductListMenuButton />
+											</div>
 										</div>
-									</div>
-								</Table.Actions>
+									</Table.Actions>
+								</div>
+							</Table.Toolbar>
+							<div>
+								<Table.Container>
+									<Table.Content>
+										<Table.Header />
+										<Table.Body />
+									</Table.Content>
+								</Table.Container>
 							</div>
-						</Table.Toolbar>
-						<div>
-							<Table.Container>
-								<Table.Content>
-									<Table.Header />
-									<Table.Body />
-								</Table.Content>
-							</Table.Container>
-						</div>
-					</Table.Provider>
-				</div>
+						</Table.Provider>
+					</div>
+					<div>
+						<Table.Provider
+							config={{
+								table: addOnTable,
+								numberOfColumns: columns.length,
+								enableSorting,
+								isLoading: false,
+								onRowClick: handleRowClick,
+								emptyStateText:
+									"Add-on plans can be purchased alongside base plans for additional features or top-ups.",
+								rowClassName: "h-10",
+							}}
+						>
+							<Table.Toolbar>
+								<div className="flex w-full justify-between items-center">
+									<Table.Heading>
+										<CubeIcon size={16} weight="fill" className="text-subtle" />
+										Add-on Plans
+									</Table.Heading>
+									<Table.Actions>
+										<AddOnPlanCreateButton />
+									</Table.Actions>
+								</div>
+							</Table.Toolbar>
+							<div>
+								<Table.Container>
+									<Table.Content>
+										<Table.Body />
+									</Table.Content>
+								</Table.Container>
+							</div>
+						</Table.Provider>
+					</div>
+				</>
 			) : (
 				<EmptyState type="plans" actionButton={<ProductListCreateButton />} />
 			)}
 			{/* Add-on Plans Table */}
-			{!isArchivedMode && (
-				<div>
-					<Table.Provider
-						config={{
-							table: addOnTable,
-							numberOfColumns: columns.length,
-							enableSorting,
-							isLoading: false,
-							onRowClick: handleRowClick,
-							emptyStateText:
-								"Add-on plans can be purchased alongside base plans for additional features or top-ups.",
-							rowClassName: "h-10",
-						}}
-					>
-						<Table.Toolbar>
-							<div className="flex w-full justify-between items-center">
-								<Table.Heading>
-									<CubeIcon size={16} weight="fill" className="text-subtle" />
-									Add-on Plans
-								</Table.Heading>
-								<Table.Actions>
-									<AddOnPlanCreateButton />
-								</Table.Actions>
-							</div>
-						</Table.Toolbar>
-						<div>
-							<Table.Container>
-								<Table.Content>
-									{/* <Table.Header /> */}
-									<Table.Body />
-								</Table.Content>
-							</Table.Container>
-						</div>
-					</Table.Provider>
-				</div>
-			)}
 		</div>
 	);
 }
