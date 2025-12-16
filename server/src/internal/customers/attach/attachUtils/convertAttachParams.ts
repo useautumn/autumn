@@ -105,9 +105,11 @@ export const getSubForAttach = async ({
 export const getCustomerSub = async ({
 	attachParams,
 	onlySubId,
+	targetSubId,
 }: {
 	attachParams: AttachParams;
 	onlySubId?: boolean;
+	targetSubId?: string;
 }) => {
 	const { stripeCli } = attachParams;
 	const fullCus = attachParams.customer;
@@ -118,6 +120,10 @@ export const getCustomerSub = async ({
 	const targetProductId = attachParams.products[0].id;
 
 	cusProducts.sort((a, b) => {
+		if (targetSubId) {
+			if (a.subscription_ids && a.subscription_ids.includes(targetSubId)) return -1;
+			if (b.subscription_ids && b.subscription_ids.includes(targetSubId)) return 1;
+		}
 		// 1. Check same group
 		const aGroupMatches = a.product.group === targetGroup;
 		const bGroupMatches = b.product.group === targetGroup;
