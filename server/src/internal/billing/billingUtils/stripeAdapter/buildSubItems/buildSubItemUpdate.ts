@@ -1,5 +1,4 @@
 import {
-	type AttachContext,
 	type FullCusProduct,
 	filterCusProductsBySubId,
 	isConsumablePrice,
@@ -8,7 +7,8 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
-import { cusProductToSubItems } from "../cusProductToSubItems";
+import type { AttachContext } from "../../../v2/types";
+import { cusProductToStripeItemSpecs } from "../cusProductToStripeItemSpecs";
 
 /**
  * Initialize targetItems with current sub state.
@@ -178,30 +178,30 @@ export const buildSubItemUpdate = ({
 	ongoingCusProduct?: FullCusProduct;
 	newCusProducts?: FullCusProduct[];
 }) => {
-	const { fullCus, sub } = attachContext;
-	const currentItems = sub?.items.data || [];
+	const { fullCus, stripeSub } = attachContext;
+	const currentItems = stripeSub?.items.data || [];
 
 	const itemsToAdd =
 		newCusProducts?.flatMap((cusProduct) =>
-			cusProductToSubItems({
+			cusProductToStripeItemSpecs({
 				ctx,
 				cusProduct,
-				attachContext,
+				fromVercel: attachContext.paymentMethod?.type === "custom",
 			}),
 		) ?? [];
 
 	const itemsToRemove = ongoingCusProduct
-		? cusProductToSubItems({
+		? cusProductToStripeItemSpecs({
 				ctx,
 				cusProduct: ongoingCusProduct,
-				attachContext,
+				fromVercel: attachContext.paymentMethod?.type === "custom", // TODO:
 			})
 		: [];
 
 	// Cus products that will remain after operation (excludes old, includes existing + new)
 	const existingCusProducts = filterCusProductsBySubId({
 		cusProducts: fullCus.customer_products,
-		subId: sub?.id,
+		subId: stripeSub?.id,
 	})
 		.filter((cp: FullCusProduct) => cp.id !== ongoingCusProduct?.id)
 		.filter((cp: FullCusProduct) => isCusProductOngoing({ cusProduct: cp }));

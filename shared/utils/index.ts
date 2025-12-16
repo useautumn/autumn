@@ -3,11 +3,6 @@
 export * from "../models/billingModels/ongoingCusProductAction";
 export * from "../models/billingModels/scheduledCusProductAction";
 
-export * from "./billingUtils/resolveAttachUtils/getUncancelAttachActions.js";
-export * from "./billingUtils/resolveAttachUtils/resolveAttachActions.js";
-export * from "./billingUtils/resolveAttachUtils/resolveNewProductTiming.js";
-export * from "./billingUtils/resolveAttachUtils/resolveOngoingCusProductAction.js";
-export * from "./billingUtils/resolveAttachUtils/resolveScheduledCusProductAction.js";
 // Common utils
 export * from "./common/formatUtils/index.js";
 export * from "./common/unixUtils.js";
@@ -53,6 +48,7 @@ export * from "./featureUtils.js";
 // INTERVAL UTILS
 export * from "./intervalUtils/addBillingInterval.js";
 export * from "./intervalUtils/priceIntervalUtils.js";
+export * from "./intervalUtils/priceIntervalUtils.js";
 // Org utils
 export * from "./orgUtils/convertOrgUtils.js";
 export * from "./productUtils/classifyProductUtils.js";
@@ -61,6 +57,7 @@ export * from "./productUtils/convertUtils.js";
 export * from "./productUtils/entUtils/classifyEntUtils.js";
 export * from "./productUtils/entUtils/entUtils.js";
 export * from "./productUtils/entUtils/formatEntUtils.js";
+export * from "./productUtils/isProductUpgrade.js";
 export * from "./productUtils/priceUtils/classifyPriceUtils.js";
 export * from "./productUtils/priceUtils/convertAmountUtils.js";
 export * from "./productUtils/priceUtils/formatPriceUtils.js";

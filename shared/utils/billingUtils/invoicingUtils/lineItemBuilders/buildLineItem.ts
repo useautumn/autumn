@@ -24,7 +24,7 @@ export const buildLineItem = ({
 	shouldProrate?: boolean;
 }): LineItem => {
 	// 1. Apply proration if needed
-	if (shouldProrate) {
+	if (shouldProrate && context.billingPeriod) {
 		amount = applyProration({
 			now: context.now,
 			billingPeriod: context.billingPeriod,

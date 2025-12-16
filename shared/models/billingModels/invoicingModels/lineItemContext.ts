@@ -14,7 +14,7 @@ export const LineItemContextSchema = z.object({
 	feature: FeatureSchema.optional(),
 
 	currency: z.string(),
-	billingPeriod: BillingPeriodSchema,
+	billingPeriod: BillingPeriodSchema.optional(), // undefined for one off prices
 	direction: z.enum(["charge", "refund"]),
 	now: z.number(),
 	billingTiming: z.enum(["in_arrear", "in_advance"]),

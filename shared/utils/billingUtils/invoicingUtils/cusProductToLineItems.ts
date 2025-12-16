@@ -29,20 +29,18 @@ export type LineItemDirection = "charge" | "refund";
  */
 export const cusProductToLineItems = ({
 	cusProduct,
-	testClockFrozenTime,
+	now,
 	billingCycleAnchor,
 	direction,
 	org,
 }: {
 	cusProduct: FullCusProduct;
-	testClockFrozenTime?: number;
+	now: number;
 	billingCycleAnchor: number;
 	direction: "charge" | "refund";
 	org: Organization;
 }): LineItem[] => {
 	let lineItems: LineItem[] = [];
-
-	const now = testClockFrozenTime ?? Date.now();
 
 	for (const cusPrice of cusProduct.customer_prices) {
 		const price = cusPrice.price;

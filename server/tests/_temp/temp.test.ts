@@ -11,8 +11,6 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
-	constructArrearItem,
-	constructArrearProratedItem,
 	constructFeatureItem,
 	constructPrepaidItem,
 } from "@/utils/scriptUtils/constructItem.js";
@@ -21,6 +19,7 @@ import {
 	constructRawProduct,
 } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { constructPriceItem } from "../../src/internal/products/product-items/productItemUtils";
 import { initProductsV0 } from "../../src/utils/scriptUtils/testUtils/initProductsV0";
 
 const freeProd = constructProduct({
@@ -38,26 +37,30 @@ const pro = constructProduct({
 	type: "pro",
 	isDefault: false,
 	items: [
-		constructArrearProratedItem({
-			featureId: TestFeature.Users,
-			includedUsage: 1,
-			pricePerUnit: 10,
-		}),
-		constructArrearProratedItem({
-			featureId: TestFeature.Workflows,
-			includedUsage: 1,
-			pricePerUnit: 25,
-		}),
-		constructArrearItem({
-			featureId: TestFeature.Words,
-			billingUnits: 1,
-			price: 0.1,
-		}),
-		constructPrepaidItem({
+		constructFeatureItem({
 			featureId: TestFeature.Messages,
-			billingUnits: 100,
-			price: 8,
+			includedUsage: 300,
 		}),
+		// constructArrearProratedItem({
+		// 	featureId: TestFeature.Users,
+		// 	includedUsage: 1,
+		// 	pricePerUnit: 10,
+		// }),
+		// constructArrearProratedItem({
+		// 	featureId: TestFeature.Workflows,
+		// 	includedUsage: 1,
+		// 	pricePerUnit: 25,
+		// }),
+		// constructArrearItem({
+		// 	featureId: TestFeature.Words,
+		// 	billingUnits: 1,
+		// 	price: 0.1,
+		// }),
+		// constructPrepaidItem({
+		// 	featureId: TestFeature.Messages,
+		// 	billingUnits: 100,
+		// 	price: 8,
+		// }),
 	],
 	// intervalCount: 2,
 });
@@ -66,22 +69,26 @@ const premium = constructProduct({
 	type: "premium",
 	isDefault: false,
 	items: [
-		constructArrearItem({
-			featureId: TestFeature.Words,
-			billingUnits: 1,
-			price: 0.1,
-		}),
-
-		constructArrearProratedItem({
-			featureId: TestFeature.Users,
-			includedUsage: 1,
-			pricePerUnit: 15,
-		}),
-		constructPrepaidItem({
+		constructFeatureItem({
 			featureId: TestFeature.Messages,
-			billingUnits: 100,
-			price: 12,
+			includedUsage: 500,
 		}),
+		// constructArrearItem({
+		// 	featureId: TestFeature.Words,
+		// 	billingUnits: 1,
+		// 	price: 0.1,
+		// }),
+
+		// constructArrearProratedItem({
+		// 	featureId: TestFeature.Users,
+		// 	includedUsage: 1,
+		// 	pricePerUnit: 15,
+		// }),
+		// constructPrepaidItem({
+		// 	featureId: TestFeature.Messages,
+		// 	billingUnits: 100,
+		// 	price: 12,
+		// }),
 	],
 	// intervalCount: 2,
 });
@@ -105,6 +112,21 @@ const oneOffAddOn = constructRawProduct({
 			billingUnits: 100,
 			price: 10,
 			isOneOff: true,
+		}),
+	],
+	isAddOn: true,
+});
+
+const oneOffCredits = constructRawProduct({
+	id: "oneOffCredits",
+	items: [
+		constructPriceItem({
+			interval: null,
+			price: 10,
+		}),
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 100,
 		}),
 	],
 	isAddOn: true,
@@ -165,7 +187,14 @@ describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [freeProd, pro, premium, freeAddOn, monthlyAddOn],
+			products: [
+				freeProd,
+				pro,
+				premium,
+				freeAddOn,
+				monthlyAddOn,
+				oneOffCredits,
+			],
 			prefix: customerId,
 		});
 
@@ -178,31 +207,24 @@ describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 			// productId: pro.id,
 		});
 
-		await autumnV1.attach({
-			customer_id: customerId,
-			product_id: pro.id,
-			options: [
-				{
-					feature_id: TestFeature.Messages,
-					quantity: 300,
-				},
-			],
-			// reward: rewardId,
-		});
+		// await autumnV1.attach({
+		// 	customer_id: customerId,
+		// 	product_id: pro.id,
+		// });
 
-		await autumnV1.entities.create(customerId, entities);
+		// await autumnV1.entities.create(customerId, entities);
 
-		await autumnV1.track({
-			customer_id: customerId,
-			feature_id: TestFeature.Workflows,
-			value: 4,
-		});
+		// await autumnV1.track({
+		// 	customer_id: customerId,
+		// 	feature_id: TestFeature.Workflows,
+		// 	value: 4,
+		// });
 
-		await autumnV1.track({
-			customer_id: customerId,
-			feature_id: TestFeature.Words,
-			value: 1000,
-		});
+		// await autumnV1.track({
+		// 	customer_id: customerId,
+		// 	feature_id: TestFeature.Words,
+		// 	value: 1000,
+		// });
 
 		// const customer = await CusService.getFull({
 		// 	db: ctx.db,

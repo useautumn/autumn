@@ -17,3 +17,4 @@ export const createMockProduct = () => ({
 	archived: false,
 });
 
+

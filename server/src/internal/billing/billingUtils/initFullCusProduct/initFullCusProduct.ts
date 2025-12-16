@@ -11,7 +11,7 @@ import { initCusEntitlement } from "./initCusEntitlementV2/initCusEntitlement";
 import { initCusPrice } from "./initCusPrice";
 import { initCusProduct } from "./initCusProduct";
 
-export const initFullCusProduct = async ({
+export const initFullCusProduct = ({
 	ctx,
 	fullCus,
 	initContext,
@@ -21,7 +21,7 @@ export const initFullCusProduct = async ({
 	fullCus: FullCustomer;
 	initContext: InitFullCusProductContext;
 	initOptions?: InitFullCusProductOptions;
-}): Promise<FullCusProduct> => {
+}): FullCusProduct => {
 	const { product } = initContext;
 
 	const cusProductId = generateId("cus_prod");
