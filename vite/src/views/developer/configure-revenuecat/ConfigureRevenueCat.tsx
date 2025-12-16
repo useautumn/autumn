@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useRevenueCatQuery } from "@/hooks/queries/revcat/useRevenueCatQuery";
@@ -94,31 +94,40 @@ export const ConfigureRevenueCat = () => {
 			? revenueCatConfig?.project_id
 			: revenueCatConfig?.sandbox_project_id;
 
-	const status = {
-		description: revenueCatConfig?.connected
-			? "Your RevenueCat account is connected."
-			: "Connect your RevenueCat account to start tracking subscriptions.",
-	};
+	const statusDescription = revenueCatConfig?.connected
+		? "Your RevenueCat account is connected."
+		: "Connect your RevenueCat account to start tracking subscriptions.";
 
-	return !isLoadingRevenueCatAccount ? (
+	const handleApiKeyClick = useCallback(() => setShowApiKeyDialog(true), []);
+	const handleProjectIdClick = useCallback(
+		() => setShowProjectIdDialog(true),
+		[],
+	);
+	const handleMapProductsClick = useCallback(() => {
+		if (!currentApiKey) {
+			toast.error("You need to link your RevenueCat API Key first");
+			return;
+		}
+		setShowMappingSheet(true);
+	}, [currentApiKey]);
+
+	if (isLoadingRevenueCatAccount) {
+		return <LoadingScreen />;
+	}
+
+	return (
 		<div className="flex flex-col gap-4">
 			<div className="px-10 max-w-[600px] flex flex-col gap-4">
 				<RevenueCatConnectionCard
 					isLoading={isLoadingRevenueCatAccount}
-					statusDescription={status.description}
+					statusDescription={statusDescription}
 					dashboardUrl={dashboardUrl}
 					currentApiKey={currentApiKey}
 					currentProjectId={currentProjectId}
 					env={env}
-					onApiKeyClick={() => setShowApiKeyDialog(true)}
-					onProjectIdClick={() => setShowProjectIdDialog(true)}
-					onMapProductsClick={() => {
-						if (!currentApiKey) {
-							toast.error("You need to link your RevenueCat API Key first");
-							return;
-						}
-						setShowMappingSheet(true);
-					}}
+					onApiKeyClick={handleApiKeyClick}
+					onProjectIdClick={handleProjectIdClick}
+					onMapProductsClick={handleMapProductsClick}
 				/>
 
 				<RevenueCatWebhookSecret
@@ -156,7 +165,5 @@ export const ConfigureRevenueCat = () => {
 				onOpenChange={setShowMappingSheet}
 			/>
 		</div>
-	) : (
-		<LoadingScreen />
 	);
 };

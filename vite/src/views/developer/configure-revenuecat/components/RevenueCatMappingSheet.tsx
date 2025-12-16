@@ -1,6 +1,6 @@
 import { isFeaturePriceItem } from "@autumn/shared";
 import { X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
@@ -35,29 +35,26 @@ interface RCProduct {
 	name: string;
 }
 
-function MappingRow({
+const MappingRow = memo(function MappingRow({
 	mapping,
 	rcProducts,
-	getMappedRevenueCatProducts,
+	mappedRevenueCatProductIds,
 	onAddProduct,
 	onRemoveProduct,
 }: {
 	mapping: ProductMapping;
 	rcProducts: RCProduct[];
-	getMappedRevenueCatProducts: (excludeAutumnProductId?: string) => string[];
+	mappedRevenueCatProductIds: string[];
 	onAddProduct: (autumnProductId: string, revenueCatProductId: string) => void;
 	onRemoveProduct: (
 		autumnProductId: string,
 		revenueCatProductId: string,
 	) => void;
 }) {
-	const mappedRevenueCatProducts = getMappedRevenueCatProducts(
-		mapping.autumnProductId,
-	);
 	const selectedProducts = mapping.revenueCatProductIds;
 	const availableProducts = rcProducts.filter(
 		(p) =>
-			!mappedRevenueCatProducts.includes(p.id) &&
+			!mappedRevenueCatProductIds.includes(p.id) &&
 			!selectedProducts.includes(p.id),
 	);
 	const hasNoRcProducts = rcProducts.length === 0;
@@ -126,108 +123,102 @@ function MappingRow({
 			)}
 		</div>
 	);
-}
+});
 
 export function RevenueCatMappingSheet({
 	open,
 	onOpenChange,
 }: RevenueCatMappingSheetProps) {
-	const { products } = useProductsQuery({
-		filter(product) {
-			const isPrepaid = product.items.some(isFeaturePriceItem);
-			return !isPrepaid;
-		},
-	});
+	const { products: allProducts } = useProductsQuery();
 	const { products: rcProducts } = useRCProducts();
+
+	// Filter out prepaid products locally with useMemo to avoid infinite loops
+	const products = useMemo(
+		() => allProducts.filter((p) => !p.items.some(isFeaturePriceItem)),
+		[allProducts],
+	);
 	const {
 		mappings: existingMappings,
 		saveMappings,
 		isSaving,
 	} = useRCMappings();
 	const [mappings, setMappings] = useState<ProductMapping[]>([]);
-	const [initialized, setInitialized] = useState(false);
+	const initializedRef = useRef(false);
 
+	// Initialize mappings only once when sheet opens
 	useEffect(() => {
-		// Only initialize once when opening the sheet
-		if (open && products && !initialized) {
-			// Group products by ID and get the latest version of each
-			const productMap = new Map<string, (typeof products)[0]>();
-
-			for (const product of products) {
-				const existing = productMap.get(product.id);
-				if (!existing || product.version > existing.version) {
-					productMap.set(product.id, product);
-				}
-			}
-
-			const latestProducts = Array.from(productMap.values());
-			const initialMappings = latestProducts.map((product) => {
-				// Find existing mapping for this product
-				const existingMapping = existingMappings.find(
-					(m) => m.autumn_product_id === product.id,
-				);
-				return {
-					autumnProductId: product.id,
-					autumnProductName: product.name,
-					revenueCatProductIds: existingMapping?.revenuecat_product_ids || [],
-				};
-			});
-			setMappings(initialMappings);
-			setInitialized(true);
-		}
-
-		// Reset initialized flag when sheet closes
 		if (!open) {
-			setInitialized(false);
+			initializedRef.current = false;
+			return;
 		}
-	}, [open, products, existingMappings, initialized]);
 
-	const handleAddProduct = (
-		autumnProductId: string,
-		revenueCatProductId: string,
-	) => {
-		setMappings((prev) =>
-			prev.map((mapping) =>
-				mapping.autumnProductId === autumnProductId
-					? {
-							...mapping,
-							revenueCatProductIds: [
-								...mapping.revenueCatProductIds,
-								revenueCatProductId,
-							],
-						}
-					: mapping,
-			),
-		);
-	};
+		if (initializedRef.current || !products || products.length === 0) {
+			return;
+		}
 
-	const handleRemoveProduct = (
-		autumnProductId: string,
-		revenueCatProductId: string,
-	) => {
-		setMappings((prev) =>
-			prev.map((mapping) =>
-				mapping.autumnProductId === autumnProductId
-					? {
-							...mapping,
-							revenueCatProductIds: mapping.revenueCatProductIds.filter(
-								(id) => id !== revenueCatProductId,
-							),
-						}
-					: mapping,
-			),
-		);
-	};
+		// Group products by ID and get the latest version of each
+		const productMap = new Map<string, (typeof products)[0]>();
+		for (const product of products) {
+			const existing = productMap.get(product.id);
+			if (!existing || product.version > existing.version) {
+				productMap.set(product.id, product);
+			}
+		}
 
-	// Get already mapped RevenueCat products (flatten all arrays)
-	const getMappedRevenueCatProducts = (excludeAutumnProductId?: string) => {
-		return mappings
-			.filter((m) => m.autumnProductId !== excludeAutumnProductId)
-			.flatMap((m) => m.revenueCatProductIds);
-	};
+		const latestProducts = Array.from(productMap.values());
+		const initialMappings = latestProducts.map((product) => {
+			const existingMapping = existingMappings.find(
+				(m) => m.autumn_product_id === product.id,
+			);
+			return {
+				autumnProductId: product.id,
+				autumnProductName: product.name,
+				revenueCatProductIds: existingMapping?.revenuecat_product_ids || [],
+			};
+		});
 
-	const handleSaveCallback = async () => {
-		// Check for duplicate RevenueCat products across all mappings
+		setMappings(initialMappings);
+		initializedRef.current = true;
+	}, [open, products, existingMappings]);
+
+	const handleAddProduct = useCallback(
+		(autumnProductId: string, revenueCatProductId: string) => {
+			setMappings((prev) =>
+				prev.map((mapping) =>
+					mapping.autumnProductId === autumnProductId
+						? {
+								...mapping,
+								revenueCatProductIds: [
+									...mapping.revenueCatProductIds,
+									revenueCatProductId,
+								],
+							}
+						: mapping,
+				),
+			);
+		},
+		[],
+	);
+
+	const handleRemoveProduct = useCallback(
+		(autumnProductId: string, revenueCatProductId: string) => {
+			setMappings((prev) =>
+				prev.map((mapping) =>
+					mapping.autumnProductId === autumnProductId
+						? {
+								...mapping,
+								revenueCatProductIds: mapping.revenueCatProductIds.filter(
+									(id) => id !== revenueCatProductId,
+								),
+							}
+						: mapping,
+				),
+			);
+		},
+		[],
+	);
+
+	const handleSave = useCallback(async () => {
 		const allRcProductIds = mappings.flatMap((m) => m.revenueCatProductIds);
 		const duplicateRc = allRcProductIds.filter(
 			(id, idx) => allRcProductIds.indexOf(id) !== idx,
@@ -250,11 +241,21 @@ export function RevenueCatMappingSheet({
 		} catch (_error) {
 			// Error handled by hook
 		}
-	};
+	}, [mappings, saveMappings, onOpenChange]);
 
-	const handleCancel = () => {
+	const handleCancel = useCallback(() => {
 		onOpenChange(false);
-	};
+	}, [onOpenChange]);
+
+	// Compute mapped product IDs for each row - memoized per mapping
+	const getMappedIdsForProduct = useCallback(
+		(excludeAutumnProductId: string) => {
+			return mappings
+				.filter((m) => m.autumnProductId !== excludeAutumnProductId)
+				.flatMap((m) => m.revenueCatProductIds);
+		},
+		[mappings],
+	);
 
 	return (
 		<Sheet open={open} onOpenChange={onOpenChange}>
@@ -277,7 +278,9 @@ export function RevenueCatMappingSheet({
 									key={mapping.autumnProductId}
 									mapping={mapping}
 									rcProducts={rcProducts}
-									getMappedRevenueCatProducts={getMappedRevenueCatProducts}
+									mappedRevenueCatProductIds={getMappedIdsForProduct(
+										mapping.autumnProductId,
+									)}
 									onAddProduct={handleAddProduct}
 									onRemoveProduct={handleRemoveProduct}
 								/>
@@ -297,7 +300,7 @@ export function RevenueCatMappingSheet({
 					</ShortcutButton>
 					<ShortcutButton
 						className="w-full"
-						onClick={handleSaveCallback}
+						onClick={handleSave}
 						metaShortcut="enter"
 						isLoading={isSaving}
 					>
