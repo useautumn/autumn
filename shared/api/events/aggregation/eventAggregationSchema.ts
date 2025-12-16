@@ -12,6 +12,10 @@ export const RangeEnum = z.enum([
 
 export type RangeEnum = z.infer<typeof RangeEnum>;
 
+export const BILLING_CYCLE_INTERVALS = ["1bc", "3bc", "last_cycle"] as const;
+
+export type BillingCycleIntervalEnum = (typeof BILLING_CYCLE_INTERVALS)[number];
+
 export const BinSizeEnum = z.enum(["day", "hour"]).default("day");
 
 export type BinSizeEnum = z.infer<typeof BinSizeEnum>;

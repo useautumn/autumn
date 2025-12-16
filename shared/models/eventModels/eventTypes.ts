@@ -1,8 +1,17 @@
 import type { BinSizeEnum, FullCustomer, RangeEnum } from "@autumn/shared";
 
-export type ClickHouseResult = {
-	data: Array<Record<string, string | number>>;
+export type ClickHouseResult<T = Record<string, string | number>> = {
+	data: T[];
 };
+
+export interface RawEventFromClickHouse {
+	id: string;
+	timestamp: Date | string | null;
+	event_name: string;
+	customer_id: string;
+	value: number | null;
+	properties: string | null;
+}
 
 export type TotalEventsParams = {
 	event_names: string[];
@@ -11,7 +20,7 @@ export type TotalEventsParams = {
 	custom_range?: { start: number; end: number };
 	interval?: RangeEnum;
 	customer?: FullCustomer;
-	bin_size?: BinSizeEnum;
+	bin_size: BinSizeEnum;
 };
 
 export type TimeseriesEventsParams = TotalEventsParams & {
@@ -35,6 +44,18 @@ export type BillingCycleResult = {
 	gap: number;
 };
 
+export type CalculateCustomRangeParamsInput = {
+	customRange: { start: number; end: number };
+	binSize: BinSizeEnum;
+};
+
+export type CalculateCustomRangeParamsOutput = {
+	binCount: number;
+	binEndDate: string;
+	filterStartDate: string;
+	filterEndDate: string;
+};
+
 export type TimeseriesEventRow = Record<string, string | number>;
 
 export type ProcessedEventRow = Record<string, string | number> & {
@@ -53,3 +74,9 @@ export type GroupedAggregatedRow = {
 };
 
 export type AggregatedEventRow = FlatAggregatedRow | GroupedAggregatedRow;
+
+export type EventListParams = {
+	customer_id: string;
+	feature_id: string | string[];
+	time_range: { start: number; end: number };
+};
