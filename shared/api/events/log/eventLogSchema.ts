@@ -5,12 +5,11 @@ import {
 } from "../../common/cursorPaginationSchemas";
 
 export const EventLogQuerySchema = CursorPaginationQuerySchema.extend({
-	customer_id: z.string().optional().describe("Filter events by customer ID"),
+	customer_id: z.string().describe("Filter events by customer ID"),
 	feature_id: z
 		.string()
 		.min(1)
 		.or(z.array(z.string().min(1)))
-		.optional()
 		.describe("Filter by specific feature ID(s)"),
 	time_range: z
 		.object({
