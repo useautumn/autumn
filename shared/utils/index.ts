@@ -52,3 +52,5 @@ export * from "./productV2Utils/productV2ToFrontendProduct.js";
 export * from "./productV2Utils/productV2ToV1.js";
 export * from "./productV3Utils/productItemUtils/productV3ItemUtils.js";
 export * from "./utils.js";
+// Cursor pagination utils
+export * from "./cursorUtils.js";
