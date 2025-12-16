@@ -41,3 +41,7 @@ export const secondsToMs = (
 
 	return seconds * 1000;
 };
+
+export const msToSeconds = (ms: number): number => {
+	return Math.floor(ms / 1000);
+};

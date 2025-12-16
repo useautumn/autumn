@@ -1,15 +1,18 @@
 import z from "zod/v4";
-import {
-	type OngoingCusProductAction,
-	OngoingCusProductActionSchema,
-	type ScheduledCusProductAction,
-	ScheduledCusProductActionSchema,
-} from "../attachModels/cusProductActions";
+
 import {
 	EnrichedNewProductActionSchema,
 	type NewProductAction,
 	NewProductActionSchema,
 } from "./newProductAction";
+import {
+	type OngoingCusProductAction,
+	OngoingCusProductActionSchema,
+} from "./ongoingCusProductAction";
+import {
+	type ScheduledCusProductAction,
+	ScheduledCusProductActionSchema,
+} from "./scheduledCusProductAction";
 
 export interface CusProductActions {
 	ongoingCusProductAction?: OngoingCusProductAction;

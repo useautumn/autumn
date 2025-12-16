@@ -166,14 +166,14 @@ export const getStripeSubItems = async ({
 				existingUsage,
 				withEntity: notNullish(attachParams.internalEntityId),
 				apiVersion: attachParams.apiVersion,
-				productOptions: prodOptions,
+				// productOptions: prodOptions,
 			});
 
 			if (!stripeItem) {
 				continue;
 			}
 
-			const { lineItem } = stripeItem;
+			const lineItem = stripeItem;
 
 			subItems.push(lineItem);
 		}

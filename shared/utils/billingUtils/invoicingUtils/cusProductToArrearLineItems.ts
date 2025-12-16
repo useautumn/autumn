@@ -1,21 +1,25 @@
 import type { LineItem } from "../../../models/billingModels/invoicingModels/lineItem";
 import type { LineItemContext } from "../../../models/billingModels/invoicingModels/lineItemContext";
 import type { FullCusProduct } from "../../../models/cusProductModels/cusProductModels";
+import type { Organization } from "../../../models/orgModels/orgTable";
 import { cusPriceToCusEntWithCusProduct } from "../../cusPriceUtils/convertCusPriceUtils";
+import { orgToCurrency } from "../../orgUtils/convertOrgUtils";
 import { isConsumablePrice } from "../../productUtils/priceUtils/classifyPriceUtils";
 import { getLineItemBillingPeriod } from "../cycleUtils/getLineItemBillingPeriod";
-import { consumablePriceToLineItem } from "./lineItemBuilders/consumablePriceToLineItem";
+import { usagePriceToLineItem } from "./lineItemBuilders/usagePriceToLineItem";
 
 export const cusProductToArrearLineItems = ({
 	cusProduct,
 	billingCycleAnchor,
 	testClockFrozenTime,
+	org,
 }: {
 	cusProduct: FullCusProduct;
 	billingCycleAnchor: number;
 	testClockFrozenTime?: number;
+	org: Organization;
 }) => {
-	const lineItems: LineItem[] = [];
+	let lineItems: LineItem[] = [];
 	const productName = cusProduct.product.name;
 	const now = testClockFrozenTime ?? Date.now();
 
@@ -44,23 +48,21 @@ export const cusProductToArrearLineItems = ({
 		}
 
 		const context: LineItemContext = {
-			productName,
+			price,
+			product: cusProduct.product,
+			feature: cusEnt.entitlement.feature,
+
 			billingPeriod,
 			direction: "charge",
 			billingTiming: "in_arrear",
 			now,
+			currency: orgToCurrency({ org }),
 		};
 
-		lineItems.push(consumablePriceToLineItem({ cusEnt, context }));
+		lineItems.push(usagePriceToLineItem({ cusEnt, context }));
 	}
 
-	console.log(
-		`arrear line items: `,
-		lineItems.map((item) => ({
-			amount: item.amount,
-			description: item.description,
-		})),
-	);
+	lineItems = lineItems.filter((item) => item.amount !== 0);
 
 	return lineItems;
 };

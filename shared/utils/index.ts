@@ -1,5 +1,8 @@
 // Billing utils
 
+export * from "../models/billingModels/ongoingCusProductAction";
+export * from "../models/billingModels/scheduledCusProductAction";
+
 export * from "./billingUtils/resolveAttachUtils/getUncancelAttachActions.js";
 export * from "./billingUtils/resolveAttachUtils/resolveAttachActions.js";
 export * from "./billingUtils/resolveAttachUtils/resolveNewProductTiming.js";

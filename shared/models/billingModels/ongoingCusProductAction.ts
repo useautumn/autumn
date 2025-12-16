@@ -6,16 +6,6 @@ export const OngoingCusProductActionSchema = z.object({
 	action: z.literal(["expire", "cancel", "uncancel"]),
 	cusProduct: FullCusProductSchema,
 });
-
-// What happens to any SCHEDULED cus product
-export const ScheduledCusProductActionSchema = z.object({
-	action: z.literal("delete"),
-	cusProduct: FullCusProductSchema,
-});
-
 export type OngoingCusProductAction = z.infer<
 	typeof OngoingCusProductActionSchema
->;
-export type ScheduledCusProductAction = z.infer<
-	typeof ScheduledCusProductActionSchema
 >;

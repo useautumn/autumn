@@ -10,7 +10,7 @@ export const getLatestPeriodEnd = ({
 	if (!subItems) {
 		subItems = sub?.items.data || [];
 	}
-	if (subItems.length == 0) {
+	if (subItems.length === 0) {
 		return Date.now();
 	}
 
@@ -20,7 +20,7 @@ export const getLatestPeriodEnd = ({
 };
 
 export const getEarliestPeriodEnd = ({ sub }: { sub: Stripe.Subscription }) => {
-	if (sub.items.data.length == 0) {
+	if (sub.items.data.length === 0) {
 		return Date.now();
 	}
 

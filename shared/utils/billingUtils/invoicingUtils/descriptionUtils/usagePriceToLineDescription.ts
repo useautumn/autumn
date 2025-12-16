@@ -25,8 +25,8 @@ export const usagePriceToLineDescription = ({
 		billingUnits,
 	});
 
-	const { productName } = context;
-	let description = `${productName} - ${featureUsageDescription}`;
+	const { product } = context;
+	let description = `${product.name} - ${featureUsageDescription}`;
 
 	if (!isOneOffPrice(price)) {
 		const periodDescription = lineItemToPeriodDescription({
@@ -34,6 +34,10 @@ export const usagePriceToLineDescription = ({
 		});
 
 		description = `${description} (${periodDescription})`;
+	}
+
+	if (context.direction === "refund") {
+		description = `Unused ${description}`;
 	}
 
 	// if (billingPeriod) {

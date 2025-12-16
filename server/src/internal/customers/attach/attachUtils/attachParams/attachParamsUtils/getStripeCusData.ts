@@ -17,7 +17,7 @@ export const getStripeCusData = async ({
 	allowNoStripe?: boolean;
 }) => {
 	if (allowNoStripe && !customer.processor?.id) {
-		return { stripeCus: undefined, paymentMethod: null, now: undefined };
+		return { stripeCus: undefined, paymentMethod: undefined, now: undefined };
 	}
 
 	const { logger, db, org, env } = ctx;
@@ -36,8 +36,14 @@ export const getStripeCusData = async ({
 	// let now = testClock ? testClock.frozen_time * 1000 : Date.now();
 	const now = testClock ? testClock.frozen_time * 1000 : undefined;
 
-	let paymentMethod = stripeCus.invoice_settings
-		?.default_payment_method as Stripe.PaymentMethod | null;
+	const invoiceSettingsPaymentMethod =
+		stripeCus.invoice_settings?.default_payment_method;
+
+	let paymentMethod: Stripe.PaymentMethod | undefined =
+		invoiceSettingsPaymentMethod &&
+		typeof invoiceSettingsPaymentMethod !== "string"
+			? invoiceSettingsPaymentMethod
+			: undefined;
 
 	if (!paymentMethod) {
 		const paymentMethods = await listCusPaymentMethods({
@@ -45,7 +51,7 @@ export const getStripeCusData = async ({
 			stripeId: stripeCus.id,
 		});
 
-		paymentMethod = paymentMethods.length ? paymentMethods[0] : null;
+		paymentMethod = paymentMethods.length ? paymentMethods[0] : undefined;
 	}
 
 	return { stripeCus, paymentMethod, now };

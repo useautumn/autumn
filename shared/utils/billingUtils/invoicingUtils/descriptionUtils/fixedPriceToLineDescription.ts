@@ -16,19 +16,23 @@ export const fixedPriceToDescription = ({
 }): string => {
 	const config = price.config as FixedPriceConfig;
 
-	const { productName } = context;
+	const { product } = context;
 
 	// biome-ignore lint/correctness/noUnusedVariables: Might be used in the future
 	const amount = formatAmount({ currency, amount: config.amount });
 
-	let description = `${productName} - Base Price`;
+	let description = `${product.name} - Base Price`;
 
-	if (isOneOffPrice(price)) {
+	if (!isOneOffPrice(price)) {
 		const periodDescription = lineItemToPeriodDescription({
 			context,
 		});
 
 		description = `${description} (${periodDescription})`;
+	}
+
+	if (context.direction === "refund") {
+		description = `Unused ${description}`;
 	}
 
 	return description;
