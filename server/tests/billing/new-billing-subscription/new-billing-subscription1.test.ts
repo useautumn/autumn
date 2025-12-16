@@ -2,7 +2,9 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
 	ApiVersion,
-	BillingInterval, CusExpand, getCusStripeSubCount
+	BillingInterval,
+	CusExpand,
+	getCusStripeSubCount,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
@@ -19,9 +21,7 @@ import {
 } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import {
-	expectProductAttached
-} from "../../utils/expectUtils/expectProductAttached";
+import { expectProductAttached } from "../../utils/expectUtils/expectProductAttached";
 
 const paidAddOn = constructRawProduct({
 	id: "addOn",
@@ -281,7 +281,9 @@ describe(`${chalk.yellowBright("new-billing-subscription: entities with new_bill
 		expect(entity2Premium).toBeDefined();
 		expect(entity2Premium.status).toBe("active");
 
-		console.log(`customer invoices: ${JSON.stringify(customer.invoices, null, 2)}`);
+		console.log(
+			`customer invoices: ${JSON.stringify(customer.invoices, null, 2)}`,
+		);
 	});
 });
 
@@ -311,7 +313,11 @@ describe(`${chalk.yellowBright("new-billing-subscription: customer upgrade with 
 	const customerId = testCase3;
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
-	const entity1 = { id: "entity1", name: "Entity 1", feature_id: TestFeature.Users };
+	const entity1 = {
+		id: "entity1",
+		name: "Entity 1",
+		feature_id: TestFeature.Users,
+	};
 
 	beforeAll(async () => {
 		await initCustomerV3({
@@ -353,7 +359,7 @@ describe(`${chalk.yellowBright("new-billing-subscription: customer upgrade with 
 		const subCount = getCusStripeSubCount({ fullCus });
 		expect(subCount).toBe(2);
 
-		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		const customer = await autumnV1.customers.get(customerId);
 		expectProductAttached({
 			customer,
 			product: pro3,
@@ -372,7 +378,7 @@ describe(`${chalk.yellowBright("new-billing-subscription: customer upgrade with 
 			product_id: premium3.id,
 		});
 
-		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		const customer = await autumnV1.customers.get(customerId);
 
 		expectProductAttached({
 			customer,
@@ -408,9 +414,7 @@ describe(`${chalk.yellowBright("new-billing-subscription: customer upgrade with 
 		const entityProducts = entity.products;
 		expect(entityProducts.length).toBe(1);
 
-		const entityPremium = entityProducts.find(
-			(p: any) => p.id === premium3.id,
-		);
+		const entityPremium = entityProducts.find((p: any) => p.id === premium3.id);
 		expect(entityPremium).toBeDefined();
 		expect(entityPremium.status).toBe("active");
 
