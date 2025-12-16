@@ -4,13 +4,8 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 /**
  * Fetch all products for the current org.
- * Optionally provide a filter function to filter results.
  */
-export const useProductsQuery = ({
-	filter,
-}: {
-	filter?: (product: ProductV2) => boolean;
-} = {}) => {
+export const useProductsQuery = () => {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
 
@@ -50,8 +45,7 @@ export const useProductsQuery = ({
 	};
 
 	return {
-		products: (data?.products.filter(filter ?? (() => true)) ||
-			[]) as ProductV2[],
+		products: data?.products || [],
 		counts: countsData || {},
 		groupToDefaults: data?.groupToDefaults || {},
 		isLoading,
