@@ -22,6 +22,7 @@ analyticsRouter.get("/event_names", async (req: any, res: any) =>
 		res,
 		action: "query event names",
 		handler: async () => {
+			AnalyticsService.handleEarlyExit();
 			const { org, env, features } = req;
 
 			const result = await queryWithCache({
@@ -35,12 +36,6 @@ analyticsRouter.get("/event_names", async (req: any, res: any) =>
 					return res?.eventNames;
 				},
 			});
-
-			// const topEventNamesRes = await AnalyticsService.getTopEventNames({
-			//   req,
-			// });
-
-			// let result = topEventNamesRes?.eventNames;
 
 			const featureIds: string[] = [];
 			const eventNames: string[] = [];
@@ -114,6 +109,7 @@ analyticsRouter.post("/events", async (req: any, res: any) =>
 		res,
 		action: "query events by customer id",
 		handler: async () => {
+			AnalyticsService.handleEarlyExit();
 			const { db, org, env, features } = req;
 			let { interval, event_names, customer_id } = req.body;
 
@@ -192,6 +188,7 @@ analyticsRouter.post("/raw", async (req: any, res: any) =>
 		res,
 		action: "query raw events by customer id",
 		handler: async () => {
+			AnalyticsService.handleEarlyExit();
 			const { db, org, env } = req;
 			const { interval, customer_id } = req.body;
 
