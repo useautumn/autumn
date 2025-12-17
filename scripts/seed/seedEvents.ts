@@ -1,5 +1,11 @@
-import { AppEnv, ErrCode, type EventInsert, RecaseError } from "@autumn/shared";
-import { initDrizzle } from "@server/db/initDrizzle.js";
+import {
+	AppEnv,
+	ErrCode,
+	type EventInsert,
+	organizations,
+	RecaseError,
+} from "@autumn/shared";
+import { type DrizzleCli, initDrizzle } from "@server/db/initDrizzle.js";
 import { EventService } from "@server/internal/api/events/EventService.js";
 import { loadLocalEnv } from "@server/utils/envUtils.js";
 import { generateId } from "@server/utils/genUtils.js";
@@ -36,10 +42,10 @@ const CONFIG = {
 
 interface CliArgs {
 	customer_id: string;
+	org_slug: string;
 	count?: number;
 	env?: AppEnv;
-	org_id?: string;
-	feature_ids?: string;
+	feature_ids: string;
 }
 
 // ============================================================================
@@ -55,12 +61,12 @@ function parseArgs(): CliArgs {
 			const [key, value] = arg.slice(2).split("=");
 			if (key === "customer_id") {
 				parsed.customer_id = value;
+			} else if (key === "org_slug") {
+				parsed.org_slug = value;
 			} else if (key === "count") {
 				parsed.count = Number.parseInt(value, 10);
 			} else if (key === "env") {
 				parsed.env = value as AppEnv;
-			} else if (key === "org_id") {
-				parsed.org_id = value;
 			} else if (key === "feature_ids") {
 				parsed.feature_ids = value;
 			}
@@ -71,13 +77,29 @@ function parseArgs(): CliArgs {
 		console.error(chalk.red("❌ Error: --customer_id is required"));
 		console.log(
 			chalk.yellow(
-				"\nUsage: bun run scripts/seed/seedEvents.ts --customer_id=<id> --feature_ids=<id1,id2,id3> [--count=<number>] [--env=<sandbox|live>] [--org_id=<id>]",
+				"\nUsage: bun run scripts/seed/seedEvents.ts --customer_id=<id> --org_slug=<slug> --feature_ids=<id1,id2,id3> [--count=<number>] [--env=<sandbox|live>]",
 			),
 		);
 		console.log(chalk.gray("\nExample:"));
 		console.log(
 			chalk.gray(
-				"  bun run scripts/seed/seedEvents.ts --customer_id=cus_123 --feature_ids=api_call,page_view --count=50 --env=sandbox",
+				"  bun run scripts/seed/seedEvents.ts --customer_id=cus_123 --org_slug=my-org --feature_ids=api_call,page_view --count=50 --env=sandbox",
+			),
+		);
+		process.exit(1);
+	}
+
+	if (!parsed.org_slug) {
+		console.error(chalk.red("❌ Error: --org_slug is required"));
+		console.log(
+			chalk.yellow(
+				"\nUsage: bun run scripts/seed/seedEvents.ts --customer_id=<id> --org_slug=<slug> --feature_ids=<id1,id2,id3> [--count=<number>] [--env=<sandbox|live>]",
+			),
+		);
+		console.log(chalk.gray("\nExample:"));
+		console.log(
+			chalk.gray(
+				"  bun run scripts/seed/seedEvents.ts --customer_id=cus_123 --org_slug=my-org --feature_ids=api_call,page_view --count=50 --env=sandbox",
 			),
 		);
 		process.exit(1);
@@ -87,13 +109,13 @@ function parseArgs(): CliArgs {
 		console.error(chalk.red("❌ Error: --feature_ids is required"));
 		console.log(
 			chalk.yellow(
-				"\nUsage: bun run scripts/seed/seedEvents.ts --customer_id=<id> --feature_ids=<id1,id2,id3> [--count=<number>] [--env=<sandbox|live>] [--org_id=<id>]",
+				"\nUsage: bun run scripts/seed/seedEvents.ts --customer_id=<id> --org_slug=<slug> --feature_ids=<id1,id2,id3> [--count=<number>] [--env=<sandbox|live>]",
 			),
 		);
 		console.log(chalk.gray("\nExample:"));
 		console.log(
 			chalk.gray(
-				"  bun run scripts/seed/seedEvents.ts --customer_id=cus_123 --feature_ids=api_call,page_view --count=50 --env=sandbox",
+				"  bun run scripts/seed/seedEvents.ts --customer_id=cus_123 --org_slug=my-org --feature_ids=api_call,page_view --count=50 --env=sandbox",
 			),
 		);
 		process.exit(1);
@@ -106,47 +128,52 @@ function parseArgs(): CliArgs {
 // VALIDATION
 // ============================================================================
 
+async function validateOrg({
+	db,
+	orgSlug,
+}: {
+	db: DrizzleCli;
+	orgSlug: string;
+}) {
+	const org = await db.query.organizations.findFirst({
+		where: (orgs, { eq }) => eq(orgs.slug, orgSlug),
+	});
+
+	if (!org) {
+		throw new RecaseError({
+			message: `Organization with slug '${orgSlug}' not found`,
+			code: ErrCode.OrgNotFound,
+			statusCode: 404,
+		});
+	}
+
+	return org;
+}
+
 async function validateCustomer({
 	db,
 	customerId,
 	orgId,
 	env,
 }: {
-	db: ReturnType<typeof initDrizzle>["db"];
+	db: DrizzleCli;
 	customerId: string;
-	orgId?: string;
+	orgId: string;
 	env: AppEnv;
 }) {
-	// Build the where clause based on whether org_id is provided
 	const customer = await db.query.customers.findFirst({
 		where: (customers, { eq, or, and }) => {
-			const customerMatch = or(
-				eq(customers.id, customerId),
-				eq(customers.internal_id, customerId),
+			return and(
+				or(eq(customers.id, customerId), eq(customers.internal_id, customerId)),
+				eq(customers.org_id, orgId),
+				eq(customers.env, env),
 			);
-
-			if (orgId) {
-				return and(
-					customerMatch,
-					eq(customers.org_id, orgId),
-					eq(customers.env, env),
-				);
-			}
-
-			return customerMatch;
-		},
-		with: {
-			org: true,
 		},
 	});
 
 	if (!customer) {
-		const errorMsg = orgId
-			? `Customer '${customerId}' not found in org '${orgId}' with env '${env}'`
-			: `Customer '${customerId}' not found`;
-
 		throw new RecaseError({
-			message: errorMsg,
+			message: `Customer '${customerId}' not found in org '${orgId}' with env '${env}'`,
 			code: ErrCode.CustomerNotFound,
 			statusCode: 404,
 		});
@@ -169,11 +196,13 @@ function generateRandomTimestamp({ daysBack }: { daysBack: number }): Date {
 function generateEvents({
 	count,
 	customer,
+	org,
 	env,
 	featureIds,
 }: {
 	count: number;
 	customer: Awaited<ReturnType<typeof validateCustomer>>;
+	org: Awaited<ReturnType<typeof validateOrg>>;
 	env: AppEnv;
 	featureIds: string[];
 }): EventInsert[] {
@@ -187,8 +216,8 @@ function generateEvents({
 
 		const event: EventInsert = {
 			id: generateId("evt"),
-			org_id: customer.org_id,
-			org_slug: customer.org?.slug || "unknown",
+			org_id: org.id,
+			org_slug: org.slug,
 			internal_customer_id: customer.internal_id,
 			customer_id: customer.id || "",
 			env,
@@ -236,28 +265,38 @@ async function main() {
 	const args = parseArgs();
 	const eventCount = args.count || CONFIG.defaultEventCount;
 	const env = args.env || CONFIG.defaultEnv;
-	const featureIds = args.feature_ids!.split(",").map((id) => id.trim());
+	const featureIds = args.feature_ids.split(",").map((id) => id.trim());
 
 	console.log(chalk.cyan("Configuration:"));
 	console.log(chalk.gray(`  Customer ID: ${args.customer_id}`));
+	console.log(chalk.gray(`  Organization Slug: ${args.org_slug}`));
 	console.log(chalk.gray(`  Event Count: ${eventCount}`));
 	console.log(chalk.gray(`  Environment: ${env}`));
 	console.log(chalk.gray(`  Feature IDs: ${featureIds.join(", ")}`));
-	if (args.org_id) {
-		console.log(chalk.gray(`  Organization ID: ${args.org_id}`));
-	}
 	console.log();
 
 	// Initialize database connection
 	const { db, client } = initDrizzle();
 
 	try {
+		// Validate organization exists
+		console.log(chalk.cyan("Validating organization..."));
+		const org = await validateOrg({
+			db,
+			orgSlug: args.org_slug,
+		});
+
+		console.log(
+			chalk.green(`✅ Organization found: ${org.slug} (${org.name})`),
+		);
+		console.log();
+
 		// Validate customer exists
 		console.log(chalk.cyan("Validating customer..."));
 		const customer = await validateCustomer({
 			db,
 			customerId: args.customer_id,
-			orgId: args.org_id,
+			orgId: org.id,
 			env,
 		});
 
@@ -266,9 +305,6 @@ async function main() {
 				`✅ Customer found: ${customer.id} (${customer.name || "No name"})`,
 			),
 		);
-		console.log(
-			chalk.gray(`   Organization: ${customer.org?.name || customer.org_id}`),
-		);
 		console.log();
 
 		// Generate events
@@ -276,6 +312,7 @@ async function main() {
 		const events = generateEvents({
 			count: eventCount,
 			customer,
+			org,
 			env,
 			featureIds,
 		});
