@@ -1,7 +1,7 @@
 import type {
+	ApiEventsListItem,
+	ApiEventsListParams,
 	ClickHouseResult,
-	EventList,
-	EventListQuery,
 	RawEventFromClickHouse,
 } from "@autumn/shared";
 import { ErrCode, RecaseError } from "@autumn/shared";
@@ -17,7 +17,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 export class EventListService {
 	private static transformRawEvents(
 		rawEvents: RawEventFromClickHouse[],
-	): EventList[] {
+	): ApiEventsListItem[] {
 		return rawEvents.map((event) => {
 			let properties = {};
 			if (event.properties) {
@@ -36,7 +36,7 @@ export class EventListService {
 						: typeof event.timestamp === "string"
 							? new Date(event.timestamp).getTime()
 							: Date.now(),
-				event_name: event.event_name,
+				feature_id: event.event_name,
 				customer_id: event.customer_id,
 				value: event.value ?? 0,
 				properties,
@@ -142,7 +142,7 @@ export class EventListService {
 		params,
 	}: {
 		ctx: AutumnContext;
-		params: EventListQuery;
+		params: ApiEventsListParams;
 	}) {
 		const { clickhouseClient, org, env } = ctx;
 		const { starting_after, limit, customer_id, feature_id, time_range } =

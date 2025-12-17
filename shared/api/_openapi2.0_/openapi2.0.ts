@@ -8,6 +8,7 @@ import { balancesOpenApi } from "./balancesOpenApi.js";
 import { coreOps } from "./coreOpenApi.js";
 import { ApiCustomerWithMeta, customersOpenApi } from "./customersOpenApi.js";
 import { ApiEntityWithMeta, entitiesOpenApi } from "./entitiesOpenApi.js";
+import { eventsOpenApi } from "./eventsOpenApi.js";
 import { ApiPlanWithMeta, plansOpenApi } from "./plansOpenApi.js";
 import { referralOps } from "./referralsOpenApi.js";
 
@@ -56,6 +57,7 @@ const openapi2_0 = createDocument(
 			...referralOps,
 			...coreOps,
 			...balancesOpenApi,
+			...eventsOpenApi,
 		},
 	},
 	{

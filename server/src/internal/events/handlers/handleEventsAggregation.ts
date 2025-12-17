@@ -2,7 +2,7 @@ import type { AggregatedEventRow, ProcessedEventRow } from "@autumn/shared";
 import {
 	CustomerNotFoundError,
 	ErrCode,
-	EventAggregationBodySchema,
+	EventsAggregateParamsSchema,
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
@@ -17,7 +17,7 @@ import {
 } from "../eventUtils.js";
 
 export const handleEventsAggregation = createRoute({
-	body: EventAggregationBodySchema,
+	body: EventsAggregateParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org, env } = ctx;
@@ -49,7 +49,7 @@ export const handleEventsAggregation = createRoute({
 					no_count: true,
 					customer,
 					group_by,
-					bin_size,
+					bin_size: bin_size ?? "day",
 					custom_range,
 				},
 			}),
@@ -62,7 +62,7 @@ export const handleEventsAggregation = createRoute({
 					customer_id: customer_id,
 					customer,
 					custom_range,
-					bin_size,
+					bin_size: bin_size ?? "day",
 				},
 			}),
 		]);
