@@ -1,5 +1,4 @@
-import axios, { AxiosInstance } from "axios";
-import { Customer } from "@autumn/shared";
+import { type AxiosInstance } from "axios";
 
 export class CusService {
 	static async createCustomer(axios: AxiosInstance, data: any) {
@@ -69,5 +68,18 @@ export class CusService {
 		return await axios.post(
 			`/v1/customers/${customer_id}/coupons/${coupon_id}`,
 		);
+	}
+
+	static async createBillingPortalSession({
+		axios,
+		customer_id,
+	}: {
+		axios: AxiosInstance;
+		customer_id: string;
+	}): Promise<{ customer_id: string | null; url: string }> {
+		const { data } = await axios.post(
+			`/v1/customers/${customer_id}/billing_portal`,
+		);
+		return data;
 	}
 }

@@ -1,8 +1,12 @@
-import { ErrCode, type FullCustomer, type RangeEnum } from "@autumn/shared";
+import {
+	ErrCode,
+	type FullCustomer,
+	type RangeEnum,
+	RecaseError,
+} from "@autumn/shared";
 import type { ClickHouseClient } from "@clickhouse/client";
 import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
-import RecaseError from "@/utils/errorUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import {
 	generateEventCountExpressions,
