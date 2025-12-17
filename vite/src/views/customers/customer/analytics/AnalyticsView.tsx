@@ -85,10 +85,6 @@ export const AnalyticsView = () => {
 			return { chartData: null, chartConfig: null };
 		}
 
-		console.log("Analytics - Raw events from API:", events);
-		console.log("Analytics - Group by:", groupBy);
-		console.log("Analytics - Group filter:", groupFilter);
-
 		// Apply frontend filter if a group filter is selected
 		let filteredEvents = events;
 		if (groupBy && groupFilter) {
@@ -109,7 +105,6 @@ export const AnalyticsView = () => {
 			events: filteredEvents,
 			groupBy,
 		});
-		console.log("Analytics - Transformed data:", transformed);
 
 		// Generate chart config with different colors per group
 		const config = generateChartConfig({
@@ -118,7 +113,6 @@ export const AnalyticsView = () => {
 			groupBy,
 			originalColors: colors,
 		});
-		console.log("Analytics - Chart config:", config);
 
 		return { chartData: transformed, chartConfig: config };
 	}, [events, features, groupBy, groupFilter]);

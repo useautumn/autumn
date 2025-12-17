@@ -15,10 +15,6 @@ export const CustomerPageDetails = () => {
 
 	const appliedCoupon = stripeCus?.discount?.source;
 
-	console.log("appliedCoupon", appliedCoupon);
-
-	console.log("stripeCus", stripeCus);
-
 	return (
 		<div className="flex h-4 items-center">
 			<div className="flex gap-2">
