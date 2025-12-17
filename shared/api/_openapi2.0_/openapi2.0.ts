@@ -17,7 +17,7 @@ const openapi2_0 = createDocument(
 		openapi: "3.1.0",
 		info: {
 			title: "Autumn API",
-			version: "1.2.0",
+			version: "2.0.0",
 		},
 
 		servers: [
