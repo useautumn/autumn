@@ -32,7 +32,7 @@ async function main() {
 	try {
 		const queriesDir = path.join(
 			import.meta.dir,
-			"../../server/src/external/clickhouse/queries",
+			"../../../server/src/external/clickhouse/queries",
 		);
 
 		const viewsToRecreate = [
