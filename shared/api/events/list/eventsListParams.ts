@@ -1,7 +1,7 @@
 import { z } from "zod/v4";
-import { CursorPaginationQuerySchema } from "../../common/cursorPaginationSchemas";
+import { PagePaginationQuerySchema } from "../../common/pagePaginationSchemas";
 
-export const ApiEventsListParamsSchema = CursorPaginationQuerySchema.extend({
+export const ApiEventsListParamsSchema = PagePaginationQuerySchema.extend({
 	customer_id: z.string().describe("Filter events by customer ID"),
 	feature_id: z
 		.string()
@@ -9,7 +9,7 @@ export const ApiEventsListParamsSchema = CursorPaginationQuerySchema.extend({
 		.or(z.array(z.string().min(1)))
 		.describe("Filter by specific feature ID(s)"),
 
-	time_range: z
+	custom_range: z
 		.object({
 			start: z.coerce
 				.number()
