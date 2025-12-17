@@ -12,6 +12,7 @@ import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useAnalyticsContext } from "../AnalyticsContext";
 import { CustomerComboBox } from "./CustomerComboBox";
 import { SelectFeatureDropdown } from "./SelectFeatureDropdown";
+import { SelectGroupByDropdown } from "./SelectGroupByDropdown";
 
 export const INTERVALS: Record<string, string> = {
 	"24h": "Last 24 hours",
@@ -23,8 +24,13 @@ export const INTERVALS: Record<string, string> = {
 };
 
 export const QueryTopbar = () => {
-	const { customer, selectedInterval, setSelectedInterval, bcExclusionFlag } =
-		useAnalyticsContext();
+	const {
+		customer,
+		selectedInterval,
+		setSelectedInterval,
+		bcExclusionFlag,
+		propertyKeys,
+	} = useAnalyticsContext();
 	const navigate = useNavigate();
 	const location = useLocation();
 
@@ -80,9 +86,17 @@ export const QueryTopbar = () => {
 			</DropdownMenu>
 			<SelectFeatureDropdown
 				classNames={{
-					trigger: "h-full border-y-0 border-l-0 border-r-1",
+					trigger: "h-full border-y-0 border-l-0 border-r-0",
 				}}
 			/>
+			{propertyKeys && propertyKeys.length > 0 && (
+				<SelectGroupByDropdown
+					propertyKeys={propertyKeys}
+					classNames={{
+						trigger: "h-full border-y-0 border-l-0 border-r-1",
+					}}
+				/>
+			)}
 		</div>
 	);
 };
