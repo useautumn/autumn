@@ -2,7 +2,12 @@
 
 /** biome-ignore-all lint/complexity/noStaticOnlyClass: wrap it up buddy */
 
-import { ErrCode, type FullCustomer, RecaseError } from "@autumn/shared";
+import {
+	ErrCode,
+	type FullCustomer,
+	type RangeEnum,
+	RecaseError,
+} from "@autumn/shared";
 import type { ClickHouseClient } from "@clickhouse/client";
 import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";

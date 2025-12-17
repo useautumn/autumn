@@ -20,6 +20,13 @@ export const handleUpdateBalance = createRoute({
 	body: UpdateBalanceParamsSchema.extend({
 		customer_entitlement_id: z.string().optional(),
 		next_reset_at: z.number().optional(),
+		granted_balance: z.number().optional().meta({
+			internal: true,
+		}),
+		usage: z.number().optional().meta({
+			description: "The new usage value to set.",
+			internal: true,
+		}),
 	}),
 
 	handler: async (c) => {

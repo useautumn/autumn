@@ -5,7 +5,6 @@ import { SuccessResponseSchema } from "../../../common/commonResponses.js";
 import { queryStringArray } from "../../../common/queryHelpers.js";
 import {
 	API_CUSTOMER_V3_EXAMPLE,
-	ApiCusExpandV3Schema,
 	ApiCustomerV3Schema,
 	BillingPortalParamsSchema,
 	BillingPortalResultSchema,
