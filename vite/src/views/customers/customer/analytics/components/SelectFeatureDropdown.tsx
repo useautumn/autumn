@@ -1,26 +1,21 @@
 import type { Feature } from "@autumn/shared";
 import { FeatureType, FeatureUsageType } from "@autumn/shared";
-import { CaretDownIcon } from "@phosphor-icons/react";
+import { CaretDownIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-	Command,
-	CommandEmpty,
-	CommandGroup,
-	CommandInput,
-	CommandItem,
-	CommandList,
-	CommandSeparator,
-} from "@/components/ui/command";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
 import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
+import {
+	DropdownMenu,
+	DropdownMenuCheckboxItem,
+	DropdownMenuContent,
+	DropdownMenuGroup,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/v2/dropdowns/DropdownMenu";
+import { cn } from "@/lib/utils";
 import { useAnalyticsContext } from "../AnalyticsContext";
 import {
 	eventNameBelongsToFeature,
@@ -158,92 +153,93 @@ export const SelectFeatureDropdown = ({
 		setHasCleared(true);
 	};
 
+	const hasNoResults =
+		filteredFeatures.length === 0 && filteredEvents.length === 0;
+
 	return (
-		<Popover open={open} onOpenChange={setOpen}>
-			<PopoverTrigger asChild>
+		<DropdownMenu open={open} onOpenChange={setOpen}>
+			<DropdownMenuTrigger asChild>
 				<IconButton
 					variant="secondary"
 					size="default"
 					icon={<CaretDownIcon size={12} weight="bold" />}
 					iconOrientation="right"
-					// className={cn(classNames?.trigger)}
+					className={cn(classNames?.trigger, open && "btn-secondary-active")}
 				>
 					{numSelected > 0 ? `${numSelected} Selected` : "Default Features"}
 				</IconButton>
-			</PopoverTrigger>
-			<PopoverContent className="w-[240px] p-0" align="end">
-				<Command>
-					<CommandInput
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align="end" className="w-[240px]">
+				{/* Search input */}
+				<div className="flex items-center gap-2 px-2 py-1.5 border-b border-border">
+					<MagnifyingGlassIcon className="size-4 text-t4" />
+					<input
+						type="text"
 						placeholder="Search..."
 						value={searchValue}
-						onValueChange={setSearchValue}
-						className="h-9"
+						onChange={(e) => setSearchValue(e.target.value)}
+						onKeyDown={(e) => e.stopPropagation()}
+						className="flex-1 bg-transparent text-sm outline-none placeholder:text-t4"
 					/>
-					<div className="max-h-[300px] overflow-y-auto">
-						<CommandList>
-							<CommandEmpty>No results found.</CommandEmpty>
+				</div>
 
+				<div className="max-h-[300px] overflow-y-auto">
+					{hasNoResults ? (
+						<div className="py-4 text-center text-sm text-t4">
+							No results found.
+						</div>
+					) : (
+						<>
 							{filteredFeatures.length > 0 && (
-								<CommandGroup heading="Features">
+								<DropdownMenuGroup>
+									<DropdownMenuLabel className="text-xs text-t4">
+										Features
+									</DropdownMenuLabel>
 									{filteredFeatures.map((option) => (
-										<CommandItem
+										<DropdownMenuCheckboxItem
 											key={`feature-${option.id}`}
-											onSelect={() => handleToggleItem(option)}
-											className="cursor-pointer"
+											checked={option.selected}
+											onCheckedChange={() => handleToggleItem(option)}
+											onSelect={(e) => e.preventDefault()}
 										>
-											<div className="flex items-center space-x-2">
-												<Checkbox
-													checked={option.selected}
-													className="h-4 w-4"
-												/>
-												<span className="text-xs">{option.name}</span>
-											</div>
-										</CommandItem>
+											<span className="text-xs">{option.name}</span>
+										</DropdownMenuCheckboxItem>
 									))}
-								</CommandGroup>
+								</DropdownMenuGroup>
 							)}
 
 							{filteredEvents.length > 0 && (
 								<>
-									{filteredFeatures.length > 0 && <CommandSeparator />}
-									<CommandGroup heading="Events">
+									{filteredFeatures.length > 0 && <DropdownMenuSeparator />}
+									<DropdownMenuGroup>
+										<DropdownMenuLabel className="text-xs text-t4">
+											Events
+										</DropdownMenuLabel>
 										{filteredEvents.map((option, index) => (
-											<CommandItem
-												key={`${index + filteredFeatures.length}`}
-												onSelect={() => handleToggleItem(option)}
-												className="cursor-pointer"
+											<DropdownMenuCheckboxItem
+												key={`event-${option.id}-${index}`}
+												checked={option.selected}
+												onCheckedChange={() => handleToggleItem(option)}
+												onSelect={(e) => e.preventDefault()}
 											>
-												<div className="flex items-center space-x-2">
-													<Checkbox
-														checked={option.selected}
-														className="h-4 w-4"
-													/>
-													<span className="text-xs">{option.name}</span>
-												</div>
-											</CommandItem>
+												<span className="text-xs">{option.name}</span>
+											</DropdownMenuCheckboxItem>
 										))}
-									</CommandGroup>
+									</DropdownMenuGroup>
 								</>
 							)}
-						</CommandList>
-					</div>
+						</>
+					)}
+				</div>
 
-					<div className="border-t p-2">
-						<div className="flex items-center justify-between gap-2">
-							<Button variant="secondary" size="sm" onClick={handleClear}>
-								Clear
-							</Button>
-							<Button
-								variant="primary"
-								size="sm"
-								onClick={() => setOpen(false)}
-							>
-								Close
-							</Button>
-						</div>
+				<div className="border-t border-border p-2">
+					<div className="flex items-center justify-between gap-2">
+						<Button variant="secondary" size="sm" onClick={handleClear}>
+							Clear
+						</Button>
 					</div>
-				</Command>
-			</PopoverContent>
-		</Popover>
+				</div>
+			</DropdownMenuContent>
+		</DropdownMenu>
 	);
 };

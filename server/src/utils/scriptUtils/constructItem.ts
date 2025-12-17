@@ -162,6 +162,7 @@ export const constructArrearProratedItem = ({
 	},
 	usageLimit,
 	rolloverConfig,
+	interval = ProductItemInterval.Month,
 }: {
 	featureId: string;
 	featureType?: ProductItemFeatureType;
@@ -170,6 +171,7 @@ export const constructArrearProratedItem = ({
 	config?: ProductItemConfig;
 	usageLimit?: number;
 	rolloverConfig?: RolloverConfig;
+	interval?: ProductItemInterval;
 }) => {
 	const item: ProductItem = {
 		feature_id: featureId,
@@ -177,7 +179,7 @@ export const constructArrearProratedItem = ({
 		included_usage: includedUsage,
 		price: pricePerUnit,
 		billing_units: 1,
-		interval: ProductItemInterval.Month,
+		interval: interval || ProductItemInterval.Month,
 		config: {
 			...config,
 			...(rolloverConfig ? { rollover: rolloverConfig } : {}),

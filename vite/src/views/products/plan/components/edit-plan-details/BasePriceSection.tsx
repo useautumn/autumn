@@ -7,11 +7,8 @@ import {
 	ProductItemInterval,
 	productV2ToBasePrice,
 } from "@autumn/shared";
-import {
-	ArrowsClockwiseIcon,
-	BarcodeIcon,
-	CheckCircleIcon,
-} from "@phosphor-icons/react";
+import { ArrowsClockwiseIcon, CheckCircleIcon } from "@phosphor-icons/react";
+import { AreaSwitch } from "@/components/v2/buttons/AreaSwitch";
 import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import {
@@ -41,13 +38,6 @@ export const BasePriceSection = ({
 	if (product.planType !== "paid") return null;
 
 	const basePrice = productV2ToBasePrice({ product });
-
-	const handleDeleteBasePrice = () => {
-		setProduct({
-			...product,
-			items: product.items.filter((item: ProductItem) => !isPriceItem(item)),
-		});
-	};
 
 	const getBasePriceIndex = () => {
 		return product.items.findIndex(
@@ -107,151 +97,117 @@ export const BasePriceSection = ({
 
 	const disabled = nullish(basePrice);
 
-	// if (nullish(basePrice?.interval)) return null;
+	console.log("product", product);
 
 	return (
-		<SheetSection
-			title="Plan Price"
-			withSeparator={withSeparator}
-			// checked={!disabled}
-			// setChecked={(checked) => {
-			// 	if (checked) {
-			// 		setProduct({
-			// 			...product,
-			// 			items: [
-			// 				...product.items,
-			// 				{
-			// 					price: 10,
-			// 					interval: ProductItemInterval.Month,
-			// 				},
-			// 			],
-			// 		});
-			// 	} else {
-			// 		handleDeleteBasePrice();
-			// 	}
-			// }}
-			// description={
-			// 	<span>
-			// 		Choose whether to add a fixed base price to this plan. You can add
-			// 		usage-based prices later.
-			// 	</span>
-			// }
-		>
+		<SheetSection withSeparator={withSeparator}>
 			<div className="space-y-4">
-				<div className="space-y-2">
-					<GroupedTabButton
-						value={basePriceType ?? "recurring"}
-						className="w-full"
-						onValueChange={(value) => {
-							//if usage based, remove the base price item
-							if (value === "usage") {
-								setProduct({
-									...product,
-									basePriceType: value as "recurring" | "one-off" | "usage",
-									items: product.items.filter((item) => !isPriceItem(item)),
-								});
-								return;
-							}
-
-							// Check if there's already a price item
+				<AreaSwitch
+					title="This plan has a fixed price"
+					checked={basePriceType !== "usage"}
+					onCheckedChange={(checked) => {
+						if (checked) {
+							// Turning ON - set to recurring and create price item
 							const hasPriceItem = product.items.some((item) =>
 								isPriceItem(item),
 							);
 
 							if (!hasPriceItem) {
-								// Recreate the price item with default price of 0
 								const newPriceItem: ProductItem = {
 									price: "" as unknown as number,
-									interval:
-										value === "one-off" ? null : ProductItemInterval.Month,
+									interval: ProductItemInterval.Month,
 									interval_count: 1,
 								};
 
 								setProduct({
 									...product,
-									basePriceType: value as "recurring" | "one-off" | "usage",
+									basePriceType: "recurring",
 									items: [...product.items, newPriceItem],
 								});
-								return;
+							} else {
+								setProduct({
+									...product,
+									basePriceType: "recurring",
+								});
 							}
-
-							// Update existing price item
+						} else {
+							// Turning OFF - set to usage and remove price items
 							setProduct({
 								...product,
-								basePriceType: value as "recurring" | "one-off" | "usage",
-								items: product.items.map((item) => {
-									if (isPriceItem(item)) {
-										return {
-											...item,
-											interval:
-												value === "one-off" ? null : ProductItemInterval.Month,
-										};
-									}
-									return item;
-								}),
+								basePriceType: "usage",
+								items: product.items.filter((item) => !isPriceItem(item)),
 							});
-						}}
-						options={[
-							{
-								value: "recurring",
-								label: "Recurring",
-								icon: (
-									<ArrowsClockwiseIcon
-										className="size-[14px]"
-										weight="regular"
-									/>
-								),
-							},
-							{
-								value: "one-off",
-								label: "One-off",
-								icon: (
-									<CheckCircleIcon className="size-[14px]" weight="regular" />
-								),
-							},
-							{
-								value: "usage",
-								label: "Variable",
-								icon: <BarcodeIcon className="size-[14px]" weight="regular" />,
-							},
-						]}
-					/>
-					{/* <p className="text-body-secondary">
-						Add a fixed price to charge for the whole plan. You can add
-						usage-based prices later.
-					</p> */}
-				</div>
-				{/* <FormLabel>Price Type</FormLabel>
-				<Select
-					value={basePriceType ?? "recurring"}
-					onValueChange={(value) => {
-						setProduct({
-							...product,
-							basePriceType: value as "recurring" | "one-off" | "usage",
-							items: product.items.map((item) => {
-								if (isPriceItem(item)) {
-									return {
-										...item,
+						}
+					}}
+				/>
+				{basePriceType !== "usage" && (
+					<div className="space-y-2">
+						<GroupedTabButton
+							value={basePriceType ?? "recurring"}
+							className="w-full"
+							onValueChange={(value) => {
+								// Check if there's already a price item
+								const hasPriceItem = product.items.some((item) =>
+									isPriceItem(item),
+								);
+
+								if (!hasPriceItem) {
+									// Recreate the price item with default price of 0
+									const newPriceItem: ProductItem = {
+										price: "" as unknown as number,
 										interval:
 											value === "one-off" ? null : ProductItemInterval.Month,
+										interval_count: 1,
 									};
+
+									setProduct({
+										...product,
+										basePriceType: value as "recurring" | "one-off",
+										items: [...product.items, newPriceItem],
+									});
+									return;
 								}
-								return item;
-							}),
-						});
-					}}
-				>
-					<SelectTrigger className="w-full">
-						<SelectValue placeholder="Select price type" />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="recurring">Recurring</SelectItem>
-						<SelectItem value="one-off">One-off</SelectItem>
-						<SelectItem value="usage" className="text-body-secondary">
-							This plan has usage-based prices only
-						</SelectItem>
-					</SelectContent>
-				</Select> */}
+
+								// Update existing price item
+								setProduct({
+									...product,
+									basePriceType: value as "recurring" | "one-off",
+									items: product.items.map((item) => {
+										if (isPriceItem(item)) {
+											return {
+												...item,
+												interval:
+													value === "one-off"
+														? null
+														: ProductItemInterval.Month,
+											};
+										}
+										return item;
+									}),
+								});
+							}}
+							options={[
+								{
+									value: "recurring",
+									label: "Recurring",
+									icon: (
+										<ArrowsClockwiseIcon
+											className="size-[14px]"
+											weight="regular"
+										/>
+									),
+								},
+								{
+									value: "one-off",
+									label: "One-off",
+									icon: (
+										<CheckCircleIcon className="size-[14px]" weight="regular" />
+									),
+								},
+							]}
+						/>
+					</div>
+				)}
 				<div className="h-13">
 					{basePriceType !== "usage" ? (
 						<div className="flex gap-2">
@@ -296,14 +252,9 @@ export const BasePriceSection = ({
 							)}
 						</div>
 					) : (
-						<InfoBox
-							classNames={{
-								infoIcon: "text-t3",
-								infoBox: "text-sm py-2",
-							}}
-						>
-							You can charge based on the quantity of a feature (eg per seat,
-							per credit) when you link features to this plan.
+						<InfoBox variant="note">
+							You can add usage-based or prepaid prices when you link plan
+							features.
 						</InfoBox>
 					)}
 				</div>

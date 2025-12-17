@@ -1,7 +1,7 @@
 import { type ClickHouseClient, createClient } from "@clickhouse/client";
 
 export const clickhouseClient: ClickHouseClient = createClient({
-	url: process.env.CLICKHOUSE_URL!,
+	url: process.env.CLICKHOUSE_URL || undefined,
 	username: process.env.CLICKHOUSE_USERNAME!,
 	password: process.env.CLICKHOUSE_PASSWORD!,
 	max_open_connections: 10,
