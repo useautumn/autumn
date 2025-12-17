@@ -15,7 +15,11 @@ export const UpdateBalanceParamsSchema = z.object({
 	current_balance: z.number().optional().meta({
 		description: "The new balance value to set.",
 	}),
-
+	granted_balance: z.number().optional().meta({
+		description:
+			"The new granted balance value to set. If provided, current_balance must also be provided.",
+		internal: true,
+	}),
 	interval: z.enum(ResetInterval).optional().meta({
 		description: "The interval to update balance for.",
 	}),
