@@ -12,7 +12,8 @@
 			"stripe": "19.3.0-beta.1",
 			"drizzle-orm": "0.43.1",
 			"drizzle-kit": "^0.31.1",
-			"@sentry/bun": "10.25.0"
+			"@sentry/bun": "10.25.0",
+			"@clickhouse/client": "1.11.2"
 		}
 	},
 	"type": "module",
@@ -29,6 +30,7 @@
 		"validate-schema": "infisical run --env=prod -- bun scripts/migrations/validate-schema.ts",
 		"setupci": "node scripts/setup/setupci.js",
 		"replicate": "bun scripts/db/replicate.ts",
+		"db:pull": "bun scripts/db/pull.ts",
 		"db:push": " bun -F @autumn/shared db:push",
 		"db:generate": "bun -F @autumn/shared db:generate",
 		"db:migrate": " bun -F @autumn/shared db:migrate"

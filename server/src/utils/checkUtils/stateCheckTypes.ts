@@ -17,6 +17,7 @@ export type StateCheckResult = {
 			| "subscription_correctness"
 			| "customer_product_correctness"
 			| "sub_id_matching"
+			| "sub_count_match"
 			| "group_uniqueness"
 			| "entitlement_price_correctness"
 			| "overall_status";
