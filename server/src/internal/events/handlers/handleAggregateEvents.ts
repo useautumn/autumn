@@ -16,13 +16,22 @@ import {
 	convertPeriodsToEpoch,
 } from "../eventUtils.js";
 
-export const handleEventsAggregation = createRoute({
+export const handleAggregateEvents = createRoute({
 	body: EventsAggregateParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org, env } = ctx;
 		const { customer_id, feature_id, group_by, range, bin_size, custom_range } =
 			c.req.valid("json");
+
+		console.log("handleAggregateEvents", {
+			customer_id,
+			feature_id,
+			group_by,
+			range,
+			bin_size,
+			custom_range,
+		});
 
 		const customer = await CusService.getFull({
 			db,
