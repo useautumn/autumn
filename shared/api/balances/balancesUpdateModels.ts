@@ -1,7 +1,7 @@
 import { ResetInterval } from "@autumn/shared";
 import { z } from "zod/v4";
 
-export const UpdateBalanceParamsSchema = z.object({
+export const ExtBalancesUpdateParamsSchema = z.object({
 	customer_id: z.string().meta({
 		description: "The ID of the customer.",
 	}),
@@ -15,14 +15,16 @@ export const UpdateBalanceParamsSchema = z.object({
 	current_balance: z.number().optional().meta({
 		description: "The new balance value to set.",
 	}),
-	granted_balance: z.number().optional().meta({
-		description:
-			"The new granted balance value to set. If provided, current_balance must also be provided.",
-		internal: true,
-	}),
 	interval: z.enum(ResetInterval).optional().meta({
 		description: "The interval to update balance for.",
 	}),
+});
+
+export const UpdateBalanceParamsSchema = ExtBalancesUpdateParamsSchema.extend({
+	granted_balance: z.number().optional(),
+	usage: z.number().optional(),
+	customer_entitlement_id: z.string().optional(),
+	next_reset_at: z.number().optional(),
 });
 
 export type UpdateBalanceParams = z.infer<typeof UpdateBalanceParamsSchema>;
