@@ -76,8 +76,20 @@ const main = async () => {
 	};
 	await Promise.all([
 		cronTask(),
-		runProductCron(),
-		runInvoiceCron({ ctx }),
+		async () => {
+			try {
+				runProductCron()
+			} catch (_e) {
+				console.error("Error running product cron:", _e);
+			}
+		},
+		async () => {
+			try {
+				runInvoiceCron({ ctx })
+			} catch (_e) {
+				console.error("Error running invoice cron:", _e);
+			}
+		},
 		// TODO: Add runUsageCron({ ctx })
 	]);
 };
