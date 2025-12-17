@@ -4,9 +4,9 @@ import {
 	type AttachFunctionResponse,
 	AttachFunctionResponseSchema,
 	AttachScenario,
-	ErrCode,
-	isTrialing,
-	SuccessCode,
+	ErrCode, isTrialing,
+	MetadataType,
+	SuccessCode
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
@@ -32,6 +32,8 @@ import { subToNewSchedule } from "../../mergeUtils/subToNewSchedule.js";
 import { handleUpgradeFlowSchedule } from "../upgradeFlow/handleUpgradeFlowSchedule.js";
 import { updateStripeSub2 } from "../upgradeFlow/updateStripeSub2.js";
 import { createStripeSub2 } from "./createStripeSub2.js";
+import { attachParamsToMetadata } from "@/internal/billing/attach/utils/attachParamsToMetadata.js";
+import { addMinutes } from "date-fns";
 
 export const handlePaidProduct = async ({
 	ctx,
@@ -208,11 +210,38 @@ export const handlePaidProduct = async ({
 					logger,
 				});
 			}
+		
+			const subInvoice: Stripe.Invoice | undefined = (sub.latest_invoice as Stripe.Invoice)
+
+			if(subInvoice && subInvoice.status === "open") {
+				logger.info(
+					`[update subscription] invoice action required: ${subInvoice.id}`,
+				);
+				const metadata = await attachParamsToMetadata({
+					db: ctx.db,
+					attachParams,
+					type: MetadataType.InvoiceActionRequired,
+					stripeInvoiceId: subInvoice.id as string,
+					expiresAt: addMinutes(Date.now(), 10).getTime(),
+				});
+	
+				await stripeCli.invoices.update(subInvoice.id, {
+					metadata: {
+						autumn_metadata_id: metadata.id,
+					},
+				});
+				return AttachFunctionResponseSchema.parse({
+					checkout_url: subInvoice.hosted_invoice_url,
+					code: SuccessCode.InvoiceActionRequired,
+					message: "Payment action required",
+				});
+			}
 		} catch (error) {
 			if (
 				error instanceof RecaseError &&
 				!invoiceOnly &&
 				error.code === ErrCode.CreateStripeSubscriptionFailed
+
 			) {
 				return await handleCreateCheckout({
 					ctx,

@@ -1,10 +1,10 @@
 import {
-	type AttachConfig,
-	type AttachFunctionResponse,
-	AttachFunctionResponseSchema,
-	MetadataType,
-	SuccessCode,
-	type UsagePriceConfig,
+    type AttachConfig,
+    type AttachFunctionResponse,
+    AttachFunctionResponseSchema,
+    MetadataType,
+    SuccessCode,
+    type UsagePriceConfig,
 } from "@autumn/shared";
 import { addMinutes } from "date-fns";
 import { Decimal } from "decimal.js";

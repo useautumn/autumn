@@ -68,7 +68,7 @@ export const createStripeSub2 = async ({
 			// The subscription will become active after external payment is confirmed via Payment Records API
 			payment_behavior: isCustomPaymentMethod
 				? "default_incomplete"
-				: "error_if_incomplete",
+				: "allow_incomplete",
 			add_invoice_items: invoiceItems,
 			collection_method: invoiceOnly ? "send_invoice" : "charge_automatically",
 			days_until_due: invoiceOnly ? 30 : undefined,
@@ -165,6 +165,7 @@ export const createStripeSub2 = async ({
 		console.log("Error code:", error.code);
 		console.log("Message:", error.message);
 		console.log("Decline code:", error.decline_code);
+		console.log("Error original stack:", error.stack);
 
 		throw new RecaseError({
 			code: ErrCode.CreateStripeSubscriptionFailed,
