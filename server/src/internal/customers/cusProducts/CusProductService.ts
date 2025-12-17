@@ -10,15 +10,7 @@ import {
 	products,
 	RecaseError,
 } from "@autumn/shared";
-import {
-	and,
-	arrayContains,
-	eq,
-	inArray,
-	isNotNull,
-	isNull,
-	or,
-} from "drizzle-orm";
+import { and, arrayContains, eq, inArray, isNotNull, or } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const ACTIVE_STATUSES = [
@@ -544,13 +536,11 @@ export class CusProductService {
 		productId,
 		internalCustomerId,
 		fingerprint,
-		internalEntityId,
 	}: {
 		db: DrizzleCli;
 		productId: string;
 		internalCustomerId: string;
 		fingerprint?: string;
-		internalEntityId?: string;
 	}) {
 		const data = await db
 			.select()
@@ -571,9 +561,6 @@ export class CusProductService {
 					),
 					eq(products.id, productId),
 					isNotNull(customerProducts.free_trial_id),
-					internalEntityId
-						? eq(customerProducts.internal_entity_id, internalEntityId)
-						: isNull(customerProducts.internal_entity_id),
 				),
 			);
 
