@@ -1,258 +1,145 @@
+import { beforeAll, describe, expect, it } from "bun:test";
+import { ApiVersion, SuccessCode } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import {
-    type AttachConfig,
-    type AttachFunctionResponse,
-    AttachFunctionResponseSchema,
-    MetadataType,
-    SuccessCode,
-    type UsagePriceConfig,
-} from "@autumn/shared";
-import { addMinutes } from "date-fns";
-import { Decimal } from "decimal.js";
-import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
-import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
-import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
-import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import { newPriceToInvoiceDescription } from "@/internal/invoices/invoiceFormatUtils.js";
-import { buildInvoiceMemoFromEntitlements } from "@/internal/invoices/invoiceMemoUtils.js";
-import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
-import { orgToCurrency } from "@/internal/orgs/orgUtils.js";
-import { priceToProduct } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
-import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
-import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
-import { getPriceOptions } from "@/internal/products/prices/priceUtils.js";
-import { attachToInsertParams } from "@/internal/products/productUtils.js";
-import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
-import { attachParamsToMetadata } from "../../../../billing/attach/utils/attachParamsToMetadata";
-import { getCustomerDisplay } from "../../../../billing/attach/utils/getCustomerDisplay";
+    constructProduct
+} from "@/utils/scriptUtils/createTestProducts.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3";
+import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached";
+import { completeInvoiceCheckout } from "@tests/utils/stripeUtils/completeInvoiceCheckout";
+import { attachAuthenticatePaymentMethod } from "@/external/stripe/stripeCusUtils";
+import { completeInvoiceConfirmation } from "@tests/utils/stripeUtils/completeInvoiceConfirmation";
 
-export const handleOneOffFunction = async ({
-	ctx,
-	attachParams,
-	config,
-}: {
-	ctx: AutumnContext;
-	attachParams: AttachParams;
-	config: AttachConfig;
-}): Promise<AttachFunctionResponse> => {
-	const { logger } = ctx;
+const pro = constructProduct({
+	type: "pro",
 
-	logger.info("Scenario 4A: One-off prices");
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 100,
+		}),
+	],
+});
 
-	const {
-		stripeCli,
-		paymentMethod,
-		org,
-		customer,
-		products,
-		prices,
-		entitlements,
-		optionsList,
-		rewards,
-	} = attachParams;
+const premium = constructProduct({
+	type: "premium",
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 100,
+		}),
+	],
+});
 
-	const { invoiceOnly } = config;
+const oneOff = constructProduct({
+	type: "one_off",
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 100,
+		}),
+	],
+});
 
-	const invoiceItems = [];
+const testCase = "temp";
 
-	for (const price of prices) {
-		const options = getPriceOptions(price, optionsList);
-		let quantity = options?.quantity;
+describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
+	const customerId = "temp";
 
-		if (quantity) {
-			const config = price.config as UsagePriceConfig;
-			quantity = new Decimal(quantity)
-				.mul(config.billing_units || 1)
-				.toNumber();
-		}
+	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
-		let invoiceItemData = {};
-		if (isFixedPrice({ price })) {
-			quantity = 1;
-
-			invoiceItemData = {
-				pricing: {
-					price: price.config.stripe_price_id,
-				},
-				quantity: 1,
-			};
-		} else {
-			const amount = priceToInvoiceAmount({
-				price,
-				quantity,
-			});
-
-			const product = priceToProduct({
-				price,
-				products,
-			});
-
-			const description = newPriceToInvoiceDescription({
-				org,
-				price,
-				product: product!,
-				ents: entitlements,
-				quantity: options?.quantity,
-				withProductPrefix: true,
-			});
-
-			invoiceItemData = {
-				description,
-				price_data: {
-					unit_amount: new Decimal(amount).mul(100).round().toNumber(),
-					currency: orgToCurrency({ org }),
-					product: price.config?.stripe_product_id || product?.processor?.id,
-				},
-			};
-		}
-
-		invoiceItems.push({
-			...invoiceItemData,
-			quantity: 1,
+	beforeAll(async () => {
+		await initCustomerV3({
+			ctx,
+			customerId,
+			withTestClock: true,
+			attachPm: "fail",
 		});
-	}
 
-	let shouldMemo = false;
-	let invoiceMemo = "";
-	try {
-		shouldMemo = attachParams.org.config.invoice_memos && invoiceOnly;
-		invoiceMemo = shouldMemo
-			? await buildInvoiceMemoFromEntitlements({
-					org: attachParams.org,
-					entitlements: attachParams.entitlements,
-					features: attachParams.features,
-					prices: attachParams.prices,
-					logger,
-				})
-			: "";
-	} catch (error) {
-		logger.error("ONE OFF FUNCTION: error adding invoice memo", {
-			error,
+		await initProductsV0({
+			ctx,
+			products: [pro, premium, oneOff],
+			prefix: testCase,
 		});
-	}
-
-	// Create invoice
-	logger.info("1. Creating invoice");
-	let stripeInvoice = await stripeCli.invoices.create({
-		customer: customer.processor.id!,
-		auto_advance: false,
-		currency: orgToCurrency({ org }),
-		discounts: rewards ? rewards.map((r) => ({ coupon: r.id })) : undefined,
-		collection_method: attachParams.invoiceOnly ? "send_invoice" : undefined,
-		days_until_due: attachParams.invoiceOnly ? 30 : undefined,
-		...(shouldMemo ? { description: invoiceMemo } : {}),
 	});
 
-	logger.info("2. Creating invoice items");
-	for (const invoiceItem of invoiceItems) {
-		await stripeCli.invoiceItems.create({
-			...invoiceItem,
-			customer: customer.processor.id!,
-			invoice: stripeInvoice.id,
+	it("should call attach and get invoice action required", async () => {
+		let attachRes = await autumnV1.attach({
+			customer_id: customerId,
+			product_id: pro.id,
 		});
-	}
+		expect(attachRes.code).toBe(SuccessCode.InvoiceActionRequired);
+		expect(attachRes.checkout_url).toBeDefined();
+		expect(attachRes.checkout_url).toContain("invoice.stripe.com");
+		expect(attachRes.message).toBe("Payment action required");
 
-	if (config.invoiceCheckout) {
-		if (stripeInvoice.status === "draft" && config.finalizeInvoice) {
-			stripeInvoice = await stripeCli.invoices.finalizeInvoice(
-				stripeInvoice.id!,
-			);
-		}
-
-		await insertInvoiceFromAttach({
-			db: ctx.db,
-			attachParams,
-			invoiceId: stripeInvoice.id,
-			logger,
+		await completeInvoiceCheckout({
+			url: attachRes.checkout_url,
 		});
+	})
 
-		return AttachFunctionResponseSchema.parse({
-			invoice: stripeInvoice,
+	it("should have attached product after completing invoice action required", async () => {
+		const customer = await autumnV1.customers.get(customerId);
+		expectProductAttached({
+			customer,
+			product: pro,
 		});
-	}
-
-	// Create invoice items
-	if (!invoiceOnly) {
-		stripeInvoice = await stripeCli.invoices.finalizeInvoice(stripeInvoice.id!);
-
-		logger.info("3. Creating invoice from stripe");
-		await insertInvoiceFromAttach({
-			db: ctx.db,
-			attachParams,
-			invoiceId: stripeInvoice.id,
-			logger,
-		});
-
-		logger.info("4. Paying invoice");
-		const { paid, error, invoice: paidInvoice } = await payForInvoice({
-			stripeCli,
-			invoiceId: stripeInvoice.id!,
-			paymentMethod,
-			logger,
-			errorOnFail: false,
-			voidIfFailed: false,
-		});
-
-		if (paidInvoice) {
-			stripeInvoice = paidInvoice;
-		}
-
-		if (!paid) {
-			// Check if invoice is still open (payment failed but invoice not voided)
-			if (stripeInvoice && stripeInvoice.status === "open") {
-				logger.info(
-					`[one off function] invoice action required: ${stripeInvoice.id}`,
-				);
-				const metadata = await attachParamsToMetadata({
-					db: ctx.db,
-					attachParams,
-					type: MetadataType.InvoiceActionRequired,
-					stripeInvoiceId: stripeInvoice.id as string,
-					expiresAt: addMinutes(Date.now(), 10).getTime(),
-				});
-
-				await stripeCli.invoices.update(stripeInvoice.id, {
-					metadata: {
-						autumn_metadata_id: metadata.id,
-					},
-				});
-
-				return AttachFunctionResponseSchema.parse({
-					checkout_url: stripeInvoice.hosted_invoice_url,
-					code: SuccessCode.InvoiceActionRequired,
-					message: "Payment action required",
-				});
-			}
-
-			if (org.config.checkout_on_failed_payment) {
-				return await handleCreateCheckout({
-					ctx,
-					attachParams,
-					config,
-				});
-			}
-			throw error;
-		}
-	}
-
-	logger.info("6. Creating full customer product");
-	const batchInsert = [];
-	for (const product of products) {
-		batchInsert.push(
-			createFullCusProduct({
-				db: ctx.db,
-				attachParams: attachToInsertParams(attachParams, product),
-				logger,
-			}),
-		);
-	}
-	await Promise.all(batchInsert);
-
-	const customerName = getCustomerDisplay({ customer });
-	const productNames = products.map((p) => p.name).join(", ");
-	return AttachFunctionResponseSchema.parse({
-		// success: true,
-		message: `Successfully purchased product(s) ${productNames} and attached to customer ${customerName}`,
-		invoice: invoiceOnly ? stripeInvoice : undefined,
-		code: SuccessCode.OneOffProductAttached,
 	});
-};
+
+	it("should call attach for one-off and get invoice action required", async () => {
+		let attachRes = await autumnV1.attach({
+			customer_id: customerId,
+			product_id: oneOff.id,
+		});
+		expect(attachRes.code).toBe(SuccessCode.InvoiceActionRequired);
+		expect(attachRes.checkout_url).toBeDefined();
+		expect(attachRes.checkout_url).toContain("invoice.stripe.com");
+		expect(attachRes.message).toBe("Payment action required");
+
+		await completeInvoiceCheckout({
+			url: attachRes.checkout_url,
+		});
+	});
+
+	it("should have attached product after completing invoice action required", async () => {
+		const customer = await autumnV1.customers.get(customerId);
+		expectProductAttached({
+			customer,
+			product: oneOff,
+		});
+	});
+
+	it("should call attach for pro and get invoice action required with 3ds", async () => {
+		await attachAuthenticatePaymentMethod({
+			ctx,
+			customerId,
+		});
+		
+		let attachRes = await autumnV1.attach({
+			customer_id: customerId,
+			product_id: premium.id,
+		});
+
+		expect(attachRes.code).toBe(SuccessCode.InvoiceActionRequired);
+		expect(attachRes.checkout_url).toBeDefined();
+		expect(attachRes.checkout_url).toContain("invoice.stripe.com");
+		expect(attachRes.message).toBe("Payment action required");
+
+		await completeInvoiceConfirmation({
+			url: attachRes.checkout_url,
+		});
+	});
+
+	it("should have attached product after completing invoice action required", async () => {
+		const customer = await autumnV1.customers.get(customerId);
+		expectProductAttached({
+			customer,
+			product: premium,
+		});
+	});
+});
