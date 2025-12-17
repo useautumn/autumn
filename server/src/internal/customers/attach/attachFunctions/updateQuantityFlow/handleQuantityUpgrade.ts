@@ -164,11 +164,27 @@ export const handleQuantityUpgrade = async ({
 		}
 	}
 
-	await stripeCli.subscriptionItems.update(subItem.id, {
-		// quantity: newOptions.quantity,
-		quantity: (subItem.quantity || 0) + subItemDifference,
-		proration_behavior: "none",
-	});
+	// 1. If no sub item, add
+	if (!subItem) {
+		if (!cusPrice.price.config.stripe_price_id) {
+			throw new Error(
+				"Trying to add new sub item for upgrade quantity flow, but no Stripe price ID found",
+			);
+		}
+
+		await stripeCli.subscriptionItems.create({
+			subscription: stripeSub.id,
+			price: cusPrice.price.config.stripe_price_id,
+			quantity: subItemDifference,
+			proration_behavior: "none",
+		});
+	} else {
+		await stripeCli.subscriptionItems.update(subItem.id, {
+			// quantity: newOptions.quantity,
+			quantity: (subItem.quantity || 0) + subItemDifference,
+			proration_behavior: "none",
+		});
+	}
 
 	// Update cus ent
 
