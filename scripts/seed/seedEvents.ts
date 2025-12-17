@@ -186,11 +186,30 @@ async function validateCustomer({
 // EVENT GENERATION
 // ============================================================================
 
-function generateRandomTimestamp({ daysBack }: { daysBack: number }): Date {
+const RANDOM_WORDS = [
+	"apple", "banana", "cherry", "delta", "echo", "foxtrot", "gamma", "hotel",
+	"indigo", "juliet", "kilo", "lima", "mango", "november", "oscar", "papa",
+	"quebec", "romeo", "sierra", "tango", "umbrella", "victor", "whiskey",
+	"xray", "yankee", "zulu", "phoenix", "dragon", "thunder", "crystal",
+];
+
+function getRandomWord(): string {
+	return RANDOM_WORDS[Math.floor(Math.random() * RANDOM_WORDS.length)];
+}
+
+function generateTimestampForDay({
+	daysBack,
+	dayIndex,
+}: {
+	daysBack: number;
+	dayIndex: number;
+}): Date {
 	const now = Date.now();
-	const startTime = now - daysBack * 24 * 60 * 60 * 1000;
-	const randomTime = startTime + Math.random() * (now - startTime);
-	return new Date(randomTime);
+	const msPerDay = 24 * 60 * 60 * 1000;
+	// dayIndex 0 = oldest day, dayIndex (daysBack-1) = today
+	const dayStart = now - (daysBack - dayIndex) * msPerDay;
+	const randomTimeInDay = dayStart + Math.random() * msPerDay;
+	return new Date(randomTimeInDay);
 }
 
 function generateEvents({
@@ -207,11 +226,20 @@ function generateEvents({
 	featureIds: string[];
 }): EventInsert[] {
 	const events: EventInsert[] = [];
+	const minPerDay = 100;
+	const totalDays = CONFIG.timeRangeDays;
 
-	for (let i = 0; i < count; i++) {
+	// Ensure at least minPerDay events per day
+	const minTotal = minPerDay * totalDays;
+	const actualCount = Math.max(count, minTotal);
+
+	for (let i = 0; i < actualCount; i++) {
 		const eventName = featureIds[Math.floor(Math.random() * featureIds.length)];
-		const timestamp = generateRandomTimestamp({
-			daysBack: CONFIG.timeRangeDays,
+		// Distribute events evenly across days, then add randomness within each day
+		const dayIndex = Math.floor(i / minPerDay) % totalDays;
+		const timestamp = generateTimestampForDay({
+			daysBack: totalDays,
+			dayIndex,
 		});
 
 		const event: EventInsert = {
@@ -232,7 +260,7 @@ function generateEvents({
 			properties: {
 				...CONFIG.defaultProperties,
 				event_index: i + 1,
-				random_value: Math.floor(Math.random() * 1000),
+				random_word_key: getRandomWord(),
 				user: {
 					id: Math.floor(Math.random() * 10) + 1,
 				},
