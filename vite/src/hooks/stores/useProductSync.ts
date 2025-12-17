@@ -1,4 +1,4 @@
-import type { ProductV2 } from "@autumn/shared";
+import type { FrontendProduct, ProductV2 } from "@autumn/shared";
 import { productV2ToFrontendProduct } from "@autumn/shared";
 import { useEffect, useRef } from "react";
 import { useProductStore } from "./useProductStore";
@@ -13,6 +13,7 @@ export const useProductSync = ({
 }) => {
 	const setBaseProduct = useProductStore((s) => s.setBaseProduct);
 	const setProduct = useProductStore((s) => s.setProduct);
+	const currentProduct = useProductStore((s) => s.product);
 	const hasInitialized = useRef(false);
 	const lastProductRef = useRef<ProductV2 | null>(null);
 
@@ -36,9 +37,22 @@ export const useProductSync = ({
 
 			// Update product on initial load, when switching products, or when version changes
 			if (!hasInitialized.current || isNewProduct || isVersionChanged) {
-				setProduct(frontendProduct);
+				// Preserve frontend-only fields during creation flow, so Free vs Variable shows correctly
+				const shouldPreserveFrontendFields =
+					!currentProduct?.internal_id && product.items.length === 0;
+
+				const mergedProduct: FrontendProduct = shouldPreserveFrontendFields
+					? {
+							...frontendProduct,
+							basePriceType:
+								currentProduct?.basePriceType ?? frontendProduct.basePriceType,
+							planType: currentProduct?.planType ?? frontendProduct.planType,
+						}
+					: frontendProduct;
+
+				setProduct(mergedProduct);
 				hasInitialized.current = true;
 			}
 		}
-	}, [product, setBaseProduct, setProduct]);
+	}, [product, setBaseProduct, setProduct, currentProduct]);
 };

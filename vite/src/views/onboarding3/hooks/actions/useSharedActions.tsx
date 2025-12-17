@@ -1,7 +1,6 @@
-import { FeatureType, type ProductV2 } from "@autumn/shared";
+import type { ProductV2 } from "@autumn/shared";
 import { useCallback, useMemo } from "react";
 import { useNavigate } from "react-router";
-import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEnv } from "@/utils/envUtils";
@@ -34,9 +33,6 @@ export const useSharedActions = ({
 
 	// Get query state setters
 	const { setQueryStates } = useOnboarding3QueryState();
-
-	// Get feature to check if Boolean
-	const feature = useFeatureStore((s) => s.feature);
 
 	// Handle plan selection from dropdown
 	const handlePlanSelect = useCallback(
@@ -82,18 +78,9 @@ export const useSharedActions = ({
 			setProduct(baseProduct);
 		}
 
-		// If we're on Step 4 (Playground) and feature is Boolean, skip Step 3 and go to Step 2
-		if (
-			step === OnboardingStep.Playground &&
-			feature?.type === FeatureType.Boolean
-		) {
-			setQueryStates({ step: OnboardingStep.FeatureCreation });
-			return;
-		}
-
 		// Default: pop one step back
 		popStep();
-	}, [popStep, step, baseProduct, setProduct, feature, setQueryStates]);
+	}, [popStep, step, baseProduct, setProduct]);
 
 	// Handle create plan success from dialog
 	const onCreatePlanSuccess = useCallback(

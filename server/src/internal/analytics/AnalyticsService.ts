@@ -1,10 +1,11 @@
 /** biome-ignore-all lint/complexity/noStaticOnlyClass: wrap it up buddy */
 
-import { ErrCode, type FullCustomer } from "@autumn/shared";
+/** biome-ignore-all lint/complexity/noStaticOnlyClass: wrap it up buddy */
+
+import { ErrCode, type FullCustomer, RecaseError } from "@autumn/shared";
 import type { ClickHouseClient } from "@clickhouse/client";
 import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
-import RecaseError from "@/utils/errorUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import {
 	generateEventCountExpressions,
