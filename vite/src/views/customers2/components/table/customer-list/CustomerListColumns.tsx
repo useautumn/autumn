@@ -163,7 +163,11 @@ export const createCustomerListColumns = (): ColumnDef<
 		header: "Email",
 		accessorKey: "email",
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
-			return <div className="truncate">{row.original.email}</div>;
+			return (
+				<div className="truncate">
+					<MiniCopyButton text={row.original.email ?? ""} />
+				</div>
+			);
 		},
 	},
 	{

@@ -108,6 +108,7 @@ export const PlanTypeSection = ({
 								setProduct({
 									...product,
 									planType: "free",
+									is_default: !product.is_add_on,
 									basePriceType: null,
 									items:
 										product.items?.filter(

@@ -1,9 +1,4 @@
-import {
-	type CreateFeature,
-	type Feature,
-	FeatureType,
-	type ProductV2,
-} from "@autumn/shared";
+import { type CreateFeature, type Feature, type ProductV2 } from "@autumn/shared";
 import { useCallback } from "react";
 import { useNavigate } from "react-router";
 import { useOrg } from "@/hooks/common/useOrg";
@@ -85,45 +80,6 @@ export const useStepActions = (props: StepActionsProps) => {
 			// Step 2: Create feature and add to product
 			if (step === OnboardingStep.FeatureCreation) {
 				canProceed = await featureCreationActions.handleProceed();
-
-				// Skip Step 3 (FeatureConfiguration) for Boolean features
-				if (
-					canProceed &&
-					feature?.type === FeatureType.Boolean &&
-					nextStep === OnboardingStep.FeatureConfiguration
-				) {
-					nextStep = OnboardingStep.Playground;
-
-					// Add a basic Boolean feature item to the product for preview
-					// (just for display in Step 4, won't be saved until user manually saves)
-					const currentProduct = useProductStore.getState().product;
-
-					// Check if this feature item already exists
-					const featureExists = currentProduct.items?.some(
-						(item) => item.feature_id === feature.id,
-					);
-
-					if (!featureExists) {
-						const updatedProduct = {
-							...currentProduct,
-							items: [
-								...(currentProduct.items || []),
-								{
-									feature_id: feature.id,
-									feature_type: "static" as const,
-									included_usage: null,
-									interval: null,
-									price: null,
-									tiers: null,
-									billing_units: null,
-									entity_feature_id: null,
-									reset_usage_when_enabled: null,
-								},
-							],
-						};
-						useProductStore.getState().setProduct(updatedProduct as ProductV2);
-					}
-				}
 			}
 
 			// Step 3: Save product changes before moving to playground
