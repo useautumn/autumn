@@ -3,7 +3,7 @@ import { ApiEventsListParamsSchema } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { EventListService } from "../EventListService";
 
-export const handleEventList = createRoute({
+export const handleListEvents = createRoute({
 	body: ApiEventsListParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

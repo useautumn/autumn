@@ -4,14 +4,7 @@ import type {
 	ClickHouseResult,
 	RawEventFromClickHouse,
 } from "@autumn/shared";
-import { ErrCode, RecaseError } from "@autumn/shared";
-import {
-	type DecodedCursorV1,
-	decodeCursor,
-	encodeCursor,
-} from "@autumn/shared/utils/cursorUtils";
 import type { ClickHouseClient } from "@clickhouse/client";
-import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
 export class EventListService {
@@ -49,13 +42,11 @@ export class EventListService {
 		eventNames,
 		startDate,
 		endDate,
-		cursor,
 	}: {
 		customerId?: string;
 		eventNames?: string[];
 		startDate?: number;
 		endDate?: number;
-		cursor: DecodedCursorV1 | null;
 	}): string {
 		const conditions: string[] = [];
 
@@ -79,12 +70,6 @@ export class EventListService {
 			);
 		}
 
-		if (cursor) {
-			conditions.push(
-				"(timestamp, id) < (fromUnixTimestamp64Milli({cursor_timestamp:Int64}), {cursor_id:String})",
-			);
-		}
-
 		return conditions.length > 0 ? `and ${conditions.join(" and ")}` : "";
 	}
 
@@ -95,7 +80,7 @@ export class EventListService {
 		eventNames,
 		startDate,
 		endDate,
-		cursor,
+		offset,
 		limit,
 	}: {
 		orgId: string | undefined;
@@ -104,13 +89,14 @@ export class EventListService {
 		eventNames?: string[];
 		startDate?: number;
 		endDate?: number;
-		cursor: DecodedCursorV1 | null;
+		offset: number;
 		limit: number;
 	}): Record<string, unknown> {
 		const params: Record<string, unknown> = {
 			org_id: orgId,
 			env,
 			limit: limit + 1,
+			offset,
 		};
 
 		if (customerId) {
@@ -129,11 +115,6 @@ export class EventListService {
 			params.end_date = endDate;
 		}
 
-		if (cursor) {
-			params.cursor_timestamp = cursor.timestamp;
-			params.cursor_id = cursor.id;
-		}
-
 		return params;
 	}
 
@@ -145,21 +126,7 @@ export class EventListService {
 		params: ApiEventsListParams;
 	}) {
 		const { clickhouseClient, org, env } = ctx;
-		const { starting_after, limit, customer_id, feature_id, time_range } =
-			params;
-
-		let cursor: DecodedCursorV1 | null = null;
-		if (starting_after) {
-			try {
-				cursor = decodeCursor(starting_after);
-			} catch (_error) {
-				throw new RecaseError({
-					message: "Invalid cursor format",
-					code: ErrCode.InvalidInputs,
-					statusCode: StatusCodes.BAD_REQUEST,
-				});
-			}
-		}
+		const { offset, limit, customer_id, feature_id, custom_range } = params;
 
 		const eventNames = feature_id
 			? Array.isArray(feature_id)
@@ -170,9 +137,8 @@ export class EventListService {
 		const whereClause = EventListService.buildWhereConditions({
 			customerId: customer_id,
 			eventNames,
-			startDate: time_range?.start,
-			endDate: time_range?.end,
-			cursor,
+			startDate: custom_range?.start,
+			endDate: custom_range?.end,
 		});
 
 		const query = `
@@ -189,7 +155,8 @@ where org_id = {org_id:String}
   and set_usage = false
   ${whereClause}
 order by timestamp desc, id desc
-limit {limit:UInt32};
+limit {limit:UInt32}
+offset {offset:UInt32};
 `;
 
 		const queryParams = EventListService.buildQueryParams({
@@ -197,9 +164,9 @@ limit {limit:UInt32};
 			env,
 			customerId: customer_id,
 			eventNames,
-			startDate: time_range?.start,
-			endDate: time_range?.end,
-			cursor,
+			startDate: custom_range?.start,
+			endDate: custom_range?.end,
+			offset,
 			limit,
 		});
 
@@ -218,19 +185,12 @@ limit {limit:UInt32};
 		const hasMore = events.length > limit;
 		const list = hasMore ? events.slice(0, limit) : events;
 
-		const lastEvent = list[list.length - 1];
-		const hasNextCursor = hasMore && lastEvent;
-		const nextCursor = hasNextCursor
-			? encodeCursor({
-					timestamp: hasNextCursor.timestamp,
-					id: hasNextCursor.id,
-				})
-			: null;
-
 		return {
 			list,
 			has_more: hasMore,
-			next_cursor: nextCursor,
+			total: events.length,
+			offset,
+			limit,
 		};
 	}
 }

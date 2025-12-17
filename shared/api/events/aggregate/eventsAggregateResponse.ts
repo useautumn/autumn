@@ -58,8 +58,20 @@ const EventAggregateResponseTotalSchema = z.object({
 });
 
 export const EventsAggregateResponseSchema = z.union([
-	EventAggregateResponseFlatSchema.and(EventAggregateResponseTotalSchema),
-	EventAggregateResponseGroupedSchema.and(EventAggregateResponseTotalSchema),
+	EventAggregateResponseFlatSchema.and(EventAggregateResponseTotalSchema).meta({
+		id: "EventAggregateResponseFlat",
+		title: "No Group",
+		description:
+			"Response when group_by is not provided. Feature values are numbers.",
+	}),
+	EventAggregateResponseGroupedSchema.and(
+		EventAggregateResponseTotalSchema,
+	).meta({
+		id: "EventAggregateResponseGrouped",
+		title: "With Group",
+		description:
+			"Response when group_by is provided. Feature values are objects with group values as keys.",
+	}),
 ]);
 
 export type EventsAggregateResponse = z.infer<

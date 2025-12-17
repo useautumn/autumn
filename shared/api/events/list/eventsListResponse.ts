@@ -1,4 +1,4 @@
-import { createCursorPaginatedResponseSchema } from "@api/common/cursorPaginationSchemas";
+import { createPagePaginatedResponseSchema } from "@api/common/pagePaginationSchemas";
 import { z } from "zod/v4";
 
 export const EVENTS_LIST_EXAMPLE = {
@@ -20,9 +20,10 @@ export const EVENTS_LIST_EXAMPLE = {
 			properties: {},
 		},
 	],
-	has_more: true,
-	next_cursor:
-		"MXwxNzY1NzM3MTYzNzg3fGV2dF8zNnFiaDJMeWRFUW5QS0dOVVlvT2R4endhUTE",
+	total: 2,
+	has_more: false,
+	offset: 0,
+	limit: 100,
 };
 
 export const ApiEventsListItemSchema = z.object({
@@ -38,7 +39,7 @@ export const ApiEventsListItemSchema = z.object({
 	properties: z.object({}).describe("Event properties (JSONB)"),
 });
 
-export const ApiEventsListResponseSchema = createCursorPaginatedResponseSchema(
+export const ApiEventsListResponseSchema = createPagePaginatedResponseSchema(
 	ApiEventsListItemSchema,
 );
 

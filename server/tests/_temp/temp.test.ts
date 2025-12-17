@@ -4,10 +4,7 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import {
-	constructFeatureItem,
-	constructPrepaidItem,
-} from "@/utils/scriptUtils/constructItem.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import {
 	constructProduct,
 	constructRawProduct,
@@ -50,19 +47,6 @@ const pro = constructProduct({
 		// 	featureId: TestFeature.Workflows,
 		// 	includedUsage: 10,
 		// }),
-	],
-	// trial: true,
-});
-const premium = constructProduct({
-	type: "premium",
-
-	items: [
-		constructPrepaidItem({
-			featureId: TestFeature.Messages,
-			includedUsage: 100,
-			price: 12,
-			billingUnits: 100,
-		}),
 	],
 });
 
