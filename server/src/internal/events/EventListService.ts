@@ -188,7 +188,7 @@ offset {offset:UInt32};
 		return {
 			list,
 			has_more: hasMore,
-			total: events.length,
+			total: list.length,
 			offset,
 			limit,
 		};
