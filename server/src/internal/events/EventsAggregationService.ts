@@ -236,6 +236,47 @@ export class EventsAggregationService {
 		const groupBy = getGroupByClause();
 		const groupByFieldName = groupBy.fieldName;
 
+		// Validate distinct group count if group_by is provided
+		if (params.group_by && groupBy.groupBy) {
+			const propertyPath = params.group_by.replace("properties.", "");
+			const pathSegments = propertyPath.split(".");
+			const escapedPathArgs = pathSegments
+				.map((seg) => `'${seg.replace(/'/g, "''")}'`)
+				.join(", ");
+			const groupField = `JSONExtractString(e.properties, ${escapedPathArgs})`;
+
+			const distinctCountQuery = `
+				SELECT COUNT(DISTINCT ${groupField}) as distinct_count
+				FROM org_events_view(org_id={org_id:String}, org_slug='', env={env:String}) e
+				${params.aggregateAll ? "" : "WHERE e.customer_id = {customer_id:String}"}
+			`;
+
+			const distinctResult = await (clickhouseClient as ClickHouseClient).query(
+				{
+					query: distinctCountQuery,
+					query_params: {
+						org_id: org?.id,
+						env: env,
+						customer_id: params.customer_id,
+					},
+					format: "JSON",
+				},
+			);
+
+			const distinctJson = (await distinctResult.json()) as ClickHouseResult<{
+				distinct_count: string;
+			}>;
+			const distinctCount = Number(distinctJson.data[0]?.distinct_count ?? 0);
+
+			if (distinctCount > 30) {
+				throw new RecaseError({
+					message: `Too many distinct group values (${distinctCount}). Maximum allowed is 30. Please choose a property with fewer unique values.`,
+					code: ErrCode.InvalidInputs,
+					statusCode: StatusCodes.BAD_REQUEST,
+				});
+			}
+		}
+
 		const query = `
 with customer_events as (
     select *
