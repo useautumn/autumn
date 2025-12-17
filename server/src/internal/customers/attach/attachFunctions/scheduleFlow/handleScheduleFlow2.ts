@@ -46,7 +46,7 @@ export const handleScheduleFunction2 = async ({
 		attachParams,
 	});
 
-	const { sub: curSub } = await getCustomerSub({ attachParams });
+	const { sub: curSub } = await getCustomerSub({ attachParams, targetSubId: curCusProduct?.subscription_ids?.[0] });
 
 	// 1. Cancel current subscription and fetch items from other cus products...?
 	let { schedule } = await getCustomerSchedule({

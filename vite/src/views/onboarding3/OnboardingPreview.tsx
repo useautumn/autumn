@@ -8,9 +8,9 @@ import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useIsEditingPlan, useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { BasePriceDisplay } from "../products/plan/components/plan-card/BasePriceDisplay";
+import { DummyPlanFeatureRow } from "../products/plan/components/plan-card/DummyPlanFeatureRow";
 import { PlanCardToolbar } from "../products/plan/components/plan-card/PlanCardToolbar";
 import { PlanFeatureList } from "../products/plan/components/plan-card/PlanFeatureList";
-import { DummyFeatureRow } from "./components/DummyFeatureRow";
 import { useOnboarding3QueryState } from "./hooks/useOnboarding3QueryState";
 import { useOnboardingStore } from "./store/useOnboardingStore";
 import { getStepNumber } from "./utils/onboardingUtils";
@@ -155,7 +155,7 @@ export const OnboardingPreview = ({
 			{showDummyFeature && feature && (
 				<>
 					<Separator className="" />
-					<DummyFeatureRow feature={feature} />
+					<DummyPlanFeatureRow />
 				</>
 			)}
 

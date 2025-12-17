@@ -64,7 +64,9 @@ export function UpdateProductActions({
 		useInvoice: boolean;
 		enableProductImmediately?: boolean;
 	}) => {
-		if (previewData?.url) {
+		// Only redirect to checkout URL for the "Checkout" button flow (useInvoice: false)
+		// When useInvoice is true, we always call the attach mutation to generate an invoice
+		if (previewData?.url && !useInvoice) {
 			window.open(previewData.url, "_blank");
 			return;
 		}

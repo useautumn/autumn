@@ -8,6 +8,7 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { pushPage } from "@/utils/genUtils";
 import { useProductsQueryState } from "@/views/products/hooks/useProductsQueryState";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
+import { AddOnPlanCreateButton } from "./AddOnPlanCreateButton";
 import { createProductListColumns } from "./ProductListColumns";
 import { ProductListCreateButton } from "./ProductListCreateButton";
 import { ProductListMenuButton } from "./ProductListMenuButton";
@@ -116,7 +117,6 @@ export function ProductListTable() {
 	const enableSorting = false;
 
 	const hasBaseRows = baseTable.getRowModel().rows.length > 0;
-	const hasAddOns = addOnPlans && addOnPlans.length > 0;
 	const isArchivedMode = queryStates.showArchivedProducts;
 
 	// Show table when there are rows OR when in archived mode (so user can toggle back)
@@ -126,77 +126,83 @@ export function ProductListTable() {
 		<div className="flex flex-col gap-8">
 			{/* Base Plans Table */}
 			{showTable ? (
-				<div>
-					<Table.Provider
-						config={{
-							table: baseTable,
-							numberOfColumns: columns.length,
-							enableSorting,
-							isLoading: false,
-							onRowClick: handleRowClick,
-							emptyStateText: "You haven't archived any plans yet.",
-							rowClassName: "h-10",
-						}}
-					>
-						<Table.Toolbar>
-							<div className="flex w-full justify-between items-center">
-								<Table.Heading>
-									<CubeIcon size={16} weight="fill" className="text-subtle" />
-									{isArchivedMode ? "Archived Plans" : "Base Plans"}
-								</Table.Heading>
-								<Table.Actions>
-									<div className="flex w-full justify-between items-center">
-										<div className="flex items-center gap-2">
-											{!isArchivedMode && <ProductListCreateButton />}
-											<ProductListMenuButton />
+				<>
+					<div>
+						<Table.Provider
+							config={{
+								table: baseTable,
+								numberOfColumns: columns.length,
+								enableSorting,
+								isLoading: false,
+								onRowClick: handleRowClick,
+								emptyStateText: "You haven't archived any plans yet.",
+								rowClassName: "h-10",
+							}}
+						>
+							<Table.Toolbar>
+								<div className="flex w-full justify-between items-center">
+									<Table.Heading>
+										<CubeIcon size={16} weight="fill" className="text-subtle" />
+										{isArchivedMode ? "Archived Plans" : "Base Plans"}
+									</Table.Heading>
+									<Table.Actions>
+										<div className="flex w-full justify-between items-center">
+											<div className="flex items-center gap-2">
+												{!isArchivedMode && <ProductListCreateButton />}
+												<ProductListMenuButton />
+											</div>
 										</div>
-									</div>
-								</Table.Actions>
+									</Table.Actions>
+								</div>
+							</Table.Toolbar>
+							<div>
+								<Table.Container>
+									<Table.Content>
+										<Table.Header />
+										<Table.Body />
+									</Table.Content>
+								</Table.Container>
 							</div>
-						</Table.Toolbar>
-						<div>
-							<Table.Container>
-								<Table.Content>
-									<Table.Header />
-									<Table.Body />
-								</Table.Content>
-							</Table.Container>
-						</div>
-					</Table.Provider>
-				</div>
+						</Table.Provider>
+					</div>
+					<div>
+						<Table.Provider
+							config={{
+								table: addOnTable,
+								numberOfColumns: columns.length,
+								enableSorting,
+								isLoading: false,
+								onRowClick: handleRowClick,
+								emptyStateText:
+									"Add-on plans can be purchased alongside base plans for additional features or top-ups.",
+								rowClassName: "h-10",
+							}}
+						>
+							<Table.Toolbar>
+								<div className="flex w-full justify-between items-center">
+									<Table.Heading>
+										<CubeIcon size={16} weight="fill" className="text-subtle" />
+										Add-on Plans
+									</Table.Heading>
+									<Table.Actions>
+										<AddOnPlanCreateButton />
+									</Table.Actions>
+								</div>
+							</Table.Toolbar>
+							<div>
+								<Table.Container>
+									<Table.Content>
+										<Table.Body />
+									</Table.Content>
+								</Table.Container>
+							</div>
+						</Table.Provider>
+					</div>
+				</>
 			) : (
 				<EmptyState type="plans" actionButton={<ProductListCreateButton />} />
 			)}
 			{/* Add-on Plans Table */}
-			{hasAddOns && (
-				<div>
-					<Table.Provider
-						config={{
-							table: addOnTable,
-							numberOfColumns: columns.length,
-							enableSorting,
-							isLoading: false,
-							onRowClick: handleRowClick,
-							rowClassName: "h-10",
-						}}
-					>
-						<Table.Toolbar>
-							<Table.Heading>
-								<CubeIcon size={16} weight="fill" className="text-subtle" />
-								Add-on Plans
-							</Table.Heading>
-						</Table.Toolbar>
-						<div>
-							<Table.Container>
-								<Table.Content>
-									{/* <Table.Header /> */}
-									<Table.Body />
-								</Table.Content>
-							</Table.Container>
-						</div>
-					</Table.Provider>
-				</div>
-			)}
 		</div>
 	);
 }

@@ -7,8 +7,10 @@ import {
 	SubtractIcon,
 	TicketIcon,
 	TrashIcon,
+	UserCircleGearIcon,
 } from "@phosphor-icons/react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/v2/buttons/Button";
 import { Dialog } from "@/components/v2/dialogs/Dialog";
 import {
@@ -22,7 +24,10 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useDropdownShortcut } from "@/hooks/useDropdownShortcut";
 import { cn } from "@/lib/utils";
+import { CusService } from "@/services/customers/CusService";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
+import { getBackendErr } from "@/utils/genUtils";
 import { getStripeCusLink } from "@/utils/linkUtils";
 import { DeleteCustomerDialog } from "@/views/customers/customer/components/DeleteCustomerDialog";
 import UpdateCustomerDialog from "@/views/customers/customer/components/UpdateCustomerDialog";
@@ -36,10 +41,12 @@ export function CustomerActions() {
 	const [createEntityOpen, setCreateEntityOpen] = useState(false);
 	const [addCouponOpen, setAddCouponOpen] = useState(false);
 	const [actionsOpen, setActionsOpen] = useState(false);
+	const [portalLoading, setPortalLoading] = useState(false);
 	const { customer } = useCusQuery();
 	const { features } = useFeaturesQuery();
 	const { stripeAccount } = useOrgStripeQuery();
 	const env = useEnv();
+	const axiosInstance = useAxiosInstance();
 
 	const stripeCustomerId = customer?.processor?.id;
 
@@ -54,6 +61,23 @@ export function CustomerActions() {
 		isOpen: actionsOpen,
 		setIsOpen: setActionsOpen,
 	});
+
+	const handleOpenBillingPortal = async () => {
+		if (!customer) return;
+
+		setPortalLoading(true);
+		try {
+			const { url } = await CusService.createBillingPortalSession({
+				axios: axiosInstance,
+				customer_id: customer.id || customer.internal_id,
+			});
+			window.open(url, "_blank");
+		} catch (error) {
+			toast.error(getBackendErr(error, "Failed to open billing portal"));
+		} finally {
+			setPortalLoading(false);
+		}
+	};
 
 	return (
 		<div className="flex items-center gap-2">
@@ -107,6 +131,14 @@ export function CustomerActions() {
 					>
 						<TicketIcon />
 						Add coupon
+					</DropdownMenuItem>
+					<DropdownMenuItem
+						onClick={handleOpenBillingPortal}
+						className="flex gap-2"
+						disabled={portalLoading}
+					>
+						<UserCircleGearIcon />
+						{portalLoading ? "Opening..." : "Open customer portal"}
 					</DropdownMenuItem>
 					{stripeCustomerId && (
 						<DropdownMenuItem
