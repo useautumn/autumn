@@ -16,6 +16,7 @@ import { hasPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePric
 import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import {
 	isFreeProduct,
+	isOneOff,
 	isProductUpgrade,
 } from "@/internal/products/productUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
@@ -321,7 +322,10 @@ export const getAttachBranch = async ({
 	});
 
 	// 3. Same product
-	if (curSameProduct) {
+	const sameProductOneOff =
+		curSameProduct &&
+		isOneOff(cusProductToPrices({ cusProduct: curSameProduct }));
+	if (curSameProduct && !sameProductOneOff) {
 		return await getSameProductBranch({ attachParams, fromPreview });
 	}
 
