@@ -49,6 +49,13 @@ const checkLimiter = rateLimiter({
 	keyGenerator: getRateLimitKeyFromContext,
 });
 
+const eventsLimiter = rateLimiter({
+	windowMs: 1000,
+	limit: 5,
+	standardHeaders: "draft-6",
+	keyGenerator: getRateLimitKeyFromContext,
+});
+
 const getLimiterForType = (type: RateLimitType) => {
 	switch (type) {
 		case RateLimitType.General:
@@ -57,6 +64,8 @@ const getLimiterForType = (type: RateLimitType) => {
 			return trackLimiter;
 		case RateLimitType.Check:
 			return checkLimiter;
+		case RateLimitType.Events:
+			return eventsLimiter;
 	}
 };
 

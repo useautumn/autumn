@@ -40,6 +40,7 @@ export const handleListPlans = createRoute({
 					entityId: entity_id,
 					withEntities: true,
 					withSubs: true,
+					allowNotFound: true,
 				});
 			})(),
 		]);

@@ -1,10 +1,10 @@
-import type { EventListResponse } from "@autumn/shared";
-import { EventListQuerySchema } from "@autumn/shared";
+import type { ApiEventsListResponse } from "@autumn/shared";
+import { ApiEventsListParamsSchema } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { EventListService } from "../EventListService";
 
-export const handleEventList = createRoute({
-	body: EventListQuerySchema,
+export const handleListEvents = createRoute({
+	body: ApiEventsListParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const bodyParams = c.req.valid("json");
@@ -14,6 +14,6 @@ export const handleEventList = createRoute({
 			params: bodyParams,
 		});
 
-		return c.json<EventListResponse>(result);
+		return c.json<ApiEventsListResponse>(result);
 	},
 });
