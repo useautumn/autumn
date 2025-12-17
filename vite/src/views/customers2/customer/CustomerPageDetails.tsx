@@ -1,11 +1,11 @@
-import { FingerprintIcon, Ticket } from "@phosphor-icons/react";
+import { FingerprintIcon, TicketIcon } from "@phosphor-icons/react";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { useCusReferralQuery } from "@/views/customers/customer/hooks/useCusReferralQuery";
 import { CustomerActions } from "./CustomerActions";
 import { useCustomerContext } from "./CustomerContext";
 
 const mutedDivClassName =
-	"py-0.5 px-1.5 rounded-lg text-t3 text-tiny flex items-center gap-1 h-6 max-w-48 truncate ";
+	"py-0.5 px-1.5 rounded-lg text-t3 text-tiny flex items-center gap-2 h-6 max-w-48 truncate bg-muted text-tiny-id";
 
 const placeholderText = "NULL";
 
@@ -13,7 +13,11 @@ export const CustomerPageDetails = () => {
 	const { customer } = useCustomerContext();
 	const { stripeCus } = useCusReferralQuery();
 
-	const appliedCoupon = stripeCus?.discount?.coupon;
+	const appliedCoupon = stripeCus?.discount?.source;
+
+	console.log("appliedCoupon", appliedCoupon);
+
+	console.log("stripeCus", stripeCus);
 
 	return (
 		<div className="flex h-4 items-center">
@@ -48,9 +52,9 @@ export const CustomerPageDetails = () => {
 					</div>
 				)}
 				{appliedCoupon && (
-					<div className="py-0.5 px-1.5 bg-secondary rounded-lg text-t3 text-sm flex items-center gap-1 h-6 max-w-48 truncate">
-						<Ticket size={12} className="shrink-0" />
-						<span className="truncate">{appliedCoupon.name}</span>
+					<div className={mutedDivClassName}>
+						<TicketIcon size={13} className="shrink-0" />
+						<span className="truncate">{appliedCoupon.coupon}</span>
 					</div>
 				)}
 				<CustomerActions />

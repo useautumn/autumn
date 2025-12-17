@@ -1,7 +1,7 @@
-import { ErrCode, type Feature, FeatureType } from "@autumn/shared";
+import { ErrCode } from "@autumn/shared";
 import { ChartBarIcon, DatabaseIcon } from "@phosphor-icons/react";
 import type { AgGridReact } from "ag-grid-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
@@ -14,6 +14,11 @@ import {
 	useAnalyticsData,
 	useRawAnalyticsData,
 } from "./hooks/useAnalyticsData";
+import { extractPropertyKeys } from "./utils/extractPropertyKeys";
+import {
+	generateChartConfig,
+	transformGroupedData,
+} from "./utils/transformGroupedChartData";
 
 export const AnalyticsView = () => {
 	const [searchParams] = useSearchParams();
@@ -25,6 +30,7 @@ export const AnalyticsView = () => {
 	const [currentPage, setCurrentPage] = useState(0);
 	const [totalPages, setTotalPages] = useState(0);
 	const [totalRows, setTotalRows] = useState(0);
+	const [groupFilter, setGroupFilter] = useState<string | null>(null);
 	const gridRef = useRef<AgGridReact>(null);
 	const navigate = useNavigate();
 
@@ -39,42 +45,83 @@ export const AnalyticsView = () => {
 		bcExclusionFlag,
 		topEventsLoading,
 		topEvents,
+		groupBy,
 	} = useAnalyticsData({ hasCleared });
+
+	// Clear the filter when groupBy changes
+	useEffect(() => {
+		setGroupFilter(null);
+	}, [groupBy]);
+
+	// Extract unique group values from events data for filtering
+	const availableGroupValues = useMemo(() => {
+		if (!groupBy || !events?.data) {
+			return [];
+		}
+
+		const groupByColumn = `properties.${groupBy}`;
+		const uniqueValues = new Set<string>();
+
+		for (const row of events.data) {
+			const value = row[groupByColumn];
+			if (value !== undefined && value !== null && value !== "") {
+				uniqueValues.add(String(value));
+			}
+		}
+
+		return Array.from(uniqueValues).sort();
+	}, [groupBy, events?.data]);
 
 	const { rawEvents, queryLoading: rawQueryLoading } = useRawAnalyticsData();
 
-	const chartConfig = events?.meta
-		.filter((x: { name: string }) => x.name !== "period")
-		.map((x: { name: string }, index: number) => {
-			if (x.name !== "period") {
-				const colorIndex = index % colors.length;
+	// Extract property keys from raw events for the group by dropdown
+	const propertyKeys = useMemo(() => {
+		return extractPropertyKeys({ rawEvents: rawEvents?.data });
+	}, [rawEvents?.data]);
 
-				return {
-					xKey: "period",
-					yKey: x.name,
-					type: "bar",
-					stacked: true,
-					yName:
-						features.find((feature: Feature) => {
-							const eventName = x.name.replace("_count", "");
+	// Transform and configure chart data
+	const { chartData, chartConfig } = useMemo(() => {
+		if (!events) {
+			return { chartData: null, chartConfig: null };
+		}
 
-							// console.log("Feature: ", feature, eventName);
+		console.log("Analytics - Raw events from API:", events);
+		console.log("Analytics - Group by:", groupBy);
+		console.log("Analytics - Group filter:", groupFilter);
 
-							if (feature.type === FeatureType.Boolean) return false;
+		// Apply frontend filter if a group filter is selected
+		let filteredEvents = events;
+		if (groupBy && groupFilter) {
+			const groupByColumn = `properties.${groupBy}`;
+			const filteredData = events.data.filter(
+				(row: Record<string, string | number>) =>
+					String(row[groupByColumn]) === groupFilter,
+			);
+			filteredEvents = {
+				...events,
+				data: filteredData,
+				rows: filteredData.length,
+			};
+		}
 
-							if (feature.id === eventName) {
-								return true;
-							}
-
-							if (feature.event_names && feature.event_names.length > 0) {
-								return feature.event_names.includes(eventName);
-							}
-							return false;
-						})?.name || x.name.replace("_count", ""),
-					fill: colors[colorIndex],
-				};
-			} else return null;
+		// Transform data for grouped display (pivots rows into columns per group)
+		const transformed = transformGroupedData({
+			events: filteredEvents,
+			groupBy,
 		});
+		console.log("Analytics - Transformed data:", transformed);
+
+		// Generate chart config with different colors per group
+		const config = generateChartConfig({
+			events: transformed,
+			features,
+			groupBy,
+			originalColors: colors,
+		});
+		console.log("Analytics - Chart config:", config);
+
+		return { chartData: transformed, chartConfig: config };
+	}, [events, features, groupBy, groupFilter]);
 
 	useEffect(() => {
 		if (error?.response?.data?.code === ErrCode.ClickHouseDisabled) {
@@ -131,6 +178,10 @@ export const AnalyticsView = () => {
 				totalRows,
 				setTotalRows,
 				topEvents,
+				propertyKeys,
+				groupFilter,
+				setGroupFilter,
+				availableGroupValues,
 			}}
 		>
 			<div className="flex flex-col gap-4 h-full relative w-full text-sm pb-8 max-w-5xl mx-auto px-10 pt-8">
@@ -151,13 +202,18 @@ export const AnalyticsView = () => {
 					)}
 
 					<div className="h-full overflow-hidden">
-						{events && events.data.length > 0 && (
+						{chartData && chartData.data.length > 0 && (
 							<div className="h-full overflow-hidden bg-interactive-secondary border max-h-[350px]">
-								<EventsBarChart data={events} chartConfig={chartConfig} />
+								<EventsBarChart
+									data={
+										chartData as Parameters<typeof EventsBarChart>[0]["data"]
+									}
+									chartConfig={chartConfig}
+								/>
 							</div>
 						)}
 
-						{!events && !queryLoading && (
+						{!chartData && !queryLoading && (
 							<div className="flex-1 px-10 pt-6">
 								<p className="text-t3 text-sm">
 									No events found. Please widen your filters.{" "}
