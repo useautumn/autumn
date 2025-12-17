@@ -45,6 +45,7 @@ export const EventsAggregateParamsSchema =
 			const customRangeExists =
 				!!data.custom_range?.end && !!data.custom_range?.start;
 			const rangeExists = data.range !== undefined;
+
 			return !customRangeExists || !rangeExists;
 		},
 		{
