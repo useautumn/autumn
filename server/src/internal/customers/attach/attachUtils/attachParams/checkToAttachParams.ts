@@ -39,6 +39,7 @@ export const checkToAttachParams = async ({
 		freeTrial: product.free_trial,
 		fingerprint: customer.fingerprint,
 		internalCustomerId: customer.internal_id,
+		internalEntityId: customer.entity?.internal_id,
 		multipleAllowed: org.config.multiple_trials,
 		productId: product.id,
 	});
