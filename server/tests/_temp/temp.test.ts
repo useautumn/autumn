@@ -7,7 +7,6 @@ import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { CusService } from "../../src/internal/customers/CusService";
 import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3";
 
 const free = constructProduct({
@@ -33,8 +32,8 @@ const pro = constructProduct({
 	],
 });
 
-const premium = constructProduct({
-	type: "premium",
+const oneOff = constructProduct({
+	type: "one_off",
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
@@ -65,11 +64,11 @@ describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
 	beforeAll(async () => {
-		await CusService.deleteByOrgId({
-			db: ctx.db,
-			orgId: ctx.org.id,
-			env: ctx.env,
-		});
+		// await CusService.deleteByOrgId({
+		// 	db: ctx.db,
+		// 	orgId: ctx.org.id,
+		// 	env: ctx.env,
+		// });
 
 		await initCustomerV3({
 			ctx,
@@ -80,19 +79,20 @@ describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [free, pro, premium],
+			products: [free, pro, oneOff],
 			prefix: testCase,
 		});
 
-		await autumnV1.attach({
+		const res = await autumnV1.attach({
 			customer_id: customerId,
-			product_id: pro.id,
+			product_id: oneOff.id,
 		});
 
-		await autumnV1.attach({
-			customer_id: customerId,
-			product_id: free.id,
-		});
+		console.log(res);
+		// await autumnV1.attach({
+		// 	customer_id: customerId,
+		// 	product_id: free.id,
+		// });
 		// await autumnV1.attach({
 		// 	customer_id: customerId,
 		// 	product_id: pro.id,
