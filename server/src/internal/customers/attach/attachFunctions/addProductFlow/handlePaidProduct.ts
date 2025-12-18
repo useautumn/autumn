@@ -4,14 +4,17 @@ import {
 	type AttachFunctionResponse,
 	AttachFunctionResponseSchema,
 	AttachScenario,
-	ErrCode, isTrialing,
+	ErrCode,
+	isTrialing,
 	MetadataType,
-	SuccessCode
+	SuccessCode,
 } from "@autumn/shared";
+import { addMinutes } from "date-fns";
 import type Stripe from "stripe";
 import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { subIsCanceled } from "@/external/stripe/stripeSubUtils.js";
+import { attachParamsToMetadata } from "@/internal/billing/attach/utils/attachParamsToMetadata.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
@@ -32,8 +35,6 @@ import { subToNewSchedule } from "../../mergeUtils/subToNewSchedule.js";
 import { handleUpgradeFlowSchedule } from "../upgradeFlow/handleUpgradeFlowSchedule.js";
 import { updateStripeSub2 } from "../upgradeFlow/updateStripeSub2.js";
 import { createStripeSub2 } from "./createStripeSub2.js";
-import { attachParamsToMetadata } from "@/internal/billing/attach/utils/attachParamsToMetadata.js";
-import { addMinutes } from "date-fns";
 
 export const handlePaidProduct = async ({
 	ctx,
@@ -210,21 +211,31 @@ export const handlePaidProduct = async ({
 					logger,
 				});
 			}
-		
-			const subInvoice: Stripe.Invoice | undefined = (sub.latest_invoice as Stripe.Invoice)
 
-			if(subInvoice && subInvoice.status === "open" && !config.invoiceCheckout) {
+			const subInvoice: Stripe.Invoice | undefined =
+				sub.latest_invoice as Stripe.Invoice;
+
+			if (
+				subInvoice &&
+				subInvoice.status === "open" &&
+				!config.invoiceCheckout
+			) {
 				logger.info(
-					`[update subscription] invoice action required: ${subInvoice.id}`,
+					`[create subscription] invoice checkout created because invoice is open: ${subInvoice.id}`,
 				);
 				const metadata = await attachParamsToMetadata({
 					db: ctx.db,
-					attachParams,
-					type: MetadataType.InvoiceActionRequired,
+					attachParams: {
+						...attachParams,
+						subId: sub.id,
+						anchorToUnix: sub.billing_cycle_anchor * 1000,
+						config,
+					},
+					type: MetadataType.InvoiceCheckout,
 					stripeInvoiceId: subInvoice.id as string,
 					expiresAt: addMinutes(Date.now(), 10).getTime(),
 				});
-	
+
 				await stripeCli.invoices.update(subInvoice.id, {
 					metadata: {
 						autumn_metadata_id: metadata.id,
@@ -241,7 +252,6 @@ export const handlePaidProduct = async ({
 				error instanceof RecaseError &&
 				!invoiceOnly &&
 				error.code === ErrCode.CreateStripeSubscriptionFailed
-
 			) {
 				return await handleCreateCheckout({
 					ctx,

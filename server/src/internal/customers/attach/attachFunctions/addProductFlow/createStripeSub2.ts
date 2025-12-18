@@ -1,4 +1,5 @@
 import { type AttachConfig, ErrCode } from "@autumn/shared";
+import type { Logger } from "@server/external/logtail/logtailUtils";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
@@ -30,7 +31,7 @@ export const createStripeSub2 = async ({
 	config: AttachConfig;
 	billingCycleAnchorUnix?: number;
 	itemSet: ItemSet;
-	logger: any;
+	logger: Logger;
 }) => {
 	const { customer, invoiceOnly, freeTrial, org, now, rewards, metadata } =
 		attachParams;
@@ -69,6 +70,7 @@ export const createStripeSub2 = async ({
 			payment_behavior: isCustomPaymentMethod
 				? "default_incomplete"
 				: "allow_incomplete",
+
 			add_invoice_items: invoiceItems,
 			collection_method: invoiceOnly ? "send_invoice" : "charge_automatically",
 			days_until_due: invoiceOnly ? 30 : undefined,
