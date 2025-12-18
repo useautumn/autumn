@@ -136,6 +136,7 @@ export function CustomerActions() {
 						onClick={handleOpenBillingPortal}
 						className="flex gap-2"
 						disabled={portalLoading}
+						shortcut="b"
 					>
 						<UserCircleGearIcon />
 						{portalLoading ? "Opening..." : "Open customer portal"}
