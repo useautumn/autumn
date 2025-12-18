@@ -44,7 +44,7 @@ export const createKey = async ({
 	name: string;
 	orgId: string;
 	prefix: string;
-	meta: any;
+	meta: Record<string, unknown>;
 	userId?: string;
 }) => {
 	const apiKey = generateApiKey(42, prefix);
@@ -65,6 +65,51 @@ export const createKey = async ({
 	await ApiKeyService.insert({ db, apiKey: apiKeyData });
 
 	return apiKey;
+};
+
+export const createHardcodedKey = async ({
+	db,
+	env,
+	name,
+	orgId,
+	hardcodedKey,
+	meta,
+}: {
+	db: DrizzleCli;
+	env: AppEnv;
+	name: string;
+	orgId: string;
+	hardcodedKey: string;
+	meta: Record<string, unknown>;
+}): Promise<{ key: string; alreadyExists: boolean }> => {
+	const hashedKey = hashApiKey(hardcodedKey);
+
+	// Check if key already exists
+	const existing = await ApiKeyService.verifyAndFetch({
+		db,
+		hashedKey,
+		env,
+	});
+
+	if (existing) {
+		return { key: hardcodedKey, alreadyExists: true };
+	}
+
+	const apiKeyData: ApiKey = {
+		id: generateId("key"),
+		org_id: orgId,
+		user_id: null,
+		name,
+		prefix: hardcodedKey.substring(0, 14),
+		created_at: Date.now(),
+		env,
+		hashed_key: hashedKey,
+		meta,
+	};
+
+	await ApiKeyService.insert({ db, apiKey: apiKeyData });
+
+	return { key: hardcodedKey, alreadyExists: false };
 };
 
 export const verifyKey = async ({

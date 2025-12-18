@@ -1,8 +1,14 @@
-import { type OrgConfig, member, organizations, user } from "@autumn/shared";
+import {
+	AppEnv,
+	member,
+	type OrgConfig,
+	organizations,
+	user,
+} from "@autumn/shared";
+import type { DrizzleCli } from "@server/db/initDrizzle.js";
+import { createHardcodedKey } from "@server/internal/dev/api-keys/apiKeyUtils.js";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
-import type { DrizzleCli } from "@server/db/initDrizzle.js";
-import { createKey } from "@server/internal/dev/api-keys/apiKeyUtils.js";
 
 const TEST_ORG_CONFIG = {
 	id: "org_2sWv2S8LJ9iaTjLI6UtNsfL88Kt",
@@ -19,12 +25,19 @@ export async function createTestOrg({
 	db,
 }: {
 	db: DrizzleCli;
-}): Promise<string | null> {
+}): Promise<string> {
 	console.log(
 		chalk.magentaBright(
 			"\n================ Creating Test Organization ================\n",
 		),
 	);
+
+	const TEST_API_KEY = process.env.UNIT_TEST_AUTUMN_SECRET_KEY;
+	if (!TEST_API_KEY) {
+		throw new Error(
+			"UNIT_TEST_AUTUMN_SECRET_KEY is not set (is infisical running?)",
+		);
+	}
 
 	// Check if org already exists
 	const existingOrg = await db.query.organizations.findFirst({
@@ -34,26 +47,31 @@ export async function createTestOrg({
 	if (existingOrg) {
 		console.log(
 			chalk.yellowBright(
-				`Test organization '${TEST_ORG_CONFIG.slug}' already exists. Creating new API key.`,
+				`Test organization '${TEST_ORG_CONFIG.slug}' already exists.`,
 			),
 		);
 
-		// Always create a new API key for existing org
-		const apiKey = await createKey({
+		// Create API key for existing org (will skip if already exists)
+		const { key, alreadyExists } = await createHardcodedKey({
 			db,
-			env: "sandbox" as any,
+			env: AppEnv.Sandbox,
 			name: "Unit Test Key",
 			orgId: TEST_ORG_CONFIG.id,
-			prefix: "am_sk_test",
+			hardcodedKey: TEST_API_KEY,
 			meta: {
 				createdBy: "setup-test-script",
 				createdAt: new Date().toISOString(),
 			},
-			userId: undefined,
 		});
 
-		console.log(chalk.greenBright("✅ Created API key for existing organization"));
-		return apiKey;
+		if (alreadyExists) {
+			console.log(chalk.greenBright("✅ API key already exists in database"));
+		} else {
+			console.log(
+				chalk.greenBright("✅ Created API key for existing organization"),
+			);
+		}
+		return key;
 	}
 
 	// Create the test organization
@@ -107,22 +125,25 @@ export async function createTestOrg({
 	}
 
 	// Create API key for the new org
-	const apiKey = await createKey({
+	const { key, alreadyExists } = await createHardcodedKey({
 		db,
-		env: "sandbox" as any,
+		env: AppEnv.Sandbox,
 		name: "Unit Test Key",
 		orgId: TEST_ORG_CONFIG.id,
-		prefix: "am_sk_test",
+		hardcodedKey: TEST_API_KEY,
 		meta: {
 			createdBy: "setup-test-script",
 			createdAt: new Date().toISOString(),
 		},
-		userId: undefined,
 	});
 
-	console.log(chalk.greenBright("✅ Created API key for test organization"));
+	if (alreadyExists) {
+		console.log(chalk.greenBright("✅ API key already exists in database"));
+	} else {
+		console.log(chalk.greenBright("✅ Created API key for test organization"));
+	}
 
-	return apiKey;
+	return key;
 }
 
 export { TEST_ORG_CONFIG };
