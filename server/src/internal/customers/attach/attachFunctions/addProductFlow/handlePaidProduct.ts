@@ -213,7 +213,7 @@ export const handlePaidProduct = async ({
 		
 			const subInvoice: Stripe.Invoice | undefined = (sub.latest_invoice as Stripe.Invoice)
 
-			if(subInvoice && subInvoice.status === "open") {
+			if(subInvoice && subInvoice.status === "open" && !config.invoiceCheckout) {
 				logger.info(
 					`[update subscription] invoice action required: ${subInvoice.id}`,
 				);
