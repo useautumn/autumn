@@ -13,7 +13,7 @@ import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/free
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { nullish } from "@/utils/genUtils.js";
 import type { ItemSet } from "@/utils/models/ItemSet.js";
-import { subIsCanceled } from "../../../../../external/stripe/stripeSubUtils.js";
+import { isStripeSubscriptionCanceled } from "../../../../../external/stripe/stripeSubUtils.js";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 import { attachParamsToCurCusProduct } from "../../attachUtils/convertAttachParams.js";
 import { createAndFilterContUseItems } from "../../attachUtils/getContUseItems/createContUseInvoiceItems.js";
@@ -91,7 +91,9 @@ export const updateStripeSub2 = async ({
 
 		// cancel_at_period_end: false,
 		// TODO: will error if sub managed by a schedule
-		cancel_at_period_end: subIsCanceled({ sub: curSub }) ? false : undefined,
+		cancel_at_period_end: isStripeSubscriptionCanceled({ sub: curSub })
+			? false
+			: undefined,
 	});
 
 	let latestInvoice = updatedSub.latest_invoice as Stripe.Invoice | null;

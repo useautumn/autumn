@@ -70,7 +70,11 @@ export const getSubsFromCusId = async ({
 	};
 };
 
-const subIsCanceled = ({ sub }: { sub: Stripe.Subscription }) => {
+const isStripeSubscriptionCanceled = ({
+	sub,
+}: {
+	sub: Stripe.Subscription;
+}) => {
 	return (
 		notNullish(sub.canceled_at) ||
 		notNullish(sub.cancel_at) ||
@@ -155,9 +159,13 @@ export const expectSubItemsCorrect = async ({
 
 	for (const sub of subs) {
 		if (subCanceled) {
-			expect(subIsCanceled({ sub }), "sub should be canceled").to.be.true;
+			expect(isStripeSubscriptionCanceled({ sub }), "sub should be canceled").to
+				.be.true;
 		} else {
-			expect(subIsCanceled({ sub }), "sub should not be canceled").to.be.false;
+			expect(
+				isStripeSubscriptionCanceled({ sub }),
+				"sub should not be canceled",
+			).to.be.false;
 		}
 	}
 
