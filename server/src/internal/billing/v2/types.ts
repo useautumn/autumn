@@ -40,7 +40,7 @@ export type StripeSubAction = {
 
 export type StripeInvoiceAction = {
 	items: Stripe.InvoiceAddLinesParams.Line[];
-	onPaymentFailure: "return_url";
+	onPaymentFailure: "return_url" | "checkout_session";
 };
 
 export type StripeCheckoutAction = {
@@ -49,12 +49,17 @@ export type StripeCheckoutAction = {
 	params: Stripe.Checkout.SessionCreateParams;
 };
 
+export type UpdateOneOffAction = {
+	targetCusProduct: FullCusProduct;
+};
+
 export type AttachPlan = {
 	autumnLineItems: LineItem[];
 
 	// 1. Autumn actions
 	ongoingCusProductAction?: OngoingCusProductAction;
 	scheduledCusProductAction?: ScheduledCusProductAction;
+	updateOneOffAction?: UpdateOneOffAction;
 	newCusProducts: FullCusProduct[];
 
 	// 2. Checkout session?

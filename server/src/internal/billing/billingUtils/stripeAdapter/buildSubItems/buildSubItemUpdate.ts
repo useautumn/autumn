@@ -1,5 +1,6 @@
 import {
 	type FullCusProduct,
+	type FullCustomer,
 	filterCusProductsBySubId,
 	isConsumablePrice,
 	isCusProductOngoing,
@@ -7,7 +8,6 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
-import type { AttachContext } from "../../../v2/types";
 import { cusProductToStripeItemSpecs } from "../cusProductToStripeItemSpecs";
 
 /**
@@ -169,16 +169,20 @@ const toStripeParams = ({
 
 export const buildSubItemUpdate = ({
 	ctx,
-	attachContext,
+	fullCus,
+	stripeSub,
+	paymentMethod,
 	ongoingCusProduct,
 	newCusProducts,
 }: {
 	ctx: AutumnContext;
-	attachContext: AttachContext;
+	fullCus: FullCustomer;
+	stripeSub: Stripe.Subscription;
+	paymentMethod?: Stripe.PaymentMethod;
 	ongoingCusProduct?: FullCusProduct;
 	newCusProducts?: FullCusProduct[];
 }) => {
-	const { fullCus, stripeSub } = attachContext;
+	// const { fullCus, stripeSub } = attachContext;
 	const currentItems = stripeSub?.items.data || [];
 
 	const itemsToAdd =
@@ -186,7 +190,7 @@ export const buildSubItemUpdate = ({
 			cusProductToStripeItemSpecs({
 				ctx,
 				cusProduct,
-				fromVercel: attachContext.paymentMethod?.type === "custom",
+				fromVercel: paymentMethod?.type === "custom",
 			}),
 		) ?? [];
 
@@ -194,7 +198,7 @@ export const buildSubItemUpdate = ({
 		? cusProductToStripeItemSpecs({
 				ctx,
 				cusProduct: ongoingCusProduct,
-				fromVercel: attachContext.paymentMethod?.type === "custom", // TODO:
+				fromVercel: paymentMethod?.type === "custom", // TODO:
 			})
 		: [];
 
@@ -225,5 +229,7 @@ export const buildSubItemUpdate = ({
 	});
 
 	// Step 3: Convert to Stripe params (deletions derived from diff)
-	return toStripeParams({ targetItems, currentItems });
+	const finalSubItems = toStripeParams({ targetItems, currentItems });
+
+	return finalSubItems;
 };

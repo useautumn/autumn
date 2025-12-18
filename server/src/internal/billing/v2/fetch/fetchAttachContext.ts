@@ -64,6 +64,8 @@ export const fetchAttachContext = async ({
 		fullCus,
 	});
 
+	// 5. Get sub update context
+
 	// 5. Get stripe sub
 	const stripeSub = await fetchStripeSubForAttach({
 		ctx,

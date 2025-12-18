@@ -46,6 +46,13 @@ export const computeAttachPlan = async ({
 		testClockFrozenTime,
 	});
 
+	// 3. Build updateOneOff action
+	// const updateOneOffAction = buildUpdateOneOffAction({
+	// 	ctx,
+	// 	attachContext,
+	// 	newCusProducts,
+	// });
+
 	// 4. Build stripe checkout action
 	const stripeCheckoutAction = buildStripeCheckoutAction({
 		ctx,
@@ -56,7 +63,9 @@ export const computeAttachPlan = async ({
 	// 5. Build stripe sub action
 	const stripeSubAction = buildStripeSubAction({
 		ctx,
-		attachContext,
+		stripeSub: attachContext.stripeSub!,
+		fullCus: attachContext.fullCus,
+		paymentMethod: attachContext.paymentMethod,
 		ongoingCusProductAction,
 		newCusProducts,
 	});

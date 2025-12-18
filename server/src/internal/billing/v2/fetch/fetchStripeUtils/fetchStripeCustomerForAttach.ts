@@ -48,5 +48,5 @@ export const fetchStripeCustomerForAttach = async ({
 		paymentMethod = paymentMethods.length ? paymentMethods[0] : undefined;
 	}
 
-	return { stripeCus, paymentMethod, now };
+	return { stripeCus, paymentMethod, testClockFrozenTime: now };
 };

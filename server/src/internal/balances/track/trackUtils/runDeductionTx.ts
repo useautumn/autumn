@@ -7,6 +7,7 @@ import {
 	CusProductStatus,
 	cusEntToCusPrice,
 	cusEntToMinBalance,
+	cusEntToStartingBalance,
 	cusProductsToCusEnts,
 	FeatureUsageType,
 	type FullCustomer,
@@ -19,7 +20,6 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { sql } from "drizzle-orm";
-import { cusEntToStartingBalance } from "../../../../../../shared/utils/cusEntUtils/balanceUtils/cusEntToStartingBalance.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { EventService } from "../../../api/events/EventService.js";
 import { CusService } from "../../../customers/CusService.js";

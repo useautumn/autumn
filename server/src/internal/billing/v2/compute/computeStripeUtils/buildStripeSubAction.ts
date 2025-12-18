@@ -1,33 +1,49 @@
-import type { FullCusProduct, OngoingCusProductAction } from "@autumn/shared";
+import type {
+	FullCusProduct,
+	FullCustomer,
+	OngoingCusProductAction,
+} from "@autumn/shared";
+import type Stripe from "stripe";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
 import { buildSubItemUpdate } from "../../../billingUtils/stripeAdapter/buildSubItems/buildSubItemUpdate";
-import type { AttachContext, StripeSubAction } from "../../types";
+import type { StripeSubAction } from "../../types";
 
 export const buildStripeSubAction = ({
 	ctx,
-	attachContext,
+	stripeSub,
+	fullCus,
+	paymentMethod,
 	ongoingCusProductAction,
 	newCusProducts,
 }: {
 	ctx: AutumnContext;
-	attachContext: AttachContext;
+	stripeSub: Stripe.Subscription;
+	fullCus: FullCustomer;
+	paymentMethod?: Stripe.PaymentMethod;
 	ongoingCusProductAction?: OngoingCusProductAction;
 	newCusProducts: FullCusProduct[];
 }): StripeSubAction => {
-	const { stripeSub } = attachContext;
+	// const { stripeSub } = attachContext;
 
 	const ongoingCusProduct = ongoingCusProductAction?.cusProduct;
 
 	// Build sub item update (what items should be on the sub after this operation)
 	const subItemUpdate = buildSubItemUpdate({
 		ctx,
-		attachContext,
+		fullCus,
+		stripeSub,
+		paymentMethod,
 		ongoingCusProduct,
 		newCusProducts,
 	});
 
 	const hasNewItems = subItemUpdate.some((item) => !item.deleted);
 	const currentSubItems = stripeSub?.items.data ?? [];
+
+	// 1. If subItems update is empty, no update:
+	if (subItemUpdate.length === 0) {
+		return { type: "none" };
+	}
 
 	// Case 4: Ongoing action is 'cancel' → cancel at period end
 	if (ongoingCusProductAction?.action === "cancel") {
