@@ -170,20 +170,24 @@ export const handleOneOffFunction = async ({
 		});
 	}
 
+	logger.info("3. Creating invoice from stripe");
+	await insertInvoiceFromAttach({
+		db: ctx.db,
+		attachParams,
+		invoiceId: stripeInvoice.id,
+		logger,
+	});
+
 	// Create invoice items
 	if (!invoiceOnly) {
 		stripeInvoice = await stripeCli.invoices.finalizeInvoice(stripeInvoice.id!);
 
-		logger.info("3. Creating invoice from stripe");
-		await insertInvoiceFromAttach({
-			db: ctx.db,
-			attachParams,
-			invoiceId: stripeInvoice.id,
-			logger,
-		});
-
 		logger.info("4. Paying invoice");
-		const { paid, error, invoice: paidInvoice } = await payForInvoice({
+		const {
+			paid,
+			error,
+			invoice: paidInvoice,
+		} = await payForInvoice({
 			stripeCli,
 			invoiceId: stripeInvoice.id!,
 			paymentMethod,
