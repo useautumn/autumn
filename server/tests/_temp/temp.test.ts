@@ -85,8 +85,7 @@ describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 
 		const res = await autumnV1.attach({
 			customer_id: customerId,
-			product_id: pro.id,
-			invoice: true,
+			product_id: oneOff.id,
 		});
 
 		console.log(res);
