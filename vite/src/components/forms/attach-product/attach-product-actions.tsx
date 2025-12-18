@@ -101,7 +101,9 @@ export function AttachProductActions({
 			});
 
 			// Handle checkout URLs and invoice links
-			if (result.data.invoice) {
+			if (result.data.checkout_url) {
+				window.open(result.data.checkout_url, "_blank");
+			} else if (result.data.invoice) {
 				window.open(
 					getStripeInvoiceLink({
 						stripeInvoice: result.data.invoice,
