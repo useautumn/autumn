@@ -11,7 +11,7 @@ import {
 import type Stripe from "stripe";
 import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
-import { subIsCanceled } from "@/external/stripe/stripeSubUtils.js";
+import { isStripeSubscriptionCanceled } from "@/external/stripe/stripeSubUtils.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
@@ -113,6 +113,7 @@ export const handleUpgradeFlow = async ({
 		);
 		canceled = true;
 		const { stripeCli } = attachParams;
+
 		await stripeCli.subscriptions.cancel(curSub.id, {
 			prorate: config.proration === ProrationBehavior.Immediately,
 			invoice_now: config.proration === ProrationBehavior.Immediately,
@@ -135,8 +136,8 @@ export const handleUpgradeFlow = async ({
 		});
 
 		// // Renew sub
-		// console.log("Sub is canceled!", subIsCanceled({ sub: res.updatedSub }));
-		// if (subIsCanceled({ sub: res.updatedSub })) {
+		// console.log("Sub is canceled!", isStripeSubscriptionCanceled({ sub: res.updatedSub }));
+		// if (isStripeSubscriptionCanceled({ sub: res.updatedSub })) {
 		// 	await attachParams.stripeCli.subscriptions.update(res.updatedSub.id, {
 		// 		cancel_at_period_end: false,
 		// 		cancel_at: null,
@@ -211,7 +212,7 @@ export const handleUpgradeFlow = async ({
 		const anchorToUnix = sub ? getEarliestPeriodEnd({ sub }) * 1000 : undefined;
 
 		let canceledAt: number | undefined;
-		if (sub && subIsCanceled({ sub })) {
+		if (sub && isStripeSubscriptionCanceled({ sub })) {
 			canceledAt = sub.canceled_at
 				? sub.canceled_at * 1000
 				: curCusProduct?.canceled_at || undefined;
