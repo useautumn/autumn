@@ -13,7 +13,7 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle";
 import { priceToStripeItem } from "@server/external/stripe/priceToStripeItem/priceToStripeItem";
-import { subIsCanceled } from "@server/external/stripe/stripeSubUtils";
+import { isStripeSubscriptionCanceled } from "@server/external/stripe/stripeSubUtils";
 import {
 	cusProductInPhase,
 	logPhaseItems,
@@ -163,7 +163,6 @@ const compareActualItems = async ({
 				continue;
 			}
 
-
 			const { autumnPrice: _, ...rest } = expectedItem;
 			console.log(`(${type}) Missing item:`, rest);
 
@@ -255,7 +254,6 @@ const compareActualItems = async ({
 	}
 };
 
-
 export const checkCusSubCorrect = async ({
 	db,
 	fullCus,
@@ -271,8 +269,6 @@ export const checkCusSubCorrect = async ({
 	org: Organization;
 	env: AppEnv;
 }) => {
-
-
 	// 1. Only 1 sub ID available
 	const cusProducts = fullCus.customer_products;
 	const subIds = cusProductToSubIds({ cusProducts });
@@ -489,7 +485,6 @@ export const checkCusSubCorrect = async ({
 		}
 
 		assert(!!sub, `Sub ${subId} should exist`);
-		
 
 		if (sub) {
 			const actualItems = sub!.items.data.map((item: any) => ({
@@ -508,7 +503,6 @@ export const checkCusSubCorrect = async ({
 				subId,
 			});
 		}
-		
 
 		// Should be canceled
 
@@ -540,11 +534,12 @@ export const checkCusSubCorrect = async ({
 
 		const finalShouldBeCanceled = cusSubShouldBeCanceled;
 
-		
-
 		if (finalShouldBeCanceled) {
 			assert(!sub!.schedule, `sub ${subId} should NOT have a schedule`);
-			assert(subIsCanceled({ sub: sub! }), `sub ${subId} should be canceled`);
+			assert(
+				isStripeSubscriptionCanceled({ sub: sub! }),
+				`sub ${subId} should be canceled`,
+			);
 			continue;
 		}
 
@@ -553,7 +548,6 @@ export const checkCusSubCorrect = async ({
 				? schedules.find((s) => s.id === sub!.schedule)
 				: null;
 
-		
 		for (let i = 0; i < supposedPhases.length; i++) {
 			const supposedPhase = supposedPhases[i];
 
