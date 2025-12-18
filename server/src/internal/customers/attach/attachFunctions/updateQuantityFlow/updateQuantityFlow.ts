@@ -57,7 +57,7 @@ export const handleUpdateQuantityFunction = async ({
 
 	for (const stripeSub of stripeSubs) {
 		if (isStripeSubscriptionCanceled({ sub: stripeSub })) {
-			stripeCli.subscriptions.update(stripeSub.id, {
+			await stripeCli.subscriptions.update(stripeSub.id, {
 				cancel_at: null,
 			});
 		}
