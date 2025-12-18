@@ -15,6 +15,9 @@ export const handleInvoiceCheckoutPaid = async ({
 	metadata: Metadata;
 }) => {
 	const { logger, org, env, db } = ctx;
+	logger.info(
+		`invoice.paid, handling invoice checkout paid for metadata: ${metadata.id}`,
+	);
 
 	const { subId, anchorToUnix, config, ...rest } =
 		metadata.data as AttachParams;

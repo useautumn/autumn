@@ -23,11 +23,13 @@ export const expectCustomerV0Correct = async ({
 	cusRes,
 	status,
 	optionsList,
+	skipEntitlements,
 }: {
 	sent: ProductV2;
 	cusRes: any; // V0.1 customer response
 	status?: CusProductStatus;
 	optionsList?: FeatureOptions[];
+	skipEntitlements?: boolean;
 }) => {
 	const { org, features } = ctx;
 
@@ -44,5 +46,6 @@ export const expectCustomerV0Correct = async ({
 		cusRes,
 		status,
 		optionsList,
+		skipEntitlements,
 	});
 };
