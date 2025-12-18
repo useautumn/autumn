@@ -313,7 +313,16 @@ export const getStripeProrationBehavior = ({
 		: behaviourMap[ProrationBehavior.NextBilling];
 };
 
-export const subIsCanceled = ({ sub }: { sub: Stripe.Subscription }) => {
+/**
+ * Checks if a Stripe subscription is canceled.
+ * @param sub - The Stripe subscription to check.
+ * @returns True if the subscription is canceled, false otherwise.
+ */
+export const isStripeSubscriptionCanceled = ({
+	sub,
+}: {
+	sub: Stripe.Subscription;
+}) => {
 	return (
 		notNullish(sub.canceled_at) ||
 		notNullish(sub.cancel_at) ||

@@ -19,7 +19,7 @@ export const handleOAuthCallback = async (c: Context<HonoEnv>) => {
 	const { db } = initDrizzle();
 
 	// Build frontend redirect URL (default)
-	const frontendUrl = process.env.CLIENT_URL || "http://localhost:5173";
+	const frontendUrl = process.env.CLIENT_URL || "http://localhost:3000";
 	let redirectUrl = new URL(`${frontendUrl}`);
 	redirectUrl.searchParams.set("tab", "stripe");
 
