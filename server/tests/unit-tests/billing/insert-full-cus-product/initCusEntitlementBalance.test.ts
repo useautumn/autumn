@@ -6,11 +6,11 @@ import {
 	type Feature,
 	type FeatureOptions,
 	FeatureType,
-	type InsertFullCusProductContext,
+	type InitFullCusProductContext,
 } from "@autumn/shared";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import chalk from "chalk";
-import { initCusEntitlementBalance } from "@/internal/billing/billingUtils/insertFullCusProduct/initCusEntitlementV2/initCusEntitlementBalance";
+import { initCusEntitlementBalance } from "@/internal/billing/billingUtils/initFullCusProduct/initCusEntitlementV2/initCusEntitlementBalance";
 
 const createMockEntitlement = ({
 	feature,
@@ -38,9 +38,9 @@ const createMockEntitlement = ({
 	feature,
 });
 
-const createMockInsertContext = (): InsertFullCusProductContext => ({
-	fullCus: {} as InsertFullCusProductContext["fullCus"],
-	product: {} as InsertFullCusProductContext["product"],
+const createMockInsertContext = (): InitFullCusProductContext => ({
+	fullCus: {} as InitFullCusProductContext["fullCus"],
+	product: {} as InitFullCusProductContext["product"],
 	featureQuantities: [] as FeatureOptions[],
 	replaceables: [] as AttachReplaceable[],
 });

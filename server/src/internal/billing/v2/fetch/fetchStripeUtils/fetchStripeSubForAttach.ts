@@ -10,18 +10,23 @@ export const fetchStripeSubForAttach = async ({
 	ctx,
 	fullCus,
 	products,
+	targetCusProductId,
 }: {
 	ctx: AutumnContext;
 	fullCus: FullCustomer;
 	products: Product[];
+	targetCusProductId?: string;
 }) => {
 	const { org, env } = ctx;
 	const stripeCli = createStripeCli({ org, env });
 
+	const product: Product | undefined = products[0];
+
 	const cusProductWithSub = getTargetSubscriptionCusProduct({
 		fullCus,
-		productId: products[0].id,
-		productGroup: products[0].group,
+		productId: product?.id,
+		productGroup: product?.group,
+		cusProductId: targetCusProductId,
 	});
 
 	const subId = cusProductWithSub?.subscription_ids?.[0];

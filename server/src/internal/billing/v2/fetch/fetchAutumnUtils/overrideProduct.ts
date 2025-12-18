@@ -1,10 +1,8 @@
+// import type { PlanOverride } from "@autumn/shared";
 import {
-	type AttachBodyV1,
-	type FullCustomer,
 	type FullProduct,
 	InternalError,
-	planFeaturesToItems,
-	planToProductV2PriceItem,
+	type ProductItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
 import { getEntsWithFeature } from "../../../../products/entitlements/entitlementUtils";
@@ -14,16 +12,14 @@ import { handleNewProductItems } from "../../../../products/product-items/produc
 // 2. Assume features + prices are passed in together
 export const overrideProduct = async ({
 	ctx,
-	body,
+	newItems,
 	products,
-	fullCustomer,
 }: {
 	ctx: AutumnContext;
-	body: AttachBodyV1;
+	newItems?: ProductItem[];
 	products: FullProduct[];
-	fullCustomer: FullCustomer;
 }) => {
-	if (!body.plan_override) {
+	if (!newItems) {
 		return {
 			fullProducts: products,
 			customPrices: [],
@@ -44,19 +40,19 @@ export const overrideProduct = async ({
 	}
 
 	const { db, logger, features } = ctx;
-	const { price, features: planFeatures } = body.plan_override;
+	// const { price, features: planFeatures } = planOverride;
 
-	const newBasePriceItem = planToProductV2PriceItem({
-		price: price ?? null,
-		features,
-	});
+	// const newBasePriceItem = planToProductV2PriceItem({
+	// 	price: price ?? null,
+	// 	features,
+	// });
 
-	const featureItems = planFeaturesToItems({
-		planFeatures: planFeatures ?? [],
-		features,
-	});
+	// const featureItems = planFeaturesToItems({
+	// 	planFeatures: planFeatures ?? [],
+	// 	features,
+	// });
 
-	const newItems = [newBasePriceItem, ...featureItems];
+	// const newItems = [newBasePriceItem, ...featureItems];
 
 	const product = products[0];
 

@@ -1,15 +1,17 @@
-import type { CusProductActions, FullCusProduct } from "@autumn/shared";
+import type { FullCusProduct, OngoingCusProductAction } from "@autumn/shared";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
 import { applyOngoingCusProductAction } from "./applyOngoingCusProductAction";
 import { insertNewCusProducts } from "./insertNewCusProducts";
 
 export const executeCusProductActions = async ({
 	ctx,
-	cusProductActions,
+	// cusProductActions,
+	ongoingCusProductAction,
 	newCusProducts,
 }: {
 	ctx: AutumnContext;
-	cusProductActions: CusProductActions;
+	// cusProductActions: CusProductActions;
+	ongoingCusProductAction?: OngoingCusProductAction;
 	newCusProducts: FullCusProduct[];
 }) => {
 	// 1. Insert new cus products
@@ -17,8 +19,6 @@ export const executeCusProductActions = async ({
 		ctx,
 		newCusProducts,
 	});
-
-	const { ongoingCusProductAction } = cusProductActions;
 
 	// 2. Apply ongoing cus product action
 	if (ongoingCusProductAction) {

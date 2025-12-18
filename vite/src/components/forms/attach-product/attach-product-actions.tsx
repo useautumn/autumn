@@ -83,6 +83,13 @@ export function AttachProductActions({
 			return;
 		}
 
+		console.log("[attach product actions] handleAttach", {
+			useInvoice,
+			enableProductImmediately,
+		});
+
+		console.log("Calling attachMutation");
+
 		try {
 			//does the attach
 			const result = await attachMutation.mutateAsync({

@@ -33,13 +33,25 @@ const freeProd = constructProduct({
 	],
 });
 
+const free = constructProduct({
+	type: "free",
+	isDefault: false,
+	isAddOn: true,
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 100,
+		}),
+	],
+});
+
 const pro = constructProduct({
 	type: "pro",
 	isDefault: false,
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
-			includedUsage: 300,
+			includedUsage: 100,
 		}),
 		// constructArrearProratedItem({
 		// 	featureId: TestFeature.Users,
@@ -207,10 +219,10 @@ describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 			// productId: pro.id,
 		});
 
-		// await autumnV1.attach({
-		// 	customer_id: customerId,
-		// 	product_id: pro.id,
-		// });
+		await autumnV1.attach({
+			customer_id: customerId,
+			product_id: pro.id,
+		});
 
 		// await autumnV1.entities.create(customerId, entities);
 

@@ -288,7 +288,7 @@ export const getStripeSubItems2 = async ({
 			existingUsage,
 			withEntity: notNullish(internalEntityId),
 			apiVersion: attachParams.apiVersion,
-			productOptions: prodOptions,
+			// productOptions: prodOptions,
 			fromVercel: attachParams.paymentMethod?.type === "custom",
 		});
 

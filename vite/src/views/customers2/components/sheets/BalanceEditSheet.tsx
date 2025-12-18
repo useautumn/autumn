@@ -132,7 +132,7 @@ export function BalanceEditSheet() {
 				granted_balance: grantedBalanceChanged ? grantedBalanceInt : undefined,
 				customer_entitlement_id: cusEnt.id,
 				entity_id: entityId ?? undefined,
-				next_reset_at: updateFields.next_reset_at,
+				next_reset_at: updateFields.next_reset_at ?? undefined,
 			});
 			toast.success("Balance updated successfully");
 			await refetch();

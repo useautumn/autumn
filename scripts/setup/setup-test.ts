@@ -5,16 +5,6 @@ import {
 	createTestOrg,
 	TEST_ORG_CONFIG,
 } from "../setupTestUtils/createTestOrg.js";
-import {
-	updateMultipleEnvVars,
-	updateSingleEnvVar,
-} from "../setupTestUtils/incrementalEnvUpdate.js";
-import {
-	setupStripeTestKey,
-	setupTunnelUrl,
-	setupUpstash,
-} from "../setupTestUtils/setupPrompts.js";
-import { updateEnvFile } from "../setupTestUtils/updateEnvFile.js";
 
 async function showPreparationChecklist() {
 	console.log(
@@ -83,44 +73,44 @@ async function main() {
 		// Step 1: Create test organization in database and get API key
 		const autumnSecretKey = await createTestOrg({ db });
 
-		// Save org details immediately
-		updateMultipleEnvVars({
-			TESTS_ORG: TEST_ORG_CONFIG.slug,
-			TESTS_ORG_ID: TEST_ORG_CONFIG.id,
-			...(autumnSecretKey && { UNIT_TEST_AUTUMN_SECRET_KEY: autumnSecretKey }),
-		});
+		// // Save org details immediately
+		// updateMultipleEnvVars({
+		// 	TESTS_ORG: TEST_ORG_CONFIG.slug,
+		// 	TESTS_ORG_ID: TEST_ORG_CONFIG.id,
+		// 	...(autumnSecretKey && { UNIT_TEST_AUTUMN_SECRET_KEY: autumnSecretKey }),
+		// });
 
-		// Step 2: Get Stripe test key
-		const stripeTestKey = await setupStripeTestKey();
+		// // Step 2: Get Stripe test key
+		// const stripeTestKey = await setupStripeTestKey();
 
-		// Save Stripe key immediately
-		updateSingleEnvVar({ key: "STRIPE_TEST_KEY", value: stripeTestKey });
+		// // Save Stripe key immediately
+		// updateSingleEnvVar({ key: "STRIPE_TEST_KEY", value: stripeTestKey });
 
-		// Step 3: Get Upstash configuration
-		const { upstashUrl, upstashToken } = await setupUpstash();
+		// // Step 3: Get Upstash configuration
+		// const { upstashUrl, upstashToken } = await setupUpstash();
 
 		// Save Upstash credentials immediately
-		updateMultipleEnvVars({
-			UPSTASH_REDIS_REST_URL: upstashUrl,
-			UPSTASH_REDIS_REST_TOKEN: upstashToken,
-		});
+		// updateMultipleEnvVars({
+		// 	UPSTASH_REDIS_REST_URL: upstashUrl,
+		// 	UPSTASH_REDIS_REST_TOKEN: upstashToken,
+		// });
 
 		// Step 4: Get tunnel URL
-		const tunnelUrl = await setupTunnelUrl();
+		// const tunnelUrl = await setupTunnelUrl();
 
-		// Save tunnel URL immediately
-		updateSingleEnvVar({ key: "STRIPE_WEBHOOK_URL", value: tunnelUrl });
+		// // Save tunnel URL immediately
+		// updateSingleEnvVar({ key: "STRIPE_WEBHOOK_URL", value: tunnelUrl });
 
-		// Step 5: Final update to ensure proper formatting
-		updateEnvFile({
-			testOrgSlug: TEST_ORG_CONFIG.slug,
-			testOrgId: TEST_ORG_CONFIG.id,
-			autumnSecretKey,
-			stripeTestKey,
-			upstashUrl,
-			upstashToken,
-			tunnelUrl,
-		});
+		// // Step 5: Final update to ensure proper formatting
+		// updateEnvFile({
+		// 	testOrgSlug: TEST_ORG_CONFIG.slug,
+		// 	testOrgId: TEST_ORG_CONFIG.id,
+		// 	autumnSecretKey,
+		// 	stripeTestKey,
+		// 	upstashUrl,
+		// 	upstashToken,
+		// 	tunnelUrl,
+		// });
 
 		console.log(
 			chalk.magentaBright(
