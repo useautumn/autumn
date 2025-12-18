@@ -5,6 +5,7 @@ source "$(dirname "$0")/config.sh"
 BUN_PARALLEL_COMPACT \
   'server/tests/attach/basic' \
   'server/tests/attach/entities' \
+  !('server/tests/attach/entities/entity2.test.ts') \
   'server/tests/attach/upgrade' \
   'server/tests/attach/downgrade' \
   'server/tests/attach/free' \
@@ -15,4 +16,8 @@ BUN_PARALLEL_COMPACT \
   'server/tests/billing/cancel' \
   'server/tests/billing/cancel/add-ons' \
   'server/tests/renew' \
+  --max=6 \
+
+BUN_PARALLEL_COMPACT \
+  'server/tests/attach/entities/entity2.test.ts' \
   --max=6 \
