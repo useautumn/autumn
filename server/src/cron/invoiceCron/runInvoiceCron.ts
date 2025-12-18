@@ -13,38 +13,44 @@ export const handleVoidInvoiceCron = async ({
 	ctx: CronContext;
 	metadata: Metadata;
 }) => {
-	const { logger, db } = ctx;
-	const data = metadata.data as AttachParams;
-	const { org, customer } = data;
-	const stripeCli = createStripeCli({ org, env: customer.env });
+	try {
+		const { logger, db } = ctx;
+		const data = metadata.data as AttachParams;
+		const { org, customer } = data;
+		const stripeCli = createStripeCli({ org, env: customer.env });
 
-	if (!metadata.stripe_invoice_id) {
-		return;
-	}
+		if (!metadata.stripe_invoice_id) {
+			return;
+		}
 
-	const invoice = await stripeCli.invoices.retrieve(metadata.stripe_invoice_id);
-	console.log(
-		`Invoice: ${metadata.stripe_invoice_id} for customer ${customer.id} (org: ${org.slug})`,
-	);
-	if (invoice.status === "open") {
-		try {
-			await stripeCli.invoices.voidInvoice(metadata.stripe_invoice_id);
-			logger.info(
-				`voided invoice ${metadata.stripe_invoice_id} for customer ${customer.id} (org: ${org.slug})`,
-			);
+		const invoice = await stripeCli.invoices.retrieve(
+			metadata.stripe_invoice_id,
+		);
+		console.log(
+			`Invoice: ${metadata.stripe_invoice_id} for customer ${customer.id} (org: ${org.slug})`,
+		);
+		if (invoice.status === "open") {
+			try {
+				await stripeCli.invoices.voidInvoice(metadata.stripe_invoice_id);
+				logger.info(
+					`voided invoice ${metadata.stripe_invoice_id} for customer ${customer.id} (org: ${org.slug})`,
+				);
 
+				await MetadataService.delete({
+					db,
+					id: metadata.id,
+				});
+			} catch (error) {
+				logger.error(`Error voiding invoice: ${error}`);
+			}
+		} else if (invoice.status === "void") {
 			await MetadataService.delete({
 				db,
 				id: metadata.id,
 			});
-		} catch (error) {
-			logger.error(`Error voiding invoice: ${error}`);
 		}
-	} else if (invoice.status === "void") {
-		await MetadataService.delete({
-			db,
-			id: metadata.id,
-		});
+	} catch (error) {
+		console.log("Error running invoice cron:", error);
 	}
 };
 
