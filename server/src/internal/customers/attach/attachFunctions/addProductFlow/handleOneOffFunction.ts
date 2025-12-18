@@ -2,9 +2,11 @@ import {
 	type AttachConfig,
 	type AttachFunctionResponse,
 	AttachFunctionResponseSchema,
+	MetadataType,
 	SuccessCode,
 	type UsagePriceConfig,
 } from "@autumn/shared";
+import { addMinutes } from "date-fns";
 import { Decimal } from "decimal.js";
 import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
@@ -20,6 +22,7 @@ import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUt
 import { getPriceOptions } from "@/internal/products/prices/priceUtils.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
+import { attachParamsToMetadata } from "../../../../billing/attach/utils/attachParamsToMetadata";
 import { getCustomerDisplay } from "../../../../billing/attach/utils/getCustomerDisplay";
 
 export const handleOneOffFunction = async ({
@@ -167,21 +170,63 @@ export const handleOneOffFunction = async ({
 		});
 	}
 
+	logger.info("3. Creating invoice from stripe");
+	await insertInvoiceFromAttach({
+		db: ctx.db,
+		attachParams,
+		invoiceId: stripeInvoice.id,
+		logger,
+	});
+
 	// Create invoice items
 	if (!invoiceOnly) {
-		await stripeCli.invoices.finalizeInvoice(stripeInvoice.id!);
+		stripeInvoice = await stripeCli.invoices.finalizeInvoice(stripeInvoice.id!);
 
-		logger.info("3. Paying invoice");
-		const { paid, error } = await payForInvoice({
+		logger.info("4. Paying invoice");
+		const {
+			paid,
+			error,
+			invoice: paidInvoice,
+		} = await payForInvoice({
 			stripeCli,
 			invoiceId: stripeInvoice.id!,
 			paymentMethod,
 			logger,
 			errorOnFail: false,
-			voidIfFailed: true,
+			voidIfFailed: false,
 		});
 
+		if (paidInvoice) {
+			stripeInvoice = paidInvoice;
+		}
+
 		if (!paid) {
+			// Check if invoice is still open (payment failed but invoice not voided)
+			if (stripeInvoice && stripeInvoice.status === "open") {
+				logger.info(
+					`[one off function] invoice action required: ${stripeInvoice.id}`,
+				);
+				const metadata = await attachParamsToMetadata({
+					db: ctx.db,
+					attachParams,
+					type: MetadataType.InvoiceActionRequired,
+					stripeInvoiceId: stripeInvoice.id as string,
+					expiresAt: addMinutes(Date.now(), 10).getTime(),
+				});
+
+				await stripeCli.invoices.update(stripeInvoice.id, {
+					metadata: {
+						autumn_metadata_id: metadata.id,
+					},
+				});
+
+				return AttachFunctionResponseSchema.parse({
+					checkout_url: stripeInvoice.hosted_invoice_url,
+					code: SuccessCode.InvoiceActionRequired,
+					message: "Payment action required",
+				});
+			}
+
 			if (org.config.checkout_on_failed_payment) {
 				return await handleCreateCheckout({
 					ctx,
@@ -193,7 +238,7 @@ export const handleOneOffFunction = async ({
 		}
 	}
 
-	logger.info("4. Creating full customer product");
+	logger.info("6. Creating full customer product");
 	const batchInsert = [];
 	for (const product of products) {
 		batchInsert.push(
@@ -205,14 +250,6 @@ export const handleOneOffFunction = async ({
 		);
 	}
 	await Promise.all(batchInsert);
-
-	logger.info("5. Creating invoice from stripe");
-	await insertInvoiceFromAttach({
-		db: ctx.db,
-		attachParams,
-		invoiceId: stripeInvoice.id,
-		logger,
-	});
 
 	const customerName = getCustomerDisplay({ customer });
 	const productNames = products.map((p) => p.name).join(", ");
