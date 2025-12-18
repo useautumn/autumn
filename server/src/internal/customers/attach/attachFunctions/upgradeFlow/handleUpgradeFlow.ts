@@ -134,6 +134,15 @@ export const handleUpgradeFlow = async ({
 			fromCreate: attachParams.products.length === 0, // just for now, if no products, it comes from cancel product...
 		});
 
+		// // Renew sub
+		// console.log("Sub is canceled!", subIsCanceled({ sub: res.updatedSub }));
+		// if (subIsCanceled({ sub: res.updatedSub })) {
+		// 	await attachParams.stripeCli.subscriptions.update(res.updatedSub.id, {
+		// 		cancel_at_period_end: false,
+		// 		cancel_at: null,
+		// 	});
+		// }
+
 		if (res?.latestInvoice) {
 			logger.info(`UPGRADE FLOW: inserting invoice ${res.latestInvoice.id}`);
 			await insertInvoiceFromAttach({
@@ -200,7 +209,6 @@ export const handleUpgradeFlow = async ({
 	if (attachParams.products.length > 0) {
 		logger.info(`UPGRADE FLOW: creating new cus product`);
 		const anchorToUnix = sub ? getEarliestPeriodEnd({ sub }) * 1000 : undefined;
-		console.log("Sub status:", sub?.status);
 
 		let canceledAt: number | undefined;
 		if (sub && subIsCanceled({ sub })) {

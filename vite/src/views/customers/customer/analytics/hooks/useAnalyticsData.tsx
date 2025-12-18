@@ -19,6 +19,7 @@ export const useAnalyticsData = ({
 	const featureIds = searchParams.get("feature_ids")?.split(",");
 	const eventNames = searchParams.get("event_names")?.split(",");
 	const interval = searchParams.get("interval");
+	const groupBy = searchParams.get("group_by");
 
 	const { topEvents, isLoading: topEventsLoading } = useTopEventNames();
 
@@ -31,6 +32,9 @@ export const useAnalyticsData = ({
 	const { features: featuresData, isLoading: featuresLoading } =
 		useFeaturesQuery();
 
+	// Format group_by for API (must be prefixed with "properties.")
+	const formattedGroupBy = groupBy ? `properties.${groupBy}` : undefined;
+
 	// Create a simple queryKey with the actual values that change
 	const queryKey = [
 		customerId,
@@ -38,6 +42,7 @@ export const useAnalyticsData = ({
 		...(eventNames || []).sort(),
 		...(featureIds || []).sort(),
 		org?.slug,
+		groupBy,
 	];
 
 	const {
@@ -50,6 +55,7 @@ export const useAnalyticsData = ({
 			customer_id: customerId || null,
 			interval: interval || "30d",
 			event_names: [...(eventNames || []), ...(featureIds || [])],
+			group_by: formattedGroupBy,
 		},
 		queryKey: ["query-events", ...queryKey],
 		options: {
@@ -72,6 +78,7 @@ export const useAnalyticsData = ({
 		error: error?.code === ErrCode.ClickHouseDisabled ? null : error,
 		bcExclusionFlag: data?.bcExclusionFlag ?? false,
 		topEventsLoading,
+		groupBy,
 	};
 };
 

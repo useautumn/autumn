@@ -102,7 +102,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing free add on, and updating f
 		}),
 	});
 
-	test("should update add on product", async () => {
+	test("should attach new free add on product", async () => {
 		const preview = await autumn.attachPreview({
 			customer_id: customerId,
 			product_id: addOn.id,
@@ -131,7 +131,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing free add on, and updating f
 				...addOn,
 				items: customItems,
 			},
-			otherProducts: [pro],
+			otherProducts: [pro, addOn],
 		});
 	});
 });
