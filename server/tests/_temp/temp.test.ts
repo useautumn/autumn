@@ -1,4 +1,4 @@
-import { beforeAll, describe } from "bun:test";
+import { beforeAll, describe, it } from "bun:test";
 import { ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
@@ -9,21 +9,8 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3";
 
-const free = constructProduct({
-	type: "free",
-	isDefault: false,
-	// isAddOn: true,
-	items: [
-		constructFeatureItem({
-			featureId: TestFeature.Messages,
-			includedUsage: 100,
-		}),
-	],
-});
-
 const pro = constructProduct({
 	type: "pro",
-
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
@@ -32,44 +19,23 @@ const pro = constructProduct({
 	],
 });
 
-const oneOff = constructProduct({
-	type: "one_off",
+const premium = constructProduct({
+	type: "premium",
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
-			includedUsage: 100,
+			includedUsage: 300,
 		}),
 	],
 });
 
-// const oneOffCredits = constructRawProduct({
-// 	id: "one_off_credits",
-// 	items: [
-// 		constructPrepaidItem({
-// 			featureId: TestFeature.Credits,
-// 			billingUnits: 100,
-// 			price: 10,
-// 			isOneOff: true,
-// 			resetUsageWhenEnabled: false,
-// 		}),
-// 	],
-// 	isAddOn: true,
-// });
+const testCase = "attach-misc3";
 
-const testCase = "temp";
-
-describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
-	const customerId = "temp";
-
+describe(`${chalk.yellowBright("attach-misc3: cache invalidation guard test")}`, () => {
+	const customerId = testCase;
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
 	beforeAll(async () => {
-		// await CusService.deleteByOrgId({
-		// 	db: ctx.db,
-		// 	orgId: ctx.org.id,
-		// 	env: ctx.env,
-		// });
-
 		await initCustomerV3({
 			ctx,
 			customerId,
@@ -79,23 +45,10 @@ describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [free, pro, oneOff],
+			products: [pro, premium],
 			prefix: testCase,
 		});
-
-		const res = await autumnV1.attach({
-			customer_id: customerId,
-			product_id: oneOff.id,
-		});
-
-		console.log(res);
-		// await autumnV1.attach({
-		// 	customer_id: customerId,
-		// 	product_id: free.id,
-		// });
-		// await autumnV1.attach({
-		// 	customer_id: customerId,
-		// 	product_id: pro.id,
-		// });
 	});
+
+	it("should block cache writes when guard is active", async () => {});
 });
