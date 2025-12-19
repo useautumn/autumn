@@ -115,7 +115,7 @@ export const BasePriceSection = ({
 				<div className="space-y-2">
 					<GroupedTabButton
 						value={basePriceType ?? "recurring"}
-						className="w-full hello"
+						className="w-full"
 						onValueChange={(value) => {
 							//if usage based, remove the base price item
 							if (value === "usage") {
