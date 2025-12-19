@@ -203,6 +203,15 @@ export const runRedisDeduction = async ({
 			};
 		}
 
+		// Handle CUSTOMER_NOT_FOUND - fallback to Postgres (cache may be blocked by guard)
+		if (result.error === "CUSTOMER_NOT_FOUND") {
+			ctx.logger.info(`Customer not found in cache, falling back to Postgres`);
+			return {
+				fallback: true,
+				code: "redis_write_failed",
+			};
+		}
+
 		return {
 			fallback: false,
 			code:
