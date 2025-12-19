@@ -24,17 +24,15 @@ export const SignIn = () => {
 	const { org } = useOrg();
 	const navigate = useNavigate();
 
-	const newPath = "/sandbox/onboarding";
+	const newPath = "/sandbox/products?tab=products";
 	const callbackPath = "/sandbox/products?tab=products";
 
 	useEffect(() => {
 		if (org) {
 			if (org.deployed) {
 				navigate("/products?tab=products");
-			} else if (org.onboarded) {
-				navigate("/sandbox/products?tab=products");
 			} else {
-				navigate("/sandbox/onboarding");
+				navigate("/sandbox/products?tab=products");
 			}
 		}
 	}, [org, navigate]);
@@ -86,8 +84,6 @@ export const SignIn = () => {
 			}, 1000);
 		}
 	};
-
-	const height = "h-9";
 
 	return (
 		<div className="w-screen h-screen bg-background flex items-center justify-center p-4">
