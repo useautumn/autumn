@@ -145,6 +145,11 @@ export const SignIn = () => {
 								placeholder="Email"
 								value={email}
 								onChange={(e) => setEmail(e.target.value)}
+								onKeyDown={(e) => {
+									if (e.key === "Enter") {
+										handleEmailSignIn(e);
+									}
+								}}
 								required
 								className="text-base !w-full"
 								autoComplete="email"
