@@ -10,17 +10,19 @@ export const handleApiSubscriptionUpdate = createRoute({
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
 
-		const updateSubscriptionContext = await fetchApiSubscriptionUpdateContext(
+		const updateSubscriptionContext = await fetchApiSubscriptionUpdateContext({
 			ctx,
-			body,
-		);
+			params: body,
+		});
 
-		const subscriptionUpdatePlan = computeSubscriptionUpdatePlan(ctx, {
+		const subscriptionUpdatePlan = computeSubscriptionUpdatePlan({
+			ctx,
 			updateSubscriptionContext,
 			params: body,
 		});
 
-		await executeSubscriptionUpdate(ctx, {
+		await executeSubscriptionUpdate({
+			ctx,
 			params: body,
 			updateSubscriptionContext,
 			subscriptionUpdatePlan,

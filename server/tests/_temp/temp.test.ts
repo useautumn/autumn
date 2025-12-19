@@ -3,6 +3,7 @@ import {
 	ApiVersion,
 	CouponDurationType,
 	type CreateReward,
+	ProductItemFeatureType,
 	RewardType,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -40,7 +41,7 @@ const free = constructProduct({
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
-			includedUsage: 100,
+			includedUsage: 12,
 		}),
 	],
 });
@@ -51,7 +52,7 @@ const pro = constructProduct({
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
-			includedUsage: 100,
+			includedUsage: 12,
 		}),
 		// constructArrearProratedItem({
 		// 	featureId: TestFeature.Users,
@@ -185,6 +186,17 @@ const reward: CreateReward = {
 	},
 };
 
+const superProd = constructRawProduct({
+	id: "super",
+	items: [
+		constructPrepaidItem({
+			featureId: TestFeature.Messages,
+			billingUnits: 12,
+			price: 8,
+		}),
+	],
+});
+
 describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 	const customerId = "temp";
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
@@ -206,6 +218,7 @@ describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 				freeAddOn,
 				monthlyAddOn,
 				oneOffCredits,
+				superProd,
 			],
 			prefix: customerId,
 		});
@@ -221,7 +234,13 @@ describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 
 		await autumnV1.attach({
 			customer_id: customerId,
-			product_id: pro.id,
+			product_id: superProd.id,
+			options: [
+				{
+					feature_id: TestFeature.Messages,
+					quantity: 10,
+				},
+			],
 		});
 
 		// await autumnV1.entities.create(customerId, entities);

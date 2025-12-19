@@ -17,10 +17,7 @@
 			"@utils/*": ["./utils/*"]
 		}
 	},
-	"include": [
-		"./**/*",
-		"../server/src/internal/billing/v2/update-subscription"
-	],
+	"include": ["./**/*"],
 	"types": ["node"],
 	"exclude": ["node_modules", "dist"]
 }
