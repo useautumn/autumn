@@ -1,9 +1,14 @@
 import { ErrCode } from "@autumn/shared";
-import { ChartBarIcon, DatabaseIcon } from "@phosphor-icons/react";
+import {
+	ArrowSquareOutIcon,
+	ChartBarIcon,
+	DatabaseIcon,
+} from "@phosphor-icons/react";
 import type { AgGridReact } from "ag-grid-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { Card, CardContent } from "@/components/ui/card";
+import { IconButton } from "@/components/v2/buttons/IconButton";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { AnalyticsContext } from "./AnalyticsContext";
 import { EventsAGGrid, EventsBarChart } from "./AnalyticsGraph";
@@ -133,14 +138,32 @@ export const AnalyticsView = () => {
 
 	// Show empty state if no actual analytics events (check rawEvents and totalRows)
 	const hasNoData =
-		!queryLoading &&
 		!rawQueryLoading &&
 		!topEventsLoading &&
 		(!rawEvents || !rawEvents.data || rawEvents.data.length === 0) &&
 		totalRows === 0;
 
 	if (hasNoData) {
-		return <EmptyState type="analytics" />;
+		return (
+			<EmptyState
+				type="analytics"
+				actionButton={
+					<IconButton
+						variant="secondary"
+						iconOrientation="right"
+						icon={<ArrowSquareOutIcon size={16} />}
+						onClick={() => {
+							window.open(
+								"https://docs.useautumn.com/getting-started/gating",
+								"_blank",
+							);
+						}}
+					>
+						Docs
+					</IconButton>
+				}
+			/>
+		);
 	}
 
 	return (

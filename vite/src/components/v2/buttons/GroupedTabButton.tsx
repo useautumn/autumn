@@ -21,7 +21,7 @@ export const GroupedTabButton = ({
 	// const isTwoTab = options.length === 2;
 
 	return (
-		<div className={cn("flex items-center ", className)}>
+		<div className={cn("flex items-center", className)}>
 			{options.map((option, index) => {
 				const isActive = value === option.value;
 				const isFirst = index === 0;

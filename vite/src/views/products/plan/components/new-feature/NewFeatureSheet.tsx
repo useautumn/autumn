@@ -103,7 +103,7 @@ export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 			{!isOnboarding && (
 				<SheetHeader
 					title="New Feature"
-					description="Configure how this feature is used in your app"
+					description="Create a feature for a part of your product you want to gate behind specific plans. Then, add it to a plan."
 				/>
 			)}
 
