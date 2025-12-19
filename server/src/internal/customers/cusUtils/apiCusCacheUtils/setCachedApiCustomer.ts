@@ -23,11 +23,13 @@ export const setCachedApiCustomer = async ({
 	fullCus,
 	customerId,
 	source,
+	fetchTimeMs,
 }: {
 	ctx: AutumnContext;
 	fullCus: FullCustomer;
 	customerId: string;
 	source?: string;
+	fetchTimeMs: number; // Timestamp when data was fetched from Postgres (for stale write prevention)
 }) => {
 	const { org, env, logger } = ctx;
 
@@ -100,25 +102,44 @@ export const setCachedApiCustomer = async ({
 	// 	masterApiCustomerData,
 	// );
 
-	await tryRedisWrite(async () => {
-		await redis.setCustomer(
+	const result = await tryRedisWrite(async () => {
+		return redis.setCustomer(
 			JSON.stringify(masterApiCustomerData),
 			org.id,
 			env,
 			customerId,
+			fetchTimeMs.toString(),
 		);
+	});
 
-		const filteredEntityBatch = entityBatch.filter(
-			(e) => e.entityData.id !== null,
+	if (result === "CACHE_EXISTS") {
+		logger.debug(
+			`Cache already exists for customer ${customerId}, source: ${source}`,
 		);
+		return;
+	}
 
-		if (entityBatch.length > 0) {
-			await redis.setEntitiesBatch(
+	if (result === "STALE_WRITE") {
+		logger.debug(
+			`Stale write blocked for customer ${customerId}, source: ${source}`,
+		);
+		return;
+	}
+
+	// Write entity caches (only if customer cache was written)
+	const filteredEntityBatch = entityBatch.filter(
+		(e) => e.entityData.id !== null,
+	);
+
+	if (filteredEntityBatch.length > 0) {
+		await tryRedisWrite(async () => {
+			return redis.setEntitiesBatch(
 				JSON.stringify(filteredEntityBatch),
 				org.id,
 				env,
 			);
-		}
-	});
+		});
+	}
+
 	logger.info(`Set cached api customer ${customerId}, source: ${source}`);
 };

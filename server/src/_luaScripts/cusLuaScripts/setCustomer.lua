@@ -5,14 +5,24 @@
 -- ARGV[2]: org_id
 -- ARGV[3]: env
 -- ARGV[4]: customer_id
+-- ARGV[5]: fetch_time_ms (optional) - timestamp when data was fetched from Postgres
 
 local customerDataJson = ARGV[1]
 local orgId = ARGV[2]
 local env = ARGV[3]
 local customerId = ARGV[4]
+local fetchTimeMs = tonumber(ARGV[5]) or 0
 
 -- Build versioned cache key using shared utility
 local cacheKey = buildCustomerCacheKey(orgId, env, customerId)
+
+-- Check if deletion marker exists and is newer than fetch time
+-- This prevents stale writes where data was fetched before cache was invalidated
+local deletionKey = buildCacheGuardKey(orgId, env, customerId)
+local deletionTime = redis.call("GET", deletionKey)
+if deletionTime and tonumber(deletionTime) > fetchTimeMs then
+    return "STALE_WRITE"
+end
 
 -- Check if complete cache already exists
 if checkCacheExists(cacheKey) then

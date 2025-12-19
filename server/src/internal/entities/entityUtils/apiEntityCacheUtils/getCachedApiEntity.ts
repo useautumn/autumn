@@ -97,6 +97,8 @@ export const getCachedApiEntity = async ({
 			}
 		}
 
+		// Record timestamp before Postgres fetch for stale write prevention
+		const fetchTimeMs = Date.now();
 		// Cache miss or skipCache - fetch from DB
 		if (!fullCus) {
 			fullCus = await CusService.getFull({
@@ -124,6 +126,7 @@ export const getCachedApiEntity = async ({
 				ctx,
 				fullCus,
 				customerId,
+				fetchTimeMs,
 			});
 		}
 
