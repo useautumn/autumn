@@ -1,4 +1,12 @@
-import { getFeatureName, Infinite, isContUseItem } from "@autumn/shared";
+import {
+	BillingInterval,
+	billingToItemInterval,
+	EntInterval,
+	entToItemInterval,
+	getFeatureName,
+	Infinite,
+	isContUseItem,
+} from "@autumn/shared";
 import { InfinityIcon } from "@phosphor-icons/react";
 import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
 import { Input } from "@/components/v2/inputs/Input";
@@ -38,16 +46,18 @@ export function IncludedUsage() {
 				<div className="flex-1">
 					<div className="text-t3 text-sm block mb-2">
 						Quantity of&nbsp;
-						{getFeatureName({
-							feature: features.find((f) => f.id === item.feature_id),
-							plural: true,
-						})}
+						<span className="font-medium text-t1">
+							{getFeatureName({
+								feature: features.find((f) => f.id === item.feature_id),
+								plural: true,
+							})}{" "}
+						</span>
 						{!isFeaturePrice ? " that can be used" : " granted before billing"}
 					</div>
 					<div className="flex items-center gap-2">
 						<Input
 							key={`included-usage-${item.feature_id || item.price_id || "default"}`}
-							placeholder="eg. 100 credits"
+							placeholder="eg, 100"
 							value={getInputValue()}
 							onChange={(e) => {
 								const value = e.target.value.trim();
@@ -67,18 +77,36 @@ export function IncludedUsage() {
 						<IconCheckbox
 							hide={isFeaturePrice}
 							icon={<InfinityIcon />}
-							iconOrientation="center"
+							iconOrientation="left"
 							variant="muted"
 							size="default"
 							checked={includedUsage === Infinite}
-							onCheckedChange={(checked) =>
-								setItem({
-									...item,
-									included_usage: checked ? Infinite : 1,
-									interval: checked ? null : item.interval, // Set interval to null when unlimited
-								})
-							}
-							className="py-1 px-2 w-26 text-t4 gap-2"
+							onCheckedChange={(checked) => {
+								if (checked) {
+									// Set to unlimited
+									setItem({
+										...item,
+										included_usage: Infinite,
+										interval: null,
+									});
+								} else {
+									// Uncheck unlimited - set to default monthly interval
+									const defaultInterval = isFeaturePrice
+										? billingToItemInterval({
+												billingInterval: BillingInterval.Month,
+											})
+										: entToItemInterval({
+												entInterval: EntInterval.Month,
+											});
+									setItem({
+										...item,
+										included_usage: 1,
+										interval:
+											item.interval === null ? defaultInterval : item.interval,
+									});
+								}
+							}}
+							className="py-1 w-26 text-t4 gap-2"
 						>
 							Unlimited
 						</IconCheckbox>
