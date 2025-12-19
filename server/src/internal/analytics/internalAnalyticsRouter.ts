@@ -4,6 +4,7 @@ import {
 	FeatureType,
 	type FullCusProduct,
 	type FullCustomer,
+	type RangeEnum,
 } from "@autumn/shared";
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
@@ -12,6 +13,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { CusService } from "../customers/CusService.js";
+import { EventsAggregationService } from "../events/EventsAggregationService.js";
 import { AnalyticsService } from "./AnalyticsService.js";
 
 export const analyticsRouter = Router();
@@ -22,6 +24,7 @@ analyticsRouter.get("/event_names", async (req: any, res: any) =>
 		res,
 		action: "query event names",
 		handler: async () => {
+			AnalyticsService.handleEarlyExit();
 			const { org, env, features } = req;
 
 			const result = await queryWithCache({
@@ -35,12 +38,6 @@ analyticsRouter.get("/event_names", async (req: any, res: any) =>
 					return res?.eventNames;
 				},
 			});
-
-			// const topEventNamesRes = await AnalyticsService.getTopEventNames({
-			//   req,
-			// });
-
-			// let result = topEventNamesRes?.eventNames;
 
 			const featureIds: string[] = [];
 			const eventNames: string[] = [];
@@ -114,8 +111,9 @@ analyticsRouter.post("/events", async (req: any, res: any) =>
 		res,
 		action: "query events by customer id",
 		handler: async () => {
+			AnalyticsService.handleEarlyExit();
 			const { db, org, env, features } = req;
-			let { interval, event_names, customer_id } = req.body;
+			let { interval, event_names, customer_id, group_by } = req.body;
 
 			let topEvents: { featureIds: string[]; eventNames: string[] } | undefined;
 
@@ -163,15 +161,29 @@ analyticsRouter.post("/events", async (req: any, res: any) =>
 				event_names = event_names.filter((name: string) => name !== "");
 			}
 
-			const events = await AnalyticsService.getTimeseriesEvents({
-				req,
+			// const events = await AnalyticsService.getTimeseriesEvents({
+			// 	req,
+			// 	params: {
+			// 		customer_id,
+			// 		interval,
+			// 		event_names,
+			// 	},
+			// 	customer,
+			// 	aggregateAll,
+			// });
+
+			const binSize = interval === "24h" ? "hour" : "day";
+
+			const events = await EventsAggregationService.getTimeseriesEvents({
+				ctx: req,
 				params: {
 					customer_id,
-					interval,
+					interval: interval as RangeEnum,
 					event_names,
+					bin_size: binSize,
+					aggregateAll,
+					group_by: group_by,
 				},
-				customer,
-				aggregateAll,
 			});
 
 			res.status(200).json({
@@ -192,6 +204,7 @@ analyticsRouter.post("/raw", async (req: any, res: any) =>
 		res,
 		action: "query raw events by customer id",
 		handler: async () => {
+			AnalyticsService.handleEarlyExit();
 			const { db, org, env } = req;
 			const { interval, customer_id } = req.body;
 

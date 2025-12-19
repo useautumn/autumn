@@ -340,7 +340,9 @@ export const createFullCusProduct = async ({
 	if (
 		(isOneOff(prices) || (isFreeProduct(prices) && product.is_add_on)) &&
 		notNullish(existingCusProduct) &&
-		!attachParams.isCustom
+		!attachParams.isCustom &&
+		!existingCusProduct.is_custom &&
+		product.version === existingCusProduct.product.version
 	) {
 		await updateOneTimeCusProduct({
 			db,
@@ -453,24 +455,27 @@ export const createFullCusProduct = async ({
 		quantity: productOptions?.quantity ?? undefined,
 	});
 
-	// Expire previous product if not one off and add on...?
-	if (isFreeProduct(prices) && product.is_add_on) {
-		const { curSameProduct } = getExistingCusProducts({
-			product,
-			cusProducts: attachParams.cusProducts!,
-			internalEntityId: attachParams.internalEntityId,
-		});
+	// // Expire previous add on product if not one off...
+	// if (product.is_add_on && !isOneOff(prices)) {
+	// 	const { curSameProduct } = getExistingCusProducts({
+	// 		product,
+	// 		cusProducts: attachParams.cusProducts!,
+	// 		internalEntityId: attachParams.internalEntityId,
+	// 	});
 
-		if (curSameProduct) {
-			await CusProductService.update({
-				db,
-				cusProductId: curSameProduct.id,
-				updates: {
-					status: CusProductStatus.Expired,
-				},
-			});
-		}
-	}
+	// 	const curPrices = curSameProduct
+	// 		? cusProductToPrices({ cusProduct: curSameProduct })
+	// 		: [];
+	// 	if (curSameProduct && !isOneOff(curPrices) && !isFreeProduct(curPrices)) {
+	// 		await CusProductService.update({
+	// 			db,
+	// 			cusProductId: curSameProduct.id,
+	// 			updates: {
+	// 				status: CusProductStatus.Expired,
+	// 			},
+	// 		});
+	// 	}
+	// }
 
 	if (!isOneOff(prices) && !product.is_add_on) {
 		await expireOrDeleteCusProduct({

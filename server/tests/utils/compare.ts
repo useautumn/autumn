@@ -39,11 +39,13 @@ export const compareMainProduct = ({
 	cusRes,
 	status = CusProductStatus.Active,
 	optionsList = [],
+	skipEntitlements = false,
 }: {
 	sent: any;
 	cusRes: any;
 	status?: CusProductStatus;
 	optionsList?: FeatureOptions[];
+	skipEntitlements?: boolean;
 }) => {
 	const { products, add_ons, entitlements } = cusRes;
 	const prod = products.find(
@@ -54,6 +56,8 @@ export const compareMainProduct = ({
 		prod,
 		`Product ${sent.id} not found (status: ${status}), (${sent.is_add_on ? "add-on" : "main"})`,
 	).toBeDefined();
+
+	if (skipEntitlements) return;
 
 	// Check entitlements
 	const sentEntitlements = Object.values(sent.entitlements) as Entitlement[];

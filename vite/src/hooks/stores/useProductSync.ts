@@ -39,7 +39,9 @@ export const useProductSync = ({
 			if (!hasInitialized.current || isNewProduct || isVersionChanged) {
 				// Preserve frontend-only fields during creation flow, so Free vs Variable shows correctly
 				const shouldPreserveFrontendFields =
-					!currentProduct?.internal_id && product.items.length === 0;
+					!currentProduct?.internal_id &&
+					product.items.length === 0 &&
+					currentProduct?.basePriceType === "usage";
 
 				const mergedProduct: FrontendProduct = shouldPreserveFrontendFields
 					? {

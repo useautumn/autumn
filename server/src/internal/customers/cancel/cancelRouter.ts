@@ -27,6 +27,7 @@ cancelRouter.post("", async (req, res) =>
 				entity_id,
 				cancel_immediately,
 				prorate: bodyProrate,
+				customer_product_id,
 			} = req.body;
 
 			const expireImmediately = cancel_immediately || false;
@@ -53,13 +54,17 @@ cancelRouter.post("", async (req, res) =>
 			const cusProducts = fullCus.customer_products;
 			const entity = fullCus.entity;
 
-			const cusProduct = cusProducts.find(
-				(cusProduct: FullCusProduct) =>
-					cusProduct.product.id === product_id &&
-					(entity
-						? cusProduct.internal_entity_id === entity.internal_id
-						: nullish(cusProduct.internal_entity_id)),
-			);
+			const cusProduct = cusProducts.find((cusProduct: FullCusProduct) => {
+				const productIdMatch = cusProduct.product.id === product_id;
+				const entityMatch = entity
+					? cusProduct.internal_entity_id === entity.internal_id
+					: nullish(cusProduct.internal_entity_id);
+
+				const cusProductIdMatch = customer_product_id
+					? cusProduct.id === customer_product_id
+					: true;
+				return productIdMatch && entityMatch && cusProductIdMatch;
+			});
 
 			if (!cusProduct) {
 				throw new CusProductNotFoundError({

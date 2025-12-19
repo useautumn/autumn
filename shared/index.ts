@@ -3,6 +3,8 @@ import * as schemas from "./db/schema.js";
 export { schemas };
 
 export * from "./api/apiUtils.js";
+// Cursor pagination utilities
+export * from "./api/common/cursorPaginationSchemas.js";
 // API MODELS
 export * from "./api/models.js";
 
@@ -71,6 +73,7 @@ export * from "./models/devModels/apiKeyTable.js";
 // 5. Others: events, apiKeys
 export * from "./models/eventModels/eventModels.js";
 export * from "./models/eventModels/eventTable.js";
+export * from "./models/eventModels/eventTypes.js";
 export * from "./models/featureModels/featureConfig/creditConfig.js";
 export * from "./models/featureModels/featureConfig/meteredConfig.js";
 export * from "./models/featureModels/featureEnums.js";

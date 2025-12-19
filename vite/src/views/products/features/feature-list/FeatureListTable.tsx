@@ -41,7 +41,6 @@ export function FeatureListTable() {
 				? feature.archived
 				: !feature.archived;
 		});
-
 		// Check if any feature has event names
 		const hasEventNames = regularFeatures?.some(
 			(feature) => feature.event_names && feature.event_names.length > 0,
@@ -86,7 +85,13 @@ export function FeatureListTable() {
 
 	const enableSorting = false;
 
-	const hasFeatureRows = featureTable.getRowModel().rows.length > 0;
+	const hasFeatureRows =
+		featureTable.getRowModel().rows.length > 0 ||
+		creditTable.getRowModel().rows.length > 0;
+
+	// For archived view, always show table structure even if empty
+	// For non-archived view, show EmptyState when no features exist
+	const showTableStructure = queryStates.showArchivedFeatures || hasFeatureRows;
 
 	const creditEmptyStateChildren = queryStates.showArchivedFeatures ? (
 		"You haven't archived any credit systems yet."
@@ -126,7 +131,7 @@ export function FeatureListTable() {
 
 			<div className="flex flex-col gap-8">
 				{/* Features Table */}
-				{hasFeatureRows ? (
+				{showTableStructure ? (
 					<div>
 						<Table.Provider
 							config={{

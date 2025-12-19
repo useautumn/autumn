@@ -11,13 +11,13 @@ import { setUsageJsDoc } from "../common/jsDocs.js";
 // import { ApiEntityWithMeta } from "../entities/entitiesOpenApi.js";
 
 import {
-	ApiEntityWithMeta,
-	entitiesOpenApi,
-} from "../_openapi/prevVersions/entitiesOpenApi.js";
-import {
 	ApiCustomerWithMeta,
 	customersOpenApi,
 } from "../_openapi/prevVersions/openapi1.2/customersOpenApi.js";
+import {
+	ApiEntityWithMeta,
+	entitiesOpenApi,
+} from "../_openapi/prevVersions/openapi1.2/entitiesOpenApi.js";
 import {
 	ApiFeatureWithMeta,
 	featuresOpenApi,

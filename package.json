@@ -12,7 +12,8 @@
 			"stripe": "19.3.0-beta.1",
 			"drizzle-orm": "0.43.1",
 			"drizzle-kit": "^0.31.1",
-			"@sentry/bun": "10.25.0"
+			"@sentry/bun": "10.25.0",
+			"@clickhouse/client": "1.11.2"
 		}
 	},
 	"type": "module",
@@ -22,13 +23,14 @@
 		"d": "ENV_FILE=.env infisical run --env=dev -- bun scripts/dev.ts",
 		"p": "ENV_FILE=.env.prod infisical run --env=prod -- bun scripts/dev.ts",
 		"setup": "node scripts/setup/setup.js",
-		"setup:test": "bun scripts/setup/setup-test.ts",
-		"tests": "infisical run --env=dev -- bun scripts/test.ts",
+		"setup:test": "infisical run --env=dev -- bun scripts/setup/setup-test.ts",
+		"t": "infisical run --env=dev -- bun scripts/test.ts",
 		"migrate-functions": "infisical run --env=dev -- bun scripts/migrations/migrate-functions.ts",
 		"migrate-functions:prod": "infisical run --env=prod -- bun scripts/migrations/migrate-functions.ts",
 		"validate-schema": "infisical run --env=prod -- bun scripts/migrations/validate-schema.ts",
 		"setupci": "node scripts/setup/setupci.js",
 		"replicate": "bun scripts/db/replicate.ts",
+		"db:pull": "bun scripts/db/pull.ts",
 		"db:push": " bun -F @autumn/shared db:push",
 		"db:generate": "bun -F @autumn/shared db:generate",
 		"db:migrate": " bun -F @autumn/shared db:migrate"

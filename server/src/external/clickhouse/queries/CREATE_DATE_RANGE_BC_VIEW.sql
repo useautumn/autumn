@@ -1,15 +1,15 @@
 CREATE or replace VIEW date_range_bc_view AS
-SELECT 
-    CASE 
-        WHEN {bin_size:String} = 'hour' THEN 
+SELECT
+    CASE
+        WHEN {bin_size:String} = 'hour' THEN
             date_trunc('hour', {start_date:DateTime} - interval {days:UInt32} day) + interval number hour
-        WHEN {bin_size:String} = 'month' THEN 
+        WHEN {bin_size:String} = 'month' THEN
             date_trunc('month', {start_date:DateTime} - interval {days:UInt32} day) + interval number month
-        ELSE 
+        ELSE
             date_trunc('day', {start_date:DateTime} - interval {days:UInt32} day) + interval number day
     END as period
 FROM numbers(
-    CASE 
+    CASE
         WHEN {bin_size:String} = 'hour' THEN {days:UInt32} * 24 + 1
         WHEN {bin_size:String} = 'month' THEN toUInt32(ceil(toFloat64({days:UInt32}) / 30.0)) + 1
         ELSE {days:UInt32} + 1
