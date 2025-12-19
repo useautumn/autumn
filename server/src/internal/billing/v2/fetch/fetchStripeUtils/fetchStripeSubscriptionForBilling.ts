@@ -6,7 +6,7 @@ import {
 import { createStripeCli } from "../../../../../external/connect/createStripeCli";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
 
-export const fetchStripeSubForAttach = async ({
+export const fetchStripeSubscriptionForBilling = async ({
 	ctx,
 	fullCus,
 	products,

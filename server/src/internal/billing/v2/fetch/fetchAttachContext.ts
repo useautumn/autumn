@@ -5,8 +5,8 @@ import { getFreeTrialForAttach } from "./fetchAutumnUtils/getFreeTrialForAttach"
 import { getProductsForAttach } from "./fetchAutumnUtils/getProductsForAttach";
 import { overrideProduct } from "./fetchAutumnUtils/overrideProduct";
 import { resolveAttachActions } from "./fetchAutumnUtils/resolveAttachActions/resolveAttachActions";
-import { fetchStripeCustomerForAttach } from "./fetchStripeUtils/fetchStripeCustomerForAttach";
-import { fetchStripeSubForAttach } from "./fetchStripeUtils/fetchStripeSubForAttach";
+import { fetchStripeCustomerForBilling } from "./fetchStripeUtils/fetchStripeCustomerForBilling";
+import { fetchStripeSubscriptionForBilling } from "./fetchStripeUtils/fetchStripeSubscriptionForBilling";
 
 export const fetchAttachContext = async ({
 	ctx,
@@ -67,17 +67,19 @@ export const fetchAttachContext = async ({
 	// 5. Get sub update context
 
 	// 5. Get stripe sub
-	const stripeSub = await fetchStripeSubForAttach({
+	const stripeSub = await fetchStripeSubscriptionForBilling({
 		ctx,
 		fullCus,
 		products: newFullProducts,
 	});
 
 	// 6. Get stripe customer
-	const { stripeCus, paymentMethod, now } = await fetchStripeCustomerForAttach({
-		ctx,
-		fullCus,
-	});
+	const { stripeCus, paymentMethod, now } = await fetchStripeCustomerForBilling(
+		{
+			ctx,
+			fullCus,
+		},
+	);
 
 	const cusProductActions = resolveAttachActions({
 		fullCus,

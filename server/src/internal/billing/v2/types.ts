@@ -1,11 +1,14 @@
 import type {
 	AttachBodyV1,
+	Entitlement,
+	FeatureOptions,
 	FreeTrial,
 	FullCusProduct,
 	FullCustomer,
 	FullProduct,
 	LineItem,
 	OngoingCusProductAction,
+	Price,
 	ScheduledCusProductAction,
 } from "@autumn/shared";
 import type Stripe from "stripe";
@@ -67,3 +70,31 @@ export type AttachPlan = {
 	stripeSubAction: StripeSubAction;
 	stripeInvoiceAction?: StripeInvoiceAction;
 };
+
+export type BillingPlan = {
+	intent: "attach" | "update_quantity" | "update_plan" | "cancel" | "one_off";
+};
+
+export type BaseSubscriptionUpdatePlan = BillingPlan & {
+	intent: "update_quantity" | "update_plan";
+	customEntitlements: Entitlement[];
+	customPrices: Price[];
+	autumnLineItems: LineItem[];
+	stripeSubscriptionAction: StripeSubAction;
+	ongoingCusProductAction: OngoingCusProductAction;
+};
+
+export enum SubscriptionUpdateQuantityAction {
+	Upgrade = "upgrade",
+	Downgrade = "downgrade",
+}
+
+export type SubscriptionUpdateQuantityPlan = BaseSubscriptionUpdatePlan & {
+	featureQuantities: {
+		old: FeatureOptions[];
+		new: FeatureOptions[];
+	};
+	action: SubscriptionUpdateQuantityAction;
+};
+
+export type SubscriptionUpdatePlan = SubscriptionUpdateQuantityPlan;
