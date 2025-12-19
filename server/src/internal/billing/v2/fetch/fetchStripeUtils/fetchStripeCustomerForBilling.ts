@@ -7,7 +7,7 @@ import {
 } from "../../../../../external/stripe/stripeCusUtils";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
 
-export const fetchStripeCustomerForAttach = async ({
+export const fetchStripeCustomerForBilling = async ({
 	ctx,
 	fullCus,
 }: {

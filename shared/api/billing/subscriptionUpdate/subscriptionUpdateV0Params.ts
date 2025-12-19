@@ -3,6 +3,7 @@ import { FeatureOptionsSchema } from "../../../models/cusProductModels/cusProduc
 import { ProductItemSchema } from "../../../models/productV2Models/productItemModels/productItemModels";
 import { CustomerDataSchema } from "../../common/customerData";
 import { EntityDataSchema } from "../../models";
+
 export const SubscriptionUpdateV0ParamsSchema = z.object({
 	// Customer / Entity Info
 	customer_id: z.string(),
@@ -12,14 +13,14 @@ export const SubscriptionUpdateV0ParamsSchema = z.object({
 	customer_data: CustomerDataSchema.optional(),
 	entity_data: EntityDataSchema.optional(),
 
-	options: z.array(FeatureOptionsSchema).nullish(),
+	options: z.array(FeatureOptionsSchema).nullish(), // used for update quantity etc (in api - feature_quantities)
 
 	invoice: z.boolean().optional(),
 	enable_product_immediately: z.boolean().optional(),
 	finalize_invoice: z.boolean().optional(),
 
 	// Reset billing cycle anchor?
-	items: z.array(ProductItemSchema).optional(),
+	items: z.array(ProductItemSchema).optional(), // used for custom configuration of a plan (in api - plan_override)
 	reset_billing_cycle_anchor: z.boolean().optional(),
 	new_billing_subscription: z.boolean().optional(),
 	prorate_billing: z.boolean().optional(),
