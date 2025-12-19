@@ -4,35 +4,29 @@ import {
 	secondsToMs,
 } from "@shared/index";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { cusProductToExistingUsages } from "@/internal/billing/billingUtils/handleExistingUsages/cusProductToExistingUsages";
-import { initFullCusProduct } from "@/internal/billing/billingUtils/initFullCusProduct/initFullCusProduct";
 import { buildAutumnLineItems } from "../../compute/computeAutumnUtils/buildAutumnLineItems";
-import { buildStripeSubAction } from "../../compute/computeStripeUtils/buildStripeSubAction";
-import {
-	SubscriptionUpdateQuantityAction,
-	type SubscriptionUpdateQuantityPlan,
-} from "../../types";
+import type { SubscriptionUpdateQuantityPlan } from "../../types";
 import type { UpdateSubscriptionContext } from "../fetch/updateSubscriptionContextSchema";
+import { computeInvoiceAction } from "./computeInvoiceAction";
+import { computeQuantityUpdateDetails } from "./computeQuantityUpdateDetails";
 import { SubscriptionUpdateIntentEnum } from "./computeSubscriptionUpdateSchema";
 
-export const computeSubscriptionUpdateQuantityPlan = (
-	ctx: AutumnContext,
-	{
-		updateSubscriptionContext,
-		params,
-	}: {
-		updateSubscriptionContext: UpdateSubscriptionContext;
-		params: SubscriptionUpdateV0Params;
-	},
-): SubscriptionUpdateQuantityPlan => {
+export const computeSubscriptionUpdateQuantityPlan = ({
+	ctx,
+	updateSubscriptionContext,
+	params,
+}: {
+	ctx: AutumnContext;
+	updateSubscriptionContext: UpdateSubscriptionContext;
+	params: SubscriptionUpdateV0Params;
+}): SubscriptionUpdateQuantityPlan => {
 	const { options } = params;
 	const {
 		customerProduct,
-		fullCustomer,
 		stripeSubscription,
 		testClockFrozenTime,
-		product,
 		paymentMethod,
+		stripeCustomer,
 	} = updateSubscriptionContext;
 
 	const featureQuantities = {
@@ -40,19 +34,39 @@ export const computeSubscriptionUpdateQuantityPlan = (
 		new: options || [],
 	};
 
-	const isUpgrade =
-		featureQuantities.new[0].quantity > featureQuantities.old[0].quantity;
+	const currentEpochMs = testClockFrozenTime || Date.now();
 
-	const action = isUpgrade
-		? SubscriptionUpdateQuantityAction.Upgrade
-		: SubscriptionUpdateQuantityAction.Downgrade;
+	const quantityUpdateDetails = featureQuantities.new.map(
+		(updatedOption, index) =>
+			computeQuantityUpdateDetails({
+				ctx,
+				previousOptions: featureQuantities.old[index],
+				updatedOptions: updatedOption,
+				customerProduct,
+				stripeSubscription,
+				currentEpochMs,
+			}),
+	);
+
+	const isSubscriptionTrialing = stripeSubscription.status === "trialing";
+
+	const invoiceAction = !isSubscriptionTrialing
+		? computeInvoiceAction({
+				ctx,
+				quantityUpdateDetails,
+				stripeSubscription,
+				stripeCustomerId: stripeCustomer.id,
+				paymentMethod,
+				shouldGenerateInvoiceOnly: !(params.finalize_invoice ?? true),
+			})
+		: undefined;
 
 	const billingCycleAnchor = secondsToMs(
-		stripeSubscription?.billing_cycle_anchor,
+		stripeSubscription.billing_cycle_anchor,
 	);
 
 	const ongoingCusProductAction = {
-		action: OngoingCusProductActionEnum.Expire,
+		action: OngoingCusProductActionEnum.Update,
 		cusProduct: customerProduct,
 	};
 
@@ -64,35 +78,32 @@ export const computeSubscriptionUpdateQuantityPlan = (
 		testClockFrozenTime,
 	});
 
-	const newCustomerProduct = initFullCusProduct({
-		ctx,
-		fullCus: fullCustomer,
-		initContext: {
-			fullCus: fullCustomer,
-			product,
-			featureQuantities: [],
-			replaceables: [],
-			existingUsages: cusProductToExistingUsages({
-				cusProduct: customerProduct,
-			}),
-		},
-	});
+	const stripeSubscriptionAction = {
+		type: "update" as const,
+		subId: stripeSubscription.id,
+		items: quantityUpdateDetails.map((detail) => {
+			if (detail.existingStripeSubscriptionItem) {
+				return {
+					id: detail.existingStripeSubscriptionItem.id,
+					quantity: detail.updatedFeatureQuantity,
+				};
+			}
 
-	const stripeSubscriptionAction = buildStripeSubAction({
-		ctx,
-		stripeSub: stripeSubscription!,
-		fullCus: fullCustomer,
-		paymentMethod,
-		ongoingCusProductAction,
-		newCusProducts: [newCustomerProduct],
-	});
+			return {
+				price: detail.stripePriceId,
+				quantity: detail.updatedFeatureQuantity,
+			};
+		}),
+	};
 
 	return {
 		intent: SubscriptionUpdateIntentEnum.UpdateQuantity,
 		customEntitlements: [],
 		customPrices: [],
 		featureQuantities,
-		action,
+		quantityUpdateDetails,
+		isSubscriptionTrialing,
+		invoiceAction,
 		autumnLineItems,
 		stripeSubscriptionAction,
 		ongoingCusProductAction,

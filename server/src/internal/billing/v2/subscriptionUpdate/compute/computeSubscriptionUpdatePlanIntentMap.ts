@@ -9,16 +9,15 @@ import type { UpdateSubscriptionContext } from "../fetch/updateSubscriptionConte
 import { computeSubscriptionUpdateQuantityPlan } from "./computeSubscriptionUpdateQuantityPlan";
 import { SubscriptionUpdateIntentEnum } from "./computeSubscriptionUpdateSchema";
 
-export type ComputeSubscriptionUpdatePlan = (
-	ctx: AutumnContext,
-	{
-		updateSubscriptionContext,
-		params,
-	}: {
-		updateSubscriptionContext: UpdateSubscriptionContext;
-		params: SubscriptionUpdateV0Params;
-	},
-) => SubscriptionUpdatePlan;
+export type ComputeSubscriptionUpdatePlan = ({
+	ctx,
+	updateSubscriptionContext,
+	params,
+}: {
+	ctx: AutumnContext;
+	updateSubscriptionContext: UpdateSubscriptionContext;
+	params: SubscriptionUpdateV0Params;
+}) => SubscriptionUpdatePlan;
 
 export type ComputeSubscriptionUpdatePlanIntentMap = Partial<
 	Record<SubscriptionUpdateIntentEnum, ComputeSubscriptionUpdatePlan>
@@ -33,7 +32,7 @@ const computeSubscriptionUpdatePlanIntentMap: ComputeSubscriptionUpdatePlanInten
 			computeSubscriptionUpdateQuantityPlan,
 	};
 
-export const getComputeSubscriptionUpdatePlanIntentMap = (
+export const getComputeSubscriptionUpdatePlanFunction = (
 	intent: SubscriptionUpdateIntentEnum,
 ): ComputeSubscriptionUpdatePlan => {
 	const plan = computeSubscriptionUpdatePlanIntentMap[intent];

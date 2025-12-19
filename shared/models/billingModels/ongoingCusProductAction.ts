@@ -5,6 +5,7 @@ export enum OngoingCusProductActionEnum {
 	Expire = "expire",
 	Cancel = "cancel",
 	Uncancel = "uncancel",
+	Update = "update",
 }
 
 // What happens to the CURRENT active cus product

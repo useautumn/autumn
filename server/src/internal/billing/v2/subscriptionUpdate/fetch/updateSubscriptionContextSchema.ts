@@ -5,7 +5,7 @@ export type UpdateSubscriptionContext = {
 	fullCustomer: FullCustomer;
 	product: FullProduct;
 	customerProduct: FullCusProduct;
-	stripeSubscription?: Stripe.Subscription;
+	stripeSubscription: Stripe.Subscription;
 	stripeSubscriptionSchedule?: Stripe.SubscriptionSchedule;
 	stripeCustomer: Stripe.Customer;
 	paymentMethod?: Stripe.PaymentMethod;
