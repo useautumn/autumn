@@ -33,7 +33,7 @@ const cusPrefixedUrls = [
 	},
 	{
 		method: "POST",
-		url: "/customers/:customer_id/transfer_product",
+		url: "/customers/:customer_id/transfer",
 	},
 ];
 
