@@ -5,6 +5,7 @@ import type {
 	FreeTrial,
 	FullCusProduct,
 	FullCustomer,
+	FullCustomerPrice,
 	FullProduct,
 	LineItem,
 	OngoingCusProductAction,
@@ -84,17 +85,55 @@ export type BaseSubscriptionUpdatePlan = BillingPlan & {
 	ongoingCusProductAction: OngoingCusProductAction;
 };
 
-export enum SubscriptionUpdateQuantityAction {
-	Upgrade = "upgrade",
-	Downgrade = "downgrade",
-}
+export type QuantityUpdateDetails = {
+	featureId: string;
+	internalFeatureId: string;
+
+	previousFeatureQuantity: number;
+	updatedFeatureQuantity: number;
+	quantityDifferenceForEntitlements: number;
+	stripeSubscriptionItemQuantityDifference: number;
+
+	shouldApplyProration: boolean;
+	shouldFinalizeInvoiceImmediately: boolean;
+	billingUnitsPerQuantity: number;
+
+	calculatedProrationAmountDollars?: number;
+	subscriptionPeriodStartEpochMs: number;
+	subscriptionPeriodEndEpochMs: number;
+
+	stripeInvoiceItemDescription: string;
+
+	customerPrice: FullCustomerPrice;
+	stripePriceId: string;
+	existingStripeSubscriptionItem?: Stripe.SubscriptionItem;
+
+	customerEntitlementId?: string;
+	customerEntitlementBalanceChange: number;
+};
+
+export type SubscriptionUpdateInvoiceAction = {
+	shouldCreateInvoice: boolean;
+	invoiceItems: {
+		description: string;
+		amountDollars: number;
+		stripePriceId: string;
+		periodStartEpochMs: number;
+		periodEndEpochMs: number;
+	}[];
+	shouldChargeImmediately: boolean;
+	paymentMethod?: Stripe.PaymentMethod;
+	customerPrices: FullCustomerPrice[];
+};
 
 export type SubscriptionUpdateQuantityPlan = BaseSubscriptionUpdatePlan & {
 	featureQuantities: {
 		old: FeatureOptions[];
 		new: FeatureOptions[];
 	};
-	action: SubscriptionUpdateQuantityAction;
+	quantityUpdateDetails: QuantityUpdateDetails[];
+	isSubscriptionTrialing: boolean;
+	invoiceAction?: SubscriptionUpdateInvoiceAction;
 };
 
 export type SubscriptionUpdatePlan = SubscriptionUpdateQuantityPlan;

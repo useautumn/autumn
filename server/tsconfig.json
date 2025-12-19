@@ -35,6 +35,6 @@
       "@utils/*": ["../shared/utils/*"],
     }
   },
-  "include": ["src", "tests", "scripts", "emails", "experiments", "src/internal/billing/v2/subscriptionUpdate", "../shared/api/billing/subscriptionUpdate/compute", "../shared/api/billing/subscriptionUpdate/fetch"],
+  "include": ["src", "tests", "scripts", "emails", "experiments"],
   "exclude": ["node_modules", "dist", "tests/archives"]
 }
