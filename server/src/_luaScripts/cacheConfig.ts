@@ -15,7 +15,14 @@ import { ApiVersion } from "@autumn/shared";
 export const CACHE_CUSTOMER_VERSION = ApiVersion.V1_2;
 
 /**
- * Cache time-to-live in seconds (7 days)
+ * Cache time-to-live in seconds (3 days)
  * All customer and entity caches will expire after this duration
  */
-export const CACHE_TTL_SECONDS = 3 * 24 * 60 * 60; // 7 days = 604800 seconds
+export const CACHE_TTL_SECONDS = 3 * 24 * 60 * 60; // 3 days
+
+/**
+ * Cache guard TTL in milliseconds
+ * When cache is deleted, a guard key is set to prevent stale writes
+ * Any cache writes within this window will be blocked
+ */
+export const CACHE_GUARD_TTL_MS = 500;
