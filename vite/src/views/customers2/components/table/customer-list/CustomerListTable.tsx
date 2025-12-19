@@ -1,8 +1,10 @@
 import type { FullCustomer } from "@autumn/shared";
+import { ArrowSquareOutIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useNavigate } from "react-router";
 import { Table } from "@/components/general/table";
+import { IconButton } from "@/components/v2/buttons/IconButton";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
@@ -112,7 +114,24 @@ export function CustomerListTable({
 		return (
 			<EmptyState
 				type="customers"
-				actionButton={<CustomerListCreateButton />}
+				actionButton={
+					<div className="flex items-center gap-2">
+						<IconButton
+							variant="secondary"
+							iconOrientation="right"
+							icon={<ArrowSquareOutIcon size={16} />}
+							onClick={() => {
+								window.open(
+									"https://docs.useautumn.com/getting-started/setup/react",
+									"_blank",
+								);
+							}}
+						>
+							Docs
+						</IconButton>
+						<CustomerListCreateButton />
+					</div>
+				}
 			/>
 		);
 	}

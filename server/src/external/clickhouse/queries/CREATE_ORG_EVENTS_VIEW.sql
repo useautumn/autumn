@@ -1,4 +1,6 @@
-CREATE OR REPLACE VIEW org_events_view AS
+CREATE OR REPLACE VIEW org_events_view
+SQL SECURITY DEFINER
+AS
 SELECT
     customer_id,
     timestamp,

@@ -18,7 +18,6 @@ export const EmptyState = ({
 		| "archived-plans"
 		| "no-customers-found"
 		| "analytics";
-
 	actionButton?: React.ReactNode;
 }) => {
 	const getEmptyStateContent = () => {
@@ -47,7 +46,7 @@ export const EmptyState = ({
 				return {
 					title: "Customers",
 					description:
-						"Create customers via the Autumn API for users or organizations that can purchase plans",
+						"Create customers to let your users or organizations purchase plans",
 					svg: customersSvg,
 				};
 			case "no-customers-found":
@@ -67,7 +66,7 @@ export const EmptyState = ({
 				return {
 					title: "No analytics data",
 					description:
-						"No analytics data found. Start recording events to see usage data.",
+						"No usage data found. Start recording events to see them appear here.",
 					svg: analyticsSvg,
 				};
 			case "api-keys":
@@ -83,7 +82,7 @@ export const EmptyState = ({
 	const { title, description, svg } = getEmptyStateContent();
 
 	return (
-		<div className="flex flex-col items-center justify-center gap-4 p-8 text-sm pt-20">
+		<div className="flex flex-col items-center justify-center gap-4 p-8 text-sm pt-20 animate-in fade-in-0 duration-500 slide-in-from-bottom-1">
 			<img src={svg} alt={title} className="h-20" />
 			<div className="space-y-1">
 				<h2 className="text-t2 font-medium text-center">{title}</h2>

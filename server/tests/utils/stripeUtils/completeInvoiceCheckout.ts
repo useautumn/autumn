@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import puppeteer from "puppeteer-core";
+import puppeteer, { type Browser } from "puppeteer-core";
 import { timeout } from "../genUtils.js";
 
 // const client = new Hyperbrowser({
@@ -14,20 +14,11 @@ export const completeInvoiceCheckout = async ({
 	url: string;
 	isLocal?: boolean;
 }) => {
-	let browser;
+	let browser: Browser;
 
-	// if (process.env.NODE_ENV === "development" && !isLocal) {
-	// 	const session = await client.sessions.create();
-	// 	browser = await puppeteer.connect({
-	// 		browserWSEndpoint: session!.wsEndpoint,
-	// 		defaultViewport: null,
-	// 	});
-	// } else {
-
-	// }
 	browser = await puppeteer.launch({
-		headless: false,
-		executablePath: "/Applications/Chromium.app/Contents/MacOS/Chromium",
+		headless: true,
+		executablePath: process.env.TESTS_CHROMIUM_PATH,
 		args: ["--no-sandbox", "--disable-setuid-sandbox"],
 	});
 

@@ -82,6 +82,16 @@ export * from "./customers/cusPlans/previousVersions/apiCusProductV3.js";
 export * from "./entities/apiBaseEntity.js";
 // Errors
 export * from "./errors/index.js";
+// Events
+export * from "./events/aggregate/eventsAggregateParams.js";
+export * from "./events/aggregate/eventsAggregateResponse.js";
+export * from "./events/components/billingCycleIntervals.js";
+export * from "./events/components/binsizeEnum.js";
+export * from "./events/components/rangeEnum.js";
+export * from "./events/insights/query/insightsQueryBody.js";
+export * from "./events/list/eventsListParams.js";
+export * from "./events/list/eventsListResponse.js";
+// Features
 export * from "./features/apiFeatureV1.js";
 export * from "./features/featureV1OpModels.js";
 export * from "./features/prevVersions/apiFeatureV0.js";

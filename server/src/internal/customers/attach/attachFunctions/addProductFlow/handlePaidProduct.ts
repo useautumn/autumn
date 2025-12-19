@@ -4,23 +4,24 @@ import {
 	type AttachFunctionResponse,
 	AttachFunctionResponseSchema,
 	AttachScenario,
-	ErrCode,
 	isTrialing,
+	MetadataType,
 	SuccessCode,
 } from "@autumn/shared";
+import { addMinutes } from "date-fns";
 import type Stripe from "stripe";
 import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
-import { subIsCanceled } from "@/external/stripe/stripeSubUtils.js";
+import { isStripeSubscriptionCanceled } from "@/external/stripe/stripeSubUtils.js";
+
+import { attachParamsToMetadata } from "@/internal/billing/attach/utils/attachParamsToMetadata.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
-import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { addIntervalToAnchor } from "@/internal/products/prices/billingIntervalUtils2.js";
 import { getSmallestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 import { getCustomerDisplay } from "../../../../billing/attach/utils/getCustomerDisplay.js";
 import {
@@ -130,7 +131,7 @@ export const handlePaidProduct = async ({
 			});
 		}
 
-		if (subIsCanceled({ sub: mergeSub })) {
+		if (isStripeSubscriptionCanceled({ sub: mergeSub })) {
 			logger.info("ADD PRODUCT FLOW, CREATING NEW SCHEDULE");
 			schedule = await subToNewSchedule({
 				ctx,
@@ -166,16 +167,16 @@ export const handlePaidProduct = async ({
 			prices: attachParams.prices,
 		});
 
-		// 1. If anchor to start of month, get next month anchor
 		if (org.config.anchor_start_of_month) {
+			// 1. If anchor to start of month, get next month anchor
 			billingCycleAnchorUnix = getNextStartOfMonthUnix({
 				interval: smallestInterval!.interval,
 				intervalCount: smallestInterval!.intervalCount,
 			});
 		}
 
-		// 2. If merge sub anchor, use it
 		if (mergeSub && !config.disableMerge) {
+			// 2. If merge sub anchor, use it
 			billingCycleAnchorUnix = addIntervalToAnchor({
 				anchorUnix: mergeSub.billing_cycle_anchor * 1000,
 				intervalConfig: smallestInterval!,
@@ -183,45 +184,61 @@ export const handlePaidProduct = async ({
 			});
 		}
 
-		// 3. If billing cycle anchor, just use it
 		if (attachParams.billingAnchor) {
+			// 3. If billing cycle anchor, just use it
 			billingCycleAnchorUnix = attachParams.billingAnchor;
 		}
 
 		// console.log("Item set: ", itemSet);
-		try {
-			sub = await createStripeSub2({
+		sub = await createStripeSub2({
+			db: ctx.db,
+			stripeCli,
+			attachParams,
+			itemSet,
+			billingCycleAnchorUnix,
+			config,
+			logger,
+		});
+
+		if (sub?.latest_invoice) {
+			invoice = await insertInvoiceFromAttach({
 				db: ctx.db,
-				stripeCli,
+				stripeInvoice: sub.latest_invoice as Stripe.Invoice,
 				attachParams,
-				itemSet,
-				billingCycleAnchorUnix,
-				config,
 				logger,
 			});
+		}
 
-			if (sub?.latest_invoice) {
-				invoice = await insertInvoiceFromAttach({
-					db: ctx.db,
-					stripeInvoice: sub.latest_invoice as Stripe.Invoice,
-					attachParams,
-					logger,
-				});
-			}
-		} catch (error) {
-			if (
-				error instanceof RecaseError &&
-				!invoiceOnly &&
-				error.code === ErrCode.CreateStripeSubscriptionFailed
-			) {
-				return await handleCreateCheckout({
-					ctx,
-					attachParams,
+		const subInvoice: Stripe.Invoice | undefined =
+			sub.latest_invoice as Stripe.Invoice;
+
+		if (subInvoice && subInvoice.status === "open" && !config.invoiceCheckout) {
+			logger.info(
+				`[create subscription] invoice checkout created because invoice is open: ${subInvoice.id}`,
+			);
+			const metadata = await attachParamsToMetadata({
+				db: ctx.db,
+				attachParams: {
+					...attachParams,
+					subId: sub.id,
+					anchorToUnix: sub.billing_cycle_anchor * 1000,
 					config,
-				});
-			}
+				},
+				type: MetadataType.InvoiceCheckout,
+				stripeInvoiceId: subInvoice.id as string,
+				expiresAt: addMinutes(Date.now(), 10).getTime(),
+			});
 
-			throw error;
+			await stripeCli.invoices.update(subInvoice.id, {
+				metadata: {
+					autumn_metadata_id: metadata.id,
+				},
+			});
+			return AttachFunctionResponseSchema.parse({
+				checkout_url: subInvoice.hosted_invoice_url,
+				code: SuccessCode.InvoiceActionRequired,
+				message: "Payment action required",
+			});
 		}
 	}
 

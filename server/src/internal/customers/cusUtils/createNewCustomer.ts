@@ -5,8 +5,11 @@ import {
 	CreateCustomerSchema,
 	type Customer,
 	ErrCode,
+	type FeatureOptions,
 	type FullCustomer,
 	type FullProduct,
+	isPrepaidPrice,
+	priceToEnt,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -160,6 +163,21 @@ export const createNewCustomer = async ({
 				logger,
 			});
 
+			const optionsList = defaultProd.prices
+				.filter((x) => isPrepaidPrice({ price: x }))
+				.map((x) => {
+					const ent = priceToEnt({
+						price: x,
+						entitlements: defaultProd.entitlements,
+					});
+					return {
+						feature_id: ent?.feature.id,
+						internal_feature_id:
+							ent?.feature.internal_id || ent?.internal_feature_id,
+						quantity: 0,
+					};
+				}) as FeatureOptions[];
+
 			await handleAddProduct({
 				ctx,
 				config: {
@@ -172,6 +190,7 @@ export const createNewCustomer = async ({
 					products: [defaultProd],
 					stripeCli,
 					freeTrial: defaultProd.free_trial || null,
+					optionsList: optionsList as FeatureOptions[],
 				}),
 			});
 		} else {

@@ -4,7 +4,7 @@ import { loadLocalEnv } from "@/utils/envUtils.js";
  * Initialize Infisical and load secrets into process.env
  * This allows all existing code using process.env to work seamlessly
  */
-export const initInfisical = async () => {
+export const initInfisical = async (params?: { secretPath?: string }) => {
 	loadLocalEnv();
 
 	// Only initialize if credentials are provided
@@ -31,6 +31,8 @@ export const initInfisical = async () => {
 		const allSecrets = await client.secrets().listSecrets({
 			environment,
 			projectId,
+			secretPath: params?.secretPath,
+			includeImports: true,
 		});
 
 		// Load secrets into process.env
@@ -41,6 +43,15 @@ export const initInfisical = async () => {
 			if (!process.env[secret.secretKey]) {
 				process.env[secret.secretKey] = secret.secretValue;
 				loadedCount++;
+			}
+		}
+
+		for (const importSecrets of allSecrets?.imports ?? []) {
+			for (const importSecret of importSecrets.secrets) {
+				if (!process.env[importSecret.secretKey]) {
+					process.env[importSecret.secretKey] = importSecret.secretValue;
+					loadedCount++;
+				}
 			}
 		}
 

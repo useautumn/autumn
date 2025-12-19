@@ -23,7 +23,7 @@ export function PricedFeatureSettings() {
 
 	return (
 		<div className="mt-3">
-			<FormLabel>Usage Model</FormLabel>
+			<FormLabel>Billing Method</FormLabel>
 			<RadioGroup
 				value={item.usage_model}
 				onValueChange={handleUsageModelChange}
@@ -32,12 +32,12 @@ export function PricedFeatureSettings() {
 				<AreaRadioGroupItem
 					value={UsageModel.PayPerUse}
 					label="Usage-based"
-					description={"Bill for how much the customer has used"}
+					description={"Bill for how much the customer uses"}
 				/>
 				<AreaRadioGroupItem
 					value={UsageModel.Prepaid}
 					label="Prepaid"
-					description="Bill for a fixed upfront quantity during checkout"
+					description="Purchase a fixed quantity upfront"
 				/>
 			</RadioGroup>
 		</div>

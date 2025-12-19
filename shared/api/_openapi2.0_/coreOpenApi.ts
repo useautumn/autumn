@@ -1,6 +1,6 @@
 import {
 	AttachBodyV0Schema,
-	AttachResponseV0Schema,
+	AttachResponseV1Schema,
 	CancelBodySchema,
 	CancelResultSchema,
 	CheckoutParamsV0Schema,
@@ -26,7 +26,6 @@ import {
 } from "../common/jsDocs.js";
 import {
 	GetBillingPortalBodySchema,
-	GetBillingPortalQuerySchema,
 	GetBillingPortalResponseSchema,
 } from "../customers/customerOpModels.js";
 
@@ -60,7 +59,7 @@ export const coreOps: ZodOpenApiPathsObject = {
 					description: "Product attached successfully",
 					content: {
 						"application/json": {
-							schema: AttachResponseV0Schema,
+							schema: AttachResponseV1Schema,
 						},
 					},
 				},
@@ -173,26 +172,7 @@ export const coreOps: ZodOpenApiPathsObject = {
 			},
 		},
 	},
-	// "/billing_portal": {
-	// 	post: {
-	// 		summary: "Create Billing Portal Session",
-	// 		description: billingPortalJsDoc,
-	// 		tags: ["core"],
-	// 		requestBody: {
-	// 			content: {
-	// 				"application/json": { schema: BillingPortalParamsSchema },
-	// 			},
-	// 		},
-	// 		responses: {
-	// 			"200": {
-	// 				description: "200 OK",
-	// 				content: {
-	// 					"application/json": { schema: BillingPortalResultSchema },
-	// 				},
-	// 			},
-	// 		},
-	// 	},
-	// },
+
 	"/customers/{customer_id}/billing_portal": {
 		post: {
 			summary: "Create Billing Portal Session",
@@ -202,7 +182,7 @@ export const coreOps: ZodOpenApiPathsObject = {
 				path: z.object({
 					customer_id: z.string(),
 				}),
-				query: GetBillingPortalQuerySchema,
+				// query: GetBillingPortalQuerySchema,
 			},
 			requestBody: {
 				content: {
@@ -223,23 +203,4 @@ export const coreOps: ZodOpenApiPathsObject = {
 			},
 		},
 	},
-
-	// "/usage": {
-	// 	post: {
-	// 		summary: "Set Usage",
-	// 		description: setUsageJsDoc,
-	// 		tags: ["core"],
-	// 		requestBody: {
-	// 			content: {
-	// 				"application/json": { schema: SetUsageParamsSchema },
-	// 			},
-	// 		},
-	// 		responses: {
-	// 			"200": {
-	// 				description: "200 OK",
-	// 				content: { "application/json": { schema: SuccessResponseSchema } },
-	// 			},
-	// 		},
-	// 	},
-	// },
 };

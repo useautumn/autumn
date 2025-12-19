@@ -6,7 +6,6 @@ import type {
 import {
 	CusProductStatus,
 	cusEntToCusPrice,
-	cusEntToPrepaidQuantity,
 	cusProductsToCusEnts,
 	FeatureUsageType,
 	type FullCustomer,
@@ -14,7 +13,6 @@ import {
 	getRelevantFeatures,
 	getStartingBalance,
 	InternalError,
-	isPrepaidCusEnt,
 	notNullish,
 	nullish,
 	orgToInStatuses,
@@ -22,7 +20,6 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { sql } from "drizzle-orm";
-import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils.js";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { EventService } from "../../../api/events/EventService.js";
@@ -124,10 +121,22 @@ export const deductFromCusEnts = async ({
 			sortParams,
 		});
 
-		const { unlimited } = getUnlimitedAndUsageAllowed({
-			cusEnts,
-			internalFeatureId: feature.internal_id!,
-		});
+		// Check if ANY relevant feature (primary or credit system) is unlimited
+		// Add unlimited features to actualDeductions with value 0 (like Lua's changedCustomerFeatureIds)
+		let unlimited = false;
+		for (const rf of relevantFeatures) {
+			const { unlimited: featureUnlimited } = getUnlimitedAndUsageAllowed({
+				cusEnts,
+				internalFeatureId: rf.internal_id!,
+			});
+			if (featureUnlimited) {
+				unlimited = true;
+				// Add to actualDeductions with 0 so balance gets returned
+				if (actualDeductions[rf.id] === undefined) {
+					actualDeductions[rf.id] = 0;
+				}
+			}
+		}
 
 		if (cusEnts.length === 0 || unlimited) continue;
 
@@ -144,6 +153,7 @@ export const deductFromCusEnts = async ({
 				ce.entitlement.feature.config?.usage_type ===
 					FeatureUsageType.Continuous && nullish(cusPrice);
 
+			// NOTE: WE USE STARTING BALANCE BECAUSE ADJUSTMENT IS ADDED IN performDeduction.sql function
 			const resetBalance = getStartingBalance({
 				entitlement: ce.entitlement,
 				options:

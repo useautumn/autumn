@@ -8,7 +8,7 @@ import {
 	UpdateBalanceParamsSchema,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import { z } from "zod/v4";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { createRoute } from "../../../honoMiddlewares/routeHandler.js";
 import { CusService } from "../../customers/CusService.js";
 import { deleteCachedApiCustomer } from "../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
@@ -16,9 +16,7 @@ import { runDeductionTx } from "../track/trackUtils/runDeductionTx.js";
 import { updateGrantedBalance } from "../updateGrantedBalance/updateGrantedBalance.js";
 
 export const handleUpdateBalance = createRoute({
-	body: UpdateBalanceParamsSchema.extend({
-		customer_entitlement_id: z.string().optional(),
-	}),
+	body: UpdateBalanceParamsSchema.extend({}),
 
 	handler: async (c) => {
 		const body = c.req.valid("json");
@@ -88,6 +86,17 @@ export const handleUpdateBalance = createRoute({
 						: undefined,
 				},
 			});
+		}
+
+		if (notNullish(body.next_reset_at)) {
+			if (body.customer_entitlement_id)
+				await CusEntService.update({
+					db: ctx.db,
+					id: body.customer_entitlement_id,
+					updates: {
+						next_reset_at: body.next_reset_at,
+					},
+				});
 		}
 
 		await deleteCachedApiCustomer({

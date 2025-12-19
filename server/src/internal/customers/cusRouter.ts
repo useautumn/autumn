@@ -29,7 +29,6 @@ cusRouter.post("/:customer_id/transfer", ...handleTransferProductV2);
 
 // Billing portal
 cusRouter.post("/:customer_id/billing_portal", ...handleCreateBillingPortal);
-// cusRouter.get("/:customer_id/billing_portal", ...handleCreateBillingPortal);
 
 // Legacy...
 cusRouter.post("/:customer_id/balances", ...handleUpdateBalancesV2);
