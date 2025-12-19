@@ -91,7 +91,7 @@ export const sendCustomSvixEvent = safeSvix({
 	action: "sendSvixEvent",
 });
 
-export const getSvixDashboardUrl = safeSvix({
+export const getSvixDashboardUrlAndPublicToken = safeSvix({
 	fn: async ({ org, env }: { org: Organization; env: AppEnv }) => {
 		const appId = getSvixAppId({ org, env });
 		if (!appId) {
@@ -99,7 +99,11 @@ export const getSvixDashboardUrl = safeSvix({
 		}
 		const svix = createSvixCli();
 		const dashboard = await svix.authentication.appPortalAccess(appId, {});
-		return dashboard.url;
+		return {
+			dashboardUrl: dashboard.url,
+			publicToken: dashboard.token,
+			appId,
+		};
 	},
-	action: "getSvixDashboardUrl",
+	action: "getSvixDashboardUrlAndPublicToken",
 });

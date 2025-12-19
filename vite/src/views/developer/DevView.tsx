@@ -1,8 +1,4 @@
-"use client";
-
 import "svix-react/style.css";
-import { AppPortal } from "svix-react";
-import { useTheme } from "@/contexts/ThemeProvider";
 import { useAppQueryStates } from "@/hooks/common/useAppQueryStates";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
@@ -11,9 +7,11 @@ import { ApiKeysPage } from "./api-keys/ApiKeysPage";
 import { ConfigureStripe } from "./configure-stripe/ConfigureStripe";
 import { ConfigureVercel } from "./configure-vercel/ConfigureVercel";
 import { PublishableKeySection } from "./publishable-key";
+import { ConfigureWebhookSection } from "./configure-svix/configure-svix-section";
+import { SvixProvider } from "svix-react";
 
 export default function DevScreen() {
-	const { apiKeys, svixDashboardUrl, isLoading, error } = useDevQuery();
+	const { apiKeys, svixDashboardUrl, svixPublicToken, svixAppId, isLoading, error } = useDevQuery();
 	const { queryStates } = useAppQueryStates({ defaultTab: "api_keys" });
 
 	const tab = queryStates.tab;
@@ -34,35 +32,12 @@ export default function DevScreen() {
 
 			{tab === "stripe" && <ConfigureStripe />}
 			{tab === "webhooks" && webhooks && svixDashboardUrl && (
-				<ConfigureWebhookSection dashboardUrl={svixDashboardUrl} />
+				<SvixProvider token={svixPublicToken} appId={svixAppId}>
+					<ConfigureWebhookSection dashboardUrl={svixDashboardUrl} publicToken={svixPublicToken} />
+				</SvixProvider>
 			)}
 
 			{tab === "vercel" && vercel && <ConfigureVercel />}
 		</div>
 	);
 }
-
-const ConfigureWebhookSection = ({ dashboardUrl }: any) => {
-	const { isDark } = useTheme();
-
-	return (
-		<div className="h-full">
-			{dashboardUrl ? (
-				<AppPortal
-					url={dashboardUrl}
-					darkMode={isDark}
-					style={{
-						height: "100%",
-						borderRadius: "none",
-						// marginTop: "0.5rem",
-						// paddingLeft: "1rem",
-						// paddingRight: "1rem",
-					}}
-					fullSize
-				/>
-			) : (
-				<div className="text-muted-foreground">Dashboard URL not found.</div>
-			)}
-		</div>
-	);
-};

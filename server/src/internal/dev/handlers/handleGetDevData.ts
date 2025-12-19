@@ -1,4 +1,4 @@
-import { getSvixDashboardUrl } from "../../../external/svix/svixHelpers";
+import { getSvixDashboardUrlAndPublicToken } from "../../../external/svix/svixHelpers";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
 import { ApiKeyService } from "../ApiKeyService";
 
@@ -12,15 +12,27 @@ export const handleGetDevData = createRoute({
 			env,
 		});
 
-		const dashboardUrl = await getSvixDashboardUrl({
+		const svixData = await getSvixDashboardUrlAndPublicToken({
 			env,
 			org,
 		});
 
+		if (!svixData) {
+			return c.json({
+				api_keys: apiKeys,
+				org,
+				svix_dashboard_url: null,
+				svix_public_token: null,
+				svix_app_id: null,
+			});
+		}
 		return c.json({
 			api_keys: apiKeys,
 			org,
-			svix_dashboard_url: dashboardUrl || null,
+
+			svix_dashboard_url: svixData.dashboardUrl,
+			svix_public_token: svixData.publicToken,
+			svix_app_id: svixData.appId,
 		});
 	},
 });

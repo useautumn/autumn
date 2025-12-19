@@ -19,6 +19,8 @@ export const useDevQuery = () => {
 	return {
 		apiKeys: data?.api_keys,
 		svixDashboardUrl: data?.svix_dashboard_url,
+		svixPublicToken: data?.svix_public_token,
+		svixAppId: data?.svix_app_id,
 		isLoading,
 		error,
 		refetch,
