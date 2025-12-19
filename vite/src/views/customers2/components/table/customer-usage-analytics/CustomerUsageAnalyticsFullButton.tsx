@@ -14,7 +14,11 @@ export function CustomerUsageAnalyticsFullButton() {
 			size="mini"
 			className="flex items-center gap-1"
 			onClick={() => {
-				pushPage({ path: `/analytics?customer_id=${customer.id}`, navigate });
+				pushPage({
+					path: "/analytics",
+					queryParams: { customer_id: customer.id },
+					navigate,
+				});
 			}}
 		>
 			<ChartBarIcon className="text-t3" />
