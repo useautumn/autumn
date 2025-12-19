@@ -171,7 +171,7 @@ export const ConfigureStripe = () => {
 				description:
 					env === AppEnv.Live
 						? "To start taking payments in Production, connect your Stripe live account below:"
-						: "You are using a default sandbox account managed by Autumn. You can connect your own Stipe sandbox account below.",
+						: "You are using a default sandbox account managed by Autumn. You can connect your own Stripe sandbox account below.",
 				showDisconnect: false,
 				showConnectButtons: true,
 				showDefaultAccountLink: false,
