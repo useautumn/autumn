@@ -129,7 +129,7 @@ const getTooltipContent = (item: ProductItem, position: "left" | "right") => {
 				case "prepaid":
 					return "Prepaid";
 				case "paid":
-					return "Pay-per-use";
+					return "Usage-based";
 				case "none":
 					return "None";
 				default:

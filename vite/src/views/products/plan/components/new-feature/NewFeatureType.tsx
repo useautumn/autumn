@@ -50,7 +50,7 @@ export function NewFeatureType({
 								Metered
 							</div>
 							<div className="text-body-secondary leading-tight">
-								A usage-based feature that you want to track
+								A usage-based feature you can track, limit or bill for
 							</div>
 						</div>
 					</div>
@@ -68,7 +68,7 @@ export function NewFeatureType({
 								Boolean
 							</div>
 							<div className="text-body-secondary leading-tight">
-								A flag that can either be enabled or disabled.
+								A feature flag you can turn on or off per plan
 							</div>
 						</div>
 					</div>

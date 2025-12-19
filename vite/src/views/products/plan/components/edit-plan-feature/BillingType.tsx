@@ -103,10 +103,10 @@ export function BillingType() {
 					<div className="text-body-highlight mb-1">Included</div>
 					<div className="text-body-secondary leading-tight">
 						{isConsumable
-							? `Set an included usage limit for this feature (e.g. 100 ${featureName} per month).`
+							? `Set an included usage limit (eg, 100 ${featureName} per month).`
 							: isAllocated
-								? `Set a usage limit for this feature (e.g. 5 ${featureName}).`
-								: "Set a usage limit for this feature."}
+								? `Set a usage limit (eg, 5 ${featureName}).`
+								: "Set a usage limit."}
 					</div>
 				</div>
 			</div>
@@ -123,10 +123,10 @@ export function BillingType() {
 					<div className="text-body-highlight mb-1">Priced</div>
 					<div className="text-body-secondary leading-tight">
 						{isConsumable
-							? `Charge a price for usage of this feature (e.g. $0.05 per ${singleFeatureName}).`
+							? `Charge a price for usage (eg, $0.05 per ${singleFeatureName}).`
 							: isAllocated
-								? `Charge a price based on usage of this feature (e.g. $10 per ${singleFeatureName}).`
-								: "Charge a price based on usage of this feature."}
+								? `Charge a price based on usage (eg, $10 per ${singleFeatureName}).`
+								: "Charge a price based on usage."}
 					</div>
 				</div>
 			</div>
