@@ -13,7 +13,8 @@
 			"drizzle-orm": "0.43.1",
 			"drizzle-kit": "^0.31.1",
 			"@sentry/bun": "10.25.0",
-			"@clickhouse/client": "1.11.2"
+			"@clickhouse/client": "1.11.2",
+			"@date-fns/utc": "2.1.0"
 		}
 	},
 	"type": "module",
