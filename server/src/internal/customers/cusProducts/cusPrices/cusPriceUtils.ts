@@ -50,7 +50,7 @@ export const getCusPriceUsage = ({
 }) => {
 	if (!cusPrice) {
 		cusPrice = cusProduct.customer_prices.find(
-			(cp) => cp.price.id == price!.id,
+			(cp) => cp.price.id === price!.id,
 		);
 		if (!cusPrice) {
 			throw new RecaseError({
