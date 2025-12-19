@@ -103,7 +103,7 @@ export const BasePriceSection = ({
 		<SheetSection withSeparator={withSeparator}>
 			<div className="space-y-4">
 				<AreaSwitch
-					title="This plan has a fixed price"
+					title="This plan has a base price"
 					checked={basePriceType !== "usage"}
 					onCheckedChange={(checked) => {
 						if (checked) {
