@@ -4,7 +4,7 @@ import { ProductItemSchema } from "../../../models/productV2Models/productItemMo
 import { CustomerDataSchema } from "../../common/customerData";
 import { EntityDataSchema } from "../../models";
 
-export const SubscriptionUpdateV0ParamsSchema = z.object({
+export const ExtSubscriptionUpdateV0ParamsSchema = z.object({
 	// Customer / Entity Info
 	customer_id: z.string(),
 	product_id: z.string().nullish(),
@@ -25,6 +25,15 @@ export const SubscriptionUpdateV0ParamsSchema = z.object({
 	new_billing_subscription: z.boolean().optional(),
 	prorate_billing: z.boolean().optional(),
 });
+
+export const SubscriptionUpdateV0ParamsSchema =
+	ExtSubscriptionUpdateV0ParamsSchema.extend({
+		customer_product_id: z.string().optional(),
+	});
+
+export type ExtSubscriptionUpdateV0Params = z.infer<
+	typeof ExtSubscriptionUpdateV0ParamsSchema
+>;
 
 export type SubscriptionUpdateV0Params = z.infer<
 	typeof SubscriptionUpdateV0ParamsSchema

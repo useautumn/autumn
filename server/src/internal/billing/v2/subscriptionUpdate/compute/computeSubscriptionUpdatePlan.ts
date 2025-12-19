@@ -22,6 +22,7 @@ export const computeSubscriptionUpdatePlan = (
 	},
 ): SubscriptionUpdatePlan => {
 	const intent = computeSubscriptionUpdateIntent(params);
+
 	const computePlan = getComputeSubscriptionUpdatePlanIntentMap(intent);
 
 	return computePlan(ctx, { updateSubscriptionContext, params });
