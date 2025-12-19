@@ -40,20 +40,20 @@ export function MainLayout() {
 		return () => window.removeEventListener("error", handleGlobalError);
 	}, [handleApiError]);
 
-	useEffect(() => {
-		// Only redirect if org is loaded and user is not onboarded
-		if (!orgLoading && org) {
-			if (!org.onboarded) {
-				navigate("/sandbox/onboarding");
-			} else if (!org.deployed) {
-				const pathname = window.location.pathname;
-				if (!pathname.startsWith("/sandbox")) {
-					const search = window.location.search;
-					navigate(`/sandbox${pathname}${search}`);
-				}
-			}
-		}
-	}, [org, orgLoading, navigate]);
+	// useEffect(() => {
+	// 	// Only redirect if org is loaded and user is not onboarded
+	// 	if (!orgLoading && org) {
+	// 		if (!org.onboarded) {
+	// 			navigate("/sandbox/onboarding");
+	// 		} else if (!org.deployed) {
+	// 			const pathname = window.location.pathname;
+	// 			if (!pathname.startsWith("/sandbox")) {
+	// 				const search = window.location.search;
+	// 				navigate(`/sandbox${pathname}${search}`);
+	// 			}
+	// 		}
+	// 	}
+	// }, [org, orgLoading, navigate]);
 
 	// 1. If not loaded, show loading screen
 	if (isPending || orgLoading) {

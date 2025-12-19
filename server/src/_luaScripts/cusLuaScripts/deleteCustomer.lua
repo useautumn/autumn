@@ -77,5 +77,12 @@ if #keysToDelete > 0 then
     deletedCount = redis.call("UNLINK", unpack(keysToDelete))
 end
 
+-- Set deletion marker with current timestamp to prevent stale writes
+-- Any cache writes with fetch_time < deletion_time will be blocked
+local deletionKey = buildCacheGuardKey(orgId, env, customerId)
+local deletionTime = redis.call("TIME")  -- Returns [seconds, microseconds]
+local timestampMs = tonumber(deletionTime[1]) * 1000 + math.floor(tonumber(deletionTime[2]) / 1000)
+redis.call("SET", deletionKey, timestampMs, "PX", CACHE_GUARD_TTL_MS)
+
 return deletedCount
 

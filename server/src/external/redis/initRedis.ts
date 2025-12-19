@@ -170,6 +170,7 @@ declare module "ioredis" {
 			orgId: string,
 			env: string,
 			customerId: string,
+			fetchTimeMs: string, // Timestamp when data was fetched from Postgres (for stale write prevention)
 		): Promise<string>;
 		setEntitiesBatch(
 			entityBatch: string,

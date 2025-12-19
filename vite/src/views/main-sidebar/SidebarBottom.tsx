@@ -1,7 +1,7 @@
 "use client";
 
-import { AppEnv } from "@autumn/shared";
-import { Book, GraduationCap } from "lucide-react";
+import { DiscordLogoIcon } from "@phosphor-icons/react";
+import { Book } from "lucide-react";
 import { useEnv } from "@/utils/envUtils";
 import { NavButton } from "./NavButton";
 import { SidebarContact } from "./SidebarContact";
@@ -19,47 +19,30 @@ export default function SidebarBottom() {
           title="Connect to Stripe"
           env={env}
         /> */}
-				{env === AppEnv.Sandbox && (
+				{/* {env === AppEnv.Sandbox && (
 					<NavButton
 						value="onboarding"
 						icon={<GraduationCap size={14} />}
 						title="Onboarding"
 						env={env}
 					/>
-				)}
+				)} */}
 				<NavButton
 					value="docs"
 					icon={<Book size={14} />}
-					title="Documentation"
+					title="Docs"
 					env={env}
 					href="https://docs.useautumn.com"
+				/>
+				<NavButton
+					value="discord"
+					icon={<DiscordLogoIcon size={14} />}
+					title="Discord"
+					env={env}
+					href="https://discord.gg/STqxY92zuS"
 				/>
 				<SidebarContact />
 			</div>
 		</div>
 	);
-}
-
-{
-	/* <div
-  className={cn(
-    "flex items-center gap-2 mb-4 mt-6 px-4",
-    state != "expanded" && "w-full flex px-0 justify-center",
-  )}
->
-  <div className="relative w-7 h-7">
-    <UserButton />
-  </div>
-  {expanded && (
-    <div className="text-xs flex flex-col gap-1 overflow-hidden">
-      <p className="text-t2">{user?.name}</p>
-      <p
-        className="text-t3 overflow-hidden text-ellipsis 
-            whitespace-nowrap"
-      >
-        {user?.email}
-      </p>
-    </div>
-  )}
-</div>; */
 }
