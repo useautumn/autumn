@@ -43,7 +43,12 @@ export const isCusProductTrialing = ({
 	);
 };
 
-// ATTACH PRIMITIVES
+/**
+ * Returns true if the customer product is assigned to the given entity,
+ * or if no entity is specified, true if the product is not assigned to any entity.
+ * @param cusProduct - The customer product object
+ * @param internalEntityId - The internal entity ID to check, or undefined to check for unassigned
+ */
 export const isCusProductOnEntity = ({
 	cusProduct,
 	internalEntityId,

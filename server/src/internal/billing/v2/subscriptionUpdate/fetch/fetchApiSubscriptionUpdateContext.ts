@@ -7,6 +7,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "../../../../customers/CusService";
 import { fetchStripeCustomerForBilling } from "../../fetch/fetchStripeUtils/fetchStripeCustomerForBilling";
 import { fetchStripeSubscriptionForBilling } from "../../fetch/fetchStripeUtils/fetchStripeSubscriptionForBilling";
+import { fetchTargetCusProductForUpdate } from "./fetchTargetCusProductForUpdate";
 import type { UpdateSubscriptionContext } from "./updateSubscriptionContextSchema";
 
 /**
@@ -42,9 +43,10 @@ export const fetchApiSubscriptionUpdateContext = async (
 		withEntities: true,
 	});
 
-	const targetCustomerProduct = fullCustomer.customer_products.find(
-		(cp) => cp.product.id === productId,
-	);
+	const targetCustomerProduct = fetchTargetCusProductForUpdate({
+		params,
+		fullCustomer,
+	});
 
 	if (!targetCustomerProduct) {
 		throw new InternalError({
