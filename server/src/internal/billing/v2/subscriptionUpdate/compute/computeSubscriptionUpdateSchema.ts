@@ -1,5 +1,8 @@
 import { z } from "zod/v4";
 
+/**
+ * The intent for a subscription update
+ */
 export enum SubscriptionUpdateIntentEnum {
 	UpdateQuantity = "update_quantity",
 	UpdatePlan = "update_plan",

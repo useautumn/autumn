@@ -10,6 +10,11 @@ export const applyOngoingCusProductAction = async ({
 	ongoingCusProductAction: OngoingCusProductAction;
 }) => {
 	const { action, cusProduct } = ongoingCusProductAction;
+
+	if (action === "update") {
+		return;
+	}
+
 	if (action === "expire") {
 		return await CusProductService.update({
 			db: ctx.db,
