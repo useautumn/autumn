@@ -2,26 +2,33 @@ import type { Feature, FullCusProduct } from "@autumn/shared";
 import { AppEnv, FeatureUsageType, ProcessorType } from "@autumn/shared";
 import {
 	ArrowSquareOutIcon,
-	DotsThreeVerticalIcon,
-	PencilIcon,
-	Subtract,
+	CaretDownIcon,
+	PencilSimpleIcon,
+	SubtractIcon,
 	TicketIcon,
 	TrashIcon,
+	UserCircleGearIcon,
 } from "@phosphor-icons/react";
 import { useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/v2/buttons/Button";
+import { Dialog } from "@/components/v2/dialogs/Dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/v2/buttons/Button";
-import { Dialog } from "@/components/v2/dialogs/Dialog";
+} from "@/components/v2/dropdowns/DropdownMenu";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
+import { useDropdownShortcut } from "@/hooks/useDropdownShortcut";
 import { cn } from "@/lib/utils";
+import { CusService } from "@/services/customers/CusService";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
+import { getBackendErr } from "@/utils/genUtils";
 import { getRevenueCatCusLink, getStripeCusLink } from "@/utils/linkUtils";
 import { DeleteCustomerDialog } from "@/views/customers/customer/components/DeleteCustomerDialog";
 import UpdateCustomerDialog from "@/views/customers/customer/components/UpdateCustomerDialog";
@@ -34,17 +41,45 @@ export function CustomerActions() {
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [createEntityOpen, setCreateEntityOpen] = useState(false);
 	const [addCouponOpen, setAddCouponOpen] = useState(false);
+	const [actionsOpen, setActionsOpen] = useState(false);
+	const [portalLoading, setPortalLoading] = useState(false);
 	const { customer } = useCusQuery();
 	const { features } = useFeaturesQuery();
-	const env = useEnv();
 	const { org } = useOrg();
 	const { stripeAccount } = useOrgStripeQuery();
-	const [ellipsisOpen, setEllipsisOpen] = useState(false);
+	const env = useEnv();
+	const axiosInstance = useAxiosInstance();
+
+	const stripeCustomerId = customer?.processor?.id;
 
 	const hasContinuousUseFeatures = features?.some(
 		(feature: Feature) =>
 			feature.config?.usage_type === FeatureUsageType.Continuous,
 	);
+
+	// Open dropdown with "a" key
+	useDropdownShortcut({
+		shortcut: "a",
+		isOpen: actionsOpen,
+		setIsOpen: setActionsOpen,
+	});
+
+	const handleOpenBillingPortal = async () => {
+		if (!customer) return;
+
+		setPortalLoading(true);
+		try {
+			const { url } = await CusService.createBillingPortalSession({
+				axios: axiosInstance,
+				customer_id: customer.id || customer.internal_id,
+			});
+			window.open(url, "_blank");
+		} catch (error) {
+			toast.error(getBackendErr(error, "Failed to open billing portal"));
+		} finally {
+			setPortalLoading(false);
+		}
+	};
 
 	return (
 		<div className="flex items-center gap-2">
@@ -63,105 +98,113 @@ export function CustomerActions() {
 			/>
 			<CreateEntity open={createEntityOpen} setOpen={setCreateEntityOpen} />
 			<AddCouponDialog open={addCouponOpen} setOpen={setAddCouponOpen} />
-			<Button
-				size="mini"
-				variant="secondary"
-				onClick={() => setIsModalOpen(true)}
-				className="gap-1"
-			>
-				<PencilIcon className="text-t3" />
-				Edit Customer
-			</Button>
 
-			<DropdownMenu open={ellipsisOpen} onOpenChange={setEllipsisOpen}>
+			<DropdownMenu open={actionsOpen} onOpenChange={setActionsOpen}>
 				<DropdownMenuTrigger asChild>
 					<Button
-						size="icon"
+						size="mini"
 						variant="secondary"
-						className={cn(ellipsisOpen && "btn-secondary-active")}
+						className={cn("gap-1", actionsOpen && "btn-secondary-active")}
 					>
-						<DotsThreeVerticalIcon size={16} className="text-t2" />
+						Actions
+						<CaretDownIcon className="size-3.5 text-t3" />
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end">
+					<DropdownMenuItem
+						onClick={() => setIsModalOpen(true)}
+						className="flex gap-2"
+					>
+						<PencilSimpleIcon />
+						Edit customer
+					</DropdownMenuItem>
 					{hasContinuousUseFeatures && (
 						<DropdownMenuItem
 							onClick={() => setCreateEntityOpen(true)}
-							className="flex gap-3"
+							className="flex gap-2"
 						>
-							<Subtract size={12} />
+							<SubtractIcon />
 							Create entity
 						</DropdownMenuItem>
 					)}
 					<DropdownMenuItem
 						onClick={() => setAddCouponOpen(true)}
-						className="flex gap-3"
+						className="flex gap-2"
 					>
-						<TicketIcon size={12} />
+						<TicketIcon />
 						Add coupon
 					</DropdownMenuItem>
-					{customer?.processor?.id &&
-						customer.processor.type === ProcessorType.Stripe && (
+					<DropdownMenuItem
+						onClick={handleOpenBillingPortal}
+						className="flex gap-2"
+						disabled={portalLoading}
+						shortcut="b"
+					>
+						<UserCircleGearIcon />
+						{portalLoading ? "Opening..." : "Open customer portal"}
+					</DropdownMenuItem>
+					{stripeCustomerId &&
+						customer?.processor?.type === ProcessorType.Stripe && (
 							<DropdownMenuItem
 								onClick={() => {
 									window.open(
 										getStripeCusLink({
-											customerId: customer.processor.id,
+											customerId: stripeCustomerId,
 											env,
 											accountId: stripeAccount?.id,
 										}),
 										"_blank",
 									);
 								}}
-								className="flex gap-3"
+								className="flex gap-2"
+								shortcut="s"
 							>
-								<ArrowSquareOutIcon size={12} />
+								<ArrowSquareOutIcon className="size-3.5" />
 								Open in Stripe
 							</DropdownMenuItem>
 						)}
-
-					{(customer?.processor?.id &&
+					{((customer?.processor?.id &&
 						customer.processor.type === ProcessorType.RevenueCat) ||
-						(customer.customer_products.some(
+						customer?.customer_products?.some(
 							(cp: FullCusProduct) =>
 								cp.processor?.type === ProcessorType.RevenueCat,
-						) && (
-							<DropdownMenuItem
-								onClick={() => {
-									console.log(org?.processor_configs?.revenuecat);
-									window.open(
-										getRevenueCatCusLink({
-											customerId: customer.id,
-											projectId:
-												env === AppEnv.Live
-													? (org?.processor_configs?.revenuecat?.project_id?.replace(
-															"proj",
-															"",
-														) ?? "")
-													: (org?.processor_configs?.revenuecat?.sandbox_project_id?.replace(
-															"proj",
-															"",
-														) ?? ""),
-										}),
-										"_blank",
-									);
-								}}
-								className="flex gap-3"
-							>
-								<ArrowSquareOutIcon size={12} />
-								Open in RevenueCat
-							</DropdownMenuItem>
-						))}
+						)) && (
+						<DropdownMenuItem
+							onClick={() => {
+								window.open(
+									getRevenueCatCusLink({
+										customerId: customer.id,
+										projectId:
+											env === AppEnv.Live
+												? (org?.processor_configs?.revenuecat?.project_id?.replace(
+														"proj",
+														"",
+													) ?? "")
+												: (org?.processor_configs?.revenuecat?.sandbox_project_id?.replace(
+														"proj",
+														"",
+													) ?? ""),
+									}),
+									"_blank",
+								);
+							}}
+							className="flex gap-2"
+						>
+							<ArrowSquareOutIcon className="size-3.5" />
+							Open in RevenueCat
+						</DropdownMenuItem>
+					)}
+					<DropdownMenuSeparator />
+					<DropdownMenuItem
+						onClick={() => setDeleteOpen(true)}
+						variant="destructive"
+						className="flex gap-2 text-red-500 !hover:bg-red-500"
+					>
+						<TrashIcon />
+						Delete customer
+					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
-
-			<Button
-				size="icon"
-				variant="secondary"
-				onClick={() => setDeleteOpen(true)}
-			>
-				<TrashIcon className="text-t3" />
-			</Button>
 		</div>
 	);
 }

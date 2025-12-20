@@ -121,41 +121,41 @@ export const cusEntToIncludedUsage = ({
 };
 
 // NEW CUS ENT UTILS
-export const cusEntToGrantedBalance = ({
-	cusEnt,
-	entityId,
-	withRollovers = false,
-}: {
-	cusEnt: FullCusEntWithFullCusProduct;
-	entityId?: string;
-	withRollovers?: boolean;
-}) => {
-	const rollover = getRolloverFields({
-		cusEnt,
-		entityId,
-	});
+// export const cusEntToGrantedBalance = ({
+// 	cusEnt,
+// 	entityId,
+// 	withRollovers = false,
+// }: {
+// 	cusEnt: FullCusEntWithFullCusProduct;
+// 	entityId?: string;
+// 	withRollovers?: boolean;
+// }) => {
+// 	const rollover = getRolloverFields({
+// 		cusEnt,
+// 		entityId,
+// 	});
 
-	const { count: entityCount } = getCusEntBalance({
-		cusEnt,
-		entityId,
-	});
+// 	const { count: entityCount } = getCusEntBalance({
+// 		cusEnt,
+// 		entityId,
+// 	});
 
-	const grantedBalance = cusEnt.entitlement.allowance || 0;
+// 	const grantedBalance = cusEnt.entitlement.allowance || 0;
 
-	const total = new Decimal(grantedBalance)
-		.mul(cusEnt.customer_product.quantity ?? 1)
-		.mul(entityCount)
-		.toNumber();
+// 	const total = new Decimal(grantedBalance)
+// 		.mul(cusEnt.customer_product.quantity ?? 1)
+// 		.mul(entityCount)
+// 		.toNumber();
 
-	if (withRollovers && rollover) {
-		return new Decimal(total)
-			.add(rollover.balance)
-			.add(rollover.usage)
-			.toNumber();
-	}
+// 	if (withRollovers && rollover) {
+// 		return new Decimal(total)
+// 			.add(rollover.balance)
+// 			.add(rollover.usage)
+// 			.toNumber();
+// 	}
 
-	return total;
-};
+// 	return total;
+// };
 
 export const apiBalanceToBreakdownKey = ({
 	breakdown,

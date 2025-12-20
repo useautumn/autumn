@@ -2,6 +2,7 @@
 
 import { TableActions } from "./table-actions";
 import { TableBody } from "./table-body";
+import { TableColumnVisibility } from "./table-column-visibility";
 import { TableContainer } from "./table-container";
 import { TableContent } from "./table-content";
 import { TableHeader } from "./table-header";
@@ -20,4 +21,5 @@ export const Table = {
 	Body: TableBody,
 	Container: TableContainer,
 	Pagination: TablePagination,
+	ColumnVisibility: TableColumnVisibility,
 };

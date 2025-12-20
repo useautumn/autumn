@@ -7,6 +7,7 @@ import {
 } from "@/hooks/stores/useSheetStore";
 import { getItemId } from "@/utils/product/productItemUtils";
 import { AddFeatureRow } from "./AddFeatureRow";
+import { DummyPlanFeatureRow } from "./DummyPlanFeatureRow";
 import { PlanFeatureRow } from "./PlanFeatureRow";
 
 export const PlanFeatureList = ({
@@ -64,14 +65,21 @@ export const PlanFeatureList = ({
 		setSheet({ type: "new-feature", itemId: "new" });
 	};
 
+	// Show dummy row when creating a new feature
+	const isCreatingNewFeature = sheetType === "new-feature";
+
 	if (filteredItems.length === 0) {
 		return (
 			<div className="space-y-1">
 				<div className="space-y-1">
+					{isCreatingNewFeature ? (
+						<DummyPlanFeatureRow />
+					) : (
 					<AddFeatureRow
 						onClick={handleAddFeature}
 						disabled={isAddButtonDisabled}
 					/>
+					)}
 				</div>
 			</div>
 		);
@@ -114,12 +122,15 @@ export const PlanFeatureList = ({
 				);
 			})}
 
-			{allowAddFeature && (
+			{allowAddFeature &&
+				(isCreatingNewFeature ? (
+					<DummyPlanFeatureRow />
+				) : (
 				<AddFeatureRow
 					onClick={handleAddFeature}
 					disabled={isAddButtonDisabled}
 				/>
-			)}
+				))}
 		</div>
 	);
 };

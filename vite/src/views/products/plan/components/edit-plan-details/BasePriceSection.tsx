@@ -22,6 +22,7 @@ import {
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useProductStore } from "@/hooks/stores/useProductStore";
+import { type SheetType, useSheetStore } from "@/hooks/stores/useSheetStore";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { SelectBillingCycle } from "./SelectBillingCycle";
 
@@ -36,18 +37,15 @@ export const BasePriceSection = ({
 	const basePriceType = product.basePriceType;
 	const { org } = useOrg();
 	const defaultCurrency = org?.default_currency?.toUpperCase() ?? "USD";
+	const sheetType = useSheetStore((s) => s.type) as SheetType;
+
+	// When sheetType is null, we're in CreateProductSheet (overlay sheet, not inline sheet)
+	const isCreatingNewPlan = sheetType === null;
 
 	if (!product.items) return null;
 	if (product.planType !== "paid") return null;
 
 	const basePrice = productV2ToBasePrice({ product });
-
-	const handleDeleteBasePrice = () => {
-		setProduct({
-			...product,
-			items: product.items.filter((item: ProductItem) => !isPriceItem(item)),
-		});
-	};
 
 	const getBasePriceIndex = () => {
 		return product.items.findIndex(
@@ -107,37 +105,13 @@ export const BasePriceSection = ({
 
 	const disabled = nullish(basePrice);
 
-	// if (nullish(basePrice?.interval)) return null;
-
 	return (
 		<SheetSection
-			title="Plan Price"
+			title="Base Price"
 			withSeparator={withSeparator}
-			// checked={!disabled}
-			// setChecked={(checked) => {
-			// 	if (checked) {
-			// 		setProduct({
-			// 			...product,
-			// 			items: [
-			// 				...product.items,
-			// 				{
-			// 					price: 10,
-			// 					interval: ProductItemInterval.Month,
-			// 				},
-			// 			],
-			// 		});
-			// 	} else {
-			// 		handleDeleteBasePrice();
-			// 	}
-			// }}
-			// description={
-			// 	<span>
-			// 		Choose whether to add a fixed base price to this plan. You can add
-			// 		usage-based prices later.
-			// 	</span>
-			// }
+			description={`Flat-rate cost to access this plan.${isCreatingNewPlan ? " You can add per-unit prices later." : ""}`}
 		>
-			<div className="space-y-4">
+			<div className="space-y-3">
 				<div className="space-y-2">
 					<GroupedTabButton
 						value={basePriceType ?? "recurring"}
@@ -211,47 +185,13 @@ export const BasePriceSection = ({
 							},
 							{
 								value: "usage",
-								label: "Variable",
+								label: "Per unit only",
 								icon: <BarcodeIcon className="size-[14px]" weight="regular" />,
 							},
 						]}
 					/>
-					{/* <p className="text-body-secondary">
-						Add a fixed price to charge for the whole plan. You can add
-						usage-based prices later.
-					</p> */}
+					{/* <p className="text-t4 text-sm">{priceDescription}</p> */}
 				</div>
-				{/* <FormLabel>Price Type</FormLabel>
-				<Select
-					value={basePriceType ?? "recurring"}
-					onValueChange={(value) => {
-						setProduct({
-							...product,
-							basePriceType: value as "recurring" | "one-off" | "usage",
-							items: product.items.map((item) => {
-								if (isPriceItem(item)) {
-									return {
-										...item,
-										interval:
-											value === "one-off" ? null : ProductItemInterval.Month,
-									};
-								}
-								return item;
-							}),
-						});
-					}}
-				>
-					<SelectTrigger className="w-full">
-						<SelectValue placeholder="Select price type" />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="recurring">Recurring</SelectItem>
-						<SelectItem value="one-off">One-off</SelectItem>
-						<SelectItem value="usage" className="text-body-secondary">
-							This plan has usage-based prices only
-						</SelectItem>
-					</SelectContent>
-				</Select> */}
 				<div className="h-13">
 					{basePriceType !== "usage" ? (
 						<div className="flex gap-2">
@@ -296,14 +236,9 @@ export const BasePriceSection = ({
 							)}
 						</div>
 					) : (
-						<InfoBox
-							classNames={{
-								infoIcon: "text-t3",
-								infoBox: "text-sm py-2",
-							}}
-						>
-							You can charge based on the quantity of a feature (eg per seat,
-							per credit) when you link features to this plan.
+						<InfoBox variant="note">
+							This plan has no base price. You can add per unit prices, such as
+							per "seat" or "credit", when adding features.
 						</InfoBox>
 					)}
 				</div>

@@ -27,7 +27,7 @@ export function TableBody() {
 	if (!rows.length) {
 		return (
 			<ShadcnTableBody>
-				<TableRow>
+				<TableRow className="hover:bg-transparent dark:hover:bg-transparent">
 					<TableCell
 						className="h-10 text-center py-0"
 						colSpan={numberOfColumns}
@@ -37,7 +37,7 @@ export function TableBody() {
 								<SmallSpinner />
 							</div>
 						) : (
-							<div className="text-t4 text-center w-full bg-interactive-secondary h-full items-center justify-center flex">
+							<div className="text-t4 text-center w-full h-full items-center justify-center flex">
 								{emptyStateChildren || emptyStateText}
 							</div>
 						)}
@@ -48,13 +48,13 @@ export function TableBody() {
 	}
 
 	return (
-		<ShadcnTableBody className="divide-y">
+		<ShadcnTableBody className="divide-y bg-interactive-secondary">
 			{rows.map((row) => {
 				const isSelected = selectedItemId === (row.original as any).id;
 				return (
 					<TableRow
 						className={cn(
-							"text-t3 transition-none h-12 py-4 relative hover:z-95",
+							"text-t3 transition-none h-12 py-4 relative",
 							rowClassName,
 							isSelected ? "z-100" : "hover:bg-interactive-secondary-hover",
 						)}
@@ -81,8 +81,11 @@ export function TableBody() {
 								style={
 									flexibleTableColumns
 										? {
-												maxWidth: `${cell.column.getSize()}px`,
 												width: `${cell.column.getSize()}px`,
+												maxWidth: `${cell.column.getSize()}px`,
+												minWidth: cell.column.columnDef.minSize
+													? `${cell.column.columnDef.minSize}px`
+													: undefined,
 											}
 										: { width: `${cell.column.getSize()}px` }
 								}

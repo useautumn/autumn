@@ -5,8 +5,11 @@ import {
 	CreateCustomerSchema,
 	type Customer,
 	ErrCode,
+	type FeatureOptions,
 	type FullCustomer,
 	type FullProduct,
+	isPrepaidPrice,
+	priceToEnt,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -25,6 +28,7 @@ import {
 import { getDefaultAttachConfig } from "../attach/attachUtils/getAttachConfig.js";
 import { CusService } from "../CusService.js";
 import { initStripeCusAndProducts } from "../handlers/handleCreateCustomer.js";
+import { deleteCachedApiCustomer } from "./apiCusCacheUtils/deleteCachedApiCustomer.js";
 
 export const getGroupToDefaultProd = async ({
 	defaultProds,
@@ -121,6 +125,10 @@ export const createNewCustomer = async ({
 		data: customerData,
 	});
 
+	console.log(
+		`[createNewCustomer] Creating new customer with ID: ${newCustomer?.id}`,
+	);
+
 	if (!newCustomer) {
 		throw new RecaseError({
 			code: ErrCode.InternalError,
@@ -138,6 +146,9 @@ export const createNewCustomer = async ({
 
 	for (const group in groupToDefaultProd) {
 		const defaultProd = groupToDefaultProd[group];
+		console.log(
+			`[createNewCustomer] Creating default product with ID: ${defaultProd?.id}`,
+		);
 
 		if (!isFreeProduct(defaultProd.prices)) {
 			let stripeCli = null;
@@ -152,6 +163,21 @@ export const createNewCustomer = async ({
 				logger,
 			});
 
+			const optionsList = defaultProd.prices
+				.filter((x) => isPrepaidPrice({ price: x }))
+				.map((x) => {
+					const ent = priceToEnt({
+						price: x,
+						entitlements: defaultProd.entitlements,
+					});
+					return {
+						feature_id: ent?.feature.id,
+						internal_feature_id:
+							ent?.feature.internal_id || ent?.internal_feature_id,
+						quantity: 0,
+					};
+				}) as FeatureOptions[];
+
 			await handleAddProduct({
 				ctx,
 				config: {
@@ -164,6 +190,7 @@ export const createNewCustomer = async ({
 					products: [defaultProd],
 					stripeCli,
 					freeTrial: defaultProd.free_trial || null,
+					optionsList: optionsList as FeatureOptions[],
 				}),
 			});
 		} else {
@@ -187,6 +214,13 @@ export const createNewCustomer = async ({
 			});
 		}
 	}
+
+	// // Clear the customer cache here
+	// await deleteCachedApiCustomer({
+	// 	customerId: newCustomer.id || newCustomer.internal_id,
+	// 	orgId: ctx.org.id,
+	// 	env: ctx.env,
+	// });
 
 	return newCustomer;
 };

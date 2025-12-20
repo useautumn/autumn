@@ -62,7 +62,6 @@ export const OnboardingSteps = ({ className }: OnboardingStepsProps) => {
 					disabled={backDisabled || !handleBack}
 					size="sm"
 					className="min-w-24 px-2 text-xs outline-1"
-					metaShortcut="backspace"
 				>
 					Back
 				</ShortcutButton>

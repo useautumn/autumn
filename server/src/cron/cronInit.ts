@@ -74,12 +74,7 @@ const main = async () => {
 		db,
 		logger,
 	};
-	await Promise.all([
-		cronTask(),
-		runProductCron(),
-		runInvoiceCron({ ctx }),
-		// TODO: Add runUsageCron({ ctx })
-	]);
+	await Promise.all([cronTask(), runProductCron(), runInvoiceCron({ ctx })]);
 };
 
 new CronJob(

@@ -32,7 +32,7 @@ export function NewFeatureBehaviour({
 								},
 							});
 						}}
-						className="space-y-4"
+						className="space-y-2"
 					>
 						<div className="flex w-full gap-2">
 							<RadioGroupItem

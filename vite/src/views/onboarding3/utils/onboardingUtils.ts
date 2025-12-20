@@ -398,16 +398,19 @@ export const createProductItem = (createdFeature: CreateFeature) => {
 
 	// Non-boolean features start in "included" billing type by default
 	// User can switch to "priced" in step 3 if needed
+	const isContinuousUse = featureType === ProductItemFeatureType.ContinuousUse;
+
 	return {
 		feature_id: createdFeature.id,
 		feature_type: featureType,
 		included_usage: 0,
-		interval: ProductItemInterval.Month,
+		// Continuous use features don't have periodic resets
+		interval: isContinuousUse ? null : ProductItemInterval.Month,
 		price: null,
 		tiers: null,
 		billing_units: 1,
 		entity_feature_id: null,
-		reset_usage_when_enabled: true,
+		reset_usage_when_enabled: !isContinuousUse,
 	};
 };
 

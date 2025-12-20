@@ -4,6 +4,7 @@ import {
 	cusProductToPrices,
 	cusProductToProduct,
 	type Entity,
+	type FeatureOptions,
 	type FreeTrial,
 	type FullCusProduct,
 	type FullCustomer,
@@ -94,12 +95,14 @@ export const newCusToAttachParams = ({
 	products,
 	stripeCli,
 	freeTrial = null,
+	optionsList = [],
 }: {
 	ctx: AutumnContext;
 	newCus: FullCustomer;
 	products: FullProduct[];
 	stripeCli: Stripe;
 	freeTrial?: FreeTrial | null;
+	optionsList?: FeatureOptions[];
 }) => {
 	const { org } = ctx;
 	if (!newCus.customer_products) {
@@ -123,7 +126,7 @@ export const newCusToAttachParams = ({
 		entitlements: products.flatMap((p) => p.entitlements),
 		freeTrial,
 		replaceables: [],
-		optionsList: [],
+		optionsList: optionsList || [],
 		cusProducts: [],
 		entities: [],
 		features: [],

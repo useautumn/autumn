@@ -75,6 +75,7 @@ export function EventsBarChart({
 	chartConfig: any;
 }) {
 	const { selectedInterval } = useAnalyticsContext();
+
 	const [options, setOptions] = useState<AgChartOptions>({
 		data: data.data,
 		series: chartConfig,
@@ -138,11 +139,9 @@ export function EventsBarChart({
 		},
 		legend: {
 			enabled: false,
-			item: {
-				label: {
-					color: "#52525b",
-				},
-			},
+		},
+		tooltip: {
+			enabled: true,
 		},
 	});
 

@@ -62,6 +62,13 @@ export function useAttachProductMutation({
 			return await CusService.attach(axiosInstance, attachBody);
 		},
 		onSuccess: async (response) => {
+			// Don't show success toast if checkout_url is returned - product not attached yet
+			if (response.data.checkout_url) {
+				toast.success("Redirecting to checkout URL");
+				closeSheet();
+				return;
+			}
+
 			toast.success(successMessage);
 			closeSheet();
 			queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
