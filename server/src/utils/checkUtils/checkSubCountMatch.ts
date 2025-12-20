@@ -1,8 +1,9 @@
 import type { FullCustomer } from "@autumn/shared";
-import { metadata } from "@autumn/shared";
+import { cusProductToPrices, isFreeProduct, metadata } from "@autumn/shared";
 import { count, inArray } from "drizzle-orm";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { allCusProductsOnSubFree } from "./allCusProductsOnSubFree";
 import type { StateCheckResult } from "./stateCheckTypes";
 
 export const checkSubCountMatch = async ({
@@ -26,21 +27,31 @@ export const checkSubCountMatch = async ({
 		return subCustomerId === fullCus.processor?.id;
 	});
 
-	if (stripeSubs.length !== subIds.length) {
+	const filteredSubIds = subIds.filter(
+		(subId) => !allCusProductsOnSubFree({ fullCus, subId: subId! }),
+	);
+
+	if (stripeSubs.length !== filteredSubIds.length) {
 		// 1. Check if there are any invoice metadata's waiting to be processed...
 		// const invoiceMetadata = await MetadataService.getByStripeInvoiceId({
 		// 	db: ctx.db,
 		// 	stripeInvoiceId: stripeSubs.map((sub) => sub.latest_invoice),
 		// 	type: MetadataType.InvoiceCheckout,
 		// });
-		const invoiceIds = await stripeSubs.map((sub) => sub.latest_invoice);
+		const invoiceIds = stripeSubs.map((sub) => sub.latest_invoice);
 		// Count of rows in metadata table with stripe_invoice_id in invoiceIds
 		const metadataCount = await ctx.db
 			.select({ count: count() })
 			.from(metadata)
 			.where(inArray(metadata.stripe_invoice_id, invoiceIds as string[]));
 
-		if (stripeSubs.length - (metadataCount?.[0]?.count || 0) !== subIds.length) {
+
+		
+
+		if (
+			stripeSubs.length - (metadataCount?.[0]?.count || 0) !==
+			subIds.length
+		) {
 			result.passed = false;
 			const errorMsg = `Expected ${subIds.length} subs in total, found ${stripeSubs.length} in Stripe`;
 			result.errors.push(errorMsg);

@@ -95,9 +95,17 @@ export const getOrCreateApiCustomer = async ({
 					},
 					createDefaultProducts: customerData?.disable_default !== true,
 				});
-			} catch (error: any) {
+
+				newCustomer = await CusService.getFull({
+					db: ctx.db,
+					idOrInternalId: customerId,
+					orgId: ctx.org.id,
+					env: ctx.env,
+				});
+			} catch (error) {
 				if (
-					error?.message?.includes(
+					error instanceof Error &&
+					error.message.includes(
 						"duplicate key value violates unique constraint",
 					) &&
 					customerId
@@ -105,21 +113,25 @@ export const getOrCreateApiCustomer = async ({
 					ctx.logger.info(
 						`[getOrCreateApiCustomer] Customer ${customerId} already exists, fetching existing customer`,
 					);
-					const existingCustomer = await CusService.get({
+
+					const existingCustomer = await CusService.getFull({
 						db: ctx.db,
 						idOrInternalId: customerId,
 						orgId: ctx.org.id,
 						env: ctx.env,
 					});
 
-					if (existingCustomer) {
-						newCustomer = existingCustomer;
-					}
+					// Race condition, don't set in cache
+					ctx.skipCache = true;
+
+					if (existingCustomer) newCustomer = existingCustomer;
 				} else {
 					throw error;
 				}
 			}
 
+			// console.log("Skipping cache:", ctx.skipCache);
+			// console.log("New customer:", newCustomer);
 			const res = await getCachedApiCustomer({
 				ctx,
 				customerId: newCustomer?.id || newCustomer?.internal_id || "",

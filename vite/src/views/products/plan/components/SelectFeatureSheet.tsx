@@ -1,19 +1,23 @@
 import { type Feature, productV2ToFeatureItems } from "@autumn/shared";
-import { PlusIcon } from "@phosphor-icons/react";
+import {
+	CaretDownIcon,
+	MagnifyingGlassIcon,
+	PlusIcon,
+} from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
-import { FormLabel } from "@/components/v2/form/FormLabel";
 import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/v2/selects/Select";
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/v2/dropdowns/DropdownMenu";
+import { FormLabel } from "@/components/v2/form/FormLabel";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { cn } from "@/lib/utils";
 import { getItemId } from "@/utils/product/productItemUtils";
 import { getFeatureIcon } from "@/views/products/features/utils/getFeatureIcon";
 import { getDefaultItem } from "../utils/getDefaultItem";
@@ -25,21 +29,12 @@ export function SelectFeatureSheet({
 }) {
 	const previousSheetType = useSheetStore((s) => s.previousType);
 	const [selectOpen, setSelectOpen] = useState(false);
+	const [searchValue, setSearchValue] = useState("");
 
 	const { features } = useFeaturesQuery();
 	const product = useProductStore((s) => s.product);
 	const setProduct = useProductStore((s) => s.setProduct);
 	const setSheet = useSheetStore((s) => s.setSheet);
-
-	// // Get feature IDs that are already added to the plan
-	// const addedFeatureIds = new Set(
-	// 	product.items?.map((item) => item.feature_id).filter(Boolean) || []
-	// );
-
-	// // Filter out archived features and features already on the plan
-	// const filteredFeatures = features.filter(
-	// 	(f: Feature) => !f.archived && !addedFeatureIds.has(f.id)
-	// );
 
 	useEffect(() => {
 		// If we're switching from another sheet, open immediately
@@ -51,6 +46,18 @@ export function SelectFeatureSheet({
 			return () => clearTimeout(timer);
 		}
 	}, []);
+
+	// Reset search when dropdown closes
+	useEffect(() => {
+		if (!selectOpen) {
+			setSearchValue("");
+		}
+	}, [selectOpen]);
+
+	// Filter features based on search
+	const filteredFeatures = features.filter((feature: Feature) =>
+		feature.name.toLowerCase().includes(searchValue.toLowerCase()),
+	);
 
 	const handleFeatureSelect = (featureId: string) => {
 		if (!featureId || !product) return;
@@ -90,32 +97,60 @@ export function SelectFeatureSheet({
 			<div className="flex-1 overflow-y-auto">
 				<SheetSection withSeparator={false}>
 					<FormLabel>Select a feature</FormLabel>
-					<Select
-						onValueChange={handleFeatureSelect}
-						open={selectOpen}
-						onOpenChange={setSelectOpen}
-					>
-						<SelectTrigger className="w-full">
-							<SelectValue placeholder="Select a feature" />
-						</SelectTrigger>
-						<SelectContent className="max-h-80">
-							<div className="max-h-60 overflow-y-auto">
-								{features.map((feature: Feature) => (
-									<SelectItem
-										key={feature.id}
-										value={feature.id}
-										className="py-2 px-2.5"
-									>
-										<div className="flex items-center gap-2">
-											<div className="text-primary shrink-0">
-												{getFeatureIcon({ feature })}
-											</div>
-											<span className="truncate">{feature.name}</span>
-										</div>
-									</SelectItem>
-								))}
+					<DropdownMenu open={selectOpen} onOpenChange={setSelectOpen}>
+						<DropdownMenuTrigger asChild>
+							<button
+								type="button"
+								className={cn(
+									"flex items-center justify-between w-full rounded-lg border bg-transparent text-sm outline-none h-input input-base input-shadow-default input-state-open p-2",
+									selectOpen && "ring-2 ring-ring ring-offset-2",
+								)}
+							>
+								<span className="text-t4">Select a feature</span>
+								<CaretDownIcon className="size-4 opacity-50" />
+							</button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent
+							align="start"
+							className="w-(--radix-dropdown-menu-trigger-width)"
+						>
+							{/* Search input */}
+							<div className="flex items-center gap-2 px-2 py-1.5 border-b border-border">
+								<MagnifyingGlassIcon className="size-4 text-t4" />
+								<input
+									type="text"
+									placeholder="Search features..."
+									value={searchValue}
+									onChange={(e) => setSearchValue(e.target.value)}
+									onKeyDown={(e) => e.stopPropagation()}
+									className="flex-1 bg-transparent text-sm outline-none placeholder:text-t4"
+								/>
 							</div>
-							<div className="border-t pt-2 pb-1 px-2.5 sticky bottom-0 bg-popover">
+
+							<div className="max-h-60 overflow-y-auto">
+								{filteredFeatures.length === 0 ? (
+									<div className="py-4 text-center text-sm text-t4">
+										No features found.
+									</div>
+								) : (
+									filteredFeatures.map((feature: Feature) => (
+										<DropdownMenuItem
+											key={feature.id}
+											onClick={() => handleFeatureSelect(feature.id)}
+											className="py-2 px-2.5"
+										>
+											<div className="flex items-center gap-2">
+												<div className="text-primary shrink-0">
+													{getFeatureIcon({ feature })}
+												</div>
+												<span className="truncate">{feature.name}</span>
+											</div>
+										</DropdownMenuItem>
+									))
+								)}
+							</div>
+
+							<div className="border-t pt-2 pb-1 px-2">
 								<Button
 									variant="muted"
 									className="w-full"
@@ -125,8 +160,8 @@ export function SelectFeatureSheet({
 									Create new feature
 								</Button>
 							</div>
-						</SelectContent>
-					</Select>
+						</DropdownMenuContent>
+					</DropdownMenu>
 				</SheetSection>
 			</div>
 		</div>

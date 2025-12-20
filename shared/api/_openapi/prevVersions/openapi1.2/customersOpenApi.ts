@@ -33,7 +33,15 @@ export const customersOpenApi = {
 					content: {
 						"application/json": {
 							schema: ListCustomersResponseSchema.extend({
-								list: z.array(ApiCustomerWithMeta),
+								list: z.array(
+									ApiCustomerWithMeta.omit({
+										entities: true,
+										invoices: true,
+										trials_used: true,
+										referrals: true,
+										payment_method: true,
+									}),
+								),
 							}),
 						},
 					},

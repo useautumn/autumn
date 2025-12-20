@@ -101,7 +101,7 @@ export function CustomerListCreateButton() {
 					size="default"
 					className="gap-1.5 font-medium"
 				>
-					New Customer
+					Create Customer
 				</Button>
 			</DialogTrigger>
 			<DialogContent className="w-[400px] bg-card">

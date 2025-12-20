@@ -1,4 +1,4 @@
-import { type ProductV2, UsageModel } from "@autumn/shared";
+import { AppEnv, type ProductV2, UsageModel } from "@autumn/shared";
 import Decimal from "decimal.js";
 import { useMemo } from "react";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -93,7 +93,10 @@ export function useAttachBodyBuilder(params: AttachBodyBuilderParams = {}) {
 				version,
 				useInvoice: mergedParams.useInvoice,
 				enableProductImmediately: mergedParams.enableProductImmediately,
-				successUrl: `${import.meta.env.VITE_FRONTEND_URL}${redirectUrl}`,
+				successUrl:
+					env === AppEnv.Sandbox
+						? `${import.meta.env.VITE_FRONTEND_URL}${redirectUrl}`
+						: undefined,
 			});
 		},
 		[products, hasChanges, storeProduct, storeEntityId, params],

@@ -21,6 +21,22 @@ export const parseCustomerIdFromUrl = ({
 	return undefined;
 };
 
+const extractCustomerIdFromBody = ({
+	body,
+	path,
+	method,
+}: {
+	body: Record<string, unknown>;
+	path: string;
+	method: string;
+}): string | undefined => {
+	const isCreateCustomerPath =
+		path.startsWith("/v1/customers") && method === "POST";
+	return (isCreateCustomerPath ? body?.id : body?.customer_id) as
+		| string
+		| undefined;
+};
+
 export const parseCustomerIdFromBody = async (
 	c: Context<HonoEnv>,
 ): Promise<
@@ -29,14 +45,14 @@ export const parseCustomerIdFromBody = async (
 	const method = c.req.method;
 	if (method === "POST" || method === "PUT" || method === "PATCH") {
 		try {
-			// Clone the request to read body without consuming it
 			const body = await c.req.json();
 
-			const isCreateCustomerPath =
-				c.req.path.startsWith("/v1/customers") && method === "POST";
-
 			return {
-				customerId: isCreateCustomerPath ? body?.id : body?.customer_id,
+				customerId: extractCustomerIdFromBody({
+					body,
+					path: c.req.path,
+					method,
+				}),
 				sendEvent: body?.send_event,
 			};
 		} catch (_error) {
@@ -102,7 +118,7 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const skipUrls = ["/v1/customers/all/search"];
 
 	// Parse request body for customer_id
-	let requestBody: any = null;
+	let requestBody: Record<string, unknown> | null = null;
 	const method = c.req.method;
 	if (method === "POST" || method === "PUT" || method === "PATCH") {
 		try {
@@ -114,7 +130,11 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	}
 
 	const customerId =
-		requestBody?.customer_id || parseCustomerIdFromUrl({ url: c.req.path });
+		extractCustomerIdFromBody({
+			body: requestBody ?? {},
+			path: c.req.path,
+			method,
+		}) || parseCustomerIdFromUrl({ url: c.req.path });
 
 	// Enrich logger context
 	const reqContext = {

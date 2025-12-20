@@ -38,6 +38,7 @@ export const ExtAttachBodyV0Schema = z
 
 		// Checkout params
 		setup_payment: z.boolean().optional(),
+		new_billing_subscription: z.boolean().optional(),
 	})
 	.meta({
 		example: {

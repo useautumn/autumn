@@ -1,6 +1,7 @@
 "use client";
 
 import type { AppEnv } from "@autumn/shared";
+import { useEffect } from "react";
 import { useAppQueryStates } from "@/hooks/common/useAppQueryStates";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -20,7 +21,11 @@ function ProductsView({ env: _env }: { env: AppEnv }) {
 
 	useSheetCleanup();
 	const resetProductStore = useProductStore((s) => s.reset);
-	resetProductStore();
+
+	// reset product store when the view mounts
+	useEffect(() => {
+		resetProductStore();
+	}, [resetProductStore]);
 
 	const { isLoading: isProductsLoading } = useProductsQuery();
 	const { isLoading: isFeaturesLoading } = useFeaturesQuery();

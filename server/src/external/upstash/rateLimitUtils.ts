@@ -56,6 +56,21 @@ export const getRateLimitType = (c: Context<HonoEnv>) => {
 		},
 	];
 
+	const eventsPatterns = [
+		{
+			method: "POST",
+			url: "/v1/events/list",
+		},
+		{
+			method: "POST",
+			url: "/v1/events/aggregate",
+		},
+		{
+			method: "POST",
+			url: "/v1/query",
+		},
+	];
+
 	if (
 		trackPatterns.some((pattern) => matchRoute({ url: path, method, pattern }))
 	) {
@@ -71,6 +86,12 @@ export const getRateLimitType = (c: Context<HonoEnv>) => {
 		)
 	) {
 		return RateLimitType.Check;
+	}
+
+	if (
+		eventsPatterns.some((pattern) => matchRoute({ url: path, method, pattern }))
+	) {
+		return RateLimitType.Events;
 	}
 
 	return RateLimitType.General;
@@ -106,6 +127,12 @@ export const getRateLimitKey = async ({
 			// }
 
 			return `check:${orgId}:${env}:${customerId}`;
+		}
+
+		case RateLimitType.Events: {
+			const res = await parseCustomerIdFromBody(c);
+			const customerId = res?.customerId;
+			return `events:${orgId}:${env}:${customerId}`;
 		}
 
 		case RateLimitType.General:

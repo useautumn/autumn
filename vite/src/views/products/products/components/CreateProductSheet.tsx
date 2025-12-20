@@ -23,10 +23,12 @@ function CreateProductSheet({
 	onSuccess,
 	open: controlledOpen,
 	onOpenChange: controlledOnOpenChange,
+	isAddOn = false,
 }: {
 	onSuccess?: (newProduct: ProductV2) => Promise<void>;
 	open?: boolean;
 	onOpenChange?: (open: boolean) => void;
+	isAddOn?: boolean;
 }) {
 	const [loading, setLoading] = useState(false);
 	const [internalOpen, setInternalOpen] = useState(false);
@@ -46,12 +48,8 @@ function CreateProductSheet({
 	const handleCreateClicked = async () => {
 		const productName = product.name?.trim() || "";
 
-		if (!/^[a-zA-Z0-9 _-]+$/.test(productName)) {
-			toast.error(
-				!productName
-					? "Plan name is required"
-					: "Plan name can only contain alphanumeric characters, dashes (-), and underscores (_)",
-			);
+		if (!productName) {
+			toast.error("Plan name is required");
 			return;
 		}
 
@@ -82,9 +80,9 @@ function CreateProductSheet({
 	useEffect(() => {
 		if (open) {
 			reset();
-			setProduct(DEFAULT_PRODUCT);
+			setProduct({ ...DEFAULT_PRODUCT, is_add_on: isAddOn });
 		}
-	}, [open, reset, setProduct]);
+	}, [open, reset, setProduct, isAddOn]);
 
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
@@ -95,8 +93,12 @@ function CreateProductSheet({
 			</SheetTrigger> */}
 			<SheetContent className="flex flex-col overflow-hidden bg-background">
 				<SheetHeader
-					title="Create Plan"
-					description="Create a new free or paid plan for your application"
+					title={isAddOn ? "Create Add-on Plan" : "Create Plan"}
+					description={
+						isAddOn
+							? "Create a new add-on plan that can be purchased alongside base plans"
+							: "Create a new free or paid plan for your application"
+					}
 					noSeparator={true}
 				/>
 
@@ -104,7 +106,7 @@ function CreateProductSheet({
 					<CreateProductMainDetails />
 					<PlanTypeSection />
 					<BasePriceSection />
-					<AdditionalOptions withSeparator={false} hideAddOn={true} />
+					<AdditionalOptions withSeparator={false} />
 				</div>
 
 				<SheetFooter>
@@ -130,7 +132,7 @@ function CreateProductSheet({
 						metaShortcut="enter"
 						isLoading={loading}
 					>
-						Create plan
+						{isAddOn ? "Create add-on plan" : "Create plan"}
 					</ShortcutButton>
 				</SheetFooter>
 			</SheetContent>

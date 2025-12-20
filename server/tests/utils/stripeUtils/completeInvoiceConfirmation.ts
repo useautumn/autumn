@@ -26,8 +26,8 @@ export const completeInvoiceConfirmation = async ({
 
 	// }
 	browser = await puppeteer.launch({
-		headless: false,
-		executablePath: "/Applications/Chromium.app/Contents/MacOS/Chromium",
+		headless: true,
+		executablePath: process.env.TESTS_CHROMIUM_PATH,
 		args: ["--no-sandbox", "--disable-setuid-sandbox"],
 	});
 

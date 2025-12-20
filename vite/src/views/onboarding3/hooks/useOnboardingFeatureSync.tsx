@@ -7,7 +7,7 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
 
 /**
  * Hook to sync feature store with backend features during onboarding
- * Prioritizes metered features and features already in the product
+ * Only syncs features AFTER a product has been created (has an internal_id from backend)
  * Re-syncs when product changes to ensure feature store matches product
  */
 export const useOnboardingFeatureSync = () => {
@@ -26,8 +26,9 @@ export const useOnboardingFeatureSync = () => {
 	useEffect(() => {
 		if (!features || features.length === 0) return;
 
-		// Wait for product to load (check if it has an ID)
-		if (!product?.id) return;
+		// Only sync after product has been created (has internal_id from backend)
+		// This ensures we don't auto-select features for a product that doesn't exist yet
+		if (!product?.internal_id) return;
 
 		// Don't sync while creating a new feature or selecting a feature
 		// This allows the new feature sheet to manage its own feature state
@@ -75,6 +76,7 @@ export const useOnboardingFeatureSync = () => {
 	}, [
 		features,
 		product?.id,
+		product?.internal_id,
 		product?.items,
 		baseFeature,
 		setBaseFeature,

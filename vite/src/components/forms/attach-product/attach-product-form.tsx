@@ -1,13 +1,14 @@
-import type { Entity, FullCustomer, ProductV2 } from "@autumn/shared";
+import type {
+	Entity,
+	FrontendProduct,
+	FullCustomer,
+	ProductV2,
+} from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
-import { useEffect } from "react";
 import { FormWrapper } from "@/components/general/form/form-wrapper";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import {
-	usePrepaidItems,
-	useProductStore,
-} from "@/hooks/stores/useProductStore";
+import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -33,15 +34,19 @@ function FormContent({
 	form,
 	onSuccess,
 }: FormContentProps) {
-	const storeProduct = useProductStore((s) => s.product);
+	const sheetData = useSheetStore((s) => s.data);
 	const productId = useStore(form.store, (state) => state.values.productId);
 	const prepaidOptions = useStore(
 		form.store,
 		(state) => state.values.prepaidOptions,
 	);
 
-	const product = storeProduct?.id
-		? storeProduct
+	// Use customized product from sheet data if available, otherwise find from products list
+	const customizedProduct = sheetData?.customizedProduct as
+		| FrontendProduct
+		| undefined;
+	const product = customizedProduct?.id
+		? customizedProduct
 		: products.find((p) => p.id === productId && !p.archived);
 
 	const { prepaidItems } = usePrepaidItems({ product });
@@ -103,7 +108,6 @@ export function AttachProductForm({
 	const itemId = useSheetStore((s) => s.itemId);
 	const form = useAttachProductForm({ initialProductId: itemId || undefined });
 	const { products, isLoading } = useProductsQuery();
-	const resetProductStore = useProductStore((s) => s.reset);
 
 	const activeProducts = products.filter((p) => !p.archived);
 
@@ -115,14 +119,6 @@ export function AttachProductForm({
 	const fullEntity = entities.find(
 		(e: Entity) => e.id === entityId || e.internal_id === entityId,
 	);
-
-	const productId = useStore(form.store, (state) => state.values.productId);
-
-	useEffect(() => {
-		if (productId && productId !== itemId) {
-			resetProductStore();
-		}
-	}, [productId, itemId, resetProductStore]);
 
 	if (isLoading) {
 		return <div className="text-sm text-t3">Loading products...</div>;

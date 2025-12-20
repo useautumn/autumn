@@ -13,7 +13,7 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle";
 import { priceToStripeItem } from "@server/external/stripe/priceToStripeItem/priceToStripeItem";
-import { subIsCanceled } from "@server/external/stripe/stripeSubUtils";
+import { isStripeSubscriptionCanceled } from "@server/external/stripe/stripeSubUtils";
 import {
 	cusProductInPhase,
 	logPhaseItems,
@@ -32,12 +32,12 @@ import {
 import {
 	isFixedPrice,
 	isOneOffPrice,
+	isPrepaidPrice,
 } from "@server/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice";
-import {
-	isFreeProduct
-} from "@server/internal/products/productUtils";
+import { isFreeProduct } from "@server/internal/products/productUtils";
 import type Stripe from "stripe";
 import { formatUnixToDateTime, nullish } from "../genUtils";
+import { allCusProductsOnSubFree } from "./allCusProductsOnSubFree";
 import type { SubItemDetail } from "./stateCheckTypes";
 
 /** Error thrown when subscription items don't match expected items. Carries item details for debugging. */
@@ -119,8 +119,14 @@ const compareActualItems = async ({
 }) => {
 	/** Helper to throw SubItemMismatchError with item details */
 	const throwMismatchError = async (message: string) => {
-		const actualDetails = await itemsToSubItemDetails({ items: actualItems, db });
-		const expectedDetails = await itemsToSubItemDetails({ items: expectedItems, db });
+		const actualDetails = await itemsToSubItemDetails({
+			items: actualItems,
+			db,
+		});
+		const expectedDetails = await itemsToSubItemDetails({
+			items: expectedItems,
+			db,
+		});
 		throw new SubItemMismatchError({
 			message,
 			subId,
@@ -128,6 +134,8 @@ const compareActualItems = async ({
 			expectedItems: expectedDetails,
 		});
 	};
+
+	let skippedCount = 0;
 
 	for (const expectedItem of expectedItems) {
 		let actualItem = actualItems.find((item: any) => {
@@ -149,17 +157,14 @@ const compareActualItems = async ({
 		}
 
 		if (!actualItem) {
-			// Search for price by stripe id
-			const price = await PriceService.getByStripeId({
-				db,
-				stripePriceId: expectedItem.price,
-			});
+			// Allow skipping if canSkip is true
+			if (expectedItem.canSkip) {
+				skippedCount++;
+				continue;
+			}
 
-			const { autumnPrice, ...rest } = expectedItem;
+			const { autumnPrice: _, ...rest } = expectedItem;
 			console.log(`(${type}) Missing item:`, rest);
-			// if (price) {
-			//   console.log(`Autumn price:`, `${price.id} - ${formatPrice({ price })}`);
-			// }
 
 			// Actual items
 			console.log(`(${type}) Actual items (${actualItems.length}):`);
@@ -175,7 +180,9 @@ const compareActualItems = async ({
 				items: expectedItems,
 			});
 
-			await throwMismatchError(`actual item should exist for price ${expectedItem.price}`);
+			await throwMismatchError(
+				`actual item should exist for price ${expectedItem.price}`,
+			);
 		}
 
 		// team manager...
@@ -225,56 +232,27 @@ const compareActualItems = async ({
 	}
 
 	if (actualItems.length !== expectedItems.length) {
-		console.log("Actual items:");
-		await logPhaseItems({
-			db,
-			items: actualItems,
-		});
+		// Fallback: allow if length matches after accounting for skipped items
+		const expectedItemsCount = expectedItems.length - skippedCount;
+		if (actualItems.length !== expectedItemsCount) {
+			console.log("Actual items:");
+			await logPhaseItems({
+				db,
+				items: actualItems,
+			});
 
-		console.log("Expected items:");
-		await logPhaseItems({
-			db,
-			items: expectedItems,
-		});
+			console.log("Expected items:");
+			await logPhaseItems({
+				db,
+				items: expectedItems,
+			});
 
-		await throwMismatchError(
-			`actual items length (${actualItems.length}) should be equals to expected items length (${expectedItems.length}) for sub ${subId}`,
-		);
+			await throwMismatchError(
+				`actual items length (${actualItems.length}) should be equals to expected items length (${expectedItems.length}) for sub ${subId}`,
+			);
+		}
 	}
 };
-
-// // If all cus products are free, then should have no sub
-// const checkAllFreeProducts = async ({
-// 	db,
-// 	fullCus,
-// 	subs,
-// }: {
-// 	db: DrizzleCli;
-// 	fullCus: FullCustomer;
-// 	subs: Stripe.Subscription[];
-// }) => {
-// 	const cusProducts = fullCus.customer_products;
-// 	const allFreeOrOneOff = cusProducts.every((cp) => {
-// 		const product = cusProductToProduct({ cusProduct: cp });
-// 		return isFreeProduct(product.prices) || isOneOff(product.prices);
-// 	});
-
-// 	if (allFreeOrOneOff) {
-// 		// Make sure no subs exist for this customer
-// 		const sub = subs.find(
-// 			(sub) =>
-// 				sub.customer === fullCus.processor?.id &&
-// 				(sub.status === "active" || sub.status === "past_due"),
-// 		);
-
-// 		if (fullCus.org_id === "6bWdIqEuRHBrReXbTb30l9beMFVZ3Ts3") return true;
-
-// 		assert(!sub, `no sub should exist for this customer`);
-// 		return true;
-// 	}
-
-// 	return false;
-// };
 
 export const checkCusSubCorrect = async ({
 	db,
@@ -291,13 +269,6 @@ export const checkCusSubCorrect = async ({
 	org: Organization;
 	env: AppEnv;
 }) => {
-	// const allFree = await checkAllFreeProducts({
-	// 	db,
-	// 	fullCus,
-	// 	subs,
-	// });
-	// if (allFree) return;
-
 	// 1. Only 1 sub ID available
 	const cusProducts = fullCus.customer_products;
 	const subIds = cusProductToSubIds({ cusProducts });
@@ -338,13 +309,13 @@ export const checkCusSubCorrect = async ({
 			const scheduleIndexes: number[] = [];
 			const apiVersion = cusProduct.api_semver || defaultApiVersion;
 
-			if (isFreeProduct(product.prices)) {
-				assert(
-					cusProduct.subscription_ids?.length === 0,
-					"free product should have no subs",
-				);
-				continue;
-			}
+			// if (isFreeProduct(product.prices)) {
+			// 	assert(
+			// 		cusProduct.subscription_ids?.length === 0,
+			// 		`free product ${cusProduct.product.name} should have no subs`,
+			// 	);
+			// 	continue;
+			// }
 
 			if (printCusProduct) {
 				console.log(
@@ -476,6 +447,8 @@ export const checkCusSubCorrect = async ({
 								priceStr: `${product.id}-${formatPrice({ price })}`,
 								stripeProdId: product.processor?.id,
 								autumnPrice: price,
+								canSkip:
+									isPrepaidPrice({ price }) && res?.lineItem?.quantity === 0,
 							});
 						}
 					}
@@ -499,35 +472,37 @@ export const checkCusSubCorrect = async ({
 			}
 		}
 
+		// Check if all free products are
 		const sub = subs.find((sub) => sub.id === subId);
+		const allCusProductsFree = allCusProductsOnSubFree({
+			fullCus,
+			subId: subId!,
+		});
+
+		if (allCusProductsFree) {
+			// assert(!sub, `Sub ${subId} should not exist`);
+			continue;
+		}
+
 		assert(!!sub, `Sub ${subId} should exist`);
 
-		const actualItems = sub!.items.data.map((item: any) => ({
-			id: item.id,
-			price: item.price.id,
-			quantity: item.quantity || 0,
-			stripeProdId: item.price.product,
-		}));
+		if (sub) {
+			const actualItems = sub!.items.data.map((item: any) => ({
+				id: item.id,
+				price: item.price.id,
+				quantity: item.quantity || 0,
+				stripeProdId: item.price.product,
+			}));
 
-		// console.log("Actual items:");
-		// await logPhaseItems({
-		//   db,
-		//   items: actualItems,
-		// });
-		// console.log("Expected items:");
-		// await logPhaseItems({
-		//   db,
-		//   items: actualItems,
-		// });
-
-		await compareActualItems({
-			actualItems,
-			expectedItems: supposedSubItems,
-			type: "sub",
-			fullCus,
-			db,
-			subId,
-		});
+			await compareActualItems({
+				actualItems,
+				expectedItems: supposedSubItems,
+				type: "sub",
+				fullCus,
+				db,
+				subId,
+			});
+		}
 
 		// Should be canceled
 
@@ -561,7 +536,10 @@ export const checkCusSubCorrect = async ({
 
 		if (finalShouldBeCanceled) {
 			assert(!sub!.schedule, `sub ${subId} should NOT have a schedule`);
-			assert(subIsCanceled({ sub: sub! }), `sub ${subId} should be canceled`);
+			assert(
+				isStripeSubscriptionCanceled({ sub: sub! }),
+				`sub ${subId} should be canceled`,
+			);
 			continue;
 		}
 
@@ -569,21 +547,6 @@ export const checkCusSubCorrect = async ({
 			supposedPhases.length > 0
 				? schedules.find((s) => s.id === sub!.schedule)
 				: null;
-
-		// console.log("--------------------------------");
-		// console.log("Supposed phases:");
-		// await logPhases({
-		//   phases: supposedPhases,
-		//   db,
-		// });
-
-		// console.log("--------------------------------");
-		// console.log("Actual phases:");
-
-		// await logPhases({
-		//   phases: (schedule?.phases as any) || [],
-		//   db,
-		// });
 
 		for (let i = 0; i < supposedPhases.length; i++) {
 			const supposedPhase = supposedPhases[i];

@@ -1,6 +1,7 @@
 import { FeatureType } from "@autumn/shared";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useProductStore } from "@/hooks/stores/useProductStore";
 import { getFeature } from "@/utils/product/entitlementUtils";
 import { isFeaturePriceItem } from "@/utils/product/getItemType";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
@@ -18,6 +19,7 @@ export function EditPlanFeatureSheet({
 }) {
 	const { item } = useProductItemContext();
 	const { features } = useFeaturesQuery();
+	const product = useProductStore((s) => s.product);
 
 	if (!item) {
 		return null;
@@ -25,11 +27,6 @@ export function EditPlanFeatureSheet({
 
 	const feature = getFeature(item?.feature_id ?? "", features);
 	const isFeaturePrice = isFeaturePriceItem(item);
-
-	// Check if user has explicitly chosen a billing type
-	const hasChosenBillingType =
-		isFeaturePrice || // Has tiers (priced)
-		(item.included_usage !== undefined && item.included_usage !== null); // Has included usage set
 
 	return (
 		<div
@@ -42,7 +39,14 @@ export function EditPlanFeatureSheet({
 			{!isOnboarding && (
 				<SheetHeader
 					title={`Configure ${feature?.name}`}
-					description="How users access this feature when they're on this plan"
+					description={
+						<p>
+							Define how customers on plan{" "}
+							<span className="font-medium text-t1">{product.name}</span> can
+							use feature{" "}
+							<span className="font-medium text-t1">{feature?.name}</span>
+						</p>
+					}
 				/>
 			)}
 
@@ -59,9 +63,11 @@ export function EditPlanFeatureSheet({
 					</SheetSection>
 
 					{isFeaturePrice && (
-						<SheetSection title="Price">
-							<PriceTiers />
-							<UsageReset showBillingLabel={true} />
+						<SheetSection title="Price" className="space-y-8">
+							<div>
+								<PriceTiers />
+								<UsageReset showBillingLabel={true} />
+							</div>
 							<PricedFeatureSettings />
 						</SheetSection>
 					)}

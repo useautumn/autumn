@@ -2,12 +2,10 @@ import { AxiosError } from "axios";
 import { useState } from "react";
 import { useParams } from "react-router";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useCurrentItem } from "@/hooks/stores/useProductStore";
 import { useProductSync } from "@/hooks/stores/useProductSync";
 import {
 	useSheetCleanup,
 	useSheetEscapeHandler,
-	useSheetStore,
 } from "@/hooks/stores/useSheetStore";
 import ErrorScreen from "@/views/general/ErrorScreen";
 import LoadingScreen from "@/views/general/LoadingScreen";
@@ -28,13 +26,10 @@ export default function PlanEditorView() {
 
 	const { isLoading: featuresLoading } = useFeaturesQuery();
 
-	const item = useCurrentItem();
-
 	// Sync store with backend data
 	useProductSync({ product: originalProduct });
 
 	const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
-	const setSheet = useSheetStore((s) => s.setSheet);
 
 	// Handle Escape key to close sheet and unfocus
 	useSheetEscapeHandler();

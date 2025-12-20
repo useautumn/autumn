@@ -1,4 +1,9 @@
-import type { ApiBalance, TrackParams, TrackResponseV2 } from "@autumn/shared";
+import type {
+	ApiBalance,
+	FullCustomer,
+	TrackParams,
+	TrackResponseV2,
+} from "@autumn/shared";
 import { InsufficientBalanceError } from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { getApiCustomerBase } from "../../../customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
@@ -11,11 +16,14 @@ const catchInsufficientBalanceError = ({
 	error,
 	body,
 }: {
-	error: any;
+	error: unknown;
 	body: TrackParams;
 }) => {
 	// Check if it's an insufficient balance error from PostgreSQL
-	if (error.message?.includes("INSUFFICIENT_BALANCE")) {
+	if (
+		error instanceof Error &&
+		error.message?.includes("INSUFFICIENT_BALANCE")
+	) {
 		// Parse the error message: INSUFFICIENT_BALANCE|featureId:{id}|value:{amount}|remaining:{remaining}
 		const parts = error.message.split("|");
 		const featureIdMatch = parts[1]?.match(/featureId:(.*)/);
@@ -67,8 +75,8 @@ export const executePostgresTracking = async ({
 		withEntities: true,
 	});
 
-	let updatedFullCus;
-	let actualDeductions;
+	let updatedFullCus: FullCustomer | undefined | null;
+	let actualDeductions: Record<string, number> = {};
 
 	try {
 		const result = await runDeductionTx({
@@ -92,7 +100,7 @@ export const executePostgresTracking = async ({
 		});
 		updatedFullCus = result.fullCus;
 		actualDeductions = result.actualDeductions;
-	} catch (error: any) {
+	} catch (error) {
 		catchInsufficientBalanceError({ error, body });
 	}
 
@@ -102,17 +110,30 @@ export const executePostgresTracking = async ({
 			fullCus: updatedFullCus,
 		});
 
+		// Build balances response matching Lua batchDeduction logic:
+		// 1. Always include primary features from featureDeductions (they were requested)
+		// 2. Only include credit systems if they were actually used (in actualDeductions)
 		const balancesRes: Record<string, ApiBalance> = {};
-		for (const featureId of Object.keys(actualDeductions ?? {})) {
-			balancesRes[featureId] = apiCustomer.balances[featureId];
+
+		// Add primary features (always - they were requested to be tracked)
+		for (const deduction of featureDeductions) {
+			const balance = apiCustomer.balances[deduction.feature.id];
+			if (balance) {
+				balancesRes[deduction.feature.id] = balance;
+			}
+
+			// If a feature is unlimited, add it to the balances response
 		}
 
-		// if (Object.keys(balancesRes).length > 0) {
-		// 	response.balance =
-		// 		balancesRes[
-		// 			Object.keys(balancesRes)[Object.keys(balancesRes).length - 1]
-		// 		];
-		// }
+		// Add credit systems only if they were actually used
+		for (const featureId of Object.keys(actualDeductions)) {
+			if (!balancesRes[featureId]) {
+				const balance = apiCustomer.balances[featureId];
+				if (balance) {
+					balancesRes[featureId] = balance;
+				}
+			}
+		}
 
 		const finalBalances = getTrackBalancesResponse({
 			featureDeductions,

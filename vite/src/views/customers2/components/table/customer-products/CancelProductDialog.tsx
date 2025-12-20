@@ -46,6 +46,7 @@ export const CancelProductDialog = ({
 				entity_id: entity?.id || entity?.internal_id,
 				cancel_immediately: cancelImmediately,
 				prorate: false,
+				customer_product_id: cusProduct.id,
 			});
 			await refetch();
 			setOpen(false);
