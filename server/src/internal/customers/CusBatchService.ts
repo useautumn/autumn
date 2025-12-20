@@ -8,14 +8,29 @@ import {
 	type CustomerLegacyData,
 	type FullCustomer,
 	type Organization,
+	customers,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { RELEVANT_STATUSES } from "./cusProducts/CusProductService.js";
 import { getApiCustomerBase } from "./cusUtils/apiCusUtils/getApiCustomerBase.js";
 import { getPaginatedFullCusQuery } from "./getFullCusQuery.js";
+import { count, eq, and } from "drizzle-orm";
 
 export class CusBatchService {
+	static async getTotalCount({
+		ctx,
+	}: {
+		ctx: RequestContext;
+	}): Promise<number> {
+		const result = await ctx.db
+			.select({ count: count() })
+			.from(customers)
+			.where(and(eq(customers.orgId, ctx.org.id), eq(customers.env, ctx.env)));
+
+		return result[0]?.count ?? 0;
+	}
+
 	static async getByInternalIds({
 		db,
 		org,
