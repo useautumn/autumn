@@ -59,22 +59,22 @@ export const migrateRevenueCatCustomer = async ({
 	const startsAtToPass = cusProduct.starts_at;
 	const anchorToPass = cusProduct.created_at;
 
-	// Debug: Log what we're passing to createFullCusProduct
-	logger.info(`[RC Migration] Passing to createFullCusProduct:`, {
-		createdAt: createdAtToPass,
-		createdAt_date: createdAtToPass
-			? new Date(createdAtToPass).toISOString()
-			: null,
-		startsAt: startsAtToPass,
-		startsAt_date: startsAtToPass
-			? new Date(startsAtToPass).toISOString()
-			: null,
-		anchorToUnix: anchorToPass,
-		anchorToUnix_date: anchorToPass
-			? new Date(anchorToPass).toISOString()
-			: null,
-		createdAt_type: typeof createdAtToPass,
-	});
+	// // Debug: Log what we're passing to createFullCusProduct
+	// logger.info(`[RC Migration] Passing to createFullCusProduct:`, {
+	// 	createdAt: createdAtToPass,
+	// 	createdAt_date: createdAtToPass
+	// 		? new Date(createdAtToPass).toISOString()
+	// 		: null,
+	// 	startsAt: startsAtToPass,
+	// 	startsAt_date: startsAtToPass
+	// 		? new Date(startsAtToPass).toISOString()
+	// 		: null,
+	// 	anchorToUnix: anchorToPass,
+	// 	anchorToUnix_date: anchorToPass
+	// 		? new Date(anchorToPass).toISOString()
+	// 		: null,
+	// 	createdAt_type: typeof createdAtToPass,
+	// });
 
 	await createFullCusProduct({
 		db: req.db,

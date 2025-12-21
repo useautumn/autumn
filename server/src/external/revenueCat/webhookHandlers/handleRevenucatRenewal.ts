@@ -1,25 +1,18 @@
 import type { WebhookRenewal } from "@puzzmo/revenue-cat-webhook-types";
 import {
-	type AppEnv,
+	ACTIVE_STATUSES,
 	AttachScenario,
 	CusProductStatus,
 	cusProductToPrices,
-	ErrCode,
-	type Feature,
-	type Organization,
 	ProcessorType,
-	RecaseError,
 } from "@shared/index";
-import type { DrizzleCli } from "@/db/initDrizzle";
 import { createStripeCli } from "@/external/connect/createStripeCli";
-import type { Logger } from "@/external/logtail/logtailUtils";
-import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService";
+import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct";
-import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
 import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
-import { ProductService } from "@/internal/products/ProductService";
 import {
 	attachToInsertParams,
 	isProductUpgrade,
@@ -28,81 +21,19 @@ import { isMainProduct } from "@/internal/products/productUtils/classifyProduct"
 
 export const handleRenewal = async ({
 	event,
-	db,
-	org,
-	env,
-	logger,
-	features,
+	ctx,
 }: {
 	event: WebhookRenewal;
-	db: DrizzleCli;
-	org: Organization;
-	env: AppEnv;
-	logger: Logger;
-	features: Feature[];
+	ctx: AutumnContext;
 }) => {
-	const { product_id, app_user_id, original_transaction_id } = event;
-	// Look up Autumn product ID from RevenueCat mapping
-	const autumnProductId = await RCMappingService.getAutumnProductId({
-		db,
-		orgId: org.id,
-		env,
+	const { db, org, env, logger, features } = ctx;
+	const { product_id, app_user_id } = event;
+
+	const { product, customer, cusProducts } = await resolveRevenuecatResources({
+		ctx,
 		revenuecatProductId: product_id,
+		customerId: app_user_id,
 	});
-
-	if (!autumnProductId) {
-		throw new RecaseError({
-			message: `No Autumn product mapped to RevenueCat product: ${product_id}`,
-			code: ErrCode.ProductNotFound,
-			statusCode: 404,
-		});
-	}
-
-	const [product, customer] = await Promise.all([
-		ProductService.getFull({
-			db,
-			orgId: org.id,
-			env,
-			idOrInternalId: autumnProductId,
-		}),
-		CusService.getFull({
-			db,
-			idOrInternalId: app_user_id,
-			orgId: org.id,
-			env,
-		}),
-	]);
-
-	if (!product) {
-		throw new RecaseError({
-			message: "Product not found",
-			code: ErrCode.ProductNotFound,
-			statusCode: 404,
-		});
-	}
-
-	if (!customer) {
-		throw new RecaseError({
-			message: "Customer not found",
-			code: ErrCode.CustomerNotFound,
-			statusCode: 404,
-		});
-	}
-
-	const cusProducts = await CusProductService.list({
-		db,
-		internalCustomerId: customer.internal_id,
-	});
-
-	if (
-		cusProducts.some((cp) => cp.processor?.type !== ProcessorType.RevenueCat)
-	) {
-		throw new RecaseError({
-			message: "Customer already has a product from a different processor.",
-			code: ErrCode.CustomerAlreadyHasProduct,
-			statusCode: 400,
-		});
-	}
 
 	const { curSameProduct, curMainProduct } = getExistingCusProducts({
 		product,
@@ -114,7 +45,7 @@ export const handleRenewal = async ({
 	const now = Date.now();
 
 	// If same product exists and is active, this is just a renewal - nothing to do
-	if (curSameProduct && curSameProduct.status === CusProductStatus.Active) {
+	if (curSameProduct && ACTIVE_STATUSES.includes(curSameProduct.status)) {
 		logger.info(
 			`Renewal for existing active product ${product.id}, no action needed`,
 		);

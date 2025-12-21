@@ -1,25 +1,19 @@
 import type { WebhookInitialPurchase } from "@puzzmo/revenue-cat-webhook-types";
 import {
-	type AppEnv,
 	AttachScenario,
 	CusProductStatus,
 	cusProductToPrices,
 	ErrCode,
-	type Feature,
-	type Organization,
 	ProcessorType,
 	RecaseError,
 } from "@shared/index";
-import type { DrizzleCli } from "@/db/initDrizzle";
 import { createStripeCli } from "@/external/connect/createStripeCli";
-import type { Logger } from "@/external/logtail/logtailUtils.js";
-import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService";
+import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct";
-import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
 import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
-import { ProductService } from "@/internal/products/ProductService";
 import {
 	attachToInsertParams,
 	isProductUpgrade,
@@ -28,93 +22,31 @@ import { isMainProduct } from "@/internal/products/productUtils/classifyProduct"
 
 export const handleInitialPurchase = async ({
 	event,
-	db,
-	org,
-	env,
-	logger,
-	features,
+	ctx,
 }: {
 	event: WebhookInitialPurchase;
-	db: DrizzleCli;
-	org: Organization;
-	env: AppEnv;
-	logger: Logger;
-	features: Feature[];
+	ctx: AutumnContext;
 }) => {
-	const { product_id, app_user_id, original_transaction_id } = event;
-	// Look up Autumn product ID from RevenueCat mapping
-	const autumnProductId = await RCMappingService.getAutumnProductId({
-		db,
-		orgId: org.id,
-		env,
+	const { db, org, env, logger, features } = ctx;
+	const { product_id, app_user_id } = event;
+
+	const { product, customer, cusProducts } = await resolveRevenuecatResources({
+		ctx,
 		revenuecatProductId: product_id,
+		customerId: app_user_id,
+		autoCreateCustomer: true,
 	});
-
-	if (!autumnProductId) {
-		throw new RecaseError({
-			message: `No Autumn product mapped to RevenueCat product: ${product_id}`,
-			code: ErrCode.ProductNotFound,
-			statusCode: 404,
-		});
-	}
-
-	const [product, customer] = await Promise.all([
-		ProductService.getFull({
-			db,
-			orgId: org.id,
-			env,
-			idOrInternalId: autumnProductId,
-		}),
-		CusService.getFull({
-			db,
-			idOrInternalId: app_user_id,
-			orgId: org.id,
-			env,
-		}),
-	]);
-
-	if (!product) {
-		throw new RecaseError({
-			message: "Product not found",
-			code: ErrCode.ProductNotFound,
-			statusCode: 404,
-		});
-	}
-
-	if (!customer) {
-		throw new RecaseError({
-			message: "Customer not found",
-			code: ErrCode.CustomerNotFound,
-			statusCode: 404,
-		});
-	}
-
-	const cusProducts = await CusProductService.list({
-		db,
-		internalCustomerId: customer.internal_id,
-	});
-
-	if (
-		cusProducts.some((cp) => cp.processor?.type !== ProcessorType.RevenueCat)
-	) {
-		throw new RecaseError({
-			message: "Customer already has a product from a different processor.",
-			code: ErrCode.CustomerAlreadyHasProduct,
-			statusCode: 400,
-		});
-	}
 
 	const { curSameProduct, curMainProduct } = getExistingCusProducts({
 		product,
 		cusProducts,
-		internalEntityId: undefined,
 		processorType: ProcessorType.RevenueCat,
 	});
 
 	// If same product already exists, skip
 	if (curSameProduct) {
 		throw new RecaseError({
-			message: "Cus product already exists",
+			message: `[handleInitialPurchase] Customer ${customer.id} already has product ${product.id}`,
 			code: ErrCode.CustomerAlreadyHasProduct,
 			statusCode: 400,
 		});
