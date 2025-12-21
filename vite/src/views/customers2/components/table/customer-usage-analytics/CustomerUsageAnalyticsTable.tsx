@@ -116,9 +116,7 @@ export function CustomerUsageAnalyticsTable() {
 					</Table.Toolbar>
 					<div className="flex w-full gap-2 ">
 						{isLoading ? (
-							<div className="flex justify-center py-4 w-full h-full relative overflow-visible text-sm border-dashed rounded-lg border shadow-sm">
-								<LoadingShimmerText text="Loading events" />
-							</div>
+							<EmptyState text={<LoadingShimmerText text="Loading events" />} />
 						) : hasEvents ? (
 							<>
 								<Table.Content
