@@ -140,7 +140,7 @@ export function SelectFeatureSheet({
 											className="py-2 px-2.5"
 										>
 											<div className="flex items-center gap-2">
-												<div className="text-primary shrink-0">
+												<div className="shrink-0">
 													{getFeatureIcon({ feature })}
 												</div>
 												<span className="truncate">{feature.name}</span>

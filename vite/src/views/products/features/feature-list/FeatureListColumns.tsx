@@ -3,7 +3,7 @@ import type { ColumnDef, Row } from "@tanstack/react-table";
 import { AdminHover } from "@/components/general/AdminHover";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { getFeatureHoverTexts } from "@/views/admin/adminUtils";
-import { getFeatureIcon } from "../utils/getFeatureIcon";
+import { getFeatureIcon, getFeatureIconConfig } from "../utils/getFeatureIcon";
 import { FeatureListRowToolbar } from "./FeatureListRowToolbar";
 
 export const createFeatureListColumns = ({
@@ -47,9 +47,15 @@ export const createFeatureListColumns = ({
 		size: 120,
 		accessorKey: "type",
 		cell: ({ row }: { row: Row<Feature> }) => {
+			const feature = row.original;
+			const config = getFeatureIconConfig(
+				feature.type,
+				feature.config?.usage_type,
+			);
 			return (
-				<div className="flex justify-start text-primary">
-					{getFeatureIcon({ feature: row.original })}
+				<div className="flex items-center gap-2 text-t2">
+					{getFeatureIcon({ feature })}
+					<span className="text-xs text-t3">{config.label}</span>
 				</div>
 			);
 		},

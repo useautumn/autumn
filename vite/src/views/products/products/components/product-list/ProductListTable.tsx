@@ -8,6 +8,7 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { pushPage } from "@/utils/genUtils";
 import { useProductsQueryState } from "@/views/products/hooks/useProductsQueryState";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
+import { AddOnPlanCreateButton } from "./AddOnPlanCreateButton";
 import { createProductListColumns } from "./ProductListColumns";
 import { ProductListCreateButton } from "./ProductListCreateButton";
 import { ProductListMenuButton } from "./ProductListMenuButton";
@@ -126,76 +127,79 @@ export function ProductListTable() {
 		<div className="flex flex-col gap-8">
 			{/* Base Plans Table */}
 			{showTableStructure ? (
-				<div>
-					<Table.Provider
-						config={{
-							table: baseTable,
-							numberOfColumns: columns.length,
-							enableSorting,
-							isLoading: false,
-							onRowClick: handleRowClick,
-							emptyStateText: "You haven't archived any plans yet.",
-							rowClassName: "h-10",
-						}}
-					>
-						<Table.Toolbar>
-							<div className="flex w-full justify-between items-center">
+				<>
+					<div>
+						<Table.Provider
+							config={{
+								table: baseTable,
+								numberOfColumns: columns.length,
+								enableSorting,
+								isLoading: false,
+								onRowClick: handleRowClick,
+								emptyStateText: "You haven't archived any plans yet.",
+								rowClassName: "h-10",
+							}}
+						>
+							<Table.Toolbar>
+								<div className="flex w-full justify-between items-center">
+									<Table.Heading>
+										<CubeIcon size={16} weight="fill" className="text-subtle" />
+										Base Plans
+									</Table.Heading>
+									<Table.Actions>
+										<div className="flex w-full justify-between items-center">
+											<div className="flex items-center gap-2">
+												<ProductListCreateButton />
+												<ProductListMenuButton />
+											</div>
+										</div>
+									</Table.Actions>
+								</div>
+							</Table.Toolbar>
+							<div>
+								<Table.Container>
+									<Table.Content>
+										<Table.Header />
+										<Table.Body />
+									</Table.Content>
+								</Table.Container>
+							</div>
+						</Table.Provider>
+					</div>
+					<div>
+						<Table.Provider
+							config={{
+								table: addOnTable,
+								numberOfColumns: columns.length,
+								enableSorting,
+								isLoading: false,
+								onRowClick: handleRowClick,
+								rowClassName: "h-10",
+								emptyStateText:
+									"Add-on plans can be purchased together with base plans, to grant additional features or top ups",
+							}}
+						>
+							<Table.Toolbar>
 								<Table.Heading>
 									<CubeIcon size={16} weight="fill" className="text-subtle" />
-									Base Plans
+									Add-on Plans
 								</Table.Heading>
 								<Table.Actions>
-									<div className="flex w-full justify-between items-center">
-										<div className="flex items-center gap-2">
-											<ProductListCreateButton />
-											<ProductListMenuButton />
-										</div>
-									</div>
+									<AddOnPlanCreateButton />
 								</Table.Actions>
+							</Table.Toolbar>
+							<div>
+								<Table.Container>
+									<Table.Content>
+										<Table.Body />
+									</Table.Content>
+								</Table.Container>
 							</div>
-						</Table.Toolbar>
-						<div>
-							<Table.Container>
-								<Table.Content>
-									<Table.Header />
-									<Table.Body />
-								</Table.Content>
-							</Table.Container>
-						</div>
-					</Table.Provider>
-				</div>
+						</Table.Provider>
+					</div>
+				</>
 			) : (
 				<EmptyState type="plans" actionButton={<ProductListCreateButton />} />
-			)}
-			{/* Add-on Plans Table */}
-			{hasAddOns && (
-				<div>
-					<Table.Provider
-						config={{
-							table: addOnTable,
-							numberOfColumns: columns.length,
-							enableSorting,
-							isLoading: false,
-							onRowClick: handleRowClick,
-							rowClassName: "h-10",
-						}}
-					>
-						<Table.Toolbar>
-							<Table.Heading>
-								<CubeIcon size={16} weight="fill" className="text-subtle" />
-								Add-on Plans
-							</Table.Heading>
-						</Table.Toolbar>
-						<div>
-							<Table.Container>
-								<Table.Content>
-									{/* <Table.Header /> */}
-									<Table.Body />
-								</Table.Content>
-							</Table.Container>
-						</div>
-					</Table.Provider>
-				</div>
 			)}
 		</div>
 	);
