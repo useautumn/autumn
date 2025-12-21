@@ -108,7 +108,7 @@ export function CreateRewardProgramSheet({
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
 			<SheetTrigger asChild>
-				<Button variant="primary" size="default">
+				<Button variant="secondary" size="default">
 					Create Referral Program
 				</Button>
 			</SheetTrigger>
