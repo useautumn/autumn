@@ -1,4 +1,5 @@
 import {
+	ACTIVE_STATUSES,
 	type ApiVersion,
 	CollectionMethod,
 	type CusProduct,
@@ -237,13 +238,14 @@ export const getExistingCusProduct = async ({
 	product,
 	internalCustomerId,
 	internalEntityId,
+	processorType = ProcessorType.Stripe,
 }: {
 	db: DrizzleCli;
-
 	cusProducts?: FullCusProduct[];
 	product: FullProduct;
 	internalCustomerId: string;
 	internalEntityId?: string;
+	processorType?: ProcessorType;
 }) => {
 	if (!cusProducts) {
 		cusProducts = await CusProductService.list({
@@ -261,6 +263,7 @@ export const getExistingCusProduct = async ({
 		product,
 		cusProducts: cusProducts as FullCusProduct[],
 		internalEntityId,
+		processorType,
 	});
 
 	return curMainProduct;
@@ -323,6 +326,7 @@ export const createFullCusProduct = async ({
 		product,
 		internalCustomerId: customer.internal_id,
 		internalEntityId: attachParams.internalEntityId,
+		processorType,
 	});
 
 	freeTrial = disableFreeTrial ? null : freeTrial;
@@ -346,7 +350,8 @@ export const createFullCusProduct = async ({
 		notNullish(existingCusProduct) &&
 		!attachParams.isCustom &&
 		!existingCusProduct.is_custom &&
-		product.version === existingCusProduct.product.version
+		product.version === existingCusProduct.product.version &&
+		ACTIVE_STATUSES.includes(existingCusProduct.status)
 	) {
 		await updateOneTimeCusProduct({
 			db,
