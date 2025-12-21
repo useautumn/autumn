@@ -115,8 +115,10 @@ export const computeQuantityUpdateDetails = ({
 	const subscriptionPeriodStartEpochMs: number = periodStartMs;
 	const subscriptionPeriodEndEpochMs: number = periodEndMs;
 
+	const isTrialing = stripeSubscription.status === "trialing";
+
 	let calculatedProrationAmountDollars: number | undefined;
-	if (shouldApplyProration && stripeSubscription.status !== "trialing") {
+	if (shouldApplyProration && !isTrialing) {
 		const previousQuantityActual = new Decimal(previousOptions.quantity)
 			.mul(billingUnitsPerQuantity)
 			.toNumber();
