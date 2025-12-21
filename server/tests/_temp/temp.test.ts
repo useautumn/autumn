@@ -7,6 +7,8 @@ import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { attachAuthenticatePaymentMethod } from "../../src/external/stripe/stripeCusUtils";
+import { CusService } from "../../src/internal/customers/CusService";
 import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3";
 
 const pro = constructProduct({
@@ -18,20 +20,19 @@ const pro = constructProduct({
 		}),
 	],
 });
-
-const premium = constructProduct({
-	type: "premium",
+const oneOffCredits = constructProduct({
+	type: "one_off",
 	items: [
 		constructFeatureItem({
-			featureId: TestFeature.Messages,
-			includedUsage: 300,
+			featureId: TestFeature.Credits,
+			includedUsage: 100,
 		}),
 	],
 });
 
-const testCase = "attach-misc3";
+const testCase = "temp";
 
-describe(`${chalk.yellowBright("attach-misc3: cache invalidation guard test")}`, () => {
+describe(`${chalk.yellowBright("temp: one off credits test")}`, () => {
 	const customerId = testCase;
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
@@ -45,10 +46,27 @@ describe(`${chalk.yellowBright("attach-misc3: cache invalidation guard test")}`,
 
 		await initProductsV0({
 			ctx,
-			products: [pro, premium],
+			products: [pro, oneOffCredits],
 			prefix: testCase,
 		});
 	});
 
-	it("should block cache writes when guard is active", async () => {});
+	it("should attach one off credits product", async () => {
+		await autumnV1.attach({
+			customer_id: customerId,
+			product_id: oneOffCredits.id,
+		});
+
+		const customer = await CusService.get({
+			db: ctx.db,
+			idOrInternalId: customerId,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		});
+
+		await attachAuthenticatePaymentMethod({
+			ctx,
+			customerId,
+		});
+	});
 });
