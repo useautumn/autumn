@@ -1,19 +1,21 @@
-import {
-	type AppEnv,
-	type Feature,
-	type FullCusProduct,
-	type FullProduct,
-	type MigrationJob,
-	type Organization,
-	ProcessorType,
+import type {
+	AppEnv,
+	Feature,
+	FullCusProduct,
+	FullProduct,
+	MigrationJob,
+	Organization,
 } from "@autumn/shared";
+
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import type { Logger } from "../../../external/logtail/logtailUtils.js";
-import { migrateRevenueCatCustomer } from "./migrateRevenuecatCustomer.js";
-import { migrateStripeCustomer } from "./migrateStripeCustomer.js";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
+import { deleteCachedApiCustomer } from "../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
+import { migrationToAttachParams } from "../migrationUtils/migrationToAttachParams.js";
+import { runMigrationAttach } from "../migrationUtils/runMigrationAttach.js";
 
 export const migrateCustomer = async ({
 	db,
@@ -66,29 +68,25 @@ export const migrateCustomer = async ({
 		);
 
 		for (const cusProduct of filteredCusProducts) {
-			if (cusProduct.processor?.type === ProcessorType.RevenueCat) {
-				await migrateRevenueCatCustomer({
-					req,
-					fullCus,
-					cusProduct,
-					toProduct,
-					customerId,
-					orgId,
-					env,
-				});
-			} else {
-				await migrateStripeCustomer({
-					req,
-					stripeCli,
-					fullCus,
-					cusProduct,
-					toProduct,
-					fromProduct,
-					customerId,
-					orgId,
-					env,
-				});
-			}
+			const attachParams = await migrationToAttachParams({
+				req,
+				stripeCli,
+				customer: fullCus,
+				cusProduct,
+				newProduct: toProduct,
+			});
+
+			await runMigrationAttach({
+				ctx: req as unknown as AutumnContext,
+				attachParams,
+				fromProduct,
+			});
+
+			await deleteCachedApiCustomer({
+				customerId,
+				orgId,
+				env,
+			});
 		}
 
 		return true;

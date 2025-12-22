@@ -1,5 +1,5 @@
-import type { Feature, FullCusProduct } from "@autumn/shared";
-import { AppEnv, FeatureUsageType, ProcessorType } from "@autumn/shared";
+import type { Feature } from "@autumn/shared";
+import { FeatureUsageType } from "@autumn/shared";
 import {
 	ArrowSquareOutIcon,
 	CaretDownIcon,
@@ -20,7 +20,6 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/v2/dropdowns/DropdownMenu";
-import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useDropdownShortcut } from "@/hooks/useDropdownShortcut";
@@ -29,7 +28,7 @@ import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
-import { getRevenueCatCusLink, getStripeCusLink } from "@/utils/linkUtils";
+import { getStripeCusLink } from "@/utils/linkUtils";
 import { DeleteCustomerDialog } from "@/views/customers/customer/components/DeleteCustomerDialog";
 import UpdateCustomerDialog from "@/views/customers/customer/components/UpdateCustomerDialog";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -45,7 +44,6 @@ export function CustomerActions() {
 	const [portalLoading, setPortalLoading] = useState(false);
 	const { customer } = useCusQuery();
 	const { features } = useFeaturesQuery();
-	const { org } = useOrg();
 	const { stripeAccount } = useOrgStripeQuery();
 	const env = useEnv();
 	const axiosInstance = useAxiosInstance();
@@ -143,55 +141,23 @@ export function CustomerActions() {
 						<UserCircleGearIcon />
 						{portalLoading ? "Opening..." : "Open customer portal"}
 					</DropdownMenuItem>
-					{stripeCustomerId &&
-						customer?.processor?.type === ProcessorType.Stripe && (
-							<DropdownMenuItem
-								onClick={() => {
-									window.open(
-										getStripeCusLink({
-											customerId: stripeCustomerId,
-											env,
-											accountId: stripeAccount?.id,
-										}),
-										"_blank",
-									);
-								}}
-								className="flex gap-2"
-								shortcut="s"
-							>
-								<ArrowSquareOutIcon className="size-3.5" />
-								Open in Stripe
-							</DropdownMenuItem>
-						)}
-					{((customer?.processor?.id &&
-						customer.processor.type === ProcessorType.RevenueCat) ||
-						customer?.customer_products?.some(
-							(cp: FullCusProduct) =>
-								cp.processor?.type === ProcessorType.RevenueCat,
-						)) && (
+					{stripeCustomerId && (
 						<DropdownMenuItem
 							onClick={() => {
 								window.open(
-									getRevenueCatCusLink({
-										customerId: customer.id,
-										projectId:
-											env === AppEnv.Live
-												? (org?.processor_configs?.revenuecat?.project_id?.replace(
-														"proj",
-														"",
-													) ?? "")
-												: (org?.processor_configs?.revenuecat?.sandbox_project_id?.replace(
-														"proj",
-														"",
-													) ?? ""),
+									getStripeCusLink({
+										customerId: stripeCustomerId,
+										env,
+										accountId: stripeAccount?.id,
 									}),
 									"_blank",
 								);
 							}}
 							className="flex gap-2"
+							shortcut="s"
 						>
 							<ArrowSquareOutIcon className="size-3.5" />
-							Open in RevenueCat
+							Open in Stripe
 						</DropdownMenuItem>
 					)}
 					<DropdownMenuSeparator />
