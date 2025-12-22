@@ -1,12 +1,9 @@
-import type { ProductItem } from "@autumn/shared";
-import { ProductItemFeatureType, UsageModel } from "@autumn/shared";
+import type { Feature, ProductItem } from "@autumn/shared";
+import { UsageModel } from "@autumn/shared";
 import {
-	BatteryHighIcon,
+	BankIcon,
 	BoxArrowDownIcon,
-	CoinsIcon,
-	PiggyBankIcon,
-	PowerIcon,
-	TicketIcon,
+	MoneyWavyIcon,
 	XIcon,
 } from "@phosphor-icons/react";
 import type React from "react";
@@ -15,16 +12,13 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/v2/tooltips/Tooltip";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { getFeatureIconConfig } from "@/views/products/features/utils/getFeatureIcon";
 
 interface PlanFeatureIconProps {
 	item: ProductItem;
 	position: "left" | "right";
 }
-
-// Helper function to classify feature type
-const getFeatureType = (item: ProductItem): ProductItemFeatureType | null => {
-	return item.feature_type || null;
-};
 
 // Helper function to classify billing/usage type
 const getBillingType = (
@@ -59,25 +53,25 @@ const getBillingType = (
 };
 
 // Helper function to get the left icon (feature type)
+// Uses shared getFeatureIconConfig for consistency
 const getLeftIcon = (
 	item: ProductItem,
-): { icon: React.ReactNode; color: string; size?: number } => {
-	const featureType = getFeatureType(item);
+	features: Feature[],
+): { icon: React.ReactNode; color: string } => {
+	// Look up the actual feature to get the correct type (important for credit systems)
+	const feature = features.find((f) => f.id === item.feature_id);
 
-	switch (featureType) {
-		case ProductItemFeatureType.Boolean:
-			return { icon: <PowerIcon />, color: "text-orange-500" }; // On/Off - pink
-		case ProductItemFeatureType.SingleUse:
-			return { icon: <BatteryHighIcon />, color: "text-red-500" }; // Usage-based - pink
-		case ProductItemFeatureType.ContinuousUse:
-			return { icon: <TicketIcon />, color: "text-primary" }; // Allocated Usage - pink
-		case ProductItemFeatureType.Static:
-			return { icon: <PowerIcon />, color: "text-orange-500" }; // Static - pink
-		case "metered" as unknown: // Handle metered features from FeatureType enum
-			return { icon: <BatteryHighIcon />, color: "text-primary" }; // Metered - pink
-		default:
-			return { icon: <BatteryHighIcon />, color: "text-primary" }; // Default - pink
+	if (feature) {
+		const config = getFeatureIconConfig(
+			feature.type,
+			feature.config?.usage_type,
+		);
+		return { icon: config.icon, color: config.color };
 	}
+
+	// Fallback to item.feature_type if feature not found
+	const config = getFeatureIconConfig(item.feature_type);
+	return { icon: config.icon, color: config.color };
 };
 
 // Helper function to get the right icon (billing type)
@@ -86,40 +80,53 @@ const getRightIcon = (
 ): {
 	icon: React.ReactNode;
 	color: string;
-	size?: number;
 } => {
 	const billingType = getBillingType(item);
+	const size = 16;
+	const weight = "duotone";
 
 	switch (billingType) {
 		case "included":
-			return { icon: <BoxArrowDownIcon />, color: "text-green-500" }; // Included/Free - green
+			return {
+				icon: <BoxArrowDownIcon size={size} weight={weight} />,
+				color: "text-green-500",
+			}; // Included/Free - green
 		case "prepaid":
-			return { icon: <PiggyBankIcon />, color: "text-blue-500" }; // Prepaid - blue
+			return {
+				icon: <BankIcon size={size} weight={weight} />,
+				color: "text-orange-500",
+			}; // Prepaid - blue
 		case "paid":
-			return { icon: <CoinsIcon />, color: "text-yellow-500" }; // Paid - orange
+			return {
+				icon: <MoneyWavyIcon size={size} weight={weight} />,
+				color: "text-yellow-500",
+			}; // Paid - orange
 		case "none":
-			return { icon: <XIcon />, color: "text-t4" }; // None - gray
+			return { icon: <XIcon size={size} weight={weight} />, color: "text-t4" }; // None - gray
 		default:
-			return { icon: <XIcon />, color: "text-t4" }; // Default - gray
+			return { icon: <XIcon size={size} weight={weight} />, color: "text-t4" }; // Default - gray
 	}
 };
 
-const getTooltipContent = (item: ProductItem, position: "left" | "right") => {
+const getTooltipContent = (
+	item: ProductItem,
+	position: "left" | "right",
+	features: Feature[],
+) => {
 	switch (position) {
 		case "left": {
-			const ft = getFeatureType(item);
-			switch (ft) {
-				case ProductItemFeatureType.Boolean:
-					return "Boolean";
-				case ProductItemFeatureType.SingleUse:
-					return "Consumable";
-				case ProductItemFeatureType.ContinuousUse:
-					return "Non-consumable";
-				case ProductItemFeatureType.Static:
-					return "Boolean";
-				default:
-					return null;
+			// Look up the actual feature to get the correct type label
+			const feature = features.find((f) => f.id === item.feature_id);
+			if (feature) {
+				const config = getFeatureIconConfig(
+					feature.type,
+					feature.config?.usage_type,
+				);
+				return config.label;
 			}
+			// Fallback to item.feature_type if feature not found
+			const config = getFeatureIconConfig(item.feature_type);
+			return config.label;
 		}
 		case "right": {
 			const bt = getBillingType(item);
@@ -129,7 +136,7 @@ const getTooltipContent = (item: ProductItem, position: "left" | "right") => {
 				case "prepaid":
 					return "Prepaid";
 				case "paid":
-					return "Pay-per-use";
+					return "Usage-based";
 				case "none":
 					return "None";
 				default:
@@ -142,15 +149,19 @@ const getTooltipContent = (item: ProductItem, position: "left" | "right") => {
 };
 
 export const PlanFeatureIcon = ({ item, position }: PlanFeatureIconProps) => {
-	const iconData = position === "left" ? getLeftIcon(item) : getRightIcon(item);
+	const { features } = useFeaturesQuery();
+	const iconData =
+		position === "left" ? getLeftIcon(item, features) : getRightIcon(item);
 	const icon = iconData.icon as React.ReactNode;
 
-	return getTooltipContent(item, position) !== null ? (
+	return getTooltipContent(item, position, features) !== null ? (
 		<Tooltip>
 			<TooltipTrigger asChild>
 				<div className={iconData.color}>{icon}</div>
 			</TooltipTrigger>
-			<TooltipContent>{getTooltipContent(item, position)}</TooltipContent>
+			<TooltipContent>
+				{getTooltipContent(item, position, features)}
+			</TooltipContent>
 		</Tooltip>
 	) : (
 		<div className={iconData.color}>{icon}</div>

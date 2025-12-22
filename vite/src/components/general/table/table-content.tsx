@@ -20,7 +20,8 @@ export function TableContent({
 		<div
 			className={cn(
 				"rounded-lg border shadow-sm relative z-50 min-w-0",
-				!rows.length && "border-dashed shadow-none",
+				!rows.length &&
+					"border-dashed bg-interactive-secondary dark:bg-transparent shadow-sm dark:shadow-none",
 				className,
 			)}
 		>
