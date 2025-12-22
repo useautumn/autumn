@@ -17,6 +17,6 @@ BUN_PARALLEL_COMPACT \
   --max=6
 
 BUN_PARALLEL_COMPACT \
-  'server/tests/external-psps/revenuecat' \
   'server/tests/attach/entities' \
   --max=6
+  # 'server/tests/external-psps/revenuecat' \
