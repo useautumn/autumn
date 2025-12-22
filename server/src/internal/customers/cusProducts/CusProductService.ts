@@ -184,7 +184,7 @@ export class CusProductService {
 		internalCustomerId: string;
 		withCustomer?: boolean;
 		inStatuses?: string[];
-	}): Promise<FullCusProduct[]> {
+	}) {
 		const cusProducts = await db.query.customerProducts.findMany({
 			where: and(
 				eq(customerProducts.internal_customer_id, internalCustomerId),

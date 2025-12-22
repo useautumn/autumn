@@ -1,7 +1,6 @@
 import { getRequestListener } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { revenuecatWebhookRouter } from "./external/revenueCat/revenuecatWebhookRouter.js";
 import { vercelWebhookRouter } from "./external/vercel/vercelWebhookRouter.js";
 import { handleConnectWebhook } from "./external/webhooks/connectWebhookRouter.js";
 import { baseMiddleware } from "./honoMiddlewares/baseMiddleware.js";
@@ -94,7 +93,6 @@ export const createHonoApp = () => {
 	// Webhook routes
 	app.post("/webhooks/connect/:env", handleConnectWebhook);
 	app.route("/webhooks/vercel", vercelWebhookRouter);
-	app.route("/webhooks/revenuecat", revenuecatWebhookRouter);
 
 	// API Middleware
 	app.route("/v1", apiRouter);

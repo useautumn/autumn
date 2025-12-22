@@ -1,4 +1,4 @@
-import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
+import { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 
 export const isCanceled = ({ cusProduct }: { cusProduct: FullCusProduct }) => {
 	return cusProduct.canceled;

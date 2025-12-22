@@ -26,7 +26,7 @@ export const PageSectionHeader = ({
 	return (
 		<div
 			className={cn(
-				"sticky top-0 z-10 border-y bg-stone-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 pl-10 pr-7 h-10 flex justify-between items-center",
+				"sticky top-0 z-10 border-y bg-stone-100 pl-10 pr-7 h-10 flex justify-between items-center",
 				isOnboarding && "px-2",
 				menuComponent && "pr-0",
 				className,
@@ -36,7 +36,7 @@ export const PageSectionHeader = ({
 				{title && (
 					<h2
 						className={cn(
-							"text-sm text-t2 dark:text-neutral-100 font-medium",
+							"text-sm text-t2 font-medium",
 							classNames?.title,
 							isSecondary && "text-sm",
 						)}

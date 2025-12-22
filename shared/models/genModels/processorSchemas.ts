@@ -1,5 +1,4 @@
 import { z } from "zod/v4";
-import { ProcessorType } from "./genEnums";
 
 /**
  * Customer-level Vercel processor
@@ -89,50 +88,17 @@ export const UpsertVercelProcessorConfigSchema = z.object({
 });
 
 /**
- * Organization-level RevenueCat processor configuration
- * Stores API key, project ID, and webhook secret
- */
-export const RevenueCatProcessorConfigSchema = z.object({
-	api_key: z.string(),
-	sandbox_api_key: z.string().optional(),
-	project_id: z.string().optional(),
-	sandbox_project_id: z.string().optional(),
-	webhook_secret: z.string(),
-	sandbox_webhook_secret: z.string().optional(),
-});
-
-export const UpsertRevenueCatProcessorConfigSchema = z.object({
-	api_key: z.string().min(8).optional(),
-	sandbox_api_key: z.string().min(8).optional(),
-	project_id: z.string().min(1).optional(),
-	sandbox_project_id: z.string().min(1).optional(),
-});
-
-/**
  * Container for all processor configurations at organization level
  */
 export const ProcessorConfigsSchema = z.object({
 	vercel: VercelProcessorConfigSchema.optional(),
-	revenuecat: RevenueCatProcessorConfigSchema.optional(),
 });
 
-export const ExternalSubIDSchema = z.object({
-	type: z.enum(ProcessorType),
-	id: z.string(),
-});
-
-export type ExternalSubID = z.infer<typeof ExternalSubIDSchema>;
 // Export inferred types for backward compatibility
 export type VercelProcessor = z.infer<typeof VercelProcessorSchema>;
 export type ExternalProcessors = z.infer<typeof ExternalProcessorsSchema>;
 export type VercelProcessorConfig = z.infer<typeof VercelProcessorConfigSchema>;
 export type UpsertVercelProcessorConfig = z.infer<
 	typeof UpsertVercelProcessorConfigSchema
->;
-export type RevenueCatProcessorConfig = z.infer<
-	typeof RevenueCatProcessorConfigSchema
->;
-export type UpsertRevenueCatProcessorConfig = z.infer<
-	typeof UpsertRevenueCatProcessorConfigSchema
 >;
 export type ProcessorConfigs = z.infer<typeof ProcessorConfigsSchema>;
