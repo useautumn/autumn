@@ -1,7 +1,7 @@
 import { Decimal } from "decimal.js";
 import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
-import { cusEntToCusPrice } from "../../productUtils/convertUtils.js";
 import { isPrepaidPrice } from "../../productUtils/priceUtils/classifyPriceUtils.js";
+import { cusEntToCusPrice } from "../convertCusEntUtils/cusEntToCusPrice.js";
 
 export const cusEntToPrepaidQuantity = ({
 	cusEnt,

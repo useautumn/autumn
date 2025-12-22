@@ -20,6 +20,7 @@ export * from "./cusEntUtils/balanceUtils/grantedBalanceUtils/cusEntsToGrantedBa
 export * from "./cusEntUtils/balanceUtils.js";
 export * from "./cusEntUtils/classifyCusEntUtils.js";
 export * from "./cusEntUtils/convertCusEntUtils/cusEntsToMaxPurchase.js";
+export * from "./cusEntUtils/convertCusEntUtils/cusEntToCusPrice.js";
 export * from "./cusEntUtils/convertCusEntUtils.js";
 export * from "./cusEntUtils/cusEntUtils.js";
 export * from "./cusEntUtils/filterCusEntUtils.js";
@@ -54,12 +55,15 @@ export * from "./intervalUtils/priceIntervalUtils.js";
 export * from "./intervalUtils/priceIntervalUtils.js";
 // Org utils
 export * from "./orgUtils/convertOrgUtils.js";
-export * from "./productUtils/classifyProductUtils.js";
+export * from "./productUtils/classifyProduct/classifyProductUtils.js";
+export * from "./productUtils/classifyProduct/isProductPaidAndRecurring.js";
 // Product utils
-export * from "./productUtils/convertUtils.js";
+export * from "./productUtils/convertProductUtils.js";
 export * from "./productUtils/entUtils/classifyEntUtils.js";
 export * from "./productUtils/entUtils/entUtils.js";
 export * from "./productUtils/entUtils/formatEntUtils.js";
+export * from "./productUtils/freeTrialUtils/initFreeTrial.js";
+export * from "./productUtils/freeTrialUtils.js";
 export * from "./productUtils/isProductUpgrade.js";
 export * from "./productUtils/priceUtils/classifyPriceUtils.js";
 export * from "./productUtils/priceUtils/convertAmountUtils.js";

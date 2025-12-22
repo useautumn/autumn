@@ -1,6 +1,6 @@
 import { createStripeCli } from "../../../../external/connect/createStripeCli";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
-import { createAndPayInvoice } from "../../billingUtils/stripeAdapter/stripeInvoiceOps/createAndPayInvoice";
+import { createAndPayInvoice } from "../utils/stripeAdapter/stripeInvoiceOps/createAndPayInvoice";
 import type {
 	AttachContext,
 	StripeCheckoutAction,

@@ -26,7 +26,7 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 			});
 
 			const cusProduct = createMockCustomerProduct({
-				cusEntitlements: [entityScopedCusEnt],
+				customerEntitlements: [entityScopedCusEnt],
 			});
 
 			// Apply entity usages: entity1: 50, entity2: 100, entity3: 25
@@ -42,7 +42,11 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 			};
 
 			// Act
-			applyExistingUsages({ cusProduct, existingUsages, entities: [] });
+			applyExistingUsages({
+				customerProduct: cusProduct,
+				existingUsages,
+				entities: [],
+			});
 
 			// Assert
 			const updatedCusEnt = cusProduct.customer_entitlements[0];
@@ -68,7 +72,7 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 			});
 
 			const cusProduct = createMockCustomerProduct({
-				cusEntitlements: [nonEntityScopedCusEnt],
+				customerEntitlements: [nonEntityScopedCusEnt],
 			});
 
 			// Try to apply entity usages to non-entity-scoped cusEnt
@@ -83,7 +87,11 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 			};
 
 			// Act
-			applyExistingUsages({ cusProduct, existingUsages, entities: [] });
+			applyExistingUsages({
+				customerProduct: cusProduct,
+				existingUsages,
+				entities: [],
+			});
 
 			// Assert: Balance should remain unchanged since cusEnt is not entity-scoped
 			const updatedCusEnt = cusProduct.customer_entitlements[0];
@@ -111,8 +119,8 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 				},
 			});
 
-			const cusProduct = createMockCustomerProduct({
-				cusEntitlements: [entityScopedCusEnt],
+			const customerProduct = createMockCustomerProduct({
+				customerEntitlements: [entityScopedCusEnt],
 			});
 
 			// Apply top-level usage (no targetEntityId) - should aggregate across entities
@@ -126,10 +134,10 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 			};
 
 			// Act
-			applyExistingUsages({ cusProduct, existingUsages, entities: [] });
+			applyExistingUsages({ customerProduct, existingUsages, entities: [] });
 
 			// Assert: Deduction should flow through entities
-			const updatedCusEnt = cusProduct.customer_entitlements[0];
+			const updatedCusEnt = customerProduct.customer_entitlements[0];
 			expect(updatedCusEnt.entities).not.toBeNull();
 
 			// The total deducted should be 80, distributed across entities
@@ -161,8 +169,8 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 				},
 			});
 
-			const cusProduct = createMockCustomerProduct({
-				cusEntitlements: [entityScopedCusEnt],
+			const customerProduct = createMockCustomerProduct({
+				customerEntitlements: [entityScopedCusEnt],
 			});
 
 			// Apply entity usages that exceed balances
@@ -177,10 +185,10 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 			};
 
 			// Act
-			applyExistingUsages({ cusProduct, existingUsages, entities: [] });
+			applyExistingUsages({ customerProduct, existingUsages, entities: [] });
 
 			// Assert: Entity balances should go negative
-			const updatedCusEnt = cusProduct.customer_entitlements[0];
+			const updatedCusEnt = customerProduct.customer_entitlements[0];
 			expect(updatedCusEnt.entities).not.toBeNull();
 			expect(updatedCusEnt.entities?.entity1.balance).toBe(-20); // 50 - 70 = -20
 			expect(updatedCusEnt.entities?.entity2.balance).toBe(-20); // 30 - 50 = -20

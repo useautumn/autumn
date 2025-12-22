@@ -1,7 +1,11 @@
 export * from "./cycleUtils/getCycleEnd";
 export * from "./cycleUtils/getCycleStart";
+
+// Interval utils
+export * from "./intervalUtils/addDuration";
 export * from "./intervalUtils/intervalArithmetic";
 
+// Invoicing utils
 export * from "./invoicingUtils/cusProductToArrearLineItems";
 export * from "./invoicingUtils/cusProductToLineItems";
 export * from "./invoicingUtils/lineItemBuilders/fixedPriceToLineItem";

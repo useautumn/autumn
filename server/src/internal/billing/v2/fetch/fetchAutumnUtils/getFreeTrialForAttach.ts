@@ -3,14 +3,12 @@ import {
 	type FreeTrial,
 	type FullCustomer,
 	type FullProduct,
+	initFreeTrial,
 	notNullish,
 	planToDbFreeTrial,
 } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
-import {
-	getFreeTrialAfterFingerprint,
-	validateAndInitFreeTrial,
-} from "../../../../products/free-trials/freeTrialUtils";
+import { getFreeTrialAfterFingerprint } from "../../../../products/free-trials/freeTrialUtils";
 
 export const getFreeTrialForAttach = async ({
 	ctx,
@@ -35,8 +33,8 @@ export const getFreeTrialForAttach = async ({
 		});
 
 		const trial = dbFreeTrial
-			? validateAndInitFreeTrial({
-					freeTrial: dbFreeTrial,
+			? initFreeTrial({
+					freeTrialParams: dbFreeTrial,
 					internalProductId: products[0].internal_id,
 					isCustom: true,
 				})

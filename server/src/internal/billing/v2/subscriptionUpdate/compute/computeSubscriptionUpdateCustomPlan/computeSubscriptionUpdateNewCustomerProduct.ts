@@ -1,28 +1,35 @@
-import type { FullProduct, SubscriptionUpdateV0Params } from "@autumn/shared";
+import {
+	type FullProduct,
+	type SubscriptionUpdateV0Params,
+	secondsToMs,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { cusProductToExistingRollovers } from "@/internal/billing/billingUtils/handleExistingRollovers/cusProductToExistingRollovers";
-import { cusProductToExistingUsages } from "@/internal/billing/billingUtils/handleExistingUsages/cusProductToExistingUsages";
-import { initFullCustomerProduct } from "@/internal/billing/billingUtils/initFullCusProduct/initFullCustomerProduct";
+import type { FreeTrialPlan } from "@/internal/billing/v2/billingPlan";
 import { computeSubscriptionUpdateFeatureQuantities } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateCustomPlan/computeSubscriptionUpdateFeatureQuantities";
 import type { UpdateSubscriptionContext } from "@/internal/billing/v2/subscriptionUpdate/fetch/updateSubscriptionContextSchema";
+import { cusProductToExistingRollovers } from "@/internal/billing/v2/utils/handleExistingRollovers/cusProductToExistingRollovers";
+import { cusProductToExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/cusProductToExistingUsages";
+import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 
-export const computeSubscriptionUpdateNewCustomerProduct = async ({
+export const computeSubscriptionUpdateNewCustomerProduct = ({
 	ctx,
-	subscriptionUpdateContext,
 	params,
+	updateSubscriptionContext,
 	fullProduct,
+	freeTrialPlan,
 }: {
 	ctx: AutumnContext;
-	subscriptionUpdateContext: UpdateSubscriptionContext;
 	params: SubscriptionUpdateV0Params;
+	updateSubscriptionContext: UpdateSubscriptionContext;
 	fullProduct: FullProduct;
+	freeTrialPlan: FreeTrialPlan;
 }) => {
 	const {
 		customerProduct,
 		fullCustomer,
 		stripeSubscription,
 		stripeSubscriptionSchedule,
-	} = subscriptionUpdateContext;
+	} = updateSubscriptionContext;
 
 	// 1. Get feature quantities
 	const existingUsages = cusProductToExistingUsages({
@@ -41,19 +48,32 @@ export const computeSubscriptionUpdateNewCustomerProduct = async ({
 		params,
 	});
 
+	// TODO: Move this to a separate function
+	const billingCycleAnchor =
+		freeTrialPlan.trialEndsAt ??
+		secondsToMs(stripeSubscription?.billing_cycle_anchor);
+
+	const now = updateSubscriptionContext.testClockFrozenTime ?? Date.now();
+
 	// 1. Compute the new full customer product
 	const newFullCustomerProduct = initFullCustomerProduct({
 		ctx,
+
 		initContext: {
 			fullCustomer,
 			fullProduct,
 			featureQuantities,
 			existingUsages,
 			existingRollovers,
+			resetCycleAnchor: billingCycleAnchor ?? "now",
+			now,
+
+			freeTrial: freeTrialPlan.freeTrial ?? null,
+			trialEndsAt: freeTrialPlan.trialEndsAt,
 		},
+
 		initOptions: {
 			isCustom: true,
-			// resetCycleAnchor,
 			subscriptionId: stripeSubscription?.id,
 			subscriptionScheduleId: stripeSubscriptionSchedule?.id,
 		},

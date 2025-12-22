@@ -107,7 +107,7 @@ Create `computeUpdatePlanPlan.ts`:
 **Inputs**: Target cus product, new product definition
 
 **Compute**:
-1. Build new cus product (reuse [`initFullCusProduct`](server/src/internal/billing/billingUtils/initFullCusProduct/initFullCusProduct.ts))
+1. Build new cus product (reuse [`initFullCustomerProduct`](server/src/internal/billing/billingUtils/initFullCustomerProduct/initFullCustomerProduct.ts))
 2. Build `stripe.subscription` update params
 3. Build `autumn.expireCusProducts` for old cus product
 4. Build `autumn.insertCusProducts` for new cus product

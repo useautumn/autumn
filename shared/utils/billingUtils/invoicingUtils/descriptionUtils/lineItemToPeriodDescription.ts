@@ -8,6 +8,8 @@ export const lineItemToPeriodDescription = ({
 }): string => {
 	const { now, billingPeriod, billingTiming } = context;
 
+	if (!billingPeriod) return "";
+
 	// In-arrear: billing for past usage (start → now)
 	// In-advance: billing for future usage (now → end)
 	const periodStart = billingTiming === "in_arrear" ? billingPeriod.start : now;

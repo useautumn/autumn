@@ -1,3 +1,4 @@
+import { CreateFreeTrialSchema } from "@models/productModels/freeTrialModels/freeTrialModels";
 import { z } from "zod/v4";
 import { FeatureOptionsSchema } from "../../../models/cusProductModels/cusProductModels";
 import { ProductItemSchema } from "../../../models/productV2Models/productItemModels/productItemModels";
@@ -19,8 +20,10 @@ export const ExtSubscriptionUpdateV0ParamsSchema = z.object({
 	enable_product_immediately: z.boolean().optional(),
 	finalize_invoice: z.boolean().optional(),
 
-	// Reset billing cycle anchor?
+	// New
 	items: z.array(ProductItemSchema).optional(), // used for custom configuration of a plan (in api - plan_override)
+	free_trial: CreateFreeTrialSchema.nullable().optional(),
+
 	reset_billing_cycle_anchor: z.boolean().optional(),
 	new_billing_subscription: z.boolean().optional(),
 	prorate_billing: z.boolean().optional(),

@@ -1,7 +1,6 @@
 import { SubscriptionUpdateV0ParamsSchema } from "@autumn/shared";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { computeSubscriptionUpdatePlan } from "../subscriptionUpdate/compute/computeSubscriptionUpdatePlan";
-import { executeSubscriptionUpdate } from "../subscriptionUpdate/execute/executeSubscriptionUpdate";
 import { fetchApiSubscriptionUpdateContext } from "../subscriptionUpdate/fetch/fetchApiSubscriptionUpdateContext";
 
 export const handleApiSubscriptionUpdate = createRoute({
@@ -21,12 +20,13 @@ export const handleApiSubscriptionUpdate = createRoute({
 			params: body,
 		});
 
-		await executeSubscriptionUpdate({
-			ctx,
-			params: body,
-			updateSubscriptionContext,
-			subscriptionUpdatePlan,
-		});
+		// Execute...
+		// await executeApiSubscriptionUpdate({
+		// 	ctx,
+		// 	params: body,
+		// 	updateSubscriptionContext,
+		// 	subscriptionUpdatePlan,
+		// });
 
 		return c.json({ success: true }, 200);
 	},

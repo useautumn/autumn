@@ -55,7 +55,7 @@ export const getUncancelAttachActions = ({
 		: undefined;
 
 	return {
-		ongoingCusProductAction,
+		ongoingCustomerProduct: ongoingCusProductAction?.cusProduct,
 		scheduledCusProductAction,
 		newProductActions: [],
 	};

@@ -3,11 +3,9 @@ import type { ApiBalanceBreakdown } from "../../api/customers/cusFeatures/apiBal
 import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import { resetIntvToEntIntv } from "../planFeatureUtils/planFeatureIntervals.js";
-import {
-	cusEntToCusPrice,
-	entToOptions,
-} from "../productUtils/convertUtils.js";
+import { entToOptions } from "../productUtils/convertProductUtils.js";
 import { getCusEntBalance } from "./balanceUtils.js";
+import { cusEntToCusPrice } from "./convertCusEntUtils/cusEntToCusPrice.js";
 import { getRolloverFields } from "./getRolloverFields.js";
 import { getStartingBalance } from "./getStartingBalance.js";
 

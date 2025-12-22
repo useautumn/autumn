@@ -1,5 +1,5 @@
 import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
-import { entToOptions } from "../../productUtils/convertUtils";
+import { entToOptions } from "../../productUtils/convertProductUtils";
 
 export const cusEntToOptions = ({
 	cusEnt,

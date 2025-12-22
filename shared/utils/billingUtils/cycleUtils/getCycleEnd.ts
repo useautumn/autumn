@@ -23,14 +23,14 @@ export const getCycleEnd = ({
 	intervalCount = 1,
 	now,
 }: {
-	anchor: number;
+	anchor: number | "now";
 	interval: BillingInterval | EntInterval;
 	intervalCount?: number;
 	now: number; // milliseconds since epoch
 }): number => {
 	// EDGE CASE: anchor might be slightly before now due to network latency.
 
-	const anchorDate = new UTCDate(anchor);
+	const anchorDate = anchor === "now" ? new UTCDate(now) : new UTCDate(anchor);
 	const nowDate = new UTCDate(now);
 
 	// For now, only handle monthly intervals
@@ -70,7 +70,7 @@ export const getCycleEnd = ({
 
 	const printLogs = false;
 	if (printLogs) {
-		console.log(`anchor: ${formatMs(anchor)}`);
+		console.log(`anchor: ${anchor === "now" ? "now" : formatMs(anchor)}`);
 		console.log(`now: ${formatMs(now)}`);
 		console.log(`cycles passed: ${cyclesPassed}`);
 		console.log(`next cycle end: ${formatMs(nextCycleEnd.getTime())}`);

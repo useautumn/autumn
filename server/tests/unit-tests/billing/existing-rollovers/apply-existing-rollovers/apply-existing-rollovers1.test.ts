@@ -19,7 +19,7 @@ describe(chalk.yellowBright("applyExistingRollovers"), () => {
 			});
 
 			const newCusProduct = createMockCustomerProduct({
-				cusEntitlements: [cusEnt],
+				customerEntitlements: [cusEnt],
 			});
 
 			const existingRollovers: ExistingRollover[] = [
@@ -35,7 +35,10 @@ describe(chalk.yellowBright("applyExistingRollovers"), () => {
 			];
 
 			// Act
-			applyExistingRollovers({ newCusProduct, existingRollovers });
+			applyExistingRollovers({
+				customerProduct: newCusProduct,
+				existingRollovers,
+			});
 
 			// Assert: rollover should be added to the cusEnt
 			const updatedCusEnt = newCusProduct.customer_entitlements.find(

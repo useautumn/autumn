@@ -20,7 +20,7 @@ describe(chalk.yellowBright("applyExistingUsages"), () => {
 			});
 
 			const cusProduct = createMockCustomerProduct({
-				cusEntitlements: [cusEnt],
+				customerEntitlements: [cusEnt],
 			});
 
 			const existingUsages: ExistingUsages = {
@@ -28,7 +28,11 @@ describe(chalk.yellowBright("applyExistingUsages"), () => {
 			};
 
 			// Act
-			applyExistingUsages({ cusProduct, existingUsages, entities: [] });
+			applyExistingUsages({
+				customerProduct: cusProduct,
+				existingUsages,
+				entities: [],
+			});
 
 			// Assert: balance should be 5000 - 1500 = 3500
 			const updatedCusEnt = cusProduct.customer_entitlements.find(

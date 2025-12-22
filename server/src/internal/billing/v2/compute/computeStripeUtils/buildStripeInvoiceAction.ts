@@ -4,10 +4,10 @@ import {
 	isOneOffProduct,
 	type LineItem,
 } from "@autumn/shared";
-import { applyStripeDiscountsToLineItems } from "../../../billingUtils/stripeAdapter/applyStripeDiscounts/applyStripeDiscountsToLineItems";
-import { subToDiscounts } from "../../../billingUtils/stripeAdapter/applyStripeDiscounts/subToDiscounts";
-import { lineItemsToStripeLines } from "../../../billingUtils/stripeAdapter/stripeInvoiceOps/lineItemsToStripeLines";
 import type { AttachContext, StripeSubAction } from "../../typesOld";
+import { applyStripeDiscountsToLineItems } from "../../utils/stripeAdapter/applyStripeDiscounts/applyStripeDiscountsToLineItems";
+import { subToDiscounts } from "../../utils/stripeAdapter/applyStripeDiscounts/subToDiscounts";
+import { lineItemsToStripeLines } from "../../utils/stripeAdapter/stripeInvoiceOps/lineItemsToStripeLines";
 
 export const buildStripeInvoiceAction = ({
 	attachContext,

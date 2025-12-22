@@ -1,4 +1,5 @@
 import type { ExistingRollover } from "@models/billingModels/existingRollovers";
+import type { FreeTrial } from "@models/productModels/freeTrialModels/freeTrialModels";
 import type { ApiVersion } from "../../api/versionUtils/ApiVersion";
 import type { FullCustomer } from "../cusModels/fullCusModel";
 import type {
@@ -15,15 +16,20 @@ export interface InitFullCustomerProductContext {
 	featureQuantities: FeatureOptions[];
 
 	// For customer entitlements
+	resetCycleAnchor: number | "now"; // Unix timestamp of the next
 	existingUsages?: ExistingUsages;
 	existingRollovers?: ExistingRollover[];
+
+	// Others
+	freeTrial: FreeTrial | null;
+	trialEndsAt?: number;
+	now: number; // milliseconds since epoch
 }
 
 export interface InitFullCustomerProductOptions {
 	subscriptionId?: string;
 	subscriptionScheduleId?: string;
 	isCustom?: boolean;
-	resetCycleAnchor?: number; // Unix timestamp of the next
 	canceledAt?: number;
 	status?: CusProductStatus; // Used for scheduling product
 	startsAt?: number; // Used for scheduling product

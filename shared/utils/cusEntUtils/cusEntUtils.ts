@@ -3,8 +3,8 @@ import type { PgDeductionUpdate } from "../../api/balances/track/trackTypes/pgDe
 import type { FullCustomer } from "../../models/cusModels/fullCusModel.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
-import { cusEntToCusPrice } from "../productUtils/convertUtils.js";
 import { isPrepaidPrice } from "../productUtils/priceUtils/classifyPriceUtils.js";
+import { cusEntToCusPrice } from "./convertCusEntUtils/cusEntToCusPrice.js";
 
 export const formatCusEnt = ({
 	cusEnt,

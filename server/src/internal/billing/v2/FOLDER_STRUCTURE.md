@@ -19,15 +19,15 @@ server/src/internal/billing/v2/
 │   ├── compute/                     # Shared compute helpers (server-side)
 │   │   │
 │   │   ├── cusProduct/              # CusProduct initialization
-│   │   │   ├── initFullCusProduct.ts
-│   │   │   ├── initCusProduct.ts
-│   │   │   ├── initCusPrice.ts
-│   │   │   ├── initCusEntitlement/
-│   │   │   │   ├── initCusEntitlement.ts
-│   │   │   │   ├── initCusEntitlementBalance.ts
-│   │   │   │   ├── initCusEntitlementEntities.ts
-│   │   │   │   ├── initCusEntitlementNextResetAt.ts
-│   │   │   │   └── initCusEntUsageAllowed.ts
+│   │   │   ├── initFullCustomerProduct.ts
+│   │   │   ├── initCustomerProduct.ts
+│   │   │   ├── initCustomerPrice.ts
+│   │   │   ├── initCustomerEntitlement/
+│   │   │   │   ├── initCustomerEntitlement.ts
+│   │   │   │   ├── initCustomerEntitlementBalance.ts
+│   │   │   │   ├── initCustomerEntitlementEntities.ts
+│   │   │   │   ├── initCustomerEntitlementNextResetAt.ts
+│   │   │   │   └── initCustomerEntitlementUsageAllowed.ts
 │   │   │   └── index.ts
 │   │   │
 │   │   ├── existingState/           # Handle existing usages/rollovers
@@ -330,7 +330,7 @@ export const handleAttach = createRoute({
 | `billingUtils/stripeAdapter/buildSubItems/*` | `stripe/subItems/*` |
 | `billingUtils/stripeAdapter/stripeInvoiceOps/*` | `stripe/invoice/*` |
 | `billingUtils/stripeAdapter/applyStripeDiscounts/*` | `stripe/discounts/*` |
-| `billingUtils/initFullCusProduct/*` | `cusProduct/*` |
+| `billingUtils/initFullCustomerProduct/*` | `cusProduct/*` |
 
 **Note**: `shared/utils/billingUtils/` stays in place - it's pure calculations used by frontend too.
 
