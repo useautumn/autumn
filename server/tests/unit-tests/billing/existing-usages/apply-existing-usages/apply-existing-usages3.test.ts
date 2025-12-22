@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { EntInterval, type ExistingUsages } from "@autumn/shared";
 import { createMockCusEntitlement } from "@tests/utils/mockUtils/cusEntitlementMocks";
-import { createMockCusProduct } from "@tests/utils/mockUtils/cusProductMocks";
+import { createMockCustomerProduct } from "@tests/utils/mockUtils/cusProductMocks";
 import chalk from "chalk";
 import { applyExistingUsages } from "@/internal/billing/billingUtils/handleExistingUsages/applyExistingUsages";
 
@@ -33,7 +33,7 @@ describe(
 					nextResetAt: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 days from now
 				});
 
-				const cusProduct = createMockCusProduct({
+				const cusProduct = createMockCustomerProduct({
 					cusEntitlements: [monthlyCusEnt, lifetimeCusEnt], // Monthly first in array
 				});
 
@@ -82,7 +82,7 @@ describe(
 					usageAllowed: true,
 				});
 
-				const cusProduct = createMockCusProduct({
+				const cusProduct = createMockCustomerProduct({
 					cusEntitlements: [payPerUseCusEnt, prepaidCusEnt], // Pay-per-use first in array
 				});
 
@@ -135,7 +135,7 @@ describe(
 					nextResetAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
 				});
 
-				const cusProduct = createMockCusProduct({
+				const cusProduct = createMockCustomerProduct({
 					cusEntitlements: [payPerUseMonthly, prepaidMonthly], // Random order
 				});
 
@@ -199,7 +199,7 @@ describe(
 				});
 
 				// Add in random order
-				const cusProduct = createMockCusProduct({
+				const cusProduct = createMockCustomerProduct({
 					cusEntitlements: [payPerUseMonthly, prepaidLifetime, prepaidMonthly],
 				});
 

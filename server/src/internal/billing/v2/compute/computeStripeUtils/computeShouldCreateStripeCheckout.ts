@@ -5,7 +5,7 @@ import {
 	isFreeProduct,
 } from "@autumn/shared";
 import { notNullish } from "../../../../../utils/genUtils";
-import type { AttachContext } from "../../types";
+import type { AttachContext } from "../../typesOld";
 
 export const computeShouldCreateStripeCheckout = ({
 	attachContext,

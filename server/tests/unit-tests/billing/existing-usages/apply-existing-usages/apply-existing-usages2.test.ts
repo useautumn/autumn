@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { ExistingUsages } from "@autumn/shared";
 import { createMockCusEntitlement } from "@tests/utils/mockUtils/cusEntitlementMocks";
-import { createMockCusProduct } from "@tests/utils/mockUtils/cusProductMocks";
+import { createMockCustomerProduct } from "@tests/utils/mockUtils/cusProductMocks";
 import { createMockEntity } from "@tests/utils/mockUtils/entityMocks";
 import chalk from "chalk";
 import { applyExistingUsages } from "@/internal/billing/billingUtils/handleExistingUsages/applyExistingUsages";
@@ -30,7 +30,7 @@ describe(
 					balance: 10,
 				});
 
-				const cusProduct = createMockCusProduct({
+				const cusProduct = createMockCustomerProduct({
 					cusEntitlements: [cusEntA, cusEntB],
 				});
 
@@ -90,7 +90,7 @@ describe(
 					balance: 10,
 				});
 
-				const cusProduct = createMockCusProduct({
+				const cusProduct = createMockCustomerProduct({
 					cusEntitlements: [cusEntA],
 				});
 
@@ -143,7 +143,7 @@ describe(
 					balance: 2,
 				});
 
-				const cusProduct = createMockCusProduct({
+				const cusProduct = createMockCustomerProduct({
 					cusEntitlements: [cusEntA1, cusEntA2],
 				});
 

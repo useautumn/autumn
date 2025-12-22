@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { ExistingRollover } from "@autumn/shared";
 import { createMockCusEntitlement } from "@tests/utils/mockUtils/cusEntitlementMocks";
-import { createMockCusProduct } from "@tests/utils/mockUtils/cusProductMocks";
+import { createMockCustomerProduct } from "@tests/utils/mockUtils/cusProductMocks";
 import chalk from "chalk";
 import { applyExistingRollovers } from "@/internal/billing/billingUtils/handleExistingRollovers/applyExistingRollovers";
 
@@ -15,7 +15,7 @@ describe(chalk.yellowBright("applyExistingRollovers (no matching cusEnt)"), () =
 			balance: 100,
 		});
 
-		const newCusProduct = createMockCusProduct({
+		const newCusProduct = createMockCustomerProduct({
 			cusEntitlements: [cusEnt],
 		});
 

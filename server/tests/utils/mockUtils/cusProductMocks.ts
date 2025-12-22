@@ -1,15 +1,21 @@
 import {
 	CollectionMethod,
 	CusProductStatus,
+	type FeatureOptions,
 	type FullCusProduct,
 	type FullCustomerEntitlement,
+	type FullCustomerPrice,
 } from "@autumn/shared";
 import { createMockProduct } from "./productMocks";
 
-export const createMockCusProduct = ({
-	cusEntitlements,
+export const createMockCustomerProduct = ({
+	customerEntitlements = [],
+	customerPrices = [],
+	options = [],
 }: {
-	cusEntitlements: FullCustomerEntitlement[];
+	customerEntitlements?: FullCustomerEntitlement[];
+	customerPrices?: FullCustomerPrice[];
+	options?: FeatureOptions[];
 }): FullCusProduct => ({
 	id: "cus_prod_test",
 	internal_product_id: "prod_internal",
@@ -25,7 +31,7 @@ export const createMockCusProduct = ({
 	trial_ends_at: null,
 	canceled_at: null,
 	ended_at: null,
-	options: [],
+	options,
 	free_trial_id: null,
 	collection_method: CollectionMethod.ChargeAutomatically,
 	subscription_ids: [],
@@ -33,8 +39,8 @@ export const createMockCusProduct = ({
 	quantity: 1,
 	api_semver: null,
 	is_custom: false,
-	customer_prices: [],
-	customer_entitlements: cusEntitlements,
+	customer_prices: customerPrices,
+	customer_entitlements: customerEntitlements,
 	product: createMockProduct(),
 	free_trial: null,
 });

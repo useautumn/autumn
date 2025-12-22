@@ -3,7 +3,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type {
 	QuantityUpdateDetails,
 	SubscriptionUpdateInvoiceAction,
-} from "../../types";
+} from "../../typesOld";
 
 /**
  * Aggregate invoice items and determine invoice creation strategy.

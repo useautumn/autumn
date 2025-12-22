@@ -4,6 +4,7 @@
 - DO NOT alter .gitignore
 - JS Doc comments should be SHORT and SWEET. Don't need examples unless ABSOLUTELY necessary
 - When using db schemas in Drizzle, import them from '@autumn/shared', and don't do schemas.
+- **Spell out variable names in full form** - avoid abbreviations in variable/function names. Use `customerProduct` not `cusProduct`, `customerEntitlements` not `cusEnts`, `organization` not `org` (in new code). Clarity over brevity.
 
 # Testing
 - When writing tests, ALWAYS read:
@@ -18,6 +19,8 @@
 - This codebase uses Bun as its preferred package manager and Node runtime.
 
 - **ALWAYS import from `zod/v4`**, not from `zod` directly. Example: `import { z } from "zod/v4";`
+
+- **ALWAYS use named import for Decimal.js**: `import { Decimal } from "decimal.js";` NOT `import Decimal from "decimal.js";`
 
 - Always prefer foo({ bar }) over foo(bar) method signatures - no matter if we are using only one argument or not, object as param are always better, as in the future when wanting to change the order of parameters, or add new ones - its easier.
 

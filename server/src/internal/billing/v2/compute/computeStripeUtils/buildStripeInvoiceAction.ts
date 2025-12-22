@@ -7,7 +7,7 @@ import {
 import { applyStripeDiscountsToLineItems } from "../../../billingUtils/stripeAdapter/applyStripeDiscounts/applyStripeDiscountsToLineItems";
 import { subToDiscounts } from "../../../billingUtils/stripeAdapter/applyStripeDiscounts/subToDiscounts";
 import { lineItemsToStripeLines } from "../../../billingUtils/stripeAdapter/stripeInvoiceOps/lineItemsToStripeLines";
-import type { AttachContext, StripeSubAction } from "../../types";
+import type { AttachContext, StripeSubAction } from "../../typesOld";
 
 export const buildStripeInvoiceAction = ({
 	attachContext,

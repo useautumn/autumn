@@ -2,7 +2,6 @@ import {
 	cusProductToArrearLineItems,
 	cusProductToLineItems,
 	type FullCusProduct,
-	type OngoingCusProductAction,
 } from "@autumn/shared";
 
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
@@ -10,13 +9,13 @@ import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
 export const buildAutumnLineItems = ({
 	ctx,
 	newCusProducts,
-	ongoingCusProductAction,
+	ongoingCustomerProduct,
 	billingCycleAnchor,
 	testClockFrozenTime,
 }: {
 	ctx: AutumnContext;
 	newCusProducts: FullCusProduct[];
-	ongoingCusProductAction?: OngoingCusProductAction;
+	ongoingCustomerProduct?: FullCusProduct;
 	billingCycleAnchor?: number;
 	testClockFrozenTime?: number;
 }) => {
@@ -24,11 +23,10 @@ export const buildAutumnLineItems = ({
 	billingCycleAnchor = billingCycleAnchor ?? now;
 
 	const { org } = ctx;
-	const ongoingCusProduct = ongoingCusProductAction?.cusProduct;
 
-	const arrearLineItems = ongoingCusProduct
+	const arrearLineItems = ongoingCustomerProduct
 		? cusProductToArrearLineItems({
-				cusProduct: ongoingCusProduct,
+				cusProduct: ongoingCustomerProduct,
 				billingCycleAnchor: billingCycleAnchor!,
 				now,
 				org,
@@ -36,9 +34,9 @@ export const buildAutumnLineItems = ({
 		: [];
 
 	// Get line items for ongoing cus product
-	const ongoingLineItems = ongoingCusProduct
+	const ongoingLineItems = ongoingCustomerProduct
 		? cusProductToLineItems({
-				cusProduct: ongoingCusProduct,
+				cusProduct: ongoingCustomerProduct,
 				now,
 				billingCycleAnchor: billingCycleAnchor!,
 				direction: "refund",

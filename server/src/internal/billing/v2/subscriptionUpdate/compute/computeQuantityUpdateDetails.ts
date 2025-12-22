@@ -23,7 +23,7 @@ import {
 	shouldProrate,
 } from "@/internal/products/prices/priceUtils/prorationConfigUtils";
 import { notNullish } from "@/utils/genUtils";
-import type { QuantityUpdateDetails } from "../../types";
+import type { QuantityUpdateDetails } from "../../typesOld";
 
 /**
  * Compute all details for a single feature quantity update.

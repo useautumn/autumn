@@ -48,11 +48,6 @@ export const getBillingType = (config: FixedPriceConfig | UsagePriceConfig) => {
 	return BillingType.UsageInArrear;
 };
 
-export const isPrepaidPrice = ({ price }: { price: Price }) => {
-	const billingType = getBillingType(price.config);
-	return billingType === BillingType.UsageInAdvance;
-};
-
 export const hasPrepaidPrice = ({
 	prices,
 	excludeOneOff,

@@ -2,7 +2,7 @@ import type Stripe from "stripe";
 import { createStripeCli } from "../../../../external/connect/createStripeCli";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
 import { notNullish } from "../../../../utils/genUtils";
-import type { StripeCheckoutAction } from "../types";
+import type { StripeCheckoutAction } from "../typesOld";
 
 export const executeStripeCheckoutAction = async ({
 	ctx,

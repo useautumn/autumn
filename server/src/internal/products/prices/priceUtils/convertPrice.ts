@@ -1,16 +1,13 @@
 import {
 	BillingInterval,
 	BillingType,
-	type EntitlementWithFeature,
-	type Feature,
 	type FullProduct,
 	isFixedPrice,
 	type Price,
 	type ProductOptions,
 	UsageModel,
-	type UsagePriceConfig,
 } from "@autumn/shared";
-import { getBillingType, getPriceEntitlement } from "../priceUtils.js";
+import { getBillingType } from "../priceUtils.js";
 
 export const priceToIntervalKey = (price: Price) => {
 	return toIntervalKey({
@@ -50,31 +47,6 @@ export const intervalKeyToPrice = (intervalKey: string) => {
 		interval: interval as BillingInterval,
 		intervalCount: intervalCount ? parseInt(intervalCount) : 1,
 	};
-};
-
-export const priceToFeature = ({
-	price,
-	ents,
-	features,
-}: {
-	price: Price;
-	ents?: EntitlementWithFeature[];
-	features?: Feature[];
-}) => {
-	if (!features && !ents) {
-		throw new Error("priceToFeature requires either ents or features as arg");
-	}
-
-	if (features) {
-		return features.find(
-			(f) =>
-				f.internal_id ===
-				(price.config as UsagePriceConfig).internal_feature_id,
-		);
-	}
-
-	const ent = getPriceEntitlement(price, ents!);
-	return ent?.feature;
 };
 
 export const priceToUsageModel = (price: Price) => {

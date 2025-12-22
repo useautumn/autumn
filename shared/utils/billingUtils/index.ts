@@ -9,3 +9,4 @@ export * from "./invoicingUtils/lineItemBuilders/usagePriceToLineItem";
 export * from "./invoicingUtils/lineItemUtils/priceToLineAmount";
 export * from "./invoicingUtils/lineItemUtils/tiersToLineAmount";
 export * from "./invoicingUtils/prorationUtils/applyProration";
+export * from "./usageUtils/roundUsageToNearestBillingUnit";

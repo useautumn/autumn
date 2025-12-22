@@ -5,7 +5,7 @@ import {
 } from "@shared/index";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "../../compute/computeAutumnUtils/buildAutumnLineItems";
-import type { SubscriptionUpdateQuantityPlan } from "../../types";
+import type { SubscriptionUpdateQuantityPlan } from "../../typesOld";
 import type { UpdateSubscriptionContext } from "../fetch/updateSubscriptionContextSchema";
 import { computeInvoiceAction } from "./computeInvoiceAction";
 import { computeQuantityUpdateDetails } from "./computeQuantityUpdateDetails";

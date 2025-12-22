@@ -6,7 +6,7 @@ import type {
 import type Stripe from "stripe";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
 import { buildSubItemUpdate } from "../../../billingUtils/stripeAdapter/buildSubItems/buildSubItemUpdate";
-import type { StripeSubAction } from "../../types";
+import type { StripeSubAction } from "../../typesOld";
 
 export const buildStripeSubAction = ({
 	ctx,

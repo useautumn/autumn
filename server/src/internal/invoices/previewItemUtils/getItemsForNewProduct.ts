@@ -10,10 +10,12 @@ import {
 	type IntervalConfig,
 	isFixedPrice,
 	isOneOffPrice,
+	isPrepaidPrice,
 	isUsagePrice,
 	type Organization,
 	type PreviewLineItem,
 	type Price,
+	priceToFeature,
 	priceToInvoiceAmount,
 	toProductItem,
 	UsageModel,
@@ -27,16 +29,12 @@ import {
 	getAlignedUnix,
 	getPeriodStartForEnd,
 } from "@/internal/products/prices/billingIntervalUtils2.js";
-import {
-	priceToFeature,
-	priceToUsageModel,
-} from "@/internal/products/prices/priceUtils/convertPrice.js";
+import { priceToUsageModel } from "@/internal/products/prices/priceUtils/convertPrice.js";
 import { sortPricesByType } from "@/internal/products/prices/priceUtils/sortPriceUtils.js";
 import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
 import type { AttachParams } from "../../customers/cusProducts/AttachParams.js";
 import { getPricecnPrice } from "../../products/pricecn/pricecnUtils.js";
 import { subtractIntervalForProration } from "../../products/prices/billingIntervalUtils.js";
-import { isPrepaidPrice } from "../../products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 
 import {
 	formatPrice,
@@ -242,7 +240,7 @@ export const getItemsForNewProduct = async ({
 			continue;
 		}
 
-		if (withPrepaid && isPrepaidPrice({ price })) {
+		if (withPrepaid && isPrepaidPrice(price)) {
 			const options = getPriceOptions(price, attachParams.optionsList);
 			const quantity = notNullish(options?.quantity) ? options?.quantity : 1;
 

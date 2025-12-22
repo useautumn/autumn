@@ -4,7 +4,7 @@ import type { FullCustomer } from "../../models/cusModels/fullCusModel.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 import { cusEntToCusPrice } from "../productUtils/convertUtils.js";
-import { isPrepaidPrice } from "../productUtils/priceUtils.js";
+import { isPrepaidPrice } from "../productUtils/priceUtils/classifyPriceUtils.js";
 
 export const formatCusEnt = ({
 	cusEnt,
@@ -80,7 +80,7 @@ export const isPrepaidCusEnt = ({
 }) => {
 	// 2. If cus ent is not prepaid, skip
 	const cusPrice = cusEntToCusPrice({ cusEnt });
-	if (!cusPrice || !isPrepaidPrice({ price: cusPrice.price })) return false;
+	if (!cusPrice || !isPrepaidPrice(cusPrice.price)) return false;
 
 	// 3. Get quantity
 	const options = cusEnt.customer_product.options.find(
