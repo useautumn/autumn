@@ -32,6 +32,9 @@ export const migrateRevenueCatCustomer = async ({
 	env: AppEnv;
 }) => {
 	const { logger } = req;
+	fullCus.customer_products = fullCus.customer_products.filter(
+		(cp) => cp.processor?.type === ProcessorType.RevenueCat,
+	);
 
 	// Debug: Log the old cusProduct dates
 	logger.info(`[RC Migration] Old cusProduct dates:`, {

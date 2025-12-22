@@ -69,17 +69,20 @@ export const resolveRevenuecatResources = async ({
 				}),
 	]);
 
-	const cusProducts = customer.customer_products;
-
 	if (
-		cusProducts.some((cp) => cp.processor?.type !== ProcessorType.RevenueCat)
+		customer.customer_products.some(
+			(cp) => cp.processor?.type !== ProcessorType.RevenueCat,
+		)
 	) {
 		throw new RecaseError({
-			message: "Customer already has a product from a different processor.",
-			code: ErrCode.CustomerAlreadyHasProduct,
-			statusCode: 400,
+			message:
+				"Customer already has a product from a different processor than RevenueCat.",
 		});
 	}
+
+	const cusProducts = customer.customer_products.filter(
+		(cp) => cp.processor?.type === ProcessorType.RevenueCat,
+	);
 
 	return { product, customer, cusProducts };
 };

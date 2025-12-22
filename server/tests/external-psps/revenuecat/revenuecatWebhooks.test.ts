@@ -18,6 +18,10 @@ import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import {
+	expectWebhookSuccess,
+	RevenueCatWebhookClient,
+} from "./utils/RevenueCatWebhookClient.js";
 
 const testCase = "rc1";
 const RC_WEBHOOK_SECRET = "test_rc_webhook_secret_12345";
@@ -71,6 +75,7 @@ describe(chalk.yellowBright("rc1: RevenueCat webhook integration"), () => {
 	const autumnV1 = new AutumnInt({ version: ApiVersion.V1_2 });
 	let proMonthlyCusProductId: string | null = null;
 	let internalCustomerId: string | null = null;
+	let rcClient: RevenueCatWebhookClient;
 
 	const fetchLatestActiveCusProductId = async () => {
 		if (!internalCustomerId) {
@@ -160,6 +165,13 @@ describe(chalk.yellowBright("rc1: RevenueCat webhook integration"), () => {
 			});
 		}
 
+		// Initialize RevenueCat webhook client
+		rcClient = new RevenueCatWebhookClient({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			webhookSecret: RC_WEBHOOK_SECRET,
+		});
+
 		// 2-4. Create products, mappings, and customer concurrently
 		await Promise.all([
 			initProductsV0({
@@ -209,34 +221,12 @@ describe(chalk.yellowBright("rc1: RevenueCat webhook integration"), () => {
 	});
 
 	test("should create customer with pro monthly product", async () => {
-		const response = await fetch(
-			`http://localhost:8080/webhooks/revenuecat/${ctx.org.id}/${ctx.env}`,
-			{
-				method: "POST",
-				body: JSON.stringify({
-					event: {
-						type: "INITIAL_PURCHASE",
-						product_id: RC_PRO_MONTHLY_ID,
-						app_user_id: customerId,
-						original_transaction_id: "1234567890",
-					},
-				}),
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: RC_WEBHOOK_SECRET,
-				},
-			},
-		);
-		const respData = await response.json();
-
-		expect(
-			response.status,
-			`Response status should be 200, got ${response.status}`,
-		).toBe(200);
-		expect(
-			respData,
-			`Response data should be success: true. Recieved: ${JSON.stringify(respData)}`,
-		).toEqual({ success: true });
+		const result = await rcClient.initialPurchase({
+			productId: RC_PRO_MONTHLY_ID,
+			appUserId: customerId,
+			originalTransactionId: "1234567890",
+		});
+		expectWebhookSuccess(result);
 
 		const customer = await autumnV1.customers.get(customerId);
 		expect(customer).toBeDefined();
@@ -248,34 +238,13 @@ describe(chalk.yellowBright("rc1: RevenueCat webhook integration"), () => {
 	});
 
 	test("should upgrade customer to pro yearly product upon renewal", async () => {
-		const response = await fetch(
-			`http://localhost:8080/webhooks/revenuecat/${ctx.org.id}/${ctx.env}`,
-			{
-				method: "POST",
-				body: JSON.stringify({
-					event: {
-						type: "RENEWAL",
-						product_id: RC_PRO_YEARLY_ID,
-						app_user_id: customerId,
-						original_transaction_id: "1234567890",
-					},
-				}),
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: RC_WEBHOOK_SECRET,
-				},
-			},
-		);
-		const respData = await response.json();
+		const result = await rcClient.renewal({
+			productId: RC_PRO_YEARLY_ID,
+			appUserId: customerId,
+			originalTransactionId: "1234567890",
+		});
+		expectWebhookSuccess(result);
 
-		expect(
-			response.status,
-			`Response status should be 200, got ${response.status}`,
-		).toBe(200);
-		expect(
-			respData,
-			`Response data should be success: true. Recieved: ${JSON.stringify(respData)}`,
-		).toEqual({ success: true });
 		await fetchLatestActiveCusProductId();
 		const customer = await autumnV1.customers.get(customerId);
 		expect(customer).toBeDefined();
@@ -285,34 +254,12 @@ describe(chalk.yellowBright("rc1: RevenueCat webhook integration"), () => {
 	});
 
 	test("should downgrade customer to pro monthly product upon initial purchase", async () => {
-		const response = await fetch(
-			`http://localhost:8080/webhooks/revenuecat/${ctx.org.id}/${ctx.env}`,
-			{
-				method: "POST",
-				body: JSON.stringify({
-					event: {
-						type: "INITIAL_PURCHASE",
-						product_id: RC_PRO_MONTHLY_ID,
-						app_user_id: customerId,
-						original_transaction_id: "1234567890",
-					},
-				}),
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: RC_WEBHOOK_SECRET,
-				},
-			},
-		);
-		const respData = await response.json();
-
-		expect(
-			response.status,
-			`Response status should be 200, got ${response.status}`,
-		).toBe(200);
-		expect(
-			respData,
-			`Response data should be success: true. Recieved: ${JSON.stringify(respData)}`,
-		).toEqual({ success: true });
+		const result = await rcClient.initialPurchase({
+			productId: RC_PRO_MONTHLY_ID,
+			appUserId: customerId,
+			originalTransactionId: "1234567890",
+		});
+		expectWebhookSuccess(result);
 
 		const customer = await autumnV1.customers.get(customerId);
 		expect(customer).toBeDefined();
@@ -327,35 +274,13 @@ describe(chalk.yellowBright("rc1: RevenueCat webhook integration"), () => {
 	});
 
 	test("should go to cancelling state upon cancellation", async () => {
-		const response = await fetch(
-			`http://localhost:8080/webhooks/revenuecat/${ctx.org.id}/${ctx.env}`,
-			{
-				method: "POST",
-				body: JSON.stringify({
-					event: {
-						type: "CANCELLATION",
-						product_id: RC_PRO_MONTHLY_ID,
-						app_user_id: customerId,
-						original_transaction_id: "1234567890",
-						expiration_at_ms: Date.now() + 1000 * 60 * 60 * 24 * 30,
-					},
-				}),
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: RC_WEBHOOK_SECRET,
-				},
-			},
-		);
-		const respData = await response.json();
-
-		expect(
-			response.status,
-			`Response status should be 200, got ${response.status}`,
-		).toBe(200);
-		expect(
-			respData,
-			`Response data should be success: true. Recieved: ${JSON.stringify(respData)}`,
-		).toEqual({ success: true });
+		const result = await rcClient.cancellation({
+			productId: RC_PRO_MONTHLY_ID,
+			appUserId: customerId,
+			originalTransactionId: "1234567890",
+			expirationAtMs: Date.now() + 1000 * 60 * 60 * 24 * 30,
+		});
+		expectWebhookSuccess(result);
 
 		const customer = await autumnV1.customers.get(customerId);
 		expect(customer).toBeDefined();
@@ -371,34 +296,11 @@ describe(chalk.yellowBright("rc1: RevenueCat webhook integration"), () => {
 	});
 
 	test("should uncancel customer after cancellation event", async () => {
-		const response = await fetch(
-			`http://localhost:8080/webhooks/revenuecat/${ctx.org.id}/${ctx.env}`,
-			{
-				method: "POST",
-				body: JSON.stringify({
-					event: {
-						type: "UNCANCELLATION",
-						product_id: RC_PRO_MONTHLY_ID,
-						app_user_id: customerId,
-					},
-				}),
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: RC_WEBHOOK_SECRET,
-				},
-			},
-		);
-
-		const respData = await response.json();
-
-		expect(
-			response.status,
-			`Response status should be 200, got ${response.status}`,
-		).toBe(200);
-		expect(
-			respData,
-			`Response data should be success: true. Recieved: ${JSON.stringify(respData)}`,
-		).toEqual({ success: true });
+		const result = await rcClient.uncancellation({
+			productId: RC_PRO_MONTHLY_ID,
+			appUserId: customerId,
+		});
+		expectWebhookSuccess(result);
 
 		const customer = await autumnV1.customers.get(customerId);
 		expect(customer).toBeDefined();
@@ -412,34 +314,12 @@ describe(chalk.yellowBright("rc1: RevenueCat webhook integration"), () => {
 	});
 
 	test("should go to expired state upon expiration", async () => {
-		const response = await fetch(
-			`http://localhost:8080/webhooks/revenuecat/${ctx.org.id}/${ctx.env}`,
-			{
-				method: "POST",
-				body: JSON.stringify({
-					event: {
-						type: "EXPIRATION",
-						product_id: RC_PRO_MONTHLY_ID,
-						app_user_id: customerId,
-						original_transaction_id: "1234567890",
-					},
-				}),
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: RC_WEBHOOK_SECRET,
-				},
-			},
-		);
-		const respData = await response.json();
-
-		expect(
-			response.status,
-			`Response status should be 200, got ${response.status}`,
-		).toBe(200);
-		expect(
-			respData,
-			`Response data should be success: true. Recieved: ${JSON.stringify(respData)}`,
-		).toEqual({ success: true });
+		const result = await rcClient.expiration({
+			productId: RC_PRO_MONTHLY_ID,
+			appUserId: customerId,
+			originalTransactionId: "1234567890",
+		});
+		expectWebhookSuccess(result);
 
 		const customer = await autumnV1.customers.get(customerId);
 		expect(customer).toBeDefined();
@@ -462,34 +342,12 @@ describe(chalk.yellowBright("rc1: RevenueCat webhook integration"), () => {
 	});
 
 	test("should attach add-on product after expiration via non-renewing purchase", async () => {
-		const response = await fetch(
-			`http://localhost:8080/webhooks/revenuecat/${ctx.org.id}/${ctx.env}`,
-			{
-				method: "POST",
-				body: JSON.stringify({
-					event: {
-						type: "NON_RENEWING_PURCHASE",
-						product_id: RC_ADD_ON_ID,
-						app_user_id: customerId,
-						original_transaction_id: "add_on_tx_12345",
-					},
-				}),
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: RC_WEBHOOK_SECRET,
-				},
-			},
-		);
-		const respData = await response.json();
-
-		expect(
-			response.status,
-			`Response status should be 200, got ${response.status}`,
-		).toBe(200);
-		expect(
-			respData,
-			`Response data should be success: true. Recieved: ${JSON.stringify(respData)}`,
-		).toEqual({ success: true });
+		const result = await rcClient.nonRenewingPurchase({
+			productId: RC_ADD_ON_ID,
+			appUserId: customerId,
+			originalTransactionId: "add_on_tx_12345",
+		});
+		expectWebhookSuccess(result);
 
 		const customer = await autumnV1.customers.get(customerId);
 		expect(customer).toBeDefined();

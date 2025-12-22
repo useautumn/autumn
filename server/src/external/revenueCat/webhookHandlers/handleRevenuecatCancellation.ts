@@ -1,5 +1,5 @@
 import type { WebhookCancellation } from "@puzzmo/revenue-cat-webhook-types";
-import { ErrCode, ProcessorType, RecaseError } from "@shared/index";
+import { ErrCode, RecaseError } from "@shared/index";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
@@ -26,8 +26,6 @@ export const handleCancellation = async ({
 	const { curSameProduct } = getExistingCusProducts({
 		product,
 		cusProducts,
-		processorType: ProcessorType.RevenueCat,
-		internalEntityId: undefined,
 	});
 
 	if (!curSameProduct) {

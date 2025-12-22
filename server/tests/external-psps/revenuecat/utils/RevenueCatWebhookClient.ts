@@ -105,7 +105,8 @@ export class RevenueCatWebhookClient {
 				app_user_id: appUserId,
 				original_app_user_id: originalAppUserId,
 				original_transaction_id:
-					originalTransactionId ?? `tx_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+					originalTransactionId ??
+					`tx_${Date.now()}_${Math.random().toString(36).slice(2)}`,
 			},
 		});
 	}
@@ -131,7 +132,8 @@ export class RevenueCatWebhookClient {
 				app_user_id: appUserId,
 				original_app_user_id: originalAppUserId,
 				original_transaction_id:
-					originalTransactionId ?? `tx_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+					originalTransactionId ??
+					`tx_${Date.now()}_${Math.random().toString(36).slice(2)}`,
 			},
 		});
 	}
@@ -158,9 +160,11 @@ export class RevenueCatWebhookClient {
 				product_id: productId,
 				app_user_id: appUserId,
 				original_app_user_id: originalAppUserId,
-				expiration_at_ms: expirationAtMs ?? Date.now() + 1000 * 60 * 60 * 24 * 30, // Default: 30 days
+				expiration_at_ms:
+					expirationAtMs ?? Date.now() + 1000 * 60 * 60 * 24 * 30, // Default: 30 days
 				original_transaction_id:
-					originalTransactionId ?? `tx_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+					originalTransactionId ??
+					`tx_${Date.now()}_${Math.random().toString(36).slice(2)}`,
 			},
 		});
 	}
@@ -211,7 +215,8 @@ export class RevenueCatWebhookClient {
 				original_app_user_id: originalAppUserId,
 				expiration_at_ms: expirationAtMs,
 				original_transaction_id:
-					originalTransactionId ?? `tx_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+					originalTransactionId ??
+					`tx_${Date.now()}_${Math.random().toString(36).slice(2)}`,
 			},
 		});
 	}
@@ -237,7 +242,8 @@ export class RevenueCatWebhookClient {
 				app_user_id: appUserId,
 				original_app_user_id: originalAppUserId,
 				original_transaction_id:
-					originalTransactionId ?? `tx_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+					originalTransactionId ??
+					`tx_${Date.now()}_${Math.random().toString(36).slice(2)}`,
 			},
 		});
 	}
@@ -263,7 +269,8 @@ export class RevenueCatWebhookClient {
 				app_user_id: appUserId,
 				original_app_user_id: originalAppUserId,
 				original_transaction_id:
-					originalTransactionId ?? `tx_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+					originalTransactionId ??
+					`tx_${Date.now()}_${Math.random().toString(36).slice(2)}`,
 			},
 		});
 	}
@@ -292,7 +299,8 @@ export class RevenueCatWebhookClient {
 				app_user_id: appUserId,
 				original_app_user_id: originalAppUserId,
 				original_transaction_id:
-					originalTransactionId ?? `tx_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+					originalTransactionId ??
+					`tx_${Date.now()}_${Math.random().toString(36).slice(2)}`,
 			},
 		});
 	}
@@ -319,4 +327,3 @@ export const expectWebhookSuccess = ({
 		);
 	}
 };
-
