@@ -1,10 +1,5 @@
 import type { WebhookExpiration } from "@puzzmo/revenue-cat-webhook-types";
-import {
-	CusProductStatus,
-	ErrCode,
-	ProcessorType,
-	RecaseError,
-} from "@shared/index";
+import { CusProductStatus, ErrCode, RecaseError } from "@shared/index";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
@@ -32,8 +27,6 @@ export const handleExpiration = async ({
 	const { curSameProduct } = getExistingCusProducts({
 		product,
 		cusProducts,
-		internalEntityId: undefined,
-		processorType: ProcessorType.RevenueCat,
 	});
 
 	if (!curSameProduct) {

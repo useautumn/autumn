@@ -20,6 +20,7 @@ import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { expectFeaturesCorrect } from "../../utils/expectUtils/expectFeaturesCorrect.js";
 import { timeout } from "../../utils/genUtils.js";
 import {
 	expectWebhookSuccess,
@@ -44,6 +45,19 @@ const proMonthlyV1 = constructProduct({
 	items: [messagesFeature],
 	isDefault: false,
 });
+
+const proMonthlyV2 = {
+	...proMonthlyV1,
+	version: 2,
+	items: replaceItems({
+		items: proMonthlyV1.items,
+		featureId: TestFeature.Messages,
+		newItem: constructFeatureItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 2000,
+		}),
+	}),
+};
 
 describe(
 	chalk.yellowBright("rcMigration1: RevenueCat customer migration"),
@@ -174,43 +188,24 @@ describe(
 				to_version: 2,
 			});
 
-			// Wait for migration to complete
-			await new Promise((resolve) => setTimeout(resolve, 4000));
+			await timeout(5000);
 
-			// Verify customer now has v2 product
-			const cusProducts = await CusProductService.list({
-				db: ctx.db,
-				internalCustomerId: internalCustomerId!,
-				inStatuses: [CusProductStatus.Active],
+			const customer = await autumnV1.customers.get(customerId);
+			expect(customer).toBeDefined();
+			expect(customer.products).toHaveLength(1);
+			expect(customer.products[0].id).toBe(proMonthlyV1.id);
+			expect(customer.products[0].version).toBe(2);
+
+			expectFeaturesCorrect({
+				customer,
+				product: proMonthlyV2,
+				usage: [
+					{
+						featureId: TestFeature.Messages,
+						value: 500,
+					},
+				],
 			});
-
-			expect(cusProducts).toHaveLength(1);
-			expect(cusProducts[0].processor?.type).toBe(ProcessorType.RevenueCat);
-
-			// Verify old cus_product is expired
-			const allCusProducts = await CusProductService.list({
-				db: ctx.db,
-				internalCustomerId: internalCustomerId!,
-				inStatuses: undefined,
-			});
-
-			const expiredCusProducts = allCusProducts.filter(
-				(cp) => cp.status === CusProductStatus.Expired,
-			);
-			expect(expiredCusProducts.length).toBeGreaterThanOrEqual(1);
 		});
-
-		// test("should have correct entitlements after migration", async () => {
-		// 	const customer = await autumnV1.customers.get(customerId);
-
-		// 	expect(customer).toBeDefined();
-		// 	expect(customer.products).toHaveLength(1);
-		// 	expect(customer.products[0].id).toBe(proMonthlyV1.id);
-
-		// 	// Verify the new entitlements (2000 messages from v2)
-		// 	const messagesFeature = customer.features[TestFeature.Messages];
-		// 	expect(messagesFeature).toBeDefined();
-		// 	expect(messagesFeature.balance).toBe(2000);
-		// });
 	},
 );

@@ -1,7 +1,6 @@
 import {
 	CusProductStatus,
 	type FullCusProduct,
-	ProcessorType,
 	type Product,
 	RELEVANT_STATUSES,
 } from "@autumn/shared";
@@ -12,12 +11,12 @@ export const getExistingCusProducts = ({
 	product,
 	cusProducts,
 	internalEntityId,
-	processorType = ProcessorType.Stripe,
+	// processorType = ProcessorType.Stripe,
 }: {
 	product: Product;
 	cusProducts: FullCusProduct[];
 	internalEntityId?: string | null;
-	processorType?: ProcessorType;
+	// processorType?: ProcessorType;
 }) => {
 	if (!cusProducts || cusProducts.length === 0 || !product) {
 		return {
@@ -28,9 +27,9 @@ export const getExistingCusProducts = ({
 	}
 
 	const curMainProduct = cusProducts.find((cp: FullCusProduct) => {
-		const sameProcessor = cp.processor?.type
-			? cp.processor.type === processorType
-			: true;
+		// const sameProcessor = cp.processor?.type
+		// 	? cp.processor.type === processorType
+		// 	: true;
 		const sameGroup = cp.product.group === product.group;
 		const isMain = !cp.product.is_add_on;
 		const isActive =
@@ -43,13 +42,10 @@ export const getExistingCusProducts = ({
 			? cp.internal_entity_id === internalEntityId
 			: nullish(cp.internal_entity_id);
 
-		return (
-			sameGroup && isMain && isActive && !oneOff && sameEntity && sameProcessor
-		);
+		return sameGroup && isMain && isActive && !oneOff && sameEntity;
 	});
 
 	const curSameProduct = cusProducts!.find((cp: any) => {
-		const sameProcessor = cp.processor?.type === processorType;
 		const idMatch = cp.product.id === product.id;
 		const entityMatch = internalEntityId
 			? cp.internal_entity_id === internalEntityId
@@ -57,12 +53,11 @@ export const getExistingCusProducts = ({
 
 		const isRelevant = RELEVANT_STATUSES.includes(cp.status);
 
-		return sameProcessor && idMatch && entityMatch && isRelevant;
+		return idMatch && entityMatch && isRelevant;
 	});
 
 	const curScheduledProduct = cusProducts!.find(
 		(cp: any) =>
-			cp.processor?.type === processorType &&
 			cp.status === CusProductStatus.Scheduled &&
 			cp.product.group === product.group &&
 			!cp.product.is_add_on &&

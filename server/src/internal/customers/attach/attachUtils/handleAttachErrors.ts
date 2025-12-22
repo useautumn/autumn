@@ -3,6 +3,7 @@ import {
 	AttachBranch,
 	type AttachConfig,
 	BillingType,
+	cusProductToProcessorType,
 	ErrCode,
 	ProcessorType,
 	RecaseError,
@@ -166,7 +167,7 @@ export const handleExternalPSPErrors = ({
 }) => {
 	if (
 		attachParams.customer.customer_products.some(
-			(cp) => cp.processor?.type !== ProcessorType.Stripe,
+			(cp) => cusProductToProcessorType(cp) !== ProcessorType.Stripe,
 		)
 	) {
 		throw new RecaseError({

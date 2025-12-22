@@ -40,7 +40,6 @@ export const handleInitialPurchase = async ({
 	const { curSameProduct, curMainProduct } = getExistingCusProducts({
 		product,
 		cusProducts,
-		processorType: ProcessorType.RevenueCat,
 	});
 
 	// If same product already exists, skip
