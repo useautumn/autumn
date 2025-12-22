@@ -1,12 +1,13 @@
 import {
 	CusProductNotFoundError,
+	cusProductToProcessorType,
 	ErrCode,
 	type FullCusProduct,
 	ProcessorType,
+	RecaseError,
 } from "@autumn/shared";
 import { Router } from "express";
 import { CusService } from "@/internal/customers/CusService.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
@@ -65,14 +66,7 @@ cancelRouter.post("", async (req, res) =>
 					? cusProduct.id === customer_product_id
 					: true;
 
-				const processorTypeMatch =
-					cusProduct.processor?.type !== ProcessorType.RevenueCat;
-				return (
-					productIdMatch &&
-					entityMatch &&
-					cusProductIdMatch &&
-					processorTypeMatch
-				);
+				return productIdMatch && entityMatch && cusProductIdMatch;
 			});
 
 			if (!cusProduct) {
@@ -80,6 +74,12 @@ cancelRouter.post("", async (req, res) =>
 					customerId: customer_id,
 					productId: product_id,
 					entityId: entity_id,
+				});
+			}
+
+			if (cusProductToProcessorType(cusProduct) === ProcessorType.RevenueCat) {
+				throw new RecaseError({
+					message: `Cannot cancel '${cusProduct.product.name}' because it is managed by RevenueCat.`,
 				});
 			}
 
