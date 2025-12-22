@@ -1,34 +1,33 @@
 import type Stripe from "stripe";
-import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type {
 	QuantityUpdateDetails,
 	SubscriptionUpdateInvoiceAction,
 } from "../../types";
 
 /**
- * Aggregate invoice items and determine invoice creation strategy.
- * PURE FUNCTION - no side effects, only calculations.
+ * Computes invoice action for quantity updates requiring proration.
  *
- * Extracted from:
- * - handleQuantityUpgrade.ts:79-164
- * - handleQuantityDowngrade.ts:78-165
+ * Filters details with proration, creates invoice items, and determines charge timing.
+ *
+ * @param quantityUpdateDetails - Array of quantity update details
+ * @param stripeSubscription - Stripe subscription being updated
+ * @param paymentMethod - Optional payment method for immediate charges
+ * @param shouldGenerateInvoiceOnly - If true, skip immediate charge
+ * @returns Invoice action with items and charge strategy, or undefined if no invoice needed
  */
 export const computeInvoiceAction = ({
-	ctx,
 	quantityUpdateDetails,
 	stripeSubscription,
-	stripeCustomerId,
 	paymentMethod,
 	shouldGenerateInvoiceOnly,
 }: {
-	ctx: AutumnContext;
 	quantityUpdateDetails: QuantityUpdateDetails[];
 	stripeSubscription: Stripe.Subscription;
-	stripeCustomerId: string;
 	paymentMethod?: Stripe.PaymentMethod;
 	shouldGenerateInvoiceOnly?: boolean;
 }): SubscriptionUpdateInvoiceAction | undefined => {
-	if (stripeSubscription.status === "trialing") {
+	const invoiceExists = stripeSubscription.latest_invoice !== null;
+	if (!invoiceExists) {
 		return undefined;
 	}
 
