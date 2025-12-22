@@ -8,6 +8,7 @@ import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import LoadingScreen from "../general/LoadingScreen";
 import { ApiKeysPage } from "./api-keys/ApiKeysPage";
+import { ConfigureRevenueCat } from "./configure-revenuecat/ConfigureRevenueCat";
 import { ConfigureStripe } from "./configure-stripe/ConfigureStripe";
 import { ConfigureVercel } from "./configure-vercel/ConfigureVercel";
 import { PublishableKeySection } from "./publishable-key";
@@ -17,7 +18,7 @@ export default function DevScreen() {
 	const { queryStates } = useAppQueryStates({ defaultTab: "api_keys" });
 
 	const tab = queryStates.tab;
-	const { pkey, webhooks, vercel } = useAutumnFlags();
+	const { pkey, webhooks, vercel, revenuecat } = useAutumnFlags();
 
 	if (isLoading) return <LoadingScreen />;
 
@@ -38,6 +39,8 @@ export default function DevScreen() {
 			)}
 
 			{tab === "vercel" && vercel && <ConfigureVercel />}
+
+			{tab === "revenuecat" && revenuecat && <ConfigureRevenueCat />}
 		</div>
 	);
 }

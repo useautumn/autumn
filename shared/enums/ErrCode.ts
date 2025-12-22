@@ -167,4 +167,7 @@ export const ErrCode = {
 	VercelSubscriptionAlreadyExists: "vercel_subscription_already_exists",
 	VercelSubscriptionNotFound: "vercel_subscription_not_found",
 	VercelResourceNotFound: "vercel_resource_not_found",
+
+	// Products
+	ProductNotFound: "product_not_found",
 };
