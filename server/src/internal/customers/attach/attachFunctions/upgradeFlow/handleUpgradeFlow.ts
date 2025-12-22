@@ -4,6 +4,7 @@ import {
 	AttachFunctionResponseSchema,
 	AttachScenario,
 	CusProductStatus,
+	cusProductToPrices,
 	cusProductToProduct,
 	ProrationBehavior,
 	SuccessCode,
@@ -21,7 +22,10 @@ import {
 	attachToInvoiceResponse,
 	insertInvoiceFromAttach,
 } from "@/internal/invoices/invoiceUtils.js";
-import { attachToInsertParams } from "@/internal/products/productUtils.js";
+import {
+	attachToInsertParams,
+	isOneOff,
+} from "@/internal/products/productUtils.js";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 import {
 	attachParamsToCurCusProduct,
@@ -179,7 +183,10 @@ export const handleUpgradeFlow = async ({
 		latestInvoice = res.latestInvoice || undefined;
 	}
 
-	if (curCusProduct) {
+	if (
+		curCusProduct &&
+		!isOneOff(cusProductToPrices({ cusProduct: curCusProduct }))
+	) {
 		logger.info(`UPGRADE FLOW: expiring previous cus product`);
 		await CusProductService.update({
 			db,
