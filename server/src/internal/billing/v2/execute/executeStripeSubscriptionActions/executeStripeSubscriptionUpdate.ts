@@ -5,10 +5,6 @@ import type { StripeSubAction } from "../../typesOld";
 /**
  * Execute Stripe subscription item updates.
  * Handles creating, updating, and deleting subscription items.
- *
- * Extracted from:
- * - handleQuantityUpgrade.ts:168-187
- * - handleQuantityDowngrade.ts:168-172
  */
 export const executeStripeSubscriptionUpdate = async ({
 	ctx,

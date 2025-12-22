@@ -7,6 +7,15 @@ import { executeStripeSubAction } from "../../execute/executeStripeSubAction";
 import { executeStripeSubscriptionUncancel } from "../../execute/executeStripeSubscriptionActions/executeStripeSubscriptionUncancel";
 import type { UpdateSubscriptionContext } from "../fetch/updateSubscriptionContextSchema";
 
+/**
+ * Executes the subscription update flow in stripe & autumn using context & plan.
+ *
+ * @param ctx - The context object.
+ * @param params - The parameters for the subscription update.
+ * @param updateSubscriptionContext - The context object for the subscription update.
+ * @param subscriptionUpdatePlan - The plan for the subscription update.
+ * @returns A promise that resolves when the subscription update is complete.
+ */
 export const executeSubscriptionUpdate = async ({
 	ctx,
 	params,
