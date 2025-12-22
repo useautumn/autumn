@@ -119,7 +119,6 @@ export const BasePriceSection = ({
 						onValueChange={(value) => {
 							//if usage based, remove the base price item
 							if (value === "usage") {
-								console.log("hey");
 								setProduct({
 									...product,
 									basePriceType: "usage",
