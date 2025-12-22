@@ -10,28 +10,9 @@ type EventRow = Record<string, string | number>;
  * Events data structure from the API
  */
 interface EventsData {
-	meta: Array<{ name: string }>;
+	meta?: Array<{ name: string }>;
 	rows: number;
 	data: EventRow[];
-}
-
-/**
- * Ensures events data has a meta property by building it from the first data row if missing
- */
-function ensureMeta(events: EventsData): EventsData {
-	if (events.meta && events.meta.length > 0) {
-		return events;
-	}
-
-	if (!events.data || events.data.length === 0) {
-		return { ...events, meta: [], rows: 0 };
-	}
-
-	return {
-		...events,
-		meta: Object.keys(events.data[0]).map((key) => ({ name: key })),
-		rows: events.rows ?? events.data.length,
-	};
 }
 
 /**
@@ -107,23 +88,30 @@ export function transformGroupedData({
 	events: EventsData;
 	groupBy: string | null;
 }): EventsData {
-	// Ensure meta exists
-	events = ensureMeta(events);
-
 	if (!groupBy) {
+		return events;
+	}
+
+	if (!events.data || events.data.length === 0) {
 		return events;
 	}
 
 	const groupByColumn = `properties.${groupBy}`;
 
+	// Build meta from first row if not present
+	const meta =
+		events.meta && events.meta.length > 0
+			? events.meta
+			: Object.keys(events.data[0]).map((key) => ({ name: key }));
+
 	// Check if data has the group_by column
-	const hasGroupColumn = events.meta.some((m) => m.name === groupByColumn);
+	const hasGroupColumn = meta.some((m) => m.name === groupByColumn);
 	if (!hasGroupColumn) {
-		return events;
+		return { ...events, meta };
 	}
 
 	// Get feature columns (exclude period and group_by column)
-	const featureColumns = events.meta
+	const featureColumns = meta
 		.filter((m) => m.name !== "period" && m.name !== groupByColumn)
 		.map((m) => m.name);
 
@@ -200,14 +188,19 @@ export function generateChartConfig({
 	groupBy: string | null;
 	originalColors: string[];
 }): ChartSeriesConfig[] {
-	// Ensure meta exists
-	events = ensureMeta(events);
-
 	const colorsToUse = groupBy ? CHART_COLORS : originalColors;
+
+	// Build meta from first row if not present
+	const meta =
+		events.meta && events.meta.length > 0
+			? events.meta
+			: events.data && events.data.length > 0
+				? Object.keys(events.data[0]).map((key) => ({ name: key }))
+				: [];
 
 	if (!groupBy) {
 		// Non-grouped: original behavior
-		return events.meta
+		return meta
 			.filter((m) => m.name !== "period")
 			.map((m, index) => ({
 				xKey: "period",
@@ -223,11 +216,11 @@ export function generateChartConfig({
 	const config: ChartSeriesConfig[] = [];
 	let colorIndex = 0;
 
-	for (const meta of events.meta) {
-		if (meta.name === "period") continue;
+	for (const m of meta) {
+		if (m.name === "period") continue;
 
 		// Parse feature__groupValue format
-		const parts = meta.name.split("__");
+		const parts = m.name.split("__");
 		if (parts.length < 2) continue;
 
 		const featureKey = parts.slice(0, -1).join("__"); // Handle feature names with underscores
@@ -237,7 +230,7 @@ export function generateChartConfig({
 
 		config.push({
 			xKey: "period",
-			yKey: meta.name,
+			yKey: m.name,
 			type: "bar",
 			stacked: true,
 			yName: `${featureName} (${groupValue})`,
