@@ -23,9 +23,7 @@ export default function ConnectStripeDialog({
 	open: boolean;
 	setOpen: (open: boolean) => void;
 }) {
-	const { org, mutate: mutateOrg } = useOrg();
-
-	console.log("org", org);
+	const { mutate: mutateOrg } = useOrg();
 
 	const axiosInstance = useAxiosInstance();
 
@@ -76,6 +74,7 @@ export default function ConnectStripeDialog({
 					placeholder="Stripe secret key (sk_test_...)"
 					value={testApiKey}
 					onChange={(e) => setTestApiKey(e.target.value)}
+					type="password"
 				/>
 
 				<DialogFooter>
