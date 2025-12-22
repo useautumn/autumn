@@ -117,8 +117,8 @@ function CreateFeatureSheet({
 			)} */}
 			<SheetContent className="flex flex-col overflow-hidden">
 				<SheetHeader
-					title="Create new feature"
-					description="Configure how this feature is used in your app"
+					title="Create a feature"
+					description="Create a feature to control based on a customer's plan."
 				/>
 
 				<div className="flex-1 overflow-y-auto">

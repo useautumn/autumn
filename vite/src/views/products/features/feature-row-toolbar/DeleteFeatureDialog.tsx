@@ -53,7 +53,7 @@ export const DeleteFeatureDialog = ({
 
 	const getDeleteMessage = () => {
 		if (feature.archived) {
-			return "This feature is currently archived and hidden from the UI. Would you like to unarchive it to make it visible again?";
+			return "This feature is currently archived. Would you like to unarchive it to make it visible again?";
 		}
 
 		if (hasProducts) {
@@ -64,10 +64,10 @@ export const DeleteFeatureDialog = ({
 					return "There are plans using this feature. You must remove this feature from the plans first, or archive it instead.";
 				}
 				if (totalCount === 1) {
-					return `${deletionText.productName} is using this feature. You must remove this feature from the plan first, or archive it instead.`;
+					return `Plan "${deletionText.productName}" is using this feature. You must remove this feature from the plan first, or archive it instead.`;
 				}
 				const otherCount = totalCount - 1;
-				return `${deletionText.productName} and ${otherCount} other plan${otherCount > 1 ? "s" : ""} are using this feature. You must remove this feature from the plans first, or archive it instead.`;
+				return `Plans "${deletionText.productName}" and ${otherCount} other plan${otherCount > 1 ? "s" : ""} are using this feature. You must remove this feature first, or archive it instead.`;
 			}
 			return "There are plans using this feature. You must remove this feature from the plans first, or archive it instead.";
 		}

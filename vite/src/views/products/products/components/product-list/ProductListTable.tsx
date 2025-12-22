@@ -117,15 +117,16 @@ export function ProductListTable() {
 	const enableSorting = false;
 
 	const hasBaseRows = baseTable.getRowModel().rows.length > 0;
-	const isArchivedMode = queryStates.showArchivedProducts;
+	const hasAddOns = addOnPlans && addOnPlans.length > 0;
 
-	// Show table when there are rows OR when in archived mode (so user can toggle back)
-	const showTable = hasBaseRows || isArchivedMode;
+	// For archived view, always show table structure even if empty
+	// For non-archived view, show EmptyState when no plans exist
+	const showTableStructure = queryStates.showArchivedProducts || hasBaseRows;
 
 	return (
 		<div className="flex flex-col gap-8">
 			{/* Base Plans Table */}
-			{showTable ? (
+			{showTableStructure ? (
 				<>
 					<div>
 						<Table.Provider
@@ -143,12 +144,12 @@ export function ProductListTable() {
 								<div className="flex w-full justify-between items-center">
 									<Table.Heading>
 										<CubeIcon size={16} weight="fill" className="text-subtle" />
-										{isArchivedMode ? "Archived Plans" : "Base Plans"}
+										Base Plans
 									</Table.Heading>
 									<Table.Actions>
 										<div className="flex w-full justify-between items-center">
 											<div className="flex items-center gap-2">
-												{!isArchivedMode && <ProductListCreateButton />}
+												<ProductListCreateButton />
 												<ProductListMenuButton />
 											</div>
 										</div>
@@ -173,21 +174,19 @@ export function ProductListTable() {
 								enableSorting,
 								isLoading: false,
 								onRowClick: handleRowClick,
-								emptyStateText:
-									"Add-on plans can be purchased alongside base plans for additional features or top-ups.",
 								rowClassName: "h-10",
+								emptyStateText:
+									"Add-on plans can be purchased together with base plans, to grant additional features or top ups",
 							}}
 						>
 							<Table.Toolbar>
-								<div className="flex w-full justify-between items-center">
-									<Table.Heading>
-										<CubeIcon size={16} weight="fill" className="text-subtle" />
-										Add-on Plans
-									</Table.Heading>
-									<Table.Actions>
-										<AddOnPlanCreateButton />
-									</Table.Actions>
-								</div>
+								<Table.Heading>
+									<CubeIcon size={16} weight="fill" className="text-subtle" />
+									Add-on Plans
+								</Table.Heading>
+								<Table.Actions>
+									<AddOnPlanCreateButton />
+								</Table.Actions>
 							</Table.Toolbar>
 							<div>
 								<Table.Container>
@@ -202,7 +201,6 @@ export function ProductListTable() {
 			) : (
 				<EmptyState type="plans" actionButton={<ProductListCreateButton />} />
 			)}
-			{/* Add-on Plans Table */}
 		</div>
 	);
 }

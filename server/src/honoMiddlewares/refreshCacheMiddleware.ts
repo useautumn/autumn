@@ -33,7 +33,7 @@ const cusPrefixedUrls = [
 	},
 	{
 		method: "POST",
-		url: "/customers/:customer_id/transfer_product",
+		url: "/customers/:customer_id/transfer",
 	},
 ];
 
@@ -106,7 +106,9 @@ export const refreshCacheMiddleware = async (
 		// For core URLs, check body for customer_id
 		const body = await c.req.json().catch(() => null);
 		if (body?.customer_id) {
-			logger.info(`Clearing cache for core url ${pathname}`);
+			logger.info(
+				`Clearing cache for core url ${pathname}, customerId: ${body.customer_id}`,
+			);
 			await deleteCachedApiCustomer({
 				customerId: body.customer_id,
 				orgId: org.id,

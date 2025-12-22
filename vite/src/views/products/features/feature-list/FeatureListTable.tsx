@@ -89,6 +89,10 @@ export function FeatureListTable() {
 		featureTable.getRowModel().rows.length > 0 ||
 		creditTable.getRowModel().rows.length > 0;
 
+	// For archived view, always show table structure even if empty
+	// For non-archived view, show EmptyState when no features exist
+	const showTableStructure = queryStates.showArchivedFeatures || hasFeatureRows;
+
 	const creditEmptyStateChildren = queryStates.showArchivedFeatures ? (
 		"You haven't archived any credit systems yet."
 	) : (
@@ -127,7 +131,7 @@ export function FeatureListTable() {
 
 			<div className="flex flex-col gap-8">
 				{/* Features Table */}
-				{hasFeatureRows ? (
+				{showTableStructure ? (
 					<div>
 						<Table.Provider
 							config={{

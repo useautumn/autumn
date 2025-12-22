@@ -1,12 +1,8 @@
 import { FeatureType, FeatureUsageType } from "@autumn/shared";
-import {
-	BatteryHighIcon,
-	BoxArrowDownIcon,
-	PowerIcon,
-	TicketIcon,
-} from "@phosphor-icons/react";
+import { BoxArrowDownIcon } from "@phosphor-icons/react";
 import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
 import { cn } from "@/lib/utils";
+import { getFeatureIconConfig } from "@/views/products/features/utils/getFeatureIcon";
 import { CustomDotIcon } from "./PlanFeatureRow";
 
 /**
@@ -21,31 +17,28 @@ export const DummyPlanFeatureRow = () => {
 	const featureType = feature.type;
 	const usageType = feature.config?.usage_type;
 
-	// Determine feature type - default to consumable when no type selected
+	// Get left icon based on feature type using shared config
+	const iconConfig = getFeatureIconConfig(featureType, usageType);
+	const getLeftIcon = () => {
+		return <span className={iconConfig.color}>{iconConfig.icon}</span>;
+	};
+
+	// Right icon is always "included" since new features have no pricing
+	const getRightIcon = () => {
+		return (
+			<BoxArrowDownIcon size={16} weight="duotone" className="text-green-500" />
+		);
+	};
+
+	// Determine feature type for placeholder logic
 	const isBoolean = featureType === FeatureType.Boolean;
 	const isNonConsumable =
 		featureType === FeatureType.Metered &&
 		usageType === FeatureUsageType.Continuous;
 
-	// Get left icon based on feature type
-	const getLeftIcon = () => {
-		if (isBoolean) {
-			return <PowerIcon className="text-orange-500" />;
-		}
-		if (isNonConsumable) {
-			return <TicketIcon className="text-primary" />;
-		}
-		// Default to consumable (single use)
-		return <BatteryHighIcon className="text-red-500" />;
-	};
-
-	// Right icon is always "included" since new features have no pricing
-	const getRightIcon = () => {
-		return <BoxArrowDownIcon className="text-green-500" />;
-	};
-
 	// Get placeholder name based on feature type
 	const getPlaceholderName = () => {
+		if (featureType === FeatureType.CreditSystem) return "Credits";
 		if (isBoolean) return "Premium Analytics";
 		if (isNonConsumable) return "Seats";
 		return "Chat Messages";
@@ -54,6 +47,10 @@ export const DummyPlanFeatureRow = () => {
 	// Build display text based on feature type
 	const getDisplayText = () => {
 		const name = hasName ? featureName : getPlaceholderName();
+
+		if (featureType === FeatureType.CreditSystem) {
+			return { primary: `100 ${name}`, secondary: "" };
+		}
 
 		if (isBoolean) {
 			return { primary: name, secondary: "" };

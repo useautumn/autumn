@@ -96,7 +96,13 @@ export const useRawAnalyticsData = () => {
 	});
 
 	// Create a simple queryKey with the actual values that change
-	const queryKey = ["query-raw-events", customerId, interval, org?.slug, env];
+	const queryKey = [
+		"query-raw-events",
+		customerId,
+		interval || "30d",
+		org?.slug,
+		env,
+	];
 
 	const {
 		data,
@@ -107,7 +113,7 @@ export const useRawAnalyticsData = () => {
 		url: `/query/raw`,
 		data: {
 			customer_id: customerId || null,
-			interval,
+			interval: interval || "30d",
 		},
 		queryKey,
 		options: {
