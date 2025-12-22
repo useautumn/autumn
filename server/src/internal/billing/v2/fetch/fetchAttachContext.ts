@@ -3,7 +3,6 @@ import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
 import { getOrCreateCustomer } from "../../../customers/cusUtils/getOrCreateCustomer";
 import { getFreeTrialForAttach } from "./fetchAutumnUtils/getFreeTrialForAttach";
 import { getProductsForAttach } from "./fetchAutumnUtils/getProductsForAttach";
-import { overrideProduct } from "./fetchAutumnUtils/overrideProduct";
 import { resolveAttachActions } from "./fetchAutumnUtils/resolveAttachActions/resolveAttachActions";
 import { fetchStripeCustomerForBilling } from "./fetchStripeUtils/fetchStripeCustomerForBilling";
 import { fetchStripeSubscriptionForBilling } from "./fetchStripeUtils/fetchStripeSubscriptionForBilling";
@@ -42,16 +41,17 @@ export const fetchAttachContext = async ({
 	});
 
 	// 3. Override product
-	const {
-		// customPrices,
-		// customEnts,
-		fullProducts: newFullProducts,
-	} = await overrideProduct({
-		ctx,
-		body,
-		products: fullProducts,
-		fullCustomer: fullCus,
-	});
+	// const {
+	// 	// customPrices,
+	// 	// customEnts,
+	// 	fullProducts: newFullProducts,
+	// } = await overrideProduct({
+	// 	ctx,
+	// 	body,
+	// 	products: fullProducts,
+	// 	fullCustomer: fullCus,
+	// });
+	const newFullProducts = fullProducts;
 
 	// 4. Get free trial
 	const {
@@ -74,12 +74,11 @@ export const fetchAttachContext = async ({
 	});
 
 	// 6. Get stripe customer
-	const { stripeCus, paymentMethod, now } = await fetchStripeCustomerForBilling(
-		{
+	const { stripeCus, paymentMethod, testClockFrozenTime } =
+		await fetchStripeCustomerForBilling({
 			ctx,
 			fullCus,
-		},
-	);
+		});
 
 	const cusProductActions = resolveAttachActions({
 		fullCus,
@@ -94,7 +93,7 @@ export const fetchAttachContext = async ({
 		stripeSub,
 		stripeCus,
 		paymentMethod,
-		testClockFrozenTime: now,
+		testClockFrozenTime,
 
 		ongoingCusProductAction: cusProductActions.ongoingCusProductAction,
 		scheduledCusProductAction: cusProductActions.scheduledCusProductAction,

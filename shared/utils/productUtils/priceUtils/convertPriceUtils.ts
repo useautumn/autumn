@@ -2,7 +2,7 @@ import type { Feature } from "@models/featureModels/featureModels";
 import type { EntitlementWithFeature } from "@models/productModels/entModels/entModels";
 import type { UsagePriceConfig } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
 import type { Price } from "@models/productModels/priceModels/priceModels";
-import { priceToEnt } from "@utils/productUtils/convertUtils";
+import { priceToEnt } from "@utils/productUtils/convertProductUtils";
 
 export const priceToFeature = ({
 	price,

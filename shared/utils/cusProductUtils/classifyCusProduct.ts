@@ -2,7 +2,7 @@ import type { FullCusProduct } from "@models/cusProductModels/cusProductModels.j
 import {
 	isFreeProduct,
 	isOneOffProduct,
-} from "../productUtils/classifyProductUtils";
+} from "../productUtils/classifyProduct/classifyProductUtils";
 import { notNullish, nullish } from "../utils";
 import { cusProductToPrices } from "./convertCusProduct";
 import { ACTIVE_STATUSES } from "./cusProductConstants";
@@ -77,6 +77,16 @@ export const isCusProductOngoing = ({
 	const isNotOneOff = !isOneOffProduct({ prices });
 
 	return isActive && isNotOneOff;
+};
+
+export const isCustomerProductOnStripeSubscription = ({
+	customerProduct,
+	stripeSubscriptionId,
+}: {
+	customerProduct: FullCusProduct;
+	stripeSubscriptionId: string;
+}) => {
+	return customerProduct.subscription_ids?.includes(stripeSubscriptionId);
 };
 
 // Note, this does not CONFIRM that the subscription is active (might be canceled in Stripe...)

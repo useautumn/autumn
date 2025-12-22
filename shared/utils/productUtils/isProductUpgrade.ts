@@ -7,7 +7,7 @@ import {
 	intervalsSame,
 } from "../intervalUtils/priceIntervalUtils";
 import { nullish } from "../utils";
-import { isFreeProduct } from "./classifyProductUtils";
+import { isFreeProduct } from "./classifyProduct/classifyProductUtils";
 import { isConsumablePrice } from "./priceUtils/classifyPriceUtils";
 
 export const isProductUpgrade = ({

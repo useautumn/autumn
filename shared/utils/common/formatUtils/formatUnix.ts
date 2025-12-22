@@ -11,9 +11,12 @@ export const formatMsToDate = (
 };
 
 export const formatMs = (
-	unixDate?: number | null,
+	unixDate?: number | null | "now",
 	options?: { withTimezone?: boolean; excludeSeconds?: boolean },
 ) => {
+	if (unixDate === "now") {
+		return "now";
+	}
 	if (!unixDate) {
 		return "undefined unix date";
 	}

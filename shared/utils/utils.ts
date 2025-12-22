@@ -1,3 +1,10 @@
+import { KSUID } from "@owpz/ksuid";
+
+export const generateId = (prefix?: string): string => {
+	const id = KSUID.random().toString();
+	return prefix ? `${prefix}_${id}` : id;
+};
+
 export const nullish = <T>(
 	value: T | null | undefined,
 ): value is null | undefined => {

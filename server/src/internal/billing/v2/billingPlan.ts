@@ -1,38 +1,56 @@
-import { EntitlementSchema, PriceSchema } from "@autumn/shared";
+import {
+	CusProductStatus,
+	EntitlementSchema,
+	FreeTrialSchema,
+	PriceSchema,
+} from "@autumn/shared";
 import { z } from "zod/v4";
 import { FullCusProductSchema } from "../../../../../shared/models/cusProductModels/cusProductModels";
 
-// manualInvoice?: {
-//   items: Stripe.InvoiceItemCreateParams[];
-//   finalize: boolean;
-//   chargeAutomatically: boolean;
-// };
-// subscription?: {
-//   action: "create" | "update" | "cancel";
-//   params: SubscriptionParams;
-// };
-// subscriptionItemUpdates?: { itemId: string; quantity: number }[];
-// checkout?: Stripe.Checkout.SessionCreateParams;
+export const FreeTrialPlanSchema = z.object({
+	freeTrial: FreeTrialSchema.nullable().optional(),
+	trialEndsAt: z.number().optional(),
+});
+
+export type FreeTrialPlan = z.infer<typeof FreeTrialPlanSchema>;
+
+export const StripeSubscriptionActionSchema = z.discriminatedUnion("type", [
+	z.object({
+		type: z.literal("create"),
+		params: z.custom<import("stripe").Stripe.SubscriptionCreateParams>(),
+	}),
+	z.object({
+		type: z.literal("update"),
+		stripeSubscriptionId: z.string(),
+		params: z.custom<import("stripe").Stripe.SubscriptionUpdateParams>(),
+	}),
+	z.object({
+		type: z.literal("cancel"),
+		stripeSubscriptionId: z.string(),
+	}),
+]);
+
+export type StripeSubscriptionAction = z.infer<
+	typeof StripeSubscriptionActionSchema
+>;
 
 export const StripeBillingPlanSchema = z.object({
-	subscription: z.object({
-		action: z.enum(["create", "update", "cancel"]),
-		params: z.object({
-			items: z.array(z.object({ id: z.string(), quantity: z.number() })),
-		}),
-	}),
+	subscription: StripeSubscriptionActionSchema.optional(),
 });
 
 export const AutumnBillingPlanSchema = z.object({
-	insertCusProducts: z.array(FullCusProductSchema),
+	insertCustomerProducts: z.array(FullCusProductSchema),
 
-	updateCusProduct: z.object({
-		cusProductId: z.string(),
-		action: z.enum(["expire"]),
+	updateCustomerProduct: z.object({
+		customerProduct: FullCusProductSchema,
+		updates: z.object({
+			status: z.enum(CusProductStatus),
+		}),
 	}),
 
-	insertCustomPrices: z.array(PriceSchema),
-	insertCustomEntitlements: z.array(EntitlementSchema),
+	customPrices: z.array(PriceSchema), // Custom prices to insert
+	customEntitlements: z.array(EntitlementSchema), // Custom entitlements to insert
+	customFreeTrial: FreeTrialSchema.optional(), // Custom free trial to insert
 
 	// expireCusProducts: z.array(z.string()),
 
@@ -46,11 +64,9 @@ export const AutumnBillingPlanSchema = z.object({
 });
 
 export const BillingPlanSchema = z.object({
-	intent: z.enum(["update_quantity", "update_plan"]),
-	featureQuantities: z.array(
-		z.object({
-			featureId: z.string(),
-			quantity: z.number(),
-		}),
-	),
+	autumn: AutumnBillingPlanSchema,
+	stripe: StripeBillingPlanSchema,
 });
+
+export type BillingPlan = z.infer<typeof BillingPlanSchema>;
+export type AutumnBillingPlan = z.infer<typeof AutumnBillingPlanSchema>;

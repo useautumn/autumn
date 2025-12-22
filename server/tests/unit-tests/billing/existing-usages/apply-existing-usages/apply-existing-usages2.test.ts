@@ -31,7 +31,7 @@ describe(
 				});
 
 				const cusProduct = createMockCustomerProduct({
-					cusEntitlements: [cusEntA, cusEntB],
+					customerEntitlements: [cusEntA, cusEntB],
 				});
 
 				// 2 entities on feature A, 3 entities on feature B
@@ -66,7 +66,11 @@ describe(
 				const existingUsages: ExistingUsages = {};
 
 				// Act
-				applyExistingUsages({ cusProduct, existingUsages, entities });
+				applyExistingUsages({
+					customerProduct: cusProduct,
+					existingUsages,
+					entities,
+				});
 
 				// Assert: Feature A balance = 10 - 2 = 8, Feature B balance = 10 - 3 = 7
 				const updatedCusEntA = cusProduct.customer_entitlements.find(
@@ -90,8 +94,8 @@ describe(
 					balance: 10,
 				});
 
-				const cusProduct = createMockCustomerProduct({
-					cusEntitlements: [cusEntA],
+				const customerProduct = createMockCustomerProduct({
+					customerEntitlements: [cusEntA],
 				});
 
 				// 2 entities on feature A
@@ -114,10 +118,10 @@ describe(
 				};
 
 				// Act
-				applyExistingUsages({ cusProduct, existingUsages, entities });
+				applyExistingUsages({ customerProduct, existingUsages, entities });
 
 				// Assert: Entity count (2) takes priority, balance = 10 - 2 = 8
-				const updatedCusEntA = cusProduct.customer_entitlements.find(
+				const updatedCusEntA = customerProduct.customer_entitlements.find(
 					(ce) => ce.feature_id === "feature_a",
 				);
 				expect(updatedCusEntA?.balance).toBe(8);
@@ -143,8 +147,8 @@ describe(
 					balance: 2,
 				});
 
-				const cusProduct = createMockCustomerProduct({
-					cusEntitlements: [cusEntA1, cusEntA2],
+				const customerProduct = createMockCustomerProduct({
+					customerEntitlements: [cusEntA1, cusEntA2],
 				});
 
 				// 3 entities on feature A
@@ -169,10 +173,10 @@ describe(
 				const existingUsages: ExistingUsages = {};
 
 				// Act
-				applyExistingUsages({ cusProduct, existingUsages, entities });
+				applyExistingUsages({ customerProduct, existingUsages, entities });
 
 				// Total usage = 3, distributed: first cusEnt uses 2, second cusEnt uses 1
-				const updatedCusEnts = cusProduct.customer_entitlements.filter(
+				const updatedCusEnts = customerProduct.customer_entitlements.filter(
 					(ce) => ce.feature_id === "feature_a",
 				);
 				expect(updatedCusEnts[0]?.balance).toBe(0);

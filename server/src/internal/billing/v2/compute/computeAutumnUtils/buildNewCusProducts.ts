@@ -1,6 +1,6 @@
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
-import { cusProductToExistingUsages } from "../../../billingUtils/handleExistingUsages/cusProductToExistingUsages";
-import { initFullCustomerProduct } from "../../../billingUtils/initFullCusProduct/initFullCustomerProduct";
+import { cusProductToExistingUsages } from "../../utils/handleExistingUsages/cusProductToExistingUsages";
+import { initFullCustomerProduct } from "../../utils/initFullCustomerProduct/initFullCustomerProduct";
 import type { AttachContext } from "../../typesOld";
 
 export const buildNewCusProducts = ({
@@ -28,7 +28,6 @@ export const buildNewCusProducts = ({
 			fullCustomer: fullCus,
 			fullProduct: products[0],
 			featureQuantities: [],
-			replaceables: [],
 			existingUsages,
 		},
 	});

@@ -16,7 +16,6 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import {
 	initEntitlement,
 	initFeature,
-	initFreeTrial,
 	initPrice,
 	initProduct,
 } from "../utils/init.js";
@@ -188,6 +187,7 @@ export const alexProducts = {
 				interval: EntInterval.Lifetime,
 			}),
 		},
+		freeTrial: null,
 		prices: [
 			initPrice({
 				amount: 20.0, // $20.00
@@ -195,10 +195,6 @@ export const alexProducts = {
 				type: "monthly",
 			}),
 		],
-		freeTrial: initFreeTrial({
-			length: 7,
-			uniqueFingerprint: true,
-		}),
 	}),
 
 	topUpMessages: initProduct({
@@ -305,10 +301,7 @@ export const alexProducts = {
 				amount: 50,
 			}),
 		],
-		freeTrial: initFreeTrial({
-			length: 7,
-			uniqueFingerprint: true,
-		}),
+		freeTrial: null,
 	}),
 
 	proTeam: initProduct({

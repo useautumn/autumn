@@ -2,6 +2,7 @@ import { AllowanceType, type EntInterval, FeatureType } from "@autumn/shared";
 import { createMockFeature } from "./featureMocks";
 
 export const createMockEntitlement = ({
+	id,
 	featureId,
 	internalFeatureId,
 	featureName,
@@ -11,6 +12,7 @@ export const createMockEntitlement = ({
 	intervalCount = 1,
 	entityFeatureId = null,
 }: {
+	id?: string;
 	featureId: string;
 	internalFeatureId?: string;
 	featureName: string;
@@ -20,7 +22,7 @@ export const createMockEntitlement = ({
 	intervalCount?: number;
 	entityFeatureId?: string | null;
 }) => ({
-	id: `ent_${featureId}_${crypto.randomUUID().slice(0, 8)}`,
+	id: id ?? `ent_${featureId}_${crypto.randomUUID().slice(0, 8)}`,
 	created_at: Date.now(),
 	internal_feature_id: internalFeatureId ?? `internal_${featureId}`,
 	internal_product_id: "prod_internal",

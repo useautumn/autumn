@@ -1,7 +1,7 @@
 import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
 import { FeatureUsageType } from "../../../models/featureModels/featureEnums";
-import { cusEntToCusPrice } from "../../productUtils/convertUtils";
 import { nullish } from "../../utils";
+import { cusEntToCusPrice } from "../convertCusEntUtils/cusEntToCusPrice";
 
 export const cusEntToUsageAllowed = ({
 	cusEnt,

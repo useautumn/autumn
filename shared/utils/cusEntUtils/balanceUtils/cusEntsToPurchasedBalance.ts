@@ -1,9 +1,9 @@
 import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import { BillingType } from "../../../models/productModels/priceModels/priceEnums.js";
-import { cusEntToCusPrice } from "../../productUtils/convertUtils.js";
 import { getBillingType } from "../../productUtils/priceUtils.js";
 import { nullish, sumValues } from "../../utils.js";
 import { getCusEntBalance } from "../balanceUtils.js";
+import { cusEntToCusPrice } from "../convertCusEntUtils/cusEntToCusPrice.js";
 import { cusEntToPrepaidQuantity } from "./cusEntToPrepaidQuantity.js";
 
 export const cusEntsToPurchasedBalance = ({
@@ -58,15 +58,3 @@ export const cusEntsToPurchasedBalance = ({
 		cusEnts.map((cusEnt) => getPurchasedBalance({ cusEnt, entityId })),
 	);
 };
-
-// // Purchased balance is how much was prepaid
-// const cusProduct = cusEnt.customer_product;
-// const options = entToOptions({
-// 	ent: cusEnt.entitlement,
-// 	options: cusProduct.options,
-// });
-
-// const quantity = options?.quantity || 0;
-// const quantityWithBillingUnits = new Decimal(quantity)
-// 	.mul(billingUnits)
-// 	.toNumber();

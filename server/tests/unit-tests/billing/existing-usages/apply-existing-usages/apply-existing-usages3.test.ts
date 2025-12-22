@@ -34,7 +34,7 @@ describe(
 				});
 
 				const cusProduct = createMockCustomerProduct({
-					cusEntitlements: [monthlyCusEnt, lifetimeCusEnt], // Monthly first in array
+					customerEntitlements: [monthlyCusEnt, lifetimeCusEnt], // Monthly first in array
 				});
 
 				// Apply 7 usage (should deplete lifetime first, then take 2 from monthly)
@@ -43,7 +43,11 @@ describe(
 				};
 
 				// Act
-				applyExistingUsages({ cusProduct, existingUsages, entities: [] });
+				applyExistingUsages({
+					customerProduct: cusProduct,
+					existingUsages,
+					entities: [],
+				});
 
 				// Assert: Lifetime should be depleted first (0), then monthly should have 3 remaining
 				const updatedLifetime = cusProduct.customer_entitlements.find(
@@ -82,8 +86,8 @@ describe(
 					usageAllowed: true,
 				});
 
-				const cusProduct = createMockCustomerProduct({
-					cusEntitlements: [payPerUseCusEnt, prepaidCusEnt], // Pay-per-use first in array
+				const customerProduct = createMockCustomerProduct({
+					customerEntitlements: [payPerUseCusEnt, prepaidCusEnt], // Pay-per-use first in array
 				});
 
 				// Apply 7 usage (should deplete prepaid first, then take 2 from pay-per-use)
@@ -92,13 +96,13 @@ describe(
 				};
 
 				// Act
-				applyExistingUsages({ cusProduct, existingUsages, entities: [] });
+				applyExistingUsages({ customerProduct, existingUsages, entities: [] });
 
 				// Assert: Prepaid should be depleted first (0), then pay-per-use should have 3 remaining
-				const updatedPrepaid = cusProduct.customer_entitlements.find(
+				const updatedPrepaid = customerProduct.customer_entitlements.find(
 					(ce) => ce.usage_allowed === false,
 				);
-				const updatedPayPerUse = cusProduct.customer_entitlements.find(
+				const updatedPayPerUse = customerProduct.customer_entitlements.find(
 					(ce) => ce.usage_allowed === true,
 				);
 
@@ -135,8 +139,8 @@ describe(
 					nextResetAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
 				});
 
-				const cusProduct = createMockCustomerProduct({
-					cusEntitlements: [payPerUseMonthly, prepaidMonthly], // Random order
+				const customerProduct = createMockCustomerProduct({
+					customerEntitlements: [payPerUseMonthly, prepaidMonthly], // Random order
 				});
 
 				// Apply 12 usage (5 from prepaid, 7 from pay-per-use -> goes to -2)
@@ -145,12 +149,12 @@ describe(
 				};
 
 				// Act
-				applyExistingUsages({ cusProduct, existingUsages, entities: [] });
+				applyExistingUsages({ customerProduct, existingUsages, entities: [] });
 
-				const updatedPrepaid = cusProduct.customer_entitlements.find(
+				const updatedPrepaid = customerProduct.customer_entitlements.find(
 					(ce) => ce.usage_allowed === false,
 				);
-				const updatedPayPerUse = cusProduct.customer_entitlements.find(
+				const updatedPayPerUse = customerProduct.customer_entitlements.find(
 					(ce) => ce.usage_allowed === true,
 				);
 
@@ -199,8 +203,12 @@ describe(
 				});
 
 				// Add in random order
-				const cusProduct = createMockCustomerProduct({
-					cusEntitlements: [payPerUseMonthly, prepaidLifetime, prepaidMonthly],
+				const customerProduct = createMockCustomerProduct({
+					customerEntitlements: [
+						payPerUseMonthly,
+						prepaidLifetime,
+						prepaidMonthly,
+					],
 				});
 
 				// Apply 5 usage (should take 2 from prepaid monthly, 2 from prepaid lifetime, 1 from pay-per-use monthly)
@@ -209,11 +217,11 @@ describe(
 				};
 
 				// Act
-				applyExistingUsages({ cusProduct, existingUsages, entities: [] });
+				applyExistingUsages({ customerProduct, existingUsages, entities: [] });
 
 				// Find each cusEnt by their unique characteristics
 				const findCusEnt = (usageAllowed: boolean, interval: EntInterval) =>
-					cusProduct.customer_entitlements.find(
+					customerProduct.customer_entitlements.find(
 						(ce) =>
 							ce.usage_allowed === usageAllowed &&
 							ce.entitlement.interval === interval,

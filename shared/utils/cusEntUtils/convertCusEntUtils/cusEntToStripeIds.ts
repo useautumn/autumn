@@ -1,6 +1,6 @@
 import { InternalError } from "../../../api/errors/base/InternalError";
 import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
-import { cusEntToCusPrice } from "../../productUtils/convertUtils";
+import { cusEntToCusPrice } from "./cusEntToCusPrice";
 
 export const cusEntToStripeIds = ({
 	cusEnt,

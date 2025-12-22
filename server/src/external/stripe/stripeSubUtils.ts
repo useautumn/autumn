@@ -222,7 +222,7 @@ export const getStripeSchedules = async ({
 				},
 			);
 
-			if (schedule.status == "canceled") {
+			if (schedule.status === "canceled") {
 				return null;
 			}
 

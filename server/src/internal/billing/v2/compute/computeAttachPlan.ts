@@ -3,9 +3,6 @@ import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
 import type { AttachContext } from "../typesOld";
 import { buildAutumnLineItems } from "./computeAutumnUtils/buildAutumnLineItems";
 import { buildNewCusProducts } from "./computeAutumnUtils/buildNewCusProducts";
-import { buildStripeCheckoutAction } from "./computeStripeUtils/buildStripeCheckoutAction";
-import { buildStripeInvoiceAction } from "./computeStripeUtils/buildStripeInvoiceAction";
-import { buildStripeSubAction } from "./computeStripeUtils/buildStripeSubAction";
 
 /**
  * Shared logic by attach, cancel and
@@ -41,7 +38,7 @@ export const computeAttachPlan = async ({
 	const autumnLineItems = buildAutumnLineItems({
 		ctx,
 		newCusProducts,
-		ongoingCusProductAction,
+		ongoingCustomerProduct: ongoingCusProductAction?.cusProduct,
 		billingCycleAnchor,
 		testClockFrozenTime,
 	});
@@ -53,30 +50,16 @@ export const computeAttachPlan = async ({
 	// 	newCusProducts,
 	// });
 
-	// 4. Build stripe checkout action
-	const stripeCheckoutAction = buildStripeCheckoutAction({
-		ctx,
-		attachContext,
-		newCusProducts,
-	});
-
 	// 5. Build stripe sub action
-	const stripeSubAction = buildStripeSubAction({
-		ctx,
-		stripeSub: attachContext.stripeSub!,
-		fullCus: attachContext.fullCus,
-		paymentMethod: attachContext.paymentMethod,
-		ongoingCusProductAction,
-		newCusProducts,
-	});
+	const stripeSubAction = undefined;
 
 	// 6. Build stripe invoice action
-	const stripeInvoiceAction = buildStripeInvoiceAction({
-		attachContext,
-		autumnLineItems,
-		stripeSubAction,
-		newCusProducts,
-	});
+	// const stripeInvoiceAction = buildStripeInvoiceAction({
+	// 	attachContext,
+	// 	autumnLineItems,
+	// 	stripeSubAction,
+	// 	newCusProducts,
+	// });
 
 	return {
 		autumnLineItems,
@@ -86,7 +69,5 @@ export const computeAttachPlan = async ({
 		newCusProducts,
 
 		stripeSubAction,
-		stripeInvoiceAction,
-		stripeCheckoutAction,
 	};
 };

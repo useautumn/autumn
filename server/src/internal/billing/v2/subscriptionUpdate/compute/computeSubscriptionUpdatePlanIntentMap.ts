@@ -4,6 +4,8 @@ import {
 	type SubscriptionUpdateV0Params,
 } from "@shared/index";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { computeSubscriptionUpdateCustomPlan } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateCustomPlan/computeSubscriptionUpdateCustomPlan";
+import type { BillingPlan } from "../../billingPlan";
 import type { SubscriptionUpdatePlan } from "../../typesOld";
 import type { UpdateSubscriptionContext } from "../fetch/updateSubscriptionContextSchema";
 import { computeSubscriptionUpdateQuantityPlan } from "./computeSubscriptionUpdateQuantityPlan";
@@ -17,7 +19,7 @@ export type ComputeSubscriptionUpdatePlan = ({
 	ctx: AutumnContext;
 	updateSubscriptionContext: UpdateSubscriptionContext;
 	params: SubscriptionUpdateV0Params;
-}) => SubscriptionUpdatePlan;
+}) => SubscriptionUpdatePlan | BillingPlan | Promise<BillingPlan>;
 
 export type ComputeSubscriptionUpdatePlanIntentMap = Partial<
 	Record<SubscriptionUpdateIntentEnum, ComputeSubscriptionUpdatePlan>
@@ -30,6 +32,8 @@ const computeSubscriptionUpdatePlanIntentMap: ComputeSubscriptionUpdatePlanInten
 	{
 		[SubscriptionUpdateIntentEnum.UpdateQuantity]:
 			computeSubscriptionUpdateQuantityPlan,
+		[SubscriptionUpdateIntentEnum.UpdatePlan]:
+			computeSubscriptionUpdateCustomPlan,
 	};
 
 export const getComputeSubscriptionUpdatePlanFunction = (

@@ -2,10 +2,10 @@ import { InternalError } from "../../../../api/errors/base/InternalError";
 import type { LineItemContext } from "../../../../models/billingModels/invoicingModels/lineItemContext";
 import type { FullCusEntWithFullCusProduct } from "../../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
 import { cusEntToPrepaidQuantity } from "../../../cusEntUtils/balanceUtils/cusEntToPrepaidQuantity";
+import { cusEntToCusPrice } from "../../../cusEntUtils/convertCusEntUtils/cusEntToCusPrice";
 import { cusEntToStripeIds } from "../../../cusEntUtils/convertCusEntUtils/cusEntToStripeIds";
 import { cusEntToInvoiceOverage } from "../../../cusEntUtils/overageUtils/cusEntToInvoiceOverage";
 import { cusEntToInvoiceUsage } from "../../../cusEntUtils/overageUtils/cusEntToInvoiceUsage";
-import { cusEntToCusPrice } from "../../../productUtils/convertUtils";
 import {
 	isConsumablePrice,
 	isPrepaidPrice,

@@ -1,9 +1,9 @@
 import {
 	type CreateFreeTrial,
-	CreateFreeTrialSchema,
 	ErrCode,
 	type FreeTrial,
 	FreeTrialDuration,
+	initFreeTrial,
 	type Price,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
@@ -12,7 +12,6 @@ import { FreeTrialService } from "@server/internal/products/free-trials/FreeTria
 import { ProductService } from "@server/internal/products/ProductService.js";
 import { isOneOff } from "@server/internal/products/productUtils.js";
 import RecaseError from "@server/utils/errorUtils.js";
-import { generateId } from "@server/utils/genUtils.js";
 import { addDays, addMinutes, addMonths, addYears } from "date-fns";
 
 export const validateOneOffTrial = async ({
@@ -29,28 +28,6 @@ export const validateOneOffTrial = async ({
 			statusCode: 400,
 		});
 	}
-};
-
-export const validateAndInitFreeTrial = ({
-	freeTrial,
-	internalProductId,
-	isCustom = false,
-}: {
-	freeTrial: CreateFreeTrial;
-	internalProductId: string;
-	isCustom?: boolean;
-}): FreeTrial => {
-	const freeTrialSchema = CreateFreeTrialSchema.parse(freeTrial);
-
-	return {
-		...freeTrialSchema,
-		id: generateId("ft"),
-		created_at: Date.now(),
-		duration: freeTrial.duration || FreeTrialDuration.Day,
-		internal_product_id: internalProductId,
-		is_custom: isCustom,
-		card_required: freeTrial.card_required ?? true,
-	};
 };
 
 export const freeTrialsAreSame = ({
@@ -176,8 +153,8 @@ export const handleNewFreeTrial = async ({
 		return curFreeTrial;
 	}
 
-	const createdFreeTrial = validateAndInitFreeTrial({
-		freeTrial: newFreeTrial,
+	const createdFreeTrial = initFreeTrial({
+		freeTrialParams: newFreeTrial,
 		internalProductId,
 		isCustom,
 	});

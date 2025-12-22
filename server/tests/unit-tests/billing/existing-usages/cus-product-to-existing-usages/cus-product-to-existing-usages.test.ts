@@ -33,7 +33,7 @@ describe(chalk.yellowBright("cusProductToExistingUsages"), () => {
 			});
 
 			const cusProduct = createMockCustomerProduct({
-				cusEntitlements: [lifetimeCusEnt, monthlyCusEnt],
+				customerEntitlements: [lifetimeCusEnt, monthlyCusEnt],
 			});
 
 			// Act
@@ -74,7 +74,7 @@ describe(chalk.yellowBright("cusProductToExistingUsages"), () => {
 			});
 
 			const cusProduct = createMockCustomerProduct({
-				cusEntitlements: [topLevelCusEnt, entityScopedCusEnt],
+				customerEntitlements: [topLevelCusEnt, entityScopedCusEnt],
 			});
 
 			// Act
@@ -126,7 +126,7 @@ describe(chalk.yellowBright("cusProductToExistingUsages"), () => {
 			];
 
 			const cusProduct = createMockCustomerProduct({
-				cusEntitlements: [cusEntWithRollover],
+				customerEntitlements: [cusEntWithRollover],
 			});
 
 			// Act
