@@ -1,13 +1,10 @@
 import type { SubscriptionUpdateV0Params } from "@shared/index";
-import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
-import { EntitlementService } from "@/internal/products/entitlements/EntitlementService";
-import { PriceService } from "@/internal/products/prices/PriceService";
+import type { SubscriptionUpdatePlan } from "@/internal/billing/v2/typesOld";
 import { executeCusProductActions } from "../../execute/executeAutumnActions/executeCusProductActions";
 import { executeInvoiceAction } from "../../execute/executeInvoiceAction";
 import { executeStripeSubAction } from "../../execute/executeStripeSubAction";
-import type { SubscriptionUpdatePlan } from "../../typesOld";
+import { executeStripeSubscriptionUncancel } from "../../execute/executeStripeSubscriptionActions/executeStripeSubscriptionUncancel";
 import type { UpdateSubscriptionContext } from "../fetch/updateSubscriptionContextSchema";
 
 export const executeSubscriptionUpdate = async ({
@@ -21,45 +18,22 @@ export const executeSubscriptionUpdate = async ({
 	updateSubscriptionContext: UpdateSubscriptionContext;
 	subscriptionUpdatePlan: SubscriptionUpdatePlan;
 }) => {
-	const { db, logger, org, env } = ctx;
+	const { logger } = ctx;
 	const { customerProduct, stripeCustomer, stripeSubscription } =
 		updateSubscriptionContext;
 	const {
-		customEntitlements,
-		customPrices,
 		ongoingCusProductAction,
 		stripeSubscriptionAction,
 		quantityUpdateDetails,
 		invoiceAction,
+		shouldUncancelSubscription,
 	} = subscriptionUpdatePlan;
 
-	if (customEntitlements.length > 0) {
-		logger.info("Inserting custom entitlements");
-		await EntitlementService.insert({ db, data: customEntitlements });
-	}
-
-	if (customPrices.length > 0) {
-		logger.info("Inserting custom prices");
-		await PriceService.insert({ db, data: customPrices });
-	}
-
-	const isProductCanceled = customerProduct.canceled === true;
-	if (isProductCanceled) {
-		logger.info("Uncanceling subscription in Stripe");
-		const stripeClient = createStripeCli({ org, env });
-		await stripeClient.subscriptions.update(stripeSubscription.id, {
-			cancel_at_period_end: false,
-		});
-
-		logger.info("Uncanceling customer product in Autumn");
-		await CusProductService.update({
-			db,
-			cusProductId: customerProduct.id,
-			updates: {
-				canceled: false,
-				canceled_at: null,
-				ended_at: null,
-			},
+	if (shouldUncancelSubscription) {
+		await executeStripeSubscriptionUncancel({
+			ctx,
+			stripeSubscriptionId: stripeSubscription?.id ?? "",
+			customerProduct,
 		});
 	}
 
@@ -75,7 +49,7 @@ export const executeSubscriptionUpdate = async ({
 			ctx,
 			invoiceAction,
 			stripeCustomerId: stripeCustomer.id,
-			stripeSubscriptionId: stripeSubscription.id,
+			stripeSubscriptionId: stripeSubscription?.id ?? "",
 			customerProduct,
 		});
 	} else {
