@@ -9,10 +9,6 @@ import type { SubscriptionUpdateInvoiceAction } from "../typesOld";
 
 /**
  * Execute invoice creation and finalization for subscription updates.
- *
- * Extracted from:
- * - handleQuantityUpgrade.ts:130-164
- * - handleQuantityDowngrade.ts:130-165
  */
 export const executeInvoiceAction = async ({
 	ctx,
