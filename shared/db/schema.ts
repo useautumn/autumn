@@ -39,7 +39,6 @@ import { migrationJobs } from "../models/migrationModels/migrationJobTable.js";
 import { organizationsRelations } from "../models/orgModels/orgRelations.js";
 import { organizations } from "../models/orgModels/orgTable.js";
 import { metadata } from "../models/otherModels/metadataTable.js";
-import { revenuecatMappings } from "../models/processorModels/revenuecatModels/revenuecatMappingsTable.js";
 import { vercelResources } from "../models/processorModels/vercelModels/vercelResourcesTable.js";
 // Product Relations
 import { entitlementsRelations } from "../models/productModels/entModels/entRelations.js";
@@ -104,7 +103,6 @@ export {
 	replaceables,
 	rollovers,
 	vercelResources,
-	revenuecatMappings as revcatMappings,
 	// Auth
 	user,
 	session,

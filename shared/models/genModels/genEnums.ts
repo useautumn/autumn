@@ -15,5 +15,4 @@ export enum Duration {
 
 export enum ProcessorType {
 	Stripe = "stripe",
-	RevenueCat = "revenuecat",
 }
