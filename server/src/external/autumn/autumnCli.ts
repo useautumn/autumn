@@ -17,6 +17,7 @@ import {
 	type LegacyVersion,
 	type OrgConfig,
 	type RewardRedemption,
+	type SubscriptionUpdateV0Params,
 	type TrackParams,
 } from "@autumn/shared";
 import { defaultApiVersion } from "@tests/constants.js";
@@ -663,5 +664,10 @@ export class AutumnInt {
 			const data = await this.post(`/balances/update`, params);
 			return data;
 		},
+	};
+
+	subscriptionUpdate = async (params: SubscriptionUpdateV0Params) => {
+		const data = await this.post(`/subscriptions/update`, params);
+		return data;
 	};
 }
