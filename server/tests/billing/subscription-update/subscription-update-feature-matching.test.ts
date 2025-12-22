@@ -39,7 +39,7 @@ describe(`${chalk.yellowBright("subscription-update: feature matching - reordere
 				price: 10,
 			}),
 			constructPrepaidItem({
-				featureId: TestFeature.Storage,
+				featureId: TestFeature.Users,
 				billingUnits: 1,
 				price: 2,
 			}),
@@ -60,7 +60,7 @@ describe(`${chalk.yellowBright("subscription-update: feature matching - reordere
 			prefix: customerId,
 		});
 
-		// Attach with features in this order: Messages, Words, Storage
+		// Attach with features in this order: Messages, Words, Users
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: multiFeatureProduct.id,
@@ -74,7 +74,7 @@ describe(`${chalk.yellowBright("subscription-update: feature matching - reordere
 					quantity: 5 * 100, // 500 words
 				},
 				{
-					feature_id: TestFeature.Storage,
+					feature_id: TestFeature.Users,
 					quantity: 20 * 1, // 20 GB
 				},
 			],
@@ -82,13 +82,13 @@ describe(`${chalk.yellowBright("subscription-update: feature matching - reordere
 	});
 
 	test("should handle features sent in REVERSE order", async () => {
-		// Update with features in REVERSE order: Storage, Words, Messages
+		// Update with features in REVERSE order: Users, Words, Messages
 		await autumnV1.subscriptionUpdate({
 			customer_id: customerId,
 			product_id: multiFeatureProduct.id,
 			options: [
 				{
-					feature_id: TestFeature.Storage,
+					feature_id: TestFeature.Users,
 					quantity: 50 * 1, // 50 GB (increased from 20)
 				},
 				{
@@ -111,13 +111,13 @@ describe(`${chalk.yellowBright("subscription-update: feature matching - reordere
 		expect(customer.balances?.[TestFeature.Words]?.purchased_balance).toBe(
 			1000,
 		);
-		expect(customer.balances?.[TestFeature.Storage]?.purchased_balance).toBe(
+		expect(customer.balances?.[TestFeature.Users]?.purchased_balance).toBe(
 			50,
 		);
 	});
 
 	test("should handle features sent in RANDOM order", async () => {
-		// Update with features in random order: Words, Storage, Messages
+		// Update with features in random order: Words, Users, Messages
 		await autumnV1.subscriptionUpdate({
 			customer_id: customerId,
 			product_id: multiFeatureProduct.id,
@@ -127,7 +127,7 @@ describe(`${chalk.yellowBright("subscription-update: feature matching - reordere
 					quantity: 20 * 100, // 2000 words
 				},
 				{
-					feature_id: TestFeature.Storage,
+					feature_id: TestFeature.Users,
 					quantity: 100 * 1, // 100 GB
 				},
 				{
@@ -145,7 +145,7 @@ describe(`${chalk.yellowBright("subscription-update: feature matching - reordere
 		expect(customer.balances?.[TestFeature.Words]?.purchased_balance).toBe(
 			2000,
 		);
-		expect(customer.balances?.[TestFeature.Storage]?.purchased_balance).toBe(
+		expect(customer.balances?.[TestFeature.Users]?.purchased_balance).toBe(
 			100,
 		);
 	});
@@ -165,7 +165,7 @@ describe(`${chalk.yellowBright("subscription-update: feature matching - reordere
 					quantity: 15 * 10, // Keep at 150
 				},
 				{
-					feature_id: TestFeature.Storage,
+					feature_id: TestFeature.Users,
 					quantity: 100 * 1, // Keep at 100
 				},
 			],
@@ -182,7 +182,7 @@ describe(`${chalk.yellowBright("subscription-update: feature matching - reordere
 		expect(customer.balances?.[TestFeature.Messages]?.purchased_balance).toBe(
 			150,
 		);
-		expect(customer.balances?.[TestFeature.Storage]?.purchased_balance).toBe(
+		expect(customer.balances?.[TestFeature.Users]?.purchased_balance).toBe(
 			100,
 		);
 	});
