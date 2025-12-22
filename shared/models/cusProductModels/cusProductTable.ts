@@ -14,7 +14,7 @@ import { freeTrials } from "../productModels/freeTrialModels/freeTrialTable.js";
 import { products } from "../productModels/productTable.js";
 
 export type CustomerProductProcessor = {
-	type: "stripe" | "revenuecat";
+	type: "stripe";
 	id: string;
 };
 

@@ -17,16 +17,6 @@ export const getStripeCusLink = ({
 	return `${baseUrl}${accountPath}${withTest}/customers/${customerId}`;
 };
 
-export const getRevenueCatCusLink = ({
-	customerId,
-	projectId,
-}: {
-	customerId: string;
-	projectId: string;
-}) => {
-	return `https://app.revenuecat.com/projects/${projectId}/customers/${customerId}`;
-};
-
 export const getStripeSubLink = ({
 	subscriptionId,
 	env,

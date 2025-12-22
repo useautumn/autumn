@@ -12,7 +12,6 @@ export const useAutumnFlags = () => {
 		stripe_key: false,
 		platform: false,
 		vercel: false,
-		revenuecat: false,
 	});
 
 	useEffect(() => {
@@ -24,7 +23,6 @@ export const useAutumnFlags = () => {
 			stripe_key: notNullish(customer.features.stripe_key),
 			platform: notNullish(customer.features.platform),
 			vercel: notNullish(customer.features.vercel),
-			revenuecat: notNullish(customer.features.revenuecat),
 		};
 
 		// Only update storage/state when values actually change
@@ -33,8 +31,7 @@ export const useAutumnFlags = () => {
 			flags.webhooks !== nextFlags.webhooks ||
 			flags.stripe_key !== nextFlags.stripe_key ||
 			flags.platform !== nextFlags.platform ||
-			flags.vercel !== nextFlags.vercel ||
-			flags.revenuecat !== nextFlags.revenuecat
+			flags.vercel !== nextFlags.vercel
 		) {
 			setFlags(nextFlags);
 		}
