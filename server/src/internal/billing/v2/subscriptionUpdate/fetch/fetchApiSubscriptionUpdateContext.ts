@@ -1,8 +1,4 @@
-import {
-	cusProductToProduct,
-	InternalError,
-	type SubscriptionUpdateV0Params,
-} from "@shared/index";
+import { InternalError, type SubscriptionUpdateV0Params } from "@shared/index";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { mapOptionsList } from "@/internal/customers/attach/attachUtils/mapOptionsList";
 import { CusService } from "../../../../customers/CusService";
@@ -45,10 +41,6 @@ export const fetchApiSubscriptionUpdateContext = async ({
 		});
 	}
 
-	const targetProduct = cusProductToProduct({
-		cusProduct: targetCustomerProduct,
-	});
-
 	const stripeSubscription = await fetchStripeSubscriptionForBilling({
 		ctx,
 		fullCus: fullCustomer,
@@ -82,7 +74,6 @@ export const fetchApiSubscriptionUpdateContext = async ({
 
 	return {
 		fullCustomer,
-		product: targetProduct,
 		customerProduct: targetCustomerProduct,
 		stripeSubscription,
 		stripeCustomer,

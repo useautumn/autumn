@@ -7,6 +7,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "../../compute/computeAutumnUtils/buildAutumnLineItems";
 import type { SubscriptionUpdateQuantityPlan } from "../../types";
 import type { UpdateSubscriptionContext } from "../fetch/updateSubscriptionContextSchema";
+import { buildStripeSubscriptionAction } from "./buildStripeSubscriptionAction";
 import { computeInvoiceAction } from "./computeInvoiceAction";
 import { computeQuantityUpdateDetails } from "./computeQuantityUpdateDetails";
 import { SubscriptionUpdateIntentEnum } from "./computeSubscriptionUpdateSchema";
@@ -20,46 +21,47 @@ export const computeSubscriptionUpdateQuantityPlan = ({
 	updateSubscriptionContext: UpdateSubscriptionContext;
 	params: SubscriptionUpdateV0Params;
 }): SubscriptionUpdateQuantityPlan => {
-	const { options } = params;
 	const {
 		customerProduct,
 		stripeSubscription,
 		testClockFrozenTime,
 		paymentMethod,
-		stripeCustomer,
 	} = updateSubscriptionContext;
 
 	const featureQuantities = {
 		old: customerProduct.options,
-		new: options || [],
+		new: params.options || [],
 	};
 
 	const currentEpochMs = testClockFrozenTime || Date.now();
+	const quantityUpdateDetails = featureQuantities.new.map((updatedOption) => {
+		const previousOption = featureQuantities.old.find(
+			(oldOption) => oldOption.feature_id === updatedOption.feature_id,
+		);
 
-	const quantityUpdateDetails = featureQuantities.new.map(
-		(updatedOption, index) =>
-			computeQuantityUpdateDetails({
-				ctx,
-				previousOptions: featureQuantities.old[index],
-				updatedOptions: updatedOption,
-				customerProduct,
-				stripeSubscription,
-				currentEpochMs,
-			}),
-	);
+		if (!previousOption) {
+			throw new Error(
+				`[Subscription Update] Cannot find previous options for feature: ${updatedOption.feature_id}. ` +
+					`This feature may not exist in the current subscription.`,
+			);
+		}
 
-	const isSubscriptionTrialing = stripeSubscription.status === "trialing";
+		return computeQuantityUpdateDetails({
+			ctx,
+			previousOptions: previousOption,
+			updatedOptions: updatedOption,
+			customerProduct,
+			stripeSubscription,
+			currentEpochMs,
+		});
+	});
 
-	const invoiceAction = !isSubscriptionTrialing
-		? computeInvoiceAction({
-				ctx,
-				quantityUpdateDetails,
-				stripeSubscription,
-				stripeCustomerId: stripeCustomer.id,
-				paymentMethod,
-				shouldGenerateInvoiceOnly: !(params.finalize_invoice ?? true),
-			})
-		: undefined;
+	const invoiceAction = computeInvoiceAction({
+		quantityUpdateDetails,
+		stripeSubscription,
+		paymentMethod,
+		shouldGenerateInvoiceOnly: !(params.finalize_invoice ?? true),
+	});
 
 	const billingCycleAnchor = secondsToMs(
 		stripeSubscription.billing_cycle_anchor,
@@ -78,34 +80,19 @@ export const computeSubscriptionUpdateQuantityPlan = ({
 		testClockFrozenTime,
 	});
 
-	const stripeSubscriptionAction = {
-		type: "update" as const,
-		subId: stripeSubscription.id,
-		items: quantityUpdateDetails.map((detail) => {
-			if (detail.existingStripeSubscriptionItem) {
-				return {
-					id: detail.existingStripeSubscriptionItem.id,
-					quantity: detail.updatedFeatureQuantity,
-				};
-			}
-
-			return {
-				price: detail.stripePriceId,
-				quantity: detail.updatedFeatureQuantity,
-			};
-		}),
-	};
+	const stripeSubscriptionAction = buildStripeSubscriptionAction({
+		quantityUpdateDetails,
+		stripeSubscriptionId: stripeSubscription.id,
+	});
 
 	return {
 		intent: SubscriptionUpdateIntentEnum.UpdateQuantity,
-		customEntitlements: [],
-		customPrices: [],
 		featureQuantities,
 		quantityUpdateDetails,
-		isSubscriptionTrialing,
 		invoiceAction,
 		autumnLineItems,
 		stripeSubscriptionAction,
 		ongoingCusProductAction,
+		shouldUncancelSubscription: customerProduct.canceled === true,
 	};
 };
