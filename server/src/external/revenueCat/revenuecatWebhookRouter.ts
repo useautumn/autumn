@@ -1,5 +1,6 @@
 import type {
 	Webhook,
+	WebhookBillingIssue,
 	WebhookCancellation,
 	WebhookExpiration,
 	WebhookInitialPurchase,
@@ -15,6 +16,7 @@ import {
 	revenuecatSeederMiddleware,
 } from "./misc/revenueCatMiddleware";
 import { handleRenewal } from "./webhookHandlers/handleRevenucatRenewal";
+import { handleBillingIssue } from "./webhookHandlers/handleRevenuecatBillingIssue";
 import { handleCancellation } from "./webhookHandlers/handleRevenuecatCancellation";
 import { handleExpiration } from "./webhookHandlers/handleRevenuecatExpiration";
 import { handleInitialPurchase } from "./webhookHandlers/handleRevenuecatInitialPurchase";
@@ -78,6 +80,12 @@ revenuecatWebhookRouter.post(
 				case "UNCANCELLATION":
 					await handleUncancellation({
 						event: body.event as WebhookUnCancellation,
+						ctx,
+					});
+					break;
+				case "BILLING_ISSUE":
+					await handleBillingIssue({
+						event: body.event as WebhookBillingIssue,
 						ctx,
 					});
 					break;

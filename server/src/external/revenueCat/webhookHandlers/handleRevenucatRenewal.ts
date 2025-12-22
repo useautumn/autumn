@@ -47,7 +47,25 @@ export const handleRenewal = async ({
 		logger.info(
 			`Renewal for existing active product ${product.id}, no action needed`,
 		);
-		return;
+		return { success: true };
+	} else if (curSameProduct && curSameProduct.status === CusProductStatus.PastDue) {
+		logger.info(
+			`Renewal for existing past due product ${product.id}, marking as active`,
+		);
+		await CusProductService.update({
+			db,
+			cusProductId: curSameProduct.id,
+			updates: {
+				status: CusProductStatus.Active,
+			},
+		});
+		logger.info(`Marked past due product as active: ${curSameProduct.id}`);
+		await deleteCachedApiCustomer({
+			customerId: customer.id ?? "",
+			orgId: org.id,
+			env,
+		});
+		return { success: true };
 	}
 
 	// Check if this is an upgrade (renewing to a different/better product)
@@ -100,7 +118,7 @@ export const handleRenewal = async ({
 			orgId: org.id,
 			env,
 		});
-		return;
+		return { success: true };
 	}
 
 	// Create new cus_product for upgrade or new product
@@ -139,4 +157,6 @@ export const handleRenewal = async ({
 		orgId: org.id,
 		env,
 	});
+
+	return { success: true };
 };

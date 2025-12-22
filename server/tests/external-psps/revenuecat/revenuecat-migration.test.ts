@@ -25,7 +25,7 @@ import { timeout } from "../../utils/genUtils.js";
 import {
 	expectWebhookSuccess,
 	RevenueCatWebhookClient,
-} from "./utils/RevenueCatWebhookClient.js";
+} from "./utils/revenue-cat-webhook-client.js";
 
 const testCase = "rcMigration1";
 const RC_WEBHOOK_SECRET = "test_rc_webhook_secret_migration";
