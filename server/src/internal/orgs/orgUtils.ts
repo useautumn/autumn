@@ -22,6 +22,7 @@ import { notNullish } from "@server/utils/genUtils.js";
 import { eq } from "drizzle-orm";
 import Stripe from "stripe";
 import { FeatureService } from "../features/FeatureService.js";
+import { getRevenueCatConfigDisplay } from "./handlers/handleRevenueCatConfig.js";
 import { getVercelConfigDisplay } from "./handlers/handleVercelConfig.js";
 import { OrgService } from "./OrgService.js";
 import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
@@ -200,6 +201,7 @@ export const createOrgResponse = ({
 	});
 
 	const vercelConnection = getVercelConfigDisplay({ org, env });
+	const revenueCatConnection = getRevenueCatConfigDisplay({ org, env });
 
 	const stripeConnection = secretKeyConnected
 		? "secret_key"
@@ -243,6 +245,15 @@ export const createOrgResponse = ({
 				webhook_url: vercelConnection.webhook_url,
 				custom_payment_method: vercelConnection.custom_payment_method,
 				marketplace_mode: vercelConnection.marketplace_mode,
+			},
+			revenuecat: {
+				connected: revenueCatConnection.connected,
+				api_key: revenueCatConnection.api_key,
+				sandbox_api_key: revenueCatConnection.sandbox_api_key,
+				project_id: revenueCatConnection.project_id,
+				sandbox_project_id: revenueCatConnection.sandbox_project_id,
+				webhook_secret: revenueCatConnection.webhook_secret,
+				sandbox_webhook_secret: revenueCatConnection.sandbox_webhook_secret,
 			},
 		},
 
