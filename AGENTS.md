@@ -6,6 +6,7 @@
 - When writing DB queries, for the `customers`, `products` and `features` tables (and others possibly not mentioned here), the primary key when updating is `internal_id`, not `id`
 - When using db schemas in Drizzle, import them from '@autumn/shared', and don't do schemas.
 - Do NOT use "any" type.
+- **Spell out variable names in full form** - avoid abbreviations in variable/function names. Use `customerProduct` not `cusProduct`, `customerEntitlements` not `cusEnts`, `organization` not `org` (in new code). Clarity over brevity.
 
 # Testing
 - When writing tests, ALWAYS read:
@@ -20,6 +21,8 @@
 - This codebase uses Bun as its preferred package manager and Node runtime.
 
 - **ALWAYS import from `zod/v4`**, not from `zod` directly. Example: `import { z } from "zod/v4";`
+
+- **ALWAYS use named import for Decimal.js**: `import { Decimal } from "decimal.js";` NOT `import Decimal from "decimal.js";`
 
 - **ALWAYS use `.meta()` for zod-openapi schema registration**, NOT `.openapi()`. Example: `ApiProductSchema.meta({ id: "Product" })`
 

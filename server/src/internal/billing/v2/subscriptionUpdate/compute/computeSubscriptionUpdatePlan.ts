@@ -1,6 +1,6 @@
 import type { SubscriptionUpdateV0Params } from "@shared/index";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { SubscriptionUpdatePlan } from "../../types";
+import type { SubscriptionUpdatePlan } from "../../typesOld";
 import type { UpdateSubscriptionContext } from "../fetch/updateSubscriptionContextSchema";
 import { computeSubscriptionUpdateIntent } from "./computeSubscriptionUpdateIntent";
 import { getComputeSubscriptionUpdatePlanFunction } from "./computeSubscriptionUpdatePlanIntentMap";

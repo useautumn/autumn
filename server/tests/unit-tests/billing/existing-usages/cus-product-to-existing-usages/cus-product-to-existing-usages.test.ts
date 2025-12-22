@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { EntInterval } from "@autumn/shared";
 import { createMockCusEntitlement } from "@tests/utils/mockUtils/cusEntitlementMocks";
-import { createMockCusProduct } from "@tests/utils/mockUtils/cusProductMocks";
+import { createMockCustomerProduct } from "@tests/utils/mockUtils/cusProductMocks";
 import { createMockRollover } from "@tests/utils/mockUtils/rolloverMocks";
 import chalk from "chalk";
 import { cusProductToExistingUsages } from "@/internal/billing/billingUtils/handleExistingUsages/cusProductToExistingUsages";
@@ -32,7 +32,7 @@ describe(chalk.yellowBright("cusProductToExistingUsages"), () => {
 				nextResetAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
 			});
 
-			const cusProduct = createMockCusProduct({
+			const cusProduct = createMockCustomerProduct({
 				cusEntitlements: [lifetimeCusEnt, monthlyCusEnt],
 			});
 
@@ -73,7 +73,7 @@ describe(chalk.yellowBright("cusProductToExistingUsages"), () => {
 				},
 			});
 
-			const cusProduct = createMockCusProduct({
+			const cusProduct = createMockCustomerProduct({
 				cusEntitlements: [topLevelCusEnt, entityScopedCusEnt],
 			});
 
@@ -125,7 +125,7 @@ describe(chalk.yellowBright("cusProductToExistingUsages"), () => {
 				}),
 			];
 
-			const cusProduct = createMockCusProduct({
+			const cusProduct = createMockCustomerProduct({
 				cusEntitlements: [cusEntWithRollover],
 			});
 

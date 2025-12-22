@@ -120,7 +120,7 @@ export const cusEntsToPrepaidQuantity = ({
 		// 2. If cus ent is not prepaid, skip
 		const cusPrice = cusEntToCusPrice({ cusEnt });
 
-		if (!cusPrice || !isPrepaidPrice({ price: cusPrice.price })) continue;
+		if (!cusPrice || !isPrepaidPrice(cusPrice.price)) continue;
 
 		// 3. Get quantity
 		const options = cusEnt.customer_product.options.find(

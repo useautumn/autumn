@@ -31,6 +31,8 @@ export * from "./cusPriceUtils/convertCusPriceUtils.js";
 export * from "./cusPriceUtils/findCusPriceUtils.js";
 // Cus product utils
 export * from "./cusProductUtils/classifyCusProduct.js";
+export * from "./cusProductUtils/convertCusProduct/cusProductToConvertedFeatureOptions.js";
+export * from "./cusProductUtils/convertCusProduct/cusProductToFeatureOptions.js";
 export * from "./cusProductUtils/convertCusProduct.js";
 export * from "./cusProductUtils/cusProductConstants.js";
 export * from "./cusProductUtils/cusProductUtils.js";
@@ -61,6 +63,7 @@ export * from "./productUtils/entUtils/formatEntUtils.js";
 export * from "./productUtils/isProductUpgrade.js";
 export * from "./productUtils/priceUtils/classifyPriceUtils.js";
 export * from "./productUtils/priceUtils/convertAmountUtils.js";
+export * from "./productUtils/priceUtils/convertPriceUtils.js";
 export * from "./productUtils/priceUtils/formatPriceUtils.js";
 export * from "./productUtils/priceUtils.js";
 export * from "./productV2Utils/mapToProductV2.js";

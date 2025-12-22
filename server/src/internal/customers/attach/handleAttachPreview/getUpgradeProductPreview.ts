@@ -6,6 +6,7 @@ import {
 	type FreeTrial,
 	type FullCusProduct,
 	isCusProductTrialing,
+	isPrepaidPrice,
 	OnDecrease,
 	OnIncrease,
 	type PreviewLineItem,
@@ -21,7 +22,6 @@ import { getItemsForNewProduct } from "@/internal/invoices/previewItemUtils/getI
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { getAlignedUnix } from "@/internal/products/prices/billingIntervalUtils2.js";
 import { getLargestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
-import { isPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import { nullish } from "@/utils/genUtils.js";
@@ -103,7 +103,7 @@ const filterNoProratePrepaidItems = ({
 		const curPrice = curPrices.find(
 			(p) =>
 				(p.config as UsagePriceConfig)?.internal_feature_id ===
-					internal_feature_id && isPrepaidPrice({ price: p }),
+					internal_feature_id && isPrepaidPrice(p),
 		);
 
 		const onDecrease = curPrice?.proration_config?.on_decrease;

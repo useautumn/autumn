@@ -1,5 +1,5 @@
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
-import type { AttachContext, AttachPlan } from "../types";
+import type { AttachContext, AttachPlan } from "../typesOld";
 import { applyCusProductActions } from "./executeAutumnActions/applyCusProductActions";
 import { executeStripeCheckoutAction } from "./executeStripeCheckoutAction";
 import { executeStripeInvoiceAction } from "./executeStripeInvoiceAction";

@@ -109,8 +109,6 @@ export const getMaxOverage = ({
 	const usageLimit = cusEnt.entitlement.usage_limit;
 	if (nullish(usageLimit)) return undefined;
 
-	// const cusPrice = cusEntToCusPrice({ cusEnt });
-	// if (cusPrice && isPrepaidPrice({ price: cusPrice.price })) return undefined;
 	if (!cusEnt.usage_allowed) return undefined;
 
 	const maxOverage = new Decimal(usageLimit)

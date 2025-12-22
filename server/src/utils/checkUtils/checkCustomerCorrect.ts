@@ -11,6 +11,7 @@ import {
 	type FullCustomer,
 	isFixedPrice,
 	isOneOffPrice,
+	isPrepaidPrice,
 	type Organization,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle";
@@ -31,7 +32,6 @@ import {
 	getPriceEntitlement,
 	getPriceOptions,
 } from "@server/internal/products/prices/priceUtils";
-import { isPrepaidPrice } from "@server/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice";
 import { isFreeProduct } from "@server/internal/products/productUtils";
 import type Stripe from "stripe";
 import { formatUnixToDateTime, nullish } from "../genUtils";
@@ -411,12 +411,12 @@ export const checkCusSubCorrect = async ({
 					withEntity: !!cusProduct.internal_entity_id,
 					isCheckout: false,
 					apiVersion,
-					productOptions: cusProduct.quantity
-						? {
-								product_id: product.id,
-								quantity: Number(cusProduct.quantity || 1),
-							}
-						: undefined,
+					// productOptions: cusProduct.quantity
+					// 	? {
+					// 			product_id: product.id,
+					// 			quantity: Number(cusProduct.quantity || 1),
+					// 		}
+					// 	: undefined,
 				});
 
 				if (res?.lineItem && nullish(res.lineItem.quantity)) {
@@ -445,8 +445,7 @@ export const checkCusSubCorrect = async ({
 								priceStr: `${product.id}-${formatPrice({ price })}`,
 								stripeProdId: product.processor?.id,
 								autumnPrice: price,
-								canSkip:
-									isPrepaidPrice({ price }) && res?.lineItem?.quantity === 0,
+								canSkip: isPrepaidPrice(price) && res?.lineItem?.quantity === 0,
 							});
 						}
 					}

@@ -5,7 +5,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { InvoiceService } from "@/internal/invoices/InvoiceService";
 import { getInvoiceItems } from "@/internal/invoices/invoiceUtils";
 import { createAndFinalizeInvoice } from "@/internal/invoices/invoiceUtils/createAndFinalizeInvoice";
-import type { SubscriptionUpdateInvoiceAction } from "../types";
+import type { SubscriptionUpdateInvoiceAction } from "../typesOld";
 
 /**
  * Execute invoice creation and finalization for subscription updates.

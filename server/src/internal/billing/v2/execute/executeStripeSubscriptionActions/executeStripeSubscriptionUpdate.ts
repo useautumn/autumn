@@ -1,6 +1,6 @@
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { StripeSubAction } from "../../types";
+import type { StripeSubAction } from "../../typesOld";
 
 /**
  * Execute Stripe subscription item updates.

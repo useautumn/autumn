@@ -24,11 +24,6 @@ export const isContUsePrice = ({ price }: { price?: Price }) => {
 	return billingType === BillingType.InArrearProrated;
 };
 
-export const isPrepaidPrice = ({ price }: { price: Price }) => {
-	const billingType = getBillingType(price.config);
-	return billingType === BillingType.UsageInAdvance;
-};
-
 export const hasPrepaidPrice = ({
 	prices,
 	excludeOneOff,

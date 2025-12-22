@@ -4,7 +4,7 @@ import type {
 	OngoingCusProductAction,
 } from "@autumn/shared";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
-import type { QuantityUpdateDetails } from "../../types";
+import type { QuantityUpdateDetails } from "../../typesOld";
 import { applyOngoingCusProductAction } from "./applyOngoingCusProductAction";
 import { insertNewCusProducts } from "./insertNewCusProducts";
 import { updateCustomerEntitlements } from "./updateCustomerEntitlements";

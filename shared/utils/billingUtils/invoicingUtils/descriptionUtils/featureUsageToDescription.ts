@@ -1,6 +1,6 @@
 import type { Feature } from "../../../../models/featureModels/featureModels";
 import { getSingularAndPlural, numberWithCommas } from "../../../displayUtils";
-import { roundUsageToNearestBillingUnit } from "../lineItemUtils/roundUsageToNearestBillingUnit";
+import { roundUsageToNearestBillingUnit } from "../../usageUtils/roundUsageToNearestBillingUnit";
 
 /**
  * Generates base usage description for a feature.

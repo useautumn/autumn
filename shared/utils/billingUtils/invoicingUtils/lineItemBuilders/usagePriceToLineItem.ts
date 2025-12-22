@@ -6,8 +6,10 @@ import { cusEntToStripeIds } from "../../../cusEntUtils/convertCusEntUtils/cusEn
 import { cusEntToInvoiceOverage } from "../../../cusEntUtils/overageUtils/cusEntToInvoiceOverage";
 import { cusEntToInvoiceUsage } from "../../../cusEntUtils/overageUtils/cusEntToInvoiceUsage";
 import { cusEntToCusPrice } from "../../../productUtils/convertUtils";
-import { isPrepaidPrice } from "../../../productUtils/priceUtils";
-import { isConsumablePrice } from "../../../productUtils/priceUtils/classifyPriceUtils";
+import {
+	isConsumablePrice,
+	isPrepaidPrice,
+} from "../../../productUtils/priceUtils/classifyPriceUtils";
 import { usagePriceToLineDescription } from "../descriptionUtils/usagePriceToLineDescription";
 import { priceToLineAmount } from "../lineItemUtils/priceToLineAmount";
 import { buildLineItem } from "./buildLineItem";
@@ -38,7 +40,7 @@ export const usagePriceToLineItem = ({
 
 	// 1. Get overage
 	let overage = 0;
-	if (isPrepaidPrice({ price: cusPrice.price })) {
+	if (isPrepaidPrice(cusPrice.price)) {
 		overage = cusEntToPrepaidQuantity({ cusEnt });
 	} else {
 		overage = cusEntToInvoiceOverage({ cusEnt });
@@ -46,7 +48,7 @@ export const usagePriceToLineItem = ({
 
 	// 2. Get usage
 	let usage = 0;
-	if (isPrepaidPrice({ price: cusPrice.price })) {
+	if (isPrepaidPrice(cusPrice.price)) {
 		usage = cusEntToPrepaidQuantity({ cusEnt });
 	} else {
 		usage = cusEntToInvoiceUsage({ cusEnt });

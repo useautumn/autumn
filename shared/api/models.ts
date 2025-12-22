@@ -77,6 +77,7 @@ export * from "./billing/checkout/prevVersions/checkoutParamsV0.js";
 export * from "./billing/checkout/prevVersions/checkoutParamsV0.js";
 export * from "./billing/checkout/prevVersions/checkoutResponseV0.js";
 export * from "./billing/subscriptionUpdate/subscriptionUpdateV0Params.js";
+export * from "./billing/subscriptionUpdate/subscriptionUpdateV0Params.js";
 export * from "./billing/subscriptionUpdate/subscriptionUpdateV1Params.js";
 export * from "./common/customerData.js";
 export * from "./common/entityData.js";

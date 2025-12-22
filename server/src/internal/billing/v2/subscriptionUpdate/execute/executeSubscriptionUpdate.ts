@@ -7,7 +7,7 @@ import { PriceService } from "@/internal/products/prices/PriceService";
 import { executeCusProductActions } from "../../execute/executeAutumnActions/executeCusProductActions";
 import { executeInvoiceAction } from "../../execute/executeInvoiceAction";
 import { executeStripeSubAction } from "../../execute/executeStripeSubAction";
-import type { SubscriptionUpdatePlan } from "../../types";
+import type { SubscriptionUpdatePlan } from "../../typesOld";
 import type { UpdateSubscriptionContext } from "../fetch/updateSubscriptionContextSchema";
 
 export const executeSubscriptionUpdate = async ({

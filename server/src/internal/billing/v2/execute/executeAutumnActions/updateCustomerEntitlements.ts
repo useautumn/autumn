@@ -1,6 +1,6 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
-import type { QuantityUpdateDetails } from "../../types";
+import type { QuantityUpdateDetails } from "../../typesOld";
 
 /**
  * Update customer entitlement balances based on quantity changes.

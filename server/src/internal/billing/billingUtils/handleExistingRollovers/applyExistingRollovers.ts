@@ -1,10 +1,10 @@
 import type { ExistingRollover, FullCusProduct } from "@shared/index";
 
 export const applyExistingRollovers = ({
-	newCusProduct,
+	customerProduct,
 	existingRollovers,
 }: {
-	newCusProduct: FullCusProduct;
+	customerProduct: FullCusProduct;
 	existingRollovers: ExistingRollover[];
 }) => {
 	const getApplicableRollovers = (): ExistingRollover[] => {
@@ -16,7 +16,7 @@ export const applyExistingRollovers = ({
 	};
 
 	for (const existingRollover of getApplicableRollovers()) {
-		const targetCusEnt = newCusProduct.customer_entitlements.find(
+		const targetCusEnt = customerProduct.customer_entitlements.find(
 			(cusEnt) =>
 				cusEnt.entitlement.internal_feature_id ===
 				existingRollover.internal_feature_id,

@@ -1,6 +1,6 @@
 import { secondsToMs } from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
-import type { AttachContext } from "../types";
+import type { AttachContext } from "../typesOld";
 import { buildAutumnLineItems } from "./computeAutumnUtils/buildAutumnLineItems";
 import { buildNewCusProducts } from "./computeAutumnUtils/buildNewCusProducts";
 import { buildStripeCheckoutAction } from "./computeStripeUtils/buildStripeCheckoutAction";

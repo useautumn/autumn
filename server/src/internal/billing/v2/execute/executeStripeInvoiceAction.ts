@@ -5,7 +5,7 @@ import type {
 	AttachContext,
 	StripeCheckoutAction,
 	StripeInvoiceAction,
-} from "../types";
+} from "../typesOld";
 import { executeStripeCheckoutAction } from "./executeStripeCheckoutAction";
 
 export const executeStripeInvoiceAction = async ({

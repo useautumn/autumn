@@ -9,7 +9,7 @@ import type Stripe from "stripe";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
 import { toSuccessUrl } from "../../../../orgs/orgUtils/convertOrgUtils";
 import { cusProductToStripeItemSpecs } from "../../../billingUtils/stripeAdapter/cusProductToStripeItemSpecs";
-import type { AttachContext } from "../../types";
+import type { AttachContext } from "../../typesOld";
 import { computeShouldCreateStripeCheckout } from "./computeShouldCreateStripeCheckout";
 
 export const buildCheckoutSessionCreateSubscriptionData = ({

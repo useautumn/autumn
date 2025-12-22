@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { ExistingUsages } from "@autumn/shared";
 import { createMockCusEntitlement } from "@tests/utils/mockUtils/cusEntitlementMocks";
-import { createMockCusProduct } from "@tests/utils/mockUtils/cusProductMocks";
+import { createMockCustomerProduct } from "@tests/utils/mockUtils/cusProductMocks";
 import chalk from "chalk";
 import { applyExistingUsages } from "@/internal/billing/billingUtils/handleExistingUsages/applyExistingUsages";
 
@@ -25,7 +25,7 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 				},
 			});
 
-			const cusProduct = createMockCusProduct({
+			const cusProduct = createMockCustomerProduct({
 				cusEntitlements: [entityScopedCusEnt],
 			});
 
@@ -67,7 +67,7 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 				// No entityFeatureId - not entity-scoped
 			});
 
-			const cusProduct = createMockCusProduct({
+			const cusProduct = createMockCustomerProduct({
 				cusEntitlements: [nonEntityScopedCusEnt],
 			});
 
@@ -111,7 +111,7 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 				},
 			});
 
-			const cusProduct = createMockCusProduct({
+			const cusProduct = createMockCustomerProduct({
 				cusEntitlements: [entityScopedCusEnt],
 			});
 
@@ -161,7 +161,7 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 				},
 			});
 
-			const cusProduct = createMockCusProduct({
+			const cusProduct = createMockCustomerProduct({
 				cusEntitlements: [entityScopedCusEnt],
 			});
 

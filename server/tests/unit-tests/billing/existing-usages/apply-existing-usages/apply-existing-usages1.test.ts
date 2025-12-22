@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { ExistingUsages } from "@autumn/shared";
 import { createMockCusEntitlement } from "@tests/utils/mockUtils/cusEntitlementMocks";
-import { createMockCusProduct } from "@tests/utils/mockUtils/cusProductMocks";
+import { createMockCustomerProduct } from "@tests/utils/mockUtils/cusProductMocks";
 import chalk from "chalk";
 import { applyExistingUsages } from "@/internal/billing/billingUtils/handleExistingUsages/applyExistingUsages";
 
@@ -19,7 +19,7 @@ describe(chalk.yellowBright("applyExistingUsages"), () => {
 				balance: 5000, // Initial balance before applying existing usages
 			});
 
-			const cusProduct = createMockCusProduct({
+			const cusProduct = createMockCustomerProduct({
 				cusEntitlements: [cusEnt],
 			});
 

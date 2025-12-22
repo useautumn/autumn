@@ -6,17 +6,18 @@ import {
 	type InitFullCusProductOptions,
 	notNullish,
 } from "@autumn/shared";
+import { generateId } from "../../../../utils/genUtils";
 
-export const initCusProduct = ({
+export const initCustomerProduct = ({
 	initContext,
 	initOptions,
-	cusProductId,
+	customerProductId,
 }: {
 	initContext: InitFullCusProductContext;
 	initOptions?: InitFullCusProductOptions;
-	cusProductId: string;
+	customerProductId?: string;
 }): CusProduct => {
-	const { fullCus, product, featureQuantities } = initContext;
+	const { fullCustomer, fullProduct, featureQuantities } = initContext;
 	const {
 		subscriptionId,
 		subscriptionScheduleId,
@@ -25,8 +26,8 @@ export const initCusProduct = ({
 		apiSemver,
 	} = initOptions ?? {};
 
-	const internalEntityId = fullCus.entity?.internal_id;
-	const entityId = fullCus.entity?.id;
+	const internalEntityId = fullCustomer.entity?.internal_id;
+	const entityId = fullCustomer.entity?.id;
 
 	const status = initOptions?.status ?? CusProductStatus.Active;
 	const startsAt = initOptions?.startsAt ?? Date.now();
@@ -41,14 +42,14 @@ export const initCusProduct = ({
 		: undefined;
 
 	return {
-		id: cusProductId,
+		id: customerProductId ?? generateId("cus_prod"),
 
-		internal_customer_id: fullCus.internal_id,
-		customer_id: fullCus.id,
+		internal_customer_id: fullCustomer.internal_id,
+		customer_id: fullCustomer.id,
 		internal_entity_id: internalEntityId,
 		entity_id: entityId,
-		internal_product_id: product.internal_id,
-		product_id: product.id,
+		internal_product_id: fullProduct.internal_id,
+		product_id: fullProduct.id,
 
 		created_at: Date.now(),
 

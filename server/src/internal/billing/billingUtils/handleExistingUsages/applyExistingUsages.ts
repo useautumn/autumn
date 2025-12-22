@@ -8,18 +8,14 @@ import { deductFromCusEntsTypescript } from "../../../balances/track/deductUtils
 import { mergeEntitiesWithExistingUsages } from "./mergeEntitiesWithExistingUsages";
 
 export const applyExistingUsages = ({
-	cusProduct,
+	customerProduct,
 	existingUsages = {},
 	entities,
 }: {
-	cusProduct: FullCusProduct;
+	customerProduct: FullCusProduct;
 	existingUsages?: ExistingUsages;
 	entities: Entity[];
 }) => {
-	// console.log(
-	// 	`applying existing usages to new cus product: ${cusProduct.product.name}`,
-	// );
-
 	// 1. Merge entities with existing usages
 	const mergedExistingUsages = mergeEntitiesWithExistingUsages({
 		entities,
@@ -29,13 +25,8 @@ export const applyExistingUsages = ({
 	for (const [internalFeatureId, existingUsage] of Object.entries(
 		mergedExistingUsages,
 	)) {
-		// console.log(
-		// 	`Applying existing usage for feature: ${internalFeatureId}, usage: `,
-		// 	existingUsage,
-		// );
-
 		const cusEnts = cusProductsToCusEnts({
-			cusProducts: [cusProduct],
+			cusProducts: [customerProduct],
 			internalFeatureId,
 		});
 
@@ -57,7 +48,7 @@ export const applyExistingUsages = ({
 		});
 
 		for (const newCusEnt of cusEnts) {
-			const original = cusProduct.customer_entitlements.find(
+			const original = customerProduct.customer_entitlements.find(
 				(ce) => ce.id === newCusEnt.id,
 			);
 			if (original) {
@@ -66,19 +57,5 @@ export const applyExistingUsages = ({
 				original.adjustment = newCusEnt.adjustment;
 			}
 		}
-
-		// console.log(
-		// 	"New cus ents:",
-		// 	JSON.stringify(
-		// 		cusProduct.customer_entitlements.map((ce) => ({
-		// 			feature_id: ce.feature_id,
-		// 			balance: ce.balance,
-		// 			entities: ce.entities,
-		// 			adjustment: ce.adjustment,
-		// 		})),
-		// 		null,
-		// 		2,
-		// 	),
-		// );
 	}
 };

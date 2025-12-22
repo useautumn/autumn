@@ -6,6 +6,7 @@ import {
 	getFeatureInvoiceDescription,
 	InternalError,
 	type PreviewLineItem,
+	priceToFeature,
 	stripeToAtmnAmount,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -15,10 +16,7 @@ import { findPriceInStripeItems } from "@/external/stripe/stripeSubUtils/stripeS
 import { attachParamsToCurCusProduct } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { getExistingUsageFromCusProducts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
-import {
-	priceToFeature,
-	priceToUsageModel,
-} from "@/internal/products/prices/priceUtils/convertPrice.js";
+import { priceToUsageModel } from "@/internal/products/prices/priceUtils/convertPrice.js";
 import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
 import { formatUnixToDate } from "@/utils/genUtils.js";
 import { calculateProrationAmount } from "../prorationUtils.js";

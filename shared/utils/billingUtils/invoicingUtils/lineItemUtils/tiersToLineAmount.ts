@@ -2,7 +2,7 @@ import { Decimal } from "decimal.js";
 import type { Price } from "../../../../models/productModels/priceModels/priceModels";
 import { Infinite } from "../../../../models/productModels/productEnums";
 import { nullish } from "../../../utils";
-import { roundUsageToNearestBillingUnit } from "./roundUsageToNearestBillingUnit";
+import { roundUsageToNearestBillingUnit } from "../../usageUtils/roundUsageToNearestBillingUnit";
 
 export const tiersToLineAmount = ({
 	price,

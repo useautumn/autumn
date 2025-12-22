@@ -1,6 +1,6 @@
+import type { ExistingRollover } from "@models/billingModels/existingRollovers";
 import type { ApiVersion } from "../../api/versionUtils/ApiVersion";
 import type { FullCustomer } from "../cusModels/fullCusModel";
-import type { AttachReplaceable } from "../cusProductModels/cusEntModels/replaceableSchema";
 import type {
 	CollectionMethod,
 	CusProductStatus,
@@ -9,17 +9,17 @@ import type { FeatureOptions } from "../cusProductModels/cusProductModels";
 import type { FullProduct } from "../productModels/productModels";
 import type { ExistingUsages } from "./existingUsages";
 
-export interface InitFullCusProductContext {
-	fullCus: FullCustomer;
-	product: FullProduct;
+export interface InitFullCustomerProductContext {
+	fullCustomer: FullCustomer;
+	fullProduct: FullProduct;
 	featureQuantities: FeatureOptions[];
-	replaceables: AttachReplaceable[];
 
 	// For customer entitlements
 	existingUsages?: ExistingUsages;
+	existingRollovers?: ExistingRollover[];
 }
 
-export interface InitFullCusProductOptions {
+export interface InitFullCustomerProductOptions {
 	subscriptionId?: string;
 	subscriptionScheduleId?: string;
 	isCustom?: boolean;

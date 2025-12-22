@@ -66,3 +66,10 @@ export const isAllocatedPrice = (
 	const billingType = getBillingType(price.config);
 	return billingType === BillingType.InArrearProrated;
 };
+
+export const isPrepaidPrice = (
+	price: Price,
+): price is Price & { config: UsagePriceConfig } => {
+	const billingType = getBillingType(price.config);
+	return billingType === BillingType.UsageInAdvance;
+};
