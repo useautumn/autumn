@@ -4,6 +4,7 @@ import { createFullCusProduct } from "@/internal/customers/add-product/createFul
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
+import { CusService } from "../../../../internal/customers/CusService.js";
 import { deleteCachedApiCustomer } from "../../../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { MetadataService } from "../../../../internal/metadata/MetadataService.js";
 
@@ -57,8 +58,22 @@ export const handleInvoiceCheckoutPaid = async ({
 		id: metadata.id,
 	});
 
+	// Fetch customer by internal ID
+	let customerId = attachParams.customer.id;
+
+	if (!customerId) {
+		const customer = await CusService.get({
+			db,
+			idOrInternalId: attachParams.customer.internal_id,
+			orgId: org.id,
+			env,
+		});
+
+		customerId = customer?.id;
+	}
+
 	await deleteCachedApiCustomer({
-		customerId: attachParams.customer.id || "",
+		customerId: customerId || "",
 		orgId: org.id,
 		env,
 	});
