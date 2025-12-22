@@ -66,4 +66,3 @@ function parseProperties(
 
 	return properties;
 }
-

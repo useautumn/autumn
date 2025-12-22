@@ -1,10 +1,11 @@
 import { ErrCode } from "@autumn/shared";
-import { ChartBarIcon, DatabaseIcon } from "@phosphor-icons/react";
+import { ChartBarIcon, DatabaseIcon, WarningIcon } from "@phosphor-icons/react";
 import type { AgGridReact } from "ag-grid-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
+import { getBackendErr } from "@/utils/genUtils";
 import { AnalyticsContext } from "./AnalyticsContext";
 import { EventsAGGrid, EventsBarChart } from "./AnalyticsGraph";
 import { colors } from "./components/AGGrid";
@@ -46,6 +47,7 @@ export const AnalyticsView = () => {
 		topEventsLoading,
 		topEvents,
 		groupBy,
+		mutate: mutateAnalytics,
 	} = useAnalyticsData({ hasCleared });
 
 	// Clear the filter when groupBy changes
@@ -72,7 +74,11 @@ export const AnalyticsView = () => {
 		return Array.from(uniqueValues).sort();
 	}, [groupBy, events?.data]);
 
-	const { rawEvents, queryLoading: rawQueryLoading } = useRawAnalyticsData();
+	const {
+		rawEvents,
+		queryLoading: rawQueryLoading,
+		mutate: mutateRawAnalytics,
+	} = useRawAnalyticsData();
 
 	// Extract property keys from raw events for the group by dropdown
 	const propertyKeys = useMemo(() => {
@@ -81,7 +87,7 @@ export const AnalyticsView = () => {
 
 	// Transform and configure chart data
 	const { chartData, chartConfig } = useMemo(() => {
-		if (!events) {
+		if (!events || !events.data || events.data.length === 0) {
 			return { chartData: null, chartConfig: null };
 		}
 
@@ -114,6 +120,15 @@ export const AnalyticsView = () => {
 			originalColors: colors,
 		});
 
+		console.log("Chart debug:", {
+			hasGroupBy: !!groupBy,
+			eventsCount: events.data.length,
+			transformedCount: transformed.data.length,
+			configCount: config.length,
+			sampleTransformed: transformed.data[0],
+			meta: transformed.meta,
+		});
+
 		return { chartData: transformed, chartConfig: config };
 	}, [events, features, groupBy, groupFilter]);
 
@@ -131,11 +146,19 @@ export const AnalyticsView = () => {
 		);
 	}
 
+	// Extract error message if there's a validation error
+	const errorMessage = error
+		? getBackendErr(error, "An error occurred while loading analytics")
+		: null;
+	const isValidationError =
+		error?.response?.data?.code === ErrCode.InvalidInputs;
+
 	// Show empty state if no actual analytics events (check rawEvents and totalRows)
 	const hasNoData =
 		!queryLoading &&
 		!rawQueryLoading &&
 		!topEventsLoading &&
+		!error &&
 		(!rawEvents || !rawEvents.data || rawEvents.data.length === 0) &&
 		totalRows === 0;
 
@@ -176,6 +199,9 @@ export const AnalyticsView = () => {
 				groupFilter,
 				setGroupFilter,
 				availableGroupValues,
+				refreshAnalytics: async () => {
+					await Promise.all([mutateAnalytics(), mutateRawAnalytics()]);
+				},
 			}}
 		>
 			<div className="flex flex-col gap-4 h-full relative w-full text-sm pb-8 max-w-5xl mx-auto px-10 pt-8">
@@ -196,25 +222,44 @@ export const AnalyticsView = () => {
 					)}
 
 					<div className="h-full overflow-hidden">
-						{chartData && chartData.data.length > 0 && (
-							<div className="h-full overflow-hidden bg-interactive-secondary border max-h-[350px]">
-								<EventsBarChart
-									data={
-										chartData as Parameters<typeof EventsBarChart>[0]["data"]
-									}
-									chartConfig={chartConfig}
-								/>
-							</div>
-						)}
+						{chartData &&
+							chartData.data.length > 0 &&
+							chartConfig &&
+							chartConfig.length > 0 && (
+								<div className="h-full overflow-hidden bg-interactive-secondary border max-h-[350px]">
+									<EventsBarChart
+										data={
+											chartData as Parameters<typeof EventsBarChart>[0]["data"]
+										}
+										chartConfig={chartConfig}
+									/>
+								</div>
+							)}
 
 						{!chartData && !queryLoading && (
 							<div className="flex-1 px-10 pt-6">
-								<p className="text-t3 text-sm">
-									No events found. Please widen your filters.{" "}
-									{eventNames.length === 0
-										? "Try to select some events in the dropdown above."
-										: ""}
-								</p>
+								{isValidationError && errorMessage ? (
+									<div className="flex flex-col gap-2 items-start">
+										<div className="flex items-center gap-2 text-warning">
+											<WarningIcon size={16} weight="fill" />
+											<p className="text-sm font-medium text-t2">
+												Grouping Error
+											</p>
+										</div>
+										<p className="text-t3 text-sm pl-6">{errorMessage}</p>
+										<p className="text-t4 text-xs pl-6">
+											Please select a different property to group by, or remove
+											the grouping to view all events.
+										</p>
+									</div>
+								) : (
+									<p className="text-t3 text-sm">
+										No events found. Please widen your filters.{" "}
+										{eventNames.length === 0
+											? "Try to select some events in the dropdown above."
+											: ""}
+									</p>
+								)}
 							</div>
 						)}
 					</div>

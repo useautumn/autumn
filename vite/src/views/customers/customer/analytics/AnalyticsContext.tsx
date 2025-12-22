@@ -7,7 +7,7 @@ export const useAnalyticsContext = () => {
 
 	if (context === undefined) {
 		throw new Error(
-			"useCustomersContext must be used within a CustomersContextProvider",
+			"useAnalyticsContext must be used within an AnalyticsContextProvider",
 		);
 	}
 
