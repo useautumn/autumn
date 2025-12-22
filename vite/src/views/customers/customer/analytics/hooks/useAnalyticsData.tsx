@@ -1,19 +1,14 @@
 import { ErrCode } from "@autumn/shared";
-import { useNavigate, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useAxiosSWR, usePostSWR } from "@/services/useAxiosSwr";
 import { useEnv } from "@/utils/envUtils";
 import { useTopEventNames } from "./useTopEventNames";
 
-export const useAnalyticsData = ({
-	hasCleared = false,
-}: {
-	hasCleared?: boolean;
-}) => {
+export const useAnalyticsData = (_options?: { hasCleared?: boolean }) => {
 	const { org } = useOrg();
 
-	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
 	const customerId = searchParams.get("customer_id");
 	const featureIds = searchParams.get("feature_ids")?.split(",");
@@ -21,7 +16,7 @@ export const useAnalyticsData = ({
 	const interval = searchParams.get("interval");
 	const groupBy = searchParams.get("group_by");
 
-	const { topEvents, isLoading: topEventsLoading } = useTopEventNames();
+	const { isLoading: topEventsLoading } = useTopEventNames();
 
 	// const { data: featuresData, isLoading: featuresLoading } = useAxiosSWR({
 	// 	url: `/features`,
@@ -49,6 +44,7 @@ export const useAnalyticsData = ({
 		data,
 		isLoading: queryLoading,
 		error,
+		mutate,
 	} = usePostSWR({
 		url: `/query/events`,
 		data: {
@@ -75,10 +71,11 @@ export const useAnalyticsData = ({
 		queryLoading,
 		events: data?.events,
 		topEvents: data?.topEvents,
-		error: error?.code === ErrCode.ClickHouseDisabled ? null : error,
+		error: error?.code === ErrCode.ClickHouseDisabled ? null : error || null,
 		bcExclusionFlag: data?.bcExclusionFlag ?? false,
 		topEventsLoading,
 		groupBy,
+		mutate,
 	};
 };
 
@@ -105,6 +102,7 @@ export const useRawAnalyticsData = () => {
 		data,
 		isLoading: queryLoading,
 		error,
+		mutate,
 	} = usePostSWR({
 		url: `/query/raw`,
 		data: {
@@ -130,6 +128,7 @@ export const useRawAnalyticsData = () => {
 		queryLoading,
 		rawEvents: data?.rawEvents,
 		error: error?.code === ErrCode.ClickHouseDisabled ? null : error,
+		mutate,
 	};
 };
 

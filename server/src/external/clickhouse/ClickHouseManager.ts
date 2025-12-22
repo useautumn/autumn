@@ -11,6 +11,7 @@ export enum ClickHouseQuery {
 	CREATE_DATE_RANGE_VIEW = "CREATE_DATE_RANGE_VIEW",
 	CREATE_DATE_RANGE_BC_VIEW = "CREATE_DATE_RANGE_BC_VIEW",
 	CREATE_ORG_EVENTS_VIEW = "CREATE_ORG_EVENTS_VIEW",
+	CREATE_EVENTS_USAGE_MATERIALIZED_VIEW = "CREATE_EVENTS_USAGE_MATERIALIZED_VIEW",
 	// CREATE_GENERATE_EVENT_COUNT_EXPRESSIONS_FUNCTION = "CREATE_GENERATE_EVENT_COUNTS_EXPRESSIONS",
 	// CREATE_GENERATE_EVENT_COUNT_EXPRESSIONS_NO_COUNT_FUNCTION = "CREATE_GENERATE_EVENT_COUNTS_EXPRESSIONS_NO_COUNT",
 	GENERATE_EVENT_COUNT_EXPRESSIONS = "GENERATE_EVENT_COUNT_EXPRESSIONS",
@@ -105,11 +106,35 @@ export class ClickHouseManager {
 	static async createDateRangeBcView() {}
 	static async createOrgEventsView() {}
 
+	static async createEventsUsageMaterializedView() {
+		const manager = await ClickHouseManager.getInstance();
+		if (!manager.client) {
+			throw new Error("ClickHouse client not initialized");
+		}
+		if (!ClickHouseManager.clickhouseAvailable) {
+			console.log(
+				"ClickHouse is not available, cannot create materialized view",
+			);
+			return;
+		}
+		try {
+			await manager.executeQuery(
+				ClickHouseQuery.CREATE_EVENTS_USAGE_MATERIALIZED_VIEW,
+				manager.client,
+			);
+			console.log("✓ Successfully created events_usage_mv materialized view");
+		} catch (error) {
+			console.error("✗ Failed to create materialized view:", error);
+			throw error;
+		}
+	}
+
 	static async ensureSQLFilesExist() {
 		const requiredQueries = [
 			ClickHouseQuery.CREATE_DATE_RANGE_VIEW,
 			ClickHouseQuery.CREATE_DATE_RANGE_BC_VIEW,
 			ClickHouseQuery.CREATE_ORG_EVENTS_VIEW,
+			ClickHouseQuery.CREATE_EVENTS_USAGE_MATERIALIZED_VIEW,
 			// ClickHouseQuery.CREATE_GENERATE_EVENT_COUNT_EXPRESSIONS_FUNCTION,
 			// ClickHouseQuery.CREATE_GENERATE_EVENT_COUNT_EXPRESSIONS_NO_COUNT_FUNCTION,
 			ClickHouseQuery.GENERATE_EVENT_COUNT_EXPRESSIONS,
@@ -171,6 +196,7 @@ export class ClickHouseManager {
 			ClickHouseQuery.CREATE_DATE_RANGE_BC_VIEW,
 			ClickHouseQuery.CREATE_DATE_RANGE_VIEW,
 			ClickHouseQuery.CREATE_ORG_EVENTS_VIEW,
+			ClickHouseQuery.CREATE_EVENTS_USAGE_MATERIALIZED_VIEW,
 
 			// ClickHouseQuery.CREATE_GENERATE_EVENT_COUNT_EXPRESSIONS_FUNCTION,
 		];
@@ -214,16 +240,16 @@ export class ClickHouseManager {
 			throw new Error(`Query ${query} not found`);
 		}
 
-		// For CREATE FUNCTION queries, use command() instead of query() to avoid FORMAT clause
-		// if (
-		//   query === ClickHouseQuery.CREATE_GENERATE_EVENT_COUNT_EXPRESSIONS_FUNCTION
-		// ) {
-		//   const result = await client.command({
-		//     query: queryContent,
-		//     ...options,
-		//   });
-		//   return result;
-		// }
+		// For CREATE MATERIALIZED VIEW queries, use command() instead of query() to avoid FORMAT clause
+		if (
+			query === ClickHouseQuery.CREATE_EVENTS_USAGE_MATERIALIZED_VIEW
+		) {
+			const result = await client.command({
+				query: queryContent,
+				...options,
+			});
+			return result;
+		}
 
 		const result = await client.query({
 			query: queryContent,

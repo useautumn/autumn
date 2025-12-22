@@ -16,6 +16,25 @@ interface EventsData {
 }
 
 /**
+ * Ensures events data has a meta property by building it from the first data row if missing
+ */
+function ensureMeta(events: EventsData): EventsData {
+	if (events.meta && events.meta.length > 0) {
+		return events;
+	}
+
+	if (!events.data || events.data.length === 0) {
+		return { ...events, meta: [], rows: 0 };
+	}
+
+	return {
+		...events,
+		meta: Object.keys(events.data[0]).map((key) => ({ name: key })),
+		rows: events.rows ?? events.data.length,
+	};
+}
+
+/**
  * Chart series configuration
  */
 interface ChartSeriesConfig {
@@ -88,6 +107,9 @@ export function transformGroupedData({
 	events: EventsData;
 	groupBy: string | null;
 }): EventsData {
+	// Ensure meta exists
+	events = ensureMeta(events);
+
 	if (!groupBy) {
 		return events;
 	}
@@ -178,6 +200,9 @@ export function generateChartConfig({
 	groupBy: string | null;
 	originalColors: string[];
 }): ChartSeriesConfig[] {
+	// Ensure meta exists
+	events = ensureMeta(events);
+
 	const colorsToUse = groupBy ? CHART_COLORS : originalColors;
 
 	if (!groupBy) {

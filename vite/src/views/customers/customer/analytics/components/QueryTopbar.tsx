@@ -1,6 +1,8 @@
 import { CaretDownIcon } from "@phosphor-icons/react";
-import { Check } from "lucide-react";
+import { Check, RefreshCw } from "lucide-react";
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router";
+import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -30,14 +32,26 @@ export const QueryTopbar = () => {
 		setSelectedInterval,
 		bcExclusionFlag,
 		propertyKeys,
+		refreshAnalytics,
 	} = useAnalyticsContext();
 	const navigate = useNavigate();
 	const location = useLocation();
+	const [isRefreshing, setIsRefreshing] = useState(false);
 
 	const updateQueryParams = (key: string, value: string) => {
 		const params = new URLSearchParams(location.search);
 		params.set(key, value);
 		navigate(`${location.pathname}?${params.toString()}`);
+	};
+
+	const handleRefresh = async () => {
+		if (!refreshAnalytics || isRefreshing) return;
+		setIsRefreshing(true);
+		try {
+			await refreshAnalytics();
+		} finally {
+			setIsRefreshing(false);
+		}
 	};
 
 	return (
@@ -93,10 +107,20 @@ export const QueryTopbar = () => {
 				<SelectGroupByDropdown
 					propertyKeys={propertyKeys}
 					classNames={{
-						trigger: "h-full border-y-0 border-l-0 border-r-1",
+						trigger: "h-full border-y-0 border-l-0 border-r-0",
 					}}
 				/>
 			)}
+			<Button
+				variant="outline"
+				className="px-3 text-xs h-full border-y-0 border-l-0 border-r"
+				onClick={handleRefresh}
+				disabled={isRefreshing}
+			>
+				<RefreshCw
+					className={`h-3 w-3 ${isRefreshing ? "animate-spin" : ""}`}
+				/>
+			</Button>
 		</div>
 	);
 };
