@@ -1,6 +1,7 @@
 import {
 	type FrontendProduct,
 	getProductItemDisplay,
+	itemsAreSame,
 	type ProductItem,
 	type ProductV2,
 	productsAreSame,
@@ -188,6 +189,43 @@ export const useCurrentItem = () => {
 
 		return null;
 	}, [product, itemId]);
+};
+
+/**
+ * Hook to check if the current item has unsaved changes compared to its initial state
+ */
+export const useHasItemChanges = () => {
+	const item = useCurrentItem();
+	const initialItem = useSheetStore((s) => s.initialItem);
+	const { features = [] } = useFeaturesQuery();
+
+	return useMemo(() => {
+		if (!item || !initialItem) return false;
+
+		const { same } = itemsAreSame({
+			item1: item,
+			item2: initialItem,
+			features,
+		});
+
+		return !same;
+	}, [item, initialItem, features]);
+};
+
+/**
+ * Hook to discard item changes (restore to initial state) and close the sheet
+ */
+export const useDiscardItemAndClose = () => {
+	const setCurrentItem = useSetCurrentItem();
+	const initialItem = useSheetStore((s) => s.initialItem);
+	const closeSheet = useSheetStore((s) => s.closeSheet);
+
+	return () => {
+		if (initialItem) {
+			setCurrentItem(initialItem);
+		}
+		closeSheet();
+	};
 };
 
 export const useSetCurrentItem = () => {
