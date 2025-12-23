@@ -1,11 +1,7 @@
-import type { FrontendProduct, ProductV2 } from "@autumn/shared";
-import { productV2ToFrontendProduct } from "@autumn/shared";
+import type { FrontendProduct } from "@autumn/shared";
 import { Button } from "@/components/v2/buttons/Button";
 import { useOrg } from "@/hooks/common/useOrg";
-import {
-	useCurrentItem,
-	useProductStore,
-} from "@/hooks/stores/useProductStore";
+import { useCurrentItem } from "@/hooks/stores/useProductStore";
 import {
 	useIsEditingPlanPrice,
 	useSheetStore,
@@ -16,16 +12,13 @@ import { checkItemIsValid } from "@/utils/product/entitlementUtils";
 
 export const BasePriceDisplay = ({
 	isOnboarding,
-	product: productProp,
+	product,
 	readOnly = false,
 }: {
 	isOnboarding?: boolean;
-	product?: ProductV2 | FrontendProduct;
+	product: FrontendProduct;
 	readOnly?: boolean;
 }) => {
-	const productFromStore = useProductStore((s) => s.product);
-	const product = productProp ?? productFromStore;
-	const frontendProduct = productV2ToFrontendProduct({ product });
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const { org } = useOrg();
 
@@ -39,7 +32,7 @@ export const BasePriceDisplay = ({
 
 	const renderPriceContent = () => {
 		const priceDisplay = getBasePriceDisplay({
-			product: frontendProduct,
+			product,
 			currency: org?.default_currency,
 			showPlaceholder: true,
 		});
