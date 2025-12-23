@@ -3,6 +3,7 @@ import { createContext, useContext } from "react";
 
 export interface ProductItemContextType {
 	item: ProductItem | null;
+	initialItem?: ProductItem | null;
 	setItem: (item: ProductItem) => void;
 	selectedIndex: number;
 	showCreateFeature: boolean;
@@ -13,6 +14,7 @@ export interface ProductItemContextType {
 
 export const ProductItemContext = createContext<ProductItemContextType>({
 	item: null,
+	initialItem: null,
 	setItem: () => {},
 	selectedIndex: 0,
 	showCreateFeature: false,
