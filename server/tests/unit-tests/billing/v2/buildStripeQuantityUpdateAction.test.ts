@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type Stripe from "stripe";
-import { buildStripeSubscriptionAction } from "@/internal/billing/v2/subscriptionUpdate/compute/buildStripeSubscriptionAction";
+import { buildStripeQuantityUpdateAction } from "@/internal/billing/v2/subscriptionUpdate/compute/buildStripeQuantityUpdateAction";
 import type { QuantityUpdateDetails } from "@/internal/billing/v2/typesOld";
 
 const createMockQuantityUpdateDetails = (
@@ -37,14 +37,14 @@ const createMockStripeSubscriptionItem = (
 		...overrides,
 	}) as Stripe.SubscriptionItem;
 
-describe("buildStripeSubscriptionAction", () => {
+describe("buildStripeQuantityUpdateAction", () => {
 	test("should create new subscription item when no existing item", () => {
 		const details = createMockQuantityUpdateDetails({
 			existingStripeSubscriptionItem: undefined,
 			updatedFeatureQuantity: 8,
 		});
 
-		const result = buildStripeSubscriptionAction({
+		const result = buildStripeQuantityUpdateAction({
 			quantityUpdateDetails: [details],
 			stripeSubscriptionId: "sub_123",
 		});
@@ -69,7 +69,7 @@ describe("buildStripeSubscriptionAction", () => {
 			stripeSubscriptionItemQuantityDifference: 3,
 		});
 
-		const result = buildStripeSubscriptionAction({
+		const result = buildStripeQuantityUpdateAction({
 			quantityUpdateDetails: [details],
 			stripeSubscriptionId: "sub_123",
 		});
@@ -93,7 +93,7 @@ describe("buildStripeSubscriptionAction", () => {
 			stripeSubscriptionItemQuantityDifference: -4,
 		});
 
-		const result = buildStripeSubscriptionAction({
+		const result = buildStripeQuantityUpdateAction({
 			quantityUpdateDetails: [details],
 			stripeSubscriptionId: "sub_123",
 		});
@@ -130,7 +130,7 @@ describe("buildStripeSubscriptionAction", () => {
 			stripePriceId: "price_2",
 		});
 
-		const result = buildStripeSubscriptionAction({
+		const result = buildStripeQuantityUpdateAction({
 			quantityUpdateDetails: [details1, details2],
 			stripeSubscriptionId: "sub_123",
 		});
@@ -153,7 +153,7 @@ describe("buildStripeSubscriptionAction", () => {
 			stripeSubscriptionItemQuantityDifference: 0,
 		});
 
-		const result = buildStripeSubscriptionAction({
+		const result = buildStripeQuantityUpdateAction({
 			quantityUpdateDetails: [details],
 			stripeSubscriptionId: "sub_123",
 		});
@@ -174,7 +174,7 @@ describe("buildStripeSubscriptionAction", () => {
 			stripeSubscriptionItemQuantityDifference: 5,
 		});
 
-		const result = buildStripeSubscriptionAction({
+		const result = buildStripeQuantityUpdateAction({
 			quantityUpdateDetails: [details],
 			stripeSubscriptionId: "sub_123",
 		});
