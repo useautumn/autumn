@@ -6,6 +6,8 @@ import {
 	type Organization,
 	type Price,
 	type Product,
+	shouldBillNow,
+	shouldProrate,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -14,10 +16,6 @@ import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { constructStripeInvoiceItem } from "@/internal/invoices/invoiceItemUtils/invoiceItemUtils.js";
 import { createAndFinalizeInvoice } from "@/internal/invoices/invoiceUtils/createAndFinalizeInvoice.js";
 import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
-import {
-	shouldBillNow,
-	shouldProrate,
-} from "@/internal/products/prices/priceUtils/prorationConfigUtils.js";
 import { formatUnixToDate } from "@/utils/genUtils.js";
 import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
 import type { Logger } from "../../external/logtail/logtailUtils";

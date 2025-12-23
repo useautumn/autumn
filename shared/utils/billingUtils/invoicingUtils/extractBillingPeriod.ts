@@ -1,44 +1,60 @@
 import { InternalError } from "@api/errors/base/InternalError";
+import type { BillingInterval } from "@models/productModels/intervals/billingInterval";
 import { secondsToMs } from "@utils/common/unixUtils";
 import type Stripe from "stripe";
+import { getCycleEnd } from "../cycleUtils/getCycleEnd";
+import { getCycleStart } from "../cycleUtils/getCycleStart";
 
 /**
- * Extracts the current billing period from a Stripe subscription.
+ * Calculates the current billing period for a subscription.
  *
- * Uses the first subscription item's period for accuracy with prorations and mid-cycle changes.
+ * Uses the subscription's billing_cycle_anchor and the price's interval configuration
+ * to calculate the billing period in-house, rather than relying on Stripe subscription
+ * item periods.
  *
- * @param stripeSubscription - Stripe subscription object
+ * @param stripeSubscription - Stripe subscription object (for billing_cycle_anchor)
+ * @param interval - The billing interval from the price config
+ * @param intervalCount - Number of intervals per cycle (default: 1)
+ * @param currentEpochMs - Current timestamp in milliseconds
  * @returns Start and end timestamps in milliseconds
- * @throws {InternalError} When subscription has no items or invalid period timestamps
  */
 export const extractBillingPeriod = ({
 	stripeSubscription,
+	interval,
+	intervalCount = 1,
+	currentEpochMs,
 }: {
 	stripeSubscription: Stripe.Subscription;
+	interval: BillingInterval;
+	intervalCount?: number;
+	currentEpochMs: number;
 }): {
 	subscriptionPeriodStartEpochMs: number;
 	subscriptionPeriodEndEpochMs: number;
 } => {
-	const firstSubscriptionItem = stripeSubscription.items.data[0];
+	const billingCycleAnchorMs = secondsToMs(
+		stripeSubscription.billing_cycle_anchor,
+	);
 
-	if (!firstSubscriptionItem) {
+	if (!billingCycleAnchorMs) {
 		throw new InternalError({
-			message: "[Billing] Subscription has no items",
+			message: `[Billing] Invalid billing_cycle_anchor: ${stripeSubscription.billing_cycle_anchor}`,
 		});
 	}
 
-	const subscriptionPeriodStartEpochMs = secondsToMs(
-		firstSubscriptionItem.current_period_start,
-	);
-	const subscriptionPeriodEndEpochMs = secondsToMs(
-		firstSubscriptionItem.current_period_end,
-	);
+	const subscriptionPeriodStartEpochMs = getCycleStart({
+		anchor: billingCycleAnchorMs,
+		interval,
+		intervalCount,
+		now: currentEpochMs,
+	});
 
-	if (!subscriptionPeriodStartEpochMs || !subscriptionPeriodEndEpochMs) {
-		throw new InternalError({
-			message: `[Billing] Invalid subscription period: start=${firstSubscriptionItem.current_period_start}, end=${firstSubscriptionItem.current_period_end}`,
-		});
-	}
+	const subscriptionPeriodEndEpochMs = getCycleEnd({
+		anchor: billingCycleAnchorMs,
+		interval,
+		intervalCount,
+		now: currentEpochMs,
+	});
 
 	return {
 		subscriptionPeriodStartEpochMs,

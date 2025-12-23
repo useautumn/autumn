@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	type ApiCustomer,
 	ApiVersion,
+	FreeTrialDuration,
 	OnDecrease,
 	OnIncrease,
 } from "@autumn/shared";
@@ -52,7 +53,7 @@ describe(`${chalk.yellowBright("subscription-update: proration configs - upgrade
 					featureId: TestFeature.Messages,
 					billingUnits,
 					price: pricePerUnit,
-					prorationConfig: {
+					config: {
 						on_increase: onIncrease,
 						on_decrease: OnDecrease.ProrateImmediately,
 					},
@@ -327,7 +328,7 @@ describe(`${chalk.yellowBright("subscription-update: proration configs - downgra
 					featureId: TestFeature.Messages,
 					billingUnits,
 					price: pricePerUnit,
-					prorationConfig: {
+					config: {
 						on_increase: OnIncrease.ProrateImmediately,
 						on_decrease: onDecrease,
 					},
@@ -614,7 +615,7 @@ describe(`${chalk.yellowBright("subscription-update: proration edge cases")}`, (
 					featureId: TestFeature.Messages,
 					billingUnits,
 					price: pricePerUnit,
-					prorationConfig: {
+					config: {
 						on_increase: OnIncrease.ProrateImmediately,
 						on_decrease: OnDecrease.ProrateImmediately,
 					},
@@ -645,7 +646,12 @@ describe(`${chalk.yellowBright("subscription-update: proration edge cases")}`, (
 					quantity: 10 * billingUnits,
 				},
 			],
-			trial_days: 14,
+			free_trial: {
+				length: 14,
+				unique_fingerprint: false,
+				duration: FreeTrialDuration.Day,
+				card_required: true,
+			},
 		});
 
 		const beforeInvoices = await autumnV1.customers.get<ApiCustomer>(

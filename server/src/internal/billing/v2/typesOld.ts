@@ -11,6 +11,7 @@ import type {
 	ScheduledCusProductAction,
 } from "@autumn/shared";
 import type Stripe from "stripe";
+import type { StripeInvoiceAction } from "./billingPlan";
 
 export type AttachContext = {
 	fullCus: FullCustomer;

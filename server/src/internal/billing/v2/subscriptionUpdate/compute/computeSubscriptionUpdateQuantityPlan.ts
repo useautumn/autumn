@@ -1,4 +1,5 @@
 import {
+	findFeatureOptionsByFeature,
 	InternalError,
 	OngoingCusProductActionEnum,
 	type SubscriptionUpdateV0Params,
@@ -22,12 +23,8 @@ export const computeSubscriptionUpdateQuantityPlan = ({
 	updateSubscriptionContext: UpdateSubscriptionContext;
 	params: SubscriptionUpdateV0Params;
 }): SubscriptionUpdateQuantityPlan => {
-	const {
-		customerProduct,
-		stripeSubscription,
-		testClockFrozenTime,
-		paymentMethod,
-	} = updateSubscriptionContext;
+	const { customerProduct, stripeSubscription, testClockFrozenTime } =
+		updateSubscriptionContext;
 
 	if (!stripeSubscription) {
 		throw new InternalError({
@@ -40,33 +37,23 @@ export const computeSubscriptionUpdateQuantityPlan = ({
 		new: params.options || [],
 	};
 
-	const currentEpochMs = testClockFrozenTime || Date.now();
 	const quantityUpdateDetails = featureQuantities.new.map((updatedOption) => {
-		const previousOption = featureQuantities.old.find(
-			(oldOption) => oldOption.feature_id === updatedOption.feature_id,
-		);
-
-		if (!previousOption) {
-			throw new Error(
-				`[Subscription Update] Cannot find previous options for feature: ${updatedOption.feature_id}. ` +
-					`This feature may not exist in the current subscription.`,
-			);
-		}
+		const previousOption = findFeatureOptionsByFeature({
+			featureOptions: customerProduct.options,
+			featureId: updatedOption.feature_id,
+		});
 
 		return computeQuantityUpdateDetails({
 			ctx,
 			previousOptions: previousOption,
 			updatedOptions: updatedOption,
-			customerProduct,
-			stripeSubscription,
-			currentEpochMs,
+			updateSubscriptionContext,
 		});
 	});
 
 	const invoiceAction = computeInvoiceAction({
 		quantityUpdateDetails,
-		stripeSubscription,
-		paymentMethod,
+		updateSubscriptionContext,
 		shouldGenerateInvoiceOnly: !(params.finalize_invoice ?? true),
 	});
 
@@ -82,7 +69,7 @@ export const computeSubscriptionUpdateQuantityPlan = ({
 	const autumnLineItems = buildAutumnLineItems({
 		ctx,
 		newCusProducts: [customerProduct],
-		ongoingCusProductAction,
+		ongoingCustomerProduct: ongoingCusProductAction?.cusProduct,
 		billingCycleAnchor,
 		testClockFrozenTime,
 	});

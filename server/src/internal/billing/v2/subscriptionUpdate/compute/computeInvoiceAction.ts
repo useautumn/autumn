@@ -1,8 +1,8 @@
-import type Stripe from "stripe";
 import type {
 	QuantityUpdateDetails,
 	SubscriptionUpdateInvoiceAction,
 } from "../../typesOld";
+import type { UpdateSubscriptionContext } from "../fetch/updateSubscriptionContextSchema";
 
 /**
  * Computes invoice action for quantity updates requiring proration.
@@ -10,22 +10,20 @@ import type {
  * Filters details with proration, creates invoice items, and determines charge timing.
  *
  * @param quantityUpdateDetails - Array of quantity update details
- * @param stripeSubscription - Stripe subscription being updated
- * @param paymentMethod - Optional payment method for immediate charges
+ * @param updateSubscriptionContext - Context containing stripeSubscription and paymentMethod
  * @param shouldGenerateInvoiceOnly - If true, skip immediate charge
  * @returns Invoice action with items and charge strategy, or undefined if no invoice needed
  */
 export const computeInvoiceAction = ({
 	quantityUpdateDetails,
-	stripeSubscription,
-	paymentMethod,
+	updateSubscriptionContext,
 	shouldGenerateInvoiceOnly,
 }: {
 	quantityUpdateDetails: QuantityUpdateDetails[];
-	stripeSubscription: Stripe.Subscription;
-	paymentMethod?: Stripe.PaymentMethod;
+	updateSubscriptionContext: UpdateSubscriptionContext;
 	shouldGenerateInvoiceOnly?: boolean;
 }): SubscriptionUpdateInvoiceAction | undefined => {
+	const { stripeSubscription, paymentMethod } = updateSubscriptionContext;
 	const invoiceExists = stripeSubscription.latest_invoice !== null;
 	if (!invoiceExists) {
 		return undefined;
