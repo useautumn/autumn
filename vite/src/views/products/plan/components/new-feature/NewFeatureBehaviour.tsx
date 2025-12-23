@@ -15,7 +15,6 @@ export function NewFeatureBehaviour({
 	setFeature: (feature: CreateFeature) => void;
 }) {
 	if (feature.type && feature.type !== FeatureType.Boolean) {
-		console.log("feature.config?.usage_type", feature);
 		return (
 			<SheetSection>
 				<RadioGroup
