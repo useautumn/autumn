@@ -9,7 +9,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "../../compute/computeAutumnUtils/buildAutumnLineItems";
 import type { SubscriptionUpdateQuantityPlan } from "../../typesOld";
 import type { UpdateSubscriptionContext } from "../fetch/updateSubscriptionContextSchema";
-import { buildStripeSubscriptionAction } from "./buildStripeSubscriptionAction";
+import { buildStripeQuantityUpdateAction } from "./buildStripeQuantityUpdateAction";
 import { computeInvoiceAction } from "./computeInvoiceAction";
 import { computeQuantityUpdateDetails } from "./computeQuantityUpdateDetails";
 import { SubscriptionUpdateIntentEnum } from "./computeSubscriptionUpdateSchema";
@@ -74,7 +74,7 @@ export const computeSubscriptionUpdateQuantityPlan = ({
 		testClockFrozenTime,
 	});
 
-	const stripeSubscriptionAction = buildStripeSubscriptionAction({
+	const stripeSubscriptionAction = buildStripeQuantityUpdateAction({
 		quantityUpdateDetails,
 		stripeSubscriptionId: stripeSubscription.id,
 	});

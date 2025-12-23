@@ -4,10 +4,8 @@ import type { QuantityUpdateDetails } from "../../typesOld";
 
 /**
  * Update customer entitlement balances based on quantity changes.
- *
- * Extracted from:
- * - handleQuantityUpgrade.ts:191-206
- * - handleQuantityDowngrade.ts:182-198
+ * @param ctx - The Autumn context.
+ * @param quantityUpdateDetails - List of quantity update details impacting entitlement balances.
  */
 export const updateCustomerEntitlements = async ({
 	ctx,

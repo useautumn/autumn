@@ -15,7 +15,7 @@ import type {
  * @param stripeSubscriptionId - Stripe subscription ID to update
  * @returns Stripe subscription action with update items
  */
-export const buildStripeSubscriptionAction = ({
+export const buildStripeQuantityUpdateAction = ({
 	quantityUpdateDetails,
 	stripeSubscriptionId,
 }: {

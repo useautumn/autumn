@@ -1,12 +1,22 @@
 import { notNullish } from "@autumn/shared";
 import type Stripe from "stripe";
 
+/**
+ * Checks if a Stripe subscription is in the trialing status.
+ * @param stripeSubscription - The Stripe subscription to check.
+ * @returns True if the subscription is in the trialing status, false otherwise.
+ */
 export const isStripeSubscriptionTrialing = (
 	stripeSubscription: Stripe.Subscription,
 ) => {
 	return stripeSubscription.status === "trialing";
 };
 
+/**
+ * Checks if a Stripe subscription is in the canceling status.
+ * @param stripeSubscription - The Stripe subscription to check.
+ * @returns True if the subscription is in the canceling status, false otherwise.
+ */
 export const isStripeSubscriptionCanceling = (
 	stripeSubscription?: Stripe.Subscription,
 ) => {

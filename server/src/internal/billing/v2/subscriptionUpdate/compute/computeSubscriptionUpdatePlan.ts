@@ -3,6 +3,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeSubscriptionUpdateCustomPlan } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateCustomPlan/computeSubscriptionUpdateCustomPlan";
 import { computeSubscriptionUpdateQuantityPlan } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateQuantityPlan";
 import { SubscriptionUpdateIntentEnum } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateSchema";
+import type { SubscriptionUpdatePlan } from "../../typesOld";
 import type { UpdateSubscriptionContext } from "../fetch/updateSubscriptionContextSchema";
 import { computeSubscriptionUpdateIntent } from "./computeSubscriptionUpdateIntent";
 
@@ -20,7 +21,7 @@ export const computeSubscriptionUpdatePlan = async ({
 	ctx: AutumnContext;
 	updateSubscriptionContext: UpdateSubscriptionContext;
 	params: SubscriptionUpdateV0Params;
-}) => {
+}): Promise<SubscriptionUpdatePlan> => {
 	const intent = computeSubscriptionUpdateIntent(params);
 
 	switch (intent) {
