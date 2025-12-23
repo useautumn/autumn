@@ -1,28 +1,33 @@
-import type { FullCusProduct } from "@autumn/shared";
 import { msToSeconds, orgToCurrency } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { InvoiceService } from "@/internal/invoices/InvoiceService";
 import { getInvoiceItems } from "@/internal/invoices/invoiceUtils";
 import { createAndFinalizeInvoice } from "@/internal/invoices/invoiceUtils/createAndFinalizeInvoice";
+import type { UpdateSubscriptionContext } from "../subscriptionUpdate/fetch/updateSubscriptionContextSchema";
 import type { SubscriptionUpdateInvoiceAction } from "../typesOld";
 
 /**
  * Execute invoice creation and finalization for subscription updates.
+ *
+ * @param ctx - Autumn context
+ * @param invoiceAction - Invoice action with items and charge strategy
+ * @param updateSubscriptionContext - Context containing stripeCustomer, stripeSubscription, customerProduct
+ * @returns Finalized Stripe invoice or null if no invoice created
  */
 export const executeInvoiceAction = async ({
 	ctx,
 	invoiceAction,
-	stripeCustomerId,
-	stripeSubscriptionId,
-	customerProduct,
+	updateSubscriptionContext,
 }: {
 	ctx: AutumnContext;
 	invoiceAction: SubscriptionUpdateInvoiceAction;
-	stripeCustomerId: string;
-	stripeSubscriptionId: string;
-	customerProduct: FullCusProduct;
+	updateSubscriptionContext: UpdateSubscriptionContext;
 }) => {
+	const { stripeCustomer, stripeSubscription, customerProduct } =
+		updateSubscriptionContext;
+	const stripeCustomerId = stripeCustomer.id;
+	const stripeSubscriptionId = stripeSubscription.id;
 	if (!invoiceAction.shouldCreateInvoice) {
 		ctx.logger.info("No invoice creation required");
 		return null;
