@@ -114,7 +114,7 @@ export const toFeature = ({
 	item: ProductItem;
 	orgId: string;
 	internalFeatureId: string;
-	internalProductId: string;
+	internalProductId?: string;
 	isCustom: boolean;
 	newVersion?: boolean;
 	feature?: Feature;
@@ -129,7 +129,7 @@ export const toFeature = ({
 		org_id: orgId,
 		created_at: item.created_at || Date.now(),
 		is_custom: isCustom,
-		internal_product_id: internalProductId,
+		internal_product_id: internalProductId || null,
 
 		internal_feature_id: internalFeatureId,
 		feature_id: item.feature_id!,
@@ -236,11 +236,11 @@ export const toFeatureAndPrice = ({
 		feature_id: item.feature_id!,
 		usage_tiers: notNullish(item.price)
 			? [
-					{
-						amount: item.price,
-						to: TierInfinite,
-					},
-				]
+				{
+					amount: item.price,
+					to: TierInfinite,
+				},
+			]
 			: (item.tiers as any),
 		interval: itemToBillingInterval({ item }) as BillingInterval,
 		interval_count: item.interval_count || 1,
@@ -257,7 +257,7 @@ export const toFeatureAndPrice = ({
 		if (shouldProrate(onDecrease) || onDecrease === OnDecrease.Prorate) {
 			onDecrease =
 				onIncrease === OnIncrease.ProrateImmediately ||
-				onIncrease === OnIncrease.BillImmediately
+					onIncrease === OnIncrease.BillImmediately
 					? OnDecrease.ProrateImmediately
 					: OnDecrease.ProrateNextCycle;
 		}

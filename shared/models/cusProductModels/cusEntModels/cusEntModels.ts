@@ -25,7 +25,7 @@ export const CustomerEntitlementSchema = z.object({
 	customer_id: z.string().nullish(), // for debugging purposes
 	feature_id: z.string(), // for debugging purposes
 
-	customer_product_id: z.string(),
+	customer_product_id: z.string().nullable(),
 	entitlement_id: z.string().nullable(),
 	created_at: z.number(),
 
