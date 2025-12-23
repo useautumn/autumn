@@ -61,14 +61,14 @@ export function IncludedUsage() {
 								if (value === "") {
 									setItem({ ...item, included_usage: null });
 								} else {
-									const numValue = parseInt(value);
+									const numValue = value;
 									if (!Number.isNaN(numValue)) {
-										setItem({ ...item, included_usage: numValue });
+										setItem({ ...item, included_usage: Number(numValue) });
 									}
 								}
 							}}
 							disabled={includedUsage === Infinite}
-							type="text"
+							type="number"
 						/>
 						<IconCheckbox
 							hide={isFeaturePrice}
