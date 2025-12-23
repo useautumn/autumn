@@ -50,7 +50,7 @@ export function BillingType() {
 				tiers: null,
 				billing_units: undefined,
 				usage_model: undefined,
-				included_usage: item.included_usage ?? 0,
+				included_usage: item.included_usage,
 				interval: isContUseItem({ item, features }) ? null : item.interval,
 			});
 		} else {
@@ -63,7 +63,7 @@ export function BillingType() {
 					billing_units: 1,
 					usage_model: UsageModel.PayPerUse,
 					included_usage:
-						item.included_usage === Infinite ? 0 : item.included_usage || 0,
+						item.included_usage === Infinite ? 0 : item.included_usage,
 					interval: getPricedInterval(),
 				});
 			}

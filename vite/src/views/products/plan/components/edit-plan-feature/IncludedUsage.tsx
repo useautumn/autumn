@@ -30,11 +30,7 @@ export function IncludedUsage() {
 		if (includedUsage === Infinite) {
 			return "Unlimited";
 		}
-		if (
-			includedUsage === null ||
-			includedUsage === undefined ||
-			includedUsage === 0
-		) {
+		if (includedUsage === null || includedUsage === undefined) {
 			return "";
 		}
 		return includedUsage.toString();
@@ -62,11 +58,11 @@ export function IncludedUsage() {
 							onChange={(e) => {
 								const value = e.target.value.trim();
 
-								if (value === "" || value === "0") {
-									setItem({ ...item, included_usage: 0 });
+								if (value === "") {
+									setItem({ ...item, included_usage: null });
 								} else {
 									const numValue = parseInt(value);
-									if (!Number.isNaN(numValue) && numValue > 0) {
+									if (!Number.isNaN(numValue)) {
 										setItem({ ...item, included_usage: numValue });
 									}
 								}
