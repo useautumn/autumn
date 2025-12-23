@@ -155,6 +155,7 @@
       "name": "@autumn/shared",
       "version": "1.0.0",
       "dependencies": {
+        "@date-fns/utc": "catalog:",
         "date-fns": "^4.1.0",
         "decimal.js": "^10.5.0",
         "dotenv": "^16.5.0",
@@ -285,6 +286,7 @@
   },
   "catalog": {
     "@clickhouse/client": "1.11.2",
+    "@date-fns/utc": "2.1.0",
     "@sentry/bun": "10.25.0",
     "drizzle-kit": "^0.31.1",
     "drizzle-orm": "0.43.1",
