@@ -8,10 +8,7 @@ import type { ClickHouseClient } from "@clickhouse/client";
 import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
-import {
-	generateEventCountExpressions,
-	getBillingCycleStartDate,
-} from "./analyticsUtils.js";
+import { getBillingCycleStartDate } from "./analyticsUtils.js";
 
 export class AnalyticsService {
 	static clickhouseAvailable =
@@ -69,7 +66,9 @@ export class AnalyticsService {
 		const resultJson = await result.json();
 
 		return {
-			eventNames: resultJson.data.map((row: any) => row.event_name),
+			eventNames: (resultJson.data as { event_name: string }[]).map(
+				(row) => row.event_name,
+			),
 			result: resultJson,
 		};
 	}
@@ -220,44 +219,23 @@ WHERE org_id = {org_id:String}
 					)) as { startDate: string; endDate: string; gap: number } | null)
 				: null;
 
-		const countExpressions = generateEventCountExpressions(
-			params.event_names,
-			params.no_count,
-		);
+		// Generate expressions for queries (works for both MV and original)
+		const generateExpressions = (
+			eventNames: string[],
+			noCount: boolean,
+			useMV: boolean,
+		) => {
+			const alias = useMV ? "ce" : "e";
+			return eventNames
+				.map((eventName) => {
+					const escapedEventName = eventName.replace(/'/g, "''");
+					const columnName = noCount ? eventName : `${eventName}_count`;
+					return `coalesce(sumIf(${alias}.value, ${alias}.event_name = '${escapedEventName}'), 0) as \`${columnName}\``;
+				})
+				.join(",\n    ");
+		};
 
 		if (AnalyticsService.clickhouseAvailable) {
-			const query = `
-with customer_events as (
-    select * 
-    from org_events_view(org_id={org_id:String}, org_slug='', env={env:String}) 
-    ${aggregateAll ? "" : "where customer_id = {customer_id:String}"}
-)
-select 
-    dr.period, 
-    ${countExpressions}
-from date_range_view(bin_size={bin_size:String}, days={days:UInt32}) dr
-    left join customer_events e
-    on date_trunc({bin_size:String}, e.timestamp) = dr.period 
-group by dr.period 
-order by dr.period;
-`;
-
-			const queryBillingCycle = `
-with customer_events as (
-    select * 
-    from org_events_view(org_id={org_id:String}, org_slug='', env={env:String}) 
-    ${aggregateAll ? "" : "where customer_id = {customer_id:String}"}
-)
-select 
-    dr.period, 
-    ${countExpressions}
-from date_range_bc_view(bin_size={bin_size:String}, start_date={end_date:DateTime}, days={days:UInt32}) dr
-    left join customer_events e
-    on date_trunc({bin_size:String}, e.timestamp) = dr.period 
-group by dr.period 
-order by dr.period;
-      `;
-
 			const queryParams = {
 				org_id: org?.id,
 				env: env,
@@ -280,34 +258,160 @@ order by dr.period;
 				end_date: isBillingCycle ? getBCResults?.endDate : undefined,
 			};
 
-			// Use regular query for aggregateAll or when no billing cycle data is available
-			const queryToUse =
-				isBillingCycle && !aggregateAll && getBCResults?.startDate
-					? queryBillingCycle
-					: query;
+			// Try materialized view first, fallback to original query if it fails
+			try {
+				const mvCountExpressions = generateExpressions(
+					params.event_names,
+					params.no_count ?? false,
+					true,
+				);
 
-			const result = await (clickhouseClient as ClickHouseClient).query({
-				query: queryToUse,
-				query_params: queryParams,
-				format: "JSON",
-				clickhouse_settings: {
-					output_format_json_quote_decimals: 0,
-					output_format_json_quote_64bit_integers: 1,
-					output_format_json_quote_64bit_floats: 1,
-				},
-			});
+				const mvQuery = `
+with customer_events as (
+    select 
+        period_hour,
+        event_name,
+        sum(value) as value
+    from events_usage_mv
+    where org_id = {org_id:String}
+      and env = {env:String}
+      ${aggregateAll ? "" : "and customer_id = {customer_id:String}"}
+      and period_hour >= date_trunc({bin_size:String}, now() - INTERVAL {days:UInt32} day)
+    group by period_hour, event_name
+)
+select 
+    dr.period, 
+    ${mvCountExpressions}
+from date_range_view(bin_size={bin_size:String}, days={days:UInt32}) dr
+    left join customer_events ce
+    on ${intervalType === "24h" ? "ce.period_hour" : `date_trunc('day', ce.period_hour)`} = dr.period 
+group by dr.period 
+order by dr.period;
+`;
 
-			const resultJson = await result.json();
+				const mvQueryBillingCycle = `
+with customer_events as (
+    select 
+        period_hour,
+        event_name,
+        sum(value) as value
+    from events_usage_mv
+    where org_id = {org_id:String}
+      and env = {env:String}
+      ${aggregateAll ? "" : "and customer_id = {customer_id:String}"}
+      and period_hour >= date_trunc('day', toDateTime({end_date:String}) - INTERVAL {days:UInt32} day)
+      and period_hour < date_trunc('day', toDateTime({end_date:String}))
+    group by period_hour, event_name
+)
+select 
+    dr.period, 
+    ${mvCountExpressions}
+from date_range_bc_view(bin_size={bin_size:String}, start_date={end_date:DateTime}, days={days:UInt32}) dr
+    left join customer_events ce
+    on ${intervalType === "24h" ? "ce.period_hour" : `date_trunc('day', ce.period_hour)`} = dr.period 
+group by dr.period 
+order by dr.period;
+      `;
 
-			resultJson.data.forEach((row: any) => {
-				Object.keys(row).forEach((key: string) => {
-					if (key !== "period") {
-						row[key] = new Decimal(row[key]).toDecimalPlaces(10).toNumber();
-					}
+				const mvQueryToUse =
+					isBillingCycle && !aggregateAll && getBCResults?.startDate
+						? mvQueryBillingCycle
+						: mvQuery;
+
+				const result = await (clickhouseClient as ClickHouseClient).query({
+					query: mvQueryToUse,
+					query_params: queryParams,
+					format: "JSON",
+					clickhouse_settings: {
+						output_format_json_quote_decimals: 0,
+						output_format_json_quote_64bit_integers: 1,
+						output_format_json_quote_64bit_floats: 1,
+					},
 				});
-			});
 
-			return resultJson;
+				const resultJson = await result.json();
+
+				(resultJson.data as Record<string, unknown>[]).forEach((row) => {
+					Object.keys(row).forEach((key: string) => {
+						if (key !== "period") {
+							row[key] = new Decimal(row[key] as number)
+								.toDecimalPlaces(10)
+								.toNumber();
+						}
+					});
+				});
+
+				return resultJson;
+			} catch {
+				// Fallback to original query if materialized view doesn't exist or fails
+				const fallbackCountExpressions = generateExpressions(
+					params.event_names,
+					params.no_count ?? false,
+					false,
+				);
+
+				const fallbackQuery = `
+with customer_events as (
+    select * 
+    from org_events_view(org_id={org_id:String}, org_slug='', env={env:String}) 
+    ${aggregateAll ? "" : "where customer_id = {customer_id:String}"}
+)
+select 
+    dr.period, 
+    ${fallbackCountExpressions}
+from date_range_view(bin_size={bin_size:String}, days={days:UInt32}) dr
+    left join customer_events e
+    on date_trunc({bin_size:String}, e.timestamp) = dr.period 
+group by dr.period 
+order by dr.period;
+`;
+
+				const fallbackQueryBillingCycle = `
+with customer_events as (
+    select * 
+    from org_events_view(org_id={org_id:String}, org_slug='', env={env:String}) 
+    ${aggregateAll ? "" : "where customer_id = {customer_id:String}"}
+)
+select 
+    dr.period, 
+    ${fallbackCountExpressions}
+from date_range_bc_view(bin_size={bin_size:String}, start_date={end_date:DateTime}, days={days:UInt32}) dr
+    left join customer_events e
+    on date_trunc({bin_size:String}, e.timestamp) = dr.period 
+group by dr.period 
+order by dr.period;
+      `;
+
+				const fallbackQueryToUse =
+					isBillingCycle && !aggregateAll && getBCResults?.startDate
+						? fallbackQueryBillingCycle
+						: fallbackQuery;
+
+				const result = await (clickhouseClient as ClickHouseClient).query({
+					query: fallbackQueryToUse,
+					query_params: queryParams,
+					format: "JSON",
+					clickhouse_settings: {
+						output_format_json_quote_decimals: 0,
+						output_format_json_quote_64bit_integers: 1,
+						output_format_json_quote_64bit_floats: 1,
+					},
+				});
+
+				const resultJson = await result.json();
+
+				(resultJson.data as Record<string, unknown>[]).forEach((row) => {
+					Object.keys(row).forEach((key: string) => {
+						if (key !== "period") {
+							row[key] = new Decimal(row[key] as number)
+								.toDecimalPlaces(10)
+								.toNumber();
+						}
+					});
+				});
+
+				return resultJson;
+			}
 		}
 	}
 
@@ -318,7 +422,7 @@ order by dr.period;
 		aggregateAll = false,
 	}: {
 		req: ExtendedRequest;
-		params: any;
+		params: { customer_id?: string; interval?: string };
 		customer?: FullCustomer;
 		aggregateAll?: boolean;
 	}) {
