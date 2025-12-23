@@ -36,6 +36,18 @@ export const FrontendOrgSchema = z.object({
 			custom_payment_method: z.string().optional(),
 			marketplace_mode: z.enum(VercelMarketplaceMode).optional(),
 		}),
+		revenuecat: z.object({
+			connected: z.boolean(),
+			/** These API Keys are also masked in the frontend
+			 * - e.g test_******3a
+			 */
+			api_key: z.string().optional(),
+			sandbox_api_key: z.string().optional(),
+			project_id: z.string().optional(),
+			sandbox_project_id: z.string().optional(),
+			webhook_secret: z.string().optional(),
+			sandbox_webhook_secret: z.string().optional(),
+		}),
 	}),
 });
 
