@@ -166,6 +166,7 @@ export * from "./models/rewardModels/rewardProgramModels/rewardProgramModels.js"
 export * from "./models/rewardModels/rewardProgramModels/rewardProgramTable.js";
 export * from "./models/subModels/subModels.js";
 export * from "./models/subModels/subTable.js";
+export * from "./utils/billingUtils/index.js";
 // Utils
 export * from "./utils/displayUtils.js";
 export * from "./utils/index.js";
