@@ -1,9 +1,9 @@
 import type { Feature, ProductItem } from "@autumn/shared";
 import { UsageModel } from "@autumn/shared";
 import {
-	BankIcon,
 	BoxArrowDownIcon,
 	MoneyWavyIcon,
+	WalletIcon,
 	XIcon,
 } from "@phosphor-icons/react";
 import type React from "react";
@@ -93,7 +93,7 @@ const getRightIcon = (
 			}; // Included/Free - green
 		case "prepaid":
 			return {
-				icon: <BankIcon size={size} weight={weight} />,
+				icon: <WalletIcon size={size} weight={weight} />,
 				color: "text-orange-500",
 			}; // Prepaid - blue
 		case "paid":

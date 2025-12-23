@@ -1,24 +1,18 @@
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import { type ProductItem, ProductItemInterval } from "@autumn/shared";
+import { PlusIcon } from "lucide-react";
 
 import { useState } from "react";
-import { ProductItemContext } from "./ProductItemContext";
-
-import {
-	ProductItemInterval,
-	ProductItem,
-	CreateFeature as CreateFeatureType,
-} from "@autumn/shared";
-
-import { useProductContext } from "../ProductContext";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { cn } from "@/lib/utils";
 import { validateProductItem } from "@/utils/product/product-item/validateProductItem";
-import { PlusIcon } from "lucide-react";
+import { useProductContext } from "../ProductContext";
 import { CreateItemDialogContent } from "./create-product-item/CreateItemDialogContent";
+import { defaultPriceItem } from "./create-product-item/defaultItemConfigs";
+import { ProductItemContext } from "./ProductItemContext";
 import { useSteps } from "./useSteps";
 import { CreateItemStep } from "./utils/CreateItemStep";
-import { cn } from "@/lib/utils";
-import { defaultPriceItem } from "./create-product-item/defaultItemConfigs";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 const defaultProductItem: ProductItem = {
 	feature_id: null,

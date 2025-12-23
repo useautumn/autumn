@@ -2,10 +2,10 @@ import { AnimatePresence, motion } from "motion/react";
 import { createPortal } from "react-dom";
 import {
 	useCurrentItem,
+	useHasItemChanges,
 	useIsCusPlanEditor,
 } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { checkItemIsValid } from "@/utils/product/entitlementUtils";
 import { CustomerPlanEditorBar } from "@/views/customers2/customer-plan/CustomerPlanEditorBar";
 import { CustomerPlanInfoBox } from "@/views/customers2/customer-plan/CustomerPlanInfoBox";
 import { ProductSheets } from "../ProductSheets";
@@ -18,16 +18,22 @@ function shouldCloseSheetOnMouseDown({
 	e,
 	item,
 	sheetType,
+	hasItemChanges,
 }: {
 	e: React.MouseEvent<HTMLDivElement>;
 	item: ReturnType<typeof useCurrentItem>;
 	sheetType: string | null;
+	hasItemChanges: boolean;
 }): boolean {
-	// Don't close if item is invalid
-
-	if (item && !checkItemIsValid(item, false)) {
+	// Don't close if item has unsaved changes
+	if (hasItemChanges) {
 		return false;
 	}
+
+	// Don't close if item is invalid
+	// if (item && !checkItemIsValid(item, false)) {
+	// 	return false;
+	// }
 
 	// Get the active element before blur happens
 	const activeElement = document.activeElement;
@@ -67,6 +73,7 @@ export const PlanEditor = () => {
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const sheetType = useSheetStore((s) => s.type);
 	const item = useCurrentItem();
+	const hasItemChanges = useHasItemChanges();
 
 	return (
 		<div className="flex w-full h-full overflow-hidden relative">
@@ -103,7 +110,14 @@ export const PlanEditor = () => {
 								className="fixed inset-0 bg-white/70 dark:bg-black/70"
 								style={{ zIndex: 40 }}
 								onMouseDown={(e) => {
-									if (shouldCloseSheetOnMouseDown({ e, item, sheetType })) {
+									if (
+										shouldCloseSheetOnMouseDown({
+											e,
+											item,
+											sheetType,
+											hasItemChanges,
+										})
+									) {
 										closeSheet();
 									}
 								}}
