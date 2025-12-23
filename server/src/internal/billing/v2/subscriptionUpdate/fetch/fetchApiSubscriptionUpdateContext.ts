@@ -81,5 +81,6 @@ export const fetchApiSubscriptionUpdateContext = async ({
 		stripeCustomer,
 		paymentMethod,
 		testClockFrozenTime,
+		currentEpochMs: testClockFrozenTime ?? Date.now(),
 	};
 };

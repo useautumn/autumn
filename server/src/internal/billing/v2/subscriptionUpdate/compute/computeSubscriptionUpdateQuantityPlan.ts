@@ -23,12 +23,8 @@ export const computeSubscriptionUpdateQuantityPlan = ({
 	updateSubscriptionContext: UpdateSubscriptionContext;
 	params: SubscriptionUpdateV0Params;
 }): SubscriptionUpdateQuantityPlan => {
-	const {
-		customerProduct,
-		stripeSubscription,
-		testClockFrozenTime,
-		paymentMethod,
-	} = updateSubscriptionContext;
+	const { customerProduct, stripeSubscription, testClockFrozenTime } =
+		updateSubscriptionContext;
 
 	if (!stripeSubscription) {
 		throw new InternalError({
@@ -41,7 +37,6 @@ export const computeSubscriptionUpdateQuantityPlan = ({
 		new: params.options || [],
 	};
 
-	const currentEpochMs = testClockFrozenTime || Date.now();
 	const quantityUpdateDetails = featureQuantities.new.map((updatedOption) => {
 		const previousOption = findFeatureOptionsByFeature({
 			featureOptions: customerProduct.options,
@@ -52,16 +47,13 @@ export const computeSubscriptionUpdateQuantityPlan = ({
 			ctx,
 			previousOptions: previousOption,
 			updatedOptions: updatedOption,
-			customerProduct,
-			stripeSubscription,
-			currentEpochMs,
+			updateSubscriptionContext,
 		});
 	});
 
 	const invoiceAction = computeInvoiceAction({
 		quantityUpdateDetails,
-		stripeSubscription,
-		paymentMethod,
+		updateSubscriptionContext,
 		shouldGenerateInvoiceOnly: !(params.finalize_invoice ?? true),
 	});
 
@@ -77,7 +69,7 @@ export const computeSubscriptionUpdateQuantityPlan = ({
 	const autumnLineItems = buildAutumnLineItems({
 		ctx,
 		newCusProducts: [customerProduct],
-		ongoingCusProductAction,
+		ongoingCustomerProduct: ongoingCusProductAction?.cusProduct,
 		billingCycleAnchor,
 		testClockFrozenTime,
 	});
