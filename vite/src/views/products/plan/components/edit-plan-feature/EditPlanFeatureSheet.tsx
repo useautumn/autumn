@@ -34,8 +34,6 @@ export function EditPlanFeatureSheet({
 
 	const showFooter = hasItemChanges && !emptyPriceItem;
 
-	console.log("item", item);
-
 	if (!item) {
 		return null;
 	}
