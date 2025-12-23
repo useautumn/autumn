@@ -163,3 +163,14 @@ export const cusProductToProduct = ({
 		free_trial: cusProduct.free_trial,
 	} as FullProduct;
 };
+
+export const cusProductToCusEnts = ({
+	customerProduct,
+}: {
+	customerProduct: FullCusProduct;
+}): FullCusEntWithFullCusProduct[] => {
+	return customerProduct.customer_entitlements.map((cusEnt) => ({
+		...cusEnt,
+		customer_product: customerProduct,
+	}));
+};

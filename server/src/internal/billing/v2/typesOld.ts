@@ -40,11 +40,6 @@ export type StripeSubAction = {
 	items?: Stripe.SubscriptionUpdateParams.Item[];
 };
 
-export type StripeInvoiceAction = {
-	items: Stripe.InvoiceAddLinesParams.Line[];
-	onPaymentFailure: "return_url" | "checkout_session";
-};
-
 export type StripeCheckoutAction = {
 	shouldCreate: boolean;
 	reason?: string;

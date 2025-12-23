@@ -1,9 +1,10 @@
 import type { SubscriptionUpdateV0Params } from "@shared/index";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { SubscriptionUpdatePlan } from "../../typesOld";
+import { computeSubscriptionUpdateCustomPlan } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateCustomPlan/computeSubscriptionUpdateCustomPlan";
+import { computeSubscriptionUpdateQuantityPlan } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateQuantityPlan";
+import { SubscriptionUpdateIntentEnum } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateSchema";
 import type { UpdateSubscriptionContext } from "../fetch/updateSubscriptionContextSchema";
 import { computeSubscriptionUpdateIntent } from "./computeSubscriptionUpdateIntent";
-import { getComputeSubscriptionUpdatePlanFunction } from "./computeSubscriptionUpdatePlanIntentMap";
 
 /**
  * Compute the subscription update plan
@@ -11,7 +12,7 @@ import { getComputeSubscriptionUpdatePlanFunction } from "./computeSubscriptionU
  * @param params - The parameters for the subscription update
  * @returns The subscription update plan
  */
-export const computeSubscriptionUpdatePlan = ({
+export const computeSubscriptionUpdatePlan = async ({
 	ctx,
 	updateSubscriptionContext,
 	params,
@@ -19,9 +20,21 @@ export const computeSubscriptionUpdatePlan = ({
 	ctx: AutumnContext;
 	updateSubscriptionContext: UpdateSubscriptionContext;
 	params: SubscriptionUpdateV0Params;
-}): SubscriptionUpdatePlan => {
+}) => {
 	const intent = computeSubscriptionUpdateIntent(params);
-	const computePlan = getComputeSubscriptionUpdatePlanFunction(intent);
 
-	return computePlan({ ctx, updateSubscriptionContext, params });
+	switch (intent) {
+		case SubscriptionUpdateIntentEnum.UpdateQuantity:
+			return computeSubscriptionUpdateQuantityPlan({
+				ctx,
+				updateSubscriptionContext,
+				params,
+			});
+		case SubscriptionUpdateIntentEnum.UpdatePlan:
+			return await computeSubscriptionUpdateCustomPlan({
+				ctx,
+				updateSubscriptionContext,
+				params,
+			});
+	}
 };

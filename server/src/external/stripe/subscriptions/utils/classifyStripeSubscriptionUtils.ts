@@ -7,7 +7,7 @@ export const isStripeSubscriptionTrialing = (
 	return stripeSubscription.status === "trialing";
 };
 
-export const isStripeSubscriptionCancelling = (
+export const isStripeSubscriptionCanceling = (
 	stripeSubscription?: Stripe.Subscription,
 ) => {
 	if (!stripeSubscription) {

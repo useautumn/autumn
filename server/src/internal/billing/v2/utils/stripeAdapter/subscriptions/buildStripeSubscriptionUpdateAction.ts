@@ -1,6 +1,6 @@
 import { msToSeconds } from "@shared/utils/common/unixUtils";
 import type Stripe from "stripe";
-import { isStripeSubscriptionCancelling } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
+import { isStripeSubscriptionCanceling } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import type { FreeTrialPlan } from "@/internal/billing/v2/billingPlan";
@@ -25,7 +25,7 @@ export const buildStripeSubscriptionUpdateAction = ({
 	}
 
 	const trialEndsAt = freeTrialPlan?.trialEndsAt;
-	const cancelAtPeriodEnd = isStripeSubscriptionCancelling(stripeSubscription)
+	const cancelAtPeriodEnd = isStripeSubscriptionCanceling(stripeSubscription)
 		? false
 		: undefined;
 

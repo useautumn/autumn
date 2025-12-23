@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { handleSubscriptionUpdatePreview } from "@/internal/billing/v2/subscriptionUpdate/handleSubscriptionUpdatePreview.js";
 import type { HonoEnv } from "../../honoUtils/HonoEnv.js";
 import { handleAttach } from "./attach/handleAttach.js";
 import { handleCheckoutV2 } from "./checkout/handleCheckoutV2.js";
@@ -14,3 +15,7 @@ billingRouter.post("/attach", ...handleAttach);
 billingRouter.post("/attach_v2", ...handleAttachV2);
 
 billingRouter.post("/subscriptions/update", ...handleApiSubscriptionUpdate);
+billingRouter.post(
+	"/subscriptions/preview/update",
+	...handleSubscriptionUpdatePreview,
+);

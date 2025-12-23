@@ -1,8 +1,4 @@
-import {
-	type FullProduct,
-	type SubscriptionUpdateV0Params,
-	secondsToMs,
-} from "@autumn/shared";
+import type { FullProduct, SubscriptionUpdateV0Params } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { FreeTrialPlan } from "@/internal/billing/v2/billingPlan";
 import { computeSubscriptionUpdateFeatureQuantities } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateCustomPlan/computeSubscriptionUpdateFeatureQuantities";
@@ -17,12 +13,14 @@ export const computeSubscriptionUpdateNewCustomerProduct = ({
 	updateSubscriptionContext,
 	fullProduct,
 	freeTrialPlan,
+	billingCycleAnchor,
 }: {
 	ctx: AutumnContext;
 	params: SubscriptionUpdateV0Params;
 	updateSubscriptionContext: UpdateSubscriptionContext;
 	fullProduct: FullProduct;
 	freeTrialPlan: FreeTrialPlan;
+	billingCycleAnchor?: number;
 }) => {
 	const {
 		customerProduct,
@@ -47,11 +45,6 @@ export const computeSubscriptionUpdateNewCustomerProduct = ({
 		currentCustomerProduct: customerProduct,
 		params,
 	});
-
-	// TODO: Move this to a separate function
-	const billingCycleAnchor =
-		freeTrialPlan.trialEndsAt ??
-		secondsToMs(stripeSubscription?.billing_cycle_anchor);
 
 	const now = updateSubscriptionContext.testClockFrozenTime ?? Date.now();
 

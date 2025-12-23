@@ -3,7 +3,7 @@ import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { computeSubscriptionUpdatePlan } from "../subscriptionUpdate/compute/computeSubscriptionUpdatePlan";
 import { fetchApiSubscriptionUpdateContext } from "../subscriptionUpdate/fetch/fetchApiSubscriptionUpdateContext";
 
-export const handleApiSubscriptionUpdate = createRoute({
+export const handleSubscriptionUpdatePreview = createRoute({
 	body: SubscriptionUpdateV0ParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
@@ -20,24 +20,6 @@ export const handleApiSubscriptionUpdate = createRoute({
 			params: body,
 		});
 
-		// Execute...
-		// await executeApiSubscriptionUpdate({
-		// 	ctx,
-		// 	params: body,
-		// 	updateSubscriptionContext,
-		// 	subscriptionUpdatePlan,
-		// });
-
-		return c.json({ success: true }, 200);
+		return c.json(subscriptionUpdatePlan, 200);
 	},
 });
-
-// versionedBody: {
-// 	latest: ApiSubscriptionUpdateBodyV1Schema,
-// 	[ApiVersion.V2_0]: ApiSubscriptionUpdateBodyV0Schema,
-// },
-// resource: AffectedResource.ApiSubscriptionUpdate,
-// handler: async (c) => {
-// 	const ctx = c.get("ctx");
-// 	const body = c.req.valid("json");
-// },

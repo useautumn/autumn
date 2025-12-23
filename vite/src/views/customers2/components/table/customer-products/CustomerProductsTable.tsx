@@ -173,7 +173,7 @@ export function CustomerProductsTable() {
 
 	const handleRowClick = (cusProduct: FullCusProduct) => {
 		setSheet({
-			type: "subscription-detail",
+			type: "subscription-update-test", // SWAP: Change back to "subscription-detail" to revert
 			itemId: cusProduct.id,
 		});
 	};

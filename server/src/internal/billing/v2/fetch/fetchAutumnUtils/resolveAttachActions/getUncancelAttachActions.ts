@@ -3,7 +3,7 @@ import {
 	type CusProductActions,
 	getOngoingCusProductById,
 	getScheduledMainCusProductByGroup,
-	isCusProductCanceled,
+	isCustomerProductCanceled,
 } from "@autumn/shared";
 
 /**
@@ -27,7 +27,7 @@ export const getUncancelAttachActions = ({
 
 	if (
 		!ongoingSameCusProduct ||
-		!isCusProductCanceled({ cusProduct: ongoingSameCusProduct })
+		!isCustomerProductCanceled(ongoingSameCusProduct)
 	) {
 		return undefined;
 	}

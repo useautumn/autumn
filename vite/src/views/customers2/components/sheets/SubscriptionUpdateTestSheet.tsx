@@ -1,0 +1,831 @@
+import {
+	type Entity,
+	type Feature,
+	type FrontendProduct,
+	type FullCusProduct,
+	type FullCustomer,
+	getProductItemDisplay,
+	type ProductItem,
+	type ProductV2,
+	type SubscriptionUpdateV0Params,
+	stripeToAtmnAmount,
+} from "@autumn/shared";
+import { PencilSimple } from "@phosphor-icons/react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router";
+import { Button } from "@/components/v2/buttons/Button";
+import { IconButton } from "@/components/v2/buttons/IconButton";
+import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
+import { usePrepaidItems } from "@/hooks/stores/useProductStore";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { pushPage } from "@/utils/genUtils";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+
+/**
+ * TEST SHEET: SubscriptionUpdateTestSheet
+ *
+ * This is an isolated test sheet for testing the subscription update flow.
+ * It calls:
+ * - POST /v1/subscriptions/preview/update - to get a billing plan preview
+ * - POST /v1/subscriptions/update - to execute the update
+ *
+ * Usage: Open this sheet with an itemId (cusProduct id) and optional customizedProduct in data
+ */
+
+interface PrepaidEditorProps {
+	prepaidItems: Array<{
+		feature_id?: string | null;
+		feature?: { internal_id: string } | undefined;
+	}>;
+	prepaidOptions: Record<string, number>;
+	onPrepaidChange: (featureId: string, quantity: number) => void;
+}
+
+function PrepaidEditor({
+	prepaidItems,
+	prepaidOptions,
+	onPrepaidChange,
+}: PrepaidEditorProps) {
+	if (prepaidItems.length === 0) return null;
+
+	return (
+		<div className="border-b border-border">
+			<div className="px-4 py-2 border-b border-border">
+				<h3 className="text-sm font-medium">Prepaid Quantities</h3>
+			</div>
+			<div className="px-4 py-3 space-y-2">
+				{prepaidItems.map((item) => {
+					const featureId = item.feature_id ?? item.feature?.internal_id ?? "";
+					const inputId = `prepaid-${featureId}`;
+					return (
+						<div key={featureId} className="flex items-center gap-3">
+							<label
+								htmlFor={inputId}
+								className="text-sm text-t-secondary flex-1"
+							>
+								{featureId}
+							</label>
+							<input
+								id={inputId}
+								type="number"
+								min={0}
+								value={prepaidOptions[featureId] ?? 0}
+								onChange={(e) =>
+									onPrepaidChange(featureId, parseInt(e.target.value, 10) || 0)
+								}
+								className="w-20 px-2 py-1 border border-border rounded text-sm bg-transparent"
+							/>
+						</div>
+					);
+				})}
+			</div>
+		</div>
+	);
+}
+
+interface BillingPlanData {
+	autumn?: {
+		insertCustomerProducts?: Array<{
+			product?: { name?: string };
+			customer_entitlements?: Array<{
+				feature_id?: string;
+				balance?: number;
+				entitlement?: { feature?: { name?: string } };
+			}>;
+		}>;
+		updateCustomerProduct?: {
+			customerProduct?: { product?: { name?: string } };
+			updates?: Record<string, unknown>;
+		};
+		customPrices?: unknown[];
+		customEntitlements?: unknown[];
+	};
+	stripe?: {
+		subscriptionAction?: {
+			type?: string;
+			stripeSubscriptionId?: string;
+			params?: {
+				items?: Array<{
+					id?: string;
+					price?: string;
+					quantity?: number;
+					deleted?: boolean;
+				}>;
+				trial_end?: number;
+				proration_behavior?: string;
+				cancel_at_period_end?: boolean;
+			};
+		};
+		invoiceAction?: {
+			addLineParams?: {
+				lines?: Array<{
+					description?: string;
+					amount?: number;
+				}>;
+			};
+		};
+	};
+}
+
+interface PreviewResultProps {
+	data: unknown;
+	isLoading: boolean;
+	error: Error | null;
+}
+
+function PreviewResult({ data, isLoading, error }: PreviewResultProps) {
+	const billingPlan = data as BillingPlanData | null;
+
+	return (
+		<div className="border-b border-border">
+			<div className="px-4 py-2 border-b border-border">
+				<h3 className="text-sm font-medium">Billing Plan Preview</h3>
+			</div>
+
+			{isLoading ? (
+				<div className="px-4 py-3 text-sm text-t-secondary">
+					Loading preview...
+				</div>
+			) : null}
+
+			{error ? (
+				<div className="px-4 py-3 text-sm text-red-400">
+					Error: {error.message}
+				</div>
+			) : null}
+
+			{!data && !isLoading && !error ? (
+				<div className="px-4 py-3 text-sm text-t-secondary">
+					No preview data yet
+				</div>
+			) : null}
+
+			{billingPlan && !isLoading ? (
+				<div className="divide-y divide-border">
+					{/* Insert Customer Products */}
+					{billingPlan.autumn?.insertCustomerProducts &&
+					billingPlan.autumn.insertCustomerProducts.length > 0 ? (
+						<div className="px-4 py-3 border-l-2 border-l-green-500">
+							<h4 className="text-xs font-semibold text-green-400 mb-1">
+								📥 Inserting Customer Product
+							</h4>
+							{billingPlan.autumn.insertCustomerProducts.map((cp, index) => (
+								<div key={index} className="text-sm">
+									<div className="font-medium">
+										{cp.product?.name || "Unknown Product"}
+									</div>
+									{cp.customer_entitlements &&
+									cp.customer_entitlements.length > 0 ? (
+										<div className="mt-1 text-xs text-t-secondary">
+											<span className="font-medium">Balances: </span>
+											{cp.customer_entitlements.map((ent, entIndex) => (
+												<span key={entIndex}>
+													{ent.entitlement?.feature?.name || ent.feature_id}:{" "}
+													{ent.balance}
+													{entIndex <
+													(cp.customer_entitlements?.length ?? 0) - 1
+														? ", "
+														: ""}
+												</span>
+											))}
+										</div>
+									) : null}
+								</div>
+							))}
+						</div>
+					) : null}
+
+					{/* Update Customer Product */}
+					{(() => {
+						const updateCusProduct = billingPlan.autumn?.updateCustomerProduct;
+						if (!updateCusProduct) return null;
+						return (
+							<div className="px-4 py-3 border-l-2 border-l-amber-500">
+								<h4 className="text-xs font-semibold text-amber-400 mb-1">
+									✏️ Updating Customer Product
+								</h4>
+								<div className="text-sm">
+									<div className="font-medium">
+										{updateCusProduct.customerProduct?.product?.name ||
+											"Unknown Product"}
+									</div>
+									{updateCusProduct.updates ? (
+										<div className="mt-1 text-xs text-t-secondary">
+											<span className="font-medium">Updates: </span>
+											<code className="text-amber-400">
+												{JSON.stringify(updateCusProduct.updates)}
+											</code>
+										</div>
+									) : null}
+								</div>
+							</div>
+						);
+					})()}
+
+					{/* Stripe Subscription Action */}
+					{billingPlan.stripe?.subscriptionAction ? (
+						<div className="px-4 py-3 border-l-2 border-l-blue-500">
+							<h4 className="text-xs font-semibold text-blue-400 mb-1">
+								💳 Stripe Subscription Action
+							</h4>
+							<div className="text-sm flex items-center gap-3">
+								<span>
+									<span className="text-t-secondary">Type: </span>
+									<span className="font-medium">
+										{billingPlan.stripe.subscriptionAction.type || "none"}
+									</span>
+								</span>
+								{billingPlan.stripe.subscriptionAction.stripeSubscriptionId ? (
+									<span>
+										<span className="text-t-secondary">Sub: </span>
+										<code className="text-xs text-blue-400">
+											{
+												billingPlan.stripe.subscriptionAction
+													.stripeSubscriptionId
+											}
+										</code>
+									</span>
+								) : null}
+							</div>
+							{/* Subscription Items */}
+							{billingPlan.stripe.subscriptionAction.params?.items &&
+							billingPlan.stripe.subscriptionAction.params.items.length > 0 ? (
+								<div className="mt-2 space-y-1">
+									<div className="text-xs text-t-secondary font-medium">
+										Items:
+									</div>
+									{billingPlan.stripe.subscriptionAction.params.items.map(
+										(item, index) => (
+											<div
+												key={index}
+												className={`flex justify-between text-xs pl-2 border-l ${
+													item.deleted
+														? "border-red-500/30"
+														: "border-blue-500/30"
+												}`}
+											>
+												{item.deleted ? (
+													<>
+														<span className="text-red-400 font-mono">
+															{item.id || "Unknown item"}
+														</span>
+														<span className="text-red-400">🗑️ delete</span>
+													</>
+												) : (
+													<>
+														<span className="text-t-primary font-mono">
+															{item.price || item.id || "Unknown"}
+														</span>
+														<span className="text-blue-400">
+															qty: {item.quantity ?? 1}
+														</span>
+													</>
+												)}
+											</div>
+										),
+									)}
+								</div>
+							) : null}
+							{/* Other params */}
+							{billingPlan.stripe.subscriptionAction.params?.trial_end ? (
+								<div className="mt-1 text-xs text-t-secondary">
+									<span>Trial ends: </span>
+									<span className="text-green-400">
+										{new Date(
+											billingPlan.stripe.subscriptionAction.params.trial_end *
+												1000,
+										).toLocaleDateString()}
+									</span>
+								</div>
+							) : null}
+							{billingPlan.stripe.subscriptionAction.params ? (
+								<details className="mt-1">
+									<summary className="text-xs cursor-pointer text-t-secondary hover:text-t-primary">
+										View raw params
+									</summary>
+									<pre className="text-xs bg-t-50 p-2 rounded mt-1 overflow-auto max-h-32">
+										{JSON.stringify(
+											billingPlan.stripe.subscriptionAction.params,
+											null,
+											2,
+										)}
+									</pre>
+								</details>
+							) : null}
+						</div>
+					) : null}
+
+					{/* Stripe Invoice Action */}
+					{billingPlan.stripe?.invoiceAction ? (
+						<div className="px-4 py-3 border-l-2 border-l-purple-500">
+							<h4 className="text-xs font-semibold text-purple-400 mb-1">
+								🧾 Stripe Invoice Action
+							</h4>
+							{billingPlan.stripe.invoiceAction.addLineParams?.lines &&
+							billingPlan.stripe.invoiceAction.addLineParams.lines.length >
+								0 ? (
+								<div className="space-y-1">
+									{billingPlan.stripe.invoiceAction.addLineParams.lines.map(
+										(
+											line: {
+												description?: string;
+												amount?: number;
+											},
+											index: number,
+										) => {
+											const amount = line.amount
+												? stripeToAtmnAmount({
+														amount: line.amount,
+														currency: "usd",
+													})
+												: 0;
+											return (
+												<div
+													key={index}
+													className="flex justify-between text-xs"
+												>
+													<span className="text-t-primary">
+														{line.description || "Line item"}
+													</span>
+													<span
+														className={
+															amount >= 0 ? "text-green-400" : "text-red-400"
+														}
+													>
+														${amount.toFixed(2)}
+													</span>
+												</div>
+											);
+										},
+									)}
+								</div>
+							) : (
+								<div className="text-xs text-t-secondary">No line items</div>
+							)}
+							<details className="mt-1">
+								<summary className="text-xs cursor-pointer text-t-secondary hover:text-t-primary">
+									View raw params
+								</summary>
+								<pre className="text-xs bg-t-50 p-2 rounded mt-1 overflow-auto max-h-32">
+									{JSON.stringify(billingPlan.stripe.invoiceAction, null, 2)}
+								</pre>
+							</details>
+						</div>
+					) : null}
+
+					{/* Empty Stripe section indicator */}
+					{billingPlan.stripe &&
+					!billingPlan.stripe.subscriptionAction &&
+					!billingPlan.stripe.invoiceAction ? (
+						<div className="px-4 py-2 text-xs text-t-secondary">
+							No Stripe actions required
+						</div>
+					) : null}
+
+					{/* Raw JSON toggle */}
+					<details className="px-4 py-2 text-xs">
+						<summary className="cursor-pointer text-t-secondary hover:text-t-primary">
+							View raw JSON
+						</summary>
+						<pre className="bg-t-50 p-2 rounded mt-1 overflow-auto max-h-40">
+							{JSON.stringify(data, null, 2)}
+						</pre>
+					</details>
+				</div>
+			) : null}
+		</div>
+	);
+}
+
+interface UpdateResultProps {
+	data: unknown;
+	isLoading: boolean;
+	error: Error | null;
+}
+
+function UpdateResult({ data, isLoading, error }: UpdateResultProps) {
+	if (!data && !isLoading && !error) return null;
+
+	return (
+		<div className="border-b border-border">
+			<div className="px-4 py-2 border-b border-border">
+				<h3 className="text-sm font-medium">Update Response</h3>
+			</div>
+			{isLoading ? (
+				<div className="px-4 py-3 text-sm text-t-secondary">Updating...</div>
+			) : null}
+			{error ? (
+				<div className="px-4 py-3 text-sm text-red-400">
+					Error: {error.message}
+				</div>
+			) : null}
+			{data !== null && data !== undefined && !isLoading ? (
+				<div className="px-4 py-3 border-l-2 border-l-green-500">
+					<div className="text-xs text-green-400 mb-1">✓ Success</div>
+					<pre className="text-xs bg-t-50 p-2 rounded overflow-auto max-h-60">
+						{JSON.stringify(data, null, 2)}
+					</pre>
+				</div>
+			) : null}
+		</div>
+	);
+}
+
+function useSubscriptionUpdatePreview({
+	body,
+	enabled,
+}: {
+	body: SubscriptionUpdateV0Params | null;
+	enabled: boolean;
+}) {
+	const axiosInstance = useAxiosInstance();
+
+	// Debounce the body to avoid too many API calls
+	const [debouncedBody, setDebouncedBody] = useState(body);
+
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedBody(body);
+		}, 300);
+		return () => clearTimeout(timer);
+	}, [body]);
+
+	const isDebouncing = JSON.stringify(body) !== JSON.stringify(debouncedBody);
+
+	const query = useQuery({
+		queryKey: [
+			"subscription-update-preview-test",
+			JSON.stringify(debouncedBody),
+		],
+		queryFn: async () => {
+			if (!debouncedBody) return null;
+			const response = await axiosInstance.post(
+				"/v1/subscriptions/preview/update",
+				debouncedBody,
+			);
+			return response.data;
+		},
+		enabled: enabled && !!debouncedBody,
+		retry: false,
+	});
+
+	return {
+		...query,
+		isLoading: query.isLoading || isDebouncing,
+	};
+}
+
+function useSubscriptionUpdate() {
+	const axiosInstance = useAxiosInstance();
+
+	return useMutation({
+		mutationFn: async (body: SubscriptionUpdateV0Params) => {
+			const response = await axiosInstance.post(
+				"/v1/subscriptions/update",
+				body,
+			);
+			return response.data;
+		},
+	});
+}
+
+function SheetContent({
+	cusProduct,
+	productV2,
+	customizedProduct,
+}: {
+	cusProduct: FullCusProduct;
+	productV2: ProductV2;
+	customizedProduct: FrontendProduct | undefined;
+}) {
+	const navigate = useNavigate();
+	const { customer, features } = useCusQuery();
+	const customerId = customer?.id ?? customer?.internal_id;
+	const entityId = cusProduct?.entity_id ?? undefined;
+
+	const product = customizedProduct?.id ? customizedProduct : productV2;
+	const { prepaidItems } = usePrepaidItems({ product });
+
+	// Get display info for custom items
+	const getItemDisplay = (item: ProductItem) => {
+		return getProductItemDisplay({
+			item,
+			features: (features as Feature[]) ?? [],
+			currency: "usd",
+		});
+	};
+
+	// Handle Edit Plan - navigates to plan editor
+	const handleEditPlan = () => {
+		if (!cusProduct || !customer) return;
+
+		const entity = (customer as FullCustomer).entities?.find(
+			(e: Entity) =>
+				e.internal_id === cusProduct.internal_entity_id ||
+				e.id === cusProduct.entity_id,
+		);
+
+		pushPage({
+			path: `/customers/${customer.id || customer.internal_id}/${cusProduct.product_id}`,
+			queryParams: {
+				id: cusProduct.id,
+				entity_id: entity ? entity.id || entity.internal_id : undefined,
+				version: String(cusProduct.product.version),
+			},
+			navigate,
+		});
+	};
+
+	// Get initial prepaid values from the current subscription
+	const initialPrepaidOptions = useMemo(() => {
+		return cusProduct.options.reduce(
+			(acc, option) => {
+				acc[option.feature_id] = option.quantity;
+				return acc;
+			},
+			{} as Record<string, number>,
+		);
+	}, [cusProduct.options]);
+
+	const [prepaidOptions, setPrepaidOptions] = useState<Record<string, number>>(
+		initialPrepaidOptions,
+	);
+
+	const handlePrepaidChange = (featureId: string, quantity: number) => {
+		setPrepaidOptions((prev) => ({
+			...prev,
+			[featureId]: quantity,
+		}));
+	};
+
+	// Build the request body
+	const requestBody = useMemo<SubscriptionUpdateV0Params | null>(() => {
+		if (!customerId) return null;
+
+		const body: SubscriptionUpdateV0Params = {
+			customer_id: customerId,
+			product_id: product?.id,
+			entity_id: entityId,
+			customer_product_id: cusProduct.id ?? cusProduct.internal_product_id,
+		};
+
+		// Add options if there are prepaid items with quantities set
+		if (prepaidItems.length > 0) {
+			const options = prepaidItems
+				.map((item) => {
+					const featureId = item.feature_id ?? item.feature?.internal_id ?? "";
+					const quantity = prepaidOptions[featureId];
+					if (quantity !== undefined && quantity !== null && featureId) {
+						return { feature_id: featureId, quantity };
+					}
+					return null;
+				})
+				.filter(Boolean);
+
+			if (options.length > 0) {
+				body.options = options as Array<{
+					feature_id: string;
+					quantity: number;
+				}>;
+			}
+		}
+
+		// Add custom items if we have a customized product
+		if (customizedProduct?.items) {
+			body.items = customizedProduct.items;
+		}
+
+		// Add free trial if we have a customized product with free trial
+		if (customizedProduct?.free_trial) {
+			body.free_trial = customizedProduct.free_trial;
+		}
+
+		return body;
+	}, [
+		customerId,
+		product?.id,
+		entityId,
+		cusProduct.id,
+		cusProduct.internal_product_id,
+		prepaidItems,
+		prepaidOptions,
+		customizedProduct?.items,
+		customizedProduct?.free_trial,
+	]);
+
+	// Preview query - fires when body changes
+	const previewQuery = useSubscriptionUpdatePreview({
+		body: requestBody,
+		enabled: !!requestBody,
+	});
+
+	// Update mutation
+	const updateMutation = useSubscriptionUpdate();
+
+	const handleConfirm = () => {
+		if (!requestBody) return;
+		updateMutation.mutate(requestBody);
+	};
+
+	return (
+		<div className="flex flex-col h-full">
+			<SheetHeader
+				title="Subscription Update Test"
+				description={`Testing update for ${cusProduct.product.name}`}
+			>
+				<IconButton
+					variant="primary"
+					onClick={handleEditPlan}
+					icon={<PencilSimple size={16} weight="duotone" />}
+				>
+					Edit Plan
+				</IconButton>
+			</SheetHeader>
+
+			<div className="flex-1 overflow-y-auto">
+				{/* Request Body Display */}
+				<div className="border-b border-border">
+					<div className="px-4 py-2 border-b border-border">
+						<h3 className="text-sm font-medium">Request Body</h3>
+					</div>
+					<div className="px-4 py-3 text-sm space-y-1">
+						<div>
+							<span className="text-t-secondary">customer_id: </span>
+							<code className="text-xs">{requestBody?.customer_id}</code>
+						</div>
+						<div>
+							<span className="text-t-secondary">product_id: </span>
+							<code className="text-xs">{requestBody?.product_id}</code>
+						</div>
+						{requestBody?.entity_id ? (
+							<div>
+								<span className="text-t-secondary">entity_id: </span>
+								<code className="text-xs">{requestBody.entity_id}</code>
+							</div>
+						) : null}
+						{requestBody?.options && requestBody.options.length > 0 ? (
+							<div>
+								<span className="text-t-secondary">options: </span>
+								<code className="text-xs">
+									{requestBody.options
+										.map((o) => `${o.feature_id}: ${o.quantity}`)
+										.join(", ")}
+								</code>
+							</div>
+						) : null}
+						{requestBody?.items && requestBody.items.length > 0 ? (
+							<div>
+								<span className="text-t-secondary">items: </span>
+								<div className="mt-1 pl-3 space-y-1">
+									{requestBody.items.map((item, index) => {
+										const display = getItemDisplay(item as ProductItem);
+										return (
+											<div
+												key={index}
+												className="text-xs border-l-2 border-l-purple-500 pl-2"
+											>
+												<span className="text-t-primary">
+													{display.primary_text}
+												</span>
+												{display.secondary_text ? (
+													<span className="text-t-secondary ml-1">
+														{display.secondary_text}
+													</span>
+												) : null}
+											</div>
+										);
+									})}
+								</div>
+							</div>
+						) : null}
+						{requestBody?.free_trial ? (
+							<div>
+								<span className="text-t-secondary">free_trial: </span>
+								<span className="text-xs">
+									<span className="text-green-400">
+										{requestBody.free_trial.length}{" "}
+										{requestBody.free_trial.duration}
+										{Number(requestBody.free_trial.length) > 1 ? "s" : ""}
+									</span>
+									<span className="text-t-secondary ml-2">
+										(card_required:{" "}
+										{requestBody.free_trial.card_required ? "true" : "false"})
+									</span>
+								</span>
+							</div>
+						) : null}
+						<details className="mt-2">
+							<summary className="text-xs cursor-pointer text-t-secondary hover:text-t-primary">
+								View raw JSON
+							</summary>
+							<pre className="text-xs bg-t-50 p-2 rounded mt-1 overflow-auto max-h-32">
+								{JSON.stringify(requestBody, null, 2)}
+							</pre>
+						</details>
+					</div>
+				</div>
+
+				{/* Prepaid Editor */}
+				<PrepaidEditor
+					prepaidItems={prepaidItems}
+					prepaidOptions={prepaidOptions}
+					onPrepaidChange={handlePrepaidChange}
+				/>
+
+				{/* Preview Result */}
+				<PreviewResult
+					data={previewQuery.data}
+					isLoading={previewQuery.isLoading}
+					error={previewQuery.error as Error | null}
+				/>
+
+				{/* Update Result */}
+				<UpdateResult
+					data={updateMutation.data}
+					isLoading={updateMutation.isPending}
+					error={updateMutation.error as Error | null}
+				/>
+			</div>
+
+			{/* Footer Actions */}
+			<div className="p-4 border-t flex gap-3">
+				<Button
+					variant="primary"
+					onClick={handleConfirm}
+					disabled={!requestBody || updateMutation.isPending}
+				>
+					{updateMutation.isPending ? "Updating..." : "Confirm Update"}
+				</Button>
+				<Button
+					variant="secondary"
+					onClick={() => previewQuery.refetch()}
+					disabled={!requestBody || previewQuery.isLoading}
+				>
+					Refresh Preview
+				</Button>
+			</div>
+		</div>
+	);
+}
+
+/**
+ * Main sheet component.
+ *
+ * To use this sheet, you need to:
+ * 1. Add "subscription-update-test" to the SheetType union in useSheetStore.ts
+ * 2. Add a case for it in CustomerSheets.tsx
+ * 3. Or, for quick testing, temporarily replace SubscriptionUpdateSheet import
+ *
+ * Example trigger:
+ * setSheet({
+ *   type: "subscription-update-test",
+ *   itemId: cusProduct.id,
+ *   data: { customizedProduct: product } // optional
+ * })
+ */
+export function SubscriptionUpdateTestSheet() {
+	const itemId = useSheetStore((s) => s.itemId);
+	const sheetData = useSheetStore((s) => s.data);
+
+	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
+
+	const customizedProduct = sheetData?.customizedProduct as
+		| FrontendProduct
+		| undefined;
+
+	if (!cusProduct) {
+		return (
+			<div className="flex flex-col h-full">
+				<SheetHeader
+					title="Subscription Update Test"
+					description="Loading..."
+				/>
+				<div className="p-4 text-sm text-t-secondary">
+					No customer product found for itemId: {itemId}
+				</div>
+			</div>
+		);
+	}
+
+	if (!productV2) {
+		return (
+			<div className="flex flex-col h-full">
+				<SheetHeader
+					title="Subscription Update Test"
+					description="Loading product..."
+				/>
+			</div>
+		);
+	}
+
+	return (
+		<SheetContent
+			cusProduct={cusProduct}
+			productV2={productV2}
+			customizedProduct={customizedProduct}
+		/>
+	);
+}

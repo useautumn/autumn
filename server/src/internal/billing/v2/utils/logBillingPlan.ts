@@ -34,20 +34,6 @@ export const logBillingPlan = ({
 					}
 				: undefined,
 		},
-		stripe: {
-			subscription: billingPlan.stripe.subscription
-				? {
-						type: billingPlan.stripe.subscription.type,
-						stripeSubscriptionId:
-							billingPlan.stripe.subscription.type !== "create"
-								? billingPlan.stripe.subscription.stripeSubscriptionId
-								: undefined,
-						params:
-							billingPlan.stripe.subscription.type !== "cancel"
-								? billingPlan.stripe.subscription.params
-								: undefined,
-					}
-				: undefined,
-		},
+		stripe: billingPlan.stripe,
 	});
 };

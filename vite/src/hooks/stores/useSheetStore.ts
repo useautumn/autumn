@@ -11,6 +11,7 @@ export type SheetType =
 	| "attach-product"
 	| "subscription-detail"
 	| "subscription-update"
+	| "subscription-update-test" // TEST: Remove this line to revert
 	| "balance-selection"
 	| "balance-edit"
 	| null;

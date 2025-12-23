@@ -1,8 +1,9 @@
 import {
+	InternalError,
 	OngoingCusProductActionEnum,
 	type SubscriptionUpdateV0Params,
 	secondsToMs,
-} from "@shared/index";
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "../../compute/computeAutumnUtils/buildAutumnLineItems";
 import type { SubscriptionUpdateQuantityPlan } from "../../typesOld";
@@ -27,6 +28,12 @@ export const computeSubscriptionUpdateQuantityPlan = ({
 		testClockFrozenTime,
 		paymentMethod,
 	} = updateSubscriptionContext;
+
+	if (!stripeSubscription) {
+		throw new InternalError({
+			message: `[Subscription Update] Stripe subscription not found`,
+		});
+	}
 
 	const featureQuantities = {
 		old: customerProduct.options,
