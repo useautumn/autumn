@@ -1,12 +1,6 @@
 import {
-    CustomerNotFoundError,
-    customerEntitlements,
-    ErrCode,
-    FeatureNotFoundError,
-    FeatureType, RecaseError
+    CustomerNotFoundError, FeatureNotFoundError
 } from "@shared/index";
-import { and, eq } from "drizzle-orm";
-import { StatusCodes } from "http-status-codes";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { CusService } from "@/internal/customers/CusService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
@@ -15,6 +9,7 @@ import { prepareNewBalanceForInsertion } from "../createNewBalance/prepareNewBal
 import {
     CreateBalanceForValidation,
     CreateBalanceSchema,
+    validateBooleanEntitlementConflict,
 } from "../createNewBalance/validationUtils";
 
 export const handleCreateBalance = createRoute({
@@ -50,27 +45,12 @@ export const handleCreateBalance = createRoute({
             throw new CustomerNotFoundError({ customerId: customer_id });
         }
 
-        const existingEntitlement =
-            await ctx.db.query.customerEntitlements.findFirst({
-                where: and(
-                    eq(customerEntitlements.internal_customer_id, fullCustomer.internal_id),
-                    eq(customerEntitlements.internal_feature_id, feature.internal_id!),
-                ),
-                with: {
-                    feature: true,
-                },
-            });
+        await validateBooleanEntitlementConflict({
+            ctx,
+            feature,
+            internalCustomerId: fullCustomer.internal_id,
+        })
 
-        if (
-            existingEntitlement &&
-            existingEntitlement.feature.type === FeatureType.Boolean
-        ) {
-            throw new RecaseError({
-                message: `A boolean entitlement ${feature.id} already exists for customer ${customer_id}`,
-                code: ErrCode.InvalidRequest,
-                statusCode: StatusCodes.BAD_REQUEST,
-            });
-        }
 
         const { newEntitlement, newCustomerEntitlement } = await prepareNewBalanceForInsertion({
             ctx,
