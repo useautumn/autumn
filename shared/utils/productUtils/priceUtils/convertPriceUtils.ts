@@ -2,6 +2,11 @@ import type { Feature } from "@models/featureModels/featureModels";
 import type { EntitlementWithFeature } from "@models/productModels/entModels/entModels";
 import type { UsagePriceConfig } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
 import type { Price } from "@models/productModels/priceModels/priceModels";
+import {
+	OnDecrease,
+	OnIncrease,
+} from "@models/productV2Models/productItemModels/productItemEnums";
+import { shouldBillNow, shouldProrate } from "@utils/billingUtils";
 import { priceToEnt } from "@utils/productUtils/convertProductUtils";
 
 export const priceToFeature = ({
@@ -27,4 +32,31 @@ export const priceToFeature = ({
 
 	const ent = priceToEnt({ price, entitlements: ents ?? [] });
 	return ent?.feature;
+};
+
+export const priceToProrationConfig = ({
+	price,
+	isUpgrade,
+}: {
+	price: Price;
+	isUpgrade: boolean;
+}): {
+	prorationBehaviorConfig: OnIncrease | OnDecrease;
+	shouldApplyProration: boolean;
+	shouldFinalizeInvoiceImmediately: boolean;
+} => {
+	const prorationBehaviorConfig = isUpgrade
+		? (price.proration_config?.on_increase ?? OnIncrease.ProrateImmediately)
+		: (price.proration_config?.on_decrease ?? OnDecrease.ProrateImmediately);
+
+	const shouldApplyProration = shouldProrate(prorationBehaviorConfig);
+	const shouldFinalizeInvoiceImmediately = shouldBillNow(
+		prorationBehaviorConfig,
+	);
+
+	return {
+		prorationBehaviorConfig,
+		shouldApplyProration,
+		shouldFinalizeInvoiceImmediately,
+	};
 };

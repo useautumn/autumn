@@ -41,7 +41,7 @@ export const executeSubscriptionUpdate = async ({
 	if (shouldUncancelSubscription) {
 		await executeStripeSubscriptionUncancel({
 			ctx,
-			stripeSubscriptionId: stripeSubscription?.id ?? "",
+			stripeSubscriptionId: stripeSubscription.id,
 			customerProduct,
 		});
 	}
@@ -58,7 +58,7 @@ export const executeSubscriptionUpdate = async ({
 			ctx,
 			invoiceAction,
 			stripeCustomerId: stripeCustomer.id,
-			stripeSubscriptionId: stripeSubscription?.id ?? "",
+			stripeSubscriptionId: stripeSubscription.id,
 			customerProduct,
 		});
 	} else {

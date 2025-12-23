@@ -1,4 +1,5 @@
 import {
+	findFeatureOptionsByFeature,
 	InternalError,
 	OngoingCusProductActionEnum,
 	type SubscriptionUpdateV0Params,
@@ -42,16 +43,10 @@ export const computeSubscriptionUpdateQuantityPlan = ({
 
 	const currentEpochMs = testClockFrozenTime || Date.now();
 	const quantityUpdateDetails = featureQuantities.new.map((updatedOption) => {
-		const previousOption = featureQuantities.old.find(
-			(oldOption) => oldOption.feature_id === updatedOption.feature_id,
-		);
-
-		if (!previousOption) {
-			throw new Error(
-				`[Subscription Update] Cannot find previous options for feature: ${updatedOption.feature_id}. ` +
-					`This feature may not exist in the current subscription.`,
-			);
-		}
+		const previousOption = findFeatureOptionsByFeature({
+			featureOptions: customerProduct.options,
+			featureId: updatedOption.feature_id,
+		});
 
 		return computeQuantityUpdateDetails({
 			ctx,
