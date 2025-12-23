@@ -18,6 +18,7 @@ import {
 	type Price,
 	PriceType,
 	type ProductItem,
+	shouldProrate,
 	TierInfinite,
 	UsageModel,
 	type UsagePriceConfig,
@@ -25,7 +26,6 @@ import {
 import { entsAreSame } from "@server/internal/products/entitlements/entitlementUtils";
 import { pricesAreSame } from "@server/internal/products/prices/priceInitUtils";
 import { getBillingType } from "@server/internal/products/prices/priceUtils";
-import { shouldProrate } from "@server/internal/products/prices/priceUtils/prorationConfigUtils";
 import { itemCanBeProrated } from "@server/internal/products/product-items/productItemUtils/classifyItem";
 import RecaseError from "@server/utils/errorUtils";
 import { generateId, notNullish, nullish } from "@server/utils/genUtils";

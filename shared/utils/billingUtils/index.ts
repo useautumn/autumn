@@ -14,4 +14,5 @@ export * from "./invoicingUtils/lineItemBuilders/usagePriceToLineItem";
 export * from "./invoicingUtils/lineItemUtils/priceToLineAmount";
 export * from "./invoicingUtils/lineItemUtils/tiersToLineAmount";
 export * from "./invoicingUtils/prorationUtils/applyProration";
+export * from "./invoicingUtils/prorationUtils/prorationConfigUtils";
 export * from "./usageUtils/roundUsageToNearestBillingUnit";

@@ -67,7 +67,7 @@ export const computeSubscriptionUpdateNewCustomerProduct = ({
 
 		initOptions: {
 			isCustom: true,
-			subscriptionId: stripeSubscription?.id,
+			subscriptionId: stripeSubscription.id,
 			subscriptionScheduleId: stripeSubscriptionSchedule?.id,
 		},
 	});

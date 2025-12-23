@@ -13,8 +13,8 @@ import type { QuantityUpdateDetails } from "@/internal/billing/v2/typesOld";
 import { calculateEntitlementChange } from "./quantityUpdateUtils/calculateEntitlementChange";
 import { calculateProrationAmount } from "./quantityUpdateUtils/calculateProrationAmount";
 import { calculateQuantityDifferences } from "./quantityUpdateUtils/calculateQuantityDifferences";
-import { extractPriceConfig } from "./quantityUpdateUtils/extractPriceConfig";
 import { mapStripeSubscriptionItem } from "./quantityUpdateUtils/mapStripeSubscriptionItem";
+import { resolvePriceForQuantityUpdate } from "./quantityUpdateUtils/resolvePriceForQuantityUpdate";
 
 /**
  * Computes all details needed for a feature quantity update operation.
@@ -46,7 +46,7 @@ export const computeQuantityUpdateDetails = ({
 	stripeSubscription: Stripe.Subscription;
 	currentEpochMs: number;
 }): QuantityUpdateDetails => {
-	const { features, org } = ctx;
+	const { features } = ctx;
 
 	const internalFeatureId = updatedOptions.internal_feature_id;
 	const featureId = updatedOptions.feature_id;
@@ -73,7 +73,7 @@ export const computeQuantityUpdateDetails = ({
 		updatedOptions,
 	});
 
-	const priceConfiguration = extractPriceConfig({
+	const priceConfiguration = resolvePriceForQuantityUpdate({
 		customerProduct,
 		updatedOptions,
 		isUpgrade: quantityDifferences.isUpgrade,
