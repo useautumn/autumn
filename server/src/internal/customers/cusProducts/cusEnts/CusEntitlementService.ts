@@ -45,14 +45,21 @@ export class CusEntService {
 	static async getByFeature({
 		db,
 		internalFeatureId,
+		internalCustomerId,
 	}: {
 		db: DrizzleCli;
 		internalFeatureId: string;
+		internalCustomerId?: string;
 	}) {
 		const data = await db
 			.select()
 			.from(customerEntitlements)
-			.where(eq(customerEntitlements.internal_feature_id, internalFeatureId))
+			.where(
+				internalCustomerId ? and(
+					eq(customerEntitlements.internal_feature_id, internalFeatureId),
+					eq(customerEntitlements.internal_customer_id, internalCustomerId)
+				) : eq(customerEntitlements.internal_feature_id, internalFeatureId),
+			)
 			.limit(10);
 
 		return data as FullCustomerEntitlement[];

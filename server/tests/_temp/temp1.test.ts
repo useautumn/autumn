@@ -47,7 +47,7 @@ export const premium = constructProduct({
 });
 
 describe(`${chalk.yellowBright("temp1: Testing balances.create endpoint")}`, () => {
-	const customerId = "temp1";
+	const customerId = `temp1-${Math.random().toString(36).substring(2, 15)}`;
 	const autumn: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
 	beforeAll(async () => {
