@@ -10,7 +10,7 @@ import {
     CreateBalanceForValidation,
     CreateBalanceSchema,
     validateBooleanEntitlementConflict,
-} from "../createNewBalance/validationUtils";
+} from "../createNewBalance/validationUtilsForNewBalances";
 
 export const handleCreateBalance = createRoute({
     body: CreateBalanceSchema,
