@@ -28,8 +28,7 @@ export const executeSubscriptionUpdate = async ({
 	subscriptionUpdatePlan: SubscriptionUpdatePlan;
 }) => {
 	const { logger } = ctx;
-	const { customerProduct, stripeCustomer, stripeSubscription } =
-		updateSubscriptionContext;
+	const { customerProduct, stripeSubscription } = updateSubscriptionContext;
 	const {
 		ongoingCusProductAction,
 		stripeSubscriptionAction,
@@ -41,7 +40,7 @@ export const executeSubscriptionUpdate = async ({
 	if (shouldUncancelSubscription) {
 		await executeStripeSubscriptionUncancel({
 			ctx,
-			stripeSubscriptionId: stripeSubscription?.id ?? "",
+			stripeSubscriptionId: stripeSubscription.id,
 			customerProduct,
 		});
 	}
@@ -57,9 +56,7 @@ export const executeSubscriptionUpdate = async ({
 		await executeInvoiceAction({
 			ctx,
 			invoiceAction,
-			stripeCustomerId: stripeCustomer.id,
-			stripeSubscriptionId: stripeSubscription?.id ?? "",
-			customerProduct,
+			updateSubscriptionContext,
 		});
 	} else {
 		logger.info("No invoice action required");

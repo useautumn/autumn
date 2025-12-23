@@ -4,15 +4,12 @@ import {
 	type FullCustomerPrice,
 	findCusPriceByFeature,
 	InternalError,
-	OnDecrease,
-	OnIncrease,
+	type OnDecrease,
+	type OnIncrease,
 	type Price,
+	priceToProrationConfig,
 	type UsagePriceConfig,
 } from "@autumn/shared";
-import {
-	shouldBillNow,
-	shouldProrate,
-} from "@/internal/products/prices/priceUtils/prorationConfigUtils";
 
 /**
  * Extracts and validates price configuration for a quantity update.
@@ -25,7 +22,7 @@ import {
  * @returns Price config including proration rules and billing units
  * @throws {InternalError} When internal_feature_id is missing or price not found
  */
-export const extractPriceConfig = ({
+export const resolvePriceForQuantityUpdate = ({
 	customerProduct,
 	updatedOptions,
 	isUpgrade,
@@ -61,16 +58,16 @@ export const extractPriceConfig = ({
 
 	const price = customerPrice.price;
 	const priceConfig = price.config as UsagePriceConfig;
-	const billingUnitsPerQuantity = priceConfig.billing_units || 1;
+	const billingUnitsPerQuantity = priceConfig.billing_units ?? 1;
 
-	const prorationBehaviorConfig = isUpgrade
-		? price.proration_config?.on_increase || OnIncrease.ProrateImmediately
-		: price.proration_config?.on_decrease || OnDecrease.ProrateImmediately;
-
-	const shouldApplyProration = shouldProrate(prorationBehaviorConfig);
-	const shouldFinalizeInvoiceImmediately = shouldBillNow(
+	const {
 		prorationBehaviorConfig,
-	);
+		shouldApplyProration,
+		shouldFinalizeInvoiceImmediately,
+	} = priceToProrationConfig({
+		price,
+		isUpgrade,
+	});
 
 	return {
 		customerPrice,

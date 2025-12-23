@@ -2,19 +2,18 @@ import {
 	cusProductToProduct,
 	extractBillingPeriod,
 	type FeatureOptions,
-	type FullCusProduct,
 	findFeatureByInternalId,
 	InternalError,
 } from "@autumn/shared";
 import { usagePriceToLineDescription } from "@autumn/shared/utils/billingUtils/invoicingUtils/descriptionUtils/usagePriceToLineDescription";
-import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { QuantityUpdateDetails } from "@/internal/billing/v2/typesOld";
+import type { UpdateSubscriptionContext } from "../fetch/updateSubscriptionContextSchema";
 import { calculateEntitlementChange } from "./quantityUpdateUtils/calculateEntitlementChange";
 import { calculateProrationAmount } from "./quantityUpdateUtils/calculateProrationAmount";
 import { calculateQuantityDifferences } from "./quantityUpdateUtils/calculateQuantityDifferences";
-import { extractPriceConfig } from "./quantityUpdateUtils/extractPriceConfig";
 import { mapStripeSubscriptionItem } from "./quantityUpdateUtils/mapStripeSubscriptionItem";
+import { resolvePriceForQuantityUpdate } from "./quantityUpdateUtils/resolvePriceForQuantityUpdate";
 
 /**
  * Computes all details needed for a feature quantity update operation.
@@ -25,9 +24,7 @@ import { mapStripeSubscriptionItem } from "./quantityUpdateUtils/mapStripeSubscr
  * @param ctx - Autumn context with features
  * @param previousOptions - Current feature options
  * @param updatedOptions - Desired feature options
- * @param customerProduct - Full customer product with prices and entitlements
- * @param stripeSubscription - Active Stripe subscription
- * @param currentEpochMs - Current timestamp in milliseconds
+ * @param updateSubscriptionContext - Context containing customerProduct, stripeSubscription, currentEpochMs
  * @returns Complete details for executing the quantity update
  * @throws {InternalError} When internal_feature_id is missing or feature not found
  */
@@ -35,18 +32,16 @@ export const computeQuantityUpdateDetails = ({
 	ctx,
 	previousOptions,
 	updatedOptions,
-	customerProduct,
-	stripeSubscription,
-	currentEpochMs,
+	updateSubscriptionContext,
 }: {
 	ctx: AutumnContext;
 	previousOptions: FeatureOptions;
 	updatedOptions: FeatureOptions;
-	customerProduct: FullCusProduct;
-	stripeSubscription: Stripe.Subscription;
-	currentEpochMs: number;
+	updateSubscriptionContext: UpdateSubscriptionContext;
 }): QuantityUpdateDetails => {
-	const { features, org } = ctx;
+	const { customerProduct, stripeSubscription, currentEpochMs } =
+		updateSubscriptionContext;
+	const { features } = ctx;
 
 	const internalFeatureId = updatedOptions.internal_feature_id;
 	const featureId = updatedOptions.feature_id;
@@ -73,27 +68,27 @@ export const computeQuantityUpdateDetails = ({
 		updatedOptions,
 	});
 
-	const priceConfiguration = extractPriceConfig({
+	const priceConfiguration = resolvePriceForQuantityUpdate({
 		customerProduct,
 		updatedOptions,
 		isUpgrade: quantityDifferences.isUpgrade,
 	});
 
-	const billingPeriod = extractBillingPeriod({ stripeSubscription });
+	const billingPeriod = extractBillingPeriod({
+		stripeSubscription,
+		interval: priceConfiguration.priceConfig.interval,
+		intervalCount: priceConfiguration.priceConfig.interval_count,
+		currentEpochMs,
+	});
 
 	const calculatedProrationAmountDollars = calculateProrationAmount({
 		previousOptions,
 		updatedOptions,
-		price: priceConfiguration.price,
-		billingUnitsPerQuantity: priceConfiguration.billingUnitsPerQuantity,
-		shouldApplyProration: priceConfiguration.shouldApplyProration,
-		isTrialing: stripeSubscription.status === "trialing",
-		isUpgrade: quantityDifferences.isUpgrade,
+		priceConfiguration,
+		quantityDifferences,
+		stripeSubscription,
+		billingPeriod,
 		currentEpochMs,
-		billingPeriod: {
-			start: billingPeriod.subscriptionPeriodStartEpochMs,
-			end: billingPeriod.subscriptionPeriodEndEpochMs,
-		},
 	});
 
 	const product = cusProductToProduct({ cusProduct: customerProduct });
