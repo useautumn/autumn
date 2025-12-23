@@ -10,7 +10,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { initCusEntitlement } from "@/internal/customers/add-product/initCusEnt";
 import { initNextResetAt } from "@/internal/customers/cusProducts/insertCusProduct/initCusEnt/initNextResetAt";
 import { toFeature } from "@/internal/products/product-items/productItemUtils/itemToPriceAndEnt";
-import type { CreateBalanceSchema } from "./validationUtils";
+import type { CreateBalanceSchema } from "./validationUtilsForNewBalances";
 
 export const prepareNewBalanceForInsertion = async ({
     ctx,
@@ -70,10 +70,6 @@ export const prepareNewBalanceForInsertion = async ({
         nextResetAt:
             initNextResetAt({
                 entitlement: newEntitlementWithFeature,
-                nextResetAt: undefined,
-                trialEndsAt: undefined,
-                freeTrial: null,
-                anchorToUnix: undefined,
                 now: Date.now(),
             }) ?? Date.now(),
         entities: [],

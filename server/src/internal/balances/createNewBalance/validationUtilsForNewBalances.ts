@@ -68,8 +68,6 @@ export const validateBooleanEntitlementConflict = async ({
             internalCustomerId,
         });
 
-        console.log("existingBooleanEntitlement: ", existingBooleanEntitlement);
-
         if (existingBooleanEntitlement.length > 0) {
             throw new RecaseError({
                 message: `A boolean entitlement ${feature.id} already exists for customer ${internalCustomerId}`,
