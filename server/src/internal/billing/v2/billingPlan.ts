@@ -30,12 +30,19 @@ export const StripeSubscriptionActionSchema = z.discriminatedUnion("type", [
 	}),
 ]);
 
+export const StripeInvoiceActionSchema = z.object({
+	addLineParams: z.custom<import("stripe").Stripe.InvoiceAddLinesParams>(),
+});
+
+export type StripeInvoiceAction = z.infer<typeof StripeInvoiceActionSchema>;
+
 export type StripeSubscriptionAction = z.infer<
 	typeof StripeSubscriptionActionSchema
 >;
 
 export const StripeBillingPlanSchema = z.object({
-	subscription: StripeSubscriptionActionSchema.optional(),
+	subscriptionAction: StripeSubscriptionActionSchema.optional(),
+	invoiceAction: StripeInvoiceActionSchema.optional(),
 });
 
 export const AutumnBillingPlanSchema = z.object({
@@ -51,16 +58,6 @@ export const AutumnBillingPlanSchema = z.object({
 	customPrices: z.array(PriceSchema), // Custom prices to insert
 	customEntitlements: z.array(EntitlementSchema), // Custom entitlements to insert
 	customFreeTrial: FreeTrialSchema.optional(), // Custom free trial to insert
-
-	// expireCusProducts: z.array(z.string()),
-
-	// updateCusProduct: z.object({
-	// 	cusProductId: z.string(),
-	// 	options: z.array(FeatureOptionsSchema),
-	// }),
-	// entitlementChanges: z.array(
-	// 	z.object({ cusEntId: z.string(), delta: z.number() }),
-	// ),
 });
 
 export const BillingPlanSchema = z.object({

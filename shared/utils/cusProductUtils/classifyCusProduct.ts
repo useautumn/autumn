@@ -7,11 +7,7 @@ import { notNullish, nullish } from "../utils";
 import { cusProductToPrices } from "./convertCusProduct";
 import { ACTIVE_STATUSES } from "./cusProductConstants";
 
-export const isCusProductOneOff = ({
-	cusProduct,
-}: {
-	cusProduct?: FullCusProduct;
-}) => {
+export const isCustomerProductOneOff = (cusProduct?: FullCusProduct) => {
 	if (!cusProduct) return false;
 
 	const prices = cusProductToPrices({ cusProduct });
@@ -19,14 +15,18 @@ export const isCusProductOneOff = ({
 	return isOneOffProduct({ prices });
 };
 
-export const isCusProductCanceled = ({
-	cusProduct,
-}: {
-	cusProduct?: FullCusProduct;
-}) => {
+export const isCustomerProductCanceled = (cusProduct?: FullCusProduct) => {
 	if (!cusProduct) return false;
 
-	return cusProduct.canceled;
+	return notNullish(cusProduct.canceled_at);
+};
+
+export const isCustomerProductFree = (cusProduct?: FullCusProduct) => {
+	if (!cusProduct) return false;
+
+	const prices = cusProductToPrices({ cusProduct });
+
+	return isFreeProduct({ prices });
 };
 
 export const isCusProductTrialing = ({

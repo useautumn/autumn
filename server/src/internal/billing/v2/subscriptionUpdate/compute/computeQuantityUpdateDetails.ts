@@ -1,9 +1,9 @@
 import {
 	cusProductToProduct,
 	extractBillingPeriod,
-	type Feature,
 	type FeatureOptions,
 	type FullCusProduct,
+	findFeatureByInternalId,
 	InternalError,
 } from "@autumn/shared";
 import { usagePriceToLineDescription } from "@autumn/shared/utils/billingUtils/invoicingUtils/descriptionUtils/usagePriceToLineDescription";
@@ -46,7 +46,7 @@ export const computeQuantityUpdateDetails = ({
 	stripeSubscription: Stripe.Subscription;
 	currentEpochMs: number;
 }): QuantityUpdateDetails => {
-	const { features } = ctx;
+	const { features, org } = ctx;
 
 	const internalFeatureId = updatedOptions.internal_feature_id;
 	const featureId = updatedOptions.feature_id;
@@ -54,6 +54,17 @@ export const computeQuantityUpdateDetails = ({
 	if (!internalFeatureId) {
 		throw new InternalError({
 			message: `[Quantity Update] internal_feature_id is required for quantity updates`,
+		});
+	}
+
+	const feature = findFeatureByInternalId({
+		features,
+		internalId: internalFeatureId,
+	});
+
+	if (!feature) {
+		throw new InternalError({
+			message: `[Quantity Update] Feature not found for internal_id: ${internalFeatureId}`,
 		});
 	}
 
@@ -84,16 +95,6 @@ export const computeQuantityUpdateDetails = ({
 			end: billingPeriod.subscriptionPeriodEndEpochMs,
 		},
 	});
-
-	const feature = features.find(
-		(featureItem: Feature) => featureItem.internal_id === internalFeatureId,
-	);
-
-	if (!feature) {
-		throw new InternalError({
-			message: `[Quantity Update] Feature not found for internal_id: ${internalFeatureId}`,
-		});
-	}
 
 	const product = cusProductToProduct({ cusProduct: customerProduct });
 

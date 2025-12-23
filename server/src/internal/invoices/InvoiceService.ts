@@ -2,6 +2,7 @@ import {
 	type ApiInvoiceV1,
 	type Customer,
 	type Feature,
+	type InsertInvoice,
 	type Invoice,
 	type InvoiceItem,
 	type InvoiceStatus,
@@ -210,11 +211,11 @@ export class InvoiceService {
 	}: {
 		db: DrizzleCli;
 		stripeId: string;
-		updates: Partial<Invoice>;
+		updates: Partial<InsertInvoice>;
 	}) {
 		const results = await db
 			.update(invoices)
-			.set(updates as any)
+			.set(updates)
 			.where(eq(invoices.stripe_id, stripeId))
 			.returning();
 

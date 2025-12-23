@@ -3,7 +3,7 @@ import {
 	cusProductToProduct,
 	type FullCustomer,
 	type FullProduct,
-	isCusProductCanceled,
+	isCustomerProductCanceled,
 } from "@autumn/shared";
 
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
@@ -43,7 +43,7 @@ export const getAttachScenario = ({
 			curSameProduct &&
 			curSameProduct.product.id !== curScheduledProduct?.product.id
 		) {
-			if (isCusProductCanceled({ cusProduct: curSameProduct })) {
+			if (isCustomerProductCanceled(curSameProduct)) {
 				return AttachScenario.Renew;
 			} else {
 				return AttachScenario.Active;
@@ -59,7 +59,7 @@ export const getAttachScenario = ({
 
 	// 1. If current product is the same as the product, return active
 	if (curMainProduct?.product.id === fullProduct.id) {
-		if (isCusProductCanceled({ cusProduct: curMainProduct })) {
+		if (isCustomerProductCanceled(curMainProduct)) {
 			return AttachScenario.Renew;
 		} else return AttachScenario.Active;
 	}

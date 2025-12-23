@@ -1,54 +1,31 @@
+import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import { createStripeCli } from "../../../../external/connect/createStripeCli";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
+import type { StripeInvoiceAction } from "../billingPlan";
 import { createAndPayInvoice } from "../utils/stripeAdapter/stripeInvoiceOps/createAndPayInvoice";
-import type {
-	AttachContext,
-	StripeCheckoutAction,
-	StripeInvoiceAction,
-} from "../typesOld";
-import { executeStripeCheckoutAction } from "./executeStripeCheckoutAction";
 
 export const executeStripeInvoiceAction = async ({
 	ctx,
-	attachContext,
-	stripeCheckoutAction,
+	billingContext,
 	stripeInvoiceAction,
 }: {
 	ctx: AutumnContext;
-	attachContext: AttachContext;
-	stripeCheckoutAction: StripeCheckoutAction;
+	billingContext: BillingContext;
 	stripeInvoiceAction: StripeInvoiceAction;
 }) => {
-	const { org, env, logger } = ctx;
-	const { items, onPaymentFailure } = stripeInvoiceAction;
+	const { org, env } = ctx;
+	const { addLineParams } = stripeInvoiceAction;
 
 	const stripeCli = createStripeCli({ org, env });
 
 	// 1. Create and pay invoice
-	const { invoice, paid, error, createCheckoutSession, hostedUrl } =
-		await createAndPayInvoice({
-			stripeCli,
-			stripeCusId: attachContext.stripeCus.id,
-			stripeLineItems: items,
-			paymentMethod: attachContext.paymentMethod,
-			onPaymentFailure: onPaymentFailure,
-		});
+	const result = await createAndPayInvoice({
+		stripeCli,
+		stripeCusId: billingContext.stripeCustomer?.id,
+		stripeLineItems: addLineParams.lines,
+		paymentMethod: billingContext.paymentMethod,
+		onPaymentFailure: "return_url",
+	});
 
-	if (!paid) {
-		// 1. Either return checkout session, hosted url, or throw error
-		if (createCheckoutSession) {
-			return await executeStripeCheckoutAction({
-				ctx,
-				stripeCheckoutAction: stripeCheckoutAction,
-			});
-		}
-
-		if (hostedUrl) {
-			return hostedUrl;
-		}
-
-		throw error;
-	}
-
-	return invoice;
+	return result;
 };

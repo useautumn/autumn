@@ -24,6 +24,7 @@ export * from "./cusEntUtils/convertCusEntUtils/cusEntToCusPrice.js";
 export * from "./cusEntUtils/convertCusEntUtils.js";
 export * from "./cusEntUtils/cusEntUtils.js";
 export * from "./cusEntUtils/filterCusEntUtils.js";
+export * from "./cusEntUtils/findCustomerEntitlement/findPrepaidCustomerEntitlement.js";
 // Cus ent utils
 export * from "./cusEntUtils/getRolloverFields.js";
 export * from "./cusEntUtils/getStartingBalance.js";
@@ -47,6 +48,7 @@ export * from "./cusUtils/fullCusUtils/getCusStripeSubCount.js";
 export * from "./expandUtils.js";
 export * from "./featureUtils/apiFeatureToDbFeature.js";
 export * from "./featureUtils/convertFeatureUtils.js";
+export * from "./featureUtils/findFeatureUtils.js";
 // Feature utils
 export * from "./featureUtils.js";
 // INTERVAL UTILS

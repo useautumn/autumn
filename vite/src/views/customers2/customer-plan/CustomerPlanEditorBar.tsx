@@ -1,5 +1,4 @@
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
-import { useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Button } from "@/components/v2/buttons/Button";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
@@ -60,7 +59,9 @@ export const CustomerPlanEditorBar = () => {
 		} else {
 			// We have a subscription ID, so we're editing an existing subscription
 			setSheet({
-				type: changesMade ? "subscription-update" : "subscription-detail",
+				type: changesMade
+					? "subscription-update-test"
+					: "subscription-update-test", // SWAP: Change back to "subscription-update" : "subscription-detail" to revert
 				itemId: queryStates.id,
 				data: changesMade ? { customizedProduct: product } : null,
 			});

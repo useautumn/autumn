@@ -11,6 +11,7 @@ import { BalanceEditSheet } from "../components/sheets/BalanceEditSheet";
 import { BalanceSelectionSheet } from "../components/sheets/BalanceSelectionSheet";
 import { SubscriptionDetailSheet } from "../components/sheets/SubscriptionDetailSheet";
 import { SubscriptionUpdateSheet } from "../components/sheets/SubscriptionUpdateSheet";
+import { SubscriptionUpdateTestSheet } from "../components/sheets/SubscriptionUpdateTestSheet"; // TEST: Remove this line to revert
 import { SHEET_ANIMATION } from "./customerAnimations";
 
 export function CustomerSheets() {
@@ -32,6 +33,8 @@ export function CustomerSheets() {
 				return <SubscriptionDetailSheet />;
 			case "subscription-update":
 				return <SubscriptionUpdateSheet />;
+			case "subscription-update-test": // TEST: Remove this case to revert
+				return <SubscriptionUpdateTestSheet />;
 			case "balance-selection":
 				return <BalanceSelectionSheet />;
 			case "balance-edit":

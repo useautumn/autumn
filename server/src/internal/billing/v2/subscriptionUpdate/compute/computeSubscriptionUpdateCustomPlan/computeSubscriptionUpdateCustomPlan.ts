@@ -2,18 +2,16 @@ import {
 	CusProductStatus,
 	cusProductToProduct,
 	type SubscriptionUpdateV0Params,
+	secondsToMs,
 } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import type { UpdateSubscriptionContext } from "@server/internal/billing/v2/subscriptionUpdate/fetch/updateSubscriptionContextSchema";
 import type { BillingPlan } from "@/internal/billing/v2/billingPlan";
-import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
-import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
+import { computeInvoiceAction } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateCustomPlan/computeInvoiceAction";
 import { computeSubscriptionUpdateFreeTrialPlan } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateCustomPlan/computeSubscriptionUpdateFreeTrialPlan";
 import { computeSubscriptionUpdateNewCustomerProduct } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateCustomPlan/computeSubscriptionUpdateNewCustomerProduct";
 import { computeSubscriptionUpdateStripeSubscriptionAction } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateCustomPlan/computeSubscriptionUpdateStripeSubscriptionAction";
-import { logBillingPlan } from "@/internal/billing/v2/utils/logBillingPlan";
 import { createStripeResourcesForProducts } from "@/internal/billing/v2/utils/stripeAdapter/createStripeResourcesForProduct";
-import { executeStripeSubscriptionAction } from "@/internal/billing/v2/utils/stripeAdapter/subscriptions/executeStripeSubscriptionAction";
 import { computeCustomFullProduct } from "../../../compute/computeAutumnUtils/computeCustomFullProduct";
 
 export const computeSubscriptionUpdateCustomPlan = async ({
@@ -25,7 +23,7 @@ export const computeSubscriptionUpdateCustomPlan = async ({
 	updateSubscriptionContext: UpdateSubscriptionContext;
 	params: SubscriptionUpdateV0Params;
 }) => {
-	const { customerProduct } = updateSubscriptionContext;
+	const { customerProduct, stripeSubscription } = updateSubscriptionContext;
 
 	const currentFullProduct = cusProductToProduct({
 		cusProduct: customerProduct,
@@ -50,6 +48,10 @@ export const computeSubscriptionUpdateCustomPlan = async ({
 			fullProduct: customFullProduct,
 		});
 
+	const billingCycleAnchor =
+		freeTrialPlan.trialEndsAt ??
+		secondsToMs(stripeSubscription?.billing_cycle_anchor);
+
 	// 3. Compute the new customer product
 	const newFullCustomerProduct = computeSubscriptionUpdateNewCustomerProduct({
 		ctx,
@@ -57,6 +59,7 @@ export const computeSubscriptionUpdateCustomPlan = async ({
 		params,
 		fullProduct: customFullProduct,
 		freeTrialPlan,
+		billingCycleAnchor,
 	});
 
 	// 4. Create stripe prices
@@ -76,9 +79,18 @@ export const computeSubscriptionUpdateCustomPlan = async ({
 			freeTrialPlan,
 		});
 
+	const stripeInvoiceAction = computeInvoiceAction({
+		ctx,
+		billingContext: updateSubscriptionContext,
+		newCustomerProduct: newFullCustomerProduct,
+		stripeSubscriptionAction,
+		billingCycleAnchor,
+	});
+
 	const billingPlan: BillingPlan = {
 		stripe: {
-			subscription: stripeSubscriptionAction,
+			subscriptionAction: stripeSubscriptionAction,
+			invoiceAction: stripeInvoiceAction,
 		},
 		autumn: {
 			insertCustomerProducts: [newFullCustomerProduct],
@@ -96,26 +108,51 @@ export const computeSubscriptionUpdateCustomPlan = async ({
 		},
 	};
 
-	logBillingPlan({ ctx, billingPlan });
-
-	if (stripeSubscriptionAction) {
-		const updatedStripeSubscription = await executeStripeSubscriptionAction({
-			ctx,
-			subscriptionAction: stripeSubscriptionAction,
-		});
-
-		if (updatedStripeSubscription) {
-			addStripeSubscriptionIdToBillingPlan({
-				billingPlan,
-				stripeSubscriptionId: updatedStripeSubscription.id,
-			});
-		}
-	}
-
-	await executeAutumnBillingPlan({
-		ctx,
-		autumnBillingPlan: billingPlan.autumn,
-	});
-
 	return billingPlan;
+
+	// logBillingPlan({ ctx, billingPlan });
+
+	// if (stripeInvoiceAction) {
+	// 	const result = await executeStripeInvoiceAction({
+	// 		ctx,
+	// 		billingContext: updateSubscriptionContext,
+	// 		stripeInvoiceAction,
+	// 	});
+
+	// 	if (result.invoice) {
+	// 		await upsertInvoiceFromBilling({
+	// 			ctx,
+	// 			stripeInvoice: result.invoice,
+	// 			fullProducts: [customFullProduct],
+	// 			fullCustomer: fullCustomer,
+	// 		});
+	// 	}
+	// }
+
+	// if (stripeSubscriptionAction) {
+	// 	const stripeSubscription = await executeStripeSubscriptionAction({
+	// 		ctx,
+	// 		subscriptionAction: stripeSubscriptionAction,
+	// 	});
+
+	// 	if (stripeSubscription) {
+	// 		addStripeSubscriptionIdToBillingPlan({
+	// 			billingPlan,
+	// 			stripeSubscriptionId: stripeSubscription.id,
+	// 		});
+
+	// 		// Add subscription to DB
+	// 		await upsertSubscriptionFromBilling({
+	// 			ctx,
+	// 			stripeSubscription,
+	// 		});
+	// 	}
+	// }
+
+	// await executeAutumnBillingPlan({
+	// 	ctx,
+	// 	autumnBillingPlan: billingPlan.autumn,
+	// });
+
+	// return billingPlan;
 };
