@@ -30,11 +30,13 @@ export const CopyProductDialog = ({
 	open,
 	setOpen,
 	product,
+	targetEnv,
 	onSuccess,
 }: {
 	open: boolean;
 	setOpen: (open: boolean) => void;
 	product: ProductV2;
+	targetEnv?: AppEnv;
 	onSuccess?: (copiedProduct: ProductV2) => Promise<void>;
 }) => {
 	const env = useEnv();
@@ -49,9 +51,13 @@ export const CopyProductDialog = ({
 		env === AppEnv.Live ? AppEnv.Sandbox : AppEnv.Live,
 	);
 
+	// Use targetEnv directly when provided, otherwise use state
+	const effectiveEnv = targetEnv ?? toEnv;
+	const envLabel = effectiveEnv === AppEnv.Sandbox ? "Sandbox" : "Production";
+
 	const handleCopy = async () => {
 		// 1. If env is the same and id is same, throw error
-		if (env === toEnv && id === product.id) {
+		if (env === effectiveEnv && id === product.id) {
 			toast.error("Plan ID already exists");
 			return;
 		}
@@ -61,11 +67,11 @@ export const CopyProductDialog = ({
 			await ProductService.copyProduct(axiosInstance, product.id, {
 				id: id,
 				name: name,
-				env: toEnv,
+				env: effectiveEnv,
 			});
 			await refetch();
 
-			toast.success("Successfully copied plan");
+			toast.success(`Successfully copied plan to ${envLabel}`);
 			setOpen(false);
 
 			// Construct the copied product with the new ID
@@ -77,7 +83,8 @@ export const CopyProductDialog = ({
 
 			if (onSuccess) {
 				await onSuccess(copiedProduct);
-			} else {
+			} else if (env === effectiveEnv) {
+				// Only navigate if copying to the same environment
 				navigateTo(`/products/${id}`, navigate);
 			}
 		} catch (error: unknown) {
@@ -95,7 +102,9 @@ export const CopyProductDialog = ({
 				onClick={(e) => e.stopPropagation()}
 			>
 				<DialogHeader>
-					<DialogTitle>Copy Product</DialogTitle>
+					<DialogTitle>
+						{targetEnv ? `Copy to ${envLabel}` : "Copy Product"}
+					</DialogTitle>
 				</DialogHeader>
 				<div className="flex flex-col gap-4">
 					<div className="flex gap-2 w-full">
@@ -116,28 +125,30 @@ export const CopyProductDialog = ({
 							/>
 						</div>
 					</div>
-					<div>
-						<FormLabel>Copy to environment</FormLabel>
-						<Select
-							value={toEnv}
-							onValueChange={(value) => setToEnv(value as AppEnv)}
-						>
-							<SelectTrigger className="w-5/12">
-								<SelectValue placeholder="Select environment" />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value={AppEnv.Live}>Production</SelectItem>
-								<SelectItem value={AppEnv.Sandbox}>Sandbox</SelectItem>
-							</SelectContent>
-						</Select>
-					</div>
+					{!targetEnv && (
+						<div>
+							<FormLabel>Copy to environment</FormLabel>
+							<Select
+								value={toEnv}
+								onValueChange={(value) => setToEnv(value as AppEnv)}
+							>
+								<SelectTrigger className="w-5/12">
+									<SelectValue placeholder="Select environment" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value={AppEnv.Live}>Production</SelectItem>
+									<SelectItem value={AppEnv.Sandbox}>Sandbox</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+					)}
 				</div>
 				<DialogFooter>
 					<Button variant="secondary" onClick={() => setOpen(false)}>
 						Cancel
 					</Button>
 					<Button variant="primary" onClick={handleCopy} isLoading={loading}>
-						Copy
+						{targetEnv ? `Copy to ${envLabel}` : "Copy"}
 					</Button>
 				</DialogFooter>
 			</DialogContent>
