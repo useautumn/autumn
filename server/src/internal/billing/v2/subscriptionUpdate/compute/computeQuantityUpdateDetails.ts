@@ -79,21 +79,21 @@ export const computeQuantityUpdateDetails = ({
 		isUpgrade: quantityDifferences.isUpgrade,
 	});
 
-	const billingPeriod = extractBillingPeriod({ stripeSubscription });
+	const billingPeriod = extractBillingPeriod({
+		stripeSubscription,
+		interval: priceConfiguration.priceConfig.interval,
+		intervalCount: priceConfiguration.priceConfig.interval_count,
+		currentEpochMs,
+	});
 
 	const calculatedProrationAmountDollars = calculateProrationAmount({
 		previousOptions,
 		updatedOptions,
-		price: priceConfiguration.price,
-		billingUnitsPerQuantity: priceConfiguration.billingUnitsPerQuantity,
-		shouldApplyProration: priceConfiguration.shouldApplyProration,
-		isTrialing: stripeSubscription.status === "trialing",
-		isUpgrade: quantityDifferences.isUpgrade,
+		priceConfiguration,
+		quantityDifferences,
+		stripeSubscription,
+		billingPeriod,
 		currentEpochMs,
-		billingPeriod: {
-			start: billingPeriod.subscriptionPeriodStartEpochMs,
-			end: billingPeriod.subscriptionPeriodEndEpochMs,
-		},
 	});
 
 	const product = cusProductToProduct({ cusProduct: customerProduct });

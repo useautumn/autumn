@@ -1,10 +1,13 @@
+import type { extractBillingPeriod } from "@autumn/shared";
 import {
 	applyProration,
 	type FeatureOptions,
-	type Price,
 	priceToLineAmount,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import type Stripe from "stripe";
+import type { calculateQuantityDifferences } from "./calculateQuantityDifferences";
+import type { resolvePriceForQuantityUpdate } from "./resolvePriceForQuantityUpdate";
 
 /**
  * Calculates the prorated amount to charge or credit for a quantity change.
@@ -14,36 +17,35 @@ import { Decimal } from "decimal.js";
  *
  * @param previousOptions - Current feature options with old quantity
  * @param updatedOptions - Desired feature options with new quantity
- * @param price - Price configuration for this feature
- * @param billingUnitsPerQuantity - Multiplier for converting quantities to billing units
- * @param shouldApplyProration - Whether proration is enabled for this change
- * @param isTrialing - Whether subscription is in trial period
- * @param isUpgrade - Whether quantity is increasing
- * @param currentEpochMs - Current timestamp in milliseconds
+ * @param priceConfiguration - Price config including proration rules and billing units
+ * @param quantityDifferences - Quantity change details including upgrade/downgrade indicator
+ * @param stripeSubscription - Active Stripe subscription (for trial status)
  * @param billingPeriod - Current billing period boundaries
+ * @param currentEpochMs - Current timestamp in milliseconds
  * @returns Prorated amount in dollars, or undefined if proration doesn't apply
  */
 export const calculateProrationAmount = ({
 	previousOptions,
 	updatedOptions,
-	price,
-	billingUnitsPerQuantity,
-	shouldApplyProration,
-	isTrialing,
-	isUpgrade,
-	currentEpochMs,
+	priceConfiguration,
+	quantityDifferences,
+	stripeSubscription,
 	billingPeriod,
+	currentEpochMs,
 }: {
 	previousOptions: FeatureOptions;
 	updatedOptions: FeatureOptions;
-	price: Price;
-	billingUnitsPerQuantity: number;
-	shouldApplyProration: boolean;
-	isTrialing: boolean;
-	isUpgrade: boolean;
+	priceConfiguration: ReturnType<typeof resolvePriceForQuantityUpdate>;
+	quantityDifferences: ReturnType<typeof calculateQuantityDifferences>;
+	stripeSubscription: Stripe.Subscription;
+	billingPeriod: ReturnType<typeof extractBillingPeriod>;
 	currentEpochMs: number;
-	billingPeriod: { start: number; end: number };
 }): number | undefined => {
+	const { price, billingUnitsPerQuantity, shouldApplyProration } =
+		priceConfiguration;
+	const { isUpgrade } = quantityDifferences;
+	const isTrialing = stripeSubscription.status === "trialing";
+
 	if (!shouldApplyProration || isTrialing) {
 		return undefined;
 	}
@@ -72,8 +74,8 @@ export const calculateProrationAmount = ({
 	const proratedAmountDollars = applyProration({
 		now: currentEpochMs,
 		billingPeriod: {
-			start: billingPeriod.start,
-			end: billingPeriod.end,
+			start: billingPeriod.subscriptionPeriodStartEpochMs,
+			end: billingPeriod.subscriptionPeriodEndEpochMs,
 		},
 		amount: amountDifferenceDollars.toNumber(),
 	});
