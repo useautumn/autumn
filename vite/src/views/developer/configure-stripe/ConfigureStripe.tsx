@@ -250,17 +250,16 @@ export const ConfigureStripe = () => {
 						<div className="flex gap-2">
 							{status.showConnectButtons && (
 								<>
-									<Button variant="secondary" onClick={handleRedirectToOAuth}>
+									<Button variant="primary" onClick={handleRedirectToOAuth}>
 										Connect via OAuth
 									</Button>
-									{canPasteSecretKey && (
-										<Button
-											variant="secondary"
-											onClick={() => setShowConnectDialog(true)}
-										>
-											Paste secret key
-										</Button>
-									)}
+
+									<Button
+										variant="secondary"
+										onClick={() => setShowConnectDialog(true)}
+									>
+										Connect via Secret Key
+									</Button>
 								</>
 							)}
 
