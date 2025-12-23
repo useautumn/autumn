@@ -12,7 +12,7 @@ export const addSubIdToCache = async ({
 	scenario: string;
 }) => {
 	await tryRedisWrite(async () => {
-		await redis.set(`sub:${subId}`, scenario, "EX", 180); // 3 minutes
+		await redis.set(`sub:${subId}`, scenario, "EX", 60); // 1 minute
 	});
 };
 export const getSubScenarioFromCache = async ({ subId }: { subId: string }) => {

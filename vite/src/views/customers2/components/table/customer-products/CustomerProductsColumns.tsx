@@ -47,6 +47,7 @@ export const CustomerProductsColumns = [
 			return (
 				<CustomerProductsStatus
 					status={row.original.status}
+					starts_at={row.original.starts_at ?? undefined}
 					canceled={row.original.canceled}
 					trialing={
 						isCusProductTrialing({

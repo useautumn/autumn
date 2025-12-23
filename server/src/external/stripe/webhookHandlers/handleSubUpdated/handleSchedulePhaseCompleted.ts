@@ -1,15 +1,16 @@
 import {
 	AttachScenario,
 	CusProductStatus,
-	cusProductToProduct,
-	isFreeProduct,
-	isOneOffProduct,
+	formatMs,
+	formatMsToDate,
+	formatSeconds,
+	isCustomerProductExpired,
 } from "@autumn/shared";
-import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import type { ExpandedStripeSubscription } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
+import { getSubScenarioFromCache } from "@/internal/customers/cusCache/subCacheUtils.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import { activateFutureProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
@@ -17,48 +18,61 @@ import { deleteCachedApiCustomer } from "../../../../internal/customers/cusUtils
 
 export const handleSchedulePhaseCompleted = async ({
 	ctx,
-	subObject,
+	stripeSubscription,
 	prevAttributes,
 }: {
 	ctx: AutumnContext;
-	subObject: Stripe.Subscription;
+	stripeSubscription: ExpandedStripeSubscription;
 	// biome-ignore lint/suspicious/noExplicitAny: Don't know the type of prevAttributes
 	prevAttributes: any;
 }) => {
+	if (await getSubScenarioFromCache({ subId: stripeSubscription.id })) {
+		return;
+	}
+
 	const { db, org, env, logger } = ctx;
 
 	const phasePossiblyChanged =
-		notNullish(prevAttributes?.items) && notNullish(subObject.schedule);
+		notNullish(prevAttributes?.items) &&
+		notNullish(stripeSubscription.schedule);
 
 	if (!phasePossiblyChanged) return;
 
+	const stripeSubscriptionSchedule = stripeSubscription.schedule;
+
 	const stripeCli = createStripeCli({ org, env });
-	const schedule = await stripeCli.subscriptionSchedules.retrieve(
-		subObject.schedule as string,
-		{
-			expand: ["customer"],
-		},
-	);
 
 	const cusProducts = await CusProductService.getByScheduleId({
 		db,
-		scheduleId: schedule.id,
+		scheduleId: stripeSubscriptionSchedule.id,
 		orgId: org.id,
 		env,
 	});
 
-	const now = await getStripeNow({
+	const nowMs = await getStripeNow({
 		stripeCli,
-		stripeCus: schedule.customer as Stripe.Customer,
+		stripeCus: stripeSubscription.customer,
 	});
 
+	logger.info(`handling schedule phase completed for ${stripeSubscription.id}`);
+	logger.info(`now date: ${formatMsToDate(nowMs)}`);
+
+	console.log(
+		"cusProducts",
+		cusProducts.map((cp) => ({
+			name: cp.product.name,
+			status: cp.status,
+			start: formatMs(cp.starts_at),
+			end: formatMs(cp.ended_at),
+		})),
+	);
+
 	for (const cusProduct of cusProducts) {
-		const shouldExpire =
-			cusProduct.canceled && cusProduct.ended_at && now >= cusProduct.ended_at;
+		const shouldExpire = isCustomerProductExpired(cusProduct, { nowMs });
 
 		if (shouldExpire) {
 			logger.info(
-				`Expiring cus product: ${cusProduct.product.name} (entity ID: ${cusProduct.entity_id})`,
+				`❌ expiring cus product: ${cusProduct.product.name} (entity ID: ${cusProduct.entity_id})`,
 			);
 			await CusProductService.update({
 				db,
@@ -75,59 +89,68 @@ export const handleSchedulePhaseCompleted = async ({
 				scenario: AttachScenario.Expired,
 				cusProduct: cusProduct,
 			});
+		}
 
-			// ACTIVATING FUTURE PRODUCT
-			const futureCusProduct = await activateFutureProduct({
-				ctx,
-				cusProduct,
-			});
+		const shouldActivateCustomerProduct = () => {
+			if (cusProduct.status !== CusProductStatus.Scheduled) return false;
 
-			if (futureCusProduct) {
-				const fullFutureProduct = cusProductToProduct({
-					cusProduct: futureCusProduct,
-				});
+			return cusProduct.starts_at <= nowMs;
+		};
 
-				if (
-					!isFreeProduct({ prices: fullFutureProduct.prices }) &&
-					!isOneOffProduct({ prices: fullFutureProduct.prices })
-				) {
-					await CusProductService.update({
-						db,
-						cusProductId: futureCusProduct.id,
-						updates: {
-							subscription_ids: [subObject.id],
-							scheduled_ids: [schedule.id],
-						},
-					});
-				}
-			}
-
-			// Maybe activate default product?
-			await deleteCachedApiCustomer({
-				customerId: cusProduct.customer?.id || "",
-				orgId: org.id,
-				env,
-				source: "handleSchedulePhaseCompleted",
+		if (shouldActivateCustomerProduct()) {
+			console.log(
+				"✅ activating scheduled customer product",
+				cusProduct.product.name,
+			);
+			await CusProductService.update({
+				db,
+				cusProductId: cusProduct.id,
+				updates: {
+					status: CusProductStatus.Active,
+					subscription_ids: [stripeSubscription.id],
+					scheduled_ids: [stripeSubscriptionSchedule.id],
+				},
 			});
 		}
+
+		// Maybe activate default product?
+		await deleteCachedApiCustomer({
+			customerId: cusProduct.customer?.id || "",
+			orgId: org.id,
+			env,
+			source: "handleSchedulePhaseCompleted",
+		});
 	}
 
-	const currentPhase = schedule.phases.findIndex(
+	console.log(
+		"Stripe subscription schedule phases:",
+		stripeSubscriptionSchedule.phases.map((phase) => ({
+			start_date: formatSeconds(phase.start_date),
+			end_date: formatSeconds(phase.end_date),
+			trial_end: formatSeconds(phase.trial_end),
+		})),
+	);
+	const currentPhase = stripeSubscriptionSchedule.phases.findIndex(
 		(phase) =>
-			phase.start_date <= Math.floor(now / 1000) &&
-			(phase.end_date ? phase.end_date > Math.floor(now / 1000) : true),
+			phase.start_date <= Math.floor(nowMs / 1000) &&
+			(phase.end_date ? phase.end_date > Math.floor(nowMs / 1000) : true),
 	);
 
+	console.log("Current phase: ", currentPhase);
+
 	if (
-		currentPhase === schedule.phases.length - 1 &&
-		schedule.status !== "released"
+		currentPhase === stripeSubscriptionSchedule.phases.length - 1 &&
+		stripeSubscriptionSchedule.status !== "released"
 	) {
+		console.log("Releasing schedule");
 		try {
 			// Last phase, cancel schedule
-			await stripeCli.subscriptionSchedules.release(schedule.id);
+			await stripeCli.subscriptionSchedules.release(
+				stripeSubscriptionSchedule.id,
+			);
 			await CusProductService.updateByStripeScheduledId({
 				db,
-				stripeScheduledId: schedule.id,
+				stripeScheduledId: stripeSubscriptionSchedule.id,
 				updates: {
 					scheduled_ids: [],
 				},
@@ -136,14 +159,40 @@ export const handleSchedulePhaseCompleted = async ({
 			if (error instanceof Error) {
 				if (process.env.NODE_ENV === "development") {
 					logger.warn(
-						`schedule.phase.completed: failed to cancel schedule ${schedule.id}, error: ${error.message}`,
+						`schedule.phase.completed: failed to cancel schedule ${stripeSubscriptionSchedule.id}, error: ${error.message}`,
 					);
 				} else {
 					logger.error(
-						`schedule.phase.completed: failed to cancel schedule ${schedule.id}, error: ${error.message}`,
+						`schedule.phase.completed: failed to cancel schedule ${stripeSubscriptionSchedule.id}, error: ${error.message}`,
 					);
 				}
 			}
 		}
 	}
 };
+
+// ACTIVATING FUTURE PRODUCT
+// const futureCusProduct = await activateFutureProduct({
+// 	ctx,
+// 	cusProduct,
+// });
+
+// if (futureCusProduct) {
+// 	const fullFutureProduct = cusProductToProduct({
+// 		cusProduct: futureCusProduct,
+// 	});
+
+// 	if (
+// 		!isFreeProduct({ prices: fullFutureProduct.prices }) &&
+// 		!isOneOffProduct({ prices: fullFutureProduct.prices })
+// 	) {
+// 		await CusProductService.update({
+// 			db,
+// 			cusProductId: futureCusProduct.id,
+// 			updates: {
+// 				subscription_ids: [subObject.id],
+// 				scheduled_ids: [schedule.id],
+// 			},
+// 		});
+// 	}
+// }

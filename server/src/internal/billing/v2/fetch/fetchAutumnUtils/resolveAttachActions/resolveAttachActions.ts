@@ -55,7 +55,7 @@ export const resolveAttachActions = ({
 	};
 
 	return {
-		ongoingCusProductAction: ongoingCusProductAction,
+		// ongoingCusProductAction: ongoingCusProductAction,
 		scheduledCusProductAction,
 		newProductActions: [newProductAction],
 	};

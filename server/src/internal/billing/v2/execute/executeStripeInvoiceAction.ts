@@ -2,7 +2,7 @@ import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import { createStripeCli } from "../../../../external/connect/createStripeCli";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
 import type { StripeInvoiceAction } from "../billingPlan";
-import { createAndPayInvoice } from "../utils/stripeAdapter/stripeInvoiceOps/createAndPayInvoice";
+import { createAndPayInvoice } from "../providers/stripe/utils/invoices/createAndPayInvoice";
 
 export const executeStripeInvoiceAction = async ({
 	ctx,

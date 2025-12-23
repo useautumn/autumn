@@ -5,9 +5,6 @@ import {
 	AttachBodyV1Schema,
 } from "@autumn/shared";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
-import { computeAttachPlan } from "../compute/computeAttachPlan";
-import { executeAttachActions } from "../execute/executeAttachActions";
-import { fetchAttachContext } from "../fetch/fetchAttachContext";
 
 export const handleAttachV2 = createRoute({
 	versionedBody: {
@@ -19,27 +16,28 @@ export const handleAttachV2 = createRoute({
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
 
-		// Step 1: Fetch autumn state
-		const attachContext = await fetchAttachContext({
-			ctx,
-			body,
-		});
+		return c.json({ success: true }, 200);
+		// // Step 1: Fetch autumn state
+		// const attachContext = await fetchAttachContext({
+		// 	ctx,
+		// 	body,
+		// });
 
-		// Step 2: Compute attach plan (no external calls)
-		const attachPlan = await computeAttachPlan({
-			ctx,
-			attachContext,
-		});
+		// // Step 2: Compute attach plan (no external calls)
+		// const attachPlan = await computeAttachPlan({
+		// 	ctx,
+		// 	attachContext,
+		// });
 
-		// Step 3: Execute attach actions
-		const attachResponse = await executeAttachActions({
-			ctx,
-			attachContext,
-			attachPlan,
-		});
+		// // Step 3: Execute attach actions
+		// const attachResponse = await executeAttachActions({
+		// 	ctx,
+		// 	attachContext,
+		// 	attachPlan,
+		// });
 
-		ctx.logger.info(`attach completed!`);
-		return c.json({ success: true, attachResponse }, 200);
+		// ctx.logger.info(`attach completed!`);
+		// return c.json({ success: true, attachResponse }, 200);
 	},
 });
 

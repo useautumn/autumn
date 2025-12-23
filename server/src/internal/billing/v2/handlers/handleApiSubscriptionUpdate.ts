@@ -1,4 +1,5 @@
 import { SubscriptionUpdateV0ParamsSchema } from "@autumn/shared";
+import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { computeSubscriptionUpdatePlan } from "../subscriptionUpdate/compute/computeSubscriptionUpdatePlan";
 import { fetchApiSubscriptionUpdateContext } from "../subscriptionUpdate/fetch/fetchApiSubscriptionUpdateContext";
@@ -20,24 +21,12 @@ export const handleApiSubscriptionUpdate = createRoute({
 			params: body,
 		});
 
-		// Execute...
-		// await executeApiSubscriptionUpdate({
-		// 	ctx,
-		// 	params: body,
-		// 	updateSubscriptionContext,
-		// 	subscriptionUpdatePlan,
-		// });
+		await executeBillingPlan({
+			ctx,
+			billingContext: updateSubscriptionContext,
+			billingPlan: subscriptionUpdatePlan,
+		});
 
 		return c.json({ success: true }, 200);
 	},
 });
-
-// versionedBody: {
-// 	latest: ApiSubscriptionUpdateBodyV1Schema,
-// 	[ApiVersion.V2_0]: ApiSubscriptionUpdateBodyV0Schema,
-// },
-// resource: AffectedResource.ApiSubscriptionUpdate,
-// handler: async (c) => {
-// 	const ctx = c.get("ctx");
-// 	const body = c.req.valid("json");
-// },

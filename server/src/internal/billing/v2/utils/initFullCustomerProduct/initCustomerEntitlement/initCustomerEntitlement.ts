@@ -2,21 +2,24 @@ import {
 	type CustomerEntitlement,
 	type EntitlementWithFeature,
 	type InitFullCustomerProductContext,
+	type InitFullCustomerProductOptions,
 	isBooleanEntitlement,
 	isUnlimitedEntitlement,
 } from "@autumn/shared";
 import { generateId } from "@server/utils/genUtils";
-import { initCustomerEntitlementNextResetAt } from "./initCustomerEntitlementNextResetAt";
 import { initCustomerEntitlementBalance } from "./initCustomerEntitlementBalance";
+import { initCustomerEntitlementNextResetAt } from "./initCustomerEntitlementNextResetAt";
 import { initCustomerEntitlementUsageAllowed } from "./initCustomerEntitlementUsageAllowed";
 
 // MAIN FUNCTION
 export const initCustomerEntitlement = ({
 	initContext,
+	initOptions,
 	entitlement,
 	cusProductId,
 }: {
 	initContext: InitFullCustomerProductContext;
+	initOptions?: InitFullCustomerProductOptions;
 	entitlement: EntitlementWithFeature;
 	cusProductId: string;
 }): CustomerEntitlement => {
@@ -37,6 +40,7 @@ export const initCustomerEntitlement = ({
 
 	const nextResetAt = initCustomerEntitlementNextResetAt({
 		initContext,
+		initOptions,
 		entitlement,
 	});
 

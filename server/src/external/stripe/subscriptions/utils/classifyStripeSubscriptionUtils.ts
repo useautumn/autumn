@@ -20,3 +20,13 @@ export const isStripeSubscriptionCanceling = (
 		stripeSubscription.cancel_at_period_end
 	);
 };
+
+export const isStripeSubscriptionCanceled = (
+	stripeSubscription?: Stripe.Subscription,
+) => {
+	if (!stripeSubscription) {
+		return false;
+	}
+
+	return stripeSubscription.status === "canceled";
+};

@@ -177,11 +177,9 @@ export const handleStripeWebhookEvent = async ({
 				break;
 
 			case "customer.subscription.updated": {
-				const subscription = event.data.object;
 				await handleSubscriptionUpdated({
 					ctx,
-					subscription,
-					previousAttributes: event.data.previous_attributes,
+					eventData: event.data,
 				});
 				break;
 			}

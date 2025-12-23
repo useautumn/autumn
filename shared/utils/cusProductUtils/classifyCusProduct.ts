@@ -15,18 +15,30 @@ export const isCustomerProductOneOff = (cusProduct?: FullCusProduct) => {
 	return isOneOffProduct({ prices });
 };
 
-export const isCustomerProductCanceled = (cusProduct?: FullCusProduct) => {
+export const isCustomerProductFree = (cusProduct?: FullCusProduct) => {
+	if (!cusProduct) return false;
+	const prices = cusProductToPrices({ cusProduct });
+
+	return isFreeProduct({ prices });
+};
+
+export const isCustomerProductCanceling = (cusProduct?: FullCusProduct) => {
 	if (!cusProduct) return false;
 
 	return notNullish(cusProduct.canceled_at);
 };
 
-export const isCustomerProductFree = (cusProduct?: FullCusProduct) => {
-	if (!cusProduct) return false;
+export const isCustomerProductExpired = (
+	cusProduct: FullCusProduct,
+	params: { nowMs?: number },
+) => {
+	const nowMs = params.nowMs ?? Date.now();
 
-	const prices = cusProductToPrices({ cusProduct });
-
-	return isFreeProduct({ prices });
+	return (
+		isCustomerProductCanceling(cusProduct) &&
+		notNullish(cusProduct.ended_at) &&
+		nowMs >= cusProduct.ended_at
+	);
 };
 
 export const isCusProductTrialing = ({
@@ -89,6 +101,16 @@ export const isCustomerProductOnStripeSubscription = ({
 	return customerProduct.subscription_ids?.includes(stripeSubscriptionId);
 };
 
+export const isCustomerProductOnStripeSubscriptionSchedule = ({
+	customerProduct,
+	stripeSubscriptionScheduleId,
+}: {
+	customerProduct: FullCusProduct;
+	stripeSubscriptionScheduleId: string;
+}) => {
+	return customerProduct.scheduled_ids?.includes(stripeSubscriptionScheduleId);
+};
+
 // Note, this does not CONFIRM that the subscription is active (might be canceled in Stripe...)
 export const cusProductHasSubscription = ({
 	cusProduct,
@@ -100,6 +122,20 @@ export const cusProductHasSubscription = ({
 	if (isFreeProduct({ prices }) || isOneOffProduct({ prices })) return false;
 
 	const subId = cusProduct.subscription_ids?.[0];
+
+	return notNullish(subId);
+};
+
+export const customerProductHasSubscriptionSchedule = ({
+	cusProduct,
+}: {
+	cusProduct: FullCusProduct;
+}) => {
+	const prices = cusProductToPrices({ cusProduct });
+
+	if (isFreeProduct({ prices }) || isOneOffProduct({ prices })) return false;
+
+	const subId = cusProduct.scheduled_ids?.[0];
 
 	return notNullish(subId);
 };

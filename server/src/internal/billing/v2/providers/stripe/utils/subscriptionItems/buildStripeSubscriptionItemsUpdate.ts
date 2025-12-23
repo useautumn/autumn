@@ -1,22 +1,26 @@
+import { customerProductToStripeItemSpecs } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionItems/customerProductToStripeItemSpecs";
 import type { StripeItemSpec } from "@shared/models/billingModels/stripeAdapterModels/stripeItemSpec";
 import type { FullCusProduct } from "@shared/models/cusProductModels/cusProductModels";
-import { isCustomerProductOnStripeSubscription } from "@shared/utils";
+import {
+	ACTIVE_STATUSES,
+	isCustomerProductOnStripeSubscription,
+} from "@shared/utils";
 import type Stripe from "stripe";
 import { stripeSubscriptionItemToStripePriceId } from "@/external/stripe/subscriptions/subscriptionItems/utils/convertStripeSubscriptionItemUtils";
 import { findStripeSubscriptionItemByStripePriceId } from "@/external/stripe/subscriptions/subscriptionItems/utils/findStripeSubscriptionItemUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
-import { findStripeItemSpecByStripePriceId } from "@/internal/billing/v2/utils/stripeAdapter/stripeItemSpec/findStripeItemSpecUtils";
-import { customerProductToStripeItemSpecs } from "@/internal/billing/v2/utils/stripeAdapter/subscriptionItems/customerProductToStripeItemSpecs";
 
 const getFinalCustomerProductsState = ({
 	billingContext,
 	addCustomerProducts = [],
 	removeCustomerProducts = [],
+	nowMs,
 }: {
 	billingContext: BillingContext;
 	addCustomerProducts?: FullCusProduct[];
 	removeCustomerProducts?: FullCusProduct[];
+	nowMs: number;
 }) => {
 	const { fullCustomer, stripeSubscription } = billingContext;
 
@@ -123,18 +127,25 @@ export const buildStripeSubscriptionItemsUpdate = ({
 	billingContext,
 	addCustomerProducts = [],
 	removeCustomerProducts = [],
+	nowMs,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	addCustomerProducts?: FullCusProduct[];
 	removeCustomerProducts?: FullCusProduct[];
+	nowMs: number;
 }) => {
 	// 1. Get final customer product state
-	const customerProducts = getFinalCustomerProductsState({
+	let customerProducts = getFinalCustomerProductsState({
 		billingContext,
 		addCustomerProducts,
 		removeCustomerProducts,
+		nowMs,
 	});
+
+	customerProducts = customerProducts.filter((cp) =>
+		ACTIVE_STATUSES.includes(cp.status),
+	);
 
 	// 2. Get recurring subscription item array (doesn't include one off items)
 	const recurringItems = customerProductsToRecurringStripeItemSpecs({

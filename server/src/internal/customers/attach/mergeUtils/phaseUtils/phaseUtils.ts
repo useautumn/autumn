@@ -1,8 +1,8 @@
-import type { FullCusProduct } from "@autumn/shared";
+import { type FullCusProduct, formatMs } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle";
 import { PriceService } from "@server/internal/products/prices/PriceService";
 import { formatPrice } from "@server/internal/products/prices/priceUtils";
-import { formatUnixToDate, notNullish } from "@server/utils/genUtils";
+import { notNullish } from "@server/utils/genUtils";
 import { differenceInDays, subDays } from "date-fns";
 import type Stripe from "stripe";
 
@@ -110,7 +110,10 @@ export const logPhases = async ({
 	for (const phase of phases) {
 		// @ts-expect-error
 		const timestampInMillis = ensureMilliseconds(phase.start_date);
-		console.log(`Phase ${formatUnixToDate(timestampInMillis)}:`);
+		const endDateInMillis = ensureMilliseconds(phase.end_date);
+		console.log(
+			`Phase ${formatMs(timestampInMillis)} to ${formatMs(endDateInMillis)}:`,
+		);
 		await logPhaseItems({ items: phase.items, db });
 	}
 };

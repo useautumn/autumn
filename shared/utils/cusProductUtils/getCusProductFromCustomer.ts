@@ -1,7 +1,9 @@
+import type { FullCusProduct } from "@models/cusProductModels/cusProductModels";
 import type { FullCustomer } from "../../models/cusModels/fullCusModel";
 import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums";
 import {
 	cusProductHasSubscription,
+	customerProductHasSubscriptionSchedule,
 	isCusProductOnEntity,
 	isCusProductOngoing,
 } from "./classifyCusProduct";
@@ -104,35 +106,20 @@ export const getScheduledMainCusProductByGroup = ({
 	});
 };
 
-/**
- * Finds the best cus product to merge subscriptions with for an incoming product.
- * Priority: 1. Entity match, 2. Product ID match, 3. Product group match
- */
-export const getTargetSubscriptionCusProduct = ({
-	fullCus,
+const sortCustomerProductsForBilling = ({
+	customerProducts,
 	productId,
 	productGroup,
 	cusProductId,
+	internalEntityId,
 }: {
-	fullCus: FullCustomer;
+	customerProducts: FullCusProduct[];
 	productId: string;
 	productGroup: string;
 	cusProductId?: string;
+	internalEntityId?: string;
 }) => {
-	const internalEntityId = fullCus.entity?.internal_id;
-
-	const cusProducts = fullCus.customer_products.filter((cp) => {
-		const isOngoing = isCusProductOngoing({ cusProduct: cp });
-		const hasSub = cusProductHasSubscription({ cusProduct: cp });
-		return isOngoing && hasSub;
-	});
-
-	// Sort by merge order:
-	// 1. Entity match (highest priority)
-	// 2. Main product (add-ons lowest priority)
-	// 3. Product ID match
-	// 4. Product group match
-	cusProducts.sort((a, b) => {
+	return customerProducts.sort((a, b) => {
 		// 0. Cus product ID match
 		const aCusProductIdMatch = a.id === cusProductId;
 		const bCusProductIdMatch = b.id === cusProductId;
@@ -175,6 +162,83 @@ export const getTargetSubscriptionCusProduct = ({
 		if (!aGroupMatch && bGroupMatch) return 1;
 
 		return 0;
+	});
+};
+
+/**
+ * Finds the best cus product to merge subscriptions with for an incoming product.
+ * Priority: 1. Entity match, 2. Product ID match, 3. Product group match
+ */
+export const getTargetSubscriptionCusProduct = ({
+	fullCus,
+	productId,
+	productGroup,
+	cusProductId,
+}: {
+	fullCus: FullCustomer;
+	productId: string;
+	productGroup: string;
+	cusProductId?: string;
+}) => {
+	const internalEntityId = fullCus.entity?.internal_id;
+
+	const cusProducts = fullCus.customer_products.filter((cp) => {
+		const isOngoing = isCusProductOngoing({ cusProduct: cp });
+		const hasSub = cusProductHasSubscription({ cusProduct: cp });
+		return isOngoing && hasSub;
+	});
+
+	// Sort by merge order:
+	// 1. Entity match (highest priority)
+	// 2. Main product (add-ons lowest priority)
+	// 3. Product ID match
+	// 4. Product group match
+	sortCustomerProductsForBilling({
+		customerProducts: cusProducts,
+		productId,
+		productGroup,
+		cusProductId,
+		internalEntityId,
+	});
+
+	return cusProducts[0];
+};
+
+/**
+ * Finds the best cus product to merge subscriptions with for an incoming product.
+ * Priority: 1. Entity match, 2. Product ID match, 3. Product group match
+ */
+export const getTargetSubscriptionScheduleCusProduct = ({
+	fullCus,
+	productId,
+	productGroup,
+	cusProductId,
+}: {
+	fullCus: FullCustomer;
+	productId: string;
+	productGroup: string;
+	cusProductId?: string;
+}) => {
+	const internalEntityId = fullCus.entity?.internal_id;
+
+	const cusProducts = fullCus.customer_products.filter((cp) => {
+		const hasSubscriptionSchedule = customerProductHasSubscriptionSchedule({
+			cusProduct: cp,
+		});
+		return hasSubscriptionSchedule;
+	});
+
+	// Sort by merge order:
+	// 1. Entity match (highest priority)
+	// 2. Main product (add-ons lowest priority)
+	// 3. Product ID match
+	// 4. Product group match
+	sortCustomerProductsForBilling({
+		customerProducts: cusProducts,
+		productId,
+		productGroup,
+		cusProductId,
+		internalEntityId,
 	});
 
 	return cusProducts[0];

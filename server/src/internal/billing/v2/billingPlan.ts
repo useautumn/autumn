@@ -30,22 +30,46 @@ export const StripeSubscriptionActionSchema = z.discriminatedUnion("type", [
 	}),
 ]);
 
+export const StripeSubscriptionScheduleActionSchema = z.discriminatedUnion(
+	"type",
+	[
+		z.object({
+			type: z.literal("create"),
+			params:
+				z.custom<import("stripe").Stripe.SubscriptionScheduleUpdateParams>(),
+		}),
+		z.object({
+			type: z.literal("update"),
+			stripeSubscriptionScheduleId: z.string(),
+			params:
+				z.custom<import("stripe").Stripe.SubscriptionScheduleUpdateParams>(),
+		}),
+	],
+);
+
 export const StripeInvoiceActionSchema = z.object({
 	addLineParams: z.custom<import("stripe").Stripe.InvoiceAddLinesParams>(),
 });
 
-export type StripeInvoiceAction = z.infer<typeof StripeInvoiceActionSchema>;
+export type StripeSubscriptionScheduleAction = z.infer<
+	typeof StripeSubscriptionScheduleActionSchema
+>;
 
 export type StripeSubscriptionAction = z.infer<
 	typeof StripeSubscriptionActionSchema
 >;
 
+export type StripeInvoiceAction = z.infer<typeof StripeInvoiceActionSchema>;
+
 export const StripeBillingPlanSchema = z.object({
 	subscriptionAction: StripeSubscriptionActionSchema.optional(),
+	subscriptionScheduleAction: StripeSubscriptionScheduleActionSchema.optional(),
 	invoiceAction: StripeInvoiceActionSchema.optional(),
 });
 
 export const AutumnBillingPlanSchema = z.object({
+	freeTrialPlan: FreeTrialPlanSchema.optional(),
+
 	insertCustomerProducts: z.array(FullCusProductSchema),
 
 	updateCustomerProduct: z.object({

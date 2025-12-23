@@ -452,7 +452,7 @@ export class CusProductService {
 	}) {
 		const updated = await db
 			.update(customerProducts)
-			.set(updates as any)
+			.set(updates)
 			.where(
 				and(
 					arrayContains(customerProducts.subscription_ids, [stripeSubId]),

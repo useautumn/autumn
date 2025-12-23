@@ -35,8 +35,19 @@ export const initCustomerProduct = ({
 	const internalEntityId = fullCustomer.entity?.internal_id;
 	const entityId = fullCustomer.entity?.id;
 
-	const status = initOptions?.status ?? CusProductStatus.Active;
 	const startsAt = initOptions?.startsAt ?? Date.now();
+	const endedAt = initOptions?.endedAt;
+
+	const initCustomerProductStatus = () => {
+		if (initOptions?.status) return initOptions?.status;
+
+		if (startsAt && startsAt > Date.now()) {
+			return CusProductStatus.Scheduled;
+		}
+
+		return CusProductStatus.Active;
+	};
+	const status = initCustomerProductStatus();
 
 	const canceled = notNullish(initOptions?.canceledAt);
 	const canceledAt = initOptions?.canceledAt;
@@ -64,7 +75,8 @@ export const initCustomerProduct = ({
 		// Legacy
 		// processor: null,
 
-		starts_at: startsAt || Date.now(),
+		starts_at: startsAt,
+		ended_at: endedAt,
 
 		trial_ends_at: trialEndsAt,
 		free_trial_id: freeTrial?.id,

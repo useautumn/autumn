@@ -1,14 +1,14 @@
-import type Stripe from "stripe";
 import {
 	type PayInvoiceResult,
 	type PaymentFailureMode,
 	payStripeInvoice,
-} from "./payStripeInvoice";
+} from "@server/internal/billing/v2/providers/stripe/utils/invoices/payStripeInvoice";
 import {
 	addStripeInvoiceLines,
 	createStripeInvoice,
 	finalizeStripeInvoice,
-} from "./stripeInvoiceOps";
+} from "@server/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
+import type Stripe from "stripe";
 
 // ============================================
 // Types

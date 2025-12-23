@@ -21,7 +21,7 @@ export const executeStripeSubscriptionAction = async ({
 		case "create":
 			return await stripeClient.subscriptions.create(subscriptionAction.params);
 		case "cancel":
-			await stripeClient.subscriptions.cancel(
+			return await stripeClient.subscriptions.cancel(
 				subscriptionAction.stripeSubscriptionId,
 			);
 	}

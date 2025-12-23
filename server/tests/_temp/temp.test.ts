@@ -9,16 +9,9 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import {
-	constructFeatureItem,
-	constructPrepaidItem,
-} from "@/utils/scriptUtils/constructItem.js";
-import {
-	constructProduct,
-	constructRawProduct,
-} from "@/utils/scriptUtils/createTestProducts.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-import { constructPriceItem } from "../../src/internal/products/product-items/productItemUtils";
 import { initProductsV0 } from "../../src/utils/scriptUtils/testUtils/initProductsV0";
 
 const freeProd = constructProduct({
@@ -41,6 +34,7 @@ const pro = constructProduct({
 			includedUsage: 12,
 		}),
 	],
+	// trial: true,
 });
 
 const premium = constructProduct({
@@ -49,47 +43,10 @@ const premium = constructProduct({
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
-			includedUsage: 500,
+			includedUsage: 12,
 		}),
 	],
-});
-
-const freeAddOn = constructRawProduct({
-	id: "freeAddOn",
-	items: [
-		constructFeatureItem({
-			featureId: TestFeature.Messages,
-			includedUsage: 1000,
-		}),
-	],
-	isAddOn: true,
-});
-
-const oneOffCredits = constructRawProduct({
-	id: "oneOffCredits",
-	items: [
-		constructPriceItem({
-			interval: null,
-			price: 10,
-		}),
-		constructFeatureItem({
-			featureId: TestFeature.Messages,
-			includedUsage: 100,
-		}),
-	],
-	isAddOn: true,
-});
-
-const monthlyAddOn = constructRawProduct({
-	id: "monthlyAddOn",
-	items: [
-		constructPrepaidItem({
-			featureId: TestFeature.Messages,
-			billingUnits: 100,
-			price: 10,
-		}),
-	],
-	isAddOn: true,
+	// trial: true,
 });
 
 // 50% off reward that only applies to pro product
@@ -124,21 +81,70 @@ describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [
-				freeProd,
-				pro,
-				premium,
-				freeAddOn,
-				monthlyAddOn,
-				oneOffCredits,
-			],
+			products: [freeProd, pro, premium],
 			prefix: customerId,
 		});
 
+		const entities = [
+			{
+				id: "entity1",
+				name: "Entity 1",
+				feature_id: TestFeature.Messages,
+			},
+			{
+				id: "entity2",
+				name: "Entity 2",
+				feature_id: TestFeature.Messages,
+			},
+			{
+				id: "entity3",
+				name: "Entity 3",
+				feature_id: TestFeature.Messages,
+			},
+		];
+		await autumnV1.entities.create(customerId, entities);
+
 		await autumnV1.attach({
 			customer_id: customerId,
-			product_id: pro.id,
+			entity_id: entities[0].id,
+			product_id: premium.id,
 		});
+
+		// await autumnV1.attach({
+		// 	customer_id: customerId,
+		// 	entity_id: entities[1].id,
+		// 	product_id: premium.id,
+		// });
+
+		// await autumnV1.attach({
+		// 	customer_id: customerId,
+		// 	entity_id: entities[2].id,
+		// 	product_id: premium.id,
+		// });
+
+		// await advanceTestClock({
+		// 	stripeCli: ctx.stripeCli,
+		// 	testClockId: result.testClockId!,
+		// 	advanceTo: addWeeks(new Date(), 1).getTime(),
+		// });
+
+		// await autumnV1.attach({
+		// 	customer_id: customerId,
+		// 	entity_id: entities[0].id,
+		// 	product_id: pro.id,
+		// });
+
+		// await advanceTestClock({
+		// 	stripeCli: ctx.stripeCli,
+		// 	testClockId: result.testClockId!,
+		// 	advanceTo: addWeeks(new Date(), 1).getTime(),
+		// });
+
+		// await autumnV1.attach({
+		// 	customer_id: customerId,
+		// 	entity_id: entities[2].id,
+		// 	product_id: pro.id,
+		// });
 	});
 });
 

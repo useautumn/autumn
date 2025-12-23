@@ -1,10 +1,14 @@
 import {
+	ACTIVE_STATUSES,
 	type CollectionMethod,
 	CusProductStatus,
+	formatMs,
 	InternalError,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { getExpandedStripeSubscription } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription.js";
+import { getStripeSubscriptionTrialEndsAtMs } from "@/external/stripe/webhookHandlers/handleSubUpdated/getStripeSubscriptionTrialEndsAt.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
@@ -15,38 +19,45 @@ import { handleSubRenewed } from "./handleSubUpdated/handleSubRenewed.js";
 
 export const handleSubscriptionUpdated = async ({
 	ctx,
-	subscription,
-	previousAttributes,
+	eventData,
 }: {
 	ctx: AutumnContext;
-	subscription: Stripe.Subscription;
-	previousAttributes: unknown;
+	eventData: Stripe.Event.Data;
 }) => {
+	const previousAttributes = eventData.previous_attributes;
 	const { db, org, env, logger } = ctx;
+
+	const stripeSubscription = await getExpandedStripeSubscription({
+		ctx,
+		subscriptionId: (eventData.object as Stripe.Subscription).id,
+	});
+
 	// handle scheduled updated
 	await handleSchedulePhaseCompleted({
 		ctx,
-		subObject: subscription,
+		stripeSubscription,
 		prevAttributes: previousAttributes,
 	});
+
+	// const subUpdatedFromBilling = await getSubScenarioFromCache({
+	// 	subId: subscription.id,
+	// });
+
+	// if (subUpdatedFromBilling) {
+	// 	logger.info(`sub.updated SKIP: already handled by billing`);
+	// 	return;
+	// }
 
 	// Get cus products by stripe sub id
 	const cusProducts = await CusProductService.getByStripeSubId({
 		db,
-		stripeSubId: subscription.id,
+		stripeSubId: stripeSubscription.id,
 		orgId: org.id,
 		env,
 		inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
 	});
 
 	if (cusProducts.length === 0) return;
-
-	// Handle syncing status
-	const stripeCli = createStripeCli({
-		org,
-		env,
-	});
-	const fullSub = await stripeCli.subscriptions.retrieve(subscription.id);
 
 	const subStatusMap: {
 		[key: string]: CusProductStatus;
@@ -57,12 +68,22 @@ export const handleSubscriptionUpdated = async ({
 		incomplete: CusProductStatus.PastDue, // temporary status for incomplete subscription
 	};
 
+	const trialEndsAtMs = getStripeSubscriptionTrialEndsAtMs({
+		stripeSubscription,
+	});
+	ctx.logger.info(
+		`SUB.UPDATED: Setting trial ends to: ${formatMs(trialEndsAtMs)}`,
+	);
+
 	const updatedCusProducts = await CusProductService.updateByStripeSubId({
 		db,
-		stripeSubId: subscription.id,
+		stripeSubId: stripeSubscription.id,
+		inStatuses: ACTIVE_STATUSES,
 		updates: {
-			status: subStatusMap[subscription.status] ?? undefined, // don't change status if it's unknown
-			collection_method: fullSub.collection_method as CollectionMethod,
+			status: subStatusMap[stripeSubscription.status] ?? undefined, // don't change status if it's unknown
+			collection_method:
+				stripeSubscription.collection_method as CollectionMethod,
+			trial_ends_at: trialEndsAtMs,
 		},
 	});
 
@@ -77,44 +98,47 @@ export const handleSubscriptionUpdated = async ({
 	await handleSubCanceled({
 		ctx,
 		previousAttributes,
-		sub: fullSub,
-		updatedCusProducts,
+		sub: stripeSubscription,
+		updatedCusProducts: cusProducts,
 		org,
 	});
 
 	await handleSubPastDue({
 		ctx,
 		previousAttributes,
-		sub: fullSub,
-		updatedCusProducts,
+		sub: stripeSubscription,
+		updatedCusProducts: cusProducts,
 		org,
 	});
 
 	await handleSubRenewed({
 		ctx,
 		prevAttributes: previousAttributes,
-		sub: fullSub,
-		updatedCusProducts,
+		sub: stripeSubscription,
+		updatedCusProducts: cusProducts,
 	});
 
 	try {
 		await SubService.updateFromStripe({
 			db,
-			stripeSub: fullSub,
+			stripeSub: stripeSubscription,
 		});
 	} catch (error) {
 		logger.warn(
-			`Failed to update sub from stripe. Stripe sub ID: ${subscription.id}, org: ${org.slug}, env: ${env}`,
+			`Failed to update sub from stripe. Stripe sub ID: ${stripeSubscription.id}, org: ${org.slug}, env: ${env}`,
 			error,
 		);
 	}
 
 	// Cancel subscription immediately
 
-	if (subscription.status === "past_due" && org.config.cancel_on_past_due) {
+	if (
+		stripeSubscription.status === "past_due" &&
+		org.config.cancel_on_past_due
+	) {
 		if (
-			!subscription.latest_invoice ||
-			typeof subscription.latest_invoice !== "string"
+			!stripeSubscription.latest_invoice ||
+			typeof stripeSubscription.latest_invoice !== "string"
 		) {
 			throw new InternalError({
 				message: "subscription.latest_invoice is not a string",
@@ -127,7 +151,7 @@ export const handleSubscriptionUpdated = async ({
 		});
 
 		const latestInvoice = await stripeCli.invoices.retrieve(
-			subscription.latest_invoice,
+			stripeSubscription.latest_invoice,
 		);
 
 		logger.info(
@@ -144,11 +168,11 @@ export const handleSubscriptionUpdated = async ({
 
 		try {
 			logger.info(
-				`sub.updated (past_due), cancelling subscription: ${subscription.id}`,
+				`sub.updated (past_due), cancelling subscription: ${stripeSubscription.id}`,
 			);
-			await stripeCli.subscriptions.cancel(subscription.id);
+			await stripeCli.subscriptions.cancel(stripeSubscription.id);
 			if (latestInvoice.status === "open") {
-				await stripeCli.invoices.voidInvoice(subscription.latest_invoice);
+				await stripeCli.invoices.voidInvoice(stripeSubscription.latest_invoice);
 			}
 		} catch (error: unknown) {
 			const errMsg = error instanceof Error ? error.message : String(error);
