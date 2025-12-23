@@ -1,17 +1,12 @@
 import {
-	CusProductStatus,
 	cusProductToProduct,
 	type SubscriptionUpdateV0Params,
 	secondsToMs,
 } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import type { UpdateSubscriptionContext } from "@server/internal/billing/v2/subscriptionUpdate/fetch/updateSubscriptionContextSchema";
-import type { BillingPlan } from "@/internal/billing/v2/billingPlan";
-import { computeInvoiceAction } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateCustomPlan/computeInvoiceAction";
 import { computeSubscriptionUpdateFreeTrialPlan } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateCustomPlan/computeSubscriptionUpdateFreeTrialPlan";
 import { computeSubscriptionUpdateNewCustomerProduct } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateCustomPlan/computeSubscriptionUpdateNewCustomerProduct";
-import { computeSubscriptionUpdateStripeSubscriptionAction } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateCustomPlan/computeSubscriptionUpdateStripeSubscriptionAction";
-import { createStripeResourcesForProducts } from "@/internal/billing/v2/utils/stripeAdapter/createStripeResourcesForProduct";
 import { computeCustomFullProduct } from "../../../compute/computeAutumnUtils/computeCustomFullProduct";
 
 export const computeSubscriptionUpdateCustomPlan = async ({
@@ -40,6 +35,8 @@ export const computeSubscriptionUpdateCustomPlan = async ({
 		customItems: params.items,
 	});
 
+	updateSubscriptionContext.fullProducts.push(customFullProduct);
+
 	// 2. Compute the custom trial details
 	const { freeTrialPlan, customFreeTrial } =
 		computeSubscriptionUpdateFreeTrialPlan({
@@ -52,6 +49,8 @@ export const computeSubscriptionUpdateCustomPlan = async ({
 		freeTrialPlan.trialEndsAt ??
 		secondsToMs(stripeSubscription?.billing_cycle_anchor);
 
+	const nowMs = updateSubscriptionContext.testClockFrozenTime ?? Date.now();
+
 	// 3. Compute the new customer product
 	const newFullCustomerProduct = computeSubscriptionUpdateNewCustomerProduct({
 		ctx,
@@ -62,97 +61,70 @@ export const computeSubscriptionUpdateCustomPlan = async ({
 		billingCycleAnchor,
 	});
 
+	// Line items?
+
+	return;
+
 	// 4. Create stripe prices
-	const fullCustomer = updateSubscriptionContext.fullCustomer;
-	await createStripeResourcesForProducts({
-		ctx,
-		fullCustomer,
-		fullProducts: [customFullProduct],
-	});
-
-	// 5. Compute Stripe subscription action
-	const stripeSubscriptionAction =
-		computeSubscriptionUpdateStripeSubscriptionAction({
-			ctx,
-			billingContext: updateSubscriptionContext,
-			newCustomerProduct: newFullCustomerProduct,
-			freeTrialPlan,
-		});
-
-	const stripeInvoiceAction = computeInvoiceAction({
-		ctx,
-		billingContext: updateSubscriptionContext,
-		newCustomerProduct: newFullCustomerProduct,
-		stripeSubscriptionAction,
-		billingCycleAnchor,
-	});
-
-	const billingPlan: BillingPlan = {
-		stripe: {
-			subscriptionAction: stripeSubscriptionAction,
-			invoiceAction: stripeInvoiceAction,
-		},
-		autumn: {
-			insertCustomerProducts: [newFullCustomerProduct],
-
-			updateCustomerProduct: {
-				customerProduct: customerProduct,
-				updates: {
-					status: CusProductStatus.Expired,
-				},
-			},
-
-			customPrices: customPrices,
-			customEntitlements: customEnts,
-			customFreeTrial: customFreeTrial,
-		},
-	};
-
-	return billingPlan;
-
-	// logBillingPlan({ ctx, billingPlan });
-
-	// if (stripeInvoiceAction) {
-	// 	const result = await executeStripeInvoiceAction({
-	// 		ctx,
-	// 		billingContext: updateSubscriptionContext,
-	// 		stripeInvoiceAction,
-	// 	});
-
-	// 	if (result.invoice) {
-	// 		await upsertInvoiceFromBilling({
-	// 			ctx,
-	// 			stripeInvoice: result.invoice,
-	// 			fullProducts: [customFullProduct],
-	// 			fullCustomer: fullCustomer,
-	// 		});
-	// 	}
-	// }
-
-	// if (stripeSubscriptionAction) {
-	// 	const stripeSubscription = await executeStripeSubscriptionAction({
-	// 		ctx,
-	// 		subscriptionAction: stripeSubscriptionAction,
-	// 	});
-
-	// 	if (stripeSubscription) {
-	// 		addStripeSubscriptionIdToBillingPlan({
-	// 			billingPlan,
-	// 			stripeSubscriptionId: stripeSubscription.id,
-	// 		});
-
-	// 		// Add subscription to DB
-	// 		await upsertSubscriptionFromBilling({
-	// 			ctx,
-	// 			stripeSubscription,
-	// 		});
-	// 	}
-	// }
-
-	// await executeAutumnBillingPlan({
+	// const fullCustomer = updateSubscriptionContext.fullCustomer;
+	// await createStripeResourcesForProducts({
 	// 	ctx,
-	// 	autumnBillingPlan: billingPlan.autumn,
+	// 	fullCustomer,
+	// 	fullProducts: [customFullProduct],
 	// });
+
+	// // 5. Build subscription schedule action
+	// const scheduleAction = buildStripeSubscriptionScheduleAction({
+	// 	ctx,
+	// 	billingContext: updateSubscriptionContext,
+	// 	addCustomerProducts: [newFullCustomerProduct],
+	// 	removeCustomerProducts: [customerProduct],
+	// 	trialEndsAt: freeTrialPlan.trialEndsAt,
+	// 	nowMs,
+	// });
+
+	// // 6. Compute Stripe subscription action
+	// const stripeSubscriptionAction = buildStripeSubscriptionAction({
+	// 	ctx,
+	// 	billingContext: updateSubscriptionContext,
+	// 	newCustomerProduct: newFullCustomerProduct,
+	// 	stripeSubscriptionScheduleAction: scheduleAction,
+	// 	freeTrialPlan,
+	// 	nowMs,
+	// });
+
+	// // 6. Compute subscription schedule action
+	// const stripeInvoiceAction = computeInvoiceAction({
+	// 	ctx,
+	// 	billingContext: updateSubscriptionContext,
+	// 	newCustomerProduct: newFullCustomerProduct,
+	// 	stripeSubscriptionAction,
+	// 	billingCycleAnchor,
+	// });
+
+	// const billingPlan: BillingPlan = {
+	// 	stripe: {
+	// 		subscriptionAction: stripeSubscriptionAction,
+	// 		invoiceAction: stripeInvoiceAction,
+	// 		subscriptionScheduleAction: scheduleAction,
+	// 	},
+
+	// 	autumn: {
+	// 		freeTrialPlan,
+	// 		insertCustomerProducts: [newFullCustomerProduct],
+
+	// 		updateCustomerProduct: {
+	// 			customerProduct: customerProduct,
+	// 			updates: {
+	// 				status: CusProductStatus.Expired,
+	// 			},
+	// 		},
+
+	// 		customPrices: customPrices,
+	// 		customEntitlements: customEnts,
+	// 		customFreeTrial: customFreeTrial,
+	// 	},
+	// };
 
 	// return billingPlan;
 };

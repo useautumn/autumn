@@ -3,18 +3,23 @@ import type Stripe from "stripe";
 import { isStripeSubscriptionCanceling } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
-import type { FreeTrialPlan } from "@/internal/billing/v2/billingPlan";
+import type {
+	FreeTrialPlan,
+	StripeSubscriptionScheduleAction,
+} from "@/internal/billing/v2/billingPlan";
 
 export const buildStripeSubscriptionUpdateAction = ({
 	ctx,
 	billingContext,
 	subItemsUpdate,
 	freeTrialPlan,
+	stripeSubscriptionScheduleAction,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	subItemsUpdate: Stripe.SubscriptionUpdateParams.Item[];
 	freeTrialPlan?: FreeTrialPlan;
+	stripeSubscriptionScheduleAction?: StripeSubscriptionScheduleAction;
 }) => {
 	const { stripeSubscription } = billingContext;
 
@@ -29,11 +34,21 @@ export const buildStripeSubscriptionUpdateAction = ({
 		? false
 		: undefined;
 
+	// When a schedule manages the subscription, don't set trial_end or cancel_at_period_end
+	// The schedule controls these via phase-level settings
+	const scheduleManagesSubscription = !!stripeSubscriptionScheduleAction;
+
 	const params: Stripe.SubscriptionUpdateParams = {
 		items: subItemsUpdate.length > 0 ? subItemsUpdate : undefined,
-		trial_end: trialEndsAt ? msToSeconds(trialEndsAt) : undefined,
+		trial_end: scheduleManagesSubscription
+			? undefined
+			: trialEndsAt
+				? msToSeconds(trialEndsAt)
+				: undefined,
 		proration_behavior: "none",
-		cancel_at_period_end: cancelAtPeriodEnd,
+		cancel_at_period_end: scheduleManagesSubscription
+			? undefined
+			: cancelAtPeriodEnd,
 	};
 
 	if (

@@ -1,9 +1,10 @@
 import { InternalError, type SubscriptionUpdateV0Params } from "@shared/index";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { fetchStripeCustomerForBilling } from "@/internal/billing/v2/providers/stripe/fetch/fetchStripeCustomerForBilling";
+import { fetchStripeSubscriptionForBilling } from "@/internal/billing/v2/providers/stripe/fetch/fetchStripeSubscriptionForBilling";
+import { fetchStripeSubscriptionScheduleForBilling } from "@/internal/billing/v2/providers/stripe/fetch/fetchStripeSubscriptionScheduleForBilling";
 import { mapOptionsList } from "@/internal/customers/attach/attachUtils/mapOptionsList";
 import { CusService } from "../../../../customers/CusService";
-import { fetchStripeCustomerForBilling } from "../../fetch/fetchStripeUtils/fetchStripeCustomerForBilling";
-import { fetchStripeSubscriptionForBilling } from "../../fetch/fetchStripeUtils/fetchStripeSubscriptionForBilling";
 import { fetchTargetCusProductForUpdate } from "./fetchTargetCusProductForUpdate";
 import type { UpdateSubscriptionContext } from "./updateSubscriptionContextSchema";
 
@@ -30,6 +31,7 @@ export const fetchApiSubscriptionUpdateContext = async ({
 		env,
 		withSubs: true,
 		withEntities: true,
+		entityId: params.entity_id ?? undefined,
 	});
 
 	const targetCustomerProduct = fetchTargetCusProductForUpdate({
@@ -50,11 +52,17 @@ export const fetchApiSubscriptionUpdateContext = async ({
 		targetCusProductId: targetCustomerProduct.id,
 	});
 
-	if (!stripeSubscription) {
-		throw new InternalError({
-			message: `[API Subscription Update] No active subscription found for customer product: ${productId}`,
+	const stripeSubscriptionSchedule =
+		await fetchStripeSubscriptionScheduleForBilling({
+			ctx,
+			fullCus: fullCustomer,
+			subscriptionScheduleId:
+				typeof stripeSubscription?.schedule === "string"
+					? stripeSubscription.schedule
+					: undefined,
+			products: [],
+			targetCusProductId: targetCustomerProduct.id,
 		});
-	}
 
 	const {
 		stripeCus: stripeCustomer,
@@ -76,8 +84,10 @@ export const fetchApiSubscriptionUpdateContext = async ({
 
 	return {
 		fullCustomer,
+		fullProducts: [],
 		customerProduct: targetCustomerProduct,
 		stripeSubscription,
+		stripeSubscriptionSchedule,
 		stripeCustomer,
 		paymentMethod,
 		testClockFrozenTime,

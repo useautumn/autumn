@@ -34,7 +34,8 @@
 		"db:push": " bun -F @autumn/shared db:push",
 		"db:generate": "bun -F @autumn/shared db:generate",
 		"db:migrate": " bun -F @autumn/shared db:migrate",
-		"test:integration": "cd server && bun test:integration"
+		"test:integration": "cd server && bun test:integration",
+		"kill": "lsof -i :8080 -i :3000 | awk 'NR>1 {print $2}' | xargs kill"
 	},
 	"dependencies": {
 		"@wooorm/starry-night": "^3.8.0",

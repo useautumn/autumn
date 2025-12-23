@@ -1,11 +1,11 @@
 import type { FullCustomer } from "@autumn/shared";
-import type Stripe from "stripe";
-import { createStripeCli } from "../../../../../external/connect/createStripeCli";
+import { createStripeCli } from "@server/external/connect/createStripeCli";
 import {
 	createStripeCusIfNotExists,
 	listCusPaymentMethods,
-} from "../../../../../external/stripe/stripeCusUtils";
-import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
+} from "@server/external/stripe/stripeCusUtils";
+import type { AutumnContext } from "@server/honoUtils/HonoEnv";
+import type Stripe from "stripe";
 
 export const fetchStripeCustomerForBilling = async ({
 	ctx,

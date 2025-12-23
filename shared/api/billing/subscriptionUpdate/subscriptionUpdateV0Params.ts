@@ -20,6 +20,10 @@ export const ExtSubscriptionUpdateV0ParamsSchema = z.object({
 	enable_product_immediately: z.boolean().optional(),
 	finalize_invoice: z.boolean().optional(),
 
+	// Schedules (epoch milliseconds)
+	// plan_custom_start_date: z.number().optional(),
+	// billing_cycle_anchor: z.number().optional(),
+
 	// New
 	items: z.array(ProductItemSchema).optional(), // used for custom configuration of a plan (in api - plan_override)
 	free_trial: CreateFreeTrialSchema.nullable().optional(),

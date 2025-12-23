@@ -3,8 +3,8 @@ import {
 	getTargetSubscriptionCusProduct,
 	type Product,
 } from "@autumn/shared";
-import { createStripeCli } from "../../../../../external/connect/createStripeCli";
-import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
+import { createStripeCli } from "@server/external/connect/createStripeCli";
+import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 
 export const fetchStripeSubscriptionForBilling = async ({
 	ctx,

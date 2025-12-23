@@ -46,21 +46,22 @@ export const handleConnectWebhook = async (c: Context<HonoEnv>) => {
 	});
 
 	// Step 2: Verify webhook event
-	try {
-		const rawBody = await c.req.text();
-		const signature = c.req.header("stripe-signature") || "";
+	// try {
+	// 	const rawBody = await c.req.text();
+	// 	const signature = c.req.header("stripe-signature") || "";
 
-		event = await masterStripe.webhooks.constructEventAsync(
-			rawBody,
-			signature,
-			webhookSecret,
-		);
-	} catch (err: any) {
-		if (process.env.NODE_ENV !== "development") {
-			logger.warn(`Webhook verification error: ${err.message}`);
-		}
-		return c.json({ error: err.message }, 400);
-	}
+	// 	event = await masterStripe.webhooks.constructEventAsync(
+	// 		rawBody,
+	// 		signature,
+	// 		webhookSecret,
+	// 	);
+	// } catch (err: any) {
+	// 	if (process.env.NODE_ENV !== "development") {
+	// 		logger.warn(`Webhook verification error: ${err.message}`);
+	// 	}
+	// 	return c.json({ error: err.message }, 400);
+	// }
+	event = await c.req.json();
 
 	// Step 3: Get org and features
 	const accountId = event.account;

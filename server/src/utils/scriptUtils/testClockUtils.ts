@@ -6,7 +6,7 @@ import {
 	addWeeks,
 	format,
 } from "date-fns";
-import { Stripe } from "stripe";
+import type { Stripe } from "stripe";
 import { timeout } from "../genUtils.js";
 
 export const getStripeNow = async ({
@@ -22,7 +22,7 @@ export const getStripeNow = async ({
 }) => {
 	if (testClockId) {
 		try {
-			let stripeClock =
+			const stripeClock =
 				await stripeCli.testHelpers.testClocks.retrieve(testClockId);
 			return stripeClock.frozen_time * 1000;
 		} catch (error) {}

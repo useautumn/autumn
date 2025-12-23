@@ -1,12 +1,11 @@
 import {
 	type FullCusProduct,
-	formatMs,
 	type InitFullCustomerProductContext,
 	type InitFullCustomerProductOptions,
 } from "@autumn/shared";
-import { applyExistingRollovers } from "../handleExistingRollovers/applyExistingRollovers";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { generateId } from "@/utils/genUtils";
-import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
+import { applyExistingRollovers } from "../handleExistingRollovers/applyExistingRollovers";
 import { applyExistingUsages } from "../handleExistingUsages/applyExistingUsages";
 import { initCustomerEntitlement } from "./initCustomerEntitlement/initCustomerEntitlement";
 import { initCustomerPrice } from "./initCustomerPrice";
@@ -26,14 +25,10 @@ export const initFullCustomerProduct = ({
 
 	const cusProductId = generateId("cus_prod");
 
-	console.log(
-		"Initializing full customer product, next reset at",
-		formatMs(initContext.resetCycleAnchor),
-	);
-
 	const newFullCusEnts = fullProduct.entitlements.map((entitlement) => ({
 		...initCustomerEntitlement({
 			initContext,
+			initOptions,
 			entitlement,
 			cusProductId,
 		}),
@@ -53,6 +48,7 @@ export const initFullCustomerProduct = ({
 
 	const newCusProduct = initCustomerProduct({
 		initContext,
+		initOptions,
 		customerProductId: cusProductId,
 	});
 

@@ -1,0 +1,118 @@
+import type { FullCusProduct } from "@autumn/shared";
+import { msToSeconds } from "@autumn/shared";
+import type { AutumnContext } from "@server/honoUtils/HonoEnv";
+import type { BillingContext } from "@server/internal/billing/v2/billingContext";
+import type { StripeSubscriptionScheduleAction } from "@server/internal/billing/v2/billingPlan";
+import { getFinalCustomerProductsState } from "@server/internal/billing/v2/utils/getFinalCustomerProductsState";
+import { buildSchedulePhases } from "@server/internal/billing/v2/utils/stripeAdapter/subscriptionSchedules/buildSchedulePhases";
+import type Stripe from "stripe";
+
+const phaseHasItems = (
+	phase: Stripe.SubscriptionScheduleUpdateParams.Phase,
+): boolean => {
+	return phase.items !== undefined && phase.items.length > 0;
+};
+
+/**
+ * Filters out empty phases from both ends.
+ * Stripe requires items in every phase.
+ */
+const filterEmptyPhases = (
+	phases: Stripe.SubscriptionScheduleUpdateParams.Phase[],
+): Stripe.SubscriptionScheduleUpdateParams.Phase[] => {
+	// Find first non-empty phase
+	const firstNonEmptyIndex = phases.findIndex(phaseHasItems);
+	if (firstNonEmptyIndex === -1) {
+		return [];
+	}
+
+	// Find last non-empty phase
+	let lastNonEmptyIndex = phases.length - 1;
+	while (lastNonEmptyIndex >= 0 && !phaseHasItems(phases[lastNonEmptyIndex])) {
+		lastNonEmptyIndex--;
+	}
+
+	// Slice to only include phases with items
+	const filtered = phases.slice(firstNonEmptyIndex, lastNonEmptyIndex + 1);
+
+	return filtered;
+};
+
+/**
+ * Builds the subscription schedule action based on add/remove customer products.
+ *
+ * Returns undefined if no schedule is needed (only 1 phase = no transitions).
+ */
+export const buildStripeSubscriptionScheduleAction = ({
+	ctx,
+	billingContext,
+	addCustomerProducts = [],
+	removeCustomerProducts = [],
+	trialEndsAt,
+	nowMs,
+}: {
+	ctx: AutumnContext;
+	billingContext: BillingContext;
+	addCustomerProducts?: FullCusProduct[];
+	removeCustomerProducts?: FullCusProduct[];
+	trialEndsAt?: number;
+	nowMs: number;
+}): StripeSubscriptionScheduleAction | undefined => {
+	const { stripeSubscriptionSchedule } = billingContext;
+
+	// 1. Get final customer product state
+	const customerProducts = getFinalCustomerProductsState({
+		billingContext,
+		addCustomerProducts,
+		removeCustomerProducts,
+	});
+
+	const phases = buildSchedulePhases({
+		ctx,
+		billingContext,
+		customerProducts,
+		trialEndsAt,
+		nowMs,
+	});
+
+	// logPhases({ phases, db: ctx.db });
+
+	// Filter out empty phases from both ends - Stripe requires items in every phase
+	const scheduledPhases = filterEmptyPhases(phases);
+
+	// No valid phases with items → no schedule needed
+	if (scheduledPhases.length === 0) {
+		return undefined;
+	}
+
+	const nowSeconds = msToSeconds(nowMs);
+	const firstPhaseStartDate = scheduledPhases[0].start_date as number;
+	const startsInFuture = firstPhaseStartDate > nowSeconds;
+
+	// Only 1 phase starting NOW → no schedule needed (direct subscription update instead)
+	// Only 1 phase starting in FUTURE → schedule needed to delay start
+	if (scheduledPhases.length === 1 && !startsInFuture) {
+		return undefined;
+	}
+
+	// Case 2: Has existing schedule → update it
+	if (stripeSubscriptionSchedule) {
+		return {
+			type: "update",
+			stripeSubscriptionScheduleId: stripeSubscriptionSchedule.id,
+			params: {
+				phases: scheduledPhases,
+			},
+		};
+	}
+
+	return {
+		type: "create",
+		params: {
+			// customer: stripeCustomer.id,
+			// start_date: startDate,
+			phases: scheduledPhases,
+			end_behavior: "release",
+		},
+	};
+};

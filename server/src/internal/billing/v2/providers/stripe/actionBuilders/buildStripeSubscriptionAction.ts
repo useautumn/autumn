@@ -1,21 +1,28 @@
 import type { FullCusProduct } from "@autumn/shared";
-import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { FreeTrialPlan } from "@/internal/billing/v2/billingPlan";
-import type { UpdateSubscriptionContext } from "@/internal/billing/v2/subscriptionUpdate/fetch/updateSubscriptionContextSchema";
-import { buildStripeSubscriptionItemsUpdate } from "@/internal/billing/v2/utils/stripeAdapter/subscriptionItems/buildStripeSubscriptionItemsUpdate";
-import { buildStripeSubscriptionCreateAction } from "@/internal/billing/v2/utils/stripeAdapter/subscriptions/buildStripeSubscriptionCreateAction";
-import { buildStripeSubscriptionUpdateAction } from "@/internal/billing/v2/utils/stripeAdapter/subscriptions/buildStripeSubscriptionUpdateAction";
+import type { AutumnContext } from "@server/honoUtils/HonoEnv";
+import type {
+	FreeTrialPlan,
+	StripeSubscriptionScheduleAction,
+} from "@server/internal/billing/v2/billingPlan";
+import { buildStripeSubscriptionItemsUpdate } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionItems/buildStripeSubscriptionItemsUpdate";
+import { buildStripeSubscriptionCreateAction } from "@server/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionCreateAction";
+import { buildStripeSubscriptionUpdateAction } from "@server/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionUpdateAction";
+import type { UpdateSubscriptionContext } from "@server/internal/billing/v2/subscriptionUpdate/fetch/updateSubscriptionContextSchema";
 
-export const computeSubscriptionUpdateStripeSubscriptionAction = ({
+export const buildStripeSubscriptionAction = ({
 	ctx,
 	billingContext,
 	newCustomerProduct,
+	stripeSubscriptionScheduleAction,
 	freeTrialPlan,
+	nowMs,
 }: {
 	ctx: AutumnContext;
 	billingContext: UpdateSubscriptionContext;
 	newCustomerProduct: FullCusProduct;
+	stripeSubscriptionScheduleAction?: StripeSubscriptionScheduleAction;
 	freeTrialPlan: FreeTrialPlan;
+	nowMs: number;
 }) => {
 	const { customerProduct, stripeSubscription } = billingContext;
 
@@ -24,6 +31,7 @@ export const computeSubscriptionUpdateStripeSubscriptionAction = ({
 		billingContext,
 		addCustomerProducts: [newCustomerProduct],
 		removeCustomerProducts: [customerProduct],
+		nowMs,
 	});
 
 	// 1. Compute the action type
@@ -62,6 +70,7 @@ export const computeSubscriptionUpdateStripeSubscriptionAction = ({
 			billingContext,
 			subItemsUpdate,
 			freeTrialPlan,
+			stripeSubscriptionScheduleAction,
 		});
 	}
 

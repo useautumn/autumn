@@ -10,10 +10,11 @@ import {
 	type SubscriptionUpdateV0Params,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
-import { PencilSimple } from "@phosphor-icons/react";
+import { Check, Copy, PencilSimple } from "@phosphor-icons/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
+import { DateInputUnix } from "@/components/general/DateInputUnix";
 import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
@@ -21,6 +22,7 @@ import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { pushPage } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 
@@ -88,11 +90,22 @@ function PrepaidEditor({
 
 interface BillingPlanData {
 	autumn?: {
+		freeTrialPlan?: {
+			freeTrial?: {
+				length?: number;
+				duration?: string;
+			} | null;
+			trialEndsAt?: number;
+		};
 		insertCustomerProducts?: Array<{
 			product?: { name?: string };
+			status?: string;
+			starts_at?: number;
+			trial_ends_at?: number;
 			customer_entitlements?: Array<{
 				feature_id?: string;
 				balance?: number;
+				next_reset_at?: number;
 				entitlement?: { feature?: { name?: string } };
 			}>;
 		}>;
@@ -119,6 +132,24 @@ interface BillingPlanData {
 				cancel_at_period_end?: boolean;
 			};
 		};
+		subscriptionScheduleAction?: {
+			type?: string;
+			stripeSubscriptionScheduleId?: string;
+			params?: {
+				customer?: string;
+				start_date?: number | "now";
+				end_behavior?: string;
+				phases?: Array<{
+					start_date?: number;
+					end_date?: number;
+					trial_end?: number;
+					items?: Array<{
+						price?: string;
+						quantity?: number;
+					}>;
+				}>;
+			};
+		};
 		invoiceAction?: {
 			addLineParams?: {
 				lines?: Array<{
@@ -138,11 +169,39 @@ interface PreviewResultProps {
 
 function PreviewResult({ data, isLoading, error }: PreviewResultProps) {
 	const billingPlan = data as BillingPlanData | null;
+	const [copied, setCopied] = useState(false);
+
+	const handleCopy = () => {
+		if (data) {
+			navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+			setCopied(true);
+			setTimeout(() => setCopied(false), 2000);
+		}
+	};
 
 	return (
 		<div className="border-b border-border">
-			<div className="px-4 py-2 border-b border-border">
+			<div className="px-4 py-2 border-b border-border flex items-center justify-between">
 				<h3 className="text-sm font-medium">Billing Plan Preview</h3>
+				{data ? (
+					<button
+						type="button"
+						onClick={handleCopy}
+						className="flex items-center gap-1 text-xs text-t-secondary hover:text-t-primary transition-colors"
+					>
+						{copied ? (
+							<>
+								<Check size={14} className="text-green-400" />
+								<span className="text-green-400">Copied!</span>
+							</>
+						) : (
+							<>
+								<Copy size={14} />
+								<span>Copy</span>
+							</>
+						)}
+					</button>
+				) : null}
 			</div>
 
 			{isLoading ? (
@@ -165,6 +224,46 @@ function PreviewResult({ data, isLoading, error }: PreviewResultProps) {
 
 			{billingPlan && !isLoading ? (
 				<div className="divide-y divide-border">
+					{/* Free Trial Plan */}
+					{billingPlan.autumn?.freeTrialPlan ? (
+						<div className="px-4 py-3 border-l-2 border-l-purple-500">
+							<h4 className="text-xs font-semibold text-purple-400 mb-1">
+								🎁 Free Trial Plan
+							</h4>
+							<div className="text-sm space-y-0.5">
+								{billingPlan.autumn.freeTrialPlan.freeTrial ? (
+									<div>
+										<span className="text-t-secondary">Duration: </span>
+										<span className="text-purple-400">
+											{billingPlan.autumn.freeTrialPlan.freeTrial.length}{" "}
+											{billingPlan.autumn.freeTrialPlan.freeTrial.duration}
+											{Number(
+												billingPlan.autumn.freeTrialPlan.freeTrial.length,
+											) > 1
+												? "s"
+												: ""}
+										</span>
+									</div>
+								) : null}
+								{billingPlan.autumn.freeTrialPlan.trialEndsAt ? (
+									<div>
+										<span className="text-t-secondary">Trial ends at: </span>
+										{(() => {
+											const trialEndsFormatted = formatUnixToDateTime(
+												billingPlan.autumn.freeTrialPlan.trialEndsAt,
+											);
+											return (
+												<span className="text-purple-400">
+													{trialEndsFormatted.date} {trialEndsFormatted.time}
+												</span>
+											);
+										})()}
+									</div>
+								) : null}
+							</div>
+						</div>
+					) : null}
+
 					{/* Insert Customer Products */}
 					{billingPlan.autumn?.insertCustomerProducts &&
 					billingPlan.autumn.insertCustomerProducts.length > 0 ? (
@@ -172,29 +271,79 @@ function PreviewResult({ data, isLoading, error }: PreviewResultProps) {
 							<h4 className="text-xs font-semibold text-green-400 mb-1">
 								📥 Inserting Customer Product
 							</h4>
-							{billingPlan.autumn.insertCustomerProducts.map((cp, index) => (
-								<div key={index} className="text-sm">
-									<div className="font-medium">
-										{cp.product?.name || "Unknown Product"}
-									</div>
-									{cp.customer_entitlements &&
-									cp.customer_entitlements.length > 0 ? (
-										<div className="mt-1 text-xs text-t-secondary">
-											<span className="font-medium">Balances: </span>
-											{cp.customer_entitlements.map((ent, entIndex) => (
-												<span key={entIndex}>
-													{ent.entitlement?.feature?.name || ent.feature_id}:{" "}
-													{ent.balance}
-													{entIndex <
-													(cp.customer_entitlements?.length ?? 0) - 1
-														? ", "
-														: ""}
-												</span>
-											))}
+							{billingPlan.autumn.insertCustomerProducts.map((cp, index) => {
+								const startsAtFormatted = formatUnixToDateTime(cp.starts_at);
+								const trialEndsAtFormatted = formatUnixToDateTime(
+									cp.trial_ends_at,
+								);
+								return (
+									<div key={index} className="text-sm">
+										<div className="font-medium">
+											{cp.product?.name || "Unknown Product"}
 										</div>
-									) : null}
-								</div>
-							))}
+										<div className="mt-1 text-xs text-t-secondary space-y-0.5">
+											{cp.status ? (
+												<div>
+													<span className="font-medium">Status: </span>
+													<span className="text-amber-400">{cp.status}</span>
+												</div>
+											) : null}
+											{cp.starts_at ? (
+												<div>
+													<span className="font-medium">Starts at: </span>
+													<span className="text-blue-400">
+														{startsAtFormatted.date} {startsAtFormatted.time}
+													</span>
+												</div>
+											) : null}
+											{cp.trial_ends_at ? (
+												<div>
+													<span className="font-medium">Trial ends at: </span>
+													<span className="text-purple-400">
+														{trialEndsAtFormatted.date}{" "}
+														{trialEndsAtFormatted.time}
+													</span>
+												</div>
+											) : null}
+											{cp.customer_entitlements &&
+											cp.customer_entitlements.length > 0 ? (
+												<div>
+													<span className="font-medium">Entitlements:</span>
+													<div className="pl-2 mt-0.5 space-y-0.5">
+														{cp.customer_entitlements.map((ent, entIndex) => {
+															const nextResetFormatted = ent.next_reset_at
+																? formatUnixToDateTime(ent.next_reset_at)
+																: null;
+															return (
+																<div
+																	key={entIndex}
+																	className="flex items-center gap-2"
+																>
+																	<span className="text-t-primary">
+																		{ent.entitlement?.feature?.name ||
+																			ent.feature_id}
+																		: {ent.balance}
+																	</span>
+																	{nextResetFormatted ? (
+																		<span className="text-t-secondary">
+																			(resets:{" "}
+																			<span className="text-blue-400">
+																				{nextResetFormatted.date}{" "}
+																				{nextResetFormatted.time}
+																			</span>
+																			)
+																		</span>
+																	) : null}
+																</div>
+															);
+														})}
+													</div>
+												</div>
+											) : null}
+										</div>
+									</div>
+								);
+							})}
 						</div>
 					) : null}
 
@@ -315,6 +464,159 @@ function PreviewResult({ data, isLoading, error }: PreviewResultProps) {
 									</pre>
 								</details>
 							) : null}
+						</div>
+					) : null}
+
+					{/* Stripe Subscription Schedule Action */}
+					{billingPlan.stripe?.subscriptionScheduleAction ? (
+						<div className="px-4 py-3 border-l-2 border-l-cyan-500">
+							<h4 className="text-xs font-semibold text-cyan-400 mb-1">
+								📅 Stripe Subscription Schedule Action
+							</h4>
+							<div className="text-sm flex items-center gap-3 flex-wrap">
+								<span>
+									<span className="text-t-secondary">Type: </span>
+									<span className="font-medium">
+										{billingPlan.stripe.subscriptionScheduleAction.type ||
+											"none"}
+									</span>
+								</span>
+								{billingPlan.stripe.subscriptionScheduleAction
+									.stripeSubscriptionScheduleId ? (
+									<span>
+										<span className="text-t-secondary">Schedule: </span>
+										<code className="text-xs text-cyan-400">
+											{
+												billingPlan.stripe.subscriptionScheduleAction
+													.stripeSubscriptionScheduleId
+											}
+										</code>
+									</span>
+								) : null}
+							</div>
+							{/* Schedule-level start_date */}
+							{(() => {
+								const scheduleParams =
+									billingPlan.stripe.subscriptionScheduleAction.params;
+								if (!scheduleParams) return null;
+								const scheduleStartDate =
+									typeof scheduleParams.start_date === "number"
+										? formatUnixToDateTime(scheduleParams.start_date * 1000)
+										: null;
+								return (
+									<div className="mt-1 text-xs space-y-0.5">
+										{scheduleStartDate ? (
+											<div>
+												<span className="text-t-secondary">Starts: </span>
+												<span className="text-cyan-400">
+													{scheduleStartDate.date} {scheduleStartDate.time}
+												</span>
+											</div>
+										) : scheduleParams.start_date === "now" ? (
+											<div>
+												<span className="text-t-secondary">Starts: </span>
+												<span className="text-cyan-400">now</span>
+											</div>
+										) : null}
+										{scheduleParams.end_behavior ? (
+											<div>
+												<span className="text-t-secondary">End behavior: </span>
+												<span className="text-amber-400">
+													{scheduleParams.end_behavior}
+												</span>
+											</div>
+										) : null}
+									</div>
+								);
+							})()}
+							{/* Phases */}
+							{billingPlan.stripe.subscriptionScheduleAction.params?.phases &&
+							billingPlan.stripe.subscriptionScheduleAction.params.phases
+								.length > 0 ? (
+								<div className="mt-2 space-y-3">
+									<div className="text-xs text-t-secondary font-medium">
+										Phases:
+									</div>
+									{billingPlan.stripe.subscriptionScheduleAction.params.phases.map(
+										(phase, phaseIndex) => {
+											const startDate = phase.start_date
+												? formatUnixToDateTime(phase.start_date * 1000)
+												: null;
+											const endDate = phase.end_date
+												? formatUnixToDateTime(phase.end_date * 1000)
+												: null;
+											const trialEnd = phase.trial_end
+												? formatUnixToDateTime(phase.trial_end * 1000)
+												: null;
+											return (
+												<div
+													key={phaseIndex}
+													className="pl-2 border-l border-cyan-500/30"
+												>
+													<div className="text-xs font-medium text-cyan-400 mb-1">
+														Phase {phaseIndex + 1}
+														<span className="font-normal text-t-secondary">
+															{" "}
+															(
+															{startDate
+																? `${startDate.date} ${startDate.time}`
+																: "schedule start"}
+															{" → "}
+															{endDate
+																? `${endDate.date} ${endDate.time}`
+																: "ongoing"}
+															)
+														</span>
+													</div>
+													{trialEnd ? (
+														<div className="text-xs pl-2 mb-0.5">
+															<span className="text-t-secondary">
+																Trial ends:{" "}
+															</span>
+															<span className="text-purple-400">
+																{trialEnd.date} {trialEnd.time}
+															</span>
+														</div>
+													) : null}
+													{phase.items && phase.items.length > 0 ? (
+														<div className="space-y-0.5">
+															{phase.items.map((item, itemIndex) => (
+																<div
+																	key={itemIndex}
+																	className="flex justify-between text-xs pl-2"
+																>
+																	<span className="text-t-primary font-mono">
+																		{item.price || "Unknown price"}
+																	</span>
+																	<span className="text-cyan-400">
+																		qty: {item.quantity ?? 1}
+																	</span>
+																</div>
+															))}
+														</div>
+													) : (
+														<div className="text-xs text-t-secondary pl-2">
+															No items
+														</div>
+													)}
+												</div>
+											);
+										},
+									)}
+								</div>
+							) : null}
+							<details className="mt-1">
+								<summary className="text-xs cursor-pointer text-t-secondary hover:text-t-primary">
+									View raw params
+								</summary>
+								<pre className="text-xs bg-t-50 p-2 rounded mt-1 overflow-auto max-h-32">
+									{JSON.stringify(
+										billingPlan.stripe.subscriptionScheduleAction.params,
+										null,
+										2,
+									)}
+								</pre>
+							</details>
 						</div>
 					) : null}
 
@@ -554,6 +856,16 @@ function SheetContent({
 		initialPrepaidOptions,
 	);
 
+	const [planCustomStartDate, setPlanCustomStartDate] = useState<number | null>(
+		null,
+	);
+	const [planCustomEndDate, setPlanCustomEndDate] = useState<number | null>(
+		null,
+	);
+	const [billingCycleAnchor, setBillingCycleAnchor] = useState<number | null>(
+		null,
+	);
+
 	const handlePrepaidChange = (featureId: string, quantity: number) => {
 		setPrepaidOptions((prev) => ({
 			...prev,
@@ -603,6 +915,17 @@ function SheetContent({
 			body.free_trial = customizedProduct.free_trial;
 		}
 
+		// Add custom plan dates if set (epoch milliseconds)
+		if (planCustomStartDate) {
+			body.plan_custom_start_date = planCustomStartDate;
+		}
+		if (planCustomEndDate) {
+			body.plan_custom_end_date = planCustomEndDate;
+		}
+		if (billingCycleAnchor) {
+			body.billing_cycle_anchor = billingCycleAnchor;
+		}
+
 		return body;
 	}, [
 		customerId,
@@ -614,6 +937,9 @@ function SheetContent({
 		prepaidOptions,
 		customizedProduct?.items,
 		customizedProduct?.free_trial,
+		planCustomStartDate,
+		planCustomEndDate,
+		billingCycleAnchor,
 	]);
 
 	// Preview query - fires when body changes
@@ -717,6 +1043,32 @@ function SheetContent({
 								</span>
 							</div>
 						) : null}
+						{requestBody?.plan_custom_start_date ? (
+							<div>
+								<span className="text-t-secondary">
+									plan_custom_start_date:{" "}
+								</span>
+								<code className="text-xs text-amber-400">
+									{requestBody.plan_custom_start_date}
+								</code>
+							</div>
+						) : null}
+						{requestBody?.plan_custom_end_date ? (
+							<div>
+								<span className="text-t-secondary">plan_custom_end_date: </span>
+								<code className="text-xs text-amber-400">
+									{requestBody.plan_custom_end_date}
+								</code>
+							</div>
+						) : null}
+						{requestBody?.billing_cycle_anchor ? (
+							<div>
+								<span className="text-t-secondary">billing_cycle_anchor: </span>
+								<code className="text-xs text-cyan-400">
+									{requestBody.billing_cycle_anchor}
+								</code>
+							</div>
+						) : null}
 						<details className="mt-2">
 							<summary className="text-xs cursor-pointer text-t-secondary hover:text-t-primary">
 								View raw JSON
@@ -734,6 +1086,84 @@ function SheetContent({
 					prepaidOptions={prepaidOptions}
 					onPrepaidChange={handlePrepaidChange}
 				/>
+
+				{/* Custom Plan Dates */}
+				<div className="border-b border-border">
+					<div className="px-4 py-2 border-b border-border">
+						<h3 className="text-sm font-medium">Custom Plan Dates</h3>
+					</div>
+					<div className="px-4 py-3 space-y-3">
+						<div className="flex items-center gap-3">
+							<label
+								htmlFor="plan-start-date"
+								className="text-sm text-t-secondary w-32"
+							>
+								Start Date
+							</label>
+							<div className="flex-1">
+								<DateInputUnix
+									unixDate={planCustomStartDate}
+									setUnixDate={setPlanCustomStartDate}
+								/>
+							</div>
+							{planCustomStartDate ? (
+								<button
+									type="button"
+									onClick={() => setPlanCustomStartDate(null)}
+									className="text-xs text-t-secondary hover:text-t-primary"
+								>
+									Clear
+								</button>
+							) : null}
+						</div>
+						<div className="flex items-center gap-3">
+							<label
+								htmlFor="plan-end-date"
+								className="text-sm text-t-secondary w-32"
+							>
+								End Date
+							</label>
+							<div className="flex-1">
+								<DateInputUnix
+									unixDate={planCustomEndDate}
+									setUnixDate={setPlanCustomEndDate}
+								/>
+							</div>
+							{planCustomEndDate ? (
+								<button
+									type="button"
+									onClick={() => setPlanCustomEndDate(null)}
+									className="text-xs text-t-secondary hover:text-t-primary"
+								>
+									Clear
+								</button>
+							) : null}
+						</div>
+						<div className="flex items-center gap-3">
+							<label
+								htmlFor="billing-cycle-anchor"
+								className="text-sm text-t-secondary w-32"
+							>
+								Billing Anchor
+							</label>
+							<div className="flex-1">
+								<DateInputUnix
+									unixDate={billingCycleAnchor}
+									setUnixDate={setBillingCycleAnchor}
+								/>
+							</div>
+							{billingCycleAnchor ? (
+								<button
+									type="button"
+									onClick={() => setBillingCycleAnchor(null)}
+									className="text-xs text-t-secondary hover:text-t-primary"
+								>
+									Clear
+								</button>
+							) : null}
+						</div>
+					</div>
+				</div>
 
 				{/* Preview Result */}
 				<PreviewResult
