@@ -3,7 +3,9 @@ import {
 	AttachBranch,
 	type AttachConfig,
 	BillingType,
+	cusProductToProcessorType,
 	ErrCode,
+	ProcessorType,
 	RecaseError,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -158,6 +160,23 @@ export const handleCustomPaymentMethodErrors = ({
 	}
 };
 
+export const handleExternalPSPErrors = ({
+	attachParams,
+}: {
+	attachParams: AttachParams;
+}) => {
+	if (
+		attachParams.customer.customer_products.some(
+			(cp) => cusProductToProcessorType(cp) !== ProcessorType.Stripe,
+		)
+	) {
+		throw new RecaseError({
+			message:
+				"This customer is billed outside of Stripe, please use the origin platform to manage their billing.",
+		});
+	}
+};
+
 export const handleAttachErrors = async ({
 	attachParams,
 	attachBody,
@@ -174,6 +193,10 @@ export const handleAttachErrors = async ({
 	const { onlyCheckout } = config;
 
 	handleCustomPaymentMethodErrors({
+		attachParams,
+	});
+
+	handleExternalPSPErrors({
 		attachParams,
 	});
 

@@ -3,7 +3,11 @@ import type { SortCusEntParams } from "../../models/cusProductModels/cusEntModel
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import type { FullCustomerPrice } from "../../models/cusProductModels/cusPriceModels/cusPriceModels.js";
 import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
-import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
+import type {
+	CusProduct,
+	FullCusProduct,
+} from "../../models/cusProductModels/cusProductModels.js";
+import { ProcessorType } from "../../models/genModels/genEnums.js";
 import type { BillingType } from "../../models/productModels/priceModels/priceEnums.js";
 import type { FullProduct } from "../../models/productModels/productModels.js";
 import { cusEntMatchesEntity } from "../cusEntUtils/filterCusEntUtils.js";
@@ -154,4 +158,8 @@ export const cusProductToProduct = ({
 		entitlements: cusProductToEnts({ cusProduct }),
 		free_trial: cusProduct.free_trial,
 	} as FullProduct;
+};
+
+export const cusProductToProcessorType = (cusProduct: CusProduct) => {
+	return cusProduct.processor?.type ?? ProcessorType.Stripe;
 };

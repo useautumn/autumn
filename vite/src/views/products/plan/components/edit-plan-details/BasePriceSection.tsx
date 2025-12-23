@@ -121,7 +121,7 @@ export const BasePriceSection = ({
 							if (value === "usage") {
 								setProduct({
 									...product,
-									basePriceType: value as "recurring" | "one-off" | "usage",
+									basePriceType: "usage",
 									items: product.items.filter((item) => !isPriceItem(item)),
 								});
 								return;

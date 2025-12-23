@@ -1,6 +1,8 @@
+import { ArrowSquareOutIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
 import { Button } from "@/components/v2/buttons/Button";
+import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
 	Dialog,
 	DialogContent,
@@ -21,7 +23,7 @@ export default function ConnectStripeDialog({
 	open: boolean;
 	setOpen: (open: boolean) => void;
 }) {
-	const { org, mutate: mutateOrg } = useOrg();
+	const { mutate: mutateOrg } = useOrg();
 
 	const axiosInstance = useAxiosInstance();
 
@@ -38,7 +40,7 @@ export default function ConnectStripeDialog({
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogContent>
 				<DialogHeader>
-					<DialogTitle>Connect your Stripe account</DialogTitle>
+					<DialogTitle>Paste your Stripe secret key</DialogTitle>
 					<DialogDescription>
 						<div className="flex items-center gap-2">
 							<span className="text-t3 text-sm">
@@ -70,12 +72,23 @@ export default function ConnectStripeDialog({
 				<Input
 					className="w-full"
 					placeholder="Stripe secret key (sk_test_...)"
-					value={org?.stripe_connected ? "Stripe connected  ✅ " : testApiKey}
+					value={testApiKey}
 					onChange={(e) => setTestApiKey(e.target.value)}
-					disabled={org?.stripe_connected}
+					type="password"
 				/>
 
 				<DialogFooter>
+					<IconButton
+						icon={<ArrowSquareOutIcon size={16} />}
+						iconOrientation="right"
+						className=""
+						variant="secondary"
+						onClick={() =>
+							window.open("https://dashboard.stripe.com/test/apikeys", "_blank")
+						}
+					>
+						Go to Stripe keys
+					</IconButton>
 					<Button onClick={handleConnectStripe} isLoading={loading}>
 						Connect Stripe
 					</Button>
