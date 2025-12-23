@@ -23,7 +23,7 @@ export const initNextResetAt = ({
 	entitlement: EntitlementWithFeature;
 	nextResetAt?: number;
 	trialEndsAt?: number;
-	freeTrial: FreeTrial | null;
+	freeTrial?: FreeTrial | null;
 	anchorToUnix?: number;
 	now: number;
 }) => {
@@ -47,7 +47,7 @@ export const initNextResetAt = ({
 			? freeTrialToStripeTimestamp({ freeTrial, now })
 			: null;
 
-	const shouldApplyTrial = applyTrialToEntitlement(entitlement, freeTrial);
+	const shouldApplyTrial = applyTrialToEntitlement(entitlement, freeTrial ?? null);
 
 	// console.log(
 	// 	"Trial end timestamp: ",
