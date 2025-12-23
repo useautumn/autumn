@@ -120,7 +120,7 @@ export const initCusEntitlement = ({
 }: {
 	entitlement: EntitlementWithFeature;
 	customer: Customer;
-	cusProductId: string;
+	cusProductId: string | null;
 	freeTrial: FreeTrial | null;
 	options?: FeatureOptions;
 	nextResetAt?: number;
@@ -183,7 +183,7 @@ export const initCusEntitlement = ({
 		id: generateId("cus_ent"),
 		internal_customer_id: customer.internal_id,
 		internal_feature_id: entitlement.internal_feature_id,
-		feature_id: entitlement.feature_id,
+		feature_id: (entitlement.feature_id ?? entitlement.feature.id) as string,
 		customer_id: customer.id,
 
 		// Foreign keys
@@ -196,6 +196,8 @@ export const initCusEntitlement = ({
 			? null
 			: entitlement.allowance_type === AllowanceType.Unlimited,
 		balance: newBalance || 0,
+		additional_balance: 0,
+		adjustment: 0,
 		entities: newEntities,
 		usage_allowed: usageAllowed,
 		next_reset_at: nextResetAtValue,

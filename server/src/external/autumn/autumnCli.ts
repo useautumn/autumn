@@ -676,6 +676,25 @@ export class AutumnInt {
 	};
 
 	balances = {
+		create: async (params: {
+			customer_id: string;
+			feature_id: string;
+			granted_balance?: string;
+			unlimited?: boolean;
+			reset?: {
+				interval: string;
+				interval_count?: number;
+			};
+		}) => {
+			const data = await this.post(`/balances/create`, params);
+			return data;
+		},
+		list: async (params: { customer_id: string }) => {
+			const data = await this.get(
+				`/balances/list?customer_id=${params.customer_id}`,
+			);
+			return data;
+		},
 		update: async (params: BalancesUpdateParams) => {
 			const data = await this.post(`/balances/update`, params);
 			return data;

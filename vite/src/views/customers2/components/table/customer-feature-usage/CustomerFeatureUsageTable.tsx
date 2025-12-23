@@ -1,4 +1,4 @@
-import type { Entity } from "@autumn/shared";
+import type { Entity, FullCusEntWithFullCusProduct } from "@autumn/shared";
 import { FeatureType, type FullCusProduct } from "@autumn/shared";
 import { BatteryHighIcon } from "@phosphor-icons/react";
 import { type ExpandedState, getExpandedRowModel } from "@tanstack/react-table";
@@ -19,9 +19,11 @@ import {
 	flattenCustomerEntitlements,
 	processNonBooleanEntitlements,
 } from "./customerFeatureUsageUtils";
+import { useRawBalances } from "./useRawBalances";
 
 export function CustomerFeatureUsageTable() {
 	const { customer, features, isLoading } = useCusQuery();
+	const { rawBalances } = useRawBalances();
 
 	const { entityId } = useEntity();
 
@@ -48,13 +50,37 @@ export function CustomerFeatureUsageTable() {
 		);
 	}, [customer?.customer_products, customer?.entities, entityId]);
 
-	const cusEnts = useMemo(
-		() =>
-			flattenCustomerEntitlements({
-				customerProducts: filteredCustomerProducts,
+	const cusEnts = useMemo(() => {
+		const productEnts = flattenCustomerEntitlements({
+			customerProducts: filteredCustomerProducts,
+		});
+
+		// Add raw balances (entitlements without internal_product_id)
+		// They need to have a customer_product structure to match FullCusEntWithFullCusProduct
+		const rawEnts = (rawBalances || []).map(
+			(raw: FullCusEntWithFullCusProduct) => ({
+				...raw,
+				rollovers: raw.rollovers || [],
+				replaceables: raw.replaceables || [],
+				customer_product: raw.customer_product || {
+					id: `raw-${raw.id}`,
+					internal_customer_id: customer?.internal_id,
+					customer_id: customer?.id,
+					internal_product_id: null,
+					product_id: null,
+					status: "active",
+					created_at: raw.created_at,
+					quantity: 1,
+					product: null,
+					customer_entitlements: [],
+					customer_prices: [],
+					free_trial: null,
+				},
 			}),
-		[filteredCustomerProducts],
-	);
+		);
+
+		return [...productEnts, ...rawEnts];
+	}, [filteredCustomerProducts, rawBalances, customer]);
 
 	const featuresMap = useMemo(
 		() => createFeaturesMap({ features: features ?? [] }),

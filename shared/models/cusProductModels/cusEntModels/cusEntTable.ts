@@ -17,7 +17,7 @@ export const customerEntitlements = pgTable(
 	"customer_entitlements",
 	{
 		id: text().primaryKey().notNull(),
-		customer_product_id: text().notNull(),
+		customer_product_id: text(),
 		entitlement_id: text().notNull(),
 		internal_customer_id: text().notNull(),
 		internal_feature_id: text().notNull(),
