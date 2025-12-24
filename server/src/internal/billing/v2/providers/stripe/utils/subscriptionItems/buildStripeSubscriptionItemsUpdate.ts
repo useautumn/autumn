@@ -10,6 +10,7 @@ import { stripeSubscriptionItemToStripePriceId } from "@/external/stripe/subscri
 import { findStripeSubscriptionItemByStripePriceId } from "@/external/stripe/subscriptions/subscriptionItems/utils/findStripeSubscriptionItemUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
+import { findStripeItemSpecByStripePriceId } from "./findStripeItemSpec";
 
 const getFinalCustomerProductsState = ({
 	billingContext,

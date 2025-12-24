@@ -1,5 +1,5 @@
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
-import type { StripeSubAction } from "../typesOld";
+import type { StripeSubscriptionAction } from "../billingPlan";
 import { executeStripeSubscriptionUpdate } from "./executeStripeSubscriptionActions/executeStripeSubscriptionUpdate";
 
 export const executeStripeSubAction = async ({
@@ -7,7 +7,7 @@ export const executeStripeSubAction = async ({
 	stripeSubAction,
 }: {
 	ctx: AutumnContext;
-	stripeSubAction: StripeSubAction;
+	stripeSubAction: StripeSubscriptionAction;
 }) => {
 	const { logger } = ctx;
 
