@@ -1,16 +1,18 @@
-import type {
-	AttachBodyV1,
-	FeatureOptions,
-	FreeTrial,
-	FullCusProduct,
-	FullCustomer,
-	FullCustomerPrice,
-	FullProduct,
-	LineItem,
-	OngoingCusProductAction,
-	ScheduledCusProductAction,
+import {
+	type AttachBodyV1,
+	type FeatureOptions,
+	type FreeTrial,
+	type FullCusProduct,
+	type FullCustomer,
+	type FullCustomerPrice,
+	FullCustomerPriceSchema,
+	type FullProduct,
+	type LineItem,
+	type OngoingCusProductAction,
+	type ScheduledCusProductAction,
 } from "@autumn/shared";
 import type Stripe from "stripe";
+import { z } from "zod/v4";
 import type {
 	StripeInvoiceAction,
 	StripeSubscriptionAction,
@@ -80,32 +82,36 @@ export type BaseSubscriptionUpdatePlan = BillingPlan & {
 	ongoingCusProductAction: OngoingCusProductAction;
 };
 
-export type QuantityUpdateDetails = {
-	featureId: string;
-	internalFeatureId: string;
+export const QuantityUpdateDetailsSchema = z.object({
+	featureId: z.string(),
+	internalFeatureId: z.string(),
 
-	previousFeatureQuantity: number;
-	updatedFeatureQuantity: number;
-	quantityDifferenceForEntitlements: number;
-	stripeSubscriptionItemQuantityDifference: number;
+	previousFeatureQuantity: z.number(),
+	updatedFeatureQuantity: z.number(),
+	quantityDifferenceForEntitlements: z.number(),
+	stripeSubscriptionItemQuantityDifference: z.number(),
 
-	shouldApplyProration: boolean;
-	shouldFinalizeInvoiceImmediately: boolean;
-	billingUnitsPerQuantity: number;
+	shouldApplyProration: z.boolean(),
+	shouldFinalizeInvoiceImmediately: z.boolean(),
+	billingUnitsPerQuantity: z.number(),
 
-	calculatedProrationAmountDollars?: number;
-	subscriptionPeriodStartEpochMs: number;
-	subscriptionPeriodEndEpochMs: number;
+	calculatedProrationAmountDollars: z.number().optional(),
+	subscriptionPeriodStartEpochMs: z.number(),
+	subscriptionPeriodEndEpochMs: z.number(),
 
-	stripeInvoiceItemDescription: string;
+	stripeInvoiceItemDescription: z.string(),
 
-	customerPrice: FullCustomerPrice;
-	stripePriceId: string;
-	existingStripeSubscriptionItem?: Stripe.SubscriptionItem;
+	customerPrice: FullCustomerPriceSchema,
+	stripePriceId: z.string(),
+	existingStripeSubscriptionItem: z
+		.custom<Stripe.SubscriptionItem>()
+		.optional(),
 
-	customerEntitlementId?: string;
-	customerEntitlementBalanceChange: number;
-};
+	customerEntitlementId: z.string().optional(),
+	customerEntitlementBalanceChange: z.number(),
+});
+
+export type QuantityUpdateDetails = z.infer<typeof QuantityUpdateDetailsSchema>;
 
 export type SubscriptionUpdateInvoiceAction = {
 	shouldCreateInvoice: boolean;

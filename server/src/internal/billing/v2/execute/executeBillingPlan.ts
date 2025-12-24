@@ -7,6 +7,7 @@ import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/exec
 import { addStripeSubscriptionScheduleIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionScheduleIdToBillingPlan";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { executeStripeInvoiceAction } from "@/internal/billing/v2/execute/executeStripeInvoiceAction";
+import { handleStripeSubscriptionUncancel } from "@/internal/billing/v2/execute/executeStripeSubscriptionActions/handleStripeSubscriptionUncancel";
 import { removeStripeSubscriptionIdFromBillingPlan } from "@/internal/billing/v2/execute/removeStripeSubscriptionIdFromBillingPlan";
 import { executeStripeSubscriptionAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionAction";
 import { executeStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionScheduleAction";
@@ -31,6 +32,8 @@ export const executeBillingPlan = async ({
 		invoiceAction: stripeInvoiceAction,
 		subscriptionScheduleAction: stripeSubscriptionScheduleAction,
 	} = billingPlan.stripe;
+
+	await handleStripeSubscriptionUncancel({ ctx, billingContext, billingPlan });
 
 	if (stripeInvoiceAction) {
 		const result = await executeStripeInvoiceAction({

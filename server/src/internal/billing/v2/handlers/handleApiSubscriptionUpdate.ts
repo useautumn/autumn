@@ -1,7 +1,7 @@
 import { SubscriptionUpdateV0ParamsSchema } from "@autumn/shared";
-import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
-import { computeSubscriptionUpdatePlan } from "../subscriptionUpdate/compute/computeSubscriptionUpdatePlan";
+import { executeBillingPlan } from "../execute/executeBillingPlan";
+import { computeSubscriptionUpdateQuantityPlan } from "../subscriptionUpdate/compute/computeSubscriptionUpdateQuantityPlan";
 import { fetchApiSubscriptionUpdateContext } from "../subscriptionUpdate/fetch/fetchApiSubscriptionUpdateContext";
 
 export const handleApiSubscriptionUpdate = createRoute({
@@ -15,7 +15,7 @@ export const handleApiSubscriptionUpdate = createRoute({
 			params: body,
 		});
 
-		const subscriptionUpdatePlan = await computeSubscriptionUpdatePlan({
+		const billingPlan = computeSubscriptionUpdateQuantityPlan({
 			ctx,
 			updateSubscriptionContext,
 			params: body,
@@ -24,7 +24,7 @@ export const handleApiSubscriptionUpdate = createRoute({
 		await executeBillingPlan({
 			ctx,
 			billingContext: updateSubscriptionContext,
-			billingPlan: subscriptionUpdatePlan,
+			billingPlan,
 		});
 
 		return c.json({ success: true }, 200);

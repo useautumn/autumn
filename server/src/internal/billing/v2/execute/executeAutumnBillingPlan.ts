@@ -1,6 +1,7 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { AutumnBillingPlan } from "@/internal/billing/v2/billingPlan";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
+import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService";
 import { FreeTrialService } from "@/internal/products/free-trials/FreeTrialService";
@@ -20,6 +21,7 @@ export const executeAutumnBillingPlan = async ({
 		customPrices,
 		customEntitlements,
 		customFreeTrial,
+		quantityUpdateDetails,
 	} = autumnBillingPlan;
 
 	await PriceService.insert({
@@ -51,5 +53,10 @@ export const executeAutumnBillingPlan = async ({
 			cusProductId: updateCustomerProduct.customerProduct.id,
 			updates: updateCustomerProduct.updates,
 		});
+	}
+
+	// 4. Update entitlement balances
+	if (quantityUpdateDetails && quantityUpdateDetails.length > 0) {
+		await updateCustomerEntitlements({ ctx, quantityUpdateDetails });
 	}
 };

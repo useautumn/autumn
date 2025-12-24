@@ -1,18 +1,14 @@
 import {
 	findFeatureOptionsByFeature,
 	InternalError,
-	OngoingCusProductActionEnum,
 	type SubscriptionUpdateV0Params,
-	secondsToMs,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { buildAutumnLineItems } from "../../compute/computeAutumnUtils/buildAutumnLineItems";
+import type { BillingPlan } from "../../billingPlan";
 import { buildStripeSubscriptionAction } from "../../providers/stripe/actionBuilders/buildStripeSubscriptionAction";
-import type { SubscriptionUpdateQuantityPlan } from "../../typesOld";
 import type { UpdateSubscriptionContext } from "../fetch/updateSubscriptionContextSchema";
-import { computeInvoiceAction } from "./computeInvoiceAction";
+import { computeStripeInvoiceAction } from "./computeInvoiceAction";
 import { computeQuantityUpdateDetails } from "./computeQuantityUpdateDetails";
-import { SubscriptionUpdateIntentEnum } from "./computeSubscriptionUpdateSchema";
 
 export const computeSubscriptionUpdateQuantityPlan = ({
 	ctx,
@@ -22,13 +18,9 @@ export const computeSubscriptionUpdateQuantityPlan = ({
 	ctx: AutumnContext;
 	updateSubscriptionContext: UpdateSubscriptionContext;
 	params: SubscriptionUpdateV0Params;
-}): SubscriptionUpdateQuantityPlan => {
-	const {
-		customerProduct,
-		stripeSubscription,
-		testClockFrozenTime,
-		currentEpochMs,
-	} = updateSubscriptionContext;
+}): BillingPlan => {
+	const { customerProduct, stripeSubscription, currentEpochMs } =
+		updateSubscriptionContext;
 
 	if (!stripeSubscription) {
 		throw new InternalError({
@@ -36,12 +28,9 @@ export const computeSubscriptionUpdateQuantityPlan = ({
 		});
 	}
 
-	const featureQuantities = {
-		old: customerProduct.options,
-		new: params.options || [],
-	};
+	const newOptions = params.options || [];
 
-	const quantityUpdateDetails = featureQuantities.new.map((updatedOption) => {
+	const quantityUpdateDetails = newOptions.map((updatedOption) => {
 		const previousOption = findFeatureOptionsByFeature({
 			featureOptions: customerProduct.options,
 			featureId: updatedOption.feature_id,
@@ -55,50 +44,41 @@ export const computeSubscriptionUpdateQuantityPlan = ({
 		});
 	});
 
-	const invoiceAction = computeInvoiceAction({
-		quantityUpdateDetails,
-		updateSubscriptionContext,
-		shouldGenerateInvoiceOnly: params.finalize_invoice === false,
-	});
-
-	const billingCycleAnchor = secondsToMs(
-		stripeSubscription.billing_cycle_anchor,
-	);
-
-	const ongoingCusProductAction = {
-		action: OngoingCusProductActionEnum.Update,
-		cusProduct: customerProduct,
+	const customerProductWithNewOptions = {
+		...customerProduct,
+		options: newOptions,
 	};
-
-	const autumnLineItems = buildAutumnLineItems({
-		ctx,
-		newCusProducts: [customerProduct],
-		ongoingCustomerProduct: ongoingCusProductAction?.cusProduct,
-		billingCycleAnchor,
-		testClockFrozenTime,
-	});
 
 	const stripeSubscriptionAction = buildStripeSubscriptionAction({
 		ctx,
 		billingContext: updateSubscriptionContext,
-		newCustomerProduct: customerProduct,
+		newCustomerProduct: customerProductWithNewOptions,
 		nowMs: currentEpochMs,
 	});
 
-	if (!stripeSubscriptionAction) {
-		throw new InternalError({
-			message: `[Subscription Update] Stripe subscription action not found`,
-		});
-	}
+	const stripeInvoiceAction = computeStripeInvoiceAction({
+		quantityUpdateDetails,
+		updateSubscriptionContext,
+		shouldFinalizeInvoice: params.finalize_invoice !== false,
+	});
 
 	return {
-		intent: SubscriptionUpdateIntentEnum.UpdateQuantity,
-		featureQuantities,
-		quantityUpdateDetails,
-		invoiceAction,
-		autumnLineItems,
-		stripeSubscriptionAction,
-		ongoingCusProductAction,
-		shouldUncancelSubscription: customerProduct.canceled === true,
+		autumn: {
+			insertCustomerProducts: [],
+			customPrices: [],
+			customEntitlements: [],
+			updateCustomerProduct: {
+				customerProduct,
+				updates: {
+					options: newOptions,
+				},
+			},
+			quantityUpdateDetails,
+			shouldUncancelSubscription: customerProduct.canceled === true,
+		},
+		stripe: {
+			subscriptionAction: stripeSubscriptionAction ?? { type: "none" },
+			invoiceAction: stripeInvoiceAction,
+		},
 	};
 };
