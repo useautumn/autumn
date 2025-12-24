@@ -1,6 +1,7 @@
 import {
 	type FullCustomer,
 	getTargetSubscriptionCusProduct,
+	InternalError,
 	type Product,
 } from "@autumn/shared";
 import { createStripeCli } from "@server/external/connect/createStripeCli";
@@ -39,6 +40,12 @@ export const fetchStripeSubscriptionForBilling = async ({
 			"latest_invoice.lines.data.discount_amounts",
 		],
 	});
+
+	if (!sub) {
+		throw new InternalError({
+			message: `[Stripe Subscription] Subscription not found: ${subId}`,
+		});
+	}
 
 	return sub;
 };

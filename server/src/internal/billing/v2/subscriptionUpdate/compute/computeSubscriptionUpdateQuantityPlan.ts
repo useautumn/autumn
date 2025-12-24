@@ -54,7 +54,7 @@ export const computeSubscriptionUpdateQuantityPlan = ({
 	const invoiceAction = computeInvoiceAction({
 		quantityUpdateDetails,
 		updateSubscriptionContext,
-		shouldGenerateInvoiceOnly: !(params.finalize_invoice ?? true),
+		shouldGenerateInvoiceOnly: params.finalize_invoice === false,
 	});
 
 	const billingCycleAnchor = secondsToMs(
