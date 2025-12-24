@@ -46,7 +46,8 @@ export const StripeSubscriptionScheduleActionSchema = z.discriminatedUnion(
 	[
 		z.object({
 			type: z.literal("create"),
-			params: z.custom<import("stripe").Stripe.SubscriptionCreateParams>(),
+			params:
+				z.custom<import("stripe").Stripe.SubscriptionScheduleUpdateParams>(),
 		}),
 		z.object({
 			type: z.literal("update"),
