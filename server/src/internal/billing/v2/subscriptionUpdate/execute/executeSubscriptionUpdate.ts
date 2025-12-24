@@ -4,7 +4,7 @@ import type { SubscriptionUpdatePlan } from "@/internal/billing/v2/typesOld";
 import { executeCusProductActions } from "../../execute/executeAutumnActions/executeCusProductActions";
 import { executeInvoiceAction } from "../../execute/executeInvoiceAction";
 import { executeStripeSubAction } from "../../execute/executeStripeSubAction";
-import { executeStripeSubscriptionUncancel } from "../../execute/executeStripeSubscriptionActions/executeStripeSubscriptionUncancel";
+import { executeStripeSubscriptionUncancel } from "../../execute/executeStripeSubscriptionActions/handleStripeSubscriptionUncancel";
 import type { UpdateSubscriptionContext } from "../fetch/updateSubscriptionContextSchema";
 
 /**

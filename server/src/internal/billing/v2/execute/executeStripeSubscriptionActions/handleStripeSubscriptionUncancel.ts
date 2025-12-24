@@ -1,6 +1,7 @@
-import type { FullCusProduct } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { BillingContext } from "@/internal/billing/v2/billingContext";
+import type { BillingPlan } from "@/internal/billing/v2/billingPlan";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
 /**
@@ -8,29 +9,42 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
  *
  * Sets cancel_at_period_end to false in Stripe and clears canceled flags in DB.
  * Ensures consistency between Stripe and Autumn state.
- *
- * @throws If Stripe update fails, preventing inconsistent state
+ * No-ops if uncancel is not needed based on billing plan.
  */
-export const executeStripeSubscriptionUncancel = async ({
+export const handleStripeSubscriptionUncancel = async ({
 	ctx,
-	stripeSubscriptionId,
-	customerProduct,
+	billingContext,
+	billingPlan,
 }: {
 	ctx: AutumnContext;
-	stripeSubscriptionId: string;
-	customerProduct: FullCusProduct;
+	billingContext: BillingContext;
+	billingPlan: BillingPlan;
 }): Promise<void> => {
+	const stripeSubscription = billingContext.stripeSubscription;
+
+	const customerProduct =
+		billingPlan.autumn.updateCustomerProduct?.customerProduct;
+
+	const shouldUncancelSubscription =
+		billingPlan.autumn.shouldUncancelSubscription &&
+		stripeSubscription &&
+		customerProduct;
+
+	if (!shouldUncancelSubscription) {
+		return;
+	}
+
 	const { db, logger, org, env } = ctx;
 
 	logger.info("Uncanceling subscription in Stripe", {
-		stripeSubscriptionId,
+		stripeSubscriptionId: stripeSubscription.id,
 		customerProductId: customerProduct.id,
 	});
 
 	const stripeClient = createStripeCli({ org, env });
 
 	// Update Stripe first - if this fails, we don't modify our DB
-	await stripeClient.subscriptions.update(stripeSubscriptionId, {
+	await stripeClient.subscriptions.update(stripeSubscription.id, {
 		cancel_at_period_end: false,
 	});
 

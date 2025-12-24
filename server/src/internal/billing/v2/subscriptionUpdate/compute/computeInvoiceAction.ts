@@ -1,35 +1,32 @@
-import type {
-	QuantityUpdateDetails,
-	SubscriptionUpdateInvoiceAction,
-} from "../../typesOld";
+import { msToSeconds } from "@shared/utils";
+import type Stripe from "stripe";
+import type { StripeInvoiceAction } from "../../billingPlan";
+import type { QuantityUpdateDetails } from "../../typesOld";
 import type { UpdateSubscriptionContext } from "../fetch/updateSubscriptionContextSchema";
 
 /**
- * Computes invoice action for quantity updates requiring proration.
- *
- * Filters details with proration, creates invoice items, and determines charge timing.
- *
- * @param quantityUpdateDetails - Array of quantity update details
- * @param updateSubscriptionContext - Context containing stripeSubscription and paymentMethod
- * @param shouldGenerateInvoiceOnly - If true, skip immediate charge
- * @returns Invoice action with items and charge strategy, or undefined if no invoice needed
+ * Computes Stripe invoice action for quantity updates requiring proration.
+ * Returns undefined if no invoice is needed or if finalize_invoice is false.
  */
-export const computeInvoiceAction = ({
+export const computeStripeInvoiceAction = ({
 	quantityUpdateDetails,
 	updateSubscriptionContext,
-	shouldGenerateInvoiceOnly,
+	shouldFinalizeInvoice,
 }: {
 	quantityUpdateDetails: QuantityUpdateDetails[];
 	updateSubscriptionContext: UpdateSubscriptionContext;
-	shouldGenerateInvoiceOnly?: boolean;
-}): SubscriptionUpdateInvoiceAction | undefined => {
-	const { stripeSubscription, paymentMethod } = updateSubscriptionContext;
-	const invoiceExists = stripeSubscription.latest_invoice !== null;
-	if (!invoiceExists) {
+	shouldFinalizeInvoice: boolean;
+}): StripeInvoiceAction | undefined => {
+	const { stripeSubscription } = updateSubscriptionContext;
+
+	const shouldComputeStripeInvoiceAction =
+		shouldFinalizeInvoice && stripeSubscription.latest_invoice;
+
+	if (!shouldComputeStripeInvoiceAction) {
 		return undefined;
 	}
 
-	const detailsRequiringInvoiceItems = quantityUpdateDetails.filter(
+	const detailsRequiringProration = quantityUpdateDetails.filter(
 		(
 			detail,
 		): detail is typeof detail & { calculatedProrationAmountDollars: number } =>
@@ -37,32 +34,27 @@ export const computeInvoiceAction = ({
 			detail.calculatedProrationAmountDollars !== undefined,
 	);
 
-	if (detailsRequiringInvoiceItems.length === 0) {
+	if (detailsRequiringProration.length === 0) {
 		return undefined;
 	}
-
-	const invoiceItems = detailsRequiringInvoiceItems.map((detail) => ({
-		description: detail.stripeInvoiceItemDescription,
-		amountDollars: detail.calculatedProrationAmountDollars,
-		stripePriceId: detail.stripePriceId,
-		periodStartEpochMs: detail.subscriptionPeriodStartEpochMs,
-		periodEndEpochMs: detail.subscriptionPeriodEndEpochMs,
-	}));
 
 	const shouldChargeImmediately = quantityUpdateDetails.some(
 		(detail) => detail.shouldFinalizeInvoiceImmediately,
 	);
 
-	const customerPrices = quantityUpdateDetails.map(
-		(detail) => detail.customerPrice,
-	);
+	if (!shouldChargeImmediately) {
+		return undefined;
+	}
 
-	return {
-		shouldCreateInvoice: true,
-		invoiceItems,
-		shouldChargeImmediately:
-			shouldChargeImmediately && !shouldGenerateInvoiceOnly,
-		paymentMethod,
-		customerPrices,
-	};
+	const lines: Stripe.InvoiceAddLinesParams.Line[] =
+		detailsRequiringProration.map((detail) => ({
+			description: detail.stripeInvoiceItemDescription,
+			amount: Math.round(detail.calculatedProrationAmountDollars * 100),
+			period: {
+				start: msToSeconds(detail.subscriptionPeriodStartEpochMs),
+				end: msToSeconds(detail.subscriptionPeriodEndEpochMs),
+			},
+		}));
+
+	return { addLineParams: { lines } };
 };
