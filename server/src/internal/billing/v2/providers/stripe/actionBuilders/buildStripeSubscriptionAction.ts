@@ -2,6 +2,7 @@ import type { FullCusProduct } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import type {
 	FreeTrialPlan,
+	StripeSubscriptionAction,
 	StripeSubscriptionScheduleAction,
 } from "@server/internal/billing/v2/billingPlan";
 import { buildStripeSubscriptionItemsUpdate } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionItems/buildStripeSubscriptionItemsUpdate";
@@ -21,9 +22,9 @@ export const buildStripeSubscriptionAction = ({
 	billingContext: UpdateSubscriptionContext;
 	newCustomerProduct: FullCusProduct;
 	stripeSubscriptionScheduleAction?: StripeSubscriptionScheduleAction;
-	freeTrialPlan: FreeTrialPlan;
+	freeTrialPlan?: FreeTrialPlan;
 	nowMs: number;
-}) => {
+}): StripeSubscriptionAction | undefined => {
 	const { customerProduct, stripeSubscription } = billingContext;
 
 	const subItemsUpdate = buildStripeSubscriptionItemsUpdate({

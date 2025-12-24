@@ -11,7 +11,10 @@ import type {
 	ScheduledCusProductAction,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import type { StripeInvoiceAction } from "./billingPlan";
+import type {
+	StripeInvoiceAction,
+	StripeSubscriptionAction,
+} from "./billingPlan";
 
 export type AttachContext = {
 	fullCus: FullCustomer;
@@ -73,7 +76,7 @@ export type BillingPlan = {
 export type BaseSubscriptionUpdatePlan = BillingPlan & {
 	intent: "update_quantity" | "update_plan";
 	autumnLineItems: LineItem[];
-	stripeSubscriptionAction: StripeSubAction;
+	stripeSubscriptionAction: StripeSubscriptionAction;
 	ongoingCusProductAction: OngoingCusProductAction;
 };
 

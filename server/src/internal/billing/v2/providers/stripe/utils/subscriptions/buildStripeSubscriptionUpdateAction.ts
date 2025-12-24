@@ -5,6 +5,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import type {
 	FreeTrialPlan,
+	StripeSubscriptionAction,
 	StripeSubscriptionScheduleAction,
 } from "@/internal/billing/v2/billingPlan";
 
@@ -20,7 +21,7 @@ export const buildStripeSubscriptionUpdateAction = ({
 	subItemsUpdate: Stripe.SubscriptionUpdateParams.Item[];
 	freeTrialPlan?: FreeTrialPlan;
 	stripeSubscriptionScheduleAction?: StripeSubscriptionScheduleAction;
-}) => {
+}): StripeSubscriptionAction | undefined => {
 	const { stripeSubscription } = billingContext;
 
 	if (!stripeSubscription) {

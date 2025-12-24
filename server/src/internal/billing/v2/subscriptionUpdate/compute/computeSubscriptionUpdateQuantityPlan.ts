@@ -7,9 +7,9 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "../../compute/computeAutumnUtils/buildAutumnLineItems";
+import { buildStripeSubscriptionAction } from "../../providers/stripe/actionBuilders/buildStripeSubscriptionAction";
 import type { SubscriptionUpdateQuantityPlan } from "../../typesOld";
 import type { UpdateSubscriptionContext } from "../fetch/updateSubscriptionContextSchema";
-import { buildStripeQuantityUpdateAction } from "./buildStripeQuantityUpdateAction";
 import { computeInvoiceAction } from "./computeInvoiceAction";
 import { computeQuantityUpdateDetails } from "./computeQuantityUpdateDetails";
 import { SubscriptionUpdateIntentEnum } from "./computeSubscriptionUpdateSchema";
@@ -23,8 +23,12 @@ export const computeSubscriptionUpdateQuantityPlan = ({
 	updateSubscriptionContext: UpdateSubscriptionContext;
 	params: SubscriptionUpdateV0Params;
 }): SubscriptionUpdateQuantityPlan => {
-	const { customerProduct, stripeSubscription, testClockFrozenTime } =
-		updateSubscriptionContext;
+	const {
+		customerProduct,
+		stripeSubscription,
+		testClockFrozenTime,
+		currentEpochMs,
+	} = updateSubscriptionContext;
 
 	if (!stripeSubscription) {
 		throw new InternalError({
@@ -74,10 +78,18 @@ export const computeSubscriptionUpdateQuantityPlan = ({
 		testClockFrozenTime,
 	});
 
-	const stripeSubscriptionAction = buildStripeQuantityUpdateAction({
-		quantityUpdateDetails,
-		stripeSubscriptionId: stripeSubscription.id,
+	const stripeSubscriptionAction = buildStripeSubscriptionAction({
+		ctx,
+		billingContext: updateSubscriptionContext,
+		newCustomerProduct: customerProduct,
+		nowMs: currentEpochMs,
 	});
+
+	if (!stripeSubscriptionAction) {
+		throw new InternalError({
+			message: `[Subscription Update] Stripe subscription action not found`,
+		});
+	}
 
 	return {
 		intent: SubscriptionUpdateIntentEnum.UpdateQuantity,
