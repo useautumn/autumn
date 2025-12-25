@@ -6,12 +6,14 @@ import {
 	type FullCustomerEntitlement,
 	type FullCustomerPrice,
 	isUnlimitedCusEnt,
+	numberWithCommas,
 } from "@autumn/shared";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { DateInputUnix } from "@/components/general/DateInputUnix";
 import { Button } from "@/components/v2/buttons/Button";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
+import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
 import { InfoRow } from "@/components/v2/InfoRow";
 import { LabelInput } from "@/components/v2/inputs/LabelInput";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
@@ -20,8 +22,8 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, notNullish } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { useCustomerContext } from "../../customer/CustomerContext";
+import { BalanceEditPreviews } from "./BalanceEditPreviews";
 import { GrantedBalancePopover } from "./GrantedBalancePopover";
 
 export function BalanceEditSheet() {
@@ -37,6 +39,8 @@ export function BalanceEditSheet() {
 
 	const axiosInstance = useAxiosInstance();
 	const [updateLoading, setUpdateLoading] = useState(false);
+	const [mode, setMode] = useState<"set" | "add">("set");
+	const [addValue, setAddValue] = useState<string>("");
 
 	const hasMultipleBalances = originalEntitlements.length > 1;
 	const [grantedBalanceChanged, setGrantedBalanceChanged] = useState(false);
@@ -149,6 +153,27 @@ export function BalanceEditSheet() {
 		setUpdateLoading(false);
 	};
 
+	const handleAddToBalance = async () => {
+		const valueToAdd = parseFloat(addValue);
+
+		setUpdateLoading(true);
+		try {
+			await axiosInstance.post("/v1/balances/update", {
+				customer_id: customer.id || customer.internal_id,
+				feature_id: featureId,
+				add_to_balance: valueToAdd,
+				customer_entitlement_id: selectedCusEnt?.id,
+				entity_id: entityId ?? undefined,
+			});
+			toast.success("Balance added successfully");
+			await refetch();
+			handleClose();
+		} catch (error) {
+			toast.error(getBackendErr(error, "Failed to add balance"));
+		}
+		setUpdateLoading(false);
+	};
+
 	if (!featureId || !originalEntitlements.length) {
 		return (
 			<div className="flex flex-col h-full">
@@ -248,81 +273,117 @@ export function BalanceEditSheet() {
 				{!isUnlimited && (
 					<SheetSection withSeparator={false}>
 						<div className="flex flex-col gap-3">
-							<div className="flex flex-col gap-3">
-								<div className="flex items-end gap-2 w-full">
-									<div className="flex items-end gap-2 w-full">
-										<div className="flex w-full">
-											<LabelInput
-												label="Balance"
-												placeholder="Enter balance"
-												className="w-full"
-												type="number"
-												value={
-													notNullish(fields.balance)
-														? String(fields.balance)
-														: ""
-												}
-												onChange={(e) => {
-													const newBalance = e.target.value
-														? parseFloat(e.target.value)
-														: null;
+							<GroupedTabButton
+								value={mode}
+								onValueChange={(v) => setMode(v as "set" | "add")}
+								options={[
+									{ value: "set", label: "Set Balance" },
+									{ value: "add", label: "Add to Balance" },
+								]}
+							/>
 
-													setUpdateFields({
-														...updateFields,
-														balance: newBalance,
-													});
-												}}
-											/>
+							{mode === "set" ? (
+								<div className="flex flex-col gap-3">
+									<div className="flex items-end gap-2 w-full">
+										<div className="flex items-end gap-4 w-full">
+											<div className="flex items-end gap-2 w-full">
+												<div className="flex w-full">
+													<LabelInput
+														label="Balance"
+														placeholder="Enter balance"
+														className="w-full"
+														type="number"
+														value={
+															notNullish(fields.balance)
+																? String(fields.balance)
+																: ""
+														}
+														onChange={(e) => {
+															const newBalance = e.target.value
+																? parseFloat(e.target.value)
+																: null;
+															setUpdateFields({
+																...updateFields,
+																balance: newBalance,
+															});
+														}}
+													/>
+												</div>
+												{showOutOfPopover && (
+													<GrantedBalancePopover
+														grantedBalance={
+															fields.grantedAndPurchasedBalance ?? null
+														}
+														onSave={(newGrantedAndPurchasedBalance) => {
+															setUpdateFields({
+																...updateFields,
+																grantedAndPurchasedBalance:
+																	newGrantedAndPurchasedBalance,
+															});
+															setGrantedBalanceChanged(true);
+														}}
+													/>
+												)}
+											</div>
+											<div className="text-t4 text-sm truncate mb-1 min-w-20 max-w-30 flex justify-center shrink-0">
+												<span className="truncate">
+													{numberWithCommas(
+														(fields.grantedAndPurchasedBalance ?? 0) -
+															(fields.balance ?? 0),
+													)}{" "}
+													used
+												</span>
+											</div>
 										</div>
-										{showOutOfPopover && (
-											<GrantedBalancePopover
-												grantedBalance={
-													fields.grantedAndPurchasedBalance ?? null
-												}
-												onSave={(newGrantedAndPurchasedBalance) => {
-													setUpdateFields({
-														...updateFields,
-														grantedAndPurchasedBalance:
-															newGrantedAndPurchasedBalance,
-													});
-													setGrantedBalanceChanged(true);
-												}}
-											/>
-										)}
 									</div>
-								</div>
-								<div className="flex flex-col shrink-0 w-full">
-									<div className="text-form-label block mb-1">Next Reset</div>
-									<DateInputUnix
-										disabled={
-											!!cusPrice ||
-											selectedCusEnt.entitlement.interval === "lifetime"
-										}
-										unixDate={fields.next_reset_at}
-										setUnixDate={(unixDate) => {
-											setUpdateFields({
-												...updateFields,
-												next_reset_at: unixDate,
-											});
-										}}
+									<div className="flex flex-col shrink-0 w-full">
+										<div className="text-form-label block mb-1">Next Reset</div>
+										<DateInputUnix
+											disabled={
+												!!cusPrice ||
+												selectedCusEnt.entitlement.interval === "lifetime"
+											}
+											unixDate={fields.next_reset_at}
+											setUnixDate={(unixDate) => {
+												setUpdateFields({
+													...updateFields,
+													next_reset_at: unixDate,
+												});
+											}}
+										/>
+									</div>
+
+									<BalanceEditPreviews
+										cusPrice={cusPrice}
+										interval={selectedCusEnt.entitlement.interval}
+										featureUsageType={feature.config?.usage_type}
+										currentBalance={fields.balance}
 									/>
 								</div>
-							</div>
-
-							{cusPrice && (
-								<InfoBox classNames={{ infoBox: "text-sm p-2" }}>
-									Reset cycle cannot be changed for paid features, as it follows
-									the billing cycle.
-								</InfoBox>
+							) : (
+								<div className="flex flex-col gap-3">
+									<LabelInput
+										label="Amount to Add"
+										placeholder="Enter amount"
+										className="w-full"
+										type="number"
+										value={addValue}
+										onChange={(e) => setAddValue(e.target.value)}
+									/>
+								</div>
 							)}
 						</div>
 						<Button
 							variant="primary"
 							className="w-full mt-3"
 							isLoading={updateLoading}
-							onClick={() => handleUpdateCusEntitlement(selectedCusEnt)}
+							onClick={() =>
+								mode === "set"
+									? handleUpdateCusEntitlement(selectedCusEnt)
+									: handleAddToBalance()
+							}
 						>
-							Update Balance
+							{mode === "set" ? "Update Balance" : "Add to Balance"}
 						</Button>
 					</SheetSection>
 				)}
