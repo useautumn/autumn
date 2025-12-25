@@ -29,6 +29,36 @@ export const handleUpdateBalance = createRoute({
 			throw new FeatureNotFoundError({ featureId: body.feature_id });
 		}
 
+		// Handle add_to_balance atomically using negative deduction
+		if (notNullish(body.add_to_balance)) {
+			await runDeductionTx({
+				ctx,
+				customerId: body.customer_id,
+				entityId: body.entity_id,
+				deductions: [
+					{
+						feature,
+						deduction: -body.add_to_balance, // Negative deduction = add to balance
+					},
+				],
+				sortParams: {
+					cusEntId: body.customer_entitlement_id,
+				},
+				skipAdditionalBalance: true,
+				alterGrantedBalance: true,
+				refreshCache: true,
+			});
+
+			await deleteCachedApiCustomer({
+				orgId: ctx.org.id,
+				env: ctx.env,
+				customerId: body.customer_id,
+				source: "handleUpdateBalance-add",
+			});
+
+			return c.json({ success: true });
+		}
+
 		// Update balance using SQL with alter_granted=true
 		if (notNullish(body.current_balance)) {
 			await runDeductionTx({
