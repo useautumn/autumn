@@ -121,8 +121,10 @@ export const getCustomerSub = async ({
 
 	cusProducts.sort((a, b) => {
 		if (targetSubId) {
-			if (a.subscription_ids && a.subscription_ids.includes(targetSubId)) return -1;
-			if (b.subscription_ids && b.subscription_ids.includes(targetSubId)) return 1;
+			if (a.subscription_ids && a.subscription_ids.includes(targetSubId))
+				return -1;
+			if (b.subscription_ids && b.subscription_ids.includes(targetSubId))
+				return 1;
 		}
 		// 1. Check same group
 		const aGroupMatches = a.product.group === targetGroup;
