@@ -1,6 +1,10 @@
 // Cus ent utils
 
+// Cursor pagination utils
+export * from "./cursorUtils.js";
 export * from "./cusEntUtils/balanceUtils/cusEntsToBalance.js";
+export * from "./cusEntUtils/balanceUtils/cusEntsToCurrentBalance.js";
+export * from "./cusEntUtils/balanceUtils/cusEntsToPrepaidQuantities.js";
 export * from "./cusEntUtils/balanceUtils/cusEntToPrepaidQuantity.js";
 export * from "./cusEntUtils/balanceUtils/cusEntToPurchasedBalance.js";
 // Cus ent utils
@@ -52,5 +56,3 @@ export * from "./productV2Utils/productV2ToFrontendProduct.js";
 export * from "./productV2Utils/productV2ToV1.js";
 export * from "./productV3Utils/productItemUtils/productV3ItemUtils.js";
 export * from "./utils.js";
-// Cursor pagination utils
-export * from "./cursorUtils.js";

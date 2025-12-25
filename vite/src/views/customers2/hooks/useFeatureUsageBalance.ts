@@ -1,8 +1,8 @@
 import {
-	cusEntsToAdjustment,
 	cusEntsToAllowance,
 	cusEntsToBalance,
 	cusEntsToGrantedBalance,
+	cusEntsToPrepaidQuantities,
 	cusProductsToCusEnts,
 	type FullCusProduct,
 } from "@autumn/shared";
@@ -38,31 +38,26 @@ export function useFeatureUsageBalance({
 		featureId,
 	});
 
-	//without adjustment, no rollovers
+	//without manual update adjustment, no rollovers
 	const initialAllowance = cusEntsToAllowance({
 		cusEnts,
 		entityId: entityId ?? undefined,
 		withRollovers: false,
 	});
 
-	//includes adjustment
+	//includes manual update adjustment
 	const allowance = cusEntsToGrantedBalance({
 		cusEnts,
 		entityId: entityId ?? undefined,
 		withRollovers: true,
 	});
 
-	const adjustment = cusEntsToAdjustment({
-		cusEnts,
-		entityId: entityId ?? undefined,
-	});
+	const prepaidAllowance = cusEntsToPrepaidQuantities({ cusEnts });
 
-	if (featureId === "open_ai_input_tokens_gpt_51") {
-		console.log("Cus ents:", cusEnts);
-		// console.log("allowance", allowance);
-		// console.log("initialAllowance", initialAllowance);
-		// console.log("adjustment:", adjustment);
-	}
+	// if (featureId === "credits") {
+	// 	console.log("Cus ents:", cusEnts);
+	// 	console.log("Prepaid allowance:", prepaidAllowance);
+	// }
 
 	const balance = cusEntsToBalance({
 		cusEnts,
@@ -70,7 +65,8 @@ export function useFeatureUsageBalance({
 		withRollovers: true,
 	});
 
-	const shouldShowOutOfBalance = allowance > 0 || (balance ?? 0) > 0;
+	const shouldShowOutOfBalance =
+		allowance + prepaidAllowance > 0 || balance > 0;
 	const shouldShowUsed =
 		balance < 0 || ((balance ?? 0) === 0 && (allowance ?? 0) <= 0);
 
@@ -82,8 +78,8 @@ export function useFeatureUsageBalance({
 	);
 
 	return {
-		allowance: allowance ?? 0,
-		initialAllowance: initialAllowance ?? 0,
+		allowance: allowance + prepaidAllowance,
+		initialAllowance: initialAllowance + prepaidAllowance,
 		balance: balance ?? 0,
 		shouldShowOutOfBalance,
 		shouldShowUsed,
