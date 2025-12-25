@@ -139,7 +139,7 @@ export const completeInvoiceCheckout = async ({
 			);
 			if (postalInput) {
 				await postalInput.click();
-				await postalInput.type("SW59SX");
+				await postalInput.type("94107");
 			}
 		} catch (error) {
 			console.log("Could not find postal code input:", error);
