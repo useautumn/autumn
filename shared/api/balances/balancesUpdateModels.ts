@@ -25,10 +25,7 @@ export const UpdateBalanceParamsSchema = ExtBalancesUpdateParamsSchema.extend({
 	usage: z.number().optional(),
 	customer_entitlement_id: z.string().optional(),
 	next_reset_at: z.number().optional(),
-	add_to_balance: z.number().optional().meta({
-		description:
-			"Amount to add to balance atomically (positive = increase balance).",
-	}),
+	add_to_balance: z.number().optional(),
 });
 
 export type UpdateBalanceParams = z.infer<typeof UpdateBalanceParamsSchema>;

@@ -56,17 +56,5 @@ describe(`${chalk.yellowBright("temp: one off credits test")}`, () => {
 			customer_id: customerId,
 			product_id: oneOffCredits.id,
 		});
-
-		const customer = await CusService.get({
-			db: ctx.db,
-			idOrInternalId: customerId,
-			orgId: ctx.org.id,
-			env: ctx.env,
-		});
-
-		await attachAuthenticatePaymentMethod({
-			ctx,
-			customerId,
-		});
 	});
 });

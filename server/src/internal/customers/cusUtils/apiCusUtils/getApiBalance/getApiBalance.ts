@@ -13,6 +13,7 @@ import {
 	cusEntsToAdjustment,
 	cusEntsToAllowance,
 	cusEntsToBalance,
+	cusEntsToCurrentBalance,
 	cusEntsToMaxPurchase,
 	cusEntToCusPrice,
 	cusEntToKey,
@@ -223,16 +224,22 @@ export const getApiBalance = ({
 	);
 
 	// 3. Current balance
-	const totalBalanceWithRollovers = cusEntsToBalance({
+	// const totalBalanceWithRollovers = cusEntsToBalance({
+	// 	cusEnts,
+	// 	entityId,
+	// 	withRollovers: includeRollovers,
+	// });
+
+	// const currentBalance = new Decimal(Math.max(0, totalBalanceWithRollovers))
+	// 	.add(totalAdditionalBalance)
+	// 	.add(totalUnused)
+	// 	.toNumber();
+
+	const currentBalance = cusEntsToCurrentBalance({
 		cusEnts,
 		entityId,
 		withRollovers: includeRollovers,
 	});
-
-	const currentBalance = new Decimal(Math.max(0, totalBalanceWithRollovers))
-		.add(totalAdditionalBalance)
-		.add(totalUnused)
-		.toNumber();
 
 	// 4. Usage
 	const totalUsage = new Decimal(grantedBalance)
