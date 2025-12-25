@@ -29,8 +29,6 @@ export function FeatureBalanceDisplay({
 	const displayBalance = balance < 0 ? 0 : balance;
 	const overage = balance < 0 ? balance * -1 : 0;
 
-	// console.log("initialAllowance", initialAllowance);
-
 	const getUsedLabel = () => {
 		//change for feather
 		if (initialAllowance > 0) return "overage";

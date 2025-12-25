@@ -1,20 +1,20 @@
 import {
 	cusEntsToBalance,
 	cusEntsToGrantedBalance,
+	cusEntsToPrepaidQuantities,
 	type FullCusProduct,
 	type FullCustomerEntitlement,
 	type FullCustomerPrice,
 	isUnlimitedCusEnt,
+	numberWithCommas,
 } from "@autumn/shared";
-import { LinkBreakIcon } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { DateInputUnix } from "@/components/general/DateInputUnix";
 import { Button } from "@/components/v2/buttons/Button";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
-import { IconButton } from "@/components/v2/buttons/IconButton";
+import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
 import { InfoRow } from "@/components/v2/InfoRow";
-import { Input } from "@/components/v2/inputs/Input";
 import { LabelInput } from "@/components/v2/inputs/LabelInput";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
@@ -24,6 +24,8 @@ import { getBackendErr, notNullish } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { useCustomerContext } from "../../customer/CustomerContext";
+import { BalanceEditPreviews } from "./BalanceEditPreviews";
+import { GrantedBalancePopover } from "./GrantedBalancePopover";
 
 export function BalanceEditSheet() {
 	const { customer, refetch } = useCusQuery();
@@ -38,8 +40,8 @@ export function BalanceEditSheet() {
 
 	const axiosInstance = useAxiosInstance();
 	const [updateLoading, setUpdateLoading] = useState(false);
-	const [isGrantedBalanceUnlinked, setIsGrantedBalanceUnlinked] =
-		useState(false);
+	const [mode, setMode] = useState<"set" | "add">("set");
+	const [addValue, setAddValue] = useState<string>("");
 
 	const hasMultipleBalances = originalEntitlements.length > 1;
 	const [grantedBalanceChanged, setGrantedBalanceChanged] = useState(false);
@@ -48,6 +50,13 @@ export function BalanceEditSheet() {
 	const selectedCusEnt = originalEntitlements.find(
 		(ent) => ent.id === selectedCusEntId,
 	);
+
+	const prepaidAllowance = useMemo(() => {
+		if (!selectedCusEnt) return 0;
+		return cusEntsToPrepaidQuantities({
+			cusEnts: [selectedCusEnt],
+		});
+	}, [selectedCusEnt]);
 
 	// Get the initial fields for the selected entitlement
 	const initialFields = useMemo(() => {
@@ -69,9 +78,12 @@ export function BalanceEditSheet() {
 			entityId: entityId ?? undefined,
 		});
 
+		const grantedAndPurchasedBalance = grantedBalance + prepaidAllowance;
+
 		return {
 			balance: balance !== null ? balance : null,
-			grantedBalance: grantedBalance !== null ? grantedBalance : null,
+			grantedAndPurchasedBalance:
+				grantedAndPurchasedBalance !== null ? grantedAndPurchasedBalance : null,
 			next_reset_at: selectedCusEnt.next_reset_at,
 		};
 	}, [selectedCusEnt, entityId]);
@@ -81,7 +93,6 @@ export function BalanceEditSheet() {
 	// Reset fields when selected entitlement changes
 	useEffect(() => {
 		setUpdateFields(initialFields);
-		setIsGrantedBalanceUnlinked(false);
 	}, [initialFields]);
 
 	const getCusProduct = (cusEnt: FullCustomerEntitlement) => {
@@ -100,16 +111,16 @@ export function BalanceEditSheet() {
 		cusEnt: FullCustomerEntitlement,
 	) => {
 		const balanceInt = parseFloat(String(updateFields.balance));
+		const grantedAndPurchasedBalanceFloat = parseFloat(
+			String(updateFields.grantedAndPurchasedBalance),
+		);
 		if (Number.isNaN(balanceInt)) {
-			toast.error("Balance not valid");
+			toast.error("Please enter a valid balance");
 			return;
 		}
 
-		const grantedBalanceInt = parseFloat(String(updateFields.grantedBalance));
-		if (Number.isNaN(grantedBalanceInt)) {
-			toast.error("Granted balance not valid");
-			return;
-		}
+		const grantedBalanceInput =
+			grantedAndPurchasedBalanceFloat - prepaidAllowance;
 
 		const cusProduct = getCusProduct(cusEnt);
 		const cusPrice = cusProduct?.customer_prices.find(
@@ -118,7 +129,7 @@ export function BalanceEditSheet() {
 		);
 
 		if (cusPrice && updateFields.next_reset_at !== cusEnt.next_reset_at) {
-			toast.error("Not allowed to change reset at for paid features");
+			toast.error("Not allowed to change reset date for paid features");
 			return;
 		}
 
@@ -129,7 +140,7 @@ export function BalanceEditSheet() {
 				customer_id: customer.id || customer.internal_id,
 				feature_id: featureId,
 				current_balance: balanceInt,
-				granted_balance: grantedBalanceChanged ? grantedBalanceInt : undefined,
+				granted_balance: grantedBalanceInput ?? undefined,
 				customer_entitlement_id: cusEnt.id,
 				entity_id: entityId ?? undefined,
 				next_reset_at: updateFields.next_reset_at ?? undefined,
@@ -139,6 +150,27 @@ export function BalanceEditSheet() {
 			handleClose();
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to update entitlement"));
+		}
+		setUpdateLoading(false);
+	};
+
+	const handleAddToBalance = async () => {
+		const valueToAdd = parseFloat(addValue);
+
+		setUpdateLoading(true);
+		try {
+			await axiosInstance.post("/v1/balances/update", {
+				customer_id: customer.id || customer.internal_id,
+				feature_id: featureId,
+				add_to_balance: valueToAdd,
+				customer_entitlement_id: selectedCusEnt?.id,
+				entity_id: entityId ?? undefined,
+			});
+			toast.success("Balance added successfully");
+			await refetch();
+			handleClose();
+		} catch (error) {
+			toast.error(getBackendErr(error, "Failed to add balance"));
 		}
 		setUpdateLoading(false);
 	};
@@ -169,8 +201,6 @@ export function BalanceEditSheet() {
 		);
 	}
 
-	console.log("selectedCusEnt", selectedCusEnt);
-
 	const fields = updateFields;
 	if (!fields) return null;
 
@@ -179,6 +209,10 @@ export function BalanceEditSheet() {
 		(cp: FullCustomerPrice) =>
 			cp.price.entitlement_id === selectedCusEnt.entitlement.id,
 	);
+
+	const showOutOfPopover =
+		(initialFields.grantedAndPurchasedBalance ?? 0) > 0 ||
+		(initialFields.balance ?? 0) > 0;
 
 	return (
 		<div className="flex flex-col h-full">
@@ -240,129 +274,121 @@ export function BalanceEditSheet() {
 				{!isUnlimited && (
 					<SheetSection withSeparator={false}>
 						<div className="flex flex-col gap-3">
-							<div className="flex gap-3">
-								<div className="flex items-end gap-2 w-full">
-									<div className="flex items-end gap-2 w-full">
-										<div className="flex w-full">
-											<LabelInput
-												label="Balance"
-												placeholder="Enter balance"
-												className="w-full"
-												type="number"
-												value={
-													notNullish(fields.balance)
-														? String(fields.balance)
-														: ""
-												}
-												onChange={(e) => {
-													const newBalance = e.target.value
-														? parseFloat(e.target.value)
-														: null;
-													const newLinkedBalance =
-														initialFields.grantedBalance != null
-															? initialFields.grantedBalance +
-																((newBalance ?? 0) -
-																	(initialFields.balance ?? 0))
-															: null;
+							<GroupedTabButton
+								value={mode}
+								onValueChange={(v) => setMode(v as "set" | "add")}
+								options={[
+									{ value: "set", label: "Set Balance" },
+									{ value: "add", label: "Add to Balance" },
+								]}
+							/>
 
-													setUpdateFields({
-														...updateFields,
-														balance: newBalance,
-														grantedBalance: isGrantedBalanceUnlinked
-															? updateFields.grantedBalance
-															: newLinkedBalance,
-													});
-												}}
-											/>
-										</div>
-										{(initialFields.grantedBalance ?? 0) > 0 &&
-											(isGrantedBalanceUnlinked ? (
-												<>
-													<span className="text-t4 text-sm pb-1">/</span>
-													<div className="flex items-center gap-1 w-full">
-														<Input
-															type="number"
-															className="h-7 px-1.5"
-															autoFocus
-															value={
-																notNullish(updateFields.grantedBalance)
-																	? String(updateFields.grantedBalance)
-																	: ""
-															}
-															onChange={(e) => {
-																setUpdateFields({
-																	...updateFields,
-																	grantedBalance: e.target.value
-																		? parseFloat(e.target.value)
-																		: null,
-																});
-																setGrantedBalanceChanged(true);
-															}}
-															onBlur={() => setIsGrantedBalanceUnlinked(false)}
-														/>
-													</div>
-												</>
-											) : (
-												<IconButton
-													variant="skeleton"
-													iconOrientation="right"
-													className="gap-1.5 text-t3"
-													icon={<LinkBreakIcon className="size-3" />}
-													onClick={() =>
-														setIsGrantedBalanceUnlinked(
-															!isGrantedBalanceUnlinked,
-														)
+							{mode === "set" ? (
+								<div className="flex flex-col gap-3">
+									<div className="flex items-end gap-2 w-full">
+										<div className="flex items-end gap-2 w-full">
+											<div className="flex w-full">
+												<LabelInput
+													label="Balance"
+													placeholder="Enter balance"
+													className="w-full"
+													type="number"
+													value={
+														notNullish(fields.balance)
+															? String(fields.balance)
+															: ""
 													}
-												>
-													<div className="text-sm inline-flex max-w-16">
-														<span className="shrink-0">/&nbsp;</span>
-														<span className="truncate min-w-0">
-															{fields.grantedBalance}
-														</span>
-													</div>
-												</IconButton>
-											))}
+													onChange={(e) => {
+														const newBalance = e.target.value
+															? parseFloat(e.target.value)
+															: null;
+														setUpdateFields({
+															...updateFields,
+															balance: newBalance,
+														});
+													}}
+												/>
+											</div>
+											{showOutOfPopover && (
+												<GrantedBalancePopover
+													grantedBalance={
+														fields.grantedAndPurchasedBalance ?? null
+													}
+													onSave={(newGrantedAndPurchasedBalance) => {
+														setUpdateFields({
+															...updateFields,
+															grantedAndPurchasedBalance:
+																newGrantedAndPurchasedBalance,
+														});
+														setGrantedBalanceChanged(true);
+													}}
+												/>
+											)}
+											<div className="text-t4 text-sm truncate mb-1 flex justify-center max-w-full w-full">
+												<span className="truncate">
+													{numberWithCommas(
+														(fields.grantedAndPurchasedBalance ?? 0) -
+															(fields.balance ?? 0),
+													)}{" "}
+													used
+												</span>
+											</div>
+										</div>
 									</div>
-								</div>
-								<div className="flex flex-col shrink-0 w-full max-w-40 min-w-40">
-									<div className="text-form-label block mb-1">Next Reset</div>
-									<DateInputUnix
-										disabled={
-											!!cusPrice ||
-											selectedCusEnt.entitlement.interval === "lifetime"
-										}
-										unixDate={fields.next_reset_at}
-										setUnixDate={(unixDate) => {
-											setUpdateFields({
-												...updateFields,
-												next_reset_at: unixDate,
-											});
-										}}
+									<div className="flex flex-col shrink-0 w-full">
+										<div className="text-form-label block mb-1">Next Reset</div>
+										<DateInputUnix
+											disabled={
+												!!cusPrice ||
+												selectedCusEnt.entitlement.interval === "lifetime"
+											}
+											unixDate={fields.next_reset_at}
+											setUnixDate={(unixDate) => {
+												setUpdateFields({
+													...updateFields,
+													next_reset_at: unixDate,
+												});
+											}}
+										/>
+									</div>
+
+									<BalanceEditPreviews
+										cusPrice={cusPrice}
+										interval={selectedCusEnt.entitlement.interval}
+										featureUsageType={feature.config?.usage_type}
+										currentBalance={fields.balance}
 									/>
 								</div>
-							</div>
-
-							{cusPrice && (
-								<InfoBox classNames={{ infoBox: "text-sm p-2" }}>
-									Reset cycle cannot be changed for paid features, as it follows
-									the billing cycle.
-								</InfoBox>
+							) : (
+								<div className="flex flex-col gap-3">
+									<LabelInput
+										label="Amount to Add"
+										placeholder="Enter amount"
+										className="w-full"
+										type="number"
+										value={addValue}
+										onChange={(e) => setAddValue(e.target.value)}
+									/>
+									<InfoBox variant="note">
+										Current and total granted balance will both be updated.
+									</InfoBox>
+								</div>
 							)}
 						</div>
 						<Button
 							variant="primary"
 							className="w-full mt-3"
 							isLoading={updateLoading}
-							onClick={() => handleUpdateCusEntitlement(selectedCusEnt)}
+							onClick={() =>
+								mode === "set"
+									? handleUpdateCusEntitlement(selectedCusEnt)
+									: handleAddToBalance()
+							}
 						>
-							Update Balance
+							{mode === "set" ? "Update Balance" : "Add to Balance"}
 						</Button>
 					</SheetSection>
 				)}
-
-				{/* <Button variant="secondary" onClick={handleClose}>
-					Cancel
-				</Button> */}
 			</div>
 		</div>
 	);
