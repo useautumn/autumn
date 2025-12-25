@@ -1,10 +1,8 @@
 import type { FullCustomer, SortCusEntParams } from "@autumn/shared";
 import {
-	cusEntsHavePrice,
 	cusEntsToAllowance,
 	cusProductsToCusEnts,
 	FeatureNotFoundError,
-	InternalError,
 	isEntityScopedCusEnt,
 	notNullish,
 	nullish,
@@ -45,12 +43,6 @@ export const updateGrantedBalance = async ({
 	if (cusEnts.length === 0) {
 		throw new RecaseError({
 			message: `[updateGrantedBalance] No balances to update for feature ${featureId}, customer ${fullCus.id}`,
-		});
-	}
-
-	if (cusEntsHavePrice({ cusEnts })) {
-		throw new InternalError({
-			message: `This feature has a price, so you cannot update the granted balance`,
 		});
 	}
 
