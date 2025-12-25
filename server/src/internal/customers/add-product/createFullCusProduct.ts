@@ -263,6 +263,8 @@ export const getExistingCusProduct = async ({
 		internalEntityId,
 	});
 
+	if (product.is_add_on) return undefined;
+
 	return curMainProduct;
 };
 
@@ -323,7 +325,6 @@ export const createFullCusProduct = async ({
 		product,
 		internalCustomerId: customer.internal_id,
 		internalEntityId: attachParams.internalEntityId,
-		// processorType,
 	});
 
 	freeTrial = disableFreeTrial ? null : freeTrial;
