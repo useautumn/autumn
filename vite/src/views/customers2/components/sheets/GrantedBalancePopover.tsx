@@ -37,12 +37,11 @@ export function GrantedBalancePopover({
 	};
 
 	return (
-		<div className="flex items-center gap-2">
-			<span className="text-t4 text-sm">/</span>
+		<div className="flex items-end gap-2 w-full min-w-0">
 			<Popover open={open} onOpenChange={handleOpenChange}>
 				<PopoverTrigger asChild>
-					<Button variant="muted">
-						<span className="truncate min-w-0">
+					<Button variant="muted" className="w-full">
+						<span className="truncate">
 							{numberWithCommas(grantedBalance ?? 0)} total
 						</span>
 					</Button>
