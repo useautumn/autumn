@@ -22,6 +22,7 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, notNullish } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { useCustomerContext } from "../../customer/CustomerContext";
 import { BalanceEditPreviews } from "./BalanceEditPreviews";
 import { GrantedBalancePopover } from "./GrantedBalancePopover";
@@ -285,47 +286,45 @@ export function BalanceEditSheet() {
 							{mode === "set" ? (
 								<div className="flex flex-col gap-3">
 									<div className="flex items-end gap-2 w-full">
-										<div className="flex items-end gap-4 w-full">
-											<div className="flex items-end gap-2 w-full">
-												<div className="flex w-full">
-													<LabelInput
-														label="Balance"
-														placeholder="Enter balance"
-														className="w-full"
-														type="number"
-														value={
-															notNullish(fields.balance)
-																? String(fields.balance)
-																: ""
-														}
-														onChange={(e) => {
-															const newBalance = e.target.value
-																? parseFloat(e.target.value)
-																: null;
-															setUpdateFields({
-																...updateFields,
-																balance: newBalance,
-															});
-														}}
-													/>
-												</div>
-												{showOutOfPopover && (
-													<GrantedBalancePopover
-														grantedBalance={
-															fields.grantedAndPurchasedBalance ?? null
-														}
-														onSave={(newGrantedAndPurchasedBalance) => {
-															setUpdateFields({
-																...updateFields,
-																grantedAndPurchasedBalance:
-																	newGrantedAndPurchasedBalance,
-															});
-															setGrantedBalanceChanged(true);
-														}}
-													/>
-												)}
+										<div className="flex items-end gap-2 w-full">
+											<div className="flex w-full">
+												<LabelInput
+													label="Balance"
+													placeholder="Enter balance"
+													className="w-full"
+													type="number"
+													value={
+														notNullish(fields.balance)
+															? String(fields.balance)
+															: ""
+													}
+													onChange={(e) => {
+														const newBalance = e.target.value
+															? parseFloat(e.target.value)
+															: null;
+														setUpdateFields({
+															...updateFields,
+															balance: newBalance,
+														});
+													}}
+												/>
 											</div>
-											<div className="text-t4 text-sm truncate mb-1 min-w-20 max-w-30 flex justify-center shrink-0">
+											{showOutOfPopover && (
+												<GrantedBalancePopover
+													grantedBalance={
+														fields.grantedAndPurchasedBalance ?? null
+													}
+													onSave={(newGrantedAndPurchasedBalance) => {
+														setUpdateFields({
+															...updateFields,
+															grantedAndPurchasedBalance:
+																newGrantedAndPurchasedBalance,
+														});
+														setGrantedBalanceChanged(true);
+													}}
+												/>
+											)}
+											<div className="text-t4 text-sm truncate mb-1 flex justify-center max-w-full w-full">
 												<span className="truncate">
 													{numberWithCommas(
 														(fields.grantedAndPurchasedBalance ?? 0) -
@@ -370,6 +369,9 @@ export function BalanceEditSheet() {
 										value={addValue}
 										onChange={(e) => setAddValue(e.target.value)}
 									/>
+									<InfoBox variant="note">
+										Current and total granted balance will both be updated.
+									</InfoBox>
 								</div>
 							)}
 						</div>
