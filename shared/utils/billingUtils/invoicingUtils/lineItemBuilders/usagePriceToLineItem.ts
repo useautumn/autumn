@@ -54,12 +54,16 @@ export const usagePriceToLineItem = ({
 		usage = cusEntToInvoiceUsage({ cusEnt });
 	}
 
-	// 3. Generate description
-	const description = usagePriceToLineDescription({
+	const lineItemContext: LineItemContext = {
+		...context,
 		price: cusPrice.price,
 		feature: cusEnt.entitlement.feature,
+	};
+
+	// 3. Generate description
+	const description = usagePriceToLineDescription({
 		usage,
-		context,
+		context: lineItemContext,
 	});
 
 	// 4. Get amount

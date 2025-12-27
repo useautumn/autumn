@@ -4,6 +4,7 @@ import {
 	type FeatureOptions,
 	findFeatureByInternalId,
 	InternalError,
+	type LineItemContext,
 } from "@autumn/shared";
 import { usagePriceToLineDescription } from "@autumn/shared/utils/billingUtils/invoicingUtils/descriptionUtils/usagePriceToLineDescription";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -99,23 +100,19 @@ export const computeQuantityUpdateDetails = ({
 
 	const product = cusProductToProduct({ cusProduct: customerProduct });
 
-	const stripeInvoiceItemDescription = usagePriceToLineDescription({
+	const lineItemContext: LineItemContext = {
 		price: priceConfiguration.price,
+		product,
 		feature,
+		currency: "usd",
+		direction: "charge",
+		now: currentEpochMs,
+		billingTiming: "in_advance",
+	};
+
+	const stripeInvoiceItemDescription = usagePriceToLineDescription({
 		usage: updatedOptions.quantity,
-		context: {
-			price: priceConfiguration.price,
-			product,
-			feature,
-			currency: "usd",
-			direction: "charge",
-			now: currentEpochMs,
-			billingTiming: "in_advance",
-			billingPeriod: {
-				start: billingPeriod.subscriptionPeriodStartEpochMs,
-				end: billingPeriod.subscriptionPeriodEndEpochMs,
-			},
-		},
+		context: lineItemContext,
 	});
 
 	const existingStripeSubscriptionItem = mapStripeSubscriptionItem({
