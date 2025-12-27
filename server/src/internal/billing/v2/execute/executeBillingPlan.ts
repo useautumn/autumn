@@ -83,7 +83,10 @@ export const executeBillingPlan = async ({
 		}
 
 		// If the stripe subscription is canceled, remove the subscription from the billing plan
-		if (isStripeSubscriptionCanceled(stripeSubscription)) {
+		if (
+			stripeSubscription &&
+			isStripeSubscriptionCanceled(stripeSubscription)
+		) {
 			removeStripeSubscriptionIdFromBillingPlan({
 				billingPlan,
 				stripeSubscriptionId: stripeSubscription.id,

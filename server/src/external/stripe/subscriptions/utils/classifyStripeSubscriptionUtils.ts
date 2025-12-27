@@ -31,6 +31,11 @@ export const isStripeSubscriptionCanceling = (
 	);
 };
 
+/**
+ * Checks if a Stripe subscription is in the canceled status.
+ * @param stripeSubscription - The Stripe subscription to check.
+ * @returns True if the subscription is in the canceled status, false otherwise.
+ */
 export const isStripeSubscriptionCanceled = (
 	stripeSubscription?: Stripe.Subscription,
 ) => {

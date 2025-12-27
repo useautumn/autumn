@@ -11,7 +11,7 @@ import type {
 } from "@/internal/billing/v2/billingPlan";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import type { UpdateSubscriptionContext } from "@/internal/billing/v2/subscriptionUpdate/fetch/updateSubscriptionContextSchema";
-import { lineItemsToStripeLines } from "@/internal/billing/v2/utils/stripeAdapter/invoiceLines/lineItemsToStripeLines";
+import { lineItemsToStripeLines } from "../../../providers/stripe/utils/invoiceLines/lineItemsToStripeLines";
 
 export const computeInvoiceAction = ({
 	ctx,

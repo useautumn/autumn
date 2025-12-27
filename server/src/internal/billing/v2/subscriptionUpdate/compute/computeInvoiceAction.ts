@@ -20,7 +20,7 @@ export const computeStripeInvoiceAction = ({
 	const { stripeSubscription } = updateSubscriptionContext;
 
 	const shouldComputeStripeInvoiceAction =
-		shouldFinalizeInvoice && stripeSubscription.latest_invoice;
+		shouldFinalizeInvoice && stripeSubscription?.latest_invoice;
 
 	if (!shouldComputeStripeInvoiceAction) {
 		return undefined;
