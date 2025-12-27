@@ -1,4 +1,8 @@
-import type { FullProduct, SubscriptionUpdateV0Params } from "@autumn/shared";
+import {
+	type FullProduct,
+	InternalError,
+	type SubscriptionUpdateV0Params,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { FreeTrialPlan } from "@/internal/billing/v2/billingPlan";
 import { computeSubscriptionUpdateFeatureQuantities } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateCustomPlan/computeSubscriptionUpdateFeatureQuantities";
@@ -28,6 +32,12 @@ export const computeSubscriptionUpdateNewCustomerProduct = ({
 		stripeSubscription,
 		stripeSubscriptionSchedule,
 	} = updateSubscriptionContext;
+
+	if (!stripeSubscription) {
+		throw new InternalError({
+			message: `[Subscription Update] Stripe subscription not found`,
+		});
+	}
 
 	// 1. Get feature quantities
 	const existingUsages = cusProductToExistingUsages({

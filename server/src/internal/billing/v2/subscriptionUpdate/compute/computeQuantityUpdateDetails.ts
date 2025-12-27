@@ -52,6 +52,12 @@ export const computeQuantityUpdateDetails = ({
 		});
 	}
 
+	if (!stripeSubscription) {
+		throw new InternalError({
+			message: `[Quantity Update] Stripe subscription not found`,
+		});
+	}
+
 	const feature = findFeatureByInternalId({
 		features,
 		internalId: internalFeatureId,
