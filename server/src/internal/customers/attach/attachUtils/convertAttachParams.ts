@@ -1,6 +1,11 @@
-import { cusProductToProduct } from "@autumn/shared";
+import {
+	cusProductToPrices,
+	cusProductToProduct,
+	isFreeProduct,
+} from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { isOneOff } from "@/internal/products/productUtils.js";
 import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
 
 export const attachParamsToCurCusProduct = ({
@@ -11,7 +16,9 @@ export const attachParamsToCurCusProduct = ({
 	const { curMainProduct, curSameProduct, curScheduledProduct } =
 		attachParamToCusProducts({ attachParams });
 
-	// 1. If same product:
+	const product = attachParamsToProduct({ attachParams });
+	if (isOneOff(product.prices)) return;
+
 	if (
 		curSameProduct &&
 		curSameProduct.product.id !== curScheduledProduct?.product.id
@@ -20,7 +27,6 @@ export const attachParamsToCurCusProduct = ({
 	}
 
 	// 2. If main product, then return main product
-	const product = attachParamsToProduct({ attachParams });
 	if (!product.is_add_on && curMainProduct) {
 		return curMainProduct;
 	}
@@ -35,6 +41,9 @@ export const attachParamsToMergeCusProduct = ({
 }) => {
 	const { curMainProduct, curSameProduct, curScheduledProduct } =
 		attachParamToCusProducts({ attachParams });
+
+	const product = attachParamsToProduct({ attachParams });
+	if (isOneOff(product.prices)) return undefined;
 
 	if (
 		curSameProduct &&
@@ -119,7 +128,17 @@ export const getCustomerSub = async ({
 	const targetEntityId = attachParams.internalEntityId || null;
 	const targetProductId = attachParams.products[0].id;
 
-	cusProducts.sort((a, b) => {
+	const filteredCusProducts = cusProducts.filter((cp) => {
+		const prices = cusProductToPrices({ cusProduct: cp }) || [];
+
+		if (isOneOff(prices) || isFreeProduct({ prices })) {
+			return false;
+		}
+
+		return true;
+	});
+
+	filteredCusProducts.sort((a, b) => {
 		if (targetSubId) {
 			if (a.subscription_ids && a.subscription_ids.includes(targetSubId))
 				return -1;
@@ -158,7 +177,7 @@ export const getCustomerSub = async ({
 	});
 
 	// const subId = cusProducts.flatMap((cp) => cp.subscription_ids || [])?.[0];
-	const cusProduct = cusProducts.find(
+	const cusProduct = filteredCusProducts.find(
 		(cp) => cp.subscription_ids && cp.subscription_ids.length > 0,
 	);
 
@@ -262,7 +281,7 @@ export const paramsToCurSub = async ({
 	attachParams: AttachParams;
 }) => {
 	const { stripeCli } = attachParams;
-	// const curCusProduct = attachParamsToCurCusProduct({ attachParams });
+
 	const mergeCusProduct = attachParamsToMergeCusProduct({ attachParams });
 	const subIds = mergeCusProduct?.subscription_ids || [];
 
