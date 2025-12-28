@@ -1,0 +1,29 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignoreExportsUsedInFile": {
+    "interface": true,
+    "type": true
+  },
+  "tags": ["-lintignore"],
+  "workspaces": {
+    ".": {},
+    "server": {
+      "entry": ["src/index.ts", "src/workers.ts", "src/cron.ts", "src/check.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "vite": {
+      "entry": ["src/main.tsx"],
+      "project": ["src/**/*.{ts,tsx}"]
+    },
+    "shared": {
+      "entry": ["index.ts"],
+      "project": ["**/*.ts"],
+      "ignore": ["node_modules/**", "dist/**"]
+    },
+    "scripts": {
+      "entry": ["setup/**/*.ts", "db/**/*.ts", "seed/**/*.ts"],
+      "project": ["**/*.ts"],
+      "ignore": ["node_modules/**"]
+    }
+  }
+}
