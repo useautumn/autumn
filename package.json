@@ -34,7 +34,8 @@
 		"db:pull": "bun scripts/db/pull.ts",
 		"db:push": " bun -F @autumn/shared db:push",
 		"db:generate": "bun -F @autumn/shared db:generate",
-		"db:migrate": " bun -F @autumn/shared db:migrate"
+		"db:migrate": " bun -F @autumn/shared db:migrate",
+		"kill-ports": "lsof -ti:8080 -ti:3000 | xargs kill -9"
 	},
 	"dependencies": {
 		"@wooorm/starry-night": "^3.8.0",
