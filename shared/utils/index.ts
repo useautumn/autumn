@@ -3,6 +3,7 @@
 // Cursor pagination utils
 export * from "./cursorUtils.js";
 export * from "./cusEntUtils/balanceUtils/cusEntsToBalance.js";
+export * from "./cusEntUtils/balanceUtils/cusEntsToCurrentBalance.js";
 export * from "./cusEntUtils/balanceUtils/cusEntsToPrepaidQuantities.js";
 export * from "./cusEntUtils/balanceUtils/cusEntToPrepaidQuantity.js";
 export * from "./cusEntUtils/balanceUtils/cusEntToPurchasedBalance.js";

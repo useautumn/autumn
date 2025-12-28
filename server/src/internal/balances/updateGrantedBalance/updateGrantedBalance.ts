@@ -3,6 +3,7 @@ import {
 	cusEntsToAllowance,
 	cusProductsToCusEnts,
 	FeatureNotFoundError,
+	InternalError,
 	isEntityScopedCusEnt,
 	notNullish,
 	nullish,

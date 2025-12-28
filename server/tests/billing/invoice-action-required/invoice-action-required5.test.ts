@@ -1,16 +1,11 @@
-import { beforeAll, describe, it } from "bun:test";
+import { beforeAll, describe } from "bun:test";
 import { ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached";
+import { timeout } from "@tests/utils/genUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { AutumnCliV2 } from "@/external/autumn/autumnCliV2";
-import {
-	attachAuthenticatePaymentMethod,
-	attachFailedPaymentMethod,
-} from "@/external/stripe/stripeCusUtils";
-import { timeout } from "@/utils/genUtils";
+import { attachAuthenticatePaymentMethod } from "@/external/stripe/stripeCusUtils";
 import {
 	constructFeatureItem,
 	constructPrepaidItem,
@@ -18,9 +13,9 @@ import {
 import {
 	constructProduct,
 	constructRawProduct,
-} from "@/utils/scriptUtils/createTestProducts.js";
+} from "@/utils/scriptUtils/createTestProducts";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3";
 
 const pro = constructProduct({
 	type: "pro",
@@ -46,9 +41,9 @@ const oneOffCredits = constructRawProduct({
 	],
 });
 
-const testCase = "temp";
+const testCase = "invoice-action-required5";
 
-describe(`${chalk.yellowBright("temp: one off credits test")}`, () => {
+describe(`${chalk.yellowBright("invoice-action-required5: payment failed for one off, non add-on")}`, () => {
 	const customerId = testCase;
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
