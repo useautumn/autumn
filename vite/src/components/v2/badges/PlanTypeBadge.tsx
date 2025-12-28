@@ -20,6 +20,7 @@ const badgeVariants = cva(
 				default: "bg-muted",
 				freeTrial: "bg-muted",
 				addon: "bg-muted",
+				autoTrial: "bg-muted",
 			},
 		},
 		defaultVariants: {
@@ -56,6 +57,17 @@ export const PlanTypeBadge = ({
 				return (
 					<PlusCircleIcon size={13} className="text-t4 mt-0.25" weight="fill" />
 				);
+			case "autoTrial":
+				return (
+					<>
+						<RadioButtonIcon
+							size={14}
+							className="text-t4 mt-0.25"
+							weight="fill"
+						/>
+						<ClockIcon size={13} className="text-t4 mt-0.25" weight="fill" />
+					</>
+				);
 			default:
 				return <DefaultIcon size={14} color="#666666" hideTitle />;
 		}
@@ -69,6 +81,8 @@ export const PlanTypeBadge = ({
 				return "Free Trial";
 			case "addon":
 				return "Add-on";
+			case "autoTrial":
+				return "Auto-trial";
 			default:
 				return "Default";
 		}
@@ -82,6 +96,8 @@ export const PlanTypeBadge = ({
 				return "This plan has a free trial period.";
 			case "addon":
 				return "This plan is an add-on that can be bought together with your base plans (eg, for top ups).";
+			case "autoTrial":
+				return "This plan will enable by default for all new users with a free trial period.";
 		}
 	};
 
