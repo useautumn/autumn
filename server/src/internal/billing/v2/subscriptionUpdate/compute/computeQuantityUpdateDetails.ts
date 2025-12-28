@@ -7,13 +7,14 @@ import {
 	type LineItemContext,
 } from "@autumn/shared";
 import { usagePriceToLineDescription } from "@autumn/shared/utils/billingUtils/invoicingUtils/descriptionUtils/usagePriceToLineDescription";
+import type Stripe from "stripe";
+import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { QuantityUpdateDetails } from "@/internal/billing/v2/typesOld";
 import type { UpdateSubscriptionContext } from "../fetch/updateSubscriptionContextSchema";
 import { calculateEntitlementChange } from "./quantityUpdateUtils/calculateEntitlementChange";
 import { calculateProrationAmount } from "./quantityUpdateUtils/calculateProrationAmount";
 import { calculateQuantityDifferences } from "./quantityUpdateUtils/calculateQuantityDifferences";
-import { mapStripeSubscriptionItem } from "./quantityUpdateUtils/mapStripeSubscriptionItem";
 import { resolvePriceForQuantityUpdate } from "./quantityUpdateUtils/resolvePriceForQuantityUpdate";
 
 /**
@@ -115,10 +116,10 @@ export const computeQuantityUpdateDetails = ({
 		context: lineItemContext,
 	});
 
-	const existingStripeSubscriptionItem = mapStripeSubscriptionItem({
+	const existingStripeSubscriptionItem = findStripeItemForPrice({
 		price: priceConfiguration.price,
-		stripeSubscription,
-	});
+		stripeItems: stripeSubscription.items.data,
+	}) as Stripe.SubscriptionItem | undefined;
 
 	const entitlementChange = calculateEntitlementChange({
 		quantityDifferenceForEntitlements:
