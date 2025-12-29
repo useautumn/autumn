@@ -69,12 +69,12 @@ export const resolveRevenuecatResources = async ({
 			}),
 	]);
 
-	// If the customer has a product from a different processor than RevenueCat and it's not a default or add-on product, throw an error
+	// If the customer has a product from a different processor than RevenueCat and it has no subscriptions, throw an error
 	if (
 		customer.customer_products.some(
 			(cp) =>
 				cp.processor?.type !== ProcessorType.RevenueCat &&
-				(!cp.product.is_default || !cp.product.is_add_on),
+				((cp.subscription_ids?.length ?? 0) !== 0),
 		)
 	) {
 		throw new RecaseError({
