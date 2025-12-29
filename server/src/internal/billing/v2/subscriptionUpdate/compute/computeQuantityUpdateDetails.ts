@@ -1,18 +1,21 @@
 import {
 	cusProductToProduct,
-	extractBillingPeriod,
 	type FeatureOptions,
 	findFeatureByInternalId,
+	findFeatureOptionsByFeature,
 	InternalError,
 	type LineItemContext,
+	orgToCurrency,
+	secondsToMs,
 } from "@autumn/shared";
 import { usagePriceToLineDescription } from "@autumn/shared/utils/billingUtils/invoicingUtils/descriptionUtils/usagePriceToLineDescription";
+import { getLineItemBillingPeriod } from "@shared/utils/billingUtils/cycleUtils/getLineItemBillingPeriod";
 import type Stripe from "stripe";
 import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { QuantityUpdateDetails } from "@/internal/billing/v2/typesOld";
 import type { UpdateSubscriptionContext } from "../fetch/updateSubscriptionContextSchema";
-import { calculateEntitlementChange } from "./quantityUpdateUtils/calculateEntitlementChange";
+import { calculateCustomerEntitlementChange } from "./quantityUpdateUtils/calculateCustomerEntitlementChange";
 import { calculateProrationAmount } from "./quantityUpdateUtils/calculateProrationAmount";
 import { calculateQuantityDifferences } from "./quantityUpdateUtils/calculateQuantityDifferences";
 import { resolvePriceForQuantityUpdate } from "./quantityUpdateUtils/resolvePriceForQuantityUpdate";
@@ -32,18 +35,16 @@ import { resolvePriceForQuantityUpdate } from "./quantityUpdateUtils/resolvePric
  */
 export const computeQuantityUpdateDetails = ({
 	ctx,
-	previousOptions,
 	updatedOptions,
 	updateSubscriptionContext,
 }: {
 	ctx: AutumnContext;
-	previousOptions: FeatureOptions;
 	updatedOptions: FeatureOptions;
 	updateSubscriptionContext: UpdateSubscriptionContext;
 }): QuantityUpdateDetails => {
 	const { customerProduct, stripeSubscription, currentEpochMs } =
 		updateSubscriptionContext;
-	const { features } = ctx;
+	const { features, org } = ctx;
 
 	const internalFeatureId = updatedOptions.internal_feature_id;
 	const featureId = updatedOptions.feature_id;
@@ -71,6 +72,11 @@ export const computeQuantityUpdateDetails = ({
 		});
 	}
 
+	const previousOptions = findFeatureOptionsByFeature({
+		featureOptions: customerProduct.options,
+		feature,
+	});
+
 	const quantityDifferences = calculateQuantityDifferences({
 		previousOptions,
 		updatedOptions,
@@ -82,12 +88,27 @@ export const computeQuantityUpdateDetails = ({
 		isUpgrade: quantityDifferences.isUpgrade,
 	});
 
-	const billingPeriod = extractBillingPeriod({
-		stripeSubscription,
-		interval: priceConfiguration.priceConfig.interval,
-		intervalCount: priceConfiguration.priceConfig.interval_count,
-		currentEpochMs,
+	const billingCycleAnchorMs = secondsToMs(
+		stripeSubscription.billing_cycle_anchor,
+	);
+
+	if (!billingCycleAnchorMs) {
+		throw new InternalError({
+			message: `[Quantity Update] Invalid billing_cycle_anchor: ${stripeSubscription.billing_cycle_anchor}`,
+		});
+	}
+
+	const billingPeriod = getLineItemBillingPeriod({
+		anchor: billingCycleAnchorMs,
+		price: priceConfiguration.price,
+		now: currentEpochMs,
 	});
+
+	if (!billingPeriod) {
+		throw new InternalError({
+			message: `[Quantity Update] Billing period not found for price: ${priceConfiguration.price.id}`,
+		});
+	}
 
 	const calculatedProrationAmountDollars = calculateProrationAmount({
 		updateSubscriptionContext,
@@ -100,11 +121,13 @@ export const computeQuantityUpdateDetails = ({
 
 	const product = cusProductToProduct({ cusProduct: customerProduct });
 
+	const currency = orgToCurrency({ org });
+
 	const lineItemContext: LineItemContext = {
 		price: priceConfiguration.price,
 		product,
 		feature,
-		currency: "usd",
+		currency,
 		direction: "charge",
 		now: currentEpochMs,
 		billingTiming: "in_advance",
@@ -120,7 +143,7 @@ export const computeQuantityUpdateDetails = ({
 		stripeItems: stripeSubscription.items.data,
 	}) as Stripe.SubscriptionItem | undefined;
 
-	const entitlementChange = calculateEntitlementChange({
+	const entitlementChange = calculateCustomerEntitlementChange({
 		quantityDifferenceForEntitlements:
 			quantityDifferences.quantityDifferenceForEntitlements,
 		billingUnitsPerQuantity: priceConfiguration.billingUnitsPerQuantity,
@@ -137,6 +160,7 @@ export const computeQuantityUpdateDetails = ({
 	return {
 		featureId,
 		internalFeatureId,
+		billingPeriod,
 		previousFeatureQuantity: previousOptions.quantity,
 		updatedFeatureQuantity: updatedOptions.quantity,
 		quantityDifferenceForEntitlements:
@@ -148,9 +172,6 @@ export const computeQuantityUpdateDetails = ({
 			priceConfiguration.shouldFinalizeInvoiceImmediately,
 		billingUnitsPerQuantity: priceConfiguration.billingUnitsPerQuantity,
 		calculatedProrationAmountDollars,
-		subscriptionPeriodStartEpochMs:
-			billingPeriod.subscriptionPeriodStartEpochMs,
-		subscriptionPeriodEndEpochMs: billingPeriod.subscriptionPeriodEndEpochMs,
 		stripeInvoiceItemDescription,
 		customerPrice: priceConfiguration.customerPrice,
 		stripePriceId: priceConfiguration.price.config.stripe_price_id,

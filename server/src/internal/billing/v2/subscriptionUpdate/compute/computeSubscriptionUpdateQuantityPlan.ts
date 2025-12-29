@@ -1,8 +1,4 @@
-import {
-	findFeatureOptionsByFeature,
-	InternalError,
-	type SubscriptionUpdateV0Params,
-} from "@autumn/shared";
+import { InternalError, type SubscriptionUpdateV0Params } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingPlan } from "../../billingPlan";
 import { buildStripeSubscriptionAction } from "../../providers/stripe/actionBuilders/buildStripeSubscriptionAction";
@@ -30,19 +26,13 @@ export const computeSubscriptionUpdateQuantityPlan = ({
 
 	const newOptions = params.options || [];
 
-	const quantityUpdateDetails = newOptions.map((updatedOption) => {
-		const previousOption = findFeatureOptionsByFeature({
-			featureOptions: customerProduct.options,
-			featureId: updatedOption.feature_id,
-		});
-
-		return computeQuantityUpdateDetails({
+	const quantityUpdateDetails = newOptions.map((updatedOptions) =>
+		computeQuantityUpdateDetails({
 			ctx,
-			previousOptions: previousOption,
-			updatedOptions: updatedOption,
+			updatedOptions,
 			updateSubscriptionContext,
-		});
-	});
+		}),
+	);
 
 	const customerProductWithNewOptions = {
 		...customerProduct,

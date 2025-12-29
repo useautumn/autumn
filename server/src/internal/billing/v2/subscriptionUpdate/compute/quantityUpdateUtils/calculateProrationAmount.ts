@@ -1,6 +1,6 @@
 import {
 	applyProration,
-	type extractBillingPeriod,
+	type BillingPeriod,
 	type FeatureOptions,
 	priceToLineAmount,
 } from "@autumn/shared";
@@ -36,11 +36,10 @@ export const calculateProrationAmount = ({
 	updatedOptions: FeatureOptions;
 	priceConfiguration: ReturnType<typeof resolvePriceForQuantityUpdate>;
 	quantityDifferences: ReturnType<typeof calculateQuantityDifferences>;
-	billingPeriod: ReturnType<typeof extractBillingPeriod>;
+	billingPeriod: BillingPeriod;
 }): number | undefined => {
 	const { stripeSubscription, currentEpochMs } = updateSubscriptionContext;
-	const { price, billingUnitsPerQuantity, shouldApplyProration } =
-		priceConfiguration;
+	const { price, billingUnitsPerQuantity } = priceConfiguration;
 	const { isUpgrade } = quantityDifferences;
 
 	if (!stripeSubscription) {
@@ -49,7 +48,7 @@ export const calculateProrationAmount = ({
 
 	const isTrialing = stripeSubscription.status === "trialing";
 
-	if (!shouldApplyProration || isTrialing) {
+	if (isTrialing) {
 		return undefined;
 	}
 
@@ -76,10 +75,7 @@ export const calculateProrationAmount = ({
 
 	const proratedAmountDollars = applyProration({
 		now: currentEpochMs,
-		billingPeriod: {
-			start: billingPeriod.subscriptionPeriodStartEpochMs,
-			end: billingPeriod.subscriptionPeriodEndEpochMs,
-		},
+		billingPeriod,
 		amount: amountDifferenceDollars.toNumber(),
 	});
 
