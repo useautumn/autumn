@@ -1,6 +1,6 @@
 import type {
 	Entity,
-	FullCusEntWithFullCusProduct,
+	FullCusEntWithOptionalProduct,
 	FullCusProduct,
 } from "@autumn/shared";
 import type { Row } from "@tanstack/react-table";
@@ -17,7 +17,7 @@ function UsageCell({
 	filteredCustomerProducts,
 	entityId,
 }: {
-	ent: FullCusEntWithFullCusProduct;
+	ent: FullCusEntWithOptionalProduct;
 	filteredCustomerProducts: FullCusProduct[];
 	entityId: string | null;
 }) {
@@ -55,7 +55,7 @@ function BarCell({
 	filteredCustomerProducts,
 	entityId,
 }: {
-	ent: FullCusEntWithFullCusProduct;
+	ent: FullCusEntWithOptionalProduct;
 	filteredCustomerProducts: FullCusProduct[];
 	entityId: string | null;
 }) {
@@ -100,7 +100,7 @@ export const CustomerBalanceTableColumns = ({
 }: {
 	filteredCustomerProducts: FullCusProduct[];
 	entityId: string | null;
-	aggregatedMap: Map<string, FullCusEntWithFullCusProduct[]>;
+	aggregatedMap: Map<string, FullCusEntWithOptionalProduct[]>;
 	entities?: unknown[];
 }) => [
 	{
@@ -108,7 +108,7 @@ export const CustomerBalanceTableColumns = ({
 		accessorKey: "feature",
 		enableResizing: true,
 		minSize: 100,
-		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => {
+		cell: ({ row }: { row: Row<FullCusEntWithOptionalProduct> }) => {
 			const ent = row.original;
 			const featureId = ent.entitlement.feature.id;
 			const originalEnts = aggregatedMap.get(featureId);
@@ -139,7 +139,7 @@ export const CustomerBalanceTableColumns = ({
 	{
 		header: "Usage",
 		accessorKey: "usage",
-		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => (
+		cell: ({ row }: { row: Row<FullCusEntWithOptionalProduct> }) => (
 			<UsageCell
 				ent={row.original}
 				filteredCustomerProducts={filteredCustomerProducts}
@@ -151,7 +151,7 @@ export const CustomerBalanceTableColumns = ({
 		header: "Bar",
 		size: 220,
 		accessorKey: "bar",
-		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => (
+		cell: ({ row }: { row: Row<FullCusEntWithOptionalProduct> }) => (
 			<BarCell
 				ent={row.original}
 				filteredCustomerProducts={filteredCustomerProducts}

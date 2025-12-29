@@ -176,6 +176,54 @@ const buildSubscriptionsCTE = (
   `;
 };
 
+const buildExtraEntitlementsCTE = (withExtraEntitlements: boolean) => {
+	if (!withExtraEntitlements) {
+		return sql``;
+	}
+
+	return sql`
+    extra_customer_entitlements AS (
+      SELECT
+        COALESCE(
+          json_agg(
+            to_jsonb(ce.*) || jsonb_build_object(
+              'entitlement', (
+                SELECT row_to_json(ent_with_feature)
+                FROM (
+                  SELECT e.*, row_to_json(f) AS feature
+                  FROM entitlements e
+                  JOIN features f ON e.internal_feature_id = f.internal_id
+                  WHERE e.id = ce.entitlement_id
+                ) AS ent_with_feature
+              ),
+              'replaceables', (
+                SELECT COALESCE(
+                  json_agg(row_to_json(r)) FILTER (WHERE r.id IS NOT NULL),
+                  '[]'::json
+                )
+                FROM replaceables r
+                WHERE r.cus_ent_id = ce.id
+              ),
+              'rollovers', (
+                SELECT COALESCE(
+                  json_agg(row_to_json(ro) ORDER BY ro.expires_at ASC NULLS LAST)
+                  FILTER (WHERE ro.expires_at > EXTRACT(EPOCH FROM now()) * 1000 OR ro.expires_at IS NULL),
+                  '[]'::json
+                )
+                FROM rollovers ro
+                WHERE ro.cus_ent_id = ce.id
+              )
+            )
+          ) FILTER (WHERE ce.id IS NOT NULL),
+          '[]'::json
+        ) AS extra_customer_entitlements
+      FROM customer_entitlements ce
+      WHERE ce.internal_customer_id = (SELECT internal_id FROM customer_record)
+        AND ce.customer_product_id IS NULL
+    )
+  `;
+};
+
 const buildInvoicesCTE = (hasEntityCTE: boolean) => {
 	const entityFilter = hasEntityCTE
 		? sql`AND (
@@ -210,6 +258,7 @@ export const getFullCusQuery = (
 	withTrialsUsed: boolean,
 	withSubs: boolean,
 	withEvents: boolean,
+	withExtraEntitlements: boolean,
 	entityId?: string,
 ) => {
 	const sqlChunks: SQL[] = [];
@@ -255,6 +304,12 @@ export const getFullCusQuery = (
 	if (withSubs) {
 		sqlChunks.push(sql`, `);
 		sqlChunks.push(buildSubscriptionsCTE(withSubs, inStatuses));
+	}
+
+	// Conditionally add extra entitlements CTE
+	if (withExtraEntitlements) {
+		sqlChunks.push(sql`, `);
+		sqlChunks.push(buildExtraEntitlementsCTE(withExtraEntitlements));
 	}
 
 	// Conditionally add invoices CTE
@@ -321,6 +376,12 @@ export const getFullCusQuery = (
 	if (withSubs) {
 		selectFieldsChunks.push(sql`,
       (SELECT subscriptions FROM customer_subscriptions) AS subscriptions`);
+	}
+
+	// Add extra entitlements to SELECT if withExtraEntitlements is true
+	if (withExtraEntitlements) {
+		selectFieldsChunks.push(sql`,
+      (SELECT extra_customer_entitlements FROM extra_customer_entitlements) AS extra_customer_entitlements`);
 	}
 
 	if (includeInvoices) {

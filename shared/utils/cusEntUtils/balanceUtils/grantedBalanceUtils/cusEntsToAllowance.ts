@@ -1,5 +1,5 @@
 import { Decimal } from "decimal.js";
-import type { FullCusEntWithFullCusProduct } from "../../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
+import type { FullCusEntWithFullCusProduct, FullCusEntWithOptionalProduct } from "../../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
 import { sumValues } from "../../../utils";
 import { getCusEntBalance } from "../../balanceUtils";
 import { getRolloverFields } from "../../getRolloverFields";
@@ -10,7 +10,7 @@ export const cusEntsToAllowance = ({
 	entityId,
 	withRollovers = false,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: (FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[];
 	entityId?: string;
 	withRollovers?: boolean;
 }) => {
@@ -19,7 +19,7 @@ export const cusEntsToAllowance = ({
 		entityId,
 		withRollovers = false,
 	}: {
-		cusEnt: FullCusEntWithFullCusProduct;
+		cusEnt: FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct;
 		entityId?: string;
 		withRollovers?: boolean;
 	}) => {
@@ -36,7 +36,7 @@ export const cusEntsToAllowance = ({
 		const grantedBalance = cusEnt.entitlement.allowance || 0;
 
 		const total = new Decimal(grantedBalance)
-			.mul(cusEnt.customer_product.quantity ?? 1)
+			.mul(cusEnt.customer_product?.quantity ?? 1)
 			.mul(entityCount)
 			.toNumber();
 

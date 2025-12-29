@@ -1,6 +1,7 @@
 import type {
 	ApiBalance,
 	FullCusEntWithFullCusProduct,
+	FullCusEntWithOptionalProduct,
 	FullCustomer,
 } from "@autumn/shared";
 import {
@@ -41,14 +42,19 @@ const cusEntsToBreakdown = ({
 	cusEnts,
 }: {
 	ctx: RequestContext;
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: (FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[];
 	fullCus: FullCustomer;
-}): {
-	key: string;
-	breakdown: ApiBalanceBreakdown;
-	prepaidQuantity: number;
-}[] => {
-	const keyToCusEnts: Record<string, FullCusEntWithFullCusProduct[]> = {};
+}):
+	| {
+			key: string;
+			breakdown: ApiBalanceBreakdown;
+			prepaidQuantity: number;
+	  }[]
+	| undefined => {
+	const keyToCusEnts: Record<
+		string,
+		(FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[]
+	> = {};
 	for (const cusEnt of cusEnts) {
 		const key = cusEntToKey({ cusEnt });
 		keyToCusEnts[key] = [...(keyToCusEnts[key] || []), cusEnt];
@@ -75,19 +81,8 @@ const cusEntsToBreakdown = ({
 			includeBreakdown: false,
 		});
 
-		const prepaidQuantity = cusEntsToPrepaidQuantity({ cusEnts });
-		const planId = cusEnts[0].customer_product.product.id;
-
-		// console.log(`Breakdown:`, {
-		// 	entityId: cusEnts[0].customer_product?.entity_id,
-		// 	granted_balance: breakdownItem.granted_balance,
-		// 	purchased_balance: breakdownItem.purchased_balance,
-		// 	current_balance: breakdownItem.current_balance,
-		// 	usage: breakdownItem.usage,
-		// 	max_purchase: breakdownItem.max_purchase,
-		// 	overage_allowed: breakdownItem.overage_allowed,
-		// 	reset: reset,
-		// });
+		const prepaidQuantity = cusEntsToPrepaidQuantity({ cusEnts, feature });
+		const planId = cusEnts[0].customer_product?.product.id ?? null;
 
 		breakdown.push({
 			key,
@@ -114,41 +109,6 @@ const cusEntsToBreakdown = ({
 	return breakdown;
 };
 
-// export const cusEntsToPrepaidQuantity = ({
-// 	cusEnts,
-// 	feature,
-// }: {
-// 	cusEnts: FullCusEntWithFullCusProduct[];
-// 	feature: Feature;
-// }) => {
-// 	let prepaidQuantity = new Decimal(0);
-
-// 	for (const cusEnt of cusEnts) {
-// 		// 1. if cus ent doesn't match feature, skip
-// 		if (!cusEntMatchesFeature({ cusEnt, feature })) continue;
-
-// 		// 2. If cus ent is not prepaid, skip
-// 		const cusPrice = cusEntToCusPrice({ cusEnt });
-
-// 		if (!cusPrice || !isPrepaidPrice({ price: cusPrice.price })) continue;
-
-// 		// 3. Get quantity
-// 		const options = cusEnt.customer_product.options.find(
-// 			(option) => option.internal_feature_id === feature.internal_id,
-// 		);
-
-// 		if (!options) continue;
-
-// 		const quantityWithUnits = new Decimal(options.quantity)
-// 			.mul(cusPrice.price.config.billing_units ?? 1)
-// 			.toNumber();
-
-// 		prepaidQuantity = prepaidQuantity.add(quantityWithUnits);
-// 	}
-
-// 	return prepaidQuantity.toNumber();
-// };
-
 export const getApiBalance = ({
 	ctx,
 	fullCus,
@@ -159,7 +119,7 @@ export const getApiBalance = ({
 }: {
 	ctx: RequestContext;
 	fullCus: FullCustomer;
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: (FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[];
 	feature: Feature;
 	includeRollovers?: boolean;
 	includeBreakdown?: boolean;
@@ -245,13 +205,13 @@ export const getApiBalance = ({
 	const reset = cusEntsToReset({ cusEnts, feature });
 	const rollovers = cusEntsToRollovers({ cusEnts, entityId });
 
-	const breakdown = includeBreakdown
+	const breakdownSet = includeBreakdown
 		? cusEntsToBreakdown({ ctx, fullCus, cusEnts })
-		: [];
+		: undefined;
 
 	const planId = cusEntsToPlanId({ cusEnts });
 
-	const masterKey = breakdown ? null : cusEntToKey({ cusEnt: cusEnts[0] });
+	const masterKey = breakdownSet ? null : cusEntToKey({ cusEnt: cusEnts[0] });
 
 	const { data: apiBalance, error } = ApiBalanceSchema.safeParse({
 		feature: expandIncludes({
@@ -284,7 +244,7 @@ export const getApiBalance = ({
 		reset: reset,
 
 		plan_id: planId,
-		breakdown: breakdown.map((item) => item.breakdown),
+		breakdown: breakdownSet?.map((item) => item.breakdown),
 		rollovers,
 	} satisfies ApiBalance);
 
@@ -292,7 +252,7 @@ export const getApiBalance = ({
 
 	// Return in latest format - version transformation happens at Customer level
 	const totalPrepaidQuantity = cusEntsToPrepaidQuantity({ cusEnts });
-	const breakdownLegacyData = breakdown.map((item) => ({
+	const breakdownLegacyData = breakdownSet?.map((item) => ({
 		key: item.key,
 		prepaid_quantity: item.prepaidQuantity,
 	}));
