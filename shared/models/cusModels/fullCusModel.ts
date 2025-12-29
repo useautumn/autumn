@@ -1,10 +1,10 @@
 import { ProductSchema } from "@models/productModels/productModels.js";
 import { z } from "zod/v4";
+import type { FullCustomerEntitlement } from "../cusProductModels/cusEntModels/cusEntModels.js";
 import {
 	CusProductSchema,
 	type FullCusProduct,
 } from "../cusProductModels/cusProductModels.js";
-import type { FullCustomerEntitlement } from "../cusProductModels/cusEntModels/cusEntModels.js";
 import type { Event } from "../eventModels/eventTable.js";
 import type { Subscription } from "../subModels/subModels.js";
 import { type Customer, CustomerSchema } from "./cusModels.js";
@@ -23,7 +23,7 @@ export type FullCustomer = Customer & {
 	invoices?: Invoice[];
 	subscriptions?: Subscription[];
 	events?: Event[];
-	extra_customer_entitlements?: FullCustomerEntitlement[];
+	extra_customer_entitlements: FullCustomerEntitlement[];
 };
 
 export const CustomerWithProductsSchema = CustomerSchema.extend({

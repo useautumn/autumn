@@ -2,14 +2,17 @@ import {
 	type BillingInterval,
 	BillingType,
 	CusProductStatus,
-	cusProductsToCusEnts,
 	cusProductsToCusPrices,
+	cusProductToCusEnts,
+	cusProductToEnts,
 	type FullCusProduct,
+	fullCustomerToCustomerEntitlements,
 	intervalsDifferent,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { Logger } from "@/external/logtail/logtailUtils";
 import { subToAutumnInterval } from "@/external/stripe/utils.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
@@ -47,14 +50,17 @@ export const getUsageInvoiceItems = async ({
 		cusProducts: [cusProduct],
 	});
 	// const ents = cusProductToEnts({ cusProduct });
-	const cusEnts = cusProductsToCusEnts({
-		cusProducts: [cusProduct],
-		inStatuses: [
-			CusProductStatus.Active,
-			CusProductStatus.Expired,
-			CusProductStatus.PastDue,
-		],
-	});
+	// const cusEnts = fullCustomerToCustomerEntitlements({
+	// 	fullCustomer: {
+	// 		customer_products: [cusProduct],
+	// 	},
+	// 	inStatuses: [
+	// 		CusProductStatus.Active,
+	// 		CusProductStatus.Expired,
+	// 		CusProductStatus.PastDue,
+	// 	],
+	// });
+	const cusEnts = cusProductToCusEnts({ cusProduct });
 
 	const invoiceItems: any[] = [];
 	const cusEntIds: string[] = [];
@@ -118,7 +124,6 @@ export const createUsageInvoiceItems = async ({
 	db,
 	attachParams,
 	cusProduct,
-	// stripeSubs,
 	sub,
 	invoiceId,
 	logger,
@@ -128,10 +133,9 @@ export const createUsageInvoiceItems = async ({
 	db: DrizzleCli;
 	attachParams: AttachParams;
 	cusProduct: FullCusProduct;
-	// stripeSubs: Stripe.Subscription[];
 	sub: Stripe.Subscription;
 	invoiceId?: string;
-	logger: any;
+	logger: Logger;
 	interval?: BillingInterval;
 	intervalCount?: number;
 }) => {
