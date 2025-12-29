@@ -40,7 +40,7 @@ export * from "./cusProductUtils/cusProductConstants.js";
 export * from "./cusProductUtils/cusProductUtils.js";
 export * from "./cusProductUtils/filterCusProductUtils.js";
 export * from "./cusProductUtils/filterCusProductUtils.js";
-export * from "./cusProductUtils/findFeatureOptionsByFeature.js";
+export * from "./cusProductUtils/featureOptionUtils/findFeatureOptions.js";
 export * from "./cusProductUtils/getCusProductFromCustomer.js";
 export * from "./cusProductUtils/productIdToCusProduct.js";
 // Cus utils

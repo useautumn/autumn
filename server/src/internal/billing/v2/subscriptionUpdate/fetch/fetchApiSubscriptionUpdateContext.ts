@@ -3,8 +3,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { fetchStripeCustomerForBilling } from "@/internal/billing/v2/providers/stripe/fetch/fetchStripeCustomerForBilling";
 import { fetchStripeSubscriptionForBilling } from "@/internal/billing/v2/providers/stripe/fetch/fetchStripeSubscriptionForBilling";
 import { fetchStripeSubscriptionScheduleForBilling } from "@/internal/billing/v2/providers/stripe/fetch/fetchStripeSubscriptionScheduleForBilling";
-import { mapOptionsList } from "@/internal/customers/attach/attachUtils/mapOptionsList";
 import { CusService } from "../../../../customers/CusService";
+import { parseFeatureQuantitiesParams } from "../../utils/parseFeatureQuantitiesParams";
 import { fetchTargetCusProductForUpdate } from "./fetchTargetCusProductForUpdate";
 import type { UpdateSubscriptionContext } from "./updateSubscriptionContextSchema";
 
@@ -74,11 +74,11 @@ export const fetchApiSubscriptionUpdateContext = async ({
 	});
 
 	if (params.options) {
-		params.options = mapOptionsList({
+		params.options = parseFeatureQuantitiesParams({
 			optionsInput: params.options,
 			features,
 			prices: targetCustomerProduct.customer_prices.map((cp) => cp.price),
-			curCusProduct: targetCustomerProduct,
+			currentCustomerProduct: targetCustomerProduct,
 		});
 	}
 

@@ -51,8 +51,8 @@ export const computeStripeInvoiceAction = ({
 			description: detail.stripeInvoiceItemDescription,
 			amount: Math.round(detail.calculatedProrationAmountDollars * 100),
 			period: {
-				start: msToSeconds(detail.subscriptionPeriodStartEpochMs),
-				end: msToSeconds(detail.subscriptionPeriodEndEpochMs),
+				start: msToSeconds(detail.billingPeriod.start),
+				end: msToSeconds(detail.billingPeriod.end),
 			},
 		}));
 

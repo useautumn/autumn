@@ -17,7 +17,7 @@ import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cus
  * @param customerEntitlements - Array of all entitlements for this customer product
  * @returns Entitlement ID and balance change to apply
  */
-export const calculateEntitlementChange = ({
+export const calculateCustomerEntitlementChange = ({
 	quantityDifferenceForEntitlements,
 	billingUnitsPerQuantity,
 	customerPrice,

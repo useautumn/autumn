@@ -1,5 +1,6 @@
 import {
 	type AttachBodyV1,
+	BillingPeriodSchema,
 	type FeatureOptions,
 	type FreeTrial,
 	type FullCusProduct,
@@ -96,8 +97,7 @@ export const QuantityUpdateDetailsSchema = z.object({
 	billingUnitsPerQuantity: z.number(),
 
 	calculatedProrationAmountDollars: z.number().optional(),
-	subscriptionPeriodStartEpochMs: z.number(),
-	subscriptionPeriodEndEpochMs: z.number(),
+	billingPeriod: BillingPeriodSchema,
 
 	stripeInvoiceItemDescription: z.string(),
 
