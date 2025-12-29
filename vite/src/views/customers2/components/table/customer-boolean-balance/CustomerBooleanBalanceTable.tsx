@@ -1,4 +1,4 @@
-import type { FullCusEntWithFullCusProduct } from "@autumn/shared";
+import type { FullCusEntWithOptionalProduct } from "@autumn/shared";
 import { useMemo } from "react";
 import { Table } from "@/components/general/table";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
@@ -9,8 +9,8 @@ export function CustomerBooleanBalanceTable({
 	aggregatedMap,
 	isLoading,
 }: {
-	allEnts: FullCusEntWithFullCusProduct[];
-	aggregatedMap: Map<string, FullCusEntWithFullCusProduct[]>;
+	allEnts: FullCusEntWithOptionalProduct[];
+	aggregatedMap: Map<string, FullCusEntWithOptionalProduct[]>;
 	isLoading: boolean;
 }) {
 	const columns = useMemo(
@@ -22,7 +22,7 @@ export function CustomerBooleanBalanceTable({
 	);
 
 	const enableSorting = false;
-	const table = useCustomerTable<FullCusEntWithFullCusProduct>({
+	const table = useCustomerTable<FullCusEntWithOptionalProduct>({
 		data: allEnts,
 		columns,
 		options: {},

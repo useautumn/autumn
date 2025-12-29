@@ -104,6 +104,7 @@ export const getCachedApiCustomer = async ({
 			env: env as AppEnv,
 			withEntities: true,
 			withSubs: true,
+			withExtraCustomerEntitlements: true,
 			expand: [CusExpand.Invoices],
 		});
 

@@ -1,6 +1,7 @@
 import type {
 	ApiBalance,
 	FullCusEntWithFullCusProduct,
+	FullCusEntWithOptionalProduct,
 	FullCustomer,
 } from "@autumn/shared";
 import {
@@ -42,16 +43,16 @@ const cusEntsToBreakdown = ({
 	cusEnts,
 }: {
 	ctx: RequestContext;
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: (FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[];
 	fullCus: FullCustomer;
 }):
 	| {
-			key: string;
-			breakdown: ApiBalanceBreakdown;
-			prepaidQuantity: number;
-	  }[]
+		key: string;
+		breakdown: ApiBalanceBreakdown;
+		prepaidQuantity: number;
+	}[]
 	| undefined => {
-	const keyToCusEnts: Record<string, FullCusEntWithFullCusProduct[]> = {};
+	const keyToCusEnts: Record<string, (FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[]> = {};
 	for (const cusEnt of cusEnts) {
 		const key = cusEntToKey({ cusEnt });
 		keyToCusEnts[key] = [...(keyToCusEnts[key] || []), cusEnt];
@@ -81,7 +82,7 @@ const cusEntsToBreakdown = ({
 		});
 
 		const prepaidQuantity = cusEntsToPrepaidQuantity({ cusEnts, feature });
-		const planId = cusEnts[0].customer_product.product.id;
+		const planId = cusEnts[0].customer_product?.product.id ?? null;
 
 		breakdown.push({
 			key,
@@ -108,7 +109,7 @@ export const cusEntsToPrepaidQuantity = ({
 	cusEnts,
 	feature,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: (FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[];
 	feature: Feature;
 }) => {
 	let prepaidQuantity = new Decimal(0);
@@ -123,7 +124,7 @@ export const cusEntsToPrepaidQuantity = ({
 		if (!cusPrice || !isPrepaidPrice({ price: cusPrice.price })) continue;
 
 		// 3. Get quantity
-		const options = cusEnt.customer_product.options.find(
+		const options = cusEnt.customer_product?.options?.find(
 			(option) => option.internal_feature_id === feature.internal_id,
 		);
 
@@ -148,7 +149,7 @@ export const getApiBalance = ({
 }: {
 	ctx: RequestContext;
 	fullCus: FullCustomer;
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: (FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[];
 	feature: Feature;
 	includeRollovers?: boolean;
 }): { data: ApiBalance; legacyData?: CusFeatureLegacyData } => {
@@ -276,7 +277,7 @@ export const getApiBalance = ({
 		max_purchase: totalMaxPurchase,
 		reset: reset,
 
-		plan_id: breakdownSet ? null : cusEnts[0].customer_product.product.id,
+		plan_id: breakdownSet ? null : cusEnts[0].customer_product?.product.id ?? null,
 		breakdown: breakdownSet?.map((item) => item.breakdown),
 		rollovers,
 	} satisfies ApiBalance);

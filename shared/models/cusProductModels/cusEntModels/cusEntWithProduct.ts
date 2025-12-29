@@ -13,7 +13,15 @@ export const FullCusEntWithFullCusProductSchema =
 		customer_product: FullCusProductSchema,
 	});
 
+export const FullCusEntWithOptionalProductSchema =
+	FullCustomerEntitlementSchema.extend({
+		customer_product: FullCusProductSchema.nullable(),
+	});
+
 export type FullCusEntWithProduct = z.infer<typeof FullCusEntWithProductSchema>;
 export type FullCusEntWithFullCusProduct = z.infer<
 	typeof FullCusEntWithFullCusProductSchema
+>;
+export type FullCusEntWithOptionalProduct = z.infer<
+	typeof FullCusEntWithOptionalProductSchema
 >;

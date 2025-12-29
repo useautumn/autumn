@@ -1,10 +1,9 @@
 import {
 	type ApiBalance,
 	type CusFeatureLegacyData,
-	cusProductsToCusEnts,
-	type FullCusEntWithFullCusProduct,
+	cusProductsToCusEnts, type FullCusEntWithOptionalProduct,
 	type FullCustomer,
-	orgToInStatuses,
+	orgToInStatuses
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 
@@ -25,8 +24,22 @@ export const getApiBalances = async ({
 		entity: fullCus.entity,
 	});
 
-	const featureToCusEnt: Record<string, FullCusEntWithFullCusProduct[]> = {};
-	for (const cusEnt of cusEntsWithCusProduct) {
+	// Add extra entitlements (loose entitlements not tied to a product)
+	const extraEnts: FullCusEntWithOptionalProduct[] = (
+		fullCus.extra_customer_entitlements || []
+	).map((ent) => ({
+		...ent,
+		customer_product: null,
+	}));
+
+	// Combine both sources
+	const allCusEnts: FullCusEntWithOptionalProduct[] = [
+		...cusEntsWithCusProduct,
+		...extraEnts,
+	];
+
+	const featureToCusEnt: Record<string, FullCusEntWithOptionalProduct[]> = {};
+	for (const cusEnt of allCusEnts) {
 		const featureId = cusEnt.entitlement.feature.id;
 		featureToCusEnt[featureId] = [
 			...(featureToCusEnt[featureId] || []),

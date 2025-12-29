@@ -4,6 +4,7 @@ import {
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { CusService } from "@/internal/customers/CusService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
+import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService";
 import { prepareNewBalanceForInsertion } from "../createNewBalance/prepareNewBalanceForInsertion";
 import {
@@ -24,16 +25,6 @@ export const handleCreateBalance = createRoute({
             throw new FeatureNotFoundError({ featureId: feature_id });
         }
 
-        // This should throw an error if the data is invalid
-        CreateBalanceForValidation.parse({
-            feature: feature,
-            granted_balance,
-            unlimited,
-            reset,
-            customer_id,
-            feature_id,
-        });
-
         const fullCustomer = await CusService.getFull({
             db: ctx.db,
             idOrInternalId: customer_id,
@@ -45,12 +36,21 @@ export const handleCreateBalance = createRoute({
             throw new CustomerNotFoundError({ customerId: customer_id });
         }
 
+        // This should throw an error if the data is invalid
+        CreateBalanceForValidation.parse({
+            feature: feature,
+            granted_balance,
+            unlimited,
+            reset,
+            customer_id,
+            feature_id,
+        });
+
         await validateBooleanEntitlementConflict({
             ctx,
             feature,
             internalCustomerId: fullCustomer.internal_id,
         })
-
 
         const { newEntitlement, newCustomerEntitlement } = await prepareNewBalanceForInsertion({
             ctx,
@@ -71,6 +71,13 @@ export const handleCreateBalance = createRoute({
         await CusEntService.insert({
             db: ctx.db,
             data: [newCustomerEntitlement],
+        });
+
+        await deleteCachedApiCustomer({
+            orgId: ctx.org.id,
+            env: ctx.env,
+            customerId: customer_id,
+            source: "handleCreateBalance",
         });
 
         return c.json({ success: true });
