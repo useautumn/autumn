@@ -73,6 +73,7 @@ describe(`${chalk.yellowBright("check6: test /check on feature with multiple bal
 		})) as unknown as CheckResponseV2;
 
 		const expectedLifetimeBreadown: ApiBalanceBreakdown = {
+			plan_id: proProd.id,
 			granted_balance: 1000,
 			purchased_balance: 0,
 			current_balance: 1000,

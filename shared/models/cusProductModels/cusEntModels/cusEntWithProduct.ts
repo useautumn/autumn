@@ -10,7 +10,7 @@ export const FullCusEntWithProductSchema = FullCustomerEntitlementSchema.extend(
 
 export const FullCusEntWithFullCusProductSchema =
 	FullCustomerEntitlementSchema.extend({
-		customer_product: FullCusProductSchema,
+		customer_product: FullCusProductSchema.nullable(),
 	});
 
 export const FullCusEntWithOptionalProductSchema =

@@ -172,11 +172,7 @@ const buildSubscriptionsCTE = (
   `;
 };
 
-const buildExtraEntitlementsCTE = (withExtraEntitlements: boolean) => {
-	if (!withExtraEntitlements) {
-		return sql``;
-	}
-
+const buildExtraEntitlementsCTE = () => {
 	return sql`
     extra_customer_entitlements AS (
       SELECT
@@ -254,7 +250,6 @@ export const getFullCusQuery = (
 	withTrialsUsed: boolean,
 	withSubs: boolean,
 	withEvents: boolean,
-	withExtraEntitlements: boolean,
 	entityId?: string,
 ) => {
 	const sqlChunks: SQL[] = [];
@@ -303,10 +298,8 @@ export const getFullCusQuery = (
 	}
 
 	// Conditionally add extra entitlements CTE
-	if (withExtraEntitlements) {
-		sqlChunks.push(sql`, `);
-		sqlChunks.push(buildExtraEntitlementsCTE(withExtraEntitlements));
-	}
+	sqlChunks.push(sql`, `);
+	sqlChunks.push(buildExtraEntitlementsCTE());
 
 	// Conditionally add invoices CTE
 	if (includeInvoices) {
@@ -375,10 +368,8 @@ export const getFullCusQuery = (
 	}
 
 	// Add extra entitlements to SELECT if withExtraEntitlements is true
-	if (withExtraEntitlements) {
-		selectFieldsChunks.push(sql`,
-      (SELECT extra_customer_entitlements FROM extra_customer_entitlements) AS extra_customer_entitlements`);
-	}
+	selectFieldsChunks.push(sql`,
+    (SELECT extra_customer_entitlements FROM extra_customer_entitlements) AS extra_customer_entitlements`);
 
 	if (includeInvoices) {
 		selectFieldsChunks.push(sql`,

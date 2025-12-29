@@ -63,6 +63,7 @@ export * from "./balances/check/checkResponseV2.js";
 export * from "./balances/check/enums/CheckExpand.js";
 export * from "./balances/check/prevVersions/CheckResponseV0.js";
 export * from "./balances/check/prevVersions/CheckResponseV1.js";
+export * from "./balances/create/createBalanceParams.js";
 export * from "./balances/prevVersions/legacyUpdateBalanceModels.js";
 export * from "./balances/track/prevVersions/trackResponseV1.js";
 export * from "./balances/track/trackParams.js";

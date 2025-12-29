@@ -18,6 +18,7 @@ import {
 	cusEntToCusPrice,
 	cusEntToKey,
 	cusEntToPurchasedBalance,
+	cusProductToFeatureOptions,
 	dbToApiFeatureV1,
 	expandIncludes,
 	type Feature,
@@ -47,12 +48,15 @@ const cusEntsToBreakdown = ({
 	fullCus: FullCustomer;
 }):
 	| {
-		key: string;
-		breakdown: ApiBalanceBreakdown;
-		prepaidQuantity: number;
-	}[]
+			key: string;
+			breakdown: ApiBalanceBreakdown;
+			prepaidQuantity: number;
+	  }[]
 	| undefined => {
-	const keyToCusEnts: Record<string, (FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[]> = {};
+	const keyToCusEnts: Record<
+		string,
+		(FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[]
+	> = {};
 	for (const cusEnt of cusEnts) {
 		const key = cusEntToKey({ cusEnt });
 		keyToCusEnts[key] = [...(keyToCusEnts[key] || []), cusEnt];
@@ -124,9 +128,10 @@ export const cusEntsToPrepaidQuantity = ({
 		if (!cusPrice || !isPrepaidPrice({ price: cusPrice.price })) continue;
 
 		// 3. Get quantity
-		const options = cusEnt.customer_product?.options?.find(
-			(option) => option.internal_feature_id === feature.internal_id,
-		);
+		const options = cusProductToFeatureOptions({
+			cusProduct: cusEnt.customer_product ?? undefined,
+			feature,
+		});
 
 		if (!options) continue;
 
@@ -277,7 +282,9 @@ export const getApiBalance = ({
 		max_purchase: totalMaxPurchase,
 		reset: reset,
 
-		plan_id: breakdownSet ? null : cusEnts[0].customer_product?.product.id ?? null,
+		plan_id: breakdownSet
+			? null
+			: (cusEnts[0].customer_product?.product.id ?? null),
 		breakdown: breakdownSet?.map((item) => item.breakdown),
 		rollovers,
 	} satisfies ApiBalance);
