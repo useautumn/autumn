@@ -2,6 +2,7 @@ import {
 	type Entitlement,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomerPrice,
+	InternalError,
 	OnIncrease,
 	type Organization,
 	type Price,
@@ -116,6 +117,12 @@ export const handleProratedUpgrade = async ({
 	logger: any;
 }) => {
 	logger.info(`Handling quantity increase`);
+
+	if (!cusEnt.customer_product) {
+		throw new InternalError({
+			message: `[handleProratedUpgrade] Customer entitlement has no customer product: ${cusEnt.id}`,
+		});
+	}
 
 	// 1. Get num reps to use
 	const reps = getReps({

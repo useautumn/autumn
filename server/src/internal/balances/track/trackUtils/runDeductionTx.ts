@@ -6,9 +6,10 @@ import type {
 import {
 	CusProductStatus,
 	cusEntToCusPrice,
-	cusProductsToCusEnts,
+	cusEntToStartingBalance,
 	FeatureUsageType,
 	type FullCustomer,
+	fullCustomerToCustomerEntitlements,
 	getMaxOverage,
 	getRelevantFeatures,
 	getStartingBalance,
@@ -112,8 +113,8 @@ export const deductFromCusEnts = async ({
 					featureId: feature.id,
 				});
 
-		const cusEnts = cusProductsToCusEnts({
-			cusProducts: fullCus.customer_products,
+		const cusEnts = fullCustomerToCustomerEntitlements({
+			fullCustomer: fullCus,
 			featureIds: relevantFeatures.map((f) => f.id),
 			reverseOrder: org.config?.reverse_deduction_order,
 			entity: fullCus.entity,
@@ -154,14 +155,7 @@ export const deductFromCusEnts = async ({
 					FeatureUsageType.Continuous && nullish(cusPrice);
 
 			// NOTE: WE USE STARTING BALANCE BECAUSE ADJUSTMENT IS ADDED IN performDeduction.sql function
-			const resetBalance = getStartingBalance({
-				entitlement: ce.entitlement,
-				options:
-					getEntOptions(ce.customer_product.options, ce.entitlement) ||
-					undefined,
-				relatedPrice: cusPrice?.price,
-				productQuantity: ce.customer_product.quantity,
-			});
+			const startingBalance = cusEntToStartingBalance({ cusEnt: ce });
 
 			return {
 				customer_entitlement_id: ce.id,
@@ -172,7 +166,7 @@ export const deductFromCusEnts = async ({
 					(isFreeAllocated && overageBehaviour !== "reject"),
 				min_balance: notNullish(maxOverage) ? -maxOverage : undefined,
 				add_to_adjustment: addToAdjustment,
-				max_balance: resetBalance,
+				max_balance: startingBalance,
 			};
 		});
 

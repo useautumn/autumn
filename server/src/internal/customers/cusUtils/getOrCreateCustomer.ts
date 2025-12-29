@@ -61,7 +61,6 @@ export const getOrCreateCustomer = async ({
 			expand,
 			allowNotFound: true,
 			withSubs: true,
-			withExtraCustomerEntitlements: true,
 		});
 	}
 
@@ -91,7 +90,6 @@ export const getOrCreateCustomer = async ({
 				entityId,
 				expand,
 				withSubs: true,
-				withExtraCustomerEntitlements: true,
 			});
 		} catch (error: any) {
 			if (error?.data?.code === "23505" && customerId) {
@@ -105,7 +103,6 @@ export const getOrCreateCustomer = async ({
 					entityId,
 					expand,
 					withSubs: true,
-					withExtraCustomerEntitlements: true,
 				});
 			} else {
 				throw error;
@@ -131,7 +128,6 @@ export const getOrCreateCustomer = async ({
 				entityId,
 				expand,
 				withSubs: true,
-				withExtraCustomerEntitlements: true,
 			});
 		}
 	}

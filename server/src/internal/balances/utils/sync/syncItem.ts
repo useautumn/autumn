@@ -8,9 +8,9 @@ import {
 	type ApiCustomer,
 	type ApiEntityV1,
 	cusEntToPrepaidQuantity,
-	cusProductsToCusEnts,
 	filterEntityLevelCusProducts,
 	filterOutEntitiesFromCusProducts,
+	fullCustomerToCustomerEntitlements,
 	getRelevantFeatures,
 	orgToInStatuses,
 	type SortCusEntParams,
@@ -213,8 +213,8 @@ export const syncItem = async ({
 		const redisBalance = redisEntity.balances?.[relevantFeature.id];
 		if (!redisBalance) continue;
 
-		const cusEnts = cusProductsToCusEnts({
-			cusProducts: fullCus.customer_products,
+		const cusEnts = fullCustomerToCustomerEntitlements({
+			fullCustomer: fullCus,
 			featureId: relevantFeature.id,
 			reverseOrder: org.config?.reverse_deduction_order,
 			entity: fullCus.entity,

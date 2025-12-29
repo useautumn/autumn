@@ -161,15 +161,15 @@ cusRouter.get(
 			const product = cusProduct
 				? cusProductToProduct({ cusProduct })
 				: await ProductService.getFull({
-					db,
-					orgId: org.id,
-					env,
-					idOrInternalId: product_id,
-					version:
-						version && Number.isInteger(parseInt(version))
-							? parseInt(version)
-							: undefined,
-				});
+						db,
+						orgId: org.id,
+						env,
+						idOrInternalId: product_id,
+						version:
+							version && Number.isInteger(parseInt(version))
+								? parseInt(version)
+								: undefined,
+					});
 
 			const productV2 = mapToProductV2({ product: product!, features });
 
@@ -201,7 +201,6 @@ export const handleGetCustomerInternal = createRoute({
 			env,
 			idOrInternalId: customer_id,
 			withEntities: true,
-			withExtraCustomerEntitlements: true,
 			expand: [CusExpand.Invoices],
 			inStatuses: [
 				CusProductStatus.Active,

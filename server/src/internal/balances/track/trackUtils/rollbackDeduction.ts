@@ -1,6 +1,6 @@
 import {
-	cusProductsToCusEnts,
 	type FullCustomer,
+	fullCustomerToCustomerEntitlements,
 	type PgDeductionUpdate,
 } from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
@@ -21,8 +21,8 @@ export const rollbackDeduction = async ({
 		`[ROLLBACK] Starting rollback for ${Object.keys(updates).length} entitlements`,
 	);
 
-	const cusEnts = cusProductsToCusEnts({
-		cusProducts: oldFullCus.customer_products,
+	const cusEnts = fullCustomerToCustomerEntitlements({
+		fullCustomer: oldFullCus,
 	});
 
 	// For each updated entitlement, restore to original state from oldFullCus

@@ -8,6 +8,7 @@ import {
 	type AttachBodyV0,
 	type BalancesUpdateParams,
 	type CheckQuery,
+	type CreateBalanceParams,
 	type CreateCustomerParams,
 	type CreateEntityParams,
 	type CreateRewardProgram,
@@ -676,16 +677,7 @@ export class AutumnInt {
 	};
 
 	balances = {
-		create: async (params: {
-			customer_id: string;
-			feature_id: string;
-			granted_balance?: string;
-			unlimited?: boolean;
-			reset?: {
-				interval: string;
-				interval_count?: number;
-			};
-		}) => {
+		create: async (params: CreateBalanceParams) => {
 			const data = await this.post(`/balances/create`, params);
 			return data;
 		},

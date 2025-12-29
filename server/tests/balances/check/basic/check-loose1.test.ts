@@ -1,10 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import {
-	ApiVersion,
-	type CheckResponseV2,
-	EntInterval,
-	SuccessCode,
-} from "@autumn/shared";
+import { ApiVersion, type CheckResponseV2 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
@@ -49,7 +44,7 @@ describe(`${chalk.yellowBright("check-loose1: basic loose entitlement check")}`,
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
-			granted_balance: "500",
+			granted_balance: 500,
 		});
 	});
 

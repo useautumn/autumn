@@ -1,9 +1,10 @@
 import {
 	type ApiBalance,
 	type CusFeatureLegacyData,
-	cusProductsToCusEnts, type FullCusEntWithOptionalProduct,
+	type FullCusEntWithOptionalProduct,
 	type FullCustomer,
-	orgToInStatuses
+	fullCustomerToCustomerEntitlements,
+	orgToInStatuses,
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 
@@ -18,8 +19,8 @@ export const getApiBalances = async ({
 }) => {
 	const { org } = ctx;
 
-	const cusEntsWithCusProduct = cusProductsToCusEnts({
-		cusProducts: fullCus.customer_products,
+	const cusEntsWithCusProduct = fullCustomerToCustomerEntitlements({
+		fullCustomer: fullCus,
 		inStatuses: orgToInStatuses({ org }),
 		entity: fullCus.entity,
 	});
