@@ -4,7 +4,7 @@ import {
 	AffectedResource,
 	defineVersionChange,
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
-import { EntInterval } from "@models/productModels/intervals/entitlementInterval.js";
+import type { EntInterval } from "@models/productModels/intervals/entitlementInterval.js";
 import { Decimal } from "decimal.js";
 import type { z } from "zod/v4";
 import { FeatureType } from "../../../../models/featureModels/featureEnums.js";
@@ -216,8 +216,7 @@ export function transformBalanceToCusFeatureV3({
 				});
 
 			return {
-				interval:
-					interval === "multiple" || !interval ? EntInterval.Month : interval,
+				interval: interval === "multiple" || !interval ? null : interval,
 
 				interval_count: interval_count,
 

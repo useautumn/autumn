@@ -1,7 +1,10 @@
 import { Decimal } from "decimal.js";
-import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
-import { cusEntToCusPrice } from "../../productUtils/convertUtils.js";
-import { isPrepaidPrice } from "../../productUtils/priceUtils.js";
+import {
+	cusEntToCusPrice,
+	type FullCusEntWithFullCusProduct,
+	isPrepaidPrice,
+	sumValues,
+} from "../../..";
 
 export const cusEntToPrepaidQuantity = ({
 	cusEnt,
@@ -26,4 +29,14 @@ export const cusEntToPrepaidQuantity = ({
 		.toNumber();
 
 	return quantityWithUnits;
+};
+
+export const cusEntsToPrepaidQuantity = ({
+	cusEnts,
+}: {
+	cusEnts: FullCusEntWithFullCusProduct[];
+}) => {
+	return sumValues(
+		cusEnts.map((cusEnt) => cusEntToPrepaidQuantity({ cusEnt })),
+	);
 };
