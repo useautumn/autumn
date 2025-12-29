@@ -1,15 +1,17 @@
 import { Decimal } from "decimal.js";
-import {
-	cusEntToCusPrice,
-	type FullCusEntWithFullCusProduct,
-	isPrepaidPrice,
-	sumValues,
-} from "../../..";
+import { sumValues } from "../../../index.js";
+import type {
+	FullCusEntWithFullCusProduct,
+	FullCusEntWithOptionalProduct,
+} from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import { cusProductToFeatureOptions } from "../../cusProductUtils/convertCusProduct/cusProductToFeatureOptions.js";
+import { cusEntToCusPrice } from "../../productUtils/convertUtils.js";
+import { isPrepaidPrice } from "../../productUtils/priceUtils.js";
 
 export const cusEntToPrepaidQuantity = ({
 	cusEnt,
 }: {
-	cusEnt: FullCusEntWithFullCusProduct;
+	cusEnt: FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct;
 }) => {
 	// 2. If cus ent is not prepaid, skip
 	const cusPrice = cusEntToCusPrice({ cusEnt });
@@ -17,7 +19,7 @@ export const cusEntToPrepaidQuantity = ({
 	if (!cusPrice || !isPrepaidPrice({ price: cusPrice.price })) return 0;
 
 	// 3. Get quantity
-	const options = cusEnt.customer_product.options.find(
+	const options = cusEnt.customer_product?.options?.find(
 		(option) =>
 			option.internal_feature_id === cusEnt.entitlement.internal_feature_id,
 	);
@@ -34,7 +36,7 @@ export const cusEntToPrepaidQuantity = ({
 export const cusEntsToPrepaidQuantity = ({
 	cusEnts,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: (FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[];
 }) => {
 	return sumValues(
 		cusEnts.map((cusEnt) => cusEntToPrepaidQuantity({ cusEnt })),

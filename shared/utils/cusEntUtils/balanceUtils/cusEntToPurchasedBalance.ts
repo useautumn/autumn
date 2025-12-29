@@ -1,5 +1,5 @@
 import { Decimal } from "decimal.js";
-import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import type { FullCusEntWithFullCusProduct, FullCusEntWithOptionalProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import { BillingType } from "../../../models/productModels/priceModels/priceEnums.js";
 import {
 	cusEntToCusPrice,
@@ -13,7 +13,7 @@ export const cusEntToPurchasedBalance = ({
 	cusEnt,
 	entityId,
 }: {
-	cusEnt: FullCusEntWithFullCusProduct;
+	cusEnt: FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct;
 	entityId?: string;
 }) => {
 	// return 0;
@@ -36,7 +36,7 @@ export const cusEntToPurchasedBalance = ({
 		const cusProduct = cusEnt.customer_product;
 		const options = entToOptions({
 			ent: cusEnt.entitlement,
-			options: cusProduct.options,
+			options: cusProduct?.options ?? [],
 		});
 
 		const quantity = options?.quantity || 0;

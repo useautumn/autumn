@@ -1,4 +1,4 @@
-import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
+import type { FullCusEntWithFullCusProduct, FullCusEntWithOptionalProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
 import { sumValues } from "../../utils";
 import { cusEntToBalance } from "../convertCusEntUtils";
 
@@ -7,7 +7,7 @@ export const cusEntsToBalance = ({
 	entityId,
 	withRollovers = false,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: (FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[];
 	entityId?: string;
 	withRollovers?: boolean;
 }) => {
