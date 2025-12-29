@@ -8,23 +8,9 @@ import {
 	entToOptions,
 } from "../productUtils/convertUtils.js";
 import { getCusEntBalance } from "./balanceUtils.js";
+import { cusEntToKey } from "./convertCusEntUtils/cusEntToKey.js";
 import { getRolloverFields } from "./getRolloverFields.js";
 import { getStartingBalance } from "./getStartingBalance.js";
-
-export const cusEntToKey = ({
-	cusEnt,
-}: {
-	cusEnt: FullCusEntWithFullCusProduct;
-}) => {
-	// Interval
-	const interval = `${cusEnt.entitlement.interval_count ?? 1}:${cusEnt.entitlement.interval}`;
-
-	const planId = `${cusEnt.customer_product.product_id}`;
-
-	const usageModel = `${cusEnt.usage_allowed}`;
-
-	return `${interval}:${planId}:${usageModel}`;
-};
 
 export const cusEntsToPlanId = ({
 	cusEnts,

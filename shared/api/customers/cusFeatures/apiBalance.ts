@@ -14,6 +14,7 @@ export const ApiBalanceRolloverSchema = z.object({
 });
 
 export const ApiBalanceBreakdownSchema = z.object({
+	id: z.string().default(""),
 	plan_id: z.string().optional(),
 
 	granted_balance: z.number(),
