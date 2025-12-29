@@ -1,11 +1,11 @@
-import type { extractBillingPeriod } from "@autumn/shared";
 import {
 	applyProration,
+	type extractBillingPeriod,
 	type FeatureOptions,
 	priceToLineAmount,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import type Stripe from "stripe";
+import type { UpdateSubscriptionContext } from "../../fetch/updateSubscriptionContextSchema";
 import type { calculateQuantityDifferences } from "./calculateQuantityDifferences";
 import type { resolvePriceForQuantityUpdate } from "./resolvePriceForQuantityUpdate";
 
@@ -15,35 +15,38 @@ import type { resolvePriceForQuantityUpdate } from "./resolvePriceForQuantityUpd
  * Applies time-based proration: (new_price - old_price) × (time_remaining / total_period).
  * Returns undefined if proration is disabled or subscription is trialing.
  *
+ * @param updateSubscriptionContext - Update subscription context
  * @param previousOptions - Current feature options with old quantity
  * @param updatedOptions - Desired feature options with new quantity
  * @param priceConfiguration - Price config including proration rules and billing units
  * @param quantityDifferences - Quantity change details including upgrade/downgrade indicator
- * @param stripeSubscription - Active Stripe subscription (for trial status)
  * @param billingPeriod - Current billing period boundaries
- * @param currentEpochMs - Current timestamp in milliseconds
  * @returns Prorated amount in dollars, or undefined if proration doesn't apply
  */
 export const calculateProrationAmount = ({
+	updateSubscriptionContext,
 	previousOptions,
 	updatedOptions,
 	priceConfiguration,
 	quantityDifferences,
-	stripeSubscription,
 	billingPeriod,
-	currentEpochMs,
 }: {
+	updateSubscriptionContext: UpdateSubscriptionContext;
 	previousOptions: FeatureOptions;
 	updatedOptions: FeatureOptions;
 	priceConfiguration: ReturnType<typeof resolvePriceForQuantityUpdate>;
 	quantityDifferences: ReturnType<typeof calculateQuantityDifferences>;
-	stripeSubscription: Stripe.Subscription;
 	billingPeriod: ReturnType<typeof extractBillingPeriod>;
-	currentEpochMs: number;
 }): number | undefined => {
+	const { stripeSubscription, currentEpochMs } = updateSubscriptionContext;
 	const { price, billingUnitsPerQuantity, shouldApplyProration } =
 		priceConfiguration;
 	const { isUpgrade } = quantityDifferences;
+
+	if (!stripeSubscription) {
+		return undefined;
+	}
+
 	const isTrialing = stripeSubscription.status === "trialing";
 
 	if (!shouldApplyProration || isTrialing) {

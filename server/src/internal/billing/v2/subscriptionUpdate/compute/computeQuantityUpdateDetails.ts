@@ -90,13 +90,12 @@ export const computeQuantityUpdateDetails = ({
 	});
 
 	const calculatedProrationAmountDollars = calculateProrationAmount({
+		updateSubscriptionContext,
 		previousOptions,
 		updatedOptions,
 		priceConfiguration,
 		quantityDifferences,
-		stripeSubscription,
 		billingPeriod,
-		currentEpochMs,
 	});
 
 	const product = cusProductToProduct({ cusProduct: customerProduct });
