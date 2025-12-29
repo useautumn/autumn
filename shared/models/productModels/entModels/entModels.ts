@@ -14,7 +14,7 @@ export const EntitlementSchema = z.object({
 	id: z.string(),
 	created_at: z.number(),
 	internal_feature_id: z.string(),
-	internal_product_id: z.string(),
+	internal_product_id: z.string().nullable(),
 	is_custom: z.boolean().default(false),
 
 	allowance_type: z.nativeEnum(AllowanceType).optional().nullable(),

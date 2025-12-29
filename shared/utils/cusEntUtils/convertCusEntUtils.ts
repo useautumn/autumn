@@ -1,7 +1,10 @@
 import { Decimal } from "decimal.js";
 import type { ApiBalanceBreakdown } from "../../api/customers/cusFeatures/apiBalance.js";
 import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
-import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import type {
+	FullCusEntWithFullCusProduct,
+	FullCusEntWithOptionalProduct,
+} from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import { resetIntvToEntIntv } from "../planFeatureUtils/planFeatureIntervals.js";
 import {
 	cusEntToCusPrice,
@@ -14,12 +17,14 @@ import { getStartingBalance } from "./getStartingBalance.js";
 export const cusEntToKey = ({
 	cusEnt,
 }: {
-	cusEnt: FullCusEntWithFullCusProduct;
+	cusEnt: FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct;
 }) => {
 	// Interval
 	const interval = `${cusEnt.entitlement.interval_count ?? 1}:${cusEnt.entitlement.interval}`;
 
-	const planId = `${cusEnt.customer_product.product_id}`;
+	const planId = cusEnt.customer_product
+		? `${cusEnt.customer_product.product_id}`
+		: `extra:${cusEnt.id}`;
 
 	const usageModel = `${cusEnt.usage_allowed}`;
 
@@ -29,7 +34,7 @@ export const cusEntToKey = ({
 export const cusEntsToPlanId = ({
 	cusEnts,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: (FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[];
 }) => {
 	// Get number of keys
 	const keys = new Set<string>();
@@ -42,7 +47,7 @@ export const cusEntsToPlanId = ({
 		return null;
 	}
 
-	return cusEnts[0].customer_product.product.id;
+	return cusEnts[0].customer_product?.product.id ?? null;
 };
 
 export const cusEntToBalance = ({
@@ -76,7 +81,7 @@ export const cusEntToIncludedUsage = ({
 	entityId,
 	withRollovers = false,
 }: {
-	cusEnt: FullCusEntWithFullCusProduct;
+	cusEnt: FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct;
 	entityId?: string;
 	withRollovers?: boolean;
 }) => {
@@ -93,7 +98,7 @@ export const cusEntToIncludedUsage = ({
 	const cusProduct = cusEnt.customer_product;
 	const options = entToOptions({
 		ent: cusEnt.entitlement,
-		options: cusProduct.options,
+		options: cusProduct?.options ?? [],
 	});
 
 	const cusPrice = cusEntToCusPrice({ cusEnt });
@@ -101,7 +106,7 @@ export const cusEntToIncludedUsage = ({
 		entitlement: cusEnt.entitlement,
 		options: options || undefined,
 		relatedPrice: cusPrice?.price,
-		productQuantity: cusProduct.quantity || 1,
+		productQuantity: cusProduct?.quantity ?? 1,
 	});
 
 	const total = new Decimal(startingBalance).mul(entityCount).toNumber();

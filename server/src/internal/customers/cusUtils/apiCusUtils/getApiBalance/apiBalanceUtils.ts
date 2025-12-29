@@ -7,6 +7,7 @@ import {
 	entIntvToResetIntv,
 	type Feature,
 	type FullCusEntWithFullCusProduct,
+	type FullCusEntWithOptionalProduct,
 	getRolloverFields,
 	isContUseFeature,
 	notNullish,
@@ -16,7 +17,7 @@ import {
 export const cusEntsToNextResetAt = ({
 	cusEnts,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: (FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[];
 }) => {
 	const result = cusEnts.reduce((acc, curr) => {
 		if (curr.next_reset_at && curr.next_reset_at < acc) {
@@ -34,7 +35,7 @@ export const cusEntsToReset = ({
 	cusEnts,
 	feature,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: (FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[];
 	feature: Feature;
 }): ApiBalanceReset | null => {
 	// 1. If feature is allocated, null
@@ -67,7 +68,7 @@ export const cusEntsToRollovers = ({
 	cusEnts,
 	entityId,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: (FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[];
 	entityId?: string;
 }): ApiBalanceRollover[] | undefined => {
 	// If all cus ents no rollover, return undefined
@@ -94,7 +95,7 @@ export const getBooleanApiBalance = ({
 	cusEnts,
 	apiFeature,
 }: {
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: (FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[];
 	apiFeature?: ApiFeatureV1;
 }): ApiBalance => {
 	const feature = cusEnts[0].entitlement.feature;
@@ -125,7 +126,7 @@ export const getUnlimitedApiBalance = ({
 	cusEnts,
 }: {
 	apiFeature?: ApiFeatureV1;
-	cusEnts: FullCusEntWithFullCusProduct[];
+	cusEnts: (FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[];
 }): ApiBalance => {
 	const feature = cusEnts[0].entitlement.feature;
 	const planId = cusEntsToPlanId({ cusEnts });

@@ -1,4 +1,4 @@
-import type { FullCusEntWithFullCusProduct } from "@models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import type { FullCusEntWithFullCusProduct, FullCusEntWithOptionalProduct } from "@models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import type { FullCustomerPrice } from "@models/cusProductModels/cusPriceModels/cusPriceModels.js";
 import type { FeatureOptions } from "@models/cusProductModels/cusProductModels.js";
 import type {
@@ -74,10 +74,10 @@ export const entToOptions = ({
 export const cusEntToCusPrice = ({
 	cusEnt,
 }: {
-	cusEnt: FullCusEntWithFullCusProduct;
+	cusEnt: FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct;
 }) => {
 	const cusProduct = cusEnt.customer_product;
-	const cusPrices = cusProduct.customer_prices;
+	const cusPrices = cusProduct?.customer_prices ?? [];
 	return cusPrices.find((cusPrice: FullCustomerPrice) => {
 		const productMatch =
 			cusPrice.customer_product_id === cusEnt.customer_product_id;
