@@ -611,6 +611,9 @@ local function loadBalances(cacheKey, orgId, env, customerId, entityId)
     local baseCustomer = cjson.decode(baseJson)
     local balanceFeatureIds = baseCustomer._balanceFeatureIds or {}
     local entityIds = baseCustomer._entityIds or {}
+    
+    -- Sort entity IDs alphabetically for consistent breakdown ordering
+    table.sort(entityIds)
 
     -- Build balances object
     local balances = {}
@@ -707,11 +710,14 @@ local function loadBalances(cacheKey, orgId, env, customerId, entityId)
     for featureId, customerBalance in pairs(balances) do
         -- Skip if unlimited
         if not customerBalance.unlimited then
-            -- Merge each entity's balances into customer balance
-            for entityId, entityBalances in pairs(entityBalanceData) do
-                local entityBalance = entityBalances[featureId]
-                if entityBalance then
-                    mergeFeatureBalances(customerBalance, entityBalance)
+            -- Merge each entity's balances into customer balance (in order)
+            for _, entityId in ipairs(entityIds) do
+                local entityBalances = entityBalanceData[entityId]
+                if entityBalances then
+                    local entityBalance = entityBalances[featureId]
+                    if entityBalance then
+                        mergeFeatureBalances(customerBalance, entityBalance)
+                    end
                 end
             end
         end
@@ -722,8 +728,11 @@ local function loadBalances(cacheKey, orgId, env, customerId, entityId)
     local entityOnlyFeatureIds = {}
     
     -- Initialize from first entity, then merge subsequent entities (avoids ghost breakdown from zero placeholder)
-    for entityId, entityBalances in pairs(entityBalanceData) do
-        for featureId, entityBalance in pairs(entityBalances) do
+    -- Use ipairs(entityIds) to preserve order
+    for _, entityId in ipairs(entityIds) do
+        local entityBalances = entityBalanceData[entityId]
+        if entityBalances then
+            for featureId, entityBalance in pairs(entityBalances) do
             if not balances[featureId] then
                 -- First entity with this feature - deep copy to initialize
                 entityOnlyFeatureIds[featureId] = true
@@ -769,6 +778,7 @@ local function loadBalances(cacheKey, orgId, env, customerId, entityId)
                 if not customerBalance.unlimited then
                     mergeFeatureBalances(customerBalance, entityBalance)
                 end
+            end
             end
         end
     end

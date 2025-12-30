@@ -11,7 +11,8 @@ import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 import { runInsertEventBatch } from "@/internal/balances/track/eventUtils/runInsertEventBatch.js";
-import { runSyncBalanceBatch } from "@/internal/balances/track/syncUtils/runSyncBalanceBatch.js";
+import { runSyncBalanceBatch } from "@/internal/balances/utils/sync/runSyncBalanceBatch.js";
+import { syncItemV2 } from "@/internal/balances/utils/sync/syncItemV2.js";
 import { runClearCreditSystemCacheTask } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import { runSaveFeatureDisplayTask } from "@/internal/features/featureUtils.js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
@@ -139,6 +140,16 @@ const processMessage = async ({
 			await runSyncBalanceBatch({
 				ctx,
 				payload: job.data,
+			});
+			return;
+		}
+
+		if (job.name === JobName.SyncBalanceBatchV2) {
+			if (!ctx) return;
+
+			await syncItemV2({
+				ctx,
+				item: job.data.item,
 			});
 			return;
 		}

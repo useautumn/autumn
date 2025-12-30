@@ -4,6 +4,10 @@ import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { logger } from "../../../../external/logtail/logtailUtils";
 
+const hashPairKey = (key: string): string => {
+	return Bun.hash(key).toString(36);
+};
+
 interface SyncPairContext {
 	customerId: string;
 	featureId: string;
@@ -12,6 +16,7 @@ interface SyncPairContext {
 	entityId?: string;
 	region: string;
 	timestamp: number;
+	breakdownIds: string[];
 }
 
 interface CustomerBatch {
@@ -49,6 +54,7 @@ export class SyncBatchingManager {
 		env,
 		entityId,
 		region,
+		breakdownIds,
 	}: Omit<SyncPairContext, "timestamp">): void {
 		// Get or create batch for this customer
 		let customerBatch = this.customerBatches.get(customerId);
@@ -61,7 +67,8 @@ export class SyncBatchingManager {
 		}
 
 		// Create unique key for this pair (within customer scope)
-		const pairKey = `${orgId}:${env}:${featureId}${entityId ? `:${entityId}` : ""}`;
+		const rawKey = `${orgId}:${env}:${featureId}${entityId ? `:${entityId}` : ""}`;
+		const pairKey = hashPairKey(rawKey);
 
 		// If this is the first pair for this customer, schedule batch execution
 		if (customerBatch.pairs.size === 0) {
@@ -80,6 +87,9 @@ export class SyncBatchingManager {
 			entityId,
 			region: region || currentRegion,
 			timestamp: existingPair?.timestamp ?? Date.now(),
+			breakdownIds: existingPair
+				? [...new Set([...existingPair.breakdownIds, ...breakdownIds])]
+				: breakdownIds,
 		});
 
 		// Force flush if batch is full
@@ -145,7 +155,7 @@ export class SyncBatchingManager {
 				);
 
 				await addTaskToQueue({
-					jobName: JobName.SyncBalanceBatch,
+					jobName: JobName.SyncBalanceBatchV2,
 					payload: {
 						orgId: item.orgId,
 						env: item.env,

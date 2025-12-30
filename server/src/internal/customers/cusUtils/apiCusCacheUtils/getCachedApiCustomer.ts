@@ -97,6 +97,7 @@ export const getCachedApiCustomer = async ({
 
 		// Cache miss or skipCache - fetch from DB
 		// Record timestamp before Postgres fetch for stale write prevention
+
 		const fetchTimeMs = Date.now();
 
 		// Include invoices:

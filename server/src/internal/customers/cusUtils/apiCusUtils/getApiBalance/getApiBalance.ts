@@ -78,6 +78,17 @@ const cusEntsToBreakdown = ({
 		const prepaidQuantity = cusEntsToPrepaidQuantity({ cusEnts });
 		const planId = cusEnts[0].customer_product.product.id;
 
+		// console.log(`Breakdown:`, {
+		// 	entityId: cusEnts[0].customer_product?.entity_id,
+		// 	granted_balance: breakdownItem.granted_balance,
+		// 	purchased_balance: breakdownItem.purchased_balance,
+		// 	current_balance: breakdownItem.current_balance,
+		// 	usage: breakdownItem.usage,
+		// 	max_purchase: breakdownItem.max_purchase,
+		// 	overage_allowed: breakdownItem.overage_allowed,
+		// 	reset: reset,
+		// });
+
 		breakdown.push({
 			key,
 			breakdown: ApiBalanceBreakdownSchema.parse({

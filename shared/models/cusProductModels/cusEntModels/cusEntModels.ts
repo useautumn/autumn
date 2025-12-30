@@ -5,7 +5,7 @@ import { ReplaceableSchema } from "./replaceableSchema.js";
 import { RolloverSchema } from "./rolloverModels/rolloverTable.js";
 
 export const SortCusEntParamsSchema = z.object({
-	cusEntId: z.string().optional(),
+	cusEntIds: z.array(z.string()).optional(),
 	interval: z.enum(EntInterval).optional(),
 });
 

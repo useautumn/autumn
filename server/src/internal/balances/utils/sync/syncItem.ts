@@ -1,6 +1,7 @@
-import type { Feature, FullCusEntWithFullCusProduct } from "@autumn/shared";
+import type { FullCusEntWithFullCusProduct } from "@autumn/shared";
 import {
 	type ApiBalance,
+	type ApiBalanceBreakdown,
 	type ApiCustomer,
 	type ApiEntityV1,
 	cusEntToPrepaidQuantity,
@@ -9,6 +10,7 @@ import {
 	filterOutEntitiesFromCusProducts,
 	getRelevantFeatures,
 	orgToInStatuses,
+	type SortCusEntParams,
 	sumValues,
 } from "@autumn/shared";
 import chalk from "chalk";
@@ -20,8 +22,8 @@ import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductSe
 import { getCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/getCachedApiCustomer.js";
 import { handleThresholdReached } from "../../../../trigger/handleThresholdReached.js";
 import { getCachedApiEntity } from "../../../entities/entityUtils/apiEntityCacheUtils/getCachedApiEntity.js";
-import type { FeatureDeduction } from "../trackUtils/getFeatureDeductions.js";
-import { deductFromCusEnts } from "../trackUtils/runDeductionTx.js";
+import type { FeatureDeduction } from "../../track/trackUtils/getFeatureDeductions.js";
+import { deductFromCusEnts } from "../../track/trackUtils/runDeductionTx.js";
 
 export interface SyncItem {
 	customerId: string;
@@ -31,37 +33,95 @@ export interface SyncItem {
 	entityId?: string;
 	region?: string;
 	timestamp: number;
+	sortParams?: SortCusEntParams;
+	alterGrantedBalance?: boolean;
+	overageBehaviour?: "cap" | "reject" | "allow";
 }
 
+/**
+ * Convert ApiBalance or ApiBalanceBreakdown to backend balance
+ * Works with both full balance objects and breakdown items (same fields used)
+ */
 const apiToBackendBalance = ({
 	cusEnts,
-	features,
 	apiBalance,
 }: {
 	cusEnts: FullCusEntWithFullCusProduct[];
-	features: Feature[];
-	apiBalance?: ApiBalance;
+	apiBalance?: ApiBalance | ApiBalanceBreakdown;
 }) => {
-	const feature = features.find((f) => f.id === apiBalance?.feature_id);
-	if (!apiBalance || !feature) return 0;
+	if (!apiBalance) return 0;
 
 	const totalPrepaidQuantity = sumValues(
 		cusEnts.map((cusEnt) => cusEntToPrepaidQuantity({ cusEnt })),
 	);
 
+	// Backend balance = prepaid_quantity + current_balance - purchased_balance
 	const backendBalance = new Decimal(totalPrepaidQuantity)
 		.add(apiBalance.current_balance)
 		.sub(apiBalance.purchased_balance)
 		.toNumber();
 
-	// console.log("Converting api balance to backend balance");
-	// console.log(`Current balance: ${apiBalance.current_balance}`);
-	// console.log(`Purchased balance: ${apiBalance.purchased_balance}`);
-	// console.log(`Total prepaid quantity: ${totalPrepaidQuantity}`);
-	// console.log(`Backend balance: ${backendBalance}`);
-
-	// 1. Current balance = granted balance + purchased balance - usage
 	return backendBalance;
+};
+
+/**
+ * Filter balance by sortParams.cusEntIds
+ * Returns a modified ApiBalance with:
+ * - breakdown filtered to only matching cusEntIds
+ * - current_balance/purchased_balance summed from filtered breakdowns
+ * If no filter, returns the original balance unchanged
+ */
+const applyCustomerEntitlementFiltersToBalance = ({
+	apiBalance,
+	sortParams,
+}: {
+	apiBalance: ApiBalance;
+	sortParams?: SortCusEntParams;
+}): ApiBalance | null => {
+	// No filtering - return original balance
+	if (!sortParams?.cusEntIds || sortParams.cusEntIds.length === 0) {
+		return apiBalance;
+	}
+
+	// Filtering but no breakdowns - nothing to match
+	if (!apiBalance.breakdown) {
+		return apiBalance;
+	}
+
+	// Filter breakdowns to matching cusEntIds
+	const filteredBreakdowns = apiBalance.breakdown.filter((b) =>
+		sortParams.cusEntIds?.includes(b.id),
+	);
+
+	if (filteredBreakdowns.length === 0) {
+		return null;
+	}
+
+	// Sum balances from filtered breakdowns using Decimal.js for precision
+	const summedBalance = filteredBreakdowns.reduce(
+		(acc, b) => ({
+			current_balance: acc.current_balance.add(b.current_balance),
+			purchased_balance: acc.purchased_balance.add(b.purchased_balance),
+			granted_balance: acc.granted_balance.add(b.granted_balance),
+			usage: acc.usage.add(b.usage),
+		}),
+		{
+			current_balance: new Decimal(0),
+			purchased_balance: new Decimal(0),
+			granted_balance: new Decimal(0),
+			usage: new Decimal(0),
+		},
+	);
+
+	// Return modified balance with filtered breakdowns and summed values
+	return {
+		...apiBalance,
+		current_balance: summedBalance.current_balance.toNumber(),
+		purchased_balance: summedBalance.purchased_balance.toNumber(),
+		granted_balance: summedBalance.granted_balance.toNumber(),
+		usage: summedBalance.usage.toNumber(),
+		breakdown: filteredBreakdowns,
+	};
 };
 
 /**
@@ -75,7 +135,7 @@ export const syncItem = async ({
 	item: SyncItem;
 	ctx: AutumnContext;
 }) => {
-	const { customerId, featureId, entityId, region } = item;
+	const { customerId, featureId, entityId, region, sortParams } = item;
 	const { db, org, env } = ctx;
 
 	// Get the correct regional Redis instance for this sync item
@@ -149,12 +209,20 @@ export const syncItem = async ({
 			reverseOrder: org.config?.reverse_deduction_order,
 			entity: fullCus.entity,
 			inStatuses: orgToInStatuses({ org }),
+			sortParams,
 		});
 
-		const backendBalance = apiToBackendBalance({
+		// Filter balance by sortParams (handles breakdown filtering)
+		const filteredBalance = applyCustomerEntitlementFiltersToBalance({
 			apiBalance: redisBalance,
+			sortParams,
+		});
+
+		if (!filteredBalance) continue;
+
+		const backendBalance = apiToBackendBalance({
 			cusEnts,
-			features: [relevantFeature],
+			apiBalance: filteredBalance,
 		});
 
 		featureDeductions.push({
@@ -172,7 +240,10 @@ export const syncItem = async ({
 		entityId,
 		deductions: featureDeductions,
 		fullCus, // to prevent fetching full customer again
+		sortParams, // Filter to specific entitlement if provided
 		refreshCache: false, // CRITICAL: Don't refresh cache after sync (Redis is the source of truth)
+		alterGrantedBalance: item.alterGrantedBalance,
+		overageBehaviour: item.overageBehaviour,
 	});
 
 	ctx.logger.info(
