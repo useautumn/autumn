@@ -29,10 +29,8 @@ export const computeSubscriptionUpdateFreeTrialPlan = ({
 	params: SubscriptionUpdateV0Params;
 	fullProduct: FullProduct;
 }): ComputeSubscriptionUpdateTrialDetailsResult => {
-	const { stripeSubscription, testClockFrozenTime, customerProduct } =
+	const { stripeSubscription, customerProduct, currentEpochMs } =
 		updateSubscriptionContext;
-
-	const now = testClockFrozenTime ?? Date.now();
 
 	const freeTrialParams = params.free_trial;
 
@@ -49,7 +47,7 @@ export const computeSubscriptionUpdateFreeTrialPlan = ({
 		});
 
 		const trialEndsAt = addDuration({
-			now,
+			now: currentEpochMs,
 			durationType: dbFreeTrial.duration,
 			durationLength: dbFreeTrial.length,
 		});

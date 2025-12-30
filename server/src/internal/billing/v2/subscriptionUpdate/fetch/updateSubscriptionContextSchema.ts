@@ -11,4 +11,5 @@ export type UpdateSubscriptionContext = {
 	paymentMethod?: Stripe.PaymentMethod;
 	testClockFrozenTime?: number;
 	currentEpochMs: number;
+	billingCycleAnchorMs?: number;
 };
