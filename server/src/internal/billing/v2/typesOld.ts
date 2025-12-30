@@ -1,14 +1,13 @@
 import {
 	type AttachBodyV1,
-	BillingPeriodSchema,
 	type FeatureOptions,
 	type FreeTrial,
 	type FullCusProduct,
 	type FullCustomer,
 	type FullCustomerPrice,
-	FullCustomerPriceSchema,
 	type FullProduct,
 	type LineItem,
+	LineItemSchema,
 	type OngoingCusProductAction,
 	type ScheduledCusProductAction,
 } from "@autumn/shared";
@@ -85,30 +84,9 @@ export type BaseSubscriptionUpdatePlan = BillingPlan & {
 
 export const QuantityUpdateDetailsSchema = z.object({
 	featureId: z.string(),
-	internalFeatureId: z.string(),
-
-	previousFeatureQuantity: z.number(),
-	updatedFeatureQuantity: z.number(),
-	quantityDifferenceForEntitlements: z.number(),
-	stripeSubscriptionItemQuantityDifference: z.number(),
-
-	shouldApplyProration: z.boolean(),
-	shouldFinalizeInvoiceImmediately: z.boolean(),
-	billingUnitsPerQuantity: z.number(),
-
-	calculatedProrationAmountDollars: z.number().optional(),
-	billingPeriod: BillingPeriodSchema,
-
-	stripeInvoiceItemDescription: z.string(),
-
-	customerPrice: FullCustomerPriceSchema,
-	stripePriceId: z.string(),
-	existingStripeSubscriptionItem: z
-		.custom<Stripe.SubscriptionItem>()
-		.optional(),
-
 	customerEntitlementId: z.string().optional(),
 	customerEntitlementBalanceChange: z.number(),
+	autumnLineItems: z.array(LineItemSchema),
 });
 
 export type QuantityUpdateDetails = z.infer<typeof QuantityUpdateDetailsSchema>;
