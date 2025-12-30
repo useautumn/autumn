@@ -46,12 +46,12 @@ export const executeAutumnBillingPlan = async ({
 		newCusProducts: insertCustomerProducts,
 	});
 
-	// 3. Update customer product
+	// 3. Update customer product options
 	if (updateCustomerProduct) {
 		await CusProductService.update({
 			db,
-			cusProductId: updateCustomerProduct.customerProduct.id,
-			updates: updateCustomerProduct.updates,
+			cusProductId: updateCustomerProduct.id,
+			updates: { options: updateCustomerProduct.options },
 		});
 	}
 

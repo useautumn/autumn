@@ -16,19 +16,14 @@ export const evaluateSubscriptionUpdatePlan = ({
 	params: SubscriptionUpdateV0Params;
 	autumnBillingPlan: AutumnBillingPlan;
 }): StripeBillingPlan => {
-	const { customerProduct, currentEpochMs } = updateSubscriptionContext;
-	const newOptions = params.options || [];
-
-	const customerProductWithNewOptions = {
-		...customerProduct,
-		options: newOptions,
-	};
+	const updatedCustomerProducts = autumnBillingPlan.updateCustomerProduct
+		? [autumnBillingPlan.updateCustomerProduct]
+		: [];
 
 	const stripeSubscriptionAction = buildStripeSubscriptionAction({
 		ctx,
 		billingContext: updateSubscriptionContext,
-		newCustomerProduct: customerProductWithNewOptions,
-		nowMs: currentEpochMs,
+		updatedCustomerProducts,
 	});
 
 	const shouldFinalizeInvoice = params.finalize_invoice !== false;

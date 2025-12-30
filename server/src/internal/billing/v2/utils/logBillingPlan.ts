@@ -27,10 +27,8 @@ export const logBillingPlan = ({
 			),
 			updateCustomerProduct: billingPlan.autumn.updateCustomerProduct
 				? {
-						customerProduct:
-							billingPlan.autumn.updateCustomerProduct.customerProduct?.product
-								.id,
-						updates: billingPlan.autumn.updateCustomerProduct.updates,
+						productId: billingPlan.autumn.updateCustomerProduct.product.id,
+						options: billingPlan.autumn.updateCustomerProduct.options,
 					}
 				: undefined,
 		},

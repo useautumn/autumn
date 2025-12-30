@@ -1,7 +1,5 @@
 import {
-	CusProductStatus,
 	EntitlementSchema,
-	FeatureOptionsSchema,
 	FreeTrialSchema,
 	LineItemSchema,
 	PriceSchema,
@@ -86,15 +84,7 @@ export const AutumnBillingPlanSchema = z.object({
 
 	insertCustomerProducts: z.array(FullCusProductSchema),
 
-	updateCustomerProduct: z
-		.object({
-			customerProduct: FullCusProductSchema,
-			updates: z.object({
-				status: z.enum(CusProductStatus).optional(),
-				options: z.array(FeatureOptionsSchema).optional(),
-			}),
-		})
-		.optional(),
+	updateCustomerProduct: FullCusProductSchema.optional(),
 
 	customPrices: z.array(PriceSchema), // Custom prices to insert
 	customEntitlements: z.array(EntitlementSchema), // Custom entitlements to insert

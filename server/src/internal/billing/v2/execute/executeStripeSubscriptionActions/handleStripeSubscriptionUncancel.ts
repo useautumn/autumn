@@ -22,8 +22,7 @@ export const handleStripeSubscriptionUncancel = async ({
 }): Promise<void> => {
 	const stripeSubscription = billingContext.stripeSubscription;
 
-	const customerProduct =
-		billingPlan.autumn.updateCustomerProduct?.customerProduct;
+	const customerProduct = billingPlan.autumn.updateCustomerProduct;
 
 	const shouldUncancelSubscription =
 		billingPlan.autumn.shouldUncancelSubscription &&
