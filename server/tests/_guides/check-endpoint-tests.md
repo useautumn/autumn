@@ -269,6 +269,73 @@ describe(`${chalk.yellowBright("check-X: description")}`, () => {
 });
 ```
 
+## Common Pitfalls
+
+### Multiple Products Need Unique IDs
+
+When creating multiple products with the same `type: "free"`, you MUST specify unique `id` values or they will conflict:
+
+```typescript
+// ❌ BAD - Both products will have the same ID
+const prod1 = constructProduct({
+  type: "free",
+  isDefault: false,
+  items: [feature1],
+});
+const prod2 = constructProduct({
+  type: "free",
+  isDefault: false,
+  items: [feature2],
+});
+
+// ✅ GOOD - Unique IDs for each product
+const prod1 = constructProduct({
+  type: "free",
+  id: "monthly-prod",
+  isDefault: false,
+  items: [feature1],
+});
+const prod2 = constructProduct({
+  type: "free",
+  id: "lifetime-prod",
+  isDefault: false,
+  items: [feature2],
+});
+```
+
+### Second Product Needs `isAddOn: true`
+
+When attaching multiple products to a customer, the second product MUST have `isAddOn: true` or it will **replace** the first product:
+
+```typescript
+// ❌ BAD - Second attach will replace first product
+const prod1 = constructProduct({ type: "free", id: "prod1", ... });
+const prod2 = constructProduct({ type: "free", id: "prod2", ... });
+
+// ✅ GOOD - Second product is an add-on
+const prod1 = constructProduct({ type: "free", id: "prod1", ... });
+const prod2 = constructProduct({ type: "free", id: "prod2", isAddOn: true, ... });
+```
+
+### Lifetime/One-off Reset Format
+
+For consumable features with lifetime (no reset interval), the `reset` object is NOT `null`. It has this format:
+
+```typescript
+// ❌ BAD - Incorrect expectation
+expect(breakdown).toMatchObject({
+  reset: null,
+});
+
+// ✅ GOOD - Correct format for lifetime/one-off features
+expect(breakdown).toMatchObject({
+  reset: {
+    interval: "one_off",
+    resets_at: null,
+  },
+});
+```
+
 ## Checklist
 
 - [ ] Unique test case name (e.g., "credit-systems1")
@@ -278,3 +345,6 @@ describe(`${chalk.yellowBright("check-X: description")}`, () => {
 - [ ] For credit systems: attach Credits, check Action1/Action2
 - [ ] Verify `next_reset_at` is defined (v1 time-based features)
 - [ ] Use `.toMatchObject()` for partial matches, `.toStrictEqual()` for exact
+- [ ] Multiple products need unique `id` values
+- [ ] Second product needs `isAddOn: true` when attaching multiple
+- [ ] Lifetime features use `reset: { interval: "one_off", resets_at: null }`, NOT `null`

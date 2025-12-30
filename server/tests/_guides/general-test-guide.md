@@ -145,6 +145,25 @@ Omit `attachPm` only for:
 - Completely free products (no prices at all)
 - Tests that don't require billing
 
+## Common Pitfalls
+
+### Wait for Sync Before Attach (after Track)
+
+`track` updates Redis immediately but syncs to Postgres **asynchronously**. `attach` rebuilds the customer cache from Postgres. If you call them back-to-back, the cache gets stale data.
+
+```typescript
+// ❌ BAD
+await autumnV2.track({ ... });
+await autumnV2.attach({ ... });  // Cache rebuilt from stale Postgres
+
+// ✅ GOOD
+await autumnV2.track({ ... });
+await timeout(2000);
+await autumnV2.attach({ ... });
+```
+
+Not an issue if you attach all products in `beforeAll` before any tracking.
+
 ## Imports
 
 ```typescript
