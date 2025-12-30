@@ -13,26 +13,22 @@ import type { UpdateSubscriptionContext } from "@server/internal/billing/v2/subs
 export const buildStripeSubscriptionAction = ({
 	ctx,
 	billingContext,
-	newCustomerProduct,
+	updatedCustomerProducts,
 	stripeSubscriptionScheduleAction,
 	freeTrialPlan,
-	nowMs,
 }: {
 	ctx: AutumnContext;
 	billingContext: UpdateSubscriptionContext;
-	newCustomerProduct: FullCusProduct;
+	updatedCustomerProducts: FullCusProduct[];
 	stripeSubscriptionScheduleAction?: StripeSubscriptionScheduleAction;
 	freeTrialPlan?: FreeTrialPlan;
-	nowMs: number;
 }): StripeSubscriptionAction | undefined => {
-	const { customerProduct, stripeSubscription } = billingContext;
+	const { stripeSubscription } = billingContext;
 
 	const subItemsUpdate = buildStripeSubscriptionItemsUpdate({
 		ctx,
 		billingContext,
-		addCustomerProducts: [newCustomerProduct],
-		removeCustomerProducts: [customerProduct],
-		nowMs,
+		updatedCustomerProducts,
 	});
 
 	// 1. Compute the action type

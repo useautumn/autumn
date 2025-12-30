@@ -40,10 +40,8 @@ export const computeSubscriptionUpdateQuantityPlan = ({
 		customPrices: [],
 		customEntitlements: [],
 		updateCustomerProduct: {
-			customerProduct,
-			updates: {
-				options: newOptions,
-			},
+			...customerProduct,
+			options: newOptions,
 		},
 		autumnLineItems,
 		quantityUpdateDetails,

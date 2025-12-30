@@ -14,34 +14,29 @@ import { findStripeItemSpecByStripePriceId } from "./findStripeItemSpec";
 
 const getFinalCustomerProductsState = ({
 	billingContext,
-	addCustomerProducts = [],
-	removeCustomerProducts = [],
-	nowMs,
+	updatedCustomerProducts = [],
 }: {
 	billingContext: BillingContext;
-	addCustomerProducts?: FullCusProduct[];
-	removeCustomerProducts?: FullCusProduct[];
-	nowMs: number;
+	updatedCustomerProducts?: FullCusProduct[];
 }) => {
 	const { fullCustomer, stripeSubscription } = billingContext;
 
-	let customerProducts = stripeSubscription
-		? fullCustomer.customer_products.filter((cp) =>
+	const customerProducts = stripeSubscription
+		? fullCustomer.customer_products.filter((customerProduct) =>
 				isCustomerProductOnStripeSubscription({
-					customerProduct: cp,
+					customerProduct,
 					stripeSubscriptionId: stripeSubscription.id,
 				}),
 			)
 		: [];
 
-	customerProducts = customerProducts.filter(
-		(cp) =>
-			!removeCustomerProducts.some((cpToRemove) => cpToRemove.id === cp.id),
-	);
-
-	customerProducts = [...customerProducts, ...addCustomerProducts];
-
-	return customerProducts;
+	return customerProducts.map((customerProduct) => {
+		const updated = updatedCustomerProducts.find(
+			(updatedCustomerProduct) =>
+				updatedCustomerProduct.id === customerProduct.id,
+		);
+		return updated ?? customerProduct;
+	});
 };
 
 const customerProductsToRecurringStripeItemSpecs = ({
@@ -126,26 +121,20 @@ const stripeItemSpecsToSubItemsUpdate = ({
 export const buildStripeSubscriptionItemsUpdate = ({
 	ctx,
 	billingContext,
-	addCustomerProducts = [],
-	removeCustomerProducts = [],
-	nowMs,
+	updatedCustomerProducts = [],
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
-	addCustomerProducts?: FullCusProduct[];
-	removeCustomerProducts?: FullCusProduct[];
-	nowMs: number;
+	updatedCustomerProducts?: FullCusProduct[];
 }) => {
-	// 1. Get final customer product state
+	// 1. Get final customer product state (with updates applied)
 	let customerProducts = getFinalCustomerProductsState({
 		billingContext,
-		addCustomerProducts,
-		removeCustomerProducts,
-		nowMs,
+		updatedCustomerProducts,
 	});
 
-	customerProducts = customerProducts.filter((cp) =>
-		ACTIVE_STATUSES.includes(cp.status),
+	customerProducts = customerProducts.filter((customerProduct) =>
+		ACTIVE_STATUSES.includes(customerProduct.status),
 	);
 
 	// 2. Get recurring subscription item array (doesn't include one off items)
