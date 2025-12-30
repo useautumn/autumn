@@ -1,6 +1,6 @@
 import type { SubscriptionUpdateV0Params } from "@shared/index";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingPlan } from "@/internal/billing/v2/billingPlan";
+import type { AutumnBillingPlan } from "@/internal/billing/v2/billingPlan";
 import { computeSubscriptionUpdateCustomPlan } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateCustomPlan/computeSubscriptionUpdateCustomPlan";
 import { computeSubscriptionUpdateQuantityPlan } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateQuantityPlan";
 import { SubscriptionUpdateIntentEnum } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateSchema";
@@ -21,7 +21,7 @@ export const computeSubscriptionUpdatePlan = async ({
 	ctx: AutumnContext;
 	updateSubscriptionContext: UpdateSubscriptionContext;
 	params: SubscriptionUpdateV0Params;
-}): Promise<BillingPlan> => {
+}): Promise<AutumnBillingPlan> => {
 	const intent = computeSubscriptionUpdateIntent(params);
 
 	switch (intent) {

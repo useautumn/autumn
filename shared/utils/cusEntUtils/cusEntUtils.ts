@@ -1,8 +1,10 @@
 import type { FullCustomerEntitlement } from "@models/cusProductModels/cusEntModels/cusEntModels.js";
+import { Decimal } from "decimal.js";
 import type { PgDeductionUpdate } from "../../api/balances/track/trackTypes/pgDeductionUpdate.js";
 import type { FullCustomer } from "../../models/cusModels/fullCusModel.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
+import type { Feature } from "@models/featureModels/featureModels.js";
 import { isPrepaidPrice } from "../productUtils/priceUtils/classifyPriceUtils.js";
 import { cusEntToCusPrice } from "./convertCusEntUtils/cusEntToCusPrice.js";
 
@@ -104,4 +106,33 @@ export const addCusProductToCusEnt = ({
 		...cusEnt,
 		customer_product: cusProduct,
 	};
+};
+
+/**
+ * Clones a customer entitlement and updates the quantity in its options.
+ * Needed because usagePriceToLineItem reads quantity from customer_product.options.
+ */
+export const cloneEntitlementWithUpdatedQuantity = ({
+	customerEntitlement,
+	feature,
+	quantityDifference,
+}: {
+	customerEntitlement: FullCusEntWithFullCusProduct;
+	feature: Feature;
+	quantityDifference: number;
+}): FullCusEntWithFullCusProduct => {
+	const cloned = structuredClone(customerEntitlement);
+	const optionIndex = cloned.customer_product.options.findIndex(
+		(opt) => opt.internal_feature_id === feature.internal_id,
+	);
+
+	if (optionIndex !== -1) {
+		cloned.customer_product.options[optionIndex].quantity = new Decimal(
+			cloned.customer_product.options[optionIndex].quantity,
+		)
+			.add(quantityDifference)
+			.toNumber();
+	}
+
+	return cloned;
 };

@@ -3,6 +3,7 @@ import {
 	EntitlementSchema,
 	FeatureOptionsSchema,
 	FreeTrialSchema,
+	LineItemSchema,
 	PriceSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
@@ -99,6 +100,7 @@ export const AutumnBillingPlanSchema = z.object({
 	customEntitlements: z.array(EntitlementSchema), // Custom entitlements to insert
 	customFreeTrial: FreeTrialSchema.optional(), // Custom free trial to insert
 
+	autumnLineItems: z.array(LineItemSchema),
 	quantityUpdateDetails: z.array(QuantityUpdateDetailsSchema).optional(),
 	shouldUncancelSubscription: z.boolean().optional(),
 });
@@ -110,3 +112,4 @@ export const BillingPlanSchema = z.object({
 
 export type BillingPlan = z.infer<typeof BillingPlanSchema>;
 export type AutumnBillingPlan = z.infer<typeof AutumnBillingPlanSchema>;
+export type StripeBillingPlan = z.infer<typeof StripeBillingPlanSchema>;

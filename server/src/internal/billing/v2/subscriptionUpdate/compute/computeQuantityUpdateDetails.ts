@@ -1,22 +1,16 @@
 import {
-	cusProductToProduct,
 	type FeatureOptions,
 	findFeatureByInternalId,
 	findFeatureOptionsByFeature,
 	InternalError,
-	type LineItemContext,
-	orgToCurrency,
 	secondsToMs,
 } from "@autumn/shared";
-import { usagePriceToLineDescription } from "@autumn/shared/utils/billingUtils/invoicingUtils/descriptionUtils/usagePriceToLineDescription";
 import { getLineItemBillingPeriod } from "@shared/utils/billingUtils/cycleUtils/getLineItemBillingPeriod";
-import type Stripe from "stripe";
-import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { QuantityUpdateDetails } from "@/internal/billing/v2/typesOld";
 import type { UpdateSubscriptionContext } from "../fetch/updateSubscriptionContextSchema";
+import { buildQuantityUpdateLineItems } from "./buildQuantityUpdateLineItems";
 import { calculateCustomerEntitlementChange } from "./quantityUpdateUtils/calculateCustomerEntitlementChange";
-import { calculateProrationAmount } from "./quantityUpdateUtils/calculateProrationAmount";
 import { calculateQuantityDifferences } from "./quantityUpdateUtils/calculateQuantityDifferences";
 import { resolvePriceForQuantityUpdate } from "./quantityUpdateUtils/resolvePriceForQuantityUpdate";
 
@@ -44,7 +38,7 @@ export const computeQuantityUpdateDetails = ({
 }): QuantityUpdateDetails => {
 	const { customerProduct, stripeSubscription, currentEpochMs } =
 		updateSubscriptionContext;
-	const { features, org } = ctx;
+	const { features } = ctx;
 
 	const internalFeatureId = updatedOptions.internal_feature_id;
 	const featureId = updatedOptions.feature_id;
@@ -110,38 +104,15 @@ export const computeQuantityUpdateDetails = ({
 		});
 	}
 
-	const calculatedProrationAmountDollars = calculateProrationAmount({
-		updateSubscriptionContext,
-		previousOptions,
-		updatedOptions,
-		priceConfiguration,
-		quantityDifferences,
-		billingPeriod,
-	});
-
-	const product = cusProductToProduct({ cusProduct: customerProduct });
-
-	const currency = orgToCurrency({ org });
-
-	const lineItemContext: LineItemContext = {
-		price: priceConfiguration.price,
-		product,
+	const autumnLineItems = buildQuantityUpdateLineItems({
+		ctx,
+		customerProduct,
 		feature,
-		currency,
-		direction: "charge",
-		now: currentEpochMs,
-		billingTiming: "in_advance",
-	};
-
-	const stripeInvoiceItemDescription = usagePriceToLineDescription({
-		usage: updatedOptions.quantity,
-		context: lineItemContext,
+		billingPeriod,
+		quantityDifferenceForEntitlements:
+			quantityDifferences.quantityDifferenceForEntitlements,
+		currentEpochMs,
 	});
-
-	const existingStripeSubscriptionItem = findStripeItemForPrice({
-		price: priceConfiguration.price,
-		stripeItems: stripeSubscription.items.data,
-	}) as Stripe.SubscriptionItem | undefined;
 
 	const entitlementChange = calculateCustomerEntitlementChange({
 		quantityDifferenceForEntitlements:
@@ -151,33 +122,11 @@ export const computeQuantityUpdateDetails = ({
 		customerEntitlements: customerProduct.customer_entitlements,
 	});
 
-	if (!priceConfiguration.price.config.stripe_price_id) {
-		throw new InternalError({
-			message: `[Quantity Update] Stripe price ID not found for price: ${priceConfiguration.price.id}`,
-		});
-	}
-
 	return {
 		featureId,
-		internalFeatureId,
-		billingPeriod,
-		previousFeatureQuantity: previousOptions.quantity,
-		updatedFeatureQuantity: updatedOptions.quantity,
-		quantityDifferenceForEntitlements:
-			quantityDifferences.quantityDifferenceForEntitlements,
-		stripeSubscriptionItemQuantityDifference:
-			quantityDifferences.stripeSubscriptionItemQuantityDifference,
-		shouldApplyProration: priceConfiguration.shouldApplyProration,
-		shouldFinalizeInvoiceImmediately:
-			priceConfiguration.shouldFinalizeInvoiceImmediately,
-		billingUnitsPerQuantity: priceConfiguration.billingUnitsPerQuantity,
-		calculatedProrationAmountDollars,
-		stripeInvoiceItemDescription,
-		customerPrice: priceConfiguration.customerPrice,
-		stripePriceId: priceConfiguration.price.config.stripe_price_id,
-		existingStripeSubscriptionItem,
 		customerEntitlementId: entitlementChange.customerEntitlementId,
 		customerEntitlementBalanceChange:
 			entitlementChange.customerEntitlementBalanceChange,
+		autumnLineItems,
 	};
 };

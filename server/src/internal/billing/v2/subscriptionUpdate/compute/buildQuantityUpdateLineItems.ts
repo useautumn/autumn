@@ -1,5 +1,6 @@
 import {
 	type BillingPeriod,
+	cloneEntitlementWithUpdatedQuantity,
 	cusEntToCusPrice,
 	cusProductToCusEnts,
 	type Feature,
@@ -10,7 +11,6 @@ import {
 	orgToCurrency,
 	usagePriceToLineItem,
 } from "@autumn/shared";
-import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
 export const buildQuantityUpdateLineItems = ({
@@ -52,13 +52,12 @@ export const buildQuantityUpdateLineItems = ({
 		});
 	}
 
-	// New customer entitlement
-	const newCustomerEntitlement = structuredClone(prepaidCustomerEntitlement);
-	newCustomerEntitlement.balance = new Decimal(
-		newCustomerEntitlement.balance ?? 0,
-	)
-		.add(quantityDifferenceForEntitlements) // does this include billing units?
-		.toNumber();
+	// Clone entitlement with updated quantity for the charge line item
+	const newCustomerEntitlement = cloneEntitlementWithUpdatedQuantity({
+		customerEntitlement: prepaidCustomerEntitlement,
+		feature,
+		quantityDifference: quantityDifferenceForEntitlements,
+	});
 
 	const lineItemContext: LineItemContext = {
 		price: customerPrice?.price,
@@ -72,7 +71,7 @@ export const buildQuantityUpdateLineItems = ({
 	};
 
 	const refundLineItem = usagePriceToLineItem({
-		cusEnt: newCustomerEntitlement,
+		cusEnt: prepaidCustomerEntitlement,
 		context: {
 			...lineItemContext,
 			direction: "refund",
@@ -80,7 +79,7 @@ export const buildQuantityUpdateLineItems = ({
 	});
 
 	const chargeLineItem = usagePriceToLineItem({
-		cusEnt: prepaidCustomerEntitlement,
+		cusEnt: newCustomerEntitlement,
 		context: lineItemContext,
 	});
 
