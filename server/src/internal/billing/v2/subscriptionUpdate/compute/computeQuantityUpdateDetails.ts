@@ -3,7 +3,6 @@ import {
 	findFeatureByInternalId,
 	findFeatureOptionsByFeature,
 	InternalError,
-	secondsToMs,
 } from "@autumn/shared";
 import { getLineItemBillingPeriod } from "@shared/utils/billingUtils/cycleUtils/getLineItemBillingPeriod";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -36,8 +35,11 @@ export const computeQuantityUpdateDetails = ({
 	updatedOptions: FeatureOptions;
 	updateSubscriptionContext: UpdateSubscriptionContext;
 }): QuantityUpdateDetails => {
-	const { customerProduct, stripeSubscription, currentEpochMs } =
-		updateSubscriptionContext;
+	const {
+		customerProduct,
+		currentEpochMs,
+		billingCycleAnchorMs,
+	} = updateSubscriptionContext;
 	const { features } = ctx;
 
 	const internalFeatureId = updatedOptions.internal_feature_id;
@@ -49,9 +51,9 @@ export const computeQuantityUpdateDetails = ({
 		});
 	}
 
-	if (!stripeSubscription) {
+	if (!billingCycleAnchorMs) {
 		throw new InternalError({
-			message: `[Quantity Update] Stripe subscription not found`,
+			message: `[Quantity Update] billingCycleAnchorMs is required (no active subscription)`,
 		});
 	}
 
@@ -81,16 +83,6 @@ export const computeQuantityUpdateDetails = ({
 		updatedOptions,
 		isUpgrade: quantityDifferences.isUpgrade,
 	});
-
-	const billingCycleAnchorMs = secondsToMs(
-		stripeSubscription.billing_cycle_anchor,
-	);
-
-	if (!billingCycleAnchorMs) {
-		throw new InternalError({
-			message: `[Quantity Update] Invalid billing_cycle_anchor: ${stripeSubscription.billing_cycle_anchor}`,
-		});
-	}
 
 	const billingPeriod = getLineItemBillingPeriod({
 		anchor: billingCycleAnchorMs,

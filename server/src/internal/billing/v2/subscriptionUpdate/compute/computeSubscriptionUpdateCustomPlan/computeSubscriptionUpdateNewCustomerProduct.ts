@@ -31,6 +31,7 @@ export const computeSubscriptionUpdateNewCustomerProduct = ({
 		fullCustomer,
 		stripeSubscription,
 		stripeSubscriptionSchedule,
+		currentEpochMs,
 	} = updateSubscriptionContext;
 
 	if (!stripeSubscription) {
@@ -56,8 +57,6 @@ export const computeSubscriptionUpdateNewCustomerProduct = ({
 		params,
 	});
 
-	const now = updateSubscriptionContext.testClockFrozenTime ?? Date.now();
-
 	// 1. Compute the new full customer product
 	const newFullCustomerProduct = initFullCustomerProduct({
 		ctx,
@@ -69,7 +68,7 @@ export const computeSubscriptionUpdateNewCustomerProduct = ({
 			existingUsages,
 			existingRollovers,
 			resetCycleAnchor: billingCycleAnchor ?? "now",
-			now,
+			now: currentEpochMs,
 
 			freeTrial: freeTrialPlan.freeTrial ?? null,
 			trialEndsAt: freeTrialPlan.trialEndsAt,

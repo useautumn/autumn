@@ -1,4 +1,8 @@
-import { InternalError, type SubscriptionUpdateV0Params } from "@shared/index";
+import {
+	InternalError,
+	type SubscriptionUpdateV0Params,
+	secondsToMs,
+} from "@shared/index";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { fetchStripeCustomerForBilling } from "@/internal/billing/v2/providers/stripe/fetch/fetchStripeCustomerForBilling";
 import { fetchStripeSubscriptionForBilling } from "@/internal/billing/v2/providers/stripe/fetch/fetchStripeSubscriptionForBilling";
@@ -82,6 +86,11 @@ export const fetchApiSubscriptionUpdateContext = async ({
 		});
 	}
 
+	const currentEpochMs = testClockFrozenTime ?? Date.now();
+	const billingCycleAnchorMs = secondsToMs(
+		stripeSubscription?.billing_cycle_anchor,
+	);
+
 	return {
 		fullCustomer,
 		fullProducts: [],
@@ -91,6 +100,7 @@ export const fetchApiSubscriptionUpdateContext = async ({
 		stripeCustomer,
 		paymentMethod,
 		testClockFrozenTime,
-		currentEpochMs: testClockFrozenTime ?? Date.now(),
+		currentEpochMs,
+		billingCycleAnchorMs,
 	};
 };
