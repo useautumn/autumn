@@ -35,11 +35,8 @@ export const computeQuantityUpdateDetails = ({
 	updatedOptions: FeatureOptions;
 	updateSubscriptionContext: UpdateSubscriptionContext;
 }): QuantityUpdateDetails => {
-	const {
-		customerProduct,
-		currentEpochMs,
-		billingCycleAnchorMs,
-	} = updateSubscriptionContext;
+	const { customerProduct, currentEpochMs, billingCycleAnchorMs } =
+		updateSubscriptionContext;
 	const { features } = ctx;
 
 	const internalFeatureId = updatedOptions.internal_feature_id;
@@ -106,19 +103,19 @@ export const computeQuantityUpdateDetails = ({
 		currentEpochMs,
 	});
 
-	const entitlementChange = calculateCustomerEntitlementChange({
-		quantityDifferenceForEntitlements:
-			quantityDifferences.quantityDifferenceForEntitlements,
-		billingUnitsPerQuantity: priceConfiguration.billingUnitsPerQuantity,
-		customerPrice: priceConfiguration.customerPrice,
-		customerEntitlements: customerProduct.customer_entitlements,
-	});
+	const { customerEntitlementId, customerEntitlementBalanceChange } =
+		calculateCustomerEntitlementChange({
+			quantityDifferenceForEntitlements:
+				quantityDifferences.quantityDifferenceForEntitlements,
+			billingUnitsPerQuantity: priceConfiguration.billingUnitsPerQuantity,
+			customerPrice: priceConfiguration.customerPrice,
+			customerEntitlements: customerProduct.customer_entitlements,
+		});
 
 	return {
 		featureId,
-		customerEntitlementId: entitlementChange.customerEntitlementId,
-		customerEntitlementBalanceChange:
-			entitlementChange.customerEntitlementBalanceChange,
+		customerEntitlementId,
+		customerEntitlementBalanceChange,
 		autumnLineItems,
 	};
 };
