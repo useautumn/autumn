@@ -14,6 +14,8 @@ export const getBooleanApiBalance = ({
 }): ApiBalance => {
 	const feature = cusEnts[0].entitlement.feature;
 	const planId = cusEntsToPlanId({ cusEnts });
+	const id = cusEnts[0].id;
+
 	return {
 		feature: apiFeature,
 		feature_id: feature.id,
@@ -32,7 +34,8 @@ export const getBooleanApiBalance = ({
 		plan_id: planId,
 		breakdown: [
 			{
-				plan_id: planId ?? undefined,
+				id,
+				plan_id: planId,
 				granted_balance: 0,
 				purchased_balance: 0,
 				current_balance: 0,
@@ -55,6 +58,7 @@ export const getUnlimitedApiBalance = ({
 }): ApiBalance => {
 	const feature = cusEnts[0].entitlement.feature;
 	const planId = cusEntsToPlanId({ cusEnts });
+	const id = cusEnts[0].id;
 
 	return {
 		feature: apiFeature,
@@ -74,7 +78,8 @@ export const getUnlimitedApiBalance = ({
 		plan_id: planId,
 		breakdown: [
 			{
-				plan_id: planId ?? undefined,
+				id,
+				plan_id: planId,
 				granted_balance: 0,
 				purchased_balance: 0,
 				current_balance: 0,

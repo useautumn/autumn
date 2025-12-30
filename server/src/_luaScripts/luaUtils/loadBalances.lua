@@ -118,6 +118,7 @@ local function fetchBreakdown(cacheKey, featureId, breakdownCount)
     }
     
     local breakdownStringFields = {
+        id = true,
         plan_id = true
     }
     
@@ -214,39 +215,20 @@ local function mergeBalanceReset(target, source)
 end
 
 -- Helper function to generate breakdown item key for matching
--- Key format: "interval_count:interval:plan_id:overage_allowed"
--- Example: "1:month:plan_123:true" or "1:lifetime:plan_456:false"
+-- Uses the breakdown's id (customer entitlement ID) for unique identification
 local function getBreakdownItemKey(breakdownItem)
     if not breakdownItem then
         return nil
     end
     
-    local intervalCount = 1
-    local interval = "lifetime"
-    
-    -- Extract interval and interval_count from reset object
-    if breakdownItem.reset and breakdownItem.reset ~= cjson.null and type(breakdownItem.reset) == "table" then
-        local resetInterval = breakdownItem.reset.interval
-        if resetInterval and resetInterval ~= "multiple" then
-            interval = resetInterval
-        end
-        intervalCount = breakdownItem.reset.interval_count or 1
-    end
-    
-    -- Get plan_id
-    local planId = breakdownItem.plan_id or ""
-    
-    -- Get overage_allowed (usage model)
-    local overageAllowed = breakdownItem.overage_allowed or false
-    
-    -- Return key in format: "interval_count:interval:plan_id:overage_allowed"
-    return tostring(intervalCount) .. ":" .. interval .. ":" .. planId .. ":" .. tostring(overageAllowed)
+    return breakdownItem.id
 end
 
 -- Helper function to create a breakdown item from a top-level balance
 -- Used when a balance has no breakdown array but needs to be merged with another balance
 local function balanceToBreakdownItem(balance)
     return {
+        id = balance.id or "",
         plan_id = balance.plan_id or "",
         granted_balance = balance.granted_balance,
         purchased_balance = balance.purchased_balance,
@@ -330,6 +312,7 @@ local function mergeFeatureBalances(targetBalance, sourceBalance)
         -- If no matching breakdown found, add as new breakdown item
         if not foundMatch then
             local newBreakdown = {
+                id = sourceBreakdown.id,
                 plan_id = sourceBreakdown.plan_id,
                 granted_balance = sourceBreakdown.granted_balance,
                 purchased_balance = sourceBreakdown.purchased_balance,
@@ -735,36 +718,55 @@ local function loadBalances(cacheKey, orgId, env, customerId, entityId)
     end
 
     -- Add entity-only balances (balances that exist in entities but not in customer)
+    -- Track which features are entity-only (to avoid double-merging customer features)
+    local entityOnlyFeatureIds = {}
+    
+    -- Initialize from first entity, then merge subsequent entities (avoids ghost breakdown from zero placeholder)
     for entityId, entityBalances in pairs(entityBalanceData) do
         for featureId, entityBalance in pairs(entityBalances) do
             if not balances[featureId] then
-                -- This balance doesn't exist in customer, add it with zero values
-                -- Copy plan_id from entity so breakdown keys match when merging
+                -- First entity with this feature - deep copy to initialize
+                entityOnlyFeatureIds[featureId] = true
+                
+                -- Copy breakdown items (reuse balanceToBreakdownItem since fields match)
+                local breakdownCopy = nil
+                if entityBalance.breakdown and #entityBalance.breakdown > 0 then
+                    breakdownCopy = {}
+                    for _, item in ipairs(entityBalance.breakdown) do
+                        table.insert(breakdownCopy, balanceToBreakdownItem(item))
+                    end
+                end
+                
+                -- Copy rollovers
+                local rolloversCopy = nil
+                if entityBalance.rollovers and #entityBalance.rollovers > 0 then
+                    rolloversCopy = {}
+                    for _, r in ipairs(entityBalance.rollovers) do
+                        table.insert(rolloversCopy, { balance = r.balance, expires_at = r.expires_at })
+                    end
+                end
+                
+                -- Create balance from entity (shallow copy top-level, deep copy breakdown/rollovers)
                 balances[featureId] = {
                     feature_id = featureId,
                     feature = entityBalance.feature,
                     plan_id = entityBalance.plan_id,
                     unlimited = entityBalance.unlimited,
-                    granted_balance = 0,
-                    purchased_balance = 0,
-                    current_balance = 0,
-                    usage = 0,
-                    max_purchase = entityBalance.max_purchase or 0,
+                    granted_balance = entityBalance.granted_balance or 0,
+                    purchased_balance = entityBalance.purchased_balance or 0,
+                    current_balance = entityBalance.current_balance or 0,
+                    usage = entityBalance.usage or 0,
+                    max_purchase = entityBalance.max_purchase,
                     overage_allowed = entityBalance.overage_allowed,
                     reset = entityBalance.reset,
-                    breakdown = nil
+                    breakdown = breakdownCopy,
+                    rollovers = rolloversCopy
                 }
-            end
-        end
-    end
-
-    -- Aggregate balances for entity-only balances using mergeFeatureBalances
-    for featureId, customerBalance in pairs(balances) do
-        -- Only process if this was an entity-only balance (all balances are still 0 from initialization)
-        if customerBalance.granted_balance == 0 and customerBalance.purchased_balance == 0 and customerBalance.current_balance == 0 and customerBalance.usage == 0 then
-            for entityId, entityBalances in pairs(entityBalanceData) do
-                local entityBalance = entityBalances[featureId]
-                if entityBalance then
+            elseif entityOnlyFeatureIds[featureId] then
+                -- Subsequent entity with this entity-only feature - merge into existing
+                -- Only merge entity-only features (customer features were already merged in the earlier loop)
+                local customerBalance = balances[featureId]
+                if not customerBalance.unlimited then
                     mergeFeatureBalances(customerBalance, entityBalance)
                 end
             end
