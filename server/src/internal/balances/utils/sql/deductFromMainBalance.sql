@@ -26,6 +26,7 @@ DECLARE
     ELSE (params->>'min_balance')::numeric
   END;
   alter_granted_balance boolean := COALESCE((params->>'alter_granted_balance')::boolean, false);
+  overage_behavior_is_allow boolean := COALESCE((params->>'overage_behavior_is_allow')::boolean, false);
   max_balance numeric := CASE 
     WHEN params->>'max_balance' IS NULL THEN NULL
     ELSE (params->>'max_balance')::numeric
@@ -70,8 +71,8 @@ BEGIN
       -- Calculate deduction respecting allow_negative and min_balance
       -- Handle negative amounts (adding credits) differently
       IF remaining < 0 THEN
-        -- Adding credits: apply ceiling if alter_granted_balance is false and max_balance exists
-        IF NOT alter_granted_balance AND max_balance IS NOT NULL THEN
+        -- Adding credits: apply ceiling if overage_behavior_is_allow is false and max_balance exists
+        IF NOT overage_behavior_is_allow AND max_balance IS NOT NULL THEN
           -- Get entity-level adjustment
           entity_adjustment := COALESCE((result_entities->entity_key->>'adjustment')::numeric, 0);
           -- Compute ceiling: max_balance + adjustment
@@ -128,8 +129,8 @@ BEGIN
     -- Calculate deduction respecting allow_negative and min_balance
     -- Handle negative amounts (adding credits) differently
     IF amount_to_deduct < 0 THEN
-      -- Adding credits: apply ceiling if alter_granted_balance is false and max_balance exists
-      IF NOT alter_granted_balance AND max_balance IS NOT NULL THEN
+      -- Adding credits: apply ceiling if overage_behavior_is_allow is false and max_balance exists
+      IF NOT overage_behavior_is_allow AND max_balance IS NOT NULL THEN
         -- Get entity-level adjustment
         entity_adjustment := COALESCE((current_entities->target_entity_id->>'adjustment')::numeric, 0);
         -- Compute ceiling: max_balance + adjustment
@@ -182,8 +183,8 @@ BEGIN
     -- Calculate deduction based on allow_negative flag
     -- Handle negative amounts (adding credits) differently
     IF amount_to_deduct < 0 THEN
-      -- Adding credits: apply ceiling if alter_granted_balance is false and max_balance exists
-      IF NOT alter_granted_balance AND max_balance IS NOT NULL THEN
+      -- Adding credits: apply ceiling if overage_behavior_is_allow is false and max_balance exists
+      IF NOT overage_behavior_is_allow AND max_balance IS NOT NULL THEN
         -- Compute ceiling: max_balance + current_adjustment (customer-level)
         ceiling := max_balance + current_adjustment;
         -- Cap addition so balance doesn't exceed ceiling

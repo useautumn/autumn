@@ -145,6 +145,31 @@ Omit `attachPm` only for:
 - Completely free products (no prices at all)
 - Tests that don't require billing
 
+## Constructing Feature Items
+
+### Lifetime (One-off) Features
+For lifetime features that never reset, pass `interval: null`:
+
+```typescript
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+
+// ✅ GOOD - Lifetime feature (no reset)
+const lifetimeMessages = constructFeatureItem({
+  featureId: TestFeature.Messages,
+  includedUsage: 200,
+  interval: null,  // null = lifetime/one-off
+});
+
+// Monthly feature (default)
+const monthlyMessages = constructFeatureItem({
+  featureId: TestFeature.Messages,
+  includedUsage: 100,
+  // interval defaults to ProductItemInterval.Month
+});
+```
+
+**Note:** `interval: null` is different from `ProductItemInterval.Lifetime`. Use `null` when constructing feature items for lifetime balances.
+
 ## Common Pitfalls
 
 ### Wait for Sync Before Attach (after Track)

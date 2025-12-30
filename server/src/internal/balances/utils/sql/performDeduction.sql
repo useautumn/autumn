@@ -26,6 +26,7 @@ DECLARE
   skip_additional_balance boolean := COALESCE((params->>'skip_additional_balance')::boolean, false);
   alter_granted_balance boolean := COALESCE((params->>'alter_granted_balance')::boolean, false);
   overage_behaviour text := NULLIF(params->>'overage_behaviour', '');
+  overage_behavior_is_allow boolean;
   feature_id text := NULLIF(params->>'feature_id', '');
   
   remaining_amount numeric;
@@ -65,6 +66,8 @@ DECLARE
   -- For calculating total balance
   total_balance numeric;
 BEGIN
+  -- Compute overage_behavior_is_allow once (used for cap bypass in deduct_from_main_balance)
+  overage_behavior_is_allow := alter_granted_balance OR overage_behaviour = 'allow';
 
   -- ============================================================================
   -- STEP 0: Lock all rows upfront to prevent deadlocks
@@ -170,7 +173,8 @@ BEGIN
       'target_entity_id', target_entity_id,
       'min_balance', min_balance,
       'max_balance', max_balance,
-      'alter_granted_balance', alter_granted_balance
+      'alter_granted_balance', alter_granted_balance,
+      'overage_behavior_is_allow', overage_behavior_is_allow
     ));
 
     -- STEP 4: Update database if any deduction occurred
@@ -222,7 +226,7 @@ BEGIN
       -- Extract entitlement properties
       ent_id := ent_obj->>'customer_entitlement_id';
       credit_cost := (ent_obj->>'credit_cost')::numeric;
-      usage_allowed := COALESCE((ent_obj->>'usage_allowed')::boolean, false);
+      usage_allowed := COALESCE((ent_obj->>'usage_allowed')::boolean, false) OR overage_behavior_is_allow;
       min_balance := (ent_obj->>'min_balance')::numeric;
       max_balance := (ent_obj->>'max_balance')::numeric;
       has_entity_scope := (ent_obj->>'entity_feature_id') IS NOT NULL;
@@ -262,7 +266,8 @@ BEGIN
         'target_entity_id', target_entity_id,
         'min_balance', min_balance,
         'max_balance', max_balance,
-        'alter_granted_balance', alter_granted_balance
+        'alter_granted_balance', alter_granted_balance,
+        'overage_behavior_is_allow', overage_behavior_is_allow
       ));
       
       -- Update database if deduction occurred (or addition with negative amount)

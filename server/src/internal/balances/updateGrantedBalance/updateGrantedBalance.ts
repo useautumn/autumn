@@ -91,11 +91,23 @@ export const updateGrantedBalance = async ({
 			id: targetCusEnt.id,
 			updates: { entities: newEntities },
 		});
+
+		// Update the cusEnt in place
+		targetCusEnt.entities = newEntities;
 	} else {
 		await CusEntService.update({
 			db: ctx.db,
 			id: targetCusEnt.id,
 			updates: { adjustment: requiredAdjustment },
 		});
+
+		// Update the cusEnt in place
+		targetCusEnt.adjustment = requiredAdjustment;
 	}
+
+	// // Update Redis cache directly (avoids clearing cache which causes race conditions)
+	// await setCachedGrantedBalance({
+	// 	ctx,
+	// 	fullCus,
+	// });
 };

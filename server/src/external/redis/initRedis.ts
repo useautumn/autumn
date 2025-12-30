@@ -9,6 +9,7 @@ import {
 	SET_CUSTOMER_SCRIPT,
 	SET_ENTITIES_BATCH_SCRIPT,
 	SET_ENTITY_PRODUCTS_SCRIPT,
+	SET_GRANTED_BALANCE_SCRIPT,
 	SET_INVOICES_SCRIPT,
 	SET_SUBSCRIPTIONS_SCRIPT,
 } from "../../_luaScripts/luaScripts.js";
@@ -77,6 +78,11 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 	redisInstance.defineCommand("setCustomerDetails", {
 		numberOfKeys: 0,
 		lua: SET_CUSTOMER_DETAILS_SCRIPT,
+	});
+
+	redisInstance.defineCommand("setGrantedBalance", {
+		numberOfKeys: 0,
+		lua: SET_GRANTED_BALANCE_SCRIPT,
 	});
 
 	redisInstance.defineCommand("deleteCustomer", {
@@ -210,6 +216,13 @@ declare module "ioredis" {
 			orgId: string,
 			env: string,
 			customerId: string,
+		): Promise<string>;
+		setGrantedBalance(
+			orgId: string,
+			env: string,
+			customerId: string,
+			customerBalancesJson: string,
+			entityBatchJson: string,
 		): Promise<string>;
 		deleteCustomer(
 			orgId: string,
