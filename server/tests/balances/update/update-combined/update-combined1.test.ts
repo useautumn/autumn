@@ -163,4 +163,3 @@ describe(`${chalk.yellowBright("update-combined1: current_balance + granted_bala
 		});
 	});
 });
-

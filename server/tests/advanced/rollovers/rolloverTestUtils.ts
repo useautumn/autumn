@@ -13,11 +13,13 @@ export const resetAndGetCusEnt = async ({
 	customer,
 	productGroup,
 	featureId,
+	skipCacheDeletion = false,
 }: {
 	db: DrizzleCli;
 	customer: Customer;
 	productGroup: string;
 	featureId: string;
+	skipCacheDeletion?: boolean;
 }) => {
 	// Run reset cusEnt on ...
 	let mainCusProduct = await getMainCusProduct({
@@ -42,7 +44,9 @@ export const resetAndGetCusEnt = async ({
 		updatedCusEnts: [],
 	});
 
-	await clearCusEntsFromCache({ cusEnts: [resetCusEnt] });
+	if (!skipCacheDeletion) {
+		await clearCusEntsFromCache({ cusEnts: [resetCusEnt] });
+	}
 
 	if (updatedCusEnt) {
 		await CusEntService.upsert({

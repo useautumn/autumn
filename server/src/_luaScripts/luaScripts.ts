@@ -46,6 +46,12 @@ const FILTER_BALANCE_UTILS = readFileSync(
 	"utf-8",
 );
 
+// Load accumulator utilities (used by deduction scripts for collecting deltas/state changes)
+const ACCUMULATOR_UTILS = readFileSync(
+	join(__dirname, "luaUtils/accumulatorUtils.lua"),
+	"utf-8",
+);
+
 // Load shared subscription utilities (used by customer and entity scripts)
 const SUBSCRIPTION_UTILS = readFileSync(
 	join(__dirname, "luaUtils/apiSubscriptionUtils.lua"),
@@ -176,7 +182,7 @@ const batchDeduction = readFileSync(
 );
 
 export function getBatchDeductionScript(): string {
-	return `${CACHE_KEY_UTILS}\n${LOAD_BALANCES}\n${FILTER_BALANCE_UTILS}\n${SUBSCRIPTION_UTILS}\n${GET_CUSTOMER_ENTITY_UTILS}\n${batchDeduction}`;
+	return `${CACHE_KEY_UTILS}\n${LOAD_BALANCES}\n${FILTER_BALANCE_UTILS}\n${ACCUMULATOR_UTILS}\n${SUBSCRIPTION_UTILS}\n${GET_CUSTOMER_ENTITY_UTILS}\n${batchDeduction}`;
 }
 
 export const BATCH_DEDUCTION_SCRIPT = getBatchDeductionScript();

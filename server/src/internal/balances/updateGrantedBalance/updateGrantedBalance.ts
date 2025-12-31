@@ -13,6 +13,7 @@ import {
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { CusEntService } from "../../customers/cusProducts/cusEnts/CusEntitlementService.js";
+import { deleteCachedApiCustomer } from "../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 
 export const updateGrantedBalance = async ({
 	ctx,
@@ -104,6 +105,13 @@ export const updateGrantedBalance = async ({
 		// Update the cusEnt in place
 		targetCusEnt.adjustment = requiredAdjustment;
 	}
+
+	await deleteCachedApiCustomer({
+		orgId: ctx.org.id,
+		env: ctx.env,
+		customerId: fullCus.id ?? "",
+		source: "updateGrantedBalance",
+	});
 
 	// // Update Redis cache directly (avoids clearing cache which causes race conditions)
 	// await setCachedGrantedBalance({

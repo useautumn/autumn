@@ -70,7 +70,11 @@ export const refreshCacheMiddleware = async (
 	}
 
 	const ctx = c.get("ctx");
-	const { logger, org, env } = ctx;
+	const { logger, org, env, skipCacheDeletion } = ctx;
+
+	if (skipCacheDeletion) {
+		return;
+	}
 
 	const pathname = new URL(c.req.url).pathname.replace("/v1", "");
 	const method = c.req.method;

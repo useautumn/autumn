@@ -1,9 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import {
-	type ApiCustomer,
-	type ApiEntityV1,
-	ApiVersion,
-} from "@autumn/shared";
+import { type ApiCustomer, type ApiEntityV1, ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
@@ -106,33 +102,33 @@ describe(`${chalk.yellowBright("update-entity-balance2: update specific entity b
 		});
 
 		// First entity should have 70
-		const entity1 = await autumnV2.entities.get<ApiCustomer>(
+		const entity1 = (await autumnV2.entities.get(
 			customerId,
 			entities[0].id,
-		);
-		expect(entity1.balances[TestFeature.Messages]).toMatchObject({
+		)) as ApiEntityV1;
+		expect(entity1.balances?.[TestFeature.Messages]).toMatchObject({
 			granted_balance: 70,
 			current_balance: 70,
 			usage: 0,
 		});
 
 		// Other entities should still have 100
-		const entity2 = await autumnV2.entities.get<ApiCustomer>(
+		const entity2 = (await autumnV2.entities.get(
 			customerId,
 			entities[1].id,
-		);
-		const entity3 = await autumnV2.entities.get<ApiCustomer>(
+		)) as ApiEntityV1;
+		const entity3 = (await autumnV2.entities.get(
 			customerId,
 			entities[2].id,
-		);
+		)) as ApiEntityV1;
 
-		expect(entity2.balances[TestFeature.Messages]).toMatchObject({
+		expect(entity2.balances?.[TestFeature.Messages]).toMatchObject({
 			granted_balance: 100,
 			current_balance: 100,
 			usage: 0,
 		});
 
-		expect(entity3.balances[TestFeature.Messages]).toMatchObject({
+		expect(entity3.balances?.[TestFeature.Messages]).toMatchObject({
 			granted_balance: 100,
 			current_balance: 100,
 			usage: 0,
@@ -156,11 +152,11 @@ describe(`${chalk.yellowBright("update-entity-balance2: update specific entity b
 		});
 
 		// Second entity should have 120
-		const entity2 = await autumnV2.entities.get<ApiCustomer>(
+		const entity2 = (await autumnV2.entities.get(
 			customerId,
 			entities[1].id,
-		);
-		expect(entity2.balances[TestFeature.Messages]).toMatchObject({
+		)) as ApiEntityV1;
+		expect(entity2.balances?.[TestFeature.Messages]).toMatchObject({
 			granted_balance: 120,
 			current_balance: 120,
 			usage: 0,
@@ -184,11 +180,11 @@ describe(`${chalk.yellowBright("update-entity-balance2: update specific entity b
 		});
 
 		// Third entity should have 50
-		const entity3 = await autumnV2.entities.get<ApiCustomer>(
+		const entity3 = (await autumnV2.entities.get(
 			customerId,
 			entities[2].id,
-		);
-		expect(entity3.balances[TestFeature.Messages]).toMatchObject({
+		)) as ApiEntityV1;
+		expect(entity3.balances?.[TestFeature.Messages]).toMatchObject({
 			granted_balance: 50,
 			current_balance: 50,
 			usage: 0,
@@ -257,11 +253,11 @@ describe(`${chalk.yellowBright("update-entity-balance2: update specific entity b
 			value: 20,
 		});
 
-		const entity1 = await autumnV2.entities.get<ApiCustomer>(
+		const entity1 = (await autumnV2.entities.get(
 			customerId,
 			entities[0].id,
-		);
-		expect(entity1.balances[TestFeature.Messages]).toMatchObject({
+		)) as ApiEntityV1;
+		expect(entity1.balances?.[TestFeature.Messages]).toMatchObject({
 			granted_balance: 70,
 			current_balance: 50,
 			usage: 20,
@@ -276,4 +272,3 @@ describe(`${chalk.yellowBright("update-entity-balance2: update specific entity b
 		});
 	});
 });
-

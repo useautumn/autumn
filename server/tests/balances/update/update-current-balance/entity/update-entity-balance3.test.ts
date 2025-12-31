@@ -4,6 +4,8 @@ import {
 	type ApiEntityV1,
 	ApiVersion,
 	type CheckResponseV2,
+	ProductItemInterval,
+	ResetInterval,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
@@ -17,7 +19,7 @@ import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js"
 const monthlyMessages = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 100,
-	interval: "month",
+	interval: ProductItemInterval.Month,
 	intervalCount: 1,
 	entityFeatureId: TestFeature.Users,
 });
@@ -113,10 +115,10 @@ describe(`${chalk.yellowBright("update-entity-balance3: update entity balance wi
 
 		// Find monthly and lifetime breakdowns
 		const monthlyBreakdown = checkRes.balance?.breakdown?.find(
-			(b) => b.reset?.interval === "month",
+			(b) => b.reset?.interval === ResetInterval.Month,
 		);
 		const lifetimeBreakdown = checkRes.balance?.breakdown?.find(
-			(b) => b.reset?.interval === null,
+			(b) => b.reset?.interval === ResetInterval.OneOff,
 		);
 
 		expect(monthlyBreakdown).toMatchObject({
@@ -140,11 +142,12 @@ describe(`${chalk.yellowBright("update-entity-balance3: update entity balance wi
 			current_balance: 120,
 		});
 
-		const entity1 = await autumnV2.entities.get<ApiCustomer>(
+		const entity1 = (await autumnV2.entities.get(
 			customerId,
 			entities[0].id,
-		);
-		expect(entity1.balances[TestFeature.Messages]).toMatchObject({
+		)) as ApiEntityV1;
+
+		expect(entity1.balances?.[TestFeature.Messages]).toMatchObject({
 			granted_balance: 120,
 			current_balance: 120,
 			usage: 0,
@@ -158,22 +161,22 @@ describe(`${chalk.yellowBright("update-entity-balance3: update entity balance wi
 		})) as unknown as CheckResponseV2;
 
 		const monthlyBreakdown = checkRes.balance?.breakdown?.find(
-			(b) => b.reset?.interval === "month",
+			(b) => b.reset?.interval === ResetInterval.Month,
 		);
 		const lifetimeBreakdown = checkRes.balance?.breakdown?.find(
-			(b) => b.reset?.interval === null,
+			(b) => b.reset?.interval === ResetInterval.OneOff,
 		);
 
-		// 120 / 150 = 0.8, so monthly should be 80 and lifetime should be 40
+		// Deduction of 30 is sequential from first breakdown (monthly)
 		expect(monthlyBreakdown).toMatchObject({
-			granted_balance: 80,
-			current_balance: 80,
+			granted_balance: 70,
+			current_balance: 70,
 			usage: 0,
 		});
 
 		expect(lifetimeBreakdown).toMatchObject({
-			granted_balance: 40,
-			current_balance: 40,
+			granted_balance: 50,
+			current_balance: 50,
 			usage: 0,
 		});
 
@@ -195,11 +198,12 @@ describe(`${chalk.yellowBright("update-entity-balance3: update entity balance wi
 			value: 60,
 		});
 
-		const entity1 = await autumnV2.entities.get<ApiCustomer>(
+		const entity1 = (await autumnV2.entities.get(
 			customerId,
 			entities[0].id,
-		);
-		expect(entity1.balances[TestFeature.Messages]).toMatchObject({
+		)) as ApiEntityV1;
+
+		expect(entity1.balances?.[TestFeature.Messages]).toMatchObject({
 			granted_balance: 120,
 			current_balance: 60,
 			usage: 60,
@@ -213,23 +217,23 @@ describe(`${chalk.yellowBright("update-entity-balance3: update entity balance wi
 		})) as unknown as CheckResponseV2;
 
 		const monthlyBreakdown = checkRes.balance?.breakdown?.find(
-			(b) => b.reset?.interval === "month",
+			(b) => b.reset?.interval === ResetInterval.Month,
 		);
 		const lifetimeBreakdown = checkRes.balance?.breakdown?.find(
-			(b) => b.reset?.interval === null,
+			(b) => b.reset?.interval === ResetInterval.OneOff,
 		);
 
-		// Should deduct 60 from monthly (was 80, now 20)
+		// Should deduct 60 from monthly (was 70, now 10)
 		expect(monthlyBreakdown).toMatchObject({
-			granted_balance: 80,
-			current_balance: 20,
+			granted_balance: 70,
+			current_balance: 10,
 			usage: 60,
 		});
 
 		// Lifetime should remain untouched
 		expect(lifetimeBreakdown).toMatchObject({
-			granted_balance: 40,
-			current_balance: 40,
+			granted_balance: 50,
+			current_balance: 50,
 			usage: 0,
 		});
 	});
@@ -242,11 +246,12 @@ describe(`${chalk.yellowBright("update-entity-balance3: update entity balance wi
 			current_balance: 180,
 		});
 
-		const entity1 = await autumnV2.entities.get<ApiCustomer>(
+		const entity1 = (await autumnV2.entities.get(
 			customerId,
 			entities[0].id,
-		);
-		expect(entity1.balances[TestFeature.Messages]).toMatchObject({
+		)) as ApiEntityV1;
+
+		expect(entity1.balances?.[TestFeature.Messages]).toMatchObject({
 			granted_balance: 180,
 			current_balance: 180,
 			usage: 0,
@@ -260,21 +265,21 @@ describe(`${chalk.yellowBright("update-entity-balance3: update entity balance wi
 		})) as unknown as CheckResponseV2;
 
 		const monthlyBreakdown = checkRes.balance?.breakdown?.find(
-			(b) => b.reset?.interval === "month",
+			(b) => b.reset?.interval === ResetInterval.Month,
 		);
 		const lifetimeBreakdown = checkRes.balance?.breakdown?.find(
-			(b) => b.reset?.interval === null,
+			(b) => b.reset?.interval === ResetInterval.OneOff,
 		);
 
 		expect(monthlyBreakdown).toMatchObject({
-			granted_balance: 120,
-			current_balance: 120,
+			granted_balance: 130,
+			current_balance: 130,
 			usage: 0,
 		});
 
 		expect(lifetimeBreakdown).toMatchObject({
-			granted_balance: 60,
-			current_balance: 60,
+			granted_balance: 50,
+			current_balance: 50,
 			usage: 0,
 		});
 
@@ -326,22 +331,22 @@ describe(`${chalk.yellowBright("update-entity-balance3: update entity balance wi
 		})) as unknown as CheckResponseV2;
 
 		const monthly1 = checkRes1.balance?.breakdown?.find(
-			(b) => b.reset?.interval === "month",
+			(b) => b.reset?.interval === ResetInterval.Month,
 		);
 		const lifetime1 = checkRes1.balance?.breakdown?.find(
-			(b) => b.reset?.interval === null,
+			(b) => b.reset?.interval === ResetInterval.OneOff,
 		);
 
-		// 15 / 180 = 0.0833, so monthly: 120 * 0.0833 = 10, lifetime: 60 * 0.0833 = 5
+		// Sequential deduction from monthly first, then lifetime if needed
 		expect(monthly1).toMatchObject({
-			granted_balance: 10,
-			current_balance: 10,
+			granted_balance: 0,
+			current_balance: 0,
 			usage: 0,
 		});
 
 		expect(lifetime1).toMatchObject({
-			granted_balance: 5,
-			current_balance: 5,
+			granted_balance: 15,
+			current_balance: 15,
 			usage: 0,
 		});
 	});
@@ -390,4 +395,3 @@ describe(`${chalk.yellowBright("update-entity-balance3: update entity balance wi
 		});
 	});
 });
-

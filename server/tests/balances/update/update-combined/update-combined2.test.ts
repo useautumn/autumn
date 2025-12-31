@@ -147,4 +147,3 @@ describe(`${chalk.yellowBright("update-combined2: current_balance + next_reset_a
 		expect(res.balance?.reset?.resets_at).toBeCloseTo(newResetAt, -3);
 	});
 });
-

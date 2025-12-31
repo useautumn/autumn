@@ -25,6 +25,9 @@ export const ApiBalanceBreakdownSchema = z.object({
 	overage_allowed: z.boolean(),
 	max_purchase: z.number().nullable(),
 	reset: ApiBalanceResetSchema.nullable(),
+
+	// Extra fields
+	prepaid_quantity: z.number().default(0),
 });
 
 export const ApiBalanceSchema = z.object({
