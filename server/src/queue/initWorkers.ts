@@ -24,6 +24,7 @@ import { setSentryTags } from "../external/sentry/sentryUtils.js";
 import { createWorkerContext } from "./createWorkerContext.js";
 import { QUEUE_URL, sqs } from "./initSqs.js";
 import { JobName } from "./JobName.js";
+import { verifyCacheConsistency } from "./jobs/verifyCacheConsistency.js";
 
 const actionHandlers = [
 	JobName.HandleProductsUpdated,
@@ -145,11 +146,27 @@ const processMessage = async ({
 		}
 
 		if (job.name === JobName.SyncBalanceBatchV2) {
-			if (!ctx) return;
+			if (!ctx) {
+				workerLogger.error("No context found for sync balance batch v2 job");
+				return;
+			}
 
 			await syncItemV2({
 				ctx,
 				item: job.data.item,
+			});
+			return;
+		}
+
+		if (job.name === JobName.VerifyCacheConsistency) {
+			if (!ctx) {
+				workerLogger.error("No context found for verify cache consistency job");
+				return;
+			}
+
+			await verifyCacheConsistency({
+				ctx,
+				payload: job.data,
 			});
 			return;
 		}

@@ -1,16 +1,9 @@
-import { beforeAll, describe, it } from "bun:test";
+import { beforeAll, describe, test } from "bun:test";
 import { ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { AutumnCliV2 } from "@/external/autumn/autumnCliV2";
-import {
-	attachAuthenticatePaymentMethod,
-	attachFailedPaymentMethod,
-} from "@/external/stripe/stripeCusUtils";
-import { timeout } from "@/utils/genUtils";
 import {
 	constructFeatureItem,
 	constructPrepaidItem,
@@ -20,21 +13,21 @@ import {
 	constructRawProduct,
 } from "@/utils/scriptUtils/createTestProducts.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { attachAuthenticatePaymentMethod } from "../../src/external/stripe/stripeCusUtils";
 import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3";
 
 const pro = constructProduct({
 	type: "pro",
 	items: [
 		constructFeatureItem({
-			featureId: TestFeature.Users,
-			includedUsage: 10,
+			featureId: TestFeature.Credits,
+			includedUsage: 500,
 		}),
 	],
 });
 
 const oneOffCredits = constructRawProduct({
 	id: "one_off_credits",
-	// isAddOn: true,
 	items: [
 		constructPrepaidItem({
 			featureId: TestFeature.Credits,
@@ -48,7 +41,7 @@ const oneOffCredits = constructRawProduct({
 
 const testCase = "temp";
 
-describe(`${chalk.yellowBright("temp: one off credits test")}`, () => {
+describe(`${chalk.yellowBright("temp: invoice payment failed for one off credits")}`, () => {
 	const customerId = testCase;
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
@@ -71,12 +64,23 @@ describe(`${chalk.yellowBright("temp: one off credits test")}`, () => {
 			product_id: pro.id,
 		});
 
+		await autumnV1.attach({
+			customer_id: customerId,
+			product_id: oneOffCredits.id,
+			options: [
+				{
+					feature_id: TestFeature.Credits,
+					quantity: 100,
+				},
+			],
+		});
+	});
+
+	test("should handle invoice payment failed for one off credits", async () => {
 		await attachAuthenticatePaymentMethod({
 			ctx,
 			customerId,
 		});
-
-		await timeout(1000);
 
 		const res = await autumnV1.attach({
 			customer_id: customerId,
@@ -84,10 +88,11 @@ describe(`${chalk.yellowBright("temp: one off credits test")}`, () => {
 			options: [
 				{
 					feature_id: TestFeature.Credits,
-					quantity: 2000,
+					quantity: 250,
 				},
 			],
 		});
+
 		console.log(res);
 	});
 });

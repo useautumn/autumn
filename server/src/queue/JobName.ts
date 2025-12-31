@@ -17,4 +17,5 @@ export enum JobName {
 	InsertEventBatch = "insert-event-batch",
 
 	ClearCreditSystemCustomerCache = "clear-credit-system-customer-cache",
+	VerifyCacheConsistency = "verify-cache-consistency",
 }
