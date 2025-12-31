@@ -27,6 +27,12 @@ export interface Payloads {
 		events: EventInsert[];
 	};
 	[JobName.ClearCreditSystemCustomerCache]: ClearCreditSystemCachePayload;
+	[JobName.VerifyCacheConsistency]: {
+		customerId: string;
+		orgId: string;
+		env: string;
+		source: string;
+	};
 	[key: string]: unknown;
 }
 
@@ -64,11 +70,13 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 	payload,
 	messageGroupId,
 	messageDeduplicationId,
+	delayMs,
 }: {
 	jobName: T;
 	payload: Payloads[T];
 	messageGroupId?: string;
 	messageDeduplicationId?: string;
+	delayMs?: number;
 }) => {
 	await initializeQueue();
 
@@ -80,9 +88,15 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 			data: payload,
 		};
 
+		// Convert milliseconds to seconds for SQS (max 900 seconds)
+		const delaySeconds = delayMs
+			? Math.min(Math.floor(delayMs / 1000), 900)
+			: undefined;
+
 		const command = new SendMessageCommand({
 			QueueUrl: sqsQueueUrl!,
 			MessageBody: JSON.stringify(message),
+			...(delaySeconds && { DelaySeconds: delaySeconds }),
 			// FIFO queues require MessageGroupId and MessageDeduplicationId
 			...(isFifoQueue && {
 				MessageGroupId: messageGroupId || generateId("msg"),
@@ -94,6 +108,8 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 		await sqsClient.send(command);
 	} else {
 		// BullMQ implementation (ignores messageGroupId)
-		await bullmqQueue.add(jobName as string, payload);
+		await bullmqQueue.add(jobName as string, payload, {
+			delay: delayMs,
+		});
 	}
 };

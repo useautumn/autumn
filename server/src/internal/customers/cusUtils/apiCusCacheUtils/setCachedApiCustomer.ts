@@ -113,14 +113,14 @@ export const setCachedApiCustomer = async ({
 	});
 
 	if (result === "CACHE_EXISTS") {
-		logger.debug(
+		logger.info(
 			`Cache already exists for customer ${customerId}, source: ${source}`,
 		);
 		return;
 	}
 
 	if (result === "STALE_WRITE") {
-		logger.debug(
+		logger.info(
 			`Stale write blocked for customer ${customerId}, source: ${source}`,
 		);
 		return;

@@ -1,8 +1,4 @@
-import {
-	CusExpand,
-	type FullCustomer,
-	type Organization,
-} from "@autumn/shared";
+import { type Organization } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import chalk from "chalk";
 import { Stripe } from "stripe";
@@ -12,8 +8,6 @@ import { unsetOrgStripeKeys } from "@/internal/orgs/orgUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import type { AutumnContext } from "../../honoUtils/HonoEnv.js";
 import { deleteCachedApiCustomer } from "../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
-import { setCachedApiInvoices } from "../../internal/customers/cusUtils/apiCusCacheUtils/setCachedApiInvoices.js";
-import { setCachedApiSubs } from "../../internal/customers/cusUtils/apiCusCacheUtils/setCachedApiSubs.js";
 import type { Logger } from "../logtail/logtailUtils.js";
 import { getSentryTags } from "../sentry/sentryUtils.js";
 import { handleCheckoutSessionCompleted } from "./webhookHandlers/handleCheckoutCompleted.js";
@@ -108,45 +102,53 @@ const handleStripeWebhookRefresh = async ({
 			return;
 		}
 
-		let fullCus: FullCustomer | undefined;
-		if (
-			updateProductEvents.includes(eventType) ||
-			updateInvoiceEvents.includes(eventType)
-		) {
-			fullCus = await CusService.getFull({
-				db,
-				idOrInternalId: cus.id!,
-				orgId: org.id,
-				env,
-				withEntities: true,
-				withSubs: true,
-				expand: [CusExpand.Invoices],
-			});
+		logger.info(`Attempting delete cached api customer! ${eventType}`);
+		await deleteCachedApiCustomer({
+			customerId: cus.id!,
+			orgId: org.id,
+			env,
+			source: `handleStripeWebhookRefresh: ${eventType}`,
+		});
 
-			if (updateProductEvents.includes(eventType)) {
-				await setCachedApiSubs({
-					ctx,
-					fullCus,
-					customerId: cus.id!,
-				});
-			}
+		// let fullCus: FullCustomer | undefined;
+		// if (
+		// 	updateProductEvents.includes(eventType) ||
+		// 	updateInvoiceEvents.includes(eventType)
+		// ) {
+		// 	fullCus = await CusService.getFull({
+		// 		db,
+		// 		idOrInternalId: cus.id!,
+		// 		orgId: org.id,
+		// 		env,
+		// 		withEntities: true,
+		// 		withSubs: true,
+		// 		expand: [CusExpand.Invoices],
+		// 	});
 
-			if (updateInvoiceEvents.includes(eventType)) {
-				await setCachedApiInvoices({
-					ctx,
-					fullCus,
-					customerId: cus.id!,
-				});
-			}
-		} else {
-			logger.info(`Attempting delete cached api customer! ${eventType}`);
-			await deleteCachedApiCustomer({
-				customerId: cus.id!,
-				orgId: org.id,
-				env,
-				source: `handleStripeWebhookRefresh: ${eventType}`,
-			});
-		}
+		// 	if (updateProductEvents.includes(eventType)) {
+		// 		await setCachedApiSubs({
+		// 			ctx,
+		// 			fullCus,
+		// 			customerId: cus.id!,
+		// 		});
+		// 	}
+
+		// 	if (updateInvoiceEvents.includes(eventType)) {
+		// 		await setCachedApiInvoices({
+		// 			ctx,
+		// 			fullCus,
+		// 			customerId: cus.id!,
+		// 		});
+		// 	}
+		// } else {
+		// 	logger.info(`Attempting delete cached api customer! ${eventType}`);
+		// 	await deleteCachedApiCustomer({
+		// 		customerId: cus.id!,
+		// 		orgId: org.id,
+		// 		env,
+		// 		source: `handleStripeWebhookRefresh: ${eventType}`,
+		// 	});
+		// }
 	}
 };
 

@@ -1,4 +1,7 @@
-import { logger } from "../../../../external/logtail/logtailUtils.js";
+import {
+	type Logger,
+	logger as loggerInstance,
+} from "../../../../external/logtail/logtailUtils.js";
 import { redis } from "../../../../external/redis/initRedis.js";
 
 /**
@@ -11,12 +14,16 @@ export const deleteCachedApiCustomer = async ({
 	orgId,
 	env,
 	source,
+	logger,
 }: {
 	customerId: string;
 	orgId: string;
 	env: string;
 	source?: string;
+	logger?: Logger;
 }): Promise<void> => {
+	logger = loggerInstance || loggerInstance;
+
 	if (redis.status !== "ready") {
 		logger.warn("❗️ Redis not ready, skipping cache deletion", {
 			data: {
