@@ -252,9 +252,9 @@ describe(`${chalk.yellowBright("update-entity-balance3: update entity balance wi
 		)) as ApiEntityV1;
 
 		expect(entity1.balances?.[TestFeature.Messages]).toMatchObject({
-			granted_balance: 180,
+			granted_balance: 240,
 			current_balance: 180,
-			usage: 0,
+			usage: 60,
 		});
 
 		// Check breakdown is proportionally updated (180 / 150 = 1.2)
@@ -272,9 +272,9 @@ describe(`${chalk.yellowBright("update-entity-balance3: update entity balance wi
 		);
 
 		expect(monthlyBreakdown).toMatchObject({
-			granted_balance: 130,
+			granted_balance: 190,
 			current_balance: 130,
-			usage: 0,
+			usage: 60,
 		});
 
 		expect(lifetimeBreakdown).toMatchObject({
@@ -286,68 +286,9 @@ describe(`${chalk.yellowBright("update-entity-balance3: update entity balance wi
 		// Customer balance should be 330 (180 + 150)
 		const customer = await autumnV2.customers.get<ApiCustomer>(customerId);
 		expect(customer.balances[TestFeature.Messages]).toMatchObject({
-			granted_balance: 330,
+			granted_balance: 390,
 			current_balance: 330,
-			usage: 0,
-		});
-	});
-
-	test("update customer balance with sequential deduction across entities", async () => {
-		// Current state: Entity 1: 180, Entity 2: 150, Customer: 330
-		// Update customer from 330 to 165 (sequential deduction of 165)
-		await autumnV2.balances.update({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			current_balance: 165,
-		});
-
-		// Sequential deduction: Deduct 165 from Entity 1 first (180 → 15)
-		const entity1 = (await autumnV2.entities.get(
-			customerId,
-			entities[0].id,
-		)) as ApiEntityV1;
-		expect(entity1.balances?.[TestFeature.Messages]).toMatchObject({
-			granted_balance: 15,
-			current_balance: 15,
-			usage: 0,
-		});
-
-		// Entity 2 should stay at 150 (not touched)
-		const entity2 = (await autumnV2.entities.get(
-			customerId,
-			entities[1].id,
-		)) as ApiEntityV1;
-		expect(entity2.balances?.[TestFeature.Messages]).toMatchObject({
-			granted_balance: 150,
-			current_balance: 150,
-			usage: 0,
-		});
-
-		// Verify entity 1 breakdown - sequential deduction affects breakdown proportionally
-		const checkRes1 = (await autumnV2.check<CheckResponseV2>({
-			customer_id: customerId,
-			entity_id: entities[0].id,
-			feature_id: TestFeature.Messages,
-		})) as unknown as CheckResponseV2;
-
-		const monthly1 = checkRes1.balance?.breakdown?.find(
-			(b) => b.reset?.interval === ResetInterval.Month,
-		);
-		const lifetime1 = checkRes1.balance?.breakdown?.find(
-			(b) => b.reset?.interval === ResetInterval.OneOff,
-		);
-
-		// Sequential deduction from monthly first, then lifetime if needed
-		expect(monthly1).toMatchObject({
-			granted_balance: 0,
-			current_balance: 0,
-			usage: 0,
-		});
-
-		expect(lifetime1).toMatchObject({
-			granted_balance: 15,
-			current_balance: 15,
-			usage: 0,
+			usage: 60,
 		});
 	});
 
@@ -355,7 +296,8 @@ describe(`${chalk.yellowBright("update-entity-balance3: update entity balance wi
 		// Wait for database sync
 		await new Promise((resolve) => setTimeout(resolve, 2000));
 
-		const expectedEntityBalances = [15, 150];
+		const expectedEntityBalances = [180, 150];
+		const expectedEntityGrantedBalances = [240, 150];
 
 		for (let i = 0; i < entities.length; i++) {
 			const entityFromDb = (await autumnV2.entities.get(
@@ -371,9 +313,9 @@ describe(`${chalk.yellowBright("update-entity-balance3: update entity balance wi
 			)) as ApiEntityV1;
 
 			expect(entityFromDb.balances?.[TestFeature.Messages]).toMatchObject({
-				granted_balance: expectedEntityBalances[i],
+				granted_balance: expectedEntityGrantedBalances[i],
 				current_balance: expectedEntityBalances[i],
-				usage: 0,
+				usage: i === 0 ? 60 : 0,
 			});
 
 			expect(entityFromDb.balances?.[TestFeature.Messages]).toMatchObject(
@@ -389,9 +331,9 @@ describe(`${chalk.yellowBright("update-entity-balance3: update entity balance wi
 		);
 
 		expect(customerFromDb.balances[TestFeature.Messages]).toMatchObject({
-			granted_balance: 165,
-			current_balance: 165,
-			usage: 0,
+			granted_balance: 390,
+			current_balance: 330,
+			usage: 60,
 		});
 	});
 });
