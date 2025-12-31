@@ -7,7 +7,10 @@ import {
 import express, { type Router } from "express";
 import type { Context } from "hono";
 import type { Stripe } from "stripe";
-import { initMasterStripe } from "@/external/connect/initStripeCli.js";
+import {
+	getStripeWebhookSecret,
+	initMasterStripe,
+} from "@/external/connect/initStripeCli.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { handleWebhookErrorSkip } from "../../utils/routerUtils/webhookErrorSkip.js";
@@ -36,29 +39,28 @@ export const handleConnectWebhook = async (c: Context<HonoEnv>) => {
 	let event: Stripe.Event;
 
 	// Step 1: Get webhook secret
-	// const webhookSecret = await getStripeWebhookSecret({
-	// 	db,
-	// 	orgId: c.req.query("org_id"),
-	// 	env,
-	// });
+	const webhookSecret = await getStripeWebhookSecret({
+		db,
+		orgId: c.req.query("org_id"),
+		env,
+	});
 
-	// // Step 2: Verify webhook event
-	// try {
-	// 	const rawBody = await c.req.text();
-	// 	const signature = c.req.header("stripe-signature") || "";
+	// Step 2: Verify webhook event
+	try {
+		const rawBody = await c.req.text();
+		const signature = c.req.header("stripe-signature") || "";
 
-	// 	event = await masterStripe.webhooks.constructEventAsync(
-	// 		rawBody,
-	// 		signature,
-	// 		webhookSecret,
-	// 	);
-	// } catch (err: any) {
-	// 	if (process.env.NODE_ENV !== "development") {
-	// 		logger.warn(`Webhook verification error: ${err.message}`);
-	// 	}
-	// 	return c.json({ error: err.message }, 400);
-	// }
-	event = await c.req.json();
+		event = await masterStripe.webhooks.constructEventAsync(
+			rawBody,
+			signature,
+			webhookSecret,
+		);
+	} catch (err: any) {
+		if (process.env.NODE_ENV !== "development") {
+			logger.warn(`Webhook verification error: ${err.message}`);
+		}
+		return c.json({ error: err.message }, 400);
+	}
 
 	// Step 3: Get org and features
 	const accountId = event.account;

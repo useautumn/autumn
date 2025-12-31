@@ -127,6 +127,8 @@ describe(`${chalk.yellowBright("update-current-balance6: sync delta with free/pr
 			customer_id: customerId,
 			product_id: productC.id,
 		});
+
+		await timeout(3000); // let stripe webhooks catch up
 	});
 
 	test("initial state: should have 45 total messages (10 granted + 20 purchased + 15 granted)", async () => {
@@ -233,15 +235,34 @@ describe(`${chalk.yellowBright("update-current-balance6: sync delta with free/pr
 		// Expect free breakdown to be 20, prepaid to be 0, arrear to be 0, purchased balance 5
 		const freeBreakdown = customer.balances[
 			TestFeature.Messages
-		].breakdown?.find((b) => b.id === productA.id);
+		].breakdown?.find((b) => b.plan_id === productA.id);
+
 		const prepaidBreakdown = customer.balances[
 			TestFeature.Messages
-		].breakdown?.find((b) => b.id === productB.id);
+		].breakdown?.find((b) => b.plan_id === productB.id);
 		const arrearBreakdown = customer.balances[
 			TestFeature.Messages
-		].breakdown?.find((b) => b.id === productC.id);
+		].breakdown?.find((b) => b.plan_id === productC.id);
+
+		expect(freeBreakdown).toMatchObject({
+			current_balance: 20,
+			granted_balance: 30,
+			purchased_balance: 0,
+			usage: 10,
+		});
+
+		expect(prepaidBreakdown).toMatchObject({
+			current_balance: 0,
+			granted_balance: 0,
+			purchased_balance: 20,
+		});
+
+		expect(arrearBreakdown).toMatchObject({
+			granted_balance: 20,
+			purchased_balance: 0,
+			current_balance: 0,
+		});
 	});
-	return;
 
 	test("verify breakdown state after update", async () => {
 		const checkRes = await autumnV2.check<CheckResponseV2>({
@@ -269,7 +290,6 @@ describe(`${chalk.yellowBright("update-current-balance6: sync delta with free/pr
 			) ?? 0;
 		expect(totalCurrent).toBe(20);
 	});
-	return;
 
 	test("verify database state matches cache", async () => {
 		await timeout(2000);
@@ -294,11 +314,6 @@ describe(`${chalk.yellowBright("update-current-balance6: sync delta with free/pr
 		});
 
 		const customer = await autumnV2.customers.get<ApiCustomer>(customerId);
-
-		console.log(
-			"Balance after negative update:",
-			customer.balances[TestFeature.Messages],
-		);
 
 		// For arrear items:
 		// - current_balance floors at 0
@@ -327,18 +342,13 @@ describe(`${chalk.yellowBright("update-current-balance6: sync delta with free/pr
 		// - current_balance should be 50
 		// - purchased_balance should be 0 (no overage)
 		expect(customer.balances[TestFeature.Messages].current_balance).toBe(50);
-		expect(customer.balances[TestFeature.Messages].purchased_balance).toBe(0);
+		expect(customer.balances[TestFeature.Messages].purchased_balance).toBe(20); // 20 from prepaid
 
 		// Verify breakdowns
 		const checkRes = await autumnV2.check<CheckResponseV2>({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 		});
-
-		console.log(
-			"Final breakdown state:",
-			JSON.stringify(checkRes.balance?.breakdown, null, 2),
-		);
 
 		// Total current_balance should be 50
 		const totalCurrent =
@@ -347,14 +357,7 @@ describe(`${chalk.yellowBright("update-current-balance6: sync delta with free/pr
 				0,
 			) ?? 0;
 		expect(totalCurrent).toBe(50);
-
-		// All breakdowns should have purchased_balance = 0
-		for (const breakdown of checkRes.balance?.breakdown ?? []) {
-			expect(breakdown.purchased_balance).toBe(0);
-		}
 	});
-
-	return;
 
 	test("final verification: database matches cache", async () => {
 		await timeout(2000);
