@@ -106,7 +106,8 @@ local function fetchBreakdown(cacheKey, featureId, breakdownCount)
         purchased_balance = true,
         current_balance = true,
         usage = true,
-        max_purchase = true
+        max_purchase = true,
+        prepaid_quantity = true
     }
     
     local breakdownBooleanFields = {
@@ -176,7 +177,18 @@ local function mergeBalanceNumericFields(target, source)
     target.purchased_balance = toNum(target.purchased_balance) + toNum(source.purchased_balance)
     target.current_balance = toNum(target.current_balance) + toNum(source.current_balance)
     target.usage = toNum(target.usage) + toNum(source.usage)
-    target.max_purchase = toNum(target.max_purchase or 0) + toNum(source.max_purchase or 0)
+    target.prepaid_quantity = toNum(target.prepaid_quantity) + toNum(source.prepaid_quantity)
+    
+    -- max_purchase: null means "no limit", 0 means "zero allowed"
+    -- Preserve null only if BOTH are null; otherwise sum (treating null as 0)
+    local targetMaxPurchase = target.max_purchase
+    local sourceMaxPurchase = source.max_purchase
+    if (targetMaxPurchase == nil or targetMaxPurchase == cjson.null) and 
+       (sourceMaxPurchase == nil or sourceMaxPurchase == cjson.null) then
+        target.max_purchase = nil
+    else
+        target.max_purchase = toNum(targetMaxPurchase or 0) + toNum(sourceMaxPurchase or 0)
+    end
 end
 
 -- Helper function to merge overage_allowed (true if at least one is true)
@@ -214,6 +226,30 @@ local function mergeBalanceReset(target, source)
     end
 end
 
+-- Helper function to get inherited plan_id from breakdowns
+-- Returns the plan_id if all breakdowns have the same value, else nil
+local function getInheritedPlanId(breakdowns)
+    if not breakdowns or #breakdowns == 0 then
+        return nil
+    end
+    
+    local firstPlanId = nil
+    for i, breakdown in ipairs(breakdowns) do
+        local bPlanId = breakdown.plan_id
+        if i == 1 then
+            firstPlanId = bPlanId
+        elseif bPlanId ~= firstPlanId then
+            return nil -- Different plan_ids found
+        end
+    end
+    
+    -- Return plan_id only if it's a valid non-empty value
+    if firstPlanId and firstPlanId ~= "" and firstPlanId ~= cjson.null then
+        return firstPlanId
+    end
+    return nil
+end
+
 -- Helper function to generate breakdown item key for matching
 -- Uses the breakdown's id (customer entitlement ID) for unique identification
 local function getBreakdownItemKey(breakdownItem)
@@ -236,7 +272,8 @@ local function balanceToBreakdownItem(balance)
         usage = balance.usage,
         max_purchase = balance.max_purchase,
         overage_allowed = balance.overage_allowed,
-        reset = balance.reset
+        reset = balance.reset,
+        prepaid_quantity = balance.prepaid_quantity
     }
 end
 
@@ -320,7 +357,8 @@ local function mergeFeatureBalances(targetBalance, sourceBalance)
                 usage = sourceBreakdown.usage,
                 max_purchase = sourceBreakdown.max_purchase,
                 overage_allowed = sourceBreakdown.overage_allowed,
-                reset = sourceBreakdown.reset
+                reset = sourceBreakdown.reset,
+                prepaid_quantity = sourceBreakdown.prepaid_quantity
             }
             table.insert(targetBreakdowns, newBreakdown)
         end
@@ -330,8 +368,7 @@ local function mergeFeatureBalances(targetBalance, sourceBalance)
     -- Only create breakdown array if we have multiple items or if we already had a breakdown
     if #targetBreakdowns > 1 or targetHadBreakdown then
         targetBalance.breakdown = targetBreakdowns
-        -- Clear top-level plan_id since it's now stored at the breakdown level
-        targetBalance.plan_id = nil
+        targetBalance.plan_id = getInheritedPlanId(targetBreakdowns)
     end
     
     -- Merge rollover balances

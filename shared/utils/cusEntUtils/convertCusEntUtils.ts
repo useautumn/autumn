@@ -8,7 +8,6 @@ import {
 	entToOptions,
 } from "../productUtils/convertUtils.js";
 import { getCusEntBalance } from "./balanceUtils.js";
-import { cusEntToKey } from "./convertCusEntUtils/cusEntToKey.js";
 import { getRolloverFields } from "./getRolloverFields.js";
 import { getStartingBalance } from "./getStartingBalance.js";
 
@@ -18,13 +17,14 @@ export const cusEntsToPlanId = ({
 	cusEnts: FullCusEntWithFullCusProduct[];
 }) => {
 	// Get number of keys
-	const keys = new Set<string>();
+	const uniquePlanIds = new Set<string>();
+
 	for (const cusEnt of cusEnts) {
-		const key = cusEntToKey({ cusEnt });
-		keys.add(key);
+		const planId = cusEnt.customer_product?.product?.id;
+		uniquePlanIds.add(planId);
 	}
 
-	if (keys.size > 1) {
+	if (uniquePlanIds.size > 1) {
 		return null;
 	}
 

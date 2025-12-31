@@ -104,6 +104,8 @@ const cusEntsToBreakdown = ({
 				overage_allowed: breakdownItem.overage_allowed,
 
 				reset: reset,
+
+				prepaid_quantity: prepaidQuantity,
 			}),
 			prepaidQuantity: prepaidQuantity,
 		});

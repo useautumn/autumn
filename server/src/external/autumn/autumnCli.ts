@@ -57,6 +57,7 @@ export class AutumnInt {
 		version,
 		orgConfig,
 		liveUrl = false,
+		skipCacheDeletion = false,
 	}: {
 		apiKey?: string;
 		secretKey?: string;
@@ -64,6 +65,7 @@ export class AutumnInt {
 		version?: string | LegacyVersion;
 		orgConfig?: Partial<OrgConfig>;
 		liveUrl?: boolean;
+		skipCacheDeletion?: boolean;
 	} = {}) {
 		// this.apiKey = apiKey || process.env.AUTUMN_API_KEY || "";
 		this.apiKey =
@@ -85,6 +87,10 @@ export class AutumnInt {
 		this.baseUrl =
 			baseUrl ||
 			(liveUrl ? "https://api.useautumn.com/v1" : "http://localhost:8080/v1");
+
+		if (skipCacheDeletion) {
+			this.headers["x-skip-cache-deletion"] = "true";
+		}
 	}
 
 	async get(path: string) {

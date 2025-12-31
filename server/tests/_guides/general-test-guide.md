@@ -170,6 +170,178 @@ const monthlyMessages = constructFeatureItem({
 
 **Note:** `interval: null` is different from `ProductItemInterval.Lifetime`. Use `null` when constructing feature items for lifetime balances.
 
+### Finding Lifetime/One-off Breakdowns in Check Response
+
+When querying breakdowns from a check response, lifetime features return `ResetInterval.OneOff`:
+
+```typescript
+import { ResetInterval } from "@autumn/shared";
+
+const checkRes = await autumnV2.check<CheckResponseV2>({
+  customer_id: customerId,
+  entity_id: entityId,
+  feature_id: TestFeature.Messages,
+});
+
+// ✅ GOOD - Use ResetInterval enum values
+const monthlyBreakdown = checkRes.balance?.breakdown?.find(
+  (b) => b.reset?.interval === ResetInterval.Month,
+);
+const lifetimeBreakdown = checkRes.balance?.breakdown?.find(
+  (b) => b.reset?.interval === ResetInterval.OneOff,
+);
+
+// ❌ BAD - Don't use null or string literals
+const lifetimeWrong1 = checkRes.balance?.breakdown?.find(
+  (b) => b.reset?.interval === null,  // Won't match - API returns "one_off"
+);
+const monthlyWrong = checkRes.balance?.breakdown?.find(
+  (b) => b.reset?.interval === "month",  // Use ResetInterval.Month instead
+);
+```
+
+## Prepaid Products
+
+### Attaching Prepaid Products Requires Quantity
+When attaching a prepaid product, you **must** pass the `options` array with a `quantity` for each prepaid feature:
+
+```typescript
+import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
+
+// Define prepaid item (includedUsage: 0 means all credits come from purchase)
+const prepaidMessagesItem = constructPrepaidItem({
+  featureId: TestFeature.Messages,
+  includedUsage: 0,  // No free credits - goes to granted_balance
+  price: 9,          // $9 per billing unit
+  billingUnits: 100, // 100 credits per unit
+});
+
+const prepaidProd = constructProduct({
+  type: "free",
+  id: "prepaid-prod",
+  isAddOn: true,
+  items: [prepaidMessagesItem],
+});
+
+// ✅ GOOD - Attach with quantity option
+await autumnV2.attach({
+  customer_id: customerId,
+  product_id: prepaidProd.id,
+  options: [
+    {
+      feature_id: TestFeature.Messages,
+      quantity: 50,  // Purchase 50 credits
+    },
+  ],
+});
+
+// ❌ BAD - Missing options for prepaid product
+await autumnV2.attach({
+  customer_id: customerId,
+  product_id: prepaidProd.id,
+  // Will fail or have no credits allocated
+});
+```
+
+### Prepaid Quantity is Rounded to Nearest Billing Units
+
+**IMPORTANT:** The `quantity` you request is **rounded up to the nearest billing unit**:
+
+```typescript
+// With billingUnits: 100 and quantity: 50:
+// - Rounds UP to 100 (the nearest billing unit)
+// - You get 100 credits, not 50!
+
+// With billingUnits: 100 and quantity: 150:
+// - Rounds UP to 200
+// - You get 200 credits
+
+// To get exactly 50 credits, use billingUnits: 1 or billingUnits: 50
+```
+
+### Prepaid Quantity Goes to `purchased_balance`, NOT `granted_balance`
+
+When attaching a prepaid product with a quantity option, the purchased credits go to `purchased_balance`, not `granted_balance`:
+
+```typescript
+// With includedUsage: 0, billingUnits: 100, and quantity: 50:
+// - Quantity rounds UP to 100 (nearest billing unit)
+// - granted_balance: 0  (from includedUsage)
+// - purchased_balance: 100 (rounded quantity)
+// - current_balance: 100 (granted + purchased)
+
+const customer = await autumnV2.customers.get<ApiCustomer>(customerId);
+expect(customer.balances[TestFeature.Messages]).toMatchObject({
+  granted_balance: 0,       // Only includedUsage contributes here
+  purchased_balance: 100,   // Rounded quantity goes HERE
+  current_balance: 100,     // Total available = granted + purchased
+  usage: 0,
+});
+```
+
+**Balance breakdown:**
+- `granted_balance` = sum of all `includedUsage` values across products
+- `purchased_balance` = sum of all purchased quantities (rounded to billing units)
+- `current_balance` = `granted_balance` + `purchased_balance` - `usage`
+
+**Pricing Note:** With `billingUnits: 100` and `price: 9`, purchasing `quantity: 50` rounds to 100 credits and costs $9.00 (1 billing unit × $9).
+
+## Interval Filters
+
+### Filtering Balance Updates by Interval
+
+When updating balances with `autumnV2.balances.update()`, you can filter by interval to target specific breakdown items:
+
+```typescript
+import { ResetInterval } from "@autumn/shared";
+
+// Update only monthly breakdowns
+await autumnV2.balances.update({
+  customer_id: customerId,
+  feature_id: TestFeature.Messages,
+  current_balance: 75,
+  interval: ResetInterval.Month,  // Only affects monthly breakdown items
+});
+
+// Update only lifetime breakdowns
+await autumnV2.balances.update({
+  customer_id: customerId,
+  feature_id: TestFeature.Messages,
+  current_balance: 150,
+  interval: ResetInterval.OneOff,  // Only affects lifetime breakdown items
+});
+```
+
+### Lifetime Interval Value
+
+**IMPORTANT:** Lifetime/one-off breakdowns use `"one_off"` as their interval value in API responses, not `null`:
+
+```typescript
+// API response structure for lifetime breakdown:
+{
+  "reset": {
+    "interval": "one_off",  // NOT null!
+    "resets_at": null
+  }
+}
+```
+
+When finding breakdowns in test assertions:
+
+```typescript
+// ✅ GOOD - Use "one_off" string or ResetInterval.OneOff
+const lifetimeBreakdown = res.balance?.breakdown?.find(
+  (b) => b.reset?.interval === "one_off",
+);
+
+// ❌ BAD - null won't match
+const lifetimeWrong = res.balance?.breakdown?.find(
+  (b) => b.reset?.interval === null,  // Won't find lifetime breakdowns!
+);
+```
+
+**Note:** The interval filter in `balances.update` handles both representations - `ResetInterval.OneOff` will match breakdowns where `reset.interval` is `"one_off"` OR where `reset` is `null`.
+
 ## Common Pitfalls
 
 ### Wait for Sync Before Attach (after Track)

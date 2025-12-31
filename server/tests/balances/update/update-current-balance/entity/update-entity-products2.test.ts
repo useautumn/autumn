@@ -1,9 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import {
-	type ApiCustomer,
-	type ApiEntityV1,
-	ApiVersion,
-} from "@autumn/shared";
+import { type ApiCustomer, type ApiEntityV1, ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
@@ -126,17 +122,14 @@ describe(`${chalk.yellowBright("update-entity-products2: update with mixed custo
 			current_balance: 100,
 		});
 
-		const entity1 = await autumnV2.entities.get<ApiCustomer>(
-			customerId,
-			entities[0].id,
-		);
+		const entity1 = await autumnV2.entities.get(customerId, entities[0].id);
 		expect(entity1.balances[TestFeature.Messages]).toMatchObject({
 			granted_balance: 100,
 			current_balance: 100,
 			usage: 0,
 		});
 
-		// Customer balance should be 300 (100 + 150 + 150) - 50 customer credit deducted
+		// Customer balance should be 300 (350 - 50 deducted from E1)
 		const customer = await autumnV2.customers.get<ApiCustomer>(customerId);
 		expect(customer.balances[TestFeature.Messages]).toMatchObject({
 			granted_balance: 300,
@@ -153,17 +146,14 @@ describe(`${chalk.yellowBright("update-entity-products2: update with mixed custo
 			current_balance: 200,
 		});
 
-		const entity2 = await autumnV2.entities.get<ApiCustomer>(
-			customerId,
-			entities[1].id,
-		);
+		const entity2 = await autumnV2.entities.get(customerId, entities[1].id);
 		expect(entity2.balances[TestFeature.Messages]).toMatchObject({
 			granted_balance: 200,
 			current_balance: 200,
 			usage: 0,
 		});
 
-		// Customer balance should be 350 (100 + 200 + 150) - no deduction this time
+		// Customer balance should be 350 (300 + 50 added to E2)
 		const customer = await autumnV2.customers.get<ApiCustomer>(customerId);
 		expect(customer.balances[TestFeature.Messages]).toMatchObject({
 			granted_balance: 350,
@@ -173,7 +163,7 @@ describe(`${chalk.yellowBright("update-entity-products2: update with mixed custo
 	});
 
 	test("update customer balance from 350 to 175 (sequential distribution)", async () => {
-		// Current state: Entity 1: 100, Entity 2: 200, Entity 3: 150, Customer: 350
+		// Current state: Entity 1: 50, Entity 2: 150, Entity 3: 100, Customer: 50
 		// Update to 175: distribute sequentially
 		await autumnV2.balances.update({
 			customer_id: customerId,
@@ -181,14 +171,14 @@ describe(`${chalk.yellowBright("update-entity-products2: update with mixed custo
 			current_balance: 175,
 		});
 
-		// Sequential distribution: E1 gets 100 (fills up), E2 gets 75 (partial), E3 gets 0
+		// Customer goes down to 0, E1 goes down to 0, E2 goes down to 75, E3 stays at 100
 		const entity1 = (await autumnV2.entities.get(
 			customerId,
 			entities[0].id,
 		)) as ApiEntityV1;
 		expect(entity1.balances?.[TestFeature.Messages]).toMatchObject({
-			granted_balance: 100,
-			current_balance: 100,
+			granted_balance: 0,
+			current_balance: 0,
 			usage: 0,
 		});
 
@@ -207,8 +197,8 @@ describe(`${chalk.yellowBright("update-entity-products2: update with mixed custo
 			entities[2].id,
 		)) as ApiEntityV1;
 		expect(entity3.balances?.[TestFeature.Messages]).toMatchObject({
-			granted_balance: 0,
-			current_balance: 0,
+			granted_balance: 100,
+			current_balance: 100,
 			usage: 0,
 		});
 
@@ -224,7 +214,7 @@ describe(`${chalk.yellowBright("update-entity-products2: update with mixed custo
 		// Wait for database sync
 		await new Promise((resolve) => setTimeout(resolve, 2000));
 
-		const expectedEntityBalances = [100, 75, 0];
+		const expectedEntityBalances = [0, 75, 100];
 
 		for (let i = 0; i < entities.length; i++) {
 			const entityFromDb = (await autumnV2.entities.get(
@@ -265,7 +255,7 @@ describe(`${chalk.yellowBright("update-entity-products2: update with mixed custo
 	});
 
 	test("track on entity, then update customer balance", async () => {
-		// Current state: E1: 100, E2: 75, E3: 0 (from previous test)
+		// Current state: E1: 0, E2: 75, E3: 100 (from previous test with customer-first deduction)
 		// Track 30 on entity 2 (currently has 75)
 		await autumnV2.track({
 			customer_id: customerId,
@@ -284,29 +274,32 @@ describe(`${chalk.yellowBright("update-entity-products2: update with mixed custo
 			usage: 30,
 		});
 
-		// Customer should have 145 (100 + 45 + 0)
-		const customerBefore = await autumnV2.customers.get<ApiCustomer>(customerId);
+		// Customer should have 145 (0 + 45 + 100)
+		const customerBefore =
+			await autumnV2.customers.get<ApiCustomer>(customerId);
 		expect(customerBefore.balances[TestFeature.Messages]).toMatchObject({
 			granted_balance: 175,
 			current_balance: 145,
 			usage: 30,
 		});
 
-		// Update customer balance to 290 (sequential distribution)
+		// Update customer balance to 290 (refund 145)
+		// With customer-first refund: customer-level gets 145, entities unchanged
 		await autumnV2.balances.update({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			current_balance: 290,
 		});
 
-		// Sequential distribution: E1 fills to 100, E2 fills to 190, E3 gets 0
+		// Customer-level refunded first: 0 → 145
+		// Merged views: E1 = 145+0, E2 = 145+45, E3 = 145+100
 		const entity1After = (await autumnV2.entities.get(
 			customerId,
 			entities[0].id,
 		)) as ApiEntityV1;
 		expect(entity1After.balances?.[TestFeature.Messages]).toMatchObject({
-			granted_balance: 100,
-			current_balance: 100,
+			granted_balance: 145,
+			current_balance: 145,
 			usage: 0,
 		});
 
@@ -315,9 +308,9 @@ describe(`${chalk.yellowBright("update-entity-products2: update with mixed custo
 			entities[1].id,
 		)) as ApiEntityV1;
 		expect(entity2After.balances?.[TestFeature.Messages]).toMatchObject({
-			granted_balance: 190,
+			granted_balance: 220,
 			current_balance: 190,
-			usage: 0,
+			usage: 30,
 		});
 
 		const entity3After = (await autumnV2.entities.get(
@@ -325,17 +318,16 @@ describe(`${chalk.yellowBright("update-entity-products2: update with mixed custo
 			entities[2].id,
 		)) as ApiEntityV1;
 		expect(entity3After.balances?.[TestFeature.Messages]).toMatchObject({
-			granted_balance: 0,
-			current_balance: 0,
+			granted_balance: 245,
+			current_balance: 245,
 			usage: 0,
 		});
 
 		const customerAfter = await autumnV2.customers.get<ApiCustomer>(customerId);
 		expect(customerAfter.balances[TestFeature.Messages]).toMatchObject({
-			granted_balance: 290,
+			granted_balance: 320,
 			current_balance: 290,
-			usage: 0,
+			usage: 30,
 		});
 	});
 });
-

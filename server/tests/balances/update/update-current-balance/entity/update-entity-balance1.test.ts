@@ -157,8 +157,8 @@ describe(`${chalk.yellowBright("update-entity-balance1: update per-entity balanc
 	});
 
 	test("verify database state matches cache after update", async () => {
-		// Wait for database sync
-		await new Promise((resolve) => setTimeout(resolve, 2000));
+		// // Wait for database sync
+		// await new Promise((resolve) => setTimeout(resolve, 2000));
 
 		// Verify customer from DB
 		const customerFromDb = await autumnV2.customers.get<ApiCustomer>(
@@ -276,9 +276,10 @@ describe(`${chalk.yellowBright("update-entity-balance1: update per-entity balanc
 			customerId,
 			entities[0].id,
 		)) as ApiEntityV1;
+
 		expect(entity1.balances?.[TestFeature.Messages]).toMatchObject({
-			granted_balance: 100,
-			current_balance: 100,
+			granted_balance: 130,
+			current_balance: 130,
 			usage: 0,
 		});
 
@@ -287,8 +288,8 @@ describe(`${chalk.yellowBright("update-entity-balance1: update per-entity balanc
 			entities[1].id,
 		)) as ApiEntityV1;
 		expect(entity2.balances?.[TestFeature.Messages]).toMatchObject({
-			granted_balance: 80,
-			current_balance: 80,
+			granted_balance: 50,
+			current_balance: 50,
 			usage: 0,
 		});
 

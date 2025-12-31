@@ -227,10 +227,11 @@ export const syncItemV2 = async ({
 			cusEnts,
 			item,
 		});
+
+		console.log("Redis balance:", redisBalance);
+		console.log("Sync entries:", entries);
 		allEntries.push(...entries);
 	}
-
-	console.log("Sync entries:", allEntries);
 
 	if (allEntries.length === 0) {
 		ctx.logger.info(
