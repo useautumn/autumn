@@ -1,4 +1,4 @@
-import { type Feature, productV2ToFeatureItems } from "@autumn/shared";
+import type { Feature } from "@autumn/shared";
 import {
 	CaretDownIcon,
 	MagnifyingGlassIcon,
@@ -69,13 +69,12 @@ export function SelectFeatureSheet({
 		const newItem = getDefaultItem({ feature: selectedFeature });
 
 		// Add the new item to the product
-		const newItems = [...(product.items || []), newItem];
+		const newItems = [...(product.items), newItem];
 		const updatedProduct = { ...product, items: newItems };
 		setProduct(updatedProduct);
 
 		// Open edit sidebar for the new item
-		const featureItems = productV2ToFeatureItems({ items: newItems });
-		const itemIndex = featureItems.length - 1;
+		const itemIndex = newItems.length - 1;
 		const itemId = getItemId({ item: newItem, itemIndex });
 
 		setSheet({ type: "edit-feature", itemId });
