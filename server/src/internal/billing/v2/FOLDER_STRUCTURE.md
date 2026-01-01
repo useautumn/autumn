@@ -47,7 +47,7 @@ server/src/internal/billing/v2/
 │   │   │   │
 │   │   │   ├── invoice/             # Invoice operations
 │   │   │   │   ├── lineItemsToStripeLines.ts
-│   │   │   │   ├── createAndPayInvoice.ts
+│   │   │   │   ├── createInvoiceForBilling.ts
 │   │   │   │   ├── payStripeInvoice.ts
 │   │   │   │   └── index.ts
 │   │   │   │

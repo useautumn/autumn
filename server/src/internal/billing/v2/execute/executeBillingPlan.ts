@@ -1,20 +1,25 @@
-import type Stripe from "stripe";
+import { MetadataType } from "@autumn/shared";
 import { isStripeSubscriptionCanceled } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
-import type { BillingPlan } from "@/internal/billing/v2/billingPlan";
+import type {
+	BillingPlan,
+	StripeInvoiceMetadata,
+} from "@/internal/billing/v2/billingPlan";
 import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
 import { addStripeSubscriptionScheduleIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionScheduleIdToBillingPlan";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
-import { executeStripeInvoiceAction } from "@/internal/billing/v2/execute/executeStripeInvoiceAction";
 import { handleStripeSubscriptionUncancel } from "@/internal/billing/v2/execute/executeStripeSubscriptionActions/handleStripeSubscriptionUncancel";
 import { removeStripeSubscriptionIdFromBillingPlan } from "@/internal/billing/v2/execute/removeStripeSubscriptionIdFromBillingPlan";
 import { executeStripeSubscriptionAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionAction";
 import { executeStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionScheduleAction";
+import { createInvoiceForBilling } from "@/internal/billing/v2/providers/stripe/utils/invoices/createInvoiceForBilling";
 import { logBillingPlan } from "@/internal/billing/v2/utils/logBillingPlan";
 import { upsertInvoiceFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertInvoiceFromBilling";
 import { upsertSubscriptionFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertSubscriptionFromBilling";
 import { addSubIdToCache } from "@/internal/customers/cusCache/subCacheUtils";
+import { MetadataService } from "@/internal/metadata/MetadataService";
+import { generateId } from "@/utils/genUtils";
 
 export const executeBillingPlan = async ({
 	ctx,
@@ -35,17 +40,40 @@ export const executeBillingPlan = async ({
 
 	await handleStripeSubscriptionUncancel({ ctx, billingContext, billingPlan });
 
+	const enableProductImmediately =
+		stripeInvoiceAction?.invoiceMode?.enableProductImmediately !== false;
+
 	if (stripeInvoiceAction) {
-		const result = await executeStripeInvoiceAction({
+		let invoiceMetadata: StripeInvoiceMetadata | undefined;
+
+		if (!enableProductImmediately) {
+			const metadataId = generateId("meta");
+			await MetadataService.insert({
+				db: ctx.db,
+				data: {
+					id: metadataId,
+					type: MetadataType.DeferredAutumnBillingPlan,
+					data: {
+						orgId: ctx.org.id,
+						env: ctx.env,
+						autumnBillingPlan: billingPlan.autumn,
+					},
+				},
+			});
+			invoiceMetadata = { autumn_metadata_id: metadataId };
+		}
+
+		const { invoice } = await createInvoiceForBilling({
 			ctx,
 			billingContext,
 			stripeInvoiceAction,
+			invoiceMetadata,
 		});
 
-		if (result.invoice) {
+		if (invoice) {
 			await upsertInvoiceFromBilling({
 				ctx,
-				stripeInvoice: result.invoice,
+				stripeInvoice: invoice,
 				fullProducts: billingContext.fullProducts,
 				fullCustomer: billingContext.fullCustomer,
 			});
@@ -113,18 +141,13 @@ export const executeBillingPlan = async ({
 		}
 	}
 
-	console.log(
-		"Inserting new customer product:",
-		billingPlan.autumn.insertCustomerProducts.map((cp) => ({
-			name: cp.product.name,
-			id: cp.id,
-			status: cp.status,
-		})),
-	);
-	await executeAutumnBillingPlan({
-		ctx,
-		autumnBillingPlan: billingPlan.autumn,
-	});
+	// if not enabling product immediately, it will be handled in webhook
+	if (enableProductImmediately) {
+		await executeAutumnBillingPlan({
+			ctx,
+			autumnBillingPlan: billingPlan.autumn,
+		});
+	}
 
-	return billingPlan;
+	return { billingPlan };
 };
