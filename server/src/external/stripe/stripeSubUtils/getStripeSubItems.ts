@@ -173,7 +173,7 @@ export const getStripeSubItems = async ({
 				continue;
 			}
 
-			const lineItem = stripeItem;
+			const { lineItem } = stripeItem;
 
 			subItems.push(lineItem);
 		}

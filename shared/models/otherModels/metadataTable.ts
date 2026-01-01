@@ -6,6 +6,7 @@ export enum MetadataType {
 	InvoiceActionRequired = "invoice_action_required",
 	InvoiceCheckout = "invoice_checkout",
 	CheckoutSessionCompleted = "checkout_session_completed",
+	DeferredAutumnBillingPlan = "deferred_autumn_billing_plan",
 }
 
 export const metadata = pgTable("metadata", {

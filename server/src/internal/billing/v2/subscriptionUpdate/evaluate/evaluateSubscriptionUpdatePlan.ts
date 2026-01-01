@@ -26,12 +26,13 @@ export const evaluateSubscriptionUpdatePlan = ({
 		updatedCustomerProducts,
 	});
 
-	const shouldFinalizeInvoice = params.finalize_invoice !== false;
-	const stripeInvoiceAction = shouldFinalizeInvoice
-		? buildStripeInvoiceAction({
-				autumnLineItems: autumnBillingPlan.autumnLineItems,
-			})
-		: undefined;
+	const stripeInvoiceAction = buildStripeInvoiceAction({
+		autumnLineItems: autumnBillingPlan.autumnLineItems,
+		invoiceMode: {
+			finalizeInvoice: params.finalize_invoice === true,
+			enableProductImmediately: params.enable_product_immediately !== false,
+		},
+	});
 
 	return {
 		subscriptionAction: stripeSubscriptionAction,

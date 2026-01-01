@@ -1,5 +1,5 @@
 import type { LineItem } from "@autumn/shared";
-import type { StripeInvoiceAction } from "../../../billingPlan";
+import type { InvoiceMode, StripeInvoiceAction } from "../../../billingPlan";
 import { lineItemsToStripeLines } from "../utils/invoiceLines/lineItemsToStripeLines";
 
 /**
@@ -8,8 +8,10 @@ import { lineItemsToStripeLines } from "../utils/invoiceLines/lineItemsToStripeL
  */
 export const buildStripeInvoiceAction = ({
 	autumnLineItems,
+	invoiceMode,
 }: {
 	autumnLineItems: LineItem[];
+	invoiceMode?: InvoiceMode;
 }): StripeInvoiceAction | undefined => {
 	if (autumnLineItems.length === 0) {
 		return undefined;
@@ -17,5 +19,8 @@ export const buildStripeInvoiceAction = ({
 
 	const lines = lineItemsToStripeLines({ lineItems: autumnLineItems });
 
-	return { addLineParams: { lines } };
+	return {
+		addLineParams: { lines },
+		invoiceMode,
+	};
 };

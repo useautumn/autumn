@@ -89,30 +89,4 @@ describe(`${chalk.yellowBright("subscription-update: invoice generation")}`, () 
 		expect(latestInvoice?.total).toBeGreaterThan(0);
 	});
 
-	test("should not create invoice when finalize_invoice is false", async () => {
-		const beforeUpdate = await autumnV1.customers.get<ApiCustomer>(customerId);
-		const invoiceCountBefore = beforeUpdate.invoices?.length || 0;
-
-		await autumnV1.subscriptionUpdate({
-			customer_id: customerId,
-			product_id: prepaidProduct.id,
-			options: [
-				{
-					feature_id: TestFeature.Messages,
-					quantity: 25 * billingUnits,
-				},
-			],
-			finalize_invoice: false,
-		});
-
-		const afterUpdate = await autumnV1.customers.get<ApiCustomer>(customerId);
-		const invoiceCountAfter = afterUpdate.invoices?.length || 0;
-
-		// Should not have created a finalized invoice
-		expect(invoiceCountAfter).toBe(invoiceCountBefore);
-
-		// But balance should still be updated
-		const balance = afterUpdate.balances?.[TestFeature.Messages];
-		expect(balance?.purchased_balance).toBe(25 * billingUnits);
-	});
 });

@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
 import type { AttachParams } from "../../../../internal/customers/cusProducts/AttachParams";
 import { MetadataService } from "../../../../internal/metadata/MetadataService";
+import { handleDeferredAutumnBillingPlan } from "./handleDeferredAutumnBillingPlan";
 import { handleInvoiceActionRequiredCompleted } from "./handleInvoiceActionRequiredCompleted";
 import { handleInvoiceCheckoutPaid } from "./handleInvoiceCheckoutPaid";
 
@@ -24,6 +25,13 @@ export const handleInvoicePaidMetadata = async ({
 
 	if (!metadata) return;
 
+	// Handle deferred billing plan (v2 flow)
+	if (metadata.type === MetadataType.DeferredAutumnBillingPlan) {
+		await handleDeferredAutumnBillingPlan({ ctx, metadata });
+		return;
+	}
+
+	// Legacy v1 flows below
 	const data = metadata.data as unknown as AttachParams;
 	const reqMatch =
 		data.org?.id === ctx.org.id && data.customer?.env === ctx.env;

@@ -1,4 +1,5 @@
 import {
+	type AppEnv,
 	EntitlementSchema,
 	FreeTrialSchema,
 	LineItemSchema,
@@ -59,8 +60,16 @@ export const StripeSubscriptionScheduleActionSchema = z.discriminatedUnion(
 	],
 );
 
+export const InvoiceModeSchema = z.object({
+	finalizeInvoice: z.boolean().default(false),
+	enableProductImmediately: z.boolean().default(true),
+});
+
+export type InvoiceMode = z.infer<typeof InvoiceModeSchema>;
+
 export const StripeInvoiceActionSchema = z.object({
 	addLineParams: z.custom<import("stripe").Stripe.InvoiceAddLinesParams>(),
+	invoiceMode: InvoiceModeSchema.optional(),
 });
 
 export type StripeSubscriptionScheduleAction = z.infer<
@@ -103,3 +112,13 @@ export const BillingPlanSchema = z.object({
 export type BillingPlan = z.infer<typeof BillingPlanSchema>;
 export type AutumnBillingPlan = z.infer<typeof AutumnBillingPlanSchema>;
 export type StripeBillingPlan = z.infer<typeof StripeBillingPlanSchema>;
+
+export type StripeInvoiceMetadata = {
+	autumn_metadata_id: string;
+};
+
+export type DeferredAutumnBillingPlanData = {
+	orgId: string;
+	env: AppEnv;
+	autumnBillingPlan: AutumnBillingPlan;
+};

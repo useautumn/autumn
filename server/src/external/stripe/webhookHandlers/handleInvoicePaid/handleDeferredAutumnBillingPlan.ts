@@ -1,0 +1,28 @@
+import type { Metadata } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { DeferredAutumnBillingPlanData } from "@/internal/billing/v2/billingPlan";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
+import { MetadataService } from "@/internal/metadata/MetadataService";
+
+export const handleDeferredAutumnBillingPlan = async ({
+	ctx,
+	metadata,
+}: {
+	ctx: AutumnContext;
+	metadata: Metadata;
+}) => {
+	const { logger, db } = ctx;
+	const data = metadata.data as DeferredAutumnBillingPlanData;
+
+	if (data.orgId !== ctx.org.id || data.env !== ctx.env) {
+		logger.warn("Deferred billing plan org/env mismatch, skipping");
+		return;
+	}
+
+	await executeAutumnBillingPlan({
+		ctx,
+		autumnBillingPlan: data.autumnBillingPlan,
+	});
+
+	await MetadataService.delete({ db, id: metadata.id });
+};
