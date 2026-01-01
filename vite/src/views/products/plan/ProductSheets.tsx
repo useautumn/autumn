@@ -31,8 +31,10 @@ export const ProductSheets = () => {
 
 	const featureItems = productV2ToFeatureItems({ items: product.items });
 
-	const isCurrentItem = (item: ProductItem, index: number) => {
-		const currentItemId = getItemId({ item, itemIndex: index });
+	// Find current item using actual product.items index (not filtered featureItems index)
+	const isCurrentItem = (item: ProductItem) => {
+		const actualIndex = product.items?.indexOf(item) ?? -1;
+		const currentItemId = getItemId({ item, itemIndex: actualIndex });
 		return itemId === currentItemId;
 	};
 
@@ -55,16 +57,12 @@ export const ProductSheets = () => {
 	const setCurrentItem = (updatedItem: ProductItem) => {
 		if (!product || !product.items) return;
 
-		const filteredItems = productV2ToFeatureItems({
-			items: product.items,
-			withBasePrice: true,
-		});
-
-		const currentItemIndex = filteredItems.findIndex(isCurrentItem);
+		// Find the actual index in product.items (not filtered array)
+		const currentItemIndex = product.items.findIndex(isCurrentItem);
 
 		if (currentItemIndex === -1) return;
 
-		const updatedItems = [...filteredItems];
+		const updatedItems = [...product.items];
 		updatedItems[currentItemIndex] = updatedItem;
 		setProduct({ ...product, items: updatedItems });
 	};
