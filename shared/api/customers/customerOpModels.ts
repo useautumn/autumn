@@ -1,7 +1,7 @@
 import { CusExpand } from "@models/cusModels/cusExpand.js";
 import { z } from "zod/v4";
 import { EntityDataSchema } from "../common/entityData.js";
-import { queryStringArray } from "../common/queryHelpers.js";
+import { queryIntegerArray, queryStringArray } from "../common/queryHelpers.js";
 
 export const GetCustomerQuerySchema = z.object({
 	expand: queryStringArray(z.enum(CusExpand)).optional(),
@@ -120,16 +120,31 @@ export const UpdateCustomerParamsSchema = z.object({
 
 // List Customers Query (based on the docs)
 export const ListCustomersQuerySchema = z.object({
-	limit: z.coerce.number().int().min(10).max(100).default(10).optional().meta({
+	limit: z.coerce.number().int().min(10).max(100).default(10).meta({
 		description: "Maximum number of customers to return",
 	}),
-	offset: z.coerce.number().int().min(0).default(0).optional().meta({
+	offset: z.coerce.number().int().min(0).default(0).meta({
 		description: "Number of customers to skip before returning results",
+	}),
+	search: z.string().optional().meta({
+		description: "Search customers by id, name, or email",
 	}),
 	product_id: z.string().optional().meta({
 		description:
 			"Filter by product ID. Returns customers with active subscriptions to this product.",
 	}),
+	product_version: queryIntegerArray().default([]).meta({
+		description:
+			"Filter by product version(s). Requires product_id. Supports comma-separated (1,2) or repeated (?product_version=1&product_version=2) format.",
+	}),
+	product_status: queryStringArray(
+		z.enum(["active", "past_due", "scheduled", "expired", "trialing"]),
+	)
+		.default(["active", "past_due", "scheduled", "trialing"])
+		.meta({
+			description:
+				"Filter by customer product status. Defaults to active, past_due, scheduled, trialing.",
+		}),
 });
 
 // List Customers Response
