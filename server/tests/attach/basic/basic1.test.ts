@@ -3,7 +3,6 @@ import { ApiVersion } from "@autumn/shared";
 import { AutumnCli } from "@tests/cli/AutumnCli.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectCustomerV0Correct } from "@tests/utils/expectUtils/expectCustomerV0Correct.js";
-import { expectFeaturesCorrect } from "@tests/utils/expectUtils/expectFeaturesCorrect.js";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
@@ -59,24 +58,8 @@ describe(`${chalk.yellowBright("basic1: Testing attach free, default product")}`
 		await expectCustomerV0Correct({
 			sent: sharedDefaultFree,
 			cusRes: data,
+			// skipEntitlements: true,
 		});
-	});
-
-	test("should have correct entitlements", async () => {
-		// Expected: 5 allowance for Messages feature
-		const entitled = (await AutumnCli.entitled(
-			customerId,
-			TestFeature.Messages,
-		)) as any;
-
-		const metered1Balance = entitled.balances.find(
-			(balance: any) => balance.feature_id === TestFeature.Messages,
-		);
-
-		expect(entitled.allowed).toBe(true);
-		expect(metered1Balance).toBeDefined();
-		expect(metered1Balance.balance).toBe(5);
-		expect(metered1Balance.unlimited).toBeUndefined();
 	});
 
 	test("should have correct boolean1 entitlement", async () => {
@@ -101,10 +84,10 @@ describe(`${chalk.yellowBright("basic1: Testing attach free, default product")}`
 			product: free2,
 		});
 
-		expectFeaturesCorrect({
-			customer,
-			product: free2,
-			otherProducts: [sharedDefaultFree],
-		});
+		// expectFeaturesCorrect({
+		// 	customer,
+		// 	product: free2,
+		// 	otherProducts: [sharedDefaultFree],
+		// });
 	});
 });

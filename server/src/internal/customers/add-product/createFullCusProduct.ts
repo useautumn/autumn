@@ -1,4 +1,5 @@
 import {
+	ACTIVE_STATUSES,
 	type ApiVersion,
 	CollectionMethod,
 	type CusProduct,
@@ -78,6 +79,7 @@ export const initCusProduct = ({
 	internalEntityId,
 	apiVersion,
 	quantity,
+	processor = ProcessorType.Stripe,
 }: {
 	customer: Customer;
 	product: FullProduct;
@@ -100,6 +102,7 @@ export const initCusProduct = ({
 	internalEntityId?: string;
 	apiVersion?: ApiVersion;
 	quantity?: number;
+	processor?: ProcessorType;
 }) => {
 	const isFuture = startsAt && startsAt > Date.now();
 
@@ -124,7 +127,7 @@ export const initCusProduct = ({
 				: CusProductStatus.Active,
 
 		processor: {
-			type: ProcessorType.Stripe,
+			type: processor ?? ProcessorType.Stripe,
 			// subscription_id: subscriptionId,
 			// subscription_schedule_id: subscriptionScheduleId,
 			// last_invoice_id: lastInvoiceId,
@@ -237,7 +240,6 @@ export const getExistingCusProduct = async ({
 	internalEntityId,
 }: {
 	db: DrizzleCli;
-
 	cusProducts?: FullCusProduct[];
 	product: FullProduct;
 	internalCustomerId: string;
@@ -284,6 +286,7 @@ export const createFullCusProduct = async ({
 	scenario = "default",
 	sendWebhook = true,
 	logger,
+	processorType = ProcessorType.Stripe,
 }: {
 	db: DrizzleCli;
 	attachParams: InsertCusProductParams;
@@ -306,6 +309,7 @@ export const createFullCusProduct = async ({
 	scenario?: string;
 	sendWebhook?: boolean;
 	logger: any;
+	processorType?: ProcessorType;
 }) => {
 	disableFreeTrial = attachParams.disableFreeTrial || disableFreeTrial;
 
@@ -319,6 +323,7 @@ export const createFullCusProduct = async ({
 		product,
 		internalCustomerId: customer.internal_id,
 		internalEntityId: attachParams.internalEntityId,
+		// processorType,
 	});
 
 	freeTrial = disableFreeTrial ? null : freeTrial;
@@ -340,7 +345,10 @@ export const createFullCusProduct = async ({
 	if (
 		(isOneOff(prices) || (isFreeProduct(prices) && product.is_add_on)) &&
 		notNullish(existingCusProduct) &&
-		!attachParams.isCustom
+		!attachParams.isCustom &&
+		!existingCusProduct.is_custom &&
+		product.version === existingCusProduct.product.version &&
+		ACTIVE_STATUSES.includes(existingCusProduct.status)
 	) {
 		await updateOneTimeCusProduct({
 			db,
@@ -433,6 +441,7 @@ export const createFullCusProduct = async ({
 	const cusProd = initCusProduct({
 		cusProdId,
 		customer,
+		processor: processorType ?? ProcessorType.Stripe,
 		product,
 		startsAt,
 		optionsList,
@@ -453,24 +462,27 @@ export const createFullCusProduct = async ({
 		quantity: productOptions?.quantity ?? undefined,
 	});
 
-	// Expire previous product if not one off and add on...?
-	if (isFreeProduct(prices) && product.is_add_on) {
-		const { curSameProduct } = getExistingCusProducts({
-			product,
-			cusProducts: attachParams.cusProducts!,
-			internalEntityId: attachParams.internalEntityId,
-		});
+	// // Expire previous add on product if not one off...
+	// if (product.is_add_on && !isOneOff(prices)) {
+	// 	const { curSameProduct } = getExistingCusProducts({
+	// 		product,
+	// 		cusProducts: attachParams.cusProducts!,
+	// 		internalEntityId: attachParams.internalEntityId,
+	// 	});
 
-		if (curSameProduct) {
-			await CusProductService.update({
-				db,
-				cusProductId: curSameProduct.id,
-				updates: {
-					status: CusProductStatus.Expired,
-				},
-			});
-		}
-	}
+	// 	const curPrices = curSameProduct
+	// 		? cusProductToPrices({ cusProduct: curSameProduct })
+	// 		: [];
+	// 	if (curSameProduct && !isOneOff(curPrices) && !isFreeProduct(curPrices)) {
+	// 		await CusProductService.update({
+	// 			db,
+	// 			cusProductId: curSameProduct.id,
+	// 			updates: {
+	// 				status: CusProductStatus.Expired,
+	// 			},
+	// 		});
+	// 	}
+	// }
 
 	if (!isOneOff(prices) && !product.is_add_on) {
 		await expireOrDeleteCusProduct({

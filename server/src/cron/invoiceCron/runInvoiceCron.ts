@@ -38,9 +38,11 @@ export const handleVoidInvoiceCron = async ({
 
 			if (voidSub && subId) {
 				logger.info(`Voiding sub ${subId} [created through invoice checkout]`);
-				await stripeCli.subscriptions.cancel(subId);
-
-				logger.info(`Voided sub ${subId} [created through invoice checkout]`);
+				try {
+					await stripeCli.subscriptions.cancel(subId);
+				} catch (error) {
+					logger.warn(`Error voiding sub ${subId}: ${error}`);
+				}
 			}
 
 			await MetadataService.delete({
@@ -50,7 +52,11 @@ export const handleVoidInvoiceCron = async ({
 		} catch (error) {
 			logger.error(`Error voiding invoice: ${error}`);
 		}
-	} else if (invoice.status === "void") {
+	} else if (
+		invoice.status === "void" ||
+		invoice.status === "paid" ||
+		invoice.status === "uncollectible"
+	) {
 		await MetadataService.delete({
 			db,
 			id: metadata.id,
@@ -59,35 +65,40 @@ export const handleVoidInvoiceCron = async ({
 };
 
 export const runInvoiceCron = async ({ ctx }: { ctx: CronContext }) => {
-	console.log("Running invoice cron");
-	const { db } = ctx;
+	try {
+		console.log("Running invoice cron");
+		const { db } = ctx;
 
-	// 1. Fetch from metadata invoices
-	const invoices = await db
-		.select()
-		.from(metadata)
-		.where(
-			and(
-				or(
-					eq(metadata.type, MetadataType.InvoiceActionRequired),
-					eq(metadata.type, MetadataType.InvoiceCheckout),
+		// 1. Fetch from metadata invoices
+		const invoices = await db
+			.select()
+			.from(metadata)
+			.where(
+				and(
+					or(
+						eq(metadata.type, MetadataType.InvoiceActionRequired),
+						eq(metadata.type, MetadataType.InvoiceCheckout),
+					),
+					lt(metadata.expires_at, Date.now()),
+					isNotNull(metadata.stripe_invoice_id),
 				),
-				lt(metadata.expires_at, Date.now()),
-				isNotNull(metadata.stripe_invoice_id),
-			),
-		);
+			);
 
-	const batchSize = 50;
-	for (let i = 0; i < invoices.length; i += batchSize) {
-		const batch = invoices.slice(i, i + batchSize);
+		const batchSize = 50;
+		for (let i = 0; i < invoices.length; i += batchSize) {
+			const batch = invoices.slice(i, i + batchSize);
 
-		const promises = [];
-		for (const metadata of batch) {
-			promises.push(handleVoidInvoiceCron({ ctx, metadata }));
+			const promises = [];
+			for (const metadata of batch) {
+				promises.push(handleVoidInvoiceCron({ ctx, metadata }));
+			}
+			await Promise.all(promises);
+			console.log(`Handled ${i + batch.length}/${invoices.length} invoices`);
+			console.log("----------------------------------\n");
 		}
-		await Promise.all(promises);
-		console.log(`Handled ${i + batch.length}/${invoices.length} invoices`);
-		console.log("----------------------------------\n");
+		console.log("FINISHED INVOICE CRON");
+	} catch (error) {
+		console.error("Error running invoice cron:", error);
+		return;
 	}
-	console.log("FINISHED INVOICE CRON");
 };

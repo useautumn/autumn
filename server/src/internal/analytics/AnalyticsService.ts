@@ -1,7 +1,3 @@
-/** biome-ignore-all lint/complexity/noStaticOnlyClass: wrap it up buddy */
-
-/** biome-ignore-all lint/complexity/noStaticOnlyClass: wrap it up buddy */
-
 import {
 	ErrCode,
 	type FullCustomer,

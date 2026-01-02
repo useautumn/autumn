@@ -6,7 +6,8 @@
 	"scripts": {
 		"setup": "tsx setup/setup.js",
 		"setup-test": "tsx setup/setup-test.ts",
-		"replicate": "bun run db/replicate.ts"
+		"replicate": "bun run db/replicate.ts",
+		"create-clickhouse-event-views:prod": "infisical run --env=prod -- bun run setup/events/recreate-clickhouse-event-views.ts"
 	},
 	"dependencies": {
 		"@autumn/shared": "workspace:*",
@@ -15,7 +16,8 @@
 		"drizzle-orm": "catalog:",
 		"inquirer": "^12.6.3",
 		"ora": "^9.0.0",
-		"p-limit": "^7.2.0"
+		"p-limit": "^7.2.0",
+		"@clickhouse/client": "catalog:"
 	},
 	"devDependencies": {
 		"@types/inquirer": "^9.0.7",

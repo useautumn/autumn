@@ -1,9 +1,7 @@
 import { Infinite, type PriceTier } from "@autumn/shared";
-import { TrashSimpleIcon } from "@phosphor-icons/react";
-import { Plus } from "lucide-react";
+import { PlusIcon, TrashSimpleIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { IconButton } from "@/components/v2/buttons/IconButton";
-import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
 import {
 	InputGroup,
@@ -149,40 +147,37 @@ export function PriceTiers() {
 
 		return (
 			<div className="space-y-2">
-				<FormLabel>Price</FormLabel>
 				<div className="flex gap-2 w-full items-center">
-					<div className="w-32">
-						<InputGroup>
-							<InputGroupInput
-								value={getDisplayValue(amountKey, firstTier.amount)}
-								onFocus={() => handleInputFocus(amountKey, firstTier.amount)}
-								onBlur={() => handleInputBlur(amountKey, "amount", 0)}
-								onChange={(e) =>
-									handleInputChange(amountKey, e.target.value, "amount", 0)
+					<InputGroup>
+						<InputGroupInput
+							value={getDisplayValue(amountKey, firstTier.amount)}
+							onFocus={() => handleInputFocus(amountKey, firstTier.amount)}
+							onBlur={() => handleInputBlur(amountKey, "amount", 0)}
+							onChange={(e) =>
+								handleInputChange(amountKey, e.target.value, "amount", 0)
+							}
+							inputMode="decimal"
+							placeholder="0.00"
+							onKeyDown={(e) => {
+								// Prevent typing minus sign
+								if (e.key === "-" || e.key === "Minus") {
+									e.preventDefault();
 								}
-								inputMode="decimal"
-								placeholder="0.00"
-								onKeyDown={(e) => {
-									// Prevent typing minus sign
-									if (e.key === "-" || e.key === "Minus") {
-										e.preventDefault();
-									}
-								}}
-							/>
-							<InputGroupAddon align="inline-end">
-								<span className="text-t3 text-xs">{currency}</span>
-							</InputGroupAddon>
-						</InputGroup>
-					</div>
+							}}
+						/>
+						<InputGroupAddon align="inline-end">
+							<span className="text-t3 text-tiny">{currency}</span>
+						</InputGroupAddon>
+					</InputGroup>
 
 					<BillingUnits />
 
-					<div className="flex items-center ml-auto gap-1 pl-2">
+					<div className="flex items-center ml-auto gap-1">
 						<IconButton
 							variant="muted"
-							size="sm"
+							className="text-t3 text-xs"
 							onClick={() => addTier({ item, setItem })}
-							icon={<Plus size={12} />}
+							icon={<PlusIcon size={12} />}
 							iconOrientation="left"
 						>
 							Add Tiers
@@ -196,108 +191,57 @@ export function PriceTiers() {
 	// Multi-tier UI - full tier management
 	return (
 		<div className="space-y-2">
-			<FormLabel>Pricing Tiers</FormLabel>
 			{tiers.map((tier: PriceTier, index: number) => {
-				const isInfinite = tier.to === Infinite;
-				const toKey = `tier-${index}-to`;
 				const amountKey = `tier-${index}-amount`;
 
 				return (
 					<div key={index} className="flex gap-2 w-full items-center">
-						<div className="flex-1 gap-2 flex items-center min-w-0">
-							<div className="flex flex-1 items-center min-w-0">
-								<div className="flex flex-1 text-sm items-center min-w-0">
-									{/* From value - first tier starts from included usage or 0 */}
-									<Input
-										value={
-											index === 0
-												? (includedUsage || 0).toString()
-												: getTierToDisplay({
-														tiers,
-														index: index - 1,
-														includedUsage,
-													})
-										}
-										onChange={() => null} // Read-only for "from" value
-										className="w-full"
-										disabled
-									/>
-								</div>
-								<span className="px-2 text-body-secondary text-xs shrink-0">
-									to
-								</span>
-								<div className="flex flex-1 text-sm items-center min-w-0">
-									{/* To value - disable if infinite (last tier) or if 2nd tier in 2-tier setup */}
-									<TierToInput index={index} />
-									{/* <Input
-										// value={isInfinite ? "∞" : getDisplayValue(toKey, tier.to)}
-										value={getTierToDisplay(index)}
-										// onFocus={() =>
-										// 	!isInfinite && handleInputFocus(toKey, tier.to)
-										// }
-										// onBlur={() =>
-										// 	!isInfinite && handleInputBlur(toKey, "to", index)
-										// }
-										// onChange={(e) =>
-										// 	!isInfinite &&
-										// 	handleInputChange(toKey, e.target.value, "to", index)
-										// }
-										className="w-full"
-										placeholder={isInfinite ? "∞" : "100"}
-										inputMode="decimal"
-										disabled={isInfinite || (tiers.length === 2 && index === 1)} // Disable infinity or 2nd tier in 2-tier setup
-									/> */}
-								</div>
-							</div>
+						<span className="text-t3 text-xs min-w-0 w-18 shrink-0 h-full">
+							{Number(includedUsage) === 0 && index === 0
+								? "first"
+								: "then, up to"}
+						</span>
 
-							{/* Price input with currency */}
-							<div className="w-22 shrink-0">
-								<InputGroup className="min-w-0">
-									<InputGroupInput
-										value={getDisplayValue(amountKey, tier.amount)}
-										onFocus={() => handleInputFocus(amountKey, tier.amount)}
-										onBlur={() => handleInputBlur(amountKey, "amount", index)}
-										onChange={(e) =>
-											handleInputChange(
-												amountKey,
-												e.target.value,
-												"amount",
-												index,
-											)
-										}
-										inputMode="decimal"
-										placeholder="0.00"
-									/>
-									<InputGroupAddon align="inline-end">
-										<span className="text-t3 text-xs">{currency}</span>
-									</InputGroupAddon>
-								</InputGroup>
-							</div>
+						<TierToInput index={index} />
 
-							{/* Interactive units display */}
-							<BillingUnits />
-						</div>
+						<InputGroup className="min-w-0 w-26 shrink-0">
+							<InputGroupInput
+								value={getDisplayValue(amountKey, tier.amount)}
+								onFocus={() => handleInputFocus(amountKey, tier.amount)}
+								onBlur={() => handleInputBlur(amountKey, "amount", index)}
+								onChange={(e) =>
+									handleInputChange(amountKey, e.target.value, "amount", index)
+								}
+								inputMode="decimal"
+								placeholder="0.00"
+							/>
+							<InputGroupAddon align="inline-end">
+								<span className="text-t3 text-tiny">{currency}</span>
+							</InputGroupAddon>
+						</InputGroup>
 
-						{/* Action buttons */}
+						<BillingUnits />
+
 						<div className="flex items-center gap-1 shrink-0">
 							<IconButton
 								variant="muted"
-								size="sm"
-								onClick={() => addTier({ item, setItem })}
-								icon={<Plus size={12} />}
-								className="p-1"
-							/>
-							<IconButton
-								variant="muted"
-								size="sm"
 								onClick={() => removeTier({ item, setItem, index })}
-								icon={<TrashSimpleIcon size={12} />}
-								className="p-1"
+								icon={<TrashSimpleIcon size={10} />}
+								className="p-1 text-t3 hover:text-red-500"
 							/>
 						</div>
 					</div>
 				);
 			})}
+			<IconButton
+				variant="muted"
+				className="w-full text-t3 text-xs mb-2 mt-1"
+				size="sm"
+				onClick={() => addTier({ item, setItem })}
+				icon={<PlusIcon size={8} />}
+			>
+				Add Tier
+			</IconButton>
 		</div>
 	);
 }

@@ -1,5 +1,5 @@
-import { BillingInterval } from "@models/productModels/intervals/billingInterval";
-import { EntInterval } from "@models/productModels/intervals/entitlementInterval";
+import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
+import { EntInterval } from "@models/productModels/intervals/entitlementInterval.js";
 import {
 	addDays,
 	addHours,

@@ -15,6 +15,12 @@ local entityId = ARGV[5]
 -- Build versioned cache key using shared utility
 local cacheKey = buildEntityCacheKey(orgId, env, customerId, entityId)
 
+-- Check if cache guard is active (prevents stale writes after deletion)
+local guardKey = buildCacheGuardKey(orgId, env, customerId)
+if redis.call("EXISTS", guardKey) == 1 then
+    return "GUARD_ACTIVE"
+end
+
 -- Check if complete cache already exists
 if checkCacheExists(cacheKey) then
     return "CACHE_EXISTS"

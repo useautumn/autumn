@@ -39,7 +39,9 @@ export const createCustomStripeCard = async ({
 }) => {
 	const stripeCli = createStripeCli({ org, env });
 	const customPaymentMethodId =
-		org.processor_configs?.[processor]?.custom_payment_method?.[env];
+		processor === "vercel"
+			? org.processor_configs?.vercel?.custom_payment_method?.[env]
+			: undefined;
 	if (customPaymentMethodId?.trim()) {
 		const pm = await stripeCli.paymentMethods.create({
 			type: "custom",

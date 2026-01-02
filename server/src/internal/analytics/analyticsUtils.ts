@@ -14,25 +14,11 @@ import { isFreeProduct } from "../products/productUtils.js";
 export async function getBillingCycleStartDate(
 	customer?: FullCustomer,
 	db?: DrizzleCli,
-	intervalType?: "1bc" | "3bc",
+	intervalType?: "1bc" | "3bc" | "last_cycle",
 ) {
-	// If no customer provided, return empty object (for aggregateAll case)
 	if (!customer || !db || !intervalType) {
 		return {};
 	}
-
-	// const customerHasProducts = notNullish(customer.customer_products);
-	// // const customerHasSubscriptions = notNullish(customer.subscriptions);
-
-	// // if (!customerHasProducts) {
-	// //   return {}; // No products, return empty object
-	// // }
-
-	// // const subscriptions = await AnalyticsService.getSubscriptionsIfNeeded(
-	// //   customer,
-	// //   customerHasSubscriptions,
-	// //   db
-	// // );
 
 	const subscriptions = customer.subscriptions || [];
 	const cusProducts = customer.customer_products.filter(
@@ -46,7 +32,7 @@ export async function getBillingCycleStartDate(
 	);
 
 	const areAllProductsFree = checkIfAllProductsAreFree(fullProducts);
-	const { startDates, endDates } = areAllProductsFree
+	const { startDates, endDates, createdDates } = areAllProductsFree
 		? getDateRangesFromEntitlements(customer.customer_products)
 		: getDateRangesFromSubscriptions(cusProducts, subscriptions);
 
@@ -54,7 +40,12 @@ export async function getBillingCycleStartDate(
 		return {};
 	}
 
-	return calculateBillingCycleResult(startDates, endDates, intervalType);
+	return calculateBillingCycleResult(
+		startDates,
+		endDates,
+		createdDates,
+		intervalType,
+	);
 }
 
 export function checkIfAllProductsAreFree(
@@ -74,9 +65,10 @@ export function formatDateToString(date: Date): string {
 export function getDateRangesFromSubscriptions(
 	customerProductsFiltered: FullCusProduct[],
 	subscriptions: Subscription[],
-): { startDates: string[]; endDates: string[] } {
+): { startDates: string[]; endDates: string[]; createdDates: string[] } {
 	const startDates: string[] = [];
 	const endDates: string[] = [];
+	const createdDates: string[] = [];
 
 	customerProductsFiltered.forEach((product: FullCusProduct) => {
 		product.subscription_ids?.forEach((subscriptionId: string) => {
@@ -96,21 +88,25 @@ export function getDateRangesFromSubscriptions(
 						new Date((subscription.current_period_end ?? 0) * 1000),
 					),
 				);
+				createdDates.push(
+					formatDateToString(new Date((subscription.created_at ?? 0) * 1000)),
+				);
 			}
 		});
 	});
 
-	return { startDates, endDates };
+	return { startDates, endDates, createdDates };
 }
 
 export function getDateRangesFromEntitlements(
 	customerProducts?: FullCusProduct[],
-): { startDates: string[]; endDates: string[] } {
+): { startDates: string[]; endDates: string[]; createdDates: string[] } {
 	const startDates: string[] = [];
 	const endDates: string[] = [];
+	const createdDates: string[] = [];
 
 	if (!customerProducts || customerProducts.length < 1) {
-		return { startDates, endDates };
+		return { startDates, endDates, createdDates };
 	}
 
 	customerProducts.forEach((product: FullCusProduct) => {
@@ -138,22 +134,54 @@ export function getDateRangesFromEntitlements(
 				if (startDate) {
 					startDates.push(startDate);
 				}
+
+				createdDates.push(formatDateToString(new Date(entitlement.created_at)));
 			},
 		);
 	});
 
-	return { startDates, endDates };
+	return { startDates, endDates, createdDates };
 }
 
 export function calculateBillingCycleResult(
 	startDates: string[],
 	endDates: string[],
-	intervalType: "1bc" | "3bc",
+	createdDates: string[],
+	intervalType: "1bc" | "3bc" | "last_cycle",
 ) {
-	const startDate = new Date(startDates[0]);
-	const endDate = new Date(endDates[0]);
-	const gap = endDate.getTime() - startDate.getTime();
+	const currentStartDate = new Date(startDates[0]);
+	const currentEndDate = new Date(endDates[0]);
+	const gap = currentEndDate.getTime() - currentStartDate.getTime();
 	const gapDays = Math.floor(gap / (1000 * 60 * 60 * 24));
+
+	if (intervalType === "last_cycle") {
+		const earliestCreation = createdDates.reduce((earliest, current) => {
+			const currentDate = new Date(current);
+			const earliestDate = new Date(earliest);
+			return currentDate < earliestDate ? current : earliest;
+		}, createdDates[0]);
+
+		const createdAt = new Date(earliestCreation);
+
+		const isSubscriptionCreatedDuringOrAfterCurrentPeriod =
+			createdAt >= currentStartDate;
+		if (isSubscriptionCreatedDuringOrAfterCurrentPeriod) {
+			return {
+				startDate: startDates[0],
+				endDate: endDates[0],
+				gap: gapDays,
+			};
+		}
+
+		const previousEndDate = new Date(currentStartDate.getTime());
+		const previousStartDate = new Date(currentStartDate.getTime() - gap);
+
+		return {
+			startDate: formatDateToString(previousStartDate),
+			endDate: formatDateToString(previousEndDate),
+			gap: gapDays,
+		};
+	}
 
 	return {
 		startDate: startDates[0],

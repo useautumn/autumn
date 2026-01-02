@@ -4,6 +4,7 @@ import {
 	AttachFunctionResponseSchema,
 	AttachScenario,
 	CusProductStatus,
+	cusProductToPrices,
 	cusProductToProduct,
 	ProrationBehavior,
 	SuccessCode,
@@ -11,7 +12,7 @@ import {
 import type Stripe from "stripe";
 import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
-import { subIsCanceled } from "@/external/stripe/stripeSubUtils.js";
+import { isStripeSubscriptionCanceled } from "@/external/stripe/stripeSubUtils.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
@@ -21,7 +22,10 @@ import {
 	attachToInvoiceResponse,
 	insertInvoiceFromAttach,
 } from "@/internal/invoices/invoiceUtils.js";
-import { attachToInsertParams } from "@/internal/products/productUtils.js";
+import {
+	attachToInsertParams,
+	isOneOff,
+} from "@/internal/products/productUtils.js";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 import {
 	attachParamsToCurCusProduct,
@@ -113,6 +117,7 @@ export const handleUpgradeFlow = async ({
 		);
 		canceled = true;
 		const { stripeCli } = attachParams;
+
 		await stripeCli.subscriptions.cancel(curSub.id, {
 			prorate: config.proration === ProrationBehavior.Immediately,
 			invoice_now: config.proration === ProrationBehavior.Immediately,
@@ -133,6 +138,15 @@ export const handleUpgradeFlow = async ({
 			branch,
 			fromCreate: attachParams.products.length === 0, // just for now, if no products, it comes from cancel product...
 		});
+
+		// // Renew sub
+		// console.log("Sub is canceled!", isStripeSubscriptionCanceled({ sub: res.updatedSub }));
+		// if (isStripeSubscriptionCanceled({ sub: res.updatedSub })) {
+		// 	await attachParams.stripeCli.subscriptions.update(res.updatedSub.id, {
+		// 		cancel_at_period_end: false,
+		// 		cancel_at: null,
+		// 	});
+		// }
 
 		if (res?.latestInvoice) {
 			logger.info(`UPGRADE FLOW: inserting invoice ${res.latestInvoice.id}`);
@@ -169,7 +183,10 @@ export const handleUpgradeFlow = async ({
 		latestInvoice = res.latestInvoice || undefined;
 	}
 
-	if (curCusProduct) {
+	if (
+		curCusProduct &&
+		!isOneOff(cusProductToPrices({ cusProduct: curCusProduct }))
+	) {
 		logger.info(`UPGRADE FLOW: expiring previous cus product`);
 		await CusProductService.update({
 			db,
@@ -200,10 +217,9 @@ export const handleUpgradeFlow = async ({
 	if (attachParams.products.length > 0) {
 		logger.info(`UPGRADE FLOW: creating new cus product`);
 		const anchorToUnix = sub ? getEarliestPeriodEnd({ sub }) * 1000 : undefined;
-		console.log("Sub status:", sub?.status);
 
 		let canceledAt: number | undefined;
-		if (sub && subIsCanceled({ sub })) {
+		if (sub && isStripeSubscriptionCanceled({ sub })) {
 			canceledAt = sub.canceled_at
 				? sub.canceled_at * 1000
 				: curCusProduct?.canceled_at || undefined;

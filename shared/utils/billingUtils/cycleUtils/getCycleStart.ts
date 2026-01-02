@@ -1,7 +1,7 @@
 import { UTCDate } from "@date-fns/utc";
-import type { BillingInterval } from "@models/productModels/intervals/billingInterval";
-import type { EntInterval } from "@models/productModels/intervals/entitlementInterval";
-import { getCycleIntervalFunctions } from "./getCycleIntervalFunctions";
+import type { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
+import type { EntInterval } from "@models/productModels/intervals/entitlementInterval.js";
+import { getCycleIntervalFunctions } from "./getCycleIntervalFunctions.js";
 
 /**
  * Get the start of the current cycle that contains `now`, aligned to the anchor.
@@ -14,6 +14,7 @@ import { getCycleIntervalFunctions } from "./getCycleIntervalFunctions";
  * @param interval - BillingInterval or EntInterval
  * @param intervalCount - Number of intervals per cycle (default: 1)
  * @param now - Current time (defaults to Date.now())
+ * @param floor - Whether to floor the cycle start to some unix
  * @returns Unix timestamp of the current cycle start
  */
 export const getCycleStart = ({
@@ -21,11 +22,13 @@ export const getCycleStart = ({
 	interval,
 	intervalCount = 1,
 	now,
+	floor,
 }: {
 	anchor: number;
 	interval: BillingInterval | EntInterval;
 	intervalCount?: number;
-	now: number; // milliseconds since epoch
+	now: number; // milliseconds since epoch;
+	floor?: number | undefined;
 }): number => {
 	const anchorDate = new UTCDate(anchor);
 	const nowDate = new UTCDate(now);
@@ -54,9 +57,12 @@ export const getCycleStart = ({
 	 * cyclesPassed = floor(-3/3) = -1, so cycleStart = Apr 28 - 3 = Jan 28
 	 * But Jan 28 > Jan 15, so we overshot - need to go back one more cycle to Oct 28
 	 */
+	let finalCycleStart = cycleStart;
 	if (cycleStart.getTime() > now) {
-		return add(anchorDate, (cyclesPassed - 1) * intervalCount).getTime();
+		finalCycleStart = add(anchorDate, (cyclesPassed - 1) * intervalCount);
 	}
 
-	return cycleStart.getTime();
+	return floor
+		? Math.floor(finalCycleStart.getTime())
+		: finalCycleStart.getTime();
 };

@@ -14,6 +14,7 @@ import {
 import { PanelLeft } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { Button } from "@/components/ui/button";
+import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { useOrg } from "@/hooks/common/useOrg";
@@ -34,6 +35,7 @@ export const buildDevSubTabs = ({
 	flags: {
 		webhooks: boolean;
 		vercel: boolean;
+		revenuecat: boolean;
 	};
 }) => {
 	return [
@@ -53,6 +55,16 @@ export const buildDevSubTabs = ({
 						title: "Vercel",
 						value: "vercel",
 						icon: <TriangleIcon size={16} weight="fill" />,
+					},
+				]
+			: []),
+		...(flags.revenuecat
+			? [
+					{
+						title: "RevenueCat",
+						value: "revenuecat",
+						// icon: <PawPrintIcon size={16} weight="fill" />,
+						icon: <RevenueCatIcon size={64} />,
 					},
 				]
 			: []),

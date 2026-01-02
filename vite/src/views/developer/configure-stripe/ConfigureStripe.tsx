@@ -171,7 +171,7 @@ export const ConfigureStripe = () => {
 				description:
 					env === AppEnv.Live
 						? "To start taking payments in Production, connect your Stripe live account below:"
-						: "You are using a default sandbox account managed by Autumn. You can connect your own Stipe sandbox account below.",
+						: "You are using a default sandbox account managed by Autumn. You can connect your own Stripe sandbox account below.",
 				showDisconnect: false,
 				showConnectButtons: true,
 				showDefaultAccountLink: false,
@@ -250,17 +250,16 @@ export const ConfigureStripe = () => {
 						<div className="flex gap-2">
 							{status.showConnectButtons && (
 								<>
-									<Button variant="secondary" onClick={handleRedirectToOAuth}>
+									<Button variant="primary" onClick={handleRedirectToOAuth}>
 										Connect via OAuth
 									</Button>
-									{canPasteSecretKey && (
-										<Button
-											variant="secondary"
-											onClick={() => setShowConnectDialog(true)}
-										>
-											Paste secret key
-										</Button>
-									)}
+
+									<Button
+										variant="secondary"
+										onClick={() => setShowConnectDialog(true)}
+									>
+										Connect via Secret Key
+									</Button>
 								</>
 							)}
 

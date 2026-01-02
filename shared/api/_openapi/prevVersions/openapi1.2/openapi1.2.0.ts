@@ -9,10 +9,10 @@ import {
 	ApiCusFeatureV3Schema,
 	ApiProductItemSchema,
 } from "../../../models.js";
-import { ApiEntityWithMeta, entitiesOpenApi } from "../entitiesOpenApi.js";
-import { analyticsOpenApi } from "./analyticsOpenApi.js";
 import { coreOpenApi } from "./coreOpenApi.js";
 import { ApiCustomerWithMeta, customersOpenApi } from "./customersOpenApi.js";
+import { ApiEntityWithMeta, entitiesOpenApi } from "./entitiesOpenApi.js";
+import { eventsOpenApi } from "./eventsOpenApi.js";
 import { ApiFeatureWithMeta, featuresOpenApi } from "./featuresOpenApi.js";
 import { ApiProductWithMeta, productsOpenApi } from "./productsOpenApi.js";
 
@@ -71,7 +71,7 @@ const OPENAPI_1_2_0 = createDocument(
 			...coreOpenApi,
 			...customersOpenApi,
 			...entitiesOpenApi,
-			...analyticsOpenApi,
+			...eventsOpenApi,
 		},
 	},
 	{
