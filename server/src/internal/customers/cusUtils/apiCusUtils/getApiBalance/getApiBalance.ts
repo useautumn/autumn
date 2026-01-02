@@ -1,7 +1,6 @@
 import type {
 	ApiBalance,
 	FullCusEntWithFullCusProduct,
-	FullCusEntWithOptionalProduct,
 	FullCustomer,
 } from "@autumn/shared";
 import {
@@ -44,7 +43,7 @@ const cusEntsToBreakdown = ({
 	cusEnts,
 }: {
 	ctx: RequestContext;
-	cusEnts: (FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[];
+	cusEnts: (FullCusEntWithFullCusProduct)[];
 	fullCus: FullCustomer;
 }):
 	| {
@@ -55,7 +54,7 @@ const cusEntsToBreakdown = ({
 	| undefined => {
 	const keyToCusEnts: Record<
 		string,
-		(FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[]
+		(FullCusEntWithFullCusProduct)[]
 	> = {};
 	for (const cusEnt of cusEnts) {
 		const key = cusEntToKey({ cusEnt });
@@ -113,7 +112,7 @@ export const cusEntsToPrepaidQuantity = ({
 	cusEnts,
 	feature,
 }: {
-	cusEnts: (FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[];
+	cusEnts: (FullCusEntWithFullCusProduct)[];
 	feature: Feature;
 }) => {
 	let prepaidQuantity = new Decimal(0);
@@ -154,7 +153,7 @@ export const getApiBalance = ({
 }: {
 	ctx: RequestContext;
 	fullCus: FullCustomer;
-	cusEnts: (FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[];
+	cusEnts: (FullCusEntWithFullCusProduct)[];
 	feature: Feature;
 	includeRollovers?: boolean;
 }): { data: ApiBalance; legacyData?: CusFeatureLegacyData } => {

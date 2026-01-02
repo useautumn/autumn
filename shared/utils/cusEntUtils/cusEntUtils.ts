@@ -1,7 +1,7 @@
 import type { FullCustomerEntitlement } from "@models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { PgDeductionUpdate } from "../../api/balances/track/trackTypes/pgDeductionUpdate.js";
 import type { FullCustomer } from "../../models/cusModels/fullCusModel.js";
-import type { FullCusEntWithFullCusProduct, FullCusEntWithOptionalProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import { cusEntToCusPrice } from "../productUtils/convertUtils.js";
 import { isPrepaidPrice } from "../productUtils/priceUtils.js";
 
@@ -104,11 +104,12 @@ export const updateCusEntInFullCus = ({
 export const isPrepaidCusEnt = ({
 	cusEnt,
 }: {
-	cusEnt: FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct;
+	cusEnt: FullCusEntWithFullCusProduct;
 }) => {
-	// 2. If cus ent is not prepaid, skip
 	const cusPrice = cusEntToCusPrice({ cusEnt });
 	if (!cusPrice || !isPrepaidPrice({ price: cusPrice.price })) return false;
+
+	if (!cusEnt.customer_product) return false;
 
 	// 3. Get quantity
 	const options = cusEnt.customer_product?.options?.find(

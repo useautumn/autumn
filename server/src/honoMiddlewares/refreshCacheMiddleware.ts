@@ -53,6 +53,11 @@ const coreUrls = [
 		method: "POST",
 		url: "/balances/update",
 	},
+	{
+		method: "POST",
+		url: "/balances/create",
+		source: "handleCreateBalance",
+	}
 ];
 
 /**
@@ -111,6 +116,7 @@ export const refreshCacheMiddleware = async (
 				customerId: body.customer_id,
 				orgId: org.id,
 				env: env,
+				source: coreMatch.source || undefined,
 			});
 		}
 	}
