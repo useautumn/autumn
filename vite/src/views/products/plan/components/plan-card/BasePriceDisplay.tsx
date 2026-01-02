@@ -1,38 +1,26 @@
-import {
-	type FrontendProduct,
-	formatAmount,
-	formatInterval,
-	type Organization,
-	type ProductV2,
-	productV2ToBasePrice,
-} from "@autumn/shared";
+import type { FrontendProduct } from "@autumn/shared";
+
 import { Button } from "@/components/v2/buttons/Button";
 import { useOrg } from "@/hooks/common/useOrg";
-import {
-	useCurrentItem,
-	useProductStore,
-} from "@/hooks/stores/useProductStore";
+import { useCurrentItem } from "@/hooks/stores/useProductStore";
 import {
 	useIsEditingPlanPrice,
 	useSheetStore,
 } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
-import { notNullish } from "@/utils/genUtils";
+import { getBasePriceDisplay } from "@/utils/product/basePriceDisplayUtils";
 import { checkItemIsValid } from "@/utils/product/entitlementUtils";
 
 export const BasePriceDisplay = ({
 	isOnboarding,
-	product: productProp,
+	product,
 	readOnly = false,
 }: {
 	isOnboarding?: boolean;
-	product?: ProductV2 | FrontendProduct;
+	product: FrontendProduct;
 	readOnly?: boolean;
 }) => {
-	const productFromStore = useProductStore((s) => s.product);
-	const product = productProp ?? productFromStore;
 	const setSheet = useSheetStore((s) => s.setSheet);
-	const basePrice = productV2ToBasePrice({ product });
 	const { org } = useOrg();
 
 	const item = useCurrentItem();
@@ -44,47 +32,40 @@ export const BasePriceDisplay = ({
 	};
 
 	const renderPriceContent = () => {
-		const frontendProduct = product as FrontendProduct;
+		const priceDisplay = getBasePriceDisplay({
+			product,
+			currency: org?.default_currency,
+			showPlaceholder: true,
+		});
 
-		if (frontendProduct.planType === "free") {
-			return <span className="text-main-sec inline-block">Free</span>;
+		switch (priceDisplay.type) {
+			case "free":
+				return (
+					<span className="text-main-sec inline-block">
+						{priceDisplay.displayText}
+					</span>
+				);
+
+			case "price":
+				return (
+					<span className="text-body-secondary flex items-center gap-1">
+						<span className="text-main-sec text-t2! font-semibold!">
+							{priceDisplay.formattedAmount}
+						</span>{" "}
+						<span className="mt-0.5">{priceDisplay.intervalText}</span>
+					</span>
+				);
+
+			case "variable":
+				return <span className="text-t3!">{priceDisplay.displayText}</span>;
+
+			case "placeholder":
+				return (
+					<span className="text-t4 text-body-secondary inline-block">
+						{priceDisplay.displayText}
+					</span>
+				);
 		}
-
-		const priceExists = notNullish(basePrice) && basePrice.price > 0;
-		if (priceExists && basePrice) {
-			const formattedAmount = formatAmount({
-				org: org as unknown as Organization,
-				amount: basePrice.price,
-				amountFormatOptions: {
-					style: "currency",
-					currency: org?.default_currency || "USD",
-					currencyDisplay: "narrowSymbol",
-				},
-			});
-
-			const secondaryText = basePrice.interval
-				? `${formatInterval({ interval: basePrice.interval, intervalCount: basePrice.interval_count ?? undefined })}`
-				: "one-off";
-
-			return (
-				<span className="text-body-secondary flex items-center gap-1">
-					<span className="text-main-sec text-t2! font-semibold!">
-						{formattedAmount}
-					</span>{" "}
-					<span className="mt-0.5">{secondaryText}</span>
-				</span>
-			);
-		}
-
-		if (frontendProduct.basePriceType === "usage") {
-			return <span className="text-t3!">Variable</span>;
-		}
-
-		return (
-			<span className="text-t4 text-body-secondary inline-block">
-				Enter price
-			</span>
-		);
 	};
 
 	return (

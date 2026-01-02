@@ -18,36 +18,35 @@ async function showPreparationChecklist() {
 		),
 	);
 	console.log(
-		chalk.yellowBright("Before you begin, please have the following ready:\n"),
-	);
-
-	console.log(chalk.whiteBright("1. Stripe Test API Key (sk_test_...)"));
-	console.log(
-		chalk.gray(
-			"   → Used to link Stripe to your test account for payment processing\n",
+		chalk.yellowBright(
+			"Before you begin, ensure the following are configured in your environment:\n",
 		),
 	);
 
-	console.log(chalk.whiteBright("2. Upstash Redis REST URL and Token"));
+	console.log(chalk.whiteBright("1. Stripe Sandbox Environment Variables"));
+	console.log(chalk.gray("   Required in your .env file:"));
+	console.log(chalk.gray("   → STRIPE_SANDBOX_CLIENT_ID"));
+	console.log(chalk.gray("   → STRIPE_SANDBOX_SECRET_KEY"));
+	console.log(chalk.gray("   → STRIPE_SANDBOX_WEBHOOK_SECRET\n"));
+
+	console.log(chalk.whiteBright("2. Stripe Webhook URL"));
 	console.log(
 		chalk.gray(
-			"   → Used for caching customer objects and testing race conditions\n",
+			"   → A tunnel URL (e.g., ngrok) pointing to localhost:8080 for webhooks\n",
 		),
 	);
 
-	console.log(chalk.whiteBright("3. Tunnel URL (e.g., ngrok URL)"));
-	console.log(
-		chalk.gray(
-			"   → Points to localhost:8080 so Stripe webhooks can reach your server\n",
-		),
-	);
+	console.log(chalk.whiteBright("3. Cache URL"));
+	console.log(chalk.gray("   → Redis on your machine\n"));
 
 	// Prompt user to continue
 	const { ready } = await inquirer.prompt([
 		{
 			type: "confirm",
 			name: "ready",
-			message: chalk.cyan("Ready to begin setup?"),
+			message: chalk.cyan(
+				"Have you configured all the above? Ready to create test org?",
+			),
 			default: true,
 		},
 	]);
@@ -70,47 +69,8 @@ async function main() {
 		// Import db from server
 		const { db } = await import("@server/db/initDrizzle.js");
 
-		// Step 1: Create test organization in database and get API key
+		// Create test organization in database and get API key
 		const autumnSecretKey = await createTestOrg({ db });
-
-		// // Save org details immediately
-		// updateMultipleEnvVars({
-		// 	TESTS_ORG: TEST_ORG_CONFIG.slug,
-		// 	TESTS_ORG_ID: TEST_ORG_CONFIG.id,
-		// 	...(autumnSecretKey && { UNIT_TEST_AUTUMN_SECRET_KEY: autumnSecretKey }),
-		// });
-
-		// // Step 2: Get Stripe test key
-		// const stripeTestKey = await setupStripeTestKey();
-
-		// // Save Stripe key immediately
-		// updateSingleEnvVar({ key: "STRIPE_TEST_KEY", value: stripeTestKey });
-
-		// // Step 3: Get Upstash configuration
-		// const { upstashUrl, upstashToken } = await setupUpstash();
-
-		// Save Upstash credentials immediately
-		// updateMultipleEnvVars({
-		// 	UPSTASH_REDIS_REST_URL: upstashUrl,
-		// 	UPSTASH_REDIS_REST_TOKEN: upstashToken,
-		// });
-
-		// Step 4: Get tunnel URL
-		// const tunnelUrl = await setupTunnelUrl();
-
-		// // Save tunnel URL immediately
-		// updateSingleEnvVar({ key: "STRIPE_WEBHOOK_URL", value: tunnelUrl });
-
-		// // Step 5: Final update to ensure proper formatting
-		// updateEnvFile({
-		// 	testOrgSlug: TEST_ORG_CONFIG.slug,
-		// 	testOrgId: TEST_ORG_CONFIG.id,
-		// 	autumnSecretKey,
-		// 	stripeTestKey,
-		// 	upstashUrl,
-		// 	upstashToken,
-		// 	tunnelUrl,
-		// });
 
 		console.log(
 			chalk.magentaBright(
@@ -121,14 +81,7 @@ async function main() {
 		console.log(chalk.cyan("Test Organization Details:"));
 		console.log(chalk.whiteBright(`  Organization: ${TEST_ORG_CONFIG.slug}`));
 		console.log(chalk.whiteBright(`  ID: ${TEST_ORG_CONFIG.id}`));
-
-		if (autumnSecretKey) {
-			console.log(chalk.whiteBright(`  Secret Key: ${autumnSecretKey}\n`));
-		} else {
-			console.log(
-				chalk.whiteBright("  Secret Key: (using existing key from .env)\n"),
-			);
-		}
+		console.log(chalk.whiteBright(`  Secret Key: ${autumnSecretKey}\n`));
 
 		console.log(chalk.cyan("Next steps:"));
 		console.log(

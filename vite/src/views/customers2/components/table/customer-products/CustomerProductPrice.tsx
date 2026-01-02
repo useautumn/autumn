@@ -1,12 +1,11 @@
-import type { FullCusProduct, Organization } from "@autumn/shared";
+import type { FullCusProduct } from "@autumn/shared";
 import {
 	cusProductToProduct,
-	formatAmount,
-	isFeaturePriceItem,
 	mapToProductV2,
-	productV2ToBasePrice,
+	productV2ToFrontendProduct,
 } from "@autumn/shared";
 import { useOrg } from "@/hooks/common/useOrg";
+import { getBasePriceDisplay } from "@/utils/product/basePriceDisplayUtils";
 
 export const CustomerProductPrice = ({
 	cusProduct,
@@ -15,44 +14,35 @@ export const CustomerProductPrice = ({
 }) => {
 	const { org } = useOrg();
 
-	// Convert FullCusProduct to FullProduct, then to ProductV2
+	// Convert FullCusProduct to FullProduct, then to ProductV2, then to FrontendProduct
 	const fullProduct = cusProductToProduct({ cusProduct });
 	const productV2 = mapToProductV2({ product: fullProduct });
+	const frontendProduct = productV2ToFrontendProduct({ product: productV2 });
 
-	// Check if product has items
-	if (!productV2.items || productV2.items.length === 0) {
+	// Handle edge case of no items
+	if (!frontendProduct.items || frontendProduct.items.length === 0) {
 		return <div className="text-t3">-</div>;
 	}
 
-	const basePrice = productV2ToBasePrice({ product: productV2 });
+	// Get the base price display information
+	const priceDisplay = getBasePriceDisplay({
+		product: frontendProduct,
+		currency: org?.default_currency,
+	});
 
-	// Check if there are any feature prices
-	const hasFeaturePrices = productV2.items.some((item) =>
-		isFeaturePriceItem(item),
-	);
-
-	// If no base price and no feature prices, show "Free"
-	if (!basePrice && !hasFeaturePrices) {
-		return <div className="text-t3">Free</div>;
+	// Render based on the display type
+	switch (priceDisplay.type) {
+		case "price":
+			return (
+				<div className="flex items-center gap-1">
+					<span className="text-t2">{priceDisplay.formattedAmount}</span>
+					<span className="text-t3">{priceDisplay.intervalText}</span>
+				</div>
+			);
+		case "free":
+		case "variable":
+			return <div className="text-t3">{priceDisplay.displayText}</div>;
+		case "placeholder":
+			return <div className="text-t3">-</div>;
 	}
-
-	// If no base price but has feature prices, show "Variable"
-	if (!basePrice && hasFeaturePrices) {
-		return <div className="text-t3">Variable</div>;
-	}
-
-	// If base price exists, format and display it
-	if (basePrice) {
-		const formattedAmount = formatAmount({
-			org: org as unknown as Organization,
-			amount: basePrice.price,
-			amountFormatOptions: {
-				style: "currency",
-				currency: org?.default_currency || "USD",
-			},
-		});
-		return <div className="text-t2">{formattedAmount}</div>;
-	}
-
-	return <div className="text-t3">-</div>;
 };

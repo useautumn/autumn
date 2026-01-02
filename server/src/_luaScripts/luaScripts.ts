@@ -1,7 +1,11 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { CACHE_CUSTOMER_VERSION, CACHE_TTL_SECONDS } from "./cacheConfig.js";
+import {
+	CACHE_CUSTOMER_VERSION,
+	CACHE_GUARD_TTL_MS,
+	CACHE_TTL_SECONDS,
+} from "./cacheConfig.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -20,7 +24,9 @@ const CACHE_KEY_UTILS_RAW = readFileSync(
 const CACHE_KEY_UTILS = CACHE_KEY_UTILS_RAW.replace(
 	/{CUSTOMER_VERSION}/g,
 	CACHE_CUSTOMER_VERSION,
-).replace("{TTL_SECONDS}", CACHE_TTL_SECONDS.toString());
+)
+	.replace("{TTL_SECONDS}", CACHE_TTL_SECONDS.toString())
+	.replace("{GUARD_TTL_MS}", CACHE_GUARD_TTL_MS.toString());
 
 // Load balance storage utilities
 const CACHE_BALANCE_UTILS = readFileSync(

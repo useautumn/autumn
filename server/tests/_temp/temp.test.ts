@@ -1,78 +1,43 @@
-import { beforeAll, describe } from "bun:test";
-import {
-	ApiVersion,
-	CouponDurationType,
-	type CreateReward,
-	RewardType,
-} from "@autumn/shared";
+import { beforeAll, describe, it } from "bun:test";
+import { ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-import { initProductsV0 } from "../../src/utils/scriptUtils/testUtils/initProductsV0";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { attachAuthenticatePaymentMethod } from "../../src/external/stripe/stripeCusUtils";
+import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3";
 
-const freeProd = constructProduct({
-	type: "free",
-	isDefault: true,
-	items: [
-		constructFeatureItem({
-			featureId: TestFeature.Messages,
-			includedUsage: 500,
-		}),
-	],
-});
+const testCase = "temp";
 
 const pro = constructProduct({
 	type: "pro",
-	isDefault: false,
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
 			includedUsage: 12,
 		}),
 	],
-	// trial: true,
 });
-
-const premium = constructProduct({
-	type: "premium",
-	isDefault: false,
+const oneOffCredits = constructProduct({
+	type: "one_off",
 	items: [
 		constructFeatureItem({
-			featureId: TestFeature.Messages,
-			includedUsage: 12,
+			featureId: TestFeature.Credits,
+			includedUsage: 100,
 		}),
 	],
 	// trial: true,
 });
 
-// 50% off reward that only applies to pro product
-const rewardId = "50_percent_off";
-const promoCode = "50OFF";
-const reward: CreateReward = {
-	id: rewardId,
-	name: "50% Off Pro",
-	type: RewardType.PercentageDiscount,
-	promo_codes: [{ code: promoCode }],
-	discount_config: {
-		discount_value: 50, // 50% off
-		duration_type: CouponDurationType.Forever,
-		duration_value: 0,
-		should_rollover: false,
-		apply_to_all: false, // Only applies to specific product
-		price_ids: [], // Will be populated when creating reward with productId
-	},
-};
-
-describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
-	const customerId = "temp";
+describe(`${chalk.yellowBright("temp: one off credits test")}`, () => {
+	const customerId = testCase;
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
 	beforeAll(async () => {
-		const result = await initCustomerV3({
+		await initCustomerV3({
 			ctx,
 			customerId,
 			withTestClock: true,
@@ -81,70 +46,21 @@ describe(`${chalk.yellowBright("temp: temporary script for testing")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [freeProd, pro, premium],
-			prefix: customerId,
+			products: [pro, oneOffCredits],
+			prefix: testCase,
 		});
+	});
 
-		const entities = [
-			{
-				id: "entity1",
-				name: "Entity 1",
-				feature_id: TestFeature.Messages,
-			},
-			{
-				id: "entity2",
-				name: "Entity 2",
-				feature_id: TestFeature.Messages,
-			},
-			{
-				id: "entity3",
-				name: "Entity 3",
-				feature_id: TestFeature.Messages,
-			},
-		];
-		await autumnV1.entities.create(customerId, entities);
-
+	it("should attach one off credits product", async () => {
 		await autumnV1.attach({
 			customer_id: customerId,
-			entity_id: entities[0].id,
-			product_id: premium.id,
+			product_id: oneOffCredits.id,
 		});
 
-		// await autumnV1.attach({
-		// 	customer_id: customerId,
-		// 	entity_id: entities[1].id,
-		// 	product_id: premium.id,
-		// });
-
-		// await autumnV1.attach({
-		// 	customer_id: customerId,
-		// 	entity_id: entities[2].id,
-		// 	product_id: premium.id,
-		// });
-
-		// await advanceTestClock({
-		// 	stripeCli: ctx.stripeCli,
-		// 	testClockId: result.testClockId!,
-		// 	advanceTo: addWeeks(new Date(), 1).getTime(),
-		// });
-
-		// await autumnV1.attach({
-		// 	customer_id: customerId,
-		// 	entity_id: entities[0].id,
-		// 	product_id: pro.id,
-		// });
-
-		// await advanceTestClock({
-		// 	stripeCli: ctx.stripeCli,
-		// 	testClockId: result.testClockId!,
-		// 	advanceTo: addWeeks(new Date(), 1).getTime(),
-		// });
-
-		// await autumnV1.attach({
-		// 	customer_id: customerId,
-		// 	entity_id: entities[2].id,
-		// 	product_id: pro.id,
-		// });
+		await attachAuthenticatePaymentMethod({
+			ctx,
+			customerId,
+		});
 	});
 });
 

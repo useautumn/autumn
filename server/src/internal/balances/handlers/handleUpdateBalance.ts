@@ -8,7 +8,6 @@ import {
 	UpdateBalanceParamsSchema,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import { z } from "zod/v4";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { createRoute } from "../../../honoMiddlewares/routeHandler.js";
 import { CusService } from "../../customers/CusService.js";
@@ -17,10 +16,7 @@ import { runDeductionTx } from "../track/trackUtils/runDeductionTx.js";
 import { updateGrantedBalance } from "../updateGrantedBalance/updateGrantedBalance.js";
 
 export const handleUpdateBalance = createRoute({
-	body: UpdateBalanceParamsSchema.extend({
-		customer_entitlement_id: z.string().optional(),
-		next_reset_at: z.number().optional(),
-	}),
+	body: UpdateBalanceParamsSchema.extend({}),
 
 	handler: async (c) => {
 		const body = c.req.valid("json");

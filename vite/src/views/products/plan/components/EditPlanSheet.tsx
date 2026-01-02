@@ -8,9 +8,7 @@ import {
 } from "@/components/v2/sheets/SheetAccordion";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { AdditionalOptions } from "./edit-plan-details/AdditionalOptions";
-import { BasePriceSection } from "./edit-plan-details/BasePriceSection";
 import { MainDetailsSection } from "./edit-plan-details/MainDetailsSection";
-import { PlanTypeSection } from "./edit-plan-details/PlanTypeSection";
 
 export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 	const product = useProductStore((s) => s.product);

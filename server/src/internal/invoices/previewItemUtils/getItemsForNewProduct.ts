@@ -6,6 +6,8 @@ import {
 	type FreeTrial,
 	type FullProduct,
 	formatAmount,
+	getCycleEnd,
+	getCycleStart,
 	getFeatureInvoiceDescription,
 	type IntervalConfig,
 	isFixedPrice,
@@ -77,6 +79,7 @@ export const getProration = ({
 	anchor,
 	intervalConfig,
 	now,
+	floor,
 }: {
 	proration?: Partial<{
 		start: number;
@@ -85,12 +88,33 @@ export const getProration = ({
 	anchor?: number; // used to indicate a future date to anchor the next period end to...
 	intervalConfig: IntervalConfig;
 	now?: number;
+	floor?: number;
 }) => {
 	let { interval, intervalCount } = intervalConfig;
 	intervalCount = intervalCount ?? 1;
 	now = now || Date.now();
 
 	if (interval === BillingInterval.OneOff) return undefined;
+
+	if (anchor) {
+		const start = getCycleStart({
+			anchor,
+			interval,
+			intervalCount,
+			now,
+			floor,
+		});
+		const end = getCycleEnd({
+			anchor,
+			interval,
+			intervalCount,
+			now,
+		});
+		return {
+			start,
+			end,
+		};
+	}
 
 	let end = proration?.end;
 	if (!end && anchor) {
@@ -181,6 +205,7 @@ export const getItemsForNewProduct = async ({
 				interval: price.config.interval!,
 				intervalCount: price.config.interval_count || 1,
 			},
+			floor: sub?.created ? Math.floor(sub.created * 1000) : undefined,
 		});
 
 		if (printLogs && finalProration) {

@@ -120,10 +120,22 @@ export const deductFromCusEntsPostgres = async ({
 			sortParams,
 		});
 
-		const { unlimited } = getUnlimitedAndUsageAllowed({
-			cusEnts,
-			internalFeatureId: feature.internal_id!,
-		});
+		// Check if ANY relevant feature (primary or credit system) is unlimited
+		// Add unlimited features to actualDeductions with value 0 (like Lua's changedCustomerFeatureIds)
+		let unlimited = false;
+		for (const rf of relevantFeatures) {
+			const { unlimited: featureUnlimited } = getUnlimitedAndUsageAllowed({
+				cusEnts,
+				internalFeatureId: rf.internal_id!,
+			});
+			if (featureUnlimited) {
+				unlimited = true;
+				// Add to actualDeductions with 0 so balance gets returned
+				if (actualDeductions[rf.id] === undefined) {
+					actualDeductions[rf.id] = 0;
+				}
+			}
+		}
 
 		if (cusEnts.length === 0 || unlimited) continue;
 

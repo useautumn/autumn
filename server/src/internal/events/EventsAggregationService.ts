@@ -1,5 +1,9 @@
 import {
+	BILLING_CYCLE_INTERVALS,
+	type BillingCycleIntervalEnum,
 	type BillingCycleResult,
+	type CalculateCustomRangeParamsInput,
+	type CalculateCustomRangeParamsOutput,
 	type CalculateDateRangeParams,
 	type ClickHouseResult,
 	type DateRangeResult,
@@ -11,7 +15,9 @@ import {
 import type { ClickHouseClient } from "@clickhouse/client";
 import { UTCDate } from "@date-fns/utc";
 import {
+	add,
 	differenceInDays,
+	differenceInHours,
 	format,
 	startOfDay,
 	startOfHour,
@@ -26,6 +32,7 @@ import {
 } from "../analytics/analyticsUtils.js";
 
 export class EventsAggregationService {
+	private static dateFormat = "yyyy-MM-dd'T'HH:mm:ss";
 	private static async calculateDateRange({
 		ctx,
 		params,
@@ -42,22 +49,24 @@ export class EventsAggregationService {
 			return {
 				startDate: format(
 					new UTCDate(params.custom_range.start),
-					"yyyy-MM-dd'T'HH:mm:ss",
+					EventsAggregationService.dateFormat,
 				),
 				endDate: format(
 					new UTCDate(params.custom_range.end),
-					"yyyy-MM-dd'T'HH:mm:ss",
+					EventsAggregationService.dateFormat,
 				),
 			};
 		}
 
-		const isBillingCycle = intervalType === "1bc" || intervalType === "3bc";
+		const isBillingCycle = BILLING_CYCLE_INTERVALS.includes(
+			intervalType as BillingCycleIntervalEnum,
+		);
 		const getBCResults =
 			isBillingCycle && !params.aggregateAll && params.customer
 				? ((await getBillingCycleStartDate(
 						params.customer,
 						db,
-						intervalType as "1bc" | "3bc",
+						intervalType as "1bc" | "3bc" | "last_cycle",
 					)) as BillingCycleResult | null)
 				: null;
 
@@ -76,12 +85,15 @@ export class EventsAggregationService {
 			intervalTypeToDaysMap[intervalType as keyof typeof intervalTypeToDaysMap];
 
 		const now = new UTCDate();
-		const endDate = format(now, "yyyy-MM-dd'T'HH:mm:ss");
+		const endDate = format(now, EventsAggregationService.dateFormat);
 
 		const startTime = sub(now, { days });
 		const truncatedStartTime =
 			binSize === "day" ? startOfDay(startTime) : startOfHour(startTime);
-		const startDate = format(truncatedStartTime, "yyyy-MM-dd'T'HH:mm:ss");
+		const startDate = format(
+			truncatedStartTime,
+			EventsAggregationService.dateFormat,
+		);
 
 		return { startDate, endDate };
 	}
@@ -98,8 +110,49 @@ export class EventsAggregationService {
 			"90d": 90,
 			"1bc": (gap ?? 0) + 1,
 			"3bc": (gap ?? 0) + 1,
+			last_cycle: (gap ?? 0) + 1,
 		};
 	}
+
+	private static calculateCustomRangeParams({
+		customRange,
+		binSize,
+	}: CalculateCustomRangeParamsInput): CalculateCustomRangeParamsOutput {
+		const startDate = new UTCDate(customRange.start);
+		const endDate = new UTCDate(customRange.end);
+
+		const filterStartDate = format(
+			startDate,
+			EventsAggregationService.dateFormat,
+		);
+		const filterEndDate = format(endDate, EventsAggregationService.dateFormat);
+
+		if (binSize === "hour") {
+			const truncStart = startOfHour(startDate);
+			const truncEnd = startOfHour(endDate);
+			const endPlusOne = add(truncEnd, { hours: 1 });
+			const hours = differenceInHours(endPlusOne, truncStart);
+
+			return {
+				binCount: hours,
+				binEndDate: format(endPlusOne, EventsAggregationService.dateFormat),
+				filterStartDate,
+				filterEndDate,
+			};
+		}
+
+		const truncStart = startOfDay(startDate);
+		const truncEnd = startOfDay(endDate);
+		const endPlusOne = add(truncEnd, { days: 1 });
+
+		return {
+			binCount: differenceInDays(endPlusOne, truncStart),
+			binEndDate: format(endPlusOne, EventsAggregationService.dateFormat),
+			filterStartDate,
+			filterEndDate,
+		};
+	}
+
 	static async getTimeseriesEvents({
 		ctx,
 		params,
@@ -112,20 +165,23 @@ export class EventsAggregationService {
 		const intervalType = params.interval;
 
 		const useCustomDateQuery =
-			intervalType === "1bc" || intervalType === "3bc" || !!params.custom_range;
+			BILLING_CYCLE_INTERVALS.includes(
+				intervalType as BillingCycleIntervalEnum,
+			) || !!params.custom_range;
 
-		// Skip billing cycle calculation if aggregating all customers or using custom_range
-		const getBCResults =
+		const shouldCalculateBillingCycle =
 			useCustomDateQuery &&
 			!params.aggregateAll &&
 			params.customer &&
-			!params.custom_range
-				? ((await getBillingCycleStartDate(
-						params.customer,
-						db,
-						intervalType as "1bc" | "3bc",
-					)) as BillingCycleResult | null)
-				: null;
+			!params.custom_range;
+
+		const getBCResults = shouldCalculateBillingCycle
+			? ((await getBillingCycleStartDate(
+					params.customer,
+					db,
+					intervalType as "1bc" | "3bc" | "last_cycle",
+				)) as BillingCycleResult | null)
+			: null;
 
 		const countExpressions = generateEventCountExpressions(
 			params.event_names,
@@ -137,7 +193,6 @@ export class EventsAggregationService {
 				return { select: "", groupBy: "", orderBy: "", fieldName: null };
 
 			let field: string | null = null;
-			// Extract property path after 'properties.' and escape single quotes for SQL safety
 			const propertyPath = params.group_by.replace("properties.", "");
 			const pathSegments = propertyPath.split(".").map((segment) => {
 				// Validate each segment contains only safe characters (alphanumeric, underscores)
@@ -161,8 +216,6 @@ export class EventsAggregationService {
 				return { select: "", groupBy: "", orderBy: "", fieldName: null };
 			}
 
-			// Join segments as separate arguments: 'key1', 'key2', 'key3'
-			// ClickHouse JSONExtractString requires each key as a separate argument
 			const escapedPathArgs = validSegments.map((seg) => `'${seg}'`).join(", ");
 			field = `JSONExtractString(e.properties, ${escapedPathArgs})`;
 
@@ -183,74 +236,162 @@ export class EventsAggregationService {
 		const groupBy = getGroupByClause();
 		const groupByFieldName = groupBy.fieldName;
 
+		// Validate distinct group count if group_by is provided
+		if (params.group_by && groupBy.groupBy) {
+			const propertyPath = params.group_by.replace("properties.", "");
+			const pathSegments = propertyPath.split(".");
+			const escapedPathArgs = pathSegments
+				.map((seg) => `'${seg.replace(/'/g, "''")}'`)
+				.join(", ");
+			const groupField = `JSONExtractString(e.properties, ${escapedPathArgs})`;
+
+			const distinctCountQuery = `
+				SELECT COUNT(DISTINCT ${groupField}) as distinct_count
+				FROM org_events_view(org_id={org_id:String}, org_slug='', env={env:String}) e
+				${params.aggregateAll ? "" : "WHERE e.customer_id = {customer_id:String}"}
+			`;
+
+			const distinctResult = await (clickhouseClient as ClickHouseClient).query(
+				{
+					query: distinctCountQuery,
+					query_params: {
+						org_id: org?.id,
+						env: env,
+						customer_id: params.customer_id,
+					},
+					format: "JSON",
+				},
+			);
+
+			const distinctJson = (await distinctResult.json()) as ClickHouseResult<{
+				distinct_count: string;
+			}>;
+			const distinctCount = Number(distinctJson.data[0]?.distinct_count ?? 0);
+
+			if (distinctCount > 30) {
+				throw new RecaseError({
+					message: `Too many distinct group values (${distinctCount}). Maximum allowed is 30. Please choose a property with fewer unique values.`,
+					code: ErrCode.InvalidInputs,
+					statusCode: StatusCodes.BAD_REQUEST,
+				});
+			}
+		}
+
 		const query = `
 with customer_events as (
-    select * 
-    from org_events_view(org_id={org_id:String}, org_slug='', env={env:String}) 
+    select *
+    from org_events_view(org_id={org_id:String}, org_slug='', env={env:String})
     ${params.aggregateAll ? "" : "where customer_id = {customer_id:String}"}
 )
-select 
-    dr.period${groupBy.select}, 
+select
+    dr.period${groupBy.select},
     ${countExpressions}
-from date_range_view(bin_size={bin_size:String}, days={days:UInt32}) dr
+from event_aggregation_date_range_view(bin_size={bin_size:String}, bin_count={bin_count:UInt32}, interval_offset={interval_offset:UInt32}) dr
     left join customer_events e
-    on date_trunc({bin_size:String}, e.timestamp) = dr.period 
-group by dr.period${groupBy.groupBy} 
+    on date_trunc({bin_size:String}, e.timestamp) = dr.period
+group by dr.period${groupBy.groupBy}
 order by dr.period${groupBy.orderBy};
 `;
 
+		const customRangeFilter = params.custom_range
+			? "and e.timestamp >= {filter_start_date:DateTime} and e.timestamp <= {filter_end_date:DateTime}"
+			: "";
+
 		const queryBillingCycle = `
 with customer_events as (
-    select * 
-    from org_events_view(org_id={org_id:String}, org_slug='', env={env:String}) 
+    select *
+    from org_events_view(org_id={org_id:String}, org_slug='', env={env:String})
     ${params.aggregateAll ? "" : "where customer_id = {customer_id:String}"}
 )
-select 
-    dr.period${groupBy.select}, 
+select
+    dr.period${groupBy.select},
     ${countExpressions}
-from date_range_bc_view(bin_size={bin_size:String}, start_date={end_date:DateTime}, days={days:UInt32}) dr
+from event_aggregation_date_range_bc_view(bin_size={bin_size:String}, start_date={end_date:DateTime}, bin_count={bin_count:UInt32}, interval_offset={interval_offset:UInt32}) dr
     left join customer_events e
-    on date_trunc({bin_size:String}, e.timestamp) = dr.period 
-group by dr.period${groupBy.groupBy} 
+    on date_trunc({bin_size:String}, e.timestamp) = dr.period
+    ${customRangeFilter}
+group by dr.period${groupBy.groupBy}
 order by dr.period${groupBy.orderBy};
       `;
 
-		const customRangeDays = params.custom_range
-			? differenceInDays(
-					new UTCDate(params.custom_range.end),
-					new UTCDate(params.custom_range.start),
-				) + 1
-			: undefined;
-
-		const customRangeEndDate = params.custom_range
-			? format(new UTCDate(params.custom_range.end), "yyyy-MM-dd'T'HH:mm:ss")
-			: undefined;
+		const { binCount, binEndDate, filterStartDate, filterEndDate } =
+			params.custom_range
+				? EventsAggregationService.calculateCustomRangeParams({
+						customRange: params.custom_range,
+						binSize: params.bin_size,
+					})
+				: {
+						binCount: undefined,
+						binEndDate: undefined,
+						filterStartDate: undefined,
+						filterEndDate: undefined,
+					};
 
 		const intervalTypeToDaysMap =
 			EventsAggregationService.intervalTypeToDaysMap({
 				gap: getBCResults?.gap,
 			});
 
+		const binSize =
+			params.bin_size ?? (intervalType === "24h" ? "hour" : "day");
+
+		const currentDayOffset = 1;
+		const calculateBinCount = (days: number): number => {
+			const count = binSize === "hour" ? days * 24 : days;
+			return count + currentDayOffset;
+		};
+
+		const standardIntervalBinCount =
+			intervalTypeToDaysMap[intervalType as keyof typeof intervalTypeToDaysMap];
+
+		// Billing cycles already have correct count (gap + 1), don't add another offset
+		const isBillingCycle =
+			BILLING_CYCLE_INTERVALS.includes(
+				intervalType as BillingCycleIntervalEnum,
+			) &&
+			!params.custom_range &&
+			getBCResults?.gap !== undefined;
+
+		const binMultiplier = binSize === "hour" ? 24 : 1;
+
+		const finalBinCount =
+			binCount ??
+			(isBillingCycle
+				? standardIntervalBinCount * binMultiplier
+				: calculateBinCount(standardIntervalBinCount));
+
+		// Use date_range_bc_view query for billing cycles or custom ranges
+		const useBillingCycleQuery =
+			useCustomDateQuery &&
+			!params.aggregateAll &&
+			(getBCResults?.startDate || params.custom_range);
+
+		const queryToUse = useBillingCycleQuery ? queryBillingCycle : query;
+
+		// Calculate interval offset based on query type:
+		// - Billing cycles: offset = gap (how far back from end_date to start_date)
+		// - Custom ranges: offset = bin_count (already calculated correctly with +1)
+		// - Standard intervals: offset = bin_count - 1 (to include current period)
+		let intervalOffset: number;
+		if (isBillingCycle) {
+			intervalOffset = getBCResults.gap * binMultiplier;
+		} else if (useBillingCycleQuery) {
+			intervalOffset = finalBinCount;
+		} else {
+			intervalOffset = finalBinCount - 1;
+		}
+
 		const queryParams = {
 			org_id: org?.id,
 			env: env,
 			customer_id: params.customer_id,
-			days:
-				customRangeDays ??
-				intervalTypeToDaysMap[
-					intervalType as keyof typeof intervalTypeToDaysMap
-				],
-			bin_size: params.bin_size ?? (intervalType === "24h" ? "hour" : "day"),
-			end_date: customRangeEndDate ?? getBCResults?.endDate,
+			bin_count: finalBinCount,
+			interval_offset: intervalOffset,
+			bin_size: binSize,
+			end_date: binEndDate ?? getBCResults?.endDate,
+			filter_start_date: filterStartDate,
+			filter_end_date: filterEndDate,
 		};
-
-		// Use date_range_bc_view query for billing cycles or custom ranges
-		const queryToUse =
-			useCustomDateQuery &&
-			!params.aggregateAll &&
-			(getBCResults?.startDate || params.custom_range)
-				? queryBillingCycle
-				: query;
 
 		const result = await (clickhouseClient as ClickHouseClient).query({
 			query: queryToUse,
@@ -340,8 +481,8 @@ group by e.event_name;
 		return rows.reduce(
 			(acc, row) => {
 				acc[row.event_name] = {
-					count: Number(row.count),
-					sum: Number(row.sum ?? 0),
+					count: new Decimal(row.count).toDecimalPlaces(10).toNumber(),
+					sum: new Decimal(row.sum ?? 0).toDecimalPlaces(10).toNumber(),
 				};
 				return acc;
 			},

@@ -3,6 +3,7 @@ import {
 	type Entity,
 	featureToOptions,
 	isCusProductTrialing,
+	isOneOffProductV2,
 	type ProductItem,
 	UsageModel,
 } from "@autumn/shared";
@@ -123,6 +124,14 @@ export function SubscriptionDetailSheet() {
 		// closeSheet();
 	};
 
+	const canEditPlan = () => {
+		return (
+			!isOneOffProductV2({ items: productV2?.items ?? [] }) &&
+			!isExpired &&
+			!isScheduled
+		);
+	};
+
 	const handleUpdateQuantities = () => {
 		// Open the subscription update sheet
 		setSheet({ type: "subscription-update", itemId });
@@ -177,7 +186,7 @@ export function SubscriptionDetailSheet() {
 										Update Quantities
 									</IconButton>
 								)}
-								{!isExpired && !isScheduled && (
+								{canEditPlan() && (
 									<IconButton
 										variant="primary"
 										onClick={handleEditPlan}
@@ -206,14 +215,6 @@ export function SubscriptionDetailSheet() {
 									? prepaidOption?.quantity
 									: null;
 
-							// // Find prepaid quantity from cusProduct.options
-							// const prepaidOption = cusProduct?.options?.find(
-							// 	(opt: FeatureOptions) => opt.feature_id === item.feature_id,
-							// );
-							// const prepaidQuantity = prepaidOption
-							// 	? prepaidOption.quantity / (item.billing_units || 1)
-							// 	: null;
-
 							return (
 								<PlanFeatureRow
 									key={item.feature_id || item.price_id || index}
@@ -230,10 +231,7 @@ export function SubscriptionDetailSheet() {
 
 			<div className="flex-1 overflow-y-auto">
 				{/* Product Information */}
-				<SheetSection
-					// title="Plan"
-					withSeparator={true}
-				>
+				<SheetSection withSeparator={true}>
 					<div className="flex gap-2 justify-between">
 						<div className="space-y-3">
 							<InfoRow
@@ -260,15 +258,6 @@ export function SubscriptionDetailSheet() {
 								/>
 							)}
 						</div>
-						{/* {!isExpired && (
-							<IconButton
-								variant="primary"
-								onClick={handleEditPlan}
-								icon={<PencilSimpleIcon size={16} weight="duotone" />}
-							>
-								Edit Plan
-							</IconButton>
-						)} */}
 					</div>
 				</SheetSection>
 				{/* Entity Information */}

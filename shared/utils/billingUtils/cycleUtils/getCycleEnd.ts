@@ -1,8 +1,7 @@
 import { UTCDate } from "@date-fns/utc";
-import type { BillingInterval } from "@models/productModels/intervals/billingInterval";
-import type { EntInterval } from "@models/productModels/intervals/entitlementInterval";
-import { formatMs } from "../../common/formatUtils/formatUnix";
-import { getCycleIntervalFunctions } from "./getCycleIntervalFunctions";
+import type { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
+import type { EntInterval } from "@models/productModels/intervals/entitlementInterval.js";
+import { getCycleIntervalFunctions } from "./getCycleIntervalFunctions.js";
 
 /**
  * Get the next cycle end after `now`, aligned to the anchor.
@@ -67,14 +66,6 @@ export const getCycleEnd = ({
 	/* TO CHECK: To we need a tolerance buffer? If so how much (seconds, milliseconds, etc.?) */
 	const candidate = add(anchorDate, cyclesPassed * intervalCount);
 	if (candidate.getTime() > now) return candidate.getTime();
-
-	const printLogs = false;
-	if (printLogs) {
-		console.log(`anchor: ${anchor === "now" ? "now" : formatMs(anchor)}`);
-		console.log(`now: ${formatMs(now)}`);
-		console.log(`cycles passed: ${cyclesPassed}`);
-		console.log(`next cycle end: ${formatMs(nextCycleEnd.getTime())}`);
-	}
 
 	return nextCycleEnd.getTime();
 };
