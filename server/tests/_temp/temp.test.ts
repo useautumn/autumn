@@ -13,7 +13,6 @@ import {
 	constructRawProduct,
 } from "@/utils/scriptUtils/createTestProducts.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { attachAuthenticatePaymentMethod } from "../../src/external/stripe/stripeCusUtils";
 import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3";
 
 const pro = constructProduct({
@@ -63,36 +62,7 @@ describe(`${chalk.yellowBright("temp: invoice payment failed for one off credits
 			customer_id: customerId,
 			product_id: pro.id,
 		});
-
-		await autumnV1.attach({
-			customer_id: customerId,
-			product_id: oneOffCredits.id,
-			options: [
-				{
-					feature_id: TestFeature.Credits,
-					quantity: 100,
-				},
-			],
-		});
 	});
 
-	test("should handle invoice payment failed for one off credits", async () => {
-		await attachAuthenticatePaymentMethod({
-			ctx,
-			customerId,
-		});
-
-		const res = await autumnV1.attach({
-			customer_id: customerId,
-			product_id: oneOffCredits.id,
-			options: [
-				{
-					feature_id: TestFeature.Credits,
-					quantity: 250,
-				},
-			],
-		});
-
-		console.log(res);
-	});
+	test("should handle invoice payment failed for one off credits", async () => {});
 });

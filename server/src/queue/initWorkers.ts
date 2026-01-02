@@ -20,11 +20,12 @@ import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigration
 import { detectBaseVariant } from "@/internal/products/productUtils/detectProductVariant.js";
 import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutReward.js";
 import { generateId } from "@/utils/genUtils.js";
+import { hatchet } from "../external/hatchet/initHatchet.js";
 import { setSentryTags } from "../external/sentry/sentryUtils.js";
 import { createWorkerContext } from "./createWorkerContext.js";
+import { verifyCacheConsistencyWorkflow } from "./hatchetWorkflows/verifyCacheConsistencyWorkflow/verifyCacheConsistencyWorkflow.js";
 import { QUEUE_URL, sqs } from "./initSqs.js";
 import { JobName } from "./JobName.js";
-import { verifyCacheConsistency } from "./jobs/verifyCacheConsistency.js";
 
 const actionHandlers = [
 	JobName.HandleProductsUpdated,
@@ -154,19 +155,6 @@ const processMessage = async ({
 			await syncItemV2({
 				ctx,
 				item: job.data.item,
-			});
-			return;
-		}
-
-		if (job.name === JobName.VerifyCacheConsistency) {
-			if (!ctx) {
-				workerLogger.error("No context found for verify cache consistency job");
-				return;
-			}
-
-			await verifyCacheConsistency({
-				ctx,
-				payload: job.data,
 			});
 			return;
 		}
@@ -328,4 +316,14 @@ export const initWorkers = async () => {
 
 	// Start the single polling loop
 	await startPollingLoop({ db });
+};
+
+export const initHatchetWorker = async () => {
+	console.log("Starting hatchet worker");
+
+	const worker = await hatchet?.worker("hatchet-worker", {
+		workflows: [verifyCacheConsistencyWorkflow!],
+	});
+
+	await worker?.start();
 };

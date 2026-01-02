@@ -17,5 +17,7 @@ export enum JobName {
 	InsertEventBatch = "insert-event-batch",
 
 	ClearCreditSystemCustomerCache = "clear-credit-system-customer-cache",
+
+	// Hatchet workflows
 	VerifyCacheConsistency = "verify-cache-consistency",
 }

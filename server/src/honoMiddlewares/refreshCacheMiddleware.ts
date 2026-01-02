@@ -118,26 +118,6 @@ export const refreshCacheMiddleware = async (
 				source: "refreshCacheMiddleware",
 				logger,
 			});
-
-			// Schedule cache verification job for 1 minute later
-			// try {
-			// 	await addTaskToQueue({
-			// 		jobName: JobName.VerifyCacheConsistency,
-			// 		payload: {
-			// 			customerId: body.customer_id,
-			// 			orgId: org.id,
-			// 			env: env,
-			// 			source: `post-${pathname.replace("/", "")}`,
-			// 		},
-			// 		delayMs: 60000, // 1 minute delay
-			// 	});
-			// 	logger.info(
-			// 		`Scheduled cache verification for ${body.customer_id} in 60s`,
-			// 	);
-			// } catch (error) {
-			// 	// Don't fail the request if scheduling fails
-			// 	logger.error(`Failed to schedule cache verification: ${error}`);
-			// }
 		}
 	}
 };

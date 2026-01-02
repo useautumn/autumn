@@ -1,4 +1,7 @@
-import type { FullCusEntWithFullCusProduct } from "@autumn/shared";
+import type {
+	FullCusEntWithFullCusProduct,
+	FullCustomer,
+} from "@autumn/shared";
 import {
 	type ApiBalance,
 	type ApiBalanceBreakdown,
@@ -20,6 +23,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
 import { getCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/getCachedApiCustomer.js";
+import { CACHE_CUSTOMER_VERSIONS } from "../../../../_luaScripts/cacheConfig.js";
 import { handleThresholdReached } from "../../../../trigger/handleThresholdReached.js";
 import { getCachedApiEntity } from "../../../entities/entityUtils/apiEntityCacheUtils/getCachedApiEntity.js";
 import type { FeatureDeduction } from "../../track/trackUtils/getFeatureDeductions.js";
@@ -36,6 +40,8 @@ export interface SyncItem {
 	sortParams?: SortCusEntParams;
 	alterGrantedBalance?: boolean;
 	overageBehaviour?: "cap" | "reject" | "allow";
+	cacheVersion?: string;
+	fullCustomer?: FullCustomer; // old full customer
 }
 
 /**
@@ -154,6 +160,7 @@ export const syncItem = async ({
 			entityId,
 			skipCustomerMerge: true, // Don't merge with customer - we want entity's own balance
 			redisInstance,
+			cacheVersion: item.cacheVersion || CACHE_CUSTOMER_VERSIONS.PREVIOUS,
 		});
 		redisEntity = apiEntity;
 	} else {
@@ -162,21 +169,24 @@ export const syncItem = async ({
 			customerId,
 			skipEntityMerge: true, // Don't merge with entities - we want customer's own balance
 			redisInstance,
+			cacheVersion: item.cacheVersion || CACHE_CUSTOMER_VERSIONS.PREVIOUS,
 		});
 		redisEntity = apiCustomer;
 	}
 
 	// Get fresh customer from DB (no locking - let deduction handle it)
-	const fullCus = await CusService.getFull({
-		db,
-		idOrInternalId: customerId,
-		orgId: org.id,
-		env,
-		inStatuses: RELEVANT_STATUSES,
-		withEntities: false,
-		withSubs: true,
-		entityId,
-	});
+	const fullCus =
+		item.fullCustomer ||
+		(await CusService.getFull({
+			db,
+			idOrInternalId: customerId,
+			orgId: org.id,
+			env,
+			inStatuses: RELEVANT_STATUSES,
+			withEntities: false,
+			withSubs: true,
+			entityId,
+		}));
 
 	// If entityId provided, deduct entity level cusEnts
 	if (entityId) {

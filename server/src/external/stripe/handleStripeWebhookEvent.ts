@@ -1,4 +1,4 @@
-import { type Organization } from "@autumn/shared";
+import type { Organization } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import chalk from "chalk";
 import { Stripe } from "stripe";

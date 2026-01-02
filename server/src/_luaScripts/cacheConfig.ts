@@ -10,6 +10,11 @@
  *
  * Format: customer:{version}:{customerId} or customer:{version}:{customerId}:entity:{entityId}
  */
+export const CACHE_CUSTOMER_VERSIONS = {
+	LATEST: "2.0.0",
+	PREVIOUS: "1.2.0",
+};
+
 export const CACHE_CUSTOMER_VERSION = "2.0.0";
 
 /**

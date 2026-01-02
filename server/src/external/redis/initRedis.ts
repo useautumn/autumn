@@ -166,6 +166,7 @@ declare module "ioredis" {
 			adjustGrantedBalance?: string,
 		): Promise<string>;
 		getCustomer(
+			cacheCustomerVersion: string,
 			orgId: string,
 			env: string,
 			customerId: string,
@@ -184,6 +185,7 @@ declare module "ioredis" {
 			env: string,
 		): Promise<string>;
 		getEntity(
+			cacheCustomerVersion: string,
 			orgId: string,
 			env: string,
 			customerId: string,
@@ -225,11 +227,15 @@ declare module "ioredis" {
 			entityBatchJson: string,
 		): Promise<string>;
 		deleteCustomer(
+			cacheCustomerVersion: string,
 			orgId: string,
 			env: string,
 			customerId: string,
 		): Promise<number>;
-		batchDeleteCustomers(customersJson: string): Promise<number>;
+		batchDeleteCustomers(
+			cacheCustomerVersion: string,
+			customersJson: string,
+		): Promise<number>;
 	}
 }
 

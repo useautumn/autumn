@@ -37,7 +37,7 @@ const messagesItemB = constructFeatureItem({
 const messagesItemC = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 200,
-	interval: ProductItemInterval.Lifetime,
+	interval: null,
 });
 
 const productA = constructProduct({
@@ -105,7 +105,9 @@ describe(`${chalk.yellowBright("track-breakdown-three-products: 3 products same 
 
 		// Verify each breakdown exists with correct values
 		const breakdowns = res.balance?.breakdown ?? [];
-		const balances = breakdowns.map((b) => b.granted_balance).sort((a, b) => (a ?? 0) - (b ?? 0));
+		const balances = breakdowns
+			.map((b) => b.granted_balance)
+			.sort((a, b) => (a ?? 0) - (b ?? 0));
 		expect(balances).toEqual([50, 100, 200]);
 
 		// All breakdown IDs should be unique
@@ -138,7 +140,10 @@ describe(`${chalk.yellowBright("track-breakdown-three-products: 3 products same 
 
 		// Sum of breakdown current_balances should equal total
 		const breakdownSum =
-			res.balance?.breakdown?.reduce((sum, b) => sum + (b.current_balance ?? 0), 0) ?? 0;
+			res.balance?.breakdown?.reduce(
+				(sum, b) => sum + (b.current_balance ?? 0),
+				0,
+			) ?? 0;
 		expect(breakdownSum).toBe(230);
 
 		// Sum of breakdown usages should equal total usage
@@ -167,8 +172,10 @@ describe(`${chalk.yellowBright("track-breakdown-three-products: 3 products same 
 
 		// Sum should still match
 		const breakdownSum =
-			res.balance?.breakdown?.reduce((sum, b) => sum + (b.current_balance ?? 0), 0) ?? 0;
+			res.balance?.breakdown?.reduce(
+				(sum, b) => sum + (b.current_balance ?? 0),
+				0,
+			) ?? 0;
 		expect(breakdownSum).toBe(30);
 	});
 });
-

@@ -35,11 +35,6 @@ export const getApiCustomer = async ({
 				customerId: customerId || "",
 			});
 
-			console.log(
-				"Legacy customer data:",
-				legacyData.cusFeatureLegacyData?.messages?.breakdown_legacy_data,
-			);
-
 			baseCustomer = apiCustomer;
 			cusLegacyData = legacyData;
 		} else {
