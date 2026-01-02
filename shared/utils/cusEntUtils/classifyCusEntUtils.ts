@@ -1,8 +1,17 @@
 import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct";
+import { FeatureType } from "../../models/featureModels/featureEnums";
 import { AllowanceType } from "../../models/productModels/entModels/entModels";
 import { cusEntToCusPrice } from "../productUtils/convertUtils";
 import { notNullish } from "../utils";
+
+export const isBooleanCusEnt = ({
+	cusEnt,
+}: {
+	cusEnt: FullCustomerEntitlement;
+}) => {
+	return cusEnt.entitlement.feature.type === FeatureType.Boolean;
+};
 
 export const isUnlimitedCusEnt = ({
 	cusEnt,

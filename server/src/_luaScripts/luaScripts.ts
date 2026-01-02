@@ -22,7 +22,7 @@ const CACHE_KEY_UTILS_RAW = readFileSync(
 
 // Inject cache version and TTL constants into cache key utils
 const CACHE_KEY_UTILS = CACHE_KEY_UTILS_RAW.replace(
-	/{CUSTOMER_VERSION}/g,
+	"{CUSTOMER_VERSION}",
 	CACHE_CUSTOMER_VERSION,
 )
 	.replace("{TTL_SECONDS}", CACHE_TTL_SECONDS.toString())

@@ -267,8 +267,9 @@ export const resetCustomerEntitlement = async ({
 				nextResetAt,
 			});
 		} catch (error) {
-			console.log("WARNING: Failed to check sub anchor");
-			console.log(error);
+			console.log(
+				`WARNING: Failed to check sub anchor: ${error}, Org: ${cusEnt.customer.org_id}`,
+			);
 		}
 
 		await CusEntService.update({

@@ -228,8 +228,8 @@ export const syncItemV2 = async ({
 			item,
 		});
 
-		console.log("Redis balance:", redisBalance);
-		console.log("Sync entries:", entries);
+		// console.log("Redis balance:", redisBalance);
+		// console.log("Sync entries:", entries);
 		allEntries.push(...entries);
 	}
 
