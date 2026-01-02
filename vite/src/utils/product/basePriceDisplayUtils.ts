@@ -1,7 +1,7 @@
 import {
 	type FrontendProduct,
 	formatAmount,
-	getIntervalString,
+	formatInterval,
 	productV2ToBasePrice,
 } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils";
