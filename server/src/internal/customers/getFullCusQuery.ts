@@ -350,6 +350,7 @@ export const getPaginatedFullCusQuery = ({
 	withEvents = false,
 	entityId,
 	internalCustomerIds,
+	productId,
 }: {
 	orgId: string;
 	env: AppEnv;
@@ -363,6 +364,7 @@ export const getPaginatedFullCusQuery = ({
 	withEvents?: boolean;
 	entityId?: string;
 	internalCustomerIds?: string[];
+	productId?: string;
 }) => {
 	const withStatusFilter = () => {
 		return inStatuses?.length
@@ -371,6 +373,16 @@ export const getPaginatedFullCusQuery = ({
 					sql`, `,
 				)}])`
 			: sql``;
+	};
+
+	const withProductFilter = () => {
+		if (!productId) return sql``;
+		return sql`AND EXISTS (
+			SELECT 1 FROM customer_products cp_filter
+			WHERE cp_filter.internal_customer_id = c.internal_id
+				AND cp_filter.product_id = ${productId}
+				AND cp_filter.status IN ('active', 'past_due', 'trialing', 'scheduled')
+		)`;
 	};
 
 	return sql`
@@ -387,6 +399,7 @@ export const getPaginatedFullCusQuery = ({
 						)})`
 					: sql``
 			}
+      ${withProductFilter()}
       ORDER BY c.created_at DESC
       LIMIT ${limit} OFFSET ${offset}
     ),
