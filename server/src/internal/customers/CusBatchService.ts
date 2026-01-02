@@ -8,6 +8,7 @@ import {
 	type CustomerLegacyData,
 	type FullCustomer,
 	type ListCustomersQuery,
+	type ListCustomersV2Params,
 	type Organization,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -48,35 +49,27 @@ export class CusBatchService {
 		query,
 	}: {
 		ctx: RequestContext;
-		query: ListCustomersQuery;
+		query: ListCustomersV2Params;
 	}) {
 		const expand = ctx.expand || [];
 		const includeInvoices = expand.includes(CusExpand.Invoices);
 		const withEntities = expand.includes(CusExpand.Entities);
 		const withTrialsUsed = expand.includes(CusExpand.TrialsUsed);
 
-		const {
-			limit,
-			offset,
-			product_id,
-			product_version,
-			search,
-			product_status,
-		} = query;
+		const { limit, offset, plans, subscription_status, search } = query;
 
 		const sqlQuery = getPaginatedFullCusQuery({
 			orgId: ctx.org.id,
 			env: ctx.env,
-			inStatuses: product_status as CusProductStatus[],
+			inStatuses: subscription_status as CusProductStatus[],
 			includeInvoices,
 			withEntities,
 			withTrialsUsed,
 			withSubs: true,
 			limit,
 			offset,
-			productId: product_id,
-			version: product_version,
 			search,
+			plans,
 		});
 		const results = await ctx.db.execute(sqlQuery);
 		const finals = [];

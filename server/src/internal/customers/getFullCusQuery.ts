@@ -1,4 +1,8 @@
-import type { AppEnv, CusProductStatus } from "@autumn/shared";
+import type {
+	AppEnv,
+	CusProductStatus,
+	ListCustomersV2Params,
+} from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 
 const buildOptimizedCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
@@ -350,8 +354,7 @@ export const getPaginatedFullCusQuery = ({
 	withEvents = false,
 	entityId,
 	internalCustomerIds,
-	productId,
-	version,
+	plans,
 	search,
 }: {
 	orgId: string;
@@ -366,8 +369,7 @@ export const getPaginatedFullCusQuery = ({
 	withEvents?: boolean;
 	entityId?: string;
 	internalCustomerIds?: string[];
-	productId?: string;
-	version?: number[];
+	plans?: ListCustomersV2Params["plans"];
 	search?: string;
 }) => {
 	const withStatusFilter = () => {
@@ -381,32 +383,36 @@ export const getPaginatedFullCusQuery = ({
 
 	const withCustomerProductFilter = () => {
 		const hasStatusFilter = inStatuses && inStatuses.length > 0;
-		const hasProductFilter = !!productId;
-		const hasVersionFilter = version && version.length > 0;
+		const hasPlansFilter = plans && plans.length > 0;
 
-		if (!hasStatusFilter && !hasProductFilter) return sql``;
+		if (!hasStatusFilter && !hasPlansFilter) return sql``;
 
 		const conditions: SQL[] = [];
 
 		if (hasStatusFilter) {
-			conditions.push(sql`cp_filter.status = ANY(ARRAY[${sql.join(
-				inStatuses.map((s) => sql`${s}`),
-				sql`, `,
-			)}])`);
+			conditions.push(
+				sql`cp_filter.status = ANY(ARRAY[${sql.join(
+					inStatuses.map((s) => sql`${s}`),
+					sql`, `,
+				)}])`,
+			);
 		}
 
-		if (hasProductFilter) {
-			conditions.push(sql`cp_filter.product_id = ${productId}`);
+		if (hasPlansFilter) {
+			const planConditions = plans.map((plan) => {
+				if (plan.versions && plan.versions.length > 0) {
+					return sql`(p_filter.id = ${plan.id} AND p_filter.version IN (${sql.join(
+						plan.versions.map((v) => sql`${v}`),
+						sql`, `,
+					)}))`;
+				}
+				return sql`p_filter.id = ${plan.id}`;
+			});
+
+			conditions.push(sql`(${sql.join(planConditions, sql` OR `)})`);
 		}
 
-		if (hasVersionFilter) {
-			conditions.push(sql`p_filter.version IN (${sql.join(
-				version.map((v) => sql`${v}`),
-				sql`, `,
-			)})`);
-		}
-
-		const needsProductJoin = hasVersionFilter;
+		const needsProductJoin = hasPlansFilter;
 
 		return sql`AND EXISTS (
 			SELECT 1 FROM customer_products cp_filter
