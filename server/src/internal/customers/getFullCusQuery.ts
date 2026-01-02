@@ -351,6 +351,8 @@ export const getPaginatedFullCusQuery = ({
 	entityId,
 	internalCustomerIds,
 	productId,
+	version,
+	search,
 }: {
 	orgId: string;
 	env: AppEnv;
@@ -365,6 +367,8 @@ export const getPaginatedFullCusQuery = ({
 	entityId?: string;
 	internalCustomerIds?: string[];
 	productId?: string;
+	version?: number[];
+	search?: string;
 }) => {
 	const withStatusFilter = () => {
 		return inStatuses?.length
@@ -375,13 +379,50 @@ export const getPaginatedFullCusQuery = ({
 			: sql``;
 	};
 
-	const withProductFilter = () => {
-		if (!productId) return sql``;
+	const withCustomerProductFilter = () => {
+		const hasStatusFilter = inStatuses && inStatuses.length > 0;
+		const hasProductFilter = !!productId;
+		const hasVersionFilter = version && version.length > 0;
+
+		if (!hasStatusFilter && !hasProductFilter) return sql``;
+
+		const conditions: SQL[] = [];
+
+		if (hasStatusFilter) {
+			conditions.push(sql`cp_filter.status = ANY(ARRAY[${sql.join(
+				inStatuses.map((s) => sql`${s}`),
+				sql`, `,
+			)}])`);
+		}
+
+		if (hasProductFilter) {
+			conditions.push(sql`cp_filter.product_id = ${productId}`);
+		}
+
+		if (hasVersionFilter) {
+			conditions.push(sql`p_filter.version IN (${sql.join(
+				version.map((v) => sql`${v}`),
+				sql`, `,
+			)})`);
+		}
+
+		const needsProductJoin = hasVersionFilter;
+
 		return sql`AND EXISTS (
 			SELECT 1 FROM customer_products cp_filter
+			${needsProductJoin ? sql`JOIN products p_filter ON cp_filter.internal_product_id = p_filter.internal_id` : sql``}
 			WHERE cp_filter.internal_customer_id = c.internal_id
-				AND cp_filter.product_id = ${productId}
-				AND cp_filter.status IN ('active', 'past_due', 'trialing', 'scheduled')
+				AND ${sql.join(conditions, sql` AND `)}
+		)`;
+	};
+
+	const withSearchFilter = () => {
+		if (!search) return sql``;
+		const pattern = `%${search}%`;
+		return sql`AND (
+			c.id ILIKE ${pattern}
+			OR c.name ILIKE ${pattern}
+			OR c.email ILIKE ${pattern}
 		)`;
 	};
 
@@ -399,7 +440,8 @@ export const getPaginatedFullCusQuery = ({
 						)})`
 					: sql``
 			}
-      ${withProductFilter()}
+      ${withCustomerProductFilter()}
+      ${withSearchFilter()}
       ORDER BY c.created_at DESC
       LIMIT ${limit} OFFSET ${offset}
     ),
