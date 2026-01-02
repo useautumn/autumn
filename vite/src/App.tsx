@@ -22,6 +22,7 @@ import { DefaultView } from "./views/DefaultView";
 import DevScreen from "./views/developer/DevView";
 import { CloseScreen } from "./views/general/CloseScreen";
 import OnboardingView3 from "./views/onboarding3/OnboardingView3";
+import QuickstartView from "./views/onboarding4/QuickstartView";
 import ProductsView from "./views/products/ProductsView";
 import PlanEditorView from "./views/products/plan/PlanEditorView";
 import { TerminalView } from "./views/TerminalView";
@@ -61,6 +62,7 @@ export default function App() {
 				{/* Onboarding routes without sidebar */}
 				<Route element={<OnboardingLayout />}>
 					<Route path="/sandbox/onboarding" element={<OnboardingView3 />} />
+					<Route path="/sandbox/quickstart" element={<QuickstartView />} />
 				</Route>
 
 				<Route element={<MainLayout />}>
