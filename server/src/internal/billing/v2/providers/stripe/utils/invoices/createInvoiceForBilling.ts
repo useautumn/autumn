@@ -28,8 +28,8 @@ export const createInvoiceForBilling = async ({
 }): Promise<PayInvoiceResult> => {
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 	const { addLineParams, invoiceMode } = stripeInvoiceAction;
-	const shouldFinalizeInvoice = invoiceMode?.finalizeInvoice ?? false;
-	const shouldPayImmediately = invoiceMode?.enableProductImmediately ?? true;
+	const shouldFinalizeInvoice = invoiceMode ? invoiceMode.finalizeInvoice : true;
+	const shouldPayImmediately = invoiceMode ? invoiceMode.enableProductImmediately : true;
 
 	const draftInvoice = await createStripeInvoice({
 		stripeCli,

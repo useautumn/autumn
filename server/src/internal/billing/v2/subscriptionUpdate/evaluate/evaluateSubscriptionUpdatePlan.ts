@@ -26,12 +26,17 @@ export const evaluateSubscriptionUpdatePlan = ({
 		updatedCustomerProducts,
 	});
 
+	const invoiceModeEnabled = params.invoice === true;
+
 	const stripeInvoiceAction = buildStripeInvoiceAction({
 		autumnLineItems: autumnBillingPlan.autumnLineItems,
-		invoiceMode: {
-			finalizeInvoice: params.finalize_invoice === true,
-			enableProductImmediately: params.enable_product_immediately !== false,
-		},
+		invoiceMode: invoiceModeEnabled
+			? {
+					finalizeInvoice: params.finalize_invoice === true,
+					enableProductImmediately:
+						params.enable_product_immediately !== false,
+				}
+			: undefined,
 	});
 
 	return {
