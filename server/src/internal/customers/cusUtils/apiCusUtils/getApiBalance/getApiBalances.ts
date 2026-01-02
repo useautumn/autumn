@@ -1,7 +1,7 @@
 import {
 	type ApiBalance,
 	type CusFeatureLegacyData,
-	type FullCusEntWithOptionalProduct,
+	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
 	orgToInStatuses,
@@ -19,14 +19,19 @@ export const getApiBalances = async ({
 }) => {
 	const { org } = ctx;
 
-	const cusEntsWithCusProduct = fullCustomerToCustomerEntitlements({
+	const allCusEntsFromFullCustomer = fullCustomerToCustomerEntitlements({
 		fullCustomer: fullCus,
 		inStatuses: orgToInStatuses({ org }),
 		entity: fullCus.entity,
 	});
 
+	// Filter out loose entitlements (customer_product is null) - they come from extra_customer_entitlements
+	const cusEntsWithCusProduct = allCusEntsFromFullCustomer.filter(
+		(ent) => ent.customer_product !== null,
+	);
+
 	// Add extra entitlements (loose entitlements not tied to a product)
-	const extraEnts: FullCusEntWithOptionalProduct[] = (
+	const extraEnts: FullCusEntWithFullCusProduct[] = (
 		fullCus.extra_customer_entitlements || []
 	).map((ent) => ({
 		...ent,
@@ -34,12 +39,12 @@ export const getApiBalances = async ({
 	}));
 
 	// Combine both sources
-	const allCusEnts: FullCusEntWithOptionalProduct[] = [
+	const allCusEnts: FullCusEntWithFullCusProduct[] = [
 		...cusEntsWithCusProduct,
 		...extraEnts,
 	];
 
-	const featureToCusEnt: Record<string, FullCusEntWithOptionalProduct[]> = {};
+	const featureToCusEnt: Record<string, FullCusEntWithFullCusProduct[]> = {};
 	for (const cusEnt of allCusEnts) {
 		const featureId = cusEnt.entitlement.feature.id;
 		featureToCusEnt[featureId] = [

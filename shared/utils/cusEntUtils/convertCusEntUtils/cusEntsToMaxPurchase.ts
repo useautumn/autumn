@@ -2,7 +2,6 @@ import { Decimal } from "decimal.js";
 import {
 	cusEntToIncludedUsage,
 	type FullCusEntWithFullCusProduct,
-	type FullCusEntWithOptionalProduct,
 	isPrepaidCusEnt,
 	notNullish,
 	nullish,
@@ -12,7 +11,7 @@ export const cusEntsToMaxPurchase = ({
 	cusEnts,
 	entityId,
 }: {
-	cusEnts: (FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[];
+	cusEnts: FullCusEntWithFullCusProduct[];
 	entityId?: string;
 }): number | null => {
 	// 1. If there's usage-based cus ent, return undefined

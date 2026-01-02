@@ -7,5 +7,5 @@ import {
 
 export type ResetCusEnt = FullCustomerEntitlement & {
 	customer: Customer;
-	customer_product: CusProduct;
+	customer_product: CusProduct | null;
 };

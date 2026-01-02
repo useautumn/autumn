@@ -1,21 +1,21 @@
 import type {
-	AppEnv,
-	CusProductStatus,
-	ListCustomersV2Params,
+  AppEnv,
+  CusProductStatus,
+  ListCustomersV2Params,
 } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 
 const buildOptimizedCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
-	const withStatusFilter = () => {
-		return inStatuses
-			? sql`AND cp.status = ANY(ARRAY[${sql.join(
-					inStatuses.map((status) => sql`${status}`),
-					sql`, `,
-				)}])`
-			: sql``;
-	};
+  const withStatusFilter = () => {
+    return inStatuses
+      ? sql`AND cp.status = ANY(ARRAY[${sql.join(
+        inStatuses.map((status) => sql`${status}`),
+        sql`, `,
+      )}])`
+      : sql``;
+  };
 
-	return sql`
+  return sql`
     customer_products_with_prices AS (
       SELECT 
         cp.*,
@@ -83,11 +83,11 @@ const buildOptimizedCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
 };
 
 const buildEntitiesCTE = (withEntities: boolean) => {
-	if (!withEntities) {
-		return sql``;
-	}
+  if (!withEntities) {
+    return sql``;
+  }
 
-	return sql`
+  return sql`
     customer_entities AS (
       SELECT 
         COALESCE(
@@ -105,11 +105,11 @@ const buildEntitiesCTE = (withEntities: boolean) => {
 };
 
 const buildEntityCTE = (entityId?: string) => {
-	if (!entityId) {
-		return sql``;
-	}
+  if (!entityId) {
+    return sql``;
+  }
 
-	return sql`
+  return sql`
     entity_record AS (
       SELECT * FROM entities e
       WHERE e.internal_customer_id = (SELECT internal_id FROM customer_record)
@@ -122,15 +122,15 @@ const buildEntityCTE = (entityId?: string) => {
 };
 
 const buildTrialsUsedCTE = (
-	withTrialsUsed: boolean,
-	orgId: string,
-	env: AppEnv,
+  withTrialsUsed: boolean,
+  orgId: string,
+  env: AppEnv,
 ) => {
-	if (!withTrialsUsed) {
-		return sql``;
-	}
+  if (!withTrialsUsed) {
+    return sql``;
+  }
 
-	return sql`
+  return sql`
     customer_trials_used AS (
       SELECT 
         COALESCE(
@@ -153,14 +153,14 @@ const buildTrialsUsedCTE = (
 };
 
 const buildSubscriptionsCTE = (
-	withSubs: boolean,
-	inStatuses?: CusProductStatus[],
+  withSubs: boolean,
+  inStatuses?: CusProductStatus[],
 ) => {
-	if (!withSubs) {
-		return sql``;
-	}
+  if (!withSubs) {
+    return sql``;
+  }
 
-	return sql`
+  return sql`
     customer_subscriptions AS (
       SELECT 
         COALESCE(
@@ -177,7 +177,7 @@ const buildSubscriptionsCTE = (
 };
 
 const buildExtraEntitlementsCTE = () => {
-	return sql`
+  return sql`
     extra_customer_entitlements AS (
       SELECT
         COALESCE(
@@ -221,15 +221,15 @@ const buildExtraEntitlementsCTE = () => {
 };
 
 const buildInvoicesCTE = (hasEntityCTE: boolean) => {
-	const entityFilter = hasEntityCTE
-		? sql`AND (
+  const entityFilter = hasEntityCTE
+    ? sql`AND (
       NOT EXISTS (SELECT 1 FROM entity_record) 
       OR i.internal_entity_id = (SELECT internal_id FROM entity_record LIMIT 1)
       OR i.internal_entity_id IS NULL
     )`
-		: sql``;
+    : sql``;
 
-	return sql`
+  return sql`
     customer_invoices AS (
       SELECT 
         COALESCE(
@@ -245,21 +245,21 @@ const buildInvoicesCTE = (hasEntityCTE: boolean) => {
 };
 
 export const getFullCusQuery = (
-	idOrInternalId: string,
-	orgId: string,
-	env: AppEnv,
-	inStatuses: CusProductStatus[],
-	includeInvoices: boolean,
-	withEntities: boolean,
-	withTrialsUsed: boolean,
-	withSubs: boolean,
-	withEvents: boolean,
-	entityId?: string,
+  idOrInternalId: string,
+  orgId: string,
+  env: AppEnv,
+  inStatuses: CusProductStatus[],
+  includeInvoices: boolean,
+  withEntities: boolean,
+  withTrialsUsed: boolean,
+  withSubs: boolean,
+  withEvents: boolean,
+  entityId?: string,
 ) => {
-	const sqlChunks: SQL[] = [];
+  const sqlChunks: SQL[] = [];
 
-	// Step 1: Get customer record
-	sqlChunks.push(sql`
+  // Step 1: Get customer record
+  sqlChunks.push(sql`
     WITH customer_record AS (
       SELECT * FROM customers c
       WHERE (
@@ -272,49 +272,49 @@ export const getFullCusQuery = (
     )
   `);
 
-	// Step 2: Get entities
-	if (withEntities) {
-		sqlChunks.push(sql`, `);
-		sqlChunks.push(buildEntitiesCTE(withEntities));
-	}
+  // Step 2: Get entities
+  if (withEntities) {
+    sqlChunks.push(sql`, `);
+    sqlChunks.push(buildEntitiesCTE(withEntities));
+  }
 
-	// Step 3: Get entity
-	if (entityId) {
-		sqlChunks.push(sql`, `);
-		sqlChunks.push(buildEntityCTE(entityId));
-	}
+  // Step 3: Get entity
+  if (entityId) {
+    sqlChunks.push(sql`, `);
+    sqlChunks.push(buildEntityCTE(entityId));
+  }
 
-	// Add customer products CTE
-	sqlChunks.push(sql`, `);
-	// sqlChunks.push(buildCusProductsCTE(inStatuses));
-	sqlChunks.push(buildOptimizedCusProductsCTE(inStatuses));
+  // Add customer products CTE
+  sqlChunks.push(sql`, `);
+  // sqlChunks.push(buildCusProductsCTE(inStatuses));
+  sqlChunks.push(buildOptimizedCusProductsCTE(inStatuses));
 
-	// Conditionally add trials used CTE
-	if (withTrialsUsed) {
-		sqlChunks.push(sql`, `);
-		sqlChunks.push(buildTrialsUsedCTE(withTrialsUsed, orgId, env));
-	}
+  // Conditionally add trials used CTE
+  if (withTrialsUsed) {
+    sqlChunks.push(sql`, `);
+    sqlChunks.push(buildTrialsUsedCTE(withTrialsUsed, orgId, env));
+  }
 
-	// Conditionally add subscriptions CTE
-	if (withSubs) {
-		sqlChunks.push(sql`, `);
-		sqlChunks.push(buildSubscriptionsCTE(withSubs, inStatuses));
-	}
+  // Conditionally add subscriptions CTE
+  if (withSubs) {
+    sqlChunks.push(sql`, `);
+    sqlChunks.push(buildSubscriptionsCTE(withSubs, inStatuses));
+  }
 
-	// Conditionally add extra entitlements CTE
-	sqlChunks.push(sql`, `);
-	sqlChunks.push(buildExtraEntitlementsCTE());
+  // Conditionally add extra entitlements CTE
+  sqlChunks.push(sql`, `);
+  sqlChunks.push(buildExtraEntitlementsCTE());
 
-	// Conditionally add invoices CTE
-	if (includeInvoices) {
-		sqlChunks.push(sql`, `);
-		sqlChunks.push(buildInvoicesCTE(!!entityId));
-	}
+  // Conditionally add invoices CTE
+  if (includeInvoices) {
+    sqlChunks.push(sql`, `);
+    sqlChunks.push(buildInvoicesCTE(!!entityId));
+  }
 
-	// Conditionally add events CTE
-	if (withEvents) {
-		sqlChunks.push(sql`, `);
-		sqlChunks.push(sql`
+  // Conditionally add events CTE
+  if (withEvents) {
+    sqlChunks.push(sql`, `);
+    sqlChunks.push(sql`
       customer_events AS (
         SELECT 
           COALESCE(
@@ -335,11 +335,11 @@ export const getFullCusQuery = (
           AND e.set_usage = false
       )
     `);
-	}
+  }
 
-	// Build final SELECT
-	const selectFieldsChunks: SQL[] = [];
-	selectFieldsChunks.push(sql`
+  // Build final SELECT
+  const selectFieldsChunks: SQL[] = [];
+  selectFieldsChunks.push(sql`
     cr.*,
     COALESCE(
       (SELECT json_agg(cpwp) FROM customer_products_with_prices cpwp),
@@ -347,157 +347,155 @@ export const getFullCusQuery = (
     ) AS customer_products
   `);
 
-	// Add entities to SELECT if withEntities is true
-	if (withEntities) {
-		selectFieldsChunks.push(sql`,
+  // Add entities to SELECT if withEntities is true
+  if (withEntities) {
+    selectFieldsChunks.push(sql`,
       (SELECT entities FROM customer_entities) AS entities`);
-	}
+  }
 
-	// Add entity to SELECT if entityId is provided
-	if (entityId) {
-		selectFieldsChunks.push(sql`,
+  // Add entity to SELECT if entityId is provided
+  if (entityId) {
+    selectFieldsChunks.push(sql`,
       (SELECT row_to_json(er) FROM entity_record er LIMIT 1) AS entity`);
-	}
+  }
 
-	// Add trials used to SELECT if withTrialsUsed is true
-	if (withTrialsUsed) {
-		selectFieldsChunks.push(sql`,
+  // Add trials used to SELECT if withTrialsUsed is true
+  if (withTrialsUsed) {
+    selectFieldsChunks.push(sql`,
       (SELECT trials_used FROM customer_trials_used) AS trials_used`);
-	}
+  }
 
-	// Add subscriptions to SELECT if withSubs is true
-	if (withSubs) {
-		selectFieldsChunks.push(sql`,
+  // Add subscriptions to SELECT if withSubs is true
+  if (withSubs) {
+    selectFieldsChunks.push(sql`,
       (SELECT subscriptions FROM customer_subscriptions) AS subscriptions`);
-	}
+  }
 
-	// Add extra entitlements to SELECT if withExtraEntitlements is true
-	selectFieldsChunks.push(sql`,
+  selectFieldsChunks.push(sql`,
     (SELECT extra_customer_entitlements FROM extra_customer_entitlements) AS extra_customer_entitlements`);
 
-	if (includeInvoices) {
-		selectFieldsChunks.push(sql`,
+  if (includeInvoices) {
+    selectFieldsChunks.push(sql`,
       (SELECT invoices FROM customer_invoices) AS invoices`);
-	}
+  }
 
-	if (withEvents) {
-		selectFieldsChunks.push(sql`,
+  if (withEvents) {
+    selectFieldsChunks.push(sql`,
       (SELECT events FROM customer_events) AS events`);
-	}
+  }
 
-	sqlChunks.push(sql`
+  sqlChunks.push(sql`
     SELECT ${sql.join(selectFieldsChunks, sql``)}
     FROM customer_record cr
   `);
 
-	return sql.join(sqlChunks, sql``);
+  return sql.join(sqlChunks, sql``);
 };
 
 export const getPaginatedFullCusQuery = ({
-	orgId,
-	env,
-	inStatuses,
-	includeInvoices,
-	withEntities,
-	withTrialsUsed,
-	withSubs,
-	limit = 10,
-	offset = 0,
-	withEvents = false,
-	entityId,
-	internalCustomerIds,
-	plans,
-	search,
+  orgId,
+  env,
+  inStatuses,
+  includeInvoices,
+  withEntities,
+  withTrialsUsed,
+  withSubs,
+  limit = 10,
+  offset = 0,
+  withEvents = false,
+  entityId,
+  internalCustomerIds,
+  plans,
+  search,
 }: {
-	orgId: string;
-	env: AppEnv;
-	inStatuses?: CusProductStatus[];
-	includeInvoices: boolean;
-	withEntities: boolean;
-	withTrialsUsed: boolean;
-	withSubs: boolean;
-	limit: number;
-	offset: number;
-	withEvents?: boolean;
-	entityId?: string;
-	internalCustomerIds?: string[];
-	plans?: ListCustomersV2Params["plans"];
-	search?: string;
+  orgId: string;
+  env: AppEnv;
+  inStatuses?: CusProductStatus[];
+  includeInvoices: boolean;
+  withEntities: boolean;
+  withTrialsUsed: boolean;
+  withSubs: boolean;
+  limit: number;
+  offset: number;
+  withEvents?: boolean;
+  entityId?: string;
+  internalCustomerIds?: string[];
+  plans?: ListCustomersV2Params["plans"];
+  search?: string;
 }) => {
-	const withStatusFilter = () => {
-		return inStatuses?.length
-			? sql`AND cp.status = ANY(ARRAY[${sql.join(
-					inStatuses.map((status) => sql`${status}`),
-					sql`, `,
-				)}])`
-			: sql``;
-	};
+  const withStatusFilter = () => {
+    return inStatuses?.length
+      ? sql`AND cp.status = ANY(ARRAY[${sql.join(
+        inStatuses.map((status) => sql`${status}`),
+        sql`, `,
+      )}])`
+      : sql``;
+  };
 
-	const withCustomerProductFilter = () => {
-		const hasStatusFilter = inStatuses && inStatuses.length > 0;
-		const hasPlansFilter = plans && plans.length > 0;
+  const withCustomerProductFilter = () => {
+    const hasStatusFilter = inStatuses && inStatuses.length > 0;
+    const hasPlansFilter = plans && plans.length > 0;
 
-		if (!hasStatusFilter && !hasPlansFilter) return sql``;
+    if (!hasStatusFilter && !hasPlansFilter) return sql``;
 
-		const conditions: SQL[] = [];
+    const conditions: SQL[] = [];
 
-		if (hasStatusFilter) {
-			conditions.push(
-				sql`cp_filter.status = ANY(ARRAY[${sql.join(
-					inStatuses.map((s) => sql`${s}`),
-					sql`, `,
-				)}])`,
-			);
-		}
+    if (hasStatusFilter) {
+      conditions.push(
+        sql`cp_filter.status = ANY(ARRAY[${sql.join(
+          inStatuses.map((s) => sql`${s}`),
+          sql`, `,
+        )}])`,
+      );
+    }
 
-		if (hasPlansFilter) {
-			const planConditions = plans.map((plan) => {
-				if (plan.versions && plan.versions.length > 0) {
-					return sql`(p_filter.id = ${plan.id} AND p_filter.version IN (${sql.join(
-						plan.versions.map((v) => sql`${v}`),
-						sql`, `,
-					)}))`;
-				}
-				return sql`p_filter.id = ${plan.id}`;
-			});
+    if (hasPlansFilter) {
+      const planConditions = plans.map((plan) => {
+        if (plan.versions && plan.versions.length > 0) {
+          return sql`(p_filter.id = ${plan.id} AND p_filter.version IN (${sql.join(
+            plan.versions.map((v) => sql`${v}`),
+            sql`, `,
+          )}))`;
+        }
+        return sql`p_filter.id = ${plan.id}`;
+      });
 
-			conditions.push(sql`(${sql.join(planConditions, sql` OR `)})`);
-		}
+      conditions.push(sql`(${sql.join(planConditions, sql` OR `)})`);
+    }
 
-		const needsProductJoin = hasPlansFilter;
+    const needsProductJoin = hasPlansFilter;
 
-		return sql`AND EXISTS (
+    return sql`AND EXISTS (
 			SELECT 1 FROM customer_products cp_filter
 			${needsProductJoin ? sql`JOIN products p_filter ON cp_filter.internal_product_id = p_filter.internal_id` : sql``}
 			WHERE cp_filter.internal_customer_id = c.internal_id
 				AND ${sql.join(conditions, sql` AND `)}
 		)`;
-	};
+  };
 
-	const withSearchFilter = () => {
-		if (!search) return sql``;
-		const pattern = `%${search}%`;
-		return sql`AND (
+  const withSearchFilter = () => {
+    if (!search) return sql``;
+    const pattern = `%${search}%`;
+    return sql`AND (
 			c.id ILIKE ${pattern}
 			OR c.name ILIKE ${pattern}
 			OR c.email ILIKE ${pattern}
 		)`;
-	};
+  };
 
-	return sql`
+  return sql`
     WITH customer_records AS (
       SELECT c.*
       FROM customers c
       WHERE c.org_id = ${orgId}
         AND c.env = ${env}
-      ${
-				internalCustomerIds && internalCustomerIds.length > 0
-					? sql`AND c.internal_id IN (${sql.join(
-							internalCustomerIds.map((id) => sql`${id}`),
-							sql`, `,
-						)})`
-					: sql``
-			}
+      ${internalCustomerIds && internalCustomerIds.length > 0
+      ? sql`AND c.internal_id IN (${sql.join(
+        internalCustomerIds.map((id) => sql`${id}`),
+        sql`, `,
+      )})`
+      : sql``
+    }
       ${withCustomerProductFilter()}
       ${withSearchFilter()}
       ORDER BY c.created_at DESC
@@ -576,9 +574,8 @@ export const getPaginatedFullCusQuery = ({
       GROUP BY cpwp.internal_customer_id
     )
     
-    ${
-			withSubs
-				? sql`, customer_subscriptions AS (
+    ${withSubs
+      ? sql`, customer_subscriptions AS (
       SELECT 
         cpwp.internal_customer_id,
         COALESCE(
@@ -589,12 +586,11 @@ export const getPaginatedFullCusQuery = ({
       JOIN subscriptions s ON s.stripe_id = ANY(cpwp.subscription_ids)
       GROUP BY cpwp.internal_customer_id
     )`
-				: sql``
-		}
+      : sql``
+    }
     
-    ${
-			withEntities
-				? sql`, customer_entities AS (
+    ${withEntities
+      ? sql`, customer_entities AS (
       SELECT 
         e.internal_customer_id,
         COALESCE(
@@ -605,12 +601,11 @@ export const getPaginatedFullCusQuery = ({
       WHERE e.internal_customer_id IN (SELECT internal_id FROM customer_records)
       GROUP BY e.internal_customer_id
     )`
-				: sql``
-		}
+      : sql``
+    }
     
-    ${
-			includeInvoices
-				? sql`, customer_invoices AS (
+    ${includeInvoices
+      ? sql`, customer_invoices AS (
       SELECT 
         i.internal_customer_id,
         COALESCE(
@@ -621,12 +616,11 @@ export const getPaginatedFullCusQuery = ({
       WHERE i.internal_customer_id IN (SELECT internal_id FROM customer_records)
       GROUP BY i.internal_customer_id
     )`
-				: sql``
-		}
+      : sql``
+    }
     
-    ${
-			withTrialsUsed
-				? sql`, customer_trials_used AS (
+    ${withTrialsUsed
+      ? sql`, customer_trials_used AS (
       SELECT 
         cp.internal_customer_id,
         json_agg(json_build_object(
@@ -641,8 +635,8 @@ export const getPaginatedFullCusQuery = ({
         AND cp.free_trial_id IS NOT NULL
       GROUP BY cp.internal_customer_id
     )`
-				: sql``
-		}
+      : sql``
+    }
     
     SELECT 
       cr.*,

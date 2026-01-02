@@ -1,5 +1,5 @@
 import { Decimal } from "decimal.js";
-import type { FullCusEntWithFullCusProduct, FullCusEntWithOptionalProduct } from "../../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
+import type { FullCusEntWithFullCusProduct } from "../../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
 import { sumValues } from "../../../utils";
 import { getCusEntBalance } from "../../balanceUtils";
 import { getRolloverFields } from "../../getRolloverFields";
@@ -10,7 +10,7 @@ export const cusEntsToAllowance = ({
 	entityId,
 	withRollovers = false,
 }: {
-	cusEnts: (FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[];
+	cusEnts: FullCusEntWithFullCusProduct[];
 	entityId?: string;
 	withRollovers?: boolean;
 }) => {
@@ -19,7 +19,7 @@ export const cusEntsToAllowance = ({
 		entityId,
 		withRollovers = false,
 	}: {
-		cusEnt: FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct;
+		cusEnt: FullCusEntWithFullCusProduct;
 		entityId?: string;
 		withRollovers?: boolean;
 	}) => {

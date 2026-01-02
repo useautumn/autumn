@@ -1,4 +1,4 @@
-import { ResetInterval } from "@autumn/shared";
+import { FeatureSchema, FeatureType, ResetInterval } from "@autumn/shared";
 import { z } from "zod/v4";
 
 export const CreateBalanceSchema = z.object({
@@ -12,6 +12,34 @@ export const CreateBalanceSchema = z.object({
 		})
 		.optional(),
 	customer_id: z.string(),
+});
+
+export const ValidateCreateBalanceParamsSchema = CreateBalanceSchema.extend({
+	feature: FeatureSchema,
+}).refine((data) => {
+	if (!data.feature) {
+		return false;
+	}
+
+	if (data.feature.type === FeatureType.Boolean) {
+		if (data.granted_balance || data.unlimited || data.reset?.interval) {
+			return false;
+		}
+	}
+
+	if (data.feature.type === FeatureType.Metered) {
+		if (!data.granted_balance && !data.unlimited) {
+			return false;
+		}
+		if (data.granted_balance && data.unlimited) {
+			return false;
+		}
+		if (data.unlimited && data.reset?.interval) {
+			return false;
+		}
+	}
+
+	return true;
 });
 
 export type CreateBalanceParams = z.infer<typeof CreateBalanceSchema>;
