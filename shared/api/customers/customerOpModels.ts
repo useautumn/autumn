@@ -126,6 +126,10 @@ export const ListCustomersQuerySchema = z.object({
 	offset: z.coerce.number().int().min(0).default(0).optional().meta({
 		description: "Number of customers to skip before returning results",
 	}),
+	product_id: z.string().optional().meta({
+		description:
+			"Filter by product ID. Returns customers with active subscriptions to this product.",
+	}),
 });
 
 // List Customers Response

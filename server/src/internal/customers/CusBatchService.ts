@@ -48,11 +48,13 @@ export class CusBatchService {
 		limit,
 		offset,
 		statuses,
+		productId,
 	}: {
 		ctx: RequestContext;
 		limit: number;
 		offset: number;
 		statuses: CusProductStatus[];
+		productId?: string;
 	}) {
 		if (!limit) limit = 10;
 		if (!offset) offset = 0;
@@ -74,6 +76,7 @@ export class CusBatchService {
 			withSubs: true,
 			limit,
 			offset,
+			productId,
 		});
 		const results = await ctx.db.execute(query);
 		const finals = [];
