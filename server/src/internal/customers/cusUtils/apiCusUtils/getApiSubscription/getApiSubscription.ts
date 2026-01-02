@@ -85,6 +85,7 @@ export const getApiSubscription = async ({
 		plan: apiPlan,
 
 		plan_id: fullProduct.id,
+		plan_version: fullProduct.version,
 		add_on: fullProduct.is_add_on,
 		default: fullProduct.is_default,
 

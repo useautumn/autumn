@@ -12,6 +12,7 @@ import {
 	CreateCustomerQuerySchema,
 	GetCustomerQuerySchema,
 	ListCustomersResponseSchema,
+	ListCustomersV2ParamsSchema,
 	UpdateCustomerParamsSchema,
 } from "../customers/customerOpModels.js";
 
@@ -50,6 +51,25 @@ export const customersOpenApi = {
 				"200": {
 					description: "200 OK",
 					content: { "application/json": { schema: ApiCustomerWithMeta } },
+				},
+			},
+		},
+	},
+	"/customers/list": {
+		post: {
+			summary: "List Customers",
+			tags: ["customers"],
+			requestBody: {
+				content: {
+					"application/json": { schema: ListCustomersV2ParamsSchema },
+				},
+			},
+			responses: {
+				"200": {
+					description: "200 OK",
+					content: {
+						"application/json": { schema: ListCustomersResponseSchema },
+					},
 				},
 			},
 		},

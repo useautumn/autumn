@@ -126,25 +126,30 @@ export const ListCustomersQuerySchema = z.object({
 	offset: z.coerce.number().int().min(0).default(0).meta({
 		description: "Number of customers to skip before returning results",
 	}),
-	search: z.string().optional().meta({
-		description: "Search customers by id, name, or email",
-	}),
-	product_id: z.string().optional().meta({
-		description:
-			"Filter by product ID. Returns customers with active subscriptions to this product.",
-	}),
-	product_version: queryIntegerArray().default([]).meta({
-		description:
-			"Filter by product version(s). Requires product_id. Supports comma-separated (1,2) or repeated (?product_version=1&product_version=2) format.",
-	}),
-	product_status: queryStringArray(
-		z.enum(["active", "past_due", "scheduled", "expired", "trialing"]),
-	)
-		.default(["active", "past_due", "scheduled", "trialing"])
+});
+
+export const ListCustomersV2ParamsSchema = ListCustomersQuerySchema.extend({
+	plans: z
+		.array(
+			z.object({
+				id: z.string(),
+				versions: queryIntegerArray().optional(),
+			}),
+		)
+		.optional()
+		.meta({
+			description:
+				"Filter by plan ID and version. Returns customers with active subscriptions to this plan.",
+		}),
+	subscription_status: queryStringArray(z.enum(["active", "scheduled"]))
+		.optional()
 		.meta({
 			description:
 				"Filter by customer product status. Defaults to active, past_due, scheduled, trialing.",
 		}),
+	search: z.string().optional().meta({
+		description: "Search customers by id, name, or email",
+	}),
 });
 
 // List Customers Response
@@ -198,6 +203,7 @@ export const GetBillingPortalResponseSchema = z.object({
 export type CreateCustomerParams = z.infer<typeof CreateCustomerParamsSchema>;
 export type UpdateCustomerParams = z.infer<typeof UpdateCustomerParamsSchema>;
 export type ListCustomersQuery = z.infer<typeof ListCustomersQuerySchema>;
+export type ListCustomersV2Params = z.infer<typeof ListCustomersV2ParamsSchema>;
 export type ListCustomersResponse = z.infer<typeof ListCustomersResponseSchema>;
 export type GetBillingPortalQuery = z.infer<typeof GetBillingPortalQuerySchema>;
 export type GetBillingPortalBody = z.infer<typeof GetBillingPortalBodySchema>;
