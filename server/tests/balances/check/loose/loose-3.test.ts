@@ -50,7 +50,7 @@ describe(`${chalk.yellowBright("check-loose3: mixed product + loose entitlement"
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
-			granted_balance: "500",
+			granted_balance: 500,
 		});
 	});
 

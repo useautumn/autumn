@@ -1,5 +1,5 @@
 import { Decimal } from "decimal.js";
-import type { FullCusEntWithFullCusProduct, FullCusEntWithOptionalProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import { BillingType } from "../../../models/productModels/priceModels/priceEnums.js";
 import {
 	cusEntToCusPrice,
@@ -13,12 +13,12 @@ export const cusEntToPurchasedBalance = ({
 	cusEnt,
 	entityId,
 }: {
-	cusEnt: FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct;
+	cusEnt: FullCusEntWithFullCusProduct;
 	entityId?: string;
 }) => {
-	// return 0;
-	// 1. If prepaid
 	const cusPrice = cusEntToCusPrice({ cusEnt });
+
+	if (!cusEnt.customer_product) return 0;
 	if (nullish(cusPrice)) {
 		const { balance } = getCusEntBalance({
 			cusEnt,

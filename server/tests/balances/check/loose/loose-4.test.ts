@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { ApiVersion, type CheckResponseV2, EntInterval, ResetInterval } from "@autumn/shared";
+import { ApiVersion, type CheckResponseV2, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
@@ -44,9 +44,9 @@ describe(`${chalk.yellowBright("check-loose4: loose entitlement with reset inter
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,
-			granted_balance: "1000",
+			granted_balance: 1000,
 			reset: {
-				interval: EntInterval.Month,
+				interval: ResetInterval.Month,
 				interval_count: 1,
 			},
 		});

@@ -1,44 +1,48 @@
-import { CreateBalanceSchema } from "@autumn/shared";
 import {
 	ErrCode,
 	type Feature,
-	FeatureSchema,
 	FeatureType,
+	type FullCustomer,
 	RecaseError,
-	ResetInterval,
+	ValidateCreateBalanceParamsSchema,
 } from "@shared/index";
 import { StatusCodes } from "http-status-codes";
-import z from "zod/v4";
+import type { z } from "zod/v4";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 
-export const CreateBalanceForValidation = CreateBalanceSchema.extend({
-	feature: FeatureSchema,
-}).refine((data) => {
-	if (!data.feature) {
-		return false;
-	}
+export const validateCreateBalanceParams = async ({
+	ctx,
+	feature,
+	internalCustomerId,
+	granted_balance,
+	unlimited,
+	reset,
+	fullCustomer,
+}: {
+	ctx: AutumnContext;
+	feature: Feature;
+	internalCustomerId: string;
+	granted_balance: number | undefined;
+	unlimited: boolean | undefined;
+	reset: z.infer<typeof ValidateCreateBalanceParamsSchema>["reset"];
+	fullCustomer: FullCustomer;
+}) => {
+	ValidateCreateBalanceParamsSchema.parse({
+		feature,
+		granted_balance,
+		unlimited,
+		reset,
+		customer_id: internalCustomerId,
+		feature_id: feature.id,
+	});
 
-	if (data.feature.type === FeatureType.Boolean) {
-		if (data.granted_balance || data.unlimited || data.reset?.interval) {
-			return false;
-		}
-	}
-
-	if (data.feature.type === FeatureType.Metered) {
-		if (!data.granted_balance && !data.unlimited) {
-			return false;
-		}
-		if (data.granted_balance && data.unlimited) {
-			return false;
-		}
-		if (data.unlimited && data.reset?.interval) {
-			return false;
-		}
-	}
-
-	return true;
-});
+	await validateBooleanEntitlementConflict({
+		ctx,
+		feature,
+		internalCustomerId: fullCustomer.internal_id,
+	});
+};
 
 export const validateBooleanEntitlementConflict = async ({
 	ctx,

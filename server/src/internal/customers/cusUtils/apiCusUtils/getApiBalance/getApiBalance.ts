@@ -1,7 +1,6 @@
 import type {
 	ApiBalance,
 	FullCusEntWithFullCusProduct,
-	FullCusEntWithOptionalProduct,
 	FullCustomer,
 } from "@autumn/shared";
 import {
@@ -42,19 +41,14 @@ const cusEntsToBreakdown = ({
 	cusEnts,
 }: {
 	ctx: RequestContext;
-	cusEnts: (FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[];
+	cusEnts: (FullCusEntWithFullCusProduct)[];
 	fullCus: FullCustomer;
-}):
-	| {
-			key: string;
-			breakdown: ApiBalanceBreakdown;
-			prepaidQuantity: number;
-	  }[]
-	| undefined => {
-	const keyToCusEnts: Record<
-		string,
-		(FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[]
-	> = {};
+}): {
+	key: string;
+	breakdown: ApiBalanceBreakdown;
+	prepaidQuantity: number;
+}[] => {
+	const keyToCusEnts: Record<string, FullCusEntWithFullCusProduct[]> = {};
 	for (const cusEnt of cusEnts) {
 		const key = cusEntToKey({ cusEnt });
 		keyToCusEnts[key] = [...(keyToCusEnts[key] || []), cusEnt];
@@ -81,8 +75,8 @@ const cusEntsToBreakdown = ({
 			includeBreakdown: false,
 		});
 
-		const prepaidQuantity = cusEntsToPrepaidQuantity({ cusEnts, feature });
-		const planId = cusEnts[0].customer_product?.product.id ?? null;
+		const prepaidQuantity = cusEntsToPrepaidQuantity({ cusEnts });
+		const planId = cusEntsToPlanId({ cusEnts });
 
 		breakdown.push({
 			key,
@@ -119,7 +113,7 @@ export const getApiBalance = ({
 }: {
 	ctx: RequestContext;
 	fullCus: FullCustomer;
-	cusEnts: (FullCusEntWithFullCusProduct | FullCusEntWithOptionalProduct)[];
+	cusEnts: (FullCusEntWithFullCusProduct)[];
 	feature: Feature;
 	includeRollovers?: boolean;
 	includeBreakdown?: boolean;
