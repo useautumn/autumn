@@ -6,6 +6,7 @@ import {
 	CreateCustomerParamsSchema,
 	CreateCustomerQuerySchema,
 	GetCustomerQuerySchema,
+	ListCustomersQuerySchema,
 	ListCustomersResponseSchema,
 	UpdateCustomerParamsSchema,
 } from "./customerOpModels.js";
@@ -20,10 +21,7 @@ export const customerOps = {
 			summary: "List Customers",
 			tags: ["customers"],
 			requestParams: {
-				query: z.object({
-					limit: z.number().int().min(10).max(100).optional(),
-					offset: z.number().int().min(0).optional(),
-				}),
+				query: ListCustomersQuerySchema,
 			},
 			responses: {
 				"200": {

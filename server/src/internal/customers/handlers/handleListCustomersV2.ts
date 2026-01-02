@@ -1,28 +1,28 @@
 import {
 	AffectedResource,
 	ApiVersion,
-	ListCustomersQuerySchema,
+	ListCustomersV2ParamsSchema,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusBatchService } from "../CusBatchService.js";
 
-export const handleListCustomers = createRoute({
-	versionedQuery: {
-		latest: ListCustomersQuerySchema,
-		[ApiVersion.V1_2]: ListCustomersQuerySchema,
+export const handleListCustomersV2 = createRoute({
+	versionedBody: {
+		latest: ListCustomersV2ParamsSchema,
+		[ApiVersion.V2_0]: ListCustomersV2ParamsSchema,
 	},
 	resource: AffectedResource.Customer,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const query = c.req.valid("query");
+		const body = c.req.valid("json");
 
-		const customers = await CusBatchService.getPage({ ctx, query });
+		const customers = await CusBatchService.getPage({ ctx, query: body });
 
 		return c.json({
 			list: customers,
 			total: customers.length,
-			limit: query.limit,
-			offset: query.offset,
+			limit: body.limit,
+			offset: body.offset,
 		});
 	},
 });
