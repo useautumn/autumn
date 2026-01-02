@@ -7,7 +7,7 @@ import {
 	ProcessorType,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import type { Stripe } from "stripe";
+import { Stripe } from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -64,7 +64,13 @@ export const createStripeCusIfNotExists = async ({
 			return stripeCus as Stripe.Customer;
 		} catch (_error) {
 			// 4. If error, create new customer
-			return null;
+			if (
+				_error instanceof Stripe.errors.StripeError &&
+				_error.code?.includes("resource_missing")
+			) {
+				return null;
+			}
+			throw _error;
 		}
 	};
 
