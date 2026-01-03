@@ -93,14 +93,14 @@ export function MainLayout() {
 			includeCredentials={true}
 		>
 			<NuqsAdapter>
-				<body className="w-screen h-screen flex bg-outer-background">
+				<div className="w-screen h-screen flex bg-outer-background">
 					<CustomToaster />
 					<MainSidebar />
 					<InviteNotifications />
 					<MainContent />
 					{/* <ChatWidget /> */}
 					<CommandBar />
-				</body>
+				</div>
 			</NuqsAdapter>
 		</AutumnProvider>
 	);

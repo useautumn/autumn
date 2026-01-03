@@ -113,7 +113,7 @@ analyticsRouter.post("/events", async (req: any, res: any) =>
 		handler: async () => {
 			AnalyticsService.handleEarlyExit();
 			const { db, org, env, features } = req;
-			let { interval, event_names, customer_id, group_by } = req.body;
+			let { interval, event_names, customer_id, group_by, bin_size } = req.body;
 
 			let topEvents: { featureIds: string[]; eventNames: string[] } | undefined;
 
@@ -172,7 +172,8 @@ analyticsRouter.post("/events", async (req: any, res: any) =>
 			// 	aggregateAll,
 			// });
 
-			const binSize = interval === "24h" ? "hour" : "day";
+			// Use provided bin_size, or default based on interval
+			const binSize = bin_size || (interval === "24h" ? "hour" : "day");
 
 			const events = await EventsAggregationService.getTimeseriesEvents({
 				ctx: req,
@@ -183,6 +184,7 @@ analyticsRouter.post("/events", async (req: any, res: any) =>
 					bin_size: binSize,
 					aggregateAll,
 					group_by: group_by,
+					customer,
 				},
 			});
 
