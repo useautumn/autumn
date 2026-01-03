@@ -1,14 +1,10 @@
 import { CheckIcon, CopyIcon } from "@phosphor-icons/react";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
-import { common, createStarryNight } from "@wooorm/starry-night";
-import { toHtml } from "hast-util-to-html";
 import * as React from "react";
+import { useTheme } from "@/contexts/ThemeProvider";
 import { useClickWithoutDrag } from "@/hooks/common/useClickWithoutDrag";
+import { highlightCode } from "@/lib/shikiHighlighter";
 import { cn } from "@/lib/utils";
-
-const getStarryNight = async () => {
-	return await createStarryNight(common);
-};
 
 interface CodeGroupProps
 	extends React.ComponentPropsWithoutRef<typeof TabsPrimitive.Root> {}
@@ -119,7 +115,7 @@ const CodeGroupContent = React.forwardRef<
 	const [isExiting, setIsExiting] = React.useState(false);
 
 	const handleCopy = React.useCallback(
-		(e: React.MouseEvent<HTMLDivElement>) => {
+		(_e: React.MouseEvent) => {
 			// Get current selection
 			const selection = window.getSelection();
 			const selectedText = selection?.toString() || "";
@@ -182,8 +178,7 @@ const CodeGroupContent = React.forwardRef<
 				className={cn(
 					"bg-white dark:bg-background border border-t-0 rounded-bl-lg rounded-br-lg",
 					"p-4 outline-none",
-					"cursor-pointer transition-colors",
-					"hover:bg-neutral-50/50",
+					"cursor-pointer",
 					className,
 				)}
 				onMouseDown={handleMouseDown}
@@ -206,10 +201,10 @@ const CodeGroupContent = React.forwardRef<
 						!isExiting && "opacity-100",
 					)}
 				>
-					<div className="absolute inset-0 bg-white/80 backdrop-blur-[2px]" />
-					<div className="relative flex items-center gap-2 text-neutral-900 text-sm font-medium">
+					<div className="absolute inset-0 bg-background/80 backdrop-blur-[2px]" />
+					<div className="relative flex items-center gap-2 text-t2 text-sm font-medium">
 						<CheckIcon className="size-4" />
-						<span>Copied!</span>
+						<span>Copied</span>
 					</div>
 				</div>
 			)}
@@ -218,161 +213,45 @@ const CodeGroupContent = React.forwardRef<
 });
 CodeGroupContent.displayName = "CodeGroupContent";
 
-interface CodeGroupCodeProps extends React.ComponentPropsWithoutRef<"pre"> {
+interface CodeGroupCodeProps extends React.ComponentPropsWithoutRef<"div"> {
 	language?: string;
 	children: string;
 }
 
-const CodeGroupCode = React.forwardRef<HTMLPreElement, CodeGroupCodeProps>(
+const CodeGroupCode = React.forwardRef<HTMLDivElement, CodeGroupCodeProps>(
 	({ className, language = "jsx", children, ...props }, ref) => {
 		const [highlightedCode, setHighlightedCode] = React.useState("");
+		const { isDark } = useTheme();
 
 		React.useEffect(() => {
 			const highlight = async () => {
 				try {
-					const starryNight = await getStarryNight();
-					const scope = starryNight.flagToScope(language);
-
-					if (scope) {
-						const tree = starryNight.highlight(children, scope);
-						let html = toHtml(tree);
-
-						// Post-process: mark operators (single/double char pl-k spans) differently from keywords
-						// Operators to mark as grey: : = ! + - * / % & | ^ ~ < > ?
-						html = html.replace(
-							/<span class="pl-k">([!:=<>+\-*/%&|^~?]+|&gt;|&lt;|&amp;|=>|==|===|!==|!=|<=|>=|&&|\|\|)<\/span>/g,
-							'<span class="pl-k pl-operator">$1</span>',
-						);
-
-						// Post-process: detect function declarations (pl-c1 followed by = async or = ()
-						// Mark these as function names (should be red)
-						html = html.replace(
-							/<span class="pl-c1">([^<]+)<\/span>(\s*)<span class="pl-k pl-operator">=<\/span>(\s*)(<span class="pl-k">async<\/span>|[(])/g,
-							'<span class="pl-c1 pl-function-name">$1</span>$2<span class="pl-k pl-operator">=</span>$3$4',
-						);
-
-						// Post-process: wrap property names in object literals (text before : that's not in a span)
-						// Match word characters followed by a colon span
-						html = html.replace(
-							/([a-zA-Z_$][a-zA-Z0-9_$]*)(<span class="pl-k pl-operator">:<\/span>)/g,
-							'<span class="pl-property">$1</span>$2',
-						);
-
-						// Post-process: wrap HTML/JSX tag names to make them blue like pl-k
-						// Match tag names after < or </
-						html = html.replace(
-							/<span class="pl-k">&lt;(<\/)?<\/span>([a-zA-Z][a-zA-Z0-9]*)/g,
-							'<span class="pl-k">&lt;$1</span><span class="pl-k">$2</span>',
-						);
-
-						// Post-process: handle plain text HTML tags (not already wrapped in spans)
-						// Common HTML tags dictionary
-						const htmlTags = [
-							"html",
-							"head",
-							"body",
-							"div",
-							"span",
-							"p",
-							"a",
-							"img",
-							"button",
-							"input",
-							"form",
-							"h1",
-							"h2",
-							"h3",
-							"h4",
-							"h5",
-							"h6",
-							"ul",
-							"ol",
-							"li",
-							"nav",
-							"header",
-							"footer",
-							"section",
-							"article",
-							"main",
-							"aside",
-							"table",
-							"tr",
-							"td",
-							"th",
-							"thead",
-							"tbody",
-							"br",
-							"hr",
-							"meta",
-							"link",
-							"script",
-							"style",
-							"title",
-							"base",
-							"noscript",
-						];
-
-						const tagPattern = htmlTags.join("|");
-
-						// Match HTML tags in plain text: <tagname> or </tagname> or <tagname/>
-						html = html.replace(
-							new RegExp(
-								`(&lt;)(/?)(${tagPattern})(\\s[^&]*?)?(&gt;|/&gt;)`,
-								"g",
-							),
-							'<span class="pl-k">$1$2$3</span>$4<span class="pl-k">$5</span>',
-						);
-
-						// Post-process: handle self-closing tags and closing brackets for any remaining cases
-						// Match closing > or /> and make them blue
-						html = html.replace(
-							/([a-zA-Z0-9"'\s}])(&gt;|\/&gt;)(?!<\/span>)/g,
-							'$1<span class="pl-k">$2</span>',
-						);
-
-						// Match JSX attributes (word before = in JSX context)
-						// Handles both with space and without space before attribute
-						html = html.replace(
-							/([>\s])([a-zA-Z][a-zA-Z0-9]*)(<span class="pl-k pl-operator">=<\/span>{)/g,
-							'$1<span class="pl-property">$2</span>$3',
-						);
-
-						// Post-process: detect boolean values (true/false) and make them purple like strings
-						html = html.replace(
-							/<span class="pl-c1">(true|false)<\/span>/g,
-							'<span class="pl-c1 pl-boolean">$1</span>',
-						);
-
-						setHighlightedCode(html);
-					} else {
-						setHighlightedCode(children);
-					}
+					const html = await highlightCode({
+						code: children,
+						language,
+						isDark,
+					});
+					setHighlightedCode(html);
 				} catch (error) {
 					console.error("Syntax highlighting error:", error);
-					setHighlightedCode(children);
+					setHighlightedCode(`<pre><code>${children}</code></pre>`);
 				}
 			};
 
 			highlight();
-		}, [children, language]);
+		}, [children, language, isDark]);
 
 		return (
-			<pre
+			<div
 				ref={ref}
 				className={cn(
-					"code-group-highlight font-mono font-medium text-[13px] leading-[1.6] whitespace-pre-wrap [overflow-wrap:anywhere] max-w-full overflow-x-auto",
+					"font-mono font-medium text-[13px] leading-[1.6] overflow-x-auto",
 					className,
 				)}
+				// biome-ignore lint/security/noDangerouslySetInnerHtml: "this is needed"
+				dangerouslySetInnerHTML={{ __html: highlightedCode || children }}
 				{...props}
-			>
-				<code
-					className={cn(
-						`language-${language}`,
-						"[overflow-wrap:anywhere] block max-w-full",
-					)}
-					dangerouslySetInnerHTML={{ __html: highlightedCode || children }}
-				/>
-			</pre>
+			/>
 		);
 	},
 );
