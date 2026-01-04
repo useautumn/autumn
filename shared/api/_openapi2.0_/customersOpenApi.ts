@@ -1,41 +1,24 @@
 import { z } from "zod/v4";
 import { SuccessResponseSchema } from "../common/commonResponses.js";
 import { ApiCustomerSchema } from "../customers/apiCustomer.js";
+import { ListCustomersResponseSchema } from "../customers/crud/listCustomersResponse.js";
 
-export const ApiCustomerWithMeta = ApiCustomerSchema.meta({
-	id: "Customer",
-	// examples: [PLAN_EXAMPLE],
-});
+// export const ApiCustomerWithMeta = ApiCustomerSchema.meta({
+// 	id: "Customer",
+// 	// examples: [PLAN_EXAMPLE],
+// });
 
+import { ListCustomersV2ParamsSchema } from "../customers/crud/listCustomersParamsV2.js";
 import {
 	CreateCustomerParamsSchema,
 	CreateCustomerQuerySchema,
 	GetCustomerQuerySchema,
-	ListCustomersResponseSchema,
-	ListCustomersV2ParamsSchema,
+	// ListCustomersResponseSchema,
 	UpdateCustomerParamsSchema,
 } from "../customers/customerOpModels.js";
 
 export const customersOpenApi = {
 	"/customers": {
-		get: {
-			summary: "List Customers",
-			tags: ["customers"],
-			requestParams: {
-				query: z.object({
-					limit: z.number().int().min(10).max(100).optional(),
-					offset: z.number().int().min(0).optional(),
-				}),
-			},
-			responses: {
-				"200": {
-					description: "200 OK",
-					content: {
-						"application/json": { schema: ListCustomersResponseSchema },
-					},
-				},
-			},
-		},
 		post: {
 			summary: "Create Customer",
 			tags: ["customers"],
@@ -50,7 +33,7 @@ export const customersOpenApi = {
 			responses: {
 				"200": {
 					description: "200 OK",
-					content: { "application/json": { schema: ApiCustomerWithMeta } },
+					content: { "application/json": { schema: ApiCustomerSchema } },
 				},
 			},
 		},
@@ -87,7 +70,7 @@ export const customersOpenApi = {
 			responses: {
 				"200": {
 					description: "200 OK",
-					content: { "application/json": { schema: ApiCustomerWithMeta } },
+					content: { "application/json": { schema: ApiCustomerSchema } },
 				},
 			},
 		},
@@ -110,7 +93,7 @@ export const customersOpenApi = {
 			responses: {
 				"200": {
 					description: "200 OK",
-					content: { "application/json": { schema: ApiCustomerWithMeta } },
+					content: { "application/json": { schema: ApiCustomerSchema } },
 				},
 			},
 		},
