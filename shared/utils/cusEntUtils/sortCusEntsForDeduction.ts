@@ -17,11 +17,13 @@ export const sortCusEntsForDeduction = ({
 	sortParams?: SortCusEntParams;
 }) => {
 	cusEnts.sort((a, b) => {
-		if (sortParams?.cusEntId) {
-			if (a.id === sortParams.cusEntId) {
+		if (sortParams?.cusEntIds && sortParams.cusEntIds.length > 0) {
+			const aInList = sortParams.cusEntIds.includes(a.id);
+			const bInList = sortParams.cusEntIds.includes(b.id);
+			if (aInList && !bInList) {
 				return -1;
 			}
-			if (b.id === sortParams.cusEntId) {
+			if (!aInList && bInList) {
 				return 1;
 			}
 		}

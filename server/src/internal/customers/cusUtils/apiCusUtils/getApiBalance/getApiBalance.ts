@@ -9,13 +9,14 @@ import {
 	ApiBalanceSchema,
 	CheckExpand,
 	CusExpand,
-	cusEntMatchesFeature,
 	cusEntsToAdjustment,
 	cusEntsToAllowance,
-	cusEntsToBalance,
 	cusEntsToCurrentBalance,
 	cusEntsToMaxPurchase,
-	cusEntToCusPrice,
+	cusEntsToPlanId,
+	cusEntsToPrepaidQuantity,
+	cusEntsToReset,
+	cusEntsToRollovers,
 	cusEntToKey,
 	cusEntToPurchasedBalance,
 	dbToApiFeatureV1,
@@ -23,7 +24,6 @@ import {
 	type Feature,
 	FeatureType,
 	getCusEntBalance,
-	isPrepaidPrice,
 	sumValues,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -31,8 +31,6 @@ import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getUnlimitedAndUsageAllowed } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import type { CusFeatureLegacyData } from "../../../../../../../shared/api/customers/cusFeatures/cusFeatureLegacyData.js";
 import {
-	cusEntsToReset,
-	cusEntsToRollovers,
 	getBooleanApiBalance,
 	getUnlimitedApiBalance,
 } from "./apiBalanceUtils.js";
@@ -45,21 +43,16 @@ const cusEntsToBreakdown = ({
 	ctx: RequestContext;
 	cusEnts: FullCusEntWithFullCusProduct[];
 	fullCus: FullCustomer;
-}):
-	| {
-			key: string;
-			breakdown: ApiBalanceBreakdown;
-			prepaidQuantity: number;
-	  }[]
-	| undefined => {
+}): {
+	key: string;
+	breakdown: ApiBalanceBreakdown;
+	prepaidQuantity: number;
+}[] => {
 	const keyToCusEnts: Record<string, FullCusEntWithFullCusProduct[]> = {};
 	for (const cusEnt of cusEnts) {
 		const key = cusEntToKey({ cusEnt });
 		keyToCusEnts[key] = [...(keyToCusEnts[key] || []), cusEnt];
 	}
-
-	const cusEntCount = Object.keys(keyToCusEnts).length;
-	if (cusEntCount <= 1) return undefined;
 
 	const breakdown: {
 		key: string;
@@ -79,14 +72,28 @@ const cusEntsToBreakdown = ({
 			cusEnts,
 			feature,
 			includeRollovers: false,
+			includeBreakdown: false,
 		});
 
-		const prepaidQuantity = cusEntsToPrepaidQuantity({ cusEnts, feature });
+		const prepaidQuantity = cusEntsToPrepaidQuantity({ cusEnts });
 		const planId = cusEnts[0].customer_product.product.id;
+
+		// console.log(`Breakdown:`, {
+		// 	entityId: cusEnts[0].customer_product?.entity_id,
+		// 	granted_balance: breakdownItem.granted_balance,
+		// 	purchased_balance: breakdownItem.purchased_balance,
+		// 	current_balance: breakdownItem.current_balance,
+		// 	usage: breakdownItem.usage,
+		// 	max_purchase: breakdownItem.max_purchase,
+		// 	overage_allowed: breakdownItem.overage_allowed,
+		// 	reset: reset,
+		// });
 
 		breakdown.push({
 			key,
 			breakdown: ApiBalanceBreakdownSchema.parse({
+				id: key,
+
 				plan_id: planId,
 				granted_balance: breakdownItem.granted_balance,
 				purchased_balance: breakdownItem.purchased_balance,
@@ -97,6 +104,8 @@ const cusEntsToBreakdown = ({
 				overage_allowed: breakdownItem.overage_allowed,
 
 				reset: reset,
+
+				prepaid_quantity: prepaidQuantity,
 			}),
 			prepaidQuantity: prepaidQuantity,
 		});
@@ -105,40 +114,40 @@ const cusEntsToBreakdown = ({
 	return breakdown;
 };
 
-export const cusEntsToPrepaidQuantity = ({
-	cusEnts,
-	feature,
-}: {
-	cusEnts: FullCusEntWithFullCusProduct[];
-	feature: Feature;
-}) => {
-	let prepaidQuantity = new Decimal(0);
+// export const cusEntsToPrepaidQuantity = ({
+// 	cusEnts,
+// 	feature,
+// }: {
+// 	cusEnts: FullCusEntWithFullCusProduct[];
+// 	feature: Feature;
+// }) => {
+// 	let prepaidQuantity = new Decimal(0);
 
-	for (const cusEnt of cusEnts) {
-		// 1. if cus ent doesn't match feature, skip
-		if (!cusEntMatchesFeature({ cusEnt, feature })) continue;
+// 	for (const cusEnt of cusEnts) {
+// 		// 1. if cus ent doesn't match feature, skip
+// 		if (!cusEntMatchesFeature({ cusEnt, feature })) continue;
 
-		// 2. If cus ent is not prepaid, skip
-		const cusPrice = cusEntToCusPrice({ cusEnt });
+// 		// 2. If cus ent is not prepaid, skip
+// 		const cusPrice = cusEntToCusPrice({ cusEnt });
 
-		if (!cusPrice || !isPrepaidPrice({ price: cusPrice.price })) continue;
+// 		if (!cusPrice || !isPrepaidPrice({ price: cusPrice.price })) continue;
 
-		// 3. Get quantity
-		const options = cusEnt.customer_product.options.find(
-			(option) => option.internal_feature_id === feature.internal_id,
-		);
+// 		// 3. Get quantity
+// 		const options = cusEnt.customer_product.options.find(
+// 			(option) => option.internal_feature_id === feature.internal_id,
+// 		);
 
-		if (!options) continue;
+// 		if (!options) continue;
 
-		const quantityWithUnits = new Decimal(options.quantity)
-			.mul(cusPrice.price.config.billing_units ?? 1)
-			.toNumber();
+// 		const quantityWithUnits = new Decimal(options.quantity)
+// 			.mul(cusPrice.price.config.billing_units ?? 1)
+// 			.toNumber();
 
-		prepaidQuantity = prepaidQuantity.add(quantityWithUnits);
-	}
+// 		prepaidQuantity = prepaidQuantity.add(quantityWithUnits);
+// 	}
 
-	return prepaidQuantity.toNumber();
-};
+// 	return prepaidQuantity.toNumber();
+// };
 
 export const getApiBalance = ({
 	ctx,
@@ -146,12 +155,14 @@ export const getApiBalance = ({
 	cusEnts,
 	feature,
 	includeRollovers = true,
+	includeBreakdown = true,
 }: {
 	ctx: RequestContext;
 	fullCus: FullCustomer;
 	cusEnts: FullCusEntWithFullCusProduct[];
 	feature: Feature;
 	includeRollovers?: boolean;
+	includeBreakdown?: boolean;
 }): { data: ApiBalance; legacyData?: CusFeatureLegacyData } => {
 	const entityId = fullCus.entity?.id;
 
@@ -194,13 +205,6 @@ export const getApiBalance = ({
 		}),
 	);
 
-	const totalAdditionalBalance = sumValues(
-		cusEnts.map((cusEnt) => {
-			const { additional_balance } = getCusEntBalance({ cusEnt, entityId });
-			return additional_balance;
-		}),
-	);
-
 	const totalMaxPurchase = cusEntsToMaxPurchase({ cusEnts, entityId });
 
 	const totalAllowanceWithRollovers = cusEntsToAllowance({
@@ -224,22 +228,13 @@ export const getApiBalance = ({
 	);
 
 	// 3. Current balance
-	// const totalBalanceWithRollovers = cusEntsToBalance({
-	// 	cusEnts,
-	// 	entityId,
-	// 	withRollovers: includeRollovers,
-	// });
-
-	// const currentBalance = new Decimal(Math.max(0, totalBalanceWithRollovers))
-	// 	.add(totalAdditionalBalance)
-	// 	.add(totalUnused)
-	// 	.toNumber();
-
-	const currentBalance = cusEntsToCurrentBalance({
+	let currentBalance = cusEntsToCurrentBalance({
 		cusEnts,
 		entityId,
 		withRollovers: includeRollovers,
 	});
+
+	currentBalance = new Decimal(currentBalance).add(totalUnused).toNumber();
 
 	// 4. Usage
 	const totalUsage = new Decimal(grantedBalance)
@@ -250,8 +245,13 @@ export const getApiBalance = ({
 	const reset = cusEntsToReset({ cusEnts, feature });
 	const rollovers = cusEntsToRollovers({ cusEnts, entityId });
 
-	const breakdownSet = cusEntsToBreakdown({ ctx, fullCus, cusEnts });
-	const masterKey = breakdownSet ? null : cusEntToKey({ cusEnt: cusEnts[0] });
+	const breakdown = includeBreakdown
+		? cusEntsToBreakdown({ ctx, fullCus, cusEnts })
+		: [];
+
+	const planId = cusEntsToPlanId({ cusEnts });
+
+	const masterKey = breakdown ? null : cusEntToKey({ cusEnt: cusEnts[0] });
 
 	const { data: apiBalance, error } = ApiBalanceSchema.safeParse({
 		feature: expandIncludes({
@@ -283,16 +283,16 @@ export const getApiBalance = ({
 		max_purchase: totalMaxPurchase,
 		reset: reset,
 
-		plan_id: breakdownSet ? null : cusEnts[0].customer_product.product.id,
-		breakdown: breakdownSet?.map((item) => item.breakdown),
+		plan_id: planId,
+		breakdown: breakdown.map((item) => item.breakdown),
 		rollovers,
 	} satisfies ApiBalance);
 
 	if (error) throw error;
 
 	// Return in latest format - version transformation happens at Customer level
-	const totalPrepaidQuantity = cusEntsToPrepaidQuantity({ cusEnts, feature });
-	const breakdownLegacyData = breakdownSet?.map((item) => ({
+	const totalPrepaidQuantity = cusEntsToPrepaidQuantity({ cusEnts });
+	const breakdownLegacyData = breakdown.map((item) => ({
 		key: item.key,
 		prepaid_quantity: item.prepaidQuantity,
 	}));
@@ -302,7 +302,7 @@ export const getApiBalance = ({
 		legacyData: {
 			key: masterKey,
 			prepaid_quantity: totalPrepaidQuantity,
-			breakdown_legacy_data: breakdownLegacyData ?? [],
+			breakdown_legacy_data: breakdownLegacyData,
 		},
 	};
 };

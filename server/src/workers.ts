@@ -12,6 +12,7 @@ import "dotenv/config";
 import cluster from "node:cluster";
 
 import { initInfisical } from "./external/infisical/initInfisical.js";
+import { initHatchetWorker } from "./queue/initWorkers.js";
 
 // Number of worker processes (defaults to CPU cores)
 const NUM_PROCESSES = process.env.NODE_ENV === "development" ? 1 : 4;
@@ -21,6 +22,8 @@ let isShuttingDown = false;
 
 if (cluster.isPrimary) {
 	await initInfisical();
+
+	await initHatchetWorker();
 
 	// Check if queue is configured before starting workers
 	if (!process.env.SQS_QUEUE_URL && !process.env.QUEUE_URL) {

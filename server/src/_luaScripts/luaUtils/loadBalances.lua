@@ -106,7 +106,8 @@ local function fetchBreakdown(cacheKey, featureId, breakdownCount)
         purchased_balance = true,
         current_balance = true,
         usage = true,
-        max_purchase = true
+        max_purchase = true,
+        prepaid_quantity = true
     }
     
     local breakdownBooleanFields = {
@@ -118,6 +119,7 @@ local function fetchBreakdown(cacheKey, featureId, breakdownCount)
     }
     
     local breakdownStringFields = {
+        id = true,
         plan_id = true
     }
     
@@ -175,7 +177,18 @@ local function mergeBalanceNumericFields(target, source)
     target.purchased_balance = toNum(target.purchased_balance) + toNum(source.purchased_balance)
     target.current_balance = toNum(target.current_balance) + toNum(source.current_balance)
     target.usage = toNum(target.usage) + toNum(source.usage)
-    target.max_purchase = toNum(target.max_purchase or 0) + toNum(source.max_purchase or 0)
+    target.prepaid_quantity = toNum(target.prepaid_quantity) + toNum(source.prepaid_quantity)
+    
+    -- max_purchase: null means "no limit", 0 means "zero allowed"
+    -- Preserve null only if BOTH are null; otherwise sum (treating null as 0)
+    local targetMaxPurchase = target.max_purchase
+    local sourceMaxPurchase = source.max_purchase
+    if (targetMaxPurchase == nil or targetMaxPurchase == cjson.null) and 
+       (sourceMaxPurchase == nil or sourceMaxPurchase == cjson.null) then
+        target.max_purchase = nil
+    else
+        target.max_purchase = toNum(targetMaxPurchase or 0) + toNum(sourceMaxPurchase or 0)
+    end
 end
 
 -- Helper function to merge overage_allowed (true if at least one is true)
@@ -213,40 +226,45 @@ local function mergeBalanceReset(target, source)
     end
 end
 
+-- Helper function to get inherited plan_id from breakdowns
+-- Returns the plan_id if all breakdowns have the same value, else nil
+local function getInheritedPlanId(breakdowns)
+    if not breakdowns or #breakdowns == 0 then
+        return nil
+    end
+    
+    local firstPlanId = nil
+    for i, breakdown in ipairs(breakdowns) do
+        local bPlanId = breakdown.plan_id
+        if i == 1 then
+            firstPlanId = bPlanId
+        elseif bPlanId ~= firstPlanId then
+            return nil -- Different plan_ids found
+        end
+    end
+    
+    -- Return plan_id only if it's a valid non-empty value
+    if firstPlanId and firstPlanId ~= "" and firstPlanId ~= cjson.null then
+        return firstPlanId
+    end
+    return nil
+end
+
 -- Helper function to generate breakdown item key for matching
--- Key format: "interval_count:interval:plan_id:overage_allowed"
--- Example: "1:month:plan_123:true" or "1:lifetime:plan_456:false"
+-- Uses the breakdown's id (customer entitlement ID) for unique identification
 local function getBreakdownItemKey(breakdownItem)
     if not breakdownItem then
         return nil
     end
     
-    local intervalCount = 1
-    local interval = "lifetime"
-    
-    -- Extract interval and interval_count from reset object
-    if breakdownItem.reset and breakdownItem.reset ~= cjson.null and type(breakdownItem.reset) == "table" then
-        local resetInterval = breakdownItem.reset.interval
-        if resetInterval and resetInterval ~= "multiple" then
-            interval = resetInterval
-        end
-        intervalCount = breakdownItem.reset.interval_count or 1
-    end
-    
-    -- Get plan_id
-    local planId = breakdownItem.plan_id or ""
-    
-    -- Get overage_allowed (usage model)
-    local overageAllowed = breakdownItem.overage_allowed or false
-    
-    -- Return key in format: "interval_count:interval:plan_id:overage_allowed"
-    return tostring(intervalCount) .. ":" .. interval .. ":" .. planId .. ":" .. tostring(overageAllowed)
+    return breakdownItem.id
 end
 
 -- Helper function to create a breakdown item from a top-level balance
 -- Used when a balance has no breakdown array but needs to be merged with another balance
 local function balanceToBreakdownItem(balance)
     return {
+        id = balance.id or "",
         plan_id = balance.plan_id or "",
         granted_balance = balance.granted_balance,
         purchased_balance = balance.purchased_balance,
@@ -254,7 +272,8 @@ local function balanceToBreakdownItem(balance)
         usage = balance.usage,
         max_purchase = balance.max_purchase,
         overage_allowed = balance.overage_allowed,
-        reset = balance.reset
+        reset = balance.reset,
+        prepaid_quantity = balance.prepaid_quantity
     }
 end
 
@@ -330,6 +349,7 @@ local function mergeFeatureBalances(targetBalance, sourceBalance)
         -- If no matching breakdown found, add as new breakdown item
         if not foundMatch then
             local newBreakdown = {
+                id = sourceBreakdown.id,
                 plan_id = sourceBreakdown.plan_id,
                 granted_balance = sourceBreakdown.granted_balance,
                 purchased_balance = sourceBreakdown.purchased_balance,
@@ -337,7 +357,8 @@ local function mergeFeatureBalances(targetBalance, sourceBalance)
                 usage = sourceBreakdown.usage,
                 max_purchase = sourceBreakdown.max_purchase,
                 overage_allowed = sourceBreakdown.overage_allowed,
-                reset = sourceBreakdown.reset
+                reset = sourceBreakdown.reset,
+                prepaid_quantity = sourceBreakdown.prepaid_quantity
             }
             table.insert(targetBreakdowns, newBreakdown)
         end
@@ -347,8 +368,7 @@ local function mergeFeatureBalances(targetBalance, sourceBalance)
     -- Only create breakdown array if we have multiple items or if we already had a breakdown
     if #targetBreakdowns > 1 or targetHadBreakdown then
         targetBalance.breakdown = targetBreakdowns
-        -- Clear top-level plan_id since it's now stored at the breakdown level
-        targetBalance.plan_id = nil
+        targetBalance.plan_id = getInheritedPlanId(targetBreakdowns)
     end
     
     -- Merge rollover balances
@@ -628,6 +648,9 @@ local function loadBalances(cacheKey, orgId, env, customerId, entityId)
     local baseCustomer = cjson.decode(baseJson)
     local balanceFeatureIds = baseCustomer._balanceFeatureIds or {}
     local entityIds = baseCustomer._entityIds or {}
+    
+    -- Sort entity IDs alphabetically for consistent breakdown ordering
+    table.sort(entityIds)
 
     -- Build balances object
     local balances = {}
@@ -724,49 +747,75 @@ local function loadBalances(cacheKey, orgId, env, customerId, entityId)
     for featureId, customerBalance in pairs(balances) do
         -- Skip if unlimited
         if not customerBalance.unlimited then
-            -- Merge each entity's balances into customer balance
-            for entityId, entityBalances in pairs(entityBalanceData) do
-                local entityBalance = entityBalances[featureId]
-                if entityBalance then
-                    mergeFeatureBalances(customerBalance, entityBalance)
+            -- Merge each entity's balances into customer balance (in order)
+            for _, entityId in ipairs(entityIds) do
+                local entityBalances = entityBalanceData[entityId]
+                if entityBalances then
+                    local entityBalance = entityBalances[featureId]
+                    if entityBalance then
+                        mergeFeatureBalances(customerBalance, entityBalance)
+                    end
                 end
             end
         end
     end
 
     -- Add entity-only balances (balances that exist in entities but not in customer)
-    for entityId, entityBalances in pairs(entityBalanceData) do
-        for featureId, entityBalance in pairs(entityBalances) do
+    -- Track which features are entity-only (to avoid double-merging customer features)
+    local entityOnlyFeatureIds = {}
+    
+    -- Initialize from first entity, then merge subsequent entities (avoids ghost breakdown from zero placeholder)
+    -- Use ipairs(entityIds) to preserve order
+    for _, entityId in ipairs(entityIds) do
+        local entityBalances = entityBalanceData[entityId]
+        if entityBalances then
+            for featureId, entityBalance in pairs(entityBalances) do
             if not balances[featureId] then
-                -- This balance doesn't exist in customer, add it with zero values
-                -- Copy plan_id from entity so breakdown keys match when merging
+                -- First entity with this feature - deep copy to initialize
+                entityOnlyFeatureIds[featureId] = true
+                
+                -- Copy breakdown items (reuse balanceToBreakdownItem since fields match)
+                local breakdownCopy = nil
+                if entityBalance.breakdown and #entityBalance.breakdown > 0 then
+                    breakdownCopy = {}
+                    for _, item in ipairs(entityBalance.breakdown) do
+                        table.insert(breakdownCopy, balanceToBreakdownItem(item))
+                    end
+                end
+                
+                -- Copy rollovers
+                local rolloversCopy = nil
+                if entityBalance.rollovers and #entityBalance.rollovers > 0 then
+                    rolloversCopy = {}
+                    for _, r in ipairs(entityBalance.rollovers) do
+                        table.insert(rolloversCopy, { balance = r.balance, expires_at = r.expires_at })
+                    end
+                end
+                
+                -- Create balance from entity (shallow copy top-level, deep copy breakdown/rollovers)
                 balances[featureId] = {
                     feature_id = featureId,
                     feature = entityBalance.feature,
                     plan_id = entityBalance.plan_id,
                     unlimited = entityBalance.unlimited,
-                    granted_balance = 0,
-                    purchased_balance = 0,
-                    current_balance = 0,
-                    usage = 0,
-                    max_purchase = entityBalance.max_purchase or 0,
+                    granted_balance = entityBalance.granted_balance or 0,
+                    purchased_balance = entityBalance.purchased_balance or 0,
+                    current_balance = entityBalance.current_balance or 0,
+                    usage = entityBalance.usage or 0,
+                    max_purchase = entityBalance.max_purchase,
                     overage_allowed = entityBalance.overage_allowed,
                     reset = entityBalance.reset,
-                    breakdown = nil
+                    breakdown = breakdownCopy,
+                    rollovers = rolloversCopy
                 }
-            end
-        end
-    end
-
-    -- Aggregate balances for entity-only balances using mergeFeatureBalances
-    for featureId, customerBalance in pairs(balances) do
-        -- Only process if this was an entity-only balance (all balances are still 0 from initialization)
-        if customerBalance.granted_balance == 0 and customerBalance.purchased_balance == 0 and customerBalance.current_balance == 0 and customerBalance.usage == 0 then
-            for entityId, entityBalances in pairs(entityBalanceData) do
-                local entityBalance = entityBalances[featureId]
-                if entityBalance then
+            elseif entityOnlyFeatureIds[featureId] then
+                -- Subsequent entity with this entity-only feature - merge into existing
+                -- Only merge entity-only features (customer features were already merged in the earlier loop)
+                local customerBalance = balances[featureId]
+                if not customerBalance.unlimited then
                     mergeFeatureBalances(customerBalance, entityBalance)
                 end
+            end
             end
         end
     end

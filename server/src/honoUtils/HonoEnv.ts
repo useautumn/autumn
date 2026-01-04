@@ -34,6 +34,9 @@ export type RequestContext = {
 	// Query params
 	expand: string[];
 	skipCache: boolean;
+
+	// For test...
+	skipCacheDeletion?: boolean;
 };
 
 export type AutumnContext = RequestContext;
