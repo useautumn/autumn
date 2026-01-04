@@ -19,24 +19,28 @@ export const ApiCusExpandSchema = z.object({
 	// upcoming_invoice: ApiCusUpcomingInvoiceSchema.nullish(),
 });
 
-export const ApiCustomerSchema = z.object({
-	autumn_id: z.string().optional(),
-	id: z.string().nullable(),
-	name: z.string().nullable(),
-	email: z.string().nullable(),
-	created_at: z.number(),
-	fingerprint: z.string().nullable(),
-	stripe_id: z.string().nullable(),
-	env: z.enum(AppEnv),
-	metadata: z.record(z.any(), z.any()),
+export const ApiCustomerSchema = z
+	.object({
+		autumn_id: z.string().optional(),
+		id: z.string().nullable(),
+		name: z.string().nullable(),
+		email: z.string().nullable(),
+		created_at: z.number(),
+		fingerprint: z.string().nullable(),
+		stripe_id: z.string().nullable(),
+		env: z.enum(AppEnv),
+		metadata: z.record(z.any(), z.any()),
 
-	subscriptions: z.array(ApiSubscriptionSchema),
+		subscriptions: z.array(ApiSubscriptionSchema),
 
-	scheduled_subscriptions: z.array(ApiSubscriptionSchema),
+		scheduled_subscriptions: z.array(ApiSubscriptionSchema),
 
-	balances: z.record(z.string(), ApiBalanceSchema),
-	...ApiCusExpandSchema.shape,
-});
+		balances: z.record(z.string(), ApiBalanceSchema),
+		...ApiCusExpandSchema.shape,
+	})
+	.meta({
+		id: "Customer",
+	});
 
 export type ApiCustomer = z.infer<typeof ApiCustomerSchema>;
 export type ApiCusExpand = z.infer<typeof ApiCusExpandSchema>;
