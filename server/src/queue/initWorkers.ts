@@ -319,11 +319,17 @@ export const initWorkers = async () => {
 };
 
 export const initHatchetWorker = async () => {
+	if (!hatchet) {
+		console.log("⏭️  Hatchet not configured, skipping worker startup");
+		return;
+	}
+
 	console.log("Starting hatchet worker");
 
-	const worker = await hatchet?.worker("hatchet-worker", {
+	const worker = await hatchet.worker("hatchet-worker", {
 		workflows: [verifyCacheConsistencyWorkflow!],
 	});
 
-	await worker?.start();
+	// Don't await - start() runs indefinitely and would block the rest of the code
+	worker.start();
 };

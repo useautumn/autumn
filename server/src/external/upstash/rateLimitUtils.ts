@@ -71,6 +71,19 @@ export const getRateLimitType = (c: Context<HonoEnv>) => {
 		},
 	];
 
+	const attachPatterns = [
+		{
+			method: "POST",
+			url: "/v1/attach",
+		},
+	];
+
+	if (
+		attachPatterns.some((pattern) => matchRoute({ url: path, method, pattern }))
+	) {
+		return RateLimitType.Attach;
+	}
+
 	if (
 		trackPatterns.some((pattern) => matchRoute({ url: path, method, pattern }))
 	) {
@@ -120,11 +133,6 @@ export const getRateLimitKey = async ({
 			const urlCustomerId = parseCustomerIdFromUrl({ url: c.req.path });
 
 			const customerId = res?.customerId || urlCustomerId;
-			// const sendEvent = res?.sendEvent;
-
-			// if (customerId && sendEvent) {
-			// 	return `track:${orgId}:${env}:${customerId}`;
-			// }
 
 			return `check:${orgId}:${env}:${customerId}`;
 		}
@@ -133,6 +141,12 @@ export const getRateLimitKey = async ({
 			const res = await parseCustomerIdFromBody(c);
 			const customerId = res?.customerId;
 			return `events:${orgId}:${env}:${customerId}`;
+		}
+
+		case RateLimitType.Attach: {
+			const res = await parseCustomerIdFromBody(c);
+			const customerId = res?.customerId;
+			return `attach:${orgId}:${env}:${customerId}`;
 		}
 
 		case RateLimitType.General:
