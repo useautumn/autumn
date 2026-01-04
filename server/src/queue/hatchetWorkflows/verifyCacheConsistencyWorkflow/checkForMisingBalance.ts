@@ -1,6 +1,5 @@
 import {
 	cusProductsToCusEnts,
-	InternalError,
 	isBooleanCusEnt,
 	isContUseFeature,
 	isUnlimitedCusEnt,
@@ -34,11 +33,7 @@ export const checkForMisingBalance = async ({
 		(cp) => cp.id === newCustomerProductId,
 	);
 
-	if (!cusProduct) {
-		throw new InternalError({
-			message: `Customer product ${newCustomerProductId} not found in full customer`,
-		});
-	}
+	if (!cusProduct) return;
 
 	const cusEnts = cusProductsToCusEnts({
 		cusProducts: [cusProduct],

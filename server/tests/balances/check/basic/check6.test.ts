@@ -74,7 +74,7 @@ describe(`${chalk.yellowBright("check6: test /check on feature with multiple bal
 
 		const expectedLifetimeBreadown: ApiBalanceBreakdown = {
 			id: expect.any(String),
-			plan_id: null,
+			plan_id: proProd.id,
 			granted_balance: 1000,
 			purchased_balance: 0,
 			current_balance: 1000,
