@@ -92,6 +92,7 @@ local function storeBalances(cacheKey, balances)
                 local breakdownResetJson = serializeReset(breakdownItem.reset)
                 
                 redis.call("HSET", breakdownKey,
+                    "id", breakdownItem.id and toString(breakdownItem.id) or "",
                     "granted_balance", toString(breakdownItem.granted_balance),
                     "purchased_balance", toString(breakdownItem.purchased_balance),
                     "current_balance", toString(breakdownItem.current_balance),
@@ -99,7 +100,8 @@ local function storeBalances(cacheKey, balances)
                     "max_purchase", toString(breakdownItem.max_purchase),
                     "overage_allowed", toString(breakdownItem.overage_allowed),
                     "reset", breakdownResetJson,
-                    "plan_id", toString(breakdownItem.plan_id)
+                    "plan_id", toString(breakdownItem.plan_id),
+                    "prepaid_quantity", toString(breakdownItem.prepaid_quantity)
                 )
                 redis.call("EXPIRE", breakdownKey, CACHE_TTL_SECONDS)
             end

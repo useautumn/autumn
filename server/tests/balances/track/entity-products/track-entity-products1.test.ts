@@ -155,6 +155,10 @@ describe(`${chalk.yellowBright("track-entity-products1: entity product tracking"
 		const customerFromCache = await autumnV1.customers.get(customerId);
 
 		// Customer balance should be 260 (started at 300, deducted 30 for entity tracking + 10 for customer tracking)
+		// const cacheCustomerFeature =
+		// 	customerFromCache.features[TestFeature.Messages];
+		// const dbCustomerFeature = customerFromDb.features[TestFeature.Messages];
+
 		expect(customerFromDb.features[TestFeature.Messages].balance).toBe(260);
 		expect(customerFromDb.features[TestFeature.Messages]).toMatchObject(
 			customerFromCache.features[TestFeature.Messages],

@@ -37,7 +37,6 @@ export const setCachedApiInvoices = async ({
 
 	// Then write to Redis
 	await tryRedisWrite(async () => {
-		// Update customer invoices
 		await redis.setInvoices(
 			JSON.stringify(masterApiInvoices),
 			org.id,

@@ -7,12 +7,15 @@ import {
 	type TrackQuery,
 } from "@autumn/shared";
 import { currentRegion } from "@/external/redis/initRedis.js";
-import { normalizeFromSchema } from "@/utils/cacheUtils/normalizeFromSchema.js";
+import {
+	normalizeFromSchema,
+	normalizeToArray,
+} from "@/utils/cacheUtils/normalizeFromSchema.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "../../../../utils/cacheUtils/cacheUtils.js";
 import { getOrCreateApiCustomer } from "../../../customers/cusUtils/getOrCreateApiCustomer.js";
+import { globalSyncBatchingManager } from "../../utils/sync/SyncBatchingManager.js";
 import { globalEventBatchingManager } from "../eventUtils/EventBatchingManager.js";
-import { globalSyncBatchingManager } from "../syncUtils/SyncBatchingManager.js";
 import { constructEvent, type EventInfo } from "../trackUtils/eventUtils.js";
 import type { FeatureDeduction } from "../trackUtils/getFeatureDeductions.js";
 import {
@@ -76,6 +79,7 @@ const queueSyncAndEvent = ({
 				env,
 				entityId: undefined, // Customer-level sync
 				region: currentRegion,
+				breakdownIds: result.modifiedBreakdownIds || [],
 			});
 		}
 
@@ -89,6 +93,7 @@ const queueSyncAndEvent = ({
 					env,
 					entityId: changedEntityId,
 					region: currentRegion,
+					breakdownIds: result.modifiedBreakdownIds || [],
 				});
 			}
 		}
@@ -172,6 +177,12 @@ export const runRedisDeduction = async ({
 					featureId,
 					normalizeFromSchema({ schema: ApiBalanceSchema, data: balance }),
 				]),
+			);
+		}
+
+		if (result.modifiedBreakdownIds) {
+			result.modifiedBreakdownIds = normalizeToArray(
+				result.modifiedBreakdownIds,
 			);
 		}
 

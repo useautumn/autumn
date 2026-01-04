@@ -2,7 +2,7 @@ import {
 	cusEntsToAllowance,
 	cusEntsToBalance,
 	cusEntsToGrantedBalance,
-	cusEntsToPrepaidQuantities,
+	cusEntsToPrepaidQuantity,
 	cusProductsToCusEnts,
 	type FullCusProduct,
 } from "@autumn/shared";
@@ -52,12 +52,7 @@ export function useFeatureUsageBalance({
 		withRollovers: true,
 	});
 
-	const prepaidAllowance = cusEntsToPrepaidQuantities({ cusEnts });
-
-	// if (featureId === "credits") {
-	// 	console.log("Cus ents:", cusEnts);
-	// 	console.log("Prepaid allowance:", prepaidAllowance);
-	// }
+	const prepaidAllowance = cusEntsToPrepaidQuantity({ cusEnts });
 
 	const balance = cusEntsToBalance({
 		cusEnts,

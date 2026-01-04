@@ -108,6 +108,14 @@ const handleStripeWebhookRefresh = async ({
 			return;
 		}
 
+		logger.info(`Attempting delete cached api customer! ${eventType}`);
+		// await deleteCachedApiCustomer({
+		// 	customerId: cus.id!,
+		// 	orgId: org.id,
+		// 	env,
+		// 	source: `handleStripeWebhookRefresh: ${eventType}`,
+		// });
+
 		let fullCus: FullCustomer | undefined;
 		if (
 			updateProductEvents.includes(eventType) ||
