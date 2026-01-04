@@ -7,7 +7,6 @@ import {
 	type CusProductStatus,
 	type CustomerLegacyData,
 	type FullCustomer,
-	type ListCustomersQuery,
 	type ListCustomersV2Params,
 	type Organization,
 } from "@autumn/shared";

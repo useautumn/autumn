@@ -343,23 +343,9 @@ export class AutumnInt {
 	}
 
 	customers = {
-		list: async (params?: {
-			limit?: number;
-			offset?: number;
-			search?: string;
-			product_id?: string;
-			product_version?: number | number[];
-			product_status?: string | string[];
-		}) => {
-			const queryParams: Record<string, string> = {};
-
-			for (const [key, value] of Object.entries(params || {})) {
-				if (value === undefined) continue;
-				queryParams[key] = Array.isArray(value) ? value.join(",") : String(value);
-			}
-
+		list: async (params?: { limit?: number; offset?: number }) => {
 			const data = await this.get(
-				`/customers?${new URLSearchParams(queryParams).toString()}`,
+				`/customers?${new URLSearchParams(params as Record<string, string>).toString()}`,
 			);
 			return data;
 		},
