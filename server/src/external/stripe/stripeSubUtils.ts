@@ -58,7 +58,7 @@ export const getStripeSubs = async ({
 		batchGet.push(getStripeSub(subId));
 	}
 
-	let subs = await PromisStripeSubscriptionCancelede.all(batchGet);
+	let subs = await Promise.all(batchGet);
 	subs = subs.filter((sub) => sub !== null);
 
 	// Sort by current_period_end (latest first)

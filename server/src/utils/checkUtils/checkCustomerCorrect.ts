@@ -16,7 +16,7 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle";
 import { priceToStripeItem } from "@server/external/stripe/priceToStripeItem/priceToStripeItem";
-import { isStripeSubscriptionCanceled } from "@server/external/stripe/stripeSubUtils";
+import { isStripeSubscriptionCanceled } from "@server/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils.js";
 import {
 	cusProductInPhase,
 	logPhaseItems,
@@ -534,7 +534,7 @@ export const checkCusSubCorrect = async ({
 		if (finalShouldBeCanceled) {
 			assert(!sub!.schedule, `sub ${subId} should NOT have a schedule`);
 			assert(
-				isStripeSubscriptionCanceled({ sub: sub! }),
+				isStripeSubscriptionCanceled(sub!),
 				`sub ${subId} should be canceled`,
 			);
 			continue;
