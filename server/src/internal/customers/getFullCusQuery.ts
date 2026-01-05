@@ -1,4 +1,8 @@
-import type { AppEnv, CusProductStatus } from "@autumn/shared";
+import type {
+	AppEnv,
+	CusProductStatus,
+	ListCustomersV2Params,
+} from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 
 const buildOptimizedCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
@@ -350,6 +354,8 @@ export const getPaginatedFullCusQuery = ({
 	withEvents = false,
 	entityId,
 	internalCustomerIds,
+	plans,
+	search,
 }: {
 	orgId: string;
 	env: AppEnv;
@@ -363,6 +369,8 @@ export const getPaginatedFullCusQuery = ({
 	withEvents?: boolean;
 	entityId?: string;
 	internalCustomerIds?: string[];
+	plans?: ListCustomersV2Params["plans"];
+	search?: string;
 }) => {
 	const withStatusFilter = () => {
 		return inStatuses?.length
@@ -371,6 +379,57 @@ export const getPaginatedFullCusQuery = ({
 					sql`, `,
 				)}])`
 			: sql``;
+	};
+
+	const withCustomerProductFilter = () => {
+		const hasStatusFilter = inStatuses && inStatuses.length > 0;
+		const hasPlansFilter = plans && plans.length > 0;
+
+		if (!hasStatusFilter && !hasPlansFilter) return sql``;
+
+		const conditions: SQL[] = [];
+
+		if (hasStatusFilter) {
+			conditions.push(
+				sql`cp_filter.status = ANY(ARRAY[${sql.join(
+					inStatuses.map((s) => sql`${s}`),
+					sql`, `,
+				)}])`,
+			);
+		}
+
+		if (hasPlansFilter) {
+			const planConditions = plans.map((plan) => {
+				if (plan.versions && plan.versions.length > 0) {
+					return sql`(p_filter.id = ${plan.id} AND p_filter.version IN (${sql.join(
+						plan.versions.map((v) => sql`${v}`),
+						sql`, `,
+					)}))`;
+				}
+				return sql`p_filter.id = ${plan.id}`;
+			});
+
+			conditions.push(sql`(${sql.join(planConditions, sql` OR `)})`);
+		}
+
+		const needsProductJoin = hasPlansFilter;
+
+		return sql`AND EXISTS (
+			SELECT 1 FROM customer_products cp_filter
+			${needsProductJoin ? sql`JOIN products p_filter ON cp_filter.internal_product_id = p_filter.internal_id` : sql``}
+			WHERE cp_filter.internal_customer_id = c.internal_id
+				AND ${sql.join(conditions, sql` AND `)}
+		)`;
+	};
+
+	const withSearchFilter = () => {
+		if (!search) return sql``;
+		const pattern = `%${search}%`;
+		return sql`AND (
+			c.id ILIKE ${pattern}
+			OR c.name ILIKE ${pattern}
+			OR c.email ILIKE ${pattern}
+		)`;
 	};
 
 	return sql`
@@ -387,6 +446,8 @@ export const getPaginatedFullCusQuery = ({
 						)})`
 					: sql``
 			}
+      ${withCustomerProductFilter()}
+      ${withSearchFilter()}
       ORDER BY c.created_at DESC
       LIMIT ${limit} OFFSET ${offset}
     ),
