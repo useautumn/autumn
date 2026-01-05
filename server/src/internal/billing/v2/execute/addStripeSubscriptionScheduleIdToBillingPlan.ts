@@ -1,13 +1,13 @@
-import type { BillingPlan } from "@/internal/billing/v2/types/billingPlan";
+import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan";
 
 export const addStripeSubscriptionScheduleIdToBillingPlan = ({
-	billingPlan,
+	autumnBillingPlan,
 	stripeSubscriptionScheduleId,
 }: {
-	billingPlan: BillingPlan;
+	autumnBillingPlan: AutumnBillingPlan;
 	stripeSubscriptionScheduleId: string;
 }) => {
-	for (const customerProduct of billingPlan.autumn.insertCustomerProducts) {
+	for (const customerProduct of autumnBillingPlan.insertCustomerProducts) {
 		customerProduct.scheduled_ids = [stripeSubscriptionScheduleId];
 	}
 };

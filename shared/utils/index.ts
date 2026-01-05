@@ -1,5 +1,6 @@
 // Billing utils
 
+export * from "./common/unixUtils.js";
 // Cursor pagination utils
 export * from "./cursorUtils.js";
 export * from "./cusEntUtils/balanceUtils/cusEntsToBalance.js";
@@ -9,7 +10,6 @@ export * from "./cusEntUtils/balanceUtils/cusEntsToPrepaidQuantity.js";
 export * from "./cusEntUtils/balanceUtils/cusEntsToPurchasedBalance.js";
 export * from "./cusEntUtils/balanceUtils/cusEntsToReset.js";
 export * from "./cusEntUtils/balanceUtils/cusEntsToRollovers.js";
-
 // Cus ent utils
 export * from "./cusEntUtils/balanceUtils/grantedBalanceUtils/cusEntsToAdjustment.js";
 export * from "./cusEntUtils/balanceUtils/grantedBalanceUtils/cusEntsToAllowance.js";

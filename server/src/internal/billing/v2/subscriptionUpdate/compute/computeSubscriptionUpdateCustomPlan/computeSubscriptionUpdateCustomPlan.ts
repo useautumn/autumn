@@ -76,7 +76,6 @@ export const computeSubscriptionUpdateCustomPlan = async ({
 		customEntitlements: customEnts,
 		customFreeTrial: customFreeTrial,
 		autumnLineItems: [],
-		quantityUpdateDetails: [],
 	} satisfies AutumnBillingPlan;
 
 	// 4. Create stripe prices

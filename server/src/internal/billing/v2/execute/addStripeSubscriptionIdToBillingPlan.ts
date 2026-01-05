@@ -1,4 +1,4 @@
-import type { BillingPlan } from "@/internal/billing/v2/types/billingPlan";
+import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan";
 
 /**
  * Adds a Stripe subscription ID to a billing plan.
@@ -6,13 +6,13 @@ import type { BillingPlan } from "@/internal/billing/v2/types/billingPlan";
  * @param stripeSubscriptionId - The Stripe subscription ID to add.
  */
 export const addStripeSubscriptionIdToBillingPlan = ({
-	billingPlan,
+	autumnBillingPlan,
 	stripeSubscriptionId,
 }: {
-	billingPlan: BillingPlan;
+	autumnBillingPlan: AutumnBillingPlan;
 	stripeSubscriptionId: string;
 }) => {
-	for (const customerProduct of billingPlan.autumn.insertCustomerProducts) {
+	for (const customerProduct of autumnBillingPlan.insertCustomerProducts) {
 		customerProduct.subscription_ids = [stripeSubscriptionId];
 	}
 };
