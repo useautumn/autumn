@@ -20,7 +20,9 @@ export const ApiCusExpandSchema = z.object({
 
 export const BaseApiCustomerSchema = z
 	.object({
-		autumn_id: z.string().optional(),
+		autumn_id: z.string().optional().meta({
+			internal: true,
+		}),
 		id: z.string().nullable(),
 		name: z.string().nullable(),
 		email: z.string().nullable(),

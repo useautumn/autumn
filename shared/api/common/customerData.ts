@@ -25,8 +25,7 @@ export const CustomerDataSchema = z
 	})
 	.meta({
 		id: "CustomerData",
-		description:
-			"Unique identifier (eg, serial number) to detect duplicate customers and prevent free trial abuse",
+		description: "Customer details to set when creating a customer",
 	});
 
 export type CustomerData = z.infer<typeof CustomerDataSchema>;

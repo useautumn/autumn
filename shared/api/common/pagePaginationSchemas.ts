@@ -32,7 +32,9 @@ export const createPagePaginatedResponseSchema = <T extends z.ZodType>(
 	itemSchema: T,
 ) =>
 	z.object({
-		list: z.array(itemSchema).describe("Array of items for current page"),
+		list: z.array(itemSchema).meta({
+			description: "Array of items for current page",
+		}),
 		has_more: z
 			.boolean()
 			.describe("Whether more results exist after this page"),
