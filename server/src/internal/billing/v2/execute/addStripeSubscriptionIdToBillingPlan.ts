@@ -1,4 +1,4 @@
-import type { BillingPlan } from "@/internal/billing/v2/billingPlan";
+import type { BillingPlan } from "@/internal/billing/v2/types/billingPlan";
 
 /**
  * Adds a Stripe subscription ID to a billing plan.

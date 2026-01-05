@@ -1,5 +1,5 @@
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
-import type { StripeSubscriptionAction } from "../billingPlan";
+import type { StripeSubscriptionAction } from "../types/billingPlan";
 import { executeStripeSubscriptionUpdate } from "./executeStripeSubscriptionActions/executeStripeSubscriptionUpdate";
 
 export const executeStripeSubAction = async ({

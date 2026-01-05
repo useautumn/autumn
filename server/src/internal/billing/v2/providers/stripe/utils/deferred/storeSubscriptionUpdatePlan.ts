@@ -2,7 +2,7 @@ import { type AppEnv, MetadataType } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { generateId } from "@/utils/genUtils";
-import type { AutumnBillingPlan } from "../../../../billingPlan";
+import type { AutumnBillingPlan } from "../../../../types/billingPlan";
 
 export type DeferredAutumnBillingPlanData = {
 	version: 2;

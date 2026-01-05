@@ -1,8 +1,8 @@
 import { createStripeCli } from "@server/external/connect/createStripeCli";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import type { BillingContext } from "@server/internal/billing/v2/billingContext";
-import type { StripeSubscriptionScheduleAction } from "@server/internal/billing/v2/billingPlan";
 import type Stripe from "stripe";
+import type { StripeSubscriptionScheduleAction } from "@/internal/billing/v2/types/billingPlan";
 
 /**
  * Maps update phase format to create phase format.

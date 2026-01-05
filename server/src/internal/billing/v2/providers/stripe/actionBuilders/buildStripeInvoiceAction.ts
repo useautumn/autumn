@@ -1,5 +1,8 @@
 import type { LineItem } from "@autumn/shared";
-import type { InvoiceMode, StripeInvoiceAction } from "../../../billingPlan";
+import type {
+	InvoiceMode,
+	StripeInvoiceAction,
+} from "../../../types/billingPlan";
 import { lineItemsToStripeLines } from "../utils/invoiceLines/lineItemsToStripeLines";
 
 /**

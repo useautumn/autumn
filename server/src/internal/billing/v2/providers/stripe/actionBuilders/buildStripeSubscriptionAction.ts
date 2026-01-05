@@ -1,14 +1,14 @@
 import type { FullCusProduct } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
-import type {
-	FreeTrialPlan,
-	StripeSubscriptionAction,
-	StripeSubscriptionScheduleAction,
-} from "@server/internal/billing/v2/billingPlan";
 import { buildStripeSubscriptionItemsUpdate } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionItems/buildStripeSubscriptionItemsUpdate";
 import { buildStripeSubscriptionCreateAction } from "@server/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionCreateAction";
 import { buildStripeSubscriptionUpdateAction } from "@server/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionUpdateAction";
 import type { UpdateSubscriptionContext } from "@server/internal/billing/v2/subscriptionUpdate/fetch/updateSubscriptionContextSchema";
+import type {
+	FreeTrialPlan,
+	StripeSubscriptionAction,
+	StripeSubscriptionScheduleAction,
+} from "@/internal/billing/v2/types/billingPlan";
 
 export const buildStripeSubscriptionAction = ({
 	ctx,

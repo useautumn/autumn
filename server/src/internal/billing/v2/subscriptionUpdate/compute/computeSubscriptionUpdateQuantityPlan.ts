@@ -1,6 +1,6 @@
 import { InternalError, type SubscriptionUpdateV0Params } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { AutumnBillingPlan } from "../../billingPlan";
+import type { AutumnBillingPlan } from "../../types/billingPlan";
 import type { UpdateSubscriptionContext } from "../fetch/updateSubscriptionContextSchema";
 import { computeQuantityUpdateDetails } from "./computeQuantityUpdateDetails";
 
