@@ -74,7 +74,7 @@ export function transformSubscriptionToCusProductV3({
 		group: input.plan?.group ?? null,
 		is_default: input.plan?.default ?? false,
 		is_add_on: input.add_on,
-		version: input.plan?.version ?? null,
+		version: input.plan_version,
 		items: items, // Map from plan to product v2 items...
 
 		status: cusPlanToCusProductV3Status(input),

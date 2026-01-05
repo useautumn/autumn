@@ -1,20 +1,11 @@
-import {
-	CusExpand,
-	type FullCustomer,
-	type Organization,
-} from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import chalk from "chalk";
+import type { Context } from "hono";
 import { Stripe } from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { CusService } from "@/internal/customers/CusService.js";
 import { unsetOrgStripeKeys } from "@/internal/orgs/orgUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
-import type { AutumnContext } from "../../honoUtils/HonoEnv.js";
-import { deleteCachedApiCustomer } from "../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
-import { setCachedApiInvoices } from "../../internal/customers/cusUtils/apiCusCacheUtils/setCachedApiInvoices.js";
-import { setCachedApiSubs } from "../../internal/customers/cusUtils/apiCusCacheUtils/setCachedApiSubs.js";
-import type { Logger } from "../logtail/logtailUtils.js";
+import { handleWebhookErrorSkip } from "@/utils/routerUtils/webhookErrorSkip.js";
 import { getSentryTags } from "../sentry/sentryUtils.js";
 import { handleCheckoutSessionCompleted } from "./webhookHandlers/handleCheckoutCompleted.js";
 import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
@@ -26,154 +17,35 @@ import { handleSubCreated } from "./webhookHandlers/handleSubCreated.js";
 import { handleSubDeleted } from "./webhookHandlers/handleSubDeleted.js";
 import { handleSubscriptionScheduleCanceled } from "./webhookHandlers/handleSubScheduleCanceled.js";
 import { handleSubscriptionUpdated } from "./webhookHandlers/handleSubUpdated.js";
+import type {
+	StripeWebhookContext,
+	StripeWebhookHonoEnv,
+} from "./webhookMiddlewares/stripeWebhookContext.js";
 
-const logStripeWebhook = ({
-	logger,
-	org,
-	event,
-}: {
-	logger: Logger;
-	org: Organization;
-	event: Stripe.Event;
-}) => {
+const logStripeWebhook = ({ ctx }: { ctx: StripeWebhookContext }) => {
+	const { logger, org, stripeEvent } = ctx;
 	logger.info(
-		`${chalk.yellow("STRIPE").padEnd(18)} ${event.type.padEnd(30)} ${org.slug} | ${event.id}`,
+		`${chalk.yellow("STRIPE").padEnd(18)} ${stripeEvent.type.padEnd(30)} ${org.slug} | ${stripeEvent.id}`,
 	);
 };
 
-const updateProductEvents = ["customer.subscription.updated"];
-
-const coreEvents = [
-	"customer.subscription.deleted",
-	"subscription_schedule.canceled",
-	"checkout.session.completed",
-];
-
-const updateInvoiceEvents = [
-	"invoice.paid",
-	"invoice.updated",
-	"invoice.created",
-	"invoice.finalized",
-];
-
-const handleStripeWebhookRefresh = async ({
-	eventType,
-	data,
-	ctx,
-}: {
-	eventType: string;
-	data: any;
-	ctx: AutumnContext;
-}) => {
-	const { db, logger, org, env } = ctx;
-
-	if (
-		coreEvents.includes(eventType) ||
-		updateProductEvents.includes(eventType) ||
-		updateInvoiceEvents.includes(eventType)
-	) {
-		const stripeCusId = data.object.customer;
-		if (!stripeCusId) {
-			logger.warn(
-				`stripe webhook cache refresh, object doesn't contain customer id`,
-				{
-					data: {
-						eventType,
-						object: data.object,
-					},
-				},
-			);
-			return;
-		}
-
-		const cus = await CusService.getByStripeId({
-			db,
-			stripeId: stripeCusId,
-			orgId: org.id,
-			env,
-		});
-
-		if (!cus) {
-			logger.warn(
-				`Searched for customer by stripe id, but not found: ${stripeCusId}`,
-			);
-			return;
-		}
-
-		const orgMatch = cus?.org_id === org.id && cus?.env === env;
-		if (!orgMatch) {
-			logger.warn(
-				`Customer org or env mismatch, skipping cache refresh: ${cus?.org_id} !== ${org.id} || ${cus?.env} !== ${env}`,
-			);
-			return;
-		}
-
-		let fullCus: FullCustomer | undefined;
-		if (
-			updateProductEvents.includes(eventType) ||
-			updateInvoiceEvents.includes(eventType)
-		) {
-			fullCus = await CusService.getFull({
-				db,
-				idOrInternalId: cus.id!,
-				orgId: org.id,
-				env,
-				withEntities: true,
-				withSubs: true,
-				expand: [CusExpand.Invoices],
-			});
-
-			if (updateProductEvents.includes(eventType)) {
-				await setCachedApiSubs({
-					ctx,
-					fullCus,
-					customerId: cus.id!,
-				});
-			}
-
-			if (updateInvoiceEvents.includes(eventType)) {
-				await setCachedApiInvoices({
-					ctx,
-					fullCus,
-					customerId: cus.id!,
-				});
-			}
-		} else {
-			logger.info(`Attempting delete cached api customer! ${eventType}`);
-			await deleteCachedApiCustomer({
-				customerId: cus.id!,
-				orgId: org.id,
-				env,
-				source: `handleStripeWebhookRefresh: ${eventType}`,
-			});
-		}
-	}
-};
-
 /**
- * Handles Stripe webhook events after org/env extraction
+ * Hono handler for Stripe webhook events
+ * Context is set up by seeder middlewares (legacy or connect)
  */
-export const handleStripeWebhookEvent = async ({
-	ctx,
-	event,
-}: {
-	ctx: AutumnContext;
-	event: Stripe.Event;
-}) => {
-	const { db, logger, org, env } = ctx;
-	logStripeWebhook({ logger, org, event });
+export const handleStripeWebhookEvent = async (
+	c: Context<StripeWebhookHonoEnv>,
+) => {
+	const ctx = c.get("ctx") as StripeWebhookContext;
+	const { db, logger, org, env, stripeEvent } = ctx;
+	const event = stripeEvent;
+	logStripeWebhook({ ctx });
 
 	try {
 		const stripeCli = createStripeCli({ org, env });
 		switch (event.type) {
 			case "customer.subscription.created":
-				await handleSubCreated({
-					db,
-					org,
-					subData: event.data.object,
-					env,
-					logger,
-				});
+				await handleSubCreated({ ctx });
 				break;
 
 			case "customer.subscription.updated": {
@@ -247,18 +119,6 @@ export const handleStripeWebhookEvent = async ({
 				break;
 			}
 
-			// case "invoice.payment_attempt_required": {
-			// 	const invoice = event.data.object;
-			// 	await handleInvoicePaymentAttemptRequired({
-			// 		db,
-			// 		org,
-			// 		invoice,
-			// 		env,
-			// 		logger,
-			// 	});
-			// 	break;
-			// }
-
 			case "subscription_schedule.canceled": {
 				const canceledSchedule = event.data.object;
 				await handleSubscriptionScheduleCanceled({
@@ -291,7 +151,7 @@ export const handleStripeWebhookEvent = async ({
 		if (error instanceof Stripe.errors.StripeError) {
 			if (error.message.includes("No such customer")) {
 				logger.warn(`stripe customer missing: ${error.message}`);
-				return { success: true };
+				return c.json({ success: true }, 200);
 			}
 
 			if (error.message.includes("Expired API Key provided")) {
@@ -301,7 +161,7 @@ export const handleStripeWebhookEvent = async ({
 					env,
 				});
 
-				return { success: true };
+				return c.json({ success: true }, 200);
 			}
 		}
 
@@ -310,27 +170,17 @@ export const handleStripeWebhookEvent = async ({
 			error instanceof Error &&
 			error.message.includes("No stripe account linked to organization")
 		) {
-			return;
+			return c.json({ success: true }, 200);
 		}
 
-		logger.error(`Stripe webhook, error: ${error}`, { error });
-		throw error;
+		const shouldSkip = handleWebhookErrorSkip({ error, logger });
+		if (!shouldSkip) {
+			logger.error(`Stripe webhook error: ${error}`, { error });
+		}
+		return c.json({ message: "Webhook received, internal server error" }, 200);
 	}
 
-	try {
-		await handleStripeWebhookRefresh({
-			eventType: event.type,
-			data: event.data,
-			ctx,
-		});
-	} catch (error) {
-		logger.error(`Stripe webhook, error refreshing cache: ${error}`, {
-			error: {
-				message: error instanceof Error ? error.message : String(error),
-			},
-		});
-		return { success: true };
-	}
+	// Note: Cache refresh is now handled by stripeWebhookRefreshMiddleware
 
-	return { success: true };
+	return c.json({ success: true }, 200);
 };

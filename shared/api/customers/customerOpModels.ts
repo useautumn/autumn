@@ -120,10 +120,10 @@ export const UpdateCustomerParamsSchema = z.object({
 
 // List Customers Query (based on the docs)
 export const ListCustomersQuerySchema = z.object({
-	limit: z.coerce.number().int().min(10).max(100).default(10).optional().meta({
+	limit: z.coerce.number().int().min(10).max(100).default(10).meta({
 		description: "Maximum number of customers to return",
 	}),
-	offset: z.coerce.number().int().min(0).default(0).optional().meta({
+	offset: z.coerce.number().int().min(0).default(0).meta({
 		description: "Number of customers to skip before returning results",
 	}),
 });
@@ -179,6 +179,7 @@ export const GetBillingPortalResponseSchema = z.object({
 export type CreateCustomerParams = z.infer<typeof CreateCustomerParamsSchema>;
 export type UpdateCustomerParams = z.infer<typeof UpdateCustomerParamsSchema>;
 export type ListCustomersQuery = z.infer<typeof ListCustomersQuerySchema>;
+
 export type ListCustomersResponse = z.infer<typeof ListCustomersResponseSchema>;
 export type GetBillingPortalQuery = z.infer<typeof GetBillingPortalQuerySchema>;
 export type GetBillingPortalBody = z.infer<typeof GetBillingPortalBodySchema>;

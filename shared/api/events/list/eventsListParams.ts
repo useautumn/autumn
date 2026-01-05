@@ -1,7 +1,9 @@
 import { z } from "zod/v4";
-import { PagePaginationQuerySchema } from "../../common/pagePaginationSchemas";
+import { createPaginationParamsSchema } from "../../common/pagePaginationSchemas";
 
-export const ApiEventsListParamsSchema = PagePaginationQuerySchema.extend({
+export const ApiEventsListParamsSchema = createPaginationParamsSchema({
+	defaultLimit: 100,
+}).extend({
 	customer_id: z.string().describe("Filter events by customer ID"),
 	feature_id: z
 		.string()

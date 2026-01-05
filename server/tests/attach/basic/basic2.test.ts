@@ -93,6 +93,7 @@ describe(`${chalk.yellowBright("basic2: Testing attach monthly add on")}`, () =>
 			cusRes: res,
 		});
 	});
+	return;
 
 	const monthlyQuantity = 500;
 

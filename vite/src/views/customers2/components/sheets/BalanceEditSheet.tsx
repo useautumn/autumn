@@ -1,7 +1,7 @@
 import {
 	cusEntsToBalance,
 	cusEntsToGrantedBalance,
-	cusEntsToPrepaidQuantities,
+	cusEntsToPrepaidQuantity,
 	type FullCusProduct,
 	type FullCustomerEntitlement,
 	type FullCustomerPrice,
@@ -53,7 +53,7 @@ export function BalanceEditSheet() {
 
 	const prepaidAllowance = useMemo(() => {
 		if (!selectedCusEnt) return 0;
-		return cusEntsToPrepaidQuantities({
+		return cusEntsToPrepaidQuantity({
 			cusEnts: [selectedCusEnt],
 		});
 	}, [selectedCusEnt]);

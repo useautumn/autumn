@@ -2,7 +2,14 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 
-import { AppEnv, type Feature, type Organization } from "@autumn/shared";
+import {
+	ApiVersionClass,
+	AppEnv,
+	AuthType,
+	type Feature,
+	LATEST_VERSION,
+	type Organization,
+} from "@autumn/shared";
 import type Stripe from "stripe";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
@@ -12,10 +19,12 @@ import {
 	type Logger,
 	logger,
 } from "../../../src/external/logtail/logtailUtils.js";
+import type { AutumnContext } from "../../../src/honoUtils/HonoEnv.js";
+import { generateId } from "../../../src/utils/genUtils.js";
 
 const DEFAULT_ENV = AppEnv.Sandbox;
 
-export type TestContext = {
+export interface TestContext extends AutumnContext {
 	org: Organization;
 	env: AppEnv;
 	stripeCli: Stripe;
@@ -23,7 +32,7 @@ export type TestContext = {
 	orgSecretKey: string;
 	features: Feature[];
 	logger: Logger;
-};
+}
 
 export const createTestContext = async () => {
 	const { db } = initDrizzle();
@@ -64,7 +73,15 @@ export const createTestContext = async () => {
 		features,
 		logger,
 		orgSecretKey,
-	};
+
+		id: generateId("test"),
+		isPublic: false,
+		authType: AuthType.Unknown,
+		apiVersion: new ApiVersionClass(LATEST_VERSION),
+		timestamp: Date.now(),
+		skipCache: false,
+		expand: [],
+	} satisfies TestContext;
 };
 
 // Only create test context if we're actually running tests

@@ -1,9 +1,13 @@
 -- batchDeleteCustomers.lua
 -- Atomically deletes multiple customers and all their associated entity caches
--- ARGV[1]: JSON array of {orgId, env, customerId} objects
+-- ARGV[1]: cacheCustomerVersion (optional, overrides default cache version)
+-- ARGV[2]: JSON array of {orgId, env, customerId} objects
 -- Returns: number of keys deleted
 
-local customersJson = ARGV[1]
+-- Set version override (used by cacheKeyUtils functions)
+CACHE_CUSTOMER_VERSION_OVERRIDE = ARGV[1] ~= "" and ARGV[1] or nil
+
+local customersJson = ARGV[2]
 local customers = cjson.decode(customersJson)
 local allKeysToDelete = {}
 

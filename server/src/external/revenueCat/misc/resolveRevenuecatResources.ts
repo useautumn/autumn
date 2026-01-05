@@ -84,7 +84,7 @@ export const resolveRevenuecatResources = async ({
 	}
 
 	const cusProducts = customer.customer_products.filter(
-		(cp) => cp.processor?.type === ProcessorType.RevenueCat,
+		(cp) => (cp.processor?.type === ProcessorType.RevenueCat || cp.product.is_default),
 	);
 
 	return { product, customer, cusProducts };
