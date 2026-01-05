@@ -42,6 +42,8 @@ const ALLOWED_HEADERS = [
 	"If-None-Match",
 	"If-Modified-Since",
 	"If-Unmodified-Since",
+	"idempotency-key",
+	"Idempotency-Key",
 ];
 
 export const createHonoApp = () => {
