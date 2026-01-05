@@ -14,7 +14,6 @@ import {
 	getRelevantFeatures,
 	orgToInStatuses,
 	type SortCusEntParams,
-	sumValues,
 } from "@autumn/shared";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
@@ -57,9 +56,7 @@ const apiToBackendBalance = ({
 }) => {
 	if (!apiBalance) return 0;
 
-	const totalPrepaidQuantity = sumValues(
-		cusEnts.map((cusEnt) => cusEntsToPrepaidQuantity({ cusEnts })),
-	);
+	const totalPrepaidQuantity = cusEntsToPrepaidQuantity({ cusEnts });
 
 	// Backend balance = prepaid_quantity + current_balance - purchased_balance
 	const backendBalance = new Decimal(totalPrepaidQuantity)
