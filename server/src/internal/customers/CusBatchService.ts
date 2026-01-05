@@ -7,9 +7,9 @@ import {
 	type CusProductStatus,
 	type CustomerLegacyData,
 	type FullCustomer,
-	type ListCustomersQuery,
 	type ListCustomersV2Params,
 	type Organization,
+	RELEVANT_STATUSES,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
@@ -61,7 +61,9 @@ export class CusBatchService {
 		const sqlQuery = getPaginatedFullCusQuery({
 			orgId: ctx.org.id,
 			env: ctx.env,
-			inStatuses: subscription_status as CusProductStatus[],
+			inStatuses: subscription_status
+				? [subscription_status as unknown as CusProductStatus]
+				: RELEVANT_STATUSES,
 			includeInvoices,
 			withEntities,
 			withTrialsUsed,

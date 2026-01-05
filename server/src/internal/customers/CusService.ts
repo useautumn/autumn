@@ -204,9 +204,7 @@ export class CusService {
 			),
 		});
 
-		if (!customer) {
-			return null;
-		}
+		if (!customer) return null;
 
 		return customer as Customer;
 	}

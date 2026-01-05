@@ -1,13 +1,10 @@
 import {
-	type AppEnv,
 	BillingType,
 	type FullCusProduct,
 	type FullCustomerPrice,
-	type Organization,
 	type Price,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
@@ -21,24 +18,19 @@ import {
 	getEarliestPeriodStart,
 } from "../stripeSubUtils/convertSubUtils.js";
 import { getFullStripeSub } from "../stripeSubUtils.js";
+import type { StripeWebhookContext } from "../webhookMiddlewares/stripeWebhookContext.js";
 
 export const handleSubCreated = async ({
-	db,
-	subData,
-	org,
-	env,
-	logger,
+	ctx,
 }: {
-	db: DrizzleCli;
-	subData: Stripe.Subscription;
-	org: Organization;
-	env: AppEnv;
-	logger: any;
+	ctx: StripeWebhookContext;
 }) => {
-	const stripeCli = createStripeCli({ org, env });
+	const { db, org, env, logger, stripeCli, stripeEvent } = ctx;
+	const stripeObject = stripeEvent.data.object as Stripe.Subscription;
+
 	const subscription = await getFullStripeSub({
 		stripeCli,
-		stripeId: subData.id,
+		stripeId: stripeObject.id,
 	});
 
 	// 1. can ignore
