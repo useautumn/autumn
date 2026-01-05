@@ -1,6 +1,5 @@
 import {
 	type AttachBodyV1,
-	type FeatureOptions,
 	type FreeTrial,
 	type FullCusProduct,
 	type FullCustomer,
@@ -8,15 +7,10 @@ import {
 	type FullProduct,
 	type LineItem,
 	LineItemSchema,
-	type OngoingCusProductAction,
-	type ScheduledCusProductAction,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { z } from "zod/v4";
-import type {
-	StripeInvoiceAction,
-	StripeSubscriptionAction,
-} from "./billingPlan";
+import type { StripeInvoiceAction } from "./billingPlan";
 
 export type AttachContext = {
 	fullCus: FullCustomer;
@@ -28,9 +22,6 @@ export type AttachContext = {
 	stripeCus: Stripe.Customer;
 	paymentMethod?: Stripe.PaymentMethod;
 	testClockFrozenTime?: number;
-
-	ongoingCusProductAction?: OngoingCusProductAction;
-	scheduledCusProductAction?: ScheduledCusProductAction;
 
 	body: AttachBodyV1;
 };
@@ -60,8 +51,7 @@ export type AttachPlan = {
 	autumnLineItems: LineItem[];
 
 	// 1. Autumn actions
-	ongoingCusProductAction?: OngoingCusProductAction;
-	scheduledCusProductAction?: ScheduledCusProductAction;
+
 	updateOneOffAction?: UpdateOneOffAction;
 	newCusProducts: FullCusProduct[];
 
@@ -75,16 +65,9 @@ export type BillingPlan = {
 	intent: "attach" | "update_quantity" | "update_plan" | "cancel" | "one_off";
 };
 
-export type BaseSubscriptionUpdatePlan = BillingPlan & {
-	intent: "update_quantity" | "update_plan";
-	autumnLineItems: LineItem[];
-	stripeSubscriptionAction: StripeSubscriptionAction;
-	ongoingCusProductAction: OngoingCusProductAction;
-};
-
 export const QuantityUpdateDetailsSchema = z.object({
 	featureId: z.string(),
-	customerEntitlementId: z.string().optional(),
+	customerEntitlementId: z.string(),
 	customerEntitlementBalanceChange: z.number(),
 	autumnLineItems: z.array(LineItemSchema),
 });
@@ -104,15 +87,3 @@ export type SubscriptionUpdateInvoiceAction = {
 	paymentMethod?: Stripe.PaymentMethod;
 	customerPrices: FullCustomerPrice[];
 };
-
-export type SubscriptionUpdateQuantityPlan = BaseSubscriptionUpdatePlan & {
-	featureQuantities: {
-		old: FeatureOptions[];
-		new: FeatureOptions[];
-	};
-	quantityUpdateDetails: QuantityUpdateDetails[];
-	invoiceAction?: SubscriptionUpdateInvoiceAction;
-	shouldUncancelSubscription: boolean;
-};
-
-export type SubscriptionUpdatePlan = SubscriptionUpdateQuantityPlan;

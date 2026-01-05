@@ -21,7 +21,6 @@ export const executeAutumnBillingPlan = async ({
 		customPrices,
 		customEntitlements,
 		customFreeTrial,
-		quantityUpdateDetails,
 	} = autumnBillingPlan;
 
 	await PriceService.insert({
@@ -56,7 +55,8 @@ export const executeAutumnBillingPlan = async ({
 	}
 
 	// 4. Update entitlement balances
-	if (quantityUpdateDetails && quantityUpdateDetails.length > 0) {
-		await updateCustomerEntitlements({ ctx, quantityUpdateDetails });
-	}
+	await updateCustomerEntitlements({
+		ctx,
+		updates: autumnBillingPlan.updateCustomerEntitlements,
+	});
 };

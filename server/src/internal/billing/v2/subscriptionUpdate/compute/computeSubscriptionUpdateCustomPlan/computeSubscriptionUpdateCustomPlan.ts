@@ -5,6 +5,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import type { UpdateSubscriptionContext } from "@server/internal/billing/v2/subscriptionUpdate/fetch/updateSubscriptionContextSchema";
+import type { AutumnBillingPlan } from "@/internal/billing/v2/billingPlan";
 import { computeSubscriptionUpdateFreeTrialPlan } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateCustomPlan/computeSubscriptionUpdateFreeTrialPlan";
 import { computeSubscriptionUpdateNewCustomerProduct } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateCustomPlan/computeSubscriptionUpdateNewCustomerProduct";
 import { computeCustomFullProduct } from "../../../compute/computeAutumnUtils/computeCustomFullProduct";
@@ -63,7 +64,20 @@ export const computeSubscriptionUpdateCustomPlan = async ({
 
 	// Line items?
 
-	return;
+	return {
+		insertCustomerProducts: [newFullCustomerProduct],
+		// updateCustomerProduct: {
+		// 	customerProduct: customerProduct,
+		// 	updates: {
+		// 		status: CusProductStatus.Expired,
+		// 	},
+		// },
+		customPrices: customPrices,
+		customEntitlements: customEnts,
+		customFreeTrial: customFreeTrial,
+		autumnLineItems: [],
+		quantityUpdateDetails: [],
+	} satisfies AutumnBillingPlan;
 
 	// 4. Create stripe prices
 	// const fullCustomer = updateSubscriptionContext.fullCustomer;
