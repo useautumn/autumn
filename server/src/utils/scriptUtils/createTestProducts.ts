@@ -95,6 +95,7 @@ export const constructProduct = ({
 	isAddOn = false,
 	freeTrial,
 	forcePaidDefault = false,
+	version = 1,
 }: {
 	id?: string;
 	items: ProductItem[];
@@ -109,6 +110,7 @@ export const constructProduct = ({
 	isAddOn?: boolean;
 	freeTrial?: CreateFreeTrial;
 	forcePaidDefault?: boolean;
+	version?: number;
 }) => {
 	let price = 0;
 	if (type === "pro") {
@@ -172,7 +174,7 @@ export const constructProduct = ({
 		env: AppEnv.Sandbox,
 		is_add_on: isAddOn,
 		is_default: (type === "free" && isDefault) || forcePaidDefault,
-		version: 1,
+		version,
 		group: group || "",
 		free_trial: freeTrialConfig as FreeTrial,
 		created_at: Date.now(),

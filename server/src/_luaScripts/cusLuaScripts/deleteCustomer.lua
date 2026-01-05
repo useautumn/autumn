@@ -1,13 +1,25 @@
 -- deleteCustomer.lua
 -- Atomically deletes a customer and all its associated entity caches
--- ARGV[1]: org_id
--- ARGV[2]: env
--- ARGV[3]: customer_id
--- Returns: number of keys deleted
+-- ARGV[1]: cacheCustomerVersion (optional, overrides default cache version)
+-- ARGV[2]: org_id
+-- ARGV[3]: env
+-- ARGV[4]: customer_id
+-- Returns: number of keys deleted (0 if guard exists and deletion was skipped)
 
-local orgId = ARGV[1]
-local env = ARGV[2]
-local customerId = ARGV[3]
+-- Set version override (used by cacheKeyUtils functions)
+CACHE_CUSTOMER_VERSION_OVERRIDE = ARGV[1] ~= "" and ARGV[1] or nil
+
+local orgId = ARGV[2]
+local env = ARGV[3]
+local customerId = ARGV[4]
+
+-- Check if a test cache delete guard exists - if so, skip deletion
+local testGuardKey = buildTestCacheDeleteGuard(orgId, env, customerId)
+local testGuard = redis.call("GET", testGuardKey)
+if testGuard then
+    -- Test guard exists, skip deletion to allow manual testing
+    return 0
+end
 
 -- Helper function to add balance-related keys for a cache key
 local function addBalanceKeys(keysToDelete, cacheKey, featureIds)

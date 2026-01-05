@@ -74,5 +74,6 @@ export const handleNonRenewingPurchase = async ({
 		customerId: customer.id ?? "",
 		orgId: org.id,
 		env,
+		source: `handleRevenuecatNonRenewingPurchase: ${product.id}`,
 	});
 };

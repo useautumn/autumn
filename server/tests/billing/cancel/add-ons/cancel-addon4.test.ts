@@ -76,13 +76,13 @@ describe(`${chalk.yellowBright("cancel-addon4: Attach pro + usage add on, use ov
 			product_id: monthlyAddOn.id,
 		});
 
+		await timeout(2000);
+
 		await autumn.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: 1000,
 		});
-
-		await timeout(3000);
 
 		const dbCustomer = await CusService.get({
 			db: ctx.db,

@@ -80,6 +80,7 @@ export const handleCreatePlan = createRoute({
 
 		let prices: Price[] = [];
 		let entitlements: Entitlement[] = [];
+		let updatedFeatures = features;
 
 		if (items) {
 			const res = await handleNewProductItems({
@@ -95,6 +96,7 @@ export const handleCreatePlan = createRoute({
 			});
 			prices = res.prices;
 			entitlements = res.entitlements;
+			updatedFeatures = res.features;
 		}
 
 		await validateOneOffTrial({
@@ -118,7 +120,7 @@ export const handleCreatePlan = createRoute({
 			...product,
 			description: body?.description ?? null,
 			prices,
-			entitlements: getEntsWithFeature({ ents: entitlements, features }),
+			entitlements: getEntsWithFeature({ ents: entitlements, features: updatedFeatures }),
 			free_trial: newFreeTrial,
 		};
 
@@ -139,7 +141,7 @@ export const handleCreatePlan = createRoute({
 
 		const planResponse = await getPlanResponse({
 			product: newFullProduct,
-			features,
+			features: updatedFeatures,
 		});
 
 		// Apply version transformations for client

@@ -10,6 +10,7 @@ import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import { CACHE_CUSTOMER_VERSIONS } from "../../../src/_luaScripts/cacheConfig";
 
 const pro = constructProduct({
 	type: "pro",
@@ -77,6 +78,7 @@ describe(`${chalk.yellowBright("attach-misc3: timestamp-based stale write preven
 		// Step 3: Delete cache (this sets the guard with current timestamp)
 		console.log("\n--- Step 3: Delete cache (sets guard with timestamp) ---");
 		const deletedCount = await redis.deleteCustomer(
+			CACHE_CUSTOMER_VERSIONS.LATEST,
 			ctx.org.id,
 			ctx.env,
 			customerId,
@@ -146,6 +148,11 @@ describe(`${chalk.yellowBright("attach-misc3: timestamp-based stale write preven
 		console.log("✅ Duplicate write correctly returned CACHE_EXISTS!");
 
 		// Cleanup: Delete the cache we wrote
-		await redis.deleteCustomer(ctx.org.id, ctx.env, customerId);
+		await redis.deleteCustomer(
+			CACHE_CUSTOMER_VERSIONS.LATEST,
+			ctx.org.id,
+			ctx.env,
+			customerId,
+		);
 	});
 });

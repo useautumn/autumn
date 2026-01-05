@@ -7,12 +7,18 @@ interface FeatureDeduction {
 	amount: number;
 }
 
+export interface BatchRequestFilters {
+	id?: string; // Match breakdown.id (customer_entitlement_id)
+	interval?: string; // Match breakdown.reset.interval (e.g., "month", "week")
+}
+
 interface BatchRequest {
 	featureDeductions: FeatureDeduction[];
-	overageBehavior: "cap" | "reject";
+	overageBehavior: "cap" | "reject" | "allow";
 	syncMode?: boolean; // If true, sync cache to target balance instead of deducting
 	targetBalance?: number; // Target balance for sync mode (per feature)
 	entityId?: string;
+	filters?: BatchRequestFilters; // Filter which breakdown items to consider
 }
 
 interface RequestResult {
@@ -28,6 +34,7 @@ interface BatchDeductionResult {
 	changedEntityIds?: string[]; // Array of entity IDs that were modified
 	balances?: Record<string, ApiBalance>; // Object of changed balances keyed by featureId
 	featureDeductions?: Record<string, number>; // Actual amounts deducted per feature
+	modifiedBreakdownIds?: string[]; // Array of breakdown.id (customer_entitlement_id) values that were modified
 	debug?: unknown; // For debugging purposes
 }
 
@@ -42,12 +49,14 @@ export const executeBatchDeduction = async ({
 	orgId,
 	env,
 	customerId,
+	adjustGrantedBalance = false,
 }: {
 	redis: Redis;
 	requests: BatchRequest[];
 	orgId: string;
 	env: string;
 	customerId: string;
+	adjustGrantedBalance?: boolean;
 }): Promise<BatchDeductionResult> => {
 	try {
 		// Execute Lua script (hot reload in dev)
@@ -56,6 +65,7 @@ export const executeBatchDeduction = async ({
 			orgId, // ARGV[2]
 			env, // ARGV[3]
 			customerId, // ARGV[4]
+			adjustGrantedBalance ? "true" : "false", // ARGV[5]
 		);
 
 		// Parse result

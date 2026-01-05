@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { insightsRouter } from "@/internal/analytics/insightsRouter.js";
 import { legacyAnalyticsRouter } from "@/internal/analytics/legacyAnalyticsRouter.js";
+import { configsRouter } from "@/internal/configs/configsRouter.js";
 import { eventsRouter } from "@/internal/events/eventsRouter.js";
 import { analyticsMiddleware } from "../honoMiddlewares/analyticsMiddleware.js";
 import { apiVersionMiddleware } from "../honoMiddlewares/apiVersionMiddleware.js";
@@ -58,3 +59,5 @@ apiRouter.route("/redemptions", redemptionRouter);
 apiRouter.route("/insights", insightsRouter);
 apiRouter.route("/query", legacyAnalyticsRouter);
 apiRouter.route("/events", eventsRouter);
+
+apiRouter.route("/configs", configsRouter);
