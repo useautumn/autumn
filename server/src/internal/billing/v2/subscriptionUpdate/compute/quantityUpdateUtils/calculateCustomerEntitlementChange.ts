@@ -1,6 +1,7 @@
-import type {
-	FullCustomerEntitlement,
-	FullCustomerPrice,
+import {
+	type FullCustomerEntitlement,
+	type FullCustomerPrice,
+	InternalError,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils";
@@ -28,13 +29,19 @@ export const calculateCustomerEntitlementChange = ({
 	customerPrice: FullCustomerPrice;
 	customerEntitlements: FullCustomerEntitlement[];
 }): {
-	customerEntitlementId: string | undefined;
+	customerEntitlementId: string;
 	customerEntitlementBalanceChange: number;
 } => {
 	const customerEntitlement = getRelatedCusEnt({
 		cusPrice: customerPrice,
 		cusEnts: customerEntitlements,
 	});
+
+	if (!customerEntitlement) {
+		throw new InternalError({
+			message: `[Quantity Update] Related customer entitlement not found for customer price: ${customerPrice.id}`,
+		});
+	}
 
 	const customerEntitlementBalanceChange = new Decimal(
 		quantityDifferenceForEntitlements,

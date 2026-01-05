@@ -1,6 +1,6 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { AutumnBillingPlan } from "@/internal/billing/v2/billingPlan";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
-import type { QuantityUpdateDetails } from "../../typesOld";
 
 /**
  * Update customer entitlement balances based on quantity changes.
@@ -9,42 +9,31 @@ import type { QuantityUpdateDetails } from "../../typesOld";
  */
 export const updateCustomerEntitlements = async ({
 	ctx,
-	quantityUpdateDetails,
+	updates,
 }: {
 	ctx: AutumnContext;
-	quantityUpdateDetails: QuantityUpdateDetails[];
+	updates: AutumnBillingPlan["updateCustomerEntitlements"];
 }) => {
 	const { db, logger } = ctx;
 
-	for (const updateDetail of quantityUpdateDetails) {
-		if (!updateDetail.customerEntitlementId) {
-			logger.info(
-				`No entitlement found for feature ${updateDetail.featureId}, skipping entitlement update`,
-			);
-			continue;
-		}
+	for (const updateDetail of updates ?? []) {
+		const { balanceChange, customerEntitlementId } = updateDetail;
 
-		const {
-			customerEntitlementBalanceChange,
-			customerEntitlementId,
-			featureId,
-		} = updateDetail;
-
-		if (customerEntitlementBalanceChange > 0) {
+		if (balanceChange > 0) {
 			logger.info(
-				`Incrementing entitlement for feature ${featureId} by ${customerEntitlementBalanceChange} units`,
+				`Incrementing entitlement for customer entitlement ID (${customerEntitlementId}) by ${balanceChange} units`,
 			);
 
 			await CusEntService.increment({
 				db,
 				id: customerEntitlementId,
-				amount: customerEntitlementBalanceChange,
+				amount: balanceChange,
 			});
-		} else if (customerEntitlementBalanceChange < 0) {
-			const absoluteDecrement = Math.abs(customerEntitlementBalanceChange);
+		} else if (balanceChange < 0) {
+			const absoluteDecrement = Math.abs(balanceChange);
 
 			logger.info(
-				`Decrementing entitlement for feature ${featureId} by ${absoluteDecrement} units`,
+				`Decrementing entitlement for feature ${customerEntitlementId} by ${absoluteDecrement} units`,
 			);
 
 			await CusEntService.decrement({
@@ -52,10 +41,6 @@ export const updateCustomerEntitlements = async ({
 				id: customerEntitlementId,
 				amount: absoluteDecrement,
 			});
-		} else {
-			logger.info(
-				`No entitlement balance change required for feature ${featureId}`,
-			);
 		}
 	}
 

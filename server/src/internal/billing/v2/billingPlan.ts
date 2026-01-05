@@ -100,8 +100,17 @@ export const AutumnBillingPlanSchema = z.object({
 	customFreeTrial: FreeTrialSchema.optional(), // Custom free trial to insert
 
 	autumnLineItems: z.array(LineItemSchema),
+
+	updateCustomerEntitlements: z
+		.array(
+			z.object({
+				customerEntitlementId: z.string(),
+				balanceChange: z.number(),
+			}),
+		)
+		.optional(),
+
 	quantityUpdateDetails: z.array(QuantityUpdateDetailsSchema).optional(),
-	shouldUncancelSubscription: z.boolean().optional(),
 });
 
 export const BillingPlanSchema = z.object({

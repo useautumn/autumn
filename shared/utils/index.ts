@@ -18,6 +18,7 @@ export * from "./cusEntUtils/balanceUtils.js";
 export * from "./cusEntUtils/classifyCusEntUtils.js";
 export * from "./cusEntUtils/convertCusEntUtils/cusEntsToMaxPurchase.js";
 export * from "./cusEntUtils/convertCusEntUtils/cusEntsToStartingBalance.js";
+export * from "./cusEntUtils/convertCusEntUtils/cusEntToCusPrice.js";
 export * from "./cusEntUtils/convertCusEntUtils/cusEntToKey.js";
 export * from "./cusEntUtils/convertCusEntUtils.js";
 export * from "./cusEntUtils/cusEntUtils.js";
