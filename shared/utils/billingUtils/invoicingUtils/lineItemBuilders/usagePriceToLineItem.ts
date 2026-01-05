@@ -1,7 +1,7 @@
 import { InternalError } from "../../../../api/errors/base/InternalError";
 import type { LineItemContext } from "../../../../models/billingModels/invoicingModels/lineItemContext";
 import type { FullCusEntWithFullCusProduct } from "../../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
-import { cusEntToPrepaidQuantity } from "../../../cusEntUtils/balanceUtils/cusEntToPrepaidQuantity";
+import { cusEntsToPrepaidQuantity } from "../../../cusEntUtils/balanceUtils/cusEntsToPrepaidQuantity";
 import { cusEntToCusPrice } from "../../../cusEntUtils/convertCusEntUtils/cusEntToCusPrice";
 import { cusEntToStripeIds } from "../../../cusEntUtils/convertCusEntUtils/cusEntToStripeIds";
 import { cusEntToInvoiceOverage } from "../../../cusEntUtils/overageUtils/cusEntToInvoiceOverage";
@@ -41,7 +41,7 @@ export const usagePriceToLineItem = ({
 	// 1. Get overage
 	let overage = 0;
 	if (isPrepaidPrice(cusPrice.price)) {
-		overage = cusEntToPrepaidQuantity({ cusEnt });
+		overage = cusEntsToPrepaidQuantity({ cusEnts: [cusEnt] });
 	} else {
 		overage = cusEntToInvoiceOverage({ cusEnt });
 	}
@@ -49,7 +49,7 @@ export const usagePriceToLineItem = ({
 	// 2. Get usage
 	let usage = 0;
 	if (isPrepaidPrice(cusPrice.price)) {
-		usage = cusEntToPrepaidQuantity({ cusEnt });
+		usage = cusEntsToPrepaidQuantity({ cusEnts: [cusEnt] });
 	} else {
 		usage = cusEntToInvoiceUsage({ cusEnt });
 	}

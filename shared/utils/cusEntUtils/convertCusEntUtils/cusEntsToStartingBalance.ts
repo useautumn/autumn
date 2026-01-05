@@ -1,8 +1,6 @@
+import { cusEntToCusPrice } from "@utils/cusEntUtils/convertCusEntUtils/cusEntToCusPrice";
 import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
-import {
-	cusEntToCusPrice,
-	entToOptions,
-} from "../../productUtils/convertUtils";
+import { entToOptions } from "../../productUtils/convertProductUtils";
 import { sumValues } from "../../utils";
 
 import { getStartingBalance } from "../getStartingBalance";

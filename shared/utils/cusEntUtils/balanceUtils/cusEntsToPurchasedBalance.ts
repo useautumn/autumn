@@ -4,7 +4,7 @@ import { getBillingType } from "../../productUtils/priceUtils.js";
 import { nullish, sumValues } from "../../utils.js";
 import { getCusEntBalance } from "../balanceUtils.js";
 import { cusEntToCusPrice } from "../convertCusEntUtils/cusEntToCusPrice.js";
-import { cusEntToPrepaidQuantity } from "./cusEntToPrepaidQuantity.js";
+import { cusEntsToPrepaidQuantity } from "./cusEntsToPrepaidQuantity.js";
 
 export const cusEntsToPurchasedBalance = ({
 	cusEnts,
@@ -35,7 +35,7 @@ export const cusEntsToPurchasedBalance = ({
 		const billingType = getBillingType(cusPrice.price.config);
 
 		if (billingType === BillingType.UsageInAdvance) {
-			const prepaidQuantity = cusEntToPrepaidQuantity({ cusEnt });
+			const prepaidQuantity = cusEntsToPrepaidQuantity({ cusEnts: [cusEnt] });
 
 			// Add negative cus ent balance too
 			const { balance } = getCusEntBalance({
