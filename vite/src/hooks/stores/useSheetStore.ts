@@ -1,3 +1,4 @@
+import type { ProductItem } from "@autumn/shared";
 import { useEffect } from "react";
 import { create } from "zustand";
 
@@ -25,6 +26,8 @@ interface SheetState {
 	itemId: string | null;
 	// Explicit data payload for the sheet
 	data: Record<string, unknown> | null;
+	// Initial item state when sheet opened (for change detection)
+	initialItem: ProductItem | null;
 
 	// Actions
 	setSheet: (params: {
@@ -32,6 +35,7 @@ interface SheetState {
 		itemId?: string | null;
 		data?: Record<string, unknown> | null;
 	}) => void;
+	setInitialItem: (item: ProductItem | null) => void;
 	closeSheet: () => void;
 	reset: () => void;
 }
@@ -42,6 +46,7 @@ const initialState = {
 	previousType: null as SheetType,
 	itemId: null as string | null,
 	data: null as Record<string, unknown> | null,
+	initialItem: null as ProductItem | null,
 };
 
 export const useSheetStore = create<SheetState>((set) => ({
@@ -49,8 +54,18 @@ export const useSheetStore = create<SheetState>((set) => ({
 
 	// Set the sheet type and optional itemId
 	setSheet: ({ type, itemId = null, data = null }) => {
-		set((state) => ({ previousType: state.type, type, itemId, data }));
+		set((state) => ({
+			previousType: state.type,
+			type,
+			itemId,
+			data,
+			// Clear initialItem when sheet changes
+			initialItem: null,
+		}));
 	},
+
+	// Set the initial item state for change detection
+	setInitialItem: (item) => set({ initialItem: item }),
 
 	// Close the sheet
 	closeSheet: () => {
@@ -59,6 +74,7 @@ export const useSheetStore = create<SheetState>((set) => ({
 			type: null,
 			itemId: null,
 			data: null,
+			initialItem: null,
 		}));
 	},
 
@@ -86,8 +102,13 @@ export const useIsUpdatingSubscription = () =>
 /**
  * Hook to handle Escape key to close sheet and unfocus active elements
  * Only closes sheet if no dialog is currently open
+ * @param onClose - Optional custom close handler. If not provided, uses default closeSheet.
  */
-export const useSheetEscapeHandler = () => {
+export const useSheetEscapeHandler = ({
+	onClose,
+}: {
+	onClose?: () => void;
+} = {}) => {
 	const sheetType = useSheetStore((s) => s.type);
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 
@@ -102,7 +123,12 @@ export const useSheetEscapeHandler = () => {
 
 				// Only close sheet if no dialog is open
 				if (!isDialogOpen) {
-					closeSheet();
+					// Use custom onClose if provided, otherwise default closeSheet
+					if (onClose) {
+						onClose();
+					} else {
+						closeSheet();
+					}
 					// Unfocus any active element
 					if (document.activeElement instanceof HTMLElement) {
 						document.activeElement.blur();
@@ -113,7 +139,7 @@ export const useSheetEscapeHandler = () => {
 
 		window.addEventListener("keydown", handleEscape);
 		return () => window.removeEventListener("keydown", handleEscape);
-	}, [sheetType, closeSheet]);
+	}, [sheetType, closeSheet, onClose]);
 };
 
 /**

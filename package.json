@@ -21,7 +21,7 @@
 	"scripts": {
 		"dev": "bun scripts/dev.ts",
 		"vite:build": "bun -F @autumn/vite build:bun",
-		"d": "ENV_FILE=.env infisical run --watch --env=dev -- bun scripts/dev.ts",
+		"d": "lsof -ti:8080 -ti:3000 | xargs kill -9 2>/dev/null || true; ENV_FILE=.env infisical run --env=dev -- bun scripts/dev.ts",
 		"p": "ENV_FILE=.env.prod infisical run --env=prod -- bun scripts/dev.ts",
 		"setup": "node scripts/setup/setup.js",
 		"setup:test": "infisical run --env=dev -- bun scripts/setup/setup-test.ts",
@@ -34,7 +34,8 @@
 		"db:pull": "bun scripts/db/pull.ts",
 		"db:push": " bun -F @autumn/shared db:push",
 		"db:generate": "bun -F @autumn/shared db:generate",
-		"db:migrate": " bun -F @autumn/shared db:migrate"
+		"db:migrate": " bun -F @autumn/shared db:migrate",
+		"q": "lsof -ti:8080 -ti:3000 | xargs kill -9"
 	},
 	"dependencies": {
 		"@wooorm/starry-night": "^3.8.0",

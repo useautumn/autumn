@@ -20,7 +20,6 @@ export const VERSION_REGISTRY: Record<ApiVersion, VersionMetadata> = {
 		releasedAt: new Date("2026-03-31").getTime(),
 		description: "Plan features with max_purchase",
 	},
-
 	[ApiVersion.V1_Beta]: {
 		semver: ApiVersion.V1_Beta,
 		calver: "beta",

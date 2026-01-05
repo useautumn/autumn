@@ -1,26 +1,24 @@
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import type { FrontendProductItem, ProductItem } from "@autumn/shared";
 import { useEffect, useState } from "react";
-import { ProductItemConfig } from "./ProductItemConfig";
-import { FrontendProductItem, ProductItem } from "@autumn/shared";
-import { ProductItemContext } from "./ProductItemContext";
-import { useProductContext } from "../ProductContext";
-import { notNullish } from "@/utils/genUtils";
-import { validateProductItem } from "@/utils/product/product-item/validateProductItem";
 import CopyButton from "@/components/general/CopyButton";
-
 import {
-	CustomDialogContent,
 	CustomDialogBody,
+	CustomDialogContent,
 } from "@/components/general/modal-components/DialogContentWrapper";
-
-import { ItemConfigFooter } from "./product-item-config/item-config-footer/ItemConfigFooter";
+import { Dialog, DialogTitle } from "@/components/ui/dialog";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { notNullish } from "@/utils/genUtils";
+import { isPriceItem } from "@/utils/product/getItemType";
+import { validateProductItem } from "@/utils/product/product-item/validateProductItem";
+import { useProductContext } from "../ProductContext";
+import { ProductItemConfig } from "./ProductItemConfig";
+import { ProductItemContext } from "./ProductItemContext";
 import {
 	AdvancedConfigSidebar,
 	MainDialogBodyWrapper,
 	ToggleAdvancedConfigButton,
 } from "./product-item-config/AdvancedConfigSidebar";
-import { isPriceItem } from "@/utils/product/getItemType";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { ItemConfigFooter } from "./product-item-config/item-config-footer/ItemConfigFooter";
 
 export default function UpdateProductItem({
 	selectedItem,

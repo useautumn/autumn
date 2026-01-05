@@ -1,38 +1,46 @@
-import { beforeAll, describe, it } from "bun:test";
+import { beforeAll, describe, test } from "bun:test";
 import { ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import {
+	constructFeatureItem,
+	constructPrepaidItem,
+} from "@/utils/scriptUtils/constructItem.js";
+import {
+	constructProduct,
+	constructRawProduct,
+} from "@/utils/scriptUtils/createTestProducts.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { attachAuthenticatePaymentMethod } from "../../src/external/stripe/stripeCusUtils";
-import { CusService } from "../../src/internal/customers/CusService";
 import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3";
 
 const pro = constructProduct({
 	type: "pro",
 	items: [
 		constructFeatureItem({
-			featureId: TestFeature.Messages,
-			includedUsage: 100,
+			featureId: TestFeature.Credits,
+			includedUsage: 500,
 		}),
 	],
 });
-const oneOffCredits = constructProduct({
-	type: "one_off",
+
+const oneOffCredits = constructRawProduct({
+	id: "one_off_credits",
 	items: [
-		constructFeatureItem({
+		constructPrepaidItem({
 			featureId: TestFeature.Credits,
-			includedUsage: 100,
+			includedUsage: 0,
+			billingUnits: 1,
+			price: 0.01,
+			isOneOff: true,
 		}),
 	],
 });
 
 const testCase = "temp";
 
-describe(`${chalk.yellowBright("temp: one off credits test")}`, () => {
+describe(`${chalk.yellowBright("temp: invoice payment failed for one off credits")}`, () => {
 	const customerId = testCase;
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
@@ -49,24 +57,12 @@ describe(`${chalk.yellowBright("temp: one off credits test")}`, () => {
 			products: [pro, oneOffCredits],
 			prefix: testCase,
 		});
-	});
 
-	it("should attach one off credits product", async () => {
 		await autumnV1.attach({
 			customer_id: customerId,
-			product_id: oneOffCredits.id,
-		});
-
-		const customer = await CusService.get({
-			db: ctx.db,
-			idOrInternalId: customerId,
-			orgId: ctx.org.id,
-			env: ctx.env,
-		});
-
-		await attachAuthenticatePaymentMethod({
-			ctx,
-			customerId,
+			product_id: pro.id,
 		});
 	});
+
+	test("should handle invoice payment failed for one off credits", async () => {});
 });

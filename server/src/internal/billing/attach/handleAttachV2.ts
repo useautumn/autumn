@@ -19,7 +19,7 @@ export const handleAttachV2 = createRoute({
 	resource: AffectedResource.Attach,
 
 	lock: {
-		ttlMs: 5000,
+		ttlMs: 60000,
 		errorMessage:
 			"Attach already in progress for this customer, try again in a few seconds",
 

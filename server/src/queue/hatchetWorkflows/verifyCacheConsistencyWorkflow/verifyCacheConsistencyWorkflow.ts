@@ -1,0 +1,149 @@
+import { type ApiCustomer, type AppEnv, CusExpand } from "@autumn/shared";
+import * as Sentry from "@sentry/bun";
+import { db } from "@/db/initDrizzle.js";
+import { hatchet } from "@/external/hatchet/initHatchet.js";
+import { getSentryTags } from "@/external/sentry/sentryUtils.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
+import { getCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/getCachedApiCustomer.js";
+import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
+import { JobName } from "../../JobName.js";
+import { createWorkflowTask } from "../createWorkflowTask.js";
+import { checkForMisingBalance } from "./checkForMisingBalance.js";
+
+export type VerifyCacheInput = {
+	customerId: string;
+	orgId: string;
+	env: AppEnv;
+	source: string;
+	newCustomerProductId: string;
+	previousFullCustomer: string;
+};
+
+type VerifyCacheOutput = {
+	verify: {
+		consistent: boolean;
+		customerId: string;
+		source: string;
+	};
+};
+
+// Only create workflow if Hatchet is enabled
+export const verifyCacheConsistencyWorkflow = hatchet?.workflow<
+	VerifyCacheInput,
+	VerifyCacheOutput
+>({
+	name: JobName.VerifyCacheConsistency,
+});
+
+// Check if subscriptions match
+const checkSubscriptionsMatch = ({
+	dbCustomer,
+	cachedCustomer,
+}: {
+	dbCustomer: ApiCustomer;
+	cachedCustomer: ApiCustomer;
+}): { success: boolean; message: string } => {
+	for (const subscription of dbCustomer.subscriptions) {
+		const cachedSubscription = cachedCustomer.subscriptions.find(
+			(s) => s.plan_id === subscription.plan_id,
+		);
+		if (!cachedSubscription) {
+			return {
+				success: false,
+				message: `Subscription ${subscription.plan_id} not found in cached customer`,
+			};
+		}
+	}
+
+	for (const scheduledSubscription of dbCustomer.scheduled_subscriptions) {
+		const cachedScheduledSubscription =
+			cachedCustomer.scheduled_subscriptions.find(
+				(s) => s.plan_id === scheduledSubscription.plan_id,
+			);
+		if (!cachedScheduledSubscription) {
+			return {
+				success: false,
+				message: `Scheduled subscription ${scheduledSubscription.plan_id} not found in cached customer`,
+			};
+		}
+	}
+
+	return {
+		success: true,
+		message: "Subscriptions match",
+	};
+};
+
+verifyCacheConsistencyWorkflow?.task({
+	name: JobName.VerifyCacheConsistency,
+	executionTimeout: "60s",
+	fn: createWorkflowTask<VerifyCacheInput, VerifyCacheOutput["verify"]>({
+		handler: async ({ input, autumnContext }) => {
+			const { customerId, source } = input;
+
+			// Get from cache
+			const { apiCustomer: cachedCustomer } = await getCachedApiCustomer({
+				ctx: autumnContext,
+				customerId,
+				source: "verify",
+			});
+
+			// Get fresh from DB
+			const fullCus = await CusService.getFull({
+				db,
+				idOrInternalId: customerId,
+				orgId: autumnContext.org.id,
+				env: autumnContext.env,
+				withEntities: true,
+				withSubs: true,
+				expand: [CusExpand.Invoices],
+			});
+
+			const { apiCustomer: dbCustomer } = await getApiCustomerBase({
+				ctx: autumnContext,
+				fullCus,
+				withAutumnId: true,
+			});
+
+			const {
+				success: subscriptionsMatch,
+				message: subscriptionsMatchMessage,
+			} = checkSubscriptionsMatch({
+				dbCustomer,
+				cachedCustomer,
+			});
+
+			if (!subscriptionsMatch) {
+				autumnContext.logger.info(
+					`[verifyCacheConsistency] subscriptions mismatch for customer ${customerId}`,
+				);
+
+				await deleteCachedApiCustomer({
+					customerId,
+					orgId: autumnContext.org.id,
+					env: autumnContext.env,
+				});
+
+				Sentry.captureException(new Error(subscriptionsMatchMessage), {
+					tags: getSentryTags({
+						ctx: autumnContext,
+						customerId,
+					}),
+				});
+			}
+
+			await checkForMisingBalance({
+				ctx: autumnContext,
+				payload: input,
+				fullCustomer: fullCus,
+			});
+
+			return {
+				consistent: subscriptionsMatch,
+				customerId,
+				source,
+			};
+		},
+	}),
+});
