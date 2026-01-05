@@ -147,6 +147,8 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		user_id: ctx.userId || null,
 	};
 
+	ctx.customerId = customerId;
+
 	// Update logger with enriched context
 	ctx.logger = ctx.logger.child({
 		context: {
