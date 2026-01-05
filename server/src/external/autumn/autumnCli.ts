@@ -126,10 +126,10 @@ export class AutumnInt {
 		return response.json();
 	}
 
-	async post(path: string, body: any) {
+	async post(path: string, body: any, headers?: Record<string, string>) {
 		const response = await fetch(`${this.baseUrl}${path}`, {
 			method: "POST",
-			headers: this.headers,
+			headers: { ...this.headers, ...headers },
 			body: JSON.stringify(body),
 		});
 
@@ -252,13 +252,13 @@ export class AutumnInt {
 		return data;
 	}
 
-	async attach(params: AttachBodyV0) {
+	async attach(params: AttachBodyV0, headers?: Record<string, string>) {
 		// const data = await this.post(`/attach`, {
 		//   customer_id: customerId,
 		//   product_id: productId,
 		//   options: toSnakeCase(options),
 		// });
-		const data = await this.post(`/attach`, params);
+		const data = await this.post(`/attach`, params, headers);
 
 		return data;
 	}
