@@ -58,20 +58,23 @@ export const resolveRevenuecatResources = async ({
 		}),
 		autoCreateCustomer
 			? getOrCreateCustomer({
-					ctx,
-					customerId,
-				})
+				ctx,
+				customerId,
+			})
 			: CusService.getFull({
-					db,
-					idOrInternalId: customerId,
-					orgId: org.id,
-					env,
-				}),
+				db,
+				idOrInternalId: customerId,
+				orgId: org.id,
+				env,
+			}),
 	]);
 
+	// If the customer has a product from a different processor than RevenueCat and it has no subscriptions, throw an error
 	if (
 		customer.customer_products.some(
-			(cp) => cp.processor?.type !== ProcessorType.RevenueCat,
+			(cp) =>
+				cp.processor?.type !== ProcessorType.RevenueCat &&
+				((cp.subscription_ids?.length ?? 0) !== 0),
 		)
 	) {
 		throw new RecaseError({
@@ -81,7 +84,7 @@ export const resolveRevenuecatResources = async ({
 	}
 
 	const cusProducts = customer.customer_products.filter(
-		(cp) => cp.processor?.type === ProcessorType.RevenueCat,
+		(cp) => (cp.processor?.type === ProcessorType.RevenueCat || cp.product.is_default),
 	);
 
 	return { product, customer, cusProducts };

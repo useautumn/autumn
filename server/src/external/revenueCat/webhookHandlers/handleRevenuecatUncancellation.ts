@@ -48,6 +48,7 @@ export const handleUncancellation = async ({
 			customerId: original_app_user_id ?? app_user_id,
 			orgId: org.id,
 			env,
+			source: `handleRevenuecatUncancellation: ${product.id}`,
 		});
 	} else {
 		throw new RecaseError({

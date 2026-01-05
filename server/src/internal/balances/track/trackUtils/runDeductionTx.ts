@@ -38,7 +38,7 @@ export type DeductionTxParams = {
 	entityId?: string;
 	deductions: FeatureDeduction[];
 	eventInfo?: EventInfo;
-	overageBehaviour?: "cap" | "reject";
+	overageBehaviour?: "cap" | "reject" | "allow";
 	addToAdjustment?: boolean;
 	skipAdditionalBalance?: boolean;
 	alterGrantedBalance?: boolean;

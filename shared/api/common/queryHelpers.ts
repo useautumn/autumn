@@ -20,9 +20,10 @@ import { z } from "zod/v4";
  */
 export function queryStringArray<T extends z.ZodTypeAny>(schema: T) {
 	return z.preprocess((val) => {
-		// Convert single string to array for consistent handling
+		// Convert single string to array, splitting on commas if present
+		// "active" → ["active"], "active,trialing" → ["active", "trialing"]
 		if (typeof val === "string") {
-			return [val];
+			return val.split(",").map((v) => v.trim());
 		}
 		return val;
 	}, z.array(schema));
@@ -40,6 +41,29 @@ export function queryStringArray<T extends z.ZodTypeAny>(schema: T) {
  * });
  * ```
  */
+/**
+ * Helper to handle query string integer arrays that can be either:
+ * - Single value: ?version=1 → [1]
+ * - Comma-separated: ?version=1,2,3 → [1, 2, 3]
+ * - Multiple values: ?version=1&version=2 → [1, 2]
+ *
+ * Parses string values to integers for consistent validation.
+ */
+export function queryIntegerArray() {
+	return z.preprocess((val) => {
+		if (typeof val === "number") {
+			return [val];
+		}
+		if (typeof val === "string") {
+			return val.split(",").map((v) => parseInt(v.trim(), 10));
+		}
+		if (Array.isArray(val)) {
+			return val.map((v) => (typeof v === "string" ? parseInt(v, 10) : v));
+		}
+		return val;
+	}, z.array(z.number().int()));
+}
+
 export function queryInteger(options?: {
 	min?: number;
 	max?: number;

@@ -1,6 +1,5 @@
 import { format } from "date-fns";
 import type { Feature } from "../models/featureModels/featureModels.js";
-import { notNullish, nullish } from "./utils.js";
 export const getFeatureName = ({
 	feature,
 	plural,
@@ -21,24 +20,12 @@ export const getFeatureName = ({
 	if (feature.display) {
 		let finalPlural: boolean | undefined;
 		// Case 1: If units and nullish plural
-		if (notNullish(units) && nullish(plural)) {
-			finalPlural = units !== 1;
-		} else if (nullish(units) && notNullish(plural)) {
+
+		if (plural !== undefined) {
 			finalPlural = plural;
 		} else {
-			finalPlural = plural || false;
+			finalPlural = units !== 1;
 		}
-
-		// if (units && units === 1) {
-		//   plural = false;
-		// }
-		// // if (!plural) {
-		// //   if (units && units === 1) {
-		// //     plural = false;
-		// //   } else {
-		// //     plural = true;
-		// //   }
-		// // }
 
 		if (finalPlural) {
 			featureName = feature.display.plural || featureName;
@@ -83,7 +70,9 @@ export const getSingularAndPlural = ({
 };
 
 export const numberWithCommas = (x: number) => {
-	return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+	return new Intl.NumberFormat("en-US", { maximumFractionDigits: 20 }).format(
+		x,
+	);
 };
 
 export const usageToFeatureName = ({

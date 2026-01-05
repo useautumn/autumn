@@ -94,7 +94,7 @@ revenuecatWebhookRouter.post(
 			return c.json({ success: true }, 200);
 		} catch (error) {
 			logger.error(`error handling revenuecat webhook ${error}`);
-			return c.json({ error: "Internal server error" }, 200); // don't retry webhooks.
+			return c.json({ error: `Internal server error: ${error}` }, 500);
 		}
 	},
 );

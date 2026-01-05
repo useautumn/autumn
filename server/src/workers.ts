@@ -22,6 +22,9 @@ let isShuttingDown = false;
 if (cluster.isPrimary) {
 	await initInfisical();
 
+	const { initHatchetWorker } = await import("./queue/initWorkers.js");
+	await initHatchetWorker();
+
 	// Check if queue is configured before starting workers
 	if (!process.env.SQS_QUEUE_URL && !process.env.QUEUE_URL) {
 		console.log("⏭️  No queue configured. Skipping workers startup.");

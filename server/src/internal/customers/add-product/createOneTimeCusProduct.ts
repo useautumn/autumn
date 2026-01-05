@@ -5,6 +5,7 @@ import {
 	CusProductStatus,
 	type EntitlementWithFeature,
 	type FeatureOptions,
+	type FullCustomer,
 	type FullCustomerEntitlement,
 	getStartingBalance,
 	type Organization,
@@ -16,6 +17,7 @@ import { getEntRelatedPrice } from "@/internal/products/entitlements/entitlement
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { nullish } from "@/utils/genUtils.js";
 import type { Logger } from "../../../external/logtail/logtailUtils.js";
+import { queueVerifyCacheConsistencyWorkflow } from "../../../queue/hatchetWorkflows/verifyCacheConsistencyWorkflow/queueVerifyCacheConsistencyWorkflow.js";
 import type { InsertCusProductParams } from "../cusProducts/AttachParams.js";
 import { CusProductService } from "../cusProducts/CusProductService.js";
 import { CusEntService } from "../cusProducts/cusEnts/CusEntitlementService.js";
@@ -187,5 +189,12 @@ export const updateOneTimeCusProduct = async ({
 		cusProduct: existingCusProduct,
 		scheduledCusProduct: undefined,
 		scenario: AttachScenario.New,
+	});
+
+	await queueVerifyCacheConsistencyWorkflow({
+		newCustomerProduct: existingCusProduct,
+		previousFullCustomer: attachParams.customer as FullCustomer,
+		logger,
+		source: "updateOneTimeCusProduct",
 	});
 };

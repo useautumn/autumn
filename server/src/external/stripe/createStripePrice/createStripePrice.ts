@@ -13,7 +13,7 @@ import {
 	getPriceEntitlement,
 	priceIsOneOffAndTiered,
 } from "@server/internal/products/prices/priceUtils";
-import type Stripe from "stripe";
+import Stripe from "stripe";
 import { billingIntervalToStripe } from "../stripePriceUtils.js";
 import {
 	createStripeArrearProrated,
@@ -57,7 +57,14 @@ export const checkCurStripePrice = async ({
 				stripePrice = null;
 			}
 		} catch (_error) {
-			stripePrice = null;
+			if (
+				_error instanceof Stripe.errors.StripeError &&
+				_error.code?.includes("resource_missing")
+			) {
+				stripePrice = null;
+			} else {
+				throw _error;
+			}
 		}
 	}
 

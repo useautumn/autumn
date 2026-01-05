@@ -276,10 +276,11 @@ async function runTest() {
 	}
 
 	// Run the test file with the appropriate framework, wrapped with Infisical
+	// Respect NODE_ENV from parent process (e.g., development for logging)
 	const child = spawn("bun", ["test", "--timeout", "0", testFile.relative], {
 		cwd: serverDir,
 		stdio: "inherit",
-		env: { ...process.env, NODE_ENV: "production" },
+		env: process.env,
 	});
 
 	// Store the process group ID

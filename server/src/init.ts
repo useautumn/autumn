@@ -1,9 +1,9 @@
 // Suppress BullMQ eviction policy warnings BEFORE any imports
 
 // Skip OpenTelemetry instrumentation in development for faster startup
+await import("./sentry.js");
 if (process.env.NODE_ENV !== "development") {
 	await import("./instrumentation.js");
-	await import("./sentry.js");
 }
 
 import cluster from "node:cluster";
@@ -17,7 +17,6 @@ import express from "express";
 import { client, db } from "./db/initDrizzle.js";
 import { ClickHouseManager } from "./external/clickhouse/ClickHouseManager.js";
 import { logger } from "./external/logtail/logtailUtils.js";
-import webhooksRouter from "./external/webhooks/webhooksRouter.js";
 import { redirectToHono } from "./initHono.js";
 import { apiRouter } from "./internal/api/apiRouter.js";
 import mainRouter from "./internal/mainRouter.js";
@@ -191,8 +190,6 @@ const init = async () => {
 			next();
 		});
 	});
-
-	app.use("/webhooks", webhooksRouter);
 
 	app.use(express.json());
 	app.use(async (req: any, _res: any, next: any) => {

@@ -53,7 +53,7 @@ export const ApiCusFeatureV3RolloverSchema = z.object({
 
 // Version 3 of cus feature response
 export const ApiCusFeatureV3BreakdownSchema = z.object({
-	interval: z.enum(EntInterval).meta({
+	interval: z.enum(EntInterval).nullable().meta({
 		description: breakdownDescriptions.interval,
 	}),
 	interval_count: z.number().nullish().meta({

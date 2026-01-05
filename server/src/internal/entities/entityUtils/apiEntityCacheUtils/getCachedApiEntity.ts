@@ -46,6 +46,7 @@ export const getCachedApiEntity = async ({
 	skipCustomerMerge = false,
 	fullCus,
 	redisInstance,
+	cacheVersion,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
@@ -53,6 +54,7 @@ export const getCachedApiEntity = async ({
 	skipCustomerMerge?: boolean; // If true, returns only entity's own features (no customer merging)
 	fullCus?: FullCustomer;
 	redisInstance?: Redis; // Optional redis instance for cross-region sync
+	cacheVersion?: string; // Optional cache version override (for sync)
 }): Promise<{ apiEntity: ApiEntityV1; legacyData: EntityLegacyData }> => {
 	const { org, env, db, skipCache } = ctx;
 	const redisClient = redisInstance || redis;
@@ -62,6 +64,7 @@ export const getCachedApiEntity = async ({
 		if (!skipCache) {
 			const cachedResult = await tryRedisRead(() =>
 				(redisClient as typeof redis).getEntity(
+					cacheVersion || "",
 					org.id,
 					env,
 					customerId,

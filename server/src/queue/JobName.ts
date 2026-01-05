@@ -13,7 +13,11 @@ export enum JobName {
 	HandleCustomerCreated = "handle-customer-created",
 
 	SyncBalanceBatch = "sync-balance-batch",
+	SyncBalanceBatchV2 = "sync-balance-batch-v2",
 	InsertEventBatch = "insert-event-batch",
 
 	ClearCreditSystemCustomerCache = "clear-credit-system-customer-cache",
+
+	// Hatchet workflows
+	VerifyCacheConsistency = "verify-cache-consistency",
 }

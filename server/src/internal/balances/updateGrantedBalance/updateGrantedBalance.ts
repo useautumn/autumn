@@ -1,6 +1,5 @@
 import type { FullCustomer, SortCusEntParams } from "@autumn/shared";
 import {
-	cusEntsHavePrice,
 	cusEntsToAllowance,
 	cusProductsToCusEnts,
 	FeatureNotFoundError,
@@ -14,6 +13,7 @@ import {
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { CusEntService } from "../../customers/cusProducts/cusEnts/CusEntitlementService.js";
+import { deleteCachedApiCustomer } from "../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 
 export const updateGrantedBalance = async ({
 	ctx,
@@ -45,12 +45,6 @@ export const updateGrantedBalance = async ({
 	if (cusEnts.length === 0) {
 		throw new RecaseError({
 			message: `[updateGrantedBalance] No balances to update for feature ${featureId}, customer ${fullCus.id}`,
-		});
-	}
-
-	if (cusEntsHavePrice({ cusEnts })) {
-		throw new InternalError({
-			message: `This feature has a price, so you cannot update the granted balance`,
 		});
 	}
 
@@ -98,11 +92,30 @@ export const updateGrantedBalance = async ({
 			id: targetCusEnt.id,
 			updates: { entities: newEntities },
 		});
+
+		// Update the cusEnt in place
+		targetCusEnt.entities = newEntities;
 	} else {
 		await CusEntService.update({
 			db: ctx.db,
 			id: targetCusEnt.id,
 			updates: { adjustment: requiredAdjustment },
 		});
+
+		// Update the cusEnt in place
+		targetCusEnt.adjustment = requiredAdjustment;
 	}
+
+	await deleteCachedApiCustomer({
+		orgId: ctx.org.id,
+		env: ctx.env,
+		customerId: fullCus.id ?? "",
+		source: "updateGrantedBalance",
+	});
+
+	// // Update Redis cache directly (avoids clearing cache which causes race conditions)
+	// await setCachedGrantedBalance({
+	// 	ctx,
+	// 	fullCus,
+	// });
 };

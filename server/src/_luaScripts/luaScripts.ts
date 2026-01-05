@@ -22,7 +22,7 @@ const CACHE_KEY_UTILS_RAW = readFileSync(
 
 // Inject cache version and TTL constants into cache key utils
 const CACHE_KEY_UTILS = CACHE_KEY_UTILS_RAW.replace(
-	/{CUSTOMER_VERSION}/g,
+	"{CUSTOMER_VERSION}",
 	CACHE_CUSTOMER_VERSION,
 )
 	.replace("{TTL_SECONDS}", CACHE_TTL_SECONDS.toString())
@@ -37,6 +37,18 @@ const CACHE_BALANCE_UTILS = readFileSync(
 // Load shared balance loading function (used by customer, entity, and deduction scripts)
 const LOAD_BALANCES = readFileSync(
 	join(__dirname, "luaUtils/loadBalances.lua"),
+	"utf-8",
+);
+
+// Load balance filter utilities (used by deduction scripts for filtered balance operations)
+const FILTER_BALANCE_UTILS = readFileSync(
+	join(__dirname, "luaUtils/filterBalanceUtils.lua"),
+	"utf-8",
+);
+
+// Load accumulator utilities (used by deduction scripts for collecting deltas/state changes)
+const ACCUMULATOR_UTILS = readFileSync(
+	join(__dirname, "luaUtils/accumulatorUtils.lua"),
 	"utf-8",
 );
 
@@ -99,6 +111,13 @@ const setInvoicesScript = readFileSync(
 	"utf-8",
 );
 export const SET_INVOICES_SCRIPT = `${CACHE_KEY_UTILS}\n${setInvoicesScript}`;
+
+// Prepend cache key utils to SET_GRANTED_BALANCE_SCRIPT
+const setGrantedBalanceScript = readFileSync(
+	join(__dirname, "cusLuaScripts/setGrantedBalance.lua"),
+	"utf-8",
+);
+export const SET_GRANTED_BALANCE_SCRIPT = `${CACHE_KEY_UTILS}\n${setGrantedBalanceScript}`;
 
 // Prepend cache key utils to DELETE_CUSTOMER_SCRIPT
 const deleteCustomerScript = readFileSync(
@@ -163,7 +182,7 @@ const batchDeduction = readFileSync(
 );
 
 export function getBatchDeductionScript(): string {
-	return `${CACHE_KEY_UTILS}\n${LOAD_BALANCES}\n${SUBSCRIPTION_UTILS}\n${GET_CUSTOMER_ENTITY_UTILS}\n${batchDeduction}`;
+	return `${CACHE_KEY_UTILS}\n${LOAD_BALANCES}\n${FILTER_BALANCE_UTILS}\n${ACCUMULATOR_UTILS}\n${SUBSCRIPTION_UTILS}\n${GET_CUSTOMER_ENTITY_UTILS}\n${batchDeduction}`;
 }
 
 export const BATCH_DEDUCTION_SCRIPT = getBatchDeductionScript();

@@ -2,6 +2,7 @@ export const ErrCode = {
 	// Idempotency
 	IdempotencyKeyAlreadyExists: "idempotency_key_already_exists",
 	IdempotencyKeyNotFound: "idempotency_key_not_found",
+	DuplicateIdempotencyKey: "duplicate_idempotency_key",
 
 	// Auth
 	InvalidApiVersion: "invalid_api_version",

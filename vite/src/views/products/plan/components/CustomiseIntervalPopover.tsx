@@ -44,7 +44,7 @@ export const CustomiseIntervalPopover = ({
 			</PopoverTrigger>
 			<PopoverContent
 				align="start"
-				className="p-3 w-[200px]"
+				className="p-3 w-[200px] z-101"
 				sideOffset={-1}
 				onOpenAutoFocus={(e) => e.preventDefault()}
 				onCloseAutoFocus={(e) => e.preventDefault()}
