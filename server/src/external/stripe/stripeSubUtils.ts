@@ -121,7 +121,7 @@ export const getUsageBasedSub = async ({
 	feature: Feature;
 	stripeSubs?: Stripe.Subscription[];
 }) => {
-	let subs;
+	let subs: Stripe.Subscription[];
 	if (stripeSubs) {
 		subs = stripeSubs;
 	} else {
