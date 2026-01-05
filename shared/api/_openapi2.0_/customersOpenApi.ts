@@ -55,11 +55,7 @@ export const customersOpenApi = {
 					description: "200 OK",
 					content: {
 						"application/json": {
-							schema: createPagePaginatedResponseSchema(
-								BaseApiCustomerSchema,
-							).meta({
-								id: "CustomerListResponse",
-							}),
+							schema: createPagePaginatedResponseSchema(BaseApiCustomerSchema),
 						},
 					},
 				},
