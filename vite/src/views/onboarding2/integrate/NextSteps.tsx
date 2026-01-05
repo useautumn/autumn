@@ -14,7 +14,7 @@ export const NextSteps = () => {
 					Autumn to check if a user has access to features in your application,
 					and track usage for those features. Learn how to do so{" "}
 					<a
-						href="https://docs.useautumn.com/features/check"
+						href="https://docs.useautumn.com/documentation/features/check"
 						className="underline cursor-pointer"
 					>
 						here

@@ -18,7 +18,7 @@ export const AITools = () => {
 	// MCP configuration for Autumn
 	const mcpConfig = {
 		name: "Autumn Docs",
-		url: "https://docs.useautumn.com/mcp",
+		url: "https://docs.useautumn.com/documentation/mcp",
 		headers: {},
 	};
 
@@ -85,7 +85,7 @@ export const AITools = () => {
 								<Button
 									onClick={() => {
 										navigator.clipboard.writeText(
-											"claude mcp add --transport http autumn-docs https://docs.useautumn.com/mcp",
+											"claude mcp add --transport http autumn-docs https://docs.useautumn.com/documentation/mcp",
 										);
 										toast.success(
 											"Copied command to clipboard. Paste in your terminal to install.",

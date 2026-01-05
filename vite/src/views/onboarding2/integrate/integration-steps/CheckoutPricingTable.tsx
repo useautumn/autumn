@@ -56,7 +56,7 @@ export const CheckoutPricingTable = () => {
 					Learn how to do so{" "}
 					<a
 						className="text-t2 font-medium underline"
-						href="https://docs.useautumn.com/setup/shadcn"
+						href="https://docs.useautumn.com/documentation/getting-started/setup/shadcn"
 						target="_blank"
 						rel="noopener"
 					>

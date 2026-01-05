@@ -42,7 +42,7 @@ export const SelectStack = () => {
 							do so{" "}
 							<a
 								className="text-t2 font-medium underline"
-								href="https://docs.useautumn.com/setup/backend"
+								href="https://docs.useautumn.com/documentation/getting-started/setup/sdk"
 								target="_blank"
 							>
 								here

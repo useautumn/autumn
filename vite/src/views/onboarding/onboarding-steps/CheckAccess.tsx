@@ -137,7 +137,7 @@ export default function CheckAccessStep({
 						{isProduct ? "plan" : "feature"} by calling the{" "}
 						<span className="font-mono text-red-500">
 							<a
-								href="https://docs.useautumn.com/api-reference/entitled"
+								href="https://docs.useautumn.com/documentation/api-reference/entitled"
 								target="_blank"
 								rel="noopener noreferrer"
 							>
@@ -149,19 +149,19 @@ export default function CheckAccessStep({
 					</span>
 					{!isProduct && selectedFeature?.type === "metered" && (
 						<span>
-							If it&apos;s a metered (usage-based) feature, send us the usage
-							data by calling the{" "}
-							<span className="font-mono text-red-500">
-								<a
-									href="https://docs.useautumn.com/api-reference/events/post"
-									target="_blank"
-									rel="noopener noreferrer"
-								>
-									/track
-								</a>
-								<ArrowUpRightFromSquare size={12} className="inline ml-1" />
-							</span>{" "}
-							endpoint.
+						If it&apos;s a metered (usage-based) feature, send us the usage
+						data by calling the{" "}
+						<span className="font-mono text-red-500">
+							<a
+								href="https://docs.useautumn.com/documentation/api-reference/events/post"
+								target="_blank"
+								rel="noopener noreferrer"
+							>
+								/track
+							</a>
+							<ArrowUpRightFromSquare size={12} className="inline ml-1" />
+						</span>{" "}
+						endpoint.
 						</span>
 					)}
 					<div className="flex flex-col gap-2">

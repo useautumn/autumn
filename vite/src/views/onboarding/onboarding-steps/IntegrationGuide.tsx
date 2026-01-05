@@ -45,7 +45,7 @@ export default function IntegrationGuideStep({
 								<p className="text-sm text-t3">
 									This guide is for React & Node.js. Read our{" "}
 									<a
-										href="https://docs.useautumn.com"
+										href="https://docs.useautumn.com/documentation/getting-started/setup/sdk"
 										target="_blank"
 										rel="noopener noreferrer"
 										className="text-yellow-800 underline font-medium"

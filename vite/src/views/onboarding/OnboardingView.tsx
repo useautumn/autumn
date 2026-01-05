@@ -140,7 +140,7 @@ function OnboardingView() {
 											your users, and read our{" "}
 											<a
 												className="text-primary underline font-semibold break-none"
-												href="https://docs.useautumn.com"
+												href="https://docs.useautumn.com/documentation/getting-started/setup/sdk"
 												target="_blank"
 												rel="noopener noreferrer"
 											>
