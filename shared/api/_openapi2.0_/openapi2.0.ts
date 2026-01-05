@@ -3,7 +3,11 @@ import { ApiPlanFeatureWithMeta } from "@api/products/planFeature/apiPlanFeature
 import yaml from "yaml";
 import { createDocument } from "zod-openapi";
 import { CustomerDataSchema } from "../common/customerData.js";
-import { ApiCustomerSchema, EntityDataSchema } from "../models.js";
+import {
+	ApiCustomerSchema,
+	BaseApiCustomerSchema,
+	EntityDataSchema,
+} from "../models.js";
 import { balancesOpenApi } from "./balancesOpenApi.js";
 import { coreOps } from "./coreOpenApi.js";
 import { customersOpenApi } from "./customersOpenApi.js";
@@ -39,6 +43,7 @@ const openapi2_0 = createDocument(
 				Plan: ApiPlanWithMeta,
 				PlanFeature: ApiPlanFeatureWithMeta,
 				Customer: ApiCustomerSchema,
+				BaseCustomer: BaseApiCustomerSchema,
 				Entity: ApiEntityWithMeta,
 			},
 			securitySchemes: {
