@@ -94,12 +94,14 @@ export const checkForMisingBalance = async ({
 		const threshold = grantedBalanceIncrease.mul(0.995);
 
 		if (grantedBalanceIncrease.gt(0) && usageIncrease.gte(threshold)) {
-			const errMessage = `[RACE CONDITION DETECTED] Usage increase (${usageIncrease}), granted balance increase (${grantedBalanceIncrease.toNumber()}), feature (${feature.name}), customer (${fullCustomer.id})`;
+			const errMessage = `[RACE CONDITION] Usage increase (${usageIncrease}), granted balance increase (${grantedBalanceIncrease.toNumber()}), feature (${feature.name}), customer (${fullCustomer.id})`;
 
-			Sentry.captureException(new Error(errMessage), {
+			console.log("CAPTURING SENTRY EXCEPTION");
+			Sentry.captureException(errMessage, {
 				tags: getSentryTags({
 					ctx,
 					customerId: fullCustomer.id || "",
+					alert: true,
 				}),
 			});
 

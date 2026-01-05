@@ -1,9 +1,9 @@
 // Suppress BullMQ eviction policy warnings BEFORE any imports
 
 // Skip OpenTelemetry instrumentation in development for faster startup
+await import("./sentry.js");
 if (process.env.NODE_ENV !== "development") {
 	await import("./instrumentation.js");
-	await import("./sentry.js");
 }
 
 import cluster from "node:cluster";

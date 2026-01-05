@@ -129,6 +129,7 @@ verifyCacheConsistencyWorkflow?.task({
 					tags: getSentryTags({
 						ctx: autumnContext,
 						customerId,
+						alert: true,
 					}),
 				});
 			}
