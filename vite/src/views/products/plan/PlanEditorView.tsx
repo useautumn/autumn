@@ -2,6 +2,7 @@ import { AxiosError } from "axios";
 import { useState } from "react";
 import { useParams } from "react-router";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useDiscardItemAndClose } from "@/hooks/stores/useProductStore";
 import { useProductSync } from "@/hooks/stores/useProductSync";
 import {
 	useSheetCleanup,
@@ -31,8 +32,11 @@ export default function PlanEditorView() {
 
 	const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
 
-	// Handle Escape key to close sheet and unfocus
-	useSheetEscapeHandler();
+	// Custom close handler that discards item changes before closing
+	const discardAndClose = useDiscardItemAndClose();
+
+	// Handle Escape key to close sheet and unfocus (with discard)
+	useSheetEscapeHandler({ onClose: discardAndClose });
 
 	// Close sheet when navigating away from this view
 	useSheetCleanup();

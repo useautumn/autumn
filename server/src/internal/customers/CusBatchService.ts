@@ -7,11 +7,12 @@ import {
 	type CusProductStatus,
 	type CustomerLegacyData,
 	type FullCustomer,
+	type ListCustomersV2Params,
 	type Organization,
+	RELEVANT_STATUSES,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
-import { RELEVANT_STATUSES } from "./cusProducts/CusProductService.js";
 import { getApiCustomerBase } from "./cusUtils/apiCusUtils/getApiCustomerBase.js";
 import { getPaginatedFullCusQuery } from "./getFullCusQuery.js";
 
@@ -45,37 +46,34 @@ export class CusBatchService {
 
 	static async getPage({
 		ctx,
-		limit,
-		offset,
-		statuses,
+		query,
 	}: {
 		ctx: RequestContext;
-		limit: number;
-		offset: number;
-		statuses: CusProductStatus[];
+		query: ListCustomersV2Params;
 	}) {
-		if (!limit) limit = 10;
-		if (!offset) offset = 0;
-
-		if (!statuses) statuses = RELEVANT_STATUSES;
-
 		const expand = ctx.expand || [];
 		const includeInvoices = expand.includes(CusExpand.Invoices);
 		const withEntities = expand.includes(CusExpand.Entities);
 		const withTrialsUsed = expand.includes(CusExpand.TrialsUsed);
 
-		const query = getPaginatedFullCusQuery({
+		const { limit, offset, plans, subscription_status, search } = query;
+
+		const sqlQuery = getPaginatedFullCusQuery({
 			orgId: ctx.org.id,
 			env: ctx.env,
-			inStatuses: statuses,
+			inStatuses: subscription_status
+				? [subscription_status as unknown as CusProductStatus]
+				: RELEVANT_STATUSES,
 			includeInvoices,
 			withEntities,
 			withTrialsUsed,
 			withSubs: true,
 			limit,
 			offset,
+			search,
+			plans,
 		});
-		const results = await ctx.db.execute(query);
+		const results = await ctx.db.execute(sqlQuery);
 		const finals = [];
 
 		for (const result of results) {

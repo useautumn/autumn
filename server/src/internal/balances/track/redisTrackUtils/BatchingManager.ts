@@ -15,6 +15,7 @@ export interface DeductionResult {
 	customerChanged?: boolean;
 	changedEntityIds?: string[];
 	balances?: Record<string, ApiBalance>; // Object of changed balances keyed by featureId
+	modifiedBreakdownIds?: string[];
 }
 
 interface BatchRequest {
@@ -170,6 +171,7 @@ export class BatchingManager {
 						customerChanged: result.customerChanged,
 						changedEntityIds: result.changedEntityIds,
 						balances: result.balances,
+						modifiedBreakdownIds: result.modifiedBreakdownIds,
 					});
 				}
 			} else {

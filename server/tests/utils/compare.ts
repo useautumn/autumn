@@ -103,9 +103,6 @@ export const compareMainProduct = ({
 		).toBeDefined();
 
 		if (entitlement.allowance_type === AllowanceType.Unlimited) {
-			// expect(recEntitlement.unlimited).toStrictEqual(true);
-			// expect(recEntitlement.balance).toStrictEqual(null);
-			// expect(recEntitlement.used).toStrictEqual(null);
 			expect(recEntitlement).toMatchObject({
 				unlimited: true,
 				balance: null,

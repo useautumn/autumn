@@ -13,7 +13,7 @@ export function EditPlanPriceSheet({
 	if (!product) return null;
 
 	return (
-		<>
+		<div className="h-full overflow-y-auto [scrollbar-gutter:stable]">
 			{!isOnboarding && (
 				<SheetHeader
 					title={`Configure ${product.name ? `${product.name} ` : ""}Price`}
@@ -23,6 +23,6 @@ export function EditPlanPriceSheet({
 			)}
 			<PlanTypeSection />
 			<BasePriceSection withSeparator={false} />
-		</>
+		</div>
 	);
 }

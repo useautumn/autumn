@@ -1,7 +1,7 @@
 /** biome-ignore-all lint/a11y/noStaticElementInteractions: needed */
 /** biome-ignore-all lint/a11y/useSemanticElements: needed */
 import type { ProductItem } from "@autumn/shared";
-import { getProductItemDisplay, productV2ToFeatureItems } from "@autumn/shared";
+import { getProductItemDisplay } from "@autumn/shared";
 import { TrashIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { AdminHover } from "@/components/general/AdminHover";
@@ -59,8 +59,8 @@ export const PlanFeatureRow = ({
 			playgroundMode !== "edit");
 
 	// Always use the current item from product.items for real-time updates
-	const featureItems = productV2ToFeatureItems({ items: product.items });
-	const item = featureItems[index] || itemProp;
+	// Note: index is now the actual index in product.items (not filtered featureItems)
+	const item = product.items?.[index] || itemProp;
 
 	const display = getProductItemDisplay({
 		item,
@@ -94,23 +94,14 @@ export const PlanFeatureRow = ({
 		if (isDisabled) return;
 		const currentItemId = getItemId({ item, itemIndex: index });
 
-		// if (isSelected) {
-		// 	// If already selected, deselect by going back to edit-plan
-		// 	setSheet({ type: "edit-plan" });
-		// } else {
 		// If not selected, select it
 		setItem(item);
 		setSheet({ type: "edit-feature", itemId: currentItemId });
 	};
 
 	const handleDeleteRow = () => {
-		const curItems = productV2ToFeatureItems({
-			items: product.items,
-			withBasePrice: true,
-		});
-		const newItems = curItems.filter(
-			(_i: ProductItem, idx: number) => idx !== index,
-		);
+		// Filter out the item by reference (not by index in filtered array)
+		const newItems = product.items?.filter((i) => i !== item) || [];
 
 		setProduct({ ...product, items: newItems });
 

@@ -113,9 +113,13 @@ export const initLogger = () => {
 	// Create separate streams for console and HyperDX
 	const streams: pino.StreamEntry[] = [];
 
-	if (process.env.NODE_ENV === "development") {
+	const isDev = process.env.NODE_ENV === "development";
+	const isTest = process.env.NODE_ENV === "test";
+
+	// Enable dev logging for development OR test environments
+	if (isDev || isTest) {
 		streams.push({
-			level: process.env.NODE_ENV === "development" ? "debug" : "info",
+			level: "debug",
 			stream: createDevLogStream(),
 		});
 	}
@@ -133,9 +137,17 @@ export const initLogger = () => {
 		});
 	}
 
+	// Fallback: if no streams configured, add dev stream anyway
+	if (streams.length === 0) {
+		streams.push({
+			level: "info",
+			stream: createDevLogStream(),
+		});
+	}
+
 	const logger = pino(
 		{
-			level: process.env.NODE_ENV === "development" ? "debug" : "info",
+			level: isDev || isTest ? "debug" : "info",
 			formatters: {
 				level: (label: any) => {
 					return {

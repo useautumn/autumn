@@ -158,7 +158,7 @@ export const V1_1_FeaturesArrayToObject = defineVersionChange({
 						included_usage: mergedItem.included_usage,
 						next_reset_at: mergedItem.next_reset_at,
 						usage_limit: mergedItem.usage_limit,
-						unlimited: false,
+						unlimited: feature.unlimited, // inherit from parent
 						overage_allowed: mergedItem.overage_allowed,
 					} satisfies ApiCusFeatureV2);
 				}

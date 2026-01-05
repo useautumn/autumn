@@ -52,6 +52,7 @@ export default defineConfig({
 			"zod/v4",
 			"drizzle-orm/pg-core",
 			"drizzle-orm",
+			"@date-fns/utc"
 		],
 	},
 

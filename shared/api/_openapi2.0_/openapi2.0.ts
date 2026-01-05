@@ -3,10 +3,10 @@ import { ApiPlanFeatureWithMeta } from "@api/products/planFeature/apiPlanFeature
 import yaml from "yaml";
 import { createDocument } from "zod-openapi";
 import { CustomerDataSchema } from "../common/customerData.js";
-import { EntityDataSchema } from "../models.js";
+import { ApiCustomerSchema, EntityDataSchema } from "../models.js";
 import { balancesOpenApi } from "./balancesOpenApi.js";
 import { coreOps } from "./coreOpenApi.js";
-import { ApiCustomerWithMeta, customersOpenApi } from "./customersOpenApi.js";
+import { customersOpenApi } from "./customersOpenApi.js";
 import { ApiEntityWithMeta, entitiesOpenApi } from "./entitiesOpenApi.js";
 import { eventsOpenApi } from "./eventsOpenApi.js";
 import { ApiPlanWithMeta, plansOpenApi } from "./plansOpenApi.js";
@@ -22,7 +22,7 @@ const openapi2_0 = createDocument(
 
 		servers: [
 			{
-				url: "https://api.useautumn.com",
+				url: "https://api.useautumn.com/v1",
 				description: "Production server",
 			},
 		],
@@ -38,7 +38,7 @@ const openapi2_0 = createDocument(
 				EntityData: EntityDataSchema,
 				Plan: ApiPlanWithMeta,
 				PlanFeature: ApiPlanFeatureWithMeta,
-				Customer: ApiCustomerWithMeta,
+				Customer: ApiCustomerSchema,
 				Entity: ApiEntityWithMeta,
 			},
 			securitySchemes: {

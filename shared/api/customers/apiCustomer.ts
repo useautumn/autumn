@@ -5,7 +5,7 @@ import { AppEnv } from "@models/genModels/genEnums.js";
 import { z } from "zod/v4";
 import { ApiCusReferralSchema } from "./components/apiCusReferral.js";
 import { ApiTrialsUsedV1Schema } from "./components/apiTrialsUsed/apiTrialsUsedV1.js";
-// import { ApiCusUpcomingInvoiceSchema } from "./components/apiCusUpcomingInvoice.js";
+
 import { ApiBalanceSchema } from "./cusFeatures/apiBalance.js";
 import { ApiSubscriptionSchema } from "./cusPlans/apiSubscription.js";
 
@@ -16,27 +16,33 @@ export const ApiCusExpandSchema = z.object({
 	rewards: ApiCusRewardsSchema.nullish(),
 	referrals: z.array(ApiCusReferralSchema).optional(),
 	payment_method: z.any().nullish(),
-	// upcoming_invoice: ApiCusUpcomingInvoiceSchema.nullish(),
 });
 
-export const ApiCustomerSchema = z.object({
-	autumn_id: z.string().optional(),
-	id: z.string().nullable(),
-	name: z.string().nullable(),
-	email: z.string().nullable(),
-	created_at: z.number(),
-	fingerprint: z.string().nullable(),
-	stripe_id: z.string().nullable(),
-	env: z.enum(AppEnv),
-	metadata: z.record(z.any(), z.any()),
+export const BaseApiCustomerSchema = z
+	.object({
+		autumn_id: z.string().optional(),
+		id: z.string().nullable(),
+		name: z.string().nullable(),
+		email: z.string().nullable(),
+		created_at: z.number(),
+		fingerprint: z.string().nullable(),
+		stripe_id: z.string().nullable(),
+		env: z.enum(AppEnv),
+		metadata: z.record(z.any(), z.any()),
+		subscriptions: z.array(ApiSubscriptionSchema),
+		scheduled_subscriptions: z.array(ApiSubscriptionSchema),
+		balances: z.record(z.string(), ApiBalanceSchema),
+	})
+	.meta({
+		id: "BaseCustomer",
+	});
 
-	subscriptions: z.array(ApiSubscriptionSchema),
-
-	scheduled_subscriptions: z.array(ApiSubscriptionSchema),
-
-	balances: z.record(z.string(), ApiBalanceSchema),
-	...ApiCusExpandSchema.shape,
+export const ApiCustomerSchema = BaseApiCustomerSchema.extend(
+	ApiCusExpandSchema.shape,
+).meta({
+	id: "Customer",
 });
 
 export type ApiCustomer = z.infer<typeof ApiCustomerSchema>;
 export type ApiCusExpand = z.infer<typeof ApiCusExpandSchema>;
+export type BaseApiCustomer = z.infer<typeof BaseApiCustomerSchema>;

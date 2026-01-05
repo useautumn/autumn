@@ -2,7 +2,6 @@ import {
 	CreateFeatureSchema,
 	FeatureUsageType,
 	featureV1ToDbFeature,
-	productV2ToFeatureItems,
 } from "@autumn/shared";
 import type { AxiosError } from "axios";
 import { useState } from "react";
@@ -74,9 +73,10 @@ export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 				const updatedProduct = { ...product, items: newItems };
 				setProduct(updatedProduct);
 
-				// Open edit sidebar for the new item - use feature items index like AddFeatureRow
-				const featureItems = productV2ToFeatureItems({ items: newItems });
-				const itemIndex = featureItems.length - 1;
+				// Open edit sidebar for the new item
+				// Use the actual index in newItems where the item was added (at the end)
+				// NOT featureItems.length - 1, which causes index mismatch on paid plans with base price items
+				const itemIndex = newItems.length - 1;
 				const itemId = getItemId({ item: newItem, itemIndex });
 
 				// Use setTimeout to ensure state updates propagate

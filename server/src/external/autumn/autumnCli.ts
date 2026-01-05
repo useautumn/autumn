@@ -57,6 +57,7 @@ export class AutumnInt {
 		version,
 		orgConfig,
 		liveUrl = false,
+		skipCacheDeletion = false,
 	}: {
 		apiKey?: string;
 		secretKey?: string;
@@ -64,6 +65,7 @@ export class AutumnInt {
 		version?: string | LegacyVersion;
 		orgConfig?: Partial<OrgConfig>;
 		liveUrl?: boolean;
+		skipCacheDeletion?: boolean;
 	} = {}) {
 		// this.apiKey = apiKey || process.env.AUTUMN_API_KEY || "";
 		this.apiKey =
@@ -85,6 +87,10 @@ export class AutumnInt {
 		this.baseUrl =
 			baseUrl ||
 			(liveUrl ? "https://api.useautumn.com/v1" : "http://localhost:8080/v1");
+
+		if (skipCacheDeletion) {
+			this.headers["x-skip-cache-deletion"] = "true";
+		}
 	}
 
 	async get(path: string) {
@@ -347,6 +353,17 @@ export class AutumnInt {
 			const data = await this.get(
 				`/customers?${new URLSearchParams(params as Record<string, string>).toString()}`,
 			);
+			return data;
+		},
+
+		listV2: async (params?: {
+			limit?: number;
+			offset?: number;
+			search?: string;
+			plans?: Array<{ id: string; versions?: number[] }>;
+			subscription_status?: string[];
+		}) => {
+			const data = await this.post(`/customers/list`, params || {});
 			return data;
 		},
 

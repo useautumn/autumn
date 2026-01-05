@@ -34,6 +34,11 @@ export type RequestContext = {
 	// Query params
 	expand: string[];
 	skipCache: boolean;
+
+	// For test...
+	skipCacheDeletion?: boolean;
+
+	// Optional (should be populated in Stripe customer?)
 };
 
 export type AutumnContext = RequestContext;
