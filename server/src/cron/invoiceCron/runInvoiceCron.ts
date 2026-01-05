@@ -26,7 +26,7 @@ export const handleVoidInvoiceCron = async ({
 	const voidSub = metadata.type === MetadataType.InvoiceCheckout;
 
 	console.log(
-		`Invoice: ${metadata.stripe_invoice_id} for customer ${customer.id} (org: ${org.slug})`,
+		`Invoice: ${metadata.stripe_invoice_id} for customer ${customer.id} (org: ${org.slug}) - status: ${invoice.status}`,
 	);
 
 	if (invoice.status === "open") {

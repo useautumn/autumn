@@ -9,7 +9,19 @@ import { isAllocatedPrice } from "../productUtils/priceUtils/classifyPriceUtils"
 import { notNullish } from "../utils";
 import { cusEntToCusPrice } from "./convertCusEntUtils/cusEntToCusPrice";
 
-export const isUnlimitedCusEnt = (cusEnt: FullCustomerEntitlement) => {
+export const isBooleanCusEnt = ({
+	cusEnt,
+}: {
+	cusEnt: FullCustomerEntitlement;
+}) => {
+	return cusEnt.entitlement.feature.type === FeatureType.Boolean;
+};
+
+export const isUnlimitedCusEnt = ({
+	cusEnt,
+}: {
+	cusEnt: FullCustomerEntitlement;
+}) => {
 	return cusEnt.entitlement.allowance_type === AllowanceType.Unlimited;
 };
 
@@ -32,14 +44,6 @@ export const cusEntsHavePrice = ({
 		const cusPrice = cusEntToCusPrice({ cusEnt });
 		return notNullish(cusPrice);
 	});
-};
-
-export const isBooleanCusEnt = ({
-	cusEnt,
-}: {
-	cusEnt: FullCustomerEntitlement;
-}) => {
-	return cusEnt.entitlement.feature.type === FeatureType.Boolean;
 };
 
 export const isAllocatedCusEnt = (cusEnt: FullCusEntWithFullCusProduct) => {

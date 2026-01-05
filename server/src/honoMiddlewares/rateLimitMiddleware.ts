@@ -56,6 +56,13 @@ const eventsLimiter = rateLimiter({
 	keyGenerator: getRateLimitKeyFromContext,
 });
 
+const attachRateLimiter = rateLimiter({
+	windowMs: 60000,
+	limit: 5,
+	standardHeaders: "draft-6",
+	keyGenerator: getRateLimitKeyFromContext,
+});
+
 const getLimiterForType = (type: RateLimitType) => {
 	switch (type) {
 		case RateLimitType.General:
@@ -66,6 +73,8 @@ const getLimiterForType = (type: RateLimitType) => {
 			return checkLimiter;
 		case RateLimitType.Events:
 			return eventsLimiter;
+		case RateLimitType.Attach:
+			return attachRateLimiter;
 	}
 };
 
@@ -73,6 +82,12 @@ export const rateLimitMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const ctx = c.get("ctx");
 
 	try {
+		if (
+			process.env.NODE_ENV === "development" &&
+			ctx.org?.id === process.env.TESTS_ORG_ID
+		) {
+			return await next();
+		}
 		// 1. Determine rate limit type based on endpoint
 		const rateLimitType = getRateLimitType(c);
 

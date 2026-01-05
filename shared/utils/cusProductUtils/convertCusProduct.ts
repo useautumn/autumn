@@ -118,8 +118,10 @@ export const cusProductsToCusEnts = ({
 		// sortParams,
 	});
 
-	if (sortParams?.cusEntId) {
-		cusEnts = cusEnts.filter((cusEnt) => cusEnt.id === sortParams.cusEntId);
+	if (sortParams?.cusEntIds && sortParams.cusEntIds.length > 0) {
+		cusEnts = cusEnts.filter((cusEnt) =>
+			sortParams.cusEntIds?.includes(cusEnt.id),
+		);
 	}
 
 	if (notNullish(sortParams?.interval)) {

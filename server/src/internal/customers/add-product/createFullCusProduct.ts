@@ -10,6 +10,7 @@ import {
 	type FeatureOptions,
 	type FreeTrial,
 	type FullCusProduct,
+	type FullCustomer,
 	type FullProduct,
 	type InsertReplaceable,
 	type Price,
@@ -24,6 +25,7 @@ import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/free
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
+import { queueVerifyCacheConsistencyWorkflow } from "../../../queue/hatchetWorkflows/verifyCacheConsistencyWorkflow/queueVerifyCacheConsistencyWorkflow.js";
 import type { InsertCusProductParams } from "../cusProducts/AttachParams.js";
 import { CusProductService } from "../cusProducts/CusProductService.js";
 import { CusEntService } from "../cusProducts/cusEnts/CusEntitlementService.js";
@@ -263,6 +265,8 @@ export const getExistingCusProduct = async ({
 		internalEntityId,
 	});
 
+	if (product.is_add_on) return undefined;
+
 	return curMainProduct;
 };
 
@@ -323,7 +327,6 @@ export const createFullCusProduct = async ({
 		product,
 		internalCustomerId: customer.internal_id,
 		internalEntityId: attachParams.internalEntityId,
-		// processorType,
 	});
 
 	freeTrial = disableFreeTrial ? null : freeTrial;
@@ -355,6 +358,7 @@ export const createFullCusProduct = async ({
 			attachParams,
 			logger,
 		});
+
 		return;
 	}
 
@@ -462,28 +466,6 @@ export const createFullCusProduct = async ({
 		quantity: productOptions?.quantity ?? undefined,
 	});
 
-	// // Expire previous add on product if not one off...
-	// if (product.is_add_on && !isOneOff(prices)) {
-	// 	const { curSameProduct } = getExistingCusProducts({
-	// 		product,
-	// 		cusProducts: attachParams.cusProducts!,
-	// 		internalEntityId: attachParams.internalEntityId,
-	// 	});
-
-	// 	const curPrices = curSameProduct
-	// 		? cusProductToPrices({ cusProduct: curSameProduct })
-	// 		: [];
-	// 	if (curSameProduct && !isOneOff(curPrices) && !isFreeProduct(curPrices)) {
-	// 		await CusProductService.update({
-	// 			db,
-	// 			cusProductId: curSameProduct.id,
-	// 			updates: {
-	// 				status: CusProductStatus.Expired,
-	// 			},
-	// 		});
-	// 	}
-	// }
-
 	if (!isOneOff(prices) && !product.is_add_on) {
 		await expireOrDeleteCusProduct({
 			db,
@@ -557,6 +539,13 @@ export const createFullCusProduct = async ({
 	} catch (_error) {
 		logger.error("Failed to add products updated webhook task to queue");
 	}
+
+	await queueVerifyCacheConsistencyWorkflow({
+		newCustomerProduct: fullCusProduct,
+		previousFullCustomer: attachParams.customer as FullCustomer,
+		logger,
+		source: "createFullCusProduct",
+	});
 
 	return fullCusProduct;
 };

@@ -28,15 +28,15 @@ export const DateInputUnix = ({
 					disabled={disabled}
 					className={cn(
 						// Match Select component styling
-						"w-full rounded-lg flex items-center justify-start gap-2 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50",
+						"w-full rounded-lg flex items-center justify-start gap-3 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50",
 						"h-input input-base input-shadow-default input-state-open truncate",
 						// Placeholder styling
 						!unixDate && "text-muted-foreground",
 					)}
 				>
-					<CalendarIcon className="size-4 shrink-0" />
+					<CalendarIcon className="size-3.5 shrink-0 text-t3 ml-1" />
 					{unixDate ? (
-						format(new Date(unixDate), "dd MMM yyyy")
+						format(new Date(unixDate), "EEEE, MMMM do yyyy")
 					) : (
 						<span>Pick a date</span>
 					)}

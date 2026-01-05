@@ -67,5 +67,6 @@ export const handleExpiration = async ({
 		customerId: event.original_app_user_id ?? event.app_user_id,
 		orgId: org.id,
 		env,
+		source: `handleRevenuecatExpiration: ${product.id}`,
 	});
 };

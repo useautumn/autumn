@@ -75,10 +75,10 @@ export const PlanFeatureList = ({
 					{isCreatingNewFeature ? (
 						<DummyPlanFeatureRow />
 					) : (
-					<AddFeatureRow
-						onClick={handleAddFeature}
-						disabled={isAddButtonDisabled}
-					/>
+						<AddFeatureRow
+							onClick={handleAddFeature}
+							disabled={isAddButtonDisabled}
+						/>
 					)}
 				</div>
 			</div>
@@ -108,7 +108,9 @@ export const PlanFeatureList = ({
 							</div>
 						)}
 						{items.map((item: ProductItem) => {
-							const itemIndex = filteredItems.indexOf(item);
+							// Use the actual index in product.items, not filteredItems
+							// This ensures getItemId generates consistent IDs across the app
+							const itemIndex = product.items?.indexOf(item) ?? -1;
 							return (
 								<PlanFeatureRow
 									key={item.entitlement_id || item.price_id || itemIndex}
@@ -126,10 +128,10 @@ export const PlanFeatureList = ({
 				(isCreatingNewFeature ? (
 					<DummyPlanFeatureRow />
 				) : (
-				<AddFeatureRow
-					onClick={handleAddFeature}
-					disabled={isAddButtonDisabled}
-				/>
+					<AddFeatureRow
+						onClick={handleAddFeature}
+						disabled={isAddButtonDisabled}
+					/>
 				))}
 		</div>
 	);

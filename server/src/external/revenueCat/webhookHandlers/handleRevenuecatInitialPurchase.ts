@@ -120,5 +120,6 @@ export const handleInitialPurchase = async ({
 		customerId: customer.id ?? "",
 		orgId: org.id,
 		env,
+		source: `handleRevenuecatInitialPurchase: ${product.id}`,
 	});
 };

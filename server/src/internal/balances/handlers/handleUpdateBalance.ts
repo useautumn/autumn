@@ -1,6 +1,5 @@
 import {
 	ErrCode,
-	FeatureNotFoundError,
 	notNullish,
 	nullish,
 	RecaseError,
@@ -12,50 +11,31 @@ import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntit
 import { createRoute } from "../../../honoMiddlewares/routeHandler.js";
 import { CusService } from "../../customers/CusService.js";
 import { deleteCachedApiCustomer } from "../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
-import { runDeductionTx } from "../track/trackUtils/runDeductionTx.js";
+import { runAddToBalance } from "../updateBalance/runAddToBalance.js";
+import { runUpdateBalance } from "../updateBalance/runUpdateBalance.js";
 import { updateGrantedBalance } from "../updateGrantedBalance/updateGrantedBalance.js";
 
 export const handleUpdateBalance = createRoute({
 	body: UpdateBalanceParamsSchema.extend({}),
 
 	handler: async (c) => {
-		const body = c.req.valid("json");
+		const params = c.req.valid("json");
 		const ctx = c.get("ctx");
 
-		const { features } = ctx;
-
-		const feature = features.find((f) => f.id === body.feature_id);
-		if (!feature) {
-			throw new FeatureNotFoundError({ featureId: body.feature_id });
+		// Handle add_to_balance atomically using negative deduction
+		if (notNullish(params.add_to_balance)) {
+			await runAddToBalance({ ctx, params });
+			return c.json({ success: true });
 		}
 
-		// Update balance using SQL with alter_granted=true
-		if (notNullish(body.current_balance)) {
-			await runDeductionTx({
-				ctx,
-				customerId: body.customer_id,
-				entityId: body.entity_id,
-				deductions: [
-					{
-						feature,
-						deduction: 0,
-						targetBalance: body.current_balance,
-					},
-				],
-				skipAdditionalBalance: true,
-				alterGrantedBalance: true,
-				sortParams: {
-					cusEntId: body.customer_entitlement_id,
-					interval: body.interval
-						? resetIntvToEntIntv({ resetIntv: body.interval })
-						: undefined,
-				},
-				refreshCache: false,
-			});
+		// Update balance using Redis first, then sync to Postgres
+		// This prevents race conditions with track operations
+		if (notNullish(params.current_balance)) {
+			await runUpdateBalance({ ctx, params });
 		}
 
-		if (notNullish(body.granted_balance)) {
-			if (nullish(body.current_balance)) {
+		if (notNullish(params.granted_balance)) {
+			if (nullish(params.current_balance)) {
 				throw new RecaseError({
 					message: "current_balance is required when updating granted balance",
 					code: ErrCode.InvalidRequest,
@@ -64,47 +44,51 @@ export const handleUpdateBalance = createRoute({
 			}
 
 			ctx.logger.info(
-				`updating granted balance for feature ${feature.id} to ${body.granted_balance}`,
+				`updating granted balance for feature ${params.feature_id} to ${params.granted_balance}`,
 			);
+
+			const sortParams = {
+				cusEntIds: params.customer_entitlement_id
+					? [params.customer_entitlement_id]
+					: undefined,
+				interval: params.interval
+					? resetIntvToEntIntv({ resetIntv: params.interval })
+					: undefined,
+			};
+
 			const fullCus = await CusService.getFull({
 				db: ctx.db,
-				idOrInternalId: body.customer_id,
+				idOrInternalId: params.customer_id,
 				orgId: ctx.org.id,
 				env: ctx.env,
-				entityId: body.entity_id,
+				entityId: params.entity_id,
+				withEntities: true,
 			});
 
 			await updateGrantedBalance({
 				ctx,
 				fullCus,
-				featureId: body.feature_id,
-				targetGrantedBalance: body.granted_balance,
-				sortParams: {
-					cusEntId: body.customer_entitlement_id,
-					interval: body.interval
-						? resetIntvToEntIntv({ resetIntv: body.interval })
-						: undefined,
-				},
+				featureId: params.feature_id,
+				targetGrantedBalance: params.granted_balance,
+				sortParams,
 			});
 		}
 
-		if (notNullish(body.next_reset_at)) {
-			if (body.customer_entitlement_id)
-				await CusEntService.update({
-					db: ctx.db,
-					id: body.customer_entitlement_id,
-					updates: {
-						next_reset_at: body.next_reset_at,
-					},
-				});
-		}
+		if (notNullish(params.next_reset_at) && params.customer_entitlement_id) {
+			await CusEntService.update({
+				db: ctx.db,
+				id: params.customer_entitlement_id,
+				updates: {
+					next_reset_at: params.next_reset_at,
+				},
+			});
 
-		await deleteCachedApiCustomer({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			customerId: body.customer_id,
-			source: "handleUpdateBalance",
-		});
+			await deleteCachedApiCustomer({
+				orgId: ctx.org.id,
+				env: ctx.env,
+				customerId: params.customer_id,
+			});
+		}
 
 		return c.json({ success: true });
 	},

@@ -1,5 +1,3 @@
-import { ApiVersion } from "@autumn/shared";
-
 /**
  * Cache configuration constants
  * These values are injected into Lua scripts at load time for optimal performance
@@ -12,7 +10,12 @@ import { ApiVersion } from "@autumn/shared";
  *
  * Format: customer:{version}:{customerId} or customer:{version}:{customerId}:entity:{entityId}
  */
-export const CACHE_CUSTOMER_VERSION = ApiVersion.V1_2;
+export const CACHE_CUSTOMER_VERSIONS = {
+	LATEST: "2.0.0",
+	PREVIOUS: "1.2.0",
+};
+
+export const CACHE_CUSTOMER_VERSION = "2.0.0";
 
 /**
  * Cache time-to-live in seconds (3 days)

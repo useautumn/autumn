@@ -58,6 +58,7 @@ export class AutumnInt {
 		version,
 		orgConfig,
 		liveUrl = false,
+		skipCacheDeletion = false,
 	}: {
 		apiKey?: string;
 		secretKey?: string;
@@ -65,6 +66,7 @@ export class AutumnInt {
 		version?: string | LegacyVersion;
 		orgConfig?: Partial<OrgConfig>;
 		liveUrl?: boolean;
+		skipCacheDeletion?: boolean;
 	} = {}) {
 		// this.apiKey = apiKey || process.env.AUTUMN_API_KEY || "";
 		this.apiKey =
@@ -86,6 +88,10 @@ export class AutumnInt {
 		this.baseUrl =
 			baseUrl ||
 			(liveUrl ? "https://api.useautumn.com/v1" : "http://localhost:8080/v1");
+
+		if (skipCacheDeletion) {
+			this.headers["x-skip-cache-deletion"] = "true";
+		}
 	}
 
 	async get(path: string) {
@@ -121,10 +127,10 @@ export class AutumnInt {
 		return response.json();
 	}
 
-	async post(path: string, body: any) {
+	async post(path: string, body: any, headers?: Record<string, string>) {
 		const response = await fetch(`${this.baseUrl}${path}`, {
 			method: "POST",
-			headers: this.headers,
+			headers: { ...this.headers, ...headers },
 			body: JSON.stringify(body),
 		});
 
@@ -247,13 +253,13 @@ export class AutumnInt {
 		return data;
 	}
 
-	async attach(params: AttachBodyV0) {
+	async attach(params: AttachBodyV0, headers?: Record<string, string>) {
 		// const data = await this.post(`/attach`, {
 		//   customer_id: customerId,
 		//   product_id: productId,
 		//   options: toSnakeCase(options),
 		// });
-		const data = await this.post(`/attach`, params);
+		const data = await this.post(`/attach`, params, headers);
 
 		return data;
 	}
@@ -348,6 +354,17 @@ export class AutumnInt {
 			const data = await this.get(
 				`/customers?${new URLSearchParams(params as Record<string, string>).toString()}`,
 			);
+			return data;
+		},
+
+		listV2: async (params?: {
+			limit?: number;
+			offset?: number;
+			search?: string;
+			plans?: Array<{ id: string; versions?: number[] }>;
+			subscription_status?: string[];
+		}) => {
+			const data = await this.post(`/customers/list`, params || {});
 			return data;
 		},
 

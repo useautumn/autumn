@@ -7,9 +7,9 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 // https://vite.dev/config/
 export default defineConfig({
-  esbuild: {
-    pure: ['console.log']
-  },
+	esbuild: {
+		pure: ["console.log"],
+	},
 	plugins: [
 		react(),
 		tailwindcss(), // Automatically reads paths from tsconfig.json
