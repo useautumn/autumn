@@ -54,7 +54,7 @@ export const getBasePriceDisplay = ({
 		});
 
 		const intervalText = basePrice.interval
-			? getIntervalString({
+			? formatInterval({
 					interval: basePrice.interval,
 					intervalCount: basePrice.interval_count,
 				})

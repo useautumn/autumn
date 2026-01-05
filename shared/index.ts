@@ -174,7 +174,9 @@ export * from "./models/subModels/subTable.js";
 export * from "./utils/billingUtils/index.js";
 export * from "./utils/common/formatUtils/formatAmount.js";
 export * from "./utils/common/index.js";
+export * from "./utils/cusEntUtils/balanceUtils/cusEntsToUsage.js";
 export * from "./utils/cusEntUtils/balanceUtils/cusEntToMinBalance.js";
+export * from "./utils/cusEntUtils/balanceUtils/cusEntToUsageAllowed.js";
 // Utils
 export * from "./utils/displayUtils.js";
 export * from "./utils/index.js";
@@ -193,6 +195,7 @@ export * from "./utils/productDisplayUtils/sortProductItems.js";
 export * from "./utils/productDisplayUtils.js";
 export * from "./utils/productUtils/convertProductUtils.js";
 export * from "./utils/productUtils/priceToInvoiceAmount.js";
+export * from "./utils/productUtils/productUtils.js";
 export * from "./utils/productV2Utils/compareProductUtils.ts/compareItemUtils.js";
 export * from "./utils/productV2Utils/compareProductUtils.ts/compareProductUtils.js";
 export * from "./utils/productV2Utils/productItemUtils/convertItemUtils.js";
