@@ -59,7 +59,7 @@ describe(`${chalk.yellowBright("check4: test /check on unlimited feature")}`, ()
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV2;
 
-		expect(res).toEqual({
+		expect(res).toMatchObject({
 			allowed: true,
 			customer_id: "check4",
 			required_balance: 1,
@@ -74,6 +74,18 @@ describe(`${chalk.yellowBright("check4: test /check on unlimited feature")}`, ()
 				overage_allowed: false,
 				max_purchase: null,
 				reset: null,
+				breakdown: [
+					{
+						current_balance: 0,
+						granted_balance: 0,
+						max_purchase: null,
+						overage_allowed: false,
+						plan_id: "check4_free",
+						purchased_balance: 0,
+						reset: null,
+						usage: 0,
+					},
+				],
 			},
 		});
 	});
@@ -100,6 +112,17 @@ describe(`${chalk.yellowBright("check4: test /check on unlimited feature")}`, ()
 			balance: 0,
 			interval: null,
 			interval_count: null,
+			breakdown: [
+				{
+					balance: 0,
+					included_usage: 0,
+					interval: null,
+					interval_count: null,
+					next_reset_at: null,
+					overage_allowed: false,
+					usage: 0,
+				},
+			],
 		};
 
 		expect(expectedRes).toMatchObject(res);

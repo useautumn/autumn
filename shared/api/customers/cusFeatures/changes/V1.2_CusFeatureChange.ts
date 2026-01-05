@@ -4,7 +4,7 @@ import {
 	AffectedResource,
 	defineVersionChange,
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
-import { EntInterval } from "@models/productModels/intervals/entitlementInterval.js";
+import type { EntInterval } from "@models/productModels/intervals/entitlementInterval.js";
 import { Decimal } from "decimal.js";
 import type { z } from "zod/v4";
 import { FeatureType } from "../../../../models/featureModels/featureEnums.js";
@@ -141,18 +141,13 @@ const toV3BalanceParams = ({
 			.toNumber();
 	}
 
-	// console.log(`Is breakdown: ${isBreakdown}, legacyData:`, legacyData);
-	// console.log(`Granted balance: ${input.granted_balance}`);
-	// console.log(`Current Balance: ${input.current_balance}`);
-	// console.log(`Overage: ${overage}`);
-	// console.log("--------------------------------");
-
 	// 1. Get included usage
 	const includedUsage = new Decimal(input.granted_balance)
 		.add(prepaidQuantity)
 		.toNumber();
 
 	// 2. Balance
+
 	const balance = new Decimal(input.current_balance).sub(overage).toNumber();
 
 	// 3. Usage
@@ -221,8 +216,7 @@ export function transformBalanceToCusFeatureV3({
 				});
 
 			return {
-				interval:
-					interval === "multiple" || !interval ? EntInterval.Month : interval,
+				interval: interval === "multiple" || !interval ? null : interval,
 
 				interval_count: interval_count,
 

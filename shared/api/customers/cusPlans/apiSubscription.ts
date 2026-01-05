@@ -4,6 +4,7 @@ import { z } from "zod/v4";
 export const ApiSubscriptionSchema = z.object({
 	plan: ApiPlanSchema.optional(),
 	plan_id: z.string(),
+	plan_version: z.number(),
 
 	default: z.boolean(),
 	add_on: z.boolean(),

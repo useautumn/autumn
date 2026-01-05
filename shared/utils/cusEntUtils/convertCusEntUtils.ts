@@ -11,34 +11,20 @@ import { getCusEntBalance } from "./balanceUtils.js";
 import { getRolloverFields } from "./getRolloverFields.js";
 import { getStartingBalance } from "./getStartingBalance.js";
 
-export const cusEntToKey = ({
-	cusEnt,
-}: {
-	cusEnt: FullCusEntWithFullCusProduct;
-}) => {
-	// Interval
-	const interval = `${cusEnt.entitlement.interval_count ?? 1}:${cusEnt.entitlement.interval}`;
-
-	const planId = `${cusEnt.customer_product.product_id}`;
-
-	const usageModel = `${cusEnt.usage_allowed}`;
-
-	return `${interval}:${planId}:${usageModel}`;
-};
-
 export const cusEntsToPlanId = ({
 	cusEnts,
 }: {
 	cusEnts: FullCusEntWithFullCusProduct[];
 }) => {
 	// Get number of keys
-	const keys = new Set<string>();
+	const uniquePlanIds = new Set<string>();
+
 	for (const cusEnt of cusEnts) {
-		const key = cusEntToKey({ cusEnt });
-		keys.add(key);
+		const planId = cusEnt.customer_product?.product?.id;
+		uniquePlanIds.add(planId);
 	}
 
-	if (keys.size > 1) {
+	if (uniquePlanIds.size > 1) {
 		return null;
 	}
 

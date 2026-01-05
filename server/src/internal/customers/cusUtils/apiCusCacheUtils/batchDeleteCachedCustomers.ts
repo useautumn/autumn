@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/bun";
 import { redis } from "@/external/redis/initRedis.js";
+import { CACHE_CUSTOMER_VERSIONS } from "../../../../_luaScripts/cacheConfig";
 
 /**
  * Batch delete multiple customer caches in one Redis operation
@@ -45,7 +46,14 @@ export const batchDeleteCachedCustomers = async ({
 		const pipeline = redis.pipeline();
 
 		for (const orgCustomers of customersByOrg.values()) {
-			pipeline.batchDeleteCustomers(JSON.stringify(orgCustomers));
+			pipeline.batchDeleteCustomers(
+				CACHE_CUSTOMER_VERSIONS.LATEST,
+				JSON.stringify(orgCustomers),
+			);
+			pipeline.batchDeleteCustomers(
+				CACHE_CUSTOMER_VERSIONS.PREVIOUS,
+				JSON.stringify(orgCustomers),
+			);
 		}
 
 		const results = await pipeline.exec();

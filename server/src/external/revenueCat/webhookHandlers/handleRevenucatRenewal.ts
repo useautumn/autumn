@@ -48,7 +48,10 @@ export const handleRenewal = async ({
 			`Renewal for existing active product ${product.id}, no action needed`,
 		);
 		return { success: true };
-	} else if (curSameProduct && curSameProduct.status === CusProductStatus.PastDue) {
+	} else if (
+		curSameProduct &&
+		curSameProduct.status === CusProductStatus.PastDue
+	) {
 		logger.info(
 			`Renewal for existing past due product ${product.id}, marking as active`,
 		);
@@ -64,6 +67,7 @@ export const handleRenewal = async ({
 			customerId: customer.id ?? "",
 			orgId: org.id,
 			env,
+			source: `handleRenewal: ${product.id}`,
 		});
 		return { success: true };
 	}
@@ -117,6 +121,7 @@ export const handleRenewal = async ({
 			customerId: customer.id ?? "",
 			orgId: org.id,
 			env,
+			source: `handleRenewal: ${product.id}`,
 		});
 		return { success: true };
 	}
@@ -156,6 +161,7 @@ export const handleRenewal = async ({
 		customerId: customer.id ?? "",
 		orgId: org.id,
 		env,
+		source: `handleRenewal: ${product.id}`,
 	});
 
 	return { success: true };

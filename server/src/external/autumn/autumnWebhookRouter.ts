@@ -1,82 +1,80 @@
 import { ErrCode, WebhookEventType } from "@autumn/shared";
-import express, { type Router } from "express";
+import { Hono } from "hono";
 import { Webhook } from "svix";
+import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import RecaseError from "@/utils/errorUtils.js";
 
-export const autumnWebhookRouter: Router = express.Router();
+export const autumnWebhookRouter = new Hono<HonoEnv>();
 
-const verifyAutumnWebhook = async (req: any) => {
+const verifyAutumnWebhook = async ({
+	rawBody,
+	headers,
+}: {
+	rawBody: string;
+	headers: {
+		svixId: string | undefined;
+		svixTimestamp: string | undefined;
+		svixSignature: string | undefined;
+	};
+}) => {
 	const wh = new Webhook(process.env.AUTUMN_WEBHOOK_SECRET!);
 
-	const headers = req.headers;
-	const payload = req.body;
+	const { svixId, svixTimestamp, svixSignature } = headers;
 
-	const svix_id = headers["svix-id"];
-	const svix_timestamp = headers["svix-timestamp"];
-	const svix_signature = headers["svix-signature"];
-
-	if (!svix_id || !svix_timestamp || !svix_signature) {
+	if (!svixId || !svixTimestamp || !svixSignature) {
 		throw new RecaseError({
 			message: "Error: Missing svix headers",
 			code: ErrCode.InvalidInputs,
 		});
-		// res.status(400).json({
-		//   success: false,
-		//   message: "Error: Missing svix headers",
-		// });
-		// return;
 	}
 
-	let evt: any;
 	try {
-		evt = wh.verify(payload, {
-			"svix-id": svix_id as string,
-			"svix-timestamp": svix_timestamp as string,
-			"svix-signature": svix_signature as string,
+		const evt = wh.verify(rawBody, {
+			"svix-id": svixId,
+			"svix-timestamp": svixTimestamp,
+			"svix-signature": svixSignature,
 		});
+		return evt as { type: string; data: Record<string, unknown> };
 	} catch (_err) {
 		throw new RecaseError({
 			message: "Error: Could not verify webhook",
 			code: ErrCode.InvalidInputs,
 		});
 	}
-
-	return evt;
 };
 
-autumnWebhookRouter.post(
-	"",
-	express.raw({ type: "application/json" }),
-	async (req, res) => {
-		try {
-			const evt = await verifyAutumnWebhook(req);
-			console.log("Received webhook from autumn");
-			const { type, data } = evt;
+autumnWebhookRouter.post("", async (c) => {
+	try {
+		const rawBody = await c.req.text();
+		const evt = await verifyAutumnWebhook({
+			rawBody,
+			headers: {
+				svixId: c.req.header("svix-id"),
+				svixTimestamp: c.req.header("svix-timestamp"),
+				svixSignature: c.req.header("svix-signature"),
+			},
+		});
 
-			// console.log("Event:", evt);
+		console.log("Received webhook from autumn");
+		const { type, data } = evt;
 
-			switch (type) {
-				case WebhookEventType.CustomerProductsUpdated:
-					console.log(
-						`Type: ${type}, Scenario: ${data?.scenario}, Product: ${data?.updated_product?.id}`,
-					);
-					break;
-				case WebhookEventType.CustomerThresholdReached:
-					console.log(`Type: ${type}`);
-					console.log(`Feature: `, data?.feature);
-					break;
-			}
-
-			res.status(200).json({
-				success: true,
-				message: "Webhook received",
-			});
-		} catch (_error) {
-			res.status(200).json({
-				success: false,
-				message: "Error: Could not verify webhook",
-			});
-			return;
+		switch (type) {
+			case WebhookEventType.CustomerProductsUpdated:
+				console.log(
+					`Type: ${type}, Scenario: ${data?.scenario}, Product: ${(data?.updated_product as { id?: string })?.id}`,
+				);
+				break;
+			case WebhookEventType.CustomerThresholdReached:
+				console.log(`Type: ${type}`);
+				console.log(`Feature: `, data?.feature);
+				break;
 		}
-	},
-);
+
+		return c.json({ success: true, message: "Webhook received" }, 200);
+	} catch (_error) {
+		return c.json(
+			{ success: false, message: "Error: Could not verify webhook" },
+			200,
+		);
+	}
+});

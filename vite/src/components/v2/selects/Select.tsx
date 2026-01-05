@@ -105,7 +105,7 @@ function SelectContent({
 				data-slot="select-content"
 				className={cn(
 					// Change z-50 to z-[101] or higher to beat the sheet's z-100
-					"bg-popover text-popover-foreground relative z-[101] max-h-(--radix-select-content-available-height) min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border shadow-md",
+					"bg-interactive-secondary text-popover-foreground relative z-[101] max-h-(--radix-select-content-available-height) min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border shadow-md",
 
 					position === "popper" &&
 						"data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",

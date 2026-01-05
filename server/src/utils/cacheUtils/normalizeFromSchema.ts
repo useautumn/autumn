@@ -82,6 +82,17 @@ const isEmptyObject = (value: unknown): boolean => {
 };
 
 /**
+ * Normalize Lua empty table to array
+ * Lua cjson encodes empty tables as {} (object) instead of [] (array)
+ */
+export const normalizeToArray = (value: unknown): string[] => {
+	if (Array.isArray(value)) return value;
+	if (value && typeof value === "object" && Object.keys(value).length === 0)
+		return [];
+	return [];
+};
+
+/**
  * Dynamically normalize data based on Zod schema structure.
  * Handles Redis cjson quirks by walking the schema and fixing data accordingly.
  */

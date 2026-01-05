@@ -1,8 +1,12 @@
 import { type ProductItem, productV2ToFeatureItems } from "@autumn/shared";
 import { AnimatePresence, motion } from "motion/react";
+import { useEffect, useRef } from "react";
 import { SheetContainer } from "@/components/v2/sheets/InlineSheet";
 import { SheetCloseButton } from "@/components/v2/sheets/SheetCloseButton";
-import { useProductStore } from "@/hooks/stores/useProductStore";
+import {
+	useDiscardItemAndClose,
+	useProductStore,
+} from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { getItemId } from "@/utils/product/productItemUtils";
 
@@ -19,30 +23,46 @@ export const ProductSheets = () => {
 	const setProduct = useProductStore((s) => s.setProduct);
 	const sheetType = useSheetStore((s) => s.type);
 	const itemId = useSheetStore((s) => s.itemId);
-	const closeSheet = useSheetStore((s) => s.closeSheet);
+	const setInitialItem = useSheetStore((s) => s.setInitialItem);
+	const initialItem = useSheetStore((s) => s.initialItem);
+
+	// Custom close handler that discards changes before closing
+	const discardAndClose = useDiscardItemAndClose();
 
 	const featureItems = productV2ToFeatureItems({ items: product.items });
 
-	const isCurrentItem = (item: ProductItem, index: number) => {
-		const currentItemId = getItemId({ item, itemIndex: index });
+	// Find current item using actual product.items index (not filtered featureItems index)
+	const isCurrentItem = (item: ProductItem) => {
+		const actualIndex = product.items?.indexOf(item) ?? -1;
+		const currentItemId = getItemId({ item, itemIndex: actualIndex });
 		return itemId === currentItemId;
 	};
 
 	const currentItem = featureItems.find(isCurrentItem);
 
+	// Track if we've set the initial item for this itemId
+	const lastItemIdRef = useRef<string | null>(null);
+
+	// Set initial item when sheet opens with a new item
+	useEffect(() => {
+		if (itemId !== null && itemId !== lastItemIdRef.current && currentItem) {
+			setInitialItem(structuredClone(currentItem));
+			lastItemIdRef.current = itemId;
+		}
+		if (itemId === null) {
+			lastItemIdRef.current = null;
+		}
+	}, [itemId, currentItem, setInitialItem]);
+
 	const setCurrentItem = (updatedItem: ProductItem) => {
 		if (!product || !product.items) return;
 
-		const filteredItems = productV2ToFeatureItems({
-			items: product.items,
-			withBasePrice: true,
-		});
-
-		const currentItemIndex = filteredItems.findIndex(isCurrentItem);
+		// Find the actual index in product.items (not filtered array)
+		const currentItemIndex = product.items.findIndex(isCurrentItem);
 
 		if (currentItemIndex === -1) return;
 
-		const updatedItems = [...filteredItems];
+		const updatedItems = [...product.items];
 		updatedItems[currentItemIndex] = updatedItem;
 		setProduct({ ...product, items: updatedItems });
 	};
@@ -59,6 +79,7 @@ export const ProductSheets = () => {
 					<ProductItemContext.Provider
 						value={{
 							item: currentItem ?? null,
+							initialItem,
 							setItem: setCurrentItem,
 							selectedIndex: 0,
 							showCreateFeature: false,
@@ -91,7 +112,7 @@ export const ProductSheets = () => {
 					style={{ width: "28rem", zIndex: 100 }}
 				>
 					<SheetContainer className="w-full bg-background z-50 border-l border-border/40 h-full relative">
-						<SheetCloseButton onClose={closeSheet} />
+						<SheetCloseButton onClose={discardAndClose} />
 						{renderSheet()}
 					</SheetContainer>
 				</motion.div>

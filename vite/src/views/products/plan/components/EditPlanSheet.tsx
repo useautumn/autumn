@@ -26,7 +26,7 @@ export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 		product.basePriceType !== "usage";
 
 	return (
-		<>
+		<div className="h-full overflow-y-auto [scrollbar-gutter:stable]">
 			{!isOnboarding && (
 				<SheetHeader
 					title={`Configure ${product.name ? product.name : "your new plan"}`}
@@ -67,6 +67,6 @@ export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 					</SheetAccordionItem>
 				</SheetAccordion>
 			)}
-		</>
+		</div>
 	);
 }
