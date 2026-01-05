@@ -1,8 +1,11 @@
 import type { SubscriptionUpdateV0Params } from "@shared/index";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { AutumnBillingPlan, StripeBillingPlan } from "../../billingPlan";
 import { buildStripeInvoiceAction } from "../../providers/stripe/actionBuilders/buildStripeInvoiceAction";
 import { buildStripeSubscriptionAction } from "../../providers/stripe/actionBuilders/buildStripeSubscriptionAction";
+import type {
+	AutumnBillingPlan,
+	StripeBillingPlan,
+} from "../../types/billingPlan";
 import type { UpdateSubscriptionContext } from "../fetch/updateSubscriptionContextSchema";
 
 export const evaluateSubscriptionUpdatePlan = ({
@@ -33,8 +36,7 @@ export const evaluateSubscriptionUpdatePlan = ({
 		invoiceMode: invoiceModeEnabled
 			? {
 					finalizeInvoice: params.finalize_invoice === true,
-					enableProductImmediately:
-						params.enable_product_immediately !== false,
+					enableProductImmediately: params.enable_product_immediately !== false,
 				}
 			: undefined,
 	});

@@ -7,7 +7,7 @@ import type {
 	FreeTrialPlan,
 	StripeSubscriptionAction,
 	StripeSubscriptionScheduleAction,
-} from "@/internal/billing/v2/billingPlan";
+} from "@/internal/billing/v2/types/billingPlan";
 
 export const buildStripeSubscriptionUpdateAction = ({
 	ctx,

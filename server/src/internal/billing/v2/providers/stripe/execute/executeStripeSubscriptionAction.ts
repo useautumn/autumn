@@ -1,6 +1,6 @@
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { StripeSubscriptionAction } from "@/internal/billing/v2/billingPlan";
+import type { StripeSubscriptionAction } from "@/internal/billing/v2/types/billingPlan";
 
 export const executeStripeSubscriptionAction = async ({
 	ctx,

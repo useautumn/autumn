@@ -1,8 +1,4 @@
 import type { BillingContext } from "@server/internal/billing/v2/billingContext";
-import type {
-	StripeInvoiceAction,
-	StripeInvoiceMetadata,
-} from "@server/internal/billing/v2/billingPlan";
 import {
 	type PayInvoiceResult,
 	payStripeInvoice,
@@ -14,6 +10,10 @@ import {
 } from "@server/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type {
+	StripeInvoiceAction,
+	StripeInvoiceMetadata,
+} from "@/internal/billing/v2/types/billingPlan";
 
 export const createInvoiceForBilling = async ({
 	ctx,
@@ -28,8 +28,12 @@ export const createInvoiceForBilling = async ({
 }): Promise<PayInvoiceResult> => {
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 	const { addLineParams, invoiceMode } = stripeInvoiceAction;
-	const shouldFinalizeInvoice = invoiceMode ? invoiceMode.finalizeInvoice : true;
-	const shouldPayImmediately = invoiceMode ? invoiceMode.enableProductImmediately : true;
+	const shouldFinalizeInvoice = invoiceMode
+		? invoiceMode.finalizeInvoice
+		: true;
+	const shouldPayImmediately = invoiceMode
+		? invoiceMode.enableProductImmediately
+		: true;
 
 	const draftInvoice = await createStripeInvoice({
 		stripeCli,

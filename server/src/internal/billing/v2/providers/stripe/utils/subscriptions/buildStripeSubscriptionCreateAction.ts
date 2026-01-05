@@ -2,7 +2,7 @@ import { msToSeconds } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
-import type { FreeTrialPlan } from "@/internal/billing/v2/billingPlan";
+import type { FreeTrialPlan } from "@/internal/billing/v2/types/billingPlan";
 
 export const buildStripeSubscriptionCreateAction = ({
 	ctx,

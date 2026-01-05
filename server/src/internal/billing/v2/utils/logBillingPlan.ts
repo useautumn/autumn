@@ -1,6 +1,6 @@
 import { formatMs } from "@shared/utils/common/formatUtils/formatUnix";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingPlan } from "@/internal/billing/v2/billingPlan";
+import type { BillingPlan } from "@/internal/billing/v2/types/billingPlan";
 
 export const logBillingPlan = ({
 	ctx,

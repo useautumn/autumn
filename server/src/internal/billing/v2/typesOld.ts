@@ -10,7 +10,7 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { z } from "zod/v4";
-import type { StripeInvoiceAction } from "./billingPlan";
+import type { StripeInvoiceAction } from "./types/billingPlan";
 
 export type AttachContext = {
 	fullCus: FullCustomer;

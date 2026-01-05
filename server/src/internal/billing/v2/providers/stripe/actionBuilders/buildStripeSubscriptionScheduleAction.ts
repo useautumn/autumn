@@ -2,10 +2,10 @@ import type { FullCusProduct } from "@autumn/shared";
 import { msToSeconds } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import type { BillingContext } from "@server/internal/billing/v2/billingContext";
-import type { StripeSubscriptionScheduleAction } from "@server/internal/billing/v2/billingPlan";
 import { getFinalCustomerProductsState } from "@server/internal/billing/v2/utils/getFinalCustomerProductsState";
 import { buildSchedulePhases } from "@server/internal/billing/v2/utils/stripeAdapter/subscriptionSchedules/buildSchedulePhases";
 import type Stripe from "stripe";
+import type { StripeSubscriptionScheduleAction } from "@/internal/billing/v2/types/billingPlan";
 
 const phaseHasItems = (
 	phase: Stripe.SubscriptionScheduleUpdateParams.Phase,

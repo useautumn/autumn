@@ -1,7 +1,7 @@
 import type { Metadata } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { DeferredAutumnBillingPlanData } from "@/internal/billing/v2/billingPlan";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
+import type { DeferredAutumnBillingPlanData } from "@/internal/billing/v2/types/billingPlan";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
 export const handleDeferredAutumnBillingPlan = async ({
