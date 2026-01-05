@@ -3,9 +3,10 @@ import {
     CreateFeatureV0ParamsSchema,
     CreateFreeTrialSchema,
     CreateProductItemParamsSchema,
-    CreateProductSchema
+    CreateProductSchema,
 } from "@shared/index";
 import { z } from "zod/v4";
+import type { DrizzleCli } from "@/db/initDrizzle";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { FeatureService } from "@/internal/features/FeatureService";
 import { createFeature } from "@/internal/features/featureActions/createFeature";
@@ -33,60 +34,67 @@ export const handlePushOrganisationConfiguration = createRoute({
             orgId: org.id,
             env,
         });
+        // Wrap all db operations in a single transaction
+        // This ensures features are visible to product creation and
+        // any errors will rollback all changes (features + products)
+        await db.transaction(async (tx) => {
+            const txDb = tx as unknown as DrizzleCli;
+            const txCtx = { ...ctx, db: txDb };
 
-        // Handle loading the features first (products depend on features)
-        for (const apiFeature of body.features) {
-            if (features.some((x) => x.id === apiFeature.id)) {
-                continue;
+            // Handle loading the features first (products depend on features)
+            for (const apiFeature of body.features) {
+                if (features.some((x) => x.id === apiFeature.id)) {
+                    continue;
+                }
+
+                // Convert API feature format to DB feature format
+                const dbFeature = apiFeatureToDbFeature({
+                    apiFeature,
+                    originalFeature: undefined,
+                });
+
+                await createFeature({
+                    ctx: txCtx,
+                    data: {
+                        id: dbFeature.id,
+                        name: dbFeature.name,
+                        type: dbFeature.type,
+                        config: dbFeature.config,
+                        event_names: dbFeature.event_names,
+                    },
+                });
             }
 
-            // Convert API feature format to DB feature format
-            const dbFeature = apiFeatureToDbFeature({
-                apiFeature,
-                originalFeature: undefined,
+            // Refresh features after creating new ones (products depend on features)
+            const updatedFeatures = await FeatureService.list({
+                db: txDb,
+                orgId: org.id,
+                env,
             });
 
-            await createFeature({
-                ctx,
-                data: {
-                    id: dbFeature.id,
-                    name: dbFeature.name,
-                    type: dbFeature.type,
-                    config: dbFeature.config,
-                    event_names: dbFeature.event_names,
-                },
-            });
-        }
+            // Handle loading the products
+            for (const apiProduct of body.products) {
+                if (products.some((x) => x.id === apiProduct.id)) {
+                    continue;
+                }
 
-        // Refresh features after creating new ones (products depend on features)
-        const updatedFeatures = await FeatureService.list({
-            db,
-            orgId: org.id,
-            env,
+                await createProduct({
+                    ctx: {
+                        ...txCtx,
+                        features: updatedFeatures,
+                    },
+                    data: {
+                        id: apiProduct.id,
+                        name: apiProduct.name,
+                        is_add_on: apiProduct.is_add_on,
+                        is_default: apiProduct.is_default,
+                        group: apiProduct.group,
+                        items: apiProduct.items,
+                        free_trial: apiProduct.free_trial,
+                    },
+                });
+            }
         });
-
-        // Handle loading the products
-        for (const apiProduct of body.products) {
-            if (products.some((x) => x.id === apiProduct.id)) {
-                continue;
-            }
-
-            await createProduct({
-                ctx: {
-                    ...ctx,
-                    features: updatedFeatures,
-                },
-                data: {
-                    id: apiProduct.id,
-                    name: apiProduct.name,
-                    is_add_on: apiProduct.is_add_on,
-                    is_default: apiProduct.is_default,
-                    group: apiProduct.group,
-                    items: apiProduct.items,
-                    free_trial: apiProduct.free_trial,
-                },
-            });
-        }
 
         return c.json({
             features: body.features,
