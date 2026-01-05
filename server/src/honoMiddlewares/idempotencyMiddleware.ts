@@ -1,5 +1,6 @@
 import {
-    ErrCode
+    ErrCode,
+    RecaseError
 } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import { redis } from "@/external/redis/initRedis.js";
@@ -25,13 +26,11 @@ export const idempotencyMiddleware = async (
         });
 
         if (!wasSet) {
-            return c.json(
-                {
-                    error: `Another request with idempotency key ${idempotencyKey} has already been received`,
-                    code: ErrCode.DuplicateIdempotencyKey,
-                },
-                409,
-            );
+            throw new RecaseError({
+                message: `Another request with idempotency key ${idempotencyKey} has already been received`,
+                code: ErrCode.DuplicateIdempotencyKey,
+                statusCode: 409,
+            })
         }
     }
 
