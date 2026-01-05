@@ -22,7 +22,7 @@ const pro = constructProduct({
 
 const testCase = "others10";
 
-describe(`${chalk.yellowBright("idempotency: idempotency key already exists")}`, () => {
+describe(`${chalk.yellowBright(`${testCase}/idempotency: idempotency key already exists`)}`, () => {
     const customerId = testCase;
     const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
     const idempotencyKey = generateId("it");
