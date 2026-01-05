@@ -1,9 +1,11 @@
 import type { SDKType } from "@/hooks/stores/useSDKStore";
 import { getCurlSnippet } from "./curlSnippets";
+import { applyDynamicParams } from "./dynamicSnippets";
 import { getNodeSnippet } from "./nodeSnippets";
 import { getPythonSnippet } from "./pythonSnippets";
 import { getReactSnippet } from "./reactSnippets";
 import type {
+	DynamicSnippetParams,
 	GetSnippetParams,
 	Snippet,
 	SnippetId,
@@ -16,29 +18,49 @@ export function getSnippet({
 	id,
 	sdk,
 	stackConfig,
+	dynamicParams,
 }: GetSnippetParams): Snippet {
+	let snippet: Snippet;
+
 	switch (sdk) {
 		case "react":
-			return getReactSnippet({ id, stackConfig });
+			snippet = getReactSnippet({ id, stackConfig });
+			break;
 		case "node":
-			return getNodeSnippet({ id });
+			snippet = getNodeSnippet({ id });
+			break;
 		case "python":
-			return getPythonSnippet({ id });
+			snippet = getPythonSnippet({ id });
+			break;
 		case "curl":
-			return getCurlSnippet({ id });
+			snippet = getCurlSnippet({ id });
+			break;
 		default:
-			return getNodeSnippet({ id });
+			snippet = getNodeSnippet({ id });
 	}
+
+	// Apply dynamic params if provided
+	if (dynamicParams) {
+		snippet = applyDynamicParams({
+			snippet,
+			productId: dynamicParams.productId,
+			featureId: dynamicParams.featureId,
+		});
+	}
+
+	return snippet;
 }
 
 export function getSnippetsForStep({
 	stepId,
 	sdk,
 	stackConfig,
+	dynamicParams,
 }: {
 	stepId: StepId;
 	sdk: SDKType;
 	stackConfig?: StackConfig;
+	dynamicParams?: DynamicSnippetParams;
 }): Snippet[] {
 	const stepSnippets = STEP_SNIPPETS[stepId];
 	const snippetIds: SnippetId[] =
@@ -48,7 +70,9 @@ export function getSnippetsForStep({
 				? stepSnippets.curl
 				: stepSnippets.other;
 
-	return snippetIds.map((id) => getSnippet({ id, sdk, stackConfig }));
+	return snippetIds.map((id) =>
+		getSnippet({ id, sdk, stackConfig, dynamicParams }),
+	);
 }
 
 export function stepNeedsStackConfig({

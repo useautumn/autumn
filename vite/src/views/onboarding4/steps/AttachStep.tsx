@@ -7,16 +7,23 @@ import { SnippetCodeBlock } from "./SnippetCodeBlock";
 interface AttachStepProps {
 	snippet: Snippet;
 	stepNumber: number;
+	productId?: string;
 }
 
-export function AttachStep({ snippet, stepNumber }: AttachStepProps) {
+export function AttachStep({
+	snippet: _,
+	stepNumber,
+	productId,
+}: AttachStepProps) {
 	const [attachMode, setAttachMode] = useState<"pricing-table" | "custom">(
 		"pricing-table",
 	);
 
 	const displaySnippet = getSnippet({
-		id: attachMode === "pricing-table" ? "attach-pricing-table" : "attach-custom",
+		id:
+			attachMode === "pricing-table" ? "attach-pricing-table" : "attach-custom",
 		sdk: "react",
+		dynamicParams: productId ? { productId } : undefined,
 	});
 
 	return (
@@ -53,4 +60,3 @@ export function AttachStep({ snippet, stepNumber }: AttachStepProps) {
 		</div>
 	);
 }
-

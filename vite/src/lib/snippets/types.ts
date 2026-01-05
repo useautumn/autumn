@@ -39,17 +39,32 @@ export interface Snippet {
 	code: string;
 }
 
+export interface DynamicSnippetParams {
+	productId?: string;
+	featureId?: string;
+}
+
 export interface GetSnippetParams {
 	id: SnippetId;
 	sdk: SDKType;
 	stackConfig?: StackConfig;
+	dynamicParams?: DynamicSnippetParams;
 }
 
 export type StepId = "customer" | "payments" | "usage";
 
-export const STEP_SNIPPETS: Record<StepId, { react: SnippetId[]; other: SnippetId[]; curl: SnippetId[] }> = {
+export const STEP_SNIPPETS: Record<
+	StepId,
+	{ react: SnippetId[]; other: SnippetId[]; curl: SnippetId[] }
+> = {
 	customer: {
-		react: ["install", "env-setup", "backend-setup", "add-provider", "create-customer"],
+		react: [
+			"install",
+			"env-setup",
+			"backend-setup",
+			"add-provider",
+			"create-customer",
+		],
 		other: ["install", "env-setup", "create-customer"],
 		curl: ["env-setup", "create-customer"],
 	},
@@ -71,4 +86,3 @@ export const DEFAULT_STACK_CONFIG: StackConfig = {
 	auth: "betterauth",
 	customerType: "user",
 };
-
