@@ -356,6 +356,17 @@ export class AutumnInt {
 			return data;
 		},
 
+		listV2: async (params?: {
+			limit?: number;
+			offset?: number;
+			search?: string;
+			plans?: Array<{ id: string; versions?: number[] }>;
+			subscription_status?: string[];
+		}) => {
+			const data = await this.post(`/customers/list`, params || {});
+			return data;
+		},
+
 		get: async <
 			T = Customer & {
 				invoices: any[];
