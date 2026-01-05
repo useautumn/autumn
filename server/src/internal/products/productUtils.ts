@@ -31,6 +31,7 @@ import {
 import RecaseError from "@server/utils/errorUtils.js";
 import { generateId, notNullish } from "@server/utils/genUtils.js";
 import { Decimal } from "decimal.js";
+import { Stripe } from "stripe";
 import type {
 	AttachParams,
 	InsertCusProductParams,
@@ -259,7 +260,14 @@ export const checkStripeProductExists = async ({
 				});
 			}
 		} catch (error) {
-			createNew = true;
+			if (
+				error instanceof Stripe.errors.StripeError &&
+				error.code?.includes("resource_missing")
+			) {
+				createNew = true;
+			} else {
+				throw error;
+			}
 		}
 	}
 

@@ -9,9 +9,8 @@ export const AttachFunctionResponseSchema = z.object({
 	checkoutSession: z.any().optional(), // Stripe.checkout.session
 	stripeSub: z.any().optional(), // Stripe.subscription
 	anchorToUnix: z.number().optional(),
-	// product_ids: z.array(z.string()),
-	// customer_id: z.string(),
-	// scenario: z.nativeEnum(AttachScenario),
+
+	newCustomerProductId: z.string().optional(),
 });
 
 export type AttachFunctionResponse = z.infer<

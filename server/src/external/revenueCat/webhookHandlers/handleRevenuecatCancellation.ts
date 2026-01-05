@@ -54,5 +54,6 @@ export const handleCancellation = async ({
 		customerId: original_app_user_id ?? app_user_id,
 		orgId: org.id,
 		env,
+		source: `handleRevenuecatCancellation: ${product.id}`,
 	});
 };

@@ -39,6 +39,8 @@ const cusPrefixedUrls = [
 
 /**
  * Core routes that trigger cache deletion when customer_id is in body
+ * Note: /balances/update is NOT included because it updates Redis directly
+ * to avoid race conditions with batched track syncs
  */
 const coreUrls = [
 	{
@@ -48,10 +50,6 @@ const coreUrls = [
 	{
 		method: "POST",
 		url: "/cancel",
-	},
-	{
-		method: "POST",
-		url: "/balances/update",
 	},
 ];
 
@@ -72,7 +70,11 @@ export const refreshCacheMiddleware = async (
 	}
 
 	const ctx = c.get("ctx");
-	const { logger, org, env } = ctx;
+	const { logger, org, env, skipCacheDeletion } = ctx;
+
+	if (skipCacheDeletion) {
+		return;
+	}
 
 	const pathname = new URL(c.req.url).pathname.replace("/v1", "");
 	const method = c.req.method;
@@ -113,6 +115,8 @@ export const refreshCacheMiddleware = async (
 				customerId: body.customer_id,
 				orgId: org.id,
 				env: env,
+				source: "refreshCacheMiddleware",
+				logger,
 			});
 		}
 	}

@@ -14,10 +14,7 @@ export const initializeDatabaseFunctions = async () => {
 	try {
 		console.log("Initializing database functions...");
 
-		const deductRpcPath = join(
-			__dirname,
-			"../internal/balances/track/trackUtils/deductRpc",
-		);
+		const sqlPath = join(__dirname, "../internal/balances/utils/sql");
 
 		// Load SQL files in dependency order:
 		// 1. Helper functions (used by main functions)
@@ -29,10 +26,11 @@ export const initializeDatabaseFunctions = async () => {
 			"getTotalBalance.sql",
 			"deductFromAdditionalBalance.sql",
 			"performDeduction.sql",
+			"syncBalances.sql",
 		];
 
 		for (const file of sqlFiles) {
-			const sqlContent = readFileSync(join(deductRpcPath, file), "utf-8");
+			const sqlContent = readFileSync(join(sqlPath, file), "utf-8");
 			await db.execute(sql.raw(sqlContent));
 			console.log(`  ✓ Loaded ${file}`);
 		}

@@ -33,6 +33,7 @@ export const handleGetCustomerV2 = createRoute({
 		}
 
 		const start = Date.now();
+
 		const customer = await getApiCustomer({
 			ctx,
 			customerId,

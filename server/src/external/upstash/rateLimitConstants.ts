@@ -11,4 +11,5 @@ export enum RateLimitType {
 	Track = "track",
 	Check = "check",
 	Events = "events",
+	Attach = "attach",
 }

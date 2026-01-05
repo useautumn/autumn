@@ -13,7 +13,7 @@ elif [[ "$filename" == *"/tests/"* ]]; then
     # Remove .ts extension if present
     path_after_tests="${path_after_tests%.ts}"
     # Use scripts/test.ts which auto-detects framework
-    infisical run --env=dev -- bun ../scripts/test.ts "$path_after_tests"
+    NODE_ENV=development infisical run --env=dev -- bun ../scripts/test.ts "$path_after_tests"
 
 elif [[ "$filename" == *".sh"* ]]; then
     "$filename"
