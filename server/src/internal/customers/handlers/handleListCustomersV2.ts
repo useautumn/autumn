@@ -1,7 +1,9 @@
 import {
 	AffectedResource,
 	ApiVersion,
+	type BaseApiCustomer,
 	ListCustomersV2ParamsSchema,
+	type PagePaginatedResponse,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusBatchService } from "../CusBatchService.js";
@@ -18,11 +20,14 @@ export const handleListCustomersV2 = createRoute({
 
 		const customers = await CusBatchService.getPage({ ctx, query: body });
 
-		return c.json({
+		const hasMore = customers.length === body.limit;
+
+		return c.json<PagePaginatedResponse<BaseApiCustomer>>({
 			list: customers,
 			total: customers.length,
 			limit: body.limit,
 			offset: body.offset,
+			has_more: hasMore,
 		});
 	},
 });

@@ -45,6 +45,7 @@ export const createPagePaginatedResponseSchema = <T extends z.ZodType>(
 
 export type PagePaginatedResponse<T> = {
 	list: T[];
+	limit: number;
 	total: number;
 	has_more: boolean;
 	offset: number;

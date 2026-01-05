@@ -1,7 +1,9 @@
 import { z } from "zod/v4";
 import { SuccessResponseSchema } from "../common/commonResponses.js";
-import { ApiCustomerSchema } from "../customers/apiCustomer.js";
-import { ListCustomersResponseSchema } from "../customers/crud/listCustomersResponse.js";
+import {
+	ApiCustomerSchema,
+	BaseApiCustomerSchema,
+} from "../customers/apiCustomer.js";
 
 // export const ApiCustomerWithMeta = ApiCustomerSchema.meta({
 // 	id: "Customer",
@@ -16,6 +18,7 @@ import {
 	// ListCustomersResponseSchema,
 	UpdateCustomerParamsSchema,
 } from "../customers/customerOpModels.js";
+import { createPagePaginatedResponseSchema } from "../models.js";
 
 export const customersOpenApi = {
 	"/customers": {
@@ -51,7 +54,13 @@ export const customersOpenApi = {
 				"200": {
 					description: "200 OK",
 					content: {
-						"application/json": { schema: ListCustomersResponseSchema },
+						"application/json": {
+							schema: createPagePaginatedResponseSchema(
+								BaseApiCustomerSchema,
+							).meta({
+								id: "CustomerListResponse",
+							}),
+						},
 					},
 				},
 			},
