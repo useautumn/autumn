@@ -1,8 +1,10 @@
 import { Code } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
 import { SDKSelector } from "@/components/v2/SDKSelector";
 import { Sheet, SheetContent } from "@/components/v2/sheets/Sheet";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useSDKStore } from "@/hooks/stores/useSDKStore";
 import {
 	DEFAULT_STACK_CONFIG,
@@ -11,11 +13,13 @@ import {
 	type StepId,
 	stepNeedsStackConfig,
 } from "@/lib/snippets";
+import { getFirstPaidProduct } from "@/lib/snippets/productUtils";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { AttachStep } from "./steps/AttachStep";
 import { BackendSetupStep } from "./steps/BackendSetupStep";
 import { EnvSetupStep } from "./steps/EnvSetupStep";
 import { SnippetStep } from "./steps/SnippetStep";
+import { UsageStep } from "./steps/UsageStep";
 
 interface CodeSheetProps {
 	stepId: StepId;
@@ -29,11 +33,45 @@ export function CodeSheet({ stepId, title, description }: CodeSheetProps) {
 	const [stackConfig, setStackConfig] =
 		useState<StackConfig>(DEFAULT_STACK_CONFIG);
 
+	// Fetch products and features
+	const { products } = useProductsQuery();
+	const { features } = useFeaturesQuery();
+
+	// Auto-select first paid product for payments step
+	const selectedProductId = useMemo(() => {
+		if (stepId !== "payments") return undefined;
+		const paidProduct = getFirstPaidProduct({ products });
+		return paidProduct?.id;
+	}, [stepId, products]);
+
+	// Feature selection state for usage step
+	const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(
+		null,
+	);
+
+	// Auto-select first feature when features load
+	useEffect(() => {
+		if (stepId === "usage" && features.length > 0 && !selectedFeatureId) {
+			setSelectedFeatureId(features[0].id);
+		}
+	}, [stepId, features, selectedFeatureId]);
+
 	const showStackSelector = stepNeedsStackConfig({ stepId, sdk: selectedSDK });
+
+	// Build dynamic params
+	const dynamicParams = useMemo(
+		() => ({
+			productId: selectedProductId,
+			featureId: selectedFeatureId ?? undefined,
+		}),
+		[selectedProductId, selectedFeatureId],
+	);
+
 	const snippets = getSnippetsForStep({
 		stepId,
 		sdk: selectedSDK,
 		stackConfig: showStackSelector ? stackConfig : undefined,
+		dynamicParams,
 	});
 
 	const renderSnippetStep = (snippet: (typeof snippets)[0], index: number) => {
@@ -65,12 +103,26 @@ export function CodeSheet({ stepId, title, description }: CodeSheetProps) {
 						key={snippet.id}
 						snippet={snippet}
 						stepNumber={stepNumber}
+						productId={selectedProductId}
 					/>
 				) : (
 					<SnippetStep
 						key={snippet.id}
 						snippet={snippet}
 						stepNumber={stepNumber}
+					/>
+				);
+			case "check":
+			case "track":
+				return (
+					<UsageStep
+						key={snippet.id}
+						snippet={snippet}
+						stepNumber={stepNumber}
+						features={features}
+						selectedFeatureId={selectedFeatureId}
+						onFeatureChange={setSelectedFeatureId}
+						showFeatureSelector={snippet.id === "check"}
 					/>
 				);
 			default:

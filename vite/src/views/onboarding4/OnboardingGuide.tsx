@@ -1,7 +1,9 @@
 "use client";
 
+import { AppEnv } from "@autumn/shared";
 import {
 	ChartBar,
+	CheckCircle,
 	CopySimple,
 	CreditCard,
 	CubeIcon,
@@ -9,15 +11,19 @@ import {
 } from "@phosphor-icons/react";
 import { ArrowRight, X } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/v2/buttons/Button";
 import type { StepId } from "@/lib/snippets";
 import { cn } from "@/lib/utils";
+import { useEnv } from "@/utils/envUtils";
 import { pushPage } from "@/utils/genUtils";
 import { CodeSheet } from "./CodeSheet";
-
-const STORAGE_KEY = "autumn_products_onboarding_dismissed";
+import {
+	type OnboardingStepId,
+	useOnboardingProgress,
+} from "./hooks/useOnboardingProgress";
 
 interface OnboardingStep {
 	id: string;
@@ -77,10 +83,12 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
 function StepCard({
 	step,
 	isActive,
+	isComplete,
 	onClick,
 }: {
 	step: OnboardingStep;
 	isActive: boolean;
+	isComplete: boolean;
 	onClick: () => void;
 }) {
 	const navigate = useNavigate();
@@ -95,12 +103,20 @@ function StepCard({
 				isActive
 					? "border-primary/30 bg-card min-h-[140px]"
 					: "hover:border-primary/20 hover:bg-interactive-secondary-hover h-[140px]",
+				isComplete && !isActive && "opacity-70",
 			)}
 			onClick={onClick}
 		>
 			{/* Collapsed state - centered icon and title */}
 			{!isActive && (
-				<div className="p-4 h-full flex flex-col items-center justify-center gap-2">
+				<div className="p-4 h-full flex flex-col items-center justify-center gap-2 relative">
+					{isComplete && (
+						<CheckCircle
+							size={16}
+							weight="fill"
+							className="absolute top-2 right-2 text-green-500"
+						/>
+					)}
 					<div className="text-t2">{step.icon}</div>
 					<span className="font-medium text-sm text-t2 whitespace-nowrap">
 						{step.shortTitle}
@@ -111,7 +127,14 @@ function StepCard({
 			{/* Expanded content */}
 			{isActive && (
 				<div className="p-4 flex flex-col gap-3">
-					<h3 className="font-medium text-sm text-foreground">{step.title}</h3>
+					<div className="flex items-center gap-2">
+						<h3 className="font-medium text-sm text-foreground">
+							{step.title}
+						</h3>
+						{isComplete && (
+							<CheckCircle size={16} weight="fill" className="text-green-500" />
+						)}
+					</div>
 					<p className="text-sm text-t2">{step.description}</p>
 
 					<div className="mt-auto pt-2 flex items-center gap-3">
@@ -150,13 +173,21 @@ function StepCard({
 										description={step.description}
 									/>
 								)}
-								{step.waitingFor && (
+								{/* Only show waiting indicator if step is not complete */}
+								{step.waitingFor && !isComplete && (
 									<div className="flex items-center gap-2 text-xs text-t3">
 										<span className="relative flex size-2">
 											<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/40 opacity-75" />
 											<span className="relative inline-flex size-2 rounded-full bg-primary/60" />
 										</span>
 										{step.waitingFor}
+									</div>
+								)}
+								{/* Show completed indicator when step is complete */}
+								{isComplete && (
+									<div className="flex items-center gap-2 text-xs text-green-600">
+										<CheckCircle size={14} weight="fill" />
+										Complete
 									</div>
 								)}
 							</>
@@ -169,19 +200,51 @@ function StepCard({
 }
 
 export function OnboardingGuide() {
-	const [isDismissed, setIsDismissed] = useState(() => {
-		if (typeof window === "undefined") return false;
-		return localStorage.getItem(STORAGE_KEY) === "true";
-	});
+	const env = useEnv();
+	const { steps, currentStep, isLoading, isDismissed, dismiss } =
+		useOnboardingProgress();
 	const [activeStep, setActiveStep] = useState<string>("plans");
+	const prevCurrentStepRef = useRef<OnboardingStepId | null>(null);
 
-	const handleDismiss = () => {
-		localStorage.setItem(STORAGE_KEY, "true");
-		setIsDismissed(true);
-	};
+	// Sync activeStep with currentStep when it changes (initial load or progress made)
+	useEffect(() => {
+		if (currentStep !== prevCurrentStepRef.current) {
+			setActiveStep(currentStep);
+			prevCurrentStepRef.current = currentStep;
+		}
+	}, [currentStep]);
+
+	// Only show in sandbox
+	if (env !== AppEnv.Sandbox) {
+		return null;
+	}
 
 	if (isDismissed) {
 		return null;
+	}
+
+	if (isLoading) {
+		return (
+			<div className="relative rounded-xl border bg-card p-4 shadow-sm">
+				{/* Header skeleton */}
+				<div className="mb-4 pr-8">
+					<Skeleton className="h-4 w-32 mb-1.5" />
+					<Skeleton className="h-3 w-64" />
+				</div>
+				{/* Steps skeleton - 4 cards */}
+				<div className="flex gap-3 items-start">
+					{[0, 1, 2, 3].map((i) => (
+						<Skeleton
+							key={i}
+							className={cn(
+								"rounded-lg h-[140px]",
+								i === 0 ? "flex-4" : "flex-1",
+							)}
+						/>
+					))}
+				</div>
+			</div>
+		);
 	}
 
 	return (
@@ -189,7 +252,7 @@ export function OnboardingGuide() {
 			{/* Dismiss button */}
 			<button
 				type="button"
-				onClick={handleDismiss}
+				onClick={dismiss}
 				className="absolute top-3 right-3 p-1 rounded-md text-t3 hover:text-foreground hover:bg-interactive-secondary-hover transition-colors"
 				aria-label="Dismiss onboarding guide"
 			>
@@ -213,6 +276,7 @@ export function OnboardingGuide() {
 						key={step.id}
 						step={step}
 						isActive={activeStep === step.id}
+						isComplete={steps[step.id as OnboardingStepId]?.complete ?? false}
 						onClick={() => setActiveStep(step.id)}
 					/>
 				))}
