@@ -541,7 +541,7 @@ export const createFullCusProduct = async ({
 	}
 
 	await queueVerifyCacheConsistencyWorkflow({
-		newCustomerProductId: cusProdId,
+		newCustomerProduct: fullCusProduct,
 		previousFullCustomer: attachParams.customer as FullCustomer,
 		logger,
 		source: "createFullCusProduct",
