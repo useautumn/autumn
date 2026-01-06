@@ -14,6 +14,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { CusService } from "../CusService.js";
 import { getApiCustomer } from "../cusUtils/apiCusUtils/getApiCustomer.js";
+import { getOrSetCachedFullCustomer } from "../cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
 
 export const handleUpdateCustomerV2 = createRoute({
 	body: UpdateCustomerParamsSchema,
@@ -127,10 +128,17 @@ export const handleUpdateCustomerV2 = createRoute({
 			update: updateData,
 		});
 
+		// Skip cache to get fresh data after update
 		ctx.skipCache = true;
-		const customerDetails = await getApiCustomer({
+		const fullCustomer = await getOrSetCachedFullCustomer({
 			ctx,
 			customerId: newCusData.id ?? customer_id,
+			source: "handleUpdateCustomerV2",
+		});
+
+		const customerDetails = await getApiCustomer({
+			ctx,
+			fullCustomer,
 		});
 
 		return c.json(customerDetails);
