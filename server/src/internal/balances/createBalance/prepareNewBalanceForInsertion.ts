@@ -19,6 +19,7 @@ export const prepareNewBalanceForInsertion = async ({
 	granted_balance,
 	unlimited,
 	reset,
+	expires_at,
 	fullCus,
 	feature_id,
 	entity,
@@ -28,6 +29,7 @@ export const prepareNewBalanceForInsertion = async ({
 	granted_balance: number | undefined;
 	unlimited: boolean | undefined;
 	reset: z.infer<typeof CreateBalanceSchema>["reset"];
+	expires_at: number | undefined;
 	fullCus: FullCustomer;
 	feature_id: string;
 	entity?: Entity;
@@ -82,11 +84,19 @@ export const prepareNewBalanceForInsertion = async ({
 		replaceables: [],
 		now: Date.now(),
 		productOptions: undefined,
+		expires_at: expires_at ?? null,
 	}) satisfies CustomerEntitlement;
 
 	// If entity is provided, assign balance to entity instead of customer-level
 	if (entity) {
 		newCustomerEntitlement.internal_entity_id = entity.internal_id;
+	}
+
+	// Set expiry if provided (mutually exclusive with reset interval)
+	if (expires_at) {
+		newCustomerEntitlement.expires_at = expires_at;
+		// Clear next_reset_at since expiring entitlements don't reset
+		newCustomerEntitlement.next_reset_at = null;
 	}
 
 	return {

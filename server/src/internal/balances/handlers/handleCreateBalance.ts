@@ -17,7 +17,7 @@ export const handleCreateBalance = createRoute({
 	body: CreateBalanceSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { feature_id, customer_id, entity_id, granted_balance, unlimited, reset } =
+		const { feature_id, customer_id, entity_id, granted_balance, unlimited, reset, expires_at } =
 			c.req.valid("json");
 
 		const feature = ctx.features.find((f) => f.id === feature_id);
@@ -46,6 +46,7 @@ export const handleCreateBalance = createRoute({
 			granted_balance,
 			unlimited,
 			reset,
+			expires_at,
 			fullCustomer,
 			entity_id,
 		});
@@ -57,6 +58,7 @@ export const handleCreateBalance = createRoute({
 				granted_balance,
 				unlimited,
 				reset,
+				expires_at,
 				fullCus: fullCustomer,
 				entity: entity_id ? fullCustomer.entities.find((e) => e.id === entity_id) : undefined,
 				feature_id,

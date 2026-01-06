@@ -181,6 +181,7 @@ export class CusEntService {
 				.where(
 					and(
 						isNull(customerEntitlements.customer_product_id),
+						isNull(customerEntitlements.expires_at), // Ignore entitlements with expiry (they don't reset)
 						lt(
 							customerEntitlements.next_reset_at,
 							customDateUnix ?? Date.now(),
