@@ -8,42 +8,46 @@ export const autumnBillingPlanToFinalFullCustomer = ({
 	billingContext: BillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
 }) => {
-	const finalFullCustomer = structuredClone(billingContext.fullCustomer);
 	const {
 		updateCustomerProduct,
 		insertCustomerProducts,
 		updateCustomerEntitlements,
 	} = autumnBillingPlan;
 
-	// 1. Update full customer with new customer products
-	finalFullCustomer.customer_products = [
+	const finalFullCustomer = structuredClone(billingContext.fullCustomer);
+
+	// 1. Combine existing customer products with new ones
+	const combinedCustomerProducts = [
 		...finalFullCustomer.customer_products,
 		...insertCustomerProducts,
 	];
 
-	// 2. Update customer product
-	for (let i = 0; i < finalFullCustomer.customer_products.length; i++) {
-		const customerProduct = finalFullCustomer.customer_products[i];
-		if (customerProduct.id === updateCustomerProduct?.id) {
-			finalFullCustomer.customer_products[i] = updateCustomerProduct;
-		}
-	}
+	// 2. Replace updated customer product if applicable
+	const customerProducts = combinedCustomerProducts.map((customerProduct) =>
+		customerProduct.id === updateCustomerProduct?.id
+			? updateCustomerProduct
+			: customerProduct,
+	);
 
-	// 3. Update full customer with updated customer entitlements
+	// 3. Apply entitlement balance updates
 	if (updateCustomerEntitlements) {
-		const allEntitlements = finalFullCustomer.customer_products.flatMap(
-			(customerProduct) => customerProduct.customer_entitlements,
+		const entitlementById = new Map(
+			customerProducts
+				.flatMap((customerProduct) => customerProduct.customer_entitlements)
+				.map((entitlement) => [entitlement.id, entitlement]),
 		);
 
 		for (const update of updateCustomerEntitlements) {
-			for (const entitlement of allEntitlements) {
-				if (entitlement.id === update.customerEntitlementId) {
-					entitlement.balance =
-						(entitlement.balance ?? 0) + update.balanceChange;
-				}
+			const entitlement = entitlementById.get(update.customerEntitlementId);
+			if (entitlement) {
+				entitlement.balance = (entitlement.balance ?? 0) + update.balanceChange;
 			}
 		}
 	}
 
-	return finalFullCustomer;
+	// 4. Return final full customer
+	return {
+		...finalFullCustomer,
+		customer_products: customerProducts,
+	};
 };
