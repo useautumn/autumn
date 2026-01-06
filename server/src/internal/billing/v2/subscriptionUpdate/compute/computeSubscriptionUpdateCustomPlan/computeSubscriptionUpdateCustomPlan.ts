@@ -27,7 +27,6 @@ export const computeSubscriptionUpdateCustomPlan = async ({
 		cusProduct: customerProduct,
 	});
 
-	// 1. Compute the custom full product
 	const {
 		fullProduct: customFullProduct,
 		customPrices,

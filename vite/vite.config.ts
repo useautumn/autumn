@@ -54,7 +54,6 @@ export default defineConfig({
 			"drizzle-orm",
 			"@date-fns/utc",
 			"date-fns",
-			"@owpz/ksuid",
 		],
 	},
 
