@@ -97,7 +97,6 @@ export const checkForMisingBalance = async ({
 		if (grantedBalanceIncrease.gt(0) && usageIncrease.gte(threshold)) {
 			const errMessage = `[RACE CONDITION] Usage increase (${usageIncrease}), granted balance increase (${grantedBalanceIncrease.toNumber()}), feature (${feature.name}), customer (${fullCustomer.id}), product: ${cusProduct.product?.name}`;
 
-			console.log("CAPTURING SENTRY EXCEPTION");
 			Sentry.captureException(errMessage, {
 				tags: getSentryTags({
 					ctx,
