@@ -19,6 +19,7 @@ export const validateCreateBalanceParams = async ({
 	unlimited,
 	reset,
 	fullCustomer,
+	entity_id,
 }: {
 	ctx: AutumnContext;
 	feature: Feature;
@@ -27,6 +28,7 @@ export const validateCreateBalanceParams = async ({
 	unlimited: boolean | undefined;
 	reset: z.infer<typeof ValidateCreateBalanceParamsSchema>["reset"];
 	fullCustomer: FullCustomer;
+	entity_id?: string;
 }) => {
 	ValidateCreateBalanceParamsSchema.parse({
 		feature,
@@ -35,6 +37,7 @@ export const validateCreateBalanceParams = async ({
 		reset,
 		customer_id: internalCustomerId,
 		feature_id: feature.id,
+		entity_id,
 	});
 
 	await validateBooleanEntitlementConflict({
@@ -42,6 +45,18 @@ export const validateCreateBalanceParams = async ({
 		feature,
 		internalCustomerId: fullCustomer.internal_id,
 	});
+
+	// Entity cannot receive a balance of its own feature type
+	if (entity_id) {
+		const entity = fullCustomer.entities.find((e) => e.id === entity_id);
+		if (entity && feature.id === entity.feature_id) {
+			throw new RecaseError({
+				message: `Cannot give an entity a balance of its own feature type`,
+				code: ErrCode.InvalidRequest,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+	}
 };
 
 export const validateBooleanEntitlementConflict = async ({

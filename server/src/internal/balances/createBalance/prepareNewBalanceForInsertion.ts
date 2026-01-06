@@ -1,6 +1,7 @@
 import {
 	type CreateBalanceSchema,
 	type CustomerEntitlement,
+	type Entity,
 	type Feature,
 	type FullCustomer,
 	planFeaturesToItems,
@@ -20,6 +21,7 @@ export const prepareNewBalanceForInsertion = async ({
 	reset,
 	fullCus,
 	feature_id,
+	entity,
 }: {
 	ctx: AutumnContext;
 	feature: Feature;
@@ -28,6 +30,7 @@ export const prepareNewBalanceForInsertion = async ({
 	reset: z.infer<typeof CreateBalanceSchema>["reset"];
 	fullCus: FullCustomer;
 	feature_id: string;
+	entity?: Entity;
 }) => {
 	const inputAsItem = planFeaturesToItems({
 		features: [feature],
@@ -38,10 +41,10 @@ export const prepareNewBalanceForInsertion = async ({
 				unlimited,
 				reset: reset
 					? {
-							interval: reset.interval as ResetInterval,
-							interval_count: reset.interval_count,
-							reset_when_enabled: true,
-						}
+						interval: reset.interval as ResetInterval,
+						interval_count: reset.interval_count,
+						reset_when_enabled: true,
+					}
 					: undefined,
 			},
 		],
@@ -53,6 +56,10 @@ export const prepareNewBalanceForInsertion = async ({
 		isCustom: true,
 		internalFeatureId: feature.internal_id!,
 	});
+
+	if (entity) {
+		newEntitlement.entity_feature_id = entity.feature_id;
+	}
 
 	const newEntitlementWithFeature = {
 		...newEntitlement,
@@ -76,6 +83,11 @@ export const prepareNewBalanceForInsertion = async ({
 		now: Date.now(),
 		productOptions: undefined,
 	}) satisfies CustomerEntitlement;
+
+	// If entity is provided, assign balance to entity instead of customer-level
+	if (entity) {
+		newCustomerEntitlement.internal_entity_id = entity.internal_id;
+	}
 
 	return {
 		newEntitlement,
