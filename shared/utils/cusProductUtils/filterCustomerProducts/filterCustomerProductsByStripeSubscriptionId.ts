@@ -13,14 +13,9 @@ export const filterCustomerProductsByStripeSubscriptionId = ({
 	customerProducts: FullCusProduct[];
 	stripeSubscriptionId?: string;
 }) => {
-	return customerProducts.filter((customerProduct) => {
-		if (!stripeSubscriptionId) {
-			return (
-				customerProduct.subscription_ids?.length === 0 ||
-				!customerProduct.subscription_ids
-			);
-		}
-
-		return customerProduct.subscription_ids?.includes(stripeSubscriptionId);
-	});
+	return customerProducts.filter((customerProduct) =>
+		stripeSubscriptionId
+			? customerProduct.subscription_ids?.includes(stripeSubscriptionId)
+			: !customerProduct.subscription_ids?.length,
+	);
 };
