@@ -134,10 +134,12 @@ const hatchetWorkflows = {
  */
 export const runHatchetWorkflow = async <T extends keyof HatchetPayloads>({
 	workflowName,
+	metadata,
 	payload,
 	delayMs,
 }: {
 	workflowName: T;
+	metadata?: Record<string, string>;
 	payload: HatchetPayloads[T];
 	/** Delay in milliseconds before the workflow runs */
 	delayMs?: number;
@@ -153,7 +155,11 @@ export const runHatchetWorkflow = async <T extends keyof HatchetPayloads>({
 	if (delayMs) {
 		// workflow.delay() takes duration in seconds
 		const delaySeconds = Math.floor(delayMs / 1000);
-		await workflow.delay(delaySeconds, payload);
+		await workflow.delay(delaySeconds, payload, {
+			additionalMetadata: {
+				...(metadata ?? {}),
+			},
+		});
 	} else {
 		await workflow.run(payload);
 	}
