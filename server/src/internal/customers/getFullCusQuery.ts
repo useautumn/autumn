@@ -216,6 +216,7 @@ const buildExtraEntitlementsCTE = () => {
       FROM customer_entitlements ce
       WHERE ce.internal_customer_id = (SELECT internal_id FROM customer_record)
         AND ce.customer_product_id IS NULL
+        AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
     )
   `;
 };

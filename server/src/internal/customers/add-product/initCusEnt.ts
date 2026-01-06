@@ -118,6 +118,7 @@ export const initCusEntitlement = ({
 	replaceables,
 	now,
 	productOptions,
+	expires_at,
 }: {
 	entitlement: EntitlementWithFeature;
 	customer: Customer;
@@ -137,6 +138,7 @@ export const initCusEntitlement = ({
 	replaceables: AttachReplaceable[];
 	now?: number;
 	productOptions?: ProductOptions;
+	expires_at?: number | null;
 }) => {
 	now = now || Date.now();
 	let { newBalance, newEntities } = initCusEntBalance({
@@ -204,5 +206,6 @@ export const initCusEntitlement = ({
 		entities: newEntities,
 		usage_allowed: usageAllowed,
 		next_reset_at: nextResetAtValue,
+		expires_at: expires_at ?? null,
 	};
 };

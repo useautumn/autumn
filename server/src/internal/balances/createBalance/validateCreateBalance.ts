@@ -18,6 +18,7 @@ export const validateCreateBalanceParams = async ({
 	granted_balance,
 	unlimited,
 	reset,
+	expires_at,
 	fullCustomer,
 	entity_id,
 }: {
@@ -27,6 +28,7 @@ export const validateCreateBalanceParams = async ({
 	granted_balance: number | undefined;
 	unlimited: boolean | undefined;
 	reset: z.infer<typeof ValidateCreateBalanceParamsSchema>["reset"];
+	expires_at: number | undefined;
 	fullCustomer: FullCustomer;
 	entity_id?: string;
 }) => {
@@ -35,6 +37,7 @@ export const validateCreateBalanceParams = async ({
 		granted_balance,
 		unlimited,
 		reset,
+		expires_at,
 		customer_id: internalCustomerId,
 		feature_id: feature.id,
 		entity_id,

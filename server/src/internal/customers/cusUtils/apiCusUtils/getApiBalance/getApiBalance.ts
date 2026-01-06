@@ -78,6 +78,9 @@ const cusEntsToBreakdown = ({
 		const prepaidQuantity = cusEntsToPrepaidQuantity({ cusEnts });
 		const planId = cusEntsToPlanId({ cusEnts });
 
+		// Get expires_at from the first cusEnt (since key is cusEnt.id, there's only one)
+		const expiresAt = cusEnts[0]?.expires_at ?? null;
+
 		breakdown.push({
 			key,
 			breakdown: ApiBalanceBreakdownSchema.parse({
@@ -95,6 +98,7 @@ const cusEntsToBreakdown = ({
 				reset: reset,
 
 				prepaid_quantity: prepaidQuantity,
+				expires_at: expiresAt,
 			}),
 			prepaidQuantity: prepaidQuantity,
 		});
