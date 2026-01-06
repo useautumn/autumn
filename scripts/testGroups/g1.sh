@@ -26,7 +26,7 @@ BUN_PARALLEL_COMPACT \
   'server/tests/balances/check/misc' \
   'server/tests/balances/check/prepaid' \
   'server/tests/balances/check/send-event' \
-  'server/tests/balances/check/loose
+  'server/tests/balances/check/loose' \
   --max=6
 
 
