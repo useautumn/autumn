@@ -9,9 +9,9 @@ import {
 	CubeIcon,
 	UserCircle,
 } from "@phosphor-icons/react";
-import { ArrowRight, X } from "lucide-react";
+import { ArrowRight, Check, X } from "lucide-react";
 import type { ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/v2/buttons/Button";
@@ -24,6 +24,7 @@ import {
 	type OnboardingStepId,
 	useOnboardingProgress,
 } from "./hooks/useOnboardingProgress";
+import { useOnboardingPrompt } from "./onboardingPrompts";
 
 interface OnboardingStep {
 	id: string;
@@ -92,7 +93,28 @@ function StepCard({
 	onClick: () => void;
 }) {
 	const navigate = useNavigate();
+	const { getPrompt } = useOnboardingPrompt();
 	const isPlansStep = step.id === "plans";
+	const [copied, setCopied] = useState(false);
+
+	useEffect(() => {
+		if (copied) {
+			const timeout = setTimeout(() => setCopied(false), 1500);
+			return () => clearTimeout(timeout);
+		}
+	}, [copied]);
+
+	const handleCopyPrompt = useCallback(
+		(e: React.MouseEvent) => {
+			e.stopPropagation();
+			const prompt = getPrompt({ stepId: step.id });
+			if (prompt) {
+				navigator.clipboard.writeText(prompt);
+				setCopied(true);
+			}
+		},
+		[step.id, getPrompt],
+	);
 
 	return (
 		<div
@@ -159,12 +181,14 @@ function StepCard({
 								<Button
 									variant="secondary"
 									size="sm"
-									onClick={(e) => {
-										e.stopPropagation();
-									}}
+									onClick={handleCopyPrompt}
 								>
-									<CopySimple className="size-3.5" />
-									Copy prompt
+									{copied ? (
+										<Check className="size-3.5 text-green-500" />
+									) : (
+										<CopySimple className="size-3.5" />
+									)}
+									{copied ? "Copied!" : "Copy prompt"}
 								</Button>
 								{step.stepId && (
 									<CodeSheet
