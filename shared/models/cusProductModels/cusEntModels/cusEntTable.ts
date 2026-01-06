@@ -7,6 +7,7 @@ import {
 	pgTable,
 	text,
 } from "drizzle-orm/pg-core";
+import { entities } from "../../../db/schema.js";
 import { collatePgColumn } from "../../../db/utils.js";
 import { features } from "../../featureModels/featureTable.js";
 import { entitlements } from "../../productModels/entModels/entTable.js";
@@ -20,6 +21,7 @@ export const customerEntitlements = pgTable(
 		customer_product_id: text(),
 		entitlement_id: text().notNull(),
 		internal_customer_id: text().notNull(),
+		internal_entity_id: text(),
 		internal_feature_id: text().notNull(),
 
 		unlimited: boolean("unlimited").default(false),
@@ -46,6 +48,11 @@ export const customerEntitlements = pgTable(
 			columns: [table.internal_feature_id],
 			foreignColumns: [features.internal_id],
 			name: "entitlements_internal_feature_id_fkey",
+		}).onDelete("cascade"),
+		foreignKey({
+			columns: [table.internal_entity_id],
+			foreignColumns: [entities.internal_id],
+			name: "customer_entitlements_internal_entity_id_fkey",
 		}).onDelete("cascade"),
 		foreignKey({
 			columns: [table.customer_product_id],

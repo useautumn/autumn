@@ -20,11 +20,13 @@ BUN_PARALLEL_COMPACT \
   'server/tests/balances/track/concurrency' \
   'server/tests/balances/track/negative' \
   'server/tests/balances/check/breakdown' \
+  'server/tests/balances/track/loose' \
   'server/tests/balances/check/basic' \
   'server/tests/balances/check/credit-systems' \
   'server/tests/balances/check/misc' \
   'server/tests/balances/check/prepaid' \
   'server/tests/balances/check/send-event' \
+  'server/tests/balances/check/loose
   --max=6
 
 

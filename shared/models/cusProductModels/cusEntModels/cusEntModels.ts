@@ -21,6 +21,7 @@ export const CustomerEntitlementSchema = z.object({
 	// Foreign keys
 	id: z.string(),
 	internal_customer_id: z.string(),
+	internal_entity_id: z.string().nullable(),
 	internal_feature_id: z.string(),
 	customer_id: z.string().nullish(), // for debugging purposes
 	feature_id: z.string(), // for debugging purposes

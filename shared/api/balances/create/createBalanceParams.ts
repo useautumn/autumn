@@ -12,6 +12,11 @@ export const CreateBalanceSchema = z.object({
 		})
 		.optional(),
 	customer_id: z.string(),
+	entity_id: z.string().optional(),
+}).refine((data) => {
+	if (data.entity_id && !data.customer_id) {
+		return false;
+	} else return true;
 });
 
 export const ValidateCreateBalanceParamsSchema = CreateBalanceSchema.extend({

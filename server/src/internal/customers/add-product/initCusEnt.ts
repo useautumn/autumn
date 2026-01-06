@@ -102,6 +102,7 @@ const initCusEntBalance = ({
 export const initCusEntitlement = ({
 	entitlement,
 	customer,
+	entity,
 	cusProductId,
 	freeTrial,
 	options,
@@ -120,6 +121,7 @@ export const initCusEntitlement = ({
 }: {
 	entitlement: EntitlementWithFeature;
 	customer: Customer;
+	entity?: Entity;
 	cusProductId: string | null;
 	freeTrial: FreeTrial | null;
 	options?: FeatureOptions;
@@ -183,6 +185,7 @@ export const initCusEntitlement = ({
 		id: generateId("cus_ent"),
 		internal_customer_id: customer.internal_id,
 		internal_feature_id: entitlement.internal_feature_id,
+		internal_entity_id: entity?.internal_id ?? null,
 		feature_id: (entitlement.feature_id ?? entitlement.feature.id) as string,
 		customer_id: customer.id,
 

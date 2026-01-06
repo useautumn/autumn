@@ -19,30 +19,13 @@ export const getApiBalances = async ({
 }) => {
 	const { org } = ctx;
 
-	const allCusEntsFromFullCustomer = fullCustomerToCustomerEntitlements({
+	// fullCustomerToCustomerEntitlements already includes extra_customer_entitlements
+	// and filters them by entity via cusEntMatchesEntity
+	const allCusEnts = fullCustomerToCustomerEntitlements({
 		fullCustomer: fullCus,
 		inStatuses: orgToInStatuses({ org }),
 		entity: fullCus.entity,
 	});
-
-	// Filter out loose entitlements (customer_product is null) - they come from extra_customer_entitlements
-	const cusEntsWithCusProduct = allCusEntsFromFullCustomer.filter(
-		(ent) => ent.customer_product !== null,
-	);
-
-	// Add extra entitlements (loose entitlements not tied to a product)
-	const extraEnts: FullCusEntWithFullCusProduct[] = (
-		fullCus.extra_customer_entitlements || []
-	).map((ent) => ({
-		...ent,
-		customer_product: null,
-	}));
-
-	// Combine both sources
-	const allCusEnts: FullCusEntWithFullCusProduct[] = [
-		...cusEntsWithCusProduct,
-		...extraEnts,
-	];
 
 	const featureToCusEnt: Record<string, FullCusEntWithFullCusProduct[]> = {};
 	for (const cusEnt of allCusEnts) {
