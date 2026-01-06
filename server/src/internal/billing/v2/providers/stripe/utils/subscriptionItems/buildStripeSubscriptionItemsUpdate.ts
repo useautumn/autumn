@@ -80,7 +80,7 @@ const stripeItemSpecsToSubItemsUpdate = ({
 
 		const shouldUpdateItem =
 			existingItem && existingItem.quantity !== stripeItemSpec.quantity;
-		const shouldCreateItem = !existingItem && !shouldUpdateItem;
+		const shouldCreateItem = !existingItem;
 
 		if (shouldUpdateItem) {
 			subItemsUpdate.push({
