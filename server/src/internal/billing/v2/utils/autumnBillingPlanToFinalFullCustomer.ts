@@ -9,31 +9,37 @@ export const autumnBillingPlanToFinalFullCustomer = ({
 	autumnBillingPlan: AutumnBillingPlan;
 }) => {
 	const finalFullCustomer = structuredClone(billingContext.fullCustomer);
+	const {
+		updateCustomerProduct,
+		insertCustomerProducts,
+		updateCustomerEntitlements,
+	} = autumnBillingPlan;
 
 	// 1. Update full customer with new customer products
 	finalFullCustomer.customer_products = [
 		...finalFullCustomer.customer_products,
-		...autumnBillingPlan.insertCustomerProducts,
+		...insertCustomerProducts,
 	];
 
 	// 2. Update customer product
 	for (let i = 0; i < finalFullCustomer.customer_products.length; i++) {
 		const customerProduct = finalFullCustomer.customer_products[i];
-		if (customerProduct.id === autumnBillingPlan.updateCustomerProduct?.id) {
-			finalFullCustomer.customer_products[i] =
-				autumnBillingPlan.updateCustomerProduct;
+		if (customerProduct.id === updateCustomerProduct?.id) {
+			finalFullCustomer.customer_products[i] = updateCustomerProduct;
 		}
 	}
 
 	// 3. Update full customer with updated customer entitlements
-	if (autumnBillingPlan.updateCustomerEntitlements) {
-		for (const update of autumnBillingPlan.updateCustomerEntitlements) {
-			for (const customerProduct of finalFullCustomer.customer_products) {
-				for (const customerEntitlement of customerProduct.customer_entitlements) {
-					if (customerEntitlement.id === update.customerEntitlementId) {
-						customerEntitlement.balance =
-							(customerEntitlement.balance ?? 0) + update.balanceChange;
-					}
+	if (updateCustomerEntitlements) {
+		const allEntitlements = finalFullCustomer.customer_products.flatMap(
+			(customerProduct) => customerProduct.customer_entitlements,
+		);
+
+		for (const update of updateCustomerEntitlements) {
+			for (const entitlement of allEntitlements) {
+				if (entitlement.id === update.customerEntitlementId) {
+					entitlement.balance =
+						(entitlement.balance ?? 0) + update.balanceChange;
 				}
 			}
 		}

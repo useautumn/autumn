@@ -12,6 +12,13 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import { findStripeItemSpecByStripePriceId } from "./findStripeItemSpec";
 
+/**
+ * Convert customer products to recurring stripe item specs
+ * @param ctx - The context
+ * @param billingContext - The billing context
+ * @param customerProducts - The customer products
+ * @returns The recurring stripe item specs
+ */
 const customerProductsToRecurringStripeItemSpecs = ({
 	ctx,
 	billingContext,
@@ -20,7 +27,7 @@ const customerProductsToRecurringStripeItemSpecs = ({
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	customerProducts: FullCusProduct[];
-}) => {
+}): StripeItemSpec[] => {
 	const stripeItemSpecs: StripeItemSpec[] = [];
 
 	for (const customerProduct of customerProducts) {
@@ -48,13 +55,19 @@ const customerProductsToRecurringStripeItemSpecs = ({
 	return stripeItemSpecs;
 };
 
+/**
+ * Convert stripe item specs to stripe subscription update params items
+ * @param billingContext - The billing context
+ * @param stripeItemSpecs - The stripe item specs
+ * @returns The subscription item update params
+ */
 const stripeItemSpecsToSubItemsUpdate = ({
 	billingContext,
 	stripeItemSpecs,
 }: {
 	billingContext: BillingContext;
 	stripeItemSpecs: StripeItemSpec[];
-}) => {
+}): Stripe.SubscriptionUpdateParams.Item[] => {
 	const { stripeSubscription } = billingContext;
 	const currentSubscriptionItems = stripeSubscription?.items.data ?? [];
 
@@ -65,12 +78,17 @@ const stripeItemSpecsToSubItemsUpdate = ({
 			stripeSubscriptionItems: currentSubscriptionItems,
 		});
 
-		if (existingItem && existingItem.quantity !== stripeItemSpec.quantity) {
+		const shouldUpdateItem =
+			existingItem && existingItem.quantity !== stripeItemSpec.quantity;
+		const shouldCreateItem = !existingItem && !shouldUpdateItem;
+
+		if (shouldUpdateItem) {
 			subItemsUpdate.push({
 				id: existingItem.id,
 				quantity: stripeItemSpec.quantity,
 			});
-		} else if (!existingItem) {
+		}
+		if (shouldCreateItem) {
 			subItemsUpdate.push({
 				price: stripeItemSpec.stripePriceId,
 				quantity: stripeItemSpec.quantity,
@@ -83,7 +101,9 @@ const stripeItemSpecsToSubItemsUpdate = ({
 			stripePriceId: stripeSubscriptionItemToStripePriceId(subItem),
 			stripeItemSpecs,
 		});
-		if (!stripeItemSpec) {
+
+		const shouldRemoveItem = !stripeItemSpec;
+		if (shouldRemoveItem) {
 			subItemsUpdate.push({ id: subItem.id, deleted: true });
 		}
 	}
@@ -101,21 +121,21 @@ export const buildStripeSubscriptionItemsUpdate = ({
 	finalCustomerProducts: FullCusProduct[];
 }) => {
 	// 1. Filter customer products by stripe subscription id
-	let customerProducts = filterCustomerProductsByStripeSubscriptionId({
+	const relatedCustomerProducts = filterCustomerProductsByStripeSubscriptionId({
 		customerProducts: finalCustomerProducts,
 		stripeSubscriptionId: billingContext.stripeSubscription?.id,
 	});
 
 	// 2. Filter customer products by active statuses
-	customerProducts = filterCustomerProductsByActiveStatuses({
-		customerProducts,
+	const activeCustomerProducts = filterCustomerProductsByActiveStatuses({
+		customerProducts: relatedCustomerProducts,
 	});
 
 	// 3. Get recurring subscription item array (doesn't include one off items)
 	const recurringItems = customerProductsToRecurringStripeItemSpecs({
 		ctx,
 		billingContext,
-		customerProducts,
+		customerProducts: activeCustomerProducts,
 	});
 
 	// 4. Diff it with the current subscription items
