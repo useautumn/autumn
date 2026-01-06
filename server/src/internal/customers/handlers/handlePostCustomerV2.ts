@@ -9,7 +9,8 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getApiCustomer } from "../cusUtils/apiCusUtils/getApiCustomer.js";
-import { getOrCreateApiCustomer } from "../cusUtils/getOrCreateApiCustomer.js";
+import { getOrSetCachedFullCustomer } from "../cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
+import { handleCreateCustomer } from "./handleCreateCustomer.js";
 
 export const handlePostCustomer = createRoute({
 	versionedQuery: {
@@ -36,24 +37,34 @@ export const handlePostCustomer = createRoute({
 		}
 
 		const start = Date.now();
-		const baseData = await getOrCreateApiCustomer({
+
+		// Create customer if ID provided, otherwise generate new one
+		const newCustomer = await handleCreateCustomer({
 			ctx,
-			customerId: createCusParams.id,
-			customerData: createCusParams,
+			cusData: {
+				id: createCusParams.id,
+				name: createCusParams.name,
+				email: createCusParams.email,
+				fingerprint: createCusParams.fingerprint,
+				metadata: createCusParams.metadata || {},
+				stripe_id: createCusParams.stripe_id,
+			},
+			createDefaultProducts: createCusParams.disable_default !== true,
+		});
+
+		// Get full customer from cache/DB
+		const fullCustomer = await getOrSetCachedFullCustomer({
+			ctx,
+			customerId: newCustomer.id || newCustomer.internal_id,
+			source: "handlePostCustomer",
 		});
 
 		const apiCustomer = await getApiCustomer({
 			ctx,
-			customerId: createCusParams.id || "",
+			fullCustomer,
 			withAutumnId: with_autumn_id,
-			baseData: {
-				apiCustomer: baseData.apiCustomer,
-				legacyData: baseData.legacyData || {
-					cusProductLegacyData: {},
-					cusFeatureLegacyData: {},
-				},
-			},
 		});
+
 		const duration = Date.now() - start;
 		ctx.logger.debug(`[post-customer] duration: ${duration}ms`);
 

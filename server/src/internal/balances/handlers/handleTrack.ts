@@ -1,6 +1,6 @@
 import { TrackParamsSchema, TrackQuerySchema } from "@autumn/shared";
 import { createRoute } from "../../../honoMiddlewares/routeHandler.js";
-import { runTrack } from "../track/runTrack.js";
+import { runTrackV2 } from "../track/runTrackV2.js";
 import {
 	getTrackEventNameDeductions,
 	getTrackFeatureDeductions,
@@ -34,12 +34,19 @@ export const handleTrack = createRoute({
 					value: body.value,
 				});
 
-		const response = await runTrack({
-			ctx,
-			body,
-			featureDeductions,
-		});
+		return c.json(
+			await runTrackV2({
+				ctx,
+				body,
+				featureDeductions,
+			}),
+		);
+		// const response = await runTrack({
+		// 	ctx,
+		// 	body,
+		// 	featureDeductions,
+		// });
 
-		return c.json(response);
+		// return c.json(response);
 	},
 });
