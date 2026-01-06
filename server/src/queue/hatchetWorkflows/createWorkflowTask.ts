@@ -47,7 +47,7 @@ export const createWorkflowTask = <TInput extends BaseWorkflowInput, TOutput>({
 		});
 
 		autumnContext?.logger.info(
-			`[${workflowName}] Runnnig for customer ${customerId}, orgId: ${orgId}`,
+			`[${workflowName}] Running for customer ${customerId}, orgId: ${orgId}`,
 		);
 
 		if (!autumnContext) {
