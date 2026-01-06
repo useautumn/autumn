@@ -1,4 +1,4 @@
-import type { SubscriptionUpdateV0Params } from "@shared/index";
+import type { UpdateSubscriptionV0Params } from "@shared/index";
 import { SubscriptionUpdateIntentEnum } from "./computeSubscriptionUpdateSchema";
 
 /**
@@ -7,7 +7,7 @@ import { SubscriptionUpdateIntentEnum } from "./computeSubscriptionUpdateSchema"
  * @returns The intent for the subscription update
  */
 export const computeSubscriptionUpdateIntent = (
-	params: SubscriptionUpdateV0Params,
+	params: UpdateSubscriptionV0Params,
 ): SubscriptionUpdateIntentEnum => {
 	if (params.options?.length && !params.items?.length)
 		return SubscriptionUpdateIntentEnum.UpdateQuantity;

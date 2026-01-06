@@ -39,7 +39,9 @@ export * from "./cusProductUtils/cusProductConstants.js";
 export * from "./cusProductUtils/cusProductUtils.js";
 export * from "./cusProductUtils/featureOptionUtils/findFeatureOptions.js";
 export * from "./cusProductUtils/filterCusProductUtils.js";
-export * from "./cusProductUtils/filterCusProductUtils.js";
+export * from "./cusProductUtils/filterCustomerProducts/filterCustomerProductsByActiveStatuses.js";
+export * from "./cusProductUtils/filterCustomerProducts/filterCustomerProductsByStripeSubscriptionId.js";
+
 export * from "./cusProductUtils/getCusProductFromCustomer.js";
 export * from "./cusProductUtils/productIdToCusProduct.js";
 // Cus utils
@@ -67,10 +69,7 @@ export * from "./productUtils/entUtils/formatEntUtils.js";
 export * from "./productUtils/freeTrialUtils/initFreeTrial.js";
 export * from "./productUtils/freeTrialUtils.js";
 export * from "./productUtils/isProductUpgrade.js";
-export * from "./productUtils/priceUtils/classifyPriceUtils.js";
-export * from "./productUtils/priceUtils/convertAmountUtils.js";
-export * from "./productUtils/priceUtils/convertPriceUtils.js";
-export * from "./productUtils/priceUtils/formatPriceUtils.js";
+export * from "./productUtils/priceUtils/index.js";
 export * from "./productUtils/priceUtils.js";
 export * from "./productV2Utils/mapToProductV2.js";
 export * from "./productV2Utils/productItemUtils/classifyItemUtils.js";

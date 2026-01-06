@@ -1,11 +1,7 @@
-import {
-	type FullProduct,
-	InternalError,
-	type SubscriptionUpdateV0Params,
-} from "@autumn/shared";
+import type { FullProduct, UpdateSubscriptionV0Params } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
 import { computeSubscriptionUpdateFeatureQuantities } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateCustomPlan/computeSubscriptionUpdateFeatureQuantities";
-import type { UpdateSubscriptionContext } from "@/internal/billing/v2/subscriptionUpdate/fetch/updateSubscriptionContextSchema";
 import type { FreeTrialPlan } from "@/internal/billing/v2/types/billingPlan";
 import { cusProductToExistingRollovers } from "@/internal/billing/v2/utils/handleExistingRollovers/cusProductToExistingRollovers";
 import { cusProductToExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/cusProductToExistingUsages";
@@ -17,28 +13,21 @@ export const computeSubscriptionUpdateNewCustomerProduct = ({
 	updateSubscriptionContext,
 	fullProduct,
 	freeTrialPlan,
-	billingCycleAnchor,
 }: {
 	ctx: AutumnContext;
-	params: SubscriptionUpdateV0Params;
-	updateSubscriptionContext: UpdateSubscriptionContext;
+	params: UpdateSubscriptionV0Params;
+	updateSubscriptionContext: UpdateSubscriptionBillingContext;
 	fullProduct: FullProduct;
 	freeTrialPlan: FreeTrialPlan;
-	billingCycleAnchor?: number;
 }) => {
 	const {
 		customerProduct,
 		fullCustomer,
 		stripeSubscription,
 		stripeSubscriptionSchedule,
+		billingCycleAnchorMs,
 		currentEpochMs,
 	} = updateSubscriptionContext;
-
-	if (!stripeSubscription) {
-		throw new InternalError({
-			message: `[Subscription Update] Stripe subscription not found`,
-		});
-	}
 
 	// 1. Get feature quantities
 	const existingUsages = cusProductToExistingUsages({
@@ -67,7 +56,7 @@ export const computeSubscriptionUpdateNewCustomerProduct = ({
 			featureQuantities,
 			existingUsages,
 			existingRollovers,
-			resetCycleAnchor: billingCycleAnchor ?? "now",
+			resetCycleAnchor: billingCycleAnchorMs ?? "now",
 			now: currentEpochMs,
 
 			freeTrial: freeTrialPlan.freeTrial ?? null,
@@ -76,7 +65,7 @@ export const computeSubscriptionUpdateNewCustomerProduct = ({
 
 		initOptions: {
 			isCustom: true,
-			subscriptionId: stripeSubscription.id,
+			subscriptionId: stripeSubscription?.id,
 			subscriptionScheduleId: stripeSubscriptionSchedule?.id,
 		},
 	});

@@ -41,7 +41,6 @@ const parseFreeTrials = ({
 	return product;
 };
 
-// biome-ignore lint/complexity/noStaticOnlyClass: no thanks m8
 export class ProductService {
 	static async getByFeature({
 		db,

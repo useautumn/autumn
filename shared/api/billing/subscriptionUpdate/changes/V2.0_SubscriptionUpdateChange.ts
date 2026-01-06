@@ -4,8 +4,8 @@ import {
 	AffectedResource,
 	defineVersionChange,
 } from "../../../versionUtils/versionChangeUtils/VersionChange";
-import { SubscriptionUpdateV0ParamsSchema } from "../subscriptionUpdateV0Params";
 import { SubscriptionUpdateV1ParamsSchema } from "../subscriptionUpdateV1Params";
+import { UpdateSubscriptionV0ParamsSchema } from "../UpdateSubscriptionV0Params";
 
 /**
  * V2_0_SubscriptionUpdateChange: Transforms subscription update params from V2.0 to V2.1 format
@@ -18,7 +18,7 @@ import { SubscriptionUpdateV1ParamsSchema } from "../subscriptionUpdateV1Params"
  * 2. Removed fields: `entity_id`, `customer_data`, `entity_data`, `options`, invoice settings
  * 3. Added field: `plan_override` for customizations
  *
- * Input: SubscriptionUpdateV0Params (V2.0 format)
+ * Input: UpdateSubscriptionV0Params (V2.0 format)
  * Output: SubscriptionUpdateV1Params (V2.1 format)
  */
 
@@ -31,15 +31,15 @@ export const V2_0_SubscriptionUpdateChange = defineVersionChange({
 	],
 	affectedResources: [AffectedResource.ApiSubscriptionUpdate],
 	newSchema: SubscriptionUpdateV1ParamsSchema,
-	oldSchema: SubscriptionUpdateV0ParamsSchema,
+	oldSchema: UpdateSubscriptionV0ParamsSchema,
 	affectsRequest: true,
 	affectsResponse: false,
 
-	// Request: V0 (SubscriptionUpdateV0Params) → V1 (SubscriptionUpdateV1Params)
+	// Request: V0 (UpdateSubscriptionV0Params) → V1 (SubscriptionUpdateV1Params)
 	transformRequest: ({
 		input,
 	}: {
-		input: z.infer<typeof SubscriptionUpdateV0ParamsSchema>;
+		input: z.infer<typeof UpdateSubscriptionV0ParamsSchema>;
 	}): z.infer<typeof SubscriptionUpdateV1ParamsSchema> => {
 		const planId = input.product_id;
 

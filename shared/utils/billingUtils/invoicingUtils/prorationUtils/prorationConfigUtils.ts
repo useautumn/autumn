@@ -54,18 +54,33 @@ export const shouldProrateDowngradeNow = ({
 
 /**
  * Determines if a quantity upgrade or downgrade should be prorated.
- * @param onIncrease - The proration behavior configuration for the quantity increase.
- * @returns True if a quantity upgrade or downgrade should be prorated, false otherwise.
+ * @param prorationConfig - The proration behavior configuration.
+ * @returns True if proration should be applied, false otherwise.
  */
-export const shouldProrate = (onIncrease?: OnIncrease | OnDecrease) => {
-	if (!onIncrease) {
+export const shouldProrate = (prorationConfig?: OnIncrease | OnDecrease) => {
+	if (!prorationConfig) {
 		return true;
 	}
 
 	return (
-		onIncrease === OnIncrease.ProrateNextCycle ||
-		onIncrease === OnIncrease.ProrateImmediately ||
-		onIncrease === OnDecrease.ProrateImmediately ||
-		onIncrease === OnDecrease.ProrateNextCycle
+		prorationConfig === OnIncrease.ProrateNextCycle ||
+		prorationConfig === OnIncrease.ProrateImmediately ||
+		prorationConfig === OnDecrease.ProrateImmediately ||
+		prorationConfig === OnDecrease.ProrateNextCycle
+	);
+};
+
+/**
+ * Determines if line items should be skipped entirely (no charge or refund).
+ * @param prorationConfig - The proration behavior configuration.
+ * @returns True if line items should be skipped, false otherwise.
+ */
+export const shouldSkipLineItems = (
+	prorationConfig: OnIncrease | OnDecrease,
+) => {
+	return (
+		prorationConfig === OnDecrease.NoProrations ||
+		prorationConfig === OnDecrease.None ||
+		prorationConfig === OnIncrease.BillNextCycle
 	);
 };

@@ -56,7 +56,7 @@ export const checkForMisingBalance = async ({
 		const feature = cusEnt.entitlement.feature;
 
 		// 1. If unlimited or boolean feature, skip
-		if (isUnlimitedCusEnt({ cusEnt }) || isBooleanCusEnt({ cusEnt })) continue;
+		if (isUnlimitedCusEnt(cusEnt) || isBooleanCusEnt({ cusEnt })) continue;
 
 		if (isContUseFeature({ feature })) continue;
 

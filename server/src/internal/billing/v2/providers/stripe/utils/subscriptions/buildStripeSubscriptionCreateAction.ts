@@ -25,14 +25,6 @@ export const buildStripeSubscriptionCreateAction = ({
 	const isFreeTrialWithCardRequired = Boolean(freeTrial?.card_required);
 	const isCustomPaymentMethod = paymentMethod?.type === "custom";
 
-	// add_invoice_items: invoiceItems,
-	// collection_method: invoiceOnly ? "send_invoice" : "charge_automatically",
-	// days_until_due: invoiceOnly ? 30 : undefined,
-	// billing cycle anchor?
-	// discounts?
-	// expand: ["latest_invoice"],
-	// metadata?
-
 	const stripeSubscriptionCreateParams: Stripe.SubscriptionCreateParams = {
 		customer: stripeCustomer.id,
 		items: subItemsUpdate.map((item) => ({
@@ -41,6 +33,8 @@ export const buildStripeSubscriptionCreateAction = ({
 		})),
 
 		billing_mode: { type: "flexible" },
+
+		collection_method: "charge_automatically",
 
 		payment_behavior: isCustomPaymentMethod
 			? "default_incomplete"

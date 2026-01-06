@@ -6,7 +6,7 @@ import {
 	InternalError,
 	isPrepaidPrice,
 	priceToFeature,
-	type SubscriptionUpdateV0Params,
+	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { paramsToFeatureOptions } from "@/internal/billing/v2/compute/computeAutumnUtils/paramsToFeatureOptions";
@@ -23,7 +23,7 @@ export const computeSubscriptionUpdateFeatureQuantities = ({
 	ctx: AutumnContext;
 	fullProduct: FullProduct;
 	currentCustomerProduct: FullCusProduct;
-	params: SubscriptionUpdateV0Params;
+	params: UpdateSubscriptionV0Params;
 }) => {
 	const newFeatureQuantities: FeatureOptions[] = [];
 	for (const price of fullProduct.prices) {

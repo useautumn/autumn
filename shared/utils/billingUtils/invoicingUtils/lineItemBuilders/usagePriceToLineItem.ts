@@ -17,9 +17,13 @@ import { buildLineItem } from "./buildLineItem";
 export const usagePriceToLineItem = ({
 	cusEnt,
 	context,
+	shouldProrateOverride,
+	chargeImmediatelyOverride,
 }: {
 	cusEnt: FullCusEntWithFullCusProduct;
 	context: LineItemContext;
+	shouldProrateOverride?: boolean;
+	chargeImmediatelyOverride?: boolean;
 }) => {
 	const cusPrice = cusEntToCusPrice({ cusEnt });
 	const { feature } = context;
@@ -75,8 +79,8 @@ export const usagePriceToLineItem = ({
 	// 5. Get stripe price / product IDs
 	const { stripePriceId, stripeProductId } = cusEntToStripeIds({ cusEnt });
 
-	// 6. Should prorate: don't if consumable price
-	const shouldProrate = !isConsumablePrice(price);
+	// 6. Should prorate: don't if consumable price (unless override provided)
+	const shouldProrate = shouldProrateOverride ?? !isConsumablePrice(price);
 
 	return buildLineItem({
 		context,
@@ -87,5 +91,6 @@ export const usagePriceToLineItem = ({
 		stripeProductId,
 
 		shouldProrate,
+		chargeImmediately: chargeImmediatelyOverride,
 	});
 };

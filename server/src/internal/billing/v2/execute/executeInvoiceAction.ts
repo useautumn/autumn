@@ -4,7 +4,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { InvoiceService } from "@/internal/invoices/InvoiceService";
 import { getInvoiceItems } from "@/internal/invoices/invoiceUtils";
 import { createAndFinalizeInvoice } from "@/internal/invoices/invoiceUtils/createAndFinalizeInvoice";
-import type { UpdateSubscriptionContext } from "../subscriptionUpdate/fetch/updateSubscriptionContextSchema";
+import type { UpdateSubscriptionBillingContext } from "../billingContext";
 import type { SubscriptionUpdateInvoiceAction } from "../typesOld";
 
 /**
@@ -22,7 +22,7 @@ export const executeInvoiceAction = async ({
 }: {
 	ctx: AutumnContext;
 	invoiceAction: SubscriptionUpdateInvoiceAction;
-	updateSubscriptionContext: UpdateSubscriptionContext;
+	updateSubscriptionContext: UpdateSubscriptionBillingContext;
 }) => {
 	const { stripeCustomer, stripeSubscription, customerProduct } =
 		updateSubscriptionContext;

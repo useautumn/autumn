@@ -1,16 +1,17 @@
 import {
+	cusProductToProduct,
 	InternalError,
-	type SubscriptionUpdateV0Params,
 	secondsToMs,
-} from "@shared/index";
+	type UpdateSubscriptionV0Params,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { fetchStripeCustomerForBilling } from "@/internal/billing/v2/providers/stripe/fetch/fetchStripeCustomerForBilling";
 import { fetchStripeSubscriptionForBilling } from "@/internal/billing/v2/providers/stripe/fetch/fetchStripeSubscriptionForBilling";
 import { fetchStripeSubscriptionScheduleForBilling } from "@/internal/billing/v2/providers/stripe/fetch/fetchStripeSubscriptionScheduleForBilling";
 import { CusService } from "../../../../customers/CusService";
+import type { UpdateSubscriptionBillingContext } from "../../billingContext";
 import { parseFeatureQuantitiesParams } from "../../utils/parseFeatureQuantitiesParams";
 import { fetchTargetCusProductForUpdate } from "./fetchTargetCusProductForUpdate";
-import type { UpdateSubscriptionContext } from "./updateSubscriptionContextSchema";
 
 /**
  * Fetch the context for updating a subscription
@@ -18,13 +19,13 @@ import type { UpdateSubscriptionContext } from "./updateSubscriptionContextSchem
  * @param body - The body of the request
  * @returns The update subscription context
  */
-export const fetchApiSubscriptionUpdateContext = async ({
+export const fetchUpdateSubscriptionBillingContext = async ({
 	ctx,
 	params,
 }: {
 	ctx: AutumnContext;
-	params: SubscriptionUpdateV0Params;
-}): Promise<UpdateSubscriptionContext> => {
+	params: UpdateSubscriptionV0Params;
+}): Promise<UpdateSubscriptionBillingContext> => {
 	const { db, org, env, features } = ctx;
 	const { customer_id: customerId, product_id: productId } = params;
 
@@ -48,6 +49,10 @@ export const fetchApiSubscriptionUpdateContext = async ({
 			message: `[API Subscription Update] Target customer product not found: ${productId}`,
 		});
 	}
+
+	const fullProduct = cusProductToProduct({
+		cusProduct: targetCustomerProduct,
+	});
 
 	const stripeSubscription = await fetchStripeSubscriptionForBilling({
 		ctx,
@@ -91,16 +96,26 @@ export const fetchApiSubscriptionUpdateContext = async ({
 		stripeSubscription?.billing_cycle_anchor,
 	);
 
+	// Invoice mode
+	const invoiceMode =
+		params?.invoice === true
+			? {
+					finalizeInvoice: params.finalize_invoice === true,
+					enableProductImmediately: params.enable_product_immediately !== false,
+				}
+			: undefined;
+
 	return {
 		fullCustomer,
-		fullProducts: [],
+		fullProducts: [fullProduct],
 		customerProduct: targetCustomerProduct,
 		stripeSubscription,
 		stripeSubscriptionSchedule,
 		stripeCustomer,
 		paymentMethod,
-		testClockFrozenTime,
+
 		currentEpochMs,
 		billingCycleAnchorMs,
+		invoiceMode,
 	};
 };

@@ -5,13 +5,13 @@ import {
 	isCustomerProductOneOff,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
-import type { UpdateSubscriptionContext } from "@/internal/billing/v2/subscriptionUpdate/fetch/updateSubscriptionContextSchema";
 import type {
 	StripeInvoiceAction,
 	StripeSubscriptionAction,
 } from "@/internal/billing/v2/types/billingPlan";
-import { lineItemsToStripeLines } from "../../../providers/stripe/utils/invoiceLines/lineItemsToStripeLines";
+import { lineItemsToInvoiceAddLinesParams } from "../../../providers/stripe/utils/invoiceLines/lineItemsToInvoiceAddLinesParams";
 
 export const computeInvoiceAction = ({
 	ctx,
@@ -21,7 +21,7 @@ export const computeInvoiceAction = ({
 	billingCycleAnchor,
 }: {
 	ctx: AutumnContext;
-	billingContext: UpdateSubscriptionContext;
+	billingContext: UpdateSubscriptionBillingContext;
 	newCustomerProduct: FullCusProduct;
 	stripeSubscriptionAction?: StripeSubscriptionAction;
 	billingCycleAnchor?: number;
@@ -61,7 +61,7 @@ export const computeInvoiceAction = ({
 			testClockFrozenTime: billingContext.testClockFrozenTime,
 		});
 
-		const addLineParams = lineItemsToStripeLines({
+		const addLineParams = lineItemsToInvoiceAddLinesParams({
 			lineItems: autumnLineItems,
 		});
 

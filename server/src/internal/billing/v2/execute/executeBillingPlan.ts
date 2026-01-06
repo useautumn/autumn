@@ -16,24 +16,18 @@ export const executeBillingPlan = async ({
 }) => {
 	logBillingPlan({ ctx, billingPlan });
 
-	const enableProductImmediately =
-		billingPlan.stripe.invoiceAction?.invoiceMode?.enableProductImmediately !==
-		false;
-
-	await executeStripeBillingPlan({
+	const result = await executeStripeBillingPlan({
 		ctx,
-		stripeBillingPlan: billingPlan.stripe,
-		autumnBillingPlan: billingPlan.autumn,
+		billingPlan,
 		billingContext,
 	});
 
-	// if not enabling product immediately, it will be handled in webhook
-	if (enableProductImmediately) {
-		await executeAutumnBillingPlan({
-			ctx,
-			autumnBillingPlan: billingPlan.autumn,
-		});
-	}
+	if (result.deferred) return result;
+
+	await executeAutumnBillingPlan({
+		ctx,
+		autumnBillingPlan: billingPlan.autumn,
+	});
 
 	return { billingPlan };
 };

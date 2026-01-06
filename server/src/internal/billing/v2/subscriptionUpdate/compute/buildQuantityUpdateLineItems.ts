@@ -9,6 +9,8 @@ import {
 	InternalError,
 	type LineItemContext,
 	orgToCurrency,
+	priceToProrationConfig,
+	sumValues,
 	usagePriceToLineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -52,6 +54,18 @@ export const buildQuantityUpdateLineItems = ({
 		});
 	}
 
+	// Get proration config based on price and direction (upgrade/downgrade)
+	const isUpgrade = quantityDifferenceForEntitlements > 0;
+	const { shouldApplyProration, chargeImmediately, skipLineItems } =
+		priceToProrationConfig({
+			price: customerPrice.price,
+			isUpgrade,
+		});
+
+	if (skipLineItems) {
+		return [];
+	}
+
 	// Clone entitlement with updated quantity for the charge line item
 	const newCustomerEntitlement = cloneEntitlementWithUpdatedQuantity({
 		customerEntitlement: prepaidCustomerEntitlement,
@@ -76,12 +90,23 @@ export const buildQuantityUpdateLineItems = ({
 			...lineItemContext,
 			direction: "refund",
 		},
+		shouldProrateOverride: shouldApplyProration,
+		chargeImmediatelyOverride: chargeImmediately,
 	});
 
 	const chargeLineItem = usagePriceToLineItem({
 		cusEnt: newCustomerEntitlement,
 		context: lineItemContext,
+		shouldProrateOverride: shouldApplyProration,
+		chargeImmediatelyOverride: chargeImmediately,
 	});
+
+	// Don't return line items if they sum to 0
+	if (
+		sumValues([refundLineItem.finalAmount, chargeLineItem.finalAmount]) === 0
+	) {
+		return [];
+	}
 
 	return [refundLineItem, chargeLineItem];
 };

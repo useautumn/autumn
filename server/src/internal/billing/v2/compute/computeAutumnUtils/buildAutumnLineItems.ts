@@ -3,30 +3,29 @@ import {
 	cusProductToLineItems,
 	type FullCusProduct,
 } from "@autumn/shared";
-
+import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
 
 export const buildAutumnLineItems = ({
 	ctx,
-	newCusProducts,
-	ongoingCustomerProduct,
-	billingCycleAnchor,
-	testClockFrozenTime,
+	newCustomerProducts,
+	deletedCustomerProduct,
+	billingContext,
 }: {
 	ctx: AutumnContext;
-	newCusProducts: FullCusProduct[];
-	ongoingCustomerProduct?: FullCusProduct;
-	billingCycleAnchor?: number;
-	testClockFrozenTime?: number;
+	newCustomerProducts: FullCusProduct[];
+	deletedCustomerProduct?: FullCusProduct;
+	billingContext: BillingContext;
 }) => {
-	const now = testClockFrozenTime ?? Date.now();
-	billingCycleAnchor = billingCycleAnchor ?? now;
+	// billingCycleAnchor = billingCycleAnchor ?? now;
+	const billingCycleAnchor = billingContext.billingCycleAnchorMs;
+	const now = billingContext.currentEpochMs;
 
 	const { org } = ctx;
 
-	const arrearLineItems = ongoingCustomerProduct
+	const arrearLineItems = deletedCustomerProduct
 		? cusProductToArrearLineItems({
-				cusProduct: ongoingCustomerProduct,
+				cusProduct: deletedCustomerProduct,
 				billingCycleAnchor: billingCycleAnchor!,
 				now,
 				org,
@@ -34,9 +33,9 @@ export const buildAutumnLineItems = ({
 		: [];
 
 	// Get line items for ongoing cus product
-	const ongoingLineItems = ongoingCustomerProduct
+	const deletedLineItems = deletedCustomerProduct
 		? cusProductToLineItems({
-				cusProduct: ongoingCustomerProduct,
+				cusProduct: deletedCustomerProduct,
 				now,
 				billingCycleAnchor: billingCycleAnchor!,
 				direction: "refund",
@@ -44,9 +43,9 @@ export const buildAutumnLineItems = ({
 			})
 		: [];
 
-	const newLineItems = newCusProducts.flatMap((newCusProduct) =>
+	const newLineItems = newCustomerProducts.flatMap((newCustomerProduct) =>
 		cusProductToLineItems({
-			cusProduct: newCusProduct,
+			cusProduct: newCustomerProduct,
 			now,
 			billingCycleAnchor: billingCycleAnchor!,
 			direction: "charge",
@@ -56,7 +55,7 @@ export const buildAutumnLineItems = ({
 
 	// All items
 	const allLineItems = [
-		...ongoingLineItems,
+		...deletedLineItems,
 		...arrearLineItems,
 		...newLineItems,
 	];

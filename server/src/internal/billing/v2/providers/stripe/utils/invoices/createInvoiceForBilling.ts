@@ -27,7 +27,9 @@ export const createInvoiceForBilling = async ({
 	invoiceMetadata?: StripeInvoiceMetadata;
 }): Promise<PayInvoiceResult> => {
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
-	const { addLineParams, invoiceMode } = stripeInvoiceAction;
+	const { addLineParams } = stripeInvoiceAction;
+	const invoiceMode = billingContext.invoiceMode;
+
 	const shouldFinalizeInvoice = invoiceMode
 		? invoiceMode.finalizeInvoice
 		: true;

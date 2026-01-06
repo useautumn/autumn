@@ -1,13 +1,32 @@
+import { InternalError } from "@autumn/shared";
+import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import { isStripeSubscriptionCanceled } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { StripeSubscriptionAction } from "@/internal/billing/v2/types/billingPlan";
+import type { BillingContext } from "@/internal/billing/v2/billingContext";
+import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
+import { removeStripeSubscriptionIdFromBillingPlan } from "@/internal/billing/v2/execute/removeStripeSubscriptionIdFromBillingPlan";
+import type {
+	BillingPlan,
+	StripeSubscriptionAction,
+} from "@/internal/billing/v2/types/billingPlan";
+import type { StripeBillingPlanResult } from "@/internal/billing/v2/types/stripeBillingPlanResult";
+import { upsertSubscriptionFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertSubscriptionFromBilling";
+import { insertMetadataFromBillingPlan } from "@/internal/metadata/utils/insertMetadataFromBillingPlan";
 
-export const executeStripeSubscriptionAction = async ({
+type InvoiceModeParams = {
+	collection_method?: "send_invoice";
+	days_until_due?: number;
+};
+
+const executeSubscriptionOperation = async ({
 	ctx,
 	subscriptionAction,
+	invoiceModeParams,
 }: {
 	ctx: AutumnContext;
 	subscriptionAction: StripeSubscriptionAction;
+	invoiceModeParams: InvoiceModeParams;
 }) => {
 	const { org, env } = ctx;
 	const stripeClient = createStripeCli({ org, env });
@@ -16,13 +35,118 @@ export const executeStripeSubscriptionAction = async ({
 		case "update":
 			return await stripeClient.subscriptions.update(
 				subscriptionAction.stripeSubscriptionId,
-				subscriptionAction.params,
+				{
+					...subscriptionAction.params,
+					...invoiceModeParams,
+					expand: ["latest_invoice"],
+				},
 			);
 		case "create":
-			return await stripeClient.subscriptions.create(subscriptionAction.params);
+			return await stripeClient.subscriptions.create({
+				...subscriptionAction.params,
+				...invoiceModeParams,
+				expand: ["latest_invoice"],
+			});
 		case "cancel":
 			return await stripeClient.subscriptions.cancel(
 				subscriptionAction.stripeSubscriptionId,
+				{
+					expand: ["latest_invoice"],
+				},
 			);
+
+		default:
+			throw new InternalError({
+				message: "Invalid subscription action type",
+			});
 	}
+};
+
+export const executeStripeSubscriptionAction = async ({
+	ctx,
+	billingPlan,
+	billingContext,
+}: {
+	ctx: AutumnContext;
+	billingPlan: BillingPlan;
+	billingContext: BillingContext;
+}): Promise<StripeBillingPlanResult> => {
+	// 1. Perform stripe subscription operation
+	const { subscriptionAction } = billingPlan.stripe;
+
+	if (!subscriptionAction) return {};
+
+	// Invoice mode:
+	const invoiceMode = billingContext.invoiceMode;
+	const invoiceModeParams = invoiceMode
+		? {
+				collection_method: "send_invoice" as const,
+				days_until_due: 30,
+			}
+		: {};
+
+	let stripeSubscription: Stripe.Subscription | undefined =
+		await executeSubscriptionOperation({
+			ctx,
+			subscriptionAction,
+			invoiceModeParams,
+		});
+
+	const latestStripeInvoice =
+		subscriptionAction.type === "create"
+			? (stripeSubscription.latest_invoice as Stripe.Invoice)
+			: undefined;
+
+	// Defer billing plan
+	const enableProductAfterInvoice =
+		invoiceMode?.enableProductImmediately === false;
+
+	const invoiceActionRequired =
+		subscriptionAction.type === "create" &&
+		latestStripeInvoice?.status === "open";
+
+	const deferBillingPlan = enableProductAfterInvoice || invoiceActionRequired;
+
+	if (deferBillingPlan) {
+		await insertMetadataFromBillingPlan({
+			ctx,
+			billingPlan,
+			billingContext,
+			enableProductAfterInvoice,
+			invoiceActionRequired,
+			stripeInvoice: latestStripeInvoice,
+		});
+
+		return {
+			stripeInvoice: latestStripeInvoice,
+			stripeSubscription,
+			deferred: true,
+		};
+	}
+
+	addStripeSubscriptionIdToBillingPlan({
+		autumnBillingPlan: billingPlan.autumn,
+		stripeSubscriptionId: stripeSubscription.id,
+	});
+
+	// Add subscription to DB
+	await upsertSubscriptionFromBilling({
+		ctx,
+		stripeSubscription,
+	});
+
+	// If the stripe subscription is canceled, remove the subscription from the billing plan
+	if (isStripeSubscriptionCanceled(stripeSubscription)) {
+		removeStripeSubscriptionIdFromBillingPlan({
+			autumnBillingPlan: billingPlan.autumn,
+			stripeSubscriptionId: stripeSubscription.id,
+		});
+
+		stripeSubscription = undefined;
+	}
+
+	return {
+		stripeSubscription,
+		stripeInvoice: latestStripeInvoice,
+	};
 };

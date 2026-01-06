@@ -5,7 +5,7 @@ import {
 	priceToLineAmount,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import type { UpdateSubscriptionContext } from "../../fetch/updateSubscriptionContextSchema";
+import type { UpdateSubscriptionBillingContext } from "../../../billingContext";
 import type { calculateQuantityDifferences } from "./calculateQuantityDifferences";
 import type { resolvePriceForQuantityUpdate } from "./resolvePriceForQuantityUpdate";
 
@@ -31,7 +31,7 @@ export const calculateProrationAmount = ({
 	quantityDifferences,
 	billingPeriod,
 }: {
-	updateSubscriptionContext: UpdateSubscriptionContext;
+	updateSubscriptionContext: UpdateSubscriptionBillingContext;
 	previousOptions: FeatureOptions;
 	updatedOptions: FeatureOptions;
 	priceConfiguration: ReturnType<typeof resolvePriceForQuantityUpdate>;

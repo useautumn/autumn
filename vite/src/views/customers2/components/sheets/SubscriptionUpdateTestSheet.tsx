@@ -7,23 +7,32 @@ import {
 	getProductItemDisplay,
 	type ProductItem,
 	type ProductV2,
-	type SubscriptionUpdateV0Params,
 	stripeToAtmnAmount,
+	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import { Check, Copy, PencilSimple } from "@phosphor-icons/react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import { DateInputUnix } from "@/components/general/DateInputUnix";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
+import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { pushPage } from "@/utils/genUtils";
+import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 
 /**
@@ -41,6 +50,7 @@ interface PrepaidEditorProps {
 	prepaidItems: Array<{
 		feature_id?: string | null;
 		feature?: { internal_id: string } | undefined;
+		billing_units?: number | null;
 	}>;
 	prepaidOptions: Record<string, number>;
 	onPrepaidChange: (featureId: string, quantity: number) => void;
@@ -61,15 +71,18 @@ function PrepaidEditor({
 			<div className="px-4 py-3 space-y-2">
 				{prepaidItems.map((item) => {
 					const featureId = item.feature_id ?? item.feature?.internal_id ?? "";
+					const billingUnits = item.billing_units ?? 1;
 					const inputId = `prepaid-${featureId}`;
 					return (
 						<div key={featureId} className="flex items-center gap-3">
-							<label
-								htmlFor={inputId}
-								className="text-sm text-t-secondary flex-1"
-							>
-								{featureId}
-							</label>
+							<div className="flex-1">
+								<label htmlFor={inputId} className="text-sm text-t-secondary">
+									{featureId}
+								</label>
+								<span className="text-xs text-t-secondary ml-2">
+									(billing_units: {billingUnits})
+								</span>
+							</div>
 							<input
 								id={inputId}
 								type="number"
@@ -157,6 +170,14 @@ interface BillingPlanData {
 					amount?: number;
 				}>;
 			};
+		};
+		invoiceItemsAction?: {
+			createInvoiceItems?: Array<{
+				description?: string;
+				amount?: number;
+				customer?: string;
+				subscription?: string;
+			}>;
 		};
 	};
 }
@@ -626,47 +647,57 @@ function PreviewResult({ data, isLoading, error }: PreviewResultProps) {
 							<h4 className="text-xs font-semibold text-purple-400 mb-1">
 								🧾 Stripe Invoice Action
 							</h4>
+
+							{/* Immediate Line Items (addLineParams) */}
 							{billingPlan.stripe.invoiceAction.addLineParams?.lines &&
 							billingPlan.stripe.invoiceAction.addLineParams.lines.length >
 								0 ? (
-								<div className="space-y-1">
-									{billingPlan.stripe.invoiceAction.addLineParams.lines.map(
-										(
-											line: {
-												description?: string;
-												amount?: number;
-											},
-											index: number,
-										) => {
-											const amount = line.amount
-												? stripeToAtmnAmount({
-														amount: line.amount,
-														currency: "usd",
-													})
-												: 0;
-											return (
-												<div
-													key={index}
-													className="flex justify-between text-xs"
-												>
-													<span className="text-t-primary">
-														{line.description || "Line item"}
-													</span>
-													<span
-														className={
-															amount >= 0 ? "text-green-400" : "text-red-400"
-														}
+								<div className="mb-2">
+									<div className="text-xs text-t-secondary font-medium mb-1">
+										Immediate charges:
+									</div>
+									<div className="space-y-1 pl-2 border-l border-purple-500/30">
+										{billingPlan.stripe.invoiceAction.addLineParams.lines.map(
+											(
+												line: {
+													description?: string;
+													amount?: number;
+												},
+												index: number,
+											) => {
+												const amount = line.amount
+													? stripeToAtmnAmount({
+															amount: line.amount,
+															currency: "usd",
+														})
+													: 0;
+												return (
+													<div
+														key={index}
+														className="flex justify-between text-xs"
 													>
-														${amount.toFixed(2)}
-													</span>
-												</div>
-											);
-										},
-									)}
+														<span className="text-t-primary">
+															{line.description || "Line item"}
+														</span>
+														<span
+															className={
+																amount >= 0 ? "text-green-400" : "text-red-400"
+															}
+														>
+															${amount.toFixed(2)}
+														</span>
+													</div>
+												);
+											},
+										)}
+									</div>
 								</div>
 							) : (
-								<div className="text-xs text-t-secondary">No line items</div>
+								<div className="text-xs text-t-secondary mb-2">
+									No immediate line items
+								</div>
 							)}
+
 							<details className="mt-1">
 								<summary className="text-xs cursor-pointer text-t-secondary hover:text-t-primary">
 									View raw params
@@ -678,10 +709,71 @@ function PreviewResult({ data, isLoading, error }: PreviewResultProps) {
 						</div>
 					) : null}
 
+					{/* Stripe Invoice Items Action - Deferred charges added to next cycle */}
+					{billingPlan.stripe?.invoiceItemsAction?.createInvoiceItems &&
+					billingPlan.stripe.invoiceItemsAction.createInvoiceItems.length >
+						0 ? (
+						<div className="px-4 py-3 border-l-2 border-l-amber-500">
+							<h4 className="text-xs font-semibold text-amber-400 mb-1">
+								⏱️ Stripe Invoice Items Action (Added to next cycle)
+							</h4>
+							<div className="space-y-1 pl-2 border-l border-amber-500/30">
+								{billingPlan.stripe.invoiceItemsAction.createInvoiceItems.map(
+									(
+										item: {
+											description?: string;
+											amount?: number;
+											customer?: string;
+											subscription?: string;
+										},
+										index: number,
+									) => {
+										const amount = item.amount
+											? stripeToAtmnAmount({
+													amount: item.amount,
+													currency: "usd",
+												})
+											: 0;
+										return (
+											<div key={index} className="flex justify-between text-xs">
+												<span className="text-t-primary">
+													{item.description || "Invoice item"}
+												</span>
+												<span
+													className={
+														amount >= 0 ? "text-amber-400" : "text-red-400"
+													}
+												>
+													${amount.toFixed(2)}
+												</span>
+											</div>
+										);
+									},
+								)}
+							</div>
+							<div className="text-xs text-t-secondary mt-1 italic">
+								These items will appear on the customer's next invoice
+							</div>
+							<details className="mt-1">
+								<summary className="text-xs cursor-pointer text-t-secondary hover:text-t-primary">
+									View raw params
+								</summary>
+								<pre className="text-xs bg-t-50 p-2 rounded mt-1 overflow-auto max-h-32">
+									{JSON.stringify(
+										billingPlan.stripe.invoiceItemsAction,
+										null,
+										2,
+									)}
+								</pre>
+							</details>
+						</div>
+					) : null}
+
 					{/* Empty Stripe section indicator */}
 					{billingPlan.stripe &&
 					!billingPlan.stripe.subscriptionAction &&
-					!billingPlan.stripe.invoiceAction ? (
+					!billingPlan.stripe.invoiceAction &&
+					!billingPlan.stripe.invoiceItemsAction ? (
 						<div className="px-4 py-2 text-xs text-t-secondary">
 							No Stripe actions required
 						</div>
@@ -740,7 +832,7 @@ function useSubscriptionUpdatePreview({
 	body,
 	enabled,
 }: {
-	body: SubscriptionUpdateV0Params | null;
+	body: UpdateSubscriptionV0Params | null;
 	enabled: boolean;
 }) {
 	const axiosInstance = useAxiosInstance();
@@ -780,16 +872,63 @@ function useSubscriptionUpdatePreview({
 	};
 }
 
-function useSubscriptionUpdate() {
+interface SubscriptionUpdateParams {
+	body: UpdateSubscriptionV0Params;
+	useInvoice?: boolean;
+	enableProductImmediately?: boolean;
+}
+
+function useSubscriptionUpdate({
+	customerId,
+	onInvoiceCreated,
+}: {
+	customerId?: string;
+	onInvoiceCreated?: (invoiceLink: string) => void;
+}) {
 	const axiosInstance = useAxiosInstance();
+	const queryClient = useQueryClient();
+	const { closeSheet } = useSheetStore();
 
 	return useMutation({
-		mutationFn: async (body: SubscriptionUpdateV0Params) => {
+		mutationFn: async ({
+			body,
+			useInvoice,
+			enableProductImmediately,
+		}: SubscriptionUpdateParams) => {
+			const requestBody = {
+				...body,
+				invoice: useInvoice,
+				enable_product_immediately: useInvoice
+					? enableProductImmediately
+					: undefined,
+				finalize_invoice: useInvoice ? false : undefined,
+				force_checkout:
+					useInvoice && enableProductImmediately === false ? true : undefined,
+			};
+
 			const response = await axiosInstance.post(
 				"/v1/subscriptions/update",
-				body,
+				requestBody,
 			);
 			return response.data;
+		},
+		onSuccess: (data) => {
+			if (data?.invoice) {
+				onInvoiceCreated?.(data.invoice);
+				toast.success("Invoice created successfully");
+			} else if (data?.checkout_url) {
+				toast.success("Redirecting to checkout...");
+				window.open(data.checkout_url, "_blank");
+			} else {
+				toast.success("Subscription updated successfully");
+			}
+			closeSheet();
+			if (customerId) {
+				queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
+			}
+		},
+		onError: (error) => {
+			console.error("Update failed:", error);
 		},
 	});
 }
@@ -807,6 +946,10 @@ function SheetContent({
 	const { customer, features } = useCusQuery();
 	const customerId = customer?.id ?? customer?.internal_id;
 	const entityId = cusProduct?.entity_id ?? undefined;
+
+	// Stripe + invoice handling
+	const { stripeAccount } = useOrgStripeQuery();
+	const env = useEnv();
 
 	const product = customizedProduct?.id ? customizedProduct : productV2;
 	const { prepaidItems } = usePrepaidItems({ product });
@@ -874,23 +1017,30 @@ function SheetContent({
 	};
 
 	// Build the request body
-	const requestBody = useMemo<SubscriptionUpdateV0Params | null>(() => {
+	const requestBody = useMemo<UpdateSubscriptionV0Params | null>(() => {
 		if (!customerId) return null;
 
-		const body: SubscriptionUpdateV0Params = {
+		const body: UpdateSubscriptionV0Params = {
 			customer_id: customerId,
 			product_id: product?.id,
 			entity_id: entityId,
 			customer_product_id: cusProduct.id ?? cusProduct.internal_product_id,
 		};
 
-		// Add options if there are prepaid items with quantities set
+		// Add options only if they have changed from initial values
 		if (prepaidItems.length > 0) {
 			const options = prepaidItems
 				.map((item) => {
 					const featureId = item.feature_id ?? item.feature?.internal_id ?? "";
 					const quantity = prepaidOptions[featureId];
-					if (quantity !== undefined && quantity !== null && featureId) {
+					const initialQuantity = initialPrepaidOptions[featureId];
+					// Only include if changed from initial value
+					if (
+						quantity !== undefined &&
+						quantity !== null &&
+						featureId &&
+						quantity !== initialQuantity
+					) {
 						return { feature_id: featureId, quantity };
 					}
 					return null;
@@ -935,6 +1085,7 @@ function SheetContent({
 		cusProduct.internal_product_id,
 		prepaidItems,
 		prepaidOptions,
+		initialPrepaidOptions,
 		customizedProduct?.items,
 		customizedProduct?.free_trial,
 		planCustomStartDate,
@@ -948,12 +1099,35 @@ function SheetContent({
 		enabled: !!requestBody,
 	});
 
-	// Update mutation
-	const updateMutation = useSubscriptionUpdate();
+	// Update mutation with invoice handling
+	const updateMutation = useSubscriptionUpdate({
+		customerId,
+		onInvoiceCreated: (stripeInvoice) => {
+			const invoiceLink = getStripeInvoiceLink({
+				stripeInvoice,
+				env,
+				accountId: stripeAccount?.id,
+			});
+			window.open(invoiceLink, "_blank");
+		},
+	});
 
 	const handleConfirm = () => {
 		if (!requestBody) return;
-		updateMutation.mutate(requestBody);
+		updateMutation.mutate({ body: requestBody, useInvoice: false });
+	};
+
+	const handleInvoiceUpdate = ({
+		enableProductImmediately,
+	}: {
+		enableProductImmediately: boolean;
+	}) => {
+		if (!requestBody) return;
+		updateMutation.mutate({
+			body: requestBody,
+			useInvoice: true,
+			enableProductImmediately,
+		});
 	};
 
 	return (
@@ -1181,16 +1355,64 @@ function SheetContent({
 			</div>
 
 			{/* Footer Actions */}
-			<div className="p-4 border-t flex gap-3">
+			<div className="p-4 border-t flex flex-col gap-2">
+				{/* Send an Invoice Button with Dropdown */}
+				<Popover>
+					<PopoverTrigger asChild>
+						<Button
+							variant="secondary"
+							className="w-full"
+							disabled={!requestBody || updateMutation.isPending}
+						>
+							Send an Invoice
+						</Button>
+					</PopoverTrigger>
+					<PopoverContent className="w-80 p-0" align="start">
+						<div className="flex flex-col">
+							<button
+								type="button"
+								onClick={() =>
+									handleInvoiceUpdate({ enableProductImmediately: true })
+								}
+								className="px-4 py-3 text-left text-sm hover:bg-accent"
+							>
+								<div className="font-medium">Enable plan immediately</div>
+								<div className="text-xs text-muted-foreground">
+									Enable the plan immediately and redirect to Stripe to finalize
+									the invoice
+								</div>
+							</button>
+							<button
+								type="button"
+								onClick={() =>
+									handleInvoiceUpdate({ enableProductImmediately: false })
+								}
+								className="px-4 py-3 text-left text-sm hover:bg-accent border-t"
+							>
+								<div className="font-medium">Enable plan after payment</div>
+								<div className="text-xs text-muted-foreground">
+									Generate an invoice link for the customer. The plan will be
+									enabled after they pay the invoice
+								</div>
+							</button>
+						</div>
+					</PopoverContent>
+				</Popover>
+
+				{/* Confirm Update Button */}
 				<Button
 					variant="primary"
+					className="w-full"
 					onClick={handleConfirm}
 					disabled={!requestBody || updateMutation.isPending}
 				>
 					{updateMutation.isPending ? "Updating..." : "Confirm Update"}
 				</Button>
+
+				{/* Refresh Preview Button */}
 				<Button
 					variant="secondary"
+					className="w-full"
 					onClick={() => previewQuery.refetch()}
 					disabled={!requestBody || previewQuery.isLoading}
 				>

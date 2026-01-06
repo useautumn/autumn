@@ -6,7 +6,11 @@ import {
 	OnDecrease,
 	OnIncrease,
 } from "@models/productV2Models/productItemModels/productItemEnums";
-import { shouldBillNow, shouldProrate } from "@utils/billingUtils";
+import {
+	shouldBillNow,
+	shouldProrate,
+	shouldSkipLineItems,
+} from "@utils/billingUtils";
 import { priceToEnt } from "@utils/productUtils/convertProductUtils";
 
 export const priceToFeature = ({
@@ -43,20 +47,17 @@ export const priceToProrationConfig = ({
 }): {
 	prorationBehaviorConfig: OnIncrease | OnDecrease;
 	shouldApplyProration: boolean;
-	shouldFinalizeInvoiceImmediately: boolean;
+	chargeImmediately: boolean;
+	skipLineItems: boolean;
 } => {
 	const prorationBehaviorConfig = isUpgrade
 		? (price.proration_config?.on_increase ?? OnIncrease.ProrateImmediately)
 		: (price.proration_config?.on_decrease ?? OnDecrease.ProrateImmediately);
 
-	const shouldApplyProration = shouldProrate(prorationBehaviorConfig);
-	const shouldFinalizeInvoiceImmediately = shouldBillNow(
-		prorationBehaviorConfig,
-	);
-
 	return {
 		prorationBehaviorConfig,
-		shouldApplyProration,
-		shouldFinalizeInvoiceImmediately,
+		shouldApplyProration: shouldProrate(prorationBehaviorConfig),
+		chargeImmediately: shouldBillNow(prorationBehaviorConfig),
+		skipLineItems: shouldSkipLineItems(prorationBehaviorConfig),
 	};
 };
