@@ -69,7 +69,7 @@ export function SelectFeatureSheet({
 		const newItem = getDefaultItem({ feature: selectedFeature });
 
 		// Add the new item to the product
-		const newItems = [...(product.items), newItem];
+		const newItems = [...product.items, newItem];
 		const updatedProduct = { ...product, items: newItems };
 		setProduct(updatedProduct);
 
@@ -102,7 +102,7 @@ export function SelectFeatureSheet({
 								type="button"
 								className={cn(
 									"flex items-center justify-between w-full rounded-lg border bg-transparent text-sm outline-none h-input input-base input-shadow-default input-state-open p-2",
-									selectOpen && "ring-2 ring-ring ring-offset-2",
+									// selectOpen && "ring-2 ring-ring ring-offset-2",
 								)}
 							>
 								<span className="text-t4">Select a feature</span>

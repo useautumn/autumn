@@ -45,6 +45,7 @@ export function getSnippet({
 			snippet,
 			productId: dynamicParams.productId,
 			featureId: dynamicParams.featureId,
+			isBoolean: dynamicParams.isBoolean,
 		});
 	}
 

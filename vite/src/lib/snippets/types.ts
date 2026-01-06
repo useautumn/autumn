@@ -42,6 +42,7 @@ export interface Snippet {
 export interface DynamicSnippetParams {
 	productId?: string;
 	featureId?: string;
+	isBoolean?: boolean;
 }
 
 export interface GetSnippetParams {

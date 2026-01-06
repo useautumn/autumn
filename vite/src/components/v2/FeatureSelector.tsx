@@ -1,12 +1,14 @@
 import type { Feature } from "@autumn/shared";
+import { CaretDownIcon } from "@phosphor-icons/react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { getFeatureIcon } from "@/views/products/features/utils/getFeatureIcon";
 import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "./selects/Select";
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "./dropdowns/DropdownMenu";
 
 interface FeatureSelectorProps {
 	features: Feature[];
@@ -21,25 +23,60 @@ export function FeatureSelector({
 	onFeatureChange,
 	className,
 }: FeatureSelectorProps) {
+	const [open, setOpen] = useState(false);
 	const selectedFeature = features.find((f) => f.id === selectedFeatureId);
 
+	const handleSelect = (featureId: string) => {
+		onFeatureChange(featureId);
+		setOpen(false);
+	};
+
 	return (
-		<Select value={selectedFeatureId ?? ""} onValueChange={onFeatureChange}>
-			<SelectTrigger className={cn("min-w-32 h-6!", className)}>
-				<SelectValue placeholder="Select feature">
-					{selectedFeature && (
-						<span className="font-mono text-xs">{selectedFeature.id}</span>
+		<DropdownMenu open={open} onOpenChange={setOpen}>
+			<DropdownMenuTrigger asChild>
+				<button
+					type="button"
+					className={cn(
+						"flex items-center justify-between rounded-lg border bg-transparent text-sm outline-none input-base input-shadow-default input-state-open p-2 w-40 h-6!",
 					)}
-				</SelectValue>
-			</SelectTrigger>
-			<SelectContent>
-				{features.map((feature) => (
-					<SelectItem key={feature.id} value={feature.id}>
-						<span className="font-mono text-xs">{feature.id}</span>
-						<span className="text-t3 ml-2">{feature.name}</span>
-					</SelectItem>
-				))}
-			</SelectContent>
-		</Select>
+				>
+					{selectedFeature ? (
+						<div className="flex items-center gap-2">
+							<div className="shrink-0">
+								{getFeatureIcon({ feature: selectedFeature })}
+							</div>
+							<span className="text-t2 truncate w-26 text-left">
+								{selectedFeature.name}
+							</span>
+						</div>
+					) : (
+						<span className="text-t4 text-xs">Select feature</span>
+					)}
+					<CaretDownIcon className="size-3 opacity-50" />
+				</button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align="start">
+				<div className="max-h-60 overflow-y-auto">
+					{features.length === 0 ? (
+						<div className="py-4 text-center text-sm text-t4">
+							No features found.
+						</div>
+					) : (
+						features.map((feature) => (
+							<DropdownMenuItem
+								key={feature.id}
+								onClick={() => handleSelect(feature.id)}
+								className="py-2 px-2.5"
+							>
+								<div className="flex items-center gap-2">
+									<div className="shrink-0">{getFeatureIcon({ feature })}</div>
+									<span className="truncate">{feature.name}</span>
+								</div>
+							</DropdownMenuItem>
+						))
+					)}
+				</div>
+			</DropdownMenuContent>
+		</DropdownMenu>
 	);
 }

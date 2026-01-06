@@ -1,3 +1,4 @@
+import { type CreditSystemConfig, FeatureType } from "@autumn/shared";
 import { Code } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
@@ -58,21 +59,45 @@ export function CodeSheet({ stepId, title, description }: CodeSheetProps) {
 
 	const showStackSelector = stepNeedsStackConfig({ stepId, sdk: selectedSDK });
 
+	// Get the selected feature and determine the feature ID for snippets
+	const selectedFeature = features.find((f) => f.id === selectedFeatureId);
+	const isBoolean = selectedFeature?.type === FeatureType.Boolean;
+
+	// For credit systems, use the first underlying feature ID from the schema
+	const getSnippetFeatureId = () => {
+		if (!selectedFeature || !selectedFeatureId) return undefined;
+
+		if (selectedFeature.type === FeatureType.CreditSystem) {
+			const config = selectedFeature.config as CreditSystemConfig | undefined;
+			const firstSchemaItem = config?.schema?.[0];
+			return firstSchemaItem?.metered_feature_id ?? selectedFeatureId;
+		}
+
+		return selectedFeatureId;
+	};
+	const snippetFeatureId = getSnippetFeatureId();
+
 	// Build dynamic params
 	const dynamicParams = useMemo(
 		() => ({
 			productId: selectedProductId,
-			featureId: selectedFeatureId ?? undefined,
+			featureId: snippetFeatureId,
+			isBoolean,
 		}),
-		[selectedProductId, selectedFeatureId],
+		[selectedProductId, snippetFeatureId, isBoolean],
 	);
 
-	const snippets = getSnippetsForStep({
+	const allSnippets = getSnippetsForStep({
 		stepId,
 		sdk: selectedSDK,
 		stackConfig: showStackSelector ? stackConfig : undefined,
 		dynamicParams,
 	});
+
+	// Filter out "track" snippet for boolean features
+	const snippets = isBoolean
+		? allSnippets.filter((s) => s.id !== "track")
+		: allSnippets;
 
 	const renderSnippetStep = (snippet: (typeof snippets)[0], index: number) => {
 		const stepNumber = index + 1;
