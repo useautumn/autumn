@@ -1,30 +1,22 @@
-import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import {
-	compareStatus,
-	navigateTo,
-	notNullish,
-	pushPage,
-} from "@/utils/genUtils";
-import { CusProduct, CusProductStatus, FullCusProduct } from "@autumn/shared";
-import { useNavigate } from "react-router";
-import { useCustomerContext } from "../CustomerContext";
-
-import { Button } from "@/components/ui/button";
+import { CusProductStatus, type FullCusProduct } from "@autumn/shared";
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
-
+import { useNavigate } from "react-router";
 import { AdminHover } from "@/components/general/AdminHover";
 import { Item, Row } from "@/components/general/TableGrid";
-import { cn } from "@/lib/utils";
-
-import { CusProductStatusItem } from "../customer-product-list/CusProductStatus";
-import { CusProductEntityItem } from "../components/CusProductEntityItem";
-import { CusProductToolbar } from "./CusProductToolbar";
-import { MultiAttachDialog } from "../product/multi-attach/MultiAttachDialog";
-import { useCusQuery } from "../hooks/useCusQuery";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { cn } from "@/lib/utils";
+import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
+import { compareStatus, notNullish, pushPage } from "@/utils/genUtils";
 import { getVersionCounts } from "@/utils/productUtils";
+import { useCustomerContext } from "../CustomerContext";
+import { CusProductEntityItem } from "../components/CusProductEntityItem";
+import { CusProductStatusItem } from "../customer-product-list/CusProductStatus";
+import { useCusQuery } from "../hooks/useCusQuery";
+import { MultiAttachDialog } from "../product/multi-attach/MultiAttachDialog";
 import AttachProductDropdown from "./AttachProductDropdown";
+import { CusProductToolbar } from "./CusProductToolbar";
 
 export const CustomerProductList = () => {
 	const navigate = useNavigate();
