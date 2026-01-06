@@ -40,6 +40,9 @@ export const CustomerEntitlementSchema = z.object({
 	next_reset_at: z.number().nullable(),
 	adjustment: z.number().nullish().default(0),
 
+	// Expiry for loose entitlements (entitlements without reset intervals)
+	expires_at: z.number().nullable(),
+
 	// Group by fields
 	entities: z.record(z.string(), EntityBalanceSchema).nullish(),
 });

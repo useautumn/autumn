@@ -11,6 +11,7 @@ export const CreateBalanceSchema = z.object({
 			interval_count: z.number().optional(),
 		})
 		.optional(),
+	expires_at: z.number().optional(), // Unix timestamp in milliseconds
 	customer_id: z.string(),
 	entity_id: z.string().optional(),
 }).refine((data) => {
@@ -27,7 +28,7 @@ export const ValidateCreateBalanceParamsSchema = CreateBalanceSchema.extend({
 	}
 
 	if (data.feature.type === FeatureType.Boolean) {
-		if (data.granted_balance || data.unlimited || data.reset?.interval) {
+		if (data.granted_balance || data.unlimited || data.reset?.interval || data.expires_at) {
 			return false;
 		}
 	}
@@ -45,6 +46,14 @@ export const ValidateCreateBalanceParamsSchema = CreateBalanceSchema.extend({
 	}
 
 	return true;
+}).refine((data) => {
+	// expires_at and reset interval are mutually exclusive (for all non-boolean feature types)
+	if (data.expires_at && data.reset?.interval) {
+		return false;
+	}
+	return true;
+}, {
+	message: "expires_at and reset interval are mutually exclusive - a balance cannot have both",
 });
 
 export type CreateBalanceParams = z.infer<typeof CreateBalanceSchema>;
