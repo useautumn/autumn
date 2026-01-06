@@ -49,11 +49,13 @@ export const buildStripeSubscriptionUpdateAction = ({
 			: cancelAtPeriodEnd,
 	};
 
-	if (
-		params.items === undefined &&
-		params.trial_end === undefined &&
-		params.cancel_at_period_end === undefined
-	) {
+	const hasNoUpdates = [
+		params.items,
+		params.trial_end,
+		params.cancel_at_period_end,
+	].every((field) => field === undefined);
+
+	if (hasNoUpdates) {
 		return undefined;
 	}
 

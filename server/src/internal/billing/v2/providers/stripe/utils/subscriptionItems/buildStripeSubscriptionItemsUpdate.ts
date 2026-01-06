@@ -28,7 +28,7 @@ const customerProductsToRecurringStripeItemSpecs = ({
 	billingContext: BillingContext;
 	customerProducts: FullCusProduct[];
 }): StripeItemSpec[] => {
-	const stripeItemSpecs: StripeItemSpec[] = [];
+	const stripeItemSpecsByPriceId = new Map<string, StripeItemSpec>();
 
 	for (const customerProduct of customerProducts) {
 		const { recurringItems } = customerProductToStripeItemSpecs({
@@ -38,21 +38,24 @@ const customerProductsToRecurringStripeItemSpecs = ({
 		});
 
 		for (const recurringItem of recurringItems) {
-			// 1. If price ID is already in the array, update the quantity
-			const existingItem = stripeItemSpecs.find(
-				(item) => item.stripePriceId === recurringItem.stripePriceId,
+			const existingItem = stripeItemSpecsByPriceId.get(
+				recurringItem.stripePriceId,
 			);
 
+			// If price ID already exists, update the quantity
 			if (existingItem) {
 				existingItem.quantity =
 					(existingItem.quantity ?? 0) + (recurringItem.quantity ?? 0);
 			} else {
-				stripeItemSpecs.push(recurringItem);
+				stripeItemSpecsByPriceId.set(
+					recurringItem.stripePriceId,
+					recurringItem,
+				);
 			}
 		}
 	}
 
-	return stripeItemSpecs;
+	return Array.from(stripeItemSpecsByPriceId.values());
 };
 
 /**
