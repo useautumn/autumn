@@ -65,16 +65,28 @@ function BarCell({
 		entityId,
 	});
 
+	// Determine whether to show reset or expiry info
+	const hasReset = ent.next_reset_at != null;
+	const hasExpiry = ent.expires_at != null;
+
 	return (
 		<div className="flex gap-3 items-center">
-			<span
-				className={cn(
-					"text-t3 text-tiny flex justify-center !px-1 bg-muted rounded-md min-w-30",
-					ent.next_reset_at ? "opacity-100" : "opacity-0",
-				)}
-			>
-				Resets {formatUnixToDateTimeString(ent.next_reset_at)}
-			</span>
+			{hasExpiry ? (
+				<span
+					className="text-t3 text-tiny flex justify-center !px-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-md min-w-30"
+				>
+					Expires {formatUnixToDateTimeString(ent.expires_at)}
+				</span>
+			) : (
+				<span
+					className={cn(
+						"text-t3 text-tiny flex justify-center !px-1 bg-muted rounded-md min-w-30",
+						hasReset ? "opacity-100" : "opacity-0",
+					)}
+				>
+					Resets {formatUnixToDateTimeString(ent.next_reset_at)}
+				</span>
+			)}
 			<div
 				className={cn(
 					"w-full max-w-50 flex justify-center pr-2 h-full items-center min-w-16",

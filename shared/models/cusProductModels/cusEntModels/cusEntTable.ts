@@ -39,6 +39,9 @@ export const customerEntitlements = pgTable(
 		// Need to work on free balance...
 		entities: jsonb("entities").$type<Record<string, EntityBalance>>(),
 
+		// Expiry for loose entitlements (entitlements without reset intervals)
+		expires_at: numeric({ mode: "number" }),
+
 		// Optional...
 		customer_id: text("customer_id"),
 		feature_id: text("feature_id"),
