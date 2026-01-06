@@ -50,7 +50,10 @@ export const executeAutumnBillingPlan = async ({
 		await CusProductService.update({
 			db,
 			cusProductId: updateCustomerProduct.id,
-			updates: { options: updateCustomerProduct.options },
+			updates: {
+				options: updateCustomerProduct.options,
+				status: updateCustomerProduct.status,
+			},
 		});
 	}
 

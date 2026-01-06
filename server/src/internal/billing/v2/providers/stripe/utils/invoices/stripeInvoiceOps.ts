@@ -1,4 +1,6 @@
 import type Stripe from "stripe";
+import { createStripeCli } from "@/external/connect/createStripeCli";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
 // ============================================
 // Create Invoice
@@ -83,4 +85,23 @@ export const finalizeStripeInvoice = async ({
 	});
 
 	return invoice;
+};
+
+// ============================================
+// Create Invoice Items
+// ============================================
+
+export type CreateStripeInvoiceItemsParams = {
+	ctx: AutumnContext;
+	invoiceItems: Stripe.InvoiceItemCreateParams[];
+};
+
+export const createStripeInvoiceItems = async ({
+	ctx,
+	invoiceItems,
+}: CreateStripeInvoiceItemsParams): Promise<void> => {
+	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+	for (const item of invoiceItems) {
+		await stripeCli.invoiceItems.create(item);
+	}
 };

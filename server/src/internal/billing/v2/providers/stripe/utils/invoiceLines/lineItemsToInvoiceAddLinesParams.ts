@@ -4,7 +4,7 @@ import type Stripe from "stripe";
 /**
  * Converts a single LineItem to Stripe.InvoiceAddLinesParams.Line
  */
-export const lineItemToStripeLine = ({
+const toStripeAddLineParams = ({
 	lineItem,
 }: {
 	lineItem: LineItem;
@@ -27,10 +27,10 @@ export const lineItemToStripeLine = ({
 /**
  * Converts an array of LineItems to Stripe.InvoiceAddLinesParams.Line[]
  */
-export const lineItemsToStripeLines = ({
+export const lineItemsToInvoiceAddLinesParams = ({
 	lineItems,
 }: {
 	lineItems: LineItem[];
 }): Stripe.InvoiceAddLinesParams.Line[] => {
-	return lineItems.map((lineItem) => lineItemToStripeLine({ lineItem }));
+	return lineItems.map((lineItem) => toStripeAddLineParams({ lineItem }));
 };

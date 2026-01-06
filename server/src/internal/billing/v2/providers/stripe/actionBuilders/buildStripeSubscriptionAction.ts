@@ -1,9 +1,9 @@
 import type { FullCusProduct } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
+import type { BillingContext } from "@server/internal/billing/v2/billingContext";
 import { buildStripeSubscriptionItemsUpdate } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionItems/buildStripeSubscriptionItemsUpdate";
 import { buildStripeSubscriptionCreateAction } from "@server/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionCreateAction";
 import { buildStripeSubscriptionUpdateAction } from "@server/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionUpdateAction";
-import type { UpdateSubscriptionContext } from "@server/internal/billing/v2/subscriptionUpdate/fetch/updateSubscriptionContextSchema";
 import type {
 	FreeTrialPlan,
 	StripeSubscriptionAction,
@@ -13,13 +13,13 @@ import type {
 export const buildStripeSubscriptionAction = ({
 	ctx,
 	billingContext,
-	updatedCustomerProducts,
+	finalCustomerProducts,
 	stripeSubscriptionScheduleAction,
 	freeTrialPlan,
 }: {
 	ctx: AutumnContext;
-	billingContext: UpdateSubscriptionContext;
-	updatedCustomerProducts: FullCusProduct[];
+	billingContext: BillingContext;
+	finalCustomerProducts: FullCusProduct[];
 	stripeSubscriptionScheduleAction?: StripeSubscriptionScheduleAction;
 	freeTrialPlan?: FreeTrialPlan;
 }): StripeSubscriptionAction | undefined => {
@@ -28,10 +28,8 @@ export const buildStripeSubscriptionAction = ({
 	const subItemsUpdate = buildStripeSubscriptionItemsUpdate({
 		ctx,
 		billingContext,
-		updatedCustomerProducts,
+		finalCustomerProducts,
 	});
-
-	// 1. Compute the action type
 
 	// Case 1: No subscription and sub items update is empty -> no action
 	if (!stripeSubscription && subItemsUpdate.length === 0) {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { SubscriptionUpdateV0Params } from "@autumn/shared";
+import type { UpdateSubscriptionV0Params } from "@autumn/shared";
 import { createMockCtx } from "@tests/utils/mockUtils/contextMocks";
 import { createMockCustomerProduct } from "@tests/utils/mockUtils/cusProductMocks";
 import { createMockFeature } from "@tests/utils/mockUtils/featureMocks";
@@ -41,7 +41,7 @@ describe(
 					customerPrices: [createMockCustomerPrice({ price })],
 				});
 
-				const params: SubscriptionUpdateV0Params = {
+				const params: UpdateSubscriptionV0Params = {
 					customer_id: "cus_test",
 					product_id: "prod_test",
 					// No options provided
@@ -75,7 +75,7 @@ describe(
 				const fullProduct = createMockFullProduct({ prices: [price] });
 				const cusProduct = createMockCustomerProduct({ options: [] });
 
-				const params: SubscriptionUpdateV0Params = {
+				const params: UpdateSubscriptionV0Params = {
 					customer_id: "cus_test",
 					product_id: "prod_test",
 					options: [{ feature_id: "credits", quantity: 50 }],
@@ -117,7 +117,7 @@ describe(
 					],
 				});
 
-				const params: SubscriptionUpdateV0Params = {
+				const params: UpdateSubscriptionV0Params = {
 					customer_id: "cus_test",
 					product_id: "prod_test",
 					options: [{ feature_id: "credits", quantity: 200 }],
@@ -195,7 +195,7 @@ describe(
 					],
 				});
 
-				const params: SubscriptionUpdateV0Params = {
+				const params: UpdateSubscriptionV0Params = {
 					customer_id: "cus_test",
 					product_id: "prod_test",
 					options: [{ feature_id: "seats", quantity: 10 }], // Only updating seats
@@ -240,7 +240,7 @@ describe(
 				const fullProduct = createMockFullProduct({ prices: [price] });
 				const cusProduct = createMockCustomerProduct({ options: [] });
 
-				const params: SubscriptionUpdateV0Params = {
+				const params: UpdateSubscriptionV0Params = {
 					customer_id: "cus_test",
 					product_id: "prod_test",
 					options: [{ feature_id: "credits", quantity: 150 }], // Should round up to 200
@@ -276,7 +276,7 @@ describe(
 				const fullProduct = createMockFullProduct({ prices: [price] });
 				const cusProduct = createMockCustomerProduct({ options: [] });
 
-				const params: SubscriptionUpdateV0Params = {
+				const params: UpdateSubscriptionV0Params = {
 					customer_id: "cus_test",
 					product_id: "prod_test",
 					options: [{ feature_id: "credits", quantity: 200 }], // Exact multiple
@@ -311,7 +311,7 @@ describe(
 				const fullProduct = createMockFullProduct({ prices: [price] });
 				const cusProduct = createMockCustomerProduct({ options: [] });
 
-				const params: SubscriptionUpdateV0Params = {
+				const params: UpdateSubscriptionV0Params = {
 					customer_id: "cus_test",
 					product_id: "prod_test",
 					options: [{ feature_id: "credits", quantity: 1 }], // Should round to 1000
@@ -367,7 +367,7 @@ describe(
 					customerPrices: [createMockCustomerPrice({ price: oldPrice })],
 				});
 
-				const params: SubscriptionUpdateV0Params = {
+				const params: UpdateSubscriptionV0Params = {
 					customer_id: "cus_test",
 					product_id: "prod_test",
 					// No options - should inherit from current
@@ -424,7 +424,7 @@ describe(
 					customerPrices: [createMockCustomerPrice({ price: oldPrice })],
 				});
 
-				const params: SubscriptionUpdateV0Params = {
+				const params: UpdateSubscriptionV0Params = {
 					customer_id: "cus_test",
 					product_id: "prod_test",
 				};
@@ -472,7 +472,7 @@ describe(
 					// No customerPrices - can't interpret stored quantity
 				});
 
-				const params: SubscriptionUpdateV0Params = {
+				const params: UpdateSubscriptionV0Params = {
 					customer_id: "cus_test",
 					product_id: "prod_test",
 				};
@@ -511,7 +511,7 @@ describe(
 
 				const cusProduct = createMockCustomerProduct({ options: [] });
 
-				const params: SubscriptionUpdateV0Params = {
+				const params: UpdateSubscriptionV0Params = {
 					customer_id: "cus_test",
 					product_id: "prod_test",
 					options: [{ feature_id: "credits", quantity: 50 }],
@@ -537,7 +537,7 @@ describe(
 				const fullProduct = createMockFullProduct({ prices: [] });
 				const cusProduct = createMockCustomerProduct({ options: [] });
 
-				const params: SubscriptionUpdateV0Params = {
+				const params: UpdateSubscriptionV0Params = {
 					customer_id: "cus_test",
 					product_id: "prod_test",
 				};
@@ -563,7 +563,7 @@ describe(
 				const fullProduct = createMockFullProduct({ prices: [price] });
 				const cusProduct = createMockCustomerProduct({ options: [] });
 
-				const params: SubscriptionUpdateV0Params = {
+				const params: UpdateSubscriptionV0Params = {
 					customer_id: "cus_test",
 					product_id: "prod_test",
 				};
@@ -595,7 +595,7 @@ describe(
 				const fullProduct = createMockFullProduct({ prices: [price] });
 				const cusProduct = createMockCustomerProduct({ options: [] }); // No current options
 
-				const params: SubscriptionUpdateV0Params = {
+				const params: UpdateSubscriptionV0Params = {
 					customer_id: "cus_test",
 					product_id: "prod_test",
 					// No options in params either
@@ -637,7 +637,7 @@ describe(
 					customerPrices: [createMockCustomerPrice({ price })],
 				});
 
-				const params: SubscriptionUpdateV0Params = {
+				const params: UpdateSubscriptionV0Params = {
 					customer_id: "cus_test",
 					product_id: "prod_test",
 					options: [], // Explicitly empty
@@ -680,7 +680,7 @@ describe(
 					customerPrices: [createMockCustomerPrice({ price })],
 				});
 
-				const params: SubscriptionUpdateV0Params = {
+				const params: UpdateSubscriptionV0Params = {
 					customer_id: "cus_test",
 					product_id: "prod_test",
 					options: [{ feature_id: "credits", quantity: 0 }],
@@ -726,7 +726,7 @@ describe(
 					customerPrices: [createMockCustomerPrice({ price })],
 				});
 
-				const params: SubscriptionUpdateV0Params = {
+				const params: UpdateSubscriptionV0Params = {
 					customer_id: "cus_test",
 					product_id: "prod_test",
 				};

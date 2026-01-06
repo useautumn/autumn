@@ -26,7 +26,10 @@ export const handleInvoicePaidMetadata = async ({
 	if (!metadata) return;
 
 	// Handle deferred billing plan (v2 flow)
-	if (metadata.type === MetadataType.DeferredAutumnBillingPlan) {
+	if (
+		metadata.type === MetadataType.InvoiceCheckoutV2 ||
+		metadata.type === MetadataType.InvoiceActionRequiredV2
+	) {
 		await handleDeferredAutumnBillingPlan({ ctx, metadata });
 		return;
 	}

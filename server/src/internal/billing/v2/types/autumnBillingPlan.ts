@@ -6,6 +6,8 @@ import {
 	PriceSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
+import type { BillingContext } from "@/internal/billing/v2/billingContext";
+import type { BillingPlan } from "@/internal/billing/v2/types/billingPlan";
 import { FullCusProductSchema } from "../../../../../../shared/models/cusProductModels/cusProductModels";
 
 export const FreeTrialPlanSchema = z.object({
@@ -14,13 +16,6 @@ export const FreeTrialPlanSchema = z.object({
 });
 
 export type FreeTrialPlan = z.infer<typeof FreeTrialPlanSchema>;
-
-export const InvoiceModeSchema = z.object({
-	finalizeInvoice: z.boolean().default(false),
-	enableProductImmediately: z.boolean().default(true),
-});
-
-export type InvoiceMode = z.infer<typeof InvoiceModeSchema>;
 
 export const UpdateCustomerEntitlementSchema = z.object({
 	customerEntitlementId: z.string(),
@@ -50,5 +45,6 @@ export type AutumnBillingPlan = z.infer<typeof AutumnBillingPlanSchema>;
 export type DeferredAutumnBillingPlanData = {
 	orgId: string;
 	env: AppEnv;
-	autumnBillingPlan: AutumnBillingPlan;
+	billingPlan: BillingPlan;
+	billingContext: BillingContext;
 };

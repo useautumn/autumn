@@ -15,6 +15,7 @@ export const buildLineItem = ({
 	stripePriceId,
 	stripeProductId,
 	shouldProrate = true,
+	chargeImmediately = true,
 }: {
 	context: LineItemContext;
 	amount: number;
@@ -22,6 +23,7 @@ export const buildLineItem = ({
 	stripePriceId?: string;
 	stripeProductId?: string;
 	shouldProrate?: boolean;
+	chargeImmediately?: boolean;
 }): LineItem => {
 	// 1. Apply proration if needed
 	if (shouldProrate && context.billingPeriod) {
@@ -44,5 +46,6 @@ export const buildLineItem = ({
 		context,
 		stripePriceId,
 		stripeProductId,
+		chargeImmediately,
 	} satisfies LineItemCreate);
 };

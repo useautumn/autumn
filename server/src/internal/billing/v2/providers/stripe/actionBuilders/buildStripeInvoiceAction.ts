@@ -1,29 +1,34 @@
 import type { LineItem } from "@autumn/shared";
-import type {
-	InvoiceMode,
-	StripeInvoiceAction,
-} from "../../../types/billingPlan";
-import { lineItemsToStripeLines } from "../utils/invoiceLines/lineItemsToStripeLines";
+import type { StripeInvoiceAction } from "../../../types/billingPlan";
+import { lineItemsToInvoiceAddLinesParams } from "../utils/invoiceLines/lineItemsToInvoiceAddLinesParams";
 
 /**
- * Builds a Stripe invoice action from Autumn line items.
- * Returns undefined if no line items are provided.
+ * Builds a StripeInvoiceAction for immediate charges.
+ * Filters for line items where chargeImmediately === true.
+ * Returns undefined if no immediate line items are provided.
  */
 export const buildStripeInvoiceAction = ({
-	autumnLineItems,
-	invoiceMode,
+	lineItems,
 }: {
-	autumnLineItems: LineItem[];
-	invoiceMode?: InvoiceMode;
+	lineItems: LineItem[];
 }): StripeInvoiceAction | undefined => {
-	if (autumnLineItems.length === 0) {
+	const immediateLineItems = lineItems.filter(
+		(line) => line.chargeImmediately === true,
+	);
+
+	if (immediateLineItems.length === 0) {
 		return undefined;
 	}
 
-	const lines = lineItemsToStripeLines({ lineItems: autumnLineItems });
+	const lines = lineItemsToInvoiceAddLinesParams({
+		lineItems: immediateLineItems,
+	});
+
+	if (lines.length === 0) {
+		return undefined;
+	}
 
 	return {
 		addLineParams: { lines },
-		invoiceMode,
 	};
 };

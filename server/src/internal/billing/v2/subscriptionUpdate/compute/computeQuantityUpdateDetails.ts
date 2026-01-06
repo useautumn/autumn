@@ -7,7 +7,7 @@ import {
 import { getLineItemBillingPeriod } from "@shared/utils/billingUtils/cycleUtils/getLineItemBillingPeriod";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { QuantityUpdateDetails } from "@/internal/billing/v2/typesOld";
-import type { UpdateSubscriptionContext } from "../fetch/updateSubscriptionContextSchema";
+import type { UpdateSubscriptionBillingContext } from "../../billingContext";
 import { buildQuantityUpdateLineItems } from "./buildQuantityUpdateLineItems";
 import { calculateCustomerEntitlementChange } from "./quantityUpdateUtils/calculateCustomerEntitlementChange";
 import { calculateQuantityDifferences } from "./quantityUpdateUtils/calculateQuantityDifferences";
@@ -33,7 +33,7 @@ export const computeQuantityUpdateDetails = ({
 }: {
 	ctx: AutumnContext;
 	updatedOptions: FeatureOptions;
-	updateSubscriptionContext: UpdateSubscriptionContext;
+	updateSubscriptionContext: UpdateSubscriptionBillingContext;
 }): QuantityUpdateDetails => {
 	const { customerProduct, currentEpochMs, billingCycleAnchorMs } =
 		updateSubscriptionContext;
@@ -78,8 +78,16 @@ export const computeQuantityUpdateDetails = ({
 	const priceConfiguration = resolvePriceForQuantityUpdate({
 		customerProduct,
 		updatedOptions,
-		isUpgrade: quantityDifferences.isUpgrade,
 	});
+
+	const { customerEntitlementId, customerEntitlementBalanceChange } =
+		calculateCustomerEntitlementChange({
+			quantityDifferenceForEntitlements:
+				quantityDifferences.quantityDifferenceForEntitlements,
+			billingUnitsPerQuantity: priceConfiguration.billingUnitsPerQuantity,
+			customerPrice: priceConfiguration.customerPrice,
+			customerEntitlements: customerProduct.customer_entitlements,
+		});
 
 	const billingPeriod = getLineItemBillingPeriod({
 		anchor: billingCycleAnchorMs,
@@ -102,15 +110,6 @@ export const computeQuantityUpdateDetails = ({
 			quantityDifferences.quantityDifferenceForEntitlements,
 		currentEpochMs,
 	});
-
-	const { customerEntitlementId, customerEntitlementBalanceChange } =
-		calculateCustomerEntitlementChange({
-			quantityDifferenceForEntitlements:
-				quantityDifferences.quantityDifferenceForEntitlements,
-			billingUnitsPerQuantity: priceConfiguration.billingUnitsPerQuantity,
-			customerPrice: priceConfiguration.customerPrice,
-			customerEntitlements: customerProduct.customer_entitlements,
-		});
 
 	return {
 		featureId,

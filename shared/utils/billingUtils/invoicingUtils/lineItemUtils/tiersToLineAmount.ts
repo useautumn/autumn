@@ -13,8 +13,11 @@ export const tiersToLineAmount = ({
 	overage: number;
 	billingUnits?: number;
 }): number => {
+	const isNegative = overage < 0;
+	const absoluteOverage = Math.abs(overage);
+
 	const roundedOverage = roundUsageToNearestBillingUnit({
-		usage: overage,
+		usage: absoluteOverage,
 		billingUnits,
 	});
 
@@ -47,5 +50,6 @@ export const tiersToLineAmount = ({
 		}
 	}
 
-	return amount.toDecimalPlaces(10).toNumber();
+	const finalAmount = amount.toDecimalPlaces(10).toNumber();
+	return isNegative ? -finalAmount : finalAmount;
 };

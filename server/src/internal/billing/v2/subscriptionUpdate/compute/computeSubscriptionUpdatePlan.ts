@@ -1,10 +1,10 @@
-import type { SubscriptionUpdateV0Params } from "@shared/index";
+import type { UpdateSubscriptionV0Params } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
 import { computeSubscriptionUpdateCustomPlan } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateCustomPlan/computeSubscriptionUpdateCustomPlan";
 import { computeSubscriptionUpdateQuantityPlan } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateQuantityPlan";
 import { SubscriptionUpdateIntentEnum } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateSchema";
 import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan";
-import type { UpdateSubscriptionContext } from "../fetch/updateSubscriptionContextSchema";
 import { computeSubscriptionUpdateIntent } from "./computeSubscriptionUpdateIntent";
 
 /**
@@ -15,12 +15,12 @@ import { computeSubscriptionUpdateIntent } from "./computeSubscriptionUpdateInte
  */
 export const computeSubscriptionUpdatePlan = async ({
 	ctx,
-	updateSubscriptionContext,
+	billingContext,
 	params,
 }: {
 	ctx: AutumnContext;
-	updateSubscriptionContext: UpdateSubscriptionContext;
-	params: SubscriptionUpdateV0Params;
+	billingContext: UpdateSubscriptionBillingContext;
+	params: UpdateSubscriptionV0Params;
 }): Promise<AutumnBillingPlan> => {
 	const intent = computeSubscriptionUpdateIntent(params);
 
@@ -28,13 +28,13 @@ export const computeSubscriptionUpdatePlan = async ({
 		case SubscriptionUpdateIntentEnum.UpdateQuantity:
 			return computeSubscriptionUpdateQuantityPlan({
 				ctx,
-				updateSubscriptionContext,
+				updateSubscriptionContext: billingContext,
 				params,
 			});
 		case SubscriptionUpdateIntentEnum.UpdatePlan:
 			return await computeSubscriptionUpdateCustomPlan({
 				ctx,
-				updateSubscriptionContext,
+				updateSubscriptionContext: billingContext,
 				params,
 			});
 	}

@@ -2,7 +2,7 @@ import type {
 	Feature,
 	FeatureOptions,
 	Price,
-	SubscriptionUpdateV0Params,
+	UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import { roundUsageToNearestBillingUnit } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -12,7 +12,7 @@ export const paramsToFeatureOptions = ({
 	price,
 	feature,
 }: {
-	params: SubscriptionUpdateV0Params;
+	params: UpdateSubscriptionV0Params;
 	price: Price;
 	feature: Feature;
 }): FeatureOptions | undefined => {

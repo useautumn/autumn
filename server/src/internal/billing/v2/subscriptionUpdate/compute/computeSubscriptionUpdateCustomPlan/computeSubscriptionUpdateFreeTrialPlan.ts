@@ -1,7 +1,7 @@
 import type {
 	FreeTrial,
 	FullProduct,
-	SubscriptionUpdateV0Params,
+	UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import {
 	addDuration,
@@ -10,7 +10,7 @@ import {
 	secondsToMs,
 } from "@autumn/shared";
 import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
-import type { UpdateSubscriptionContext } from "@/internal/billing/v2/subscriptionUpdate/fetch/updateSubscriptionContextSchema";
+import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
 
 interface ComputeSubscriptionUpdateTrialDetailsResult {
 	freeTrialPlan: {
@@ -25,8 +25,8 @@ export const computeSubscriptionUpdateFreeTrialPlan = ({
 	params,
 	fullProduct,
 }: {
-	updateSubscriptionContext: UpdateSubscriptionContext;
-	params: SubscriptionUpdateV0Params;
+	updateSubscriptionContext: UpdateSubscriptionBillingContext;
+	params: UpdateSubscriptionV0Params;
 	fullProduct: FullProduct;
 }): ComputeSubscriptionUpdateTrialDetailsResult => {
 	const { stripeSubscription, customerProduct, currentEpochMs } =

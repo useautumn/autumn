@@ -1,6 +1,14 @@
-import type { FullProduct } from "@autumn/shared";
+import type { FullCusProduct, FullProduct } from "@autumn/shared";
 import type { FullCustomer } from "@shared/models/cusModels/fullCusModel";
 import type Stripe from "stripe";
+import { z } from "zod/v4";
+
+export const InvoiceModeSchema = z.object({
+	finalizeInvoice: z.boolean().default(false),
+	enableProductImmediately: z.boolean().default(true),
+});
+
+export type InvoiceMode = z.infer<typeof InvoiceModeSchema>;
 
 export interface BillingContext {
 	fullCustomer: FullCustomer;
@@ -10,5 +18,17 @@ export interface BillingContext {
 	stripeSubscription?: Stripe.Subscription;
 	stripeSubscriptionSchedule?: Stripe.SubscriptionSchedule;
 	paymentMethod?: Stripe.PaymentMethod;
-	testClockFrozenTime?: number;
+
+	// Timestamps...
+	currentEpochMs: number;
+	billingCycleAnchorMs?: number;
+
+	// Invoice mode
+	invoiceMode?: InvoiceMode;
 }
+
+export interface UpdateSubscriptionBillingContext extends BillingContext {
+	customerProduct: FullCusProduct; // target customer product
+}
+
+// testClockFrozenTime?: number;

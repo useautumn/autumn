@@ -1,4 +1,7 @@
-import { CusProductStatus, type FullCustomer } from "../../index.js";
+import {
+	type FullCustomer,
+	filterCustomerProductsByActiveStatuses,
+} from "../../index.js";
 import type { Entity } from "../../models/cusModels/entityModels/entityModels.js";
 import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
@@ -96,16 +99,6 @@ export const filterOutEntitiesFromCusProducts = ({
 	return finalCusProducts;
 };
 
-export const getActiveCusProducts = ({
-	customer,
-}: {
-	customer: FullCustomer;
-}): FullCusProduct[] => {
-	return customer.customer_products.filter(
-		(p: FullCusProduct) => p.status === CusProductStatus.Active,
-	);
-};
-
 export const isProductAlreadyEnabled = ({
 	productId,
 	customer,
@@ -115,7 +108,9 @@ export const isProductAlreadyEnabled = ({
 	customer: FullCustomer;
 	entityId?: string;
 }) => {
-	return getActiveCusProducts({ customer }).some((cp: FullCusProduct) => {
+	return filterCustomerProductsByActiveStatuses({
+		customerProducts: customer.customer_products,
+	}).some((cp: FullCusProduct) => {
 		// Check if product matches and is not an add-on
 		if (cp.product_id !== productId || cp.product.is_add_on) {
 			return false;
@@ -141,18 +136,4 @@ export const isProductAlreadyEnabled = ({
 
 		return false;
 	});
-};
-
-export const filterCusProductsBySubId = ({
-	cusProducts,
-	subId,
-}: {
-	cusProducts: FullCusProduct[];
-	subId?: string;
-}): FullCusProduct[] => {
-	if (!subId) return [];
-
-	return cusProducts.filter((cp: FullCusProduct) =>
-		cp.subscription_ids?.includes(subId),
-	);
 };

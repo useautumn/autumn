@@ -1,9 +1,13 @@
 import type { FullCusProduct } from "@autumn/shared";
-import { msToSeconds } from "@autumn/shared";
+import {
+	isCustomerProductOnStripeSubscription,
+	isCustomerProductOnStripeSubscriptionSchedule,
+	msToSeconds,
+	RELEVANT_STATUSES,
+} from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import type { BillingContext } from "@server/internal/billing/v2/billingContext";
-import { getFinalCustomerProductsState } from "@server/internal/billing/v2/utils/getFinalCustomerProductsState";
-import { buildSchedulePhases } from "@server/internal/billing/v2/utils/stripeAdapter/subscriptionSchedules/buildSchedulePhases";
+import { buildSchedulePhases } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/buildSchedulePhases";
 import type Stripe from "stripe";
 import type { StripeSubscriptionScheduleAction } from "@/internal/billing/v2/types/billingPlan";
 
@@ -46,31 +50,42 @@ const filterEmptyPhases = (
 export const buildStripeSubscriptionScheduleAction = ({
 	ctx,
 	billingContext,
-	addCustomerProducts = [],
-	removeCustomerProducts = [],
+	finalCustomerProducts,
 	trialEndsAt,
 	nowMs,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
-	addCustomerProducts?: FullCusProduct[];
-	removeCustomerProducts?: FullCusProduct[];
+	finalCustomerProducts: FullCusProduct[];
 	trialEndsAt?: number;
 	nowMs: number;
 }): StripeSubscriptionScheduleAction | undefined => {
-	const { stripeSubscriptionSchedule } = billingContext;
+	const { stripeSubscriptionSchedule, stripeSubscription } = billingContext;
 
-	// 1. Get final customer product state
-	const customerProducts = getFinalCustomerProductsState({
-		billingContext,
-		addCustomerProducts,
-		removeCustomerProducts,
-	});
+	// 1. Filter customer products by stripe subscription id or stripe subscription schedule ID?
+
+	let customerProducts = stripeSubscription
+		? finalCustomerProducts.filter(
+				(cp) =>
+					isCustomerProductOnStripeSubscription({
+						customerProduct: cp,
+						stripeSubscriptionId: stripeSubscription.id,
+					}) ||
+					isCustomerProductOnStripeSubscriptionSchedule({
+						customerProduct: cp,
+						stripeSubscriptionScheduleId: stripeSubscriptionSchedule?.id ?? "",
+					}),
+			)
+		: [];
+
+	customerProducts = customerProducts.filter((cp) =>
+		RELEVANT_STATUSES.includes(cp.status),
+	);
 
 	const phases = buildSchedulePhases({
 		ctx,
 		billingContext,
-		customerProducts,
+		customerProducts: finalCustomerProducts,
 		trialEndsAt,
 		nowMs,
 	});

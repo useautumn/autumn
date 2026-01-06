@@ -5,7 +5,7 @@ import { ProductItemSchema } from "../../../models/productV2Models/productItemMo
 import { CustomerDataSchema } from "../../common/customerData";
 import { EntityDataSchema } from "../../models";
 
-export const ExtSubscriptionUpdateV0ParamsSchema = z.object({
+export const ExtUpdateSubscriptionV0ParamsSchema = z.object({
 	// Customer / Entity Info
 	customer_id: z.string(),
 	product_id: z.string().nullish(),
@@ -33,17 +33,17 @@ export const ExtSubscriptionUpdateV0ParamsSchema = z.object({
 	prorate_billing: z.boolean().optional(),
 });
 
-export const SubscriptionUpdateV0ParamsSchema =
-	ExtSubscriptionUpdateV0ParamsSchema.extend({
+export const UpdateSubscriptionV0ParamsSchema =
+	ExtUpdateSubscriptionV0ParamsSchema.extend({
 		customer_product_id: z.string().optional(),
 	});
 
-export type ExtSubscriptionUpdateV0Params = z.infer<
-	typeof ExtSubscriptionUpdateV0ParamsSchema
+export type ExtUpdateSubscriptionV0Params = z.infer<
+	typeof ExtUpdateSubscriptionV0ParamsSchema
 >;
 
-export type SubscriptionUpdateV0Params = z.infer<
-	typeof SubscriptionUpdateV0ParamsSchema
+export type UpdateSubscriptionV0Params = z.infer<
+	typeof UpdateSubscriptionV0ParamsSchema
 >;
 
 // keep_existing_plan: true, //disable_plan_switch

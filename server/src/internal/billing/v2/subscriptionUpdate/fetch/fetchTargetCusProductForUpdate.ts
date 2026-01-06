@@ -1,14 +1,14 @@
 import {
 	type FullCustomer,
 	isCusProductOnEntity,
-	type SubscriptionUpdateV0Params,
+	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 
 export const fetchTargetCusProductForUpdate = ({
 	params,
 	fullCustomer,
 }: {
-	params: SubscriptionUpdateV0Params;
+	params: UpdateSubscriptionV0Params;
 	fullCustomer: FullCustomer;
 }) => {
 	const cusProducts = fullCustomer.customer_products;

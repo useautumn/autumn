@@ -20,6 +20,9 @@ export const LineItemSchema = z
 
 		stripePriceId: z.string().optional(),
 		stripeProductId: z.string().optional(),
+
+		// Optional - for testing
+		chargeImmediately: z.boolean().default(true),
 	})
 	.transform((data) => {
 		return {

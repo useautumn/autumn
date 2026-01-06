@@ -1,43 +1,16 @@
+import {
+	filterCustomerProductsByActiveStatuses,
+	filterCustomerProductsByStripeSubscriptionId,
+} from "@autumn/shared";
 import { customerProductToStripeItemSpecs } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionItems/customerProductToStripeItemSpecs";
 import type { StripeItemSpec } from "@shared/models/billingModels/stripeAdapterModels/stripeItemSpec";
 import type { FullCusProduct } from "@shared/models/cusProductModels/cusProductModels";
-import {
-	ACTIVE_STATUSES,
-	isCustomerProductOnStripeSubscription,
-} from "@shared/utils";
 import type Stripe from "stripe";
 import { stripeSubscriptionItemToStripePriceId } from "@/external/stripe/subscriptions/subscriptionItems/utils/convertStripeSubscriptionItemUtils";
 import { findStripeSubscriptionItemByStripePriceId } from "@/external/stripe/subscriptions/subscriptionItems/utils/findStripeSubscriptionItemUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import { findStripeItemSpecByStripePriceId } from "./findStripeItemSpec";
-
-const getFinalCustomerProductsState = ({
-	billingContext,
-	updatedCustomerProducts = [],
-}: {
-	billingContext: BillingContext;
-	updatedCustomerProducts?: FullCusProduct[];
-}) => {
-	const { fullCustomer, stripeSubscription } = billingContext;
-
-	const customerProducts = stripeSubscription
-		? fullCustomer.customer_products.filter((customerProduct) =>
-				isCustomerProductOnStripeSubscription({
-					customerProduct,
-					stripeSubscriptionId: stripeSubscription.id,
-				}),
-			)
-		: [];
-
-	return customerProducts.map((customerProduct) => {
-		const updated = updatedCustomerProducts.find(
-			(updatedCustomerProduct) =>
-				updatedCustomerProduct.id === customerProduct.id,
-		);
-		return updated ?? customerProduct;
-	});
-};
 
 const customerProductsToRecurringStripeItemSpecs = ({
 	ctx,
@@ -121,30 +94,31 @@ const stripeItemSpecsToSubItemsUpdate = ({
 export const buildStripeSubscriptionItemsUpdate = ({
 	ctx,
 	billingContext,
-	updatedCustomerProducts = [],
+	finalCustomerProducts,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
-	updatedCustomerProducts?: FullCusProduct[];
+	finalCustomerProducts: FullCusProduct[];
 }) => {
-	// 1. Get final customer product state (with updates applied)
-	let customerProducts = getFinalCustomerProductsState({
-		billingContext,
-		updatedCustomerProducts,
+	// 1. Filter customer products by stripe subscription id
+	let customerProducts = filterCustomerProductsByStripeSubscriptionId({
+		customerProducts: finalCustomerProducts,
+		stripeSubscriptionId: billingContext.stripeSubscription?.id,
 	});
 
-	customerProducts = customerProducts.filter((customerProduct) =>
-		ACTIVE_STATUSES.includes(customerProduct.status),
-	);
+	// 2. Filter customer products by active statuses
+	customerProducts = filterCustomerProductsByActiveStatuses({
+		customerProducts,
+	});
 
-	// 2. Get recurring subscription item array (doesn't include one off items)
+	// 3. Get recurring subscription item array (doesn't include one off items)
 	const recurringItems = customerProductsToRecurringStripeItemSpecs({
 		ctx,
 		billingContext,
 		customerProducts,
 	});
 
-	// 3. Diff it with the current subscription items
+	// 4. Diff it with the current subscription items
 	return stripeItemSpecsToSubItemsUpdate({
 		billingContext,
 		stripeItemSpecs: recurringItems,
