@@ -8,8 +8,8 @@ import type { EntInterval } from "@models/productModels/intervals/entitlementInt
 import { Decimal } from "decimal.js";
 import type { z } from "zod/v4";
 import { FeatureType } from "../../../../models/featureModels/featureEnums.js";
-import { apiBalanceToBreakdownKey } from "../../../../utils/cusEntUtils/convertCusEntUtils.js";
 import { resetIntvToEntIntv } from "../../../../utils/planFeatureUtils/planFeatureIntervals.js";
+import { sumValues } from "../../../../utils/utils.js";
 import type { ApiFeatureV1 } from "../../../features/apiFeatureV1.js";
 import {
 	type ApiBalance,
@@ -116,18 +116,14 @@ const toV3BalanceParams = ({
 		};
 	}
 
-	let prepaidQuantity = legacyData?.prepaid_quantity ?? 0;
+	let prepaidQuantity = 0;
 
 	if (isBreakdown) {
-		const breakdownKey = apiBalanceToBreakdownKey({
-			breakdown: input as ApiBalanceBreakdown,
-		});
-		prepaidQuantity =
-			legacyData?.breakdown_legacy_data?.find(
-				(item) => item.key === breakdownKey,
-			)?.prepaid_quantity ??
-			legacyData?.prepaid_quantity ??
-			0;
+		prepaidQuantity = (input as ApiBalanceBreakdown).prepaid_quantity ?? 0;
+	} else {
+		prepaidQuantity = sumValues(
+			(input as ApiBalance).breakdown?.map((b) => b.prepaid_quantity) ?? [],
+		);
 	}
 
 	let overage = 0;
