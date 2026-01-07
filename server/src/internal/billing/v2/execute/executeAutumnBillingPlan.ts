@@ -23,15 +23,16 @@ export const executeAutumnBillingPlan = async ({
 		customFreeTrial,
 	} = autumnBillingPlan;
 
+	await EntitlementService.insert({
+		db,
+		data: customEntitlements,
+	});
+
 	await PriceService.insert({
 		db,
 		data: customPrices,
 	});
 
-	await EntitlementService.insert({
-		db,
-		data: customEntitlements,
-	});
 	if (customFreeTrial) {
 		await FreeTrialService.insert({
 			db,

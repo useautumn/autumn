@@ -8,9 +8,12 @@ import { buildStripeSubscriptionAction } from "../../../providers/stripe/actionB
 import type {
 	AutumnBillingPlan,
 	StripeBillingPlan,
+	StripeInvoiceAction,
+	StripeInvoiceItemsAction,
 } from "../../../types/billingPlan";
+import { initStripeResourcesForBillingPlan } from "../utils/common/initStripeResourcesForProducts";
 
-export const evaluateStripeBillingPlan = ({
+export const evaluateStripeBillingPlan = async ({
 	ctx,
 	billingContext,
 	autumnBillingPlan,
@@ -18,7 +21,13 @@ export const evaluateStripeBillingPlan = ({
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
-}): StripeBillingPlan => {
+}): Promise<StripeBillingPlan> => {
+	await initStripeResourcesForBillingPlan({
+		ctx,
+		autumnBillingPlan,
+		billingContext,
+	});
+
 	const finalFullCustomer = autumnBillingPlanToFinalFullCustomer({
 		billingContext,
 		autumnBillingPlan,
@@ -32,14 +41,21 @@ export const evaluateStripeBillingPlan = ({
 
 	const { lineItems } = autumnBillingPlan;
 
-	const stripeInvoiceAction = buildStripeInvoiceAction({
-		lineItems,
-	});
+	const subscriptionActionIsCreate =
+		stripeSubscriptionAction?.type === "create";
 
-	const stripeInvoiceItemsAction = buildStripeInvoiceItemsAction({
-		lineItems,
-		billingContext,
-	});
+	let stripeInvoiceAction: StripeInvoiceAction | undefined;
+	let stripeInvoiceItemsAction: StripeInvoiceItemsAction | undefined;
+	if (!subscriptionActionIsCreate) {
+		stripeInvoiceAction = buildStripeInvoiceAction({
+			lineItems,
+		});
+
+		stripeInvoiceItemsAction = buildStripeInvoiceItemsAction({
+			lineItems,
+			billingContext,
+		});
+	}
 
 	// Build stripe subscription schedule action
 	const stripeSubscriptionScheduleAction =

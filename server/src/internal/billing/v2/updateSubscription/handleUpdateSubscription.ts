@@ -22,7 +22,7 @@ export const handleUpdateSubscription = createRoute({
 			params: body,
 		});
 
-		const stripeBillingPlan = evaluateStripeBillingPlan({
+		const stripeBillingPlan = await evaluateStripeBillingPlan({
 			ctx,
 			billingContext,
 			autumnBillingPlan,

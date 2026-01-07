@@ -18,16 +18,15 @@ export const buildAutumnLineItems = ({
 	billingContext: BillingContext;
 }) => {
 	// billingCycleAnchor = billingCycleAnchor ?? now;
-	const billingCycleAnchor = billingContext.billingCycleAnchorMs;
-	const now = billingContext.currentEpochMs;
+	const { billingCycleAnchorMs, currentEpochMs } = billingContext;
 
-	const { org } = ctx;
+	const { org, logger } = ctx;
 
 	const arrearLineItems = deletedCustomerProduct
 		? cusProductToArrearLineItems({
 				cusProduct: deletedCustomerProduct,
-				billingCycleAnchor: billingCycleAnchor!,
-				now,
+				billingCycleAnchorMs,
+				nowMs: currentEpochMs,
 				org,
 			})
 		: [];
@@ -36,20 +35,22 @@ export const buildAutumnLineItems = ({
 	const deletedLineItems = deletedCustomerProduct
 		? cusProductToLineItems({
 				cusProduct: deletedCustomerProduct,
-				now,
-				billingCycleAnchor: billingCycleAnchor!,
+				nowMs: currentEpochMs,
+				billingCycleAnchorMs,
 				direction: "refund",
 				org,
+				logger,
 			})
 		: [];
 
 	const newLineItems = newCustomerProducts.flatMap((newCustomerProduct) =>
 		cusProductToLineItems({
 			cusProduct: newCustomerProduct,
-			now,
-			billingCycleAnchor: billingCycleAnchor!,
+			nowMs: currentEpochMs,
+			billingCycleAnchorMs,
 			direction: "charge",
 			org,
+			logger,
 		}),
 	);
 

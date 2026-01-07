@@ -5,7 +5,7 @@ export const formatMsToDate = (
 	options?: { withTimezone?: boolean },
 ) => {
 	if (!unixDate) {
-		return "undefined unix date";
+		return "undefined";
 	}
 	return format(new Date(unixDate), "dd MMM yyyy");
 };
@@ -18,7 +18,7 @@ export const formatMs = (
 		return "now";
 	}
 	if (!unixDate) {
-		return "undefined unix date";
+		return "undefined";
 	}
 
 	let formatString = options?.excludeSeconds
