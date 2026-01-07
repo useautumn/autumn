@@ -24,13 +24,13 @@ export const getCycleStart = ({
 	now,
 	floor,
 }: {
-	anchor: number;
+	anchor: number | "now";
 	interval: BillingInterval | EntInterval;
 	intervalCount?: number;
 	now: number; // milliseconds since epoch;
 	floor?: number | undefined;
 }): number => {
-	const anchorDate = new UTCDate(anchor);
+	const anchorDate = anchor === "now" ? new UTCDate(now) : new UTCDate(anchor);
 	const nowDate = new UTCDate(now);
 
 	const intervalFunctions = getCycleIntervalFunctions({ interval });

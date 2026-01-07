@@ -5,6 +5,8 @@ import {
 	entToOptions,
 	type FeatureOptions,
 	type FullCusProduct,
+	formatPrice,
+	InternalError,
 	isAllocatedCusEnt,
 	isOneOffPrice,
 	notNullish,
@@ -84,15 +86,21 @@ export const customerProductToStripeItemSpecs = ({
 
 		const { lineItem } = stripeItem;
 
+		if (!lineItem.price) {
+			throw new InternalError({
+				message: `Autumn price ${formatPrice({ price })} has no stripe price id`,
+			});
+		}
+
 		if (isOneOffPrice(price)) {
 			oneOffItems.push({
-				stripePriceId: lineItem?.price ?? "",
+				stripePriceId: lineItem.price,
 				quantity: lineItem?.quantity,
 				autumnPrice: price,
 			});
 		} else {
 			recurringItems.push({
-				stripePriceId: lineItem?.price ?? "",
+				stripePriceId: lineItem.price,
 				quantity: lineItem?.quantity,
 				autumnPrice: price,
 			});

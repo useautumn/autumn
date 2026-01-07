@@ -25,8 +25,6 @@ export const UpdateConfirmationInfo = ({
 		newProduct: previewData?.product,
 	});
 
-	console.log("previewData", previewData);
-
 	const hasPrepaidQuantityChanges = useHasPrepaidQuantityChanges(product, form);
 
 	const renderInfoBoxes = (): ReactNode[] => {

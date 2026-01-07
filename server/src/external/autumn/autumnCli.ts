@@ -696,8 +696,19 @@ export class AutumnInt {
 	};
 
 	subscriptions = {
-		update: async (params: UpdateSubscriptionV0Params) => {
+		update: async (
+			params: UpdateSubscriptionV0Params,
+			{ timeout }: { timeout?: number } = {},
+		) => {
 			const data = await this.post(`/subscriptions/update`, params);
+			if (timeout) {
+				await new Promise((resolve) => setTimeout(resolve, timeout));
+			}
+			return data;
+		},
+
+		previewUpdate: async (params: UpdateSubscriptionV0Params) => {
+			const data = await this.post(`/subscriptions/preview_update`, params);
 			return data;
 		},
 	};

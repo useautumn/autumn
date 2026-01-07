@@ -1,15 +1,14 @@
 import {
 	CusProductStatus,
 	cusProductToProduct,
-	secondsToMs,
 	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@server/internal/billing/v2/billingContext";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
+import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan";
 import { computeCustomPlanFreeTrial } from "@/internal/billing/v2/updateSubscription/compute/customPlan/computeCustomPlanFreeTrial";
 import { computeCustomPlanNewCustomerProduct } from "@/internal/billing/v2/updateSubscription/compute/customPlan/computeCustomPlanNewCustomerProduct";
-import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan";
 import { computeCustomFullProduct } from "../../../compute/computeAutumnUtils/computeCustomFullProduct";
 
 export const computeCustomPlan = async ({
@@ -21,7 +20,7 @@ export const computeCustomPlan = async ({
 	updateSubscriptionContext: UpdateSubscriptionBillingContext;
 	params: UpdateSubscriptionV0Params;
 }) => {
-	const { customerProduct, stripeSubscription } = updateSubscriptionContext;
+	const { customerProduct } = updateSubscriptionContext;
 
 	const currentFullProduct = cusProductToProduct({
 		cusProduct: customerProduct,
@@ -46,15 +45,14 @@ export const computeCustomPlan = async ({
 		fullProduct: customFullProduct,
 	});
 
-	updateSubscriptionContext.billingCycleAnchorMs =
-		freeTrialPlan.trialEndsAt ??
-		secondsToMs(stripeSubscription?.billing_cycle_anchor);
+	if (freeTrialPlan.trialEndsAt) {
+		updateSubscriptionContext.billingCycleAnchorMs = freeTrialPlan.trialEndsAt;
+	}
 
 	// 3. Compute the new customer product
 	const newFullCustomerProduct = computeCustomPlanNewCustomerProduct({
 		ctx,
 		updateSubscriptionContext,
-		params,
 		fullProduct: customFullProduct,
 		freeTrialPlan,
 	});

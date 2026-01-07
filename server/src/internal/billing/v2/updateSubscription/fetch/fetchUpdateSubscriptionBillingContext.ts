@@ -26,7 +26,7 @@ export const fetchUpdateSubscriptionBillingContext = async ({
 	ctx: AutumnContext;
 	params: UpdateSubscriptionV0Params;
 }): Promise<UpdateSubscriptionBillingContext> => {
-	const { db, org, env, features } = ctx;
+	const { db, org, env } = ctx;
 	const { customer_id: customerId, product_id: productId } = params;
 
 	const fullCustomer = await CusService.getFull({
@@ -82,16 +82,15 @@ export const fetchUpdateSubscriptionBillingContext = async ({
 		fullCus: fullCustomer,
 	});
 
-	if (params.options) {
-		params.options = parseFeatureQuantitiesParams({
-			optionsInput: params.options,
-			features,
-			prices: targetCustomerProduct.customer_prices.map((cp) => cp.price),
-			currentCustomerProduct: targetCustomerProduct,
-		});
-	}
+	const featureQuantities = parseFeatureQuantitiesParams({
+		ctx,
+		featureQuantitiesParams: params,
+		fullProduct,
+		currentCustomerProduct: targetCustomerProduct,
+	});
 
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
+
 	const billingCycleAnchorMs = secondsToMs(
 		stripeSubscription?.billing_cycle_anchor,
 	);
@@ -115,7 +114,8 @@ export const fetchUpdateSubscriptionBillingContext = async ({
 		paymentMethod,
 
 		currentEpochMs,
-		billingCycleAnchorMs,
+		billingCycleAnchorMs: billingCycleAnchorMs ?? "now",
 		invoiceMode,
+		featureQuantities,
 	};
 };

@@ -1,3 +1,4 @@
+import { formatMs } from "@utils/common";
 import type { LineItem } from "../../../models/billingModels/invoicingModels/lineItem";
 import type { LineItemContext } from "../../../models/billingModels/invoicingModels/lineItemContext";
 import type { FullCusProduct } from "../../../models/cusProductModels/cusProductModels";
@@ -29,28 +30,42 @@ export type LineItemDirection = "charge" | "refund";
  */
 export const cusProductToLineItems = ({
 	cusProduct,
-	now,
-	billingCycleAnchor,
+	nowMs,
+	billingCycleAnchorMs,
 	direction,
 	org,
+	logger,
 }: {
 	cusProduct: FullCusProduct;
-	now: number;
-	billingCycleAnchor: number;
+	nowMs: number;
+	billingCycleAnchorMs: number | "now";
 	direction: "charge" | "refund";
 	org: Organization;
+	// biome-ignore lint/suspicious/noExplicitAny: Logger type defined in server package
+	logger: any;
 }): LineItem[] => {
 	let lineItems: LineItem[] = [];
+
+	logger.debug(
+		`Building line items for customer product: ${cusProduct.product.id} (${direction})`,
+	);
+	logger.debug(
+		`Billing cycle anchor: ${formatMs(billingCycleAnchorMs)}, now: ${formatMs(nowMs)}`,
+	);
 
 	for (const cusPrice of cusProduct.customer_prices) {
 		const price = cusPrice.price;
 
 		// Calculate billing period
 		const billingPeriod = getLineItemBillingPeriod({
-			anchor: billingCycleAnchor,
+			anchorMs: billingCycleAnchorMs,
 			price,
-			now,
+			nowMs,
 		});
+
+		logger.debug(
+			`Billing period: ${formatMs(billingPeriod?.start)} - ${formatMs(billingPeriod?.end)}`,
+		);
 
 		// Build line item context
 		const context: LineItemContext = {
@@ -61,7 +76,7 @@ export const cusProductToLineItems = ({
 			billingPeriod,
 			direction,
 			billingTiming: "in_advance",
-			now,
+			now: nowMs,
 			currency: orgToCurrency({ org }),
 		};
 

@@ -1,7 +1,6 @@
-import type { FullProduct, UpdateSubscriptionV0Params } from "@autumn/shared";
+import type { FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
-import { computeCustomPlanFeatureQuantities } from "@/internal/billing/v2/updateSubscription/compute/customPlan/computeCustomPlanFeatureQuantities";
 import type { FreeTrialPlan } from "@/internal/billing/v2/types/billingPlan";
 import { cusProductToExistingRollovers } from "@/internal/billing/v2/utils/handleExistingRollovers/cusProductToExistingRollovers";
 import { cusProductToExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/cusProductToExistingUsages";
@@ -9,13 +8,11 @@ import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCus
 
 export const computeCustomPlanNewCustomerProduct = ({
 	ctx,
-	params,
 	updateSubscriptionContext,
 	fullProduct,
 	freeTrialPlan,
 }: {
 	ctx: AutumnContext;
-	params: UpdateSubscriptionV0Params;
 	updateSubscriptionContext: UpdateSubscriptionBillingContext;
 	fullProduct: FullProduct;
 	freeTrialPlan: FreeTrialPlan;
@@ -27,9 +24,9 @@ export const computeCustomPlanNewCustomerProduct = ({
 		stripeSubscriptionSchedule,
 		billingCycleAnchorMs,
 		currentEpochMs,
+		featureQuantities,
 	} = updateSubscriptionContext;
 
-	// 1. Get feature quantities
 	const existingUsages = cusProductToExistingUsages({
 		cusProduct: customerProduct,
 		entityId: fullCustomer.entity?.id,
@@ -39,14 +36,7 @@ export const computeCustomPlanNewCustomerProduct = ({
 		cusProduct: customerProduct,
 	});
 
-	const featureQuantities = computeCustomPlanFeatureQuantities({
-		ctx,
-		fullProduct,
-		currentCustomerProduct: customerProduct,
-		params,
-	});
-
-	// 1. Compute the new full customer product
+	// Compute the new full customer product
 	const newFullCustomerProduct = initFullCustomerProduct({
 		ctx,
 

@@ -11,6 +11,7 @@ import type {
 	StripeSubscriptionAction,
 } from "@/internal/billing/v2/types/billingPlan";
 import type { StripeBillingPlanResult } from "@/internal/billing/v2/types/stripeBillingPlanResult";
+import { upsertInvoiceFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertInvoiceFromBilling";
 import { upsertSubscriptionFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertSubscriptionFromBilling";
 import { insertMetadataFromBillingPlan } from "@/internal/metadata/utils/insertMetadataFromBillingPlan";
 
@@ -106,6 +107,15 @@ export const executeStripeSubscriptionAction = async ({
 		latestStripeInvoice?.status === "open";
 
 	const deferBillingPlan = enableProductAfterInvoice || invoiceActionRequired;
+
+	if (latestStripeInvoice) {
+		await upsertInvoiceFromBilling({
+			ctx,
+			stripeInvoice: latestStripeInvoice,
+			fullProducts: billingContext.fullProducts,
+			fullCustomer: billingContext.fullCustomer,
+		});
+	}
 
 	if (deferBillingPlan) {
 		await insertMetadataFromBillingPlan({

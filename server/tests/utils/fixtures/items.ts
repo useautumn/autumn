@@ -1,4 +1,6 @@
+import { BillingInterval, type LimitedItem } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
+import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
 import {
 	constructArrearItem,
 	constructArrearProratedItem,
@@ -32,8 +34,11 @@ const monthlyMessages = ({
 	includedUsage = 100,
 }: {
 	includedUsage?: number;
-} = {}) =>
-	constructFeatureItem({ featureId: TestFeature.Messages, includedUsage });
+} = {}): LimitedItem =>
+	constructFeatureItem({
+		featureId: TestFeature.Messages,
+		includedUsage,
+	}) as LimitedItem;
 
 /**
  * Monthly words - resets each billing cycle
@@ -43,8 +48,11 @@ const monthlyWords = ({
 	includedUsage = 100,
 }: {
 	includedUsage?: number;
-} = {}) =>
-	constructFeatureItem({ featureId: TestFeature.Words, includedUsage });
+} = {}): LimitedItem =>
+	constructFeatureItem({
+		featureId: TestFeature.Words,
+		includedUsage,
+	}) as LimitedItem;
 
 /**
  * Monthly credits - resets each billing cycle
@@ -54,8 +62,11 @@ const monthlyCredits = ({
 	includedUsage = 100,
 }: {
 	includedUsage?: number;
-} = {}) =>
-	constructFeatureItem({ featureId: TestFeature.Credits, includedUsage });
+} = {}): LimitedItem =>
+	constructFeatureItem({
+		featureId: TestFeature.Credits,
+		includedUsage,
+	}) as LimitedItem;
 
 /**
  * Unlimited messages - no usage cap
@@ -75,12 +86,12 @@ const lifetimeMessages = ({
 	includedUsage = 100,
 }: {
 	includedUsage?: number;
-} = {}) =>
+} = {}): LimitedItem =>
 	constructFeatureItem({
 		featureId: TestFeature.Messages,
 		includedUsage,
 		interval: null,
-	});
+	}) as LimitedItem;
 
 // ═══════════════════════════════════════════════════════════════════
 // PREPAID (purchase units upfront)
@@ -88,19 +99,21 @@ const lifetimeMessages = ({
 
 /**
  * Prepaid messages - purchase units upfront ($10/unit)
- * @param includedUsage - Free units before purchase required (default: 0)
+ * @param includedUsage - Free units before purchase required (default: 0), billing units are 100
  */
 const prepaidMessages = ({
 	includedUsage = 0,
+	billingUnits = 100,
 }: {
 	includedUsage?: number;
-} = {}) =>
+	billingUnits?: number;
+} = {}): LimitedItem =>
 	constructPrepaidItem({
 		featureId: TestFeature.Messages,
 		price: 10,
-		billingUnits: 1,
+		billingUnits,
 		includedUsage,
-	});
+	}) as LimitedItem;
 
 // ═══════════════════════════════════════════════════════════════════
 // CONSUMABLE / PAY-PER-USE (overage pricing)
@@ -114,13 +127,13 @@ const consumableMessages = ({
 	includedUsage = 0,
 }: {
 	includedUsage?: number;
-} = {}) =>
+} = {}): LimitedItem =>
 	constructArrearItem({
 		featureId: TestFeature.Messages,
 		includedUsage,
 		price: 0.1,
 		billingUnits: 1,
-	});
+	}) as LimitedItem;
 
 // ═══════════════════════════════════════════════════════════════════
 // ALLOCATED / SEATS (prorated billing)
@@ -134,11 +147,35 @@ const allocatedUsers = ({
 	includedUsage = 0,
 }: {
 	includedUsage?: number;
-} = {}) =>
+} = {}): LimitedItem =>
 	constructArrearProratedItem({
 		featureId: TestFeature.Users,
 		pricePerUnit: 10,
 		includedUsage,
+	}) as LimitedItem;
+
+// ═══════════════════════════════════════════════════════════════════
+// BASE PRICES
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Monthly base price item
+ * @param price - Monthly price (default: 20)
+ */
+const monthlyPrice = ({ price = 20 }: { price?: number } = {}) =>
+	constructPriceItem({
+		price,
+		interval: BillingInterval.Month,
+	});
+
+/**
+ * Annual base price item
+ * @param price - Annual price (default: 200)
+ */
+const annualPrice = ({ price = 200 }: { price?: number } = {}) =>
+	constructPriceItem({
+		price,
+		interval: BillingInterval.Year,
 	});
 
 // ═══════════════════════════════════════════════════════════════════
@@ -164,4 +201,8 @@ export const items = {
 
 	// Allocated
 	allocatedUsers,
+
+	// Base prices
+	monthlyPrice,
+	annualPrice,
 } as const;

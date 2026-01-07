@@ -1,4 +1,8 @@
-import type { FullCusProduct, FullProduct } from "@autumn/shared";
+import type {
+	FeatureOptions,
+	FullCusProduct,
+	FullProduct,
+} from "@autumn/shared";
 import type { FullCustomer } from "@shared/models/cusModels/fullCusModel";
 import type Stripe from "stripe";
 import { z } from "zod/v4";
@@ -21,10 +25,13 @@ export interface BillingContext {
 
 	// Timestamps...
 	currentEpochMs: number;
-	billingCycleAnchorMs?: number;
+	billingCycleAnchorMs: number | "now";
 
 	// Invoice mode
 	invoiceMode?: InvoiceMode;
+
+	// Feature quantities
+	featureQuantities: FeatureOptions[];
 }
 
 export interface UpdateSubscriptionBillingContext extends BillingContext {

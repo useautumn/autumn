@@ -40,12 +40,19 @@ export const buildLineItem = ({
 	}
 
 	// 3. Return LineItem
-	return LineItemSchema.parse({
+	const lineItemData = {
 		amount,
 		description,
 		context,
 		stripePriceId,
 		stripeProductId,
 		chargeImmediately,
-	} satisfies LineItemCreate);
+	} satisfies LineItemCreate;
+
+	const result = LineItemSchema.safeParse(lineItemData);
+	if (!result.success) {
+		throw result.error;
+	}
+
+	return result.data;
 };

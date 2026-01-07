@@ -1,25 +1,37 @@
-import type { BillingPreviewResponse } from "@autumn/shared";
+import {
+	type BillingPreviewResponse,
+	orgToCurrency,
+	sumValues,
+} from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import type { BillingPlan } from "@/internal/billing/v2/types/billingPlan";
 
 export const billingPlanToPreviewResponse = ({
+	ctx,
+	billingContext,
 	billingPlan,
 }: {
+	ctx: AutumnContext;
+	billingContext: BillingContext;
 	billingPlan: BillingPlan;
 }): BillingPreviewResponse => {
-	// 1. Get lines
+	const { fullCustomer } = billingContext;
+
 	const autumnBillingPlan = billingPlan.autumn;
+	const previewLineItems = autumnBillingPlan.lineItems.map((line) => ({
+		description: line.description,
+		amount: line.finalAmount,
+	}));
 
-	// const previewLineItems = autumnBillingPlan.lineItems.map((line) => ({
-	// 	description: line.description,
-	// 	amount: line.amount,
-	// }));
+	const total = sumValues(previewLineItems.map((line) => line.amount));
 
-	// const total = autumnBillingPlanLines.reduce(
-	// 	(acc, line) => acc + line.amount,
-	// 	0,
-	// );
+	const currency = orgToCurrency({ org: ctx.org });
 
-	// return {
-	// 	customer_id: billingPlan.customer_id,
-	// };
+	return {
+		customer_id: fullCustomer.id || "",
+		line_items: previewLineItems,
+		total,
+		currency,
+	} satisfies BillingPreviewResponse;
 };

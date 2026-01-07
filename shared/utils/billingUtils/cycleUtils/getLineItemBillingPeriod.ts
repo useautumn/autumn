@@ -5,30 +5,29 @@ import { getCycleEnd } from "./getCycleEnd";
 import { getCycleStart } from "./getCycleStart";
 
 export const getLineItemBillingPeriod = ({
-	anchor,
+	anchorMs,
 	price,
-	now,
+	nowMs,
 }: {
-	anchor: number;
+	anchorMs: number | "now";
 	price: Price;
-	now: number;
+	nowMs: number;
 }): BillingPeriod | undefined => {
 	if (isOneOffPrice(price)) return undefined;
 
 	const { interval, interval_count: intervalCount } = price.config;
-	return {
-		start: getCycleStart({
-			anchor,
-			interval: price.config.interval,
-			intervalCount: price.config.interval_count,
-			now,
-		}),
+	const start = getCycleStart({
+		anchor: anchorMs,
+		interval,
+		intervalCount,
+		now: nowMs,
+	});
+	const end = getCycleEnd({
+		anchor: anchorMs,
+		interval,
+		intervalCount,
+		now: nowMs,
+	});
 
-		end: getCycleEnd({
-			anchor,
-			interval,
-			intervalCount,
-			now,
-		}),
-	};
+	return { start, end };
 };

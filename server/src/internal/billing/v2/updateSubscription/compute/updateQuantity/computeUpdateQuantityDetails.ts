@@ -92,9 +92,9 @@ export const computeUpdateQuantityDetails = ({
 		});
 
 	const billingPeriod = getLineItemBillingPeriod({
-		anchor: billingCycleAnchorMs,
+		anchorMs: billingCycleAnchorMs,
 		price: customerPrice.price,
-		now: currentEpochMs,
+		nowMs: currentEpochMs,
 	});
 
 	if (!billingPeriod) {

@@ -10,13 +10,13 @@ import { usagePriceToLineItem } from "./lineItemBuilders/usagePriceToLineItem";
 
 export const cusProductToArrearLineItems = ({
 	cusProduct,
-	billingCycleAnchor,
-	now,
+	billingCycleAnchorMs,
+	nowMs,
 	org,
 }: {
 	cusProduct: FullCusProduct;
-	billingCycleAnchor: number;
-	now: number;
+	billingCycleAnchorMs: number | "now";
+	nowMs: number;
 	org: Organization;
 }) => {
 	let lineItems: LineItem[] = [];
@@ -28,9 +28,9 @@ export const cusProductToArrearLineItems = ({
 
 		// Calculate billing period
 		const billingPeriod = getLineItemBillingPeriod({
-			anchor: billingCycleAnchor,
+			anchorMs: billingCycleAnchorMs,
 			price,
-			now,
+			nowMs,
 		});
 
 		const cusEnt = cusPriceToCusEntWithCusProduct({
@@ -53,7 +53,7 @@ export const cusProductToArrearLineItems = ({
 			billingPeriod,
 			direction: "charge",
 			billingTiming: "in_arrear",
-			now,
+			now: nowMs,
 			currency: orgToCurrency({ org }),
 		};
 
