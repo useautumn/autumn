@@ -1,13 +1,13 @@
 import type { FullProduct, UpdateSubscriptionV0Params } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
-import { computeSubscriptionUpdateFeatureQuantities } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateCustomPlan/computeSubscriptionUpdateFeatureQuantities";
+import { computeCustomPlanFeatureQuantities } from "@/internal/billing/v2/updateSubscription/compute/customPlan/computeCustomPlanFeatureQuantities";
 import type { FreeTrialPlan } from "@/internal/billing/v2/types/billingPlan";
 import { cusProductToExistingRollovers } from "@/internal/billing/v2/utils/handleExistingRollovers/cusProductToExistingRollovers";
 import { cusProductToExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/cusProductToExistingUsages";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 
-export const computeSubscriptionUpdateNewCustomerProduct = ({
+export const computeCustomPlanNewCustomerProduct = ({
 	ctx,
 	params,
 	updateSubscriptionContext,
@@ -39,7 +39,7 @@ export const computeSubscriptionUpdateNewCustomerProduct = ({
 		cusProduct: customerProduct,
 	});
 
-	const featureQuantities = computeSubscriptionUpdateFeatureQuantities({
+	const featureQuantities = computeCustomPlanFeatureQuantities({
 		ctx,
 		fullProduct,
 		currentCustomerProduct: customerProduct,

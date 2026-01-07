@@ -4,6 +4,7 @@ import {
 	CusProductStatus,
 	cusProductsToCusEnts,
 	cusProductsToCusPrices,
+	customerPriceToCustomerEntitlement,
 	type FullCusProduct,
 	intervalsDifferent,
 	type UsagePriceConfig,
@@ -13,10 +14,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { subToAutumnInterval } from "@/external/stripe/utils.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import {
-	getCusPriceUsage,
-	getRelatedCusEnt,
-} from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
+import { getCusPriceUsage } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
 import {
 	formatPrice,
 	getBillingType,
@@ -73,7 +71,10 @@ export const getUsageInvoiceItems = async ({
 
 		if (amount <= 0) continue;
 
-		const cusEnt = getRelatedCusEnt({ cusPrice, cusEnts })!;
+		const cusEnt = customerPriceToCustomerEntitlement({
+			customerPrice: cusPrice,
+			customerEntitlements: cusEnts,
+		})!;
 
 		if (!cusEnt) {
 			console.log("Price:", formatPrice({ price: cusPrice.price }));

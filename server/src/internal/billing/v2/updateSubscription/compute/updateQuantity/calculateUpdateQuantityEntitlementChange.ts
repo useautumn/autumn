@@ -1,10 +1,9 @@
 import {
+	customerPriceToBillingUnits,
 	type FullCustomerEntitlement,
 	type FullCustomerPrice,
-	InternalError,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils";
 
 /**
  * Calculates the entitlement balance change resulting from a quantity update.
@@ -18,35 +17,23 @@ import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cus
  * @param customerEntitlements - Array of all entitlements for this customer product
  * @returns Entitlement ID and balance change to apply
  */
-export const calculateCustomerEntitlementChange = ({
+export const calculateUpdateQuantityEntitlementChange = ({
 	quantityDifferenceForEntitlements,
-	billingUnitsPerQuantity,
 	customerPrice,
-	customerEntitlements,
+	customerEntitlement,
 }: {
 	quantityDifferenceForEntitlements: number;
-	billingUnitsPerQuantity: number;
 	customerPrice: FullCustomerPrice;
-	customerEntitlements: FullCustomerEntitlement[];
+	customerEntitlement: FullCustomerEntitlement;
 }): {
 	customerEntitlementId: string;
 	customerEntitlementBalanceChange: number;
 } => {
-	const customerEntitlement = getRelatedCusEnt({
-		cusPrice: customerPrice,
-		cusEnts: customerEntitlements,
-	});
-
-	if (!customerEntitlement) {
-		throw new InternalError({
-			message: `[Quantity Update] Related customer entitlement not found for customer price: ${customerPrice.id}`,
-		});
-	}
-
+	const billingUnits = customerPriceToBillingUnits({ customerPrice });
 	const customerEntitlementBalanceChange = new Decimal(
 		quantityDifferenceForEntitlements,
 	)
-		.mul(billingUnitsPerQuantity)
+		.mul(billingUnits)
 		.toNumber();
 
 	return {

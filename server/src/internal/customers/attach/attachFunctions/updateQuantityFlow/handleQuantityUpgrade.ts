@@ -2,6 +2,7 @@ import {
 	type AttachConfig,
 	calculateProrationAmount,
 	cusProductToProduct,
+	customerPriceToCustomerEntitlement,
 	type Feature,
 	type FeatureOptions,
 	type FullCusProduct,
@@ -18,7 +19,6 @@ import type { Stripe } from "stripe";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import { constructStripeInvoiceItem } from "@/internal/invoices/invoiceItemUtils/invoiceItemUtils.js";
 import { createAndFinalizeInvoice } from "@/internal/invoices/invoiceUtils/createAndFinalizeInvoice.js";
@@ -186,9 +186,9 @@ export const handleQuantityUpgrade = async ({
 
 	// Update cus ent
 
-	const cusEnt = getRelatedCusEnt({
-		cusPrice,
-		cusEnts: cusProduct.customer_entitlements,
+	const cusEnt = customerPriceToCustomerEntitlement({
+		customerPrice: cusPrice,
+		customerEntitlements: cusProduct.customer_entitlements,
 	});
 
 	if (cusEnt) {

@@ -1,7 +1,7 @@
 import {
+	customerPriceToCustomerEntitlement,
 	ErrCode,
 	type FullCusProduct,
-	type FullCustomerEntitlement,
 	type FullCustomerPrice,
 	getFeatureInvoiceDescription,
 	type Price,
@@ -11,28 +11,6 @@ import { getPriceForOverage } from "@server/internal/products/prices/priceUtils"
 import RecaseError from "@server/utils/errorUtils";
 import { Decimal } from "decimal.js";
 import { getTotalNegativeBalance } from "../cusEnts/cusEntUtils";
-
-export const getRelatedCusEnt = ({
-	cusPrice,
-	cusEnts,
-}: {
-	cusPrice: FullCustomerPrice;
-	cusEnts: FullCustomerEntitlement[];
-}) => {
-	const config = cusPrice.price.config as UsagePriceConfig;
-	if (!config) {
-		console.log("No config found for cusPrice", cusPrice);
-		return null;
-	}
-
-	const cusEnt = cusEnts.find(
-		(ce) =>
-			ce.customer_product_id == cusPrice.customer_product_id &&
-			ce.entitlement.id == cusPrice.price.entitlement_id,
-	);
-
-	return cusEnt;
-};
 
 // Get overage for a cusPrice
 export const getCusPriceUsage = ({
@@ -61,9 +39,9 @@ export const getCusPriceUsage = ({
 	}
 
 	// 1. Get related cusEnt
-	const cusEnt = getRelatedCusEnt({
-		cusPrice,
-		cusEnts: cusProduct.customer_entitlements,
+	const cusEnt = customerPriceToCustomerEntitlement({
+		customerPrice: cusPrice,
+		customerEntitlements: cusProduct.customer_entitlements,
 	});
 	const config = cusPrice.price.config as UsagePriceConfig;
 

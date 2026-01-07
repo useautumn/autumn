@@ -12,7 +12,7 @@ import { notNullish } from "@/utils/genUtils";
  * @param updatedOptions - Desired feature options with new quantity
  * @returns Quantity differences and upgrade/downgrade indicator
  */
-export const calculateQuantityDifferences = ({
+export const calculateUpdateQuantityDifferences = ({
 	previousOptions,
 	updatedOptions,
 }: {

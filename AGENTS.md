@@ -89,6 +89,14 @@
 ## File Naming
 DON'T name files one word (like index.ts, model.ts, etc.). Give proper indication in the filename to which resource it's targeting. For example, a utility file for organizations should be named orgUtils.ts. This is because it's easier to search for files like this. That being said, the filename shouldn't be overly long (less than three words is ideal)
 
+## File Moving/Renaming
+When restructuring, moving, or renaming files, **ALWAYS use terminal commands** (`mv`, `mkdir`) instead of rewriting files. This preserves git history and ensures no lines/logic are accidentally lost or changed
+
+## Deleting Files
+- **NEVER use `rm` commands unless the file is confirmed to be unused**
+- **ALWAYS ask for user approval before running any `rm` or `rm -rf` commands**
+- Before deleting, verify the file has no imports/references in the codebase
+
 # Vite
 ## Components
 - Always use v2 components from `@/components/v2/` (buttons, inputs, dialogs, sheets, selects, etc.) for new features. Old components in `@/components/ui/` are deprecated.

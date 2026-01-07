@@ -14,7 +14,7 @@ import { paramsToFeatureOptions } from "@/internal/billing/v2/compute/computeAut
 /**
  * Compute the feature quantities for a subscription update
  */
-export const computeSubscriptionUpdateFeatureQuantities = ({
+export const computeCustomPlanFeatureQuantities = ({
 	ctx,
 	fullProduct,
 	currentCustomerProduct,

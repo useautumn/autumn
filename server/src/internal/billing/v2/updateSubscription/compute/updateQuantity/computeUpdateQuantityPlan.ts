@@ -1,10 +1,10 @@
 import { InternalError, type UpdateSubscriptionV0Params } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { AutumnBillingPlan } from "../../types/billingPlan";
-import type { UpdateSubscriptionBillingContext } from "../../billingContext";
-import { computeQuantityUpdateDetails } from "./computeQuantityUpdateDetails";
+import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
+import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan";
+import { computeUpdateQuantityDetails } from "./computeUpdateQuantityDetails";
 
-export const computeSubscriptionUpdateQuantityPlan = ({
+export const computeUpdateQuantityPlan = ({
 	ctx,
 	updateSubscriptionContext,
 	params,
@@ -24,16 +24,14 @@ export const computeSubscriptionUpdateQuantityPlan = ({
 	const newOptions = params.options || [];
 
 	const quantityUpdateDetails = newOptions.map((updatedOptions) =>
-		computeQuantityUpdateDetails({
+		computeUpdateQuantityDetails({
 			ctx,
 			updatedOptions,
 			updateSubscriptionContext,
 		}),
 	);
 
-	const lineItems = quantityUpdateDetails.flatMap(
-		(detail) => detail.lineItems,
-	);
+	const lineItems = quantityUpdateDetails.flatMap((detail) => detail.lineItems);
 
 	return {
 		insertCustomerProducts: [],

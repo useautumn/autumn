@@ -1,11 +1,10 @@
 import { UpdateSubscriptionV0ParamsSchema } from "@autumn/shared";
-import { computeSubscriptionUpdatePlan } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdatePlan";
+import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
-import { executeBillingPlan } from "../execute/executeBillingPlan";
-import { evaluateStripeBillingPlan } from "../providers/stripe/actionBuilders/evaluateStripeBillingPlan";
-import { fetchUpdateSubscriptionBillingContext } from "../subscriptionUpdate/fetch/fetchUpdateSubscriptionBillingContext";
+import { computeUpdateSubscriptionPlan } from "./compute/computeUpdateSubscriptionPlan";
+import { fetchUpdateSubscriptionBillingContext } from "./fetch/fetchUpdateSubscriptionBillingContext";
 
-export const handleUpdateSubscription = createRoute({
+export const handlePreviewUpdateSubscription = createRoute({
 	body: UpdateSubscriptionV0ParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
@@ -17,7 +16,7 @@ export const handleUpdateSubscription = createRoute({
 				params: body,
 			});
 
-		const autumnBillingPlan = await computeSubscriptionUpdatePlan({
+		const autumnBillingPlan = await computeUpdateSubscriptionPlan({
 			ctx,
 			billingContext: updateSubscriptionBillingContext,
 			params: body,
@@ -29,15 +28,14 @@ export const handleUpdateSubscription = createRoute({
 			autumnBillingPlan,
 		});
 
-		await executeBillingPlan({
-			ctx,
-			billingContext: updateSubscriptionBillingContext,
-			billingPlan: {
+		// Convert to preview response
+
+		return c.json(
+			{
 				autumn: autumnBillingPlan,
 				stripe: stripeBillingPlan,
 			},
-		});
-
-		return c.json({ success: true }, 200);
+			200,
+		);
 	},
 });
