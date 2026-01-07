@@ -15,8 +15,8 @@ import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js"
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
 /**
- * Test: Monthly messages + Lifetime messages from different products
- * Expected: breakdown array with 2 items (different reset intervals)
+ * Test: Monthly messages + Lifetime messages under the SAME product
+ * Expected: breakdown array with 2 items (different reset intervals, same product)
  */
 
 const monthlyMessages = constructFeatureItem({
@@ -31,24 +31,16 @@ const lifetimeMessages = constructFeatureItem({
 	interval: null, // lifetime
 });
 
-const monthlyProd = constructProduct({
+const combinedProd = constructProduct({
 	type: "free",
-	id: "monthly-prod",
+	id: "combined-prod",
 	isDefault: false,
-	items: [monthlyMessages],
+	items: [monthlyMessages, lifetimeMessages],
 });
 
-const lifetimeProd = constructProduct({
-	type: "free",
-	id: "lifetime-prod",
-	isAddOn: true,
-	isDefault: false,
-	items: [lifetimeMessages],
-});
+const testCase = "check-breakdown6";
 
-const testCase = "check-breakdown2";
-
-describe(`${chalk.yellowBright("check-breakdown2: monthly + lifetime messages = 2 breakdown items")}`, () => {
+describe(`${chalk.yellowBright("check-breakdown6: monthly + lifetime messages in same product = 2 breakdown items")}`, () => {
 	const customerId = testCase;
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2_0 });
@@ -62,34 +54,28 @@ describe(`${chalk.yellowBright("check-breakdown2: monthly + lifetime messages = 
 
 		await initProductsV0({
 			ctx,
-			products: [monthlyProd, lifetimeProd],
+			products: [combinedProd],
 			prefix: testCase,
 		});
 
-		// Attach both products
 		await autumnV2.attach({
 			customer_id: customerId,
-			product_id: monthlyProd.id,
-		});
-
-		await autumnV2.attach({
-			customer_id: customerId,
-			product_id: lifetimeProd.id,
+			product_id: combinedProd.id,
 		});
 	});
 
-	test("should have correct parent balance and 2 breakdown items", async () => {
+	test("v2: should have correct parent balance and 2 breakdown items", async () => {
 		const res = (await autumnV2.check<CheckResponseV2>({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV2;
 
-		// Parent balance should sum both products
+		// Parent balance should sum both items
 		expect(res.balance).toMatchObject({
 			granted_balance: 700, // 500 + 200
 			current_balance: 700,
 			usage: 0,
-			plan_id: null, // null when multiple products
+			plan_id: combinedProd.id, // Same product for both
 		});
 
 		// Should have 2 breakdown items with unique IDs
@@ -98,7 +84,7 @@ describe(`${chalk.yellowBright("check-breakdown2: monthly + lifetime messages = 
 		expect(new Set(breakdown?.map((b) => b.id)).size).toBe(2);
 	});
 
-	test("breakdown items should have correct values", async () => {
+	test("v2: breakdown items should have correct values", async () => {
 		const res = (await autumnV2.check<CheckResponseV2>({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -115,7 +101,7 @@ describe(`${chalk.yellowBright("check-breakdown2: monthly + lifetime messages = 
 			granted_balance: 500,
 			current_balance: 500,
 			usage: 0,
-			plan_id: monthlyProd.id,
+			plan_id: combinedProd.id,
 			reset: {
 				interval: "month",
 			},
@@ -125,7 +111,7 @@ describe(`${chalk.yellowBright("check-breakdown2: monthly + lifetime messages = 
 			granted_balance: 200,
 			current_balance: 200,
 			usage: 0,
-			plan_id: lifetimeProd.id,
+			plan_id: combinedProd.id,
 			reset: {
 				interval: "one_off",
 				resets_at: null,
@@ -139,7 +125,7 @@ describe(`${chalk.yellowBright("check-breakdown2: monthly + lifetime messages = 
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV1;
 
-		// Parent balance should sum both products
+		// Parent balance should sum both items
 		expect(res.included_usage).toBe(700); // 500 + 200
 		expect(res.balance).toBe(700);
 		expect(res.usage).toBe(0);
@@ -153,8 +139,6 @@ describe(`${chalk.yellowBright("check-breakdown2: monthly + lifetime messages = 
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV1;
-
-		console.log("Response:", res);
 
 		const monthlyBreakdown = res.breakdown?.find(
 			(b) => b.included_usage === 500,
