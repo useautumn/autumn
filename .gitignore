@@ -100,7 +100,7 @@ supabase/
 # 2. Load files
 
 .claude/
-.vscode/
+
 
 migration.sh
 stat.sh

@@ -1,6 +1,5 @@
-import { applyProration, priceToLineAmount } from "@autumn/shared";
 import { expect, test } from "bun:test";
-import { TestFeature } from "@tests/setup/v2Features.js";
+import { applyProration, type Price, priceToLineAmount } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -34,7 +33,10 @@ test.concurrent(`${chalk.yellowBright("preview-total: mid-cycle free to paid pro
 	const customer = await autumnV1.customers.get(customerId);
 	const subscription = customer.products?.[0];
 
-	if (!subscription?.current_period_start || !subscription?.current_period_end) {
+	if (
+		!subscription?.current_period_start ||
+		!subscription?.current_period_end
+	) {
 		throw new Error("Missing billing period on subscription");
 	}
 
@@ -54,7 +56,7 @@ test.concurrent(`${chalk.yellowBright("preview-total: mid-cycle free to paid pro
 
 	// Calculate expected amount manually
 	const baseAmount = priceToLineAmount({
-		price: priceItem.price,
+		price: priceItem.price as unknown as Price,
 		multiplier: 1,
 	});
 
@@ -74,4 +76,3 @@ test.concurrent(`${chalk.yellowBright("preview-total: mid-cycle free to paid pro
 
 	expect(preview.total).toBe(expectedAmount);
 });
-
