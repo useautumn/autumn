@@ -6,7 +6,7 @@ import {
 
 export const isProductPaidAndRecurring = (product: FullProduct) => {
 	return (
-		isOneOffProduct({ prices: product.prices }) &&
+		!isOneOffProduct({ prices: product.prices }) &&
 		!isFreeProduct({ prices: product.prices })
 	);
 };

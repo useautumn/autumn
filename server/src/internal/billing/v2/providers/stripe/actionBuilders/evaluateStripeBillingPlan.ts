@@ -64,7 +64,6 @@ export const evaluateStripeBillingPlan = async ({
 			billingContext,
 			finalCustomerProducts: finalFullCustomer.customer_products,
 			trialEndsAt: autumnBillingPlan.freeTrialPlan?.trialEndsAt,
-			nowMs: billingContext.currentEpochMs,
 		});
 
 	return {
