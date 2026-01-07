@@ -89,6 +89,7 @@ export const getPricesAndEnts = async ({
 		entitlements: ents,
 		customPrices,
 		customEnts,
+		features: updatedFeatures,
 	} = await handleNewProductItems({
 		db,
 		curPrices,
@@ -120,14 +121,14 @@ export const getPricesAndEnts = async ({
 	return {
 		optionsList: mapOptionsList({
 			optionsInput: optionsInput || [],
-			features,
+			features: updatedFeatures,
 			prices,
 			curCusProduct,
 		}),
 		prices,
 		entitlements: getEntsWithFeature({
 			ents,
-			features,
+			features: updatedFeatures,
 		}),
 		freeTrial: uniqueFreeTrial,
 		customPrices,

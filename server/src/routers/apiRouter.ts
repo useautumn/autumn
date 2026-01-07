@@ -1,16 +1,17 @@
 import { Hono } from "hono";
-import { insightsRouter } from "@/internal/analytics/insightsRouter";
-import { legacyAnalyticsRouter } from "@/internal/analytics/legacyAnalyticsRouter";
-import { eventsRouter } from "@/internal/events/eventsRouter";
-import { analyticsMiddleware } from "../honoMiddlewares/analyticsMiddleware";
-import { apiVersionMiddleware } from "../honoMiddlewares/apiVersionMiddleware";
-import { idempotencyMiddleware } from "../honoMiddlewares/idempotencyMiddleware";
-import { orgConfigMiddleware } from "../honoMiddlewares/orgConfigMiddleware";
-import { queryMiddleware } from "../honoMiddlewares/queryMiddleware";
-import { rateLimitMiddleware } from "../honoMiddlewares/rateLimitMiddleware";
-import { refreshCacheMiddleware } from "../honoMiddlewares/refreshCacheMiddleware";
-import { secretKeyMiddleware } from "../honoMiddlewares/secretKeyMiddleware";
-import type { HonoEnv } from "../honoUtils/HonoEnv";
+import { insightsRouter } from "@/internal/analytics/insightsRouter.js";
+import { legacyAnalyticsRouter } from "@/internal/analytics/legacyAnalyticsRouter.js";
+import { configsRouter } from "@/internal/configs/configsRouter.js";
+import { eventsRouter } from "@/internal/events/eventsRouter.js";
+import { analyticsMiddleware } from "../honoMiddlewares/analyticsMiddleware.js";
+import { apiVersionMiddleware } from "../honoMiddlewares/apiVersionMiddleware.js";
+import { idempotencyMiddleware } from "../honoMiddlewares/idempotencyMiddleware.js";
+import { orgConfigMiddleware } from "../honoMiddlewares/orgConfigMiddleware.js";
+import { queryMiddleware } from "../honoMiddlewares/queryMiddleware.js";
+import { rateLimitMiddleware } from "../honoMiddlewares/rateLimitMiddleware.js";
+import { refreshCacheMiddleware } from "../honoMiddlewares/refreshCacheMiddleware.js";
+import { secretKeyMiddleware } from "../honoMiddlewares/secretKeyMiddleware.js";
+import type { HonoEnv } from "../honoUtils/HonoEnv.js";
 import {
 	redemptionRouter,
 	referralRouter,
@@ -60,3 +61,5 @@ apiRouter.route("/redemptions", redemptionRouter);
 apiRouter.route("/insights", insightsRouter);
 apiRouter.route("/query", legacyAnalyticsRouter);
 apiRouter.route("/events", eventsRouter);
+
+apiRouter.route("/configs", configsRouter);

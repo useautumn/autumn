@@ -1,4 +1,5 @@
 import {
+	CusProductStatus,
 	cusProductsToCusEnts,
 	isBooleanCusEnt,
 	isContUseFeature,
@@ -33,7 +34,7 @@ export const checkForMisingBalance = async ({
 		(cp) => cp.id === newCustomerProductId,
 	);
 
-	if (!cusProduct) return;
+	if (!cusProduct || cusProduct.status === CusProductStatus.Scheduled) return;
 
 	const cusEnts = cusProductsToCusEnts({
 		cusProducts: [cusProduct],
@@ -94,9 +95,8 @@ export const checkForMisingBalance = async ({
 		const threshold = grantedBalanceIncrease.mul(0.995);
 
 		if (grantedBalanceIncrease.gt(0) && usageIncrease.gte(threshold)) {
-			const errMessage = `[RACE CONDITION] Usage increase (${usageIncrease}), granted balance increase (${grantedBalanceIncrease.toNumber()}), feature (${feature.name}), customer (${fullCustomer.id})`;
+			const errMessage = `[RACE CONDITION] Usage increase (${usageIncrease}), granted balance increase (${grantedBalanceIncrease.toNumber()}), feature (${feature.name}), customer (${fullCustomer.id}), product: ${cusProduct.product?.name}`;
 
-			console.log("CAPTURING SENTRY EXCEPTION");
 			Sentry.captureException(errMessage, {
 				tags: getSentryTags({
 					ctx,
@@ -113,6 +113,8 @@ export const checkForMisingBalance = async ({
 					newUsage: newUsage.toNumber(),
 					previousTotalBalance: previousTotalBalance.toNumber(),
 					newTotalBalance: newTotalBalance.toNumber(),
+					previousCustomer: previousApiCustomer,
+					newCustomer: newApiCustomer,
 				},
 			});
 		}

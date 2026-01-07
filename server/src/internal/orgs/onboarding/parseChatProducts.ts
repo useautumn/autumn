@@ -29,6 +29,7 @@ export const parseChatProducts = async ({
 	const allPrices: Price[] = [];
 	const allEnts: Entitlement[] = [];
 
+	let currentFeatures = features;
 	for (const product of chatProducts) {
 		const backendProduct: Product = constructProduct({
 			productData: CreateProductV2ParamsSchema.parse({
@@ -38,18 +39,19 @@ export const parseChatProducts = async ({
 			env: AppEnv.Sandbox,
 		});
 
-		const { prices, entitlements } = await handleNewProductItems({
+		const { prices, entitlements, features: updatedFeatures } = await handleNewProductItems({
 			db,
 			curPrices: [],
 			curEnts: [],
 			newItems: product.items,
 			product: backendProduct,
-			features,
+			features: currentFeatures,
 			saveToDb: false,
 			isCustom: false,
 			logger,
 		});
 
+		currentFeatures = updatedFeatures;
 		products.push(backendProduct);
 		allPrices.push(...prices);
 
