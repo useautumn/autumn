@@ -28,10 +28,12 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: entity 2 upgra
 
 	const { autumnV1, ctx, entities } = await initScenario({
 		customerId,
-		options: [
+		setup: [
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro, free] }),
 			s.entities({ count: 2, featureId: TestFeature.Users }),
+		],
+		actions: [
 			s.attach({ productId: "pro", entityIndex: 0 }),
 			s.attach({ productId: "free", entityIndex: 1 }),
 		],
@@ -106,10 +108,12 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: base + consuma
 
 	const { autumnV1, ctx, entities } = await initScenario({
 		customerId,
-		options: [
+		setup: [
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro, free] }),
 			s.entities({ count: 2, featureId: TestFeature.Users }),
+		],
+		actions: [
 			s.attach({ productId: "pro", entityIndex: 0 }),
 			s.attach({ productId: "free", entityIndex: 1 }),
 		],
@@ -201,10 +205,12 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: annual price")
 
 	const { autumnV1, ctx, entities } = await initScenario({
 		customerId,
-		options: [
+		setup: [
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro, free] }),
 			s.entities({ count: 2, featureId: TestFeature.Users }),
+		],
+		actions: [
 			s.attach({ productId: "pro", entityIndex: 0 }),
 			s.attach({ productId: "free", entityIndex: 1 }),
 		],
@@ -279,10 +285,12 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: annual mid-cyc
 
 	const { autumnV1, ctx, entities } = await initScenario({
 		customerId,
-		options: [
+		setup: [
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro, free] }),
 			s.entities({ count: 2, featureId: TestFeature.Users }),
+		],
+		actions: [
 			s.attach({ productId: "pro", entityIndex: 0 }),
 			s.attach({ productId: "free", entityIndex: 1 }),
 			s.advanceTestClock({ days: 15 }), // Advance 15 days mid-cycle
@@ -359,10 +367,12 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: monthly mid-cy
 
 	const { autumnV1, ctx, entities } = await initScenario({
 		customerId,
-		options: [
+		setup: [
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro, free] }),
 			s.entities({ count: 2, featureId: TestFeature.Users }),
+		],
+		actions: [
 			s.attach({ productId: "pro", entityIndex: 0 }),
 			s.attach({ productId: "free", entityIndex: 1 }),
 			s.advanceTestClock({ days: 15 }), // Advance 15 days mid-cycle
