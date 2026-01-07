@@ -9,14 +9,14 @@ export const createWorkerContext = async ({
 	db,
 	orgId,
 	env,
-	// features,
 	logger,
+	workflowId,
 }: {
 	db: DrizzleCli;
 	orgId?: string;
 	env?: AppEnv;
-	// features: Feature[];
 	logger: Logger;
+	workflowId?: string;
 }) => {
 	if (!orgId || !env) return;
 
@@ -36,6 +36,7 @@ export const createWorkerContext = async ({
 	const workerLogger = logger.child({
 		context: {
 			context: {
+				workflow_id: workflowId,
 				org_id: org?.id,
 				org_slug: org?.slug,
 				env: env,

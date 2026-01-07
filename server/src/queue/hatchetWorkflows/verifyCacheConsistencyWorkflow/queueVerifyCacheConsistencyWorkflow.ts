@@ -5,6 +5,7 @@ import {
 	isFreeProduct,
 } from "@autumn/shared";
 import type { Logger } from "../../../external/logtail/logtailUtils";
+import { generateId } from "../../../utils/genUtils";
 import { JobName } from "../../JobName";
 import { runHatchetWorkflow } from "../../queueUtils";
 
@@ -19,8 +20,9 @@ export const queueVerifyCacheConsistencyWorkflow = async ({
 	logger: Logger;
 	source: string;
 }) => {
+	const workflowId = generateId("workflow");
 	logger.info(
-		`[${source}] Scheduling verify cache workflow for customer ${previousFullCustomer.id || previousFullCustomer.internal_id}`,
+		`[${source}] Scheduling verify cache workflow for customer ${previousFullCustomer.id || previousFullCustomer.internal_id}, workflowId: ${workflowId}`,
 	);
 	try {
 		// 1. Check if new customer product is not free
@@ -29,6 +31,10 @@ export const queueVerifyCacheConsistencyWorkflow = async ({
 
 		await runHatchetWorkflow({
 			workflowName: JobName.VerifyCacheConsistency,
+			metadata: {
+				workflowId,
+				customerId: previousFullCustomer.id ?? "",
+			},
 			payload: {
 				orgId: previousFullCustomer.org_id,
 				env: previousFullCustomer.env,
