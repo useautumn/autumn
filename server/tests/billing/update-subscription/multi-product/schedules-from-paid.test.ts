@@ -1,4 +1,9 @@
-import { expect, test } from "bun:test";
+import { test } from "bun:test";
+import {
+	expectProductActive,
+	expectProductCanceled,
+	expectProductNotPresent,
+} from "@tests/billing/utils/expectCustomerProductCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -43,10 +48,10 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: cancel entity 1, update en
 		customerId,
 		entities[0].id,
 	);
-	const entity1Product = entity1AfterCancel.products?.find(
-		(p: { id?: string }) => p.id === `${customerId}_pro`,
-	);
-	expect(entity1Product?.canceled_at).toBeDefined();
+	await expectProductCanceled({
+		customer: entity1AfterCancel,
+		productId: `${customerId}_pro`,
+	});
 
 	// Entity 2 updates pro's items (change price)
 	const newPriceItem = items.monthlyPrice({ price: 30 }); // $30/mo instead of $20
@@ -60,10 +65,10 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: cancel entity 1, update en
 
 	// Verify entity 2 has updated items
 	const entity2Data = await autumnV1.entities.get(customerId, entities[1].id);
-	const entity2Product = entity2Data.products?.find(
-		(p: { id?: string }) => p.id === `${customerId}_pro`,
-	);
-	expect(entity2Product).toBeDefined();
+	await expectProductActive({
+		customer: entity2Data,
+		productId: `${customerId}_pro`,
+	});
 
 	await expectSubToBeCorrect({
 		db: ctx.db,
@@ -89,15 +94,14 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: cancel entity 1, update en
 		entities[1].id,
 	);
 
-	const entity1ProAfter = entity1AfterCycle.products?.find(
-		(p: { id?: string }) => p.id === `${customerId}_pro`,
-	);
-	const entity2ProAfter = entity2AfterCycle.products?.find(
-		(p: { id?: string }) => p.id === `${customerId}_pro`,
-	);
-
-	expect(entity1ProAfter).toBeUndefined();
-	expect(entity2ProAfter).toBeDefined();
+	await expectProductNotPresent({
+		customer: entity1AfterCycle,
+		productId: `${customerId}_pro`,
+	});
+	await expectProductActive({
+		customer: entity2AfterCycle,
+		productId: `${customerId}_pro`,
+	});
 
 	await expectSubToBeCorrect({
 		db: ctx.db,
@@ -166,10 +170,10 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: downgrade entity 1, update
 
 	// Verify entity 2's premium still active with new price
 	const entity2Data = await autumnV1.entities.get(customerId, entities[1].id);
-	const entity2Premium = entity2Data.products?.find(
-		(p: { id?: string }) => p.id === `${customerId}_premium`,
-	);
-	expect(entity2Premium).toBeDefined();
+	await expectProductActive({
+		customer: entity2Data,
+		productId: `${customerId}_premium`,
+	});
 
 	await expectSubToBeCorrect({
 		db: ctx.db,
@@ -196,19 +200,18 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: downgrade entity 1, update
 		entities[1].id,
 	);
 
-	const entity1Premium = entity1AfterCycle.products?.find(
-		(p: { id?: string }) => p.id === `${customerId}_premium`,
-	);
-	const entity1Pro = entity1AfterCycle.products?.find(
-		(p: { id?: string }) => p.id === `${customerId}_pro`,
-	);
-	const entity2PremiumAfter = entity2AfterCycle.products?.find(
-		(p: { id?: string }) => p.id === `${customerId}_premium`,
-	);
-
-	expect(entity1Premium).toBeUndefined();
-	expect(entity1Pro).toBeDefined();
-	expect(entity2PremiumAfter).toBeDefined();
+	await expectProductNotPresent({
+		customer: entity1AfterCycle,
+		productId: `${customerId}_premium`,
+	});
+	await expectProductActive({
+		customer: entity1AfterCycle,
+		productId: `${customerId}_pro`,
+	});
+	await expectProductActive({
+		customer: entity2AfterCycle,
+		productId: `${customerId}_premium`,
+	});
 
 	await expectSubToBeCorrect({
 		db: ctx.db,
@@ -287,10 +290,10 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: annual + monthly downgrade
 
 	// Verify entity 3's premium still active
 	const entity3Data = await autumnV1.entities.get(customerId, entities[2].id);
-	const entity3Premium = entity3Data.products?.find(
-		(p: { id?: string }) => p.id === `${customerId}_premium`,
-	);
-	expect(entity3Premium).toBeDefined();
+	await expectProductActive({
+		customer: entity3Data,
+		productId: `${customerId}_premium`,
+	});
 
 	await expectSubToBeCorrect({
 		db: ctx.db,
@@ -323,26 +326,26 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: annual + monthly downgrade
 	);
 
 	// Entity 1 should still have premium-annual (annual cycle not over)
-	const entity1PremiumAnnual = entity1AfterCycle.products?.find(
-		(p: { id?: string }) => p.id === `${customerId}_premium-annual`,
-	);
-	expect(entity1PremiumAnnual).toBeDefined();
+	await expectProductActive({
+		customer: entity1AfterCycle,
+		productId: `${customerId}_premium-annual`,
+	});
 
 	// Entity 2 should be on pro now
-	const entity2Premium = entity2AfterCycle.products?.find(
-		(p: { id?: string }) => p.id === `${customerId}_premium`,
-	);
-	const entity2Pro = entity2AfterCycle.products?.find(
-		(p: { id?: string }) => p.id === `${customerId}_pro`,
-	);
-	expect(entity2Premium).toBeUndefined();
-	expect(entity2Pro).toBeDefined();
+	await expectProductNotPresent({
+		customer: entity2AfterCycle,
+		productId: `${customerId}_premium`,
+	});
+	await expectProductActive({
+		customer: entity2AfterCycle,
+		productId: `${customerId}_pro`,
+	});
 
 	// Entity 3 should still have premium
-	const entity3PremiumAfter = entity3AfterCycle.products?.find(
-		(p: { id?: string }) => p.id === `${customerId}_premium`,
-	);
-	expect(entity3PremiumAfter).toBeDefined();
+	await expectProductActive({
+		customer: entity3AfterCycle,
+		productId: `${customerId}_premium`,
+	});
 
 	await expectSubToBeCorrect({
 		db: ctx.db,
@@ -377,16 +380,14 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: update to free item remove
 	// Verify both entities have pro
 	const entity1Before = await autumnV1.entities.get(customerId, entities[0].id);
 	const entity2Before = await autumnV1.entities.get(customerId, entities[1].id);
-	expect(
-		entity1Before.products?.find(
-			(p: { id?: string }) => p.id === `${customerId}_pro`,
-		),
-	).toBeDefined();
-	expect(
-		entity2Before.products?.find(
-			(p: { id?: string }) => p.id === `${customerId}_pro`,
-		),
-	).toBeDefined();
+	await expectProductActive({
+		customer: entity1Before,
+		productId: `${customerId}_pro`,
+	});
+	await expectProductActive({
+		customer: entity2Before,
+		productId: `${customerId}_pro`,
+	});
 
 	// Entity 2 updates Pro's items to be free (no price items, only feature)
 	await autumnV1.subscriptions.update({
@@ -398,10 +399,10 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: update to free item remove
 
 	// Entity 2's subscription should now be free (removed from paid sub)
 	const entity2Data = await autumnV1.entities.get(customerId, entities[1].id);
-	const entity2Product = entity2Data.products?.find(
-		(p: { id?: string }) => p.id === `${customerId}_pro`,
-	);
-	expect(entity2Product).toBeDefined();
+	await expectProductActive({
+		customer: entity2Data,
+		productId: `${customerId}_pro`,
+	});
 
 	// Should only have 1 subscription (entity 1's pro)
 	await expectSubToBeCorrect({
@@ -429,16 +430,14 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: update to free item remove
 		entities[1].id,
 	);
 
-	expect(
-		entity1AfterCycle.products?.find(
-			(p: { id?: string }) => p.id === `${customerId}_pro`,
-		),
-	).toBeDefined();
-	expect(
-		entity2AfterCycle.products?.find(
-			(p: { id?: string }) => p.id === `${customerId}_pro`,
-		),
-	).toBeDefined();
+	await expectProductActive({
+		customer: entity1AfterCycle,
+		productId: `${customerId}_pro`,
+	});
+	await expectProductActive({
+		customer: entity2AfterCycle,
+		productId: `${customerId}_pro`,
+	});
 
 	await expectSubToBeCorrect({
 		db: ctx.db,
@@ -507,10 +506,10 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: downgrade + update to free
 
 	// Entity 2's subscription should now be free
 	const entity2Data = await autumnV1.entities.get(customerId, entities[1].id);
-	const entity2Premium = entity2Data.products?.find(
-		(p: { id?: string }) => p.id === `${customerId}_premium`,
-	);
-	expect(entity2Premium).toBeDefined();
+	await expectProductActive({
+		customer: entity2Data,
+		productId: `${customerId}_premium`,
+	});
 
 	await expectSubToBeCorrect({
 		db: ctx.db,
@@ -538,19 +537,18 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: downgrade + update to free
 		entities[1].id,
 	);
 
-	const entity1Premium = entity1AfterCycle.products?.find(
-		(p: { id?: string }) => p.id === `${customerId}_premium`,
-	);
-	const entity1Pro = entity1AfterCycle.products?.find(
-		(p: { id?: string }) => p.id === `${customerId}_pro`,
-	);
-	const entity2PremiumAfter = entity2AfterCycle.products?.find(
-		(p: { id?: string }) => p.id === `${customerId}_premium`,
-	);
-
-	expect(entity1Premium).toBeUndefined();
-	expect(entity1Pro).toBeDefined();
-	expect(entity2PremiumAfter).toBeDefined();
+	await expectProductNotPresent({
+		customer: entity1AfterCycle,
+		productId: `${customerId}_premium`,
+	});
+	await expectProductActive({
+		customer: entity1AfterCycle,
+		productId: `${customerId}_pro`,
+	});
+	await expectProductActive({
+		customer: entity2AfterCycle,
+		productId: `${customerId}_premium`,
+	});
 
 	await expectSubToBeCorrect({
 		db: ctx.db,

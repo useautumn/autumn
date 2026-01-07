@@ -38,7 +38,9 @@ export const expectCustomerProductCorrect = async ({
 	}
 
 	if (!product) {
-		throw new Error(`Product ${productId} not found but expected state: ${state}`);
+		throw new Error(
+			`Product ${productId} not found but expected state: ${state}`,
+		);
 	}
 
 	if (state === "active") {

@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { expectCustomerFeatureCorrect } from "@tests/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/billing/utils/expectCustomerInvoiceCorrect";
+import { expectProductActive } from "@tests/billing/utils/expectCustomerProductCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -55,9 +56,10 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: entity 2 upgra
 		items: [messagesItem, priceItem],
 	});
 
-	// Verify entity 2's feature
+	// Verify entity 2 has the updated product
 	const entity2Data = await autumnV1.entities.get(customerId, entities[1].id);
 
+	await expectProductActive({ customer: entity2Data, productId: free.id });
 	expectCustomerFeatureCorrect({
 		customer: entity2Data,
 		featureId: TestFeature.Messages,
@@ -149,9 +151,10 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: base + consuma
 		],
 	});
 
-	// Verify entity 2's features
+	// Verify entity 2 has the updated product
 	const entity2Data = await autumnV1.entities.get(customerId, entities[1].id);
 
+	await expectProductActive({ customer: entity2Data, productId: free.id });
 	expectCustomerFeatureCorrect({
 		customer: entity2Data,
 		featureId: TestFeature.Messages,
@@ -226,9 +229,10 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: annual price")
 		items: [messagesItem, annualPriceItem],
 	});
 
-	// Verify entity 2's feature
+	// Verify entity 2 has the updated product
 	const entity2Data = await autumnV1.entities.get(customerId, entities[1].id);
 
+	await expectProductActive({ customer: entity2Data, productId: free.id });
 	expectCustomerFeatureCorrect({
 		customer: entity2Data,
 		featureId: TestFeature.Messages,
@@ -305,9 +309,10 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: annual mid-cyc
 		items: [messagesItem, annualPriceItem],
 	});
 
-	// Verify entity 2's feature
+	// Verify entity 2 has the updated product
 	const entity2Data = await autumnV1.entities.get(customerId, entities[1].id);
 
+	await expectProductActive({ customer: entity2Data, productId: free.id });
 	expectCustomerFeatureCorrect({
 		customer: entity2Data,
 		featureId: TestFeature.Messages,
@@ -384,9 +389,10 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: monthly mid-cy
 		items: [messagesItem, priceItem],
 	});
 
-	// Verify entity 2's feature
+	// Verify entity 2 has the updated product
 	const entity2Data = await autumnV1.entities.get(customerId, entities[1].id);
 
+	await expectProductActive({ customer: entity2Data, productId: free.id });
 	expectCustomerFeatureCorrect({
 		customer: entity2Data,
 		featureId: TestFeature.Messages,
