@@ -19,6 +19,8 @@ export const evaluateStripeBillingPlan = ({
 	billingContext: BillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
 }): StripeBillingPlan => {
+	const { autumnLineItems } = autumnBillingPlan;
+
 	const finalFullCustomer = autumnBillingPlanToFinalFullCustomer({
 		billingContext,
 		autumnBillingPlan,
@@ -29,8 +31,6 @@ export const evaluateStripeBillingPlan = ({
 		billingContext,
 		finalCustomerProducts: finalFullCustomer.customer_products,
 	});
-
-	const { autumnLineItems } = autumnBillingPlan;
 
 	const stripeInvoiceAction = buildStripeInvoiceAction({
 		lineItems: autumnLineItems,

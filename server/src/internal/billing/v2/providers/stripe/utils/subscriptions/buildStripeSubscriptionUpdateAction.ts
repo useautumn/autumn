@@ -38,25 +38,24 @@ export const buildStripeSubscriptionUpdateAction = ({
 	// When a schedule manages the subscription, don't set trial_end or cancel_at_period_end
 	// The schedule controls these via phase-level settings
 	const scheduleManagesSubscription = !!stripeSubscriptionScheduleAction;
+	const shouldSetTrialEnd = !scheduleManagesSubscription && trialEndsAt;
 
 	const params: Stripe.SubscriptionUpdateParams = {
 		items: subItemsUpdate.length > 0 ? subItemsUpdate : undefined,
-		trial_end: scheduleManagesSubscription
-			? undefined
-			: trialEndsAt
-				? msToSeconds(trialEndsAt)
-				: undefined,
+		trial_end: shouldSetTrialEnd ? msToSeconds(trialEndsAt) : undefined,
 		proration_behavior: "none",
 		cancel_at_period_end: scheduleManagesSubscription
 			? undefined
 			: cancelAtPeriodEnd,
 	};
 
-	if (
-		params.items === undefined &&
-		params.trial_end === undefined &&
-		params.cancel_at_period_end === undefined
-	) {
+	const hasNoUpdates = [
+		params.items,
+		params.trial_end,
+		params.cancel_at_period_end,
+	].every((field) => field === undefined);
+
+	if (hasNoUpdates) {
 		return undefined;
 	}
 
