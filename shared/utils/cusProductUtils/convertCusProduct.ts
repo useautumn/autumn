@@ -1,8 +1,5 @@
-import type { Entity } from "../../models/cusModels/entityModels/entityModels.js";
-import type { SortCusEntParams } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
-import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import type { FullCustomerPrice } from "../../models/cusProductModels/cusPriceModels/cusPriceModels.js";
-import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
+import type { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
 import type {
 	CusProduct,
 	FullCusProduct,
@@ -10,10 +7,7 @@ import type {
 import { ProcessorType } from "../../models/genModels/genEnums.js";
 import type { BillingType } from "../../models/productModels/priceModels/priceEnums.js";
 import type { FullProduct } from "../../models/productModels/productModels.js";
-import { cusEntMatchesEntity } from "../cusEntUtils/filterCusEntUtils.js";
-import { sortCusEntsForDeduction } from "../cusEntUtils/sortCusEntsForDeduction.js";
 import { getBillingType } from "../productUtils/priceUtils.js";
-import { notNullish } from "../utils.js";
 
 export const cusProductsToPrices = ({
 	cusProducts,
@@ -50,79 +44,6 @@ export const cusProductsToCusPrices = ({
 	}
 
 	return cusPrices;
-};
-
-export const cusProductsToCusEnts = ({
-	cusProducts,
-	inStatuses = [CusProductStatus.Active, CusProductStatus.PastDue],
-	reverseOrder = false,
-	featureId,
-	featureIds,
-	entity,
-	sortParams,
-}: {
-	cusProducts: FullCusProduct[];
-	inStatuses?: CusProductStatus[];
-	reverseOrder?: boolean;
-	featureId?: string;
-	featureIds?: string[];
-	entity?: Entity;
-	sortParams?: SortCusEntParams;
-}) => {
-	let cusEnts: FullCusEntWithFullCusProduct[] = [];
-
-	for (const cusProduct of cusProducts) {
-		if (!inStatuses.includes(cusProduct.status)) continue;
-
-		cusEnts.push(
-			...cusProduct.customer_entitlements.map((cusEnt) => ({
-				...cusEnt,
-				customer_product: cusProduct,
-			})),
-		);
-	}
-
-	if (featureId) {
-		cusEnts = cusEnts.filter(
-			(cusEnt) => cusEnt.entitlement.feature.id === featureId,
-		);
-	}
-
-	if (featureIds) {
-		cusEnts = cusEnts.filter((cusEnt) =>
-			featureIds.includes(cusEnt.entitlement.feature.id),
-		);
-	}
-
-	if (entity) {
-		cusEnts = cusEnts.filter((cusEnt) =>
-			cusEntMatchesEntity({
-				cusEnt: cusEnt,
-				entity,
-			}),
-		);
-	}
-
-	sortCusEntsForDeduction({
-		cusEnts,
-		reverseOrder,
-		entityId: entity?.id,
-		// sortParams,
-	});
-
-	if (sortParams?.cusEntIds && sortParams.cusEntIds.length > 0) {
-		cusEnts = cusEnts.filter((cusEnt) =>
-			sortParams.cusEntIds?.includes(cusEnt.id),
-		);
-	}
-
-	if (notNullish(sortParams?.interval)) {
-		cusEnts = cusEnts.filter(
-			(cusEnt) => cusEnt.entitlement.interval === sortParams.interval,
-		);
-	}
-
-	return cusEnts as FullCusEntWithFullCusProduct[];
 };
 
 export const cusProductToPrices = ({

@@ -4,8 +4,8 @@ import {
 	CusExpand,
 	type EntityLegacyData,
 	type FullCustomer,
-	filterEntityLevelCusProducts,
-	filterOutEntitiesFromCusProducts,
+	filterEntityLevelCustomerEntitlementsFromFullCustomer,
+	filterOutEntitiesFromFullCustomer,
 } from "@autumn/shared";
 import { redis } from "../../../../external/redis/initRedis.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
@@ -47,18 +47,13 @@ export const setCachedApiCustomer = async ({
 	const { apiCustomer: masterApiCustomer, legacyData } =
 		await getApiCustomerBase({
 			ctx: ctxWithExpand,
-			fullCus: {
-				...structuredClone(fullCus),
-				customer_products: filterOutEntitiesFromCusProducts({
-					cusProducts: fullCus.customer_products,
-				}),
-			},
+			fullCus: filterOutEntitiesFromFullCustomer({ fullCus }),
 			withAutumnId: true,
 		});
 
 	// Build entity api customers (entity-level features only)
-	const entityLevelCusProducts = filterEntityLevelCusProducts({
-		cusProducts: fullCus.customer_products,
+	const filteredFullCus = filterEntityLevelCustomerEntitlementsFromFullCustomer({
+		fullCustomer: fullCus,
 	});
 
 	// Build entities first
@@ -67,8 +62,8 @@ export const setCachedApiCustomer = async ({
 		entityData: ApiEntityV1 & { legacyData: EntityLegacyData };
 	}[] = [];
 	const entityFullCus = {
-		...fullCus,
-		customer_products: entityLevelCusProducts,
+		...filteredFullCus,
+		customer_products: filteredFullCus.customer_products,
 	};
 
 	for (const entity of fullCus.entities) {

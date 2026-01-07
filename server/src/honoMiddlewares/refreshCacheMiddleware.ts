@@ -42,7 +42,7 @@ const cusPrefixedUrls = [
  * Note: /balances/update is NOT included because it updates Redis directly
  * to avoid race conditions with batched track syncs
  */
-const coreUrls = [
+const coreUrls: { method: string; url: string; source?: string }[] = [
 	{
 		method: "POST",
 		url: "/attach",
@@ -51,6 +51,11 @@ const coreUrls = [
 		method: "POST",
 		url: "/cancel",
 	},
+	{
+		method: "POST",
+		url: "/balances/create",
+		source: "handleCreateBalance",
+	}
 ];
 
 /**
@@ -115,8 +120,7 @@ export const refreshCacheMiddleware = async (
 				customerId: body.customer_id,
 				orgId: org.id,
 				env: env,
-				source: "refreshCacheMiddleware",
-				logger,
+				source: coreMatch.source || undefined,
 			});
 		}
 	}

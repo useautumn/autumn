@@ -4,13 +4,12 @@ import {
 	type ApiCustomer,
 	type ApiEntityV1,
 	cusEntsToAllowance,
-	cusEntToPrepaidQuantity,
-	cusProductsToCusEnts,
-	type FullCusEntWithFullCusProduct,
-	filterEntityLevelCusProducts,
-	filterOutEntitiesFromCusProducts,
+	cusEntToPrepaidQuantity, type FullCusEntWithFullCusProduct,
+	filterEntityLevelCustomerEntitlementsFromFullCustomer,
+	filterOutEntitiesFromFullCustomer,
+	fullCustomerToCustomerEntitlements,
 	getRelevantFeatures,
-	orgToInStatuses,
+	orgToInStatuses
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { sql } from "drizzle-orm";
@@ -180,7 +179,7 @@ export const syncItemV2 = async ({
 	}
 
 	// Get fresh customer from DB
-	const fullCus = await CusService.getFull({
+	let fullCus = await CusService.getFull({
 		db,
 		idOrInternalId: customerId,
 		orgId: org.id,
@@ -193,13 +192,11 @@ export const syncItemV2 = async ({
 
 	// Filter to entity-level or customer-level cusProducts
 	if (entityId) {
-		fullCus.customer_products = filterEntityLevelCusProducts({
-			cusProducts: fullCus.customer_products,
+		fullCus = filterEntityLevelCustomerEntitlementsFromFullCustomer({
+			fullCustomer: fullCus,
 		});
 	} else {
-		fullCus.customer_products = filterOutEntitiesFromCusProducts({
-			cusProducts: fullCus.customer_products,
-		});
+		fullCus = filterOutEntitiesFromFullCustomer({ fullCus });
 	}
 
 	const relevantFeatures = getRelevantFeatures({
@@ -214,8 +211,8 @@ export const syncItemV2 = async ({
 		const redisBalance = redisEntity.balances?.[relevantFeature.id];
 		if (!redisBalance) continue;
 
-		const cusEnts = cusProductsToCusEnts({
-			cusProducts: fullCus.customer_products,
+		const cusEnts = fullCustomerToCustomerEntitlements({
+			fullCustomer: fullCus,
 			featureId: relevantFeature.id,
 			reverseOrder: org.config?.reverse_deduction_order,
 			entity: fullCus.entity,
@@ -244,19 +241,19 @@ export const syncItemV2 = async ({
 	const result = await db.execute(
 		sql`SELECT * FROM sync_balances(
 			${JSON.stringify({
-				entitlements: allEntries,
-				target_entity_id: entityId || null,
-			})}::jsonb
+			entitlements: allEntries,
+			target_entity_id: entityId || null,
+		})}::jsonb
 		)`,
 	);
 
 	// Format result for readable logging
 	const syncResult = result[0] as
 		| {
-				sync_balances?: {
-					updates?: Record<string, { balance?: number; adjustment?: number }>;
-				};
-		  }
+			sync_balances?: {
+				updates?: Record<string, { balance?: number; adjustment?: number }>;
+			};
+		}
 		| undefined;
 	const updates = syncResult?.sync_balances?.updates;
 

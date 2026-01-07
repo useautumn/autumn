@@ -101,7 +101,8 @@ local function storeBalances(cacheKey, balances)
                     "overage_allowed", toString(breakdownItem.overage_allowed),
                     "reset", breakdownResetJson,
                     "plan_id", toString(breakdownItem.plan_id),
-                    "prepaid_quantity", toString(breakdownItem.prepaid_quantity)
+                    "prepaid_quantity", toString(breakdownItem.prepaid_quantity),
+                    "expires_at", toString(breakdownItem.expires_at)
                 )
                 redis.call("EXPIRE", breakdownKey, CACHE_TTL_SECONDS)
             end

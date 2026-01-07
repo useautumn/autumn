@@ -21,11 +21,12 @@ export const CustomerEntitlementSchema = z.object({
 	// Foreign keys
 	id: z.string(),
 	internal_customer_id: z.string(),
+	internal_entity_id: z.string().nullable(),
 	internal_feature_id: z.string(),
 	customer_id: z.string().nullish(), // for debugging purposes
 	feature_id: z.string(), // for debugging purposes
 
-	customer_product_id: z.string(),
+	customer_product_id: z.string().nullable(),
 	entitlement_id: z.string().nullable(),
 	created_at: z.number(),
 
@@ -38,6 +39,9 @@ export const CustomerEntitlementSchema = z.object({
 	usage_allowed: z.boolean().nullable(),
 	next_reset_at: z.number().nullable(),
 	adjustment: z.number().nullish().default(0),
+
+	// Expiry for loose entitlements (entitlements without reset intervals)
+	expires_at: z.number().nullable(),
 
 	// Group by fields
 	entities: z.record(z.string(), EntityBalanceSchema).nullish(),

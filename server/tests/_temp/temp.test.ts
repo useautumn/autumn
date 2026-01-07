@@ -4,6 +4,7 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { CusService } from "@/internal/customers/CusService";
 import {
 	constructFeatureItem,
 	constructPrepaidItem,
@@ -58,10 +59,20 @@ describe(`${chalk.yellowBright("temp: invoice payment failed for one off credits
 			prefix: testCase,
 		});
 
-		await autumnV1.attach({
+		const res = await autumnV1.balances.create({
 			customer_id: customerId,
-			product_id: pro.id,
+			feature_id: TestFeature.Messages,
+			granted_balance: 100,
 		});
+
+		const fullCustomer = await CusService.getFull({
+			db: ctx.db,
+			idOrInternalId: customerId,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		});
+
+		console.log(fullCustomer);
 	});
 
 	test("should handle invoice payment failed for one off credits", async () => {});
