@@ -3,7 +3,7 @@ import { computeUpdateSubscriptionPlan } from "@/internal/billing/v2/updateSubsc
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { executeBillingPlan } from "../execute/executeBillingPlan";
 import { evaluateStripeBillingPlan } from "../providers/stripe/actionBuilders/evaluateStripeBillingPlan";
-import { fetchUpdateSubscriptionBillingContext } from "../updateSubscription/fetch/fetchUpdateSubscriptionBillingContext";
+import { setupUpdateSubscriptionBillingContext } from "./setup/setupUpdateSubscriptionBillingContext";
 
 export const handleUpdateSubscription = createRoute({
 	body: UpdateSubscriptionV0ParamsSchema,
@@ -11,7 +11,7 @@ export const handleUpdateSubscription = createRoute({
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
 
-		const billingContext = await fetchUpdateSubscriptionBillingContext({
+		const billingContext = await setupUpdateSubscriptionBillingContext({
 			ctx,
 			params: body,
 		});

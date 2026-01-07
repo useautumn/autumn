@@ -5,13 +5,11 @@ import {
 	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { fetchStripeCustomerForBilling } from "@/internal/billing/v2/providers/stripe/fetch/fetchStripeCustomerForBilling";
-import { fetchStripeSubscriptionForBilling } from "@/internal/billing/v2/providers/stripe/fetch/fetchStripeSubscriptionForBilling";
-import { fetchStripeSubscriptionScheduleForBilling } from "@/internal/billing/v2/providers/stripe/fetch/fetchStripeSubscriptionScheduleForBilling";
+import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
 import { CusService } from "../../../../customers/CusService";
 import type { UpdateSubscriptionBillingContext } from "../../billingContext";
 import { parseFeatureQuantitiesParams } from "../../utils/parseFeatureQuantitiesParams";
-import { fetchTargetCusProductForUpdate } from "./fetchTargetCusProductForUpdate";
+import { findTargetCustomerProduct } from "./findTargetCustomerProduct";
 
 /**
  * Fetch the context for updating a subscription
@@ -19,7 +17,7 @@ import { fetchTargetCusProductForUpdate } from "./fetchTargetCusProductForUpdate
  * @param body - The body of the request
  * @returns The update subscription context
  */
-export const fetchUpdateSubscriptionBillingContext = async ({
+export const setupUpdateSubscriptionBillingContext = async ({
 	ctx,
 	params,
 }: {
@@ -39,7 +37,7 @@ export const fetchUpdateSubscriptionBillingContext = async ({
 		entityId: params.entity_id ?? undefined,
 	});
 
-	const targetCustomerProduct = fetchTargetCusProductForUpdate({
+	const targetCustomerProduct = findTargetCustomerProduct({
 		params,
 		fullCustomer,
 	});
@@ -54,32 +52,16 @@ export const fetchUpdateSubscriptionBillingContext = async ({
 		cusProduct: targetCustomerProduct,
 	});
 
-	const stripeSubscription = await fetchStripeSubscriptionForBilling({
-		ctx,
-		fullCus: fullCustomer,
-		products: [],
-		targetCusProductId: targetCustomerProduct.id,
-	});
-
-	const stripeSubscriptionSchedule =
-		await fetchStripeSubscriptionScheduleForBilling({
-			ctx,
-			fullCus: fullCustomer,
-			subscriptionScheduleId:
-				typeof stripeSubscription?.schedule === "string"
-					? stripeSubscription.schedule
-					: undefined,
-			products: [],
-			targetCusProductId: targetCustomerProduct.id,
-		});
-
 	const {
-		stripeCus: stripeCustomer,
+		stripeSubscription,
+		stripeSubscriptionSchedule,
+		stripeCustomer,
 		paymentMethod,
 		testClockFrozenTime,
-	} = await fetchStripeCustomerForBilling({
+	} = await setupStripeBillingContext({
 		ctx,
-		fullCus: fullCustomer,
+		fullCustomer,
+		targetCustomerProduct,
 	});
 
 	const featureQuantities = parseFeatureQuantitiesParams({
@@ -90,7 +72,6 @@ export const fetchUpdateSubscriptionBillingContext = async ({
 	});
 
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
-
 	const billingCycleAnchorMs = secondsToMs(
 		stripeSubscription?.billing_cycle_anchor,
 	);
