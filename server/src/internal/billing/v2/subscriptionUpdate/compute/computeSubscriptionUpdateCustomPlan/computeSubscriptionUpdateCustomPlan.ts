@@ -60,7 +60,7 @@ export const computeSubscriptionUpdateCustomPlan = async ({
 		freeTrialPlan,
 	});
 
-	const autumnLineItems = buildAutumnLineItems({
+	const lineItems = buildAutumnLineItems({
 		ctx,
 		newCustomerProducts: [newFullCustomerProduct],
 		deletedCustomerProduct: customerProduct,
@@ -76,6 +76,6 @@ export const computeSubscriptionUpdateCustomPlan = async ({
 		customPrices: customPrices,
 		customEntitlements: customEnts,
 		customFreeTrial: customFreeTrial,
-		autumnLineItems,
+		lineItems,
 	} satisfies AutumnBillingPlan;
 };

@@ -31,8 +31,8 @@ export const computeSubscriptionUpdateQuantityPlan = ({
 		}),
 	);
 
-	const autumnLineItems = quantityUpdateDetails.flatMap(
-		(detail) => detail.autumnLineItems,
+	const lineItems = quantityUpdateDetails.flatMap(
+		(detail) => detail.lineItems,
 	);
 
 	return {
@@ -54,7 +54,7 @@ export const computeSubscriptionUpdateQuantityPlan = ({
 			balanceChange: detail.customerEntitlementBalanceChange,
 		})),
 
-		autumnLineItems,
+		lineItems,
 		// quantityUpdateDetails,
 	};
 };

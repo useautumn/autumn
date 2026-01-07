@@ -101,7 +101,7 @@ export const computeQuantityUpdateDetails = ({
 		});
 	}
 
-	const autumnLineItems = buildQuantityUpdateLineItems({
+	const lineItems = buildQuantityUpdateLineItems({
 		ctx,
 		customerProduct,
 		feature,
@@ -115,6 +115,6 @@ export const computeQuantityUpdateDetails = ({
 		featureId,
 		customerEntitlementId,
 		customerEntitlementBalanceChange,
-		autumnLineItems,
+		lineItems,
 	};
 };

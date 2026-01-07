@@ -35,8 +35,8 @@ Tests are organized into logical groups that can be run via shell scripts in `se
 - **setupMain.ts** - Main setup script that clears and initializes the test organization
 - **global.ts** - Shared test data (features, products, rewards, etc.)
 - **utils/** - Test utilities and helper functions
-  - `setupUtils/clearOrg.ts` - Clears test org data
-  - `setupUtils/setupOrg.ts` - Sets up test org with features and products
+  - `setup/clearOrg.ts` - Clears test org data
+  - `setup/setupOrg.ts` - Sets up test org with features and products
   - `setup.ts` - Re-exports setup utilities
   - `init.ts` - Test initialization helpers
   - `stripeUtils.ts` - Stripe-specific test utilities

@@ -35,7 +35,7 @@ export const computeAttachPlan = async ({
 	// When to build checkout action?
 
 	// 2. Build autumn line items
-	const autumnLineItems = buildAutumnLineItems({
+	const lineItems = buildAutumnLineItems({
 		ctx,
 		newCusProducts,
 		ongoingCustomerProduct: ongoingCusProductAction?.cusProduct,
@@ -56,13 +56,13 @@ export const computeAttachPlan = async ({
 	// 6. Build stripe invoice action
 	// const stripeInvoiceAction = buildStripeInvoiceAction({
 	// 	attachContext,
-	// 	autumnLineItems,
+	// 	lineItems,
 	// 	stripeSubAction,
 	// 	newCusProducts,
 	// });
 
 	return {
-		autumnLineItems,
+		lineItems,
 
 		ongoingCusProductAction,
 		scheduledCusProductAction,

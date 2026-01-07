@@ -628,7 +628,10 @@ export class AutumnInt {
 
 	track = async (
 		params: TrackParams,
-		{ skipCache = false }: { skipCache?: boolean } = {},
+		{
+			skipCache = false,
+			timeout,
+		}: { skipCache?: boolean; timeout?: number } = {},
 	) => {
 		const queryParams = new URLSearchParams();
 		if (skipCache) {
@@ -636,6 +639,10 @@ export class AutumnInt {
 		}
 
 		const data = await this.post(`/track?${queryParams.toString()}`, params);
+
+		if (timeout) {
+			await new Promise((resolve) => setTimeout(resolve, timeout));
+		}
 		return data;
 	};
 

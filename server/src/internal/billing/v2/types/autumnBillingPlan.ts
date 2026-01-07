@@ -33,7 +33,7 @@ export const AutumnBillingPlanSchema = z.object({
 	customEntitlements: z.array(EntitlementSchema), // Custom entitlements to insert
 	customFreeTrial: FreeTrialSchema.optional(), // Custom free trial to insert
 
-	autumnLineItems: z.array(LineItemSchema),
+	lineItems: z.array(LineItemSchema),
 
 	updateCustomerEntitlements: z
 		.array(UpdateCustomerEntitlementSchema)
