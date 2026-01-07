@@ -1,15 +1,10 @@
-import {
-	cusProductToProduct,
-	InternalError,
-	secondsToMs,
-	type UpdateSubscriptionV0Params,
-} from "@autumn/shared";
+import { secondsToMs, type UpdateSubscriptionV0Params } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
-import { CusService } from "../../../../customers/CusService";
+import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
+import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
+import { setupUpdateSubscriptionProductContext } from "@/internal/billing/v2/updateSubscription/setup/setupUpdateSubscriptionProductContext";
 import type { UpdateSubscriptionBillingContext } from "../../billingContext";
-import { parseFeatureQuantitiesParams } from "../../utils/parseFeatureQuantitiesParams";
-import { findTargetCustomerProduct } from "./findTargetCustomerProduct";
 
 /**
  * Fetch the context for updating a subscription
@@ -24,32 +19,23 @@ export const setupUpdateSubscriptionBillingContext = async ({
 	ctx: AutumnContext;
 	params: UpdateSubscriptionV0Params;
 }): Promise<UpdateSubscriptionBillingContext> => {
-	const { db, org, env } = ctx;
-	const { customer_id: customerId, product_id: productId } = params;
-
-	const fullCustomer = await CusService.getFull({
-		db,
-		idOrInternalId: customerId,
-		orgId: org.id,
-		env,
-		withSubs: true,
-		withEntities: true,
-		entityId: params.entity_id ?? undefined,
-	});
-
-	const targetCustomerProduct = findTargetCustomerProduct({
+	const fullCustomer = await setupFullCustomerContext({
+		ctx,
 		params,
-		fullCustomer,
 	});
 
-	if (!targetCustomerProduct) {
-		throw new InternalError({
-			message: `[API Subscription Update] Target customer product not found: ${productId}`,
+	const { customerProduct, fullProduct, customPrices, customEnts } =
+		await setupUpdateSubscriptionProductContext({
+			ctx,
+			fullCustomer,
+			params,
 		});
-	}
 
-	const fullProduct = cusProductToProduct({
-		cusProduct: targetCustomerProduct,
+	const featureQuantities = setupFeatureQuantitiesContext({
+		ctx,
+		featureQuantitiesParams: params,
+		fullProduct,
+		currentCustomerProduct: customerProduct,
 	});
 
 	const {
@@ -61,14 +47,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 	} = await setupStripeBillingContext({
 		ctx,
 		fullCustomer,
-		targetCustomerProduct,
-	});
-
-	const featureQuantities = parseFeatureQuantitiesParams({
-		ctx,
-		featureQuantitiesParams: params,
-		fullProduct,
-		currentCustomerProduct: targetCustomerProduct,
+		targetCustomerProduct: customerProduct,
 	});
 
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
@@ -88,7 +67,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 	return {
 		fullCustomer,
 		fullProducts: [fullProduct],
-		customerProduct: targetCustomerProduct,
+		customerProduct,
 		stripeSubscription,
 		stripeSubscriptionSchedule,
 		stripeCustomer,
@@ -98,5 +77,8 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		billingCycleAnchorMs: billingCycleAnchorMs ?? "now",
 		invoiceMode,
 		featureQuantities,
+
+		customPrices,
+		customEnts,
 	};
 };

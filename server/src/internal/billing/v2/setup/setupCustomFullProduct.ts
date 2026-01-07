@@ -1,9 +1,9 @@
 import type { FullProduct, ProductItem } from "@autumn/shared";
-import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
-import { getEntsWithFeature } from "../../../../products/entitlements/entitlementUtils";
-import { handleNewProductItems } from "../../../../products/product-items/productItemUtils/handleNewProductItems";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils";
+import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems";
 
-export const computeCustomFullProduct = async ({
+export const setupCustomFullProduct = async ({
 	ctx,
 	customItems,
 	currentFullProduct,
