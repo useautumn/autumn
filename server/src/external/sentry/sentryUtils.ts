@@ -32,12 +32,14 @@ export const getSentryTags = ({
 	messageId,
 	path,
 	method,
+	alert = false,
 }: {
 	ctx: AutumnContext;
 	customerId?: string;
 	messageId?: string;
 	path?: string;
 	method?: string;
+	alert?: boolean;
 }) => {
 	if (!ctx) return;
 	return {
@@ -46,11 +48,12 @@ export const getSentryTags = ({
 		env: ctx.env || "unknown",
 		auth_type: ctx.authType,
 		request_id: ctx.id || "",
-		customer_id: customerId,
+		customer_id: customerId || ctx.customerId,
 		message_id: messageId,
 		path: path,
 		method: method,
 
 		email: ctx.user?.email,
+		alert: alert ? "true" : "false",
 	};
 };

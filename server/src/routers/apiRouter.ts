@@ -5,6 +5,7 @@ import { configsRouter } from "@/internal/configs/configsRouter.js";
 import { eventsRouter } from "@/internal/events/eventsRouter.js";
 import { analyticsMiddleware } from "../honoMiddlewares/analyticsMiddleware.js";
 import { apiVersionMiddleware } from "../honoMiddlewares/apiVersionMiddleware.js";
+import { idempotencyMiddleware } from "../honoMiddlewares/idempotencyMiddleware.js";
 import { orgConfigMiddleware } from "../honoMiddlewares/orgConfigMiddleware.js";
 import { queryMiddleware } from "../honoMiddlewares/queryMiddleware.js";
 import { rateLimitMiddleware } from "../honoMiddlewares/rateLimitMiddleware.js";
@@ -14,14 +15,14 @@ import type { HonoEnv } from "../honoUtils/HonoEnv.js";
 import {
 	redemptionRouter,
 	referralRouter,
-} from "../internal/api/rewards/referralRouter.js";
-import { balancesRouter } from "../internal/balances/balancesRouter.js";
-import { billingRouter } from "../internal/billing/billingRouter.js";
-import { cusRouter } from "../internal/customers/cusRouter.js";
-import { entityRouter } from "../internal/entities/entityRouter.js";
-import { featureRouter } from "../internal/features/featureRouter.js";
-import { honoOrgRouter } from "../internal/orgs/orgRouter.js";
-import { platformBetaRouter } from "../internal/platform/platformBeta/platformBetaRouter.js";
+} from "../internal/api/rewards/referralRouter";
+import { balancesRouter } from "../internal/balances/balancesRouter";
+import { billingRouter } from "../internal/billing/billingRouter";
+import { cusRouter } from "../internal/customers/cusRouter";
+import { entityRouter } from "../internal/entities/entityRouter";
+import { featureRouter } from "../internal/features/featureRouter";
+import { honoOrgRouter } from "../internal/orgs/orgRouter";
+import { platformBetaRouter } from "../internal/platform/platformBeta/platformBetaRouter";
 import {
 	honoProductBetaRouter,
 	honoProductRouter,
@@ -37,6 +38,7 @@ apiRouter.use("*", analyticsMiddleware);
 apiRouter.use("*", rateLimitMiddleware);
 apiRouter.use("*", refreshCacheMiddleware);
 apiRouter.use("*", queryMiddleware());
+apiRouter.use("*", idempotencyMiddleware);
 
 apiRouter.route("", billingRouter);
 apiRouter.route("", balancesRouter);
