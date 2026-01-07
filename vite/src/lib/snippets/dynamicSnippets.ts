@@ -2,6 +2,7 @@ import type { Snippet } from "./types";
 
 const PRODUCT_ID_PLACEHOLDER = "pro_plan";
 const FEATURE_ID_PLACEHOLDER = "api_calls";
+const PREPAID_FEATURE_ID_PLACEHOLDER = "prepaid_feature";
 const LIMIT_MESSAGE_PLACEHOLDER = "You've reached your limit!";
 const BOOLEAN_ACCESS_MESSAGE = "You don't have access";
 
@@ -10,11 +11,13 @@ export function applyDynamicParams({
 	productId,
 	featureId,
 	isBoolean,
+	prepaidFeatureId,
 }: {
 	snippet: Snippet;
 	productId?: string;
 	featureId?: string;
 	isBoolean?: boolean;
+	prepaidFeatureId?: string;
 }): Snippet {
 	let code = snippet.code;
 
@@ -28,6 +31,13 @@ export function applyDynamicParams({
 
 	if (isBoolean) {
 		code = code.replace(LIMIT_MESSAGE_PLACEHOLDER, BOOLEAN_ACCESS_MESSAGE);
+	}
+
+	if (prepaidFeatureId) {
+		code = code.replace(
+			new RegExp(PREPAID_FEATURE_ID_PLACEHOLDER, "g"),
+			prepaidFeatureId,
+		);
 	}
 
 	return { ...snippet, code };

@@ -2,9 +2,6 @@
 
 Autumn handles Stripe checkout and plan changes. Add the payment flow to this codebase.
 
-**API Key:** am_sk_test_xxx (already in .env as AUTUMN_SECRET_KEY)
-**Available Product IDs:** {{PRODUCT_IDS}}
-
 ### Step 1: Detect my integration type
 
 Check if this codebase already has Autumn set up:
@@ -118,3 +115,8 @@ attach_response = await autumn.attach(
 - To cancel a subscription: use `autumn.cancel({ customer_id, product_id })` (backend) or `cancel({ productId })` from `useCustomer` (React)
 
 Docs: https://docs.useautumn.com/llms.txt
+
+---
+
+## Current Autumn Configuration
+{{AUTUMN_CONFIG}}

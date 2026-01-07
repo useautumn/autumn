@@ -129,6 +129,7 @@ export function CodeSheet({ stepId, title, description }: CodeSheetProps) {
 						snippet={snippet}
 						stepNumber={stepNumber}
 						productId={selectedProductId}
+						products={products}
 					/>
 				) : (
 					<SnippetStep

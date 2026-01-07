@@ -86,6 +86,7 @@ function UpgradeButton() {
   const handleUpgrade = async () => {
     await attach({
       productId: "pro_plan",
+      successUrl: "http://localhost:3000",
     });
   };
 
@@ -108,7 +109,11 @@ function UpgradeButton() {
 export default function PricingPage() {
   return (
     <div className="w-full max-w-4xl mx-auto p-8">
-      <PricingTable />
+      <PricingTable
+        checkoutParams={{
+          successUrl: "http://localhost:3000",
+        }}
+      />
     </div>
   );
 }`,
@@ -128,6 +133,36 @@ function UpgradeButton() {
   const handleUpgrade = async () => {
     await attach({
       productId: "pro_plan",
+      successUrl: "http://localhost:3000",
+    });
+  };
+
+  return (
+    <button onClick={handleUpgrade}>
+      Upgrade to Pro
+    </button>
+  );
+}`,
+	},
+	"attach-custom-prepaid": {
+		id: "attach-custom-prepaid",
+		title: "Attach a product",
+		description:
+			"Build your own UI and use the attach function to subscribe customers to products.",
+		filename: "billing.tsx",
+		language: "tsx",
+		code: `import { useCustomer } from "autumn-js/react";
+
+function UpgradeButton() {
+  const { attach } = useCustomer();
+
+  const handleUpgrade = async () => {
+    await attach({
+      productId: "pro_plan",
+      successUrl: "http://localhost:3000",
+      options: [
+        { feature_id: "prepaid_feature", quantity: 10 }
+      ],
     });
   };
 

@@ -9,7 +9,7 @@ import {
 import { useSecretKeyStore } from "@/hooks/stores/useSecretKeyStore";
 import type { Snippet } from "@/lib/snippets";
 
-const SECRET_KEY_PLACEHOLDER = "sk_test_42424242";
+const SECRET_KEY_PLACEHOLDER = "am_sk_test_42424242";
 
 interface SnippetCodeBlockProps {
 	snippet: Snippet;

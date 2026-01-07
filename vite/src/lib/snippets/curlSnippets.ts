@@ -17,7 +17,7 @@ export const CURL_SNIPPETS: Record<string, Snippet> = {
 		filename: "terminal",
 		language: "bash",
 		code: `curl -X POST https://api.useautumn.com/v1/customers \\
-  -H "Authorization: Bearer sk_test_42424242" \\
+  -H "Authorization: Bearer am_sk_test_42424242" \\
   -H "Content-Type: application/json" \\
   -d '{
     "id": "user_or_org_id_from_auth",
@@ -32,11 +32,12 @@ export const CURL_SNIPPETS: Record<string, Snippet> = {
 		filename: "terminal",
 		language: "bash",
 		code: `curl -X POST https://api.useautumn.com/v1/attach \\
-  -H "Authorization: Bearer sk_test_42424242" \\
+  -H "Authorization: Bearer am_sk_test_42424242" \\
   -H "Content-Type: application/json" \\
   -d '{
     "customer_id": "user_or_org_id_from_auth",
-    "product_id": "pro_plan"
+    "product_id": "pro_plan",
+    "success_url": "http://localhost:3000"
   }'`,
 	},
 	check: {
@@ -47,7 +48,7 @@ export const CURL_SNIPPETS: Record<string, Snippet> = {
 		filename: "terminal",
 		language: "bash",
 		code: `curl -X POST https://api.useautumn.com/v1/check \\
-  -H "Authorization: Bearer sk_test_42424242" \\
+  -H "Authorization: Bearer am_sk_test_42424242" \\
   -H "Content-Type: application/json" \\
   -d '{
     "customer_id": "user_or_org_id_from_auth",
@@ -61,7 +62,7 @@ export const CURL_SNIPPETS: Record<string, Snippet> = {
 		filename: "terminal",
 		language: "bash",
 		code: `curl -X POST https://api.useautumn.com/v1/track \\
-  -H "Authorization: Bearer sk_test_42424242" \\
+  -H "Authorization: Bearer am_sk_test_42424242" \\
   -H "Content-Type: application/json" \\
   -d '{
     "customer_id": "user_or_org_id_from_auth",

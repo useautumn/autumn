@@ -9,6 +9,7 @@ export type SnippetId =
 	| "attach"
 	| "attach-pricing-table" // React only - use PricingTable component
 	| "attach-custom" // React only - build your own
+	| "attach-custom-prepaid" // React only - build your own with prepaid options
 	| "check"
 	| "track";
 
@@ -43,6 +44,7 @@ export interface DynamicSnippetParams {
 	productId?: string;
 	featureId?: string;
 	isBoolean?: boolean;
+	prepaidFeatureId?: string;
 }
 
 export interface GetSnippetParams {
