@@ -133,6 +133,7 @@ const handleCustomProductItems = async ({
 		})),
 		customPrices: [...newPrices, ...updatedPrices],
 		customEnts: [...newEnts, ...updatedEnts],
+		features,
 	};
 };
 
@@ -166,6 +167,7 @@ export const handleNewProductItems = async ({
 			entitlements: [],
 			customPrices: [],
 			customEnts: [],
+			features,
 		};
 	}
 
@@ -301,5 +303,6 @@ export const handleNewProductItems = async ({
 		})),
 		customPrices: [],
 		customEnts: [],
+		features,
 	};
 };

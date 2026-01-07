@@ -57,6 +57,7 @@ export const createProduct = async ({
 
 	let prices: Price[] = [];
 	let entitlements: Entitlement[] = [];
+	let updatedFeatures = features;
 	if (items) {
 		const res = await handleNewProductItems({
 			db,
@@ -71,6 +72,7 @@ export const createProduct = async ({
 		});
 		prices = res.prices;
 		entitlements = res.entitlements;
+		updatedFeatures = res.features;
 	}
 
 	await validateOneOffTrial({
@@ -93,7 +95,7 @@ export const createProduct = async ({
 	const newFullProduct: FullProduct = {
 		...product,
 		prices,
-		entitlements: getEntsWithFeature({ ents: entitlements, features }),
+		entitlements: getEntsWithFeature({ ents: entitlements, features: updatedFeatures }),
 		free_trial: newFreeTrial,
 	};
 
@@ -114,7 +116,7 @@ export const createProduct = async ({
 
 	const productResponse = await getProductResponse({
 		product: newFullProduct,
-		features,
+		features: updatedFeatures,
 	});
 
 	return productResponse;
