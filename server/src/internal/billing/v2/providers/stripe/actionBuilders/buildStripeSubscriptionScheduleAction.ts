@@ -52,31 +52,29 @@ export const buildStripeSubscriptionScheduleAction = ({
 	billingContext,
 	finalCustomerProducts,
 	trialEndsAt,
-	nowMs,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	finalCustomerProducts: FullCusProduct[];
 	trialEndsAt?: number;
-	nowMs: number;
 }): StripeSubscriptionScheduleAction | undefined => {
 	const { stripeSubscriptionSchedule, stripeSubscription } = billingContext;
 
 	// 1. Filter customer products by stripe subscription id or stripe subscription schedule ID?
 
-	const relatedCustomerProducts = stripeSubscription
-		? finalCustomerProducts.filter(
-				(customerProduct) =>
-					isCustomerProductOnStripeSubscription({
-						customerProduct,
-						stripeSubscriptionId: stripeSubscription.id,
-					}) ||
-					isCustomerProductOnStripeSubscriptionSchedule({
-						customerProduct,
-						stripeSubscriptionScheduleId: stripeSubscriptionSchedule?.id ?? "",
-					}),
-			)
-		: [];
+	const relatedCustomerProducts = finalCustomerProducts.filter(
+		(customerProduct) =>
+			(stripeSubscription &&
+				isCustomerProductOnStripeSubscription({
+					customerProduct,
+					stripeSubscriptionId: stripeSubscription.id,
+				})) ||
+			(stripeSubscriptionSchedule &&
+				isCustomerProductOnStripeSubscriptionSchedule({
+					customerProduct,
+					stripeSubscriptionScheduleId: stripeSubscriptionSchedule.id,
+				})),
+	);
 
 	const customerProducts = relatedCustomerProducts.filter((customerProduct) =>
 		RELEVANT_STATUSES.includes(customerProduct.status),
@@ -87,7 +85,6 @@ export const buildStripeSubscriptionScheduleAction = ({
 		billingContext,
 		customerProducts,
 		trialEndsAt,
-		nowMs,
 	});
 
 	// Filter out empty phases from both ends - Stripe requires items in every phase
@@ -98,7 +95,7 @@ export const buildStripeSubscriptionScheduleAction = ({
 		return undefined;
 	}
 
-	const nowSeconds = msToSeconds(nowMs);
+	const nowSeconds = msToSeconds(billingContext.currentEpochMs);
 	const firstPhaseStartDate = scheduledPhases[0].start_date as number;
 	const startsInFuture = firstPhaseStartDate > nowSeconds;
 

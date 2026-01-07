@@ -56,15 +56,14 @@ export const buildSchedulePhases = ({
 	billingContext,
 	customerProducts,
 	trialEndsAt,
-	nowMs,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	customerProducts: FullCusProduct[];
 	trialEndsAt?: number;
-	nowMs: number;
 }): Stripe.SubscriptionScheduleUpdateParams.Phase[] => {
 	// 2. Find all transition points
+	const nowMs = billingContext.currentEpochMs;
 	const transitionPoints = buildTransitionPoints({
 		customerProducts,
 		nowMs,
@@ -95,9 +94,9 @@ export const buildSchedulePhases = ({
 		const phaseIndex = i;
 
 		// 1. Get customer products from now -> transition point
-		const activeCustomerProducts = customerProducts.filter((cp) =>
+		const activeCustomerProducts = customerProducts.filter((customerProduct) =>
 			isCustomerProductActiveDuringPeriod({
-				customerProduct: cp,
+				customerProduct,
 				startMs,
 				endMs,
 			}),
