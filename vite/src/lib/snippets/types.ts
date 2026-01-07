@@ -10,6 +10,8 @@ export type SnippetId =
 	| "attach-pricing-table" // React only - use PricingTable component
 	| "attach-custom" // React only - build your own
 	| "attach-custom-prepaid" // React only - build your own with prepaid options
+	| "billing-state" // Get products with scenarios
+	| "checkout" // Handle checkout flow
 	| "check"
 	| "track";
 
@@ -73,8 +75,8 @@ export const STEP_SNIPPETS: Record<
 	},
 	payments: {
 		react: ["attach"],
-		other: ["attach"],
-		curl: ["attach"],
+		other: ["billing-state", "checkout"],
+		curl: ["billing-state", "checkout"],
 	},
 	usage: {
 		react: ["check", "track"],

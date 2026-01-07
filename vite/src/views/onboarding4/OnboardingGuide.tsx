@@ -4,21 +4,23 @@ import { AppEnv } from "@autumn/shared";
 import {
 	ChartBar,
 	CheckCircle,
+	CheckCircleIcon,
 	CopySimple,
 	CreditCard,
 	CubeIcon,
 	UserCircle,
 } from "@phosphor-icons/react";
-import { ArrowRight, Check, X } from "lucide-react";
+import { Check, X } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/v2/buttons/Button";
+import { IconButton } from "@/components/v2/buttons/IconButton";
 import type { StepId } from "@/lib/snippets";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
-import { pushPage } from "@/utils/genUtils";
+import CreateProductSheet from "@/views/products/products/components/CreateProductSheet";
 import { CodeSheet } from "./CodeSheet";
 import {
 	type OnboardingStepId,
@@ -45,7 +47,7 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
 		shortTitle: "Plans",
 		icon: <CubeIcon size={20} weight="duotone" />,
 		description:
-			"Define pricing tiers and features for your product. Set up base plans and add-ons to offer flexible pricing options.",
+			"Define your pricing plans and features your customers can access",
 		link: "/quickstart",
 		linkText: "Go to Quickstart",
 	},
@@ -56,7 +58,7 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
 		shortTitle: "Customer",
 		icon: <UserCircle size={20} weight="duotone" />,
 		description:
-			"Add your first customer to start testing your billing integration.",
+			"Create your first customer: a user or organization that can be billed",
 		waitingFor: "Waiting for customer",
 	},
 	{
@@ -65,18 +67,16 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
 		title: "Handle payments",
 		shortTitle: "Payments",
 		icon: <CreditCard size={20} weight="duotone" />,
-		description:
-			"Connect Stripe and configure billing to start accepting payments.",
+		description: "Build your billing page and handle payments",
 		waitingFor: "Waiting for checkout",
 	},
 	{
 		id: "usage",
 		stepId: "usage",
-		title: "Track usage",
-		shortTitle: "Usage",
+		title: "Limits and gating",
+		shortTitle: "Gating",
 		icon: <ChartBar size={20} weight="duotone" />,
-		description:
-			"Monitor feature usage and customer activity to enforce limits and drive upgrades.",
+		description: "Record usage events and enforce feature limits",
 		waitingFor: "Waiting for event",
 	},
 ];
@@ -92,10 +92,10 @@ function StepCard({
 	isComplete: boolean;
 	onClick: () => void;
 }) {
-	const navigate = useNavigate();
 	const { getPrompt } = useOnboardingPrompt();
 	const isPlansStep = step.id === "plans";
 	const [copied, setCopied] = useState(false);
+	const [createProductOpen, setCreateProductOpen] = useState(false);
 
 	useEffect(() => {
 		if (copied) {
@@ -117,72 +117,105 @@ function StepCard({
 	);
 
 	return (
-		<div
-			style={{ flex: isActive ? 4 : 1 }}
+		<motion.div
+			initial={false}
+			animate={{ flex: isActive ? 4 : 1 }}
+			transition={{ duration: 0.3, ease: "easeInOut" }}
 			className={cn(
-				"relative rounded-lg border bg-card cursor-pointer",
-				"transition-[flex,border-color,background-color] duration-300 ease-out",
+				"relative rounded-xl border bg-card cursor-pointer h-29 overflow-hidden",
 				isActive
-					? "border-primary/30 bg-card min-h-[140px]"
-					: "hover:border-primary/20 hover:bg-interactive-secondary-hover h-[140px]",
-				isComplete && !isActive && "opacity-70",
+					? "border-primary/30"
+					: "hover:border-primary/20 hover:bg-interactive-secondary-hover",
+				isComplete && !isActive && "opacity-50",
 			)}
 			onClick={onClick}
 		>
-			{/* Collapsed state - centered icon and title */}
-			{!isActive && (
-				<div className="p-4 h-full flex flex-col items-center justify-center gap-2 relative">
-					{isComplete && (
-						<CheckCircle
-							size={16}
-							weight="fill"
-							className="absolute top-2 right-2 text-green-500"
-						/>
-					)}
-					<div className="text-t2">{step.icon}</div>
-					<span className="font-medium text-sm text-t2 whitespace-nowrap">
-						{step.shortTitle}
-					</span>
-				</div>
-			)}
-
-			{/* Expanded content */}
-			{isActive && (
-				<div className="p-4 flex flex-col gap-3">
-					<div className="flex items-center gap-2">
-						<h3 className="font-medium text-sm text-foreground">
-							{step.title}
-						</h3>
+			<AnimatePresence mode="popLayout" initial={false}>
+				{/* Collapsed state - centered icon and title */}
+				{!isActive && (
+					<motion.div
+						key="collapsed"
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1, transition: { duration: 0.5 } }}
+						exit={{ opacity: 0, transition: { duration: 0.1 } }}
+						className="p-4 h-full flex flex-col items-center justify-center gap-2 relative"
+					>
 						{isComplete && (
-							<CheckCircle size={16} weight="fill" className="text-green-500" />
+							<CheckCircleIcon
+								size={16}
+								weight="fill"
+								className="absolute top-2 right-2 text-green-500"
+							/>
 						)}
-					</div>
-					<p className="text-sm text-t2">{step.description}</p>
+						<div className="text-primary/70">{step.icon}</div>
+						<span className="font-medium text-sm text-t2 whitespace-nowrap">
+							{step.shortTitle}
+						</span>
+					</motion.div>
+				)}
 
-					<div className="mt-auto pt-2 flex items-center gap-3">
-						{isPlansStep && step.link ? (
-							<Button
-								variant="secondary"
-								size="sm"
-								onClick={(e) => {
-									e.stopPropagation();
-									if (step.link) {
-										navigate(
-											pushPage({ path: step.link, preserveParams: false }),
-										);
-									}
-								}}
-							>
-								{step.linkText}
-								<ArrowRight className="size-3.5" />
-							</Button>
-						) : (
-							<>
-								<Button
-									variant="secondary"
-									size="sm"
-									onClick={handleCopyPrompt}
-								>
+				{/* Expanded content */}
+				{isActive && (
+					<motion.div
+						key="expanded"
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1, transition: { duration: 0.5 } }}
+						exit={{ opacity: 0, transition: { duration: 0.1 } }}
+						className="absolute top-0 left-0 bottom-0 w-[500px] p-4 pr-6 flex flex-col"
+					>
+						<div className="flex items-center gap-2">
+							<h3 className="font-medium text-sm text-foreground mb-1">
+								{step.title}
+							</h3>
+						</div>
+						<p className="text-sm text-t3">{step.description}</p>
+
+						<div className="pt-4 flex items-center gap-2 w-full">
+							{/* Only show waiting indicator if step is not complete */}
+							{isComplete && (
+								<div className="flex items-center gap-2 text-xs text-green-600 mr-auto">
+									<CheckCircle size={14} weight="fill" />
+									Complete
+								</div>
+							)}
+							{step.waitingFor && !isComplete && (
+								<div className="flex items-center gap-2 text-tiny text-t3 mr-auto">
+									<span className="relative flex size-2">
+										<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/40 opacity-75" />
+										<span className="relative inline-flex size-2 rounded-full bg-primary/60" />
+									</span>
+									{step.waitingFor}
+								</div>
+							)}
+
+							{step.stepId && (
+								<CodeSheet
+									stepId={step.stepId}
+									title={step.title}
+									description={step.description}
+								/>
+							)}
+							{isPlansStep ? (
+								<>
+									<CreateProductSheet
+										open={createProductOpen}
+										onOpenChange={setCreateProductOpen}
+									/>
+									<IconButton
+										variant="secondary"
+										className="ml-auto gap-2"
+										size="sm"
+										icon={<CubeIcon size={14} />}
+										onClick={(e) => {
+											e.stopPropagation();
+											setCreateProductOpen(true);
+										}}
+									>
+										Create Plan
+									</IconButton>
+								</>
+							) : (
+								<Button variant="primary" size="sm" onClick={handleCopyPrompt}>
 									{copied ? (
 										<Check className="size-3.5 text-green-500" />
 									) : (
@@ -190,36 +223,13 @@ function StepCard({
 									)}
 									{copied ? "Copied!" : "Copy prompt"}
 								</Button>
-								{step.stepId && (
-									<CodeSheet
-										stepId={step.stepId}
-										title={step.title}
-										description={step.description}
-									/>
-								)}
-								{/* Only show waiting indicator if step is not complete */}
-								{step.waitingFor && !isComplete && (
-									<div className="flex items-center gap-2 text-xs text-t3">
-										<span className="relative flex size-2">
-											<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/40 opacity-75" />
-											<span className="relative inline-flex size-2 rounded-full bg-primary/60" />
-										</span>
-										{step.waitingFor}
-									</div>
-								)}
-								{/* Show completed indicator when step is complete */}
-								{isComplete && (
-									<div className="flex items-center gap-2 text-xs text-green-600">
-										<CheckCircle size={14} weight="fill" />
-										Complete
-									</div>
-								)}
-							</>
-						)}
-					</div>
-				</div>
-			)}
-		</div>
+							)}
+							{/* Show completed indicator when step is complete */}
+						</div>
+					</motion.div>
+				)}
+			</AnimatePresence>
+		</motion.div>
 	);
 }
 
@@ -227,7 +237,7 @@ export function OnboardingGuide() {
 	const env = useEnv();
 	const { steps, currentStep, isLoading, isDismissed, dismiss } =
 		useOnboardingProgress();
-	const [activeStep, setActiveStep] = useState<string>("plans");
+	const [activeStep, setActiveStep] = useState<string | null>(null);
 	const prevCurrentStepRef = useRef<OnboardingStepId | null>(null);
 
 	// Sync activeStep with currentStep when it changes (initial load or progress made)
@@ -237,6 +247,14 @@ export function OnboardingGuide() {
 			prevCurrentStepRef.current = currentStep;
 		}
 	}, [currentStep]);
+
+	// Don't render cards until activeStep is synced
+	const resolvedActiveStep = activeStep ?? currentStep;
+
+	// Check if all steps are complete
+	const allStepsComplete = ONBOARDING_STEPS.every(
+		(step) => steps[step.id as OnboardingStepId]?.complete,
+	);
 
 	// Only show in sandbox
 	if (env !== AppEnv.Sandbox) {
@@ -249,11 +267,11 @@ export function OnboardingGuide() {
 
 	if (isLoading) {
 		return (
-			<div className="relative rounded-xl border bg-card p-4 shadow-sm">
+			<div className="relative rounded-xl border bg-interactive-secondary p-4 shadow-sm">
 				{/* Header skeleton */}
 				<div className="mb-4 pr-8">
-					<Skeleton className="h-4 w-32 mb-1.5" />
-					<Skeleton className="h-3 w-64" />
+					<Skeleton className="h-4 w-32 mb-1.5 bg-card/50" />
+					<Skeleton className="h-3 w-64 bg-card/50" />
 				</div>
 				{/* Steps skeleton - 4 cards */}
 				<div className="flex gap-3 items-start">
@@ -261,7 +279,7 @@ export function OnboardingGuide() {
 						<Skeleton
 							key={i}
 							className={cn(
-								"rounded-lg h-[140px]",
+								"rounded-lg h-30 bg-card/50",
 								i === 0 ? "flex-4" : "flex-1",
 							)}
 						/>
@@ -272,7 +290,7 @@ export function OnboardingGuide() {
 	}
 
 	return (
-		<div className="relative rounded-xl border bg-card p-4 shadow-sm">
+		<div className="relative rounded-xl border bg-interactive-secondary p-4 shadow-sm">
 			{/* Dismiss button */}
 			<button
 				type="button"
@@ -286,10 +304,27 @@ export function OnboardingGuide() {
 			{/* Header */}
 			<div className="mb-4 pr-8">
 				<h2 className="text-sm font-semibold text-foreground">
-					Getting Started
+					{allStepsComplete
+						? "All steps complete 🎉"
+						: "Get started with Autumn"}
 				</h2>
-				<p className="text-xs text-t3 mt-0.5">
-					Complete these steps to set up billing for your product
+				<p className="text-sm text-t3 mt-0.5">
+					{allStepsComplete ? (
+						<>
+							Read the{" "}
+							<a
+								href="https://docs.useautumn.com/documentation/getting-started/display-billing"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="text-primary hover:underline"
+							>
+								docs
+							</a>{" "}
+							to learn more about what you can do with Autumn
+						</>
+					) : (
+						"4 steps to get your app's billing done in less than 30 minutes"
+					)}
 				</p>
 			</div>
 
@@ -299,7 +334,7 @@ export function OnboardingGuide() {
 					<StepCard
 						key={step.id}
 						step={step}
-						isActive={activeStep === step.id}
+						isActive={resolvedActiveStep === step.id}
 						isComplete={steps[step.id as OnboardingStepId]?.complete ?? false}
 						onClick={() => setActiveStep(step.id)}
 					/>

@@ -97,6 +97,60 @@ function UpgradeButton() {
   );
 }`,
 	},
+	"billing-state": {
+		id: "billing-state",
+		title: "Get billing state",
+		description:
+			"Use usePricingTable to get products with their billing scenario for the current customer.",
+		filename: "billing-page.tsx",
+		language: "tsx",
+		code: `import { usePricingTable } from "autumn-js/react";
+
+const buttonText: Record<string, string> = {
+  active: "Current Plan",
+  upgrade: "Upgrade",
+  downgrade: "Downgrade",
+  scheduled: "Scheduled",
+};
+
+function PricingPage() {
+  const { products } = usePricingTable();
+
+  return (
+    <>
+      {products.map((product) => (
+        <PricingCard
+          key={product.id}
+          name={product.name}
+          buttonText={buttonText[product.scenario] ?? "Subscribe"}
+        />
+      ))}
+    </>
+  );
+}`,
+	},
+	checkout: {
+		id: "checkout",
+		title: "Handle checkout",
+		description:
+			"Use checkout to initiate payment. It auto-redirects new customers to Stripe. For returning customers, it returns preview data.",
+		filename: "pricing-card.tsx",
+		language: "tsx",
+		code: `import { useCustomer } from "autumn-js/react";
+
+const { checkout, attach } = useCustomer();
+
+const handleSelect = async (productId: string) => {
+  const data = await checkout({ productId });
+
+  if (!data.url) {
+    // Returning customer → show confirmation dialog
+    console.log("Preview:", data.product, data.total, data.currency);
+    // Then call attach() to confirm the change
+    await attach({ productId });
+  }
+};`,
+	},
 	"attach-pricing-table": {
 		id: "attach-pricing-table",
 		title: "Attach a product",

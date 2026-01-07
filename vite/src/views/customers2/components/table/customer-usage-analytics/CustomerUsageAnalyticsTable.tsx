@@ -154,7 +154,7 @@ export function CustomerUsageAnalyticsTable() {
 												className="px-1! ml-2"
 												onClick={() =>
 													window.open(
-														"https://docs.useautumn.com/getting-started/gating",
+														"https://docs.useautumn.com/documentation/getting-started/gating",
 														"_blank",
 													)
 												}

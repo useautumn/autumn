@@ -1,82 +1,105 @@
 ## Add Autumn payment flow
 
-Autumn handles Stripe checkout and plan changes. Add the payment flow to this codebase.
+Autumn handles Stripe checkout and plan changes. Your task is to add the payment flow to this codebase for ALL plans in the Autumn configuration.
 
 ### Step 1: Detect my integration type
 
 Check if this codebase already has Autumn set up:
-- If there's an `AutumnProvider` and `autumnHandler` mounted → Use **React hooks** (Path A)
-- If there's just an `Autumn` client initialized → Use **Backend SDK** (Path B)
+- If there's an `AutumnProvider` and `autumnHandler` mounted → **Path A: React**
+- If there's just an `Autumn` client initialized → **Path B: Backend SDK**
 
-Tell me which path you'll follow before proceeding.
+Before implementing:
+1. Tell me which path you'll follow before proceeding.
+2. Tell me that I will be building pricing cards to handle billing flows, and ask for any guidance or any input
 
 ---
 
-## Path A: React hooks
+## Path A: React
 
-Use the `checkout` function from the `useCustomer` hook. This handles:
-- Redirecting to Stripe checkout for new customers
-- Showing a confirmation dialog for returning customers (card on file)
+### Checkout Flow
+
+Use `checkout` from `useCustomer`. It returns either a Stripe URL (new customer) or checkout preview data (returning customer with card on file).
+
 ```tsx
-import { useCustomer, CheckoutDialog } from "autumn-js/react";
+import { useCustomer } from "autumn-js/react";
 
-export default function UpgradeButton() {
-  const { checkout } = useCustomer();
+const { checkout } = useCustomer();
 
-  return (
-    <button
-      onClick={async () => {
-        await checkout({
-          productId: "pro", // your product ID from Autumn dashboard
-          dialog: CheckoutDialog,
-        });
-      }}
-    >
-      Upgrade to Pro
-    </button>
-  );
+const data = await checkout({ productId: "pro" });
+
+if (!data.url) {
+  // Returning customer → show confirmation dialog with result data
+  // data contains: { product, current_product, lines, total (IN MAJOR CURRENCY), currency, next_cycle }
 }
 ```
 
-The `CheckoutDialog` component automatically handles the case where the user already has a card on file and just needs to confirm the purchase/upgrade.
+After user confirms in your dialog, call `attach` to enable plan (and charge card as needed)
+
+```tsx
+const { attach } = useCustomer();
+
+await attach({ productId: "pro" });
+```
+
+### Getting Billing State
+
+Use `usePricingTable` to get products with their billing scenario and display state.
+
+```tsx
+import { usePricingTable } from "autumn-js/react";
+
+function PricingPage() {
+  const { products } = usePricingTable();
+  // Each product has: scenario, properties
+  // scenario: "scheduled" | "active" | "new" | "renew" | "upgrade" | "downgrade" | "cancel"
+}
+```
+
+### Canceling
+Only use this if there is no free plan in the user's Autumn config. If there is a free plan, then you can cancel by attaching the free plan.
+
+```tsx
+const { cancel } = useCustomer();
+await cancel({ productId: "pro" });
+```
 
 ---
 
 ## Path B: Backend SDK
 
-Payments are a 2-step process:
+### Checkout Flow
 
-1. **checkout** - Returns either a Stripe checkout URL (new customer) or preview data (returning customer)
-2. **attach** - Confirms the purchase when no checkout URL is returned
+Payments are a 2-step process:
+1. **checkout** - Returns Stripe checkout URL (new customer) or preview data (returning customer)
+2. **attach** - Confirms purchase when no URL was returned
 
 **TypeScript:**
 ```typescript
 import { Autumn } from "autumn-js";
+import type { CheckoutResult, AttachResult } from "autumn-js";
 
-const autumn = new Autumn({
-  secretKey: process.env.AUTUMN_SECRET_KEY,
-});
+const autumn = new Autumn({ secretKey: process.env.AUTUMN_SECRET_KEY });
 
 // Step 1: Get checkout info
 const { data } = await autumn.checkout({
   customer_id: "user_or_org_id_from_auth",
-  product_id: "pro",
-});
+  product_id: "pro",{{TS_CHECKOUT_OPTIONS}}
+}) as { data: CheckoutResult };
 
 if (data.url) {
-  // Redirect user to Stripe checkout
+  // New customer → redirect to Stripe
   return redirect(data.url);
 } else {
-  // Card on file - show preview data to user for confirmation
-  // data contains: { product, prices, preview }
+  // Returning customer → return preview data for confirmation UI
+  // data contains: { product, current_product, lines, total (IN MAJOR CURRENCY), currency, next_cycle }
   return data;
 }
 
-// Step 2: After user confirms (only if no URL was returned)
+// Step 2: After user confirms (only if no URL)
 const { data: attachData } = await autumn.attach({
   customer_id: "user_or_org_id_from_auth",
-  product_id: "pro",
-});
+  product_id: "pro",{{TS_ATTACH_OPTIONS}}
+}) as { data: AttachResult };
 ```
 
 **Python:**
@@ -88,31 +111,134 @@ autumn = Autumn('am_sk_test_xxx')
 # Step 1: Get checkout info
 response = await autumn.checkout(
     customer_id="user_or_org_id_from_auth",
-    product_id="pro"
+    product_id="pro",{{PY_CHECKOUT_OPTIONS}}
 )
 
 if response.url:
-    # Redirect user to Stripe checkout
+    # New customer → redirect to Stripe
     return redirect(response.url)
 else:
-    # Card on file - show preview to user for confirmation
+    # Returning customer → return preview data for confirmation UI
     return response
 
-# Step 2: After user confirms (only if no URL was returned)
+# Step 2: After user confirms
 attach_response = await autumn.attach(
     customer_id="user_or_org_id_from_auth",
-    product_id="pro"
+    product_id="pro",{{PY_ATTACH_OPTIONS}}
 )
+```
+{{PREPAID_SECTION}}
+
+### Getting Billing State
+
+Use `products.list` with a `customer_id` to get products with their billing scenario. **Don't build custom billing state logic.**
+
+**TypeScript:**
+```typescript
+const { data } = await autumn.products.list({
+  customer_id: "user_or_org_id_from_auth",
+});
+
+data.list.forEach((product) => {
+  const { scenario } = product;
+  // "scheduled" | "active" | "new" | "renew" | "upgrade" | "downgrade" | "cancel"
+});
+```
+
+**Python:**
+```python
+response = await autumn.products.list(customer_id="user_or_org_id_from_auth")
+
+for product in response.list:
+    scenario = product.scenario
+```
+
+**curl:**
+```bash
+curl https://api.useautumn.com/v1/products?customer_id=user_or_org_id_from_auth \
+  -H "Authorization: Bearer $AUTUMN_SECRET_KEY"
+```
+
+### Canceling
+
+```typescript
+await autumn.cancel({ customer_id: "...", product_id: "pro" });
+```
+
+Or attach a free product ID to downgrade.
+
+---
+
+## Common Patterns
+
+### Pricing Button Text
+
+```typescript
+const SCENARIO_TEXT: Record<string, string> = {
+  scheduled: "Plan Scheduled",
+  active: "Current Plan",
+  renew: "Renew",
+  upgrade: "Upgrade",
+  new: "Enable",
+  downgrade: "Downgrade",
+  cancel: "Cancel Plan",
+};
+
+export const getPricingButtonText = (product: Product): string => {
+  const { scenario, properties } = product;
+  const { is_one_off, updateable, has_trial } = properties ?? {};
+
+  if (has_trial) return "Start Trial";
+  if (scenario === "active" && updateable) return "Update";
+  if (scenario === "new" && is_one_off) return "Purchase";
+
+  return SCENARIO_TEXT[scenario ?? ""] ?? "Enable Plan";
+};
+```
+
+### Confirmation Dialog Text
+
+```typescript
+import type { CheckoutResult, Product } from "autumn-js";
+
+export const getConfirmationTexts = (result: CheckoutResult): { title: string; message: string } => {
+  const { product, current_product, next_cycle } = result;
+  const scenario = product.scenario;
+  const productName = product.name;
+  const currentProductName = current_product?.name;
+  const nextCycleDate = next_cycle?.starts_at 
+    ? new Date(next_cycle.starts_at).toLocaleDateString() 
+    : undefined;
+
+  const isRecurring = !product.properties?.is_one_off;
+
+  const CONFIRMATION_TEXT: Record<string, { title: string; message: string }> = {
+    scheduled: { title: "Already Scheduled", message: "You already have this product scheduled." },
+    active: { title: "Already Active", message: "You are already subscribed to this product." },
+    renew: { title: "Renew", message: `Renew your subscription to ${productName}.` },
+    upgrade: { title: `Upgrade to ${productName}`, message: `Upgrade to ${productName}. Your card will be charged immediately.` },
+    downgrade: { title: `Downgrade to ${productName}`, message: `${currentProductName} will be cancelled. ${productName} begins ${nextCycleDate}.` },
+    cancel: { title: "Cancel", message: `Your subscription to ${currentProductName} will end ${nextCycleDate}.` },
+  };
+
+  if (scenario === "new") {
+    return isRecurring
+      ? { title: `Subscribe to ${productName}`, message: `Subscribe to ${productName}. Charged immediately.` }
+      : { title: `Purchase ${productName}`, message: `Purchase ${productName}. Charged immediately.` };
+  }
+
+  return CONFIRMATION_TEXT[scenario ?? ""] ?? { title: "Change Subscription", message: "You are about to change your subscription." };
+};
 ```
 
 ---
 
 ## Notes
 
-- This handles upgrades, downgrades, and plan switches automatically
-- Product IDs come from your Autumn dashboard (e.g., "free", "pro", "enterprise")
-- You can pass `successUrl` to `checkout` to redirect users after payment completes
-- To cancel a subscription: use `autumn.cancel({ customer_id, product_id })` (backend) or `cancel({ productId })` from `useCustomer` (React)
+- **NB: the result is `data.url`, NOT `data.checkout_url`**
+- This handles all upgrades, downgrades, renewals, uncancellations automatically
+- Product IDs come from the Autumn configuration (below)
+- Pass `successUrl` to `checkout` to redirect users after payment
 
 Docs: https://docs.useautumn.com/llms.txt
 

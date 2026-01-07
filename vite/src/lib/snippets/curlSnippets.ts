@@ -40,6 +40,39 @@ export const CURL_SNIPPETS: Record<string, Snippet> = {
     "success_url": "http://localhost:3000"
   }'`,
 	},
+	"billing-state": {
+		id: "billing-state",
+		title: "Get billing state",
+		description:
+			"Get products with their billing scenario for a customer.",
+		filename: "terminal",
+		language: "bash",
+		code: `# Get products with billing scenarios
+curl "https://api.useautumn.com/v1/products?customer_id=user_or_org_id_from_auth" \\
+  -H "Authorization: Bearer am_sk_test_42424242"
+
+# Response includes scenario for each product:
+# "active" | "upgrade" | "downgrade" | "scheduled" | "new"`,
+	},
+	checkout: {
+		id: "checkout",
+		title: "Handle checkout",
+		description:
+			"Initiate checkout. Returns a Stripe URL for new customers, or preview data for returning customers.",
+		filename: "terminal",
+		language: "bash",
+		code: `# Step 1: Get checkout info
+curl -X POST https://api.useautumn.com/v1/checkout \\
+  -H "Authorization: Bearer am_sk_test_42424242" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "customer_id": "user_or_org_id_from_auth",
+    "product_id": "pro_plan"
+  }'
+
+# If response has "url" → redirect to Stripe
+# If no "url" → show confirmation, then call /attach`,
+	},
 	check: {
 		id: "check",
 		title: "Check feature access",

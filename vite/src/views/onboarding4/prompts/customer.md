@@ -244,7 +244,8 @@ autumn = Autumn('am_sk_test_xxx')
 
 ### B3. Create a test customer
 
-This will GET or CREATE a new customer. Add it on sign up or on sign in to the app. Pass in ID from auth provider.
+This will GET or CREATE a new customer. Add it when a user signs in or loads the app. Pass in ID from auth provider.
+The response returns customer state, used to display billing information client-side. Please console.log the Autumn customer client-side.
 
 **TypeScript:**
 ```typescript
@@ -272,6 +273,12 @@ curl -X POST https://api.useautumn.com/customers \
   -d '{"id": "user_or_org_id_from_auth", "name": "Test User", "email": "test@example.com"}'
 ```
 
+When calling these functions from the client, the SDK exports types for all response objects. Use these for type-safe code.
+
+```tsx
+import type { Customer } from "autumn-js";
+```
+
 ---
 
 ## Verify
@@ -280,5 +287,6 @@ After setup, tell me:
 1. What stack you detected
 2. Which path you followed
 3. What files you created/modified
+4. That the Autumn customer is logged in browser, and to check in the Autumn dashboard
 
 Docs: https://docs.useautumn.com/llms.txt

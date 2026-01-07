@@ -57,6 +57,68 @@ await autumn.attach({
   successUrl: "http://localhost:3000",
 });`,
 	},
+	"billing-state": {
+		id: "billing-state",
+		title: "Get billing state",
+		description:
+			"Use products.list with a customer_id to get products with their billing scenario.",
+		filename: "billing.ts",
+		language: "typescript",
+		code: `import Autumn from "autumn-js";
+
+const autumn = new Autumn({
+  secretKey: "am_sk_test_42424242",
+});
+
+const buttonText: Record<string, string> = {
+  active: "Current Plan",
+  upgrade: "Upgrade",
+  downgrade: "Downgrade",
+  scheduled: "Scheduled",
+};
+
+const { data } = await autumn.products.list({
+  customerId: "user_or_org_id_from_auth",
+});
+
+const products = data.list.map((product) => ({
+  id: product.id,
+  name: product.name,
+  buttonText: buttonText[product.scenario] ?? "Subscribe",
+}));`,
+	},
+	checkout: {
+		id: "checkout",
+		title: "Handle checkout",
+		description:
+			"Use checkout to initiate payment. Returns a Stripe URL for new customers, or preview data for returning customers.",
+		filename: "billing.ts",
+		language: "typescript",
+		code: `import Autumn from "autumn-js";
+
+const autumn = new Autumn({
+  secretKey: "am_sk_test_42424242",
+});
+
+const { data } = await autumn.checkout({
+  customerId: "user_or_org_id_from_auth",
+  productId: "pro_plan",
+});
+
+if (data.url) {
+  // New customer → redirect to Stripe
+  return redirect(data.url);
+}
+
+// Returning customer → return preview for confirmation UI
+console.log("Preview:", data.product, data.total, data.currency);
+
+// After user confirms:
+await autumn.attach({
+  customerId: "user_or_org_id_from_auth",
+  productId: "pro_plan",
+});`,
+	},
 	check: {
 		id: "check",
 		title: "Check feature access",

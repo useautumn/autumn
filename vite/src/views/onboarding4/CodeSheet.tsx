@@ -5,7 +5,6 @@ import { Button } from "@/components/v2/buttons/Button";
 import { SDKSelector } from "@/components/v2/SDKSelector";
 import { Sheet, SheetContent } from "@/components/v2/sheets/Sheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useSDKStore } from "@/hooks/stores/useSDKStore";
 import {
 	DEFAULT_STACK_CONFIG,
@@ -14,7 +13,6 @@ import {
 	type StepId,
 	stepNeedsStackConfig,
 } from "@/lib/snippets";
-import { getFirstPaidProduct } from "@/lib/snippets/productUtils";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { AttachStep } from "./steps/AttachStep";
 import { BackendSetupStep } from "./steps/BackendSetupStep";
@@ -34,16 +32,8 @@ export function CodeSheet({ stepId, title, description }: CodeSheetProps) {
 	const [stackConfig, setStackConfig] =
 		useState<StackConfig>(DEFAULT_STACK_CONFIG);
 
-	// Fetch products and features
-	const { products } = useProductsQuery();
+	// Fetch features
 	const { features } = useFeaturesQuery();
-
-	// Auto-select first paid product for payments step
-	const selectedProductId = useMemo(() => {
-		if (stepId !== "payments") return undefined;
-		const paidProduct = getFirstPaidProduct({ products });
-		return paidProduct?.id;
-	}, [stepId, products]);
 
 	// Feature selection state for usage step
 	const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(
@@ -80,11 +70,10 @@ export function CodeSheet({ stepId, title, description }: CodeSheetProps) {
 	// Build dynamic params
 	const dynamicParams = useMemo(
 		() => ({
-			productId: selectedProductId,
 			featureId: snippetFeatureId,
 			isBoolean,
 		}),
-		[selectedProductId, snippetFeatureId, isBoolean],
+		[snippetFeatureId, isBoolean],
 	);
 
 	const allSnippets = getSnippetsForStep({
@@ -128,8 +117,6 @@ export function CodeSheet({ stepId, title, description }: CodeSheetProps) {
 						key={snippet.id}
 						snippet={snippet}
 						stepNumber={stepNumber}
-						productId={selectedProductId}
-						products={products}
 					/>
 				) : (
 					<SnippetStep
@@ -173,7 +160,7 @@ export function CodeSheet({ stepId, title, description }: CodeSheetProps) {
 				}}
 			>
 				<Code className="size-3.5" />
-				Show code
+				Show docs
 			</Button>
 			<SheetContent
 				className="flex flex-col overflow-hidden bg-background min-w-xl"

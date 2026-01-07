@@ -53,6 +53,64 @@ autumn.attach(
     success_url="http://localhost:3000"
 )`,
 	},
+	"billing-state": {
+		id: "billing-state",
+		title: "Get billing state",
+		description:
+			"Use products.list with a customer_id to get products with their billing scenario.",
+		filename: "billing.py",
+		language: "python",
+		code: `from autumn import Autumn
+
+autumn = Autumn(secret_key="am_sk_test_42424242")
+
+button_text = {
+    "active": "Current Plan",
+    "upgrade": "Upgrade",
+    "downgrade": "Downgrade",
+    "scheduled": "Scheduled",
+}
+
+response = autumn.products.list(customer_id="user_or_org_id_from_auth")
+
+products = [
+    {
+        "id": p.id,
+        "name": p.name,
+        "button_text": button_text.get(p.scenario, "Subscribe"),
+    }
+    for p in response.list
+]`,
+	},
+	checkout: {
+		id: "checkout",
+		title: "Handle checkout",
+		description:
+			"Use checkout to initiate payment. Returns a Stripe URL for new customers, or preview data for returning customers.",
+		filename: "billing.py",
+		language: "python",
+		code: `from autumn import Autumn
+
+autumn = Autumn(secret_key="am_sk_test_42424242")
+
+response = autumn.checkout(
+    customer_id="user_or_org_id_from_auth",
+    product_id="pro_plan"
+)
+
+if response.url:
+    # New customer → redirect to Stripe
+    return redirect(response.url)
+
+# Returning customer → return preview for confirmation UI
+print("Preview:", response.product, response.total, response.currency)
+
+# After user confirms:
+autumn.attach(
+    customer_id="user_or_org_id_from_auth",
+    product_id="pro_plan"
+)`,
+	},
 	check: {
 		id: "check",
 		title: "Check feature access",
