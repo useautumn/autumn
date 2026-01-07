@@ -1,4 +1,4 @@
-## Add Autumn usage tracking
+## Add Autumn gating and usage tracking
 
 Autumn tracks feature usage and enforces limits. Add usage tracking to this codebase.
 
@@ -14,7 +14,7 @@ Tell me what you detected before proceeding.
 
 ## Frontend checks (React hooks)
 
-Use frontend checks for **UX only** - showing/hiding features, displaying remaining usage, prompting upgrades. These should NOT be trusted for security.
+Use frontend checks for **UX only** - showing/hiding features, prompting upgrades. These should NOT be trusted for security.
 
 ### Check feature access
 ```tsx
@@ -110,7 +110,13 @@ return result
 - **Backend checks** = Security (enforce limits) - required before any protected action
 - Pattern: check → do work → track (only track after successful completion)
 - Feature IDs come from the Autumn configuration (below)
+- Current usage and total limit can be taken from from Customer object and displayed -- see the Customer types from the Autumn SDK
+```tsx
+import type { Customer } from "autumn-js";
 
+//Balance is: customer.features.<feature_name>.balance
+```
+{{CREDIT_SYSTEM_NOTE}}
 Docs: https://docs.useautumn.com/llms.txt
 
 ---

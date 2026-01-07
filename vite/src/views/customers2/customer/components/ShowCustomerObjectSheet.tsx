@@ -4,7 +4,6 @@ import { useParams } from "react-router";
 import {
 	CodeGroup,
 	CodeGroupCode,
-	CodeGroupContent,
 	CodeGroupCopyButton,
 	CodeGroupList,
 	CodeGroupTab,
@@ -43,7 +42,7 @@ export function ShowCustomerObjectSheet({
 		queryKey: ["customer-object", customer_id, "expanded"],
 		queryFn: async () => {
 			const { data } = await axiosInstance.get(
-				`/v1/customers/${customer_id}`,
+				`/v1/customers/${customer_id}?expand=${EXPAND_PARAMS}`,
 			);
 			return data;
 		},
@@ -58,11 +57,11 @@ export function ShowCustomerObjectSheet({
 				<SheetHeader>
 					<SheetTitle>Customer Object</SheetTitle>
 					<p className="text-t3 text-sm">
-						Full customer object from GET /customers/{customer_id}
+						Customer state from GET /customers/{customer_id}
 					</p>
 				</SheetHeader>
 
-				<div className="flex-1 overflow-y-auto px-4 pb-4">
+				<div className="flex-1 overflow-hidden flex flex-col px-4 pb-4">
 					{isLoading && (
 						<div className="flex items-center justify-center py-12">
 							<Spinner className="size-6 animate-spin text-t3" />
@@ -76,16 +75,16 @@ export function ShowCustomerObjectSheet({
 					)}
 
 					{data && (
-						<CodeGroup value="response">
+						<CodeGroup value="response" className="flex-1 h-0 flex flex-col">
 							<CodeGroupList>
 								<CodeGroupTab value="response">Response</CodeGroupTab>
 								<CodeGroupCopyButton
 									onCopy={() => navigator.clipboard.writeText(formattedJson)}
 								/>
 							</CodeGroupList>
-							<CodeGroupContent value="response" copyText={formattedJson}>
+							<div className="flex-1 h-0 overflow-y-auto border border-t-0 rounded-b-lg bg-white dark:bg-background p-4">
 								<CodeGroupCode language="json">{formattedJson}</CodeGroupCode>
-							</CodeGroupContent>
+							</div>
 						</CodeGroup>
 					)}
 				</div>

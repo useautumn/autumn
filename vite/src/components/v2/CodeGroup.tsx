@@ -2,7 +2,6 @@ import { CheckIcon, CopyIcon } from "@phosphor-icons/react";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
 import * as React from "react";
 import { useTheme } from "@/contexts/ThemeProvider";
-import { useClickWithoutDrag } from "@/hooks/common/useClickWithoutDrag";
 import { highlightCode } from "@/lib/shikiHighlighter";
 import { cn } from "@/lib/utils";
 
@@ -110,105 +109,19 @@ interface CodeGroupContentProps
 const CodeGroupContent = React.forwardRef<
 	React.ElementRef<typeof TabsPrimitive.Content>,
 	CodeGroupContentProps
->(({ className, copyText, children, ...props }, ref) => {
-	const [showCopiedFeedback, setShowCopiedFeedback] = React.useState(false);
-	const [isExiting, setIsExiting] = React.useState(false);
-
-	const handleCopy = React.useCallback(
-		(_e: React.MouseEvent) => {
-			// Get current selection
-			const selection = window.getSelection();
-			const selectedText = selection?.toString() || "";
-
-			// Determine what to copy
-			const textToCopy = selectedText || copyText || "";
-
-			if (textToCopy) {
-				navigator.clipboard.writeText(textToCopy);
-
-				// Show feedback with fade in
-				setIsExiting(false);
-				setShowCopiedFeedback(true);
-
-				// Start fade out after delay
-				setTimeout(() => {
-					setIsExiting(true);
-				}, 1000);
-
-				// Hide completely after fade out animation
-				setTimeout(() => {
-					setShowCopiedFeedback(false);
-					setIsExiting(false);
-				}, 1200);
-			}
-		},
-		[copyText],
-	);
-
-	const { handleMouseDown, handleClick } = useClickWithoutDrag(handleCopy);
-
-	const handleKeyDown = React.useCallback(
-		(e: React.KeyboardEvent<HTMLDivElement>) => {
-			if (e.key === "Enter" || e.key === " ") {
-				e.preventDefault();
-				const textToCopy = copyText || "";
-				if (textToCopy) {
-					navigator.clipboard.writeText(textToCopy);
-					setIsExiting(false);
-					setShowCopiedFeedback(true);
-
-					setTimeout(() => {
-						setIsExiting(true);
-					}, 1000);
-
-					setTimeout(() => {
-						setShowCopiedFeedback(false);
-						setIsExiting(false);
-					}, 1200);
-				}
-			}
-		},
-		[copyText],
-	);
-
+>(({ className, children, ...props }, ref) => {
 	return (
-		<div className="relative">
-			<TabsPrimitive.Content
-				ref={ref}
-				className={cn(
-					"bg-white dark:bg-background border border-t-0 rounded-bl-lg rounded-br-lg",
-					"p-4 outline-none",
-					"cursor-pointer",
-					className,
-				)}
-				onMouseDown={handleMouseDown}
-				onClick={handleClick}
-				onKeyDown={handleKeyDown}
-				role="button"
-				tabIndex={0}
-				aria-label="Click to copy code"
-				{...props}
-			>
-				{children}
-			</TabsPrimitive.Content>
-
-			{showCopiedFeedback && (
-				<div
-					className={cn(
-						"absolute inset-0 flex items-center justify-center pointer-events-none z-10 rounded-bl-lg rounded-br-lg overflow-hidden",
-						"transition-opacity duration-300",
-						"opacity-0",
-						!isExiting && "opacity-100",
-					)}
-				>
-					<div className="absolute inset-0 bg-background/80 backdrop-blur-[2px]" />
-					<div className="relative flex items-center gap-2 text-t2 text-sm font-medium">
-						<CheckIcon className="size-4" />
-						<span>Copied</span>
-					</div>
-				</div>
+		<TabsPrimitive.Content
+			ref={ref}
+			className={cn(
+				"bg-white dark:bg-background border border-t-0 rounded-bl-lg rounded-br-lg",
+				"outline-none",
+				className,
 			)}
-		</div>
+			{...props}
+		>
+			{children}
+		</TabsPrimitive.Content>
 	);
 });
 CodeGroupContent.displayName = "CodeGroupContent";
@@ -245,7 +158,7 @@ const CodeGroupCode = React.forwardRef<HTMLDivElement, CodeGroupCodeProps>(
 			<div
 				ref={ref}
 				className={cn(
-					"font-mono font-medium text-[13px] leading-[1.6] overflow-x-auto",
+					"font-mono font-medium text-[13px] leading-[1.6] overflow-x-auto p-4",
 					className,
 				)}
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: "this is needed"
