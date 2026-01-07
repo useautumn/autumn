@@ -27,7 +27,7 @@ export const PYTHON_SNIPPETS: Record<string, Snippet> = {
 		language: "python",
 		code: `from autumn import Autumn
 
-autumn = Autumn(secret_key="sk_test_42424242")
+autumn = Autumn(secret_key="am_sk_test_42424242")
 
 # Create a customer
 autumn.customers.create(
@@ -44,12 +44,13 @@ autumn.customers.create(
 		language: "python",
 		code: `from autumn import Autumn
 
-autumn = Autumn(secret_key="sk_test_42424242")
+autumn = Autumn(secret_key="am_sk_test_42424242")
 
 # Attach a product to a customer
 autumn.attach(
     customer_id="user_or_org_id_from_auth",
-    product_id="pro_plan"
+    product_id="pro_plan",
+    success_url="http://localhost:3000"
 )`,
 	},
 	check: {
@@ -61,7 +62,7 @@ autumn.attach(
 		language: "python",
 		code: `from autumn import Autumn
 
-autumn = Autumn(secret_key="sk_test_42424242")
+autumn = Autumn(secret_key="am_sk_test_42424242")
 
 # Check if customer can use a feature
 result = autumn.check(
@@ -81,7 +82,7 @@ if result.allowed:
 		language: "python",
 		code: `from autumn import Autumn
 
-autumn = Autumn(secret_key="sk_test_42424242")
+autumn = Autumn(secret_key="am_sk_test_42424242")
 
 # Track usage of a feature
 autumn.track(

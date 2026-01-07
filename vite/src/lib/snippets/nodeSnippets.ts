@@ -28,7 +28,7 @@ export const NODE_SNIPPETS: Record<string, Snippet> = {
 		code: `import Autumn from "autumn-js";
 
 const autumn = new Autumn({
-  secretKey: "sk_test_42424242",
+  secretKey: "am_sk_test_42424242",
 });
 		
 // Create a customer
@@ -47,13 +47,14 @@ await autumn.customers.create({
 		code: `import Autumn from "autumn-js";
 
 const autumn = new Autumn({
-  secretKey: "sk_test_42424242",
+  secretKey: "am_sk_test_42424242",
 });
 
 // Attach a product to a customer
 await autumn.attach({
   customerId: "user_or_org_id_from_auth",
   productId: "pro_plan",
+  successUrl: "http://localhost:3000",
 });`,
 	},
 	check: {
@@ -66,7 +67,7 @@ await autumn.attach({
 		code: `import Autumn from "autumn-js";
 
 const autumn = new Autumn({
-  secretKey: "sk_test_42424242",
+  secretKey: "am_sk_test_42424242",
 });
 
 // Check if customer can use a feature
@@ -88,7 +89,7 @@ if (data.allowed) {
 		code: `import Autumn from "autumn-js";
 
 const autumn = new Autumn({
-  secretKey: "sk_test_42424242",
+  secretKey: "am_sk_test_42424242",
 });
 
 // Track usage of a feature

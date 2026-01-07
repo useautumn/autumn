@@ -1,8 +1,6 @@
 ## Set up Autumn billing integration
 
-Autumn is a billing and entitlements layer over Stripe. Integrate it into this codebase.
-
-**API Key:** am_sk_test_xxx
+Autumn is a billing and entitlements layer over Stripe, which we are adding into this codebase. Your task is to create an Autumn customer by following these steps, and add it to a place in this app where it will be automatically created.
 
 ### Step 1: Analyze my codebase
 
@@ -11,9 +9,16 @@ Before making changes, detect:
 - If TS/JS: Framework (Next.js, React Router, Tanstack Start, Hono, Express, Fastify, or other)
 - If TS/JS: Is there a React frontend? (Check for React in package.json)
 
-Also ask me: **Should Autumn customers be individual users, or organizations?**
+Also ask me: 
+
+**1. Should Autumn customers be individual users, or organizations?**
 - Users (B2C): Each user has their own plan and limits
 - Organizations (B2B): Plans and limits are shared across an org
+
+**2. Have you created an AUTUMN_SECRET_KEY and added it to .env?**
+Please prompt them to create one here: https://app.useautumn.com/dev?tab=api_keys and add it to .env as AUTUMN_SECRET_KEY
+
+
 
 Tell me what you detected and which path you'll follow before proceeding.
 
@@ -238,6 +243,8 @@ autumn = Autumn('am_sk_test_xxx')
 ```
 
 ### B3. Create a test customer
+
+This will GET or CREATE a new customer. Add it on sign up or on sign in to the app. Pass in ID from auth provider.
 
 **TypeScript:**
 ```typescript
