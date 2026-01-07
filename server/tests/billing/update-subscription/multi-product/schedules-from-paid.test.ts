@@ -33,10 +33,12 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: cancel entity 1, update en
 
 	const { autumnV1, ctx, entities, testClockId } = await initScenario({
 		customerId,
-		options: [
+		setup: [
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro] }),
 			s.entities({ count: 2, featureId: TestFeature.Users }),
+		],
+		actions: [
 			s.attach({ productId: "pro", entityIndex: 0 }),
 			s.attach({ productId: "pro", entityIndex: 1 }),
 			s.cancel({ productId: "pro", entityIndex: 0 }), // Cancel entity 1's pro
@@ -132,10 +134,12 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: downgrade entity 1, update
 
 	const { autumnV1, ctx, entities, testClockId } = await initScenario({
 		customerId,
-		options: [
+		setup: [
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [premium, pro] }),
 			s.entities({ count: 2, featureId: TestFeature.Users }),
+		],
+		actions: [
 			s.attach({ productId: "premium", entityIndex: 0 }),
 			s.attach({ productId: "premium", entityIndex: 1 }),
 		],
@@ -253,10 +257,12 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: annual + monthly downgrade
 
 	const { autumnV1, ctx, entities, testClockId } = await initScenario({
 		customerId,
-		options: [
+		setup: [
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [premiumAnnual, premium, pro] }),
 			s.entities({ count: 3, featureId: TestFeature.Users }),
+		],
+		actions: [
 			s.attach({ productId: "premium-annual", entityIndex: 0 }),
 			s.attach({ productId: "premium", entityIndex: 1 }),
 			s.attach({ productId: "premium", entityIndex: 2 }),
@@ -368,10 +374,12 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: update to free item remove
 
 	const { autumnV1, ctx, entities, testClockId } = await initScenario({
 		customerId,
-		options: [
+		setup: [
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro] }),
 			s.entities({ count: 2, featureId: TestFeature.Users }),
+		],
+		actions: [
 			s.attach({ productId: "pro", entityIndex: 0 }),
 			s.attach({ productId: "pro", entityIndex: 1 }),
 		],
@@ -470,10 +478,12 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: downgrade + update to free
 
 	const { autumnV1, ctx, entities, testClockId } = await initScenario({
 		customerId,
-		options: [
+		setup: [
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [premium, pro] }),
 			s.entities({ count: 2, featureId: TestFeature.Users }),
+		],
+		actions: [
 			s.attach({ productId: "premium", entityIndex: 0 }),
 			s.attach({ productId: "premium", entityIndex: 1 }),
 		],
