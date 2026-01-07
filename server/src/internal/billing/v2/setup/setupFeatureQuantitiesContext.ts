@@ -11,10 +11,10 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { paramsToFeatureOptions } from "@/internal/billing/v2/compute/computeAutumnUtils/paramsToFeatureOptions";
 
 /**
- * Parses feature quantities from params, iterating over all prepaid prices.
+ * Sets up feature quantities context from params, iterating over all prepaid prices.
  * For each prepaid price, uses new quantity from params or falls back to existing subscription.
  */
-export const parseFeatureQuantitiesParams = ({
+export const setupFeatureQuantitiesContext = ({
 	ctx,
 	featureQuantitiesParams,
 	fullProduct,

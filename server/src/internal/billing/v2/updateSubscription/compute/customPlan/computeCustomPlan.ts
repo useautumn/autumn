@@ -1,6 +1,5 @@
 import {
 	CusProductStatus,
-	cusProductToProduct,
 	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
@@ -9,8 +8,6 @@ import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutum
 import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan";
 import { computeCustomPlanFreeTrial } from "@/internal/billing/v2/updateSubscription/compute/customPlan/computeCustomPlanFreeTrial";
 import { computeCustomPlanNewCustomerProduct } from "@/internal/billing/v2/updateSubscription/compute/customPlan/computeCustomPlanNewCustomerProduct";
-import { parseFeatureQuantitiesParams } from "@/internal/billing/v2/utils/parseFeatureQuantitiesParams";
-import { computeCustomFullProduct } from "../../../compute/computeAutumnUtils/computeCustomFullProduct";
 
 export const computeCustomPlan = async ({
 	ctx,
@@ -21,23 +18,10 @@ export const computeCustomPlan = async ({
 	updateSubscriptionContext: UpdateSubscriptionBillingContext;
 	params: UpdateSubscriptionV0Params;
 }) => {
-	const { customerProduct } = updateSubscriptionContext;
+	const { customerProduct, customPrices, customEnts } =
+		updateSubscriptionContext;
 
-	const currentFullProduct = cusProductToProduct({
-		cusProduct: customerProduct,
-	});
-
-	const {
-		fullProduct: customFullProduct,
-		customPrices,
-		customEnts,
-	} = await computeCustomFullProduct({
-		ctx,
-		currentFullProduct,
-		customItems: params.items,
-	});
-
-	updateSubscriptionContext.fullProducts = [customFullProduct];
+	const customFullProduct = updateSubscriptionContext.fullProducts[0];
 
 	// 2. Compute the custom trial details
 	const { freeTrialPlan, customFreeTrial } = computeCustomPlanFreeTrial({
@@ -49,13 +33,6 @@ export const computeCustomPlan = async ({
 	if (freeTrialPlan.trialEndsAt) {
 		updateSubscriptionContext.billingCycleAnchorMs = freeTrialPlan.trialEndsAt;
 	}
-
-	updateSubscriptionContext.featureQuantities = parseFeatureQuantitiesParams({
-		ctx,
-		featureQuantitiesParams: params,
-		fullProduct: customFullProduct,
-		currentCustomerProduct: customerProduct,
-	}); // re-parse feature quantities for new custom product
 
 	// 3. Compute the new customer product
 	const newFullCustomerProduct = computeCustomPlanNewCustomerProduct({

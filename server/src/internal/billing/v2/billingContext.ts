@@ -1,7 +1,9 @@
 import type {
+	Entitlement,
 	FeatureOptions,
 	FullCusProduct,
 	FullProduct,
+	Price,
 } from "@autumn/shared";
 import type { FullCustomer } from "@shared/models/cusModels/fullCusModel";
 import type Stripe from "stripe";
@@ -32,6 +34,10 @@ export interface BillingContext {
 
 	// Feature quantities
 	featureQuantities: FeatureOptions[];
+
+	// Unforunately, need to add custom prices, custom entitlements and free trial here, because it's determined in the setup step.
+	customPrices: Price[];
+	customEnts: Entitlement[];
 }
 
 export interface UpdateSubscriptionBillingContext extends BillingContext {

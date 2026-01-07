@@ -10,11 +10,11 @@ import {
 } from "@tests/utils/mockUtils/priceMocks";
 import { createMockFullProduct } from "@tests/utils/mockUtils/productMocks";
 import chalk from "chalk";
-import { parseFeatureQuantitiesParams } from "@/internal/billing/v2/utils/parseFeatureQuantitiesParams";
+import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 
 // ============ TESTS ============
 
-describe(chalk.yellowBright("parseFeatureQuantitiesParams"), () => {
+describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 	describe("basic quantity inheritance", () => {
 		test("1. current has quantity, new params has none → uses current", () => {
 			const feature = createMockFeature({
@@ -47,7 +47,7 @@ describe(chalk.yellowBright("parseFeatureQuantitiesParams"), () => {
 
 			const ctx = createMockCtx({ features: [feature] });
 
-			const result = parseFeatureQuantitiesParams({
+			const result = setupFeatureQuantitiesContext({
 				ctx,
 				featureQuantitiesParams: params,
 				fullProduct,
@@ -81,7 +81,7 @@ describe(chalk.yellowBright("parseFeatureQuantitiesParams"), () => {
 
 			const ctx = createMockCtx({ features: [feature] });
 
-			const result = parseFeatureQuantitiesParams({
+			const result = setupFeatureQuantitiesContext({
 				ctx,
 				featureQuantitiesParams: params,
 				fullProduct,
@@ -123,7 +123,7 @@ describe(chalk.yellowBright("parseFeatureQuantitiesParams"), () => {
 
 			const ctx = createMockCtx({ features: [feature] });
 
-			const result = parseFeatureQuantitiesParams({
+			const result = setupFeatureQuantitiesContext({
 				ctx,
 				featureQuantitiesParams: params,
 				fullProduct,
@@ -203,7 +203,7 @@ describe(chalk.yellowBright("parseFeatureQuantitiesParams"), () => {
 				features: [creditsFeature, seatsFeature, storageFeature],
 			});
 
-			const result = parseFeatureQuantitiesParams({
+			const result = setupFeatureQuantitiesContext({
 				ctx,
 				featureQuantitiesParams: params,
 				fullProduct,
@@ -246,7 +246,7 @@ describe(chalk.yellowBright("parseFeatureQuantitiesParams"), () => {
 
 			const ctx = createMockCtx({ features: [feature] });
 
-			const result = parseFeatureQuantitiesParams({
+			const result = setupFeatureQuantitiesContext({
 				ctx,
 				featureQuantitiesParams: params,
 				fullProduct,
@@ -282,7 +282,7 @@ describe(chalk.yellowBright("parseFeatureQuantitiesParams"), () => {
 
 			const ctx = createMockCtx({ features: [feature] });
 
-			const result = parseFeatureQuantitiesParams({
+			const result = setupFeatureQuantitiesContext({
 				ctx,
 				featureQuantitiesParams: params,
 				fullProduct,
@@ -317,7 +317,7 @@ describe(chalk.yellowBright("parseFeatureQuantitiesParams"), () => {
 
 			const ctx = createMockCtx({ features: [feature] });
 
-			const result = parseFeatureQuantitiesParams({
+			const result = setupFeatureQuantitiesContext({
 				ctx,
 				featureQuantitiesParams: params,
 				fullProduct,
@@ -373,7 +373,7 @@ describe(chalk.yellowBright("parseFeatureQuantitiesParams"), () => {
 
 			const ctx = createMockCtx({ features: [feature] });
 
-			const result = parseFeatureQuantitiesParams({
+			const result = setupFeatureQuantitiesContext({
 				ctx,
 				featureQuantitiesParams: params,
 				fullProduct,
@@ -429,7 +429,7 @@ describe(chalk.yellowBright("parseFeatureQuantitiesParams"), () => {
 
 			const ctx = createMockCtx({ features: [feature] });
 
-			const result = parseFeatureQuantitiesParams({
+			const result = setupFeatureQuantitiesContext({
 				ctx,
 				featureQuantitiesParams: params,
 				fullProduct,
@@ -477,7 +477,7 @@ describe(chalk.yellowBright("parseFeatureQuantitiesParams"), () => {
 
 			const ctx = createMockCtx({ features: [feature] });
 
-			const result = parseFeatureQuantitiesParams({
+			const result = setupFeatureQuantitiesContext({
 				ctx,
 				featureQuantitiesParams: params,
 				fullProduct,
@@ -517,7 +517,7 @@ describe(chalk.yellowBright("parseFeatureQuantitiesParams"), () => {
 
 			const ctx = createMockCtx({ features: [feature] });
 
-			const result = parseFeatureQuantitiesParams({
+			const result = setupFeatureQuantitiesContext({
 				ctx,
 				featureQuantitiesParams: params,
 				fullProduct,
@@ -542,7 +542,7 @@ describe(chalk.yellowBright("parseFeatureQuantitiesParams"), () => {
 
 			const ctx = createMockCtx({ features: [] });
 
-			const result = parseFeatureQuantitiesParams({
+			const result = setupFeatureQuantitiesContext({
 				ctx,
 				featureQuantitiesParams: params,
 				fullProduct,
@@ -570,7 +570,7 @@ describe(chalk.yellowBright("parseFeatureQuantitiesParams"), () => {
 			const ctx = createMockCtx({ features: [] });
 
 			expect(() =>
-				parseFeatureQuantitiesParams({
+				setupFeatureQuantitiesContext({
 					ctx,
 					featureQuantitiesParams: params,
 					fullProduct,
@@ -601,7 +601,7 @@ describe(chalk.yellowBright("parseFeatureQuantitiesParams"), () => {
 
 			const ctx = createMockCtx({ features: [feature] });
 
-			const result = parseFeatureQuantitiesParams({
+			const result = setupFeatureQuantitiesContext({
 				ctx,
 				featureQuantitiesParams: params,
 				fullProduct,
@@ -643,7 +643,7 @@ describe(chalk.yellowBright("parseFeatureQuantitiesParams"), () => {
 
 			const ctx = createMockCtx({ features: [feature] });
 
-			const result = parseFeatureQuantitiesParams({
+			const result = setupFeatureQuantitiesContext({
 				ctx,
 				featureQuantitiesParams: params,
 				fullProduct,
@@ -686,7 +686,7 @@ describe(chalk.yellowBright("parseFeatureQuantitiesParams"), () => {
 
 			const ctx = createMockCtx({ features: [feature] });
 
-			const result = parseFeatureQuantitiesParams({
+			const result = setupFeatureQuantitiesContext({
 				ctx,
 				featureQuantitiesParams: params,
 				fullProduct,
@@ -731,7 +731,7 @@ describe(chalk.yellowBright("parseFeatureQuantitiesParams"), () => {
 
 			const ctx = createMockCtx({ features: [feature] });
 
-			const result = parseFeatureQuantitiesParams({
+			const result = setupFeatureQuantitiesContext({
 				ctx,
 				featureQuantitiesParams: params,
 				fullProduct,
