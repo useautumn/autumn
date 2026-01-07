@@ -13,8 +13,8 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: add monthly base price")}`,
 	const messagesItem = items.monthlyMessages({ includedUsage: 300 });
 	const free = products.base({ items: [messagesItem] });
 
-	const { customerId, autumnV1 } = await initTestScenario({
-		customerId: "free-to-paid-monthly-base",
+	const { customerId, autumnV1, ctx } = await initTestScenario({
+		customerId: "f2p-add-base",
 		products: [free],
 		attachProducts: [free.id],
 		customerOptions: {
@@ -64,6 +64,13 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: add monthly base price")}`,
 		count: 1,
 		latestTotal: 20,
 	});
+
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+	});
 });
 
 // 2. Adding monthly base price + consumable to free product
@@ -71,8 +78,8 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: add monthly base + consumab
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const free = products.base({ items: [messagesItem] });
 
-	const { customerId, autumnV1 } = await initTestScenario({
-		customerId: "free-to-paid-monthly-consumable",
+	const { customerId, autumnV1, ctx } = await initTestScenario({
+		customerId: "f2p-add-base-cons",
 		products: [free],
 		attachProducts: [free.id],
 		customerOptions: {
@@ -124,6 +131,13 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: add monthly base + consumab
 		count: 1,
 		latestTotal: 20,
 	});
+
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+	});
 });
 
 // 3. Adding annual base price + monthly consumable to free product
@@ -132,7 +146,7 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: add annual base + monthly c
 	const free = products.base({ items: [messagesItem] });
 
 	const { customerId, autumnV1, ctx } = await initTestScenario({
-		customerId: "free-to-paid-annual-consumable",
+		customerId: "f2p-add-annual-cons",
 		products: [free],
 		attachProducts: [free.id],
 		customerOptions: {
@@ -190,8 +204,8 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: update free item to consuma
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const free = products.base({ items: [messagesItem] });
 
-	const { customerId, autumnV1 } = await initTestScenario({
-		customerId: "free-to-paid-to-consumable",
+	const { customerId, autumnV1, ctx } = await initTestScenario({
+		customerId: "f2p-update-to-cons",
 		products: [free],
 		attachProducts: [free.id],
 		customerOptions: {
@@ -244,6 +258,13 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: update free item to consuma
 		customer,
 		count: 0,
 	});
+
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+	});
 });
 
 // 5. Updating free feature item to prepaid
@@ -251,8 +272,8 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: update free item to prepaid
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const free = products.base({ items: [messagesItem] });
 
-	const { customerId, autumnV1 } = await initTestScenario({
-		customerId: "free-to-paid-to-prepaid",
+	const { customerId, autumnV1, ctx } = await initTestScenario({
+		customerId: "f2p-update-to-prepaid",
 		products: [free],
 		attachProducts: [free.id],
 		customerOptions: {
@@ -304,5 +325,94 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: update free item to prepaid
 		includedUsage: 100,
 		balance: 100 - messagesUsage,
 		usage: messagesUsage,
+	});
+
+	// Prepaid charges upfront - $10 for 100 units
+	expectCustomerInvoiceCorrect({
+		customer,
+		count: 1,
+		latestTotal: 10,
+	});
+
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+	});
+});
+
+// 6. Updating free users to allocated users
+test.concurrent(`${chalk.yellowBright("free-to-paid: update free users to allocated")}`, async () => {
+	const usersItem = items.monthlyUsers({ includedUsage: 5 });
+	const free = products.base({ items: [usersItem] });
+
+	const { customerId, autumnV1, ctx } = await initTestScenario({
+		customerId: "f2p-free-to-allocated",
+		products: [free],
+		attachProducts: [free.id],
+		customerOptions: {
+			withTestClock: true,
+			attachPm: "success",
+		},
+	});
+
+	// Use some users (continuous use feature)
+	const usersUsed = 3;
+	await autumnV1.track(
+		{
+			customer_id: customerId,
+			feature_id: TestFeature.Users,
+			value: usersUsed,
+		},
+		{ timeout: 2000 },
+	);
+
+	// Verify initial state
+	const initialCustomer = await autumnV1.customers.get(customerId);
+	expect(initialCustomer.features[TestFeature.Users].balance).toEqual(
+		usersItem.included_usage - usersUsed,
+	);
+
+	// Update to allocated users ($10/seat prorated billing)
+	const allocatedUsersItem = items.allocatedUsers({ includedUsage: 2 });
+
+	const preview = await autumnV1.subscriptions.previewUpdate({
+		customer_id: customerId,
+		product_id: free.id,
+		items: [allocatedUsersItem],
+	});
+
+	// Should charge for (usersUsed - includedUsage) extra seats = (3 - 2) = 1 seat @ $10
+	expect(preview.total).toEqual(10);
+
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: free.id,
+		items: [allocatedUsersItem],
+	});
+
+	const customer = await autumnV1.customers.get(customerId);
+
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Users,
+		includedUsage: allocatedUsersItem.included_usage,
+		balance: allocatedUsersItem.included_usage - usersUsed,
+		usage: usersUsed,
+	});
+
+	// Invoice for the extra seat
+	expectCustomerInvoiceCorrect({
+		customer,
+		count: 1,
+		latestTotal: 10,
+	});
+
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
 	});
 });

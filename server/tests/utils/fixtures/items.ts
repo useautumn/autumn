@@ -79,6 +79,20 @@ const unlimitedMessages = () =>
 	});
 
 /**
+ * Monthly users - resets each billing cycle
+ * @param includedUsage - Free usage allowance (default: 5)
+ */
+const monthlyUsers = ({
+	includedUsage = 5,
+}: {
+	includedUsage?: number;
+} = {}): LimitedItem =>
+	constructFeatureItem({
+		featureId: TestFeature.Users,
+		includedUsage,
+	}) as LimitedItem;
+
+/**
  * Lifetime messages - never resets (interval: null)
  * @param includedUsage - One-time usage allowance (default: 100)
  */
@@ -190,6 +204,7 @@ export const items = {
 	monthlyMessages,
 	monthlyWords,
 	monthlyCredits,
+	monthlyUsers,
 	unlimitedMessages,
 	lifetimeMessages,
 

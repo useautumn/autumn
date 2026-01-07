@@ -12,6 +12,10 @@ import { notNullish } from "@utils/utils.js";
 import { Decimal } from "decimal.js";
 import { getItemType } from "./getItemType.js";
 
+/**
+ * @deprecated Use `applyProration` from `@autumn/shared` instead.
+ * This function will be removed in a future version.
+ */
 export const calculateProrationAmount = ({
 	periodEnd,
 	periodStart,

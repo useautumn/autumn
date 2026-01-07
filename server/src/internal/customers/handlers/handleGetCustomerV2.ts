@@ -40,6 +40,8 @@ export const handleGetCustomerV2 = createRoute({
 			withAutumnId: with_autumn_id,
 		});
 
+		console.log("Customer invoices:", customer.invoices);
+
 		const duration = Date.now() - start;
 		ctx.logger.debug(`[get-customer] getApiCustomer duration: ${duration}ms`);
 

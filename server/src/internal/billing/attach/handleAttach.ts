@@ -18,17 +18,20 @@ export const handleAttach = createRoute({
 	body: AttachBodyV0Schema,
 	resource: AffectedResource.Attach,
 
-	lock: {
-		ttlMs: 60000,
-		errorMessage:
-			"Attach already in progress for this customer, try again in a few seconds",
+	lock:
+		process.env.NODE_ENV !== "development"
+			? {
+					ttlMs: 60000,
+					errorMessage:
+						"Attach already in progress for this customer, try again in a few seconds",
 
-		getKey: (c) => {
-			const ctx = c.get("ctx");
-			const attachBody = c.req.valid("json");
-			return `lock:attach:${ctx.org.id}:${ctx.env}:${attachBody.customer_id}`;
-		},
-	},
+					getKey: (c) => {
+						const ctx = c.get("ctx");
+						const attachBody = c.req.valid("json");
+						return `lock:attach:${ctx.org.id}:${ctx.env}:${attachBody.customer_id}`;
+					},
+				}
+			: undefined,
 
 	handler: async (c) => {
 		// await handleAttachRaceCondition({ req, res });

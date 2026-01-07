@@ -3,6 +3,7 @@ import {
 	orgToCurrency,
 	sumValues,
 } from "@autumn/shared";
+import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import type { BillingPlan } from "@/internal/billing/v2/types/billingPlan";
@@ -24,7 +25,11 @@ export const billingPlanToPreviewResponse = ({
 		amount: line.finalAmount,
 	}));
 
-	const total = sumValues(previewLineItems.map((line) => line.amount));
+	const total = new Decimal(
+		sumValues(previewLineItems.map((line) => line.amount)),
+	)
+		.toDP(2)
+		.toNumber();
 
 	const currency = orgToCurrency({ org: ctx.org });
 

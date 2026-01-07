@@ -3,6 +3,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
+import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
 import { setupUpdateSubscriptionProductContext } from "@/internal/billing/v2/updateSubscription/setup/setupUpdateSubscriptionProductContext";
 import type { UpdateSubscriptionBillingContext } from "../../billingContext";
 
@@ -55,14 +56,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		stripeSubscription?.billing_cycle_anchor,
 	);
 
-	// Invoice mode
-	const invoiceMode =
-		params?.invoice === true
-			? {
-					finalizeInvoice: params.finalize_invoice === true,
-					enableProductImmediately: params.enable_product_immediately !== false,
-				}
-			: undefined;
+	const invoiceMode = setupInvoiceModeContext({ params });
 
 	return {
 		fullCustomer,
