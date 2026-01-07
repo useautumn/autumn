@@ -21,19 +21,17 @@ export interface BillingContext {
 	stripeCustomer: Stripe.Customer;
 	fullProducts: FullProduct[];
 
-	stripeSubscription?: Stripe.Subscription;
-	stripeSubscriptionSchedule?: Stripe.SubscriptionSchedule;
-	paymentMethod?: Stripe.PaymentMethod;
+	featureQuantities: FeatureOptions[];
+	invoiceMode?: InvoiceMode;
 
 	// Timestamps...
 	currentEpochMs: number;
 	billingCycleAnchorMs: number | "now";
 
-	// Invoice mode
-	invoiceMode?: InvoiceMode;
-
-	// Feature quantities
-	featureQuantities: FeatureOptions[];
+	// Stripe context
+	stripeSubscription?: Stripe.Subscription;
+	stripeSubscriptionSchedule?: Stripe.SubscriptionSchedule;
+	paymentMethod?: Stripe.PaymentMethod;
 
 	// Unforunately, need to add custom prices, custom entitlements and free trial here, because it's determined in the setup step.
 	customPrices: Price[];

@@ -136,6 +136,7 @@ export const expectSubToBeCorrect = async ({
 	flags,
 	subId,
 	rewards,
+	subCount,
 }: {
 	db: DrizzleCli;
 	customerId: string;
@@ -150,6 +151,7 @@ export const expectSubToBeCorrect = async ({
 	};
 	subId?: string;
 	rewards?: string[];
+	subCount?: number;
 }) => {
 	const stripeCli = createStripeCli({ org, env });
 	const fullCus = await CusService.getFull({
@@ -159,6 +161,18 @@ export const expectSubToBeCorrect = async ({
 		env,
 		withEntities: true,
 	});
+
+	// Check Stripe subscription count if specified
+	if (subCount !== undefined) {
+		const stripeCustomerId = fullCus.processor?.id;
+		if (!stripeCustomerId) {
+			throw new Error(`Customer ${customerId} has no Stripe processor ID`);
+		}
+		const subs = await stripeCli.subscriptions.list({
+			customer: stripeCustomerId,
+		});
+		expect(subs.data.length).toBe(subCount);
+	}
 
 	// 1. Only 1 sub ID available
 	let cusProducts = fullCus.customer_products;
@@ -187,6 +201,8 @@ export const expectSubToBeCorrect = async ({
 			items: [],
 		};
 	});
+
+	console.log("Schedule unixes:", scheduleUnixes);
 
 	// console.log(`\n\nChecking sub correct`);
 	const printCusProduct = false;
@@ -428,27 +444,16 @@ export const expectSubToBeCorrect = async ({
 		return;
 	}
 
+	if (supposedPhases.length > 0) {
+		expect(sub.schedule, `Sub ${subId} should have a schedule`).not.toBeNull();
+	}
+
 	const schedule =
 		supposedPhases.length > 0
 			? await stripeCli.subscriptionSchedules.retrieve(sub.schedule as string, {
 					expand: ["phases.items.price"],
 				})
 			: null;
-
-	// console.log("--------------------------------");
-	// console.log("Supposed phases:");
-	// await logPhases({
-	//   phases: supposedPhases,
-	//   db,
-	// });
-
-	// console.log("--------------------------------");
-	// console.log("Actual phases:");
-
-	// await logPhases({
-	//   phases: (schedule?.phases as any) || [],
-	//   db,
-	// });
 
 	for (let i = 0; i < supposedPhases.length; i++) {
 		const supposedPhase = supposedPhases[i];
@@ -482,10 +487,6 @@ export const expectSubToBeCorrect = async ({
 	}
 
 	expect(sub.cancel_at).toBeNull();
-	// if (shouldBeCanceled) {
-	//   expect(sub.cancel_at).toBeDefined();
-	// } else {
-	// }
 };
 
 export const expectSubCount = async ({

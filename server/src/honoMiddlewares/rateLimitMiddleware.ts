@@ -82,10 +82,7 @@ export const rateLimitMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const ctx = c.get("ctx");
 
 	try {
-		if (
-			process.env.NODE_ENV === "development" &&
-			ctx.org?.id === process.env.TESTS_ORG_ID
-		) {
+		if (process.env.NODE_ENV === "development") {
 			return await next();
 		}
 		// 1. Determine rate limit type based on endpoint

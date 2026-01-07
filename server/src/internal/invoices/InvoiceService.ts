@@ -171,8 +171,16 @@ export class InvoiceService {
 			items: items,
 		};
 
+		let newInvoice: Invoice | null = null;
 		try {
-			await db.insert(invoices).values(invoice as any);
+			const results = await db
+				.insert(invoices)
+				.values(invoice as any)
+				.returning();
+			if (results.length === 0) {
+				return null;
+			}
+			newInvoice = results[0] as Invoice;
 		} catch (error: any) {
 			if (error.code === "23505") {
 				console.log("   🧐 Invoice already exists");
@@ -186,7 +194,7 @@ export class InvoiceService {
 		// Send monthly_revenue event
 		try {
 			if (!stripeInvoice.livemode || !sendRevenueEvent) {
-				return;
+				return newInvoice;
 			}
 
 			const autumn = new Autumn();
@@ -202,6 +210,8 @@ export class InvoiceService {
 		} catch (error) {
 			console.log("Failed to send revenue event", error);
 		}
+
+		return newInvoice;
 	}
 
 	static async updateByStripeId({

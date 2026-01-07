@@ -28,7 +28,7 @@ export const executeStripeInvoiceAction = async ({
 		return { stripeInvoice: undefined };
 	}
 
-	logger.info("[executeStripeInvoiceAction] Creating invoice for billing");
+	logger.debug("[executeStripeInvoiceAction] Creating invoice for billing");
 
 	const { invoice } = await createInvoiceForBilling({
 		ctx,
@@ -44,7 +44,7 @@ export const executeStripeInvoiceAction = async ({
 	// Insert metadata into DB
 	const deferBillingPlan = enableProductAfterInvoice || invoiceActionRequired;
 	if (deferBillingPlan) {
-		logger.info(
+		logger.debug(
 			`Deferring billing plan, enableProductAfterInvoice: ${enableProductAfterInvoice}, invoiceActionRequired: ${invoiceActionRequired}`,
 		);
 		await insertMetadataFromBillingPlan({
@@ -63,7 +63,7 @@ export const executeStripeInvoiceAction = async ({
 	}
 
 	if (invoice) {
-		logger.info("[executeStripeInvoiceAction] Upserting invoice from billing");
+		logger.debug("[executeStripeInvoiceAction] Upserting invoice from billing");
 		await upsertInvoiceFromBilling({
 			ctx,
 			stripeInvoice: invoice,
@@ -72,7 +72,7 @@ export const executeStripeInvoiceAction = async ({
 		});
 	}
 
-	logger.info(
+	logger.debug(
 		`[executeStripeInvoiceAction] Completed, invoice: ${invoice?.id}`,
 	);
 
