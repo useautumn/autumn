@@ -1,4 +1,5 @@
 import {
+	customerPriceToCustomerEntitlement,
 	EntInterval,
 	type FeatureOptions,
 	type FullCusProduct,
@@ -12,7 +13,6 @@ import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntit
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService.js";
 import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils.js";
 import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils.js";
-import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
@@ -41,9 +41,9 @@ export const handlePrepaidPrices = async ({
 
 	if (!resetBalance) return false;
 
-	const cusEnt = getRelatedCusEnt({
-		cusPrice,
-		cusEnts: cusProduct.customer_entitlements,
+	const cusEnt = customerPriceToCustomerEntitlement({
+		customerPrice: cusPrice,
+		customerEntitlements: cusProduct.customer_entitlements,
 	});
 
 	if (!cusEnt) {

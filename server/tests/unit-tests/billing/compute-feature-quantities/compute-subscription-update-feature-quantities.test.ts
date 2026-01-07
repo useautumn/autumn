@@ -10,13 +10,11 @@ import {
 } from "@tests/utils/mockUtils/priceMocks";
 import { createMockFullProduct } from "@tests/utils/mockUtils/productMocks";
 import chalk from "chalk";
-import { computeSubscriptionUpdateFeatureQuantities } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateCustomPlan/computeSubscriptionUpdateFeatureQuantities";
+import { computeCustomPlanFeatureQuantities } from "@/internal/billing/v2/updateSubscription/compute/customPlan/computeCustomPlanFeatureQuantities";
 
 // ============ TESTS ============
 
-describe(
-	chalk.yellowBright("computeSubscriptionUpdateFeatureQuantities"),
-	() => {
+describe(chalk.yellowBright("computeCustomPlanFeatureQuantities"), () => {
 		describe("basic quantity inheritance", () => {
 			test("1. current has quantity, new params has none → uses current", () => {
 				const feature = createMockFeature({
@@ -49,7 +47,7 @@ describe(
 
 				const ctx = createMockCtx({ features: [feature] });
 
-				const result = computeSubscriptionUpdateFeatureQuantities({
+			const result = computeCustomPlanFeatureQuantities({
 					ctx,
 					fullProduct,
 					currentCustomerProduct: cusProduct,
@@ -83,7 +81,7 @@ describe(
 
 				const ctx = createMockCtx({ features: [feature] });
 
-				const result = computeSubscriptionUpdateFeatureQuantities({
+			const result = computeCustomPlanFeatureQuantities({
 					ctx,
 					fullProduct,
 					currentCustomerProduct: cusProduct,
@@ -125,7 +123,7 @@ describe(
 
 				const ctx = createMockCtx({ features: [feature] });
 
-				const result = computeSubscriptionUpdateFeatureQuantities({
+			const result = computeCustomPlanFeatureQuantities({
 					ctx,
 					fullProduct,
 					currentCustomerProduct: cusProduct,
@@ -205,7 +203,7 @@ describe(
 					features: [creditsFeature, seatsFeature, storageFeature],
 				});
 
-				const result = computeSubscriptionUpdateFeatureQuantities({
+			const result = computeCustomPlanFeatureQuantities({
 					ctx,
 					fullProduct,
 					currentCustomerProduct: cusProduct,
@@ -248,7 +246,7 @@ describe(
 
 				const ctx = createMockCtx({ features: [feature] });
 
-				const result = computeSubscriptionUpdateFeatureQuantities({
+			const result = computeCustomPlanFeatureQuantities({
 					ctx,
 					fullProduct,
 					currentCustomerProduct: cusProduct,
@@ -284,7 +282,7 @@ describe(
 
 				const ctx = createMockCtx({ features: [feature] });
 
-				const result = computeSubscriptionUpdateFeatureQuantities({
+			const result = computeCustomPlanFeatureQuantities({
 					ctx,
 					fullProduct,
 					currentCustomerProduct: cusProduct,
@@ -319,7 +317,7 @@ describe(
 
 				const ctx = createMockCtx({ features: [feature] });
 
-				const result = computeSubscriptionUpdateFeatureQuantities({
+			const result = computeCustomPlanFeatureQuantities({
 					ctx,
 					fullProduct,
 					currentCustomerProduct: cusProduct,
@@ -375,7 +373,7 @@ describe(
 
 				const ctx = createMockCtx({ features: [feature] });
 
-				const result = computeSubscriptionUpdateFeatureQuantities({
+			const result = computeCustomPlanFeatureQuantities({
 					ctx,
 					fullProduct,
 					currentCustomerProduct: cusProduct,
@@ -431,7 +429,7 @@ describe(
 
 				const ctx = createMockCtx({ features: [feature] });
 
-				const result = computeSubscriptionUpdateFeatureQuantities({
+			const result = computeCustomPlanFeatureQuantities({
 					ctx,
 					fullProduct,
 					currentCustomerProduct: cusProduct,
@@ -479,7 +477,7 @@ describe(
 
 				const ctx = createMockCtx({ features: [feature] });
 
-				const result = computeSubscriptionUpdateFeatureQuantities({
+			const result = computeCustomPlanFeatureQuantities({
 					ctx,
 					fullProduct,
 					currentCustomerProduct: cusProduct,
@@ -519,7 +517,7 @@ describe(
 
 				const ctx = createMockCtx({ features: [feature] });
 
-				const result = computeSubscriptionUpdateFeatureQuantities({
+			const result = computeCustomPlanFeatureQuantities({
 					ctx,
 					fullProduct,
 					currentCustomerProduct: cusProduct,
@@ -544,7 +542,7 @@ describe(
 
 				const ctx = createMockCtx({ features: [] });
 
-				const result = computeSubscriptionUpdateFeatureQuantities({
+			const result = computeCustomPlanFeatureQuantities({
 					ctx,
 					fullProduct,
 					currentCustomerProduct: cusProduct,
@@ -572,7 +570,7 @@ describe(
 				const ctx = createMockCtx({ features: [] });
 
 				expect(() =>
-					computeSubscriptionUpdateFeatureQuantities({
+				computeCustomPlanFeatureQuantities({
 						ctx,
 						fullProduct,
 						currentCustomerProduct: cusProduct,
@@ -603,7 +601,7 @@ describe(
 
 				const ctx = createMockCtx({ features: [feature] });
 
-				const result = computeSubscriptionUpdateFeatureQuantities({
+			const result = computeCustomPlanFeatureQuantities({
 					ctx,
 					fullProduct,
 					currentCustomerProduct: cusProduct,
@@ -645,7 +643,7 @@ describe(
 
 				const ctx = createMockCtx({ features: [feature] });
 
-				const result = computeSubscriptionUpdateFeatureQuantities({
+			const result = computeCustomPlanFeatureQuantities({
 					ctx,
 					fullProduct,
 					currentCustomerProduct: cusProduct,
@@ -688,7 +686,7 @@ describe(
 
 				const ctx = createMockCtx({ features: [feature] });
 
-				const result = computeSubscriptionUpdateFeatureQuantities({
+			const result = computeCustomPlanFeatureQuantities({
 					ctx,
 					fullProduct,
 					currentCustomerProduct: cusProduct,
@@ -733,7 +731,7 @@ describe(
 
 				const ctx = createMockCtx({ features: [feature] });
 
-				const result = computeSubscriptionUpdateFeatureQuantities({
+			const result = computeCustomPlanFeatureQuantities({
 					ctx,
 					fullProduct,
 					currentCustomerProduct: cusProduct,
@@ -744,5 +742,4 @@ describe(
 				expect(result[0].quantity).toBe(75);
 			});
 		});
-	},
-);
+});

@@ -28,8 +28,7 @@ export * from "./cusEntUtils/findCustomerEntitlement/findPrepaidCustomerEntitlem
 export * from "./cusEntUtils/getRolloverFields.js";
 export * from "./cusEntUtils/getStartingBalance.js";
 export * from "./cusEntUtils/sortCusEntsForDeduction.js";
-export * from "./cusPriceUtils/convertCusPriceUtils.js";
-export * from "./cusPriceUtils/findCusPriceUtils.js";
+export * from "./cusPriceUtils/index.js";
 // Cus product utils
 export * from "./cusProductUtils/classifyCusProduct.js";
 export * from "./cusProductUtils/convertCusProduct/cusProductToConvertedFeatureOptions.js";

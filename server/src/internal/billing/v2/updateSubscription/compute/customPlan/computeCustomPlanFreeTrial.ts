@@ -20,7 +20,7 @@ interface ComputeSubscriptionUpdateTrialDetailsResult {
 	customFreeTrial?: FreeTrial;
 }
 
-export const computeSubscriptionUpdateFreeTrialPlan = ({
+export const computeCustomPlanFreeTrial = ({
 	updateSubscriptionContext,
 	params,
 	fullProduct,

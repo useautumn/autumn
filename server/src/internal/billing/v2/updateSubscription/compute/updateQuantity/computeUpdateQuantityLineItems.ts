@@ -15,7 +15,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-export const buildQuantityUpdateLineItems = ({
+export const computeUpdateQuantityLineItems = ({
 	ctx,
 	customerProduct,
 	feature,

@@ -1,17 +1,18 @@
 import {
+	customerPriceToCustomerEntitlement,
 	type FeatureOptions,
+	findCusPriceByFeature,
 	findFeatureByInternalId,
 	findFeatureOptionsByFeature,
 	InternalError,
 } from "@autumn/shared";
 import { getLineItemBillingPeriod } from "@shared/utils/billingUtils/cycleUtils/getLineItemBillingPeriod";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
 import type { QuantityUpdateDetails } from "@/internal/billing/v2/typesOld";
-import type { UpdateSubscriptionBillingContext } from "../../billingContext";
-import { buildQuantityUpdateLineItems } from "./buildQuantityUpdateLineItems";
-import { calculateCustomerEntitlementChange } from "./quantityUpdateUtils/calculateCustomerEntitlementChange";
-import { calculateQuantityDifferences } from "./quantityUpdateUtils/calculateQuantityDifferences";
-import { resolvePriceForQuantityUpdate } from "./quantityUpdateUtils/resolvePriceForQuantityUpdate";
+import { calculateUpdateQuantityDifferences } from "./calculateUpdateQuantityDifferences";
+import { calculateUpdateQuantityEntitlementChange } from "./calculateUpdateQuantityEntitlementChange";
+import { computeUpdateQuantityLineItems } from "./computeUpdateQuantityLineItems";
 
 /**
  * Computes all details needed for a feature quantity update operation.
@@ -26,7 +27,7 @@ import { resolvePriceForQuantityUpdate } from "./quantityUpdateUtils/resolvePric
  * @returns Complete details for executing the quantity update
  * @throws {InternalError} When internal_feature_id is missing or feature not found
  */
-export const computeQuantityUpdateDetails = ({
+export const computeUpdateQuantityDetails = ({
 	ctx,
 	updatedOptions,
 	updateSubscriptionContext,
@@ -57,51 +58,52 @@ export const computeQuantityUpdateDetails = ({
 	const feature = findFeatureByInternalId({
 		features,
 		internalId: internalFeatureId,
+		errorOnNotFound: true,
 	});
-
-	if (!feature) {
-		throw new InternalError({
-			message: `[Quantity Update] Feature not found for internal_id: ${internalFeatureId}`,
-		});
-	}
 
 	const previousOptions = findFeatureOptionsByFeature({
 		featureOptions: customerProduct.options,
 		feature,
 	});
 
-	const quantityDifferences = calculateQuantityDifferences({
+	const quantityDifferences = calculateUpdateQuantityDifferences({
 		previousOptions,
 		updatedOptions,
 	});
 
-	const priceConfiguration = resolvePriceForQuantityUpdate({
-		customerProduct,
-		updatedOptions,
+	const customerPrice = findCusPriceByFeature({
+		internalFeatureId: internalFeatureId,
+		cusPrices: customerProduct.customer_prices,
+		errorOnNotFound: true,
+	});
+
+	const customerEntitlement = customerPriceToCustomerEntitlement({
+		customerPrice,
+		customerEntitlements: customerProduct.customer_entitlements,
+		errorOnNotFound: true,
 	});
 
 	const { customerEntitlementId, customerEntitlementBalanceChange } =
-		calculateCustomerEntitlementChange({
+		calculateUpdateQuantityEntitlementChange({
 			quantityDifferenceForEntitlements:
 				quantityDifferences.quantityDifferenceForEntitlements,
-			billingUnitsPerQuantity: priceConfiguration.billingUnitsPerQuantity,
-			customerPrice: priceConfiguration.customerPrice,
-			customerEntitlements: customerProduct.customer_entitlements,
+			customerPrice,
+			customerEntitlement,
 		});
 
 	const billingPeriod = getLineItemBillingPeriod({
 		anchor: billingCycleAnchorMs,
-		price: priceConfiguration.price,
+		price: customerPrice.price,
 		now: currentEpochMs,
 	});
 
 	if (!billingPeriod) {
 		throw new InternalError({
-			message: `[Quantity Update] Billing period not found for price: ${priceConfiguration.price.id}`,
+			message: `[Quantity Update] Billing period not found for price: ${customerPrice.price.id}`,
 		});
 	}
 
-	const lineItems = buildQuantityUpdateLineItems({
+	const lineItems = computeUpdateQuantityLineItems({
 		ctx,
 		customerProduct,
 		feature,

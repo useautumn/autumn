@@ -15,6 +15,14 @@ import { priceToStripeItem } from "@/external/stripe/priceToStripeItem/priceToSt
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
 
+/**
+ * Convert a customer product to stripe item specs
+ * A stripe item spec is an internal intermediate type containing the stripe price id and quantity of the item.
+ * @param ctx - The context
+ * @param customerProduct - The customer product
+ * @param billingContext - The billing context
+ * @returns The stripe item specs
+ */
 export const customerProductToStripeItemSpecs = ({
 	ctx,
 	customerProduct,
@@ -27,14 +35,13 @@ export const customerProductToStripeItemSpecs = ({
 	recurringItems: StripeItemSpec[];
 	oneOffItems: StripeItemSpec[];
 } => {
+	const { org } = ctx;
 	const product = cusProductToProduct({ cusProduct: customerProduct });
 
 	const cusPrices = customerProduct.customer_prices;
 	const cusEnts = customerProduct.customer_entitlements;
 
 	const fromVercel = billingContext?.paymentMethod?.type === "custom";
-
-	const { org } = ctx;
 
 	const recurringItems: StripeItemSpec[] = [];
 	const oneOffItems: StripeItemSpec[] = [];

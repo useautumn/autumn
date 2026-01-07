@@ -2,6 +2,7 @@ import {
 	type AppEnv,
 	BillingType,
 	CusProductStatus,
+	customerPriceToCustomerEntitlement,
 	type FullCusProduct,
 	isFixedPrice,
 	type Organization,
@@ -10,7 +11,6 @@ import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
 import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
@@ -62,9 +62,9 @@ export const sendUsageAndReset = async ({
 
 		if (isFixedPrice(price)) continue;
 
-		const relatedCusEnt = getRelatedCusEnt({
-			cusPrice,
-			cusEnts,
+		const relatedCusEnt = customerPriceToCustomerEntitlement({
+			customerPrice: cusPrice,
+			customerEntitlements: cusEnts,
 		});
 
 		if (!relatedCusEnt) continue;

@@ -7,12 +7,12 @@ import {
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@server/internal/billing/v2/billingContext";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
-import { computeSubscriptionUpdateFreeTrialPlan } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateCustomPlan/computeSubscriptionUpdateFreeTrialPlan";
-import { computeSubscriptionUpdateNewCustomerProduct } from "@/internal/billing/v2/subscriptionUpdate/compute/computeSubscriptionUpdateCustomPlan/computeSubscriptionUpdateNewCustomerProduct";
+import { computeCustomPlanFreeTrial } from "@/internal/billing/v2/updateSubscription/compute/customPlan/computeCustomPlanFreeTrial";
+import { computeCustomPlanNewCustomerProduct } from "@/internal/billing/v2/updateSubscription/compute/customPlan/computeCustomPlanNewCustomerProduct";
 import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan";
 import { computeCustomFullProduct } from "../../../compute/computeAutumnUtils/computeCustomFullProduct";
 
-export const computeSubscriptionUpdateCustomPlan = async ({
+export const computeCustomPlan = async ({
 	ctx,
 	updateSubscriptionContext,
 	params,
@@ -40,19 +40,18 @@ export const computeSubscriptionUpdateCustomPlan = async ({
 	updateSubscriptionContext.fullProducts = [customFullProduct];
 
 	// 2. Compute the custom trial details
-	const { freeTrialPlan, customFreeTrial } =
-		computeSubscriptionUpdateFreeTrialPlan({
-			updateSubscriptionContext,
-			params,
-			fullProduct: customFullProduct,
-		});
+	const { freeTrialPlan, customFreeTrial } = computeCustomPlanFreeTrial({
+		updateSubscriptionContext,
+		params,
+		fullProduct: customFullProduct,
+	});
 
 	updateSubscriptionContext.billingCycleAnchorMs =
 		freeTrialPlan.trialEndsAt ??
 		secondsToMs(stripeSubscription?.billing_cycle_anchor);
 
 	// 3. Compute the new customer product
-	const newFullCustomerProduct = computeSubscriptionUpdateNewCustomerProduct({
+	const newFullCustomerProduct = computeCustomPlanNewCustomerProduct({
 		ctx,
 		updateSubscriptionContext,
 		params,
