@@ -64,33 +64,31 @@ export const buildStripeSubscriptionScheduleAction = ({
 
 	// 1. Filter customer products by stripe subscription id or stripe subscription schedule ID?
 
-	let customerProducts = stripeSubscription
+	const relatedCustomerProducts = stripeSubscription
 		? finalCustomerProducts.filter(
-				(cp) =>
+				(customerProduct) =>
 					isCustomerProductOnStripeSubscription({
-						customerProduct: cp,
+						customerProduct,
 						stripeSubscriptionId: stripeSubscription.id,
 					}) ||
 					isCustomerProductOnStripeSubscriptionSchedule({
-						customerProduct: cp,
+						customerProduct,
 						stripeSubscriptionScheduleId: stripeSubscriptionSchedule?.id ?? "",
 					}),
 			)
 		: [];
 
-	customerProducts = customerProducts.filter((cp) =>
-		RELEVANT_STATUSES.includes(cp.status),
+	const customerProducts = relatedCustomerProducts.filter((customerProduct) =>
+		RELEVANT_STATUSES.includes(customerProduct.status),
 	);
 
 	const phases = buildSchedulePhases({
 		ctx,
 		billingContext,
-		customerProducts: finalCustomerProducts,
+		customerProducts,
 		trialEndsAt,
 		nowMs,
 	});
-
-	// logPhases({ phases, db: ctx.db });
 
 	// Filter out empty phases from both ends - Stripe requires items in every phase
 	const scheduledPhases = filterEmptyPhases(phases);

@@ -11,27 +11,26 @@ export const handleUpdateSubscription = createRoute({
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
 
-		const updateSubscriptionBillingContext =
-			await fetchUpdateSubscriptionBillingContext({
-				ctx,
-				params: body,
-			});
+		const billingContext = await fetchUpdateSubscriptionBillingContext({
+			ctx,
+			params: body,
+		});
 
 		const autumnBillingPlan = await computeSubscriptionUpdatePlan({
 			ctx,
-			billingContext: updateSubscriptionBillingContext,
+			billingContext,
 			params: body,
 		});
 
 		const stripeBillingPlan = evaluateStripeBillingPlan({
 			ctx,
-			billingContext: updateSubscriptionBillingContext,
+			billingContext,
 			autumnBillingPlan,
 		});
 
 		await executeBillingPlan({
 			ctx,
-			billingContext: updateSubscriptionBillingContext,
+			billingContext,
 			billingPlan: {
 				autumn: autumnBillingPlan,
 				stripe: stripeBillingPlan,
