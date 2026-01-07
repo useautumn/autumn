@@ -1,17 +1,17 @@
 import { expect } from "bun:test";
-import type { ApiCustomer } from "@autumn/shared";
+import type { ApiCustomerV3 } from "@autumn/shared";
 
 export const expectLatestInvoiceCorrect = ({
 	customer,
 	productId,
 	amount,
 }: {
-	customer: ApiCustomer;
+	customer: ApiCustomerV3;
 	productId: string;
 	amount: number;
 }) => {
 	const invoices = customer.invoices;
 
 	expect(invoices?.[0].total).toBe(amount);
-	expect(invoices?.[0].plan_ids).toContain(productId);
+	expect(invoices?.[0].product_ids).toContain(productId);
 };
