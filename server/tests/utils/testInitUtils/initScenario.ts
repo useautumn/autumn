@@ -247,7 +247,8 @@ const defaultConfig: ScenarioConfig = {
  * Uses functional composition for flexible configuration.
  *
  * @param customerId - Unique identifier used as customer ID and product prefix
- * @param options - Array of configuration functions from `s.*`
+ * @param setup - Configuration functions (customer, products, entities)
+ * @param actions - Action functions (attach, cancel, advanceTestClock)
  * @returns autumnV1, autumnV2, ctx, testClockId, customer, entities
  *
  * @example
@@ -255,9 +256,11 @@ const defaultConfig: ScenarioConfig = {
  * // Simple test
  * const { autumnV1, ctx } = await initScenario({
  *   customerId: "simple-test",
- *   options: [
+ *   setup: [
  *     s.customer({ paymentMethod: "success" }),
  *     s.products({ list: [free] }),
+ *   ],
+ *   actions: [
  *     s.attach({ productId: "base" }),
  *   ],
  * });
@@ -265,10 +268,12 @@ const defaultConfig: ScenarioConfig = {
  * // With entities
  * const { autumnV1, ctx, entities } = await initScenario({
  *   customerId: "entity-test",
- *   options: [
+ *   setup: [
  *     s.customer({ paymentMethod: "success" }),
  *     s.products({ list: [pro, free] }),
  *     s.entities({ count: 2, featureId: TestFeature.Users }),
+ *   ],
+ *   actions: [
  *     s.attach({ productId: "pro", entityIndex: 0 }),
  *     s.attach({ productId: "free", entityIndex: 1 }),
  *   ],
@@ -278,13 +283,15 @@ const defaultConfig: ScenarioConfig = {
  */
 export const initScenario = async ({
 	customerId,
-	options,
+	setup,
+	actions,
 }: {
 	customerId: string;
-	options: ConfigFn[];
+	setup: ConfigFn[];
+	actions: ConfigFn[];
 }) => {
-	// Build config from options
-	const config = options.reduce((c, fn) => fn(c), defaultConfig);
+	// Build config from setup and actions
+	const config = [...setup, ...actions].reduce((c, fn) => fn(c), defaultConfig);
 
 	// Generate entities from config
 	const generatedEntities = config.entityConfig

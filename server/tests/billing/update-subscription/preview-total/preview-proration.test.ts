@@ -21,9 +21,11 @@ test.concurrent(`${chalk.yellowBright("preview-total: mid-cycle free to paid pro
 
 	const { autumnV1, advancedTo } = await initScenario({
 		customerId,
-		options: [
+		setup: [
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [free] }),
+		],
+		actions: [
 			s.attach({ productId: "free" }),
 			s.advanceTestClock({ days: 15 }), // Mid-cycle
 		],
