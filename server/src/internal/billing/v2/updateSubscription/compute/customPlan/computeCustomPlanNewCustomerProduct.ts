@@ -36,6 +36,8 @@ export const computeCustomPlanNewCustomerProduct = ({
 		cusProduct: customerProduct,
 	});
 
+	console.log("New customer product feature quantities", featureQuantities);
+
 	// Compute the new full customer product
 	const newFullCustomerProduct = initFullCustomerProduct({
 		ctx,

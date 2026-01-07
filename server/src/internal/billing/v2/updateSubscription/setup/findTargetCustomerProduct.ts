@@ -4,7 +4,7 @@ import {
 	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 
-export const fetchTargetCusProductForUpdate = ({
+export const findTargetCustomerProduct = ({
 	params,
 	fullCustomer,
 }: {

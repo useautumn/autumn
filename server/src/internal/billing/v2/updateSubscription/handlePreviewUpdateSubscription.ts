@@ -3,7 +3,7 @@ import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/strip
 import { billingPlanToPreviewResponse } from "@/internal/billing/v2/utils/billingPlanToPreviewResponse";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { computeUpdateSubscriptionPlan } from "./compute/computeUpdateSubscriptionPlan";
-import { fetchUpdateSubscriptionBillingContext } from "./fetch/fetchUpdateSubscriptionBillingContext";
+import { setupUpdateSubscriptionBillingContext } from "./setup/setupUpdateSubscriptionBillingContext";
 
 export const handlePreviewUpdateSubscription = createRoute({
 	body: UpdateSubscriptionV0ParamsSchema,
@@ -12,7 +12,7 @@ export const handlePreviewUpdateSubscription = createRoute({
 		const body = c.req.valid("json");
 
 		const updateSubscriptionBillingContext =
-			await fetchUpdateSubscriptionBillingContext({
+			await setupUpdateSubscriptionBillingContext({
 				ctx,
 				params: body,
 			});

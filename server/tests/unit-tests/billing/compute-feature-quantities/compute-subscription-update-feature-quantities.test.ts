@@ -552,7 +552,7 @@ describe(chalk.yellowBright("parseFeatureQuantitiesParams"), () => {
 			expect(result).toHaveLength(0);
 		});
 
-		test("skips price when feature not found (no error thrown)", () => {
+		test("throws error when feature not found for price", () => {
 			const price = createMockPrepaidPrice({
 				id: "price_credits",
 				featureId: "credits",
@@ -569,15 +569,14 @@ describe(chalk.yellowBright("parseFeatureQuantitiesParams"), () => {
 			// Empty features array - feature won't be found
 			const ctx = createMockCtx({ features: [] });
 
-			// Should not throw, just skip the price
-			const result = parseFeatureQuantitiesParams({
-				ctx,
-				featureQuantitiesParams: params,
-				fullProduct,
-				currentCustomerProduct: cusProduct,
-			});
-
-			expect(result).toHaveLength(0);
+			expect(() =>
+				parseFeatureQuantitiesParams({
+					ctx,
+					featureQuantitiesParams: params,
+					fullProduct,
+					currentCustomerProduct: cusProduct,
+				}),
+			).toThrow("Feature not found for price");
 		});
 
 		test("neither current nor new has quantity → feature not included", () => {
