@@ -48,7 +48,7 @@ export type UpdateOneOffAction = {
 };
 
 export type AttachPlan = {
-	autumnLineItems: LineItem[];
+	lineItems: LineItem[];
 
 	// 1. Autumn actions
 
@@ -69,7 +69,7 @@ export const QuantityUpdateDetailsSchema = z.object({
 	featureId: z.string(),
 	customerEntitlementId: z.string(),
 	customerEntitlementBalanceChange: z.number(),
-	autumnLineItems: z.array(LineItemSchema),
+	lineItems: z.array(LineItemSchema),
 });
 
 export type QuantityUpdateDetails = z.infer<typeof QuantityUpdateDetailsSchema>;

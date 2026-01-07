@@ -24,24 +24,6 @@ export const clearOrg = async ({
 
 	const autumn = new AutumnInt();
 
-	// if (process.env.STRIPE_TEST_KEY) {
-	// 	console.log(`Reconnecting stripe...`);
-
-	// 	try {
-	// 		await autumn.stripe.delete();
-	// 	} catch (_error) {}
-	// 	try {
-	// 		await autumn.stripe.connect({
-	// 			secret_key: process.env.STRIPE_TEST_KEY!,
-	// 			success_url: "https://useautumn.com",
-	// 			default_currency: "usd",
-	// 		});
-	// 	} catch (error: any) {
-	// 		console.error("Error reconnecting stripe", error.message);
-	// 		process.exit(1);
-	// 	}
-	// }
-
 	const { db, client } = initDrizzle();
 	const org = await OrgService.getBySlug({ db, slug: orgSlug });
 

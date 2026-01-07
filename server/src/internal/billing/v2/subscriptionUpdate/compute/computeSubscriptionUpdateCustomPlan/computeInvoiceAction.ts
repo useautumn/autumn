@@ -53,7 +53,7 @@ export const computeInvoiceAction = ({
 	// If subscription action is update, we need to create an invoice
 	const stripeSubscriptionActionType = stripeSubscriptionAction?.type;
 	if (stripeSubscriptionActionType === "update") {
-		const autumnLineItems = buildAutumnLineItems({
+		const lineItems = buildAutumnLineItems({
 			ctx,
 			newCusProducts: [toCustomerProduct],
 			ongoingCustomerProduct: fromCustomerProduct,
@@ -62,7 +62,7 @@ export const computeInvoiceAction = ({
 		});
 
 		const addLineParams = lineItemsToInvoiceAddLinesParams({
-			lineItems: autumnLineItems,
+			lineItems,
 		});
 
 		return {

@@ -40,7 +40,7 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
  *
  * This is an isolated test sheet for testing the subscription update flow.
  * It calls:
- * - POST /v1/subscriptions/preview/update - to get a billing plan preview
+ * - POST /v1/subscriptions/preview_update - to get a billing plan preview
  * - POST /v1/subscriptions/update - to execute the update
  *
  * Usage: Open this sheet with an itemId (cusProduct id) and optional customizedProduct in data
@@ -857,7 +857,7 @@ function useSubscriptionUpdatePreview({
 		queryFn: async () => {
 			if (!debouncedBody) return null;
 			const response = await axiosInstance.post(
-				"/v1/subscriptions/preview/update",
+				"/v1/subscriptions/preview_update",
 				debouncedBody,
 			);
 			return response.data;

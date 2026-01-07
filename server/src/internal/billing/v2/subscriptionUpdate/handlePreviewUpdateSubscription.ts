@@ -4,7 +4,7 @@ import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { computeSubscriptionUpdatePlan } from "./compute/computeSubscriptionUpdatePlan";
 import { fetchUpdateSubscriptionBillingContext } from "./fetch/fetchUpdateSubscriptionBillingContext";
 
-export const handleUpdateSubscriptionPreview = createRoute({
+export const handlePreviewUpdateSubscription = createRoute({
 	body: UpdateSubscriptionV0ParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
@@ -27,6 +27,8 @@ export const handleUpdateSubscriptionPreview = createRoute({
 			billingContext: updateSubscriptionBillingContext,
 			autumnBillingPlan,
 		});
+
+		// Convert to preview response
 
 		return c.json(
 			{
