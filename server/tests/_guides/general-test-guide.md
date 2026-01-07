@@ -37,6 +37,44 @@ const autumn = new AutumnInt({
 
 ## Common Test Patterns
 
+### Product IDs - Use Variable References, Not Hardcoded Strings
+
+When using `initScenario`, products are automatically prefixed with the `customerId`. When referencing product IDs in API calls or assertions, **always use the product variable's `.id` property** instead of hardcoding the prefixed string:
+
+```typescript
+const pro = products.pro({ id: "pro", items: [messagesItem] });
+const premium = constructProduct({ id: "premium", items: [...], type: "premium" });
+
+const { autumnV1, ctx, entities } = await initScenario({
+  customerId,
+  options: [
+    s.products({ list: [pro, premium] }),
+    s.attach({ productId: "pro", entityIndex: 0 }), // s.attach uses unprefixed ID
+  ],
+});
+
+// ✅ GOOD - Use product variable's .id (includes prefix automatically)
+await autumnV1.attach({
+  customer_id: customerId,
+  product_id: pro.id,  // Returns prefixed ID like "my-test_pro"
+  entity_id: entities[0].id,
+});
+
+await expectProductActive({
+  customer: customerData,
+  productId: premium.id,  // Use variable reference
+});
+
+// ❌ BAD - Don't hardcode prefixed product IDs
+await autumnV1.attach({
+  customer_id: customerId,
+  product_id: `${customerId}_pro`,  // Avoid hardcoding
+  entity_id: entities[0].id,
+});
+```
+
+**Note:** The `s.attach()` and `s.cancel()` helpers in `initScenario` take the **unprefixed** product ID (e.g., `"pro"`), but direct API calls require the **full prefixed ID** which you get from `pro.id`.
+
 ### Wait for Async Processing
 ```typescript
 await new Promise((resolve) => setTimeout(resolve, 2000));
