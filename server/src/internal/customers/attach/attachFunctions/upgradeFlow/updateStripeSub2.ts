@@ -1,5 +1,5 @@
 import {
-	type AttachBranch,
+	AttachBranch,
 	type AttachConfig,
 	type AttachReplaceable,
 	ProrationBehavior,
@@ -93,9 +93,14 @@ export const updateStripeSub2 = async ({
 
 		// cancel_at_period_end: false,
 		// TODO: will error if sub managed by a schedule
-		cancel_at_period_end: isStripeSubscriptionCanceled({ sub: curSub })
-			? false
-			: undefined,
+		cancel_at_period_end:
+			isStripeSubscriptionCanceled({ sub: curSub }) &&
+			!(
+				branch === AttachBranch.SameCustomEnts ||
+				branch === AttachBranch.NewVersion
+			)
+				? false
+				: undefined,
 	});
 
 	let latestInvoice = updatedSub.latest_invoice as Stripe.Invoice | null;
