@@ -7,6 +7,12 @@ import { notNullish, nullish } from "../utils";
 import { cusProductToPrices } from "./convertCusProduct";
 import { ACTIVE_STATUSES } from "./cusProductConstants";
 
+export const isCustomerProductMain = (cusProduct?: FullCusProduct) => {
+	if (!cusProduct) return false;
+
+	return !cusProduct.product.is_add_on;
+};
+
 export const isCustomerProductOneOff = (cusProduct?: FullCusProduct) => {
 	if (!cusProduct) return false;
 

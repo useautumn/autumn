@@ -112,8 +112,8 @@ const lifetimeMessages = ({
 // ═══════════════════════════════════════════════════════════════════
 
 /**
- * Prepaid messages - purchase units upfront ($10/unit)
- * @param includedUsage - Free units before purchase required (default: 0), billing units are 100
+ * Prepaid messages - purchase units upfront ($10 per 100 units)
+ * @param includedUsage - Free units before purchase required (default: 0)
  */
 const prepaidMessages = ({
 	includedUsage = 0,
@@ -124,6 +124,24 @@ const prepaidMessages = ({
 } = {}): LimitedItem =>
 	constructPrepaidItem({
 		featureId: TestFeature.Messages,
+		price: 10,
+		billingUnits,
+		includedUsage,
+	}) as LimitedItem;
+
+/**
+ * Prepaid users/seats - purchase seats upfront ($10/seat)
+ * @param includedUsage - Free seats before purchase required (default: 0)
+ */
+const prepaidUsers = ({
+	includedUsage = 0,
+	billingUnits = 1,
+}: {
+	includedUsage?: number;
+	billingUnits?: number;
+} = {}): LimitedItem =>
+	constructPrepaidItem({
+		featureId: TestFeature.Users,
 		price: 10,
 		billingUnits,
 		includedUsage,
@@ -210,6 +228,7 @@ export const items = {
 
 	// Prepaid
 	prepaidMessages,
+	prepaidUsers,
 
 	// Consumable
 	consumableMessages,

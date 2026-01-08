@@ -1,7 +1,6 @@
 import type { FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
-import type { FreeTrialPlan } from "@/internal/billing/v2/types/billingPlan";
 import { cusProductToExistingRollovers } from "@/internal/billing/v2/utils/handleExistingRollovers/cusProductToExistingRollovers";
 import { cusProductToExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/cusProductToExistingUsages";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
@@ -10,21 +9,20 @@ export const computeCustomPlanNewCustomerProduct = ({
 	ctx,
 	updateSubscriptionContext,
 	fullProduct,
-	freeTrialPlan,
 }: {
 	ctx: AutumnContext;
 	updateSubscriptionContext: UpdateSubscriptionBillingContext;
 	fullProduct: FullProduct;
-	freeTrialPlan: FreeTrialPlan;
 }) => {
 	const {
 		customerProduct,
 		fullCustomer,
 		stripeSubscription,
 		stripeSubscriptionSchedule,
-		billingCycleAnchorMs,
+		resetCycleAnchorMs,
 		currentEpochMs,
 		featureQuantities,
+		trialContext,
 	} = updateSubscriptionContext;
 
 	const existingUsages = cusProductToExistingUsages({
@@ -48,11 +46,11 @@ export const computeCustomPlanNewCustomerProduct = ({
 			featureQuantities,
 			existingUsages,
 			existingRollovers,
-			resetCycleAnchor: billingCycleAnchorMs ?? "now",
+			resetCycleAnchor: resetCycleAnchorMs,
 			now: currentEpochMs,
 
-			freeTrial: freeTrialPlan.freeTrial ?? null,
-			trialEndsAt: freeTrialPlan.trialEndsAt,
+			freeTrial: trialContext?.freeTrial ?? null,
+			trialEndsAt: trialContext?.trialEndsAt,
 		},
 
 		initOptions: {

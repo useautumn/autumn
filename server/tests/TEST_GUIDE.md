@@ -8,28 +8,27 @@
 
 ## Quick Start
 
-Use `initTestScenario` for the fastest test setup:
+Use `initScenario` with the scenario builder (`s.*`) for test setup:
 
 ```typescript
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import { initTestScenario } from "@tests/utils/testInitUtils/initTestScenario.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
 test.concurrent(`${chalk.yellowBright("my-feature: descriptive test name")}`, async () => {
   const messagesItem = items.monthlyMessages({ includedUsage: 500 });
   const free = products.base({ items: [messagesItem] });
 
-  const { customerId, autumnV1, ctx } = await initTestScenario({
+  const { customerId, autumnV1, ctx } = await initScenario({
     customerId: "my-unique-test-id",
-    products: [free],
-    attachProducts: [free.id],  // Pass original IDs - auto-prefixed
-    customerOptions: {
-      withTestClock: true,
-      attachPm: "success",
-    },
+    setup: [
+      s.customer({ paymentMethod: "success" }), // testClock defaults to true
+      s.products({ list: [free] }),
+    ],
+    actions: [s.attach({ productId: "base" })],
   });
 
   // Your test logic here
@@ -40,7 +39,7 @@ test.concurrent(`${chalk.yellowBright("my-feature: descriptive test name")}`, as
   });
 
   const customer = await autumnV1.customers.get(customerId);
-  expect(customer.features[0].balance).toBe(400);
+  expect(customer.features[TestFeature.Messages].balance).toBe(400);
 });
 ```
 
@@ -91,48 +90,83 @@ const pro = products.pro({ items: [items.monthlyMessages()] });
 
 ---
 
-## Test Scenario Initialization
+## Scenario Builder (`initScenario`) - Recommended
 
-### `initTestScenario`
-
-Combines customer creation, product creation, and attachment into one call.
-
-```typescript
-import { initTestScenario } from "@tests/utils/testInitUtils/initTestScenario.js";
-
-const { customerId, products, autumnV1, autumnV2, testClockId, customer, ctx } = 
-  await initTestScenario({
-    customerId: "unique-test-id",      // Used as customer ID AND product prefix
-    products: [free, addon],           // Products to create
-    attachProducts: [free.id],         // Original IDs (auto-prefixed with customerId_)
-    customerOptions: {
-      withTestClock: true,             // Default: true
-      attachPm: "success",             // "success" | "fail" | "authenticate"
-      withDefault: false,              // Default: false
-      customerData: { fingerprint },   // Optional customer data
-    },
-  });
-```
-
-**Important:** Product IDs are prefixed with `customerId_` for test isolation.
-- You pass: `attachProducts: ["base"]`
-- Actual product ID becomes: `"my-test-id_base"`
-
----
-
-## Scenario Builder (`initScenario`)
-
-For complex tests (entities, multiple products), use functional composition:
+Use functional composition with `setup` and `actions` arrays for flexible test configuration:
 
 ```typescript
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 
-const { autumnV1, ctx, entities } = await initScenario({
+const { customerId, autumnV1, autumnV2, ctx, testClockId, entities } = await initScenario({
   customerId: "my-test",
-  options: [
+  setup: [
+    s.customer({ paymentMethod: "success" }), // testClock is true by default
+    s.products({ list: [pro, free] }),
+    s.entities({ count: 2, featureId: TestFeature.Users }), // optional
+  ],
+  actions: [
+    s.attach({ productId: "pro", entityIndex: 0 }),
+    s.attach({ productId: "free", entityIndex: 1 }),
+    s.advanceTestClock({ days: 15 }), // optional
+  ],
+});
+// entities[0].id = "ent-1", entities[1].id = "ent-2"
+```
+
+### Setup Methods (`s.*`)
+
+| Method | Purpose |
+|--------|---------|
+| `s.customer({ paymentMethod?, data?, withDefault?, testClock? })` | Customer options. **`testClock` defaults to `true`** - don't pass it unless disabling |
+| `s.products({ list })` | Products to create |
+| `s.entities({ count, featureId })` | Auto-generate entities (ids: "ent-1", "ent-2", ...) |
+
+> **Note:** `testClock` defaults to `true` - you don't need to pass `testClock: true` in most tests.
+
+### Action Methods (`s.*`)
+
+| Method | Purpose |
+|--------|---------|
+| `s.attach({ productId, entityIndex? })` | Attach product (omit entityIndex for customer-level) |
+| `s.cancel({ productId, entityIndex? })` | Cancel product subscription |
+| `s.advanceTestClock({ days?, weeks?, hours?, months?, toNextInvoice? })` | Advance test clock after attachments |
+
+### Examples
+
+**Simple test (no entities):**
+```typescript
+const { customerId, autumnV1 } = await initScenario({
+  customerId: "simple-test",
+  setup: [
+    s.customer({}), // testClock defaults to true
+    s.products({ list: [free] }),
+  ],
+  actions: [s.attach({ productId: "base" })],
+});
+```
+
+**With payment method:**
+```typescript
+const { customerId, autumnV1, ctx } = await initScenario({
+  customerId: "paid-test",
+  setup: [
+    s.customer({ paymentMethod: "success" }),
+    s.products({ list: [pro] }),
+  ],
+  actions: [s.attach({ productId: "pro" })],
+});
+```
+
+**With entities:**
+```typescript
+const { customerId, autumnV1, entities } = await initScenario({
+  customerId: "entity-test",
+  setup: [
     s.customer({ paymentMethod: "success" }),
     s.products({ list: [pro, free] }),
     s.entities({ count: 2, featureId: TestFeature.Users }),
+  ],
+  actions: [
     s.attach({ productId: "pro", entityIndex: 0 }),
     s.attach({ productId: "free", entityIndex: 1 }),
   ],
@@ -140,13 +174,46 @@ const { autumnV1, ctx, entities } = await initScenario({
 // entities[0].id = "ent-1", entities[1].id = "ent-2"
 ```
 
-| Method | Purpose |
-|--------|---------|
-| `s.customer({ paymentMethod?, testClock?, data?, withDefault? })` | Customer options (testClock defaults to `true`) |
-| `s.products({ list })` | Products to create |
-| `s.entities({ count, featureId })` | Auto-generate entities (ids: "ent-1", "ent-2", ...) |
-| `s.attach({ productId, entityIndex? })` | Attach product (omit entityIndex for customer-level) |
-| `s.advanceTestClock({ days?, weeks?, hours?, months?, toNextInvoice? })` | Advance test clock after attachments |
+**With clock advancement:**
+```typescript
+const { customerId, autumnV1, advancedTo } = await initScenario({
+  customerId: "clock-test",
+  setup: [
+    s.customer({ paymentMethod: "success" }),
+    s.products({ list: [pro] }),
+  ],
+  actions: [
+    s.attach({ productId: "pro" }),
+    s.advanceTestClock({ days: 15 }),
+  ],
+});
+```
+
+---
+
+## Product ID Prefixing
+
+**Important:** Product IDs are automatically prefixed with `customerId_` for test isolation.
+
+- In `s.attach()`: Use the **unprefixed** product ID (e.g., `"base"`, `"pro"`)
+- In API calls after setup: Use `product.id` which includes the prefix
+
+```typescript
+const free = products.base({ items: [messagesItem] }); // id = "base"
+
+const { customerId, autumnV1 } = await initScenario({
+  customerId: "my-test",
+  setup: [s.products({ list: [free] })],
+  actions: [s.attach({ productId: "base" })], // Use "base" (unprefixed)
+});
+
+// For subsequent API calls, use free.id which is prefixed
+await autumnV1.subscriptions.update({
+  customer_id: customerId,
+  product_id: free.id, // "my-test_base" (prefixed)
+  items: [newItem],
+});
+```
 
 ---
 
@@ -173,6 +240,26 @@ await autumnV1.subscriptions.update({
 ```
 
 **Key rule:** Prepaid `quantity` is the **total credits** you want, not multiplied by billing units.
+
+---
+
+## Legacy: `initTestScenario`
+
+For simpler cases without entities, `initTestScenario` is still available but `initScenario` is preferred:
+
+```typescript
+import { initTestScenario } from "@tests/utils/testInitUtils/initTestScenario.js";
+
+const { customerId, autumnV1, ctx } = await initTestScenario({
+  customerId: "unique-test-id",
+  products: [free, addon],
+  attachProducts: [free.id],  // Original IDs (auto-prefixed)
+  customerOptions: {
+    withTestClock: true,
+    attachPm: "success",
+  },
+});
+```
 
 ---
 
@@ -218,4 +305,40 @@ Place cursor inside a `test.concurrent()` block and press `Cmd+T`.
 ### Run entire file
 ```bash
 bun test path/to/file.test.ts
+```
+
+---
+
+## Code Style
+
+### Avoid Parameter Duplication
+
+When calling similar methods (like `previewUpdate` + `update`), define params once and reuse:
+
+```typescript
+// ❌ BAD - Duplicated params
+const preview = await autumnV1.subscriptions.previewUpdate({
+  customer_id: customerId,
+  product_id: pro.id,
+  items: [prepaidItem, priceItem],
+  options: [{ feature_id: TestFeature.Users, quantity: 10 }],
+});
+
+await autumnV1.subscriptions.update({
+  customer_id: customerId,
+  product_id: pro.id,
+  items: [prepaidItem, priceItem],
+  options: [{ feature_id: TestFeature.Users, quantity: 10 }],
+});
+
+// ✅ GOOD - Define once, reuse
+const updateParams = {
+  customer_id: customerId,
+  product_id: pro.id,
+  items: [prepaidItem, priceItem],
+  options: [{ feature_id: TestFeature.Users, quantity: 10 }],
+};
+
+const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
+await autumnV1.subscriptions.update(updateParams);
 ```

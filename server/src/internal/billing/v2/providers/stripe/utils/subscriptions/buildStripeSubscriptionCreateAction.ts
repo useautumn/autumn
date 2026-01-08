@@ -2,25 +2,22 @@ import { msToSeconds } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
-import type { FreeTrialPlan } from "@/internal/billing/v2/types/billingPlan";
 
 export const buildStripeSubscriptionCreateAction = ({
 	ctx,
 	billingContext,
-	freeTrialPlan,
 	subItemsUpdate,
 	addInvoiceItems,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
-	freeTrialPlan?: FreeTrialPlan;
 	subItemsUpdate: Stripe.SubscriptionUpdateParams.Item[];
 	addInvoiceItems: Stripe.SubscriptionCreateParams.AddInvoiceItem[];
 }) => {
-	const { stripeCustomer, paymentMethod } = billingContext;
+	const { stripeCustomer, paymentMethod, trialContext } = billingContext;
 
-	const trialEndsAt = freeTrialPlan?.trialEndsAt;
-	const freeTrial = freeTrialPlan?.freeTrial;
+	const trialEndsAt = trialContext?.trialEndsAt;
+	const freeTrial = trialContext?.freeTrial;
 
 	const isFreeTrialWithCardRequired = Boolean(freeTrial?.card_required);
 	const isCustomPaymentMethod = paymentMethod?.type === "custom";

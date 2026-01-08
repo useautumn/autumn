@@ -1,7 +1,7 @@
 import {
-	cusProductToArrearLineItems,
 	cusProductToLineItems,
 	type FullCusProduct,
+	type LineItem,
 } from "@autumn/shared";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
@@ -22,14 +22,14 @@ export const buildAutumnLineItems = ({
 
 	const { org, logger } = ctx;
 
-	const arrearLineItems = deletedCustomerProduct
-		? cusProductToArrearLineItems({
-				cusProduct: deletedCustomerProduct,
-				billingCycleAnchorMs,
-				nowMs: currentEpochMs,
-				org,
-			})
-		: [];
+	// For now, update subscription doesn't charge for existing usage.
+	const arrearLineItems: LineItem[] = [];
+	// cusProductToArrearLineItems({
+	// 	cusProduct: deletedCustomerProduct,
+	// 	billingCycleAnchorMs,
+	// 	nowMs: currentEpochMs,
+	// 	org,
+	// })
 
 	// Get line items for ongoing cus product
 	const deletedLineItems = deletedCustomerProduct

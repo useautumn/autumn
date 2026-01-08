@@ -1,7 +1,7 @@
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
+import type { AttachContext } from "../../typesOld";
 import { cusProductToExistingUsages } from "../../utils/handleExistingUsages/cusProductToExistingUsages";
 import { initFullCustomerProduct } from "../../utils/initFullCustomerProduct/initFullCustomerProduct";
-import type { AttachContext } from "../../typesOld";
 
 export const buildNewCusProducts = ({
 	ctx,

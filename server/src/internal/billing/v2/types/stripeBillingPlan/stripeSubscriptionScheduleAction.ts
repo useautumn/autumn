@@ -20,4 +20,3 @@ export const StripeSubscriptionScheduleActionSchema = z.discriminatedUnion(
 export type StripeSubscriptionScheduleAction = z.infer<
 	typeof StripeSubscriptionScheduleActionSchema
 >;
-

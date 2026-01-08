@@ -4,6 +4,8 @@ import { setupStripeBillingContext } from "@/internal/billing/v2/providers/strip
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
+import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
+import { setupTrialContext } from "@/internal/billing/v2/setup/setupTrialContext";
 import { setupUpdateSubscriptionProductContext } from "@/internal/billing/v2/updateSubscription/setup/setupUpdateSubscriptionProductContext";
 import type { UpdateSubscriptionBillingContext } from "../../billingContext";
 
@@ -52,9 +54,37 @@ export const setupUpdateSubscriptionBillingContext = async ({
 	});
 
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
-	const billingCycleAnchorMs = secondsToMs(
-		stripeSubscription?.billing_cycle_anchor,
-	);
+
+	// 1. Setup trial context first
+	const trialContext = setupTrialContext({
+		stripeSubscription,
+		customerProduct,
+		currentEpochMs,
+		params,
+		fullProduct,
+	});
+
+	// 2. Initial billing cycle anchor from Stripe subscription
+	let billingCycleAnchorMs: number | "now" =
+		secondsToMs(stripeSubscription?.billing_cycle_anchor) ?? "now";
+
+	// 3. Determine final anchor based on product transitions
+	billingCycleAnchorMs = setupResetCycleAnchor({
+		billingCycleAnchorMs,
+		customerProduct,
+		newFullProduct: fullProduct,
+	});
+
+	// 4. Trial ends at overrides reset cycle anchor
+	if (trialContext.trialEndsAt) {
+		billingCycleAnchorMs = trialContext.trialEndsAt;
+	}
+
+	const resetCycleAnchorMs = setupResetCycleAnchor({
+		billingCycleAnchorMs,
+		customerProduct,
+		newFullProduct: fullProduct,
+	});
 
 	const invoiceMode = setupInvoiceModeContext({ params });
 
@@ -68,11 +98,14 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		paymentMethod,
 
 		currentEpochMs,
-		billingCycleAnchorMs: billingCycleAnchorMs ?? "now",
+		billingCycleAnchorMs,
+		resetCycleAnchorMs,
+
 		invoiceMode,
 		featureQuantities,
 
 		customPrices,
 		customEnts,
+		trialContext,
 	};
 };

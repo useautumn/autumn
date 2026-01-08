@@ -1,6 +1,7 @@
 import type {
 	Entitlement,
 	FeatureOptions,
+	FreeTrial,
 	FullCusProduct,
 	FullProduct,
 	Price,
@@ -16,6 +17,12 @@ export const InvoiceModeSchema = z.object({
 
 export type InvoiceMode = z.infer<typeof InvoiceModeSchema>;
 
+export interface TrialContext {
+	freeTrial?: FreeTrial | null;
+	trialEndsAt?: number;
+	customFreeTrial?: FreeTrial;
+}
+
 export interface BillingContext {
 	fullCustomer: FullCustomer;
 	stripeCustomer: Stripe.Customer;
@@ -27,6 +34,7 @@ export interface BillingContext {
 	// Timestamps...
 	currentEpochMs: number;
 	billingCycleAnchorMs: number | "now";
+	resetCycleAnchorMs: number | "now";
 
 	// Stripe context
 	stripeSubscription?: Stripe.Subscription;
@@ -36,6 +44,9 @@ export interface BillingContext {
 	// Unforunately, need to add custom prices, custom entitlements and free trial here, because it's determined in the setup step.
 	customPrices: Price[];
 	customEnts: Entitlement[];
+
+	// Trial context
+	trialContext?: TrialContext;
 }
 
 export interface UpdateSubscriptionBillingContext extends BillingContext {

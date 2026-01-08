@@ -4,7 +4,6 @@ import { isStripeSubscriptionCanceling } from "@/external/stripe/subscriptions/u
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import type {
-	FreeTrialPlan,
 	StripeSubscriptionAction,
 	StripeSubscriptionScheduleAction,
 } from "@/internal/billing/v2/types/billingPlan";
@@ -13,16 +12,14 @@ export const buildStripeSubscriptionUpdateAction = ({
 	ctx,
 	billingContext,
 	subItemsUpdate,
-	freeTrialPlan,
 	stripeSubscriptionScheduleAction,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	subItemsUpdate: Stripe.SubscriptionUpdateParams.Item[];
-	freeTrialPlan?: FreeTrialPlan;
 	stripeSubscriptionScheduleAction?: StripeSubscriptionScheduleAction;
 }): StripeSubscriptionAction | undefined => {
-	const { stripeSubscription } = billingContext;
+	const { stripeSubscription, trialContext } = billingContext;
 
 	if (!stripeSubscription) {
 		throw new Error(
@@ -30,7 +27,7 @@ export const buildStripeSubscriptionUpdateAction = ({
 		);
 	}
 
-	const trialEndsAt = freeTrialPlan?.trialEndsAt;
+	const trialEndsAt = trialContext?.trialEndsAt;
 	const cancelAtPeriodEnd = isStripeSubscriptionCanceling(stripeSubscription)
 		? false
 		: undefined;

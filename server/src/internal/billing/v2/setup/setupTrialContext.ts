@@ -1,5 +1,5 @@
 import type {
-	FreeTrial,
+	FullCusProduct,
 	FullProduct,
 	UpdateSubscriptionV0Params,
 } from "@autumn/shared";
@@ -9,34 +9,28 @@ import {
 	isProductPaidAndRecurring,
 	secondsToMs,
 } from "@autumn/shared";
+import type Stripe from "stripe";
 import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
-import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
+import type { TrialContext } from "@/internal/billing/v2/billingContext";
 
-interface ComputeSubscriptionUpdateTrialDetailsResult {
-	freeTrialPlan: {
-		freeTrial?: FreeTrial | null;
-		trialEndsAt?: number;
-	};
-	customFreeTrial?: FreeTrial;
-}
-
-export const computeCustomPlanFreeTrial = ({
-	updateSubscriptionContext,
+export const setupTrialContext = ({
+	stripeSubscription,
+	customerProduct,
+	currentEpochMs,
 	params,
 	fullProduct,
 }: {
-	updateSubscriptionContext: UpdateSubscriptionBillingContext;
+	stripeSubscription?: Stripe.Subscription;
+	customerProduct: FullCusProduct;
+	currentEpochMs: number;
 	params: UpdateSubscriptionV0Params;
 	fullProduct: FullProduct;
-}): ComputeSubscriptionUpdateTrialDetailsResult => {
-	const { stripeSubscription, customerProduct, currentEpochMs } =
-		updateSubscriptionContext;
-
+}): TrialContext => {
 	const freeTrialParams = params.free_trial;
 
 	// Case 1: If free trial is null (removing free trial)
 	if (freeTrialParams === null) {
-		return { freeTrialPlan: { freeTrial: null } };
+		return { freeTrial: null };
 	}
 
 	// Case 2: If free trial params are passed in
@@ -53,7 +47,8 @@ export const computeCustomPlanFreeTrial = ({
 		});
 
 		return {
-			freeTrialPlan: { freeTrial: dbFreeTrial, trialEndsAt },
+			freeTrial: dbFreeTrial,
+			trialEndsAt,
 			customFreeTrial: dbFreeTrial,
 		};
 	}
@@ -69,20 +64,18 @@ export const computeCustomPlanFreeTrial = ({
 			);
 
 			return {
-				freeTrialPlan: { freeTrial: null, trialEndsAt },
-			};
-		} else {
-			return {
-				freeTrialPlan: { freeTrial: null },
+				freeTrial: null,
+				trialEndsAt,
 			};
 		}
+		return {
+			freeTrial: null,
+		};
 	}
 
 	// Case 4: Return free trial / trial ends at from current customer product
 	return {
-		freeTrialPlan: {
-			freeTrial: customerProduct.free_trial,
-			trialEndsAt: customerProduct.trial_ends_at ?? undefined,
-		},
+		freeTrial: customerProduct.free_trial,
+		trialEndsAt: customerProduct.trial_ends_at ?? undefined,
 	};
 };

@@ -1,7 +1,7 @@
-import {
-	type FullCusProduct,
-	type InitFullCustomerProductContext,
-	type InitFullCustomerProductOptions,
+import type {
+	FullCusProduct,
+	InitFullCustomerProductContext,
+	InitFullCustomerProductOptions,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { generateId } from "@/utils/genUtils";
