@@ -284,3 +284,4 @@ export const TEMPLATE_CONFIGS: TemplateConfig[] = [
 		websiteUrl: "https://lovable.dev/pricing",
 	},
 ];
+

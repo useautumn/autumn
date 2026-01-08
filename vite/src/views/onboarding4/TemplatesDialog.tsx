@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import {
 	Dialog,
 	DialogContent,
@@ -6,6 +7,7 @@ import {
 	DialogTitle,
 } from "@/components/v2/dialogs/Dialog";
 import { cn } from "@/lib/utils";
+import { pushPage } from "@/utils/genUtils";
 import { TemplateDetailView } from "./TemplateDetailView";
 import { TEMPLATE_CONFIGS, type TemplateConfig } from "./templateConfigs";
 
@@ -54,6 +56,7 @@ interface TemplatesDialogProps {
 }
 
 export function TemplatesDialog({ open, onOpenChange }: TemplatesDialogProps) {
+	const navigate = useNavigate();
 	const [selectedTemplate, setSelectedTemplate] =
 		useState<TemplateConfig | null>(null);
 
@@ -65,9 +68,8 @@ export function TemplatesDialog({ open, onOpenChange }: TemplatesDialogProps) {
 	};
 
 	const handleCopyPlans = () => {
-		// TODO: Implement copying plans to Autumn
-		console.log("Copying plans for template:", selectedTemplate?.id);
 		handleClose(false);
+		pushPage({ path: "/products", navigate });
 	};
 
 	return (
