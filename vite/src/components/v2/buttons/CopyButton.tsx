@@ -1,5 +1,5 @@
 import { CheckIcon, CopyIcon } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
 	Tooltip,
 	TooltipContent,
@@ -10,10 +10,69 @@ import { cn } from "@/lib/utils";
 import type { IconButtonProps } from "./IconButton";
 import { IconButton } from "./IconButton";
 
+/** Hook for copy-to-clipboard with auto-reset state */
+export const useCopyAnimation = ({
+	text,
+	timeout = 1500,
+}: {
+	text: string;
+	timeout?: number;
+}) => {
+	const [copied, setCopied] = useState(false);
+
+	useEffect(() => {
+		if (copied) {
+			const timer = setTimeout(() => setCopied(false), timeout);
+			return () => clearTimeout(timer);
+		}
+	}, [copied, timeout]);
+
+	const handleCopy = useCallback(
+		(e: React.MouseEvent<HTMLButtonElement>) => {
+			e.preventDefault();
+			e.stopPropagation();
+			navigator.clipboard.writeText(text);
+			setCopied(true);
+		},
+		[text],
+	);
+
+	return { copied, handleCopy };
+};
+
+/** Animated icon that transitions between copy and check */
+export const AnimatedCopyIcon = ({
+	copied,
+	size = "size-3.5",
+}: {
+	copied: boolean;
+	size?: string;
+}) => (
+	<span
+		className={cn("relative inline-flex items-center justify-center", size)}
+	>
+		<CopyIcon
+			className={cn(
+				size,
+				"absolute transition-all duration-100",
+				copied ? "opacity-0 scale-95" : "opacity-100 scale-100",
+			)}
+		/>
+		<CheckIcon
+			className={cn(
+				size,
+				"absolute text-green-500 transition-all duration-100",
+				copied ? "opacity-100 scale-100" : "opacity-0 scale-95",
+			)}
+		/>
+	</span>
+);
+
 interface CopyButtonProps extends IconButtonProps {
 	children?: React.ReactNode;
 	side?: "top" | "bottom" | "left" | "right";
 	text: string;
+	iconOrientation?: "left" | "right";
 	innerClassName?: string;
 }
 
@@ -21,24 +80,11 @@ export const CopyButton = ({
 	text,
 	side = "right",
 	innerClassName = "",
+	iconOrientation = "right",
+	children,
 	...props
 }: CopyButtonProps) => {
-	const [copied, setCopied] = useState(false);
-
-	useEffect(() => {
-		if (copied) {
-			setTimeout(() => {
-				setCopied(false);
-			}, 1500); // Show "Copied" message for 2 seconds
-		}
-	}, [copied]);
-
-	const handleCopy = (e: React.MouseEvent<HTMLButtonElement>) => {
-		e.preventDefault();
-		e.stopPropagation();
-		navigator.clipboard.writeText(text);
-		setCopied(true);
-	};
+	const { copied, handleCopy } = useCopyAnimation({ text });
 
 	return (
 		<TooltipProvider>
@@ -47,13 +93,14 @@ export const CopyButton = ({
 					<IconButton
 						variant="muted"
 						{...props}
-						iconOrientation="right"
+						size={"sm"}
+						iconOrientation={iconOrientation}
 						onClick={handleCopy}
-						icon={<CopyIcon className="size-3.5" />}
-						className={cn("text-t3", props.className)}
+						icon={<AnimatedCopyIcon copied={copied} />}
+						className={cn("", props.className)}
 					>
-						<span className={cn("text-tiny-id truncate", innerClassName)}>
-							{text}
+						<span className={cn("truncate", innerClassName)}>
+							{children ?? text}
 						</span>
 					</IconButton>
 				</TooltipTrigger>
@@ -63,8 +110,7 @@ export const CopyButton = ({
 					className="bg-background text-body p-2 py-1 border rounded-lg shadow-sm z-100"
 				>
 					<div className="flex items-center gap-1">
-						<CheckIcon className="size-3" />
-						<span className="text-xs font-medium">Copied</span>
+						<span className="text-xs font-medium">Copied!</span>
 					</div>
 				</TooltipContent>
 			</Tooltip>
@@ -77,25 +123,9 @@ export const MiniCopyButton = ({
 	side = "right",
 	innerClassName = "",
 	children,
-	className = "",
 	...props
 }: CopyButtonProps) => {
-	const [copied, setCopied] = useState(false);
-
-	useEffect(() => {
-		if (copied) {
-			setTimeout(() => {
-				setCopied(false);
-			}, 1500); // Show "Copied" message for 2 seconds
-		}
-	}, [copied]);
-
-	const handleCopy = (e: React.MouseEvent<HTMLButtonElement>) => {
-		e.preventDefault();
-		e.stopPropagation();
-		navigator.clipboard.writeText(text);
-		setCopied(true);
-	};
+	const { copied, handleCopy } = useCopyAnimation({ text });
 
 	return (
 		<div className="flex items-center gap-1 w-fit max-w-full group text-t3">
@@ -112,12 +142,13 @@ export const MiniCopyButton = ({
 							variant="skeleton"
 							{...props}
 							iconOrientation="right"
-							icon={<CopyIcon className="size-3.5" />}
+							icon={<AnimatedCopyIcon copied={copied} />}
 							onClick={handleCopy}
 							className={cn(
-								"[&_svg]:opacity-0 group-hover:[&_svg]:opacity-100 hover:[&_svg]:text-primary cursor-pointer !px-0 active:border-transparent",
+								"opacity-0 group-hover:opacity-100 cursor-pointer px-0!",
+								copied && "opacity-100",
 							)}
-						></IconButton>
+						/>
 					</TooltipTrigger>
 					<TooltipContent
 						side={side}
@@ -125,8 +156,7 @@ export const MiniCopyButton = ({
 						className="bg-background text-body p-2 py-1 border rounded-lg shadow-sm"
 					>
 						<div className="flex items-center gap-1">
-							<CheckIcon className="size-3 text-green-500" />
-							<span className="text-xs font-medium">Copied</span>
+							<span className="text-xs font-medium">Copied!</span>
 						</div>
 					</TooltipContent>
 				</Tooltip>

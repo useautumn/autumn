@@ -5,17 +5,16 @@ import {
 	ChartBar,
 	CheckCircle,
 	CheckCircleIcon,
-	CopySimple,
 	CreditCard,
 	CubeIcon,
 	UserCircle,
 } from "@phosphor-icons/react";
-import { Check, X } from "lucide-react";
+import { X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/v2/buttons/Button";
+import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import type { StepId } from "@/lib/snippets";
 import { cn } from "@/lib/utils";
@@ -94,27 +93,7 @@ function StepCard({
 }) {
 	const { getPrompt } = useOnboardingPrompt();
 	const isPlansStep = step.id === "plans";
-	const [copied, setCopied] = useState(false);
 	const [createProductOpen, setCreateProductOpen] = useState(false);
-
-	useEffect(() => {
-		if (copied) {
-			const timeout = setTimeout(() => setCopied(false), 1500);
-			return () => clearTimeout(timeout);
-		}
-	}, [copied]);
-
-	const handleCopyPrompt = useCallback(
-		(e: React.MouseEvent) => {
-			e.stopPropagation();
-			const prompt = getPrompt({ stepId: step.id });
-			if (prompt) {
-				navigator.clipboard.writeText(prompt);
-				setCopied(true);
-			}
-		},
-		[step.id, getPrompt],
-	);
 
 	return (
 		<motion.div
@@ -215,14 +194,14 @@ function StepCard({
 									</IconButton>
 								</>
 							) : (
-								<Button variant="primary" size="sm" onClick={handleCopyPrompt}>
-									{copied ? (
-										<Check className="size-3.5 text-green-500" />
-									) : (
-										<CopySimple className="size-3.5" />
-									)}
-									{copied ? "Copied!" : "Copy prompt"}
-								</Button>
+								<CopyButton
+									text={getPrompt({ stepId: step.id }) || ""}
+									variant="secondary"
+									size="sm"
+									iconOrientation="left"
+								>
+									Copy prompt
+								</CopyButton>
 							)}
 							{/* Show completed indicator when step is complete */}
 						</div>
@@ -275,13 +254,10 @@ export function OnboardingGuide() {
 				</div>
 				{/* Steps skeleton - 4 cards */}
 				<div className="flex gap-3 items-start">
-					{[0, 1, 2, 3].map((i) => (
+					{[4, 1, 1, 1].map((flex, i) => (
 						<Skeleton
 							key={i}
-							className={cn(
-								"rounded-lg h-30 bg-card/50",
-								i === 0 ? "flex-4" : "flex-1",
-							)}
+							className={cn("rounded-lg h-30 bg-card/50", `flex-${flex}`)}
 						/>
 					))}
 				</div>

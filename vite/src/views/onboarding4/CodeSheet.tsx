@@ -1,6 +1,6 @@
 import { type CreditSystemConfig, FeatureType } from "@autumn/shared";
 import { Code } from "@phosphor-icons/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
 import { SDKSelector } from "@/components/v2/SDKSelector";
 import { Sheet, SheetContent } from "@/components/v2/sheets/Sheet";
@@ -32,7 +32,6 @@ export function CodeSheet({ stepId, title, description }: CodeSheetProps) {
 	const [stackConfig, setStackConfig] =
 		useState<StackConfig>(DEFAULT_STACK_CONFIG);
 
-	// Fetch features
 	const { features } = useFeaturesQuery();
 
 	// Feature selection state for usage step
@@ -68,13 +67,10 @@ export function CodeSheet({ stepId, title, description }: CodeSheetProps) {
 	const snippetFeatureId = getSnippetFeatureId();
 
 	// Build dynamic params
-	const dynamicParams = useMemo(
-		() => ({
-			featureId: snippetFeatureId,
-			isBoolean,
-		}),
-		[snippetFeatureId, isBoolean],
-	);
+	const dynamicParams = {
+		featureId: snippetFeatureId,
+		isBoolean,
+	};
 
 	const allSnippets = getSnippetsForStep({
 		stepId,
