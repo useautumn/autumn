@@ -12,7 +12,7 @@ import {
 import { X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
@@ -217,15 +217,6 @@ export function OnboardingGuide() {
 	const { steps, currentStep, isLoading, isDismissed, dismiss } =
 		useOnboardingProgress();
 	const [activeStep, setActiveStep] = useState<string | null>(null);
-	const prevCurrentStepRef = useRef<OnboardingStepId | null>(null);
-
-	// Sync activeStep with currentStep when it changes (initial load or progress made)
-	useEffect(() => {
-		if (currentStep !== prevCurrentStepRef.current) {
-			setActiveStep(currentStep);
-			prevCurrentStepRef.current = currentStep;
-		}
-	}, [currentStep]);
 
 	// Don't render cards until activeStep is synced
 	const resolvedActiveStep = activeStep ?? currentStep;
@@ -257,7 +248,7 @@ export function OnboardingGuide() {
 					{[4, 1, 1, 1].map((flex, i) => (
 						<Skeleton
 							key={i}
-							className={cn("rounded-lg h-30 bg-card/50", `flex-${flex}`)}
+							className={cn("rounded-lg h-30 bg-card/70", `flex-${flex}`)}
 						/>
 					))}
 				</div>
