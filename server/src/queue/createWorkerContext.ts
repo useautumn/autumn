@@ -7,24 +7,27 @@ import { generateId } from "../utils/genUtils.js";
 
 export const createWorkerContext = async ({
 	db,
-	orgId,
-	env,
+	payload,
 	logger,
 	workflowId,
 }: {
 	db: DrizzleCli;
-	orgId?: string;
-	env?: AppEnv;
+	payload: {
+		orgId?: string;
+		env?: AppEnv;
+		customerId?: string;
+	};
 	logger: Logger;
 	workflowId?: string;
 }) => {
+	const { orgId, env, customerId } = payload;
 	if (!orgId || !env) return;
 
 	// Fetch org with features once for all items
 	const orgData = await OrgService.getWithFeatures({
 		db,
 		orgId,
-		env: env as AppEnv,
+		env,
 	});
 
 	if (!orgData) {
@@ -39,6 +42,7 @@ export const createWorkerContext = async ({
 				workflow_id: workflowId,
 				org_id: org?.id,
 				org_slug: org?.slug,
+				customer_id: customerId,
 				env: env,
 				authType: AuthType.Worker,
 			},
@@ -52,12 +56,12 @@ export const createWorkerContext = async ({
 		db,
 		logger: workerLogger,
 
-		id: generateId("job"),
+		id: workflowId || generateId("job"),
 		timestamp: Date.now(),
 		isPublic: false,
 		authType: AuthType.Unknown,
 		apiVersion: createdAtToVersion({ createdAt: org.created_at! }),
-		clickhouseClient: null as any,
+		clickhouseClient: undefined,
 		expand: [],
 		skipCache: true,
 	};

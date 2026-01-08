@@ -20,6 +20,7 @@ export const handleUpgradeFlowSchedule = async ({
 	curSub,
 	removeCusProducts,
 	fromAddProduct = false,
+	addNewProducts = true,
 }: {
 	ctx: AutumnContext;
 	attachParams: AttachParams;
@@ -28,6 +29,7 @@ export const handleUpgradeFlowSchedule = async ({
 	curSub: Stripe.Subscription;
 	removeCusProducts?: FullCusProduct[];
 	fromAddProduct?: boolean;
+	addNewProducts?: boolean;
 }) => {
 	const { logger } = ctx;
 
@@ -57,7 +59,10 @@ export const handleUpgradeFlowSchedule = async ({
 		config,
 		billingPeriodEnd: schedule?.phases?.[nextPhaseIndex]?.start_date,
 		removeCusProducts,
+		addNewProducts,
 	});
+
+	// await logPhases({ phases: newItems.phases, db: ctx.db });
 
 	// Should release schedule...
 	const newCurPhaseIndex = getCurrentPhaseIndex({

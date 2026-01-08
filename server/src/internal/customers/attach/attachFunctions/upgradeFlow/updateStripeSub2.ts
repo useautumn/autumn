@@ -31,7 +31,6 @@ export const updateStripeSub2 = async ({
 	curSub,
 	itemSet,
 	branch,
-	fromCreate = false,
 }: {
 	ctx: AutumnContext;
 	attachParams: AttachParams;
@@ -39,7 +38,6 @@ export const updateStripeSub2 = async ({
 	curSub: Stripe.Subscription;
 	itemSet: ItemSet;
 	branch: AttachBranch;
-	fromCreate?: boolean;
 }) => {
 	const { db, logger } = ctx;
 
@@ -113,13 +111,6 @@ export const updateStripeSub2 = async ({
 			latestInvoice: null,
 		};
 	}
-
-	// if (fromCreate) {
-	// 	return {
-	// 		updatedSub,
-	// 		latestInvoice: updatedSub.latest_invoice as Stripe.Invoice,
-	// 	};
-	// }
 
 	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
 	const cusEntIds: string[] = [];
