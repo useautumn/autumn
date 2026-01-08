@@ -1,4 +1,4 @@
-import type { FullProduct } from "@autumn/shared";
+import type { FullCusProduct, FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
 import { cusProductToExistingRollovers } from "@/internal/billing/v2/utils/handleExistingRollovers/cusProductToExistingRollovers";
@@ -9,10 +9,12 @@ export const computeCustomPlanNewCustomerProduct = ({
 	ctx,
 	updateSubscriptionContext,
 	fullProduct,
+	currentCustomerProduct,
 }: {
 	ctx: AutumnContext;
 	updateSubscriptionContext: UpdateSubscriptionBillingContext;
 	fullProduct: FullProduct;
+	currentCustomerProduct: FullCusProduct;
 }) => {
 	const {
 		customerProduct,
@@ -57,6 +59,9 @@ export const computeCustomPlanNewCustomerProduct = ({
 			isCustom: true,
 			subscriptionId: stripeSubscription?.id,
 			subscriptionScheduleId: stripeSubscriptionSchedule?.id,
+
+			canceledAt: currentCustomerProduct.canceled_at ?? undefined,
+			endedAt: currentCustomerProduct.ended_at ?? undefined,
 		},
 	});
 

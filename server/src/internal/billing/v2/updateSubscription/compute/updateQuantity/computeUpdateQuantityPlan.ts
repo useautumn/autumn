@@ -1,4 +1,4 @@
-import { InternalError, type UpdateSubscriptionV0Params } from "@autumn/shared";
+import { InternalError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
 import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan";
@@ -7,13 +7,12 @@ import { computeUpdateQuantityDetails } from "./computeUpdateQuantityDetails";
 export const computeUpdateQuantityPlan = ({
 	ctx,
 	updateSubscriptionContext,
-	params,
 }: {
 	ctx: AutumnContext;
 	updateSubscriptionContext: UpdateSubscriptionBillingContext;
-	params: UpdateSubscriptionV0Params;
 }): AutumnBillingPlan => {
-	const { customerProduct, stripeSubscription } = updateSubscriptionContext;
+	const { customerProduct, stripeSubscription, featureQuantities } =
+		updateSubscriptionContext;
 
 	if (!stripeSubscription) {
 		throw new InternalError({
@@ -21,7 +20,7 @@ export const computeUpdateQuantityPlan = ({
 		});
 	}
 
-	const newOptions = params.options || [];
+	const newOptions = featureQuantities;
 
 	const quantityUpdateDetails = newOptions.map((updatedOptions) =>
 		computeUpdateQuantityDetails({

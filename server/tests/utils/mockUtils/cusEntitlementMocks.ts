@@ -14,6 +14,7 @@ export const createMockCusEntitlement = ({
 	featureName,
 	allowance,
 	balance,
+	customerProductId,
 	featureType = FeatureType.Metered,
 	interval = null,
 	intervalCount = 1,
@@ -29,6 +30,7 @@ export const createMockCusEntitlement = ({
 	featureName: string;
 	allowance: number;
 	balance: number;
+	customerProductId?: string;
 	featureType?: FeatureType;
 	interval?: EntInterval | null;
 	intervalCount?: number;
@@ -44,7 +46,7 @@ export const createMockCusEntitlement = ({
 		internal_feature_id: internalFeatureId ?? `internal_${featureId}`,
 		customer_id: "cus_test",
 		feature_id: featureId,
-		customer_product_id: "cus_prod_test",
+		customer_product_id: customerProductId ?? "cus_prod_test",
 		entitlement_id: entId,
 		created_at: Date.now(),
 		unlimited: false,

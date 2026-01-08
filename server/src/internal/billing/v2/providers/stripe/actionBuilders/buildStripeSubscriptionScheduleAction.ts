@@ -7,7 +7,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import type { BillingContext } from "@server/internal/billing/v2/billingContext";
-import { buildSchedulePhases } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/buildSchedulePhases";
+import { buildStripePhasesUpdate } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/buildStripePhasesUpdate";
 import type Stripe from "stripe";
 import type { StripeSubscriptionScheduleAction } from "@/internal/billing/v2/types/billingPlan";
 
@@ -80,7 +80,7 @@ export const buildStripeSubscriptionScheduleAction = ({
 		RELEVANT_STATUSES.includes(customerProduct.status),
 	);
 
-	const phases = buildSchedulePhases({
+	const phases = buildStripePhasesUpdate({
 		ctx,
 		billingContext,
 		customerProducts,

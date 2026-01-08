@@ -3,12 +3,14 @@ import { expectCustomerInvoiceCorrect } from "@tests/billing/utils/expectCustome
 import {
 	expectProductActive,
 	expectProductCanceled,
+	expectProductNotPresent,
 	expectProductScheduled,
 } from "@tests/billing/utils/expectCustomerProductCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts";
@@ -21,7 +23,7 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts";
  */
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST CASE 1: Update Pro product while it is canceling (free default scheduled)
+// TEST 1: Update while canceling
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -36,8 +38,8 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts";
  * - Scheduled free product should remain scheduled
  * - Stripe subscription is correct (still set to cancel at period end)
  */
-test.concurrent(`${chalk.yellowBright("update-while-canceling: update pro items while canceling to free")}`, async () => {
-	const customerId = "cancel-update-pro-to-free";
+test.concurrent(`${chalk.yellowBright("update while canceling")}`, async () => {
+	const customerId = "upd-while-canceling";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
@@ -129,21 +131,22 @@ test.concurrent(`${chalk.yellowBright("update-while-canceling: update pro items 
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST CASE 2: Update scheduled Pro while downgrading from Premium
+// TEST 2: Update while downgrading
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * Scenario:
  * - User is on Premium
- * - User downgrades from Premium → Pro (Pro is scheduled)
- * - User updates the scheduled Pro product
+ * - User downgrades from Premium → Pro (Premium is canceling, Pro is scheduled)
+ * - User updates the canceling Premium product
  *
  * Expected Result:
- * - Scheduled Pro product should remain scheduled (with updated items)
- * - Premium product should remain canceling
+ * - Premium product should remain canceling (with updated items)
+ * - Scheduled Pro product should remain scheduled
+ * - After advancing test clock, Pro should become active
  */
-test.concurrent(`${chalk.yellowBright("update-while-canceling: update scheduled pro during downgrade")}`, async () => {
-	const customerId = "downgrade-update-scheduled";
+test.concurrent(`${chalk.yellowBright("update while downgrading")}`, async () => {
+	const customerId = "upd-while-downgrading";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const consumableItem = items.consumableMessages({ includedUsage: 50 });
@@ -162,7 +165,7 @@ test.concurrent(`${chalk.yellowBright("update-while-canceling: update scheduled 
 		items: [messagesItem],
 	});
 
-	const { autumnV1, ctx } = await initScenario({
+	const { autumnV1, ctx, testClockId } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -178,7 +181,7 @@ test.concurrent(`${chalk.yellowBright("update-while-canceling: update scheduled 
 		productId: premium.id,
 	});
 
-	// User downgrades from premium to pro (pro is scheduled)
+	// User downgrades from premium to pro (premium becomes canceling, pro is scheduled)
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -195,24 +198,24 @@ test.concurrent(`${chalk.yellowBright("update-while-canceling: update scheduled 
 		productId: pro.id,
 	});
 
-	console.log("Products after downgrade:", customerAfterDowngrade.products);
-
-	// Now update the scheduled pro's items
-	const updatedMessagesItem = items.monthlyMessages({ includedUsage: 200 });
-	const newPriceItem = items.monthlyPrice({ price: 40 }); // $40/mo instead of $20
+	// Now update the canceling premium's items (not the scheduled pro)
+	const updatedConsumableItem = items.consumableMessages({
+		includedUsage: 100,
+	}); // Increase from 50 to 100
+	const newPriceItem = items.monthlyPrice({ price: 60 }); // $60/mo instead of $50
 
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
-		product_id: pro.id,
-		items: [updatedMessagesItem, newPriceItem],
+		product_id: premium.id,
+		items: [updatedConsumableItem, newPriceItem],
 	});
 
-	console.log("Preview total (update scheduled product):", preview.total);
+	console.log("Preview total (update canceling product):", preview.total);
 
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
-		product_id: pro.id,
-		items: [updatedMessagesItem, newPriceItem],
+		product_id: premium.id,
+		items: [updatedConsumableItem, newPriceItem],
 	});
 
 	// Verify state after update
@@ -220,16 +223,16 @@ test.concurrent(`${chalk.yellowBright("update-while-canceling: update scheduled 
 
 	console.log("Products after update:", customerAfterUpdate.products);
 
-	// Scheduled pro product should remain scheduled (with updated items)
-	await expectProductScheduled({
-		customer: customerAfterUpdate,
-		productId: pro.id,
-	});
-
-	// Premium product should remain canceling
+	// Premium product should remain canceling (with updated items)
 	await expectProductCanceled({
 		customer: customerAfterUpdate,
 		productId: premium.id,
+	});
+
+	// Scheduled pro product should remain scheduled
+	await expectProductScheduled({
+		customer: customerAfterUpdate,
+		productId: pro.id,
 	});
 
 	// Verify Stripe subscription is correct (still set to cancel at period end)
@@ -242,15 +245,39 @@ test.concurrent(`${chalk.yellowBright("update-while-canceling: update scheduled 
 		shouldBeCanceled: true,
 	});
 
-	// Verify invoices
+	// Verify invoices - should have initial premium attach + update
 	expectCustomerInvoiceCorrect({
 		customer: customerAfterUpdate,
-		count: 1, // Only initial premium attach
+		count: 2,
+		latestTotal: preview.total,
+	});
+
+	// Advance to next billing cycle
+	await advanceToNextInvoice({
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId!,
+	});
+
+	// After advancing, pro should be active and premium should be gone
+	const customerAfterAdvance = await autumnV1.customers.get(customerId);
+
+	console.log("Products after advance:", customerAfterAdvance.products);
+
+	// Pro should now be active
+	await expectProductActive({
+		customer: customerAfterAdvance,
+		productId: pro.id,
+	});
+
+	// Premium should no longer be present
+	await expectProductNotPresent({
+		customer: customerAfterAdvance,
+		productId: premium.id,
 	});
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ADDITIONAL TEST: Update while canceling with usage tracked
+// TEST 3: Update while canceling (preserves usage)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -265,8 +292,8 @@ test.concurrent(`${chalk.yellowBright("update-while-canceling: update scheduled 
  * - Usage should be preserved
  * - Stripe subscription is correct (still set to cancel at period end)
  */
-test.concurrent(`${chalk.yellowBright("update-while-canceling: update pro with usage while canceling")}`, async () => {
-	const customerId = "cancel-update-pro-usage";
+test.concurrent(`${chalk.yellowBright("update while canceling: preserves usage")}`, async () => {
+	const customerId = "upd-while-cancel-usage";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
@@ -286,7 +313,7 @@ test.concurrent(`${chalk.yellowBright("update-while-canceling: update pro with u
 	const { autumnV1, ctx } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ paymentMethod: "success", withDefault: true }),
+			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [free, pro] }),
 		],
 		actions: [s.attach({ productId: "pro" })],

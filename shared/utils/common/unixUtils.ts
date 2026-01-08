@@ -45,3 +45,8 @@ export const secondsToMs = (
 export const msToSeconds = (ms: number): number => {
 	return Math.floor(ms / 1000);
 };
+
+/** Truncates ms to second-level precision (removes sub-second component). */
+export const truncateMsToSecondPrecision = (ms: number): number => {
+	return Math.floor(ms / 1000) * 1000;
+};

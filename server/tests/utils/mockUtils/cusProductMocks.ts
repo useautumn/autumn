@@ -17,7 +17,11 @@ export const createMockCustomerProduct = ({
 	options = [],
 	subscriptionIds = [],
 	internalEntityId,
+	entityId,
 	product,
+	status = CusProductStatus.Active,
+	startsAt,
+	endedAt,
 }: {
 	id?: string;
 	productId?: string;
@@ -26,7 +30,11 @@ export const createMockCustomerProduct = ({
 	options?: FeatureOptions[];
 	subscriptionIds?: string[];
 	internalEntityId?: string;
+	entityId?: string;
 	product?: FullProduct;
+	status?: CusProductStatus;
+	startsAt?: number;
+	endedAt?: number | null;
 }): FullCusProduct => ({
 	id,
 	internal_product_id: `internal_${productId}`,
@@ -34,14 +42,14 @@ export const createMockCustomerProduct = ({
 	internal_customer_id: "cus_internal",
 	customer_id: "cus_test",
 	internal_entity_id: internalEntityId ?? null,
-	entity_id: null,
+	entity_id: entityId ?? null,
 	created_at: Date.now(),
-	status: CusProductStatus.Active,
+	status,
 	canceled: false,
-	starts_at: Date.now(),
+	starts_at: startsAt ?? Date.now(),
 	trial_ends_at: null,
 	canceled_at: null,
-	ended_at: null,
+	ended_at: endedAt ?? null,
 	options,
 	free_trial_id: null,
 	collection_method: CollectionMethod.ChargeAutomatically,

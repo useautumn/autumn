@@ -100,6 +100,9 @@ const ensureMilliseconds = (timestamp: number | undefined): number => {
 	return timestamp;
 };
 
+/**
+ * @deprecated Use logSubscriptionScheduleAction from billing/v2/providers/stripe/utils/subscriptionSchedules instead
+ */
 export const logPhases = async ({
 	phases,
 	db,
@@ -110,7 +113,7 @@ export const logPhases = async ({
 	for (const phase of phases) {
 		// @ts-expect-error
 		const timestampInMillis = ensureMilliseconds(phase.start_date);
-		const endDateInMillis = ensureMilliseconds(phase.end_date);
+		const endDateInMillis = ensureMilliseconds(phase.end_date as number);
 		console.log(
 			`Phase ${formatMs(timestampInMillis)} to ${formatMs(endDateInMillis)}:`,
 		);

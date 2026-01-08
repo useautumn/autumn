@@ -1,4 +1,3 @@
-import { formatMs } from "@utils/common";
 import type { LineItem } from "../../../models/billingModels/invoicingModels/lineItem";
 import type { LineItemContext } from "../../../models/billingModels/invoicingModels/lineItemContext";
 import type { FullCusProduct } from "../../../models/cusProductModels/cusProductModels";
@@ -46,12 +45,12 @@ export const cusProductToLineItems = ({
 }): LineItem[] => {
 	let lineItems: LineItem[] = [];
 
-	logger.debug(
-		`Building line items for customer product: ${cusProduct.product.id} (${direction})`,
-	);
-	logger.debug(
-		`Billing cycle anchor: ${formatMs(billingCycleAnchorMs)}, now: ${formatMs(nowMs)}`,
-	);
+	// logger.debug(
+	// 	`Building line items for customer product: ${cusProduct.product.id} (${direction})`,
+	// );
+	// logger.debug(
+	// 	`Billing cycle anchor: ${formatMs(billingCycleAnchorMs)}, now: ${formatMs(nowMs)}`,
+	// );
 
 	for (const cusPrice of cusProduct.customer_prices) {
 		const price = cusPrice.price;
@@ -63,9 +62,9 @@ export const cusProductToLineItems = ({
 			nowMs,
 		});
 
-		logger.debug(
-			`Billing period: ${formatMs(billingPeriod?.start)} - ${formatMs(billingPeriod?.end)}`,
-		);
+		// logger.debug(
+		// 	`Billing period: ${formatMs(billingPeriod?.start)} - ${formatMs(billingPeriod?.end)}`,
+		// );
 
 		// Build line item context
 		const context: LineItemContext = {
@@ -117,14 +116,6 @@ export const cusProductToLineItems = ({
 			}),
 		);
 	}
-
-	// console.log(
-	// 	"Line items:",
-	// 	lineItems.map((item) => ({
-	// 		amount: item.amount,
-	// 		description: item.description,
-	// 	})),
-	// );
 
 	lineItems = lineItems.filter((item) => item.amount !== 0);
 

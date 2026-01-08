@@ -13,7 +13,8 @@ import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import { findStripeItemSpecByStripePriceId } from "./findStripeItemSpec";
 
 /**
- * Convert customer products to recurring stripe item specs
+ * Convert customer products to recurring stripe item specs.
+ * For metered prices (quantity undefined), we preserve undefined as Stripe requires.
  * @param ctx - The context
  * @param billingContext - The billing context
  * @param customerProducts - The customer products
@@ -42,10 +43,18 @@ const customerProductsToRecurringStripeItemSpecs = ({
 				recurringItem.stripePriceId,
 			);
 
-			// If price ID already exists, update the quantity
 			if (existingItem) {
-				existingItem.quantity =
-					(existingItem.quantity ?? 0) + (recurringItem.quantity ?? 0);
+				// For metered prices, quantity is undefined and should stay undefined
+				if (
+					recurringItem.quantity === undefined &&
+					existingItem.quantity === undefined
+				) {
+					// Both metered - keep undefined
+				} else {
+					// Licensed prices - accumulate quantity
+					existingItem.quantity =
+						(existingItem.quantity ?? 0) + (recurringItem.quantity ?? 0);
+				}
 			} else {
 				stripeItemSpecsByPriceId.set(
 					recurringItem.stripePriceId,
@@ -59,7 +68,8 @@ const customerProductsToRecurringStripeItemSpecs = ({
 };
 
 /**
- * Convert stripe item specs to stripe subscription update params items
+ * Convert stripe item specs to stripe subscription update params items.
+ * For metered prices (quantity undefined), we don't include quantity as Stripe requires.
  * @param billingContext - The billing context
  * @param stripeItemSpecs - The stripe item specs
  * @returns The subscription item update params
@@ -86,16 +96,26 @@ const stripeItemSpecsToSubItemsUpdate = ({
 		const shouldCreateItem = !existingItem;
 
 		if (shouldUpdateItem) {
-			subItemsUpdate.push({
-				id: existingItem.id,
-				quantity: stripeItemSpec.quantity,
-			});
+			// For metered prices, don't include quantity
+			if (stripeItemSpec.quantity === undefined) {
+				subItemsUpdate.push({ id: existingItem.id });
+			} else {
+				subItemsUpdate.push({
+					id: existingItem.id,
+					quantity: stripeItemSpec.quantity,
+				});
+			}
 		}
 		if (shouldCreateItem) {
-			subItemsUpdate.push({
-				price: stripeItemSpec.stripePriceId,
-				quantity: stripeItemSpec.quantity,
-			});
+			// For metered prices, don't include quantity
+			if (stripeItemSpec.quantity === undefined) {
+				subItemsUpdate.push({ price: stripeItemSpec.stripePriceId });
+			} else {
+				subItemsUpdate.push({
+					price: stripeItemSpec.stripePriceId,
+					quantity: stripeItemSpec.quantity,
+				});
+			}
 		}
 	}
 

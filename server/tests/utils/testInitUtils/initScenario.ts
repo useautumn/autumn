@@ -45,7 +45,7 @@ type FeatureOption = {
 type AttachmentDef = {
 	productId: string;
 	entityIndex?: number;
-	options?: FeatureOption[];
+	options?: Array<{ feature_id: string; quantity: number }>;
 };
 
 type CancelDef = {

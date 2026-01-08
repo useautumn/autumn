@@ -22,10 +22,12 @@ type InvoiceModeParams = {
 
 const executeSubscriptionOperation = async ({
 	ctx,
+	billingContext,
 	subscriptionAction,
 	invoiceModeParams,
 }: {
 	ctx: AutumnContext;
+	billingContext: BillingContext;
 	subscriptionAction: StripeSubscriptionAction;
 	invoiceModeParams: InvoiceModeParams;
 }) => {
@@ -33,7 +35,20 @@ const executeSubscriptionOperation = async ({
 	const stripeClient = createStripeCli({ org, env });
 
 	switch (subscriptionAction.type) {
-		case "update":
+		case "update": {
+			let stripeSubscription = billingContext.stripeSubscription;
+			if (
+				stripeSubscription &&
+				stripeSubscription.billing_mode.type !== "flexible"
+			) {
+				stripeSubscription = await stripeClient.subscriptions.migrate(
+					stripeSubscription?.id,
+					{
+						billing_mode: { type: "flexible" },
+					},
+				);
+			}
+
 			return await stripeClient.subscriptions.update(
 				subscriptionAction.stripeSubscriptionId,
 				{
@@ -42,6 +57,7 @@ const executeSubscriptionOperation = async ({
 					expand: ["latest_invoice"],
 				},
 			);
+		}
 		case "create":
 			return await stripeClient.subscriptions.create({
 				...subscriptionAction.params,
@@ -86,9 +102,13 @@ export const executeStripeSubscriptionAction = async ({
 			}
 		: {};
 
+	ctx.logger.debug(
+		`[executeStripeSubscriptionAction] Executing subscription operation: ${subscriptionAction.type}`,
+	);
 	let stripeSubscription: Stripe.Subscription | undefined =
 		await executeSubscriptionOperation({
 			ctx,
+			billingContext,
 			subscriptionAction,
 			invoiceModeParams,
 		});
@@ -109,6 +129,9 @@ export const executeStripeSubscriptionAction = async ({
 	const deferBillingPlan = enableProductAfterInvoice || invoiceActionRequired;
 
 	if (latestStripeInvoice) {
+		ctx.logger.debug(
+			`[executeStripeSubscriptionAction] Upserting invoice from billing: ${latestStripeInvoice.id}`,
+		);
 		await upsertInvoiceFromBilling({
 			ctx,
 			stripeInvoice: latestStripeInvoice,
@@ -118,6 +141,9 @@ export const executeStripeSubscriptionAction = async ({
 	}
 
 	if (deferBillingPlan) {
+		ctx.logger.debug(
+			`[executeStripeSubscriptionAction] Inserting metadata from billing plan`,
+		);
 		await insertMetadataFromBillingPlan({
 			ctx,
 			billingPlan,
@@ -140,6 +166,9 @@ export const executeStripeSubscriptionAction = async ({
 	});
 
 	// Add subscription to DB
+	ctx.logger.debug(
+		`[executeStripeSubscriptionAction] Upserting subscription from billing: ${stripeSubscription.id}`,
+	);
 	await upsertSubscriptionFromBilling({
 		ctx,
 		stripeSubscription,
@@ -147,6 +176,9 @@ export const executeStripeSubscriptionAction = async ({
 
 	// If the stripe subscription is canceled, remove the subscription from the billing plan
 	if (isStripeSubscriptionCanceled(stripeSubscription)) {
+		ctx.logger.debug(
+			`[executeStripeSubscriptionAction] Subscription canceled, removing subscription from billing plan: ${stripeSubscription.id}`,
+		);
 		removeStripeSubscriptionIdFromBillingPlan({
 			autumnBillingPlan: billingPlan.autumn,
 			stripeSubscriptionId: stripeSubscription.id,

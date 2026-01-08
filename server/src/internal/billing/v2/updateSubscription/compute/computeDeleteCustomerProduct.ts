@@ -1,6 +1,5 @@
 import {
 	type FullCusProduct,
-	findMainScheduledCustomerProductByGroup,
 	isCustomerProductCanceling,
 	isCustomerProductMain,
 } from "@autumn/shared";
@@ -30,8 +29,11 @@ export const computeDeleteCustomerProduct = ({
 
 	if (!isMain || !isCanceling) return undefined;
 
-	return findMainScheduledCustomerProductByGroup({
-		fullCustomer,
-		productGroup: customerProduct.product.group,
-	});
+	// For now we won't change the cancelling state of the product in update subscription. To be changed when we add the cancelling / canceled fields to update subscription.
+	return undefined;
+
+	// return findMainScheduledCustomerProductByGroup({
+	// 	fullCustomer,
+	// 	productGroup: customerProduct.product.group,
+	// });
 };
