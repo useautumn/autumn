@@ -1,4 +1,5 @@
 import { type SDKType, useSDKStore } from "@/hooks/stores/useSDKStore";
+import { SDK_OPTIONS } from "@/lib/snippets/stackOptionsConfig";
 import { cn } from "@/lib/utils";
 import {
 	Select,
@@ -7,19 +8,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "./selects/Select";
-
-interface SDKOption {
-	value: SDKType;
-	label: string;
-	icon: string;
-}
-
-const SDK_OPTIONS: SDKOption[] = [
-	{ value: "react", label: "React", icon: "/frameworks/react.png" },
-	{ value: "node", label: "Node.js", icon: "/frameworks/nodejs.svg" },
-	{ value: "python", label: "Python", icon: "/frameworks/python.svg" },
-	{ value: "curl", label: "cURL", icon: "/frameworks/curl.svg" },
-];
 
 interface SDKSelectorProps {
 	className?: string;
@@ -36,7 +24,7 @@ export function SDKSelector({ className }: SDKSelectorProps) {
 			value={selectedSDK}
 			onValueChange={(v) => setSelectedSDK(v as SDKType)}
 		>
-			<SelectTrigger className={cn("min-w-28 h-6!", className)}>
+			<SelectTrigger className={cn("min-w-28 h-6", className)}>
 				<SelectValue>
 					{selectedOption && (
 						<span className="flex items-center gap-2">
