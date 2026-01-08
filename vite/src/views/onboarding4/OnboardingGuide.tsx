@@ -245,10 +245,10 @@ export function OnboardingGuide() {
 				</div>
 				{/* Steps skeleton - 4 cards */}
 				<div className="flex gap-3 items-start">
-					{[4, 1, 1, 1].map((flex, i) => (
+					{["flex-[4]", "flex-1", "flex-1", "flex-1"].map((flexClass, i) => (
 						<Skeleton
 							key={i}
-							className={cn("rounded-lg h-30 bg-card/70", `flex-${flex}`)}
+							className={cn("rounded-lg h-30 bg-card/70", flexClass)}
 						/>
 					))}
 				</div>
