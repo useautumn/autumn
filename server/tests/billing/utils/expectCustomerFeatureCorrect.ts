@@ -5,6 +5,7 @@ import { AutumnInt } from "@/external/autumn/autumnCli";
 
 const defaultAutumn = new AutumnInt({ version: ApiVersion.V1_2 });
 
+
 export const expectCustomerFeatureExists = async ({
 	customerId,
 	customer: providedCustomer,
@@ -18,7 +19,7 @@ export const expectCustomerFeatureExists = async ({
 		? providedCustomer
 		: await defaultAutumn.customers.get(customerId!);
 
-	const feature = customer.features[featureId];
+	const feature = customer.features?.[featureId];
 
 	expect(feature).toBeDefined();
 };
@@ -43,9 +44,9 @@ export const expectCustomerFeatureCorrect = async ({
 	resetsAt?: number;
 }) => {
 	const customer = providedCustomer
-		? providedCustomer
+		? providedCustomer 
 		: await defaultAutumn.customers.get(customerId!);
-	const feature = customer.features[featureId];
+	const feature = customer.features?.[featureId];
 
 	expect(feature).toMatchObject({
 		included_usage: includedUsage,
@@ -54,7 +55,7 @@ export const expectCustomerFeatureCorrect = async ({
 	});
 
 	if (resetsAt !== undefined) {
-		const actualResetsAt = feature.next_reset_at ?? 0;
+		const actualResetsAt = feature?.next_reset_at ?? 0;
 		expect(actualResetsAt).toBeDefined();
 		expect(Math.abs(actualResetsAt - resetsAt)).toBeLessThanOrEqual(
 			TEN_MINUTES_MS,
