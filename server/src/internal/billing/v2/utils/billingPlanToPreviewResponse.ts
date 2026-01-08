@@ -20,13 +20,13 @@ export const billingPlanToPreviewResponse = ({
 	const { fullCustomer } = billingContext;
 
 	const autumnBillingPlan = billingPlan.autumn;
-	const previewLineItems = autumnBillingPlan.lineItems.map((line) => ({
+	const previewImmediateLineItems = autumnBillingPlan.lineItems.filter((line) => line.chargeImmediately).map((line) => ({
 		description: line.description,
 		amount: line.finalAmount,
 	}));
 
 	const total = new Decimal(
-		sumValues(previewLineItems.map((line) => line.amount)),
+		sumValues(previewImmediateLineItems.map((line) => line.amount)),
 	)
 		.toDP(2)
 		.toNumber();
@@ -35,7 +35,7 @@ export const billingPlanToPreviewResponse = ({
 
 	return {
 		customer_id: fullCustomer.id || "",
-		line_items: previewLineItems,
+		line_items: previewImmediateLineItems,
 		total,
 		currency,
 	} satisfies BillingPreviewResponse;

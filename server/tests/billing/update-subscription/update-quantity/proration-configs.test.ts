@@ -1,10 +1,16 @@
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, OnDecrease, OnIncrease } from "@autumn/shared";
+import { expectCustomerInvoiceCorrect } from "@tests/billing/utils/expectCustomerInvoiceCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { advanceTestClock } from "@tests/utils/stripeUtils.js";
+import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { addHours, addMonths } from "date-fns";
 
 const billingUnits = 12;
 const pricePerUnit = 8; // $8 per unit = $96 for 12 units
@@ -32,325 +38,406 @@ const pricePerUnit = 8; // $8 per unit = $96 for 12 units
 // UPGRADE PRORATION TESTS
 // =============================================================================
 
-test.concurrent(
-	`${chalk.yellowBright("update-quantity: prorate immediately on upgrade")}`,
-	async () => {
-		const customerId = "proration-upgrade-prorate-immed";
+// NOTE: OnIncrease.BillImmediately is not supported for prepaid items yet: 01/08/2026
 
-		const product = products.base({
-			id: "prepaid",
-			items: [
-				items.prepaid({
-					featureId: TestFeature.Messages,
-					billingUnits,
-					price: pricePerUnit,
-					config: {
-						on_increase: OnIncrease.ProrateImmediately,
-						on_decrease: OnDecrease.ProrateImmediately,
-					},
-				}),
-			],
-		});
+test.concurrent(`${chalk.yellowBright("update-quantity: prorate immediately on upgrade")}`, async () => {
+	const customerId = "proration-upgrade-prorate-immediately";
 
-		const { autumnV1 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [product] }),
-			],
-			actions: [
-				s.attach({
-					productId: product.id,
-					options: [
-						{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
-					],
-				}),
-			],
-		});
+	const product = products.base({
+		id: "prepaid",
+		items: [
+			items.prepaid({
+				featureId: TestFeature.Messages,
+				billingUnits,
+				price: pricePerUnit,
+				config: {
+					on_increase: OnIncrease.ProrateImmediately,
+					on_decrease: OnDecrease.ProrateImmediately,
+				},
+			}),
+		],
+	});
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [product] }),
+		],
+		actions: [
+			s.attach({
+				productId: product.id,
+				options: [
+					{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
+				],
+			}),
+		],
+	});
 
-		const beforeInvoices =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
-		const invoiceCountBefore = beforeInvoices.invoices?.length || 0;
+	// Preview the upgrade
+	const preview = await autumnV1.subscriptions.previewUpdate({
+		customer_id: customerId,
+		product_id: product.id,
+		options: [
+			{ feature_id: TestFeature.Messages, quantity: 20 * billingUnits },
+		],
+	});
 
-		// Upgrade to 20 units
-		await autumnV1.subscriptions.update({
-			customer_id: customerId,
-			product_id: product.id,
-			options: [
-				{ feature_id: TestFeature.Messages, quantity: 20 * billingUnits },
-			],
-		});
+	// Preview should show prorated amount (less than full $80)
+	const fullAmount = 10 * pricePerUnit;
+	expect(preview.total).toBeGreaterThan(0);
+	expect(preview.total).toBeLessThanOrEqual(fullAmount);
 
-		const afterUpdate =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const beforeInvoices =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const invoiceCountBefore = beforeInvoices.invoices?.length || 0;
 
-		// Should create invoice
-		expect(afterUpdate.invoices?.length).toBeGreaterThan(invoiceCountBefore);
+	// Upgrade to 20 units
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: product.id,
+		options: [
+			{ feature_id: TestFeature.Messages, quantity: 20 * billingUnits },
+		],
+	});
 
-		const latestInvoice = afterUpdate.invoices?.[0];
-		expect(latestInvoice?.status).toBe("paid");
+	const afterUpdate = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Should charge PRORATED amount (less than full $80)
-		// Exact amount depends on time remaining in billing cycle
-		const fullAmount = 10 * pricePerUnit;
-		expect(latestInvoice?.total).toBeGreaterThan(0);
-		expect(latestInvoice?.total).toBeLessThanOrEqual(fullAmount);
-	},
-);
+	// Should create invoice with prorated amount matching preview
+	expectCustomerInvoiceCorrect({
+		customer: afterUpdate,
+		count: invoiceCountBefore + 1,
+		latestTotal: preview.total,
+		latestStatus: "paid",
+	});
+});
 
-test.concurrent(
-	`${chalk.yellowBright("update-quantity: prorate next cycle on upgrade")}`,
-	async () => {
-		const customerId = "proration-upgrade-prorate-next";
+test.concurrent(`${chalk.yellowBright("update-quantity: prorate next cycle on upgrade")}`, async () => {
+	const customerId = "proration-upgrade-prorate-next";
 
-		const product = products.base({
-			id: "prepaid",
-			items: [
-				items.prepaid({
-					featureId: TestFeature.Messages,
-					billingUnits,
-					price: pricePerUnit,
-					config: {
-						on_increase: OnIncrease.ProrateNextCycle,
-						on_decrease: OnDecrease.ProrateImmediately,
-					},
-				}),
-			],
-		});
+	const product = products.base({
+		id: "prepaid",
+		items: [
+			items.prepaid({
+				featureId: TestFeature.Messages,
+				billingUnits,
+				price: pricePerUnit,
+				config: {
+					on_increase: OnIncrease.ProrateNextCycle,
+					on_decrease: OnDecrease.ProrateImmediately,
+				},
+			}),
+		],
+	});
 
-		const { autumnV1 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [product] }),
-			],
-			actions: [
-				s.attach({
-					productId: product.id,
-					options: [
-						{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
-					],
-				}),
-			],
-		});
+	const { autumnV1, testClockId } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [product] }),
+		],
+		actions: [
+			s.attach({
+				productId: product.id,
+				options: [
+					{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
+				],
+			}),
+			s.advanceTestClock({ days: 15 }), // Mid-cycle
+		],
+	});
 
-		const beforeInvoices =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
-		const invoiceCountBefore = beforeInvoices.invoices?.length || 0;
+	// Preview the upgrade - should show prorated amount for next cycle
+	const preview = await autumnV1.subscriptions.previewUpdate({
+		customer_id: customerId,
+		product_id: product.id,
+		options: [
+			{ feature_id: TestFeature.Messages, quantity: 20 * billingUnits },
+		],
+	});
 
-		// Upgrade to 20 units
-		await autumnV1.subscriptions.update({
-			customer_id: customerId,
-			product_id: product.id,
-			options: [
-				{ feature_id: TestFeature.Messages, quantity: 20 * billingUnits },
-			],
-		});
+	// Preview total should be 0 (billed next cycle, not immediately)
+	expect(preview.total).toBe(0);
 
-		const afterUpdate =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const beforeInvoices =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const invoiceCountBefore = beforeInvoices.invoices?.length || 0;
 
-		// Should NOT create finalized invoice immediately
-		const finalizedInvoices = afterUpdate.invoices?.filter(
-			(inv) => inv.status === "paid" || inv.status === "open",
-		);
-		expect(finalizedInvoices?.length).toBe(invoiceCountBefore);
+	// Upgrade to 20 units
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: product.id,
+		options: [
+			{ feature_id: TestFeature.Messages, quantity: 20 * billingUnits },
+		],
+	});
 
-		// But balance should be updated immediately
-		const feature = afterUpdate.features?.[TestFeature.Messages];
-		expect(feature?.balance).toBe(20 * billingUnits);
-	},
-);
+	const afterUpdate = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-test.concurrent(
-	`${chalk.yellowBright("update-quantity: bill next cycle on upgrade")}`,
-	async () => {
-		const customerId = "proration-upgrade-bill-next";
+	// Should NOT create finalized invoice immediately
+	const finalizedInvoices = afterUpdate.invoices?.filter(
+		(inv) => inv.status === "paid" || inv.status === "open",
+	);
+	expect(finalizedInvoices?.length).toBe(invoiceCountBefore);
 
-		const product = products.base({
-			id: "prepaid",
-			items: [
-				items.prepaid({
-					featureId: TestFeature.Messages,
-					billingUnits,
-					price: pricePerUnit,
-					config: {
-						on_increase: OnIncrease.BillNextCycle,
-						on_decrease: OnDecrease.ProrateImmediately,
-					},
-				}),
-			],
-		});
+	// But balance should be updated immediately
+	const feature = afterUpdate.features?.[TestFeature.Messages];
+	expect(feature?.balance).toBe(20 * billingUnits);
 
-		const { autumnV1 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [product] }),
-			],
-			actions: [
-				s.attach({
-					productId: product.id,
-					options: [
-						{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
-					],
-				}),
-			],
-		});
+	// Advance clock to next billing cycle
+	await advanceTestClock({
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId!,
+		advanceTo: addHours(
+			addMonths(new Date(), 1),
+			hoursToFinalizeInvoice,
+		).getTime(),
+		waitForSeconds: 30,
+	});
 
-		const beforeInvoices =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
-		const invoiceCountBefore = beforeInvoices.invoices?.length || 0;
+	const afterCycle = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Upgrade to 20 units
-		await autumnV1.subscriptions.update({
-			customer_id: customerId,
-			product_id: product.id,
-			options: [
-				{ feature_id: TestFeature.Messages, quantity: 20 * billingUnits },
-			],
-		});
+	// NOW invoice should exist with prorated amount
+	expectCustomerInvoiceCorrect({
+		customer: afterCycle,
+		count: invoiceCountBefore + 1,
+		latestStatus: "paid",
+	});
+});
 
-		const afterUpdate =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+test.concurrent(`${chalk.yellowBright("update-quantity: bill next cycle on upgrade")}`, async () => {
+	const customerId = "proration-upgrade-bill-next";
 
-		// Should NOT create invoice immediately
-		expect(afterUpdate.invoices?.length).toBe(invoiceCountBefore);
+	const product = products.base({
+		id: "prepaid",
+		items: [
+			items.prepaid({
+				featureId: TestFeature.Messages,
+				billingUnits,
+				price: pricePerUnit,
+				config: {
+					on_increase: OnIncrease.BillNextCycle,
+					on_decrease: OnDecrease.ProrateImmediately,
+				},
+			}),
+		],
+	});
 
-		// But balance should be updated
-		const feature = afterUpdate.features?.[TestFeature.Messages];
-		expect(feature?.balance).toBe(20 * billingUnits);
-	},
-);
+	const { autumnV1, testClockId } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [product] }),
+		],
+		actions: [
+			s.attach({
+				productId: product.id,
+				options: [
+					{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
+				],
+			}),
+			s.advanceTestClock({ days: 15 }), // Mid-cycle
+		],
+	});
+
+	// Preview the upgrade - should show 0 (billed next cycle)
+	const preview = await autumnV1.subscriptions.previewUpdate({
+		customer_id: customerId,
+		product_id: product.id,
+		options: [
+			{ feature_id: TestFeature.Messages, quantity: 20 * billingUnits },
+		],
+	});
+
+	// Preview total should be 0 (billed next cycle, not immediately)
+	expect(preview.total).toBe(0);
+
+	const beforeInvoices =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const invoiceCountBefore = beforeInvoices.invoices?.length || 0;
+
+	// Upgrade to 20 units
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: product.id,
+		options: [
+			{ feature_id: TestFeature.Messages, quantity: 20 * billingUnits },
+		],
+	});
+
+	const afterUpdate = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	// Should NOT create invoice immediately
+	expect(afterUpdate.invoices?.length).toBe(invoiceCountBefore);
+
+	// But balance should be updated
+	const feature = afterUpdate.features?.[TestFeature.Messages];
+	expect(feature?.balance).toBe(20 * billingUnits);
+
+	// Advance clock to next billing cycle
+	await advanceToNextInvoice({
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId!,
+	});
+
+	const afterCycle = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	// Next cycle invoice is the full renewal amount for 20 units
+	// BillNextCycle defers billing - preview shows $0 for immediate charge
+	const fullRenewalAmount = 20 * pricePerUnit; // 20 units * $8 = $160
+	expectCustomerInvoiceCorrect({
+		customer: afterCycle,
+		count: (beforeInvoices.invoices?.length ?? 0) + 1,
+		latestTotal: fullRenewalAmount,
+		latestStatus: "paid",
+	});
+});
 
 // =============================================================================
 // DOWNGRADE PRORATION TESTS
 // =============================================================================
 
-test.concurrent(
-	`${chalk.yellowBright("update-quantity: prorate immediately on downgrade")}`,
-	async () => {
-		const customerId = "proration-downgrade-prorate-immed";
+test.concurrent(`${chalk.yellowBright("update-quantity: prorate immediately on downgrade")}`, async () => {
+	const customerId = "proration-downgrade-prorate-immed";
 
-		const product = products.base({
-			id: "prepaid",
-			items: [
-				items.prepaid({
-					featureId: TestFeature.Messages,
-					billingUnits,
-					price: pricePerUnit,
-					config: {
-						on_increase: OnIncrease.ProrateImmediately,
-						on_decrease: OnDecrease.ProrateImmediately,
-					},
-				}),
-			],
-		});
+	const product = products.base({
+		id: "prepaid",
+		items: [
+			items.prepaid({
+				featureId: TestFeature.Messages,
+				billingUnits,
+				price: pricePerUnit,
+				config: {
+					on_increase: OnIncrease.ProrateImmediately,
+					on_decrease: OnDecrease.ProrateImmediately,
+				},
+			}),
+		],
+	});
 
-		const { autumnV1 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [product] }),
-			],
-			actions: [
-				s.attach({
-					productId: product.id,
-					options: [
-						{ feature_id: TestFeature.Messages, quantity: 20 * billingUnits },
-					],
-				}),
-			],
-		});
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [product] }),
+		],
+		actions: [
+			s.attach({
+				productId: product.id,
+				options: [
+					{ feature_id: TestFeature.Messages, quantity: 20 * billingUnits },
+				],
+			}),
+		],
+	});
 
-		const beforeInvoices =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
-		const invoiceCountBefore = beforeInvoices.invoices?.length || 0;
+	// Preview the downgrade
+	const preview = await autumnV1.subscriptions.previewUpdate({
+		customer_id: customerId,
+		product_id: product.id,
+		options: [
+			{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
+		],
+	});
 
-		// Downgrade to 10 units
-		await autumnV1.subscriptions.update({
-			customer_id: customerId,
-			product_id: product.id,
-			options: [
-				{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
-			],
-		});
+	// Preview should show negative (credit) prorated amount
+	expect(preview.total).toBeLessThan(0);
 
-		const afterUpdate =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const beforeInvoices =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const invoiceCountBefore = beforeInvoices.invoices?.length || 0;
 
-		// Should create invoice with credit
-		expect(afterUpdate.invoices?.length).toBeGreaterThan(invoiceCountBefore);
+	// Downgrade to 10 units
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: product.id,
+		options: [
+			{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
+		],
+	});
 
-		const latestInvoice = afterUpdate.invoices?.[0];
-		expect(latestInvoice?.status).toBe("paid");
+	const afterUpdate = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Should have negative total (credit) - prorated amount
-		expect(latestInvoice?.total).toBeLessThan(0);
+	// Should create invoice with credit matching preview
+	expectCustomerInvoiceCorrect({
+		customer: afterUpdate,
+		count: invoiceCountBefore + 1,
+		latestTotal: preview.total,
+		latestStatus: "paid",
+	});
 
-		// Balance should be reduced
-		const feature = afterUpdate.features?.[TestFeature.Messages];
-		expect(feature?.balance).toBe(10 * billingUnits);
-	},
-);
+	// Balance should be reduced
+	const feature = afterUpdate.features?.[TestFeature.Messages];
+	expect(feature?.balance).toBe(10 * billingUnits);
+});
 
-test.concurrent(
-	`${chalk.yellowBright("update-quantity: no prorations on downgrade")}`,
-	async () => {
-		const customerId = "proration-downgrade-no-prorations";
+test.concurrent(`${chalk.yellowBright("update-quantity: no prorations on downgrade")}`, async () => {
+	const customerId = "proration-downgrade-no-prorations";
 
-		const product = products.base({
-			id: "prepaid",
-			items: [
-				items.prepaid({
-					featureId: TestFeature.Messages,
-					billingUnits,
-					price: pricePerUnit,
-					config: {
-						on_increase: OnIncrease.ProrateImmediately,
-						on_decrease: OnDecrease.NoProrations,
-					},
-				}),
-			],
-		});
+	const product = products.base({
+		id: "prepaid",
+		items: [
+			items.prepaid({
+				featureId: TestFeature.Messages,
+				billingUnits,
+				price: pricePerUnit,
+				config: {
+					on_increase: OnIncrease.ProrateImmediately,
+					on_decrease: OnDecrease.NoProrations,
+				},
+			}),
+		],
+	});
 
-		const { autumnV1 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [product] }),
-			],
-			actions: [
-				s.attach({
-					productId: product.id,
-					options: [
-						{ feature_id: TestFeature.Messages, quantity: 20 * billingUnits },
-					],
-				}),
-			],
-		});
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [product] }),
+		],
+		actions: [
+			s.attach({
+				productId: product.id,
+				options: [
+					{ feature_id: TestFeature.Messages, quantity: 20 * billingUnits },
+				],
+			}),
+		],
+	});
 
-		const beforeInvoices =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
-		const invoiceCountBefore = beforeInvoices.invoices?.length || 0;
+	// Preview the downgrade
+	const preview = await autumnV1.subscriptions.previewUpdate({
+		customer_id: customerId,
+		product_id: product.id,
+		options: [
+			{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
+		],
+	});
 
-		// Downgrade to 10 units
-		await autumnV1.subscriptions.update({
-			customer_id: customerId,
-			product_id: product.id,
-			options: [
-				{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
-			],
-		});
+	// Preview should show 0 (no prorations = no credit)
+	expect(preview.total).toBe(0);
 
-		const afterUpdate =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const beforeInvoices =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const invoiceCountBefore = beforeInvoices.invoices?.length || 0;
 
-		// Should NOT create invoice (no credit)
-		expect(afterUpdate.invoices?.length).toBe(invoiceCountBefore);
+	// Downgrade to 10 units
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: product.id,
+		options: [
+			{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
+		],
+	});
 
-		// Balance should be reduced immediately (no credit, but balance updated)
-		const feature = afterUpdate.features?.[TestFeature.Messages];
-		expect(feature?.balance).toBe(10 * billingUnits);
-	},
-);
+	const afterUpdate = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	// Should NOT create invoice (no credit)
+	expectCustomerInvoiceCorrect({
+		customer: afterUpdate,
+		count: invoiceCountBefore,
+	});
+
+	// Balance should be reduced immediately (no credit, but balance updated)
+	const feature = afterUpdate.features?.[TestFeature.Messages];
+	expect(feature?.balance).toBe(10 * billingUnits);
+});
