@@ -42,6 +42,7 @@ const initWorker = ({ id, db }: { id: number; db: DrizzleCli }) => {
 			const ctx = await createWorkerContext({
 				db,
 				logger: workerLogger,
+				payload: job.data,
 			});
 
 			try {
@@ -64,10 +65,13 @@ const initWorker = ({ id, db }: { id: number; db: DrizzleCli }) => {
 				}
 
 				if (job.name === JobName.Migration) {
+					if (!ctx) {
+						workerLogger.error("No context found for migration job");
+						return;
+					}
 					await runMigrationTask({
-						db,
+						ctx,
 						payload: job.data,
-						logger: workerLogger,
 					});
 					return;
 				}
