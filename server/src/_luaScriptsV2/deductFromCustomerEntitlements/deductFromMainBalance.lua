@@ -180,8 +180,8 @@ local function deduct_from_main_balance(params)
         deducted_amount = math.min(amount_to_deduct * credit_cost, current_balance - min_balance)
       end
     else
-      -- Pass 1: Only deduct down to zero
-      deducted_amount = math.min(current_balance, amount_to_deduct * credit_cost)
+      -- Pass 1: Only deduct down to zero (can't deduct from negative balance)
+      deducted_amount = math.max(0, math.min(current_balance, amount_to_deduct * credit_cost))
     end
     
     result_balance = current_balance - deducted_amount

@@ -2,6 +2,7 @@ import {
 	type AppEnv,
 	CusExpand,
 	CustomerNotFoundError,
+	EntityNotFoundError,
 	type FullCustomer,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -16,10 +17,12 @@ import { setCachedFullCustomer } from "./setCachedFullCustomer.js";
 export const getOrSetCachedFullCustomer = async ({
 	ctx,
 	customerId,
+	entityId,
 	source,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
+	entityId?: string;
 	source?: string;
 }): Promise<FullCustomer> => {
 	const { org, env, db, skipCache, logger } = ctx;
@@ -59,6 +62,13 @@ export const getOrSetCachedFullCustomer = async ({
 
 	if (!fullCustomer) {
 		throw new CustomerNotFoundError({ customerId });
+	}
+
+	if (entityId) {
+		fullCustomer.entity = fullCustomer.entities?.find((e) => e.id === entityId);
+		if (!fullCustomer.entity) {
+			throw new EntityNotFoundError({ entityId });
+		}
 	}
 
 	// 3. Set cache (fire and forget)

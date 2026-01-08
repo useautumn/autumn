@@ -1,5 +1,6 @@
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { deleteCachedApiCustomer } from "../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { matchRoute } from "./middlewareUtils.js";
 
@@ -95,6 +96,13 @@ export const refreshCacheMiddleware = async (
 				orgId: org.id,
 				env: env,
 			});
+			await deleteCachedFullCustomer({
+				customerId,
+				orgId: org.id,
+				env: env,
+				source: "refreshCacheMiddleware",
+				logger,
+			});
 		}
 		return;
 	}
@@ -112,6 +120,13 @@ export const refreshCacheMiddleware = async (
 				`Clearing cache for core url ${pathname}, customerId: ${body.customer_id}`,
 			);
 			await deleteCachedApiCustomer({
+				customerId: body.customer_id,
+				orgId: org.id,
+				env: env,
+				source: "refreshCacheMiddleware",
+				logger,
+			});
+			await deleteCachedFullCustomer({
 				customerId: body.customer_id,
 				orgId: org.id,
 				env: env,
