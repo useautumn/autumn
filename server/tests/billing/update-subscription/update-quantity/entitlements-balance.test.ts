@@ -1,17 +1,13 @@
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import {
-	initScenario,
-	s,
-} from "@tests/utils/testInitUtils/initScenario.js";
+import { items } from "@tests/utils/fixtures/items.js";
+import { products } from "@tests/utils/fixtures/products.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService.js";
-import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
-import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
 
 const billingUnits = 12;
-const pricePerUnit = 8;
 
 /**
  * Subscription Update - Entitlement Balance Tests
@@ -27,13 +23,12 @@ test.concurrent(
 	async () => {
 		const customerId = "ent-balance-upgrade";
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "prepaid",
 			items: [
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Messages,
 					billingUnits,
-					price: pricePerUnit,
 				}),
 			],
 		});
@@ -69,7 +64,7 @@ test.concurrent(
 		);
 		const beforeBalance = beforeEntitlement?.balance || 0;
 
-		await autumnV1.subscriptionUpdate({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [
@@ -102,13 +97,12 @@ test.concurrent(
 	async () => {
 		const customerId = "ent-balance-downgrade";
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "prepaid",
 			items: [
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Messages,
 					billingUnits,
-					price: pricePerUnit,
 				}),
 			],
 		});
@@ -144,7 +138,7 @@ test.concurrent(
 		);
 		const beforeBalance = beforeEntitlement?.balance || 0;
 
-		await autumnV1.subscriptionUpdate({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [

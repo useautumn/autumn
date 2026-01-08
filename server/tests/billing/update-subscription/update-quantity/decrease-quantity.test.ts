@@ -1,20 +1,11 @@
 import { expect, test } from "bun:test";
-import {
-	type ApiCustomerV3,
-	findPriceByFeatureId,
-	priceToLineAmount,
-} from "@autumn/shared";
+import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectLatestInvoiceCorrect } from "@tests/billing/utils/expectLatestInvoiceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import {
-	initScenario,
-	s,
-} from "@tests/utils/testInitUtils/initScenario.js";
-import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { items } from "@tests/utils/fixtures/items.js";
+import { products } from "@tests/utils/fixtures/products.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { ProductService } from "@/internal/products/ProductService.js";
-import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
-import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
 
 /**
  * Subscription Update - Decrease Quantity Tests
@@ -30,13 +21,13 @@ test.concurrent(
 		const billingUnits = 12;
 		const pricePerUnit = 8;
 
-		const prepaidItem = constructPrepaidItem({
+		const prepaidItem = items.prepaid({
 			featureId: TestFeature.Messages,
 			billingUnits,
 			price: pricePerUnit,
 		});
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "prepaid",
 			items: [prepaidItem],
 		});
@@ -57,21 +48,20 @@ test.concurrent(
 			],
 		});
 
-		// Get price for invoice validation
-		const fullProduct = await ProductService.getFull({
-			db: ctx.db,
-			idOrInternalId: product.id,
-			orgId: ctx.org.id,
-			env: ctx.env,
+		// Preview the downgrade
+		const preview = await autumnV1.subscriptions.previewUpdate({
+			customer_id: customerId,
+			product_id: product.id,
+			options: [
+				{ feature_id: TestFeature.Messages, quantity: 5 * billingUnits },
+			],
 		});
 
-		const prepaidMessagesPrice = findPriceByFeatureId({
-			prices: fullProduct.prices,
-			featureId: TestFeature.Messages,
-		});
+		// Verify preview total matches expected (20 -> 5 = -15 units * $8)
+		expect(preview.total).toBe(-15 * pricePerUnit);
 
 		// Downgrade from 20 to 5 units
-		await autumnV1.subscriptionUpdate({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [
@@ -85,16 +75,11 @@ test.concurrent(
 		// Should have 60 messages (5 units × 12 billing_units)
 		expect(feature?.balance).toBe(60);
 
-		// Expect credit invoice for downgrade (20 -> 5 = -15 units)
-		const expectedAmount = priceToLineAmount({
-			price: prepaidMessagesPrice!,
-			overage: -15 * billingUnits,
-		});
-
+		// Expect credit invoice for downgrade (20 -> 5 = -15 units * $8)
 		expectLatestInvoiceCorrect({
 			customer,
 			productId: product.id,
-			amount: expectedAmount,
+			amount: -15 * pricePerUnit,
 		});
 	},
 );

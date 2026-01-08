@@ -1,20 +1,16 @@
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { items } from "@tests/utils/fixtures/items.js";
+import { products } from "@tests/utils/fixtures/products.js";
 import { completeInvoiceCheckout } from "@tests/utils/stripeUtils/completeInvoiceCheckout.js";
-import {
-	initScenario,
-	s,
-} from "@tests/utils/testInitUtils/initScenario.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService.js";
 import { timeout } from "@/utils/genUtils.js";
-import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
-import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
 
 const billingUnits = 12;
-const pricePerUnit = 8;
 
 /**
  * Invoice Mode Tests
@@ -31,13 +27,12 @@ test.concurrent(
 	async () => {
 		const customerId = "inv-mode-default";
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "prepaid",
 			items: [
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Messages,
 					billingUnits,
-					price: pricePerUnit,
 				}),
 			],
 		});
@@ -73,7 +68,7 @@ test.concurrent(
 		);
 		const beforeBalance = beforeEntitlement?.balance || 0;
 
-		await autumnV1.subscriptionUpdate({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [
@@ -115,13 +110,12 @@ test.concurrent(
 	async () => {
 		const customerId = "inv-mode-draft-explicit";
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "prepaid",
 			items: [
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Messages,
 					billingUnits,
-					price: pricePerUnit,
 				}),
 			],
 		});
@@ -157,7 +151,7 @@ test.concurrent(
 		);
 		const beforeBalance = beforeEntitlement?.balance || 0;
 
-		await autumnV1.subscriptionUpdate({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [
@@ -204,13 +198,12 @@ test.concurrent(
 	async () => {
 		const customerId = "inv-mode-finalized";
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "prepaid",
 			items: [
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Messages,
 					billingUnits,
-					price: pricePerUnit,
 				}),
 			],
 		});
@@ -246,7 +239,7 @@ test.concurrent(
 		);
 		const beforeBalance = beforeEntitlement?.balance || 0;
 
-		await autumnV1.subscriptionUpdate({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [
@@ -293,13 +286,12 @@ test.concurrent(
 	async () => {
 		const customerId = "inv-mode-payment-required";
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "prepaid",
 			items: [
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Messages,
 					billingUnits,
-					price: pricePerUnit,
 				}),
 			],
 		});
@@ -335,7 +327,7 @@ test.concurrent(
 		);
 		const beforeBalance = beforeEntitlement?.balance || 0;
 
-		await autumnV1.subscriptionUpdate({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [

@@ -82,5 +82,5 @@ export const shouldSkipLineItems = (
 		prorationConfig === OnDecrease.NoProrations ||
 		prorationConfig === OnDecrease.None ||
 		prorationConfig === OnIncrease.BillNextCycle
-	);
+	)
 };
