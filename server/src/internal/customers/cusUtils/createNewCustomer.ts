@@ -28,7 +28,6 @@ import {
 import { getDefaultAttachConfig } from "../attach/attachUtils/getAttachConfig.js";
 import { CusService } from "../CusService.js";
 import { initStripeCusAndProducts } from "../handlers/handleCreateCustomer.js";
-import { deleteCachedApiCustomer } from "./apiCusCacheUtils/deleteCachedApiCustomer.js";
 
 export const getGroupToDefaultProd = async ({
 	defaultProds,
@@ -125,10 +124,6 @@ export const createNewCustomer = async ({
 		data: customerData,
 	});
 
-	console.log(
-		`[createNewCustomer] Creating new customer with ID: ${newCustomer?.id}`,
-	);
-
 	if (!newCustomer) {
 		throw new RecaseError({
 			code: ErrCode.InternalError,
@@ -164,7 +159,7 @@ export const createNewCustomer = async ({
 			});
 
 			const optionsList = defaultProd.prices
-				.filter((x) => isPrepaidPrice({ price: x }))
+				.filter((x) => isPrepaidPrice(x))
 				.map((x) => {
 					const ent = priceToEnt({
 						price: x,

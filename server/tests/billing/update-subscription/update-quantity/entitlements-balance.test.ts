@@ -1,14 +1,14 @@
-import { beforeAll, describe, expect, test } from "bun:test";
-import { ApiVersion } from "@autumn/shared";
+import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import {
+	initScenario,
+	s,
+} from "@tests/utils/testInitUtils/initScenario.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0";
 
 const billingUnits = 12;
 const pricePerUnit = 8;
@@ -22,48 +22,38 @@ const pricePerUnit = 8;
  * balance increment/decrement logic works correctly.
  */
 
-describe(`${chalk.yellowBright("subscription-update: entitlement balance updates")}`, () => {
-	const customerId = "sub-update-entitlements";
-	const autumnV1 = new AutumnInt({ version: ApiVersion.V1_2 });
+test.concurrent(
+	`${chalk.yellowBright("update-quantity: increment entitlement balance on upgrade")}`,
+	async () => {
+		const customerId = "ent-balance-upgrade";
 
-	const prepaidProduct = constructRawProduct({
-		id: "prepaid_messages",
-		items: [
-			constructPrepaidItem({
-				featureId: TestFeature.Messages,
-				billingUnits,
-				price: pricePerUnit,
-			}),
-		],
-	});
-
-	beforeAll(async () => {
-		await initCustomerV3({
-			ctx,
-			customerId,
-			withTestClock: true,
-			attachPm: "success",
-		});
-
-		await initProductsV0({
-			ctx,
-			products: [prepaidProduct],
-			prefix: customerId,
-		});
-
-		await autumnV1.attach({
-			customer_id: customerId,
-			product_id: prepaidProduct.id,
-			options: [
-				{
-					feature_id: TestFeature.Messages,
-					quantity: 10 * billingUnits,
-				},
+		const product = constructRawProduct({
+			id: "prepaid",
+			items: [
+				constructPrepaidItem({
+					featureId: TestFeature.Messages,
+					billingUnits,
+					price: pricePerUnit,
+				}),
 			],
 		});
-	});
 
-	test("should increment entitlement balance on upgrade", async () => {
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [product] }),
+			],
+			actions: [
+				s.attach({
+					productId: product.id,
+					options: [
+						{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
+					],
+				}),
+			],
+		});
+
 		const beforeUpdate = await CusService.getFull({
 			db: ctx.db,
 			idOrInternalId: customerId,
@@ -72,7 +62,7 @@ describe(`${chalk.yellowBright("subscription-update: entitlement balance updates
 		});
 
 		const customerProduct = beforeUpdate.customer_products.find(
-			(cp) => cp.product.id === prepaidProduct.id,
+			(cp) => cp.product.id === product.id,
 		);
 		const beforeEntitlement = customerProduct?.customer_entitlements.find(
 			(ent) => ent.entitlement.feature_id === TestFeature.Messages,
@@ -81,12 +71,9 @@ describe(`${chalk.yellowBright("subscription-update: entitlement balance updates
 
 		await autumnV1.subscriptionUpdate({
 			customer_id: customerId,
-			product_id: prepaidProduct.id,
+			product_id: product.id,
 			options: [
-				{
-					feature_id: TestFeature.Messages,
-					quantity: 15 * billingUnits, // +5 units
-				},
+				{ feature_id: TestFeature.Messages, quantity: 15 * billingUnits },
 			],
 		});
 
@@ -98,7 +85,7 @@ describe(`${chalk.yellowBright("subscription-update: entitlement balance updates
 		});
 
 		const afterCustomerProduct = afterUpdate.customer_products.find(
-			(cp) => cp.product.id === prepaidProduct.id,
+			(cp) => cp.product.id === product.id,
 		);
 		const afterEntitlement = afterCustomerProduct?.customer_entitlements.find(
 			(ent) => ent.entitlement.feature_id === TestFeature.Messages,
@@ -107,9 +94,41 @@ describe(`${chalk.yellowBright("subscription-update: entitlement balance updates
 
 		// +5 units × 12 billing_units = +60 messages
 		expect(afterBalance).toBe(beforeBalance + 60);
-	});
+	},
+);
 
-	test("should decrement entitlement balance on downgrade", async () => {
+test.concurrent(
+	`${chalk.yellowBright("update-quantity: decrement entitlement balance on downgrade")}`,
+	async () => {
+		const customerId = "ent-balance-downgrade";
+
+		const product = constructRawProduct({
+			id: "prepaid",
+			items: [
+				constructPrepaidItem({
+					featureId: TestFeature.Messages,
+					billingUnits,
+					price: pricePerUnit,
+				}),
+			],
+		});
+
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [product] }),
+			],
+			actions: [
+				s.attach({
+					productId: product.id,
+					options: [
+						{ feature_id: TestFeature.Messages, quantity: 15 * billingUnits },
+					],
+				}),
+			],
+		});
+
 		const beforeUpdate = await CusService.getFull({
 			db: ctx.db,
 			idOrInternalId: customerId,
@@ -118,7 +137,7 @@ describe(`${chalk.yellowBright("subscription-update: entitlement balance updates
 		});
 
 		const customerProduct = beforeUpdate.customer_products.find(
-			(cp) => cp.product.id === prepaidProduct.id,
+			(cp) => cp.product.id === product.id,
 		);
 		const beforeEntitlement = customerProduct?.customer_entitlements.find(
 			(ent) => ent.entitlement.feature_id === TestFeature.Messages,
@@ -127,12 +146,9 @@ describe(`${chalk.yellowBright("subscription-update: entitlement balance updates
 
 		await autumnV1.subscriptionUpdate({
 			customer_id: customerId,
-			product_id: prepaidProduct.id,
+			product_id: product.id,
 			options: [
-				{
-					feature_id: TestFeature.Messages,
-					quantity: 10 * billingUnits, // -5 units
-				},
+				{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
 			],
 		});
 
@@ -144,7 +160,7 @@ describe(`${chalk.yellowBright("subscription-update: entitlement balance updates
 		});
 
 		const afterCustomerProduct = afterUpdate.customer_products.find(
-			(cp) => cp.product.id === prepaidProduct.id,
+			(cp) => cp.product.id === product.id,
 		);
 		const afterEntitlement = afterCustomerProduct?.customer_entitlements.find(
 			(ent) => ent.entitlement.feature_id === TestFeature.Messages,
@@ -153,5 +169,5 @@ describe(`${chalk.yellowBright("subscription-update: entitlement balance updates
 
 		// -5 units × 12 billing_units = -60 messages
 		expect(afterBalance).toBe(beforeBalance - 60);
-	});
-});
+	},
+);

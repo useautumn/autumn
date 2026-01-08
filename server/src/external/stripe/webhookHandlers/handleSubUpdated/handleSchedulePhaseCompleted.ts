@@ -54,10 +54,11 @@ export const handleSchedulePhaseCompleted = async ({
 		stripeCus: stripeSubscription.customer,
 	});
 
-	logger.info(`handling schedule phase completed for ${stripeSubscription.id}`);
-	logger.info(`now date: ${formatMsToDate(nowMs)}`);
-
-	console.log(
+	logger.debug(
+		`handling schedule phase completed for ${stripeSubscription.id}`,
+	);
+	logger.debug(`now date: ${formatMsToDate(nowMs)}`);
+	logger.debug(
 		"cusProducts",
 		cusProducts.map((cp) => ({
 			name: cp.product.name,
@@ -136,13 +137,13 @@ export const handleSchedulePhaseCompleted = async ({
 			(phase.end_date ? phase.end_date > Math.floor(nowMs / 1000) : true),
 	);
 
-	console.log("Current phase: ", currentPhase);
+	logger.debug("Current phase: ", currentPhase);
 
 	if (
 		currentPhase === stripeSubscriptionSchedule.phases.length - 1 &&
 		stripeSubscriptionSchedule.status !== "released"
 	) {
-		console.log("Releasing schedule");
+		logger.debug("Releasing schedule");
 		try {
 			// Last phase, cancel schedule
 			await stripeCli.subscriptionSchedules.release(
@@ -170,29 +171,3 @@ export const handleSchedulePhaseCompleted = async ({
 		}
 	}
 };
-
-// ACTIVATING FUTURE PRODUCT
-// const futureCusProduct = await activateFutureProduct({
-// 	ctx,
-// 	cusProduct,
-// });
-
-// if (futureCusProduct) {
-// 	const fullFutureProduct = cusProductToProduct({
-// 		cusProduct: futureCusProduct,
-// 	});
-
-// 	if (
-// 		!isFreeProduct({ prices: fullFutureProduct.prices }) &&
-// 		!isOneOffProduct({ prices: fullFutureProduct.prices })
-// 	) {
-// 		await CusProductService.update({
-// 			db,
-// 			cusProductId: futureCusProduct.id,
-// 			updates: {
-// 				subscription_ids: [subObject.id],
-// 				scheduled_ids: [schedule.id],
-// 			},
-// 		});
-// 	}
-// }

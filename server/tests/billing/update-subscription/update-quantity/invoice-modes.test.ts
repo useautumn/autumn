@@ -1,62 +1,63 @@
-import { beforeAll, describe, expect, test } from "bun:test";
-import { type ApiCustomer, ApiVersion } from "@autumn/shared";
+import { expect, test } from "bun:test";
+import type { ApiCustomerV3 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { completeInvoiceCheckout } from "@tests/utils/stripeUtils/completeInvoiceCheckout.js";
+import {
+	initScenario,
+	s,
+} from "@tests/utils/testInitUtils/initScenario.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { timeout } from "@/utils/genUtils.js";
 import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0";
 
 const billingUnits = 12;
 const pricePerUnit = 8;
 
-describe(`${chalk.yellowBright("subscription-update: invoice mode - default behavior (draft invoice, immediate entitlements)")}`, () => {
-	const customerId = "sub-update-invoice-default";
-	const autumnV1 = new AutumnInt({ version: ApiVersion.V1_2 });
+/**
+ * Invoice Mode Tests
+ *
+ * These tests verify different invoice mode configurations:
+ * - Default: draft invoice with immediate entitlements
+ * - Draft invoice with immediate entitlements (explicit)
+ * - Finalized invoice with immediate entitlements
+ * - Entitlements after payment (via checkout)
+ */
 
-	const prepaidProduct = constructRawProduct({
-		id: "prepaid_messages",
-		items: [
-			constructPrepaidItem({
-				featureId: TestFeature.Messages,
-				billingUnits,
-				price: pricePerUnit,
-			}),
-		],
-	});
+test.concurrent(
+	`${chalk.yellowBright("update-quantity: default invoice mode (draft, immediate entitlements)")}`,
+	async () => {
+		const customerId = "inv-mode-default";
 
-	beforeAll(async () => {
-		await initCustomerV3({
-			ctx,
-			customerId,
-			withTestClock: true,
-			attachPm: "success",
-		});
-
-		await initProductsV0({
-			ctx,
-			products: [prepaidProduct],
-			prefix: customerId,
-		});
-
-		await autumnV1.attach({
-			customer_id: customerId,
-			product_id: prepaidProduct.id,
-			options: [
-				{
-					feature_id: TestFeature.Messages,
-					quantity: 10 * billingUnits,
-				},
+		const product = constructRawProduct({
+			id: "prepaid",
+			items: [
+				constructPrepaidItem({
+					featureId: TestFeature.Messages,
+					billingUnits,
+					price: pricePerUnit,
+				}),
 			],
 		});
-	});
 
-	test("should default to draft invoice with immediate entitlements when only invoice: true is passed", async () => {
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [product] }),
+			],
+			actions: [
+				s.attach({
+					productId: product.id,
+					options: [
+						{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
+					],
+				}),
+			],
+		});
+
 		const beforeUpdate = await CusService.getFull({
 			db: ctx.db,
 			idOrInternalId: customerId,
@@ -65,7 +66,7 @@ describe(`${chalk.yellowBright("subscription-update: invoice mode - default beha
 		});
 
 		const customerProduct = beforeUpdate.customer_products.find(
-			(cp) => cp.product.id === prepaidProduct.id,
+			(cp) => cp.product.id === product.id,
 		);
 		const beforeEntitlement = customerProduct?.customer_entitlements.find(
 			(ent) => ent.entitlement.feature_id === TestFeature.Messages,
@@ -74,12 +75,9 @@ describe(`${chalk.yellowBright("subscription-update: invoice mode - default beha
 
 		await autumnV1.subscriptionUpdate({
 			customer_id: customerId,
-			product_id: prepaidProduct.id,
+			product_id: product.id,
 			options: [
-				{
-					feature_id: TestFeature.Messages,
-					quantity: 15 * billingUnits,
-				},
+				{ feature_id: TestFeature.Messages, quantity: 15 * billingUnits },
 			],
 			invoice: true,
 		});
@@ -92,7 +90,7 @@ describe(`${chalk.yellowBright("subscription-update: invoice mode - default beha
 		});
 
 		const afterCustomerProduct = afterUpdate.customer_products.find(
-			(cp) => cp.product.id === prepaidProduct.id,
+			(cp) => cp.product.id === product.id,
 		);
 		const afterEntitlement = afterCustomerProduct?.customer_entitlements.find(
 			(ent) => ent.entitlement.feature_id === TestFeature.Messages,
@@ -101,59 +99,49 @@ describe(`${chalk.yellowBright("subscription-update: invoice mode - default beha
 
 		expect(afterBalance).toBe(beforeBalance + 60);
 
-		const customer = await autumnV1.customers.get<ApiCustomer>(customerId);
-		const balance = customer.balances?.[TestFeature.Messages];
-		expect(balance?.purchased_balance).toBe(180);
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		const feature = customer.features?.[TestFeature.Messages];
+		expect(feature?.balance).toBe(180);
 
 		const draftInvoice = customer.invoices?.find(
 			(inv) => inv.status === "draft",
 		);
 		expect(draftInvoice).toBeDefined();
-	});
-});
+	},
+);
 
-describe(`${chalk.yellowBright("subscription-update: invoice mode - draft invoice with immediate entitlements (explicit)")}`, () => {
-	const customerId = "sub-update-invoice-draft";
-	const autumnV1 = new AutumnInt({ version: ApiVersion.V1_2 });
+test.concurrent(
+	`${chalk.yellowBright("update-quantity: draft invoice with immediate entitlements (explicit)")}`,
+	async () => {
+		const customerId = "inv-mode-draft-explicit";
 
-	const prepaidProduct = constructRawProduct({
-		id: "prepaid_messages",
-		items: [
-			constructPrepaidItem({
-				featureId: TestFeature.Messages,
-				billingUnits,
-				price: pricePerUnit,
-			}),
-		],
-	});
-
-	beforeAll(async () => {
-		await initCustomerV3({
-			ctx,
-			customerId,
-			withTestClock: true,
-			attachPm: "success",
-		});
-
-		await initProductsV0({
-			ctx,
-			products: [prepaidProduct],
-			prefix: customerId,
-		});
-
-		await autumnV1.attach({
-			customer_id: customerId,
-			product_id: prepaidProduct.id,
-			options: [
-				{
-					feature_id: TestFeature.Messages,
-					quantity: 10 * billingUnits,
-				},
+		const product = constructRawProduct({
+			id: "prepaid",
+			items: [
+				constructPrepaidItem({
+					featureId: TestFeature.Messages,
+					billingUnits,
+					price: pricePerUnit,
+				}),
 			],
 		});
-	});
 
-	test("should create draft invoice and update entitlements immediately", async () => {
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [product] }),
+			],
+			actions: [
+				s.attach({
+					productId: product.id,
+					options: [
+						{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
+					],
+				}),
+			],
+		});
+
 		const beforeUpdate = await CusService.getFull({
 			db: ctx.db,
 			idOrInternalId: customerId,
@@ -162,7 +150,7 @@ describe(`${chalk.yellowBright("subscription-update: invoice mode - draft invoic
 		});
 
 		const customerProduct = beforeUpdate.customer_products.find(
-			(cp) => cp.product.id === prepaidProduct.id,
+			(cp) => cp.product.id === product.id,
 		);
 		const beforeEntitlement = customerProduct?.customer_entitlements.find(
 			(ent) => ent.entitlement.feature_id === TestFeature.Messages,
@@ -171,12 +159,9 @@ describe(`${chalk.yellowBright("subscription-update: invoice mode - draft invoic
 
 		await autumnV1.subscriptionUpdate({
 			customer_id: customerId,
-			product_id: prepaidProduct.id,
+			product_id: product.id,
 			options: [
-				{
-					feature_id: TestFeature.Messages,
-					quantity: 15 * billingUnits, // +5 units
-				},
+				{ feature_id: TestFeature.Messages, quantity: 15 * billingUnits },
 			],
 			invoice: true,
 			finalize_invoice: false,
@@ -192,7 +177,7 @@ describe(`${chalk.yellowBright("subscription-update: invoice mode - draft invoic
 		});
 
 		const afterCustomerProduct = afterUpdate.customer_products.find(
-			(cp) => cp.product.id === prepaidProduct.id,
+			(cp) => cp.product.id === product.id,
 		);
 		const afterEntitlement = afterCustomerProduct?.customer_entitlements.find(
 			(ent) => ent.entitlement.feature_id === TestFeature.Messages,
@@ -203,59 +188,49 @@ describe(`${chalk.yellowBright("subscription-update: invoice mode - draft invoic
 		expect(afterBalance).toBe(beforeBalance + 60);
 
 		// Verify via API that balance is updated and invoice is draft
-		const customer = await autumnV1.customers.get<ApiCustomer>(customerId);
-		const balance = customer.balances?.[TestFeature.Messages];
-		expect(balance?.purchased_balance).toBe(180); // 15 units × 12 = 180
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		const feature = customer.features?.[TestFeature.Messages];
+		expect(feature?.balance).toBe(180); // 15 units × 12 = 180
 
 		const draftInvoice = customer.invoices?.find(
 			(inv) => inv.status === "draft",
 		);
 		expect(draftInvoice).toBeDefined();
-	});
-});
+	},
+);
 
-describe(`${chalk.yellowBright("subscription-update: invoice mode - finalized invoice with immediate entitlements")}`, () => {
-	const customerId = "sub-update-invoice-finalized";
-	const autumnV1 = new AutumnInt({ version: ApiVersion.V1_2 });
+test.concurrent(
+	`${chalk.yellowBright("update-quantity: finalized invoice with immediate entitlements")}`,
+	async () => {
+		const customerId = "inv-mode-finalized";
 
-	const prepaidProduct = constructRawProduct({
-		id: "prepaid_messages",
-		items: [
-			constructPrepaidItem({
-				featureId: TestFeature.Messages,
-				billingUnits,
-				price: pricePerUnit,
-			}),
-		],
-	});
-
-	beforeAll(async () => {
-		await initCustomerV3({
-			ctx,
-			customerId,
-			withTestClock: true,
-			attachPm: "success",
-		});
-
-		await initProductsV0({
-			ctx,
-			products: [prepaidProduct],
-			prefix: customerId,
-		});
-
-		await autumnV1.attach({
-			customer_id: customerId,
-			product_id: prepaidProduct.id,
-			options: [
-				{
-					feature_id: TestFeature.Messages,
-					quantity: 10 * billingUnits,
-				},
+		const product = constructRawProduct({
+			id: "prepaid",
+			items: [
+				constructPrepaidItem({
+					featureId: TestFeature.Messages,
+					billingUnits,
+					price: pricePerUnit,
+				}),
 			],
 		});
-	});
 
-	test("should finalize invoice immediately and update entitlements", async () => {
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [product] }),
+			],
+			actions: [
+				s.attach({
+					productId: product.id,
+					options: [
+						{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
+					],
+				}),
+			],
+		});
+
 		const beforeUpdate = await CusService.getFull({
 			db: ctx.db,
 			idOrInternalId: customerId,
@@ -264,7 +239,7 @@ describe(`${chalk.yellowBright("subscription-update: invoice mode - finalized in
 		});
 
 		const customerProduct = beforeUpdate.customer_products.find(
-			(cp) => cp.product.id === prepaidProduct.id,
+			(cp) => cp.product.id === product.id,
 		);
 		const beforeEntitlement = customerProduct?.customer_entitlements.find(
 			(ent) => ent.entitlement.feature_id === TestFeature.Messages,
@@ -273,12 +248,9 @@ describe(`${chalk.yellowBright("subscription-update: invoice mode - finalized in
 
 		await autumnV1.subscriptionUpdate({
 			customer_id: customerId,
-			product_id: prepaidProduct.id,
+			product_id: product.id,
 			options: [
-				{
-					feature_id: TestFeature.Messages,
-					quantity: 20 * billingUnits, // +10 units
-				},
+				{ feature_id: TestFeature.Messages, quantity: 20 * billingUnits },
 			],
 			invoice: true,
 			finalize_invoice: true,
@@ -294,7 +266,7 @@ describe(`${chalk.yellowBright("subscription-update: invoice mode - finalized in
 		});
 
 		const afterCustomerProduct = afterUpdate.customer_products.find(
-			(cp) => cp.product.id === prepaidProduct.id,
+			(cp) => cp.product.id === product.id,
 		);
 		const afterEntitlement = afterCustomerProduct?.customer_entitlements.find(
 			(ent) => ent.entitlement.feature_id === TestFeature.Messages,
@@ -305,59 +277,49 @@ describe(`${chalk.yellowBright("subscription-update: invoice mode - finalized in
 		expect(afterBalance).toBe(beforeBalance + 120);
 
 		// Verify via API that balance is updated and invoice is paid
-		const customer = await autumnV1.customers.get<ApiCustomer>(customerId);
-		const balance = customer.balances?.[TestFeature.Messages];
-		expect(balance?.purchased_balance).toBe(240); // 20 units × 12 = 240
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		const feature = customer.features?.[TestFeature.Messages];
+		expect(feature?.balance).toBe(240); // 20 units × 12 = 240
 
 		const paidInvoice = customer.invoices?.find(
 			(inv) => inv.status === "paid",
 		);
 		expect(paidInvoice).toBeDefined();
-	});
-});
+	},
+);
 
-describe(`${chalk.yellowBright("subscription-update: invoice mode - entitlements after payment")}`, () => {
-	const customerId = "sub-update-invoice-payment-required";
-	const autumnV1 = new AutumnInt({ version: ApiVersion.V1_2 });
+test.concurrent(
+	`${chalk.yellowBright("update-quantity: entitlements after payment via checkout")}`,
+	async () => {
+		const customerId = "inv-mode-payment-required";
 
-	const prepaidProduct = constructRawProduct({
-		id: "prepaid_messages",
-		items: [
-			constructPrepaidItem({
-				featureId: TestFeature.Messages,
-				billingUnits,
-				price: pricePerUnit,
-			}),
-		],
-	});
-
-	beforeAll(async () => {
-		await initCustomerV3({
-			ctx,
-			customerId,
-			withTestClock: true,
-			attachPm: "success",
-		});
-
-		await initProductsV0({
-			ctx,
-			products: [prepaidProduct],
-			prefix: customerId,
-		});
-
-		await autumnV1.attach({
-			customer_id: customerId,
-			product_id: prepaidProduct.id,
-			options: [
-				{
-					feature_id: TestFeature.Messages,
-					quantity: 10 * billingUnits,
-				},
+		const product = constructRawProduct({
+			id: "prepaid",
+			items: [
+				constructPrepaidItem({
+					featureId: TestFeature.Messages,
+					billingUnits,
+					price: pricePerUnit,
+				}),
 			],
 		});
-	});
 
-	test("should not update entitlements until payment is received via checkout", async () => {
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [product] }),
+			],
+			actions: [
+				s.attach({
+					productId: product.id,
+					options: [
+						{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
+					],
+				}),
+			],
+		});
+
 		const beforeUpdate = await CusService.getFull({
 			db: ctx.db,
 			idOrInternalId: customerId,
@@ -366,7 +328,7 @@ describe(`${chalk.yellowBright("subscription-update: invoice mode - entitlements
 		});
 
 		const customerProduct = beforeUpdate.customer_products.find(
-			(cp) => cp.product.id === prepaidProduct.id,
+			(cp) => cp.product.id === product.id,
 		);
 		const beforeEntitlement = customerProduct?.customer_entitlements.find(
 			(ent) => ent.entitlement.feature_id === TestFeature.Messages,
@@ -375,12 +337,9 @@ describe(`${chalk.yellowBright("subscription-update: invoice mode - entitlements
 
 		await autumnV1.subscriptionUpdate({
 			customer_id: customerId,
-			product_id: prepaidProduct.id,
+			product_id: product.id,
 			options: [
-				{
-					feature_id: TestFeature.Messages,
-					quantity: 25 * billingUnits, // +15 units
-				},
+				{ feature_id: TestFeature.Messages, quantity: 25 * billingUnits },
 			],
 			invoice: true,
 			finalize_invoice: true,
@@ -396,7 +355,7 @@ describe(`${chalk.yellowBright("subscription-update: invoice mode - entitlements
 		});
 
 		const afterCustomerProduct = afterUpdate.customer_products.find(
-			(cp) => cp.product.id === prepaidProduct.id,
+			(cp) => cp.product.id === product.id,
 		);
 		const afterEntitlement = afterCustomerProduct?.customer_entitlements.find(
 			(ent) => ent.entitlement.feature_id === TestFeature.Messages,
@@ -407,9 +366,9 @@ describe(`${chalk.yellowBright("subscription-update: invoice mode - entitlements
 		expect(afterBalance).toBe(beforeBalance);
 
 		// Verify via API that balance is NOT updated and invoice is open
-		const customer = await autumnV1.customers.get<ApiCustomer>(customerId);
-		const balance = customer.balances?.[TestFeature.Messages];
-		expect(balance?.purchased_balance).toBe(120); // Still 10 units × 12 = 120
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		const feature = customer.features?.[TestFeature.Messages];
+		expect(feature?.balance).toBe(120); // Still 10 units × 12 = 120
 
 		const openInvoice = customer.invoices?.find(
 			(inv) => inv.status === "open",
@@ -434,7 +393,7 @@ describe(`${chalk.yellowBright("subscription-update: invoice mode - entitlements
 		});
 
 		const paidCustomerProduct = afterPayment.customer_products.find(
-			(cp) => cp.product.id === prepaidProduct.id,
+			(cp) => cp.product.id === product.id,
 		);
 		const paidEntitlement = paidCustomerProduct?.customer_entitlements.find(
 			(ent) => ent.entitlement.feature_id === TestFeature.Messages,
@@ -446,15 +405,15 @@ describe(`${chalk.yellowBright("subscription-update: invoice mode - entitlements
 
 		// Verify via API that balance is now updated and invoice is paid
 		const customerAfterPayment =
-			await autumnV1.customers.get<ApiCustomer>(customerId);
-		const balanceAfterPayment =
-			customerAfterPayment.balances?.[TestFeature.Messages];
-		expect(balanceAfterPayment?.purchased_balance).toBe(300); // 25 units × 12 = 300
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		const featureAfterPayment =
+			customerAfterPayment.features?.[TestFeature.Messages];
+		expect(featureAfterPayment?.balance).toBe(300); // 25 units × 12 = 300
 
 		// All invoices should now be paid
 		const unpaidInvoices = customerAfterPayment.invoices?.filter(
 			(inv) => inv.status !== "paid",
 		);
 		expect(unpaidInvoices?.length ?? 0).toBe(0);
-	});
-});
+	},
+);

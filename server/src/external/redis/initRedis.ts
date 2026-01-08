@@ -14,9 +14,9 @@ import {
 	SET_SUBSCRIPTIONS_SCRIPT,
 } from "../../_luaScripts/luaScripts.js";
 
-if (!process.env.CACHE_URL) {
-	throw new Error("CACHE_URL (redis) is not set");
-}
+// if (!process.env.CACHE_URL) {
+// 	throw new Error("CACHE_URL (redis) is not set");
+// }
 
 // Region constants
 export const REGION_US_EAST_2 = "us-east-2";

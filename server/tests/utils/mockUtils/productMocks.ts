@@ -25,18 +25,22 @@ export const createMockProduct = ({
 
 export const createMockFullProduct = ({
 	id = "prod_test",
+	name = "Test Product",
 	prices = [],
 	stripeProductId,
+	isAddOn = false,
 }: {
 	id?: string;
+	name?: string;
 	prices?: Price[];
 	stripeProductId?: string;
+	isAddOn?: boolean;
 }): FullProduct =>
 	({
 		id,
-		name: "Test Product",
+		name,
 		description: null,
-		is_add_on: false,
+		is_add_on: isAddOn,
 		is_default: false,
 		version: 1,
 		group: "test_group",

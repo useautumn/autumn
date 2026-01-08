@@ -4,6 +4,7 @@ import {
 	AppEnv,
 	type Feature,
 } from "@autumn/shared";
+import { logger } from "@/external/logtail/logtailUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
 export const createMockOrg = () => ({
@@ -26,4 +27,5 @@ export const createMockCtx = ({
 		org: org ?? createMockOrg(),
 		apiVersion: new ApiVersionClass(ApiVersion.V1_2),
 		env: AppEnv.Sandbox,
+		logger: logger,
 	}) as unknown as AutumnContext;

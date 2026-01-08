@@ -44,18 +44,9 @@ export const deleteCachedApiCustomer = async ({
 			env,
 			customerId,
 		);
-		const deletedCountV1_2_0 = await redis.deleteCustomer(
-			CACHE_CUSTOMER_VERSIONS.PREVIOUS,
-			orgId,
-			env,
-			customerId,
-		);
 
 		logger.info(
 			`Deleted ${deletedCount} cache keys for customer ${customerId}, source: ${source}`,
-		);
-		logger.info(
-			`Deleted ${deletedCountV1_2_0} cache keys (v1.2.0) for customer ${customerId}, source: ${source}`,
 		);
 	} catch (error) {
 		logger.error(`Error deleting customer with entities: ${error}`);

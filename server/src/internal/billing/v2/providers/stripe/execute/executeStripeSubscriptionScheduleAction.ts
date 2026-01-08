@@ -2,6 +2,7 @@ import { createStripeCli } from "@server/external/connect/createStripeCli";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import type { BillingContext } from "@server/internal/billing/v2/billingContext";
 import type Stripe from "stripe";
+import { logSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/logSubscriptionScheduleAction";
 import type { StripeSubscriptionScheduleAction } from "@/internal/billing/v2/types/billingPlan";
 
 /**
@@ -31,11 +32,20 @@ export const executeStripeSubscriptionScheduleAction = async ({
 	const { org, env } = ctx;
 	const stripeCli = createStripeCli({ org, env });
 
+	ctx.logger.debug(
+		`[executeStripeSubscriptionScheduleAction] Executing subscription schedule operation: ${subscriptionScheduleAction.type}`,
+	);
+
+	// Log phases
+	logSubscriptionScheduleAction({
+		ctx,
+		billingContext,
+		subscriptionScheduleAction,
+	});
+
 	switch (subscriptionScheduleAction.type) {
 		case "create": {
 			const { params } = subscriptionScheduleAction;
-
-			console.log("Creating new stripe subscription schedule");
 
 			// If there's an existing subscription, create from it first then update with phases
 			if (stripeSubscription) {
@@ -50,8 +60,6 @@ export const executeStripeSubscriptionScheduleAction = async ({
 						end_behavior: params.end_behavior,
 					},
 				);
-
-				console.log("New schedule: ", newSchedule);
 
 				return newSchedule;
 			}

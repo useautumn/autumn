@@ -33,6 +33,7 @@ export const computeCustomPlan = async ({
 		ctx,
 		updateSubscriptionContext,
 		fullProduct: customFullProduct,
+		currentCustomerProduct: customerProduct,
 	});
 
 	const lineItems = buildAutumnLineItems({

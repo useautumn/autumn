@@ -1,6 +1,5 @@
 import { msToSeconds } from "@shared/utils/common/unixUtils";
 import type Stripe from "stripe";
-import { isStripeSubscriptionCanceling } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import type {
@@ -28,9 +27,6 @@ export const buildStripeSubscriptionUpdateAction = ({
 	}
 
 	const trialEndsAt = trialContext?.trialEndsAt;
-	const cancelAtPeriodEnd = isStripeSubscriptionCanceling(stripeSubscription)
-		? false
-		: undefined;
 
 	// When a schedule manages the subscription, don't set trial_end or cancel_at_period_end
 	// The schedule controls these via phase-level settings
@@ -41,9 +37,6 @@ export const buildStripeSubscriptionUpdateAction = ({
 		items: subItemsUpdate.length > 0 ? subItemsUpdate : undefined,
 		trial_end: shouldSetTrialEnd ? msToSeconds(trialEndsAt) : undefined,
 		proration_behavior: "none",
-		cancel_at_period_end: scheduleManagesSubscription
-			? undefined
-			: cancelAtPeriodEnd,
 	};
 
 	const hasNoUpdates = [

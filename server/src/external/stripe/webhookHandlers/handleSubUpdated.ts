@@ -39,15 +39,6 @@ export const handleSubscriptionUpdated = async ({
 		prevAttributes: previousAttributes,
 	});
 
-	// const subUpdatedFromBilling = await getSubScenarioFromCache({
-	// 	subId: subscription.id,
-	// });
-
-	// if (subUpdatedFromBilling) {
-	// 	logger.info(`sub.updated SKIP: already handled by billing`);
-	// 	return;
-	// }
-
 	// Get cus products by stripe sub id
 	const cusProducts = await CusProductService.getByStripeSubId({
 		db,

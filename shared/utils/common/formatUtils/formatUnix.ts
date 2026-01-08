@@ -48,3 +48,17 @@ export const formatSeconds = (
 		options?.withTimezone ? "dd MMM yyyy HH:mm:ss z" : "dd MMM yyyy HH:mm:ss",
 	);
 };
+
+// Format seconds to date
+export const formatSecondsToDate = (
+	unixSeconds?: number | null,
+	options?: { withTimezone?: boolean },
+) => {
+	if (!unixSeconds) {
+		return "undefined";
+	}
+	return format(
+		new Date(unixSeconds * 1000),
+		options?.withTimezone ? "dd MMM yyyy HH:mm:ss z" : "dd MMM yyyy HH:mm:ss",
+	);
+};

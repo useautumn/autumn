@@ -51,10 +51,5 @@ export const upsertInvoiceFromBilling = async ({
 		items: autumnInvoiceItems,
 	});
 
-	console.log(
-		"[upsertInvoiceFromBilling] Inserted new invoice into DB:",
-		newInvoice,
-	);
-
 	return newInvoice;
 };

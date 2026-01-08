@@ -1,10 +1,11 @@
 import { execSync } from "node:child_process";
 import { loadLocalEnv } from "../src/utils/envUtils.js";
 
-// ... rest of your existing setup code
+const isUnitTest = () => {
+	return process.argv.some((arg) => arg.includes("unit-tests"));
+};
 
 const loadInfisicalSecrets = async () => {
-	// Load infisical secrets into process.env
 	try {
 		const secrets = execSync("infisical export --env=dev --format=dotenv", {
 			encoding: "utf-8",
@@ -26,7 +27,11 @@ const loadInfisicalSecrets = async () => {
  * Loads environment variables before any test file runs.
  */
 
-console.log("--- Setup integration tests ---");
-await loadInfisicalSecrets();
-loadLocalEnv();
-console.log("--- Setup integration tests complete ---");
+if (isUnitTest()) {
+	console.log("--- Skipping integration setup for unit tests ---");
+} else {
+	console.log("--- Setup integration tests ---");
+	await loadInfisicalSecrets();
+	loadLocalEnv();
+	console.log("--- Setup integration tests complete ---");
+}

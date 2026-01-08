@@ -24,6 +24,10 @@ export const executeAutumnBillingPlan = async ({
 		customFreeTrial,
 	} = autumnBillingPlan;
 
+	ctx.logger.debug(
+		`[executeAutumnBillingPlan] inserting ${customEntitlements.length} custom entitlements and ${customPrices.length} custom prices`,
+	);
+
 	await EntitlementService.insert({
 		db,
 		data: customEntitlements,
@@ -41,6 +45,9 @@ export const executeAutumnBillingPlan = async ({
 		});
 	}
 
+	ctx.logger.debug(
+		`[executeAutumnBillingPlan] inserting new customer products: ${insertCustomerProducts.map((cp) => cp.product.id).join(", ")}`,
+	);
 	// 2. Insert new customer products
 	await insertNewCusProducts({
 		ctx,
@@ -49,6 +56,13 @@ export const executeAutumnBillingPlan = async ({
 
 	// 3. Update customer product options
 	if (updateCustomerProduct) {
+		ctx.logger.debug(
+			`[executeAutumnBillingPlan] updating customer product: ${updateCustomerProduct.product.id}, updates:`,
+			{
+				options: updateCustomerProduct.options,
+				status: updateCustomerProduct.status,
+			},
+		);
 		await CusProductService.update({
 			db,
 			cusProductId: updateCustomerProduct.id,
@@ -61,6 +75,9 @@ export const executeAutumnBillingPlan = async ({
 
 	// 4. Delete scheduled customer product (e.g., when updating while canceling)
 	if (deleteCustomerProduct) {
+		ctx.logger.debug(
+			`[executeAutumnBillingPlan] deleting scheduled customer product: ${deleteCustomerProduct.product.id}`,
+		);
 		await CusProductService.delete({
 			db,
 			cusProductId: deleteCustomerProduct.id,

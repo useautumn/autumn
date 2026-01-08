@@ -131,6 +131,7 @@ export const createMockAllocatedPrice = ({
 		config: {
 			type: PriceType.Usage,
 			bill_when: BillWhen.EndOfPeriod,
+			should_prorate: true, // Required for getBillingType to return InArrearProrated
 			billing_units: 1,
 			internal_feature_id: internalFeatureId ?? `internal_${featureId}`,
 			feature_id: featureId,
@@ -169,12 +170,14 @@ export const createMockOneOffPrice = ({
 
 export const createMockCustomerPrice = ({
 	price,
+	customerProductId,
 }: {
 	price: Price;
+	customerProductId?: string;
 }): FullCustomerPrice => ({
 	id: `cus_price_${price.id}`,
 	internal_customer_id: "cus_internal",
-	customer_product_id: "cus_prod_test",
+	customer_product_id: customerProductId ?? "cus_prod_test",
 	created_at: Date.now(),
 	price_id: price.id,
 	price,

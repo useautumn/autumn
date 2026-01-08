@@ -28,7 +28,6 @@ export const computeUpdateSubscriptionPlan = async ({
 			return computeUpdateQuantityPlan({
 				ctx,
 				updateSubscriptionContext: billingContext,
-				params,
 			});
 		case UpdateSubscriptionIntent.UpdatePlan:
 			return await computeCustomPlan({

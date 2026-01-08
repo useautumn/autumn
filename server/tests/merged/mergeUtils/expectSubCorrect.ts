@@ -14,7 +14,7 @@ import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { priceToStripeItem } from "@/external/stripe/priceToStripeItem/priceToStripeItem.js";
-import { isStripeSubscriptionCanceled } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils.js";
+import { isStripeSubscriptionCanceling } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils.js";
 import {
 	cusProductInPhase,
 	logPhaseItems,
@@ -440,7 +440,7 @@ export const expectSubToBeCorrect = async ({
 	if (finalShouldBeCanceled) {
 		expect(sub.schedule).toBeNull();
 		// expect(sub.cancel_at).toBeDefined();
-		expect(isStripeSubscriptionCanceled(sub)).toBe(true);
+		expect(isStripeSubscriptionCanceling(sub)).toBe(true);
 		return;
 	}
 
