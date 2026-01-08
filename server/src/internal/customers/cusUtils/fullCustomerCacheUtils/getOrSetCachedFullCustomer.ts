@@ -39,6 +39,18 @@ export const getOrSetCachedFullCustomer = async ({
 			logger.debug(
 				`[getOrSetCachedFullCustomer] Cache hit for ${customerId}, source: ${source}`,
 			);
+
+			// Set entity if entityId is provided, otherwise clear it
+			if (entityId) {
+				cached.entity = cached.entities?.find((e) => e.id === entityId);
+				if (!cached.entity) {
+					throw new EntityNotFoundError({ entityId });
+				}
+			} else {
+				// Clear entity from cache hit - customer GET should not have entity set
+				cached.entity = undefined;
+			}
+
 			return cached;
 		}
 	}

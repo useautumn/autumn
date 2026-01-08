@@ -4,6 +4,7 @@ import type {
 	TrackParams,
 	TrackResponseV2,
 } from "@autumn/shared";
+import { RecaseError } from "@autumn/shared";
 import { currentRegion } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { getApiCustomerBase } from "../../../customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
@@ -139,18 +140,6 @@ export const runRedisDeductionV2 = async ({
 		| undefined;
 
 	try {
-		const requestId = Math.random().toString(36).substring(7);
-		console.log(
-			`[runRedisDeductionV2][${requestId}] Attempting Redis deduction...`,
-		);
-		console.log(
-			`[runRedisDeductionV2][${requestId}] Input fullCustomer entity balances:`,
-			JSON.stringify(
-				fullCustomer.customer_products?.[0]?.customer_entitlements?.[0]
-					?.entities,
-			),
-		);
-
 		result = await deductFromRedisCusEnts({
 			ctx,
 			fullCus: fullCustomer,
@@ -158,40 +147,29 @@ export const runRedisDeductionV2 = async ({
 			overageBehaviour: overageBehavior || "cap",
 			entityId: fullCustomer.entity?.id,
 		});
-
-		console.log(
-			`[runRedisDeductionV2][${requestId}] Redis deduction succeeded`,
-		);
-		console.log(
-			`[runRedisDeductionV2][${requestId}] Output fullCus entity balances:`,
-			JSON.stringify(
-				result.fullCus?.customer_products?.[0]?.customer_entitlements?.[0]
-					?.entities,
-			),
-		);
-		console.log(
-			`[runRedisDeductionV2][${requestId}] Actual deductions:`,
-			JSON.stringify(result.actualDeductions),
-		);
-		console.log(
-			`[runRedisDeductionV2][${requestId}] Modified cusEntIds:`,
-			result.modifiedCusEntIds,
-		);
 	} catch (error) {
-		console.log("[runRedisDeductionV2] Redis deduction FAILED:", error);
-		ctx.logger.warn(
-			`Failed to deduct from Redis: ${error}. Falling back to Postgres.`,
-		);
-		if (
-			JSON.stringify(error).includes("PAID_ALLOCATED") ||
-			JSON.stringify(error).includes("CUSTOMER_NOT_FOUND")
-		) {
+		// Pass through RecaseError (user-facing errors like insufficient_balance)
+		if (error instanceof RecaseError) {
+			throw error;
+		}
+
+		// For InternalError and other errors, check if we should fallback to Postgres
+		const errorStr = JSON.stringify(error);
+		const shouldFallback =
+			errorStr.includes("PAID_ALLOCATED") ||
+			errorStr.includes("CUSTOMER_NOT_FOUND") ||
+			errorStr.includes("customer_not_in_cache");
+
+		if (shouldFallback) {
+			ctx.logger.warn(`Falling back to Postgres for track operation.`);
 			result = await executePostgresTracking({
 				ctx,
 				body,
 				featureDeductions,
 			});
-		} else throw error;
+		} else {
+			throw error;
+		}
 	}
 
 	if (isRedisResult(result)) {

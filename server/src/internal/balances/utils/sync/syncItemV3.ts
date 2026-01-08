@@ -123,7 +123,20 @@ export const syncItemV3 = async ({
 		return;
 	}
 
+	// Debug: log entities from cache
+	for (const cp of fullCustomer.customer_products) {
+		for (const ce of cp.customer_entitlements) {
+			if (cusEntIds.includes(ce.id)) {
+				logger.info(
+					`[SYNC V3 DEBUG] cusEnt ${ce.id.slice(-10)} entities: ${JSON.stringify(ce.entities)}`,
+				);
+			}
+		}
+	}
+
 	const entries = buildSyncEntriesFromFullCustomer({ fullCustomer, cusEntIds });
+
+	logger.info(`[SYNC V3 DEBUG] entries: ${JSON.stringify(entries)}`);
 
 	if (entries.length === 0) {
 		logger.info(`[SYNC V3] No entries to sync for ${customerId}`);
@@ -137,10 +150,17 @@ export const syncItemV3 = async ({
 	const syncResult = result[0] as
 		| {
 				sync_balances?: {
-					updates?: Record<string, { balance?: number; adjustment?: number }>;
+					updates?: Record<
+						string,
+						{ balance?: number; adjustment?: number; entities?: unknown }
+					>;
 				};
 		  }
 		| undefined;
+
+	logger.info(
+		`[SYNC V3 DEBUG] SQL result: ${JSON.stringify(syncResult?.sync_balances)}`,
+	);
 
 	const formatted = formatSyncResult({
 		updates: syncResult?.sync_balances?.updates,
