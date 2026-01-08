@@ -1,13 +1,17 @@
 import {
+	AffectedResource,
 	type ApiVersion,
+	ApiVersionClass,
+	applyResponseVersionChanges,
 	ErrCode,
 	RecaseError,
 	type TrackParams,
+	type TrackResponseV2,
 } from "@autumn/shared";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { EventService } from "../../api/events/EventService.js";
 import { getOrCreateCachedFullCustomer } from "../../customers/cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
-import { deductFromRedisCusEnts } from "../utils/redis/deductFromRedisCusEnts.js";
+import { runRedisDeductionV2 } from "./redisTrackUtils/runRedisDeductionV2.js";
 import { constructEvent, type EventInfo } from "./trackUtils/eventUtils.js";
 import type { FeatureDeduction } from "./trackUtils/getFeatureDeductions.js";
 
@@ -71,64 +75,26 @@ export const runTrackV2 = async ({
 	}
 
 	// Try Redis deduction
-
 	console.log("Deducting from Redis...");
-	await deductFromRedisCusEnts({
+	const response = await runRedisDeductionV2({
 		ctx,
-		fullCus: fullCustomer,
-		deductions: featureDeductions,
-		overageBehaviour: body.overage_behavior || "cap",
+		fullCustomer,
+		featureDeductions,
+		overageBehavior: body.overage_behavior || "cap",
+		body,
 	});
 
-	// const { fallback, balances } = await runRedisDeduction({
-	// 	ctx,
-	// 	query: {
-	// 		expand: ctx.expand as CheckExpand[],
-	// 		skip_cache: ctx.skipCache,
-	// 	},
-	// 	trackParams: body,
-	// 	featureDeductions,
-	// 	overageBehavior: body.overage_behavior || "cap",
-	// 	eventInfo,
-	// });
+	const transformedResponse = applyResponseVersionChanges<TrackResponseV2>({
+		input: response,
+		targetVersion: apiVersion
+			? new ApiVersionClass(apiVersion)
+			: ctx.apiVersion,
+		resource: AffectedResource.Track,
+		legacyData: {
+			feature_id: body.feature_id || body.event_name,
+		},
+		ctx,
+	});
 
-	// let response: TrackResponseV2;
-	// if (fallback) {
-	// 	response = await executePostgresTracking({
-	// 		ctx,
-	// 		body,
-	// 		featureDeductions,
-	// 	});
-	// } else {
-	// 	// Clean balances
-
-	// 	// console.log("Balances:", balances);
-	// 	const finalBalances = getTrackBalancesResponse({
-	// 		featureDeductions,
-	// 		features: ctx.features,
-	// 		balances,
-	// 	});
-
-	// 	response = {
-	// 		customer_id: body.customer_id,
-	// 		entity_id: body.entity_id,
-	// 		event_name: body.event_name,
-	// 		value: body.value ?? 1,
-	// 		balance: finalBalances.balance,
-	// 		balances: finalBalances.balances,
-	// 	};
-	// }
-
-	// const transformedResponse = applyResponseVersionChanges<TrackResponseV2>({
-	// 	input: response,
-	// 	targetVersion: apiVersion
-	// 		? new ApiVersionClass(apiVersion)
-	// 		: ctx.apiVersion,
-	// 	resource: AffectedResource.Track,
-	// 	legacyData: {
-	// 		feature_id: body.feature_id || body.event_name,
-	// 	},
-	// 	ctx,
-	// });
-	// return transformedResponse;
+	return transformedResponse;
 };

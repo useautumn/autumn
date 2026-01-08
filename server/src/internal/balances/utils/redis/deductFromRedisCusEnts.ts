@@ -44,6 +44,7 @@ interface LuaDeductionResult {
 	remaining: number;
 	error?: string;
 	feature_id?: string;
+	logs?: string[];
 }
 
 export const deductFromRedisCusEnts = async ({
@@ -61,6 +62,7 @@ export const deductFromRedisCusEnts = async ({
 	isPaidAllocated: boolean;
 	actualDeductions: Record<string, number>;
 	remainingAmounts: Record<string, number>;
+	modifiedCusEntIds: string[];
 }> => {
 	const { org, env } = ctx;
 	const oldFullCus = structuredClone(fullCus);
@@ -79,6 +81,7 @@ export const deductFromRedisCusEnts = async ({
 
 	const actualDeductions: Record<string, number> = {};
 	const remainingAmounts: Record<string, number> = {};
+	const modifiedCusEntIds: string[] = [];
 
 	// Build cache key
 	const customerId = fullCus.id || fullCus.internal_id;
@@ -178,6 +181,17 @@ export const deductFromRedisCusEnts = async ({
 			feature_id: feature.id,
 		};
 
+		// Log what's in Redis BEFORE the Lua script runs
+		const preRedisState = await redis.call(
+			"JSON.GET",
+			cacheKey,
+			"$.customer_products[0].customer_entitlements[0].entities",
+		);
+		console.log(
+			`[deductFromRedisCusEnts] PRE-LUA Redis state for ${entityId}:`,
+			preRedisState,
+		);
+
 		const result = (await redis.eval(
 			DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
 			1, // number of keys
@@ -185,9 +199,27 @@ export const deductFromRedisCusEnts = async ({
 			JSON.stringify(luaParams), // ARGV[1]
 		)) as string;
 
+		// Log what's in Redis AFTER the Lua script runs
+		const postRedisState = await redis.call(
+			"JSON.GET",
+			cacheKey,
+			"$.customer_products[0].customer_entitlements[0].entities",
+		);
+		console.log(
+			`[deductFromRedisCusEnts] POST-LUA Redis state for ${entityId}:`,
+			postRedisState,
+		);
+
 		const resultJson = JSON.parse(result) as LuaDeductionResult;
 
-		console.log("Lua deduction result:", resultJson);
+		// Log Lua debug output
+		if (resultJson.logs && resultJson.logs.length > 0) {
+			console.log("\n========== LUA LOGS ==========");
+			for (const log of resultJson.logs) {
+				console.log(log);
+			}
+			console.log("==============================\n");
+		}
 
 		// Handle errors from Lua script
 		if (resultJson.error === "CUSTOMER_NOT_FOUND") {
@@ -216,8 +248,10 @@ export const deductFromRedisCusEnts = async ({
 			0,
 		);
 
-		// Convert updates to actual deductions
+		// Convert updates to actual deductions and collect modified cusEntIds
 		for (const [cusEntId, update] of Object.entries(updates)) {
+			modifiedCusEntIds.push(cusEntId);
+
 			const cusEnt = cusEnts.find((ce) => ce.id === cusEntId);
 			const deductedFeature = cusEnt?.entitlement.feature;
 			if (!deductedFeature) continue;
@@ -290,5 +324,6 @@ export const deductFromRedisCusEnts = async ({
 		actualDeductions,
 		remainingAmounts,
 		isPaidAllocated,
+		modifiedCusEntIds,
 	};
 };

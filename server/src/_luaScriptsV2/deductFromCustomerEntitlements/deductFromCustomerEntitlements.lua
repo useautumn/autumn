@@ -90,35 +90,53 @@ end
 -- Initialize remaining_amount (target_balance logic can be added later if needed)
 local remaining_amount = amount_to_deduct or 0
 
--- Track updates and pending JSON.SET operations
+-- Track updates and pending operations
 local updates = {}
-local pending_sets = {} -- { { path, value }, ... }
-local debug_info = {} -- Debug info to help troubleshoot
+local pending_sets = {} -- { { path, value }, ... } for JSON.SET
+local logs = {} -- Debug logs
+
+-- Helper: Round number to avoid floating-point precision issues
+-- Uses string.format to get clean decimal representation
+local function round_number(num)
+  if num == nil then return 0 end
+  -- Format to 10 decimal places, then convert back to number to strip trailing zeros
+  return tonumber(string.format("%.10g", num))
+end
+
+table.insert(logs, "=== LUA DEDUCTION START ===")
+table.insert(logs, "amount_to_deduct: " .. tostring(amount_to_deduct))
+table.insert(logs, "remaining_amount: " .. tostring(remaining_amount))
+table.insert(logs, "num_entitlements: " .. tostring(#sorted_entitlements))
+table.insert(logs, "overage_behaviour: " .. tostring(overage_behaviour))
+table.insert(logs, "overage_behavior_is_allow: " .. tostring(overage_behavior_is_allow))
 
 -- ============================================================================
 -- PASS 1: Deduct all entitlements down to 0 (or add if negative)
 -- ============================================================================
-for _, ent_obj in ipairs(sorted_entitlements) do
-  if remaining_amount == 0 then break end
+table.insert(logs, "=== PASS 1 START ===")
+
+for ent_idx, ent_obj in ipairs(sorted_entitlements) do
+  table.insert(logs, "PASS1 ent[" .. ent_idx .. "] remaining_amount=" .. tostring(remaining_amount))
+  if remaining_amount == 0 then 
+    table.insert(logs, "PASS1 breaking - remaining_amount is 0")
+    break 
+  end
   
   -- Extract entitlement properties
   local ent_id = ent_obj.customer_entitlement_id
   local credit_cost = ent_obj.credit_cost or 1
   local min_balance = ent_obj.min_balance
   local max_balance = ent_obj.max_balance
+  local usage_allowed = ent_obj.usage_allowed
   -- Check for both nil AND cjson.null (JSON null decodes to cjson.null, not Lua nil)
   local has_entity_scope = ent_obj.entity_feature_id ~= nil and ent_obj.entity_feature_id ~= cjson.null
+  
+  table.insert(logs, "PASS1 ent_id=" .. tostring(ent_id) .. " credit_cost=" .. tostring(credit_cost) .. " usage_allowed=" .. tostring(usage_allowed))
   
   -- Find entitlement in FullCustomer (returns 1-based indices)
   local cus_ent, cus_product, ce_idx, cp_idx = find_entitlement(full_customer, ent_id)
   
-  -- Debug: track if entitlement was found
-  table.insert(debug_info, {
-    ent_id = ent_id,
-    found = cus_ent ~= nil,
-    cp_idx = cp_idx,
-    ce_idx = ce_idx
-  })
+  table.insert(logs, "PASS1 found=" .. tostring(cus_ent ~= nil) .. " cp_idx=" .. tostring(cp_idx) .. " ce_idx=" .. tostring(ce_idx))
   
   -- Only process if entitlement found (Lua 5.1 compatible - no goto)
   if cus_ent then
@@ -131,6 +149,8 @@ for _, ent_obj in ipairs(sorted_entitlements) do
     local current_balance = cus_ent.balance or 0
     local current_additional_balance = cus_ent.additional_balance or 0
     local current_adjustment = cus_ent.adjustment or 0
+    
+    table.insert(logs, "PASS1 current_balance=" .. tostring(current_balance) .. " current_adjustment=" .. tostring(current_adjustment))
     
     -- Track original entities (preserve null if not entity-scoped)
     local original_entities = cus_ent.entities
@@ -161,24 +181,22 @@ for _, ent_obj in ipairs(sorted_entitlements) do
       overage_behavior_is_allow = overage_behavior_is_allow
     })
     
-    -- Debug: track deduction result
-    table.insert(debug_info, {
-      ent_id_deduction = ent_id,
-      current_balance = current_balance,
-      deducted = deducted,
-      new_balance = new_balance,
-      has_entity_scope = has_entity_scope
-    })
+    table.insert(logs, "PASS1 deduct_from_main_balance returned: deducted=" .. tostring(deducted) .. " new_balance=" .. tostring(new_balance))
     
-    -- Queue JSON.SET operations if any deduction occurred
+    -- Queue operations if any deduction occurred
     if deducted ~= 0 or additional_deducted ~= 0 then
-      -- Queue balance update
+      table.insert(logs, "PASS1 deduction occurred, updating in-memory and queueing")
+      
+      -- Update the in-memory cus_ent for Pass 2 to read correct values (no rounding yet)
+      cus_ent.balance = new_balance
+      cus_ent.adjustment = new_adjustment
+      if has_entity_scope then
+        cus_ent.entities = new_entities
+      end
+      
+      -- Queue numeric updates (rounding happens at the end)
       table.insert(pending_sets, { base_path .. '.balance', new_balance })
-      
-      -- Queue additional_balance update
       table.insert(pending_sets, { base_path .. '.additional_balance', new_additional_balance })
-      
-      -- Queue adjustment update
       table.insert(pending_sets, { base_path .. '.adjustment', new_adjustment })
       
       -- Only update entities if entity-scoped
@@ -190,7 +208,7 @@ for _, ent_obj in ipairs(sorted_entitlements) do
       end
       -- If not entity-scoped, don't touch entities at all (preserves null or existing value)
       
-      -- Track in updates for return value
+      -- Track in updates for return value (rounding happens at the end)
       updates[ent_id] = {
         balance = new_balance,
         additional_balance = new_additional_balance,
@@ -200,17 +218,29 @@ for _, ent_obj in ipairs(sorted_entitlements) do
         additional_deducted = additional_deducted
       }
       
+      local old_remaining = remaining_amount
       remaining_amount = remaining_amount - (deducted / credit_cost)
+      table.insert(logs, "PASS1 remaining: " .. tostring(old_remaining) .. " - (" .. tostring(deducted) .. "/" .. tostring(credit_cost) .. ") = " .. tostring(remaining_amount))
+    else
+      table.insert(logs, "PASS1 no deduction (deducted=" .. tostring(deducted) .. " additional_deducted=" .. tostring(additional_deducted) .. ")")
     end
   end
 end
 
+table.insert(logs, "=== PASS 1 END === remaining_amount=" .. tostring(remaining_amount))
+
 -- ============================================================================
 -- PASS 2: Allow usage_allowed=true entitlements to go negative
 -- ============================================================================
+table.insert(logs, "=== PASS 2 START === remaining_amount=" .. tostring(remaining_amount))
+
 if remaining_amount > 0 then
-  for _, ent_obj in ipairs(sorted_entitlements) do
-    if remaining_amount == 0 then break end
+  for ent_idx, ent_obj in ipairs(sorted_entitlements) do
+    table.insert(logs, "PASS2 ent[" .. ent_idx .. "] remaining_amount=" .. tostring(remaining_amount))
+    if remaining_amount == 0 then 
+      table.insert(logs, "PASS2 breaking - remaining_amount is 0")
+      break 
+    end
     
     -- Extract entitlement properties
     local ent_id = ent_obj.customer_entitlement_id
@@ -224,8 +254,11 @@ if remaining_amount > 0 then
     if usage_allowed == cjson.null then usage_allowed = false end
     usage_allowed = usage_allowed or overage_behavior_is_allow
     
+    table.insert(logs, "PASS2 ent_id=" .. tostring(ent_id) .. " usage_allowed=" .. tostring(usage_allowed))
+    
     -- Skip entitlements without usage_allowed
     if not usage_allowed then
+      table.insert(logs, "PASS2 skipping - usage_allowed is false")
       -- continue (Lua 5.1 compatible - just don't enter the if block)
     else
       -- Find entitlement in FullCustomer (returns 1-based indices)
@@ -267,22 +300,19 @@ if remaining_amount > 0 then
           overage_behavior_is_allow = overage_behavior_is_allow
         })
         
-        -- Queue JSON.SET operations if deduction occurred
+        table.insert(logs, "PASS2 current_balance=" .. tostring(current_balance) .. " deducted=" .. tostring(deducted) .. " new_balance=" .. tostring(new_balance))
+        
+        -- Queue operations if deduction occurred
         if deducted ~= 0 then
-          -- Update the in-memory cus_ent for subsequent iterations
+          -- Update the in-memory cus_ent for subsequent iterations (no rounding yet)
           cus_ent.balance = new_balance
           cus_ent.adjustment = new_adjustment
           if has_entity_scope then
             cus_ent.entities = new_entities
           end
           
-          -- Queue balance update
+          -- Queue numeric updates (rounding happens at the end)
           table.insert(pending_sets, { base_path .. '.balance', new_balance })
-          
-          -- Queue additional_balance update (unchanged from current, but sync anyway)
-          table.insert(pending_sets, { base_path .. '.additional_balance', new_additional_balance })
-          
-          -- Queue adjustment update
           table.insert(pending_sets, { base_path .. '.adjustment', new_adjustment })
           
           -- Only update entities if entity-scoped
@@ -292,7 +322,7 @@ if remaining_amount > 0 then
             entities_to_store = new_entities
           end
           
-          -- Update or create entry in updates
+          -- Update or create entry in updates (rounding happens at the end)
           if updates[ent_id] then
             -- Update existing entry (entitlement was updated in both passes)
             updates[ent_id].balance = new_balance
@@ -313,12 +343,20 @@ if remaining_amount > 0 then
             }
           end
           
+          local old_remaining = remaining_amount
           remaining_amount = remaining_amount - (deducted / credit_cost)
+          table.insert(logs, "PASS2 remaining: " .. tostring(old_remaining) .. " - (" .. tostring(deducted) .. "/" .. tostring(credit_cost) .. ") = " .. tostring(remaining_amount))
+        else
+          table.insert(logs, "PASS2 no deduction (deducted=" .. tostring(deducted) .. ")")
         end
       end
     end
   end
+else
+  table.insert(logs, "PASS2 skipped - remaining_amount <= 0")
 end
+
+table.insert(logs, "=== PASS 2 END === remaining_amount=" .. tostring(remaining_amount))
 
 -- Check overage behaviour
 if remaining_amount > 0 and overage_behaviour == 'reject' then
@@ -330,26 +368,38 @@ if remaining_amount > 0 and overage_behaviour == 'reject' then
   })
 end
 
--- Apply all pending JSON.SET operations (targeted updates, avoids cjson corruption)
+-- Apply all pending JSON.SET operations with rounding for numeric values
 for _, op in ipairs(pending_sets) do
   local path = op[1]
   local value = op[2]
   
-  -- For entities (already JSON string), use as-is; for numbers, convert to string
   if type(value) == 'string' then
     -- Already JSON encoded (entities)
     redis.call('JSON.SET', cache_key, path, value)
   else
-    -- Number - JSON.SET accepts raw numbers
-    redis.call('JSON.SET', cache_key, path, value)
+    -- Number - round to avoid floating-point precision issues
+    local rounded_value = round_number(value)
+    redis.call('JSON.SET', cache_key, path, rounded_value)
   end
+  table.insert(logs, "JSON.SET " .. path .. " = " .. tostring(value))
 end
 
--- Return result
+-- Round all numeric values in updates before returning
+for ent_id, update in pairs(updates) do
+  update.balance = round_number(update.balance)
+  update.additional_balance = round_number(update.additional_balance)
+  update.adjustment = round_number(update.adjustment)
+  update.deducted = round_number(update.deducted)
+  update.additional_deducted = round_number(update.additional_deducted)
+end
+
+table.insert(logs, "=== LUA DEDUCTION END ===")
+
+-- Return result with rounded remaining
 return cjson.encode({
   updates = updates,
-  remaining = remaining_amount,
+  remaining = round_number(remaining_amount),
   error = cjson.null,
-  debug = debug_info
+  logs = logs
 })
 
