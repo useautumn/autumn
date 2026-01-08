@@ -40,8 +40,7 @@ export const createWorkflowTask = <TInput extends BaseWorkflowInput, TOutput>({
 
 		const autumnContext = await createWorkerContext({
 			db,
-			orgId,
-			env,
+			payload: input,
 			logger,
 			workflowId: workflowMetadata.workflowId,
 		});

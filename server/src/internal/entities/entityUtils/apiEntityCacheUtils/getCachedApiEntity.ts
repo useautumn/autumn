@@ -2,6 +2,7 @@ import {
 	type ApiEntityV1,
 	ApiEntityV1Schema,
 	type AppEnv,
+	CusExpand,
 	type EntityLegacyData,
 	EntityLegacyDataSchema,
 	EntityNotFoundError,
@@ -112,8 +113,11 @@ export const getCachedApiEntity = async ({
 				inStatuses: RELEVANT_STATUSES,
 				withEntities: true,
 				withSubs: true,
-				entityId,
+				// entityId,
+				expand: [CusExpand.Invoices],
 			});
+
+			fullCus.entity = fullCus.entities.find((e) => e.id === entityId);
 		}
 
 		const entity = fullCus.entity;
