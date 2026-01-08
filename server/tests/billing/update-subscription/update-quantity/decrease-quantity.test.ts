@@ -6,15 +6,12 @@ import {
 } from "@autumn/shared";
 import { expectLatestInvoiceCorrect } from "@tests/billing/utils/expectLatestInvoiceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import {
-	initScenario,
-	s,
-} from "@tests/utils/testInitUtils/initScenario.js";
+import { items } from "@tests/utils/fixtures/items.js";
+import { products } from "@tests/utils/fixtures/products.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
-import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
 
 /**
  * Subscription Update - Decrease Quantity Tests
@@ -30,13 +27,13 @@ test.concurrent(
 		const billingUnits = 12;
 		const pricePerUnit = 8;
 
-		const prepaidItem = constructPrepaidItem({
+		const prepaidItem = items.prepaid({
 			featureId: TestFeature.Messages,
 			billingUnits,
 			price: pricePerUnit,
 		});
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "prepaid",
 			items: [prepaidItem],
 		});
@@ -71,7 +68,7 @@ test.concurrent(
 		});
 
 		// Downgrade from 20 to 5 units
-		await autumnV1.subscriptionUpdate({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [

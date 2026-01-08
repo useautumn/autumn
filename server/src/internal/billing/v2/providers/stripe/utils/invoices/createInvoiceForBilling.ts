@@ -28,7 +28,7 @@ export const createInvoiceForBilling = async ({
 }): Promise<PayInvoiceResult> => {
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 	const { addLineParams } = stripeInvoiceAction;
-	const invoiceMode = billingContext.invoiceMode;
+	const { invoiceMode } = billingContext;
 
 	const shouldFinalizeInvoice = invoiceMode
 		? invoiceMode.finalizeInvoice
@@ -37,10 +37,13 @@ export const createInvoiceForBilling = async ({
 		? invoiceMode.enableProductImmediately
 		: true;
 
+	const collectionMethod = shouldPayImmediately ? "charge_automatically" : "send_invoice";
+
 	const draftInvoice = await createStripeInvoice({
 		stripeCli,
 		stripeCusId: billingContext.stripeCustomer.id,
 		metadata: invoiceMetadata,
+		collectionMethod,
 	});
 
 	await addStripeInvoiceLines({
