@@ -9,32 +9,19 @@ const __dirname = dirname(__filename);
 const LUA_SCRIPTS_V2_DIR = join(__dirname, "../../../../_luaScriptsV2");
 
 // ============================================================================
-// HELPER SCRIPTS (deductFromCustomerEntitlements/)
-// ============================================================================
-
-const DEDUCT_FROM_MAIN_BALANCE = readFileSync(
-	join(
-		LUA_SCRIPTS_V2_DIR,
-		"deductFromCustomerEntitlements/deductFromMainBalance.lua",
-	),
-	"utf-8",
-);
-
-// ============================================================================
 // MAIN SCRIPTS
 // ============================================================================
 
-const deductFromCustomerEntitlementsScript = readFileSync(
+/**
+ * Lua script for deducting from customer entitlements in Redis.
+ * Uses JSON.NUMINCRBY for atomic incremental updates to prevent race conditions.
+ * The script is self-contained with all helper functions inline.
+ * Supports both positive deductions and negative refunds.
+ */
+export const DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT = readFileSync(
 	join(
 		LUA_SCRIPTS_V2_DIR,
 		"deductFromCustomerEntitlements/deductFromCustomerEntitlements.lua",
 	),
 	"utf-8",
 );
-
-/**
- * Lua script for deducting from customer entitlements in Redis
- * Mirrors the SQL function deduct_from_cus_ents in performDeduction.sql
- */
-export const DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT = `${DEDUCT_FROM_MAIN_BALANCE}\n${deductFromCustomerEntitlementsScript}`;
-

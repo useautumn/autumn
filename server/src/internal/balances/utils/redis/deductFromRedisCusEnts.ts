@@ -191,6 +191,9 @@ export const deductFromRedisCusEnts = async ({
 			`[deductFromRedisCusEnts] PRE-LUA Redis state for ${entityId}:`,
 			preRedisState,
 		);
+		console.log(
+			`[deductFromRedisCusEnts] Lua params: amount_to_deduct=${luaParams.amount_to_deduct}, target_balance=${luaParams.target_balance}`,
+		);
 
 		const result = (await redis.eval(
 			DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,

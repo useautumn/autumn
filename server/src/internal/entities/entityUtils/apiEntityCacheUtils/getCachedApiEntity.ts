@@ -1,9 +1,7 @@
 import {
 	type ApiEntityV1,
 	ApiEntityV1Schema,
-	type AppEnv,
 	type EntityLegacyData,
-	EntityLegacyDataSchema,
 	EntityNotFoundError,
 	type FullCustomer,
 	filterEntityLevelCusProducts,
@@ -11,13 +9,8 @@ import {
 } from "@autumn/shared";
 import { CACHE_CUSTOMER_VERSION } from "@lua/cacheConfig.js";
 import type { Redis } from "ioredis";
-import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
-import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
-import { normalizeFromSchema } from "@/utils/cacheUtils/normalizeFromSchema.js";
-import { setCachedApiCustomer } from "../../../customers/cusUtils/apiCusCacheUtils/setCachedApiCustomer.js";
+import { getOrSetCachedFullCustomer } from "../../../customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
 import { getApiEntityBase } from "../apiEntityUtils/getApiEntityBase.js";
 
 export const buildCachedApiEntityKey = ({
@@ -45,92 +38,32 @@ export const getCachedApiEntity = async ({
 	entityId,
 	skipCustomerMerge = false,
 	fullCus,
-	redisInstance,
-	cacheVersion,
+	redisInstance: _redisInstance,
+	cacheVersion: _cacheVersion,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	entityId: string;
 	skipCustomerMerge?: boolean; // If true, returns only entity's own features (no customer merging)
 	fullCus?: FullCustomer;
-	redisInstance?: Redis; // Optional redis instance for cross-region sync
-	cacheVersion?: string; // Optional cache version override (for sync)
+	redisInstance?: Redis; // Kept for backwards compatibility
+	cacheVersion?: string; // Kept for backwards compatibility
 }): Promise<{ apiEntity: ApiEntityV1; legacyData: EntityLegacyData }> => {
-	const { org, env, db, skipCache } = ctx;
-	const redisClient = redisInstance || redis;
-
 	const getExpandedApiEntity = async () => {
-		// Try to get from cache using Lua script (unless skipCache is true)
-		if (!skipCache) {
-			const cachedResult = await tryRedisRead(() =>
-				(redisClient as typeof redis).getEntity(
-					cacheVersion || "",
-					org.id,
-					env,
-					customerId,
-					entityId,
-					skipCustomerMerge ? "true" : "false",
-				),
-			);
-
-			// If found in cache, parse and return
-			if (cachedResult) {
-				const parsed = JSON.parse(cachedResult as string) as ApiEntityV1 & {
-					legacyData: EntityLegacyData;
-				};
-
-				// Extract legacyData before normalization (not in schema)
-				const { legacyData, ...rest } = parsed;
-
-				// Normalize the data based on schema
-				const normalized = normalizeFromSchema<ApiEntityV1>({
-					schema: ApiEntityV1Schema,
-					data: rest,
-				});
-
-				const normalizedLegacyData = normalizeFromSchema<EntityLegacyData>({
-					schema: EntityLegacyDataSchema,
-					data: legacyData,
-				});
-
-				return {
-					apiEntity: ApiEntityV1Schema.parse(normalized),
-					legacyData: normalizedLegacyData,
-				};
-			}
-		}
-
-		// Record timestamp before Postgres fetch for stale write prevention
-		const fetchTimeMs = Date.now();
-		// Cache miss or skipCache - fetch from DB
+		// Get FullCustomer from cache (reads from same cache that track Lua script updates)
+		// Falls back to DB if cache miss
 		if (!fullCus) {
-			fullCus = await CusService.getFull({
-				db,
-				idOrInternalId: customerId,
-				orgId: org.id,
-				env: env as AppEnv,
-				inStatuses: RELEVANT_STATUSES,
-				withEntities: true,
-				withSubs: true,
+			fullCus = await getOrSetCachedFullCustomer({
+				ctx,
+				customerId,
 				entityId,
+				source: "getCachedApiEntity",
 			});
 		}
 
 		const entity = fullCus.entity;
 		if (!entity) {
-			// throw new Error(`Entity ${entityId} not found`);
 			throw new EntityNotFoundError({ entityId });
-		}
-
-		// Store in cache (only if not skipping cache)
-		if (!skipCache) {
-			// Set entity cache
-			await setCachedApiCustomer({
-				ctx,
-				fullCus,
-				customerId,
-				fetchTimeMs,
-			});
 		}
 
 		// Build ApiEntity with full products for return
