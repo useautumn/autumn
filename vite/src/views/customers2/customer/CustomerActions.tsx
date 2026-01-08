@@ -2,6 +2,7 @@ import type { Feature, FullCusProduct } from "@autumn/shared";
 import { AppEnv, FeatureUsageType, ProcessorType } from "@autumn/shared";
 import {
 	ArrowSquareOutIcon,
+	BracketsSquareIcon,
 	CaretDownIcon,
 	PencilSimpleIcon,
 	SubtractIcon,
@@ -35,6 +36,7 @@ import UpdateCustomerDialog from "@/views/customers/customer/components/UpdateCu
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { AddCouponDialog } from "./components/AddCouponDialog";
 import { CreateEntity } from "./components/CreateEntity";
+import { ShowCustomerObjectSheet } from "./components/ShowCustomerObjectSheet";
 
 export function CustomerActions() {
 	const [isModalOpen, setIsModalOpen] = useState(false);
@@ -43,6 +45,7 @@ export function CustomerActions() {
 	const [addCouponOpen, setAddCouponOpen] = useState(false);
 	const [actionsOpen, setActionsOpen] = useState(false);
 	const [portalLoading, setPortalLoading] = useState(false);
+	const [showObjectOpen, setShowObjectOpen] = useState(false);
 	const { customer } = useCusQuery();
 	const { features } = useFeaturesQuery();
 	const { org } = useOrg();
@@ -98,6 +101,10 @@ export function CustomerActions() {
 			/>
 			<CreateEntity open={createEntityOpen} setOpen={setCreateEntityOpen} />
 			<AddCouponDialog open={addCouponOpen} setOpen={setAddCouponOpen} />
+			<ShowCustomerObjectSheet
+				open={showObjectOpen}
+				setOpen={setShowObjectOpen}
+			/>
 
 			<DropdownMenu open={actionsOpen} onOpenChange={setActionsOpen}>
 				<DropdownMenuTrigger asChild>
@@ -133,6 +140,13 @@ export function CustomerActions() {
 					>
 						<TicketIcon />
 						Add coupon
+					</DropdownMenuItem>
+					<DropdownMenuItem
+						onClick={() => setShowObjectOpen(true)}
+						className="flex gap-2"
+					>
+						<BracketsSquareIcon />
+						Show customer object
 					</DropdownMenuItem>
 					<DropdownMenuItem
 						onClick={handleOpenBillingPortal}
