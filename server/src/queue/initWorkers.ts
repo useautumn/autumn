@@ -85,15 +85,6 @@ const processMessage = async ({
 			return;
 		}
 
-		if (job.name === JobName.Migration) {
-			await runMigrationTask({
-				db,
-				payload: job.data,
-				logger: workerLogger,
-			});
-			return;
-		}
-
 		if (job.name === JobName.ClearCreditSystemCustomerCache) {
 			await runClearCreditSystemCacheTask({
 				db,
@@ -106,8 +97,7 @@ const processMessage = async ({
 		// Jobs below need worker context
 		const ctx = await createWorkerContext({
 			db,
-			orgId: job.data.orgId,
-			env: job.data.env,
+			payload: job.data,
 			logger: workerLogger,
 		});
 
@@ -116,6 +106,15 @@ const processMessage = async ({
 				ctx,
 				messageId: message.MessageId,
 			});
+		}
+
+		if (job.name === JobName.Migration) {
+			if (!ctx) {
+				workerLogger.error("No context found for migration job");
+				return;
+			}
+			await runMigrationTask({ ctx, payload: job.data });
+			return;
 		}
 
 		if (actionHandlers.includes(job.name as JobName)) {
