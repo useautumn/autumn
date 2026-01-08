@@ -56,6 +56,13 @@ export const executeStripeInvoiceAction = async ({
 			stripeInvoice: invoice,
 		});
 
+		await upsertInvoiceFromBilling({
+			ctx,
+			stripeInvoice: invoice,
+			fullProducts: billingContext.fullProducts,
+			fullCustomer: billingContext.fullCustomer,
+		});
+
 		return {
 			stripeInvoice: invoice,
 			deferred: true,

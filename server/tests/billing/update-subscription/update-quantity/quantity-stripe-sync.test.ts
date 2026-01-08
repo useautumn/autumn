@@ -1,16 +1,13 @@
 import { expect, test } from "bun:test";
 import { OnDecrease, OnIncrease } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import {
-	initScenario,
-	s,
-} from "@tests/utils/testInitUtils/initScenario.js";
+import { items } from "@tests/utils/fixtures/items.js";
+import { products } from "@tests/utils/fixtures/products.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
-import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
 
 /**
  * Subscription Item Quantity Difference Tests
@@ -26,20 +23,19 @@ import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
  * 3. When updating one product, we must preserve the quantity from other products
  */
 
+const billingUnits = 12;
+
 test.concurrent(
 	`${chalk.yellowBright("update-quantity: stripe sync upgrade quantity difference")}`,
 	async () => {
 		const customerId = "qty-stripe-sync-upgrade";
-		const billingUnits = 12;
-		const pricePerUnit = 8;
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "prepaid",
 			items: [
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Messages,
 					billingUnits,
-					price: pricePerUnit,
 					config: {
 						on_increase: OnIncrease.ProrateImmediately,
 						on_decrease: OnDecrease.NoProrations,
@@ -101,7 +97,7 @@ test.concurrent(
 		const updatedQuantity = updatedUnits * billingUnits;
 		const unitsDifference = updatedUnits - initialUnits; // +3
 
-		await autumnV1.subscriptionUpdate({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [
@@ -140,16 +136,13 @@ test.concurrent(
 	`${chalk.yellowBright("update-quantity: stripe sync downgrade quantity difference")}`,
 	async () => {
 		const customerId = "qty-stripe-sync-downgrade";
-		const billingUnits = 12;
-		const pricePerUnit = 8;
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "prepaid",
 			items: [
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Messages,
 					billingUnits,
-					price: pricePerUnit,
 					config: {
 						on_increase: OnIncrease.ProrateImmediately,
 						on_decrease: OnDecrease.NoProrations,
@@ -208,7 +201,7 @@ test.concurrent(
 		const downgradedQuantity = downgradedUnits * billingUnits;
 		const unitsDifference = downgradedUnits - initialUnits; // -5
 
-		await autumnV1.subscriptionUpdate({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [

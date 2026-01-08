@@ -10,6 +10,9 @@ import {
 	UsageModel,
 } from "@autumn/shared";
 
+/* 
+**  Only required for more complex features, consider using items in the test fixtures instead
+*/
 export const constructFeatureItem = ({
 	featureId,
 	includedUsage = 150,

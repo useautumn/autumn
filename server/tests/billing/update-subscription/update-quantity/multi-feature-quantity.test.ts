@@ -1,13 +1,10 @@
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import {
-	initScenario,
-	s,
-} from "@tests/utils/testInitUtils/initScenario.js";
+import { items } from "@tests/utils/fixtures/items.js";
+import { products } from "@tests/utils/fixtures/products.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
-import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
 
 /**
  * Subscription Update - Feature Matching Tests
@@ -26,20 +23,19 @@ test.concurrent(
 	async () => {
 		const customerId = "multi-feat-reverse-order";
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "multi_feature",
 			items: [
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Messages,
 					billingUnits: 10,
 					price: 5,
 				}),
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Words,
 					billingUnits: 100,
-					price: 10,
 				}),
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Users,
 					billingUnits: 1,
 					price: 2,
@@ -67,7 +63,7 @@ test.concurrent(
 		});
 
 		// Update with features in REVERSE order: Users, Words, Messages
-		await autumnV1.subscriptionUpdate({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [
@@ -91,20 +87,19 @@ test.concurrent(
 	async () => {
 		const customerId = "multi-feat-random-order";
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "multi_feature",
 			items: [
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Messages,
 					billingUnits: 10,
 					price: 5,
 				}),
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Words,
 					billingUnits: 100,
-					price: 10,
 				}),
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Users,
 					billingUnits: 1,
 					price: 2,
@@ -132,7 +127,7 @@ test.concurrent(
 		});
 
 		// Update with features in random order: Words, Users, Messages
-		await autumnV1.subscriptionUpdate({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [
@@ -155,20 +150,19 @@ test.concurrent(
 	async () => {
 		const customerId = "multi-feat-partial-update";
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "multi_feature",
 			items: [
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Messages,
 					billingUnits: 10,
 					price: 5,
 				}),
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Words,
 					billingUnits: 100,
-					price: 10,
 				}),
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Users,
 					billingUnits: 1,
 					price: 2,
@@ -195,7 +189,7 @@ test.concurrent(
 		});
 
 		// Only update Words, keep others the same
-		await autumnV1.subscriptionUpdate({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [
@@ -221,10 +215,10 @@ test.concurrent(
 	async () => {
 		const customerId = "multi-feat-nonexistent";
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "multi_feature",
 			items: [
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Messages,
 					billingUnits: 10,
 					price: 5,
@@ -249,7 +243,7 @@ test.concurrent(
 		});
 
 		// Try to update a feature that doesn't exist in the subscription
-		const invalidUpdate = autumnV1.subscriptionUpdate({
+		const invalidUpdate = autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [
@@ -267,18 +261,17 @@ test.concurrent(
 	async () => {
 		const customerId = "multi-feat-duplicate-ids";
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "two_feature",
 			items: [
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Messages,
 					billingUnits: 10,
 					price: 5,
 				}),
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Words,
 					billingUnits: 100,
-					price: 10,
 				}),
 			],
 		});
@@ -301,7 +294,7 @@ test.concurrent(
 		});
 
 		// Send the same feature twice (edge case - should use last value or error)
-		await autumnV1.subscriptionUpdate({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [

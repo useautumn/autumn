@@ -25,8 +25,7 @@ export const handleDeferredAutumnBillingPlan = async ({
 	// Execute stripe billing plan
 	await executeStripeBillingPlan({
 		ctx,
-		stripeBillingPlan: billingPlan.stripe,
-		autumnBillingPlan: billingPlan.autumn,
+		billingPlan,
 		billingContext,
 		resumeFromDeferred: true,
 	});
