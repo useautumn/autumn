@@ -1,6 +1,5 @@
 import type { FullCusProduct } from "@models/cusProductModels/cusProductModels";
 import type { FullCustomer } from "../../models/cusModels/fullCusModel";
-import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums";
 import {
 	cusProductHasSubscription,
 	customerProductHasSubscriptionSchedule,
@@ -75,35 +74,6 @@ export const getOngoingCusProductById = ({
 	});
 
 	return activeCusProduct;
-};
-
-/**
- * Finds the scheduled customer product in a given group for a customer.
- * Filters by product group, scheduled status, and entity.
- */
-export const getScheduledMainCusProductByGroup = ({
-	fullCus,
-	productGroup,
-}: {
-	fullCus: FullCustomer;
-	productGroup: string;
-}) => {
-	return fullCus.customer_products.find((cp) => {
-		const productGroupMatches = cp.product.group === productGroup;
-
-		const statusMatches = cp.status === CusProductStatus.Scheduled;
-
-		const entityMatches = isCusProductOnEntity({
-			cusProduct: cp,
-			internalEntityId: fullCus.entity?.internal_id,
-		});
-
-		const isMainProduct = !cp.product.is_add_on;
-
-		return (
-			productGroupMatches && statusMatches && entityMatches && isMainProduct
-		);
-	});
 };
 
 const sortCustomerProductsForBilling = ({

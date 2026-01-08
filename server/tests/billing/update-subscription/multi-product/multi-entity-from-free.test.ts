@@ -27,10 +27,12 @@ test.concurrent(`${chalk.yellowBright("multi-entity-from-free: update free items
 
 	const { autumnV1, ctx, entities } = await initScenario({
 		customerId,
-		options: [
+		setup: [
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro, free] }),
 			s.entities({ count: 2, featureId: TestFeature.Users }),
+		],
+		actions: [
 			s.attach({ productId: "pro", entityIndex: 0 }),
 			s.attach({ productId: "free", entityIndex: 1 }),
 		],

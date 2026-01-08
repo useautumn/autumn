@@ -3,7 +3,6 @@ import {
 	type AutumnBillingPlan,
 	AutumnBillingPlanSchema,
 	type DeferredAutumnBillingPlanData,
-	type FreeTrialPlan,
 	type InvoiceMode,
 	InvoiceModeSchema,
 } from "./autumnBillingPlan";
@@ -31,7 +30,6 @@ export {
 	StripeSubscriptionScheduleActionSchema,
 	type AutumnBillingPlan,
 	type DeferredAutumnBillingPlanData,
-	type FreeTrialPlan,
 	type InvoiceMode,
 	type StripeBillingPlan,
 	type StripeInvoiceAction,

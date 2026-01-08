@@ -18,6 +18,7 @@ export const executeAutumnBillingPlan = async ({
 	const {
 		insertCustomerProducts,
 		updateCustomerProduct,
+		deleteCustomerProduct,
 		customPrices,
 		customEntitlements,
 		customFreeTrial,
@@ -58,7 +59,15 @@ export const executeAutumnBillingPlan = async ({
 		});
 	}
 
-	// 4. Update entitlement balances
+	// 4. Delete scheduled customer product (e.g., when updating while canceling)
+	if (deleteCustomerProduct) {
+		await CusProductService.delete({
+			db,
+			cusProductId: deleteCustomerProduct.id,
+		});
+	}
+
+	// 5. Update entitlement balances
 	await updateCustomerEntitlements({
 		ctx,
 		updates: autumnBillingPlan.updateCustomerEntitlements,

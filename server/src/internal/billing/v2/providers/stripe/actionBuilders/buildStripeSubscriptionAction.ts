@@ -5,7 +5,6 @@ import { buildStripeSubscriptionItemsUpdate } from "@server/internal/billing/v2/
 import { buildStripeSubscriptionCreateAction } from "@server/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionCreateAction";
 import { buildStripeSubscriptionUpdateAction } from "@server/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionUpdateAction";
 import type {
-	FreeTrialPlan,
 	StripeSubscriptionAction,
 	StripeSubscriptionScheduleAction,
 } from "@/internal/billing/v2/types/billingPlan";
@@ -15,13 +14,11 @@ export const buildStripeSubscriptionAction = ({
 	billingContext,
 	finalCustomerProducts,
 	stripeSubscriptionScheduleAction,
-	freeTrialPlan,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	finalCustomerProducts: FullCusProduct[];
 	stripeSubscriptionScheduleAction?: StripeSubscriptionScheduleAction;
-	freeTrialPlan?: FreeTrialPlan;
 }): StripeSubscriptionAction | undefined => {
 	const { stripeSubscription } = billingContext;
 
@@ -64,7 +61,6 @@ export const buildStripeSubscriptionAction = ({
 			ctx,
 			billingContext,
 			subItemsUpdate,
-			freeTrialPlan,
 			stripeSubscriptionScheduleAction,
 		});
 	}

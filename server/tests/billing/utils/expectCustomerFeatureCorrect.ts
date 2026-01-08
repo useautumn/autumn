@@ -23,7 +23,7 @@ export const expectCustomerFeatureExists = async ({
 	expect(feature).toBeDefined();
 };
 
-const ONE_HOUR_MS = 60 * 60 * 1000;
+const TEN_MINUTES_MS = 10 * 60 * 1000;
 
 export const expectCustomerFeatureCorrect = async ({
 	customerId,
@@ -57,7 +57,7 @@ export const expectCustomerFeatureCorrect = async ({
 		const actualResetsAt = feature.next_reset_at ?? 0;
 		expect(actualResetsAt).toBeDefined();
 		expect(Math.abs(actualResetsAt - resetsAt)).toBeLessThanOrEqual(
-			ONE_HOUR_MS,
+			TEN_MINUTES_MS,
 		);
 	}
 };

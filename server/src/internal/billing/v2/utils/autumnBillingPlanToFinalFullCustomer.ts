@@ -10,6 +10,7 @@ export const autumnBillingPlanToFinalFullCustomer = ({
 }) => {
 	const {
 		updateCustomerProduct,
+		deleteCustomerProduct,
 		insertCustomerProducts,
 		updateCustomerEntitlements,
 	} = autumnBillingPlan;
@@ -23,13 +24,20 @@ export const autumnBillingPlanToFinalFullCustomer = ({
 	];
 
 	// 2. Replace updated customer product if applicable
-	const customerProducts = combinedCustomerProducts.map((customerProduct) =>
+	let customerProducts = combinedCustomerProducts.map((customerProduct) =>
 		customerProduct.id === updateCustomerProduct?.id
 			? updateCustomerProduct
 			: customerProduct,
 	);
 
-	// 3. Apply entitlement balance updates
+	// 3. Remove deleted customer product if applicable
+	if (deleteCustomerProduct) {
+		customerProducts = customerProducts.filter(
+			(customerProduct) => customerProduct.id !== deleteCustomerProduct.id,
+		);
+	}
+
+	// 4. Apply entitlement balance updates
 	if (updateCustomerEntitlements) {
 		const entitlementById = new Map(
 			customerProducts
@@ -45,7 +53,7 @@ export const autumnBillingPlanToFinalFullCustomer = ({
 		}
 	}
 
-	// 4. Return final full customer
+	// 5. Return final full customer
 	return {
 		...finalFullCustomer,
 		customer_products: customerProducts,

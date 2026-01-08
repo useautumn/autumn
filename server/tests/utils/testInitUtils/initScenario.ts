@@ -37,9 +37,15 @@ type EntityConfig = {
 	featureId: string;
 };
 
+type FeatureOption = {
+	feature_id: string;
+	quantity: number;
+};
+
 type AttachmentDef = {
 	productId: string;
 	entityIndex?: number;
+	options?: FeatureOption[];
 };
 
 type CancelDef = {
@@ -136,20 +142,24 @@ const entities = ({
  * Product ID is auto-prefixed with customerId.
  * @param productId - The product ID (without prefix)
  * @param entityIndex - Optional entity index (0-based) to attach to (omit for customer-level)
+ * @param options - Optional feature options (e.g., prepaid quantity)
  * @example s.attach({ productId: "pro" }) // customer-level
  * @example s.attach({ productId: "pro", entityIndex: 0 }) // attach to first entity (ent-1)
  * @example s.attach({ productId: "free", entityIndex: 1 }) // attach to second entity (ent-2)
+ * @example s.attach({ productId: "pro", options: [{ feature_id: "messages", quantity: 100 }] })
  */
 const attach = ({
 	productId,
 	entityIndex,
+	options,
 }: {
 	productId: string;
 	entityIndex?: number;
+	options?: FeatureOption[];
 }): ConfigFn => {
 	return (config) => ({
 		...config,
-		attachments: [...config.attachments, { productId, entityIndex }],
+		attachments: [...config.attachments, { productId, entityIndex, options }],
 	});
 };
 
@@ -357,6 +367,7 @@ export const initScenario = async ({
 			customer_id: customerId,
 			product_id: prefixedProductId,
 			entity_id: entityId,
+			options: attachment.options,
 		});
 	}
 

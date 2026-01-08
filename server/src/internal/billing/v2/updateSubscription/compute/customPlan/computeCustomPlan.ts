@@ -6,7 +6,7 @@ import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@server/internal/billing/v2/billingContext";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan";
-import { computeCustomPlanFreeTrial } from "@/internal/billing/v2/updateSubscription/compute/customPlan/computeCustomPlanFreeTrial";
+import { computeDeleteCustomerProduct } from "@/internal/billing/v2/updateSubscription/compute/computeDeleteCustomerProduct";
 import { computeCustomPlanNewCustomerProduct } from "@/internal/billing/v2/updateSubscription/compute/customPlan/computeCustomPlanNewCustomerProduct";
 
 export const computeCustomPlan = async ({
@@ -18,28 +18,21 @@ export const computeCustomPlan = async ({
 	updateSubscriptionContext: UpdateSubscriptionBillingContext;
 	params: UpdateSubscriptionV0Params;
 }) => {
-	const { customerProduct, customPrices, customEnts } =
-		updateSubscriptionContext;
+	const {
+		customerProduct,
+		customPrices,
+		customEnts,
+		trialContext,
+		fullCustomer,
+	} = updateSubscriptionContext;
 
 	const customFullProduct = updateSubscriptionContext.fullProducts[0];
 
-	// 2. Compute the custom trial details
-	const { freeTrialPlan, customFreeTrial } = computeCustomPlanFreeTrial({
-		updateSubscriptionContext,
-		params,
-		fullProduct: customFullProduct,
-	});
-
-	if (freeTrialPlan.trialEndsAt) {
-		updateSubscriptionContext.billingCycleAnchorMs = freeTrialPlan.trialEndsAt;
-	}
-
-	// 3. Compute the new customer product
+	// Compute the new customer product
 	const newFullCustomerProduct = computeCustomPlanNewCustomerProduct({
 		ctx,
 		updateSubscriptionContext,
 		fullProduct: customFullProduct,
-		freeTrialPlan,
 	});
 
 	const lineItems = buildAutumnLineItems({
@@ -49,15 +42,22 @@ export const computeCustomPlan = async ({
 		billingContext: updateSubscriptionContext,
 	});
 
+	// If customer product is canceling, compute the scheduled product to delete
+	const deleteCustomerProduct = computeDeleteCustomerProduct({
+		fullCustomer,
+		customerProduct,
+	});
+
 	return {
 		insertCustomerProducts: [newFullCustomerProduct],
 		updateCustomerProduct: {
 			...customerProduct,
 			status: CusProductStatus.Expired,
 		},
-		customPrices: customPrices,
+		deleteCustomerProduct,
+		customPrices,
 		customEntitlements: customEnts,
-		customFreeTrial: customFreeTrial,
+		customFreeTrial: trialContext?.customFreeTrial,
 		lineItems,
 	} satisfies AutumnBillingPlan;
 };
