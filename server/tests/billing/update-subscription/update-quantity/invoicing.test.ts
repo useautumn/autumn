@@ -1,16 +1,12 @@
 import { expect, test } from "bun:test";
 import type { ApiCustomer } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import {
-	initScenario,
-	s,
-} from "@tests/utils/testInitUtils/initScenario.js";
+import { items } from "@tests/utils/fixtures/items.js";
+import { products } from "@tests/utils/fixtures/products.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
-import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
 
 const billingUnits = 12;
-const pricePerUnit = 8;
 
 /**
  * Subscription Update - Invoice Generation Tests
@@ -25,13 +21,12 @@ test.concurrent(
 	async () => {
 		const customerId = "invoicing-upgrade";
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "prepaid",
 			items: [
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Messages,
 					billingUnits,
-					price: pricePerUnit,
 				}),
 			],
 		});
@@ -55,7 +50,7 @@ test.concurrent(
 		const beforeUpdate = await autumnV1.customers.get<ApiCustomer>(customerId);
 		const invoiceCountBefore = beforeUpdate.invoices?.length || 0;
 
-		await autumnV1.subscriptionUpdate({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [

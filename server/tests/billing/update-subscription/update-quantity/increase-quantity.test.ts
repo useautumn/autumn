@@ -6,15 +6,12 @@ import {
 } from "@autumn/shared";
 import { expectLatestInvoiceCorrect } from "@tests/billing/utils/expectLatestInvoiceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import {
-	initScenario,
-	s,
-} from "@tests/utils/testInitUtils/initScenario.js";
+import { items } from "@tests/utils/fixtures/items.js";
+import { products } from "@tests/utils/fixtures/products.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
-import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
 
 /**
  * Subscription Update - Increase Quantity Tests
@@ -32,13 +29,13 @@ test.concurrent(
 		const billingUnits = 12;
 		const pricePerUnit = 8;
 
-		const prepaidItem = constructPrepaidItem({
+		const prepaidItem = items.prepaid({
 			featureId: TestFeature.Messages,
 			billingUnits,
 			price: pricePerUnit,
 		});
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "prepaid",
 			items: [prepaidItem],
 		});
@@ -73,7 +70,7 @@ test.concurrent(
 		});
 
 		// Upgrade from 10 to 20 units
-		await autumnV1.subscriptionUpdate({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [
@@ -106,18 +103,17 @@ test.concurrent(
 		const messagesBillingUnits = 10;
 		const wordsBillingUnits = 100;
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "multi_feature",
 			items: [
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Messages,
 					billingUnits: messagesBillingUnits,
 					price: 5,
 				}),
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Words,
 					billingUnits: wordsBillingUnits,
-					price: 10,
 				}),
 			],
 		});
@@ -164,7 +160,7 @@ test.concurrent(
 		});
 
 		// Upgrade both features
-		await autumnV1.subscriptionUpdate({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [
@@ -210,18 +206,17 @@ test.concurrent(
 		const messagesBillingUnits = 10;
 		const wordsBillingUnits = 100;
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "selective_upgrade",
 			items: [
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Messages,
 					billingUnits: messagesBillingUnits,
 					price: 5,
 				}),
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Words,
 					billingUnits: wordsBillingUnits,
-					price: 10,
 				}),
 			],
 		});
@@ -263,7 +258,7 @@ test.concurrent(
 		});
 
 		// Upgrade only messages, keep words unchanged
-		await autumnV1.subscriptionUpdate({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [

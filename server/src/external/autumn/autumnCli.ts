@@ -690,11 +690,6 @@ export class AutumnInt {
 		},
 	};
 
-	subscriptionUpdate = async (params: UpdateSubscriptionV0Params) => {
-		const data = await this.post(`/subscriptions/update`, params);
-		return data;
-	};
-
 	subscriptions = {
 		update: async (
 			params: UpdateSubscriptionV0Params,

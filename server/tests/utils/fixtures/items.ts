@@ -1,4 +1,8 @@
-import { BillingInterval, type LimitedItem } from "@autumn/shared";
+import {
+	BillingInterval,
+	type LimitedItem,
+	type ProductItemConfig,
+} from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
 import {
@@ -112,22 +116,51 @@ const lifetimeMessages = ({
 // ═══════════════════════════════════════════════════════════════════
 
 /**
+ * Generic prepaid item - purchase units upfront for any feature
+ */
+const prepaid = ({
+	featureId,
+	price = 10,
+	billingUnits = 100,
+	includedUsage = 0,
+	config,
+}: {
+	featureId: string;
+	price?: number;
+	billingUnits?: number;
+	includedUsage?: number;
+	config?: ProductItemConfig;
+}): LimitedItem =>
+	constructPrepaidItem({
+		featureId,
+		price,
+		billingUnits,
+		includedUsage,
+		config,
+	}) as LimitedItem;
+
+/**
  * Prepaid messages - purchase units upfront ($10/unit)
  * @param includedUsage - Free units before purchase required (default: 0), billing units are 100
  */
 const prepaidMessages = ({
 	includedUsage = 0,
 	billingUnits = 100,
+	price = 10,
+	config,
 }: {
 	includedUsage?: number;
 	billingUnits?: number;
+	price?: number;
+	config?: ProductItemConfig;
 } = {}): LimitedItem =>
-	constructPrepaidItem({
+	prepaid({
 		featureId: TestFeature.Messages,
-		price: 10,
+		price,
 		billingUnits,
 		includedUsage,
-	}) as LimitedItem;
+		config,
+	});
 
 // ═══════════════════════════════════════════════════════════════════
 // CONSUMABLE / PAY-PER-USE (overage pricing)
@@ -209,6 +242,7 @@ export const items = {
 	lifetimeMessages,
 
 	// Prepaid
+	prepaid,
 	prepaidMessages,
 
 	// Consumable

@@ -1,14 +1,10 @@
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3 } from "@autumn/shared";
-import { OnDecrease, OnIncrease } from "@autumn/shared";
+import { type ApiCustomerV3, OnDecrease, OnIncrease } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import {
-	initScenario,
-	s,
-} from "@tests/utils/testInitUtils/initScenario.js";
+import { items } from "@tests/utils/fixtures/items.js";
+import { products } from "@tests/utils/fixtures/products.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
-import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
 
 const billingUnits = 12;
 const pricePerUnit = 8; // $8 per unit = $96 for 12 units
@@ -41,10 +37,10 @@ test.concurrent(
 	async () => {
 		const customerId = "proration-upgrade-prorate-immed";
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "prepaid",
 			items: [
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Messages,
 					billingUnits,
 					price: pricePerUnit,
@@ -77,7 +73,7 @@ test.concurrent(
 		const invoiceCountBefore = beforeInvoices.invoices?.length || 0;
 
 		// Upgrade to 20 units
-		await autumnV1.subscriptionUpdate({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [
@@ -107,10 +103,10 @@ test.concurrent(
 	async () => {
 		const customerId = "proration-upgrade-prorate-next";
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "prepaid",
 			items: [
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Messages,
 					billingUnits,
 					price: pricePerUnit,
@@ -143,7 +139,7 @@ test.concurrent(
 		const invoiceCountBefore = beforeInvoices.invoices?.length || 0;
 
 		// Upgrade to 20 units
-		await autumnV1.subscriptionUpdate({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [
@@ -171,10 +167,10 @@ test.concurrent(
 	async () => {
 		const customerId = "proration-upgrade-bill-next";
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "prepaid",
 			items: [
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Messages,
 					billingUnits,
 					price: pricePerUnit,
@@ -207,7 +203,7 @@ test.concurrent(
 		const invoiceCountBefore = beforeInvoices.invoices?.length || 0;
 
 		// Upgrade to 20 units
-		await autumnV1.subscriptionUpdate({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [
@@ -236,10 +232,10 @@ test.concurrent(
 	async () => {
 		const customerId = "proration-downgrade-prorate-immed";
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "prepaid",
 			items: [
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Messages,
 					billingUnits,
 					price: pricePerUnit,
@@ -272,7 +268,7 @@ test.concurrent(
 		const invoiceCountBefore = beforeInvoices.invoices?.length || 0;
 
 		// Downgrade to 10 units
-		await autumnV1.subscriptionUpdate({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [
@@ -303,10 +299,10 @@ test.concurrent(
 	async () => {
 		const customerId = "proration-downgrade-no-prorations";
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "prepaid",
 			items: [
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Messages,
 					billingUnits,
 					price: pricePerUnit,
@@ -339,7 +335,7 @@ test.concurrent(
 		const invoiceCountBefore = beforeInvoices.invoices?.length || 0;
 
 		// Downgrade to 10 units
-		await autumnV1.subscriptionUpdate({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [

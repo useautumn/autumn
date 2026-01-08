@@ -1,13 +1,10 @@
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import {
-	initScenario,
-	s,
-} from "@tests/utils/testInitUtils/initScenario.js";
+import { items } from "@tests/utils/fixtures/items.js";
+import { products } from "@tests/utils/fixtures/products.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
-import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
 
 /**
  * Subscription Update - No Change (No-Op) Tests
@@ -16,20 +13,19 @@ import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
  * unnecessary invoices or modify balances.
  */
 
+const billingUnits = 12;
+
 test.concurrent(
 	`${chalk.yellowBright("update-quantity: same quantity is no-op")}`,
 	async () => {
 		const customerId = "no-change-qty-noop";
-		const billingUnits = 12;
-		const pricePerUnit = 8;
 
-		const prepaidItem = constructPrepaidItem({
+		const prepaidItem = items.prepaid({
 			featureId: TestFeature.Messages,
 			billingUnits,
-			price: pricePerUnit,
 		});
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "prepaid",
 			items: [prepaidItem],
 		});
@@ -56,7 +52,7 @@ test.concurrent(
 		const beforeInvoiceCount = beforeUpdate.invoices?.length ?? 0;
 
 		// Update to same quantity (no-op)
-		await autumnV1.subscriptionUpdate({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [

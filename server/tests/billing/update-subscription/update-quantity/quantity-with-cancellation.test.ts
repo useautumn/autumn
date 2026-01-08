@@ -1,15 +1,12 @@
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import {
-	initScenario,
-	s,
-} from "@tests/utils/testInitUtils/initScenario.js";
+import { items } from "@tests/utils/fixtures/items.js";
+import { products } from "@tests/utils/fixtures/products.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService.js";
-import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
-import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
 
 /**
  * Subscription Update - Cancellation Integration Tests
@@ -19,20 +16,19 @@ import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
  * quantity update is performed on a canceled subscription.
  */
 
+const billingUnits = 12;
+
 test.concurrent(
 	`${chalk.yellowBright("update-quantity: uncancel when updating canceled subscription")}`,
 	async () => {
 		const customerId = "qty-cancel-uncancel";
-		const billingUnits = 12;
-		const pricePerUnit = 8;
 
-		const product = constructRawProduct({
+		const product = products.base({
 			id: "prepaid",
 			items: [
-				constructPrepaidItem({
+				items.prepaid({
 					featureId: TestFeature.Messages,
 					billingUnits,
-					price: pricePerUnit,
 				}),
 			],
 		});
@@ -66,7 +62,7 @@ test.concurrent(
 		expect(subscriptionBefore?.status).toBe("active");
 
 		// Update quantity - should uncancel
-		await autumnV1.subscriptionUpdate({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: product.id,
 			options: [
