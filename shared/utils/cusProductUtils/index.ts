@@ -1,4 +1,5 @@
-export * from "./classifyCusProduct.js";
+export * from "./classifyCustomerProduct/classifyCustomerProduct.js";
+export * from "./classifyCustomerProduct/cpBuilder.js";
 export * from "./convertCusProduct/cusProductToConvertedFeatureOptions.js";
 export * from "./convertCusProduct/cusProductToFeatureOptions.js";
 export * from "./convertCusProduct.js";
@@ -8,6 +9,7 @@ export * from "./featureOptionUtils/findFeatureOptions.js";
 export * from "./filterCusProductUtils.js";
 export * from "./filterCustomerProducts/filterCustomerProductsByActiveStatuses.js";
 export * from "./filterCustomerProducts/filterCustomerProductsByStripeSubscriptionId.js";
+export * from "./findCustomerProduct/findActiveCustomerProduct.js";
 export * from "./findCustomerProduct/findScheduledCustomerProduct.js";
 export * from "./getCusProductFromCustomer.js";
 export * from "./productIdToCusProduct.js";

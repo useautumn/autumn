@@ -119,7 +119,7 @@ export const refreshCacheMiddleware = async (
 				customerId: body.customer_id,
 				orgId: org.id,
 				env: env,
-				source: "refreshCacheMiddleware",
+				source: `refreshCacheMiddleware: ${pathname}`,
 				logger,
 			});
 		}

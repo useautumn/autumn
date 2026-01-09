@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/billing/utils/expectCustomerInvoiceCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
@@ -39,7 +40,8 @@ test.concurrent(`${chalk.yellowBright("p2p: consumable to prepaid with overage")
 	);
 
 	// Verify customer is in overage
-	const customerBefore = await autumnV1.customers.get(customerId);
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customerBefore.features[TestFeature.Messages].balance).toBe(-30);
 
 	// Change to prepaid with 100 units
@@ -59,7 +61,7 @@ test.concurrent(`${chalk.yellowBright("p2p: consumable to prepaid with overage")
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Usage should be preserved - was 80, now has 100 prepaid = 20 remaining
 	expectCustomerFeatureCorrect({
@@ -132,7 +134,7 @@ test.concurrent(`${chalk.yellowBright("p2p: prepaid to consumable")}`, async () 
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Usage should be preserved
 	expectCustomerFeatureCorrect({
@@ -200,7 +202,7 @@ test.concurrent(`${chalk.yellowBright("p2p: included to consumable with overage"
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Usage preserved - now over the included amount
 	expectCustomerFeatureCorrect({
@@ -268,7 +270,7 @@ test.concurrent(`${chalk.yellowBright("p2p: consumable to included (remove overa
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Usage preserved
 	expectCustomerFeatureCorrect({
@@ -333,7 +335,7 @@ test.concurrent(`${chalk.yellowBright("p2p: allocated to prepaid")}`, async () =
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Usage preserved, now with prepaid model
 	expectCustomerFeatureCorrect({
@@ -402,7 +404,7 @@ test.concurrent(`${chalk.yellowBright("p2p: prepaid to allocated")}`, async () =
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Usage preserved, now using 6 with 3 included = 3 overage @ $10 each
 	expectCustomerFeatureCorrect({
@@ -445,7 +447,7 @@ test.concurrent(`${chalk.yellowBright("p2p: allocated with entity-based usage")}
 	});
 
 	// Entity count = 3, included = 2, so 1 overage seat @ $10
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	expectCustomerFeatureCorrect({
 		customer,
@@ -467,7 +469,8 @@ test.concurrent(`${chalk.yellowBright("p2p: allocated with entity-based usage")}
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 	await autumnV1.subscriptions.update(updateParams);
 
-	const updatedCustomer = await autumnV1.customers.get(customerId);
+	const updatedCustomer =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Now 3 entities with 5 included = 2 remaining
 	expectCustomerFeatureCorrect({

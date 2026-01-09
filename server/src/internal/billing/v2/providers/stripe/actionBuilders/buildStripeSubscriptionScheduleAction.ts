@@ -1,9 +1,9 @@
 import type { FullCusProduct } from "@autumn/shared";
 import {
+	cp,
 	isCustomerProductOnStripeSubscription,
 	isCustomerProductOnStripeSubscriptionSchedule,
 	msToSeconds,
-	RELEVANT_STATUSES,
 } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import type { BillingContext } from "@server/internal/billing/v2/billingContext";
@@ -76,8 +76,9 @@ export const buildStripeSubscriptionScheduleAction = ({
 				})),
 	);
 
-	const customerProducts = relatedCustomerProducts.filter((customerProduct) =>
-		RELEVANT_STATUSES.includes(customerProduct.status),
+	const customerProducts = relatedCustomerProducts.filter(
+		(customerProduct) =>
+			cp(customerProduct).paid().recurring().hasRelevantStatus().valid,
 	);
 
 	const phases = buildStripePhasesUpdate({

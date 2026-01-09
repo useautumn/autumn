@@ -118,6 +118,12 @@ export const handleUpgradeFlow = async ({
 		canceled = true;
 		const { stripeCli } = attachParams;
 
+		// // Set lock to prevent webhook handler from processing this cancellation
+		// await setStripeSubscriptionLock({
+		// 	stripeSubscriptionId: curSub.id,
+		// 	lockedAtMs: Date.now(),
+		// });
+
 		await stripeCli.subscriptions.cancel(curSub.id, {
 			prorate: config.proration === ProrationBehavior.Immediately,
 			invoice_now: config.proration === ProrationBehavior.Immediately,

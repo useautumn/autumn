@@ -1,5 +1,5 @@
 import { expect } from "bun:test";
-import { ApiVersion } from "@autumn/shared";
+import { type ApiCustomerV3, ApiVersion } from "@autumn/shared";
 import type { Customer } from "autumn-js";
 import { AutumnInt } from "@/external/autumn/autumnCli";
 
@@ -35,7 +35,7 @@ export const expectCustomerFeatureCorrect = async ({
 	resetsAt,
 }: {
 	customerId?: string;
-	customer?: Customer;
+	customer?: ApiCustomerV3;
 	featureId: string;
 	includedUsage?: number;
 	balance?: number;

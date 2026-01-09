@@ -1,4 +1,8 @@
-import type { ProductItem, ProductV2 } from "@autumn/shared";
+import {
+	FreeTrialDuration,
+	type ProductItem,
+	type ProductV2,
+} from "@autumn/shared";
 import {
 	constructProduct,
 	constructRawProduct,
@@ -62,8 +66,40 @@ const proAnnual = ({
 		isDefault: false,
 	});
 
+/**
+ * Pro product with free trial - $20/month base price with configurable trial
+ * @param items - Product items (features)
+ * @param id - Product ID (default: "pro-trial")
+ * @param trialDays - Number of trial days (default: 7)
+ * @param cardRequired - Whether card is required for trial (default: true)
+ */
+const proWithTrial = ({
+	items,
+	id = "pro-trial",
+	trialDays = 7,
+	cardRequired = true,
+}: {
+	items: ProductItem[];
+	id?: string;
+	trialDays?: number;
+	cardRequired?: boolean;
+}): ProductV2 =>
+	constructProduct({
+		id,
+		items: [...items],
+		type: "pro",
+		isDefault: false,
+		freeTrial: {
+			length: trialDays,
+			duration: FreeTrialDuration.Day,
+			unique_fingerprint: false,
+			card_required: cardRequired,
+		},
+	});
+
 export const products = {
 	base,
 	pro,
 	proAnnual,
+	proWithTrial,
 } as const;

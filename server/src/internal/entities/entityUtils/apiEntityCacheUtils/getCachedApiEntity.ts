@@ -121,6 +121,7 @@ export const getCachedApiEntity = async ({
 		}
 
 		const entity = fullCus.entity;
+
 		if (!entity) {
 			// throw new Error(`Entity ${entityId} not found`);
 			throw new EntityNotFoundError({ entityId });

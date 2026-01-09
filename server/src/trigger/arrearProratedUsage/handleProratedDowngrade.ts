@@ -16,6 +16,7 @@ import {
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { stripeSubscriptionToNowMs } from "@/external/stripe/subscriptions/utils/convertStripeSubscription.js";
 import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService.js";
 import { constructStripeInvoiceItem } from "@/internal/invoices/invoiceItemUtils/invoiceItemUtils.js";
 import { createAndFinalizeInvoice } from "@/internal/invoices/invoiceUtils/createAndFinalizeInvoice.js";
@@ -23,7 +24,6 @@ import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js"
 import { getReplaceables } from "@/internal/products/prices/priceUtils/arrearProratedUtils/getContUsageDowngradeItem.js";
 import { roundUsage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { formatUnixToDate } from "@/utils/genUtils.js";
-import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
 import { getUsageFromBalance } from "../adjustAllowance.js";
 export const createDowngradeProrationInvoice = async ({
 	org,
@@ -56,7 +56,10 @@ export const createDowngradeProrationInvoice = async ({
 }) => {
 	const config = cusPrice.price.config as UsagePriceConfig;
 
-	const now = await getStripeNow({ stripeCli, stripeSub: sub });
+	const now = await stripeSubscriptionToNowMs({
+		stripeSubscription: sub,
+		stripeCli,
+	});
 	let invoiceAmount = new Decimal(newPrice).minus(prevPrice).toNumber();
 
 	logger.info(`Prev price: ${prevPrice}, New price: ${newPrice}`);

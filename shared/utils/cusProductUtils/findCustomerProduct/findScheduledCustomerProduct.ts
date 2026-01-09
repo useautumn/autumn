@@ -3,19 +3,29 @@ import { CusProductStatus } from "../../../models/cusProductModels/cusProductEnu
 import {
 	isCusProductOnEntity,
 	isCustomerProductMain,
-} from "../classifyCusProduct";
+} from "../classifyCustomerProduct/classifyCustomerProduct";
 
 /**
- * Finds the scheduled customer product in a given group for a customer.
- * Filters by product group, scheduled status, and entity.
+ * Finds the scheduled main customer product in a given group for a customer.
+ * Filters by product group, scheduled status, entity, and main product.
+ *
+ * @param fullCustomer - The full customer object
+ * @param productGroup - The product group to search in
+ * @param internalEntityId - Optional entity ID. Falls back to `fullCustomer.entity?.internal_id`
  */
 export const findMainScheduledCustomerProductByGroup = ({
 	fullCustomer,
 	productGroup,
+	internalEntityId,
 }: {
 	fullCustomer: FullCustomer;
 	productGroup: string;
+	internalEntityId?: string | null;
 }) => {
+	if (!internalEntityId) {
+		internalEntityId = fullCustomer.entity?.internal_id;
+	}
+
 	return fullCustomer.customer_products.find((customerProduct) => {
 		const productGroupMatches = customerProduct.product.group === productGroup;
 
@@ -23,7 +33,7 @@ export const findMainScheduledCustomerProductByGroup = ({
 
 		const entityMatches = isCusProductOnEntity({
 			cusProduct: customerProduct,
-			internalEntityId: fullCustomer.entity?.internal_id,
+			internalEntityId,
 		});
 
 		const isMainProduct = isCustomerProductMain(customerProduct);

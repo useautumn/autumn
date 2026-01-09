@@ -10,6 +10,7 @@ import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { sendUsageAndReset } from "@/external/stripe/webhookHandlers/handleInvoiceCreated/handleInvoiceCreated.js";
 import { parseVercelPrepaidQuantities } from "@/external/vercel/misc/vercelInvoicing.js";
 import { VercelResourceService } from "@/external/vercel/services/VercelResourceService.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
@@ -18,16 +19,10 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 
 export const handleMarketplaceInvoicePaid = async ({
-	db,
-	org,
-	env,
-	logger,
+	ctx,
 	payload,
 }: {
-	db: DrizzleCli;
-	org: Organization;
-	env: AppEnv;
-	logger: Logger;
+	ctx: AutumnContext;
 	payload: {
 		installationId: string;
 		invoiceId: string;
@@ -37,6 +32,7 @@ export const handleMarketplaceInvoicePaid = async ({
 		invoiceDate: string;
 	};
 }) => {
+	const { db, org, env, logger } = ctx;
 	const { installationId, invoiceId, externalInvoiceId, invoiceDate } = payload;
 
 	const stripeCli = createStripeCli({ org, env });
@@ -67,10 +63,8 @@ export const handleMarketplaceInvoicePaid = async ({
 
 	try {
 		const partialCustomer = await CusService.getByStripeId({
-			db,
+			ctx,
 			stripeId: invoice.customer as string,
-			orgId: org.id,
-			env,
 		});
 
 		if (!partialCustomer) {

@@ -1,7 +1,6 @@
-import { EntityNotFoundError } from "@autumn/shared";
+import { type EntityBalance, EntityNotFoundError } from "@autumn/shared";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler.js";
 import { adjustAllowance } from "../../../../trigger/adjustAllowance.js";
-import type { ExtendedRequest } from "../../../../utils/models/Request.js";
 import { EntityService } from "../../../api/entities/EntityService.js";
 import { CusService } from "../../../customers/CusService.js";
 import { CusEntService } from "../../../customers/cusProducts/cusEnts/CusEntitlementService.js";
@@ -86,7 +85,9 @@ export const handleDeleteEntity = createRoute({
 
 			// Update linked cus ents with replaceables...
 			for (const linkedCusEnt of linkedCusEnts) {
-				let newEntities;
+				let newEntities: {
+					[key: string]: EntityBalance;
+				};
 				if (replaceable) {
 					const { newEntities: newEntities_ } = replaceEntityInCusEnt({
 						cusEnt: linkedCusEnt,
@@ -122,7 +123,7 @@ export const handleDeleteEntity = createRoute({
 
 		// Cancel any subs
 		await cancelSubsForEntity({
-			req: ctx as unknown as ExtendedRequest,
+			ctx,
 			cusProducts,
 			entity,
 		});

@@ -1,7 +1,7 @@
 import { AttachScenario, type FullCusProduct } from "@autumn/shared";
 import type Stripe from "stripe";
+import { getStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
-import { getSubScenarioFromCache } from "@/internal/customers/cusCache/subCacheUtils.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
@@ -56,9 +56,11 @@ export const handleSubRenewed = async ({
 		return;
 	}
 
-	const subScenario = await getSubScenarioFromCache({ subId: sub.id });
-	logger.info(`sub.renewed: renewed=${renewed}, subScenario=${subScenario}`);
-	if (subScenario === AttachScenario.Renew) {
+	const subLock = await getStripeSubscriptionLock({
+		stripeSubscriptionId: sub.id,
+	});
+	logger.info(`sub.renewed: renewed=${renewed}, subLock=${!!subLock}`);
+	if (subLock) {
 		logger.info(`sub.renewed SKIP: already handled by attach`);
 		return;
 	}
