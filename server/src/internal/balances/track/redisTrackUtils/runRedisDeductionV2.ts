@@ -8,6 +8,7 @@ import { RecaseError } from "@autumn/shared";
 import { currentRegion } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { getApiCustomerBase } from "../../../customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
+import { deleteCachedFullCustomer } from "../../../customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { deductFromRedisCusEnts } from "../../utils/redis/deductFromRedisCusEnts.js";
 import { globalSyncBatchingManagerV2 } from "../../utils/sync/SyncBatchingManagerV2.js";
 import { globalEventBatchingManager } from "../eventUtils/EventBatchingManager.js";
@@ -166,6 +167,15 @@ export const runRedisDeductionV2 = async ({
 				ctx,
 				body,
 				featureDeductions,
+			});
+
+			// Delete stale FullCustomer cache after Postgres fallback
+			// so subsequent requests fetch fresh data from DB
+			await deleteCachedFullCustomer({
+				customerId: body.customer_id,
+				orgId: ctx.org.id,
+				env: ctx.env,
+				source: "runRedisDeductionV2-postgres-fallback",
 			});
 		} else {
 			throw error;
