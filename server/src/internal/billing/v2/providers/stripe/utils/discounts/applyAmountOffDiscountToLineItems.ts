@@ -71,15 +71,12 @@ export const applyAmountOffDiscountToLineItems = ({
 		const totalDiscount =
 			existingDiscounts.reduce((sum, d) => sum + d.amountOff, 0) + itemDiscount;
 
-		const rawFinalAmount =
-			item.context.direction === "refund"
-				? new Decimal(item.amount).plus(totalDiscount).toNumber()
-				: new Decimal(item.amount).minus(totalDiscount).toNumber();
-
-		const finalAmount =
-			item.context.direction === "refund"
-				? Math.min(rawFinalAmount, 0)
-				: Math.max(rawFinalAmount, 0);
+		// Discounts only apply to charges (refunds filtered by discountAppliesToLineItem)
+		// Cap at 0 to prevent negative charges
+		const finalAmount = Math.max(
+			new Decimal(item.amount).minus(totalDiscount).toNumber(),
+			0,
+		);
 
 		return {
 			...item,

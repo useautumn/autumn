@@ -51,15 +51,12 @@ export const applyPercentOffDiscountToLineItems = ({
 
 		const existingDiscounts = item.discounts ?? [];
 
-		const rawFinalAmount =
-			item.context.direction === "refund"
-				? new Decimal(currentAmount).plus(itemDiscount).toNumber()
-				: new Decimal(currentAmount).minus(itemDiscount).toNumber();
-
-		const finalAmount =
-			item.context.direction === "refund"
-				? Math.min(rawFinalAmount, 0)
-				: Math.max(rawFinalAmount, 0);
+		// Discounts only apply to charges (refunds filtered by discountAppliesToLineItem)
+		// Cap at 0 to prevent negative charges
+		const finalAmount = Math.max(
+			new Decimal(currentAmount).minus(itemDiscount).toNumber(),
+			0,
+		);
 
 		return {
 			...item,
