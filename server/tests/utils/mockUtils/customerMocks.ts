@@ -24,12 +24,15 @@ export const createMockFullCustomer = ({
 
 export const createMockStripeCustomer = ({
 	id = "cus_stripe_test",
+	discount = null,
 }: {
 	id?: string;
+	discount?: Stripe.Discount | null;
 } = {}): Stripe.Customer =>
 	({
 		id,
 		object: "customer",
 		email: "test@example.com",
 		name: "Test Customer",
+		discount,
 	}) as Stripe.Customer;
