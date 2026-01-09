@@ -1,4 +1,4 @@
-import { type Job, Worker } from "bullmq";
+import { type ConnectionOptions, type Job, Worker } from "bullmq";
 import type { Logger } from "pino";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
@@ -129,7 +129,7 @@ const initWorker = ({ id, db }: { id: number; db: DrizzleCli }) => {
 			}
 		},
 		{
-			connection: workerRedis,
+			connection: workerRedis as ConnectionOptions,
 			concurrency: 1,
 			removeOnComplete: {
 				count: 0,
