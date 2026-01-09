@@ -108,7 +108,7 @@ describe(chalk.yellowBright("applyAmountOffDiscountToLineItems"), () => {
 	);
 
 	describe(chalk.cyan("Separate refund vs charge distribution"), () => {
-		test("distributes discount separately for refund and charge groups", () => {
+		test("distributes discount only to charges, not refunds", () => {
 			const lineItems = [
 				lineItemFixtures.charge({ amount: 100 }),
 				lineItemFixtures.refund({ amount: 50 }),
@@ -120,14 +120,13 @@ describe(chalk.yellowBright("applyAmountOffDiscountToLineItems"), () => {
 				discount,
 			});
 
-			// Charge item gets full $20 (only charge in its group)
+			// Charge item gets full $20 (only applicable item)
 			expect(result[0].discounts[0].amountOff).toBe(20);
 			expect(result[0].finalAmount).toBe(80); // 100 - 20
 
-			// Refund item also gets full $20 (only refund in its group)
-			// Refund: finalAmount = amount + discount = -50 + 20 = -30
-			expect(result[1].discounts[0].amountOff).toBe(20);
-			expect(result[1].finalAmount).toBe(-30);
+			// Refund item is skipped - discounts don't apply to refunds
+			expect(result[1].discounts).toHaveLength(0);
+			expect(result[1].finalAmount).toBe(-50);
 		});
 
 		test("distributes within charge group only (multiple charges)", () => {

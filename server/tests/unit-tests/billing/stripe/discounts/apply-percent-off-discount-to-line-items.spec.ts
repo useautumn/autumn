@@ -94,7 +94,7 @@ describe(chalk.yellowBright("applyPercentOffDiscountToLineItems"), () => {
 			expect(result[0].finalAmount).toBe(80);
 		});
 
-		test("refund direction: discount makes amount less negative", () => {
+		test("refund direction: discounts do not apply to refunds", () => {
 			const lineItems = [lineItemFixtures.refund({ amount: 100 })];
 			const discount = discounts.twentyPercentOff();
 
@@ -103,9 +103,10 @@ describe(chalk.yellowBright("applyPercentOffDiscountToLineItems"), () => {
 				discount,
 			});
 
-			// Refund: finalAmount = amount + discount = -100 + 20 = -80
-			expect(result[0].finalAmount).toBe(-80);
-			expect(result[0].discounts[0].amountOff).toBe(20); // |amount| * 20%
+			// Refunds are skipped by discountAppliesToLineItem
+			// finalAmount stays at -100, no discounts applied
+			expect(result[0].finalAmount).toBe(-100);
+			expect(result[0].discounts).toHaveLength(0);
 		});
 	});
 
@@ -173,7 +174,7 @@ describe(chalk.yellowBright("applyPercentOffDiscountToLineItems"), () => {
 	});
 
 	describe(chalk.cyan("Existing discounts accumulation"), () => {
-		test("accumulates with existing discounts", () => {
+		test("accumulates with existing discounts (multiplicative stacking)", () => {
 			const lineItems = [
 				lineItemFixtures.withExistingDiscount({
 					amount: 100,
@@ -187,13 +188,13 @@ describe(chalk.yellowBright("applyPercentOffDiscountToLineItems"), () => {
 				discount,
 			});
 
-			// New discount: 100 * 20% = 20
-			// Total discount: 10 + 20 = 30
-			// finalAmount: 100 - 30 = 70
-			expect(result[0].finalAmount).toBe(70);
+			// Existing discount already reduced finalAmount from 100 to 90
+			// New discount: 90 * 20% = 18 (multiplicative stacking)
+			// finalAmount: 90 - 18 = 72
+			expect(result[0].finalAmount).toBe(72);
 			expect(result[0].discounts).toHaveLength(2);
 			expect(result[0].discounts[0].amountOff).toBe(10);
-			expect(result[0].discounts[1].amountOff).toBe(20);
+			expect(result[0].discounts[1].amountOff).toBe(18);
 		});
 	});
 

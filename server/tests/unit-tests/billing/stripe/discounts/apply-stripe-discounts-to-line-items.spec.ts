@@ -77,7 +77,7 @@ describe(chalk.yellowBright("applyStripeDiscountsToLineItems"), () => {
 	});
 
 	describe(chalk.cyan("Multiple discounts stacking"), () => {
-		test("multiple percent_off discounts stack correctly", () => {
+		test("multiple percent_off discounts stack multiplicatively", () => {
 			const lineItems = [lineItemFixtures.charge({ amount: 100 })];
 			const discountList = [
 				discounts.percentOff({ percentOff: 10, couponId: "coupon_1" }),
@@ -89,12 +89,13 @@ describe(chalk.yellowBright("applyStripeDiscountsToLineItems"), () => {
 				discounts: discountList,
 			});
 
+			// Multiplicative stacking:
 			// First discount: 100 * 10% = 10, finalAmount = 90
-			// Second discount: 100 * 20% = 20, total discount = 30, finalAmount = 70
+			// Second discount: 90 * 20% = 18, finalAmount = 72
 			expect(result[0].discounts).toHaveLength(2);
 			expect(result[0].discounts[0].amountOff).toBe(10);
-			expect(result[0].discounts[1].amountOff).toBe(20);
-			expect(result[0].finalAmount).toBe(70);
+			expect(result[0].discounts[1].amountOff).toBe(18);
+			expect(result[0].finalAmount).toBe(72);
 		});
 
 		test("percent then amount discounts stack correctly", () => {
@@ -259,11 +260,11 @@ describe(chalk.yellowBright("applyStripeDiscountsToLineItems"), () => {
 	});
 
 	describe(chalk.cyan("Direction handling with multiple discounts"), () => {
-		test("correctly handles refund direction with stacked discounts", () => {
+		test("refunds are not discounted (discounts only apply to charges)", () => {
 			const lineItems = [lineItemFixtures.refund({ amount: 100 })];
 			const discountList = [
-				discounts.tenPercentOff(), // $10
-				discounts.fiveDollarsOff(), // $5
+				discounts.tenPercentOff(),
+				discounts.fiveDollarsOff(),
 			];
 
 			const result = applyStripeDiscountsToLineItems({
@@ -271,11 +272,10 @@ describe(chalk.yellowBright("applyStripeDiscountsToLineItems"), () => {
 				discounts: discountList,
 			});
 
-			// Refund: discounts make it less negative
-			// First: |-100| * 10% = 10, finalAmount = -100 + 10 = -90
-			// Second: + $5, total = 15, finalAmount = -100 + 15 = -85
-			expect(result[0].discounts).toHaveLength(2);
-			expect(result[0].finalAmount).toBe(-85);
+			// Refunds are skipped by discountAppliesToLineItem
+			// finalAmount stays at -100, no discounts applied
+			expect(result[0].discounts).toHaveLength(0);
+			expect(result[0].finalAmount).toBe(-100);
 		});
 	});
 });
