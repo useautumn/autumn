@@ -5,6 +5,7 @@ dotenv.config();
 
 import {
 	type ApiBaseEntity,
+	ApiEntityV0,
 	type AttachBodyV0,
 	type BalancesUpdateParams,
 	type CheckQuery,
@@ -445,7 +446,7 @@ export class AutumnInt {
 				expand?: EntityExpand[];
 				skip_cache?: string;
 			},
-		) => {
+		): Promise<ApiEntityV0> => {
 			const queryParams = new URLSearchParams();
 			const defaultParams = {
 				expand: [EntityExpand.Invoices],
@@ -478,7 +479,7 @@ export class AutumnInt {
 			return data;
 		},
 
-		list: async (customerId: string) => {
+		list: async (customerId: string): Promise<ApiEntityV0[]> => {
 			const data = await this.get(`/customers/${customerId}/entities`);
 			return data;
 		},
