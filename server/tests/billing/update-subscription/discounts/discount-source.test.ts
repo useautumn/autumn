@@ -18,7 +18,7 @@ import {
 	applySubscriptionDiscount,
 	applyCustomerDiscount,
 	removeSubscriptionDiscount,
-} from "./discountTestUtils.js";
+} from "../../utils/discounts/discountTestUtils.js";
 
 const billingUnits = 12;
 const pricePerUnit = 10;

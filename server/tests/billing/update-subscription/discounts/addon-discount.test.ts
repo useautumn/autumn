@@ -22,7 +22,7 @@ import {
 	applySubscriptionDiscount,
 	createPercentCoupon,
 	getStripeSubscription,
-} from "./discountTestUtils.js";
+} from "../../utils/discounts/discountTestUtils.js";
 
 const billingUnits = 12;
 const pricePerUnit = 10;
@@ -459,6 +459,8 @@ test.concurrent(`${chalk.yellowBright("addon: main discount doesn't affect isola
 		],
 	});
 
-	// Main upgrade: 5 units * $10 = $50, 40% off = $30
-	expect(mainPreview.total).toBe(30);
+	// Main upgrade generates: refund (-$50 for 5 units) + charge ($100 for 10 units)
+	// Discount only applies to charge: $100 * 0.6 = $60
+	// Total: -$50 + $60 = $10
+	expect(mainPreview.total).toBe(10);
 });

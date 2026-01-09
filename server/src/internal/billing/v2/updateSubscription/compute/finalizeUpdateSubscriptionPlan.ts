@@ -8,7 +8,7 @@ export const finalizeUpdateSubscriptionPlan = ({
 }: {
 	plan: AutumnBillingPlan;
     billingContext: BillingContext;
-}) => {
+}): AutumnBillingPlan => {
 
 	if (billingContext.stripeDiscounts?.length) {
 		plan.lineItems = applyStripeDiscountsToLineItems({
