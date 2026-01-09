@@ -9,15 +9,23 @@ export const applyStripeDiscountsToLineItems = ({
 	lineItems: LineItem[];
 	discounts: StripeDiscountWithCoupon[];
 }): LineItem[] => {
-	for (const discount of discounts) {
-		if (discount.source.coupon.percent_off) {
-			lineItems = applyPercentOffDiscountToLineItems({
-				lineItems,
-				discount,
-			});
-		} else if (discount.source.coupon.amount_off) {
-			lineItems = applyAmountOffDiscountToLineItems({ lineItems, discount });
-		}
+	const percentOffDiscounts = discounts.filter(
+		(d) => d.source.coupon.percent_off,
+	);
+	const amountOffDiscounts = discounts.filter(
+		(d) => d.source.coupon.amount_off,
+	);
+
+	for (const discount of percentOffDiscounts) {
+		lineItems = applyPercentOffDiscountToLineItems({
+			lineItems,
+			discount,
+		});
 	}
+
+	for (const discount of amountOffDiscounts) {
+		lineItems = applyAmountOffDiscountToLineItems({ lineItems, discount });
+	}
+
 	return lineItems;
 };

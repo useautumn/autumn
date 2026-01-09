@@ -26,9 +26,11 @@ export const createMockStripeSubscriptionItem = ({
 export const createMockStripeSubscription = ({
 	id,
 	items = [],
+	discounts = [],
 }: {
 	id: string;
 	items?: { id: string; priceId: string; quantity: number }[];
+	discounts?: (Stripe.Discount | string)[];
 }): Stripe.Subscription => {
 	const subscriptionItems = items.map((item) =>
 		createMockStripeSubscriptionItem({
@@ -48,5 +50,6 @@ export const createMockStripeSubscription = ({
 			has_more: false,
 			url: `/v1/subscription_items?subscription=${id}`,
 		},
+		discounts,
 	} as Stripe.Subscription;
 };

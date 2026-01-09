@@ -30,8 +30,12 @@ export const applyPercentOffDiscountToLineItems = ({
 			return item;
 		}
 
-		// Calculate discount amount: |amount| * (percentOff / 100)
-		const itemDiscount = new Decimal(Math.abs(item.amount))
+		// Use current finalAmount as base for multiplicative stacking
+		// If no previous discounts, finalAmount equals amount
+		const currentAmount = item.finalAmount ?? item.amount;
+
+		// Calculate discount amount: |currentAmount| * (percentOff / 100)
+		const itemDiscount = new Decimal(Math.abs(currentAmount))
 			.times(percentOff)
 			.dividedBy(100)
 			.round()
@@ -46,16 +50,13 @@ export const applyPercentOffDiscountToLineItems = ({
 		};
 
 		const existingDiscounts = item.discounts ?? [];
-		const totalDiscount =
-			existingDiscounts.reduce((sum, d) => sum + d.amountOff, 0) + itemDiscount;
 
-		// Calculate finalAmount based on direction
-		// Refund (negative): add discount to make less negative
-		// Charge (positive): subtract discount to reduce charge
-		const finalAmount =
-			item.context.direction === "refund"
-				? new Decimal(item.amount).plus(totalDiscount).toNumber()
-				: new Decimal(item.amount).minus(totalDiscount).toNumber();
+		// Discounts only apply to charges (refunds filtered by discountAppliesToLineItem)
+		// Cap at 0 to prevent negative charges
+		const finalAmount = Math.max(
+			new Decimal(currentAmount).minus(itemDiscount).toNumber(),
+			0,
+		);
 
 		return {
 			...item,

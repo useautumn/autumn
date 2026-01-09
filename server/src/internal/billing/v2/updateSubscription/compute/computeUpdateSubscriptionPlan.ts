@@ -8,6 +8,7 @@ import {
 } from "@/internal/billing/v2/updateSubscription/compute/computeUpdateSubscriptionIntent";
 import { computeCustomPlan } from "@/internal/billing/v2/updateSubscription/compute/customPlan/computeCustomPlan";
 import { computeUpdateQuantityPlan } from "@/internal/billing/v2/updateSubscription/compute/updateQuantity/computeUpdateQuantityPlan";
+import { finalizeUpdateSubscriptionPlan } from "@/internal/billing/v2/updateSubscription/compute/finalizeUpdateSubscriptionPlan";
 
 /**
  * Compute the subscription update plan
@@ -23,17 +24,27 @@ export const computeUpdateSubscriptionPlan = async ({
 }): Promise<AutumnBillingPlan> => {
 	const intent = computeUpdateSubscriptionIntent(params);
 
+	let plan: AutumnBillingPlan;
 	switch (intent) {
 		case UpdateSubscriptionIntent.UpdateQuantity:
-			return computeUpdateQuantityPlan({
+			plan = computeUpdateQuantityPlan({
 				ctx,
 				updateSubscriptionContext: billingContext,
 			});
+			break;
 		case UpdateSubscriptionIntent.UpdatePlan:
-			return await computeCustomPlan({
+			plan = await computeCustomPlan({
 				ctx,
 				updateSubscriptionContext: billingContext,
 				params,
 			});
+			break;
 	}
+
+	plan = finalizeUpdateSubscriptionPlan({
+		plan,
+		billingContext,
+	});
+
+	return plan;
 };
