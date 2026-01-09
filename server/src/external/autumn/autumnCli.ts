@@ -434,6 +434,22 @@ export class AutumnInt {
 			});
 			return data;
 		},
+
+		setBalance: async ({
+			customerId,
+			balances,
+			entityId,
+		}: {
+			customerId: string;
+			balances: Array<{ feature_id: string; balance: number }>;
+			entityId?: string;
+		}) => {
+			const data = await this.post(`/customers/${customerId}/balances`, {
+				balances,
+				entity_id: entityId,
+			});
+			return data;
+		},
 	};
 
 	entities = {

@@ -11,4 +11,7 @@ export const UpdateBalancesParamsSchema = z.object({
 			}),
 		}),
 	),
+	entity_id: z.string().optional().meta({
+		description: "The ID of the entity to update balance for.",
+	}),
 });
