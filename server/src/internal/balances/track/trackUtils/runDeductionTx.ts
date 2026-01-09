@@ -112,6 +112,10 @@ export const deductFromCusEnts = async ({
 					featureId: feature.id,
 				});
 
+		// For refunds (negative amounts), reverse usage_allowed sorting
+		// so overage entitlements are processed first (to recover negative balance)
+		const isRefund = (toDeduct ?? 0) < 0;
+
 		const cusEnts = cusProductsToCusEnts({
 			cusProducts: fullCus.customer_products,
 			featureIds: relevantFeatures.map((f) => f.id),
@@ -119,7 +123,20 @@ export const deductFromCusEnts = async ({
 			entity: fullCus.entity,
 			inStatuses: orgToInStatuses({ org }),
 			sortParams,
+			isRefund,
 		});
+
+		// Debug: log sort order
+		console.log(`[runDeductionTx] toDeduct=${toDeduct}, isRefund=${isRefund}`);
+		console.log(
+			`[runDeductionTx] CusEnts:`,
+			cusEnts.map((ce) => ({
+				id: ce.id.slice(-8),
+				usage_allowed: ce.usage_allowed,
+				balance: ce.balance,
+				interval: ce.entitlement.interval,
+			})),
+		);
 
 		// Check if ANY relevant feature (primary or credit system) is unlimited
 		// Add unlimited features to actualDeductions with value 0 (like Lua's changedCustomerFeatureIds)

@@ -60,6 +60,7 @@ export const cusProductsToCusEnts = ({
 	featureIds,
 	entity,
 	sortParams,
+	isRefund = false,
 }: {
 	cusProducts: FullCusProduct[];
 	inStatuses?: CusProductStatus[];
@@ -68,6 +69,7 @@ export const cusProductsToCusEnts = ({
 	featureIds?: string[];
 	entity?: Entity;
 	sortParams?: SortCusEntParams;
+	isRefund?: boolean;
 }) => {
 	let cusEnts: FullCusEntWithFullCusProduct[] = [];
 
@@ -107,6 +109,7 @@ export const cusProductsToCusEnts = ({
 		cusEnts,
 		reverseOrder,
 		entityId: entity?.id,
+		isRefund,
 		// sortParams,
 	});
 

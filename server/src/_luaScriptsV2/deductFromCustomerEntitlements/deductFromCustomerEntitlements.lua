@@ -17,9 +17,9 @@
       sorted_entitlements: [{ customer_entitlement_id, credit_cost, entity_feature_id, usage_allowed, min_balance, max_balance }],
       amount_to_deduct: number | null,
       target_balance: number | null,
-      target_entity_id: string | null,
-      rollover_ids: string[] | null,
-      cus_ent_ids: string[] | null,
+      target_entity_id: string | nil,
+      rollover_ids: string[] | nil,
+      cus_ent_ids: string[] | nil,
       skip_additional_balance: boolean,
       alter_granted_balance: boolean,
       overage_behaviour: "cap" | "reject" | "allow",
@@ -135,9 +135,7 @@ if overage_behaviour == 'reject' and remaining_amount > 0 then
         -- Pass 2 availability: if usage_allowed, can go to min_balance
         if usage_allowed then
           local floor = min_balance or 0
-          -- We can deduct down to floor (which could be negative)
-          -- Additional capacity from current balance down to floor
-          local pass2_available = math.max(0, 0 - floor) -- From 0 down to floor
+          local pass2_available = math.max(0, 0 - floor)
           total_available = total_available + (pass2_available / credit_cost)
         end
         
@@ -186,155 +184,39 @@ if overage_behaviour == 'reject' and remaining_amount > 0 then
 end
 
 -- ============================================================================
--- REFUND HANDLING: For negative amounts, two-phase approach:
---   PASS 1: Recover overage - increment negative balance towards 0 (usage_allowed entitlements only)
---   PASS 2: Restore prepaid - increment balance up to max_balance (all entitlements)
--- 
--- In V2, overage is stored as NEGATIVE balance (not in additional_balance).
--- When tracking 180 with 150 prepaid, the PPU entitlement ends with balance=-30.
--- Refund should first recover this negative balance back to 0.
+-- HELPER: Process a single pass over entitlements
 -- ============================================================================
-if is_refund then
-  table.insert(logs, "=== REFUND START ===")
+local function process_pass(pass_config)
+  local pass_name = pass_config.name
+  local allow_negative = pass_config.allow_negative
+  local skip_if_not_usage_allowed = pass_config.skip_if_not_usage_allowed
   
-  -- For refunds, remaining_amount is negative. We want to:
-  -- 1. First recover overage (negative balance) back to 0 for usage_allowed entitlements
-  -- 2. Then restore prepaid balance up to max_balance for all entitlements
-  -- remaining_amount will approach 0 as we process refunds.
-  
-  -- ============================================================================
-  -- REFUND PASS 1: Recover overage (negative balance → 0)
-  -- Only entitlements with usage_allowed=true can have negative balance (overage)
-  -- ============================================================================
-  table.insert(logs, "=== REFUND PASS 1: recover overage (negative balance) ===")
+  table.insert(logs, "=== " .. pass_name .. " START ===")
   
   for ent_idx, ent_obj in ipairs(sorted_entitlements) do
-    if remaining_amount >= 0 then break end
+    -- Check termination condition based on direction
+    if is_refund then
+      if remaining_amount >= 0 then break end
+    else
+      if remaining_amount == 0 then break end
+    end
     
     local ent_id = ent_obj.customer_entitlement_id
     local credit_cost = ent_obj.credit_cost or 1
+    local min_balance = ent_obj.min_balance
+    local max_balance = ent_obj.max_balance
     local has_entity_scope = ent_obj.entity_feature_id ~= nil and ent_obj.entity_feature_id ~= cjson.null
+    
+    -- Check usage_allowed
     local usage_allowed = ent_obj.usage_allowed
     if usage_allowed == cjson.null then usage_allowed = false end
     usage_allowed = usage_allowed or overage_behavior_is_allow
     
-    -- Only process entitlements that allow overage (can have negative balance)
-    if not usage_allowed then
-      table.insert(logs, "REFUND PASS1 skipping " .. ent_id .. " - no overage allowed")
-    else
-      local cus_ent, cus_product, ce_idx, cp_idx = find_entitlement(full_customer, ent_id)
-      
-      if cus_ent then
-        local cp_idx_0 = cp_idx - 1
-        local ce_idx_0 = ce_idx - 1
-        local base_path = '$.customer_products[' .. cp_idx_0 .. '].customer_entitlements[' .. ce_idx_0 .. ']'
-        
-        local overage_recovered = 0
-        
-        if has_entity_scope and target_entity_id then
-          -- ENTITY-SCOPED with specific target entity
-          local entity_data = read_current_entity_balance(cache_key, base_path, target_entity_id)
-          local entity_balance = entity_data and entity_data.balance or 0
-          
-          table.insert(logs, "REFUND PASS1 entity " .. target_entity_id .. " balance=" .. tostring(entity_balance))
-          
-          -- Only recover if balance is negative (overage was used)
-          if entity_balance < 0 then
-            -- remaining_amount is negative, -remaining_amount is positive (amount to refund)
-            -- Can only increment up to 0 (recover overage)
-            local to_recover = math.min(-remaining_amount * credit_cost, -entity_balance)
-            
-            if to_recover > 0 then
-              local entity_path = build_entity_path(base_path, target_entity_id)
-              redis.call('JSON.NUMINCRBY', cache_key, entity_path .. '.balance', to_recover)
-              table.insert(logs, "JSON.NUMINCRBY " .. entity_path .. '.balance ' .. tostring(to_recover))
-              
-              overage_recovered = to_recover
-              remaining_amount = remaining_amount + (to_recover / credit_cost)
-            end
-          end
-          
-        elseif has_entity_scope and not target_entity_id then
-          -- ENTITY-SCOPED without target (all entities)
-          local current_entities = read_current_entities(cache_key, base_path)
-          
-          local entity_keys = {}
-          for k in pairs(current_entities) do
-            table.insert(entity_keys, k)
-          end
-          table.sort(entity_keys)
-          
-          for _, entity_key in ipairs(entity_keys) do
-            if remaining_amount >= 0 then break end
-            
-            local entity_data = read_current_entity_balance(cache_key, base_path, entity_key)
-            local entity_balance = entity_data and entity_data.balance or 0
-            
-            if entity_balance < 0 then
-              local to_recover = math.min(-remaining_amount * credit_cost, -entity_balance)
-              
-              if to_recover > 0 then
-                local entity_path = build_entity_path(base_path, entity_key)
-                redis.call('JSON.NUMINCRBY', cache_key, entity_path .. '.balance', to_recover)
-                
-                overage_recovered = overage_recovered + to_recover
-                remaining_amount = remaining_amount + (to_recover / credit_cost)
-              end
-            end
-          end
-          
-        else
-          -- TOP-LEVEL balance (no entity scope)
-          local current_balance = read_current_balance(cache_key, base_path)
-          
-          table.insert(logs, "REFUND PASS1 ent " .. ent_id .. " balance=" .. tostring(current_balance))
-          
-          -- Only recover if balance is negative (overage was used)
-          if current_balance < 0 then
-            -- remaining_amount is negative, -remaining_amount is positive (amount to refund)
-            -- Can only increment up to 0 (recover overage)
-            local to_recover = math.min(-remaining_amount * credit_cost, -current_balance)
-            
-            table.insert(logs, "REFUND PASS1 to_recover=" .. tostring(to_recover))
-            
-            if to_recover > 0 then
-              redis.call('JSON.NUMINCRBY', cache_key, base_path .. '.balance', to_recover)
-              table.insert(logs, "JSON.NUMINCRBY " .. base_path .. '.balance ' .. tostring(to_recover))
-              
-              overage_recovered = to_recover
-              remaining_amount = remaining_amount + (to_recover / credit_cost)
-            end
-          end
-        end
-        
-        -- Track overage recovery (stored as negative deducted for consistency)
-        if overage_recovered > 0 then
-          if not updates[ent_id] then
-            updates[ent_id] = { deducted = 0, additional_deducted = 0 }
-          end
-          updates[ent_id].deducted = (updates[ent_id].deducted or 0) - overage_recovered
-        end
-        
-        table.insert(logs, "REFUND PASS1 ent " .. ent_id .. " overage_recovered=" .. tostring(overage_recovered) .. " remaining=" .. tostring(remaining_amount))
-      end
+    -- Apply filter if needed
+    if skip_if_not_usage_allowed and not usage_allowed then
+      table.insert(logs, pass_name .. " skipping " .. ent_id .. " - usage_allowed=false")
+      goto continue
     end
-  end
-  
-  table.insert(logs, "=== REFUND PASS 1 END === remaining=" .. tostring(remaining_amount))
-  
-  -- ============================================================================
-  -- REFUND PASS 2: Restore prepaid (increment balance up to max_balance)
-  -- All entitlements can receive prepaid refunds
-  -- ============================================================================
-  table.insert(logs, "=== REFUND PASS 2: restore prepaid (balance up to max_balance) ===")
-  
-  for ent_idx, ent_obj in ipairs(sorted_entitlements) do
-    if remaining_amount >= 0 then break end
-    
-    local ent_id = ent_obj.customer_entitlement_id
-    local credit_cost = ent_obj.credit_cost or 1
-    local max_balance = ent_obj.max_balance
-    local has_entity_scope = ent_obj.entity_feature_id ~= nil and ent_obj.entity_feature_id ~= cjson.null
     
     local cus_ent, cus_product, ce_idx, cp_idx = find_entitlement(full_customer, ent_id)
     
@@ -343,407 +225,81 @@ if is_refund then
       local ce_idx_0 = ce_idx - 1
       local base_path = '$.customer_products[' .. cp_idx_0 .. '].customer_entitlements[' .. ce_idx_0 .. ']'
       
-      local refunded = 0
+      -- Get current adjustment from cus_ent for ceiling calculation
+      local current_adjustment = cus_ent.adjustment or 0
       
-      if has_entity_scope and target_entity_id then
-        -- ENTITY-SCOPED with specific target entity
-        local entity_data = read_current_entity_balance(cache_key, base_path, target_entity_id)
-        local entity_balance = entity_data and entity_data.balance or 0
-        
-        table.insert(logs, "REFUND PASS2 entity " .. target_entity_id .. " FRESH balance=" .. tostring(entity_balance))
-        
-        -- Calculate how much we can add (remaining_amount is negative, so -remaining_amount is positive)
-        local to_add = -remaining_amount * credit_cost
-        
-        -- Cap at max_balance if set (unless overage_behavior is 'allow')
-        if max_balance and not overage_behavior_is_allow then
-          local room = max_balance - entity_balance
-          if room > 0 then
-            to_add = math.min(to_add, room)
-          else
-            to_add = 0
-          end
-        end
-        
-        if to_add > 0 then
-          local entity_path = build_entity_path(base_path, target_entity_id)
-          redis.call('JSON.NUMINCRBY', cache_key, entity_path .. '.balance', to_add)
-          table.insert(logs, "JSON.NUMINCRBY " .. entity_path .. '.balance ' .. tostring(to_add))
-          
-          if alter_granted_balance then
-            redis.call('JSON.NUMINCRBY', cache_key, entity_path .. '.adjustment', to_add)
-          end
-          
-          refunded = to_add
-          remaining_amount = remaining_amount + (to_add / credit_cost)
-        end
-        
-      elseif has_entity_scope and not target_entity_id then
-        -- ENTITY-SCOPED without target (all entities)
-        local current_entities = read_current_entities(cache_key, base_path)
-        
-        local entity_keys = {}
-        for k in pairs(current_entities) do
-          table.insert(entity_keys, k)
-        end
-        table.sort(entity_keys)
-        
-        for _, entity_key in ipairs(entity_keys) do
-          if remaining_amount >= 0 then break end
-          
-          local entity_data = read_current_entity_balance(cache_key, base_path, entity_key)
-          local entity_balance = entity_data and entity_data.balance or 0
-          
-          local to_add = -remaining_amount * credit_cost
-          
-          if max_balance and not overage_behavior_is_allow then
-            local room = max_balance - entity_balance
-            if room > 0 then
-              to_add = math.min(to_add, room)
-            else
-              to_add = 0
-            end
-          end
-          
-          if to_add > 0 then
-            local entity_path = build_entity_path(base_path, entity_key)
-            redis.call('JSON.NUMINCRBY', cache_key, entity_path .. '.balance', to_add)
-            
-            if alter_granted_balance then
-              redis.call('JSON.NUMINCRBY', cache_key, entity_path .. '.adjustment', to_add)
-            end
-            
-            refunded = refunded + to_add
-            remaining_amount = remaining_amount + (to_add / credit_cost)
-          end
-        end
-        
-      else
-        -- TOP-LEVEL balance (no entity scope)
-        local current_balance = read_current_balance(cache_key, base_path)
-        
-        table.insert(logs, "REFUND PASS2 top-level FRESH balance=" .. tostring(current_balance))
-        table.insert(logs, "REFUND PASS2 remaining_amount=" .. tostring(remaining_amount) .. " credit_cost=" .. tostring(credit_cost))
-        
-        local to_add = -remaining_amount * credit_cost
-        table.insert(logs, "REFUND PASS2 initial to_add=" .. tostring(to_add))
-        
-        if max_balance and not overage_behavior_is_allow then
-          local room = max_balance - current_balance
-          table.insert(logs, "REFUND PASS2 max_balance=" .. tostring(max_balance) .. " room=" .. tostring(room))
-          if room > 0 then
-            to_add = math.min(to_add, room)
-            table.insert(logs, "REFUND PASS2 capped to_add=" .. tostring(to_add))
-          else
-            to_add = 0
-            table.insert(logs, "REFUND PASS2 no room, to_add=0")
-          end
-        else
-          table.insert(logs, "REFUND PASS2 no cap applied (max_balance=" .. tostring(max_balance) .. " overage_is_allow=" .. tostring(overage_behavior_is_allow) .. ")")
-        end
-        
-        if to_add > 0 then
-          redis.call('JSON.NUMINCRBY', cache_key, base_path .. '.balance', to_add)
-          table.insert(logs, "JSON.NUMINCRBY " .. base_path .. '.balance ' .. tostring(to_add))
-          
-          if alter_granted_balance then
-            redis.call('JSON.NUMINCRBY', cache_key, base_path .. '.adjustment', to_add)
-          end
-          
-          refunded = to_add
-          remaining_amount = remaining_amount + (to_add / credit_cost)
-        end
-      end
+      local deducted = deduct_from_main_balance({
+        cache_key = cache_key,
+        base_path = base_path,
+        has_entity_scope = has_entity_scope,
+        target_entity_id = target_entity_id,
+        amount = remaining_amount,
+        credit_cost = credit_cost,
+        allow_negative = allow_negative,
+        min_balance = min_balance,
+        max_balance = max_balance,
+        adjustment = current_adjustment,
+        alter_granted_balance = alter_granted_balance,
+        overage_behavior_is_allow = overage_behavior_is_allow,
+        logs = logs,
+        log_prefix = pass_name,
+      })
       
-      -- Track refund (stored as negative deducted for consistency)
-      if refunded > 0 then
+      -- Update remaining_amount
+      remaining_amount = remaining_amount - (deducted / credit_cost)
+      
+      -- Track in updates
+      if deducted ~= 0 then
         if not updates[ent_id] then
           updates[ent_id] = { deducted = 0, additional_deducted = 0 }
         end
-        updates[ent_id].deducted = (updates[ent_id].deducted or 0) - refunded
+        updates[ent_id].deducted = (updates[ent_id].deducted or 0) + deducted
       end
       
-      table.insert(logs, "REFUND PASS2 ent " .. ent_id .. " refunded=" .. tostring(refunded) .. " remaining=" .. tostring(remaining_amount))
+      table.insert(logs, pass_name .. " ent " .. ent_id .. " deducted=" .. tostring(deducted) .. " remaining=" .. tostring(remaining_amount))
     end
+    
+    ::continue::
   end
   
-  table.insert(logs, "=== REFUND PASS 2 END === remaining=" .. tostring(remaining_amount))
-  table.insert(logs, "=== REFUND END === remaining=" .. tostring(remaining_amount))
+  table.insert(logs, "=== " .. pass_name .. " END === remaining=" .. tostring(remaining_amount))
 end
 
--- Only run deduction passes if NOT a refund
-if not is_refund then
-
 -- ============================================================================
--- PASS 1: Deduct down to 0 (no negative balances)
+-- MAIN DEDUCTION/REFUND LOGIC
+-- Same two-pass structure for both deductions and refunds (matches SQL)
+-- Pass 1: Process all entitlements (floor at 0 for deductions, ceiling for refunds)
+-- Pass 2: Only for positive amounts - allow usage_allowed entitlements to go negative
 -- ============================================================================
-table.insert(logs, "=== PASS 1 START ===")
 
-for ent_idx, ent_obj in ipairs(sorted_entitlements) do
-  if remaining_amount == 0 then break end
-  
-  local ent_id = ent_obj.customer_entitlement_id
-  local credit_cost = ent_obj.credit_cost or 1
-  local min_balance = ent_obj.min_balance
-  local max_balance = ent_obj.max_balance
-  local has_entity_scope = ent_obj.entity_feature_id ~= nil and ent_obj.entity_feature_id ~= cjson.null
-  
-  -- Find entitlement to get JSONPath indices
-  local cus_ent, cus_product, ce_idx, cp_idx = find_entitlement(full_customer, ent_id)
-  
-  if cus_ent then
-    local cp_idx_0 = cp_idx - 1
-    local ce_idx_0 = ce_idx - 1
-    local base_path = '$.customer_products[' .. cp_idx_0 .. '].customer_entitlements[' .. ce_idx_0 .. ']'
-    
-    local deducted = 0
-    
-    if has_entity_scope and target_entity_id then
-      -- ENTITY-SCOPED with specific target entity
-      -- Read FRESH balance from Redis
-      local entity_data = read_current_entity_balance(cache_key, base_path, target_entity_id)
-      local entity_balance = entity_data and entity_data.balance or 0
-      
-      table.insert(logs, "PASS1 entity " .. target_entity_id .. " FRESH balance=" .. tostring(entity_balance))
-      
-      -- Calculate how much we can deduct (floor at 0 in pass 1)
-      local to_deduct = math.min(entity_balance, remaining_amount * credit_cost)
-      to_deduct = math.max(0, to_deduct) -- Can't deduct from negative balance
-      
-      if to_deduct > 0 then
-        -- Apply atomic decrement
-        local entity_path = build_entity_path(base_path, target_entity_id)
-        redis.call('JSON.NUMINCRBY', cache_key, entity_path .. '.balance', -to_deduct)
-        table.insert(logs, "JSON.NUMINCRBY " .. entity_path .. '.balance ' .. tostring(-to_deduct))
-        
-        if alter_granted_balance then
-          redis.call('JSON.NUMINCRBY', cache_key, entity_path .. '.adjustment', -to_deduct)
-        end
-        
-        deducted = to_deduct
-        remaining_amount = remaining_amount - (to_deduct / credit_cost)
-      end
-      
-    elseif has_entity_scope and not target_entity_id then
-      -- ENTITY-SCOPED without target (all entities)
-      local current_entities = read_current_entities(cache_key, base_path)
-      
-      -- Sort entity keys for consistency
-      local entity_keys = {}
-      for k in pairs(current_entities) do
-        table.insert(entity_keys, k)
-      end
-      table.sort(entity_keys)
-      
-      for _, entity_key in ipairs(entity_keys) do
-        if remaining_amount == 0 then break end
-        
-        -- Read FRESH balance for this entity
-        local entity_data = read_current_entity_balance(cache_key, base_path, entity_key)
-        local entity_balance = entity_data and entity_data.balance or 0
-        
-        local to_deduct = math.min(entity_balance, remaining_amount * credit_cost)
-        to_deduct = math.max(0, to_deduct)
-        
-        if to_deduct > 0 then
-          local entity_path = build_entity_path(base_path, entity_key)
-          redis.call('JSON.NUMINCRBY', cache_key, entity_path .. '.balance', -to_deduct)
-          
-          if alter_granted_balance then
-            redis.call('JSON.NUMINCRBY', cache_key, entity_path .. '.adjustment', -to_deduct)
-          end
-          
-          deducted = deducted + to_deduct
-          remaining_amount = remaining_amount - (to_deduct / credit_cost)
-        end
-      end
-      
-    else
-      -- TOP-LEVEL balance (no entity scope)
-      local current_balance = read_current_balance(cache_key, base_path)
-      
-      table.insert(logs, "PASS1 top-level FRESH balance=" .. tostring(current_balance))
-      
-      local to_deduct = math.min(current_balance, remaining_amount * credit_cost)
-      to_deduct = math.max(0, to_deduct)
-      
-      if to_deduct > 0 then
-        redis.call('JSON.NUMINCRBY', cache_key, base_path .. '.balance', -to_deduct)
-        table.insert(logs, "JSON.NUMINCRBY " .. base_path .. '.balance ' .. tostring(-to_deduct))
-        
-        if alter_granted_balance then
-          redis.call('JSON.NUMINCRBY', cache_key, base_path .. '.adjustment', -to_deduct)
-        end
-        
-        deducted = to_deduct
-        remaining_amount = remaining_amount - (to_deduct / credit_cost)
-      end
-    end
-    
-    -- Track deduction
-    if deducted > 0 then
-      if not updates[ent_id] then
-        updates[ent_id] = { deducted = 0, additional_deducted = 0 }
-      end
-      updates[ent_id].deducted = (updates[ent_id].deducted or 0) + deducted
-    end
-    
-    table.insert(logs, "PASS1 ent " .. ent_id .. " deducted=" .. tostring(deducted) .. " remaining=" .. tostring(remaining_amount))
-  end
-end
+process_pass({
+  name = "PASS1",
+  allow_negative = false,
+  skip_if_not_usage_allowed = false,
+})
 
-table.insert(logs, "=== PASS 1 END === remaining=" .. tostring(remaining_amount))
-
--- ============================================================================
--- PASS 2: Allow usage_allowed=true entitlements to go negative
--- ============================================================================
-table.insert(logs, "=== PASS 2 START ===")
-
+-- Pass 2 only applies to positive deductions (not refunds)
 if remaining_amount > 0 then
-  for ent_idx, ent_obj in ipairs(sorted_entitlements) do
-    if remaining_amount == 0 then break end
-    
-    local ent_id = ent_obj.customer_entitlement_id
-    local credit_cost = ent_obj.credit_cost or 1
-    local min_balance = ent_obj.min_balance
-    local has_entity_scope = ent_obj.entity_feature_id ~= nil and ent_obj.entity_feature_id ~= cjson.null
-    
-    -- Check usage_allowed
-    local usage_allowed = ent_obj.usage_allowed
-    if usage_allowed == cjson.null then usage_allowed = false end
-    usage_allowed = usage_allowed or overage_behavior_is_allow
-    
-    if not usage_allowed then
-      table.insert(logs, "PASS2 skipping " .. ent_id .. " - usage_allowed=false")
-    else
-      local cus_ent, cus_product, ce_idx, cp_idx = find_entitlement(full_customer, ent_id)
-      
-      if cus_ent then
-        local cp_idx_0 = cp_idx - 1
-        local ce_idx_0 = ce_idx - 1
-        local base_path = '$.customer_products[' .. cp_idx_0 .. '].customer_entitlements[' .. ce_idx_0 .. ']'
-        
-        local deducted = 0
-        
-        if has_entity_scope and target_entity_id then
-          -- Read FRESH balance
-          local entity_data = read_current_entity_balance(cache_key, base_path, target_entity_id)
-          local entity_balance = entity_data and entity_data.balance or 0
-          
-          table.insert(logs, "PASS2 entity " .. target_entity_id .. " FRESH balance=" .. tostring(entity_balance))
-          
-          -- In pass 2, we can go negative (respecting min_balance if set)
-          local to_deduct = remaining_amount * credit_cost
-          if min_balance then
-            to_deduct = math.min(to_deduct, entity_balance - min_balance)
-          end
-          to_deduct = math.max(0, to_deduct) -- Still can't deduct negative amount
-          
-          if to_deduct > 0 then
-            local entity_path = build_entity_path(base_path, target_entity_id)
-            redis.call('JSON.NUMINCRBY', cache_key, entity_path .. '.balance', -to_deduct)
-            table.insert(logs, "JSON.NUMINCRBY " .. entity_path .. '.balance ' .. tostring(-to_deduct))
-            
-            if alter_granted_balance then
-              redis.call('JSON.NUMINCRBY', cache_key, entity_path .. '.adjustment', -to_deduct)
-            end
-            
-            deducted = to_deduct
-            remaining_amount = remaining_amount - (to_deduct / credit_cost)
-          end
-          
-        elseif has_entity_scope and not target_entity_id then
-          -- All entities
-          local current_entities = read_current_entities(cache_key, base_path)
-          
-          local entity_keys = {}
-          for k in pairs(current_entities) do
-            table.insert(entity_keys, k)
-          end
-          table.sort(entity_keys)
-          
-          for _, entity_key in ipairs(entity_keys) do
-            if remaining_amount == 0 then break end
-            
-            local entity_data = read_current_entity_balance(cache_key, base_path, entity_key)
-            local entity_balance = entity_data and entity_data.balance or 0
-            
-            local to_deduct = remaining_amount * credit_cost
-            if min_balance then
-              to_deduct = math.min(to_deduct, entity_balance - min_balance)
-            end
-            to_deduct = math.max(0, to_deduct)
-            
-            if to_deduct > 0 then
-              local entity_path = build_entity_path(base_path, entity_key)
-              redis.call('JSON.NUMINCRBY', cache_key, entity_path .. '.balance', -to_deduct)
-              
-              if alter_granted_balance then
-                redis.call('JSON.NUMINCRBY', cache_key, entity_path .. '.adjustment', -to_deduct)
-              end
-              
-              deducted = deducted + to_deduct
-              remaining_amount = remaining_amount - (to_deduct / credit_cost)
-            end
-          end
-          
-        else
-          -- TOP-LEVEL
-          local current_balance = read_current_balance(cache_key, base_path)
-          
-          table.insert(logs, "PASS2 top-level FRESH balance=" .. tostring(current_balance))
-          
-          local to_deduct = remaining_amount * credit_cost
-          if min_balance then
-            to_deduct = math.min(to_deduct, current_balance - min_balance)
-          end
-          to_deduct = math.max(0, to_deduct)
-          
-          if to_deduct > 0 then
-            redis.call('JSON.NUMINCRBY', cache_key, base_path .. '.balance', -to_deduct)
-            table.insert(logs, "JSON.NUMINCRBY " .. base_path .. '.balance ' .. tostring(-to_deduct))
-            
-            if alter_granted_balance then
-              redis.call('JSON.NUMINCRBY', cache_key, base_path .. '.adjustment', -to_deduct)
-            end
-            
-            deducted = to_deduct
-            remaining_amount = remaining_amount - (to_deduct / credit_cost)
-          end
-        end
-        
-        -- Track deduction
-        if deducted > 0 then
-          if not updates[ent_id] then
-            updates[ent_id] = { deducted = 0, additional_deducted = 0 }
-          end
-          updates[ent_id].deducted = (updates[ent_id].deducted or 0) + deducted
-        end
-        
-        table.insert(logs, "PASS2 ent " .. ent_id .. " deducted=" .. tostring(deducted) .. " remaining=" .. tostring(remaining_amount))
-      end
-    end
-  end
+  process_pass({
+    name = "PASS2",
+    allow_negative = true,
+    skip_if_not_usage_allowed = true,
+  })
 end
 
-table.insert(logs, "=== PASS 2 END === remaining=" .. tostring(remaining_amount))
-
--- Safety check: if we still have remaining after both passes with reject mode,
--- another concurrent request may have depleted the balance between our pre-check and deductions.
--- The pre-check should catch most cases, but this handles the race condition edge case.
--- The updates contain what was actually deducted (for potential rollback by caller).
+-- Safety check: if we still have remaining after both passes with reject mode
 if remaining_amount > 0 and overage_behaviour == 'reject' then
   return cjson.encode({
     error = 'INSUFFICIENT_BALANCE',
     feature_id = feature_id,
     remaining = remaining_amount,
-    updates = updates -- Contains partial deductions that were applied
+    updates = updates
   })
 end
 
-end -- End of "if not is_refund then"
-
--- Read final balances for return value
+-- ============================================================================
+-- READ FINAL BALANCES FOR RETURN VALUE
+-- ============================================================================
 for ent_id, update in pairs(updates) do
   local cus_ent, cus_product, ce_idx, cp_idx = find_entitlement(full_customer, ent_id)
   if cus_ent then

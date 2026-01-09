@@ -10,11 +10,13 @@ export const sortCusEntsForDeduction = ({
 	reverseOrder = false,
 	entityId,
 	sortParams,
+	isRefund = false,
 }: {
 	cusEnts: FullCusEntWithFullCusProduct[];
 	reverseOrder?: boolean;
 	entityId?: string;
 	sortParams?: SortCusEntParams;
+	isRefund?: boolean;
 }) => {
 	cusEnts.sort((a, b) => {
 		if (sortParams?.cusEntIds && sortParams.cusEntIds.length > 0) {
@@ -87,14 +89,27 @@ export const sortCusEntsForDeduction = ({
 			return 1;
 		}
 
-		// // If one has usage_allowed, it should go last
-		// if (!a.usage_allowed && b.usage_allowed) {
-		// 	return -1;
-		// }
+		// Handle overage vs prepaid ordering:
+		// - An entitlement is "in overage mode" if usage_allowed=true AND balance <= 0
+		// - An entitlement has "prepaid balance" if balance > 0 (regardless of usage_allowed)
+		// - For deductions: entitlements with prepaid balance go FIRST, overage mode goes LAST
+		// - For refunds: overage mode goes FIRST (recover overage before prepaid)
+		// Note: When both have prepaid balance, interval sorting (below) determines order
+		const aBalance = a.balance ?? 0;
+		const bBalance = b.balance ?? 0;
+		const aInOverageMode = a.usage_allowed && aBalance <= 0;
+		const bInOverageMode = b.usage_allowed && bBalance <= 0;
 
-		// if (!b.usage_allowed && a.usage_allowed) {
-		// 	return 1;
-		// }
+		if (aInOverageMode !== bInOverageMode) {
+			if (aInOverageMode && !bInOverageMode) {
+				// a is in overage mode, b has prepaid balance
+				return isRefund ? -1 : 1;
+			}
+			if (!aInOverageMode && bInOverageMode) {
+				// a has prepaid balance, b is in overage mode
+				return isRefund ? 1 : -1;
+			}
+		}
 
 		// If one has a next_reset_at, it should go first
 		const nextResetFirst = reverseOrder ? 1 : -1;
@@ -121,15 +136,6 @@ export const sortCusEntsForDeduction = ({
 			}
 		}
 
-		// If one has a usage_allowed, it should go last
-		if (a.usage_allowed && !b.usage_allowed) {
-			return 1;
-		}
-
-		if (!a.usage_allowed && b.usage_allowed) {
-			return -1;
-		}
-
 		// 0a. If both are entity products (attached to entities), sort by entity_id for consistent ordering
 		const aIsProductEntity = !!a.customer_product?.internal_entity_id;
 		const bIsProductEntity = !!b.customer_product?.internal_entity_id;
@@ -143,7 +149,7 @@ export const sortCusEntsForDeduction = ({
 			}
 		}
 
-		// Check if a is main product
+		// Check if a is main product (add-ons go after main products)
 		const aIsAddOn = a.customer_product?.product?.is_add_on;
 		const bIsAddOn = b.customer_product?.product?.is_add_on;
 
