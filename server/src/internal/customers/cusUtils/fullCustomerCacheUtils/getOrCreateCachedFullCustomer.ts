@@ -152,9 +152,9 @@ export const getOrCreateCachedFullCustomer = async ({
 		}
 	}
 
-	// 6. Set cache (fire and forget)
+	// 6. Set cache (await to ensure it's ready before Redis deduction)
 	if (!skipCache) {
-		setCachedFullCustomer({
+		await setCachedFullCustomer({
 			ctx,
 			fullCustomer,
 			customerId: fullCustomer.id || fullCustomer.internal_id,

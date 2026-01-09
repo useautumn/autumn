@@ -17,6 +17,7 @@ const LUA_SCRIPTS_V2_DIR = join(__dirname, "../../../../_luaScriptsV2");
  * Uses JSON.NUMINCRBY for atomic incremental updates to prevent race conditions.
  * The script is self-contained with all helper functions inline.
  * Supports both positive deductions and negative refunds.
+ * Refund logic: PASS 1 recovers overage (negative balance → 0), PASS 2 restores prepaid (balance → max_balance).
  */
 export const DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT = readFileSync(
 	join(
