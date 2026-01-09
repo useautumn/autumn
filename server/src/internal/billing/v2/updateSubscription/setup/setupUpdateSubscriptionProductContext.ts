@@ -1,5 +1,4 @@
 import {
-	cusProductToProduct,
 	type FullCustomer,
 	InternalError,
 	type UpdateSubscriptionV0Params,
@@ -7,6 +6,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupCustomFullProduct } from "../../setup/setupCustomFullProduct";
 import { findTargetCustomerProduct } from "./findTargetCustomerProduct";
+import { getFullProductForVersion } from "./getFullProductForVersion";
 
 export const setupUpdateSubscriptionProductContext = async ({
 	ctx,
@@ -28,8 +28,10 @@ export const setupUpdateSubscriptionProductContext = async ({
 		});
 	}
 
-	const fullProduct = cusProductToProduct({
-		cusProduct: targetCustomerProduct,
+	const fullProduct = await getFullProductForVersion({
+		ctx,
+		targetCustomerProduct,
+		version: params.version,
 	});
 
 	const {
