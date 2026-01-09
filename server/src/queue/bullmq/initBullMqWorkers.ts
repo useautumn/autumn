@@ -129,6 +129,7 @@ const initWorker = ({ id, db }: { id: number; db: DrizzleCli }) => {
 			}
 		},
 		{
+			// @ts-expect-error - workerRedis is a valid connection
 			connection: workerRedis,
 			concurrency: 1,
 			removeOnComplete: {
