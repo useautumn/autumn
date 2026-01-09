@@ -1,71 +1,33 @@
 /**
- * Integration tests for Stripe discounts in update subscription flow.
+ * Integration tests for percent-off discounts in update subscription flow.
  *
- * These tests verify that discounts applied at subscription or customer level
- * are correctly reflected in preview totals.
+ * Tests various percent-off discount scenarios including edge cases
+ * like minimum (1%), maximum (99%), 100% (free), and duration variants.
  */
 
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { CusService } from "@/internal/customers/CusService.js";
+import {
+	getStripeSubscription,
+	createPercentCoupon,
+	applySubscriptionDiscount,
+} from "./discountTestUtils.js";
 
 const billingUnits = 12;
 const pricePerUnit = 10;
 
-/**
- * Helper to get Stripe subscription for a customer
- */
-const getStripeSubscription = async ({
-	customerId,
-}: {
-	customerId: string;
-}) => {
-	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
-
-	const fullCustomer = await CusService.getFull({
-		db: ctx.db,
-		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
-
-	const stripeCustomerId =
-		fullCustomer.processor?.id || fullCustomer.processor?.processor_id;
-
-	if (!stripeCustomerId) {
-		throw new Error("Missing Stripe customer ID");
-	}
-
-	const subscriptions = await stripeCli.subscriptions.list({
-		customer: stripeCustomerId,
-		status: "all",
-	});
-
-	if (subscriptions.data.length === 0) {
-		throw new Error("No subscriptions found");
-	}
-
-	return {
-		stripeCli,
-		stripeCustomerId,
-		subscription: subscriptions.data[0],
-	};
-};
-
 // =============================================================================
-// PERCENT-OFF DISCOUNT TESTS
+// MIGRATED TESTS FROM subscription-discounts.test.ts
 // =============================================================================
 
 test.concurrent(
-	`${chalk.yellowBright("discount: 20% off subscription discount applied to upgrade")}`,
+	`${chalk.yellowBright("percent-off: 20% discount applied to upgrade")}`,
 	async () => {
-		const customerId = "discount-20pct-upgrade";
+		const customerId = "pct-20-upgrade";
 
 		const product = products.base({
 			id: "prepaid",
@@ -98,17 +60,17 @@ test.concurrent(
 			customerId,
 		});
 
-		// Create a 20% off coupon and apply to subscription
-		const coupon = await stripeCli.coupons.create({
-			percent_off: 20,
-			duration: "forever",
+		const coupon = await createPercentCoupon({
+			stripeCli,
+			percentOff: 20,
 		});
 
-		await stripeCli.subscriptions.update(subscription.id, {
-			discounts: [{ coupon: coupon.id }],
+		await applySubscriptionDiscount({
+			stripeCli,
+			subscriptionId: subscription.id,
+			couponIds: [coupon.id],
 		});
 
-		// Preview upgrade from 5 to 10 units (adding 5 units)
 		const preview = await autumnV1.subscriptions.previewUpdate({
 			customer_id: customerId,
 			product_id: product.id,
@@ -130,9 +92,9 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("discount: 50% off subscription discount")}`,
+	`${chalk.yellowBright("percent-off: 50% discount applied to upgrade")}`,
 	async () => {
-		const customerId = "discount-50pct-upgrade";
+		const customerId = "pct-50-upgrade";
 
 		const product = products.base({
 			id: "prepaid",
@@ -165,13 +127,15 @@ test.concurrent(
 			customerId,
 		});
 
-		const coupon = await stripeCli.coupons.create({
-			percent_off: 50,
-			duration: "forever",
+		const coupon = await createPercentCoupon({
+			stripeCli,
+			percentOff: 50,
 		});
 
-		await stripeCli.subscriptions.update(subscription.id, {
-			discounts: [{ coupon: coupon.id }],
+		await applySubscriptionDiscount({
+			stripeCli,
+			subscriptionId: subscription.id,
+			couponIds: [coupon.id],
 		});
 
 		const preview = await autumnV1.subscriptions.previewUpdate({
@@ -195,9 +159,9 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("discount: 100% off subscription discount (free)")}`,
+	`${chalk.yellowBright("percent-off: 100% discount (free upgrade)")}`,
 	async () => {
-		const customerId = "discount-100pct-free";
+		const customerId = "pct-100-free";
 
 		const product = products.base({
 			id: "prepaid",
@@ -230,13 +194,15 @@ test.concurrent(
 			customerId,
 		});
 
-		const coupon = await stripeCli.coupons.create({
-			percent_off: 100,
-			duration: "forever",
+		const coupon = await createPercentCoupon({
+			stripeCli,
+			percentOff: 100,
 		});
 
-		await stripeCli.subscriptions.update(subscription.id, {
-			discounts: [{ coupon: coupon.id }],
+		await applySubscriptionDiscount({
+			stripeCli,
+			subscriptionId: subscription.id,
+			couponIds: [coupon.id],
 		});
 
 		const preview = await autumnV1.subscriptions.previewUpdate({
@@ -255,222 +221,10 @@ test.concurrent(
 	},
 );
 
-// =============================================================================
-// AMOUNT-OFF DISCOUNT TESTS
-// =============================================================================
-
 test.concurrent(
-	`${chalk.yellowBright("discount: $10 off amount discount applied to upgrade")}`,
+	`${chalk.yellowBright("percent-off: promotion code applied to subscription")}`,
 	async () => {
-		const customerId = "discount-10dollars-upgrade";
-
-		const product = products.base({
-			id: "prepaid",
-			items: [
-				items.prepaid({
-					featureId: TestFeature.Messages,
-					billingUnits,
-					price: pricePerUnit,
-				}),
-			],
-		});
-
-		const { autumnV1 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [product] }),
-			],
-			actions: [
-				s.attach({
-					productId: product.id,
-					options: [
-						{ feature_id: TestFeature.Messages, quantity: 5 * billingUnits },
-					],
-				}),
-			],
-		});
-
-		const { stripeCli, subscription } = await getStripeSubscription({
-			customerId,
-		});
-
-		// $10 off coupon (1000 cents) - amount_off requires repeating duration
-		const coupon = await stripeCli.coupons.create({
-			amount_off: 1000,
-			currency: "usd",
-			duration: "repeating",
-			duration_in_months: 12,
-		});
-
-		await stripeCli.subscriptions.update(subscription.id, {
-			discounts: [{ coupon: coupon.id }],
-		});
-
-		const preview = await autumnV1.subscriptions.previewUpdate({
-			customer_id: customerId,
-			product_id: product.id,
-			options: [
-				{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
-			],
-		});
-
-		// Upgrade generates: refund (-$50) + charge ($100)
-		// Discounts only apply to charges, not refunds
-		// Charge with $10 off: $100 - $10 = $90
-		// Total: -$50 + $90 = $40
-		const refundAmount = -50;
-		const discountedCharge = 100 - 10;
-		const expectedAmount = refundAmount + discountedCharge;
-
-		expect(preview.total).toBe(expectedAmount);
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("discount: charge capped at zero when discount exceeds charge")}`,
-	async () => {
-		const customerId = "discount-cap-at-zero";
-
-		const product = products.base({
-			id: "prepaid",
-			items: [
-				items.prepaid({
-					featureId: TestFeature.Messages,
-					billingUnits,
-					price: pricePerUnit,
-				}),
-			],
-		});
-
-		const { autumnV1 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [product] }),
-			],
-			actions: [
-				s.attach({
-					productId: product.id,
-					options: [
-						{ feature_id: TestFeature.Messages, quantity: 5 * billingUnits },
-					],
-				}),
-			],
-		});
-
-		const { stripeCli, subscription } = await getStripeSubscription({
-			customerId,
-		});
-
-		// $100 off coupon (10000 cents) - more than the $100 new charge
-		// amount_off requires repeating duration
-		const coupon = await stripeCli.coupons.create({
-			amount_off: 10000,
-			currency: "usd",
-			duration: "repeating",
-			duration_in_months: 12,
-		});
-
-		await stripeCli.subscriptions.update(subscription.id, {
-			discounts: [{ coupon: coupon.id }],
-		});
-
-		const preview = await autumnV1.subscriptions.previewUpdate({
-			customer_id: customerId,
-			product_id: product.id,
-			options: [
-				{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
-			],
-		});
-
-		// Charge is capped at 0 (100 - 100 = 0), but refund for unused still applies
-		// Net = -$50 (refund) + $0 (discounted charge) = -$50
-		expect(preview.total).toBe(-50);
-	},
-);
-
-// =============================================================================
-// MULTIPLE DISCOUNT TESTS
-// =============================================================================
-
-test.concurrent(
-	`${chalk.yellowBright("discount: multiple discounts stack (20% + 10%)")}`,
-	async () => {
-		const customerId = "discount-multiple-stack";
-
-		const product = products.base({
-			id: "prepaid",
-			items: [
-				items.prepaid({
-					featureId: TestFeature.Messages,
-					billingUnits,
-					price: pricePerUnit,
-				}),
-			],
-		});
-
-		const { autumnV1 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [product] }),
-			],
-			actions: [
-				s.attach({
-					productId: product.id,
-					options: [
-						{ feature_id: TestFeature.Messages, quantity: 5 * billingUnits },
-					],
-				}),
-			],
-		});
-
-		const { stripeCli, subscription } = await getStripeSubscription({
-			customerId,
-		});
-
-		// Create two coupons: 20% and 10%
-		const coupon1 = await stripeCli.coupons.create({
-			percent_off: 20,
-			duration: "forever",
-		});
-
-		const coupon2 = await stripeCli.coupons.create({
-			percent_off: 10,
-			duration: "forever",
-		});
-
-		// Apply both discounts to subscription
-		await stripeCli.subscriptions.update(subscription.id, {
-			discounts: [{ coupon: coupon1.id }, { coupon: coupon2.id }],
-		});
-
-		const preview = await autumnV1.subscriptions.previewUpdate({
-			customer_id: customerId,
-			product_id: product.id,
-			options: [
-				{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
-			],
-		});
-
-		// Upgrade generates: refund (-$50) + charge ($100)
-		// Discounts only apply to charges, not refunds
-		// Charge: $100, 20% off = $80, then 10% off = $72
-		// Total: -$50 + $72 = $22
-		const refundAmount = -50;
-		const afterFirstDiscount = Math.round(100 * 0.8);
-		const discountedCharge = Math.round(afterFirstDiscount * 0.9);
-		const expectedAmount = refundAmount + discountedCharge;
-
-		expect(preview.total).toBe(expectedAmount);
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("discount: promotion code applied to subscription")}`,
-	async () => {
-		const customerId = "discount-promo-code";
+		const customerId = "pct-promo-code";
 
 		const product = products.base({
 			id: "prepaid",
@@ -504,9 +258,9 @@ test.concurrent(
 		});
 
 		// Create a coupon and promotion code
-		const coupon = await stripeCli.coupons.create({
-			percent_off: 25,
-			duration: "forever",
+		const coupon = await createPercentCoupon({
+			stripeCli,
+			percentOff: 25,
 		});
 
 		const promotionCode = await stripeCli.promotionCodes.create({
@@ -539,5 +293,208 @@ test.concurrent(
 		const expectedAmount = refundAmount + discountedCharge;
 
 		expect(preview.total).toBe(expectedAmount);
+	},
+);
+
+// =============================================================================
+// NEW EDGE CASE TESTS
+// =============================================================================
+
+test.concurrent(
+	`${chalk.yellowBright("percent-off: 1% discount (minimum)")}`,
+	async () => {
+		const customerId = "pct-1-minimum";
+
+		const product = products.base({
+			id: "prepaid",
+			items: [
+				items.prepaid({
+					featureId: TestFeature.Messages,
+					billingUnits,
+					price: pricePerUnit,
+				}),
+			],
+		});
+
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [product] }),
+			],
+			actions: [
+				s.attach({
+					productId: product.id,
+					options: [
+						{ feature_id: TestFeature.Messages, quantity: 5 * billingUnits },
+					],
+				}),
+			],
+		});
+
+		const { stripeCli, subscription } = await getStripeSubscription({
+			customerId,
+		});
+
+		const coupon = await createPercentCoupon({
+			stripeCli,
+			percentOff: 1,
+		});
+
+		await applySubscriptionDiscount({
+			stripeCli,
+			subscriptionId: subscription.id,
+			couponIds: [coupon.id],
+		});
+
+		const preview = await autumnV1.subscriptions.previewUpdate({
+			customer_id: customerId,
+			product_id: product.id,
+			options: [
+				{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
+			],
+		});
+
+		// Upgrade generates: refund (-$50) + charge ($100)
+		// Discounts only apply to charges, not refunds
+		// Charge with 1% off: $100 * 0.99 = $99
+		// Total: -$50 + $99 = $49
+		const refundAmount = -50;
+		const discountedCharge = Math.round(100 * 0.99);
+		const expectedAmount = refundAmount + discountedCharge;
+
+		expect(preview.total).toBe(expectedAmount);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("percent-off: 99% discount (near-free)")}`,
+	async () => {
+		const customerId = "pct-99-near-free";
+
+		const product = products.base({
+			id: "prepaid",
+			items: [
+				items.prepaid({
+					featureId: TestFeature.Messages,
+					billingUnits,
+					price: pricePerUnit,
+				}),
+			],
+		});
+
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [product] }),
+			],
+			actions: [
+				s.attach({
+					productId: product.id,
+					options: [
+						{ feature_id: TestFeature.Messages, quantity: 5 * billingUnits },
+					],
+				}),
+			],
+		});
+
+		const { stripeCli, subscription } = await getStripeSubscription({
+			customerId,
+		});
+
+		const coupon = await createPercentCoupon({
+			stripeCli,
+			percentOff: 99,
+		});
+
+		await applySubscriptionDiscount({
+			stripeCli,
+			subscriptionId: subscription.id,
+			couponIds: [coupon.id],
+		});
+
+		const preview = await autumnV1.subscriptions.previewUpdate({
+			customer_id: customerId,
+			product_id: product.id,
+			options: [
+				{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
+			],
+		});
+
+		// Upgrade generates: refund (-$50) + charge ($100)
+		// Discounts only apply to charges, not refunds
+		// Charge with 99% off: $100 * 0.01 = $1
+		// Total: -$50 + $1 = -$49
+		const refundAmount = -50;
+		const discountedCharge = Math.round(100 * 0.01);
+		const expectedAmount = refundAmount + discountedCharge;
+
+		expect(preview.total).toBe(expectedAmount);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("percent-off: discount on quantity decrease (refund not discounted)")}`,
+	async () => {
+		const customerId = "pct-decrease-refund";
+
+		const product = products.base({
+			id: "prepaid",
+			items: [
+				items.prepaid({
+					featureId: TestFeature.Messages,
+					billingUnits,
+					price: pricePerUnit,
+				}),
+			],
+		});
+
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [product] }),
+			],
+			actions: [
+				s.attach({
+					productId: product.id,
+					options: [
+						// Start with 10 units
+						{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
+					],
+				}),
+			],
+		});
+
+		const { stripeCli, subscription } = await getStripeSubscription({
+			customerId,
+		});
+
+		const coupon = await createPercentCoupon({
+			stripeCli,
+			percentOff: 50,
+		});
+
+		await applySubscriptionDiscount({
+			stripeCli,
+			subscriptionId: subscription.id,
+			couponIds: [coupon.id],
+		});
+
+		// Preview decrease from 10 to 5 units (removing 5 units)
+		const preview = await autumnV1.subscriptions.previewUpdate({
+			customer_id: customerId,
+			product_id: product.id,
+			options: [
+				{ feature_id: TestFeature.Messages, quantity: 5 * billingUnits },
+			],
+		});
+
+		// Downgrade generates: refund (-$100 for 10 units) + charge ($50 for 5 units)
+		// Discounts only apply to charges, not refunds
+		// Charge with 50% off: $50 * 0.5 = $25
+		// Total: -$100 + $25 = -$75
+		expect(preview.total).toBe(-75);
 	},
 );

@@ -34,9 +34,7 @@ export const applyAmountOffDiscountToLineItems = ({
 	// Filter to applicable CHARGE line items only
 	// Discounts reduce what the customer pays, so only apply to charges
 	const applicableChargeItems = lineItems.filter(
-		(item) =>
-			item.context.direction === "charge" &&
-			discountAppliesToLineItem({ discount, lineItem: item }),
+		(item) => discountAppliesToLineItem({ discount, lineItem: item }),
 	);
 
 	if (applicableChargeItems.length === 0) return lineItems;
