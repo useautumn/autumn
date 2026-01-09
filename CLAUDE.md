@@ -9,6 +9,8 @@
 - When writing tests, ALWAYS read:
   1. `server/tests/_guides/general-test-guide.md` - Common patterns, client initialization, public keys
   2. Case-specific guide (e.g., `server/tests/_guides/check-endpoint-tests.md` for `/check` tests)
+- When running tests, ALL server-side console logs go to the server's logs which you do not have access to. You must ask the user to paste you in the logs, instead of expecting the server logs to magically appear
+in the test logs. Use your common sense
 
 # Linting and Codebase rules
 - You can access the biome linter by running `bunx biome check <folder or file path>`. Always specify a folder path, as the codebase is quite large and you will get out of scope errors that you are not burdened to correct. If you would like to let biome automatically fix as much as it can, use  `bunx biome check --write <folder or file path>`

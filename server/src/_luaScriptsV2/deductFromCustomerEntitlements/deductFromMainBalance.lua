@@ -8,29 +8,35 @@
   calculate_change(balance, amount, params)
   
   Calculates how much to deduct or add based on floor/ceiling constraints.
+  Mirrors SQL deductFromMainBalance.sql logic exactly.
   
   For deductions (amount > 0):
     - Pass 1 (allow_negative=false): floor at 0
     - Pass 2 (allow_negative=true): floor at min_balance
     
   For refunds (amount < 0):
-    - Ceiling at max_balance (unless overage_behavior_is_allow)
+    - If overage_behavior_is_allow is false and max_balance exists:
+      Apply ceiling of (max_balance + adjustment) to cap how much can be added
+    - Otherwise: add the full amount
     
   Returns: number (positive = deduct, negative = add)
 ]]
 local function calculate_change(balance, amount, params)
   if amount < 0 then
-    -- REFUND: add to balance, cap at ceiling (max_balance)
-    local to_add = -amount
-    if params.max_balance and not params.overage_behavior_is_allow then
-      local room = params.max_balance - balance
-      if room > 0 then
-        to_add = math.min(to_add, room)
-      else
-        to_add = 0
-      end
+    -- REFUND: amount is negative, we want to ADD to balance
+    -- Match SQL logic: apply ceiling if overage_behavior_is_allow is false and max_balance exists
+    if not params.overage_behavior_is_allow and params.max_balance then
+      local adjustment = params.adjustment or 0
+      local ceiling = params.max_balance + adjustment
+      local max_addable = math.max(0, ceiling - balance)
+      -- amount is negative, so -amount is positive (the amount to add)
+      -- Return negative value (adding to balance), capped at max_addable
+      return -math.min(-amount, max_addable)
+    else
+      -- No ceiling: return the full negative amount (which adds to balance)
+      return amount
     end
-    return -to_add  -- negative = adding to balance
+    
   elseif params.allow_negative then
     -- PASS 2: can go below 0, floor at min_balance
     if params.min_balance then
@@ -66,6 +72,7 @@ end
     max_balance: number | nil (ceiling for refunds)
     alter_granted_balance: boolean
     overage_behavior_is_allow: boolean
+    refund_mode: string | nil ("recover_overage" or "restore_prepaid", default is "restore_prepaid")
     logs: table (for debug logging)
     log_prefix: string (for debug logging)
     
@@ -103,7 +110,7 @@ local function deduct_from_main_balance(params)
     
   elseif params.has_entity_scope then
     -- ========================================================================
-    -- CASE 2: Entity-scoped without target (all entities)
+    -- CASE 2: Entity-scoped without target (all entities) - SCENARIO 1
     -- ========================================================================
     local entities = read_current_entities(params.cache_key, params.base_path)
     local keys = sorted_keys(entities)
@@ -121,6 +128,7 @@ local function deduct_from_main_balance(params)
         min_balance = params.min_balance,
         allow_negative = params.allow_negative,
         overage_behavior_is_allow = params.overage_behavior_is_allow,
+        refund_mode = params.refund_mode,
       }
       local to_change = calculate_change(balance, remaining, entity_params)
       
