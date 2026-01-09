@@ -4,6 +4,12 @@
   Uses JSON.NUMINCRBY for atomic incremental updates.
   Reads CURRENT balance from Redis before each calculation to avoid stale reads.
   
+  Helper functions are prepended via string interpolation from:
+    - luaUtils.lua (safe_table, safe_number, find_entitlement, build_entity_path, sorted_keys)
+    - readBalances.lua (read_current_balance, read_current_entity_balance, read_current_entities)
+    - deductFromRollovers.lua (deduct_from_rollovers - stub)
+    - deductFromMainBalance.lua (calculate_change, deduct_from_main_balance)
+  
   KEYS[1] = FullCustomer cache key
   
   ARGV[1] = JSON params:
@@ -28,125 +34,6 @@
       feature_id: string | null
     }
 ]]
-
--- Note: cjson is pre-loaded as a global in Redis Lua environment (no require needed)
-
--- ============================================================================
--- HELPER: Safe table getter (handles cjson.null)
--- ============================================================================
-local function safe_table(val)
-  if val == nil or val == cjson.null or type(val) ~= 'table' then
-    return {}
-  end
-  return val
-end
-
--- ============================================================================
--- HELPER: Safe number getter
--- ============================================================================
-local function safe_number(val)
-  if val == nil or val == cjson.null then
-    return 0
-  end
-  return tonumber(val) or 0
-end
-
--- ============================================================================
--- HELPER: Find entitlement in FullCustomer by ID
--- Returns: cus_ent table, cus_product table, cus_ent_index, cus_product_index
--- ============================================================================
-local function find_entitlement(full_customer, ent_id)
-  if not full_customer.customer_products then return nil, nil, nil, nil end
-  
-  for cp_idx, cus_product in ipairs(full_customer.customer_products) do
-    if cus_product.customer_entitlements then
-      for ce_idx, cus_ent in ipairs(cus_product.customer_entitlements) do
-        if cus_ent.id == ent_id then
-          return cus_ent, cus_product, ce_idx, cp_idx
-        end
-      end
-    end
-  end
-  return nil, nil, nil, nil
-end
-
--- ============================================================================
--- HELPER: Build entity path (consistent across all operations)
--- ============================================================================
-local function build_entity_path(base_path, entity_id)
-  -- Use bracket notation for entity access since entity IDs are object keys
-  return base_path .. '["entities"]["' .. entity_id .. '"]'
-end
-
--- ============================================================================
--- HELPER: Read current balance from Redis (fresh read, not from snapshot)
--- ============================================================================
-local function read_current_balance(cache_key, base_path)
-  local result = redis.call('JSON.GET', cache_key, base_path .. '.balance')
-  if not result or result == cjson.null then
-    return 0
-  end
-  -- JSON.GET returns a JSON string, need to decode
-  local decoded = cjson.decode(result)
-  -- JSONPath returns an array of matches, extract the first element
-  if type(decoded) == 'table' and decoded[1] ~= nil then
-    decoded = decoded[1]
-  end
-  return safe_number(decoded)
-end
-
--- ============================================================================
--- HELPER: Read current entity balance from Redis (fresh read)
--- ============================================================================
-local function read_current_entity_balance(cache_key, base_path, entity_id)
-  -- Use dot notation for entity access
-  local entity_path = base_path .. '.entities.' .. entity_id
-  local result = redis.call('JSON.GET', cache_key, entity_path)
-  
-  if not result or result == cjson.null then
-    return nil -- Entity doesn't exist
-  end
-  
-  local decoded = cjson.decode(result)
-  
-  -- JSONPath returns an array of matches, extract the first element
-  if type(decoded) == 'table' and decoded[1] ~= nil then
-    decoded = decoded[1]
-  end
-  
-  if type(decoded) ~= 'table' then
-    return nil
-  end
-  
-  return {
-    balance = safe_number(decoded.balance),
-    adjustment = safe_number(decoded.adjustment)
-  }
-end
-
--- ============================================================================
--- HELPER: Read all entity balances from Redis (fresh read)
--- ============================================================================
-local function read_current_entities(cache_key, base_path)
-  local entities_path = base_path .. '.entities'
-  local result = redis.call('JSON.GET', cache_key, entities_path)
-  if not result or result == cjson.null then
-    return {}
-  end
-  local decoded = cjson.decode(result)
-  -- JSONPath returns an array of matches, extract the first element
-  if type(decoded) == 'table' and decoded[1] ~= nil and type(decoded[1]) == 'table' then
-    -- Check if this looks like a JSONPath array wrapper (first element is an object with entity keys)
-    -- vs an actual entity object (first element would be a number or have 'balance' field directly)
-    if decoded.balance == nil and decoded.adjustment == nil then
-      decoded = decoded[1]
-    end
-  end
-  if type(decoded) ~= 'table' then
-    return {}
-  end
-  return decoded
-end
 
 -- ============================================================================
 -- MAIN SCRIPT
