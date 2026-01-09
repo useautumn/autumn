@@ -1,6 +1,7 @@
 import {
 	cusProductToLineItems,
 	type FullCusProduct,
+	filterUnchangedPricesFromLineItems,
 	type LineItem,
 } from "@autumn/shared";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
@@ -54,11 +55,19 @@ export const buildAutumnLineItems = ({
 		}),
 	);
 
+	const {
+		deletedLineItems: filteredDeletedLineItems,
+		newLineItems: filteredNewLineItems,
+	} = filterUnchangedPricesFromLineItems({
+		deletedLineItems,
+		newLineItems,
+	});
+
 	// All items
 	const allLineItems = [
-		...deletedLineItems,
+		...filteredDeletedLineItems,
 		...arrearLineItems,
-		...newLineItems,
+		...filteredNewLineItems,
 	];
 
 	return allLineItems;

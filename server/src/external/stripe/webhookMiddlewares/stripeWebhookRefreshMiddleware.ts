@@ -57,7 +57,7 @@ export const stripeWebhookRefreshMiddleware = async (
 				return;
 			}
 
-			const customer = ctx.customer;
+			const customer = ctx.fullCustomer;
 
 			if (!customer) {
 				logger.warn(`Customer not found in context, skipping cache refresh`);

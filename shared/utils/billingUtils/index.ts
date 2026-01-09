@@ -8,6 +8,7 @@ export * from "./intervalUtils/intervalArithmetic.js";
 // Invoicing utils
 export * from "./invoicingUtils/cusProductToArrearLineItems.js";
 export * from "./invoicingUtils/cusProductToLineItems.js";
+export * from "./invoicingUtils/filterUnchangedPricesFromLineItems.js";
 export * from "./invoicingUtils/lineItemBuilders/buildLineItem.js";
 export * from "./invoicingUtils/lineItemBuilders/fixedPriceToLineItem.js";
 export * from "./invoicingUtils/lineItemBuilders/usagePriceToLineItem.js";

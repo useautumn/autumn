@@ -1,9 +1,10 @@
 import { expect, test } from "bun:test";
+import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/billing/utils/expectCustomerInvoiceCorrect";
 import {
 	expectProductActive,
-	expectProductCanceled,
+	expectProductCanceling,
 	expectProductNotPresent,
 	expectProductScheduled,
 } from "@tests/billing/utils/expectCustomerProductCorrect";
@@ -58,7 +59,7 @@ test.concurrent(`${chalk.yellowBright("schedules-f2p: cancel entity 1, upgrade e
 		customerId,
 		entities[0].id,
 	);
-	await expectProductCanceled({
+	await expectProductCanceling({
 		customer: entity1AfterCancel,
 		productId: pro.id,
 	});
@@ -94,7 +95,7 @@ test.concurrent(`${chalk.yellowBright("schedules-f2p: cancel entity 1, upgrade e
 	});
 
 	// Verify invoices
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	expectCustomerInvoiceCorrect({
 		customer,
@@ -240,7 +241,7 @@ test.concurrent(`${chalk.yellowBright("schedules-f2p: downgrade entity 1, upgrad
 	});
 
 	// Verify invoices
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	expectCustomerInvoiceCorrect({
 		customer,
@@ -341,7 +342,7 @@ test.concurrent(`${chalk.yellowBright("schedules-f2p: cancel to default, upgrade
 		customerId,
 		entities[0].id,
 	);
-	await expectProductCanceled({
+	await expectProductCanceling({
 		customer: entity1AfterCancel,
 		productId: pro.id,
 	});
@@ -381,7 +382,7 @@ test.concurrent(`${chalk.yellowBright("schedules-f2p: cancel to default, upgrade
 	});
 
 	// Verify invoices
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	expectCustomerInvoiceCorrect({
 		customer,

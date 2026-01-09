@@ -4,7 +4,7 @@ import { createMockCusEntitlement } from "@tests/utils/mockUtils/cusEntitlementM
 import { createMockCustomerProduct } from "@tests/utils/mockUtils/cusProductMocks";
 import { createMockRollover } from "@tests/utils/mockUtils/rolloverMocks";
 import chalk from "chalk";
-import { cusProductToExistingUsages } from "@/internal/billing/billingUtils/handleExistingUsages/cusProductToExistingUsages";
+import { cusProductToExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/cusProductToExistingUsages";
 
 describe(chalk.yellowBright("cusProductToExistingUsages"), () => {
 	describe("multiple cusEnts (lifetime and monthly)", () => {

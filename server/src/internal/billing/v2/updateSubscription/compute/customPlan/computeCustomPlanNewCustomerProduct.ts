@@ -36,7 +36,7 @@ export const computeCustomPlanNewCustomerProduct = ({
 		cusProduct: customerProduct,
 	});
 
-	console.log("New customer product feature quantities", featureQuantities);
+	console.log("Existing usages", existingUsages);
 
 	// Compute the new full customer product
 	const newFullCustomerProduct = initFullCustomerProduct({
@@ -57,9 +57,10 @@ export const computeCustomPlanNewCustomerProduct = ({
 
 		initOptions: {
 			isCustom: true,
-			subscriptionId: stripeSubscription?.id,
+			subscriptionId: stripeSubscription?.id, // don't populate if it's starting in the future.
 			subscriptionScheduleId: stripeSubscriptionSchedule?.id,
 
+			startsAt: currentCustomerProduct.starts_at ?? undefined, // keep same starts at as current customer product?
 			canceledAt: currentCustomerProduct.canceled_at ?? undefined,
 			endedAt: currentCustomerProduct.ended_at ?? undefined,
 		},

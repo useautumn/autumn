@@ -1,6 +1,6 @@
 import { expect } from "bun:test";
+import type { ApiCustomerV3 } from "@autumn/shared";
 import { ApiVersion } from "@autumn/shared";
-import type { Customer } from "autumn-js";
 import { AutumnInt } from "@/external/autumn/autumnCli";
 
 const defaultAutumn = new AutumnInt({ version: ApiVersion.V1_2 });
@@ -21,7 +21,7 @@ export const expectCustomerProductCorrect = async ({
 	state,
 }: {
 	customerId?: string;
-	customer?: Customer;
+	customer?: ApiCustomerV3;
 	productId: string;
 	state: ProductState;
 }) => {
@@ -66,16 +66,18 @@ export const expectCustomerProductCorrect = async ({
  */
 export const expectProductActive = async (params: {
 	customerId?: string;
-	customer?: Customer;
+	customer?: ApiCustomerV3;
 	productId: string;
 }) => expectCustomerProductCorrect({ ...params, state: "active" });
 
 /**
- * Shorthand for checking product is canceled
+ * Shorthand for checking product is canceling (active but with canceled_at set).
+ * This is the state a product enters after a downgrade - it remains active until
+ * the billing cycle ends, then transitions to the new product.
  */
-export const expectProductCanceled = async (params: {
+export const expectProductCanceling = async (params: {
 	customerId?: string;
-	customer?: Customer;
+	customer?: ApiCustomerV3;
 	productId: string;
 }) => expectCustomerProductCorrect({ ...params, state: "canceled" });
 
@@ -84,7 +86,7 @@ export const expectProductCanceled = async (params: {
  */
 export const expectProductScheduled = async (params: {
 	customerId?: string;
-	customer?: Customer;
+	customer?: ApiCustomerV3;
 	productId: string;
 }) => expectCustomerProductCorrect({ ...params, state: "scheduled" });
 
@@ -93,6 +95,6 @@ export const expectProductScheduled = async (params: {
  */
 export const expectProductNotPresent = async (params: {
 	customerId?: string;
-	customer?: Customer;
+	customer?: ApiCustomerV3;
 	productId: string;
 }) => expectCustomerProductCorrect({ ...params, state: "undefined" });

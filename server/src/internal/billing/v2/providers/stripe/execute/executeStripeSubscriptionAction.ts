@@ -2,6 +2,7 @@ import { InternalError } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { isStripeSubscriptionCanceled } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
+import { setStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
@@ -93,8 +94,17 @@ export const executeStripeSubscriptionAction = async ({
 
 	if (!subscriptionAction) return {};
 
+	let { invoiceMode, stripeSubscription, currentEpochMs } = billingContext;
+
+	// 2. Lock stripe subscription
+	if (stripeSubscription) {
+		await setStripeSubscriptionLock({
+			stripeSubscriptionId: stripeSubscription.id,
+			lockedAtMs: currentEpochMs,
+		});
+	}
+
 	// Invoice mode:
-	const invoiceMode = billingContext.invoiceMode;
 	const invoiceModeParams = invoiceMode
 		? {
 				collection_method: "send_invoice" as const,
@@ -105,13 +115,12 @@ export const executeStripeSubscriptionAction = async ({
 	ctx.logger.debug(
 		`[executeStripeSubscriptionAction] Executing subscription operation: ${subscriptionAction.type}`,
 	);
-	let stripeSubscription: Stripe.Subscription | undefined =
-		await executeSubscriptionOperation({
-			ctx,
-			billingContext,
-			subscriptionAction,
-			invoiceModeParams,
-		});
+	stripeSubscription = await executeSubscriptionOperation({
+		ctx,
+		billingContext,
+		subscriptionAction,
+		invoiceModeParams,
+	});
 
 	const latestStripeInvoice =
 		subscriptionAction.type === "create"

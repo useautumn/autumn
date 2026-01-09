@@ -350,7 +350,7 @@ export const initScenario = async ({
 
 	// 5. Attach products
 	for (const attachment of config.attachments) {
-		const prefixedProductId = `${customerId}_${attachment.productId}`;
+		const prefixedProductId = `${attachment.productId}_${customerId}`;
 
 		// Resolve entityIndex to entityId
 		let entityId: string | undefined;
@@ -373,7 +373,7 @@ export const initScenario = async ({
 
 	// 6. Cancel products if configured
 	for (const cancellation of config.cancellations) {
-		const prefixedProductId = `${customerId}_${cancellation.productId}`;
+		const prefixedProductId = `${cancellation.productId}_${customerId}`;
 
 		// Resolve entityIndex to entityId
 		let entityId: string | undefined;

@@ -2,6 +2,7 @@ import {
 	type BillingInterval,
 	type FixedPriceConfig,
 	isFixedPrice,
+	itemToBillingInterval,
 	type Price,
 	type ProductItem,
 	type ProductV2,
@@ -17,8 +18,8 @@ export const addPrefixToProducts = ({
 	prefix: string;
 }) => {
 	for (const product of products) {
-		product.id = `${prefix}_${product.id}`;
-		product.name = `${prefix} ${product.name}`;
+		product.id = `${product.id}_${prefix}`;
+		product.name = `${product.name} ${prefix}`;
 		product.group = prefix;
 	}
 
@@ -40,7 +41,7 @@ export const replaceItems = ({
 }) => {
 	const newItems = structuredClone(items);
 
-	let index;
+	let index: number | undefined;
 	if (featureId) {
 		index = newItems.findIndex((item) => item.feature_id === featureId);
 	}
@@ -48,7 +49,7 @@ export const replaceItems = ({
 	if (interval) {
 		index = newItems.findIndex(
 			(item) =>
-				item.interval === (interval as any) &&
+				itemToBillingInterval({ item }) === interval &&
 				(intervalCount ? item.interval_count === intervalCount : true) &&
 				nullish(item.feature_id),
 		);

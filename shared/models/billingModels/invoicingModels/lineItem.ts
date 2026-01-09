@@ -34,19 +34,3 @@ export const LineItemSchema = z
 export type LineItemCreate = z.input<typeof LineItemSchema>;
 export type LineItem = z.infer<typeof LineItemSchema>;
 export type LineItemDiscount = z.infer<typeof LineItemDiscountSchema>;
-
-// export type LineItem = {
-// 	amount: number;
-
-// 	discounts: LineItemDiscount[];
-// 	finalAmount: number;
-
-// 	description: string;
-// 	price: Price;
-// 	feature?: Feature; // Optional - fixed prices don't have features
-// 	context: LineItemContext;
-
-// 	// Stripe fields
-// 	stripePriceId?: string;
-// 	stripeProductId?: string;
-// };

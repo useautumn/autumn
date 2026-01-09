@@ -3,6 +3,7 @@ import chalk from "chalk";
 import type { Context } from "hono";
 import { Stripe } from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { handleStripeSubscriptionUpdated } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/handleStripeSubscriptionUpdated.js";
 import { unsetOrgStripeKeys } from "@/internal/orgs/orgUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { handleWebhookErrorSkip } from "@/utils/routerUtils/webhookErrorSkip.js";
@@ -16,7 +17,6 @@ import { handleInvoiceUpdated } from "./webhookHandlers/handleInvoiceUpdated.js"
 import { handleSubCreated } from "./webhookHandlers/handleSubCreated.js";
 import { handleSubDeleted } from "./webhookHandlers/handleSubDeleted.js";
 import { handleSubscriptionScheduleCanceled } from "./webhookHandlers/handleSubScheduleCanceled.js";
-import { handleSubscriptionUpdated } from "./webhookHandlers/handleSubUpdated.js";
 import type {
 	StripeWebhookContext,
 	StripeWebhookHonoEnv,
@@ -49,10 +49,7 @@ export const handleStripeWebhookEvent = async (
 				break;
 
 			case "customer.subscription.updated": {
-				await handleSubscriptionUpdated({
-					ctx,
-					eventData: event.data,
-				});
+				await handleStripeSubscriptionUpdated({ ctx });
 				break;
 			}
 
@@ -106,14 +103,7 @@ export const handleStripeWebhookEvent = async (
 			}
 
 			case "invoice.finalized": {
-				const finalizedInvoice = event.data.object;
-				await handleInvoiceFinalized({
-					db,
-					org,
-					data: finalizedInvoice,
-					env,
-					logger,
-				});
+				await handleInvoiceFinalized({ ctx });
 				break;
 			}
 
@@ -129,13 +119,7 @@ export const handleStripeWebhookEvent = async (
 			}
 
 			case "customer.discount.deleted":
-				await handleCusDiscountDeleted({
-					db,
-					org,
-					discount: event.data.object,
-					env,
-					logger,
-				});
+				await handleCusDiscountDeleted({ ctx });
 				break;
 		}
 	} catch (error) {
