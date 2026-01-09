@@ -8,8 +8,9 @@ import {
 	ApiEventsListResponseSchema,
 	EVENTS_LIST_EXAMPLE,
 } from "@api/events/list/eventsListResponse.js";
+import type { ZodOpenApiPathsObject } from "zod-openapi";
 
-export const eventsOpenApi = {
+export const eventsOpenApi: ZodOpenApiPathsObject = {
 	"/events/list": {
 		post: {
 			summary: "List Events",
