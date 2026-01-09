@@ -9,6 +9,7 @@ export const ExtUpdateSubscriptionV0ParamsSchema = z.object({
 	// Customer / Entity Info
 	customer_id: z.string(),
 	product_id: z.string().nullish(),
+	version: z.number().optional(),
 	entity_id: z.string().nullish(),
 
 	customer_data: CustomerDataSchema.optional(),
