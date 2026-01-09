@@ -13,7 +13,7 @@ import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/free
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { nullish } from "@/utils/genUtils.js";
 import type { ItemSet } from "@/utils/models/ItemSet.js";
-import { createProrationInvoice } from "../../../../../external/stripe/stripeSubUtils/updateStripeSub/createProrationInvoice.js";
+import { createProrationInvoice } from "../../../../../external/stripe/stripeSubUtils/updateStripeSub/createProrationinvoice.js";
 import { isStripeSubscriptionCanceled } from "../../../../../external/stripe/stripeSubUtils.js";
 
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
