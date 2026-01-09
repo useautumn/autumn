@@ -53,7 +53,11 @@ export const createStripeCusIfNotExists = async ({
 			const stripeCus = await stripeCli.customers.retrieve(
 				customer.processor.id,
 				{
-					expand: ["test_clock", "invoice_settings.default_payment_method"],
+					expand: [
+						"test_clock",
+						"invoice_settings.default_payment_method",
+						"discount.source.coupon.applies_to",
+					],
 				},
 			);
 

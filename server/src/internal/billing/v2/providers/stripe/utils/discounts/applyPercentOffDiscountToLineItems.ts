@@ -30,8 +30,12 @@ export const applyPercentOffDiscountToLineItems = ({
 			return item;
 		}
 
-		// Calculate discount amount: |amount| * (percentOff / 100)
-		const itemDiscount = new Decimal(Math.abs(item.amount))
+		// Use current finalAmount as base for multiplicative stacking
+		// If no previous discounts, finalAmount equals amount
+		const currentAmount = item.finalAmount ?? item.amount;
+
+		// Calculate discount amount: |currentAmount| * (percentOff / 100)
+		const itemDiscount = new Decimal(Math.abs(currentAmount))
 			.times(percentOff)
 			.dividedBy(100)
 			.round()
@@ -46,13 +50,11 @@ export const applyPercentOffDiscountToLineItems = ({
 		};
 
 		const existingDiscounts = item.discounts ?? [];
-		const totalDiscount =
-			existingDiscounts.reduce((sum, d) => sum + d.amountOff, 0) + itemDiscount;
 
 		const rawFinalAmount =
 			item.context.direction === "refund"
-				? new Decimal(item.amount).plus(totalDiscount).toNumber()
-				: new Decimal(item.amount).minus(totalDiscount).toNumber();
+				? new Decimal(currentAmount).plus(itemDiscount).toNumber()
+				: new Decimal(currentAmount).minus(itemDiscount).toNumber();
 
 		const finalAmount =
 			item.context.direction === "refund"
