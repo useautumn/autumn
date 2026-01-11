@@ -31,6 +31,7 @@ export interface Payloads {
 	[JobName.SyncBalanceBatchV3]: {
 		orgId: string;
 		env: AppEnv;
+		customerId: string;
 		item: {
 			customerId: string;
 			orgId: string;

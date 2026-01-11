@@ -19,7 +19,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
 import { getCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/getCachedApiCustomer.js";
-import { getCachedApiEntity } from "../../../entities/entityUtils/apiEntityCacheUtils/getCachedApiEntity.js";
+import { getCachedApiEntity } from "@/internal/entities/entityUtils/apiEntityCacheUtils/getCachedApiEntity.js";
 
 export interface SyncItemV2 {
 	customerId: string;

@@ -11,7 +11,7 @@ import {
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { EventService } from "../../api/events/EventService.js";
 import { getOrCreateCachedFullCustomer } from "../../customers/cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
-import { runRedisDeductionV2 } from "./redisTrackUtils/runRedisDeductionV2.js";
+import { runRedisDeductionV2 } from "./runRedisDeduction/runRedisDeductionV2.js";
 import { constructEvent, type EventInfo } from "./trackUtils/eventUtils.js";
 import type { FeatureDeduction } from "./trackUtils/getFeatureDeductions.js";
 
@@ -39,10 +39,7 @@ export const runTrackV2 = async ({
 	// 1. Get full customer from cache or DB
 	const fullCustomer = await getOrCreateCachedFullCustomer({
 		ctx,
-		customerId: body.customer_id,
-		customerData: body.customer_data,
-		entityId: body.entity_id,
-		entityData: body.entity_data,
+		params: body,
 		source: "runTrackV2",
 	});
 
@@ -75,7 +72,6 @@ export const runTrackV2 = async ({
 	}
 
 	// Try Redis deduction
-	console.log("Deducting from Redis...");
 	const response = await runRedisDeductionV2({
 		ctx,
 		fullCustomer,

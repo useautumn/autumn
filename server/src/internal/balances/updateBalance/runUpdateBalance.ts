@@ -10,7 +10,7 @@ import { getCachedApiEntity } from "@/internal/entities/entityUtils/apiEntityCac
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import type { BatchRequestFilters } from "../track/redisTrackUtils/executeBatchDeduction.js";
 import { runDeductionTx } from "../track/trackUtils/runDeductionTx.js";
-import { syncItemV2 } from "../utils/sync/syncItemV2.js";
+import { syncItemV2 } from "../utils/sync/legacy/syncItemV2.js";
 import { runRedisUpdateBalance } from "./runRedisUpdateBalance.js";
 
 /**

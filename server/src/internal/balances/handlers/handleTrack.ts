@@ -41,12 +41,5 @@ export const handleTrack = createRoute({
 				featureDeductions,
 			}),
 		);
-		// const response = await runTrack({
-		// 	ctx,
-		// 	body,
-		// 	featureDeductions,
-		// });
-
-		// return c.json(response);
 	},
 });

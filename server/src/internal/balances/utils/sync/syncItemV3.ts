@@ -1,4 +1,9 @@
-import type { FullCustomer, FullCustomerEntitlement } from "@autumn/shared";
+import {
+	cusProductsToCusEnts,
+	type EntityBalance,
+	type FullCustomer,
+	findCustomerEntitlementById,
+} from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { getRegionalRedis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -13,87 +18,54 @@ export interface SyncItemV3 {
 	cusEntIds: string[];
 }
 
-interface EntitlementSync {
+interface SyncEntry {
 	customer_entitlement_id: string;
-	target_balance?: number;
-	target_adjustment?: number;
-	entity_feature_id?: string;
-	target_entity_id?: string;
+	feature_id: string;
+	balance: number;
+	adjustment: number;
+	entities: Record<string, EntityBalance> | null;
 }
 
-const buildCustomerLevelEntry = ({
-	cusEnt,
-}: {
-	cusEnt: FullCustomerEntitlement;
-}): EntitlementSync => ({
-	customer_entitlement_id: cusEnt.id,
-	target_balance: cusEnt.balance ?? 0,
-	target_adjustment: cusEnt.adjustment ?? 0,
-});
-
-const buildEntityLevelEntries = ({
-	cusEnt,
-}: {
-	cusEnt: FullCustomerEntitlement;
-}): EntitlementSync[] => {
-	if (!cusEnt.entities) return [];
-
-	return Object.entries(cusEnt.entities).map(([entityId, entityBalance]) => ({
-		customer_entitlement_id: cusEnt.id,
-		target_balance: entityBalance.balance,
-		target_adjustment: entityBalance.adjustment,
-		entity_feature_id: cusEnt.entitlement?.entity_feature_id ?? undefined,
-		target_entity_id: entityId,
-	}));
-};
-
-const buildSyncEntriesFromFullCustomer = ({
+const buildSyncEntries = ({
 	fullCustomer,
 	cusEntIds,
 }: {
 	fullCustomer: FullCustomer;
 	cusEntIds: string[];
-}): EntitlementSync[] => {
-	const entries: EntitlementSync[] = [];
-	const cusEntIdSet = new Set(cusEntIds);
+}): SyncEntry[] => {
+	const cusEnts = cusProductsToCusEnts({
+		cusProducts: fullCustomer.customer_products,
+	});
 
-	for (const cusProduct of fullCustomer.customer_products) {
-		for (const cusEnt of cusProduct.customer_entitlements) {
-			if (!cusEntIdSet.has(cusEnt.id)) continue;
+	const entries: SyncEntry[] = [];
 
-			const hasEntityScope = !!cusEnt.entitlement?.entity_feature_id;
+	for (const cusEntId of cusEntIds) {
+		const cusEnt = findCustomerEntitlementById({
+			cusEnts,
+			id: cusEntId,
+			errorOnNotFound: false,
+		});
 
-			if (hasEntityScope) {
-				entries.push(...buildEntityLevelEntries({ cusEnt }));
-			} else {
-				entries.push(buildCustomerLevelEntry({ cusEnt }));
-			}
-		}
+		if (!cusEnt) continue;
+
+		entries.push({
+			customer_entitlement_id: cusEnt.id,
+			feature_id: cusEnt.entitlement.feature.id,
+			balance: cusEnt.balance ?? 0,
+			adjustment: cusEnt.adjustment ?? 0,
+			entities: cusEnt.entities ?? null,
+		});
 	}
 
 	return entries;
 };
 
-const formatSyncResult = ({
-	updates,
-}: {
-	updates:
-		| Record<string, { balance?: number; adjustment?: number }>
-		| undefined;
-}): string => {
-	if (!updates || Object.keys(updates).length === 0) {
-		return "no changes";
-	}
-
-	return Object.entries(updates)
-		.map(([id, data]) => {
-			const shortId = id.replace("cus_ent_", "");
-			const parts: string[] = [];
-			if (data.balance !== undefined) parts.push(`bal=${data.balance}`);
-			if (data.adjustment !== undefined) parts.push(`adj=${data.adjustment}`);
-			return `${shortId}: ${parts.join(", ")}`;
-		})
-		.join(" | ");
+const formatSyncEntry = ({ entry }: { entry: SyncEntry }): string => {
+	const hasEntities = entry.entities && Object.keys(entry.entities).length > 0;
+	const entitiesStr = hasEntities
+		? `, entities=${Object.keys(entry.entities!).length}`
+		: "";
+	return `${entry.feature_id} (${entry.customer_entitlement_id}): bal=${entry.balance}, adj=${entry.adjustment}${entitiesStr}`;
 };
 
 /**
@@ -119,52 +91,32 @@ export const syncItemV3 = async ({
 	});
 
 	if (!fullCustomer) {
-		logger.info(`[SYNC V3] Cache miss for ${customerId}, skipping sync`);
+		logger.info(`[SYNC V3] Cache miss for ${customerId}, skipping`);
 		return;
 	}
 
-	// Debug: log entities from cache
-	for (const cp of fullCustomer.customer_products) {
-		for (const ce of cp.customer_entitlements) {
-			if (cusEntIds.includes(ce.id)) {
-				logger.info(
-					`[SYNC V3 DEBUG] cusEnt ${ce.id.slice(-10)} entities: ${JSON.stringify(ce.entities)}`,
-				);
-			}
-		}
-	}
-
-	const entries = buildSyncEntriesFromFullCustomer({ fullCustomer, cusEntIds });
-
-	logger.info(`[SYNC V3 DEBUG] entries: ${JSON.stringify(entries)}`);
+	const entries = buildSyncEntries({ fullCustomer, cusEntIds });
 
 	if (entries.length === 0) {
-		logger.info(`[SYNC V3] No entries to sync for ${customerId}`);
+		logger.info(`[SYNC V3] No entries for ${customerId}`);
 		return;
+	}
+
+	for (const entry of entries) {
+		logger.info(`[SYNC V3] (${customerId}) ${formatSyncEntry({ entry })}`);
 	}
 
 	const result = await db.execute(
-		sql`SELECT * FROM sync_balances(${JSON.stringify({ entitlements: entries })}::jsonb)`,
+		sql`SELECT * FROM sync_balances_v2(${JSON.stringify({ customer_entitlement_updates: entries })}::jsonb)`,
 	);
 
-	const syncResult = result[0] as
-		| {
-				sync_balances?: {
-					updates?: Record<
-						string,
-						{ balance?: number; adjustment?: number; entities?: unknown }
-					>;
-				};
-		  }
+	const syncResult = result[0]?.sync_balances_v2 as
+		| { updates?: Record<string, unknown> }
 		| undefined;
 
-	logger.info(
-		`[SYNC V3 DEBUG] SQL result: ${JSON.stringify(syncResult?.sync_balances)}`,
-	);
+	const updateCount = syncResult?.updates
+		? Object.keys(syncResult.updates).length
+		: 0;
 
-	const formatted = formatSyncResult({
-		updates: syncResult?.sync_balances?.updates,
-	});
-
-	logger.info(`[SYNC V3] (${customerId}) ${formatted}`);
+	logger.info(`[SYNC V3] (${customerId}) Done: ${updateCount} updated`);
 };

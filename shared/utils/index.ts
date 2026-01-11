@@ -20,6 +20,7 @@ export * from "./cusEntUtils/convertCusEntUtils/cusEntToKey.js";
 export * from "./cusEntUtils/convertCusEntUtils.js";
 export * from "./cusEntUtils/cusEntUtils.js";
 export * from "./cusEntUtils/filterCusEntUtils.js";
+export * from "./cusEntUtils/findCustomerEntitlement/findCustomerEntitlementById.js";
 // Cus ent utils
 export * from "./cusEntUtils/getRolloverFields.js";
 export * from "./cusEntUtils/getStartingBalance.js";

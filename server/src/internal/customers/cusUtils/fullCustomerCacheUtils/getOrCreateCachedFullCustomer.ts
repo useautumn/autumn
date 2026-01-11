@@ -1,10 +1,12 @@
 import {
 	type AppEnv,
+	type CheckParams,
 	CusExpand,
 	type CustomerData,
 	type Entity,
 	type EntityData,
 	type FullCustomer,
+	type TrackParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { autoCreateEntity } from "@/internal/entities/handlers/handleCreateEntity/autoCreateEntity.js";
@@ -19,20 +21,20 @@ import { setCachedFullCustomer } from "./setCachedFullCustomer.js";
  */
 export const getOrCreateCachedFullCustomer = async ({
 	ctx,
-	customerId,
-	customerData,
-	entityId,
-	entityData,
+	params,
 	source,
 }: {
 	ctx: AutumnContext;
-	customerId: string | null;
-	customerData?: CustomerData;
-	entityId?: string;
-	entityData?: EntityData;
+	params: TrackParams | CheckParams;
 	source?: string;
 }): Promise<FullCustomer> => {
 	const { org, env, db, skipCache, logger } = ctx;
+	const {
+		customer_id: customerId,
+		customer_data: customerData,
+		entity_id: entityId,
+		entity_data: entityData,
+	} = params;
 
 	let fullCustomer: FullCustomer | undefined;
 	const fetchTimeMs = Date.now();
@@ -45,6 +47,7 @@ export const getOrCreateCachedFullCustomer = async ({
 
 		if (fullCustomer) {
 			logger.debug(`[getOrCreateCachedFullCustomer] Cache hit: ${customerId}`);
+			return fullCustomer;
 		}
 	}
 

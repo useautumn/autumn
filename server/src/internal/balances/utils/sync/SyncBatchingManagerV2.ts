@@ -170,6 +170,7 @@ export class SyncBatchingManagerV2 {
 				payload: {
 					orgId: context.orgId,
 					env: context.env,
+					customerId: context.customerId,
 					item: {
 						customerId: context.customerId,
 						orgId: context.orgId,
