@@ -6,7 +6,7 @@ import {
 	type FullCusProduct,
 	type FullCustomer,
 	getProductItemDisplay,
-	isCusProductTrialing,
+	isCustomerProductTrialing,
 	type ProductItem,
 	type ProductV2,
 	stripeToAtmnAmount,
@@ -17,7 +17,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { DateInputUnix } from "@/components/general/DateInputUnix";
+import { AttachProductLineItems } from "@/components/forms/attach-product/attach-product-line-items";
+import { AttachProductTotals } from "@/components/forms/attach-product/attach-product-totals";
+import { useUpdateSubscriptionPreview } from "@/components/forms/update-subscription/use-update-subscription-preview";
 import {
 	Popover,
 	PopoverContent,
@@ -25,6 +27,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
+import { LoadingShimmerText } from "@/components/v2/LoadingShimmerText";
 import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
@@ -126,7 +129,7 @@ function FreeTrialEditor({
 	onTrialCardRequiredChange,
 	onRemoveTrialChange,
 }: FreeTrialEditorProps) {
-	const isCurrentlyTrialing = isCusProductTrialing({ cusProduct });
+	const isCurrentlyTrialing = isCustomerProductTrialing(cusProduct);
 
 	return (
 		<div className="border-b border-border">
@@ -1145,13 +1148,13 @@ function SheetContent({
 		initialPrepaidOptions,
 	);
 
-	const [planCustomStartDate, setPlanCustomStartDate] = useState<number | null>(
+	const [planCustomStartDate, _setPlanCustomStartDate] = useState<
+		number | null
+	>(null);
+	const [planCustomEndDate, _setPlanCustomEndDate] = useState<number | null>(
 		null,
 	);
-	const [planCustomEndDate, setPlanCustomEndDate] = useState<number | null>(
-		null,
-	);
-	const [billingCycleAnchor, setBillingCycleAnchor] = useState<number | null>(
+	const [billingCycleAnchor, _setBillingCycleAnchor] = useState<number | null>(
 		null,
 	);
 
@@ -1267,6 +1270,32 @@ function SheetContent({
 	const previewQuery = useSubscriptionUpdatePreview({
 		body: requestBody,
 		enabled: !!requestBody,
+	});
+
+	// Compute freeTrial value for preview
+	const previewFreeTrial = useMemo(() => {
+		if (removeTrial) {
+			return null;
+		}
+		if (trialLength) {
+			return {
+				length: trialLength,
+				duration: trialDuration,
+				card_required: trialCardRequired,
+				unique_fingerprint: false,
+			};
+		}
+		return undefined;
+	}, [removeTrial, trialLength, trialDuration, trialCardRequired]);
+
+	// Checkout preview query with free trial support
+	const checkoutPreviewQuery = useUpdateSubscriptionPreview({
+		customerId,
+		product,
+		entityId,
+		prepaidOptions: prepaidOptions ?? undefined,
+		version: product?.version,
+		freeTrial: previewFreeTrial,
 	});
 
 	// Update mutation with invoice handling
@@ -1471,82 +1500,22 @@ function SheetContent({
 					onRemoveTrialChange={setRemoveTrial}
 				/>
 
-				{/* Custom Plan Dates */}
+				{/* Checkout Preview Response (same as SubscriptionUpdateSheet) */}
 				<div className="border-b border-border">
 					<div className="px-4 py-2 border-b border-border">
-						<h3 className="text-sm font-medium">Custom Plan Dates</h3>
+						<h3 className="text-sm font-medium">Checkout Preview Response</h3>
 					</div>
-					<div className="px-4 py-3 space-y-3">
-						<div className="flex items-center gap-3">
-							<label
-								htmlFor="plan-start-date"
-								className="text-sm text-t-secondary w-32"
-							>
-								Start Date
-							</label>
-							<div className="flex-1">
-								<DateInputUnix
-									unixDate={planCustomStartDate}
-									setUnixDate={setPlanCustomStartDate}
-								/>
-							</div>
-							{planCustomStartDate ? (
-								<button
-									type="button"
-									onClick={() => setPlanCustomStartDate(null)}
-									className="text-xs text-t-secondary hover:text-t-primary"
-								>
-									Clear
-								</button>
-							) : null}
+					{checkoutPreviewQuery.isLoading ? (
+						<LoadingShimmerText
+							text="Calculating totals"
+							className="py-4 px-6"
+						/>
+					) : (
+						<div className="py-4">
+							<AttachProductLineItems previewData={checkoutPreviewQuery.data} />
+							<AttachProductTotals previewData={checkoutPreviewQuery.data} />
 						</div>
-						<div className="flex items-center gap-3">
-							<label
-								htmlFor="plan-end-date"
-								className="text-sm text-t-secondary w-32"
-							>
-								End Date
-							</label>
-							<div className="flex-1">
-								<DateInputUnix
-									unixDate={planCustomEndDate}
-									setUnixDate={setPlanCustomEndDate}
-								/>
-							</div>
-							{planCustomEndDate ? (
-								<button
-									type="button"
-									onClick={() => setPlanCustomEndDate(null)}
-									className="text-xs text-t-secondary hover:text-t-primary"
-								>
-									Clear
-								</button>
-							) : null}
-						</div>
-						<div className="flex items-center gap-3">
-							<label
-								htmlFor="billing-cycle-anchor"
-								className="text-sm text-t-secondary w-32"
-							>
-								Billing Anchor
-							</label>
-							<div className="flex-1">
-								<DateInputUnix
-									unixDate={billingCycleAnchor}
-									setUnixDate={setBillingCycleAnchor}
-								/>
-							</div>
-							{billingCycleAnchor ? (
-								<button
-									type="button"
-									onClick={() => setBillingCycleAnchor(null)}
-									className="text-xs text-t-secondary hover:text-t-primary"
-								>
-									Clear
-								</button>
-							) : null}
-						</div>
-					</div>
+					)}
 				</div>
 
 				{/* Preview Result */}

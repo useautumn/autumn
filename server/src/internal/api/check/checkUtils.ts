@@ -4,7 +4,7 @@ import {
 	type FreeTrial,
 	type FullCusProduct,
 	findCusPriceByFeature,
-	isCusProductTrialing,
+	isCustomerProductTrialing,
 	type ProductItem,
 	priceToInvoiceAmount,
 	UsageModel,
@@ -64,7 +64,8 @@ export const getOptions = ({
 
 			if (
 				(freeTrial ||
-					(cusProduct && isCusProductTrialing({ cusProduct, now }))) &&
+					(cusProduct &&
+						isCustomerProductTrialing(cusProduct, { nowMs: now }))) &&
 				notNullish(i.interval)
 			) {
 				priceData = {

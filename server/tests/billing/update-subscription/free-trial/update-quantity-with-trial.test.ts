@@ -1,11 +1,12 @@
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3 } from "@autumn/shared";
+import { type ApiCustomerV3, ms } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/billing/utils/expectCustomerFeatureCorrect";
 import {
 	expectFeatureResetAlignedWithTrialEnd,
 	expectPeriodEndsAlignedWithTrialEnd,
 	expectProductTrialing,
 } from "@tests/billing/utils/expectCustomerProductTrialing";
+import { expectPreviewNextCycleCorrect } from "@tests/billing/utils/expectPreviewNextCycleCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -62,10 +63,13 @@ test.concurrent(`${chalk.yellowBright("trial-qty: update prepaid quantity while 
 		options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
 	};
 
-	const _preview = await autumnV1.subscriptions.previewUpdate(updateParams);
+	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should be some charge for additional prepaid (depends on trial behavior)
-	// But trial should be preserved
+	// next_cycle should align with existing 14-day trial
+	expectPreviewNextCycleCorrect({
+		preview,
+		startsAt: ms.days(14),
+	});
 
 	await autumnV1.subscriptions.update(updateParams);
 
@@ -141,6 +145,12 @@ test.concurrent(`${chalk.yellowBright("trial-qty: update allocated seats while t
 
 	// During trial, no proration should occur
 	expect(preview.total).toEqual(0);
+
+	// next_cycle should align with existing 14-day trial
+	expectPreviewNextCycleCorrect({
+		preview,
+		startsAt: ms.days(14),
+	});
 
 	await autumnV1.subscriptions.update(updateParams);
 

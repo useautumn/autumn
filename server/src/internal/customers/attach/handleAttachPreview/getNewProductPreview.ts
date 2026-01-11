@@ -3,7 +3,7 @@ import {
 	type AttachConfig,
 	BillingInterval,
 	type FullProduct,
-	isCusProductTrialing,
+	isCustomerProductTrialing,
 } from "@autumn/shared";
 import { getOptions } from "@/internal/api/check/checkUtils.js";
 import { getItemsForNewProduct } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
@@ -114,9 +114,8 @@ export const getNewProductPreview = async ({
 	if (mergeSub && !config.disableMerge) {
 		if (mergeCusProduct?.free_trial) {
 			if (
-				isCusProductTrialing({
-					cusProduct: mergeCusProduct,
-					now: attachParams.now,
+				isCustomerProductTrialing(mergeCusProduct, {
+					nowMs: attachParams.now,
 				})
 			) {
 				trialEnds = mergeCusProduct.trial_ends_at || undefined;

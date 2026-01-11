@@ -1,5 +1,5 @@
 import { expect } from "bun:test";
-import type { ApiCustomerV3 } from "@autumn/shared";
+import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
 import { ApiVersion } from "@autumn/shared";
 import { AutumnInt } from "@/external/autumn/autumnCli";
 
@@ -7,6 +7,8 @@ const defaultAutumn = new AutumnInt({ version: ApiVersion.V1_2 });
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * ONE_HOUR_MS;
+
+const TEN_MINUTES_MS = 10 * 60 * 1000;
 
 /**
  * Verify a customer product is currently trialing with the expected trial end time.
@@ -16,16 +18,13 @@ export const expectProductTrialing = async ({
 	customerId,
 	customer: providedCustomer,
 	productId,
-	trialEndsAfter,
-	trialEndsBefore,
+	trialEndsAt: expectedTrialEndsAt,
 }: {
 	customerId?: string;
-	customer?: ApiCustomerV3;
+	customer?: ApiCustomerV3 | ApiEntityV0;
 	productId: string;
-	/** Lower bound - current_period_end should be after this (ms from now) */
-	trialEndsAfter?: number;
-	/** Upper bound - current_period_end should be before this (ms from now) */
-	trialEndsBefore?: number;
+	/** Expected trial end timestamp (10 min tolerance) */
+	trialEndsAt?: number;
 }) => {
 	const customer = providedCustomer
 		? providedCustomer
@@ -52,20 +51,11 @@ export const expectProductTrialing = async ({
 		`Product ${productId} should have current_period_end defined when trialing`,
 	).toBeDefined();
 
-	const now = Date.now();
-
-	// Verify trial_ends_at is within expected range
-	if (trialEndsAfter !== undefined) {
+	// Verify trial_ends_at matches expected timestamp (with tolerance)
+	if (expectedTrialEndsAt !== undefined) {
 		expect(
-			trialEndsAt! > now + trialEndsAfter - ONE_HOUR_MS,
-			`Product ${productId} current_period_end (${trialEndsAt}) should be after ${trialEndsAfter}ms from now`,
-		).toBe(true);
-	}
-
-	if (trialEndsBefore !== undefined) {
-		expect(
-			trialEndsAt! < now + trialEndsBefore + ONE_HOUR_MS,
-			`Product ${productId} current_period_end (${trialEndsAt}) should be before ${trialEndsBefore}ms from now`,
+			Math.abs(trialEndsAt! - expectedTrialEndsAt) < TEN_MINUTES_MS,
+			`Product ${productId} current_period_end (${trialEndsAt}) should be within 10 min of ${expectedTrialEndsAt}`,
 		).toBe(true);
 	}
 
@@ -81,7 +71,7 @@ export const expectProductNotTrialing = async ({
 	productId,
 }: {
 	customerId?: string;
-	customer?: ApiCustomerV3;
+	customer?: ApiCustomerV3 | ApiEntityV0;
 	productId: string;
 }) => {
 	const customer = providedCustomer
@@ -112,7 +102,7 @@ export const expectFeatureResetAlignedWithTrialEnd = async ({
 	trialEndsAt,
 }: {
 	customerId?: string;
-	customer?: ApiCustomerV3;
+	customer?: ApiCustomerV3 | ApiEntityV0;
 	featureId: string;
 	trialEndsAt: number;
 }) => {
@@ -120,7 +110,12 @@ export const expectFeatureResetAlignedWithTrialEnd = async ({
 		? providedCustomer
 		: await defaultAutumn.customers.get(customerId!);
 
-	const feature = customer.features[featureId];
+	expect(
+		customer.features,
+		"Customer features not found for reset alignment check",
+	).toBeDefined();
+
+	const feature = customer.features![featureId];
 	expect(
 		feature,
 		`Feature ${featureId} not found for reset alignment check`,
@@ -148,7 +143,7 @@ export const expectPeriodEndsAlignedWithTrialEnd = async ({
 	trialEndsAt,
 }: {
 	customerId?: string;
-	customer?: ApiCustomerV3;
+	customer?: ApiCustomerV3 | ApiEntityV0;
 	productId: string;
 	trialEndsAt: number;
 }) => {
@@ -196,7 +191,7 @@ export const getTrialEndsAt = async ({
 	productId,
 }: {
 	customerId?: string;
-	customer?: ApiCustomerV3;
+	customer?: ApiCustomerV3 | ApiEntityV0;
 	productId: string;
 }): Promise<number | null> => {
 	const customer = providedCustomer

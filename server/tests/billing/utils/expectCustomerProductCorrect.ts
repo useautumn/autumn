@@ -1,5 +1,5 @@
 import { expect } from "bun:test";
-import type { ApiCustomerV3 } from "@autumn/shared";
+import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
 import { ApiVersion } from "@autumn/shared";
 import { AutumnInt } from "@/external/autumn/autumnCli";
 
@@ -21,7 +21,7 @@ export const expectCustomerProductCorrect = async ({
 	state,
 }: {
 	customerId?: string;
-	customer?: ApiCustomerV3;
+	customer?: ApiCustomerV3 | ApiEntityV0;
 	productId: string;
 	state: ProductState;
 }) => {
@@ -66,7 +66,7 @@ export const expectCustomerProductCorrect = async ({
  */
 export const expectProductActive = async (params: {
 	customerId?: string;
-	customer?: ApiCustomerV3;
+	customer?: ApiCustomerV3 | ApiEntityV0;
 	productId: string;
 }) => expectCustomerProductCorrect({ ...params, state: "active" });
 
@@ -77,7 +77,7 @@ export const expectProductActive = async (params: {
  */
 export const expectProductCanceling = async (params: {
 	customerId?: string;
-	customer?: ApiCustomerV3;
+	customer?: ApiCustomerV3 | ApiEntityV0;
 	productId: string;
 }) => expectCustomerProductCorrect({ ...params, state: "canceled" });
 
@@ -86,7 +86,7 @@ export const expectProductCanceling = async (params: {
  */
 export const expectProductScheduled = async (params: {
 	customerId?: string;
-	customer?: ApiCustomerV3;
+	customer?: ApiCustomerV3 | ApiEntityV0;
 	productId: string;
 }) => expectCustomerProductCorrect({ ...params, state: "scheduled" });
 
@@ -95,6 +95,6 @@ export const expectProductScheduled = async (params: {
  */
 export const expectProductNotPresent = async (params: {
 	customerId?: string;
-	customer?: ApiCustomerV3;
+	customer?: ApiCustomerV3 | ApiEntityV0;
 	productId: string;
 }) => expectCustomerProductCorrect({ ...params, state: "undefined" });

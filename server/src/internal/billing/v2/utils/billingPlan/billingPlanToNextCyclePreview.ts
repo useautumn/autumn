@@ -1,0 +1,63 @@
+import {
+	type BillingPreviewResponse,
+	cp,
+	cusProductsToPrices,
+	cusProductToLineItems,
+	getCycleEnd,
+	getSmallestInterval,
+	sumValues,
+} from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { BillingContext } from "@/internal/billing/v2/billingContext";
+import type { BillingPlan } from "@/internal/billing/v2/types/billingPlan";
+
+export const billingPlanToNextCyclePreview = ({
+	ctx,
+	billingContext,
+	billingPlan,
+}: {
+	ctx: AutumnContext;
+	billingContext: BillingContext;
+	billingPlan: BillingPlan;
+}): BillingPreviewResponse["next_cycle"] => {
+	// 1. Return undefined if billing cycle anchor is now
+	const { billingCycleAnchorMs } = billingContext;
+
+	if (billingCycleAnchorMs === "now") return undefined;
+	const { insertCustomerProducts } = billingPlan.autumn;
+
+	// 2. Get cycle end and if none, return undefined
+	const customerProducts = insertCustomerProducts.filter(
+		(customerProduct) => cp(customerProduct).paid().recurring().valid,
+	);
+
+	const prices = cusProductsToPrices({ cusProducts: customerProducts });
+	const smallestInterval = getSmallestInterval({ prices });
+
+	if (!smallestInterval) return undefined;
+
+	const nextCycleStart = getCycleEnd({
+		anchor: billingCycleAnchorMs,
+		interval: smallestInterval.interval,
+		intervalCount: smallestInterval.intervalCount,
+		now: billingContext.currentEpochMs,
+	});
+
+	const autumnLineItems = customerProducts.flatMap((customerProduct) =>
+		cusProductToLineItems({
+			cusProduct: customerProduct,
+			nowMs: nextCycleStart,
+			billingCycleAnchorMs,
+			direction: "charge",
+			org: ctx.org,
+			logger: ctx.logger,
+		}),
+	);
+
+	const total = sumValues(autumnLineItems.map((line) => line.finalAmount));
+
+	return {
+		starts_at: nextCycleStart,
+		total,
+	};
+};

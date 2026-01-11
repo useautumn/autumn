@@ -7,6 +7,7 @@ import {
 	expectProductNotTrialing,
 	expectProductTrialing,
 } from "@tests/billing/utils/expectCustomerProductTrialing";
+import { expectPreviewNextCycleCorrect } from "@tests/billing/utils/expectPreviewNextCycleCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -32,7 +33,7 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: remove trial while running")}`
 		trialDays: 14,
 	});
 
-	const { customerId, autumnV1, ctx } = await initScenario({
+	const { customerId, autumnV1, ctx, testClockId } = await initScenario({
 		customerId: "p2p-remove-trial-active",
 		setup: [
 			s.customer({ testClock: true, paymentMethod: "success" }),
@@ -49,6 +50,13 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: remove trial while running")}`
 		productId: proTrial.id,
 	});
 
+	// Advance to mid-trial (7 days into 14-day trial)
+	await advanceTestClock({
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId!,
+		numberOfDays: 7,
+	});
+
 	// Remove the trial by passing free_trial: null
 	const updateParams = {
 		customer_id: customerId,
@@ -61,6 +69,13 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: remove trial while running")}`
 
 	// Should charge full price since trial is being removed
 	expect(preview.total).toEqual(20);
+
+	// When trial is removed, next_cycle should start in ~1 month (regular billing)
+	expectPreviewNextCycleCorrect({
+		preview,
+		startsAt: ms.days(30),
+		total: items.monthlyPrice().price!,
+	});
 
 	await autumnV1.subscriptions.update(updateParams);
 
@@ -211,6 +226,13 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: trial carries over when undefi
 	// Should be 0 during trial
 	expect(preview.total).toEqual(0);
 
+	// next_cycle should align with existing trial (~14 days)
+	expectPreviewNextCycleCorrect({
+		preview,
+		startsAt: ms.days(14),
+		total: items.monthlyPrice().price!,
+	});
+
 	await autumnV1.subscriptions.update(updateParams);
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -269,8 +291,7 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: replace trial with new trial")
 	await expectProductTrialing({
 		customer: customerBefore,
 		productId: proTrial.id,
-		trialEndsAfter: ms.days(6),
-		trialEndsBefore: ms.days(8),
+		trialEndsAt: Date.now() + ms.days(7),
 	});
 
 	// Replace with a new 30-day trial
@@ -282,6 +303,7 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: replace trial with new trial")
 			length: 30,
 			duration: FreeTrialDuration.Day,
 			card_required: true,
+			unique_fingerprint: false,
 		},
 	};
 
@@ -289,6 +311,13 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: replace trial with new trial")
 
 	// Should be 0 during trial
 	expect(preview.total).toEqual(0);
+
+	// next_cycle should show new 30-day trial end
+	expectPreviewNextCycleCorrect({
+		preview,
+		startsAt: ms.days(30),
+		total: items.monthlyPrice().price!,
+	});
 
 	await autumnV1.subscriptions.update(updateParams);
 
@@ -298,8 +327,7 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: replace trial with new trial")
 	await expectProductTrialing({
 		customer,
 		productId: proTrial.id,
-		trialEndsAfter: ms.days(29), // At least 29 days from now
-		trialEndsBefore: ms.days(31), // At most 31 days from now
+		trialEndsAt: Date.now() + ms.days(30),
 	});
 
 	await expectSubToBeCorrect({
@@ -310,7 +338,87 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: replace trial with new trial")
 	});
 });
 
-// 5. New trial after old expired
+// 5. Paid product (no trial) → Paid product with trial, items undefined
+test.concurrent(`${chalk.yellowBright("p2p-trial: paid no trial -> paid with trial, items undefined")}`, async () => {
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const priceItem = items.monthlyPrice();
+
+	const pro = products.pro({
+		items: [messagesItem, priceItem],
+		id: "pro-no-trial",
+	});
+
+	const { customerId, autumnV1, ctx } = await initScenario({
+		customerId: "p2p-trial-items-undefined",
+		setup: [
+			s.customer({ testClock: true, paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [s.attach({ productId: pro.id })],
+	});
+
+	// Verify initially NOT trialing
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductNotTrialing({
+		customer: customerBefore,
+		productId: pro.id,
+	});
+
+	// Add trial without passing items (items undefined)
+	const updateParams = {
+		customer_id: customerId,
+		product_id: pro.id,
+		// items is NOT specified (undefined)
+		free_trial: {
+			length: 14,
+			duration: FreeTrialDuration.Day,
+			card_required: true,
+			unique_fingerprint: false,
+		},
+	};
+
+	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
+
+	// Should be 0 during trial (trial being added)
+	expect(preview.total).toEqual(0);
+
+	// next_cycle should show when trial ends
+	expectPreviewNextCycleCorrect({
+		preview,
+		startsAt: ms.days(14),
+		total: priceItem.price!,
+	});
+
+	await autumnV1.subscriptions.update(updateParams);
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	// Product should now be trialing
+	await expectProductTrialing({
+		customer,
+		productId: pro.id,
+		trialEndsAt: Date.now() + ms.days(14),
+	});
+
+	// Feature should still have correct values (unchanged since items undefined)
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		includedUsage: messagesItem.included_usage,
+		balance: messagesItem.included_usage,
+		usage: 0,
+	});
+
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+	});
+});
+
+// 6. New trial after old expired
 test.concurrent(`${chalk.yellowBright("p2p-trial: new trial after old expired")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
@@ -357,6 +465,7 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: new trial after old expired")}
 			length: 14,
 			duration: FreeTrialDuration.Day,
 			card_required: true,
+			unique_fingerprint: false,
 		},
 	};
 
@@ -364,6 +473,13 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: new trial after old expired")}
 
 	// Should be 0 during new trial
 	expect(preview.total).toEqual(0);
+
+	// next_cycle should show new 14-day trial end
+	expectPreviewNextCycleCorrect({
+		preview,
+		startsAt: ms.days(14),
+		total: items.monthlyPrice().price!,
+	});
 
 	await autumnV1.subscriptions.update(updateParams);
 
@@ -373,8 +489,7 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: new trial after old expired")}
 	await expectProductTrialing({
 		customer,
 		productId: proTrial.id,
-		trialEndsAfter: ms.days(13),
-		trialEndsBefore: ms.days(15),
+		trialEndsAt: Date.now() + ms.days(14),
 	});
 
 	await expectSubToBeCorrect({

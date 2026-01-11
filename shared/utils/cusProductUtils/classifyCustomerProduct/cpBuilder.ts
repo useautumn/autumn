@@ -5,7 +5,6 @@ import {
 	customerProductHasRelevantStatus,
 	customerProductHasSubscriptionSchedule,
 	isCusProductOnEntity,
-	isCusProductTrialing,
 	isCustomerProductAddOn,
 	isCustomerProductCanceling,
 	isCustomerProductFree,
@@ -16,6 +15,7 @@ import {
 	isCustomerProductPaid,
 	isCustomerProductRecurring,
 	isCustomerProductScheduled,
+	isCustomerProductTrialing,
 } from "./classifyCustomerProduct";
 
 type Predicate = (cp: FullCusProduct) => boolean;
@@ -120,10 +120,8 @@ class CustomerProductChecker {
 	}
 
 	/** Product is trialing */
-	trialing({ now }: { now?: number } = {}) {
-		this.predicates.push(
-			(cp) => !!isCusProductTrialing({ cusProduct: cp, now }),
-		);
+	trialing({ nowMs }: { nowMs?: number } = {}) {
+		this.predicates.push((cp) => !!isCustomerProductTrialing(cp, { nowMs }));
 		return this;
 	}
 

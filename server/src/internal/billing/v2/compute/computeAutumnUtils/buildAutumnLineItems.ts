@@ -1,10 +1,12 @@
 import {
+	cp,
 	cusProductToLineItems,
 	type FullCusProduct,
 	filterUnchangedPricesFromLineItems,
 	type LineItem,
 } from "@autumn/shared";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
+import { billingContextHasTrial } from "@/internal/billing/v2/utils/billingContext/billingContextHasTrial";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
 
 export const buildAutumnLineItems = ({
@@ -33,7 +35,13 @@ export const buildAutumnLineItems = ({
 	// })
 
 	// Get line items for ongoing cus product
-	const deletedLineItems = deletedCustomerProduct
+	const { valid: isTrialing } = cp(deletedCustomerProduct).trialing({
+		nowMs: currentEpochMs,
+	});
+
+	const shouldRefundLineItems = deletedCustomerProduct && !isTrialing;
+
+	const deletedLineItems = shouldRefundLineItems
 		? cusProductToLineItems({
 				cusProduct: deletedCustomerProduct,
 				nowMs: currentEpochMs,
@@ -64,11 +72,29 @@ export const buildAutumnLineItems = ({
 	});
 
 	// All items
-	const allLineItems = [
+	let allLineItems = [
 		...filteredDeletedLineItems,
 		...arrearLineItems,
 		...filteredNewLineItems,
 	];
+
+	// If trialing, don't apply free trial?
+	if (billingContextHasTrial({ billingContext })) {
+		allLineItems = [
+			...filteredDeletedLineItems,
+			...arrearLineItems,
+			...filteredNewLineItems,
+		].map((item) => ({ ...item, amount: 0, finalAmount: 0 }));
+	}
+
+	console.log(
+		"All line items: ",
+		allLineItems.map((item) => ({
+			description: item.description,
+			amount: item.amount,
+			finalAmount: item.finalAmount,
+		})),
+	);
 
 	return allLineItems;
 };
