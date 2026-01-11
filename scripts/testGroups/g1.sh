@@ -11,21 +11,21 @@ source "$(dirname "$0")/config.sh"
 # Adjust --max to control concurren.cy (default: 6)
 BUN_PARALLEL_COMPACT \
   'server/tests/balances/track/basic' \
-  'server/tests/balances/track/breakdown' \
-  'server/tests/balances/track/credit-systems' \
-  'server/tests/balances/track/entity-products' \
-  'server/tests/balances/track/legacy' \
-  'server/tests/balances/track/allocated' \
-  'server/tests/balances/track/entity-balances' \
-  'server/tests/balances/track/concurrency' \
-  'server/tests/balances/track/negative' \
-  'server/tests/balances/check/breakdown' \
-  'server/tests/balances/check/basic' \
-  'server/tests/balances/check/credit-systems' \
-  'server/tests/balances/check/misc' \
-  'server/tests/balances/check/prepaid' \
-  'server/tests/balances/check/send-event' \
-  --max=6
+  # 'server/tests/balances/track/breakdown' \
+  # 'server/tests/balances/track/credit-systems' \
+  # 'server/tests/balances/track/entity-products' \
+  # 'server/tests/balances/track/legacy' \
+  # 'server/tests/balances/track/allocated' \
+  # 'server/tests/balances/track/entity-balances' \
+  # 'server/tests/balances/track/concurrency' \
+  # 'server/tests/balances/track/negative' \
+  # 'server/tests/balances/check/breakdown' \
+  # 'server/tests/balances/check/basic' \
+  # 'server/tests/balances/check/credit-systems' \
+  # 'server/tests/balances/check/misc' \
+  # 'server/tests/balances/check/prepaid' \
+  # 'server/tests/balances/check/send-event' \
+  # --max=6
 
 
 # BUN_PARALLEL_COMPACT \

@@ -27,6 +27,19 @@ in the test logs. Use your common sense
 
 - Functions (unless there's a very good reason) should always take in objects as arguments. Object params are named and easy to understand.
 
+- For regular functions, use inline object types in the function signature rather than creating separate type definitions. Only create named types when they're reused across multiple functions or exported.
+  ```typescript
+  // ❌ BAD - Unnecessary type definition for single-use params
+  type DoSomethingParams = {
+    ctx: AutumnContext;
+    customerId: string;
+  };
+  const doSomething = async ({ ctx, customerId }: DoSomethingParams) => { ... }
+
+  // ✅ GOOD - Inline object type
+  const doSomething = async ({ ctx, customerId }: { ctx: AutumnContext; customerId: string }) => { ... }
+  ```
+
 - This codebase uses Bun for all of its operations in `/server`, `/vite` and `/shared`. It uses Bun for the package management, Bun for the workspace management and Bun for the runtime. Prefer Bun over PNPM. If you ever want to trace a package dependency tree, run `bun why <package name>` which will tell you why a certain package was installed and by who.
 - Prefer Guard clauses "if(!admin) return;" over explicity "if(admin) do X;" Early returns are better
 

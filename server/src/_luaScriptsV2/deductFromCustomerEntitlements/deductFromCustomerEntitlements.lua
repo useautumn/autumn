@@ -212,54 +212,53 @@ local function process_pass(pass_config)
     if usage_allowed == cjson.null then usage_allowed = false end
     usage_allowed = usage_allowed or overage_behavior_is_allow
     
-    -- Apply filter if needed
-    if skip_if_not_usage_allowed and not usage_allowed then
+    -- Apply filter: only process if usage is allowed (or skip filter is disabled)
+    local should_process = not skip_if_not_usage_allowed or usage_allowed
+    
+    if not should_process then
       table.insert(logs, pass_name .. " skipping " .. ent_id .. " - usage_allowed=false")
-      goto continue
-    end
-    
-    local cus_ent, cus_product, ce_idx, cp_idx = find_entitlement(full_customer, ent_id)
-    
-    if cus_ent then
-      local cp_idx_0 = cp_idx - 1
-      local ce_idx_0 = ce_idx - 1
-      local base_path = '$.customer_products[' .. cp_idx_0 .. '].customer_entitlements[' .. ce_idx_0 .. ']'
+    else
+      local cus_ent, cus_product, ce_idx, cp_idx = find_entitlement(full_customer, ent_id)
       
-      -- Get current adjustment from cus_ent for ceiling calculation
-      local current_adjustment = cus_ent.adjustment or 0
-      
-      local deducted = deduct_from_main_balance({
-        cache_key = cache_key,
-        base_path = base_path,
-        has_entity_scope = has_entity_scope,
-        target_entity_id = target_entity_id,
-        amount = remaining_amount,
-        credit_cost = credit_cost,
-        allow_negative = allow_negative,
-        min_balance = min_balance,
-        max_balance = max_balance,
-        adjustment = current_adjustment,
-        alter_granted_balance = alter_granted_balance,
-        overage_behavior_is_allow = overage_behavior_is_allow,
-        logs = logs,
-        log_prefix = pass_name,
-      })
-      
-      -- Update remaining_amount
-      remaining_amount = remaining_amount - (deducted / credit_cost)
-      
-      -- Track in updates
-      if deducted ~= 0 then
-        if not updates[ent_id] then
-          updates[ent_id] = { deducted = 0, additional_deducted = 0 }
+      if cus_ent then
+        local cp_idx_0 = cp_idx - 1
+        local ce_idx_0 = ce_idx - 1
+        local base_path = '$.customer_products[' .. cp_idx_0 .. '].customer_entitlements[' .. ce_idx_0 .. ']'
+        
+        -- Get current adjustment from cus_ent for ceiling calculation
+        local current_adjustment = cus_ent.adjustment or 0
+        
+        local deducted = deduct_from_main_balance({
+          cache_key = cache_key,
+          base_path = base_path,
+          has_entity_scope = has_entity_scope,
+          target_entity_id = target_entity_id,
+          amount = remaining_amount,
+          credit_cost = credit_cost,
+          allow_negative = allow_negative,
+          min_balance = min_balance,
+          max_balance = max_balance,
+          adjustment = current_adjustment,
+          alter_granted_balance = alter_granted_balance,
+          overage_behavior_is_allow = overage_behavior_is_allow,
+          logs = logs,
+          log_prefix = pass_name,
+        })
+        
+        -- Update remaining_amount
+        remaining_amount = remaining_amount - (deducted / credit_cost)
+        
+        -- Track in updates
+        if deducted ~= 0 then
+          if not updates[ent_id] then
+            updates[ent_id] = { deducted = 0, additional_deducted = 0 }
+          end
+          updates[ent_id].deducted = (updates[ent_id].deducted or 0) + deducted
         end
-        updates[ent_id].deducted = (updates[ent_id].deducted or 0) + deducted
+        
+        table.insert(logs, pass_name .. " ent " .. ent_id .. " deducted=" .. tostring(deducted) .. " remaining=" .. tostring(remaining_amount))
       end
-      
-      table.insert(logs, pass_name .. " ent " .. ent_id .. " deducted=" .. tostring(deducted) .. " remaining=" .. tostring(remaining_amount))
     end
-    
-    ::continue::
   end
   
   table.insert(logs, "=== " .. pass_name .. " END === remaining=" .. tostring(remaining_amount))

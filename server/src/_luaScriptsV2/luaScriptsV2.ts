@@ -5,9 +5,8 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Path to _luaScriptsV2 folder (4 levels up from this file)
-const LUA_SCRIPTS_V2_DIR = join(__dirname, "../../../../_luaScriptsV2");
-const DEDUCT_DIR = join(LUA_SCRIPTS_V2_DIR, "deductFromCustomerEntitlements");
+// Path to deductFromCustomerEntitlements folder (same directory as this file)
+const DEDUCT_DIR = join(__dirname, "deductFromCustomerEntitlements");
 
 // ============================================================================
 // HELPER MODULES

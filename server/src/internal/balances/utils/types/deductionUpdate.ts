@@ -1,10 +1,10 @@
-import type { EntityBalance } from "@models/cusProductModels/cusEntModels/cusEntModels.js";
 import type {
+	EntityBalance,
 	InsertReplaceable,
 	Replaceable,
-} from "@models/cusProductModels/cusEntModels/replaceableTable.js";
+} from "@autumn/shared";
 
-export interface PgDeductionUpdate {
+export interface DeductionUpdate {
 	balance: number;
 	additional_balance: number;
 	additional_granted_balance?: number;

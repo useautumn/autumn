@@ -1,15 +1,6 @@
-import {
-	type Feature,
-	FeatureNotFoundError,
-	RecaseError,
-} from "@autumn/shared";
+import { FeatureNotFoundError, RecaseError } from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
-
-export type FeatureDeduction = {
-	feature: Feature;
-	deduction: number;
-	targetBalance?: number;
-};
+import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 
 const DEFAULT_VALUE = 1;
 

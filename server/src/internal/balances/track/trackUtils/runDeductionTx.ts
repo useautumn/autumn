@@ -1,8 +1,4 @@
-import type {
-	Event,
-	PgDeductionUpdate,
-	SortCusEntParams,
-} from "@autumn/shared";
+import type { Event, SortCusEntParams } from "@autumn/shared";
 import {
 	CusProductStatus,
 	cusEntToCusPrice,
@@ -16,7 +12,6 @@ import {
 	notNullish,
 	nullish,
 	orgToInStatuses,
-	updateCusEntInFullCus,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { sql } from "drizzle-orm";
@@ -28,6 +23,8 @@ import { getUnlimitedAndUsageAllowed } from "../../../customers/cusProducts/cusE
 import { deleteCachedApiCustomer } from "../../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { getCreditCost } from "../../../features/creditSystemUtils.js";
 import { isPaidContinuousUse } from "../../../features/featureUtils.js";
+import { applyDeductionUpdateToFullCustomer } from "../../utils/deduction/applyDeductionUpdateToFullCustomer.js";
+import type { DeductionUpdate } from "../../utils/types/deductionUpdate.js";
 import { constructEvent, type EventInfo } from "./eventUtils.js";
 import type { FeatureDeduction } from "./getFeatureDeductions.js";
 import { handlePaidAllocatedCusEnt } from "./handlePaidAllocatedCusEnt.js";
@@ -228,7 +225,7 @@ export const deductFromCusEnts = async ({
 
 		// Parse the JSONB result
 		const resultJson = result[0]?.deduct_from_cus_ents as {
-			updates: Record<string, PgDeductionUpdate>;
+			updates: Record<string, DeductionUpdate>;
 			remaining: number;
 		};
 
@@ -302,7 +299,7 @@ export const deductFromCusEnts = async ({
 					updates,
 				});
 
-				updateCusEntInFullCus({
+				applyDeductionUpdateToFullCustomer({
 					fullCus,
 					cusEntId,
 					update,
