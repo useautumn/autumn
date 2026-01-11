@@ -70,5 +70,5 @@ balances/
 
 TODOS:
 1. Remove cus_ent_ids from script input
-2. Deal with actualDeductions in deductFromRedisCusEnts
+2. Deal with actualDeductions in executeRedisDeduction
 3. Deal with unlimited features

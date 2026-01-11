@@ -1,4 +1,4 @@
-import type { DeductionUpdate } from "../../utils/types/deductionUpdate";
+import type { DeductionUpdate } from "../types/deductionUpdate";
 
 /**
  * Convert deduction updates to modified customer entitlement IDs.
@@ -10,5 +10,5 @@ export const deductionUpdatesToModifiedIds = ({
 }: {
 	updates: Record<string, DeductionUpdate>;
 }): string[] => {
-	return Object.keys(updates).filter((id) => updates[id].deducted > 0);
+	return Object.keys(updates).filter((id) => updates[id].deducted !== 0);
 };

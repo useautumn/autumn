@@ -1,4 +1,4 @@
-import type { ApiBalance, FullCustomer } from "@autumn/shared";
+import type { ApiBalance, Feature, FullCustomer } from "@autumn/shared";
 import {
 	cusProductsToCusEnts,
 	findCustomerEntitlementById,
@@ -7,8 +7,8 @@ import {
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
-import type { FeatureDeduction } from "../../track/trackUtils/getFeatureDeductions.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
+import type { FeatureDeduction } from "../types/featureDeduction.js";
 
 type TrackBalanceResponse = {
 	balance: ApiBalance | null;
@@ -53,21 +53,61 @@ export const computeActualDeductions = ({
 	return actualDeductions;
 };
 
+const findUnlimitedFeature = ({
+	ctx,
+	fullCustomer,
+	featureId,
+}: {
+	ctx: AutumnContext;
+	fullCustomer: FullCustomer;
+	featureId: string;
+}): Feature | undefined => {
+	const relevantFeatures = getRelevantFeatures({
+		features: ctx.features,
+		featureId,
+	});
+
+	for (const feature of relevantFeatures) {
+		const cusEnts = cusProductsToCusEnts({
+			cusProducts: fullCustomer.customer_products,
+			featureIds: [feature.id],
+		});
+
+		if (cusEnts.some((cusEnt) => cusEnt.unlimited)) {
+			return feature;
+		}
+	}
+
+	return undefined;
+};
+
 /**
  * Determines which feature's balance to return for a given featureDeduction.
  * Prefers credit systems that were actually deducted from, else falls back to the main feature.
  */
 const getFeatureToUseForBalance = ({
+	ctx,
+	fullCustomer,
 	featureDeduction,
-	features,
 	actualDeductions,
 }: {
+	ctx: AutumnContext;
+	fullCustomer: FullCustomer;
 	featureDeduction: FeatureDeduction;
-	features: AutumnContext["features"];
 	actualDeductions: Record<string, number>;
 }): string => {
+	const unlimitedFeauture = findUnlimitedFeature({
+		ctx,
+		fullCustomer,
+		featureId: featureDeduction.feature.id,
+	});
+
+	if (unlimitedFeauture) {
+		return unlimitedFeauture.id;
+	}
+
 	const relevantFeatures = getRelevantFeatures({
-		features,
+		features: ctx.features,
 		featureId: featureDeduction.feature.id,
 	});
 
@@ -117,8 +157,9 @@ export const deductionToTrackResponse = async ({
 	// Add primary features (always - they were requested to be tracked)
 	for (const deduction of featureDeductions) {
 		const featureToUse = getFeatureToUseForBalance({
+			ctx,
 			featureDeduction: deduction,
-			features: ctx.features,
+			fullCustomer: fullCus,
 			actualDeductions,
 		});
 

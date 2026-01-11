@@ -4,6 +4,7 @@ export enum RedisDeductionErrorCode {
 	NoCustomerProducts = "NO_CUSTOMER_PRODUCTS",
 	InsufficientBalance = "INSUFFICIENT_BALANCE",
 	PaidAllocated = "PAID_ALLOCATED",
+	SkipCache = "SKIP_CACHE",
 }
 
 /** Errors that should trigger a fallback to Postgres */
@@ -11,6 +12,7 @@ export const FALLBACK_ERROR_CODES = [
 	RedisDeductionErrorCode.CustomerNotFound,
 	RedisDeductionErrorCode.NoCustomerProducts,
 	RedisDeductionErrorCode.PaidAllocated,
+	RedisDeductionErrorCode.SkipCache,
 ] as const;
 
 /** Error thrown by Redis deduction operations */

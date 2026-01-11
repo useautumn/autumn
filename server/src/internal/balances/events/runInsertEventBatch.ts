@@ -1,4 +1,4 @@
-import { events } from "@autumn/shared";
+import { events, tryCatch } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import type { Logger } from "pino";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -35,6 +35,8 @@ export const runInsertEventBatch = async ({
 		}
 	});
 
+	logger.debug(`Inserting ${eventInserts.length} events`);
+
 	// Group events by internal_customer_id
 	const eventsByCustomer = new Map<string, typeof eventInserts>();
 	for (const event of eventInserts) {
@@ -54,14 +56,11 @@ export const runInsertEventBatch = async ({
 	// Insert events for each customer in parallel
 	const insertPromises = Array.from(eventsByCustomer.entries()).map(
 		async ([customerId, customerEvents]) => {
-			try {
-				await db.insert(events).values(customerEvents as any);
-				return {
-					success: true,
-					customerId,
-					count: customerEvents.length,
-				};
-			} catch (error: any) {
+			const { error } = await tryCatch(
+				db.insert(events).values(customerEvents),
+			);
+
+			if (error) {
 				logger.error(
 					`❌ Failed to insert ${customerEvents.length} events for customer ${customerId}: ${error.message}`,
 				);

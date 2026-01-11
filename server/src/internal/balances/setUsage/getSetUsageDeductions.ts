@@ -23,7 +23,7 @@ import {
 	getCreditCost,
 	getCreditSystemsFromFeature,
 } from "../../features/creditSystemUtils.js";
-import type { FeatureDeduction } from "../track/trackUtils/getFeatureDeductions.js";
+import type { FeatureDeduction } from "../utils/types/featureDeduction.js";
 
 // Helper: Check if cusEnts has balance for a feature
 const cusEntsHasFeatureBalance = ({

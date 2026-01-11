@@ -3,7 +3,7 @@ import type { Logger } from "pino";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
-import { runInsertEventBatch } from "@/internal/balances/track/eventUtils/runInsertEventBatch.js";
+import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
 import { runSyncBalanceBatch } from "@/internal/balances/utils/sync/legacy/runSyncBalanceBatch.js";
 import { runSaveFeatureDisplayTask } from "@/internal/features/featureUtils.js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";

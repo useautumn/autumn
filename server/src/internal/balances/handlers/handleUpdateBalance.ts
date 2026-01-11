@@ -3,7 +3,6 @@ import {
 	notNullish,
 	nullish,
 	RecaseError,
-	resetIntvToEntIntv,
 	UpdateBalanceParamsSchema,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
@@ -11,9 +10,9 @@ import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntit
 import { createRoute } from "../../../honoMiddlewares/routeHandler.js";
 import { CusService } from "../../customers/CusService.js";
 import { deleteCachedApiCustomer } from "../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
-import { runAddToBalance } from "../updateBalance/runAddToBalance.js";
-import { runUpdateBalance } from "../updateBalance/runUpdateBalance.js";
+import { runUpdateBalanceV2 } from "../updateBalance/runUpdateBalanceV2.js";
 import { updateGrantedBalance } from "../updateGrantedBalance/updateGrantedBalance.js";
+import { buildCustomerEntitlementFilters } from "../utils/buildCustomerEntitlementFilters.js";
 
 export const handleUpdateBalance = createRoute({
 	body: UpdateBalanceParamsSchema.extend({}),
@@ -22,16 +21,11 @@ export const handleUpdateBalance = createRoute({
 		const params = c.req.valid("json");
 		const ctx = c.get("ctx");
 
-		// Handle add_to_balance atomically using negative deduction
-		if (notNullish(params.add_to_balance)) {
-			await runAddToBalance({ ctx, params });
-			return c.json({ success: true });
-		}
-
-		// Update balance using Redis first, then sync to Postgres
-		// This prevents race conditions with track operations
-		if (notNullish(params.current_balance)) {
-			await runUpdateBalance({ ctx, params });
+		if (
+			notNullish(params.add_to_balance) ||
+			notNullish(params.current_balance)
+		) {
+			await runUpdateBalanceV2({ ctx, params });
 		}
 
 		if (notNullish(params.granted_balance)) {
@@ -47,14 +41,9 @@ export const handleUpdateBalance = createRoute({
 				`updating granted balance for feature ${params.feature_id} to ${params.granted_balance}`,
 			);
 
-			const sortParams = {
-				cusEntIds: params.customer_entitlement_id
-					? [params.customer_entitlement_id]
-					: undefined,
-				interval: params.interval
-					? resetIntvToEntIntv({ resetIntv: params.interval })
-					: undefined,
-			};
+			const customerEntitlementFilters = buildCustomerEntitlementFilters({
+				params,
+			});
 
 			const fullCus = await CusService.getFull({
 				db: ctx.db,
@@ -70,7 +59,7 @@ export const handleUpdateBalance = createRoute({
 				fullCus,
 				featureId: params.feature_id,
 				targetGrantedBalance: params.granted_balance,
-				sortParams,
+				customerEntitlementFilters,
 			});
 		}
 

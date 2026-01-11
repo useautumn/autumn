@@ -1,6 +1,6 @@
 import type { EventInsert } from "@autumn/shared";
-import { JobName } from "../../../../queue/JobName.js";
-import { addTaskToQueue } from "../../../../queue/queueUtils.js";
+import { JobName } from "@server/queue/JobName.js";
+import { addTaskToQueue } from "@server/queue/queueUtils.js";
 
 class BatchingManager {
 	private events: Map<string, EventInsert> = new Map();

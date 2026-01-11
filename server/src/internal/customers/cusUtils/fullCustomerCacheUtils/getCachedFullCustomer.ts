@@ -87,11 +87,13 @@ export const getCachedFullCustomer = async ({
 	orgId,
 	env,
 	customerId,
+	entityId,
 	redisInstance,
 }: {
 	orgId: string;
 	env: string;
 	customerId: string;
+	entityId?: string;
 	redisInstance?: Redis;
 }): Promise<FullCustomer | null> => {
 	const cacheKey = buildFullCustomerCacheKey({ orgId, env, customerId });
@@ -104,6 +106,13 @@ export const getCachedFullCustomer = async ({
 	if (!cached) return null;
 
 	const fullCustomer = JSON.parse(cached) as FullCustomer;
+
+	if (entityId) {
+		fullCustomer.entity = fullCustomer.entities?.find((e) => e.id === entityId);
+		if (!fullCustomer.entity) return null; // might need to create?
+	} else {
+		fullCustomer.entity = undefined;
+	}
 
 	// Round balance fields to handle floating-point precision from JSON.NUMINCRBY
 	return roundFullCustomerBalances(fullCustomer);

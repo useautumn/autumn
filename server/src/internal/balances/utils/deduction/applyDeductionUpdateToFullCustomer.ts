@@ -1,5 +1,5 @@
 import type { FullCustomer } from "@autumn/shared";
-import type { DeductionUpdate } from "../types/deductionTypes.js";
+import type { DeductionUpdate } from "../types/deductionUpdate.js";
 
 export const applyDeductionUpdateToFullCustomer = ({
 	fullCus,

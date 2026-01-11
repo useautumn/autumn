@@ -4,6 +4,7 @@ import {
 	logger as loggerInstance,
 } from "../../../../external/logtail/logtailUtils.js";
 import { redis } from "../../../../external/redis/initRedis.js";
+import { deleteCachedFullCustomer } from "../fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 
 /**
  * Delete all cached ApiCustomer data from Redis
@@ -38,18 +39,27 @@ export const deleteCachedApiCustomer = async ({
 	if (!customerId) return;
 
 	try {
-		const deletedCount = await redis.deleteCustomer(
-			CACHE_CUSTOMER_VERSIONS.LATEST,
-			orgId,
-			env,
-			customerId,
-		);
-		const deletedCountV1_2_0 = await redis.deleteCustomer(
-			CACHE_CUSTOMER_VERSIONS.PREVIOUS,
-			orgId,
-			env,
-			customerId,
-		);
+		const [deletedCount, deletedCountV1_2_0] = await Promise.all([
+			redis.deleteCustomer(
+				CACHE_CUSTOMER_VERSIONS.LATEST,
+				orgId,
+				env,
+				customerId,
+			),
+			redis.deleteCustomer(
+				CACHE_CUSTOMER_VERSIONS.PREVIOUS,
+				orgId,
+				env,
+				customerId,
+			),
+			deleteCachedFullCustomer({
+				customerId,
+				orgId,
+				env,
+				source,
+				logger,
+			}),
+		]);
 
 		logger.info(
 			`Deleted ${deletedCount} cache keys for customer ${customerId}, source: ${source}`,

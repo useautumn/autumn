@@ -6,4 +6,4 @@
 ## Lua Scripts
 - [x] `deduction/deductFromFullCustomer.lua` - Main deduction script (mirrors `performDeduction.sql`)
 - [x] `luaScriptsV2.ts` - TypeScript loader for Lua scripts
-- [x] `deductFromRedisCusEnts.ts` - Calls the Lua script
+- [x] `executeRedisDeduction.ts` - Calls the Lua script

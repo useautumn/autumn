@@ -227,6 +227,8 @@ export const getApiBalance = ({
 		cusEnts.map((cusEnt) => cusEntToPurchasedBalance({ cusEnt, entityId })),
 	);
 
+	console.log("totalPurchasedBalance", totalPurchasedBalance);
+
 	// 3. Current balance
 	let currentBalance = cusEntsToCurrentBalance({
 		cusEnts,

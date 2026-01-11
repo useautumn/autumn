@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/bun";
 import { redis } from "@/external/redis/initRedis.js";
 import { CACHE_CUSTOMER_VERSIONS } from "../../../../_luaScripts/cacheConfig";
+import { batchDeleteCachedFullCustomers } from "../fullCustomerCacheUtils/batchDeleteCachedFullCustomers";
 
 /**
  * Batch delete multiple customer caches in one Redis operation
@@ -30,6 +31,10 @@ export const batchDeleteCachedCustomers = async ({
 	}
 
 	try {
+		await batchDeleteCachedFullCustomers({
+			customers,
+		});
+
 		// Group customers by orgId to avoid Redis Cluster hash slot errors
 		// All keys in a Lua script must be in the same hash slot (same {orgId})
 		const customersByOrg = new Map<string, typeof customers>();

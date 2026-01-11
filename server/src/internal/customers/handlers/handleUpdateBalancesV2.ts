@@ -3,8 +3,9 @@ import {
 	UpdateBalancesParamsSchema,
 } from "@autumn/shared";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
-import type { FeatureDeduction } from "../../balances/track/trackUtils/getFeatureDeductions";
+
 import { runDeductionTx } from "../../balances/track/trackUtils/runDeductionTx";
+import type { FeatureDeduction } from "../../balances/utils/types/featureDeduction";
 import { CusService } from "../CusService";
 
 export const handleUpdateBalancesV2 = createRoute({

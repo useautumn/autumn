@@ -6,23 +6,15 @@ import type {
 import { tryCatch } from "@autumn/shared";
 import { currentRegion } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { globalEventBatchingManager } from "../../events/EventBatchingManager.js";
+import { buildEventInfo, initEvent } from "../../events/initEvent.js";
 import { deductionToTrackResponse } from "../../utils/deduction/deductionToTrackResponse.js";
-import { deductFromRedisCusEnts } from "../../utils/redis/deductFromRedisCusEnts.js";
+import { executeRedisDeduction } from "../../utils/deduction/executeRedisDeduction.js";
+import { deductionUpdatesToModifiedIds } from "../../utils/sync/deductionUpdatesToModifiedIds.js";
 import { globalSyncBatchingManagerV2 } from "../../utils/sync/SyncBatchingManagerV2.js";
-import type { DeductionUpdate } from "../../utils/types/deductionUpdate";
-import { globalEventBatchingManager } from "../eventUtils/EventBatchingManager.js";
-import { constructEvent, type EventInfo } from "../trackUtils/eventUtils.js";
-import type { FeatureDeduction } from "../trackUtils/getFeatureDeductions.js";
-import { deductionUpdatesToModifiedIds } from "./deductionUpdatesToModifiedIds.js";
-import { handleRedisDeductionError } from "./handleRedisDeductionError.js";
-
-type RunRedisDeductionParams = {
-	ctx: AutumnContext;
-	fullCustomer: FullCustomer;
-	featureDeductions: FeatureDeduction[];
-	overageBehavior: "cap" | "reject";
-	body: TrackParams;
-};
+import type { DeductionUpdate } from "../../utils/types/deductionUpdate.js";
+import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
+import { handleRedisTrackError } from "./handleRedisTrackError.js";
 
 const queueSyncItem = ({
 	ctx,
@@ -36,6 +28,7 @@ const queueSyncItem = ({
 	const modifiedCusEntIds = deductionUpdatesToModifiedIds({ updates });
 	if (modifiedCusEntIds.length === 0) return;
 
+	ctx.logger.info(`[QUEUE SYNC] (${body.customer_id})`);
 	globalSyncBatchingManagerV2.addSyncItem({
 		customerId: body.customer_id,
 		orgId: ctx.org.id,
@@ -56,15 +49,10 @@ const queueEvent = ({
 }): void => {
 	if (body.skip_event || body.idempotency_key) return;
 
-	const eventInfo: EventInfo = {
-		event_name: body.feature_id || body.event_name || "",
-		value: body.value ?? 1,
-		properties: body.properties,
-		timestamp: body.timestamp,
-	};
+	const eventInfo = buildEventInfo(body);
 
 	globalEventBatchingManager.addEvent(
-		constructEvent({
+		initEvent({
 			ctx,
 			eventInfo,
 			internalCustomerId: fullCustomer.internal_id,
@@ -79,26 +67,34 @@ const queueEvent = ({
  * Executes deductions against cached customer data in Redis.
  * Queues sync to Postgres and event insertion after successful deduction.
  */
-export const runRedisDeductionV2 = async ({
+export const runRedisTrack = async ({
 	ctx,
 	fullCustomer,
 	featureDeductions,
 	overageBehavior,
 	body,
-}: RunRedisDeductionParams): Promise<TrackResponseV2> => {
+}: {
+	ctx: AutumnContext;
+	fullCustomer: FullCustomer;
+	featureDeductions: FeatureDeduction[];
+	overageBehavior: "cap" | "reject";
+	body: TrackParams;
+}): Promise<TrackResponseV2> => {
 	const { data: result, error } = await tryCatch(
-		deductFromRedisCusEnts({
+		executeRedisDeduction({
 			ctx,
 			fullCustomer,
 			entityId: fullCustomer.entity?.id,
 			deductions: featureDeductions,
-			overageBehaviour: overageBehavior || "cap",
+			deductionOptions: {
+				overageBehaviour: overageBehavior || "cap",
+			},
 		}),
 	);
 
 	// Handle error (fallback to Postgres or rethrow)
 	if (error) {
-		return handleRedisDeductionError({
+		return handleRedisTrackError({
 			ctx,
 			error,
 			body,
