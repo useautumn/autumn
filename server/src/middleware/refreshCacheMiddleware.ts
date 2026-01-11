@@ -89,6 +89,8 @@ const handleRefreshCache = async (req: any, res: any) => {
 			customerId,
 			orgId: req.org.id,
 			env: req.env,
+			logger: logger,
+			source: `refreshCacheMiddleware, url: ${req.originalUrl} (express)`,
 		});
 	}
 
@@ -105,6 +107,7 @@ const handleRefreshCache = async (req: any, res: any) => {
 			customerId: req.body.customer_id,
 			orgId: req.org.id,
 			env: req.env,
+			logger: logger,
 		});
 	}
 };

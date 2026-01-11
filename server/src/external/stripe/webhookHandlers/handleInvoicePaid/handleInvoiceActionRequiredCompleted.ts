@@ -7,7 +7,6 @@ import { handleUpgradeFlow } from "@server/internal/customers/attach/attachFunct
 import { attachParamsToCurCusProduct } from "@server/internal/customers/attach/attachUtils/convertAttachParams";
 import { getDefaultAttachConfig } from "@server/internal/customers/attach/attachUtils/getAttachConfig";
 import type { AttachParams } from "@server/internal/customers/cusProducts/AttachParams";
-import { deleteCachedApiCustomer } from "@server/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
 import { MetadataService } from "@server/internal/metadata/MetadataService";
 import type Stripe from "stripe";
 
@@ -63,11 +62,5 @@ export const handleInvoiceActionRequiredCompleted = async ({
 	await MetadataService.delete({
 		db: ctx.db,
 		id: metadata.id,
-	});
-
-	await deleteCachedApiCustomer({
-		customerId: attachParams.customer.id || "",
-		orgId: attachParams.org.id,
-		env: attachParams.customer.env,
 	});
 };

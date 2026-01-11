@@ -188,6 +188,8 @@ export const getOrCreateApiCustomer = async ({
 			customerId,
 			orgId: ctx.org.id,
 			env: ctx.env,
+			logger: ctx.logger,
+			source: `getOrCreateApiCustomer, auto creating entity`,
 		});
 
 		await getCachedApiCustomer({

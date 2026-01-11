@@ -71,6 +71,7 @@ export const handleUpdateCusEntitlementV2 = createRoute({
 			env: ctx.env,
 			customerId: customer_id,
 			source: "handleUpdateBalance",
+			logger: ctx.logger,
 		});
 
 		return c.json({ success: true });
