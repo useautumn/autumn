@@ -7,13 +7,14 @@ import {
 	RecaseError,
 } from "@shared/index";
 import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService";
-import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { CusService } from "@/internal/customers/CusService";
 import { ProductService } from "@/internal/products/ProductService";
 import { getOrCreateCustomer } from "../../../internal/customers/cusUtils/getOrCreateCustomer";
 
 /**
  * Resolves a RevenueCat product ID to an Autumn product and fetches the customer.
+ * Also sets ctx.customerId for cache invalidation by the refresh middleware.
  * Throws if product mapping, product, customer is not found, or customer has non-RevenueCat products.
  */
 export const resolveRevenuecatResources = async ({
@@ -22,7 +23,7 @@ export const resolveRevenuecatResources = async ({
 	customerId,
 	autoCreateCustomer = false,
 }: {
-	ctx: AutumnContext;
+	ctx: RevenueCatWebhookContext;
 	revenuecatProductId: string;
 	customerId: string;
 	autoCreateCustomer?: boolean;
@@ -58,15 +59,15 @@ export const resolveRevenuecatResources = async ({
 		}),
 		autoCreateCustomer
 			? getOrCreateCustomer({
-				ctx,
-				customerId,
-			})
+					ctx,
+					customerId,
+				})
 			: CusService.getFull({
-				db,
-				idOrInternalId: customerId,
-				orgId: org.id,
-				env,
-			}),
+					db,
+					idOrInternalId: customerId,
+					orgId: org.id,
+					env,
+				}),
 	]);
 
 	// If the customer has a product from a different processor than RevenueCat and it has no subscriptions, throw an error
@@ -74,7 +75,7 @@ export const resolveRevenuecatResources = async ({
 		customer.customer_products.some(
 			(cp) =>
 				cp.processor?.type !== ProcessorType.RevenueCat &&
-				((cp.subscription_ids?.length ?? 0) !== 0),
+				(cp.subscription_ids?.length ?? 0) !== 0,
 		)
 	) {
 		throw new RecaseError({
@@ -84,8 +85,12 @@ export const resolveRevenuecatResources = async ({
 	}
 
 	const cusProducts = customer.customer_products.filter(
-		(cp) => (cp.processor?.type === ProcessorType.RevenueCat || cp.product.is_default),
+		(cp) =>
+			cp.processor?.type === ProcessorType.RevenueCat || cp.product.is_default,
 	);
+
+	// Set customer ID in context for cache refresh middleware
+	ctx.customerId = customer.id ?? "";
 
 	return { product, customer, cusProducts };
 };

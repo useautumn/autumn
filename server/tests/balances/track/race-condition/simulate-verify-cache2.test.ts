@@ -207,18 +207,6 @@ describe(`${chalk.yellowBright("simulate-verify-cache2: sync should not wipe out
 		});
 		console.log(chalk.red("✓ Sync completed"));
 
-		// await removeTestCacheDeleteGuard({
-		// 	ctx,
-		// 	customerId,
-		// });
-
-		// await deleteCachedApiCustomer({
-		// 	orgId: ctx.org.id,
-		// 	env: ctx.env,
-		// 	customerId: customerId,
-		// 	source: "test-setup",
-		// });
-
 		// 1. Check that credits weren't wiped out
 		const cachedCustomer =
 			await autumnV2.customers.get<ApiCustomer>(customerId);

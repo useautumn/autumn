@@ -33,6 +33,7 @@ export const getApiCustomer = async ({
 			const { apiCustomer, legacyData } = await getCachedApiCustomer({
 				ctx,
 				customerId: customerId || "",
+				source: `getApiCustomer`,
 			});
 
 			baseCustomer = apiCustomer;
