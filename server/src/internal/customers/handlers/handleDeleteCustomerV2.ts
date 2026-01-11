@@ -65,6 +65,8 @@ export const deleteCusById = async ({
 		customerId: customer.id ?? "",
 		orgId: org.id,
 		env,
+		source: `deleteCusById, deleting customer cache`,
+		logger: ctx.logger,
 	});
 
 	return response;
@@ -130,6 +132,8 @@ export const handleDeleteCustomerV2 = createRoute({
 			customerId: customer.id ?? "",
 			orgId: org.id,
 			env,
+			source: `handleDeleteCustomerV2, deleting customer cache`,
+			logger: ctx.logger,
 		});
 
 		return c.json(response);

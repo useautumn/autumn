@@ -111,6 +111,7 @@ export const updateGrantedBalance = async ({
 		env: ctx.env,
 		customerId: fullCus.id ?? "",
 		source: "updateGrantedBalance",
+		logger: ctx.logger,
 	});
 
 	// // Update Redis cache directly (avoids clearing cache which causes race conditions)

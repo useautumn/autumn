@@ -94,6 +94,8 @@ export const refreshCacheMiddleware = async (
 				customerId,
 				orgId: org.id,
 				env: env,
+				logger,
+				source: `refreshCacheMiddleware, url: ${pathname}`,
 			});
 		}
 		return;

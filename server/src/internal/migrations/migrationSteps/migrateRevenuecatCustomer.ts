@@ -91,5 +91,7 @@ export const migrateRevenueCatCustomer = async ({
 		customerId,
 		orgId: org.id,
 		env,
+		logger,
+		source: `migrateRevenueCatCustomer, deleting customer cache`,
 	});
 };

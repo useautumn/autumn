@@ -17,6 +17,8 @@ export const handleClearCustomerCache = createRoute({
 				customerId: customer_id,
 				orgId: ctx.org.id,
 				env: ctx.env,
+				source: `handleClearCustomerCache, deleting single customer cache`,
+				logger: ctx.logger,
 			});
 		}
 

@@ -54,6 +54,7 @@ export const createSharedProducts = async ({
 				customerId: customer.id ?? "",
 				orgId: ctx.org.id,
 				env: ctx.env,
+				logger: ctx.logger,
 			}),
 		);
 	}

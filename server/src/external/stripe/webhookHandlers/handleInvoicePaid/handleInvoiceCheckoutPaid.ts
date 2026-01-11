@@ -5,7 +5,6 @@ import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { CusService } from "../../../../internal/customers/CusService.js";
-import { deleteCachedApiCustomer } from "../../../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { MetadataService } from "../../../../internal/metadata/MetadataService.js";
 
 export const handleInvoiceCheckoutPaid = async ({
@@ -71,10 +70,4 @@ export const handleInvoiceCheckoutPaid = async ({
 
 		customerId = customer?.id;
 	}
-
-	await deleteCachedApiCustomer({
-		customerId: customerId || "",
-		orgId: org.id,
-		env,
-	});
 };

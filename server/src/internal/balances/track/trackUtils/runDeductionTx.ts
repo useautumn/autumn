@@ -367,29 +367,9 @@ export const runDeductionTx = async (
 			customerId: fullCus.id ?? "",
 			orgId: ctx.org.id,
 			env: ctx.env,
+			logger: ctx.logger,
+			source: `runDeductionTx, refreshing cache`,
 		});
-		// // 1. If paid allocated, delete cache
-		// if (result?.isPaidAllocated) {
-		// 	await deleteCachedApiCustomer({
-		// 		customerId: fullCus.id ?? "",
-		// 		orgId: ctx.org.id,
-		// 		env: ctx.env,
-		// 	});
-		// } else {
-		// 	for (const [featureId, deductedAmount] of Object.entries(
-		// 		actualDeductions,
-		// 	)) {
-		// 		if (deductedAmount !== 0) {
-		// 			await deductFromCache({
-		// 				ctx,
-		// 				customerId: fullCus.id ?? "",
-		// 				featureId,
-		// 				amount: deductedAmount,
-		// 				entityId: params.entityId,
-		// 			});
-		// 		}
-		// 	}
-		// }
 	}
 
 	return {
