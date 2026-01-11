@@ -22,7 +22,7 @@ export const migrateStripeCustomer = async ({
 	fromProduct: FullProduct;
 	customerId: string;
 }) => {
-	const { org, env } = ctx;
+	const { org, env, logger } = ctx;
 
 	const attachParams = await migrationToAttachParams({
 		ctx,
@@ -42,5 +42,7 @@ export const migrateStripeCustomer = async ({
 		customerId,
 		orgId: org.id,
 		env,
+		logger,
+		source: `migrateStripeCustomer, deleting customer cache`,
 	});
 };

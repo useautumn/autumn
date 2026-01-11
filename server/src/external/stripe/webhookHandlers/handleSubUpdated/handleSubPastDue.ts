@@ -6,7 +6,6 @@ import {
 import type Stripe from "stripe";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
-import { deleteCachedApiCustomer } from "../../../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 
 export const isSubPastDue = ({
 	previousAttributes,
@@ -69,14 +68,5 @@ export const handleSubPastDue = async ({
 				error,
 			});
 		}
-	}
-
-	const customerId = updatedCusProducts[0].customer?.id;
-	if (customerId) {
-		await deleteCachedApiCustomer({
-			customerId,
-			orgId: org.id,
-			env,
-		});
 	}
 };

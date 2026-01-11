@@ -1,10 +1,15 @@
 import * as Sentry from "@sentry/bun";
-import { redis } from "@/external/redis/initRedis.js";
+import {
+	getConfiguredRegions,
+	getRegionalRedis,
+	redis,
+} from "@/external/redis/initRedis.js";
 import { CACHE_CUSTOMER_VERSIONS } from "../../../../_luaScripts/cacheConfig";
 
 /**
- * Batch delete multiple customer caches in one Redis operation
- * Much more efficient than calling deleteCachedApiCustomer multiple times
+ * Batch delete multiple customer caches in one Redis operation across ALL regions.
+ * This ensures cache consistency and prevents race conditions where
+ * a stale cache in another region could be read after deletion.
  * @param customers Array of {orgId, env, customerId} to delete
  * @returns Number of keys deleted
  */
@@ -29,49 +34,74 @@ export const batchDeleteCachedCustomers = async ({
 		return 0;
 	}
 
+	// Group customers by orgId to avoid Redis Cluster hash slot errors
+	// All keys in a Lua script must be in the same hash slot (same {orgId})
+	const customersByOrg = new Map<string, typeof customers>();
+
+	for (const customer of customers) {
+		const key = customer.orgId;
+		if (!customersByOrg.has(key)) {
+			customersByOrg.set(key, []);
+		}
+		customersByOrg.get(key)?.push(customer);
+	}
+
+	const regions = getConfiguredRegions();
+
 	try {
-		// Group customers by orgId to avoid Redis Cluster hash slot errors
-		// All keys in a Lua script must be in the same hash slot (same {orgId})
-		const customersByOrg = new Map<string, typeof customers>();
+		// Delete from all regions in parallel
+		const regionPromises = regions.map(async (region) => {
+			const regionalRedis = getRegionalRedis(region);
 
-		for (const customer of customers) {
-			const key = customer.orgId;
-			if (!customersByOrg.has(key)) {
-				customersByOrg.set(key, []);
+			if (regionalRedis.status !== "ready") {
+				console.warn(
+					`Redis not ready for region ${region}, skipping batch delete`,
+				);
+				return { region, deletedCount: 0, skipped: true };
 			}
-			customersByOrg.get(key)?.push(customer);
-		}
 
-		// Use pipeline to batch all org deletions into one network round trip
-		const pipeline = redis.pipeline();
+			// Use pipeline to batch all org deletions into one network round trip
+			const pipeline = regionalRedis.pipeline();
 
-		for (const orgCustomers of customersByOrg.values()) {
-			pipeline.batchDeleteCustomers(
-				CACHE_CUSTOMER_VERSIONS.LATEST,
-				JSON.stringify(orgCustomers),
-			);
-			pipeline.batchDeleteCustomers(
-				CACHE_CUSTOMER_VERSIONS.PREVIOUS,
-				JSON.stringify(orgCustomers),
-			);
-		}
+			for (const orgCustomers of customersByOrg.values()) {
+				pipeline.batchDeleteCustomers(
+					CACHE_CUSTOMER_VERSIONS.LATEST,
+					JSON.stringify(orgCustomers),
+				);
+			}
 
-		const results = await pipeline.exec();
+			const results = await pipeline.exec();
 
-		// Sum up all deleted counts
-		let totalDeleted = 0;
-		if (results) {
-			for (const [error, result] of results) {
-				if (error) {
-					console.error("Error in pipeline batch delete:", error);
-					throw error;
+			// Sum up all deleted counts for this region
+			let regionDeleted = 0;
+			if (results) {
+				for (const [error, result] of results) {
+					if (error) {
+						console.error(
+							`Error in pipeline batch delete for region ${region}:`,
+							error,
+						);
+						throw error;
+					}
+					regionDeleted += result as number;
 				}
-				totalDeleted += result as number;
 			}
-		}
+
+			return { region, deletedCount: regionDeleted, skipped: false };
+		});
+
+		const regionResults = await Promise.all(regionPromises);
+
+		const totalDeleted = regionResults.reduce(
+			(sum, r) => sum + r.deletedCount,
+			0,
+		);
+		const regionsSummary = regionResults
+			.map((r) => `${r.region}: ${r.skipped ? "skipped" : r.deletedCount}`)
+			.join(", ");
 
 		console.log(
-			`Batch deleted ${totalDeleted} cache keys for ${customers.length} customers across ${customersByOrg.size} orgs`,
+			`[batchDeleteCache] customers: ${customers.length}, keys: ${totalDeleted}, regions: ${regionsSummary}`,
 		);
 
 		return totalDeleted;

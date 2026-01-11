@@ -150,6 +150,8 @@ export const triggerFreeProduct = async ({
 			customerId: fullRedeemer.id!,
 			orgId: org.id,
 			env,
+			logger,
+			source: `triggerFreeProduct, deleting redeemer cache`,
 		});
 	}
 
@@ -168,6 +170,8 @@ export const triggerFreeProduct = async ({
 			customerId: fullReferrer.id!,
 			orgId: org.id,
 			env,
+			logger,
+			source: `triggerFreeProduct, deleting referrer cache`,
 		});
 		logger.info(`✅ Added ${fullProduct.name} to referrer`);
 	}
