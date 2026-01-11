@@ -79,18 +79,14 @@ export const isCustomerProductExpired = (
 	);
 };
 
-export const isCusProductTrialing = ({
-	cusProduct,
-	now,
-}: {
-	cusProduct?: FullCusProduct;
-	now?: number;
-}) => {
-	if (!cusProduct) return false;
+export const isCustomerProductTrialing = (
+	customerProduct?: FullCusProduct,
+	params?: { nowMs?: number },
+) => {
+	if (!customerProduct) return false;
 
-	return (
-		cusProduct.trial_ends_at && cusProduct.trial_ends_at > (now || Date.now())
-	);
+	const nowMs = params?.nowMs ?? Date.now();
+	return customerProduct.trial_ends_at && customerProduct.trial_ends_at > nowMs;
 };
 
 export const customerProductHasRelevantStatus = (cp?: FullCusProduct) => {

@@ -97,8 +97,37 @@ const proWithTrial = ({
 		},
 	});
 
+/**
+ * Base (free) product with free trial - no base price, with configurable trial
+ * @param items - Product items (features)
+ * @param id - Product ID (default: "base-trial")
+ * @param trialDays - Number of trial days (default: 7)
+ * @param cardRequired - Whether card is required for trial (default: false)
+ */
+const baseWithTrial = ({
+	items,
+	id = "base-trial",
+	trialDays = 7,
+	cardRequired = false,
+}: {
+	items: ProductItem[];
+	id?: string;
+	trialDays?: number;
+	cardRequired?: boolean;
+}): ProductV2 => ({
+	...constructRawProduct({ id, items }),
+	is_default: false,
+	free_trial: {
+		length: trialDays,
+		duration: FreeTrialDuration.Day,
+		unique_fingerprint: false,
+		card_required: cardRequired,
+	},
+});
+
 export const products = {
 	base,
+	baseWithTrial,
 	pro,
 	proAnnual,
 	proWithTrial,

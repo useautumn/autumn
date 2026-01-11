@@ -1,10 +1,14 @@
-import type { CheckoutResponseV0, ProductV2 } from "@autumn/shared";
+import type {
+	CheckoutResponseV0,
+	CreateFreeTrial,
+	ProductV2,
+} from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useAttachBodyBuilder } from "./use-attach-body-builder";
+import { useUpdateSubscriptionBodyBuilder } from "./use-update-subscription-body-builder";
 
-interface AttachPreviewParams {
+interface UpdateSubscriptionPreviewParams {
 	// Required params - no fallbacks
 	customerId?: string;
 	product?: ProductV2;
@@ -12,30 +16,39 @@ interface AttachPreviewParams {
 	prepaidOptions?: Record<string, number>;
 	version?: number;
 
+	// Free trial param - null removes trial, undefined preserves existing
+	freeTrial?: CreateFreeTrial | null;
+
 	// Control behavior
 	enabled?: boolean;
 }
 
-export function useAttachPreview(params: AttachPreviewParams = {}) {
+export function useUpdateSubscriptionPreview(
+	params: UpdateSubscriptionPreviewParams = {},
+) {
 	const axiosInstance = useAxiosInstance();
 
-	// Build attach body using shared hook with explicit params
-	const { attachBody } = useAttachBodyBuilder({
+	// Build update subscription body using shared hook with explicit params
+	const { updateSubscriptionBody } = useUpdateSubscriptionBodyBuilder({
 		customerId: params.customerId,
 		product: params.product,
 		entityId: params.entityId,
 		prepaidOptions: params.prepaidOptions,
 		version: params.version,
+		freeTrial: params.freeTrial,
 	});
 
 	// Auto-enable if not explicitly set and all required data is present
 	const shouldEnable =
 		params.enabled !== undefined
 			? params.enabled
-			: !!(params.customerId && params.product && attachBody);
+			: !!(params.customerId && params.product && updateSubscriptionBody);
 
-	// Create a stable serialized key from attachBody (which already captures all dependencies)
-	const queryKeyDeps = useMemo(() => JSON.stringify(attachBody), [attachBody]);
+	// Create a stable serialized key from updateSubscriptionBody (which already captures all dependencies)
+	const queryKeyDeps = useMemo(
+		() => JSON.stringify(updateSubscriptionBody),
+		[updateSubscriptionBody],
+	);
 
 	// Debounce the query key to delay API calls by 150ms
 	const [debouncedQueryKey, setDebouncedQueryKey] = useState(queryKeyDeps);
@@ -51,15 +64,15 @@ export function useAttachPreview(params: AttachPreviewParams = {}) {
 	const isDebouncing = queryKeyDeps !== debouncedQueryKey;
 
 	const query = useQuery({
-		queryKey: ["attach-checkout", debouncedQueryKey],
+		queryKey: ["update-subscription-preview", debouncedQueryKey],
 		queryFn: async () => {
-			if (!attachBody || !params.customerId) {
+			if (!updateSubscriptionBody || !params.customerId) {
 				return null;
 			}
 
 			const response = await axiosInstance.post<CheckoutResponseV0>(
 				"/v1/subscriptions/preview_update",
-				attachBody,
+				updateSubscriptionBody,
 			);
 
 			return response.data;
