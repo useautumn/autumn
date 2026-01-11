@@ -18,9 +18,11 @@ import {
 	add,
 	differenceInDays,
 	differenceInHours,
+	differenceInMonths,
 	format,
 	startOfDay,
 	startOfHour,
+	startOfMonth,
 	sub,
 } from "date-fns";
 import { Decimal } from "decimal.js";
@@ -135,6 +137,20 @@ export class EventsAggregationService {
 
 			return {
 				binCount: hours,
+				binEndDate: format(endPlusOne, EventsAggregationService.dateFormat),
+				filterStartDate,
+				filterEndDate,
+			};
+		}
+
+		if (binSize === "month") {
+			const truncStart = startOfMonth(startDate);
+			const truncEnd = startOfMonth(endDate);
+			const endPlusOne = add(truncEnd, { months: 1 });
+			const months = differenceInMonths(endPlusOne, truncStart);
+
+			return {
+				binCount: months,
 				binEndDate: format(endPlusOne, EventsAggregationService.dateFormat),
 				filterStartDate,
 				filterEndDate,
@@ -337,8 +353,14 @@ order by dr.period${groupBy.orderBy};
 
 		const currentDayOffset = 1;
 		const calculateBinCount = (days: number): number => {
-			const count = binSize === "hour" ? days * 24 : days;
-			return count + currentDayOffset;
+			if (binSize === "hour") {
+				return days * 24 + currentDayOffset;
+			}
+			if (binSize === "month") {
+				// Convert days to months (approximate: 30 days per month)
+				return Math.ceil(days / 30) + currentDayOffset;
+			}
+			return days + currentDayOffset;
 		};
 
 		const standardIntervalBinCount =
@@ -352,12 +374,14 @@ order by dr.period${groupBy.orderBy};
 			!params.custom_range &&
 			getBCResults?.gap !== undefined;
 
-		const binMultiplier = binSize === "hour" ? 24 : 1;
+		// Multiplier to convert from days to the appropriate bin size unit
+		const binMultiplier =
+			binSize === "hour" ? 24 : binSize === "month" ? 1 / 30 : 1;
 
 		const finalBinCount =
 			binCount ??
 			(isBillingCycle
-				? standardIntervalBinCount * binMultiplier
+				? Math.ceil(standardIntervalBinCount * binMultiplier)
 				: calculateBinCount(standardIntervalBinCount));
 
 		// Use date_range_bc_view query for billing cycles or custom ranges
@@ -374,7 +398,7 @@ order by dr.period${groupBy.orderBy};
 		// - Standard intervals: offset = bin_count - 1 (to include current period)
 		let intervalOffset: number;
 		if (isBillingCycle) {
-			intervalOffset = getBCResults.gap * binMultiplier;
+			intervalOffset = Math.ceil(getBCResults.gap * binMultiplier);
 		} else if (useBillingCycleQuery) {
 			intervalOffset = finalBinCount;
 		} else {
