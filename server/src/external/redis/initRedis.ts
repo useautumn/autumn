@@ -13,6 +13,7 @@ import {
 	SET_INVOICES_SCRIPT,
 	SET_SUBSCRIPTIONS_SCRIPT,
 } from "../../_luaScripts/luaScripts.js";
+import { DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT } from "../../_luaScriptsV2/luaScriptsV2.js";
 
 if (!process.env.CACHE_URL) {
 	throw new Error("CACHE_URL (redis) is not set");
@@ -93,6 +94,11 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 	redisInstance.defineCommand("batchDeleteCustomers", {
 		numberOfKeys: 0,
 		lua: BATCH_DELETE_CUSTOMERS_SCRIPT,
+	});
+
+	redisInstance.defineCommand("deductFromCustomerEntitlements", {
+		numberOfKeys: 1,
+		lua: DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	});
 
 	// biome-ignore lint/correctness/noUnusedFunctionParameters: Might uncomment this back in in the future
@@ -236,6 +242,10 @@ declare module "ioredis" {
 			cacheCustomerVersion: string,
 			customersJson: string,
 		): Promise<number>;
+		deductFromCustomerEntitlements(
+			cacheKey: string,
+			paramsJson: string,
+		): Promise<string>;
 	}
 }
 

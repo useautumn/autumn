@@ -7,13 +7,13 @@ import {
 	type ApiBalanceBreakdown,
 	type ApiCustomer,
 	type ApiEntityV1,
+	type CustomerEntitlementFilters,
 	cusEntToPrepaidQuantity,
 	cusProductsToCusEnts,
 	filterEntityLevelCusProducts,
 	filterOutEntitiesFromCusProducts,
 	getRelevantFeatures,
 	orgToInStatuses,
-	type SortCusEntParams,
 	sumValues,
 } from "@autumn/shared";
 import chalk from "chalk";
@@ -29,7 +29,7 @@ import { getCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheU
 import { handleThresholdReached } from "@/trigger/handleThresholdReached.js";
 import { getCachedApiEntity } from "../../../../entities/entityUtils/apiEntityCacheUtils/getCachedApiEntity";
 import { deductFromCusEnts } from "../../../track/trackUtils/runDeductionTx";
-import type { FeatureDeduction } from "../../types/deductionTypes";
+import type { FeatureDeduction } from "../../types/featureDeduction.js";
 
 export interface SyncItem {
 	customerId: string;
@@ -39,7 +39,7 @@ export interface SyncItem {
 	entityId?: string;
 	region?: string;
 	timestamp: number;
-	sortParams?: SortCusEntParams;
+	customerEntitlementFilters?: CustomerEntitlementFilters;
 	alterGrantedBalance?: boolean;
 	overageBehaviour?: "cap" | "reject" | "allow";
 	cacheVersion?: string;
@@ -73,7 +73,7 @@ const apiToBackendBalance = ({
 };
 
 /**
- * Filter balance by sortParams.cusEntIds
+ * Filter balance by customerEntitlementFilters.cusEntIds
  * Returns a modified ApiBalance with:
  * - breakdown filtered to only matching cusEntIds
  * - current_balance/purchased_balance summed from filtered breakdowns
@@ -81,13 +81,13 @@ const apiToBackendBalance = ({
  */
 const applyCustomerEntitlementFiltersToBalance = ({
 	apiBalance,
-	sortParams,
+	customerEntitlementFilters,
 }: {
 	apiBalance: ApiBalance;
-	sortParams?: SortCusEntParams;
+	customerEntitlementFilters?: CustomerEntitlementFilters;
 }): ApiBalance | null => {
 	// No filtering - return original balance
-	if (!sortParams?.cusEntIds || sortParams.cusEntIds.length === 0) {
+	if (!customerEntitlementFilters?.cusEntIds || customerEntitlementFilters.cusEntIds.length === 0) {
 		return apiBalance;
 	}
 
@@ -98,7 +98,7 @@ const applyCustomerEntitlementFiltersToBalance = ({
 
 	// Filter breakdowns to matching cusEntIds
 	const filteredBreakdowns = apiBalance.breakdown.filter((b) =>
-		sortParams.cusEntIds?.includes(b.id),
+		customerEntitlementFilters.cusEntIds?.includes(b.id),
 	);
 
 	if (filteredBreakdowns.length === 0) {
@@ -143,7 +143,7 @@ export const syncItem = async ({
 	item: SyncItem;
 	ctx: AutumnContext;
 }) => {
-	const { customerId, featureId, entityId, region, sortParams } = item;
+	const { customerId, featureId, entityId, region, customerEntitlementFilters } = item;
 	const { db, org, env } = ctx;
 
 	// Get the correct regional Redis instance for this sync item
@@ -221,13 +221,13 @@ export const syncItem = async ({
 			reverseOrder: org.config?.reverse_deduction_order,
 			entity: fullCus.entity,
 			inStatuses: orgToInStatuses({ org }),
-			sortParams,
+			customerEntitlementFilters,
 		});
 
-		// Filter balance by sortParams (handles breakdown filtering)
+		// Filter balance by customerEntitlementFilters (handles breakdown filtering)
 		const filteredBalance = applyCustomerEntitlementFiltersToBalance({
 			apiBalance: redisBalance,
-			sortParams,
+			customerEntitlementFilters,
 		});
 
 		if (!filteredBalance) continue;
@@ -252,7 +252,7 @@ export const syncItem = async ({
 		entityId,
 		deductions: featureDeductions,
 		fullCus, // to prevent fetching full customer again
-		sortParams, // Filter to specific entitlement if provided
+		customerEntitlementFilters, // Filter to specific entitlement if provided
 		refreshCache: false, // CRITICAL: Don't refresh cache after sync (Redis is the source of truth)
 		alterGrantedBalance: item.alterGrantedBalance,
 		overageBehaviour: item.overageBehaviour,

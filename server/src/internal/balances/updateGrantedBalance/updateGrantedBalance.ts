@@ -1,4 +1,4 @@
-import type { FullCustomer, SortCusEntParams } from "@autumn/shared";
+import type { CustomerEntitlementFilters, FullCustomer } from "@autumn/shared";
 import {
 	cusEntsToAllowance,
 	cusProductsToCusEnts,
@@ -20,13 +20,13 @@ export const updateGrantedBalance = async ({
 	fullCus,
 	featureId,
 	targetGrantedBalance,
-	sortParams,
+	customerEntitlementFilters = {},
 }: {
 	ctx: AutumnContext;
 	fullCus: FullCustomer;
 	featureId: string;
 	targetGrantedBalance: number;
-	sortParams: SortCusEntParams;
+	customerEntitlementFilters?: CustomerEntitlementFilters;
 }) => {
 	const feature = ctx.features.find((f) => f.id === featureId);
 
@@ -39,7 +39,7 @@ export const updateGrantedBalance = async ({
 		featureIds: [featureId],
 		entity: fullCus.entity,
 		inStatuses: orgToInStatuses({ org: ctx.org }),
-		sortParams,
+		customerEntitlementFilters,
 	});
 
 	if (cusEnts.length === 0) {

@@ -1,5 +1,5 @@
 import type { Entity } from "../../models/cusModels/entityModels/entityModels.js";
-import type { SortCusEntParams } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
+import type { CustomerEntitlementFilters } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import type { FullCustomerPrice } from "../../models/cusProductModels/cusPriceModels/cusPriceModels.js";
 import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
@@ -59,7 +59,7 @@ export const cusProductsToCusEnts = ({
 	featureId,
 	featureIds,
 	entity,
-	sortParams,
+	customerEntitlementFilters,
 	isRefund = false,
 }: {
 	cusProducts: FullCusProduct[];
@@ -68,7 +68,7 @@ export const cusProductsToCusEnts = ({
 	featureId?: string;
 	featureIds?: string[];
 	entity?: Entity;
-	sortParams?: SortCusEntParams;
+	customerEntitlementFilters?: CustomerEntitlementFilters;
 	isRefund?: boolean;
 }) => {
 	let cusEnts: FullCusEntWithFullCusProduct[] = [];
@@ -110,18 +110,18 @@ export const cusProductsToCusEnts = ({
 		reverseOrder,
 		entityId: entity?.id,
 		isRefund,
-		// sortParams,
+		// customerEntitlementFilters,
 	});
 
-	if (sortParams?.cusEntIds && sortParams.cusEntIds.length > 0) {
+	if (customerEntitlementFilters?.cusEntIds && customerEntitlementFilters.cusEntIds.length > 0) {
 		cusEnts = cusEnts.filter((cusEnt) =>
-			sortParams.cusEntIds?.includes(cusEnt.id),
+			customerEntitlementFilters.cusEntIds?.includes(cusEnt.id),
 		);
 	}
 
-	if (notNullish(sortParams?.interval)) {
+	if (notNullish(customerEntitlementFilters?.interval)) {
 		cusEnts = cusEnts.filter(
-			(cusEnt) => cusEnt.entitlement.interval === sortParams.interval,
+			(cusEnt) => cusEnt.entitlement.interval === customerEntitlementFilters.interval,
 		);
 	}
 

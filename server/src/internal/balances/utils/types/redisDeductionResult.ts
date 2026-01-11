@@ -1,4 +1,4 @@
-import type { DeductionUpdate } from "./deductionTypes.js";
+import type { DeductionUpdate } from "./deductionUpdate.js";
 
 export interface LuaDeductionResult {
 	updates: Record<string, DeductionUpdate>;

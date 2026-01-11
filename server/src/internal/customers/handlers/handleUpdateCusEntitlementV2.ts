@@ -50,7 +50,7 @@ export const handleUpdateCusEntitlementV2 = createRoute({
 			],
 			skipAdditionalBalance: true,
 			alterGrantedBalance: true,
-			sortParams: {
+			customerEntitlementFilters: {
 				cusEntIds: [customer_entitlement_id],
 			},
 			refreshCache: false,

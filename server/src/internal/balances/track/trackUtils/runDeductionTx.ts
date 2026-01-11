@@ -1,4 +1,4 @@
-import type { Event, SortCusEntParams } from "@autumn/shared";
+import type { CustomerEntitlementFilters, Event } from "@autumn/shared";
 import {
 	CusProductStatus,
 	cusEntToCusPrice,
@@ -23,10 +23,10 @@ import { getUnlimitedAndUsageAllowed } from "../../../customers/cusProducts/cusE
 import { deleteCachedApiCustomer } from "../../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { getCreditCost } from "../../../features/creditSystemUtils.js";
 import { isPaidContinuousUse } from "../../../features/featureUtils.js";
+import { type EventInfo, initEvent } from "../../events/initEvent.js";
 import { applyDeductionUpdateToFullCustomer } from "../../utils/deduction/applyDeductionUpdateToFullCustomer.js";
 import type { DeductionUpdate } from "../../utils/types/deductionUpdate.js";
-import { constructEvent, type EventInfo } from "./eventUtils.js";
-import type { FeatureDeduction } from "./getFeatureDeductions.js";
+import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import { handlePaidAllocatedCusEnt } from "./handlePaidAllocatedCusEnt.js";
 import { rollbackDeduction } from "./rollbackDeduction.js";
 
@@ -43,7 +43,7 @@ export type DeductionTxParams = {
 	fullCus?: FullCustomer; // if provided from function above!
 	refreshCache?: boolean; // Whether to refresh Redis cache after deduction (default: true for track, false for sync)
 
-	sortParams?: SortCusEntParams;
+	customerEntitlementFilters?: CustomerEntitlementFilters;
 };
 
 export const deductFromCusEnts = async ({
@@ -56,7 +56,7 @@ export const deductFromCusEnts = async ({
 	skipAdditionalBalance = true,
 	alterGrantedBalance = false,
 	fullCus,
-	sortParams,
+	customerEntitlementFilters,
 }: DeductionTxParams): Promise<{
 	oldFullCus: FullCustomer;
 	fullCus: FullCustomer | undefined;
@@ -119,7 +119,7 @@ export const deductFromCusEnts = async ({
 			reverseOrder: org.config?.reverse_deduction_order,
 			entity: fullCus.entity,
 			inStatuses: orgToInStatuses({ org }),
-			sortParams,
+			customerEntitlementFilters,
 			isRefund,
 		});
 
@@ -361,7 +361,7 @@ export const runDeductionTx = async (
 	}
 
 	if (params.eventInfo) {
-		const newEvent = constructEvent({
+		const newEvent = initEvent({
 			ctx,
 			eventInfo: params.eventInfo,
 			internalCustomerId: fullCus.internal_id,
@@ -382,28 +382,6 @@ export const runDeductionTx = async (
 			orgId: ctx.org.id,
 			env: ctx.env,
 		});
-		// // 1. If paid allocated, delete cache
-		// if (result?.isPaidAllocated) {
-		// 	await deleteCachedApiCustomer({
-		// 		customerId: fullCus.id ?? "",
-		// 		orgId: ctx.org.id,
-		// 		env: ctx.env,
-		// 	});
-		// } else {
-		// 	for (const [featureId, deductedAmount] of Object.entries(
-		// 		actualDeductions,
-		// 	)) {
-		// 		if (deductedAmount !== 0) {
-		// 			await deductFromCache({
-		// 				ctx,
-		// 				customerId: fullCus.id ?? "",
-		// 				featureId,
-		// 				amount: deductedAmount,
-		// 				entityId: params.entityId,
-		// 			});
-		// 		}
-		// 	}
-		// }
 	}
 
 	return {

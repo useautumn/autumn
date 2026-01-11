@@ -2,9 +2,7 @@ import {
 	type AppEnv,
 	type CheckParams,
 	CusExpand,
-	type CustomerData,
 	type Entity,
-	type EntityData,
 	type FullCustomer,
 	type TrackParams,
 } from "@autumn/shared";
@@ -42,8 +40,12 @@ export const getOrCreateCachedFullCustomer = async ({
 	// 1. Try cache first
 	if (customerId && !skipCache) {
 		fullCustomer =
-			(await getCachedFullCustomer({ orgId: org.id, env, customerId })) ??
-			undefined;
+			(await getCachedFullCustomer({
+				orgId: org.id,
+				env,
+				customerId,
+				entityId,
+			})) ?? undefined;
 
 		if (fullCustomer) {
 			logger.debug(`[getOrCreateCachedFullCustomer] Cache hit: ${customerId}`);
@@ -88,6 +90,7 @@ export const getOrCreateCachedFullCustomer = async ({
 				env: env as AppEnv,
 				withEntities: true,
 				withSubs: true,
+				entityId,
 				expand: [CusExpand.Invoices],
 			});
 		} catch (error: unknown) {
@@ -100,6 +103,7 @@ export const getOrCreateCachedFullCustomer = async ({
 					env: env as AppEnv,
 					withEntities: true,
 					withSubs: true,
+					entityId,
 					expand: [CusExpand.Invoices],
 				});
 			} else {
@@ -123,6 +127,7 @@ export const getOrCreateCachedFullCustomer = async ({
 			env: env as AppEnv,
 			withEntities: true,
 			withSubs: true,
+			entityId,
 			expand: [CusExpand.Invoices],
 		});
 	}

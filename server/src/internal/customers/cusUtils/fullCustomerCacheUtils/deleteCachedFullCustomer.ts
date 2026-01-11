@@ -41,17 +41,20 @@ export const deleteCachedFullCustomer = async ({
 	const guardKey = buildFullCustomerCacheGuardKey({ orgId, env, customerId });
 
 	try {
-		// Set guard key with current timestamp (prevents stale writes)
+		// Set guard key and delete cache key in one round trip
 		const guardTimestamp = Date.now().toString();
-		await redis.set(
-			guardKey,
-			guardTimestamp,
-			"EX",
-			FULL_CUSTOMER_CACHE_GUARD_TTL_SECONDS,
-		);
+		const results = await redis
+			.pipeline()
+			.set(
+				guardKey,
+				guardTimestamp,
+				"EX",
+				FULL_CUSTOMER_CACHE_GUARD_TTL_SECONDS,
+			)
+			.del(cacheKey)
+			.exec();
 
-		// Delete the cache key
-		const deletedCount = await redis.del(cacheKey);
+		const deletedCount = results?.[1]?.[1] ?? 0;
 
 		log.info(
 			`[deleteCachedFullCustomer] Deleted ${deletedCount} keys for ${customerId}, source: ${source}`,

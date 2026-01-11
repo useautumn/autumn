@@ -48,6 +48,9 @@ in the test logs. Use your common sense
 - **ALWAYS use `.meta()` for zod-openapi schema registration**, NOT `.openapi()`. Example: `ApiProductSchema.meta({ id: "Product" })`
 
 - **ALWAYS use `c.req.param()` to get route parameters in Hono handlers**, NOT `c.req.valid("param")`. Example: `const { customer_id } = c.req.param();`
+
+- When referring to a `customer_entitlement` object (or plural `customer_entitlements`), always use the full name. Do not abbreviate to "entitlement" or "entitlements" as this will be confused with the separate `entitlement` object.
+
 ## Error Handling in API Routes
 - NEVER use `c.json({ message: "...", code: "..." }, statusCode)` pattern for input validation or expected errors in Hono routes
 - ALWAYS throw `RecaseError` from `@autumn/shared` for all validation errors, not found errors, forbidden errors, etc.

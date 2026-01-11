@@ -85,6 +85,13 @@ export const rateLimitMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		// 1. Determine rate limit type based on endpoint
 		const rateLimitType = getRateLimitType(c);
 
+		if (
+			rateLimitType === RateLimitType.Attach &&
+			process.env.NODE_ENV !== "production"
+		) {
+			return await next();
+		}
+
 		// 2. Get rate limit key based on type
 		const rateLimitKey = await getRateLimitKey({ c, rateLimitType });
 

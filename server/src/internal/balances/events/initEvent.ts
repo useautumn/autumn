@@ -1,16 +1,34 @@
-import type { EventInsert } from "@autumn/shared";
-import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
-import { generateId } from "../../../../utils/genUtils.js";
+import type { EventInsert, TrackParams } from "@autumn/shared";
+import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
+import { generateId } from "../../../utils/genUtils.js";
 
 export type EventInfo = {
 	event_name: string;
 	value?: number;
-	properties?: Record<string, any>;
+	properties?: Record<string, unknown>;
 	timestamp?: number;
 	idempotency_key?: string;
 };
 
-export const constructEvent = (params: {
+export const buildEventInfo = (params: TrackParams) => {
+	const {
+		feature_id,
+		event_name,
+		value,
+		properties,
+		timestamp,
+		idempotency_key,
+	} = params;
+	return {
+		event_name: feature_id || event_name || "",
+		value: value ?? 1,
+		properties: properties,
+		timestamp: timestamp,
+		idempotency_key: idempotency_key,
+	};
+};
+
+export const initEvent = (params: {
 	ctx: AutumnContext;
 	eventInfo: EventInfo;
 	internalCustomerId: string;

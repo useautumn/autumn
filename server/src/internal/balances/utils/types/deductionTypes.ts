@@ -1,7 +1,7 @@
 import type {
+	CustomerEntitlementFilters,
 	FullCusEntWithFullCusProduct,
 	FullCustomer,
-	SortCusEntParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { DeductionUpdate } from "./deductionUpdate";
@@ -10,10 +10,14 @@ import type { FeatureDeduction } from "./featureDeduction.js";
 /** Behavior options for deduction */
 export type DeductionOptions = {
 	overageBehaviour?: "cap" | "reject" | "allow";
-	addToAdjustment?: boolean;
-	skipAdditionalBalance?: boolean;
 	alterGrantedBalance?: boolean;
-	sortParams?: SortCusEntParams;
+	customerEntitlementFilters?: CustomerEntitlementFilters;
+
+	// only for resolved
+	paidAllocated?: boolean;
+
+	/** @deprecated skipAdditionalBalance is deprecated and will be removed in a future release. */
+	skipAdditionalBalance?: boolean;
 };
 
 /** Core params for deduction (shared by Redis & Postgres) */
@@ -42,7 +46,6 @@ export type CustomerEntitlementDeduction = {
 	entity_feature_id: string | null;
 	usage_allowed: boolean;
 	min_balance: number | undefined;
-	add_to_adjustment: boolean;
 	max_balance: number;
 };
 
@@ -51,12 +54,7 @@ export type PreparedFeatureDeduction = {
 	customerEntitlements: FullCusEntWithFullCusProduct[];
 	customerEntitlementDeductions: CustomerEntitlementDeduction[];
 	rolloverIds: string[];
-	// cusEnts: FullCusEntWithFullCusProduct[];
-	// cusEntInput: CusEntDeductionInput[];
-	// rolloverIds: string[];
-	// cusEntIds: string[];
-	// unlimited: boolean;
-	// unlimitedFeatureIds: string[];
+	unlimitedFeatureIds: string[];
 };
 
 /** Result from Postgres deduction */

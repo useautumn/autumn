@@ -15,9 +15,9 @@ import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
 import type {
 	CustomerEntitlementDeduction,
 	DeductionOptions,
-	FeatureDeduction,
 	PreparedFeatureDeduction,
 } from "../types/deductionTypes.js";
+import type { FeatureDeduction } from "../types/featureDeduction.js";
 
 /**
  * Prepares all the inputs needed to execute a deduction for a single feature.
@@ -35,13 +35,9 @@ export const prepareFeatureDeduction = ({
 	options?: DeductionOptions;
 }): PreparedFeatureDeduction => {
 	const { org } = ctx;
-	const { feature, deduction: toDeduct, targetBalance } = deduction;
+	const { feature, targetBalance } = deduction;
 
-	const {
-		overageBehaviour = "cap",
-		addToAdjustment = false,
-		sortParams,
-	} = options;
+	const { overageBehaviour = "cap", customerEntitlementFilters } = options;
 
 	// Get relevant features (just the feature itself if targetBalance is set)
 	const relevantFeatures = notNullish(targetBalance)
@@ -58,11 +54,10 @@ export const prepareFeatureDeduction = ({
 		reverseOrder: org.config?.reverse_deduction_order,
 		entity: fullCustomer.entity,
 		inStatuses: orgToInStatuses({ org }),
-		sortParams,
+		customerEntitlementFilters,
 	});
 
 	// Check if ANY relevant feature is unlimited
-	let unlimited = false;
 	const unlimitedFeatureIds: string[] = [];
 
 	for (const rf of relevantFeatures) {
@@ -70,8 +65,8 @@ export const prepareFeatureDeduction = ({
 			cusEnts,
 			internalFeatureId: rf.internal_id!,
 		});
+
 		if (featureUnlimited) {
-			unlimited = true;
 			unlimitedFeatureIds.push(rf.id);
 		}
 	}
@@ -91,16 +86,16 @@ export const prepareFeatureDeduction = ({
 
 			const resetBalance = cusEntToStartingBalance({ cusEnt: ce });
 
+			const isFreeAllocatedUsageAllowed =
+				isFreeAllocated && overageBehaviour !== "reject";
+
 			return {
 				customer_entitlement_id: ce.id,
 				credit_cost: creditCost,
 				entity_feature_id: ce.entitlement.entity_feature_id ?? null,
-				usage_allowed:
-					ce.usage_allowed ||
-					(isFreeAllocated && overageBehaviour !== "reject"),
+				usage_allowed: ce.usage_allowed || isFreeAllocatedUsageAllowed,
 				min_balance: notNullish(maxOverage) ? -maxOverage : undefined,
 				max_balance: resetBalance,
-				add_to_adjustment: addToAdjustment,
 			};
 		});
 
@@ -118,6 +113,7 @@ export const prepareFeatureDeduction = ({
 		customerEntitlements: cusEnts,
 		customerEntitlementDeductions,
 		rolloverIds: sortedRollovers.map((r) => r.id),
+		unlimitedFeatureIds,
 		// cusEnts,
 		// cusEntInput,
 		// rolloverIds,

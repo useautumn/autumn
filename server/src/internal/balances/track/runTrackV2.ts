@@ -9,11 +9,10 @@ import {
 	type TrackResponseV2,
 } from "@autumn/shared";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
-import { EventService } from "../../api/events/EventService.js";
 import { getOrCreateCachedFullCustomer } from "../../customers/cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
-import { runRedisDeductionV2 } from "./runRedisDeduction/runRedisDeductionV2.js";
-import { constructEvent, type EventInfo } from "./trackUtils/eventUtils.js";
-import type { FeatureDeduction } from "./trackUtils/getFeatureDeductions.js";
+import type { FeatureDeduction } from "../utils/types/featureDeduction.js";
+import { handleEventIdempotencyKey } from "./utils/handleEventIdempotencyKey.js";
+import { runRedisTrack } from "./utils/runRedisTrack.js";
 
 export const runTrackV2 = async ({
 	ctx,
@@ -43,36 +42,15 @@ export const runTrackV2 = async ({
 		source: "runTrackV2",
 	});
 
-	// Clean properties
-	const eventInfo: EventInfo = {
-		event_name: body.feature_id || body.event_name || "",
-		value: body.value ?? 1,
-		properties: body.properties,
-		timestamp: body.timestamp,
-		idempotency_key: body.idempotency_key,
-	};
-
-	// If idempotency key is provided, insert event first
-	if (body.idempotency_key) {
-		const newEvent = constructEvent({
-			ctx,
-			eventInfo,
-			internalCustomerId: fullCustomer.internal_id,
-			internalEntityId: fullCustomer.entity?.internal_id ?? undefined,
-			customerId: body.customer_id,
-			entityId: body.entity_id,
-		});
-
-		await EventService.insert({
-			db: ctx.db,
-			event: newEvent,
-		});
-
-		body.skip_event = true;
-	}
+	// If idempotency key is provided, insert event first and skip insertion later
+	await handleEventIdempotencyKey({
+		ctx,
+		body,
+		fullCustomer,
+	});
 
 	// Try Redis deduction
-	const response = await runRedisDeductionV2({
+	const response: TrackResponseV2 = await runRedisTrack({
 		ctx,
 		fullCustomer,
 		featureDeductions,

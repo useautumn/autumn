@@ -1,4 +1,4 @@
-import type { SortCusEntParams } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
+import type { CustomerEntitlementFilters } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import { FeatureType } from "../../models/featureModels/featureEnums.js";
 import { AllowanceType } from "../../models/productModels/entModels/entModels.js";
@@ -9,19 +9,22 @@ export const sortCusEntsForDeduction = ({
 	cusEnts,
 	reverseOrder = false,
 	entityId,
-	sortParams,
+	customerEntitlementFilters,
 	isRefund = false,
 }: {
 	cusEnts: FullCusEntWithFullCusProduct[];
 	reverseOrder?: boolean;
 	entityId?: string;
-	sortParams?: SortCusEntParams;
+	customerEntitlementFilters?: CustomerEntitlementFilters;
 	isRefund?: boolean;
 }) => {
 	cusEnts.sort((a, b) => {
-		if (sortParams?.cusEntIds && sortParams.cusEntIds.length > 0) {
-			const aInList = sortParams.cusEntIds.includes(a.id);
-			const bInList = sortParams.cusEntIds.includes(b.id);
+		if (
+			customerEntitlementFilters?.cusEntIds &&
+			customerEntitlementFilters.cusEntIds.length > 0
+		) {
+			const aInList = customerEntitlementFilters.cusEntIds.includes(a.id);
+			const bInList = customerEntitlementFilters.cusEntIds.includes(b.id);
 			if (aInList && !bInList) {
 				return -1;
 			}

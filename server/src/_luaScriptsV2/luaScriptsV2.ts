@@ -19,6 +19,16 @@ const READ_BALANCES = readFileSync(
 	"utf-8",
 );
 
+const CONTEXT_UTILS = readFileSync(
+	join(DEDUCT_DIR, "contextUtils.lua"),
+	"utf-8",
+);
+
+const GET_TOTAL_BALANCE = readFileSync(
+	join(DEDUCT_DIR, "getTotalBalance.lua"),
+	"utf-8",
+);
+
 const DEDUCT_FROM_ROLLOVERS = readFileSync(
 	join(DEDUCT_DIR, "deductFromRollovers.lua"),
 	"utf-8",
@@ -46,6 +56,8 @@ const mainScript = readFileSync(
  */
 export const DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT = `${LUA_UTILS}
 ${READ_BALANCES}
+${CONTEXT_UTILS}
+${GET_TOTAL_BALANCE}
 ${DEDUCT_FROM_ROLLOVERS}
 ${DEDUCT_FROM_MAIN_BALANCE}
 ${mainScript}`;

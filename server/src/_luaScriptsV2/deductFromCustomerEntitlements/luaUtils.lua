@@ -24,6 +24,13 @@ local function safe_number(val)
 end
 
 -- ============================================================================
+-- HELPER: Check if value is nil or cjson.null
+-- ============================================================================
+local function is_nil(val)
+  return val == nil or val == cjson.null
+end
+
+-- ============================================================================
 -- HELPER: Find entitlement in FullCustomer by ID
 -- Returns: cus_ent table, cus_product table, cus_ent_index, cus_product_index
 -- ============================================================================

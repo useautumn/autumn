@@ -110,8 +110,8 @@ export const getCheckData = async ({
 	const start = performance.now();
 	const fullCustomer = await getOrCreateCachedFullCustomer({
 		ctx,
-		customerId: customer_id,
-		entityId: entity_id,
+		params: body,
+
 		source: "getCheckData",
 	});
 	const { apiCustomer, legacyData: legacyDataResult } =
