@@ -118,8 +118,8 @@ export const deductFromCusEnts = async ({
 			reverseOrder: org.config?.reverse_deduction_order,
 			entity: fullCus.entity,
 			inStatuses: orgToInStatuses({ org }),
-			// customerEntitlementFilters,
-			// isRefund,
+			customerEntitlementFilters,
+			isRefund,
 		});
 
 		// Debug: log sort order
