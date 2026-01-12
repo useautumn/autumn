@@ -73,7 +73,7 @@ export function ProductListTable() {
 		);
 
 		return { basePlans, addOnPlans };
-	}, [products, counts, queryStates.showArchivedProducts]);
+	}, [products, queryStates.showArchivedProducts]);
 
 	// Check if any product has a group
 	const hasAnyGroup = useMemo(

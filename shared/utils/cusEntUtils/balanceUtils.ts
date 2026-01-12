@@ -19,22 +19,26 @@ export const getSummedEntityBalances = ({
 		};
 	}
 
-	return {
-		additional_balance: Object.values(cusEnt.entities).reduce(
-			(acc, curr) => acc + (curr.additional_balance ?? 0),
-			0,
-		),
+	const entities = Object.values(cusEnt.entities);
 
-		balance: Object.values(cusEnt.entities).reduce(
-			(acc, curr) => acc + curr.balance,
-			0,
-		),
-		adjustment: Object.values(cusEnt.entities).reduce(
-			(acc, curr) => acc + (curr.adjustment ?? 0),
-			0,
-		),
+	return {
+		additional_balance: entities
+			.reduce(
+				(acc, curr) => acc.add(curr.additional_balance ?? 0),
+				new Decimal(0),
+			)
+			.toNumber(),
+
+		balance: entities
+			.reduce((acc, curr) => acc.add(curr.balance), new Decimal(0))
+			.toNumber(),
+
+		adjustment: entities
+			.reduce((acc, curr) => acc.add(curr.adjustment ?? 0), new Decimal(0))
+			.toNumber(),
+
 		unused: 0,
-		count: Object.values(cusEnt.entities).length,
+		count: entities.length,
 	};
 };
 

@@ -42,11 +42,13 @@ export const handleUpgradeFlow = async ({
 	attachParams,
 	config,
 	branch,
+	fromMigration = false,
 }: {
 	ctx: AutumnContext;
 	attachParams: AttachParams;
 	config: AttachConfig;
 	branch: AttachBranch;
+	fromMigration?: boolean;
 }) => {
 	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
 
@@ -84,7 +86,8 @@ export const handleUpgradeFlow = async ({
 		if (
 			product.is_add_on ||
 			branch === AttachBranch.NewVersion ||
-			branch === AttachBranch.SameCustomEnts
+			branch === AttachBranch.SameCustomEnts ||
+			fromMigration
 		)
 			continue;
 
@@ -142,7 +145,6 @@ export const handleUpgradeFlow = async ({
 			curSub: curSub,
 			itemSet,
 			branch,
-			fromCreate: attachParams.products.length === 0, // just for now, if no products, it comes from cancel product...
 		});
 
 		if (res?.latestInvoice) {
@@ -172,6 +174,9 @@ export const handleUpgradeFlow = async ({
 				config,
 				schedule,
 				curSub,
+				removeCusProducts:
+					fromMigration && curCusProduct ? [curCusProduct!] : undefined,
+				addNewProducts: !(fromMigration && curCusProduct?.canceled_at),
 			});
 		}
 
@@ -216,10 +221,16 @@ export const handleUpgradeFlow = async ({
 		const anchorToUnix = sub ? getEarliestPeriodEnd({ sub }) * 1000 : undefined;
 
 		let canceledAt: number | undefined;
+		let endedAt: number | undefined;
 		if (sub && isStripeSubscriptionCanceled(sub)) {
 			canceledAt = sub.canceled_at
 				? sub.canceled_at * 1000
 				: curCusProduct?.canceled_at || undefined;
+		}
+
+		if (fromMigration && curCusProduct?.canceled_at) {
+			canceledAt = curCusProduct.canceled_at;
+			endedAt = curCusProduct.ended_at ?? undefined;
 		}
 
 		await createFullCusProduct({
@@ -235,6 +246,7 @@ export const handleUpgradeFlow = async ({
 			anchorToUnix: anchorToUnix,
 			scenario: AttachScenario.Upgrade,
 			canceledAt: canceledAt,
+			endedAt: endedAt,
 			subscriptionStatus:
 				sub?.status === "past_due" ? CusProductStatus.PastDue : undefined,
 			logger,
@@ -248,25 +260,4 @@ export const handleUpgradeFlow = async ({
 			? attachToInvoiceResponse({ invoice: latestInvoice || undefined })
 			: undefined,
 	});
-
-	// if (res) {
-	// 	if (req.apiVersion.gte(ApiVersion.V1_1)) {
-	// 		res.status(200).json(
-	// 			AttachResultSchema.parse({
-	// 				customer_id: attachParams.customer.id,
-	// 				product_ids: attachParams.products.map((p) => p.id),
-	// 				invoice: attachParams.invoiceOnly
-	// 					? attachToInvoiceResponse({ invoice: latestInvoice || undefined })
-	// 					: undefined,
-	// 				code: "updated_product_successfully",
-	// 				message: `Successfully updated product`,
-	// 			}),
-	// 		);
-	// 	} else {
-	// 		res.status(200).json({
-	// 			success: true,
-	// 			message: `Successfully updated product`,
-	// 		});
-	// 	}
-	// }
 };

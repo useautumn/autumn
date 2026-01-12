@@ -210,12 +210,5 @@ export const createNewCustomer = async ({
 		}
 	}
 
-	// // Clear the customer cache here
-	// await deleteCachedApiCustomer({
-	// 	customerId: newCustomer.id || newCustomer.internal_id,
-	// 	orgId: ctx.org.id,
-	// 	env: ctx.env,
-	// });
-
 	return newCustomer;
 };

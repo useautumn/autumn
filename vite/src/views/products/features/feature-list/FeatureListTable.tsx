@@ -107,7 +107,10 @@ export function FeatureListTable() {
 					icon={<ArrowSquareOutIcon size={16} className="-translate-y-px" />}
 					className="px-1! ml-2"
 					onClick={() =>
-						window.open("https://docs.useautumn.com/pricing/credits", "_blank")
+						window.open(
+							"https://docs.useautumn.com/documentation/pricing/credits",
+							"_blank",
+						)
 					}
 				>
 					Docs

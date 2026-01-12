@@ -8,7 +8,7 @@ import { InsufficientBalanceError } from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { getApiCustomerBase } from "../../../customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
 import { getOrCreateCustomer } from "../../../customers/cusUtils/getOrCreateCustomer.js";
-import type { FeatureDeduction } from "./getFeatureDeductions.js";
+import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import { getTrackBalancesResponse } from "./getTrackBalancesResponse.js";
 import { runDeductionTx } from "./runDeductionTx.js";
 

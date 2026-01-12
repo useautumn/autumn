@@ -1,7 +1,10 @@
 import { LayoutTemplate, MessageSquareText } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { AIChatView } from "./AIChatView";
 import { TemplatesDialog } from "./TemplatesDialog";
+
+type ViewMode = "welcome" | "chat";
 
 interface OptionCardProps {
 	icon: React.ReactNode;
@@ -34,7 +37,12 @@ function OptionCard({ icon, title, description, onClick }: OptionCardProps) {
 }
 
 export default function QuickstartView() {
+	const [viewMode, setViewMode] = useState<ViewMode>("welcome");
 	const [templatesOpen, setTemplatesOpen] = useState(false);
+
+	if (viewMode === "chat") {
+		return <AIChatView onBack={() => setViewMode("welcome")} />;
+	}
 
 	return (
 		<div className="w-full h-full flex items-center justify-center bg-background">
@@ -56,9 +64,7 @@ export default function QuickstartView() {
 						icon={<MessageSquareText className="size-5 text-t2" />}
 						title="Describe your pricing"
 						description="Let AI help you build your pricing"
-						onClick={() => {
-							// TODO: Open AI chat
-						}}
+						onClick={() => setViewMode("chat")}
 					/>
 				</div>
 			</div>
