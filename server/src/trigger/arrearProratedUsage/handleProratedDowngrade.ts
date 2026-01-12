@@ -4,6 +4,7 @@ import {
 	type FullCustomerPrice,
 	getFeatureInvoiceDescription,
 	type InsertReplaceable,
+	InternalError,
 	OnDecrease,
 	OnIncrease,
 	type Organization,
@@ -13,6 +14,7 @@ import {
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService.js";
 import { constructStripeInvoiceItem } from "@/internal/invoices/invoiceItemUtils/invoiceItemUtils.js";
 import { createAndFinalizeInvoice } from "@/internal/invoices/invoiceUtils/createAndFinalizeInvoice.js";
@@ -145,9 +147,15 @@ export const handleProratedDowngrade = async ({
 	subItem: Stripe.SubscriptionItem;
 	newBalance: number;
 	prevBalance: number;
-	logger: any;
+	logger: Logger;
 }) => {
 	logger.info(`Handling quantity decrease`);
+
+	if (!cusEnt.customer_product) {
+		throw new InternalError({
+			message: `[handleProratedDowngrade] Customer entitlement has no customer product: ${cusEnt.id}`,
+		});
+	}
 
 	const { overage: prevOverage, usage: prevUsage } = getUsageFromBalance({
 		ent: cusEnt.entitlement,

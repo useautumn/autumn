@@ -9,9 +9,9 @@ import {
 	type ApiEntityV1,
 	type CustomerEntitlementFilters,
 	cusEntToPrepaidQuantity,
-	cusProductsToCusEnts,
-	filterEntityLevelCusProducts,
-	filterOutEntitiesFromCusProducts,
+	filterEntityLevelCustomerEntitlementsFromFullCustomer,
+	filterOutEntitiesFromFullCustomer,
+	fullCustomerToCustomerEntitlements,
 	getRelevantFeatures,
 	orgToInStatuses,
 	sumValues,
@@ -186,7 +186,7 @@ export const syncItem = async ({
 	}
 
 	// Get fresh customer from DB (no locking - let deduction handle it)
-	const fullCus =
+	let fullCus =
 		item.fullCustomer ||
 		(await CusService.getFull({
 			db,
@@ -201,14 +201,12 @@ export const syncItem = async ({
 
 	// If entityId provided, deduct entity level cusEnts
 	if (entityId) {
-		fullCus.customer_products = filterEntityLevelCusProducts({
-			cusProducts: fullCus.customer_products,
+		fullCus = filterEntityLevelCustomerEntitlementsFromFullCustomer({
+			fullCustomer: fullCus,
 		});
 	} else {
 		// If entityId NOT provided, JUST deduct customer level cusEnts
-		fullCus.customer_products = filterOutEntitiesFromCusProducts({
-			cusProducts: fullCus.customer_products,
-		});
+		fullCus = filterOutEntitiesFromFullCustomer({ fullCus }) as FullCustomer;
 	}
 
 	const relevantFeatures = getRelevantFeatures({
@@ -224,8 +222,8 @@ export const syncItem = async ({
 		const redisBalance = redisEntity.balances?.[relevantFeature.id];
 		if (!redisBalance) continue;
 
-		const cusEnts = cusProductsToCusEnts({
-			cusProducts: fullCus.customer_products,
+		const cusEnts = fullCustomerToCustomerEntitlements({
+			fullCustomer: fullCus,
 			featureId: relevantFeature.id,
 			reverseOrder: org.config?.reverse_deduction_order,
 			entity: fullCus.entity,

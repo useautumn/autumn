@@ -1,6 +1,9 @@
-import type { Entity } from "../../models/cusModels/entityModels/entityModels.js";
-import type { CustomerEntitlementFilters } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
-import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import type { Entity } from "@models/cusModels/entityModels/entityModels.js";
+import type { CustomerEntitlementFilters } from "@models/cusProductModels/cusEntModels/cusEntModels.js";
+import type { FullCusEntWithFullCusProduct } from "@models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import { cusEntMatchesEntity } from "@utils/cusEntUtils/filterCusEntUtils.js";
+import { sortCusEntsForDeduction } from "@utils/cusEntUtils/sortCusEntsForDeduction.js";
+import { notNullish } from "@utils/utils.js";
 import type { FullCustomerPrice } from "../../models/cusProductModels/cusPriceModels/cusPriceModels.js";
 import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
 import type {
@@ -10,10 +13,7 @@ import type {
 import { ProcessorType } from "../../models/genModels/genEnums.js";
 import type { BillingType } from "../../models/productModels/priceModels/priceEnums.js";
 import type { FullProduct } from "../../models/productModels/productModels.js";
-import { cusEntMatchesEntity } from "../cusEntUtils/filterCusEntUtils.js";
-import { sortCusEntsForDeduction } from "../cusEntUtils/sortCusEntsForDeduction.js";
 import { getBillingType } from "../productUtils/priceUtils.js";
-import { notNullish } from "../utils.js";
 
 export const cusProductsToPrices = ({
 	cusProducts,
@@ -113,7 +113,10 @@ export const cusProductsToCusEnts = ({
 		// customerEntitlementFilters,
 	});
 
-	if (customerEntitlementFilters?.cusEntIds && customerEntitlementFilters.cusEntIds.length > 0) {
+	if (
+		customerEntitlementFilters?.cusEntIds &&
+		customerEntitlementFilters.cusEntIds.length > 0
+	) {
 		cusEnts = cusEnts.filter((cusEnt) =>
 			customerEntitlementFilters.cusEntIds?.includes(cusEnt.id),
 		);
@@ -121,7 +124,8 @@ export const cusProductsToCusEnts = ({
 
 	if (notNullish(customerEntitlementFilters?.interval)) {
 		cusEnts = cusEnts.filter(
-			(cusEnt) => cusEnt.entitlement.interval === customerEntitlementFilters.interval,
+			(cusEnt) =>
+				cusEnt.entitlement.interval === customerEntitlementFilters.interval,
 		);
 	}
 

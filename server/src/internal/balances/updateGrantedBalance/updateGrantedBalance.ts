@@ -1,8 +1,8 @@
 import type { CustomerEntitlementFilters, FullCustomer } from "@autumn/shared";
 import {
 	cusEntsToAllowance,
-	cusProductsToCusEnts,
 	FeatureNotFoundError,
+	fullCustomerToCustomerEntitlements,
 	InternalError,
 	isEntityScopedCusEnt,
 	notNullish,
@@ -34,8 +34,8 @@ export const updateGrantedBalance = async ({
 		throw new FeatureNotFoundError({ featureId });
 	}
 
-	const cusEnts = cusProductsToCusEnts({
-		cusProducts: fullCus.customer_products,
+	const cusEnts = fullCustomerToCustomerEntitlements({
+		fullCustomer: fullCus,
 		featureIds: [featureId],
 		entity: fullCus.entity,
 		inStatuses: orgToInStatuses({ org: ctx.org }),

@@ -2,20 +2,19 @@ import type { CustomerEntitlementFilters, Event } from "@autumn/shared";
 import {
 	CusProductStatus,
 	cusEntToCusPrice,
-	cusProductsToCusEnts,
 	FeatureUsageType,
 	type FullCustomer,
+	fullCustomerToCustomerEntitlements,
 	getMaxOverage,
 	getRelevantFeatures,
-	getStartingBalance,
 	InternalError,
 	notNullish,
 	nullish,
 	orgToInStatuses,
 } from "@autumn/shared";
+import { cusEntToStartingBalance } from "@shared/utils/cusEntUtils/balanceUtils/cusEntToStartingBalance.js";
 import { Decimal } from "decimal.js";
 import { sql } from "drizzle-orm";
-import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { EventService } from "../../../api/events/EventService.js";
 import { CusService } from "../../../customers/CusService.js";
@@ -105,22 +104,22 @@ export const deductFromCusEnts = async ({
 		const relevantFeatures = notNullish(targetBalance)
 			? [feature]
 			: getRelevantFeatures({
-					features: ctx.features,
-					featureId: feature.id,
-				});
+				features: ctx.features,
+				featureId: feature.id,
+			});
 
 		// For refunds (negative amounts), reverse usage_allowed sorting
 		// so overage entitlements are processed first (to recover negative balance)
 		const isRefund = (toDeduct ?? 0) < 0;
 
-		const cusEnts = cusProductsToCusEnts({
-			cusProducts: fullCus.customer_products,
+		const cusEnts = fullCustomerToCustomerEntitlements({
+			fullCustomer: fullCus,
 			featureIds: relevantFeatures.map((f) => f.id),
 			reverseOrder: org.config?.reverse_deduction_order,
 			entity: fullCus.entity,
 			inStatuses: orgToInStatuses({ org }),
-			customerEntitlementFilters,
-			isRefund,
+			// customerEntitlementFilters,
+			// isRefund,
 		});
 
 		// Debug: log sort order
@@ -165,17 +164,10 @@ export const deductFromCusEnts = async ({
 			const cusPrice = cusEntToCusPrice({ cusEnt: ce });
 			const isFreeAllocated =
 				ce.entitlement.feature.config?.usage_type ===
-					FeatureUsageType.Continuous && nullish(cusPrice);
+				FeatureUsageType.Continuous && nullish(cusPrice);
 
 			// NOTE: WE USE STARTING BALANCE BECAUSE ADJUSTMENT IS ADDED IN performDeduction.sql function
-			const resetBalance = getStartingBalance({
-				entitlement: ce.entitlement,
-				options:
-					getEntOptions(ce.customer_product.options, ce.entitlement) ||
-					undefined,
-				relatedPrice: cusPrice?.price,
-				productQuantity: ce.customer_product.quantity,
-			});
+			const startingBalance = cusEntToStartingBalance({ cusEnt: ce });
 
 			return {
 				customer_entitlement_id: ce.id,
@@ -186,7 +178,7 @@ export const deductFromCusEnts = async ({
 					(isFreeAllocated && overageBehaviour !== "reject"),
 				min_balance: notNullish(maxOverage) ? -maxOverage : undefined,
 				add_to_adjustment: addToAdjustment,
-				max_balance: resetBalance,
+				max_balance: startingBalance,
 			};
 		});
 
@@ -209,17 +201,17 @@ export const deductFromCusEnts = async ({
 		const result = await db.execute(
 			sql`SELECT * FROM deduct_from_cus_ents(
 				${JSON.stringify({
-					sorted_entitlements: cusEntInput,
-					amount_to_deduct: toDeduct ?? null,
-					target_balance: targetBalance ?? null,
-					target_entity_id: entityId || null,
-					rollover_ids: rolloverIds.length > 0 ? rolloverIds : null,
-					cus_ent_ids: cusEntIds.length > 0 ? cusEntIds : null,
-					skip_additional_balance: skipAdditionalBalance,
-					alter_granted_balance: alterGrantedBalance,
-					overage_behaviour: overageBehaviour ?? "cap",
-					feature_id: feature.id,
-				})}::jsonb
+				sorted_entitlements: cusEntInput,
+				amount_to_deduct: toDeduct ?? null,
+				target_balance: targetBalance ?? null,
+				target_entity_id: entityId || null,
+				rollover_ids: rolloverIds.length > 0 ? rolloverIds : null,
+				cus_ent_ids: cusEntIds.length > 0 ? cusEntIds : null,
+				skip_additional_balance: skipAdditionalBalance,
+				alter_granted_balance: alterGrantedBalance,
+				overage_behaviour: overageBehaviour ?? "cap",
+				feature_id: feature.id,
+			})}::jsonb
 			)`,
 		);
 

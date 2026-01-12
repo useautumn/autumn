@@ -3,7 +3,7 @@ import {
 	CusExpand,
 	type FullCustomer,
 	filterCusProductsByEntity,
-	filterOutEntitiesFromCusProducts,
+	filterOutEntitiesFromFullCustomer,
 } from "@autumn/shared";
 import { redis } from "../../../../external/redis/initRedis.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
@@ -33,12 +33,7 @@ export const setCachedApiSubs = async ({
 	});
 	const { data: masterApiSubs } = await getApiSubscriptions({
 		ctx: ctxWithExpand,
-		fullCus: {
-			...structuredClone(fullCus),
-			customer_products: filterOutEntitiesFromCusProducts({
-				cusProducts: fullCus.customer_products,
-			}),
-		},
+		fullCus: filterOutEntitiesFromFullCustomer({ fullCus }),
 	});
 
 	// Split subscriptions by status

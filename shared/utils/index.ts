@@ -8,6 +8,7 @@ export * from "./cusEntUtils/balanceUtils/cusEntsToPrepaidQuantity.js";
 export * from "./cusEntUtils/balanceUtils/cusEntsToPurchasedBalance.js";
 export * from "./cusEntUtils/balanceUtils/cusEntsToReset.js";
 export * from "./cusEntUtils/balanceUtils/cusEntsToRollovers.js";
+export * from "./cusEntUtils/balanceUtils/cusEntToStartingBalance.js";
 // Cus ent utils
 export * from "./cusEntUtils/balanceUtils/grantedBalanceUtils/cusEntsToAdjustment.js";
 export * from "./cusEntUtils/balanceUtils/grantedBalanceUtils/cusEntsToAllowance.js";
@@ -27,7 +28,9 @@ export * from "./cusEntUtils/getStartingBalance.js";
 export * from "./cusEntUtils/sortCusEntsForDeduction.js";
 // Cus product utils
 export * from "./cusProductUtils/classifyCusProduct.js";
-export * from "./cusProductUtils/convertCusProduct.js";
+export * from "./cusProductUtils/convertCusProduct/cusProductsToCusEnts.js";
+export * from "./cusProductUtils/convertCusProduct/cusProductToCusEnts.js";
+export * from "./cusProductUtils/convertCusProduct/cusProductToFeatureOptions.js";
 export * from "./cusProductUtils/cusProductConstants.js";
 export * from "./cusProductUtils/cusProductUtils.js";
 export * from "./cusProductUtils/filterCusProductUtils.js";
@@ -36,6 +39,7 @@ export * from "./cusProductUtils/formatCusProductUtils.js";
 export * from "./cusProductUtils/productIdToCusProduct.js";
 // Cus utils
 export * from "./cusUtils/cusPlanUtils/cusPlanUtils.js";
+export * from "./cusUtils/fullCusUtils/fullCustomerToCustomerEntitlements.js";
 export * from "./cusUtils/fullCusUtils/getCusStripeSubCount.js";
 export * from "./expandUtils.js";
 export * from "./featureUtils/apiFeatureToDbFeature.js";
