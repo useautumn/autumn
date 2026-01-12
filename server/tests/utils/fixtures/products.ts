@@ -18,12 +18,14 @@ const base = ({
 	items,
 	id = "base",
 	isDefault = false,
+	isAddOn = false,
 }: {
 	items: ProductItem[];
 	id?: string;
 	isDefault?: boolean;
+	isAddOn?: boolean;
 }): ProductV2 => ({
-	...constructRawProduct({ id, items }),
+	...constructRawProduct({ id, items, isAddOn }),
 	is_default: isDefault,
 });
 

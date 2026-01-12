@@ -3,13 +3,15 @@ import {
 	type LineItemDiscount,
 	type StripeDiscountWithCoupon,
 	stripeToAtmnAmount,
+	sumValues,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import { addDiscountTagToDescription } from "./addDiscountTagToDescription";
 import { discountAppliesToLineItem } from "./discountAppliesToLineItem";
 
 /**
  * Applies an amount_off discount to line items.
- * Distributes the fixed amount proportionally within each direction group (refund/charge).
+ * Only applies to charge items (not refunds) - distributes proportionally across charges.
  */
 export const applyAmountOffDiscountToLineItems = ({
 	lineItems,
@@ -31,42 +33,29 @@ export const applyAmountOffDiscountToLineItems = ({
 		currency: coupon.currency ?? "usd",
 	});
 
-	// Filter to applicable line items
-	const applicableItems = lineItems.filter((item) =>
+	// Filter to applicable CHARGE line items only
+	// Discounts reduce what the customer pays, so only apply to charges
+	const applicableChargeItems = lineItems.filter((item) =>
 		discountAppliesToLineItem({ discount, lineItem: item }),
 	);
 
-	if (applicableItems.length === 0) return lineItems;
+	if (applicableChargeItems.length === 0) return lineItems;
 
 	// Build a map of line item -> discount amount
 	const discountMap = new Map<LineItem, number>();
 
-	// Helper to distribute discount proportionally across items
-	const distributeDiscount = (items: LineItem[]) => {
-		const total = items.reduce((sum, item) => sum + Math.abs(item.amount), 0);
-
-		if (total === 0) return;
-
-		for (const item of items) {
-			const proportion = new Decimal(Math.abs(item.amount)).dividedBy(total);
-			const itemDiscount = proportion
-				.times(discountAmountOff)
-				.round()
-				.toNumber();
-			discountMap.set(item, itemDiscount);
-		}
-	};
-
-	// Group by direction and distribute separately
-	const refundItems = applicableItems.filter(
-		(item) => item.context.direction === "refund",
-	);
-	const chargeItems = applicableItems.filter(
-		(item) => item.context.direction === "charge",
+	// Distribute discount proportionally across charge items
+	const total = sumValues(
+		applicableChargeItems.map((item) => Math.abs(item.amount)),
 	);
 
-	distributeDiscount(refundItems);
-	distributeDiscount(chargeItems);
+	if (total === 0) return lineItems;
+
+	for (const item of applicableChargeItems) {
+		const proportion = new Decimal(Math.abs(item.amount)).dividedBy(total);
+		const itemDiscount = proportion.times(discountAmountOff).round().toNumber();
+		discountMap.set(item, itemDiscount);
+	}
 
 	// Apply discounts to line items
 	return lineItems.map((item) => {
@@ -83,16 +72,18 @@ export const applyAmountOffDiscountToLineItems = ({
 		const totalDiscount =
 			existingDiscounts.reduce((sum, d) => sum + d.amountOff, 0) + itemDiscount;
 
-		// Calculate finalAmount based on direction
-		// Refund (negative): add discount to make less negative
-		// Charge (positive): subtract discount to reduce charge
-		const finalAmount =
-			item.context.direction === "refund"
-				? new Decimal(item.amount).plus(totalDiscount).toNumber()
-				: new Decimal(item.amount).minus(totalDiscount).toNumber();
+		// Discounts only apply to charges (refunds filtered by discountAppliesToLineItem)
+		// Cap at 0 to prevent negative charges
+		const finalAmount = Math.max(
+			new Decimal(item.amount).minus(totalDiscount).toNumber(),
+			0,
+		);
 
 		return {
 			...item,
+			description: addDiscountTagToDescription({
+				description: item.description,
+			}),
 			discounts: [...existingDiscounts, newDiscount],
 			finalAmount,
 		};

@@ -10,6 +10,11 @@ export const discountAppliesToLineItem = ({
 	discount: StripeDiscountWithCoupon;
 	lineItem: LineItem;
 }): boolean => {
+	// Discounts only apply to charges, not refunds
+	if (lineItem.context.direction === "refund") {
+		return false;
+	}
+
 	const appliesToProducts = discount.source.coupon.applies_to?.products;
 
 	// If no applies_to, discount applies to all products

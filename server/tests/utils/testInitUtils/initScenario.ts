@@ -46,6 +46,7 @@ type AttachmentDef = {
 	productId: string;
 	entityIndex?: number;
 	options?: Array<{ feature_id: string; quantity: number }>;
+	newBillingSubscription?: boolean;
 };
 
 type CancelDef = {
@@ -143,23 +144,30 @@ const entities = ({
  * @param productId - The product ID (without prefix)
  * @param entityIndex - Optional entity index (0-based) to attach to (omit for customer-level)
  * @param options - Optional feature options (e.g., prepaid quantity)
+ * @param newBillingSubscription - Create a separate Stripe subscription for this product
  * @example s.attach({ productId: "pro" }) // customer-level
  * @example s.attach({ productId: "pro", entityIndex: 0 }) // attach to first entity (ent-1)
  * @example s.attach({ productId: "free", entityIndex: 1 }) // attach to second entity (ent-2)
  * @example s.attach({ productId: "pro", options: [{ feature_id: "messages", quantity: 100 }] })
+ * @example s.attach({ productId: "addon", newBillingSubscription: true }) // separate subscription
  */
 const attach = ({
 	productId,
 	entityIndex,
 	options,
+	newBillingSubscription,
 }: {
 	productId: string;
 	entityIndex?: number;
 	options?: FeatureOption[];
+	newBillingSubscription?: boolean;
 }): ConfigFn => {
 	return (config) => ({
 		...config,
-		attachments: [...config.attachments, { productId, entityIndex, options }],
+		attachments: [
+			...config.attachments,
+			{ productId, entityIndex, options, newBillingSubscription },
+		],
 	});
 };
 
@@ -368,6 +376,7 @@ export const initScenario = async ({
 			product_id: prefixedProductId,
 			entity_id: entityId,
 			options: attachment.options,
+			new_billing_subscription: attachment.newBillingSubscription,
 		});
 	}
 

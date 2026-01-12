@@ -5,6 +5,7 @@ import type {
 	FullCusProduct,
 	FullProduct,
 	Price,
+	StripeDiscountWithCoupon,
 } from "@autumn/shared";
 import type { FullCustomer } from "@shared/models/cusModels/fullCusModel";
 import type Stripe from "stripe";
@@ -39,6 +40,7 @@ export interface BillingContext {
 	// Stripe context
 	stripeSubscription?: Stripe.Subscription;
 	stripeSubscriptionSchedule?: Stripe.SubscriptionSchedule;
+	stripeDiscounts?: StripeDiscountWithCoupon[];
 	paymentMethod?: Stripe.PaymentMethod;
 
 	// Unforunately, need to add custom prices, custom entitlements and free trial here, because it's determined in the setup step.
