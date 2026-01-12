@@ -79,7 +79,7 @@ export const prepareNewBalanceForInsertion = async ({
 				entitlement: newEntitlementWithFeature,
 				now: Date.now(),
 			}) ?? Date.now(),
-		entities: [],
+		entities: entity ? [entity] : [],
 		carryExistingUsages: false,
 		replaceables: [],
 		now: Date.now(),

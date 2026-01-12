@@ -68,6 +68,13 @@ export const fullCustomerToCustomerEntitlements = ({
 		);
 	}
 
+	// Filter out expired entitlements (applies to loose entitlements with expires_at)
+	// This is necessary because cached fullCustomer may contain entitlements that have since expired
+	const now = Date.now();
+	cusEnts = cusEnts.filter(
+		(cusEnt) => !cusEnt.expires_at || cusEnt.expires_at > now,
+	);
+
 	sortCusEntsForDeduction({
 		cusEnts,
 		reverseOrder,
