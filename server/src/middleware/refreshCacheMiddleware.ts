@@ -1,3 +1,4 @@
+import type { AutumnContext } from "../honoUtils/HonoEnv.js";
 import { deleteCachedApiCustomer } from "../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 
 const cusPrefixedUrls = [
@@ -74,6 +75,16 @@ const coreUrls = [
 
 const handleRefreshCache = async (req: any, res: any) => {
 	const { logger } = req;
+
+	// Construct a minimal ctx from the Express request
+	const ctx = {
+		org: req.org,
+		env: req.env,
+		logger: req.logger,
+		db: req.db,
+		features: req.features || [],
+	} as AutumnContext;
+
 	const pathMatch = matchesCusPrefixedUrl(
 		req.originalUrl.replace("/v1", ""),
 		req.method,
@@ -87,9 +98,7 @@ const handleRefreshCache = async (req: any, res: any) => {
 
 		await deleteCachedApiCustomer({
 			customerId,
-			orgId: req.org.id,
-			env: req.env,
-			logger: logger,
+			ctx,
 			source: `refreshCacheMiddleware, url: ${req.originalUrl} (express)`,
 		});
 	}
@@ -105,9 +114,8 @@ const handleRefreshCache = async (req: any, res: any) => {
 
 		await deleteCachedApiCustomer({
 			customerId: req.body.customer_id,
-			orgId: req.org.id,
-			env: req.env,
-			logger: logger,
+			ctx,
+			source: `refreshCacheMiddleware, core url: ${req.originalUrl} (express)`,
 		});
 	}
 };

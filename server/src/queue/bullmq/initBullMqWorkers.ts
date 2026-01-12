@@ -3,8 +3,8 @@ import type { Logger } from "pino";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
-import { runInsertEventBatch } from "@/internal/balances/track/eventUtils/runInsertEventBatch.js";
-import { runSyncBalanceBatch } from "@/internal/balances/utils/sync/runSyncBalanceBatch.js";
+import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
+import { runSyncBalanceBatch } from "@/internal/balances/utils/sync/legacy/runSyncBalanceBatch.js";
 import { runSaveFeatureDisplayTask } from "@/internal/features/featureUtils.js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
 import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigrationTask.js";
@@ -112,10 +112,15 @@ const initWorker = ({ id, db }: { id: number; db: DrizzleCli }) => {
 				}
 
 				if (job.name === JobName.TriggerCheckoutReward) {
+					if (!ctx) {
+						workerLogger.error(
+							"No context found for trigger checkout reward job",
+						);
+						return;
+					}
 					await runTriggerCheckoutReward({
-						db,
+						ctx,
 						payload: job.data,
-						logger: workerLogger,
 					});
 				}
 			} catch (error: any) {

@@ -63,10 +63,8 @@ export const deleteCusById = async ({
 	// Delete customer and all entity caches atomically
 	await deleteCachedApiCustomer({
 		customerId: customer.id ?? "",
-		orgId: org.id,
-		env,
+		ctx,
 		source: `deleteCusById, deleting customer cache`,
-		logger: ctx.logger,
 	});
 
 	return response;
@@ -130,10 +128,8 @@ export const handleDeleteCustomerV2 = createRoute({
 		// Delete customer and all entity caches atomically
 		await deleteCachedApiCustomer({
 			customerId: customer.id ?? "",
-			orgId: org.id,
-			env,
+			ctx,
 			source: `handleDeleteCustomerV2, deleting customer cache`,
-			logger: ctx.logger,
 		});
 
 		return c.json(response);

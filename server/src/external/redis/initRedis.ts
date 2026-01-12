@@ -13,6 +13,11 @@ import {
 	SET_INVOICES_SCRIPT,
 	SET_SUBSCRIPTIONS_SCRIPT,
 } from "../../_luaScripts/luaScripts.js";
+import {
+	BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
+	DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
+	DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
+} from "../../_luaScriptsV2/luaScriptsV2.js";
 
 if (!process.env.CACHE_URL) {
 	throw new Error("CACHE_URL (redis) is not set");
@@ -103,6 +108,21 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 		lua: BATCH_DELETE_CUSTOMERS_SCRIPT,
 	});
 
+	redisInstance.defineCommand("deductFromCustomerEntitlements", {
+		numberOfKeys: 1,
+		lua: DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
+	});
+
+	redisInstance.defineCommand("deleteFullCustomerCache", {
+		numberOfKeys: 3,
+		lua: DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
+	});
+
+	redisInstance.defineCommand("batchDeleteFullCustomerCache", {
+		numberOfKeys: 0,
+		lua: BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
+	});
+
 	// biome-ignore lint/correctness/noUnusedFunctionParameters: Might uncomment this back in in the future
 	redisInstance.on("error", (error) => {
 		// logger.error(`redis (cache) error: ${error.message}`);
@@ -141,14 +161,10 @@ export const getRegionalRedis = (region: string): Redis => {
 		return redis;
 	}
 
-	// Check if we already have a connection for this region
-	let regionalInstance = regionalRedisInstances.get(region);
-	if (regionalInstance) {
-		return regionalInstance;
-	}
-
-	// Create new connection for the requested region
+	// Get the cache URL for the requested region
 	const cacheUrl = regionToCacheUrl[region];
+
+	// If no cache URL configured, fall back to primary
 	if (!cacheUrl) {
 		console.warn(
 			`No cache URL configured for region ${region}, falling back to primary`,
@@ -156,6 +172,19 @@ export const getRegionalRedis = (region: string): Redis => {
 		return redis;
 	}
 
+	// If the cache URL is the same as primary, return primary instance
+	// (avoids creating duplicate connections to the same server)
+	if (cacheUrl === primaryCacheUrl) {
+		return redis;
+	}
+
+	// Check if we already have a connection for this region
+	let regionalInstance = regionalRedisInstances.get(region);
+	if (regionalInstance) {
+		return regionalInstance;
+	}
+
+	// Create new connection for the requested region
 	console.log(`Creating Redis connection for region: ${region}`);
 	regionalInstance = createRedisConnection(cacheUrl);
 	regionalRedisInstances.set(region, regionalInstance);
@@ -244,6 +273,22 @@ declare module "ioredis" {
 			cacheCustomerVersion: string,
 			customersJson: string,
 		): Promise<number>;
+		deductFromCustomerEntitlements(
+			cacheKey: string,
+			paramsJson: string,
+		): Promise<string>;
+		deleteFullCustomerCache(
+			testGuardKey: string,
+			guardKey: string,
+			cacheKey: string,
+			guardTimestamp: string,
+			guardTtl: string,
+		): Promise<"SKIPPED" | "DELETED" | "NOT_FOUND">;
+		batchDeleteFullCustomerCache(
+			guardTimestamp: string,
+			guardTtl: string,
+			customersJson: string,
+		): Promise<string>;
 	}
 }
 

@@ -5,9 +5,9 @@ import { hatchet } from "@/external/hatchet/initHatchet.js";
 import { getSentryTags } from "@/external/sentry/sentryUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
-import { getCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/getCachedApiCustomer.js";
 import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
+import { getCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getCachedFullCustomer.js";
 import { JobName } from "../../JobName.js";
 import { createWorkflowTask } from "../createWorkflowTask.js";
 import { checkForMisingBalance } from "./checkForMisingBalance.js";
@@ -85,12 +85,23 @@ verifyCacheConsistencyWorkflow?.task({
 		handler: async ({ input, autumnContext }) => {
 			const { customerId, source } = input;
 
-			// Get from cache
-			const { apiCustomer: cachedCustomer } = await getCachedApiCustomer({
-				ctx: autumnContext,
+			// Get from cache (now using full customer cache)
+			const cachedFullCustomer = await getCachedFullCustomer({
+				orgId: autumnContext.org.id,
+				env: autumnContext.env,
 				customerId,
-				source: "verify",
 			});
+
+			if (!cachedFullCustomer) {
+				autumnContext.logger.info(
+					`[verifyCacheConsistency] No cached customer found for ${customerId}`,
+				);
+				return {
+					consistent: true,
+					customerId,
+					source,
+				};
+			}
 
 			// Get fresh from DB
 			const fullCus = await CusService.getFull({
@@ -106,6 +117,13 @@ verifyCacheConsistencyWorkflow?.task({
 			const { apiCustomer: dbCustomer } = await getApiCustomerBase({
 				ctx: autumnContext,
 				fullCus,
+				withAutumnId: true,
+			});
+
+			// Convert cached full customer to API customer for comparison
+			const { apiCustomer: cachedCustomer } = await getApiCustomerBase({
+				ctx: autumnContext,
+				fullCus: cachedFullCustomer,
 				withAutumnId: true,
 			});
 
@@ -126,12 +144,10 @@ verifyCacheConsistencyWorkflow?.task({
 					`[verifyCacheConsistency] subscriptions mismatch for customer ${customerId}`,
 				);
 
-				await deleteCachedApiCustomer({
+				await deleteCachedFullCustomer({
 					customerId,
-					orgId: autumnContext.org.id,
-					env: autumnContext.env,
-					logger: autumnContext.logger,
-					source: `verifyCacheConsistencyWorkflow, deleting customer cache`,
+					ctx: autumnContext,
+					source: "verifyCacheConsistency",
 				});
 
 				Sentry.captureException(new Error(subscriptionsMatchMessage), {

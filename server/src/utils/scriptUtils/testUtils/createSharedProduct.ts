@@ -52,9 +52,8 @@ export const createSharedProducts = async ({
 		clearCache.push(
 			deleteCachedApiCustomer({
 				customerId: customer.id ?? "",
-				orgId: ctx.org.id,
-				env: ctx.env,
-				logger: ctx.logger,
+				ctx,
+				source: "createSharedProducts",
 			}),
 		);
 	}

@@ -1,10 +1,11 @@
 import { CACHE_CUSTOMER_VERSIONS } from "../../../../_luaScripts/cacheConfig.js";
-import type { Logger } from "../../../../external/logtail/logtailUtils.js";
 import {
 	getConfiguredRegions,
 	getRegionalRedis,
 	redis,
 } from "../../../../external/redis/initRedis.js";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
+import { deleteCachedFullCustomer } from "../fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 
 /**
  * Delete all cached ApiCustomer data from Redis across ALL regions.
@@ -13,17 +14,15 @@ import {
  */
 export const deleteCachedApiCustomer = async ({
 	customerId,
-	orgId,
-	env,
+	ctx,
 	source,
-	logger,
 }: {
 	customerId: string;
-	orgId: string;
-	env: string;
+	ctx: AutumnContext;
 	source?: string;
-	logger: Logger;
 }): Promise<void> => {
+	const { org, env, logger } = ctx;
+
 	if (redis.status !== "ready") {
 		logger.warn("❗️ Redis not ready, skipping cache deletion", {
 			data: {
@@ -39,6 +38,11 @@ export const deleteCachedApiCustomer = async ({
 	const regions = getConfiguredRegions();
 
 	try {
+		await deleteCachedFullCustomer({
+			ctx,
+			customerId,
+			source,
+		});
 		// Delete from all regions in parallel to avoid race conditions
 		const deletePromises = regions.map(async (region) => {
 			const regionalRedis = getRegionalRedis(region);
@@ -53,7 +57,7 @@ export const deleteCachedApiCustomer = async ({
 
 			const deletedCount = await regionalRedis.deleteCustomer(
 				CACHE_CUSTOMER_VERSIONS.LATEST,
-				orgId,
+				org.id,
 				env,
 				customerId,
 			);

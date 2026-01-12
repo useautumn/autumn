@@ -26,7 +26,11 @@ export const UpdateBalanceParamsSchema = ExtBalancesUpdateParamsSchema.extend({
 	customer_entitlement_id: z.string().optional(),
 	next_reset_at: z.number().optional(),
 	add_to_balance: z.number().optional(),
-});
+}).refine(
+	(data) =>
+		!(data.add_to_balance !== undefined && data.current_balance !== undefined),
+	{ message: "Cannot specify both add_to_balance and current_balance" },
+);
 
 export type UpdateBalanceParams = z.infer<typeof UpdateBalanceParamsSchema>;
 

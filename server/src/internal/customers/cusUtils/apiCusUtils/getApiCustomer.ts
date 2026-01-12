@@ -7,79 +7,55 @@ import {
 	type FullCustomer,
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
-import { getCachedApiCustomer } from "../apiCusCacheUtils/getCachedApiCustomer.js";
+import { getApiCustomerBase } from "./getApiCustomerBase.js";
 import { getApiCustomerExpand } from "./getApiCustomerExpand.js";
 
 /**
- * Get full ApiCustomer with expand fields and version changes applied
+ * Transform FullCustomer to ApiCustomer with expand fields and version changes applied
  */
 export const getApiCustomer = async ({
 	ctx,
+	fullCustomer,
 	withAutumnId = false,
-	customerId,
-	fullCus,
-	baseData,
 }: {
 	ctx: RequestContext;
+	fullCustomer: FullCustomer;
 	withAutumnId?: boolean;
-	customerId?: string;
-	fullCus?: FullCustomer;
-	baseData?: { apiCustomer: ApiCustomer; legacyData: CustomerLegacyData };
-}) => {
-	const getBaseCustomer = async () => {
-		let baseCustomer: ApiCustomer;
-		let cusLegacyData: CustomerLegacyData;
-		if (!baseData) {
-			const { apiCustomer, legacyData } = await getCachedApiCustomer({
-				ctx,
-				customerId: customerId || "",
-				source: `getApiCustomer`,
-			});
-
-			baseCustomer = apiCustomer;
-			cusLegacyData = legacyData;
-		} else {
-			baseCustomer = baseData.apiCustomer;
-			cusLegacyData = baseData.legacyData;
-		}
-
-		// Clean api customer
-		baseCustomer = {
-			...baseCustomer,
-			entities: undefined,
-			autumn_id: withAutumnId ? baseCustomer.autumn_id : undefined,
-			invoices: ctx.expand.includes(CusExpand.Invoices)
-				? (baseCustomer.invoices ?? [])
-				: undefined,
-		};
-
-		return { baseCustomer, cusLegacyData };
-	};
-
-	const getExpandParams = async () => {
-		const apiCusExpand = await getApiCustomerExpand({
+}): Promise<ApiCustomer> => {
+	// Get base ApiCustomer (subscriptions, balances, invoices)
+	const { apiCustomer: baseCustomer, legacyData: customerLegacyData } =
+		await getApiCustomerBase({
 			ctx,
-			customerId,
-			fullCus: fullCus || undefined,
+			fullCus: fullCustomer,
+			withAutumnId,
 		});
 
-		return apiCusExpand;
-	};
-
-	const [{ baseCustomer, cusLegacyData }, apiCusExpand] = await Promise.all([
-		getBaseCustomer(),
-		getExpandParams(),
-	]);
-
-	const apiCustomer = {
+	// Clean base customer (remove entities from base, handle expand)
+	const cleanedBaseCustomer: ApiCustomer = {
 		...baseCustomer,
-		...apiCusExpand,
+		entities: undefined,
+		autumn_id: withAutumnId ? baseCustomer.autumn_id : undefined,
+		invoices: ctx.expand.includes(CusExpand.Invoices)
+			? (baseCustomer.invoices ?? [])
+			: undefined,
 	};
 
-	// Get legacy data for version changes
+	// Get expand params (rewards, referrals, etc.)
+	const apiCustomerExpand = await getApiCustomerExpand({
+		ctx,
+		customerId: fullCustomer.id || fullCustomer.internal_id,
+		fullCus: fullCustomer,
+	});
+
+	const apiCustomer: ApiCustomer = {
+		...cleanedBaseCustomer,
+		...apiCustomerExpand,
+	};
+
+	// Apply version transformations based on API version
 	return applyResponseVersionChanges<ApiCustomer, CustomerLegacyData>({
 		input: apiCustomer,
-		legacyData: cusLegacyData,
+		legacyData: customerLegacyData,
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Customer,
 		ctx,

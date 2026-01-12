@@ -31,10 +31,8 @@ export const revenuecatWebhookRefreshMiddleware = async (
 
 		await deleteCachedApiCustomer({
 			customerId,
-			orgId: org.id,
-			env,
+			ctx,
 			source: `revenuecatWebhookRefreshMiddleware: ${revenuecatEventType}`,
-			logger,
 		});
 	} catch (error) {
 		logger.error(`RevenueCat webhook, error refreshing cache: ${error}`, {

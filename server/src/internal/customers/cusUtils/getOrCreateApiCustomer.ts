@@ -11,9 +11,10 @@ import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { autoCreateEntity } from "../../entities/handlers/handleCreateEntity/autoCreateEntity.js";
 import { CusService } from "../CusService.js";
 import { handleCreateCustomer } from "../handlers/handleCreateCustomer.js";
-import { deleteCachedApiCustomer } from "./apiCusCacheUtils/deleteCachedApiCustomer.js";
-import { getCachedApiCustomer } from "./apiCusCacheUtils/getCachedApiCustomer.js";
+import { getApiCustomerBase } from "./apiCusUtils/getApiCustomerBase.js";
 import { updateCustomerDetails } from "./cusUtils.js";
+import { deleteCachedFullCustomer } from "./fullCustomerCacheUtils/deleteCachedFullCustomer.js";
+import { getOrSetCachedFullCustomer } from "./fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
 
 export const getOrCreateApiCustomer = async ({
 	ctx,
@@ -49,11 +50,12 @@ export const getOrCreateApiCustomer = async ({
 			createDefaultProducts: customerData?.disable_default !== true,
 		});
 
-		const res = await getCachedApiCustomer({
+		const fullCus = await getOrSetCachedFullCustomer({
 			ctx,
 			customerId: newCustomer.id || newCustomer.internal_id,
+			source: "getOrCreateApiCustomer",
 		});
-
+		const res = await getApiCustomerBase({ ctx, fullCus });
 		apiCustomer = res.apiCustomer;
 		legacyData = res.legacyData;
 	}
@@ -63,19 +65,20 @@ export const getOrCreateApiCustomer = async ({
 		let apiCustomerOrUndefined: ApiCustomer | undefined;
 
 		try {
-			const res = await getCachedApiCustomer({
+			const fullCus = await getOrSetCachedFullCustomer({
 				ctx,
 				customerId,
+				source: "getOrCreateApiCustomer",
 			});
-
-			apiCustomerOrUndefined = res?.apiCustomer;
-			legacyData = res?.legacyData;
+			const res = await getApiCustomerBase({ ctx, fullCus });
+			apiCustomerOrUndefined = res.apiCustomer;
+			legacyData = res.legacyData;
 		} catch (_error) {
 			if (_error instanceof CustomerNotFoundError) {
+				// Customer doesn't exist yet
 			} else {
 				throw _error;
 			}
-			// Customer doesn't exist yet
 		}
 
 		// If customer not found, create it
@@ -130,15 +133,14 @@ export const getOrCreateApiCustomer = async ({
 				}
 			}
 
-			// console.log("Skipping cache:", ctx.skipCache);
-			// console.log("New customer:", newCustomer);
-			const res = await getCachedApiCustomer({
+			const fullCus = await getOrSetCachedFullCustomer({
 				ctx,
 				customerId: newCustomer?.id || newCustomer?.internal_id || "",
 				source: "getOrCreateApiCustomer",
 			});
-			apiCustomerOrUndefined = res?.apiCustomer;
-			legacyData = res?.legacyData;
+			const res = await getApiCustomerBase({ ctx, fullCus });
+			apiCustomerOrUndefined = res.apiCustomer;
+			legacyData = res.legacyData;
 		}
 
 		apiCustomer = apiCustomerOrUndefined;
@@ -153,14 +155,21 @@ export const getOrCreateApiCustomer = async ({
 		customerData,
 	});
 
-	// If updated, refresh the cache and get the latest ApiCustomer
+	// If updated, invalidate cache and get the latest ApiCustomer
 	if (updated) {
-		const res = await getCachedApiCustomer({
+		await deleteCachedFullCustomer({
+			customerId: apiCustomer.id || "",
+			ctx,
+			source: "getOrCreateApiCustomer",
+		});
+		const fullCus = await getOrSetCachedFullCustomer({
 			ctx,
 			customerId: apiCustomer.id || "",
+			source: "getOrCreateApiCustomer",
 		});
-		apiCustomer = res?.apiCustomer;
-		legacyData = res?.legacyData;
+		const res = await getApiCustomerBase({ ctx, fullCus });
+		apiCustomer = res.apiCustomer;
+		legacyData = res.legacyData;
 	}
 
 	// AUTO CREATE ENTITY
@@ -184,17 +193,17 @@ export const getOrCreateApiCustomer = async ({
 			},
 		});
 
-		await deleteCachedApiCustomer({
+		await deleteCachedFullCustomer({
 			customerId,
-			orgId: ctx.org.id,
-			env: ctx.env,
-			logger: ctx.logger,
-			source: `getOrCreateApiCustomer, auto creating entity`,
+			ctx,
+			source: "getOrCreateApiCustomer",
 		});
 
-		await getCachedApiCustomer({
+		// Warm up the cache
+		await getOrSetCachedFullCustomer({
 			ctx,
 			customerId,
+			source: "getOrCreateApiCustomer",
 		});
 
 		const apiEntity = ApiBaseEntitySchema.parse(newEntity);
