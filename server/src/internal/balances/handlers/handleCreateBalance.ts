@@ -1,5 +1,6 @@
 import { CreateBalanceSchema, EntityNotFoundError } from "@autumn/shared";
 import { FeatureNotFoundError } from "@shared/index";
+import type { DrizzleCli } from "@/db/initDrizzle";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { CusService } from "@/internal/customers/CusService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
@@ -69,14 +70,16 @@ export const handleCreateBalance = createRoute({
 				feature_id,
 			});
 
-		await EntitlementService.insert({
-			db: ctx.db,
-			data: [newEntitlement],
-		});
+		await ctx.db.transaction(async (tx) => {
+			await EntitlementService.insert({
+				db: tx as unknown as DrizzleCli,
+				data: [newEntitlement],
+			});
 
-		await CusEntService.insert({
-			db: ctx.db,
-			data: [newCustomerEntitlement],
+			await CusEntService.insert({
+				db: tx as unknown as DrizzleCli,
+				data: [newCustomerEntitlement],
+			});
 		});
 
 		await deleteCachedFullCustomer({
