@@ -107,11 +107,9 @@ export const updateGrantedBalance = async ({
 	}
 
 	await deleteCachedApiCustomer({
-		orgId: ctx.org.id,
-		env: ctx.env,
+		ctx,
 		customerId: fullCus.id ?? "",
 		source: "updateGrantedBalance",
-		logger: ctx.logger,
 	});
 
 	// // Update Redis cache directly (avoids clearing cache which causes race conditions)

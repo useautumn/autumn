@@ -93,9 +93,7 @@ export const refreshCacheMiddleware = async (
 			);
 			await deleteCachedApiCustomer({
 				customerId,
-				orgId: org.id,
-				env: env,
-				logger,
+				ctx,
 				source: `refreshCacheMiddleware, url: ${pathname}`,
 			});
 			await deleteCachedFullCustomer({
@@ -121,10 +119,8 @@ export const refreshCacheMiddleware = async (
 			);
 			await deleteCachedApiCustomer({
 				customerId: body.customer_id,
-				orgId: org.id,
-				env: env,
+				ctx,
 				source: "refreshCacheMiddleware",
-				logger,
 			});
 			await deleteCachedFullCustomer({
 				customerId: body.customer_id,

@@ -112,10 +112,15 @@ const initWorker = ({ id, db }: { id: number; db: DrizzleCli }) => {
 				}
 
 				if (job.name === JobName.TriggerCheckoutReward) {
+					if (!ctx) {
+						workerLogger.error(
+							"No context found for trigger checkout reward job",
+						);
+						return;
+					}
 					await runTriggerCheckoutReward({
-						db,
+						ctx,
 						payload: job.data,
-						logger: workerLogger,
 					});
 				}
 			} catch (error: any) {

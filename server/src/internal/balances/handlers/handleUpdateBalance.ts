@@ -73,9 +73,7 @@ export const handleUpdateBalance = createRoute({
 			});
 
 			await deleteCachedApiCustomer({
-				logger: ctx.logger,
-				orgId: ctx.org.id,
-				env: ctx.env,
+				ctx,
 				customerId: params.customer_id,
 				source: `handleUpdateBalance, updating next_reset_at`,
 			});

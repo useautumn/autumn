@@ -67,10 +67,8 @@ export const stripeWebhookRefreshMiddleware = async (
 			logger.info(`Attempting delete cached api customer! ${eventType}`);
 			await deleteCachedApiCustomer({
 				customerId: customer.id!,
-				orgId: org.id,
-				env,
+				ctx,
 				source: `stripeWebhookRefreshMiddleware: ${eventType}`,
-				logger,
 			});
 		}
 	} catch (error) {

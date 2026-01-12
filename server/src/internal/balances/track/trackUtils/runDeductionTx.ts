@@ -379,9 +379,7 @@ export const runDeductionTx = async (
 	if (params?.refreshCache && fullCus) {
 		await deleteCachedApiCustomer({
 			customerId: fullCus.id ?? "",
-			orgId: ctx.org.id,
-			env: ctx.env,
-			logger: ctx.logger,
+			ctx,
 			source: `runDeductionTx, refreshing cache`,
 		});
 	}

@@ -163,8 +163,7 @@ describe(`${chalk.yellowBright("track-race-condition4: sync should not wipe out 
 		console.log(chalk.red("✓ Sync completed"));
 
 		await deleteCachedFullCustomer({
-			orgId: ctx.org.id,
-			env: ctx.env,
+			ctx,
 			customerId: customerId,
 			source: "test-setup",
 		});
