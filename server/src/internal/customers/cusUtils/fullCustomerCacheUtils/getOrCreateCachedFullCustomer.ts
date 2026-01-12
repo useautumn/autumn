@@ -11,6 +11,7 @@ import { autoCreateEntity } from "@/internal/entities/handlers/handleCreateEntit
 import { CusService } from "../../CusService.js";
 import { handleCreateCustomer } from "../../handlers/handleCreateCustomer.js";
 import { updateCustomerDetails } from "../cusUtils.js";
+import { deleteCachedFullCustomer } from "./deleteCachedFullCustomer.js";
 import { getCachedFullCustomer } from "./getCachedFullCustomer.js";
 import { setCachedFullCustomer } from "./setCachedFullCustomer.js";
 
@@ -38,6 +39,7 @@ export const getOrCreateCachedFullCustomer = async ({
 	const fetchTimeMs = Date.now();
 
 	// 1. Try cache first
+	let setCache = true;
 	if (customerId && !skipCache) {
 		fullCustomer =
 			(await getCachedFullCustomer({
@@ -49,7 +51,7 @@ export const getOrCreateCachedFullCustomer = async ({
 
 		if (fullCustomer) {
 			logger.debug(`[getOrCreateCachedFullCustomer] Cache hit: ${customerId}`);
-			return fullCustomer;
+			setCache = false;
 		}
 	}
 
@@ -120,6 +122,8 @@ export const getOrCreateCachedFullCustomer = async ({
 	});
 
 	if (updated) {
+		setCache = true;
+
 		fullCustomer = await CusService.getFull({
 			db,
 			idOrInternalId: fullCustomer.id || fullCustomer.internal_id,
@@ -141,6 +145,12 @@ export const getOrCreateCachedFullCustomer = async ({
 		if (existingEntity) {
 			fullCustomer.entity = existingEntity;
 		} else {
+			setCache = true;
+			await deleteCachedFullCustomer({
+				customerId: fullCustomer.id || fullCustomer.internal_id,
+				ctx,
+				source: "getOrCreateCachedFullCustomer",
+			});
 			logger.info(
 				`Auto creating entity ${entityId} for customer ${customerId}`,
 			);
@@ -161,7 +171,7 @@ export const getOrCreateCachedFullCustomer = async ({
 	}
 
 	// 6. Set cache (await to ensure it's ready before Redis deduction)
-	if (!skipCache) {
+	if (!skipCache && setCache) {
 		await setCachedFullCustomer({
 			ctx,
 			fullCustomer,
