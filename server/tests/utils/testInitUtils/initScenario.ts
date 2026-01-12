@@ -116,8 +116,8 @@ const customer = ({
  * Define products to create for this test scenario.
  * Products are prefixed with customerId for test isolation.
  * @param list - Array of ProductV2 objects
- * @param customerIds - Array of customer IDs to delete before creating products
- * @example s.products({ list: [pro, free], customerIds: [customerId] })
+ * @param customerIdsToDelete - Array of customer IDs to delete before creating products
+ * @example s.products({ list: [pro, free], customerIdsToDelete: [customerId] })
  */
 const products = ({
 	list,
