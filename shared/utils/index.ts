@@ -28,7 +28,7 @@ export * from "./cusEntUtils/getStartingBalance.js";
 export * from "./cusEntUtils/sortCusEntsForDeduction.js";
 // Cus product utils
 export * from "./cusProductUtils/classifyCusProduct.js";
-export * from "./cusProductUtils/convertCusProduct/cusProductsToCusEnts.js";
+export * from "./cusProductUtils/convertCusProduct.js";
 export * from "./cusProductUtils/convertCusProduct/cusProductToCusEnts.js";
 export * from "./cusProductUtils/convertCusProduct/cusProductToFeatureOptions.js";
 export * from "./cusProductUtils/cusProductConstants.js";
