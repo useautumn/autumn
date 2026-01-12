@@ -3,10 +3,12 @@ import type {
 	FullCustomerEntitlement,
 } from "../../models/cusProductModels/cusEntModels/cusEntModels";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct";
-import { FeatureType } from "../../models/featureModels/featureEnums";
+import {
+	FeatureType,
+	FeatureUsageType,
+} from "../../models/featureModels/featureEnums";
 import { AllowanceType } from "../../models/productModels/entModels/entModels";
-import { isAllocatedPrice } from "../productUtils/priceUtils/classifyPriceUtils";
-import { notNullish } from "../utils";
+import { notNullish, nullish } from "../utils";
 import { cusEntToCusPrice } from "./convertCusEntUtils/cusEntToCusPrice";
 
 export const isBooleanCusEnt = ({
@@ -42,8 +44,20 @@ export const cusEntsHavePrice = ({
 	});
 };
 
-export const isAllocatedCusEnt = (cusEnt: FullCusEntWithFullCusProduct) => {
-	const cusPrice = cusEntToCusPrice({ cusEnt });
+export const isFreeCustomerEntitlement = (
+	customerEntitlement: FullCusEntWithFullCusProduct,
+) => {
+	const cusPrice = cusEntToCusPrice({ cusEnt: customerEntitlement });
+	return nullish(cusPrice);
+};
 
-	return cusPrice && isAllocatedPrice(cusPrice.price);
+export const isAllocatedCustomerEntitlement = (
+	customerEntitlement: FullCusEntWithFullCusProduct,
+) => {
+	const feature = customerEntitlement.entitlement.feature;
+	const isContinuous =
+		feature.config?.usage_type === FeatureUsageType.Continuous;
+	if (!isContinuous) return false;
+
+	return true;
 };

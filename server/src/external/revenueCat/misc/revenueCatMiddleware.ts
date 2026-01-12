@@ -3,11 +3,11 @@ import type { Organization } from "@shared/models/orgModels/orgTable";
 import chalk from "chalk";
 import type { Context, Next } from "hono";
 import type { Logger } from "@/external/logtail/logtailUtils";
-import type { HonoEnv } from "@/honoUtils/HonoEnv";
+import type { RevenueCatWebhookHonoEnv } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { OrgService } from "@/internal/orgs/OrgService";
 
 export const revenuecatSeederMiddleware = async (
-	c: Context<HonoEnv>,
+	c: Context<RevenueCatWebhookHonoEnv>,
 	next: Next,
 ) => {
 	const { orgId, env } = c.req.param();
@@ -53,7 +53,7 @@ export const logRevCatWebhook = ({
 };
 
 export const revenuecatLogMiddleware = async (
-	c: Context<HonoEnv>,
+	c: Context<RevenueCatWebhookHonoEnv>,
 	next: Next,
 ) => {
 	const { logger, org } = c.get("ctx");

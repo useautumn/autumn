@@ -7,7 +7,8 @@ import {
 } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { AppEnv } from "autumn-js";
-import { CircleUserRoundIcon, PackageIcon } from "lucide-react";
+import { CircleUserRoundIcon, Monitor, Moon, PackageIcon, Sun } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeProvider";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useNavigate } from "react-router";
@@ -73,6 +74,26 @@ const CommandBar = () => {
 	const axiosInstance = useAxiosInstance();
 	const { isAdmin } = useAdmin();
 	const { org } = useOrg();
+	const { theme, setTheme } = useTheme();
+
+	const cycleTheme = useCallback(() => {
+		const themeOrder = ["light", "dark", "system"] as const;
+		const currentIndex = themeOrder.indexOf(theme);
+		const nextIndex = (currentIndex + 1) % themeOrder.length;
+		setTheme(themeOrder[nextIndex]);
+	}, [theme, setTheme]);
+
+	const getThemeIcon = () => {
+		if (theme === "light") return <Sun />;
+		if (theme === "dark") return <Moon />;
+		return <Monitor />;
+	};
+
+	const getThemeLabel = () => {
+		if (theme === "light") return "Light";
+		if (theme === "dark") return "Dark";
+		return "System";
+	};
 
 	// Improved close dialog function with proper timing
 	const closeDialog = useCallback(() => {
@@ -183,6 +204,7 @@ const CommandBar = () => {
 	useCommandBarHotkeys({
 		isOpen: open,
 		closeDialog,
+		cycleTheme,
 		switchToOrgsPage: () => switchToPage("orgs"),
 		switchToImpersonatePage: () => switchToPage("impersonate"),
 	});
@@ -344,12 +366,20 @@ const CommandBar = () => {
 					},
 				]
 			: []),
+		{
+			title: `Theme: ${getThemeLabel()}`,
+			icon: getThemeIcon(),
+			shortcutKey: "5",
+			onSelect: () => {
+				cycleTheme();
+			},
+		},
 		...(!isLoadingOrgs && orgs && orgs.length > 1
 			? [
 					{
 						title: "Switch Organization",
 						icon: <AtIcon className="scale-[105%]" />,
-						shortcutKey: "5",
+						shortcutKey: "6",
 						onSelect: () => switchToPage("orgs"),
 					},
 				]
@@ -359,7 +389,7 @@ const CommandBar = () => {
 					{
 						title: "Impersonate",
 						icon: <FingerprintIcon />,
-						shortcutKey: "6",
+						shortcutKey: "7",
 						onSelect: () => switchToPage("impersonate"),
 					},
 				]

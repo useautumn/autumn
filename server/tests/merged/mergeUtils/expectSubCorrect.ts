@@ -83,7 +83,11 @@ const compareActualItems = async ({
 
 		expect(actualItem).toBeDefined();
 
-		if (actualItem?.quantity !== (expectedItem as any).quantity) {
+		// Treat 0 and undefined as equivalent for quantity
+		const actualQty = actualItem?.quantity ?? 0;
+		const expectedQty = (expectedItem as any).quantity ?? 0;
+
+		if (actualQty !== expectedQty) {
 			if (phaseStartsAt) {
 				console.log(`Phase starts at: ${formatUnixToDateTime(phaseStartsAt)}`);
 			}
@@ -100,9 +104,7 @@ const compareActualItems = async ({
 				items: expectedItems,
 			});
 
-			console.log(
-				`Item quantity mismatch: ${actualItem?.quantity} !== ${expectedItem.quantity}`,
-			);
+			console.log(`Item quantity mismatch: ${actualQty} !== ${expectedQty}`);
 
 			const price = await PriceService.getByStripeId({
 				db,
@@ -118,7 +120,7 @@ const compareActualItems = async ({
 			console.log("--------------------------------");
 		}
 
-		expect(actualItem?.quantity).toBe((expectedItem as any).quantity);
+		expect(actualQty).toBe(expectedQty);
 	}
 
 	expect(actualItems.length).toBe(expectedItems.length);

@@ -28,6 +28,15 @@ export interface Payloads {
 			timestamp: number;
 		};
 	};
+	[JobName.SyncBalanceBatchV3]: {
+		customerId: string;
+		orgId: string;
+		env: AppEnv;
+		region?: string;
+		timestamp: number;
+		cusEntIds: string[];
+		rolloverIds?: string[];
+	};
 	[JobName.InsertEventBatch]: {
 		events: EventInsert[];
 	};

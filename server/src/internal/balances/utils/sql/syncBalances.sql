@@ -7,7 +7,7 @@
 --     - target_balance: number (optional) - the backend balance to set
 --     - target_adjustment: number (optional) - the adjustment value (granted_balance - starting_balance)
 --     - entity_feature_id: string (optional) - indicates entity-scoped entitlement
---   target_entity_id: string (optional) - for entity-scoped balances
+--     - target_entity_id: string (optional) - for entity-scoped balances, the entity ID to update
 --
 -- Returns JSONB with:
 --   updates: object mapping customer_entitlement_id -> update result
@@ -21,7 +21,6 @@ AS $$
 DECLARE
   -- Extract parameters from JSONB
   entitlements jsonb := params->'entitlements';
-  target_entity_id text := NULLIF(params->>'target_entity_id', '');
   
   -- Loop variables
   ent_obj jsonb;
@@ -29,6 +28,7 @@ DECLARE
   target_balance numeric;
   target_adjustment numeric;
   has_entity_scope boolean;
+  target_entity_id text;
   
   -- Current state from DB
   current_balance numeric;
@@ -69,6 +69,7 @@ BEGIN
     target_balance := (ent_obj->>'target_balance')::numeric;
     target_adjustment := (ent_obj->>'target_adjustment')::numeric;
     has_entity_scope := (ent_obj->>'entity_feature_id') IS NOT NULL;
+    target_entity_id := NULLIF(ent_obj->>'target_entity_id', '');
     
     -- Fetch current state from DB
     SELECT
@@ -93,11 +94,14 @@ BEGIN
     new_entities := current_entities;
     
     -- ============================================================================
-    -- CASE 1: ENTITY-SCOPED (always has specific entity_id)
-    -- Note: TypeScript filters out entity-scoped entitlements when entityId is null,
-    -- so we only need to handle the case where target_entity_id is provided.
+    -- CASE 1: ENTITY-SCOPED (requires specific target_entity_id)
     -- ============================================================================
     IF has_entity_scope THEN
+      -- Skip if target_entity_id is null (can't update entity balance without entity ID)
+      IF target_entity_id IS NULL THEN
+        CONTINUE;
+      END IF;
+      
       IF target_balance IS NOT NULL THEN
         new_entities := jsonb_set(
           new_entities,

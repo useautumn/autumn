@@ -107,8 +107,6 @@ export const handleMultiAttachFlow = async ({
 			curSub: curSub!,
 			itemSet,
 			branch,
-			// fromCreate: attachParams.products.length === 0, // just for now, if no products, it comes from cancel product...
-			fromCreate: true, // just for now, if no products, it comes from cancel product...
 		});
 
 		// TODO: Add these missing functions or remove if not needed

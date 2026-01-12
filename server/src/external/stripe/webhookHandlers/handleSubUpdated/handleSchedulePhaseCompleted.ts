@@ -15,7 +15,6 @@ import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/han
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { notNullish } from "@/utils/genUtils.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
-import { deleteCachedApiCustomer } from "../../../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 
 export const handleSchedulePhaseCompleted = async ({
 	ctx,
@@ -110,13 +109,6 @@ export const handleSchedulePhaseCompleted = async ({
 				},
 			});
 		}
-
-		await deleteCachedApiCustomer({
-			customerId: cusProduct.customer?.id || "",
-			orgId: org.id,
-			env,
-			source: "handleSchedulePhaseCompleted",
-		});
 	}
 
 	if (

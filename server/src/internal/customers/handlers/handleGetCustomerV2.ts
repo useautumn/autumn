@@ -8,6 +8,7 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getApiCustomer } from "../cusUtils/apiCusUtils/getApiCustomer.js";
+import { getOrSetCachedFullCustomer } from "../cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
 
 export const handleGetCustomerV2 = createRoute({
 	versionedQuery: {
@@ -34,9 +35,17 @@ export const handleGetCustomerV2 = createRoute({
 
 		const start = Date.now();
 
-		const customer = await getApiCustomer({
+		// Get FullCustomer from cache or DB
+		const fullCustomer = await getOrSetCachedFullCustomer({
 			ctx,
 			customerId,
+			source: "handleGetCustomerV2",
+		});
+
+		// Transform to ApiCustomer with version changes
+		const customer = await getApiCustomer({
+			ctx,
+			fullCustomer,
 			withAutumnId: with_autumn_id,
 		});
 

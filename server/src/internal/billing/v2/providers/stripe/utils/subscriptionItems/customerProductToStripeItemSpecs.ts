@@ -7,7 +7,7 @@ import {
 	type FullCusProduct,
 	formatPrice,
 	InternalError,
-	isAllocatedCusEnt,
+	isAllocatedCustomerEntitlement,
 	isOneOffPrice,
 	notNullish,
 	type StripeItemSpec,
@@ -64,7 +64,7 @@ export const customerProductToStripeItemSpecs = ({
 				cusProduct: customerProduct,
 			});
 
-			if (isAllocatedCusEnt(cusEntWithCusProduct)) {
+			if (isAllocatedCustomerEntitlement(cusEntWithCusProduct)) {
 				existingUsage = cusEntToInvoiceUsage({ cusEnt: cusEntWithCusProduct });
 			}
 		}

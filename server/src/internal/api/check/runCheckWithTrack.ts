@@ -10,7 +10,7 @@ import {
 	type TrackParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv";
-import { runTrack } from "../../balances/track/runTrack";
+import { runTrackV2 } from "../../balances/track/runTrackV2";
 import { getTrackFeatureDeductions } from "../../balances/track/trackUtils/getFeatureDeductions";
 import { featureToCreditSystem } from "../../features/creditSystemUtils";
 import type { CheckData } from "./checkTypes/CheckData";
@@ -58,7 +58,7 @@ export const runCheckWithTrack = async ({
 	let allowed = true;
 
 	try {
-		const response = await runTrack({
+		const response = await runTrackV2({
 			ctx,
 			body: trackBody,
 			featureDeductions,

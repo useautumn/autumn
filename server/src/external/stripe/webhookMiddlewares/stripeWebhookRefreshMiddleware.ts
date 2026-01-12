@@ -30,7 +30,7 @@ export const stripeWebhookRefreshMiddleware = async (
 
 	// Post-processing: refresh cache
 	const ctx = c.get("ctx");
-	const { db, logger, org, env, stripeEvent } = ctx;
+	const { logger, org, env, stripeEvent } = ctx;
 
 	if (!stripeEvent) return;
 
@@ -66,50 +66,9 @@ export const stripeWebhookRefreshMiddleware = async (
 
 			await deleteCachedApiCustomer({
 				customerId: customer.id!,
-				orgId: org.id,
-				env,
+				ctx,
 				source: `stripeWebhookRefreshMiddleware: ${eventType}`,
 			});
-
-			// let fullCus: FullCustomer | undefined;
-			// if (
-			// 	updateProductEvents.includes(eventType) ||
-			// 	updateInvoiceEvents.includes(eventType)
-			// ) {
-			// 	fullCus = await CusService.getFull({
-			// 		db,
-			// 		idOrInternalId: customer.id!,
-			// 		orgId: org.id,
-			// 		env,
-			// 		withEntities: true,
-			// 		withSubs: true,
-			// 		expand: [CusExpand.Invoices],
-			// 	});
-
-			// 	if (updateProductEvents.includes(eventType)) {
-			// 		await setCachedApiSubs({
-			// 			ctx,
-			// 			fullCus,
-			// 			customerId: customer.id!,
-			// 		});
-			// 	}
-
-			// 	if (updateInvoiceEvents.includes(eventType)) {
-			// 		await setCachedApiInvoices({
-			// 			ctx,
-			// 			fullCus,
-			// 			customerId: customer.id!,
-			// 		});
-			// 	}
-			// } else {
-			// 	logger.info(`Attempting delete cached api customer! ${eventType}`);
-			// 	await deleteCachedApiCustomer({
-			// 		customerId: customer.id!,
-			// 		orgId: org.id,
-			// 		env,
-			// 		source: `stripeWebhookRefreshMiddleware: ${eventType}`,
-			// 	});
-			// }
 		}
 	} catch (error) {
 		logger.error(`Stripe webhook, error refreshing cache: ${error}`, {
