@@ -1,4 +1,5 @@
 import { KSUID } from "@owpz/ksuid";
+import { Decimal } from "decimal.js";
 
 export const generateId = (prefix?: string): string => {
 	const id = KSUID.random().toString();
@@ -17,7 +18,7 @@ export const notNullish = <T>(value: T | null | undefined): value is T =>
 export const idRegex = /^[a-zA-Z0-9_-]+$/;
 
 export const sumValues = (vals: number[]) => {
-	return vals.reduce((acc, curr) => acc + curr, 0);
+	return vals.reduce((acc, curr) => acc.add(curr), new Decimal(0)).toNumber();
 };
 
 export const keyToTitle = (
