@@ -1,41 +1,36 @@
 import { beforeAll, describe, test } from "bun:test";
-import { LegacyVersion } from "@autumn/shared";
+import { ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { attachFailedPaymentMethod } from "../../src/external/stripe/stripeCusUtils.js";
-import { CusService } from "../../src/internal/customers/CusService.js";
 
-// UNCOMMENT FROM HERE
 const pro = constructProduct({
 	type: "pro",
-
 	items: [
-		constructArrearProratedItem({
-			featureId: TestFeature.Users,
-			pricePerUnit: 10,
-			includedUsage: 0,
+		constructArrearItem({
+			featureId: TestFeature.Messages,
+			includedUsage: 5,
+			price: 0.1,
+			billingUnits: 1,
 		}),
 	],
 });
 
-describe(`${chalk.yellowBright("temp: Testing pay per use")}`, () => {
+describe(`${chalk.yellowBright("temp2: Testing pay-per-use with raw balance")}`, () => {
 	const customerId = "temp2";
-	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
+	const autumn: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
-	let testClockId: string;
 	beforeAll(async () => {
-		const result = await initCustomerV3({
+		await initCustomerV3({
 			ctx,
 			customerId,
-			customerData: {},
+			withTestClock: false,
 			attachPm: "success",
-			withTestClock: true,
 		});
 
 		await initProductsV0({
@@ -43,59 +38,20 @@ describe(`${chalk.yellowBright("temp: Testing pay per use")}`, () => {
 			products: [pro],
 			prefix: customerId,
 		});
-
-		testClockId = result.testClockId!;
 	});
 
-	test("should attach pro product", async () => {
+	test("should attach product and create raw balance", async () => {
+		// Attach product with pay-per-use feature (5 messages included)
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: pro.id,
 		});
 
-		// await advanceToNextInvoice({
-		// 	stripeCli: ctx.stripeCli,
-		// 	testClockId,
-		// });
-
-		const customer = await CusService.get({
-			db: ctx.db,
-			idOrInternalId: customerId,
-			orgId: ctx.org.id,
-			env: ctx.env,
+		// Create a raw balance of 5 messages
+		await autumn.balances.create({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			granted_balance: "5",
 		});
-
-		await attachFailedPaymentMethod({
-			stripeCli: ctx.stripeCli,
-			customer: customer!,
-		});
-
-		// await autumn.track({
-		// 	customer_id: customerId,
-		// 	feature_id: TestFeature.Users,
-		// 	value: 1,
-		// });
-
-		await autumn.entities.create(customerId, [
-			{
-				id: "1",
-				name: "Entity 1",
-				feature_id: TestFeature.Users,
-			},
-		]);
 	});
-
-	// test("should cancel one add on", async () => {
-	// 	await autumn.cancel({
-	// 		customer_id: customerId,
-	// 		product_id: addOn.id,
-	// 	});
-
-	// 	await expectSubToBeCorrect({
-	// 		customerId,
-	// 		db,
-	// 		org,
-	// 		env,
-	// 	});
-	// });
 });

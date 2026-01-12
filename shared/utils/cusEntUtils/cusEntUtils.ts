@@ -57,12 +57,13 @@ export const isPrepaidCusEnt = ({
 }: {
 	cusEnt: FullCusEntWithFullCusProduct;
 }) => {
-	// 2. If cus ent is not prepaid, skip
 	const cusPrice = cusEntToCusPrice({ cusEnt });
 	if (!cusPrice || !isPrepaidPrice({ price: cusPrice.price })) return false;
 
+	if (!cusEnt.customer_product) return false;
+
 	// 3. Get quantity
-	const options = cusEnt.customer_product.options.find(
+	const options = cusEnt.customer_product?.options?.find(
 		(option) =>
 			option.internal_feature_id === cusEnt.entitlement.internal_feature_id,
 	);

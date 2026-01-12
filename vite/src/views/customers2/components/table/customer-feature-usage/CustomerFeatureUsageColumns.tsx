@@ -34,13 +34,13 @@ export const CustomerFeatureUsageColumns = [
 
 			if (subRowData) {
 				const parentAllowance = subRowData.entitlement?.allowance ?? 0;
-				const parentQuantity = subRowData.customer_product.quantity || 1;
+				const parentQuantity = subRowData.customer_product?.quantity || 1;
 				const parentTotal = parentAllowance * parentQuantity;
 
 				const meteredCusEnt = subRowData.meteredCusEnt;
 				if (meteredCusEnt?.entitlement) {
 					const meteredAllowance = meteredCusEnt.entitlement.allowance || 0;
-					const meteredQuantity = meteredCusEnt.customer_product.quantity || 1;
+					const meteredQuantity = meteredCusEnt.customer_product?.quantity || 1;
 					const meteredTotal = meteredAllowance * meteredQuantity;
 					const meteredBalance = meteredCusEnt.balance || 0;
 					const meteredUsed = meteredTotal - meteredBalance;
@@ -54,7 +54,7 @@ export const CustomerFeatureUsageColumns = [
 				} else {
 					allowance = subRowData.entitlement?.allowance ?? 0;
 					balance = subRowData.meteredCusEnt?.balance ?? 0;
-					quantity = subRowData.customer_product.quantity || 1;
+					quantity = subRowData.customer_product?.quantity || 1;
 				}
 
 				featureName = subRowData.feature?.name ?? "";
@@ -64,7 +64,7 @@ export const CustomerFeatureUsageColumns = [
 				const parentEnt = cusEnt as FullCusEntWithSubRows;
 				allowance = parentEnt.entitlement?.allowance || 0;
 				balance = parentEnt?.balance || 0;
-				quantity = parentEnt.customer_product.quantity || 1;
+				quantity = parentEnt.customer_product?.quantity || 1;
 				featureName = parentEnt.entitlement.feature?.name || "";
 				featureType =
 					parentEnt.entitlement.feature?.type || FeatureType.Boolean;
@@ -85,7 +85,7 @@ export const CustomerFeatureUsageColumns = [
 						if (subEnt.allowance_type !== AllowanceType.Unlimited) {
 							const subTotal =
 								(subEnt.allowance || 0) *
-								(meteredCusEnt.customer_product.quantity || 1);
+								(meteredCusEnt.customer_product?.quantity || 1);
 							const subRemaining = meteredCusEnt.balance || 0;
 							const subUsed = subTotal - subRemaining;
 							totalSpent += subUsed * creditCost;
@@ -136,7 +136,7 @@ export const CustomerFeatureUsageColumns = [
 					meteredCusEnt.entitlement.allowance_type || AllowanceType.Unlimited;
 				allowance = meteredCusEnt.entitlement.allowance || 0;
 				balance = meteredCusEnt.balance || 0;
-				quantity = meteredCusEnt.customer_product.quantity || 1;
+				quantity = meteredCusEnt.customer_product?.quantity || 1;
 				isSubRow = true;
 				creditAmount = credit_amount;
 			} else {
@@ -147,7 +147,7 @@ export const CustomerFeatureUsageColumns = [
 					parentEnt.entitlement.allowance_type || AllowanceType.Unlimited;
 				allowance = parentEnt.entitlement.allowance || 0;
 				balance = parentEnt.balance || 0;
-				quantity = parentEnt.customer_product.quantity || 1;
+				quantity = parentEnt.customer_product?.quantity || 1;
 				isSubRow = false;
 				subRows = parentEnt.subRows;
 			}

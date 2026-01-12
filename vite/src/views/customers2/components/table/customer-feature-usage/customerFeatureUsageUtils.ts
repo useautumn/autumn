@@ -1,7 +1,7 @@
 import type {
 	CreditSchemaItem,
 	Feature,
-	FullCusEntWithFullCusProduct,
+	FullCusEntWithOptionalProduct,
 	FullCusProduct,
 	FullCustomerEntitlement,
 } from "@autumn/shared";
@@ -15,7 +15,7 @@ export function flattenCustomerEntitlements({
 	customerProducts,
 }: {
 	customerProducts: FullCusProduct[];
-}): FullCusEntWithFullCusProduct[] {
+}): FullCusEntWithOptionalProduct[] {
 	return customerProducts.flatMap((cp: FullCusProduct) =>
 		cp.customer_entitlements.map((e: FullCustomerEntitlement) => ({
 			...e,
@@ -40,9 +40,9 @@ export function createFeaturesMap({
  */
 export interface DeduplicatedEntitlementsResult {
 	/** Combined entitlements (one per feature) */
-	entitlements: FullCusEntWithFullCusProduct[];
+	entitlements: FullCusEntWithOptionalProduct[];
 	/** Mapping of featureId -> array of original entitlements that were aggregated */
-	aggregatedMap: Map<string, FullCusEntWithFullCusProduct[]>;
+	aggregatedMap: Map<string, FullCusEntWithOptionalProduct[]>;
 }
 
 /**
@@ -52,10 +52,10 @@ export function deduplicateEntitlements({
 	entitlements,
 	entityId,
 }: {
-	entitlements: FullCusEntWithFullCusProduct[];
+	entitlements: FullCusEntWithOptionalProduct[];
 	entityId?: string | null;
 }): DeduplicatedEntitlementsResult {
-	const featureMap = new Map<string, FullCusEntWithFullCusProduct[]>();
+	const featureMap = new Map<string, FullCusEntWithOptionalProduct[]>();
 
 	for (const ent of entitlements) {
 		const featureId = ent.entitlement.feature.id;
@@ -65,8 +65,8 @@ export function deduplicateEntitlements({
 		featureMap.get(featureId)?.push(ent);
 	}
 
-	const combined: FullCusEntWithFullCusProduct[] = [];
-	const aggregatedMap = new Map<string, FullCusEntWithFullCusProduct[]>();
+	const combined: FullCusEntWithOptionalProduct[] = [];
+	const aggregatedMap = new Map<string, FullCusEntWithOptionalProduct[]>();
 
 	for (const [featureId, ents] of featureMap.entries()) {
 		if (ents.length === 1) {
@@ -103,7 +103,7 @@ export function deduplicateEntitlements({
 				0,
 			);
 			const summedQuantity = ents.reduce(
-				(sum, e) => sum + (e.customer_product.quantity ?? 1),
+				(sum, e) => sum + (e.customer_product?.quantity ?? 1),
 				0,
 			);
 			const earliestReset = ents.reduce(
@@ -122,10 +122,12 @@ export function deduplicateEntitlements({
 					...first.entitlement,
 					allowance: summedAllowance,
 				},
-				customer_product: {
-					...first.customer_product,
-					quantity: summedQuantity,
-				},
+				customer_product: first.customer_product
+					? {
+							...first.customer_product,
+							quantity: summedQuantity,
+						}
+					: null,
 				next_reset_at: earliestReset ?? first.next_reset_at,
 			});
 		}
@@ -145,13 +147,13 @@ export function processNonBooleanEntitlements({
 	cusEnts,
 	featuresMap,
 }: {
-	entitlements: FullCusEntWithFullCusProduct[];
-	cusEnts: FullCusEntWithFullCusProduct[];
+	entitlements: FullCusEntWithOptionalProduct[];
+	cusEnts: FullCusEntWithOptionalProduct[];
 	featuresMap: Map<string, Feature>;
 }): FullCusEntWithSubRows[] {
 	// Create a map of feature id to customer entitlements for quick lookup
 	const featureIdToCusEnt = new Map(
-		cusEnts.map((ent: FullCusEntWithFullCusProduct) => [
+		cusEnts.map((ent: FullCusEntWithOptionalProduct) => [
 			ent.entitlement.feature.id,
 			ent,
 		]),
@@ -159,10 +161,10 @@ export function processNonBooleanEntitlements({
 
 	return entitlements
 		.filter(
-			(ent: FullCusEntWithFullCusProduct) =>
+			(ent: FullCusEntWithOptionalProduct) =>
 				ent.entitlement.feature.type !== FeatureType.Boolean,
 		)
-		.map((ent: FullCusEntWithFullCusProduct): FullCusEntWithSubRows => {
+		.map((ent: FullCusEntWithOptionalProduct): FullCusEntWithSubRows => {
 			if (ent.entitlement.feature.type === FeatureType.CreditSystem) {
 				const creditSchema = ent.entitlement.feature.config?.schema || [];
 				const subRows = creditSchema.map((schemaItem: CreditSchemaItem) => {
@@ -177,7 +179,7 @@ export function processNonBooleanEntitlements({
 						feature_amount: schemaItem.feature_amount,
 						feature: meteredFeature,
 						meteredCusEnt,
-						isSubRow: true,
+						isSubRow: true as const,
 						entitlement: ent.entitlement,
 						customer_product: ent.customer_product,
 						next_reset_at: ent.next_reset_at,
@@ -195,10 +197,10 @@ export function processNonBooleanEntitlements({
 export function filterBooleanEntitlements({
 	entitlements,
 }: {
-	entitlements: FullCusEntWithFullCusProduct[];
-}): FullCusEntWithFullCusProduct[] {
+	entitlements: FullCusEntWithOptionalProduct[];
+}): FullCusEntWithOptionalProduct[] {
 	return entitlements.filter(
-		(ent: FullCusEntWithFullCusProduct) =>
+		(ent: FullCusEntWithOptionalProduct) =>
 			ent.entitlement.feature.type === FeatureType.Boolean,
 	);
 }

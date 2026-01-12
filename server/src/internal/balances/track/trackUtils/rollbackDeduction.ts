@@ -1,4 +1,6 @@
-import { cusProductsToCusEnts, type FullCustomer } from "@autumn/shared";
+import {
+	type FullCustomer, fullCustomerToCustomerEntitlements
+} from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
 import { CusEntService } from "../../../customers/cusProducts/cusEnts/CusEntitlementService";
 import type { DeductionUpdate } from "../../utils/types/deductionUpdate.js";
@@ -18,8 +20,8 @@ export const rollbackDeduction = async ({
 		`[ROLLBACK] Starting rollback for ${Object.keys(updates).length} entitlements`,
 	);
 
-	const cusEnts = cusProductsToCusEnts({
-		cusProducts: oldFullCus.customer_products,
+	const cusEnts = fullCustomerToCustomerEntitlements({
+		fullCustomer: oldFullCus,
 	});
 
 	// For each updated entitlement, restore to original state from oldFullCus

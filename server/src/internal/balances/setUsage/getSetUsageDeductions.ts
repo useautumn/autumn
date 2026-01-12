@@ -1,12 +1,12 @@
 import {
 	CusProductStatus,
 	cusEntToIncludedUsage,
-	cusProductsToCusEnts,
 	ErrCode,
 	type Feature,
 	FeatureNotFoundError,
 	FeatureType,
 	type FullCustomerEntitlement,
+	fullCustomerToCustomerEntitlements,
 	orgToInStatuses,
 	RecaseError,
 	type SetUsageParams,
@@ -69,8 +69,8 @@ export const getSetUsageDeductions = async ({
 		});
 	}
 
-	const cusEnts = cusProductsToCusEnts({
-		cusProducts: fullCus.customer_products,
+	const cusEnts = fullCustomerToCustomerEntitlements({
+		fullCustomer: fullCus,
 		reverseOrder: org.config?.reverse_deduction_order,
 		featureId: feature.id,
 		inStatuses: orgToInStatuses({ org }),
@@ -141,8 +141,8 @@ export const getSetUsageDeductions = async ({
 	// CALCULATE DEDUCTION
 	// ==========================================
 
-	const deductionCusEnts = cusProductsToCusEnts({
-		cusProducts: fullCus.customer_products,
+	const deductionCusEnts = fullCustomerToCustomerEntitlements({
+		fullCustomer: fullCus,
 		reverseOrder: org.config?.reverse_deduction_order,
 		featureId: deductionFeature.id,
 		inStatuses: orgToInStatuses({ org }),

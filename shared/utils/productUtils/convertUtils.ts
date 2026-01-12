@@ -77,7 +77,7 @@ export const cusEntToCusPrice = ({
 	cusEnt: FullCusEntWithFullCusProduct;
 }) => {
 	const cusProduct = cusEnt.customer_product;
-	const cusPrices = cusProduct.customer_prices;
+	const cusPrices = cusProduct?.customer_prices ?? [];
 	return cusPrices.find((cusPrice: FullCustomerPrice) => {
 		const productMatch =
 			cusPrice.customer_product_id === cusEnt.customer_product_id;
