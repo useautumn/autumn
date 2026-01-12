@@ -1,4 +1,4 @@
-import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
+import type { AutumnContext } from "@server/honoUtils/HonoEnv.js";
 import { type SyncItem, syncItem } from "./syncItem.js";
 
 interface SyncBatchPayload {

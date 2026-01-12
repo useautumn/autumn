@@ -198,8 +198,7 @@ describe(`${chalk.yellowBright("track-race-condition2: sync should not wipe out 
 		await removeTestFullCustomerCacheGuard({ ctx, customerId });
 
 		await deleteCachedFullCustomer({
-			orgId: ctx.org.id,
-			env: ctx.env,
+			ctx,
 			customerId: customerId,
 			source: "test-setup",
 		});

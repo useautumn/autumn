@@ -8,7 +8,6 @@ import {
 	RewardTriggerEvent,
 } from "@autumn/shared";
 import { z } from "zod/v4";
-import { parseCtxForAction } from "@/internal/analytics/actionUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
 import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionService.js";
@@ -17,7 +16,6 @@ import { triggerFreeProduct } from "@/internal/rewards/referralUtils/triggerFree
 import { triggerRedemption } from "@/internal/rewards/referralUtils.js";
 import { getRewardCat } from "@/internal/rewards/rewardUtils.js";
 import { generateId, notNullish } from "@/utils/genUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { createRoute } from "../../../../../honoMiddlewares/routeHandler";
 
 export const handleRedeemReferral = createRoute({
@@ -149,23 +147,16 @@ export const handleRedeemReferral = createRoute({
 			const rewardCat = getRewardCat(reward);
 			if (rewardCat === RewardCategory.FreeProduct) {
 				await triggerFreeProduct({
-					req: parseCtxForAction({ ctx }) as ExtendedRequest,
-					db,
+					ctx,
 					referralCode,
 					redeemer: customer,
 					rewardProgram: reward_program,
-					org,
-					env,
-					logger: ctx.logger,
 					redemption,
 				});
 			} else {
 				await triggerRedemption({
-					db,
+					ctx,
 					referralCode,
-					org,
-					env,
-					logger: ctx.logger,
 					reward,
 					redemption,
 				});

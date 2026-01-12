@@ -185,10 +185,13 @@ export const handleCheckoutSessionCompleted = async ({
 		await addTaskToQueue({
 			jobName: JobName.TriggerCheckoutReward,
 			payload: {
+				// For createWorkerContext
+				orgId: org.id,
+				env: attachParams.customer.env,
+				customerId: attachParams.customer.id,
+				// For triggerCheckoutReward
 				customer: attachParams.customer,
 				product,
-				org,
-				env: attachParams.customer.env,
 				subId: checkoutSub?.id as string,
 			},
 		});

@@ -158,8 +158,7 @@ describe(`${chalk.yellowBright("track-race-condition3: track runs when credits a
 		console.log(chalk.red("✓ Sync completed"));
 
 		await deleteCachedFullCustomer({
-			orgId: ctx.org.id,
-			env: ctx.env,
+			ctx,
 			customerId: customerId,
 			source: "test-setup",
 		});

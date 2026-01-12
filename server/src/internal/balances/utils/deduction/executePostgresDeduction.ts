@@ -170,10 +170,8 @@ export const executePostgresDeduction = async ({
 	if (refreshCache) {
 		await deleteCachedApiCustomer({
 			customerId,
-			orgId: org.id,
-			env,
+			ctx,
 			source: "executePostgresDeduction",
-			logger: ctx.logger,
 		});
 	}
 
