@@ -51,6 +51,7 @@ const checkSubscriptionsMatch = ({
 		const cachedSubscription = cachedCustomer.subscriptions.find(
 			(s) => s.plan_id === subscription.plan_id,
 		);
+
 		if (!cachedSubscription) {
 			return {
 				success: false,
