@@ -381,6 +381,8 @@ export const runDeductionTx = async (
 			customerId: fullCus.id ?? "",
 			orgId: ctx.org.id,
 			env: ctx.env,
+			logger: ctx.logger,
+			source: `runDeductionTx, refreshing cache`,
 		});
 	}
 

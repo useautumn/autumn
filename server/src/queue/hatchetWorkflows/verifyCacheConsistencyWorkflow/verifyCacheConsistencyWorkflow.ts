@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/bun";
 import { db } from "@/db/initDrizzle.js";
 import { hatchet } from "@/external/hatchet/initHatchet.js";
 import { getSentryTags } from "@/external/sentry/sentryUtils.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
@@ -38,9 +39,11 @@ export const verifyCacheConsistencyWorkflow = hatchet?.workflow<
 
 // Check if subscriptions match
 const checkSubscriptionsMatch = ({
+	ctx,
 	dbCustomer,
 	cachedCustomer,
 }: {
+	ctx: AutumnContext;
 	dbCustomer: ApiCustomer;
 	cachedCustomer: ApiCustomer;
 }): { success: boolean; message: string } => {
@@ -124,10 +127,14 @@ verifyCacheConsistencyWorkflow?.task({
 				withAutumnId: true,
 			});
 
+			autumnContext.logger.info(`DB CUSTOMER`, { data: dbCustomer });
+			autumnContext.logger.info(`CACHED CUSTOMER`, { data: cachedCustomer });
+
 			const {
 				success: subscriptionsMatch,
 				message: subscriptionsMatchMessage,
 			} = checkSubscriptionsMatch({
+				ctx: autumnContext,
 				dbCustomer,
 				cachedCustomer,
 			});
@@ -139,16 +146,15 @@ verifyCacheConsistencyWorkflow?.task({
 
 				await deleteCachedFullCustomer({
 					customerId,
-					orgId: autumnContext.org.id,
-					env: autumnContext.env,
+					ctx: autumnContext,
 					source: "verifyCacheConsistency",
-					logger: autumnContext.logger,
 				});
 
 				Sentry.captureException(new Error(subscriptionsMatchMessage), {
 					tags: getSentryTags({
 						ctx: autumnContext,
 						customerId,
+						alert: true,
 					}),
 				});
 			}

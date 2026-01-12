@@ -1,11 +1,10 @@
 import type { WebhookExpiration } from "@puzzmo/revenue-cat-webhook-types";
 import { CusProductStatus, ErrCode, RecaseError } from "@shared/index";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
-import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { activateDefaultProduct } from "@/internal/customers/cusProducts/cusProductUtils";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
-import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
 import { isOneOff } from "@/internal/products/productUtils";
 
 export const handleExpiration = async ({
@@ -13,9 +12,9 @@ export const handleExpiration = async ({
 	ctx,
 }: {
 	event: WebhookExpiration;
-	ctx: AutumnContext;
+	ctx: RevenueCatWebhookContext;
 }) => {
-	const { db, org, env, logger } = ctx;
+	const { db, logger } = ctx;
 	const { product_id, original_app_user_id, app_user_id } = event;
 
 	const { product, customer, cusProducts } = await resolveRevenuecatResources({
@@ -62,11 +61,4 @@ export const handleExpiration = async ({
 			curCusProduct: curSameProduct,
 		});
 	}
-
-	await deleteCachedApiCustomer({
-		customerId: event.original_app_user_id ?? event.app_user_id,
-		orgId: org.id,
-		env,
-		source: `handleRevenuecatExpiration: ${product.id}`,
-	});
 };

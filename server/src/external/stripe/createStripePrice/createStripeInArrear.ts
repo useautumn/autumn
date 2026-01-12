@@ -32,9 +32,10 @@ export const searchStripeMeter = async ({
 }) => {
 	const allStripeMeters = [];
 	let hasMore = true;
-	let startingAfter;
+	let startingAfter: string | undefined;
 
 	const start = performance.now();
+	// Get max 200 meters
 	while (hasMore) {
 		const response: any = await stripeCli.billing.meters.list({
 			limit: 100,

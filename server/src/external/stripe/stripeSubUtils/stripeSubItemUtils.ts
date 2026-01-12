@@ -132,7 +132,8 @@ export const findPriceInStripeItems = ({
 		if (subItem) {
 			itemMatch =
 				config.stripe_price_id === subItem.price?.id ||
-				config.stripe_product_id === subItem.price?.product;
+				config.stripe_product_id === subItem.price?.product ||
+				config.stripe_empty_price_id === subItem.price?.id;
 		}
 
 		if (lineItem) {

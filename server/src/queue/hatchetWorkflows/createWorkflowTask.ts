@@ -36,13 +36,18 @@ export const createWorkflowTask = <TInput extends BaseWorkflowInput, TOutput>({
 		const workflowName = hatchetCtx.workflowName();
 		const taskName = hatchetCtx.taskName();
 		const name = `${workflowName}/${taskName}`;
+		const workflowMetadata = hatchetCtx.additionalMetadata();
 
 		const autumnContext = await createWorkerContext({
 			db,
-			orgId,
-			env,
+			payload: input,
 			logger,
+			workflowId: workflowMetadata.workflowId,
 		});
+
+		autumnContext?.logger.info(
+			`[${workflowName}] Running for customer ${customerId}, orgId: ${orgId}`,
+		);
 
 		if (!autumnContext) {
 			const error = new Error(

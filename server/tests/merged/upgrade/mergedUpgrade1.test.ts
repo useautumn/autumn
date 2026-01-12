@@ -17,6 +17,7 @@ import { addWeeks } from "date-fns";
 import type { Stripe } from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { timeout } from "@/utils/genUtils";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
@@ -129,6 +130,7 @@ describe(`${chalk.yellowBright("mergedUpgrade1: Testing merged subs, upgrade 1 &
 	const entity2Val = 300000;
 
 	test("should advance test clock and upgrade entity 1 to premium, and have correct invoice", async () => {
+		await timeout(3000);
 		await autumn.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Words,

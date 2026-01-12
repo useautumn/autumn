@@ -1,5 +1,5 @@
 import {
-	type AttachBranch,
+	AttachBranch,
 	type AttachConfig,
 	type AttachReplaceable,
 	ProrationBehavior,
@@ -31,7 +31,6 @@ export const updateStripeSub2 = async ({
 	curSub,
 	itemSet,
 	branch,
-	fromCreate = false,
 }: {
 	ctx: AutumnContext;
 	attachParams: AttachParams;
@@ -39,7 +38,6 @@ export const updateStripeSub2 = async ({
 	curSub: Stripe.Subscription;
 	itemSet: ItemSet;
 	branch: AttachBranch;
-	fromCreate?: boolean;
 }) => {
 	const { db, logger } = ctx;
 
@@ -93,9 +91,14 @@ export const updateStripeSub2 = async ({
 
 		// cancel_at_period_end: false,
 		// TODO: will error if sub managed by a schedule
-		cancel_at_period_end: isStripeSubscriptionCanceled({ sub: curSub })
-			? false
-			: undefined,
+		cancel_at_period_end:
+			isStripeSubscriptionCanceled({ sub: curSub }) &&
+			!(
+				branch === AttachBranch.SameCustomEnts ||
+				branch === AttachBranch.NewVersion
+			)
+				? false
+				: undefined,
 	});
 
 	let latestInvoice = updatedSub.latest_invoice as Stripe.Invoice | null;
@@ -108,13 +111,6 @@ export const updateStripeSub2 = async ({
 			latestInvoice: null,
 		};
 	}
-
-	// if (fromCreate) {
-	// 	return {
-	// 		updatedSub,
-	// 		latestInvoice: updatedSub.latest_invoice as Stripe.Invoice,
-	// 	};
-	// }
 
 	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
 	const cusEntIds: string[] = [];

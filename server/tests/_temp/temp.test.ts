@@ -72,7 +72,16 @@ describe(`${chalk.yellowBright("temp: invoice payment failed for one off credits
 			customer_id: customerId,
 			product_id: free.id,
 		});
-	});
 
-	test("should handle invoice payment failed for one off credits", async () => {});
+		await autumnV1.attach({
+			customer_id: customerId,
+			product_id: oneOffCredits.id,
+			options: [
+				{
+					feature_id: TestFeature.Credits,
+					quantity: 25,
+				},
+			],
+		});
+	});
 });

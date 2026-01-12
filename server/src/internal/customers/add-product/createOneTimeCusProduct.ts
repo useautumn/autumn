@@ -192,7 +192,7 @@ export const updateOneTimeCusProduct = async ({
 	});
 
 	await queueVerifyCacheConsistencyWorkflow({
-		newCustomerProductId: existingCusProduct.id,
+		newCustomerProduct: existingCusProduct,
 		previousFullCustomer: attachParams.customer as FullCustomer,
 		logger,
 		source: "updateOneTimeCusProduct",

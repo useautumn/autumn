@@ -14,18 +14,9 @@ export const runSyncBalanceBatch = async ({
 	payload,
 }: {
 	ctx?: AutumnContext;
-	payload: SyncBatchPayload | any; // Allow any for backwards compatibility
+	payload: SyncBatchPayload;
 }) => {
-	// Backwards compatibility: handle both old (items array) and new (item object) formats
-	let item = payload.item;
-
-	// Old format: { items: [...] }
-	if (!item && payload.items && Array.isArray(payload.items)) {
-		item = payload.items[0];
-		console.warn(
-			"⚠️  Received old format sync message with items array, using first item",
-		);
-	}
+	const item = payload.item;
 
 	if (!item || !ctx) {
 		console.warn("⚠️  No sync item provided");

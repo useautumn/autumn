@@ -1,8 +1,5 @@
-import {
-	type Logger,
-	logger as loggerInstance,
-} from "@/external/logtail/logtailUtils.js";
 import { redis } from "@/external/redis/initRedis.js";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import {
 	buildFullCustomerCacheGuardKey,
 	buildFullCustomerCacheKey,
@@ -16,21 +13,17 @@ import { buildTestFullCustomerCacheGuardKey } from "./testFullCustomerCacheGuard
  */
 export const deleteCachedFullCustomer = async ({
 	customerId,
-	orgId,
-	env,
+	ctx,
 	source,
-	logger,
 }: {
 	customerId: string;
-	orgId: string;
-	env: string;
+	ctx: AutumnContext;
 	source?: string;
-	logger?: Logger;
 }): Promise<void> => {
-	const log = logger || loggerInstance;
+	const { org, env, logger } = ctx;
 
 	if (redis.status !== "ready") {
-		log.warn(
+		logger.warn(
 			`[deleteCachedFullCustomer] Redis not ready, skipping deletion for ${customerId}`,
 		);
 		return;
@@ -39,12 +32,20 @@ export const deleteCachedFullCustomer = async ({
 	if (!customerId) return;
 
 	const testGuardKey = buildTestFullCustomerCacheGuardKey({
-		orgId,
+		orgId: org.id,
 		env,
 		customerId,
 	});
-	const cacheKey = buildFullCustomerCacheKey({ orgId, env, customerId });
-	const guardKey = buildFullCustomerCacheGuardKey({ orgId, env, customerId });
+	const cacheKey = buildFullCustomerCacheKey({
+		orgId: org.id,
+		env,
+		customerId,
+	});
+	const guardKey = buildFullCustomerCacheGuardKey({
+		orgId: org.id,
+		env,
+		customerId,
+	});
 
 	try {
 		const guardTimestamp = Date.now().toString();
@@ -58,20 +59,20 @@ export const deleteCachedFullCustomer = async ({
 		);
 
 		if (result === "SKIPPED") {
-			log.info(
+			logger.info(
 				`[deleteCachedFullCustomer] Test guard exists, skipping deletion for ${customerId}`,
 			);
 		} else if (result === "DELETED") {
-			log.info(
+			logger.info(
 				`[deleteCachedFullCustomer] Deleted cache for ${customerId}, source: ${source}`,
 			);
 		} else {
-			log.debug(
+			logger.debug(
 				`[deleteCachedFullCustomer] Cache key didn't exist for ${customerId}, source: ${source}`,
 			);
 		}
 	} catch (error) {
-		log.error(`[deleteCachedFullCustomer] Error: ${error}`);
+		logger.error(`[deleteCachedFullCustomer] Error: ${error}`);
 		throw error;
 	}
 };
