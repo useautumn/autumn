@@ -37,7 +37,7 @@ export const ValidateCreateBalanceParamsSchema = CreateBalanceSchema.extend({
 		if (data.granted_balance === undefined && !data.unlimited) {
 			return false;
 		}
-		if (data.granted_balance && data.unlimited) {
+		if (data.granted_balance !== undefined && data.unlimited) {
 			return false;
 		}
 		if (data.unlimited && data.reset?.interval) {
