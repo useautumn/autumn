@@ -78,7 +78,7 @@ const getFeatureDeductions = ({
 	);
 	const featureDeductions = [];
 	for (const feature of features) {
-		let deduction;
+		let deduction: number | undefined;
 		if (feature.type === FeatureType.Metered) {
 			deduction = getMeteredDeduction(feature, event);
 		} else if (feature.type === FeatureType.CreditSystem) {
@@ -157,7 +157,7 @@ export const logBalanceUpdate = ({
 		cusEnts.map((cusEnt: any) => {
 			let balanceStr = cusEnt.balance;
 
-			if (notNullish(cusEnt.entitlement.entity_feature_id)) {
+			if (notNullish(cusEnt.entitlement?.entity_feature_id)) {
 				console.log(
 					`   - Entity feature ID found for feature: ${cusEnt.feature_id}`,
 				);
@@ -174,7 +174,7 @@ export const logBalanceUpdate = ({
 				}
 			}
 			try {
-				if (cusEnt.entitlement.allowance_type === AllowanceType.Unlimited) {
+				if (cusEnt.entitlement?.allowance_type === AllowanceType.Unlimited) {
 					balanceStr = "Unlimited";
 				}
 			} catch (error) {

@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import type { ApiCustomerV3 } from "@shared/index";
 import { expectCustomerFeatureCorrect } from "@tests/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/billing/utils/expectCustomerInvoiceCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
@@ -17,7 +18,10 @@ test.concurrent(`${chalk.yellowBright("version-entitlements: remove boolean feat
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 20 });
 	const dashboardItem = items.dashboard();
-	const pro = products.base({ id: "pro", items: [messagesItem, priceItem, dashboardItem] });
+	const pro = products.base({
+		id: "pro",
+		items: [messagesItem, priceItem, dashboardItem],
+	});
 
 	const { customerId, autumnV1, ctx } = await initScenario({
 		customerId: "version-ent-remove-bool",
@@ -50,7 +54,7 @@ test.concurrent(`${chalk.yellowBright("version-entitlements: remove boolean feat
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Messages should have full balance
 	expectCustomerFeatureCorrect({
@@ -111,7 +115,7 @@ test.concurrent(`${chalk.yellowBright("version-entitlements: swap features")}`, 
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Messages should no longer be accessible
 	expect(customer.features[TestFeature.Messages]).toBeUndefined();
@@ -138,7 +142,10 @@ test.concurrent(`${chalk.yellowBright("version-entitlements: multiple feature ch
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const dashboardItem = items.dashboard();
 	const priceItem = items.monthlyPrice({ price: 20 });
-	const pro = products.base({ id: "pro", items: [messagesItem, dashboardItem, priceItem] });
+	const pro = products.base({
+		id: "pro",
+		items: [messagesItem, dashboardItem, priceItem],
+	});
 
 	const { customerId, autumnV1, ctx } = await initScenario({
 		customerId: "version-ent-multi-change",
@@ -150,7 +157,9 @@ test.concurrent(`${chalk.yellowBright("version-entitlements: multiple feature ch
 	});
 
 	// Verify initial state: messages + dashboard
-	const customerBefore = await autumnV1.customers.get(customerId);
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
 	expect(customerBefore.features[TestFeature.Messages]).toBeDefined();
 	expect(customerBefore.features[TestFeature.Dashboard]).toBeDefined();
 	expect(customerBefore.features[TestFeature.Words]).toBeUndefined();
@@ -176,7 +185,7 @@ test.concurrent(`${chalk.yellowBright("version-entitlements: multiple feature ch
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Messages should still be there
 	expectCustomerFeatureCorrect({
@@ -305,7 +314,7 @@ test.concurrent(`${chalk.yellowBright("version-entitlements: features and price 
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Messages should have full balance
 	expectCustomerFeatureCorrect({
@@ -349,7 +358,10 @@ test.concurrent(`${chalk.yellowBright("version-entitlements: features and price 
 	const dashboardItem = items.dashboard();
 	const wordsItem = items.monthlyWords({ includedUsage: 500 });
 	const priceItem = items.monthlyPrice({ price: 30 });
-	const pro = products.base({ id: "pro", items: [messagesItem, dashboardItem, wordsItem, priceItem] });
+	const pro = products.base({
+		id: "pro",
+		items: [messagesItem, dashboardItem, wordsItem, priceItem],
+	});
 
 	const { customerId, autumnV1, ctx } = await initScenario({
 		customerId: "version-ent-minus-price",
@@ -385,7 +397,7 @@ test.concurrent(`${chalk.yellowBright("version-entitlements: features and price 
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Messages should have full balance
 	expectCustomerFeatureCorrect({

@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import type { ApiCustomerV3 } from "@shared/index";
 import { expectCustomerFeatureCorrect } from "@tests/billing/utils/expectCustomerFeatureCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -49,7 +50,7 @@ test.concurrent(`${chalk.yellowBright("version-billing: add prepaid users")}`, a
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Users should now be accessible with 5 included
 	expectCustomerFeatureCorrect({
@@ -84,7 +85,9 @@ test.concurrent(`${chalk.yellowBright("version-billing: add consumable overage")
 	});
 
 	// Create v2 with consumable messages (pay-per-use after included)
-	const consumableMessagesItem = items.consumableMessages({ includedUsage: 100 });
+	const consumableMessagesItem = items.consumableMessages({
+		includedUsage: 100,
+	});
 	await autumnV1.products.update(pro.id, {
 		items: [consumableMessagesItem, priceItem],
 	});
@@ -149,7 +152,7 @@ test.concurrent(`${chalk.yellowBright("version-billing: add allocated seats")}`,
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Users should now be accessible with 3 included
 	expectCustomerFeatureCorrect({
@@ -201,7 +204,7 @@ test.concurrent(`${chalk.yellowBright("version-billing: metered to prepaid")}`, 
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Messages should now have prepaid model with 50 included
 	expectCustomerFeatureCorrect({
@@ -237,7 +240,9 @@ test.concurrent(`${chalk.yellowBright("version-billing: mixed billing models")}`
 
 	// Create v2 with mixed billing: prepaid users + consumable messages + higher base price
 	const prepaidUsersItem = items.prepaidUsers({ includedUsage: 3 });
-	const consumableMessagesItem = items.consumableMessages({ includedUsage: 100 });
+	const consumableMessagesItem = items.consumableMessages({
+		includedUsage: 100,
+	});
 	const newPriceItem = items.monthlyPrice({ price: 30 });
 	await autumnV1.products.update(pro.id, {
 		items: [consumableMessagesItem, prepaidUsersItem, newPriceItem],
@@ -256,7 +261,7 @@ test.concurrent(`${chalk.yellowBright("version-billing: mixed billing models")}`
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Messages should have consumable model
 	expect(customer.features[TestFeature.Messages]).toBeDefined();
@@ -283,7 +288,10 @@ test.concurrent(`${chalk.yellowBright("version-billing: remove prepaid keep mete
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const prepaidUsersItem = items.prepaidUsers({ includedUsage: 5 });
 	const priceItem = items.monthlyPrice({ price: 30 });
-	const pro = products.base({ id: "pro", items: [messagesItem, prepaidUsersItem, priceItem] });
+	const pro = products.base({
+		id: "pro",
+		items: [messagesItem, prepaidUsersItem, priceItem],
+	});
 
 	const { customerId, autumnV1, ctx } = await initScenario({
 		customerId: "version-billing-remove",
@@ -322,7 +330,7 @@ test.concurrent(`${chalk.yellowBright("version-billing: remove prepaid keep mete
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Messages should still be accessible
 	expectCustomerFeatureCorrect({

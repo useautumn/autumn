@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import type { ApiCusProductV3, ApiCustomerV3 } from "@shared/index";
 import { expectCustomerFeatureCorrect } from "@tests/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/billing/utils/expectCustomerInvoiceCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
@@ -231,7 +232,7 @@ test.concurrent(`${chalk.yellowBright("version-pricing: remove base price")}`, a
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Customer should still have the feature (now free)
 	expectCustomerFeatureCorrect({
@@ -243,7 +244,9 @@ test.concurrent(`${chalk.yellowBright("version-pricing: remove base price")}`, a
 	});
 
 	// Product should still be active
-	expect(customer.products.find((p) => p.id === pro.id)).toBeDefined();
+	expect(
+		customer.products.find((p: ApiCusProductV3) => p.id === pro.id),
+	).toBeDefined();
 
 	// Should have 2 invoices (initial charge + credit for downgrade)
 	await expectCustomerInvoiceCorrect({
@@ -253,9 +256,11 @@ test.concurrent(`${chalk.yellowBright("version-pricing: remove base price")}`, a
 	});
 
 	// Verify product is active but has no subscription IDs (free product)
-	const customerProduct = customer.products.find((p) => p.id === pro.id);
+	const customerProduct = customer.products.find(
+		(p: ApiCusProductV3) => p.id === pro.id,
+	);
 	expect(customerProduct).toBeDefined();
-	expect(customerProduct?.subscription_ids?.length ?? 0).toBe(0);
+	expect(customerProduct?.stripe_subscription_ids?.length ?? 0).toBe(0);
 });
 
 // 1.6 Preview matches actual invoice
