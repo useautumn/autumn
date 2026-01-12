@@ -3,6 +3,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { fetchStripeCustomerForBilling } from "./fetchStripeCustomerForBilling";
 import { fetchStripeSubscriptionForBilling } from "./fetchStripeSubscriptionForBilling";
 import { fetchStripeSubscriptionScheduleForBilling } from "./fetchStripeSubscriptionScheduleForBilling";
+import { setupStripeDiscountsForBilling } from "./setupStripeDiscountsForBilling";
 
 export const setupStripeBillingContext = async ({
 	ctx,
@@ -41,10 +42,16 @@ export const setupStripeBillingContext = async ({
 		fullCus: fullCustomer,
 	});
 
+	const stripeDiscounts = setupStripeDiscountsForBilling({
+		stripeSubscription,
+		stripeCustomer,
+	});
+
 	return {
 		stripeSubscription,
 		stripeSubscriptionSchedule,
 		stripeCustomer,
+		stripeDiscounts,
 		paymentMethod,
 		testClockFrozenTime,
 	};
