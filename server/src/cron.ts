@@ -1,7 +1,7 @@
 import { initInfisical } from "./external/infisical/initInfisical.js";
-import { warmupRegionalRedis } from "./external/redis/initRedis.js";
 
 await initInfisical();
+const { warmupRegionalRedis } = await import("./external/redis/initRedis.js");
 await warmupRegionalRedis();
 
 await import("./cron/cronInit.js");
