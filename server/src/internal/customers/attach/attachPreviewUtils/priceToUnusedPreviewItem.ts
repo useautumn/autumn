@@ -4,7 +4,7 @@ import {
 	type FullCustomer,
 	formatAmount,
 	getTotalCusProdQuantity,
-	isCusProductTrialing,
+	isCustomerProductTrialing,
 	isFixedPrice,
 	type Organization,
 	type Price,
@@ -66,7 +66,7 @@ export const priceToUnusedPreviewItem = ({
 	anchor?: number;
 }) => {
 	now = now || Date.now();
-	const onTrial = isCusProductTrialing({ cusProduct, now });
+	const onTrial = isCustomerProductTrialing(cusProduct, { nowMs: now });
 
 	const subItem = findStripeItemForPrice({
 		price,

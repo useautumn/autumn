@@ -9,7 +9,6 @@ import type {
 	WebhookUnCancellation,
 } from "@puzzmo/revenue-cat-webhook-types";
 import { type Context, Hono } from "hono";
-import type { HonoEnv } from "@/honoUtils/HonoEnv";
 import { getRevenuecatWebhookSecret } from "./misc/getRevenuecatWebhookSecret";
 import {
 	revenuecatLogMiddleware,
@@ -22,14 +21,17 @@ import { handleExpiration } from "./webhookHandlers/handleRevenuecatExpiration";
 import { handleInitialPurchase } from "./webhookHandlers/handleRevenuecatInitialPurchase";
 import { handleNonRenewingPurchase } from "./webhookHandlers/handleRevenuecatNonRenewingPurchase";
 import { handleUncancellation } from "./webhookHandlers/handleRevenuecatUncancellation";
+import type { RevenueCatWebhookHonoEnv } from "./webhookMiddlewares/revenuecatWebhookContext";
+import { revenuecatWebhookRefreshMiddleware } from "./webhookMiddlewares/revenuecatWebhookRefreshMiddleware";
 
-export const revenuecatWebhookRouter = new Hono<HonoEnv>();
+export const revenuecatWebhookRouter = new Hono<RevenueCatWebhookHonoEnv>();
 
 revenuecatWebhookRouter.post(
 	"/:orgId/:env",
 	revenuecatSeederMiddleware,
 	revenuecatLogMiddleware,
-	async (c: Context<HonoEnv>) => {
+	revenuecatWebhookRefreshMiddleware,
+	async (c: Context<RevenueCatWebhookHonoEnv>) => {
 		const ctx = c.get("ctx");
 		const { logger, org, env } = ctx;
 		const Authorization = c.req.header("Authorization");
@@ -45,6 +47,9 @@ revenuecatWebhookRouter.post(
 				});
 				return c.json({ error: "Unauthorized" }, 401);
 			}
+
+			// Set event type in context for logging in refresh middleware
+			ctx.revenuecatEventType = body.event.type;
 
 			switch (body.event.type) {
 				case "INITIAL_PURCHASE":

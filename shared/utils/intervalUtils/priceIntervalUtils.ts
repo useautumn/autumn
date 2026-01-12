@@ -81,8 +81,6 @@ export const getSmallestInterval = ({
 	ents?: Entitlement[];
 	excludeOneOff?: boolean;
 }) => {
-	// let sortedPrices = structuredClone(prices);
-	// sortPricesByInterval(sortedPrices);
 	let allPriceIntervals = prices.map((p) => {
 		return {
 			interval: p.config.interval,

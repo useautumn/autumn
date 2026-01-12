@@ -5,7 +5,7 @@ import {
 	AttachFunctionResponseSchema,
 	AttachScenario,
 	CusProductStatus,
-	isCusProductTrialing,
+	isCustomerProductTrialing,
 	SuccessCode,
 } from "@autumn/shared";
 import type Stripe from "stripe";
@@ -107,8 +107,6 @@ export const handleMultiAttachFlow = async ({
 			curSub: curSub!,
 			itemSet,
 			branch,
-			// fromCreate: attachParams.products.length === 0, // just for now, if no products, it comes from cancel product...
-			fromCreate: true, // just for now, if no products, it comes from cancel product...
 		});
 
 		// TODO: Add these missing functions or remove if not needed
@@ -188,8 +186,7 @@ export const handleMultiAttachFlow = async ({
 				logger,
 				productOptions,
 				trialEndsAt:
-					mergeCusProduct &&
-					isCusProductTrialing({ cusProduct: mergeCusProduct })
+					mergeCusProduct && isCustomerProductTrialing(mergeCusProduct)
 						? mergeCusProduct?.trial_ends_at || undefined
 						: undefined,
 			}),

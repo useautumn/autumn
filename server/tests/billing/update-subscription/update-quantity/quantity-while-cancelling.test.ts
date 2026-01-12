@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import {
-	expectProductCanceled,
+	expectProductCanceling,
 	expectProductScheduled,
 } from "@tests/billing/utils/expectCustomerProductCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
@@ -84,7 +84,7 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: active canceli
 	// Verify prepaid is canceled and free is scheduled
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductCanceled({
+	await expectProductCanceling({
 		customer: customerAfterCancel,
 		productId: prepaid.id,
 	});
@@ -107,7 +107,7 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: active canceli
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Prepaid should remain canceling (canceling state preserved)
-	await expectProductCanceled({
+	await expectProductCanceling({
 		customer: customerAfterUpdate,
 		productId: prepaid.id,
 	});
@@ -198,7 +198,7 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: scheduled prod
 	// Verify premium is canceled and prepaid is scheduled
 	const customerAfterDowngrade =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductCanceled({
+	await expectProductCanceling({
 		customer: customerAfterDowngrade,
 		productId: premium.id,
 	});
@@ -231,7 +231,7 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: scheduled prod
 	});
 
 	// Premium product should remain canceling
-	await expectProductCanceled({
+	await expectProductCanceling({
 		customer: customerAfterUpdate,
 		productId: premium.id,
 	});
@@ -331,7 +331,7 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: preserves usag
 	// Verify prepaid is canceled and free is scheduled
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductCanceled({
+	await expectProductCanceling({
 		customer: customerAfterCancel,
 		productId: prepaid.id,
 	});
@@ -354,7 +354,7 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: preserves usag
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Prepaid should remain canceling (canceling state preserved)
-	await expectProductCanceled({
+	await expectProductCanceling({
 		customer: customerAfterUpdate,
 		productId: prepaid.id,
 	});

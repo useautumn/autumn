@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, OnDecrease, OnIncrease } from "@autumn/shared";
+import { expectCustomerFeatureCorrect } from "@tests/billing/utils/expectCustomerFeatureCorrect.js";
 import { expectCustomerInvoiceCorrect } from "@tests/billing/utils/expectCustomerInvoiceCorrect.js";
-import { expectEntityFeatureCorrect } from "@tests/billing/utils/expectEntityFeatureCorrect.js";
-import { expectEntityProductActive } from "@tests/billing/utils/expectEntityProductCorrect.js";
+import { expectProductActive } from "@tests/billing/utils/expectCustomerProductCorrect.js";
 import { expectLatestInvoiceCorrect } from "@tests/billing/utils/expectLatestInvoiceCorrect.js";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -97,16 +97,16 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: entity 1 increases
 
 	// Verify entity 1 has new balance
 	const entity1 = await autumnV1.entities.get(customerId, entities[0].id);
-	await expectEntityFeatureCorrect({
-		entity: entity1,
+	await expectCustomerFeatureCorrect({
+		customer: entity1,
 		featureId: TestFeature.Messages,
 		balance: newQuantity1,
 	});
 
 	// Verify entity 2 is unchanged
 	const entity2 = await autumnV1.entities.get(customerId, entities[1].id);
-	await expectEntityFeatureCorrect({
-		entity: entity2,
+	await expectCustomerFeatureCorrect({
+		customer: entity2,
 		featureId: TestFeature.Messages,
 		balance: initialQuantity2,
 	});
@@ -196,16 +196,16 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: entity 2 decreases
 
 	// Verify entity 2 has new balance
 	const entity2 = await autumnV1.entities.get(customerId, entities[1].id);
-	await expectEntityFeatureCorrect({
-		entity: entity2,
+	await expectCustomerFeatureCorrect({
+		customer: entity2,
 		featureId: TestFeature.Messages,
 		balance: newQuantity2,
 	});
 
 	// Verify entity 1 is unchanged
 	const entity1 = await autumnV1.entities.get(customerId, entities[0].id);
-	await expectEntityFeatureCorrect({
-		entity: entity1,
+	await expectCustomerFeatureCorrect({
+		customer: entity1,
 		featureId: TestFeature.Messages,
 		balance: initialQuantity1,
 	});
@@ -302,13 +302,13 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: mixed changes acro
 	const entity1 = await autumnV1.entities.get(customerId, entities[0].id);
 	const entity2 = await autumnV1.entities.get(customerId, entities[1].id);
 
-	await expectEntityFeatureCorrect({
-		entity: entity1,
+	await expectCustomerFeatureCorrect({
+		customer: entity1,
 		featureId: TestFeature.Messages,
 		balance: newQuantity1,
 	});
-	await expectEntityFeatureCorrect({
-		entity: entity2,
+	await expectCustomerFeatureCorrect({
+		customer: entity2,
 		featureId: TestFeature.Messages,
 		balance: newQuantity2,
 	});
@@ -398,8 +398,8 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: OnDecrease.None cr
 
 	// Balance is updated immediately with OnDecrease.None
 	const entity1After = await autumnV1.entities.get(customerId, entities[0].id);
-	await expectEntityFeatureCorrect({
-		entity: entity1After,
+	await expectCustomerFeatureCorrect({
+		customer: entity1After,
 		featureId: TestFeature.Messages,
 		balance: newQuantity1,
 	});
@@ -413,8 +413,8 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: OnDecrease.None cr
 
 	// Entity 2 should be unchanged
 	const entity2 = await autumnV1.entities.get(customerId, entities[1].id);
-	await expectEntityFeatureCorrect({
-		entity: entity2,
+	await expectCustomerFeatureCorrect({
+		customer: entity2,
 		featureId: TestFeature.Messages,
 		balance: initialQuantity2,
 	});
@@ -497,24 +497,24 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: different products
 
 	// Verify entity 2 (pro) has new balance
 	const entity2 = await autumnV1.entities.get(customerId, entities[1].id);
-	await expectEntityProductActive({
-		entity: entity2,
+	await expectProductActive({
+		customer: entity2,
 		productId: proProduct.id,
 	});
-	await expectEntityFeatureCorrect({
-		entity: entity2,
+	await expectCustomerFeatureCorrect({
+		customer: entity2,
 		featureId: TestFeature.Messages,
 		balance: newQuantityPro,
 	});
 
 	// Verify entity 1 (base) is unchanged
 	const entity1 = await autumnV1.entities.get(customerId, entities[0].id);
-	await expectEntityProductActive({
-		entity: entity1,
+	await expectProductActive({
+		customer: entity1,
 		productId: baseProduct.id,
 	});
-	await expectEntityFeatureCorrect({
-		entity: entity1,
+	await expectCustomerFeatureCorrect({
+		customer: entity1,
 		featureId: TestFeature.Messages,
 		balance: initialQuantityBase,
 	});
@@ -618,26 +618,26 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: multiple features 
 
 	// Verify entity 1 features
 	const entity1 = await autumnV1.entities.get(customerId, entities[0].id);
-	await expectEntityFeatureCorrect({
-		entity: entity1,
+	await expectCustomerFeatureCorrect({
+		customer: entity1,
 		featureId: TestFeature.Messages,
 		balance: 100,
 	});
-	await expectEntityFeatureCorrect({
-		entity: entity1,
+	await expectCustomerFeatureCorrect({
+		customer: entity1,
 		featureId: TestFeature.Words,
 		balance: 100,
 	});
 
 	// Verify entity 2 is unchanged
 	const entity2 = await autumnV1.entities.get(customerId, entities[1].id);
-	await expectEntityFeatureCorrect({
-		entity: entity2,
+	await expectCustomerFeatureCorrect({
+		customer: entity2,
 		featureId: TestFeature.Messages,
 		balance: 100,
 	});
-	await expectEntityFeatureCorrect({
-		entity: entity2,
+	await expectCustomerFeatureCorrect({
+		customer: entity2,
 		featureId: TestFeature.Words,
 		balance: 500,
 	});

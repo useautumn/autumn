@@ -13,11 +13,11 @@ import {
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
+import { stripeSubscriptionToNowMs } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
 import { constructStripeInvoiceItem } from "@/internal/invoices/invoiceItemUtils/invoiceItemUtils.js";
 import { createAndFinalizeInvoice } from "@/internal/invoices/invoiceUtils/createAndFinalizeInvoice.js";
 import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
 import { formatUnixToDate } from "@/utils/genUtils.js";
-import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
 import type { Logger } from "../../external/logtail/logtailUtils";
 
 export const getUpgradeProrationInvoiceItem = ({
@@ -121,7 +121,10 @@ export const createUpgradeProrationInvoice = async ({
 	onIncrease: OnIncrease;
 	logger: Logger;
 }) => {
-	const now = await getStripeNow({ stripeCli, stripeSub: sub });
+	const now = await stripeSubscriptionToNowMs({
+		stripeSubscription: sub,
+		stripeCli,
+	});
 
 	const paymentMethod = await getCusPaymentMethod({
 		stripeCli,

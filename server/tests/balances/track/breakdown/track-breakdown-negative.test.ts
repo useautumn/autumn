@@ -151,6 +151,7 @@ describe(`${chalk.yellowBright("track-breakdown-negative: refunds with breakdown
 		})) as unknown as CheckResponseV2;
 
 		const ppuBreakdown = res.balance?.breakdown?.find((b) => b.overage_allowed);
+
 		expect(ppuBreakdown?.purchased_balance).toBe(10);
 	});
 

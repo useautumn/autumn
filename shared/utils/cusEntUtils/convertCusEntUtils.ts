@@ -49,7 +49,7 @@ export const cusEntToBalance = ({
 	});
 
 	if (withRollovers && rollover) {
-		return balance + rollover.balance;
+		return new Decimal(balance).add(rollover.balance).toNumber();
 	}
 
 	return balance;
@@ -91,7 +91,10 @@ export const cusEntToIncludedUsage = ({
 	const total = new Decimal(startingBalance).mul(entityCount).toNumber();
 
 	if (withRollovers && rollover) {
-		return total + rollover.balance + rollover.usage;
+		return new Decimal(total)
+			.add(rollover.balance)
+			.add(rollover.usage)
+			.toNumber();
 	}
 
 	return total;

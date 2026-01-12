@@ -1,10 +1,13 @@
 import { expect } from "bun:test";
-import { ApiVersion } from "@autumn/shared";
+import {
+	type ApiCustomerV3,
+	type ApiEntityV0,
+	ApiVersion,
+} from "@autumn/shared";
 import type { Customer } from "autumn-js";
 import { AutumnInt } from "@/external/autumn/autumnCli";
 
 const defaultAutumn = new AutumnInt({ version: ApiVersion.V1_2 });
-
 
 export const expectCustomerFeatureExists = async ({
 	customerId,
@@ -12,7 +15,7 @@ export const expectCustomerFeatureExists = async ({
 	featureId,
 }: {
 	customerId?: string;
-	customer?: Customer;
+	customer?: Customer | ApiEntityV0;
 	featureId: string;
 }) => {
 	const customer = providedCustomer
@@ -26,7 +29,7 @@ export const expectCustomerFeatureExists = async ({
 
 const TEN_MINUTES_MS = 10 * 60 * 1000;
 
-export const expectCustomerFeatureCorrect = async ({
+export const expectCustomerFeatureCorrect = ({
 	customerId,
 	customer: providedCustomer,
 	featureId,
@@ -36,23 +39,31 @@ export const expectCustomerFeatureCorrect = async ({
 	resetsAt,
 }: {
 	customerId?: string;
-	customer?: Customer;
+	customer?: ApiCustomerV3 | ApiEntityV0;
 	featureId: string;
 	includedUsage?: number;
 	balance?: number;
 	usage?: number;
 	resetsAt?: number;
 }) => {
-	const customer = providedCustomer
-		? providedCustomer 
-		: await defaultAutumn.customers.get(customerId!);
-	const feature = customer.features?.[featureId];
+	if (!providedCustomer && !customerId) {
+		throw new Error("Either customer or customerId must be provided");
+	}
 
-	expect(feature).toMatchObject({
-		included_usage: includedUsage,
-		balance,
-		usage,
-	});
+	const feature = providedCustomer?.features?.[featureId];
+	expect(feature, `Feature ${featureId} not found`).toBeDefined();
+
+	if (includedUsage !== undefined) {
+		expect(feature?.included_usage).toBe(includedUsage);
+	}
+
+	if (balance !== undefined) {
+		expect(feature?.balance).toBe(balance);
+	}
+
+	if (usage !== undefined) {
+		expect(feature?.usage).toBe(usage);
+	}
 
 	if (resetsAt !== undefined) {
 		const actualResetsAt = feature?.next_reset_at ?? 0;

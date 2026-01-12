@@ -72,6 +72,7 @@ export const initCusProduct = ({
 	trialEndsAt,
 	subscriptionStatus,
 	canceledAt,
+	endedAt,
 	createdAt,
 	collectionMethod,
 	subscriptionIds,
@@ -95,6 +96,7 @@ export const initCusProduct = ({
 	trialEndsAt?: number | null;
 	subscriptionStatus?: CusProductStatus;
 	canceledAt?: number | null;
+	endedAt?: number | null;
 	createdAt?: number | null;
 	collectionMethod?: CollectionMethod;
 	subscriptionIds?: string[];
@@ -121,7 +123,7 @@ export const initCusProduct = ({
 		product_id: product.id,
 		created_at: createdAt || Date.now(),
 		canceled: notNullish(canceledAt),
-
+		ended_at: endedAt,
 		status: subscriptionStatus
 			? subscriptionStatus
 			: isFuture
@@ -280,6 +282,7 @@ export const createFullCusProduct = async ({
 	trialEndsAt,
 	subscriptionStatus,
 	canceledAt = null,
+	endedAt,
 	createdAt = null,
 	subscriptionIds = [],
 	subscriptionScheduleIds = [],
@@ -302,6 +305,7 @@ export const createFullCusProduct = async ({
 	trialEndsAt?: number;
 	subscriptionStatus?: CusProductStatus;
 	canceledAt?: number | null;
+	endedAt?: number | null;
 	createdAt?: number | null;
 	subscriptionIds?: string[];
 	subscriptionScheduleIds?: string[];
@@ -464,6 +468,7 @@ export const createFullCusProduct = async ({
 		entityId: attachParams.entityId,
 		apiVersion: attachParams.apiVersion,
 		quantity: productOptions?.quantity ?? undefined,
+		endedAt,
 	});
 
 	if (!isOneOff(prices) && !product.is_add_on) {

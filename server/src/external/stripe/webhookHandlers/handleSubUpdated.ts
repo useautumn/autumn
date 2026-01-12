@@ -8,8 +8,12 @@ import {
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getExpandedStripeSubscription } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription.js";
-import { getStripeSubscriptionTrialEndsAtMs } from "@/external/stripe/webhookHandlers/handleSubUpdated/getStripeSubscriptionTrialEndsAt.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { stripeSubscriptionToTrialEndsAtMs } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
+import { CusService } from "@/internal/customers/CusService.js";
+import {
+	CusProductService,
+	RELEVANT_STATUSES,
+} from "@/internal/customers/cusProducts/CusProductService.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { handleSchedulePhaseCompleted } from "./handleSubUpdated/handleSchedulePhaseCompleted.js";
@@ -27,6 +31,14 @@ export const handleSubscriptionUpdated = async ({
 	const previousAttributes = eventData.previous_attributes;
 	const { db, org, env, logger } = ctx;
 
+	const fullCustomer = await CusService.getFull({
+		db,
+		idOrInternalId: ctx.customerId ?? "",
+		orgId: org.id,
+		env,
+		inStatuses: RELEVANT_STATUSES,
+	});
+
 	const stripeSubscription = await getExpandedStripeSubscription({
 		ctx,
 		subscriptionId: (eventData.object as Stripe.Subscription).id,
@@ -37,6 +49,7 @@ export const handleSubscriptionUpdated = async ({
 		ctx,
 		stripeSubscription,
 		prevAttributes: previousAttributes,
+		fullCustomer,
 	});
 
 	// Get cus products by stripe sub id
@@ -59,7 +72,7 @@ export const handleSubscriptionUpdated = async ({
 		incomplete: CusProductStatus.PastDue, // temporary status for incomplete subscription
 	};
 
-	const trialEndsAtMs = getStripeSubscriptionTrialEndsAtMs({
+	const trialEndsAtMs = stripeSubscriptionToTrialEndsAtMs({
 		stripeSubscription,
 	});
 	ctx.logger.info(

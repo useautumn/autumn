@@ -6,6 +6,7 @@ import type {
 import {
 	addDuration,
 	initFreeTrial,
+	isCustomerProductTrialing,
 	isProductPaidAndRecurring,
 	secondsToMs,
 } from "@autumn/shared";
@@ -25,12 +26,12 @@ export const setupTrialContext = ({
 	currentEpochMs: number;
 	params: UpdateSubscriptionV0Params;
 	fullProduct: FullProduct;
-}): TrialContext => {
+}): TrialContext | undefined => {
 	const freeTrialParams = params.free_trial;
 
 	// Case 1: If free trial is null (removing free trial)
 	if (freeTrialParams === null) {
-		return { freeTrial: null };
+		return { freeTrial: null, trialEndsAt: null };
 	}
 
 	// Case 2: If free trial params are passed in
@@ -65,17 +66,20 @@ export const setupTrialContext = ({
 
 			return {
 				freeTrial: null,
-				trialEndsAt,
+				trialEndsAt: trialEndsAt,
 			};
+		} else {
+			return undefined;
 		}
-		return {
-			freeTrial: null,
-		};
 	}
 
 	// Case 4: Return free trial / trial ends at from current customer product
-	return {
-		freeTrial: customerProduct.free_trial,
-		trialEndsAt: customerProduct.trial_ends_at ?? undefined,
-	};
+	if (isCustomerProductTrialing(customerProduct, { nowMs: currentEpochMs })) {
+		return {
+			freeTrial: customerProduct.free_trial, // can be undefined...
+			trialEndsAt: customerProduct.trial_ends_at ?? null,
+		};
+	}
+
+	return undefined;
 };

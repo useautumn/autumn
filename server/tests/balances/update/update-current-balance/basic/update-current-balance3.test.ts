@@ -166,4 +166,3 @@ describe(`${chalk.yellowBright("update-current-balance3: update balance to 0")}`
 		});
 	});
 });
-

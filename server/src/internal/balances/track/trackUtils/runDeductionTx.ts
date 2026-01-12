@@ -1,8 +1,4 @@
-import type {
-	Event,
-	PgDeductionUpdate,
-	SortCusEntParams,
-} from "@autumn/shared";
+import type { CustomerEntitlementFilters, Event } from "@autumn/shared";
 import {
 	CusProductStatus,
 	cusEntToCusPrice,
@@ -16,7 +12,6 @@ import {
 	notNullish,
 	nullish,
 	orgToInStatuses,
-	updateCusEntInFullCus,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { sql } from "drizzle-orm";
@@ -27,8 +22,10 @@ import { getUnlimitedAndUsageAllowed } from "../../../customers/cusProducts/cusE
 import { deleteCachedApiCustomer } from "../../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { getCreditCost } from "../../../features/creditSystemUtils.js";
 import { isPaidContinuousUse } from "../../../features/featureUtils.js";
-import { constructEvent, type EventInfo } from "./eventUtils.js";
-import type { FeatureDeduction } from "./getFeatureDeductions.js";
+import { type EventInfo, initEvent } from "../../events/initEvent.js";
+import { applyDeductionUpdateToFullCustomer } from "../../utils/deduction/applyDeductionUpdateToFullCustomer.js";
+import type { DeductionUpdate } from "../../utils/types/deductionUpdate.js";
+import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import { handlePaidAllocatedCusEnt } from "./handlePaidAllocatedCusEnt.js";
 import { rollbackDeduction } from "./rollbackDeduction.js";
 
@@ -45,7 +42,7 @@ export type DeductionTxParams = {
 	fullCus?: FullCustomer; // if provided from function above!
 	refreshCache?: boolean; // Whether to refresh Redis cache after deduction (default: true for track, false for sync)
 
-	sortParams?: SortCusEntParams;
+	customerEntitlementFilters?: CustomerEntitlementFilters;
 };
 
 export const deductFromCusEntsPostgres = async ({
@@ -58,7 +55,7 @@ export const deductFromCusEntsPostgres = async ({
 	skipAdditionalBalance = true,
 	alterGrantedBalance = false,
 	fullCus,
-	sortParams,
+	customerEntitlementFilters,
 }: DeductionTxParams): Promise<{
 	oldFullCus: FullCustomer;
 	fullCus: FullCustomer | undefined;
@@ -111,14 +108,31 @@ export const deductFromCusEntsPostgres = async ({
 					featureId: feature.id,
 				});
 
+		// For refunds (negative amounts), reverse usage_allowed sorting
+		// so overage entitlements are processed first (to recover negative balance)
+		const isRefund = (toDeduct ?? 0) < 0;
+
 		const cusEnts = cusProductsToCusEnts({
 			cusProducts: fullCus.customer_products,
 			featureIds: relevantFeatures.map((f) => f.id),
 			reverseOrder: org.config?.reverse_deduction_order,
 			entity: fullCus.entity,
 			inStatuses: orgToInStatuses({ org }),
-			sortParams,
+			customerEntitlementFilters,
+			isRefund,
 		});
+
+		// Debug: log sort order
+		console.log(`[runDeductionTx] toDeduct=${toDeduct}, isRefund=${isRefund}`);
+		console.log(
+			`[runDeductionTx] CusEnts:`,
+			cusEnts.map((ce) => ({
+				id: ce.id.slice(-8),
+				usage_allowed: ce.usage_allowed,
+				balance: ce.balance,
+				interval: ce.entitlement.interval,
+			})),
+		);
 
 		// Check if ANY relevant feature (primary or credit system) is unlimited
 		// Add unlimited features to actualDeductions with value 0 (like Lua's changedCustomerFeatureIds)
@@ -201,7 +215,7 @@ export const deductFromCusEntsPostgres = async ({
 
 		// Parse the JSONB result
 		const resultJson = result[0]?.deduct_from_cus_ents as {
-			updates: Record<string, PgDeductionUpdate>;
+			updates: Record<string, DeductionUpdate>;
 			remaining: number;
 		};
 
@@ -275,7 +289,7 @@ export const deductFromCusEntsPostgres = async ({
 					updates,
 				});
 
-				updateCusEntInFullCus({
+				applyDeductionUpdateToFullCustomer({
 					fullCus,
 					cusEntId,
 					update,
@@ -337,7 +351,7 @@ export const runDeductionTx = async (
 	}
 
 	if (params.eventInfo) {
-		const newEvent = constructEvent({
+		const newEvent = initEvent({
 			ctx,
 			eventInfo: params.eventInfo,
 			internalCustomerId: fullCus.internal_id,
@@ -355,31 +369,9 @@ export const runDeductionTx = async (
 	if (params?.refreshCache && fullCus) {
 		await deleteCachedApiCustomer({
 			customerId: fullCus.id ?? "",
-			orgId: ctx.org.id,
-			env: ctx.env,
+			ctx,
+			source: `runDeductionTx, refreshing cache`,
 		});
-		// // 1. If paid allocated, delete cache
-		// if (result?.isPaidAllocated) {
-		// 	await deleteCachedApiCustomer({
-		// 		customerId: fullCus.id ?? "",
-		// 		orgId: ctx.org.id,
-		// 		env: ctx.env,
-		// 	});
-		// } else {
-		// 	for (const [featureId, deductedAmount] of Object.entries(
-		// 		actualDeductions,
-		// 	)) {
-		// 		if (deductedAmount !== 0) {
-		// 			await deductFromCache({
-		// 				ctx,
-		// 				customerId: fullCus.id ?? "",
-		// 				featureId,
-		// 				amount: deductedAmount,
-		// 				entityId: params.entityId,
-		// 			});
-		// 		}
-		// 	}
-		// }
 	}
 
 	return {

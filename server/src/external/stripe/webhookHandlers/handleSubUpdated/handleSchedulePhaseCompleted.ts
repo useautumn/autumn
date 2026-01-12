@@ -1,32 +1,41 @@
 import {
 	AttachScenario,
 	CusProductStatus,
+	type FullCustomer,
 	formatMs,
-	formatMsToDate,
-	formatSeconds,
 	isCustomerProductExpired,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { stripeCustomerToNowMs } from "@/external/stripe/customers/index";
+import { isStripeSubscriptionScheduleInLastPhase } from "@/external/stripe/subscriptionSchedules/utils/classifyStripeSubscriptionScheduleUtils";
+import { stripeSubscriptionScheduleToPhaseIndex } from "@/external/stripe/subscriptionSchedules/utils/convertStripeSubscriptionScheduleUtils";
 import type { ExpandedStripeSubscription } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription.js";
+import { getStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
-import { getSubScenarioFromCache } from "@/internal/customers/cusCache/subCacheUtils.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
-import { deleteCachedApiCustomer } from "../../../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 
 export const handleSchedulePhaseCompleted = async ({
 	ctx,
 	stripeSubscription,
 	prevAttributes,
+	fullCustomer,
 }: {
 	ctx: AutumnContext;
+	fullCustomer: FullCustomer;
 	stripeSubscription: ExpandedStripeSubscription;
 	// biome-ignore lint/suspicious/noExplicitAny: Don't know the type of prevAttributes
 	prevAttributes: any;
 }) => {
-	if (await getSubScenarioFromCache({ subId: stripeSubscription.id })) {
+	if (
+		await getStripeSubscriptionLock({
+			stripeSubscriptionId: stripeSubscription.id,
+		})
+	) {
+		ctx.logger.info(
+			`[handleSchedulePhaseCompleted] SKIP: subscription is locked`,
+		);
 		return;
 	}
 
@@ -39,41 +48,29 @@ export const handleSchedulePhaseCompleted = async ({
 	if (!phasePossiblyChanged) return;
 
 	const stripeSubscriptionSchedule = stripeSubscription.schedule;
-
 	const stripeCli = createStripeCli({ org, env });
+	const customerProducts = fullCustomer.customer_products;
 
-	const cusProducts = await CusProductService.getByScheduleId({
-		db,
-		scheduleId: stripeSubscriptionSchedule.id,
-		orgId: org.id,
-		env,
-	});
-
-	const nowMs = await getStripeNow({
+	const nowMs = await stripeCustomerToNowMs({
 		stripeCli,
-		stripeCus: stripeSubscription.customer,
+		stripeCustomer: stripeSubscription.customer,
 	});
 
-	logger.debug(
-		`handling schedule phase completed for ${stripeSubscription.id}`,
-	);
-	logger.debug(`now date: ${formatMsToDate(nowMs)}`);
-	logger.debug(
-		"cusProducts",
-		cusProducts.map((cp) => ({
-			name: cp.product.name,
-			status: cp.status,
-			start: formatMs(cp.starts_at),
-			end: formatMs(cp.ended_at),
-		})),
+	const currentPhaseIndex = stripeSubscriptionScheduleToPhaseIndex({
+		stripeSubscriptionSchedule,
+		nowMs,
+	});
+
+	logger.info(
+		`[handleSchedulePhaseCompleted] sub: ${stripeSubscription.id}, now: ${formatMs(nowMs)}, currentPhase: ${currentPhaseIndex + 1}/${stripeSubscriptionSchedule.phases.length}`,
 	);
 
-	for (const cusProduct of cusProducts) {
+	for (const cusProduct of customerProducts) {
 		const shouldExpire = isCustomerProductExpired(cusProduct, { nowMs });
 
 		if (shouldExpire) {
 			logger.info(
-				`❌ expiring cus product: ${cusProduct.product.name} (entity ID: ${cusProduct.entity_id})`,
+				`[handleSchedulePhaseCompleted] ❌ expiring: ${cusProduct.product.name}${cusProduct.entity_id ? `@${cusProduct.entity_id}` : ""}`,
 			);
 			await CusProductService.update({
 				db,
@@ -94,15 +91,14 @@ export const handleSchedulePhaseCompleted = async ({
 
 		const shouldActivateCustomerProduct = () => {
 			if (cusProduct.status !== CusProductStatus.Scheduled) return false;
-
 			return cusProduct.starts_at <= nowMs;
 		};
 
 		if (shouldActivateCustomerProduct()) {
-			console.log(
-				"✅ activating scheduled customer product",
-				cusProduct.product.name,
+			logger.info(
+				`[handleSchedulePhaseCompleted] ✅ activating: ${cusProduct.product.name}${cusProduct.entity_id ? `@${cusProduct.entity_id}` : ""}`,
 			);
+
 			await CusProductService.update({
 				db,
 				cusProductId: cusProduct.id,
@@ -113,39 +109,18 @@ export const handleSchedulePhaseCompleted = async ({
 				},
 			});
 		}
-
-		// Maybe activate default product?
-		await deleteCachedApiCustomer({
-			customerId: cusProduct.customer?.id || "",
-			orgId: org.id,
-			env,
-			source: "handleSchedulePhaseCompleted",
-		});
 	}
 
-	console.log(
-		"Stripe subscription schedule phases:",
-		stripeSubscriptionSchedule.phases.map((phase) => ({
-			start_date: formatSeconds(phase.start_date),
-			end_date: formatSeconds(phase.end_date),
-			trial_end: formatSeconds(phase.trial_end),
-		})),
-	);
-	const currentPhase = stripeSubscriptionSchedule.phases.findIndex(
-		(phase) =>
-			phase.start_date <= Math.floor(nowMs / 1000) &&
-			(phase.end_date ? phase.end_date > Math.floor(nowMs / 1000) : true),
-	);
-
-	logger.debug("Current phase: ", currentPhase);
-
 	if (
-		currentPhase === stripeSubscriptionSchedule.phases.length - 1 &&
-		stripeSubscriptionSchedule.status !== "released"
+		isStripeSubscriptionScheduleInLastPhase({
+			stripeSubscriptionSchedule,
+			nowMs,
+		})
 	) {
-		logger.debug("Releasing schedule");
+		logger.debug(
+			`[handleSchedulePhaseCompleted] releasing schedule (last phase reached)`,
+		);
 		try {
-			// Last phase, cancel schedule
 			await stripeCli.subscriptionSchedules.release(
 				stripeSubscriptionSchedule.id,
 			);
@@ -160,11 +135,11 @@ export const handleSchedulePhaseCompleted = async ({
 			if (error instanceof Error) {
 				if (process.env.NODE_ENV === "development") {
 					logger.warn(
-						`schedule.phase.completed: failed to cancel schedule ${stripeSubscriptionSchedule.id}, error: ${error.message}`,
+						`[handleSchedulePhaseCompleted] failed to release schedule: ${error.message}`,
 					);
 				} else {
 					logger.error(
-						`schedule.phase.completed: failed to cancel schedule ${stripeSubscriptionSchedule.id}, error: ${error.message}`,
+						`[handleSchedulePhaseCompleted] failed to release schedule: ${error.message}`,
 					);
 				}
 			}
