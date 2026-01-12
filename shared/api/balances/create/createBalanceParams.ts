@@ -34,7 +34,7 @@ export const ValidateCreateBalanceParamsSchema = CreateBalanceSchema.extend({
 	}
 
 	if (data.feature.type === FeatureType.Metered) {
-		if (!data.granted_balance && !data.unlimited) {
+		if (data.granted_balance === undefined && !data.unlimited) {
 			return false;
 		}
 		if (data.granted_balance && data.unlimited) {
