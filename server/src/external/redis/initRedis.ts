@@ -44,6 +44,56 @@ export const getConfiguredRegions = (): string[] => {
 	return ALL_REGIONS.filter((region) => regionToCacheUrl[region]);
 };
 
+/** Wait for a Redis instance to be ready */
+const waitForRedisReady = (
+	instance: Redis,
+	region: string,
+	timeoutMs = 10000,
+): Promise<void> => {
+	return new Promise((resolve, reject) => {
+		if (instance.status === "ready") {
+			resolve();
+			return;
+		}
+
+		const timeout = setTimeout(() => {
+			reject(new Error(`Redis connection timeout for region ${region}`));
+		}, timeoutMs);
+
+		instance.once("ready", () => {
+			clearTimeout(timeout);
+			console.log(`[Redis] ${region}: connected`);
+			resolve();
+		});
+
+		instance.once("error", (err) => {
+			clearTimeout(timeout);
+			reject(err);
+		});
+	});
+};
+
+/** Pre-warm all regional Redis connections. Call on startup before processing requests. */
+export const warmupRegionalRedis = async (): Promise<void> => {
+	const regions = getConfiguredRegions();
+	console.log(
+		`[Redis] Warming up connections for ${regions.length} regions...`,
+	);
+
+	const warmupPromises = regions.map(async (region) => {
+		try {
+			const instance = getRegionalRedis(region);
+			await waitForRedisReady(instance, region);
+		} catch (error) {
+			console.error(`[Redis] ${region}: warmup failed -`, error);
+			// Don't throw - allow startup to continue even if one region fails
+		}
+	});
+
+	await Promise.all(warmupPromises);
+	console.log(`[Redis] Warmup complete`);
+};
+
 /** Configure a Redis instance with custom commands */
 const configureRedisInstance = (redisInstance: Redis): Redis => {
 	const batchDeductionScript = getBatchDeductionScript();

@@ -64,7 +64,7 @@ export const batchDeleteCachedFullCustomers = async ({
 		const regionalRedis = getRegionalRedis(region);
 
 		if (regionalRedis.status !== "ready") {
-			log.warn(`[batchDeleteCachedFullCustomers] ${region}: not_ready`);
+			console.warn(`[batchDeleteCachedFullCustomers] ${region}: not_ready`);
 			return 0;
 		}
 
@@ -88,7 +88,7 @@ export const batchDeleteCachedFullCustomers = async ({
 			}
 		}
 
-		log.info(
+		console.info(
 			`[batchDeleteCachedFullCustomers] ${region}: deleted ${deleted} keys, customers (${customers.length}), orgs (${customersByOrg.size})`,
 		);
 		return deleted;
