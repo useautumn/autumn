@@ -37,6 +37,7 @@ export const receivedByRedeemer = (received_by: RewardReceivedBy) => {
 };
 
 export const triggerFreePaidProduct = async ({
+	ctx,
 	req,
 	referralCode,
 	redeemer,
@@ -44,14 +45,15 @@ export const triggerFreePaidProduct = async ({
 	fullProduct,
 	redemption,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
+	req?: ExtendedRequest;
 	referralCode: ReferralCode;
 	redeemer: Customer;
 	rewardProgram: FullRewardProgram & { reward: Reward };
 	fullProduct: FullProduct;
 	redemption: RewardRedemption;
 }) => {
-	const { db, org, env, logger } = req;
+	const { db, org, env, logger } = ctx;
 	const { received_by } = rewardProgram;
 
 	logger.info(
@@ -101,7 +103,7 @@ export const triggerFreePaidProduct = async ({
 
 		const fullCus = [fullReferrer, fullRedeemer][i];
 		const attachParams = rewardProgramToAttachParams({
-			ctx: req as unknown as AutumnContext,
+			ctx,
 			rewardProgram,
 			customer: fullCus,
 			product: fullProduct,
@@ -145,7 +147,7 @@ export const triggerFreePaidProduct = async ({
 			});
 
 			await handleAddProduct({
-				ctx: req as unknown as AutumnContext,
+				ctx,
 				attachParams,
 				branch: AttachBranch.New,
 				config: {

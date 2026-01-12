@@ -119,7 +119,7 @@ export const ProductProps = () => {
 							time. This can alter your existing upgrade and downgrade logic, so
 							read the docs{" "}
 							<a
-								href="https://docs.useautumn.com/products/create-product#product-groups"
+								href="https://docs.useautumn.com/documentation/pricing/plans#plan-properties"
 								target="_blank"
 								rel="noopener noreferrer"
 								className="text-purple-500 underline"

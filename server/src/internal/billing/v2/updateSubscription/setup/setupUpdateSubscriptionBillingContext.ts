@@ -1,6 +1,7 @@
-import { secondsToMs, type UpdateSubscriptionV0Params } from "@autumn/shared";
+import { formatMs, type UpdateSubscriptionV0Params } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
+import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
@@ -65,19 +66,17 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		fullProduct,
 	});
 
-	// 2. Initial billing cycle anchor from Stripe subscription
-	let billingCycleAnchorMs: number | "now" =
-		secondsToMs(stripeSubscription?.billing_cycle_anchor) ?? "now";
-
 	// 3. Determine final anchor based on product transitions
-	billingCycleAnchorMs = setupResetCycleAnchor({
-		billingCycleAnchorMs,
+	let billingCycleAnchorMs = setupBillingCycleAnchor({
+		stripeSubscription,
 		customerProduct,
 		newFullProduct: fullProduct,
+		trialContext,
+		currentEpochMs,
 	});
 
 	// 4. Trial ends at overrides reset cycle anchor
-	if (trialContext.trialEndsAt) {
+	if (trialContext?.trialEndsAt) {
 		billingCycleAnchorMs = trialContext.trialEndsAt;
 	}
 
@@ -86,6 +85,10 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		customerProduct,
 		newFullProduct: fullProduct,
 	});
+
+	console.log("Billing cycle anchor: ", formatMs(billingCycleAnchorMs));
+	console.log("Trial ends at: ", formatMs(trialContext?.trialEndsAt));
+	console.log("Reset cycle anchor: ", formatMs(resetCycleAnchorMs));
 
 	const invoiceMode = setupInvoiceModeContext({ params });
 

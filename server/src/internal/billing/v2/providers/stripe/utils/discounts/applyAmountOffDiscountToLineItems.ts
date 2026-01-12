@@ -3,8 +3,10 @@ import {
 	type LineItemDiscount,
 	type StripeDiscountWithCoupon,
 	stripeToAtmnAmount,
+	sumValues,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import { addDiscountTagToDescription } from "./addDiscountTagToDescription";
 import { discountAppliesToLineItem } from "./discountAppliesToLineItem";
 
 /**
@@ -33,8 +35,8 @@ export const applyAmountOffDiscountToLineItems = ({
 
 	// Filter to applicable CHARGE line items only
 	// Discounts reduce what the customer pays, so only apply to charges
-	const applicableChargeItems = lineItems.filter(
-		(item) => discountAppliesToLineItem({ discount, lineItem: item }),
+	const applicableChargeItems = lineItems.filter((item) =>
+		discountAppliesToLineItem({ discount, lineItem: item }),
 	);
 
 	if (applicableChargeItems.length === 0) return lineItems;
@@ -43,9 +45,8 @@ export const applyAmountOffDiscountToLineItems = ({
 	const discountMap = new Map<LineItem, number>();
 
 	// Distribute discount proportionally across charge items
-	const total = applicableChargeItems.reduce(
-		(sum, item) => sum + Math.abs(item.amount),
-		0,
+	const total = sumValues(
+		applicableChargeItems.map((item) => Math.abs(item.amount)),
 	);
 
 	if (total === 0) return lineItems;
@@ -80,6 +81,9 @@ export const applyAmountOffDiscountToLineItems = ({
 
 		return {
 			...item,
+			description: addDiscountTagToDescription({
+				description: item.description,
+			}),
 			discounts: [...existingDiscounts, newDiscount],
 			finalAmount,
 		};

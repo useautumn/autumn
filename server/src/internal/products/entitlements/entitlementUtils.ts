@@ -169,13 +169,13 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
 	const entsAreDiff = Object.values(diffs).some((d) => d.condition);
 
 	if (entsAreDiff) {
-		console.log("Entitlements different");
-		console.log(
-			"Differences:",
-			Object.values(diffs)
-				.filter((d) => d.condition)
-				.map((d) => d.message),
-		);
+		// console.log("Entitlements different");
+		// console.log(
+		// 	"Differences:",
+		// 	Object.values(diffs)
+		// 		.filter((d) => d.condition)
+		// 		.map((d) => d.message),
+		// );
 	}
 	return !entsAreDiff;
 };

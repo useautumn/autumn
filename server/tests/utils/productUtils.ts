@@ -56,7 +56,7 @@ export const createProduct = async ({
 
 	if (prefix) {
 		clone.id = `${prefix}_${clone.id}`;
-		clone.name = `${prefix} ${clone.name}`;
+		clone.name = `${clone.name} ${prefix}`;
 	}
 
 	try {

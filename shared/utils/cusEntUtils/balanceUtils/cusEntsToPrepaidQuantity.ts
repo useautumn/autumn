@@ -1,6 +1,7 @@
 import { cusEntToCusPrice } from "@utils/cusEntUtils/convertCusEntUtils/cusEntToCusPrice";
 import { Decimal } from "decimal.js";
 import {
+	entToOptions,
 	type FullCusEntWithFullCusProduct,
 	isPrepaidPrice,
 	sumValues,
@@ -17,10 +18,10 @@ export const cusEntToPrepaidQuantity = ({
 	if (!cusPrice || !isPrepaidPrice(cusPrice.price)) return 0;
 
 	// 3. Get quantity
-	const options = cusEnt.customer_product.options.find(
-		(option) =>
-			option.internal_feature_id === cusEnt.entitlement.internal_feature_id,
-	);
+	const options = entToOptions({
+		ent: cusEnt.entitlement,
+		options: cusEnt.customer_product.options,
+	});
 
 	if (!options) return 0;
 

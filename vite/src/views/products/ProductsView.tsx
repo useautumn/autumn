@@ -9,6 +9,7 @@ import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetCleanup } from "@/hooks/stores/useSheetStore";
 import LoadingScreen from "../general/LoadingScreen";
+import { OnboardingGuide } from "../onboarding4/OnboardingGuide";
 import { FeaturesPage } from "./features/FeaturesPage";
 import { ProductsContext } from "./ProductsContext";
 import { ProductsPage } from "./products/ProductsPage";
@@ -38,9 +39,10 @@ function ProductsView({ env: _env }: { env: AppEnv }) {
 	return (
 		<ProductsContext.Provider value={{}}>
 			<div className="flex flex-col gap-4 h-fit relative w-full pb-8 max-w-5xl mx-auto pt-8">
-				{/* <h1 className="text-xl font-medium shrink-0 pt-6 pl-10">
-					{keyToTitle(tab, { exclusionMap: { products: "Plans" } })}
-				</h1> */}
+				{/* Onboarding Guide - visible on all tabs */}
+				<div className="px-10">
+					<OnboardingGuide />
+				</div>
 
 				{tab === "products" && <ProductsPage />}
 				{tab === "features" && <FeaturesPage />}

@@ -4,7 +4,7 @@ import {
 	type AttachFunctionResponse,
 	AttachFunctionResponseSchema,
 	AttachScenario,
-	isCusProductTrialing,
+	isCustomerProductTrialing,
 	MetadataType,
 	SuccessCode,
 } from "@autumn/shared";
@@ -86,9 +86,8 @@ export const handlePaidProduct = async ({
 
 	if (mergeSub && !config.disableMerge) {
 		if (mergeCusProduct?.free_trial) {
-			trialEndsAt = isCusProductTrialing({
-				cusProduct: mergeCusProduct,
-				now: attachParams.now,
+			trialEndsAt = isCustomerProductTrialing(mergeCusProduct, {
+				nowMs: attachParams.now,
 			})
 				? mergeCusProduct.trial_ends_at
 				: undefined;
@@ -109,7 +108,6 @@ export const handlePaidProduct = async ({
 			itemSet: newItemSet,
 			config,
 			branch,
-			fromCreate: true,
 		});
 
 		sub = updatedSub;

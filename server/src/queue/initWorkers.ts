@@ -10,9 +10,10 @@ import type { Logger } from "pino";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
-import { runInsertEventBatch } from "@/internal/balances/track/eventUtils/runInsertEventBatch.js";
-import { runSyncBalanceBatch } from "@/internal/balances/utils/sync/runSyncBalanceBatch.js";
-import { syncItemV2 } from "@/internal/balances/utils/sync/syncItemV2.js";
+import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
+import { runSyncBalanceBatch } from "@/internal/balances/utils/sync/legacy/runSyncBalanceBatch.js";
+import { syncItemV2 } from "@/internal/balances/utils/sync/legacy/syncItemV2.js";
+import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
 import { runClearCreditSystemCacheTask } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import { runSaveFeatureDisplayTask } from "@/internal/features/featureUtils.js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
@@ -85,15 +86,6 @@ const processMessage = async ({
 			return;
 		}
 
-		if (job.name === JobName.Migration) {
-			await runMigrationTask({
-				db,
-				payload: job.data,
-				logger: workerLogger,
-			});
-			return;
-		}
-
 		if (job.name === JobName.ClearCreditSystemCustomerCache) {
 			await runClearCreditSystemCacheTask({
 				db,
@@ -106,8 +98,7 @@ const processMessage = async ({
 		// Jobs below need worker context
 		const ctx = await createWorkerContext({
 			db,
-			orgId: job.data.orgId,
-			env: job.data.env,
+			payload: job.data,
 			logger: workerLogger,
 		});
 
@@ -116,6 +107,15 @@ const processMessage = async ({
 				ctx,
 				messageId: message.MessageId,
 			});
+		}
+
+		if (job.name === JobName.Migration) {
+			if (!ctx) {
+				workerLogger.error("No context found for migration job");
+				return;
+			}
+			await runMigrationTask({ ctx, payload: job.data });
+			return;
 		}
 
 		if (actionHandlers.includes(job.name as JobName)) {
@@ -159,6 +159,19 @@ const processMessage = async ({
 			return;
 		}
 
+		if (job.name === JobName.SyncBalanceBatchV3) {
+			if (!ctx) {
+				workerLogger.error("No context found for sync balance batch v3 job");
+				return;
+			}
+
+			await syncItemV3({
+				ctx,
+				payload: job.data,
+			});
+			return;
+		}
+
 		if (job.name === JobName.InsertEventBatch) {
 			await runInsertEventBatch({
 				db,
@@ -169,10 +182,13 @@ const processMessage = async ({
 		}
 
 		if (job.name === JobName.TriggerCheckoutReward) {
+			if (!ctx) {
+				workerLogger.error("No context found for trigger checkout reward job");
+				return;
+			}
 			await runTriggerCheckoutReward({
-				db,
+				ctx,
 				payload: job.data,
-				logger: workerLogger,
 			});
 		}
 	} catch (error: any) {

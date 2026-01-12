@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
-import { ProductItemInterval } from "@autumn/shared";
+import {
+	type ApiCustomerV3,
+	EntInterval,
+	ProductItemInterval,
+} from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/billing/utils/expectCustomerInvoiceCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -52,7 +56,7 @@ test.concurrent(`${chalk.yellowBright("free-to-free: add boolean feature")}`, as
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Messages usage should stay the same
 	expectCustomerFeatureCorrect({
@@ -110,7 +114,7 @@ test.concurrent(`${chalk.yellowBright("free-to-free: add unlimited feature")}`, 
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Messages should now be unlimited
 	expect(customer.features[TestFeature.Messages].unlimited).toBe(true);
@@ -159,7 +163,7 @@ test.concurrent(`${chalk.yellowBright("free-to-free: add included feature")}`, a
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Messages usage should stay the same
 	expectCustomerFeatureCorrect({
@@ -230,7 +234,7 @@ test.concurrent(`${chalk.yellowBright("free-to-free: remove feature")}`, async (
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Messages usage should stay the same
 	expectCustomerFeatureCorrect({
@@ -287,7 +291,7 @@ test.concurrent(`${chalk.yellowBright("free-to-free: increase included usage")}`
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Usage should stay, balance should increase
 	expectCustomerFeatureCorrect({
@@ -341,7 +345,7 @@ test.concurrent(`${chalk.yellowBright("free-to-free: decrease included usage")}`
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Usage should stay, balance should decrease
 	expectCustomerFeatureCorrect({
@@ -399,7 +403,7 @@ test.concurrent(`${chalk.yellowBright("free-to-free: change interval month to we
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Usage should stay
 	expectCustomerFeatureCorrect({
@@ -412,7 +416,7 @@ test.concurrent(`${chalk.yellowBright("free-to-free: change interval month to we
 
 	// Verify interval changed
 	expect(customer.features[TestFeature.Messages].interval).toEqual(
-		ProductItemInterval.Week,
+		EntInterval.Week,
 	);
 
 	expectCustomerInvoiceCorrect({
@@ -462,7 +466,7 @@ test.concurrent(`${chalk.yellowBright("free-to-free: change interval month to ye
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Usage should stay
 	expectCustomerFeatureCorrect({
@@ -475,7 +479,7 @@ test.concurrent(`${chalk.yellowBright("free-to-free: change interval month to ye
 
 	// Verify interval changed
 	expect(customer.features[TestFeature.Messages].interval).toEqual(
-		ProductItemInterval.Year,
+		EntInterval.Year,
 	);
 
 	expectCustomerInvoiceCorrect({
@@ -511,7 +515,8 @@ test.concurrent(`${chalk.yellowBright("free-to-free: anchor stays same after 5 d
 	);
 
 	// Get the original reset time
-	const customerBefore = await autumnV1.customers.get(customerId);
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const originalResetAt =
 		customerBefore.features[TestFeature.Messages].next_reset_at;
 	expect(originalResetAt).toBeDefined();
@@ -539,7 +544,7 @@ test.concurrent(`${chalk.yellowBright("free-to-free: anchor stays same after 5 d
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Usage should stay the same, reset anchor should stay approximately the same
 	expectCustomerFeatureCorrect({
@@ -584,7 +589,8 @@ test.concurrent(`${chalk.yellowBright("free-to-free: weekly anchor stays same af
 	);
 
 	// Get the original reset time
-	const customerBefore = await autumnV1.customers.get(customerId);
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const originalResetAt =
 		customerBefore.features[TestFeature.Messages].next_reset_at;
 	expect(originalResetAt).toBeDefined();
@@ -617,7 +623,7 @@ test.concurrent(`${chalk.yellowBright("free-to-free: weekly anchor stays same af
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// After 2 weeks, balance would have reset, but anchor day should be preserved
 	// The next_reset_at should be aligned to the same day of week as original

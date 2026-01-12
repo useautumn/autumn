@@ -2,12 +2,12 @@ import {
 	cusProductsToCusPrices,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
-	type PgDeductionUpdate,
 } from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
 import { adjustAllowance } from "../../../../trigger/adjustAllowance";
 import { CusEntService } from "../../../customers/cusProducts/cusEnts/CusEntitlementService";
 import { getTotalNegativeBalance } from "../../../customers/cusProducts/cusEnts/cusEntUtils";
+import type { DeductionUpdate } from "../../utils/types/deductionUpdate.js";
 
 export const handlePaidAllocatedCusEnt = async ({
 	ctx,
@@ -18,7 +18,7 @@ export const handlePaidAllocatedCusEnt = async ({
 	ctx: AutumnContext;
 	cusEnt: FullCusEntWithFullCusProduct;
 	fullCus: FullCustomer;
-	updates: Record<string, PgDeductionUpdate>;
+	updates: Record<string, DeductionUpdate>;
 }) => {
 	const { db, env, org } = ctx;
 

@@ -1,10 +1,8 @@
 import type { FullCustomerEntitlement } from "@models/cusProductModels/cusEntModels/cusEntModels.js";
+import type { Feature } from "@models/featureModels/featureModels.js";
 import { Decimal } from "decimal.js";
-import type { PgDeductionUpdate } from "../../api/balances/track/trackTypes/pgDeductionUpdate.js";
-import type { FullCustomer } from "../../models/cusModels/fullCusModel.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
-import type { Feature } from "@models/featureModels/featureModels.js";
 import { isPrepaidPrice } from "../productUtils/priceUtils/classifyPriceUtils.js";
 import { cusEntToCusPrice } from "./convertCusEntUtils/cusEntToCusPrice.js";
 
@@ -27,53 +25,34 @@ export const isEntityCusEnt = ({
 	);
 };
 
-export const updateCusEntInFullCus = ({
-	fullCus,
-	cusEntId,
-	update,
-}: {
-	fullCus: FullCustomer;
-	cusEntId: string;
-	update: PgDeductionUpdate;
-}) => {
-	for (let i = 0; i < fullCus.customer_products.length; i++) {
-		for (
-			let j = 0;
-			j < fullCus.customer_products[i].customer_entitlements.length;
-			j++
-		) {
-			const ce = fullCus.customer_products[i].customer_entitlements[j];
-			if (ce.id === cusEntId) {
-				let replaceables = ce.replaceables ?? [];
+// export const cusEntMatchesEntity = ({
+// 	cusEnt,
+// 	entity,
+// }: {
+// 	cusEnt: FullCusEntWithFullCusProduct;
+// 	entity?: Entity;
+// }) => {
+// 	if (!entity) return true;
 
-				if (update.newReplaceables) {
-					replaceables = [
-						...replaceables,
-						...update.newReplaceables.map((r) => ({
-							...r,
-							delete_next_cycle: r.delete_next_cycle ?? true,
-							from_entity_id: r.from_entity_id ?? null,
-						})),
-					];
-				}
+// 	let cusProductMatch = true;
 
-				if (update.deletedReplaceables) {
-					replaceables = replaceables.filter(
-						(r) => !update.deletedReplaceables?.map((r) => r.id).includes(r.id),
-					);
-				}
+// 	if (notNullish(cusEnt.customer_product?.internal_entity_id)) {
+// 		cusProductMatch =
+// 			cusEnt.customer_product.internal_entity_id === entity.internal_id;
+// 	}
 
-				fullCus.customer_products[i].customer_entitlements[j] = {
-					...ce,
-					balance: update.balance,
-					entities: update.entities,
-					adjustment: update.adjustment,
-					replaceables,
-				};
-			}
-		}
-	}
-};
+// 	let entityFeatureIdMatch = true;
+// 	// let feature = features?.find(
+// 	//   (f) => f.id == cusEnt.entitlement.entity_feature_id,
+// 	// );
+
+// 	if (notNullish(cusEnt.entitlement.entity_feature_id)) {
+// 		entityFeatureIdMatch =
+// 			cusEnt.entitlement.entity_feature_id === entity.feature_id;
+// 	}
+
+// 	return cusProductMatch && entityFeatureIdMatch;
+// };
 
 export const isPrepaidCusEnt = ({
 	cusEnt,

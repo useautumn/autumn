@@ -5,7 +5,7 @@ import {
 	type Feature,
 	getRelevantFeatures,
 } from "@autumn/shared";
-import type { FeatureDeduction } from "./getFeatureDeductions";
+import type { FeatureDeduction } from "../../utils/types/featureDeduction";
 
 export const getTrackBalancesResponse = ({
 	featureDeductions,

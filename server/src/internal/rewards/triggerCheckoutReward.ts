@@ -1,4 +1,6 @@
 import {
+	type Customer,
+	type Product,
 	type ReferralCode,
 	type Reward,
 	RewardCategory,
@@ -6,25 +8,30 @@ import {
 	type RewardRedemption,
 	RewardTriggerEvent,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { RewardProgramService } from "../rewards/RewardProgramService.js";
 import { RewardRedemptionService } from "./RewardRedemptionService.js";
 import { triggerFreeProduct } from "./referralUtils/triggerFreeProduct.js";
 import { triggerRedemption } from "./referralUtils.js";
 import { getRewardCat } from "./rewardUtils.js";
+
 export const runTriggerCheckoutReward = async ({
-	db,
+	ctx,
 	payload,
-	logger,
 }: {
-	db: DrizzleCli;
-	payload: any;
-	logger: any;
+	ctx: AutumnContext;
+	payload: {
+		customer: Customer;
+		product: Product;
+		subId?: string;
+	};
 }) => {
+	const { db, org, env, logger } = ctx;
+
 	try {
 		// Customer redeeming code, product they're buying
-		const { customer, product, org, env, subId } = payload;
+		const { customer, product, subId } = payload;
 		const stripeCli = createStripeCli({
 			org,
 			env,
@@ -108,26 +115,19 @@ export const runTriggerCheckoutReward = async ({
 			const rewardCat = getRewardCat(reward);
 			if (rewardCat === RewardCategory.FreeProduct) {
 				await triggerFreeProduct({
-					req: undefined,
-					db,
+					ctx,
 					referralCode,
 					redeemer: customer,
 					rewardProgram: reward_program,
-					org,
-					env,
-					logger,
 					redemption,
 				});
 			} else {
 				await triggerRedemption({
-					db,
+					ctx,
 					referralCode: {
 						...referralCode,
 						reward_program,
 					},
-					org,
-					env,
-					logger,
 					reward,
 					redemption,
 				});

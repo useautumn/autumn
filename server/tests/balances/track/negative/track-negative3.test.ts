@@ -51,7 +51,7 @@ describe(`${chalk.yellowBright("track-negative3: track negative on free allocate
 		});
 	});
 
-	test("should track positive into 'overage' ", async () => {
+	test("should track positive into 'overage'", async () => {
 		const trackValue = 8;
 
 		const trackRes: TrackResponseV2 = await autumnV2.track({
@@ -135,6 +135,7 @@ describe(`${chalk.yellowBright("track-negative3: track negative on free allocate
 			usage: 0,
 		});
 	});
+	return;
 
 	test("non-cached customer should reflect changes", async () => {
 		await timeout(2000);

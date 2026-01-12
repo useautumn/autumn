@@ -1,9 +1,9 @@
 import type { FullCusProduct, FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { fetchStripeCustomerForBilling } from "./fetchStripeCustomerForBilling";
-import { setupStripeDiscountsForBilling } from "./setupStripeDiscountsForBilling";
 import { fetchStripeSubscriptionForBilling } from "./fetchStripeSubscriptionForBilling";
 import { fetchStripeSubscriptionScheduleForBilling } from "./fetchStripeSubscriptionScheduleForBilling";
+import { setupStripeDiscountsForBilling } from "./setupStripeDiscountsForBilling";
 
 export const setupStripeBillingContext = async ({
 	ctx,

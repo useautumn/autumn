@@ -4,6 +4,7 @@ import type {
 	StripeDiscountWithCoupon,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import { addDiscountTagToDescription } from "./addDiscountTagToDescription";
 import { discountAppliesToLineItem } from "./discountAppliesToLineItem";
 
 /**
@@ -60,6 +61,9 @@ export const applyPercentOffDiscountToLineItems = ({
 
 		return {
 			...item,
+			description: addDiscountTagToDescription({
+				description: item.description,
+			}),
 			discounts: [...existingDiscounts, newDiscount],
 			finalAmount,
 		};

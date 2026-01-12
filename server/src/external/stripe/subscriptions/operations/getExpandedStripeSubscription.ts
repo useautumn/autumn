@@ -6,6 +6,7 @@ export type ExpandedStripeSubscription = Stripe.Subscription & {
 	schedule: Stripe.SubscriptionSchedule & {
 		phases: Stripe.SubscriptionSchedule.Phase[];
 	};
+
 	customer: Stripe.Customer;
 };
 
@@ -22,7 +23,7 @@ export const getExpandedStripeSubscription = async ({
 	const expandedStripeSubscription = await stripeCli.subscriptions.retrieve(
 		subscriptionId,
 		{
-			expand: ["schedule.phases", "customer"],
+			expand: ["schedule.phases", "customer.test_clock"],
 		},
 	);
 	return expandedStripeSubscription as ExpandedStripeSubscription;

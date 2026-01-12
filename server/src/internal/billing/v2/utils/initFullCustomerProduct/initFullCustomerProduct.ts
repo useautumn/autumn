@@ -1,7 +1,8 @@
-import type {
-	FullCusProduct,
-	InitFullCustomerProductContext,
-	InitFullCustomerProductOptions,
+import {
+	cp,
+	type FullCusProduct,
+	type InitFullCustomerProductContext,
+	type InitFullCustomerProductOptions,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { generateId } from "@/utils/genUtils";
@@ -61,18 +62,25 @@ export const initFullCustomerProduct = ({
 		customer_prices: newCusPrices,
 	};
 
-	// Finally, apply existing usages to new cus product
 	applyExistingUsages({
 		customerProduct: newFullCustomerProduct,
 		existingUsages: initContext.existingUsages,
 		entities: fullCustomer.entities,
 	});
 
-	// TODO: Add rollovers to customer entitlements
 	applyExistingRollovers({
 		customerProduct: newFullCustomerProduct,
 		existingRollovers: initContext.existingRollovers ?? [],
 	});
+
+	const { valid: isPaidRecurring } = cp(newFullCustomerProduct)
+		.paid()
+		.recurring();
+
+	if (!isPaidRecurring) {
+		newFullCustomerProduct.subscription_ids = [];
+		newFullCustomerProduct.scheduled_ids = [];
+	}
 
 	return newFullCustomerProduct;
 };

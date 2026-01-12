@@ -1,10 +1,12 @@
 import {
 	type Entity,
 	type Feature,
+	FreeTrialDuration,
 	type FrontendProduct,
 	type FullCusProduct,
 	type FullCustomer,
 	getProductItemDisplay,
+	isCustomerProductTrialing,
 	type ProductItem,
 	type ProductV2,
 	stripeToAtmnAmount,
@@ -15,7 +17,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { DateInputUnix } from "@/components/general/DateInputUnix";
+import { AttachProductLineItems } from "@/components/forms/attach-product/attach-product-line-items";
+import { AttachProductTotals } from "@/components/forms/attach-product/attach-product-totals";
+import { useUpdateSubscriptionPreview } from "@/components/forms/update-subscription/use-update-subscription-preview";
 import {
 	Popover,
 	PopoverContent,
@@ -23,6 +27,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
+import { LoadingShimmerText } from "@/components/v2/LoadingShimmerText";
 import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
@@ -96,6 +101,150 @@ function PrepaidEditor({
 						</div>
 					);
 				})}
+			</div>
+		</div>
+	);
+}
+
+interface FreeTrialEditorProps {
+	cusProduct: FullCusProduct;
+	trialLength: number | null;
+	trialDuration: FreeTrialDuration;
+	trialCardRequired: boolean;
+	removeTrial: boolean;
+	onTrialLengthChange: (length: number | null) => void;
+	onTrialDurationChange: (duration: FreeTrialDuration) => void;
+	onTrialCardRequiredChange: (required: boolean) => void;
+	onRemoveTrialChange: (remove: boolean) => void;
+}
+
+function FreeTrialEditor({
+	cusProduct,
+	trialLength,
+	trialDuration,
+	trialCardRequired,
+	removeTrial,
+	onTrialLengthChange,
+	onTrialDurationChange,
+	onTrialCardRequiredChange,
+	onRemoveTrialChange,
+}: FreeTrialEditorProps) {
+	const isCurrentlyTrialing = isCustomerProductTrialing(cusProduct);
+
+	return (
+		<div className="border-b border-border">
+			<div className="px-4 py-2 border-b border-border">
+				<h3 className="text-sm font-medium">Free Trial</h3>
+			</div>
+			<div className="px-4 py-3 space-y-3">
+				{/* Current Trial Status */}
+				<div className="flex items-center gap-2">
+					<span className="text-sm text-t-secondary">Current Status:</span>
+					{isCurrentlyTrialing ? (
+						<span className="text-xs px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded">
+							Trialing (ends:{" "}
+							{new Date(cusProduct.trial_ends_at!).toLocaleDateString()})
+						</span>
+					) : (
+						<span className="text-xs px-2 py-0.5 bg-gray-500/20 text-gray-400 rounded">
+							Not Trialing
+						</span>
+					)}
+				</div>
+
+				{/* Remove Trial (only show if currently trialing) */}
+				{isCurrentlyTrialing ? (
+					<div className="flex items-center gap-2">
+						<input
+							id="remove-trial"
+							type="checkbox"
+							checked={removeTrial}
+							onChange={(e) => {
+								onRemoveTrialChange(e.target.checked);
+								if (e.target.checked) {
+									onTrialLengthChange(null); // Clear new trial if removing
+								}
+							}}
+							className="rounded border-border"
+						/>
+						<label htmlFor="remove-trial" className="text-sm text-red-400">
+							Remove Trial (pass free_trial: null)
+						</label>
+					</div>
+				) : null}
+
+				{/* Set New Trial */}
+				{!removeTrial ? (
+					<>
+						<div className="flex items-center gap-3">
+							<label
+								htmlFor="trial-length"
+								className="text-sm text-t-secondary w-24"
+							>
+								Trial Length
+							</label>
+							<input
+								id="trial-length"
+								type="number"
+								min={1}
+								placeholder="e.g. 7"
+								value={trialLength ?? ""}
+								onChange={(e) =>
+									onTrialLengthChange(
+										e.target.value ? parseInt(e.target.value, 10) : null,
+									)
+								}
+								className="w-20 px-2 py-1 border border-border rounded text-sm bg-transparent"
+							/>
+							<select
+								id="trial-duration"
+								value={trialDuration}
+								onChange={(e) =>
+									onTrialDurationChange(e.target.value as FreeTrialDuration)
+								}
+								className="px-2 py-1 border border-border rounded text-sm bg-transparent"
+							>
+								<option value={FreeTrialDuration.Day}>Day(s)</option>
+								<option value={FreeTrialDuration.Month}>Month(s)</option>
+								<option value={FreeTrialDuration.Year}>Year(s)</option>
+							</select>
+						</div>
+
+						<div className="flex items-center gap-2">
+							<input
+								id="card-required"
+								type="checkbox"
+								checked={trialCardRequired}
+								onChange={(e) => onTrialCardRequiredChange(e.target.checked)}
+								className="rounded border-border"
+							/>
+							<label
+								htmlFor="card-required"
+								className="text-sm text-t-secondary"
+							>
+								Card Required
+							</label>
+						</div>
+					</>
+				) : null}
+
+				{/* Preview of what will be sent */}
+				<div className="text-xs text-t-secondary mt-2 pt-2 border-t border-border/50">
+					{removeTrial ? (
+						<span className="text-red-400">
+							Will send: free_trial: null (removes trial)
+						</span>
+					) : trialLength ? (
+						<span className="text-green-400">
+							Will send: free_trial:{" "}
+							{`{ length: ${trialLength}, duration: "${trialDuration}", card_required: ${trialCardRequired} }`}
+						</span>
+					) : (
+						<span className="text-gray-400">
+							No free_trial param (undefined) - existing trial preserved
+						</span>
+					)}
+				</div>
 			</div>
 		</div>
 	);
@@ -999,15 +1148,23 @@ function SheetContent({
 		initialPrepaidOptions,
 	);
 
-	const [planCustomStartDate, setPlanCustomStartDate] = useState<number | null>(
+	const [planCustomStartDate, _setPlanCustomStartDate] = useState<
+		number | null
+	>(null);
+	const [planCustomEndDate, _setPlanCustomEndDate] = useState<number | null>(
 		null,
 	);
-	const [planCustomEndDate, setPlanCustomEndDate] = useState<number | null>(
+	const [billingCycleAnchor, _setBillingCycleAnchor] = useState<number | null>(
 		null,
 	);
-	const [billingCycleAnchor, setBillingCycleAnchor] = useState<number | null>(
-		null,
+
+	// Free trial state
+	const [trialLength, setTrialLength] = useState<number | null>(null);
+	const [trialDuration, setTrialDuration] = useState<FreeTrialDuration>(
+		FreeTrialDuration.Day,
 	);
+	const [trialCardRequired, setTrialCardRequired] = useState(true);
+	const [removeTrial, setRemoveTrial] = useState(false);
 
 	const handlePrepaidChange = (featureId: string, quantity: number) => {
 		setPrepaidOptions((prev) => ({
@@ -1060,8 +1217,20 @@ function SheetContent({
 			body.items = customizedProduct.items;
 		}
 
-		// Add free trial if we have a customized product with free trial
-		if (customizedProduct?.free_trial) {
+		// Add free trial logic:
+		// 1. If removeTrial is true, pass null to remove the trial
+		// 2. If trialLength is set, use the new trial settings
+		// 3. If customizedProduct has free_trial, use that
+		// 4. Otherwise, don't include free_trial (undefined = preserve existing)
+		if (removeTrial) {
+			body.free_trial = null;
+		} else if (trialLength) {
+			body.free_trial = {
+				length: trialLength,
+				duration: trialDuration,
+				card_required: trialCardRequired,
+			};
+		} else if (customizedProduct?.free_trial) {
 			body.free_trial = customizedProduct.free_trial;
 		}
 
@@ -1091,12 +1260,42 @@ function SheetContent({
 		planCustomStartDate,
 		planCustomEndDate,
 		billingCycleAnchor,
+		removeTrial,
+		trialLength,
+		trialDuration,
+		trialCardRequired,
 	]);
 
 	// Preview query - fires when body changes
 	const previewQuery = useSubscriptionUpdatePreview({
 		body: requestBody,
 		enabled: !!requestBody,
+	});
+
+	// Compute freeTrial value for preview
+	const previewFreeTrial = useMemo(() => {
+		if (removeTrial) {
+			return null;
+		}
+		if (trialLength) {
+			return {
+				length: trialLength,
+				duration: trialDuration,
+				card_required: trialCardRequired,
+				unique_fingerprint: false,
+			};
+		}
+		return undefined;
+	}, [removeTrial, trialLength, trialDuration, trialCardRequired]);
+
+	// Checkout preview query with free trial support
+	const checkoutPreviewQuery = useUpdateSubscriptionPreview({
+		customerId,
+		product,
+		entityId,
+		prepaidOptions: prepaidOptions ?? undefined,
+		version: product?.version,
+		freeTrial: previewFreeTrial,
 	});
 
 	// Update mutation with invoice handling
@@ -1221,7 +1420,14 @@ function SheetContent({
 								</div>
 							</div>
 						) : null}
-						{requestBody?.free_trial ? (
+						{requestBody?.free_trial === null ? (
+							<div>
+								<span className="text-t-secondary">free_trial: </span>
+								<span className="text-xs text-red-400">
+									null (removing trial)
+								</span>
+							</div>
+						) : requestBody?.free_trial ? (
 							<div>
 								<span className="text-t-secondary">free_trial: </span>
 								<span className="text-xs">
@@ -1281,82 +1487,35 @@ function SheetContent({
 					onPrepaidChange={handlePrepaidChange}
 				/>
 
-				{/* Custom Plan Dates */}
+				{/* Free Trial Editor */}
+				<FreeTrialEditor
+					cusProduct={cusProduct}
+					trialLength={trialLength}
+					trialDuration={trialDuration}
+					trialCardRequired={trialCardRequired}
+					removeTrial={removeTrial}
+					onTrialLengthChange={setTrialLength}
+					onTrialDurationChange={setTrialDuration}
+					onTrialCardRequiredChange={setTrialCardRequired}
+					onRemoveTrialChange={setRemoveTrial}
+				/>
+
+				{/* Checkout Preview Response (same as SubscriptionUpdateSheet) */}
 				<div className="border-b border-border">
 					<div className="px-4 py-2 border-b border-border">
-						<h3 className="text-sm font-medium">Custom Plan Dates</h3>
+						<h3 className="text-sm font-medium">Checkout Preview Response</h3>
 					</div>
-					<div className="px-4 py-3 space-y-3">
-						<div className="flex items-center gap-3">
-							<label
-								htmlFor="plan-start-date"
-								className="text-sm text-t-secondary w-32"
-							>
-								Start Date
-							</label>
-							<div className="flex-1">
-								<DateInputUnix
-									unixDate={planCustomStartDate}
-									setUnixDate={setPlanCustomStartDate}
-								/>
-							</div>
-							{planCustomStartDate ? (
-								<button
-									type="button"
-									onClick={() => setPlanCustomStartDate(null)}
-									className="text-xs text-t-secondary hover:text-t-primary"
-								>
-									Clear
-								</button>
-							) : null}
+					{checkoutPreviewQuery.isLoading ? (
+						<LoadingShimmerText
+							text="Calculating totals"
+							className="py-4 px-6"
+						/>
+					) : (
+						<div className="py-4">
+							<AttachProductLineItems previewData={checkoutPreviewQuery.data} />
+							<AttachProductTotals previewData={checkoutPreviewQuery.data} />
 						</div>
-						<div className="flex items-center gap-3">
-							<label
-								htmlFor="plan-end-date"
-								className="text-sm text-t-secondary w-32"
-							>
-								End Date
-							</label>
-							<div className="flex-1">
-								<DateInputUnix
-									unixDate={planCustomEndDate}
-									setUnixDate={setPlanCustomEndDate}
-								/>
-							</div>
-							{planCustomEndDate ? (
-								<button
-									type="button"
-									onClick={() => setPlanCustomEndDate(null)}
-									className="text-xs text-t-secondary hover:text-t-primary"
-								>
-									Clear
-								</button>
-							) : null}
-						</div>
-						<div className="flex items-center gap-3">
-							<label
-								htmlFor="billing-cycle-anchor"
-								className="text-sm text-t-secondary w-32"
-							>
-								Billing Anchor
-							</label>
-							<div className="flex-1">
-								<DateInputUnix
-									unixDate={billingCycleAnchor}
-									setUnixDate={setBillingCycleAnchor}
-								/>
-							</div>
-							{billingCycleAnchor ? (
-								<button
-									type="button"
-									onClick={() => setBillingCycleAnchor(null)}
-									className="text-xs text-t-secondary hover:text-t-primary"
-								>
-									Clear
-								</button>
-							) : null}
-						</div>
-					</div>
+					)}
 				</div>
 
 				{/* Preview Result */}

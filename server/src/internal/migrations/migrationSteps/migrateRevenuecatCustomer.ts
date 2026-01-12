@@ -1,5 +1,4 @@
 import {
-	type AppEnv,
 	AttachScenario,
 	CusProductStatus,
 	type FullCusProduct,
@@ -8,30 +7,27 @@ import {
 	ProcessorType,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { deleteCachedApiCustomer } from "../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 
 export const migrateRevenueCatCustomer = async ({
-	req,
+	ctx,
 	fullCus,
 	cusProduct,
 	toProduct,
 	customerId,
-	orgId,
-	env,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	fullCus: FullCustomer;
 	cusProduct: FullCusProduct;
 	toProduct: FullProduct;
 	customerId: string;
-	orgId: string;
-	env: AppEnv;
 }) => {
-	const { logger } = req;
+	const { db, logger, org, env, features } = ctx;
+
 	fullCus.customer_products = fullCus.customer_products.filter(
 		(cp) => cp.processor?.type === ProcessorType.RevenueCat,
 	);
@@ -50,7 +46,7 @@ export const migrateRevenueCatCustomer = async ({
 	});
 
 	await CusProductService.update({
-		db: req.db,
+		db,
 		cusProductId: cusProduct.id,
 		updates: {
 			status: CusProductStatus.Expired,
@@ -59,29 +55,11 @@ export const migrateRevenueCatCustomer = async ({
 	});
 
 	const createdAtToPass = cusProduct.created_at;
-	const startsAtToPass = cusProduct.starts_at;
 	const anchorToPass = cusProduct.created_at;
 
-	// // Debug: Log what we're passing to createFullCusProduct
-	// logger.info(`[RC Migration] Passing to createFullCusProduct:`, {
-	// 	createdAt: createdAtToPass,
-	// 	createdAt_date: createdAtToPass
-	// 		? new Date(createdAtToPass).toISOString()
-	// 		: null,
-	// 	startsAt: startsAtToPass,
-	// 	startsAt_date: startsAtToPass
-	// 		? new Date(startsAtToPass).toISOString()
-	// 		: null,
-	// 	anchorToUnix: anchorToPass,
-	// 	anchorToUnix_date: anchorToPass
-	// 		? new Date(anchorToPass).toISOString()
-	// 		: null,
-	// 	createdAt_type: typeof createdAtToPass,
-	// });
-
 	await createFullCusProduct({
-		db: req.db,
-		logger: req.logger,
+		db,
+		logger,
 		scenario: AttachScenario.New,
 		processorType: ProcessorType.RevenueCat,
 		// Preserve the original created_at, starts_at, and billing cycle anchor
@@ -95,14 +73,14 @@ export const migrateRevenueCatCustomer = async ({
 				prices: toProduct.prices,
 				entitlements: toProduct.entitlements,
 				entities: fullCus.entities || [],
-				org: req.org,
-				stripeCli: createStripeCli({ org: req.org, env: req.env }),
+				org,
+				stripeCli: createStripeCli({ org, env }),
 				paymentMethod: null,
 				freeTrial: null,
 				optionsList: cusProduct.options || [],
 				cusProducts: fullCus.customer_products,
 				replaceables: [],
-				features: req.features,
+				features,
 				fromMigration: true,
 			},
 			toProduct,
@@ -111,7 +89,7 @@ export const migrateRevenueCatCustomer = async ({
 
 	await deleteCachedApiCustomer({
 		customerId,
-		orgId,
-		env,
+		ctx,
+		source: `migrateRevenueCatCustomer, deleting customer cache`,
 	});
 };

@@ -8,6 +8,7 @@ import {
 	CusProductStatus,
 } from "@autumn/shared";
 import chalk from "chalk";
+import { setStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { handleCreateCheckout } from "../../add-product/handleCreateCheckout.js";
 import { handleCreateInvoiceCheckout } from "../../add-product/handleCreateInvoiceCheckout.js";
@@ -193,6 +194,12 @@ export const runAttachFunction = async ({
 
 		const subId = curMainProduct?.subscription_ids?.[0];
 		if (subId) {
+			// Set lock to prevent webhook handler from processing this cancellation
+			await setStripeSubscriptionLock({
+				stripeSubscriptionId: subId,
+				lockedAtMs: Date.now(),
+			});
+
 			await stripeCli.subscriptions.cancel(subId, {
 				cancellation_details: {
 					comment: "autumn_downgrade,trial_canceled",

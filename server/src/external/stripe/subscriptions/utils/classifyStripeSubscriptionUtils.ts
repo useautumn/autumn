@@ -1,14 +1,23 @@
 import { notNullish } from "@autumn/shared";
 import type Stripe from "stripe";
 
+/** Stripe subscription that is trialing with guaranteed trial_end */
+export type TrialingStripeSubscription = Stripe.Subscription & {
+	status: "trialing";
+	trial_end: number;
+};
+
 /**
  * Checks if a Stripe subscription is in the trialing status.
- * @param stripeSubscription - The Stripe subscription to check.
- * @returns True if the subscription is in the trialing status, false otherwise.
+ * Type guard that narrows to TrialingStripeSubscription with defined trial_end.
  */
 export const isStripeSubscriptionTrialing = (
-	stripeSubscription: Stripe.Subscription,
-) => {
+	stripeSubscription?: Stripe.Subscription,
+): stripeSubscription is TrialingStripeSubscription => {
+	if (!stripeSubscription) {
+		return false;
+	}
+
 	return stripeSubscription.status === "trialing";
 };
 
