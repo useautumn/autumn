@@ -15,8 +15,12 @@ import {
 	RedisDeductionError,
 	RedisDeductionErrorCode,
 } from "../types/redisDeductionError.js";
-import type { LuaDeductionResult } from "../types/redisDeductionResult.js";
+import type {
+	LuaDeductionResult,
+	RolloverUpdate,
+} from "../types/redisDeductionResult.js";
 import { applyDeductionUpdateToFullCustomer } from "./applyDeductionUpdateToFullCustomer.js";
+import { applyRolloverUpdatesToFullCustomer } from "./applyRolloverUpdatesToFullCustomer.js";
 import { logDeductionUpdates } from "./logDeductionUpdates.js";
 import { prepareDeductionOptions } from "./prepareDeductionOptions.js";
 import { prepareFeatureDeduction } from "./prepareFeatureDeduction.js";
@@ -37,6 +41,7 @@ export const executeRedisDeduction = async ({
 	oldFullCus: FullCustomer;
 	fullCus: FullCustomer | undefined;
 	updates: Record<string, DeductionUpdate>;
+	rolloverUpdates: Record<string, RolloverUpdate>;
 }> => {
 	const { org, env } = ctx;
 	const oldFullCus = structuredClone(fullCustomer);
@@ -62,6 +67,7 @@ export const executeRedisDeduction = async ({
 	}
 
 	let allUpdates: Record<string, DeductionUpdate> = {};
+	let allRolloverUpdates: Record<string, RolloverUpdate> = {};
 
 	// Build cache key
 	const customerId = fullCustomer.id || fullCustomer.internal_id;
@@ -123,7 +129,7 @@ export const executeRedisDeduction = async ({
 			});
 		}
 
-		const { updates, logs } = resultJson;
+		const { updates, rollover_updates, logs } = resultJson;
 		logDeductionUpdates({
 			ctx,
 			fullCustomer,
@@ -132,6 +138,7 @@ export const executeRedisDeduction = async ({
 		});
 
 		allUpdates = { ...allUpdates, ...updates };
+		allRolloverUpdates = { ...allRolloverUpdates, ...rollover_updates };
 
 		if (logs && logs.length > 0) {
 			ctx.logger.debug(`[executeRedisDeduction] Logs: ${logs.join("\n")}`);
@@ -139,6 +146,13 @@ export const executeRedisDeduction = async ({
 
 		// Handle paid allocated entitlements and update fullCus in memory
 		try {
+			// Apply rollover updates first
+			applyRolloverUpdatesToFullCustomer({
+				fullCus: fullCustomer,
+				rolloverUpdates: rollover_updates,
+			});
+
+			// Apply customer entitlement updates
 			for (const cusEntId of Object.keys(updates)) {
 				const update = updates[cusEntId];
 				const cusEnt = customerEntitlements.find(
@@ -179,5 +193,6 @@ export const executeRedisDeduction = async ({
 		oldFullCus,
 		fullCus: fullCustomer,
 		updates: allUpdates,
+		rolloverUpdates: allRolloverUpdates,
 	};
 };

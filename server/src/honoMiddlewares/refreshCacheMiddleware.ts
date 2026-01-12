@@ -85,7 +85,7 @@ export const refreshCacheMiddleware = async (
 		matchRoute({ url: pathname, method, pattern }),
 	);
 
-	if (pathMatch) {
+	if (pathMatch && !skipCacheDeletion) {
 		const customerId = c.req.param("customer_id");
 		if (customerId) {
 			logger.info(

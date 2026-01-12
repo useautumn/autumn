@@ -8,9 +8,17 @@ import {
 	buildFullCustomerCacheKey,
 	FULL_CUSTOMER_CACHE_GUARD_TTL_SECONDS,
 } from "./fullCustomerCacheConfig.js";
+import { buildTestFullCustomerCacheGuardKey } from "./testFullCustomerCacheGuard.js";
+
+type CustomerToDelete = {
+	orgId: string;
+	env: string;
+	customerId: string;
+};
 
 /**
- * Batch delete multiple FullCustomer caches in one Redis pipeline.
+ * Batch delete multiple FullCustomer caches.
+ * Groups by orgId to ensure all keys in each batch are on the same Redis Cluster node.
  * Sets guard keys to prevent stale writes from in-flight requests.
  */
 export const batchDeleteCachedFullCustomers = async ({
@@ -18,11 +26,7 @@ export const batchDeleteCachedFullCustomers = async ({
 	source,
 	logger,
 }: {
-	customers: Array<{
-		orgId: string;
-		env: string;
-		customerId: string;
-	}>;
+	customers: CustomerToDelete[];
 	source?: string;
 	logger?: Logger;
 }): Promise<number> => {
@@ -39,46 +43,72 @@ export const batchDeleteCachedFullCustomers = async ({
 		return 0;
 	}
 
+	// Group customers by orgId to ensure all keys hash to the same Redis Cluster slot
+	const customersByOrg = new Map<string, CustomerToDelete[]>();
+	for (const customer of customers) {
+		const existing = customersByOrg.get(customer.orgId) || [];
+		existing.push(customer);
+		customersByOrg.set(customer.orgId, existing);
+	}
+
 	try {
 		const guardTimestamp = Date.now().toString();
+
+		// Use pipeline to batch all org deletions into one network round trip
 		const pipeline = redis.pipeline();
+		const orgIds: string[] = [];
 
-		// Queue SET (guard) and DEL (cache) for each customer
-		for (const { orgId, env, customerId } of customers) {
-			const cacheKey = buildFullCustomerCacheKey({ orgId, env, customerId });
-			const guardKey = buildFullCustomerCacheGuardKey({
-				orgId,
-				env,
-				customerId,
-			});
+		for (const [orgId, orgCustomers] of customersByOrg) {
+			const customersData = orgCustomers.map(({ env, customerId }) => ({
+				testGuardKey: buildTestFullCustomerCacheGuardKey({
+					orgId,
+					env,
+					customerId,
+				}),
+				guardKey: buildFullCustomerCacheGuardKey({ orgId, env, customerId }),
+				cacheKey: buildFullCustomerCacheKey({ orgId, env, customerId }),
+			}));
 
-			pipeline.set(
-				guardKey,
+			pipeline.batchDeleteFullCustomerCache(
 				guardTimestamp,
-				"EX",
-				FULL_CUSTOMER_CACHE_GUARD_TTL_SECONDS,
+				FULL_CUSTOMER_CACHE_GUARD_TTL_SECONDS.toString(),
+				JSON.stringify(customersData),
 			);
-			pipeline.del(cacheKey);
+			orgIds.push(orgId);
 		}
 
 		const results = await pipeline.exec();
 
-		// Count deleted keys (every 2nd result is a DEL)
+		// Sum up results from all orgs
 		let totalDeleted = 0;
+		let totalSkipped = 0;
+
 		if (results) {
-			for (let i = 1; i < results.length; i += 2) {
-				const [error, deletedCount] = results[i];
+			for (const [error, resultJson] of results) {
 				if (error) {
-					log.error(`[batchDeleteCachedFullCustomers] Pipeline error: ${error}`);
+					log.error(
+						`[batchDeleteCachedFullCustomers] Pipeline error: ${error}`,
+					);
 					throw error;
 				}
-				totalDeleted += (deletedCount as number) ?? 0;
+				const result = JSON.parse(resultJson as string) as {
+					deleted: number;
+					skipped: number;
+				};
+				totalDeleted += result.deleted;
+				totalSkipped += result.skipped;
 			}
 		}
 
-		log.info(
-			`[batchDeleteCachedFullCustomers] Deleted ${totalDeleted} keys for ${customers.length} customers, source: ${source}`,
-		);
+		if (totalSkipped > 0) {
+			log.info(
+				`[batchDeleteCachedFullCustomers] Skipped ${totalSkipped} customers (test guard), deleted ${totalDeleted}, source: ${source}`,
+			);
+		} else {
+			log.info(
+				`[batchDeleteCachedFullCustomers] Deleted ${totalDeleted} keys for ${customers.length} customers across ${customersByOrg.size} orgs, source: ${source}`,
+			);
+		}
 
 		return totalDeleted;
 	} catch (error) {

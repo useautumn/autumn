@@ -168,7 +168,7 @@ const processMessage = async ({
 
 			await syncItemV3({
 				ctx,
-				item: job.data.item,
+				payload: job.data,
 			});
 			return;
 		}

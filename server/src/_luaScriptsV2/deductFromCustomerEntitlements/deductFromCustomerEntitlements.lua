@@ -4,10 +4,16 @@
   Uses JSON.NUMINCRBY for atomic incremental updates.
   Reads CURRENT balance from Redis before each calculation to avoid stale reads.
   
+  Deduction Order (mirrors SQL performDeduction.sql):
+    1. Deduct from rollovers first (oldest first by expires_at)
+    2. Pass 1: Deduct from main balance (floor at 0)
+    3. Pass 2: Allow negative if usage_allowed
+  
   Helper functions are prepended via string interpolation from:
     - luaUtils.lua (safe_table, safe_number, find_entitlement, build_entity_path, sorted_keys, is_nil)
-    - readBalances.lua (read_current_balance, read_current_entity_balance, read_current_entities)
-    - deductFromRollovers.lua (deduct_from_rollovers - stub)
+    - readBalances.lua (read_current_balance, read_current_entity_balance, read_current_entities, read_rollover_data)
+    - contextUtils.lua (init_context, update_in_memory_customer_entitlement, queue_balance_update, apply_pending_writes)
+    - deductFromRollovers.lua (deduct_from_rollovers)
     - deductFromMainBalance.lua (calculate_change, deduct_from_main_balance)
     - getTotalBalance.lua (get_total_balance)
   
@@ -30,6 +36,7 @@
   Returns JSON:
     {
       updates: { [cus_ent_id]: { balance, additional_balance, adjustment, entities, deducted, additional_deducted } },
+      rollover_updates: { [rollover_id]: { balance, usage, entities } },
       remaining: number,
       error: string | null,
       feature_id: string | null
@@ -187,11 +194,60 @@ local function process_pass(pass_config)
 end
 
 -- ============================================================================
+-- HELPER: Process rollovers before main balance deduction
+-- ============================================================================
+local function process_rollovers(config)
+  local context = config.context
+  local rollover_ids = config.rollover_ids
+  local remaining = config.remaining_amount
+  local target_entity_id = config.target_entity_id
+  local sorted_entitlements = config.sorted_entitlements
+  local logger = context.logger
+  
+  -- Early return if no rollovers or no positive amount
+  if is_nil(rollover_ids) or #rollover_ids == 0 or remaining <= 0 then
+    return 0
+  end
+  
+  -- Determine has_entity_scope from first entitlement
+  local first_ent = sorted_entitlements[1]
+  local has_entity_scope = false
+  if first_ent then
+    has_entity_scope = first_ent.entity_feature_id ~= nil and first_ent.entity_feature_id ~= cjson.null
+  end
+  
+  local rollover_deducted = deduct_from_rollovers({
+    context = context,
+    rollover_ids = rollover_ids,
+    amount = remaining,
+    target_entity_id = target_entity_id,
+    has_entity_scope = has_entity_scope,
+  })
+  
+  logger.log("Rollover deduction: deducted=%s, remaining=%s", rollover_deducted, remaining - rollover_deducted)
+  
+  return rollover_deducted
+end
+
+-- ============================================================================
 -- MAIN DEDUCTION/REFUND LOGIC
 -- Same two-pass structure for both deductions and refunds (matches SQL)
+-- Step 1: Deduct from rollovers first (only for positive deductions)
 -- Pass 1: Process all entitlements (floor at 0 for deductions, ceiling at 0 for refunds)
 -- Pass 2: Process remaining (deductions: only usage_allowed can go negative; refunds: all can go above 0)
 -- ============================================================================
+
+-- Step 1: Deduct from rollovers BEFORE main balance deduction (only for track, not update balance)
+if not alter_granted_balance then
+  local rollover_deducted = process_rollovers({
+    context = context,
+    rollover_ids = rollover_ids,
+    remaining_amount = remaining_amount,
+    target_entity_id = target_entity_id,
+    sorted_entitlements = sorted_entitlements,
+  })
+  remaining_amount = remaining_amount - rollover_deducted
+end
 
 process_pass({
   pass_number = 1,
@@ -241,10 +297,29 @@ for ent_id, update in pairs(updates) do
   end
 end
 
+-- Build rollover_updates from context.rollovers (only include modified ones)
+local rollover_updates = {}
+if not is_nil(rollover_ids) then
+  for rollover_id, rollover_data in pairs(context.rollovers) do
+    -- Include all rollovers that were in the rollover_ids list (they may have been modified)
+    for _, rid in ipairs(rollover_ids) do
+      if rid == rollover_id then
+        rollover_updates[rollover_id] = {
+          balance = rollover_data.balance,
+          usage = rollover_data.usage,
+          entities = rollover_data.entities,
+        }
+        break
+      end
+    end
+  end
+end
+
 logger.log("=== LUA DEDUCTION END ===")
 
 return cjson.encode({
   updates = updates,
+  rollover_updates = rollover_updates,
   remaining = remaining_amount,
   error = cjson.null,
   logs = context.logs

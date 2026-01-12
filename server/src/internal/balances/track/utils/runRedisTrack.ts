@@ -14,19 +14,24 @@ import { deductionUpdatesToModifiedIds } from "../../utils/sync/deductionUpdates
 import { globalSyncBatchingManagerV2 } from "../../utils/sync/SyncBatchingManagerV2.js";
 import type { DeductionUpdate } from "../../utils/types/deductionUpdate.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
+import type { RolloverUpdate } from "../../utils/types/redisDeductionResult.js";
 import { handleRedisTrackError } from "./handleRedisTrackError.js";
 
 const queueSyncItem = ({
 	ctx,
 	body,
 	updates,
+	rolloverUpdates,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	updates: Record<string, DeductionUpdate>;
+	rolloverUpdates: Record<string, RolloverUpdate>;
 }): void => {
 	const modifiedCusEntIds = deductionUpdatesToModifiedIds({ updates });
-	if (modifiedCusEntIds.length === 0) return;
+	const rolloverIds = Object.keys(rolloverUpdates);
+
+	if (modifiedCusEntIds.length === 0 && rolloverIds.length === 0) return;
 
 	ctx.logger.info(`[QUEUE SYNC] (${body.customer_id})`);
 	globalSyncBatchingManagerV2.addSyncItem({
@@ -34,6 +39,7 @@ const queueSyncItem = ({
 		orgId: ctx.org.id,
 		env: ctx.env,
 		cusEntIds: modifiedCusEntIds,
+		rolloverIds,
 		region: currentRegion,
 	});
 };
@@ -102,13 +108,14 @@ export const runRedisTrack = async ({
 		});
 	}
 
-	const { updates, fullCus } = result;
+	const { updates, fullCus, rolloverUpdates } = result;
 
 	// Queue sync and event
 	queueSyncItem({
 		ctx,
 		body,
 		updates,
+		rolloverUpdates,
 	});
 
 	queueEvent({ ctx, body, fullCustomer });

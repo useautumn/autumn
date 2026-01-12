@@ -11,6 +11,7 @@ interface CustomerBatchContext {
 	region: string;
 	timestamp: number;
 	cusEntIds: Set<string>;
+	rolloverIds: Set<string>;
 }
 
 interface CustomerBatch {
@@ -34,12 +35,14 @@ export class SyncBatchingManagerV2 {
 		orgId,
 		env,
 		cusEntIds,
+		rolloverIds,
 		region,
 	}: {
 		customerId: string;
 		orgId: string;
 		env: AppEnv;
 		cusEntIds: string[];
+		rolloverIds?: string[];
 		region?: string;
 	}): void {
 		const batchKey = this.buildBatchKey({ orgId, env, customerId });
@@ -52,20 +55,30 @@ export class SyncBatchingManagerV2 {
 		}
 
 		this.mergeCusEntIds({ batch, cusEntIds });
+		this.mergeRolloverIds({ batch, rolloverIds: rolloverIds ?? [] });
 
-		if (batch.context.cusEntIds.size >= this.MAX_BATCH_SIZE) {
+		const totalSize =
+			batch.context.cusEntIds.size + batch.context.rolloverIds.size;
+		if (totalSize >= this.MAX_BATCH_SIZE) {
 			this.executeCustomerBatch({ batchKey });
 		}
 	}
 
-	getStats(): { totalCustomers: number; totalPendingEntitlements: number } {
+	getStats(): {
+		totalCustomers: number;
+		totalPendingEntitlements: number;
+		totalPendingRollovers: number;
+	} {
 		let totalEntitlements = 0;
+		let totalRollovers = 0;
 		for (const batch of this.customerBatches.values()) {
 			totalEntitlements += batch.context.cusEntIds.size;
+			totalRollovers += batch.context.rolloverIds.size;
 		}
 		return {
 			totalCustomers: this.customerBatches.size,
 			totalPendingEntitlements: totalEntitlements,
+			totalPendingRollovers: totalRollovers,
 		};
 	}
 
@@ -107,6 +120,7 @@ export class SyncBatchingManagerV2 {
 				region: region || currentRegion,
 				timestamp: Date.now(),
 				cusEntIds: new Set(),
+				rolloverIds: new Set(),
 			},
 			timer: null,
 		};
@@ -121,6 +135,18 @@ export class SyncBatchingManagerV2 {
 	}): void {
 		for (const id of cusEntIds) {
 			batch.context.cusEntIds.add(id);
+		}
+	}
+
+	private mergeRolloverIds({
+		batch,
+		rolloverIds,
+	}: {
+		batch: CustomerBatch;
+		rolloverIds: string[];
+	}): void {
+		for (const id of rolloverIds) {
+			batch.context.rolloverIds.add(id);
 		}
 	}
 
@@ -145,7 +171,7 @@ export class SyncBatchingManagerV2 {
 		this.customerBatches.delete(batchKey);
 
 		const { context } = batch;
-		if (context.cusEntIds.size === 0) return;
+		if (context.cusEntIds.size === 0 && context.rolloverIds.size === 0) return;
 
 		await this.queueSyncJob({ context });
 	}
@@ -168,24 +194,20 @@ export class SyncBatchingManagerV2 {
 			await addTaskToQueue({
 				jobName: JobName.SyncBalanceBatchV3,
 				payload: {
+					customerId: context.customerId,
 					orgId: context.orgId,
 					env: context.env,
-					customerId: context.customerId,
-					item: {
-						customerId: context.customerId,
-						orgId: context.orgId,
-						env: context.env,
-						region: context.region,
-						timestamp: context.timestamp,
-						cusEntIds: Array.from(context.cusEntIds),
-					},
+					region: context.region,
+					timestamp: context.timestamp,
+					cusEntIds: Array.from(context.cusEntIds),
+					rolloverIds: Array.from(context.rolloverIds),
 				},
 				messageGroupId: context.customerId,
 				messageDeduplicationId: dedupHash,
 			});
 
 			logger.info(
-				`[SyncV3] Queued sync for ${context.customerId}, ${context.cusEntIds.size} entitlements`,
+				`[SyncV3] Queued sync for ${context.customerId}, ${context.cusEntIds.size} entitlements, ${context.rolloverIds.size} rollovers`,
 			);
 		} catch (error) {
 			logger.error(
