@@ -102,6 +102,8 @@ describe(`${chalk.yellowBright("mergedAdd1: Testing merged subs, with track")}`,
 			org,
 			env,
 		});
+
+		await timeout(3000);
 	});
 
 	test("should track usage and have correct invoice end of month", async () => {

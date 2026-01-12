@@ -58,7 +58,7 @@ export function useAttachPreview(params: AttachPreviewParams = {}) {
 			}
 
 			const response = await axiosInstance.post<CheckoutResponseV0>(
-				"/v1/checkout",
+				"/v1/subscriptions/preview_update",
 				attachBody,
 			);
 

@@ -8,11 +8,10 @@ import {
 } from "@shared/index";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
-import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
-import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
 import {
 	attachToInsertParams,
 	isProductUpgrade,
@@ -24,7 +23,7 @@ export const handleRenewal = async ({
 	ctx,
 }: {
 	event: WebhookRenewal;
-	ctx: AutumnContext;
+	ctx: RevenueCatWebhookContext;
 }) => {
 	const { db, org, env, logger, features } = ctx;
 	const { product_id, app_user_id } = event;
@@ -63,12 +62,6 @@ export const handleRenewal = async ({
 			},
 		});
 		logger.info(`Marked past due product as active: ${curSameProduct.id}`);
-		await deleteCachedApiCustomer({
-			customerId: customer.id ?? "",
-			orgId: org.id,
-			env,
-			source: `handleRenewal: ${product.id}`,
-		});
 		return { success: true };
 	}
 
@@ -116,13 +109,6 @@ export const handleRenewal = async ({
 		});
 
 		logger.info(`Reactivated cus_product: ${curSameProduct.id}`);
-
-		await deleteCachedApiCustomer({
-			customerId: customer.id ?? "",
-			orgId: org.id,
-			env,
-			source: `handleRenewal: ${product.id}`,
-		});
 		return { success: true };
 	}
 
@@ -156,13 +142,6 @@ export const handleRenewal = async ({
 	logger.info(
 		`Created cus_product for ${product.id} with scenario: ${scenario} (renewal)`,
 	);
-
-	await deleteCachedApiCustomer({
-		customerId: customer.id ?? "",
-		orgId: org.id,
-		env,
-		source: `handleRenewal: ${product.id}`,
-	});
 
 	return { success: true };
 };

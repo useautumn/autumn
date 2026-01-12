@@ -200,15 +200,8 @@ const computeUpdatedScheduleItems = async ({
 		removeCusProducts ||
 		getCusProductsToRemove({ attachParams, includeScheduled: true });
 
-	// console.log(
-	//   "REMOVING CUS PRODUCTS:",
-	//   cusProductsToRemove?.map((cp) => `${cp.product.id} (E: ${cp.entity_id})`)
-	// );
-
 	const allCusProducts = attachParams.customer.customer_products;
 
-	// console.log("New schedule items:");
-	// logScheduleItems({ items: newScheduleItems, cusProducts: allCusProducts });
 	for (const cusProduct of cusProductsToRemove) {
 		newScheduleItems = await removeCusProductFromScheduleItems({
 			curScheduleItems: baseCurScheduleItems,
@@ -220,9 +213,6 @@ const computeUpdatedScheduleItems = async ({
 			attachParams,
 		});
 	}
-
-	// console.log("New schedule items after removing cus products:");
-	// logScheduleItems({ items: newScheduleItems, cusProducts: allCusProducts });
 
 	return newScheduleItems;
 };
@@ -236,6 +226,7 @@ export const paramsToScheduleItems = async ({
 	config,
 	removeCusProducts,
 	billingPeriodEnd,
+	addNewProducts = true,
 }: {
 	ctx: AutumnContext;
 	sub?: Stripe.Subscription;
@@ -244,11 +235,18 @@ export const paramsToScheduleItems = async ({
 	config: AttachConfig;
 	removeCusProducts?: FullCusProduct[];
 	billingPeriodEnd?: number;
+	addNewProducts?: boolean;
 }) => {
-	const itemSet = await getStripeSubItems2({
-		attachParams,
-		config,
-	});
+	const itemSet = addNewProducts
+		? await getStripeSubItems2({
+				attachParams,
+				config,
+			})
+		: {
+				subItems: [],
+				invoiceItems: [],
+				usageFeatures: [],
+			};
 
 	let phaseIndex = -1;
 

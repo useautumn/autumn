@@ -13,10 +13,10 @@ import { db } from "../../../db/initDrizzle";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv";
 import { EventService } from "../../api/events/EventService";
 import { CusService } from "../../customers/CusService";
+import { type EventInfo, initEvent } from "../events/initEvent";
+import type { FeatureDeduction } from "../utils/types/featureDeduction";
 import { runRedisDeduction } from "./redisTrackUtils/runRedisDeduction";
-import { constructEvent, type EventInfo } from "./trackUtils/eventUtils";
 import { executePostgresTracking } from "./trackUtils/executePostgresTracking";
-import type { FeatureDeduction } from "./trackUtils/getFeatureDeductions";
 import { getTrackBalancesResponse } from "./trackUtils/getTrackBalancesResponse";
 
 export const runTrack = async ({
@@ -60,7 +60,7 @@ export const runTrack = async ({
 			entityId: body.entity_id,
 		});
 
-		const newEvent = constructEvent({
+		const newEvent = initEvent({
 			ctx,
 			eventInfo,
 			internalCustomerId: customer?.internal_id ?? "",

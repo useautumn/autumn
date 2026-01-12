@@ -113,6 +113,7 @@ vercelWebhookRouter.post(
 	vercelLogMiddleware,
 	async (c) => {
 		const { db, org, env, logger } = c.get("ctx");
+		const ctx = c.get("ctx");
 		let body: any;
 		try {
 			body = await c.req.json();
@@ -126,20 +127,14 @@ vercelWebhookRouter.post(
 			switch (eventType) {
 				case "marketplace.invoice.paid":
 					await handleMarketplaceInvoicePaid({
-						db,
-						org,
-						env: env as AppEnv,
-						logger,
+						ctx,
 						payload: body.payload,
 					});
 					return c.json({ success: true }, 200);
 
 				case "marketplace.invoice.notpaid":
 					await handleMarketplaceInvoiceNotPaid({
-						db,
-						org,
-						env: env as AppEnv,
-						logger,
+						ctx,
 						payload: body.payload,
 					});
 					return c.json({ received: true }, 200);

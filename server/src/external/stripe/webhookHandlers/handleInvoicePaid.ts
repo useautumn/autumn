@@ -255,10 +255,13 @@ export const handleInvoicePaid = async ({
 				await addTaskToQueue({
 					jobName: JobName.TriggerCheckoutReward,
 					payload: {
+						// For createWorkerContext
+						orgId: org.id,
+						env: cusProd.customer!.env,
+						customerId: cusProd.customer!.id,
+						// For triggerCheckoutReward
 						customer: cusProd.customer,
 						product: cusProd.product,
-						org,
-						env: cusProd.customer!.env,
 						subId: cusProd.subscription_ids?.[0],
 					},
 				});

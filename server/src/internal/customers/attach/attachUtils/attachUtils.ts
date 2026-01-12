@@ -1,4 +1,4 @@
-import { type FullCusProduct, isCusProductTrialing } from "@autumn/shared";
+import { type FullCusProduct, isCustomerProductTrialing } from "@autumn/shared";
 import type Stripe from "stripe";
 import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { subToAutumnInterval } from "@/external/stripe/utils.js";
@@ -66,9 +66,7 @@ export const isMainTrialBranch = ({
 	attachParams: AttachParams;
 }) => {
 	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
-	if (
-		!isCusProductTrialing({ cusProduct: curCusProduct!, now: attachParams.now })
-	)
+	if (!isCustomerProductTrialing(curCusProduct!, { nowMs: attachParams.now }))
 		return false;
 
 	const subId = curCusProduct?.subscription_ids?.[0];

@@ -10,11 +10,15 @@
 - When writing tests, ALWAYS read:
   1. `server/tests/_guides/general-test-guide.md` - Common patterns, client initialization, public keys
   2. Case-specific guide (e.g., `server/tests/_guides/check-endpoint-tests.md` for `/check` tests)
+- When running tests, ALL server-side console logs go to the server's logs which you do not have access to. You must ask the user to paste you in the logs, instead of expecting the server logs to magically appear
+in the test logs. Use your common sense
 
 # Linting and Codebase rules
 - You can access the biome linter by running `bunx biome check <folder or file path>`. Always specify a folder path, as the codebase is quite large and you will get out of scope errors that you are not burdened to correct. If you would like to let biome automatically fix as much as it can, use  `bunx biome check --write <folder or file path>`
 
 - Note, biome does not perform typechecking. In which case you need to, you may run `tsc --noEmit --skipLibCheck <folder or file path>`
+
+- The `server/src/_luaScriptsV2/` folder contains Lua scripts for Redis atomic operations. Redis uses **Lua 5.1** - there is NO `goto` statement (added in Lua 5.2), so use if/else blocks instead.
 
 - This codebase uses Bun as its preferred package manager and Node runtime.
 
@@ -28,6 +32,19 @@
 
 - Functions (unless there's a very good reason) should always take in objects as arguments. Object params are named and easy to understand.
 
+- For regular functions, use inline object types in the function signature rather than creating separate type definitions. Only create named types when they're reused across multiple functions or exported.
+  ```typescript
+  // ❌ BAD - Unnecessary type definition for single-use params
+  type DoSomethingParams = {
+    ctx: AutumnContext;
+    customerId: string;
+  };
+  const doSomething = async ({ ctx, customerId }: DoSomethingParams) => { ... }
+
+  // ✅ GOOD - Inline object type
+  const doSomething = async ({ ctx, customerId }: { ctx: AutumnContext; customerId: string }) => { ... }
+  ```
+
 - This codebase uses Bun for all of its operations in `/server`, `/vite` and `/shared`. It uses Bun for the package management, Bun for the workspace management and Bun for the runtime. Prefer Bun over PNPM. If you ever want to trace a package dependency tree, run `bun why <package name>` which will tell you why a certain package was installed and by who.
 - Prefer Guard clauses "if(!admin) return;" over explicity "if(admin) do X;" Early returns are better
 
@@ -36,6 +53,9 @@
 - **ALWAYS use `.meta()` for zod-openapi schema registration**, NOT `.openapi()`. Example: `ApiProductSchema.meta({ id: "Product" })`
 
 - **ALWAYS use `c.req.param()` to get route parameters in Hono handlers**, NOT `c.req.valid("param")`. Example: `const { customer_id } = c.req.param();`
+
+- When referring to a `customer_entitlement` object (or plural `customer_entitlements`), always use the full name. Do not abbreviate to "entitlement" or "entitlements" as this will be confused with the separate `entitlement` object.
+
 ## Error Handling in API Routes
 - NEVER use `c.json({ message: "...", code: "..." }, statusCode)` pattern for input validation or expected errors in Hono routes
 - ALWAYS throw `RecaseError` from `@autumn/shared` for all validation errors, not found errors, forbidden errors, etc.

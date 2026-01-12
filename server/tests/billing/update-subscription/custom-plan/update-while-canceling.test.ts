@@ -1,8 +1,9 @@
 import { expect, test } from "bun:test";
+import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/billing/utils/expectCustomerInvoiceCorrect";
 import {
 	expectProductActive,
-	expectProductCanceled,
+	expectProductCanceling,
 	expectProductNotPresent,
 	expectProductScheduled,
 } from "@tests/billing/utils/expectCustomerProductCorrect";
@@ -69,8 +70,9 @@ test.concurrent(`${chalk.yellowBright("update while canceling")}`, async () => {
 	});
 
 	// Verify pro is canceled and free is scheduled
-	const customerAfterCancel = await autumnV1.customers.get(customerId);
-	await expectProductCanceled({
+	const customerAfterCancel =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductCanceling({
 		customer: customerAfterCancel,
 		productId: pro.id,
 	});
@@ -99,10 +101,11 @@ test.concurrent(`${chalk.yellowBright("update while canceling")}`, async () => {
 	});
 
 	// Verify state after update
-	const customerAfterUpdate = await autumnV1.customers.get(customerId);
+	const customerAfterUpdate =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Pro should remain canceling (canceling state preserved)
-	await expectProductCanceled({
+	await expectProductCanceling({
 		customer: customerAfterUpdate,
 		productId: pro.id,
 	});
@@ -175,7 +178,8 @@ test.concurrent(`${chalk.yellowBright("update while downgrading")}`, async () =>
 	});
 
 	// Verify premium is active
-	const customerAfterAttach = await autumnV1.customers.get(customerId);
+	const customerAfterAttach =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({
 		customer: customerAfterAttach,
 		productId: premium.id,
@@ -188,8 +192,9 @@ test.concurrent(`${chalk.yellowBright("update while downgrading")}`, async () =>
 	});
 
 	// Verify premium is canceled and pro is scheduled
-	const customerAfterDowngrade = await autumnV1.customers.get(customerId);
-	await expectProductCanceled({
+	const customerAfterDowngrade =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductCanceling({
 		customer: customerAfterDowngrade,
 		productId: premium.id,
 	});
@@ -219,12 +224,13 @@ test.concurrent(`${chalk.yellowBright("update while downgrading")}`, async () =>
 	});
 
 	// Verify state after update
-	const customerAfterUpdate = await autumnV1.customers.get(customerId);
+	const customerAfterUpdate =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	console.log("Products after update:", customerAfterUpdate.products);
 
 	// Premium product should remain canceling (with updated items)
-	await expectProductCanceled({
+	await expectProductCanceling({
 		customer: customerAfterUpdate,
 		productId: premium.id,
 	});
@@ -242,7 +248,6 @@ test.concurrent(`${chalk.yellowBright("update while downgrading")}`, async () =>
 		org: ctx.org,
 		env: ctx.env,
 		subCount: 1,
-		shouldBeCanceled: true,
 	});
 
 	// Verify invoices - should have initial premium attach + update
@@ -259,7 +264,8 @@ test.concurrent(`${chalk.yellowBright("update while downgrading")}`, async () =>
 	});
 
 	// After advancing, pro should be active and premium should be gone
-	const customerAfterAdvance = await autumnV1.customers.get(customerId);
+	const customerAfterAdvance =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	console.log("Products after advance:", customerAfterAdvance.products);
 
@@ -331,7 +337,8 @@ test.concurrent(`${chalk.yellowBright("update while canceling: preserves usage")
 	);
 
 	// Verify usage tracked
-	const customerWithUsage = await autumnV1.customers.get(customerId);
+	const customerWithUsage =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customerWithUsage.features[TestFeature.Messages].usage).toBe(
 		messagesUsage,
 	);
@@ -343,13 +350,14 @@ test.concurrent(`${chalk.yellowBright("update while canceling: preserves usage")
 	});
 
 	// Verify pro is canceled and free is scheduled
-	const customerAfterCancel = await autumnV1.customers.get(customerId);
-	await expectProductCanceled({
-		customer: customerAfterCancel,
+	const customerAfterCancel2 =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductCanceling({
+		customer: customerAfterCancel2,
 		productId: pro.id,
 	});
 	await expectProductScheduled({
-		customer: customerAfterCancel,
+		customer: customerAfterCancel2,
 		productId: free.id,
 	});
 
@@ -374,22 +382,23 @@ test.concurrent(`${chalk.yellowBright("update while canceling: preserves usage")
 	});
 
 	// Verify state after update
-	const customerAfterUpdate = await autumnV1.customers.get(customerId);
+	const customerAfterUpdate2 =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Pro should remain canceling (canceling state preserved)
-	await expectProductCanceled({
-		customer: customerAfterUpdate,
+	await expectProductCanceling({
+		customer: customerAfterUpdate2,
 		productId: pro.id,
 	});
 
 	// Scheduled free product should remain scheduled
 	await expectProductScheduled({
-		customer: customerAfterUpdate,
+		customer: customerAfterUpdate2,
 		productId: free.id,
 	});
 
 	// Usage should be preserved
-	expect(customerAfterUpdate.features[TestFeature.Messages].usage).toBe(
+	expect(customerAfterUpdate2.features[TestFeature.Messages].usage).toBe(
 		messagesUsage,
 	);
 

@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/billing/utils/expectCustomerInvoiceCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
@@ -50,7 +51,7 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: add monthly base price")}`,
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	expectCustomerFeatureCorrect({
 		customer,
@@ -115,7 +116,7 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: add monthly base + consumab
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	expectCustomerFeatureCorrect({
 		customer,
@@ -169,7 +170,7 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: add annual base + monthly c
 
 	await autumnV1.subscriptions.update(updateParams, { timeout: 2000 });
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	expectCustomerFeatureCorrect({
 		customer,
@@ -234,7 +235,7 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: update free item to consuma
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	expectCustomerFeatureCorrect({
 		customer,
@@ -300,7 +301,7 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: update free item to prepaid
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	expectCustomerFeatureCorrect({
 		customer,
@@ -351,7 +352,8 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: update free users to alloca
 	);
 
 	// Verify initial state
-	const initialCustomer = await autumnV1.customers.get(customerId);
+	const initialCustomer =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(initialCustomer.features[TestFeature.Users].balance).toEqual(
 		usersItem.included_usage - usersUsed,
 	);
@@ -372,7 +374,7 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: update free users to alloca
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	expectCustomerFeatureCorrect({
 		customer,

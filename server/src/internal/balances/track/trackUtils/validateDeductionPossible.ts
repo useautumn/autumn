@@ -10,7 +10,7 @@ import {
 import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
 import { getFeatureBalance } from "../../../customers/cusProducts/cusEnts/cusEntUtils.js";
-import type { FeatureDeduction } from "./getFeatureDeductions.js";
+import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 
 /**
  * Calculate total available rollover balance for a feature

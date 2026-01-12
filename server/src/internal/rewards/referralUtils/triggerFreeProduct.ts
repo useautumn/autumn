@@ -1,5 +1,4 @@
 import {
-	type AppEnv,
 	type Customer,
 	ErrCode,
 	type FullRewardProgram,
@@ -10,7 +9,6 @@ import {
 	type RewardRedemption,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import type { InsertCusProductParams } from "@/internal/customers/cusProducts/AttachParams.js";
@@ -25,26 +23,21 @@ import { ReferralResponseCodes } from "../referralUtils.js";
 import { triggerFreePaidProduct } from "./triggerFreePaidProduct.js";
 
 export const triggerFreeProduct = async ({
+	ctx,
 	req,
-	db,
 	referralCode,
 	redeemer,
 	redemption,
 	rewardProgram,
-	org,
-	env,
-	logger,
 }: {
+	ctx: AutumnContext;
 	req?: ExtendedRequest;
-	db: DrizzleCli;
 	referralCode: ReferralCode;
 	redeemer: Customer;
 	redemption: RewardRedemption;
 	rewardProgram: FullRewardProgram & { reward: Reward };
-	org: any;
-	env: AppEnv;
-	logger: any;
 }) => {
+	const { db, org, env, logger } = ctx;
 	logger.info(`Triggering free product reward`);
 	const { received_by } = rewardProgram;
 
@@ -62,20 +55,9 @@ export const triggerFreeProduct = async ({
 		env,
 	});
 
-	function seedReq(req?: ExtendedRequest) {
-		// Seed in properties that aren't usually present dependent on the trigger type
-		return {
-			...(req || {}),
-			db: req?.db ? req.db : db,
-			org: req?.org ? req.org : org,
-			env: req?.env ? req.env : env,
-			logger: req?.logger ? req.logger : logger,
-		} as ExtendedRequest;
-	}
-
 	if (!isFreeProduct(fullProduct.prices) && !isOneOff(fullProduct.prices)) {
-		req = seedReq(req);
 		return await triggerFreePaidProduct({
+			ctx,
 			req,
 			referralCode,
 			redeemer,
@@ -118,7 +100,7 @@ export const triggerFreeProduct = async ({
 	}
 
 	const attachParams: InsertCusProductParams = {
-		req: req as unknown as AutumnContext,
+		req: ctx,
 		org,
 		product: fullProduct,
 		prices: fullProduct.prices,
@@ -126,7 +108,7 @@ export const triggerFreeProduct = async ({
 		optionsList: [],
 		entities: [],
 		freeTrial: null,
-		features: [],
+		features: ctx.features,
 		customer: fullReferrer,
 		cusProducts: fullReferrer.customer_products,
 		replaceables: [],
@@ -148,8 +130,8 @@ export const triggerFreeProduct = async ({
 
 		await deleteCachedApiCustomer({
 			customerId: fullRedeemer.id!,
-			orgId: org.id,
-			env,
+			ctx,
+			source: `triggerFreeProduct, deleting redeemer cache`,
 		});
 	}
 
@@ -166,8 +148,8 @@ export const triggerFreeProduct = async ({
 
 		await deleteCachedApiCustomer({
 			customerId: fullReferrer.id!,
-			orgId: org.id,
-			env,
+			ctx,
+			source: `triggerFreeProduct, deleting referrer cache`,
 		});
 		logger.info(`✅ Added ${fullProduct.name} to referrer`);
 	}

@@ -4,7 +4,7 @@ import { EntInterval } from "../../productModels/intervals/entitlementInterval.j
 import { ReplaceableSchema } from "./replaceableSchema.js";
 import { RolloverSchema } from "./rolloverModels/rolloverTable.js";
 
-export const SortCusEntParamsSchema = z.object({
+export const CustomerEntitlementFiltersSchema = z.object({
 	cusEntIds: z.array(z.string()).optional(),
 	interval: z.enum(EntInterval).optional(),
 });
@@ -49,7 +49,9 @@ export const FullCustomerEntitlementSchema = CustomerEntitlementSchema.extend({
 	rollovers: z.array(RolloverSchema),
 });
 
-export type SortCusEntParams = z.infer<typeof SortCusEntParamsSchema>;
+export type CustomerEntitlementFilters = z.infer<
+	typeof CustomerEntitlementFiltersSchema
+>;
 export type EntityBalance = z.infer<typeof EntityBalanceSchema>;
 export type CustomerEntitlement = z.infer<typeof CustomerEntitlementSchema>;
 export type FullCustomerEntitlement = z.infer<

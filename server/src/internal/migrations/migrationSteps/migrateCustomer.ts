@@ -1,43 +1,43 @@
 import {
-	type AppEnv,
-	type Feature,
+	ACTIVE_STATUSES,
 	type FullCusProduct,
 	type FullProduct,
 	type MigrationJob,
-	type Organization,
 	ProcessorType,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
-import type { Logger } from "../../../external/logtail/logtailUtils.js";
+import { CusProductService } from "../../customers/cusProducts/CusProductService.js";
+import { createMigrationCustomerLogger } from "../migrationUtils/createMigrationCustomerLogger.js";
 import { migrateRevenueCatCustomer } from "./migrateRevenuecatCustomer.js";
 import { migrateStripeCustomer } from "./migrateStripeCustomer.js";
 
 export const migrateCustomer = async ({
-	db,
+	ctx,
 	customerId,
-	org,
-	logger,
-	env,
-	orgId,
 	fromProduct,
 	toProduct,
-	features,
 	migrationJob,
 }: {
-	db: DrizzleCli;
+	ctx: AutumnContext;
 	customerId: string;
-	org: Organization;
-	env: AppEnv;
-	orgId: string;
 	fromProduct: FullProduct;
 	toProduct: FullProduct;
-	logger: Logger;
-	features: Feature[];
 	migrationJob?: MigrationJob;
 }) => {
+	const { db, org, env } = ctx;
+	const orgId = org.id;
+
+	// Create customer-specific logger
+	const customerLogger = createMigrationCustomerLogger({
+		ctx,
+		customerId,
+		migrationJobId: migrationJob?.id,
+	});
+
+	const customerCtx: AutumnContext = { ...ctx, logger: customerLogger };
+
 	try {
 		const stripeCli = createStripeCli({ org, env });
 		const fullCus = await CusService.getFull({
@@ -46,18 +46,8 @@ export const migrateCustomer = async ({
 			orgId,
 			env,
 			withEntities: true,
+			inStatuses: ACTIVE_STATUSES,
 		});
-
-		// 1. Build req object
-		const req = {
-			db,
-			orgId,
-			env,
-			org,
-			features,
-			logger,
-			timestamp: Date.now(),
-		} as ExtendedRequest;
 
 		const cusProducts = fullCus.customer_products;
 		const filteredCusProducts = cusProducts.filter(
@@ -65,38 +55,50 @@ export const migrateCustomer = async ({
 				cp.product.internal_id === fromProduct.internal_id,
 		);
 
-		for (const cusProduct of filteredCusProducts) {
+		customerLogger.debug(
+			`Filtered customer products ${filteredCusProducts.length}`,
+		);
+
+		for (let i = 0; i < filteredCusProducts.length; i++) {
+			const cusProduct = filteredCusProducts[i];
 			if (cusProduct.processor?.type === ProcessorType.RevenueCat) {
 				await migrateRevenueCatCustomer({
-					req,
+					ctx: customerCtx,
 					fullCus,
 					cusProduct,
 					toProduct,
 					customerId,
-					orgId,
-					env,
 				});
 			} else {
 				await migrateStripeCustomer({
-					req,
+					ctx: customerCtx,
 					stripeCli,
 					fullCus,
 					cusProduct,
 					toProduct,
 					fromProduct,
 					customerId,
-					orgId,
-					env,
 				});
+			}
+
+			// If not last, refresh full customer with new cusProducts
+			if (i < filteredCusProducts.length - 1) {
+				const latestCusProducts = await CusProductService.list({
+					db,
+					internalCustomerId: fullCus.internal_id,
+					inStatuses: ACTIVE_STATUSES,
+				});
+
+				fullCus.customer_products = latestCusProducts;
 			}
 		}
 
 		return true;
-	} catch (error: any) {
-		logger.error(
+	} catch (error) {
+		customerLogger.error(
 			`Migration failed for customer ${customerId}, job id: ${migrationJob?.id}`,
 		);
-		logger.error(error);
+		customerLogger.error(error);
 
 		return false;
 	}

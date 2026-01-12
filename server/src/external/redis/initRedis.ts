@@ -13,6 +13,11 @@ import {
 	SET_INVOICES_SCRIPT,
 	SET_SUBSCRIPTIONS_SCRIPT,
 } from "../../_luaScripts/luaScripts.js";
+import {
+	BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
+	DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
+	DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
+} from "../../_luaScriptsV2/luaScriptsV2.js";
 
 // if (!process.env.CACHE_URL) {
 // 	throw new Error("CACHE_URL (redis) is not set");
@@ -22,6 +27,9 @@ import {
 export const REGION_US_EAST_2 = "us-east-2";
 export const REGION_US_WEST_2 = "us-west-2";
 
+// All configured regions
+export const ALL_REGIONS = [REGION_US_EAST_2, REGION_US_WEST_2] as const;
+
 // Current region this instance is running in
 export const currentRegion = process.env.AWS_REGION || REGION_US_WEST_2;
 
@@ -29,6 +37,61 @@ export const currentRegion = process.env.AWS_REGION || REGION_US_WEST_2;
 const regionToCacheUrl: Record<string, string | undefined> = {
 	[REGION_US_EAST_2]: process.env.CACHE_URL_US_EAST,
 	[REGION_US_WEST_2]: process.env.CACHE_URL, // Default/us-west-2 URL
+};
+
+/** Get all regions that have configured cache URLs */
+export const getConfiguredRegions = (): string[] => {
+	return ALL_REGIONS.filter((region) => regionToCacheUrl[region]);
+};
+
+/** Wait for a Redis instance to be ready */
+const waitForRedisReady = (
+	instance: Redis,
+	region: string,
+	timeoutMs = 10000,
+): Promise<void> => {
+	return new Promise((resolve, reject) => {
+		if (instance.status === "ready") {
+			resolve();
+			return;
+		}
+
+		const timeout = setTimeout(() => {
+			reject(new Error(`Redis connection timeout for region ${region}`));
+		}, timeoutMs);
+
+		instance.once("ready", () => {
+			clearTimeout(timeout);
+			console.log(`[Redis] ${region}: connected`);
+			resolve();
+		});
+
+		instance.once("error", (err) => {
+			clearTimeout(timeout);
+			reject(err);
+		});
+	});
+};
+
+/** Pre-warm all regional Redis connections. Call on startup before processing requests. */
+export const warmupRegionalRedis = async (): Promise<void> => {
+	const regions = getConfiguredRegions();
+	console.log(
+		`[Redis] Warming up connections for ${regions.length} regions...`,
+	);
+
+	const warmupPromises = regions.map(async (region) => {
+		try {
+			const instance = getRegionalRedis(region);
+			await waitForRedisReady(instance, region);
+		} catch (error) {
+			console.error(`[Redis] ${region}: warmup failed -`, error);
+			// Don't throw - allow startup to continue even if one region fails
+		}
+	});
+
+	await Promise.all(warmupPromises);
+	console.log(`[Redis] Warmup complete`);
 };
 
 /** Configure a Redis instance with custom commands */
@@ -95,9 +158,23 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 		lua: BATCH_DELETE_CUSTOMERS_SCRIPT,
 	});
 
-	// biome-ignore lint/correctness/noUnusedFunctionParameters: Might uncomment this back in in the future
+	redisInstance.defineCommand("deductFromCustomerEntitlements", {
+		numberOfKeys: 1,
+		lua: DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
+	});
+
+	redisInstance.defineCommand("deleteFullCustomerCache", {
+		numberOfKeys: 3,
+		lua: DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
+	});
+
+	redisInstance.defineCommand("batchDeleteFullCustomerCache", {
+		numberOfKeys: 0,
+		lua: BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
+	});
+
 	redisInstance.on("error", (error) => {
-		// logger.error(`redis (cache) error: ${error.message}`);
+		console.error(`[Redis] Connection error:`, error.message);
 	});
 
 	return redisInstance;
@@ -133,14 +210,10 @@ export const getRegionalRedis = (region: string): Redis => {
 		return redis;
 	}
 
-	// Check if we already have a connection for this region
-	let regionalInstance = regionalRedisInstances.get(region);
-	if (regionalInstance) {
-		return regionalInstance;
-	}
-
-	// Create new connection for the requested region
+	// Get the cache URL for the requested region
 	const cacheUrl = regionToCacheUrl[region];
+
+	// If no cache URL configured, fall back to primary
 	if (!cacheUrl) {
 		console.warn(
 			`No cache URL configured for region ${region}, falling back to primary`,
@@ -148,6 +221,19 @@ export const getRegionalRedis = (region: string): Redis => {
 		return redis;
 	}
 
+	// If the cache URL is the same as primary, return primary instance
+	// (avoids creating duplicate connections to the same server)
+	if (cacheUrl === primaryCacheUrl) {
+		return redis;
+	}
+
+	// Check if we already have a connection for this region
+	let regionalInstance = regionalRedisInstances.get(region);
+	if (regionalInstance) {
+		return regionalInstance;
+	}
+
+	// Create new connection for the requested region
 	console.log(`Creating Redis connection for region: ${region}`);
 	regionalInstance = createRedisConnection(cacheUrl);
 	regionalRedisInstances.set(region, regionalInstance);
@@ -236,6 +322,22 @@ declare module "ioredis" {
 			cacheCustomerVersion: string,
 			customersJson: string,
 		): Promise<number>;
+		deductFromCustomerEntitlements(
+			cacheKey: string,
+			paramsJson: string,
+		): Promise<string>;
+		deleteFullCustomerCache(
+			testGuardKey: string,
+			guardKey: string,
+			cacheKey: string,
+			guardTimestamp: string,
+			guardTtl: string,
+		): Promise<"SKIPPED" | "DELETED" | "NOT_FOUND">;
+		batchDeleteFullCustomerCache(
+			guardTimestamp: string,
+			guardTtl: string,
+			customersJson: string,
+		): Promise<string>;
 	}
 }
 

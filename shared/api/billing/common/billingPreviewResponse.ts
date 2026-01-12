@@ -11,6 +11,13 @@ export const BillingPreviewResponseSchema = z.object({
 
 	total: z.number(),
 	currency: z.string(),
+
+	next_cycle: z
+		.object({
+			starts_at: z.number(),
+			total: z.number(),
+		})
+		.optional(),
 });
 
 export type BillingPreviewResponse = z.infer<
