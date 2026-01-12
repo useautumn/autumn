@@ -14,9 +14,11 @@ import {
 	usagePriceToLineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { BillingContext } from "@/internal/billing/v2/billingContext";
 
 export const computeUpdateQuantityLineItems = ({
 	ctx,
+	billingContext,
 	customerProduct,
 	feature,
 	billingPeriod,
@@ -24,6 +26,7 @@ export const computeUpdateQuantityLineItems = ({
 	currentEpochMs,
 }: {
 	ctx: AutumnContext;
+	billingContext: BillingContext;
 	customerProduct: FullCusProduct;
 	feature: Feature;
 	billingPeriod?: BillingPeriod;
@@ -103,7 +106,10 @@ export const computeUpdateQuantityLineItems = ({
 
 	// Don't return line items if they sum to 0
 	if (
-		sumValues([refundLineItem.finalAmount, chargeLineItem.finalAmount]) === 0
+		sumValues([
+			refundLineItem?.finalAmount ?? 0,
+			chargeLineItem?.finalAmount ?? 0,
+		]) === 0
 	) {
 		return [];
 	}

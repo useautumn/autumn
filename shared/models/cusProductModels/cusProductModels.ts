@@ -1,4 +1,5 @@
 import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
+import { ProcessorType } from "@models/genModels/genEnums.js";
 import { z } from "zod/v4";
 import { CustomerSchema } from "../cusModels/cusModels.js";
 import { FreeTrialSchema } from "../productModels/freeTrialModels/freeTrialModels.js";
@@ -50,14 +51,14 @@ export const CusProductSchema = z.object({
 	// Fixed-cycle configuration
 	subscription_ids: z.array(z.string()).nullish(),
 	scheduled_ids: z.array(z.string()).nullish(),
-	// processor: z
-	// 	.object({
-	// 		type: z.enum(ProcessorType),
-	// 		subscription_id: z.string().optional().nullable(),
-	// 		subscription_schedule_id: z.string().optional().nullable(),
-	// 		last_invoice_id: z.string().optional().nullable(),
-	// 	})
-	// 	.optional(),
+	processor: z
+		.object({
+			type: z.enum(ProcessorType),
+			// subscription_id: z.string().optional().nullable(),
+			// subscription_schedule_id: z.string().optional().nullable(),
+			// last_invoice_id: z.string().optional().nullable(),
+		})
+		.optional(),
 
 	quantity: z.number().default(1),
 	api_semver: z.enum(ApiVersion).nullable(),

@@ -4,7 +4,7 @@ import type {
 	Price,
 	UpdateSubscriptionV0Params,
 } from "@autumn/shared";
-import { roundUsageToNearestBillingUnit } from "@autumn/shared";
+import { notNullish, roundUsageToNearestBillingUnit } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 
 export const paramsToFeatureOptions = ({
@@ -22,7 +22,7 @@ export const paramsToFeatureOptions = ({
 
 	const billingUnits = price.config.billing_units ?? 1;
 
-	if (options?.quantity) {
+	if (notNullish(options?.quantity)) {
 		// 1. Round options quantity to nearest billing units:
 		const roundedQuantity = roundUsageToNearestBillingUnit({
 			usage: options.quantity,

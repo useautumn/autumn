@@ -12,6 +12,7 @@ import {
 	stripeToAtmnAmount,
 	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
+import type { AxiosError } from "axios";
 import { Check, Copy, PencilSimple } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
@@ -289,7 +290,7 @@ interface BillingPlanData {
 					quantity?: number;
 					deleted?: boolean;
 				}>;
-				trial_end?: number;
+				trial_end?: number | "now";
 				proration_behavior?: string;
 				cancel_at_period_end?: boolean;
 			};
@@ -613,10 +614,13 @@ function PreviewResult({ data, isLoading, error }: PreviewResultProps) {
 								<div className="mt-1 text-xs text-t-secondary">
 									<span>Trial ends: </span>
 									<span className="text-green-400">
-										{new Date(
-											billingPlan.stripe.subscriptionAction.params.trial_end *
-												1000,
-										).toLocaleDateString()}
+										{billingPlan.stripe.subscriptionAction.params.trial_end ===
+										"now"
+											? "now"
+											: new Date(
+													(billingPlan.stripe.subscriptionAction.params
+														.trial_end as number) * 1000,
+												).toLocaleDateString()}
 									</span>
 								</div>
 							) : null}
@@ -1077,6 +1081,10 @@ function useSubscriptionUpdate({
 			}
 		},
 		onError: (error) => {
+			toast.error(
+				(error as AxiosError<{ message: string }>)?.response?.data?.message ??
+					"Failed to update subscription",
+			);
 			console.error("Update failed:", error);
 		},
 	});
@@ -1134,15 +1142,24 @@ function SheetContent({
 	};
 
 	// Get initial prepaid values from the current subscription
+	// Divide by billing_units to show values in "billing units" (e.g., 200 instead of 20000)
 	const initialPrepaidOptions = useMemo(() => {
 		return cusProduct.options.reduce(
 			(acc, option) => {
-				acc[option.feature_id] = option.quantity;
+				// Find the corresponding prepaid item to get billing_units
+				const prepaidItem = prepaidItems.find(
+					(item) =>
+						(item.feature_id ?? item.feature?.internal_id) ===
+						option.feature_id,
+				);
+				const billingUnits = prepaidItem?.billing_units ?? 1;
+				// Divide by billing_units so input shows "200" not "20000"
+				acc[option.feature_id] = Math.round(option.quantity / billingUnits);
 				return acc;
 			},
 			{} as Record<string, number>,
 		);
-	}, [cusProduct.options]);
+	}, [cusProduct.options, prepaidItems]);
 
 	const [prepaidOptions, setPrepaidOptions] = useState<Record<string, number>>(
 		initialPrepaidOptions,
@@ -1185,20 +1202,26 @@ function SheetContent({
 		};
 
 		// Add options only if they have changed from initial values
+		// Multiply by billing_units to match what useUpdateSubscriptionBodyBuilder does
 		if (prepaidItems.length > 0) {
 			const options = prepaidItems
 				.map((item) => {
 					const featureId = item.feature_id ?? item.feature?.internal_id ?? "";
-					const quantity = prepaidOptions[featureId];
+					const inputQuantity = prepaidOptions[featureId];
 					const initialQuantity = initialPrepaidOptions[featureId];
+					const billingUnits = item.billing_units ?? 1;
 					// Only include if changed from initial value
 					if (
-						quantity !== undefined &&
-						quantity !== null &&
+						inputQuantity !== undefined &&
+						inputQuantity !== null &&
 						featureId &&
-						quantity !== initialQuantity
+						inputQuantity !== initialQuantity
 					) {
-						return { feature_id: featureId, quantity };
+						// Multiply by billing_units - input is in "billing units", API expects total quantity
+						return {
+							feature_id: featureId,
+							quantity: inputQuantity * billingUnits,
+						};
 					}
 					return null;
 				})
@@ -1230,8 +1253,6 @@ function SheetContent({
 				duration: trialDuration,
 				card_required: trialCardRequired,
 			};
-		} else if (customizedProduct?.free_trial) {
-			body.free_trial = customizedProduct.free_trial;
 		}
 
 		// Add custom plan dates if set (epoch milliseconds)
