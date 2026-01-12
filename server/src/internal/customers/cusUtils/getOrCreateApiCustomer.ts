@@ -12,9 +12,9 @@ import { autoCreateEntity } from "../../entities/handlers/handleCreateEntity/aut
 import { CusService } from "../CusService.js";
 import { handleCreateCustomer } from "../handlers/handleCreateCustomer.js";
 import { getApiCustomerBase } from "./apiCusUtils/getApiCustomerBase.js";
+import { updateCustomerDetails } from "./cusUtils.js";
 import { deleteCachedFullCustomer } from "./fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { getOrSetCachedFullCustomer } from "./fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
-import { updateCustomerDetails } from "./cusUtils.js";
 
 export const getOrCreateApiCustomer = async ({
 	ctx,
@@ -159,8 +159,7 @@ export const getOrCreateApiCustomer = async ({
 	if (updated) {
 		await deleteCachedFullCustomer({
 			customerId: apiCustomer.id || "",
-			orgId: ctx.org.id,
-			env: ctx.env,
+			ctx,
 			source: "getOrCreateApiCustomer",
 		});
 		const fullCus = await getOrSetCachedFullCustomer({
@@ -196,8 +195,7 @@ export const getOrCreateApiCustomer = async ({
 
 		await deleteCachedFullCustomer({
 			customerId,
-			orgId: ctx.org.id,
-			env: ctx.env,
+			ctx,
 			source: "getOrCreateApiCustomer",
 		});
 

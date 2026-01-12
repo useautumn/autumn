@@ -15,13 +15,14 @@ export const handleUpdateBalancesV2 = createRoute({
 
 		const { org, env, db, features } = ctx;
 		const { customer_id } = c.req.param();
-		const { balances } = c.req.valid("json");
+		const { balances, entity_id } = c.req.valid("json");
 
 		const fullCus = await CusService.getFull({
 			db,
 			idOrInternalId: customer_id,
 			orgId: org.id,
 			env,
+			entityId: entity_id,
 		});
 
 		for (const balance of balances) {

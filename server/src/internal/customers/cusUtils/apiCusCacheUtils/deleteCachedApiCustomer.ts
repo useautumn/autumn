@@ -1,30 +1,27 @@
 import { CACHE_CUSTOMER_VERSIONS } from "../../../../_luaScripts/cacheConfig.js";
 import {
-	type Logger,
-	logger as loggerInstance,
-} from "../../../../external/logtail/logtailUtils.js";
-import { redis } from "../../../../external/redis/initRedis.js";
+	getConfiguredRegions,
+	getRegionalRedis,
+	redis,
+} from "../../../../external/redis/initRedis.js";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { deleteCachedFullCustomer } from "../fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 
 /**
- * Delete all cached ApiCustomer data from Redis
- * This includes the base customer key and all related feature/breakdown/rollover keys
- * Also deletes all associated entity caches atomically using Lua script
+ * Delete all cached ApiCustomer data from Redis across ALL regions.
+ * This ensures cache consistency and prevents race conditions where
+ * a stale cache in another region could be read after deletion.
  */
 export const deleteCachedApiCustomer = async ({
 	customerId,
-	orgId,
-	env,
+	ctx,
 	source,
-	logger,
 }: {
 	customerId: string;
-	orgId: string;
-	env: string;
+	ctx: AutumnContext;
 	source?: string;
-	logger?: Logger;
 }): Promise<void> => {
-	logger = loggerInstance || loggerInstance;
+	const { org, env, logger } = ctx;
 
 	if (redis.status !== "ready") {
 		logger.warn("❗️ Redis not ready, skipping cache deletion", {
@@ -38,34 +35,48 @@ export const deleteCachedApiCustomer = async ({
 
 	if (!customerId) return;
 
+	const regions = getConfiguredRegions();
+
 	try {
-		const [deletedCount, deletedCountV1_2_0] = await Promise.all([
-			redis.deleteCustomer(
+		await deleteCachedFullCustomer({
+			ctx,
+			customerId,
+			source,
+		});
+		// Delete from all regions in parallel to avoid race conditions
+		const deletePromises = regions.map(async (region) => {
+			const regionalRedis = getRegionalRedis(region);
+
+			// Check if this regional instance is ready
+			if (regionalRedis.status !== "ready") {
+				logger?.warn(`Redis not ready for region ${region}, skipping`, {
+					data: { status: regionalRedis.status, customerId, region },
+				});
+				return { region, deletedCount: 0, skipped: true };
+			}
+
+			const deletedCount = await regionalRedis.deleteCustomer(
 				CACHE_CUSTOMER_VERSIONS.LATEST,
-				orgId,
+				org.id,
 				env,
 				customerId,
-			),
-			redis.deleteCustomer(
-				CACHE_CUSTOMER_VERSIONS.PREVIOUS,
-				orgId,
-				env,
-				customerId,
-			),
-			deleteCachedFullCustomer({
-				customerId,
-				orgId,
-				env,
-				source,
-				logger,
-			}),
-		]);
+			);
+
+			return { region, deletedCount, skipped: false };
+		});
+
+		const results = await Promise.all(deletePromises);
+
+		const totalDeleted = results.reduce(
+			(sum, r) => sum + (r.deletedCount || 0),
+			0,
+		);
+		const regionsSummary = results
+			.map((r) => `${r.region}: ${r.skipped ? "skipped" : r.deletedCount}`)
+			.join(", ");
 
 		logger.info(
-			`Deleted ${deletedCount} cache keys for customer ${customerId}, source: ${source}`,
-		);
-		logger.info(
-			`Deleted ${deletedCountV1_2_0} cache keys (v1.2.0) for customer ${customerId}, source: ${source}`,
+			`Deleted cache keys for customer ${customerId}. Source: ${source}, keys: ${totalDeleted}, regions: ${regions.length} (${regionsSummary})`,
 		);
 	} catch (error) {
 		logger.error(`Error deleting customer with entities: ${error}`);

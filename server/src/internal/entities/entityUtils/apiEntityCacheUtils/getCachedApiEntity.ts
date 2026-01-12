@@ -59,6 +59,8 @@ export const getCachedApiEntity = async ({
 				entityId,
 				source: "getCachedApiEntity",
 			});
+
+			fullCus.entity = fullCus.entities.find((e) => e.id === entityId);
 		}
 
 		const entity = fullCus.entity;

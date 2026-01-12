@@ -11,7 +11,6 @@ import { getRegionalRedis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { getCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getCachedFullCustomer.js";
-import type { Logger } from "../../../../external/logtail/logtailUtils";
 
 const SYNC_CONFLICT_CODES = {
 	ResetAtMismatch: "RESET_AT_MISMATCH",
@@ -24,15 +23,11 @@ const SYNC_CONFLICT_CODES = {
 const handleSyncPostgresError = async ({
 	error,
 	customerId,
-	orgId,
-	env,
-	logger,
+	ctx,
 }: {
 	error: Error;
 	customerId: string;
-	orgId: string;
-	env: string;
-	logger: Logger;
+	ctx: AutumnContext;
 }): Promise<boolean> => {
 	const message = error.message || "";
 	const isConflict =
@@ -50,17 +45,15 @@ const handleSyncPostgresError = async ({
 	const cusEntMatch = message.match(/cus_ent_id:(\S+)/);
 	const cusEntId = cusEntMatch?.[1];
 
-	logger.warn(
+	ctx.logger.warn(
 		`[SYNC V3] (${customerId}) Sync conflict detected: ${code}, cus_ent: ${cusEntId}. Clearing cache.`,
 	);
 
 	// Clear the stale cache
 	await deleteCachedFullCustomer({
 		customerId,
-		orgId,
-		env,
+		ctx,
 		source: `sync-conflict-${code}`,
-		logger,
 	});
 
 	return true;
@@ -247,9 +240,7 @@ export const syncItemV3 = async ({
 		await handleSyncPostgresError({
 			error,
 			customerId,
-			orgId,
-			env,
-			logger,
+			ctx,
 		});
 		return;
 	}

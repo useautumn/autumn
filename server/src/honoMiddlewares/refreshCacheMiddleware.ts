@@ -95,13 +95,13 @@ export const refreshCacheMiddleware = async (
 				customerId,
 				orgId: org.id,
 				env: env,
+				logger,
+				source: `refreshCacheMiddleware, url: ${pathname}`,
 			});
 			await deleteCachedFullCustomer({
 				customerId,
-				orgId: org.id,
-				env: env,
+				ctx,
 				source: "refreshCacheMiddleware",
-				logger,
 			});
 		}
 		return;
@@ -128,10 +128,8 @@ export const refreshCacheMiddleware = async (
 			});
 			await deleteCachedFullCustomer({
 				customerId: body.customer_id,
-				orgId: org.id,
-				env: env,
+				ctx,
 				source: "refreshCacheMiddleware",
-				logger,
 			});
 		}
 	}

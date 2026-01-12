@@ -7,9 +7,8 @@ import {
 } from "@shared/index";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
-import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct";
-import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
 import { attachToInsertParams } from "@/internal/products/productUtils";
 import { oneOffOrAddOn } from "@/internal/products/productUtils/classifyProduct";
 
@@ -18,7 +17,7 @@ export const handleNonRenewingPurchase = async ({
 	ctx,
 }: {
 	event: WebhookNonRenewingPurchase;
-	ctx: AutumnContext;
+	ctx: RevenueCatWebhookContext;
 }) => {
 	const { db, org, env, logger, features } = ctx;
 
@@ -69,11 +68,4 @@ export const handleNonRenewingPurchase = async ({
 	logger.info(
 		`Created cus_product for ${product.id} with scenario: ${scenario}`,
 	);
-
-	await deleteCachedApiCustomer({
-		customerId: customer.id ?? "",
-		orgId: org.id,
-		env,
-		source: `handleRevenuecatNonRenewingPurchase: ${product.id}`,
-	});
 };
