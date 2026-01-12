@@ -28,7 +28,7 @@ export const ValidateCreateBalanceParamsSchema = CreateBalanceSchema.extend({
 	}
 
 	if (data.feature.type === FeatureType.Boolean) {
-		if (data.granted_balance || data.unlimited || data.reset?.interval || data.expires_at) {
+		if (data.granted_balance !== undefined || data.unlimited || data.reset?.interval || data.expires_at) {
 			return false;
 		}
 	}
