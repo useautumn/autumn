@@ -1,24 +1,27 @@
-import {
-	CreateBalanceSchema,
-	EntityNotFoundError
-} from "@autumn/shared";
+import { CreateBalanceSchema, EntityNotFoundError } from "@autumn/shared";
 import { FeatureNotFoundError } from "@shared/index";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { CusService } from "@/internal/customers/CusService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
-import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService";
 import { prepareNewBalanceForInsertion } from "../createBalance/prepareNewBalanceForInsertion";
-import {
-	validateCreateBalanceParams
-} from "../createBalance/validateCreateBalance";
+import { validateCreateBalanceParams } from "../createBalance/validateCreateBalance";
 
 export const handleCreateBalance = createRoute({
 	body: CreateBalanceSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { feature_id, customer_id, entity_id, granted_balance, unlimited, reset, expires_at } =
-			c.req.valid("json");
+		const { org, env } = ctx;
+		const {
+			feature_id,
+			customer_id,
+			entity_id,
+			granted_balance,
+			unlimited,
+			reset,
+			expires_at,
+		} = c.req.valid("json");
 
 		const feature = ctx.features.find((f) => f.id === feature_id);
 		if (!feature) {
@@ -28,8 +31,8 @@ export const handleCreateBalance = createRoute({
 		const fullCustomer = await CusService.getFull({
 			db: ctx.db,
 			idOrInternalId: customer_id,
-			orgId: ctx.org.id,
-			env: ctx.env,
+			orgId: org.id,
+			env: env,
 			withEntities: true,
 		});
 
@@ -60,7 +63,9 @@ export const handleCreateBalance = createRoute({
 				reset,
 				expires_at,
 				fullCus: fullCustomer,
-				entity: entity_id ? fullCustomer.entities.find((e) => e.id === entity_id) : undefined,
+				entity: entity_id
+					? fullCustomer.entities.find((e) => e.id === entity_id)
+					: undefined,
 				feature_id,
 			});
 
@@ -74,10 +79,9 @@ export const handleCreateBalance = createRoute({
 			data: [newCustomerEntitlement],
 		});
 
-		await deleteCachedApiCustomer({
-			orgId: ctx.org.id,
-			env: ctx.env,
+		await deleteCachedFullCustomer({
 			customerId: customer_id,
+			ctx,
 			source: "handleCreateBalance",
 		});
 
