@@ -191,55 +191,97 @@ const { customerId, autumnV1, advancedTo } = await initScenario({
 
 ---
 
-## Product ID Prefixing
+## Product ID in `s.attach()`
 
-**Important:** Product IDs are automatically prefixed with `customerId_` for test isolation.
-
-- In `s.attach()`: Use the **unprefixed** product ID (e.g., `"base"`, `"pro"`)
-- In API calls after setup: Use `product.id` which includes the prefix
+**Important:** Always use the product variable's `.id` property in `s.attach()`, never a string literal.
 
 ```typescript
-const free = products.base({ items: [messagesItem] }); // id = "base"
+const free = products.base({ items: [messagesItem] });
+const pro = products.pro({ items: [messagesItem] });
 
-const { customerId, autumnV1 } = await initScenario({
-  customerId: "my-test",
-  setup: [s.products({ list: [free] })],
-  actions: [s.attach({ productId: "base" })], // Use "base" (unprefixed)
-});
+// ✅ GOOD - Use product.id
+actions: [
+  s.attach({ productId: free.id }),
+  s.attach({ productId: pro.id }),
+]
 
-// For subsequent API calls, use free.id which is prefixed
-await autumnV1.subscriptions.update({
-  customer_id: customerId,
-  product_id: free.id, // "my-test_base" (prefixed)
-  items: [newItem],
-});
+// ❌ BAD - Don't use string literals
+actions: [
+  s.attach({ productId: "base" }),    // Wrong!
+  s.attach({ productId: "pro" }),     // Wrong!
+]
 ```
+
+This ensures consistency and prevents bugs when product IDs change. The same `product.id` is used for both `s.attach()` and subsequent API calls.
 
 ---
 
 ## Prepaid Items
 
-**Prepaid items require a `quantity` in `options`** when calling `subscriptions.update` or `subscriptions.previewUpdate`:
+**Prepaid items require a `quantity` in `options`** when attaching or updating:
 
 ```typescript
-const prepaidItem = items.prepaidMessages(); // $10 per 100 units (billingUnits: 100)
+const prepaidItem = items.prepaidMessages({
+  includedUsage: 0,
+  billingUnits: 100,  // 1 pack = 100 units
+  price: 10,          // $10 per pack
+});
+```
 
-// IMPORTANT: quantity is inclusive of billing units
-// quantity: 100 with billingUnits: 100 = 100 credits
-await autumnV1.subscriptions.update({
-  customer_id: customerId,
-  product_id: productId,
-  items: [prepaidItem],
-  options: [
-    {
-      feature_id: TestFeature.Messages,
-      quantity: 100, // Gets you 100 credits
-    },
+### Key Rules
+
+1. **`quantity` is the total units you want** - NOT multiplied by billing units
+2. **`quantity` is separate from `included_usage`** - included_usage provides free balance, quantity is purchased balance
+3. **Balance = included_usage + quantity - usage**
+
+### Attaching Prepaid Products
+
+```typescript
+// Attach with 200 units purchased (2 packs)
+await initScenario({
+  actions: [
+    s.attach({
+      productId: "pro",
+      options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
+    }),
   ],
 });
 ```
 
-**Key rule:** Prepaid `quantity` is the **total credits** you want, not multiplied by billing units.
+### Updating Prepaid Quantities
+
+```typescript
+// Upgrade from 200 to 500 units
+const updateParams = {
+  customer_id: customerId,
+  product_id: pro.id,
+  options: [{ feature_id: TestFeature.Messages, quantity: 500 }],
+};
+
+const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
+// preview.total = (5 packs - 2 packs) * $10 = $30
+
+await autumnV1.subscriptions.update(updateParams);
+```
+
+### Prepaid Billing Logic
+
+On update, the system:
+1. Refunds previous prepaid: `old_packs * old_price`
+2. Charges new prepaid: `new_packs * new_price`
+3. `preview.total = new_charge - old_refund`
+
+```typescript
+// Old: 2 packs * $10 = $20
+// New: 5 packs * $10 = $50
+// preview.total = $50 - $20 = $30 (charge)
+expect(preview.total).toBe(30);
+
+// Old: 5 packs * $10 = $50
+// New: 2 packs * $10 = $20
+// preview.total = $20 - $50 = -$30 (credit)
+expect(preview.total).toBe(-30);
+```
 
 ---
 

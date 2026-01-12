@@ -62,6 +62,9 @@ export const addProductsUpdatedWebhookTask = async ({
 	// Build action
 
 	try {
+		ctx?.logger.info(
+			`[addProductsUpdatedWebhookTask] Sending webhook for product ${cusProduct.product.name}, scenario: ${scenario}`,
+		);
 		await addTaskToQueue({
 			jobName: JobName.HandleProductsUpdated,
 			payload: {

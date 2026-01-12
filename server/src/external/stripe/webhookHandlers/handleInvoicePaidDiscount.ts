@@ -11,9 +11,9 @@ import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { stripeCustomerToNowMs } from "@/external/stripe/customers/index.js";
 import { RewardService } from "@/internal/rewards/RewardService.js";
 import { generateId } from "@/utils/genUtils.js";
-import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
 import {
 	deleteCouponFromCus,
 	deleteCouponFromSub,
@@ -96,9 +96,9 @@ export const handleInvoicePaidDiscount = async ({
 
 			const discountFinished = newAmount <= 0;
 
-			const now = await getStripeNow({
+			const now = await stripeCustomerToNowMs({
 				stripeCli,
-				stripeCus: stripeCus as Stripe.Customer,
+				stripeCustomer: stripeCus as Stripe.Customer,
 			});
 
 			const expired = curExpiresAt && curExpiresAt < now;

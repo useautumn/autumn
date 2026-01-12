@@ -10,7 +10,15 @@ import {
 	products,
 	RecaseError,
 } from "@autumn/shared";
-import { and, arrayContains, eq, inArray, isNotNull, or } from "drizzle-orm";
+import {
+	and,
+	arrayContains,
+	eq,
+	inArray,
+	isNotNull,
+	not,
+	or,
+} from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const ACTIVE_STATUSES = [
@@ -444,11 +452,13 @@ export class CusProductService {
 		stripeSubId,
 		updates,
 		inStatuses = RELEVANT_STATUSES,
+		notInStatuses,
 	}: {
 		db: DrizzleCli;
 		stripeSubId: string;
 		updates: Partial<CusProduct>;
 		inStatuses?: string[];
+		notInStatuses?: string[];
 	}) {
 		const updated = await db
 			.update(customerProducts)
@@ -457,6 +467,9 @@ export class CusProductService {
 				and(
 					arrayContains(customerProducts.subscription_ids, [stripeSubId]),
 					inStatuses ? inArray(customerProducts.status, inStatuses) : undefined,
+					notInStatuses
+						? not(inArray(customerProducts.status, notInStatuses))
+						: undefined,
 				),
 			)
 			.returning({

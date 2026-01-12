@@ -4,12 +4,13 @@ import {
 	truncateMsToSecondPrecision,
 } from "@autumn/shared";
 import type Stripe from "stripe";
+import { logPhase } from "@/external/stripe/subscriptionSchedules/utils/logStripeSchedulePhaseUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import { customerProductToStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/subscriptionItems/customerProductToStripeItemSpecs";
 import { isCustomerProductActiveDuringPeriod } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/isCustomerProductActiveAtEpochMs";
 import { buildTransitionPoints } from "./buildTransitionPoints";
-import { logPhase, logTransitionPoints } from "./logBuildStripePhasesUpdate";
+import { logTransitionPoints } from "./logBuildPhaseHelpers";
 
 /**
  * Normalizes customer product timestamps to second-level precision.
@@ -167,10 +168,11 @@ export const buildStripePhasesUpdate = ({
 		// Log phase details
 		logPhase({
 			ctx,
-			billingContext,
-			phaseIndex,
 			phase,
-			activeCustomerProducts,
+			customerProducts: activeCustomerProducts,
+			phaseIndex,
+			logPrefix: "[buildStripePhasesUpdate]",
+			showCustomerProducts: true,
 		});
 
 		phases.push(phase);

@@ -80,7 +80,7 @@ function SelectTrigger({
 				"[&_svg:not([class*='text-'])]:text-muted-foreground rounded-lg flex items-center justify-between gap-2 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 
 				// Use only custom styles for visual appearance
-				`h-input input-base input-shadow-default input-state-open`,
+				`input-base input-shadow-default input-state-open`,
 				className,
 			)}
 			{...props}

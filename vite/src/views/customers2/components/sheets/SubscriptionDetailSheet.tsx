@@ -2,7 +2,7 @@ import {
 	CusProductStatus,
 	type Entity,
 	featureToOptions,
-	isCusProductTrialing,
+	isCustomerProductTrialing,
 	isOneOffProductV2,
 	type ProductItem,
 	UsageModel,
@@ -290,9 +290,8 @@ export function SubscriptionDetailSheet() {
 										status={cusProduct.status}
 										canceled={cusProduct.canceled}
 										trialing={
-											isCusProductTrialing({
-												cusProduct,
-												now: Date.now(),
+											isCustomerProductTrialing(cusProduct, {
+												nowMs: Date.now(),
 											}) || false
 										}
 										trial_ends_at={cusProduct.trial_ends_at ?? undefined}

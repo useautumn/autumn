@@ -1,47 +1,28 @@
 import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { CusService } from "@/internal/customers/CusService.js";
 import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionService.js";
 import { RewardService } from "@/internal/rewards/RewardService.js";
 import { notNullish } from "@/utils/genUtils.js";
+import type { StripeWebhookContext } from "../webhookMiddlewares/stripeWebhookContext";
 
 export async function handleCusDiscountDeleted({
-	db,
-	org,
-	discount,
-	env,
-	logger,
+	ctx,
 }: {
-	db: DrizzleCli;
-	org: any;
-	discount: any;
-	env: any;
-	logger: any;
+	ctx: StripeWebhookContext;
 }) {
-	const customer = await CusService.getByStripeId({
-		db,
-		stripeId: discount.customer,
-		orgId: org.id,
-		env,
-	});
-
-	if (!customer) {
-		logger.warn(`discount.deleted: customer ${discount.customer} not found`);
+	const { db, logger, fullCustomer, org, env, stripeEvent, stripeCli } = ctx;
+	if (!fullCustomer) {
+		logger.warn(`discount.deleted: autumn customer not found`);
 		return;
 	}
 
-	if (customer.env !== env || customer.org_id !== org.id) {
-		logger.info(
-			`discount.deleted: env or org mismatch, skipping, ${customer.env} !== ${env} || ${customer.org_id} !== ${org.id}`,
-		);
-		return;
-	}
+	// TODO: Fix this.
+	const discount = stripeEvent.data.object as any;
 
 	// Check if any redemptions available, and apply to customer if so
 	const redemptions = await RewardRedemptionService.getUnappliedRedemptions({
 		db,
-		internalCustomerId: customer.internal_id,
+		internalCustomerId: fullCustomer.internal_id,
 	});
 
 	logger.info(
@@ -64,12 +45,6 @@ export async function handleCusDiscountDeleted({
 		);
 
 		if (!paidProductRedemption) return;
-
-		// Re-apply coupon and mark applied / redeemer applied to true
-		const stripeCli = createStripeCli({
-			org,
-			env,
-		});
 
 		// Mark reward redemption as applied / redeemer applied to true
 		const sub = await stripeCli.subscriptions.retrieve(discount.subscription);
@@ -96,7 +71,7 @@ export async function handleCusDiscountDeleted({
 		// Mark reward redemption as applied / redeemer applied to true
 		const isReferrer =
 			paidProductRedemption.referral_code.internal_customer_id ===
-			customer.internal_id;
+			fullCustomer.internal_id;
 
 		await RewardRedemptionService.update({
 			db,
@@ -111,12 +86,6 @@ export async function handleCusDiscountDeleted({
 	}
 
 	const redemption = redemptions[0];
-
-	// Apply redemption to customer
-	const stripeCli = createStripeCli({
-		org,
-		env,
-	});
 
 	const stripeCus = (await stripeCli.customers.retrieve(
 		discount.customer,
@@ -163,7 +132,7 @@ export async function handleCusDiscountDeleted({
 	});
 
 	logger.info(
-		`discount.deleted: applied reward ${reward.name} on customer ${customer.name} (${customer.id})`,
+		`discount.deleted: applied reward ${reward.name} on customer ${fullCustomer.name} (${fullCustomer.id})`,
 	);
 	logger.info(`Redemption ID: ${redemption.id}`);
 }

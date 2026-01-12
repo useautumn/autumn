@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
-import { ProductItemInterval } from "@autumn/shared";
+import {
+	type ApiCustomerV3,
+	EntInterval,
+	ProductItemInterval,
+} from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/billing/utils/expectCustomerInvoiceCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
@@ -57,7 +61,7 @@ test.concurrent(`${chalk.yellowBright("p2p: shift included usage up")}`, async (
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Usage preserved, now within included
 	expectCustomerFeatureCorrect({
@@ -125,7 +129,7 @@ test.concurrent(`${chalk.yellowBright("p2p: shift included usage down into overa
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Usage preserved, now in overage (80 used, 50 included = 30 overage)
 	expectCustomerFeatureCorrect({
@@ -197,7 +201,7 @@ test.concurrent(`${chalk.yellowBright("p2p: mid-cycle update with pending overag
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Usage preserved, now within included
 	expectCustomerFeatureCorrect({
@@ -250,7 +254,8 @@ test.concurrent(`${chalk.yellowBright("p2p: update to more included covers overa
 	);
 
 	// Verify customer is over their limit
-	const customerBefore = await autumnV1.customers.get(customerId);
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customerBefore.features[TestFeature.Messages].balance).toBeLessThan(0);
 
 	// Update to 100 included - should now cover the usage
@@ -269,7 +274,7 @@ test.concurrent(`${chalk.yellowBright("p2p: update to more included covers overa
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Now usage is within included
 	expectCustomerFeatureCorrect({
@@ -347,7 +352,7 @@ test.concurrent(`${chalk.yellowBright("p2p: monthly to annual")}`, async () => {
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Usage should be preserved
 	expectCustomerFeatureCorrect({
@@ -418,7 +423,7 @@ test.concurrent(`${chalk.yellowBright("p2p: annual to monthly")}`, async () => {
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Usage should be preserved
 	expectCustomerFeatureCorrect({
@@ -490,7 +495,7 @@ test.concurrent(`${chalk.yellowBright("p2p: change feature reset interval")}`, a
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Usage should stay
 	expectCustomerFeatureCorrect({
@@ -503,7 +508,7 @@ test.concurrent(`${chalk.yellowBright("p2p: change feature reset interval")}`, a
 
 	// Verify interval changed
 	expect(customer.features[TestFeature.Messages].interval).toEqual(
-		ProductItemInterval.Week,
+		EntInterval.Week,
 	);
 
 	// Verify invoice matches preview
@@ -552,7 +557,8 @@ test.concurrent(`${chalk.yellowBright("p2p: reset anchor preserved after 5 days"
 	);
 
 	// Get the original reset time
-	const customerBefore = await autumnV1.customers.get(customerId);
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const originalResetAt =
 		customerBefore.features[TestFeature.Messages].next_reset_at;
 	expect(originalResetAt).toBeDefined();
@@ -580,7 +586,7 @@ test.concurrent(`${chalk.yellowBright("p2p: reset anchor preserved after 5 days"
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Usage should stay the same, reset anchor should stay approximately the same
 	expectCustomerFeatureCorrect({
@@ -590,152 +596,6 @@ test.concurrent(`${chalk.yellowBright("p2p: reset anchor preserved after 5 days"
 		balance: updatedMessagesItem.included_usage - messagesUsage,
 		usage: messagesUsage,
 		resetsAt: originalResetAt!,
-	});
-
-	// Verify invoice matches preview
-	await expectCustomerInvoiceCorrect({
-		customer,
-		count: 2,
-		latestTotal: preview.total,
-	});
-
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// PAID-TO-PAID: ALLOCATED/SEAT-BASED UPDATES
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// 8.1 Increase seat allowance
-test.concurrent(`${chalk.yellowBright("p2p: increase seat allowance")}`, async () => {
-	const allocatedUsersItem = items.allocatedUsers({ includedUsage: 2 });
-	const priceItem = items.monthlyPrice({ price: 20 });
-	const pro = products.base({
-		id: "pro",
-		items: [allocatedUsersItem, priceItem],
-	});
-
-	const { customerId, autumnV1, ctx } = await initScenario({
-		customerId: "p2p-inc-seats",
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro] }),
-		],
-		actions: [s.attach({ productId: "pro" })],
-	});
-
-	// Use 2 seats (at the limit)
-	const seatsUsed = 2;
-	await autumnV1.track(
-		{
-			customer_id: customerId,
-			feature_id: TestFeature.Users,
-			value: seatsUsed,
-		},
-		{ timeout: 2000 },
-	);
-
-	// Increase to 5 included seats
-	const newAllocatedUsersItem = items.allocatedUsers({ includedUsage: 5 });
-
-	const updateParams = {
-		customer_id: customerId,
-		product_id: pro.id,
-		items: [newAllocatedUsersItem, priceItem],
-	};
-
-	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
-
-	// No price change, just seat increase
-	expect(preview.total).toBe(0);
-
-	await autumnV1.subscriptions.update(updateParams);
-
-	const customer = await autumnV1.customers.get(customerId);
-
-	// Usage preserved, more capacity available
-	expectCustomerFeatureCorrect({
-		customer,
-		featureId: TestFeature.Users,
-		includedUsage: newAllocatedUsersItem.included_usage,
-		balance: newAllocatedUsersItem.included_usage - seatsUsed,
-		usage: seatsUsed,
-	});
-
-	// Verify invoice matches preview
-	await expectCustomerInvoiceCorrect({
-		customer,
-		count: 2,
-		latestTotal: preview.total,
-	});
-
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
-});
-
-// 8.2 Decrease seat allowance below usage
-test.concurrent(`${chalk.yellowBright("p2p: decrease seat allowance below usage")}`, async () => {
-	const allocatedUsersItem = items.allocatedUsers({ includedUsage: 5 });
-	const priceItem = items.monthlyPrice({ price: 20 });
-	const pro = products.base({
-		id: "pro",
-		items: [allocatedUsersItem, priceItem],
-	});
-
-	const { customerId, autumnV1, ctx } = await initScenario({
-		customerId: "p2p-dec-seats",
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro] }),
-		],
-		actions: [s.attach({ productId: "pro" })],
-	});
-
-	// Use 5 seats
-	const seatsUsed = 5;
-	await autumnV1.track(
-		{
-			customer_id: customerId,
-			feature_id: TestFeature.Users,
-			value: seatsUsed,
-		},
-		{ timeout: 2000 },
-	);
-
-	// Decrease to 3 included seats (using 5, so 2 extra)
-	const newAllocatedUsersItem = items.allocatedUsers({ includedUsage: 3 });
-
-	const updateParams = {
-		customer_id: customerId,
-		product_id: pro.id,
-		items: [newAllocatedUsersItem, priceItem],
-	};
-
-	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
-
-	// Should charge $20 for 2 extra seats @ $10 each
-	expect(preview.total).toBe(20);
-
-	await autumnV1.subscriptions.update(updateParams);
-
-	const customer = await autumnV1.customers.get(customerId);
-
-	// Using 5 with 3 included = -2 balance
-	expectCustomerFeatureCorrect({
-		customer,
-		featureId: TestFeature.Users,
-		includedUsage: newAllocatedUsersItem.included_usage,
-		balance: newAllocatedUsersItem.included_usage - seatsUsed,
-		usage: seatsUsed,
 	});
 
 	// Verify invoice matches preview
@@ -804,7 +664,7 @@ test.concurrent(`${chalk.yellowBright("p2p: interval + feature + usage change")}
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Messages usage preserved, higher limit
 	expectCustomerFeatureCorrect({

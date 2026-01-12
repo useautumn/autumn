@@ -2,7 +2,7 @@ import {
 	CusProductStatus,
 	type CustomerSchema,
 	type FullCusProduct,
-	isCusProductTrialing,
+	isCustomerProductTrialing,
 } from "@autumn/shared";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import type { z } from "zod/v4";
@@ -93,9 +93,8 @@ const getCusProductsInfo = ({
 								}
 								tooltip={true}
 								trialing={
-									isCusProductTrialing({
-										cusProduct: cusProduct as FullCusProduct,
-										now: Date.now(),
+									isCustomerProductTrialing(cusProduct as FullCusProduct, {
+										nowMs: Date.now(),
 									}) || false
 								}
 								trial_ends_at={

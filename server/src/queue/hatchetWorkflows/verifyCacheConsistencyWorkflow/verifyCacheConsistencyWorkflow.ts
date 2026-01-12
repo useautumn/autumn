@@ -3,10 +3,11 @@ import * as Sentry from "@sentry/bun";
 import { db } from "@/db/initDrizzle.js";
 import { hatchet } from "@/external/hatchet/initHatchet.js";
 import { getSentryTags } from "@/external/sentry/sentryUtils.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
-import { getCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/getCachedApiCustomer.js";
 import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
+import { getCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getCachedFullCustomer.js";
 import { JobName } from "../../JobName.js";
 import { createWorkflowTask } from "../createWorkflowTask.js";
 import { checkForMisingBalance } from "./checkForMisingBalance.js";
@@ -38,9 +39,11 @@ export const verifyCacheConsistencyWorkflow = hatchet?.workflow<
 
 // Check if subscriptions match
 const checkSubscriptionsMatch = ({
+	ctx,
 	dbCustomer,
 	cachedCustomer,
 }: {
+	ctx: AutumnContext;
 	dbCustomer: ApiCustomer;
 	cachedCustomer: ApiCustomer;
 }): { success: boolean; message: string } => {
@@ -82,12 +85,23 @@ verifyCacheConsistencyWorkflow?.task({
 		handler: async ({ input, autumnContext }) => {
 			const { customerId, source } = input;
 
-			// Get from cache
-			const { apiCustomer: cachedCustomer } = await getCachedApiCustomer({
-				ctx: autumnContext,
+			// Get from cache (now using full customer cache)
+			const cachedFullCustomer = await getCachedFullCustomer({
+				orgId: autumnContext.org.id,
+				env: autumnContext.env,
 				customerId,
-				source: "verify",
 			});
+
+			if (!cachedFullCustomer) {
+				autumnContext.logger.info(
+					`[verifyCacheConsistency] No cached customer found for ${customerId}`,
+				);
+				return {
+					consistent: true,
+					customerId,
+					source,
+				};
+			}
 
 			// Get fresh from DB
 			const fullCus = await CusService.getFull({
@@ -106,10 +120,21 @@ verifyCacheConsistencyWorkflow?.task({
 				withAutumnId: true,
 			});
 
+			// Convert cached full customer to API customer for comparison
+			const { apiCustomer: cachedCustomer } = await getApiCustomerBase({
+				ctx: autumnContext,
+				fullCus: cachedFullCustomer,
+				withAutumnId: true,
+			});
+
+			autumnContext.logger.info(`DB CUSTOMER`, { data: dbCustomer });
+			autumnContext.logger.info(`CACHED CUSTOMER`, { data: cachedCustomer });
+
 			const {
 				success: subscriptionsMatch,
 				message: subscriptionsMatchMessage,
 			} = checkSubscriptionsMatch({
+				ctx: autumnContext,
 				dbCustomer,
 				cachedCustomer,
 			});
@@ -119,10 +144,10 @@ verifyCacheConsistencyWorkflow?.task({
 					`[verifyCacheConsistency] subscriptions mismatch for customer ${customerId}`,
 				);
 
-				await deleteCachedApiCustomer({
+				await deleteCachedFullCustomer({
 					customerId,
-					orgId: autumnContext.org.id,
-					env: autumnContext.env,
+					ctx: autumnContext,
+					source: "verifyCacheConsistency",
 				});
 
 				Sentry.captureException(new Error(subscriptionsMatchMessage), {

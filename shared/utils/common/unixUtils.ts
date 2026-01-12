@@ -1,3 +1,12 @@
+/** Converts time units to milliseconds. */
+export const ms = {
+	seconds: (n: number) => n * 1000,
+	minutes: (n: number) => n * 60 * 1000,
+	hours: (n: number) => n * 60 * 60 * 1000,
+	days: (n: number) => n * 24 * 60 * 60 * 1000,
+	weeks: (n: number) => n * 7 * 24 * 60 * 60 * 1000,
+};
+
 /**
  * Validates that a timestamp is in milliseconds (not seconds).
  * Returns true if valid, false otherwise.
@@ -23,9 +32,10 @@ export const isValidMsTimestamp = (unixTimestamp: number): boolean => {
  * Validates that a timestamp is in seconds, then converts to milliseconds.
  * Returns undefined if input is undefined or not a valid seconds timestamp.
  */
-export const secondsToMs = (
-	seconds: number | undefined,
-): number | undefined => {
+export function secondsToMs(seconds: number): number;
+export function secondsToMs(seconds: undefined): undefined;
+export function secondsToMs(seconds: number | undefined): number | undefined;
+export function secondsToMs(seconds: number | undefined): number | undefined {
 	if (seconds === undefined) {
 		return undefined;
 	}
@@ -40,7 +50,7 @@ export const secondsToMs = (
 	}
 
 	return seconds * 1000;
-};
+}
 
 export const msToSeconds = (ms: number): number => {
 	return Math.floor(ms / 1000);

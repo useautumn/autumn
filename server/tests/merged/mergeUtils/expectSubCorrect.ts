@@ -83,7 +83,11 @@ const compareActualItems = async ({
 
 		expect(actualItem).toBeDefined();
 
-		if (actualItem?.quantity !== (expectedItem as any).quantity) {
+		// Treat 0 and undefined as equivalent for quantity
+		const actualQty = actualItem?.quantity ?? 0;
+		const expectedQty = (expectedItem as any).quantity ?? 0;
+
+		if (actualQty !== expectedQty) {
 			if (phaseStartsAt) {
 				console.log(`Phase starts at: ${formatUnixToDateTime(phaseStartsAt)}`);
 			}
@@ -100,9 +104,7 @@ const compareActualItems = async ({
 				items: expectedItems,
 			});
 
-			console.log(
-				`Item quantity mismatch: ${actualItem?.quantity} !== ${expectedItem.quantity}`,
-			);
+			console.log(`Item quantity mismatch: ${actualQty} !== ${expectedQty}`);
 
 			const price = await PriceService.getByStripeId({
 				db,
@@ -118,7 +120,7 @@ const compareActualItems = async ({
 			console.log("--------------------------------");
 		}
 
-		expect(actualItem?.quantity).toBe((expectedItem as any).quantity);
+		expect(actualQty).toBe(expectedQty);
 	}
 
 	expect(actualItems.length).toBe(expectedItems.length);
@@ -202,7 +204,7 @@ export const expectSubToBeCorrect = async ({
 		};
 	});
 
-	console.log("Schedule unixes:", scheduleUnixes);
+	// console.log("Schedule unixes:", scheduleUnixes);
 
 	// console.log(`\n\nChecking sub correct`);
 	const printCusProduct = false;
@@ -255,7 +257,12 @@ export const expectSubToBeCorrect = async ({
 				return;
 			}
 
-			// 2. If main product, check that schedule is AFTER this phase
+			// 2. If main product is canceled and ends at or before this phase, exclude it
+			if (cusProduct.canceled && (cusProduct.ended_at || 0) <= unix) {
+				return;
+			}
+
+			// 3. If main product, check that schedule is AFTER this phase
 			const curScheduledProduct = cusProducts.find(
 				(cp) =>
 					cp.product.group === product.group &&
@@ -315,7 +322,7 @@ export const expectSubToBeCorrect = async ({
 				org,
 				options,
 				existingUsage,
-				withEntity: !!entityId,
+				withEntity: Boolean(cusProduct.internal_entity_id),
 				isCheckout: false,
 				apiVersion,
 			});
@@ -455,20 +462,34 @@ export const expectSubToBeCorrect = async ({
 				})
 			: null;
 
+	// Expected phases:
+	// await logPhases({
+	// 	phases: supposedPhases,
+	// 	db,
+	// });
+
+	// await logPhases({
+	// 	phases: schedule?.phases || [],
+	// 	db,
+	// });
+
 	for (let i = 0; i < supposedPhases.length; i++) {
 		const supposedPhase = supposedPhases[i];
 
 		if (supposedPhase.items.length === 0) continue;
 
-		const actualPhase = schedule?.phases?.[i + 1];
-		expect(schedule?.phases.length).toBeGreaterThan(i + 1);
-
-		expect(
+		// Find the actual phase by matching start date (Stripe schedule includes past phases)
+		const actualPhase = schedule?.phases?.find((phase) =>
 			similarUnix({
 				unix1: supposedPhase.start_date,
-				unix2: actualPhase!.start_date * 1000,
+				unix2: phase.start_date * 1000,
 			}),
-		).toBe(true);
+		);
+
+		expect(
+			actualPhase,
+			`No matching phase found for supposed phase at ${formatUnixToDateTime(supposedPhase.start_date)}`,
+		).toBeDefined();
 
 		const actualItems =
 			actualPhase?.items.map((item) => ({

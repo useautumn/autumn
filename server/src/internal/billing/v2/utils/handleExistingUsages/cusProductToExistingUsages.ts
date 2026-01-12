@@ -64,6 +64,10 @@ export const cusProductToExistingUsages = ({
 			entityId,
 		});
 
+		console.log(
+			`Feature ${cusEntWithCusProduct.entitlement.feature.name} usage: ${usage}`,
+		);
+
 		existingUsages[internalFeatureId].usage = new Decimal(
 			existingUsages[internalFeatureId].usage,
 		)

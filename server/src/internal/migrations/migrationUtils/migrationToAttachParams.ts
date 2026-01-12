@@ -1,26 +1,23 @@
 import type { FullCusProduct, FullCustomer, FullProduct } from "@autumn/shared";
 import type Stripe from "stripe";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getStripeCusData } from "@/internal/customers/attach/attachUtils/attachParams/attachParamsUtils/getStripeCusData.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
-import type { AutumnContext } from "../../../honoUtils/HonoEnv";
 
 export const migrationToAttachParams = async ({
-	req,
+	ctx,
 	stripeCli,
 	customer,
 	cusProduct,
 	newProduct,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	stripeCli: Stripe;
 	customer: FullCustomer;
 	cusProduct: FullCusProduct;
 	newProduct: FullProduct;
 }): Promise<AttachParams> => {
-	const ctx = req as unknown as AutumnContext;
-
-	const { org, logger } = req;
+	const { org, features } = ctx;
 	const internalEntityId = cusProduct.internal_entity_id || undefined;
 
 	const { stripeCus, paymentMethod, now } = await getStripeCusData({
@@ -46,8 +43,11 @@ export const migrationToAttachParams = async ({
 		req: ctx,
 		org,
 		entities: customer.entities,
-		features: ctx.features,
+		features,
 		internalEntityId,
+		entityId:
+			customer.entities?.find((e) => e.internal_id === internalEntityId)?.id ||
+			undefined,
 		cusProducts: customer.customer_products,
 
 		// Others

@@ -1,4 +1,8 @@
-import type { FullCusProduct, FullProduct } from "@autumn/shared";
+import {
+	type FullCusProduct,
+	type FullProduct,
+	formatMs,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
 import { cusProductToExistingRollovers } from "@/internal/billing/v2/utils/handleExistingRollovers/cusProductToExistingRollovers";
@@ -36,7 +40,7 @@ export const computeCustomPlanNewCustomerProduct = ({
 		cusProduct: customerProduct,
 	});
 
-	console.log("New customer product feature quantities", featureQuantities);
+	console.log("Reset cycle anchor: ", formatMs(resetCycleAnchorMs));
 
 	// Compute the new full customer product
 	const newFullCustomerProduct = initFullCustomerProduct({
@@ -57,9 +61,10 @@ export const computeCustomPlanNewCustomerProduct = ({
 
 		initOptions: {
 			isCustom: true,
-			subscriptionId: stripeSubscription?.id,
+			subscriptionId: stripeSubscription?.id, // don't populate if it's starting in the future.
 			subscriptionScheduleId: stripeSubscriptionSchedule?.id,
 
+			startsAt: currentCustomerProduct.starts_at ?? undefined, // keep same starts at as current customer product?
 			canceledAt: currentCustomerProduct.canceled_at ?? undefined,
 			endedAt: currentCustomerProduct.ended_at ?? undefined,
 		},

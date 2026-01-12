@@ -55,18 +55,101 @@ expect(preview.total).toBe(20);
 expect(preview.total).toBe(0);
 ```
 
-#### 4. Prepaid Features
-- Refund full previous prepaid amount
-- Charge full new prepaid amount
+##### ⚠️ Important: Allocated Features Create Invoices on Track
+
+For allocated features (seat-based / prorated billing), **tracking usage past the included boundary immediately creates a prorated invoice**. This is handled in `adjustAllowance.ts`.
+
+This means:
+- When `track()` causes usage to exceed included seats, an invoice is created immediately
+- This is different from consumable features, which only bill at cycle end
 
 ```typescript
-// Had 100 units prepaid @ $10, now buying 200 @ $10
-// = -$10 (refund) + $20 (new) = $10
-expect(preview.total).toBe(10);
+// Example: Product with 3 included seats @ $10/seat overage
+// Customer tracks 5 seats (2 over included)
 
-// Switching from prepaid to non-prepaid
-// = -$10 (full refund)
-expect(preview.total).toBe(-10);
+await autumnV1.track({
+  customer_id: customerId,
+  feature_id: TestFeature.Users,
+  value: 5,  // 2 over the 3 included
+});
+
+// This immediately creates an invoice for the 2 extra seats (prorated)
+// Invoice count is now: 1 (initial) + 1 (track overage) = 2
+
+// Later, when updating subscription:
+await autumnV1.subscriptions.update(updateParams);
+
+// Invoice count becomes: 1 (initial) + 1 (track overage) + 1 (update) = 3
+```
+
+This affects invoice count expectations in tests:
+- Usage within included: No extra invoice from track
+- Usage exceeds included: +1 invoice from track
+
+#### 4. Prepaid Features
+
+**Prepaid features require `options` with `quantity`** when attaching or updating. The `quantity` is:
+- The **total units** you want (NOT multiplied by billing_units)
+- **NOT** inclusive of `included_usage` (included_usage is separate free balance)
+
+Billing logic on update:
+1. **Refund** previous prepaid amount: `old_packs * old_price`
+2. **Charge** new prepaid amount: `new_packs * new_price`
+3. **preview.total** = new charge - old refund
+
+```typescript
+// Setup: $10 per 100 units (1 pack = 100 units at $10)
+const prepaidItem = items.prepaidMessages({
+  includedUsage: 0,
+  billingUnits: 100,
+  price: 10,
+});
+
+// Attach with 2 packs (200 units)
+await initScenario({
+  actions: [
+    s.attach({
+      productId: "pro",
+      options: [{ feature_id: TestFeature.Messages, quantity: 200 }], // 2 packs
+    }),
+  ],
+});
+
+// Upgrade to 5 packs (500 units)
+const preview = await autumnV1.subscriptions.previewUpdate({
+  customer_id: customerId,
+  product_id: pro.id,
+  options: [{ feature_id: TestFeature.Messages, quantity: 500 }], // 5 packs
+});
+
+// preview.total = (5 - 2) * $10 = $30
+expect(preview.total).toBe(30);
+
+// Downgrade to 3 packs (300 units)
+const preview2 = await autumnV1.subscriptions.previewUpdate({
+  customer_id: customerId,
+  product_id: pro.id,
+  options: [{ feature_id: TestFeature.Messages, quantity: 300 }], // 3 packs
+});
+
+// preview.total = (3 - 5) * $10 = -$20 (credit)
+expect(preview2.total).toBe(-20);
+```
+
+##### Prepaid with Price/Billing Unit Changes
+
+When changing price or billing units via `items`, the calculation uses old and new pack costs:
+
+```typescript
+// Old: 3 packs of 100 @ $10 = $30
+// New: 3 packs of 100 @ $15 = $45
+// preview.total = $45 - $30 = $15
+expect(preview.total).toBe(15);
+
+// Old: 300 units / 100 = 3 packs @ $10 = $30
+// New: 300 units / 50 = 6 packs @ $10 = $60
+// preview.total = $60 - $30 = $30
+expect(preview.total).toBe(30);
 ```
 
 ### Preview vs Invoice Matching
@@ -101,6 +184,25 @@ await expectCustomerInvoiceCorrect({
 | Free-to-Paid | 1 |
 | Paid-to-Paid (upgrade/downgrade) | Initial (1) + Update (1) = 2 |
 | Paid-to-Paid (allocated to prepaid) | Initial (1) + Arrear Settlement (1) + Prepaid (1) = 3 |
+
+#### Allocated Feature Invoice Counts
+
+For allocated features, invoice count depends on whether usage exceeded included at any point:
+
+| Scenario | Invoice Count |
+|----------|--------------|
+| Usage stays within included, then update | Initial (1) + Update (1) = 2 |
+| Usage exceeds included via track, then update | Initial (1) + Track Overage (1) + Update (1) = 3 |
+| Usage exceeds included via track, update increases included to cover usage | Initial (1) + Track Overage (1) + Update Credit (1) = 3 |
+
+```typescript
+// Example: 3 included seats, track 5 seats (2 over), then increase to 10 included
+await expectCustomerInvoiceCorrect({
+  customer,
+  count: 3,  // 1 (attach) + 1 (track overage) + 1 (update credit)
+  latestTotal: preview.total,
+});
+```
 
 ### No-Charge Updates
 

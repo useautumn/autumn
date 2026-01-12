@@ -1,47 +1,10 @@
 import type { FullCusProduct } from "@models/cusProductModels/cusProductModels";
 import type { FullCustomer } from "../../models/cusModels/fullCusModel";
 import {
-	cusProductHasSubscription,
 	customerProductHasSubscriptionSchedule,
 	isCusProductOnEntity,
-	isCusProductOngoing,
-} from "./classifyCusProduct";
-
-/**
- * Finds the active main (not add-on, not one-off) customer product in a given group for a customer.
- * Filters by product group, entity, active status, non-add-on, and non-one-off products.
- */
-export const getOngoingMainCusProductByGroup = ({
-	fullCus,
-	productGroup,
-}: {
-	fullCus: FullCustomer;
-	productGroup: string;
-}) => {
-	const internalEntityId = fullCus.entity?.internal_id;
-	const cusProducts = fullCus.customer_products;
-
-	const activeMainCusProduct = cusProducts.find((cp) => {
-		// 1. Product group matches
-		const productGroupMatches = cp.product.group === productGroup;
-
-		// 2. Entity matches
-		const entityMatches = isCusProductOnEntity({
-			cusProduct: cp,
-			internalEntityId,
-		});
-
-		// 3. Status is active
-		const isOngoing = isCusProductOngoing({ cusProduct: cp });
-
-		// 4. Is main product
-		const isMainProduct = !cp.product.is_add_on;
-
-		return productGroupMatches && entityMatches && isOngoing && isMainProduct;
-	});
-
-	return activeMainCusProduct;
-};
+} from "./classifyCustomerProduct/classifyCustomerProduct";
+import { cp } from "./classifyCustomerProduct/cpBuilder";
 
 /**
  * Finds the active customer product by id for a customer.
@@ -57,20 +20,23 @@ export const getOngoingCusProductById = ({
 	const internalEntityId = fullCus.entity?.internal_id;
 	const cusProducts = fullCus.customer_products;
 
-	const activeCusProduct = cusProducts.find((cp) => {
+	const activeCusProduct = cusProducts.find((customerProduct) => {
 		// 1. Product matches
-		const productMatches = cp.product.id === productId;
+		const productMatches = customerProduct.product.id === productId;
 
 		// 2. Entity matches
 		const entityMatches = isCusProductOnEntity({
-			cusProduct: cp,
+			cusProduct: customerProduct,
 			internalEntityId,
 		});
 
-		// 3. Status is active
-		const isOngoing = isCusProductOngoing({ cusProduct: cp });
+		// 3. Status is active and recurring
+		const { valid } = cp(customerProduct)
+			.recurring()
+			.hasActiveStatus()
+			.onEntity({ internalEntityId });
 
-		return productMatches && entityMatches && isOngoing;
+		return productMatches && entityMatches && valid;
 	});
 
 	return activeCusProduct;
@@ -152,10 +118,13 @@ export const getTargetSubscriptionCusProduct = ({
 }) => {
 	const internalEntityId = fullCus.entity?.internal_id;
 
-	const cusProducts = fullCus.customer_products.filter((cp) => {
-		const isOngoing = isCusProductOngoing({ cusProduct: cp });
-		const hasSub = cusProductHasSubscription({ cusProduct: cp });
-		return isOngoing && hasSub;
+	const cusProducts = fullCus.customer_products.filter((customerProduct) => {
+		const { valid } = cp(customerProduct)
+			.recurring()
+			.hasActiveStatus()
+			.hasSubscription();
+
+		return valid;
 	});
 
 	// Sort by merge order:

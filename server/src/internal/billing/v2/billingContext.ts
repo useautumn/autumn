@@ -20,7 +20,7 @@ export type InvoiceMode = z.infer<typeof InvoiceModeSchema>;
 
 export interface TrialContext {
 	freeTrial?: FreeTrial | null;
-	trialEndsAt?: number;
+	trialEndsAt: number | null;
 	customFreeTrial?: FreeTrial;
 }
 

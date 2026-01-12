@@ -6,18 +6,17 @@ import {
 	RecaseError,
 } from "@shared/index";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
-import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
-import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
 
 export const handleUncancellation = async ({
 	event,
 	ctx,
 }: {
 	event: WebhookUnCancellation;
-	ctx: AutumnContext;
+	ctx: RevenueCatWebhookContext;
 }) => {
-	const { db, org, env } = ctx;
+	const { db } = ctx;
 	const { product_id, original_app_user_id, app_user_id } = event;
 
 	const { product, cusProducts } = await resolveRevenuecatResources({
@@ -42,13 +41,6 @@ export const handleUncancellation = async ({
 				ended_at: null,
 				status: CusProductStatus.Active,
 			},
-		});
-
-		await deleteCachedApiCustomer({
-			customerId: original_app_user_id ?? app_user_id,
-			orgId: org.id,
-			env,
-			source: `handleRevenuecatUncancellation: ${product.id}`,
 		});
 	} else {
 		throw new RecaseError({
