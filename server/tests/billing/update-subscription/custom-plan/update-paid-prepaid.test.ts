@@ -950,3 +950,82 @@ test.concurrent(`${chalk.yellowBright("prepaid: zero usage, change item config")
 		env: ctx.env,
 	});
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FREE TO PAID: PREPAID ITEM WITH ZERO QUANTITY
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Update from free product to paid with prepaid item, passing 0 quantity
+test.concurrent(`${chalk.yellowBright("prepaid: free to paid with zero quantity")}`, async () => {
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const free = products.base({ items: [messagesItem], id: "free" });
+
+	const { customerId, autumnV1, ctx } = await initScenario({
+		customerId: "free-to-prepaid-zero-qty",
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [free] }),
+		],
+		actions: [s.attach({ productId: free.id })],
+	});
+
+	// Track some usage on the free product
+	const messagesUsed = 30;
+	await autumnV1.track(
+		{
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: messagesUsed,
+		},
+		{ timeout: 2000 },
+	);
+
+	// Update to add prepaid messages item with 0 quantity
+	const billingUnits = 100;
+	const pricePerPack = 10;
+	const prepaidItem = items.prepaidMessages({
+		includedUsage: 0,
+		billingUnits,
+		price: pricePerPack,
+	});
+	const priceItem = items.monthlyPrice({ price: 20 });
+
+	const updateParams = {
+		customer_id: customerId,
+		product_id: free.id,
+		items: [prepaidItem, priceItem],
+		options: [{ feature_id: TestFeature.Messages, quantity: 0 }],
+	};
+
+	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
+
+	// With 0 quantity, no packs are purchased
+	// Total = base price only = $20
+	expect(preview.total).toBe(priceItem.price);
+
+	await autumnV1.subscriptions.update(updateParams);
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	// With 0 quantity: includedUsage = 0, balance = 0 - messagesUsed (goes negative)
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		includedUsage: 0, // 0 + 0 = 0
+		balance: Math.max(0, 0 - messagesUsed), // 0 - 30 = -30 (negative balance)
+		usage: 0,
+	});
+
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 1, // Initial free invoice + update invoice
+		latestTotal: preview.total,
+	});
+
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+	});
+});

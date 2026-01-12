@@ -1,4 +1,5 @@
 import { type FullCusProduct, isCustomerProductTrialing } from "@autumn/shared";
+import { FlaskIcon } from "@phosphor-icons/react";
 import type { Row, Table } from "@tanstack/react-table";
 import { ArrowRightLeft, Delete } from "lucide-react";
 import { TableDropdownMenuCell } from "@/components/general/table/table-dropdown-menu-cell";
@@ -74,6 +75,7 @@ export const CustomerProductsColumns = [
 			const meta = table.options.meta as {
 				onCancelClick?: (product: FullCusProduct) => void;
 				onTransferClick?: (product: FullCusProduct) => void;
+				onTestSheetClick?: (product: FullCusProduct) => void;
 				hasEntities?: boolean;
 			};
 
@@ -81,6 +83,17 @@ export const CustomerProductsColumns = [
 
 			return (
 				<TableDropdownMenuCell>
+					{meta.onTestSheetClick && (
+						<DropdownMenuItem
+							className="flex items-center gap-2 text-xs"
+							onClick={(e) => {
+								e.stopPropagation();
+								meta.onTestSheetClick?.(row.original);
+							}}
+						>
+							<FlaskIcon size={16} /> Test Sheet
+						</DropdownMenuItem>
+					)}
 					{meta.hasEntities && meta.onTransferClick && (
 						<DropdownMenuItem
 							className="flex items-center gap-2 text-xs"

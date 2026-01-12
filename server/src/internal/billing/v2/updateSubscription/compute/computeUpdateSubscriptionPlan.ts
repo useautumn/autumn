@@ -42,6 +42,7 @@ export const computeUpdateSubscriptionPlan = async ({
 	}
 
 	plan = finalizeUpdateSubscriptionPlan({
+		ctx,
 		plan,
 		billingContext,
 	});

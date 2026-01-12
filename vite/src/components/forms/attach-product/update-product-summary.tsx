@@ -1,8 +1,11 @@
-import type { CheckoutResponseV0, ProductV2 } from "@autumn/shared";
+import type {
+	PreviewUpdateSubscriptionResponse,
+	ProductV2,
+} from "@autumn/shared";
 import { LoadingShimmerText } from "@/components/v2/LoadingShimmerText";
+import { UpdateConfirmationInfo } from "../update-subscription/update-confirmation-info";
 import { AttachProductLineItems } from "./attach-product-line-items";
 import { AttachProductTotals } from "./attach-product-totals";
-import { UpdateConfirmationInfo } from "./update-confirmation-info";
 import type { UseAttachProductForm } from "./use-attach-product-form";
 
 export function UpdateProductSummary({
@@ -12,7 +15,7 @@ export function UpdateProductSummary({
 	form,
 }: {
 	product?: ProductV2;
-	previewData?: CheckoutResponseV0 | null;
+	previewData?: PreviewUpdateSubscriptionResponse | null;
 	isLoading?: boolean;
 	form: UseAttachProductForm;
 }) {

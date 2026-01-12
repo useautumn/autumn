@@ -8,7 +8,7 @@ import { useMemo } from "react";
 import { UpdateProductActions } from "@/components/forms/attach-product/update-product-actions";
 import { UpdateProductPrepaidOptions } from "@/components/forms/attach-product/update-product-prepaid-options";
 import { UpdateProductSummary } from "@/components/forms/attach-product/update-product-summary";
-import { useAttachPreview } from "@/components/forms/attach-product/use-attach-preview";
+import { useUpdateSubscriptionPreview } from "@/components/forms/update-subscription/use-update-subscription-preview";
 import {
 	type UseAttachProductForm,
 	useAttachProductForm,
@@ -43,7 +43,7 @@ const FormContent = ({
 	const initialPrepaidOptions =
 		form.options.defaultValues?.prepaidOptions ?? {};
 
-	const previewQuery = useAttachPreview({
+	const previewQuery = useUpdateSubscriptionPreview({
 		customerId,
 		product,
 		entityId,

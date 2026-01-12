@@ -13,6 +13,9 @@ export const ADMIN_USER_IDs = [
 	"user_2sB3tBXsnVVLlTKliQIqvvM2xfB", // j
 	"ZsDswIXyOGMP9y1V1At4dAZNaiggClSs", // t
 	"NqNuL3MtS7MR2WYoqx2b28iY9vmfAs8h", // c
+
+	// Sandbox:
+	"user_2rypooIKyMQx81vMS8FFGx24UHU", // john
 ];
 
 export const dashboardOrigins = [

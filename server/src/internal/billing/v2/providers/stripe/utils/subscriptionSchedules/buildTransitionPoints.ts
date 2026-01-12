@@ -23,11 +23,6 @@ export const buildTransitionPoints = ({
 }): (number | undefined)[] => {
 	const timestamps = new Set<number>();
 
-	// Add trial end as a transition point
-	if (trialEndsAt && trialEndsAt > nowMs) {
-		timestamps.add(trialEndsAt);
-	}
-
 	// Add new billing cycle anchor as a transition point
 	if (newBillingCycleAnchorMs && newBillingCycleAnchorMs > nowMs) {
 		timestamps.add(newBillingCycleAnchorMs);
@@ -49,6 +44,12 @@ export const buildTransitionPoints = ({
 		if (endedAtMs && endedAtMs > nowMs) {
 			timestamps.add(endedAtMs);
 		}
+	}
+
+	// Add trial end as a transition point only if schedule is required
+	// (i.e., there's at least one other transition point)
+	if (trialEndsAt && trialEndsAt > nowMs && timestamps.size > 0) {
+		timestamps.add(trialEndsAt);
 	}
 
 	return [...Array.from(timestamps).sort((a, b) => a - b), undefined];

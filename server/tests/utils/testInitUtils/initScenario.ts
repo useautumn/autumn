@@ -12,13 +12,47 @@ import ctx from "./createTestContext.js";
 // TYPES
 // ═══════════════════════════════════════════════════════════════════
 
-type AdvanceClockConfig = {
+type FeatureOption = {
+	feature_id: string;
+	quantity: number;
+};
+
+type EntityConfig = {
+	count: number;
+	featureId: string;
+};
+
+type GeneratedEntity = {
+	id: string;
+	name: string;
+	featureId: string;
+};
+
+// Discriminated union for all action types
+type AttachAction = {
+	type: "attach";
+	productId: string;
+	entityIndex?: number;
+	options?: FeatureOption[];
+	newBillingSubscription?: boolean;
+};
+
+type CancelAction = {
+	type: "cancel";
+	productId: string;
+	entityIndex?: number;
+};
+
+type AdvanceClockAction = {
+	type: "advanceClock";
 	days?: number;
 	weeks?: number;
 	hours?: number;
 	months?: number;
 	toNextInvoice?: boolean;
 };
+
+type ScenarioAction = AttachAction | CancelAction | AdvanceClockAction;
 
 type ScenarioConfig = {
 	testClock: boolean;
@@ -27,37 +61,7 @@ type ScenarioConfig = {
 	withDefault: boolean;
 	products: ProductV2[];
 	entityConfig?: EntityConfig;
-	attachments: AttachmentDef[];
-	cancellations: CancelDef[];
-	advanceClock?: AdvanceClockConfig;
-};
-
-type EntityConfig = {
-	count: number;
-	featureId: string;
-};
-
-type FeatureOption = {
-	feature_id: string;
-	quantity: number;
-};
-
-type AttachmentDef = {
-	productId: string;
-	entityIndex?: number;
-	options?: Array<{ feature_id: string; quantity: number }>;
-	newBillingSubscription?: boolean;
-};
-
-type CancelDef = {
-	productId: string;
-	entityIndex?: number;
-};
-
-type GeneratedEntity = {
-	id: string;
-	name: string;
-	featureId: string;
+	actions: ScenarioAction[];
 };
 
 type ConfigFn = (config: ScenarioConfig) => ScenarioConfig;
@@ -141,6 +145,7 @@ const entities = ({
 /**
  * Attach a product to the customer or a specific entity.
  * Product ID is auto-prefixed with customerId.
+ * Actions are executed in the order they appear in the actions array.
  * @param productId - The product ID (without prefix)
  * @param entityIndex - Optional entity index (0-based) to attach to (omit for customer-level)
  * @param options - Optional feature options (e.g., prepaid quantity)
@@ -164,16 +169,22 @@ const attach = ({
 }): ConfigFn => {
 	return (config) => ({
 		...config,
-		attachments: [
-			...config.attachments,
-			{ productId, entityIndex, options, newBillingSubscription },
+		actions: [
+			...config.actions,
+			{
+				type: "attach" as const,
+				productId,
+				entityIndex,
+				options,
+				newBillingSubscription,
+			},
 		],
 	});
 };
 
 /**
  * Cancel a product subscription for the customer or a specific entity.
- * Runs after all attachments.
+ * Actions are executed in the order they appear in the actions array.
  * @param productId - The product ID (without prefix)
  * @param entityIndex - Optional entity index (0-based) to cancel for (omit for customer-level)
  * @example s.cancel({ productId: "pro" }) // customer-level
@@ -188,12 +199,17 @@ const cancel = ({
 }): ConfigFn => {
 	return (config) => ({
 		...config,
-		cancellations: [...config.cancellations, { productId, entityIndex }],
+		actions: [
+			...config.actions,
+			{ type: "cancel" as const, productId, entityIndex },
+		],
 	});
 };
 
 /**
- * Advance the Stripe test clock after all attachments.
+ * Advance the Stripe test clock.
+ * Actions are executed in the order they appear in the actions array.
+ * Multiple advanceTestClock calls are executed sequentially, each starting from where the previous one ended.
  * @param days - Number of days to advance
  * @param weeks - Number of weeks to advance
  * @param hours - Number of hours to advance
@@ -202,6 +218,12 @@ const cancel = ({
  * @example s.advanceTestClock({ days: 15 }) // advance 15 days
  * @example s.advanceTestClock({ months: 1 }) // advance 1 month
  * @example s.advanceTestClock({ toNextInvoice: true }) // advance to next invoice
+ * @example
+ * // Interleaved actions:
+ * s.attach({ productId: "pro" }),
+ * s.advanceTestClock({ days: 7 }),
+ * s.cancel({ productId: "pro" }),
+ * s.advanceTestClock({ days: 3 }),
  */
 const advanceTestClock = ({
 	days,
@@ -218,7 +240,17 @@ const advanceTestClock = ({
 }): ConfigFn => {
 	return (config) => ({
 		...config,
-		advanceClock: { days, weeks, hours, months, toNextInvoice },
+		actions: [
+			...config.actions,
+			{
+				type: "advanceClock" as const,
+				days,
+				weeks,
+				hours,
+				months,
+				toNextInvoice,
+			},
+		],
 	});
 };
 
@@ -256,18 +288,18 @@ const defaultConfig: ScenarioConfig = {
 	testClock: false,
 	withDefault: false,
 	products: [],
-	attachments: [],
-	cancellations: [],
+	actions: [],
 };
 
 /**
  * Initialize a complete test scenario with customer, products, entities, and attachments.
  * Uses functional composition for flexible configuration.
+ * Actions are executed in the exact order they appear in the actions array.
  *
  * @param customerId - Unique identifier used as customer ID and product prefix
  * @param setup - Configuration functions (customer, products, entities)
- * @param actions - Action functions (attach, cancel, advanceTestClock)
- * @returns autumnV1, autumnV2, ctx, testClockId, customer, entities
+ * @param actions - Action functions (attach, cancel, advanceTestClock) - executed in order
+ * @returns autumnV1, autumnV2, ctx, testClockId, customer, entities, advancedTo
  *
  * @example
  * ```typescript
@@ -283,20 +315,20 @@ const defaultConfig: ScenarioConfig = {
  *   ],
  * });
  *
- * // With entities
- * const { autumnV1, ctx, entities } = await initScenario({
- *   customerId: "entity-test",
+ * // Interleaved actions - executed in order
+ * const { autumnV1, ctx, advancedTo } = await initScenario({
+ *   customerId: "interleaved-test",
  *   setup: [
- *     s.customer({ paymentMethod: "success" }),
- *     s.products({ list: [pro, free] }),
- *     s.entities({ count: 2, featureId: TestFeature.Users }),
+ *     s.customer({ testClock: true, paymentMethod: "success" }),
+ *     s.products({ list: [pro] }),
  *   ],
  *   actions: [
- *     s.attach({ productId: "pro", entityIndex: 0 }),
- *     s.attach({ productId: "free", entityIndex: 1 }),
+ *     s.attach({ productId: "pro" }),
+ *     s.advanceTestClock({ days: 7 }),  // Advance 7 days
+ *     s.cancel({ productId: "pro" }),
+ *     s.advanceTestClock({ days: 3 }),  // Advance another 3 days (10 total)
  *   ],
  * });
- * // entities[0].id = "ent-1", entities[1].id = "ent-2"
  * ```
  */
 export const initScenario = async ({
@@ -356,75 +388,82 @@ export const initScenario = async ({
 		await autumnV1.entities.create(customerId, entityDefs);
 	}
 
-	// 5. Attach products
-	for (const attachment of config.attachments) {
-		const prefixedProductId = `${attachment.productId}_${customerId}`;
+	// 5. Execute actions in order (attach, cancel, advanceClock)
+	let advancedTo: number = Date.now();
 
-		// Resolve entityIndex to entityId
-		let entityId: string | undefined;
-		if (attachment.entityIndex !== undefined) {
-			if (attachment.entityIndex >= generatedEntities.length) {
+	for (const action of config.actions) {
+		if (action.type === "attach") {
+			const prefixedProductId = `${action.productId}_${customerId}`;
+
+			// Resolve entityIndex to entityId
+			let entityId: string | undefined;
+			if (action.entityIndex !== undefined) {
+				if (action.entityIndex >= generatedEntities.length) {
+					throw new Error(
+						`entityIndex ${action.entityIndex} is out of bounds. Only ${generatedEntities.length} entities configured.`,
+					);
+				}
+				entityId = generatedEntities[action.entityIndex].id;
+			}
+
+			await autumnV1.attach({
+				customer_id: customerId,
+				product_id: prefixedProductId,
+				entity_id: entityId,
+				options: action.options,
+				new_billing_subscription: action.newBillingSubscription,
+			});
+		} else if (action.type === "cancel") {
+			const prefixedProductId = `${action.productId}_${customerId}`;
+
+			// Resolve entityIndex to entityId
+			let entityId: string | undefined;
+			if (action.entityIndex !== undefined) {
+				if (action.entityIndex >= generatedEntities.length) {
+					throw new Error(
+						`entityIndex ${action.entityIndex} is out of bounds. Only ${generatedEntities.length} entities configured.`,
+					);
+				}
+				entityId = generatedEntities[action.entityIndex].id;
+			}
+
+			await autumnV1.cancel({
+				customer_id: customerId,
+				product_id: prefixedProductId,
+				entity_id: entityId,
+			});
+		} else if (action.type === "advanceClock") {
+			if (!testClockId) {
 				throw new Error(
-					`entityIndex ${attachment.entityIndex} is out of bounds. Only ${generatedEntities.length} entities configured.`,
+					"Cannot advance test clock: testClock not enabled in customer config",
 				);
 			}
-			entityId = generatedEntities[attachment.entityIndex].id;
-		}
 
-		await autumnV1.attach({
-			customer_id: customerId,
-			product_id: prefixedProductId,
-			entity_id: entityId,
-			options: attachment.options,
-			new_billing_subscription: attachment.newBillingSubscription,
-		});
-	}
+			const startingFrom = new Date(advancedTo);
 
-	// 6. Cancel products if configured
-	for (const cancellation of config.cancellations) {
-		const prefixedProductId = `${cancellation.productId}_${customerId}`;
-
-		// Resolve entityIndex to entityId
-		let entityId: string | undefined;
-		if (cancellation.entityIndex !== undefined) {
-			if (cancellation.entityIndex >= generatedEntities.length) {
-				throw new Error(
-					`entityIndex ${cancellation.entityIndex} is out of bounds. Only ${generatedEntities.length} entities configured.`,
-				);
+			if (action.toNextInvoice) {
+				// Advance to next month + hours to finalize invoice
+				const baseDate = startingFrom ?? new Date();
+				advancedTo = await advanceTestClockFn({
+					stripeCli: ctx.stripeCli,
+					testClockId,
+					advanceTo: addHours(
+						addMonths(baseDate, 1),
+						hoursToFinalizeInvoice,
+					).getTime(),
+					waitForSeconds: 30,
+				});
+			} else {
+				advancedTo = await advanceTestClockFn({
+					stripeCli: ctx.stripeCli,
+					testClockId,
+					startingFrom,
+					numberOfDays: action.days,
+					numberOfWeeks: action.weeks,
+					numberOfHours: action.hours,
+					numberOfMonths: action.months,
+				});
 			}
-			entityId = generatedEntities[cancellation.entityIndex].id;
-		}
-
-		await autumnV1.cancel({
-			customer_id: customerId,
-			product_id: prefixedProductId,
-			entity_id: entityId,
-		});
-	}
-
-	// 7. Advance test clock if configured
-	let advancedTo: number | undefined;
-	if (config.advanceClock && testClockId) {
-		if (config.advanceClock.toNextInvoice) {
-			// Advance to next month + hours to finalize invoice
-			advancedTo = await advanceTestClockFn({
-				stripeCli: ctx.stripeCli,
-				testClockId,
-				advanceTo: addHours(
-					addMonths(new Date(), 1),
-					hoursToFinalizeInvoice,
-				).getTime(),
-				waitForSeconds: 30,
-			});
-		} else {
-			advancedTo = await advanceTestClockFn({
-				stripeCli: ctx.stripeCli,
-				testClockId,
-				numberOfDays: config.advanceClock.days,
-				numberOfWeeks: config.advanceClock.weeks,
-				numberOfHours: config.advanceClock.hours,
-				numberOfMonths: config.advanceClock.months,
-			});
 		}
 	}
 

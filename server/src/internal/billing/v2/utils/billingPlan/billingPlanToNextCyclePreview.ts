@@ -23,15 +23,25 @@ export const billingPlanToNextCyclePreview = ({
 	// 1. Return undefined if billing cycle anchor is now
 	const { billingCycleAnchorMs } = billingContext;
 
+	ctx.logger.info(`billingCycleAnchorMs: ${billingCycleAnchorMs}`);
+
+	ctx.logger.info(`billingCycleAnchorMs: ${billingCycleAnchorMs}`);
+
 	if (billingCycleAnchorMs === "now") return undefined;
-	const { insertCustomerProducts } = billingPlan.autumn;
+	const { insertCustomerProducts, updateCustomerProduct } = billingPlan.autumn;
 
 	// 2. Get cycle end and if none, return undefined
-	const customerProducts = insertCustomerProducts.filter(
-		(customerProduct) => cp(customerProduct).paid().recurring().valid,
+	const allCustomerProducts = [
+		...insertCustomerProducts,
+		...(updateCustomerProduct ? [updateCustomerProduct] : []),
+	];
+	const customerProducts = allCustomerProducts.filter(
+		(customerProduct) =>
+			cp(customerProduct).paid().recurring().hasActiveStatus().valid,
 	);
 
 	const prices = cusProductsToPrices({ cusProducts: customerProducts });
+
 	const smallestInterval = getSmallestInterval({ prices });
 
 	if (!smallestInterval) return undefined;

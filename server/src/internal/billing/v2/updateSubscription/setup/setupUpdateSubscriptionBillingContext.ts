@@ -1,4 +1,4 @@
-import { formatMs, type UpdateSubscriptionV0Params } from "@autumn/shared";
+import { type UpdateSubscriptionV0Params } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
@@ -85,10 +85,6 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		customerProduct,
 		newFullProduct: fullProduct,
 	});
-
-	console.log("Billing cycle anchor: ", formatMs(billingCycleAnchorMs));
-	console.log("Trial ends at: ", formatMs(trialContext?.trialEndsAt));
-	console.log("Reset cycle anchor: ", formatMs(resetCycleAnchorMs));
 
 	const invoiceMode = setupInvoiceModeContext({ params });
 
