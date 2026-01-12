@@ -140,9 +140,9 @@ export const executeRedisDeduction = async ({
 		allUpdates = { ...allUpdates, ...updates };
 		allRolloverUpdates = { ...allRolloverUpdates, ...rollover_updates };
 
-		if (logs && logs.length > 0) {
-			ctx.logger.debug(`[executeRedisDeduction] Logs: ${logs.join("\n")}`);
-		}
+		// if (logs && logs.length > 0) {
+		// 	ctx.logger.debug(`[executeRedisDeduction] Logs: ${logs.join("\n")}`);
+		// }
 
 		// Handle paid allocated entitlements and update fullCus in memory
 		try {

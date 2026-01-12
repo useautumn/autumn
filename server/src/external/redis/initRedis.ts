@@ -161,14 +161,10 @@ export const getRegionalRedis = (region: string): Redis => {
 		return redis;
 	}
 
-	// Check if we already have a connection for this region
-	let regionalInstance = regionalRedisInstances.get(region);
-	if (regionalInstance) {
-		return regionalInstance;
-	}
-
-	// Create new connection for the requested region
+	// Get the cache URL for the requested region
 	const cacheUrl = regionToCacheUrl[region];
+
+	// If no cache URL configured, fall back to primary
 	if (!cacheUrl) {
 		console.warn(
 			`No cache URL configured for region ${region}, falling back to primary`,
@@ -176,6 +172,19 @@ export const getRegionalRedis = (region: string): Redis => {
 		return redis;
 	}
 
+	// If the cache URL is the same as primary, return primary instance
+	// (avoids creating duplicate connections to the same server)
+	if (cacheUrl === primaryCacheUrl) {
+		return redis;
+	}
+
+	// Check if we already have a connection for this region
+	let regionalInstance = regionalRedisInstances.get(region);
+	if (regionalInstance) {
+		return regionalInstance;
+	}
+
+	// Create new connection for the requested region
 	console.log(`Creating Redis connection for region: ${region}`);
 	regionalInstance = createRedisConnection(cacheUrl);
 	regionalRedisInstances.set(region, regionalInstance);
