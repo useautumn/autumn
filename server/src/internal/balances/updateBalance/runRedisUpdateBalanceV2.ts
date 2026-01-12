@@ -73,11 +73,12 @@ export const runRedisUpdateBalanceV2 = async ({
 
 	const { updates } = result;
 
-	// Sync to Postgres
+	// Sync to Postgres (update balance doesn't touch rollovers)
 	const modifiedCusEntIds = deductionUpdatesToModifiedIds({ updates });
+
 	if (modifiedCusEntIds.length > 0) {
 		await syncItemV3({
-			item: {
+			payload: {
 				customerId,
 				orgId: org.id,
 				env,

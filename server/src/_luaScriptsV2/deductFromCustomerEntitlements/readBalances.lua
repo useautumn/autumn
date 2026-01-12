@@ -4,6 +4,33 @@
 -- ============================================================================
 
 -- ============================================================================
+-- HELPER: Read rollover data from Redis (fresh read)
+-- Returns: { balance, usage, entities } or nil if not found
+-- ============================================================================
+local function read_rollover_data(cache_key, rollover_path)
+  local result = redis.call('JSON.GET', cache_key, rollover_path)
+  if not result or result == cjson.null then
+    return nil
+  end
+  
+  local decoded = cjson.decode(result)
+  -- JSONPath returns an array of matches, extract the first element
+  if type(decoded) == 'table' and decoded[1] ~= nil then
+    decoded = decoded[1]
+  end
+  
+  if type(decoded) ~= 'table' then
+    return nil
+  end
+  
+  return {
+    balance = safe_number(decoded.balance),
+    usage = safe_number(decoded.usage),
+    entities = safe_table(decoded.entities),
+  }
+end
+
+-- ============================================================================
 -- HELPER: Read current balance from Redis (fresh read, not from snapshot)
 -- ============================================================================
 local function read_current_balance(cache_key, base_path)

@@ -85,17 +85,19 @@ export const getOrSetCachedFullCustomer = async ({
 
 	// 3. Set cache (fire and forget)
 	if (!skipCache) {
-		setCachedFullCustomer({
+		await setCachedFullCustomer({
 			ctx,
 			fullCustomer,
 			customerId,
 			fetchTimeMs,
 			source,
-		}).catch((error) => {
-			logger.error(
-				`[getOrSetCachedFullCustomer] Failed to set cache: ${error}`,
-			);
 		});
+
+		// .catch((error) => {
+		// 	logger.error(
+		// 		`[getOrSetCachedFullCustomer] Failed to set cache: ${error}`,
+		// 	);
+		// });
 	}
 
 	return fullCustomer;

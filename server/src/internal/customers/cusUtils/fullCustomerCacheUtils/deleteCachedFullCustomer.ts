@@ -8,6 +8,7 @@ import {
 	buildFullCustomerCacheKey,
 	FULL_CUSTOMER_CACHE_GUARD_TTL_SECONDS,
 } from "./fullCustomerCacheConfig.js";
+import { buildTestFullCustomerCacheGuardKey } from "./testFullCustomerCacheGuard.js";
 
 /**
  * Delete FullCustomer from Redis cache
@@ -37,28 +38,38 @@ export const deleteCachedFullCustomer = async ({
 
 	if (!customerId) return;
 
+	const testGuardKey = buildTestFullCustomerCacheGuardKey({
+		orgId,
+		env,
+		customerId,
+	});
 	const cacheKey = buildFullCustomerCacheKey({ orgId, env, customerId });
 	const guardKey = buildFullCustomerCacheGuardKey({ orgId, env, customerId });
 
 	try {
-		// Set guard key and delete cache key in one round trip
 		const guardTimestamp = Date.now().toString();
-		const results = await redis
-			.pipeline()
-			.set(
-				guardKey,
-				guardTimestamp,
-				"EX",
-				FULL_CUSTOMER_CACHE_GUARD_TTL_SECONDS,
-			)
-			.del(cacheKey)
-			.exec();
 
-		const deletedCount = results?.[1]?.[1] ?? 0;
-
-		log.info(
-			`[deleteCachedFullCustomer] Deleted ${deletedCount} keys for ${customerId}, source: ${source}`,
+		const result = await redis.deleteFullCustomerCache(
+			testGuardKey,
+			guardKey,
+			cacheKey,
+			guardTimestamp,
+			FULL_CUSTOMER_CACHE_GUARD_TTL_SECONDS.toString(),
 		);
+
+		if (result === "SKIPPED") {
+			log.info(
+				`[deleteCachedFullCustomer] Test guard exists, skipping deletion for ${customerId}`,
+			);
+		} else if (result === "DELETED") {
+			log.info(
+				`[deleteCachedFullCustomer] Deleted cache for ${customerId}, source: ${source}`,
+			);
+		} else {
+			log.debug(
+				`[deleteCachedFullCustomer] Cache key didn't exist for ${customerId}, source: ${source}`,
+			);
+		}
 	} catch (error) {
 		log.error(`[deleteCachedFullCustomer] Error: ${error}`);
 		throw error;

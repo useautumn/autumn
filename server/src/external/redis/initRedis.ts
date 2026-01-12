@@ -13,7 +13,11 @@ import {
 	SET_INVOICES_SCRIPT,
 	SET_SUBSCRIPTIONS_SCRIPT,
 } from "../../_luaScripts/luaScripts.js";
-import { DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT } from "../../_luaScriptsV2/luaScriptsV2.js";
+import {
+	BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
+	DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
+	DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
+} from "../../_luaScriptsV2/luaScriptsV2.js";
 
 if (!process.env.CACHE_URL) {
 	throw new Error("CACHE_URL (redis) is not set");
@@ -99,6 +103,16 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 	redisInstance.defineCommand("deductFromCustomerEntitlements", {
 		numberOfKeys: 1,
 		lua: DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
+	});
+
+	redisInstance.defineCommand("deleteFullCustomerCache", {
+		numberOfKeys: 3,
+		lua: DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
+	});
+
+	redisInstance.defineCommand("batchDeleteFullCustomerCache", {
+		numberOfKeys: 0,
+		lua: BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
 	});
 
 	// biome-ignore lint/correctness/noUnusedFunctionParameters: Might uncomment this back in in the future
@@ -245,6 +259,18 @@ declare module "ioredis" {
 		deductFromCustomerEntitlements(
 			cacheKey: string,
 			paramsJson: string,
+		): Promise<string>;
+		deleteFullCustomerCache(
+			testGuardKey: string,
+			guardKey: string,
+			cacheKey: string,
+			guardTimestamp: string,
+			guardTtl: string,
+		): Promise<"SKIPPED" | "DELETED" | "NOT_FOUND">;
+		batchDeleteFullCustomerCache(
+			guardTimestamp: string,
+			guardTtl: string,
+			customersJson: string,
 		): Promise<string>;
 	}
 }

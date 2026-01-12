@@ -17,6 +17,8 @@ in the test logs. Use your common sense
 
 - Note, biome does not perform typechecking. In which case you need to, you may run `tsc --noEmit --skipLibCheck <folder or file path>`
 
+- The `server/src/_luaScriptsV2/` folder contains Lua scripts for Redis atomic operations. Redis uses **Lua 5.1** - there is NO `goto` statement (added in Lua 5.2), so use if/else blocks instead.
+
 - This codebase uses Bun as its preferred package manager and Node runtime.
 
 - **ALWAYS import from `zod/v4`**, not from `zod` directly. Example: `import { z } from "zod/v4";`

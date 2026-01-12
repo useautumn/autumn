@@ -87,7 +87,10 @@ const applyCustomerEntitlementFiltersToBalance = ({
 	customerEntitlementFilters?: CustomerEntitlementFilters;
 }): ApiBalance | null => {
 	// No filtering - return original balance
-	if (!customerEntitlementFilters?.cusEntIds || customerEntitlementFilters.cusEntIds.length === 0) {
+	if (
+		!customerEntitlementFilters?.cusEntIds ||
+		customerEntitlementFilters.cusEntIds.length === 0
+	) {
 		return apiBalance;
 	}
 
@@ -143,7 +146,13 @@ export const syncItem = async ({
 	item: SyncItem;
 	ctx: AutumnContext;
 }) => {
-	const { customerId, featureId, entityId, region, customerEntitlementFilters } = item;
+	const {
+		customerId,
+		featureId,
+		entityId,
+		region,
+		customerEntitlementFilters,
+	} = item;
 	const { db, org, env } = ctx;
 
 	// Get the correct regional Redis instance for this sync item

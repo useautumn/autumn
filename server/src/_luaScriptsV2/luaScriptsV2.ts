@@ -5,8 +5,9 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Path to deductFromCustomerEntitlements folder (same directory as this file)
+// Path to script folders
 const DEDUCT_DIR = join(__dirname, "deductFromCustomerEntitlements");
+const DELETE_CACHE_DIR = join(__dirname, "deleteFullCustomerCache");
 
 // ============================================================================
 // HELPER MODULES
@@ -61,3 +62,25 @@ ${GET_TOTAL_BALANCE}
 ${DEDUCT_FROM_ROLLOVERS}
 ${DEDUCT_FROM_MAIN_BALANCE}
 ${mainScript}`;
+
+// ============================================================================
+// DELETE FULL CUSTOMER CACHE SCRIPTS
+// ============================================================================
+
+/**
+ * Lua script for deleting a single FullCustomer cache from Redis.
+ * Checks test guard, sets stale-write guard, and deletes cache atomically.
+ */
+export const DELETE_FULL_CUSTOMER_CACHE_SCRIPT = readFileSync(
+	join(DELETE_CACHE_DIR, "deleteFullCustomerCache.lua"),
+	"utf-8",
+);
+
+/**
+ * Lua script for batch deleting multiple FullCustomer caches from Redis.
+ * For each customer: checks test guard, sets stale-write guard, deletes cache.
+ */
+export const BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT = readFileSync(
+	join(DELETE_CACHE_DIR, "batchDeleteFullCustomerCache.lua"),
+	"utf-8",
+);

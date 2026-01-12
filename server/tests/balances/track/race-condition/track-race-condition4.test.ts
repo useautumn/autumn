@@ -9,19 +9,11 @@ import { executeRedisDeduction } from "@/internal/balances/utils/deduction/execu
 import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
 import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import {
-	constructProduct,
-	constructRawProduct,
-} from "@/utils/scriptUtils/createTestProducts.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 import { deleteCachedFullCustomer } from "../../../../src/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
-import {
-	removeTestFullCustomerCacheGuard,
-	setTestFullCustomerCacheGuard,
-} from "../../../../src/internal/customers/cusUtils/fullCustomerCacheUtils/testFullCustomerCacheGuard";
-import { constructPrepaidItem } from "../../../../src/utils/scriptUtils/constructItem.js";
-import { timeout } from "../../../utils/genUtils";
+import { timeout } from "../../../utils/genUtils.js";
 
 const pro = constructProduct({
 	type: "pro",
@@ -29,40 +21,25 @@ const pro = constructProduct({
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
 			includedUsage: 100,
+			entityFeatureId: TestFeature.Users,
 		}),
 	],
 });
 
-const oneOffCredits = constructRawProduct({
-	id: "one_off_messages",
-	isAddOn: true,
-	items: [
-		constructPrepaidItem({
-			featureId: TestFeature.Messages,
-			includedUsage: 0,
-			billingUnits: 1,
-			price: 0.01,
-			isOneOff: true,
-		}),
-	],
-});
+const testCase = "track-race-condition4";
 
-const testCase = "track-race-condition2";
-
-describe(`${chalk.yellowBright("track-race-condition2: sync should not wipe out top up credits")}`, () => {
+describe(`${chalk.yellowBright("track-race-condition4: sync should not wipe out newly created entity credits")}`, () => {
 	const customerId = testCase;
 	const autumnV2 = new AutumnInt({
 		version: ApiVersion.V2_0,
 	});
-	const autumnV2SkipCacheDeletion: AutumnInt = new AutumnInt({
+
+	const autumnV2WithoutCacheDeletion = new AutumnInt({
 		version: ApiVersion.V2_0,
 		skipCacheDeletion: true,
 	});
 
 	beforeAll(async () => {
-		// Clean up any stale test guards from previous runs
-		await removeTestFullCustomerCacheGuard({ ctx, customerId });
-
 		await initCustomerV3({
 			ctx,
 			customerId,
@@ -72,25 +49,27 @@ describe(`${chalk.yellowBright("track-race-condition2: sync should not wipe out 
 
 		await initProductsV0({
 			ctx,
-			products: [pro, oneOffCredits],
+			products: [pro],
 			prefix: testCase,
 		});
 
+		await autumnV2.entities.create(customerId, [
+			{
+				id: "user-1",
+				name: "User 1",
+				feature_id: TestFeature.Users,
+			},
+		]);
+
 		await autumnV2.attach({
 			customer_id: customerId,
-			product_ids: [pro.id, oneOffCredits.id],
-			options: [
-				{
-					feature_id: TestFeature.Messages,
-					quantity: 100,
-				},
-			],
+			product_id: pro.id,
 		});
 
-		await timeout(3000); // let webhooks come in
+		await timeout(2500);
 	});
 
-	test("should manually reproduce race condition where sync wipes out attached credits", async () => {
+	test("should manually reproduce race condition where sync wipes out newly created entity credits", async () => {
 		console.log(
 			chalk.cyan("\n=== Manually orchestrating race condition steps ===\n"),
 		);
@@ -147,30 +126,19 @@ describe(`${chalk.yellowBright("track-race-condition2: sync should not wipe out 
 			),
 		);
 
-		// STEP 3: Lock the fullCustomer cache and attach 100 more credits
-		// The lock prevents cache invalidation during attach, simulating the race condition
-		console.log(
-			chalk.yellow(
-				"\nStep 3: Locking cache and attaching 100 one-off credits (updates DB)...",
-			),
-		);
-
-		await setTestFullCustomerCacheGuard({ ctx, customerId });
-
-		await autumnV2SkipCacheDeletion.attach({
-			customer_id: customerId,
-			product_id: oneOffCredits.id,
-			options: [
-				{
-					feature_id: TestFeature.Messages,
-					quantity: 100,
-				},
-			],
-		});
-		console.log(chalk.green("✓ Attached 100 credits to DB (cache locked)"));
+		// STEP 3: Create a new entity
+		console.log(chalk.yellow("\nStep 3: Creating a new entity..."));
+		await autumnV2WithoutCacheDeletion.entities.create(customerId, [
+			{
+				id: "user-2",
+				name: "User 2",
+				feature_id: TestFeature.Users,
+			},
+		]);
+		console.log(chalk.green("✓ New entity created"));
 
 		// STEP 4: Manually call syncItemV3 to sync the OLD Redis balance to DB
-		// This simulates the race condition where sync runs AFTER attach
+		// This simulates the race condition where sync runs AFTER reset
 		// The sync should detect that DB has newer data and NOT overwrite it
 		console.log(
 			chalk.yellow(
@@ -194,9 +162,6 @@ describe(`${chalk.yellowBright("track-race-condition2: sync should not wipe out 
 		});
 		console.log(chalk.red("✓ Sync completed"));
 
-		// Remove the test guard so cache can be invalidated normally
-		await removeTestFullCustomerCacheGuard({ ctx, customerId });
-
 		await deleteCachedFullCustomer({
 			orgId: ctx.org.id,
 			env: ctx.env,
@@ -204,13 +169,12 @@ describe(`${chalk.yellowBright("track-race-condition2: sync should not wipe out 
 			source: "test-setup",
 		});
 
-		// Check that credits weren't wiped out
+		// Check that credits weren't wiped out (should be reset to 100)
 		const cachedCustomer =
 			await autumnV2.customers.get<ApiCustomer>(customerId);
 
-		// Expected: 100 (pro) + 100 (initial one-off) - 5 (tracked) + 100 (attached one-off) = 295
 		expect(cachedCustomer.balances[TestFeature.Messages].current_balance).toBe(
-			295,
+			200,
 		);
 
 		const customerAfterSync = await autumnV2.customers.get<ApiCustomer>(
@@ -221,6 +185,6 @@ describe(`${chalk.yellowBright("track-race-condition2: sync should not wipe out 
 		);
 		expect(
 			customerAfterSync.balances[TestFeature.Messages].current_balance,
-		).toBe(295);
+		).toBe(200);
 	});
 });
