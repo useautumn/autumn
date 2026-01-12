@@ -51,8 +51,8 @@ end
 -- HELPER: Read current entity balance from Redis (fresh read)
 -- ============================================================================
 local function read_current_entity_balance(cache_key, base_path, entity_id)
-  -- Use dot notation for entity access
-  local entity_path = base_path .. '.entities.' .. entity_id
+  -- Use bracket notation for entity access (handles special characters in entity_id)
+  local entity_path = build_entity_path(base_path, entity_id)
   local result = redis.call('JSON.GET', cache_key, entity_path)
   
   if not result or result == cjson.null then

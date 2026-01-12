@@ -43,11 +43,13 @@ export const runTrackV2 = async ({
 	});
 
 	// If idempotency key is provided, insert event first and skip insertion later
-	await handleEventIdempotencyKey({
-		ctx,
-		body,
-		fullCustomer,
-	});
+	if (body.idempotency_key) {
+		await handleEventIdempotencyKey({
+			ctx,
+			body,
+			fullCustomer,
+		});
+	}
 
 	// Try Redis deduction
 	const response: TrackResponseV2 = await runRedisTrack({
