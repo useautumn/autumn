@@ -206,11 +206,11 @@ test.concurrent(`${chalk.yellowBright("version-errors: same version processes no
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	// Normal flow creates a second invoice with $0 total
+	// No second invoice created for same version (no price change)
 	await expectCustomerInvoiceCorrect({
 		customerId,
-		count: 2,
-		latestTotal: 0,
+		count: 1,
+		latestTotal: 20,
 	});
 
 	await expectSubToBeCorrect({

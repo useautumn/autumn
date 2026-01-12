@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import type { ApiCustomerV3 } from "@shared/index";
 import { expectCustomerFeatureCorrect } from "@tests/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/billing/utils/expectCustomerInvoiceCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
@@ -95,7 +96,7 @@ test.concurrent(`${chalk.yellowBright("version-items: override included usage")}
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Should have custom 500 usage, not v2's 200
 	expectCustomerFeatureCorrect({
@@ -198,7 +199,7 @@ test.concurrent(`${chalk.yellowBright("version-items: override price and usage")
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Should have custom 1000 usage
 	expectCustomerFeatureCorrect({
@@ -228,7 +229,10 @@ test.concurrent(`${chalk.yellowBright("version-items: partial override keeps ver
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const wordsItem = items.monthlyWords({ includedUsage: 500 });
 	const priceItem = items.monthlyPrice({ price: 20 });
-	const pro = products.base({ id: "pro", items: [messagesItem, wordsItem, priceItem] });
+	const pro = products.base({
+		id: "pro",
+		items: [messagesItem, wordsItem, priceItem],
+	});
 
 	const { customerId, autumnV1, ctx } = await initScenario({
 		customerId: "version-items-partial",
@@ -258,7 +262,7 @@ test.concurrent(`${chalk.yellowBright("version-items: partial override keeps ver
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Messages should have custom 500 (overridden)
 	expectCustomerFeatureCorrect({
