@@ -89,9 +89,7 @@ export const migrateRevenueCatCustomer = async ({
 
 	await deleteCachedApiCustomer({
 		customerId,
-		orgId: org.id,
-		env,
-		logger,
+		ctx,
 		source: `migrateRevenueCatCustomer, deleting customer cache`,
 	});
 };

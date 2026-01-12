@@ -8,9 +8,10 @@ import {
 	InternalError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
+import { getOrCreateCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
+import { getApiEntityBase } from "@/internal/entities/entityUtils/apiEntityUtils/getApiEntityBase.js";
 import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUtils.js";
-import { getOrCreateApiCustomer } from "../../../customers/cusUtils/getOrCreateApiCustomer.js";
-import { getCachedApiEntity } from "../../../entities/entityUtils/apiEntityCacheUtils/getCachedApiEntity.js";
 import type { CheckData } from "../checkTypes/CheckData.js";
 import { apiBalanceToAllowed } from "./apiBalanceToAllowed.js";
 
@@ -106,27 +107,32 @@ export const getCheckData = async ({
 
 	let apiEntity: ApiCustomer | ApiEntityV1 | undefined;
 	let legacyData: CustomerLegacyData | undefined;
-	const start = Date.now();
+	const start = performance.now();
+	const fullCustomer = await getOrCreateCachedFullCustomer({
+		ctx,
+		params: body,
+
+		source: "getCheckData",
+	});
 	const { apiCustomer, legacyData: legacyDataResult } =
-		await getOrCreateApiCustomer({
+		await getApiCustomerBase({
 			ctx,
-			customerId: customer_id,
-			customerData: customer_data,
-			entityId: entity_id,
-			entityData: entity_data,
+			fullCus: fullCustomer,
+			withAutumnId: true,
 		});
 	ctx.logger.debug(
-		`[check] getOrCreateApiCustomer took ${Date.now() - start}ms`,
+		`[check] getOrCreateCachedFullCustomer took ${performance.now() - start}ms`,
 	);
 
 	apiEntity = apiCustomer;
 	legacyData = legacyDataResult;
-	if (entity_id) {
-		const { apiEntity: apiEntityResult } = await getCachedApiEntity({
-			ctx,
-			customerId: customer_id,
-			entityId: entity_id,
-		});
+	if (entity_id && fullCustomer.entity) {
+		const { apiEntity: apiEntityResult, legacyData: legacyDataResult } =
+			await getApiEntityBase({
+				ctx,
+				entity: fullCustomer.entity,
+				fullCus: fullCustomer,
+			});
 
 		apiEntity = apiEntityResult;
 		legacyData = legacyDataResult;

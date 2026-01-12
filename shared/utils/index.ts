@@ -5,9 +5,9 @@ export * from "./cursorUtils.js";
 export * from "./cusEntUtils/balanceUtils/cusEntsToBalance.js";
 export * from "./cusEntUtils/balanceUtils/cusEntsToCurrentBalance.js";
 export * from "./cusEntUtils/balanceUtils/cusEntsToPrepaidQuantity.js";
+export * from "./cusEntUtils/balanceUtils/cusEntsToPurchasedBalance.js";
 export * from "./cusEntUtils/balanceUtils/cusEntsToReset.js";
 export * from "./cusEntUtils/balanceUtils/cusEntsToRollovers.js";
-export * from "./cusEntUtils/balanceUtils/cusEntToPurchasedBalance.js";
 // Cus ent utils
 export * from "./cusEntUtils/balanceUtils/grantedBalanceUtils/cusEntsToAdjustment.js";
 export * from "./cusEntUtils/balanceUtils/grantedBalanceUtils/cusEntsToAllowance.js";
@@ -20,6 +20,7 @@ export * from "./cusEntUtils/convertCusEntUtils/cusEntToKey.js";
 export * from "./cusEntUtils/convertCusEntUtils.js";
 export * from "./cusEntUtils/cusEntUtils.js";
 export * from "./cusEntUtils/filterCusEntUtils.js";
+export * from "./cusEntUtils/findCustomerEntitlement/findCustomerEntitlementById.js";
 // Cus ent utils
 export * from "./cusEntUtils/getRolloverFields.js";
 export * from "./cusEntUtils/getStartingBalance.js";

@@ -1,5 +1,4 @@
 import {
-	type AppEnv,
 	ErrCode,
 	type ReferralCode,
 	type Reward,
@@ -8,9 +7,9 @@ import {
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { CusService } from "../customers/CusService.js";
 import { RewardRedemptionService } from "./RewardRedemptionService.js";
@@ -42,22 +41,18 @@ export const generateReferralCode = () => {
 
 // Trigger reward
 export const triggerRedemption = async ({
-	db,
+	ctx,
 	referralCode,
-	org,
-	env,
-	logger,
 	reward,
 	redemption,
 }: {
-	db: DrizzleCli;
-	org: any;
-	env: AppEnv;
-	logger: any;
+	ctx: AutumnContext;
 	referralCode: ReferralCode & { reward_program: RewardProgram };
 	reward: Reward;
 	redemption: RewardRedemption;
 }) => {
+	const { db, org, env, logger } = ctx;
+
 	logger.info(
 		`Triggering redemption ${redemption.id} for referral code ${referralCode.code}`,
 	);

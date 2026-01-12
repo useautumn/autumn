@@ -40,9 +40,7 @@ export const migrateStripeCustomer = async ({
 
 	await deleteCachedApiCustomer({
 		customerId,
-		orgId: org.id,
-		env,
-		logger,
+		ctx,
 		source: `migrateStripeCustomer, deleting customer cache`,
 	});
 };

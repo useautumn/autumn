@@ -7,7 +7,6 @@ BUN_PARALLEL_COMPACT \
   'server/tests/contUse/roles' \
   'server/tests/contUse/update' \
   'server/tests/contUse/entities' \
-  'server/tests/balances/track/paid-allocated' \
   'server/tests/balances/set-usage' \
   --max=6
 

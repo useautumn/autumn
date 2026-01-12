@@ -5,6 +5,7 @@ import {
 	redis,
 } from "@/external/redis/initRedis.js";
 import { CACHE_CUSTOMER_VERSIONS } from "../../../../_luaScripts/cacheConfig";
+import { batchDeleteCachedFullCustomers } from "../fullCustomerCacheUtils/batchDeleteCachedFullCustomers";
 
 /**
  * Batch delete multiple customer caches in one Redis operation across ALL regions.
@@ -49,6 +50,10 @@ export const batchDeleteCachedCustomers = async ({
 	const regions = getConfiguredRegions();
 
 	try {
+		await batchDeleteCachedFullCustomers({
+			customers,
+			source: `batchDeleteCachedCustomers, deleting ${customers.length} customers`,
+		});
 		// Delete from all regions in parallel
 		const regionPromises = regions.map(async (region) => {
 			const regionalRedis = getRegionalRedis(region);

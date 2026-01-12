@@ -3,10 +3,12 @@ import {
 	type ApiEntityV1,
 	applyResponseVersionChanges,
 	type EntityLegacyData,
+	EntityNotFoundError,
 	type FullCustomer,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getCachedApiEntity } from "../apiEntityCacheUtils/getCachedApiEntity.js";
+import { getOrSetCachedFullCustomer } from "../../../customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
+import { getApiEntityBase } from "./getApiEntityBase.js";
 import { getApiEntityExpand } from "./getApiEntityExpand.js";
 
 /**
@@ -25,13 +27,26 @@ export const getApiEntity = async ({
 	fullCus?: FullCustomer;
 	withAutumnId?: boolean;
 }): Promise<ApiEntityV1> => {
-	// Get base entity (cacheable or direct from DB)
-	const { apiEntity: baseEntity, legacyData: entityLegacyData } =
-		await getCachedApiEntity({
+	const fullCustomer =
+		fullCus ??
+		(await getOrSetCachedFullCustomer({
 			ctx,
 			customerId,
 			entityId,
-			fullCus,
+			source: "getApiEntity",
+		}));
+
+	if (!fullCustomer.entity) {
+		throw new EntityNotFoundError({ entityId });
+	}
+
+	// Get base entity (cacheable or direct from DB)
+	const { apiEntity: baseEntity, legacyData: entityLegacyData } =
+		await getApiEntityBase({
+			ctx,
+			entity: fullCustomer.entity,
+			fullCus: fullCustomer,
+			withAutumnId,
 		});
 
 	// Clean api entity
@@ -40,8 +55,6 @@ export const getApiEntity = async ({
 		feature_id: baseEntity.feature_id || undefined,
 		autumn_id: withAutumnId ? baseEntity.autumn_id : undefined,
 	};
-
-	// Get expand fields (not cacheable)
 
 	const apiEntityExpand = await getApiEntityExpand({
 		ctx,

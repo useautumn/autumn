@@ -1,10 +1,7 @@
-import {
-	cusProductsToCusEnts,
-	type FullCustomer,
-	type PgDeductionUpdate,
-} from "@autumn/shared";
+import { cusProductsToCusEnts, type FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
 import { CusEntService } from "../../../customers/cusProducts/cusEnts/CusEntitlementService";
+import type { DeductionUpdate } from "../../utils/types/deductionUpdate.js";
 
 export const rollbackDeduction = async ({
 	ctx,
@@ -13,7 +10,7 @@ export const rollbackDeduction = async ({
 }: {
 	ctx: AutumnContext;
 	oldFullCus: FullCustomer;
-	updates: Record<string, PgDeductionUpdate>;
+	updates: Record<string, DeductionUpdate>;
 }) => {
 	const { db, logger } = ctx;
 
