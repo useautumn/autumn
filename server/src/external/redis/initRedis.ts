@@ -123,9 +123,8 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 		lua: BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
 	});
 
-	// biome-ignore lint/correctness/noUnusedFunctionParameters: Might uncomment this back in in the future
 	redisInstance.on("error", (error) => {
-		// logger.error(`redis (cache) error: ${error.message}`);
+		console.error(`[Redis] Connection error:`, error.message);
 	});
 
 	return redisInstance;

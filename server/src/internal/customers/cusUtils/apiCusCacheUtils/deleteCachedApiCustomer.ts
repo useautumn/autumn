@@ -38,11 +38,7 @@ export const deleteCachedApiCustomer = async ({
 	const regions = getConfiguredRegions();
 
 	try {
-		await deleteCachedFullCustomer({
-			ctx,
-			customerId,
-			source,
-		});
+		await deleteCachedFullCustomer({ ctx, customerId, source });
 		// Delete from all regions in parallel to avoid race conditions
 		const deletePromises = regions.map(async (region) => {
 			const regionalRedis = getRegionalRedis(region);

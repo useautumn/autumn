@@ -50,10 +50,7 @@ export const batchDeleteCachedCustomers = async ({
 	const regions = getConfiguredRegions();
 
 	try {
-		await batchDeleteCachedFullCustomers({
-			customers,
-			source: `batchDeleteCachedCustomers, deleting ${customers.length} customers`,
-		});
+		await batchDeleteCachedFullCustomers({ customers });
 		// Delete from all regions in parallel
 		const regionPromises = regions.map(async (region) => {
 			const regionalRedis = getRegionalRedis(region);
