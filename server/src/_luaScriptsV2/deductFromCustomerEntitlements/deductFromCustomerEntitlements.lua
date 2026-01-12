@@ -140,10 +140,13 @@ local function process_pass(pass_config)
     if remaining_amount == 0 then break end
     
     local ent_id = ent_obj.customer_entitlement_id
-    local credit_cost = ent_obj.credit_cost or 1
+    local credit_cost = ent_obj.credit_cost
+    -- Handle cjson.null (truthy in Lua) and zero/nil values
+    if credit_cost == cjson.null or credit_cost == nil or credit_cost == 0 then
+      credit_cost = 1
+    end
     local min_balance = ent_obj.min_balance
     local max_balance = ent_obj.max_balance
-
     
     -- Check usage_allowed
     local usage_allowed = ent_obj.usage_allowed

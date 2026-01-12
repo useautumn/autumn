@@ -67,7 +67,8 @@ BEGIN
     ) INTO cus_ent_ids;
     
     IF cus_ent_ids IS NOT NULL AND array_length(cus_ent_ids, 1) > 0 THEN
-      PERFORM 1 FROM customer_entitlements ce WHERE ce.id = ANY(cus_ent_ids) FOR UPDATE;
+      -- ORDER BY ensures consistent lock acquisition order to prevent deadlocks
+      PERFORM 1 FROM customer_entitlements ce WHERE ce.id = ANY(cus_ent_ids) ORDER BY ce.id FOR UPDATE;
     END IF;
   END IF;
   
@@ -80,7 +81,8 @@ BEGIN
     ) INTO rollover_ids;
     
     IF rollover_ids IS NOT NULL AND array_length(rollover_ids, 1) > 0 THEN
-      PERFORM 1 FROM rollovers r WHERE r.id = ANY(rollover_ids) FOR UPDATE;
+      -- ORDER BY ensures consistent lock acquisition order to prevent deadlocks
+      PERFORM 1 FROM rollovers r WHERE r.id = ANY(rollover_ids) ORDER BY r.id FOR UPDATE;
     END IF;
   END IF;
   
