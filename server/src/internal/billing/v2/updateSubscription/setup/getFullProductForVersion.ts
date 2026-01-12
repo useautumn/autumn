@@ -3,7 +3,7 @@ import {
 	ErrCode,
 	type FullCusProduct,
 	type FullProduct,
-	notNullish,
+	nullish,
 	ProductNotFoundError,
 	RecaseError,
 } from "@autumn/shared";
@@ -22,7 +22,7 @@ export const getFullProductForVersion = async ({
 	targetCustomerProduct: FullCusProduct;
 	version?: number;
 }): Promise<FullProduct> => {
-	if (notNullish(version)) {
+	if (nullish(version)) {
 		return cusProductToProduct({ cusProduct: targetCustomerProduct });
 	}
 
