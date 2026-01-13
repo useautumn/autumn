@@ -4,7 +4,7 @@ import { Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { Input } from "@/components/v2/inputs/Input";
