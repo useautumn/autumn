@@ -1,7 +1,7 @@
 import type {
 	EntitlementWithFeature,
 	Feature,
-	FullCusEntWithOptionalProduct,
+	FullCusEntWithFullCusProduct,
 	FullCusProduct,
 } from "@autumn/shared";
 
@@ -19,7 +19,7 @@ export interface CreditSystemSubRow {
 	/** The metered feature details (looked up from features map) */
 	feature?: Feature;
 	/** The customer entitlement for this metered feature with usage data */
-	meteredCusEnt?: FullCusEntWithOptionalProduct;
+	meteredCusEnt?: FullCusEntWithFullCusProduct;
 	/** Flag to identify this as a subrow */
 	isSubRow: true;
 	/** Parent entitlement (inherited for table context) */
@@ -39,9 +39,9 @@ export type CustomerFeatureUsageRowData =
 	| FullCusEntWithSubRows;
 
 /**
- * Extended version of FullCusEntWithOptionalProduct that includes optional subrows
+ * Extended version of FullCusEntWithFullCusProduct that includes optional subrows
  * for credit system features.
  */
-export type FullCusEntWithSubRows = FullCusEntWithOptionalProduct & {
+export type FullCusEntWithSubRows = FullCusEntWithFullCusProduct & {
 	subRows?: CustomerFeatureUsageRowData[];
 };

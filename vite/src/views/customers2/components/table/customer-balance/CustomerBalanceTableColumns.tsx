@@ -1,6 +1,6 @@
 import type {
 	Entity,
-	FullCusEntWithOptionalProduct,
+	FullCusEntWithFullCusProduct,
 	FullCusProduct,
 } from "@autumn/shared";
 import type { Row } from "@tanstack/react-table";
@@ -17,7 +17,7 @@ function UsageCell({
 	filteredCustomerProducts,
 	entityId,
 }: {
-	ent: FullCusEntWithOptionalProduct;
+	ent: FullCusEntWithFullCusProduct;
 	filteredCustomerProducts: FullCusProduct[];
 	entityId: string | null;
 }) {
@@ -67,7 +67,7 @@ function BarCell({
 	filteredCustomerProducts,
 	entityId,
 }: {
-	ent: FullCusEntWithOptionalProduct;
+	ent: FullCusEntWithFullCusProduct;
 	filteredCustomerProducts: FullCusProduct[];
 	entityId: string | null;
 }) {
@@ -92,9 +92,7 @@ function BarCell({
 	return (
 		<div className="flex gap-3 items-center">
 			{hasExpiry ? (
-				<span
-					className="text-t3 text-tiny flex justify-center !px-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-md min-w-30"
-				>
+				<span className="text-t3 text-tiny flex justify-center !px-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-md min-w-30">
 					Expires {formatUnixToDateTimeString(ent.expires_at)}
 				</span>
 			) : (
@@ -132,7 +130,7 @@ export const CustomerBalanceTableColumns = ({
 }: {
 	filteredCustomerProducts: FullCusProduct[];
 	entityId: string | null;
-	aggregatedMap: Map<string, FullCusEntWithOptionalProduct[]>;
+	aggregatedMap: Map<string, FullCusEntWithFullCusProduct[]>;
 	entities?: unknown[];
 }) => [
 	{
@@ -140,7 +138,7 @@ export const CustomerBalanceTableColumns = ({
 		accessorKey: "feature",
 		enableResizing: true,
 		minSize: 100,
-		cell: ({ row }: { row: Row<FullCusEntWithOptionalProduct> }) => {
+		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => {
 			const ent = row.original;
 			const featureId = ent.entitlement.feature.id;
 			const originalEnts = aggregatedMap.get(featureId);
@@ -171,7 +169,7 @@ export const CustomerBalanceTableColumns = ({
 	{
 		header: "Usage",
 		accessorKey: "usage",
-		cell: ({ row }: { row: Row<FullCusEntWithOptionalProduct> }) => (
+		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => (
 			<UsageCell
 				ent={row.original}
 				filteredCustomerProducts={filteredCustomerProducts}
@@ -183,7 +181,7 @@ export const CustomerBalanceTableColumns = ({
 		header: "Bar",
 		size: 220,
 		accessorKey: "bar",
-		cell: ({ row }: { row: Row<FullCusEntWithOptionalProduct> }) => (
+		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => (
 			<BarCell
 				ent={row.original}
 				filteredCustomerProducts={filteredCustomerProducts}
