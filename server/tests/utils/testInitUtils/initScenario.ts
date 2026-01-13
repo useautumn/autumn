@@ -35,6 +35,7 @@ type AttachAction = {
 	entityIndex?: number;
 	options?: FeatureOption[];
 	newBillingSubscription?: boolean;
+	timeout?: number;
 };
 
 type CancelAction = {
@@ -150,22 +151,26 @@ const entities = ({
  * @param entityIndex - Optional entity index (0-based) to attach to (omit for customer-level)
  * @param options - Optional feature options (e.g., prepaid quantity)
  * @param newBillingSubscription - Create a separate Stripe subscription for this product
+ * @param timeout - Optional timeout in milliseconds for the attach request
  * @example s.attach({ productId: "pro" }) // customer-level
  * @example s.attach({ productId: "pro", entityIndex: 0 }) // attach to first entity (ent-1)
  * @example s.attach({ productId: "free", entityIndex: 1 }) // attach to second entity (ent-2)
  * @example s.attach({ productId: "pro", options: [{ feature_id: "messages", quantity: 100 }] })
  * @example s.attach({ productId: "addon", newBillingSubscription: true }) // separate subscription
+ * @example s.attach({ productId: "pro", timeout: 5000 }) // with timeout
  */
 const attach = ({
 	productId,
 	entityIndex,
 	options,
 	newBillingSubscription,
+	timeout,
 }: {
 	productId: string;
 	entityIndex?: number;
 	options?: FeatureOption[];
 	newBillingSubscription?: boolean;
+	timeout?: number;
 }): ConfigFn => {
 	return (config) => ({
 		...config,
@@ -177,6 +182,7 @@ const attach = ({
 				entityIndex,
 				options,
 				newBillingSubscription,
+				timeout,
 			},
 		],
 	});
@@ -413,6 +419,9 @@ export const initScenario = async ({
 				options: action.options,
 				new_billing_subscription: action.newBillingSubscription,
 			});
+			if (action.timeout) {
+				await new Promise((resolve) => setTimeout(resolve, action.timeout));
+			}
 		} else if (action.type === "cancel") {
 			const prefixedProductId = `${action.productId}_${customerId}`;
 

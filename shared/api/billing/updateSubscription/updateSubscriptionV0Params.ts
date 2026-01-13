@@ -25,9 +25,9 @@ export const ExtUpdateSubscriptionV0ParamsSchema = z.object({
 	items: z.array(ProductItemSchema).optional(), // used for custom configuration of a plan (in api - plan_override)
 	free_trial: CreateFreeTrialSchema.nullable().optional(),
 
-	reset_billing_cycle_anchor: z.boolean().optional(),
-	new_billing_subscription: z.boolean().optional(),
-	prorate_billing: z.boolean().optional(),
+	// reset_billing_cycle_anchor: z.boolean().optional(),
+	// new_billing_subscription: z.boolean().optional(),
+	// prorate_billing: z.boolean().optional(),
 });
 
 export const UpdateSubscriptionV0ParamsSchema =
