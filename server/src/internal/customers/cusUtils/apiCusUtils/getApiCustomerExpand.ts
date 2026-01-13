@@ -50,11 +50,13 @@ export const getApiCustomerExpand = async ({
 
 	const getCusTrialsUsed = () => {
 		if (expand.includes(CusExpand.TrialsUsed)) {
-			return fullCus.trials_used?.map((t) => ({
-				plan_id: t.product_id,
-				customer_id: t.customer_id,
-				fingerprint: t.fingerprint,
-			}));
+			return (
+				fullCus.trials_used?.map((t) => ({
+					plan_id: t.product_id,
+					customer_id: t.customer_id,
+					fingerprint: t.fingerprint,
+				})) ?? []
+			);
 		}
 		return undefined;
 	};
