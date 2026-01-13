@@ -1,4 +1,5 @@
-import { ErrCode, RecaseError } from "../../../errors/errCodes.js";
+import { RecaseError } from "@api/errors/base/RecaseError.js";
+import { FeatureNotFoundError } from "../../../index.js";
 import type { Feature } from "../../../models/featureModels/featureModels.js";
 import type {
 	Entitlement,
@@ -17,9 +18,8 @@ export const enrichEntitlementsWithFeatures = ({
 			(f) => f.internal_id === ent.internal_feature_id,
 		);
 		if (!feature) {
-			throw new RecaseError({
-				message: `Couldn't find feature ${ent.internal_feature_id} for entitlement ${ent.id}`,
-				code: ErrCode.FeatureNotFound,
+			throw new FeatureNotFoundError({
+				featureId: ent.feature_id ?? "",
 			});
 		}
 		return { ...ent, feature };
