@@ -56,7 +56,7 @@ const coreUrls: { method: string; url: string; source?: string }[] = [
 		method: "POST",
 		url: "/balances/create",
 		source: "handleCreateBalance",
-	}
+	},
 ];
 
 /**
@@ -76,7 +76,7 @@ export const refreshCacheMiddleware = async (
 	}
 
 	const ctx = c.get("ctx");
-	const { logger, org, env, skipCacheDeletion } = ctx;
+	const { logger, skipCacheDeletion } = ctx;
 
 	if (skipCacheDeletion) {
 		return;

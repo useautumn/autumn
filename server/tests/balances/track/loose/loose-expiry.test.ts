@@ -54,9 +54,6 @@ describe(`${chalk.yellowBright("loose-expiry: track with expiring loose entitlem
 			value: 10,
 		});
 
-		// Wait for sync
-		await new Promise((resolve) => setTimeout(resolve, 500));
-
 		// Check balance - should have 90 remaining
 		const res = (await autumnV2.check({
 			customer_id: customerId,

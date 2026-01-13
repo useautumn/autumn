@@ -1,88 +1,66 @@
 import {
+	type CreateBalanceParams,
 	ErrCode,
 	type Feature,
 	FeatureType,
 	type FullCustomer,
 	RecaseError,
 	ValidateCreateBalanceParamsSchema,
-} from "@shared/index";
+} from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import type { z } from "zod/v4";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
+import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase";
 
 export const validateCreateBalanceParams = async ({
 	ctx,
+	params,
 	feature,
-	internalCustomerId,
-	granted_balance,
-	unlimited,
-	reset,
-	expires_at,
 	fullCustomer,
-	entity_id,
 }: {
 	ctx: AutumnContext;
+	params: CreateBalanceParams;
 	feature: Feature;
-	internalCustomerId: string;
-	granted_balance: number | undefined;
-	unlimited: boolean | undefined;
-	reset: z.infer<typeof ValidateCreateBalanceParamsSchema>["reset"];
-	expires_at: number | undefined;
 	fullCustomer: FullCustomer;
-	entity_id?: string;
 }) => {
 	ValidateCreateBalanceParamsSchema.parse({
+		...params,
 		feature,
-		granted_balance,
-		unlimited,
-		reset,
-		expires_at,
-		customer_id: internalCustomerId,
-		feature_id: feature.id,
-		entity_id,
 	});
 
 	await validateBooleanEntitlementConflict({
 		ctx,
 		feature,
-		internalCustomerId: fullCustomer.internal_id,
+		fullCustomer,
 	});
 
 	// Entity cannot receive a balance of its own feature type
-	if (entity_id) {
-		const entity = fullCustomer.entities.find((e) => e.id === entity_id);
-		if (entity && feature.id === entity.feature_id) {
-			throw new RecaseError({
-				message: `Cannot give an entity a balance of its own feature type`,
-				code: ErrCode.InvalidRequest,
-				statusCode: StatusCodes.BAD_REQUEST,
-			});
-		}
+	const entity = fullCustomer.entity;
+	if (entity && feature.id === entity.feature_id) {
+		throw new RecaseError({
+			message: `Cannot give an entity a balance of its own feature type`,
+		});
 	}
 };
 
 export const validateBooleanEntitlementConflict = async ({
 	ctx,
 	feature,
-	internalCustomerId,
+	fullCustomer,
 }: {
 	ctx: AutumnContext;
 	feature: Feature;
-	internalCustomerId: string;
+	fullCustomer: FullCustomer;
 }) => {
 	if (feature.type === FeatureType.Boolean) {
-		const existingBooleanEntitlement = await CusEntService.getByFeature({
-			db: ctx.db,
-			internalFeatureId: feature.internal_id!,
-			internalCustomerId,
+		const { apiCustomer } = await getApiCustomerBase({
+			ctx,
+			fullCus: fullCustomer,
 		});
 
-		if (existingBooleanEntitlement.length > 0) {
+		if (apiCustomer.balances?.[feature.id]) {
 			throw new RecaseError({
-				message: `A boolean entitlement ${feature.id} already exists for customer ${internalCustomerId}`,
-				code: ErrCode.InvalidRequest,
-				statusCode: StatusCodes.BAD_REQUEST,
+				message: `A boolean entitlement ${feature.id} already exists for customer ${fullCustomer.internal_id}`,
 			});
 		}
 	}

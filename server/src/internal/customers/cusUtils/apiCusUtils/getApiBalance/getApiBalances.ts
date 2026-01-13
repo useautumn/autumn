@@ -19,8 +19,6 @@ export const getApiBalances = async ({
 }) => {
 	const { org } = ctx;
 
-	// fullCustomerToCustomerEntitlements already includes extra_customer_entitlements
-	// and filters them by entity via cusEntMatchesEntity
 	const allCusEnts = fullCustomerToCustomerEntitlements({
 		fullCustomer: fullCus,
 		inStatuses: orgToInStatuses({ org }),

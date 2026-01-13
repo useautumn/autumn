@@ -1,18 +1,20 @@
 import {
+	ACTIVE_STATUSES,
 	CusProductStatus,
 	type FullCustomer,
 	InternalError,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
+import { handlePaidAllocatedCusEnt } from "@/internal/balances/utils/paidAllocatedFeature/handlePaidAllocatedCusEnt.js";
+import { rollbackDeduction } from "@/internal/balances/utils/paidAllocatedFeature/rollbackDeduction.js";
 import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { CusService } from "../../../customers/CusService.js";
 import type { EventInfo } from "../../events/initEvent.js";
-import { handlePaidAllocatedCusEnt } from "../../track/trackUtils/handlePaidAllocatedCusEnt.js";
-import { rollbackDeduction } from "../../track/trackUtils/rollbackDeduction.js";
 import { applyDeductionUpdateToFullCustomer } from "../../utils/deduction/applyDeductionUpdateToFullCustomer.js";
 import type { DeductionUpdate } from "../../utils/types/deductionUpdate.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
+import { handleThresholdReached } from "../handleThresholdReached.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import { logDeductionUpdates } from "./logDeductionUpdates.js";
 import { prepareDeductionOptions } from "./prepareDeductionOptions.js";
@@ -59,7 +61,7 @@ export const executePostgresDeduction = async ({
 			idOrInternalId: customerId,
 			orgId: org.id,
 			env,
-			inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+			inStatuses: ACTIVE_STATUSES,
 			entityId,
 			withSubs: true,
 		});
@@ -165,6 +167,17 @@ export const executePostgresDeduction = async ({
 			});
 			throw error;
 		}
+
+		handleThresholdReached({
+			ctx,
+			oldFullCus,
+			newFullCus: fullCustomer,
+			feature: deduction.feature,
+		}).catch((error) => {
+			ctx.logger.error(
+				`[executeRedisDeduction] Failed to handle threshold reached: ${error}`,
+			);
+		});
 	}
 
 	if (refreshCache) {

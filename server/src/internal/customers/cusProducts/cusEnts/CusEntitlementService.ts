@@ -14,7 +14,7 @@ import {
 	features,
 	type ResetCusEnt,
 } from "@autumn/shared";
-import { and, eq, isNull, lt, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -55,10 +55,12 @@ export class CusEntService {
 			.select()
 			.from(customerEntitlements)
 			.where(
-				internalCustomerId ? and(
-					eq(customerEntitlements.internal_feature_id, internalFeatureId),
-					eq(customerEntitlements.internal_customer_id, internalCustomerId)
-				) : eq(customerEntitlements.internal_feature_id, internalFeatureId),
+				internalCustomerId
+					? and(
+							eq(customerEntitlements.internal_feature_id, internalFeatureId),
+							eq(customerEntitlements.internal_customer_id, internalCustomerId),
+						)
+					: eq(customerEntitlements.internal_feature_id, internalFeatureId),
 			)
 			.limit(10);
 
@@ -97,10 +99,6 @@ export class CusEntService {
 				.select()
 				.from(customerEntitlements)
 				.innerJoin(
-					customerProducts,
-					eq(customerEntitlements.customer_product_id, customerProducts.id),
-				)
-				.innerJoin(
 					entitlements,
 					eq(customerEntitlements.entitlement_id, entitlements.id),
 				)
@@ -112,12 +110,25 @@ export class CusEntService {
 					customers,
 					eq(customerEntitlements.internal_customer_id, customers.internal_id),
 				)
+				.leftJoin(
+					customerProducts,
+					eq(customerEntitlements.customer_product_id, customerProducts.id),
+				)
 				.where(
 					and(
-						eq(customerProducts.status, CusProductStatus.Active),
+						or(
+							isNull(customerEntitlements.customer_product_id),
+							eq(customerProducts.status, CusProductStatus.Active),
+						),
 						lt(
 							customerEntitlements.next_reset_at,
 							customDateUnix ?? Date.now(),
+						),
+
+						// Customer entitlement has not expired
+						or(
+							isNull(customerEntitlements.expires_at),
+							gt(customerEntitlements.expires_at, Date.now()),
 						),
 					),
 				)
@@ -147,73 +158,6 @@ export class CusEntService {
 		}
 
 		return allResults as ResetCusEnt[];
-	}
-
-	static async getLooseResetPassed({
-		db,
-		customDateUnix,
-		batchSize = 1000,
-	}: {
-		db: DrizzleCli;
-		customDateUnix?: number;
-		batchSize?: number;
-	}) {
-		const allResults: ResetCusEnt[] = [];
-		let offset = 0;
-		let hasMore = true;
-
-		while (hasMore) {
-			const data = await db
-				.select()
-				.from(customerEntitlements)
-				.innerJoin(
-					entitlements,
-					eq(customerEntitlements.entitlement_id, entitlements.id),
-				)
-				.innerJoin(
-					features,
-					eq(entitlements.internal_feature_id, features.internal_id),
-				)
-				.innerJoin(
-					customers,
-					eq(customerEntitlements.internal_customer_id, customers.internal_id),
-				)
-				.where(
-					and(
-						isNull(customerEntitlements.customer_product_id),
-						isNull(customerEntitlements.expires_at), // Ignore entitlements with expiry (they don't reset)
-						lt(
-							customerEntitlements.next_reset_at,
-							customDateUnix ?? Date.now(),
-						),
-					),
-				)
-				.limit(batchSize)
-				.offset(offset);
-
-			if (data.length === 0) {
-				hasMore = false;
-			} else {
-				const mappedData = data.map((item) => ({
-					...item.customer_entitlements,
-					entitlement: {
-						...item.entitlements,
-						feature: item.features,
-					},
-					customer_product: null,
-					customer: item.customers,
-					replaceables: [],
-					rollovers: [],
-				})) as ResetCusEnt[];
-
-				allResults.push(...mappedData);
-				offset += batchSize;
-				hasMore = data.length === batchSize;
-				console.log(`Fetched ${allResults.length} entitlements to reset`);
-			}
-		}
-
-		return allResults;
 	}
 
 	static async update({

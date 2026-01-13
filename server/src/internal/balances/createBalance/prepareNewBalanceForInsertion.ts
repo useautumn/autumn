@@ -1,13 +1,11 @@
 import {
-	type CreateBalanceSchema,
+	type CreateBalanceParams,
 	type CustomerEntitlement,
-	type Entity,
+	enrichEntitlementWithFeature,
 	type Feature,
 	type FullCustomer,
 	planFeaturesToItems,
-	type ResetInterval,
-} from "@shared/index";
-import type z from "zod/v4";
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { initCusEntitlement } from "@/internal/customers/add-product/initCusEnt";
 import { initNextResetAt } from "@/internal/customers/cusProducts/insertCusProduct/initCusEnt/initNextResetAt";
@@ -15,41 +13,18 @@ import { toFeature } from "@/internal/products/product-items/productItemUtils/it
 
 export const prepareNewBalanceForInsertion = async ({
 	ctx,
+	fullCustomer,
 	feature,
-	granted_balance,
-	unlimited,
-	reset,
-	expires_at,
-	fullCus,
-	feature_id,
-	entity,
+	params,
 }: {
 	ctx: AutumnContext;
 	feature: Feature;
-	granted_balance: number | undefined;
-	unlimited: boolean | undefined;
-	reset: z.infer<typeof CreateBalanceSchema>["reset"];
-	expires_at: number | undefined;
-	fullCus: FullCustomer;
-	feature_id: string;
-	entity?: Entity;
+	fullCustomer: FullCustomer;
+	params: CreateBalanceParams;
 }) => {
 	const inputAsItem = planFeaturesToItems({
 		features: [feature],
-		planFeatures: [
-			{
-				feature_id,
-				granted_balance: granted_balance,
-				unlimited,
-				reset: reset
-					? {
-						interval: reset.interval as ResetInterval,
-						interval_count: reset.interval_count,
-						reset_when_enabled: true,
-					}
-					: undefined,
-			},
-		],
+		planFeatures: [params],
 	});
 
 	const { ent: newEntitlement } = toFeature({
@@ -59,19 +34,20 @@ export const prepareNewBalanceForInsertion = async ({
 		internalFeatureId: feature.internal_id!,
 	});
 
+	const entity = fullCustomer.entity;
+
 	if (entity) {
 		newEntitlement.entity_feature_id = entity.feature_id;
 	}
 
-	const newEntitlementWithFeature = {
-		...newEntitlement,
+	const newEntitlementWithFeature = enrichEntitlementWithFeature({
+		entitlement: newEntitlement,
 		feature,
-		feature_id: feature.id,
-	};
+	});
 
 	const newCustomerEntitlement = initCusEntitlement({
 		entitlement: newEntitlementWithFeature,
-		customer: fullCus,
+		customer: fullCustomer,
 		cusProductId: null,
 		freeTrial: null,
 		nextResetAt:
@@ -84,7 +60,7 @@ export const prepareNewBalanceForInsertion = async ({
 		replaceables: [],
 		now: Date.now(),
 		productOptions: undefined,
-		expires_at: expires_at ?? null,
+		expires_at: params.expires_at ?? null,
 	}) satisfies CustomerEntitlement;
 
 	// If entity is provided, assign balance to entity instead of customer-level
@@ -93,8 +69,8 @@ export const prepareNewBalanceForInsertion = async ({
 	}
 
 	// Set expiry if provided (mutually exclusive with reset interval)
-	if (expires_at) {
-		newCustomerEntitlement.expires_at = expires_at;
+	if (params.expires_at) {
+		newCustomerEntitlement.expires_at = params.expires_at ?? null;
 		// Clear next_reset_at since expiring entitlements don't reset
 		newCustomerEntitlement.next_reset_at = null;
 	}

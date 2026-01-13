@@ -1,9 +1,10 @@
 import {
-	type FullCustomer, fullCustomerToCustomerEntitlements
+	type FullCustomer,
+	fullCustomerToCustomerEntitlements,
 } from "@autumn/shared";
-import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
-import { CusEntService } from "../../../customers/cusProducts/cusEnts/CusEntitlementService";
-import type { DeductionUpdate } from "../../utils/types/deductionUpdate.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { DeductionUpdate } from "@/internal/balances/utils/types/deductionUpdate.js";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 
 export const rollbackDeduction = async ({
 	ctx,

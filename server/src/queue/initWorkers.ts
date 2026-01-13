@@ -11,8 +11,6 @@ import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
-import { runSyncBalanceBatch } from "@/internal/balances/utils/sync/legacy/runSyncBalanceBatch.js";
-import { syncItemV2 } from "@/internal/balances/utils/sync/legacy/syncItemV2.js";
 import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
 import { runClearCreditSystemCacheTask } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import { runSaveFeatureDisplayTask } from "@/internal/features/featureUtils.js";
@@ -134,27 +132,6 @@ const processMessage = async ({
 				db,
 				payload: job.data,
 				logger: workerLogger,
-			});
-			return;
-		}
-
-		if (job.name === JobName.SyncBalanceBatch) {
-			await runSyncBalanceBatch({
-				ctx,
-				payload: job.data,
-			});
-			return;
-		}
-
-		if (job.name === JobName.SyncBalanceBatchV2) {
-			if (!ctx) {
-				workerLogger.error("No context found for sync balance batch v2 job");
-				return;
-			}
-
-			await syncItemV2({
-				ctx,
-				item: job.data.item,
 			});
 			return;
 		}

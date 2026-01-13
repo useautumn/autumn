@@ -49,17 +49,7 @@ export const getUsageInvoiceItems = async ({
 	const cusPrices = cusProductsToCusPrices({
 		cusProducts: [cusProduct],
 	});
-	// const ents = cusProductToEnts({ cusProduct });
-	// const cusEnts = fullCustomerToCustomerEntitlements({
-	// 	fullCustomer: {
-	// 		customer_products: [cusProduct],
-	// 	},
-	// 	inStatuses: [
-	// 		CusProductStatus.Active,
-	// 		CusProductStatus.Expired,
-	// 		CusProductStatus.PastDue,
-	// 	],
-	// });
+
 	const cusEnts = cusProductToCusEnts({ cusProduct });
 
 	const invoiceItems: any[] = [];

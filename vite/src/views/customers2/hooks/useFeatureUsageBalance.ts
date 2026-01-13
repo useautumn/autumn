@@ -35,7 +35,7 @@ export function useFeatureUsageBalance({
 }: FeatureUsageBalanceParams): FeatureUsageBalanceResult {
 	const cusEnts = cusProductsToCusEnts({
 		cusProducts,
-		featureId,
+		featureIds: [featureId],
 	});
 
 	//without manual update adjustment, no rollovers
