@@ -123,6 +123,12 @@ export const executeRedisDeduction = async ({
 
 		const resultJson = JSON.parse(result) as LuaDeductionResult;
 
+		// if (resultJson.logs && resultJson.logs.length > 0) {
+		// 	ctx.logger.debug(
+		// 		`[executeRedisDeduction] Logs: ${resultJson.logs.join("\n")}`,
+		// 	);
+		// }
+
 		if (resultJson.error) {
 			throw new RedisDeductionError({
 				message: `Redis deduction failed: ${resultJson.error}`,
@@ -130,7 +136,7 @@ export const executeRedisDeduction = async ({
 			});
 		}
 
-		const { updates, rollover_updates, logs } = resultJson;
+		const { updates, rollover_updates } = resultJson;
 		logDeductionUpdates({
 			ctx,
 			fullCustomer,
@@ -140,10 +146,6 @@ export const executeRedisDeduction = async ({
 
 		allUpdates = { ...allUpdates, ...updates };
 		allRolloverUpdates = { ...allRolloverUpdates, ...rollover_updates };
-
-		// if (logs && logs.length > 0) {
-		// 	ctx.logger.debug(`[executeRedisDeduction] Logs: ${logs.join("\n")}`);
-		// }
 
 		// Handle paid allocated entitlements and update fullCus in memory
 		try {

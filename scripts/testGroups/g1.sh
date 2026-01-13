@@ -22,6 +22,7 @@ BUN_PARALLEL_COMPACT \
   'server/tests/balances/track/rollovers' \
   'server/tests/balances/track/race-condition' \
   'server/tests/balances/track/paid-allocated' \
+  'server/tests/balances/track/edge-cases' \
   'server/tests/balances/check/breakdown' \
   'server/tests/balances/track/loose' \
   'server/tests/balances/check/basic' \

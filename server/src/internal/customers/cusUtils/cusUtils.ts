@@ -63,7 +63,7 @@ export const updateCustomerDetails = async ({
 		});
 		customer = { ...customer, ...updates };
 
-		// In updateCustomerDetails, after updating DB:
+		// Invalidate cache after DB update
 		await deleteCachedFullCustomer({
 			customerId: idOrInternalId,
 			ctx,
