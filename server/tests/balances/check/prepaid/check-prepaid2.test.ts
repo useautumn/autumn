@@ -254,7 +254,7 @@ describe(`${chalk.yellowBright("check-prepaid2: test /check on prepaid + pay per
 	});
 
 	test("should check that non-cached customer returns correct response", async () => {
-		await timeout(2000);
+		await timeout(4000);
 		const res = (await autumnV2.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,

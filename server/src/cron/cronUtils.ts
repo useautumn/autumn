@@ -136,17 +136,6 @@ const handleShortDurationCusEnt = async ({
 		`Reseting short cus ent (${cusEnt.feature_id}) [${ent.interval}], customer: ${cusEnt.customer_id}, org: ${cusEnt.customer.org_id}`,
 	);
 
-	// const org = await OrgService.get({
-	// 	db,
-	// 	orgId: cusEnt.customer.org_id,
-	// });
-
-	// await deleteCachedApiCustomer({
-	// 	customerId: cusEnt.customer.id!,
-	// 	orgId: org.id,
-	// 	env: cusEnt.customer.env,
-	// });
-
 	updatedCusEnts.push(newCusEnt);
 
 	return newCusEnt;

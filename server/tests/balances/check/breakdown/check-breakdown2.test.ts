@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	ApiVersion,
+	type CheckResponseV1,
 	type CheckResponseV2,
 	ProductItemInterval,
 } from "@autumn/shared";
@@ -49,6 +50,7 @@ const testCase = "check-breakdown2";
 
 describe(`${chalk.yellowBright("check-breakdown2: monthly + lifetime messages = 2 breakdown items")}`, () => {
 	const customerId = testCase;
+	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2_0 });
 
 	beforeAll(async () => {
@@ -128,6 +130,51 @@ describe(`${chalk.yellowBright("check-breakdown2: monthly + lifetime messages = 
 				interval: "one_off",
 				resets_at: null,
 			},
+		});
+	});
+
+	test("v1.2: should have correct parent and 2 breakdown items", async () => {
+		const res = (await autumnV1.check<CheckResponseV1>({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+		})) as unknown as CheckResponseV1;
+
+		// Parent balance should sum both products
+		expect(res.included_usage).toBe(700); // 500 + 200
+		expect(res.balance).toBe(700);
+		expect(res.usage).toBe(0);
+
+		// Should have 2 breakdown items
+		expect(res.breakdown).toHaveLength(2);
+	});
+
+	test("v1.2: breakdown items should have correct values", async () => {
+		const res = (await autumnV1.check<CheckResponseV1>({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+		})) as unknown as CheckResponseV1;
+
+		console.log("Response:", res);
+
+		const monthlyBreakdown = res.breakdown?.find(
+			(b) => b.included_usage === 500,
+		);
+		const lifetimeBreakdown = res.breakdown?.find(
+			(b) => b.included_usage === 200,
+		);
+
+		expect(monthlyBreakdown).toMatchObject({
+			included_usage: 500,
+			balance: 500,
+			usage: 0,
+			interval: "month",
+		});
+
+		expect(lifetimeBreakdown).toMatchObject({
+			included_usage: 200,
+			balance: 200,
+			usage: 0,
+			interval: "lifetime",
 		});
 	});
 });

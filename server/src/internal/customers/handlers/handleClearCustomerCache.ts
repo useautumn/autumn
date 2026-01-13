@@ -15,8 +15,8 @@ export const handleClearCustomerCache = createRoute({
 		if (customer_id) {
 			await deleteCachedApiCustomer({
 				customerId: customer_id,
-				orgId: ctx.org.id,
-				env: ctx.env,
+				ctx,
+				source: `handleClearCustomerCache, deleting single customer cache`,
 			});
 		}
 

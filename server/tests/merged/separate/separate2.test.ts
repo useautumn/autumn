@@ -113,7 +113,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing separate subscriptions beca
 	});
 
 	const subIds: string[] = [];
-	test("should attach pro  product", async () => {
+	test("should attach pro product", async () => {
 		for (const op of ops) {
 			const res = await autumn.attach({
 				customer_id: customerId,

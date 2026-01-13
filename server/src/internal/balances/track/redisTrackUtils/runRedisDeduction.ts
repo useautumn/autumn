@@ -14,10 +14,10 @@ import {
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "../../../../utils/cacheUtils/cacheUtils.js";
 import { getOrCreateApiCustomer } from "../../../customers/cusUtils/getOrCreateApiCustomer.js";
+import { globalEventBatchingManager } from "../../events/EventBatchingManager.js";
+import { type EventInfo, initEvent } from "../../events/initEvent.js";
 import { globalSyncBatchingManager } from "../../utils/sync/SyncBatchingManager.js";
-import { globalEventBatchingManager } from "../eventUtils/EventBatchingManager.js";
-import { constructEvent, type EventInfo } from "../trackUtils/eventUtils.js";
-import type { FeatureDeduction } from "../trackUtils/getFeatureDeductions.js";
+import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import {
 	type DeductionResult,
 	globalBatchingManager,
@@ -101,7 +101,7 @@ const queueSyncAndEvent = ({
 
 	if (!trackParams.skip_event && apiCustomer?.autumn_id && eventInfo) {
 		globalEventBatchingManager.addEvent(
-			constructEvent({
+			initEvent({
 				ctx,
 				eventInfo: eventInfo,
 				internalCustomerId: apiCustomer?.autumn_id,
