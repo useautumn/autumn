@@ -39,7 +39,6 @@
 	"devDependencies": {
 		"@types/bun": "latest",
 		"@types/node": "^24.0.3",
-
 		"cross-env": "^7.0.3",
 		"nodemon": "^3.1.7",
 		"tsx": "^4.19.4",
