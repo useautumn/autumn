@@ -212,8 +212,8 @@ test.concurrent(`${chalk.yellowBright("version-billing: metered to prepaid")}`, 
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Messages should now have prepaid model with 50 included
-	// Options are ignored when version is passed in
+	// Messages should now have prepaid model with 300 included
+	// prepaidMessages has billingUnits=100, quantity=300 rounds up to 300
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,

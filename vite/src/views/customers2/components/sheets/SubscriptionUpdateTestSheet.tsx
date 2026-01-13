@@ -1183,6 +1183,9 @@ function SheetContent({
 	const [trialCardRequired, setTrialCardRequired] = useState(true);
 	const [removeTrial, setRemoveTrial] = useState(false);
 
+	// Version update state
+	const [targetVersion, setTargetVersion] = useState<number | null>(null);
+
 	const handlePrepaidChange = (featureId: string, quantity: number) => {
 		setPrepaidOptions((prev) => ({
 			...prev,
@@ -1266,6 +1269,11 @@ function SheetContent({
 			body.billing_cycle_anchor = billingCycleAnchor;
 		}
 
+		// Add version if set (for version updates)
+		if (targetVersion !== null) {
+			body.version = targetVersion;
+		}
+
 		return body;
 	}, [
 		customerId,
@@ -1285,6 +1293,7 @@ function SheetContent({
 		trialLength,
 		trialDuration,
 		trialCardRequired,
+		targetVersion,
 	]);
 
 	// Preview query - fires when body changes
@@ -1520,6 +1529,61 @@ function SheetContent({
 					onTrialCardRequiredChange={setTrialCardRequired}
 					onRemoveTrialChange={setRemoveTrial}
 				/>
+
+				{/* Version Update Editor */}
+				<div className="border-b border-border">
+					<div className="px-4 py-2 border-b border-border">
+						<h3 className="text-sm font-medium">Version Update</h3>
+					</div>
+					<div className="px-4 py-3 space-y-3">
+						<div className="flex items-center gap-2">
+							<span className="text-sm text-t-secondary">Current Version:</span>
+							<span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded font-mono">
+								{cusProduct.product.version}
+							</span>
+						</div>
+						<div className="flex items-center gap-3">
+							<label
+								htmlFor="target-version"
+								className="text-sm text-t-secondary"
+							>
+								Target Version:
+							</label>
+							<input
+								id="target-version"
+								type="number"
+								min={1}
+								placeholder="e.g. 2"
+								value={targetVersion ?? ""}
+								onChange={(e) => {
+									const value = e.target.value;
+									setTargetVersion(value === "" ? null : parseInt(value, 10));
+								}}
+								className="w-20 px-2 py-1 border border-border rounded text-sm bg-transparent font-mono"
+							/>
+							{targetVersion !== null && (
+								<button
+									type="button"
+									onClick={() => setTargetVersion(null)}
+									className="text-xs text-t-secondary hover:text-t-primary"
+								>
+									Clear
+								</button>
+							)}
+						</div>
+						<div className="text-xs text-t-secondary mt-2 pt-2 border-t border-border/50">
+							{targetVersion !== null ? (
+								<span className="text-green-400">
+									Will send: version: {targetVersion}
+								</span>
+							) : (
+								<span className="text-gray-400">
+									No version param (quantity update only)
+								</span>
+							)}
+						</div>
+					</div>
+				</div>
 
 				{/* Checkout Preview Response (same as SubscriptionUpdateSheet) */}
 				<div className="border-b border-border">
