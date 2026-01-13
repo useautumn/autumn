@@ -51,8 +51,9 @@ export const applyDeductionUpdateToFullCustomer = ({
 	}
 
 	// Search in extra_customer_entitlements (loose entitlements)
-	for (let i = 0; i < fullCus.extra_customer_entitlements.length; i++) {
-		const ce = fullCus.extra_customer_entitlements[i];
+	const extraCusEnts = fullCus.extra_customer_entitlements || [];
+	for (let i = 0; i < extraCusEnts.length; i++) {
+		const ce = extraCusEnts[i];
 		if (ce.id === cusEntId) {
 			let replaceables = ce.replaceables ?? [];
 
