@@ -5,7 +5,10 @@ import { createDocument } from "zod-openapi";
 import { CustomerDataSchema } from "../../../common/customerData.js";
 import { EntityDataSchema } from "../../../common/entityData.js";
 import { ApiCusProductV3Schema } from "../../../customers/cusPlans/previousVersions/apiCusProductV3.js";
-import { ApiCusFeatureV3Schema, ApiProductItemSchema } from "../../../models.js";
+import {
+	ApiCusFeatureV3Schema,
+	ApiProductItemSchema,
+} from "../../../models.js";
 import { balancesOpenApi } from "./balancesOpenApi1.2.0.js";
 import { coreOpenApi } from "./coreOpenApi.js";
 import { ApiCustomerWithMeta, customersOpenApi } from "./customersOpenApi.js";
@@ -13,6 +16,7 @@ import { ApiEntityWithMeta, entitiesOpenApi } from "./entitiesOpenApi.js";
 import { eventsOpenApi } from "./eventsOpenApi.js";
 import { ApiFeatureWithMeta, featuresOpenApi } from "./featuresOpenApi.js";
 import { ApiProductWithMeta, productsOpenApi } from "./productsOpenApi.js";
+import { referralsOpenApi } from "./referralsOpenApi.js";
 
 // Register schema with .meta() for OpenAPI spec generation
 
@@ -71,6 +75,7 @@ const OPENAPI_1_2_0 = createDocument(
 			...entitiesOpenApi,
 			...eventsOpenApi,
 			...balancesOpenApi,
+			...referralsOpenApi,
 		},
 	},
 	{
