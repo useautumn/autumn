@@ -2,6 +2,7 @@ import { AttachScenario } from "@models/checkModels/checkPreviewModels.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
 import { FreeTrialDuration } from "@models/productModels/freeTrialModels/freeTrialEnums.js";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
+import { ResetInterval } from "@models/productModels/intervals/resetInterval.js";
 import { z } from "zod/v4";
 import { DisplaySchema } from "./components/display.js";
 import { ApiPlanFeatureSchema } from "./planFeature/apiPlanFeature.js";
@@ -28,7 +29,7 @@ export const ApiPlanSchema = z.object({
 	price: z
 		.object({
 			amount: z.number(),
-			interval: z.enum(BillingInterval),
+			interval: z.enum(BillingInterval).or(z.enum(ResetInterval)),
 			interval_count: z.number().optional(),
 			display: DisplaySchema.optional(),
 		})

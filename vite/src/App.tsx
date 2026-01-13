@@ -121,6 +121,7 @@ export default function App() {
 					<Route path="/analytics" element={<AnalyticsView />} />
 					<Route path="/sandbox/analytics" element={<AnalyticsView />} />
 					<Route path="/dev/cli" element={<Otp />} />
+					<Route path="/sandbox/dev/cli" element={<Otp />} />
 				</Route>
 			</Routes>
 		</BrowserRouter>
