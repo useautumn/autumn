@@ -127,10 +127,30 @@ const baseWithTrial = ({
 	},
 });
 
+/**
+ * One-off product - one-time purchase with $10 base price
+ * @param items - Product items (features)
+ * @param id - Product ID (default: "one-off")
+ */
+const oneOff = ({
+	items,
+	id = "one-off",
+}: {
+	items: ProductItem[];
+	id?: string;
+}): ProductV2 =>
+	constructProduct({
+		id,
+		items: [...items],
+		type: "one_off",
+		isDefault: false,
+	});
+
 export const products = {
 	base,
 	baseWithTrial,
 	pro,
 	proAnnual,
 	proWithTrial,
+	oneOff,
 } as const;

@@ -126,7 +126,7 @@ test.concurrent(`${chalk.yellowBright("error: negative quantity for prepaid feat
 				options: [{ feature_id: TestFeature.Messages, quantity: 5 }],
 			}),
 		],
-	});
+	}); 
 
 	// Try to update with negative quantity
 	const updateParams = {

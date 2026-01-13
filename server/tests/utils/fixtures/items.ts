@@ -181,6 +181,33 @@ const prepaidUsers = ({
 	}) as LimitedItem;
 
 // ═══════════════════════════════════════════════════════════════════
+// ONE-OFF (interval: null, no recurring charges)
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * One-off messages - purchase units once (no recurring charges)
+ * @param includedUsage - Free units included (default: 0)
+ * @param billingUnits - Units per pack (default: 100)
+ * @param price - Price per pack (default: 10)
+ */
+const oneOffMessages = ({
+	includedUsage = 0,
+	billingUnits = 100,
+	price = 10,
+}: {
+	includedUsage?: number;
+	billingUnits?: number;
+	price?: number;
+} = {}): LimitedItem =>
+	constructPrepaidItem({
+		featureId: TestFeature.Messages,
+		price,
+		billingUnits,
+		includedUsage,
+		isOneOff: true,
+	}) as LimitedItem;
+
+// ═══════════════════════════════════════════════════════════════════
 // CONSUMABLE / PAY-PER-USE (overage pricing)
 // ═══════════════════════════════════════════════════════════════════
 
@@ -263,6 +290,9 @@ export const items = {
 	prepaid,
 	prepaidMessages,
 	prepaidUsers,
+
+	// One-off
+	oneOffMessages,
 
 	// Consumable
 	consumableMessages,
