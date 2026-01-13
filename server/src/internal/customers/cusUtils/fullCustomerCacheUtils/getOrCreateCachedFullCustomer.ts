@@ -24,7 +24,9 @@ export const getOrCreateCachedFullCustomer = async ({
 	source,
 }: {
 	ctx: AutumnContext;
-	params: TrackParams | CheckParams;
+	params: Omit<TrackParams | CheckParams, "customer_id"> & {
+		customer_id: string | null;
+	};
 	source?: string;
 }): Promise<FullCustomer> => {
 	const { org, env, db, skipCache, logger } = ctx;
@@ -95,9 +97,12 @@ export const getOrCreateCachedFullCustomer = async ({
 				entityId,
 				expand: [CusExpand.Invoices],
 			});
-		} catch (error: unknown) {
-			const errorData = (error as { data?: { code?: string } })?.data;
-			if (errorData?.code === "23505" && customerId) {
+			// biome-ignore lint/suspicious/noExplicitAny: it's fine.
+		} catch (error: any) {
+			if (error?.code === "23505" && customerId) {
+				ctx.logger.debug(
+					`[getOrCreateCachedFullCustomer] insert customer duplicate key error`,
+				);
 				fullCustomer = await CusService.getFull({
 					db,
 					idOrInternalId: customerId,

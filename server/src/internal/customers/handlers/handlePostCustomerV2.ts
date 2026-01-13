@@ -9,6 +9,7 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getApiCustomer } from "../cusUtils/apiCusUtils/getApiCustomer.js";
+import { getOrCreateCachedFullCustomer } from "../cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
 import { getOrSetCachedFullCustomer } from "../cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
 import { handleCreateCustomer } from "./handleCreateCustomer.js";
 
@@ -38,24 +39,19 @@ export const handlePostCustomer = createRoute({
 
 		const start = Date.now();
 
-		// Create customer if ID provided, otherwise generate new one
-		const newCustomer = await handleCreateCustomer({
+		const fullCustomer = await getOrCreateCachedFullCustomer({
 			ctx,
-			cusData: {
-				id: createCusParams.id,
-				name: createCusParams.name,
-				email: createCusParams.email,
-				fingerprint: createCusParams.fingerprint,
-				metadata: createCusParams.metadata || {},
-				stripe_id: createCusParams.stripe_id,
+			params: {
+				customer_id: createCusParams.id,
+				customer_data: {
+					name: createCusParams.name,
+					email: createCusParams.email,
+					fingerprint: createCusParams.fingerprint,
+					metadata: createCusParams.metadata || {},
+					stripe_id: createCusParams.stripe_id,
+					disable_default: createCusParams.disable_default,
+				},
 			},
-			createDefaultProducts: createCusParams.disable_default !== true,
-		});
-
-		// Get full customer from cache/DB
-		const fullCustomer = await getOrSetCachedFullCustomer({
-			ctx,
-			customerId: newCustomer.id || newCustomer.internal_id,
 			source: "handlePostCustomer",
 		});
 
