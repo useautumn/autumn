@@ -5,10 +5,8 @@ import { createDocument } from "zod-openapi";
 import { CustomerDataSchema } from "../../../common/customerData.js";
 import { EntityDataSchema } from "../../../common/entityData.js";
 import { ApiCusProductV3Schema } from "../../../customers/cusPlans/previousVersions/apiCusProductV3.js";
-import {
-	ApiCusFeatureV3Schema,
-	ApiProductItemSchema,
-} from "../../../models.js";
+import { ApiCusFeatureV3Schema, ApiProductItemSchema } from "../../../models.js";
+import { balancesOpenApi } from "./balancesOpenApi1.2.0.js";
 import { coreOpenApi } from "./coreOpenApi.js";
 import { ApiCustomerWithMeta, customersOpenApi } from "./customersOpenApi.js";
 import { ApiEntityWithMeta, entitiesOpenApi } from "./entitiesOpenApi.js";
@@ -72,6 +70,7 @@ const OPENAPI_1_2_0 = createDocument(
 			...customersOpenApi,
 			...entitiesOpenApi,
 			...eventsOpenApi,
+			...balancesOpenApi,
 		},
 	},
 	{
