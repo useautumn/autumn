@@ -1,6 +1,6 @@
 import type {
-	CheckoutResponseV0,
 	CreateFreeTrial,
+	PreviewUpdateSubscriptionResponse,
 	ProductV2,
 } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
@@ -70,10 +70,11 @@ export function useUpdateSubscriptionPreview(
 				return null;
 			}
 
-			const response = await axiosInstance.post<CheckoutResponseV0>(
-				"/v1/subscriptions/preview_update",
-				updateSubscriptionBody,
-			);
+			const response =
+				await axiosInstance.post<PreviewUpdateSubscriptionResponse>(
+					"/v1/subscriptions/preview_update",
+					updateSubscriptionBody,
+				);
 
 			return response.data;
 		},

@@ -12,7 +12,6 @@ import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect"
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
@@ -29,7 +28,7 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: add paid with free_trial param
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const free = products.base({ items: [messagesItem] });
 
-	const { customerId, autumnV1, ctx } = await initScenario({
+	const { customerId, autumnV1, ctx, advancedTo } = await initScenario({
 		customerId: "f2p-trial-param",
 		setup: [
 			s.customer({ testClock: true, paymentMethod: "success" }),
@@ -70,7 +69,7 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: add paid with free_trial param
 	// next_cycle should show when trial ends and what the charge will be
 	expectPreviewNextCycleCorrect({
 		preview,
-		startsAt: ms.days(7),
+		startsAt: advancedTo + ms.days(7),
 		total: priceItem.price!,
 	});
 
@@ -82,7 +81,7 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: add paid with free_trial param
 	await expectProductTrialing({
 		customer,
 		productId: free.id,
-		trialEndsAt: Date.now() + ms.days(7),
+		trialEndsAt: advancedTo + ms.days(7),
 	});
 
 	// Usage should be preserved
@@ -119,29 +118,24 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial -> free, updat
 		trialDays: 14,
 	});
 
-	const { customerId, autumnV1, ctx, testClockId } = await initScenario({
+	const { customerId, autumnV1 } = await initScenario({
 		customerId: "f2p-trial-mid-update-preserve",
 		setup: [
 			s.customer({ testClock: true, paymentMethod: "success" }),
 			s.products({ list: [freeWithTrial] }),
 		],
-		actions: [s.attach({ productId: freeWithTrial.id })],
+		actions: [
+			s.attach({ productId: freeWithTrial.id }),
+			s.advanceTestClock({ days: 5 }), // Advance 5 days (mid-trial)
+		],
 	});
 
-	// Verify initially trialing
+	// Verify initially trialing (get the trial end time before update)
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	const initialTrialEnd = await expectProductTrialing({
-		customer: customerBefore,
-		productId: freeWithTrial.id,
-	});
-
-	// Advance 5 days (mid-trial)
-	await advanceTestClock({
-		stripeCli: ctx.stripeCli,
-		testClockId: testClockId!,
-		numberOfDays: 5,
-	});
+	const initialTrialEnd = customerBefore.products?.find(
+		(p) => p.id === freeWithTrial.id,
+	)?.current_period_end;
 
 	// Update mid-trial - change included usage (no free_trial param = keep existing trial)
 	const updatedMessagesItem = items.monthlyMessages({ includedUsage: 200 });
@@ -196,29 +190,24 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial, update mid-tr
 		trialDays: 14,
 	});
 
-	const { customerId, autumnV1, ctx, testClockId } = await initScenario({
+	const { customerId, autumnV1, advancedTo } = await initScenario({
 		customerId: "f2p-trial-mid-update-extend",
 		setup: [
 			s.customer({ testClock: true, paymentMethod: "success" }),
 			s.products({ list: [freeWithTrial] }),
 		],
-		actions: [s.attach({ productId: freeWithTrial.id })],
+		actions: [
+			s.attach({ productId: freeWithTrial.id }),
+			s.advanceTestClock({ days: 5 }), // Advance 5 days (mid-trial)
+		],
 	});
 
-	// Verify initially trialing
+	// Get the initial trial end time before update
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	const initialTrialEnd = await expectProductTrialing({
-		customer: customerBefore,
-		productId: freeWithTrial.id,
-	});
-
-	// Advance 5 days (mid-trial)
-	await advanceTestClock({
-		stripeCli: ctx.stripeCli,
-		testClockId: testClockId!,
-		numberOfDays: 5,
-	});
+	const initialTrialEnd = customerBefore.products?.find(
+		(p) => p.id === freeWithTrial.id,
+	)?.current_period_end;
 
 	// Update mid-trial WITH new free_trial param - extend to 30 days from now
 	const updatedMessagesItem = items.monthlyMessages({ includedUsage: 200 });
@@ -250,11 +239,11 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial, update mid-tr
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Trial should be extended to 30 days from now
+	// Trial should be extended to 30 days from advancedTo (test clock time)
 	const newTrialEnd = await expectProductTrialing({
 		customer,
 		productId: freeWithTrial.id,
-		trialEndsAt: Date.now() + ms.days(35), // 5 days advanced + 30 day new trial
+		trialEndsAt: advancedTo! + ms.days(30), // advancedTo + 30 day new trial
 	});
 
 	// New trial end should be later than original
@@ -282,28 +271,16 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial, update mid-tr
 		trialDays: 14,
 	});
 
-	const { customerId, autumnV1, ctx, testClockId } = await initScenario({
+	const { customerId, autumnV1, ctx, advancedTo } = await initScenario({
 		customerId: "f2p-trial-mid-update-to-paid",
 		setup: [
 			s.customer({ testClock: true, paymentMethod: "success" }),
 			s.products({ list: [freeWithTrial] }),
 		],
-		actions: [s.attach({ productId: freeWithTrial.id })],
-	});
-
-	// Verify initially trialing
-	const customerBefore =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductTrialing({
-		customer: customerBefore,
-		productId: freeWithTrial.id,
-	});
-
-	// Advance 5 days (mid-trial)
-	await advanceTestClock({
-		stripeCli: ctx.stripeCli,
-		testClockId: testClockId!,
-		numberOfDays: 5,
+		actions: [
+			s.attach({ productId: freeWithTrial.id }),
+			s.advanceTestClock({ days: 5 }), // Advance 5 days (mid-trial)
+		],
 	});
 
 	// Update mid-trial to PAID product (add price item)
@@ -334,6 +311,7 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial, update mid-tr
 	await expectProductNotTrialing({
 		customer,
 		productId: freeWithTrial.id,
+		nowMs: advancedTo,
 	});
 
 	// Product should be active
@@ -359,7 +337,7 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free no trial -> free with tri
 		id: "free-no-trial",
 	});
 
-	const { customerId, autumnV1 } = await initScenario({
+	const { customerId, autumnV1, advancedTo } = await initScenario({
 		customerId: "f2p-trial-items-undefined",
 		setup: [
 			s.customer({ testClock: true, paymentMethod: "success" }),
@@ -402,7 +380,7 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free no trial -> free with tri
 	await expectProductTrialing({
 		customer,
 		productId: free.id,
-		trialEndsAt: Date.now() + ms.days(14),
+		trialEndsAt: advancedTo + ms.days(14),
 	});
 
 	// Feature should still have correct values (unchanged since items undefined)
@@ -427,28 +405,16 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial, update mid-tr
 		trialDays: 14,
 	});
 
-	const { customerId, autumnV1, ctx, testClockId } = await initScenario({
+	const { customerId, autumnV1, advancedTo } = await initScenario({
 		customerId: "f2p-trial-mid-update-remove",
 		setup: [
 			s.customer({ testClock: true, paymentMethod: "success" }),
 			s.products({ list: [freeWithTrial] }),
 		],
-		actions: [s.attach({ productId: freeWithTrial.id })],
-	});
-
-	// Verify initially trialing
-	const customerBefore =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductTrialing({
-		customer: customerBefore,
-		productId: freeWithTrial.id,
-	});
-
-	// Advance 5 days (mid-trial)
-	await advanceTestClock({
-		stripeCli: ctx.stripeCli,
-		testClockId: testClockId!,
-		numberOfDays: 5,
+		actions: [
+			s.attach({ productId: freeWithTrial.id }),
+			s.advanceTestClock({ days: 5 }), // Advance 5 days (mid-trial)
+		],
 	});
 
 	// Update mid-trial WITH free_trial: null - remove trial
@@ -474,6 +440,7 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial, update mid-tr
 	await expectProductNotTrialing({
 		customer,
 		productId: freeWithTrial.id,
+		nowMs: advancedTo,
 	});
 
 	// Product should now be active

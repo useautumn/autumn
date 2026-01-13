@@ -8,6 +8,7 @@ import type {
 } from "@/internal/billing/v2/types/billingPlan";
 
 export const buildStripeSubscriptionUpdateAction = ({
+	// biome-ignore lint/correctness/noUnusedFunctionParameters: might be used in the future
 	ctx,
 	billingContext,
 	subItemsUpdate,
@@ -31,11 +32,25 @@ export const buildStripeSubscriptionUpdateAction = ({
 	// When a schedule manages the subscription, don't set trial_end or cancel_at_period_end
 	// The schedule controls these via phase-level settings
 	const scheduleManagesSubscription = !!stripeSubscriptionScheduleAction;
-	const shouldSetTrialEnd = !scheduleManagesSubscription && trialEndsAt;
+	const shouldSetTrialEnd =
+		!scheduleManagesSubscription &&
+		trialEndsAt &&
+		msToSeconds(trialEndsAt) !== stripeSubscription?.trial_end;
+
+	console.log("shouldSetTrialEnd", shouldSetTrialEnd);
+	console.log("trialEndsAt", trialEndsAt);
+	console.log("stripeSubscription?.trial_end", stripeSubscription?.trial_end);
+
+	const shouldUnsetTrialEnd =
+		!scheduleManagesSubscription && trialEndsAt === null;
 
 	const params: Stripe.SubscriptionUpdateParams = {
 		items: subItemsUpdate.length > 0 ? subItemsUpdate : undefined,
-		trial_end: shouldSetTrialEnd ? msToSeconds(trialEndsAt) : undefined,
+		trial_end: shouldSetTrialEnd
+			? msToSeconds(trialEndsAt)
+			: shouldUnsetTrialEnd
+				? "now"
+				: undefined,
 		proration_behavior: "none",
 	};
 

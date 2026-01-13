@@ -1,5 +1,5 @@
-import { BillingPreviewResponseSchema } from "@api/billing/common/billingPreviewResponse";
 import type { z } from "zod/v4";
+import { BillingPreviewResponseSchema } from "../common/billingPreviewResponse";
 
 export const PreviewUpdateSubscriptionResponseSchema =
 	BillingPreviewResponseSchema;

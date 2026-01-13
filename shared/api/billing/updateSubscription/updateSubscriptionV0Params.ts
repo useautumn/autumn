@@ -1,4 +1,5 @@
 import { CreateFreeTrialSchema } from "@models/productModels/freeTrialModels/freeTrialModels";
+import { nullish } from "@utils/utils";
 import { z } from "zod/v4";
 import { FeatureOptionsSchema } from "../../../models/cusProductModels/cusProductModels";
 import { ProductItemSchema } from "../../../models/productV2Models/productItemModels/productItemModels";
@@ -21,10 +22,6 @@ export const ExtUpdateSubscriptionV0ParamsSchema = z.object({
 	enable_product_immediately: z.boolean().optional(),
 	finalize_invoice: z.boolean().optional(),
 
-	// Schedules (epoch milliseconds)
-	// plan_custom_start_date: z.number().optional(),
-	// billing_cycle_anchor: z.number().optional(),
-
 	// New
 	items: z.array(ProductItemSchema).optional(), // used for custom configuration of a plan (in api - plan_override)
 	free_trial: CreateFreeTrialSchema.nullable().optional(),
@@ -37,6 +34,20 @@ export const ExtUpdateSubscriptionV0ParamsSchema = z.object({
 export const UpdateSubscriptionV0ParamsSchema =
 	ExtUpdateSubscriptionV0ParamsSchema.extend({
 		customer_product_id: z.string().optional(),
+	}).check((ctx) => {
+		if (ctx.value.options && ctx.value.options.length > 0) {
+			const invalidFeatures = ctx.value.options
+				.filter((opt) => nullish(opt.quantity) || opt.quantity < 0)
+				.map((opt) => opt.feature_id);
+
+			if (invalidFeatures.length > 0) {
+				ctx.issues.push({
+					code: "custom",
+					message: `Options quantity must be >= 0 for features: ${invalidFeatures.join(", ")}`,
+					input: ctx.value,
+				});
+			}
+		}
 	});
 
 export type ExtUpdateSubscriptionV0Params = z.infer<
@@ -46,6 +57,10 @@ export type ExtUpdateSubscriptionV0Params = z.infer<
 export type UpdateSubscriptionV0Params = z.infer<
 	typeof UpdateSubscriptionV0ParamsSchema
 >;
+
+// Schedules (epoch milliseconds)
+// plan_custom_start_date: z.number().optional(),
+// billing_cycle_anchor: z.number().optional(),
 
 // keep_existing_plan: true, //disable_plan_switch
 // prorate_billing: true,

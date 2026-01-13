@@ -40,7 +40,10 @@ export const computeCustomPlanNewCustomerProduct = ({
 		cusProduct: customerProduct,
 	});
 
-	console.log("Reset cycle anchor: ", formatMs(resetCycleAnchorMs));
+	console.log("Trial context: ", {
+		trialEndsAt: formatMs(trialContext?.trialEndsAt),
+		freeTrial: trialContext?.freeTrial,
+	});
 
 	// Compute the new full customer product
 	const newFullCustomerProduct = initFullCustomerProduct({
@@ -56,7 +59,7 @@ export const computeCustomPlanNewCustomerProduct = ({
 			now: currentEpochMs,
 
 			freeTrial: trialContext?.freeTrial ?? null,
-			trialEndsAt: trialContext?.trialEndsAt,
+			trialEndsAt: trialContext?.trialEndsAt ?? undefined,
 		},
 
 		initOptions: {

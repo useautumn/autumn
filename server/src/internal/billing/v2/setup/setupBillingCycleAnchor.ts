@@ -3,7 +3,6 @@ import {
 	type FullProduct,
 	isCustomerProductFree,
 	isCustomerProductOneOff,
-	isCustomerProductTrialing,
 	isFreeProduct,
 	isOneOffProduct,
 	secondsToMs,
@@ -48,16 +47,6 @@ export const setupBillingCycleAnchor = ({
 	const stripeTrialEndsAtMs = isStripeSubscriptionTrialing(stripeSubscription)
 		? secondsToMs(stripeSubscription?.trial_end)
 		: undefined;
-
-	const currentCustomerProductTrialEndsAtMs = isCustomerProductTrialing(
-		customerProduct,
-		{ nowMs: currentEpochMs },
-	)
-		? customerProduct?.trial_ends_at
-		: undefined;
-
-	const currentTrialEndsAt =
-		stripeTrialEndsAtMs ?? currentCustomerProductTrialEndsAtMs;
 
 	const newIsTrialing =
 		(trialContext?.trialEndsAt && trialContext.trialEndsAt > currentEpochMs) ??

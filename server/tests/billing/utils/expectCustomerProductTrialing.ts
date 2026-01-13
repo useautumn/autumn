@@ -1,6 +1,6 @@
 import { expect } from "bun:test";
 import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
-import { ApiVersion } from "@autumn/shared";
+import { ApiVersion, formatMs } from "@autumn/shared";
 import { AutumnInt } from "@/external/autumn/autumnCli";
 
 const defaultAutumn = new AutumnInt({ version: ApiVersion.V1_2 });
@@ -63,16 +63,21 @@ export const expectProductTrialing = async ({
 };
 
 /**
- * Verify a customer product is NOT trialing (status is not "trialing").
+ * Verify a customer product is NOT trialing.
+ * If nowMs is provided, checks if product is actually trialing based on test clock time
+ * (status may be "trialing" but if nowMs >= current_period_end, trial has ended).
  */
 export const expectProductNotTrialing = async ({
 	customerId,
 	customer: providedCustomer,
 	productId,
+	nowMs,
 }: {
 	customerId?: string;
 	customer?: ApiCustomerV3 | ApiEntityV0;
 	productId: string;
+	/** Current time in ms (e.g., advancedTo from test clock). If provided, checks if trial is actually active. */
+	nowMs?: number;
 }) => {
 	const customer = providedCustomer
 		? providedCustomer
@@ -86,6 +91,25 @@ export const expectProductNotTrialing = async ({
 		`Product ${productId} not found for not-trialing check`,
 	).toBeDefined();
 
+	// If nowMs is provided, check if product is actually trialing based on test clock time
+	if (nowMs !== undefined && product!.status === "trialing") {
+		const currentPeriodStart = product!.current_period_start;
+		const currentPeriodEnd = product!.current_period_end;
+		if (!currentPeriodStart || !currentPeriodEnd) {
+			throw new Error(
+				`Product ${productId} has no current_period_start or current_period_end`,
+			);
+		}
+		// If status is "trialing" but nowMs >= current_period_end, trial has ended
+		// Only fail if nowMs < current_period_end (trial is actually still active)
+		expect(
+			nowMs >= currentPeriodStart || nowMs >= currentPeriodEnd,
+			`Product ${productId} is still trialing (status: "trialing", current_period_end: ${formatMs(currentPeriodEnd)}, nowMs: ${formatMs(nowMs)}). Trial has not ended yet.`,
+		).toBe(true);
+		return;
+	}
+
+	// Without nowMs, simply check status is not "trialing"
 	expect(
 		product!.status,
 		`Product ${productId} should not have status "trialing" but got "${product!.status}"`,
