@@ -1,5 +1,5 @@
 import type {
-	FullCusEntWithOptionalProduct,
+	FullCusEntWithFullCusProduct,
 	FullCusProduct,
 } from "@autumn/shared";
 import { Table } from "@/components/general/table";
@@ -16,10 +16,10 @@ export function CustomerBalanceTable({
 	aggregatedMap,
 	isLoading,
 }: {
-	allEnts: FullCusEntWithOptionalProduct[];
+	allEnts: FullCusEntWithFullCusProduct[];
 	filteredCustomerProducts: FullCusProduct[];
 	entityId: string | null;
-	aggregatedMap: Map<string, FullCusEntWithOptionalProduct[]>;
+	aggregatedMap: Map<string, FullCusEntWithFullCusProduct[]>;
 	isLoading: boolean;
 }) {
 	const { customer } = useCusQuery();
@@ -41,13 +41,13 @@ export function CustomerBalanceTable({
 	});
 
 	const enableSorting = false;
-	const table = useCustomerTable<FullCusEntWithOptionalProduct>({
+	const table = useCustomerTable<FullCusEntWithFullCusProduct>({
 		data: allEnts,
 		columns,
 		options: {},
 	});
 
-	const handleRowClick = (ent: FullCusEntWithOptionalProduct) => {
+	const handleRowClick = (ent: FullCusEntWithFullCusProduct) => {
 		const featureId = ent.entitlement.feature.id;
 		const ents = aggregatedMap.get(featureId) || [ent];
 		const hasMultipleBalances = ents.length > 1;
