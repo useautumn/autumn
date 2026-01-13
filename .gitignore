@@ -93,11 +93,7 @@ server/test.sh
 
 .dev.vars
 
-supabase/
 
-# To load supabase
-# 1. Start supabase locally
-# 2. Load files
 
 .claude/
 .vscode/
