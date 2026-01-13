@@ -50,4 +50,28 @@ describe(`${chalk.yellowBright("loose-basic: basic track with loose entitlement"
 		expect(res.balance?.current_balance).toBe(90);
 		expect(res.balance?.usage).toBe(10);
 	});
+
+	test("should list correctly", async () => {
+		const res = await autumnV2.customers.listV2({
+			search: customerId,
+		});
+
+		expect(res.list).toMatchObject([
+			expect.objectContaining({
+				id: customerId,
+				name: customerId,
+				email: `${customerId}@example.com`,
+				fingerprint: null,
+				subscriptions: [],
+				scheduled_subscriptions: [],
+				balances: {
+					[TestFeature.Messages]: expect.objectContaining({
+						granted_balance: 100,
+						current_balance: 90,
+						usage: 10,
+					}),
+				},
+			}),
+		]);
+	});
 });
