@@ -1,4 +1,5 @@
 import {
+	ACTIVE_STATUSES,
 	cusEntsToAllowance,
 	cusEntsToBalance,
 	cusEntsToGrantedBalance,
@@ -36,6 +37,7 @@ export function useFeatureUsageBalance({
 	const cusEnts = cusProductsToCusEnts({
 		cusProducts,
 		featureIds: [featureId],
+		inStatuses: ACTIVE_STATUSES,
 	});
 
 	//without manual update adjustment, no rollovers
