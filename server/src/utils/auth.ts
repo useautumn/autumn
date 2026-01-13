@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import { invitation } from "@autumn/shared";
+import { invitation, schemas } from "@autumn/shared";
 import { oauthProvider } from "@better-auth/oauth-provider";
 import { betterAuth, type User } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -29,7 +29,8 @@ export const auth = betterAuth({
 	},
 
 	database: drizzleAdapter(db, {
-		provider: "pg", // or "mysql", "sqlite"
+		provider: "pg",
+		schema: schemas,
 	}),
 
 	databaseHooks: {
