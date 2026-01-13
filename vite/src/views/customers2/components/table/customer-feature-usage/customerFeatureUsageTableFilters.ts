@@ -1,17 +1,17 @@
 import {
 	CusProductStatus,
-	type FullCusEntWithOptionalProduct,
+	type FullCusEntWithFullCusProduct,
 } from "@autumn/shared";
 
 export function filterCustomerFeatureUsage({
 	entitlements,
 	showExpired,
 }: {
-	entitlements: FullCusEntWithOptionalProduct[];
+	entitlements: FullCusEntWithFullCusProduct[];
 	showExpired: boolean;
-}): FullCusEntWithOptionalProduct[] {
+}): FullCusEntWithFullCusProduct[] {
 	return entitlements
-		.filter((ent: FullCusEntWithOptionalProduct) => {
+		.filter((ent: FullCusEntWithFullCusProduct) => {
 			if (showExpired) {
 				return true;
 			}
@@ -26,7 +26,7 @@ export function filterCustomerFeatureUsage({
 			);
 		})
 		.sort(
-			(a: FullCusEntWithOptionalProduct, b: FullCusEntWithOptionalProduct) => {
+			(a: FullCusEntWithFullCusProduct, b: FullCusEntWithFullCusProduct) => {
 				const aStatus = a.customer_product?.status;
 				const bStatus = b.customer_product?.status;
 
