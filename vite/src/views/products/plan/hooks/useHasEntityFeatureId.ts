@@ -8,8 +8,8 @@ export const useHasEntityFeatureId = () => {
 	});
 
 	return {
-		hasEntityFeatureId: data?.hasEntityFeatureId ?? false,
-		// hasEntityFeatureId: true,
+		// hasEntityFeatureId: data?.hasEntityFeatureId ?? false,
+		hasEntityFeatureId: true,
 		isLoading,
 	};
 };

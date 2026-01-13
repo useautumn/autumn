@@ -1,6 +1,6 @@
 import {
-	apiFeatureToDbFeature,
 	AppEnv,
+	apiFeatureToDbFeature,
 	CreateFeatureV0ParamsSchema,
 	CreateFreeTrialSchema,
 	CreateProductItemParamsSchema,
@@ -11,8 +11,8 @@ import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { createFeature } from "@/internal/features/featureActions/createFeature.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import { createFeature } from "@/internal/features/featureActions/createFeature.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { createProduct } from "@/internal/products/handlers/productActions/createProduct.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -30,6 +30,7 @@ const SyncPreviewPricingSchema = z.object({
 
 /**
  * Syncs pricing configuration to the preview sandbox organization.
+ * Uses session auth (betterAuthMiddleware) to identify the user's preview org.
  * - Nukes existing config (customers, products, features)
  * - Pushes new config from the request body
  */
@@ -37,7 +38,7 @@ export const handleSyncPreviewPricing = createRoute({
 	body: SyncPreviewPricingSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { db, org: masterOrg, logger, userId } = ctx;
+		const { db, org: masterOrg, userId } = ctx;
 		const body = c.req.valid("json");
 
 		if (!userId) {
@@ -48,14 +49,13 @@ export const handleSyncPreviewPricing = createRoute({
 			});
 		}
 
-		// Find the preview org
+		// Find the preview org using session auth
 		const previewSlug = buildPreviewOrgSlug({
 			userId,
 			masterOrgId: masterOrg.id,
 		});
 
 		const previewOrg = await OrgService.getBySlug({ db, slug: previewSlug });
-
 		if (!previewOrg) {
 			throw new RecaseError({
 				message: "Preview org not found. Call /preview/setup first.",
@@ -64,7 +64,9 @@ export const handleSyncPreviewPricing = createRoute({
 			});
 		}
 
-		console.log(`[Preview Sync] Starting sync for preview org: ${previewOrg.id}`);
+		console.log(
+			`[Preview Sync] Starting sync for preview org: ${previewOrg.id}`,
+		);
 		console.log(`[Preview Sync] Features to sync: ${body.features.length}`);
 		console.log(`[Preview Sync] Products to sync: ${body.products.length}`);
 
@@ -147,7 +149,9 @@ export const handleSyncPreviewPricing = createRoute({
 						free_trial: apiProduct.free_trial,
 					},
 				});
-				console.log(`[Preview Sync]   Created product: ${apiProduct.id} (${apiProduct.name})`);
+				console.log(
+					`[Preview Sync]   Created product: ${apiProduct.id} (${apiProduct.name})`,
+				);
 			}
 		});
 
@@ -165,4 +169,3 @@ export const handleSyncPreviewPricing = createRoute({
 		});
 	},
 });
-
