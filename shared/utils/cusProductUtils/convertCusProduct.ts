@@ -55,11 +55,20 @@ export const cusProductsToCusPrices = ({
 export const cusProductsToCusEnts = ({
 	cusProducts,
 	featureIds,
+	inStatuses,
 }: {
 	cusProducts: FullCusProduct[];
 	featureIds?: string[];
+	inStatuses?: CusProductStatus[];
 }) => {
 	let cusEnts: FullCusEntWithFullCusProduct[] = [];
+
+	cusProducts = cusProducts.filter((cusProduct) => {
+		if (inStatuses) {
+			return inStatuses.includes(cusProduct.status);
+		}
+		return true;
+	});
 
 	for (const cusProduct of cusProducts) {
 		cusEnts.push(
