@@ -34,7 +34,7 @@
 		"stripe": "catalog:"
 	},
 	"peerDependencies": {
-		"zod": "^3.25.23"
+		"zod": "^4.1.12"
 	},
 	"devDependencies": {
 		"@types/bun": "latest",
