@@ -279,7 +279,25 @@ export function AIChatView({ onBack }: AIChatViewProps) {
 								transition={{ duration: 0.3 }}
 								className="absolute inset-0 flex flex-col items-center justify-center px-6"
 							>
-								{/* Background leaf with gradient fade */}
+								{/* Glow layer behind leaf */}
+								<motion.div
+									initial={{ opacity: 0 }}
+									animate={{ opacity: [0, 0.6, 0] }}
+									transition={{
+										duration: 4,
+										repeat: Infinity,
+										ease: "easeOut",
+									}}
+									className="absolute inset-0 pointer-events-none overflow-hidden"
+									style={{
+										backgroundImage: "url(/autumn-leaf.png)",
+										backgroundRepeat: "no-repeat",
+										backgroundPosition: "85% 60%",
+										backgroundSize: "30%",
+										filter: "blur(50px) brightness(1)",
+									}}
+								/>
+								{/* Main leaf */}
 								<motion.div
 									initial={{ opacity: 0 }}
 									animate={{ opacity: 0.45 }}
