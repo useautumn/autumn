@@ -4,14 +4,14 @@ import {
 	ExtAttachBodyV0Schema,
 } from "../../../billing/attach/prevVersions/attachBodyV0.js";
 
-export const ExtCheckoutParamsV0Schema = ExtAttachBodyV0Schema.extend({
+export const ExtCheckoutParamsV0Schema = ExtAttachBodyV0Schema.safeExtend({
 	setup_payment: z.boolean().optional(),
 }).meta({
 	description:
 		"Returns a Stripe Checkout URL for the customer to make a payment, or returns payment confirmation information.",
 });
 
-export const CheckoutParamsV0Schema = AttachBodyV0Schema.extend({
+export const CheckoutParamsV0Schema = AttachBodyV0Schema.safeExtend({
 	setup_payment: z.boolean().optional(),
 });
 

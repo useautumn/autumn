@@ -302,7 +302,7 @@ export const getFullCusQuery = (
     sqlChunks.push(buildSubscriptionsCTE(withSubs, inStatuses));
   }
 
-  // Conditionally add extra entitlements CTE
+  // Unconditionally add extra entitlements CTE
   sqlChunks.push(sql`, `);
   sqlChunks.push(buildExtraEntitlementsCTE());
 
@@ -434,43 +434,28 @@ export const getPaginatedFullCusQuery = ({
   };
 
   const withCustomerProductFilter = () => {
-    const hasStatusFilter = inStatuses && inStatuses.length > 0;
     const hasPlansFilter = plans && plans.length > 0;
 
-    if (!hasStatusFilter && !hasPlansFilter) return sql``;
+    // Only filter customers by plans, not by status
+    // Status filtering is applied to customer_products, not to exclude customers
+    // This allows customers with only loose entitlements (no customer_products) to be included
+    if (!hasPlansFilter) return sql``;
 
-    const conditions: SQL[] = [];
-
-    if (hasStatusFilter) {
-      conditions.push(
-        sql`cp_filter.status = ANY(ARRAY[${sql.join(
-          inStatuses.map((s) => sql`${s}`),
+    const planConditions = plans.map((plan) => {
+      if (plan.versions && plan.versions.length > 0) {
+        return sql`(p_filter.id = ${plan.id} AND p_filter.version IN (${sql.join(
+          plan.versions.map((v) => sql`${v}`),
           sql`, `,
-        )}])`,
-      );
-    }
-
-    if (hasPlansFilter) {
-      const planConditions = plans.map((plan) => {
-        if (plan.versions && plan.versions.length > 0) {
-          return sql`(p_filter.id = ${plan.id} AND p_filter.version IN (${sql.join(
-            plan.versions.map((v) => sql`${v}`),
-            sql`, `,
-          )}))`;
-        }
-        return sql`p_filter.id = ${plan.id}`;
-      });
-
-      conditions.push(sql`(${sql.join(planConditions, sql` OR `)})`);
-    }
-
-    const needsProductJoin = hasPlansFilter;
+        )}))`;
+      }
+      return sql`p_filter.id = ${plan.id}`;
+    });
 
     return sql`AND EXISTS (
 			SELECT 1 FROM customer_products cp_filter
-			${needsProductJoin ? sql`JOIN products p_filter ON cp_filter.internal_product_id = p_filter.internal_id` : sql``}
+			JOIN products p_filter ON cp_filter.internal_product_id = p_filter.internal_id
 			WHERE cp_filter.internal_customer_id = c.internal_id
-				AND ${sql.join(conditions, sql` AND `)}
+				AND (${sql.join(planConditions, sql` OR `)})
 		)`;
   };
 
@@ -483,6 +468,53 @@ export const getPaginatedFullCusQuery = ({
 			OR c.email ILIKE ${pattern}
 		)`;
   };
+
+  // ADDITION: Unconditionally add extra entitlements CTE (305-308)
+  // This matches the style of the rest of the CTE construction blocks.
+  // Extra entitlements are those without a customer_product_id (loose entitlements)
+  const extraEntitlementsCTE = sql`, extra_customer_entitlements AS (
+    SELECT
+      ce.internal_customer_id,
+      COALESCE(
+        json_agg(
+          to_jsonb(ce.*) || jsonb_build_object(
+            'entitlement', (
+              SELECT row_to_json(ent_with_feature)
+              FROM (
+                SELECT e.*, row_to_json(f) AS feature
+                FROM entitlements e
+                JOIN features f ON e.internal_feature_id = f.internal_id
+                WHERE e.id = ce.entitlement_id
+              ) AS ent_with_feature
+            ),
+            'replaceables', (
+              SELECT COALESCE(
+                json_agg(row_to_json(r)) FILTER (WHERE r.id IS NOT NULL),
+                '[]'::json
+              )
+              FROM replaceables r
+              WHERE r.cus_ent_id = ce.id
+            ),
+            'rollovers', (
+              SELECT COALESCE(
+                json_agg(row_to_json(ro) ORDER BY ro.expires_at ASC NULLS LAST)
+                FILTER (WHERE ro.expires_at > EXTRACT(EPOCH FROM now()) * 1000 OR ro.expires_at IS NULL),
+                '[]'::json
+              )
+              FROM rollovers ro
+              WHERE ro.cus_ent_id = ce.id
+            )
+          )
+          ORDER BY ce.id DESC
+        ) FILTER (WHERE ce.id IS NOT NULL),
+        '[]'::json
+      ) AS extra_customer_entitlements
+    FROM customer_entitlements ce
+    WHERE ce.internal_customer_id IN (SELECT internal_id FROM customer_records)
+      AND ce.customer_product_id IS NULL
+      AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+    GROUP BY ce.internal_customer_id
+  )`;
 
   return sql`
     WITH customer_records AS (
@@ -638,6 +670,8 @@ export const getPaginatedFullCusQuery = ({
     )`
       : sql``
     }
+
+    ${extraEntitlementsCTE}
     
     SELECT 
       cr.*,
@@ -647,6 +681,7 @@ export const getPaginatedFullCusQuery = ({
       ${includeInvoices ? sql`, COALESCE(ci.invoices, '[]'::json) AS invoices` : sql``}
       ${withTrialsUsed ? sql`, COALESCE(ctu.trials_used, '[]'::json) AS trials_used` : sql``}
       ${withEvents ? sql`, COALESCE(cev.events, '[]'::json) AS events` : sql``}
+      , COALESCE(ece.extra_customer_entitlements, '[]'::json) AS extra_customer_entitlements
     FROM customer_records cr
     LEFT JOIN customer_products_aggregated cpa ON cpa.internal_customer_id = cr.internal_id
     ${withSubs ? sql`LEFT JOIN customer_subscriptions cs ON cs.internal_customer_id = cr.internal_id` : sql``}
@@ -654,6 +689,7 @@ export const getPaginatedFullCusQuery = ({
     ${includeInvoices ? sql`LEFT JOIN customer_invoices ci ON ci.internal_customer_id = cr.internal_id` : sql``}
     ${withTrialsUsed ? sql`LEFT JOIN customer_trials_used ctu ON ctu.internal_customer_id = cr.internal_id` : sql``}
     ${withEvents ? sql`LEFT JOIN customer_events cev ON cev.internal_customer_id = cr.internal_id` : sql``}
+    LEFT JOIN extra_customer_entitlements ece ON ece.internal_customer_id = cr.internal_id
     ORDER BY cr.created_at DESC
   `;
 };
