@@ -7,18 +7,21 @@ import {
 	CheckCircleIcon,
 	CreditCard,
 	CubeIcon,
+	SparkleIcon,
 	UserCircle,
 } from "@phosphor-icons/react";
 import { X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import type { StepId } from "@/lib/snippets";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
+import { pushPage } from "@/utils/genUtils";
 import CreateProductSheet from "@/views/products/products/components/CreateProductSheet";
 import { CodeSheet } from "./CodeSheet";
 import {
@@ -92,6 +95,7 @@ function StepCard({
 	onClick: () => void;
 }) {
 	const { getPrompt } = useOnboardingPrompt();
+	const navigate = useNavigate();
 	const isPlansStep = step.id === "plans";
 	const [createProductOpen, setCreateProductOpen] = useState(false);
 
@@ -184,13 +188,29 @@ function StepCard({
 										variant="secondary"
 										className="ml-auto gap-2"
 										size="sm"
+										icon={<SparkleIcon size={14} />}
+										onClick={(e) => {
+											e.stopPropagation();
+											pushPage({
+												path: "/quickstart",
+												navigate,
+												preserveParams: false,
+											});
+										}}
+									>
+										AI builder
+									</IconButton>
+									<IconButton
+										variant="secondary"
+										className="gap-2"
+										size="sm"
 										icon={<CubeIcon size={14} />}
 										onClick={(e) => {
 											e.stopPropagation();
 											setCreateProductOpen(true);
 										}}
 									>
-										Create Plan
+										Create plan
 									</IconButton>
 								</>
 							) : (
