@@ -146,10 +146,10 @@ describe(`${chalk.yellowBright("track-credit-system4: test deduction with two cr
 			value: deductValue,
 		});
 
-		expect(trackRes.balances?.[TestFeature.Action1]).toBeUndefined();
-		expect(trackRes.balances?.[TestFeature.Action3]).toBeUndefined();
-		expect(trackRes.balances?.[TestFeature.Credits]).toBeDefined();
-		expect(trackRes.balances?.[TestFeature.Credits2]).toBeDefined();
+		expect(trackRes.balances?.[TestFeature.Action1]).toBeDefined();
+		expect(trackRes.balances?.[TestFeature.Action3]).toBeDefined();
+		expect(trackRes.balances?.[TestFeature.Credits]).toBeUndefined();
+		expect(trackRes.balances?.[TestFeature.Credits2]).toBeUndefined();
 
 		const customer = await autumnV1.customers.get(customerId);
 

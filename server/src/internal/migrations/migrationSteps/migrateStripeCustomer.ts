@@ -1,39 +1,31 @@
-import {
-	type AppEnv,
-	type FullCusProduct,
-	type FullCustomer,
-	type FullProduct,
-} from "@autumn/shared";
+import type { FullCusProduct, FullCustomer, FullProduct } from "@autumn/shared";
 import type { Stripe } from "stripe";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
-import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { deleteCachedApiCustomer } from "../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { migrationToAttachParams } from "../migrationUtils/migrationToAttachParams.js";
 import { runMigrationAttach } from "../migrationUtils/runMigrationAttach.js";
 
 export const migrateStripeCustomer = async ({
-	req,
+	ctx,
 	stripeCli,
 	fullCus,
 	cusProduct,
 	toProduct,
 	fromProduct,
 	customerId,
-	orgId,
-	env,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	stripeCli: Stripe;
 	fullCus: FullCustomer;
 	cusProduct: FullCusProduct;
 	toProduct: FullProduct;
 	fromProduct: FullProduct;
 	customerId: string;
-	orgId: string;
-	env: AppEnv;
 }) => {
+	const { org, env, logger } = ctx;
+
 	const attachParams = await migrationToAttachParams({
-		req,
+		ctx,
 		stripeCli,
 		customer: fullCus,
 		cusProduct,
@@ -41,14 +33,14 @@ export const migrateStripeCustomer = async ({
 	});
 
 	await runMigrationAttach({
-		ctx: req as unknown as AutumnContext,
+		ctx,
 		attachParams,
 		fromProduct,
 	});
 
 	await deleteCachedApiCustomer({
 		customerId,
-		orgId,
-		env,
+		ctx,
+		source: `migrateStripeCustomer, deleting customer cache`,
 	});
 };

@@ -159,6 +159,7 @@ export class SyncBatchingManager {
 					payload: {
 						orgId: item.orgId,
 						env: item.env,
+						customerId: item.customerId,
 						item, // Single item
 					},
 					messageGroupId: customerId, // FIFO ordering per customer

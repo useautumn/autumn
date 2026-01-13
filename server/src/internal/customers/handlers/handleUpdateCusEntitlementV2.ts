@@ -50,7 +50,7 @@ export const handleUpdateCusEntitlementV2 = createRoute({
 			],
 			skipAdditionalBalance: true,
 			alterGrantedBalance: true,
-			sortParams: {
+			customerEntitlementFilters: {
 				cusEntIds: [customer_entitlement_id],
 			},
 			refreshCache: false,
@@ -67,8 +67,7 @@ export const handleUpdateCusEntitlementV2 = createRoute({
 		}
 
 		await deleteCachedApiCustomer({
-			orgId: ctx.org.id,
-			env: ctx.env,
+			ctx,
 			customerId: customer_id,
 			source: "handleUpdateBalance",
 		});

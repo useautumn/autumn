@@ -15,10 +15,10 @@ import {
 	cusEntsToMaxPurchase,
 	cusEntsToPlanId,
 	cusEntsToPrepaidQuantity,
+	cusEntsToPurchasedBalance,
 	cusEntsToReset,
 	cusEntsToRollovers,
 	cusEntToKey,
-	cusEntToPurchasedBalance,
 	dbToApiFeatureV1,
 	expandIncludes,
 	type Feature,
@@ -223,9 +223,10 @@ export const getApiBalance = ({
 		.toNumber();
 
 	// 2. Purchased balance
-	const totalPurchasedBalance = sumValues(
-		cusEnts.map((cusEnt) => cusEntToPurchasedBalance({ cusEnt, entityId })),
-	);
+	const totalPurchasedBalance = cusEntsToPurchasedBalance({
+		cusEnts,
+		entityId,
+	});
 
 	// 3. Current balance
 	let currentBalance = cusEntsToCurrentBalance({

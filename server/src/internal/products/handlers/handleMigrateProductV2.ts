@@ -147,6 +147,8 @@ export const handleMigrateProductV2 = createRoute({
 			jobName: JobName.Migration,
 			payload: {
 				migrationJobId: migrationJob.id,
+				orgId: org.id,
+				env,
 			},
 		});
 

@@ -9,11 +9,10 @@ import {
 } from "@shared/index";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
-import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
-import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
 import {
 	attachToInsertParams,
 	isProductUpgrade,
@@ -25,7 +24,7 @@ export const handleInitialPurchase = async ({
 	ctx,
 }: {
 	event: WebhookInitialPurchase;
-	ctx: AutumnContext;
+	ctx: RevenueCatWebhookContext;
 }) => {
 	const { db, org, env, logger, features } = ctx;
 	const { product_id, app_user_id } = event;
@@ -115,11 +114,4 @@ export const handleInitialPurchase = async ({
 	logger.info(
 		`Created cus_product for ${product.id} with scenario: ${scenario}`,
 	);
-
-	await deleteCachedApiCustomer({
-		customerId: customer.id ?? "",
-		orgId: org.id,
-		env,
-		source: `handleRevenuecatInitialPurchase: ${product.id}`,
-	});
 };

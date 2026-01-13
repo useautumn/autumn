@@ -1,5 +1,6 @@
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { deleteCachedApiCustomer } from "../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { matchRoute } from "./middlewareUtils.js";
 
@@ -84,7 +85,7 @@ export const refreshCacheMiddleware = async (
 		matchRoute({ url: pathname, method, pattern }),
 	);
 
-	if (pathMatch) {
+	if (pathMatch && !skipCacheDeletion) {
 		const customerId = c.req.param("customer_id");
 		if (customerId) {
 			logger.info(
@@ -92,8 +93,13 @@ export const refreshCacheMiddleware = async (
 			);
 			await deleteCachedApiCustomer({
 				customerId,
-				orgId: org.id,
-				env: env,
+				ctx,
+				source: `refreshCacheMiddleware, url: ${pathname}`,
+			});
+			await deleteCachedFullCustomer({
+				customerId,
+				ctx,
+				source: "refreshCacheMiddleware",
 			});
 		}
 		return;
@@ -113,10 +119,13 @@ export const refreshCacheMiddleware = async (
 			);
 			await deleteCachedApiCustomer({
 				customerId: body.customer_id,
-				orgId: org.id,
-				env: env,
+				ctx,
 				source: "refreshCacheMiddleware",
-				logger,
+			});
+			await deleteCachedFullCustomer({
+				customerId: body.customer_id,
+				ctx,
+				source: "refreshCacheMiddleware",
 			});
 		}
 	}

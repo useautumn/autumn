@@ -1,19 +1,18 @@
 import {
-	AppEnv,
-	migrationErrors,
-	MigrationJob,
+	type AppEnv,
+	ErrCode,
+	type MigrationJob,
 	MigrationJobStep,
+	migrationErrors,
+	migrationJobs,
 } from "@autumn/shared";
-
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { migrationJobs } from "@autumn/shared";
-import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode } from "@autumn/shared";
 import { and, eq, ne } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import RecaseError from "@/utils/errorUtils.js";
 
 export class MigrationService {
 	static async createJob({ db, data }: { db: DrizzleCli; data: MigrationJob }) {
-		let result = await db.insert(migrationJobs).values(data).returning();
+		const result = await db.insert(migrationJobs).values(data).returning();
 
 		if (result.length === 0) {
 			throw new RecaseError({
@@ -34,7 +33,7 @@ export class MigrationService {
 		migrationJobId: string;
 		updates: any;
 	}) {
-		let results = await db
+		const results = await db
 			.update(migrationJobs)
 			.set({
 				...updates,
@@ -51,7 +50,7 @@ export class MigrationService {
 	}
 
 	static async getJob({ db, id }: { db: DrizzleCli; id: string }) {
-		let job = await db.query.migrationJobs.findFirst({
+		const job = await db.query.migrationJobs.findFirst({
 			where: eq(migrationJobs.id, id),
 		});
 
@@ -74,7 +73,7 @@ export class MigrationService {
 		orgId: string;
 		env: AppEnv;
 	}) {
-		let jobs = await db.query.migrationJobs.findMany({
+		const jobs = await db.query.migrationJobs.findMany({
 			where: and(
 				eq(migrationJobs.org_id, orgId),
 				eq(migrationJobs.env, env),
@@ -87,7 +86,7 @@ export class MigrationService {
 	}
 
 	static async insertError({ db, data }: { db: DrizzleCli; data: any }) {
-		let result = await db.insert(migrationErrors).values(data).returning();
+		const result = await db.insert(migrationErrors).values(data).returning();
 
 		if (result.length === 0) {
 			throw new RecaseError({
@@ -106,7 +105,7 @@ export class MigrationService {
 		db: DrizzleCli;
 		migrationJobId: string;
 	}) {
-		let errors = await db.query.migrationErrors.findMany({
+		const errors = await db.query.migrationErrors.findMany({
 			where: eq(migrationErrors.migration_job_id, migrationJobId),
 			with: {
 				customer: true,

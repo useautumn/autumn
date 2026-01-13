@@ -5,10 +5,9 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { currentRegion } from "@/external/redis/initRedis.js";
-import { globalBatchingManager } from "@/internal/balances/track/redisTrackUtils/BatchingManager.js";
-import { syncItemV2 } from "@/internal/balances/utils/sync/syncItemV2.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { setCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/setCachedApiCustomer.js";
+import { executeRedisDeduction } from "@/internal/balances/utils/deduction/executeRedisDeduction.js";
+import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
+import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import {
 	constructProduct,
@@ -16,7 +15,7 @@ import {
 } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { deleteCachedApiCustomer } from "../../../../src/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
+import { deleteCachedFullCustomer } from "../../../../src/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 
 const pro = constructProduct({
 	type: "pro",
@@ -79,53 +78,43 @@ describe(`${chalk.yellowBright("track-race-condition1: sync should not wipe out 
 		// STEP 1: Get full customer and set it in Redis cache
 		console.log(chalk.yellow("Step 1: Setting up customer in Redis cache..."));
 
-		const fullCus = await CusService.getFull({
-			db: ctx.db,
-			idOrInternalId: customerId,
-			orgId: ctx.org.id,
-			env: ctx.env,
-			withEntities: true,
-			withSubs: true,
-		});
-
-		await setCachedApiCustomer({
+		const fullCustomer = await getOrSetCachedFullCustomer({
 			ctx,
-			fullCus,
 			customerId,
 			source: "test-setup",
-			fetchTimeMs: Date.now(),
 		});
 		console.log(chalk.green("✓ Customer cached in Redis"));
 
-		// STEP 2: Track 5 messages using globalBatchingManager.deduct() directly
+		// STEP 2: Track 5 messages using executeRedisDeduction() directly
 		// This deducts from Redis WITHOUT automatically queuing a sync
 		console.log(
 			chalk.yellow(
-				"\nStep 2: Tracking 5 messages directly via globalBatchingManager.deduct() (no auto sync)...",
+				"\nStep 2: Tracking 5 messages directly via executeRedisDeduction() (no auto sync)...",
 			),
 		);
 
-		const deductionResult = await globalBatchingManager.deduct({
-			customerId,
-			featureDeductions: [
+		const messagesFeature = ctx.features.find(
+			(f) => f.id === TestFeature.Messages,
+		)!;
+
+		const deductionResult = await executeRedisDeduction({
+			ctx,
+			deductions: [
 				{
-					featureId: TestFeature.Messages,
-					amount: 5,
+					feature: messagesFeature,
+					deduction: 5,
 				},
 			],
-			orgId: ctx.org.id,
-			env: ctx.env,
-			overageBehavior: "cap",
+			fullCustomer,
+			deductionOptions: {
+				overageBehaviour: "cap",
+			},
 		});
 
 		console.log(chalk.green("✓ Tracked 5 messages in Redis (no sync queued)"));
 		console.log(
-			"  Redis balance after track:",
-			deductionResult.balances?.[TestFeature.Messages],
-		);
-		console.log(
 			"  Modified breakdown IDs:",
-			deductionResult.modifiedBreakdownIds,
+			Object.keys(deductionResult.updates),
 		);
 
 		// Get the customer from Redis to see current balance
@@ -148,7 +137,7 @@ describe(`${chalk.yellowBright("track-race-condition1: sync should not wipe out 
 		});
 		console.log(chalk.green("✓ Attached 250 credits to DB"));
 
-		// STEP 4: Manually call syncItemV2 to sync the OLD Redis balance to DB
+		// STEP 4: Manually call syncItemV3 to sync the OLD Redis balance to DB
 		// This simulates the race condition where sync runs AFTER attach
 		// The sync should detect that DB has newer data and NOT overwrite it
 		console.log(
@@ -157,26 +146,24 @@ describe(`${chalk.yellowBright("track-race-condition1: sync should not wipe out 
 			),
 		);
 
-		// Get the breakdownIds from the deduction result
-		const breakdownIds = deductionResult.modifiedBreakdownIds || [];
+		// Get the cusEntIds from the deduction result
+		const cusEntIds = Object.keys(deductionResult.updates);
 
-		await syncItemV2({
-			item: {
+		await syncItemV3({
+			ctx,
+			payload: {
 				customerId,
-				featureId: TestFeature.Messages,
 				orgId: ctx.org.id,
 				env: ctx.env,
 				timestamp: Date.now(),
 				region: currentRegion,
-				breakdownIds,
+				cusEntIds,
 			},
-			ctx,
 		});
 		console.log(chalk.red("✓ Sync completed"));
 
-		await deleteCachedApiCustomer({
-			orgId: ctx.org.id,
-			env: ctx.env,
+		await deleteCachedFullCustomer({
+			ctx,
 			customerId: customerId,
 			source: "test-setup",
 		});

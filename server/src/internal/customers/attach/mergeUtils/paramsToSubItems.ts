@@ -39,6 +39,11 @@ export const getCusProductsToRemove = ({
 			? products
 			: [cusProductToProduct({ cusProduct: attachParams.cusProduct! })];
 
+	console.log(
+		"Getting customer products to remove, internal entity ID:",
+		attachParams.internalEntityId,
+	);
+
 	for (const product of prods) {
 		// Get cur main and cur same
 		const { curMainProduct, curSameProduct, curScheduledProduct } =
@@ -120,10 +125,9 @@ export const paramsToSubItems = async ({
 		? removeCusProducts!
 		: getCusProductsToRemove({ attachParams });
 
-	// console.log(
-	// 	"Cus products to remove:",
-	// 	cusProductsToRemove.map((cp) => cp.product.name),
-	// );
+	ctx.logger.info(
+		`[paramsToSubItems] Removing cus products: ${cusProductsToRemove.map((cp) => `${cp.product.id} (E: ${cp.entity_id})`).join(", ")}`,
+	);
 
 	const newSubItems = mergeNewSubItems({
 		itemSet,
@@ -185,6 +189,10 @@ export const paramsToSubItems = async ({
 					itemSet.subItems.some((si) => si.price === existingSubItem.price?.id)
 				) {
 					continue;
+				}
+
+				if (printRemoveLogs) {
+					console.log(`Deleting consumable sub item ${existingSubItem.id}`);
 				}
 
 				newSubItems.push({

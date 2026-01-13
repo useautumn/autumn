@@ -25,6 +25,16 @@ const pro = constructProduct({
 	],
 });
 
+const free = constructProduct({
+	type: "free",
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Credits,
+			includedUsage: 500,
+		}),
+	],
+});
+
 const oneOffCredits = constructRawProduct({
 	id: "one_off_credits",
 	items: [
@@ -54,15 +64,24 @@ describe(`${chalk.yellowBright("temp: invoice payment failed for one off credits
 
 		await initProductsV0({
 			ctx,
-			products: [pro, oneOffCredits],
+			products: [pro, free, oneOffCredits],
 			prefix: testCase,
 		});
 
 		await autumnV1.attach({
 			customer_id: customerId,
-			product_id: pro.id,
+			product_id: free.id,
+		});
+
+		await autumnV1.attach({
+			customer_id: customerId,
+			product_id: oneOffCredits.id,
+			options: [
+				{
+					feature_id: TestFeature.Credits,
+					quantity: 25,
+				},
+			],
 		});
 	});
-
-	test("should handle invoice payment failed for one off credits", async () => {});
 });

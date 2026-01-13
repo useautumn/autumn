@@ -1,7 +1,7 @@
-loadLocalEnv();
-
 import { loadLocalEnv } from "@server/utils/envUtils";
 import inquirer from "inquirer";
+
+loadLocalEnv();
 
 export const migrateFunctions = async () => {
 	// Dynamic import to ensure env is loaded first
