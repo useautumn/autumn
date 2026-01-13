@@ -1,4 +1,4 @@
-import { createSupabaseClient } from "./createSupabaseClient";
+import { createSupabaseClient } from "@/external/supabase/createSupabaseClient";
 
 export const readFile = async ({
 	bucket = "autumn",
