@@ -10,13 +10,11 @@ export const sortCusEntsForDeduction = ({
 	reverseOrder = false,
 	entityId,
 	customerEntitlementFilters,
-	isRefund = false,
 }: {
 	cusEnts: FullCusEntWithFullCusProduct[];
 	reverseOrder?: boolean;
 	entityId?: string;
 	customerEntitlementFilters?: CustomerEntitlementFilters;
-	isRefund?: boolean;
 }) => {
 	cusEnts.sort((a, b) => {
 		if (
@@ -92,27 +90,27 @@ export const sortCusEntsForDeduction = ({
 			return 1;
 		}
 
-		// Handle overage vs prepaid ordering:
-		// - An entitlement is "in overage mode" if usage_allowed=true AND balance <= 0
-		// - An entitlement has "prepaid balance" if balance > 0 (regardless of usage_allowed)
-		// - For deductions: entitlements with prepaid balance go FIRST, overage mode goes LAST
-		// - For refunds: overage mode goes FIRST (recover overage before prepaid)
-		// Note: When both have prepaid balance, interval sorting (below) determines order
-		const aBalance = a.balance ?? 0;
-		const bBalance = b.balance ?? 0;
-		const aInOverageMode = a.usage_allowed && aBalance <= 0;
-		const bInOverageMode = b.usage_allowed && bBalance <= 0;
+		// // Handle overage vs prepaid ordering:
+		// // - An entitlement is "in overage mode" if usage_allowed=true AND balance <= 0
+		// // - An entitlement has "prepaid balance" if balance > 0 (regardless of usage_allowed)
+		// // - For deductions: entitlements with prepaid balance go FIRST, overage mode goes LAST
+		// // - For refunds: overage mode goes FIRST (recover overage before prepaid)
+		// // Note: When both have prepaid balance, interval sorting (below) determines order
+		// const aBalance = a.balance ?? 0;
+		// const bBalance = b.balance ?? 0;
+		// const aInOverageMode = a.usage_allowed && aBalance <= 0;
+		// const bInOverageMode = b.usage_allowed && bBalance <= 0;
 
-		if (aInOverageMode !== bInOverageMode) {
-			if (aInOverageMode && !bInOverageMode) {
-				// a is in overage mode, b has prepaid balance
-				return isRefund ? -1 : 1;
-			}
-			if (!aInOverageMode && bInOverageMode) {
-				// a has prepaid balance, b is in overage mode
-				return isRefund ? 1 : -1;
-			}
-		}
+		// if (aInOverageMode !== bInOverageMode) {
+		// 	if (aInOverageMode && !bInOverageMode) {
+		// 		// a is in overage mode, b has prepaid balance
+		// 		return isRefund ? -1 : 1;
+		// 	}
+		// 	if (!aInOverageMode && bInOverageMode) {
+		// 		// a has prepaid balance, b is in overage mode
+		// 		return isRefund ? 1 : -1;
+		// 	}
+		// }
 
 		// If one has a next_reset_at, it should go first
 		const nextResetFirst = reverseOrder ? 1 : -1;

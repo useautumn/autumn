@@ -41,7 +41,7 @@ const cusEntsToBreakdown = ({
 	cusEnts,
 }: {
 	ctx: RequestContext;
-	cusEnts: (FullCusEntWithFullCusProduct)[];
+	cusEnts: FullCusEntWithFullCusProduct[];
 	fullCus: FullCustomer;
 }): {
 	key: string;
@@ -117,7 +117,7 @@ export const getApiBalance = ({
 }: {
 	ctx: RequestContext;
 	fullCus: FullCustomer;
-	cusEnts: (FullCusEntWithFullCusProduct)[];
+	cusEnts: FullCusEntWithFullCusProduct[];
 	feature: Feature;
 	includeRollovers?: boolean;
 	includeBreakdown?: boolean;
@@ -204,13 +204,13 @@ export const getApiBalance = ({
 	const reset = cusEntsToReset({ cusEnts, feature });
 	const rollovers = cusEntsToRollovers({ cusEnts, entityId });
 
-	const breakdownSet = includeBreakdown
+	const breakdown = includeBreakdown
 		? cusEntsToBreakdown({ ctx, fullCus, cusEnts })
-		: undefined;
+		: [];
 
 	const planId = cusEntsToPlanId({ cusEnts });
 
-	const masterKey = breakdownSet ? null : cusEntToKey({ cusEnt: cusEnts[0] });
+	const masterKey = breakdown ? null : cusEntToKey({ cusEnt: cusEnts[0] });
 
 	const { data: apiBalance, error } = ApiBalanceSchema.safeParse({
 		feature: expandIncludes({
@@ -243,7 +243,7 @@ export const getApiBalance = ({
 		reset: reset,
 
 		plan_id: planId,
-		breakdown: breakdownSet?.map((item) => item.breakdown),
+		breakdown: breakdown.map((item) => item.breakdown),
 		rollovers,
 	} satisfies ApiBalance);
 
@@ -251,7 +251,7 @@ export const getApiBalance = ({
 
 	// Return in latest format - version transformation happens at Customer level
 	const totalPrepaidQuantity = cusEntsToPrepaidQuantity({ cusEnts });
-	const breakdownLegacyData = breakdownSet?.map((item) => ({
+	const breakdownLegacyData = breakdown.map((item) => ({
 		key: item.key,
 		prepaid_quantity: item.prepaidQuantity,
 	}));

@@ -18,11 +18,11 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { getRelatedCusPrice } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { cusProductToSub } from "../internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
-import { handleProratedDowngrade } from "./arrearProratedUsage/handleProratedDowngrade.js";
-import { handleProratedUpgrade } from "./arrearProratedUsage/handleProratedUpgrade.js";
+import { handleProratedDowngrade } from "./createPaidAllocatedInvoice/handleProratedDowngrade.js";
+import { handleProratedUpgrade } from "./createPaidAllocatedInvoice/handleProratedUpgrade.js";
 
 export const getUsageFromBalance = ({
 	ent,

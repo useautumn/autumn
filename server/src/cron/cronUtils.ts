@@ -51,7 +51,7 @@ const checkSubAnchor = async ({
 	// 1. Get the customer product
 	const cusProduct = await CusProductService.getByIdForReset({
 		db,
-		id: cusEnt.customer_product_id,
+		id: cusEnt.customer_product_id ?? "",
 	});
 
 	// Get org and env

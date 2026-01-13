@@ -28,7 +28,7 @@ export const ApiBalanceBreakdownSchema = z.object({
 
 	// Extra fields
 	prepaid_quantity: z.number().default(0),
-	expires_at: z.number().nullable().optional(), // For loose entitlements with expiry
+	expires_at: z.number().nullable(), // For loose entitlements with expiry
 });
 
 export const ApiBalanceSchema = z.object({

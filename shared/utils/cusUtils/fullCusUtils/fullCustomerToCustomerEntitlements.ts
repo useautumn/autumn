@@ -79,8 +79,7 @@ export const fullCustomerToCustomerEntitlements = ({
 		cusEnts,
 		reverseOrder,
 		entityId: entity?.id,
-		isRefund,
-		// customerEntitlementFilters,
+		customerEntitlementFilters,
 	});
 
 	if (

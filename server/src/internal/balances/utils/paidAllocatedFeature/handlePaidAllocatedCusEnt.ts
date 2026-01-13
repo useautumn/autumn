@@ -3,11 +3,11 @@ import {
 	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
 } from "@autumn/shared";
-import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
-import { adjustAllowance } from "../../../../trigger/adjustAllowance";
-import { CusEntService } from "../../../customers/cusProducts/cusEnts/CusEntitlementService";
-import { getTotalNegativeBalance } from "../../../customers/cusProducts/cusEnts/cusEntUtils";
-import type { DeductionUpdate } from "../../utils/types/deductionUpdate.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { DeductionUpdate } from "@/internal/balances/utils/types/deductionUpdate.js";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
+import { getTotalNegativeBalance } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+import { adjustAllowance } from "./adjustAllowance.js";
 
 export const handlePaidAllocatedCusEnt = async ({
 	ctx,

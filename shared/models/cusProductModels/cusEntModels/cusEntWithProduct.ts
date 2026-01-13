@@ -4,7 +4,7 @@ import { FullCustomerEntitlementSchema } from "./cusEntModels.js";
 
 export const FullCusEntWithProductSchema = FullCustomerEntitlementSchema.extend(
 	{
-		customer_product: CusProductSchema,
+		customer_product: CusProductSchema.nullable(),
 	},
 );
 
