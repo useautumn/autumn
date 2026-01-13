@@ -1,6 +1,6 @@
 import type { ApiBalance, Feature, FullCustomer } from "@autumn/shared";
 import {
-	cusProductsToCusEnts,
+	fullCustomerToCustomerEntitlements,
 	findCustomerEntitlementById,
 	getRelevantFeatures,
 } from "@autumn/shared";
@@ -28,8 +28,8 @@ export const computeActualDeductions = ({
 }): Record<string, number> => {
 	const actualDeductions: Record<string, number> = {};
 
-	const customerEntitlements = cusProductsToCusEnts({
-		cusProducts: fullCus.customer_products,
+	const customerEntitlements = fullCustomerToCustomerEntitlements({
+		fullCustomer: fullCus,
 	});
 
 	for (const cusEntId of Object.keys(updates)) {
@@ -68,8 +68,8 @@ const findUnlimitedFeature = ({
 	});
 
 	for (const feature of relevantFeatures) {
-		const cusEnts = cusProductsToCusEnts({
-			cusProducts: fullCustomer.customer_products,
+		const cusEnts = fullCustomerToCustomerEntitlements({
+			fullCustomer,
 			featureIds: [feature.id],
 		});
 

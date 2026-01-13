@@ -19,7 +19,12 @@ const { db, client } = initDrizzle();
 
 export const cronTask = async () => {
 	try {
-		const cusEnts: ResetCusEnt[] = await CusEntService.getActiveResetPassed({
+		// const [productCusEnts, looseCusEnts] = await Promise.all([
+		// 	CusEntService.getActiveResetPassed({ db, batchSize: 500 }),
+		// 	CusEntService.getLooseResetPassed({ db, batchSize: 500 }),
+		// ]);
+		// const cusEnts: ResetCusEnt[] = [...productCusEnts, ...looseCusEnts];
+		const cusEnts = await CusEntService.getActiveResetPassed({
 			db,
 			batchSize: 500,
 		});

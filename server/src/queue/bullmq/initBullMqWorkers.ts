@@ -4,7 +4,7 @@ import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
-import { runSyncBalanceBatch } from "@/internal/balances/utils/sync/legacy/runSyncBalanceBatch.js";
+import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
 import { runSaveFeatureDisplayTask } from "@/internal/features/featureUtils.js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
 import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigrationTask.js";
@@ -94,8 +94,14 @@ const initWorker = ({ id, db }: { id: number; db: DrizzleCli }) => {
 					return;
 				}
 
-				if (job.name === JobName.SyncBalanceBatch) {
-					await runSyncBalanceBatch({
+				if (job.name === JobName.SyncBalanceBatchV3) {
+					if (!ctx) {
+						workerLogger.error(
+							"No context found for sync balance batch v3 job",
+						);
+						return;
+					}
+					await syncItemV3({
 						ctx,
 						payload: job.data,
 					});

@@ -60,3 +60,11 @@ export async function tryCatch<T, E = Error>(
 		return { data: null, error: error as E };
 	}
 }
+
+/** Sleep until a specific epoch timestamp (in milliseconds) */
+export function sleepUntil(epochMs: number): Promise<void> {
+	const now = Date.now();
+	const delay = epochMs - now;
+	if (delay <= 0) return Promise.resolve();
+	return new Promise((resolve) => setTimeout(resolve, delay));
+}

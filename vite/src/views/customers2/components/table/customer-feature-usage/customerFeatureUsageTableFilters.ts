@@ -1,18 +1,22 @@
 import {
 	CusProductStatus,
-	type FullCusEntWithFullCusProduct,
+	type FullCusEntWithOptionalProduct,
 } from "@autumn/shared";
 
 export function filterCustomerFeatureUsage({
 	entitlements,
 	showExpired,
 }: {
-	entitlements: FullCusEntWithFullCusProduct[];
+	entitlements: FullCusEntWithOptionalProduct[];
 	showExpired: boolean;
-}): FullCusEntWithFullCusProduct[] {
+}): FullCusEntWithOptionalProduct[] {
 	return entitlements
-		.filter((ent: FullCusEntWithFullCusProduct) => {
+		.filter((ent: FullCusEntWithOptionalProduct) => {
 			if (showExpired) {
+				return true;
+			}
+			// Extra entitlements (no customer_product) are always shown
+			if (!ent.customer_product) {
 				return true;
 			}
 			// Exclude expired and scheduled products from balance calculations
@@ -22,11 +26,14 @@ export function filterCustomerFeatureUsage({
 			);
 		})
 		.sort(
-			(a: FullCusEntWithFullCusProduct, b: FullCusEntWithFullCusProduct) => {
-				// Sort by status first (Active items first)
-				if (a.customer_product.status !== b.customer_product.status) {
-					if (a.customer_product.status === CusProductStatus.Active) return -1;
-					if (b.customer_product.status === CusProductStatus.Active) return 1;
+			(a: FullCusEntWithOptionalProduct, b: FullCusEntWithOptionalProduct) => {
+				const aStatus = a.customer_product?.status;
+				const bStatus = b.customer_product?.status;
+
+				// Sort by status first (Active items first, null treated as active)
+				if (aStatus !== bStatus) {
+					if (!aStatus || aStatus === CusProductStatus.Active) return -1;
+					if (!bStatus || bStatus === CusProductStatus.Active) return 1;
 					return 0;
 				}
 

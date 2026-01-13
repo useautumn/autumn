@@ -1,7 +1,7 @@
 import {
 	type FullCustomer,
-	filterEntityLevelCusProducts,
-	filterOutEntitiesFromCusProducts,
+	filterEntityLevelCustomerEntitlementsFromFullCustomer,
+	filterOutEntitiesFromFullCustomer,
 } from "@autumn/shared";
 import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -47,9 +47,11 @@ export const setCachedGrantedBalance = async ({
 	// ============================================================================
 	// 1. Build customer-level balances payload (customer-level products only)
 	// ============================================================================
-	const customerLevelCusProducts = filterOutEntitiesFromCusProducts({
-		cusProducts: fullCus.customer_products,
+	const filteredFullCus = filterOutEntitiesFromFullCustomer({
+		fullCus,
 	});
+
+	const customerLevelCusProducts = filteredFullCus.customer_products;
 
 	const { data: customerBalances } = await getApiBalances({
 		ctx,
@@ -73,9 +75,9 @@ export const setCachedGrantedBalance = async ({
 	// ============================================================================
 	// 2. Build entity balances batch (entity-level products only)
 	// ============================================================================
-	const entityLevelCusProducts = filterEntityLevelCusProducts({
-		cusProducts: fullCus.customer_products,
-	});
+	const entityLevelCusProducts = filterEntityLevelCustomerEntitlementsFromFullCustomer({
+		fullCustomer: fullCus,
+	}).customer_products;
 
 	const entityBatch: EntityBatchItem[] = [];
 

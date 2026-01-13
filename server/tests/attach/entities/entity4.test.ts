@@ -87,6 +87,9 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing attach pro diff enti
 			entityId: entity2.id,
 			numSubs: 2,
 		});
+
+		// wait for webhooks to clear cache
+		await timeout(4000);
 	});
 
 	const entity1Usage = Math.random() * 1000000;

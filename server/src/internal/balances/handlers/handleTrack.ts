@@ -1,10 +1,10 @@
 import { TrackParamsSchema, TrackQuerySchema } from "@autumn/shared";
-import { createRoute } from "../../../honoMiddlewares/routeHandler.js";
-import { runTrackV2 } from "../track/runTrackV2.js";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { runTrackV2 } from "@/internal/balances/track/runTrackV2.js";
 import {
 	getTrackEventNameDeductions,
 	getTrackFeatureDeductions,
-} from "../track/trackUtils/getFeatureDeductions.js";
+} from "@/internal/balances/track/utils/getFeatureDeductions.js";
 
 export const handleTrack = createRoute({
 	query: TrackQuerySchema,

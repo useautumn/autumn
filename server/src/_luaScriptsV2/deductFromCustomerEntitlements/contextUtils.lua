@@ -42,9 +42,20 @@ local function init_context(params)
     local cus_ent, cus_product, ce_idx, cp_idx = find_entitlement(params.full_customer, ent_id)
     
     if cus_ent then
-      local cp_idx_0 = cp_idx - 1
-      local ce_idx_0 = ce_idx - 1
-      local base_path = '$.customer_products[' .. cp_idx_0 .. '].customer_entitlements[' .. ce_idx_0 .. ']'
+      local base_path
+      local is_loose = (cp_idx == nil)  -- Loose entitlement if no customer_product index
+      
+      if is_loose then
+        -- Loose entitlement: path is $.extra_customer_entitlements[idx]
+        local ece_idx_0 = ce_idx - 1
+        base_path = '$.extra_customer_entitlements[' .. ece_idx_0 .. ']'
+      else
+        -- Product entitlement: path is $.customer_products[cp_idx].customer_entitlements[ce_idx]
+        local cp_idx_0 = cp_idx - 1
+        local ce_idx_0 = ce_idx - 1
+        base_path = '$.customer_products[' .. cp_idx_0 .. '].customer_entitlements[' .. ce_idx_0 .. ']'
+      end
+      
       local has_entity_scope = ent_obj.entity_feature_id ~= nil and ent_obj.entity_feature_id ~= cjson.null
       
       local ent_data = {
@@ -52,6 +63,7 @@ local function init_context(params)
         has_entity_scope = has_entity_scope,
         adjustment = cus_ent.adjustment or 0,
         unlimited = cus_ent.unlimited,
+        is_loose = is_loose,
       }
       
       if has_entity_scope then
