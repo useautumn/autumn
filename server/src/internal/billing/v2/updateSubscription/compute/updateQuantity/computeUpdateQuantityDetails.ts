@@ -105,6 +105,7 @@ export const computeUpdateQuantityDetails = ({
 
 	const lineItems = computeUpdateQuantityLineItems({
 		ctx,
+		billingContext: updateSubscriptionContext,
 		customerProduct,
 		feature,
 		billingPeriod,

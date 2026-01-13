@@ -31,7 +31,17 @@ export const setupTrialContext = ({
 
 	// Case 1: If free trial is null (removing free trial)
 	if (freeTrialParams === null) {
-		return { freeTrial: null, trialEndsAt: null };
+		// If currently trialing, then return this object, if not don't return anything
+
+		if (
+			isStripeSubscriptionTrialing(stripeSubscription) ||
+			isCustomerProductTrialing(customerProduct, { nowMs: currentEpochMs })
+		) {
+			return { freeTrial: null, trialEndsAt: null };
+		} else {
+			return undefined;
+		}
+		// return { freeTrial: null, trialEndsAt: null };
 	}
 
 	// Case 2: If free trial params are passed in

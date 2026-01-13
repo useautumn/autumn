@@ -1,29 +1,27 @@
-import type { CheckoutResponseV0, ProductV2 } from "@autumn/shared";
+import type {
+	PreviewUpdateSubscriptionResponse,
+	ProductV2,
+} from "@autumn/shared";
 import type { ReactNode } from "react";
 import { useMemo } from "react";
-import {
-	useHasBillingChanges,
-	useHasChanges,
-	usePrepaidItems,
-} from "@/hooks/stores/useProductStore";
-import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
+import { useHasChanges, usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
-import type { UseAttachProductForm } from "./use-attach-product-form";
+import type { UseUpdateSubscriptionForm } from "./use-update-subscription-form";
 
 export const UpdateConfirmationInfo = ({
 	previewData,
 	product,
 	form,
 }: {
-	previewData?: CheckoutResponseV0 | null;
+	previewData?: PreviewUpdateSubscriptionResponse | null;
 	product?: ProductV2;
-	form: UseAttachProductForm;
+	form: UseUpdateSubscriptionForm;
 }) => {
 	const hasChanges = useHasChanges();
-	const hasBillingChanges = useHasBillingChanges({
-		baseProduct: previewData?.current_product,
-		newProduct: previewData?.product,
-	});
+	// const hasBillingChanges = useHasBillingChanges({
+	// 	baseProduct: previewData?.current_product,
+	// 	newProduct: previewData?.product,
+	// });
 
 	const hasPrepaidQuantityChanges = useHasPrepaidQuantityChanges(product, form);
 
@@ -44,14 +42,14 @@ export const UpdateConfirmationInfo = ({
 		}
 
 		// Version change notice
-		if (previewData.current_product?.version !== previewData.product.version) {
-			boxes.push(
-				<InfoBox key="version-change" variant="info">
-					You're switching from v{previewData.current_product?.version} to v
-					{previewData.product.version} of this plan
-				</InfoBox>,
-			);
-		}
+		// if (previewData.current_product?.version !== previewData.product.version) {
+		// 	boxes.push(
+		// 		<InfoBox key="version-change" variant="info">
+		// 			You're switching from v{previewData.current_product?.version} to v
+		// 			{previewData.product.version} of this plan
+		// 		</InfoBox>,
+		// 	);
+		// }
 
 		// Prepaid quantity changes notice
 		if (hasPrepaidQuantityChanges) {
@@ -63,32 +61,32 @@ export const UpdateConfirmationInfo = ({
 		}
 
 		// No billing changes notice
-		if (!hasBillingChanges && !hasPrepaidQuantityChanges) {
-			boxes.push(
-				<InfoBox key="no-billing-changes" variant="success">
-					No changes to billing will be made
-				</InfoBox>,
-			);
-		}
+		// if (!hasBillingChanges && !hasPrepaidQuantityChanges) {
+		// 	boxes.push(
+		// 		<InfoBox key="no-billing-changes" variant="success">
+		// 			No changes to billing will be made
+		// 		</InfoBox>,
+		// 	);
+		// }
 
 		// Free trial updated
-		if (previewData.product.free_trial) {
-			const trialEndDate = previewData.next_cycle?.starts_at
-				? formatUnixToDate(previewData.next_cycle.starts_at)
-				: null;
+		// if (previewData.product.free_trial) {
+		// 	const trialEndDate = previewData.next_cycle?.starts_at
+		// 		? formatUnixToDate(previewData.next_cycle.starts_at)
+		// 		: null;
 
-			boxes.push(
-				<InfoBox key="free-trial-updated" variant="info">
-					Free trial updated
-					{trialEndDate && (
-						<>
-							{" "}
-							- trial ends <span className="font-semibold">{trialEndDate}</span>
-						</>
-					)}
-				</InfoBox>,
-			);
-		}
+		// 	boxes.push(
+		// 		<InfoBox key="free-trial-updated" variant="info">
+		// 			Free trial updated
+		// 			{trialEndDate && (
+		// 				<>
+		// 					{" "}
+		// 					- trial ends <span className="font-semibold">{trialEndDate}</span>
+		// 				</>
+		// 			)}
+		// 		</InfoBox>,
+		// 	);
+		// }
 
 		return boxes;
 	};
@@ -110,7 +108,7 @@ export const UpdateConfirmationInfo = ({
 
 const useHasPrepaidQuantityChanges = (
 	product: ProductV2 | undefined,
-	form: UseAttachProductForm,
+	form: UseUpdateSubscriptionForm,
 ) => {
 	const { prepaidItems } = usePrepaidItems({ product });
 	const currentPrepaidOptions = form.state.values.prepaidOptions;

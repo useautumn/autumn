@@ -1,5 +1,6 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/actionBuilders/buildStripeSubscriptionScheduleAction";
+import { shouldCreateManualStripeInvoice } from "@/internal/billing/v2/providers/stripe/utils/invoices/shouldCreateManualStripeInvoice";
 import { autumnBillingPlanToFinalFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer";
 import type { BillingContext } from "../../../billingContext";
 import { buildStripeInvoiceAction } from "../../../providers/stripe/actionBuilders/buildStripeInvoiceAction";
@@ -41,12 +42,14 @@ export const evaluateStripeBillingPlan = async ({
 
 	const { lineItems } = autumnBillingPlan;
 
-	const subscriptionActionIsCreate =
-		stripeSubscriptionAction?.type === "create";
+	const createManualInvoice = shouldCreateManualStripeInvoice({
+		billingContext,
+		stripeSubscriptionAction,
+	});
 
 	let stripeInvoiceAction: StripeInvoiceAction | undefined;
 	let stripeInvoiceItemsAction: StripeInvoiceItemsAction | undefined;
-	if (!subscriptionActionIsCreate) {
+	if (createManualInvoice) {
 		stripeInvoiceAction = buildStripeInvoiceAction({
 			lineItems,
 		});
@@ -63,7 +66,7 @@ export const evaluateStripeBillingPlan = async ({
 			ctx,
 			billingContext,
 			finalCustomerProducts: finalFullCustomer.customer_products,
-			trialEndsAt: billingContext.trialContext?.trialEndsAt,
+			trialEndsAt: billingContext.trialContext?.trialEndsAt ?? undefined,
 		});
 
 	return {

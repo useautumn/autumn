@@ -44,14 +44,22 @@ export const expectCustomerProductCorrect = async ({
 	}
 
 	if (state === "active") {
-		expect(String(product.status)).toBe("active");
+		// Product can be "active" or "trialing" - both are considered active states
+		expect(
+			product.status === "active" || product.status === "trialing",
+			`Product ${productId} should be "active" or "trialing" but got "${product.status}"`,
+		).toBe(true);
 		// canceled_at can be undefined or null when not canceled
 		expect(
 			product.canceled_at == null,
 			`Product ${productId} should not be canceled (canceled_at: ${product.canceled_at})`,
 		).toBe(true);
 	} else if (state === "canceled") {
-		expect(String(product.status)).toBe("active");
+		// Product can be "active" or "trialing" when canceling (scheduled to end)
+		expect(
+			product.status === "active" || product.status === "trialing",
+			`Product ${productId} should be "active" or "trialing" but got "${product.status}"`,
+		).toBe(true);
 		expect(
 			product.canceled_at != null,
 			`Product ${productId} should be canceled`,

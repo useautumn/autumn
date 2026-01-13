@@ -191,6 +191,29 @@ const { customerId, autumnV1, advancedTo } = await initScenario({
 
 ---
 
+## Test Clocks
+
+**Critical:** `Date.now()` does NOT change when using `s.advanceTestClock`. Always use `advancedTo` from `initScenario`.
+
+```typescript
+const { advancedTo } = await initScenario({
+  actions: [
+    s.attach({ productId: pro.id }),
+    s.advanceTestClock({ days: 3 }),
+  ],
+});
+
+// ❌ WRONG - Date.now() is still real time
+expect(trialEndsAt).toBeCloseTo(Date.now() + ms.days(4));
+
+// ✅ CORRECT - Use advancedTo (Stripe test clock's current time)
+expect(trialEndsAt).toBeCloseTo(advancedTo + ms.days(4));
+```
+
+`advancedTo` is the Unix timestamp (ms) of the Stripe test clock after all `s.advanceTestClock` actions complete.
+
+---
+
 ## Product ID in `s.attach()`
 
 **Important:** Always use the product variable's `.id` property in `s.attach()`, never a string literal.

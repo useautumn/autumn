@@ -41,6 +41,7 @@ test.concurrent(`${chalk.yellowBright("version-billing: add prepaid users")}`, a
 		customer_id: customerId,
 		product_id: pro.id,
 		version: 2,
+		options: [{ feature_id: TestFeature.Users, quantity: 0 }],
 	};
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
@@ -183,7 +184,11 @@ test.concurrent(`${chalk.yellowBright("version-billing: metered to prepaid")}`, 
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro] }),
 		],
-		actions: [s.attach({ productId: "pro" })],
+		actions: [
+			s.attach({
+				productId: "pro",
+			}),
+		],
 	});
 
 	// Verify messages is metered (limited) before update
@@ -191,7 +196,7 @@ test.concurrent(`${chalk.yellowBright("version-billing: metered to prepaid")}`, 
 	expect(customerBefore.features[TestFeature.Messages]).toBeDefined();
 
 	// Create v2 with prepaid messages instead of metered
-	const prepaidMessagesItem = items.prepaidMessages({ includedUsage: 50 });
+	const prepaidMessagesItem = items.prepaidMessages({ includedUsage: 0 });
 	await autumnV1.products.update(pro.id, {
 		items: [prepaidMessagesItem, priceItem],
 	});
@@ -200,6 +205,7 @@ test.concurrent(`${chalk.yellowBright("version-billing: metered to prepaid")}`, 
 		customer_id: customerId,
 		product_id: pro.id,
 		version: 2,
+		options: [{ feature_id: TestFeature.Messages, quantity: 300 }],
 	};
 
 	await autumnV1.subscriptions.update(updateParams);
@@ -207,11 +213,12 @@ test.concurrent(`${chalk.yellowBright("version-billing: metered to prepaid")}`, 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Messages should now have prepaid model with 50 included
+	// Options are ignored when version is passed in
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
-		includedUsage: 50,
-		balance: 50,
+		includedUsage: 300,
+		balance: 300,
 		usage: 0,
 	});
 
@@ -252,6 +259,7 @@ test.concurrent(`${chalk.yellowBright("version-billing: mixed billing models")}`
 		customer_id: customerId,
 		product_id: pro.id,
 		version: 2,
+		options: [{ feature_id: TestFeature.Users, quantity: 0 }],
 	};
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);

@@ -1,13 +1,12 @@
 import {
-	cp,
 	cusProductToLineItems,
 	type FullCusProduct,
-	filterUnchangedPricesFromLineItems,
 	type LineItem,
+	secondsToMs,
 } from "@autumn/shared";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
-import { billingContextHasTrial } from "@/internal/billing/v2/utils/billingContext/billingContextHasTrial";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
+import { logBuildAutumnLineItems } from "./logBuildAutumnLineItems";
 
 export const buildAutumnLineItems = ({
 	ctx,
@@ -21,7 +20,8 @@ export const buildAutumnLineItems = ({
 	billingContext: BillingContext;
 }) => {
 	// billingCycleAnchor = billingCycleAnchor ?? now;
-	const { billingCycleAnchorMs, currentEpochMs } = billingContext;
+	const { billingCycleAnchorMs, currentEpochMs, stripeSubscription } =
+		billingContext;
 
 	const { org, logger } = ctx;
 
@@ -35,17 +35,14 @@ export const buildAutumnLineItems = ({
 	// })
 
 	// Get line items for ongoing cus product
-	const { valid: isTrialing } = cp(deletedCustomerProduct).trialing({
-		nowMs: currentEpochMs,
-	});
-
-	const shouldRefundLineItems = deletedCustomerProduct && !isTrialing;
-
-	const deletedLineItems = shouldRefundLineItems
+	const originalBillingCycleAnchorMs = stripeSubscription?.billing_cycle_anchor
+		? secondsToMs(stripeSubscription.billing_cycle_anchor)
+		: "now";
+	const deletedLineItems = deletedCustomerProduct
 		? cusProductToLineItems({
 				cusProduct: deletedCustomerProduct,
 				nowMs: currentEpochMs,
-				billingCycleAnchorMs,
+				billingCycleAnchorMs: originalBillingCycleAnchorMs,
 				direction: "refund",
 				org,
 				logger,
@@ -63,38 +60,15 @@ export const buildAutumnLineItems = ({
 		}),
 	);
 
-	const {
-		deletedLineItems: filteredDeletedLineItems,
-		newLineItems: filteredNewLineItems,
-	} = filterUnchangedPricesFromLineItems({
+	// Combine all line items - trial filtering and unchanged price filtering
+	// will be handled in finalizeUpdateSubscriptionPlan
+	const allLineItems = [...deletedLineItems, ...newLineItems];
+
+	logBuildAutumnLineItems({
+		logger,
 		deletedLineItems,
 		newLineItems,
 	});
-
-	// All items
-	let allLineItems = [
-		...filteredDeletedLineItems,
-		...arrearLineItems,
-		...filteredNewLineItems,
-	];
-
-	// If trialing, don't apply free trial?
-	if (billingContextHasTrial({ billingContext })) {
-		allLineItems = [
-			...filteredDeletedLineItems,
-			...arrearLineItems,
-			...filteredNewLineItems,
-		].map((item) => ({ ...item, amount: 0, finalAmount: 0 }));
-	}
-
-	console.log(
-		"All line items: ",
-		allLineItems.map((item) => ({
-			description: item.description,
-			amount: item.amount,
-			finalAmount: item.finalAmount,
-		})),
-	);
 
 	return allLineItems;
 };
