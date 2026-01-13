@@ -44,8 +44,19 @@ export function MainLayout() {
 	}, [handleApiError]);
 
 	useEffect(() => {
-		// Only redirect if org is loaded and user is not onboarded
+		// Only redirect if org is loaded
 		if (!orgLoading && org) {
+			// Redirect to quickstart if not onboarded
+			if (!org.onboarded) {
+				const pathname = window.location.pathname;
+				// Don't redirect if already on quickstart
+				if (!pathname.includes("/quickstart")) {
+					navigate("/sandbox/quickstart");
+					return;
+				}
+			}
+
+			// Redirect to sandbox if not deployed
 			if (!org.deployed) {
 				const pathname = window.location.pathname;
 				if (!pathname.startsWith("/sandbox")) {

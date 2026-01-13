@@ -3,13 +3,12 @@ import {
 	DefaultChatTransport,
 	lastAssistantMessageIsCompleteWithToolCalls,
 } from "ai";
-import { ArrowLeft, ImageIcon, MessageSquareText } from "lucide-react";
+import { ImageIcon } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useRef, useState } from "react";
-import { useNavigate } from "react-router";
 import {
 	Conversation,
 	ConversationContent,
-	ConversationEmptyState,
 } from "@/components/ai-elements/conversation";
 import {
 	Message,
@@ -31,7 +30,12 @@ import {
 } from "@/components/ai-elements/prompt-input";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Button } from "@/components/v2/buttons/Button";
-import { pushPage } from "@/utils/genUtils";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { OrgDropdown } from "@/views/main-sidebar/components/OrgDropdown";
+import { SidebarContext } from "@/views/main-sidebar/SidebarContext";
+import { CopyPlansButton } from "./CopyPlansButton";
+import { TemplatePrompts } from "./components/TemplatePrompts";
+import { WelcomeHeader } from "./components/WelcomeHeader";
 import { PricingConfigSheet } from "./PricingConfigSheet";
 import { PricingPreview } from "./PricingPreview";
 import type { AgentPricingConfig } from "./pricingAgentUtils";
@@ -51,6 +55,22 @@ function ImageUploadButton({ disabled }: { disabled?: boolean }) {
 		>
 			<ImageIcon className="size-4" />
 		</PromptInputButton>
+	);
+}
+
+function AttachmentsHeader() {
+	const attachments = usePromptInputAttachments();
+
+	if (!attachments.files.length) {
+		return null;
+	}
+
+	return (
+		<PromptInputHeader>
+			<PromptInputAttachments className="p-0 pt-2">
+				{(attachment) => <PromptInputAttachment data={attachment} />}
+			</PromptInputAttachments>
+		</PromptInputHeader>
 	);
 }
 
@@ -76,8 +96,8 @@ interface PreviewOrg {
 }
 
 export function AIChatView({ onBack }: AIChatViewProps) {
-	const navigate = useNavigate();
 	const [input, setInput] = useState("");
+	const [hasStartedChat, setHasStartedChat] = useState(false);
 	const [pricingConfig, setPricingConfig] = useState<AgentPricingConfig | null>(
 		null,
 	);
@@ -86,6 +106,7 @@ export function AIChatView({ onBack }: AIChatViewProps) {
 	const [previewOrg, setPreviewOrg] = useState<PreviewOrg | null>(null);
 	const [isPreviewSyncing, setIsPreviewSyncing] = useState(false);
 	const previewSetupRef = useRef<Promise<PreviewOrg | null> | null>(null);
+	const axiosInstance = useAxiosInstance();
 
 	/** Setup the preview org (called once, memoized) */
 	const setupPreviewOrg = useCallback(async (): Promise<PreviewOrg | null> => {
@@ -156,37 +177,22 @@ export function AIChatView({ onBack }: AIChatViewProps) {
 				console.log("[Preview] Features:", config.features.length);
 				console.log("[Preview] Products:", config.products.length);
 
-				const response = await fetch(
-					`${import.meta.env.VITE_BACKEND_URL}/pricing-agent/preview/sync`,
+				const response = await axiosInstance.post(
+					"/pricing-agent/preview/sync",
 					{
-						method: "POST",
-						credentials: "include",
-						headers: {
-							"x-client-type": "dashboard",
-							"Content-Type": "application/json",
-						},
-						body: JSON.stringify({
-							features: config.features,
-							products: config.products,
-						}),
+						features: config.features,
+						products: config.products,
 					},
 				);
 
-				if (!response.ok) {
-					const error = await response.json();
-					console.error("[Preview] Sync failed:", error);
-					return;
-				}
-
-				const result = await response.json();
-				console.log("[Preview] Sync complete:", result);
+				console.log("[Preview] Sync complete:", response.data);
 			} catch (error) {
 				console.error("[Preview] Sync error:", error);
 			} finally {
 				setIsPreviewSyncing(false);
 			}
 		},
-		[previewOrg, setupPreviewOrg],
+		[axiosInstance, previewOrg, setupPreviewOrg],
 	);
 
 	const { messages, sendMessage, status, addToolOutput } = useChat({
@@ -231,10 +237,6 @@ export function AIChatView({ onBack }: AIChatViewProps) {
 		},
 	});
 
-	const handleCopyPlans = () => {
-		pushPage({ path: "/products", navigate });
-	};
-
 	const handleSubmit = (message: PromptInputMessage) => {
 		if (
 			(!message.text.trim() && message.files.length === 0) ||
@@ -242,6 +244,7 @@ export function AIChatView({ onBack }: AIChatViewProps) {
 		)
 			return;
 
+		setHasStartedChat(true);
 		sendMessage({
 			text: message.text,
 			files: message.files,
@@ -249,178 +252,277 @@ export function AIChatView({ onBack }: AIChatViewProps) {
 		setInput("");
 	};
 
+	const handleSelectTemplate = ({ prompt }: { prompt: string }) => {
+		setInput(prompt);
+	};
+
 	const isLoading = status === "streaming" || status === "submitted";
 
+	const handleStartNewChat = () => {
+		setHasStartedChat(false);
+		setInput("");
+		setPricingConfig(null);
+	};
+
 	return (
-		<div className="w-full h-full flex flex-col bg-background">
-			{/* Header */}
-			<div className="flex items-center gap-3 px-6 py-4 border-b">
-				<button
-					type="button"
-					onClick={onBack}
-					className="p-1.5 rounded-lg hover:bg-interactive-secondary transition-colors"
-				>
-					<ArrowLeft className="size-5 text-t2" />
-				</button>
-				<h1 className="text-lg font-medium text-foreground">
-					Describe your pricing
-				</h1>
-			</div>
-
-			{/* Main content - split view */}
-			<div className="flex-1 flex min-h-0">
-				{/* Left: Chat */}
-				<div className="w-1/2 flex flex-col border-r">
-					<Conversation className="flex-1">
-						<ConversationContent className="px-6">
-							{messages.length === 0 && !isLoading ? (
-								<ConversationEmptyState
-									icon={<MessageSquareText className="size-8" />}
-									title="Tell me about your pricing"
-									description="Describe your ideal pricing model and I'll help you build it. For example: 'I want a freemium model with usage-based pricing for API calls.'"
+		<SidebarContext.Provider value={{ expanded: true, setExpanded: () => {} }}>
+			<div className="w-full h-full flex flex-col bg-background">
+				{/* Main content */}
+				<div className="flex-1 flex min-h-0 relative">
+					<AnimatePresence mode="wait">
+						{!hasStartedChat ? (
+							/* Welcome State - Centered */
+							<motion.div
+								key="welcome"
+								initial={{ opacity: 1 }}
+								exit={{ opacity: 0 }}
+								transition={{ duration: 0.3 }}
+								className="absolute inset-0 flex flex-col items-center justify-center px-6"
+							>
+								{/* Background leaf with gradient fade */}
+								<motion.div
+									initial={{ opacity: 0 }}
+									animate={{ opacity: 0.45 }}
+									transition={{ duration: 1, ease: "easeOut" }}
+									className="absolute inset-0 pointer-events-none overflow-hidden"
+									style={{
+										backgroundImage: "url(/autumn-leaf.png)",
+										backgroundRepeat: "no-repeat",
+										backgroundPosition: "85% 60%",
+										backgroundSize: "30%",
+										maskImage:
+											"radial-gradient(ellipse 70% 80% at 85% 60%, black 0%, transparent 70%)",
+										WebkitMaskImage:
+											"radial-gradient(ellipse 70% 80% at 85% 60%, black 0%, transparent 70%)",
+									}}
 								/>
-							) : (
-								<>
-									{messages.map((message) => (
-										<Message key={message.id} from={message.role}>
-											<MessageContent>
-												{message.parts.map((part, partIndex) => {
-													switch (part.type) {
-														case "text":
-															return (
-																<MessageResponse key={partIndex}>
-																	{part.text}
-																</MessageResponse>
-															);
 
-														case "file": {
-															const isImage =
-																part.mediaType?.startsWith("image/");
-															if (!isImage || !part.url) return null;
-															return (
-																<div
-																	key={partIndex}
-																	className="flex items-center gap-1.5 rounded-md border border-border px-1.5 py-1 w-fit"
-																>
-																	<img
-																		src={part.url}
-																		alt={part.filename || "Attached image"}
-																		className="w-90 rounded object-cover"
-																	/>
-																</div>
-															);
-														}
+								{/* Org dropdown in top left */}
+								<div className="absolute top-4 left-4">
+									<OrgDropdown />
+								</div>
 
-														case "tool-build_pricing": {
-															const toolPart = part as BuildPricingToolPart;
-															return (
-																<div
-																	key={toolPart.toolCallId}
-																	className="flex items-center gap-3 text-sm"
-																>
-																	{toolPart.state === "input-streaming" ||
-																	toolPart.state === "input-available" ? (
-																		<Shimmer className="text-sm">
-																			Building pricing configuration
-																		</Shimmer>
-																	) : toolPart.state === "output-error" ? (
-																		<span className="text-t4">
-																			Error generating pricing
-																		</span>
-																	) : (
-																		<>
-																			<span className="text-t4 font-normal">
-																				Generated{" "}
-																				{toolPart.input?.products.length ?? 0}{" "}
-																				product(s) and{" "}
-																				{toolPart.input?.features.length ?? 0}{" "}
-																				feature(s)
-																			</span>
-																			<Button
-																				variant="secondary"
-																				size="sm"
-																				onClick={() =>
-																					setJsonSheetConfig(
-																						toolPart.input ?? null,
-																					)
-																				}
-																				className="text-t3 text-xs"
-																			>
-																				View JSON
-																			</Button>
-																		</>
-																	)}
-																</div>
-															);
-														}
+								<WelcomeHeader />
 
-														default:
-															return null;
-													}
-												})}
-											</MessageContent>
-										</Message>
-									))}
-									{isLoading &&
-										messages.length > 0 &&
-										messages[messages.length - 1]?.role === "user" && (
-											<div className="flex items-center gap-2 text-t3 text-sm">
-												<Shimmer>Planning next steps</Shimmer>
-											</div>
-										)}
-								</>
-							)}
-						</ConversationContent>
-					</Conversation>
+								<div className="w-full max-w-2xl">
+									<PromptInput
+										onSubmit={handleSubmit}
+										accept="image/*"
+										multiple
+									>
+										<AttachmentsHeader />
+										<PromptInputBody>
+											<PromptInputTextarea
+												value={input}
+												onChange={(e) => setInput(e.target.value)}
+												placeholder="Build me a Free and a Pro plan with... (or, paste a screenshot)"
+												disabled={isLoading}
+											/>
+										</PromptInputBody>
+										<PromptInputFooter className="justify-between">
+											<ImageUploadButton disabled={isLoading} />
+											<PromptInputSubmit disabled={isLoading} />
+										</PromptInputFooter>
+									</PromptInput>
+								</div>
 
-					<div className="px-6 pb-6 pt-2 border-t">
-						<PromptInput onSubmit={handleSubmit} accept="image/*" multiple>
-							<PromptInputHeader>
-								<PromptInputAttachments>
-									{(attachment) => <PromptInputAttachment data={attachment} />}
-								</PromptInputAttachments>
-							</PromptInputHeader>
-							<PromptInputBody>
-								<PromptInputTextarea
-									value={input}
-									onChange={(e) => setInput(e.target.value)}
-									placeholder="Describe your pricing model..."
-									disabled={isLoading}
-								/>
-							</PromptInputBody>
-							<PromptInputFooter className="justify-between">
-								<ImageUploadButton disabled={isLoading} />
-								<PromptInputSubmit disabled={isLoading} />
-							</PromptInputFooter>
-						</PromptInput>
-					</div>
+								<motion.div
+									initial={{ opacity: 0, y: 20 }}
+									animate={{ opacity: 1, y: 0 }}
+									transition={{ duration: 0.4, ease: "easeOut", delay: 0.1 }}
+									className="flex flex-col items-center mt-6"
+								>
+									<TemplatePrompts onSelectTemplate={handleSelectTemplate} />
+									<Button
+										variant="skeleton"
+										type="button"
+										onClick={onBack}
+										className="mt-3 text-sm text-t4 hover:text-t3 transition-colors"
+									>
+										or skip to dashboard
+									</Button>
+								</motion.div>
+							</motion.div>
+						) : (
+							/* Chat State - Split View */
+							<motion.div
+								key="chat"
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
+								transition={{ duration: 0.3, delay: 0.2 }}
+								className="flex w-full h-full relative"
+							>
+								{/* Org dropdown in top left */}
+								<div className="absolute top-4 left-4 z-10">
+									<OrgDropdown />
+								</div>
+
+								{/* Left: Chat */}
+								<motion.div
+									initial={{ x: -50, opacity: 0 }}
+									animate={{ x: 0, opacity: 1 }}
+									transition={{ duration: 0.4, delay: 0.3 }}
+									className="w-1/3 flex flex-col pt-14"
+								>
+									<Conversation className="flex-1">
+										<ConversationContent className="px-6">
+											{messages.map((message) => (
+												<Message key={message.id} from={message.role}>
+													<MessageContent>
+														{message.parts.map((part, partIndex) => {
+															switch (part.type) {
+																case "text":
+																	return (
+																		<MessageResponse key={partIndex}>
+																			{part.text}
+																		</MessageResponse>
+																	);
+
+																case "file": {
+																	const isImage =
+																		part.mediaType?.startsWith("image/");
+																	if (!isImage || !part.url) return null;
+																	return (
+																		<div
+																			key={partIndex}
+																			className="flex items-center gap-1.5 rounded-md border border-border px-1.5 py-1 w-fit"
+																		>
+																			<img
+																				src={part.url}
+																				alt={part.filename || "Attached image"}
+																				className="w-90 rounded object-cover"
+																			/>
+																		</div>
+																	);
+																}
+
+																case "tool-build_pricing": {
+																	const toolPart = part as BuildPricingToolPart;
+																	return (
+																		<div
+																			key={toolPart.toolCallId}
+																			className="flex items-center gap-3 text-sm"
+																		>
+																			{toolPart.state === "input-streaming" ||
+																			toolPart.state === "input-available" ? (
+																				<Shimmer className="text-sm">
+																					Building pricing configuration
+																				</Shimmer>
+																			) : toolPart.state === "output-error" ? (
+																				<span className="text-t4">
+																					Error generating pricing
+																				</span>
+																			) : (
+																				<>
+																					<span className="text-t4 font-normal">
+																						Generated{" "}
+																						{toolPart.input?.products.length ??
+																							0}{" "}
+																						product(s) and{" "}
+																						{toolPart.input?.features.length ??
+																							0}{" "}
+																						feature(s)
+																					</span>
+																					<Button
+																						variant="secondary"
+																						size="sm"
+																						onClick={() =>
+																							setJsonSheetConfig(
+																								toolPart.input ?? null,
+																							)
+																						}
+																						className="text-t3 text-xs"
+																					>
+																						View JSON
+																					</Button>
+																				</>
+																			)}
+																		</div>
+																	);
+																}
+
+																default:
+																	return null;
+															}
+														})}
+													</MessageContent>
+												</Message>
+											))}
+											{isLoading &&
+												messages.length > 0 &&
+												messages[messages.length - 1]?.role === "user" && (
+													<div className="flex items-center gap-2 text-t3 text-sm">
+														<Shimmer>Planning next steps</Shimmer>
+													</div>
+												)}
+										</ConversationContent>
+									</Conversation>
+
+									<div className="px-6 pb-6 pt-2">
+										<PromptInput
+											onSubmit={handleSubmit}
+											accept="image/*"
+											multiple
+										>
+											<AttachmentsHeader />
+											<PromptInputBody>
+												<PromptInputTextarea
+													value={input}
+													onChange={(e) => setInput(e.target.value)}
+													placeholder="Describe your app's pricing"
+													disabled={isLoading}
+												/>
+											</PromptInputBody>
+											<PromptInputFooter className="justify-between">
+												<ImageUploadButton disabled={isLoading} />
+												<PromptInputSubmit
+													disabled={isLoading}
+													variant="primary"
+												/>
+											</PromptInputFooter>
+										</PromptInput>
+									</div>
+								</motion.div>
+
+								{/* Right: Pricing Preview */}
+								<motion.div
+									initial={{ x: 100, opacity: 0 }}
+									animate={{ x: 0, opacity: 1 }}
+									transition={{ duration: 0.4, delay: 0.4 }}
+									className="w-2/3 flex flex-col pt-14 px-6 pb-6"
+								>
+									<PricingPreview
+										config={pricingConfig}
+										previewOrg={previewOrg}
+										isSyncing={isPreviewSyncing}
+										headerActions={
+											pricingConfig &&
+											pricingConfig.products.length > 0 && (
+												<>
+													<Button
+														variant="secondary"
+														size="sm"
+														onClick={handleStartNewChat}
+													>
+														Clear chat
+													</Button>
+													<CopyPlansButton pricingConfig={pricingConfig} />
+												</>
+											)
+										}
+									/>
+								</motion.div>
+							</motion.div>
+						)}
+					</AnimatePresence>
 				</div>
 
-				{/* Right: Pricing Preview */}
-				<div className="w-1/2 flex flex-col p-6">
-					<div className="mb-4">
-						<h2 className="text-sm font-medium text-t2">Preview</h2>
-					</div>
-					<PricingPreview
-						config={pricingConfig}
-						previewOrg={previewOrg}
-						isSyncing={isPreviewSyncing}
-					/>
-					{pricingConfig && pricingConfig.products.length > 0 && (
-						<div className="flex justify-end mt-4">
-							<Button variant="primary" onClick={handleCopyPlans}>
-								Copy plans to Autumn
-							</Button>
-						</div>
-					)}
-				</div>
+				<PricingConfigSheet
+					open={jsonSheetConfig !== null}
+					onOpenChange={(open) => !open && setJsonSheetConfig(null)}
+					config={jsonSheetConfig}
+				/>
 			</div>
-
-			<PricingConfigSheet
-				open={jsonSheetConfig !== null}
-				onOpenChange={(open) => !open && setJsonSheetConfig(null)}
-				config={jsonSheetConfig}
-			/>
-		</div>
+		</SidebarContext.Provider>
 	);
 }

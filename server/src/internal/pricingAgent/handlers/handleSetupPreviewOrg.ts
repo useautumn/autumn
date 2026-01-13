@@ -1,6 +1,5 @@
 import {
 	AppEnv,
-	member,
 	type Organization,
 	organizations,
 	RecaseError,
@@ -9,9 +8,9 @@ import {
 import { generateId } from "better-auth";
 import { eq } from "drizzle-orm";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { createKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { afterOrgCreated } from "@/utils/authUtils/afterOrgCreated.js";
-import { createKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 
 /**
  * Builds the deterministic preview org slug for a user
@@ -76,7 +75,9 @@ export const handleSetupPreviewOrg = createRoute({
 			// Create new preview organization
 			const orgId = generateId();
 
-			logger.info(`[Preview] Creating new preview org: ${orgId} (${previewSlug})`);
+			logger.info(
+				`[Preview] Creating new preview org: ${orgId} (${previewSlug})`,
+			);
 
 			const [insertedOrg] = await db
 				.insert(organizations)
@@ -93,19 +94,16 @@ export const handleSetupPreviewOrg = createRoute({
 
 			previewOrg = insertedOrg;
 
-			// Create membership (user owns the preview org)
-			await db.insert(member).values({
-				id: generateId(),
-				organizationId: orgId,
-				userId: userId,
-				role: "owner",
-				createdAt: new Date(),
-			});
+			// Note: We intentionally do NOT create a membership here.
+			// The preview org should not be accessible to the user via the dashboard.
+			// They can only interact with it via the returned API key.
 
 			// Initialize org (creates Stripe test account, svix apps, etc.)
 			await afterOrgCreated({ org: previewOrg, user });
 
-			logger.info(`[Preview] Created preview org: ${previewOrg.id} (${previewSlug})`);
+			logger.info(
+				`[Preview] Created preview org: ${previewOrg.id} (${previewSlug})`,
+			);
 		}
 
 		// Generate a new sandbox API key for this session
@@ -130,4 +128,3 @@ export const handleSetupPreviewOrg = createRoute({
 		});
 	},
 });
-

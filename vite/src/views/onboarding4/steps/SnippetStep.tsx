@@ -21,4 +21,3 @@ export function SnippetStep({ snippet, stepNumber }: SnippetStepProps) {
 		</div>
 	);
 }
-

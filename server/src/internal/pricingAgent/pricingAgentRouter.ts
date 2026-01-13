@@ -1,11 +1,27 @@
-import { anthropic } from "@ai-sdk/anthropic";
+import { createAnthropic } from "@ai-sdk/anthropic";
 import { InternalError } from "@autumn/shared";
+import { withTracing } from "@posthog/ai";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
 import { Hono } from "hono";
+import { PostHog } from "posthog-node";
 import { z } from "zod/v4";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleSetupPreviewOrg } from "./handlers/handleSetupPreviewOrg.js";
 import { handleSyncPreviewPricing } from "./handlers/handleSyncPreviewPricing.js";
+
+// PostHog client singleton
+let phClient: PostHog | null = null;
+const getPostHogClient = (): PostHog | null => {
+	if (!process.env.POSTHOG_API_KEY) {
+		return null;
+	}
+	if (!phClient) {
+		phClient = new PostHog(process.env.POSTHOG_API_KEY, {
+			host: process.env.POSTHOG_HOST || "https://us.i.posthog.com",
+		});
+	}
+	return phClient;
+};
 
 // ============ SCHEMAS ============
 const ApiFeatureType = z.enum([
@@ -138,7 +154,9 @@ const ProductSchema = z
 		group: z
 			.string()
 			.default("")
-			.describe("Group name for upgrade/downgrade logic"),
+			.describe(
+				"A group to assign this plan to. Leave empty unless user is building pricing where a customer could subscribe to 2 or more types of plans at the same time.`",
+			),
 		items: z.array(ProductItemSchema).default([]),
 		free_trial: FreeTrialSchema,
 	})
@@ -238,7 +256,7 @@ Products contain an array of items. There are THREE distinct item patterns:
    \`{ feature_id: "credits", included_usage: 10000 }\`
    → Customer gets 10,000 credits included
 
-3. **Metered/Usage-Based Pricing** (feature + price + usage_model):
+3. **Metered/Usage-Based Pricing**:
    \`{ feature_id: "credits", included_usage: 10000, price: 0.01, usage_model: "pay_per_use", interval: "month" }\`
    → Customer can use 10,000 credits per month, and then pays $0.01 per credit used after that.
 
@@ -246,16 +264,28 @@ Products contain an array of items. There are THREE distinct item patterns:
    \`{ feature_id: "credits", price: 10, usage_model: "prepaid", billing_units: 10000 }\`
    → Customer pays $10 once to receive 10,000 credits
 
+5. **Per-Unit Pricing Structure**:
+For any "per-X" pricing (like "$Y per seat", "$Y per project", "$Y per website"), ALWAYS use this pattern:
+- Base subscription fee: \`{ feature_id: null, price: 10, interval: "month" }\`
+- Unit allocation: \`{ feature_id: "seats", included_usage: 1, price: 10, usage_model: "pay_per_use", billing_units: 1 }\`
+This creates: $Y/month base price that includes 1 unit, then $Y per additional unit purchased.
+**ALWAYS** use this two-item pattern for any per-unit pricing - never use pure per-unit without a base fee.
+
+
 
 ## Guidelines when building the config
 
-- If you identify more than 3 features from user input, build the 3 most important (prioritizing metered features) and ask the user to confirm if they want to add more. Tell them that you kept it simple to start with, but they can add more later.
+- Refer to the Item Types section above to see examples of how to build the config.
+
+- If you identify more than 3 features from user input, build the 3 most important (prioritizing metered features) and ask the user to confirm if they want to add more. Inform them clearly that you kept it simple to start with, but they can add more later.
 
 - Product and Feature IDs should be lowercase with underscores (e.g., "pro_plan", "chat_messages")
 
 - **NEVER** allow is_default: true for plans with prices. All prices MUST be null or undefined.
 
 - Ignore reference to "Enterprise" plans with custom pricing. They do not need to be generated here. Instead, inform the user that custom plans can be created for any customer within the Autumn dashboard.
+
+- For annual variants of plans, create another separate plan but with the annual price interval. Name it <plan_name> - Annual
 
 
 ## Guidelines when responding to the user
@@ -264,6 +294,10 @@ Products contain an array of items. There are THREE distinct item patterns:
 
 - If the user asks about changing currency, let them know they can do so in the Autumn dashboard, under Developer > Stripe.
 
+- If the user has a price for a feature, clarify whether it should be a usage-based (pay_per_use) or prepaid (prepaid) pricing
+
+- If you don't know something, DO NOT make up information or assume anything. They can reach us on discord here: https://discord.gg/atmn (we're very responsive)
+
 - Keep responses very concise and friendly.`;
 
 // ============ HONO ROUTER ============
@@ -271,6 +305,7 @@ export const pricingAgentRouter = new Hono<HonoEnv>();
 
 pricingAgentRouter.post("/chat", async (c) => {
 	const { messages }: { messages: UIMessage[] } = await c.req.json();
+	const ctx = c.var.ctx;
 
 	if (!process.env.ANTHROPIC_API_KEY) {
 		throw new InternalError({
@@ -279,8 +314,28 @@ pricingAgentRouter.post("/chat", async (c) => {
 		});
 	}
 
+	// Create Anthropic client and optionally wrap with PostHog tracing
+	const anthropicClient = createAnthropic({
+		apiKey: process.env.ANTHROPIC_API_KEY,
+	});
+	const baseModel = anthropicClient("claude-sonnet-4-20250514");
+
+	const posthog = getPostHogClient();
+	const distinctId = ctx.userId || ctx.org?.id || "anonymous";
+
+	const model = posthog
+		? withTracing(baseModel, posthog, {
+				posthogDistinctId: distinctId,
+				posthogProperties: {
+					org_id: ctx.org?.id,
+					org_slug: ctx.org?.slug,
+					feature: "pricing_agent",
+				},
+			})
+		: baseModel;
+
 	const result = streamText({
-		model: anthropic("claude-sonnet-4-20250514"),
+		model,
 		system: SYSTEM_PROMPT,
 		messages: await convertToModelMessages(messages),
 		tools: {
@@ -289,6 +344,11 @@ pricingAgentRouter.post("/chat", async (c) => {
 					"Generate the pricing configuration based on the conversation. Call this whenever you have new information about the user's pricing needs, even if partial. This updates their live preview.",
 				inputSchema: OrganisationConfigurationSchema,
 			},
+		},
+		onFinish: async () => {
+			if (posthog) {
+				await posthog.flush();
+			}
 		},
 	});
 
