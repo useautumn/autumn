@@ -40,7 +40,7 @@ export const fullCustomerToCustomerEntitlements = ({
 		);
 	}
 
-	for (const cusEnt of fullCustomer.extra_customer_entitlements) {
+	for (const cusEnt of fullCustomer.extra_customer_entitlements || []) {
 		cusEnts.push({
 			...cusEnt,
 			customer_product: null,
