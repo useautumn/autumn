@@ -11,6 +11,7 @@ import { honoAdminRouter } from "../internal/admin/adminRouter";
 import { internalCusRouter } from "../internal/customers/internalCusRouter";
 import { internalDevRouter } from "../internal/dev/devRouter";
 import { internalOrgRouter } from "../internal/orgs/orgRouter";
+import { pricingAgentRouter } from "../internal/pricingAgent/pricingAgentRouter";
 import { internalProductRouter } from "../internal/products/internalProductRouter";
 
 export const internalRouter = new Hono<HonoEnv>();
@@ -30,3 +31,4 @@ internalRouter.route("organization", internalOrgRouter);
 internalRouter.route("/products", internalProductRouter);
 internalRouter.route("/customers", internalCusRouter);
 internalRouter.route("/dev", internalDevRouter);
+internalRouter.route("/pricing-agent", pricingAgentRouter);
