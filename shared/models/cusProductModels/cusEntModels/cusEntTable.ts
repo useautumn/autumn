@@ -7,8 +7,8 @@ import {
 	pgTable,
 	text,
 } from "drizzle-orm/pg-core";
-import { entities } from "../../../db/schema.js";
 import { collatePgColumn } from "../../../db/utils.js";
+import { entities } from "../../cusModels/entityModels/entityTable.js";
 import { features } from "../../featureModels/featureTable.js";
 import { entitlements } from "../../productModels/entModels/entTable.js";
 import { customerProducts } from "../cusProductTable.js";
