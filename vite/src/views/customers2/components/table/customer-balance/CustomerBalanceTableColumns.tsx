@@ -1,6 +1,6 @@
 import type {
 	Entity,
-	FullCusEntWithFullCusProduct,
+	FullCusEntWithOptionalProduct,
 	FullCusProduct,
 } from "@autumn/shared";
 import type { Row } from "@tanstack/react-table";
@@ -17,7 +17,7 @@ function UsageCell({
 	filteredCustomerProducts,
 	entityId,
 }: {
-	ent: FullCusEntWithFullCusProduct;
+	ent: FullCusEntWithOptionalProduct;
 	filteredCustomerProducts: FullCusProduct[];
 	entityId: string | null;
 }) {
@@ -55,7 +55,7 @@ function BarCell({
 	filteredCustomerProducts,
 	entityId,
 }: {
-	ent: FullCusEntWithFullCusProduct;
+	ent: FullCusEntWithOptionalProduct;
 	filteredCustomerProducts: FullCusProduct[];
 	entityId: string | null;
 }) {
@@ -65,16 +65,28 @@ function BarCell({
 		entityId,
 	});
 
+	// Determine whether to show reset or expiry info
+	const hasReset = ent.next_reset_at != null;
+	const hasExpiry = ent.expires_at != null;
+
 	return (
 		<div className="flex gap-3 items-center">
-			<span
-				className={cn(
-					"text-t3 text-tiny flex justify-center !px-1 bg-muted rounded-md min-w-30",
-					ent.next_reset_at ? "opacity-100" : "opacity-0",
-				)}
-			>
-				Resets {formatUnixToDateTimeString(ent.next_reset_at)}
-			</span>
+			{hasExpiry ? (
+				<span
+					className="text-t3 text-tiny flex justify-center !px-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-md min-w-30"
+				>
+					Expires {formatUnixToDateTimeString(ent.expires_at)}
+				</span>
+			) : (
+				<span
+					className={cn(
+						"text-t3 text-tiny flex justify-center !px-1 bg-muted rounded-md min-w-30",
+						hasReset ? "opacity-100" : "opacity-0",
+					)}
+				>
+					Resets {formatUnixToDateTimeString(ent.next_reset_at)}
+				</span>
+			)}
 			<div
 				className={cn(
 					"w-full max-w-50 flex justify-center pr-2 h-full items-center min-w-16",
@@ -100,7 +112,7 @@ export const CustomerBalanceTableColumns = ({
 }: {
 	filteredCustomerProducts: FullCusProduct[];
 	entityId: string | null;
-	aggregatedMap: Map<string, FullCusEntWithFullCusProduct[]>;
+	aggregatedMap: Map<string, FullCusEntWithOptionalProduct[]>;
 	entities?: unknown[];
 }) => [
 	{
@@ -108,7 +120,7 @@ export const CustomerBalanceTableColumns = ({
 		accessorKey: "feature",
 		enableResizing: true,
 		minSize: 100,
-		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => {
+		cell: ({ row }: { row: Row<FullCusEntWithOptionalProduct> }) => {
 			const ent = row.original;
 			const featureId = ent.entitlement.feature.id;
 			const originalEnts = aggregatedMap.get(featureId);
@@ -139,7 +151,7 @@ export const CustomerBalanceTableColumns = ({
 	{
 		header: "Usage",
 		accessorKey: "usage",
-		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => (
+		cell: ({ row }: { row: Row<FullCusEntWithOptionalProduct> }) => (
 			<UsageCell
 				ent={row.original}
 				filteredCustomerProducts={filteredCustomerProducts}
@@ -151,7 +163,7 @@ export const CustomerBalanceTableColumns = ({
 		header: "Bar",
 		size: 220,
 		accessorKey: "bar",
-		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => (
+		cell: ({ row }: { row: Row<FullCusEntWithOptionalProduct> }) => (
 			<BarCell
 				ent={row.original}
 				filteredCustomerProducts={filteredCustomerProducts}

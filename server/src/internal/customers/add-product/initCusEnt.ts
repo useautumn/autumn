@@ -102,6 +102,7 @@ const initCusEntBalance = ({
 export const initCusEntitlement = ({
 	entitlement,
 	customer,
+	entity,
 	cusProductId,
 	freeTrial,
 	options,
@@ -117,10 +118,12 @@ export const initCusEntitlement = ({
 	replaceables,
 	now,
 	productOptions,
+	expires_at,
 }: {
 	entitlement: EntitlementWithFeature;
 	customer: Customer;
-	cusProductId: string;
+	entity?: Entity;
+	cusProductId: string | null;
 	freeTrial: FreeTrial | null;
 	options?: FeatureOptions;
 	nextResetAt?: number;
@@ -135,6 +138,7 @@ export const initCusEntitlement = ({
 	replaceables: AttachReplaceable[];
 	now?: number;
 	productOptions?: ProductOptions;
+	expires_at?: number | null;
 }) => {
 	now = now || Date.now();
 	let { newBalance, newEntities } = initCusEntBalance({
@@ -183,7 +187,8 @@ export const initCusEntitlement = ({
 		id: generateId("cus_ent"),
 		internal_customer_id: customer.internal_id,
 		internal_feature_id: entitlement.internal_feature_id,
-		feature_id: entitlement.feature_id,
+		internal_entity_id: entity?.internal_id ?? null,
+		feature_id: (entitlement.feature_id ?? entitlement.feature.id) as string,
 		customer_id: customer.id,
 
 		// Foreign keys
@@ -196,8 +201,11 @@ export const initCusEntitlement = ({
 			? null
 			: entitlement.allowance_type === AllowanceType.Unlimited,
 		balance: newBalance || 0,
+		additional_balance: 0,
+		adjustment: 0,
 		entities: newEntities,
 		usage_allowed: usageAllowed,
 		next_reset_at: nextResetAtValue,
+		expires_at: expires_at ?? null,
 	};
 };

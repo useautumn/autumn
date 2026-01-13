@@ -1,3 +1,4 @@
+import { CreateBalanceParamsSchema } from "@api/balances/create/createBalanceParams.js";
 import type { ZodOpenApiPathsObject } from "zod-openapi";
 import { ExtBalancesUpdateParamsSchema } from "../balances/balancesUpdateModels.js";
 import { SuccessResponseSchema } from "../common/commonResponses.js";
@@ -17,6 +18,27 @@ export const balancesOpenApi: ZodOpenApiPathsObject = {
 			responses: {
 				"200": {
 					description: "Balance updated successfully",
+					content: {
+						"application/json": { schema: SuccessResponseSchema },
+					},
+				},
+			},
+		},
+	},
+	"/balances/create": {
+		post: {
+			summary: "Create Balance",
+			description:
+				"Create a new balance for a specific feature for a customer.",
+			tags: ["balances"],
+			requestBody: {
+				content: {
+					"application/json": { schema: CreateBalanceParamsSchema },
+				},
+			},
+			responses: {
+				"200": {
+					description: "Balance created successfully",
 					content: {
 						"application/json": { schema: SuccessResponseSchema },
 					},

@@ -1,17 +1,17 @@
-import type { FullCusEntWithFullCusProduct } from "@autumn/shared";
+import type { FullCusEntWithOptionalProduct } from "@autumn/shared";
 import type { Row } from "@tanstack/react-table";
 import { CustomerFeatureConfiguration } from "../customer-feature-usage/CustomerFeatureConfiguration";
 
 export const CustomerBooleanBalanceTableColumns = ({
 	aggregatedMap,
 }: {
-	aggregatedMap: Map<string, FullCusEntWithFullCusProduct[]>;
+	aggregatedMap: Map<string, FullCusEntWithOptionalProduct[]>;
 }) => [
 	{
 		header: "Feature",
 		size: 200,
 		accessorKey: "feature",
-		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => {
+		cell: ({ row }: { row: Row<FullCusEntWithOptionalProduct> }) => {
 			const ent = row.original;
 			const featureId = ent.entitlement.feature.id;
 			const originalEnts = aggregatedMap.get(featureId);
@@ -36,7 +36,7 @@ export const CustomerBooleanBalanceTableColumns = ({
 		header: "Type",
 		size: 200,
 		accessorKey: "type",
-		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => {
+		cell: ({ row }: { row: Row<FullCusEntWithOptionalProduct> }) => {
 			const ent = row.original;
 
 			return (

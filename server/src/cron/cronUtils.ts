@@ -51,7 +51,7 @@ const checkSubAnchor = async ({
 	// 1. Get the customer product
 	const cusProduct = await CusProductService.getByIdForReset({
 		db,
-		id: cusEnt.customer_product_id,
+		id: cusEnt.customer_product_id ?? "",
 	});
 
 	// Get org and env
@@ -113,7 +113,7 @@ const handleShortDurationCusEnt = async ({
 		...getResetBalancesUpdate({
 			cusEnt,
 			allowance: new Decimal(ent.allowance || 0)
-				.mul(cusEnt.customer_product.quantity)
+				.mul(cusEnt.customer_product?.quantity ?? 1)
 				.toNumber(),
 		}),
 	};
@@ -166,20 +166,21 @@ export const resetCustomerEntitlement = async ({
 			});
 		}
 
-		// Fetch related price
-		const cusPrices = await CusPriceService.getByCustomerProductId({
-			db,
-			customerProductId: cusEnt.customer_product_id,
-		});
-
-		// 2. Quantity is from prices...
-		const relatedCusPrice = getRelatedCusPrice(cusEnt, cusPrices);
-		if (relatedCusPrice) {
-			return;
+		// Fetch related price (skip for loose ents)
+		let relatedCusPrice = null;
+		if (cusEnt.customer_product_id) {
+			const cusPrices = await CusPriceService.getByCustomerProductId({
+				db,
+				customerProductId: cusEnt.customer_product_id,
+			});
+			relatedCusPrice = getRelatedCusPrice(cusEnt, cusPrices);
+			if (relatedCusPrice) {
+				return;
+			}
 		}
 
 		const entOptions = getEntOptions(
-			cusEnt.customer_product.options,
+			cusEnt.customer_product?.options ?? [],
 			cusEnt.entitlement,
 		);
 
@@ -228,7 +229,7 @@ export const resetCustomerEntitlement = async ({
 			entitlement: cusEnt.entitlement,
 			options: entOptions || undefined,
 			relatedPrice: undefined,
-			productQuantity: cusEnt.customer_product.quantity,
+			productQuantity: cusEnt.customer_product?.quantity ?? 1,
 		});
 
 		// 1. Check if should reset
@@ -249,16 +250,20 @@ export const resetCustomerEntitlement = async ({
 			allowance: resetBalance || undefined,
 		});
 
-		try {
-			nextResetAt = await checkSubAnchor({
-				db,
-				cusEnt,
-				nextResetAt,
-			});
-		} catch (error) {
-			console.log(
-				`WARNING: Failed to check sub anchor: ${error}, Org: ${cusEnt.customer.org_id}`,
-			);
+		// Only check sub anchor for product-based ents (loose ents have no subscription)
+		if (cusEnt.customer_product) {
+			try {
+				nextResetAt = await checkSubAnchor({
+					db,
+					cusEnt: cusEnt as FullCusEntWithProduct,
+					nextResetAt,
+				});
+			} catch (error) {
+				console.log(
+					`WARNING: Failed to check sub anchor: ${error}, Org: ${cusEnt.customer.org_id}`,
+				);
+				console.log(error);
+			}
 		}
 
 		await CusEntService.update({

@@ -35,7 +35,7 @@ export function useFeatureUsageBalance({
 }: FeatureUsageBalanceParams): FeatureUsageBalanceResult {
 	const cusEnts = cusProductsToCusEnts({
 		cusProducts,
-		featureId,
+		featureIds: [featureId],
 	});
 
 	//without manual update adjustment, no rollovers
@@ -68,7 +68,7 @@ export function useFeatureUsageBalance({
 	const isUnlimited = cusEnts.some((e) => e.unlimited);
 	const usageType = cusEnts[0]?.entitlement?.feature?.config?.usage_type;
 	const quantity = cusEnts.reduce(
-		(sum, e) => sum + (e.customer_product.quantity ?? 1),
+		(sum, e) => sum + (e.customer_product?.quantity ?? 1),
 		0,
 	);
 

@@ -12,7 +12,6 @@ import { handleListCustomersV2 } from "./handlers/handleListCustomersV2.js";
 import { handlePostCustomer } from "./handlers/handlePostCustomerV2.js";
 import { handleTransferProductV2 } from "./handlers/handleTransferProductV2.js";
 import { handleUpdateBalancesV2 } from "./handlers/handleUpdateBalancesV2.js";
-import { handleUpdateCusEntitlementV2 } from "./handlers/handleUpdateCusEntitlementV2.js";
 import { handleUpdateCustomerV2 } from "./handlers/handleUpdateCustomerV2.js";
 
 export const expressCusRouter = express.Router();
@@ -39,7 +38,3 @@ cusRouter.post("/:customer_id/billing_portal", ...handleCreateBillingPortal);
 
 // Legacy...
 cusRouter.post("/:customer_id/balances", ...handleUpdateBalancesV2);
-cusRouter.post(
-	"/:customer_id/entitlements/:customer_entitlement_id",
-	...handleUpdateCusEntitlementV2,
-);

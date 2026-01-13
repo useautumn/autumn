@@ -32,20 +32,33 @@ end
 
 -- ============================================================================
 -- HELPER: Find entitlement in FullCustomer by ID
--- Returns: cus_ent table, cus_product table, cus_ent_index, cus_product_index
+-- Returns: cus_ent table, cus_product table (or nil for loose), cus_ent_index, cus_product_index (or nil for loose)
+-- For loose entitlements: cus_product=nil and cus_product_index=nil
 -- ============================================================================
 local function find_entitlement(full_customer, ent_id)
-  if not full_customer.customer_products then return nil, nil, nil, nil end
-  
-  for cp_idx, cus_product in ipairs(full_customer.customer_products) do
-    if cus_product.customer_entitlements then
-      for ce_idx, cus_ent in ipairs(cus_product.customer_entitlements) do
-        if cus_ent.id == ent_id then
-          return cus_ent, cus_product, ce_idx, cp_idx
+  -- Search in customer_products first
+  if full_customer.customer_products then
+    for cp_idx, cus_product in ipairs(full_customer.customer_products) do
+      if cus_product.customer_entitlements then
+        for ce_idx, cus_ent in ipairs(cus_product.customer_entitlements) do
+          if cus_ent.id == ent_id then
+            return cus_ent, cus_product, ce_idx, cp_idx
+          end
         end
       end
     end
   end
+  
+  -- Search in extra_customer_entitlements (loose entitlements)
+  if full_customer.extra_customer_entitlements then
+    for ece_idx, cus_ent in ipairs(full_customer.extra_customer_entitlements) do
+      if cus_ent.id == ent_id then
+        -- Return nil for cus_product and cus_product_index to indicate loose entitlement
+        return cus_ent, nil, ece_idx, nil
+      end
+    end
+  end
+  
   return nil, nil, nil, nil
 end
 
