@@ -12,6 +12,7 @@ import { AdminView } from "./views/admin/AdminView";
 import { ImpersonateRedirect } from "./views/admin/ImpersonateRedirect";
 import { AcceptInvitation } from "./views/auth/AcceptInvitation";
 import { PasswordSignIn } from "./views/auth/components/PasswordSignIn";
+import { Consent } from "./views/auth/Consent";
 import { SignIn } from "./views/auth/SignIn";
 import { Otp } from "./views/cli/Otp";
 import CustomersPage from "./views/customers/CustomersPage";
@@ -56,6 +57,7 @@ export default function App() {
 			<Routes>
 				<Route path="/sign-in" element={<SignIn />} />
 				<Route path="/pw-sign-in" element={<PasswordSignIn />} />
+				<Route path="/consent" element={<Consent />} />
 				<Route path="/accept" element={<AcceptInvitation />} />
 				<Route path="/close" element={<CloseScreen />} />
 

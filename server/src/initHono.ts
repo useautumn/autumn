@@ -1,3 +1,7 @@
+import {
+	oauthProviderAuthServerMetadata,
+	oauthProviderOpenIdConfigMetadata,
+} from "@better-auth/oauth-provider";
 import { getRequestListener } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -63,7 +67,14 @@ export const createHonoApp = () => {
 		}),
 	);
 
-	// Better Auth handler
+	app.get("/api/auth/.well-known/openid-configuration", (c) => {
+		return oauthProviderOpenIdConfigMetadata(auth)(c.req.raw);
+	});
+
+	app.get("/.well-known/oauth-authorization-server/api/auth", (c) => {
+		return oauthProviderAuthServerMetadata(auth)(c.req.raw);
+	});
+
 	app.on(["POST", "GET"], "/api/auth/*", (c) => {
 		return auth.handler(c.req.raw);
 	});

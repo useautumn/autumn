@@ -55,6 +55,7 @@
 		"drizzle-orm": "catalog:"
 	},
 	"devDependencies": {
+		"@better-auth/cli": "^1.4.12",
 		"@biomejs/biome": "^2.2.7",
 		"@types/node": "^24.9.1",
 		"concurrently": "^9.2.1",

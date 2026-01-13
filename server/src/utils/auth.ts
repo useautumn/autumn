@@ -1,11 +1,13 @@
 import "dotenv/config";
 
 import { invitation } from "@autumn/shared";
+import { oauthProvider } from "@better-auth/oauth-provider";
 import { betterAuth, type User } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import {
 	admin,
 	emailOTP,
+	jwt,
 	type Organization,
 	organization,
 } from "better-auth/plugins";
@@ -106,6 +108,12 @@ export const auth = betterAuth({
 		admin({
 			adminUserIds: ADMIN_USER_IDs,
 			impersonationSessionDuration: 1000 * 60 * 60 * 24, // 1 days
+		}),
+
+		jwt(),
+		oauthProvider({
+			loginPage: "/sign-in",
+			consentPage: "/consent",
 		}),
 
 		organization({
