@@ -17,6 +17,16 @@
 			"@date-fns/utc": "2.1.0"
 		}
 	},
+	"overrides": {
+		"@better-auth/core": "1.4.12",
+		"better-auth": "1.4.12",
+		"zod": "4.3.5"
+	},
+	"resolutions": {
+		"@better-auth/core": "1.4.12",
+		"better-auth": "1.4.12",
+		"zod": "4.3.5"
+	},
 	"type": "module",
 	"scripts": {
 		"dev": "bun scripts/dev.ts",
