@@ -20,7 +20,7 @@ Please prompt them to create one here: https://app.useautumn.com/dev?tab=api_key
 
 
 
-Tell me what you detected and which path you'll follow before proceeding.
+Tell me what you detected, which path you'll follow and what you'll be adding autumn to.
 
 ---
 
@@ -29,6 +29,8 @@ Tell me what you detected and which path you'll follow before proceeding.
 Use this path if there's a React frontend with a Node.js backend.
 
 ### A1. Install the SDK
+
+**Use the package manager already installed** -- eg user may be using bun, or pnpm.
 ```bash
 npm install autumn-js
 ```
