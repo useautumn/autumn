@@ -1,6 +1,6 @@
 import type {
 	Entity,
-	FullCusEntWithOptionalProduct,
+	FullCusEntWithFullCusProduct,
 	FullCustomerEntitlement,
 } from "@autumn/shared";
 import { FeatureType, type FullCusProduct } from "@autumn/shared";
@@ -52,13 +52,13 @@ export function CustomerFeatureUsageTable() {
 		);
 	}, [customer?.customer_products, customer?.entities, entityId]);
 
-	const cusEnts = useMemo((): FullCusEntWithOptionalProduct[] => {
+	const cusEnts = useMemo((): FullCusEntWithFullCusProduct[] => {
 		const productEnts = flattenCustomerEntitlements({
 			customerProducts: filteredCustomerProducts,
 		});
 
 		// Add extra entitlements (loose entitlements not tied to a product)
-		const extraEnts: FullCusEntWithOptionalProduct[] = (
+		const extraEnts: FullCusEntWithFullCusProduct[] = (
 			customer?.extra_customer_entitlements || []
 		).map((ent: FullCustomerEntitlement) => ({
 			...ent,

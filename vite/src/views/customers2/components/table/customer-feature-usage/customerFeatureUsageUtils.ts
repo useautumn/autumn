@@ -1,7 +1,7 @@
 import type {
 	CreditSchemaItem,
 	Feature,
-	FullCusEntWithOptionalProduct,
+	FullCusEntWithFullCusProduct,
 	FullCusProduct,
 	FullCustomerEntitlement,
 } from "@autumn/shared";
@@ -15,7 +15,7 @@ export function flattenCustomerEntitlements({
 	customerProducts,
 }: {
 	customerProducts: FullCusProduct[];
-}): FullCusEntWithOptionalProduct[] {
+}): FullCusEntWithFullCusProduct[] {
 	return customerProducts.flatMap((cp: FullCusProduct) =>
 		cp.customer_entitlements.map((e: FullCustomerEntitlement) => ({
 			...e,
@@ -40,9 +40,9 @@ export function createFeaturesMap({
  */
 export interface DeduplicatedEntitlementsResult {
 	/** Combined entitlements (one per feature) */
-	entitlements: FullCusEntWithOptionalProduct[];
+	entitlements: FullCusEntWithFullCusProduct[];
 	/** Mapping of featureId -> array of original entitlements that were aggregated */
-	aggregatedMap: Map<string, FullCusEntWithOptionalProduct[]>;
+	aggregatedMap: Map<string, FullCusEntWithFullCusProduct[]>;
 }
 
 /**
@@ -52,10 +52,10 @@ export function deduplicateEntitlements({
 	entitlements,
 	entityId,
 }: {
-	entitlements: FullCusEntWithOptionalProduct[];
+	entitlements: FullCusEntWithFullCusProduct[];
 	entityId?: string | null;
 }): DeduplicatedEntitlementsResult {
-	const featureMap = new Map<string, FullCusEntWithOptionalProduct[]>();
+	const featureMap = new Map<string, FullCusEntWithFullCusProduct[]>();
 
 	for (const ent of entitlements) {
 		const featureId = ent.entitlement.feature.id;
@@ -65,8 +65,8 @@ export function deduplicateEntitlements({
 		featureMap.get(featureId)?.push(ent);
 	}
 
-	const combined: FullCusEntWithOptionalProduct[] = [];
-	const aggregatedMap = new Map<string, FullCusEntWithOptionalProduct[]>();
+	const combined: FullCusEntWithFullCusProduct[] = [];
+	const aggregatedMap = new Map<string, FullCusEntWithFullCusProduct[]>();
 
 	for (const [featureId, ents] of featureMap.entries()) {
 		if (ents.length === 1) {
@@ -147,13 +147,13 @@ export function processNonBooleanEntitlements({
 	cusEnts,
 	featuresMap,
 }: {
-	entitlements: FullCusEntWithOptionalProduct[];
-	cusEnts: FullCusEntWithOptionalProduct[];
+	entitlements: FullCusEntWithFullCusProduct[];
+	cusEnts: FullCusEntWithFullCusProduct[];
 	featuresMap: Map<string, Feature>;
 }): FullCusEntWithSubRows[] {
 	// Create a map of feature id to customer entitlements for quick lookup
 	const featureIdToCusEnt = new Map(
-		cusEnts.map((ent: FullCusEntWithOptionalProduct) => [
+		cusEnts.map((ent: FullCusEntWithFullCusProduct) => [
 			ent.entitlement.feature.id,
 			ent,
 		]),
@@ -161,10 +161,10 @@ export function processNonBooleanEntitlements({
 
 	return entitlements
 		.filter(
-			(ent: FullCusEntWithOptionalProduct) =>
+			(ent: FullCusEntWithFullCusProduct) =>
 				ent.entitlement.feature.type !== FeatureType.Boolean,
 		)
-		.map((ent: FullCusEntWithOptionalProduct): FullCusEntWithSubRows => {
+		.map((ent: FullCusEntWithFullCusProduct): FullCusEntWithSubRows => {
 			if (ent.entitlement.feature.type === FeatureType.CreditSystem) {
 				const creditSchema = ent.entitlement.feature.config?.schema || [];
 				const subRows = creditSchema.map((schemaItem: CreditSchemaItem) => {
@@ -197,10 +197,10 @@ export function processNonBooleanEntitlements({
 export function filterBooleanEntitlements({
 	entitlements,
 }: {
-	entitlements: FullCusEntWithOptionalProduct[];
-}): FullCusEntWithOptionalProduct[] {
+	entitlements: FullCusEntWithFullCusProduct[];
+}): FullCusEntWithFullCusProduct[] {
 	return entitlements.filter(
-		(ent: FullCusEntWithOptionalProduct) =>
+		(ent: FullCusEntWithFullCusProduct) =>
 			ent.entitlement.feature.type === FeatureType.Boolean,
 	);
 }
