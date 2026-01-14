@@ -3,7 +3,7 @@ import type Stripe from "stripe";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
 import type { AttachParams } from "../../../../internal/customers/cusProducts/AttachParams";
 import { MetadataService } from "../../../../internal/metadata/MetadataService";
-import { handleDeferredAutumnBillingPlan } from "./handleDeferredAutumnBillingPlan";
+import { executeDeferredBillingPlan } from "@/internal/billing/v2/execute/executeDeferredBillingPlan";
 import { handleInvoiceActionRequiredCompleted } from "./handleInvoiceActionRequiredCompleted";
 import { handleInvoiceCheckoutPaid } from "./handleInvoiceCheckoutPaid";
 
@@ -26,11 +26,8 @@ export const handleInvoicePaidMetadata = async ({
 	if (!metadata) return;
 
 	// Handle deferred billing plan (v2 flow)
-	if (
-		metadata.type === MetadataType.InvoiceCheckoutV2 ||
-		metadata.type === MetadataType.InvoiceActionRequiredV2
-	) {
-		await handleDeferredAutumnBillingPlan({ ctx, metadata });
+	if (metadata.type === MetadataType.DeferredInvoice) {
+		await executeDeferredBillingPlan({ ctx, metadata });
 		return;
 	}
 

@@ -34,9 +34,15 @@ export const AutumnBillingPlanSchema = z.object({
 
 export type AutumnBillingPlan = z.infer<typeof AutumnBillingPlanSchema>;
 
+export enum StripeBillingStage {
+	InvoiceAction = "invoice_action",
+	SubscriptionAction = "subscription_action",
+}
+
 export type DeferredAutumnBillingPlanData = {
 	orgId: string;
 	env: AppEnv;
 	billingPlan: BillingPlan;
 	billingContext: BillingContext;
+	resumeAfter: StripeBillingStage;
 };

@@ -1,4 +1,7 @@
-import { filterUnchangedPricesFromLineItems } from "@autumn/shared";
+import {
+	filterUnchangedPricesFromLineItems,
+	isCustomerProductOneOff,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
 import { buildSharedSubscriptionTrialLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildSharedSubscriptionTrialLineItems";
@@ -41,6 +44,11 @@ export const finalizeUpdateSubscriptionPlan = ({
 			lineItems: plan.lineItems,
 			discounts: billingContext.stripeDiscounts,
 		});
+	}
+
+	// Guard: if current customer product is one off, make sure there are no line items.
+	if (isCustomerProductOneOff(billingContext.customerProduct)) {
+		plan.lineItems = [];
 	}
 
 	return plan;

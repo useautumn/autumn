@@ -1,4 +1,3 @@
-import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import { addStripeSubscriptionScheduleIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionScheduleIdToBillingPlan";
@@ -6,19 +5,20 @@ import { executeStripeInvoiceAction } from "@/internal/billing/v2/providers/stri
 import { executeStripeSubscriptionAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionAction";
 import { executeStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionScheduleAction";
 import { createStripeInvoiceItems } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
+import { StripeBillingStage } from "@/internal/billing/v2/types/autumnBillingPlan";
 import type { BillingPlan } from "@/internal/billing/v2/types/billingPlan";
-import type { StripeBillingPlanResult } from "@/internal/billing/v2/types/stripeBillingPlanResult";
+import type { StripeBillingPlanResult } from "@/internal/billing/v2/types/billingResult";
 
 export const executeStripeBillingPlan = async ({
 	ctx,
 	billingPlan,
 	billingContext,
-	resumeFromDeferred = false,
+	resumeAfter,
 }: {
 	ctx: AutumnContext;
 	billingPlan: BillingPlan;
 	billingContext: BillingContext;
-	resumeFromDeferred?: boolean;
+	resumeAfter?: StripeBillingStage;
 }): Promise<StripeBillingPlanResult> => {
 	const { logger } = ctx;
 	const {
@@ -28,39 +28,46 @@ export const executeStripeBillingPlan = async ({
 		subscriptionScheduleAction: stripeSubscriptionScheduleAction,
 	} = billingPlan.stripe;
 
-	if (stripeInvoiceAction && !resumeFromDeferred) {
-		const result = await executeStripeInvoiceAction({
+	// Collect results from each stage
+	let invoiceResult: StripeBillingPlanResult | undefined;
+	let subscriptionResult: StripeBillingPlanResult | undefined;
+	let stripeSubscription = billingContext.stripeSubscription;
+
+	const resumeAfterInvoiceAction =
+		resumeAfter === StripeBillingStage.InvoiceAction;
+
+	const resumeAfterSubscriptionAction =
+		resumeAfter === StripeBillingStage.SubscriptionAction;
+
+	if (stripeInvoiceAction && resumeAfterInvoiceAction) {
+		invoiceResult = await executeStripeInvoiceAction({
 			ctx,
 			billingPlan,
 			billingContext,
 		});
 
-		if (result.deferred) return result;
+		if (invoiceResult.deferred) return invoiceResult;
 	}
 
-	if (stripeInvoiceItemsAction?.createInvoiceItems) {
-		logger.info(
-			"[executeStripeBillingPlan] Creating invoice items for next cycle",
-		);
+	if (
+		stripeInvoiceItemsAction?.createInvoiceItems &&
+		!resumeAfterSubscriptionAction
+	) {
+		logger.info("[execStripePlan] Creating invoice items for next cycle");
 		await createStripeInvoiceItems({
 			ctx,
 			invoiceItems: stripeInvoiceItemsAction.createInvoiceItems,
 		});
 	}
 
-	let stripeSubscription: Stripe.Subscription | undefined =
-		billingContext.stripeSubscription;
-
-	if (stripeSubscriptionAction) {
-		const result = await executeStripeSubscriptionAction({
+	if (stripeSubscriptionAction && !resumeAfterSubscriptionAction) {
+		subscriptionResult = await executeStripeSubscriptionAction({
 			ctx,
 			billingPlan,
 			billingContext,
 		});
-
-		if (result?.deferred) return result;
-
-		stripeSubscription = result.stripeSubscription;
+		if (subscriptionResult?.deferred) return subscriptionResult;
+		stripeSubscription = subscriptionResult.stripeSubscription;
 	}
 
 	if (stripeSubscriptionScheduleAction) {
@@ -80,5 +87,12 @@ export const executeStripeBillingPlan = async ({
 		}
 	}
 
-	return { stripeInvoice: undefined };
+	return {
+		stripeSubscription: subscriptionResult?.stripeSubscription,
+
+		stripeInvoice:
+			subscriptionResult?.stripeInvoice ?? invoiceResult?.stripeInvoice,
+
+		actionRequired: invoiceResult?.actionRequired,
+	};
 };

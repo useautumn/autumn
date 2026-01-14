@@ -169,3 +169,45 @@ test.concurrent(`${chalk.yellowBright("error: one-off to paid recurring transiti
 		},
 	});
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INVOICE MODE ERRORS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// 5. Cannot use invoice mode when there's no billing change
+test.concurrent(`${chalk.yellowBright("error: invoice mode with no billing change")}`, async () => {
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const priceItem = items.monthlyPrice({ price: 20 });
+	const pro = products.base({
+		id: "pro",
+		items: [messagesItem, priceItem],
+	});
+
+	const { customerId, autumnV1 } = await initScenario({
+		customerId: "err-inv-no-billing",
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [s.attach({ productId: pro.id })],
+	});
+
+	// Add boolean feature - no price change
+	const adminRightsItem = items.adminRights();
+
+	const updateParams = {
+		customer_id: customerId,
+		product_id: pro.id,
+		items: [messagesItem, priceItem, adminRightsItem],
+		invoice: true,
+		enable_product_immediately: true,
+		finalize_invoice: false,
+	};
+
+	await expectAutumnError({
+		errCode: ErrCode.InvalidRequest,
+		func: async () => {
+			await autumnV1.subscriptions.update(updateParams);
+		},
+	});
+});

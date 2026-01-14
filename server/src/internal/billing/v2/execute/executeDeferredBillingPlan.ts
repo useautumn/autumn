@@ -5,7 +5,7 @@ import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe
 import type { DeferredAutumnBillingPlanData } from "@/internal/billing/v2/types/billingPlan";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
-export const handleDeferredAutumnBillingPlan = async ({
+export const executeDeferredBillingPlan = async ({
 	ctx,
 	metadata,
 }: {
@@ -20,14 +20,14 @@ export const handleDeferredAutumnBillingPlan = async ({
 		return;
 	}
 
-	const { billingPlan, billingContext } = data;
+	const { billingPlan, billingContext, resumeAfter } = data;
 
 	// Execute stripe billing plan
 	await executeStripeBillingPlan({
 		ctx,
 		billingPlan,
 		billingContext,
-		resumeFromDeferred: true,
+		resumeAfter,
 	});
 
 	await executeAutumnBillingPlan({

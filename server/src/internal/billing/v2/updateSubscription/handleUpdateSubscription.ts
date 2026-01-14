@@ -1,6 +1,7 @@
 import { UpdateSubscriptionV0ParamsSchema } from "@autumn/shared";
 import { computeUpdateSubscriptionPlan } from "@/internal/billing/v2/updateSubscription/compute/computeUpdateSubscriptionPlan";
 import { handleUpdateSubscriptionErrors } from "@/internal/billing/v2/updateSubscription/errors/handleUpdateSubscriptionErrors";
+import { billingResultToResponse } from "@/internal/billing/v2/utils/billingResult/billingResultToResponse";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { executeBillingPlan } from "../execute/executeBillingPlan";
 import { evaluateStripeBillingPlan } from "../providers/stripe/actionBuilders/evaluateStripeBillingPlan";
@@ -30,6 +31,7 @@ export const handleUpdateSubscription = createRoute({
 			ctx,
 			billingContext,
 			autumnBillingPlan,
+			params: body,
 		});
 
 		const stripeBillingPlan = await evaluateStripeBillingPlan({
@@ -38,7 +40,7 @@ export const handleUpdateSubscription = createRoute({
 			autumnBillingPlan,
 		});
 
-		await executeBillingPlan({
+		const billingResult = await executeBillingPlan({
 			ctx,
 			billingContext,
 			billingPlan: {
@@ -47,6 +49,13 @@ export const handleUpdateSubscription = createRoute({
 			},
 		});
 
-		return c.json({ success: true }, 200);
+		const response = billingResultToResponse({
+			billingContext,
+			billingResult,
+		});
+
+		ctx.logger.info("[handleUpdateSubscription] Completed", { response });
+
+		return c.json(response, 200);
 	},
 });

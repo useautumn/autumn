@@ -26,6 +26,16 @@ const dashboard = () =>
 		isBoolean: true,
 	});
 
+/**
+ * Boolean feature - admin rights access
+ * @returns AdminRights feature item
+ */
+const adminRights = () =>
+	constructFeatureItem({
+		featureId: TestFeature.AdminRights,
+		isBoolean: true,
+	});
+
 // ═══════════════════════════════════════════════════════════════════
 // FREE METERED (included usage, resets monthly)
 // ═══════════════════════════════════════════════════════════════════
@@ -181,6 +191,33 @@ const prepaidUsers = ({
 	}) as LimitedItem;
 
 // ═══════════════════════════════════════════════════════════════════
+// ONE-OFF (interval: null, no recurring charges)
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * One-off messages - purchase units once (no recurring charges)
+ * @param includedUsage - Free units included (default: 0)
+ * @param billingUnits - Units per pack (default: 100)
+ * @param price - Price per pack (default: 10)
+ */
+const oneOffMessages = ({
+	includedUsage = 0,
+	billingUnits = 100,
+	price = 10,
+}: {
+	includedUsage?: number;
+	billingUnits?: number;
+	price?: number;
+} = {}): LimitedItem =>
+	constructPrepaidItem({
+		featureId: TestFeature.Messages,
+		price,
+		billingUnits,
+		includedUsage,
+		isOneOff: true,
+	}) as LimitedItem;
+
+// ═══════════════════════════════════════════════════════════════════
 // CONSUMABLE / PAY-PER-USE (overage pricing)
 // ═══════════════════════════════════════════════════════════════════
 
@@ -243,6 +280,16 @@ const annualPrice = ({ price = 200 }: { price?: number } = {}) =>
 		interval: BillingInterval.Year,
 	});
 
+/**
+ * One-off base price item (no recurring charges)
+ * @param price - One-time price (default: 50)
+ */
+const oneOffPrice = ({ price = 50 }: { price?: number } = {}) =>
+	constructPriceItem({
+		price,
+		interval: null,
+	});
+
 // ═══════════════════════════════════════════════════════════════════
 // EXPORT
 // ═══════════════════════════════════════════════════════════════════
@@ -250,6 +297,7 @@ const annualPrice = ({ price = 200 }: { price?: number } = {}) =>
 export const items = {
 	// Boolean
 	dashboard,
+	adminRights,
 
 	// Free metered
 	monthlyMessages,
@@ -264,6 +312,9 @@ export const items = {
 	prepaidMessages,
 	prepaidUsers,
 
+	// One-off
+	oneOffMessages,
+
 	// Consumable
 	consumableMessages,
 
@@ -273,4 +324,5 @@ export const items = {
 	// Base prices
 	monthlyPrice,
 	annualPrice,
+	oneOffPrice,
 } as const;

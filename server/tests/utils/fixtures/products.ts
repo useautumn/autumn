@@ -13,20 +13,31 @@ import {
  * @param items - Product items (features)
  * @param id - Product ID (default: "base")
  * @param isDefault - Whether this is a default product (default: false)
+ * @param trialDays - Optional number of trial days
  */
 const base = ({
 	items,
 	id = "base",
 	isDefault = false,
 	isAddOn = false,
+	trialDays,
 }: {
 	items: ProductItem[];
 	id?: string;
 	isDefault?: boolean;
 	isAddOn?: boolean;
+	trialDays?: number;
 }): ProductV2 => ({
 	...constructRawProduct({ id, items, isAddOn }),
 	is_default: isDefault,
+	...(trialDays && {
+		free_trial: {
+			length: trialDays,
+			duration: FreeTrialDuration.Day,
+			unique_fingerprint: false,
+			card_required: true,
+		},
+	}),
 });
 
 /**
@@ -127,10 +138,30 @@ const baseWithTrial = ({
 	},
 });
 
+/**
+ * One-off product - one-time purchase with $10 base price
+ * @param items - Product items (features)
+ * @param id - Product ID (default: "one-off")
+ */
+const oneOff = ({
+	items,
+	id = "one-off",
+}: {
+	items: ProductItem[];
+	id?: string;
+}): ProductV2 =>
+	constructProduct({
+		id,
+		items: [...items],
+		type: "one_off",
+		isDefault: false,
+	});
+
 export const products = {
 	base,
 	baseWithTrial,
 	pro,
 	proAnnual,
 	proWithTrial,
+	oneOff,
 } as const;
