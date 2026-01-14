@@ -1,4 +1,4 @@
-import { type UpdateSubscriptionV0Params } from "@autumn/shared";
+import type { UpdateSubscriptionV0Params } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
