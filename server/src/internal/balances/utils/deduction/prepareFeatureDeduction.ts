@@ -1,6 +1,6 @@
 import {
 	cusEntToStartingBalance,
-	cusProductsToCusEnts,
+	fullCustomerToCustomerEntitlements,
 	type FullCustomer,
 	getMaxOverage,
 	getRelevantFeatures,
@@ -43,13 +43,13 @@ export const prepareFeatureDeduction = ({
 	const relevantFeatures = notNullish(targetBalance)
 		? [feature]
 		: getRelevantFeatures({
-				features: ctx.features,
-				featureId: feature.id,
-			});
+			features: ctx.features,
+			featureId: feature.id,
+		});
 
-	// Get customer entitlements for these features
-	const cusEnts = cusProductsToCusEnts({
-		cusProducts: fullCustomer.customer_products,
+	// Get customer entitlements for these features (includes both product and loose entitlements)
+	const cusEnts = fullCustomerToCustomerEntitlements({
+		fullCustomer,
 		featureIds: relevantFeatures.map((f) => f.id),
 		reverseOrder: org.config?.reverse_deduction_order,
 		entity: fullCustomer.entity,

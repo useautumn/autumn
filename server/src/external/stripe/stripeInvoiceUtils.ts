@@ -41,11 +41,6 @@ export const getFullStripeInvoice = async ({
 	return invoice;
 };
 
-export const invoiceToSubId = ({ invoice }: { invoice: Stripe.Invoice }) => {
-	const subId = invoice.parent?.subscription_details?.subscription;
-	return subId as string | undefined;
-};
-
 export const payForInvoice = async ({
 	stripeCli,
 	paymentMethod,

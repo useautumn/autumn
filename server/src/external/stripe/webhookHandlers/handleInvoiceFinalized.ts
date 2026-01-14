@@ -16,10 +16,10 @@ import { FeatureService } from "@/internal/features/FeatureService.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { stripeInvoiceToStripeSubscriptionId } from "../invoices/utils/convertStripeInvoice";
 import {
 	getFullStripeInvoice,
 	getStripeExpandedInvoice,
-	invoiceToSubId,
 	updateInvoiceIfExists,
 } from "../stripeInvoiceUtils.js";
 import type { StripeWebhookContext } from "../webhookMiddlewares/stripeWebhookContext.js";
@@ -50,7 +50,7 @@ export const handleInvoiceFinalized = async ({
 		env,
 	});
 
-	const subId = invoiceToSubId({ invoice });
+	const subId = stripeInvoiceToStripeSubscriptionId(invoice);
 
 	if (subId) {
 		const stripeCli = createStripeCli({ org, env });

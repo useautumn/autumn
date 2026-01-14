@@ -10,7 +10,8 @@ import { CusService } from "@/internal/customers/CusService.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import { MetadataService } from "@/internal/metadata/MetadataService.js";
-import { getFullStripeInvoice, invoiceToSubId } from "../stripeInvoiceUtils.js";
+import { stripeInvoiceToStripeSubscriptionId } from "../invoices/utils/convertStripeInvoice";
+import { getFullStripeInvoice } from "../stripeInvoiceUtils.js";
 
 // biome-ignore lint/correctness/noUnusedVariables: Might be useful in the future
 const handleInvoiceCheckoutVoided = async ({
@@ -58,7 +59,7 @@ const handleInvoiceCheckoutVoided = async ({
 		env: attachParams.customer.env,
 	});
 
-	const subId = invoiceToSubId({ invoice: fullInvoice });
+	const subId = stripeInvoiceToStripeSubscriptionId(fullInvoice);
 
 	if (!subId) return;
 

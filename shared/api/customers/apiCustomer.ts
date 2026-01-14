@@ -41,9 +41,7 @@ export const BaseApiCustomerSchema = z
 
 export const ApiCustomerSchema = BaseApiCustomerSchema.extend(
 	ApiCusExpandSchema.shape,
-).meta({
-	id: "Customer",
-});
+);
 
 export type ApiCustomer = z.infer<typeof ApiCustomerSchema>;
 export type ApiCusExpand = z.infer<typeof ApiCusExpandSchema>;

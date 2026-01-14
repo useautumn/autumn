@@ -109,6 +109,14 @@ else
   remaining_amount = amount_to_deduct or 0
 end
 
+-- ============================================================================
+-- HELPER: Round number to eliminate floating point errors
+-- ============================================================================
+local function round_to_precision(num, decimals)
+  local mult = 10 ^ (decimals or 10)
+  return math.floor(num * mult + 0.5) / mult
+end
+
 -- Determine if this is a refund (negative amount)
 local is_refund = remaining_amount < 0
 
@@ -258,6 +266,7 @@ process_pass({
   context = context,
 })
 
+
 -- Pass 2: Exceed bounds
 -- For deductions: only usage_allowed entitlements can go below 0 (into overage)
 -- For refunds: ALL entitlements can go above 0 (up to max_balance)
@@ -267,8 +276,10 @@ if remaining_amount ~= 0 then
     skip_if_not_usage_allowed = not is_refund,  -- Only skip for deductions, not refunds
     context = context,
   })
+  
 end
 
+remaining_amount = round_to_precision(remaining_amount, 10)
 -- Throw error and don't apply updates if we're in reject mode and there's still remaining amount
 if remaining_amount > 0 and overage_behaviour == 'reject' then
   return cjson.encode({
@@ -278,7 +289,7 @@ if remaining_amount > 0 and overage_behaviour == 'reject' then
     updates = {},
     logs = context.logs
   })
-end
+end 
 
 -- Apply all pending writes to Redis (only after validation passes)
 apply_pending_writes(cache_key, context)

@@ -1,6 +1,6 @@
+import { cusEntToCusPrice } from "@utils/cusEntUtils/convertCusEntUtils/cusEntToCusPrice";
 import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
 import { entToOptions } from "../../productUtils/convertProductUtils";
-import { cusEntToCusPrice } from "../convertCusEntUtils/cusEntToCusPrice";
 import { getStartingBalance } from "../getStartingBalance";
 
 export const cusEntToStartingBalance = ({
@@ -12,13 +12,13 @@ export const cusEntToStartingBalance = ({
 	const price = cusPrice?.price;
 	const options = entToOptions({
 		ent: cusEnt.entitlement,
-		options: cusEnt.customer_product.options,
+		options: cusEnt.customer_product?.options ?? [],
 	});
 
 	return getStartingBalance({
 		entitlement: cusEnt.entitlement,
 		options,
 		relatedPrice: price,
-		productQuantity: cusEnt.customer_product.quantity,
+		productQuantity: cusEnt.customer_product?.quantity ?? 1,
 	});
 };

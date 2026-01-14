@@ -235,4 +235,24 @@ export class InvoiceService {
 
 		return results[0] as Invoice;
 	}
+
+	static async updateFromStripeInvoice({
+		db,
+		stripeInvoice,
+	}: {
+		db: DrizzleCli;
+		stripeInvoice: Stripe.Invoice;
+	}) {
+		return await InvoiceService.updateByStripeId({
+			db,
+			stripeId: stripeInvoice.id!,
+			updates: {
+				status: stripeInvoice.status as InvoiceStatus,
+				hosted_invoice_url: stripeInvoice.hosted_invoice_url,
+				discounts: getInvoiceDiscounts({
+					expandedInvoice: stripeInvoice,
+				}),
+			},
+		});
+	}
 }

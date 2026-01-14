@@ -177,6 +177,7 @@ export * from "./utils/common/index.js";
 export * from "./utils/cusEntUtils/balanceUtils/cusEntsToUsage.js";
 export * from "./utils/cusEntUtils/balanceUtils/cusEntToMinBalance.js";
 export * from "./utils/cusEntUtils/balanceUtils/cusEntToUsageAllowed.js";
+export * from "./utils/cusEntUtils/index";
 // Utils
 export * from "./utils/displayUtils.js";
 export * from "./utils/index.js";
