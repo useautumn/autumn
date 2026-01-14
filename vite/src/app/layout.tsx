@@ -3,7 +3,7 @@ import { ArrowRightIcon } from "@phosphor-icons/react";
 import { AutumnProvider } from "autumn-js/react";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { useEffect, useState } from "react";
-import { Outlet, useNavigate } from "react-router";
+import { Outlet, useLocation, useNavigate } from "react-router";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
@@ -30,6 +30,7 @@ export function MainLayout() {
 	const { handleApiError } = useGlobalErrorHandler();
 
 	const navigate = useNavigate();
+	const location = useLocation();
 
 	// Global error handler for API errors
 	useEffect(() => {
@@ -51,8 +52,14 @@ export function MainLayout() {
 				const pathname = window.location.pathname;
 				// Don't redirect if already on quickstart
 				if (!pathname.includes("/quickstart")) {
-					navigate("/sandbox/quickstart");
-					return;
+					// Skip redirect if navigating from onboarding skip button
+					const skipRedirect = (
+						location.state as { skipOnboardingRedirect?: boolean } | null
+					)?.skipOnboardingRedirect;
+					if (!skipRedirect) {
+						navigate("/sandbox/quickstart");
+						return;
+					}
 				}
 			}
 
@@ -65,7 +72,7 @@ export function MainLayout() {
 				}
 			}
 		}
-	}, [org, orgLoading, navigate]);
+	}, [org, orgLoading, navigate, location.state]);
 
 	// 1. If not loaded, show loading screen
 	if (isPending || orgLoading) {
