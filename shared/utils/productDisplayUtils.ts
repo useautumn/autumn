@@ -144,14 +144,16 @@ export const getFeaturePriceItemDisplay = ({
 
 	const priceStr = formatTiers({ item, currency, amountFormatOptions }) ?? "";
 
+	// For "per X" display, use singular when billing_units is 1 or not specified
+	const billingUnits = item.billing_units ?? 1;
 	const billingFeatureName = getFeatureName({
 		feature,
-		units: item.billing_units,
+		units: billingUnits,
 	});
 
 	let priceStr2 = "";
-	if (item.billing_units && item.billing_units > 1) {
-		priceStr2 = `${numberWithCommas(item.billing_units)} ${billingFeatureName}`;
+	if (billingUnits > 1) {
+		priceStr2 = `${numberWithCommas(billingUnits)} ${billingFeatureName}`;
 	} else {
 		priceStr2 = `${billingFeatureName}`;
 	}

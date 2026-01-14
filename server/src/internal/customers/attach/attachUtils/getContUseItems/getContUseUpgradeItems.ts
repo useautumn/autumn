@@ -6,12 +6,13 @@ import {
 	usageToFeatureName,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import type { Logger } from "@/external/logtail/logtailUtils.js";
+import { getPrevAndNewPriceForUpgrade } from "@/internal/balances/utils/paidAllocatedFeature/createPaidAllocatedInvoice/handleProratedUpgrade.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { constructPreviewItem } from "@/internal/invoices/previewItemUtils/constructPreviewItem.js";
 import type { Proration } from "@/internal/invoices/prorationUtils.js";
 import { getUsageFromBalance } from "@/internal/products/prices/priceUtils/arrearProratedUtils/getPrevAndNewUsages.js";
 import { priceToInvoiceItem } from "@/internal/products/prices/priceUtils/priceToInvoiceItem.js";
-import { getPrevAndNewPriceForUpgrade } from "@/trigger/arrearProratedUsage/handleProratedUpgrade.js";
 import { attachParamsToProduct } from "../convertAttachParams.js";
 
 export const getContUseUpgradeItems = async ({
@@ -31,7 +32,7 @@ export const getContUseUpgradeItems = async ({
 	curItem: PreviewLineItem;
 	curUsage: number;
 	proration?: Proration;
-	logger: any;
+	logger: Logger;
 }) => {
 	const prevInvoiceItem = curItem;
 	const prevBalance = prevCusEnt.entitlement.allowance! - curUsage;

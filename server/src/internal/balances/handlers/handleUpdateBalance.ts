@@ -6,13 +6,13 @@ import {
 	UpdateBalanceParamsSchema,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import { createRoute } from "../../../honoMiddlewares/routeHandler.js";
-import { CusService } from "../../customers/CusService.js";
-import { deleteCachedApiCustomer } from "../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
-import { runUpdateBalanceV2 } from "../updateBalance/runUpdateBalanceV2.js";
-import { updateGrantedBalance } from "../updateGrantedBalance/updateGrantedBalance.js";
-import { buildCustomerEntitlementFilters } from "../utils/buildCustomerEntitlementFilters.js";
+import { createRoute } from "@/honoMiddlewares/routeHandler";
+import { runUpdateBalanceV2 } from "@/internal/balances/updateBalance/runUpdateBalanceV2";
+import { updateGrantedBalance } from "@/internal/balances/updateBalance/updateGrantedBalance";
+import { buildCustomerEntitlementFilters } from "@/internal/balances/utils/buildCustomerEntitlementFilters";
+import { CusService } from "@/internal/customers/CusService";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
+import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
 
 export const handleUpdateBalance = createRoute({
 	body: UpdateBalanceParamsSchema.extend({}),

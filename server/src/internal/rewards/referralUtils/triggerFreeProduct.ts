@@ -116,7 +116,7 @@ export const triggerFreeProduct = async ({
 
 	if (addToRedeemer) {
 		const redeemerAttachParams = {
-			...structuredClone(attachParams),
+			...attachParams,
 			customer: fullRedeemer,
 			cusProducts: fullRedeemer.customer_products,
 		};
@@ -139,7 +139,7 @@ export const triggerFreeProduct = async ({
 		await createFullCusProduct({
 			db,
 			attachParams: {
-				...structuredClone(attachParams),
+				...attachParams,
 				customer: fullReferrer,
 				cusProducts: fullReferrer.customer_products,
 			},

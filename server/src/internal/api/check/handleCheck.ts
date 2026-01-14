@@ -28,7 +28,6 @@ export const handleCheck = createRoute({
 
 		const {
 			customer_id,
-			feature_id,
 			product_id,
 			entity_id,
 			required_quantity,
@@ -98,49 +97,3 @@ export const handleCheck = createRoute({
 		});
 	},
 });
-
-// await handleEventSent({
-// 	req: {
-// 		...ctx,
-// 		body: {
-// 			...body,
-// 			value: requiredBalance,
-// 		},
-// 	},
-// 	customer_id: customer_id,
-// 	customer_data: customer_data,
-// 	event_data: {
-// 		customer_id: customer_id,
-// 		feature_id: feature_id,
-// 		value: requiredBalance,
-// 		entity_id: entity_id,
-// 	},
-// });
-
-// if (v2Response.allowed && ctx.isPublic !== true) {
-// 	if (send_event && feature_id) {
-// 		// console.log(
-// 		// 	`Allowed is true, sending event for customer ${customer_id}, feature ${feature_id}`,
-// 		// );
-// 		const featureDeductions = getTrackFeatureDeductions({
-// 			ctx,
-// 			featureId: feature_id,
-// 			value: requiredBalance,
-// 		});
-
-// 		await runTrack({
-// 			ctx,
-// 			body: {
-// 				customer_id,
-// 				entity_id,
-// 				feature_id,
-// 				value: requiredBalance,
-// 				properties: body.properties,
-// 				skip_event: body.skip_event,
-// 			} satisfies TrackParams,
-// 			featureDeductions,
-// 		});
-// 	}
-// }
-
-// Apply version transformations based on API version

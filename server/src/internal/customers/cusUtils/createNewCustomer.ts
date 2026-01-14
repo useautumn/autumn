@@ -84,10 +84,6 @@ export const createNewCustomer = async ({
 		(p) =>
 			!isFreeProduct(p.prices) && !isDefaultTrialFullProduct({ product: p }),
 	);
-	// const freeProds = defaultProds.filter((p) => isFreeProduct(p.prices));
-	// const defaultPaidTrialProd = nonFreeProds.find((p) =>
-	//   isDefaultTrialFullProduct({ product: p })
-	// );
 
 	const parsedCustomer = CreateCustomerSchema.parse(customer);
 
@@ -141,7 +137,7 @@ export const createNewCustomer = async ({
 
 	for (const group in groupToDefaultProd) {
 		const defaultProd = groupToDefaultProd[group];
-		console.log(
+		logger.debug(
 			`[createNewCustomer] Creating default product with ID: ${defaultProd?.id}`,
 		);
 

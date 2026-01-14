@@ -1,4 +1,7 @@
-import { cusProductsToCusEnts, type FullCustomer } from "@autumn/shared";
+import {
+	type FullCustomer,
+	fullCustomerToCustomerEntitlements,
+} from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
@@ -14,8 +17,8 @@ export const updateUsages = async ({
 	fullCus: FullCustomer;
 	db: DrizzleCli;
 }) => {
-	const cusEnts = cusProductsToCusEnts({
-		cusProducts: fullCus.customer_products,
+	const cusEnts = fullCustomerToCustomerEntitlements({
+		fullCustomer: fullCus,
 		inStatuses: RELEVANT_STATUSES,
 		featureId,
 	});

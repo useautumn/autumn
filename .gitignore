@@ -93,11 +93,7 @@ server/test.sh
 
 .dev.vars
 
-supabase/
 
-# To load supabase
-# 1. Start supabase locally
-# 2. Load files
 
 
 
@@ -116,3 +112,4 @@ credentials/
 server/chrome
 
 
+server/autumn.config.ts

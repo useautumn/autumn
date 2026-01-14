@@ -15,7 +15,7 @@ export function CustomerUsageAnalyticsFullButton() {
 			className="flex items-center gap-1"
 			onClick={() => {
 				pushPage({
-					path: "/analytics",
+					path: "/events",
 					queryParams: { customer_id: customer.id },
 					navigate,
 				});

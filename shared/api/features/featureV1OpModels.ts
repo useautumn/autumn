@@ -16,8 +16,7 @@ const featureDescriptions = {
 		"Whether the feature is archived. Archived features are hidden from the dashboard and list features endpoint.",
 };
 
-// Create Feature Params
-export const CreateFeatureV1ParamsSchema = z
+export const BaseFeatureV1ParamsSchema = z
 	.object({
 		id: z
 			.string()
@@ -51,9 +50,12 @@ export const CreateFeatureV1ParamsSchema = z
 			.meta({ description: featureDescriptions.credit_schema }),
 
 		event_names: z.array(z.string()).optional(),
-	})
+	});
+
+// Create Feature Params
+export const CreateFeatureV1ParamsSchema = BaseFeatureV1ParamsSchema
 	.refine(
-		(data) => {
+		(data: z.infer<typeof BaseFeatureV1ParamsSchema>) => {
 			if (data.type === FeatureType.Metered && nullish(data.consumable)) {
 				return false;
 			}
@@ -94,7 +96,7 @@ export const CreateFeatureV1ParamsSchema = z
 	);
 
 export const UpdateFeatureV1ParamsSchema =
-	CreateFeatureV1ParamsSchema.partial().extend({
+	BaseFeatureV1ParamsSchema.partial().extend({
 		archived: z.boolean().optional(),
 	});
 

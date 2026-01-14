@@ -1,5 +1,5 @@
 import {
-	cusProductsToCusEnts,
+	fullCustomerToCustomerEntitlements,
 	type EntityBalance,
 	type EntityRolloverBalance,
 	type FullCustomer,
@@ -93,8 +93,8 @@ const buildSyncEntries = ({
 	fullCustomer: FullCustomer;
 	cusEntIds: string[];
 }): SyncEntry[] => {
-	const cusEnts = cusProductsToCusEnts({
-		cusProducts: fullCustomer.customer_products,
+	const cusEnts = fullCustomerToCustomerEntitlements({
+		fullCustomer,
 	});
 
 	const entries: SyncEntry[] = [];

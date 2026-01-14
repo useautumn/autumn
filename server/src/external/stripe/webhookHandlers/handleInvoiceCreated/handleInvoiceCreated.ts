@@ -14,10 +14,8 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
 import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-import {
-	getFullStripeInvoice,
-	invoiceToSubId,
-} from "../../stripeInvoiceUtils.js";
+import { stripeInvoiceToStripeSubscriptionId } from "../../invoices/utils/convertStripeInvoice";
+import { getFullStripeInvoice } from "../../stripeInvoiceUtils.js";
 import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
 import { getStripeSubs } from "../../stripeSubUtils.js";
 import { handleContUsePrices } from "./handleContUsePrices.js";
@@ -73,7 +71,7 @@ export const sendUsageAndReset = async ({
 			stripeCli,
 		});
 
-		const subId = invoiceToSubId({ invoice });
+		const subId = stripeInvoiceToStripeSubscriptionId(invoice);
 
 		if (!usageBasedSub || usageBasedSub.id !== subId) continue;
 
@@ -153,7 +151,7 @@ export const handleInvoiceCreated = async ({
 		stripeId: data.id!,
 	});
 
-	const subId = invoiceToSubId({ invoice });
+	const subId = stripeInvoiceToStripeSubscriptionId(invoice);
 
 	if (subId) {
 		const activeProducts = await CusProductService.getByStripeSubId({
@@ -227,7 +225,7 @@ export const handleInvoiceCreated = async ({
 		});
 
 		for (const activeProduct of activeProducts) {
-			const subId = invoiceToSubId({ invoice });
+			const subId = stripeInvoiceToStripeSubscriptionId(invoice);
 			const subscription = stripeSubs.find((s) => s.id === subId);
 
 			await sendUsageAndReset({
