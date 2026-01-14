@@ -1,13 +1,15 @@
 "use client";
 
-import { DiscordLogoIcon } from "@phosphor-icons/react";
-import { Book } from "lucide-react";
+import { BooksIcon, DiscordLogoIcon } from "@phosphor-icons/react";
 import { useEnv } from "@/utils/envUtils";
+import { FeedbackDialog } from "./FeedbackDialog";
 import { NavButton } from "./NavButton";
 import { SidebarContact } from "./SidebarContact";
+import { useSidebarContext } from "./SidebarContext";
 
 export default function SidebarBottom() {
 	const env = useEnv();
+	const { expanded } = useSidebarContext();
 	// const { user, isLoaded } = useUser();
 
 	return (
@@ -29,15 +31,17 @@ export default function SidebarBottom() {
 				)} */}
 				<NavButton
 					value="docs"
-					icon={<Book size={14} />}
+					icon={<BooksIcon size={16} weight="duotone" />}
 					title="Docs"
 					env={env}
 					href="https://docs.useautumn.com"
 				/>
+				<FeedbackDialog />
 				<NavButton
 					value="discord"
-					icon={<DiscordLogoIcon size={14} />}
+					icon={<DiscordLogoIcon size={16} weight="duotone" />}
 					title="Discord"
+					online={expanded}
 					env={env}
 					href="https://discord.gg/STqxY92zuS"
 				/>
