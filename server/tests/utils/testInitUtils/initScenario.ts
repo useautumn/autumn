@@ -62,6 +62,7 @@ type ScenarioConfig = {
 	withDefault: boolean;
 	products: ProductV2[];
 	entityConfig?: EntityConfig;
+	customerIds?: string[];
 	actions: ScenarioAction[];
 };
 
@@ -120,10 +121,21 @@ const customer = ({
  * Define products to create for this test scenario.
  * Products are prefixed with customerId for test isolation.
  * @param list - Array of ProductV2 objects
- * @example s.products({ list: [pro, free] })
+ * @param customerIdsToDelete - Array of customer IDs to delete before creating products
+ * @example s.products({ list: [pro, free], customerIdsToDelete: [customerId] })
  */
-const products = ({ list }: { list: ProductV2[] }): ConfigFn => {
-	return (config) => ({ ...config, products: list });
+const products = ({
+	list,
+	customerIdsToDelete,
+}: {
+	list: ProductV2[];
+	customerIdsToDelete?: string[];
+}): ConfigFn => {
+	return (config) => ({
+		...config,
+		products: list,
+		customerIds: customerIdsToDelete,
+	});
 };
 
 /**
@@ -354,7 +366,17 @@ export const initScenario = async ({
 		? generateEntities(config.entityConfig)
 		: [];
 
-	// 1. Initialize customer
+	// 1. Initialize products & delete previous customers (prefix = customerId for isolation)
+	if (config.products.length > 0) {
+		await initProductsV0({
+			ctx,
+			products: config.products,
+			prefix: customerId,
+			customerIds: config.customerIds ?? [customerId],
+		});
+	}
+
+	// 2. Initialize customer
 	const { testClockId, customer } = await initCustomerV3({
 		ctx,
 		customerId,
@@ -363,15 +385,6 @@ export const initScenario = async ({
 		withTestClock: config.testClock,
 		withDefault: config.withDefault,
 	});
-
-	// 2. Initialize products (prefix = customerId for isolation)
-	if (config.products.length > 0) {
-		await initProductsV0({
-			ctx,
-			products: config.products,
-			prefix: customerId,
-		});
-	}
 
 	// 3. Create autumn clients
 	const autumnV1 = new AutumnInt({

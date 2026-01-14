@@ -46,6 +46,7 @@ export const createProduct = async ({
 
 		await Promise.all(batchDelete);
 	} catch (error) {
+		console.error("Error deleting product", error);
 		// Ignore deletion errors (might have customers attached)
 	}
 
