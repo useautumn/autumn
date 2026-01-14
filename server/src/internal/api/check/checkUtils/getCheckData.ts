@@ -93,8 +93,7 @@ export const getCheckData = async ({
 	body: CheckParams & { feature_id: string };
 	requiredBalance: number;
 }): Promise<CheckData> => {
-	const { customer_id, feature_id, entity_id, entity_data, customer_data } =
-		body;
+	const { customer_id, feature_id, entity_id } = body;
 
 	const { feature, creditSystems } = getFeatureAndCreditSystems({
 		features: ctx.features,
