@@ -26,29 +26,43 @@ export const ExtUpdateSubscriptionV0ParamsSchema = z.object({
 	items: z.array(ProductItemSchema).optional(), // used for custom configuration of a plan (in api - plan_override)
 	free_trial: CreateFreeTrialSchema.nullable().optional(),
 
-	reset_billing_cycle_anchor: z.boolean().optional(),
-	new_billing_subscription: z.boolean().optional(),
-	prorate_billing: z.boolean().optional(),
+	// reset_billing_cycle_anchor: z.boolean().optional(),
+	// new_billing_subscription: z.boolean().optional(),
+	// prorate_billing: z.boolean().optional(),
 });
 
 export const UpdateSubscriptionV0ParamsSchema =
 	ExtUpdateSubscriptionV0ParamsSchema.extend({
 		customer_product_id: z.string().optional(),
-	}).check((ctx) => {
-		if (ctx.value.options && ctx.value.options.length > 0) {
-			const invalidFeatures = ctx.value.options
-				.filter((opt) => nullish(opt.quantity) || opt.quantity < 0)
-				.map((opt) => opt.feature_id);
+	})
+		.refine(
+			(data) => {
+				if (data.items && data.items.length === 0) {
+					return false;
+				}
 
-			if (invalidFeatures.length > 0) {
-				ctx.issues.push({
-					code: "custom",
-					message: `Options quantity must be >= 0 for features: ${invalidFeatures.join(", ")}`,
-					input: ctx.value,
-				});
+				return true;
+			},
+			{
+				message:
+					"Must provide at least one item when updating to a custom plan",
+			},
+		)
+		.check((ctx) => {
+			if (ctx.value.options && ctx.value.options.length > 0) {
+				const invalidFeatures = ctx.value.options
+					.filter((opt) => nullish(opt.quantity) || opt.quantity < 0)
+					.map((opt) => opt.feature_id);
+
+				if (invalidFeatures.length > 0) {
+					ctx.issues.push({
+						code: "custom",
+						message: `Options quantity must be >= 0 for features: ${invalidFeatures.join(", ")}`,
+						input: ctx.value,
+					});
+				}
 			}
-		}
-	});
+		});
 
 export type ExtUpdateSubscriptionV0Params = z.infer<
 	typeof ExtUpdateSubscriptionV0ParamsSchema

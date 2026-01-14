@@ -17,9 +17,7 @@ export const handleFeatureQuantityErrors = ({
 	autumnBillingPlan: AutumnBillingPlan;
 }) => {
 	const newCustomerProduct = autumnBillingPlan.insertCustomerProducts?.[0];
-	if (!newCustomerProduct) {
-		return;
-	}
+	if (!newCustomerProduct) return;
 
 	const newPrices = cusProductToPrices({ cusProduct: newCustomerProduct });
 	const prepaidPrices = newPrices.filter(isPrepaidPrice);

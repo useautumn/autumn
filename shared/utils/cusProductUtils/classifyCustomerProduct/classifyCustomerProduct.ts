@@ -51,6 +51,15 @@ export const isCustomerProductPaid = (customerProduct?: FullCusProduct) => {
 	return !isFreeProduct({ prices });
 };
 
+/** Customer product is both paid AND recurring (not free, not one-off) */
+export const isCustomerProductPaidRecurring = (
+	customerProduct?: FullCusProduct,
+) => {
+	if (!customerProduct) return false;
+	const prices = cusProductToPrices({ cusProduct: customerProduct });
+	return !isFreeProduct({ prices }) && !isOneOffProduct({ prices });
+};
+
 // ============================================================================
 // STATUS CHECKS
 // ============================================================================

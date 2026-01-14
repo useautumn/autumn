@@ -1,0 +1,38 @@
+import { type BillingResponse, stripeToAtmnAmount } from "@autumn/shared";
+import type { BillingContext } from "@/internal/billing/v2/billingContext";
+import type { BillingResult } from "@/internal/billing/v2/types/billingResult";
+
+export const billingResultToResponse = ({
+	billingContext,
+	billingResult,
+}: {
+	billingContext: BillingContext;
+	billingResult: BillingResult;
+}): BillingResponse => {
+	const { fullCustomer } = billingContext;
+
+	const customerId = fullCustomer.id ?? fullCustomer.internal_id;
+
+	const stripeInvoice = billingResult.stripe.stripeInvoice;
+
+	return {
+		customer_id: customerId,
+		entity_id: fullCustomer.entity?.id,
+		invoice: stripeInvoice
+			? {
+					status: stripeInvoice.status,
+					stripe_id: stripeInvoice.id,
+					total: stripeToAtmnAmount({
+						amount: stripeInvoice.total,
+						currency: stripeInvoice.currency,
+					}),
+					currency: stripeInvoice.currency,
+					hosted_invoice_url: stripeInvoice.hosted_invoice_url ?? null,
+				}
+			: undefined,
+		payment_url:
+			stripeInvoice?.status === "open" && stripeInvoice.hosted_invoice_url
+				? stripeInvoice.hosted_invoice_url
+				: null,
+	} satisfies BillingResponse;
+};

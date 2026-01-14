@@ -1,16 +1,11 @@
-import {
-	cp,
-	cusProductToLineItems,
-	type FullCusProduct,
-	type LineItem,
-	secondsToMs,
-} from "@autumn/shared";
+import { cp, type FullCusProduct, type LineItem } from "@autumn/shared";
 import chalk from "chalk";
 import type { Logger } from "@/external/logtail/logtailUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
 import type { AutumnBillingPlan } from "@/internal/billing/v2/types/autumnBillingPlan";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
+import { customerProductToLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToLineItems";
 
 const formatLineItem = (item: LineItem) => ({
 	description: item.description,
@@ -130,25 +125,15 @@ export const buildSharedSubscriptionTrialLineItems = ({
 
 	if (siblingCustomerProducts.length === 0) return [];
 
-	const originalBillingCycleAnchorMs = stripeSubscription.billing_cycle_anchor
-		? secondsToMs(stripeSubscription.billing_cycle_anchor)
-		: currentEpochMs;
-
-	const billingCycleAnchorMs =
-		direction === "charge"
-			? billingContext.billingCycleAnchorMs
-			: originalBillingCycleAnchorMs;
-
 	const lineItems: LineItem[] = [];
 	for (const customerProduct of siblingCustomerProducts) {
 		lineItems.push(
-			...cusProductToLineItems({
-				cusProduct: customerProduct,
-				nowMs: currentEpochMs,
-				billingCycleAnchorMs,
+			...customerProductToLineItems({
+				ctx,
+				customerProduct: customerProduct,
+				billingContext,
 				direction,
-				org,
-				logger,
+				priceFilters: { excludeOneOffPrices: true },
 			}),
 		);
 	}

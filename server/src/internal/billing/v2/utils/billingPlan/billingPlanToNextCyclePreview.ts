@@ -2,7 +2,6 @@ import {
 	type BillingPreviewResponse,
 	cp,
 	cusProductsToPrices,
-	cusProductToLineItems,
 	getCycleEnd,
 	getSmallestInterval,
 	sumValues,
@@ -10,6 +9,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import type { BillingPlan } from "@/internal/billing/v2/types/billingPlan";
+import { customerProductToLineItems } from "../lineItems/customerProductToLineItems";
 
 export const billingPlanToNextCyclePreview = ({
 	ctx,
@@ -22,10 +22,6 @@ export const billingPlanToNextCyclePreview = ({
 }): BillingPreviewResponse["next_cycle"] => {
 	// 1. Return undefined if billing cycle anchor is now
 	const { billingCycleAnchorMs } = billingContext;
-
-	ctx.logger.info(`billingCycleAnchorMs: ${billingCycleAnchorMs}`);
-
-	ctx.logger.info(`billingCycleAnchorMs: ${billingCycleAnchorMs}`);
 
 	if (billingCycleAnchorMs === "now") return undefined;
 	const { insertCustomerProducts, updateCustomerProduct } = billingPlan.autumn;
@@ -40,7 +36,10 @@ export const billingPlanToNextCyclePreview = ({
 			cp(customerProduct).paid().recurring().hasActiveStatus().valid,
 	);
 
-	const prices = cusProductsToPrices({ cusProducts: customerProducts });
+	const prices = cusProductsToPrices({
+		cusProducts: customerProducts,
+		filters: { excludeOneOffPrices: true },
+	});
 
 	const smallestInterval = getSmallestInterval({ prices });
 
@@ -54,13 +53,14 @@ export const billingPlanToNextCyclePreview = ({
 	});
 
 	const autumnLineItems = customerProducts.flatMap((customerProduct) =>
-		cusProductToLineItems({
-			cusProduct: customerProduct,
-			nowMs: nextCycleStart,
-			billingCycleAnchorMs,
+		customerProductToLineItems({
+			ctx,
+			customerProduct: customerProduct,
+			billingContext: {
+				...billingContext,
+				currentEpochMs: nextCycleStart,
+			},
 			direction: "charge",
-			org: ctx.org,
-			logger: ctx.logger,
 		}),
 	);
 

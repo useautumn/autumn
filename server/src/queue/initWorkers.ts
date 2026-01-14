@@ -340,12 +340,21 @@ export const initHatchetWorker = async () => {
 		return;
 	}
 
-	console.log("Starting hatchet worker");
+	try {
+		console.log("Starting hatchet worker");
 
-	const worker = await hatchet.worker("hatchet-worker", {
-		workflows: [verifyCacheConsistencyWorkflow!],
-	});
+		const worker = await hatchet.worker("hatchet-worker", {
+			workflows: [verifyCacheConsistencyWorkflow!],
+		});
 
-	// Don't await - start() runs indefinitely and would block the rest of the code
-	worker.start();
+		// Don't await - start() runs indefinitely and would block the rest of the code
+		// But catch errors to prevent unhandled promise rejections from crashing
+		worker.start().catch((error) => {
+			console.error("Hatchet worker error (non-fatal):", error.message);
+			Sentry.captureException(error);
+		});
+	} catch (error) {
+		console.error("Failed to start hatchet worker", error);
+		Sentry.captureException(error);
+	}
 };

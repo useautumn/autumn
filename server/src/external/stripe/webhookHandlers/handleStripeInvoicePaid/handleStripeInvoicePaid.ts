@@ -27,8 +27,10 @@ export const handleStripeInvoicePaid = async ({
 	if (invoicePaidContext.stripeSubscriptionId) {
 		// 3a. Convert to charge_automatically if needed
 		// await convertToChargeAutomatically({ ctx, invoicePaidContext });
+
 		// 3b. Create/update Autumn invoice
 		// await upsertAutumnInvoice({ ctx, invoicePaidContext });
+
 		// 3c. Trigger checkout rewards
 		// await triggerCheckoutRewards({ ctx, invoicePaidContext });
 	} else {

@@ -1,11 +1,7 @@
-import {
-	cusProductToLineItems,
-	type FullCusProduct,
-	type LineItem,
-	secondsToMs,
-} from "@autumn/shared";
+import type { FullCusProduct, LineItem } from "@autumn/shared";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
+import { customerProductToLineItems } from "../../utils/lineItems/customerProductToLineItems";
 import { logBuildAutumnLineItems } from "./logBuildAutumnLineItems";
 
 export const buildAutumnLineItems = ({
@@ -19,11 +15,7 @@ export const buildAutumnLineItems = ({
 	deletedCustomerProduct?: FullCusProduct;
 	billingContext: BillingContext;
 }) => {
-	// billingCycleAnchor = billingCycleAnchor ?? now;
-	const { billingCycleAnchorMs, currentEpochMs, stripeSubscription } =
-		billingContext;
-
-	const { org, logger } = ctx;
+	const { logger } = ctx;
 
 	// For now, update subscription doesn't charge for existing usage.
 	const arrearLineItems: LineItem[] = [];
@@ -35,28 +27,22 @@ export const buildAutumnLineItems = ({
 	// })
 
 	// Get line items for ongoing cus product
-	const originalBillingCycleAnchorMs = stripeSubscription?.billing_cycle_anchor
-		? secondsToMs(stripeSubscription.billing_cycle_anchor)
-		: "now";
 	const deletedLineItems = deletedCustomerProduct
-		? cusProductToLineItems({
-				cusProduct: deletedCustomerProduct,
-				nowMs: currentEpochMs,
-				billingCycleAnchorMs: originalBillingCycleAnchorMs,
+		? customerProductToLineItems({
+				ctx,
+				customerProduct: deletedCustomerProduct,
+				billingContext,
 				direction: "refund",
-				org,
-				logger,
+				priceFilters: { excludeOneOffPrices: true },
 			})
 		: [];
 
 	const newLineItems = newCustomerProducts.flatMap((newCustomerProduct) =>
-		cusProductToLineItems({
-			cusProduct: newCustomerProduct,
-			nowMs: currentEpochMs,
-			billingCycleAnchorMs,
+		customerProductToLineItems({
+			ctx,
+			customerProduct: newCustomerProduct,
+			billingContext,
 			direction: "charge",
-			org,
-			logger,
 		}),
 	);
 
