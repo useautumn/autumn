@@ -1,5 +1,6 @@
 import { AppEnv } from "@autumn/shared";
 import { z } from "zod/v4";
+import { auth } from "@/utils/auth";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
 import { createKey } from "../api-keys/apiKeyUtils";
 
@@ -17,6 +18,16 @@ export const handleCreateSecretKey = createRoute({
 		if (env === AppEnv.Live) {
 			prefix = "am_sk_live";
 		}
+
+		const meta: Record<string, string> = {};
+		const user = await auth.api.getSession({
+			headers: c.req.raw.headers,
+		});
+
+		if (user?.user?.name) {
+			meta.author = user?.user?.name;
+		}
+
 		const apiKey = await createKey({
 			db,
 			env,
@@ -24,7 +35,7 @@ export const handleCreateSecretKey = createRoute({
 			orgId: org.id,
 			userId: ctx.user?.id,
 			prefix,
-			meta: {},
+			meta,
 		});
 
 		return c.json({

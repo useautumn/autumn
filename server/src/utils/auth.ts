@@ -113,8 +113,24 @@ export const auth = betterAuth({
 
 		jwt(),
 		oauthProvider({
-			loginPage: "/sign-in",
-			consentPage: "/consent",
+			loginPage: `${process.env.CLIENT_URL}/sign-in`,
+			consentPage: `${process.env.CLIENT_URL}/consent`,
+			scopes: ["openid", "profile", "email", "apiKeys"],
+			clientReference: ({ session }) => {
+				return (session?.activeOrganizationId as string | undefined) ?? undefined;
+			},
+			// Use the active organization as the consent reference
+			// This makes consent org-scoped, not just user-scoped
+			postLogin: {
+				// Required: page to redirect to if shouldRedirect returns true
+				page: `${process.env.CLIENT_URL}/consent`,
+				// Required: whether to show post-login page (we don't need this, so always false)
+				shouldRedirect: async () => false,
+				// Optional: reference ID for consent (org ID makes consent org-scoped)
+				consentReferenceId: ({ session }) => {
+					return (session?.activeOrganizationId as string | undefined) ?? undefined;
+				},
+			},
 		}),
 
 		organization({

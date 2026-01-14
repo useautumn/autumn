@@ -10,6 +10,8 @@ import { useSession } from "./lib/auth-client";
 import { identifyUser } from "./utils/posthogTracking";
 import { AdminView } from "./views/admin/AdminView";
 import { ImpersonateRedirect } from "./views/admin/ImpersonateRedirect";
+import { OAuthClientsView } from "./views/admin/oauth/OAuthClientsView";
+
 import { AcceptInvitation } from "./views/auth/AcceptInvitation";
 import { PasswordSignIn } from "./views/auth/components/PasswordSignIn";
 import { Consent } from "./views/auth/Consent";
@@ -70,6 +72,7 @@ export default function App() {
 				<Route element={<MainLayout />}>
 					<Route path="*" element={<DefaultView />} />
 					<Route path="/admin" element={<AdminView />} />
+					<Route path="/admin/oauth" element={<OAuthClientsView />} />
 					<Route
 						path="/impersonate-redirect"
 						element={<ImpersonateRedirect />}
