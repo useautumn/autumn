@@ -21,6 +21,7 @@ export function useUpdateSubscriptionRequestBody({
 
 	const initialPrepaidOptions =
 		form.options.defaultValues?.prepaidOptions ?? {};
+	const initialVersion = form.options.defaultValues?.version;
 
 	const buildRequestBody = useCallback(() => {
 		const formValues = form.store.state.values;
@@ -30,6 +31,7 @@ export function useUpdateSubscriptionRequestBody({
 			trialDuration,
 			trialCardRequired,
 			removeTrial,
+			version,
 		} = formValues;
 
 		const options = prepaidItems
@@ -80,6 +82,11 @@ export function useUpdateSubscriptionRequestBody({
 			requestBody.items = customizedProduct.items;
 		}
 
+		// Only send version if it changed from the initial value
+		if (version !== initialVersion) {
+			requestBody.version = version;
+		}
+
 		return requestBody;
 	}, [
 		form.store,
@@ -88,6 +95,7 @@ export function useUpdateSubscriptionRequestBody({
 		entityId,
 		customerProduct.id,
 		customerProduct.internal_product_id,
+		initialVersion,
 		prepaidItems,
 		initialPrepaidOptions,
 		customizedProduct?.items,

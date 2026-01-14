@@ -4,11 +4,13 @@ import type {
 	ProductV2,
 } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useUpdateSubscriptionPreview } from "@/components/forms/update-subscription/use-update-subscription-preview";
 import {
 	FreeTrialSection,
 	getFreeTrial,
+	PlanVersionSection,
 	PrepaidQuantitySection,
 	UpdateSubscriptionFooter,
 	type UpdateSubscriptionFormContext,
@@ -23,6 +25,7 @@ import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -32,7 +35,8 @@ function SheetContent({
 }: {
 	updateSubscriptionFormContext: UpdateSubscriptionFormContext;
 }) {
-	const { customerProduct, prepaidItems } = updateSubscriptionFormContext;
+	const { customerProduct, prepaidItems, numVersions, currentVersion } =
+		updateSubscriptionFormContext;
 	const { closeSheet } = useSheetStore();
 	const { stripeAccount } = useOrgStripeQuery();
 	const env = useEnv();
@@ -89,6 +93,12 @@ function SheetContent({
 				itemId={customerProduct.id}
 			/>
 
+			<PlanVersionSection
+				form={form}
+				numVersions={numVersions}
+				currentVersion={currentVersion}
+			/>
+
 			<PrepaidQuantitySection form={form} prepaidItems={prepaidItems} />
 
 			<FreeTrialSection form={form} customerProduct={customerProduct} />
@@ -97,6 +107,7 @@ function SheetContent({
 				form={form}
 				prepaidItems={prepaidItems}
 				customerProduct={customerProduct}
+				currentVersion={currentVersion}
 				currency={previewQuery.data?.currency}
 			/>
 
@@ -118,6 +129,7 @@ export function SubscriptionUpdateSheet2() {
 	const itemId = useSheetStore((s) => s.itemId);
 	const sheetData = useSheetStore((s) => s.data);
 	const { customer } = useCusQuery();
+	const axiosInstance = useAxiosInstance();
 
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
 
@@ -127,6 +139,22 @@ export function SubscriptionUpdateSheet2() {
 
 	const product = customizedProduct?.id ? customizedProduct : productV2;
 	const { prepaidItems } = usePrepaidItems({ product });
+
+	// Fetch numVersions for the product
+	const { data: productData } = useQuery({
+		queryKey: ["product-versions", productV2?.id],
+		queryFn: async () => {
+			if (!productV2?.id) return null;
+			const { data } = await axiosInstance.get(
+				`/products/${productV2.id}/data`,
+			);
+			return data;
+		},
+		enabled: !!productV2?.id,
+	});
+
+	const numVersions = productData?.numVersions ?? productV2?.version ?? 1;
+	const currentVersion = cusProduct?.product?.version ?? 1;
 
 	const updateSubscriptionFormContext = useMemo(
 		(): UpdateSubscriptionFormContext | null =>
@@ -138,9 +166,20 @@ export function SubscriptionUpdateSheet2() {
 						customerProduct: cusProduct as FullCusProduct,
 						customizedProduct,
 						prepaidItems,
+						numVersions,
+						currentVersion,
 					}
 				: null,
-		[customer, product, cusProduct, productV2, customizedProduct, prepaidItems],
+		[
+			customer,
+			product,
+			cusProduct,
+			productV2,
+			customizedProduct,
+			prepaidItems,
+			numVersions,
+			currentVersion,
+		],
 	);
 
 	if (!cusProduct) {

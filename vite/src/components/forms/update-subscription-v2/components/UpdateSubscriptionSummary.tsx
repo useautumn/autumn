@@ -7,12 +7,14 @@ import type { UseUpdateSubscriptionForm } from "../hooks/useUpdateSubscriptionFo
 import type { SummaryItem } from "../types/summary";
 import { generatePrepaidChanges } from "../utils/generatePrepaidChanges";
 import { generateTrialChanges } from "../utils/generateTrialChanges";
+import { generateVersionChanges } from "../utils/generateVersionChanges";
 import { SummaryItemRow } from "./SummaryItemRow";
 
 interface UpdateSubscriptionSummaryProps {
 	form: UseUpdateSubscriptionForm;
 	prepaidItems: PrepaidItemWithFeature[];
 	customerProduct: FullCusProduct;
+	currentVersion: number;
 	currency?: string;
 }
 
@@ -20,6 +22,7 @@ export function UpdateSubscriptionSummary({
 	form,
 	prepaidItems,
 	customerProduct,
+	currentVersion,
 	currency = "usd",
 }: UpdateSubscriptionSummaryProps) {
 	const formValues = useStore(form.store, (state) => state.values);
@@ -42,15 +45,22 @@ export function UpdateSubscriptionSummary({
 			trialDuration: formValues.trialDuration,
 		});
 
-		return [...prepaidChanges, ...trialChanges];
+		const versionChanges = generateVersionChanges({
+			currentVersion,
+			selectedVersion: formValues.version,
+		});
+
+		return [...versionChanges, ...prepaidChanges, ...trialChanges];
 	}, [
 		prepaidItems,
 		formValues.prepaidOptions,
 		formValues.removeTrial,
 		formValues.trialLength,
 		formValues.trialDuration,
+		formValues.version,
 		initialPrepaidOptions,
 		customerProduct,
+		currentVersion,
 		currency,
 	]);
 

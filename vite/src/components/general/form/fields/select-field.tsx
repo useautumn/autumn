@@ -9,13 +9,13 @@ import {
 } from "@/components/v2/selects/Select";
 import { useFieldContext } from "@/hooks/form/form-context";
 
-export type SelectFieldOption = {
+export type SelectFieldOption<T extends string | number = string> = {
 	label: string;
-	value: string;
+	value: T;
 	disabledValue?: string;
 };
 
-export function SelectField({
+export function SelectField<T extends string | number = string>({
 	label,
 	options,
 	placeholder,
@@ -25,19 +25,29 @@ export function SelectField({
 	selectValueAfter,
 }: {
 	label: string;
-	options: SelectFieldOption[];
+	options: SelectFieldOption<T>[];
 	placeholder: string;
 	textAfter?: string;
 	className?: string;
 	hideFieldInfo?: boolean;
 	selectValueAfter?: React.ReactNode;
 }) {
-	const field = useFieldContext<string>();
+	const field = useFieldContext<T>();
+
+	// Convert value to string for the Select component (which only accepts strings)
+	const stringValue = String(field.state.value);
+	const handleChange = (value: string) => {
+		// Convert back to the original type
+		const typedValue = (
+			typeof field.state.value === "number" ? Number(value) : value
+		) as T;
+		field.handleChange(typedValue);
+	};
 
 	return (
 		<div className={className}>
 			<Label>{label}</Label>
-			<Select value={field.state.value} onValueChange={field.handleChange}>
+			<Select value={stringValue} onValueChange={handleChange}>
 				<SelectTrigger className="w-full h-7">
 					<div className="flex items-center gap-2">
 						<SelectValue placeholder={placeholder} />
@@ -47,8 +57,8 @@ export function SelectField({
 				<SelectContent>
 					{options.map((option) => (
 						<SelectItem
-							key={option.value}
-							value={option.value}
+							key={String(option.value)}
+							value={String(option.value)}
 							className={
 								option.disabledValue ? "text-t4 pointer-events-none" : ""
 							}

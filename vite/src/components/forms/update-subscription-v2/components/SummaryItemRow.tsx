@@ -1,5 +1,5 @@
 import { formatAmount } from "@autumn/shared";
-import { CalendarIcon } from "@phosphor-icons/react";
+import { CalendarIcon, GitBranchIcon } from "@phosphor-icons/react";
 import { PlanFeatureIcon } from "@/views/products/plan/components/plan-card/PlanFeatureIcon";
 import { CustomDotIcon } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
 import type { SummaryItem } from "../types/summary";
@@ -30,6 +30,14 @@ export function SummaryItemRow({
 			);
 		}
 
+		if (item.type === "version") {
+			return (
+				<div className="text-purple-500">
+					<GitBranchIcon size={16} weight="duotone" />
+				</div>
+			);
+		}
+
 		return null;
 	};
 
@@ -43,11 +51,15 @@ export function SummaryItemRow({
 		}
 
 		if (item.oldValue !== null && item.oldValue !== item.newValue) {
+			const isVersion = item.type === "version";
+			const formatValue = (value: string | number) =>
+				isVersion ? `v${value}` : value;
+
 			return (
 				<span className="bg-muted px-2 py-0.5 rounded-md text-xs flex items-center gap-1">
-					<span className="text-red-500">{item.oldValue}</span>
+					<span className="text-red-500">{formatValue(item.oldValue)}</span>
 					<span className="text-t3">→</span>
-					<span className="text-green-500">{item.newValue}</span>
+					<span className="text-green-500">{formatValue(item.newValue)}</span>
 				</span>
 			);
 		}

@@ -2,7 +2,7 @@ import type { ProductItem } from "@autumn/shared";
 
 export interface SummaryItem {
 	id: string;
-	type: "prepaid" | "trial";
+	type: "prepaid" | "trial" | "version";
 	label: string;
 	description: string;
 	oldValue: string | number | null;
