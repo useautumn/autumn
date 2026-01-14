@@ -14,7 +14,7 @@ import { getStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { notNullish } from "@/utils/genUtils.js";
-import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
+import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 
 export const handleSchedulePhaseCompleted = async ({
 	ctx,

@@ -1,11 +1,14 @@
+import { ms } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import { createInvoiceForBilling } from "@/internal/billing/v2/providers/stripe/utils/invoices/createInvoiceForBilling";
+import { StripeBillingStage } from "@/internal/billing/v2/types/autumnBillingPlan";
 import type {
 	BillingPlan,
 	StripeInvoiceMetadata,
 } from "@/internal/billing/v2/types/billingPlan";
-import type { StripeBillingPlanResult } from "@/internal/billing/v2/types/stripeBillingPlanResult";
+import type { StripeBillingPlanResult } from "@/internal/billing/v2/types/billingResult";
+import { isDeferredInvoiceMode } from "@/internal/billing/v2/utils/billingContext/isDeferredInvoiceMode";
 import { upsertInvoiceFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertInvoiceFromBilling";
 import { insertMetadataFromBillingPlan } from "@/internal/metadata/utils/insertMetadataFromBillingPlan";
 
@@ -30,30 +33,36 @@ export const executeStripeInvoiceAction = async ({
 
 	logger.debug("[executeStripeInvoiceAction] Creating invoice for billing");
 
-	const { invoice } = await createInvoiceForBilling({
+	const { invoice, actionRequired } = await createInvoiceForBilling({
 		ctx,
 		billingContext,
 		stripeInvoiceAction,
 		invoiceMetadata,
 	});
 
-	const enableProductAfterInvoice =
-		billingContext.invoiceMode?.enableProductImmediately === false;
-	const invoiceActionRequired = invoice.status === "open";
-
 	// Insert metadata into DB
-	const deferBillingPlan = enableProductAfterInvoice || invoiceActionRequired;
+
+	const deferredInvoiceMode = isDeferredInvoiceMode({
+		billingContext,
+	});
+
+	// const actionRequired = invoice.status === "open" && !isInvoiceMode;
+
+	const deferBillingPlan =
+		invoice.status === "open" && (deferredInvoiceMode || actionRequired);
+
 	if (deferBillingPlan) {
-		logger.debug(
-			`Deferring billing plan, enableProductAfterInvoice: ${enableProductAfterInvoice}, invoiceActionRequired: ${invoiceActionRequired}`,
-		);
+		logger.debug(`Deferring billing plan`);
+
 		await insertMetadataFromBillingPlan({
 			ctx,
 			billingPlan,
 			billingContext,
-			enableProductAfterInvoice,
-			invoiceActionRequired,
 			stripeInvoice: invoice,
+			expiresAt: deferredInvoiceMode
+				? Date.now() + ms.days(10)
+				: Date.now() + ms.days(30),
+			resumeAfter: StripeBillingStage.InvoiceAction,
 		});
 
 		await upsertInvoiceFromBilling({
@@ -66,6 +75,7 @@ export const executeStripeInvoiceAction = async ({
 		return {
 			stripeInvoice: invoice,
 			deferred: true,
+			actionRequired,
 		};
 	}
 

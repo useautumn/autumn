@@ -5,7 +5,7 @@ import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/han
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
-import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
+import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
 
 const isSubRenewed = ({
 	previousAttributes,

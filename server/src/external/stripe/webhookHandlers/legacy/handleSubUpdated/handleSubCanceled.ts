@@ -13,11 +13,11 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { formatUnixToDateTime, nullish } from "@/utils/genUtils.js";
-import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
+import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 import {
 	getLatestPeriodEnd,
 	subToPeriodStartEnd,
-} from "../../stripeSubUtils/convertSubUtils.js";
+} from "../../../stripeSubUtils/convertSubUtils.js";
 
 export const isSubCanceled = ({
 	previousAttributes,

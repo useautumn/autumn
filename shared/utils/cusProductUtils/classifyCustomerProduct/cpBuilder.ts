@@ -13,6 +13,7 @@ import {
 	isCustomerProductOnStripeSubscription,
 	isCustomerProductOnStripeSubscriptionSchedule,
 	isCustomerProductPaid,
+	isCustomerProductPaidRecurring,
 	isCustomerProductRecurring,
 	isCustomerProductScheduled,
 	isCustomerProductTrialing,
@@ -79,6 +80,12 @@ class CustomerProductChecker {
 	/** Product has at least one price (not free) */
 	paid() {
 		this.predicates.push(isCustomerProductPaid);
+		return this;
+	}
+
+	/** Product is paid AND recurring (not free, not one-off) */
+	paidRecurring() {
+		this.predicates.push(isCustomerProductPaidRecurring);
 		return this;
 	}
 

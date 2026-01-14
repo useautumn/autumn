@@ -37,6 +37,7 @@ export const evaluateStripeBillingPlan = async ({
 	const stripeSubscriptionAction = buildStripeSubscriptionAction({
 		ctx,
 		billingContext,
+		autumnBillingPlan,
 		finalCustomerProducts: finalFullCustomer.customer_products,
 	});
 

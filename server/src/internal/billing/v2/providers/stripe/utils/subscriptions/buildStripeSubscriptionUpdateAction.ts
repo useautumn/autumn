@@ -37,10 +37,6 @@ export const buildStripeSubscriptionUpdateAction = ({
 		trialEndsAt &&
 		msToSeconds(trialEndsAt) !== stripeSubscription?.trial_end;
 
-	console.log("shouldSetTrialEnd", shouldSetTrialEnd);
-	console.log("trialEndsAt", trialEndsAt);
-	console.log("stripeSubscription?.trial_end", stripeSubscription?.trial_end);
-
 	const shouldUnsetTrialEnd =
 		!scheduleManagesSubscription && trialEndsAt === null;
 

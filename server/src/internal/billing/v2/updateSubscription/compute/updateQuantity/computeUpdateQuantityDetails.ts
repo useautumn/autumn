@@ -5,6 +5,8 @@ import {
 	findFeatureByInternalId,
 	findFeatureOptionsByFeature,
 	InternalError,
+	isOneOffPrice,
+	RecaseError,
 } from "@autumn/shared";
 import { getLineItemBillingPeriod } from "@shared/utils/billingUtils/cycleUtils/getLineItemBillingPeriod";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -49,12 +51,6 @@ export const computeUpdateQuantityDetails = ({
 		});
 	}
 
-	if (!billingCycleAnchorMs) {
-		throw new InternalError({
-			message: `[Quantity Update] billingCycleAnchorMs is required (no active subscription)`,
-		});
-	}
-
 	const feature = findFeatureByInternalId({
 		features,
 		internalId: internalFeatureId,
@@ -77,6 +73,12 @@ export const computeUpdateQuantityDetails = ({
 		errorOnNotFound: true,
 	});
 
+	if (isOneOffPrice(customerPrice.price)) {
+		throw new RecaseError({
+			message: `Not allowed to update feature quantity for one off items.`,
+		});
+	}
+
 	const customerEntitlement = customerPriceToCustomerEntitlement({
 		customerPrice,
 		customerEntitlements: customerProduct.customer_entitlements,
@@ -90,6 +92,12 @@ export const computeUpdateQuantityDetails = ({
 			customerPrice,
 			customerEntitlement,
 		});
+
+	if (!billingCycleAnchorMs) {
+		throw new InternalError({
+			message: `[Quantity Update] billingCycleAnchorMs is required (no active subscription)`,
+		});
+	}
 
 	const billingPeriod = getLineItemBillingPeriod({
 		anchorMs: billingCycleAnchorMs,

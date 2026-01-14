@@ -1,3 +1,4 @@
+import { isOneOffPrice } from "@utils/productUtils/priceUtils/classifyPriceUtils.js";
 import type { Entity } from "../../models/cusModels/entityModels/entityModels.js";
 import type { CustomerEntitlementFilters } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
@@ -17,10 +18,20 @@ import { notNullish } from "../utils.js";
 
 export const cusProductsToPrices = ({
 	cusProducts,
+	filters,
 }: {
 	cusProducts: FullCusProduct[];
+	filters?: {
+		excludeOneOffPrices?: boolean;
+	};
 }) => {
-	return cusProducts.flatMap((cp) => cusProductToPrices({ cusProduct: cp }));
+	let prices = cusProducts.flatMap((cp) =>
+		cusProductToPrices({ cusProduct: cp }),
+	);
+	if (filters?.excludeOneOffPrices) {
+		prices = prices.filter((p) => !isOneOffPrice(p));
+	}
+	return prices;
 };
 
 export const cusProductsToCusPrices = ({
@@ -121,7 +132,10 @@ export const cusProductsToCusEnts = ({
 		// customerEntitlementFilters,
 	});
 
-	if (customerEntitlementFilters?.cusEntIds && customerEntitlementFilters.cusEntIds.length > 0) {
+	if (
+		customerEntitlementFilters?.cusEntIds &&
+		customerEntitlementFilters.cusEntIds.length > 0
+	) {
 		cusEnts = cusEnts.filter((cusEnt) =>
 			customerEntitlementFilters.cusEntIds?.includes(cusEnt.id),
 		);
@@ -129,7 +143,8 @@ export const cusProductsToCusEnts = ({
 
 	if (notNullish(customerEntitlementFilters?.interval)) {
 		cusEnts = cusEnts.filter(
-			(cusEnt) => cusEnt.entitlement.interval === customerEntitlementFilters.interval,
+			(cusEnt) =>
+				cusEnt.entitlement.interval === customerEntitlementFilters.interval,
 		);
 	}
 
