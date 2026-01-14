@@ -14,9 +14,7 @@ export type TimeseriesData = {
 	data: TimeseriesRow[];
 };
 
-/**
- * Prepares chart data from pre-aggregated timeseries data
- */
+/** Prepares chart data from pre-aggregated timeseries data */
 export function prepareTimeseriesChartData({
 	timeseriesEvents,
 }: {
@@ -42,6 +40,7 @@ export function prepareTimeseriesChartData({
 	});
 
 	// Transform timeseries data to chart format
+	// Period is aggregated by user's local timezone on the backend
 	const chartData = timeseriesEvents.data.map((row) => {
 		const date = new Date(row.period);
 		const dayKey = date.toLocaleDateString("en-US", {
