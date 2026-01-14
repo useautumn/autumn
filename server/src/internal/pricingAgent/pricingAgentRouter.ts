@@ -304,7 +304,8 @@ This creates: $Y/month base price that includes 1 unit, then $Y per additional u
 export const pricingAgentRouter = new Hono<HonoEnv>();
 
 pricingAgentRouter.post("/chat", async (c) => {
-	const { messages }: { messages: UIMessage[] } = await c.req.json();
+	const { messages, sessionId }: { messages: UIMessage[]; sessionId?: string } =
+		await c.req.json();
 	const ctx = c.var.ctx;
 
 	if (!process.env.ANTHROPIC_API_KEY) {
@@ -327,6 +328,7 @@ pricingAgentRouter.post("/chat", async (c) => {
 		? withTracing(baseModel, posthog, {
 				posthogDistinctId: distinctId,
 				posthogProperties: {
+					...(sessionId && { $ai_session_id: sessionId }),
 					org_id: ctx.org?.id,
 					org_slug: ctx.org?.slug,
 					feature: "pricing_agent",

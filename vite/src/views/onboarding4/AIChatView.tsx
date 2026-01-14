@@ -5,7 +5,7 @@ import {
 } from "ai";
 import { ImageIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useId, useRef, useState } from "react";
 import {
 	Conversation,
 	ConversationContent,
@@ -108,6 +108,10 @@ export function AIChatView({ onBack }: AIChatViewProps) {
 	const previewSetupRef = useRef<Promise<PreviewOrg | null> | null>(null);
 	const axiosInstance = useAxiosInstance();
 
+	// Session ID for PostHog AI tracing - groups all messages in a conversation
+	const reactId = useId();
+	const chatSessionIdRef = useRef(`pricing-chat-${reactId}-${Date.now()}`);
+
 	/** Setup the preview org (called once, memoized) */
 	const setupPreviewOrg = useCallback(async (): Promise<PreviewOrg | null> => {
 		// If already setting up, return the existing promise
@@ -201,6 +205,9 @@ export function AIChatView({ onBack }: AIChatViewProps) {
 			credentials: "include",
 			headers: {
 				"x-client-type": "dashboard",
+			},
+			body: {
+				sessionId: chatSessionIdRef.current,
 			},
 		}),
 
