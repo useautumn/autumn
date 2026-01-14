@@ -103,7 +103,7 @@ export function deduplicateEntitlements({
 				0,
 			);
 			const summedQuantity = ents.reduce(
-				(sum, e) => sum + (e.customer_product.quantity ?? 1),
+				(sum, e) => sum + (e.customer_product?.quantity ?? 1),
 				0,
 			);
 			const earliestReset = ents.reduce(
@@ -122,10 +122,12 @@ export function deduplicateEntitlements({
 					...first.entitlement,
 					allowance: summedAllowance,
 				},
-				customer_product: {
-					...first.customer_product,
-					quantity: summedQuantity,
-				},
+				customer_product: first.customer_product
+					? {
+							...first.customer_product,
+							quantity: summedQuantity,
+						}
+					: null,
 				next_reset_at: earliestReset ?? first.next_reset_at,
 			});
 		}
@@ -177,7 +179,7 @@ export function processNonBooleanEntitlements({
 						feature_amount: schemaItem.feature_amount,
 						feature: meteredFeature,
 						meteredCusEnt,
-						isSubRow: true,
+						isSubRow: true as const,
 						entitlement: ent.entitlement,
 						customer_product: ent.customer_product,
 						next_reset_at: ent.next_reset_at,

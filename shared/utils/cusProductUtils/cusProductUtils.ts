@@ -1,4 +1,4 @@
-import { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
+import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 import { notNullish } from "../utils.js";
 
 export const getTotalCusProdQuantity = ({

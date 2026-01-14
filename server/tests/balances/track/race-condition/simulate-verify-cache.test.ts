@@ -5,7 +5,7 @@
 // import chalk from "chalk";
 // import { AutumnInt } from "@/external/autumn/autumnCli.js";
 // import { currentRegion } from "@/external/redis/initRedis.js";
-// import { globalBatchingManager } from "@/internal/balances/track/redisTrackUtils/BatchingManager.js";
+
 // import { CusService } from "@/internal/customers/CusService.js";
 // import { setCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/setCachedApiCustomer.js";
 // import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";

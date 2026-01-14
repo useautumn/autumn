@@ -1,6 +1,6 @@
 import { EntityNotFoundError } from "@autumn/shared";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler.js";
-import { adjustAllowance } from "../../../../trigger/adjustAllowance.js";
+import { adjustAllowance } from "@/internal/balances/utils/paidAllocatedFeature/adjustAllowance.js";
 import type { ExtendedRequest } from "../../../../utils/models/Request.js";
 import { EntityService } from "../../../api/entities/EntityService.js";
 import { CusService } from "../../../customers/CusService.js";

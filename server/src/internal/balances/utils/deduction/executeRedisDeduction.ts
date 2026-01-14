@@ -4,10 +4,11 @@ import type {
 } from "@autumn/shared";
 import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { handlePaidAllocatedCusEnt } from "@/internal/balances/utils/paidAllocatedFeature/handlePaidAllocatedCusEnt.js";
+import { rollbackDeduction } from "@/internal/balances/utils/paidAllocatedFeature/rollbackDeduction.js";
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
-import { handlePaidAllocatedCusEnt } from "../../track/trackUtils/handlePaidAllocatedCusEnt.js";
-import { rollbackDeduction } from "../../track/trackUtils/rollbackDeduction.js";
+import { handleThresholdReached } from "../handleThresholdReached.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
@@ -189,6 +190,17 @@ export const executeRedisDeduction = async ({
 			});
 			throw error;
 		}
+
+		handleThresholdReached({
+			ctx,
+			oldFullCus,
+			newFullCus: fullCustomer,
+			feature: deduction.feature,
+		}).catch((error) => {
+			ctx.logger.error(
+				`[executeRedisDeduction] Failed to handle threshold reached: ${error}`,
+			);
+		});
 	}
 
 	return {
