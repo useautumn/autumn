@@ -1,12 +1,14 @@
 import {
+	cusProductToProduct,
 	type FullCustomer,
 	InternalError,
+	notNullish,
 	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { ProductService } from "@/internal/products/ProductService";
 import { setupCustomFullProduct } from "../../setup/setupCustomFullProduct";
 import { findTargetCustomerProduct } from "./findTargetCustomerProduct";
-import { getFullProductForVersion } from "./getFullProductForVersion";
 
 export const setupUpdateSubscriptionProductContext = async ({
 	ctx,
@@ -28,11 +30,20 @@ export const setupUpdateSubscriptionProductContext = async ({
 		});
 	}
 
-	const fullProduct = await getFullProductForVersion({
-		ctx,
-		targetCustomerProduct,
-		version: params.version,
-	});
+	let fullProduct = cusProductToProduct({ cusProduct: targetCustomerProduct });
+
+	if (
+		notNullish(params.version) &&
+		params.version !== targetCustomerProduct.product.version
+	) {
+		fullProduct = await ProductService.getFull({
+			db: ctx.db,
+			idOrInternalId: targetCustomerProduct.product.id,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			version: params.version,
+		});
+	}
 
 	const {
 		fullProduct: customFullProduct,
