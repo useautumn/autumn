@@ -198,7 +198,7 @@ function StepCard({
 											});
 										}}
 									>
-										AI builder
+										AI chat
 									</IconButton>
 									<IconButton
 										variant="secondary"
