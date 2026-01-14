@@ -38,7 +38,7 @@ export function SelectField({
 		<div className={className}>
 			<Label>{label}</Label>
 			<Select value={field.state.value} onValueChange={field.handleChange}>
-				<SelectTrigger className="w-full h-6!">
+				<SelectTrigger className="w-full h-7">
 					<div className="flex items-center gap-2">
 						<SelectValue placeholder={placeholder} />
 						{selectValueAfter && selectValueAfter}
