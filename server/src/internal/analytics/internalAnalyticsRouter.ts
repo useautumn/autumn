@@ -113,7 +113,8 @@ analyticsRouter.post("/events", async (req: any, res: any) =>
 		handler: async () => {
 			AnalyticsService.handleEarlyExit();
 			const { db, org, env, features } = req;
-			let { interval, event_names, customer_id, group_by, bin_size } = req.body;
+			let { interval, event_names, customer_id, group_by, bin_size, timezone } =
+				req.body;
 
 			let topEvents: { featureIds: string[]; eventNames: string[] } | undefined;
 
@@ -185,6 +186,7 @@ analyticsRouter.post("/events", async (req: any, res: any) =>
 					aggregateAll,
 					group_by: group_by,
 					customer,
+					timezone,
 				},
 			});
 
