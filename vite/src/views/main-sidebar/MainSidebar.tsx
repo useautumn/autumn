@@ -152,7 +152,7 @@ export const MainSidebar = () => {
 									icon: <CubeIcon size={16} weight="fill" />,
 								},
 								{
-									title: "Plan Features",
+									title: "Features",
 									value: "features",
 									icon: <LegoIcon size={16} weight="fill" />,
 								},

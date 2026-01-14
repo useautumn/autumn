@@ -107,7 +107,8 @@ local function fetchBreakdown(cacheKey, featureId, breakdownCount)
         current_balance = true,
         usage = true,
         max_purchase = true,
-        prepaid_quantity = true
+        prepaid_quantity = true,
+        expires_at = true
     }
     
     local breakdownBooleanFields = {
@@ -386,6 +387,112 @@ local function mergeFeatureBalances(targetBalance, sourceBalance)
 end
 
 -- ============================================================================
+-- FILTER EXPIRED BREAKDOWNS
+-- ============================================================================
+
+-- Filter out expired breakdown items from all balances and recalculate totals
+-- @param balances table - Map of featureId -> balance object
+-- @param nowMs number - Current time in milliseconds
+-- @return table - Filtered balances (may remove entire features if all breakdowns expired)
+local function filterExpiredBreakdowns(balances, nowMs)
+    if not balances then return balances end
+    
+    local filteredBalances = {}
+    
+    for featureId, balance in pairs(balances) do
+        if not balance.breakdown or #balance.breakdown == 0 then
+            -- No breakdown - check top-level expires_at
+            if not balance.expires_at or balance.expires_at == cjson.null or balance.expires_at > nowMs then
+                filteredBalances[featureId] = balance
+            end
+        else
+            -- Has breakdown - filter expired items
+            local validBreakdowns = {}
+            local totalGranted = 0
+            local totalPurchased = 0
+            local totalCurrent = 0
+            local totalUsage = 0
+            
+            for _, bd in ipairs(balance.breakdown) do
+                local expiresAt = bd.expires_at
+                local isExpired = expiresAt and expiresAt ~= cjson.null and expiresAt <= nowMs
+                
+                if not isExpired then
+                    table.insert(validBreakdowns, bd)
+                    totalGranted = totalGranted + toNum(bd.granted_balance)
+                    totalPurchased = totalPurchased + toNum(bd.purchased_balance)
+                    totalCurrent = totalCurrent + toNum(bd.current_balance)
+                    totalUsage = totalUsage + toNum(bd.usage)
+                end
+            end
+            
+            if #validBreakdowns > 0 then
+                -- Update balance with filtered breakdowns and recalculated totals
+                balance.breakdown = validBreakdowns
+                balance.granted_balance = totalGranted
+                balance.purchased_balance = totalPurchased
+                balance.current_balance = totalCurrent
+                balance.usage = totalUsage
+                
+                -- Recalculate reset object from remaining breakdowns
+                local firstInterval = nil
+                local firstIntervalCount = nil
+                local minResetsAt = nil
+                local hasMultipleIntervals = false
+                
+                for _, bd in ipairs(validBreakdowns) do
+                    local bdReset = bd.reset
+                    if bdReset and bdReset ~= cjson.null and type(bdReset) == "table" then
+                        local bdInterval = bdReset.interval
+                        local bdIntervalCount = bdReset.interval_count
+                        local bdResetsAt = bdReset.resets_at
+                        
+                        -- Track if we have multiple different intervals
+                        if firstInterval == nil then
+                            firstInterval = bdInterval
+                            firstIntervalCount = bdIntervalCount
+                        elseif bdInterval ~= firstInterval or bdIntervalCount ~= firstIntervalCount then
+                            hasMultipleIntervals = true
+                        end
+                        
+                        -- Track minimum resets_at
+                        if bdResetsAt and type(bdResetsAt) == "number" then
+                            if minResetsAt == nil or bdResetsAt < minResetsAt then
+                                minResetsAt = bdResetsAt
+                            end
+                        end
+                    end
+                end
+                
+                -- Update balance.reset based on remaining breakdowns
+                if firstInterval then
+                    if hasMultipleIntervals then
+                        balance.reset = {
+                            interval = "multiple",
+                            resets_at = minResetsAt
+                        }
+                    else
+                        balance.reset = {
+                            interval = firstInterval,
+                            interval_count = firstIntervalCount,
+                            resets_at = minResetsAt
+                        }
+                    end
+                else
+                    -- No breakdowns have reset info
+                    balance.reset = nil
+                end
+                
+                filteredBalances[featureId] = balance
+            end
+            -- If no valid breakdowns remain, the feature is omitted entirely
+        end
+    end
+    
+    return filteredBalances
+end
+
+-- ============================================================================
 -- LOAD SINGLE BALANCE (WITH _key FIELDS FOR REDIS OPERATIONS)
 -- ============================================================================
 
@@ -572,7 +679,10 @@ local function loadEntityLevelFeatures(cacheKey, orgId, env, customerId, entityI
         end
     end
     
-    return mergedBalances
+    -- Filter out expired breakdowns
+    local nowMs = redis.call("TIME")
+    nowMs = tonumber(nowMs[1]) * 1000 + math.floor(tonumber(nowMs[2]) / 1000)
+    return filterExpiredBreakdowns(mergedBalances, nowMs)
 end
 
 -- Load customer balances with merged entity balances
@@ -630,7 +740,10 @@ local function loadBalances(cacheKey, orgId, env, customerId, entityId)
             customerBalances[featureId] = balanceData
         end
         
-        return customerBalances
+        -- Filter out expired breakdowns
+        local nowMs = redis.call("TIME")
+        nowMs = tonumber(nowMs[1]) * 1000 + math.floor(tonumber(nowMs[2]) / 1000)
+        return filterExpiredBreakdowns(customerBalances, nowMs)
     end
     
     -- If entityId is provided, load entity-level balances (entity + customer merged)
@@ -826,6 +939,11 @@ local function loadBalances(cacheKey, orgId, env, customerId, entityId)
             balance.rollovers = nil
         end
     end
+
+    -- Filter out expired breakdowns
+    local nowMs = redis.call("TIME")
+    nowMs = tonumber(nowMs[1]) * 1000 + math.floor(tonumber(nowMs[2]) / 1000)
+    balances = filterExpiredBreakdowns(balances, nowMs)
 
 -- Return merged balances
 return balances

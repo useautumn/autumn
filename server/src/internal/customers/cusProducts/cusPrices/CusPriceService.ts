@@ -1,12 +1,11 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
 import {
-	CustomerPrice,
-	FullCustomerEntitlement,
-	FullCustomerPrice,
+	type CustomerPrice,
+	customerPrices,
+	type FullCustomerEntitlement,
+	type FullCustomerPrice,
 } from "@autumn/shared";
-import { customerPrices } from "@autumn/shared";
-
 import { eq } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export class CusPriceService {
 	static async getRelatedToCusEnt({
@@ -16,6 +15,10 @@ export class CusPriceService {
 		db: DrizzleCli;
 		cusEnt: FullCustomerEntitlement;
 	}) {
+		if (!cusEnt.customer_product_id) {
+			return null;
+		}
+
 		const customerPricesData = await db.query.customerPrices.findMany({
 			where: eq(customerPrices.customer_product_id, cusEnt.customer_product_id),
 			with: {
@@ -37,7 +40,7 @@ export class CusPriceService {
 		db: DrizzleCli;
 		data: CustomerPrice[] | CustomerPrice;
 	}) {
-		if (Array.isArray(data) && data.length == 0) {
+		if (Array.isArray(data) && data.length === 0) {
 			return;
 		}
 
