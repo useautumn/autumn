@@ -1,17 +1,27 @@
-import { Check, Clock, ExternalLink, Shield, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import {
+	Check,
+	ChevronDown,
+	Clock,
+	ExternalLink,
+	Shield,
+	X,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { Button } from "@/components/v2/buttons/Button";
-import { authClient, useSession } from "@/lib/auth-client";
+import {
+	authClient,
+	useListOrganizations,
+	useSession,
+} from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 
 interface ScopeInfo {
 	id: string;
 	name: string;
 	description: string;
-	granted: boolean;
 }
 
 interface ClientInfo {
@@ -22,6 +32,63 @@ interface ClientInfo {
 	policy_uri?: string;
 	tos_uri?: string;
 }
+
+// Joke scopes - one is randomly selected to show at the end
+const JOKE_SCOPES = [
+	{ name: "Increase your MRR", description: "Automatically 10x your revenue" },
+	{
+		name: "Steal all your Stripe keys",
+		description: "For safekeeping, of course",
+	},
+	{ name: "Delete production database", description: "What could go wrong?" },
+	{
+		name: "Charge customers twice",
+		description: "Double the revenue, double the fun",
+	},
+	{
+		name: "Leak your pricing strategy",
+		description: "Competitors love this one trick",
+	},
+	{ name: "Downgrade all paid users", description: "Free tier for everyone!" },
+	{
+		name: "Refund all transactions",
+		description: "Your accountant will love this",
+	},
+	{
+		name: "Email investors your burn rate",
+		description: "Transparency is key",
+	},
+	{
+		name: "Set all prices to $0.01",
+		description: "Aggressive pricing strategy",
+	},
+	{
+		name: "Auto-approve all refunds",
+		description: "Customer satisfaction guaranteed",
+	},
+	{
+		name: "Share your churn rate on Twitter",
+		description: "Radical transparency",
+	},
+	{
+		name: "Convert annual plans to monthly",
+		description: "Cash flow is overrated",
+	},
+	{
+		name: "Add hidden fees to invoices",
+		description: "Airlines hate this one trick",
+	},
+	{
+		name: "Send payment reminders at 3am",
+		description: "Urgency drives conversions",
+	},
+];
+
+// Get a random joke scope (seeded by session to stay consistent)
+const getRandomJokeScope = () => {
+	const index = Math.floor(Math.random() * JOKE_SCOPES.length);
+	return JOKE_SCOPES[index];
+};
 
 // Map scope IDs to human-readable descriptions
 const SCOPE_DESCRIPTIONS: Record<
@@ -59,17 +126,72 @@ function getScopeInfo(scopeId: string): { name: string; description: string } {
 	);
 }
 
+// Org logo component (simplified version)
+const OrgLogo = ({ org }: { org: { name: string; logo?: string | null } }) => {
+	const firstLetter = org?.name?.charAt(0).toUpperCase() || "A";
+
+	return (
+		<div className="rounded-md overflow-hidden flex items-center justify-center bg-zinc-200 dark:bg-zinc-700 w-6 h-6 min-w-6 min-h-6">
+			{org.logo ? (
+				<img src={org.logo} alt={org.name} className="w-full h-full" />
+			) : (
+				<span className="w-6 h-6 flex items-center justify-center bg-linear-to-r from-purple-600 via-purple-500 to-purple-400 text-white text-xs font-medium">
+					{firstLetter}
+				</span>
+			)}
+		</div>
+	);
+};
+
 export const Consent = () => {
 	const [searchParams] = useSearchParams();
 	const { data: session } = useSession();
+	const { data: orgs } = useListOrganizations();
+	const { data: activeOrganization } = authClient.useActiveOrganization();
 
 	const [clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
 	const [scopes, setScopes] = useState<ScopeInfo[]>([]);
+	const [jokeScope] = useState(() => getRandomJokeScope());
 	const [isLoading, setIsLoading] = useState(true);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [orgDropdownOpen, setOrgDropdownOpen] = useState(false);
+	const [switchingOrg, setSwitchingOrg] = useState(false);
+	const orgDropdownRef = useRef<HTMLDivElement>(null);
 
 	const clientId = searchParams.get("client_id");
 	const requestedScopes = searchParams.get("scope")?.split(" ") || [];
+
+	// Get the current org (active or first available)
+	const currentOrg = activeOrganization || orgs?.[0];
+
+	// Close dropdown when clicking outside
+	useEffect(() => {
+		const handleClickOutside = (event: MouseEvent) => {
+			if (
+				orgDropdownRef.current &&
+				!orgDropdownRef.current.contains(event.target as Node)
+			) {
+				setOrgDropdownOpen(false);
+			}
+		};
+
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => document.removeEventListener("mousedown", handleClickOutside);
+	}, []);
+
+	const handleSwitchOrg = async (orgId: string) => {
+		setSwitchingOrg(true);
+		try {
+			await authClient.organization.setActive({
+				organizationId: orgId,
+			});
+			// Reload to refresh the page with new org context
+			window.location.reload();
+		} catch (_) {
+			toast.error("Failed to switch organization");
+			setSwitchingOrg(false);
+		}
+	};
 
 	useEffect(() => {
 		async function fetchClientInfo() {
@@ -80,45 +202,45 @@ export const Consent = () => {
 			}
 
 			try {
-				// Fetch public client info
-				const { data, error } = await authClient.oauth2.publicClient({
-					client_id: clientId,
-				});
+				// Fetch client name from our own endpoint
+				const response = await fetch(
+					`${import.meta.env.VITE_BACKEND_URL}/oauth/client/${encodeURIComponent(clientId)}`,
+				);
 
-				if (error) {
-					toast.error(error.message || "Failed to load application info");
-					setIsLoading(false);
-					return;
-				}
-
-				if (data) {
+				if (response.ok) {
+					const data = await response.json();
 					setClientInfo({
 						client_id: clientId,
 						client_name: data.name || "Unknown Application",
-						client_uri: data.uri,
-						logo_uri: data.icon,
-						policy_uri: data.policy,
-						tos_uri: data.tos,
+					});
+				} else {
+					console.error("Error fetching client info:", response.status);
+					// Fallback - just use the client_id
+					setClientInfo({
+						client_id: clientId,
+						client_name: "External Application",
 					});
 				}
-
-				// Parse scopes
-				const scopeInfos: ScopeInfo[] = requestedScopes.map((scopeId) => {
-					const info = getScopeInfo(scopeId);
-					return {
-						id: scopeId,
-						name: info.name,
-						description: info.description,
-						granted: true, // All requested scopes are granted by default
-					};
-				});
-				setScopes(scopeInfos);
 			} catch (error) {
 				console.error("Error fetching client info:", error);
-				toast.error("Failed to load application information");
-			} finally {
-				setIsLoading(false);
+				// Fallback - just use the client_id
+				setClientInfo({
+					client_id: clientId,
+					client_name: "External Application",
+				});
 			}
+
+			// Parse scopes
+			const scopeInfos: ScopeInfo[] = requestedScopes.map((scopeId) => {
+				const info = getScopeInfo(scopeId);
+				return {
+					id: scopeId,
+					name: info.name,
+					description: info.description,
+				};
+			});
+			setScopes(scopeInfos);
+			setIsLoading(false);
 		}
 
 		fetchClientInfo();
@@ -127,10 +249,7 @@ export const Consent = () => {
 	const handleAuthorize = async () => {
 		setIsSubmitting(true);
 		try {
-			const grantedScopes = scopes
-				.filter((s) => s.granted)
-				.map((s) => s.id)
-				.join(" ");
+			const grantedScopes = scopes.map((s) => s.id).join(" ");
 
 			const { data, error } = await authClient.oauth2.consent({
 				accept: true,
@@ -143,8 +262,10 @@ export const Consent = () => {
 				return;
 			}
 
-			// The server will redirect automatically
-			if (data?.redirectTo) {
+			// Handle redirect - server returns { redirect: true, uri: "..." }
+			if (data?.uri) {
+				window.location.href = data.uri;
+			} else if (data?.redirectTo) {
 				window.location.href = data.redirectTo;
 			}
 		} catch (error) {
@@ -167,7 +288,9 @@ export const Consent = () => {
 				return;
 			}
 
-			if (data?.redirectTo) {
+			if (data?.uri) {
+				window.location.href = data.uri;
+			} else if (data?.redirectTo) {
 				window.location.href = data.redirectTo;
 			}
 		} catch (error) {
@@ -175,15 +298,6 @@ export const Consent = () => {
 			toast.error("Failed to cancel. Please close this window.");
 			setIsSubmitting(false);
 		}
-	};
-
-	const toggleScope = (scopeId: string) => {
-		// Don't allow toggling openid scope - it's required
-		if (scopeId === "openid") return;
-
-		setScopes((prev) =>
-			prev.map((s) => (s.id === scopeId ? { ...s, granted: !s.granted } : s)),
-		);
 	};
 
 	if (isLoading) {
@@ -227,9 +341,6 @@ export const Consent = () => {
 
 				{/* Header */}
 				<div className="text-center space-y-2">
-					<p className="text-sm text-muted-foreground">
-						An external application
-					</p>
 					<h1 className="text-lg font-semibold text-foreground">
 						{clientInfo.client_name}
 					</h1>
@@ -246,6 +357,73 @@ export const Consent = () => {
 					)}
 				</div>
 
+				{/* Organization Selector */}
+				{currentOrg && (
+					<div
+						ref={orgDropdownRef}
+						className="border border-border rounded-xl bg-card"
+					>
+						<div className="px-4 py-2 border-b border-border bg-muted/30">
+							<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+								Organization
+							</p>
+						</div>
+						<div className="relative">
+							<button
+								type="button"
+								onClick={() => setOrgDropdownOpen(!orgDropdownOpen)}
+								disabled={switchingOrg || !orgs || orgs.length < 2}
+								className={cn(
+									"w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors",
+									orgs &&
+										orgs.length >= 2 &&
+										"hover:bg-muted/50 cursor-pointer",
+									switchingOrg && "opacity-50",
+								)}
+							>
+								<div className="flex items-center gap-3">
+									<OrgLogo org={currentOrg} />
+									<span className="text-sm font-medium text-foreground">
+										{currentOrg.name}
+									</span>
+								</div>
+								{orgs && orgs.length >= 2 && (
+									<ChevronDown
+										className={cn(
+											"w-4 h-4 text-muted-foreground transition-transform",
+											orgDropdownOpen && "rotate-180",
+										)}
+									/>
+								)}
+							</button>
+
+							{/* Dropdown */}
+							{orgDropdownOpen && orgs && orgs.length >= 2 && (
+								<div className="absolute top-full left-0 right-0 z-50 mt-1 border border-border rounded-lg bg-card shadow-lg max-h-64 overflow-y-auto">
+									{orgs
+										.filter((org) => org.id !== currentOrg.id)
+										.map((org) => (
+											<button
+												key={org.id}
+												type="button"
+												onClick={() => {
+													setOrgDropdownOpen(false);
+													handleSwitchOrg(org.id);
+												}}
+												className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/50 transition-colors border-b border-border last:border-b-0"
+											>
+												<OrgLogo org={org} />
+												<span className="text-sm text-foreground">
+													{org.name}
+												</span>
+											</button>
+										))}
+								</div>
+							)}
+						</div>
+					</div>
+				)}
+
 				{/* Permissions Card */}
 				<div className="border border-border rounded-xl bg-card overflow-hidden">
 					{/* Header */}
@@ -258,48 +436,37 @@ export const Consent = () => {
 					{/* Scopes List */}
 					<div className="divide-y divide-border">
 						{scopes.map((scope) => (
-							<button
+							<div
 								key={scope.id}
-								type="button"
-								onClick={() => toggleScope(scope.id)}
-								disabled={scope.id === "openid"}
-								className={cn(
-									"w-full flex items-start gap-3 px-4 py-3 text-left transition-colors",
-									scope.id !== "openid" && "hover:bg-muted/50 cursor-pointer",
-									scope.id === "openid" && "cursor-default",
-								)}
+								className="w-full flex items-start gap-3 px-4 py-3 text-left"
 							>
-								<div
-									className={cn(
-										"mt-0.5 flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center",
-										scope.granted
-											? "bg-green-500/10 text-green-600"
-											: "bg-red-500/10 text-red-500",
-									)}
-								>
-									{scope.granted ? (
-										<Check className="w-3 h-3" />
-									) : (
-										<X className="w-3 h-3" />
-									)}
+								<div className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center bg-green-500/10 text-green-600">
+									<Check className="w-3 h-3" />
 								</div>
 								<div className="flex-1 min-w-0">
-									<p
-										className={cn(
-											"text-sm font-medium",
-											scope.granted
-												? "text-foreground"
-												: "text-muted-foreground line-through",
-										)}
-									>
+									<p className="text-sm font-medium text-foreground">
 										{scope.name}
 									</p>
 									<p className="text-xs text-muted-foreground mt-0.5">
 										{scope.description}
 									</p>
 								</div>
-							</button>
+							</div>
 						))}
+						{/* Joke scope - always denied */}
+						<div className="w-full flex items-start gap-3 px-4 py-3 text-left cursor-default">
+							<div className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center bg-red-500/10 text-red-500">
+								<X className="w-3 h-3" />
+							</div>
+							<div className="flex-1 min-w-0">
+								<p className="text-sm font-medium text-muted-foreground">
+									{jokeScope.name}
+								</p>
+								<p className="text-xs text-muted-foreground mt-0.5">
+									{jokeScope.description}
+								</p>
+							</div>
+						</div>
 					</div>
 				</div>
 
@@ -351,7 +518,14 @@ export const Consent = () => {
 					<div className="flex items-center gap-2">
 						<Clock className="w-3 h-3" />
 						<span>
-							You can revoke access at any time from your account settings.
+							You can revoke access at any time from your{" "}
+							<a
+								href="/customers#settings.apps"
+								className="text-primary hover:underline"
+							>
+								organization settings
+							</a>
+							.
 						</span>
 					</div>
 				</div>

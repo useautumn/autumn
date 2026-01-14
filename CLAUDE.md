@@ -15,7 +15,7 @@ in the test logs. Use your common sense
 # Linting and Codebase rules
 - You can access the biome linter by running `bunx biome check <folder or file path>`. Always specify a folder path, as the codebase is quite large and you will get out of scope errors that you are not burdened to correct. If you would like to let biome automatically fix as much as it can, use  `bunx biome check --write <folder or file path>`
 
-- Note, biome does not perform typechecking. In which case you need to, you may run `tsc --noEmit --skipLibCheck <folder or file path>`
+- Note, biome does not perform typechecking. In which case you need to, you may run `tsgo --noEmit --skipLibCheck <folder or file path>`
 
 - The `server/src/_luaScriptsV2/` folder contains Lua scripts for Redis atomic operations. Redis uses **Lua 5.1** - there is NO `goto` statement (added in Lua 5.2), so use if/else blocks instead.
 

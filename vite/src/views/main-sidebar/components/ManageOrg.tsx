@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
 	Dialog,
@@ -10,26 +10,36 @@ import {
 import { InvitePopover } from "../org-dropdown/manage-org/InvitePopover";
 import { OrgInvitesList } from "../org-dropdown/manage-org/OrgInvitesList";
 import { OrgMembersList } from "../org-dropdown/manage-org/OrgMembersList";
+import { AuthorizedApps } from "./AuthorizedApps";
 import { OrgDetails } from "./OrgDetails";
 import { UserDetails } from "./UserDetails";
 
-type ManageOrgTab = "user" | "members" | "invites";
+type ManageOrgTab = "user" | "members" | "invites" | "apps";
 
 const tabsContentClassName = "h-full overflow-y-auto focus-visible:ring-0";
 
 export const ManageOrg = ({
 	open,
 	setOpen,
+	initialTab,
 }: {
 	open: boolean;
 	setOpen: (open: boolean) => void;
+	initialTab?: ManageOrgTab;
 }) => {
-	const [currentTab, setCurrentTab] = useState<ManageOrgTab>("user");
+	const [currentTab, setCurrentTab] = useState<ManageOrgTab>(initialTab || "user");
+
+	// Update tab when initialTab changes (e.g., from hash)
+	useEffect(() => {
+		if (initialTab) {
+			setCurrentTab(initialTab);
+		}
+	}, [initialTab]);
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild></DialogTrigger>
-			<DialogContent className="gap-0 p-0 rounded-xs w-[90%] max-w-[650px] h-[450px] flex flex-col justify-between">
+			<DialogContent className="gap-0 p-0 rounded-xs w-[90%] max-w-[750px] h-[550px] flex flex-col justify-between">
 				<div className="flex flex-col gap-6 overflow-hidden h-full">
 					<DialogHeader className="px-6 pt-6">
 						<DialogTitle>Settings</DialogTitle>
@@ -46,6 +56,7 @@ export const ManageOrg = ({
 									<TabsTrigger value="organization">Organization</TabsTrigger>
 									<TabsTrigger value="members">Members</TabsTrigger>
 									<TabsTrigger value="invites">Invites</TabsTrigger>
+									<TabsTrigger value="apps">Apps</TabsTrigger>
 								</TabsList>
 								{(currentTab === "members" || currentTab === "invites") && (
 									<InvitePopover />
@@ -68,6 +79,9 @@ export const ManageOrg = ({
 							</TabsContent>
 							<TabsContent value="invites" className={tabsContentClassName}>
 								<OrgInvitesList />
+							</TabsContent>
+							<TabsContent value="apps" className={tabsContentClassName}>
+								<AuthorizedApps />
 							</TabsContent>
 						</Tabs>
 					</div>
