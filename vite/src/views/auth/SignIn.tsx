@@ -24,7 +24,7 @@ export const SignIn = () => {
 	const { org } = useOrg();
 	const navigate = useNavigate();
 
-	const newPath = "/sandbox/products?tab=products";
+	const newPath = "/sandbox/quickstart";
 	const callbackPath = "/sandbox/products?tab=products";
 
 	useEffect(() => {

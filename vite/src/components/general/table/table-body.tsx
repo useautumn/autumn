@@ -1,4 +1,5 @@
 import { flexRender } from "@tanstack/react-table";
+import { Link } from "react-router";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
 	TableBody as ShadcnTableBody,
@@ -15,6 +16,7 @@ export function TableBody() {
 		numberOfColumns,
 		enableSelection,
 		isLoading,
+		getRowHref,
 		onRowClick,
 		rowClassName,
 		emptyStateChildren,
@@ -51,6 +53,8 @@ export function TableBody() {
 		<ShadcnTableBody className="divide-y bg-interactive-secondary">
 			{rows.map((row) => {
 				const isSelected = selectedItemId === (row.original as any).id;
+				const rowHref = getRowHref?.(row.original);
+
 				return (
 					<TableRow
 						className={cn(
@@ -60,7 +64,7 @@ export function TableBody() {
 						)}
 						data-state={row.getIsSelected() && "selected"}
 						key={row.id}
-						onClick={() => onRowClick?.(row.original)}
+						onClick={!rowHref ? () => onRowClick?.(row.original) : undefined}
 					>
 						{enableSelection && (
 							<TableCell className="w-[50px]">
@@ -71,28 +75,47 @@ export function TableBody() {
 								/>
 							</TableCell>
 						)}
-						{row.getVisibleCells().map((cell, index) => (
-							<TableCell
-								className={cn(
-									"px-2 h-4 text-t3",
-									index === 0 && "pl-4 text-t2 font-medium",
-								)}
-								key={cell.id}
-								style={
-									flexibleTableColumns
-										? {
-												width: `${cell.column.getSize()}px`,
-												maxWidth: `${cell.column.getSize()}px`,
-												minWidth: cell.column.columnDef.minSize
-													? `${cell.column.columnDef.minSize}px`
-													: undefined,
-											}
-										: { width: `${cell.column.getSize()}px` }
-								}
-							>
-								{flexRender(cell.column.columnDef.cell, cell.getContext())}
-							</TableCell>
-						))}
+						{row.getVisibleCells().map((cell, index) => {
+							const cellContent = flexRender(
+								cell.column.columnDef.cell,
+								cell.getContext(),
+							);
+							const cellStyle = flexibleTableColumns
+								? {
+										width: `${cell.column.getSize()}px`,
+										maxWidth: `${cell.column.getSize()}px`,
+										minWidth: cell.column.columnDef.minSize
+											? `${cell.column.columnDef.minSize}px`
+											: undefined,
+									}
+								: { width: `${cell.column.getSize()}px` };
+
+							return (
+								<TableCell
+									className={cn(
+										"px-2 h-4 text-t3",
+										index === 0 && "pl-4 text-t2 font-medium",
+										rowHref && "p-0",
+									)}
+									key={cell.id}
+									style={cellStyle}
+								>
+									{rowHref ? (
+										<Link
+											to={rowHref}
+											className={cn(
+												"flex items-center h-full w-full px-2",
+												index === 0 && "pl-4",
+											)}
+										>
+											{cellContent}
+										</Link>
+									) : (
+										cellContent
+									)}
+								</TableCell>
+							);
+						})}
 					</TableRow>
 				);
 			})}
