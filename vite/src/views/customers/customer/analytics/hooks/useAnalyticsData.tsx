@@ -1,10 +1,20 @@
 import { ErrCode } from "@autumn/shared";
+import { useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useAxiosSWR, usePostSWR } from "@/services/useAxiosSwr";
 import { useEnv } from "@/utils/envUtils";
 import { useTopEventNames } from "./useTopEventNames";
+
+/** Gets the user's IANA timezone (e.g., "America/New_York") */
+const getUserTimezone = (): string => {
+	try {
+		return Intl.DateTimeFormat().resolvedOptions().timeZone;
+	} catch {
+		return "UTC";
+	}
+};
 
 export const useAnalyticsData = ({
 	hasCleared = false,
@@ -23,6 +33,9 @@ export const useAnalyticsData = ({
 	const binSize = searchParams.get("bin_size");
 
 	const { topEvents, isLoading: topEventsLoading } = useTopEventNames();
+
+	// Get user's timezone - memoized since it won't change during session
+	const timezone = useMemo(() => getUserTimezone(), []);
 
 	// const { data: featuresData, isLoading: featuresLoading } = useAxiosSWR({
 	// 	url: `/features`,
@@ -45,6 +58,7 @@ export const useAnalyticsData = ({
 		...(featureIds || []).sort(),
 		org?.slug,
 		groupBy,
+		timezone,
 	];
 
 	const {
@@ -59,6 +73,7 @@ export const useAnalyticsData = ({
 			event_names: [...(eventNames || []), ...(featureIds || [])],
 			group_by: formattedGroupBy,
 			bin_size: binSize || undefined,
+			timezone,
 		},
 		queryKey: ["query-events", ...queryKey],
 		options: {

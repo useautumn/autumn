@@ -13,7 +13,8 @@ export function WelcomeHeader() {
 				Welcome to Autumn
 			</h1>
 			<p className="text-md text-t3 font-normal">
-				Get started by building your app's pricing model
+				Get started by describing your app's pricing model, or paste a
+				screenshot.
 			</p>
 		</motion.div>
 	);

@@ -340,7 +340,7 @@ export function AIChatView({ onBack }: AIChatViewProps) {
 											<PromptInputTextarea
 												value={input}
 												onChange={(e) => setInput(e.target.value)}
-												placeholder="Build me a Free and a Pro plan with... (or, paste a screenshot)"
+												placeholder="My app has a free and a pro plan with..."
 												disabled={isLoading}
 											/>
 										</PromptInputBody>
