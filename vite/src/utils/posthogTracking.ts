@@ -29,7 +29,7 @@ function identifyUserInPostHog(
 ) {
 	// Skip tracking in development unless explicitly enabled
 	if (process.env.NODE_ENV === "development" && !TRACK_IN_DEVELOPMENT) {
-		console.log(`[DEV] Would identify user: ${distinctId}`, properties);
+		// console.log(`[DEV] Would identify user: ${distinctId}`, properties);
 		return;
 	}
 

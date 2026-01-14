@@ -22,9 +22,9 @@ export const InfoTooltip = ({
 				tabIndex={-1}
 				onFocus={(e) => e.preventDefault()}
 			>
-				<button type="button" className="outline-none">
+				<span className="outline-none inline-flex items-center cursor-pointer">
 					<InfoIcon className="text-t3/50 size-3" />
-				</button>
+				</span>
 			</TooltipTrigger>
 			<TooltipContent sideOffset={10} {...props} className="">
 				{children}
