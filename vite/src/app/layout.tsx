@@ -43,26 +43,13 @@ export function MainLayout() {
 		return () => window.removeEventListener("error", handleGlobalError);
 	}, [handleApiError]);
 
+	// Redirect to sandbox if not deployed
 	useEffect(() => {
-		// Only redirect if org is loaded
-		if (!orgLoading && org) {
-			// Redirect to quickstart if not onboarded
-			if (!org.onboarded) {
-				const pathname = window.location.pathname;
-				// Don't redirect if already on quickstart
-				if (!pathname.includes("/quickstart")) {
-					navigate("/sandbox/quickstart");
-					return;
-				}
-			}
-
-			// Redirect to sandbox if not deployed
-			if (!org.deployed) {
-				const pathname = window.location.pathname;
-				if (!pathname.startsWith("/sandbox")) {
-					const search = window.location.search;
-					navigate(`/sandbox${pathname}${search}`);
-				}
+		if (!orgLoading && org && !org.deployed) {
+			const pathname = window.location.pathname;
+			if (!pathname.startsWith("/sandbox")) {
+				const search = window.location.search;
+				navigate(`/sandbox${pathname}${search}`);
 			}
 		}
 	}, [org, orgLoading, navigate]);
