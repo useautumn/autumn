@@ -1,7 +1,6 @@
 import {
 	AppEnv,
 	type Organization,
-	organizations,
 	RecaseError,
 	user as userTable,
 } from "@autumn/shared";
@@ -48,13 +47,8 @@ export const handleSetupPreviewOrg = createRoute({
 		const user = await db.query.user.findFirst({
 			where: eq(userTable.id, userId),
 		});
-		if (!user) {
-			throw new RecaseError({
-				message: "User not found",
-				code: "user_not_found",
-				statusCode: 404,
-			});
-		}
+
+		if (!user) throw new RecaseError({ message: "User not found" });
 
 		const previewSlug = buildPreviewOrgSlug({
 			userId,
@@ -79,20 +73,13 @@ export const handleSetupPreviewOrg = createRoute({
 				`[Preview] Creating new preview org: ${orgId} (${previewSlug})`,
 			);
 
-			const [insertedOrg] = await db
-				.insert(organizations)
-				.values({
-					id: orgId,
-					slug: previewSlug,
-					name: `Preview - ${user.name || user.email}`,
-					logo: "",
-					createdAt: new Date(),
-					metadata: "",
-					created_by: masterOrg.id,
-				})
-				.returning();
-
-			previewOrg = insertedOrg;
+			previewOrg = await OrgService.create({
+				db,
+				id: orgId,
+				slug: previewSlug,
+				name: `Preview - ${user.name || user.email}`,
+				createdBy: masterOrg.id,
+			});
 
 			// Note: We intentionally do NOT create a membership here.
 			// The preview org should not be accessible to the user via the dashboard.
@@ -115,11 +102,6 @@ export const handleSetupPreviewOrg = createRoute({
 			prefix: "am_sk_test",
 			meta: { preview: true },
 		});
-
-		console.log(`[Preview] Setup complete for user ${userId}:`);
-		console.log(`  - Org ID: ${previewOrg.id}`);
-		console.log(`  - Org Slug: ${previewSlug}`);
-		console.log(`  - API Key: ${apiKey.substring(0, 20)}...`);
 
 		return c.json({
 			api_key: apiKey,

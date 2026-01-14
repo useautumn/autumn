@@ -10,10 +10,7 @@ import {
 	type MeteredConfig,
 	type UsagePriceConfig,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@server/db/initDrizzle";
-import { generateFeatureDisplay } from "@server/external/llm/llmUtils";
 import { ACTIVE_STATUSES } from "@server/internal/customers/cusProducts/CusProductService";
-import { FeatureService } from "@server/internal/features/FeatureService";
 import RecaseError from "@server/utils/errorUtils";
 import { StatusCodes } from "http-status-codes";
 
@@ -85,46 +82,6 @@ export const validateCreditSystem = (config: CreditSystemConfig) => {
 	}
 
 	return newConfig;
-};
-
-export const runSaveFeatureDisplayTask = async ({
-	db,
-	feature,
-
-	logger,
-}: {
-	db: DrizzleCli;
-	feature: Feature;
-
-	logger: any;
-}) => {
-	let display;
-	try {
-		if (!process.env.ANTHROPIC_API_KEY) {
-			logger.warn(
-				"ANTHROPIC_API_KEY is not set, skipping feature display generation",
-			);
-			return;
-		}
-
-		logger.info(`Generating feature display for ${feature.id}`);
-		display = await generateFeatureDisplay(feature);
-		logger.info(`Result: ${JSON.stringify(display)}`);
-
-		await FeatureService.update({
-			db,
-			internalId: feature.internal_id,
-			updates: {
-				display,
-			},
-		});
-	} catch (error) {
-		logger.error(`failed to generate feature display, ${error}`, {
-			data: {
-				feature,
-			},
-		});
-	}
 };
 
 export const getCusFeatureType = ({ feature }: { feature: Feature }) => {
