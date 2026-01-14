@@ -6,6 +6,7 @@ import {
 	useSheetEscapeHandler,
 	useSheetStore,
 } from "@/hooks/stores/useSheetStore";
+import { SubscriptionUpdateSheet2 } from "@/views/customers2/components/sheets/SubscriptionUpdateSheet2";
 import { AttachProductSheet } from "../components/sheets/AttachProductSheet";
 import { BalanceEditSheet } from "../components/sheets/BalanceEditSheet";
 import { BalanceSelectionSheet } from "../components/sheets/BalanceSelectionSheet";
@@ -34,7 +35,7 @@ export function CustomerSheets() {
 			case "subscription-update":
 				return <SubscriptionUpdateSheet />;
 			case "subscription-update-test": // TEST: Remove this case to revert
-				return <SubscriptionUpdateTestSheet />;
+				return <SubscriptionUpdateSheet2 />;
 			case "balance-selection":
 				return <BalanceSelectionSheet />;
 			case "balance-edit":
