@@ -71,9 +71,6 @@ export const priceToUsageInAdvance = ({
 	} else if (nullish(optionsQuantity) && isCheckout) {
 		// 2. If quantity is nullish and is checkout, default to 1
 		finalQuantity = 1;
-	} else if (nullish(optionsQuantity)) {
-		// 3. If quantity is nullish and not checkout (subscription update), default to 0
-		finalQuantity = 0;
 	}
 
 	const adjustableQuantity =
