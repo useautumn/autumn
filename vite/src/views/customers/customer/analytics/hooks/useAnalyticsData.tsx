@@ -20,6 +20,7 @@ export const useAnalyticsData = ({
 	const eventNames = searchParams.get("event_names")?.split(",");
 	const interval = searchParams.get("interval");
 	const groupBy = searchParams.get("group_by");
+	const binSize = searchParams.get("bin_size");
 
 	const { topEvents, isLoading: topEventsLoading } = useTopEventNames();
 
@@ -39,6 +40,7 @@ export const useAnalyticsData = ({
 	const queryKey = [
 		customerId,
 		interval || "30d",
+		binSize || "day",
 		...(eventNames || []).sort(),
 		...(featureIds || []).sort(),
 		org?.slug,
@@ -56,6 +58,7 @@ export const useAnalyticsData = ({
 			interval: interval || "30d",
 			event_names: [...(eventNames || []), ...(featureIds || [])],
 			group_by: formattedGroupBy,
+			bin_size: binSize || undefined,
 		},
 		queryKey: ["query-events", ...queryKey],
 		options: {
