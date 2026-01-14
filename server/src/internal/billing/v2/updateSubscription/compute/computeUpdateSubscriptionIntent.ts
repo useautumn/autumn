@@ -11,7 +11,11 @@ export enum UpdateSubscriptionIntent {
 export const computeUpdateSubscriptionIntent = (
 	params: UpdateSubscriptionV0Params,
 ): UpdateSubscriptionIntent => {
+	// Version change = plan update (takes priority)
+	if (params.version !== undefined) return UpdateSubscriptionIntent.UpdatePlan;
+
 	if (params.options?.length && !params.items?.length)
 		return UpdateSubscriptionIntent.UpdateQuantity;
+
 	return UpdateSubscriptionIntent.UpdatePlan;
 };
