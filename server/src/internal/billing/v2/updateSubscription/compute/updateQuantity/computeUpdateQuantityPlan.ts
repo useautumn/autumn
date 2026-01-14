@@ -1,4 +1,3 @@
-import { InternalError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
 import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan";
@@ -11,14 +10,7 @@ export const computeUpdateQuantityPlan = ({
 	ctx: AutumnContext;
 	updateSubscriptionContext: UpdateSubscriptionBillingContext;
 }): AutumnBillingPlan => {
-	const { customerProduct, stripeSubscription, featureQuantities } =
-		updateSubscriptionContext;
-
-	if (!stripeSubscription) {
-		throw new InternalError({
-			message: `[Subscription Update] Stripe subscription not found`,
-		});
-	}
+	const { customerProduct, featureQuantities } = updateSubscriptionContext;
 
 	const newOptions = featureQuantities;
 

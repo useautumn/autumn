@@ -10,6 +10,7 @@ export * from "./checkout/prevVersions/checkoutResponseV0.js";
 
 // Common
 export * from "./common/billingPreviewResponse.js";
+export * from "./common/billingResponse.js";
 export * from "./updateSubscription/previewUpdateSubscriptionResponse.js";
 
 // Update Subscription

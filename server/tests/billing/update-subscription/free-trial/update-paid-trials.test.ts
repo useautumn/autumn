@@ -48,7 +48,6 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: remove trial while running")}`
 	const updateParams = {
 		customer_id: customerId,
 		product_id: proTrial.id,
-		items: [messagesItem, items.monthlyPrice()],
 		free_trial: null,
 	};
 

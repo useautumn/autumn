@@ -33,11 +33,12 @@ export const createInvoiceForBilling = async ({
 	const shouldFinalizeInvoice = invoiceMode
 		? invoiceMode.finalizeInvoice
 		: true;
-	const shouldPayImmediately = invoiceMode
-		? invoiceMode.enableProductImmediately
-		: true;
 
-	const collectionMethod = shouldPayImmediately ? "charge_automatically" : "send_invoice";
+	const isInvoiceMode = Boolean(invoiceMode);
+
+	const collectionMethod = isInvoiceMode
+		? "send_invoice"
+		: "charge_automatically";
 
 	const draftInvoice = await createStripeInvoice({
 		stripeCli,
@@ -46,26 +47,26 @@ export const createInvoiceForBilling = async ({
 		collectionMethod,
 	});
 
-	await addStripeInvoiceLines({
+	const invoiceWithLines = await addStripeInvoiceLines({
 		stripeCli,
 		invoiceId: draftInvoice.id,
 		lines: addLineParams.lines,
 	});
 
 	if (!shouldFinalizeInvoice) {
-		return { paid: false, invoice: draftInvoice };
+		return { paid: false, invoice: invoiceWithLines };
 	}
 
 	const finalizedInvoice = await finalizeStripeInvoice({
 		stripeCli,
-		invoiceId: draftInvoice.id,
+		invoiceId: invoiceWithLines.id,
 	});
 
 	if (finalizedInvoice.status === "paid") {
 		return { paid: true, invoice: finalizedInvoice };
 	}
 
-	if (!shouldPayImmediately) {
+	if (isInvoiceMode) {
 		return { paid: false, invoice: finalizedInvoice };
 	}
 
@@ -73,6 +74,5 @@ export const createInvoiceForBilling = async ({
 		stripeCli,
 		invoiceId: finalizedInvoice.id,
 		paymentMethod: billingContext.paymentMethod,
-		onFailure: "return_url",
 	});
 };

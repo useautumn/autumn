@@ -5,7 +5,7 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
-import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
+import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 
 export const isSubPastDue = ({
 	previousAttributes,

@@ -4,7 +4,9 @@ import type { BillingContext } from "@server/internal/billing/v2/billingContext"
 import { buildStripeSubscriptionItemsUpdate } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionItems/buildStripeSubscriptionItemsUpdate";
 import { buildStripeSubscriptionCreateAction } from "@server/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionCreateAction";
 import { buildStripeSubscriptionUpdateAction } from "@server/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionUpdateAction";
+import { billingPlanToOneOffStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/billingPlanToOneOffStripeItemSpecs";
 import type {
+	AutumnBillingPlan,
 	StripeSubscriptionAction,
 	StripeSubscriptionScheduleAction,
 } from "@/internal/billing/v2/types/billingPlan";
@@ -12,11 +14,13 @@ import type {
 export const buildStripeSubscriptionAction = ({
 	ctx,
 	billingContext,
+	autumnBillingPlan,
 	finalCustomerProducts,
 	stripeSubscriptionScheduleAction,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
+	autumnBillingPlan: AutumnBillingPlan;
 	finalCustomerProducts: FullCusProduct[];
 	stripeSubscriptionScheduleAction?: StripeSubscriptionScheduleAction;
 }): StripeSubscriptionAction | undefined => {
@@ -26,6 +30,11 @@ export const buildStripeSubscriptionAction = ({
 		ctx,
 		billingContext,
 		finalCustomerProducts,
+	});
+
+	const oneOffItemSpecs = billingPlanToOneOffStripeItemSpecs({
+		ctx,
+		autumnBillingPlan,
 	});
 
 	// Case 1: No subscription and sub items update is empty -> no action
@@ -39,7 +48,10 @@ export const buildStripeSubscriptionAction = ({
 			ctx,
 			billingContext,
 			subItemsUpdate,
-			addInvoiceItems: [],
+			addInvoiceItems: oneOffItemSpecs.map((item) => ({
+				price: item.stripePriceId,
+				quantity: item.quantity,
+			})),
 		});
 	}
 

@@ -1,5 +1,5 @@
-import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
+import { willStripeSubscriptionUpdateCreateInvoice } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/willStripeSubscriptionUpdateCreateInvoice";
 import type { StripeSubscriptionAction } from "@/internal/billing/v2/types/billingPlan";
 
 export const shouldCreateManualStripeInvoice = ({
@@ -12,15 +12,15 @@ export const shouldCreateManualStripeInvoice = ({
 	const isCreateAction = stripeSubscriptionAction?.type === "create";
 	if (isCreateAction) return false;
 
-	const { stripeSubscription, trialContext } = billingContext;
+	const { stripeSubscription } = billingContext;
 	if (!stripeSubscription) return false;
 
-	const isTrialing = isStripeSubscriptionTrialing(stripeSubscription);
-	const endingTrial = trialContext?.trialEndsAt === null;
-	const updateWillCharge =
-		stripeSubscriptionAction?.type === "update" && isTrialing && endingTrial;
+	const updateWillCreateInvoice = willStripeSubscriptionUpdateCreateInvoice({
+		billingContext,
+		stripeSubscriptionAction,
+	});
 
-	if (updateWillCharge) return false;
+	if (updateWillCreateInvoice) return false;
 
 	return true;
 };

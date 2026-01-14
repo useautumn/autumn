@@ -1,4 +1,4 @@
-import type { LineItem } from "@autumn/shared";
+import { isOneOffPrice, type LineItem } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
@@ -42,8 +42,9 @@ export const filterLineItemsForTrialTransition = ({
 	}
 
 	return lineItems.filter((lineItem) => {
-		const { billingTiming, direction } = lineItem.context;
+		const { billingTiming, direction, price } = lineItem.context;
 		const isPositive = lineItem.amount > 0;
+		const isRecurringPrice = !isOneOffPrice(price);
 
 		// Ending trial (isTrialing → !willBeTrialing):
 		// Filter out refunds and in_arrear positive items (no refund for trial period, no arrear charges)
@@ -55,7 +56,8 @@ export const filterLineItemsForTrialTransition = ({
 		// Starting trial (!isTrialing → willBeTrialing):
 		// Filter out in_advance positive items (no charge for upcoming trial period)
 		if (willBeTrialing) {
-			if (billingTiming === "in_advance" && isPositive) return false;
+			if (billingTiming === "in_advance" && isPositive && isRecurringPrice)
+				return false;
 		}
 
 		return true;

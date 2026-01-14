@@ -15,11 +15,11 @@ import {
 	RELEVANT_STATUSES,
 } from "@/internal/customers/cusProducts/CusProductService.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
-import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
-import { handleSchedulePhaseCompleted } from "./handleSubUpdated/handleSchedulePhaseCompleted.js";
-import { handleSubCanceled } from "./handleSubUpdated/handleSubCanceled.js";
-import { handleSubPastDue } from "./handleSubUpdated/handleSubPastDue.js";
-import { handleSubRenewed } from "./handleSubUpdated/handleSubRenewed.js";
+import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
+import { handleSchedulePhaseCompleted } from "./handleSchedulePhaseCompleted.js";
+import { handleSubCanceled } from "./handleSubCanceled.js";
+import { handleSubPastDue } from "./handleSubPastDue.js";
+import { handleSubRenewed } from "./handleSubRenewed.js";
 
 export const handleSubscriptionUpdated = async ({
 	ctx,

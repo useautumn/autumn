@@ -3,6 +3,7 @@ import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan";
 import type { BillingPlan } from "@/internal/billing/v2/types/billingPlan";
+import type { BillingResult } from "@/internal/billing/v2/types/billingResult";
 
 export const executeBillingPlan = async ({
 	ctx,
@@ -12,19 +13,22 @@ export const executeBillingPlan = async ({
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
-}) => {
-	const result = await executeStripeBillingPlan({
+}): Promise<BillingResult> => {
+	const stripeBillingResult = await executeStripeBillingPlan({
 		ctx,
 		billingPlan,
 		billingContext,
 	});
 
-	if (result.deferred) return result;
+	if (stripeBillingResult.deferred)
+		return {
+			stripe: stripeBillingResult,
+		};
 
 	await executeAutumnBillingPlan({
 		ctx,
 		autumnBillingPlan: billingPlan.autumn,
 	});
 
-	return { billingPlan };
+	return { stripe: stripeBillingResult };
 };

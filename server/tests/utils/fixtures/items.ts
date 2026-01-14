@@ -26,6 +26,16 @@ const dashboard = () =>
 		isBoolean: true,
 	});
 
+/**
+ * Boolean feature - admin rights access
+ * @returns AdminRights feature item
+ */
+const adminRights = () =>
+	constructFeatureItem({
+		featureId: TestFeature.AdminRights,
+		isBoolean: true,
+	});
+
 // ═══════════════════════════════════════════════════════════════════
 // FREE METERED (included usage, resets monthly)
 // ═══════════════════════════════════════════════════════════════════
@@ -270,6 +280,16 @@ const annualPrice = ({ price = 200 }: { price?: number } = {}) =>
 		interval: BillingInterval.Year,
 	});
 
+/**
+ * One-off base price item (no recurring charges)
+ * @param price - One-time price (default: 50)
+ */
+const oneOffPrice = ({ price = 50 }: { price?: number } = {}) =>
+	constructPriceItem({
+		price,
+		interval: null,
+	});
+
 // ═══════════════════════════════════════════════════════════════════
 // EXPORT
 // ═══════════════════════════════════════════════════════════════════
@@ -277,6 +297,7 @@ const annualPrice = ({ price = 200 }: { price?: number } = {}) =>
 export const items = {
 	// Boolean
 	dashboard,
+	adminRights,
 
 	// Free metered
 	monthlyMessages,
@@ -303,4 +324,5 @@ export const items = {
 	// Base prices
 	monthlyPrice,
 	annualPrice,
+	oneOffPrice,
 } as const;
