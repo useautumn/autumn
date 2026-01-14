@@ -60,6 +60,11 @@ export function MainLayout() {
 						navigate("/sandbox/quickstart");
 						return;
 					}
+					// Clear the skip flag so it doesn't persist across refreshes
+					navigate(location.pathname + location.search, {
+						replace: true,
+						state: {},
+					});
 				}
 			}
 
@@ -72,7 +77,7 @@ export function MainLayout() {
 				}
 			}
 		}
-	}, [org, orgLoading, navigate, location.state]);
+	}, [org, orgLoading, navigate, location.state, location.pathname, location.search]);
 
 	// 1. If not loaded, show loading screen
 	if (isPending || orgLoading) {
