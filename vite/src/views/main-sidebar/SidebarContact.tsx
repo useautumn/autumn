@@ -1,6 +1,7 @@
 "use client";
 
-import { GraduationCap, MessageCircle } from "lucide-react";
+import { QuestionIcon } from "@phosphor-icons/react";
+import { GraduationCap } from "lucide-react";
 import { Link } from "react-router";
 import CopyButton from "@/components/general/CopyButton";
 import {
@@ -13,12 +14,10 @@ import {
 import { useEnv } from "@/utils/envUtils";
 import { useOnboardingVisibility } from "@/views/onboarding4/hooks/useOnboardingProgress";
 import { NavButton } from "./NavButton";
-import { useSidebarContext } from "./SidebarContext";
 
 export function SidebarContact() {
 	const email = "hey@useautumn.com";
 	const env = useEnv();
-	const { expanded } = useSidebarContext();
 	const { show: showOnboardingGuide } = useOnboardingVisibility();
 
 	return (
@@ -28,9 +27,9 @@ export function SidebarContact() {
 					<NavButton
 						env={env}
 						value="chat"
-						icon={<MessageCircle size={14} />}
+						icon={<QuestionIcon size={16} weight="duotone" />}
 						title="Need help?"
-						online={expanded}
+						onClick={() => {}}
 					/>
 				</div>
 			</DropdownMenuTrigger>
