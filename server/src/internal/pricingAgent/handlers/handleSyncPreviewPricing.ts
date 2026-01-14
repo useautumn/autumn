@@ -8,7 +8,6 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import { z } from "zod/v4";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
@@ -64,14 +63,12 @@ export const handleSyncPreviewPricing = createRoute({
 			});
 		}
 
-		console.log(
-			`[Preview Sync] Starting sync for preview org: ${previewOrg.id}`,
+		ctx.logger.debug(
+			`[Preview Sync] Starting sync for preview org: ${previewOrg.id}, features: ${body.features.length}, products: ${body.products.length}`,
 		);
-		console.log(`[Preview Sync] Features to sync: ${body.features.length}`);
-		console.log(`[Preview Sync] Products to sync: ${body.products.length}`);
 
 		// Step 1: Nuke existing config
-		console.log("[Preview Sync] Step 1: Nuking existing configuration...");
+		ctx.logger.debug("[Preview Sync] Step 1: Nuking existing configuration...");
 
 		await CusService.deleteByOrgId({
 			db,
@@ -91,10 +88,8 @@ export const handleSyncPreviewPricing = createRoute({
 			env: AppEnv.Sandbox,
 		});
 
-		console.log("[Preview Sync] Nuke complete.");
-
 		// Step 2: Push new config
-		console.log("[Preview Sync] Step 2: Pushing new configuration...");
+		ctx.logger.debug("[Preview Sync] Step 2: Pushing new configuration...");
 
 		// Build a context for the preview org
 		const previewCtx = {
@@ -104,16 +99,12 @@ export const handleSyncPreviewPricing = createRoute({
 			features: [] as Awaited<ReturnType<typeof FeatureService.list>>,
 		};
 
-		await db.transaction(async (tx) => {
-			const txDb = tx as unknown as DrizzleCli;
-			const txCtx = { ...previewCtx, db: txDb };
-
-			// Create features
-			for (const apiFeature of body.features) {
+		// Create features
+		await Promise.all(
+			body.features.map((apiFeature) => {
 				const dbFeature = apiFeatureToDbFeature({ apiFeature });
-
-				await createFeature({
-					ctx: txCtx,
+				return createFeature({
+					ctx: previewCtx,
 					data: {
 						id: dbFeature.id,
 						name: dbFeature.name,
@@ -121,22 +112,24 @@ export const handleSyncPreviewPricing = createRoute({
 						config: dbFeature.config,
 						event_names: dbFeature.event_names,
 					},
+					skipGenerateDisplay: true,
 				});
-				console.log(`[Preview Sync]   Created feature: ${dbFeature.id}`);
-			}
+			}),
+		);
 
-			// Get updated features for product creation
-			const updatedFeatures = await FeatureService.list({
-				db: txDb,
-				orgId: previewOrg.id,
-				env: AppEnv.Sandbox,
-			});
+		// Get updated features for product creation
+		const updatedFeatures = await FeatureService.list({
+			db,
+			orgId: previewOrg.id,
+			env: AppEnv.Sandbox,
+		});
 
-			// Create products
-			for (const apiProduct of body.products) {
-				await createProduct({
+		// Create products
+		await Promise.all(
+			body.products.map((apiProduct) =>
+				createProduct({
 					ctx: {
-						...txCtx,
+						...previewCtx,
 						features: updatedFeatures,
 					},
 					data: {
@@ -148,18 +141,13 @@ export const handleSyncPreviewPricing = createRoute({
 						items: apiProduct.items,
 						free_trial: apiProduct.free_trial,
 					},
-				});
-				console.log(
-					`[Preview Sync]   Created product: ${apiProduct.id} (${apiProduct.name})`,
-				);
-			}
-		});
+				}),
+			),
+		);
 
-		console.log("[Preview Sync] Sync complete!");
-		console.log(`[Preview Sync] Summary:`);
-		console.log(`  - Org ID: ${previewOrg.id}`);
-		console.log(`  - Features created: ${body.features.length}`);
-		console.log(`  - Products created: ${body.products.length}`);
+		ctx.logger.debug(
+			`[Preview Sync] Summary: ${body.features.length} features, ${body.products.length} products`,
+		);
 
 		return c.json({
 			success: true,

@@ -3,6 +3,7 @@ import { SendMessageCommand } from "@aws-sdk/client-sqs";
 import { generateId } from "@server/utils/genUtils";
 import { isHatchetEnabled } from "@/external/hatchet/initHatchet.js";
 import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
+import type { GenerateFeatureDisplayWorkflowPayload } from "@/internal/features/workflows/generateFeatureDisplayWorkflow.js";
 import {
 	type VerifyCacheInput,
 	verifyCacheConsistencyWorkflow,
@@ -41,6 +42,7 @@ export interface Payloads {
 		events: EventInsert[];
 	};
 	[JobName.ClearCreditSystemCustomerCache]: ClearCreditSystemCachePayload;
+	[JobName.GenerateFeatureDisplay]: GenerateFeatureDisplayWorkflowPayload;
 	[JobName.VerifyCacheConsistency]: {
 		customerId: string;
 		orgId: string;
