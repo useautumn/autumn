@@ -329,6 +329,7 @@ pricingAgentRouter.post("/chat", async (c) => {
 				posthogDistinctId: distinctId,
 				posthogProperties: {
 					...(sessionId && { $ai_session_id: sessionId }),
+					...(ctx.user?.email && { $set: { email: ctx.user.email } }),
 					org_id: ctx.org?.id,
 					org_slug: ctx.org?.slug,
 					feature: "pricing_agent",
