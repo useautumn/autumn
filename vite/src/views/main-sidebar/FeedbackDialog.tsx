@@ -43,7 +43,7 @@ export function FeedbackDialog() {
 	};
 
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
+		<>
 			<NavButton
 				env={env}
 				icon={<ChatCircleTextIcon size={16} weight="duotone" />}
@@ -51,34 +51,36 @@ export function FeedbackDialog() {
 				isGroup
 				onClick={() => setOpen(true)}
 			/>
-			<DialogContent>
-				<DialogHeader>
-					<DialogTitle>Help us improve</DialogTitle>
-					<DialogDescription>
-						We read every comment, and often turn around features within a
-						couple days. Be as brutal as you can - thank you so much!
-					</DialogDescription>
-				</DialogHeader>
-				<LongInput
-					value={feedback}
-					onChange={(e) => setFeedback(e.target.value)}
-					placeholder={`The worst part about Autumn is...\n\nI really wish Autumn had....\n\nThe part I found most confusing was...`}
-					className="min-h-[120px]"
-				/>
-				<DialogFooter>
-					<Button variant="secondary" onClick={() => setOpen(false)}>
-						Cancel
-					</Button>
-					<Button
-						variant="primary"
-						onClick={handleSubmit}
-						isLoading={loading}
-						disabled={!feedback.trim()}
-					>
-						Send Feedback
-					</Button>
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
+			<Dialog open={open} onOpenChange={setOpen}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Help us improve</DialogTitle>
+						<DialogDescription>
+							We read every comment, and often turn around features within a
+							couple days. Be as brutal as you can - thank you so much!
+						</DialogDescription>
+					</DialogHeader>
+					<LongInput
+						value={feedback}
+						onChange={(e) => setFeedback(e.target.value)}
+						placeholder={`The worst part about Autumn is...\n\nI really wish Autumn had....\n\nThe part I found most confusing was...`}
+						className="min-h-[120px]"
+					/>
+					<DialogFooter>
+						<Button variant="secondary" onClick={() => setOpen(false)}>
+							Cancel
+						</Button>
+						<Button
+							variant="primary"
+							onClick={handleSubmit}
+							isLoading={loading}
+							disabled={!feedback.trim()}
+						>
+							Send Feedback
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+		</>
 	);
 }
