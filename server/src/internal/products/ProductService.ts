@@ -341,7 +341,7 @@ export class ProductService {
 
 		if (!data) {
 			if (allowNotFound) return null as unknown as FullProduct;
-			throw new ProductNotFoundError({ productId: idOrInternalId });
+			throw new ProductNotFoundError({ productId: idOrInternalId, version });
 		}
 
 		return data as FullProduct;
