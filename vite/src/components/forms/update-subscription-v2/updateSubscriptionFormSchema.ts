@@ -9,6 +9,9 @@ export const UpdateSubscriptionFormSchema = z.object({
 	trialDuration: z.enum(FreeTrialDuration),
 	trialCardRequired: z.boolean(),
 	removeTrial: z.boolean(), // Only relevant when currently trialing
+
+	// Plan version (initialized with current version)
+	version: z.number().positive(),
 });
 
 export type UpdateSubscriptionForm = z.infer<

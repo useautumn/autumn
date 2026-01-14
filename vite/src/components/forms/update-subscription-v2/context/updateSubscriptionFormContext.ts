@@ -12,4 +12,6 @@ export interface UpdateSubscriptionFormContext {
 	customerProduct: FullCusProduct;
 	customizedProduct: FrontendProduct | undefined;
 	prepaidItems: PrepaidItemWithFeature[];
+	numVersions: number;
+	currentVersion: number;
 }

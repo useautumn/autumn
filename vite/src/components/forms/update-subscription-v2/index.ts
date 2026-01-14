@@ -2,11 +2,12 @@
 
 // Components
 export * from "./components/FreeTrialSection";
+export * from "./components/PlanVersionSection";
 export * from "./components/PrepaidQuantitySection";
 export * from "./components/UpdateSubscriptionFooter";
 export * from "./components/UpdateSubscriptionPreviewSection";
 export * from "./components/UpdateSubscriptionSummary";
-export * from "./context/UpdateSubscriptionFormContext";
+export * from "./context/updateSubscriptionFormContext";
 // Hooks
 export * from "./hooks/useUpdateSubscriptionForm";
 export * from "./hooks/useUpdateSubscriptionMutation";
@@ -15,4 +16,5 @@ export * from "./hooks/useUpdateSubscriptionRequestBody";
 export * from "./types/summary";
 export * from "./updateSubscriptionFormSchema";
 // Utils
+export * from "./utils/generateVersionChanges";
 export * from "./utils/getFreeTrial";

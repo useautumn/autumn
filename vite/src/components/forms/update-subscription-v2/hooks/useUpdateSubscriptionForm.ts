@@ -12,7 +12,8 @@ export function useUpdateSubscriptionForm({
 }: {
 	updateSubscriptionFormContext: UpdateSubscriptionFormContext;
 }) {
-	const { customerProduct, prepaidItems } = updateSubscriptionFormContext;
+	const { customerProduct, prepaidItems, currentVersion } =
+		updateSubscriptionFormContext;
 
 	const initialPrepaidOptions = useMemo(() => {
 		const subscriptionValues = customerProduct.options.reduce(
@@ -40,6 +41,7 @@ export function useUpdateSubscriptionForm({
 			trialDuration: FreeTrialDuration.Day,
 			trialCardRequired: true,
 			removeTrial: false,
+			version: currentVersion,
 		} as UpdateSubscriptionForm,
 		validators: {
 			onChange: UpdateSubscriptionFormSchema,
