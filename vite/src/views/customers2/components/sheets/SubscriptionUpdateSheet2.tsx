@@ -232,6 +232,7 @@ function SheetContent({
 							)
 						: undefined
 				}
+				hasChanges={hasChanges}
 			/>
 
 			<UpdateSubscriptionFooter
