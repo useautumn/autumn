@@ -9,6 +9,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import type { BillingPlan } from "@/internal/billing/v2/types/billingPlan";
+import { billingPlanToUpdatedCustomerProduct } from "@/internal/billing/v2/utils/billingPlan/billingPlanToUpdatedCustomerProduct";
 import { customerProductToLineItems } from "../lineItems/customerProductToLineItems";
 
 export const billingPlanToNextCyclePreview = ({
@@ -24,15 +25,16 @@ export const billingPlanToNextCyclePreview = ({
 	const { billingCycleAnchorMs } = billingContext;
 
 	if (billingCycleAnchorMs === "now") return undefined;
-	const {
-		insertCustomerProducts,
-		updateCustomerProduct: { customerProduct: targetUpdateCustomerProduct },
-	} = billingPlan.autumn;
+
+	const updatedCustomerProduct = billingPlanToUpdatedCustomerProduct({
+		autumnBillingPlan: billingPlan.autumn,
+	});
+	const { insertCustomerProducts } = billingPlan.autumn;
 
 	// 2. Get cycle end and if none, return undefined
 	const allCustomerProducts = [
 		...insertCustomerProducts,
-		...(targetUpdateCustomerProduct ? [targetUpdateCustomerProduct] : []),
+		...(updatedCustomerProduct ? [updatedCustomerProduct] : []),
 	];
 	const customerProducts = allCustomerProducts.filter(
 		(customerProduct) =>
