@@ -135,6 +135,14 @@ export const redirectToHono = () => {
 				return true;
 			}
 
+			// Check for wildcard patterns (e.g., /api/autumn/*)
+			if (routePath.endsWith("/*")) {
+				const basePath = routePath.slice(0, -2); // Remove "/*"
+				if (path.startsWith(`${basePath}/`) || path === basePath) {
+					return true;
+				}
+			}
+
 			// Check for dynamic routes (e.g., /v1/products/:id)
 			if (routePath.includes(":")) {
 				const routeRegex = new RegExp(

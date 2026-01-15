@@ -10,7 +10,6 @@ import { expressCusRouter } from "../customers/cusRouter.js";
 import { platformRouter } from "../platform/platformLegacy/platformRouter.js";
 import { expressProductRouter } from "../products/productRouter.js";
 import { componentRouter } from "./components/componentRouter.js";
-import { invoiceRouter } from "./invoiceRouter.js";
 import { rewardProgramRouter } from "./rewards/rewardProgramRouter.js";
 import rewardRouter from "./rewards/rewardRouter.js";
 
@@ -22,7 +21,6 @@ apiRouter.use(analyticsMiddleware);
 apiRouter.use(expressApiVersionMiddleware as any);
 apiRouter.use(refreshCacheMiddleware);
 
-apiRouter.use("/invoices", invoiceRouter);
 apiRouter.use("/components", componentRouter);
 apiRouter.use("/rewards", rewardRouter);
 

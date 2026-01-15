@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { handleGetStripeInvoice } from "./handlers/handleGetStripeInvoice.js";
 import { handleRedirectToInvoice } from "./handlers/handleRedirectToInvoice.js";
 
 export const publicInvoiceRouter = new Hono<HonoEnv>();
@@ -18,3 +19,11 @@ publicInvoiceRouter.get(
 	invoiceRedirectLimiter,
 	...handleRedirectToInvoice,
 );
+
+/**
+ * Authenticated invoice router - requires secret key middleware
+ * Mounted at /v1/invoices in apiRouter
+ */
+export const invoiceRouter = new Hono<HonoEnv>();
+
+invoiceRouter.get("/:stripe_invoice_id/stripe", ...handleGetStripeInvoice);

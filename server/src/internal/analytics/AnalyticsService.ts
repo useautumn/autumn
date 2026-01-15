@@ -322,17 +322,19 @@ order by dr.period;
 	}
 
 	static async getRawEvents({
-		req,
+		ctx,
 		params,
 		customer,
 		aggregateAll = false,
 	}: {
-		req: ExtendedRequest;
+		ctx: AutumnContext;
 		params: any;
 		customer?: FullCustomer;
 		aggregateAll?: boolean;
 	}) {
-		const { clickhouseClient, org, db, env } = req;
+		const { clickhouseClient, org, db, env } = ctx;
+
+		if (!clickhouseClient) throw new Error("ClickHouse client not found");
 
 		AnalyticsService.handleEarlyExit();
 
