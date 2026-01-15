@@ -11,21 +11,19 @@ import {
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
+/** Visibility is controlled by parent AdvancedSettings */
 export function EntityFeatureConfig() {
 	const { features } = useFeaturesQuery();
 	const { item, setItem } = useProductItemContext();
 
 	if (!item) return null;
 
-	// Filter for continuous use features
+	// Filter for continuous use features, excluding the current feature (can't link to itself)
 	const continuousUseFeatures = features.filter(
-		(f) => f.config?.usage_type === FeatureUsageType.Continuous,
+		(f) =>
+			f.config?.usage_type === FeatureUsageType.Continuous &&
+			f.id !== item.feature_id,
 	);
-
-	// Don't show if there are no continuous use features available
-	if (continuousUseFeatures.length === 0) {
-		return null;
-	}
 
 	return (
 		<AreaCheckbox
