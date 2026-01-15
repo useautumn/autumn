@@ -1,4 +1,5 @@
 import { flexRender } from "@tanstack/react-table";
+import { Link } from "react-router";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
 	TableBody as ShadcnTableBody,
@@ -15,6 +16,7 @@ export function TableBody() {
 		numberOfColumns,
 		enableSelection,
 		isLoading,
+		getRowHref,
 		onRowClick,
 		rowClassName,
 		emptyStateChildren,
@@ -51,6 +53,8 @@ export function TableBody() {
 		<ShadcnTableBody className="divide-y bg-interactive-secondary">
 			{rows.map((row) => {
 				const isSelected = selectedItemId === (row.original as any).id;
+				const rowHref = getRowHref?.(row.original);
+
 				return (
 					<TableRow
 						className={cn(
@@ -60,7 +64,7 @@ export function TableBody() {
 						)}
 						data-state={row.getIsSelected() && "selected"}
 						key={row.id}
-						onClick={() => onRowClick?.(row.original)}
+						onClick={!rowHref ? () => onRowClick?.(row.original) : undefined}
 					>
 						{enableSelection && (
 							<TableCell className="w-[50px]">

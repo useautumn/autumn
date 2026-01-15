@@ -9,6 +9,7 @@ import {
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import { notNullish } from "@server/utils/genUtils.js";
 import { and, eq } from "drizzle-orm";
+import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { clearOrgCache } from "../orgs/orgUtils/clearOrgCache.js";
 
 export class FeatureService {
@@ -138,7 +139,7 @@ export class FeatureService {
 	}: {
 		db: DrizzleCli;
 		data: Feature[] | Feature;
-		logger: any;
+		logger: Logger | Console;
 	}) {
 		try {
 			const insertedData = await db
@@ -156,7 +157,7 @@ export class FeatureService {
 			}
 			return insertedData as Feature[]; // DRIZZLE TYPE REFACTOR
 		} catch (error: any) {
-			if (error.code === "23505") {
+			if (error?.code === "23505") {
 				const id = Array.isArray(data)
 					? data.map((f) => f.id)?.join(",")
 					: data.id;

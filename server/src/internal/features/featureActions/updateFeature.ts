@@ -176,8 +176,9 @@ export const updateFeature = async ({
 		await addTaskToQueue({
 			jobName: JobName.GenerateFeatureDisplay,
 			payload: {
-				feature: updatedFeature,
-				org: ctx.org,
+				featureId: updatedFeature.id,
+				orgId: ctx.org.id,
+				env: ctx.env,
 			},
 		});
 	}

@@ -10,20 +10,20 @@ import { cn } from "@/lib/utils";
 import { useTableContext } from "./table-context";
 
 function SortIcon({ sortDirection }: { sortDirection: string | false }) {
-	if (!sortDirection) {
-		return null;
+	if (sortDirection === "asc") {
+		return (
+			<ChevronUpIcon
+				aria-hidden="true"
+				className="shrink-0 opacity-60"
+				size={16}
+			/>
+		);
 	}
 
-	return sortDirection === "asc" ? (
-		<ChevronUpIcon
-			aria-hidden="true"
-			className="shrink-0 opacity-60"
-			size={16}
-		/>
-	) : (
+	return (
 		<ChevronDownIcon
 			aria-hidden="true"
-			className="shrink-0 opacity-60"
+			className={cn("shrink-0", sortDirection ? "opacity-60" : "opacity-30")}
 			size={16}
 		/>
 	);
@@ -50,7 +50,7 @@ function HeaderContent<T>({
 	return (
 		<button
 			className={cn(
-				"flex h-full w-full cursor-pointer select-none items-center justify-between gap-2",
+				"flex h-full select-none items-center gap-1",
 				enableSorting && "cursor-pointer",
 			)}
 			onClick={
@@ -87,7 +87,7 @@ export function TableHeader({ className }: { className?: string }) {
 			{headerGroups.map((headerGroup) => (
 				<TableRow
 					className={cn(
-						"border-b bg-card pointer-events-none text-t4 sticky top-0 z-20",
+						"border-b bg-card text-t4 sticky top-0 z-20",
 						!rows.length && "border-dashed",
 					)}
 					key={headerGroup.id}
