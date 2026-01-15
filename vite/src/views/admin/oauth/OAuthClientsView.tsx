@@ -1,4 +1,4 @@
-import { ArrowLeft, ExternalLink, Globe, Key, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { ArrowLeft, Globe, Key, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -13,16 +13,21 @@ import { DefaultView } from "../../DefaultView";
 import LoadingScreen from "../../general/LoadingScreen";
 import { useAdmin } from "../hooks/useAdmin";
 import { CreateOAuthClientDialog } from "./CreateOAuthClientDialog";
-import { EditOAuthClientDialog } from "./EditOAuthClientDialog";
 
 interface OAuthClient {
+	id?: string;
 	client_id: string;
 	client_name?: string;
-	redirect_uris?: string[];
+	redirect_uris: string[];
 	public?: boolean;
 	disabled?: boolean;
 	skip_consent?: boolean;
 	scope?: string;
+	client_id_issued_at?: number;
+	token_endpoint_auth_method?: string;
+	grant_types?: string[];
+	response_types?: string[];
+	reference_id?: string;
 }
 
 export const OAuthClientsView = () => {
@@ -31,8 +36,6 @@ export const OAuthClientsView = () => {
 	const [clients, setClients] = useState<OAuthClient[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
-	const [editDialogOpen, setEditDialogOpen] = useState(false);
-	const [editingClient, setEditingClient] = useState<OAuthClient | null>(null);
 
 	const fetchClients = async () => {
 		setIsLoading(true);
@@ -42,8 +45,10 @@ export const OAuthClientsView = () => {
 				toast.error(error.message || "Failed to fetch OAuth clients");
 				return;
 			}
+			console.log("OAuth Clients Data:", data);
 			setClients((data as OAuthClient[]) || []);
 		} catch (error) {
+			console.error("Fetch clients error:", error);
 			toast.error(getBackendErr(error, "Failed to fetch OAuth clients"));
 		} finally {
 			setIsLoading(false);
@@ -56,14 +61,14 @@ export const OAuthClientsView = () => {
 		}
 	}, [isAdmin]);
 
-	const handleDeleteClient = async (clientId: string) => {
+	const handleDeleteClient = async (client_id: string) => {
 		if (!confirm("Are you sure you want to delete this OAuth client?")) {
 			return;
 		}
 
 		try {
 			const { error } = await authClient.oauth2.deleteClient({
-				client_id: clientId,
+				client_id,
 			});
 			if (error) {
 				toast.error(error.message || "Failed to delete client");
@@ -76,51 +81,7 @@ export const OAuthClientsView = () => {
 		}
 	};
 
-	const handleTestClient = async (client: OAuthClient) => {
-		// Generate PKCE code verifier and challenge
-		const generateCodeVerifier = () => {
-			const array = new Uint8Array(32);
-			crypto.getRandomValues(array);
-			return btoa(String.fromCharCode(...array))
-				.replace(/\+/g, "-")
-				.replace(/\//g, "_")
-				.replace(/=/g, "");
-		};
-
-		const generateCodeChallenge = async (verifier: string) => {
-			const encoder = new TextEncoder();
-			const data = encoder.encode(verifier);
-			const digest = await crypto.subtle.digest("SHA-256", data);
-			return btoa(String.fromCharCode(...new Uint8Array(digest)))
-				.replace(/\+/g, "-")
-				.replace(/\//g, "_")
-				.replace(/=/g, "");
-		};
-
-		const codeVerifier = generateCodeVerifier();
-		const codeChallenge = await generateCodeChallenge(codeVerifier);
-
-		// Store code verifier for later (in real app, CLI would store this)
-		console.log("Code Verifier (save this for token exchange):", codeVerifier);
-
-		const redirectUri = client.redirect_uris?.[0] || "http://localhost:31448/";
-		const scope = client.scope || "openid profile email";
-
-		const params = new URLSearchParams({
-			client_id: client.client_id,
-			response_type: "code",
-			redirect_uri: redirectUri,
-			scope: scope,
-			code_challenge: codeChallenge,
-			code_challenge_method: "S256",
-			prompt: "consent", // Force consent screen even if already granted
-		});
-
-		const authUrl = `${import.meta.env.VITE_BACKEND_URL}/api/auth/oauth2/authorize?${params.toString()}`;
-		window.open(authUrl, "_blank");
-	};
-
-	const handleRotateSecret = async (clientId: string) => {
+	const handleRotateSecret = async (client_id: string) => {
 		if (
 			!confirm(
 				"Are you sure? This will invalidate the current client secret immediately.",
@@ -131,7 +92,7 @@ export const OAuthClientsView = () => {
 
 		try {
 			const { data, error } = await authClient.oauth2.client.rotateSecret({
-				client_id: clientId,
+				client_id,
 			});
 			if (error) {
 				toast.error(error.message || "Failed to rotate secret");
@@ -243,10 +204,10 @@ export const OAuthClientsView = () => {
 									<CopyButton
 										text={client.client_id}
 										variant="skeleton"
-										className="text-xs text-muted-foreground mt-0.5 max-w-[200px] !pl-0 cursor-pointer"
+										className="text-xs text-muted-foreground mt-0.5 max-w-[200px] h-auto p-0"
 										innerClassName="text-xs"
 									>
-										{client.client_id?.slice(0, 20)}...
+										{client.client_id.slice(0, 20)}...
 									</CopyButton>
 								</div>
 
@@ -255,10 +216,10 @@ export const OAuthClientsView = () => {
 									<Badge
 										variant="muted"
 										className={cn(
-											"text-xs bg-transparent",
+											"text-xs",
 											client.public
-												? "text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400"
-												: "text-purple-600 dark:text-purple-400 border-purple-600 dark:border-purple-400",
+												? "bg-blue-500/10 text-blue-600 border-blue-200"
+												: "bg-purple-500/10 text-purple-600 border-purple-200",
 										)}
 									>
 										{client.public ? "Public" : "Confidential"}
@@ -270,10 +231,10 @@ export const OAuthClientsView = () => {
 									<Badge
 										variant="muted"
 										className={cn(
-											"text-xs w-fit bg-transparent",
+											"text-xs w-fit",
 											client.disabled
-												? "text-red-600 dark:text-red-400 border-red-600 dark:border-red-400"
-												: "text-green-600 dark:text-green-400 border-green-600 dark:border-green-400",
+												? "bg-red-500/10 text-red-600 border-red-200"
+												: "bg-green-500/10 text-green-600 border-green-200",
 										)}
 									>
 										{client.disabled ? "Disabled" : "Active"}
@@ -281,7 +242,7 @@ export const OAuthClientsView = () => {
 									{client.skip_consent && (
 										<Badge
 											variant="muted"
-											className="text-xs w-fit bg-transparent text-yellow-600 dark:text-yellow-400 border-yellow-600 dark:border-yellow-400"
+											className="text-xs w-fit bg-yellow-500/10 text-yellow-600 border-yellow-200"
 										>
 											Skip Consent
 										</Badge>
@@ -291,7 +252,7 @@ export const OAuthClientsView = () => {
 								{/* Redirect URIs */}
 								<div className="min-w-0">
 									<div className="flex flex-wrap gap-1">
-										{(client.redirect_uris ?? []).slice(0, 2).map((uri, i) => (
+										{client.redirect_uris?.slice(0, 2).map((uri, i) => (
 											<span
 												key={i}
 												className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded truncate max-w-[180px]"
@@ -300,9 +261,14 @@ export const OAuthClientsView = () => {
 												{uri}
 											</span>
 										))}
-										{(client.redirect_uris?.length ?? 0) > 2 && (
+										{(client.redirect_uris?.length || 0) > 2 && (
 											<span className="text-xs text-muted-foreground">
-												+{(client.redirect_uris?.length ?? 0) - 2} more
+												+{client.redirect_uris.length - 2} more
+											</span>
+										)}
+										{!client.redirect_uris?.length && (
+											<span className="text-xs text-muted-foreground">
+												No redirect URIs
 											</span>
 										)}
 									</div>
@@ -310,23 +276,6 @@ export const OAuthClientsView = () => {
 
 								{/* Actions */}
 								<div className="flex justify-end gap-1">
-									<IconButton
-										variant="skeleton"
-										size="icon"
-										icon={<ExternalLink className="w-3.5 h-3.5" />}
-										onClick={() => handleTestClient(client)}
-										title="Test OAuth Flow"
-									/>
-									<IconButton
-										variant="skeleton"
-										size="icon"
-										icon={<Pencil className="w-3.5 h-3.5" />}
-										onClick={() => {
-											setEditingClient(client);
-											setEditDialogOpen(true);
-										}}
-										title="Edit Scopes"
-									/>
 									{!client.public && (
 										<IconButton
 											variant="skeleton"
@@ -358,14 +307,6 @@ export const OAuthClientsView = () => {
 					fetchClients();
 					setCreateDialogOpen(false);
 				}}
-			/>
-
-			{/* Edit Dialog */}
-			<EditOAuthClientDialog
-				open={editDialogOpen}
-				onOpenChange={setEditDialogOpen}
-				onSuccess={fetchClients}
-				client={editingClient}
 			/>
 		</div>
 	);
