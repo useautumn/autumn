@@ -8,9 +8,9 @@ import { handleGetDevData } from "./handlers/handleGetDevData.js";
 import { handleGetOtp } from "./handlers/handleGetOtp.js";
 
 // Unauthenticated CLI routes (no session required)
-export const cliDevRouter = new Hono<HonoEnv>();
-cliDevRouter.get("/otp/:otp", ...handleGetOtp);
-cliDevRouter.post("/cli/stripe", ...handleCliStripe);
+export const publicDevRouter = new Hono<HonoEnv>();
+publicDevRouter.get("/otp/:otp", ...handleGetOtp);
+publicDevRouter.post("/cli/stripe", ...handleCliStripe);
 
 export const internalDevRouter = new Hono<HonoEnv>();
 internalDevRouter.post("/otp", ...handleCreateOtp);

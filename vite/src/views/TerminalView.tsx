@@ -1,16 +1,14 @@
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useCustomer } from "autumn-js/react";
 import { Terminal } from "lucide-react";
-import { Link } from "react-router";
-import ErrorScreen from "./general/ErrorScreen";
-import LoadingScreen from "./general/LoadingScreen";
-import { useAxiosSWR } from "@/services/useAxiosSwr";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { getBackendErr } from "@/utils/genUtils";
 import { ToggleButton } from "@/components/general/ToggleButton";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useAxiosSWR } from "@/services/useAxiosSwr";
+import { getBackendErr } from "@/utils/genUtils";
+import LoadingScreen from "./general/LoadingScreen";
 
 type TrmnlConfig = {
 	deviceId: string;
@@ -50,16 +48,16 @@ export const TerminalView = () => {
 		return <LoadingScreen />;
 	}
 
-	if (!customer?.features.trmnl) {
-		return (
-			<ErrorScreen>
-				<p className="mb-4">🚩 This page is not found</p>
-				<Link className="text-t2 hover:underline" to="/customers">
-					Return to dashboard
-				</Link>
-			</ErrorScreen>
-		);
-	}
+	// if (!customer?.features.trmnl) {
+	// 	return (
+	// 		<ErrorScreen>
+	// 			<p className="mb-4">🚩 This page is not found</p>
+	// 			<Link className="text-t2 hover:underline" to="/customers">
+	// 				Return to dashboard
+	// 			</Link>
+	// 		</ErrorScreen>
+	// 	);
+	// }
 
 	const handleSave = async () => {
 		try {
@@ -136,6 +134,7 @@ export const TerminalView = () => {
 						href="https://help.usetrmnl.com/en/articles/9416306-how-to-set-up-a-new-device"
 						className="underline"
 						target="_blank"
+						rel="noopener"
 					>
 						guide
 					</a>{" "}
@@ -148,6 +147,7 @@ export const TerminalView = () => {
 						href="https://usetrmnl.com/recipes/119587/install_read_only?read_only=true"
 						className="underline"
 						target="_blank"
+						rel="noopener"
 					>
 						page
 					</a>
@@ -160,6 +160,7 @@ export const TerminalView = () => {
 						href="https://usetrmnl.com/playlists"
 						className="underline"
 						target="_blank"
+						rel="noopener"
 					>
 						here
 					</a>
@@ -171,6 +172,7 @@ export const TerminalView = () => {
 						href="https://help.usetrmnl.com/en/articles/10113695-how-refresh-rates-work"
 						className="underline"
 						target="_blank"
+						rel="noopener"
 					>
 						page
 					</a>{" "}
