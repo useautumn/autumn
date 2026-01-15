@@ -43,7 +43,7 @@ export function EditPlanSection({
 			title={<SectionTitle hasCustomizations={hasCustomizations} />}
 			withSeparator
 		>
-			<Button variant="secondary" onClick={onEditPlan} className="w-fit">
+			<Button variant="secondary" onClick={onEditPlan} className="w-full">
 				<PencilSimpleIcon size={14} className="mr-1" />
 				Edit Plan Items
 			</Button>
