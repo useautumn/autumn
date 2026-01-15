@@ -735,5 +735,48 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 			expect(result).toHaveLength(1);
 			expect(result[0].quantity).toBe(75);
 		});
+
+		test("current has options with quantity 0, new params has no options → carries over 0", () => {
+			const feature = features.create({
+				id: "seats",
+				name: "Seats",
+			});
+
+			const price = prices.createPrepaid({
+				id: "price_seats",
+				featureId: "seats",
+			});
+
+			const fullProduct = products.createFull({ prices: [price] });
+			const cusProduct = customerProducts.create({
+				options: [
+					{
+						feature_id: "seats",
+						internal_feature_id: "internal_seats",
+						quantity: 0,
+					},
+				],
+				customerPrices: [prices.createCustomer({ price })],
+			});
+
+			const params: UpdateSubscriptionV0Params = {
+				customer_id: "cus_test",
+				product_id: "prod_test",
+				// No options provided - should carry over from current
+			};
+
+			const ctx = contexts.create({ features: [feature] });
+
+			const result = setupFeatureQuantitiesContext({
+				ctx,
+				featureQuantitiesParams: params,
+				fullProduct,
+				currentCustomerProduct: cusProduct,
+			});
+
+			expect(result).toHaveLength(1);
+			expect(result[0].feature_id).toBe("seats");
+			expect(result[0].quantity).toBe(0);
+		});
 	});
 });

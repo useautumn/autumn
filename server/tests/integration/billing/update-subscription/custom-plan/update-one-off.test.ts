@@ -41,7 +41,7 @@ test.concurrent(`${chalk.yellowBright("one-off: update included usage on free me
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [oneOffProduct] }),
 		],
-		actions: [s.attach({ productId: oneOffProduct.id })],
+		actions: [s.attach({ productId: oneOffProduct.id, timeout: 3000 })],
 	});
 
 	// Track some usage
