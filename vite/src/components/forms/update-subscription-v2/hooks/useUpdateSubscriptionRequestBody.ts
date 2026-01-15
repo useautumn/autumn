@@ -23,7 +23,6 @@ export function useUpdateSubscriptionRequestBody({
 			prepaidOptions,
 			trialLength,
 			trialDuration,
-			trialCardRequired,
 			removeTrial,
 			version,
 			items,
@@ -67,7 +66,6 @@ export function useUpdateSubscriptionRequestBody({
 			removeTrial,
 			trialLength,
 			trialDuration,
-			trialCardRequired,
 		});
 		if (freeTrial !== undefined) {
 			requestBody.free_trial = freeTrial;

@@ -11,6 +11,7 @@ export function NumberField({
 	max,
 	className,
 	hideFieldInfo,
+	disabled,
 }: {
 	label: string;
 	placeholder?: string;
@@ -18,6 +19,7 @@ export function NumberField({
 	max?: number;
 	className?: string;
 	hideFieldInfo?: boolean;
+	disabled?: boolean;
 }) {
 	const field = useFieldContext<number | null>();
 
@@ -50,6 +52,7 @@ export function NumberField({
 				value={field.state.value ?? ""}
 				onChange={handleChange}
 				className="text-sm"
+				disabled={disabled}
 			/>
 			{!hideFieldInfo && <FieldInfo field={field} />}
 		</div>

@@ -3,7 +3,9 @@ import {
 	type FullCusProduct,
 	isCustomerProductTrialing,
 } from "@autumn/shared";
+import { XCircleIcon } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
+import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import type { UseUpdateSubscriptionForm } from "../hooks/useUpdateSubscriptionForm";
 
@@ -37,60 +39,57 @@ export function FreeTrialSection({
 					)}
 				</div>
 
-				{/* Remove Trial Option (only if currently trialing) */}
-				{isCurrentlyTrialing && (
-					<form.AppField name="removeTrial">
+				{/* Trial Length and Remove Trial */}
+				<div className="flex gap-2 items-end">
+					<form.AppField name="trialLength">
 						{(field) => (
-							<field.CheckboxField
-								label="Remove trial immediately"
-								labelClassName="text-sm text-red-400"
-								hideFieldInfo
+							<field.NumberField
+								label="Trial Length"
+								placeholder="e.g. 7"
+								min={1}
+								className="min-w-24"
+								disabled={removeTrial}
 							/>
 						)}
 					</form.AppField>
-				)}
-
-				{/* Set New Trial (hidden if removing) */}
-				{!removeTrial && (
-					<>
-						<div className="flex gap-2 items-end">
-							<form.AppField name="trialLength">
-								{(field) => (
-									<field.NumberField
-										label="Trial Length"
-										placeholder="e.g. 7"
-										min={1}
-										className="w-24"
-									/>
-								)}
-							</form.AppField>
-							<form.AppField name="trialDuration">
-								{(field) => (
-									<field.SelectField
-										label=""
-										placeholder="Duration"
-										className="w-full"
-										options={[
-											{ label: "Days", value: FreeTrialDuration.Day },
-											{ label: "Months", value: FreeTrialDuration.Month },
-											{ label: "Years", value: FreeTrialDuration.Year },
-										]}
-										hideFieldInfo
-									/>
-								)}
-							</form.AppField>
-						</div>
-
-						<form.AppField name="trialCardRequired">
+					<form.AppField name="trialDuration">
+						{(field) => (
+							<field.SelectField
+								label=""
+								placeholder="Duration"
+								className="w-full"
+								options={[
+									{ label: "Days", value: FreeTrialDuration.Day },
+									{ label: "Months", value: FreeTrialDuration.Month },
+									{ label: "Years", value: FreeTrialDuration.Year },
+								]}
+								hideFieldInfo
+								disabled={removeTrial}
+							/>
+						)}
+					</form.AppField>
+					{isCurrentlyTrialing && (
+						<form.AppField name="removeTrial">
 							{(field) => (
-								<field.CheckboxField
-									label="Require payment method"
-									hideFieldInfo
-								/>
+								<IconCheckbox
+									icon={<XCircleIcon />}
+									iconOrientation="left"
+									variant="secondary"
+									size="default"
+									checked={field.state.value}
+									onCheckedChange={field.handleChange}
+									className={
+										field.state.value
+											? "text-red-500! border-red-500"
+											: "text-t4"
+									}
+								>
+									Remove trial
+								</IconCheckbox>
 							)}
 						</form.AppField>
-					</>
-				)}
+					)}
+				</div>
 			</div>
 		</SheetSection>
 	);

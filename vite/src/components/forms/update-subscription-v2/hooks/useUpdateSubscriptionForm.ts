@@ -1,4 +1,8 @@
-import { FreeTrialDuration } from "@autumn/shared";
+import {
+	FreeTrialDuration,
+	getRemainingTrialDays,
+	isCustomerProductTrialing,
+} from "@autumn/shared";
 import { useMemo } from "react";
 import { useAppForm } from "@/hooks/form/form";
 import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormContext";
@@ -34,12 +38,16 @@ export function useUpdateSubscriptionForm({
 		);
 	}, [customerProduct.options, prepaidItems]);
 
+	const isTrialing = isCustomerProductTrialing(customerProduct);
+	const remainingTrialDays = isTrialing
+		? getRemainingTrialDays({ trialEndsAt: customerProduct.trial_ends_at })
+		: null;
+
 	return useAppForm({
 		defaultValues: {
 			prepaidOptions: initialPrepaidOptions,
-			trialLength: null,
+			trialLength: remainingTrialDays,
 			trialDuration: FreeTrialDuration.Day,
-			trialCardRequired: true,
 			removeTrial: false,
 			version: currentVersion,
 			items: null,

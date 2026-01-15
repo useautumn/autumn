@@ -13,13 +13,15 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/v2/dropdowns/DropdownMenu";
 import { FormLabel } from "@/components/v2/form/FormLabel";
+import {
+	useProduct,
+	useSheet,
+} from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { getItemId } from "@/utils/product/productItemUtils";
 import { getFeatureIcon } from "@/views/products/features/utils/getFeatureIcon";
-import { useProduct, useSheet } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { getDefaultItem } from "../utils/getDefaultItem";
 
 export function SelectFeatureSheet({
@@ -27,7 +29,6 @@ export function SelectFeatureSheet({
 }: {
 	isOnboarding?: boolean;
 }) {
-	const previousSheetType = useSheetStore((s) => s.previousType);
 	const [selectOpen, setSelectOpen] = useState(false);
 	const [searchValue, setSearchValue] = useState("");
 
@@ -36,14 +37,9 @@ export function SelectFeatureSheet({
 	const { setSheet } = useSheet();
 
 	useEffect(() => {
-		// If we're switching from another sheet, open immediately
-		if (previousSheetType && previousSheetType !== "select-feature") {
-			setSelectOpen(true);
-		} else {
-			// Otherwise, delay to let sheet animate in
-			const timer = setTimeout(() => setSelectOpen(true), 250);
-			return () => clearTimeout(timer);
-		}
+		// Always delay to let sheet animate in (300ms animation + buffer)
+		const timer = setTimeout(() => setSelectOpen(true), 350);
+		return () => clearTimeout(timer);
 	}, []);
 
 	// Reset search when dropdown closes
