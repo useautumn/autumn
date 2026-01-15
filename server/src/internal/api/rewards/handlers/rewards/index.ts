@@ -1,11 +1,4 @@
-import handleCreateCoupon from "./handleCreateCoupon.js";
-import handleDeleteCoupon from "./handleDeleteCoupon.js";
-import handleGetCoupon from "./handleGetCoupon.js";
-import handleUpdateCoupon from "./handleUpdateCoupon.js";
-
-export {
-	handleCreateCoupon,
-	handleDeleteCoupon,
-	handleGetCoupon,
-	handleUpdateCoupon,
-};
+export { handleCreateCoupon } from "./handleCreateCoupon.js";
+export { handleDeleteCoupon } from "./handleDeleteCoupon.js";
+export { handleGetCoupon } from "./handleGetCoupon.js";
+export { handleUpdateCoupon } from "./handleUpdateCoupon.js";

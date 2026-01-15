@@ -14,6 +14,11 @@ import {
 	getBillingCycleStartDate,
 } from "./analyticsUtils.js";
 
+export type TopEventNameRow = {
+	event_name: string;
+	count: number;
+};
+
 export class AnalyticsService {
 	static clickhouseAvailable =
 		process.env.CLICKHOUSE_URL &&
@@ -47,7 +52,10 @@ export class AnalyticsService {
 	}: {
 		ctx: AutumnContext;
 		limit?: number;
-	}) {
+	}): Promise<{
+		eventNames: string[];
+		result: { data: TopEventNameRow[] };
+	}> {
 		const { clickhouseClient, org, env } = ctx;
 
 		if (!clickhouseClient) throw new Error("ClickHouse client not found");
@@ -69,10 +77,10 @@ export class AnalyticsService {
 			},
 		});
 
-		const resultJson = await result.json();
+		const resultJson = await result.json<TopEventNameRow>();
 
 		return {
-			eventNames: resultJson.data.map((row: any) => row.event_name),
+			eventNames: resultJson.data.map((row) => row.event_name),
 			result: resultJson,
 		};
 	}

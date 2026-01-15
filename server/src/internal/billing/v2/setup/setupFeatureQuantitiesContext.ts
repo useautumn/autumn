@@ -3,6 +3,7 @@ import {
 	type FeatureOptions,
 	type FullCusProduct,
 	type FullProduct,
+	formatPrice,
 	isPrepaidPrice,
 	priceToFeature,
 	type UpdateSubscriptionV0Params,
@@ -26,6 +27,16 @@ export const setupFeatureQuantitiesContext = ({
 	currentCustomerProduct?: FullCusProduct;
 }): FeatureOptions[] => {
 	const options: FeatureOptions[] = [];
+
+	console.log(
+		"Full product prices:",
+		fullProduct.prices.map((price) => formatPrice({ price })),
+	);
+
+	console.log(
+		"Current customer product options:",
+		currentCustomerProduct?.options,
+	);
 
 	for (const price of fullProduct.prices) {
 		if (!isPrepaidPrice(price)) continue;
