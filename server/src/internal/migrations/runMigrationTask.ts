@@ -21,6 +21,9 @@ export const runMigrationTask = async ({
 	const { db, logger } = ctx;
 	const { migrationJobId } = payload;
 
+	logger.info(`--------------------------------`);
+	logger.info(`Running migration task ${migrationJobId}`);
+
 	try {
 		const migrationJob = await MigrationService.getJob({
 			db,

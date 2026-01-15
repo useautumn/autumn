@@ -1,4 +1,5 @@
 import {
+	AttachBranch,
 	type AttachConfig,
 	CusProductStatus,
 	cusProductToPrices,
@@ -39,10 +40,14 @@ export const getCusProductsToRemove = ({
 			? products
 			: [cusProductToProduct({ cusProduct: attachParams.cusProduct! })];
 
-	console.log(
-		"Getting customer products to remove, internal entity ID:",
-		attachParams.internalEntityId,
-	);
+	// console.log(
+	// 	"Getting customer products to remove, internal entity ID:",
+	// 	attachParams.internalEntityId,
+	// );
+
+	const isUpdate =
+		attachParams.branch === AttachBranch.NewVersion ||
+		attachParams.branch === AttachBranch.SameCustomEnts;
 
 	for (const product of prods) {
 		// Get cur main and cur same
@@ -64,7 +69,7 @@ export const getCusProductsToRemove = ({
 		}
 
 		// 2. If cancelling, and same product exists (add on / main), add it.
-		else if (curSameProduct && attachParams.fromCancel) {
+		else if (curSameProduct && (attachParams.fromCancel || isUpdate)) {
 			cusProductsToRemove.push(curSameProduct);
 		}
 

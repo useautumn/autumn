@@ -4,54 +4,29 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { CusService } from "@/internal/customers/CusService";
 import {
 	constructFeatureItem,
 	constructPrepaidItem,
 } from "@/utils/scriptUtils/constructItem.js";
-import {
-	constructProduct,
-	constructRawProduct,
-} from "@/utils/scriptUtils/createTestProducts.js";
+import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3";
+import { expectSubToBeCorrect } from "../merged/mergeUtils/expectSubCorrect";
 
-const pro = constructProduct({
-	type: "pro",
-	items: [
-		constructFeatureItem({
-			featureId: TestFeature.Credits,
-			includedUsage: 500,
-		}),
-	],
+const prepaidUsersItem = constructPrepaidItem({
+	featureId: TestFeature.Users,
+	billingUnits: 1,
+	price: 10,
 });
-
-const free = constructProduct({
-	type: "free",
-	items: [
-		constructFeatureItem({
-			featureId: TestFeature.Credits,
-			includedUsage: 500,
-		}),
-	],
-});
-
-const oneOffCredits = constructRawProduct({
-	id: "one_off_credits",
-	items: [
-		constructPrepaidItem({
-			featureId: TestFeature.Credits,
-			includedUsage: 0,
-			billingUnits: 1,
-			price: 0.01,
-			isOneOff: true,
-		}),
-	],
+const addOn = constructRawProduct({
+	id: "addOn",
+	isAddOn: true,
+	items: [prepaidUsersItem],
 });
 
 const testCase = "temp";
 
-describe(`${chalk.yellowBright("temp: invoice payment failed for one off credits")}`, () => {
+describe(`${chalk.yellowBright("temp:	 add on")}`, () => {
 	const customerId = testCase;
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
@@ -65,23 +40,38 @@ describe(`${chalk.yellowBright("temp: invoice payment failed for one off credits
 
 		await initProductsV0({
 			ctx,
-			products: [pro, free, oneOffCredits],
+			products: [addOn],
 			prefix: testCase,
 		});
 
-		const res = await autumnV1.balances.create({
+		await autumnV1.attach({
 			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			granted_balance: 100,
+			product_id: addOn.id,
+			options: [
+				{
+					feature_id: TestFeature.Users,
+					quantity: 10,
+				},
+			],
 		});
 
-		const fullCustomer = await CusService.getFull({
+		const dashboardItem = constructFeatureItem({
+			featureId: TestFeature.Dashboard,
+			isBoolean: true,
+		});
+
+		await autumnV1.attach({
+			customer_id: customerId,
+			product_id: addOn.id,
+			is_custom: true,
+			items: [prepaidUsersItem, dashboardItem],
+		});
+
+		await expectSubToBeCorrect({
 			db: ctx.db,
-			idOrInternalId: customerId,
-			orgId: ctx.org.id,
+			customerId,
+			org: ctx.org,
 			env: ctx.env,
 		});
-
-		console.log(fullCustomer);
 	});
 });
