@@ -7,5 +7,5 @@ export const cusEntsToPlanId = ({
 }) => {
 	if (cusEnts.length !== 1) return null;
 
-	return cusEnts[0].customer_product.product.id;
+	return cusEnts[0].customer_product?.product.id ?? null;
 };

@@ -109,7 +109,6 @@ export const handlePaidProduct = async ({
 			itemSet: newItemSet,
 			config,
 			branch,
-			fromCreate: true,
 		});
 
 		sub = updatedSub;

@@ -88,7 +88,10 @@ export const validateDefaultFlag = async ({
 	curProduct?: FullProduct;
 }) => {
 	const validate = (): { type: "free" | "default_trial" | undefined } => {
-		const isDefault = body.is_default || curProduct?.is_default || false;
+		const isDefault =
+			body.is_default !== undefined
+				? body.is_default
+				: curProduct?.is_default || false;
 		if (!isDefault) return { type: undefined };
 
 		// If default, check if there are any prices...?

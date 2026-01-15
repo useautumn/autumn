@@ -154,7 +154,7 @@ export const AnalyticsView = () => {
 						icon={<ArrowSquareOutIcon size={16} />}
 						onClick={() => {
 							window.open(
-								"https://docs.useautumn.com/getting-started/gating",
+								"https://docs.useautumn.com/documentation/getting-started/gating",
 								"_blank",
 							);
 						}}
@@ -175,6 +175,12 @@ export const AnalyticsView = () => {
 				setSelectedInterval: (interval: string) => {
 					const newParams = new URLSearchParams(searchParams);
 					newParams.set("interval", interval);
+					navigate(`${location.pathname}?${newParams.toString()}`);
+				},
+				selectedBinSize: searchParams.get("bin_size") || "day",
+				setSelectedBinSize: (binSize: string) => {
+					const newParams = new URLSearchParams(searchParams);
+					newParams.set("bin_size", binSize);
 					navigate(`${location.pathname}?${newParams.toString()}`);
 				},
 

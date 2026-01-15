@@ -8,7 +8,12 @@ import {
 	type Entitlement,
 	type ProductV2,
 } from "@autumn/shared";
-import type { Customer, ProductItem, ProductStatus } from "autumn-js";
+import type {
+	Customer,
+	CustomerInvoice,
+	ProductItem,
+	ProductStatus,
+} from "autumn-js";
 import { AutumnInt } from "../../../src/external/autumn/autumnCli";
 
 export const expectProductAttached = ({
@@ -209,7 +214,7 @@ export const expectInvoicesCorrect = ({
 	first,
 	// second,
 }: {
-	customer: Customer;
+	customer: Customer & { invoices: CustomerInvoice[] };
 	first: {
 		productId: string;
 		total: number;

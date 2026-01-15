@@ -2,9 +2,9 @@ import {
 	FeatureNotFoundError,
 	UpdateBalancesParamsSchema,
 } from "@autumn/shared";
+import { executePostgresDeduction } from "@/internal/balances/utils/deduction/executePostgresDeduction";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
-import type { FeatureDeduction } from "../../balances/track/trackUtils/getFeatureDeductions";
-import { runDeductionTx } from "../../balances/track/trackUtils/runDeductionTx";
+import type { FeatureDeduction } from "../../balances/utils/types/featureDeduction";
 import { CusService } from "../CusService";
 
 export const handleUpdateBalancesV2 = createRoute({
@@ -14,13 +14,14 @@ export const handleUpdateBalancesV2 = createRoute({
 
 		const { org, env, db, features } = ctx;
 		const { customer_id } = c.req.param();
-		const { balances } = c.req.valid("json");
+		const { balances, entity_id } = c.req.valid("json");
 
 		const fullCus = await CusService.getFull({
 			db,
 			idOrInternalId: customer_id,
 			orgId: org.id,
 			env,
+			entityId: entity_id,
 		});
 
 		for (const balance of balances) {
@@ -36,14 +37,16 @@ export const handleUpdateBalancesV2 = createRoute({
 			targetBalance: b.balance,
 		})) satisfies FeatureDeduction[];
 
-		await runDeductionTx({
+		await executePostgresDeduction({
 			ctx,
+			fullCustomer: fullCus,
 			customerId: customer_id,
 			deductions: featureDeductions,
-			entityId: fullCus.entity?.id,
-			skipAdditionalBalance: true,
-			alterGrantedBalance: true,
 			refreshCache: true,
+			options: {
+				alterGrantedBalance: true,
+				overageBehaviour: "allow",
+			},
 		});
 
 		return c.json({ success: true });

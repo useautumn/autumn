@@ -8,6 +8,7 @@ import {
 	type AttachBodyV0,
 	type BalancesUpdateParams,
 	type CheckQuery,
+	type CreateBalanceParams,
 	type CreateCustomerParams,
 	type CreateEntityParams,
 	type CreateRewardProgram,
@@ -434,6 +435,22 @@ export class AutumnInt {
 			});
 			return data;
 		},
+
+		setBalance: async ({
+			customerId,
+			balances,
+			entityId,
+		}: {
+			customerId: string;
+			balances: Array<{ feature_id: string; balance: number }>;
+			entityId?: string;
+		}) => {
+			const data = await this.post(`/customers/${customerId}/balances`, {
+				balances,
+				entity_id: entityId,
+			});
+			return data;
+		},
 	};
 
 	entities = {
@@ -676,6 +693,16 @@ export class AutumnInt {
 	};
 
 	balances = {
+		create: async (params: CreateBalanceParams) => {
+			const data = await this.post(`/balances/create`, params);
+			return data;
+		},
+		list: async (params: { customer_id: string }) => {
+			const data = await this.get(
+				`/balances/list?customer_id=${params.customer_id}`,
+			);
+			return data;
+		},
 		update: async (params: BalancesUpdateParams) => {
 			const data = await this.post(`/balances/update`, params);
 			return data;

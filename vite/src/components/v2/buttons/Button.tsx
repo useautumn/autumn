@@ -26,8 +26,8 @@ const buttonVariants = cva(
 				btn-primary-dark
 				`,
 
-				secondary: `bg-interactive-secondary border border-[var(--color-input)] hover:bg-interactive-secondary-hover btn-secondary-shadow
-				focus-visible:bg-active-primary focus-visible:border-primary active:border-primary text-t1
+				secondary: `bg-interactive-secondary border border-[var(--color-input)] hover:bg-interactive-secondary-hover active:bg-interactive-secondary-hover btn-secondary-shadow
+				focus-visible:bg-active-primary focus-visible:border-primary text-t1
 			
 				`,
 
@@ -37,7 +37,7 @@ const buttonVariants = cva(
 
 				muted: `bg-muted hover:bg-interactive-secondary-hover border border-transparent
 				 focus-visible:border-primary hover:interactive-secondary-hover
-				active:bg-interactive-secondary-hover active:text-primary!
+				active:bg-interactive-secondary-hover
 				`,
 
 				destructive: `bg-destructive !text-primary-foreground border-[1.2px] border-transparent
@@ -85,7 +85,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 			asChild = false,
 			isLoading = false,
 			transition = false,
-			disableActive = false,
+			disableActive = true,
 			hide = false,
 			children,
 			...props
@@ -132,13 +132,13 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 					return "active:!bg-primary active:!border-transparent focus-visible:!bg-primary focus-visible:!border-transparent";
 
 				case "secondary":
-					return "active:!bg-input-background active:!border-[var(--color-input)] focus-visible:!bg-input-background focus-visible:!border-[var(--color-input)]";
+					return "active:!bg-interactive-secondary-hover active:!border-[var(--color-input)] focus-visible:!bg-interactive-secondary-hover focus-visible:!border-[var(--color-input)]";
 
 				case "skeleton":
 					return "active:!bg-transparent active:!border-transparent focus-visible:!bg-transparent focus-visible:!border-transparent";
 
 				case "muted":
-					return "active:!bg-muted active:!border-transparent focus-visible:!bg-muted focus-visible:!border-transparent";
+					return "active:!bg-interactive-secondary-hover active:!border-transparent focus-visible:!bg-interactive-secondary-hover focus-visible:!border-transparent";
 
 				case "destructive":
 					return "active:!bg-destructive active:!border-transparent focus-visible:!bg-destructive focus-visible:!border-transparent";

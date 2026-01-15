@@ -1,4 +1,5 @@
 import {
+	AttachBranch,
 	type AttachConfig,
 	CusProductStatus,
 	cusProductToPrices,
@@ -39,6 +40,15 @@ export const getCusProductsToRemove = ({
 			? products
 			: [cusProductToProduct({ cusProduct: attachParams.cusProduct! })];
 
+	// console.log(
+	// 	"Getting customer products to remove, internal entity ID:",
+	// 	attachParams.internalEntityId,
+	// );
+
+	const isUpdate =
+		attachParams.branch === AttachBranch.NewVersion ||
+		attachParams.branch === AttachBranch.SameCustomEnts;
+
 	for (const product of prods) {
 		// Get cur main and cur same
 		const { curMainProduct, curSameProduct, curScheduledProduct } =
@@ -59,7 +69,7 @@ export const getCusProductsToRemove = ({
 		}
 
 		// 2. If cancelling, and same product exists (add on / main), add it.
-		else if (curSameProduct && attachParams.fromCancel) {
+		else if (curSameProduct && (attachParams.fromCancel || isUpdate)) {
 			cusProductsToRemove.push(curSameProduct);
 		}
 
@@ -120,10 +130,9 @@ export const paramsToSubItems = async ({
 		? removeCusProducts!
 		: getCusProductsToRemove({ attachParams });
 
-	// console.log(
-	// 	"Cus products to remove:",
-	// 	cusProductsToRemove.map((cp) => cp.product.name),
-	// );
+	ctx.logger.info(
+		`[paramsToSubItems] Removing cus products: ${cusProductsToRemove.map((cp) => `${cp.product.id} (E: ${cp.entity_id})`).join(", ")}`,
+	);
 
 	const newSubItems = mergeNewSubItems({
 		itemSet,
@@ -185,6 +194,10 @@ export const paramsToSubItems = async ({
 					itemSet.subItems.some((si) => si.price === existingSubItem.price?.id)
 				) {
 					continue;
+				}
+
+				if (printRemoveLogs) {
+					console.log(`Deleting consumable sub item ${existingSubItem.id}`);
 				}
 
 				newSubItems.push({

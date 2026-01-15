@@ -4,13 +4,13 @@ import { FullCustomerEntitlementSchema } from "./cusEntModels.js";
 
 export const FullCusEntWithProductSchema = FullCustomerEntitlementSchema.extend(
 	{
-		customer_product: CusProductSchema,
+		customer_product: CusProductSchema.nullable(),
 	},
 );
 
 export const FullCusEntWithFullCusProductSchema =
 	FullCustomerEntitlementSchema.extend({
-		customer_product: FullCusProductSchema,
+		customer_product: FullCusProductSchema.nullable(),
 	});
 
 export type FullCusEntWithProduct = z.infer<typeof FullCusEntWithProductSchema>;

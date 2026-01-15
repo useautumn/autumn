@@ -1,9 +1,11 @@
 import { AppEnv } from "@autumn/shared";
+import { ArrowRightIcon } from "@phosphor-icons/react";
 import { AutumnProvider } from "autumn-js/react";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Outlet, useNavigate } from "react-router";
 import { CustomToaster } from "@/components/general/CustomToaster";
+import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useGlobalErrorHandler } from "@/hooks/common/useGlobalErrorHandler";
 import { useOrg } from "@/hooks/common/useOrg";
@@ -17,6 +19,7 @@ import CommandBar from "@/views/command-bar/CommandBar";
 import { useCusSearchQuery } from "@/views/customers/hooks/useCusSearchQuery";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { InviteNotifications } from "@/views/general/notifications/InviteNotifications";
+import { DeployToProdDialog } from "@/views/main-sidebar/components/deploy-button/DeployToProdDialog";
 import { MainSidebar } from "@/views/main-sidebar/MainSidebar";
 import { AppContext } from "./AppContext";
 
@@ -40,15 +43,13 @@ export function MainLayout() {
 		return () => window.removeEventListener("error", handleGlobalError);
 	}, [handleApiError]);
 
+	// Redirect to sandbox if not deployed
 	useEffect(() => {
-		// Only redirect if org is loaded and user is not onboarded
-		if (!orgLoading && org) {
-			if (!org.deployed) {
-				const pathname = window.location.pathname;
-				if (!pathname.startsWith("/sandbox")) {
-					const search = window.location.search;
-					navigate(`/sandbox${pathname}${search}`);
-				}
+		if (!orgLoading && org && !org.deployed) {
+			const pathname = window.location.pathname;
+			if (!pathname.startsWith("/sandbox")) {
+				const search = window.location.search;
+				navigate(`/sandbox${pathname}${search}`);
 			}
 		}
 	}, [org, orgLoading, navigate]);
@@ -93,14 +94,14 @@ export function MainLayout() {
 			includeCredentials={true}
 		>
 			<NuqsAdapter>
-				<body className="w-screen h-screen flex bg-outer-background">
+				<div className="w-screen h-screen flex bg-outer-background">
 					<CustomToaster />
 					<MainSidebar />
 					<InviteNotifications />
 					<MainContent />
 					{/* <ChatWidget /> */}
 					<CommandBar />
-				</body>
+				</div>
 			</NuqsAdapter>
 		</AutumnProvider>
 	);
@@ -108,13 +109,14 @@ export function MainLayout() {
 
 const MainContent = () => {
 	const env = useEnv();
+	const { org } = useOrg();
+	const [showDeployDialog, setShowDeployDialog] = useState(false);
 
 	useDevQuery();
 	useAutumnFlags();
 	useFeaturesQuery();
 	useRewardsQuery();
 	useCusSearchQuery();
-	useOrg();
 
 	return (
 		<AppContext.Provider value={{}}>
@@ -129,8 +131,24 @@ const MainContent = () => {
 					{env === AppEnv.Sandbox && (
 						<div className="w-full min-h-10 h-10 bg-t8/10 text-sm flex items-center justify-center relative px-4 text-t8 border-b border-t8/20">
 							<p className="font-medium font-mono">You&apos;re in sandbox</p>
+							{!org?.deployed && (
+								<IconButton
+									variant="secondary"
+									size="sm"
+									icon={<ArrowRightIcon />}
+									iconOrientation="right"
+									onClick={() => setShowDeployDialog(true)}
+									className="absolute right-3 border-t8/50 animate-in fade-in-0 duration-300 slide-in-from-right-2"
+								>
+									Deploy to Production
+								</IconButton>
+							)}
 						</div>
 					)}
+					<DeployToProdDialog
+						open={showDeployDialog}
+						onOpenChange={setShowDeployDialog}
+					/>
 					<div
 						className={cn(
 							"w-full h-full overflow-auto flex justify-center bg-background",

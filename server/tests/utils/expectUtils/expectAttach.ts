@@ -15,7 +15,7 @@ import {
 	expectProductAttached,
 } from "@tests/utils/expectUtils/expectProductAttached.js";
 import { getCurrentOptions } from "@tests/utils/testAttachUtils/testAttachUtils.js";
-import type { AttachParams, Customer } from "autumn-js";
+import type { AttachParams, Customer, CustomerInvoice } from "autumn-js";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -172,7 +172,7 @@ export const attachAndExpectCorrect = async ({
 
 	if (!skipInvoiceCheck && !freeProduct) {
 		expectInvoicesCorrect({
-			customer,
+			customer: customer as Customer & { invoices: CustomerInvoice[] },
 			first: {
 				productId: product.id,
 				total: new Decimal(checkoutRes.total).toDecimalPlaces(2).toNumber(),

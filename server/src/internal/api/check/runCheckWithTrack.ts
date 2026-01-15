@@ -9,11 +9,11 @@ import {
 	RecaseError,
 	type TrackParams,
 } from "@autumn/shared";
-import type { AutumnContext } from "../../../honoUtils/HonoEnv";
-import { runTrack } from "../../balances/track/runTrack";
-import { getTrackFeatureDeductions } from "../../balances/track/trackUtils/getFeatureDeductions";
-import { featureToCreditSystem } from "../../features/creditSystemUtils";
-import type { CheckData } from "./checkTypes/CheckData";
+import type { AutumnContext } from "@server/honoUtils/HonoEnv.js";
+import { runTrackV2 } from "@server/internal/balances/track/runTrackV2";
+import { getTrackFeatureDeductions } from "@server/internal/balances/track/utils/getFeatureDeductions.js";
+import { featureToCreditSystem } from "@server/internal/features/creditSystemUtils.js";
+import type { CheckData } from "./checkTypes/CheckData.js";
 
 export const runCheckWithTrack = async ({
 	ctx,
@@ -58,7 +58,7 @@ export const runCheckWithTrack = async ({
 	let allowed = true;
 
 	try {
-		const response = await runTrack({
+		const response = await runTrackV2({
 			ctx,
 			body: trackBody,
 			featureDeductions,

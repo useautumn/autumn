@@ -32,12 +32,14 @@ const badgeVariants = cva(
 export interface PlanTypeBadgeProps extends VariantProps<typeof badgeVariants> {
 	className?: string;
 	iconOnly?: boolean;
+	noIcon?: boolean;
 }
 
 export const PlanTypeBadge = ({
 	variant,
 	className,
 	iconOnly,
+	noIcon,
 }: PlanTypeBadgeProps) => {
 	const getIcon = () => {
 		switch (variant) {
@@ -107,7 +109,7 @@ export const PlanTypeBadge = ({
 				<div
 					className={cn(badgeVariants({ variant }), className, "select-none")}
 				>
-					{getIcon()}
+					{!noIcon && getIcon()}
 					{!iconOnly && <span>{getLabel()}</span>}
 				</div>
 			</TooltipTrigger>

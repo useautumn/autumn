@@ -1,4 +1,8 @@
-import type { Entity } from "@autumn/shared";
+import type {
+	Entity,
+	FullCusEntWithFullCusProduct,
+	FullCustomerEntitlement,
+} from "@autumn/shared";
 import { FeatureType, type FullCusProduct } from "@autumn/shared";
 import { BatteryHighIcon } from "@phosphor-icons/react";
 import { type ExpandedState, getExpandedRowModel } from "@tanstack/react-table";
@@ -48,13 +52,21 @@ export function CustomerFeatureUsageTable() {
 		);
 	}, [customer?.customer_products, customer?.entities, entityId]);
 
-	const cusEnts = useMemo(
-		() =>
-			flattenCustomerEntitlements({
-				customerProducts: filteredCustomerProducts,
-			}),
-		[filteredCustomerProducts],
-	);
+	const cusEnts = useMemo((): FullCusEntWithFullCusProduct[] => {
+		const productEnts = flattenCustomerEntitlements({
+			customerProducts: filteredCustomerProducts,
+		});
+
+		// Add extra entitlements (loose entitlements not tied to a product)
+		const extraEnts: FullCusEntWithFullCusProduct[] = (
+			customer?.extra_customer_entitlements || []
+		).map((ent: FullCustomerEntitlement) => ({
+			...ent,
+			customer_product: null,
+		}));
+
+		return [...productEnts, ...extraEnts];
+	}, [filteredCustomerProducts, customer?.extra_customer_entitlements]);
 
 	const featuresMap = useMemo(
 		() => createFeaturesMap({ features: features ?? [] }),

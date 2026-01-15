@@ -42,6 +42,10 @@ local cacheKey = buildCustomerCacheKey(orgId, env, customerId)
 -- Parse requests
 local requests = cjson.decode(requestsJson)
 
+-- Get current time in milliseconds for expiry checks
+local nowMs = redis.call("TIME")
+nowMs = tonumber(nowMs[1]) * 1000 + math.floor(tonumber(nowMs[2]) / 1000)
+
 -- Check if customer exists
 local customerExists = redis.call("EXISTS", cacheKey)
 if customerExists == 0 then
@@ -167,8 +171,8 @@ local function deductFromCurrentBalance(ctx, target, entityId, cusFeature, amoun
         for index, breakdown in ipairs(cusFeature.breakdown) do
             if remaining == 0 then break end
             
-            -- Check if this breakdown matches the filters
-            if breakdownMatchesFilters(breakdown, filters) then
+            -- Check if this breakdown matches the filters (and is not expired)
+            if breakdownMatchesFilters(breakdown, filters, nowMs) then
                 local breakdownCurrentBalance = breakdown.current_balance or 0
                 -- For refunds (negative amount), always apply. For deductions, only if balance > 0
                 if remaining < 0 or breakdownCurrentBalance > 0 then
@@ -210,8 +214,8 @@ local function deductFromCurrentBalance(ctx, target, entityId, cusFeature, amoun
         end
     else
         -- No breakdowns: deduct from top-level current_balance
-        -- Check if top-level cusFeature matches the filters (treat as single-item breakdown)
-        if breakdownMatchesFilters(cusFeature, filters) then
+        -- Check if top-level cusFeature matches the filters (treat as single-item breakdown, and is not expired)
+        if breakdownMatchesFilters(cusFeature, filters, nowMs) then
             local topLevelCurrentBalance = cusFeature.current_balance or 0
             -- For refunds (negative amount), always apply. For deductions, only if balance > 0
             if remaining < 0 or topLevelCurrentBalance > 0 then
@@ -283,8 +287,8 @@ local function deductPositiveAmountFromOverage(ctx, target, entityId, cusFeature
         for index, breakdown in ipairs(cusFeature.breakdown) do
             if remaining <= 0 then break end
             
-            -- Check if this breakdown matches the filters and allows overage
-            if breakdownMatchesFilters(breakdown, filters) then
+            -- Check if this breakdown matches the filters (and is not expired) and allows overage
+            if breakdownMatchesFilters(breakdown, filters, nowMs) then
                 -- Check if this breakdown explicitly allows overage
                 -- Only deduct from breakdowns that have overage_allowed=true
                 -- "allow" mode bypasses this check
@@ -317,8 +321,8 @@ local function deductPositiveAmountFromOverage(ctx, target, entityId, cusFeature
         end
     else
         -- No breakdowns: deduct from top-level overage
-        -- Check if top-level cusFeature matches the filters (treat as single-item breakdown)
-        if breakdownMatchesFilters(cusFeature, filters) then
+        -- Check if top-level cusFeature matches the filters (treat as single-item breakdown, and is not expired)
+        if breakdownMatchesFilters(cusFeature, filters, nowMs) then
             local topLevelPurchasedBalance = cusFeature.purchased_balance or 0
             -- Calculate availableCapacity: nil if unlimited, otherwise max_purchase - purchased_balance
             local availableCapacity
@@ -364,8 +368,8 @@ local function deductNegativeAmountFromOverage(ctx, target, entityId, cusFeature
         for index, breakdown in ipairs(cusFeature.breakdown) do
             if remaining >= 0 then break end
             
-            -- Check if this breakdown matches the filters
-            if breakdownMatchesFilters(breakdown, filters) then
+            -- Check if this breakdown matches the filters (and is not expired)
+            if breakdownMatchesFilters(breakdown, filters, nowMs) then
                 -- "allow" mode bypasses overage_allowed check for refunds too
                 -- Allocated features (continuous use) automatically bypass breakdown-level overage check
                 local breakdownAllowOverage = breakdown.overage_allowed == true or overageBehavior == "allow" or allocatedFeatureBypass
@@ -387,8 +391,8 @@ local function deductNegativeAmountFromOverage(ctx, target, entityId, cusFeature
         end
     else
         -- No breakdowns: refund from top-level overage
-        -- Check if top-level cusFeature matches the filters
-        if breakdownMatchesFilters(cusFeature, filters) then
+        -- Check if top-level cusFeature matches the filters (and is not expired)
+        if breakdownMatchesFilters(cusFeature, filters, nowMs) then
             local topLevelPurchasedBalance = cusFeature.purchased_balance or 0
             local topLevelPrepaidQuantity = cusFeature.prepaid_quantity or 0
             -- Can only decrement purchased_balance down to prepaid_quantity (prepaid credits can't be refunded)

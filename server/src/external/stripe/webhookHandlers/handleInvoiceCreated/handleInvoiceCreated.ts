@@ -14,7 +14,6 @@ import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtil
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-import { deleteCachedApiCustomer } from "../../../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import {
 	getFullStripeInvoice,
 	invoiceToSubId,
@@ -132,15 +131,6 @@ export const sendUsageAndReset = async ({
 
 			handled.push(handledPrepaid);
 		}
-	}
-
-	if (handled.some((h) => Boolean(h))) {
-		await deleteCachedApiCustomer({
-			customerId: customer.id!,
-			orgId: org.id,
-			env,
-			source: `handleInvoiceCreated: ${invoice.id}`,
-		});
 	}
 };
 

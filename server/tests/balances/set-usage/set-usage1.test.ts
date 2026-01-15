@@ -77,24 +77,30 @@ const simulateOneCycle = async ({
 
 		const customer = await autumn.customers.get(customerId);
 		const prevBalance = customer.features[TestFeature.Users].balance!;
-		const prevUsage = includedUsage - prevBalance;
+		// const prevUsage = includedUsage - prevBalance;
 
-		const usageDiff = usageValue - prevUsage;
+		// const usageDiff = usageValue - prevUsage;
 
-		const value1 = Math.floor(usageDiff / 2);
-		const value2 = usageDiff - value1;
+		// const value1 = Math.floor(usageDiff / 2);
+		// const value2 = usageDiff - value1;
 
-		await autumn.track({
+		await autumn.usage({
 			customer_id: customerId,
 			feature_id: TestFeature.Users,
-			value: value1,
+			value: usageValue,
 		});
 
-		await autumn.track({
-			customer_id: customerId,
-			feature_id: TestFeature.Users,
-			value: value2,
-		});
+		// await autumn.track({
+		// 	customer_id: customerId,
+		// 	feature_id: TestFeature.Users,
+		// 	value: value1,
+		// });
+
+		// await autumn.track({
+		// 	customer_id: customerId,
+		// 	feature_id: TestFeature.Users,
+		// 	value: value2,
+		// });
 
 		const newBalance = includedUsage - usageValue;
 		const prevOverage = Math.max(0, -prevBalance);

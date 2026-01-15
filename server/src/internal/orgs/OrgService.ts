@@ -13,7 +13,18 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import RecaseError from "@server/utils/errorUtils.js";
-import { and, eq, inArray, or, sql } from "drizzle-orm";
+import { addDays } from "date-fns";
+import {
+	and,
+	eq,
+	inArray,
+	isNotNull,
+	like,
+	lt,
+	notExists,
+	or,
+	sql,
+} from "drizzle-orm";
 import { FeatureService } from "../features/FeatureService.js";
 import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
 
@@ -39,70 +50,6 @@ export class OrgService {
 			.innerJoin(user, eq(member.userId, user.id));
 
 		return results;
-
-		// // Try to get members with user data
-		// let results;
-		// try {
-		//   results = await db.query.member.findMany({
-		//     where: eq(member.organizationId, orgId),
-		//     with: {
-		//       user: true,
-		//     },
-		//   });
-		// } catch (error) {
-		//   // Fallback: get members and users separately
-		//   const members = await db.query.member.findMany({
-		//     where: eq(member.organizationId, orgId),
-		//   });
-
-		//   const userIds = members.map((m) => m.userId);
-		//   const users = await db.query.user.findMany({
-		//     where: inArray(user.id, userIds),
-		//   });
-
-		//   // Combine the data
-		//   results = members.map((member) => ({
-		//     ...member,
-		//     user: users.find((u) => u.id === member.userId),
-		//   }));
-		// }
-
-		// // Transform to the expected format
-		// const transformed = results
-		//   .map((result) => {
-		//     // Check if user data exists
-		//     if (!result.user) {
-		//       console.error("Missing user data for member:", result);
-		//       return null;
-		//     }
-
-		//     return {
-		//       member: {
-		//         id: result.id,
-		//         organizationId: result.organizationId,
-		//         userId: result.userId,
-		//         role: result.role,
-		//         createdAt: result.createdAt,
-		//       },
-		//       user: {
-		//         id: result.user.id,
-		//         name: result.user.name,
-		//         email: result.user.email,
-		//         emailVerified: result.user.emailVerified,
-		//         image: result.user.image,
-		//         createdAt: result.user.createdAt,
-		//         updatedAt: result.user.updatedAt,
-		//         role: result.user.role,
-		//         banned: result.user.banned,
-		//         banReason: result.user.banReason,
-		//         banExpires: result.user.banExpires,
-		//         createdBy: result.user.createdBy,
-		//       },
-		//     };
-		//   })
-		//   .filter(Boolean); // Remove null entries
-
-		// return transformed;
 	}
 
 	static async getInvites({ db, orgId }: { db: DrizzleCli; orgId: string }) {
@@ -286,6 +233,46 @@ export class OrgService {
 
 	static async insert({ db, org }: { db: DrizzleCli; org: any }) {
 		await db.insert(organizations).values(org);
+	}
+
+	/**
+	 * Create a new organization
+	 */
+	static async create({
+		db,
+		id,
+		slug,
+		name,
+		createdBy,
+	}: {
+		db: DrizzleCli;
+		id: string;
+		slug: string;
+		name: string;
+		createdBy?: string;
+	}): Promise<Organization> {
+		const [insertedOrg] = await db
+			.insert(organizations)
+			.values({
+				id,
+				slug,
+				name,
+				logo: "",
+				createdAt: new Date(),
+				metadata: "",
+				created_by: createdBy,
+			})
+			.returning();
+
+		if (!insertedOrg) {
+			throw new RecaseError({
+				message: "Failed to create organization",
+				code: ErrCode.InternalError,
+				statusCode: 500,
+			});
+		}
+
+		return insertedOrg as Organization;
 	}
 
 	static async delete({ db, orgId }: { db: DrizzleCli; orgId: string }) {
@@ -480,5 +467,31 @@ export class OrgService {
 			.where(eq(organizations.id, orgId));
 
 		await clearOrgCache({ db, orgId });
+	}
+
+	static async listPreviewOrgsForDeletion({ db }: { db: DrizzleCli }) {
+		const PREVIEW_ORG_PATTERN = "preview|%";
+		// 1. Find all preview orgs with no memberships
+		const orgs = await db
+			.select()
+			.from(organizations)
+			.where(
+				and(
+					// SAFETY: Only match preview org slug pattern
+					like(organizations.slug, PREVIEW_ORG_PATTERN),
+					// SAFETY: Only delete orgs with no members
+					notExists(
+						db
+							.select({ id: member.id })
+							.from(member)
+							.where(eq(member.organizationId, organizations.id)),
+					),
+					// SAFETY: Only delete preview organizations older than 1 day
+					lt(organizations.createdAt, addDays(new Date(), -1)),
+					isNotNull(organizations.created_by),
+				),
+			);
+
+		return orgs as Organization[];
 	}
 }

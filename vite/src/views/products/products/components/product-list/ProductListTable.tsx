@@ -1,7 +1,6 @@
 import type { ProductV2 } from "@autumn/shared";
 import { CubeIcon } from "@phosphor-icons/react";
 import { useMemo } from "react";
-import { useNavigate } from "react-router";
 import { Table } from "@/components/general/table";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -18,8 +17,7 @@ type ProductWithCounts = ProductV2 & {
 };
 
 export function ProductListTable() {
-	const navigate = useNavigate();
-	const { products, counts } = useProductsQuery();
+	const { products, counts, isCountsLoading } = useProductsQuery();
 	const { queryStates } = useProductsQueryState();
 
 	// Filter products based on archived state and add counts
@@ -94,6 +92,7 @@ export function ProductListTable() {
 		options: {
 			globalFilterFn: "includesString",
 			enableGlobalFilter: true,
+			enableSorting: true,
 		},
 	});
 
@@ -103,18 +102,14 @@ export function ProductListTable() {
 		options: {
 			globalFilterFn: "includesString",
 			enableGlobalFilter: true,
+			enableSorting: true,
 		},
 	});
 
-	const handleRowClick = (product: ProductWithCounts) => {
-		navigate(
-			pushPage({
-				path: `/products/${product.id}`,
-			}),
-		);
-	};
+	const getRowHref = (product: ProductWithCounts) =>
+		pushPage({ path: `/products/${product.id}` });
 
-	const enableSorting = false;
+	const enableSorting = true;
 
 	const hasBaseRows = baseTable.getRowModel().rows.length > 0;
 	const hasAddOns = addOnPlans && addOnPlans.length > 0;
@@ -134,8 +129,8 @@ export function ProductListTable() {
 								table: baseTable,
 								numberOfColumns: columns.length,
 								enableSorting,
-								isLoading: false,
-								onRowClick: handleRowClick,
+								isLoading: isCountsLoading,
+								getRowHref,
 								emptyStateText: "You haven't archived any plans yet.",
 								rowClassName: "h-10",
 							}}
@@ -172,8 +167,8 @@ export function ProductListTable() {
 								table: addOnTable,
 								numberOfColumns: columns.length,
 								enableSorting,
-								isLoading: false,
-								onRowClick: handleRowClick,
+								isLoading: isCountsLoading,
+								getRowHref,
 								rowClassName: "h-10",
 								emptyStateText:
 									"Add-on plans can be purchased together with base plans, to grant additional features or top ups",

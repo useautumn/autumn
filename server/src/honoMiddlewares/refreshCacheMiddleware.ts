@@ -1,5 +1,6 @@
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { deleteCachedApiCustomer } from "../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { matchRoute } from "./middlewareUtils.js";
 
@@ -42,7 +43,7 @@ const cusPrefixedUrls = [
  * Note: /balances/update is NOT included because it updates Redis directly
  * to avoid race conditions with batched track syncs
  */
-const coreUrls = [
+const coreUrls: { method: string; url: string; source?: string }[] = [
 	{
 		method: "POST",
 		url: "/attach",
@@ -50,6 +51,11 @@ const coreUrls = [
 	{
 		method: "POST",
 		url: "/cancel",
+	},
+	{
+		method: "POST",
+		url: "/balances/create",
+		source: "handleCreateBalance",
 	},
 ];
 
@@ -70,7 +76,7 @@ export const refreshCacheMiddleware = async (
 	}
 
 	const ctx = c.get("ctx");
-	const { logger, org, env, skipCacheDeletion } = ctx;
+	const { logger, skipCacheDeletion } = ctx;
 
 	if (skipCacheDeletion) {
 		return;
@@ -84,7 +90,7 @@ export const refreshCacheMiddleware = async (
 		matchRoute({ url: pathname, method, pattern }),
 	);
 
-	if (pathMatch) {
+	if (pathMatch && !skipCacheDeletion) {
 		const customerId = c.req.param("customer_id");
 		if (customerId) {
 			logger.info(
@@ -92,8 +98,13 @@ export const refreshCacheMiddleware = async (
 			);
 			await deleteCachedApiCustomer({
 				customerId,
-				orgId: org.id,
-				env: env,
+				ctx,
+				source: `refreshCacheMiddleware, url: ${pathname}`,
+			});
+			await deleteCachedFullCustomer({
+				customerId,
+				ctx,
+				source: "refreshCacheMiddleware",
 			});
 		}
 		return;
@@ -113,10 +124,13 @@ export const refreshCacheMiddleware = async (
 			);
 			await deleteCachedApiCustomer({
 				customerId: body.customer_id,
-				orgId: org.id,
-				env: env,
+				ctx,
 				source: "refreshCacheMiddleware",
-				logger,
+			});
+			await deleteCachedFullCustomer({
+				customerId: body.customer_id,
+				ctx,
+				source: "refreshCacheMiddleware",
 			});
 		}
 	}

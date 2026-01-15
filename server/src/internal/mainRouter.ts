@@ -99,33 +99,33 @@ if (process.env.AUTUMN_SECRET_KEY) {
 	);
 }
 
-mainRouter.use(
-	"/demo/api/autumn",
-	withOrgAuth,
-	autumnHandler({
-		autumn: (req: any) => {
-			const client = new Autumn({
-				url: "http://localhost:8080/v1",
-				headers: {
-					cookie: req.headers.cookie,
-					"Content-Type": "application/json",
-					origin: req.get("origin"),
-					"x-client-type": "dashboard",
-					app_env: req.env || req.headers.app_env,
-				},
-			});
-			return client as any;
-		},
-		identify: async (req: any) => {
-			return {
-				customerId: "onboarding_demo_user",
-				customerData: {
-					name: "Demo User",
-					email: "demo@useautumn.com",
-				},
-			};
-		},
-	}),
-);
+// mainRouter.use(
+// 	"/demo/api/autumn",
+// 	withOrgAuth,
+// 	autumnHandler({
+// 		autumn: (req: any) => {
+// 			const client = new Autumn({
+// 				url: "http://localhost:8080/v1",
+// 				headers: {
+// 					cookie: req.headers.cookie,
+// 					"Content-Type": "application/json",
+// 					origin: req.get("origin"),
+// 					"x-client-type": "dashboard",
+// 					app_env: req.env || req.headers.app_env,
+// 				},
+// 			});
+// 			return client as any;
+// 		},
+// 		identify: async (req: any) => {
+// 			return {
+// 				customerId: "onboarding_demo_user",
+// 				customerData: {
+// 					name: "Demo User",
+// 					email: "demo@useautumn.com",
+// 				},
+// 			};
+// 		},
+// 	}),
+// );
 
 export default mainRouter;

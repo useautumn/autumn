@@ -34,6 +34,7 @@ interface CreateFeatureParams {
 		config?: any;
 		event_names?: string[];
 	};
+	skipGenerateDisplay?: boolean;
 }
 
 /**
@@ -43,6 +44,7 @@ interface CreateFeatureParams {
 export const createFeature = async ({
 	ctx,
 	data,
+	skipGenerateDisplay = false,
 }: CreateFeatureParams): Promise<Feature | null> => {
 	const parsedFeature = validateFeature(data);
 
@@ -61,13 +63,16 @@ export const createFeature = async ({
 		logger: ctx.logger,
 	});
 
-	await addTaskToQueue({
-		jobName: JobName.GenerateFeatureDisplay,
-		payload: {
-			feature,
-			org: ctx.org,
-		},
-	});
+	if (!skipGenerateDisplay) {
+		await addTaskToQueue({
+			jobName: JobName.GenerateFeatureDisplay,
+			payload: {
+				featureId: feature.id,
+				orgId: ctx.org.id,
+				env: ctx.env,
+			},
+		});
+	}
 
 	return insertedData && insertedData.length > 0 ? insertedData[0] : null;
 };
