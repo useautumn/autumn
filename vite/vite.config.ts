@@ -3,7 +3,6 @@ import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
-import { nodePolyfills } from "vite-plugin-node-polyfills";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 // https://vite.dev/config/
@@ -15,11 +14,6 @@ export default defineConfig({
 		react(),
 		tailwindcss(), // Automatically reads paths from tsconfig.json
 		tsconfigPaths(),
-		nodePolyfills({
-			// Only polyfill Buffer for @owpz/ksuid
-			include: ["buffer"],
-			globals: { Buffer: true },
-		}),
 		sentryVitePlugin({
 			org: process.env.VITE_SENTRY_ORG,
 			project: process.env.VITE_SENTRY_PROJECT,

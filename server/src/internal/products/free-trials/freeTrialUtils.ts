@@ -3,7 +3,6 @@ import {
 	ErrCode,
 	type FreeTrial,
 	FreeTrialDuration,
-	initFreeTrial,
 	type Price,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
@@ -13,6 +12,7 @@ import { ProductService } from "@server/internal/products/ProductService.js";
 import { isOneOff } from "@server/internal/products/productUtils.js";
 import RecaseError from "@server/utils/errorUtils.js";
 import { addDays, addMinutes, addMonths, addYears } from "date-fns";
+import { initFreeTrial } from "@/internal/products/free-trials/initFreeTrial";
 
 export const validateOneOffTrial = async ({
 	prices,

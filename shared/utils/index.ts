@@ -47,7 +47,6 @@ export * from "./productUtils/classifyProduct/isProductPaidAndRecurring.js";
 // Product utils
 export * from "./productUtils/convertProductUtils.js";
 export * from "./productUtils/entUtils/index.js";
-export * from "./productUtils/freeTrialUtils/initFreeTrial.js";
 export * from "./productUtils/freeTrialUtils.js";
 export * from "./productUtils/isProductUpgrade.js";
 export * from "./productUtils/priceUtils/index.js";

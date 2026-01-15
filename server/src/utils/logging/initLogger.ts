@@ -118,7 +118,7 @@ export const initLogger = () => {
 	const streams: pino.StreamEntry[] = [];
 
 	const isDev = process.env.NODE_ENV === "development";
-	const isTest = process.env.NODE_ENV === "test";
+	const isTest = process.env.NODE_ENV === "test2";
 
 	// Enable dev logging for development OR test environments
 	if (isDev || isTest) {
