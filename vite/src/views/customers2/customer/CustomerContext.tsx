@@ -5,6 +5,8 @@ export type CustomerContextType = {
 	customer: CustomerWithProducts;
 	entityId: string | null;
 	setEntityId: (entityId: string | null) => void;
+	isInlineEditorOpen: boolean;
+	setIsInlineEditorOpen: (isOpen: boolean) => void;
 };
 export const CustomerContext = createContext<CustomerContextType | null>(null);
 

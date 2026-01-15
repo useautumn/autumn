@@ -3,10 +3,10 @@ import { AdminHover } from "@/components/general/AdminHover";
 import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
 import { CardHeader } from "@/components/v2/cards/Card";
 import {
-	useCurrentItem,
-	useProductStore,
-} from "@/hooks/stores/useProductStore";
-import { useIsEditingPlan, useSheetStore } from "@/hooks/stores/useSheetStore";
+	useProduct,
+	useSheet,
+} from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
+import { useCurrentItem } from "@/hooks/stores/useProductStore";
 import { checkItemIsValid } from "@/utils/product/entitlementUtils";
 import { BasePriceDisplay } from "./BasePriceDisplay";
 import { PlanCardToolbar } from "./PlanCardToolbar";
@@ -14,9 +14,9 @@ import { PlanCardToolbar } from "./PlanCardToolbar";
 const MAX_PLAN_NAME_LENGTH = 20;
 
 export const PlanCardHeader = () => {
-	const product = useProductStore((s) => s.product);
-	const setSheet = useSheetStore((s) => s.setSheet);
-	const isPlanBeingEdited = useIsEditingPlan();
+	const { product } = useProduct();
+	const { sheetType, setSheet } = useSheet();
+	const isPlanBeingEdited = sheetType === "edit-plan";
 
 	const item = useCurrentItem();
 

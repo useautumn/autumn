@@ -21,9 +21,9 @@ import {
 } from "@/components/v2/inputs/InputGroup";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useOrg } from "@/hooks/common/useOrg";
-import { useProductStore } from "@/hooks/stores/useProductStore";
 import { type SheetType, useSheetStore } from "@/hooks/stores/useSheetStore";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
+import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { SelectBillingCycle } from "./SelectBillingCycle";
 
 export const BasePriceSection = ({
@@ -31,8 +31,7 @@ export const BasePriceSection = ({
 }: {
 	withSeparator?: boolean;
 }) => {
-	const product = useProductStore((s) => s.product);
-	const setProduct = useProductStore((s) => s.setProduct);
+	const { product, setProduct } = useProduct();
 
 	const basePriceType = product.basePriceType;
 	const { org } = useOrg();

@@ -12,9 +12,9 @@ import {
 	stripeToAtmnAmount,
 	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
-import type { AxiosError } from "axios";
 import { Check, Copy, PencilSimple } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -1691,13 +1691,13 @@ function SheetContent({
  * Main sheet component.
  *
  * To use this sheet, you need to:
- * 1. Add "subscription-update-test" to the SheetType union in useSheetStore.ts
+ * 1. Add "subscription-update-v2" to the SheetType union in useSheetStore.ts
  * 2. Add a case for it in CustomerSheets.tsx
  * 3. Or, for quick testing, temporarily replace SubscriptionUpdateSheet import
  *
  * Example trigger:
  * setSheet({
- *   type: "subscription-update-test",
+ *   type: "subscription-update-v2",
  *   itemId: cusProduct.id,
  *   data: { customizedProduct: product } // optional
  * })

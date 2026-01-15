@@ -350,17 +350,42 @@ html {
 	/* --breakpoint-xl: 85rem; */
 	/* --breakpoint-2xl: 100rem;
 	--breakpoint-3xl: 120rem; */
+
+	/* Accordion animations */
+	--animate-accordion-down: accordion-down 0.2s ease-out;
+	--animate-accordion-up: accordion-up 0.2s ease-out;
+
+	/* Shine animation */
 	--animate-shine: shine var(--duration) infinite linear;
-  @keyframes shine {
-  0% {
-    background-position: 0% 0%;
-		}
-  50% {
-    background-position: 100% 100%;
-		}
-  to {
-    background-position: 0% 0%;
-		}
+}
+
+@keyframes accordion-down {
+	from {
+		height: 0;
+	}
+	to {
+		height: var(--radix-accordion-content-height);
+	}
+}
+
+@keyframes accordion-up {
+	from {
+		height: var(--radix-accordion-content-height);
+	}
+	to {
+		height: 0;
+	}
+}
+
+@keyframes shine {
+	0% {
+		background-position: 0% 0%;
+	}
+	50% {
+		background-position: 100% 100%;
+	}
+	to {
+		background-position: 0% 0%;
 	}
 }
 

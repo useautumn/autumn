@@ -22,9 +22,10 @@ import {
 	XCircle,
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 // import { Badge } from "@/components/v2/Badge";
+import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { InfoRow } from "@/components/v2/InfoRow";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
@@ -42,6 +43,7 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { BasePriceDisplay } from "@/views/products/plan/components/plan-card/BasePriceDisplay";
 import { PlanFeatureRow } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
 import { useFeaturesQuery } from "../../../../hooks/queries/useFeaturesQuery";
+import { CancelProductDialog } from "../table/customer-products/CancelProductDialog";
 import { CustomerProductsStatus } from "../table/customer-products/CustomerProductsStatus";
 import { UpdatePlanButton } from "./UpdatePlanButton";
 
@@ -65,6 +67,9 @@ export function SubscriptionDetailSheet() {
 	// Get customer product and productV2 by itemId
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
 	const isExpired = cusProduct?.status === CusProductStatus.Expired;
+	const isCanceled = cusProduct?.canceled;
+
+	const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
 	useEffect(() => {
 		if (
@@ -133,8 +138,11 @@ export function SubscriptionDetailSheet() {
 	};
 
 	const handleUpdateQuantities = () => {
-		// Open the subscription update sheet
 		setSheet({ type: "subscription-update", itemId });
+	};
+
+	const handleUpdateSubscription = () => {
+		setSheet({ type: "subscription-update-v2", itemId });
 	};
 
 	const handleViewStripe = () => {
@@ -173,29 +181,7 @@ export function SubscriptionDetailSheet() {
 				<SheetSection>
 					{productV2 && (
 						<div className="flex gap-2 justify-between items-center h-6 mb-3">
-							<div className="">
-								<BasePriceDisplay product={productV2} readOnly={true} />
-							</div>
-							<div className="flex gap-2">
-								{hasPrepaidItems && !isExpired && !isScheduled && (
-									<IconButton
-										variant="secondary"
-										onClick={handleUpdateQuantities}
-										icon={<ShoppingBagIcon size={16} weight="duotone" />}
-									>
-										Update Quantities
-									</IconButton>
-								)}
-								{canEditPlan() && (
-									<IconButton
-										variant="primary"
-										onClick={handleEditPlan}
-										icon={<PencilSimpleIcon size={16} weight="duotone" />}
-									>
-										Edit Plan
-									</IconButton>
-								)}
-							</div>
+							<BasePriceDisplay product={productV2} readOnly={true} />
 						</div>
 					)}
 
@@ -339,13 +325,39 @@ export function SubscriptionDetailSheet() {
 							</IconButton>
 						)}
 					</div>
-				</SheetSection>{" "}
+				</SheetSection>
 				{showUpdateProduct && (
 					<div className="flex justify-end p-2">
-						<UpdatePlanButton cusProduct={cusProduct} />{" "}
+						<UpdatePlanButton cusProduct={cusProduct} />
+					</div>
+				)}
+				{!isExpired && !isScheduled && (
+					<div className="p-4 flex gap-2">
+						{!isCanceled && (
+							<Button
+								variant="secondary"
+								className="flex-1"
+								onClick={() => setCancelDialogOpen(true)}
+							>
+								Cancel Subscription
+							</Button>
+						)}
+						<Button
+							variant="primary"
+							className="flex-1"
+							onClick={handleUpdateSubscription}
+						>
+							Update Subscription
+						</Button>
 					</div>
 				)}
 			</div>
+
+			<CancelProductDialog
+				cusProduct={cusProduct}
+				open={cancelDialogOpen}
+				setOpen={setCancelDialogOpen}
+			/>
 		</div>
 	);
 }

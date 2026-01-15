@@ -1,7 +1,37 @@
+import { differenceInDays } from "date-fns";
+import type { FreeTrialDuration } from "../../models/productModels/freeTrialModels/freeTrialEnums.js";
 import type {
 	CreateFreeTrial,
 	FreeTrial,
 } from "../../models/productModels/freeTrialModels/freeTrialModels.js";
+import { addDuration } from "../billingUtils/intervalUtils/addDuration.js";
+
+export const getTrialLengthInDays = ({
+	trialLength,
+	trialDuration,
+}: {
+	trialLength: number;
+	trialDuration: FreeTrialDuration;
+}): number => {
+	const now = Date.now();
+	const trialEnd = addDuration({
+		now,
+		durationType: trialDuration,
+		durationLength: trialLength,
+	});
+	return differenceInDays(trialEnd, now);
+};
+
+export const getRemainingTrialDays = ({
+	trialEndsAt,
+}: {
+	trialEndsAt: number | null | undefined;
+}): number | null => {
+	if (!trialEndsAt) return null;
+	const remainingDays = differenceInDays(trialEndsAt, Date.now());
+	if (remainingDays <= 0) return null;
+	return remainingDays;
+};
 
 export const freeTrialsAreSame = ({
 	ft1,

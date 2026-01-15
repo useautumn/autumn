@@ -1,6 +1,7 @@
 import {
 	AppEnv,
 	type CreateFreeTrial,
+	type ProductItem,
 	type ProductV2,
 	UsageModel,
 } from "@autumn/shared";
@@ -8,7 +9,6 @@ import { Decimal } from "decimal.js";
 import { useMemo } from "react";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useHasChanges, useProductStore } from "@/hooks/stores/useProductStore";
-import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useEnv } from "@/utils/envUtils";
 import { getRedirectUrl } from "@/utils/genUtils";
 import { getUpdateSubscriptionBody } from "./get-update-subscription-body";
@@ -25,6 +25,8 @@ interface UpdateSubscriptionBodyBuilderParams {
 
 	// Free trial param - null removes trial, undefined preserves existing
 	freeTrial?: CreateFreeTrial | null;
+	// Custom items for preview support (separate from isCustom logic)
+	items?: ProductItem[] | null;
 }
 
 /**
@@ -37,7 +39,6 @@ export function useUpdateSubscriptionBodyBuilder(
 	const { products } = useProductsQuery();
 	const hasChanges = useHasChanges();
 	const storeProduct = useProductStore((s) => s.product);
-	const { entityId: storeEntityId } = useEntity();
 	const env = useEnv();
 
 	// Memoized builder function that can be called with runtime params
@@ -97,7 +98,7 @@ export function useUpdateSubscriptionBodyBuilder(
 			return getUpdateSubscriptionBody({
 				customerId: mergedParams.customerId,
 				product,
-				entityId: mergedParams.entityId ?? storeEntityId ?? undefined,
+				entityId: mergedParams.entityId,
 				optionsInput: options.length > 0 ? options : undefined,
 				isCustom,
 				version,
@@ -108,9 +109,10 @@ export function useUpdateSubscriptionBodyBuilder(
 						? `${import.meta.env.VITE_FRONTEND_URL}${redirectUrl}`
 						: undefined,
 				freeTrial: mergedParams.freeTrial,
+				items: mergedParams.items,
 			});
 		},
-		[products, hasChanges, storeProduct, storeEntityId, params, env],
+		[products, hasChanges, storeProduct, params, env],
 	);
 
 	// For simple usage, return the built body with current params
