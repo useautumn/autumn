@@ -1,27 +1,23 @@
 import type { PreviewUpdateSubscriptionResponse } from "@autumn/shared";
+import { AnimatePresence, motion } from "motion/react";
 import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
+import { SHEET_ANIMATION } from "@/views/products/plan/planAnimations";
 import { PreviewErrorDisplay } from "./PreviewErrorDisplay";
 
 interface UpdateSubscriptionPreviewSectionProps {
 	isLoading: boolean;
 	previewData?: PreviewUpdateSubscriptionResponse | null;
 	error?: string;
+	hasChanges: boolean;
 }
 
 export function UpdateSubscriptionPreviewSection({
 	isLoading,
 	previewData,
 	error,
+	hasChanges,
 }: UpdateSubscriptionPreviewSectionProps) {
-	if (error) {
-		return (
-			<SheetSection title="Pricing Preview" withSeparator>
-				<PreviewErrorDisplay error={error} />
-			</SheetSection>
-		);
-	}
-
 	const totals = [];
 
 	if (previewData) {
@@ -41,14 +37,31 @@ export function UpdateSubscriptionPreviewSection({
 	}
 
 	return (
-		<LineItemsPreview
-			title="Pricing Preview"
-			isLoading={isLoading}
-			loadingText="Calculating totals"
-			lineItems={previewData?.line_items}
-			currency={previewData?.currency}
-			totals={totals}
-			filterZeroAmounts
-		/>
+		<AnimatePresence mode="wait">
+			{hasChanges && (
+				<motion.div
+					initial={{ opacity: 0, y: 20 }}
+					animate={{ opacity: 1, y: 0 }}
+					exit={{ opacity: 0, y: 20 }}
+					transition={SHEET_ANIMATION}
+				>
+					{error ? (
+						<SheetSection title="Pricing Preview" withSeparator>
+							<PreviewErrorDisplay error={error} />
+						</SheetSection>
+					) : (
+						<LineItemsPreview
+							title="Pricing Preview"
+							isLoading={isLoading}
+							loadingText="Calculating totals"
+							lineItems={previewData?.line_items}
+							currency={previewData?.currency}
+							totals={totals}
+							filterZeroAmounts
+						/>
+					)}
+				</motion.div>
+			)}
+		</AnimatePresence>
 	);
 }
