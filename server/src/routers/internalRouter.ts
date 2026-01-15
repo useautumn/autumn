@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { internalTrmnlRouter } from "@/internal/api/trmnl/trmnlRouter";
 import { adminAuthMiddleware } from "../honoMiddlewares/adminAuthMiddleware";
 import { analyticsMiddleware } from "../honoMiddlewares/analyticsMiddleware";
 import { apiVersionMiddleware } from "../honoMiddlewares/apiVersionMiddleware";
@@ -32,3 +33,4 @@ internalRouter.route("/products", internalProductRouter);
 internalRouter.route("/customers", internalCusRouter);
 internalRouter.route("/dev", internalDevRouter);
 internalRouter.route("/pricing-agent", pricingAgentRouter);
+internalRouter.route("/trmnl", internalTrmnlRouter);

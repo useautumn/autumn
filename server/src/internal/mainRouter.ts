@@ -2,12 +2,8 @@ import "dotenv/config";
 
 import { autumnHandler } from "autumn-js/express";
 import { Router } from "express";
-import rateLimit from "express-rate-limit";
-import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { withOrgAuth } from "../middleware/authMiddleware.js";
 import { analyticsRouter } from "./analytics/internalAnalyticsRouter.js";
-import { trmnlRouter } from "./api/trmnl/trmnlRouter.js";
-import { InvoiceService } from "./invoices/InvoiceService.js";
 
 import { viewsRouter } from "./saved-views/savedViewsRouter.js";
 
@@ -15,53 +11,6 @@ const mainRouter: Router = Router();
 
 mainRouter.use("/query", withOrgAuth, analyticsRouter);
 mainRouter.use("/saved_views", withOrgAuth, viewsRouter);
-mainRouter.use("/trmnl", trmnlRouter);
-
-const limiter = rateLimit({
-	windowMs: 60 * 1000, // 15 minutes
-	limit: 10, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
-	standardHeaders: "draft-8", // draft-6: `RateLimit-*` headers; draft-7 & draft-8: combined `RateLimit` header
-	legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
-});
-
-mainRouter.use(
-	"/invoices/hosted_invoice_url/:invoiceId",
-	limiter,
-	async (req: any, res: any) => {
-		const invoiceId = req.params.invoiceId;
-		const invoice = await InvoiceService.get({
-			db: req.db,
-			id: invoiceId,
-		});
-
-		if (!invoice) return res.status(404).json({ error: "Invoice not found" });
-
-		try {
-			const org = invoice.customer.org;
-			const env = invoice.customer.env;
-
-			const stripeCli = createStripeCli({
-				org,
-				env,
-			});
-
-			const stripeInvoice = await stripeCli.invoices.retrieve(
-				invoice.stripe_id,
-			);
-
-			if (stripeInvoice.status === "draft") {
-				return res
-					.status(404)
-					.json({ error: "This invoice is in draft status and has no URL" });
-			}
-
-			res.redirect(stripeInvoice.hosted_invoice_url);
-		} catch (e) {
-			console.error(e);
-			return res.status(500).json({ error: "Error retrieving invoice" });
-		}
-	},
-);
 
 // Optional...
 if (process.env.AUTUMN_SECRET_KEY) {
