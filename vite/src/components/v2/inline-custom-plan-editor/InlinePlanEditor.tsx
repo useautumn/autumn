@@ -5,16 +5,15 @@ import { Button } from "@/components/v2/buttons/Button";
 import { CustomerPlanInfoBox } from "@/views/customers2/customer-plan/CustomerPlanInfoBox";
 import { EditPlanHeader } from "@/views/products/plan/components/EditPlanHeader";
 import { PlanEditorBar } from "@/views/products/plan/components/PlanEditorBar";
+import PlanCard from "@/views/products/plan/components/plan-card/PlanCard";
+import { ProductSheets } from "@/views/products/plan/ProductSheets";
 import { SHEET_ANIMATION } from "@/views/products/plan/planAnimations";
-import {
-	InlineEditorProvider,
-	useInlineEditorContext,
-} from "./InlineEditorContext";
-import { InlinePlanCard } from "./InlinePlanCard";
-import { InlineProductSheets } from "./InlineProductSheets";
+import { InlineEditorProvider } from "./InlineEditorContext";
+import { useProduct, useSheet } from "./PlanEditorContext";
 
 interface InlinePlanEditorProps {
 	product: FrontendProduct;
+	productName?: string;
 	onSave: (items: ProductItem[]) => void;
 	onCancel: () => void;
 }
@@ -46,7 +45,8 @@ function InlinePlanEditorContent({
 	onSave: (items: ProductItem[]) => void;
 	onCancel: () => void;
 }) {
-	const { product, sheetType, closeSheet } = useInlineEditorContext();
+	const { product } = useProduct();
+	const { sheetType, closeSheet } = useSheet();
 
 	return (
 		<div className="absolute inset-0 z-100 bg-background flex flex-col">
@@ -62,7 +62,7 @@ function InlinePlanEditorContent({
 						</div>
 						<div className="flex flex-col w-full h-fit items-center justify-start pt-20 px-10 gap-4">
 							<CustomerPlanInfoBox />
-							<InlinePlanCard />
+							<PlanCard />
 						</div>
 						{!sheetType && (
 							<PlanEditorBar>
@@ -90,7 +90,7 @@ function InlinePlanEditorContent({
 					)}
 				</AnimatePresence>
 
-				<InlineProductSheets />
+				<ProductSheets />
 			</div>
 		</div>
 	);

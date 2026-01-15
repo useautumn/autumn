@@ -7,6 +7,13 @@ import type {
 import { featureToOptions, UsageModel } from "@autumn/shared";
 import { InfoIcon, PencilSimpleIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/v2/buttons/Button";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/v2/selects/Select";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import {
 	Tooltip,
@@ -15,6 +22,7 @@ import {
 } from "@/components/v2/tooltips/Tooltip";
 import { BasePriceDisplay } from "@/views/products/plan/components/plan-card/BasePriceDisplay";
 import { PlanFeatureRow } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
+import type { UseUpdateSubscriptionForm } from "../hooks/useUpdateSubscriptionForm";
 
 interface EditPlanSectionProps {
 	hasCustomizations: boolean;
@@ -22,25 +30,74 @@ interface EditPlanSectionProps {
 	product?: ProductV2;
 	customerProduct?: FullCusProduct;
 	features?: Feature[];
+	form?: UseUpdateSubscriptionForm;
+	numVersions?: number;
+	currentVersion?: number;
 }
 
-function SectionTitle({ hasCustomizations }: { hasCustomizations: boolean }) {
+function SectionTitle({
+	hasCustomizations,
+	form,
+	numVersions,
+	currentVersion,
+}: {
+	hasCustomizations: boolean;
+	form?: UseUpdateSubscriptionForm;
+	numVersions?: number;
+	currentVersion?: number;
+}) {
+	const showVersionSelector =
+		form && numVersions !== undefined && numVersions > 1;
+
+	const versionOptions = showVersionSelector
+		? Array.from(
+				{ length: numVersions },
+				(_, index) => numVersions - index,
+			).map((version) => ({
+				label: `Version ${version}${version === currentVersion ? " (current)" : ""}`,
+				value: String(version),
+			}))
+		: [];
+
 	return (
-		<span className="flex items-center gap-1.5">
-			Plan Configuration
-			{hasCustomizations && (
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<InfoIcon
-							size={14}
-							weight="fill"
-							className="text-amber-500 cursor-help"
-						/>
-					</TooltipTrigger>
-					<TooltipContent side="top">
-						This subscription's configuration was edited. See changes below.
-					</TooltipContent>
-				</Tooltip>
+		<span className="flex items-center justify-between w-full gap-2">
+			<span className="flex items-center gap-1.5">
+				Plan Configuration
+				{hasCustomizations && (
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<InfoIcon
+								size={14}
+								weight="fill"
+								className="text-amber-500 cursor-help"
+							/>
+						</TooltipTrigger>
+						<TooltipContent side="top">
+							This subscription's configuration was edited. See changes below.
+						</TooltipContent>
+					</Tooltip>
+				)}
+			</span>
+			{showVersionSelector && (
+				<form.AppField name="version">
+					{(field) => (
+						<Select
+							value={String(field.state.value ?? currentVersion)}
+							onValueChange={(value) => field.handleChange(Number(value))}
+						>
+							<SelectTrigger className="w-fit h-7 text-xs whitespace-nowrap">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								{versionOptions.map((option) => (
+									<SelectItem key={option.value} value={option.value}>
+										{option.label}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					)}
+				</form.AppField>
 			)}
 		</span>
 	);
@@ -52,10 +109,20 @@ export function EditPlanSection({
 	product,
 	customerProduct,
 	features,
+	form,
+	numVersions,
+	currentVersion,
 }: EditPlanSectionProps) {
 	return (
 		<SheetSection
-			title={<SectionTitle hasCustomizations={hasCustomizations} />}
+			title={
+				<SectionTitle
+					hasCustomizations={hasCustomizations}
+					form={form}
+					numVersions={numVersions}
+					currentVersion={currentVersion}
+				/>
+			}
 			withSeparator
 		>
 			{product?.items && product.items.length > 0 && (
