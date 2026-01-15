@@ -1,5 +1,6 @@
 import type {
 	ApiVersion,
+	AttachBranch,
 	AttachConfig,
 	AttachReplaceable,
 	AttachScenario,
@@ -88,6 +89,7 @@ export type AttachParams = {
 	cusEntIds?: string[];
 
 	newBillingSubscription?: boolean;
+	branch?: AttachBranch;
 };
 
 export type InsertCusProductParams = {
