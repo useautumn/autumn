@@ -93,6 +93,7 @@ export function UpdateSubscriptionSummary({
 		currentVersion,
 		currency,
 		features,
+		originalItems,
 	]);
 
 	if (changes.length === 0) return null;

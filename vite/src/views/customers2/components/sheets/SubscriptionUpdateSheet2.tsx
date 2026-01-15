@@ -153,7 +153,6 @@ function SheetContent({
 			removeTrial: formValues.removeTrial,
 			trialLength: formValues.trialLength,
 			trialDuration: formValues.trialDuration,
-			trialCardRequired: formValues.trialCardRequired,
 		}),
 		items: formValues.items,
 		version: formValues.version,
