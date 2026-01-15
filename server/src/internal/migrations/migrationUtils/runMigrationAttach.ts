@@ -67,10 +67,11 @@ export const runMigrationAttach = async ({
 	const customer = attachParams.customer;
 	logger.info(`--------------------------------`);
 	logger.info(
-		`Running migration for ${customer.id}, function: ${attachFunction}`,
+		`Running migration for ${customer.id} (E: ${attachParams.entityId || "N/A"}), function: ${attachFunction}`,
 	);
 
 	let sameCustomBranch: AttachBranch | undefined;
+	attachParams.branch = branch;
 	try {
 		const curSameProduct = attachParams.customer.customer_products.find(
 			(cp) => cp.product.internal_id === fromProduct.internal_id,
@@ -97,6 +98,7 @@ export const runMigrationAttach = async ({
 			ctx,
 			attachParams,
 			config,
+			fromMigration: true,
 			branch:
 				sameCustomBranch === AttachBranch.SameCustomEnts
 					? AttachBranch.SameCustomEnts

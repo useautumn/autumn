@@ -109,9 +109,9 @@ describe(`${chalk.yellowBright("check-prepaid2: test /check on prepaid + pay per
 			usage: 0,
 			max_purchase: null,
 			overage_allowed: false,
-			reset: {
+			reset: expect.objectContaining({
 				interval: "month",
-			},
+			}),
 		};
 
 		const expectedUsageBreakdown = {
@@ -121,14 +121,18 @@ describe(`${chalk.yellowBright("check-prepaid2: test /check on prepaid + pay per
 			usage: 0,
 			max_purchase: 300,
 			overage_allowed: true,
-			reset: {
+			reset: expect.objectContaining({
 				interval: "month",
-			},
+			}),
 		};
 
 		expect(res.balance?.breakdown).toHaveLength(2);
-		expect(res.balance?.breakdown?.[0]).toMatchObject(expectedPrepaidBreakdown);
-		expect(res.balance?.breakdown?.[1]).toMatchObject(expectedUsageBreakdown);
+		expect(res.balance?.breakdown).toContainEqual(
+			expect.objectContaining(expectedPrepaidBreakdown),
+		);
+		expect(res.balance?.breakdown).toContainEqual(
+			expect.objectContaining(expectedUsageBreakdown),
+		);
 	});
 
 	test("should have correct v1 response for empty usage", async () => {
@@ -173,13 +177,15 @@ describe(`${chalk.yellowBright("check-prepaid2: test /check on prepaid + pay per
 		expect(balance?.usage).toBe(curUsage);
 		expect(balance?.purchased_balance).toBe(500);
 
-		const prepaidBreakdown = res.balance?.breakdown?.[0];
-		expect(prepaidBreakdown).toMatchObject({
-			granted_balance: prepaidItem.included_usage,
-			purchased_balance: prepaidQuantity,
-			current_balance: prepaidQuantity + prepaidItem.included_usage - curUsage,
-			usage: curUsage,
-		});
+		expect(res.balance?.breakdown).toContainEqual(
+			expect.objectContaining({
+				granted_balance: prepaidItem.included_usage,
+				purchased_balance: prepaidQuantity,
+				current_balance: prepaidQuantity + prepaidItem.included_usage - curUsage,
+				usage: curUsage,
+				overage_allowed: false,
+			}),
+		);
 	});
 
 	// Balances at this point:
@@ -206,21 +212,25 @@ describe(`${chalk.yellowBright("check-prepaid2: test /check on prepaid + pay per
 			purchased_balance: prepaidQuantity + 200,
 		});
 
-		const prepaidBreakdown = res.balance?.breakdown?.[0];
-		expect(prepaidBreakdown).toMatchObject({
-			granted_balance: prepaidItem.included_usage,
-			purchased_balance: prepaidQuantity,
-			current_balance: 0,
-			usage: 600,
-		});
+		expect(res.balance?.breakdown).toContainEqual(
+			expect.objectContaining({
+				granted_balance: prepaidItem.included_usage,
+				purchased_balance: prepaidQuantity,
+				current_balance: 0,
+				usage: 600,
+				overage_allowed: false,
+			}),
+		);
 
-		const usageBreakdown = res.balance?.breakdown?.[1];
-		expect(usageBreakdown).toMatchObject({
-			granted_balance: usageItem.included_usage,
-			purchased_balance: 200,
-			current_balance: 0,
-			usage: 400,
-		});
+		expect(res.balance?.breakdown).toContainEqual(
+			expect.objectContaining({
+				granted_balance: usageItem.included_usage,
+				purchased_balance: 200,
+				current_balance: 0,
+				usage: 400,
+				overage_allowed: true,
+			}),
+		);
 	});
 
 	test("should track another 200 and only 100 used due to usage limit", async () => {
@@ -243,18 +253,20 @@ describe(`${chalk.yellowBright("check-prepaid2: test /check on prepaid + pay per
 			purchased_balance: prepaidQuantity + 300,
 		});
 
-		const usageBreakdown = res.balance?.breakdown?.[1];
-		expect(usageBreakdown).toMatchObject({
-			granted_balance: usageItem.included_usage,
-			purchased_balance: 300,
-			current_balance: 0,
-			usage: 500,
-			max_purchase: 300,
-		});
+		expect(res.balance?.breakdown).toContainEqual(
+			expect.objectContaining({
+				granted_balance: usageItem.included_usage,
+				purchased_balance: 300,
+				current_balance: 0,
+				usage: 500,
+				max_purchase: 300,
+				overage_allowed: true,
+			}),
+		);
 	});
 
 	test("should check that non-cached customer returns correct response", async () => {
-		await timeout(2000);
+		await timeout(4000);
 		const res = (await autumnV2.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -268,21 +280,25 @@ describe(`${chalk.yellowBright("check-prepaid2: test /check on prepaid + pay per
 			purchased_balance: prepaidQuantity + 300,
 		});
 
-		const prepaidBreakdown = res.balance?.breakdown?.[0];
-		expect(prepaidBreakdown).toMatchObject({
-			granted_balance: prepaidItem.included_usage,
-			purchased_balance: prepaidQuantity,
-			current_balance: 0,
-			usage: 600,
-		});
+		expect(res.balance?.breakdown).toContainEqual(
+			expect.objectContaining({
+				granted_balance: prepaidItem.included_usage,
+				purchased_balance: prepaidQuantity,
+				current_balance: 0,
+				usage: 600,
+				overage_allowed: false,
+			}),
+		);
 
-		const usageBreakdown = res.balance?.breakdown?.[1];
-		expect(usageBreakdown).toMatchObject({
-			granted_balance: usageItem.included_usage,
-			purchased_balance: 300,
-			current_balance: 0,
-			usage: 500,
-			max_purchase: 300,
-		});
+		expect(res.balance?.breakdown).toContainEqual(
+			expect.objectContaining({
+				granted_balance: usageItem.included_usage,
+				purchased_balance: 300,
+				current_balance: 0,
+				usage: 500,
+				max_purchase: 300,
+				overage_allowed: true,
+			}),
+		);
 	});
 });

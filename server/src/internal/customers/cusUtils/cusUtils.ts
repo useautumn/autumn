@@ -21,7 +21,7 @@ import {
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
-import { setCachedApiCusDetails } from "./apiCusCacheUtils/setCachedApiCusDetails.js";
+import { deleteCachedFullCustomer } from "./fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 
 export const updateCustomerDetails = async ({
 	ctx,
@@ -63,11 +63,11 @@ export const updateCustomerDetails = async ({
 		});
 		customer = { ...customer, ...updates };
 
-		// Update cache if it exists
-		await setCachedApiCusDetails({
+		// Invalidate cache after DB update
+		await deleteCachedFullCustomer({
+			customerId: idOrInternalId,
 			ctx,
-			customer,
-			updates,
+			source: "updateCustomerDetails",
 		});
 
 		return true;
@@ -178,6 +178,7 @@ export const newCusToFullCus = ({ newCus }: { newCus: Customer }) => {
 	const fullCus: FullCustomer = {
 		...newCus,
 		customer_products: [],
+		extra_customer_entitlements: [],
 		entities: [],
 	};
 

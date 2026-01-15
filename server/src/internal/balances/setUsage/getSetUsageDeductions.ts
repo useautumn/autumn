@@ -1,12 +1,13 @@
 import {
 	CusProductStatus,
 	cusEntToIncludedUsage,
-	cusProductsToCusEnts,
 	ErrCode,
 	type Feature,
 	FeatureNotFoundError,
 	FeatureType,
+	type FullCustomer,
 	type FullCustomerEntitlement,
+	fullCustomerToCustomerEntitlements,
 	orgToInStatuses,
 	RecaseError,
 	type SetUsageParams,
@@ -23,7 +24,7 @@ import {
 	getCreditCost,
 	getCreditSystemsFromFeature,
 } from "../../features/creditSystemUtils.js";
-import type { FeatureDeduction } from "../track/trackUtils/getFeatureDeductions.js";
+import type { FeatureDeduction } from "../utils/types/featureDeduction.js";
 
 // Helper: Check if cusEnts has balance for a feature
 const cusEntsHasFeatureBalance = ({
@@ -46,21 +47,14 @@ const cusEntsHasFeatureBalance = ({
 export const getSetUsageDeductions = async ({
 	ctx,
 	setUsageParams,
+	fullCustomer,
 }: {
 	ctx: AutumnContext;
 	setUsageParams: SetUsageParams;
+	fullCustomer: FullCustomer;
 }): Promise<FeatureDeduction[]> => {
 	const { org, features: allFeatures } = ctx;
 	const { value, entity_id } = setUsageParams;
-
-	const fullCus = await CusService.getFull({
-		db: ctx.db,
-		idOrInternalId: setUsageParams.customer_id,
-		orgId: ctx.org.id,
-		env: ctx.env,
-		inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
-		entityId: setUsageParams.entity_id,
-	});
 
 	const feature = allFeatures.find((f) => f.id === setUsageParams.feature_id);
 	if (!feature) {
@@ -69,8 +63,8 @@ export const getSetUsageDeductions = async ({
 		});
 	}
 
-	const cusEnts = cusProductsToCusEnts({
-		cusProducts: fullCus.customer_products,
+	const cusEnts = fullCustomerToCustomerEntitlements({
+		fullCustomer,
 		reverseOrder: org.config?.reverse_deduction_order,
 		featureId: feature.id,
 		inStatuses: orgToInStatuses({ org }),
@@ -141,8 +135,8 @@ export const getSetUsageDeductions = async ({
 	// CALCULATE DEDUCTION
 	// ==========================================
 
-	const deductionCusEnts = cusProductsToCusEnts({
-		cusProducts: fullCus.customer_products,
+	const deductionCusEnts = fullCustomerToCustomerEntitlements({
+		fullCustomer,
 		reverseOrder: org.config?.reverse_deduction_order,
 		featureId: deductionFeature.id,
 		inStatuses: orgToInStatuses({ org }),
@@ -162,8 +156,6 @@ export const getSetUsageDeductions = async ({
 			cusEntToIncludedUsage({ cusEnt, entityId: setUsageParams.entity_id }),
 		),
 	);
-
-	console.log("totalAllowance", totalAllowance);
 
 	// ==========================================
 	// TARGET BALANCE CALCULATION

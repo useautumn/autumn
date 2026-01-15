@@ -1,5 +1,4 @@
 import type { FullCustomerEntitlement } from "@models/cusProductModels/cusEntModels/cusEntModels.js";
-import type { PgDeductionUpdate } from "../../api/balances/track/trackTypes/pgDeductionUpdate.js";
 import type { FullCustomer } from "../../models/cusModels/fullCusModel.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import { cusEntToCusPrice } from "../productUtils/convertUtils.js";
@@ -22,54 +21,6 @@ export const isEntityCusEnt = ({
 		cusEnt.entitlement.entity_feature_id ||
 		cusEnt.customer_product?.internal_entity_id
 	);
-};
-
-export const updateCusEntInFullCus = ({
-	fullCus,
-	cusEntId,
-	update,
-}: {
-	fullCus: FullCustomer;
-	cusEntId: string;
-	update: PgDeductionUpdate;
-}) => {
-	for (let i = 0; i < fullCus.customer_products.length; i++) {
-		for (
-			let j = 0;
-			j < fullCus.customer_products[i].customer_entitlements.length;
-			j++
-		) {
-			const ce = fullCus.customer_products[i].customer_entitlements[j];
-			if (ce.id === cusEntId) {
-				let replaceables = ce.replaceables ?? [];
-
-				if (update.newReplaceables) {
-					replaceables = [
-						...replaceables,
-						...update.newReplaceables.map((r) => ({
-							...r,
-							delete_next_cycle: r.delete_next_cycle ?? true,
-							from_entity_id: r.from_entity_id ?? null,
-						})),
-					];
-				}
-
-				if (update.deletedReplaceables) {
-					replaceables = replaceables.filter(
-						(r) => !update.deletedReplaceables?.map((r) => r.id).includes(r.id),
-					);
-				}
-
-				fullCus.customer_products[i].customer_entitlements[j] = {
-					...ce,
-					balance: update.balance,
-					entities: update.entities,
-					adjustment: update.adjustment,
-					replaceables,
-				};
-			}
-		}
-	}
 };
 
 // export const cusEntMatchesEntity = ({
@@ -106,12 +57,13 @@ export const isPrepaidCusEnt = ({
 }: {
 	cusEnt: FullCusEntWithFullCusProduct;
 }) => {
-	// 2. If cus ent is not prepaid, skip
 	const cusPrice = cusEntToCusPrice({ cusEnt });
 	if (!cusPrice || !isPrepaidPrice({ price: cusPrice.price })) return false;
 
+	if (!cusEnt.customer_product) return false;
+
 	// 3. Get quantity
-	const options = cusEnt.customer_product.options.find(
+	const options = cusEnt.customer_product?.options?.find(
 		(option) =>
 			option.internal_feature_id === cusEnt.entitlement.internal_feature_id,
 	);

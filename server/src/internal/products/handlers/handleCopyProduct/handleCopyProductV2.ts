@@ -86,6 +86,10 @@ export const handleCopyProductV2 = createRoute({
 			}),
 		]);
 
+		if (fromFullProduct) {
+			fromFullProduct.is_default = false;
+		}
+
 		// 3. Sync features between environments if copying across environments
 		if (fromEnv !== toEnv) {
 			for (const fromFeature of fromFeatures) {

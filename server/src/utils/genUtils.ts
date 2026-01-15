@@ -149,5 +149,11 @@ export const getUnique = (vals: string[]) => {
 };
 
 export const sumValues = (vals: number[]) => {
-	return vals.reduce((acc, curr) => acc + curr, 0);
+	const { Decimal } = require("decimal.js");
+	return vals
+		.reduce(
+			(acc: InstanceType<typeof Decimal>, curr: number) => acc.add(curr),
+			new Decimal(0),
+		)
+		.toNumber();
 };

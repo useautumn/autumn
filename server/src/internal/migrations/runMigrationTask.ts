@@ -1,26 +1,30 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: ok */
-import { MigrationJobStep } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { FeatureService } from "../features/FeatureService.js";
+import { type AppEnv, MigrationJobStep } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "../products/ProductService.js";
 import { MigrationService } from "./MigrationService.js";
 import { getMigrationCustomers } from "./migrationSteps/getMigrationCustomers.js";
 import { migrateCustomers } from "./migrationSteps/migrateCustomers.js";
 
+export interface MigrationTaskPayload {
+	migrationJobId: string;
+	orgId: string;
+	env: AppEnv;
+}
+
 export const runMigrationTask = async ({
-	db,
+	ctx,
 	payload,
-	logger,
 }: {
-	db: DrizzleCli;
-	payload: any;
-	logger: any;
+	ctx: AutumnContext;
+	payload: MigrationTaskPayload;
 }) => {
+	const { db, logger } = ctx;
 	const { migrationJobId } = payload;
 
-	try {
-		logger.info(`Running migration task, ID: ${migrationJobId}`);
+	logger.info(`--------------------------------`);
+	logger.info(`Running migration task ${migrationJobId}`);
 
+	try {
 		const migrationJob = await MigrationService.getJob({
 			db,
 			id: migrationJobId,
@@ -66,26 +70,18 @@ export const runMigrationTask = async ({
 			fromProduct,
 		});
 
-		const features = await FeatureService.list({
-			db,
-			orgId,
-			env,
-		});
-
-		logger.info(`Job ${migrationJobId} | Found ${customers?.length} customers`);
+		logger.info(
+			`Running migration for org ${ctx.org.id}, from ${fromProduct.name} to ${toProduct.name}`,
+		);
 
 		// STEP 2: MIGRATE CUSTOMERS..
 		await migrateCustomers({
-			db,
+			ctx,
 			migrationJob,
 			fromProduct,
 			toProduct,
 			customers,
-			logger,
-			features,
 		});
-
-		// await new Promise((resolve) => setTimeout(resolve, 10000));
 	} catch (error) {
 		logger.error(`Migration failed: ${migrationJobId}`);
 		logger.error(error);

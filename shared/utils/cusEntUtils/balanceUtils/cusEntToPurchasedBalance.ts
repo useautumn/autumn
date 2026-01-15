@@ -16,9 +16,9 @@ export const cusEntToPurchasedBalance = ({
 	cusEnt: FullCusEntWithFullCusProduct;
 	entityId?: string;
 }) => {
-	// return 0;
-	// 1. If prepaid
 	const cusPrice = cusEntToCusPrice({ cusEnt });
+
+	if (!cusEnt.customer_product) return 0;
 	if (nullish(cusPrice)) {
 		const { balance } = getCusEntBalance({
 			cusEnt,
@@ -36,7 +36,7 @@ export const cusEntToPurchasedBalance = ({
 		const cusProduct = cusEnt.customer_product;
 		const options = entToOptions({
 			ent: cusEnt.entitlement,
-			options: cusProduct.options,
+			options: cusProduct?.options ?? [],
 		});
 
 		const quantity = options?.quantity || 0;

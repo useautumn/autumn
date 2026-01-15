@@ -4,49 +4,38 @@ dotenv.config();
 
 import {
 	type Customer,
-	type Feature,
 	type FullProduct,
 	type MigrationJob,
 	MigrationJobStep,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { MigrationService } from "../MigrationService.js";
 import { migrateCustomer } from "./migrateCustomer.js";
 
 export const migrateCustomers = async ({
-	db,
+	ctx,
 	migrationJob,
 	fromProduct,
 	toProduct,
-	logger,
 	customers,
-	features,
 }: {
-	db: DrizzleCli;
+	ctx: AutumnContext;
 	migrationJob: MigrationJob;
 	fromProduct: FullProduct;
 	toProduct: FullProduct;
-	logger: any;
 	customers: Customer[];
-	features: Feature[];
 }) => {
+	const { db, logger, org } = ctx;
+	const { env } = migrationJob;
+
 	await MigrationService.updateJob({
 		db,
 		migrationJobId: migrationJob.id,
 		updates: {
 			current_step: MigrationJobStep.MigrateCustomers,
 		},
-	});
-
-	let batchCount = 0;
-	const { org_id: orgId, env } = migrationJob;
-
-	const org = await OrgService.get({
-		db,
-		orgId,
 	});
 
 	// Create stripe prices if they don't exist
@@ -77,16 +66,11 @@ export const migrateCustomers = async ({
 			if (!customer.id) continue;
 			batchPromises.push(
 				migrateCustomer({
-					db,
-					migrationJob,
-					customerId: customer.id!,
-					org,
-					logger,
-					env,
-					orgId,
+					ctx,
+					customerId: customer.id,
 					fromProduct,
 					toProduct,
-					features,
+					migrationJob,
 				}),
 			);
 		}
@@ -130,28 +114,10 @@ export const migrateCustomers = async ({
 				},
 			},
 		});
-
-		batchCount++;
 	}
 
 	// Get number of errors
-	const migrationDetails: any = {};
-	// try {
-	//   let errors = await MigrationService.getErrors({
-	//     db,
-	//     migrationJobId: migrationJob.id,
-	//   });
-
-	//   migrationDetails.num_errors = errors!.length;
-	//   migrationDetails.failed_customers = errors!.map(
-	//     (e: any) => `${e.customer.id} - ${e.customer.name}`,
-	//   );
-	// } catch (error) {
-	//   migrationDetails.failed_to_get_errors = true;
-	//   migrationDetails.error = error;
-	//   logger.error("Failed to get migration errors");
-	//   logger.error(error);
-	// }
+	const migrationDetails = {};
 
 	const curMigrationJob = await MigrationService.getJob({
 		db,
@@ -169,10 +135,4 @@ export const migrateCustomers = async ({
 			},
 		},
 	});
-
-	// await sendMigrationEmail({
-	//   db,
-	//   migrationJobId: migrationJob.id,
-	//   org,
-	// });
 };

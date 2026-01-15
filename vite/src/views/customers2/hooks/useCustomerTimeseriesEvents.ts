@@ -1,6 +1,16 @@
 import { ErrCode } from "@autumn/shared";
+import { useMemo } from "react";
 import { useParams } from "react-router";
 import { usePostSWR } from "@/services/useAxiosSwr";
+
+/** Gets the user's IANA timezone (e.g., "America/New_York") */
+const getUserTimezone = (): string => {
+	try {
+		return Intl.DateTimeFormat().resolvedOptions().timeZone;
+	} catch {
+		return "UTC";
+	}
+};
 
 export const useCustomerTimeseriesEvents = ({
 	interval = "30d",
@@ -11,17 +21,22 @@ export const useCustomerTimeseriesEvents = ({
 }) => {
 	const { customer_id } = useParams();
 
+	// Get user's timezone - memoized since it won't change during session
+	const timezone = useMemo(() => getUserTimezone(), []);
+
 	const { data, isLoading, error } = usePostSWR({
 		url: `/query/events`,
 		data: {
 			customer_id: customer_id || null,
 			interval,
 			event_names: eventNames,
+			timezone,
 		},
 		queryKey: [
 			"customer-timeseries-events",
 			customer_id,
 			interval,
+			timezone,
 			...eventNames.sort(),
 		],
 		options: {

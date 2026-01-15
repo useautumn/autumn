@@ -21,7 +21,6 @@ import { useOrg } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { CollapsibleNavGroup } from "./CollapsibleNavGroup";
-import { DeployToProdButton } from "./components/deploy-button/DeployToProdButton";
 import { OrgDropdown } from "./components/OrgDropdown";
 import { EnvDropdown } from "./EnvDropdown";
 import { NavButton } from "./NavButton";
@@ -137,11 +136,7 @@ export const MainSidebar = () => {
 						<PanelLeft size={14} />
 					</Button>
 					<OrgDropdown />
-					{org?.deployed ? (
-						<EnvDropdown env={env} />
-					) : (
-						<DeployToProdButton expanded={expanded} />
-					)}
+					{org?.deployed && <EnvDropdown env={env} />}
 					<div className="flex flex-col px-2 gap-1">
 						<CollapsibleNavGroup
 							value="products"
@@ -157,7 +152,7 @@ export const MainSidebar = () => {
 									icon: <CubeIcon size={16} weight="fill" />,
 								},
 								{
-									title: "Plan Features",
+									title: "Features",
 									value: "features",
 									icon: <LegoIcon size={16} weight="fill" />,
 								},
@@ -175,9 +170,9 @@ export const MainSidebar = () => {
 							env={env}
 						/>
 						<NavButton
-							value="analytics"
+							value="events"
 							icon={<ChartBarIcon size={16} weight="fill" />}
-							title="Analytics"
+							title="Events"
 							env={env}
 						/>
 						<CollapsibleNavGroup

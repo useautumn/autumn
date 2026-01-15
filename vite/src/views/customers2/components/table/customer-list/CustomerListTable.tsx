@@ -2,7 +2,6 @@ import type { FullCustomer } from "@autumn/shared";
 import { ArrowSquareOutIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { useNavigate } from "react-router";
 import { Table } from "@/components/general/table";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
@@ -23,7 +22,6 @@ export function CustomerListTable({
 }: {
 	customers: CustomerWithProducts[];
 }) {
-	const navigate = useNavigate();
 	const { features } = useFeaturesQuery();
 
 	// Subscribe to full_customers query to get reactive updates
@@ -94,14 +92,11 @@ export function CustomerListTable({
 		},
 	});
 
-	const handleRowClick = (customer: CustomerWithProducts) => {
-		navigate(
-			pushPage({
-				path: `/customers/${customer.id || customer.internal_id}`,
-				preserveParams: false,
-			}),
-		);
-	};
+	const getRowHref = (customer: CustomerWithProducts) =>
+		pushPage({
+			path: `/customers/${customer.id || customer.internal_id}`,
+			preserveParams: false,
+		});
 
 	const enableSorting = false;
 
@@ -122,7 +117,7 @@ export function CustomerListTable({
 							icon={<ArrowSquareOutIcon size={16} />}
 							onClick={() => {
 								window.open(
-									"https://docs.useautumn.com/getting-started/setup/react",
+									"https://docs.useautumn.com/documentation/getting-started/setup/react",
 									"_blank",
 								);
 							}}
@@ -159,7 +154,7 @@ export function CustomerListTable({
 						numberOfColumns: columns.length,
 						enableSorting,
 						isLoading: false,
-						onRowClick: handleRowClick,
+						getRowHref,
 						emptyStateText: "No matching results found.",
 						rowClassName: "h-10",
 						enableColumnVisibility: true,

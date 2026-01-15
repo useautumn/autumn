@@ -15,10 +15,10 @@ import {
 	cusEntsToMaxPurchase,
 	cusEntsToPlanId,
 	cusEntsToPrepaidQuantity,
+	cusEntsToPurchasedBalance,
 	cusEntsToReset,
 	cusEntsToRollovers,
 	cusEntToKey,
-	cusEntToPurchasedBalance,
 	dbToApiFeatureV1,
 	expandIncludes,
 	type Feature,
@@ -76,18 +76,10 @@ const cusEntsToBreakdown = ({
 		});
 
 		const prepaidQuantity = cusEntsToPrepaidQuantity({ cusEnts });
-		const planId = cusEnts[0].customer_product.product.id;
+		const planId = cusEntsToPlanId({ cusEnts });
 
-		// console.log(`Breakdown:`, {
-		// 	entityId: cusEnts[0].customer_product?.entity_id,
-		// 	granted_balance: breakdownItem.granted_balance,
-		// 	purchased_balance: breakdownItem.purchased_balance,
-		// 	current_balance: breakdownItem.current_balance,
-		// 	usage: breakdownItem.usage,
-		// 	max_purchase: breakdownItem.max_purchase,
-		// 	overage_allowed: breakdownItem.overage_allowed,
-		// 	reset: reset,
-		// });
+		// Get expires_at from the first cusEnt (since key is cusEnt.id, there's only one)
+		const expiresAt = cusEnts[0]?.expires_at ?? null;
 
 		breakdown.push({
 			key,
@@ -106,6 +98,7 @@ const cusEntsToBreakdown = ({
 				reset: reset,
 
 				prepaid_quantity: prepaidQuantity,
+				expires_at: expiresAt,
 			}),
 			prepaidQuantity: prepaidQuantity,
 		});
@@ -113,41 +106,6 @@ const cusEntsToBreakdown = ({
 
 	return breakdown;
 };
-
-// export const cusEntsToPrepaidQuantity = ({
-// 	cusEnts,
-// 	feature,
-// }: {
-// 	cusEnts: FullCusEntWithFullCusProduct[];
-// 	feature: Feature;
-// }) => {
-// 	let prepaidQuantity = new Decimal(0);
-
-// 	for (const cusEnt of cusEnts) {
-// 		// 1. if cus ent doesn't match feature, skip
-// 		if (!cusEntMatchesFeature({ cusEnt, feature })) continue;
-
-// 		// 2. If cus ent is not prepaid, skip
-// 		const cusPrice = cusEntToCusPrice({ cusEnt });
-
-// 		if (!cusPrice || !isPrepaidPrice({ price: cusPrice.price })) continue;
-
-// 		// 3. Get quantity
-// 		const options = cusEnt.customer_product.options.find(
-// 			(option) => option.internal_feature_id === feature.internal_id,
-// 		);
-
-// 		if (!options) continue;
-
-// 		const quantityWithUnits = new Decimal(options.quantity)
-// 			.mul(cusPrice.price.config.billing_units ?? 1)
-// 			.toNumber();
-
-// 		prepaidQuantity = prepaidQuantity.add(quantityWithUnits);
-// 	}
-
-// 	return prepaidQuantity.toNumber();
-// };
 
 export const getApiBalance = ({
 	ctx,
@@ -223,9 +181,10 @@ export const getApiBalance = ({
 		.toNumber();
 
 	// 2. Purchased balance
-	const totalPurchasedBalance = sumValues(
-		cusEnts.map((cusEnt) => cusEntToPurchasedBalance({ cusEnt, entityId })),
-	);
+	const totalPurchasedBalance = cusEntsToPurchasedBalance({
+		cusEnts,
+		entityId,
+	});
 
 	// 3. Current balance
 	let currentBalance = cusEntsToCurrentBalance({

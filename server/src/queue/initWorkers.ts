@@ -10,11 +10,10 @@ import type { Logger } from "pino";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
-import { runInsertEventBatch } from "@/internal/balances/track/eventUtils/runInsertEventBatch.js";
-import { runSyncBalanceBatch } from "@/internal/balances/utils/sync/runSyncBalanceBatch.js";
-import { syncItemV2 } from "@/internal/balances/utils/sync/syncItemV2.js";
+import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
+import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
 import { runClearCreditSystemCacheTask } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
-import { runSaveFeatureDisplayTask } from "@/internal/features/featureUtils.js";
+import { generateFeatureDisplayWorkflow } from "@/internal/features/workflows/generateFeatureDisplayWorkflow.js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
 import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigrationTask.js";
 import { detectBaseVariant } from "@/internal/products/productUtils/detectProductVariant.js";
@@ -76,24 +75,6 @@ const processMessage = async ({
 			return;
 		}
 
-		if (job.name === JobName.GenerateFeatureDisplay) {
-			await runSaveFeatureDisplayTask({
-				db,
-				feature: job.data.feature,
-				logger: workerLogger,
-			});
-			return;
-		}
-
-		if (job.name === JobName.Migration) {
-			await runMigrationTask({
-				db,
-				payload: job.data,
-				logger: workerLogger,
-			});
-			return;
-		}
-
 		if (job.name === JobName.ClearCreditSystemCustomerCache) {
 			await runClearCreditSystemCacheTask({
 				db,
@@ -106,8 +87,7 @@ const processMessage = async ({
 		// Jobs below need worker context
 		const ctx = await createWorkerContext({
 			db,
-			orgId: job.data.orgId,
-			env: job.data.env,
+			payload: job.data,
 			logger: workerLogger,
 		});
 
@@ -116,6 +96,27 @@ const processMessage = async ({
 				ctx,
 				messageId: message.MessageId,
 			});
+		}
+
+		if (job.name === JobName.Migration) {
+			if (!ctx) {
+				workerLogger.error("No context found for migration job");
+				return;
+			}
+			await runMigrationTask({ ctx, payload: job.data });
+			return;
+		}
+
+		if (job.name === JobName.GenerateFeatureDisplay) {
+			if (!ctx) {
+				workerLogger.error("No context found for generate feature display job");
+				return;
+			}
+			await generateFeatureDisplayWorkflow({
+				ctx,
+				payload: job.data,
+			});
+			return;
 		}
 
 		if (actionHandlers.includes(job.name as JobName)) {
@@ -138,23 +139,15 @@ const processMessage = async ({
 			return;
 		}
 
-		if (job.name === JobName.SyncBalanceBatch) {
-			await runSyncBalanceBatch({
-				ctx,
-				payload: job.data,
-			});
-			return;
-		}
-
-		if (job.name === JobName.SyncBalanceBatchV2) {
+		if (job.name === JobName.SyncBalanceBatchV3) {
 			if (!ctx) {
-				workerLogger.error("No context found for sync balance batch v2 job");
+				workerLogger.error("No context found for sync balance batch v3 job");
 				return;
 			}
 
-			await syncItemV2({
+			await syncItemV3({
 				ctx,
-				item: job.data.item,
+				payload: job.data,
 			});
 			return;
 		}
@@ -169,21 +162,26 @@ const processMessage = async ({
 		}
 
 		if (job.name === JobName.TriggerCheckoutReward) {
+			if (!ctx) {
+				workerLogger.error("No context found for trigger checkout reward job");
+				return;
+			}
 			await runTriggerCheckoutReward({
-				db,
+				ctx,
 				payload: job.data,
-				logger: workerLogger,
 			});
 		}
-	} catch (error: any) {
+	} catch (error) {
 		Sentry.captureException(error);
-		workerLogger.error(`Failed to process SQS job: ${job.name}`, {
-			jobName: job.name,
-			error: {
-				message: error.message,
-				stack: error.stack,
-			},
-		});
+		if (error instanceof Error) {
+			workerLogger.error(`Failed to process SQS job: ${job.name}`, {
+				jobName: job.name,
+				error: {
+					message: error.message,
+					stack: error.stack,
+				},
+			});
+		}
 	}
 };
 
@@ -238,10 +236,12 @@ const startPollingLoop = async ({ db }: { db: DrizzleCli }) => {
 
 						try {
 							await processMessage({ message, db });
-						} catch (error: any) {
-							logger.error(
-								`Failed to process message ${message.MessageId}: ${error.message}`,
-							);
+						} catch (error) {
+							if (error instanceof Error) {
+								logger.error(
+									`Failed to process message ${message.MessageId}: ${error.message}`,
+								);
+							}
 						}
 
 						// Always delete message, even on error (receive once only)
@@ -326,8 +326,12 @@ export const initHatchetWorker = async () => {
 
 	console.log("Starting hatchet worker");
 
+	const workflows = [verifyCacheConsistencyWorkflow].filter(Boolean);
+
 	const worker = await hatchet.worker("hatchet-worker", {
-		workflows: [verifyCacheConsistencyWorkflow!],
+		workflows: workflows as NonNullable<
+			typeof verifyCacheConsistencyWorkflow
+		>[],
 	});
 
 	// Don't await - start() runs indefinitely and would block the rest of the code

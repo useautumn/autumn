@@ -1,5 +1,9 @@
 "use client";
 
+import { QuestionIcon } from "@phosphor-icons/react";
+import { GraduationCap } from "lucide-react";
+import { Link } from "react-router";
+import CopyButton from "@/components/general/CopyButton";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -7,19 +11,14 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-import { toast } from "sonner";
-import { NavButton } from "./NavButton";
 import { useEnv } from "@/utils/envUtils";
-import { MessageCircle } from "lucide-react";
-import CopyButton from "@/components/general/CopyButton";
-import { Link } from "react-router";
-import { useSidebarContext } from "./SidebarContext";
+import { useOnboardingVisibility } from "@/views/onboarding4/hooks/useOnboardingProgress";
+import { NavButton } from "./NavButton";
 
 export function SidebarContact() {
 	const email = "hey@useautumn.com";
 	const env = useEnv();
-	const { expanded } = useSidebarContext();
+	const { show: showOnboardingGuide } = useOnboardingVisibility();
 
 	return (
 		<DropdownMenu>
@@ -28,9 +27,9 @@ export function SidebarContact() {
 					<NavButton
 						env={env}
 						value="chat"
-						icon={<MessageCircle size={14} />}
+						icon={<QuestionIcon size={16} weight="duotone" />}
 						title="Need help?"
-						online={expanded}
+						onClick={() => {}}
 					/>
 				</div>
 			</DropdownMenuTrigger>
@@ -40,7 +39,9 @@ export function SidebarContact() {
 				</span>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem
-					onClick={() => (window.location.href = `mailto:${email}`)}
+					onClick={() => {
+						window.location.href = `mailto:${email}`;
+					}}
 					className="cursor-pointer"
 				>
 					<div className="flex items-center justify-between w-full">
@@ -69,6 +70,14 @@ export function SidebarContact() {
 							<span className="relative inline-flex rounded-full h-2 w-2 bg-lime-500"></span>
 						</span>
 					</Link>
+				</DropdownMenuItem>
+				<DropdownMenuSeparator />
+				<DropdownMenuItem
+					onClick={showOnboardingGuide}
+					className="cursor-pointer"
+				>
+					<GraduationCap size={14} />
+					Show onboarding guide
 				</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>

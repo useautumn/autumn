@@ -9,12 +9,14 @@ import {
 	ApiCusFeatureV3Schema,
 	ApiProductItemSchema,
 } from "../../../models.js";
+import { balancesOpenApi } from "./balancesOpenApi1.2.0.js";
 import { coreOpenApi } from "./coreOpenApi.js";
 import { ApiCustomerWithMeta, customersOpenApi } from "./customersOpenApi.js";
 import { ApiEntityWithMeta, entitiesOpenApi } from "./entitiesOpenApi.js";
 import { eventsOpenApi } from "./eventsOpenApi.js";
 import { ApiFeatureWithMeta, featuresOpenApi } from "./featuresOpenApi.js";
 import { ApiProductWithMeta, productsOpenApi } from "./productsOpenApi.js";
+import { referralsOpenApi } from "./referralsOpenApi.js";
 
 // Register schema with .meta() for OpenAPI spec generation
 
@@ -72,6 +74,8 @@ const OPENAPI_1_2_0 = createDocument(
 			...customersOpenApi,
 			...entitiesOpenApi,
 			...eventsOpenApi,
+			...balancesOpenApi,
+			...referralsOpenApi,
 		},
 	},
 	{

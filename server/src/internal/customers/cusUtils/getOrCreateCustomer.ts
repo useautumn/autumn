@@ -92,7 +92,7 @@ export const getOrCreateCustomer = async ({
 				withSubs: true,
 			});
 		} catch (error: any) {
-			if (error?.data?.code === "23505" && customerId) {
+			if (error?.code === "23505" && customerId) {
 				customer = await CusService.getFull({
 					db,
 					idOrInternalId: customerId,

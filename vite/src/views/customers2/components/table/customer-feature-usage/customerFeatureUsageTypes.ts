@@ -25,7 +25,7 @@ export interface CreditSystemSubRow {
 	/** Parent entitlement (inherited for table context) */
 	entitlement: EntitlementWithFeature;
 	/** Parent customer product (inherited for table context) */
-	customer_product: FullCusProduct;
+	customer_product: FullCusProduct | null;
 	/** Parent reset timestamp (inherited for table context) */
 	next_reset_at: number | null;
 }

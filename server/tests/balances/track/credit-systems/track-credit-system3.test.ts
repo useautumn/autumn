@@ -117,9 +117,9 @@ describe(`${chalk.yellowBright("track-credit-system3: test deduction order - act
 		});
 
 		expect(trackRes.balance).toMatchObject({
-			feature_id: TestFeature.Credits,
-			current_balance: 200 - creditCostForOverflow,
-			usage: creditCostForOverflow,
+			feature_id: TestFeature.Action1,
+			current_balance: 0,
+			usage: 100,
 		});
 
 		await timeout(2000);

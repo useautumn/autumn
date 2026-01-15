@@ -12,7 +12,6 @@ import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
-import { deleteCachedApiCustomer } from "../../../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 
 export const handleSchedulePhaseCompleted = async ({
 	ctx,
@@ -100,14 +99,6 @@ export const handleSchedulePhaseCompleted = async ({
 					});
 				}
 			}
-
-			// Maybe activate default product?
-			await deleteCachedApiCustomer({
-				customerId: cusProduct.customer?.id || "",
-				orgId: org.id,
-				env,
-				source: "handleSchedulePhaseCompleted",
-			});
 		}
 	}
 
