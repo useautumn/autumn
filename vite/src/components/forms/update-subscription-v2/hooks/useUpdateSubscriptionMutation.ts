@@ -48,17 +48,23 @@ export function useUpdateSubscriptionMutation({
 				"/v1/subscriptions/update",
 				requestBody,
 			);
-			return response.data;
+			return { data: response.data, useInvoice };
 		},
-		onSuccess: (data) => {
-			if (data?.invoice) {
-				onInvoiceCreated?.(data.invoice);
-				toast.success("Invoice created successfully");
-			} else if (data?.checkout_url) {
-				onCheckoutRedirect?.(data.checkout_url);
-				toast.success("Redirecting to checkout...");
+		onSuccess: ({ data, useInvoice }) => {
+			if (useInvoice) {
+				// Invoice flow: redirect to Stripe invoice page
+				if (data?.invoice) {
+					onInvoiceCreated?.(data.invoice.stripe_id);
+					toast.success("Invoice created successfully");
+				}
 			} else {
-				toast.success("Subscription updated successfully");
+				// Confirm update flow: only redirect if payment_url exists (payment method required)
+				if (data?.payment_url) {
+					onCheckoutRedirect?.(data.payment_url);
+					toast.success("Redirecting to complete payment...");
+				} else {
+					toast.success("Subscription updated successfully");
+				}
 			}
 
 			onSuccess?.();
