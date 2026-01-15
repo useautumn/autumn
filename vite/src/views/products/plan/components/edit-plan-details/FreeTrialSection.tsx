@@ -10,11 +10,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/v2/selects/Select";
-import { useProductStore } from "@/hooks/stores/useProductStore";
+import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 
 export const FreeTrialSection = () => {
-	const product = useProductStore((s) => s.product);
-	const setProduct = useProductStore((s) => s.setProduct);
+	const { product, setProduct } = useProduct();
 	const lengthId = useId();
 
 	return (

@@ -1,5 +1,10 @@
 import { formatAmount } from "@autumn/shared";
 import { CalendarIcon, GitBranchIcon, WrenchIcon } from "@phosphor-icons/react";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/v2/tooltips/tooltip";
 import { PlanFeatureIcon } from "@/views/products/plan/components/plan-card/PlanFeatureIcon";
 import { CustomDotIcon } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
 import type { SummaryItem } from "../types/summary";
@@ -75,7 +80,7 @@ export function SummaryItemRow({
 		if (item.oldValue === null) {
 			return (
 				<span className="bg-green-500/10 text-green-500 px-2 py-0.5 rounded-md text-xs font-medium">
-					+{item.newValue}
+					{item.newValue}
 				</span>
 			);
 		}
@@ -83,15 +88,22 @@ export function SummaryItemRow({
 		return null;
 	};
 
+	const fullText = `${item.label} ${item.description}`;
+
 	return (
 		<div className="flex items-center w-full h-10 px-3 rounded-xl input-base">
 			<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
 				{renderIcons()}
 
-				<p className="whitespace-nowrap truncate flex-1 min-w-0">
-					<span className="text-body">{item.label}</span>
-					<span className="text-body-secondary"> {item.description}</span>
-				</p>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<p className="whitespace-nowrap truncate flex-1 min-w-0 cursor-default">
+							<span className="text-body">{item.label}</span>
+							<span className="text-body-secondary"> {item.description}</span>
+						</p>
+					</TooltipTrigger>
+					<TooltipContent side="top">{fullText}</TooltipContent>
+				</Tooltip>
 			</div>
 
 			<div className="flex items-center gap-2 shrink-0">

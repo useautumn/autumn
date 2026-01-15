@@ -1,6 +1,7 @@
 import {
 	AppEnv,
 	type CreateFreeTrial,
+	type ProductItem,
 	type ProductV2,
 	UsageModel,
 } from "@autumn/shared";
@@ -25,6 +26,8 @@ interface UpdateSubscriptionBodyBuilderParams {
 
 	// Free trial param - null removes trial, undefined preserves existing
 	freeTrial?: CreateFreeTrial | null;
+	// Custom items for preview support (separate from isCustom logic)
+	items?: ProductItem[] | null;
 }
 
 /**
@@ -108,6 +111,7 @@ export function useUpdateSubscriptionBodyBuilder(
 						? `${import.meta.env.VITE_FRONTEND_URL}${redirectUrl}`
 						: undefined,
 				freeTrial: mergedParams.freeTrial,
+				items: mergedParams.items,
 			});
 		},
 		[products, hasChanges, storeProduct, storeEntityId, params, env],

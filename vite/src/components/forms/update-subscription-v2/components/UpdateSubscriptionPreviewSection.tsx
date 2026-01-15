@@ -1,15 +1,27 @@
 import type { PreviewUpdateSubscriptionResponse } from "@autumn/shared";
 import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
+import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
+import { PreviewErrorDisplay } from "./PreviewErrorDisplay";
 
 interface UpdateSubscriptionPreviewSectionProps {
 	isLoading: boolean;
 	previewData?: PreviewUpdateSubscriptionResponse | null;
+	error?: string;
 }
 
 export function UpdateSubscriptionPreviewSection({
 	isLoading,
 	previewData,
+	error,
 }: UpdateSubscriptionPreviewSectionProps) {
+	if (error) {
+		return (
+			<SheetSection title="Pricing Preview" withSeparator>
+				<PreviewErrorDisplay error={error} />
+			</SheetSection>
+		);
+	}
+
 	const totals = [];
 
 	if (previewData) {

@@ -10,12 +10,11 @@ import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
-import { useProductStore } from "@/hooks/stores/useProductStore";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { FeatureService } from "@/services/FeatureService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { getItemId } from "@/utils/product/productItemUtils";
+import { useProduct, useSheet } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { useSaveRestoreFeature } from "../../hooks/useSaveRestoreFeature";
 import { getDefaultItem } from "../../utils/getDefaultItem";
 import { NewFeatureAdvanced } from "./NewFeatureAdvanced";
@@ -30,9 +29,8 @@ export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 
 	const feature = useFeatureStore((s) => s.feature);
 	const setFeature = useFeatureStore((s) => s.setFeature);
-	const product = useProductStore((s) => s.product);
-	const setProduct = useProductStore((s) => s.setProduct);
-	const setSheet = useSheetStore((s) => s.setSheet);
+	const { product, setProduct } = useProduct();
+	const { setSheet } = useSheet();
 	const axiosInstance = useAxiosInstance();
 	const { refetch } = useFeaturesQuery();
 	const [isCreating, setIsCreating] = useState(false);

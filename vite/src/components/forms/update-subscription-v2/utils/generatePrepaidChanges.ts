@@ -32,10 +32,10 @@ export function generatePrepaidChanges({
 					? (newQuantity - oldQuantity) * unitPrice
 					: undefined;
 
-			const featureName = item.feature?.name ?? "items";
+			const featureName = item.feature?.name ?? "Items";
 
-			const direction = quantityDelta > 0 ? "more" : "fewer";
-			const description = `${Math.abs(quantityDelta)} ${direction} prepaid`;
+			const direction = quantityDelta > 0 ? "added" : "removed";
+			const description = `${Math.abs(quantityDelta)} prepaid ${direction}`;
 
 			return {
 				id: `prepaid-${featureId}`,
