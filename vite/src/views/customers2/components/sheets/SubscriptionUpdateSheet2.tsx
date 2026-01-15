@@ -22,6 +22,7 @@ import {
 	type UpdateSubscriptionFormContext,
 	UpdateSubscriptionPreviewSection,
 	UpdateSubscriptionSummary,
+	useHasSubscriptionChanges,
 	useUpdateSubscriptionForm,
 	useUpdateSubscriptionMutation,
 	useUpdateSubscriptionRequestBody,
@@ -67,6 +68,19 @@ function SheetContent({
 
 	const formValues = useStore(form.store, (state) => state.values);
 	const { prepaidOptions } = formValues;
+
+	const defaultValues = form.options.defaultValues;
+	const initialPrepaidOptions = defaultValues?.prepaidOptions ?? {};
+
+	const hasChanges = useHasSubscriptionChanges({
+		formValues,
+		initialPrepaidOptions,
+		prepaidItems,
+		customerProduct,
+		currentVersion,
+		originalItems,
+		features,
+	});
 
 	// Compute extended prepaid items that includes both original prepaid items
 	// and any new prepaid items added through the inline editor
@@ -223,6 +237,7 @@ function SheetContent({
 
 			<UpdateSubscriptionFooter
 				isPending={isPending}
+				hasChanges={hasChanges}
 				onConfirm={handleConfirm}
 				onInvoiceUpdate={handleInvoiceUpdate}
 			/>

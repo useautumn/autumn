@@ -8,15 +8,19 @@ import { SheetFooter } from "@/components/v2/sheets/SharedSheetComponents";
 
 interface UpdateSubscriptionFooterProps {
 	isPending: boolean;
+	hasChanges: boolean;
 	onConfirm: () => void;
 	onInvoiceUpdate: (params: { enableProductImmediately: boolean }) => void;
 }
 
 export function UpdateSubscriptionFooter({
 	isPending,
+	hasChanges,
 	onConfirm,
 	onInvoiceUpdate,
 }: UpdateSubscriptionFooterProps) {
+	if (!hasChanges) return null;
+
 	return (
 		<SheetFooter className="flex flex-col grid-cols-1 mt-0">
 			<Popover>

@@ -12,6 +12,7 @@ export * from "./components/UpdateSubscriptionSummary";
 export * from "./context/updateSubscriptionFormContext";
 
 // Hooks
+export * from "./hooks/useHasSubscriptionChanges";
 export * from "./hooks/useUpdateSubscriptionForm";
 export * from "./hooks/useUpdateSubscriptionMutation";
 export * from "./hooks/useUpdateSubscriptionRequestBody";

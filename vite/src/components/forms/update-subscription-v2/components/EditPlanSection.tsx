@@ -5,7 +5,7 @@ import {
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
-} from "@/components/v2/tooltips/tooltip";
+} from "@/components/v2/tooltips/Tooltip";
 
 interface EditPlanSectionProps {
 	hasCustomizations: boolean;
