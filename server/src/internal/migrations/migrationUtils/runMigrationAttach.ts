@@ -71,6 +71,7 @@ export const runMigrationAttach = async ({
 	);
 
 	let sameCustomBranch: AttachBranch | undefined;
+	attachParams.branch = branch;
 	try {
 		const curSameProduct = attachParams.customer.customer_products.find(
 			(cp) => cp.product.internal_id === fromProduct.internal_id,

@@ -170,9 +170,9 @@ export const MainSidebar = () => {
 							env={env}
 						/>
 						<NavButton
-							value="analytics"
+							value="events"
 							icon={<ChartBarIcon size={16} weight="fill" />}
-							title="Analytics"
+							title="Events"
 							env={env}
 						/>
 						<CollapsibleNavGroup

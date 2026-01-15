@@ -5,12 +5,12 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
 import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
-import { runSaveFeatureDisplayTask } from "@/internal/features/featureUtils.js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
 import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigrationTask.js";
 import { detectBaseVariant } from "@/internal/products/productUtils/detectProductVariant.js";
 import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutReward.js";
 import { generateId } from "@/utils/genUtils.js";
+import { generateFeatureDisplayWorkflow } from "../../internal/features/workflows/generateFeatureDisplayWorkflow.js";
 import { createWorkerContext } from "../createWorkerContext.js";
 import { JobName } from "../JobName.js";
 import { workerRedis } from "./initBullMq.js";
@@ -56,10 +56,16 @@ const initWorker = ({ id, db }: { id: number; db: DrizzleCli }) => {
 				}
 
 				if (job.name === JobName.GenerateFeatureDisplay) {
-					await runSaveFeatureDisplayTask({
-						db,
-						feature: job.data.feature,
-						logger: workerLogger,
+					if (!ctx) {
+						workerLogger.error(
+							"No context found for generate feature display job",
+						);
+						return;
+					}
+
+					await generateFeatureDisplayWorkflow({
+						ctx,
+						payload: job.data,
 					});
 					return;
 				}

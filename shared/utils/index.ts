@@ -42,9 +42,8 @@ export * from "./cusUtils/cusPlanUtils/cusPlanUtils.js";
 export * from "./cusUtils/fullCusUtils/fullCustomerToCustomerEntitlements.js";
 export * from "./cusUtils/fullCusUtils/getCusStripeSubCount.js";
 export * from "./expandUtils.js";
-export * from "./featureUtils/apiFeatureToDbFeature.js";
-export * from "./featureUtils/convertFeatureUtils.js";
 // Feature utils
+export * from "./featureUtils/index.js";
 export * from "./featureUtils.js";
 // Org utils
 export * from "./orgUtils/convertOrgUtils.js";
