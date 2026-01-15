@@ -6,6 +6,7 @@ import type { Feature } from "@models/featureModels/featureModels";
 import type { Price } from "@models/productModels/priceModels/priceModels";
 import { roundUsageToNearestBillingUnit } from "@utils/billingUtils/usageUtils/roundUsageToNearestBillingUnit";
 import { findPrepaidCusPriceByFeature } from "@utils/cusPriceUtils/findCusPriceUtils/findPrepaidCusPriceByFeature";
+import { nullish } from "@utils/utils";
 import { Decimal } from "decimal.js";
 import { cusProductToFeatureOptions } from "./cusProductToFeatureOptions";
 
@@ -23,7 +24,7 @@ export const cusProductToConvertedFeatureOptions = ({
 }): FeatureOptions | undefined => {
 	const currentOption = cusProductToFeatureOptions({ cusProduct, feature });
 
-	if (!currentOption?.quantity) return undefined;
+	if (nullish(currentOption?.quantity)) return undefined;
 
 	const oldCusPrice = findPrepaidCusPriceByFeature({
 		customerPrices: cusProduct.customer_prices,
