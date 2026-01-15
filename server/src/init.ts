@@ -20,7 +20,6 @@ import { ClickHouseManager } from "./external/clickhouse/ClickHouseManager.js";
 import { logger } from "./external/logtail/logtailUtils.js";
 import { redirectToHono } from "./initHono.js";
 import { apiRouter } from "./internal/api/apiRouter.js";
-import mainRouter from "./internal/mainRouter.js";
 import { auth } from "./utils/auth.js";
 import { generateId } from "./utils/genUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
@@ -200,8 +199,6 @@ const init = async () => {
 		next();
 	});
 
-	// Legacy Express routes
-	app.use(mainRouter);
 	app.use("/v1", apiRouter);
 
 	const PORT = process.env.SERVER_PORT
