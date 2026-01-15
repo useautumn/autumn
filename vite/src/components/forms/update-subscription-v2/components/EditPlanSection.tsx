@@ -54,7 +54,7 @@ function SectionTitle({
 				{ length: numVersions },
 				(_, index) => numVersions - index,
 			).map((version) => ({
-				label: `Version ${version}${version === currentVersion ? " (current)" : ""}`,
+				label: `Version ${version}`,
 				value: String(version),
 			}))
 		: [];

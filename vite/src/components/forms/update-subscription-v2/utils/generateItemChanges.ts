@@ -209,7 +209,8 @@ function formatItemValue(item: ProductItem): string {
 		return `$${item.price}`;
 	}
 
-	if (parts.length === 0) return "Configured";
+	// Boolean features have no price/tiers/usage - just "enabled" when present
+	if (parts.length === 0) return "Enabled";
 	return parts.join(" + ");
 }
 
@@ -263,6 +264,7 @@ function formatChangedItemValue({
 		parts.push(`${item.interval}`);
 	}
 
-	if (parts.length === 0) return "Configured";
+	// Boolean features or edge cases (null vs undefined) - just "enabled" when present
+	if (parts.length === 0) return "Enabled";
 	return parts.join(" + ");
 }
