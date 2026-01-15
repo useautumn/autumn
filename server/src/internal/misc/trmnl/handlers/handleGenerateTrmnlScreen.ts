@@ -13,9 +13,9 @@ function numberWithCommas(x: number | string) {
 export const handleGenerateTrmnlScreen = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { org, features, clickhouseClient, env, db, logger } = ctx;
+		const { org, features } = ctx;
 
-		const { result }: any = await AnalyticsService.getTopEventNames({
+		const { result } = await AnalyticsService.getTopEventNames({
 			ctx,
 			limit: 1,
 		});
