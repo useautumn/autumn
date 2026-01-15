@@ -9,7 +9,6 @@ import {
 	SelectValue,
 } from "@/components/v2/selects/Select";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { getFeature } from "@/utils/product/entitlementUtils";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
 export function EntityFeatureConfig() {
@@ -17,14 +16,6 @@ export function EntityFeatureConfig() {
 	const { item, setItem } = useProductItemContext();
 
 	if (!item) return null;
-
-	// Get the current item's feature
-	const currentFeature = getFeature(item.feature_id ?? "", features);
-
-	// Don't show if the current item itself is a continuous use feature
-	if (currentFeature?.config?.usage_type === FeatureUsageType.Continuous) {
-		return null;
-	}
 
 	// Filter for continuous use features
 	const continuousUseFeatures = features.filter(
