@@ -32,7 +32,7 @@ export const useEntity = () => {
 		if (entity_id !== selectedEntityId) {
 			setSelectedEntityId(entity_id);
 		}
-	}, [entity_id, selectedEntityId, setSelectedEntityId]);
+	}, [entity_id, selectedEntityId]);
 
 	// Function to update both store and query param
 	const setEntityId = (entityId: string | null) => {
@@ -43,15 +43,14 @@ export const useEntity = () => {
 	return { entityId: selectedEntityId, entity, setEntityId };
 };
 
-// Hook to get a customer product and its productV2 by itemId
+// Hook to get a customer product and its productV2 by customer product ID
 export const useSubscriptionById = ({ itemId }: { itemId: string | null }) => {
 	const { customer } = useCusQuery();
 
 	const cusProduct = useMemo(() => {
 		if (!itemId || !customer?.customer_products) return null;
 		return customer.customer_products.find(
-			(p: FullCusProduct) =>
-				p.id === itemId || p.internal_product_id === itemId,
+			(p: FullCusProduct) => p.id === itemId,
 		);
 	}, [itemId, customer?.customer_products]);
 
