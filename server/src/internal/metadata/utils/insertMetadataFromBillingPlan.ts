@@ -34,6 +34,7 @@ export const insertMetadataFromBillingPlan = async ({
 	const type = stripeInvoice ? MetadataType.DeferredInvoice : undefined;
 
 	const data = {
+		requestId: ctx.id,
 		orgId: ctx.org.id,
 		env: ctx.env,
 		billingPlan,

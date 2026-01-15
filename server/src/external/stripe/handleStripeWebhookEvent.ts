@@ -1,5 +1,4 @@
 import * as Sentry from "@sentry/bun";
-import chalk from "chalk";
 import type { Context } from "hono";
 import { Stripe } from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
@@ -22,13 +21,6 @@ import type {
 	StripeWebhookHonoEnv,
 } from "./webhookMiddlewares/stripeWebhookContext.js";
 
-const logStripeWebhook = ({ ctx }: { ctx: StripeWebhookContext }) => {
-	const { logger, org, stripeEvent } = ctx;
-	logger.info(
-		`${chalk.yellow("STRIPE").padEnd(18)} ${stripeEvent.type.padEnd(30)} ${org.slug} | ${stripeEvent.id}`,
-	);
-};
-
 /**
  * Hono handler for Stripe webhook events
  * Context is set up by seeder middlewares (legacy or connect)
@@ -39,7 +31,6 @@ export const handleStripeWebhookEvent = async (
 	const ctx = c.get("ctx") as StripeWebhookContext;
 	const { db, logger, org, env, stripeEvent } = ctx;
 	const event = stripeEvent;
-	logStripeWebhook({ ctx });
 
 	try {
 		const stripeCli = createStripeCli({ org, env });

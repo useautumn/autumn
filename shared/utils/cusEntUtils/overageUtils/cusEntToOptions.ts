@@ -9,6 +9,6 @@ export const cusEntToOptions = ({
 	const ent = cusEnt.entitlement;
 	return entToOptions({
 		ent,
-		options: cusEnt.customer_product.options,
+		options: cusEnt.customer_product?.options ?? [],
 	});
 };

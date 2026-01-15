@@ -34,5 +34,7 @@ export const billingResultToResponse = ({
 			stripeInvoice?.status === "open" && stripeInvoice.hosted_invoice_url
 				? stripeInvoice.hosted_invoice_url
 				: null,
+
+		required_action: billingResult.stripe.requiredAction,
 	} satisfies BillingResponse;
 };

@@ -6,13 +6,13 @@
 //     hoursToFinalizeInvoice,
 //   ).getTime(),
 
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { AppEnv, Organization, ProductV2 } from "@autumn/shared";
-import Stripe from "stripe";
+import type { AppEnv, Organization, ProductV2 } from "@autumn/shared";
+import { expect } from "chai";
+import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { expectFeaturesCorrect } from "../expectFeaturesCorrect.js";
 import { getExpectedInvoiceTotal } from "../expectInvoiceUtils.js";
-import { expect } from "chai";
 
 // });
 export const expectInvoiceAfterUsage = async ({
@@ -42,10 +42,12 @@ export const expectInvoiceAfterUsage = async ({
 	numInvoices?: number;
 	expectExpired?: boolean;
 }) => {
-	let entity = await autumn.entities.get(customerId, entityId);
+	const entity = await autumn.entities.get(customerId, entityId);
 
 	if (expectExpired) {
-		let matchingProduct = entity.products.find((p: any) => p.id === product.id);
+		const matchingProduct = entity.products.find(
+			(p: any) => p.id === product.id,
+		);
 		expect(matchingProduct).to.not.exist;
 	} else {
 		expectFeaturesCorrect({
@@ -72,8 +74,8 @@ export const expectInvoiceAfterUsage = async ({
 		expectExpired,
 	});
 
-	let invoices = entity.invoices;
+	const invoices = entity.invoices;
 
-	expect(invoices.length).to.equal(numInvoices);
-	expect(invoices[0].total).to.equal(invoiceTotal);
+	expect(invoices?.length).to.equal(numInvoices);
+	expect(invoices?.[0].total).to.equal(invoiceTotal);
 };

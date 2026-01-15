@@ -1,7 +1,7 @@
 import { Hono } from "hono";
+import { stripeLoggerMiddleware } from "@/external/stripe/webhookMiddlewares/stripeLoggerMiddleware.js";
 import { handleStripeWebhookEvent } from "./handleStripeWebhookEvent.js";
 import { stripeConnectSeederMiddleware } from "./webhookMiddlewares/stripeConnectSeederMiddleware.js";
-import { stripeInitLoggerMiddleware } from "./webhookMiddlewares/stripeInitLoggerMiddleware.js";
 import { stripeLegacySeederMiddleware } from "./webhookMiddlewares/stripeLegacySeederMiddleware.js";
 import { stripeToAutumnCustomerMiddleware } from "./webhookMiddlewares/stripeToAutumnCustomerMiddleware.js";
 import type { StripeWebhookHonoEnv } from "./webhookMiddlewares/stripeWebhookContext.js";
@@ -15,7 +15,7 @@ stripeWebhookRouter.post(
 	stripeLegacySeederMiddleware,
 	stripeWebhookRefreshMiddleware,
 	stripeToAutumnCustomerMiddleware,
-	stripeInitLoggerMiddleware,
+	stripeLoggerMiddleware,
 	handleStripeWebhookEvent,
 );
 
@@ -25,6 +25,6 @@ stripeWebhookRouter.post(
 	stripeConnectSeederMiddleware,
 	stripeWebhookRefreshMiddleware,
 	stripeToAutumnCustomerMiddleware,
-	stripeInitLoggerMiddleware,
+	stripeLoggerMiddleware,
 	handleStripeWebhookEvent,
 );

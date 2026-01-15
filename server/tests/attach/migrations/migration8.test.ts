@@ -141,7 +141,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration with entities - o
 			product: premium,
 			status: CusProductStatus.Active,
 		});
-		expect(entity2Res.products[0].canceled_at).toBeFalsy();
+		expect(entity2Res.products?.[0].canceled_at).toBeFalsy();
 	});
 
 	test("should update premium product to new version", async () => {
@@ -173,7 +173,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration with entities - o
 		});
 
 		// Entity 1 should have updated included usage
-		const entity1Words = entity1Res.features[TestFeature.Words].balance;
+		const entity1Words = entity1Res.features![TestFeature.Words].balance;
 		expect(entity1Words).toBe(10000);
 
 		// Entity 2 should have premium v2, active and NOT cancelled
@@ -183,10 +183,10 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration with entities - o
 			product: premiumV2,
 			status: CusProductStatus.Active,
 		});
-		expect(entity2Res.products[0].canceled_at).toBeFalsy();
+		expect(entity2Res.products![0].canceled_at).toBeFalsy();
 
 		// Entity 2 should have updated included usage
-		const entity2Words = entity2Res.features[TestFeature.Words].balance;
+		const entity2Words = entity2Res.features![TestFeature.Words].balance;
 		expect(entity2Words).toBe(10000);
 
 		await expectSubToBeCorrect({

@@ -62,10 +62,12 @@ export const cusProductsToCusPrices = ({
 export const cusProductsToCusEnts = ({
 	cusProducts,
 	featureIds,
+	internalFeatureIds,
 	inStatuses,
 }: {
 	cusProducts: FullCusProduct[];
 	featureIds?: string[];
+	internalFeatureIds?: string[];
 	inStatuses?: CusProductStatus[];
 }) => {
 	let cusEnts: FullCusEntWithFullCusProduct[] = [];
@@ -89,6 +91,12 @@ export const cusProductsToCusEnts = ({
 	if (featureIds) {
 		cusEnts = cusEnts.filter((cusEnt) =>
 			featureIds.includes(cusEnt.entitlement.feature.id),
+		);
+	}
+
+	if (internalFeatureIds) {
+		cusEnts = cusEnts.filter((cusEnt) =>
+			internalFeatureIds.includes(cusEnt.entitlement.internal_feature_id),
 		);
 	}
 

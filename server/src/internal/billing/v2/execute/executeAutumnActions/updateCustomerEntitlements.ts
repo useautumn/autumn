@@ -17,32 +17,26 @@ export const updateCustomerEntitlements = async ({
 	const { db, logger } = ctx;
 
 	for (const updateDetail of updates ?? []) {
-		const { balanceChange, customerEntitlementId } = updateDetail;
+		const { balanceChange, customerEntitlement } = updateDetail;
+
+		logger.debug(
+			`updating customer entitlement ${customerEntitlement.id} by ${balanceChange}`,
+		);
 
 		if (balanceChange > 0) {
-			logger.info(
-				`Incrementing entitlement for customer entitlement ID (${customerEntitlementId}) by ${balanceChange} units`,
-			);
-
 			await CusEntService.increment({
 				db,
-				id: customerEntitlementId,
+				id: customerEntitlement.id,
 				amount: balanceChange,
 			});
 		} else if (balanceChange < 0) {
 			const absoluteDecrement = Math.abs(balanceChange);
 
-			logger.info(
-				`Decrementing entitlement for feature ${customerEntitlementId} by ${absoluteDecrement} units`,
-			);
-
 			await CusEntService.decrement({
 				db,
-				id: customerEntitlementId,
+				id: customerEntitlement.id,
 				amount: absoluteDecrement,
 			});
 		}
 	}
-
-	logger.info("Successfully updated all customer entitlements");
 };
