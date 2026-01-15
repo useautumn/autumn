@@ -4,7 +4,7 @@ import {
 	type EntityLegacyData,
 	EntityNotFoundError,
 	type FullCustomer,
-	filterEntityLevelCusProducts,
+	filterEntityLevelCustomerEntitlementsFromFullCustomer,
 	filterPlanAndFeatureExpand,
 } from "@autumn/shared";
 
@@ -81,12 +81,9 @@ export const getCachedApiEntity = async ({
 		const { apiEntity: pureApiEntity } = await getApiEntityBase({
 			ctx,
 			entity,
-			fullCus: {
-				...fullCus,
-				customer_products: filterEntityLevelCusProducts({
-					cusProducts: fullCus.customer_products,
-				}),
-			},
+			fullCus: filterEntityLevelCustomerEntitlementsFromFullCustomer({
+				fullCustomer: fullCus,
+			}),
 			withAutumnId: true,
 		});
 

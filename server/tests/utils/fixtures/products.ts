@@ -1,4 +1,5 @@
 import {
+	type FreeTrial,
 	FreeTrialDuration,
 	type ProductItem,
 	type ProductV2,
@@ -36,7 +37,7 @@ const base = ({
 			duration: FreeTrialDuration.Day,
 			unique_fingerprint: false,
 			card_required: true,
-		},
+		} as unknown as FreeTrial,
 	}),
 });
 
@@ -135,7 +136,7 @@ const baseWithTrial = ({
 		duration: FreeTrialDuration.Day,
 		unique_fingerprint: false,
 		card_required: cardRequired,
-	},
+	} as unknown as FreeTrial,
 });
 
 /**

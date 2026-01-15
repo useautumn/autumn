@@ -15,6 +15,10 @@ export function filterCustomerFeatureUsage({
 			if (showExpired) {
 				return true;
 			}
+			// Extra entitlements (no customer_product) are always shown
+			if (!ent.customer_product) {
+				return true;
+			}
 			// Exclude expired and scheduled products from balance calculations
 			return (
 				ent.customer_product.status !== CusProductStatus.Expired &&
@@ -23,10 +27,13 @@ export function filterCustomerFeatureUsage({
 		})
 		.sort(
 			(a: FullCusEntWithFullCusProduct, b: FullCusEntWithFullCusProduct) => {
-				// Sort by status first (Active items first)
-				if (a.customer_product.status !== b.customer_product.status) {
-					if (a.customer_product.status === CusProductStatus.Active) return -1;
-					if (b.customer_product.status === CusProductStatus.Active) return 1;
+				const aStatus = a.customer_product?.status;
+				const bStatus = b.customer_product?.status;
+
+				// Sort by status first (Active items first, null treated as active)
+				if (aStatus !== bStatus) {
+					if (!aStatus || aStatus === CusProductStatus.Active) return -1;
+					if (!bStatus || bStatus === CusProductStatus.Active) return 1;
 					return 0;
 				}
 

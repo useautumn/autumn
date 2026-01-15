@@ -3,6 +3,7 @@ import chalk from "chalk";
 import type { Context } from "hono";
 import { Stripe } from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { handleStripeInvoicePaid } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/handleStripeInvoicePaid.js";
 import { handleStripeSubscriptionUpdated } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/handleStripeSubscriptionUpdated.js";
 import { unsetOrgStripeKeys } from "@/internal/orgs/orgUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
@@ -12,7 +13,6 @@ import { handleCheckoutSessionCompleted } from "./webhookHandlers/handleCheckout
 import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
 import { handleInvoiceCreated } from "./webhookHandlers/handleInvoiceCreated/handleInvoiceCreated.js";
 import { handleInvoiceFinalized } from "./webhookHandlers/handleInvoiceFinalized.js";
-import { handleInvoicePaid } from "./webhookHandlers/handleInvoicePaid.js";
 import { handleInvoiceUpdated } from "./webhookHandlers/handleInvoiceUpdated.js";
 import { handleSubCreated } from "./webhookHandlers/handleSubCreated.js";
 import { handleSubDeleted } from "./webhookHandlers/handleSubDeleted.js";
@@ -74,12 +74,7 @@ export const handleStripeWebhookEvent = async (
 			}
 
 			case "invoice.paid": {
-				const invoice = event.data.object;
-				await handleInvoicePaid({
-					ctx,
-					invoiceData: invoice,
-					event,
-				});
+				await handleStripeInvoicePaid({ ctx });
 				break;
 			}
 

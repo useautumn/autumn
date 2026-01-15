@@ -8,6 +8,7 @@ import {
 	text,
 } from "drizzle-orm/pg-core";
 import { collatePgColumn } from "../../../db/utils.js";
+import { entities } from "../../cusModels/entityModels/entityTable.js";
 import { features } from "../../featureModels/featureTable.js";
 import { entitlements } from "../../productModels/entModels/entTable.js";
 import { customerProducts } from "../cusProductTable.js";
@@ -17,9 +18,10 @@ export const customerEntitlements = pgTable(
 	"customer_entitlements",
 	{
 		id: text().primaryKey().notNull(),
-		customer_product_id: text().notNull(),
+		customer_product_id: text(),
 		entitlement_id: text().notNull(),
 		internal_customer_id: text().notNull(),
+		internal_entity_id: text(),
 		internal_feature_id: text().notNull(),
 
 		unlimited: boolean("unlimited").default(false),
@@ -37,6 +39,9 @@ export const customerEntitlements = pgTable(
 		// Need to work on free balance...
 		entities: jsonb("entities").$type<Record<string, EntityBalance>>(),
 
+		// Expiry for loose entitlements (entitlements without reset intervals)
+		expires_at: numeric({ mode: "number" }),
+
 		// Optional...
 		customer_id: text("customer_id"),
 		feature_id: text("feature_id"),
@@ -46,6 +51,11 @@ export const customerEntitlements = pgTable(
 			columns: [table.internal_feature_id],
 			foreignColumns: [features.internal_id],
 			name: "entitlements_internal_feature_id_fkey",
+		}).onDelete("cascade"),
+		foreignKey({
+			columns: [table.internal_entity_id],
+			foreignColumns: [entities.internal_id],
+			name: "customer_entitlements_internal_entity_id_fkey",
 		}).onDelete("cascade"),
 		foreignKey({
 			columns: [table.customer_product_id],

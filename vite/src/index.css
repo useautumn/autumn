@@ -8,10 +8,8 @@
 @import "tailwind-scrollbar-hide/v4";
 @import "@squircle/tailwindcss";
 
-/* ---break--- */
 @plugin "tailwindcss-animate";
 
-/* ---break--- */
 @custom-variant dark (&:is(.dark *));
 
 html {
@@ -54,7 +52,6 @@ html {
 
 	--interactive-secondary: #fff;
 	--interactive-secondary-hover: #FCFAFF;
-
 
 	--muted-foreground: #444;
 	--t1: #121212;
@@ -166,22 +163,16 @@ html {
 	--muted: #1c1c1d;
 	/* --card: oklch(0.141 0.005 285.823); */
 
-
-
 	--t1: #ddd;
 	--t2: #ccc;
 	--t3: #999;
-
-
 
 	--card: #121212;
 
 	/* --border: #262626; */
 	--border: #2c2c2c;
 
-
 	--chart-grid-stroke: #262626;
-
 
 	--card-foreground: oklch(0.985 0 0);
 	--popover: oklch(0.141 0.005 285.823);
@@ -363,6 +354,9 @@ html {
 	/* Accordion animations */
 	--animate-accordion-down: accordion-down 0.2s ease-out;
 	--animate-accordion-up: accordion-up 0.2s ease-out;
+
+	/* Shine animation */
+	--animate-shine: shine var(--duration) infinite linear;
 }
 
 @keyframes accordion-down {
@@ -380,6 +374,18 @@ html {
 	}
 	to {
 		height: 0;
+	}
+}
+
+@keyframes shine {
+	0% {
+		background-position: 0% 0%;
+	}
+	50% {
+		background-position: 100% 100%;
+	}
+	to {
+		background-position: 0% 0%;
 	}
 }
 
@@ -505,9 +511,6 @@ input[type="number"]::-webkit-inner-spin-button {
 	}
 } */
 
-
-
-
 .shimmer-hover {
 	position: relative;
 	overflow: hidden;
@@ -530,7 +533,6 @@ input[type="number"]::-webkit-inner-spin-button {
 	opacity: 0;
 	transition: opacity 0.2s;
 }
-
 
 .shimmer-hover:hover::after {
 	animation: shimmer-once 0.8s;

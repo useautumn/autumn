@@ -18,9 +18,11 @@ import {
 	add,
 	differenceInDays,
 	differenceInHours,
+	differenceInMonths,
 	format,
 	startOfDay,
 	startOfHour,
+	startOfMonth,
 	sub,
 } from "date-fns";
 import { Decimal } from "decimal.js";
@@ -33,6 +35,24 @@ import {
 
 export class EventsAggregationService {
 	private static dateFormat = "yyyy-MM-dd'T'HH:mm:ss";
+
+	/** Validates and sanitizes timezone string to prevent SQL injection */
+	private static sanitizeTimezone(timezone?: string): string {
+		if (!timezone) return "UTC";
+
+		// Only allow valid IANA timezone format (alphanumeric, underscores, slashes, plus/minus)
+		// Examples: "America/New_York", "Europe/London", "Asia/Ho_Chi_Minh", "UTC", "Etc/GMT+5"
+		if (!/^[a-zA-Z0-9_/+-]+$/.test(timezone)) {
+			return "UTC";
+		}
+
+		// Limit length to prevent abuse
+		if (timezone.length > 50) {
+			return "UTC";
+		}
+
+		return timezone;
+	}
 	private static async calculateDateRange({
 		ctx,
 		params,
@@ -141,6 +161,20 @@ export class EventsAggregationService {
 			};
 		}
 
+		if (binSize === "month") {
+			const truncStart = startOfMonth(startDate);
+			const truncEnd = startOfMonth(endDate);
+			const endPlusOne = add(truncEnd, { months: 1 });
+			const months = differenceInMonths(endPlusOne, truncStart);
+
+			return {
+				binCount: months,
+				binEndDate: format(endPlusOne, EventsAggregationService.dateFormat),
+				filterStartDate,
+				filterEndDate,
+			};
+		}
+
 		const truncStart = startOfDay(startDate);
 		const truncEnd = startOfDay(endDate);
 		const endPlusOne = add(truncEnd, { days: 1 });
@@ -236,6 +270,9 @@ export class EventsAggregationService {
 		const groupBy = getGroupByClause();
 		const groupByFieldName = groupBy.fieldName;
 
+		// Sanitize timezone parameter
+		const timezone = EventsAggregationService.sanitizeTimezone(params.timezone);
+
 		// Validate distinct group count if group_by is provided
 		if (params.group_by && groupBy.groupBy) {
 			const propertyPath = params.group_by.replace("properties.", "");
@@ -278,7 +315,19 @@ export class EventsAggregationService {
 		}
 
 		const query = `
-with customer_events as (
+with date_range as (
+    select
+        CASE
+            WHEN {bin_size:String} = 'hour' THEN
+                date_trunc('hour', now(), {timezone:String}) - interval {interval_offset:UInt32} hour + interval number hour
+            WHEN {bin_size:String} = 'month' THEN
+                date_trunc('month', now(), {timezone:String}) - interval {interval_offset:UInt32} month + interval number month
+            ELSE
+                date_trunc('day', now(), {timezone:String}) - interval {interval_offset:UInt32} day + interval number day
+        END as period
+    from numbers({bin_count:UInt32})
+),
+customer_events as (
     select *
     from org_events_view(org_id={org_id:String}, org_slug='', env={env:String})
     ${params.aggregateAll ? "" : "where customer_id = {customer_id:String}"}
@@ -286,9 +335,9 @@ with customer_events as (
 select
     dr.period${groupBy.select},
     ${countExpressions}
-from event_aggregation_date_range_view(bin_size={bin_size:String}, bin_count={bin_count:UInt32}, interval_offset={interval_offset:UInt32}) dr
+from date_range dr
     left join customer_events e
-    on date_trunc({bin_size:String}, e.timestamp) = dr.period
+    on date_trunc({bin_size:String}, e.timestamp, {timezone:String}) = dr.period
 group by dr.period${groupBy.groupBy}
 order by dr.period${groupBy.orderBy};
 `;
@@ -298,7 +347,19 @@ order by dr.period${groupBy.orderBy};
 			: "";
 
 		const queryBillingCycle = `
-with customer_events as (
+with date_range as (
+    select
+        CASE
+            WHEN {bin_size:String} = 'hour' THEN
+                date_trunc('hour', {end_date:DateTime}, {timezone:String}) - interval {interval_offset:UInt32} hour + interval number hour
+            WHEN {bin_size:String} = 'month' THEN
+                date_trunc('month', {end_date:DateTime}, {timezone:String}) - interval {interval_offset:UInt32} month + interval number month
+            ELSE
+                date_trunc('day', {end_date:DateTime}, {timezone:String}) - interval {interval_offset:UInt32} day + interval number day
+        END as period
+    from numbers({bin_count:UInt32})
+),
+customer_events as (
     select *
     from org_events_view(org_id={org_id:String}, org_slug='', env={env:String})
     ${params.aggregateAll ? "" : "where customer_id = {customer_id:String}"}
@@ -306,9 +367,9 @@ with customer_events as (
 select
     dr.period${groupBy.select},
     ${countExpressions}
-from event_aggregation_date_range_bc_view(bin_size={bin_size:String}, start_date={end_date:DateTime}, bin_count={bin_count:UInt32}, interval_offset={interval_offset:UInt32}) dr
+from date_range dr
     left join customer_events e
-    on date_trunc({bin_size:String}, e.timestamp) = dr.period
+    on date_trunc({bin_size:String}, e.timestamp, {timezone:String}) = dr.period
     ${customRangeFilter}
 group by dr.period${groupBy.groupBy}
 order by dr.period${groupBy.orderBy};
@@ -337,8 +398,14 @@ order by dr.period${groupBy.orderBy};
 
 		const currentDayOffset = 1;
 		const calculateBinCount = (days: number): number => {
-			const count = binSize === "hour" ? days * 24 : days;
-			return count + currentDayOffset;
+			if (binSize === "hour") {
+				return days * 24 + currentDayOffset;
+			}
+			if (binSize === "month") {
+				// Convert days to months (approximate: 30 days per month)
+				return Math.ceil(days / 30) + currentDayOffset;
+			}
+			return days + currentDayOffset;
 		};
 
 		const standardIntervalBinCount =
@@ -352,12 +419,14 @@ order by dr.period${groupBy.orderBy};
 			!params.custom_range &&
 			getBCResults?.gap !== undefined;
 
-		const binMultiplier = binSize === "hour" ? 24 : 1;
+		// Multiplier to convert from days to the appropriate bin size unit
+		const binMultiplier =
+			binSize === "hour" ? 24 : binSize === "month" ? 1 / 30 : 1;
 
 		const finalBinCount =
 			binCount ??
 			(isBillingCycle
-				? standardIntervalBinCount * binMultiplier
+				? Math.ceil(standardIntervalBinCount * binMultiplier)
 				: calculateBinCount(standardIntervalBinCount));
 
 		// Use date_range_bc_view query for billing cycles or custom ranges
@@ -374,7 +443,7 @@ order by dr.period${groupBy.orderBy};
 		// - Standard intervals: offset = bin_count - 1 (to include current period)
 		let intervalOffset: number;
 		if (isBillingCycle) {
-			intervalOffset = getBCResults.gap * binMultiplier;
+			intervalOffset = Math.ceil(getBCResults.gap * binMultiplier);
 		} else if (useBillingCycleQuery) {
 			intervalOffset = finalBinCount;
 		} else {
@@ -391,6 +460,7 @@ order by dr.period${groupBy.orderBy};
 			end_date: binEndDate ?? getBCResults?.endDate,
 			filter_start_date: filterStartDate,
 			filter_end_date: filterEndDate,
+			timezone,
 		};
 
 		const result = await (clickhouseClient as ClickHouseClient).query({

@@ -3,6 +3,7 @@ import type { Row } from "@tanstack/react-table";
 import { AdminHover } from "@/components/general/AdminHover";
 import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
+import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { getPlanHoverTexts } from "@/views/admin/adminUtils";
 import { ProductCountsTooltip } from "@/views/products/products/product-row-toolbar/ProductCountsTooltip";
 import { ProductListRowToolbar } from "./ProductListRowToolbar";
@@ -16,12 +17,18 @@ export const createProductListColumns = ({
 		size: 300,
 		header: "Name",
 		accessorKey: "name",
+		enableSorting: false,
 		cell: ({ row }: { row: Row<ProductV2> }) => {
 			return (
-				<div className="font-medium text-t1">
+				<div className="font-medium text-t1 flex gap-1">
 					<AdminHover texts={getPlanHoverTexts({ plan: row.original })}>
 						{row.original.name}
 					</AdminHover>
+					<PlanTypeBadges
+						product={row.original}
+						iconOnly
+						className="bg-transparent"
+					/>
 				</div>
 			);
 		},
@@ -29,6 +36,7 @@ export const createProductListColumns = ({
 	{
 		header: "ID",
 		accessorKey: "id",
+		enableSorting: false,
 		cell: ({ row }: { row: Row<ProductV2> }) => {
 			const product = row.original;
 			return (
@@ -47,6 +55,7 @@ export const createProductListColumns = ({
 				{
 					header: "Group",
 					accessorKey: "group",
+					enableSorting: false,
 					cell: ({ row }: { row: Row<ProductV2> }) => {
 						return <div className="text-t2">{row.original.group || ""}</div>;
 					},
@@ -56,6 +65,7 @@ export const createProductListColumns = ({
 	{
 		header: "Customers",
 		accessorKey: "active_count",
+		enableSorting: true,
 		cell: ({ row }: { row: Row<ProductV2 & { active_count?: number }> }) => {
 			return (
 				<div className="text-t2">
@@ -65,14 +75,14 @@ export const createProductListColumns = ({
 		},
 	},
 	{
-		header: "",
-		size: 130,
-		accessorKey: "badges",
-		enableSorting: false,
+		header: "Created",
+		accessorKey: "created_at",
+		size: 100,
+		enableSorting: true,
 		cell: ({ row }: { row: Row<ProductV2> }) => {
 			return (
-				<div className="flex justify-end">
-					<PlanTypeBadges product={row.original} />
+				<div className="text-t4 text-xs ">
+					{formatUnixToDateTime(row.original.created_at).date}
 				</div>
 			);
 		},

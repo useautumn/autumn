@@ -152,7 +152,7 @@ export const MainSidebar = () => {
 									icon: <CubeIcon size={16} weight="fill" />,
 								},
 								{
-									title: "Plan Features",
+									title: "Features",
 									value: "features",
 									icon: <LegoIcon size={16} weight="fill" />,
 								},
@@ -170,9 +170,9 @@ export const MainSidebar = () => {
 							env={env}
 						/>
 						<NavButton
-							value="analytics"
+							value="events"
 							icon={<ChartBarIcon size={16} weight="fill" />}
-							title="Analytics"
+							title="Events"
 							env={env}
 						/>
 						<CollapsibleNavGroup

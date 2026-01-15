@@ -19,7 +19,7 @@ export const entitlements = pgTable(
 		id: text().primaryKey().notNull(),
 		created_at: numeric({ mode: "number" }).notNull(),
 		internal_feature_id: text().notNull(),
-		internal_product_id: text().notNull(),
+		internal_product_id: text(),
 		is_custom: boolean().default(false),
 
 		allowance_type: text(),

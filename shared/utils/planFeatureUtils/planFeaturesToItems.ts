@@ -6,7 +6,11 @@ import {
 	ProductItemType,
 	type RolloverConfig,
 } from "@models/productV2Models/productItemModels/productItemModels.js";
-import { type ApiFeatureV0, FeatureNotFoundError } from "../../api/models.js";
+import {
+	type ApiFeatureV0,
+	type CreateBalanceParams,
+	FeatureNotFoundError,
+} from "../../api/models.js";
 import type { UpdatePlanFeatureParams } from "../../api/products/planFeature/planFeatureOpModels.js";
 import { ApiVersion } from "../../api/versionUtils/ApiVersion.js";
 import { ApiVersionClass } from "../../api/versionUtils/ApiVersionClass.js";
@@ -83,11 +87,24 @@ const planFeatureToItemConfig = ({
 	return undefined;
 };
 
+/**
+ * Augmented CreateBalanceParams that can be used for planFeaturesToItems function
+ */
+type CreateBalanceForPlanFeatureMap = CreateBalanceParams & {
+	price?: undefined;
+} & {
+	reset?: CreateBalanceParams["reset"] & { reset_when_enabled: true };
+};
+
 export const planFeaturesToItems = ({
 	planFeatures,
 	features,
 }: {
-	planFeatures: (ApiPlanFeature | UpdatePlanFeatureParams)[];
+	planFeatures: (
+		| ApiPlanFeature
+		| UpdatePlanFeatureParams
+		| CreateBalanceForPlanFeatureMap
+	)[];
 	features: Feature[];
 }): ProductItem[] => {
 	if (!planFeatures) return [];

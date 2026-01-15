@@ -14,7 +14,7 @@ import {
 	features,
 	type ResetCusEnt,
 } from "@autumn/shared";
-import { and, eq, lt, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -45,14 +45,23 @@ export class CusEntService {
 	static async getByFeature({
 		db,
 		internalFeatureId,
+		internalCustomerId,
 	}: {
 		db: DrizzleCli;
 		internalFeatureId: string;
+		internalCustomerId?: string;
 	}) {
 		const data = await db
 			.select()
 			.from(customerEntitlements)
-			.where(eq(customerEntitlements.internal_feature_id, internalFeatureId))
+			.where(
+				internalCustomerId
+					? and(
+							eq(customerEntitlements.internal_feature_id, internalFeatureId),
+							eq(customerEntitlements.internal_customer_id, internalCustomerId),
+						)
+					: eq(customerEntitlements.internal_feature_id, internalFeatureId),
+			)
 			.limit(10);
 
 		return data as FullCustomerEntitlement[];
@@ -90,10 +99,6 @@ export class CusEntService {
 				.select()
 				.from(customerEntitlements)
 				.innerJoin(
-					customerProducts,
-					eq(customerEntitlements.customer_product_id, customerProducts.id),
-				)
-				.innerJoin(
 					entitlements,
 					eq(customerEntitlements.entitlement_id, entitlements.id),
 				)
@@ -105,12 +110,25 @@ export class CusEntService {
 					customers,
 					eq(customerEntitlements.internal_customer_id, customers.internal_id),
 				)
+				.leftJoin(
+					customerProducts,
+					eq(customerEntitlements.customer_product_id, customerProducts.id),
+				)
 				.where(
 					and(
-						eq(customerProducts.status, CusProductStatus.Active),
+						or(
+							isNull(customerEntitlements.customer_product_id),
+							eq(customerProducts.status, CusProductStatus.Active),
+						),
 						lt(
 							customerEntitlements.next_reset_at,
 							customDateUnix ?? Date.now(),
+						),
+
+						// Customer entitlement has not expired
+						or(
+							isNull(customerEntitlements.expires_at),
+							gt(customerEntitlements.expires_at, Date.now()),
 						),
 					),
 				)

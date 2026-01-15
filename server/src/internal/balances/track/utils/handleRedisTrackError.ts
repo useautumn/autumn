@@ -27,6 +27,7 @@ export const handleRedisTrackError = async ({
 	body: TrackParams;
 	featureDeductions: FeatureDeduction[];
 }): Promise<TrackResponseV2> => {
+	ctx.logger.warn(`Redis track error: ${error.message}`);
 	if (!(error instanceof RedisDeductionError)) {
 		throw error;
 	}

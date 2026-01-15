@@ -118,13 +118,13 @@ else
     echo "⚠️  Warning: $ROOT_PATH/server/shell directory not found"
 fi
 
-# # Copy drizzle migration files
-# if [ -d "$ROOT_PATH/shared/drizzle" ]; then
-#     echo "📋 Copying database migration files..."
-#     mkdir -p shared/drizzle
-#     cp -r "$ROOT_PATH/shared/drizzle/"* shared/drizzle/
-#     echo "✅ Copied migration files"
-# fi
+# Copy drizzle migration files
+if [ -d "$ROOT_PATH/shared/drizzle" ]; then
+    echo "📋 Copying database migration files..."
+    mkdir -p shared/drizzle
+    cp -r "$ROOT_PATH/shared/drizzle/"* shared/drizzle/
+    echo "✅ Copied migration files"
+fi
 
 # Shared workspace is now used directly from source (no build needed)
 

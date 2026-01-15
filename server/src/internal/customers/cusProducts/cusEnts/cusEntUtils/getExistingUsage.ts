@@ -12,8 +12,8 @@ import {
 	type Price,
 	sortCusEntsForDeduction,
 } from "@autumn/shared";
+import { performDeductionOnCusEnt } from "@/internal/balances/utils/legacy/performDeductionOnCusEnt.js";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
-import { performDeductionOnCusEnt } from "@/trigger/updateBalanceTask.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import { isOneOff } from "../../../../products/productUtils.js";
 import {
