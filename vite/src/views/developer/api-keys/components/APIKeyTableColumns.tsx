@@ -1,18 +1,22 @@
 import type { ApiKey } from "@autumn/shared";
 import type { ColumnDef, Row } from "@tanstack/react-table";
-import { CalendarIcon, TerminalIcon, UserIcon } from "lucide-react";
+import { CalendarIcon, ShieldCheckIcon, TerminalIcon, UserIcon } from "lucide-react";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { APIKeyToolbar } from "./APIKeyToolbar";
 
 // Parse meta to get source info
 function getSourceInfo(meta: ApiKey["meta"]): {
-	type: "cli" | "dashboard" | null;
+	type: "cli" | "dashboard" | "autumn_support" | null;
 	author?: string;
 } {
 	if (!meta || typeof meta !== "object") return { type: null };
 
 	if (meta.created_via === "oauth") {
 		return { type: "cli" };
+	}
+
+	if (meta.created_via === "autumn_support") {
+		return { type: "autumn_support" };
 	}
 
 	if (meta.author) {
@@ -61,6 +65,17 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 						<span className="text-tiny flex items-center gap-1 px-1.5 py-0.5 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 rounded-md">
 							<TerminalIcon size={12} />
 							CLI
+						</span>
+					</div>
+				);
+			}
+
+			if (source.type === "autumn_support") {
+				return (
+					<div className="flex justify-start items-center">
+						<span className="text-tiny flex items-center gap-1 px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-md">
+							<ShieldCheckIcon size={12} />
+							Autumn Support
 						</span>
 					</div>
 				);
