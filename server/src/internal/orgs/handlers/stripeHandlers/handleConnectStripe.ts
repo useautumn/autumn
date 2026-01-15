@@ -2,12 +2,8 @@ import { AppEnv, type StripeConfig } from "@autumn/shared";
 import { z } from "zod/v4";
 import { ensureStripeProductsWithEnv } from "@/external/stripe/stripeEnsureUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { OrgService } from "../../OrgService.js";
 import { handleStripeSecretKey } from "../../orgUtils/handleStripeSecretKey.js";
-
-// Connecting stripe
-const validateConnectStripeRequest = () => {};
 
 const addSuccessUrlToUpdates = ({
 	success_url,
@@ -73,11 +69,10 @@ export const handleConnectStripe = createRoute({
 
 		if (newOrg) {
 			await ensureStripeProductsWithEnv({
-				db,
-				logger,
-				req: ctx as ExtendedRequest,
-				org: newOrg,
-				env,
+				ctx: {
+					...ctx,
+					org: newOrg!,
+				},
 			});
 		}
 

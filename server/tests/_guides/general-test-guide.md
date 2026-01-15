@@ -419,7 +419,7 @@ import {
   expectProductTrialing,
   expectProductNotTrialing,
   expectFeatureResetAlignedWithTrialEnd,
-} from "@tests/billing/utils/expectCustomerProductTrialing";
+} from "@tests/integration/billing/utils/expectCustomerProductTrialing";
 
 // Verify product is trialing and get trial end time
 // Verify product is trialing with expected trial end (10 min tolerance)
@@ -455,7 +455,7 @@ await expectFeatureResetAlignedWithTrialEnd({
 Use `expectPreviewNextCycleCorrect` to verify the `next_cycle` field in subscription update previews:
 
 ```typescript
-import { expectPreviewNextCycleCorrect } from "@tests/billing/utils/expectPreviewNextCycleCorrect";
+import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 
 const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 

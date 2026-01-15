@@ -2,7 +2,7 @@ import { execSync } from "node:child_process";
 import { loadLocalEnv } from "../src/utils/envUtils.js";
 
 const isUnitTest = () => {
-	return process.argv.some((arg) => arg.includes("unit-tests"));
+	return process.argv.some((arg) => arg.includes("unit"));
 };
 
 const loadInfisicalSecrets = async () => {

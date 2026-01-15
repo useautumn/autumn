@@ -49,6 +49,7 @@ export enum StripeBillingStage {
 }
 
 export type DeferredAutumnBillingPlanData = {
+	requestId: string;
 	orgId: string;
 	env: AppEnv;
 	billingPlan: BillingPlan;

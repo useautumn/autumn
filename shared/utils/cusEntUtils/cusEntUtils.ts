@@ -102,6 +102,8 @@ export const cloneEntitlementWithUpdatedQuantity = ({
 	quantityDifference: number;
 }): FullCusEntWithFullCusProduct => {
 	const cloned = structuredClone(customerEntitlement);
+	if (!cloned.customer_product) return cloned;
+
 	const optionIndex = cloned.customer_product.options.findIndex(
 		(opt) => opt.internal_feature_id === feature.internal_id,
 	);

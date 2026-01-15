@@ -17,7 +17,7 @@ export const handleAttachPreview = (req: any, res: any) =>
 			const attachBody = AttachBodyV0Schema.parse(req.body);
 
 			// console.log("attachBody", attachBody);
-			const ctx = req as AutumnContext;
+			const ctx = req as unknown as AutumnContext;
 			const { attachParams } = await getAttachParams({
 				ctx,
 				attachBody,

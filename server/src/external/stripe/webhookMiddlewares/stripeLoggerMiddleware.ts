@@ -29,6 +29,7 @@ const logStripeWebhookResponse = ({
 		`${chalk.yellow("STRIPE").padEnd(18)} ${stripeEvent.type.padEnd(30)} ${org.slug} | ${stripeEvent.id}`,
 		{
 			statusCode: statusCode,
+			extras: ctx.extraLogs,
 		},
 	);
 };

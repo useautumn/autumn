@@ -36,6 +36,11 @@ export const computeCustomPlanNewCustomerProduct = ({
 		cusProduct: customerProduct,
 	});
 
+	ctx.logger.debug(
+		`[computeNewCustomerProduct] existing usages:`,
+		existingUsages,
+	);
+
 	// Compute the new full customer product
 	const newFullCustomerProduct = initFullCustomerProduct({
 		ctx,
