@@ -6,6 +6,16 @@ import {
 } from "@autumn/shared";
 import type { SummaryItem } from "../types/summary";
 
+function hasValue<T>(value: T | null | undefined): value is T {
+	return value !== null && value !== undefined;
+}
+
+function formatPriceWithUnits(price: number, billingUnits: number): string {
+	return billingUnits > 1
+		? `$${price} per ${billingUnits}`
+		: `$${price} per unit`;
+}
+
 function formatTierPricing({
 	tiers,
 	billingUnits,
@@ -15,20 +25,16 @@ function formatTierPricing({
 }): string {
 	if (tiers.length === 0) return "Tiered";
 
-	// Find the first tier with a price to show
 	const firstPricedTier = tiers.find((tier) => tier.amount > 0);
 	if (!firstPricedTier) {
-		// All tiers are free
 		const lastTier = tiers[tiers.length - 1];
 		if (lastTier.to === "inf") return "Unlimited free";
 		return `${lastTier.to} free`;
 	}
 
-	// Format: "$20 per 100" style
-	if (billingUnits > 1) {
-		return `$${firstPricedTier.amount} per ${billingUnits}`;
-	}
-	return `$${firstPricedTier.amount} per unit`;
+	return billingUnits > 1
+		? `$${firstPricedTier.amount} per ${billingUnits}`
+		: `$${firstPricedTier.amount} per unit`;
 }
 
 export function generateItemChanges({
@@ -44,7 +50,6 @@ export function generateItemChanges({
 }): SummaryItem[] {
 	if (!customizedItems || !originalItems) return [];
 
-	// Build a map of feature_id to feature name for lookups
 	const featureNameMap = new Map<string, string>();
 	if (features) {
 		for (const feature of features) {
@@ -52,7 +57,6 @@ export function generateItemChanges({
 		}
 	}
 
-	// Helper to get feature name from item or features list
 	const getFeatureName = (item: ProductItem): string => {
 		if (item.feature?.name) return item.feature.name;
 		if (item.feature_id && featureNameMap.has(item.feature_id)) {
@@ -63,7 +67,6 @@ export function generateItemChanges({
 
 	const changes: SummaryItem[] = [];
 
-	// Build maps by feature_id for comparison (for feature items)
 	const originalFeatureMap = new Map(
 		originalItems
 			.filter((item) => item.feature_id)
@@ -75,12 +78,10 @@ export function generateItemChanges({
 			.map((item) => [item.feature_id, item]),
 	);
 
-	// Check for modifications and removals of feature items
 	for (const [featureId, original] of originalFeatureMap) {
 		const customized = customizedFeatureMap.get(featureId);
 
 		if (!customized) {
-			// Item removed
 			changes.push({
 				id: `item-removed-${featureId}`,
 				type: "item",
@@ -91,30 +92,36 @@ export function generateItemChanges({
 				productItem: original,
 			});
 		} else if (hasItemChanged(original, customized)) {
-			// Item modified
+			const oldValueFormatted = formatChangedItemValue({
+				item: original,
+				original,
+				customized,
+			});
+			const newValueFormatted = formatChangedItemValue({
+				item: customized,
+				original,
+				customized,
+			});
 			changes.push({
 				id: `item-modified-${featureId}`,
 				type: "item",
 				label: getFeatureName(original),
 				description: getModificationDescription({ original, customized }),
-				oldValue: formatItemValue(original),
-				newValue: formatItemValue(customized),
+				oldValue: oldValueFormatted,
+				newValue: newValueFormatted,
 				productItem: customized,
 			});
 		}
 	}
 
-	// Check for additions of feature items
 	for (const [featureId, customized] of customizedFeatureMap) {
 		if (!originalFeatureMap.has(featureId)) {
-			// Get prepaid quantity if this is a prepaid item
 			const prepaidQuantity =
 				featureId && prepaidOptions ? prepaidOptions[featureId] : undefined;
 
-			// For prepaid items with quantity, show 0 → X in the badge
 			const isPrepaidWithQuantity =
 				customized.usage_model === UsageModel.Prepaid &&
-				prepaidQuantity !== undefined &&
+				hasValue(prepaidQuantity) &&
 				prepaidQuantity > 0;
 
 			const billingUnits = customized.billing_units ?? 1;
@@ -139,13 +146,11 @@ export function generateItemChanges({
 		}
 	}
 
-	// Handle price-only items (no feature_id) by comparing counts
 	const originalPriceItems = originalItems.filter((item) => !item.feature_id);
 	const customizedPriceItems = customizedItems.filter(
 		(item) => !item.feature_id,
 	);
 
-	// Simple comparison: if price item count changed, show as a single change
 	if (originalPriceItems.length !== customizedPriceItems.length) {
 		const priceDiff = customizedPriceItems.length - originalPriceItems.length;
 		if (priceDiff > 0) {
@@ -192,36 +197,49 @@ function getModificationDescription({
 	original: ProductItem;
 	customized: ProductItem;
 }): string {
-	// Priority: included_usage changes are most common
+	const parts: string[] = [];
+
 	if (original.included_usage !== customized.included_usage) {
 		const oldValue = original.included_usage;
 		const newValue = customized.included_usage;
 
-		if (newValue === "inf") return "Changed to unlimited";
-		if (oldValue === "inf") return `Limited to ${newValue}`;
-
-		const oldNum = Number(oldValue);
-		const newNum = Number(newValue);
-		if (newNum < oldNum) return `Reduced from ${oldValue} to ${newValue}`;
-		return `Increased from ${oldValue} to ${newValue}`;
+		if (newValue === "inf") {
+			parts.push("changed to unlimited");
+		} else if (oldValue === "inf") {
+			parts.push(`limited to ${newValue}`);
+		} else {
+			const oldNum = Number(oldValue);
+			const newNum = Number(newValue);
+			if (newNum < oldNum) {
+				parts.push(`reduced from ${oldValue} to ${newValue}`);
+			} else {
+				parts.push(`increased from ${oldValue} to ${newValue}`);
+			}
+		}
 	}
 
 	if (original.price !== customized.price) {
 		const oldPrice = original.price ?? 0;
 		const newPrice = customized.price ?? 0;
-		if (newPrice > oldPrice) return `Price increased to $${newPrice}`;
-		return `Price reduced to $${newPrice}`;
+		if (newPrice > oldPrice) {
+			parts.push(`price increased from $${oldPrice} to $${newPrice}`);
+		} else {
+			parts.push(`price reduced from $${oldPrice} to $${newPrice}`);
+		}
 	}
 
 	if (JSON.stringify(original.tiers) !== JSON.stringify(customized.tiers)) {
-		return "Pricing tiers updated";
+		parts.push("pricing tiers updated");
 	}
 
 	if (original.interval !== customized.interval) {
-		return `Billing cycle changed to ${customized.interval}`;
+		parts.push(`billing cycle changed to ${customized.interval}`);
 	}
 
-	return "Configuration updated";
+	if (parts.length === 0) return "Configuration updated";
+
+	const result = parts.join(", ");
+	return result.charAt(0).toUpperCase() + result.slice(1);
 }
 
 function getAdditionDescription({
@@ -231,10 +249,9 @@ function getAdditionDescription({
 	item: ProductItem;
 	prepaidQuantity?: number;
 }): string {
-	// For prepaid items with a quantity set, show the prepaid info
 	if (
 		item.usage_model === UsageModel.Prepaid &&
-		prepaidQuantity !== undefined &&
+		hasValue(prepaidQuantity) &&
 		prepaidQuantity > 0
 	) {
 		const billingUnits = item.billing_units ?? 1;
@@ -243,43 +260,29 @@ function getAdditionDescription({
 	}
 
 	const parts: string[] = [];
+	const includedUsage = item.included_usage;
+	const hasIncludedUsage = hasValue(includedUsage);
 
-	// Check for included usage
-	const hasIncludedUsage =
-		item.included_usage !== null && item.included_usage !== undefined;
 	if (hasIncludedUsage) {
-		if (item.included_usage === "inf") {
+		if (includedUsage === "inf") {
 			parts.push("unlimited");
 		} else {
-			parts.push(`${item.included_usage} included`);
+			parts.push(`${includedUsage} included`);
 		}
 	}
 
-	// Check for overage pricing (price or tiers)
 	const hasOveragePrice =
-		item.price !== null &&
-		item.price !== undefined &&
-		item.price > 0 &&
-		hasIncludedUsage;
+		hasValue(item.price) && item.price > 0 && hasIncludedUsage;
 	const hasTieredPricing = item.tiers?.length && item.tiers.length > 0;
 
 	if (hasOveragePrice) {
 		const billingUnits = item.billing_units ?? 1;
-		if (billingUnits > 1) {
-			parts.push(`then $${item.price} per ${billingUnits}`);
-		} else {
-			parts.push(`then $${item.price} per unit`);
-		}
+		parts.push(`then ${formatPriceWithUnits(item.price ?? 0, billingUnits)}`);
 	} else if (hasTieredPricing && item.tiers) {
 		const billingUnits = item.billing_units ?? 1;
 		const tierText = formatTierPricing({ tiers: item.tiers, billingUnits });
 		parts.push(`then ${tierText}`);
-	} else if (
-		!hasIncludedUsage &&
-		item.price !== null &&
-		item.price !== undefined
-	) {
-		// Pure price item (no included usage)
+	} else if (!hasIncludedUsage && hasValue(item.price)) {
 		return `Added at $${item.price}`;
 	}
 
@@ -289,43 +292,83 @@ function getAdditionDescription({
 
 function formatItemValue(item: ProductItem): string {
 	const parts: string[] = [];
+	const includedUsage = item.included_usage;
+	const hasIncludedUsage = hasValue(includedUsage);
 
-	// Check for included usage
-	const hasIncludedUsage =
-		item.included_usage !== null && item.included_usage !== undefined;
 	if (hasIncludedUsage) {
-		if (item.included_usage === "inf") {
+		if (includedUsage === "inf") {
 			parts.push("Unlimited");
 		} else {
-			parts.push(`${item.included_usage} Included`);
+			parts.push(`${includedUsage} Included`);
 		}
 	}
 
-	// Check for overage pricing
 	const hasOveragePrice =
-		item.price !== null &&
-		item.price !== undefined &&
-		item.price > 0 &&
-		hasIncludedUsage;
+		hasValue(item.price) && item.price > 0 && hasIncludedUsage;
 	const hasTieredPricing = item.tiers?.length && item.tiers.length > 0;
 
 	if (hasOveragePrice) {
 		const billingUnits = item.billing_units ?? 1;
-		if (billingUnits > 1) {
-			parts.push(`$${item.price} per ${billingUnits}`);
-		} else {
-			parts.push(`$${item.price} per unit`);
-		}
+		parts.push(formatPriceWithUnits(item.price ?? 0, billingUnits));
 	} else if (hasTieredPricing && item.tiers) {
 		const billingUnits = item.billing_units ?? 1;
 		parts.push(formatTierPricing({ tiers: item.tiers, billingUnits }));
-	} else if (
-		!hasIncludedUsage &&
-		item.price !== null &&
-		item.price !== undefined
-	) {
-		// Pure price item
+	} else if (!hasIncludedUsage && hasValue(item.price)) {
 		return `$${item.price}`;
+	}
+
+	if (parts.length === 0) return "Configured";
+	return parts.join(" + ");
+}
+
+/**
+ * Format only the parts of an item that changed between original and customized.
+ * Avoids showing unchanged values like "+ $10 per unit" when only included_usage changed.
+ */
+function formatChangedItemValue({
+	item,
+	original,
+	customized,
+}: {
+	item: ProductItem;
+	original: ProductItem;
+	customized: ProductItem;
+}): string {
+	const parts: string[] = [];
+
+	const includedUsageChanged =
+		original.included_usage !== customized.included_usage;
+	if (includedUsageChanged) {
+		if (item.included_usage === "inf") {
+			parts.push("Unlimited");
+		} else if (hasValue(item.included_usage)) {
+			parts.push(`${item.included_usage} Included`);
+		}
+	}
+
+	const priceChanged = original.price !== customized.price;
+	if (priceChanged && hasValue(item.price)) {
+		const billingUnits = item.billing_units ?? 1;
+		parts.push(formatPriceWithUnits(item.price, billingUnits));
+	}
+
+	const tiersChanged =
+		JSON.stringify(original.tiers) !== JSON.stringify(customized.tiers);
+	if (tiersChanged && item.tiers?.length) {
+		const billingUnits = item.billing_units ?? 1;
+		parts.push(formatTierPricing({ tiers: item.tiers, billingUnits }));
+	}
+
+	const billingUnitsChanged =
+		original.billing_units !== customized.billing_units;
+	if (billingUnitsChanged && !priceChanged && hasValue(item.price)) {
+		const billingUnits = item.billing_units ?? 1;
+		parts.push(formatPriceWithUnits(item.price, billingUnits));
+	}
+
+	const intervalChanged = original.interval !== customized.interval;
+	if (intervalChanged && item.interval) {
+		parts.push(`${item.interval}`);
 	}
 
 	if (parts.length === 0) return "Configured";

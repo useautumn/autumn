@@ -4,7 +4,7 @@ import {
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
-} from "@/components/v2/tooltips/tooltip";
+} from "@/components/v2/tooltips/Tooltip";
 import { PlanFeatureIcon } from "@/views/products/plan/components/plan-card/PlanFeatureIcon";
 import { CustomDotIcon } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
 import type { SummaryItem } from "../types/summary";
@@ -91,40 +91,42 @@ export function SummaryItemRow({
 	const fullText = `${item.label} ${item.description}`;
 
 	return (
-		<div className="flex items-center w-full h-10 px-3 rounded-xl input-base">
-			<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
-				{renderIcons()}
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<div className="flex items-center w-full h-10 px-3 rounded-xl input-base cursor-default">
+					<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
+						{renderIcons()}
 
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<p className="whitespace-nowrap truncate flex-1 min-w-0 cursor-default">
+						<p className="whitespace-nowrap truncate flex-1 min-w-0">
 							<span className="text-body">{item.label}</span>
 							<span className="text-body-secondary"> {item.description}</span>
 						</p>
-					</TooltipTrigger>
-					<TooltipContent side="top">{fullText}</TooltipContent>
-				</Tooltip>
-			</div>
+					</div>
 
-			<div className="flex items-center gap-2 shrink-0">
-				{renderChangeIndicator()}
+					<div className="flex items-center gap-2 shrink-0">
+						{renderChangeIndicator()}
 
-				{item.costDelta !== undefined && item.costDelta !== 0 && (
-					<span
-						className={
-							item.costDelta > 0 ? "text-t2 text-xs" : "text-green-600 text-xs"
-						}
-					>
-						{item.costDelta > 0 ? "+" : ""}
-						{formatAmount({
-							amount: item.costDelta,
-							currency,
-							minFractionDigits: 2,
-							amountFormatOptions: { currencyDisplay: "narrowSymbol" },
-						})}
-					</span>
-				)}
-			</div>
-		</div>
+						{item.costDelta !== undefined && item.costDelta !== 0 && (
+							<span
+								className={
+									item.costDelta > 0
+										? "text-t2 text-xs"
+										: "text-green-600 text-xs"
+								}
+							>
+								{item.costDelta > 0 ? "+" : ""}
+								{formatAmount({
+									amount: item.costDelta,
+									currency,
+									minFractionDigits: 2,
+									amountFormatOptions: { currencyDisplay: "narrowSymbol" },
+								})}
+							</span>
+						)}
+					</div>
+				</div>
+			</TooltipTrigger>
+			<TooltipContent side="top">{fullText}</TooltipContent>
+		</Tooltip>
 	);
 }

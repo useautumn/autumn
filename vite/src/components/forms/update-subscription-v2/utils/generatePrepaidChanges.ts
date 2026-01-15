@@ -20,7 +20,6 @@ export function generatePrepaidChanges({
 
 			if (oldQuantity === newQuantity) return null;
 
-			// Apply billing units to show actual quantities
 			const billingUnits = item.billing_units ?? 1;
 			const oldDisplayQuantity = oldQuantity * billingUnits;
 			const newDisplayQuantity = newQuantity * billingUnits;
