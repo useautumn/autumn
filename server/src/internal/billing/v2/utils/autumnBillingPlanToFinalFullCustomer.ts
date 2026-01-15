@@ -1,5 +1,6 @@
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan";
+import { billingPlanToUpdatedCustomerProduct } from "@/internal/billing/v2/utils/billingPlan/billingPlanToUpdatedCustomerProduct";
 
 export const autumnBillingPlanToFinalFullCustomer = ({
 	billingContext,
@@ -9,7 +10,6 @@ export const autumnBillingPlanToFinalFullCustomer = ({
 	autumnBillingPlan: AutumnBillingPlan;
 }) => {
 	const {
-		updateCustomerProduct,
 		deleteCustomerProduct,
 		insertCustomerProducts,
 		updateCustomerEntitlements,
@@ -24,12 +24,9 @@ export const autumnBillingPlanToFinalFullCustomer = ({
 	];
 
 	// 2. Replace updated customer product if applicable
-	const updatedCustomerProduct = updateCustomerProduct
-		? {
-				...updateCustomerProduct.customerProduct,
-				...updateCustomerProduct.updates,
-			}
-		: undefined;
+	const updatedCustomerProduct = billingPlanToUpdatedCustomerProduct({
+		autumnBillingPlan,
+	});
 
 	let customerProducts = combinedCustomerProducts.map((customerProduct) =>
 		customerProduct.id === updatedCustomerProduct?.id

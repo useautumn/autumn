@@ -5,6 +5,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
 import type { AutumnBillingPlan } from "@/internal/billing/v2/types/autumnBillingPlan";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
+import { billingPlanToUpdatedCustomerProduct } from "@/internal/billing/v2/utils/billingPlan/billingPlanToUpdatedCustomerProduct";
 import { customerProductToLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToLineItems";
 
 const formatLineItem = (item: LineItem) => ({
@@ -69,9 +70,13 @@ const getSiblingCustomerProducts = ({
 	autumnBillingPlan: AutumnBillingPlan;
 	stripeSubscriptionId: string;
 }): FullCusProduct[] => {
+	const updatedCustomerProduct = billingPlanToUpdatedCustomerProduct({
+		autumnBillingPlan,
+	});
+
 	const handledIds = new Set([
 		...autumnBillingPlan.insertCustomerProducts.map((cp) => cp.id),
-		autumnBillingPlan.updateCustomerProduct?.customerProduct.id,
+		updatedCustomerProduct?.id,
 		autumnBillingPlan.deleteCustomerProduct?.id,
 	]);
 
