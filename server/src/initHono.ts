@@ -12,6 +12,7 @@ import type { HonoEnv } from "./honoUtils/HonoEnv.js";
 import { handleHealthCheck } from "./honoUtils/handleHealthCheck.js";
 import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
 import { apiRouter } from "./routers/apiRouter.js";
+import { cliRouter } from "./routers/cliRouter.js";
 import { internalRouter } from "./routers/internalRouter.js";
 import { auth } from "./utils/auth.js";
 
@@ -102,6 +103,7 @@ export const createHonoApp = () => {
 
 	// API Middleware
 	app.route("/v1", apiRouter);
+	app.route("", cliRouter);
 	app.route("", internalRouter);
 
 	app.onError(errorMiddleware);

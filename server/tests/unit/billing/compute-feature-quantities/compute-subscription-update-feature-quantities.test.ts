@@ -689,10 +689,8 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				currentCustomerProduct: cusProduct,
 			});
 
-			// quantity: 0 is falsy, so paramsToFeatureOptions returns undefined
-			// Falls back to current quantity
 			expect(result).toHaveLength(1);
-			expect(result[0].quantity).toBe(100);
+			expect(result[0].quantity).toBe(0);
 		});
 
 		test("handles feature matched by internal_feature_id in current options", () => {

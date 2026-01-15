@@ -13,10 +13,9 @@
  */
 
 import { expect } from "bun:test";
+import { FeatureUsageType } from "@autumn/shared";
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements";
-import {
-	prices,
-} from "@tests/utils/fixtures/db/prices";
+import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
 
 // ============ TIME CONSTANTS ============
@@ -116,6 +115,7 @@ export const createProductWithAllPriceTypes = ({
 	});
 
 	// Allocated: has usage (allowance - balance = usage)
+	// Must set usage_type: Continuous for isAllocatedCustomerEntitlement to return true
 	const allocatedAllowance = 10;
 	const allocatedEntitlement = customerEntitlements.create({
 		entitlementId: `ent_${productId}_seats`,
@@ -125,6 +125,7 @@ export const createProductWithAllPriceTypes = ({
 		allowance: allocatedAllowance,
 		balance: allocatedAllowance - allocatedUsage, // Usage = allocatedUsage
 		customerProductId,
+		featureConfig: { usage_type: FeatureUsageType.Continuous },
 	});
 
 	// Feature options for prepaid quantity

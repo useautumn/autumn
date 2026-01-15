@@ -1,6 +1,5 @@
 import "dotenv/config";
 
-import { Autumn } from "autumn-js";
 import { autumnHandler } from "autumn-js/express";
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
@@ -8,29 +7,14 @@ import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { withOrgAuth } from "../middleware/authMiddleware.js";
 import { analyticsRouter } from "./analytics/internalAnalyticsRouter.js";
 import { trmnlRouter } from "./api/trmnl/trmnlRouter.js";
-import { cusRouter } from "./customers/internalCusRouter.js";
-import { devRouter } from "./dev/devRouter.js";
 import { InvoiceService } from "./invoices/InvoiceService.js";
-import { onboardingRouter } from "./orgs/onboarding/onboardingRouter.js";
 
-import { expressProductRouter } from "./products/internalProductRouter.js";
 import { viewsRouter } from "./saved-views/savedViewsRouter.js";
 
 const mainRouter: Router = Router();
 
-// mainRouter.get("", async (req: any, res) => {
-// 	res.status(200).json({ message: "Hello World" });
-// });
-
-// mainRouter.use("/users", withAuth, userRouter);
-mainRouter.use("/onboarding", withOrgAuth, onboardingRouter);
-
-mainRouter.use("/products", withOrgAuth, expressProductRouter);
-mainRouter.use("/dev", devRouter);
-mainRouter.use("/customers", withOrgAuth, cusRouter);
 mainRouter.use("/query", withOrgAuth, analyticsRouter);
 mainRouter.use("/saved_views", withOrgAuth, viewsRouter);
-
 mainRouter.use("/trmnl", trmnlRouter);
 
 const limiter = rateLimit({
