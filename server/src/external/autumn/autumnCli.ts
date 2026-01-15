@@ -5,9 +5,12 @@ dotenv.config();
 
 import {
 	type ApiBaseEntity,
-	ApiEntityV0,
+	type ApiCusFeatureV3,
+	type ApiCusProductV3,
+	type ApiEntityV0,
 	type AttachBodyV0,
 	type BalancesUpdateParams,
+	type BillingResponse,
 	type CheckQuery,
 	type CreateBalanceParams,
 	type CreateCustomerParams,
@@ -456,14 +459,19 @@ export class AutumnInt {
 	};
 
 	entities = {
-		get: async (
+		get: async <
+			T = ApiEntityV0 & {
+				features: Record<string, ApiCusFeatureV3>;
+				products: ApiCusProductV3[];
+			},
+		>(
 			customerId: string,
 			entityId: string,
 			params?: {
 				expand?: EntityExpand[];
 				skip_cache?: string;
 			},
-		): Promise<ApiEntityV0> => {
+		): Promise<T> => {
 			const queryParams = new URLSearchParams();
 			const defaultParams = {
 				expand: [EntityExpand.Invoices],
@@ -480,7 +488,7 @@ export class AutumnInt {
 			const data = await this.get(
 				`/customers/${customerId}/entities/${entityId}?${queryParams.toString()}`,
 			);
-			return data;
+			return data as T;
 		},
 
 		create: async (
@@ -722,7 +730,7 @@ export class AutumnInt {
 		update: async (
 			params: UpdateSubscriptionV0Params,
 			{ timeout }: { timeout?: number } = {},
-		) => {
+		): Promise<BillingResponse> => {
 			const data = await this.post(`/subscriptions/update`, params);
 			if (timeout) {
 				await new Promise((resolve) => setTimeout(resolve, timeout));

@@ -1,24 +1,33 @@
 import {
 	type AppEnv,
+	CusProductStatus,
 	EntitlementSchema,
+	FeatureOptionsSchema,
 	FreeTrialSchema,
+	FullCusProductSchema,
+	FullCustomerEntitlementSchema,
 	LineItemSchema,
 	PriceSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import type { BillingPlan } from "@/internal/billing/v2/types/billingPlan";
-import { FullCusProductSchema } from "../../../../../../shared/models/cusProductModels/cusProductModels";
 
 export const UpdateCustomerEntitlementSchema = z.object({
-	customerEntitlementId: z.string(),
+	customerEntitlement: FullCustomerEntitlementSchema,
 	balanceChange: z.number(),
 });
 
 export const AutumnBillingPlanSchema = z.object({
 	insertCustomerProducts: z.array(FullCusProductSchema),
 
-	updateCustomerProduct: FullCusProductSchema.optional(),
+	updateCustomerProduct: z.object({
+		customerProduct: FullCusProductSchema,
+		updates: z.object({
+			options: z.array(FeatureOptionsSchema).optional(),
+			status: z.enum(CusProductStatus).optional(),
+		}),
+	}),
 	deleteCustomerProduct: FullCusProductSchema.optional(), // Scheduled product to delete (e.g., when updating while canceling)
 
 	customPrices: z.array(PriceSchema), // Custom prices to insert
@@ -40,6 +49,7 @@ export enum StripeBillingStage {
 }
 
 export type DeferredAutumnBillingPlanData = {
+	requestId: string;
 	orgId: string;
 	env: AppEnv;
 	billingPlan: BillingPlan;

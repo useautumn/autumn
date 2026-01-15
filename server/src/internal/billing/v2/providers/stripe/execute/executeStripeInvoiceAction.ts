@@ -1,6 +1,7 @@
 import { ms } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
+import { shouldDeferBillingPlan } from "@/internal/billing/v2/providers/stripe/utils/common/shouldDeferBillingPlan";
 import { createInvoiceForBilling } from "@/internal/billing/v2/providers/stripe/utils/invoices/createInvoiceForBilling";
 import { StripeBillingStage } from "@/internal/billing/v2/types/autumnBillingPlan";
 import type {
@@ -33,7 +34,7 @@ export const executeStripeInvoiceAction = async ({
 
 	logger.debug("[executeStripeInvoiceAction] Creating invoice for billing");
 
-	const { invoice, actionRequired } = await createInvoiceForBilling({
+	const { invoice, requiredAction } = await createInvoiceForBilling({
 		ctx,
 		billingContext,
 		stripeInvoiceAction,
@@ -42,14 +43,15 @@ export const executeStripeInvoiceAction = async ({
 
 	// Insert metadata into DB
 
+	const deferBillingPlan = shouldDeferBillingPlan({
+		billingContext,
+		latestStripeInvoice: invoice,
+		requiredAction,
+	});
+
 	const deferredInvoiceMode = isDeferredInvoiceMode({
 		billingContext,
 	});
-
-	// const actionRequired = invoice.status === "open" && !isInvoiceMode;
-
-	const deferBillingPlan =
-		invoice.status === "open" && (deferredInvoiceMode || actionRequired);
 
 	if (deferBillingPlan) {
 		logger.debug(`Deferring billing plan`);
@@ -75,7 +77,7 @@ export const executeStripeInvoiceAction = async ({
 		return {
 			stripeInvoice: invoice,
 			deferred: true,
-			actionRequired,
+			requiredAction,
 		};
 	}
 

@@ -1,6 +1,10 @@
 import { UpdateSubscriptionV0ParamsSchema } from "@autumn/shared";
+import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
+import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
 import { computeUpdateSubscriptionPlan } from "@/internal/billing/v2/updateSubscription/compute/computeUpdateSubscriptionPlan";
 import { handleUpdateSubscriptionErrors } from "@/internal/billing/v2/updateSubscription/errors/handleUpdateSubscriptionErrors";
+import { logUpdateSubscriptionContext } from "@/internal/billing/v2/updateSubscription/logs/logUpdateSubscriptionContext";
+import { logUpdateSubscriptionPlan } from "@/internal/billing/v2/updateSubscription/logs/logUpdateSubscriptionPlan";
 import { billingResultToResponse } from "@/internal/billing/v2/utils/billingResult/billingResultToResponse";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { executeBillingPlan } from "../execute/executeBillingPlan";
@@ -13,19 +17,22 @@ export const handleUpdateSubscription = createRoute({
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
 
-		ctx.logger.info(`===============================================`);
-		ctx.logger.info(`UPDATE SUBSCRIPTION RUNNING FOR ${body.customer_id}`);
+		ctx.logger.info(
+			`=============== RUNNING UPDATE SUBSCRIPTION FOR ${body.customer_id} ===============`,
+		);
 
 		const billingContext = await setupUpdateSubscriptionBillingContext({
 			ctx,
 			params: body,
 		});
+		logUpdateSubscriptionContext({ ctx, billingContext });
 
 		const autumnBillingPlan = await computeUpdateSubscriptionPlan({
 			ctx,
 			billingContext,
 			params: body,
 		});
+		logUpdateSubscriptionPlan({ ctx, plan: autumnBillingPlan, billingContext });
 
 		await handleUpdateSubscriptionErrors({
 			ctx,
@@ -39,6 +46,7 @@ export const handleUpdateSubscription = createRoute({
 			billingContext,
 			autumnBillingPlan,
 		});
+		logStripeBillingPlan({ ctx, stripeBillingPlan, billingContext });
 
 		const billingResult = await executeBillingPlan({
 			ctx,
@@ -48,13 +56,12 @@ export const handleUpdateSubscription = createRoute({
 				stripe: stripeBillingPlan,
 			},
 		});
+		logStripeBillingResult({ ctx, result: billingResult.stripe });
 
 		const response = billingResultToResponse({
 			billingContext,
 			billingResult,
 		});
-
-		ctx.logger.info("[handleUpdateSubscription] Completed", { response });
 
 		return c.json(response, 200);
 	},

@@ -52,8 +52,10 @@ export const computeCustomPlan = async ({
 	return {
 		insertCustomerProducts: [newFullCustomerProduct],
 		updateCustomerProduct: {
-			...customerProduct,
-			status: CusProductStatus.Expired,
+			customerProduct,
+			updates: {
+				status: CusProductStatus.Expired,
+			},
 		},
 		deleteCustomerProduct,
 		customPrices,

@@ -9,7 +9,7 @@ import { handleInvoicePaymentFailure } from "./handleInvoicePaymentFailure";
 export type PayInvoiceResult = {
 	paid: boolean;
 	invoice: Stripe.Invoice;
-	actionRequired?: {
+	requiredAction?: {
 		code: PaymentFailureCode;
 		reason: string;
 	};

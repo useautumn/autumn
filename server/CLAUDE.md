@@ -23,6 +23,16 @@ Default to using Bun instead of Node.js.
 - Prefer `Bun.file` over `node:fs`'s readFile/writeFile
 - Bun.$`ls` instead of execa.
 
+## Type Checking
+
+Use `bun ts` to run type checking with tsgo:
+
+```sh
+bun ts
+```
+
+This runs `bunx tsgo --build --noEmit` which performs fast type checking across the codebase.
+
 ## Testing
 
 Use `bun test` to run tests.

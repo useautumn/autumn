@@ -6,10 +6,8 @@ import {
 	type FullCustomerPrice,
 	type FullProduct,
 	type LineItem,
-	LineItemSchema,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import { z } from "zod/v4";
 import type { StripeInvoiceAction } from "./types/billingPlan";
 
 export type AttachContext = {
@@ -64,15 +62,6 @@ export type AttachPlan = {
 export type BillingPlan = {
 	intent: "attach" | "update_quantity" | "update_plan" | "cancel" | "one_off";
 };
-
-export const QuantityUpdateDetailsSchema = z.object({
-	featureId: z.string(),
-	customerEntitlementId: z.string(),
-	customerEntitlementBalanceChange: z.number(),
-	lineItems: z.array(LineItemSchema),
-});
-
-export type QuantityUpdateDetails = z.infer<typeof QuantityUpdateDetailsSchema>;
 
 export type SubscriptionUpdateInvoiceAction = {
 	shouldCreateInvoice: boolean;

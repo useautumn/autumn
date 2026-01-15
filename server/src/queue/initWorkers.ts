@@ -19,6 +19,7 @@ import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigration
 import { detectBaseVariant } from "@/internal/products/productUtils/detectProductVariant.js";
 import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutReward.js";
 import { generateId } from "@/utils/genUtils.js";
+import { addWorkflowToLogs } from "@/utils/logging/addContextToLogs.js";
 import { hatchet } from "../external/hatchet/initHatchet.js";
 import { setSentryTags } from "../external/sentry/sentryUtils.js";
 import { createWorkerContext } from "./createWorkerContext.js";
@@ -53,13 +54,12 @@ const processMessage = async ({
 
 	const job: SqsJob = JSON.parse(message.Body);
 
-	const workerLogger = logger.child({
-		context: {
-			worker: {
-				messageId: message.MessageId,
-				type: job.name,
-				payload: job.data,
-			},
+	const workerLogger = addWorkflowToLogs({
+		logger: logger,
+		workflowContext: {
+			id: message.MessageId ?? generateId("job"),
+			name: job.name,
+			payload: job.data,
 		},
 	});
 

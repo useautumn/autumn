@@ -14,6 +14,7 @@ export const completeInvoiceConfirmation = async ({
 	url: string;
 	isLocal?: boolean;
 }) => {
+	console.log("🔐 Invoice confirmation starting...");
 	let browser: Browser;
 
 	// if (process.env.NODE_ENV === "development" && !isLocal) {
@@ -121,6 +122,7 @@ export const completeInvoiceConfirmation = async ({
 
 		// Wait for the 3DS authentication to complete
 		await timeout(10000);
+		console.log("✅ Invoice confirmation completed");
 	} finally {
 		// always close browser
 		await browser.close();

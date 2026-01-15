@@ -50,6 +50,8 @@ export const initCustomerEntitlement = ({
 		id: generateId("cus_ent"),
 		internal_customer_id: fullCustomer.internal_id,
 		internal_feature_id: entitlement.internal_feature_id,
+		internal_entity_id: null,
+
 		feature_id: entitlement.feature.id,
 		customer_id: fullCustomer.id,
 		entitlement_id: entitlement.id,
@@ -64,6 +66,8 @@ export const initCustomerEntitlement = ({
 		entities,
 		usage_allowed: usageAllowed,
 		next_reset_at: nextResetAt,
+
+		expires_at: null,
 	};
 };
 

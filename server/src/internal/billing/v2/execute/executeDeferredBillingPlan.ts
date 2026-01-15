@@ -4,6 +4,7 @@ import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeA
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan";
 import type { DeferredAutumnBillingPlanData } from "@/internal/billing/v2/types/billingPlan";
 import { MetadataService } from "@/internal/metadata/MetadataService";
+import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 
 export const executeDeferredBillingPlan = async ({
 	ctx,
@@ -12,15 +13,19 @@ export const executeDeferredBillingPlan = async ({
 	ctx: AutumnContext;
 	metadata: Metadata;
 }) => {
-	const { logger, db } = ctx;
+	const { db } = ctx;
 	const data = metadata.data as DeferredAutumnBillingPlanData;
 
-	if (data.orgId !== ctx.org.id || data.env !== ctx.env) {
-		logger.warn("Deferred billing plan org/env mismatch, skipping");
-		return;
-	}
+	if (data.orgId !== ctx.org.id || data.env !== ctx.env) return;
 
 	const { billingPlan, billingContext, resumeAfter } = data;
+
+	addToExtraLogs({
+		ctx,
+		extras: {
+			originalRequestId: data.requestId,
+		},
+	});
 
 	// Execute stripe billing plan
 	await executeStripeBillingPlan({

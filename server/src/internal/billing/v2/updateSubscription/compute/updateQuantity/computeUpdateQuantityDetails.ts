@@ -1,17 +1,18 @@
 import {
 	customerPriceToCustomerEntitlement,
 	type FeatureOptions,
+	type FullCustomerEntitlement,
 	findCusPriceByFeature,
 	findFeatureByInternalId,
 	findFeatureOptionsByFeature,
 	InternalError,
 	isOneOffPrice,
+	type LineItem,
 	RecaseError,
 } from "@autumn/shared";
 import { getLineItemBillingPeriod } from "@shared/utils/billingUtils/cycleUtils/getLineItemBillingPeriod";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
-import type { QuantityUpdateDetails } from "@/internal/billing/v2/typesOld";
 import { calculateUpdateQuantityDifferences } from "./calculateUpdateQuantityDifferences";
 import { calculateUpdateQuantityEntitlementChange } from "./calculateUpdateQuantityEntitlementChange";
 import { computeUpdateQuantityLineItems } from "./computeUpdateQuantityLineItems";
@@ -37,7 +38,12 @@ export const computeUpdateQuantityDetails = ({
 	ctx: AutumnContext;
 	updatedOptions: FeatureOptions;
 	updateSubscriptionContext: UpdateSubscriptionBillingContext;
-}): QuantityUpdateDetails => {
+}): {
+	featureId: string;
+	customerEntitlement: FullCustomerEntitlement;
+	customerEntitlementBalanceChange: number;
+	lineItems: LineItem[];
+} => {
 	const { customerProduct, currentEpochMs, billingCycleAnchorMs } =
 		updateSubscriptionContext;
 	const { features } = ctx;
@@ -85,7 +91,7 @@ export const computeUpdateQuantityDetails = ({
 		errorOnNotFound: true,
 	});
 
-	const { customerEntitlementId, customerEntitlementBalanceChange } =
+	const { customerEntitlementBalanceChange } =
 		calculateUpdateQuantityEntitlementChange({
 			quantityDifferenceForEntitlements:
 				quantityDifferences.quantityDifferenceForEntitlements,
@@ -124,7 +130,7 @@ export const computeUpdateQuantityDetails = ({
 
 	return {
 		featureId,
-		customerEntitlementId,
+		customerEntitlement,
 		customerEntitlementBalanceChange,
 		lineItems,
 	};

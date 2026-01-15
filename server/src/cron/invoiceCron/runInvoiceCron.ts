@@ -78,6 +78,7 @@ export const runInvoiceCron = async ({ ctx }: { ctx: CronContext }) => {
 					or(
 						eq(metadata.type, MetadataType.InvoiceActionRequired),
 						eq(metadata.type, MetadataType.InvoiceCheckout),
+						eq(metadata.type, MetadataType.DeferredInvoice),
 					),
 					lt(metadata.expires_at, Date.now()),
 					isNotNull(metadata.stripe_invoice_id),

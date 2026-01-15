@@ -61,5 +61,6 @@ export const createWorkerAutumnContext = async ({
 		apiVersion,
 		timestamp: Date.now(),
 		skipCache: false,
+		extraLogs: {},
 	} satisfies AutumnContext;
 };

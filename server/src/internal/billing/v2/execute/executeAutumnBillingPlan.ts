@@ -46,7 +46,7 @@ export const executeAutumnBillingPlan = async ({
 	}
 
 	ctx.logger.debug(
-		`[executeAutumnBillingPlan] inserting new customer products: ${insertCustomerProducts.map((cp) => cp.product.id).join(", ")}`,
+		`[execAutumnPlan] inserting new customer products: ${insertCustomerProducts.map((cp) => cp.product.id).join(", ")}`,
 	);
 	// 2. Insert new customer products
 	await insertNewCusProducts({
@@ -56,20 +56,15 @@ export const executeAutumnBillingPlan = async ({
 
 	// 3. Update customer product options
 	if (updateCustomerProduct) {
+		const { customerProduct, updates } = updateCustomerProduct;
 		ctx.logger.debug(
-			`[executeAutumnBillingPlan] updating customer product: ${updateCustomerProduct.product.id}, updates:`,
-			{
-				options: updateCustomerProduct.options,
-				status: updateCustomerProduct.status,
-			},
+			`[execAutumnPlan] updating customer product: ${customerProduct.id}, updates:`,
+			updates,
 		);
 		await CusProductService.update({
 			db,
-			cusProductId: updateCustomerProduct.id,
-			updates: {
-				options: updateCustomerProduct.options,
-				status: updateCustomerProduct.status,
-			},
+			cusProductId: customerProduct.id,
+			updates,
 		});
 	}
 

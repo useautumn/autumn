@@ -17,17 +17,11 @@ export const updateCustomerProductOptions = async ({
 	customerProductId: string;
 	updatedFeatureOptions: FeatureOptions[];
 }) => {
-	const { db, logger } = ctx;
-
-	logger.info(
-		`Updating customer product ${customerProductId} with ${updatedFeatureOptions.length} feature options`,
-	);
+	const { db } = ctx;
 
 	await CusProductService.update({
 		db,
 		cusProductId: customerProductId,
 		updates: { options: updatedFeatureOptions },
 	});
-
-	logger.info("Successfully updated customer product options");
 };

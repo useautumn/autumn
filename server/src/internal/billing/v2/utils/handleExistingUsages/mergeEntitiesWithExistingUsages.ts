@@ -1,5 +1,4 @@
-import type { ExistingUsages } from "../../../../../../shared/models/billingModels/existingUsages";
-import type { Entity } from "../../../../../../shared/models/cusModels/entityModels/entityModels";
+import type { Entity, ExistingUsages } from "@autumn/shared";
 
 export const mergeEntitiesWithExistingUsages = ({
 	entities,

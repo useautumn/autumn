@@ -28,19 +28,19 @@ const logSharedSubscriptionTrialLineItems = ({
 		`  ${item.description}: ${chalk.yellow(item.finalAmount.toFixed(2))}`;
 
 	// Structured info log
-	logger.info(`buildSharedSubscriptionTrialLineItems data`, {
-		data: {
-			direction,
-			sibilingCustomerProducts: siblingCustomerProducts.map(
-				(customerProduct) => ({
-					id: customerProduct.id,
-					productId: customerProduct.product?.id,
-					entityId: customerProduct.entity_id,
-				}),
-			),
-			lineItems: lineItems.map(formatLineItem),
-		},
-	});
+	// logger.info(`buildSharedSubscriptionTrialLineItems data`, {
+	// 	data: {
+	// 		direction,
+	// 		sibilingCustomerProducts: siblingCustomerProducts.map(
+	// 			(customerProduct) => ({
+	// 				id: customerProduct.id,
+	// 				productId: customerProduct.product?.id,
+	// 				entityId: customerProduct.entity_id,
+	// 			}),
+	// 		),
+	// 		lineItems: lineItems.map(formatLineItem),
+	// 	},
+	// });
 
 	// Debug output
 	logger.debug("========== [buildSharedSubscriptionTrialLineItems] ==========");
@@ -71,7 +71,7 @@ const getSiblingCustomerProducts = ({
 }): FullCusProduct[] => {
 	const handledIds = new Set([
 		...autumnBillingPlan.insertCustomerProducts.map((cp) => cp.id),
-		autumnBillingPlan.updateCustomerProduct?.id,
+		autumnBillingPlan.updateCustomerProduct?.customerProduct.id,
 		autumnBillingPlan.deleteCustomerProduct?.id,
 	]);
 
@@ -98,8 +98,8 @@ export const buildSharedSubscriptionTrialLineItems = ({
 	billingContext: UpdateSubscriptionBillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
 }): LineItem[] => {
-	const { org, logger } = ctx;
-	const { fullCustomer, stripeSubscription, currentEpochMs } = billingContext;
+	const { logger } = ctx;
+	const { fullCustomer, stripeSubscription } = billingContext;
 
 	if (!stripeSubscription) return [];
 
