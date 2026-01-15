@@ -7,8 +7,8 @@ import {
 	UpdateSubscriptionIntent,
 } from "@/internal/billing/v2/updateSubscription/compute/computeUpdateSubscriptionIntent";
 import { computeCustomPlan } from "@/internal/billing/v2/updateSubscription/compute/customPlan/computeCustomPlan";
-import { computeUpdateQuantityPlan } from "@/internal/billing/v2/updateSubscription/compute/updateQuantity/computeUpdateQuantityPlan";
 import { finalizeUpdateSubscriptionPlan } from "@/internal/billing/v2/updateSubscription/compute/finalizeUpdateSubscriptionPlan";
+import { computeUpdateQuantityPlan } from "@/internal/billing/v2/updateSubscription/compute/updateQuantity/computeUpdateQuantityPlan";
 
 /**
  * Compute the subscription update plan

@@ -2,6 +2,8 @@ import { ApiVersion, type ProductV2 } from "@autumn/shared";
 import type { CustomerData } from "autumn-js";
 import { addHours, addMonths } from "date-fns";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { removeAllPaymentMethods } from "@/external/stripe/customers/paymentMethods/operations/removeAllPaymentMethods.js";
+import { attachPaymentMethod as attachPaymentMethodFn } from "@/utils/scriptUtils/initCustomer.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 import { hoursToFinalizeInvoice } from "../constants.js";
@@ -53,7 +55,21 @@ type AdvanceClockAction = {
 	toNextInvoice?: boolean;
 };
 
-type ScenarioAction = AttachAction | CancelAction | AdvanceClockAction;
+type AttachPaymentMethodAction = {
+	type: "attachPaymentMethod";
+	paymentMethodType: "success" | "fail" | "authenticate";
+};
+
+type RemovePaymentMethodAction = {
+	type: "removePaymentMethod";
+};
+
+type ScenarioAction =
+	| AttachAction
+	| CancelAction
+	| AdvanceClockAction
+	| AttachPaymentMethodAction
+	| RemovePaymentMethodAction;
 
 type ScenarioConfig = {
 	testClock: boolean;
@@ -273,6 +289,47 @@ const advanceTestClock = ({
 };
 
 /**
+ * Attach or replace a payment method for the customer.
+ * Useful for testing payment failures or 3DS authentication flows mid-scenario.
+ * @param type - Payment method type: "success", "fail", or "authenticate"
+ * @example s.attachPaymentMethod({ type: "authenticate" }) // attach 3DS-required card
+ * @example s.attachPaymentMethod({ type: "fail" }) // attach card that will fail
+ */
+const attachPaymentMethod = ({
+	type,
+}: {
+	type: "success" | "fail" | "authenticate";
+}): ConfigFn => {
+	return (config) => ({
+		...config,
+		actions: [
+			...config.actions,
+			{
+				type: "attachPaymentMethod" as const,
+				paymentMethodType: type,
+			},
+		],
+	});
+};
+
+/**
+ * Remove all payment methods from the customer.
+ * Useful for testing "no payment method" scenarios.
+ * @example s.removePaymentMethod()
+ */
+const removePaymentMethod = (): ConfigFn => {
+	return (config) => ({
+		...config,
+		actions: [
+			...config.actions,
+			{
+				type: "removePaymentMethod" as const,
+			},
+		],
+	});
+};
+
+/**
  * Scenario configuration functions.
  * Import and use with initScenario to configure test setup.
  * @example
@@ -296,6 +353,8 @@ export const s = {
 	attach,
 	cancel,
 	advanceTestClock,
+	attachPaymentMethod,
+	removePaymentMethod,
 } as const;
 
 // ═══════════════════════════════════════════════════════════════════
@@ -486,6 +545,29 @@ export const initScenario = async ({
 					numberOfMonths: action.months,
 				});
 			}
+		} else if (action.type === "attachPaymentMethod") {
+			const stripeCusId = customer?.processor?.id;
+			if (!stripeCusId) {
+				throw new Error(
+					"Cannot attach payment method: customer has no Stripe ID",
+				);
+			}
+			await attachPaymentMethodFn({
+				stripeCli: ctx.stripeCli,
+				stripeCusId,
+				type: action.paymentMethodType,
+			});
+		} else if (action.type === "removePaymentMethod") {
+			const stripeCusId = customer?.processor?.id;
+			if (!stripeCusId) {
+				throw new Error(
+					"Cannot remove payment method: customer has no Stripe ID",
+				);
+			}
+			await removeAllPaymentMethods({
+				stripeClient: ctx.stripeCli,
+				stripeCustomerId: stripeCusId,
+			});
 		}
 	}
 

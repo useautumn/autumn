@@ -1,8 +1,4 @@
-import {
-	type FullCusProduct,
-	type FullProduct,
-	formatMs,
-} from "@autumn/shared";
+import type { FullCusProduct, FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
 import { cusProductToExistingRollovers } from "@/internal/billing/v2/utils/handleExistingRollovers/cusProductToExistingRollovers";
@@ -40,11 +36,6 @@ export const computeCustomPlanNewCustomerProduct = ({
 		cusProduct: customerProduct,
 	});
 
-	console.log("Trial context: ", {
-		trialEndsAt: formatMs(trialContext?.trialEndsAt),
-		freeTrial: trialContext?.freeTrial,
-	});
-
 	// Compute the new full customer product
 	const newFullCustomerProduct = initFullCustomerProduct({
 		ctx,
@@ -63,7 +54,7 @@ export const computeCustomPlanNewCustomerProduct = ({
 		},
 
 		initOptions: {
-			isCustom: true,
+			isCustom: updateSubscriptionContext.isCustom,
 			subscriptionId: stripeSubscription?.id, // don't populate if it's starting in the future.
 			subscriptionScheduleId: stripeSubscriptionSchedule?.id,
 

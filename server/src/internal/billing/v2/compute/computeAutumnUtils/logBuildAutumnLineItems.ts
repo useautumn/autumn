@@ -17,13 +17,6 @@ export const logBuildAutumnLineItems = ({
 	deletedLineItems: LineItem[];
 	newLineItems: LineItem[];
 }) => {
-	logger.info(`buildAutumnLineItems data`, {
-		data: {
-			deletedLineItems: deletedLineItems.map(formatLineItem),
-			newLineItems: newLineItems.map(formatLineItem),
-		},
-	});
-
 	// Debug output (compact table format)
 	const formatLineItemCompact = (item: LineItem) =>
 		`  ${item.description}: ${chalk.yellow(item.finalAmount.toFixed(2))}`;

@@ -14,6 +14,7 @@ import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingCont
  * - Excludes in_advance positive items (no charge for upcoming trial period)
  */
 export const filterLineItemsForTrialTransition = ({
+	// biome-ignore lint/correctness/noUnusedFunctionParameters: might be used in the future
 	ctx,
 	lineItems,
 	billingContext,
@@ -29,16 +30,6 @@ export const filterLineItemsForTrialTransition = ({
 	// No filtering needed if no trial transition
 	if (!isTrialing && !willBeTrialing) {
 		return lineItems;
-	}
-
-	if (isTrialing && !willBeTrialing) {
-		ctx.logger.info(
-			`Trial transition: ending trial, clearing refund line items`,
-		);
-	} else if (!isTrialing && willBeTrialing) {
-		ctx.logger.info(
-			`Trial transition: starting trial, clearing charge line items`,
-		);
 	}
 
 	return lineItems.filter((lineItem) => {

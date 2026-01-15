@@ -5,9 +5,10 @@ dotenv.config();
 
 import {
 	type ApiBaseEntity,
-	ApiEntityV0,
+	type ApiEntityV0,
 	type AttachBodyV0,
 	type BalancesUpdateParams,
+	type BillingResponse,
 	type CheckQuery,
 	type CreateBalanceParams,
 	type CreateCustomerParams,
@@ -722,7 +723,7 @@ export class AutumnInt {
 		update: async (
 			params: UpdateSubscriptionV0Params,
 			{ timeout }: { timeout?: number } = {},
-		) => {
+		): Promise<BillingResponse> => {
 			const data = await this.post(`/subscriptions/update`, params);
 			if (timeout) {
 				await new Promise((resolve) => setTimeout(resolve, timeout));

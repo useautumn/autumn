@@ -8,6 +8,11 @@ export const PaymentFailureCodeEnum = z.enum([
 
 export type PaymentFailureCode = z.infer<typeof PaymentFailureCodeEnum>;
 
+export const BillingResponseRequiredActionSchema = z.object({
+	code: PaymentFailureCodeEnum,
+	reason: z.string(),
+});
+
 export const BillingResponseSchema = z.object({
 	customer_id: z.string(),
 	entity_id: z.string().optional(),
@@ -24,12 +29,10 @@ export const BillingResponseSchema = z.object({
 
 	payment_url: z.string().nullable(),
 
-	required_action: z
-		.object({
-			code: PaymentFailureCodeEnum,
-			reason: z.string(),
-		})
-		.optional(),
+	required_action: BillingResponseRequiredActionSchema.optional(),
 });
 
 export type BillingResponse = z.infer<typeof BillingResponseSchema>;
+export type BillingResponseRequiredAction = z.infer<
+	typeof BillingResponseRequiredActionSchema
+>;

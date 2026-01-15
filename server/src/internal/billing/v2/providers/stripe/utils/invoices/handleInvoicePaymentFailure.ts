@@ -6,7 +6,7 @@ import type { PayInvoiceResult } from "./payStripeInvoice";
 // ============================================
 
 /**
- * Maps Stripe error codes to payment failure codes.
+ * Maps Stripe error codes/messages to payment failure codes.
  * Returns "3ds_required" for authentication errors, "payment_failed" for all others.
  */
 const getFailureCodeFromStripeError = ({
@@ -17,6 +17,16 @@ const getFailureCodeFromStripeError = ({
 	const authCodes = ["authentication_required", "authentication_not_handled"];
 
 	if (authCodes.includes(stripeError.code ?? "")) {
+		return "3ds_required";
+	}
+
+	// Check message for 3DS indicators (Stripe doesn't always set the code)
+	const message = stripeError.message?.toLowerCase() ?? "";
+	if (
+		message.includes("additional user action") ||
+		message.includes("authentication") ||
+		message.includes("3d secure")
+	) {
 		return "3ds_required";
 	}
 
@@ -43,7 +53,7 @@ export const handleInvoicePaymentFailure = ({
 		return {
 			paid: false,
 			invoice,
-			actionRequired: {
+			requiredAction: {
 				code: "payment_method_required",
 				reason: "No payment method found",
 			},
@@ -60,7 +70,7 @@ export const handleInvoicePaymentFailure = ({
 	return {
 		paid: false,
 		invoice,
-		actionRequired: {
+		requiredAction: {
 			code: getFailureCodeFromStripeError({ stripeError }),
 			reason: stripeError.message ?? "Failed to pay invoice",
 		},

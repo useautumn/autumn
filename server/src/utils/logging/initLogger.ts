@@ -83,6 +83,10 @@ const createDevLogStream = () => {
 					"data",
 					"body",
 					"query",
+
+					"workflow",
+					"stripe_event",
+					"extras",
 				];
 				const additionalFields = Object.keys(log)
 					.filter((key) => !excludeFields.includes(key))
@@ -130,7 +134,11 @@ export const initLogger = () => {
 			stream: pino.transport({
 				target: "@axiomhq/pino",
 				options: {
-					dataset: "express",
+					dataset:
+						process.env.NODE_ENV === "test" ||
+						process.env.NODE_ENV === "development"
+							? "server-dev"
+							: "express",
 					token: process.env.AXIOM_TOKEN,
 				},
 			}),

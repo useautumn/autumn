@@ -1,4 +1,4 @@
-import type { UpdateSubscriptionV0Params } from "@autumn/shared";
+import { notNullish, type UpdateSubscriptionV0Params } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
@@ -87,6 +87,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 	});
 
 	const invoiceMode = setupInvoiceModeContext({ params });
+	const isCustom = notNullish(params.items);
 
 	return {
 		fullCustomer,
@@ -108,5 +109,6 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		customPrices,
 		customEnts,
 		trialContext,
+		isCustom,
 	};
 };

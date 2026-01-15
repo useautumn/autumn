@@ -1,15 +1,16 @@
-import { ms } from "@autumn/shared";
+import { ms, tryCatch } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
-import { logStripeInvoice } from "@/external/stripe/invoices/utils/logStripeInvoice";
 import { isStripeSubscriptionCanceled } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import { setStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
 import { removeStripeSubscriptionIdFromBillingPlan } from "@/internal/billing/v2/execute/removeStripeSubscriptionIdFromBillingPlan";
+import { shouldDeferBillingPlan } from "@/internal/billing/v2/providers/stripe/utils/common/shouldDeferBillingPlan";
 import { finalizeStripeInvoice } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 import { executeStripeSubscriptionOperation } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/executeStripeSubscriptionOperation";
 import { getLatestInvoiceFromSubscriptionAction } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/getLatestInvoiceFromSubscriptionAction";
+import { getRequiredActionFromSubscriptionInvoice } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/getRequiredActionFromSubscriptionInvoice";
 import { StripeBillingStage } from "@/internal/billing/v2/types/autumnBillingPlan";
 import type { BillingPlan } from "@/internal/billing/v2/types/billingPlan";
 import type { StripeBillingPlanResult } from "@/internal/billing/v2/types/billingResult";
@@ -43,11 +44,17 @@ export const executeStripeSubscriptionAction = async ({
 	}
 
 	logger.debug(`[execSubAction] Executing subscription operation`);
-	stripeSubscription = await executeStripeSubscriptionOperation({
-		ctx,
-		billingContext,
-		subscriptionAction,
-	});
+	const { data: updatedStripeSubscription, error } = await tryCatch(
+		executeStripeSubscriptionOperation({
+			ctx,
+			billingContext,
+			subscriptionAction,
+		}),
+	);
+
+	if (error) throw error;
+
+	stripeSubscription = updatedStripeSubscription;
 
 	let latestStripeInvoice = getLatestInvoiceFromSubscriptionAction({
 		stripeSubscription,
@@ -61,14 +68,25 @@ export const executeStripeSubscriptionAction = async ({
 			stripeCli: createStripeCli({ org: ctx.org, env: ctx.env }),
 			invoiceId: latestStripeInvoice.id,
 		});
-
-		logStripeInvoice({
-			logger,
-			stripeInvoice: latestStripeInvoice,
-		});
 	}
 
-	const deferBillingPlan = latestStripeInvoice?.status === "open";
+	// Determine required action from invoice payment intent status (only if open)
+	const requiredAction =
+		latestStripeInvoice?.status === "open"
+			? await getRequiredActionFromSubscriptionInvoice({
+					stripeClient: createStripeCli({ org: ctx.org, env: ctx.env }),
+					invoiceId: latestStripeInvoice!.id,
+					hasPaymentMethod: Boolean(billingContext.paymentMethod),
+				})
+			: undefined;
+
+	const deferBillingPlan = latestStripeInvoice
+		? shouldDeferBillingPlan({
+				billingContext,
+				latestStripeInvoice,
+				requiredAction,
+			})
+		: false;
 
 	if (latestStripeInvoice) {
 		logger.debug(`[execSubAction] Upserting invoice from billing`);
@@ -81,12 +99,6 @@ export const executeStripeSubscriptionAction = async ({
 	}
 
 	if (deferBillingPlan) {
-		if (!latestStripeInvoice) {
-			logger.error(
-				"Attempted to defer billing plan with no latest stripe invoice",
-			);
-		}
-
 		logger.debug(`[execSubAction] Inserting metadata from billing plan`);
 
 		// Required if we resume after and carry out subscription schedule action
@@ -108,6 +120,7 @@ export const executeStripeSubscriptionAction = async ({
 			stripeInvoice: latestStripeInvoice,
 			stripeSubscription,
 			deferred: true,
+			requiredAction,
 		};
 	}
 

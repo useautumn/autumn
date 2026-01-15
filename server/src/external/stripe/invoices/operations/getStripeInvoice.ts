@@ -1,8 +1,22 @@
 import type Stripe from "stripe";
 
+// Helper type for InvoicePayment with expanded payment intent
+type InvoicePaymentWithExpandedPaymentIntent = Omit<
+	Stripe.InvoicePayment,
+	"payment"
+> & {
+	payment: {
+		payment_intent: Stripe.PaymentIntent;
+		type: "payment_intent";
+	};
+};
+
 // Map expand strings to their expanded types
 type InvoiceExpandMap = {
 	payments: { payments: Stripe.ApiList<Stripe.InvoicePayment> };
+	"payments.data.payment.payment_intent": {
+		payments: Stripe.ApiList<InvoicePaymentWithExpandedPaymentIntent>;
+	};
 	discounts: { discounts: Stripe.Discount[] };
 	"discounts.source.coupon": {
 		discounts: (Stripe.Discount & { source: { coupon: Stripe.Coupon } })[];

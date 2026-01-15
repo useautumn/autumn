@@ -12,13 +12,10 @@ export const executeDeferredBillingPlan = async ({
 	ctx: AutumnContext;
 	metadata: Metadata;
 }) => {
-	const { logger, db } = ctx;
+	const { db } = ctx;
 	const data = metadata.data as DeferredAutumnBillingPlanData;
 
-	if (data.orgId !== ctx.org.id || data.env !== ctx.env) {
-		logger.warn("Deferred billing plan org/env mismatch, skipping");
-		return;
-	}
+	if (data.orgId !== ctx.org.id || data.env !== ctx.env) return;
 
 	const { billingPlan, billingContext, resumeAfter } = data;
 
