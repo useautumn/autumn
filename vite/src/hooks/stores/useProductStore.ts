@@ -274,6 +274,11 @@ export const useIsLatestVersion = (product: FrontendProduct) => {
 	}, [product, products]);
 };
 
+export interface PrepaidItemWithFeature extends ProductItem {
+	feature: ReturnType<typeof itemToFeature>;
+	display: ReturnType<typeof getProductItemDisplay>;
+}
+
 /**
  * Hook to get prepaid items from a product with feature information and display
  */

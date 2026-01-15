@@ -1,0 +1,64 @@
+import {
+	FreeTrialDuration,
+	getRemainingTrialDays,
+	isCustomerProductTrialing,
+} from "@autumn/shared";
+import { useMemo } from "react";
+import { useAppForm } from "@/hooks/form/form";
+import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormContext";
+import {
+	type UpdateSubscriptionForm,
+	UpdateSubscriptionFormSchema,
+} from "../updateSubscriptionFormSchema";
+
+export function useUpdateSubscriptionForm({
+	updateSubscriptionFormContext,
+}: {
+	updateSubscriptionFormContext: UpdateSubscriptionFormContext;
+}) {
+	const { customerProduct, prepaidItems, currentVersion } =
+		updateSubscriptionFormContext;
+
+	const initialPrepaidOptions = useMemo(() => {
+		const subscriptionValues = customerProduct.options.reduce(
+			(accumulator, option) => {
+				accumulator[option.feature_id] = option.quantity;
+				return accumulator;
+			},
+			{} as Record<string, number>,
+		);
+
+		return prepaidItems.reduce(
+			(accumulator, item) => {
+				const featureId = item.feature_id as string;
+				accumulator[featureId] = subscriptionValues[featureId] ?? 0;
+				return accumulator;
+			},
+			{} as Record<string, number>,
+		);
+	}, [customerProduct.options, prepaidItems]);
+
+	const isTrialing = isCustomerProductTrialing(customerProduct);
+	const remainingTrialDays = isTrialing
+		? getRemainingTrialDays({ trialEndsAt: customerProduct.trial_ends_at })
+		: null;
+
+	return useAppForm({
+		defaultValues: {
+			prepaidOptions: initialPrepaidOptions,
+			trialLength: remainingTrialDays,
+			trialDuration: FreeTrialDuration.Day,
+			removeTrial: false,
+			version: currentVersion,
+			items: null,
+		} as UpdateSubscriptionForm,
+		validators: {
+			onChange: UpdateSubscriptionFormSchema,
+			onSubmit: UpdateSubscriptionFormSchema,
+		},
+	});
+}
+
+export type UseUpdateSubscriptionForm = ReturnType<
+	typeof useUpdateSubscriptionForm
+>;

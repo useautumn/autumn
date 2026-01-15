@@ -1,6 +1,7 @@
 import type {
 	CreateFreeTrial,
 	FeatureOptions,
+	ProductItem,
 	ProductV2,
 } from "@autumn/shared";
 
@@ -15,6 +16,7 @@ export const getUpdateSubscriptionBody = ({
 	version,
 	isCustom = false,
 	freeTrial,
+	items,
 }: {
 	customerId: string;
 	product: ProductV2;
@@ -27,6 +29,8 @@ export const getUpdateSubscriptionBody = ({
 	isCustom?: boolean;
 	// Free trial param - null removes trial, undefined preserves existing
 	freeTrial?: CreateFreeTrial | null;
+	// Custom items - separate from isCustom logic for preview support
+	items?: ProductItem[] | null;
 }) => {
 	const customData = isCustom
 		? {
@@ -61,6 +65,8 @@ export const getUpdateSubscriptionBody = ({
 			: undefined,
 		is_custom: isCustom,
 		...customData,
+		// Override items if explicitly provided (for preview with custom items)
+		...(items && items.length > 0 ? { items } : {}),
 		free_trial: getFreeTrialValue(),
 
 		invoice: useInvoice,

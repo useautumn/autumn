@@ -12,7 +12,7 @@ export type SheetType =
 	| "attach-product"
 	| "subscription-detail"
 	| "subscription-update"
-	| "subscription-update-test" // TEST: Remove this line to revert
+	| "subscription-update-v2"
 	| "balance-selection"
 	| "balance-edit"
 	| null;
