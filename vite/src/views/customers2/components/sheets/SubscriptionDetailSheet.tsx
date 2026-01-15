@@ -181,29 +181,7 @@ export function SubscriptionDetailSheet() {
 				<SheetSection>
 					{productV2 && (
 						<div className="flex gap-2 justify-between items-center h-6 mb-3">
-							<div className="">
-								<BasePriceDisplay product={productV2} readOnly={true} />
-							</div>
-							<div className="flex gap-2">
-								{hasPrepaidItems && !isExpired && !isScheduled && (
-									<IconButton
-										variant="secondary"
-										onClick={handleUpdateQuantities}
-										icon={<ShoppingBagIcon size={16} weight="duotone" />}
-									>
-										Update Quantities
-									</IconButton>
-								)}
-								{canEditPlan() && (
-									<IconButton
-										variant="primary"
-										onClick={handleEditPlan}
-										icon={<PencilSimpleIcon size={16} weight="duotone" />}
-									>
-										Edit Plan
-									</IconButton>
-								)}
-							</div>
+							<BasePriceDisplay product={productV2} readOnly={true} />
 						</div>
 					)}
 
