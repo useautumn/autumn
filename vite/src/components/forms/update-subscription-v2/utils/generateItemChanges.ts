@@ -86,7 +86,6 @@ export function generateItemChanges({
 				id: `item-removed-${featureId}`,
 				type: "item",
 				label: getFeatureName(original),
-				description: "Removed from plan",
 				oldValue: formatItemValue(original),
 				newValue: null,
 				productItem: original,
@@ -106,7 +105,6 @@ export function generateItemChanges({
 				id: `item-modified-${featureId}`,
 				type: "item",
 				label: getFeatureName(original),
-				description: getModificationDescription({ original, customized }),
 				oldValue: oldValueFormatted,
 				newValue: newValueFormatted,
 				productItem: customized,
@@ -133,10 +131,6 @@ export function generateItemChanges({
 				id: `item-added-${featureId}`,
 				type: "item",
 				label: getFeatureName(customized),
-				description: getAdditionDescription({
-					item: customized,
-					prepaidQuantity,
-				}),
 				oldValue: isPrepaidWithQuantity ? 0 : null,
 				newValue: isPrepaidWithQuantity
 					? displayQuantity
@@ -158,7 +152,6 @@ export function generateItemChanges({
 				id: "price-items-added",
 				type: "item",
 				label: `${priceDiff} Price Item${priceDiff > 1 ? "s" : ""}`,
-				description: "Added to plan",
 				oldValue: null,
 				newValue: String(priceDiff),
 			});
@@ -167,7 +160,6 @@ export function generateItemChanges({
 				id: "price-items-removed",
 				type: "item",
 				label: `${Math.abs(priceDiff)} Price Item${Math.abs(priceDiff) > 1 ? "s" : ""}`,
-				description: "Removed from plan",
 				oldValue: String(Math.abs(priceDiff)),
 				newValue: null,
 			});
@@ -188,106 +180,6 @@ function hasItemChanged(
 		original.billing_units !== customized.billing_units ||
 		original.interval !== customized.interval
 	);
-}
-
-function getModificationDescription({
-	original,
-	customized,
-}: {
-	original: ProductItem;
-	customized: ProductItem;
-}): string {
-	const parts: string[] = [];
-
-	if (original.included_usage !== customized.included_usage) {
-		const oldValue = original.included_usage;
-		const newValue = customized.included_usage;
-
-		if (newValue === "inf") {
-			parts.push("changed to unlimited");
-		} else if (oldValue === "inf") {
-			parts.push(`limited to ${newValue}`);
-		} else {
-			const oldNum = Number(oldValue);
-			const newNum = Number(newValue);
-			if (newNum < oldNum) {
-				parts.push(`reduced from ${oldValue} to ${newValue}`);
-			} else {
-				parts.push(`increased from ${oldValue} to ${newValue}`);
-			}
-		}
-	}
-
-	if (original.price !== customized.price) {
-		const oldPrice = original.price ?? 0;
-		const newPrice = customized.price ?? 0;
-		if (newPrice > oldPrice) {
-			parts.push(`price increased from $${oldPrice} to $${newPrice}`);
-		} else {
-			parts.push(`price reduced from $${oldPrice} to $${newPrice}`);
-		}
-	}
-
-	if (JSON.stringify(original.tiers) !== JSON.stringify(customized.tiers)) {
-		parts.push("pricing tiers updated");
-	}
-
-	if (original.interval !== customized.interval) {
-		parts.push(`billing cycle changed to ${customized.interval}`);
-	}
-
-	if (parts.length === 0) return "Configuration updated";
-
-	const result = parts.join(", ");
-	return result.charAt(0).toUpperCase() + result.slice(1);
-}
-
-function getAdditionDescription({
-	item,
-	prepaidQuantity,
-}: {
-	item: ProductItem;
-	prepaidQuantity?: number;
-}): string {
-	if (
-		item.usage_model === UsageModel.Prepaid &&
-		hasValue(prepaidQuantity) &&
-		prepaidQuantity > 0
-	) {
-		const billingUnits = item.billing_units ?? 1;
-		const displayQuantity = prepaidQuantity * billingUnits;
-		return `Added with ${displayQuantity} prepaid`;
-	}
-
-	const parts: string[] = [];
-	const includedUsage = item.included_usage;
-	const hasIncludedUsage = hasValue(includedUsage);
-
-	if (hasIncludedUsage) {
-		if (includedUsage === "inf") {
-			parts.push("unlimited");
-		} else {
-			parts.push(`${includedUsage} included`);
-		}
-	}
-
-	const hasOveragePrice =
-		hasValue(item.price) && item.price > 0 && hasIncludedUsage;
-	const hasTieredPricing = item.tiers?.length && item.tiers.length > 0;
-
-	if (hasOveragePrice) {
-		const billingUnits = item.billing_units ?? 1;
-		parts.push(`then ${formatPriceWithUnits(item.price ?? 0, billingUnits)}`);
-	} else if (hasTieredPricing && item.tiers) {
-		const billingUnits = item.billing_units ?? 1;
-		const tierText = formatTierPricing({ tiers: item.tiers, billingUnits });
-		parts.push(`then ${tierText}`);
-	} else if (!hasIncludedUsage && hasValue(item.price)) {
-		return `Added at $${item.price}`;
-	}
-
-	if (parts.length === 0) return "Added to plan";
-	return `Added with ${parts.join(", ")}`;
 }
 
 function formatItemValue(item: ProductItem): string {

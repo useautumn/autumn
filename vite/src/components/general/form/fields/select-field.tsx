@@ -23,6 +23,7 @@ export function SelectField<T extends string | number = string>({
 	className,
 	hideFieldInfo,
 	selectValueAfter,
+	disabled,
 }: {
 	label: string;
 	options: SelectFieldOption<T>[];
@@ -31,6 +32,7 @@ export function SelectField<T extends string | number = string>({
 	className?: string;
 	hideFieldInfo?: boolean;
 	selectValueAfter?: React.ReactNode;
+	disabled?: boolean;
 }) {
 	const field = useFieldContext<T>();
 
@@ -47,8 +49,12 @@ export function SelectField<T extends string | number = string>({
 	return (
 		<div className={className}>
 			<Label>{label}</Label>
-			<Select value={stringValue} onValueChange={handleChange}>
-				<SelectTrigger className="w-full h-7">
+			<Select
+				value={stringValue}
+				onValueChange={handleChange}
+				disabled={disabled}
+			>
+				<SelectTrigger className="w-full h-7" disabled={disabled}>
 					<div className="flex items-center gap-2">
 						<SelectValue placeholder={placeholder} />
 						{selectValueAfter && selectValueAfter}

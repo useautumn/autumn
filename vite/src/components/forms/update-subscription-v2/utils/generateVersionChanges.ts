@@ -16,7 +16,6 @@ export function generateVersionChanges({
 			id: "version-change",
 			type: "version",
 			label: "Plan Version",
-			description: "",
 			oldValue: currentVersion,
 			newValue: selectedVersion,
 		},

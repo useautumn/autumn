@@ -4,7 +4,6 @@ export interface SummaryItem {
 	id: string;
 	type: "prepaid" | "trial" | "version" | "item";
 	label: string;
-	description: string;
 	oldValue: string | number | null;
 	newValue: string | number | null;
 	costDelta?: number;
