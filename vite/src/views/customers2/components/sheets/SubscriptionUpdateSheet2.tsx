@@ -1,12 +1,15 @@
-import type {
-	FrontendProduct,
-	FullCusProduct,
-	ProductItem,
-	ProductV2,
+import {
+	type FrontendProduct,
+	type FullCusProduct,
+	getProductItemDisplay,
+	type ProductItem,
+	type ProductV2,
+	productV2ToFrontendProduct,
+	UsageModel,
 } from "@autumn/shared";
-import { productV2ToFrontendProduct } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 import { useMemo, useState } from "react";
 import { useUpdateSubscriptionPreview } from "@/components/forms/update-subscription/use-update-subscription-preview";
 import {
@@ -25,13 +28,16 @@ import {
 } from "@/components/forms/update-subscription-v2";
 import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/InlinePlanEditor";
 import { SheetHeader } from "@/components/v2/sheets/SharedSheetComponents";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
+import { getBackendErr } from "@/utils/genUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
+import { itemToFeature } from "@/utils/product/productItemUtils/convertItem";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 
@@ -57,9 +63,42 @@ function SheetContent({
 	const { setIsInlineEditorOpen } = useCustomerContext();
 
 	const form = useUpdateSubscriptionForm({ updateSubscriptionFormContext });
+	const { features } = useFeaturesQuery();
 
 	const formValues = useStore(form.store, (state) => state.values);
 	const { prepaidOptions } = formValues;
+
+	// Compute extended prepaid items that includes both original prepaid items
+	// and any new prepaid items added through the inline editor
+	const extendedPrepaidItems = useMemo(() => {
+		if (!formValues.items) return prepaidItems;
+
+		// Get IDs of original prepaid items
+		const originalPrepaidIds = new Set(
+			prepaidItems.map((item) => item.feature_id),
+		);
+
+		// Find new prepaid items from form that aren't in the original list
+		const newPrepaidItems = formValues.items.filter(
+			(item) =>
+				item.usage_model === UsageModel.Prepaid &&
+				item.feature_id &&
+				!originalPrepaidIds.has(item.feature_id),
+		);
+
+		// Enrich new prepaid items with feature info
+		const enrichedNewItems = newPrepaidItems.map((item) => {
+			const feature = itemToFeature({ item, features });
+			const display = getProductItemDisplay({
+				item,
+				features,
+				currency: "usd",
+			});
+			return { ...item, feature, display };
+		});
+
+		return [...prepaidItems, ...enrichedNewItems];
+	}, [prepaidItems, formValues.items, features]);
 
 	const productWithFormItems = useMemo((): FrontendProduct | undefined => {
 		if (!product) return undefined;
@@ -92,6 +131,8 @@ function SheetContent({
 			trialDuration: formValues.trialDuration,
 			trialCardRequired: formValues.trialCardRequired,
 		}),
+		items: formValues.items,
+		version: formValues.version,
 	});
 
 	const { handleConfirm, handleInvoiceUpdate, isPending } =
@@ -154,7 +195,7 @@ function SheetContent({
 				onEditPlan={handleEditPlan}
 			/>
 
-			<PrepaidQuantitySection form={form} prepaidItems={prepaidItems} />
+			<PrepaidQuantitySection form={form} prepaidItems={extendedPrepaidItems} />
 
 			<FreeTrialSection form={form} customerProduct={customerProduct} />
 
@@ -170,6 +211,14 @@ function SheetContent({
 			<UpdateSubscriptionPreviewSection
 				isLoading={previewQuery.isLoading}
 				previewData={previewQuery.data}
+				error={
+					previewQuery.error
+						? getBackendErr(
+								previewQuery.error as AxiosError,
+								"Failed to load preview",
+							)
+						: undefined
+				}
 			/>
 
 			<UpdateSubscriptionFooter

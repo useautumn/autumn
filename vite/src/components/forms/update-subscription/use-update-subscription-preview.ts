@@ -1,6 +1,7 @@
 import type {
 	CreateFreeTrial,
 	PreviewUpdateSubscriptionResponse,
+	ProductItem,
 } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
@@ -13,11 +14,15 @@ export function useUpdateSubscriptionPreview({
 	prepaidOptions,
 	freeTrial,
 	enabled,
+	items,
+	version,
 }: {
 	updateSubscriptionFormContext: UpdateSubscriptionFormContext;
 	prepaidOptions?: Record<string, number>;
 	freeTrial?: CreateFreeTrial | null;
 	enabled?: boolean;
+	items?: ProductItem[] | null;
+	version?: number;
 }) {
 	const { customerId, product, entityId } = updateSubscriptionFormContext;
 	const axiosInstance = useAxiosInstance();
@@ -27,8 +32,9 @@ export function useUpdateSubscriptionPreview({
 		product,
 		entityId,
 		prepaidOptions,
-		version: product?.version,
+		version: version ?? product?.version,
 		freeTrial,
+		items,
 	});
 
 	const shouldEnable =

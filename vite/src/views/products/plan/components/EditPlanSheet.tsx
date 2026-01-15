@@ -6,13 +6,12 @@ import {
 	SheetAccordion,
 	SheetAccordionItem,
 } from "@/components/v2/sheets/SheetAccordion";
-import { useProductStore } from "@/hooks/stores/useProductStore";
+import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { AdditionalOptions } from "./edit-plan-details/AdditionalOptions";
 import { MainDetailsSection } from "./edit-plan-details/MainDetailsSection";
 
 export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
-	const product = useProductStore((s) => s.product);
-	const setProduct = useProductStore((s) => s.setProduct);
+	const { product, setProduct } = useProduct();
 
 	const basePrice = productV2ToBasePrice({ product });
 

@@ -15,11 +15,11 @@ import {
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { getItemId } from "@/utils/product/productItemUtils";
 import { getFeatureIcon } from "@/views/products/features/utils/getFeatureIcon";
+import { useProduct, useSheet } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { getDefaultItem } from "../utils/getDefaultItem";
 
 export function SelectFeatureSheet({
@@ -32,9 +32,8 @@ export function SelectFeatureSheet({
 	const [searchValue, setSearchValue] = useState("");
 
 	const { features } = useFeaturesQuery();
-	const product = useProductStore((s) => s.product);
-	const setProduct = useProductStore((s) => s.setProduct);
-	const setSheet = useSheetStore((s) => s.setSheet);
+	const { product, setProduct } = useProduct();
+	const { setSheet } = useSheet();
 
 	useEffect(() => {
 		// If we're switching from another sheet, open immediately
