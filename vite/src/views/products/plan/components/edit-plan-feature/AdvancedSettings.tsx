@@ -54,51 +54,6 @@ export function AdvancedSettings() {
 
 	if (!hasAnyContent) return null;
 
-	// Rollover logic (unused but kept for reference)
-	const _showRolloverConfig =
-		(hasCreditSystem || usageType === FeatureUsageType.Single) &&
-		item.interval !== null &&
-		item.included_usage &&
-		Number(item.included_usage) > 0;
-
-	// const defaultRollover: RolloverConfig = {
-	// 	duration: RolloverExpiryDurationType.Month,
-	// 	length: 1 as number,
-	// 	max: null,
-	// };
-
-	// const setRolloverConfigKey = (
-	// 	key: keyof RolloverConfig,
-	// 	value: null | number | RolloverExpiryDurationType,
-	// ) => {
-	// 	setItem({
-	// 		...item,
-	// 		config: {
-	// 			...(item.config || {}),
-	// 			rollover: {
-	// 				...(item.config?.rollover || defaultRollover),
-	// 				[key]: value,
-	// 			},
-	// 		},
-	// 	});
-	// };
-
-	// const setRolloverConfig = (rollover: RolloverConfig | null) => {
-	// 	const newConfig = { ...(item.config || {}) };
-	// 	if (rollover === null) {
-	// 		delete newConfig.rollover;
-	// 	} else {
-	// 		newConfig.rollover = rollover;
-	// 	}
-	// 	setItem({
-	// 		...item,
-	// 		config: newConfig,
-	// 	});
-	// };
-
-	// const rollover = item.config?.rollover as RolloverConfig;
-	// const hasRollover = item.config?.rollover != null;
-
 	return (
 		<SheetAccordion type="single" withSeparator={false} collapsible={true}>
 			<SheetAccordionItem
@@ -108,16 +63,12 @@ export function AdvancedSettings() {
 			>
 				<div className="space-y-6 pt-2 pb-10 [>&_.advanced-input-width]:w-xs">
 					{/* Reset existing usage when plan is enabled */}
-					{usageType === FeatureUsageType.Single && (
+					{showResetUsage && (
 						<AreaCheckbox
 							title="Reset existing usage when plan is enabled"
 							description="When coming from another plan, this will reset the customer's feature usage to 0."
 							checked={!!item.reset_usage_when_enabled}
-							// hide={usageType === FeatureUsageType.Continuous}
-							disabled={
-								usageType === FeatureUsageType.Continuous ||
-								notNullish(item.config?.rollover)
-							}
+							disabled={notNullish(item.config?.rollover)}
 							onCheckedChange={(checked) =>
 								setItem({
 									...item,
@@ -128,19 +79,16 @@ export function AdvancedSettings() {
 					)}
 
 					{/* Usage Limits */}
-					{
-						//if feature is priced, show usage limit
-						isFeaturePriceItem(item) && <UsageLimit />
-					}
+					{showUsageLimits && <UsageLimit />}
 
 					{/* Rollover */}
-					<RolloverConfig />
+					{showRollover && <RolloverConfig />}
 
 					{/* Entity Feature Config */}
-					{hasEntityFeatureId && <EntityFeatureConfig />}
+					{showEntityFeature && <EntityFeatureConfig />}
 
 					{/* Proration Config */}
-					<ProrationConfig />
+					{showProration && <ProrationConfig />}
 				</div>
 			</SheetAccordionItem>
 		</SheetAccordion>
