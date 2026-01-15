@@ -15,8 +15,6 @@ import { redis } from "../../external/redis/initRedis.js";
 import type { HonoEnv } from "../../honoUtils/HonoEnv.js";
 import { OrgService } from "../orgs/OrgService.js";
 import { clearOrgCache } from "../orgs/orgUtils/clearOrgCache.js";
-import { isStripeConnected } from "../orgs/orgUtils.js";
-import { createKey } from "./api-keys/apiKeyUtils.js";
 import { handleCreateSecretKey } from "./handlers/handleCreateSecretKey.js";
 import { handleDeleteSecretKey } from "./handlers/handleDeleteSecretKey.js";
 import { handleGetDevData } from "./handlers/handleGetDevData.js";
@@ -112,80 +110,83 @@ export const handleGetOtp = async (req: any, res: any) =>
 		res,
 		action: "Get OTP",
 		handler: async () => {
-			const { db, env } = req;
-			const { otp } = req.params;
-			const cacheKey = `otp:${otp}`;
-			const cacheData = await CacheManager.getJson<{
-				orgId: string;
-				stripeFlowAuthKey: string;
-			}>(cacheKey);
-			if (!cacheData) {
-				res.status(404).json({ error: "OTP not found" });
-				return;
-			}
+			throw new Error("OTP Auth has been deprecated for atmn. Please upgrade to the latest version of the CLI.");
+		}
+		// handler: async () => {
+		// 	const { db, env } = req;
+		// 	const { otp } = req.params;
+		// 	const cacheKey = `otp:${otp}`;
+		// 	const cacheData = await CacheManager.getJson<{
+		// 		orgId: string;
+		// 		stripeFlowAuthKey: string;
+		// 	}>(cacheKey);
+		// 	if (!cacheData) {
+		// 		res.status(404).json({ error: "OTP not found" });
+		// 		return;
+		// 	}
 
-			// Generate API key for the OTP
-			const sandboxKey = await createKey({
-				db,
-				env: AppEnv.Sandbox,
-				name: `Autumn Key CLI`,
-				orgId: cacheData.orgId,
-				prefix: "am_sk_test",
-				meta: {
-					fromCli: true,
-					generatedAt: new Date().toISOString(),
-				},
-				userId: req.user?.id,
-			});
+		// 	// Generate API key for the OTP
+		// 	const sandboxKey = await createKey({
+		// 		db,
+		// 		env: AppEnv.Sandbox,
+		// 		name: `Autumn Key CLI`,
+		// 		orgId: cacheData.orgId,
+		// 		prefix: ApiKeyPrefix.Sandbox,
+		// 		meta: {
+		// 			fromCli: true,
+		// 			generatedAt: new Date().toISOString(),
+		// 		},
+		// 		userId: req.user?.id,
+		// 	});
 
-			const prodKey = await createKey({
-				db,
-				env: AppEnv.Live,
-				name: `Autumn Key CLI`,
-				orgId: cacheData.orgId,
-				prefix: "am_sk_live",
-				meta: {
-					fromCli: true,
-					generatedAt: new Date().toISOString(),
-				},
-				userId: req.user?.id,
-			});
+		// 	const prodKey = await createKey({
+		// 		db,
+		// 		env: AppEnv.Live,
+		// 		name: `Autumn Key CLI`,
+		// 		orgId: cacheData.orgId,
+		// 		prefix: ApiKeyPrefix.Live,
+		// 		meta: {
+		// 			fromCli: true,
+		// 			generatedAt: new Date().toISOString(),
+		// 		},
+		// 		userId: req.user?.id,
+		// 	});
 
-			const org = await OrgService.get({
-				db: req.db,
-				orgId: cacheData.orgId,
-			});
+		// 	const org = await OrgService.get({
+		// 		db: req.db,
+		// 		orgId: cacheData.orgId,
+		// 	});
 
-			const stripeConnected = isStripeConnected({ org, env: AppEnv.Sandbox });
+		// 	const stripeConnected = isStripeConnected({ org, env: AppEnv.Sandbox });
 
-			const responseData = {
-				...cacheData,
-				stripe_connected: stripeConnected,
-				sandboxKey,
-				prodKey,
-			};
+		// 	const responseData = {
+		// 		...cacheData,
+		// 		stripe_connected: stripeConnected,
+		// 		sandboxKey,
+		// 		prodKey,
+		// 	};
 
-			await CacheManager.invalidate({
-				action: "otp",
-				value: otp,
-			});
-			await CacheManager.invalidate({
-				action: "orgOTPExists",
-				value: cacheData.orgId,
-			});
+		// 	await CacheManager.invalidate({
+		// 		action: "otp",
+		// 		value: otp,
+		// 	});
+		// 	await CacheManager.invalidate({
+		// 		action: "orgOTPExists",
+		// 		value: cacheData.orgId,
+		// 	});
 
-			if (!stripeConnected) {
-				// we need to generate a key for the CLI to use.
-				const key = generateRandomKey();
-				responseData.stripeFlowAuthKey = key;
-				const stripeCacheData = {
-					orgId: cacheData.orgId,
-				};
-				await CacheManager.setJson(key, stripeCacheData, OTP_TTL);
-			}
+		// 	if (!stripeConnected) {
+		// 		// we need to generate a key for the CLI to use.
+		// 		const key = generateRandomKey();
+		// 		responseData.stripeFlowAuthKey = key;
+		// 		const stripeCacheData = {
+		// 			orgId: cacheData.orgId,
+		// 		};
+		// 		await CacheManager.setJson(key, stripeCacheData, OTP_TTL);
+		// 	}
 
-			res.status(200).json(responseData);
-		},
+		// 	res.status(200).json(responseData);
+		// },
 	});
 
 devRouter.post("/cli/stripe", async (req: any, res: any) => {

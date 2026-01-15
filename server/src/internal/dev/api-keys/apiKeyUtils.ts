@@ -6,6 +6,11 @@ import { generateId } from "@/utils/genUtils.js";
 import { ApiKeyService } from "../ApiKeyService.js";
 import { buildSecretKeyCacheKey } from "./cacheApiKeyUtils.js";
 
+export enum ApiKeyPrefix {
+	Sandbox = "am_sk_test",
+	Live = "am_sk_live",
+}
+
 function generateApiKey(length = 32, prefix = "") {
 	try {
 		// Define allowed characters (alphanumeric only)
@@ -121,7 +126,7 @@ export const verifyKey = async ({
 }) => {
 	const hashedKey = hashApiKey(key);
 
-	const env = key.startsWith("am_sk_test") ? AppEnv.Sandbox : AppEnv.Live;
+	const env = key.startsWith(ApiKeyPrefix.Sandbox) ? AppEnv.Sandbox : AppEnv.Live;
 
 	const data = await queryWithCache({
 		ttl: 3600,

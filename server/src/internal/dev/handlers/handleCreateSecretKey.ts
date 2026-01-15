@@ -2,7 +2,7 @@ import { AppEnv } from "@autumn/shared";
 import { z } from "zod/v4";
 import { auth } from "@/utils/auth";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
-import { createKey } from "../api-keys/apiKeyUtils";
+import { ApiKeyPrefix, createKey } from "../api-keys/apiKeyUtils";
 
 export const handleCreateSecretKey = createRoute({
 	body: z.object({
@@ -14,18 +14,24 @@ export const handleCreateSecretKey = createRoute({
 		const { name } = c.req.valid("json");
 
 		// 1. Create API key
-		let prefix = "am_sk_test";
+		let prefix = ApiKeyPrefix.Sandbox;
 		if (env === AppEnv.Live) {
-			prefix = "am_sk_live";
+			prefix = ApiKeyPrefix.Live;
 		}
 
-		const meta: Record<string, string> = {};
-		const user = await auth.api.getSession({
+		// Get session to check for impersonation and author
+		const session = await auth.api.getSession({
 			headers: c.req.raw.headers,
 		});
 
-		if (user?.user?.name) {
-			meta.author = user?.user?.name;
+		const meta: Record<string, string> = {};
+
+		// Check if this is an impersonation session (Autumn Support)
+		if (session?.session?.impersonatedBy) {
+			meta.created_via = "autumn_support";
+		} else if (session?.user?.name) {
+			// Regular user creation
+			meta.author = session.user.name;
 		}
 
 		const apiKey = await createKey({
