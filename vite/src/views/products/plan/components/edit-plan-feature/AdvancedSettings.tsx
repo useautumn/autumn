@@ -24,13 +24,6 @@ export function AdvancedSettings() {
 	const { hasEntityFeatureId } = useHasEntityFeatureId();
 
 	if (!item) return null;
-	//if feature is not priced and single use, return null
-	if (
-		!isFeaturePriceItem(item) &&
-		getFeatureUsageType({ item, features }) === FeatureUsageType.Continuous
-	) {
-		return null;
-	}
 
 	const usageType = getFeatureUsageType({ item, features });
 	const hasCreditSystem = getFeatureCreditSystem({ item, features });
