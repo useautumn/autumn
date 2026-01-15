@@ -33,7 +33,7 @@ export function CustomerSheets() {
 				return <SubscriptionDetailSheet />;
 			case "subscription-update":
 				return <SubscriptionUpdateSheet />;
-			case "subscription-update-test": // TEST: Remove this case to revert
+			case "subscription-update-v2":
 				return <SubscriptionUpdateSheet2 />;
 			case "balance-selection":
 				return <BalanceSelectionSheet />;
