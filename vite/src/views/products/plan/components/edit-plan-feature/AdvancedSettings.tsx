@@ -27,8 +27,34 @@ export function AdvancedSettings() {
 
 	const usageType = getFeatureUsageType({ item, features });
 	const hasCreditSystem = getFeatureCreditSystem({ item, features });
+	const isPriced = isFeaturePriceItem(item);
 
-	// Rollover logic
+	// Check if there are other continuous use features (for entity feature config)
+	const hasOtherContinuousFeatures = features.some(
+		(f) =>
+			f.config?.usage_type === FeatureUsageType.Continuous &&
+			f.id !== item.feature_id,
+	);
+
+	// Determine what will show in Advanced section
+	const showResetUsage = usageType === FeatureUsageType.Single;
+	const showUsageLimits = isPriced;
+	const showRollover = hasCreditSystem || usageType === FeatureUsageType.Single;
+	const showEntityFeature = hasEntityFeatureId && hasOtherContinuousFeatures;
+	// Proration shows for priced features (simplified check)
+	const showProration = isPriced;
+
+	// Hide Advanced section if nothing will render inside it
+	const hasAnyContent =
+		showResetUsage ||
+		showUsageLimits ||
+		showRollover ||
+		showEntityFeature ||
+		showProration;
+
+	if (!hasAnyContent) return null;
+
+	// Rollover logic (unused but kept for reference)
 	const _showRolloverConfig =
 		(hasCreditSystem || usageType === FeatureUsageType.Single) &&
 		item.interval !== null &&
