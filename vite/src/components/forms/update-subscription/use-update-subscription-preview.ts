@@ -4,6 +4,7 @@ import type {
 	ProductItem,
 } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 import { useEffect, useMemo, useState } from "react";
 import type { UpdateSubscriptionFormContext } from "@/components/forms/update-subscription-v2/context/UpdateSubscriptionFormContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -75,6 +76,11 @@ export function useUpdateSubscriptionPreview({
 		},
 		enabled: shouldEnable,
 		staleTime: 0,
+		retry: (failureCount, error) => {
+			const status = (error as AxiosError)?.response?.status;
+			if (status && status >= 400 && status < 500) return false;
+			return failureCount < 3;
+		},
 	});
 
 	return {
