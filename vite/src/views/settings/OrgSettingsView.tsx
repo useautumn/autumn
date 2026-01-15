@@ -1,8 +1,10 @@
-import { Calendar, Key, Shield, Trash2 } from "lucide-react";
+import { ArrowLeft, Building2, Calendar, Key, Shield, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
+import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
 	Dialog,
 	DialogContent,
@@ -11,8 +13,8 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/v2/dialogs/Dialog";
+import { authClient } from "@/lib/auth-client";
 import { getBackendErr } from "@/utils/genUtils";
-import { groupAndFormatScopes } from "@/utils/scopeDefinitions";
 
 interface OAuthConsent {
 	id: string;
@@ -34,30 +36,24 @@ interface ApiKeyPreview {
 	env: string;
 }
 
-// Helper to render scope badges
-function renderScopeBadges(scopes: string[]): JSX.Element {
-	const grouped = groupAndFormatScopes(scopes);
-	
-	if (grouped.length === 0) {
-		return <span className="text-sm text-muted-foreground">No permissions</span>;
-	}
+// Map scope IDs to human-readable names
+const SCOPE_NAMES: Record<string, string> = {
+	openid: "User ID",
+	profile: "Profile",
+	email: "Email",
+	offline_access: "Offline Access",
+	"apikeys:read": "Read API Keys",
+	"apikeys:write": "Manage API Keys",
+};
 
-	return (
-		<div className="flex flex-wrap gap-1.5">
-			{grouped.map((permission) => (
-				<Badge
-					key={permission.resource}
-					variant="secondary"
-					className="text-xs"
-				>
-					{permission.resourceName}: {permission.actions.join(", ")}
-				</Badge>
-			))}
-		</div>
-	);
+function getScopeName(scope: string): string {
+	return SCOPE_NAMES[scope] || scope;
 }
 
-export const AuthorizedApps = () => {
+export const OrgSettingsView = () => {
+	const navigate = useNavigate();
+	const { data: activeOrganization } = authClient.useActiveOrganization();
+
 	const [consents, setConsents] = useState<OAuthConsent[]>([]);
 	const [clientNames, setClientNames] = useState<Record<string, string>>({});
 	const [isLoading, setIsLoading] = useState(true);
@@ -75,7 +71,6 @@ export const AuthorizedApps = () => {
 	const fetchConsents = async () => {
 		setIsLoading(true);
 		try {
-			// Use our new org-level consent endpoint
 			const response = await fetch(
 				`${import.meta.env.VITE_BACKEND_URL}/consents`,
 				{
@@ -130,7 +125,6 @@ export const AuthorizedApps = () => {
 		setLoadingApiKeys(true);
 		setLinkedApiKeys([]);
 
-		// Fetch API keys linked to this consent
 		try {
 			const response = await fetch(
 				`${import.meta.env.VITE_BACKEND_URL}/consents/${consentId}/api-keys`,
@@ -193,7 +187,49 @@ export const AuthorizedApps = () => {
 	};
 
 	return (
-		<div className="flex flex-col px-6 py-4">
+		<div className="flex flex-col p-6 max-w-3xl mx-auto">
+			{/* Header */}
+			<div className="flex items-center gap-3 mb-6">
+				<IconButton
+					variant="secondary"
+					size="sm"
+					icon={<ArrowLeft className="w-4 h-4" />}
+					onClick={() => navigate(-1)}
+				/>
+				<div>
+					<h1 className="text-lg font-semibold text-t1">
+						Organization Settings
+					</h1>
+					<p className="text-sm text-t3">
+						Manage settings for this organization
+					</p>
+				</div>
+			</div>
+
+			{/* Current Org Info */}
+			{activeOrganization && (
+				<div className="border border-border rounded-xl bg-card p-4 mb-6">
+					<div className="flex items-center gap-2 text-xs text-t3 mb-2">
+						<Building2 className="w-3.5 h-3.5" />
+						<span>Current Organization</span>
+					</div>
+					<div className="flex items-center gap-3">
+						<div className="w-10 h-10 rounded-md bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-medium">
+							{activeOrganization.name?.charAt(0).toUpperCase() || "O"}
+						</div>
+						<div>
+							<p className="text-sm font-medium text-t1">
+								{activeOrganization.name}
+							</p>
+							<p className="text-xs text-t3">
+								Settings below apply to this organization only
+							</p>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Authorized Apps Section */}
 			<div className="border border-border rounded-xl bg-card overflow-hidden">
 				<div className="px-4 py-3 border-b border-border bg-muted/30">
 					<div className="flex items-center gap-2">
@@ -203,7 +239,7 @@ export const AuthorizedApps = () => {
 						</h2>
 					</div>
 					<p className="text-xs text-t3 mt-1">
-						These applications have access to this organization
+						External applications that have been granted access to this organization
 					</p>
 				</div>
 
@@ -236,9 +272,13 @@ export const AuthorizedApps = () => {
 										</p>
 									</div>
 
-									{/* Scopes - Grouped by Resource */}
-									<div className="mt-2">
-										{renderScopeBadges(consent.scopes)}
+									{/* Scopes */}
+									<div className="flex flex-wrap gap-1 mt-2">
+										{consent.scopes.map((scope) => (
+											<Badge key={scope} variant="muted" className="text-xs">
+												{getScopeName(scope)}
+											</Badge>
+										))}
 									</div>
 
 									{/* Date */}
@@ -280,7 +320,7 @@ export const AuthorizedApps = () => {
 							<span className="font-semibold text-t1">
 								{revokeTarget?.clientName}
 							</span>
-							? This app will no longer be able to access your organization.
+							? This app will no longer be able to access this organization.
 						</DialogDescription>
 					</DialogHeader>
 

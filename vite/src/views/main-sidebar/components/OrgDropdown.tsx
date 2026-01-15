@@ -8,7 +8,7 @@ import {
 	Settings,
 	Sun,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { AdminHover } from "@/components/general/AdminHover";
@@ -63,58 +63,12 @@ export const OrgDropdown = () => {
 	// To pre-fetch data
 	useMemberships();
 	const [dropdownOpen, setDropdownOpen] = useState(false);
-	const [manageOpen, setManageOpen] = useState(() => {
-		// Check hash on initial render
-		const hash = window.location.hash;
-		return hash.startsWith("#settings");
-	});
-	const [manageTab, setManageTab] = useState<"user" | "members" | "invites" | "apps">(() => {
-		// Check hash on initial render
-		const hash = window.location.hash;
-		if (hash.startsWith("#settings")) {
-			const tab = hash.split(".")[1] as "user" | "members" | "invites" | "apps" | undefined;
-			if (tab && ["user", "members", "invites", "apps"].includes(tab)) {
-				return tab;
-			}
-		}
-		return "user";
-	});
-	const hasProcessedInitialHash = useRef(false);
-
-	// Listen for hash changes to open settings dialog
-	useEffect(() => {
-		const handleHashChange = () => {
-			const hash = window.location.hash;
-			if (hash.startsWith("#settings")) {
-				const tab = hash.split(".")[1] as "user" | "members" | "invites" | "apps" | undefined;
-				if (tab && ["user", "members", "invites", "apps"].includes(tab)) {
-					setManageTab(tab);
-				} else {
-					setManageTab("user");
-				}
-				setManageOpen(true);
-			}
-		};
-
-		// Clear hash after initial mount if we opened from hash
-		if (!hasProcessedInitialHash.current && window.location.hash.startsWith("#settings")) {
-			hasProcessedInitialHash.current = true;
-			setTimeout(() => {
-				window.history.replaceState(null, "", window.location.pathname + window.location.search);
-			}, 500);
-		}
-
-		// Listen for hash changes
-		window.addEventListener("hashchange", handleHashChange);
-		return () => {
-			window.removeEventListener("hashchange", handleHashChange);
-		};
-	}, []);
+	const [manageOpen, setManageOpen] = useState(false);
 
 	if (isLoading)
 		return (
 			<>
-				<ManageOrg open={manageOpen} setOpen={setManageOpen} initialTab={manageTab} />
+				<ManageOrg open={manageOpen} setOpen={setManageOpen} />
 				<div className="h-7 w-32 px-4 flex items-center gap-2">
 					<Skeleton className="min-w-5 h-5 bg-stone-200" />
 					<Skeleton className="w-32 h-5 bg-stone-200" />
@@ -122,11 +76,11 @@ export const OrgDropdown = () => {
 			</>
 		);
 
-	if (!org || error) return <ManageOrg open={manageOpen} setOpen={setManageOpen} initialTab={manageTab} />;
+	if (!org || error) return <ManageOrg open={manageOpen} setOpen={setManageOpen} />;
 
 	return (
 		<div className={cn("flex px-3")}>
-			<ManageOrg open={manageOpen} setOpen={setManageOpen} initialTab={manageTab} />
+			<ManageOrg open={manageOpen} setOpen={setManageOpen} />
 			<CreateNewOrg dialogType={dialogType} setDialogType={setDialogType} />
 
 			<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>

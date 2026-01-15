@@ -9,8 +9,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LogOut, Settings } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router";
 
 export const UserButton = () => {
+	const navigate = useNavigate();
 	const { data: session } = useSession();
 	const user = session?.user;
 	const [isLoading, setIsLoading] = useState(false);
@@ -72,13 +74,11 @@ export const UserButton = () => {
 				sideOffset={12}
 			>
 				<DropdownMenuItem
-					onClick={() => {
-						window.location.hash = "settings.user";
-					}}
+					onClick={() => navigate("/settings")}
 					className="cursor-pointer flex items-center gap-2 text-sm rounded-sm text-t2"
 				>
 					<Settings size={10} />
-					<span>Account Settings</span>
+					<span>Organization Settings</span>
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem

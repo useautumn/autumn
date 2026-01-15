@@ -11,7 +11,6 @@ import { identifyUser } from "./utils/posthogTracking";
 import { AdminView } from "./views/admin/AdminView";
 import { ImpersonateRedirect } from "./views/admin/ImpersonateRedirect";
 import { OAuthClientsView } from "./views/admin/oauth/OAuthClientsView";
-
 import { AcceptInvitation } from "./views/auth/AcceptInvitation";
 import { PasswordSignIn } from "./views/auth/components/PasswordSignIn";
 import { Consent } from "./views/auth/Consent";
@@ -28,6 +27,7 @@ import OnboardingView3 from "./views/onboarding3/OnboardingView3";
 import QuickstartView from "./views/onboarding4/QuickstartView";
 import ProductsView from "./views/products/ProductsView";
 import PlanEditorView from "./views/products/plan/PlanEditorView";
+import { OrgSettingsView } from "./views/settings/OrgSettingsView";
 import { TerminalView } from "./views/TerminalView";
 
 export function SquircleProvider({ children }: { children: React.ReactNode }) {
@@ -71,6 +71,7 @@ export default function App() {
 
 				<Route element={<MainLayout />}>
 					<Route path="*" element={<DefaultView />} />
+					<Route path="/settings" element={<OrgSettingsView />} />
 					<Route path="/admin" element={<AdminView />} />
 					<Route path="/admin/oauth" element={<OAuthClientsView />} />
 					<Route

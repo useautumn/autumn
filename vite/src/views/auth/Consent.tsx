@@ -17,12 +17,7 @@ import {
 	useSession,
 } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
-
-interface ScopeInfo {
-	id: string;
-	name: string;
-	description: string;
-}
+import { groupAndFormatScopes, type GroupedPermission } from "@/utils/scopeDefinitions";
 
 interface ClientInfo {
 	client_id: string;
@@ -90,42 +85,6 @@ const getRandomJokeScope = () => {
 	return JOKE_SCOPES[index];
 };
 
-// Map scope IDs to human-readable descriptions
-const SCOPE_DESCRIPTIONS: Record<
-	string,
-	{ name: string; description: string }
-> = {
-	openid: {
-		name: "User ID",
-		description: "Access your unique user identifier",
-	},
-	profile: {
-		name: "Profile information",
-		description: "Access your name and profile picture",
-	},
-	email: {
-		name: "Email address",
-		description: "Access your email address",
-	},
-	"apikeys:read": {
-		name: "Read API keys",
-		description: "View your API keys",
-	},
-	"apikeys:write": {
-		name: "Manage API keys",
-		description: "Create and manage your API keys",
-	},
-};
-
-function getScopeInfo(scopeId: string): { name: string; description: string } {
-	return (
-		SCOPE_DESCRIPTIONS[scopeId] || {
-			name: scopeId,
-			description: `Access to ${scopeId}`,
-		}
-	);
-}
-
 // Org logo component (simplified version)
 const OrgLogo = ({ org }: { org: { name: string; logo?: string | null } }) => {
 	const firstLetter = org?.name?.charAt(0).toUpperCase() || "A";
@@ -150,7 +109,7 @@ export const Consent = () => {
 	const { data: activeOrganization } = authClient.useActiveOrganization();
 
 	const [clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
-	const [scopes, setScopes] = useState<ScopeInfo[]>([]);
+	const [groupedPermissions, setGroupedPermissions] = useState<GroupedPermission[]>([]);
 	const [jokeScope] = useState(() => getRandomJokeScope());
 	const [isLoading, setIsLoading] = useState(true);
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -230,16 +189,9 @@ export const Consent = () => {
 				});
 			}
 
-			// Parse scopes
-			const scopeInfos: ScopeInfo[] = requestedScopes.map((scopeId) => {
-				const info = getScopeInfo(scopeId);
-				return {
-					id: scopeId,
-					name: info.name,
-					description: info.description,
-				};
-			});
-			setScopes(scopeInfos);
+			// Parse and group scopes by resource
+			const grouped = groupAndFormatScopes(requestedScopes);
+			setGroupedPermissions(grouped);
 			setIsLoading(false);
 		}
 
@@ -249,7 +201,8 @@ export const Consent = () => {
 	const handleAuthorize = async () => {
 		setIsSubmitting(true);
 		try {
-			const grantedScopes = scopes.map((s) => s.id).join(" ");
+			// Use the original requested scopes
+			const grantedScopes = requestedScopes.join(" ");
 
 			const { data, error } = await authClient.oauth2.consent({
 				accept: true,
@@ -433,11 +386,11 @@ export const Consent = () => {
 						</p>
 					</div>
 
-					{/* Scopes List */}
+					{/* Grouped Permissions List */}
 					<div className="divide-y divide-border">
-						{scopes.map((scope) => (
+						{groupedPermissions.map((permission) => (
 							<div
-								key={scope.id}
+								key={permission.resource}
 								className="w-full flex items-start gap-3 px-4 py-3 text-left"
 							>
 								<div className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center bg-green-500/10 text-green-600">
@@ -445,10 +398,10 @@ export const Consent = () => {
 								</div>
 								<div className="flex-1 min-w-0">
 									<p className="text-sm font-medium text-foreground">
-										{scope.name}
+										{permission.formattedPermission}
 									</p>
 									<p className="text-xs text-muted-foreground mt-0.5">
-										{scope.description}
+										{permission.description}
 									</p>
 								</div>
 							</div>
@@ -520,7 +473,7 @@ export const Consent = () => {
 						<span>
 							You can revoke access at any time from your{" "}
 							<a
-								href="/customers#settings.apps"
+								href="/settings"
 								className="text-primary hover:underline"
 							>
 								organization settings
