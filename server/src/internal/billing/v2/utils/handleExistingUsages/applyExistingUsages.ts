@@ -22,12 +22,12 @@ export const applyExistingUsages = ({
 		existingUsages,
 	});
 
-	for (const [internalFeatureId, existingUsage] of Object.entries(
-		mergedExistingUsages,
-	)) {
+	for (const [internalFeatureId, existingUsage] of Object.entries<
+		ExistingUsages[string]
+	>(mergedExistingUsages)) {
 		const cusEnts = cusProductsToCusEnts({
 			cusProducts: [customerProduct],
-			internalFeatureId,
+			internalFeatureIds: [internalFeatureId],
 		});
 
 		// 1. Deduct entity usages

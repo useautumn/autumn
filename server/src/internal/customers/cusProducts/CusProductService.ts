@@ -6,6 +6,7 @@ import {
 	customers,
 	ErrCode,
 	type FullCusProduct,
+	type InsertCustomerProduct,
 	InternalError,
 	products,
 	RecaseError,
@@ -456,7 +457,7 @@ export class CusProductService {
 	}: {
 		db: DrizzleCli;
 		stripeSubId: string;
-		updates: Partial<CusProduct>;
+		updates: Partial<InsertCustomerProduct>;
 		inStatuses?: string[];
 		notInStatuses?: string[];
 	}) {

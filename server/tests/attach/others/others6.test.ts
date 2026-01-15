@@ -84,8 +84,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach with customer ID and
 			product: pro,
 		});
 
-		expect(customer.invoices.length).toBe(1);
-		expect(customer.invoices[0].status).toBe("draft");
+		expect(customer.invoices!.length).toBe(1);
+		expect(customer.invoices![0].status).toBe("draft");
 	});
 
 	test("should create customer with ID, and attach pro product", async () => {
@@ -102,9 +102,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach with customer ID and
 		});
 
 		internalEntityId = entity.autumn_id;
-
-		// console.log("Customer: ", customer);
-		// console.log("Entity: ", entity);
 
 		await timeout(2000);
 

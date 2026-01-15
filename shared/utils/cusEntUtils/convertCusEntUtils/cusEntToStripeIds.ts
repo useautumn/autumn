@@ -17,7 +17,7 @@ export const cusEntToStripeIds = ({
 	const stripePriceId = cusPrice.price.config.stripe_price_id;
 	const stripeProductId =
 		cusPrice.price.config.stripe_product_id ||
-		cusEnt.customer_product.product.processor?.id;
+		cusEnt.customer_product?.product?.processor?.id;
 
 	return {
 		stripePriceId: stripePriceId ?? undefined,

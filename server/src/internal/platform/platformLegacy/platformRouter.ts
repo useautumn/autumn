@@ -12,7 +12,7 @@ import { and, eq } from "drizzle-orm";
 import { type NextFunction, Router } from "express";
 import { z } from "zod";
 import { createKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
-import { connectStripe } from "@/internal/orgs/handlers/handleConnectStripe_old.js";
+import { handleStripeSecretKey } from "@/internal/orgs/orgUtils/handleStripeSecretKey";
 import { shouldReconnectStripe } from "@/internal/orgs/orgUtils.js";
 import { afterOrgCreated } from "@/utils/authUtils/afterOrgCreated.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
@@ -217,9 +217,9 @@ platformRouter.post("/exchange", (req: any, res: any) =>
 						test_api_key,
 						test_webhook_secret,
 						defaultCurrency: newDefaultCurrency,
-					} = await connectStripe({
+					} = await handleStripeSecretKey({
 						orgId: org.id,
-						apiKey: stripe_test_key,
+						secretKey: stripe_test_key,
 						env: AppEnv.Sandbox,
 					});
 
@@ -258,9 +258,9 @@ platformRouter.post("/exchange", (req: any, res: any) =>
 						live_api_key,
 						live_webhook_secret,
 						defaultCurrency: newDefaultCurrency,
-					} = await connectStripe({
+					} = await handleStripeSecretKey({
 						orgId: org.id,
-						apiKey: stripe_live_key,
+						secretKey: stripe_live_key,
 						env: AppEnv.Live,
 					});
 
