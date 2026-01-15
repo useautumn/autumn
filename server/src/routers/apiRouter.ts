@@ -21,6 +21,7 @@ import { billingRouter } from "../internal/billing/billingRouter";
 import { cusRouter } from "../internal/customers/cusRouter";
 import { entityRouter } from "../internal/entities/entityRouter";
 import { featureRouter } from "../internal/features/featureRouter";
+import { invoiceRouter } from "../internal/invoices/invoiceRouter.js";
 import { honoOrgRouter } from "../internal/orgs/orgRouter";
 import { platformBetaRouter } from "../internal/platform/platformBeta/platformBetaRouter";
 import {
@@ -45,6 +46,7 @@ apiRouter.route("", balancesRouter);
 apiRouter.route("", migrationRouter);
 apiRouter.route("", entityRouter);
 apiRouter.route("/customers", cusRouter);
+apiRouter.route("/invoices", invoiceRouter);
 
 apiRouter.route("/products_beta", honoProductBetaRouter);
 apiRouter.route("/products", honoProductRouter);

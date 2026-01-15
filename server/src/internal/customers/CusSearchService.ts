@@ -1,24 +1,24 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-
-import { AppEnv, customers, CusProductStatus } from "@autumn/shared";
+import {
+	type AppEnv,
+	CusProductStatus,
+	customerProducts,
+	customers,
+	products,
+} from "@autumn/shared";
 
 import {
 	and,
 	desc,
 	eq,
-	ilike,
-	or,
-	lt,
-	isNotNull,
-	gt,
-	sql,
-	gte,
+	gt, ilike, isNotNull,
 	isNull,
-	inArray,
+	lt,
 	notExists,
+	or,
+	sql
 } from "drizzle-orm";
-import { customerProducts, products } from "@autumn/shared";
 import { alias } from "drizzle-orm/pg-core";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 // Create alias for subquery
 const customerProductsAlias = alias(customerProducts, "cp_alias");
@@ -111,7 +111,7 @@ export class CusSearchService {
 		let statuses: string[] = [];
 
 		// 1. Create base query to fetch all customerproducts
-		let activeProdFilter = or(
+		const activeProdFilter = or(
 			eq(customerProducts.status, CusProductStatus.Active),
 			eq(customerProducts.status, CusProductStatus.PastDue),
 		);
@@ -135,7 +135,7 @@ export class CusSearchService {
 			});
 		}
 
-		let filtersDrizzle = and(
+		const filtersDrizzle = and(
 			// New product:version filtering
 			productVersionFilters.length > 0
 				? or(
@@ -206,7 +206,7 @@ export class CusSearchService {
 				: undefined,
 		);
 
-		let cusFilter = and(
+		const cusFilter = and(
 			eq(customers.org_id, orgId),
 			eq(customers.env, env),
 
@@ -501,7 +501,7 @@ export class CusSearchService {
 		const noneProducts = filters?.none === "true";
 
 		if (noneProducts) {
-			return await this.searchByNone({
+			return await CusSearchService.searchByNone({
 				db,
 				orgId,
 				env,
@@ -514,7 +514,7 @@ export class CusSearchService {
 		}
 
 		if (filters?.version && filters?.version.length > 0) {
-			return await this.searchByProduct({
+			return await CusSearchService.searchByProduct({
 				db,
 				orgId,
 				env,
@@ -526,7 +526,7 @@ export class CusSearchService {
 			});
 		}
 
-		let filterClause = and(
+		const filterClause = and(
 			eq(customers.org_id, orgId),
 			eq(customers.env, env),
 			search

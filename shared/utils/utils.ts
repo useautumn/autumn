@@ -1,10 +1,4 @@
-import { KSUID } from "@owpz/ksuid";
 import { Decimal } from "decimal.js";
-
-export const generateId = (prefix?: string): string => {
-	const id = KSUID.random().toString();
-	return prefix ? `${prefix}_${id}` : id;
-};
 
 export const nullish = <T>(
 	value: T | null | undefined,

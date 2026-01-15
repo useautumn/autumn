@@ -115,7 +115,9 @@ const logResponse = async ({
 			res: responseBody,
 		});
 
-		ctx.logger.debug(`EXTRA LOGS:`, JSON.stringify(ctx.extraLogs, null, 2));
+		if (Object.keys(ctx.extraLogs).length > 0) {
+			ctx.logger.debug(`EXTRA LOGS:`, JSON.stringify(ctx.extraLogs, null, 2));
+		}
 	} catch (error) {
 		console.error("Failed to log response to logtail");
 		console.error(error);

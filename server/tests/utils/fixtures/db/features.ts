@@ -8,11 +8,13 @@ const create = ({
 	internalId,
 	name,
 	type = FeatureType.Metered,
+	config = {},
 }: {
 	id: string;
 	internalId?: string;
 	name: string;
 	type?: FeatureType;
+	config?: Record<string, unknown>;
 }) => ({
 	internal_id: internalId ?? `internal_${id}`,
 	org_id: "org_test",
@@ -21,7 +23,7 @@ const create = ({
 	id,
 	name,
 	type,
-	config: {},
+	config,
 	display: null,
 	archived: false,
 	event_names: [],

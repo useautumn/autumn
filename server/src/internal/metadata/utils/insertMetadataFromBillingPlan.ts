@@ -1,4 +1,4 @@
-import { generateId, InternalError, MetadataType } from "@autumn/shared";
+import { InternalError, MetadataType } from "@autumn/shared";
 import { addDays } from "date-fns";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
@@ -9,6 +9,7 @@ import type {
 	BillingPlan,
 	DeferredAutumnBillingPlanData,
 } from "@/internal/billing/v2/types/billingPlan";
+import { generateId } from "@/utils/genUtils";
 import { MetadataService } from "../MetadataService";
 
 /**

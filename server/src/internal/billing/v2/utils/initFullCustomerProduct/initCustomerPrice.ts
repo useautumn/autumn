@@ -1,9 +1,5 @@
-import {
-	type CustomerPrice,
-	type FullCustomer,
-	generateId,
-	type Price,
-} from "@autumn/shared";
+import type { CustomerPrice, FullCustomer, Price } from "@autumn/shared";
+import { generateId } from "@/utils/genUtils";
 
 export const initCustomerPrice = ({
 	price,

@@ -2,11 +2,11 @@ import {
 	CollectionMethod,
 	type CusProduct,
 	CusProductStatus,
-	generateId,
 	type InitFullCustomerProductContext,
 	type InitFullCustomerProductOptions,
 	notNullish,
 } from "@autumn/shared";
+import { generateId } from "@/utils/genUtils";
 
 export const initCustomerProduct = ({
 	initContext,

@@ -7,6 +7,7 @@ import {
 import type { ClickHouseClient } from "@clickhouse/client";
 import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import {
 	generateEventCountExpressions,
@@ -41,13 +42,15 @@ export class AnalyticsService {
 	}
 
 	static async getTopEventNames({
-		req,
+		ctx,
 		limit = 3,
 	}: {
-		req: ExtendedRequest;
+		ctx: AutumnContext;
 		limit?: number;
 	}) {
-		const { clickhouseClient, org, env } = req;
+		const { clickhouseClient, org, env } = ctx;
+
+		if (!clickhouseClient) throw new Error("ClickHouse client not found");
 
 		const query = `
     select count(*) as count, event_name 
@@ -132,13 +135,15 @@ WHERE
 	}
 
 	static async getTotalEvents({
-		req,
+		ctx,
 		eventName,
 	}: {
-		req: ExtendedRequest;
+		ctx: AutumnContext;
 		eventName?: string;
 	}) {
-		const { clickhouseClient, org, env } = req;
+		const { clickhouseClient, org, env } = ctx;
+
+		if (!clickhouseClient) throw new Error("ClickHouse client not found");
 
 		const query = `
 SELECT SUM(
@@ -166,8 +171,11 @@ WHERE event_name = {eventName:String}
 		return (resultJson.data as { total_events: number }[])[0].total_events;
 	}
 
-	static async getTotalCustomers({ req }: { req: ExtendedRequest }) {
-		const { clickhouseClient, org, env } = req;
+	static async getTotalCustomers({ ctx }: { ctx: AutumnContext }) {
+		const { clickhouseClient, org, env } = ctx;
+
+		if (!clickhouseClient) throw new Error("ClickHouse client not found");
+
 		const query = `SELECT COUNT(DISTINCT id) AS total_customers 
 FROM customers
 WHERE org_id = {org_id:String} 
@@ -188,12 +196,12 @@ WHERE org_id = {org_id:String}
 	}
 
 	static async getTimeseriesEvents({
-		req,
+		ctx,
 		params,
 		customer,
 		aggregateAll = false,
 	}: {
-		req: ExtendedRequest;
+		ctx: AutumnContext;
 		params: {
 			event_names: string[];
 			interval: RangeEnum;
@@ -203,7 +211,9 @@ WHERE org_id = {org_id:String}
 		customer?: FullCustomer;
 		aggregateAll?: boolean;
 	}) {
-		const { clickhouseClient, org, env, db } = req;
+		const { clickhouseClient, org, env, db } = ctx;
+
+		if (!clickhouseClient) throw new Error("ClickHouse client not found");
 
 		const intervalType: RangeEnum = params.interval || "24h";
 
@@ -312,17 +322,19 @@ order by dr.period;
 	}
 
 	static async getRawEvents({
-		req,
+		ctx,
 		params,
 		customer,
 		aggregateAll = false,
 	}: {
-		req: ExtendedRequest;
+		ctx: AutumnContext;
 		params: any;
 		customer?: FullCustomer;
 		aggregateAll?: boolean;
 	}) {
-		const { clickhouseClient, org, db, env } = req;
+		const { clickhouseClient, org, db, env } = ctx;
+
+		if (!clickhouseClient) throw new Error("ClickHouse client not found");
 
 		AnalyticsService.handleEarlyExit();
 
