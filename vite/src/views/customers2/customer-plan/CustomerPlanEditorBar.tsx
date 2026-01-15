@@ -60,8 +60,8 @@ export const CustomerPlanEditorBar = () => {
 			// We have a subscription ID, so we're editing an existing subscription
 			setSheet({
 				type: changesMade
-					? "subscription-update-test"
-					: "subscription-update-test", // SWAP: Change back to "subscription-update" : "subscription-detail" to revert
+					? "subscription-update-v2"
+					: "subscription-detail",
 				itemId: queryStates.id,
 				data: changesMade ? { customizedProduct: product } : null,
 			});

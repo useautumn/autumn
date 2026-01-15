@@ -207,6 +207,9 @@ function SheetContent({
 			<EditPlanSection
 				hasCustomizations={formValues.items !== null}
 				onEditPlan={handleEditPlan}
+				product={product}
+				customerProduct={customerProduct}
+				features={features}
 			/>
 
 			<PrepaidQuantitySection form={form} prepaidItems={extendedPrepaidItems} />
