@@ -42,6 +42,7 @@ export function useUpdateSubscriptionForm({
 			trialCardRequired: true,
 			removeTrial: false,
 			version: currentVersion,
+			items: null,
 		} as UpdateSubscriptionForm,
 		validators: {
 			onChange: UpdateSubscriptionFormSchema,

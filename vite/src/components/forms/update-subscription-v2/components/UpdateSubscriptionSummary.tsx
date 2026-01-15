@@ -1,10 +1,11 @@
-import type { FullCusProduct } from "@autumn/shared";
+import type { FullCusProduct, ProductItem } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 import { useMemo } from "react";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import type { PrepaidItemWithFeature } from "@/hooks/stores/useProductStore";
 import type { UseUpdateSubscriptionForm } from "../hooks/useUpdateSubscriptionForm";
 import type { SummaryItem } from "../types/summary";
+import { generateItemChanges } from "../utils/generateItemChanges";
 import { generatePrepaidChanges } from "../utils/generatePrepaidChanges";
 import { generateTrialChanges } from "../utils/generateTrialChanges";
 import { generateVersionChanges } from "../utils/generateVersionChanges";
@@ -16,6 +17,7 @@ interface UpdateSubscriptionSummaryProps {
 	customerProduct: FullCusProduct;
 	currentVersion: number;
 	currency?: string;
+	originalItems?: ProductItem[];
 }
 
 export function UpdateSubscriptionSummary({
@@ -24,6 +26,7 @@ export function UpdateSubscriptionSummary({
 	customerProduct,
 	currentVersion,
 	currency = "usd",
+	originalItems,
 }: UpdateSubscriptionSummaryProps) {
 	const formValues = useStore(form.store, (state) => state.values);
 
@@ -50,7 +53,17 @@ export function UpdateSubscriptionSummary({
 			selectedVersion: formValues.version,
 		});
 
-		return [...versionChanges, ...prepaidChanges, ...trialChanges];
+		const itemChanges = generateItemChanges({
+			originalItems,
+			customizedItems: formValues.items,
+		});
+
+		return [
+			...versionChanges,
+			...itemChanges,
+			...prepaidChanges,
+			...trialChanges,
+		];
 	}, [
 		prepaidItems,
 		formValues.prepaidOptions,
@@ -58,6 +71,7 @@ export function UpdateSubscriptionSummary({
 		formValues.trialLength,
 		formValues.trialDuration,
 		formValues.version,
+		formValues.items,
 		initialPrepaidOptions,
 		customerProduct,
 		currentVersion,

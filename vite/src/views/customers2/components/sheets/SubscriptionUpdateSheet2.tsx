@@ -1,13 +1,16 @@
 import type {
 	FrontendProduct,
 	FullCusProduct,
+	ProductItem,
 	ProductV2,
 } from "@autumn/shared";
+import { productV2ToFrontendProduct } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useUpdateSubscriptionPreview } from "@/components/forms/update-subscription/use-update-subscription-preview";
 import {
+	EditPlanSection,
 	FreeTrialSection,
 	getFreeTrial,
 	PlanVersionSection,
@@ -20,6 +23,7 @@ import {
 	useUpdateSubscriptionMutation,
 	useUpdateSubscriptionRequestBody,
 } from "@/components/forms/update-subscription-v2";
+import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/InlinePlanEditor";
 import { SheetHeader } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
@@ -29,22 +33,50 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 
 function SheetContent({
 	updateSubscriptionFormContext,
+	originalItems,
 }: {
 	updateSubscriptionFormContext: UpdateSubscriptionFormContext;
+	originalItems: FrontendProduct["items"] | undefined;
 }) {
-	const { customerProduct, prepaidItems, numVersions, currentVersion } =
-		updateSubscriptionFormContext;
+	const {
+		customerProduct,
+		prepaidItems,
+		numVersions,
+		currentVersion,
+		product,
+	} = updateSubscriptionFormContext;
 	const { closeSheet } = useSheetStore();
 	const { stripeAccount } = useOrgStripeQuery();
 	const env = useEnv();
+
+	const [showPlanEditor, setShowPlanEditor] = useState(false);
+	const { setIsInlineEditorOpen } = useCustomerContext();
 
 	const form = useUpdateSubscriptionForm({ updateSubscriptionFormContext });
 
 	const formValues = useStore(form.store, (state) => state.values);
 	const { prepaidOptions } = formValues;
+
+	const productWithFormItems = useMemo((): FrontendProduct | undefined => {
+		if (!product) return undefined;
+
+		const baseFrontendProduct = productV2ToFrontendProduct({
+			product: product as ProductV2,
+		});
+
+		if (formValues.items) {
+			return {
+				...baseFrontendProduct,
+				items: formValues.items,
+			};
+		}
+
+		return baseFrontendProduct;
+	}, [product, formValues.items]);
 
 	const { buildRequestBody } = useUpdateSubscriptionRequestBody({
 		updateSubscriptionFormContext,
@@ -82,6 +114,24 @@ function SheetContent({
 			},
 		});
 
+	// Handler to open the inline plan editor
+	const handleEditPlan = () => {
+		if (!productWithFormItems) return;
+		setShowPlanEditor(true);
+		setIsInlineEditorOpen(true);
+	};
+
+	const handlePlanEditorSave = (items: ProductItem[]) => {
+		form.setFieldValue("items", items);
+		setShowPlanEditor(false);
+		setIsInlineEditorOpen(false);
+	};
+
+	const handlePlanEditorCancel = () => {
+		setShowPlanEditor(false);
+		setIsInlineEditorOpen(false);
+	};
+
 	return (
 		<div className="flex flex-col h-full overflow-y-auto">
 			<SheetHeader
@@ -99,6 +149,11 @@ function SheetContent({
 				currentVersion={currentVersion}
 			/>
 
+			<EditPlanSection
+				hasCustomizations={formValues.items !== null}
+				onEditPlan={handleEditPlan}
+			/>
+
 			<PrepaidQuantitySection form={form} prepaidItems={prepaidItems} />
 
 			<FreeTrialSection form={form} customerProduct={customerProduct} />
@@ -109,6 +164,7 @@ function SheetContent({
 				customerProduct={customerProduct}
 				currentVersion={currentVersion}
 				currency={previewQuery.data?.currency}
+				originalItems={originalItems}
 			/>
 
 			<UpdateSubscriptionPreviewSection
@@ -121,24 +177,27 @@ function SheetContent({
 				onConfirm={handleConfirm}
 				onInvoiceUpdate={handleInvoiceUpdate}
 			/>
+
+			{showPlanEditor && productWithFormItems && (
+				<InlinePlanEditor
+					product={productWithFormItems}
+					productName={customerProduct.product.name}
+					onSave={handlePlanEditorSave}
+					onCancel={handlePlanEditorCancel}
+				/>
+			)}
 		</div>
 	);
 }
 
 export function SubscriptionUpdateSheet2() {
 	const itemId = useSheetStore((s) => s.itemId);
-	const sheetData = useSheetStore((s) => s.data);
 	const { customer } = useCusQuery();
 	const axiosInstance = useAxiosInstance();
 
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
 
-	const customizedProduct = sheetData?.customizedProduct as
-		| FrontendProduct
-		| undefined;
-
-	const product = customizedProduct?.id ? customizedProduct : productV2;
-	const { prepaidItems } = usePrepaidItems({ product });
+	const { prepaidItems } = usePrepaidItems({ product: productV2 });
 
 	// Fetch numVersions for the product
 	const { data: productData } = useQuery({
@@ -161,10 +220,9 @@ export function SubscriptionUpdateSheet2() {
 			cusProduct && productV2
 				? {
 						customerId: customer?.id ?? customer?.internal_id,
-						product: product as ProductV2,
+						product: productV2 as ProductV2,
 						entityId: cusProduct?.entity_id ?? undefined,
 						customerProduct: cusProduct as FullCusProduct,
-						customizedProduct,
 						prepaidItems,
 						numVersions,
 						currentVersion,
@@ -172,10 +230,8 @@ export function SubscriptionUpdateSheet2() {
 				: null,
 		[
 			customer,
-			product,
 			cusProduct,
 			productV2,
-			customizedProduct,
 			prepaidItems,
 			numVersions,
 			currentVersion,
@@ -218,6 +274,7 @@ export function SubscriptionUpdateSheet2() {
 	return (
 		<SheetContent
 			updateSubscriptionFormContext={updateSubscriptionFormContext}
+			originalItems={productV2?.items}
 		/>
 	);
 }

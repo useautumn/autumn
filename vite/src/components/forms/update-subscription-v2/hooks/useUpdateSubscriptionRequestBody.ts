@@ -10,14 +10,8 @@ export function useUpdateSubscriptionRequestBody({
 	updateSubscriptionFormContext: UpdateSubscriptionFormContext;
 	form: UseUpdateSubscriptionForm;
 }) {
-	const {
-		customerId,
-		product,
-		entityId,
-		customerProduct,
-		prepaidItems,
-		customizedProduct,
-	} = updateSubscriptionFormContext;
+	const { customerId, product, entityId, customerProduct, prepaidItems } =
+		updateSubscriptionFormContext;
 
 	const initialPrepaidOptions =
 		form.options.defaultValues?.prepaidOptions ?? {};
@@ -32,6 +26,7 @@ export function useUpdateSubscriptionRequestBody({
 			trialCardRequired,
 			removeTrial,
 			version,
+			items,
 		} = formValues;
 
 		const options = prepaidItems
@@ -78,8 +73,9 @@ export function useUpdateSubscriptionRequestBody({
 			requestBody.free_trial = freeTrial;
 		}
 
-		if (customizedProduct?.items) {
-			requestBody.items = customizedProduct.items;
+		// Send items if customized (from form state)
+		if (items && items.length > 0) {
+			requestBody.items = items;
 		}
 
 		// Only send version if it changed from the initial value
@@ -98,7 +94,6 @@ export function useUpdateSubscriptionRequestBody({
 		initialVersion,
 		prepaidItems,
 		initialPrepaidOptions,
-		customizedProduct?.items,
 	]);
 
 	return { buildRequestBody };

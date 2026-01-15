@@ -1,4 +1,4 @@
-import { FreeTrialDuration } from "@autumn/shared";
+import { FreeTrialDuration, ProductItemSchema } from "@autumn/shared";
 import { z } from "zod/v4";
 
 export const UpdateSubscriptionFormSchema = z.object({
@@ -12,6 +12,9 @@ export const UpdateSubscriptionFormSchema = z.object({
 
 	// Plan version (initialized with current version)
 	version: z.number().positive(),
+
+	// Custom plan items (null = no customization, use default product items)
+	items: z.array(ProductItemSchema).nullable(),
 });
 
 export type UpdateSubscriptionForm = z.infer<

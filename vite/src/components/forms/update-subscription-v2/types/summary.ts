@@ -2,13 +2,13 @@ import type { ProductItem } from "@autumn/shared";
 
 export interface SummaryItem {
 	id: string;
-	type: "prepaid" | "trial" | "version";
+	type: "prepaid" | "trial" | "version" | "item";
 	label: string;
 	description: string;
 	oldValue: string | number | null;
 	newValue: string | number | null;
 	costDelta?: number;
 	currency?: string;
-	/** The product item for rendering icons (prepaid changes only) */
+	/** The product item for rendering icons (prepaid and item changes) */
 	productItem?: ProductItem;
 }
