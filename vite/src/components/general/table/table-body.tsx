@@ -80,13 +80,7 @@ export function TableBody() {
 								key={cell.id}
 								style={
 									flexibleTableColumns
-										? {
-												width: `${cell.column.getSize()}px`,
-												maxWidth: `${cell.column.getSize()}px`,
-												minWidth: cell.column.columnDef.minSize
-													? `${cell.column.columnDef.minSize}px`
-													: undefined,
-											}
+										? undefined
 										: { width: `${cell.column.getSize()}px` }
 								}
 							>

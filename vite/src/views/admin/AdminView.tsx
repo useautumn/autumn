@@ -5,11 +5,10 @@ import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 import { DefaultView } from "../DefaultView";
 import LoadingScreen from "../general/LoadingScreen";
-import { AdminTable } from "./AdminTable";
+import { AdminUserTable } from "./AdminUserTable";
+import { AdminOrgTable } from "./AdminOrgTable";
 import { CreateUser } from "./components/CreateUser";
 import { useAdmin } from "./hooks/useAdmin";
-import { columns as orgColumns } from "./orgColumns";
-import { columns as userColumns } from "./userColumns";
 
 export const AdminView = () => {
 	const navigate = useNavigate();
@@ -39,9 +38,7 @@ export const AdminView = () => {
 	};
 
 	return (
-		<div className="flex flex-col p-6">
-			{/* 1. User list */}
-
+		<div className="flex flex-col p-6 gap-8">
 			<div className="flex justify-end absolute top-10 right-10 gap-2">
 				<CreateUser />
 				<Button
@@ -63,9 +60,9 @@ export const AdminView = () => {
 				</Button>
 			</div>
 
-			<div className="text-xs">
-				<AdminTable path="/admin/users" columns={userColumns} title="Users" />
-				<AdminTable path="/admin/orgs" columns={orgColumns} title="Orgs" />
+			<div className="flex gap-8">
+				<AdminUserTable />
+				<AdminOrgTable />
 			</div>
 		</div>
 	);
