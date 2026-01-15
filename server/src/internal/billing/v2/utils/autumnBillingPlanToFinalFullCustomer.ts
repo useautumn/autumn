@@ -24,9 +24,16 @@ export const autumnBillingPlanToFinalFullCustomer = ({
 	];
 
 	// 2. Replace updated customer product if applicable
+	const updatedCustomerProduct = updateCustomerProduct
+		? {
+				...updateCustomerProduct.customerProduct,
+				...updateCustomerProduct.updates,
+			}
+		: undefined;
+
 	let customerProducts = combinedCustomerProducts.map((customerProduct) =>
-		customerProduct.id === updateCustomerProduct?.id
-			? updateCustomerProduct
+		customerProduct.id === updatedCustomerProduct?.id
+			? updatedCustomerProduct
 			: customerProduct,
 	);
 
@@ -46,7 +53,7 @@ export const autumnBillingPlanToFinalFullCustomer = ({
 		);
 
 		for (const update of updateCustomerEntitlements) {
-			const entitlement = entitlementById.get(update.customerEntitlementId);
+			const entitlement = entitlementById.get(update.customerEntitlement.id);
 			if (entitlement) {
 				entitlement.balance = (entitlement.balance ?? 0) + update.balanceChange;
 			}

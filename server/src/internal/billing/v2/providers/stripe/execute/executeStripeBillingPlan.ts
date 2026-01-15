@@ -20,7 +20,6 @@ export const executeStripeBillingPlan = async ({
 	billingContext: BillingContext;
 	resumeAfter?: StripeBillingStage;
 }): Promise<StripeBillingPlanResult> => {
-	const { logger } = ctx;
 	const {
 		subscriptionAction: stripeSubscriptionAction,
 		invoiceAction: stripeInvoiceAction,
@@ -39,7 +38,7 @@ export const executeStripeBillingPlan = async ({
 	const resumeAfterSubscriptionAction =
 		resumeAfter === StripeBillingStage.SubscriptionAction;
 
-	if (stripeInvoiceAction && resumeAfterInvoiceAction) {
+	if (stripeInvoiceAction && !resumeAfterInvoiceAction) {
 		invoiceResult = await executeStripeInvoiceAction({
 			ctx,
 			billingPlan,
@@ -53,7 +52,6 @@ export const executeStripeBillingPlan = async ({
 		stripeInvoiceItemsAction?.createInvoiceItems &&
 		!resumeAfterSubscriptionAction
 	) {
-		logger.info("[execStripePlan] Creating invoice items for next cycle");
 		await createStripeInvoiceItems({
 			ctx,
 			invoiceItems: stripeInvoiceItemsAction.createInvoiceItems,
@@ -93,6 +91,7 @@ export const executeStripeBillingPlan = async ({
 		stripeInvoice:
 			subscriptionResult?.stripeInvoice ?? invoiceResult?.stripeInvoice,
 
-		actionRequired: invoiceResult?.actionRequired,
+		requiredAction:
+			subscriptionResult?.requiredAction ?? invoiceResult?.requiredAction,
 	};
 };

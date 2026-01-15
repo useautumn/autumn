@@ -9,13 +9,13 @@ import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
 /** Price with associated product name for logging. */
-type PriceWithProduct = {
+export type PriceWithProduct = {
 	price: Price;
 	productName: string;
 };
 
 /** Generic phase item type that works for both response and update params. */
-type PhaseItem = {
+export type PhaseItem = {
 	price?: string | Stripe.Price | Stripe.DeletedPrice;
 	quantity?: number;
 };
@@ -30,7 +30,7 @@ type LoggablePhase = {
 /**
  * Extracts prices with product names from customer products.
  */
-const customerProductsToPricesWithProduct = ({
+export const customerProductsToPricesWithProduct = ({
 	customerProducts,
 }: {
 	customerProducts: FullCusProduct[];
@@ -46,7 +46,7 @@ const customerProductsToPricesWithProduct = ({
 /**
  * Matches a Stripe price ID to an Autumn price with product info.
  */
-const matchStripePriceIdToAutumnPrice = ({
+export const matchStripePriceIdToAutumnPrice = ({
 	stripePriceId,
 	pricesWithProduct,
 }: {
@@ -68,7 +68,7 @@ const matchStripePriceIdToAutumnPrice = ({
 /**
  * Formats a phase item for logging by matching Stripe price ID to Autumn price.
  */
-const formatPhaseItemWithAutumnPrice = ({
+export const formatPhaseItemWithAutumnPrice = ({
 	item,
 	pricesWithProduct,
 }: {

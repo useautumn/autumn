@@ -5,7 +5,7 @@ export interface StripeBillingPlanResult {
 	deferred?: boolean;
 	stripeInvoice?: Stripe.Invoice;
 	stripeSubscription?: Stripe.Subscription;
-	actionRequired?: {
+	requiredAction?: {
 		code: PaymentFailureCode;
 		reason: string;
 	};

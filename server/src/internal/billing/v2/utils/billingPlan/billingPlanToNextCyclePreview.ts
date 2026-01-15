@@ -24,12 +24,15 @@ export const billingPlanToNextCyclePreview = ({
 	const { billingCycleAnchorMs } = billingContext;
 
 	if (billingCycleAnchorMs === "now") return undefined;
-	const { insertCustomerProducts, updateCustomerProduct } = billingPlan.autumn;
+	const {
+		insertCustomerProducts,
+		updateCustomerProduct: { customerProduct: targetUpdateCustomerProduct },
+	} = billingPlan.autumn;
 
 	// 2. Get cycle end and if none, return undefined
 	const allCustomerProducts = [
 		...insertCustomerProducts,
-		...(updateCustomerProduct ? [updateCustomerProduct] : []),
+		...(targetUpdateCustomerProduct ? [targetUpdateCustomerProduct] : []),
 	];
 	const customerProducts = allCustomerProducts.filter(
 		(customerProduct) =>

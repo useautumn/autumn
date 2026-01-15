@@ -49,6 +49,7 @@ export interface BillingContext {
 
 	// Trial context
 	trialContext?: TrialContext;
+	isCustom: boolean;
 }
 
 export interface UpdateSubscriptionBillingContext extends BillingContext {

@@ -1,4 +1,5 @@
 import { type AppEnv, AuthType, createdAtToVersion } from "@autumn/shared";
+import { addAppContextToLogs } from "@/utils/logging/addContextToLogs.js";
 import type { DrizzleCli } from "../db/initDrizzle.js";
 import type { Logger } from "../external/logtail/logtailUtils.js";
 import type { AutumnContext } from "../honoUtils/HonoEnv.js";
@@ -9,7 +10,6 @@ export const createWorkerContext = async ({
 	db,
 	payload,
 	logger,
-	workflowId,
 }: {
 	db: DrizzleCli;
 	payload: {
@@ -18,7 +18,6 @@ export const createWorkerContext = async ({
 		customerId?: string;
 	};
 	logger: Logger;
-	workflowId?: string;
 }) => {
 	const { orgId, env, customerId } = payload;
 	if (!orgId || !env) return;
@@ -35,17 +34,19 @@ export const createWorkerContext = async ({
 	}
 
 	const { org, features } = orgData;
+	const apiVersion = createdAtToVersion({
+		createdAt: org.created_at ?? Date.now(),
+	});
 
-	const workerLogger = logger.child({
-		context: {
-			context: {
-				workflow_id: workflowId,
-				org_id: org?.id,
-				org_slug: org?.slug,
-				customer_id: customerId,
-				env: env,
-				authType: AuthType.Worker,
-			},
+	const workerLogger = addAppContextToLogs({
+		logger: logger,
+		appContext: {
+			org_id: org?.id,
+			org_slug: org?.slug,
+			customer_id: customerId,
+			env: env,
+			auth_type: AuthType.Worker,
+			api_version: apiVersion.semver,
 		},
 	});
 
@@ -56,14 +57,15 @@ export const createWorkerContext = async ({
 		db,
 		logger: workerLogger,
 
-		id: workflowId || generateId("job"),
+		id: generateId("job"),
 		timestamp: Date.now(),
 		isPublic: false,
-		authType: AuthType.Unknown,
-		apiVersion: createdAtToVersion({ createdAt: org.created_at! }),
+		authType: AuthType.Worker,
+		apiVersion,
 		clickhouseClient: undefined,
 		expand: [],
 		skipCache: true,
+		extraLogs: {},
 	};
 
 	return ctx;

@@ -4,11 +4,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import type { StripeSubscriptionAction } from "@/internal/billing/v2/types/billingPlan";
 
-type InvoiceModeParams = {
-	collection_method?: "send_invoice";
-	days_until_due?: number;
-};
-
 export const executeStripeSubscriptionOperation = async ({
 	ctx,
 	billingContext,
@@ -48,6 +43,7 @@ export const executeStripeSubscriptionOperation = async ({
 				{
 					...subscriptionAction.params,
 					...invoiceModeParams,
+					payment_behavior: "error_if_incomplete",
 					expand: ["latest_invoice"],
 				},
 			);
@@ -56,6 +52,7 @@ export const executeStripeSubscriptionOperation = async ({
 			return await stripeClient.subscriptions.create({
 				...subscriptionAction.params,
 				...invoiceModeParams,
+				payment_behavior: "allow_incomplete",
 				expand: ["latest_invoice"],
 			});
 		case "cancel":

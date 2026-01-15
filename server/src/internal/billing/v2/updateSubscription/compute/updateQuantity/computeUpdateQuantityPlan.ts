@@ -29,21 +29,17 @@ export const computeUpdateQuantityPlan = ({
 		customPrices: [],
 		customEntitlements: [],
 		updateCustomerProduct: {
-			...customerProduct,
-			options: newOptions,
-
-			// If quantity is being updated, customer product should be uncanceled
-			canceled: false,
-			canceled_at: null,
-			ended_at: null,
+			customerProduct,
+			updates: {
+				options: newOptions,
+			},
 		},
 
 		updateCustomerEntitlements: quantityUpdateDetails.map((detail) => ({
-			customerEntitlementId: detail.customerEntitlementId,
+			customerEntitlement: detail.customerEntitlement,
 			balanceChange: detail.customerEntitlementBalanceChange,
 		})),
 
 		lineItems,
-		// quantityUpdateDetails,
 	};
 };
