@@ -1,5 +1,5 @@
 import { formatAmount } from "@autumn/shared";
-import { CalendarIcon, GitBranchIcon } from "@phosphor-icons/react";
+import { CalendarIcon, GitBranchIcon, WrenchIcon } from "@phosphor-icons/react";
 import { PlanFeatureIcon } from "@/views/products/plan/components/plan-card/PlanFeatureIcon";
 import { CustomDotIcon } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
 import type { SummaryItem } from "../types/summary";
@@ -34,6 +34,14 @@ export function SummaryItemRow({
 			return (
 				<div className="text-purple-500">
 					<GitBranchIcon size={16} weight="duotone" />
+				</div>
+			);
+		}
+
+		if (item.type === "item") {
+			return (
+				<div className="text-amber-500">
+					<WrenchIcon size={16} weight="duotone" />
 				</div>
 			);
 		}

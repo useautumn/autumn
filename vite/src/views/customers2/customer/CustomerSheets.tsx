@@ -12,7 +12,6 @@ import { BalanceEditSheet } from "../components/sheets/BalanceEditSheet";
 import { BalanceSelectionSheet } from "../components/sheets/BalanceSelectionSheet";
 import { SubscriptionDetailSheet } from "../components/sheets/SubscriptionDetailSheet";
 import { SubscriptionUpdateSheet } from "../components/sheets/SubscriptionUpdateSheet";
-import { SubscriptionUpdateTestSheet } from "../components/sheets/SubscriptionUpdateTestSheet"; // TEST: Remove this line to revert
 import { SHEET_ANIMATION } from "./customerAnimations";
 
 export function CustomerSheets() {
@@ -47,32 +46,21 @@ export function CustomerSheets() {
 
 	return (
 		<AnimatePresence mode="wait">
-			{sheetType && (
-				<motion.div
-					initial={{ x: "100%" }}
-					animate={{ x: 0 }}
-					exit={{ x: "100%" }}
-					transition={SHEET_ANIMATION}
-					className="absolute right-0 top-0 bottom-0"
-					style={{ width: "28rem", zIndex: 45 }}
-				>
-					<SheetContainer className="w-full bg-background z-40 border-l border-border/40 h-full relative">
-						<SheetCloseButton onClose={handleClose} />
-						{renderSheet()}
-					</SheetContainer>
-				</motion.div>
-			)}
-		</AnimatePresence>
+				{sheetType && (
+					<motion.div
+						initial={{ x: "100%" }}
+						animate={{ x: 0 }}
+						exit={{ x: "100%" }}
+						transition={SHEET_ANIMATION}
+						className="absolute right-0 top-0 bottom-0"
+						style={{ width: "28rem", zIndex: 45 }}
+					>
+						<SheetContainer className="w-full bg-background z-40 border-l border-border/40 h-full relative">
+							<SheetCloseButton onClose={handleClose} />
+							{renderSheet()}
+						</SheetContainer>
+					</motion.div>
+				)}
+			</AnimatePresence>
 	);
-
-	// return (
-	// 	<Sheet open={open} onOpenChange={closeSheet}>
-	// 		<SheetContent
-	// 			className="w-full bg-background border-l h-full"
-	// 			// side="right"
-	// 		>
-	// 			{renderSheet()}
-	// 		</SheetContent>
-	// 	</Sheet>
-	// );
 }

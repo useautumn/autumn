@@ -152,8 +152,9 @@ const MainContent = () => {
 						onOpenChange={setShowDeployDialog}
 					/>
 					<div
+						data-main-content
 						className={cn(
-							"w-full h-full overflow-auto flex justify-center bg-background",
+							"w-full h-full overflow-auto flex justify-center bg-background relative",
 						)}
 					>
 						<div className="w-full h-full justify-center">
