@@ -16,7 +16,6 @@ import {
 	EditPlanSection,
 	FreeTrialSection,
 	getFreeTrial,
-	PlanVersionSection,
 	PrepaidQuantitySection,
 	UpdateSubscriptionFooter,
 	type UpdateSubscriptionFormContext,
@@ -198,18 +197,15 @@ function SheetContent({
 				itemId={customerProduct.id}
 			/>
 
-			<PlanVersionSection
-				form={form}
-				numVersions={numVersions}
-				currentVersion={currentVersion}
-			/>
-
 			<EditPlanSection
 				hasCustomizations={formValues.items !== null}
 				onEditPlan={handleEditPlan}
 				product={product}
 				customerProduct={customerProduct}
 				features={features}
+				form={form}
+				numVersions={numVersions}
+				currentVersion={currentVersion}
 			/>
 
 			<PrepaidQuantitySection form={form} prepaidItems={extendedPrepaidItems} />

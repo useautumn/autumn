@@ -3,7 +3,6 @@
 // Components
 export * from "./components/EditPlanSection";
 export * from "./components/FreeTrialSection";
-export * from "./components/PlanVersionSection";
 export * from "./components/PrepaidQuantitySection";
 export * from "./components/PreviewErrorDisplay";
 export * from "./components/UpdateSubscriptionFooter";
