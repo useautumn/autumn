@@ -247,4 +247,3 @@ export const customerHasPm = async ({
 };
 
 attachRouter.post("/attach/preview", handleAttachPreview);
-// attachRouter.post("/checkout", handleCheckout);

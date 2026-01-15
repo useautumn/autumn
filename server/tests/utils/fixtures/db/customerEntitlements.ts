@@ -19,6 +19,7 @@ const create = ({
 	balance,
 	customerProductId,
 	featureType = FeatureType.Metered,
+	featureConfig = {},
 	interval = null,
 	intervalCount = 1,
 	usageAllowed = true,
@@ -35,6 +36,7 @@ const create = ({
 	balance: number;
 	customerProductId?: string;
 	featureType?: FeatureType;
+	featureConfig?: Record<string, unknown>;
 	interval?: EntInterval | null;
 	intervalCount?: number;
 	usageAllowed?: boolean;
@@ -66,6 +68,7 @@ const create = ({
 			featureName,
 			allowance,
 			featureType,
+			featureConfig,
 			interval,
 			intervalCount,
 			entityFeatureId,

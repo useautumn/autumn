@@ -5,7 +5,6 @@ import type {
 } from "@autumn/shared";
 import {
 	addDuration,
-	initFreeTrial,
 	isCustomerProductTrialing,
 	isProductPaidAndRecurring,
 	secondsToMs,
@@ -13,6 +12,7 @@ import {
 import type Stripe from "stripe";
 import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import type { TrialContext } from "@/internal/billing/v2/billingContext";
+import { initFreeTrial } from "@/internal/products/free-trials/initFreeTrial";
 
 export const setupTrialContext = ({
 	stripeSubscription,

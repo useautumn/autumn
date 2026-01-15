@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
 	InputOTP,
 	InputOTPGroup,
 	InputOTPSlot,
 } from "@/components/ui/input-otp";
-import { toast } from "sonner";
 import { DevService } from "@/services/DevService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
@@ -20,7 +20,9 @@ export const Otp = () => {
 
 	useEffect(() => {
 		const fetchOtp = async () => {
+			console.log("Fetching OTP");
 			const { otp } = await DevService.createOTP(axiosInstance);
+			console.log("OTP fetched", otp);
 			setTheOtp(otp);
 		};
 		fetchOtp();

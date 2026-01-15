@@ -215,8 +215,6 @@ test.concurrent(`${chalk.yellowBright("update while downgrading")}`, async () =>
 		items: [updatedConsumableItem, newPriceItem],
 	});
 
-	console.log("Preview total (update canceling product):", preview.total);
-
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: premium.id,
@@ -226,8 +224,6 @@ test.concurrent(`${chalk.yellowBright("update while downgrading")}`, async () =>
 	// Verify state after update
 	const customerAfterUpdate =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	console.log("Products after update:", customerAfterUpdate.products);
 
 	// Premium product should remain canceling (with updated items)
 	await expectProductCanceling({
@@ -266,8 +262,6 @@ test.concurrent(`${chalk.yellowBright("update while downgrading")}`, async () =>
 	// After advancing, pro should be active and premium should be gone
 	const customerAfterAdvance =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	console.log("Products after advance:", customerAfterAdvance.products);
 
 	// Pro should now be active
 	await expectProductActive({
@@ -369,11 +363,6 @@ test.concurrent(`${chalk.yellowBright("update while canceling: preserves usage")
 		product_id: pro.id,
 		items: [updatedMessagesItem, items.monthlyPrice()],
 	});
-
-	console.log(
-		"Preview total (update while canceling with usage):",
-		preview.total,
-	);
 
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,

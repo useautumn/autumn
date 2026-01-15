@@ -2,8 +2,8 @@ import {
 	type CreateFreeTrial,
 	CreateFreeTrialSchema,
 	type FreeTrial,
-} from "@models/productModels/freeTrialModels/freeTrialModels";
-import { generateId } from "@utils/utils";
+} from "@autumn/shared";
+import { generateId } from "@/utils/genUtils";
 
 export const initFreeTrial = ({
 	freeTrialParams,
@@ -24,5 +24,3 @@ export const initFreeTrial = ({
 		is_custom: isCustom,
 	};
 };
-
-// card_required: freeTrial.card_required ?? true,

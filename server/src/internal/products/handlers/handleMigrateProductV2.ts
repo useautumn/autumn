@@ -136,6 +136,8 @@ export const handleMigrateProductV2 = createRoute({
 			toProduct,
 		});
 
+		ctx.logger.info(`CREATED MIGRATION JOB: ${migrationJob.id}`);
+
 		await MigrationService.createJob({
 			db,
 			data: migrationJob,

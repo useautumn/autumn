@@ -22,7 +22,6 @@
 		"db:studio": "cross-env NODE_OPTIONS=\"--import tsx\" bunx drizzle-kit studio --config drizzle.config.ts"
 	},
 	"dependencies": {
-		"@owpz/ksuid": "^25.7.20",
 		"@date-fns/utc": "catalog:",
 		"date-fns": "^4.1.0",
 		"decimal.js": "^10.5.0",

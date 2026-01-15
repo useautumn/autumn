@@ -1,4 +1,4 @@
-import type { ExtendedRequest } from "@/utils/models/Request.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
 export class RevenueService {
 	static clickhouseAvailable =
@@ -6,8 +6,10 @@ export class RevenueService {
 		process.env.CLICKHOUSE_USERNAME &&
 		process.env.CLICKHOUSE_PASSWORD;
 
-	static async getMonthlyRevenue({ req }: { req: ExtendedRequest }) {
-		const { clickhouseClient, org, env } = req;
+	static async getMonthlyRevenue({ ctx }: { ctx: AutumnContext }) {
+		const { clickhouseClient, org, env } = ctx;
+
+		if (!clickhouseClient) throw new Error("ClickHouse client not found");
 
 		const query = `
 SELECT

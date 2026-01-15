@@ -269,7 +269,6 @@ export class ProductService {
 				prices: { where: eq(prices.is_custom, false) },
 				free_trials: { where: eq(freeTrials.is_custom, false) },
 			},
-			// orderBy: [desc(products.internal_id)],
 		})) as FullProduct[];
 
 		parseFreeTrials({ products: data });
