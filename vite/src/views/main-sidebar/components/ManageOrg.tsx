@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
 	Dialog,
@@ -21,20 +21,11 @@ const tabsContentClassName = "h-full overflow-y-auto focus-visible:ring-0";
 export const ManageOrg = ({
 	open,
 	setOpen,
-	initialTab,
 }: {
 	open: boolean;
 	setOpen: (open: boolean) => void;
-	initialTab?: ManageOrgTab;
 }) => {
-	const [currentTab, setCurrentTab] = useState<ManageOrgTab>(initialTab || "user");
-
-	// Update tab when initialTab changes (e.g., from hash)
-	useEffect(() => {
-		if (initialTab) {
-			setCurrentTab(initialTab);
-		}
-	}, [initialTab]);
+	const [currentTab, setCurrentTab] = useState<ManageOrgTab>("user");
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
