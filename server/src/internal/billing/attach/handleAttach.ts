@@ -50,6 +50,8 @@ export const handleAttach = createRoute({
 			attachParams,
 		});
 
+		attachParams.branch = branch; // important!
+
 		const { flags, config } = await getAttachConfig({
 			ctx,
 			attachParams,
