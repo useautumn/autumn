@@ -2,9 +2,8 @@ import {
 	FeatureNotFoundError,
 	UpdateBalancesParamsSchema,
 } from "@autumn/shared";
+import { executePostgresDeduction } from "@/internal/balances/utils/deduction/executePostgresDeduction";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
-
-import { runDeductionTx } from "../../balances/track/trackUtils/runDeductionTx";
 import type { FeatureDeduction } from "../../balances/utils/types/featureDeduction";
 import { CusService } from "../CusService";
 
@@ -38,14 +37,16 @@ export const handleUpdateBalancesV2 = createRoute({
 			targetBalance: b.balance,
 		})) satisfies FeatureDeduction[];
 
-		await runDeductionTx({
+		await executePostgresDeduction({
 			ctx,
+			fullCustomer: fullCus,
 			customerId: customer_id,
 			deductions: featureDeductions,
-			entityId: fullCus.entity?.id,
-			skipAdditionalBalance: true,
-			alterGrantedBalance: true,
 			refreshCache: true,
+			options: {
+				alterGrantedBalance: true,
+				overageBehaviour: "allow",
+			},
 		});
 
 		return c.json({ success: true });

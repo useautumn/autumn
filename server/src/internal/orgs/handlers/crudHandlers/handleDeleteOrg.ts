@@ -1,13 +1,12 @@
-import { AppEnv, customers, ErrCode, type Organization } from "@autumn/shared";
-import { and, eq } from "drizzle-orm";
+import { AppEnv, type Organization } from "@autumn/shared";
 import {
 	deauthorizeAccount,
 	deleteConnectedAccount,
 } from "@/external/connect/connectUtils.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { deleteSvixApp } from "@/external/svix/svixHelpers.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler.js";
+import { deleteOrg } from "../../deleteOrg/deleteOrg.js";
 import { deleteStripeWebhook } from "../../orgUtils.js";
 
 const deleteSvixWebhooks = async ({
@@ -102,37 +101,12 @@ export const handleDeleteOrg = createRoute({
 		const ctx = c.get("ctx");
 		const { org, db, logger } = ctx;
 
-		// 1. Check if any customers
-		const hasCustomers = await db.query.customers.findFirst({
-			where: and(eq(customers.org_id, org.id), eq(customers.env, AppEnv.Live)),
+		await deleteOrg({
+			org,
+			db,
+			logger,
+			deleteOrgFromDb: false,
 		});
-
-		if (hasCustomers)
-			throw new RecaseError({
-				message: "Cannot delete org with production mode customers",
-				code: ErrCode.OrgHasCustomers,
-				statusCode: 400,
-			});
-
-		// 2. Delete svix webhooks
-		logger.info("1. Deleting svix webhooks");
-		await deleteSvixWebhooks({ org, logger });
-
-		// 3. Delete stripe webhooks
-		logger.info("2. Deleting stripe webhooks");
-		await deleteStripeWebhooks({ org, logger });
-
-		// 4. Delete stripe accounts
-		logger.info("3. Deleting stripe accounts");
-		await deleteStripeAccounts({ org, logger });
-
-		// 4. Delete all sandbox customers
-		logger.info("4. Deleting sandbox customers");
-		await db
-			.delete(customers)
-			.where(
-				and(eq(customers.org_id, org.id), eq(customers.env, AppEnv.Sandbox)),
-			);
 
 		return c.json({
 			message: "Org deleted",

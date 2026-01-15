@@ -1,5 +1,5 @@
 import {
-	cusProductsToCusEnts,
+	fullCustomerToCustomerEntitlements,
 	type FullCustomer,
 	findCustomerEntitlementById,
 } from "@autumn/shared";
@@ -22,8 +22,8 @@ export const logDeductionUpdates = ({
 }): void => {
 	if (Object.keys(updates).length === 0) return;
 
-	const customerEntitlements = cusProductsToCusEnts({
-		cusProducts: fullCustomer.customer_products,
+	const customerEntitlements = fullCustomerToCustomerEntitlements({
+		fullCustomer,
 	});
 
 	for (const [cusEntId, update] of Object.entries(updates)) {

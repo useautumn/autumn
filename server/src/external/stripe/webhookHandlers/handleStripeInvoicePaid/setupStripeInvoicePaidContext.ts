@@ -1,13 +1,16 @@
+import { cp, type FullCusProduct } from "@autumn/shared";
 import type Stripe from "stripe";
 import {
-	getFullStripeInvoice,
-	invoiceToSubId,
-} from "@/external/stripe/stripeInvoiceUtils.js";
+	type ExpandedStripeInvoice,
+	getStripeInvoice,
+} from "@/external/stripe/invoices/operations/getStripeInvoice.js";
+import { stripeInvoiceToStripeSubscriptionId } from "../../invoices/utils/convertStripeInvoice";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
 
 export interface StripeInvoicePaidContext {
-	stripeInvoice: Stripe.Invoice;
-	stripeSubscriptionId: string | null;
+	stripeInvoice: ExpandedStripeInvoice<["discounts.source.coupon", "payments"]>;
+	stripeSubscriptionId?: string;
+	customerProducts?: FullCusProduct[];
 }
 
 export const setupStripeInvoicePaidContext = async ({
@@ -19,16 +22,35 @@ export const setupStripeInvoicePaidContext = async ({
 
 	const invoiceData = stripeEvent.data.object as Stripe.Invoice;
 
-	const stripeInvoice = await getFullStripeInvoice({
-		stripeCli,
-		stripeId: invoiceData.id!,
-		expand: ["payments"],
+	const stripeInvoice = await getStripeInvoice({
+		stripeClient: stripeCli,
+		invoiceId: invoiceData.id!,
+		expand: ["discounts.source.coupon", "payments"],
 	});
 
-	const stripeSubscriptionId = invoiceToSubId({ invoice: stripeInvoice }) ?? null;
+	const stripeSubscriptionId =
+		stripeInvoiceToStripeSubscriptionId(stripeInvoice);
+
+	const { fullCustomer } = ctx;
+
+	let customerProducts: FullCusProduct[] | undefined;
+
+	if (fullCustomer && stripeSubscriptionId) {
+		customerProducts = fullCustomer.customer_products.filter(
+			(customerProduct) => {
+				const { valid } = cp(customerProduct)
+					.paid()
+					.recurring()
+					.onStripeSubscription({ stripeSubscriptionId });
+
+				return valid;
+			},
+		);
+	}
 
 	return {
 		stripeInvoice,
 		stripeSubscriptionId,
+		customerProducts,
 	};
 };

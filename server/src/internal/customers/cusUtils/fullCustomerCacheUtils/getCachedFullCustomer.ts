@@ -114,6 +114,11 @@ export const getCachedFullCustomer = async ({
 		fullCustomer.entity = undefined;
 	}
 
+	// Ensure extra_customer_entitlements is an array (due to legacy issues with old full customer object in cache.)
+	if (!fullCustomer.extra_customer_entitlements) {
+		fullCustomer.extra_customer_entitlements = [];
+	}
+
 	// Round balance fields to handle floating-point precision from JSON.NUMINCRBY
 	return roundFullCustomerBalances(fullCustomer);
 };

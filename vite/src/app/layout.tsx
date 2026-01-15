@@ -43,15 +43,13 @@ export function MainLayout() {
 		return () => window.removeEventListener("error", handleGlobalError);
 	}, [handleApiError]);
 
+	// Redirect to sandbox if not deployed
 	useEffect(() => {
-		// Only redirect if org is loaded and user is not onboarded
-		if (!orgLoading && org) {
-			if (!org.deployed) {
-				const pathname = window.location.pathname;
-				if (!pathname.startsWith("/sandbox")) {
-					const search = window.location.search;
-					navigate(`/sandbox${pathname}${search}`);
-				}
+		if (!orgLoading && org && !org.deployed) {
+			const pathname = window.location.pathname;
+			if (!pathname.startsWith("/sandbox")) {
+				const search = window.location.search;
+				navigate(`/sandbox${pathname}${search}`);
 			}
 		}
 	}, [org, orgLoading, navigate]);
@@ -96,14 +94,14 @@ export function MainLayout() {
 			includeCredentials={true}
 		>
 			<NuqsAdapter>
-				<body className="w-screen h-screen flex bg-outer-background">
+				<div className="w-screen h-screen flex bg-outer-background">
 					<CustomToaster />
 					<MainSidebar />
 					<InviteNotifications />
 					<MainContent />
 					{/* <ChatWidget /> */}
 					<CommandBar />
-				</body>
+				</div>
 			</NuqsAdapter>
 		</AutumnProvider>
 	);

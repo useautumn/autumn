@@ -177,6 +177,12 @@ export const AnalyticsView = () => {
 					newParams.set("interval", interval);
 					navigate(`${location.pathname}?${newParams.toString()}`);
 				},
+				selectedBinSize: searchParams.get("bin_size") || "day",
+				setSelectedBinSize: (binSize: string) => {
+					const newParams = new URLSearchParams(searchParams);
+					newParams.set("bin_size", binSize);
+					navigate(`${location.pathname}?${newParams.toString()}`);
+				},
 
 				setEventNames,
 				featureIds,

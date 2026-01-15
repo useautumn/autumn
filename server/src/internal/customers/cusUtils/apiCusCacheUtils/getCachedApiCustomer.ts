@@ -7,7 +7,7 @@ import {
 	CusExpand,
 	type CustomerLegacyData,
 	CustomerLegacyDataSchema,
-	filterOutEntitiesFromCusProducts,
+	filterOutEntitiesFromFullCustomer,
 	filterPlanAndFeatureExpand,
 } from "@autumn/shared";
 import { CACHE_CUSTOMER_VERSION } from "@lua/cacheConfig.js";
@@ -137,12 +137,7 @@ export const getCachedApiCustomer = async ({
 
 		const { apiCustomer: masterApiCustomer } = await getApiCustomerBase({
 			ctx,
-			fullCus: {
-				...fullCus,
-				customer_products: filterOutEntitiesFromCusProducts({
-					cusProducts: fullCus.customer_products,
-				}),
-			},
+			fullCus: filterOutEntitiesFromFullCustomer({ fullCus }),
 			withAutumnId: true,
 		});
 

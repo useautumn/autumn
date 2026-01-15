@@ -7,10 +7,10 @@ export const useTab = () => {
 	}
 
 	if (
-		pathname.startsWith("/analytics") ||
-		pathname.startsWith("/sandbox/analytics")
+		pathname.startsWith("/events") ||
+		pathname.startsWith("/sandbox/events")
 	) {
-		return "analytics";
+		return "events";
 	}
 
 	if (

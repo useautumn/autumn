@@ -86,6 +86,7 @@ describe(`${chalk.yellowBright("check6: test /check on feature with multiple bal
 				resets_at: null,
 			},
 			prepaid_quantity: 0,
+			expires_at: null,
 		};
 
 		const expectedMonthlyBreadown = {

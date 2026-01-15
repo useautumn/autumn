@@ -13,22 +13,26 @@ export const handleGetProductDeleteInfo = async (req: any, res: any) =>
 		handler: async (req: ExtendedRequest, res: any) => {
 			try {
 				// 1. Get number of versions
-				const { db, orgId, env } = req;
+				const { db } = req;
+				const productId = Array.isArray(req.params.productId)
+					? req.params.productId[0]
+					: req.params.productId;
+
 				const product = await ProductService.get({
 					db,
-					id: req.params.productId,
+					id: productId,
 					orgId: req.orgId,
 					env: req.env,
 				});
 
 				if (!product) {
-					throw new ProductNotFoundError({ productId: req.params.productId });
+					throw new ProductNotFoundError({ productId });
 				}
 
 				const [allVersions, latestVersion, deletionText] = await Promise.all([
 					CusProdReadService.existsForProduct({
 						db,
-						productId: req.params.productId,
+						productId,
 					}),
 					CusProdReadService.existsForProduct({
 						db,
@@ -36,7 +40,7 @@ export const handleGetProductDeleteInfo = async (req: any, res: any) =>
 					}),
 					ProductService.getDeletionText({
 						db,
-						productId: req.params.productId,
+						productId,
 						orgId: req.orgId,
 						env: req.env,
 					}),

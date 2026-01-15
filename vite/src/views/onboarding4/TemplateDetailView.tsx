@@ -28,7 +28,9 @@ function PricingTierCard({ tier }: { tier: PricingTier }) {
 				<span className="text-2xl font-semibold text-foreground">
 					{tier.price}
 				</span>
-				{tier.interval && <span className="text-sm text-t3">/{tier.interval}</span>}
+				{tier.interval && (
+					<span className="text-sm text-t3">/{tier.interval}</span>
+				)}
 			</div>
 
 			<div className="flex flex-col gap-2 mt-auto">
@@ -83,7 +85,9 @@ export function TemplateDetailView({
 					))}
 				</div>
 
-				<p className="text-sm text-t2 leading-relaxed">{template.description}</p>
+				<p className="text-sm text-t2 leading-relaxed">
+					{template.description}
+				</p>
 			</div>
 
 			{/* Pricing tiers */}
@@ -112,5 +116,3 @@ export function TemplateDetailView({
 		</div>
 	);
 }
-
-
