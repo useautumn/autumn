@@ -2,23 +2,22 @@ import { ErrCode, RecaseError } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { auth } from "@/utils/auth.js";
-import { ADMIN_USER_IDs } from "@/utils/constants.js";
 
 /**
  * Admin auth middleware for Hono
- * Validates that the user is an admin user
+ * Validates that the user has an "admin" role
  */
 export const adminAuthMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const data = await auth.api.getSession({
 		headers: c.req.raw.headers,
 	});
 
-	if (
-		!ADMIN_USER_IDs.includes(data?.session?.userId || "") &&
-		!ADMIN_USER_IDs.includes(data?.session?.impersonatedBy || "")
-	) {
+	// Check if user has admin role
+	const isAdmin = data?.user?.role === "admin";
+
+	if (!isAdmin) {
 		throw new RecaseError({
-			message: "Method not allowed",
+			message: "Forbidden - Admin access required",
 			code: ErrCode.InvalidRequest,
 			statusCode: 403,
 		});
