@@ -81,6 +81,17 @@ function SheetContent({
 		features,
 	});
 
+	// Only include prepaid options that have changed from their initial values
+	const changedPrepaidOptions = useMemo(() => {
+		const changed: Record<string, number> = {};
+		for (const [featureId, quantity] of Object.entries(prepaidOptions)) {
+			if (quantity !== initialPrepaidOptions[featureId]) {
+				changed[featureId] = quantity;
+			}
+		}
+		return Object.keys(changed).length > 0 ? changed : undefined;
+	}, [prepaidOptions, initialPrepaidOptions]);
+
 	// Compute extended prepaid items that includes both original prepaid items
 	// and any new prepaid items added through the inline editor
 	const extendedPrepaidItems = useMemo(() => {
@@ -137,7 +148,7 @@ function SheetContent({
 
 	const previewQuery = useUpdateSubscriptionPreview({
 		updateSubscriptionFormContext,
-		prepaidOptions,
+		prepaidOptions: changedPrepaidOptions,
 		freeTrial: getFreeTrial({
 			removeTrial: formValues.removeTrial,
 			trialLength: formValues.trialLength,
