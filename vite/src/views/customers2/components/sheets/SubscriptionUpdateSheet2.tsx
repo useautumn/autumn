@@ -10,6 +10,7 @@ import {
 import { useStore } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
+
 import { useMemo, useState } from "react";
 import { useUpdateSubscriptionPreview } from "@/components/forms/update-subscription/use-update-subscription-preview";
 import {
@@ -30,9 +31,13 @@ import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/Inli
 import { SheetHeader } from "@/components/v2/sheets/SharedSheetComponents";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
-import { usePrepaidItems } from "@/hooks/stores/useProductStore";
+import {
+	useHasBillingChanges,
+	usePrepaidItems,
+} from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
+import { cn } from "@/lib/utils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
@@ -40,6 +45,7 @@ import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import { itemToFeature } from "@/utils/product/productItemUtils/convertItem";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
+import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 
 function SheetContent({
 	updateSubscriptionFormContext,
@@ -141,6 +147,44 @@ function SheetContent({
 		return baseFrontendProduct;
 	}, [product, formValues.items]);
 
+	const baseProduct = useMemo((): FrontendProduct | undefined => {
+		if (!product) return undefined;
+		return productV2ToFrontendProduct({ product: product as ProductV2 });
+	}, [product]);
+	const newProduct = useMemo((): FrontendProduct | undefined => {
+		if (!product) return undefined;
+
+		const base = productV2ToFrontendProduct({ product: product as ProductV2 });
+		const freeTrial = getFreeTrial({
+			removeTrial: formValues.removeTrial,
+			trialLength: formValues.trialLength,
+			trialDuration: formValues.trialDuration,
+		});
+
+		return {
+			...base,
+			items: formValues.items ?? base.items,
+			free_trial:
+				freeTrial === null ? undefined : (freeTrial ?? base.free_trial),
+		};
+	}, [
+		product,
+		formValues.items,
+		formValues.removeTrial,
+		formValues.trialLength,
+		formValues.trialDuration,
+	]);
+
+	const hasBillingChanges = useHasBillingChanges({
+		baseProduct: baseProduct as FrontendProduct,
+		newProduct: newProduct as FrontendProduct,
+	});
+
+	const hasPrepaidQuantityChanges = changedPrepaidOptions !== undefined;
+
+	const hasNoBillingChanges =
+		hasChanges && !hasBillingChanges && !hasPrepaidQuantityChanges;
+
 	const { buildRequestBody } = useUpdateSubscriptionRequestBody({
 		updateSubscriptionFormContext,
 		form,
@@ -206,6 +250,29 @@ function SheetContent({
 				]}
 				itemId={customerProduct.id}
 			/>
+
+			<div
+				className={cn(
+					"grid px-4 transition-[grid-template-rows] duration-200 ease-out",
+					!hasNoBillingChanges && "delay-75",
+				)}
+				style={{
+					gridTemplateRows: hasNoBillingChanges ? "1fr" : "0fr",
+				}}
+			>
+				<div className="overflow-hidden">
+					<div
+						className={cn(
+							"pt-4 transition-opacity duration-150",
+							hasNoBillingChanges ? "opacity-100 delay-75" : "opacity-0",
+						)}
+					>
+						<InfoBox variant="success" classNames={{ infoBox: "w-full" }}>
+							No changes to billing will be made
+						</InfoBox>
+					</div>
+				</div>
+			</div>
 
 			<EditPlanSection
 				hasCustomizations={formValues.items !== null}
