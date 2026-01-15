@@ -2,7 +2,7 @@ import { AppEnv, oauthAccessToken, oauthConsent } from "@autumn/shared";
 import { and, eq, gt } from "drizzle-orm";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { hashOAuthToken } from "@/utils/oauthUtils.js";
-import { createKey } from "../../api-keys/apiKeyUtils.js";
+import { ApiKeyPrefix, createKey } from "../../api-keys/apiKeyUtils.js";
 
 /**
  * Create API keys from an OAuth access token.
@@ -92,19 +92,19 @@ export const handleCreateOAuthApiKeys = createRoute({
 			createKey({
 				db,
 				env: AppEnv.Sandbox,
-				name: "CLI Key",
+				name: `CLI Key - ${new Date().toISOString()}`,
 				orgId,
 				userId,
-				prefix: "am_sk_test",
+				prefix: ApiKeyPrefix.Sandbox,
 				meta,
 			}),
 			createKey({
 				db,
 				env: AppEnv.Live,
-				name: "CLI Key",
+				name: `CLI Key - ${new Date().toISOString()}`,
 				orgId,
 				userId,
-				prefix: "am_sk_live",
+				prefix: ApiKeyPrefix.Live,
 				meta,
 			}),
 		]);
