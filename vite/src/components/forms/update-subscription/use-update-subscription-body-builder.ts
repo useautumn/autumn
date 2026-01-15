@@ -9,7 +9,6 @@ import { Decimal } from "decimal.js";
 import { useMemo } from "react";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useHasChanges, useProductStore } from "@/hooks/stores/useProductStore";
-import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useEnv } from "@/utils/envUtils";
 import { getRedirectUrl } from "@/utils/genUtils";
 import { getUpdateSubscriptionBody } from "./get-update-subscription-body";
@@ -40,7 +39,6 @@ export function useUpdateSubscriptionBodyBuilder(
 	const { products } = useProductsQuery();
 	const hasChanges = useHasChanges();
 	const storeProduct = useProductStore((s) => s.product);
-	const { entityId: storeEntityId } = useEntity();
 	const env = useEnv();
 
 	// Memoized builder function that can be called with runtime params
@@ -100,7 +98,7 @@ export function useUpdateSubscriptionBodyBuilder(
 			return getUpdateSubscriptionBody({
 				customerId: mergedParams.customerId,
 				product,
-				entityId: mergedParams.entityId ?? storeEntityId ?? undefined,
+				entityId: mergedParams.entityId,
 				optionsInput: options.length > 0 ? options : undefined,
 				isCustom,
 				version,
@@ -114,7 +112,7 @@ export function useUpdateSubscriptionBodyBuilder(
 				items: mergedParams.items,
 			});
 		},
-		[products, hasChanges, storeProduct, storeEntityId, params, env],
+		[products, hasChanges, storeProduct, params, env],
 	);
 
 	// For simple usage, return the built body with current params
