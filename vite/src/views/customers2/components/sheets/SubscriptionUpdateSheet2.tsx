@@ -237,6 +237,8 @@ function SheetContent({
 			<UpdateSubscriptionFooter
 				isPending={isPending}
 				hasChanges={hasChanges}
+				isLoading={previewQuery.isLoading}
+				hasError={!!previewQuery.error}
 				onConfirm={handleConfirm}
 				onInvoiceUpdate={handleInvoiceUpdate}
 			/>
