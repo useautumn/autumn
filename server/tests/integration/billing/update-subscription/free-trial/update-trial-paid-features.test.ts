@@ -20,11 +20,11 @@ import chalk from "chalk";
  * Tests for scenarios involving products with prepaid/paid features and trial transitions.
  */
 
-// 1. Pro product with prepaid users -> add trial -> remove trial
-test.concurrent(`${chalk.yellowBright("trial-paid-features: prepaid users add trial then remove")}`, async () => {
+// 1. Pro product with prepaid users (0 seats) -> add trial -> update quantity to 5 seats
+test.concurrent(`${chalk.yellowBright("trial-paid-features: add trial then update quantity")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 20 });
-	const prepaidUsersItem = items.prepaidUsers({ includedUsage: 5 });
+	const prepaidUsersItem = items.prepaidUsers({ includedUsage: 0 }); // $10/seat
 
 	const pro = products.base({
 		id: "pro",
@@ -32,7 +32,7 @@ test.concurrent(`${chalk.yellowBright("trial-paid-features: prepaid users add tr
 	});
 
 	const { customerId, autumnV1, ctx, advancedTo } = await initScenario({
-		customerId: "trial-prepaid-add-remove",
+		customerId: "trial-prepaid-add-update-qty",
 		setup: [
 			s.customer({ testClock: true, paymentMethod: "success" }),
 			s.products({ list: [pro] }),
@@ -40,14 +40,12 @@ test.concurrent(`${chalk.yellowBright("trial-paid-features: prepaid users add tr
 		actions: [
 			s.attach({
 				productId: pro.id,
-				options: [{ feature_id: TestFeature.Users, quantity: 3 }],
+				options: [{ feature_id: TestFeature.Users, quantity: 0 }],
 			}),
 		],
 	});
 
-	return;
-
-	// Verify initial state - NOT trialing, has users
+	// Verify initial state - NOT trialing, 0 seats
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductNotTrialing({
@@ -55,12 +53,12 @@ test.concurrent(`${chalk.yellowBright("trial-paid-features: prepaid users add tr
 		productId: pro.id,
 	});
 
-	// Prepaid users: 5 included + 3 purchased = 8 total
+	// Prepaid users: 0 included + 0 purchased = 0 total
 	expectCustomerFeatureCorrect({
 		customer: customerBefore,
 		featureId: TestFeature.Users,
-		includedUsage: 5,
-		balance: 8,
+		includedUsage: 0,
+		balance: 0,
 		usage: 0,
 	});
 
@@ -79,10 +77,10 @@ test.concurrent(`${chalk.yellowBright("trial-paid-features: prepaid users add tr
 	const addTrialPreview =
 		await autumnV1.subscriptions.previewUpdate(addTrialParams);
 
-	// Should refund previous payment since entering trial
-	expect(addTrialPreview.total).toBeLessThanOrEqual(0);
+	// Should refund previous payment since entering trial (base price only, 0 seats)
+	expect(addTrialPreview.total).toEqual(-priceItem.price!);
 
-	// next_cycle should show when trial ends
+	// next_cycle should show when trial ends (base price only, 0 seats)
 	expectPreviewNextCycleCorrect({
 		preview: addTrialPreview,
 		startsAt: advancedTo + ms.days(14),
@@ -90,6 +88,8 @@ test.concurrent(`${chalk.yellowBright("trial-paid-features: prepaid users add tr
 	});
 
 	await autumnV1.subscriptions.update(addTrialParams);
+
+	return;
 
 	const customerWithTrial =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -101,12 +101,12 @@ test.concurrent(`${chalk.yellowBright("trial-paid-features: prepaid users add tr
 		trialEndsAt: advancedTo + ms.days(14),
 	});
 
-	// Users should still be accessible
+	// Users should still be 0
 	expectCustomerFeatureCorrect({
 		customer: customerWithTrial,
 		featureId: TestFeature.Users,
-		includedUsage: 5,
-		balance: 8,
+		includedUsage: 0,
+		balance: 0,
 		usage: 0,
 	});
 
@@ -119,54 +119,60 @@ test.concurrent(`${chalk.yellowBright("trial-paid-features: prepaid users add tr
 		usage: 0,
 	});
 
-	// Step 3: Update plan to remove the trial
-	const removeTrialParams = {
+	// Step 3: Update quantity to 5 seats while trialing
+	const seatsQuantity = 5;
+	const seatsPrice = seatsQuantity * 10; // $10/seat = $50
+
+	const updateQuantityParams = {
 		customer_id: customerId,
 		product_id: pro.id,
-		free_trial: null,
+		options: [{ feature_id: TestFeature.Users, quantity: seatsQuantity }],
 	};
 
-	const removeTrialPreview =
-		await autumnV1.subscriptions.previewUpdate(removeTrialParams);
+	const updateQuantityPreview =
+		await autumnV1.subscriptions.previewUpdate(updateQuantityParams);
 
-	// Should charge full price since trial is being removed
-	expect(removeTrialPreview.total).toEqual(priceItem.price);
+	// Should be $0 during trial (seats are free during trial)
+	expect(updateQuantityPreview.total).toEqual(0);
 
-	// When trial is removed, next_cycle should not be defined (billing starts now)
+	// next_cycle should show when trial ends (base price + 5 seats)
 	expectPreviewNextCycleCorrect({
-		preview: removeTrialPreview,
-		expectDefined: false,
+		preview: updateQuantityPreview,
+		startsAt: advancedTo + ms.days(14),
+		total: priceItem.price! + seatsPrice,
 	});
 
-	await autumnV1.subscriptions.update(removeTrialParams, { timeout: 5000 });
+	await autumnV1.subscriptions.update(updateQuantityParams);
+	return;
 
-	const customerAfterRemove =
+	const customerAfterQuantityUpdate =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Product should no longer be trialing
-	await expectProductNotTrialing({
-		customer: customerAfterRemove,
+	// Product should still be trialing
+	await expectProductTrialing({
+		customer: customerAfterQuantityUpdate,
 		productId: pro.id,
+		trialEndsAt: advancedTo + ms.days(14),
 	});
 
-	// Should now be active (not trialing)
+	// Should now be active (trialing)
 	await expectProductActive({
-		customer: customerAfterRemove,
+		customer: customerAfterQuantityUpdate,
 		productId: pro.id,
 	});
 
-	// Users should still be accessible with same balance
+	// Users should now have 5 seats
 	expectCustomerFeatureCorrect({
-		customer: customerAfterRemove,
+		customer: customerAfterQuantityUpdate,
 		featureId: TestFeature.Users,
-		includedUsage: 5,
-		balance: 8,
+		includedUsage: 0,
+		balance: seatsQuantity,
 		usage: 0,
 	});
 
 	// Messages should still be accessible
 	expectCustomerFeatureCorrect({
-		customer: customerAfterRemove,
+		customer: customerAfterQuantityUpdate,
 		featureId: TestFeature.Messages,
 		includedUsage: messagesItem.included_usage,
 		balance: messagesItem.included_usage,
@@ -178,8 +184,5 @@ test.concurrent(`${chalk.yellowBright("trial-paid-features: prepaid users add tr
 		customerId,
 		org: ctx.org,
 		env: ctx.env,
-		flags: {
-			checkNotTrialing: true,
-		},
 	});
 });
