@@ -199,12 +199,16 @@ export const EditPlanHeader = () => {
 
 const CustomerBreadcrumbs = () => {
 	const { customer } = useCusQuery();
-	const { product } = useCusProductQuery();
+	const { product: cusProductQueryProduct } = useCusProductQuery();
+	const storeProduct = useProductStore((s) => s.product);
 	const [{ entity_id }] = useQueryStates({
 		entity_id: parseAsString,
 	});
 	//find entity name
 	const entity = customer.entities.find((e: any) => e.id === entity_id);
+
+	// Use store product if cusProductQuery doesn't have it (e.g., in inline editor)
+	const productName = cusProductQueryProduct?.name || storeProduct?.name || "";
 
 	return (
 		<V2Breadcrumb
@@ -228,7 +232,7 @@ const CustomerBreadcrumbs = () => {
 					: []),
 
 				{
-					name: product?.name || "",
+					name: productName,
 				},
 			]}
 		/>

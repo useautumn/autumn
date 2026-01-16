@@ -1,22 +1,25 @@
+import { z } from "zod/v4";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { RewardService } from "@/internal/rewards/RewardService.js";
-import { routeHandler } from "@/utils/routerUtils.js";
 
-export default async (req: any, res: any) =>
-	routeHandler({
-		req,
-		res,
-		action: "get reward",
-		handler: async (req, res) => {
-			const { id } = req.params;
-			const { orgId, env, db } = req;
+const GetCouponParamsSchema = z.object({
+	id: z.string(),
+});
 
-			const reward = await RewardService.get({
-				db,
-				idOrInternalId: id,
-				orgId,
-				env,
-			});
+export const handleGetCoupon = createRoute({
+	params: GetCouponParamsSchema,
+	handler: async (c) => {
+		const ctx = c.get("ctx");
+		const { org, env, db } = ctx;
+		const { id } = c.req.param();
 
-			res.status(200).json(reward);
-		},
-	});
+		const reward = await RewardService.get({
+			db,
+			idOrInternalId: id,
+			orgId: org.id,
+			env,
+		});
+
+		return c.json(reward);
+	},
+});

@@ -10,3 +10,10 @@ export const RELEVANT_STATUSES = [
 	CusProductStatus.PastDue,
 	CusProductStatus.Scheduled,
 ];
+
+export const ALL_STATUSES = [
+	CusProductStatus.Scheduled,
+	CusProductStatus.Active,
+	CusProductStatus.PastDue,
+	CusProductStatus.Expired,
+];

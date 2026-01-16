@@ -1,5 +1,10 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { ApiVersion, type LimitedItem, ResetInterval } from "@autumn/shared";
+import {
+	type ApiEntityV1,
+	ApiVersion,
+	type LimitedItem,
+	ResetInterval,
+} from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
@@ -71,8 +76,11 @@ describe(`${chalk.yellowBright("update-granted-balance3: testing update granted 
 			interval: ResetInterval.Month,
 		});
 
-		const entity1 = await autumnV2.entities.get(customerId, entities[0].id);
-		const balance = entity1.balances[TestFeature.Messages];
+		const entity1 = await autumnV2.entities.get<ApiEntityV1>(
+			customerId,
+			entities[0].id,
+		);
+		const balance = entity1.balances![TestFeature.Messages];
 
 		expect(balance).toMatchObject({
 			granted_balance: 75,
@@ -81,8 +89,11 @@ describe(`${chalk.yellowBright("update-granted-balance3: testing update granted 
 			purchased_balance: 0,
 		});
 
-		const entity2 = await autumnV2.entities.get(customerId, entities[1].id);
-		const balance2 = entity2.balances[TestFeature.Messages];
+		const entity2 = await autumnV2.entities.get<ApiEntityV1>(
+			customerId,
+			entities[1].id,
+		);
+		const balance2 = entity2.balances?.[TestFeature.Messages];
 
 		expect(balance2).toMatchObject({
 			granted_balance: 100,
@@ -101,8 +112,11 @@ describe(`${chalk.yellowBright("update-granted-balance3: testing update granted 
 			granted_balance: 50,
 		});
 
-		const entity2 = await autumnV2.entities.get(customerId, entities[1].id);
-		const balance2 = entity2.balances[TestFeature.Messages];
+		const entity2 = await autumnV2.entities.get<ApiEntityV1>(
+			customerId,
+			entities[1].id,
+		);
+		const balance2 = entity2.balances![TestFeature.Messages];
 
 		expect(balance2).toMatchObject({
 			granted_balance: 50,
@@ -111,8 +125,11 @@ describe(`${chalk.yellowBright("update-granted-balance3: testing update granted 
 			purchased_balance: 0,
 		});
 
-		const entity1 = await autumnV2.entities.get(customerId, entities[0].id);
-		const balance1 = entity1.balances[TestFeature.Messages];
+		const entity1 = await autumnV2.entities.get<ApiEntityV1>(
+			customerId,
+			entities[0].id,
+		);
+		const balance1 = entity1.balances![TestFeature.Messages];
 
 		expect(balance1).toMatchObject({
 			granted_balance: 75,

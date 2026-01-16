@@ -1,5 +1,5 @@
 import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
-import { useProductStore } from "@/hooks/stores/useProductStore";
+import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { BasePriceSection } from "./edit-plan-details/BasePriceSection";
 import { PlanTypeSection } from "./edit-plan-details/PlanTypeSection";
 
@@ -8,7 +8,7 @@ export function EditPlanPriceSheet({
 }: {
 	isOnboarding?: boolean;
 }) {
-	const product = useProductStore((s) => s.product);
+	const { product } = useProduct();
 
 	if (!product) return null;
 

@@ -8,7 +8,6 @@ import {
 import { EntityService } from "@/internal/api/entities/EntityService.js";
 
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
-import type { ExtendedRequest } from "../../../../utils/models/Request.js";
 import { CusService } from "../../../customers/CusService.js";
 import { constructEntity } from "../../entityUtils/entityUtils.js";
 import { createEntityForCusProduct } from "./createEntityForCusProduct.js";
@@ -66,12 +65,11 @@ export const autoCreateEntity = async ({
 
 	for (const cusProduct of fullCus.customer_products) {
 		await createEntityForCusProduct({
-			req: ctx as unknown as ExtendedRequest,
+			ctx,
 			customer: fullCus,
 			cusProduct,
 			inputEntities: [inputEntity],
 			fromAutoCreate: true,
-			logger: ctx.logger,
 		});
 	}
 

@@ -1,36 +1,26 @@
-import { AttachBodyV0Schema } from "@autumn/shared";
-import type {
-	ExtendedRequest,
-	ExtendedResponse,
-} from "@/utils/models/Request.js";
-import { routeHandler } from "@/utils/routerUtils.js";
-import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
+import { AffectedResource, AttachBodyV0Schema } from "@autumn/shared";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { attachParamsToPreview } from "../../../billing/attachPreview/attachParamsToPreview.js";
 import { getAttachParams } from "../attachUtils/attachParams/getAttachParams.js";
 
-export const handleAttachPreview = (req: any, res: any) =>
-	routeHandler({
-		req,
-		res,
-		action: "attach-preview",
-		handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
-			const attachBody = AttachBodyV0Schema.parse(req.body);
+export const handleAttachPreview = createRoute({
+	body: AttachBodyV0Schema,
+	resource: AffectedResource.Attach,
+	handler: async (c) => {
+		const ctx = c.get("ctx");
+		const attachBody = c.req.valid("json");
 
-			// console.log("attachBody", attachBody);
-			const ctx = req as AutumnContext;
-			const { attachParams } = await getAttachParams({
-				ctx,
-				attachBody,
-			});
+		const { attachParams } = await getAttachParams({
+			ctx,
+			attachBody,
+		});
 
-			const attachPreview = await attachParamsToPreview({
-				ctx,
-				attachParams,
-				attachBody,
-			});
+		const attachPreview = await attachParamsToPreview({
+			ctx,
+			attachParams,
+			attachBody,
+		});
 
-			res.status(200).json(attachPreview);
-
-			return;
-		},
-	});
+		return c.json(attachPreview);
+	},
+});

@@ -3,11 +3,9 @@ import type { ApiBalanceBreakdown } from "../../api/customers/cusFeatures/apiBal
 import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import { resetIntvToEntIntv } from "../planFeatureUtils/planFeatureIntervals.js";
-import {
-	cusEntToCusPrice,
-	entToOptions,
-} from "../productUtils/convertUtils.js";
+import { entToOptions } from "../productUtils/convertProductUtils.js";
 import { getCusEntBalance } from "./balanceUtils.js";
+import { cusEntToCusPrice } from "./convertCusEntUtils/cusEntToCusPrice.js";
 import { getRolloverFields } from "./getRolloverFields.js";
 import { getStartingBalance } from "./getStartingBalance.js";
 
@@ -102,51 +100,7 @@ export const cusEntToIncludedUsage = ({
 	}
 
 	return total;
-
-	// if (rollover) {
-	// 	total = new Decimal(total)
-	// 		.add(rollover.balance)
-	// 		.add(rollover.usage)
-	// 		.toNumber();
-	// }
 };
-
-// NEW CUS ENT UTILS
-// export const cusEntToGrantedBalance = ({
-// 	cusEnt,
-// 	entityId,
-// 	withRollovers = false,
-// }: {
-// 	cusEnt: FullCusEntWithFullCusProduct;
-// 	entityId?: string;
-// 	withRollovers?: boolean;
-// }) => {
-// 	const rollover = getRolloverFields({
-// 		cusEnt,
-// 		entityId,
-// 	});
-
-// 	const { count: entityCount } = getCusEntBalance({
-// 		cusEnt,
-// 		entityId,
-// 	});
-
-// 	const grantedBalance = cusEnt.entitlement.allowance || 0;
-
-// 	const total = new Decimal(grantedBalance)
-// 		.mul(cusEnt.customer_product.quantity ?? 1)
-// 		.mul(entityCount)
-// 		.toNumber();
-
-// 	if (withRollovers && rollover) {
-// 		return new Decimal(total)
-// 			.add(rollover.balance)
-// 			.add(rollover.usage)
-// 			.toNumber();
-// 	}
-
-// 	return total;
-// };
 
 export const apiBalanceToBreakdownKey = ({
 	breakdown,

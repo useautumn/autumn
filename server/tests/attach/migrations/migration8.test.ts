@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type AppEnv,
+	BillingInterval,
 	CusProductStatus,
 	type Organization,
 } from "@autumn/shared";
@@ -12,6 +13,7 @@ import chalk from "chalk";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
 import { timeout } from "@/utils/genUtils.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -37,6 +39,11 @@ const premium = constructProduct({
 const updatedPremiumWordsItem = constructArrearItem({
 	featureId: TestFeature.Words,
 	includedUsage: 10000,
+});
+
+const updatedPremiumPriceItem = constructPriceItem({
+	price: 80,
+	interval: BillingInterval.Month,
 });
 
 const entities = [
@@ -141,12 +148,12 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration with entities - o
 			product: premium,
 			status: CusProductStatus.Active,
 		});
-		expect(entity2Res.products[0].canceled_at).toBeFalsy();
+		expect(entity2Res.products?.[0].canceled_at).toBeFalsy();
 	});
 
 	test("should update premium product to new version", async () => {
 		await autumn.products.update(premium.id, {
-			items: [updatedPremiumWordsItem],
+			items: [updatedPremiumWordsItem, updatedPremiumPriceItem],
 		});
 	});
 
@@ -173,7 +180,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration with entities - o
 		});
 
 		// Entity 1 should have updated included usage
-		const entity1Words = entity1Res.features[TestFeature.Words].balance;
+		const entity1Words = entity1Res.features![TestFeature.Words].balance;
 		expect(entity1Words).toBe(10000);
 
 		// Entity 2 should have premium v2, active and NOT cancelled
@@ -183,10 +190,10 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration with entities - o
 			product: premiumV2,
 			status: CusProductStatus.Active,
 		});
-		expect(entity2Res.products[0].canceled_at).toBeFalsy();
+		expect(entity2Res.products![0].canceled_at).toBeFalsy();
 
 		// Entity 2 should have updated included usage
-		const entity2Words = entity2Res.features[TestFeature.Words].balance;
+		const entity2Words = entity2Res.features![TestFeature.Words].balance;
 		expect(entity2Words).toBe(10000);
 
 		await expectSubToBeCorrect({

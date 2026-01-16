@@ -2,7 +2,7 @@ import { type Metadata, MetadataType, metadata } from "@autumn/shared";
 
 import { and, eq, isNotNull, lt, or } from "drizzle-orm";
 import { createStripeCli } from "../../external/connect/createStripeCli";
-import { invoiceToSubId } from "../../external/stripe/stripeInvoiceUtils";
+import { stripeInvoiceToStripeSubscriptionId } from "../../external/stripe/invoices/utils/convertStripeInvoice";
 import type { AttachParams } from "../../internal/customers/cusProducts/AttachParams";
 import { MetadataService } from "../../internal/metadata/MetadataService";
 import type { CronContext } from "../utils/CronContext";
@@ -22,7 +22,7 @@ export const handleVoidInvoiceCron = async ({
 	if (!metadata.stripe_invoice_id) return;
 
 	const invoice = await stripeCli.invoices.retrieve(metadata.stripe_invoice_id);
-	const subId = invoiceToSubId({ invoice });
+	const subId = stripeInvoiceToStripeSubscriptionId(invoice);
 	const voidSub = metadata.type === MetadataType.InvoiceCheckout;
 
 	console.log(
@@ -78,6 +78,7 @@ export const runInvoiceCron = async ({ ctx }: { ctx: CronContext }) => {
 					or(
 						eq(metadata.type, MetadataType.InvoiceActionRequired),
 						eq(metadata.type, MetadataType.InvoiceCheckout),
+						eq(metadata.type, MetadataType.DeferredInvoice),
 					),
 					lt(metadata.expires_at, Date.now()),
 					isNotNull(metadata.stripe_invoice_id),

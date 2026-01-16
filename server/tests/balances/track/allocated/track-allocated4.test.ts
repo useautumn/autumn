@@ -117,8 +117,8 @@ describe(`${chalk.yellowBright(
 		// Verify entity balances
 		for (const entity of entities) {
 			const _entity = await autumnV1.entities.get(customerId, entity.id);
-			expect(_entity.features[TestFeature.Workflows].balance).toBe(10 + 5); // 3 + 10
-			expect(_entity.features[TestFeature.Messages].balance).toBe(100 + 50); // 100 + 50
+			expect(_entity.features![TestFeature.Workflows].balance).toBe(10 + 5); // 3 + 10
+			expect(_entity.features![TestFeature.Messages].balance).toBe(100 + 50); // 100 + 50
 		}
 	});
 
@@ -302,16 +302,16 @@ Total messages: 200, Total workflows: 20
 		const entity1 = await autumnV1.entities.get(customerId, entity1Id);
 		const entity2 = await autumnV1.entities.get(customerId, entity2Id);
 
-		expect(entity1.features[TestFeature.Messages].balance).toBe(
+		expect(entity1.features![TestFeature.Messages].balance).toBe(
 			expectedEntity1TotalMessages,
 		);
-		expect(entity1.features[TestFeature.Workflows].balance).toBe(
+		expect(entity1.features![TestFeature.Workflows].balance).toBe(
 			expectedEntity1TotalWorkflows,
 		);
-		expect(entity2.features[TestFeature.Messages].balance).toBe(
+		expect(entity2.features![TestFeature.Messages].balance).toBe(
 			expectedEntity2TotalMessages,
 		);
-		expect(entity2.features[TestFeature.Workflows].balance).toBe(
+		expect(entity2.features![TestFeature.Workflows].balance).toBe(
 			expectedEntity2TotalWorkflows,
 		);
 
@@ -322,10 +322,10 @@ Total messages: 200, Total workflows: 20
 				skip_cache: "true",
 			},
 		);
-		expect(nonCachedEntity1.features[TestFeature.Messages].balance).toBe(
+		expect(nonCachedEntity1.features![TestFeature.Messages].balance).toBe(
 			expectedEntity1TotalMessages,
 		);
-		expect(nonCachedEntity1.features[TestFeature.Workflows].balance).toBe(
+		expect(nonCachedEntity1.features![TestFeature.Workflows].balance).toBe(
 			expectedEntity1TotalWorkflows,
 		);
 		const nonCachedEntity2 = await autumnV1.entities.get(
@@ -335,10 +335,10 @@ Total messages: 200, Total workflows: 20
 				skip_cache: "true",
 			},
 		);
-		expect(nonCachedEntity2.features[TestFeature.Messages].balance).toBe(
+		expect(nonCachedEntity2.features![TestFeature.Messages].balance).toBe(
 			expectedEntity2TotalMessages,
 		);
-		expect(nonCachedEntity2.features[TestFeature.Workflows].balance).toBe(
+		expect(nonCachedEntity2.features![TestFeature.Workflows].balance).toBe(
 			expectedEntity2TotalWorkflows,
 		);
 	});

@@ -17,16 +17,12 @@ export const migrationToAttachParams = async ({
 	cusProduct: FullCusProduct;
 	newProduct: FullProduct;
 }): Promise<AttachParams> => {
-	const { db, org, env, logger, features } = ctx;
+	const { org, features } = ctx;
 	const internalEntityId = cusProduct.internal_entity_id || undefined;
 
 	const { stripeCus, paymentMethod, now } = await getStripeCusData({
-		stripeCli,
-		db,
-		org,
-		env,
+		ctx,
 		customer,
-		logger,
 		allowNoStripe: true,
 	});
 

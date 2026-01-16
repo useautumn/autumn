@@ -7,6 +7,7 @@ import {
 } from "@autumn/shared";
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
+import { setStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
@@ -16,7 +17,6 @@ import {
 	isFreeProduct,
 } from "@/internal/products/productUtils.js";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
-import { addSubIdToCache } from "../../../cusCache/subCacheUtils.js";
 import {
 	attachParamsToCurCusProduct,
 	getCustomerSchedule,
@@ -46,7 +46,10 @@ export const handleScheduleFunction2 = async ({
 		attachParams,
 	});
 
-	const { sub: curSub } = await getCustomerSub({ attachParams, targetSubId: curCusProduct?.subscription_ids?.[0] });
+	const { sub: curSub } = await getCustomerSub({
+		attachParams,
+		targetSubId: curCusProduct?.subscription_ids?.[0],
+	});
 
 	// 1. Cancel current subscription and fetch items from other cus products...?
 	let { schedule } = await getCustomerSchedule({
@@ -142,9 +145,9 @@ export const handleScheduleFunction2 = async ({
 		logger.info(`SCHEDULE FLOW: no schedule, creating new schedule`);
 
 		// Add sub ID to upstash so renew isn't being handled...
-		await addSubIdToCache({
-			subId: curSub.id,
-			scenario: AttachScenario.Renew,
+		await setStripeSubscriptionLock({
+			stripeSubscriptionId: curSub.id,
+			lockedAtMs: Date.now(),
 		});
 
 		schedule = await subToNewSchedule({
@@ -168,6 +171,13 @@ export const handleScheduleFunction2 = async ({
 
 	if (!schedule) {
 		logger.info(`SCHEDULE FLOW: no schedule, canceling sub ${curSub?.id}`);
+
+		// Set lock to prevent webhook handler from processing this cancellation
+		await setStripeSubscriptionLock({
+			stripeSubscriptionId: curSub.id,
+			lockedAtMs: Date.now(),
+		});
+
 		await stripeCli.subscriptions.update(curSub.id, {
 			cancel_at: expectedEnd,
 			cancellation_details: {

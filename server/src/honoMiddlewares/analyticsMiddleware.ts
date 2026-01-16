@@ -1,5 +1,10 @@
+import chalk from "chalk";
 import type { Context, Next } from "hono";
-import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
+import {
+	addAppContextToLogs,
+	addExtrasToLogs,
+} from "@/utils/logging/addContextToLogs";
 
 export const parseCustomerIdFromUrl = ({
 	url,
@@ -72,7 +77,7 @@ const logResponse = async ({
 	c,
 	skipUrls,
 }: {
-	ctx: any;
+	ctx: AutumnContext;
 	c: Context<HonoEnv>;
 	skipUrls: string[];
 }) => {
@@ -82,8 +87,13 @@ const logResponse = async ({
 			return;
 		}
 
+		ctx.logger = addExtrasToLogs({
+			logger: ctx.logger,
+			extras: ctx.extraLogs,
+		});
+
 		// Try to extract response body if it's JSON
-		let responseBody: any = null;
+		let responseBody: Record<string, unknown> | null = null;
 		const contentType = c.res.headers.get("content-type");
 		if (contentType?.includes("application/json")) {
 			try {
@@ -96,12 +106,17 @@ const logResponse = async ({
 		}
 
 		// Log response in non-development environments
-		if (process.env.NODE_ENV !== "development") {
-			const log = c.res.status === 200 ? ctx.logger.info : ctx.logger.warn;
-			log(`[${c.res.status}] ${c.req.path} (${ctx.org?.slug})`, {
-				statusCode: c.res.status,
-				res: responseBody,
-			});
+		// if (process.env.NODE_ENV !== "development") {
+		const log = c.res.status === 200 ? ctx.logger.info : ctx.logger.warn;
+		const statusColor = c.res.status === 200 ? chalk.green : chalk.yellow;
+
+		log(`[${statusColor(c.res.status)}] ${c.req.path} (${ctx.org?.slug})`, {
+			statusCode: c.res.status,
+			res: responseBody,
+		});
+
+		if (Object.keys(ctx.extraLogs).length > 0) {
+			ctx.logger.debug(`EXTRA LOGS:`, JSON.stringify(ctx.extraLogs, null, 2));
 		}
 	} catch (error) {
 		console.error("Failed to log response to logtail");
@@ -117,46 +132,31 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const ctx = c.get("ctx");
 	const skipUrls = ["/v1/customers/all/search"];
 
-	// Parse request body for customer_id
-	let requestBody: Record<string, unknown> | null = null;
-	const method = c.req.method;
-	if (method === "POST" || method === "PUT" || method === "PATCH") {
-		try {
-			// Clone the request to read body without consuming it
-			requestBody = await c.req.json();
-		} catch (_error) {
-			// Body might not be JSON, that's okay
-		}
+	let { customerId } = (await parseCustomerIdFromBody(c)) || {};
+	if (!customerId) {
+		customerId = parseCustomerIdFromUrl({ url: c.req.path });
 	}
-
-	const customerId =
-		extractCustomerIdFromBody({
-			body: requestBody ?? {},
-			path: c.req.path,
-			method,
-		}) || parseCustomerIdFromUrl({ url: c.req.path });
-
-	// Enrich logger context
-	const reqContext = {
-		org_id: ctx.org?.id,
-		org_slug: ctx.org?.slug,
-		env: ctx.env,
-		authType: ctx.authType,
-		body: requestBody,
-		customer_id: customerId,
-		user_id: ctx.userId || null,
-	};
 
 	ctx.customerId = customerId;
 
 	// Update logger with enriched context
-	ctx.logger = ctx.logger.child({
-		context: {
-			context: reqContext,
+	ctx.logger = addAppContextToLogs({
+		logger: ctx.logger,
+		appContext: {
+			org_id: ctx.org?.id,
+			org_slug: ctx.org?.slug,
+			env: ctx.env,
+			auth_type: ctx.authType,
+			customer_id: customerId,
+			user_id: ctx.userId || undefined,
+			user_email: ctx.user?.email || undefined,
+			api_version: ctx.apiVersion?.semver,
 		},
 	});
 
-	ctx.logger.info(`${method} ${c.req.path} (${ctx.org?.slug})`);
+	ctx.logger.info(
+		`${c.req.method} ${c.req.path} (${ctx.org?.slug}) [${ctx.id}]`,
+	);
 
 	// Execute the request
 	await next();

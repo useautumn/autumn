@@ -2,7 +2,9 @@ import {
 	type AttachConfig,
 	type AttachFunctionResponse,
 	AttachFunctionResponseSchema,
+	isFixedPrice,
 	MetadataType,
+	priceToInvoiceAmount,
 	SuccessCode,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -17,8 +19,6 @@ import { buildInvoiceMemoFromEntitlements } from "@/internal/invoices/invoiceMem
 import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
 import { orgToCurrency } from "@/internal/orgs/orgUtils.js";
 import { priceToProduct } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
-import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
-import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { getPriceOptions } from "@/internal/products/prices/priceUtils.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
@@ -66,7 +66,7 @@ export const handleOneOffFunction = async ({
 		}
 
 		let invoiceItemData = {};
-		if (isFixedPrice({ price })) {
+		if (isFixedPrice(price)) {
 			quantity = 1;
 
 			invoiceItemData = {

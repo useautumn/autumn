@@ -46,6 +46,7 @@ export const createProduct = async ({
 
 		await Promise.all(batchDelete);
 	} catch (error) {
+		console.error("Error deleting product", error);
 		// Ignore deletion errors (might have customers attached)
 	}
 
@@ -56,7 +57,7 @@ export const createProduct = async ({
 
 	if (prefix) {
 		clone.id = `${prefix}_${clone.id}`;
-		clone.name = `${prefix} ${clone.name}`;
+		clone.name = `${clone.name} ${prefix}`;
 	}
 
 	try {
@@ -138,6 +139,16 @@ export const createReward = async ({
 		);
 
 		reward.discount_config!.price_ids = usagePrices?.map((price) => price.id);
+	} else if (productId) {
+		const fullProduct = await ProductService.getFull({
+			db,
+			orgId,
+			env,
+			idOrInternalId: productId,
+		});
+
+		reward.discount_config!.price_ids =
+			fullProduct?.prices.map((p) => p.id) ?? [];
 	}
 
 	try {

@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
+import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
 import { useHasChanges } from "@/hooks/stores/useProductStore";
@@ -34,6 +35,7 @@ export default function CustomerView2() {
 	const sheetData = useSheetStore((s) => s.data);
 	const hasChanges = useHasChanges();
 	const hasCustomizedProduct = !!sheetData?.customizedProduct;
+	const [isInlineEditorOpen, setIsInlineEditorOpen] = useState(false);
 
 	// useSheetCleanup();
 
@@ -55,7 +57,13 @@ export default function CustomerView2() {
 
 	return (
 		<CustomerContext.Provider
-			value={{ customer, entityId: entityId, setEntityId }}
+			value={{
+				customer,
+				entityId: entityId,
+				setEntityId,
+				isInlineEditorOpen,
+				setIsInlineEditorOpen,
+			}}
 		>
 			<div className="flex w-full h-full overflow-hidden relative">
 				<motion.div
@@ -105,7 +113,7 @@ export default function CustomerView2() {
 					</div>
 					{createPortal(
 						<AnimatePresence>
-							{sheetType && (
+							{sheetType && !isInlineEditorOpen && (
 								<motion.div
 									initial={{ opacity: 0 }}
 									animate={{ opacity: 1 }}

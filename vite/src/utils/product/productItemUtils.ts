@@ -17,23 +17,6 @@ export const itemIsUnlimited = (item: ProductItem) => {
 	return item.included_usage === Infinite;
 };
 
-export const formatAmount = ({
-	defaultCurrency,
-	amount,
-	maxFractionDigits = 6,
-}: {
-	defaultCurrency: string;
-	amount: number;
-	maxFractionDigits?: number;
-}) => {
-	return new Intl.NumberFormat("en-US", {
-		style: "currency",
-		currency: defaultCurrency,
-		minimumFractionDigits: 0,
-		maximumFractionDigits: maxFractionDigits || 6,
-	}).format(amount);
-};
-
 export const getItemType = (item: ProductItem) => {
 	if (isPriceItem(item)) {
 		return ProductItemType.Price;

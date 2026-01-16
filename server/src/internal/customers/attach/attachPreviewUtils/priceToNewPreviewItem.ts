@@ -2,19 +2,17 @@ import {
 	type EntitlementWithFeature,
 	type FullProduct,
 	formatAmount,
+	isFixedPrice,
+	isOneOffPrice,
 	type Organization,
 	type Price,
+	priceToInvoiceAmount,
 	type Reward,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { newPriceToInvoiceDescription } from "@/internal/invoices/invoiceFormatUtils.js";
 import { getProration } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
 import { priceToUsageModel } from "@/internal/products/prices/priceUtils/convertPrice.js";
-import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
-import {
-	isFixedPrice,
-	isOneOffPrice,
-} from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
 import {
 	formatReward,
@@ -48,7 +46,7 @@ export const priceToNewPreviewItem = ({
 	rewards?: Reward[];
 	subDiscounts?: Stripe.Discount[];
 }) => {
-	if (skipOneOff && isOneOffPrice({ price })) return;
+	if (skipOneOff && isOneOffPrice(price)) return;
 
 	now = now ?? Date.now();
 
@@ -73,7 +71,7 @@ export const priceToNewPreviewItem = ({
 		console.log("Apply Reward", formatReward({ reward }));
 	}
 
-	if (isFixedPrice({ price })) {
+	if (isFixedPrice(price)) {
 		let amount = priceToInvoiceAmount({
 			price,
 			quantity: 1,

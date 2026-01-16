@@ -6,6 +6,7 @@ import {
 	type FullCusProduct,
 	type FullCustomer,
 	type FullProduct,
+	formatAmount,
 	Infinite,
 	numberWithCommas,
 	type Organization,
@@ -89,28 +90,20 @@ export const getPriceText = ({
 	item: ProductItem;
 	org: Organization;
 }) => {
-	const formatAmount = (amount: number) => {
-		return new Intl.NumberFormat(undefined, {
-			style: "currency",
-			currency: org.default_currency || "USD",
-			minimumFractionDigits: 0,
-			maximumFractionDigits: 10,
-		}).format(amount);
-	};
 	if (item.price) {
-		return formatAmount(item.price as number);
+		return formatAmount({ org, amount: item.price as number });
 	}
 
 	const tiers = item.tiers;
 	if (tiers) {
 		if (tiers.length == 1) {
-			return formatAmount(tiers[0].amount);
+			return formatAmount({ org, amount: tiers[0].amount });
 		}
 
 		const firstPrice = tiers[0].amount;
 		const lastPrice = tiers[tiers.length - 1].amount;
 
-		return `${formatAmount(firstPrice)} - ${formatAmount(lastPrice)}`;
+		return `${formatAmount({ org, amount: firstPrice })} - ${formatAmount({ org, amount: lastPrice })}`;
 	}
 };
 

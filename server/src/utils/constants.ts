@@ -13,12 +13,18 @@ export const ADMIN_USER_IDs = [
 	"user_2sB3tBXsnVVLlTKliQIqvvM2xfB", // j
 	"ZsDswIXyOGMP9y1V1At4dAZNaiggClSs", // t
 	"NqNuL3MtS7MR2WYoqx2b28iY9vmfAs8h", // c
+	"NqNuL3MtS7MR2WYoqx2b28iY9vmfAs8h", // charlie prod
+
+	// Sandbox:
+	"user_2rypooIKyMQx81vMS8FFGx24UHU", // john
+	"K7NDwSwohMCV9BXJ3Yb5MxgeXhWcwj0L", // charlie sandbox
 ];
 
 export const dashboardOrigins = [
 	"http://localhost:3000",
 	"https://app.useautumn.com",
 	"https://staging.useautumn.com",
+	"https://dev.useautumn.com",
 	process.env.CLIENT_URL!,
 ];
 

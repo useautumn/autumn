@@ -1,15 +1,15 @@
-import { constructPreviewItem } from "@/internal/invoices/previewItemUtils/constructPreviewItem.js";
 import {
-	FullEntitlement,
+	type FullEntitlement,
 	getFeatureInvoiceDescription,
-	Organization,
-	Price,
-	Product,
-	UsagePriceConfig,
+	type Organization,
+	type Price,
+	type Product,
+	shouldProrate,
+	type UsagePriceConfig,
 	usageToFeatureName,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import { shouldProrate } from "../prorationConfigUtils.js";
+import { constructPreviewItem } from "@/internal/invoices/previewItemUtils/constructPreviewItem.js";
 
 export const getUsageDiffLineItem = ({
 	prevBalance,
@@ -54,7 +54,7 @@ export const getUsageDiffLineItem = ({
 	});
 
 	if (!isIncrease && !willProrate) {
-		let featureName = usageToFeatureName({
+		const featureName = usageToFeatureName({
 			usage: usageDiff,
 			feature: ent.feature,
 		});

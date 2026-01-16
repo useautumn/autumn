@@ -1,57 +1,58 @@
-import { ErrCode } from "@autumn/shared";
+import { ErrCode, RecaseError } from "@autumn/shared";
+import { z } from "zod/v4";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { RewardService } from "@/internal/rewards/RewardService.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { routeHandler } from "@/utils/routerUtils.js";
 
-export default async (req: any, res: any) =>
-	routeHandler({
-		req,
-		res,
-		action: "delete reward",
-		handler: async (req, res) => {
-			const { id } = req.params;
-			const { orgId, env, db } = req;
+const DeleteCouponParamsSchema = z.object({
+	id: z.string(),
+});
 
-			const org = await OrgService.getFromReq(req);
-			const stripeCli = createStripeCli({
-				org,
-				env,
+export const handleDeleteCoupon = createRoute({
+	params: DeleteCouponParamsSchema,
+	handler: async (c) => {
+		const ctx = c.get("ctx");
+		const { org, env, db } = ctx;
+		const { id } = c.req.param();
+
+		const stripeCli = createStripeCli({
+			org,
+			env,
+		});
+
+		const reward = await RewardService.get({
+			db,
+			idOrInternalId: id,
+			orgId: org.id,
+			env,
+		});
+
+		if (!reward) {
+			throw new RecaseError({
+				message: `Reward ${id} not found`,
+				code: ErrCode.InvalidRequest,
+				statusCode: 404,
 			});
+		}
 
-			const reward = await RewardService.get({
-				db,
-				idOrInternalId: id,
-				orgId,
-				env,
-			});
+		try {
+			await stripeCli.coupons.del(reward.id);
+		} catch (error) {
+			console.log(
+				`Failed to delete coupon from stripe: ${(error as { message: string }).message}`,
+			);
+		}
 
-			if (!reward) {
-				throw new RecaseError({
-					message: `Reward ${id} not found`,
-					code: ErrCode.InvalidRequest,
-				});
-			}
+		await RewardService.delete({
+			db,
+			internalId: reward.internal_id,
+			env,
+			orgId: org.id,
+		});
 
-			try {
-				await stripeCli.coupons.del(reward.id);
-			} catch (error) {
-				console.log(
-					`Failed to delete coupon from stripe: ${(error as { message: string }).message}`,
-				);
-			}
-
-			await RewardService.delete({
-				db,
-				internalId: reward.internal_id,
-				env,
-				orgId,
-			});
-
-			res.status(200).json({
-				success: true,
-				message: "Reward deleted successfully",
-			});
-		},
-	});
+		return c.json({
+			success: true,
+			message: "Reward deleted successfully",
+		});
+	},
+});
