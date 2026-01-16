@@ -15,7 +15,6 @@ interface AreaCheckboxProps {
 	checked?: boolean;
 	onCheckedChange?: (checked: boolean) => void;
 	title: string;
-	tooltip?: string;
 	disabled?: boolean;
 	disabledReason?: string;
 	hide?: boolean;
