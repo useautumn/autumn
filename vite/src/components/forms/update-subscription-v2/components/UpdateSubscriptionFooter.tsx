@@ -7,24 +7,19 @@ import {
 import { Button } from "@/components/v2/buttons/Button";
 import { SheetFooter } from "@/components/v2/sheets/SharedSheetComponents";
 import { SHEET_ANIMATION } from "@/views/products/plan/planAnimations";
+import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 
-interface UpdateSubscriptionFooterProps {
-	isPending: boolean;
-	hasChanges: boolean;
-	isLoading?: boolean;
-	hasError?: boolean;
-	onConfirm: () => void;
-	onInvoiceUpdate: (params: { enableProductImmediately: boolean }) => void;
-}
+export function UpdateSubscriptionFooter() {
+	const {
+		isPending,
+		hasChanges,
+		previewQuery,
+		handleConfirm,
+		handleInvoiceUpdate,
+	} = useUpdateSubscriptionFormContext();
 
-export function UpdateSubscriptionFooter({
-	isPending,
-	hasChanges,
-	isLoading = false,
-	hasError = false,
-	onConfirm,
-	onInvoiceUpdate,
-}: UpdateSubscriptionFooterProps) {
+	const isLoading = previewQuery.isLoading;
+	const hasError = !!previewQuery.error;
 	const shouldShow = hasChanges && !isLoading && !hasError;
 
 	return (
@@ -52,7 +47,7 @@ export function UpdateSubscriptionFooter({
 									<button
 										type="button"
 										onClick={() =>
-											onInvoiceUpdate({ enableProductImmediately: true })
+											handleInvoiceUpdate({ enableProductImmediately: true })
 										}
 										className="px-4 py-3 text-left text-sm hover:bg-accent"
 									>
@@ -65,7 +60,7 @@ export function UpdateSubscriptionFooter({
 									<button
 										type="button"
 										onClick={() =>
-											onInvoiceUpdate({ enableProductImmediately: false })
+											handleInvoiceUpdate({ enableProductImmediately: false })
 										}
 										className="px-4 py-3 text-left text-sm hover:bg-accent border-t"
 									>
@@ -81,7 +76,7 @@ export function UpdateSubscriptionFooter({
 						<Button
 							variant="primary"
 							className="w-full"
-							onClick={onConfirm}
+							onClick={handleConfirm}
 							isLoading={isPending}
 						>
 							Confirm Update
