@@ -15,11 +15,13 @@ export const formatInterval = ({
 }): string => {
 	if (!interval) return "";
 
-	// Handle one_off and lifetime (no interval string)
-	if (
-		interval === BillingInterval.OneOff ||
-		interval === EntInterval.Lifetime
-	) {
+	// Handle one_off (show "one time")
+	if (interval === BillingInterval.OneOff) {
+		return "one times";
+	}
+
+	// Handle lifetime (no interval string)
+	if (interval === EntInterval.Lifetime) {
 		return "";
 	}
 
