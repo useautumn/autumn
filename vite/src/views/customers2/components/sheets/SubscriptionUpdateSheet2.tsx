@@ -18,6 +18,7 @@ import {
 	type UpdateSubscriptionFormContext,
 	UpdateSubscriptionPreviewSection,
 	useHasSubscriptionChanges,
+	useTrialState,
 	useUpdateSubscriptionForm,
 	useUpdateSubscriptionMutation,
 	useUpdateSubscriptionRequestBody,
@@ -65,6 +66,7 @@ function SheetContent({
 
 	const form = useUpdateSubscriptionForm({ updateSubscriptionFormContext });
 	const { features } = useFeaturesQuery();
+	const trialState = useTrialState({ form, customerProduct });
 
 	const formValues = useStore(form.store, (state) => state.values);
 	const { prepaidOptions } = formValues;
@@ -80,6 +82,7 @@ function SheetContent({
 		currentVersion,
 		originalItems,
 		features,
+		isTrialConfirmed: trialState.isTrialConfirmed,
 	});
 
 	// Only include prepaid options that have changed from their initial values
@@ -118,17 +121,23 @@ function SheetContent({
 		if (!product) return undefined;
 
 		const base = productV2ToFrontendProduct({ product: product as ProductV2 });
-		const freeTrial = getFreeTrial({
-			removeTrial: formValues.removeTrial,
-			trialLength: formValues.trialLength,
-			trialDuration: formValues.trialDuration,
-		});
+
+		// Only include trial changes if confirmed
+		let freeTrialValue = base.free_trial;
+		if (trialState.isTrialConfirmed) {
+			const freeTrial = getFreeTrial({
+				removeTrial: formValues.removeTrial,
+				trialLength: formValues.trialLength,
+				trialDuration: formValues.trialDuration,
+			});
+			freeTrialValue =
+				freeTrial === null ? undefined : (freeTrial ?? base.free_trial);
+		}
 
 		return {
 			...base,
 			items: formValues.items ?? base.items,
-			free_trial:
-				freeTrial === null ? undefined : (freeTrial ?? base.free_trial),
+			free_trial: freeTrialValue,
 		};
 	}, [
 		product,
@@ -136,6 +145,7 @@ function SheetContent({
 		formValues.removeTrial,
 		formValues.trialLength,
 		formValues.trialDuration,
+		trialState.isTrialConfirmed,
 	]);
 
 	const hasBillingChanges = useHasBillingChanges({
@@ -153,14 +163,19 @@ function SheetContent({
 		form,
 	});
 
+	// Only include trial in preview if confirmed (user clicked check button)
+	const confirmedFreeTrial = trialState.isTrialConfirmed
+		? getFreeTrial({
+				removeTrial: formValues.removeTrial,
+				trialLength: formValues.trialLength,
+				trialDuration: formValues.trialDuration,
+			})
+		: undefined;
+
 	const previewQuery = useUpdateSubscriptionPreview({
 		updateSubscriptionFormContext,
 		prepaidOptions: changedPrepaidOptions,
-		freeTrial: getFreeTrial({
-			removeTrial: formValues.removeTrial,
-			trialLength: formValues.trialLength,
-			trialDuration: formValues.trialDuration,
-		}),
+		freeTrial: confirmedFreeTrial,
 		items: formValues.items,
 		version: formValues.version,
 	});
@@ -270,6 +285,7 @@ function SheetContent({
 				currentVersion={currentVersion}
 				prepaidOptions={prepaidOptions}
 				initialPrepaidOptions={initialPrepaidOptions}
+				trialState={trialState}
 			/>
 
 			<UpdateSubscriptionPreviewSection

@@ -25,6 +25,7 @@ export interface TrialState {
 	hasTrialValue: boolean;
 	isTrialModified: boolean;
 	isTrialExpanded: boolean;
+	isTrialConfirmed: boolean;
 }
 
 export interface TrialActions {
@@ -32,6 +33,7 @@ export interface TrialActions {
 	handleEndTrial: () => void;
 	handleRevertTrial: () => void;
 	setIsTrialExpanded: (expanded: boolean) => void;
+	setIsTrialConfirmed: (confirmed: boolean) => void;
 }
 
 export type UseTrialStateReturn = TrialState & TrialActions;
@@ -55,6 +57,7 @@ export function useTrialState({
 			: null;
 
 	const [isTrialExpanded, setIsTrialExpanded] = useState(isCurrentlyTrialing);
+	const [isTrialConfirmed, setIsTrialConfirmed] = useState(isCurrentlyTrialing);
 
 	const removeTrial = useStore(form.store, (state) => state.values.removeTrial);
 
@@ -106,9 +109,11 @@ export function useTrialState({
 		hasTrialValue,
 		isTrialModified,
 		isTrialExpanded,
+		isTrialConfirmed,
 		handleToggleTrial,
 		handleEndTrial,
 		handleRevertTrial,
 		setIsTrialExpanded,
+		setIsTrialConfirmed,
 	};
 }

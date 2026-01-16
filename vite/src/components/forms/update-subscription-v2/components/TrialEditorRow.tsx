@@ -33,6 +33,7 @@ interface TrialEditorRowProps {
 	onEndTrial: () => void;
 	onCollapse: () => void;
 	onRevert: () => void;
+	onConfirm: () => void;
 }
 
 export function TrialEditorRow({
@@ -44,6 +45,7 @@ export function TrialEditorRow({
 	onEndTrial,
 	onCollapse,
 	onRevert,
+	onConfirm,
 }: TrialEditorRowProps) {
 	const [isEditing, setIsEditing] = useState(false);
 	const [isAddingNewTrial, setIsAddingNewTrial] = useState(
@@ -252,6 +254,7 @@ export function TrialEditorRow({
 						}
 						setIsEditing(false);
 						setIsAddingNewTrial(false);
+						onConfirm();
 					}}
 				/>
 			</div>

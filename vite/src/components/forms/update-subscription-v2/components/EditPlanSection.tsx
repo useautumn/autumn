@@ -18,7 +18,7 @@ import { Button } from "@/components/v2/buttons/Button";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
-import { useTrialState } from "../hooks/useTrialState";
+import type { UseTrialStateReturn } from "../hooks/useTrialState";
 import type { UseUpdateSubscriptionForm } from "../hooks/useUpdateSubscriptionForm";
 import { PriceDisplay } from "./PriceDisplay";
 import { SectionTitle } from "./SectionTitle";
@@ -38,6 +38,7 @@ interface EditPlanSectionProps {
 	currentVersion?: number;
 	prepaidOptions?: Record<string, number>;
 	initialPrepaidOptions?: Record<string, number>;
+	trialState: UseTrialStateReturn;
 }
 
 export function EditPlanSection({
@@ -52,11 +53,10 @@ export function EditPlanSection({
 	currentVersion,
 	prepaidOptions = {},
 	initialPrepaidOptions = {},
+	trialState,
 }: EditPlanSectionProps) {
 	const { org } = useOrg();
 	const currency = org?.default_currency ?? "USD";
-
-	const trialState = useTrialState({ form, customerProduct });
 
 	const priceItem = product?.items?.find((i) => isPriceItem(i));
 	const isPaidProduct = priceItem?.price && priceItem.price > 0;
@@ -244,6 +244,7 @@ export function EditPlanSection({
 										onEndTrial={trialState.handleEndTrial}
 										onCollapse={() => trialState.setIsTrialExpanded(false)}
 										onRevert={trialState.handleRevertTrial}
+										onConfirm={() => trialState.setIsTrialConfirmed(true)}
 									/>
 								</div>
 							</div>
