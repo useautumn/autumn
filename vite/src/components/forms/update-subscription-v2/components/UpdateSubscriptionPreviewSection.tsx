@@ -1,24 +1,21 @@
-import type { PreviewUpdateSubscriptionResponse } from "@autumn/shared";
+import type { AxiosError } from "axios";
 import { format } from "date-fns";
 import { AnimatePresence, motion } from "motion/react";
 import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
+import { getBackendErr } from "@/utils/genUtils";
 import { SHEET_ANIMATION } from "@/views/products/plan/planAnimations";
+import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 import { PreviewErrorDisplay } from "./PreviewErrorDisplay";
 
-interface UpdateSubscriptionPreviewSectionProps {
-	isLoading: boolean;
-	previewData?: PreviewUpdateSubscriptionResponse | null;
-	error?: string;
-	hasChanges: boolean;
-}
+export function UpdateSubscriptionPreviewSection() {
+	const { previewQuery, hasChanges } = useUpdateSubscriptionFormContext();
 
-export function UpdateSubscriptionPreviewSection({
-	isLoading,
-	previewData,
-	error,
-	hasChanges,
-}: UpdateSubscriptionPreviewSectionProps) {
+	const { isLoading, data: previewData, error: queryError } = previewQuery;
+	const error = queryError
+		? getBackendErr(queryError as AxiosError, "Failed to load preview")
+		: undefined;
+
 	const totals = [];
 
 	if (previewData) {

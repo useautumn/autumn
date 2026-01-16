@@ -5,7 +5,7 @@ import {
 } from "@autumn/shared";
 import { useMemo } from "react";
 import { useAppForm } from "@/hooks/form/form";
-import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormContext";
+import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 import {
 	type UpdateSubscriptionForm,
 	UpdateSubscriptionFormSchema,

@@ -6,7 +6,7 @@ import type {
 import { useQuery } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
 import { useEffect, useMemo, useState } from "react";
-import type { UpdateSubscriptionFormContext } from "@/components/forms/update-subscription-v2/context/UpdateSubscriptionFormContext";
+import type { UpdateSubscriptionFormContext } from "@/components/forms/update-subscription-v2/context/UpdateSubscriptionFormProvider";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useUpdateSubscriptionBodyBuilder } from "./use-update-subscription-body-builder";
 
@@ -88,3 +88,7 @@ export function useUpdateSubscriptionPreview({
 		isLoading: query.isLoading || isDebouncing,
 	};
 }
+
+export type UseUpdateSubscriptionPreviewReturn = ReturnType<
+	typeof useUpdateSubscriptionPreview
+>;

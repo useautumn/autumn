@@ -3,8 +3,8 @@ export * from "./components/EditPlanSection";
 export * from "./components/UpdateSubscriptionFooter";
 export * from "./components/UpdateSubscriptionPreviewSection";
 
-// Context
-export * from "./context/updateSubscriptionFormContext";
+// Context & Provider
+export * from "./context/UpdateSubscriptionFormProvider";
 
 // Hooks
 export * from "./hooks/useHasSubscriptionChanges";

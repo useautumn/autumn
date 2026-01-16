@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
 import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormContext";
+import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 
 export function useUpdateSubscriptionMutation({
 	updateSubscriptionFormContext,
