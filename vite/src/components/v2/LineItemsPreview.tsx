@@ -6,7 +6,7 @@ import {
 	AccordionItem,
 	AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Badge } from "@/components/v2/badges/badge";
+import { Badge } from "@/components/v2/badges/Badge";
 import { LoadingShimmerText } from "@/components/v2/LoadingShimmerText";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { cn } from "@/lib/utils";
