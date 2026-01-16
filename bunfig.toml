@@ -1,0 +1,7 @@
+[test]
+preload = ["./server/tests/setup-integration-tests.ts"]
+timeout = 0
+
+
+[test.env]
+NODE_ENV = "test"

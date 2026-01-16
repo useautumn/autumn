@@ -1,13 +1,12 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
 import {
-	FullCustomerEntitlement,
-	Rollover,
-	RolloverConfig,
+	type FullCustomerEntitlement,
+	type Rollover,
 	rollovers,
 } from "@autumn/shared";
 import { and, eq, gte, inArray } from "drizzle-orm";
-import { performMaximumClearing } from "./rolloverUtils.js";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { performMaximumClearing } from "./rolloverUtils.js";
 
 export class RolloverService {
 	static async update({
@@ -79,28 +78,19 @@ export class RolloverService {
 	static async insert({
 		db,
 		rows,
-		// rolloverConfig,
 		fullCusEnt,
-		// cusEntID,
-		// entityMode,
 	}: {
 		db: DrizzleCli;
 		rows: Rollover[];
-		// rolloverConfig: RolloverConfig;
 		fullCusEnt: FullCustomerEntitlement;
-		// cusEntID: string;
-		// entityMode: boolean;
 	}) {
 		if (rows.length === 0) return {};
 
-		await db
-			.insert(rollovers)
-			.values(rows as any)
-			.returning();
+		await db.insert(rollovers).values(rows).returning();
 
 		let curRollovers = [...fullCusEnt.rollovers, ...rows];
 
-		let { toDelete, toUpdate } = performMaximumClearing({
+		const { toDelete, toUpdate } = performMaximumClearing({
 			rows: curRollovers as Rollover[],
 			cusEnt: fullCusEnt,
 		});
@@ -116,7 +106,7 @@ export class RolloverService {
 		// Return latest rollovers...?
 		curRollovers = curRollovers.filter((r) => toDelete.includes(r.id));
 		curRollovers = curRollovers.map((r) => {
-			let updatedRow = toUpdate.find((u) => u.id === r.id);
+			const updatedRow = toUpdate.find((u) => u.id === r.id);
 			if (updatedRow) {
 				return updatedRow;
 			}

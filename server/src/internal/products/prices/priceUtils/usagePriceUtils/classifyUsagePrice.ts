@@ -13,10 +13,6 @@ import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 import { getBillingType } from "../../priceUtils";
 
-export const isOneOffPrice = ({ price }: { price: Price }) => {
-	return price.config.interval === BillingInterval.OneOff;
-};
-
 export const isArrearPrice = ({ price }: { price?: Price }) => {
 	if (!price) return false;
 	const billingType = getBillingType(price.config);
@@ -26,27 +22,6 @@ export const isContUsePrice = ({ price }: { price?: Price }) => {
 	if (!price) return false;
 	const billingType = getBillingType(price.config);
 	return billingType === BillingType.InArrearProrated;
-};
-
-export const isPrepaidPrice = ({ price }: { price: Price }) => {
-	const billingType = getBillingType(price.config);
-	return billingType === BillingType.UsageInAdvance;
-};
-
-export const isPayPerUse = ({ price }: { price: Price }) => {
-	const billingType = getBillingType(price.config);
-	return (
-		billingType === BillingType.UsageInArrear ||
-		billingType === BillingType.InArrearProrated
-	);
-};
-
-export const isFixedPrice = ({ price }: { price: Price }) => {
-	const billingType = getBillingType(price.config);
-
-	return (
-		billingType === BillingType.FixedCycle || billingType === BillingType.OneOff
-	);
 };
 
 export const hasPrepaidPrice = ({

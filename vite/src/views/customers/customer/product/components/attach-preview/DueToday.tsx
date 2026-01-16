@@ -1,19 +1,15 @@
-import { QuantityInput } from "@/components/pricing/attach-pricing-dialog";
-
-import { useProductContext } from "@/views/products/product/ProductContext";
-import { AttachNewItems } from "./AttachNewItems";
-import { PriceItem } from "@/components/pricing/attach-pricing-dialog";
-import { formatAmount } from "@/utils/product/productItemUtils";
 import {
 	AttachBranch,
+	formatAmount,
 	getAmountForQuantity,
-	Price,
-	UsagePriceConfig,
+	type Price,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import { PriceItem } from "@/components/pricing/attach-pricing-dialog";
 import { Input } from "@/components/ui/input";
-import { notNullish } from "@/utils/genUtils";
 import { useOrg } from "@/hooks/common/useOrg";
+import { notNullish } from "@/utils/genUtils";
+import { useProductContext } from "@/views/products/product/ProductContext";
 
 export const DueToday = () => {
 	const { org } = useOrg();
@@ -82,7 +78,7 @@ export const DueToday = () => {
 		if (notNullish(option.price)) {
 			return `x ${formatAmount({
 				amount: option.price,
-				defaultCurrency: currency,
+				currency,
 				maxFractionDigits: 5,
 			})} per `;
 		}
@@ -161,7 +157,7 @@ export const DueToday = () => {
 					<span>
 						{formatAmount({
 							amount: getTotalPrice(),
-							defaultCurrency: currency,
+							currency,
 							maxFractionDigits: 2,
 						})}
 					</span>

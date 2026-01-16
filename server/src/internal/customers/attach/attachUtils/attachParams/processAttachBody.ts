@@ -80,12 +80,8 @@ export const processAttachBody = async ({
 
 	const [stripeCusData, rewardData] = await Promise.all([
 		getStripeCusData({
-			stripeCli,
-			db: ctx.db,
-			org,
-			env,
+			ctx,
 			customer,
-			logger,
 		}),
 		getRewards({
 			ctx,

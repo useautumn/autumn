@@ -3,11 +3,11 @@ import {
 	ErrCode,
 	type FeatureOptions,
 	type FullCusProduct,
+	findCusPriceByFeature,
 } from "@autumn/shared";
 import type { Stripe } from "stripe";
 import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import { featureToCusPrice } from "@/internal/customers/cusProducts/cusPrices/convertCusPriceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 import { handleQuantityDowngrade } from "./handleQuantityDowngrade.js";
@@ -32,7 +32,7 @@ export const handleUpdateFeatureQuantity = async ({
 }) => {
 	const subToUpdate = stripeSubs?.[0];
 
-	const cusPrice = featureToCusPrice({
+	const cusPrice = findCusPriceByFeature({
 		internalFeatureId: newOptions.internal_feature_id!,
 		cusPrices: cusProduct.customer_prices,
 	})!;

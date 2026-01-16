@@ -5,8 +5,12 @@ dotenv.config();
 
 import {
 	type ApiBaseEntity,
+	type ApiCusFeatureV3,
+	type ApiCusProductV3,
+	type ApiEntityV0,
 	type AttachBodyV0,
 	type BalancesUpdateParams,
+	type BillingResponse,
 	type CheckQuery,
 	type CreateBalanceParams,
 	type CreateCustomerParams,
@@ -19,6 +23,7 @@ import {
 	type OrgConfig,
 	type RewardRedemption,
 	type TrackParams,
+	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import { defaultApiVersion } from "@tests/constants.js";
 import type {
@@ -454,14 +459,19 @@ export class AutumnInt {
 	};
 
 	entities = {
-		get: async (
+		get: async <
+			T = ApiEntityV0 & {
+				features: Record<string, ApiCusFeatureV3>;
+				products: ApiCusProductV3[];
+			},
+		>(
 			customerId: string,
 			entityId: string,
 			params?: {
 				expand?: EntityExpand[];
 				skip_cache?: string;
 			},
-		) => {
+		): Promise<T> => {
 			const queryParams = new URLSearchParams();
 			const defaultParams = {
 				expand: [EntityExpand.Invoices],
@@ -478,7 +488,7 @@ export class AutumnInt {
 			const data = await this.get(
 				`/customers/${customerId}/entities/${entityId}?${queryParams.toString()}`,
 			);
-			return data;
+			return data as T;
 		},
 
 		create: async (
@@ -494,7 +504,7 @@ export class AutumnInt {
 			return data;
 		},
 
-		list: async (customerId: string) => {
+		list: async (customerId: string): Promise<ApiEntityV0[]> => {
 			const data = await this.get(`/customers/${customerId}/entities`);
 			return data;
 		},
@@ -644,7 +654,10 @@ export class AutumnInt {
 
 	track = async (
 		params: TrackParams,
-		{ skipCache = false }: { skipCache?: boolean } = {},
+		{
+			skipCache = false,
+			timeout,
+		}: { skipCache?: boolean; timeout?: number } = {},
 	) => {
 		const queryParams = new URLSearchParams();
 		if (skipCache) {
@@ -652,6 +665,10 @@ export class AutumnInt {
 		}
 
 		const data = await this.post(`/track?${queryParams.toString()}`, params);
+
+		if (timeout) {
+			await new Promise((resolve) => setTimeout(resolve, timeout));
+		}
 		return data;
 	};
 
@@ -705,6 +722,24 @@ export class AutumnInt {
 		},
 		update: async (params: BalancesUpdateParams) => {
 			const data = await this.post(`/balances/update`, params);
+			return data;
+		},
+	};
+
+	subscriptions = {
+		update: async (
+			params: UpdateSubscriptionV0Params,
+			{ timeout }: { timeout?: number } = {},
+		): Promise<BillingResponse> => {
+			const data = await this.post(`/subscriptions/update`, params);
+			if (timeout) {
+				await new Promise((resolve) => setTimeout(resolve, timeout));
+			}
+			return data;
+		},
+
+		previewUpdate: async (params: UpdateSubscriptionV0Params) => {
+			const data = await this.post(`/subscriptions/preview_update`, params);
 			return data;
 		},
 	};

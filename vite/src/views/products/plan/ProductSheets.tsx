@@ -1,13 +1,13 @@
 import { type ProductItem, productV2ToFeatureItems } from "@autumn/shared";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef } from "react";
-import { SheetContainer } from "@/components/v2/sheets/InlineSheet";
-import { SheetCloseButton } from "@/components/v2/sheets/SheetCloseButton";
 import {
 	useDiscardItemAndClose,
-	useProductStore,
-} from "@/hooks/stores/useProductStore";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
+	useProduct,
+	useSheet,
+} from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
+import { SheetContainer } from "@/components/v2/sheets/InlineSheet";
+import { SheetCloseButton } from "@/components/v2/sheets/SheetCloseButton";
 import { getItemId } from "@/utils/product/productItemUtils";
 
 import { ProductItemContext } from "../product/product-item/ProductItemContext";
@@ -19,19 +19,13 @@ import { SelectFeatureSheet } from "./components/SelectFeatureSheet";
 import { SHEET_ANIMATION } from "./planAnimations";
 
 export const ProductSheets = () => {
-	const product = useProductStore((s) => s.product);
-	const setProduct = useProductStore((s) => s.setProduct);
-	const sheetType = useSheetStore((s) => s.type);
-	const itemId = useSheetStore((s) => s.itemId);
-	const setInitialItem = useSheetStore((s) => s.setInitialItem);
-	const initialItem = useSheetStore((s) => s.initialItem);
+	const { product, setProduct } = useProduct();
+	const { sheetType, itemId, initialItem, setInitialItem } = useSheet();
 
-	// Custom close handler that discards changes before closing
 	const discardAndClose = useDiscardItemAndClose();
 
 	const featureItems = productV2ToFeatureItems({ items: product.items });
 
-	// Find current item using actual product.items index (not filtered featureItems index)
 	const isCurrentItem = (item: ProductItem) => {
 		const actualIndex = product.items?.indexOf(item) ?? -1;
 		const currentItemId = getItemId({ item, itemIndex: actualIndex });
@@ -40,10 +34,8 @@ export const ProductSheets = () => {
 
 	const currentItem = featureItems.find(isCurrentItem);
 
-	// Track if we've set the initial item for this itemId
 	const lastItemIdRef = useRef<string | null>(null);
 
-	// Set initial item when sheet opens with a new item
 	useEffect(() => {
 		if (itemId !== null && itemId !== lastItemIdRef.current && currentItem) {
 			setInitialItem(structuredClone(currentItem));
@@ -57,7 +49,6 @@ export const ProductSheets = () => {
 	const setCurrentItem = (updatedItem: ProductItem) => {
 		if (!product || !product.items) return;
 
-		// Find the actual index in product.items (not filtered array)
 		const currentItemIndex = product.items.findIndex(isCurrentItem);
 
 		if (currentItemIndex === -1) return;
@@ -67,7 +58,6 @@ export const ProductSheets = () => {
 		setProduct({ ...product, items: updatedItems });
 	};
 
-	// Don't render on small screens
 	const renderSheet = () => {
 		switch (sheetType) {
 			case "edit-plan":
@@ -95,8 +85,6 @@ export const ProductSheets = () => {
 				return <NewFeatureSheet />;
 			case "select-feature":
 				return <SelectFeatureSheet />;
-			// default:
-			// 	return <EditPlanSheet />;
 		}
 	};
 

@@ -1,9 +1,8 @@
-import { FullCusProduct } from "../cusProductModels/cusProductModels.js";
-import { FreeTrial } from "../productModels/freeTrialModels/freeTrialModels.js";
-import { FullProduct } from "../productModels/productModels.js";
-import { UsageModel } from "../productV2Models/productItemModels/productItemModels.js";
-import { AttachBranch } from "./attachEnums/AttachBranch.js";
-import { AttachFunction } from "./attachEnums/AttachFunction.js";
+import type { FreeTrial } from "../productModels/freeTrialModels/freeTrialModels.js";
+import type { FullProduct } from "../productModels/productModels.js";
+import type { UsageModel } from "../productV2Models/productItemModels/productItemModels.js";
+import type { AttachBranch } from "./attachEnums/AttachBranch.js";
+import type { AttachFunction } from "./attachEnums/AttachFunction.js";
 
 export interface PreviewLineItem {
 	amount?: number | undefined;

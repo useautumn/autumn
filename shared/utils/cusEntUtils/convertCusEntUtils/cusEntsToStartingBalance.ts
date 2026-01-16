@@ -2,7 +2,6 @@ import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductMod
 import { sumValues } from "../../utils";
 import { cusEntToStartingBalance } from "../balanceUtils/cusEntToStartingBalance";
 
-
 export const cusEntsToStartingBalance = ({
 	cusEnts,
 }: {

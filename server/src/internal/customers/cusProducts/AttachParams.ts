@@ -128,15 +128,3 @@ export type InsertCusProductParams = {
 
 	newBillingSubscription?: boolean;
 };
-
-// export const AttachResultSchema = z.object({
-// 	customer_id: z.string(),
-// 	product_ids: z.array(z.string()),
-// 	code: z.string(),
-// 	message: z.string(),
-
-// 	checkout_url: z.string().nullish(),
-// 	invoice: z.any().nullish(),
-// });
-
-// export type AttachResult = z.infer<typeof AttachResultSchema>;

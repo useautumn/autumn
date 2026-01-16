@@ -9,7 +9,6 @@ import {
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 // import { ProrationBehavior } from "@/internal/customers/change-product/handleUpgrade.js";
 import { SubService } from "@server/internal/subscriptions/SubService.js";
-import { notNullish } from "@server/utils/genUtils.js";
 import { differenceInSeconds } from "date-fns";
 import type Stripe from "stripe";
 import {
@@ -122,7 +121,7 @@ export const getUsageBasedSub = async ({
 	feature: Feature;
 	stripeSubs?: Stripe.Subscription[];
 }) => {
-	let subs;
+	let subs: Stripe.Subscription[];
 	if (stripeSubs) {
 		subs = stripeSubs;
 	} else {
@@ -222,7 +221,7 @@ export const getStripeSchedules = async ({
 				},
 			);
 
-			if (schedule.status == "canceled") {
+			if (schedule.status === "canceled") {
 				return null;
 			}
 
@@ -311,21 +310,4 @@ export const getStripeProrationBehavior = ({
 	return org.config.bill_upgrade_immediately
 		? behaviourMap[ProrationBehavior.Immediately]
 		: behaviourMap[ProrationBehavior.NextBilling];
-};
-
-/**
- * Checks if a Stripe subscription is canceled.
- * @param sub - The Stripe subscription to check.
- * @returns True if the subscription is canceled, false otherwise.
- */
-export const isStripeSubscriptionCanceled = ({
-	sub,
-}: {
-	sub: Stripe.Subscription;
-}) => {
-	return (
-		notNullish(sub.canceled_at) ||
-		notNullish(sub.cancel_at) ||
-		sub.cancel_at_period_end
-	);
 };

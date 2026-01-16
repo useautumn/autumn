@@ -132,7 +132,6 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing downgrade entity pro
 		// expect(proProd).toBeDefined();
 		// expect(proProd.status).toBe(CusProductStatus.Scheduled);
 	});
-	return;
 
 	test("should advance test clock and have pro attached to entity 1", async () => {
 		await advanceTestClock({
@@ -146,17 +145,17 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing downgrade entity pro
 		});
 
 		const entity = await autumn.entities.get(customerId, entity1.id);
-		const proProd = entity.products.find((p: any) => p.id === pro.id);
+		const proProd = entity.products?.find((p: any) => p.id === pro.id);
 		expect(proProd).toBeDefined();
-		expect(proProd.status).toBe(CusProductStatus.Active);
-		expect(entity.products.length).toBe(1);
+		expect(proProd?.status).toBe(CusProductStatus.Active);
+		expect(entity.products?.length).toBe(1);
 
 		const entity2Res = await autumn.entities.get(customerId, entity2.id);
-		const premiumProd = entity2Res.products.find(
+		const premiumProd = entity2Res.products?.find(
 			(p: any) => p.id === premium.id,
 		);
 		expect(premiumProd).toBeDefined();
-		expect(premiumProd.status).toBe(CusProductStatus.Active);
-		expect(entity2Res.products.length).toBe(1);
+		expect(premiumProd?.status).toBe(CusProductStatus.Active);
+		expect(entity2Res.products?.length).toBe(1);
 	});
 });

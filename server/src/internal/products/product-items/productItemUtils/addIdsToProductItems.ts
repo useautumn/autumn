@@ -28,7 +28,7 @@ export const addIdsToProductItems = ({
 	const priceIds = new Set<string>();
 
 	const basePriceItem = items.find((item) => item.price_id === null);
-	const baseCurPrice = curPrices.find((price) => isFixedPrice({ price }));
+	const baseCurPrice = curPrices.find((price) => isFixedPrice(price));
 
 	if (basePriceItem && baseCurPrice) {
 		basePriceItem.price_id = baseCurPrice.id;

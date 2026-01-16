@@ -6,13 +6,15 @@ import {
 	CusProductStatus,
 	cusProductToPrices,
 	cusProductToProduct,
+	type FullCusProduct,
+	isCustomerProductCanceling,
 	ProrationBehavior,
 	SuccessCode,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
-import { isStripeSubscriptionCanceled } from "@/external/stripe/stripeSubUtils.js";
+import { isStripeSubscriptionCanceled } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
@@ -121,6 +123,12 @@ export const handleUpgradeFlow = async ({
 		canceled = true;
 		const { stripeCli } = attachParams;
 
+		// // Set lock to prevent webhook handler from processing this cancellation
+		// await setStripeSubscriptionLock({
+		// 	stripeSubscriptionId: curSub.id,
+		// 	lockedAtMs: Date.now(),
+		// });
+
 		await stripeCli.subscriptions.cancel(curSub.id, {
 			prorate: config.proration === ProrationBehavior.Immediately,
 			invoice_now: config.proration === ProrationBehavior.Immediately,
@@ -162,15 +170,30 @@ export const handleUpgradeFlow = async ({
 		const schedule = await paramsToCurSubSchedule({ attachParams });
 
 		if (schedule) {
+			let removeCusProducts: FullCusProduct[] | undefined;
+			let addNewProducts = true;
+			if (fromMigration) {
+				// 1. If customer product is canceling, already removed from schedule.
+				if (isCustomerProductCanceling(curCusProduct)) {
+					removeCusProducts = [];
+				} else {
+					removeCusProducts = [curCusProduct!];
+				}
+
+				// For adding the new product to the schedule, we need to add it ONLY if the customer product is not canceling.
+				if (isCustomerProductCanceling(curCusProduct)) {
+					addNewProducts = false;
+				}
+			}
+
 			await handleUpgradeFlowSchedule({
 				ctx,
 				attachParams,
 				config,
 				schedule,
 				curSub,
-				removeCusProducts:
-					fromMigration && curCusProduct ? [curCusProduct!] : undefined,
-				addNewProducts: !(fromMigration && curCusProduct?.canceled_at),
+				removeCusProducts,
+				addNewProducts,
 			});
 		}
 
@@ -216,7 +239,7 @@ export const handleUpgradeFlow = async ({
 
 		let canceledAt: number | undefined;
 		let endedAt: number | undefined;
-		if (sub && isStripeSubscriptionCanceled({ sub })) {
+		if (sub && isStripeSubscriptionCanceled(sub)) {
 			canceledAt = sub.canceled_at
 				? sub.canceled_at * 1000
 				: curCusProduct?.canceled_at || undefined;

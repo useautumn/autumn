@@ -81,6 +81,7 @@ export const createTestContext = async () => {
 		timestamp: Date.now(),
 		skipCache: false,
 		expand: [],
+		extraLogs: {},
 	} satisfies TestContext;
 };
 

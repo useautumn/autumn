@@ -3,25 +3,23 @@
 # Source shared configuration
 source "$(dirname "$0")/config.sh"
 
+
+
 BUN_PARALLEL_COMPACT \
-  'server/tests/merged/downgrade' \
-  'server/tests/merged/separate' \
-  'server/tests/merged/add' \
-  'server/tests/merged/group' \
-  'server/tests/merged/prepaid' \
-  'server/tests/merged/upgrade' \
-  'server/tests/merged/addOn' \
-  'server/tests/merged/trial' \
-  'server/tests/core/cancel' \
-  --max=6 \
-  
-  
-  
+  'server/tests/advanced/coupons' \
+  'server/tests/advanced/misc' \
+  'server/tests/attach/updateQuantity' \
+  'server/tests/attach/multiProduct' \
+  'server/tests/advanced/multiFeature' \
+  'server/tests/advanced/referrals' \
+  'server/tests/advanced/rollovers' \
+  'server/tests/advanced/customInterval' \
+  'server/tests/advanced/usageLimit' \
+  --max=6
 
 
+# BUN_PARALLEL_COMPACT \
+#   'server/tests/advanced/usage'
+#   # 'server/tests/crud/plan'
 
-# deprecated tests(?)
-# 'server/tests/core/multiAttach' \
-# 'server/tests/core/multiAttach/multiInvoice' \
-# 'server/tests/core/multiAttach/multiUpgrade' \
-# 'sever/tests/core/multiAttach/multiReward'
+# # 'server/tests/advanced/referrals/paid' \

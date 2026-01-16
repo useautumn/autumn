@@ -205,7 +205,6 @@ export const handleUpdatePlan = createRoute({
 				newFreeTrial: free_trial,
 				internalProductId: fullProduct.internal_id,
 				isCustom: false,
-				product: fullProduct,
 			});
 		}
 

@@ -14,7 +14,7 @@ import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { priceToStripeItem } from "@/external/stripe/priceToStripeItem/priceToStripeItem.js";
-import { isStripeSubscriptionCanceled } from "@/external/stripe/stripeSubUtils.js";
+import { isStripeSubscriptionCanceling } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils.js";
 import {
 	cusProductInPhase,
 	logPhaseItems,
@@ -138,6 +138,7 @@ export const expectSubToBeCorrect = async ({
 	flags,
 	subId,
 	rewards,
+	subCount,
 }: {
 	db: DrizzleCli;
 	customerId: string;
@@ -152,6 +153,7 @@ export const expectSubToBeCorrect = async ({
 	};
 	subId?: string;
 	rewards?: string[];
+	subCount?: number;
 }) => {
 	const stripeCli = createStripeCli({ org, env });
 	const fullCus = await CusService.getFull({
@@ -161,6 +163,18 @@ export const expectSubToBeCorrect = async ({
 		env,
 		withEntities: true,
 	});
+
+	// Check Stripe subscription count if specified
+	if (subCount !== undefined) {
+		const stripeCustomerId = fullCus.processor?.id;
+		if (!stripeCustomerId) {
+			throw new Error(`Customer ${customerId} has no Stripe processor ID`);
+		}
+		const subs = await stripeCli.subscriptions.list({
+			customer: stripeCustomerId,
+		});
+		expect(subs.data.length).toBe(subCount);
+	}
 
 	// 1. Only 1 sub ID available
 	let cusProducts = fullCus.customer_products;
@@ -189,6 +203,8 @@ export const expectSubToBeCorrect = async ({
 			items: [],
 		};
 	});
+
+	// console.log("Schedule unixes:", scheduleUnixes);
 
 	// console.log(`\n\nChecking sub correct`);
 	const printCusProduct = false;
@@ -241,7 +257,12 @@ export const expectSubToBeCorrect = async ({
 				return;
 			}
 
-			// 2. If main product, check that schedule is AFTER this phase
+			// 2. If main product is canceled and ends at or before this phase, exclude it
+			if (cusProduct.canceled && (cusProduct.ended_at || 0) <= unix) {
+				return;
+			}
+
+			// 3. If main product, check that schedule is AFTER this phase
 			const curScheduledProduct = cusProducts.find(
 				(cp) =>
 					cp.product.group === product.group &&
@@ -301,15 +322,9 @@ export const expectSubToBeCorrect = async ({
 				org,
 				options,
 				existingUsage,
-				withEntity: !!cusProduct.internal_entity_id,
+				withEntity: Boolean(cusProduct.internal_entity_id),
 				isCheckout: false,
 				apiVersion,
-				productOptions: cusProduct.quantity
-					? {
-							product_id: product.id,
-							quantity: cusProduct.quantity,
-						}
-					: undefined,
 			});
 
 			if (res?.lineItem && nullish(res.lineItem.quantity)) {
@@ -432,8 +447,12 @@ export const expectSubToBeCorrect = async ({
 	if (finalShouldBeCanceled) {
 		expect(sub.schedule).toBeNull();
 		// expect(sub.cancel_at).toBeDefined();
-		expect(isStripeSubscriptionCanceled({ sub })).toBe(true);
+		expect(isStripeSubscriptionCanceling(sub)).toBe(true);
 		return;
+	}
+
+	if (supposedPhases.length > 0) {
+		expect(sub.schedule, `Sub ${subId} should have a schedule`).not.toBeNull();
 	}
 
 	const schedule =
@@ -443,19 +462,15 @@ export const expectSubToBeCorrect = async ({
 				})
 			: null;
 
-	// console.log("--------------------------------");
-	// console.log("Supposed phases:");
+	// Expected phases:
 	// await logPhases({
-	//   phases: supposedPhases,
-	//   db,
+	// 	phases: supposedPhases,
+	// 	db,
 	// });
 
-	// console.log("--------------------------------");
-	// console.log("Actual phases:");
-
 	// await logPhases({
-	//   phases: (schedule?.phases as any) || [],
-	//   db,
+	// 	phases: schedule?.phases || [],
+	// 	db,
 	// });
 
 	for (let i = 0; i < supposedPhases.length; i++) {
@@ -463,15 +478,18 @@ export const expectSubToBeCorrect = async ({
 
 		if (supposedPhase.items.length === 0) continue;
 
-		const actualPhase = schedule?.phases?.[i + 1];
-		expect(schedule?.phases.length).toBeGreaterThan(i + 1);
-
-		expect(
+		// Find the actual phase by matching start date (Stripe schedule includes past phases)
+		const actualPhase = schedule?.phases?.find((phase) =>
 			similarUnix({
 				unix1: supposedPhase.start_date,
-				unix2: actualPhase!.start_date * 1000,
+				unix2: phase.start_date * 1000,
 			}),
-		).toBe(true);
+		);
+
+		expect(
+			actualPhase,
+			`No matching phase found for supposed phase at ${formatUnixToDateTime(supposedPhase.start_date)}`,
+		).toBeDefined();
 
 		const actualItems =
 			actualPhase?.items.map((item) => ({
@@ -490,10 +508,6 @@ export const expectSubToBeCorrect = async ({
 	}
 
 	expect(sub.cancel_at).toBeNull();
-	// if (shouldBeCanceled) {
-	//   expect(sub.cancel_at).toBeDefined();
-	// } else {
-	// }
 };
 
 export const expectSubCount = async ({

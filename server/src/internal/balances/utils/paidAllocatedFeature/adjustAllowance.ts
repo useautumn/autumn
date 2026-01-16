@@ -120,13 +120,6 @@ export const adjustAllowance = async ({
 		stripeCli,
 	});
 
-	// const sub = await getUsageBasedSub({
-	// 	db,
-	// 	stripeCli,
-	// 	subIds: cusProduct.subscription_ids!,
-	// 	feature: affectedFeature,
-	// });
-
 	if (!sub) {
 		logger.error("adjustAllowance: no usage-based sub found");
 		return { newReplaceables: null, invoice: null, deletedReplaceables: null };

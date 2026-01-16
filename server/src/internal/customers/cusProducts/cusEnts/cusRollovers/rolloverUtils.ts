@@ -82,16 +82,10 @@ export const calculateNextExpiry = (
 
 export function performMaximumClearing({
 	rows,
-	// rolloverConfig,
 	cusEnt,
-	// cusEntID,
-	// entityMode,
 }: {
 	rows: Rollover[];
-	// rolloverConfig: RolloverConfig;
 	cusEnt: FullCustomerEntitlement;
-	// cusEntID: string;
-	// entityMode: boolean;
 }) {
 	const rolloverConfig = cusEnt.entitlement.rollover;
 

@@ -101,7 +101,7 @@ const findBestMatch = (oldPrice: Price, newPrices: Price[]): Price | null => {
 	if (candidates.length === 1) return candidates[0];
 
 	// If multiple candidates, use type-specific matching
-	if (isFixedPrice({ price: oldPrice })) {
+	if (isFixedPrice(oldPrice)) {
 		return findMatchingFixedPrice(oldPrice, candidates);
 	} else if (isUsagePrice({ price: oldPrice })) {
 		return findMatchingUsagePrice(oldPrice, candidates);

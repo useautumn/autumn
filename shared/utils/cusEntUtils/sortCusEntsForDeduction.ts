@@ -90,28 +90,6 @@ export const sortCusEntsForDeduction = ({
 			return 1;
 		}
 
-		// // Handle overage vs prepaid ordering:
-		// // - An entitlement is "in overage mode" if usage_allowed=true AND balance <= 0
-		// // - An entitlement has "prepaid balance" if balance > 0 (regardless of usage_allowed)
-		// // - For deductions: entitlements with prepaid balance go FIRST, overage mode goes LAST
-		// // - For refunds: overage mode goes FIRST (recover overage before prepaid)
-		// // Note: When both have prepaid balance, interval sorting (below) determines order
-		// const aBalance = a.balance ?? 0;
-		// const bBalance = b.balance ?? 0;
-		// const aInOverageMode = a.usage_allowed && aBalance <= 0;
-		// const bInOverageMode = b.usage_allowed && bBalance <= 0;
-
-		// if (aInOverageMode !== bInOverageMode) {
-		// 	if (aInOverageMode && !bInOverageMode) {
-		// 		// a is in overage mode, b has prepaid balance
-		// 		return isRefund ? -1 : 1;
-		// 	}
-		// 	if (!aInOverageMode && bInOverageMode) {
-		// 		// a has prepaid balance, b is in overage mode
-		// 		return isRefund ? 1 : -1;
-		// 	}
-		// }
-
 		// If one has a next_reset_at, it should go first
 		const nextResetFirst = reverseOrder ? 1 : -1;
 
@@ -160,6 +138,19 @@ export const sortCusEntsForDeduction = ({
 
 		if (!aIsAddOn && bIsAddOn) {
 			return -1;
+		}
+
+		// 2.5. Sort by usage_allowed (prepaid goes before pay-per-use)
+		// Prepaid (usage_allowed=false) should be deducted first since it can't go negative
+		if (a.usage_allowed !== b.usage_allowed) {
+			// If a is prepaid (false) and b is pay-per-use (true), a goes first
+			if (!a.usage_allowed && b.usage_allowed) {
+				return -1;
+			}
+			// If a is pay-per-use (true) and b is prepaid (false), b goes first
+			if (a.usage_allowed && !b.usage_allowed) {
+				return 1;
+			}
 		}
 
 		// 4. Sort by created_at

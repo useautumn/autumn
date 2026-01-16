@@ -125,16 +125,6 @@ const handleCustomProductItems = async ({
 	sameEnts: Entitlement[];
 	features: Feature[];
 }) => {
-	// await EntitlementService.insert({
-	//   db,
-	//   data: [...newEnts, ...updatedEnts],
-	// });
-
-	// await PriceService.insert({
-	//   db,
-	//   data: [...newPrices, ...updatedPrices],
-	// });
-
 	return {
 		prices: [...newPrices, ...updatedPrices, ...samePrices],
 		entitlements: [...newEnts, ...updatedEnts, ...sameEnts].map((ent) => ({

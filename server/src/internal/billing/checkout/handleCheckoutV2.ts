@@ -5,7 +5,6 @@ import {
 	CheckoutParamsV0Schema,
 } from "@autumn/shared";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
-import type { ExtendedRequest } from "../../../utils/models/Request";
 import { handleCreateCheckout } from "../../customers/add-product/handleCreateCheckout";
 import { handleCreateInvoiceCheckout } from "../../customers/add-product/handleCreateInvoiceCheckout";
 import {
@@ -97,7 +96,7 @@ export const handleCheckoutV2 = createRoute({
 		});
 
 		const checkoutRes = await previewToCheckoutRes({
-			req: ctx as ExtendedRequest,
+			ctx,
 			attachParams,
 			preview,
 			branch,

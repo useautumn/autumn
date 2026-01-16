@@ -17,10 +17,10 @@ const allowedEndpoints = [
 		method: "POST",
 		path: "/v1/check",
 	},
-	{
-		method: "POST",
-		path: "/v1/attach",
-	},
+	// {
+	// 	method: "POST",
+	// 	path: "/v1/attach",
+	// },
 	{
 		method: "GET",
 		path: "/v1/customers/:customerId",

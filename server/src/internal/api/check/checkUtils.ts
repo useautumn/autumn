@@ -3,14 +3,14 @@ import {
 	type Feature,
 	type FreeTrial,
 	type FullCusProduct,
-	isTrialing,
+	findCusPriceByFeature,
+	isCustomerProductTrialing,
 	type ProductItem,
+	priceToInvoiceAmount,
 	UsageModel,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import { featureToCusPrice } from "@/internal/customers/cusProducts/cusPrices/convertCusPriceUtils.js";
 import { getProration } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
-import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import { isFeaturePriceItem } from "@/internal/products/product-items/productItemUtils/getItemType.js";
 import { itemToPriceOrTiers } from "@/internal/products/product-items/productItemUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
@@ -63,7 +63,9 @@ export const getOptions = ({
 			});
 
 			if (
-				(freeTrial || (cusProduct && isTrialing({ cusProduct, now }))) &&
+				(freeTrial ||
+					(cusProduct &&
+						isCustomerProductTrialing(cusProduct, { nowMs: now }))) &&
 				notNullish(i.interval)
 			) {
 				priceData = {
@@ -83,7 +85,7 @@ export const getOptions = ({
 			if (currentQuantity && internalFeatureId) {
 				currentQuantity = currentQuantity * (i.billing_units || 1);
 
-				const curPrice = featureToCusPrice({
+				const curPrice = findCusPriceByFeature({
 					internalFeatureId: internalFeatureId,
 					cusPrices: cusProduct?.customer_prices ?? [],
 				})?.price;

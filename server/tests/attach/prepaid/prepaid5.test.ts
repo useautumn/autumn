@@ -210,18 +210,18 @@ describe(`${chalk.yellowBright(`attach/${testCase}: prepaid add on, with entitie
 		});
 
 		const entity2 = await autumn.entities.get(customerId, entity2Id);
-		expect(entity2.invoices.length).toBe(2);
-		const creditProd = entity2.products.find(
+		expect(entity2.invoices!.length).toBe(2);
+		const creditProd = entity2.products!.find(
 			(p: any) => p.id === prepaidAddOn.id,
 		);
 
 		expect(creditProd).toBeDefined();
-		const messagesItem = creditProd!.items.find(
+		const messagesItem = creditProd!.items!.find(
 			(i: any) => i.feature_id === TestFeature.Messages,
 		);
 
 		expect(messagesItem).toBeDefined();
-		expect(messagesItem.quantity).toBe(oldEntity2Quantity);
-		expect(messagesItem.next_cycle_quantity).toBe(newEntity2Quantity);
+		expect(messagesItem!.quantity).toBe(oldEntity2Quantity);
+		expect(messagesItem!.next_cycle_quantity).toBe(newEntity2Quantity);
 	});
 });

@@ -34,6 +34,7 @@ export const priceToOneOffAndTiered = ({
 		);
 	}
 	return {
+		price: undefined,
 		price_data: {
 			product: config.stripe_product_id
 				? config.stripe_product_id

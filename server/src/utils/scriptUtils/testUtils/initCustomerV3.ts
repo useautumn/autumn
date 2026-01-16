@@ -49,6 +49,7 @@ export const initCustomerV3 = async ({
 	});
 
 	// 2. Create customer
+
 	try {
 		await autumn.customers.delete(customerId);
 	} catch (_error) {}

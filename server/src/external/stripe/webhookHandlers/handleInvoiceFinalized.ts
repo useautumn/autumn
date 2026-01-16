@@ -1,31 +1,28 @@
 import {
 	ACTIVE_STATUSES,
-	type AppEnv,
 	type FullCustomerPrice,
 	type InvoiceStatus,
-	type Organization,
 } from "@autumn/shared";
 
 import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import {
 	submitBillingDataToVercel,
 	submitInvoiceToVercel,
 } from "@/external/vercel/misc/vercelInvoicing.js";
 import { logVercelWebhook } from "@/external/vercel/misc/vercelMiddleware.js";
-import { CusService } from "@/internal/customers/CusService.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { stripeInvoiceToStripeSubscriptionId } from "../invoices/utils/convertStripeInvoice";
 import {
 	getFullStripeInvoice,
 	getStripeExpandedInvoice,
-	invoiceToSubId,
 	updateInvoiceIfExists,
 } from "../stripeInvoiceUtils.js";
+import type { StripeWebhookContext } from "../webhookMiddlewares/stripeWebhookContext.js";
 
 /**
  * Handles invoice.finalized webhook
@@ -34,22 +31,17 @@ import {
  * For Vercel custom payment method invoices: Submits invoice to Vercel marketplace for payment processing
  */
 export const handleInvoiceFinalized = async ({
-	db,
-	org,
-	data,
-	env,
-	logger,
+	ctx,
 }: {
-	db: DrizzleCli;
-	org: Organization;
-	data: Stripe.Invoice;
-	env: AppEnv;
-	logger: any;
+	ctx: StripeWebhookContext;
 }) => {
-	const stripeCli = createStripeCli({ org, env });
+	const { db, org, env, logger, stripeEvent, stripeCli, fullCustomer } = ctx;
+
+	const invoiceData = stripeEvent.data.object as Stripe.Invoice;
+
 	const invoice = await getFullStripeInvoice({
 		stripeCli,
-		stripeId: data.id!,
+		stripeId: invoiceData.id!,
 	});
 
 	const features = await FeatureService.list({
@@ -58,7 +50,7 @@ export const handleInvoiceFinalized = async ({
 		env,
 	});
 
-	const subId = invoiceToSubId({ invoice });
+	const subId = stripeInvoiceToStripeSubscriptionId(invoice);
 
 	if (subId) {
 		const stripeCli = createStripeCli({ org, env });
@@ -80,7 +72,7 @@ export const handleInvoiceFinalized = async ({
 				);
 
 				// Only process if it's a custom payment method (Vercel)
-				if (paymentMethod.type === "custom") {
+				if (paymentMethod.type === "custom" && fullCustomer) {
 					logVercelWebhook({
 						logger,
 						org,
@@ -91,21 +83,6 @@ export const handleInvoiceFinalized = async ({
 					});
 
 					try {
-						// Get customer and product
-						const customer = await CusService.getByStripeId({
-							db,
-							stripeId: invoice.customer as string,
-							orgId: org.id,
-							env,
-						});
-
-						if (!customer) {
-							console.error("Customer not found for Vercel invoice", {
-								stripeCustomerId: invoice.customer,
-							});
-							return;
-						}
-
 						const product = await ProductService.getFull({
 							db,
 							orgId: org.id,
@@ -124,7 +101,7 @@ export const handleInvoiceFinalized = async ({
 						await submitBillingDataToVercel({
 							installationId: vercelInstallationId,
 							invoice,
-							customer,
+							customer: fullCustomer,
 							product,
 						});
 
@@ -132,7 +109,7 @@ export const handleInvoiceFinalized = async ({
 						await submitInvoiceToVercel({
 							installationId: vercelInstallationId,
 							invoice,
-							customer,
+							customer: fullCustomer,
 							product,
 							org,
 							features,
@@ -144,10 +121,10 @@ export const handleInvoiceFinalized = async ({
 						//   1. Create cus_product (user gets access)
 						//   2. Report payment as "guaranteed" to Stripe
 						//   3. Attach payment record to invoice (marks it as paid)
-					} catch (error: any) {
+					} catch (error) {
 						logger.error("Failed to process Vercel invoice", {
 							data: {
-								error: error.message,
+								error: String(error),
 								invoiceId: invoice.id,
 							},
 						});

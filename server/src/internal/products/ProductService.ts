@@ -41,7 +41,6 @@ const parseFreeTrials = ({
 	return product;
 };
 
-// biome-ignore lint/complexity/noStaticOnlyClass: no thanks m8
 export class ProductService {
 	static async getByFeature({
 		db,
@@ -270,7 +269,6 @@ export class ProductService {
 				prices: { where: eq(prices.is_custom, false) },
 				free_trials: { where: eq(freeTrials.is_custom, false) },
 			},
-			// orderBy: [desc(products.internal_id)],
 		})) as FullProduct[];
 
 		parseFreeTrials({ products: data });
@@ -342,7 +340,7 @@ export class ProductService {
 
 		if (!data) {
 			if (allowNotFound) return null as unknown as FullProduct;
-			throw new ProductNotFoundError({ productId: idOrInternalId });
+			throw new ProductNotFoundError({ productId: idOrInternalId, version });
 		}
 
 		return data as FullProduct;

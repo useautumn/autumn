@@ -1,4 +1,4 @@
-import type { ProductV2 } from "@autumn/shared";
+import { formatAmount, type ProductV2 } from "@autumn/shared";
 import type { CheckoutResult } from "autumn-js";
 import { ArrowUpRightFromSquare, Loader2, Plus, X } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -26,7 +26,6 @@ import { useEnv } from "@/utils/envUtils";
 import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
 import { getBackendErr } from "@/utils/genUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
-import { formatAmount } from "@/utils/product/productItemUtils";
 import { useCusQuery } from "../../hooks/useCusQuery";
 import { InvoiceCustomerButton } from "../components/InvoiceCustomerButton";
 import { getCusProductMinQuantity } from "../utils/getCusProductMinQuantity";
@@ -311,7 +310,7 @@ export const MultiAttachDialog = ({
 									<p>Total:</p>
 									<p>
 										{formatAmount({
-											defaultCurrency,
+											currency: defaultCurrency,
 											amount: checkoutResult.total,
 											maxFractionDigits: 2,
 										})}
@@ -329,7 +328,7 @@ export const MultiAttachDialog = ({
 										<p>
 											{formatAmount({
 												amount: checkoutResult.next_cycle?.total,
-												defaultCurrency,
+												currency: defaultCurrency,
 											})}
 										</p>
 									</div>
