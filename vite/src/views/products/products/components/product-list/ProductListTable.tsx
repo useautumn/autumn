@@ -155,7 +155,7 @@ export function ProductListTable() {
 								getRowHref,
 								emptyStateText: queryStates.showArchivedProducts
 									? "You haven't archived any plans yet"
-									: "You haven't created any recurring plans yet",
+									: "You haven't created any main plans yet",
 								rowClassName: "h-10",
 							}}
 						>
