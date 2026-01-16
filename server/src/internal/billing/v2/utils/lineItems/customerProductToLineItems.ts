@@ -7,7 +7,6 @@ import {
 	cusPriceToCusEnt,
 	type FullCusProduct,
 	fixedPriceToLineItem,
-	getLineItemBillingPeriod,
 	isConsumablePrice,
 	isFixedPrice,
 	isOneOffPrice,
@@ -17,8 +16,9 @@ import {
 	usagePriceToLineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { getBillingCycleAnchorForDirection } from "@/internal/billing/v2/utils/billingContext/getBillingCycleAnchorForDirection";
 import type { BillingContext } from "../../billingContext";
-import { getCurrentBillingCycleAnchorMs } from "../billingContext/getCurrentBillingCycleAnchorMs";
+import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
 
 export type LineItemDirection = "charge" | "refund";
 
@@ -47,14 +47,10 @@ export const customerProductToLineItems = ({
 }): LineItem[] => {
 	const { billingCycleAnchorMs, currentEpochMs } = billingContext;
 
-	const originalBillingCycleAnchorMs = getCurrentBillingCycleAnchorMs({
+	const anchorMs = getBillingCycleAnchorForDirection({
 		billingContext,
+		direction,
 	});
-
-	const anchorMs =
-		direction === "refund"
-			? originalBillingCycleAnchorMs
-			: billingCycleAnchorMs;
 
 	let lineItems: LineItem[] = [];
 
@@ -69,10 +65,15 @@ export const customerProductToLineItems = ({
 		const price = cusPrice.price;
 
 		// Calculate billing period
+
+		const billingContextForPeriod = {
+			...billingContext,
+			billingCycleAnchorMs: anchorMs,
+		};
+
 		const billingPeriod = getLineItemBillingPeriod({
-			anchorMs,
+			billingContext: billingContextForPeriod,
 			price,
-			nowMs: currentEpochMs,
 		});
 
 		// Build line item context

@@ -19,12 +19,14 @@ export const expectProductTrialing = async ({
 	customer: providedCustomer,
 	productId,
 	trialEndsAt: expectedTrialEndsAt,
+	toleranceMs = TEN_MINUTES_MS,
 }: {
 	customerId?: string;
 	customer?: ApiCustomerV3 | ApiEntityV0;
 	productId: string;
 	/** Expected trial end timestamp (10 min tolerance) */
 	trialEndsAt?: number;
+	toleranceMs?: number;
 }) => {
 	const customer = providedCustomer
 		? providedCustomer
@@ -54,8 +56,8 @@ export const expectProductTrialing = async ({
 	// Verify trial_ends_at matches expected timestamp (with tolerance)
 	if (expectedTrialEndsAt !== undefined) {
 		expect(
-			Math.abs(trialEndsAt! - expectedTrialEndsAt) < TEN_MINUTES_MS,
-			`Product ${productId} current_period_end (${trialEndsAt}) should be within 10 min of ${expectedTrialEndsAt}`,
+			Math.abs(trialEndsAt! - expectedTrialEndsAt) < toleranceMs,
+			`Product ${productId} current_period_end (${formatMs(trialEndsAt)}) should be within 10 min of ${formatMs(expectedTrialEndsAt)}`,
 		).toBe(true);
 	}
 

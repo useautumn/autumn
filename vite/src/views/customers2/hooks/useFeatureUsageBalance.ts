@@ -6,6 +6,7 @@ import {
 	cusEntsToPrepaidQuantity,
 	cusProductsToCusEnts,
 	type FullCusProduct,
+	nullish,
 } from "@autumn/shared";
 
 export interface FeatureUsageBalanceParams {
@@ -54,7 +55,10 @@ export function useFeatureUsageBalance({
 		withRollovers: true,
 	});
 
-	const prepaidAllowance = cusEntsToPrepaidQuantity({ cusEnts });
+	const prepaidAllowance = cusEntsToPrepaidQuantity({
+		cusEnts,
+		sumAcrossEntities: nullish(entityId),
+	});
 
 	const balance = cusEntsToBalance({
 		cusEnts,

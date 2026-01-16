@@ -10,9 +10,9 @@ import {
 	type LineItem,
 	RecaseError,
 } from "@autumn/shared";
-import { getLineItemBillingPeriod } from "@shared/utils/billingUtils/cycleUtils/getLineItemBillingPeriod";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
+import { getLineItemBillingPeriod } from "@/internal/billing/v2/utils/lineItems/getLineItemBillingPeriod";
 import { calculateUpdateQuantityDifferences } from "./calculateUpdateQuantityDifferences";
 import { calculateUpdateQuantityEntitlementChange } from "./calculateUpdateQuantityEntitlementChange";
 import { computeUpdateQuantityLineItems } from "./computeUpdateQuantityLineItems";
@@ -106,9 +106,8 @@ export const computeUpdateQuantityDetails = ({
 	}
 
 	const billingPeriod = getLineItemBillingPeriod({
-		anchorMs: billingCycleAnchorMs,
+		billingContext: updateSubscriptionContext,
 		price: customerPrice.price,
-		nowMs: currentEpochMs,
 	});
 
 	if (!billingPeriod) {

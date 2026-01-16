@@ -253,8 +253,8 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: base + consuma
 	expectCustomerFeatureCorrect({
 		customer: entity2Data,
 		featureId: TestFeature.Messages,
-		includedUsage: 100, // prepaid quantity
-		balance: 100,
+		includedUsage: 150, // prepaid quantity
+		balance: 150,
 		usage: 0,
 	});
 
@@ -398,9 +398,6 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: annual mid-cyc
 		items: [messagesItem, annualPriceItem],
 	});
 
-	// Annual price should be charged in full (no proration for annual)
-	console.log("Preview total (annual mid-cycle):", preview.total);
-
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		entity_id: entities[1].id,
@@ -479,9 +476,6 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: monthly mid-cy
 		product_id: free.id,
 		items: [messagesItem, priceItem],
 	});
-
-	// Mid-cycle: ~15/30 days remaining = ~50% proration = ~$10
-	console.log("Preview total (mid-cycle):", preview.total);
 
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,

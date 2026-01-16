@@ -1,10 +1,10 @@
 import {
 	ACTIVE_STATUSES,
-	CusProductStatus,
 	type FullCustomer,
 	InternalError,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
+import { withLock } from "@/external/redis/redisUtils.js";
 import { handlePaidAllocatedCusEnt } from "@/internal/balances/utils/paidAllocatedFeature/handlePaidAllocatedCusEnt.js";
 import { rollbackDeduction } from "@/internal/balances/utils/paidAllocatedFeature/rollbackDeduction.js";
 import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
@@ -74,30 +74,33 @@ export const executePostgresDeduction = async ({
 		deductions,
 	});
 
-	let allUpdates: Record<string, DeductionUpdate> = {};
+	const executeDeduction = async (): Promise<
+		Record<string, DeductionUpdate>
+	> => {
+		let allUpdates: Record<string, DeductionUpdate> = {};
 
-	// Need to deduct from customer entitlement...
-	for (const deduction of deductions) {
-		const { feature, deduction: toDeduct, targetBalance } = deduction;
+		// Need to deduct from customer entitlement...
+		for (const deduction of deductions) {
+			const { feature, deduction: toDeduct, targetBalance } = deduction;
 
-		const {
-			customerEntitlementDeductions,
-			rolloverIds,
-			customerEntitlements,
-			unlimitedFeatureIds,
-		} = prepareFeatureDeduction({
-			ctx,
-			fullCustomer,
-			deduction,
-			options,
-		});
+			const {
+				customerEntitlementDeductions,
+				rolloverIds,
+				customerEntitlements,
+				unlimitedFeatureIds,
+			} = prepareFeatureDeduction({
+				ctx,
+				fullCustomer,
+				deduction,
+				options,
+			});
 
-		if (customerEntitlements.length === 0 || unlimitedFeatureIds.length > 0)
-			continue;
+			if (customerEntitlements.length === 0 || unlimitedFeatureIds.length > 0)
+				continue;
 
-		// Call the stored function to deduct from entitlements with credit costs
-		const result = await db.execute(
-			sql`SELECT * FROM deduct_from_cus_ents(
+			// Call the stored function to deduct from entitlements with credit costs
+			const result = await db.execute(
+				sql`SELECT * FROM deduct_from_cus_ents(
 				${JSON.stringify({
 					sorted_entitlements: customerEntitlementDeductions,
 					amount_to_deduct: toDeduct ?? null,
@@ -111,82 +114,94 @@ export const executePostgresDeduction = async ({
 					feature_id: feature.id,
 				})}::jsonb
 			)`,
-		);
+			);
 
-		// Parse the JSONB result
-		const resultJson = result[0]?.deduct_from_cus_ents as {
-			updates: Record<string, DeductionUpdate>;
-			remaining: number;
-		};
+			// Parse the JSONB result
+			const resultJson = result[0]?.deduct_from_cus_ents as {
+				updates: Record<string, DeductionUpdate>;
+				remaining: number;
+			};
 
-		if (!resultJson) {
-			throw new InternalError({
-				message: "Failed to deduct from entitlements",
+			if (!resultJson) {
+				throw new InternalError({
+					message: "Failed to deduct from entitlements",
+				});
+			}
+
+			const { updates } = resultJson;
+			logDeductionUpdates({
+				ctx,
+				fullCustomer,
+				updates,
+				source: "executePostgresDeduction",
 			});
-		}
+			allUpdates = { ...allUpdates, ...updates };
 
-		const { updates } = resultJson;
-		logDeductionUpdates({
-			ctx,
-			fullCustomer,
-			updates,
-			source: "executePostgresDeduction",
-		});
-		allUpdates = { ...allUpdates, ...updates };
+			try {
+				for (const cusEntId of Object.keys(updates)) {
+					const update = updates[cusEntId];
+					const cusEnt = customerEntitlements.find((ce) => ce.id === cusEntId);
 
-		try {
-			for (const cusEntId of Object.keys(updates)) {
-				const update = updates[cusEntId];
-				const cusEnt = customerEntitlements.find((ce) => ce.id === cusEntId);
+					if (!cusEnt) continue;
 
-				if (!cusEnt) continue;
+					await handlePaidAllocatedCusEnt({
+						ctx,
+						cusEnt,
+						fullCus: fullCustomer,
+						updates,
+					});
 
-				await handlePaidAllocatedCusEnt({
+					applyDeductionUpdateToFullCustomer({
+						fullCus: fullCustomer,
+						cusEntId,
+						update,
+					});
+				}
+			} catch (error) {
+				if (error instanceof Error && !error?.message?.includes("declined")) {
+					ctx.logger.error(
+						`[deductFromCusEnts] Attempting rollback due to error: ${error}`,
+					);
+				}
+				await rollbackDeduction({
 					ctx,
-					cusEnt,
-					fullCus: fullCustomer,
+					oldFullCus,
 					updates,
 				});
+				throw error;
+			}
 
-				applyDeductionUpdateToFullCustomer({
-					fullCus: fullCustomer,
-					cusEntId,
-					update,
-				});
-			}
-		} catch (error) {
-			if (error instanceof Error && !error?.message?.includes("declined")) {
-				ctx.logger.error(
-					`[deductFromCusEnts] Attempting rollback due to error: ${error}`,
-				);
-			}
-			await rollbackDeduction({
+			handleThresholdReached({
 				ctx,
 				oldFullCus,
-				updates,
+				newFullCus: fullCustomer,
+				feature: deduction.feature,
+			}).catch((error) => {
+				ctx.logger.error(
+					`[executeRedisDeduction] Failed to handle threshold reached: ${error}`,
+				);
 			});
-			throw error;
 		}
 
-		handleThresholdReached({
-			ctx,
-			oldFullCus,
-			newFullCus: fullCustomer,
-			feature: deduction.feature,
-		}).catch((error) => {
-			ctx.logger.error(
-				`[executeRedisDeduction] Failed to handle threshold reached: ${error}`,
-			);
-		});
-	}
+		if (refreshCache) {
+			await deleteCachedApiCustomer({
+				customerId,
+				ctx,
+				source: "executePostgresDeduction",
+			});
+		}
 
-	if (refreshCache) {
-		await deleteCachedApiCustomer({
-			customerId,
-			ctx,
-			source: "executePostgresDeduction",
-		});
-	}
+		return allUpdates;
+	};
+
+	const allUpdates = resolvedOptions.paidAllocated
+		? await withLock({
+				lockKey: `lock:deduction:${org.id}:${env}:${customerId}`,
+				ttlMs: 10000,
+				errorMessage: `Deduction for paid feature ${deductions[0]?.feature?.name} already in progress for customer ${customerId}.`,
+				fn: executeDeduction,
+			})
+		: await executeDeduction();
 
 	return {
 		oldFullCus,

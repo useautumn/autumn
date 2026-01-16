@@ -1,9 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { ExistingUsages } from "@autumn/shared";
+import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import chalk from "chalk";
 import { applyExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/applyExistingUsages";
+
+const ctx = contexts.create({});
 
 describe(chalk.yellowBright("applyExistingUsages"), () => {
 	describe("basic usage deduction", () => {
@@ -29,6 +32,7 @@ describe(chalk.yellowBright("applyExistingUsages"), () => {
 
 			// Act
 			applyExistingUsages({
+				ctx,
 				customerProduct: cusProduct,
 				existingUsages,
 				entities: [],

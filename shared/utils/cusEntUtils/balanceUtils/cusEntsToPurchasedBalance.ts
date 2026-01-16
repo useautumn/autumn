@@ -45,7 +45,10 @@ export const cusEntToPurchasedBalance = ({
 
 	if (billingType === BillingType.UsageInAdvance) {
 		// Purchased balance is how much was prepaid
-		const prepaidQuantity = cusEntToPrepaidQuantity({ cusEnt });
+		const prepaidQuantity = cusEntToPrepaidQuantity({
+			cusEnt,
+			sumAcrossEntities: nullish(entityId),
+		});
 
 		const mainOverage = getCusEntMainOverage({ cusEnt, entityId });
 

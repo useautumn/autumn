@@ -89,19 +89,11 @@ export const calculateProratedRefund = async ({
 }): Promise<number> => {
 	const { billingPeriod } = await getStripeSubscription({ customerId });
 
-	console.log("calculateProratedRefund inputs:", {
-		nowMs,
-		billingPeriod,
-		amount,
-	});
-
 	const prorated = applyProration({
 		now: nowMs,
 		billingPeriod,
 		amount,
 	});
-
-	console.log("applyProration result:", prorated);
 
 	return -Number(prorated.toFixed(2));
 };

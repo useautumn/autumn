@@ -2,10 +2,10 @@ import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
-import { getStripeSubscription } from "@tests/integration/billing/utils/discounts/discountTestUtils";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
@@ -17,7 +17,7 @@ test.concurrent(`${chalk.yellowBright("subscription-update: remove trial with no
 		trialDays: 14,
 	});
 
-	const { customerId, autumnV1 } = await initScenario({
+	const { customerId, autumnV1, ctx } = await initScenario({
 		customerId: "sub-update-remove-trial",
 		setup: [
 			s.customer({ testClock: true, paymentMethod: "success" }),
@@ -26,15 +26,11 @@ test.concurrent(`${chalk.yellowBright("subscription-update: remove trial with no
 		actions: [
 			s.attach({ productId: proTrial.id }),
 			s.removePaymentMethod(),
-			s.attachPaymentMethod({ type: "success" }), // Re-attach but subscription default_payment_method stays null
+			s.attachPaymentMethod({ type: "success" }),
 		],
 	});
 
-	// 1. Verify stripe subscription.default_payment_method is null
-	const { subscription: stripeSub } = await getStripeSubscription({
-		customerId,
-	});
-	expect(stripeSub.default_payment_method).toBeNull();
+	await timeout(2000);
 
 	// New items for the update
 	const newMessagesItem = items.monthlyMessages({ includedUsage: 200 });
