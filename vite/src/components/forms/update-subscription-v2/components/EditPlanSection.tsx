@@ -8,11 +8,12 @@ import {
 	UsageModel,
 } from "@autumn/shared";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
+import { LayoutGroup, motion } from "motion/react";
 import { useMemo } from "react";
 import { Button } from "@/components/v2/buttons/Button";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
-import { cn } from "@/lib/utils";
+import { LAYOUT_TRANSITION } from "../constants/animationConstants";
 import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 import { PriceDisplay } from "./PriceDisplay";
 import { SectionTitle } from "./SectionTitle";
@@ -155,90 +156,113 @@ export function EditPlanSection() {
 							<PriceDisplay product={product} currency={currency} />
 						)}
 					</div>
-					<div className="space-y-2">
-						{product?.items?.map((item: ProductItem, index: number) => {
-							if (!item.feature_id) return null;
+					<LayoutGroup>
+						<div className="space-y-2">
+							{product?.items?.map((item: ProductItem, index: number) => {
+								if (!item.feature_id) return null;
 
-							const featureId = item.feature_id;
-							const featureForOptions = features?.find(
-								(f) => f.id === featureId,
-							);
-							const prepaidOption = featureToOptions({
-								feature: featureForOptions,
-								options: customerProduct?.options,
-							});
+								const featureId = item.feature_id;
+								const featureForOptions = features?.find(
+									(f) => f.id === featureId,
+								);
+								const prepaidOption = featureToOptions({
+									feature: featureForOptions,
+									options: customerProduct?.options,
+								});
 
-							const isPrepaid = item.usage_model === UsageModel.Prepaid;
-							const currentPrepaidQuantity = isPrepaid
-								? prepaidOptions[featureId]
-								: prepaidOption?.quantity;
-							const initialPrepaidQuantity = isPrepaid
-								? initialPrepaidOptions[featureId]
-								: undefined;
+								const isPrepaid = item.usage_model === UsageModel.Prepaid;
+								const currentPrepaidQuantity = isPrepaid
+									? prepaidOptions[featureId]
+									: prepaidOption?.quantity;
+								const initialPrepaidQuantity = isPrepaid
+									? initialPrepaidOptions[featureId]
+									: undefined;
 
-							const originalItem = originalItemsMap.get(featureId);
-							const isCreated =
-								!originalItem && originalItems && originalItems.length > 0;
-							const edits = buildEditsForItem({
-								updatedItem: item,
-								originalItem,
-								updatedPrepaidQuantity: currentPrepaidQuantity,
-								originalPrepaidQuantity: initialPrepaidQuantity,
-							});
+								const originalItem = originalItemsMap.get(featureId);
+								const isCreated =
+									!originalItem && originalItems && originalItems.length > 0;
+								const edits = buildEditsForItem({
+									updatedItem: item,
+									originalItem,
+									updatedPrepaidQuantity: currentPrepaidQuantity,
+									originalPrepaidQuantity: initialPrepaidQuantity,
+								});
 
-							return (
-								<SubscriptionItemRow
-									key={featureId || item.price_id || index}
-									item={item}
-									edits={edits}
-									prepaidQuantity={currentPrepaidQuantity}
-									form={form}
-									featureId={featureId}
-									isCreated={isCreated}
-								/>
-							);
-						})}
-						{deletedItems.map((item: ProductItem, index: number) => (
-							<SubscriptionItemRow
-								key={`deleted-${item.feature_id || index}`}
-								item={item}
-								isDeleted
-							/>
-						))}
-						{showVersionChange && (
-							<VersionChangeRow
-								currentVersion={currentVersion}
-								selectedVersion={selectedVersion}
-							/>
-						)}
-						<div
-							className={cn(
-								"grid transition-[grid-template-rows] duration-200 ease-out",
-								trialState.isTrialExpanded || trialState.removeTrial
-									? "grid-rows-[1fr] mb-2"
-									: "grid-rows-[0fr]",
+								return (
+									<motion.div
+										key={featureId || item.price_id || index}
+										layout
+										transition={LAYOUT_TRANSITION}
+									>
+										<SubscriptionItemRow
+											item={item}
+											edits={edits}
+											prepaidQuantity={currentPrepaidQuantity}
+											form={form}
+											featureId={featureId}
+											isCreated={isCreated}
+										/>
+									</motion.div>
+								);
+							})}
+							{deletedItems.map((item: ProductItem, index: number) => (
+								<motion.div
+									key={`deleted-${item.feature_id || index}`}
+									layout
+									transition={LAYOUT_TRANSITION}
+								>
+									<SubscriptionItemRow item={item} isDeleted />
+								</motion.div>
+							))}
+							{showVersionChange && (
+								<motion.div
+									key="version-change"
+									layout
+									transition={LAYOUT_TRANSITION}
+								>
+									<VersionChangeRow
+										currentVersion={currentVersion}
+										selectedVersion={selectedVersion}
+									/>
+								</motion.div>
 							)}
-						>
-							<div className="overflow-hidden">
-								<TrialEditorRow
-									form={form}
-									isCurrentlyTrialing={trialState.isCurrentlyTrialing}
-									initialTrialLength={trialState.remainingTrialDays}
-									initialTrialFormatted={trialState.remainingTrialFormatted}
-									removeTrial={trialState.removeTrial}
-									onEndTrial={trialState.handleEndTrial}
-									onCollapse={() => trialState.setIsTrialExpanded(false)}
-									onRevert={trialState.handleRevertTrial}
-								/>
-							</div>
+							{(trialState.isTrialExpanded || trialState.removeTrial) && (
+								<motion.div
+									key="trial-editor"
+									layout
+									transition={LAYOUT_TRANSITION}
+								>
+									<TrialEditorRow
+										form={form}
+										isCurrentlyTrialing={trialState.isCurrentlyTrialing}
+										initialTrialLength={trialState.remainingTrialDays}
+										initialTrialFormatted={trialState.remainingTrialFormatted}
+										removeTrial={trialState.removeTrial}
+										onEndTrial={trialState.handleEndTrial}
+										onCollapse={() => trialState.setIsTrialExpanded(false)}
+										onRevert={trialState.handleRevertTrial}
+									/>
+								</motion.div>
+							)}
+							<motion.div layout transition={LAYOUT_TRANSITION}>
+								<Button
+									variant="secondary"
+									onClick={handleEditPlan}
+									className="w-full"
+								>
+									<PencilSimpleIcon size={14} className="mr-1" />
+									Edit Plan Items
+								</Button>
+							</motion.div>
 						</div>
-					</div>
+					</LayoutGroup>
 				</>
-			) : null}
-			<Button variant="secondary" onClick={handleEditPlan} className="w-full">
-				<PencilSimpleIcon size={14} className="mr-1" />
-				Edit Plan Items
-			</Button>
+			) : (
+				<Button variant="secondary" onClick={handleEditPlan} className="w-full">
+					<PencilSimpleIcon size={14} className="mr-1" />
+					Edit Plan Items
+				</Button>
+			)}
 		</SheetSection>
 	);
 }
