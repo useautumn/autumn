@@ -17,7 +17,7 @@ export const formatInterval = ({
 
 	// Handle one_off (show "one time")
 	if (interval === BillingInterval.OneOff) {
-		return "one times";
+		return "one-off";
 	}
 
 	// Handle lifetime (no interval string)
