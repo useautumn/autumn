@@ -1,6 +1,6 @@
 import { expect } from "bun:test";
-import { ApiVersion } from "@autumn/shared";
 import type { ApiCustomerV3 } from "@autumn/shared";
+import { ApiVersion } from "@autumn/shared";
 import { AutumnInt } from "@/external/autumn/autumnCli";
 
 const defaultAutumn = new AutumnInt({ version: ApiVersion.V1_2 });
@@ -14,12 +14,14 @@ export const expectCustomerInvoiceCorrect = async ({
 	count,
 	latestTotal,
 	latestStatus,
+	latestInvoiceProductId,
 }: {
 	customerId?: string;
 	customer?: ApiCustomerV3;
 	count: number;
 	latestTotal?: number;
 	latestStatus?: "paid" | "draft" | "open" | "void";
+	latestInvoiceProductId?: string;
 }) => {
 	const customer = providedCustomer
 		? providedCustomer
@@ -39,5 +41,9 @@ export const expectCustomerInvoiceCorrect = async ({
 
 	if (latestStatus !== undefined && invoices.length > 0) {
 		expect(invoices[0].status).toBe(latestStatus);
+	}
+
+	if (latestInvoiceProductId !== undefined && invoices.length > 0) {
+		expect(invoices[0].product_ids).toContain(latestInvoiceProductId);
 	}
 };
