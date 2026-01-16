@@ -13,12 +13,10 @@ import { useMemo, useState } from "react";
 import { useUpdateSubscriptionPreview } from "@/components/forms/update-subscription/use-update-subscription-preview";
 import {
 	EditPlanSection,
-	FreeTrialSection,
 	getFreeTrial,
 	UpdateSubscriptionFooter,
 	type UpdateSubscriptionFormContext,
 	UpdateSubscriptionPreviewSection,
-	UpdateSubscriptionSummary,
 	useHasSubscriptionChanges,
 	useUpdateSubscriptionForm,
 	useUpdateSubscriptionMutation,
@@ -196,6 +194,27 @@ function SheetContent({
 
 	const handlePlanEditorSave = (items: ProductItem[]) => {
 		form.setFieldValue("items", items);
+
+		// Initialize prepaid options to 0 for any new prepaid items
+		const currentPrepaidOptions = form.store.state.values.prepaidOptions;
+		const updatedPrepaidOptions = { ...currentPrepaidOptions };
+		let hasNewPrepaidItems = false;
+
+		for (const item of items) {
+			if (
+				item.usage_model === "prepaid" &&
+				item.feature_id &&
+				updatedPrepaidOptions[item.feature_id] === undefined
+			) {
+				updatedPrepaidOptions[item.feature_id] = 0;
+				hasNewPrepaidItems = true;
+			}
+		}
+
+		if (hasNewPrepaidItems) {
+			form.setFieldValue("prepaidOptions", updatedPrepaidOptions);
+		}
+
 		setShowPlanEditor(false);
 		setIsInlineEditorOpen(false);
 	};
@@ -251,14 +270,6 @@ function SheetContent({
 				currentVersion={currentVersion}
 				prepaidOptions={prepaidOptions}
 				initialPrepaidOptions={initialPrepaidOptions}
-			/>
-
-			<FreeTrialSection form={form} customerProduct={customerProduct} />
-
-			<UpdateSubscriptionSummary
-				form={form}
-				customerProduct={customerProduct}
-				currentVersion={currentVersion}
 			/>
 
 			<UpdateSubscriptionPreviewSection

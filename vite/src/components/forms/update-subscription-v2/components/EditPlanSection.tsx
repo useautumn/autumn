@@ -18,9 +18,13 @@ import { Button } from "@/components/v2/buttons/Button";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
+import { useTrialState } from "../hooks/useTrialState";
 import type { UseUpdateSubscriptionForm } from "../hooks/useUpdateSubscriptionForm";
+import { PriceDisplay } from "./PriceDisplay";
 import { SectionTitle } from "./SectionTitle";
 import { SubscriptionItemRow } from "./SubscriptionItemRow";
+import { TrialEditorRow } from "./TrialEditorRow";
+import { VersionChangeRow } from "./VersionChangeRow";
 
 interface EditPlanSectionProps {
 	hasCustomizations: boolean;
@@ -29,7 +33,7 @@ interface EditPlanSectionProps {
 	originalItems?: ProductItem[];
 	customerProduct?: FullCusProduct;
 	features?: Feature[];
-	form?: UseUpdateSubscriptionForm;
+	form: UseUpdateSubscriptionForm;
 	numVersions?: number;
 	currentVersion?: number;
 	prepaidOptions?: Record<string, number>;
@@ -51,6 +55,11 @@ export function EditPlanSection({
 }: EditPlanSectionProps) {
 	const { org } = useOrg();
 	const currency = org?.default_currency ?? "USD";
+
+	const trialState = useTrialState({ form, customerProduct });
+
+	const priceItem = product?.items?.find((i) => isPriceItem(i));
+	const isPaidProduct = priceItem?.price && priceItem.price > 0;
 
 	const originalItemsMap = new Map(
 		originalItems?.filter((i) => i.feature_id).map((i) => [i.feature_id, i]) ??
@@ -117,6 +126,12 @@ export function EditPlanSection({
 		};
 	}, [originalItems, product?.items, currency]);
 
+	const selectedVersion = form.getFieldValue("version");
+	const showVersionChange =
+		currentVersion !== undefined &&
+		selectedVersion !== undefined &&
+		selectedVersion !== currentVersion;
+
 	return (
 		<SheetSection
 			title={
@@ -125,6 +140,8 @@ export function EditPlanSection({
 					form={form}
 					numVersions={numVersions}
 					currentVersion={currentVersion}
+					trialState={trialState}
+					isPaidProduct={!!isPaidProduct}
 				/>
 			}
 			withSeparator
@@ -199,6 +216,37 @@ export function EditPlanSection({
 								isDeleted
 							/>
 						))}
+						{showVersionChange && (
+							<VersionChangeRow
+								currentVersion={currentVersion}
+								selectedVersion={selectedVersion}
+							/>
+						)}
+						{isPaidProduct && form && (
+							<div
+								className={cn(
+									"grid transition-[grid-template-rows] duration-200 ease-out",
+									trialState.isTrialExpanded ||
+										trialState.removeTrial ||
+										trialState.isCurrentlyTrialing ||
+										trialState.hasTrialValue
+										? "grid-rows-[1fr]"
+										: "grid-rows-[0fr]",
+								)}
+							>
+								<div className="overflow-hidden">
+									<TrialEditorRow
+										form={form}
+										isCurrentlyTrialing={trialState.isCurrentlyTrialing}
+										initialTrialLength={trialState.remainingTrialDays}
+										removeTrial={trialState.removeTrial}
+										onEndTrial={trialState.handleEndTrial}
+										onCollapse={() => trialState.setIsTrialExpanded(false)}
+										onRevert={trialState.handleRevertTrial}
+									/>
+								</div>
+							</div>
+						)}
 					</div>
 				</>
 			) : null}
@@ -207,42 +255,5 @@ export function EditPlanSection({
 				Edit Plan Items
 			</Button>
 		</SheetSection>
-	);
-}
-
-function PriceDisplay({
-	product,
-	currency,
-}: {
-	product?: ProductV2;
-	currency: string;
-}) {
-	const priceItem = product?.items?.find((i) => isPriceItem(i));
-
-	if (!priceItem || priceItem.price === 0 || priceItem.price === undefined) {
-		return <span className="text-t2">Free</span>;
-	}
-
-	const formattedPrice = formatAmount({
-		currency,
-		amount: priceItem.price,
-		amountFormatOptions: {
-			style: "currency",
-			currencyDisplay: "narrowSymbol",
-		},
-	});
-
-	const intervalText = priceItem.interval
-		? formatInterval({
-				interval: priceItem.interval,
-				intervalCount: priceItem.interval_count ?? 1,
-			})
-		: "one-off";
-
-	return (
-		<span className="flex items-center gap-1">
-			<span className="text-t1 font-semibold">{formattedPrice}</span>
-			<span className="text-t3">{intervalText}</span>
-		</span>
 	);
 }
