@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type AppEnv,
+	BillingInterval,
 	CusProductStatus,
 	type Organization,
 } from "@autumn/shared";
@@ -12,6 +13,7 @@ import chalk from "chalk";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
 import { timeout } from "@/utils/genUtils.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -37,6 +39,11 @@ const premium = constructProduct({
 const updatedPremiumWordsItem = constructArrearItem({
 	featureId: TestFeature.Words,
 	includedUsage: 10000,
+});
+
+const updatedPremiumPriceItem = constructPriceItem({
+	price: 80,
+	interval: BillingInterval.Month,
 });
 
 const entities = [
@@ -146,7 +153,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration with entities - o
 
 	test("should update premium product to new version", async () => {
 		await autumn.products.update(premium.id, {
-			items: [updatedPremiumWordsItem],
+			items: [updatedPremiumWordsItem, updatedPremiumPriceItem],
 		});
 	});
 

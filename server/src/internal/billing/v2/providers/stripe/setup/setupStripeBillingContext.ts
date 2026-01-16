@@ -1,4 +1,4 @@
-import type { FullCusProduct, FullCustomer } from "@autumn/shared";
+import { type FullCusProduct, type FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { fetchStripeCustomerForBilling } from "./fetchStripeCustomerForBilling";
 import { fetchStripeSubscriptionForBilling } from "./fetchStripeSubscriptionForBilling";

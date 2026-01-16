@@ -1,4 +1,5 @@
 import { msToSeconds } from "@shared/utils/common/unixUtils";
+import { notNullish } from "@shared/utils/utils";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
@@ -32,18 +33,23 @@ export const buildStripeSubscriptionUpdateAction = ({
 	// When a schedule manages the subscription, don't set trial_end or cancel_at_period_end
 	// The schedule controls these via phase-level settings
 	const scheduleManagesSubscription = !!stripeSubscriptionScheduleAction;
-	const shouldSetTrialEnd =
-		!scheduleManagesSubscription &&
-		trialEndsAt &&
-		msToSeconds(trialEndsAt) !== stripeSubscription?.trial_end;
 
-	const shouldUnsetTrialEnd =
-		!scheduleManagesSubscription && trialEndsAt === null;
+	const appliesToBilling = trialContext?.appliesToBilling;
+	let shouldSetTrialEnd: boolean | undefined;
+	let shouldUnsetTrialEnd: boolean | undefined;
+	if (appliesToBilling) {
+		shouldSetTrialEnd =
+			!scheduleManagesSubscription &&
+			notNullish(trialEndsAt) &&
+			msToSeconds(trialEndsAt) !== stripeSubscription?.trial_end;
+
+		shouldUnsetTrialEnd = !scheduleManagesSubscription && trialEndsAt === null;
+	}
 
 	const params: Stripe.SubscriptionUpdateParams = {
 		items: subItemsUpdate.length > 0 ? subItemsUpdate : undefined,
 		trial_end: shouldSetTrialEnd
-			? msToSeconds(trialEndsAt)
+			? msToSeconds(trialEndsAt!) // safe to unwrap because we checked notNullish above
 			: shouldUnsetTrialEnd
 				? "now"
 				: undefined,

@@ -13,8 +13,8 @@ export const setStripeSubscriptionLock = async ({
 			`sub:${stripeSubscriptionId}`,
 			JSON.stringify({ lockedAtMs }),
 			"EX",
-			process.env.NODE_ENV === "production" ? 30 : 3,
-		); // 10 seconds
+			process.env.NODE_ENV === "production" ? 60 : 3,
+		);
 	});
 };
 

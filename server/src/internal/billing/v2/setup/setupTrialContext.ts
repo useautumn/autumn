@@ -28,6 +28,7 @@ export const setupTrialContext = ({
 	fullProduct: FullProduct;
 }): TrialContext | undefined => {
 	const freeTrialParams = params.free_trial;
+	const newProductIsPaidRecurring = isProductPaidAndRecurring(fullProduct);
 
 	// Case 1: If free trial is null (removing free trial)
 	if (freeTrialParams === null) {
@@ -37,7 +38,11 @@ export const setupTrialContext = ({
 			isStripeSubscriptionTrialing(stripeSubscription) ||
 			isCustomerProductTrialing(customerProduct, { nowMs: currentEpochMs })
 		) {
-			return { freeTrial: null, trialEndsAt: null };
+			return {
+				freeTrial: null,
+				trialEndsAt: null,
+				appliesToBilling: newProductIsPaidRecurring,
+			};
 		} else {
 			return undefined;
 		}
@@ -61,6 +66,7 @@ export const setupTrialContext = ({
 			freeTrial: dbFreeTrial,
 			trialEndsAt,
 			customFreeTrial: dbFreeTrial,
+			appliesToBilling: newProductIsPaidRecurring,
 		};
 	}
 
@@ -77,6 +83,7 @@ export const setupTrialContext = ({
 			return {
 				freeTrial: null,
 				trialEndsAt: trialEndsAt,
+				appliesToBilling: newProductIsPaidRecurring,
 			};
 		} else {
 			return undefined;
@@ -88,6 +95,7 @@ export const setupTrialContext = ({
 		return {
 			freeTrial: customerProduct.free_trial, // can be undefined...
 			trialEndsAt: customerProduct.trial_ends_at ?? null,
+			appliesToBilling: false,
 		};
 	}
 
