@@ -19,7 +19,6 @@ export function useHasSubscriptionChanges({
 	currentVersion,
 	originalItems,
 	features,
-	isTrialConfirmed,
 }: {
 	formValues: UpdateSubscriptionForm;
 	initialPrepaidOptions: Record<string, number>;
@@ -28,20 +27,16 @@ export function useHasSubscriptionChanges({
 	currentVersion: number;
 	originalItems?: ProductItem[];
 	features?: Feature[];
-	isTrialConfirmed: boolean;
 }): boolean {
 	return useMemo(() => {
-		// Only consider trial changes if the user has confirmed them
-		if (isTrialConfirmed) {
-			const trialChanges = generateTrialChanges({
-				customerProduct,
-				removeTrial: formValues.removeTrial,
-				trialLength: formValues.trialLength,
-				trialDuration: formValues.trialDuration,
-			});
+		const trialChanges = generateTrialChanges({
+			customerProduct,
+			removeTrial: formValues.removeTrial,
+			trialLength: formValues.trialLength,
+			trialDuration: formValues.trialDuration,
+		});
 
-			if (trialChanges.length > 0) return true;
-		}
+		if (trialChanges.length > 0) return true;
 
 		const versionChanges = generateVersionChanges({
 			originalVersion: currentVersion,
@@ -88,6 +83,5 @@ export function useHasSubscriptionChanges({
 		currentVersion,
 		originalItems,
 		features,
-		isTrialConfirmed,
 	]);
 }
