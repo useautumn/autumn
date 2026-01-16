@@ -1,7 +1,7 @@
 import { FormLabel } from "@/components/v2/form/FormLabel";
+import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { Input } from "@/components/v2/inputs/Input";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
-import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 
 export const MainDetailsSection = () => {
 	const { product, setProduct } = useProduct();

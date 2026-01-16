@@ -184,6 +184,35 @@ export function generateItemChanges({
 		}
 	}
 
+	// Check for base price value/interval changes (when count is the same)
+	if (
+		originalPriceItems.length > 0 &&
+		originalPriceItems.length === updatedPriceItems.length
+	) {
+		const original = originalPriceItems[0];
+		const updated = updatedPriceItems[0];
+
+		if (original && updated) {
+			const hasChanged =
+				original.price !== updated.price ||
+				original.interval !== updated.interval ||
+				original.interval_count !== updated.interval_count;
+
+			if (hasChanged) {
+				changes.push({
+					id: "base-price-modified",
+					type: "config",
+					label: "Base Price",
+					icon: "price",
+					description: "Base price modified",
+					oldValue: original.price ?? 0,
+					newValue: updated.price ?? 0,
+					isUpgrade: (updated.price ?? 0) > (original.price ?? 0),
+				});
+			}
+		}
+	}
+
 	return changes;
 }
 

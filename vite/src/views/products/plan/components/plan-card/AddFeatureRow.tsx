@@ -1,11 +1,11 @@
 import { PlusIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/v2/buttons/Button";
 import {
+	useCurrentItem,
 	useProduct,
 	useSheet,
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useCurrentItem } from "@/hooks/stores/useProductStore";
 import { checkItemIsValid } from "@/utils/product/entitlementUtils";
 
 interface AddFeatureRowProps {

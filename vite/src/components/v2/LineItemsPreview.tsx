@@ -138,7 +138,9 @@ export function LineItemsPreview<T extends BillingLineItem>({
 									}
 								>
 									{formatAmount({
-										amount: total.amount,
+										amount: new Decimal(total.amount)
+											.toDecimalPlaces(2)
+											.toNumber(),
 										currency,
 										minFractionDigits: 2,
 										amountFormatOptions: { currencyDisplay: "narrowSymbol" },
