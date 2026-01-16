@@ -10,7 +10,7 @@ export class CusService {
 	}
 
 	static async attach(axios: AxiosInstance, data: any) {
-		return await axios.post(`/v1/subscriptions/update`, {
+		return await axios.post(`/v1/attach`, {
 			...data,
 		});
 	}

@@ -1,3 +1,4 @@
+import { UsageModel } from "@autumn/shared";
 import { useCallback } from "react";
 import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormContext";
 import { getFreeTrial } from "../utils/getFreeTrial";
@@ -50,6 +51,28 @@ export function useUpdateSubscriptionRequestBody({
 			})
 			.filter(Boolean);
 
+		if (items && items.length > 0) {
+			const existingFeatureIds = new Set(options.map((o) => o?.feature_id));
+
+			for (const item of items) {
+				if (
+					item.usage_model === UsageModel.Prepaid &&
+					item.feature_id &&
+					!existingFeatureIds.has(item.feature_id)
+				) {
+					const inputQuantity = prepaidOptions[item.feature_id];
+					const billingUnits = item.billing_units ?? 1;
+
+					if (inputQuantity !== undefined && inputQuantity !== null) {
+						options.push({
+							feature_id: item.feature_id,
+							quantity: inputQuantity * billingUnits,
+						});
+					}
+				}
+			}
+		}
+
 		const requestBody: Record<string, unknown> = {
 			customer_id: customerId,
 			product_id: product?.id,
@@ -71,12 +94,10 @@ export function useUpdateSubscriptionRequestBody({
 			requestBody.free_trial = freeTrial;
 		}
 
-		// Send items if customized (from form state)
 		if (items && items.length > 0) {
 			requestBody.items = items;
 		}
 
-		// Only send version if it changed from the initial value
 		if (version !== initialVersion) {
 			requestBody.version = version;
 		}
