@@ -15,15 +15,16 @@ import { useHasPlanChanges, useProduct, useSheet } from "./PlanEditorContext";
 
 interface InlinePlanEditorProps {
 	product: FrontendProduct;
-	productName?: string;
 	onSave: (items: ProductItem[]) => void;
 	onCancel: () => void;
+	isOpen: boolean;
 }
 
 export function InlinePlanEditor({
 	product,
 	onSave,
 	onCancel,
+	isOpen,
 }: InlinePlanEditorProps) {
 	const mainContent = document.querySelector("[data-main-content]");
 
@@ -33,9 +34,13 @@ export function InlinePlanEditor({
 	}
 
 	return createPortal(
-		<InlineEditorProvider initialProduct={product}>
-			<InlinePlanEditorContent onSave={onSave} onCancel={onCancel} />
-		</InlineEditorProvider>,
+		<AnimatePresence>
+			{isOpen && (
+				<InlineEditorProvider initialProduct={product}>
+					<InlinePlanEditorContent onSave={onSave} onCancel={onCancel} />
+				</InlineEditorProvider>
+			)}
+		</AnimatePresence>,
 		mainContent,
 	);
 }
