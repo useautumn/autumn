@@ -151,11 +151,11 @@ export const EditPlanHeader = () => {
 							<CopyButton
 								side="bottom"
 								text={product?.id ? product?.id : ""}
-								className="text-xs"
-								size="sm"
+								size="mini"
+								className="text-t3"
+								innerClassName="max-w-30 text-tiny-id truncate"
 							/>
 						)}
-
 						<IconBadge variant="muted" icon={<UserIcon />}>
 							{counts?.active || 0}
 						</IconBadge>
