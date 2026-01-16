@@ -3,10 +3,10 @@ import { AdminHover } from "@/components/general/AdminHover";
 import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
 import { CardHeader } from "@/components/v2/cards/Card";
 import {
+	useCurrentItem,
 	useProduct,
 	useSheet,
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
-import { useCurrentItem } from "@/hooks/stores/useProductStore";
 import { checkItemIsValid } from "@/utils/product/entitlementUtils";
 import { BasePriceDisplay } from "./BasePriceDisplay";
 import { PlanCardToolbar } from "./PlanCardToolbar";

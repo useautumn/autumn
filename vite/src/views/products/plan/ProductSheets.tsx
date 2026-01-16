@@ -2,12 +2,12 @@ import { type ProductItem, productV2ToFeatureItems } from "@autumn/shared";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef } from "react";
 import {
+	useDiscardItemAndClose,
 	useProduct,
 	useSheet,
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { SheetContainer } from "@/components/v2/sheets/InlineSheet";
 import { SheetCloseButton } from "@/components/v2/sheets/SheetCloseButton";
-import { useDiscardItemAndClose } from "@/hooks/stores/useProductStore";
 import { getItemId } from "@/utils/product/productItemUtils";
 
 import { ProductItemContext } from "../product/product-item/ProductItemContext";

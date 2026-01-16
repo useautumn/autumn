@@ -15,15 +15,17 @@ import {
 import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import {
+	useProduct,
+	useSheet,
+} from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
+import {
 	InputGroup,
 	InputGroupAddon,
 	InputGroupInput,
 } from "@/components/v2/inputs/InputGroup";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useOrg } from "@/hooks/common/useOrg";
-import { type SheetType, useSheetStore } from "@/hooks/stores/useSheetStore";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
-import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { SelectBillingCycle } from "./SelectBillingCycle";
 
 export const BasePriceSection = ({
@@ -32,11 +34,11 @@ export const BasePriceSection = ({
 	withSeparator?: boolean;
 }) => {
 	const { product, setProduct } = useProduct();
+	const { sheetType } = useSheet();
 
 	const basePriceType = product.basePriceType;
 	const { org } = useOrg();
 	const defaultCurrency = org?.default_currency?.toUpperCase() ?? "USD";
-	const sheetType = useSheetStore((s) => s.type) as SheetType;
 
 	// When sheetType is null, we're in CreateProductSheet (overlay sheet, not inline sheet)
 	const isCreatingNewPlan = sheetType === null;
