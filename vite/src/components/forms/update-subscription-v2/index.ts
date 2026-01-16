@@ -8,6 +8,7 @@ export * from "./context/updateSubscriptionFormContext";
 
 // Hooks
 export * from "./hooks/useHasSubscriptionChanges";
+export * from "./hooks/useTrialState";
 export * from "./hooks/useUpdateSubscriptionForm";
 export * from "./hooks/useUpdateSubscriptionMutation";
 export * from "./hooks/useUpdateSubscriptionRequestBody";
