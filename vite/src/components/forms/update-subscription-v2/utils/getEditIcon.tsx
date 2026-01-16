@@ -1,3 +1,4 @@
+import type { EditIconType } from "@autumn/shared";
 import {
 	CurrencyDollarIcon,
 	HashIcon,
@@ -6,7 +7,6 @@ import {
 	TagIcon,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import type { EditIconType } from "../types/summary";
 
 export function getEditIcon(iconType: EditIconType, isUpgrade: boolean) {
 	const iconProps = {
