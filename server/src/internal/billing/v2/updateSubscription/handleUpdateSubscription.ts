@@ -13,6 +13,19 @@ import { setupUpdateSubscriptionBillingContext } from "./setup/setupUpdateSubscr
 
 export const handleUpdateSubscription = createRoute({
 	body: UpdateSubscriptionV0ParamsSchema,
+	lock:
+		process.env.NODE_ENV !== "development"
+			? {
+					ttlMs: 120000,
+					errorMessage:
+						"Update subscription already in progress for this customer, try again in a few seconds",
+					getKey: (c) => {
+						const ctx = c.get("ctx");
+						const attachBody = c.req.valid("json");
+						return `lock:attach:${ctx.org.id}:${ctx.env}:${attachBody.customer_id}`;
+					},
+				}
+			: undefined,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");

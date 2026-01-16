@@ -197,7 +197,7 @@ export const executePostgresDeduction = async ({
 	const allUpdates = resolvedOptions.paidAllocated
 		? await withLock({
 				lockKey: `lock:deduction:${org.id}:${env}:${customerId}`,
-				ttlMs: 10000,
+				ttlMs: 60000,
 				errorMessage: `Deduction for paid feature ${deductions[0]?.feature?.name} already in progress for customer ${customerId}.`,
 				fn: executeDeduction,
 			})
