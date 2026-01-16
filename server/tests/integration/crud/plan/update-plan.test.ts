@@ -8,12 +8,12 @@ import {
 	ResetInterval,
 	type UpdatePlanParams,
 } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { TestFeature } from "../../setup/v2Features.js";
 
 describe(
 	chalk.yellowBright("Plan V2 - Advanced UPDATE (Entitlement Remapping)"),

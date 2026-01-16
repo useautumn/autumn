@@ -6,9 +6,9 @@ import {
 	ProductItemInterval,
 	ResetInterval,
 } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features";
 import chalk from "chalk";
 import { AutumnCliV2 } from "@/external/autumn/autumnCliV2.js";
-import { TestFeature } from "../../setup/v2Features";
 
 describe(
 	chalk.yellowBright("Plan V2 - Metered Feature with Reset Tests"),
