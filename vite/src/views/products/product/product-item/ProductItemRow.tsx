@@ -1,29 +1,24 @@
 // ProductItemRow.tsx
 import {
-	BillingInterval,
-	Feature,
+	type BillingInterval,
+	type Feature,
 	FeatureType,
+	formatAmount,
 	getFeatureName,
 	Infinite,
-	ProductItem,
+	type ProductItem,
 	ProductItemType,
 } from "@autumn/shared";
-import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import {
-	formatAmount,
-	getItemType,
-	intervalIsNone,
-} from "@/utils/product/productItemUtils";
+import { DollarSign, Flag } from "lucide-react";
 import { AdminHover } from "@/components/general/AdminHover";
-import { getFeature } from "@/utils/product/entitlementUtils";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign } from "lucide-react";
-import { Flag } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { isFeatureItem, isPriceItem } from "@/utils/product/getItemType";
-import { notNullish } from "@/utils/genUtils";
-import { useProductContext } from "../ProductContext";
+import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { formatIntervalText } from "@/utils/formatUtils/formatTextUtils";
+import { notNullish } from "@/utils/genUtils";
+import { getFeature } from "@/utils/product/entitlementUtils";
+import { isFeatureItem, isPriceItem } from "@/utils/product/getItemType";
+import { getItemType, intervalIsNone } from "@/utils/product/productItemUtils";
 
 interface ProductItemRowProps {
 	item: ProductItem;
@@ -116,20 +111,20 @@ export const ProductItemRow = ({
 
 		if (item.price) {
 			amountStr = formatAmount({
-				defaultCurrency: org?.default_currency || "USD",
+				currency: org?.default_currency || "USD",
 				amount: item.price,
 			});
 		} else if (item.tiers && item.tiers.length == 1) {
 			amountStr = formatAmount({
-				defaultCurrency: org?.default_currency || "USD",
+				currency: org?.default_currency || "USD",
 				amount: item.tiers![0].amount,
 			});
 		} else {
 			amountStr = `${formatAmount({
-				defaultCurrency: org?.default_currency || "USD",
+				currency: org?.default_currency || "USD",
 				amount: item.tiers![0].amount,
 			})} - ${formatAmount({
-				defaultCurrency: org?.default_currency || "USD",
+				currency: org?.default_currency || "USD",
 				amount: item.tiers![item.tiers!.length - 1].amount,
 			})}`;
 		}
@@ -166,9 +161,9 @@ export const ProductItemRow = ({
 	};
 
 	const getFixedPriceString = (item: ProductItem) => {
-		const currency = org?.default_currency || "USD";
+		const currencyCode = org?.default_currency || "USD";
 		const formattedAmount = formatAmount({
-			defaultCurrency: currency,
+			currency: currencyCode,
 			amount: item.price!,
 		});
 

@@ -1,13 +1,13 @@
-import { constructPreviewItem } from "@/internal/invoices/previewItemUtils/constructPreviewItem.js";
 import {
-	FullEntitlement,
+	type FullEntitlement,
 	getFeatureInvoiceDescription,
-	Organization,
-	Price,
-	UsagePriceConfig,
+	type Organization,
+	type Price,
+	priceToInvoiceAmount,
+	type UsagePriceConfig,
 } from "@autumn/shared";
-import { priceToInvoiceAmount } from "./priceToInvoiceAmount.js";
-import { Proration } from "@/internal/invoices/prorationUtils.js";
+import { constructPreviewItem } from "@/internal/invoices/previewItemUtils/constructPreviewItem.js";
+import type { Proration } from "@/internal/invoices/prorationUtils.js";
 import { formatUnixToDate } from "@/utils/genUtils.js";
 
 export const priceToInvoiceItem = ({
@@ -58,7 +58,7 @@ export const priceToInvoiceItem = ({
 		invoiceAmount = 0;
 	}
 
-	let newPreviewItem = constructPreviewItem({
+	const newPreviewItem = constructPreviewItem({
 		price,
 		org,
 		amount: invoiceAmount,

@@ -153,10 +153,14 @@ export const attachPaymentMethod = async ({
 	type: "success" | "fail" | "authenticate";
 }) => {
 	try {
-		const token = type === "fail" ? "tok_chargeCustomerFail" : "tok_visa";
+		// Use pre-defined payment method IDs for special test cards
+		if (type === "authenticate" || type === "fail") {
+			const pmId =
+				type === "authenticate"
+					? "pm_card_authenticationRequired"
+					: "pm_card_chargeCustomerFail";
 
-		if (type === "authenticate") {
-			await stripeCli.paymentMethods.attach("pm_card_authenticationRequired", {
+			await stripeCli.paymentMethods.attach(pmId, {
 				customer: stripeCusId,
 			});
 
@@ -171,10 +175,12 @@ export const attachPaymentMethod = async ({
 			});
 			return;
 		}
+
+		// Success case - create from token
 		const pm = await stripeCli.paymentMethods.create({
 			type: "card",
 			card: {
-				token,
+				token: "tok_visa",
 			},
 		});
 

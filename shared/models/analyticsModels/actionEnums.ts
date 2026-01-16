@@ -3,6 +3,10 @@ export enum AuthType {
 	SecretKey = "secret_key",
 	PublicKey = "public_key",
 	Dashboard = "dashboard",
+
+	// Internal
+	Vercel = "vercel",
+	Revenuecat = "revenuecat",
 	Stripe = "stripe",
 	Unknown = "unknown",
 	Worker = "worker",

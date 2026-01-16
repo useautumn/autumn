@@ -12,6 +12,7 @@ export type SheetType =
 	| "attach-product"
 	| "subscription-detail"
 	| "subscription-update"
+	| "subscription-update-v2"
 	| "balance-selection"
 	| "balance-edit"
 	| null;

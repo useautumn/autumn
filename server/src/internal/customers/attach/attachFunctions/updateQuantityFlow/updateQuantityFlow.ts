@@ -4,10 +4,8 @@ import {
 	SuccessCode,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import {
-	getStripeSubs,
-	isStripeSubscriptionCanceled,
-} from "@/external/stripe/stripeSubUtils.js";
+import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
+import { isStripeSubscriptionCanceled } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 import type { AttachParams } from "../../../cusProducts/AttachParams.js";
@@ -56,7 +54,7 @@ export const handleUpdateQuantityFunction = async ({
 	}
 
 	for (const stripeSub of stripeSubs) {
-		if (isStripeSubscriptionCanceled({ sub: stripeSub })) {
+		if (isStripeSubscriptionCanceled(stripeSub)) {
 			await stripeCli.subscriptions.update(stripeSub.id, {
 				cancel_at: null,
 			});

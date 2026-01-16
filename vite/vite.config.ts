@@ -7,9 +7,9 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 // https://vite.dev/config/
 export default defineConfig({
-  esbuild: {
-    pure: ['console.log']
-  },
+	esbuild: {
+		pure: ["console.log"],
+	},
 	plugins: [
 		react(),
 		tailwindcss(), // Automatically reads paths from tsconfig.json
@@ -17,7 +17,7 @@ export default defineConfig({
 		sentryVitePlugin({
 			org: process.env.VITE_SENTRY_ORG,
 			project: process.env.VITE_SENTRY_PROJECT,
-			telemetry: false
+			telemetry: false,
 		}),
 	],
 
@@ -43,6 +43,8 @@ export default defineConfig({
 	},
 
 	optimizeDeps: {
+		// Force pre-bundle @owpz/ksuid for proper ESM handling
+		include: ["@owpz/ksuid"],
 		// Exclude workspace dependencies from pre-bundling to avoid cache issues
 		exclude: [
 			"@autumn/shared",
@@ -52,7 +54,8 @@ export default defineConfig({
 			"zod/v4",
 			"drizzle-orm/pg-core",
 			"drizzle-orm",
-			"@date-fns/utc"
+			"@date-fns/utc",
+			"date-fns",
 		],
 	},
 

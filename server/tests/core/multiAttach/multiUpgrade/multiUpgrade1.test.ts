@@ -167,7 +167,7 @@ describe(`${chalk.yellowBright("multiUpgrade1: Testing multi attach and upgrade"
 		});
 
 		const entity = await autumn.entities.get(customerId, "1");
-		const invoices = entity.invoices[0];
+		const invoices = entity.invoices![0];
 
 		expect(invoices.total).toBe(checkoutRes.total);
 

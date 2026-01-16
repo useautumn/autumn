@@ -30,7 +30,6 @@ const newWordsItem = constructArrearItem({
 
 const proWithTrial = constructProduct({
 	items: [newWordsItem],
-	id: "migrations4_pro",
 	type: "pro",
 	isDefault: false,
 	trial: true,
@@ -49,6 +48,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro -> pro wi
 			prefix: testCase,
 			customerId,
 		});
+
+		proWithTrial.id = pro.id;
 
 		await initCustomerV3({
 			ctx,

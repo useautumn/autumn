@@ -92,7 +92,8 @@ export function MainLayout() {
 
 	return (
 		<AutumnProvider
-			backendUrl={import.meta.env.VITE_BACKEND_URL}
+			// backendUrl={import.meta.env.VITE_BACKEND_URL}
+			backendUrl="http://localhost:8080"
 			includeCredentials={true}
 		>
 			<NuqsAdapter>
@@ -161,8 +162,9 @@ const MainContent = ({
 						onOpenChange={setShowDeployDialog}
 					/>
 					<div
+						data-main-content
 						className={cn(
-							"w-full h-full overflow-auto flex justify-center bg-background",
+							"w-full h-full overflow-auto flex justify-center bg-background relative",
 						)}
 					>
 						<div className="w-full h-full justify-center">

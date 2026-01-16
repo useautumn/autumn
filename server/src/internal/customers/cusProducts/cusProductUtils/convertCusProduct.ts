@@ -4,30 +4,7 @@ import type {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 
-import {
-	getStripeSchedules,
-	getStripeSubs,
-} from "@/external/stripe/stripeSubUtils.js";
-
-export const cusProductsToSchedules = ({
-	cusProducts,
-	stripeCli,
-}: {
-	cusProducts: (FullCusProduct | undefined)[];
-	stripeCli: Stripe;
-}) => {
-	const scheduleIds: string[] = [];
-	for (const cusProduct of cusProducts) {
-		if (cusProduct) {
-			scheduleIds.push(...(cusProduct.scheduled_ids || []));
-		}
-	}
-
-	return getStripeSchedules({
-		stripeCli,
-		scheduleIds,
-	});
-};
+import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 
 export const cusProductToSchedule = async ({
 	cusProduct,

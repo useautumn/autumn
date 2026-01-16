@@ -4,6 +4,7 @@
 - DO NOT alter .gitignore
 - JS Doc comments should be SHORT and SWEET. Don't need examples unless ABSOLUTELY necessary
 - When using db schemas in Drizzle, import them from '@autumn/shared', and don't do schemas.
+- **Spell out variable names in full form** - avoid abbreviations in variable/function names. Use `customerProduct` not `cusProduct`, `customerEntitlements` not `cusEnts`, `organization` not `org` (in new code). Clarity over brevity.
 
 # Testing
 - When writing tests, ALWAYS read:
@@ -22,6 +23,8 @@ in the test logs. Use your common sense
 - This codebase uses Bun as its preferred package manager and Node runtime.
 
 - **ALWAYS import from `zod/v4`**, not from `zod` directly. Example: `import { z } from "zod/v4";`
+
+- **ALWAYS use named import for Decimal.js**: `import { Decimal } from "decimal.js";` NOT `import Decimal from "decimal.js";`
 
 - Always prefer foo({ bar }) over foo(bar) method signatures - no matter if we are using only one argument or not, object as param are always better, as in the future when wanting to change the order of parameters, or add new ones - its easier.
 
@@ -44,6 +47,8 @@ in the test logs. Use your common sense
 
 - This codebase uses Bun for all of its operations in `/server`, `/vite` and `/shared`. It uses Bun for the package management, Bun for the workspace management and Bun for the runtime. Prefer Bun over PNPM. If you ever want to trace a package dependency tree, run `bun why <package name>` which will tell you why a certain package was installed and by who.
 - Prefer Guard clauses "if(!admin) return;" over explicity "if(admin) do X;" Early returns are better
+
+- For single-line if statements (especially guard clauses), omit curly braces to keep code neat: `if (!isValid) throw error;` instead of wrapping in braces.
 
 - Do not run "npx tsc" - run "tsc" instead as it is installed globally.
 
@@ -105,6 +110,14 @@ in the test logs. Use your common sense
 
 ## File Naming
 DON'T name files one word (like index.ts, model.ts, etc.). Give proper indication in the filename to which resource it's targeting. For example, a utility file for organizations should be named orgUtils.ts. This is because it's easier to search for files like this. That being said, the filename shouldn't be overly long (less than three words is ideal)
+
+## File Moving/Renaming
+When restructuring, moving, or renaming files, **ALWAYS use terminal commands** (`mv`, `mkdir`) instead of rewriting files. This preserves git history and ensures no lines/logic are accidentally lost or changed
+
+## Deleting Files
+- **NEVER use `rm` commands unless the file is confirmed to be unused**
+- **ALWAYS ask for user approval before running any `rm` or `rm -rf` commands**
+- Before deleting, verify the file has no imports/references in the codebase
 
 # Vite
 ## Components

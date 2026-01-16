@@ -10,7 +10,7 @@ import { and, eq, inArray } from "drizzle-orm";
 
 export class FreeTrialService {
 	static async insert({ db, data }: { db: DrizzleCli; data: FreeTrial }) {
-		await db.insert(freeTrials).values(data as any);
+		await db.insert(freeTrials).values(data);
 	}
 
 	static async upsert({ db, data }: { db: DrizzleCli; data: FreeTrial }) {
@@ -21,7 +21,7 @@ export class FreeTrialService {
 
 		await db
 			.insert(freeTrials)
-			.values(data as any)
+			.values(data)
 			.onConflictDoUpdate({
 				target: [freeTrials.id],
 				set: updateCols,

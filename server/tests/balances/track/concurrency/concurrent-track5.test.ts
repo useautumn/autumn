@@ -85,7 +85,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing per-entity track with concu
 		// Verify each seat has 500 messages
 		for (const entity of entities) {
 			const entityRes = await autumnV1.entities.get(customerId, entity.id);
-			expect(entityRes.features[TestFeature.Messages].balance).toBe(500);
+			expect(entityRes.features![TestFeature.Messages].balance).toBe(500);
 		}
 
 		// Verify customer has 500 * 5 = 2500 messages
@@ -102,13 +102,13 @@ describe(`${chalk.yellowBright(`${testCase}: Testing per-entity track with concu
 
 		// Verify seat1 has 500 included messages with 600 usage_limit
 		const entityRes = await autumnV1.entities.get(customerId, entityId);
-		expect(entityRes.features[TestFeature.Messages].balance).toBe(500);
+		expect(entityRes.features![TestFeature.Messages].balance).toBe(500);
 
 		console.log(
 			"🚀 Starting 5 concurrent track calls (200 units each) for seat1...",
 		);
 		console.log(
-			`   Initial state: balance=${entityRes.features[TestFeature.Messages].balance}, usage_limit=${entityRes.features[TestFeature.Messages].usage_limit}`,
+			`   Initial state: balance=${entityRes.features![TestFeature.Messages].balance}, usage_limit=${entityRes.features![TestFeature.Messages].usage_limit}`,
 		);
 
 		// Try 5 concurrent 200-unit sends to seat1
@@ -166,22 +166,22 @@ describe(`${chalk.yellowBright(`${testCase}: Testing per-entity track with concu
 		const finalEntityRes = await autumnV1.entities.get(customerId, entityId);
 		console.log(`\n📦 Final state for ${entityId}:`);
 		console.log(
-			`- Balance: ${finalEntityRes.features[TestFeature.Messages].balance} (expected: -100)`,
+			`- Balance: ${finalEntityRes.features![TestFeature.Messages].balance} (expected: -100)`,
 		);
 		console.log(
-			`- Usage: ${finalEntityRes.features[TestFeature.Messages].usage} (expected: 600)`,
+			`- Usage: ${finalEntityRes.features![TestFeature.Messages].usage} (expected: 600)`,
 		);
 		console.log(
-			`- Usage limit: ${finalEntityRes.features[TestFeature.Messages].usage_limit} (expected: 600)`,
+			`- Usage limit: ${finalEntityRes.features![TestFeature.Messages].usage_limit} (expected: 600)`,
 		);
 
-		expect(finalEntityRes.features[TestFeature.Messages].balance).toBe(-100);
-		expect(finalEntityRes.features[TestFeature.Messages].usage).toBe(600);
+		expect(finalEntityRes.features![TestFeature.Messages].balance).toBe(-100);
+		expect(finalEntityRes.features![TestFeature.Messages].usage).toBe(600);
 
 		// Verify other seats remain untouched at 500
 		for (const seatId of ["seat2", "seat3", "seat4", "seat5"]) {
 			const otherSeatRes = await autumnV1.entities.get(customerId, seatId);
-			expect(otherSeatRes.features[TestFeature.Messages].balance).toBe(500);
+			expect(otherSeatRes.features![TestFeature.Messages].balance).toBe(500);
 		}
 	});
 
@@ -199,16 +199,16 @@ describe(`${chalk.yellowBright(`${testCase}: Testing per-entity track with concu
 			skip_cache: "true",
 		});
 
-		expect(finalEntityRes.features[TestFeature.Messages].balance).toBe(-100);
-		expect(finalEntityRes.features[TestFeature.Messages].usage).toBe(600);
-		expect(finalEntityRes.features[TestFeature.Messages].usage_limit).toBe(600);
+		expect(finalEntityRes.features![TestFeature.Messages].balance).toBe(-100);
+		expect(finalEntityRes.features![TestFeature.Messages].usage).toBe(600);
+		expect(finalEntityRes.features![TestFeature.Messages].usage_limit).toBe(600);
 
 		// Verify other seats still at 500 in database
 		for (const seatId of ["seat2", "seat3", "seat4", "seat5"]) {
 			const otherSeatRes = await autumnV1.entities.get(customerId, seatId, {
 				skip_cache: "true",
 			});
-			expect(otherSeatRes.features[TestFeature.Messages].balance).toBe(500);
+			expect(otherSeatRes.features![TestFeature.Messages].balance).toBe(500);
 		}
 	});
 });

@@ -13,6 +13,7 @@ import { handleHealthCheck } from "./honoUtils/handleHealthCheck.js";
 import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
 import { apiRouter } from "./routers/apiRouter.js";
 import { internalRouter } from "./routers/internalRouter.js";
+import { publicRouter } from "./routers/publicRouter.js";
 import { auth } from "./utils/auth.js";
 
 const ALLOWED_ORIGINS = [
@@ -77,15 +78,6 @@ export const createHonoApp = () => {
 	app.use("*", baseMiddleware);
 	app.use("*", traceMiddleware);
 
-	// app.get("/debug", (c) => {
-	// 	return c.json({
-	// 		region: process.env.AWS_REGION,
-	// 		amazonId:
-	// 			c.req.header("x-amzn-trace-id") || c.req.header("X-Amzn-Trace-Id"),
-	// 		reqId: c.get("ctx").id,
-	// 	});
-	// });
-
 	app.get("/", handleHealthCheck);
 
 	// Add Render region identifier header for load balancer verification
@@ -100,6 +92,8 @@ export const createHonoApp = () => {
 	app.route("/webhooks/vercel", vercelWebhookRouter);
 	app.route("/webhooks/revenuecat", revenuecatWebhookRouter);
 
+	// Public routes (no auth required)
+	app.route("", publicRouter);
 	// API Middleware
 	app.route("/v1", apiRouter);
 	app.route("", internalRouter);
@@ -139,6 +133,14 @@ export const redirectToHono = () => {
 			// Exact match
 			if (routePath === path) {
 				return true;
+			}
+
+			// Check for wildcard patterns (e.g., /api/autumn/*)
+			if (routePath.endsWith("/*")) {
+				const basePath = routePath.slice(0, -2); // Remove "/*"
+				if (path.startsWith(`${basePath}/`) || path === basePath) {
+					return true;
+				}
 			}
 
 			// Check for dynamic routes (e.g., /v1/products/:id)

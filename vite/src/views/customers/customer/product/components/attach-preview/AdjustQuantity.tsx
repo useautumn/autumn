@@ -1,11 +1,11 @@
+import { formatAmount } from "@autumn/shared";
+import React from "react";
 import {
 	PriceItem,
 	QuantityInput,
 } from "@/components/pricing/attach-pricing-dialog";
 import { useOrg } from "@/hooks/common/useOrg";
-import { formatAmount } from "@/utils/product/productItemUtils";
 import { useProductContext } from "@/views/products/product/ProductContext";
-import React from "react";
 
 export const AdjustableOptions = () => {
 	const { org } = useOrg();
@@ -37,7 +37,7 @@ export const AdjustableOptions = () => {
 							<span className="text-muted-foreground">
 								×{" "}
 								{formatAmount({
-									defaultCurrency: currency,
+									currency,
 									amount: price,
 									maxFractionDigits: 2,
 								})}{" "}

@@ -2,12 +2,16 @@ import {
 	type AttachConfig,
 	calculateProrationAmount,
 	cusProductToProduct,
+	customerPriceToCustomerEntitlement,
 	type Feature,
 	type FeatureOptions,
 	type FullCusProduct,
+	findCusPriceByFeature,
 	getFeatureInvoiceDescription,
 	OnDecrease,
 	priceToInvoiceAmount,
+	shouldBillNow,
+	shouldProrate,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -15,16 +19,10 @@ import type { Stripe } from "stripe";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import { featureToCusPrice } from "@/internal/customers/cusProducts/cusPrices/convertCusPriceUtils.js";
-import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import { constructStripeInvoiceItem } from "@/internal/invoices/invoiceItemUtils/invoiceItemUtils.js";
 import { createAndFinalizeInvoice } from "@/internal/invoices/invoiceUtils/createAndFinalizeInvoice.js";
 import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
-import {
-	shouldBillNow,
-	shouldProrate,
-} from "@/internal/products/prices/priceUtils/prorationConfigUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
 
@@ -50,7 +48,7 @@ export const handleQuantityDowngrade = async ({
 	const { db, logger, org, features } = ctx;
 	const { stripeCli, paymentMethod } = attachParams;
 
-	const cusPrice = featureToCusPrice({
+	const cusPrice = findCusPriceByFeature({
 		internalFeatureId: newOptions.internal_feature_id!,
 		cusPrices: cusProduct.customer_prices,
 	})!;
@@ -179,9 +177,9 @@ export const handleQuantityDowngrade = async ({
 
 	await createDowngradeInvoice();
 
-	const cusEnt = getRelatedCusEnt({
-		cusPrice,
-		cusEnts: cusProduct.customer_entitlements,
+	const cusEnt = customerPriceToCustomerEntitlement({
+		customerPrice: cusPrice,
+		customerEntitlements: cusProduct.customer_entitlements,
 	});
 
 	if (cusEnt) {

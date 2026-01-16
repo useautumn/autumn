@@ -128,9 +128,9 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item 
 			const msgesFeature = entity.features[TestFeature.Messages];
 			const expectedRollover = Math.min(usage.rollover, rolloverConfig.max);
 
-			expect(msgesFeature.rollovers.length).toBe(1);
+			expect(msgesFeature.rollovers?.length).toBe(1);
 			expect(msgesFeature.balance).toBe(includedUsage + expectedRollover);
-			expect(msgesFeature.rollovers[0].balance).toBe(expectedRollover);
+			expect(msgesFeature.rollovers?.[0].balance).toBe(expectedRollover);
 		}
 
 		// Verify non-cached entity balances
@@ -149,7 +149,9 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item 
 			expect(nonCachedMsgesFeature.balance).toBe(
 				includedUsage + expectedRollover,
 			);
-			expect(nonCachedMsgesFeature.rollovers[0].balance).toBe(expectedRollover);
+			expect(nonCachedMsgesFeature.rollovers?.[0].balance).toBe(
+				expectedRollover,
+			);
 		}
 	});
 
@@ -165,15 +167,15 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item 
 		const entity1Msges = entity1.features[TestFeature.Messages];
 		// 400, 300 -> 400, 100 (max is 500)
 		const rollovers = entity1Msges.rollovers;
-		expect(rollovers[0].balance).toBe(100);
-		expect(rollovers[1].balance).toBe(400);
+		expect(rollovers?.[0].balance).toBe(100);
+		expect(rollovers?.[1].balance).toBe(400);
 
 		const entity2 = await autumn.entities.get(customerId, entity2Id);
 		const entity2Msges = entity2.features[TestFeature.Messages];
 		// 400, 200 -> 400, 0 (max is 500)
 		const rollovers2 = entity2Msges.rollovers;
-		expect(rollovers2[0].balance).toBe(100);
-		expect(rollovers2[1].balance).toBe(400);
+		expect(rollovers2?.[0].balance).toBe(100);
+		expect(rollovers2?.[1].balance).toBe(400);
 
 		// Verify non-cached entity balances
 		await timeout(2000);
@@ -183,8 +185,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item 
 		const nonCachedEntity1Msges =
 			nonCachedEntity1.features[TestFeature.Messages];
 		const nonCachedRollovers1 = nonCachedEntity1Msges.rollovers;
-		expect(nonCachedRollovers1[0].balance).toBe(100);
-		expect(nonCachedRollovers1[1].balance).toBe(400);
+		expect(nonCachedRollovers1?.[0].balance).toBe(100);
+		expect(nonCachedRollovers1?.[1].balance).toBe(400);
 
 		const nonCachedEntity2 = await autumn.entities.get(customerId, entity2Id, {
 			skip_cache: "true",
@@ -192,8 +194,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item 
 		const nonCachedEntity2Msges =
 			nonCachedEntity2.features[TestFeature.Messages];
 		const nonCachedRollovers2 = nonCachedEntity2Msges.rollovers;
-		expect(nonCachedRollovers2[0].balance).toBe(100);
-		expect(nonCachedRollovers2[1].balance).toBe(400);
+		expect(nonCachedRollovers2?.[0].balance).toBe(100);
+		expect(nonCachedRollovers2?.[1].balance).toBe(400);
 	});
 
 	test("should track and deduct from oldest rollovers first", async () => {
@@ -209,8 +211,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item 
 			const entRes = await autumn.entities.get(customerId, entity.id);
 			const msgesFeature = entRes.features[TestFeature.Messages];
 			const rollovers = msgesFeature.rollovers;
-			expect(rollovers[0].balance).toBe(0);
-			expect(rollovers[1].balance).toBe(350);
+			expect(rollovers?.[0].balance).toBe(0);
+			expect(rollovers?.[1].balance).toBe(350);
 			expect(msgesFeature.balance).toBe(includedUsage + 350);
 		}
 
@@ -223,8 +225,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item 
 			const nonCachedMsgesFeature =
 				nonCachedEntity.features[TestFeature.Messages];
 			const nonCachedRollovers = nonCachedMsgesFeature.rollovers;
-			expect(nonCachedRollovers[0].balance).toBe(0);
-			expect(nonCachedRollovers[1].balance).toBe(350);
+			expect(nonCachedRollovers?.[0].balance).toBe(0);
+			expect(nonCachedRollovers?.[1].balance).toBe(350);
 			expect(nonCachedMsgesFeature.balance).toBe(includedUsage + 350);
 		}
 	});
@@ -242,8 +244,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item 
 			const entRes = await autumn.entities.get(customerId, entity.id);
 			const msgesFeature = entRes.features[TestFeature.Messages];
 			const rollovers = msgesFeature.rollovers;
-			expect(rollovers[0].balance).toBe(0);
-			expect(rollovers[1].balance).toBe(0);
+			expect(rollovers?.[0].balance).toBe(0);
+			expect(rollovers?.[1].balance).toBe(0);
 			expect(msgesFeature.balance).toBe(includedUsage - 50);
 		}
 
@@ -256,8 +258,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item 
 			const nonCachedMsgesFeature =
 				nonCachedEntity.features[TestFeature.Messages];
 			const nonCachedRollovers = nonCachedMsgesFeature.rollovers;
-			expect(nonCachedRollovers[0].balance).toBe(0);
-			expect(nonCachedRollovers[1].balance).toBe(0);
+			expect(nonCachedRollovers?.[0].balance).toBe(0);
+			expect(nonCachedRollovers?.[1].balance).toBe(0);
 			expect(nonCachedMsgesFeature.balance).toBe(includedUsage - 50);
 		}
 	});

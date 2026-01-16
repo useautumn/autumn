@@ -1,9 +1,12 @@
-import { type FeatureOptions, isPrepaidPrice } from "@autumn/shared";
+import {
+	type FeatureOptions,
+	isPrepaidPrice,
+	priceToFeature,
+} from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
 import { attachParamsToProduct } from "../../../customers/attach/attachUtils/convertAttachParams";
 import type { AttachParams } from "../../../customers/cusProducts/AttachParams";
 import { getPriceOptions } from "../../../products/prices/priceUtils";
-import { priceToFeature } from "../../../products/prices/priceUtils/convertPrice";
 
 export const getCheckoutOptions = async ({
 	ctx,
@@ -13,9 +16,7 @@ export const getCheckoutOptions = async ({
 	attachParams: AttachParams;
 }) => {
 	const product = attachParamsToProduct({ attachParams });
-	const prepaidPrices = product.prices.filter((p) =>
-		isPrepaidPrice({ price: p }),
-	);
+	const prepaidPrices = product.prices.filter((p) => isPrepaidPrice(p));
 
 	const newOptions: FeatureOptions[] = structuredClone(
 		attachParams.optionsList,

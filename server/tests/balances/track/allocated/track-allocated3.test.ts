@@ -101,7 +101,7 @@ describe(`${chalk.yellowBright(
 		// Verify entity balances
 		for (const entity of entities) {
 			const _entity = await autumnV1.entities.get(customerId, entity.id);
-			expect(_entity.features[TestFeature.Workflows].balance).toBe(10 + 5); // 3 + 10
+			expect(_entity.features![TestFeature.Workflows].balance).toBe(10 + 5); // 3 + 10
 		}
 	});
 
@@ -187,10 +187,10 @@ Total workflows to use: ${numCustomerWorkflows + numEntity1Workflows + numEntity
 		// Check entity balances
 		const entity1 = await autumnV1.entities.get(customerId, entity1Id);
 		const entity2 = await autumnV1.entities.get(customerId, entity2Id);
-		expect(entity1.features[TestFeature.Workflows].balance).toBe(
+		expect(entity1.features![TestFeature.Workflows].balance).toBe(
 			expectedEnt1Workflows + expectedCusWorkflows,
 		);
-		expect(entity2.features[TestFeature.Workflows].balance).toBe(
+		expect(entity2.features![TestFeature.Workflows].balance).toBe(
 			expectedEnt2Workflows + expectedCusWorkflows,
 		);
 
@@ -208,7 +208,7 @@ Total workflows to use: ${numCustomerWorkflows + numEntity1Workflows + numEntity
 				skip_cache: "true",
 			},
 		);
-		expect(nonCachedEntity1.features[TestFeature.Workflows].balance).toBe(
+		expect(nonCachedEntity1.features![TestFeature.Workflows].balance).toBe(
 			expectedEnt1Workflows + expectedCusWorkflows,
 		);
 		const nonCachedEntity2 = await autumnV1.entities.get(
@@ -218,7 +218,7 @@ Total workflows to use: ${numCustomerWorkflows + numEntity1Workflows + numEntity
 				skip_cache: "true",
 			},
 		);
-		expect(nonCachedEntity2.features[TestFeature.Workflows].balance).toBe(
+		expect(nonCachedEntity2.features![TestFeature.Workflows].balance).toBe(
 			expectedEnt2Workflows + expectedCusWorkflows,
 		);
 	});

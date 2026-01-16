@@ -1,7 +1,7 @@
 import { type FreeTrial, notNullish } from "@autumn/shared";
 import { AreaCheckbox } from "@/components/v2/checkboxes/AreaCheckbox";
+import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
-import { useProductStore } from "@/hooks/stores/useProductStore";
 import { getDefaultFreeTrial } from "../../utils/getDefaultFreeTrial";
 import { FreeTrialSection } from "./FreeTrialSection";
 
@@ -10,8 +10,7 @@ export const AdditionalOptions = ({
 }: {
 	withSeparator?: boolean;
 }) => {
-	const product = useProductStore((s) => s.product);
-	const setProduct = useProductStore((s) => s.setProduct);
+	const { product, setProduct } = useProduct();
 
 	if (!product.planType) return null;
 

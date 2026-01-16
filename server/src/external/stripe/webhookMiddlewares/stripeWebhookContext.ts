@@ -1,11 +1,11 @@
-import type { Customer } from "@autumn/shared";
+import type { Customer, FullCustomer } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 export interface StripeWebhookContext extends AutumnContext {
 	stripeEvent: Stripe.Event;
 	stripeCli: Stripe;
-	customer?: Customer;
+	fullCustomer?: FullCustomer;
 }
 
 export type StripeWebhookHonoEnv = {

@@ -10,16 +10,15 @@ import {
 import { CoinsIcon } from "@phosphor-icons/react";
 import { PanelButton } from "@/components/v2/buttons/PanelButton";
 import { IncludedUsageIcon } from "@/components/v2/icons/AutumnIcons";
+import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
-import { useProductStore } from "@/hooks/stores/useProductStore";
 
 export const PlanTypeSection = ({
 	withSeparator = true,
 }: {
 	withSeparator?: boolean;
 }) => {
-	const product = useProductStore((s) => s.product);
-	const setProduct = useProductStore((s) => s.setProduct);
+	const { product, setProduct } = useProduct();
 
 	const planType = productV2ToPlanType({ product });
 
