@@ -14,9 +14,9 @@ import {
 	TierInfinite,
 	UsageModel,
 } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { TestFeature } from "../../setup/v2Features.js";
 
 describe(chalk.yellowBright("Plan V2 - Complex Real-World Scenarios"), () => {
 	const autumnV2 = new AutumnInt({ version: ApiVersion.V2_0 });
