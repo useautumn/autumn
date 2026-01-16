@@ -50,7 +50,7 @@ export const handleUpdateSubscriptionErrors = async ({
 	handleCustomPlanErrors({ ctx, billingContext, autumnBillingPlan, params });
 
 	// 5. One-off errors
-	handleOneOffErrors({ ctx, billingContext, autumnBillingPlan });
+	handleOneOffErrors({ ctx, billingContext, autumnBillingPlan, params });
 
 	// 6. Trial removal with one-off items
 	checkTrialRemovalWithOneOffItems({ billingContext, autumnBillingPlan });

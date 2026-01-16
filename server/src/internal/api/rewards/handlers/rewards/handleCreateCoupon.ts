@@ -18,7 +18,7 @@ import {
 } from "@/internal/rewards/rewardUtils.js";
 
 const CreateCouponQuerySchema = z.object({
-	legacyStripe: z.string().optional(),
+	legacyStripe: z.boolean().optional(),
 });
 
 export const handleCreateCoupon = createRoute({
@@ -60,7 +60,7 @@ export const handleCreateCoupon = createRoute({
 				env,
 				prices,
 				logger,
-				legacyVersion: legacyStripe === "true",
+				legacyVersion: legacyStripe,
 			});
 		}
 
