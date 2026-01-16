@@ -116,7 +116,7 @@ export function buildEditsForItem({
 				description: `Removed tier: up to ${tierLabel} units at $${oldTier.amount}`,
 				oldValue: `$${oldTier.amount}`,
 				newValue: null,
-				isUpgrade: true,
+				isUpgrade: false,
 			});
 		}
 
