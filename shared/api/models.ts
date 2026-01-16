@@ -69,12 +69,9 @@ export * from "./balances/track/prevVersions/trackResponseV1.js";
 export * from "./balances/track/trackParams.js";
 export * from "./balances/track/trackResponseV2.js";
 export * from "./balances/usageModels.js";
-export * from "./billing/attach/prevVersions/attachBodyV0.js";
-export * from "./billing/attach/prevVersions/attachResponseV1.js";
-export * from "./billing/checkout/checkoutParamsV1.js";
-export * from "./billing/checkout/prevVersions/checkoutParamsV0.js";
-export * from "./billing/checkout/prevVersions/checkoutParamsV0.js";
-export * from "./billing/checkout/prevVersions/checkoutResponseV0.js";
+// Billing
+export * from "./billing/index.js";
+
 export * from "./common/customerData.js";
 export * from "./common/entityData.js";
 export * from "./common/pagePaginationSchemas.js";

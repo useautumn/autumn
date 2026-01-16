@@ -1,11 +1,15 @@
+import {
+	AttachBranch,
+	formatAmount,
+	getAmountForQuantity,
+	type Price,
+} from "@autumn/shared";
+import { Decimal } from "decimal.js";
 import { PriceItem } from "@/components/pricing/attach-pricing-dialog";
 import { Input } from "@/components/ui/input";
 import { useOrg } from "@/hooks/common/useOrg";
 import { notNullish } from "@/utils/genUtils";
-import { formatAmount } from "@/utils/product/productItemUtils";
 import { useProductContext } from "@/views/products/product/ProductContext";
-import { AttachBranch, getAmountForQuantity, Price } from "@autumn/shared";
-import { Decimal } from "decimal.js";
 
 export const UpdateQuantity = () => {
 	const { org } = useOrg();
@@ -22,7 +26,7 @@ export const UpdateQuantity = () => {
 		if (notNullish(option.price)) {
 			return `x ${formatAmount({
 				amount: option.price,
-				defaultCurrency: currency,
+				currency,
 				maxFractionDigits: 5,
 			})} per `;
 		}
@@ -149,7 +153,7 @@ export const UpdateQuantity = () => {
 				<span>
 					{formatAmount({
 						amount: getTotalPrice(),
-						defaultCurrency: currency,
+						currency,
 						maxFractionDigits: 2,
 					})}
 				</span>

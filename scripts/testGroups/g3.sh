@@ -24,8 +24,7 @@ BUN_PARALLEL_COMPACT \
   'server/tests/attach/response' \
   'server/tests/interval/upgrade' \
   'server/tests/interval/multiSub' \
-  'server/tests/billing/cancel' \
-  'server/tests/billing/new-billing-subscription' \
-  'server/tests/billing/invoice-action-required/new-subscription' \
+  'server/tests/integration/billing/new-billing-subscription' \
+  'server/tests/integration/billing/invoice-action-required/new-subscription' \
   --max=6
 

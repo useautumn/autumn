@@ -19,6 +19,7 @@ import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigration
 import { detectBaseVariant } from "@/internal/products/productUtils/detectProductVariant.js";
 import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutReward.js";
 import { generateId } from "@/utils/genUtils.js";
+import { addWorkflowToLogs } from "@/utils/logging/addContextToLogs.js";
 import { hatchet } from "../external/hatchet/initHatchet.js";
 import { setSentryTags } from "../external/sentry/sentryUtils.js";
 import { createWorkerContext } from "./createWorkerContext.js";
@@ -53,13 +54,12 @@ const processMessage = async ({
 
 	const job: SqsJob = JSON.parse(message.Body);
 
-	const workerLogger = logger.child({
-		context: {
-			worker: {
-				messageId: message.MessageId,
-				type: job.name,
-				payload: job.data,
-			},
+	const workerLogger = addWorkflowToLogs({
+		logger: logger,
+		workflowContext: {
+			id: message.MessageId ?? generateId("job"),
+			name: job.name,
+			payload: job.data,
 		},
 	});
 
@@ -324,16 +324,21 @@ export const initHatchetWorker = async () => {
 		return;
 	}
 
-	console.log("Starting hatchet worker");
+	try {
+		console.log("Starting hatchet worker");
 
-	const workflows = [verifyCacheConsistencyWorkflow].filter(Boolean);
+		const worker = await hatchet.worker("hatchet-worker", {
+			workflows: [verifyCacheConsistencyWorkflow!],
+		});
 
-	const worker = await hatchet.worker("hatchet-worker", {
-		workflows: workflows as NonNullable<
-			typeof verifyCacheConsistencyWorkflow
-		>[],
-	});
-
-	// Don't await - start() runs indefinitely and would block the rest of the code
-	worker.start();
+		// Don't await - start() runs indefinitely and would block the rest of the code
+		// But catch errors to prevent unhandled promise rejections from crashing
+		worker.start().catch((error) => {
+			console.error("Hatchet worker error (non-fatal):", error.message);
+			Sentry.captureException(error);
+		});
+	} catch (error) {
+		console.error("Failed to start hatchet worker", error);
+		Sentry.captureException(error);
+	}
 };

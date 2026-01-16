@@ -1,15 +1,14 @@
 import { useHotkeys } from "react-hotkeys-hook";
 import { Card, CardContent } from "@/components/v2/cards/Card";
+import { useSheet } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { Separator } from "@/components/v2/separator";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useFeatureNavigation } from "../../hooks/useFeatureNavigation";
 import { PlanCardHeader } from "./PlanCardHeader";
 import { PlanFeatureList } from "./PlanFeatureList";
 
-export default function sPlanCard() {
-	// Initialize feature navigation (registers hotkeys internally)
+export default function PlanCard() {
 	useFeatureNavigation();
-	const sheetType = useSheetStore((s) => s.type);
+	const { sheetType } = useSheet();
 
 	useHotkeys("ctrl+s", () => {
 		console.log("Save");
@@ -20,9 +19,8 @@ export default function sPlanCard() {
 			className="min-w-sm max-w-xl mx-4 w-full !rounded-2xl gap-2 bg-background outline-4 outline-outer-background z-50 relative"
 			onMouseDown={(e) => e.stopPropagation()}
 		>
-			{/* Overlay when sheet is open that lets you hover on plan card buttons */}
 			{sheetType && (
-				<div className="bg-white/50 dark:bg-black/50 absolute pointer-events-none rounded-2xl -inset-[5px]"></div>
+				<div className="bg-white/50 dark:bg-black/50 absolute pointer-events-none rounded-2xl -inset-[5px]" />
 			)}
 			<PlanCardHeader />
 

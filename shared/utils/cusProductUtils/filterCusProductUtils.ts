@@ -1,4 +1,7 @@
-import { CusProductStatus, type FullCustomer } from "../../index.js";
+import {
+	type FullCustomer,
+	filterCustomerProductsByActiveStatuses,
+} from "../../index.js";
 import type { Entity } from "../../models/cusModels/entityModels/entityModels.js";
 import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
@@ -16,21 +19,23 @@ export const filterCusProductsByEntity = ({
 }: {
 	cusProducts: FullCusProduct[];
 	entity: Entity;
-	org: Organization;
+	org?: Organization;
 }): FullCusProduct[] => {
-	return cusProducts?.filter((p: FullCusProduct) => {
-		if (org.config.entity_product) {
-			return (
-				notNullish(p.internal_entity_id) &&
-				p.internal_entity_id === entity.internal_id
-			);
-		}
+	return (
+		cusProducts?.filter((p: FullCusProduct) => {
+			if (org?.config?.entity_product) {
+				return (
+					notNullish(p.internal_entity_id) &&
+					p.internal_entity_id === entity.internal_id
+				);
+			}
 
-		return (
-			p.internal_entity_id === entity.internal_id ||
-			nullish(p.internal_entity_id)
-		);
-	}) || [];
+			return (
+				p.internal_entity_id === entity.internal_id ||
+				nullish(p.internal_entity_id)
+			);
+		}) || []
+	);
 };
 
 export const filterEntityLevelCustomerEntitlementsFromFullCustomer = ({
@@ -38,7 +43,9 @@ export const filterEntityLevelCustomerEntitlementsFromFullCustomer = ({
 }: {
 	fullCustomer: FullCustomer;
 }): FullCustomer => {
-	const finalCusProducts: FullCusProduct[] = structuredClone(fullCustomer?.customer_products || []);
+	const finalCusProducts: FullCusProduct[] = structuredClone(
+		fullCustomer?.customer_products || [],
+	);
 	for (let i = 0; i < finalCusProducts.length; i++) {
 		if (notNullish(finalCusProducts[i].internal_entity_id)) continue;
 
@@ -49,11 +56,14 @@ export const filterEntityLevelCustomerEntitlementsFromFullCustomer = ({
 		finalCusProducts[i].customer_entitlements = newCusEnts;
 	}
 	// Filter extra_customer_entitlements to keep only entity-level ones
-	const finalExtraCusEnts = structuredClone(fullCustomer?.extra_customer_entitlements || []).filter((ce) =>
-		// NEW APPROACH: has internal_entity_id
-		notNullish(ce.internal_entity_id) ||
-		// OLD APPROACH: has entities object with data
-		(ce.entities && Object.keys(ce.entities).length > 0),
+	const finalExtraCusEnts = structuredClone(
+		fullCustomer?.extra_customer_entitlements || [],
+	).filter(
+		(ce) =>
+			// NEW APPROACH: has internal_entity_id
+			notNullish(ce.internal_entity_id) ||
+			// OLD APPROACH: has entities object with data
+			(ce.entities && Object.keys(ce.entities).length > 0),
 	);
 
 	// finalCusProducts = finalCusProducts.filter((cp: FullCusProduct) => {
@@ -89,25 +99,25 @@ export const filterOutEntitiesFromFullCustomer = ({
 	fullCus: FullCustomer;
 }): FullCustomer => {
 	// 1. Remove cus products with internal_entity_id
-	const finalCusProducts = structuredClone(fullCus?.customer_products || []).filter(
-		(p: FullCusProduct) => {
-			return nullish(p.internal_entity_id);
-		},
-	);
+	const finalCusProducts = structuredClone(
+		fullCus?.customer_products || [],
+	).filter((p: FullCusProduct) => {
+		return nullish(p.internal_entity_id);
+	});
 
 	// Filter extra_customer_entitlements to remove entity-level ones
-	const finalExtraCusEnts = structuredClone(fullCus?.extra_customer_entitlements || []).filter(
-		(cusEnt: FullCustomerEntitlement) => {
-			return (
-				// Must NOT have entity_feature_id (per-entity feature)
-				nullish(cusEnt.entitlement.entity_feature_id) &&
-				// Must NOT have internal_entity_id (new approach)
-				nullish(cusEnt.internal_entity_id) &&
-				// Must NOT have entities object (old approach)
-				(!cusEnt.entities || Object.keys(cusEnt.entities).length === 0)
-			);
-		},
-	);
+	const finalExtraCusEnts = structuredClone(
+		fullCus?.extra_customer_entitlements || [],
+	).filter((cusEnt: FullCustomerEntitlement) => {
+		return (
+			// Must NOT have entity_feature_id (per-entity feature)
+			nullish(cusEnt.entitlement.entity_feature_id) &&
+			// Must NOT have internal_entity_id (new approach)
+			nullish(cusEnt.internal_entity_id) &&
+			// Must NOT have entities object (old approach)
+			(!cusEnt.entities || Object.keys(cusEnt.entities).length === 0)
+		);
+	});
 
 	// 2. Remove cus products with entity balances...
 	for (let i = 0; i < finalCusProducts.length; i++) {
@@ -125,16 +135,6 @@ export const filterOutEntitiesFromFullCustomer = ({
 	} satisfies FullCustomer;
 };
 
-export const getActiveCusProducts = ({
-	customer,
-}: {
-	customer: FullCustomer;
-}): FullCusProduct[] => {
-	return customer.customer_products.filter(
-		(p: FullCusProduct) => p.status === CusProductStatus.Active,
-	);
-};
-
 export const isProductAlreadyEnabled = ({
 	productId,
 	customer,
@@ -144,7 +144,9 @@ export const isProductAlreadyEnabled = ({
 	customer: FullCustomer;
 	entityId?: string;
 }) => {
-	return getActiveCusProducts({ customer }).some((cp: FullCusProduct) => {
+	return filterCustomerProductsByActiveStatuses({
+		customerProducts: customer.customer_products,
+	}).some((cp: FullCusProduct) => {
 		// Check if product matches and is not an add-on
 		if (cp.product_id !== productId || cp.product.is_add_on) {
 			return false;

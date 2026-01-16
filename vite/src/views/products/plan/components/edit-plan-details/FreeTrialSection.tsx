@@ -2,6 +2,7 @@ import { FreeTrialDuration } from "@autumn/shared";
 import { useId } from "react";
 import { TextCheckbox } from "@/components/v2/checkboxes/TextCheckbox";
 import { FormLabel } from "@/components/v2/form/FormLabel";
+import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { Input } from "@/components/v2/inputs/Input";
 import {
 	Select,
@@ -10,11 +11,9 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/v2/selects/Select";
-import { useProductStore } from "@/hooks/stores/useProductStore";
 
 export const FreeTrialSection = () => {
-	const product = useProductStore((s) => s.product);
-	const setProduct = useProductStore((s) => s.setProduct);
+	const { product, setProduct } = useProduct();
 	const lengthId = useId();
 
 	return (

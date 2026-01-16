@@ -57,14 +57,13 @@ export const stripeWebhookRefreshMiddleware = async (
 				return;
 			}
 
-			const customer = ctx.customer;
+			const customer = ctx.fullCustomer;
 
 			if (!customer) {
 				logger.warn(`Customer not found in context, skipping cache refresh`);
 				return;
 			}
 
-			logger.info(`Attempting delete cached api customer! ${eventType}`);
 			await deleteCachedApiCustomer({
 				customerId: customer.id!,
 				ctx,

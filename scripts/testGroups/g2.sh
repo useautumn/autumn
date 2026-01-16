@@ -2,6 +2,8 @@
 
 source "$(dirname "$0")/config.sh"
 
+
+
 BUN_PARALLEL_COMPACT \
   'server/tests/attach/basic' \
   'server/tests/attach/upgrade' \
@@ -10,9 +12,9 @@ BUN_PARALLEL_COMPACT \
   'server/tests/attach/addOn' \
   'server/tests/attach/checkout' \
   'server/tests/attach/misc' \
-  'server/tests/billing/invoice-action-required' \
-  'server/tests/billing/cancel' \
-  'server/tests/billing/cancel/add-ons' \
+  'server/tests/integration/billing/invoice-action-required' \
+  'server/tests/integration/billing/cancel' \
+  'server/tests/integration/billing/cancel/add-ons' \
   'server/tests/renew' \
   --max=6
 

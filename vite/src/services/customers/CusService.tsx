@@ -1,4 +1,4 @@
-import { type AxiosInstance } from "axios";
+import type { AxiosInstance } from "axios";
 
 export class CusService {
 	static async createCustomer(axios: AxiosInstance, data: any) {

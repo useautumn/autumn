@@ -1,4 +1,4 @@
-import { CusProductStatus } from "@autumn/shared";
+import { CusProductStatus, formatMsToDate } from "@autumn/shared";
 import { DotIcon, ExclamationMarkIcon, XIcon } from "@phosphor-icons/react";
 import { formatDistanceToNow } from "date-fns";
 import { BanIcon, CalendarIcon, CheckIcon, ClockIcon } from "lucide-react";
@@ -65,12 +65,14 @@ export const CustomerProductsStatus = ({
 	canceled,
 	trialing,
 	trial_ends_at,
+	starts_at,
 }: {
 	status?: CusProductStatus;
 	tooltip?: boolean;
 	canceled?: boolean;
 	trialing?: boolean;
 	trial_ends_at?: number;
+	starts_at?: number;
 }) => {
 	// Expired status takes priority over canceled
 	if (status === CusProductStatus.Expired) {
@@ -80,6 +82,22 @@ export const CustomerProductsStatus = ({
 					className="text-white bg-black dark:bg-black rounded-full p-0.5"
 					size={12}
 				/>
+			</StatusItem>
+		);
+	}
+
+	if (status === CusProductStatus.Scheduled) {
+		return (
+			<StatusItem text="" tooltip={tooltip}>
+				<CalendarIcon
+					className="text-white bg-purple-500 dark:bg-purple-600 rounded-full p-0.5"
+					size={12}
+				/>
+				{starts_at && (
+					<span className="text-sm text-t3 pl-1 truncate">
+						Starts {formatMsToDate(starts_at)}
+					</span>
+				)}
 			</StatusItem>
 		);
 	}
@@ -132,16 +150,6 @@ export const CustomerProductsStatus = ({
 				<StatusItem text="Trial" tooltip={tooltip}>
 					<ClockIcon
 						className="text-white bg-blue-500 dark:bg-blue-600 rounded-full m-0.5"
-						size={12}
-					/>
-				</StatusItem>
-			);
-
-		case CusProductStatus.Scheduled:
-			return (
-				<StatusItem text="Scheduled" tooltip={tooltip}>
-					<CalendarIcon
-						className="text-white bg-purple-500 dark:bg-purple-600 rounded-full p-0.5"
 						size={12}
 					/>
 				</StatusItem>

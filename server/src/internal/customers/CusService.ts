@@ -14,7 +14,7 @@ import {
 } from "@autumn/shared";
 import { and, eq, ilike, or, sql, type Table } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
 import { RELEVANT_STATUSES } from "./cusProducts/CusProductService.js";
 import { getFullCusQuery } from "./getFullCusQuery.js";
@@ -186,20 +186,17 @@ export class CusService {
 	}
 
 	static async getByStripeId({
-		db,
+		ctx,
 		stripeId,
-		orgId,
-		env,
 	}: {
-		db: DrizzleCli;
+		ctx: AutumnContext;
 		stripeId: string;
-		orgId: string;
-		env: AppEnv;
 	}) {
+		const { db, org, env } = ctx;
 		const customer = await db.query.customers.findFirst({
 			where: and(
 				eq(sql`processor->>'id'`, stripeId),
-				eq(customers.org_id, orgId),
+				eq(customers.org_id, org.id),
 				eq(customers.env, env),
 			),
 		});

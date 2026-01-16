@@ -73,6 +73,7 @@ export function registerAllVersionChanges() {
 		version: ApiVersion.V2_0,
 		changes: V2_CHANGES,
 	});
+
 	VersionChangeRegistryClass.register({
 		version: ApiVersion.V1_Beta,
 		changes: V1_4_CHANGES,

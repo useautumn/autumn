@@ -7,9 +7,14 @@ import {
 import { and, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
+/**
+ * MetadataService handles CRUD operations for the metadata table.
+ */
 export class MetadataService {
 	static async insert({ db, data }: { db: DrizzleCli; data: MetadataInsert }) {
-		await db.insert(metadata).values(data);
+		const insertedMetadata = await db.insert(metadata).values(data).returning();
+
+		return insertedMetadata[0] as Metadata;
 	}
 
 	static async get({ db, id }: { db: DrizzleCli; id: string }) {

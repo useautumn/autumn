@@ -1,5 +1,8 @@
-import { cusProductToPrices, type FullCusProduct } from "@autumn/shared";
-import { isFixedPrice } from "@server/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice";
+import {
+	cusProductToPrices,
+	type FullCusProduct,
+	isFixedPrice,
+} from "@autumn/shared";
 
 export const cusProductToSubIds = ({
 	cusProducts,
@@ -17,5 +20,5 @@ export const cpToPrice = ({
 	type: "base" | "arrear" | "cont" | "prepaid";
 }) => {
 	const prices = cusProductToPrices({ cusProduct: cp });
-	return prices.find((p) => isFixedPrice({ price: p }));
+	return prices.find((p) => isFixedPrice(p));
 };

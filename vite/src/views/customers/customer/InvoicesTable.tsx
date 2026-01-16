@@ -2,7 +2,6 @@ import {
 	type Entity,
 	type Invoice,
 	type InvoiceDiscount,
-	Product,
 } from "@autumn/shared";
 import { toast } from "sonner";
 import { AdminHover } from "@/components/general/AdminHover";

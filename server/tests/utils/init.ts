@@ -11,7 +11,6 @@ import {
 	type Feature,
 	FeatureType,
 	FeatureUsageType,
-	FreeTrialDuration,
 	type Organization,
 	PriceType,
 	type ProductItem,
@@ -221,23 +220,6 @@ export const initPrice = ({
 			},
 		};
 	}
-};
-
-export const initFreeTrial = ({
-	length,
-	uniqueFingerprint = false,
-	cardRequired = true,
-}: {
-	length: number;
-	uniqueFingerprint?: boolean;
-	cardRequired?: boolean;
-}): CreateFreeTrial => {
-	return {
-		length,
-		unique_fingerprint: uniqueFingerprint,
-		duration: FreeTrialDuration.Day,
-		card_required: cardRequired,
-	};
 };
 
 export const initProduct = ({

@@ -8,7 +8,7 @@ export const ExtCheckoutParamsV1Schema = z
 	.object({
 		// Customer / Entity Info
 		customer_id: z.string(),
-		plan_id: z.string().optional(),
+		plan_id: z.string(),
 		version: z.number().optional(),
 
 		entity_id: z.string().optional(),

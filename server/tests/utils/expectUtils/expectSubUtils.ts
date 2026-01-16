@@ -16,11 +16,12 @@ import {
 	isLicenseItem,
 } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
+import { isStripeSubscriptionCanceled } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import { CusService } from "@/internal/customers/CusService.js";
 import { isV4Usage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
-import { notNullish, nullish } from "@/utils/genUtils.js";
+import { nullish } from "@/utils/genUtils.js";
 
 export const getSubsFromCusId = async ({
 	stripeCli,
@@ -68,18 +69,6 @@ export const getSubsFromCusId = async ({
 		cusProduct,
 		subs,
 	};
-};
-
-const isStripeSubscriptionCanceled = ({
-	sub,
-}: {
-	sub: Stripe.Subscription;
-}) => {
-	return (
-		notNullish(sub.canceled_at) ||
-		notNullish(sub.cancel_at) ||
-		sub.cancel_at_period_end
-	);
 };
 
 export const expectSubItemsCorrect = async ({
@@ -159,13 +148,11 @@ export const expectSubItemsCorrect = async ({
 
 	for (const sub of subs) {
 		if (subCanceled) {
-			expect(isStripeSubscriptionCanceled({ sub }), "sub should be canceled").to
-				.be.true;
+			expect(isStripeSubscriptionCanceled(sub), "sub should be canceled").to.be
+				.true;
 		} else {
-			expect(
-				isStripeSubscriptionCanceled({ sub }),
-				"sub should not be canceled",
-			).to.be.false;
+			expect(isStripeSubscriptionCanceled(sub), "sub should not be canceled").to
+				.be.false;
 		}
 	}
 

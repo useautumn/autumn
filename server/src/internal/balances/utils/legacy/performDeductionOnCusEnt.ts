@@ -66,7 +66,7 @@ export const performDeductionOnCusEnt = ({
 			})
 		: cusEnt.entitlement.allowance || 0;
 
-	if (isEntityScopedCusEnt({ cusEnt })) {
+	if (isEntityScopedCusEnt(cusEnt)) {
 		// CASE 1: Deduct from entity balances
 
 		if (nullish(entityId)) {

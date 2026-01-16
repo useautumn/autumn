@@ -9,12 +9,12 @@ import { StatusCodes } from "http-status-codes";
 import type Stripe from "stripe";
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
+import { setStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
-import { addSubIdToCache } from "../../cusCache/subCacheUtils.js";
 import {
 	cusProductToSchedule,
 	cusProductToSub,
@@ -99,9 +99,9 @@ export const handleRenewProduct = async ({
 
 		if (curSubId) {
 			// Add sub ID to upstash so webhook handler doesn't handle again
-			await addSubIdToCache({
-				subId: curSubId,
-				scenario: AttachScenario.Renew,
+			await setStripeSubscriptionLock({
+				stripeSubscriptionId: curSubId,
+				lockedAtMs: Date.now(),
 			});
 
 			// Uncancel the sub

@@ -1,11 +1,12 @@
+import { expect } from "bun:test";
 import {
+	type ApiEntityV0,
 	type CreateEntityParams,
 	type FeatureOptions,
 	Infinite,
 	type ProductV2,
 } from "@autumn/shared";
-import type { Customer, Entity } from "autumn-js";
-import { expect } from "chai";
+import type { Customer } from "autumn-js";
 import { Decimal } from "decimal.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 
@@ -18,7 +19,7 @@ export const expectFeaturesCorrect = ({
 	usage,
 	entities,
 }: {
-	customer: Customer | Entity;
+	customer: Customer | ApiEntityV0;
 	product: ProductV2;
 	otherProducts?: ProductV2[];
 	productQuantity?: number;
@@ -43,7 +44,7 @@ export const expectFeaturesCorrect = ({
 		let includedUsage: string | number = 0;
 
 		const item = items.find((i) => i.feature_id === featureId)!;
-		expect(item, `Item ${featureId} exists`).to.exist;
+		expect(item, `Item ${featureId} exists`).toBeDefined();
 
 		if (item.included_usage === undefined) continue;
 
@@ -69,24 +70,20 @@ export const expectFeaturesCorrect = ({
 			}
 		}
 
-		const feature = customer.features[featureId!];
+		const feature = customer.features?.[featureId!];
 
-		expect(feature, `Feature ${featureId} exists`).to.exist;
+		expect(feature, `Feature ${featureId} exists`).toBeDefined();
 
 		// 1. Check that included usage matches
 
-		expect(
-			feature.included_usage,
-			`Feature ${featureId} included usage is correct`,
-		).to.equal(includedUsage);
+		expect(feature?.included_usage).toBe(includedUsage as number);
 
 		// 2. Check that unlimited is set correctly
 		if (item?.included_usage === Infinite) {
-			expect(feature.unlimited, `Feature ${featureId} is unlimited`).to.be.true;
+			expect(feature?.unlimited).toBe(true);
 		} else {
-			expect(
-				feature.unlimited === false || nullish(feature.unlimited),
-				`Feature ${featureId} is not unlimited`,
+			expect(feature?.unlimited === false || nullish(feature?.unlimited)).toBe(
+				true,
 			);
 		}
 
@@ -99,9 +96,8 @@ export const expectFeaturesCorrect = ({
 				return acc;
 			}, 0) || 0;
 
-		expect(
-			new Decimal(feature.usage ?? 0).toDP(8).toNumber(),
-			`Feature ${featureId} usage is correct`,
-		).to.equal(new Decimal(featureUsage).toDP(8).toNumber());
+		expect(new Decimal(feature?.usage ?? 0).toDP(8).toNumber()).toBe(
+			new Decimal(featureUsage).toDP(8).toNumber(),
+		);
 	}
 };

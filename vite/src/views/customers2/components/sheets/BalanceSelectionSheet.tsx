@@ -150,7 +150,7 @@ export function BalanceSelectionSheet() {
 									</div>
 
 									<div className="bg-muted px-1 py-0.5 rounded-md text-t1 w-fit flex items-center gap-1">
-										{isUnlimitedCusEnt({ cusEnt })
+										{isUnlimitedCusEnt(cusEnt)
 											? "Unlimited"
 											: notNullish(balance)
 												? new Intl.NumberFormat().format(balance)

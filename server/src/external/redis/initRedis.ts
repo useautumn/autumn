@@ -19,9 +19,9 @@ import {
 	DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
 } from "../../_luaScriptsV2/luaScriptsV2.js";
 
-if (!process.env.CACHE_URL) {
-	throw new Error("CACHE_URL (redis) is not set");
-}
+// if (!process.env.CACHE_URL) {
+// 	throw new Error("CACHE_URL (redis) is not set");
+// }
 
 // Region constants
 export const REGION_US_EAST_2 = "us-east-2";
