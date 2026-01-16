@@ -185,7 +185,7 @@ export function SubscriptionUpdateSheet2() {
 				window.open(invoiceLink, "_blank");
 			}}
 			onCheckoutRedirect={(checkoutUrl) => {
-				window.open(checkoutUrl, "_blank");
+				window.location.href = checkoutUrl;
 			}}
 			onSuccess={closeSheet}
 		>
