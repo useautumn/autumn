@@ -7,6 +7,7 @@ import {
 	getFeatureInvoiceDescription,
 	type PreviewLineItem,
 	type Price,
+	shouldProrate,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
@@ -20,7 +21,6 @@ import { newPriceToInvoiceDescription } from "@/internal/invoices/invoiceFormatU
 import { getCurContUseItems } from "@/internal/invoices/previewItemUtils/getCurContUseItems.js";
 import { getDefaultPriceStr } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
 import { priceToUsageModel } from "@/internal/products/prices/priceUtils/convertPrice.js";
-import { shouldProrate } from "@/internal/products/prices/priceUtils/prorationConfigUtils.js";
 import {
 	getBillingType,
 	getPriceEntitlement,

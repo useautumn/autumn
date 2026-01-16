@@ -1,6 +1,7 @@
 import {
 	type AppEnv,
 	type FullProduct,
+	formatAmount,
 	getProductItemDisplay,
 	isPriceItem,
 	isUsagePrice,
@@ -16,8 +17,6 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
-
-import { formatAmount } from "@/utils/formatUtils.js";
 import { sortProductsByPrice } from "../../../internal/products/productUtils/sortProductUtils.js";
 import {
 	isFreeProduct,

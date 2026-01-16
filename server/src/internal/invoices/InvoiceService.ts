@@ -2,6 +2,7 @@ import {
 	type ApiInvoiceV1,
 	type Customer,
 	type Feature,
+	type InsertInvoice,
 	type Invoice,
 	type InvoiceItem,
 	type InvoiceStatus,
@@ -170,8 +171,16 @@ export class InvoiceService {
 			items: items,
 		};
 
+		let newInvoice: Invoice | null = null;
 		try {
-			await db.insert(invoices).values(invoice as any);
+			const results = await db
+				.insert(invoices)
+				.values(invoice as any)
+				.returning();
+			if (results.length === 0) {
+				return null;
+			}
+			newInvoice = results[0] as Invoice;
 		} catch (error: any) {
 			if (error.code === "23505") {
 				console.log("   🧐 Invoice already exists");
@@ -185,7 +194,7 @@ export class InvoiceService {
 		// Send monthly_revenue event
 		try {
 			if (!stripeInvoice.livemode || !sendRevenueEvent) {
-				return;
+				return newInvoice;
 			}
 
 			const autumn = new Autumn();
@@ -201,6 +210,8 @@ export class InvoiceService {
 		} catch (error) {
 			console.log("Failed to send revenue event", error);
 		}
+
+		return newInvoice;
 	}
 
 	static async updateByStripeId({
@@ -210,11 +221,11 @@ export class InvoiceService {
 	}: {
 		db: DrizzleCli;
 		stripeId: string;
-		updates: Partial<Invoice>;
+		updates: Partial<InsertInvoice>;
 	}) {
 		const results = await db
 			.update(invoices)
-			.set(updates as any)
+			.set(updates)
 			.where(eq(invoices.stripe_id, stripeId))
 			.returning();
 
@@ -223,5 +234,25 @@ export class InvoiceService {
 		}
 
 		return results[0] as Invoice;
+	}
+
+	static async updateFromStripeInvoice({
+		db,
+		stripeInvoice,
+	}: {
+		db: DrizzleCli;
+		stripeInvoice: Stripe.Invoice;
+	}) {
+		return await InvoiceService.updateByStripeId({
+			db,
+			stripeId: stripeInvoice.id!,
+			updates: {
+				status: stripeInvoice.status as InvoiceStatus,
+				hosted_invoice_url: stripeInvoice.hosted_invoice_url,
+				discounts: getInvoiceDiscounts({
+					expandedInvoice: stripeInvoice,
+				}),
+			},
+		});
 	}
 }

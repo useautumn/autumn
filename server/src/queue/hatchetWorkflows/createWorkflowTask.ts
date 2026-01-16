@@ -5,6 +5,8 @@ import { db } from "@/db/initDrizzle.js";
 import { createLogger } from "@/external/logtail/logtailUtils.js";
 import { getSentryTags } from "@/external/sentry/sentryUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { generateId } from "@/utils/genUtils.js";
+import { addWorkflowToLogs } from "@/utils/logging/addContextToLogs.js";
 import { createWorkerContext } from "../createWorkerContext.js";
 
 type BaseWorkflowInput = {
@@ -38,11 +40,19 @@ export const createWorkflowTask = <TInput extends BaseWorkflowInput, TOutput>({
 		const name = `${workflowName}/${taskName}`;
 		const workflowMetadata = hatchetCtx.additionalMetadata();
 
+		const workflowLogger = addWorkflowToLogs({
+			logger,
+			workflowContext: {
+				id: workflowMetadata.workflowId ?? generateId("workflow"),
+				payload: input,
+				name: hatchetCtx.workflowName(),
+			},
+		});
+
 		const autumnContext = await createWorkerContext({
 			db,
 			payload: input,
-			logger,
-			workflowId: workflowMetadata.workflowId,
+			logger: workflowLogger,
 		});
 
 		autumnContext?.logger.info(

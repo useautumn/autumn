@@ -20,29 +20,7 @@ export const intervalToValue = (
 
 export type IntervalConfig = {
 	interval: BillingInterval;
-	intervalCount?: number | null;
-};
-
-export const intervalsDifferent = ({
-	intervalA,
-	intervalB,
-}: {
-	intervalA: IntervalConfig;
-	intervalB: IntervalConfig;
-}) => {
-	const valA = intervalToValue(intervalA.interval, intervalA.intervalCount);
-	const valB = intervalToValue(intervalB.interval, intervalB.intervalCount);
-	return valA !== valB;
-};
-
-export const intervalsSame = ({
-	intervalA,
-	intervalB,
-}: {
-	intervalA: IntervalConfig;
-	intervalB: IntervalConfig;
-}) => {
-	return !intervalsDifferent({ intervalA, intervalB });
+	intervalCount?: number;
 };
 
 type EntIntervalConfig = {

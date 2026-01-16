@@ -1,7 +1,7 @@
 import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
+import { ProcessorType } from "@models/genModels/genEnums.js";
 import { z } from "zod/v4";
 import { CustomerSchema } from "../cusModels/cusModels.js";
-import { ProcessorType } from "../genModels/genEnums.js";
 import { FreeTrialSchema } from "../productModels/freeTrialModels/freeTrialModels.js";
 import { ProductSchema } from "../productModels/productModels.js";
 import { FullCustomerEntitlementSchema } from "./cusEntModels/cusEntModels.js";
@@ -54,14 +54,16 @@ export const CusProductSchema = z.object({
 	processor: z
 		.object({
 			type: z.enum(ProcessorType),
-			subscription_id: z.string().optional().nullable(),
-			subscription_schedule_id: z.string().optional().nullable(),
-			last_invoice_id: z.string().optional().nullable(),
+			// subscription_id: z.string().optional().nullable(),
+			// subscription_schedule_id: z.string().optional().nullable(),
+			// last_invoice_id: z.string().optional().nullable(),
 		})
 		.optional(),
 
 	quantity: z.number().default(1),
 	api_semver: z.enum(ApiVersion).nullable(),
+
+	is_custom: z.boolean().default(false),
 });
 
 export const FullCusProductSchema = CusProductSchema.extend({
@@ -71,7 +73,6 @@ export const FullCusProductSchema = CusProductSchema.extend({
 	customer: CustomerSchema.optional(),
 	product: ProductSchema,
 	free_trial: FreeTrialSchema.nullish(),
-	is_custom: z.boolean().default(false),
 });
 
 export type CusProduct = z.infer<typeof CusProductSchema>;

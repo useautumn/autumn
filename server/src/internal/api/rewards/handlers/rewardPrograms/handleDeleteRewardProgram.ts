@@ -1,22 +1,25 @@
+import { z } from "zod/v4";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
-import { routeHandler } from "@/utils/routerUtils.js";
 
-export default async (req: any, res: any) =>
-	routeHandler({
-		req,
-		res,
-		action: "delete reward scheme",
-		handler: async (req, res) => {
-			const { orgId, env, db } = req;
-			const { id } = req.params;
+const DeleteRewardProgramParamsSchema = z.object({
+	id: z.string(),
+});
 
-			const rewardProgram = await RewardProgramService.delete({
-				db,
-				idOrInternalId: id,
-				orgId,
-				env,
-			});
+export const handleDeleteRewardProgram = createRoute({
+	params: DeleteRewardProgramParamsSchema,
+	handler: async (c) => {
+		const ctx = c.get("ctx");
+		const { org, env, db } = ctx;
+		const { id } = c.req.param();
 
-			return res.status(200).json(rewardProgram);
-		},
-	});
+		const rewardProgram = await RewardProgramService.delete({
+			db,
+			idOrInternalId: id,
+			orgId: org.id,
+			env,
+		});
+
+		return c.json(rewardProgram);
+	},
+});

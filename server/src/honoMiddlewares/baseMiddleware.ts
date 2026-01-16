@@ -3,6 +3,7 @@ import {
 	AppEnv,
 	AuthType,
 	LATEST_VERSION,
+	tryCatch,
 } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import { db } from "@/db/initDrizzle.js";
@@ -10,6 +11,7 @@ import { ClickHouseManager } from "@/external/clickhouse/ClickHouseManager.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { generateId } from "@/utils/genUtils.js";
+import { addRequestToLogs } from "@/utils/logging/addContextToLogs";
 
 /**
  * Base middleware that sets up the request context
@@ -27,29 +29,21 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 	const clickhouseClient = await ClickHouseManager.getClient();
 
-	const reqContext = {
-		id,
-		// env: c.req.header("app_env") || undefined,
-		method: c.req.method,
-		url: c.req.url,
-		timestamp,
-	};
+	const { data: body } = await tryCatch(c.req.json());
 
-	const method = c.req.method;
-
-	let body = null;
-	if (method === "POST" || method === "PUT" || method === "PATCH") {
-		try {
-			body = await c.req.json();
-		} catch (_error) {}
-	}
-
-	// Create child logger
-	const childLogger = logger.child({
-		context: {
-			req: reqContext,
-			body,
+	const childLogger = addRequestToLogs({
+		logger,
+		requestContext: {
+			id,
+			method: c.req.method,
+			url: c.req.url,
+			timestamp,
+			user_agent: c.req.header("user-agent"),
+			ip_address: c.req.header("x-forwarded-for"),
 			query: c.req.query(),
+			body,
+
+			name: `${c.req.method} ${c.req.path}`,
 		},
 	});
 
@@ -79,6 +73,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 		// Test params:
 		skipCacheDeletion: c.req.header("x-skip-cache-deletion") === "true",
+		extraLogs: {},
 	});
 
 	// childLogger.info(`${method} ${path}`);

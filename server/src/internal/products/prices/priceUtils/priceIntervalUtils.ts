@@ -6,24 +6,8 @@ import {
 } from "@autumn/shared";
 import { nullish } from "@server/utils/genUtils.js";
 
-const BillingIntervalOrder = [
-	BillingInterval.Year,
-	BillingInterval.SemiAnnual,
-	BillingInterval.Quarter,
-	BillingInterval.Month,
-	BillingInterval.OneOff,
-];
-
-const ReversedBillingIntervalOrder = [
-	// BillingInterval.OneOff,
-	BillingInterval.Month,
-	BillingInterval.Quarter,
-	BillingInterval.SemiAnnual,
-	BillingInterval.Year,
-];
-
 const entToBillingInterval = (entInterval: EntInterval | null | undefined) => {
-	if (entInterval == EntInterval.Lifetime || !entInterval) {
+	if (entInterval === EntInterval.Lifetime || !entInterval) {
 		return BillingInterval.OneOff;
 	} else return entInterval as unknown as BillingInterval;
 };
@@ -94,16 +78,6 @@ export const getLargestInterval = ({
 		interval: sortedPrices[0].config.interval,
 		intervalCount: sortedPrices[0].config.interval_count ?? 1,
 	};
-
-	// return BillingIntervalOrder.find((interval) =>
-	//   prices.some((price) => {
-	//     let intervalMatch = price.config.interval === interval;
-	//     let oneOffMatch = excludeOneOff
-	//       ? price.config.interval !== BillingInterval.OneOff
-	//       : true;
-	//     return intervalMatch && oneOffMatch;
-	//   })
-	// )!;
 };
 
 export const getSmallestInterval = ({
@@ -153,22 +127,6 @@ export const getSmallestInterval = ({
 		interval: smallestInterval.interval,
 		intervalCount: smallestInterval.intervalCount,
 	};
-
-	// if (!smallestIntervalPrice) {
-	//   return null;
-	// }
-
-	// return {
-	//   interval: smallestIntervalPrice.config.interval,
-	//   intervalCount: smallestIntervalPrice.config.interval_count ?? 1,
-	// };
-
-	// return ReversedBillingIntervalOrder.find(
-	//   (interval) =>
-	//     prices.some((price) => price.config.interval === interval) ||
-	//     (ents &&
-	//       ents?.some((ent) => entToBillingInterval(ent.interval) === interval))
-	// )!;
 };
 
 export const sortPricesByInterval = (prices: Price[]) => {

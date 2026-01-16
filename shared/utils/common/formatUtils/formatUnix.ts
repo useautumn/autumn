@@ -5,17 +5,20 @@ export const formatMsToDate = (
 	options?: { withTimezone?: boolean },
 ) => {
 	if (!unixDate) {
-		return "undefined unix date";
+		return "undefined";
 	}
 	return format(new Date(unixDate), "dd MMM yyyy");
 };
 
 export const formatMs = (
-	unixDate?: number | null,
+	unixDate?: number | null | "now",
 	options?: { withTimezone?: boolean; excludeSeconds?: boolean },
 ) => {
+	if (unixDate === "now") {
+		return "now";
+	}
 	if (!unixDate) {
-		return "undefined unix date";
+		return "undefined";
 	}
 
 	let formatString = options?.excludeSeconds
@@ -39,6 +42,20 @@ export const formatSeconds = (
 ): string => {
 	if (!unixSeconds && unixSeconds !== 0) {
 		return "undefined unix date";
+	}
+	return format(
+		new Date(unixSeconds * 1000),
+		options?.withTimezone ? "dd MMM yyyy HH:mm:ss z" : "dd MMM yyyy HH:mm:ss",
+	);
+};
+
+// Format seconds to date
+export const formatSecondsToDate = (
+	unixSeconds?: number | null,
+	options?: { withTimezone?: boolean },
+) => {
+	if (!unixSeconds) {
+		return "undefined";
 	}
 	return format(
 		new Date(unixSeconds * 1000),

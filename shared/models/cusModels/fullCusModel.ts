@@ -4,12 +4,34 @@ import type { FullCustomerEntitlement } from "../cusProductModels/cusEntModels/c
 import {
 	CusProductSchema,
 	type FullCusProduct,
+	FullCusProductSchema,
 } from "../cusProductModels/cusProductModels.js";
 import type { Event } from "../eventModels/eventTable.js";
-import type { Subscription } from "../subModels/subModels.js";
+import {
+	type Subscription,
+	SubscriptionSchema,
+} from "../subModels/subModels.js";
 import { type Customer, CustomerSchema } from "./cusModels.js";
-import type { Entity } from "./entityModels/entityModels.js";
-import type { Invoice } from "./invoiceModels/invoiceModels.js";
+import { type Entity, EntitySchema } from "./entityModels/entityModels.js";
+import { type Invoice, InvoiceSchema } from "./invoiceModels/invoiceModels.js";
+
+export const FullCustomerSchema = CustomerSchema.extend({
+	customer_products: z.array(FullCusProductSchema),
+	entities: z.array(EntitySchema),
+	subscriptions: z.array(SubscriptionSchema).optional(),
+	entity: EntitySchema.optional(),
+
+	trials_used: z
+		.array(
+			z.object({
+				product_id: z.string(),
+				customer_id: z.string(),
+				fingerprint: z.string(),
+			}),
+		)
+		.optional(),
+	invoices: z.array(InvoiceSchema).optional(),
+});
 
 export type FullCustomer = Customer & {
 	customer_products: FullCusProduct[];

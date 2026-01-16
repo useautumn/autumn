@@ -1,11 +1,12 @@
-import type {
-	BillingInterval,
-	FixedPriceConfig,
-	Price,
-	ProductItem,
-	ProductV2,
+import {
+	type BillingInterval,
+	type FixedPriceConfig,
+	isFixedPrice,
+	itemToBillingInterval,
+	type Price,
+	type ProductItem,
+	type ProductV2,
 } from "@autumn/shared";
-import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { isPriceItem } from "@/internal/products/product-items/productItemUtils/getItemType.js";
 import { nullish } from "@/utils/genUtils.js";
 
@@ -17,8 +18,8 @@ export const addPrefixToProducts = ({
 	prefix: string;
 }) => {
 	for (const product of products) {
-		product.id = `${prefix}_${product.id}`;
-		product.name = `${prefix} ${product.name}`;
+		product.id = `${product.id}_${prefix}`;
+		product.name = `${product.name} ${prefix}`;
 		product.group = prefix;
 	}
 
@@ -40,7 +41,7 @@ export const replaceItems = ({
 }) => {
 	const newItems = structuredClone(items);
 
-	let index;
+	let index: number | undefined;
 	if (featureId) {
 		index = newItems.findIndex((item) => item.feature_id === featureId);
 	}
@@ -48,7 +49,7 @@ export const replaceItems = ({
 	if (interval) {
 		index = newItems.findIndex(
 			(item) =>
-				item.interval === (interval as any) &&
+				itemToBillingInterval({ item }) === interval &&
 				(intervalCount ? item.interval_count === intervalCount : true) &&
 				nullish(item.feature_id),
 		);
@@ -68,7 +69,7 @@ export const getBasePrice = ({ product }: { product: ProductV2 }) => {
 };
 
 export const v1ProductToBasePrice = ({ prices }: { prices: Price[] }) => {
-	const fixedPrice = prices.find((price) => isFixedPrice({ price }));
+	const fixedPrice = prices.find((price) => isFixedPrice(price));
 	if (fixedPrice) {
 		return (fixedPrice.config as FixedPriceConfig).amount;
 	} else return 0;

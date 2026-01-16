@@ -11,6 +11,7 @@ import {
 	type FullCustomer,
 	type FullProduct,
 	getProductItemDisplay,
+	isPrepaidPrice,
 	type Price,
 	type ProductItem,
 	toApiFeature,
@@ -21,7 +22,6 @@ import { notNullish } from "@/utils/genUtils.js";
 import { getFreeTrialAfterFingerprint } from "../../free-trials/freeTrialUtils.js";
 import { sortProductItems } from "../../pricecn/pricecnUtils.js";
 import { getLargestInterval } from "../../prices/priceUtils/priceIntervalUtils.js";
-import { isPrepaidPrice } from "../../prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { getItemType } from "../../product-items/productItemUtils/getItemType.js";
 import { itemToPriceOrTiers } from "../../product-items/productItemUtils.js";
 import { isFreeProduct, isOneOff } from "../../productUtils.js";
@@ -149,8 +149,7 @@ export const getProductProperties = ({
 		has_trial: hasFreeTrial,
 		updateable: product.prices.some(
 			(p: Price) =>
-				isPrepaidPrice({ price: p }) &&
-				p.config.interval !== BillingInterval.OneOff,
+				isPrepaidPrice(p) && p.config.interval !== BillingInterval.OneOff,
 		),
 	});
 };

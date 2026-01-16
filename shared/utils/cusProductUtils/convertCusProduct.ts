@@ -1,9 +1,6 @@
-import type { Entity } from "@models/cusModels/entityModels/entityModels.js";
-import type { CustomerEntitlementFilters } from "@models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "@models/cusProductModels/cusEntModels/cusEntWithProduct.js";
-import { cusEntMatchesEntity } from "@utils/cusEntUtils/filterCusEntUtils.js";
 import { sortCusEntsForDeduction } from "@utils/cusEntUtils/sortCusEntsForDeduction.js";
-import { notNullish } from "@utils/utils.js";
+import { isOneOffPrice } from "@utils/productUtils/priceUtils/classifyPriceUtils.js";
 import type { FullCustomerPrice } from "../../models/cusProductModels/cusPriceModels/cusPriceModels.js";
 import type { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
 import type {
@@ -17,10 +14,20 @@ import { getBillingType } from "../productUtils/priceUtils.js";
 
 export const cusProductsToPrices = ({
 	cusProducts,
+	filters,
 }: {
 	cusProducts: FullCusProduct[];
+	filters?: {
+		excludeOneOffPrices?: boolean;
+	};
 }) => {
-	return cusProducts.flatMap((cp) => cusProductToPrices({ cusProduct: cp }));
+	let prices = cusProducts.flatMap((cp) =>
+		cusProductToPrices({ cusProduct: cp }),
+	);
+	if (filters?.excludeOneOffPrices) {
+		prices = prices.filter((p) => !isOneOffPrice(p));
+	}
+	return prices;
 };
 
 export const cusProductsToCusPrices = ({
@@ -55,10 +62,12 @@ export const cusProductsToCusPrices = ({
 export const cusProductsToCusEnts = ({
 	cusProducts,
 	featureIds,
+	internalFeatureIds,
 	inStatuses,
 }: {
 	cusProducts: FullCusProduct[];
 	featureIds?: string[];
+	internalFeatureIds?: string[];
 	inStatuses?: CusProductStatus[];
 }) => {
 	let cusEnts: FullCusEntWithFullCusProduct[] = [];
@@ -82,6 +91,12 @@ export const cusProductsToCusEnts = ({
 	if (featureIds) {
 		cusEnts = cusEnts.filter((cusEnt) =>
 			featureIds.includes(cusEnt.entitlement.feature.id),
+		);
+	}
+
+	if (internalFeatureIds) {
+		cusEnts = cusEnts.filter((cusEnt) =>
+			internalFeatureIds.includes(cusEnt.entitlement.internal_feature_id),
 		);
 	}
 
@@ -130,6 +145,17 @@ export const cusProductToProduct = ({
 		entitlements: cusProductToEnts({ cusProduct }),
 		free_trial: cusProduct.free_trial,
 	} as FullProduct;
+};
+
+export const cusProductToCusEnts = ({
+	customerProduct,
+}: {
+	customerProduct: FullCusProduct;
+}): FullCusEntWithFullCusProduct[] => {
+	return customerProduct.customer_entitlements.map((cusEnt) => ({
+		...cusEnt,
+		customer_product: customerProduct,
+	}));
 };
 
 export const cusProductToProcessorType = (cusProduct: CusProduct) => {

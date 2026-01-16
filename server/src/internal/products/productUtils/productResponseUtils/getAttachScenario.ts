@@ -3,8 +3,9 @@ import {
 	cusProductToProduct,
 	type FullCustomer,
 	type FullProduct,
+	isCustomerProductCanceling,
 } from "@autumn/shared";
-import { isCanceled } from "@/internal/customers/cusProducts/cusProductUtils/classifyCusProduct.js";
+
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import {
 	isFreeProduct,
@@ -42,7 +43,7 @@ export const getAttachScenario = ({
 			curSameProduct &&
 			curSameProduct.product.id !== curScheduledProduct?.product.id
 		) {
-			if (isCanceled({ cusProduct: curSameProduct })) {
+			if (isCustomerProductCanceling(curSameProduct)) {
 				return AttachScenario.Renew;
 			} else {
 				return AttachScenario.Active;
@@ -58,7 +59,7 @@ export const getAttachScenario = ({
 
 	// 1. If current product is the same as the product, return active
 	if (curMainProduct?.product.id === fullProduct.id) {
-		if (isCanceled({ cusProduct: curMainProduct })) {
+		if (isCustomerProductCanceling(curMainProduct)) {
 			return AttachScenario.Renew;
 		} else return AttachScenario.Active;
 	}

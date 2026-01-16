@@ -52,36 +52,10 @@ export const getContUsageDowngradeItem = ({
 			newOverage,
 		});
 
-		// let description = getFeatureInvoiceDescription({
-		//   feature,
-		//   usage: newRoundedUsage,
-		//   billingUnits: (price.config as UsagePriceConfig).billing_units,
-		//   prodName: product.name,
-		// });
-
 		return {
 			newReplaceables,
 			amount: null,
 		};
 	} else {
 	}
-
-	// let shouldProrate =
-	//   price.config.proration_config?.on_decrease == OnDecrease.Prorate;
-
-	// if (shouldProrate) {
-	//   invoice = await createDowngradeProrationInvoice({
-	//     org,
-	//     cusPrice,
-	//     stripeCli,
-	//     sub,
-	//     newPrice,
-	//     prevPrice,
-	//     newRoundedUsage,
-	//     feature,
-	//     product,
-	//     onDecrease,
-	//     logger,
-	//   });
-	// }
 };

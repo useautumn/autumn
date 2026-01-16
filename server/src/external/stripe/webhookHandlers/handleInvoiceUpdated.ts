@@ -1,86 +1,11 @@
 import {
-	type Invoice,
+	type InsertInvoice,
 	InvoiceStatus,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
-import { MetadataService } from "@/internal/metadata/MetadataService.js";
-import { getFullStripeInvoice, invoiceToSubId } from "../stripeInvoiceUtils.js";
-
-// biome-ignore lint/correctness/noUnusedVariables: Might be useful in the future
-const handleInvoiceCheckoutVoided = async ({
-	db,
-	stripeCli,
-	invoiceObject,
-	logger,
-}: {
-	db: DrizzleCli;
-	stripeCli: Stripe;
-	invoiceObject: Stripe.Invoice;
-	logger: any;
-}) => {
-	const fullInvoice = await getFullStripeInvoice({
-		stripeCli,
-		stripeId: invoiceObject.id!,
-	});
-
-	const metadataId = fullInvoice.metadata?.autumn_metadata_id;
-
-	if (!metadataId) return;
-
-	const metadata = await MetadataService.get({
-		db,
-		id: metadataId,
-	});
-
-	if (!metadata) return;
-
-	const {
-		anchorToUnix: _anchorToUnix,
-		config: _config,
-		...rest
-	} = metadata.data as AttachParams;
-
-	const attachParams = rest as AttachParams;
-
-	if (!attachParams) return;
-
-	const customer = attachParams.customer;
-	const fullCus = await CusService.getFull({
-		db,
-		idOrInternalId: customer.id || customer.internal_id,
-		orgId: attachParams.org.id,
-		env: attachParams.customer.env,
-	});
-
-	const subId = invoiceToSubId({ invoice: fullInvoice });
-
-	if (!subId) return;
-
-	const cusSubIds = fullCus.customer_products.flatMap(
-		(cp) => cp.subscription_ids || [],
-	);
-
-	const subIdMatch = cusSubIds.includes(subId);
-
-	if (subIdMatch) return;
-
-	try {
-		const sub = await stripeCli.subscriptions.retrieve(subId);
-
-		if (sub.status !== "canceled") {
-			console.log("Invoice checkout voided, cancelling sub:", subId);
-			await stripeCli.subscriptions.cancel(subId);
-		}
-	} catch (error: any) {
-		logger.warn(`Failed to cancel sub ${subId}, error: ${error?.message}`);
-	}
-};
 
 export const handleInvoiceUpdated = async ({
 	event,
@@ -95,7 +20,7 @@ export const handleInvoiceUpdated = async ({
 		stripeId: invoiceObject.id!,
 	});
 
-	const updates: Partial<Invoice> = {};
+	const updates: Partial<InsertInvoice> = {};
 
 	if (invoiceObject.status === "void") {
 		updates.status = InvoiceStatus.Void;

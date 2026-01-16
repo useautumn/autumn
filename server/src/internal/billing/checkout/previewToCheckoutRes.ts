@@ -12,6 +12,7 @@ import {
 	UsageModel,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import {
 	attachParamsToCurCusProduct,
 	attachParamsToProduct,
@@ -24,20 +25,19 @@ import {
 	getProductResponse,
 } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import { notNullish } from "@/utils/genUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const previewToCheckoutRes = async ({
-	req,
+	ctx,
 	attachParams,
 	preview,
 	branch,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	attachParams: AttachParams;
 	branch: AttachBranch;
 	preview: AttachPreview;
 }) => {
-	const { logger, features, org } = req;
+	const { logger, features, org } = ctx;
 	const product = attachParamsToProduct({ attachParams });
 
 	const curCusProduct = attachParamsToCurCusProduct({ attachParams });

@@ -6,6 +6,7 @@ import {
 	MetadataType,
 	SuccessCode,
 } from "@autumn/shared";
+import { addMonths } from "date-fns";
 import { isOneOff } from "@/internal/products/productUtils.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { attachParamsToMetadata } from "../../billing/attach/utils/attachParamsToMetadata.js";
@@ -56,6 +57,7 @@ export const handleCreateInvoiceCheckout = async ({
 		},
 		type: MetadataType.InvoiceCheckout,
 		stripeInvoiceId: invoice?.id,
+		expiresAt: addMonths(Date.now(), 1).getTime(),
 	});
 
 	if (invoice) {

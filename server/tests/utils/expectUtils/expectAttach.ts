@@ -1,5 +1,6 @@
 import { expect } from "bun:test";
 import {
+	type ApiEntityV0,
 	type AppEnv,
 	AttachBranch,
 	type CreateEntityParams,
@@ -245,7 +246,7 @@ export const expectAttachCorrect = async ({
 	entityId,
 	otherProducts,
 }: {
-	customer: Customer;
+	customer: Customer | ApiEntityV0;
 	product: ProductV2;
 	entityId?: string;
 	otherProducts?: ProductV2[];
