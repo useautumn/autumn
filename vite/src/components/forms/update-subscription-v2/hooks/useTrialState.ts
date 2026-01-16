@@ -7,7 +7,7 @@ import {
 	isCustomerProductTrialing,
 } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import type { UseUpdateSubscriptionForm } from "./useUpdateSubscriptionForm";
 
 interface UseTrialStateParams {
@@ -54,7 +54,10 @@ export function useTrialState({
 			? formatRemainingTrialTime({ trialEndsAt: customerProduct.trial_ends_at })
 			: null;
 
-	const [isTrialExpanded, setIsTrialExpanded] = useState(isCurrentlyTrialing);
+	const trialEnabled = useStore(
+		form.store,
+		(state) => state.values.trialEnabled,
+	);
 
 	const removeTrial = useStore(form.store, (state) => state.values.removeTrial);
 
@@ -80,21 +83,30 @@ export function useTrialState({
 	const handleToggleTrial = useCallback(() => {
 		if (removeTrial) {
 			form.setFieldValue("removeTrial", false);
-			setIsTrialExpanded(true);
+			form.setFieldValue("trialEnabled", true);
 		} else {
-			setIsTrialExpanded((prev) => !prev);
+			form.setFieldValue("trialEnabled", !trialEnabled);
 		}
-	}, [removeTrial, form]);
+	}, [removeTrial, trialEnabled, form]);
 
 	const handleEndTrial = useCallback(() => {
 		form.setFieldValue("removeTrial", true);
+		form.setFieldValue("trialEnabled", false);
 	}, [form]);
 
 	const handleRevertTrial = useCallback(() => {
 		form.setFieldValue("removeTrial", false);
+		form.setFieldValue("trialEnabled", true);
 		form.setFieldValue("trialLength", remainingTrialDays);
 		form.setFieldValue("trialDuration", FreeTrialDuration.Day);
 	}, [form, remainingTrialDays]);
+
+	const setIsTrialExpanded = useCallback(
+		(expanded: boolean) => {
+			form.setFieldValue("trialEnabled", expanded);
+		},
+		[form],
+	);
 
 	return {
 		isCurrentlyTrialing,
@@ -105,7 +117,7 @@ export function useTrialState({
 		removeTrial,
 		hasTrialValue,
 		isTrialModified,
-		isTrialExpanded,
+		isTrialExpanded: trialEnabled,
 		handleToggleTrial,
 		handleEndTrial,
 		handleRevertTrial,

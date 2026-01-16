@@ -193,19 +193,15 @@ export function TrialEditorRow({
 	}
 
 	const handleClearTrial = () => {
-		if (!hasTrialValue && !isCurrentlyTrialing) {
-			onCollapse();
-			setIsEditing(false);
-			setIsAddingNewTrial(true);
-			return;
-		}
+		// Just collapse - preserve the value so it can be restored
+		onCollapse();
+		setIsEditing(false);
+		setIsAddingNewTrial(true);
 
-		form.setFieldValue("trialLength", null);
+		// Only mark for removal if they're currently trialing (ending an active trial)
 		if (isCurrentlyTrialing) {
 			onEndTrial();
 		}
-		setIsEditing(false);
-		setIsAddingNewTrial(true);
 	};
 
 	const isNewTrial = !isCurrentlyTrialing;

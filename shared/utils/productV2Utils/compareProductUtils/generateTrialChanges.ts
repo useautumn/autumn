@@ -27,11 +27,13 @@ export function generateTrialChanges({
 	removeTrial,
 	trialLength,
 	trialDuration,
+	trialEnabled = true,
 }: {
 	customerProduct: FullCusProduct;
 	removeTrial: boolean;
 	trialLength: number | null;
 	trialDuration: FreeTrialDuration;
+	trialEnabled?: boolean;
 }): ItemEdit[] {
 	const isCurrentlyTrialing = isCustomerProductTrialing(customerProduct);
 	const remainingDays = getRemainingTrialDays({
@@ -50,6 +52,11 @@ export function generateTrialChanges({
 			newValue: null,
 			isUpgrade: false,
 		});
+		return changes;
+	}
+
+	// If trial is not enabled (collapsed), don't generate changes for new trials
+	if (!trialEnabled && !isCurrentlyTrialing) {
 		return changes;
 	}
 

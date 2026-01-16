@@ -255,7 +255,7 @@ export function SubscriptionItemRow({
 										icon={<CheckIcon size={14} />}
 										variant="skeleton"
 										size="sm"
-										className="text-t4 hover:text-t2 hover:bg-muted"
+										className="text-green-600 dark:text-green-500 hover:text-green-700 dark:hover:text-green-400 hover:bg-black/5 dark:hover:bg-white/10"
 										onClick={() => setIsEditingQuantity(false)}
 									/>
 								</>
