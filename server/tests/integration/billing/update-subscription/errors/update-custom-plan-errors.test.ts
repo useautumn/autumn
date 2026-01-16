@@ -1,5 +1,4 @@
 import { test } from "bun:test";
-import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -47,7 +46,7 @@ test.concurrent(`${chalk.yellowBright("error: custom plan same config (paid)")}`
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro] }),
 		],
-		actions: [s.attach({ productId: "pro" })],
+		actions: [s.attach({ productId: pro.id })],
 	});
 
 	// Try to update with identical items - should fail

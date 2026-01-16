@@ -1,5 +1,4 @@
 import type { UpdateSubscriptionV0Params } from "@shared/index";
-import { notNullish } from "@/utils/genUtils";
 
 export enum UpdateSubscriptionIntent {
 	UpdateQuantity = "update_quantity",
@@ -12,8 +11,8 @@ export enum UpdateSubscriptionIntent {
 export const computeUpdateSubscriptionIntent = (
 	params: UpdateSubscriptionV0Params,
 ): UpdateSubscriptionIntent => {
-	const itemsChanged = notNullish(params.items);
-	const versionChanged = notNullish(params.version);
+	const itemsChanged = params.items !== undefined;
+	const versionChanged = params.version !== undefined;
 	const freeTrialChanged = params.free_trial !== undefined;
 
 	if (itemsChanged || versionChanged || freeTrialChanged)

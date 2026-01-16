@@ -13,15 +13,15 @@ import { mapToProductV2 } from "@/internal/products/productV2Utils";
 export const handleGetProducts = createRoute({
 	handler: async (c) => {
 		const { db, org, env, features } = c.get("ctx");
-		let products = await ProductService.listFull({
+		const products = await ProductService.listFull({
 			db,
 			orgId: org.id,
 			env: env,
 		});
 
-		if (process.env.NODE_ENV === "development") {
-			products = products.slice(0, 10);
-		}
+		// if (process.env.NODE_ENV === "development") {
+		// 	products = products.slice(0, 10);
+		// }
 
 		sortFullProducts({ products });
 

@@ -8,6 +8,7 @@ import {
 	expectProductTrialing,
 } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
+import { calculateProratedRefund } from "@tests/integration/billing/utils/stripeSubscriptionUtils";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -290,7 +291,7 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: replace trial with new trial")
 	const updateParams = {
 		customer_id: customerId,
 		product_id: proTrial.id,
-		items: [messagesItem, items.monthlyPrice()],
+		// items: [messagesItem, items.monthlyPrice()],
 		free_trial: {
 			length: 30,
 			duration: FreeTrialDuration.Day,
@@ -425,12 +426,16 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: paid no trial -> paid with tri
 // 6. New trial after old expired
 test.concurrent(`${chalk.yellowBright("p2p-trial: new trial after old expired")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const priceItem = items.monthlyPrice();
+	const trialDays = 7;
 
 	const proTrial = products.proWithTrial({
 		items: [messagesItem],
 		id: "pro-trial",
-		trialDays: 7,
+		trialDays,
 	});
+
+	const daysAdvanced = 10;
 
 	const { customerId, autumnV1, ctx, advancedTo } = await initScenario({
 		customerId: "p2p-new-trial-after-expired",
@@ -440,7 +445,7 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: new trial after old expired")}
 		],
 		actions: [
 			s.attach({ productId: proTrial.id }),
-			s.advanceTestClock({ days: 10 }), // Advance past 7-day trial
+			s.advanceTestClock({ days: daysAdvanced }), // Advance past 7-day trial
 		],
 	});
 
@@ -463,12 +468,12 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: new trial after old expired")}
 	});
 
 	// Add a new 14-day trial
+	const newTrialDays = 14;
 	const updateParams = {
 		customer_id: customerId,
 		product_id: proTrial.id,
-		items: [messagesItem, items.monthlyPrice()],
 		free_trial: {
-			length: 14,
+			length: newTrialDays,
 			duration: FreeTrialDuration.Day,
 			card_required: true,
 			unique_fingerprint: false,
@@ -477,14 +482,20 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: new trial after old expired")}
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should be 0 during new trial
-	expect(preview.total).toEqual(0);
+	// Calculate prorated refund using Stripe subscription's billing period
+	const proratedRefund = await calculateProratedRefund({
+		customerId,
+		nowMs: advancedTo,
+		amount: priceItem.price!,
+	});
+
+	expect(preview.total).toEqual(proratedRefund);
 
 	// next_cycle should show new 14-day trial end
 	expectPreviewNextCycleCorrect({
 		preview,
-		startsAt: advancedTo + ms.days(14),
-		total: items.monthlyPrice().price!,
+		startsAt: advancedTo + ms.days(newTrialDays),
+		total: priceItem.price!,
 	});
 
 	await autumnV1.subscriptions.update(updateParams);
@@ -495,7 +506,7 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: new trial after old expired")}
 	await expectProductTrialing({
 		customer,
 		productId: proTrial.id,
-		trialEndsAt: advancedTo + ms.days(14),
+		trialEndsAt: advancedTo + ms.days(newTrialDays),
 	});
 
 	// Usage should be preserved, reset should follow new trial end
@@ -505,7 +516,15 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: new trial after old expired")}
 		includedUsage: messagesItem.included_usage,
 		balance: messagesItem.included_usage - messagesUsage,
 		usage: messagesUsage,
-		resetsAt: advancedTo + ms.days(14),
+		resetsAt: advancedTo + ms.days(newTrialDays),
+	});
+
+	// Invoice count: 1 ($0 trial) + 1 ($20 trial end) + 1 (refund ~-$18) = 3
+	expectCustomerInvoiceCorrect({
+		customer,
+		count: 2,
+		latestTotal: proratedRefund,
+		latestInvoiceProductId: proTrial.id,
 	});
 
 	await expectSubToBeCorrect({

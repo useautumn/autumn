@@ -10,19 +10,18 @@ export const ExtUpdateSubscriptionV0ParamsSchema = z.object({
 	// Customer / Entity Info
 	customer_id: z.string(),
 	product_id: z.string().nullish(),
-	version: z.number().optional(),
 	entity_id: z.string().nullish(),
 
 	customer_data: CustomerDataSchema.optional(),
 	entity_data: EntityDataSchema.optional(),
 
-	options: z.array(FeatureOptionsSchema).nullish(), // used for update quantity etc (in api - feature_quantities)
-
 	invoice: z.boolean().optional(),
 	enable_product_immediately: z.boolean().optional(),
 	finalize_invoice: z.boolean().optional(),
+	options: z.array(FeatureOptionsSchema).nullish(), // used for update quantity etc (in api - feature_quantities)
 
 	// New
+	version: z.number().optional(),
 	items: z.array(ProductItemSchema).optional(), // used for custom configuration of a plan (in api - plan_override)
 	free_trial: CreateFreeTrialSchema.nullable().optional(),
 
