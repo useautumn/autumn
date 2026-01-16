@@ -239,6 +239,7 @@ export function EditPlanSection({
 										form={form}
 										isCurrentlyTrialing={trialState.isCurrentlyTrialing}
 										initialTrialLength={trialState.remainingTrialDays}
+										initialTrialFormatted={trialState.remainingTrialFormatted}
 										removeTrial={trialState.removeTrial}
 										onEndTrial={trialState.handleEndTrial}
 										onCollapse={() => trialState.setIsTrialExpanded(false)}

@@ -38,7 +38,7 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 	return (
 		<Button
 			variant="dotted"
-			className="group !rounded-xl !bg-transparent w-full !h-9 !border-dashed !text-primary [&_svg]:text-primary hover:!border-primary !border-primary/50 active:!border-primary focus-visible:!bg-[#FDFDFC] focus-visible:!border-dashed [data-state='open']:!bg-[#FDFDFC] disabled:relative z-95 hover:relative"
+			className="group !rounded-xl !bg-transparent w-full !h-9 !border-dashed !text-primary [&_svg]:text-primary hover:!border-primary !border-primary/50 active:!border-primary focus-visible:!bg-primary/5 focus-visible:!border-dashed [data-state='open']:!bg-primary/5 disabled:relative z-95 hover:relative"
 			disabled={disabled}
 			onClick={() => {
 				if (!checkItemIsValid(item!)) return;

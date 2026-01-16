@@ -1,4 +1,4 @@
-import type { FreeTrialDuration } from "@autumn/shared";
+import { type FreeTrialDuration, getTrialLengthInDays } from "@autumn/shared";
 import {
 	ArrowCounterClockwiseIcon,
 	CalendarBlankIcon,
@@ -28,6 +28,7 @@ interface TrialEditorRowProps {
 	form: UseUpdateSubscriptionForm;
 	isCurrentlyTrialing: boolean;
 	initialTrialLength: number | null;
+	initialTrialFormatted: string | null;
 	removeTrial: boolean;
 	onEndTrial: () => void;
 	onCollapse: () => void;
@@ -38,6 +39,7 @@ export function TrialEditorRow({
 	form,
 	isCurrentlyTrialing,
 	initialTrialLength,
+	initialTrialFormatted,
 	removeTrial,
 	onEndTrial,
 	onCollapse,
@@ -59,11 +61,15 @@ export function TrialEditorRow({
 		? formatTrialDuration({ length: trialLength, duration: trialDuration })
 		: null;
 
+	const newTrialLengthInDays = hasTrialValue
+		? getTrialLengthInDays({ trialLength, trialDuration })
+		: null;
+
 	const isTrialModified =
 		isCurrentlyTrialing &&
 		hasTrialValue &&
 		initialTrialLength !== null &&
-		trialLength !== initialTrialLength;
+		newTrialLengthInDays !== initialTrialLength;
 
 	const ringClass = getTrialRingClass({
 		removeTrial,
@@ -132,11 +138,9 @@ export function TrialEditorRow({
 						/>
 						<span className="text-sm text-t2">Free Trial</span>
 					</div>
-					{isTrialModified && initialTrialLength ? (
+					{isTrialModified && initialTrialFormatted ? (
 						<span className="text-xs flex items-center gap-1">
-							<span className="text-red-500">
-								{initialTrialLength} days left
-							</span>
+							<span className="text-red-500">{initialTrialFormatted} left</span>
 							<span className="text-t3">→</span>
 							<span className="text-green-500">{formattedDuration} left</span>
 						</span>
@@ -144,8 +148,10 @@ export function TrialEditorRow({
 						<span className="text-xs px-2 py-0.5 bg-green-500/20 text-green-400 rounded-md">
 							{formattedDuration}
 						</span>
-					) : formattedDuration ? (
-						<span className="text-xs text-t3">{formattedDuration} left</span>
+					) : initialTrialFormatted ? (
+						<span className="text-xs text-t3">
+							{initialTrialFormatted} left
+						</span>
 					) : null}
 				</div>
 				<div className="flex items-center h-10 px-3 rounded-xl input-base gap-2">

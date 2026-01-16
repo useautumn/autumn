@@ -1,4 +1,9 @@
-import { differenceInDays } from "date-fns";
+import {
+	differenceInDays,
+	differenceInHours,
+	formatDuration,
+	intervalToDuration,
+} from "date-fns";
 import type { FreeTrialDuration } from "../../models/productModels/freeTrialModels/freeTrialEnums.js";
 import type {
 	CreateFreeTrial,
@@ -28,9 +33,37 @@ export const getRemainingTrialDays = ({
 	trialEndsAt: number | null | undefined;
 }): number | null => {
 	if (!trialEndsAt) return null;
-	const remainingDays = differenceInDays(trialEndsAt, Date.now());
-	if (remainingDays <= 0) return null;
-	return remainingDays;
+	const now = Date.now();
+	if (trialEndsAt <= now) return null;
+	const remainingDays = differenceInDays(trialEndsAt, now);
+	// Return at least 1 if trial hasn't ended yet (handles sub-day remaining time)
+	return remainingDays > 0 ? remainingDays : 1;
+};
+
+/** Formats remaining trial time as a human-readable string using date-fns */
+export const formatRemainingTrialTime = ({
+	trialEndsAt,
+}: {
+	trialEndsAt: number | null | undefined;
+}): string | null => {
+	if (!trialEndsAt) return null;
+	const now = Date.now();
+	if (trialEndsAt <= now) return null;
+
+	const totalHours = differenceInHours(trialEndsAt, now);
+	if (totalHours < 1) return "< 1 hour";
+
+	// For less than 24 hours, show hours
+	if (totalHours < 24) {
+		return `${totalHours} ${totalHours === 1 ? "hour" : "hours"}`;
+	}
+
+	// For 24+ hours, use date-fns formatDuration for years/months/days
+	const duration = intervalToDuration({ start: now, end: trialEndsAt });
+	return formatDuration(duration, {
+		format: ["years", "months", "days"],
+		delimiter: ", ",
+	});
 };
 
 export const freeTrialsAreSame = ({

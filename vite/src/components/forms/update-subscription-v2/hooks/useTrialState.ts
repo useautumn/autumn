@@ -1,7 +1,9 @@
 import {
 	FreeTrialDuration,
 	type FullCusProduct,
+	formatRemainingTrialTime,
 	getRemainingTrialDays,
+	getTrialLengthInDays,
 	isCustomerProductTrialing,
 } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
@@ -16,6 +18,7 @@ interface UseTrialStateParams {
 export interface TrialState {
 	isCurrentlyTrialing: boolean;
 	remainingTrialDays: number | null;
+	remainingTrialFormatted: string | null;
 	trialLength: number | null;
 	trialDuration: FreeTrialDuration;
 	removeTrial: boolean;
@@ -46,6 +49,11 @@ export function useTrialState({
 			? getRemainingTrialDays({ trialEndsAt: customerProduct.trial_ends_at })
 			: null;
 
+	const remainingTrialFormatted =
+		isCurrentlyTrialing && customerProduct
+			? formatRemainingTrialTime({ trialEndsAt: customerProduct.trial_ends_at })
+			: null;
+
 	const [isTrialExpanded, setIsTrialExpanded] = useState(isCurrentlyTrialing);
 
 	const removeTrial = useStore(form.store, (state) => state.values.removeTrial);
@@ -59,11 +67,15 @@ export function useTrialState({
 
 	const hasTrialValue = trialLength !== null && trialLength > 0;
 
+	const newTrialLengthInDays = hasTrialValue
+		? getTrialLengthInDays({ trialLength, trialDuration })
+		: null;
+
 	const isTrialModified =
 		isCurrentlyTrialing &&
 		hasTrialValue &&
 		remainingTrialDays !== null &&
-		trialLength !== remainingTrialDays;
+		newTrialLengthInDays !== remainingTrialDays;
 
 	const handleToggleTrial = useCallback(() => {
 		if (removeTrial) {
@@ -87,6 +99,7 @@ export function useTrialState({
 	return {
 		isCurrentlyTrialing,
 		remainingTrialDays,
+		remainingTrialFormatted,
 		trialLength,
 		trialDuration,
 		removeTrial,
