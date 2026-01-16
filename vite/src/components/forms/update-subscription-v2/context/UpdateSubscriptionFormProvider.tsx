@@ -129,7 +129,6 @@ export function UpdateSubscriptionFormProvider({
 		currentVersion,
 		originalItems,
 		features,
-		isTrialConfirmed: trialState.isTrialConfirmed,
 	});
 
 	const changedPrepaidOptions = useMemo(() => {
@@ -169,16 +168,13 @@ export function UpdateSubscriptionFormProvider({
 
 		const base = productV2ToFrontendProduct({ product: product as ProductV2 });
 
-		let freeTrialValue = base.free_trial;
-		if (trialState.isTrialConfirmed) {
-			const freeTrial = getFreeTrial({
-				removeTrial: formValues.removeTrial,
-				trialLength: formValues.trialLength,
-				trialDuration: formValues.trialDuration,
-			});
-			freeTrialValue =
-				freeTrial === null ? undefined : (freeTrial ?? base.free_trial);
-		}
+		const freeTrial = getFreeTrial({
+			removeTrial: formValues.removeTrial,
+			trialLength: formValues.trialLength,
+			trialDuration: formValues.trialDuration,
+		});
+		const freeTrialValue =
+			freeTrial === null ? undefined : (freeTrial ?? base.free_trial);
 
 		return {
 			...base,
@@ -191,7 +187,6 @@ export function UpdateSubscriptionFormProvider({
 		formValues.removeTrial,
 		formValues.trialLength,
 		formValues.trialDuration,
-		trialState.isTrialConfirmed,
 	]);
 
 	const hasBillingChanges = useHasBillingChanges({
@@ -203,18 +198,16 @@ export function UpdateSubscriptionFormProvider({
 	const hasNoBillingChanges =
 		hasChanges && !hasBillingChanges && !hasPrepaidQuantityChanges;
 
-	const confirmedFreeTrial = trialState.isTrialConfirmed
-		? getFreeTrial({
-				removeTrial: formValues.removeTrial,
-				trialLength: formValues.trialLength,
-				trialDuration: formValues.trialDuration,
-			})
-		: undefined;
+	const freeTrial = getFreeTrial({
+		removeTrial: formValues.removeTrial,
+		trialLength: formValues.trialLength,
+		trialDuration: formValues.trialDuration,
+	});
 
 	const previewQuery = useUpdateSubscriptionPreview({
 		updateSubscriptionFormContext: formContext,
 		prepaidOptions: changedPrepaidOptions,
-		freeTrial: confirmedFreeTrial,
+		freeTrial,
 		items: formValues.items,
 		version: formValues.version,
 	});

@@ -226,7 +226,6 @@ export function EditPlanSection() {
 										onEndTrial={trialState.handleEndTrial}
 										onCollapse={() => trialState.setIsTrialExpanded(false)}
 										onRevert={trialState.handleRevertTrial}
-										onConfirm={() => trialState.setIsTrialConfirmed(true)}
 									/>
 								</div>
 							</div>
