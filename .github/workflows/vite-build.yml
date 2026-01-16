@@ -48,3 +48,5 @@ jobs:
 
       - name: Build Vite
         run: cd vite && bunx vite build
+        env:
+          NODE_OPTIONS: "--max-old-space-size=8192"
