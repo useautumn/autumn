@@ -135,7 +135,10 @@ export function ProductListTable() {
 	// For archived view, always show table structure even if empty
 	// For non-archived view, show EmptyState when no plans exist
 	const showTableStructure =
-		queryStates.showArchivedProducts || hasRecurringBasePlans;
+		queryStates.showArchivedProducts ||
+		hasRecurringBasePlans ||
+		hasRecurringAddOns ||
+		hasOneTimePlans;
 
 	return (
 		<div className="flex flex-col gap-8">
@@ -150,7 +153,9 @@ export function ProductListTable() {
 								enableSorting,
 								isLoading: isCountsLoading,
 								getRowHref,
-								emptyStateText: "You haven't archived any plans yet.",
+								emptyStateText: queryStates.showArchivedProducts
+									? "You haven't archived any plans yet"
+									: "You haven't created any recurring plans yet",
 								rowClassName: "h-10",
 							}}
 						>
