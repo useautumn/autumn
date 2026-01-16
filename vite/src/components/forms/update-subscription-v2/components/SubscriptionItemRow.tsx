@@ -262,7 +262,7 @@ export function SubscriptionItemRow({
 							) : (
 								<>
 									<span className="text-sm tabular-nums text-t3">
-										x{prepaidQuantity}
+										x{prepaidQuantity ?? 0}
 									</span>
 									<Tooltip>
 										<TooltipTrigger asChild>
