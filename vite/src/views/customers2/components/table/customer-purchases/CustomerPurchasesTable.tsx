@@ -1,14 +1,16 @@
 import type { Entity, FullCusProduct } from "@autumn/shared";
 import { ShoppingBagIcon } from "@phosphor-icons/react";
 import type { Row } from "@tanstack/react-table";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
 import { Button } from "@/components/v2/buttons/Button";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useCustomerProductsData } from "@/views/customers2/hooks/useCustomerProductsData";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
+import { CancelProductDialog } from "../customer-products/CancelProductDialog";
 import { CustomerProductsColumns } from "../customer-products/CustomerProductsColumns";
+import { TransferProductDialog } from "../customer-products/TransferProductDialog";
 
 export function CustomerPurchasesTable() {
 	const { customer, isLoading, purchases, hasEntities } =
@@ -16,6 +18,11 @@ export function CustomerPurchasesTable() {
 	const { setEntityId } = useEntity();
 	const selectedItemId = useSheetStore((s) => s.itemId);
 	const setSheet = useSheetStore((s) => s.setSheet);
+	const [cancelOpen, setCancelOpen] = useState(false);
+	const [transferOpen, setTransferOpen] = useState(false);
+	const [selectedProduct, setSelectedProduct] = useState<FullCusProduct | null>(
+		null,
+	);
 
 	// Build columns dynamically - include Scope column only when there are entity products
 	const columns = useMemo(() => {
@@ -63,15 +70,32 @@ export function CustomerPurchasesTable() {
 			});
 		}
 
-		// Add remaining columns (no Actions column for purchases)
+		// Add remaining columns
 		baseColumns.push(
 			CustomerProductsColumns[1], // Price
 			CustomerProductsColumns[2], // Status
 			CustomerProductsColumns[3], // Created At
+			CustomerProductsColumns[4], // Actions (empty for purchases, but keeps layout consistent)
 		);
 
 		return baseColumns;
 	}, [purchases.hasEntityProducts, customer.entities, setEntityId]);
+
+	const handleCancelClick = (product: FullCusProduct) => {
+		setSelectedProduct(product);
+		setCancelOpen(true);
+	};
+
+	const handleTransferClick = (product: FullCusProduct) => {
+		setSelectedProduct(product);
+		setTransferOpen(true);
+	};
+
+	const tableMeta = {
+		onCancelClick: handleCancelClick,
+		onTransferClick: handleTransferClick,
+		hasEntities,
+	};
 
 	const table = useCustomerTable({
 		data: purchases.all,
@@ -79,7 +103,7 @@ export function CustomerPurchasesTable() {
 		options: {
 			globalFilterFn: "includesString",
 			enableGlobalFilter: true,
-			meta: { hasEntities },
+			meta: tableMeta,
 		},
 	});
 
@@ -96,6 +120,20 @@ export function CustomerPurchasesTable() {
 
 	return (
 		<div className="flex flex-col gap-4">
+			{selectedProduct && (
+				<>
+					<CancelProductDialog
+						cusProduct={selectedProduct}
+						open={cancelOpen}
+						setOpen={setCancelOpen}
+					/>
+					<TransferProductDialog
+						cusProduct={selectedProduct}
+						open={transferOpen}
+						setOpen={setTransferOpen}
+					/>
+				</>
+			)}
 			<Table.Provider
 				config={{
 					table,
@@ -120,7 +158,6 @@ export function CustomerPurchasesTable() {
 						</Table.Heading>
 					</Table.Toolbar>
 					<Table.Content>
-						<Table.Header />
 						<Table.Body />
 					</Table.Content>
 				</Table.Container>
