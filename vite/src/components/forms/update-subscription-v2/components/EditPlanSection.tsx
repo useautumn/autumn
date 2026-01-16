@@ -82,19 +82,30 @@ export function EditPlanSection() {
 				},
 			});
 
-		const oldIntervalText = originalInterval
-			? formatInterval({
-					interval: originalInterval,
-					intervalCount: originalIntervalCount,
-				})
-			: null;
+		const getIntervalText = (
+			interval: typeof originalInterval,
+			intervalCount: number,
+			hasPriceItem: boolean,
+		) => {
+			if (interval) {
+				return formatInterval({ interval, intervalCount });
+			}
+			// Only show "one-time" if there's a price item with no interval
+			// Otherwise it's variable/usage-based
+			return hasPriceItem ? "one-time" : null;
+		};
 
-		const newIntervalText = currentInterval
-			? formatInterval({
-					interval: currentInterval,
-					intervalCount: currentIntervalCount,
-				})
-			: (oldIntervalText ?? "per month");
+		const oldIntervalText = getIntervalText(
+			originalInterval,
+			originalIntervalCount,
+			!!originalPriceItem,
+		);
+
+		const newIntervalText = getIntervalText(
+			currentInterval,
+			currentIntervalCount,
+			!!currentPriceItem,
+		);
 
 		return {
 			oldPrice: formatPrice(originalPrice),
@@ -144,7 +155,7 @@ export function EditPlanSection() {
 							<PriceDisplay product={product} currency={currency} />
 						)}
 					</div>
-					<div className="space-y-2 mb-4">
+					<div className="space-y-2">
 						{product?.items?.map((item: ProductItem, index: number) => {
 							if (!item.feature_id) return null;
 
@@ -203,11 +214,8 @@ export function EditPlanSection() {
 						<div
 							className={cn(
 								"grid transition-[grid-template-rows] duration-200 ease-out",
-								trialState.isTrialExpanded ||
-									trialState.removeTrial ||
-									trialState.isCurrentlyTrialing ||
-									trialState.hasTrialValue
-									? "grid-rows-[1fr]"
+								trialState.isTrialExpanded || trialState.removeTrial
+									? "grid-rows-[1fr] mb-2"
 									: "grid-rows-[0fr]",
 							)}
 						>
