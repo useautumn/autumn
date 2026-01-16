@@ -1,4 +1,5 @@
 import { test } from "bun:test";
+import { FreeTrialDuration } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -210,7 +211,41 @@ test.concurrent(`${chalk.yellowBright("error: one-off item quantity update on re
 	});
 });
 
-// 6. Error: removing trial and adding one-off item
+// 6. Error: adding a free trial to a one-off product
+test.concurrent(`${chalk.yellowBright("error: one-off adding free trial")}`, async () => {
+	const oneOffPriceItem = items.oneOffPrice({ price: 50 });
+	const oneOffProd = products.base({
+		items: [oneOffPriceItem],
+		id: "oneoff-add-trial",
+	});
+
+	const { customerId, autumnV1 } = await initScenario({
+		customerId: "err-oneoff-add-trial",
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [oneOffProd] }),
+		],
+		actions: [s.attach({ productId: "oneoff-add-trial" })],
+	});
+
+	// Try to add a free trial to a one-off product - should fail
+	await expectAutumnError({
+		func: async () => {
+			await autumnV1.subscriptions.update({
+				customer_id: customerId,
+				product_id: oneOffProd.id,
+				free_trial: {
+					length: 7,
+					duration: FreeTrialDuration.Day,
+					unique_fingerprint: false,
+					card_required: true,
+				},
+			});
+		},
+	});
+});
+
+// 8. Error: removing trial and adding one-off item
 test.concurrent(`${chalk.yellowBright("error: remove trial and add one-off item")}`, async () => {
 	const dashboardItem = items.dashboard();
 	const monthlyBasePrice = items.monthlyPrice({ price: 20 });
