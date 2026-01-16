@@ -1,11 +1,6 @@
 name: Vite Build Check
 
 on:
-  push:
-    branches:
-      - main
-      - staging
-      - dev
   pull_request:
 
 jobs:
