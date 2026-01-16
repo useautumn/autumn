@@ -1,11 +1,9 @@
 import {
 	type FrontendProduct,
 	type FullCusProduct,
-	getProductItemDisplay,
 	type ProductItem,
 	type ProductV2,
 	productV2ToFrontendProduct,
-	UsageModel,
 } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
@@ -17,7 +15,6 @@ import {
 	EditPlanSection,
 	FreeTrialSection,
 	getFreeTrial,
-	PrepaidQuantitySection,
 	UpdateSubscriptionFooter,
 	type UpdateSubscriptionFormContext,
 	UpdateSubscriptionPreviewSection,
@@ -42,7 +39,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
-import { itemToFeature } from "@/utils/product/productItemUtils/convertItem";
+
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
@@ -97,38 +94,6 @@ function SheetContent({
 		}
 		return Object.keys(changed).length > 0 ? changed : undefined;
 	}, [prepaidOptions, initialPrepaidOptions]);
-
-	// Compute extended prepaid items that includes both original prepaid items
-	// and any new prepaid items added through the inline editor
-	const extendedPrepaidItems = useMemo(() => {
-		if (!formValues.items) return prepaidItems;
-
-		// Get IDs of original prepaid items
-		const originalPrepaidIds = new Set(
-			prepaidItems.map((item) => item.feature_id),
-		);
-
-		// Find new prepaid items from form that aren't in the original list
-		const newPrepaidItems = formValues.items.filter(
-			(item) =>
-				item.usage_model === UsageModel.Prepaid &&
-				item.feature_id &&
-				!originalPrepaidIds.has(item.feature_id),
-		);
-
-		// Enrich new prepaid items with feature info
-		const enrichedNewItems = newPrepaidItems.map((item) => {
-			const feature = itemToFeature({ item, features });
-			const display = getProductItemDisplay({
-				item,
-				features,
-				currency: "usd",
-			});
-			return { ...item, feature, display };
-		});
-
-		return [...prepaidItems, ...enrichedNewItems];
-	}, [prepaidItems, formValues.items, features]);
 
 	const productWithFormItems = useMemo((): FrontendProduct | undefined => {
 		if (!product) return undefined;
@@ -277,25 +242,24 @@ function SheetContent({
 			<EditPlanSection
 				hasCustomizations={formValues.items !== null}
 				onEditPlan={handleEditPlan}
-				product={product}
+				product={productWithFormItems as ProductV2 | undefined}
+				originalItems={originalItems}
 				customerProduct={customerProduct}
 				features={features}
 				form={form}
 				numVersions={numVersions}
 				currentVersion={currentVersion}
+				prepaidOptions={prepaidOptions}
+				initialPrepaidOptions={initialPrepaidOptions}
 			/>
-
-			<PrepaidQuantitySection form={form} prepaidItems={extendedPrepaidItems} />
 
 			<FreeTrialSection form={form} customerProduct={customerProduct} />
 
 			<UpdateSubscriptionSummary
 				form={form}
-				prepaidItems={prepaidItems}
 				customerProduct={customerProduct}
 				currentVersion={currentVersion}
 				currency={previewQuery.data?.currency}
-				originalItems={originalItems}
 			/>
 
 			<UpdateSubscriptionPreviewSection

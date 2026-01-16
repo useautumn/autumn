@@ -1,4 +1,5 @@
 import type { PreviewUpdateSubscriptionResponse } from "@autumn/shared";
+import { format } from "date-fns";
 import { AnimatePresence, motion } from "motion/react";
 import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
@@ -32,6 +33,9 @@ export function UpdateSubscriptionPreviewSection({
 				label: "Next Cycle",
 				amount: previewData.next_cycle.total,
 				variant: "secondary" as const,
+				badge: previewData.next_cycle.starts_at
+					? format(new Date(previewData.next_cycle.starts_at), "MMM d, yyyy")
+					: undefined,
 			});
 		}
 	}
