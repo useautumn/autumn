@@ -6,7 +6,7 @@ import {
 	type EntitlementWithFeature,
 	type Entity,
 	type EntityBalance,
-	entitlementFeatureMatchesEntityFeature,
+	entitlementHasEntityFeature,
 	type FeatureOptions,
 	FeatureType,
 	type FreeTrial,
@@ -39,8 +39,7 @@ export const initCusEntEntities = ({
 		: null;
 
 	for (const entity of entities) {
-		if (!entitlementFeatureMatchesEntityFeature({ entitlement, entity }))
-			continue;
+		if (!entitlementHasEntityFeature({ entitlement, entity })) continue;
 
 		if (existingCusEnt?.entities?.[entity.id]) {
 			continue;

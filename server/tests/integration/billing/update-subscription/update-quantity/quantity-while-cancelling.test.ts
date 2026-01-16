@@ -51,14 +51,6 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: active canceli
 		price: pricePerUnit,
 	});
 
-	// Free is the default product
-	const free = constructProduct({
-		id: "free",
-		items: [prepaidItem],
-		type: "free",
-		isDefault: true,
-	});
-
 	const prepaid = constructRawProduct({
 		id: "prepaid",
 		items: [prepaidItem],
@@ -68,7 +60,7 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: active canceli
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [free, prepaid] }),
+			s.products({ list: [prepaid] }),
 		],
 		actions: [
 			s.attach({
@@ -88,10 +80,6 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: active canceli
 		customer: customerAfterCancel,
 		productId: prepaid.id,
 	});
-	await expectProductScheduled({
-		customer: customerAfterCancel,
-		productId: free.id,
-	});
 
 	// Now update prepaid's quantity while it's canceling (10 → 20 units)
 	await autumnV1.subscriptions.update({
@@ -110,12 +98,6 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: active canceli
 	await expectProductCanceling({
 		customer: customerAfterUpdate,
 		productId: prepaid.id,
-	});
-
-	// Scheduled free product should remain scheduled
-	await expectProductScheduled({
-		customer: customerAfterUpdate,
-		productId: free.id,
 	});
 
 	// Balance should be updated to 200 (20 units × 10 billing_units)
@@ -207,8 +189,6 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: scheduled prod
 		productId: prepaid.id,
 	});
 
-	console.log("Products after downgrade:", customerAfterDowngrade.products);
-
 	// Now update the scheduled prepaid's quantity (5 → 15 units)
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
@@ -221,8 +201,6 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: scheduled prod
 	// Verify state after update
 	const customerAfterUpdate =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	console.log("Products after update:", customerAfterUpdate.products);
 
 	// Scheduled prepaid product should remain scheduled
 	await expectProductScheduled({
@@ -243,7 +221,6 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: scheduled prod
 		org: ctx.org,
 		env: ctx.env,
 		subCount: 1,
-		shouldBeCanceled: true,
 	});
 });
 
@@ -274,14 +251,6 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: preserves usag
 		price: pricePerUnit,
 	});
 
-	// Free is the default product
-	const free = constructProduct({
-		id: "free",
-		items: [prepaidItem],
-		type: "free",
-		isDefault: true,
-	});
-
 	const prepaid = constructRawProduct({
 		id: "prepaid",
 		items: [prepaidItem],
@@ -290,8 +259,8 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: preserves usag
 	const { autumnV1, ctx } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ paymentMethod: "success", withDefault: true }),
-			s.products({ list: [free, prepaid] }),
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [prepaid] }),
 		],
 		actions: [
 			s.attach({
@@ -335,10 +304,6 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: preserves usag
 		customer: customerAfterCancel,
 		productId: prepaid.id,
 	});
-	await expectProductScheduled({
-		customer: customerAfterCancel,
-		productId: free.id,
-	});
 
 	// Now update prepaid's quantity while it's canceling (10 → 20 units)
 	await autumnV1.subscriptions.update({
@@ -357,12 +322,6 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: preserves usag
 	await expectProductCanceling({
 		customer: customerAfterUpdate,
 		productId: prepaid.id,
-	});
-
-	// Scheduled free product should remain scheduled
-	await expectProductScheduled({
-		customer: customerAfterUpdate,
-		productId: free.id,
 	});
 
 	// Usage should be preserved

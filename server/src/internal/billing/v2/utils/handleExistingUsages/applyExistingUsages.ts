@@ -4,14 +4,51 @@ import {
 	type ExistingUsages,
 	type FullCusProduct,
 } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { deductFromCusEntsTypescript } from "@/internal/balances/track/deductUtils/deductFromCusEntsTypescript";
+import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 import { mergeEntitiesWithExistingUsages } from "./mergeEntitiesWithExistingUsages";
 
+const logExistingUsages = ({
+	ctx,
+	existingUsages,
+}: {
+	ctx: AutumnContext;
+	existingUsages: ExistingUsages;
+}) => {
+	const existinUsagesLogs = Object.entries(existingUsages).map(
+		([internalFeatureId, existingUsage]) => {
+			const entityUsages = Object.entries(existingUsage.entityUsages).map(
+				([entityId, entityUsage]) => ({
+					entityId,
+					entityUsage,
+				}),
+			);
+			return {
+				featureId: ctx.features.find((f) => f.internal_id === internalFeatureId)
+					?.id,
+				usage: existingUsage.usage,
+				entityUsages: entityUsages.length > 0 ? entityUsages : undefined,
+			};
+		},
+	);
+	ctx.logger.debug(`[applyExistingUsages] existing usages:`, existinUsagesLogs);
+
+	addToExtraLogs({
+		ctx,
+		extras: {
+			existingUsages: existinUsagesLogs,
+		},
+	});
+};
+
 export const applyExistingUsages = ({
+	ctx,
 	customerProduct,
 	existingUsages = {},
 	entities,
 }: {
+	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
 	existingUsages?: ExistingUsages;
 	entities: Entity[];
@@ -20,6 +57,11 @@ export const applyExistingUsages = ({
 	const mergedExistingUsages = mergeEntitiesWithExistingUsages({
 		entities,
 		existingUsages,
+	});
+
+	logExistingUsages({
+		ctx,
+		existingUsages: mergedExistingUsages,
 	});
 
 	for (const [internalFeatureId, existingUsage] of Object.entries<
@@ -55,6 +97,12 @@ export const applyExistingUsages = ({
 				original.balance = newCusEnt.balance;
 				original.entities = newCusEnt.entities;
 				original.adjustment = newCusEnt.adjustment;
+
+				ctx.logger.debug(`Deduction for feature ${newCusEnt.feature_id}:`, {
+					balance: newCusEnt.balance,
+					entities: newCusEnt.entities,
+					adjustment: newCusEnt.adjustment,
+				});
 			}
 		}
 	}

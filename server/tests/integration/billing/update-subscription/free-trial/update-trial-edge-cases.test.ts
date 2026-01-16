@@ -14,6 +14,7 @@ import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { addDays } from "date-fns";
 
 /**
  * Update Trial Edge Cases Tests
@@ -234,5 +235,102 @@ test.concurrent(`${chalk.yellowBright("trial-edge-cases: start with users, add t
 		flags: {
 			checkNotTrialing: true,
 		},
+	});
+});
+
+// 2. Start with trial -> extend trial with longer duration
+test.concurrent(`${chalk.yellowBright("trial-edge-cases: extend trial with longer duration")}`, async () => {
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const priceItem = items.monthlyPrice({ price: 20 });
+
+	const pro = products.base({
+		items: [messagesItem, priceItem],
+		trialDays: 20,
+	});
+
+	const { customerId, autumnV1, ctx, advancedTo } = await initScenario({
+		customerId: "trial-edge-extend",
+		setup: [
+			s.customer({ testClock: true, paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [s.attach({ productId: pro.id })],
+	});
+
+	// Step 1: Verify initial state - trialing for 20 days
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductTrialing({
+		customer: customerBefore,
+		productId: pro.id,
+		trialEndsAt: advancedTo + ms.days(20),
+	});
+
+	// No invoice yet (trial)
+	expectCustomerInvoiceCorrect({
+		customer: customerBefore,
+		count: 1,
+		latestTotal: 0,
+	});
+
+	// Step 2: Update to extend trial to 200 days
+	const extendTrialParams = {
+		customer_id: customerId,
+		product_id: pro.id,
+		free_trial: {
+			length: 200,
+			duration: FreeTrialDuration.Day,
+			card_required: true,
+			unique_fingerprint: false,
+		},
+	};
+
+	const extendTrialPreview =
+		await autumnV1.subscriptions.previewUpdate(extendTrialParams);
+
+	// Should be $0 since still in trial
+	expect(extendTrialPreview.total).toEqual(0);
+
+	// next_cycle should show when the extended trial ends (in 200 days)
+	expectPreviewNextCycleCorrect({
+		preview: extendTrialPreview,
+		startsAt: advancedTo + ms.days(200),
+		total: priceItem.price!,
+	});
+
+	await autumnV1.subscriptions.update(extendTrialParams, { timeout: 2000 });
+
+	const customerAfterExtend =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	// Product should now be trialing with 200 day trial
+	await expectProductTrialing({
+		customer: customerAfterExtend,
+		productId: pro.id,
+		trialEndsAt: addDays(advancedTo, 200).getTime(),
+		toleranceMs: ms.hours(2),
+	});
+
+	// Features should still work
+	expectCustomerFeatureCorrect({
+		customer: customerAfterExtend,
+		featureId: TestFeature.Messages,
+		includedUsage: messagesItem.included_usage,
+		balance: messagesItem.included_usage,
+		usage: 0,
+	});
+
+	// Still no invoice (still in trial)
+	expectCustomerInvoiceCorrect({
+		customer: customerAfterExtend,
+		count: 2,
+		latestTotal: 0,
+	});
+
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
 	});
 });

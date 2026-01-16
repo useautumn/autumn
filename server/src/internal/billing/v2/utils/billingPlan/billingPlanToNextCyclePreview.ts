@@ -2,6 +2,7 @@ import {
 	type BillingPreviewResponse,
 	cp,
 	cusProductsToPrices,
+	formatMs,
 	getCycleEnd,
 	getSmallestInterval,
 	sumValues,
@@ -50,12 +51,27 @@ export const billingPlanToNextCyclePreview = ({
 
 	if (!smallestInterval) return undefined;
 
+	ctx.logger.debug(
+		`[billingPlanToNextCyclePreview] Billing cycle anchor: ${formatMs(billingCycleAnchorMs)}`,
+	);
+	ctx.logger.debug(
+		`[billingPlanToNextCyclePreview] Smallest interval: ${smallestInterval.interval}`,
+	);
+	ctx.logger.debug(
+		`[billingPlanToNextCyclePreview] Current epoch ms: ${formatMs(billingContext.currentEpochMs)}`,
+	);
+
 	const nextCycleStart = getCycleEnd({
 		anchor: billingCycleAnchorMs,
 		interval: smallestInterval.interval,
 		intervalCount: smallestInterval.intervalCount,
 		now: billingContext.currentEpochMs,
+		floor: billingCycleAnchorMs,
 	});
+
+	ctx.logger.debug(
+		`[billingPlanToNextCyclePreview] Next cycle start: ${formatMs(nextCycleStart)}`,
+	);
 
 	const autumnLineItems = customerProducts.flatMap((customerProduct) =>
 		customerProductToLineItems({

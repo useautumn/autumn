@@ -346,7 +346,7 @@ test.concurrent(`${chalk.yellowBright("subscription-create: 3ds authentication r
 	});
 
 	// Complete 3DS authentication
-	await completeInvoiceCheckout({
+	await completeInvoiceConfirmation({
 		url: result.payment_url!,
 	});
 

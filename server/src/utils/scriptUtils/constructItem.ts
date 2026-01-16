@@ -10,9 +10,9 @@ import {
 	UsageModel,
 } from "@autumn/shared";
 
-/* 
-**  Only required for more complex features, consider using items in the test fixtures instead
-*/
+/*
+ **  Only required for more complex features, consider using items in the test fixtures instead
+ */
 export const constructFeatureItem = ({
 	featureId,
 	includedUsage = 150,
@@ -80,6 +80,7 @@ export const constructPrepaidItem = ({
 	usageLimit,
 	intervalCount = 1,
 	resetUsageWhenEnabled,
+	entityFeatureId,
 }: {
 	featureId: string;
 	price?: number;
@@ -92,6 +93,7 @@ export const constructPrepaidItem = ({
 	usageLimit?: number;
 	intervalCount?: number;
 	resetUsageWhenEnabled?: boolean;
+	entityFeatureId?: string;
 }) => {
 	const item: ProductItem = {
 		feature_id: featureId,
@@ -110,6 +112,7 @@ export const constructPrepaidItem = ({
 		},
 		usage_limit: usageLimit,
 		reset_usage_when_enabled: resetUsageWhenEnabled,
+		entity_feature_id: entityFeatureId,
 	};
 
 	return item;

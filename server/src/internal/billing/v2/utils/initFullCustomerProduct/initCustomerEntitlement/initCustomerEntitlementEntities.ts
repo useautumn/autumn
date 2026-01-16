@@ -2,7 +2,7 @@ import {
 	type EntitlementWithFeature,
 	type Entity,
 	type EntityBalance,
-	entitlementFeatureMatchesEntityFeature,
+	entitlementHasEntityFeature,
 	isEntityScopedEntitlement,
 } from "@autumn/shared";
 
@@ -20,7 +20,7 @@ export const initCustomerEntitlementEntities = ({
 	const entities: Record<string, EntityBalance> = {};
 
 	for (const entity of customerEntities) {
-		const featureMatches = entitlementFeatureMatchesEntityFeature({
+		const featureMatches = entitlementHasEntityFeature({
 			entitlement,
 			entity,
 		});

@@ -5,7 +5,7 @@
 ```typescript
 import { expectCustomerFeatureCorrect, expectCustomerFeatureExists } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
-import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectProductActive, expectProductCanceling, expectProductScheduled, expectProductNotPresent } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectProductTrialing, expectProductNotTrialing } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
@@ -86,6 +86,43 @@ Verify product is active for customer/entity.
 
 ```typescript
 await expectProductActive({
+  customer,
+  productId: pro.id,
+});
+```
+
+### `expectProductCanceling`
+
+Verify product is in canceling state (scheduled for removal at end of billing cycle). This is the state a product enters after a downgrade - it remains active until the billing cycle ends.
+
+**Important:** Canceling is NOT a status value. The product has `status: "active"` with `canceled_at` set.
+
+```typescript
+// Works with both customers and entities
+const entity = await autumnV1.entities.get(customerId, entityId);
+await expectProductCanceling({
+  customer: entity,  // Pass entity data here
+  productId: premium.id,
+});
+```
+
+### `expectProductScheduled`
+
+Verify product is scheduled (waiting to become active at end of billing cycle).
+
+```typescript
+await expectProductScheduled({
+  customer,
+  productId: pro.id,
+});
+```
+
+### `expectProductNotPresent`
+
+Verify product does not exist for customer/entity.
+
+```typescript
+await expectProductNotPresent({
   customer,
   productId: pro.id,
 });

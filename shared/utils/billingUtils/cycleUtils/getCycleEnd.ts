@@ -14,6 +14,12 @@ import { getCycleIntervalFunctions } from "./getCycleIntervalFunctions.js";
  * @param interval - BillingInterval or EntInterval
  * @param intervalCount - Number of intervals per cycle (default: 1)
  * @param now - Current time (defaults to Date.now())
+ * @param floor - Minimum allowed result (unix ms). If the calculated cycle end is before
+ *   this value, returns the floor instead. Use this when billing cannot start before a
+ *   certain date (e.g., trial end date for long trials).
+ *   Example: Trial ends 4 Aug (anchor), now is 16 Jan, monthly interval.
+ *   Without floor: returns 4 Feb (next monthly boundary after now).
+ *   With floor=4 Aug: returns 4 Aug (billing can't start before trial ends).
  * @returns Unix timestamp of the next cycle end
  */
 export const getCycleEnd = ({
@@ -21,19 +27,18 @@ export const getCycleEnd = ({
 	interval,
 	intervalCount = 1,
 	now,
+	floor,
 }: {
 	anchor: number | "now";
 	interval: BillingInterval | EntInterval;
 	intervalCount?: number;
 	now: number; // milliseconds since epoch
+	floor?: number;
 }): number => {
 	// EDGE CASE: anchor might be slightly before now due to network latency.
 
 	const anchorDate = anchor === "now" ? new UTCDate(now) : new UTCDate(anchor);
 	const nowDate = new UTCDate(now);
-
-	// For now, only handle monthly intervals
-	// TODO: Add support for other intervals
 
 	const intervalFunctions = getCycleIntervalFunctions({ interval });
 
@@ -61,11 +66,14 @@ export const getCycleEnd = ({
 	 * (28 Feb will see cycles passes as -1, so next cycle will be anchorDate + (-1 + 1) months)
 	 */
 
-	// const TOLERANCE_MS = 30 * 1000; // 30 seconds buffer for network latency
-
-	/* TO CHECK: To we need a tolerance buffer? If so how much (seconds, milliseconds, etc.?) */
 	const candidate = add(anchorDate, cyclesPassed * intervalCount);
-	if (candidate.getTime() > now) return candidate.getTime();
+	const result =
+		candidate.getTime() > now ? candidate.getTime() : nextCycleEnd.getTime();
 
-	return nextCycleEnd.getTime();
+	// If floor is provided and result is before floor, return floor
+	if (floor !== undefined && result < floor) {
+		return floor;
+	}
+
+	return result;
 };

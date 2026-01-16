@@ -43,15 +43,19 @@ const adminRights = () =>
 /**
  * Monthly messages - resets each billing cycle
  * @param includedUsage - Free usage allowance (default: 100)
+ * @param entityFeatureId - Entity feature ID for per-entity balances
  */
 const monthlyMessages = ({
 	includedUsage = 100,
+	entityFeatureId,
 }: {
 	includedUsage?: number;
+	entityFeatureId?: string;
 } = {}): LimitedItem =>
 	constructFeatureItem({
 		featureId: TestFeature.Messages,
 		includedUsage,
+		entityFeatureId,
 	}) as LimitedItem;
 
 /**
@@ -134,12 +138,14 @@ const prepaid = ({
 	billingUnits = 100,
 	includedUsage = 0,
 	config,
+	entityFeatureId,
 }: {
 	featureId: string;
 	price?: number;
 	billingUnits?: number;
 	includedUsage?: number;
 	config?: ProductItemConfig;
+	entityFeatureId?: string;
 }): LimitedItem =>
 	constructPrepaidItem({
 		featureId,
@@ -147,22 +153,26 @@ const prepaid = ({
 		billingUnits,
 		includedUsage,
 		config,
+		entityFeatureId,
 	}) as LimitedItem;
 
 /**
  * Prepaid messages - purchase units upfront ($10/unit)
  * @param includedUsage - Free units before purchase required (default: 0), billing units are 100
+ * @param entityFeatureId - Entity feature ID for per-entity balances
  */
 const prepaidMessages = ({
 	includedUsage = 0,
 	billingUnits = 100,
 	price = 10,
 	config,
+	entityFeatureId,
 }: {
 	includedUsage?: number;
 	billingUnits?: number;
 	price?: number;
 	config?: ProductItemConfig;
+	entityFeatureId?: string;
 } = {}): LimitedItem =>
 	prepaid({
 		featureId: TestFeature.Messages,
@@ -170,6 +180,7 @@ const prepaidMessages = ({
 		billingUnits,
 		includedUsage,
 		config,
+		entityFeatureId,
 	});
 
 /**
@@ -224,17 +235,21 @@ const oneOffMessages = ({
 /**
  * Consumable messages - pay-per-use overage ($0.10/unit)
  * @param includedUsage - Free units before overage kicks in (default: 0)
+ * @param entityFeatureId - Entity feature ID for per-entity balances
  */
 const consumableMessages = ({
 	includedUsage = 0,
+	entityFeatureId,
 }: {
 	includedUsage?: number;
+	entityFeatureId?: string;
 } = {}): LimitedItem =>
 	constructArrearItem({
 		featureId: TestFeature.Messages,
 		includedUsage,
 		price: 0.1,
 		billingUnits: 1,
+		entityFeatureId,
 	}) as LimitedItem;
 
 // ═══════════════════════════════════════════════════════════════════

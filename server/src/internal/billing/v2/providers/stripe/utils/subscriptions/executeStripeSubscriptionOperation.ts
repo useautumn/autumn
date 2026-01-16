@@ -1,4 +1,4 @@
-import { InternalError } from "@autumn/shared";
+import { InternalError, nullish } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
@@ -15,6 +15,7 @@ export const executeStripeSubscriptionOperation = async ({
 }) => {
 	const { org, env } = ctx;
 	const stripeClient = createStripeCli({ org, env });
+	const { paymentMethod } = billingContext;
 
 	const invoiceModeParams = billingContext.invoiceMode
 		? {
@@ -22,6 +23,12 @@ export const executeStripeSubscriptionOperation = async ({
 				days_until_due: 30,
 			}
 		: {};
+
+	// default incomplete used so that payment failure / 3ds errors are clearly handled
+	const createPaymentBehavior =
+		nullish(paymentMethod) || paymentMethod?.type === "custom"
+			? "default_incomplete"
+			: "allow_incomplete";
 
 	switch (subscriptionAction.type) {
 		case "update": {
@@ -52,7 +59,11 @@ export const executeStripeSubscriptionOperation = async ({
 			return await stripeClient.subscriptions.create({
 				...subscriptionAction.params,
 				...invoiceModeParams,
-				payment_behavior: "allow_incomplete",
+
+				billing_mode: { type: "flexible" },
+
+				payment_behavior: createPaymentBehavior,
+
 				expand: ["latest_invoice"],
 			});
 		case "cancel":

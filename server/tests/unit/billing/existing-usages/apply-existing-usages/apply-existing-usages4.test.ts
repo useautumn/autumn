@@ -1,9 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { ExistingUsages } from "@autumn/shared";
+import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import chalk from "chalk";
 import { applyExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/applyExistingUsages";
+
+const ctx = contexts.create({});
 
 describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 	describe("entity usages deduction on entity-scoped cusEnt", () => {
@@ -43,6 +46,7 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 
 			// Act
 			applyExistingUsages({
+				ctx,
 				customerProduct: cusProduct,
 				existingUsages,
 				entities: [],
@@ -88,6 +92,7 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 
 			// Act
 			applyExistingUsages({
+				ctx,
 				customerProduct: cusProduct,
 				existingUsages,
 				entities: [],
@@ -134,7 +139,12 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 			};
 
 			// Act
-			applyExistingUsages({ customerProduct, existingUsages, entities: [] });
+			applyExistingUsages({
+				ctx,
+				customerProduct,
+				existingUsages,
+				entities: [],
+			});
 
 			// Assert: Deduction should flow through entities
 			const updatedCusEnt = customerProduct.customer_entitlements[0];
@@ -185,13 +195,168 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 			};
 
 			// Act
-			applyExistingUsages({ customerProduct, existingUsages, entities: [] });
+			applyExistingUsages({
+				ctx,
+				customerProduct,
+				existingUsages,
+				entities: [],
+			});
 
 			// Assert: Entity balances should go negative
 			const updatedCusEnt = customerProduct.customer_entitlements[0];
 			expect(updatedCusEnt.entities).not.toBeNull();
 			expect(updatedCusEnt.entities?.entity1.balance).toBe(-20); // 50 - 70 = -20
 			expect(updatedCusEnt.entities?.entity2.balance).toBe(-20); // 30 - 50 = -20
+		});
+	});
+
+	describe("per-entity to per-entity preservation", () => {
+		test("entity usages are preserved when updating from entity-scoped to entity-scoped cusEnt", () => {
+			const internalFeatureId = "internal_feature_a";
+			const entityFeatureId = "entity_feature_id";
+
+			// Entity-scoped cusEnt with 3 entities, each with balance 100
+			const entityScopedCusEnt = customerEntitlements.create({
+				internalFeatureId,
+				featureId: "feature_a",
+				featureName: "Feature A",
+				allowance: 100,
+				balance: 0, // Top-level balance not used for entity-scoped
+				entityFeatureId,
+				entities: {
+					entity1: { id: "entity1", balance: 100, adjustment: 0 },
+					entity2: { id: "entity2", balance: 100, adjustment: 0 },
+					entity3: { id: "entity3", balance: 100, adjustment: 0 },
+				},
+			});
+
+			const cusProduct = customerProducts.create({
+				customerEntitlements: [entityScopedCusEnt],
+			});
+
+			// Existing entity usages: entity1 used 30, entity2 used 50, entity3 used 10
+			const existingUsages: ExistingUsages = {
+				[internalFeatureId]: {
+					usage: 0,
+					entityUsages: {
+						entity1: 30,
+						entity2: 50,
+						entity3: 10,
+					},
+				},
+			};
+
+			// Act
+			applyExistingUsages({
+				ctx,
+				customerProduct: cusProduct,
+				existingUsages,
+				entities: [],
+			});
+
+			// Assert: Each entity's balance should be reduced by its usage
+			const updatedCusEnt = cusProduct.customer_entitlements[0];
+			expect(updatedCusEnt.entities).not.toBeNull();
+			expect(updatedCusEnt.entities?.entity1.balance).toBe(70); // 100 - 30
+			expect(updatedCusEnt.entities?.entity2.balance).toBe(50); // 100 - 50
+			expect(updatedCusEnt.entities?.entity3.balance).toBe(90); // 100 - 10
+		});
+
+		test("entity usages are preserved even when some entities have no prior usage", () => {
+			const internalFeatureId = "internal_feature_a";
+			const entityFeatureId = "entity_feature_id";
+
+			// Entity-scoped cusEnt with 3 entities
+			const entityScopedCusEnt = customerEntitlements.create({
+				internalFeatureId,
+				featureId: "feature_a",
+				featureName: "Feature A",
+				allowance: 50,
+				balance: 0,
+				entityFeatureId,
+				entities: {
+					entity1: { id: "entity1", balance: 50, adjustment: 0 },
+					entity2: { id: "entity2", balance: 50, adjustment: 0 },
+					entity3: { id: "entity3", balance: 50, adjustment: 0 },
+				},
+			});
+
+			const cusProduct = customerProducts.create({
+				customerEntitlements: [entityScopedCusEnt],
+			});
+
+			// Only entity1 has existing usage, entity2/entity3 have none
+			const existingUsages: ExistingUsages = {
+				[internalFeatureId]: {
+					usage: 0,
+					entityUsages: {
+						entity1: 25,
+						// entity2 and entity3 have no entry - should remain at full balance
+					},
+				},
+			};
+
+			// Act
+			applyExistingUsages({
+				ctx,
+				customerProduct: cusProduct,
+				existingUsages,
+				entities: [],
+			});
+
+			// Assert
+			const updatedCusEnt = cusProduct.customer_entitlements[0];
+			expect(updatedCusEnt.entities).not.toBeNull();
+			expect(updatedCusEnt.entities?.entity1.balance).toBe(25); // 50 - 25
+			expect(updatedCusEnt.entities?.entity2.balance).toBe(50); // Unchanged
+			expect(updatedCusEnt.entities?.entity3.balance).toBe(50); // Unchanged
+		});
+	});
+
+	describe("entity to non-entity conversion", () => {
+		test("entity usages are NOT summed when applied to non-entity-scoped cusEnt (current behavior)", () => {
+			const internalFeatureId = "internal_feature_a";
+
+			// Non-entity-scoped cusEnt (no entityFeatureId)
+			const nonEntityScopedCusEnt = customerEntitlements.create({
+				internalFeatureId,
+				featureId: "feature_a",
+				featureName: "Feature A",
+				allowance: 300,
+				balance: 300,
+				// No entityFeatureId - not entity-scoped
+			});
+
+			const cusProduct = customerProducts.create({
+				customerEntitlements: [nonEntityScopedCusEnt],
+			});
+
+			// Entity usages from previous entity-scoped product
+			// entity1: 30, entity2: 50, entity3: 10 = total 90
+			const existingUsages: ExistingUsages = {
+				[internalFeatureId]: {
+					usage: 0, // No top-level usage
+					entityUsages: {
+						entity1: 30,
+						entity2: 50,
+						entity3: 10,
+					},
+				},
+			};
+
+			// Act
+			applyExistingUsages({
+				ctx,
+				customerProduct: cusProduct,
+				existingUsages,
+				entities: [],
+			});
+
+			// Assert: Entity usages should NOT be applied (cusEnt is non-entity-scoped)
+			// This is the CURRENT intentional behavior - entity usages don't convert to top-level
+			const updatedCusEnt = cusProduct.customer_entitlements[0];
+			expect(updatedCusEnt.balance).toBe(300); // Unchanged - entity usages ignored
+			expect(updatedCusEnt.entities).toBeNull();
 		});
 	});
 });

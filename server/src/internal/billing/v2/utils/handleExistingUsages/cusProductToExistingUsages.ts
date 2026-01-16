@@ -46,9 +46,14 @@ export const cusProductToExistingUsages = ({
 
 		// 1. If it's entity scoped
 		if (isEntityScopedCusEnt(cusEnt)) {
-			// const entityUsages = cusEnt.entities;
+			const entityAllowance = cusEnt.entitlement.allowance ?? 0;
 			for (const [entityId, entityBalance] of Object.entries(cusEnt.entities)) {
-				currentExistingUsage.entityUsages![entityId] = entityBalance.balance;
+				// Usage = startingBalance + adjustment - currentBalance
+				const entityUsage = new Decimal(entityAllowance)
+					.add(entityBalance.adjustment ?? 0)
+					.sub(entityBalance.balance)
+					.toNumber();
+				currentExistingUsage.entityUsages![entityId] = entityUsage;
 			}
 			continue;
 		}
