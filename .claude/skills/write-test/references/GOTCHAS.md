@@ -1,344 +1,280 @@
-# Common Gotchas and Debugging
+# Test Gotchas
 
-## Test Context (`ctx`)
+Quick reference for common mistakes. Each gotcha follows the format:
+- **Wrong** / **Right** examples
+- Brief explanation if needed
 
-All tests have access to `ctx` which contains:
-```typescript
-import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+---
 
-ctx.org        // Test organization
-ctx.db         // Database connection
-ctx.features   // Organization features
-ctx.stripeCli  // Stripe client
-ctx.env        // Environment (sandbox)
-```
+## Setup & Initialization
 
-## Autumn Client Initialization
-
-### Default (Secret Key)
-```typescript
-const autumnV1 = new AutumnInt({ version: ApiVersion.V1_2 });
-```
-
-### Public Key (Limited Access)
-```typescript
-const autumnPublic = new AutumnInt({
-  version: ApiVersion.V1_2,
-  secretKey: ctx.org.test_pkey!,
-});
-```
-
-**Public key restrictions:**
-- Can only access: `GET /products`, `POST /entitled`, `POST /check`, `POST /attach`, `GET /customers/:id`
-- Cannot send events (`send_event: true` is silently ignored)
-
-### With Custom Config
-```typescript
-const autumn = new AutumnInt({
-  version: ApiVersion.V1_2,
-  orgConfig: { include_past_due: true },
-});
-```
-
-## Payment Method Required for Paid Features
-
-**If your product has ANY price, you MUST attach a payment method:**
-
-```typescript
-// CORRECT - Product with prices
-s.customer({ paymentMethod: "success" })
-
-// OR with legacy init:
-await initCustomerV3({
-  ctx,
-  customerId,
-  attachPm: "success",  // Required!
-});
-
-// WRONG - Missing payment method for paid product
-s.customer({})  // Will fail on billing
-```
-
-Use `paymentMethod: "success"` when product has:
-- Overage pricing (arrear items)
-- Per-seat pricing
-- Usage-based billing
-- Any base price
-
-## Test Clock Issues
-
-### `Date.now()` Doesn't Change
-
+### Payment Method Required for Paid Features
 ```typescript
 // WRONG
-expect(trialEndsAt).toBeCloseTo(Date.now() + ms.days(14));
+s.customer({})
 
-// CORRECT - Use advancedTo from initScenario
-expect(trialEndsAt).toBeCloseTo(advancedTo + ms.days(14));
+// RIGHT
+s.customer({ paymentMethod: "success" })
 ```
+Required for: overage pricing, per-seat, usage-based billing, any base price.
 
-### Test Clock Must Be Enabled
-
-```typescript
-// testClock defaults to true, but if disabled:
-s.customer({ testClock: false })
-
-// Then s.advanceTestClock will throw
-```
-
-## Product ID Issues
-
-### Always Use `product.id`, Not Strings
-
+### Product IDs - Use Variables, Not Strings
 ```typescript
 // WRONG
 s.attach({ productId: "pro" })
-await autumnV1.attach({ product_id: `pro_${customerId}` });
 
-// CORRECT
+// RIGHT
 s.attach({ productId: pro.id })
-await autumnV1.attach({ product_id: pro.id });
 ```
+Products are prefixed by `initScenario`. Always use `product.id`.
 
-Products are mutated by `initScenario` to include the prefix. Using `product.id` ensures correct prefixed ID.
-
-## Error Testing
-
-### Use `expectAutumnError`, Not try-catch
-
-```typescript
-import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
-import { ErrCode } from "@autumn/shared";
-
-// CORRECT
-await expectAutumnError({
-  errCode: ErrCode.CustomerNotFound,
-  func: async () => {
-    await autumn.customers.get("invalid-id");
-  },
-});
-
-// WRONG - Don't use try-catch
-let errorThrown = false;
-try {
-  await autumn.customers.get("invalid-id");
-} catch (error) {
-  errorThrown = true;
-}
-expect(errorThrown).toBe(true);
-```
-
-**Common Error Codes:**
-- `ErrCode.CustomerNotFound`
-- `ErrCode.ProductNotFound`
-- `ErrCode.FeatureNotFound`
-- `ErrCode.InsufficientBalance`
-- `ErrCode.DuplicateIdempotencyKey`
-- `ErrCode.InvalidRequest`
-
-## Lifetime/One-Off Interval Values
-
-### Constructing Features
-
-Use `interval: null` for lifetime features:
-
-```typescript
-const lifetimeMessages = constructFeatureItem({
-  featureId: TestFeature.Messages,
-  includedUsage: 200,
-  interval: null,  // null = lifetime/one-off
-});
-```
-
-### In API Responses
-
-Lifetime breakdowns use `"one_off"`, NOT `null`:
-
-```typescript
-// API response structure:
-{
-  "reset": {
-    "interval": "one_off",  // NOT null!
-    "resets_at": null
-  }
-}
-
-// CORRECT - Use ResetInterval enum
-import { ResetInterval } from "@autumn/shared";
-
-const lifetimeBreakdown = res.balance?.breakdown?.find(
-  b => b.reset?.interval === ResetInterval.OneOff
-);
-
-// WRONG - null won't match
-const wrong = res.balance?.breakdown?.find(
-  b => b.reset?.interval === null  // Won't find lifetime!
-);
-```
-
-## Prepaid Gotchas
-
-### Quantity Required
-
-```typescript
-// WRONG - Missing options
-s.attach({ productId: pro.id })
-
-// CORRECT
-s.attach({
-  productId: pro.id,
-  options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
-})
-```
-
-### Quantity Rounds UP to Billing Units
-
-```typescript
-// With billingUnits: 100:
-// quantity: 50  → rounds to 100 credits
-// quantity: 150 → rounds to 200 credits
-
-// To get exactly 50, use billingUnits: 1 or billingUnits: 50
-```
-
-### Quantity Goes to `purchased_balance`, Not `granted_balance`
-
-```typescript
-// With includedUsage: 0, billingUnits: 100, quantity: 50:
-// - Rounds to 100
-// - granted_balance: 0 (from includedUsage)
-// - purchased_balance: 100 (from quantity)
-// - current_balance: 100 (total)
-```
-
-## Multiple Products
-
-### Unique IDs Required
-
+### Multiple Products Need Unique IDs
 ```typescript
 // WRONG - Same default ID
 const prod1 = constructProduct({ type: "free", items: [...] });
 const prod2 = constructProduct({ type: "free", items: [...] });
 
-// CORRECT
+// RIGHT
 const prod1 = constructProduct({ type: "free", id: "prod1", items: [...] });
-const prod2 = constructProduct({ type: "free", id: "prod2", items: [...] });
+const prod2 = constructProduct({ type: "free", id: "prod2", isAddOn: true, items: [...] });
 ```
+Without `isAddOn: true`, second product **replaces** the first.
 
-### Second Product Needs `isAddOn: true`
-
-Without it, second product **replaces** the first:
-
+### Product Fixtures with Built-in Base Price
+`products.pro`, `products.proWithTrial`, etc. already include a base price. Only `products.base` has no base price.
 ```typescript
-// WRONG - prod2 replaces prod1
-const prod1 = constructProduct({ type: "free", id: "prod1", ... });
-const prod2 = constructProduct({ type: "free", id: "prod2", ... });
+// WRONG - Double base price (pro already has $20/mo)
+const priceItem = items.monthlyPrice({ price: 20 });
+const pro = products.pro({
+  id: "pro",
+  items: [messagesItem, priceItem],  // Now has TWO base prices!
+});
 
-// CORRECT
-const prod1 = constructProduct({ type: "free", id: "prod1", ... });
-const prod2 = constructProduct({ type: "free", id: "prod2", isAddOn: true, ... });
+// RIGHT - Use products.base when you need a reference to the price item
+const priceItem = items.monthlyPrice({ price: 20 });
+const pro = products.base({
+  id: "pro",
+  items: [messagesItem, priceItem],
+});
+// Now priceItem.price! can be used in assertions
+
+// ALSO RIGHT - Use pro/proWithTrial if you don't need the price reference
+const pro = products.pro({ id: "pro", items: [messagesItem] });
+const proTrial = products.proWithTrial({ id: "pro", items: [messagesItem], trialDays: 14 });
 ```
 
-## Product States After Downgrade
+---
 
-When downgrading from Product A to Product B:
-- **Product A**: enters "canceling" state (`status: "active"` but `canceled_at` is set)
-- **Product B**: enters "scheduled" state (`status: "scheduled"`)
+## API & Types
 
-After billing cycle ends:
-- **Product A**: removed/expired
-- **Product B**: becomes "active"
-
+### Error Testing - Use `expectAutumnError`
 ```typescript
-// After downgrade:
-await expectProductCanceling({ customer, productId: premium.id });
-await expectProductScheduled({ customer, productId: pro.id });
+// WRONG
+try { await autumn.customers.get("invalid"); } catch { errorThrown = true; }
 
-// After billing cycle:
-await expectProductNotPresent({ customer, productId: premium.id });
-await expectProductActive({ customer, productId: pro.id });
+// RIGHT
+await expectAutumnError({
+  errCode: ErrCode.CustomerNotFound,
+  func: () => autumn.customers.get("invalid"),
+});
 ```
 
-## Sync Timing Issues
+### Entities Use `customer:` Not `entity:`
+```typescript
+// WRONG
+expectCustomerFeatureCorrect({ entity: entityData, ... });
+
+// RIGHT
+expectCustomerFeatureCorrect({ customer: entityData, ... });
+```
+`expectCustomerFeatureCorrect` accepts both `ApiCustomerV3` and `ApiEntityV0` via the `customer` param.
+
+### Lifetime Interval: `null` vs `"one_off"`
+```typescript
+// Constructing: use null
+constructFeatureItem({ interval: null });
+
+// In API responses: use ResetInterval.OneOff
+breakdown.find(b => b.reset?.interval === ResetInterval.OneOff);
+// NOT: b.reset?.interval === null (won't match!)
+```
+
+---
+
+## Timing & Sync
+
+### Test Clock: `Date.now()` Doesn't Change
+```typescript
+// WRONG
+expect(trialEndsAt).toBeCloseTo(Date.now() + ms.days(14));
+
+// RIGHT
+expect(trialEndsAt).toBeCloseTo(advancedTo + ms.days(14));
+```
 
 ### Wait After Track Before Attach
-
-`track` updates Redis immediately but syncs to Postgres asynchronously. `attach` rebuilds cache from Postgres.
-
 ```typescript
 // WRONG - Cache gets stale data
 await autumnV1.track({ ... });
 await autumnV1.attach({ ... });
 
-// CORRECT
+// RIGHT
 await autumnV1.track({ ... });
 await new Promise(r => setTimeout(r, 2000));
 await autumnV1.attach({ ... });
 ```
+`track` syncs to Postgres async; `attach` rebuilds from Postgres.
 
-Not an issue if you attach all products in setup before tracking.
-
-### Cache vs Database Verification
-
+### Cache vs Database
 ```typescript
-// Cached (immediate)
 const cached = await autumnV1.customers.get(customerId);
-
-// Database (skip cache)
 await new Promise(r => setTimeout(r, 2000));
 const fromDb = await autumnV1.customers.get(customerId, { skip_cache: "true" });
 ```
 
-## Invoice Count Mismatches
+---
 
-### Allocated Features Create Invoices on Track
+## Prepaid Features
 
+### Quantity Required on Attach
 ```typescript
-// Product: 3 included seats @ $10/seat overage
-await autumnV1.track({ value: 5 });  // 2 over included
-// Invoice count = attach (1) + track overage (1) = 2
+// WRONG
+s.attach({ productId: pro.id })
+
+// RIGHT
+s.attach({ productId: pro.id, options: [{ feature_id: TestFeature.Messages, quantity: 200 }] })
 ```
 
-### Consumable Features Don't Charge on Update
-
+### Quantity Rounds UP to Billing Units
 ```typescript
-// Overage billed at cycle end, not on update
-expect(preview.total).toBe(0);  // Even with overage
+// billingUnits: 100
+// quantity: 50  → 100 credits
+// quantity: 150 → 200 credits
 ```
 
-### Prepaid Refund/Charge Logic
+### Quantity Goes to `purchased_balance`
+```typescript
+// includedUsage: 0, billingUnits: 100, quantity: 50
+// granted_balance: 0, purchased_balance: 100, current_balance: 100
+```
 
+### Consumable + Prepaid on Same Feature: Balances Sum
+When a product has both consumable and prepaid items for the same feature, they create **separate breakdown entries** that sum together:
+```typescript
+// consumableItem with includedUsage: 50
+// prepaidItem with quantity: 100
+// Results in TWO breakdown entries for the same feature:
+//   - Consumable: granted_balance: 50, purchased_balance: 0
+//   - Prepaid:    granted_balance: 0,  purchased_balance: 100
+// Aggregated totals:
+//   - granted_balance: 50
+//   - purchased_balance: 100  
+//   - current_balance: 150 (sum of both)
+//   - included_usage: 150 (NOT just prepaid quantity!)
+
+// WRONG
+expectCustomerFeatureCorrect({
+  customer: entity,
+  featureId: TestFeature.Messages,
+  includedUsage: 100,  // Only prepaid quantity
+  balance: 100,
+});
+
+// RIGHT
+expectCustomerFeatureCorrect({
+  customer: entity,
+  featureId: TestFeature.Messages,
+  includedUsage: 150,  // 50 (consumable) + 100 (prepaid)
+  balance: 150,
+});
+```
+
+---
+
+## Billing & Invoices
+
+### Consumable Overage: Not Charged on Update
+```typescript
+expect(preview.total).toBe(0);  // Even with existing overage
+```
+Overage billed at cycle end, not on subscription update.
+
+### Allocated Features: Invoice on Track
+```typescript
+// 3 included seats, track 5 → 2 overage
+// Invoice count = attach (1) + overage (1) = 2
+```
+
+### Prepaid Charge = Diff, Not Total
 ```typescript
 // Old: 2 packs @ $10 = $20
 // New: 5 packs @ $10 = $50
-// preview.total = $50 - $20 = $30 (NOT $50!)
+// preview.total = $30 (NOT $50)
 ```
 
-## Free-to-Free Tests
-
-Skip `expectSubToBeCorrect` for free products (no Stripe subscription exists):
-
+### Free-to-Free: Skip Subscription Check
 ```typescript
-// Free-to-free: No subscription check
+// Free products have no Stripe subscription
 expectCustomerFeatureCorrect({ ... });
 // Don't call expectSubToBeCorrect
-
-// Free-to-paid or paid-to-paid: Check subscription
-await expectSubToBeCorrect({ db: ctx.db, customerId, org: ctx.org, env: ctx.env });
 ```
 
-## Server Logs Not Visible
+---
 
-Console logs in server code don't appear in test output. Ask the user to check server logs directly.
+## Product States
 
-## Decimal.js for Balance Calculations
-
+### Canceling/Downgrading is NOT a Status
 ```typescript
-import { Decimal } from "decimal.js";
+// WRONG - Checking status for canceling products
+expect(product.status).toBe("canceling");  // "canceling" is not a valid status!
 
-// WRONG - Floating point error
+// RIGHT - Use expectProductCanceling helper
+await expectProductCanceling({ customer, productId: premium.id });
+```
+A product that is canceling or downgrading has `status: "active"` with `canceled_at` set. The "canceling" state is a derived state, not a status value.
+
+### After Downgrade (A → B)
+- **Product A**: "canceling" (`status: "active"`, `canceled_at` set) → use `expectProductCanceling`
+- **Product B**: "scheduled" (`status: "scheduled"`) → use `expectProductScheduled`
+
+After billing cycle:
+- **Product A**: removed
+- **Product B**: "active"
+
+### expectProductCanceling Works with Entities
+```typescript
+// For entities, pass the entity data to the customer param
+const entity1Data = await autumnV1.entities.get(customerId, entities[0].id);
+await expectProductCanceling({
+  customer: entity1Data,
+  productId: premium.id,
+});
+```
+
+---
+
+## Misc
+
+### Server Logs Not Visible in Tests
+Console logs in server code don't appear in test output. Check server logs directly.
+
+### Decimal.js for Balance Math
+```typescript
+// WRONG
 expect(balance).toBe(100 - 23.47);
 
-// CORRECT
+// RIGHT
 expect(balance).toBe(new Decimal(100).sub(23.47).toNumber());
 ```
+
+---
+
+## Quick Reference
+
+| Context | Import |
+|---------|--------|
+| Test context | `import ctx from "@tests/utils/testInitUtils/createTestContext.js"` |
+| Error testing | `import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js"` |
+| Error codes | `import { ErrCode } from "@autumn/shared"` |
+| Reset intervals | `import { ResetInterval } from "@autumn/shared"` |
+| Decimal math | `import { Decimal } from "decimal.js"` |

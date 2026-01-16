@@ -1,10 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import type { ExistingUsages } from "@autumn/shared";
+import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { entities } from "@tests/utils/fixtures/db/entities";
 import chalk from "chalk";
 import { applyExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/applyExistingUsages";
+
+const ctx = contexts.create({});
 
 describe(
 	chalk.yellowBright("applyExistingUsages (testing entities flow)"),
@@ -67,6 +70,7 @@ describe(
 
 				// Act
 				applyExistingUsages({
+					ctx,
 					customerProduct: cusProduct,
 					existingUsages,
 					entities: entityList,
@@ -118,7 +122,12 @@ describe(
 				};
 
 				// Act
-				applyExistingUsages({ customerProduct, existingUsages, entities: entityList });
+				applyExistingUsages({
+					ctx,
+					customerProduct,
+					existingUsages,
+					entities: entityList,
+				});
 
 				// Assert: Entity count (2) takes priority, balance = 10 - 2 = 8
 				const updatedCusEntA = customerProduct.customer_entitlements.find(
@@ -173,7 +182,12 @@ describe(
 				const existingUsages: ExistingUsages = {};
 
 				// Act
-				applyExistingUsages({ customerProduct, existingUsages, entities: entityList });
+				applyExistingUsages({
+					ctx,
+					customerProduct,
+					existingUsages,
+					entities: entityList,
+				});
 
 				// Total usage = 3, distributed: first cusEnt uses 2, second cusEnt uses 1
 				const updatedCusEnts = customerProduct.customer_entitlements.filter(

@@ -63,6 +63,7 @@ export const initFullCustomerProduct = ({
 	};
 
 	applyExistingUsages({
+		ctx,
 		customerProduct: newFullCustomerProduct,
 		existingUsages: initContext.existingUsages,
 		entities: fullCustomer.entities,

@@ -522,7 +522,7 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: new trial after old expired")}
 	// Invoice count: 1 ($0 trial) + 1 ($20 trial end) + 1 (refund ~-$18) = 3
 	expectCustomerInvoiceCorrect({
 		customer,
-		count: 2,
+		count: 3,
 		latestTotal: proratedRefund,
 		latestInvoiceProductId: proTrial.id,
 	});

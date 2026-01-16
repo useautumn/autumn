@@ -1,12 +1,10 @@
 export * from "./cycleUtils/getCycleEnd.js";
 export * from "./cycleUtils/getCycleStart.js";
-export * from "./cycleUtils/getLineItemBillingPeriod.js";
 // Interval utils
 export * from "./intervalUtils/addDuration.js";
 export * from "./intervalUtils/intervalArithmetic.js";
 
 // Invoicing utils
-export * from "./invoicingUtils/cusProductToArrearLineItems.js";
 
 export * from "./invoicingUtils/filterUnchangedPricesFromLineItems.js";
 export * from "./invoicingUtils/lineItemBuilders/buildLineItem.js";

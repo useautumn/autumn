@@ -1,23 +1,25 @@
 import {
+	addCusProductToCusEnt,
 	type CreateEntityParams,
+	cusEntToCusPrice,
 	ErrCode,
+	type FullCusEntWithFullCusProduct,
 	type FullCusProduct,
 	type FullCustomer,
 	type FullCustomerEntitlement,
+	findCustomerEntitlementByFeature,
+	findFeatureById,
 	type Replaceable,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import {
-	findLinkedCusEnts,
-	findMainCusEntForFeature,
-} from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
-import { getRelatedCusPrice } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+import { acquireLock, clearLock } from "@/external/redis/redisUtils.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { adjustAllowance } from "@/internal/balances/utils/paidAllocatedFeature/adjustAllowance.js";
 import { getReps } from "@/internal/balances/utils/paidAllocatedFeature/createPaidAllocatedInvoice/handleProratedUpgrade.js";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
+import { findLinkedCusEnts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const updateLinkedCusEnt = async ({
 	db,
@@ -65,18 +67,16 @@ export const updateLinkedCusEnt = async ({
 };
 
 export const createEntityForCusProduct = async ({
-	req,
+	ctx,
 	customer,
 	cusProduct,
 	inputEntities,
-	logger,
 	fromAutoCreate = false,
 }: {
-	req: ExtendedRequest;
+	ctx: AutumnContext;
 	customer: FullCustomer;
 	cusProduct: FullCusProduct;
 	inputEntities: CreateEntityParams[];
-	logger: any;
 	fromAutoCreate?: boolean;
 }) => {
 	const featureToEntities = inputEntities.reduce(
@@ -87,22 +87,35 @@ export const createEntityForCusProduct = async ({
 		{} as Record<string, CreateEntityParams[]>,
 	);
 
-	const { db, env, org, features } = req;
+	const { db, env, org, features, logger } = ctx;
 
 	const cusEnts = cusProduct.customer_entitlements;
 	const cusPrices = cusProduct.customer_prices;
 
 	for (const featureId in featureToEntities) {
 		const inputEntities = featureToEntities[featureId]!;
-		const feature = features.find((f: any) => f.id === featureId)!;
+		const feature = findFeatureById({
+			features,
+			featureId,
+			errorOnNotFound: true,
+		});
 
-		const mainCusEnt = findMainCusEntForFeature({
+		const mainCusEnt = findCustomerEntitlementByFeature({
 			cusEnts,
 			feature,
 		});
 
+		let mainCusEntWithCusProduct: FullCusEntWithFullCusProduct | undefined;
+
 		if (mainCusEnt) {
-			const cusPrice = getRelatedCusPrice(mainCusEnt, cusPrices);
+			mainCusEntWithCusProduct = addCusProductToCusEnt({
+				cusEnt: mainCusEnt,
+				cusProduct,
+			});
+
+			const cusPrice = cusEntToCusPrice({
+				cusEnt: mainCusEntWithCusProduct,
+			});
 
 			if (fromAutoCreate && cusPrice) {
 				throw new RecaseError({
@@ -114,50 +127,63 @@ export const createEntityForCusProduct = async ({
 
 		// 1. If main cus ent:
 		let deletedReplaceables: Replaceable[] = [];
-		if (mainCusEnt) {
-			const originalBalance = mainCusEnt.balance || 0;
-			const newBalance = originalBalance - inputEntities.length;
-
-			const repsLength = getReps({
-				cusEnt: mainCusEnt as any,
-				prevBalance: originalBalance,
-				newBalance,
-			}).length;
-			const innerNewBalance = newBalance + repsLength;
-
-			// Check if new balance would exceed usage limit
-			if (
-				notNullish(mainCusEnt.entitlement.usage_limit) &&
-				innerNewBalance < -mainCusEnt.entitlement.usage_limit!
-			) {
-				throw new RecaseError({
-					message: `Cannot create ${inputEntities.length} entities for feature ${feature.name} as it would exceed the usage limit.`,
-					code: ErrCode.FeatureLimitReached,
-				});
-			}
-
-			const { deletedReplaceables: deletedReplaceables_, invoice } =
-				await adjustAllowance({
-					db,
-					env,
-					org,
-					cusPrices,
-					customer,
-					affectedFeature: feature,
-					cusEnt: { ...mainCusEnt, customer_product: cusProduct },
-					originalBalance,
-					newBalance,
-					logger,
-					errorIfIncomplete: true,
-				});
-
-			deletedReplaceables = deletedReplaceables_ || [];
-
-			await CusEntService.decrement({
-				db,
-				id: mainCusEnt.id,
-				amount: inputEntities.length - deletedReplaceables.length,
+		if (mainCusEntWithCusProduct) {
+			// Acquire lock to prevent race conditions on seat charging
+			const lockKey = `lock:create-entity:${org.id}:${env}:${customer.id}`;
+			await acquireLock({
+				lockKey,
+				ttlMs: 10000,
+				errorMessage:
+					"Entity creation already in progress for this customer, try again in a few seconds",
 			});
+
+			try {
+				const originalBalance = mainCusEntWithCusProduct.balance || 0;
+				const newBalance = originalBalance - inputEntities.length;
+
+				const repsLength = getReps({
+					cusEnt: mainCusEntWithCusProduct,
+					prevBalance: originalBalance,
+					newBalance,
+				}).length;
+				const innerNewBalance = newBalance + repsLength;
+
+				// Check if new balance would exceed usage limit
+				if (
+					notNullish(mainCusEntWithCusProduct.entitlement.usage_limit) &&
+					innerNewBalance < -mainCusEntWithCusProduct.entitlement.usage_limit!
+				) {
+					throw new RecaseError({
+						message: `Cannot create ${inputEntities.length} entities for feature ${feature.name} as it would exceed the usage limit.`,
+						code: ErrCode.FeatureLimitReached,
+					});
+				}
+
+				const { deletedReplaceables: deletedReplaceables_ } =
+					await adjustAllowance({
+						db,
+						env,
+						org,
+						cusPrices,
+						customer,
+						affectedFeature: feature,
+						cusEnt: mainCusEntWithCusProduct,
+						originalBalance,
+						newBalance,
+						logger,
+						errorIfIncomplete: true,
+					});
+
+				deletedReplaceables = deletedReplaceables_ || [];
+
+				await CusEntService.decrement({
+					db,
+					id: mainCusEntWithCusProduct.id,
+					amount: inputEntities.length - deletedReplaceables.length,
+				});
+			} finally {
+				await clearLock({ lockKey });
+			}
 		}
 
 		const entityToReplacement: Record<string, string> = {};

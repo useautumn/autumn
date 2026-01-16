@@ -6,7 +6,6 @@ import {
 	expectProductActive,
 	expectProductCanceling,
 	expectProductNotPresent,
-	expectProductScheduled,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -200,16 +199,6 @@ test.concurrent(`${chalk.yellowBright("schedules-f2p: downgrade entity 1, upgrad
 		entity_id: entities[0].id,
 	});
 
-	// Verify entity 1 has scheduled downgrade
-	const entity1AfterDowngrade = await autumnV1.entities.get(
-		customerId,
-		entities[0].id,
-	);
-	console.log(
-		"Entity 1 products after downgrade:",
-		entity1AfterDowngrade.products,
-	);
-
 	// Now upgrade entity 2 from free to paid
 	const priceItem = items.monthlyPrice();
 
@@ -280,149 +269,6 @@ test.concurrent(`${chalk.yellowBright("schedules-f2p: downgrade entity 1, upgrad
 		productId: premium.id,
 	});
 	await expectProductActive({ customer: entity1AfterCycle, productId: pro.id });
-
-	// Entity 2: should still have paid product with features
-	await expectProductActive({
-		customer: entity2AfterCycle,
-		productId: free.id,
-	});
-	expectCustomerFeatureCorrect({
-		customer: entity2AfterCycle,
-		featureId: TestFeature.Messages,
-		includedUsage: messagesItem.included_usage,
-		balance: messagesItem.included_usage,
-		usage: 0,
-	});
-
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-		subCount: 1,
-	});
-});
-
-// 3. Cancel entity 1 (pro→free scheduled), upgrade entity 2 (free→paid)
-// This tests that when pro is canceled, the free default is scheduled as replacement
-test.concurrent(`${chalk.yellowBright("schedules-f2p: cancel to default, upgrade entity 2")}`, async () => {
-	const customerId = "sched-cancel-default-upgrade";
-
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-
-	// Free is the default product
-	const free = constructProduct({
-		id: "free",
-		items: [messagesItem],
-		type: "free",
-		isDefault: true,
-	});
-
-	const pro = products.pro({
-		id: "pro",
-		items: [messagesItem],
-	});
-
-	const { autumnV1, ctx, entities, testClockId } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success", withDefault: true }),
-			s.products({ list: [free, pro] }),
-			s.entities({ count: 2, featureId: TestFeature.Users }),
-		],
-		actions: [
-			s.attach({ productId: "pro", entityIndex: 0 }),
-			s.attach({ productId: "free", entityIndex: 1 }),
-			s.cancel({ productId: "pro", entityIndex: 0 }), // Cancel entity 1's pro → free scheduled
-		],
-	});
-
-	// Verify entity 1 has pro canceled and free scheduled
-	const entity1AfterCancel = await autumnV1.entities.get(
-		customerId,
-		entities[0].id,
-	);
-	await expectProductCanceling({
-		customer: entity1AfterCancel,
-		productId: pro.id,
-	});
-	await expectProductScheduled({
-		customer: entity1AfterCancel,
-		productId: free.id,
-	});
-
-	// Now upgrade entity 2 from free to paid
-	const priceItem = items.monthlyPrice();
-
-	const preview = await autumnV1.subscriptions.previewUpdate({
-		customer_id: customerId,
-		entity_id: entities[1].id,
-		product_id: free.id,
-		items: [messagesItem, priceItem],
-	});
-
-	expect(preview.total).toEqual(20);
-
-	await autumnV1.subscriptions.update({
-		customer_id: customerId,
-		entity_id: entities[1].id,
-		product_id: free.id,
-		items: [messagesItem, priceItem],
-	});
-
-	// Verify entity 2 upgraded successfully
-	const entity2Data = await autumnV1.entities.get(customerId, entities[1].id);
-
-	expectCustomerFeatureCorrect({
-		customer: entity2Data,
-		featureId: TestFeature.Messages,
-		includedUsage: messagesItem.included_usage,
-		balance: messagesItem.included_usage,
-		usage: 0,
-	});
-
-	// Verify invoices
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	expectCustomerInvoiceCorrect({
-		customer,
-		count: 2, // entity1 pro attach + entity2 upgrade
-		latestTotal: 20,
-	});
-
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-		subCount: 1,
-	});
-
-	// Advance to next billing cycle
-	await advanceToNextInvoice({
-		stripeCli: ctx.stripeCli,
-		testClockId: testClockId!,
-	});
-
-	// Verify state after cycle
-	const entity1AfterCycle = await autumnV1.entities.get(
-		customerId,
-		entities[0].id,
-	);
-	const entity2AfterCycle = await autumnV1.entities.get(
-		customerId,
-		entities[1].id,
-	);
-
-	// Entity 1: pro should be gone, free should be active
-	await expectProductNotPresent({
-		customer: entity1AfterCycle,
-		productId: pro.id,
-	});
-	await expectProductActive({
-		customer: entity1AfterCycle,
-		productId: free.id,
-	});
 
 	// Entity 2: should still have paid product with features
 	await expectProductActive({

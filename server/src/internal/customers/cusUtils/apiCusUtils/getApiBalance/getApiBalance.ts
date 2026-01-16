@@ -24,6 +24,7 @@ import {
 	type Feature,
 	FeatureType,
 	getCusEntBalance,
+	nullish,
 	sumValues,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -48,6 +49,8 @@ const cusEntsToBreakdown = ({
 	breakdown: ApiBalanceBreakdown;
 	prepaidQuantity: number;
 }[] => {
+	const entityId = fullCus.entity?.id;
+
 	const keyToCusEnts: Record<string, FullCusEntWithFullCusProduct[]> = {};
 	for (const cusEnt of cusEnts) {
 		const key = cusEntToKey({ cusEnt });
@@ -75,7 +78,11 @@ const cusEntsToBreakdown = ({
 			includeBreakdown: false,
 		});
 
-		const prepaidQuantity = cusEntsToPrepaidQuantity({ cusEnts });
+		const prepaidQuantity = cusEntsToPrepaidQuantity({
+			cusEnts,
+			sumAcrossEntities: nullish(entityId),
+		});
+
 		const planId = cusEntsToPlanId({ cusEnts });
 
 		// Get expires_at from the first cusEnt (since key is cusEnt.id, there's only one)
@@ -250,7 +257,10 @@ export const getApiBalance = ({
 	if (error) throw error;
 
 	// Return in latest format - version transformation happens at Customer level
-	const totalPrepaidQuantity = cusEntsToPrepaidQuantity({ cusEnts });
+	const totalPrepaidQuantity = cusEntsToPrepaidQuantity({
+		cusEnts,
+		sumAcrossEntities: nullish(entityId),
+	});
 	const breakdownLegacyData = breakdown.map((item) => ({
 		key: item.key,
 		prepaid_quantity: item.prepaidQuantity,

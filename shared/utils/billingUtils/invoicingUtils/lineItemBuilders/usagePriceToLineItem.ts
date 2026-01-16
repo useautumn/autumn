@@ -45,7 +45,10 @@ export const usagePriceToLineItem = ({
 	// 1. Get overage
 	let overage = 0;
 	if (isPrepaidPrice(cusPrice.price)) {
-		overage = cusEntsToPrepaidQuantity({ cusEnts: [cusEnt] });
+		overage = cusEntsToPrepaidQuantity({
+			cusEnts: [cusEnt],
+			sumAcrossEntities: false,
+		});
 	} else {
 		overage = cusEntToInvoiceOverage({ cusEnt });
 	}
@@ -53,7 +56,10 @@ export const usagePriceToLineItem = ({
 	// 2. Get usage
 	let usage = 0;
 	if (isPrepaidPrice(cusPrice.price)) {
-		usage = cusEntsToPrepaidQuantity({ cusEnts: [cusEnt] });
+		usage = cusEntsToPrepaidQuantity({
+			cusEnts: [cusEnt],
+			sumAcrossEntities: false,
+		});
 	} else {
 		usage = cusEntToInvoiceUsage({ cusEnt });
 	}

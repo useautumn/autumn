@@ -157,10 +157,6 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: downgrade entity 1, update
 		customerId,
 		entities[0].id,
 	);
-	console.log(
-		"Entity 1 products after downgrade:",
-		entity1AfterDowngrade.products,
-	);
 
 	// Entity 2 updates Premium items to different price
 	const newPriceItem = items.monthlyPrice({ price: 60 }); // $60/mo
@@ -501,10 +497,6 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: downgrade + update to free
 		customerId,
 		entities[0].id,
 	);
-	console.log(
-		"Entity 1 products after downgrade:",
-		entity1AfterDowngrade.products,
-	);
 
 	// Entity 2 updates Premium to be free (no price, only feature item)
 	await autumnV1.subscriptions.update({
@@ -716,7 +708,7 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: downgrade entity 2 from pr
 		customerId,
 		entities[1].id,
 	);
-	await expectProductActive({
+	await expectProductCanceling({
 		customer: entity2AfterDowngrade,
 		productId: premium.id,
 	});
@@ -736,7 +728,7 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: downgrade entity 2 from pr
 		customerId,
 		entities[1].id,
 	);
-	await expectProductActive({
+	await expectProductCanceling({
 		customer: entity2AfterUpdate,
 		productId: premium.id,
 	});
@@ -869,7 +861,7 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: 3 premium entities - downg
 	const entity2Data = await autumnV1.entities.get(customerId, entities[1].id);
 	const entity3Data = await autumnV1.entities.get(customerId, entities[2].id);
 
-	await expectProductActive({
+	await expectProductCanceling({
 		customer: entity1Data,
 		productId: premium.id,
 	});

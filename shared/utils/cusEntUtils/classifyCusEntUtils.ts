@@ -51,6 +51,13 @@ export const isFreeCustomerEntitlement = (
 	return nullish(cusPrice);
 };
 
+export const isPaidCustomerEntitlement = (
+	customerEntitlement: FullCusEntWithFullCusProduct,
+) => {
+	const cusPrice = cusEntToCusPrice({ cusEnt: customerEntitlement });
+	return notNullish(cusPrice);
+};
+
 export const isAllocatedCustomerEntitlement = (
 	customerEntitlement: FullCusEntWithFullCusProduct,
 ) => {

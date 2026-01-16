@@ -126,7 +126,7 @@ test.concurrent(`${chalk.yellowBright("error: negative quantity for prepaid feat
 				options: [{ feature_id: TestFeature.Messages, quantity: 5 }],
 			}),
 		],
-	}); 
+	});
 
 	// Try to update with negative quantity
 	const updateParams = {
@@ -142,6 +142,45 @@ test.concurrent(`${chalk.yellowBright("error: negative quantity for prepaid feat
 		errMessage: "Options quantity must be >= 0",
 		func: async () => {
 			await autumnV1.subscriptions.update(updateParams);
+		},
+	});
+});
+
+// 4. Update quantity for non-existent feature → error
+test.concurrent(`${chalk.yellowBright("error: update quantity for non-existent feature")}`, async () => {
+	const product = products.base({
+		id: "multi_feature",
+		items: [
+			items.prepaid({
+				featureId: TestFeature.Messages,
+				billingUnits: 10,
+				price: 5,
+			}),
+		],
+	});
+
+	const { customerId, autumnV1 } = await initScenario({
+		customerId: "err-nonexistent-feature",
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [product] }),
+		],
+		actions: [
+			s.attach({
+				productId: product.id,
+				options: [{ feature_id: TestFeature.Messages, quantity: 10 * 10 }],
+			}),
+		],
+	});
+
+	// Try to update a feature that doesn't exist in the subscription
+	await expectAutumnError({
+		func: async () => {
+			await autumnV1.subscriptions.update({
+				customer_id: customerId,
+				product_id: product.id,
+				options: [{ feature_id: TestFeature.Users, quantity: 10 * 10 }],
+			});
 		},
 	});
 });
