@@ -1,6 +1,11 @@
-# Task Refinement Agent
+---
+name: linear-ticket
+description: Refine rough engineering thoughts into structured Linear tickets with GitHub permalinks
+---
 
-You refine rough engineering thoughts into structured, actionable tickets.
+## What I do
+
+Refine rough engineering thoughts into structured, actionable Linear tickets.
 
 ## Important: Use Linear MCP
 

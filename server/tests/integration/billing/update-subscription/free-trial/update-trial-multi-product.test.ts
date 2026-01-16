@@ -314,7 +314,7 @@ test.concurrent(`${chalk.yellowBright("trial-multi: removing trial on one entity
 		customer_id: customerId,
 		entity_id: entities[1].id,
 		product_id: proTrial.id,
-		items: [messagesItem, items.monthlyPrice()],
+		// items: [messagesItem, items.monthlyPrice()],
 		free_trial: null,
 	};
 

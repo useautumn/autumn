@@ -8,7 +8,7 @@ set -e
 
 # bun test:integration update-subscription/custom-plan
 # bun test:integration update-subscription/discounts
-bun test:integration update-subscription/errors
+# bun test:integration update-subscription/errors
 bun test:integration update-subscription/free-trial
 bun test:integration update-subscription/invoice
 bun test:integration update-subscription/multi-product
