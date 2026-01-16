@@ -8,22 +8,18 @@ import {
 	UsageModel,
 } from "@autumn/shared";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
-import { LayoutGroup, motion, type Transition } from "motion/react";
+import { LayoutGroup, motion } from "motion/react";
 import { useMemo } from "react";
 import { Button } from "@/components/v2/buttons/Button";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
+import { LAYOUT_TRANSITION } from "../constants/animationConstants";
 import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 import { PriceDisplay } from "./PriceDisplay";
 import { SectionTitle } from "./SectionTitle";
 import { SubscriptionItemRow } from "./SubscriptionItemRow";
 import { TrialEditorRow } from "./TrialEditorRow";
 import { VersionChangeRow } from "./VersionChangeRow";
-
-const LAYOUT_TRANSITION: Transition = {
-	duration: 0.35,
-	ease: [0.32, 0.72, 0, 1],
-};
 
 export function EditPlanSection() {
 	const {
