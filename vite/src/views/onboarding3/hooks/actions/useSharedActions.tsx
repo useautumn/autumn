@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEnv } from "@/utils/envUtils";
+import { navigateTo } from "@/utils/genUtils";
 import { OnboardingStep } from "../../utils/onboardingUtils";
 import { useOnboarding3QueryState } from "../useOnboarding3QueryState";
 
@@ -101,7 +102,6 @@ export const useSharedActions = ({
 				setSheet({ type: "edit-plan" });
 			} catch (error) {
 				console.error("Failed to load new plan:", error);
-				const { navigateTo } = await import("@/utils/genUtils");
 				navigateTo(`/products/${newProduct.id}`, navigate, env);
 			}
 		},
