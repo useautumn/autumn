@@ -155,7 +155,7 @@ export function EditPlanSection() {
 							<PriceDisplay product={product} currency={currency} />
 						)}
 					</div>
-					<div className="space-y-2 mb-4">
+					<div className="space-y-2">
 						{product?.items?.map((item: ProductItem, index: number) => {
 							if (!item.feature_id) return null;
 
@@ -215,7 +215,7 @@ export function EditPlanSection() {
 							className={cn(
 								"grid transition-[grid-template-rows] duration-200 ease-out",
 								trialState.isTrialExpanded || trialState.removeTrial
-									? "grid-rows-[1fr]"
+									? "grid-rows-[1fr] mb-2"
 									: "grid-rows-[0fr]",
 							)}
 						>
