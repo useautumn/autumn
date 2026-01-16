@@ -156,9 +156,7 @@ export function TrialEditorRow({
 						<CalendarBlankIcon
 							size={14}
 							weight="fill"
-							className={cn(
-								isTrialModified ? "text-amber-400" : "text-blue-400",
-							)}
+							className="text-blue-400"
 						/>
 						<span className="text-sm text-t2">Free Trial</span>
 					</div>
@@ -195,20 +193,21 @@ export function TrialEditorRow({
 	}
 
 	const handleClearTrial = () => {
-		if (!hasTrialValue && !isCurrentlyTrialing) {
-			onCollapse();
-			setIsEditing(false);
-			setIsAddingNewTrial(true);
-			return;
-		}
+		// Just collapse - preserve the value so it can be restored
+		onCollapse();
+		setIsEditing(false);
+		setIsAddingNewTrial(true);
 
-		form.setFieldValue("trialLength", null);
+		// Only mark for removal if they're currently trialing (ending an active trial)
 		if (isCurrentlyTrialing) {
 			onEndTrial();
 		}
-		setIsEditing(false);
-		setIsAddingNewTrial(true);
 	};
+
+	const isNewTrial = !isCurrentlyTrialing;
+	const editModeRingClass = isNewTrial
+		? "ring-1 ring-inset ring-green-500/50"
+		: "ring-1 ring-inset ring-amber-500/50";
 
 	return (
 		<div
@@ -219,14 +218,14 @@ export function TrialEditorRow({
 			<div
 				className={cn(
 					"flex items-center flex-1 h-10 px-3 rounded-xl input-base",
-					"ring-1 ring-inset ring-amber-500/50",
+					editModeRingClass,
 				)}
 			>
 				<div className="flex items-center gap-2">
 					<CalendarBlankIcon
 						size={14}
 						weight="fill"
-						className="text-amber-400"
+						className="text-blue-400"
 					/>
 					<span className="text-sm text-t2">Free Trial</span>
 				</div>
@@ -239,6 +238,7 @@ export function TrialEditorRow({
 							placeholder="7"
 							min={1}
 							className="w-16"
+							inputClassName="placeholder:opacity-50"
 							hideFieldInfo
 						/>
 					)}

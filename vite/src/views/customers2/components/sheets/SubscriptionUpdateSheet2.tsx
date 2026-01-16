@@ -75,12 +75,12 @@ function SheetContent() {
 			<UpdateSubscriptionPreviewSection />
 			<UpdateSubscriptionFooter />
 
-			{showPlanEditor && productWithFormItems && (
+			{productWithFormItems && (
 				<InlinePlanEditor
 					product={productWithFormItems}
-					productName={customerProduct.product.name}
 					onSave={handlePlanEditorSave}
 					onCancel={handlePlanEditorCancel}
+					isOpen={showPlanEditor}
 				/>
 			)}
 		</div>

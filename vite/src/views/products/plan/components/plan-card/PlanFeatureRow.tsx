@@ -84,7 +84,7 @@ export const PlanFeatureRow = ({
 	}, [itemId, currentItemId]);
 
 	const handleRowClicked = () => {
-		if (isDisabled) return;
+		if (readOnly || isDisabled) return;
 		const currentItemId = getItemId({ item, itemIndex: index });
 
 		setItem(item);
