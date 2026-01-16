@@ -1,55 +1,72 @@
-import { formatAmount } from "@autumn/shared";
-import { CalendarIcon, GitBranchIcon, WrenchIcon } from "@phosphor-icons/react";
-import { cn } from "@/lib/utils";
-import { PlanFeatureIcon } from "@/views/products/plan/components/plan-card/PlanFeatureIcon";
-import { CustomDotIcon } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
-import type { SummaryItem } from "../types/summary";
+import type { EditIconType, ItemEdit } from "@autumn/shared";
+import {
+	CalendarIcon,
+	CurrencyDollarIcon,
+	GitBranchIcon,
+	HashIcon,
+	PackageIcon,
+	StackIcon,
+	TagIcon,
+	WrenchIcon,
+} from "@phosphor-icons/react";
 
-export function SummaryItemRow({
-	item,
-	currency,
-}: {
-	item: SummaryItem;
-	currency: string;
-}) {
-	const renderIcons = () => {
-		if (item.type === "prepaid" && item.productItem) {
-			return (
-				<div className="flex flex-row items-center gap-1 shrink-0">
-					<PlanFeatureIcon item={item.productItem} position="left" />
-					<CustomDotIcon />
-					<PlanFeatureIcon item={item.productItem} position="right" />
-				</div>
-			);
-		}
-
-		if (item.type === "trial") {
+function getIcon(iconType: EditIconType) {
+	const iconProps = { size: 16, weight: "duotone" as const };
+	switch (iconType) {
+		case "trial":
 			return (
 				<div className="text-blue-500">
-					<CalendarIcon size={16} weight="duotone" />
+					<CalendarIcon {...iconProps} />
 				</div>
 			);
-		}
-
-		if (item.type === "version") {
+		case "version":
 			return (
 				<div className="text-purple-500">
-					<GitBranchIcon size={16} weight="duotone" />
+					<GitBranchIcon {...iconProps} />
 				</div>
 			);
-		}
-
-		if (item.type === "item") {
+		case "item":
 			return (
 				<div className="text-amber-500">
-					<WrenchIcon size={16} weight="duotone" />
+					<WrenchIcon {...iconProps} />
 				</div>
 			);
-		}
+		case "prepaid":
+			return (
+				<div className="text-cyan-500">
+					<PackageIcon {...iconProps} />
+				</div>
+			);
+		case "price":
+			return (
+				<div className="text-green-500">
+					<CurrencyDollarIcon {...iconProps} />
+				</div>
+			);
+		case "tier":
+			return (
+				<div className="text-orange-500">
+					<StackIcon {...iconProps} />
+				</div>
+			);
+		case "usage":
+			return (
+				<div className="text-indigo-500">
+					<HashIcon {...iconProps} />
+				</div>
+			);
+		case "units":
+			return (
+				<div className="text-pink-500">
+					<TagIcon {...iconProps} />
+				</div>
+			);
+		default:
+			return null;
+	}
+}
 
-		return null;
-	};
-
+export function SummaryItemRow({ item }: { item: ItemEdit }) {
 	const renderChangeIndicator = () => {
 		if (item.newValue === null) {
 			return (
@@ -87,7 +104,7 @@ export function SummaryItemRow({
 	return (
 		<div className="flex items-center w-full h-10 px-3 rounded-xl input-base">
 			<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
-				{renderIcons()}
+				{getIcon(item.icon)}
 
 				<p className="whitespace-nowrap truncate flex-1 min-w-0 text-body">
 					{item.label}
@@ -96,23 +113,6 @@ export function SummaryItemRow({
 
 			<div className="flex items-center gap-2 shrink-0">
 				{renderChangeIndicator()}
-
-				{item.costDelta !== undefined && item.costDelta !== 0 && (
-					<span
-						className={cn(
-							"text-xs",
-							item.costDelta > 0 ? "text-t2" : "text-green-600",
-						)}
-					>
-						{item.costDelta > 0 ? "+" : ""}
-						{formatAmount({
-							amount: item.costDelta,
-							currency,
-							minFractionDigits: 2,
-							amountFormatOptions: { currencyDisplay: "narrowSymbol" },
-						})}
-					</span>
-				)}
 			</div>
 		</div>
 	);

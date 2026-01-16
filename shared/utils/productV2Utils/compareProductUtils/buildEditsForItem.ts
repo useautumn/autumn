@@ -1,44 +1,47 @@
-import { type ProductItem, UsageModel } from "@autumn/shared";
-import type { ItemEdit } from "../types/summary";
+import {
+	type ProductItem,
+	UsageModel,
+} from "../../../models/productV2Models/productItemModels/productItemModels.js";
+import type { ItemEdit } from "./itemEditTypes.js";
 
-/** Format tier threshold value for display */
 function formatTierValue(value: string | number | "inf"): string {
 	return value === "inf" ? "Infinite" : String(value);
 }
 
+/** Builds a list of granular edits for a single product item comparison */
 export function buildEditsForItem({
-	item,
 	originalItem,
-	prepaidQuantity,
-	initialPrepaidQuantity,
+	updatedItem,
+	originalPrepaidQuantity,
+	updatedPrepaidQuantity,
 }: {
-	item: ProductItem;
 	originalItem?: ProductItem;
-	prepaidQuantity?: number;
-	initialPrepaidQuantity?: number;
+	updatedItem: ProductItem;
+	originalPrepaidQuantity?: number;
+	updatedPrepaidQuantity?: number;
 }): ItemEdit[] {
 	const edits: ItemEdit[] = [];
-	const isPrepaid = item.usage_model === UsageModel.Prepaid;
+	const isPrepaid = updatedItem.usage_model === UsageModel.Prepaid;
 
 	if (originalItem) {
 		if (
-			originalItem.price !== item.price &&
+			originalItem.price !== updatedItem.price &&
 			originalItem.price !== null &&
 			originalItem.price !== undefined &&
-			item.price !== null &&
-			item.price !== undefined
+			updatedItem.price !== null &&
+			updatedItem.price !== undefined
 		) {
 			const oldPrice = originalItem.price;
-			const newPrice = item.price;
-			const isUpgrade = newPrice < oldPrice;
+			const newPrice = updatedItem.price;
+			const isUpgrade = newPrice > oldPrice;
 			edits.push({
-				id: `price-${item.feature_id}`,
+				id: `price-${updatedItem.feature_id}`,
 				type: "config",
 				icon: "price",
 				label: "Price",
 				description: isUpgrade
-					? `Price decreased from $${oldPrice} to $${newPrice}`
-					: `Price increased from $${oldPrice} to $${newPrice}`,
+					? `Price increased from $${oldPrice} to $${newPrice}`
+					: `Price decreased from $${oldPrice} to $${newPrice}`,
 				oldValue: `$${oldPrice}`,
 				newValue: `$${newPrice}`,
 				isUpgrade,
@@ -46,7 +49,7 @@ export function buildEditsForItem({
 		}
 
 		const oldTiers = originalItem.tiers ?? [];
-		const newTiers = item.tiers ?? [];
+		const newTiers = updatedItem.tiers ?? [];
 
 		for (let i = 0; i < newTiers.length; i++) {
 			const newTier = newTiers[i];
@@ -57,7 +60,7 @@ export function buildEditsForItem({
 				const prevTierTo = i === 0 ? "0" : (oldTiers[i - 1]?.to ?? "0");
 				const prevLabel = formatTierValue(prevTierTo);
 				edits.push({
-					id: `tier-${item.feature_id}-${i}`,
+					id: `tier-${updatedItem.feature_id}-${i}`,
 					type: "config",
 					icon: "tier",
 					label: "Pricing Tier",
@@ -67,15 +70,15 @@ export function buildEditsForItem({
 					isUpgrade: true,
 				});
 			} else if (oldTier.amount !== newTier.amount) {
-				const isUpgrade = newTier.amount < oldTier.amount;
+				const isUpgrade = newTier.amount > oldTier.amount;
 				edits.push({
-					id: `tier-${item.feature_id}-${i}`,
+					id: `tier-${updatedItem.feature_id}-${i}`,
 					type: "config",
 					icon: "tier",
 					label: "Pricing Tier",
 					description: isUpgrade
-						? `Tier price decreased from $${oldTier.amount} to $${newTier.amount} (up to ${tierLabel})`
-						: `Tier price increased from $${oldTier.amount} to $${newTier.amount} (up to ${tierLabel})`,
+						? `Tier price increased from $${oldTier.amount} to $${newTier.amount} (up to ${tierLabel})`
+						: `Tier price decreased from $${oldTier.amount} to $${newTier.amount} (up to ${tierLabel})`,
 					oldValue: `$${oldTier.amount}`,
 					newValue: `$${newTier.amount}`,
 					isUpgrade,
@@ -87,7 +90,7 @@ export function buildEditsForItem({
 					newTier.to === "inf" ||
 					(oldTier.to !== "inf" && Number(newTier.to) > Number(oldTier.to));
 				edits.push({
-					id: `tier-${item.feature_id}-${i}-threshold`,
+					id: `tier-${updatedItem.feature_id}-${i}-threshold`,
 					type: "config",
 					icon: "tier",
 					label: "Pricing Tier",
@@ -105,7 +108,7 @@ export function buildEditsForItem({
 			const oldTier = oldTiers[i];
 			const tierLabel = formatTierValue(oldTier.to);
 			edits.push({
-				id: `tier-${item.feature_id}-${i}-removed`,
+				id: `tier-${updatedItem.feature_id}-${i}-removed`,
 				type: "config",
 				icon: "tier",
 				label: "Pricing Tier",
@@ -117,7 +120,7 @@ export function buildEditsForItem({
 		}
 
 		const oldUsage = originalItem.included_usage ?? 0;
-		const newUsage = item.included_usage ?? 0;
+		const newUsage = updatedItem.included_usage ?? 0;
 		if (oldUsage !== newUsage) {
 			const formatUsageValue = (val: string | number) =>
 				val === "inf" ? "unlimited" : String(val);
@@ -129,7 +132,7 @@ export function buildEditsForItem({
 				newUsage === "inf" ? Number.POSITIVE_INFINITY : Number(newUsage);
 			const isUpgrade = newNum > oldNum;
 			edits.push({
-				id: `usage-${item.feature_id}`,
+				id: `usage-${updatedItem.feature_id}`,
 				type: "config",
 				icon: "usage",
 				label: "Included Usage",
@@ -143,11 +146,11 @@ export function buildEditsForItem({
 		}
 
 		const oldUnits = originalItem.billing_units ?? 1;
-		const newUnits = item.billing_units ?? 1;
+		const newUnits = updatedItem.billing_units ?? 1;
 		if (oldUnits !== newUnits) {
 			const isUpgrade = newUnits > oldUnits;
 			edits.push({
-				id: `units-${item.feature_id}`,
+				id: `units-${updatedItem.feature_id}`,
 				type: "config",
 				icon: "units",
 				label: "Billing Units",
@@ -163,21 +166,21 @@ export function buildEditsForItem({
 
 	if (
 		isPrepaid &&
-		initialPrepaidQuantity !== undefined &&
-		prepaidQuantity !== undefined &&
-		prepaidQuantity !== initialPrepaidQuantity
+		originalPrepaidQuantity !== undefined &&
+		updatedPrepaidQuantity !== undefined &&
+		updatedPrepaidQuantity !== originalPrepaidQuantity
 	) {
-		const isUpgrade = prepaidQuantity > initialPrepaidQuantity;
+		const isUpgrade = updatedPrepaidQuantity > originalPrepaidQuantity;
 		edits.push({
-			id: `prepaid-${item.feature_id}`,
+			id: `prepaid-${updatedItem.feature_id}`,
 			type: "prepaid",
 			icon: "prepaid",
 			label: "Prepaid Quantity",
 			description: isUpgrade
-				? `Prepaid quantity increased from ${initialPrepaidQuantity} to ${prepaidQuantity}`
-				: `Prepaid quantity decreased from ${initialPrepaidQuantity} to ${prepaidQuantity}`,
-			oldValue: `${initialPrepaidQuantity} Prepaid`,
-			newValue: `${prepaidQuantity} Prepaid`,
+				? `Prepaid quantity increased from ${originalPrepaidQuantity} to ${updatedPrepaidQuantity}`
+				: `Prepaid quantity decreased from ${originalPrepaidQuantity} to ${updatedPrepaidQuantity}`,
+			oldValue: `${originalPrepaidQuantity} Prepaid`,
+			newValue: `${updatedPrepaidQuantity} Prepaid`,
 			isUpgrade,
 			editable: true,
 		});

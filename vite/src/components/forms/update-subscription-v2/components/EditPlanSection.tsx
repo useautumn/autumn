@@ -4,13 +4,16 @@ import type {
 	ProductItem,
 	ProductV2,
 } from "@autumn/shared";
-import { featureToOptions, UsageModel } from "@autumn/shared";
+import {
+	buildEditsForItem,
+	featureToOptions,
+	UsageModel,
+} from "@autumn/shared";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/v2/buttons/Button";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { BasePriceDisplay } from "@/views/products/plan/components/plan-card/BasePriceDisplay";
 import type { UseUpdateSubscriptionForm } from "../hooks/useUpdateSubscriptionForm";
-import { buildEditsForItem } from "../utils/buildEditsForItem";
 import { SectionTitle } from "./SectionTitle";
 import { SubscriptionItemRow } from "./SubscriptionItemRow";
 
@@ -96,10 +99,10 @@ export function EditPlanSection({
 							const isCreated =
 								!originalItem && originalItems && originalItems.length > 0;
 							const edits = buildEditsForItem({
-								item,
+								updatedItem: item,
 								originalItem,
-								prepaidQuantity: currentPrepaidQuantity,
-								initialPrepaidQuantity,
+								updatedPrepaidQuantity: currentPrepaidQuantity,
+								originalPrepaidQuantity: initialPrepaidQuantity,
 							});
 
 							return (

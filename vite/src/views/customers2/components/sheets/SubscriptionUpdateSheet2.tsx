@@ -259,7 +259,6 @@ function SheetContent({
 				form={form}
 				customerProduct={customerProduct}
 				currentVersion={currentVersion}
-				currency={previewQuery.data?.currency}
 			/>
 
 			<UpdateSubscriptionPreviewSection

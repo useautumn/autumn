@@ -1,5 +1,6 @@
 import {
 	getProductItemDisplay,
+	type ItemEdit,
 	type ProductItem,
 	UsageModel,
 } from "@autumn/shared";
@@ -21,7 +22,6 @@ import { cn } from "@/lib/utils";
 import { PlanFeatureIcon } from "@/views/products/plan/components/plan-card/PlanFeatureIcon";
 import { CustomDotIcon } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
 import type { UseUpdateSubscriptionForm } from "../hooks/useUpdateSubscriptionForm";
-import type { ItemEdit } from "../types/summary";
 import { getEditIcon } from "../utils/getEditIcon";
 import { CompactValueChange } from "./CompactValueChange";
 import { StatusBadge } from "./StatusBadge";
@@ -56,9 +56,23 @@ function EditRow({
 			return (
 				<span className="text-xs text-t3">
 					{prefix}
-					<span className="text-red-500 font-medium">{oldVal}</span>
+					<span
+						className={cn(
+							"font-medium",
+							edit.isUpgrade ? "text-red-500" : "text-green-500",
+						)}
+					>
+						{oldVal}
+					</span>
 					{middle}
-					<span className="text-green-500 font-medium">{newVal}</span>
+					<span
+						className={cn(
+							"font-medium",
+							edit.isUpgrade ? "text-green-500" : "text-red-500",
+						)}
+					>
+						{newVal}
+					</span>
 					<span className="text-t4">{suffix}</span>
 				</span>
 			);
@@ -78,7 +92,11 @@ function EditRow({
 			{showRing ? (
 				renderDescription()
 			) : (
-				<CompactValueChange oldValue={edit.oldValue} newValue={edit.newValue} />
+				<CompactValueChange
+					oldValue={edit.oldValue}
+					newValue={edit.newValue}
+					isUpgrade={edit.isUpgrade}
+				/>
 			)}
 		</div>
 	);
@@ -155,6 +173,7 @@ export function SubscriptionItemRow({
 				<CompactValueChange
 					oldValue={singleEdit.oldValue}
 					newValue={singleEdit.newValue}
+					isUpgrade={singleEdit.isUpgrade}
 				/>
 			);
 		}
