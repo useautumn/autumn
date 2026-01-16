@@ -1,6 +1,6 @@
 import { UsageModel } from "@autumn/shared";
 import { useCallback } from "react";
-import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormContext";
+import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 import { getFreeTrial } from "../utils/getFreeTrial";
 import type { UseUpdateSubscriptionForm } from "./useUpdateSubscriptionForm";
 

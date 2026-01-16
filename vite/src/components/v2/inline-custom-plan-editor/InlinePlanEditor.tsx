@@ -2,6 +2,8 @@ import type { FrontendProduct, ProductItem } from "@autumn/shared";
 import { AnimatePresence, motion } from "motion/react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/v2/buttons/Button";
+import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
+import { cn } from "@/lib/utils";
 import { CustomerPlanInfoBox } from "@/views/customers2/customer-plan/CustomerPlanInfoBox";
 import { EditPlanHeader } from "@/views/products/plan/components/EditPlanHeader";
 import { PlanEditorBar } from "@/views/products/plan/components/PlanEditorBar";
@@ -9,7 +11,7 @@ import PlanCard from "@/views/products/plan/components/plan-card/PlanCard";
 import { ProductSheets } from "@/views/products/plan/ProductSheets";
 import { SHEET_ANIMATION } from "@/views/products/plan/planAnimations";
 import { InlineEditorProvider } from "./InlineEditorContext";
-import { useProduct, useSheet } from "./PlanEditorContext";
+import { useHasPlanChanges, useProduct, useSheet } from "./PlanEditorContext";
 
 interface InlinePlanEditorProps {
 	product: FrontendProduct;
@@ -47,12 +49,16 @@ function InlinePlanEditorContent({
 }) {
 	const { product } = useProduct();
 	const { sheetType, closeSheet } = useSheet();
+	const hasPlanChanges = useHasPlanChanges();
 
 	return (
 		<div className="absolute inset-0 z-100 bg-background flex flex-col">
 			<div className="flex w-full h-full overflow-hidden relative flex-1">
 				<motion.div
-					className="h-full overflow-hidden absolute inset-0"
+					className={cn(
+						"h-full overflow-hidden absolute inset-0",
+						sheetType && "pointer-events-none",
+					)}
 					animate={{ width: sheetType ? "calc(100% - 28rem)" : "100%" }}
 					transition={SHEET_ANIMATION}
 				>
@@ -69,9 +75,14 @@ function InlinePlanEditorContent({
 								<Button variant="secondary" onClick={onCancel}>
 									Return to Customer
 								</Button>
-								<Button onClick={() => onSave(product.items)}>
-									Save Changes
-								</Button>
+								{hasPlanChanges && (
+									<ShortcutButton
+										metaShortcut="s"
+										onClick={() => onSave(product.items)}
+									>
+										Save Changes
+									</ShortcutButton>
+								)}
 							</PlanEditorBar>
 						)}
 					</div>

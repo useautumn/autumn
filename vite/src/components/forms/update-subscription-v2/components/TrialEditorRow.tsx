@@ -2,13 +2,11 @@ import { type FreeTrialDuration, getTrialLengthInDays } from "@autumn/shared";
 import {
 	ArrowCounterClockwiseIcon,
 	CalendarBlankIcon,
-	CheckIcon,
 	PencilSimpleIcon,
-	TimerIcon,
 	TrashIcon,
 } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
 	Tooltip,
@@ -33,7 +31,6 @@ interface TrialEditorRowProps {
 	onEndTrial: () => void;
 	onCollapse: () => void;
 	onRevert: () => void;
-	onConfirm: () => void;
 }
 
 export function TrialEditorRow({
@@ -45,12 +42,12 @@ export function TrialEditorRow({
 	onEndTrial,
 	onCollapse,
 	onRevert,
-	onConfirm,
 }: TrialEditorRowProps) {
 	const [isEditing, setIsEditing] = useState(false);
 	const [isAddingNewTrial, setIsAddingNewTrial] = useState(
 		!isCurrentlyTrialing,
 	);
+	const containerRef = useRef<HTMLDivElement>(null);
 
 	const trialLength = useStore(form.store, (state) => state.values.trialLength);
 	const trialDuration = useStore(
@@ -79,6 +76,31 @@ export function TrialEditorRow({
 		hasTrialValue,
 		isCurrentlyTrialing,
 	});
+
+	const handleBlur = () => {
+		// Use setTimeout to wait for focus to fully settle after portal interactions
+		setTimeout(() => {
+			const activeElement = document.activeElement;
+			const isStillInContainer =
+				containerRef.current?.contains(activeElement) ?? false;
+
+			// Check if any Radix select portal is open
+			const hasOpenSelect = document.querySelector(
+				"[data-radix-popper-content-wrapper]",
+			);
+
+			if (!isStillInContainer && !hasOpenSelect) {
+				if (hasTrialValue) {
+					setIsEditing(false);
+					setIsAddingNewTrial(false);
+				} else if (!isCurrentlyTrialing) {
+					onCollapse();
+					setIsEditing(false);
+					setIsAddingNewTrial(true);
+				}
+			}
+		}, 0);
+	};
 
 	if (removeTrial) {
 		return (
@@ -189,7 +211,11 @@ export function TrialEditorRow({
 	};
 
 	return (
-		<div className="flex items-center gap-2">
+		<div
+			ref={containerRef}
+			className="flex items-center gap-2"
+			onBlur={handleBlur}
+		>
 			<div
 				className={cn(
 					"flex items-center flex-1 h-10 px-3 rounded-xl input-base",
@@ -197,24 +223,25 @@ export function TrialEditorRow({
 				)}
 			>
 				<div className="flex items-center gap-2">
-					<TimerIcon size={14} className="text-amber-400" />
+					<CalendarBlankIcon
+						size={14}
+						weight="fill"
+						className="text-amber-400"
+					/>
 					<span className="text-sm text-t2">Free Trial</span>
 				</div>
 			</div>
 			<div className="flex items-center h-10 px-3 rounded-xl input-base gap-2">
 				<form.AppField name="trialLength">
-					{(field) => {
-						const showError = field.state.meta.isTouched && !hasTrialValue;
-						return (
-							<field.NumberField
-								label=""
-								placeholder="7"
-								min={1}
-								className={cn("w-16", showError && "[&_input]:border-red-500!")}
-								hideFieldInfo
-							/>
-						);
-					}}
+					{(field) => (
+						<field.NumberField
+							label=""
+							placeholder="7"
+							min={1}
+							className="w-16"
+							hideFieldInfo
+						/>
+					)}
 				</form.AppField>
 				<form.AppField name="trialDuration">
 					{(field) => (
@@ -238,24 +265,6 @@ export function TrialEditorRow({
 					size="sm"
 					className="text-t4 hover:text-red-400"
 					onClick={handleClearTrial}
-				/>
-				<IconButton
-					icon={<CheckIcon size={14} />}
-					variant="skeleton"
-					size="sm"
-					className="text-t4 hover:text-t2 hover:bg-muted"
-					onClick={() => {
-						if (!hasTrialValue) {
-							form.setFieldMeta("trialLength", (prev) => ({
-								...prev,
-								isTouched: true,
-							}));
-							return;
-						}
-						setIsEditing(false);
-						setIsAddingNewTrial(false);
-						onConfirm();
-					}}
 				/>
 			</div>
 		</div>
