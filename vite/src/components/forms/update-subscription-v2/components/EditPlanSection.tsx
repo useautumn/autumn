@@ -203,10 +203,7 @@ export function EditPlanSection() {
 						<div
 							className={cn(
 								"grid transition-[grid-template-rows] duration-200 ease-out",
-								trialState.isTrialExpanded ||
-									trialState.removeTrial ||
-									trialState.isCurrentlyTrialing ||
-									trialState.hasTrialValue
+								trialState.isTrialExpanded || trialState.removeTrial
 									? "grid-rows-[1fr]"
 									: "grid-rows-[0fr]",
 							)}

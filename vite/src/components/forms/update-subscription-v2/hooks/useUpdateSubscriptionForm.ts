@@ -49,6 +49,7 @@ export function useUpdateSubscriptionForm({
 			trialLength: remainingTrialDays,
 			trialDuration: FreeTrialDuration.Day,
 			removeTrial: false,
+			trialEnabled: isTrialing,
 			version: currentVersion,
 			items: null,
 		} as UpdateSubscriptionForm,
