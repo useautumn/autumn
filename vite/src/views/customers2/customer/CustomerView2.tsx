@@ -14,6 +14,7 @@ import { useCusReferralQuery } from "../../customers/customer/hooks/useCusReferr
 import { CustomerFeatureUsageTable } from "../components/table/customer-feature-usage/CustomerFeatureUsageTable";
 import { CustomerInvoicesTable } from "../components/table/customer-invoices/CustomerInvoicesTable";
 import { CustomerProductsTable } from "../components/table/customer-products/CustomerProductsTable";
+import { CustomerPurchasesTable } from "../components/table/customer-purchases/CustomerPurchasesTable";
 import { CustomerUsageAnalyticsTable } from "../components/table/customer-usage-analytics/CustomerUsageAnalyticsTable";
 import { CustomerBreadcrumbs } from "./CustomerBreadcrumbs2";
 import { CustomerContext } from "./CustomerContext";
@@ -93,6 +94,7 @@ export default function CustomerView2() {
 						{/* <Separator className="my-2" /> */}
 						<div className="flex flex-col gap-12 w-full">
 							<CustomerProductsTable />
+							<CustomerPurchasesTable />
 							{/* <Separator /> */}
 							<CustomerFeatureUsageTable />
 							{/* <Separator /> */}

@@ -2,6 +2,11 @@
 "use client";
 
 import React from "react";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "./Checkbox";
 
@@ -12,18 +17,18 @@ interface AreaCheckboxProps {
 	title: string;
 	tooltip?: string;
 	disabled?: boolean;
+	disabledReason?: string;
 	hide?: boolean;
 	description?: string;
 	children?: React.ReactNode;
 }
 
 function AreaCheckbox({
-	className,
 	checked = false,
 	onCheckedChange,
 	title,
-	tooltip,
 	disabled = false,
+	disabledReason,
 	hide = false,
 	description,
 	children,
@@ -31,29 +36,31 @@ function AreaCheckbox({
 	const id = React.useId();
 
 	if (hide) return null;
-	return (
-		<div className="flex items-start gap-[6px]">
+
+	const isDisabled = disabled || !!disabledReason;
+
+	const content = (
+		<div className="flex items-start gap-[6px] text-sm">
 			<Checkbox
 				id={id}
 				checked={checked}
 				onCheckedChange={(checked) => {
-					if (!disabled && onCheckedChange) {
+					if (!isDisabled && onCheckedChange) {
 						onCheckedChange(checked as boolean);
 					}
 				}}
-				disabled={disabled}
+				disabled={isDisabled}
 				size="sm"
 				className="mt-[3px]"
 			/>
 
-			<div className="flex flex-col gap-[4px] w-full">
+			<div className="flex flex-col w-full">
 				<label
 					htmlFor={id}
 					className={cn(
-						"text-checkbox-label font-medium select-none w-fit",
-						!disabled && "hover:!text-t1",
-						// !checked && "opacity-50",
-						disabled && "cursor-not-allowed",
+						"text-t2 font-medium select-none w-fit",
+						!isDisabled && "hover:text-t1",
+						isDisabled && "cursor-not-allowed opacity-50",
 					)}
 				>
 					{title}
@@ -62,30 +69,36 @@ function AreaCheckbox({
 				{(children || description) && (
 					<div
 						className={cn(
-							"space-y-2",
-							!checked && "opacity-50 pointer-events-none",
+							"grid transition-all duration-200",
+							checked
+								? "grid-rows-[1fr] opacity-100"
+								: "grid-rows-[0fr] opacity-0",
 						)}
 					>
-						{description && <p className="text-form-label">{description}</p>}
-						{children}
+						<div className="overflow-hidden space-y-2">
+							{description && <p className="text-t3">{description}</p>}
+							{children}
+						</div>
 					</div>
 				)}
 			</div>
 		</div>
 	);
+
+	if (disabledReason) {
+		return (
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<div>{content}</div>
+				</TooltipTrigger>
+				<TooltipContent side="left" className="max-w-60">
+					{disabledReason}
+				</TooltipContent>
+			</Tooltip>
+		);
+	}
+
+	return content;
 }
 
 export { AreaCheckbox };
-
-// {tooltip && (
-// 	<TooltipProvider>
-// 		<Tooltip>
-// 			<TooltipTrigger asChild>
-// 				<InfoIcon className="size-3 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
-// 			</TooltipTrigger>
-// 			<TooltipContent className="max-w-xs">
-// 				<p className="text-sm">{tooltip}</p>
-// 			</TooltipContent>
-// 		</Tooltip>
-// 	</TooltipProvider>
-// )}
