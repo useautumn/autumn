@@ -115,7 +115,10 @@ export function generateItemChanges({
 				description: `${getFeatureName(original)} changed from ${oldValueFormatted} to ${newValueFormatted}`,
 				oldValue: oldValueFormatted,
 				newValue: newValueFormatted,
-				isUpgrade: true,
+				isUpgrade: isItemUpgrade({
+					originalItem: original,
+					updatedItem: updated,
+				}),
 			});
 		}
 	}
@@ -184,31 +187,36 @@ export function generateItemChanges({
 		}
 	}
 
-	// Check for base price value/interval changes (when count is the same)
 	if (
 		originalPriceItems.length > 0 &&
 		originalPriceItems.length === updatedPriceItems.length
 	) {
-		const original = originalPriceItems[0];
-		const updated = updatedPriceItems[0];
+		for (let i = 0; i < originalPriceItems.length; i++) {
+			const original = originalPriceItems[i];
+			const updated = updatedPriceItems[i];
 
-		if (original && updated) {
-			const hasChanged =
-				original.price !== updated.price ||
-				original.interval !== updated.interval ||
-				original.interval_count !== updated.interval_count;
+			if (original && updated) {
+				const hasChanged =
+					original.price !== updated.price ||
+					original.interval !== updated.interval ||
+					original.interval_count !== updated.interval_count;
 
-			if (hasChanged) {
-				changes.push({
-					id: "base-price-modified",
-					type: "config",
-					label: "Base Price",
-					icon: "price",
-					description: "Base price modified",
-					oldValue: original.price ?? 0,
-					newValue: updated.price ?? 0,
-					isUpgrade: (updated.price ?? 0) > (original.price ?? 0),
-				});
+				if (hasChanged) {
+					const label =
+						originalPriceItems.length > 1
+							? `Base Price ${i + 1}`
+							: "Base Price";
+					changes.push({
+						id: `base-price-modified-${i}`,
+						type: "config",
+						label,
+						icon: "price",
+						description: `${label} modified`,
+						oldValue: original.price ?? 0,
+						newValue: updated.price ?? 0,
+						isUpgrade: (updated.price ?? 0) > (original.price ?? 0),
+					});
+				}
 			}
 		}
 	}
@@ -230,6 +238,33 @@ function hasItemChanged({
 		originalItem.billing_units !== updatedItem.billing_units ||
 		originalItem.interval !== updatedItem.interval
 	);
+}
+
+function isItemUpgrade({
+	originalItem,
+	updatedItem,
+}: {
+	originalItem: ProductItem;
+	updatedItem: ProductItem;
+}): boolean {
+	const originalIncluded =
+		originalItem.included_usage === "inf"
+			? Number.POSITIVE_INFINITY
+			: Number(originalItem.included_usage ?? 0);
+	const updatedIncluded =
+		updatedItem.included_usage === "inf"
+			? Number.POSITIVE_INFINITY
+			: Number(updatedItem.included_usage ?? 0);
+
+	if (updatedIncluded > originalIncluded) return true;
+	if (updatedIncluded < originalIncluded) return false;
+
+	const originalPrice = originalItem.price ?? 0;
+	const updatedPrice = updatedItem.price ?? 0;
+	if (updatedPrice < originalPrice) return true;
+	if (updatedPrice > originalPrice) return false;
+
+	return true;
 }
 
 function formatItemValue(item: ProductItem): string {
