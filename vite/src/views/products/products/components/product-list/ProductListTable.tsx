@@ -217,7 +217,7 @@ export function ProductListTable() {
 								<Table.Toolbar>
 									<Table.Heading>
 										<CubeIcon size={16} weight="fill" className="text-subtle" />
-										One-Time Plans
+										One-off Plans
 									</Table.Heading>
 								</Table.Toolbar>
 								<Table.Container>

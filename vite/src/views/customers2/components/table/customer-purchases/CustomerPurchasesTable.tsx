@@ -1,5 +1,5 @@
 import type { Entity, FullCusProduct } from "@autumn/shared";
-import { ShoppingBagIcon } from "@phosphor-icons/react";
+import { SectionTag } from "@/components/v2/badges/SectionTag";
 import type { Row } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
@@ -147,16 +147,9 @@ export function CustomerPurchasesTable() {
 				}}
 			>
 				<Table.Container>
-					<Table.Toolbar>
-						<Table.Heading>
-							<ShoppingBagIcon
-								size={16}
-								weight="fill"
-								className="text-subtle"
-							/>
-							Purchases
-						</Table.Heading>
-					</Table.Toolbar>
+
+
+						<SectionTag>Purchases</SectionTag>
 					<Table.Content>
 						<Table.Body />
 					</Table.Content>

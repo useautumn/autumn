@@ -3,6 +3,7 @@ import { ArrowSquareOutIcon, PackageIcon } from "@phosphor-icons/react";
 import type { Row } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
+import { SectionTag } from "@/components/v2/badges/SectionTag";
 import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
@@ -194,7 +195,7 @@ export function CustomerProductsTable() {
 					<Table.Toolbar>
 						<Table.Heading>
 							<PackageIcon size={16} weight="fill" className="text-subtle" />
-							Subscriptions
+							Plans
 						</Table.Heading>
 						<Table.Actions>
 							<ShowExpiredActionButton
@@ -204,6 +205,7 @@ export function CustomerProductsTable() {
 							<AttachProductSheetTrigger />
 						</Table.Actions>
 					</Table.Toolbar>
+					<SectionTag>Subscriptions</SectionTag>
 					<Table.Content>
 						<Table.Header />
 						<Table.Body />
