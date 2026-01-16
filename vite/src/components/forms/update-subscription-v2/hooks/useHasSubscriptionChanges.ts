@@ -1,11 +1,15 @@
-import type { Feature, FullCusProduct, ProductItem } from "@autumn/shared";
+import {
+	type Feature,
+	type FullCusProduct,
+	generateItemChanges,
+	generatePrepaidChanges,
+	generateTrialChanges,
+	generateVersionChanges,
+	type ProductItem,
+} from "@autumn/shared";
 import { useMemo } from "react";
 import type { PrepaidItemWithFeature } from "@/hooks/stores/useProductStore";
 import type { UpdateSubscriptionForm } from "../updateSubscriptionFormSchema";
-import { generateItemChanges } from "../utils/generateItemChanges";
-import { generatePrepaidChanges } from "../utils/generatePrepaidChanges";
-import { generateTrialChanges } from "../utils/generateTrialChanges";
-import { generateVersionChanges } from "../utils/generateVersionChanges";
 
 export function useHasSubscriptionChanges({
 	formValues,
@@ -15,6 +19,7 @@ export function useHasSubscriptionChanges({
 	currentVersion,
 	originalItems,
 	features,
+	isTrialConfirmed,
 }: {
 	formValues: UpdateSubscriptionForm;
 	initialPrepaidOptions: Record<string, number>;
@@ -23,27 +28,31 @@ export function useHasSubscriptionChanges({
 	currentVersion: number;
 	originalItems?: ProductItem[];
 	features?: Feature[];
+	isTrialConfirmed: boolean;
 }): boolean {
 	return useMemo(() => {
-		const trialChanges = generateTrialChanges({
-			customerProduct,
-			removeTrial: formValues.removeTrial,
-			trialLength: formValues.trialLength,
-			trialDuration: formValues.trialDuration,
-		});
+		// Only consider trial changes if the user has confirmed them
+		if (isTrialConfirmed) {
+			const trialChanges = generateTrialChanges({
+				customerProduct,
+				removeTrial: formValues.removeTrial,
+				trialLength: formValues.trialLength,
+				trialDuration: formValues.trialDuration,
+			});
 
-		if (trialChanges.length > 0) return true;
+			if (trialChanges.length > 0) return true;
+		}
 
 		const versionChanges = generateVersionChanges({
-			currentVersion,
-			selectedVersion: formValues.version,
+			originalVersion: currentVersion,
+			updatedVersion: formValues.version,
 		});
 
 		if (versionChanges.length > 0) return true;
 
 		const itemChanges = generateItemChanges({
 			originalItems,
-			customizedItems: formValues.items,
+			updatedItems: formValues.items,
 			features,
 			prepaidOptions: formValues.prepaidOptions,
 		});
@@ -58,8 +67,8 @@ export function useHasSubscriptionChanges({
 
 		const prepaidChanges = generatePrepaidChanges({
 			prepaidItems,
-			currentOptions: formValues.prepaidOptions,
-			initialOptions: initialPrepaidOptions,
+			updatedOptions: formValues.prepaidOptions,
+			originalOptions: initialPrepaidOptions,
 		}).filter((change) => {
 			const featureId = change.id.replace("prepaid-", "");
 			return !newlyAddedFeatureIds.has(featureId);
@@ -79,5 +88,6 @@ export function useHasSubscriptionChanges({
 		currentVersion,
 		originalItems,
 		features,
+		isTrialConfirmed,
 	]);
 }

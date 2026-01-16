@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/v2/buttons/Button";
 import { Input } from "@/components/v2/inputs/Input";
 import { useFieldContext } from "@/hooks/form/form-context";
+import { cn } from "@/lib/utils";
 import SmallSpinner from "../../SmallSpinner";
 
 export function QuantityField({
@@ -14,6 +15,7 @@ export function QuantityField({
 	max,
 	className,
 	hideFieldInfo,
+	compact,
 }: {
 	label: string;
 	placeholder?: string;
@@ -22,6 +24,7 @@ export function QuantityField({
 	max?: number;
 	className?: string;
 	hideFieldInfo?: boolean;
+	compact?: boolean;
 }) {
 	const field = useFieldContext<number>();
 
@@ -66,11 +69,18 @@ export function QuantityField({
 		<div className={className}>
 			{label && <Label>{label}</Label>}
 			<div className="relative flex items-center">
-				<div className="inline-flex rounded-lg overflow-hidden border border-border w-fit h-6 items-center">
+				<div
+					className={cn(
+						"inline-flex rounded-lg overflow-hidden border border-border w-fit h-6 items-center",
+					)}
+				>
 					<Button
 						type="button"
 						aria-label="Decrease quantity"
-						className="disabled:pointer-events-none disabled:opacity-50 rounded-none border-none h-input px-3"
+						className={cn(
+							"disabled:pointer-events-none disabled:opacity-50 rounded-none border-none h-input",
+							compact ? "px-2" : "px-3",
+						)}
 						disabled={field.state.value <= min}
 						onClick={handleDecrement}
 						size="sm"
@@ -82,9 +92,11 @@ export function QuantityField({
 					<div className="relative border-x border-border">
 						<Input
 							variant="headless"
-							className="text-sm text-center w-16 h-input p-2"
+							className={cn(
+								"text-sm text-center h-input p-2",
+								compact ? "w-10" : "w-16",
+							)}
 							onChange={handleInputChange}
-							// placeholder={placeholder}
 							type="number"
 							value={field.state.value ?? ""}
 							min={min}
@@ -100,7 +112,10 @@ export function QuantityField({
 					<Button
 						type="button"
 						aria-label="Increase quantity"
-						className="disabled:pointer-events-none disabled:opacity-50 rounded-none border-none h-input px-3"
+						className={cn(
+							"disabled:pointer-events-none disabled:opacity-50 rounded-none border-none h-input",
+							compact ? "px-2" : "px-3",
+						)}
 						disabled={max !== undefined && field.state.value >= max}
 						onClick={handleIncrement}
 						size="sm"

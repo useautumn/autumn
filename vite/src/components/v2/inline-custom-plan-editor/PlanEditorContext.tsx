@@ -1,7 +1,20 @@
-import type { FrontendProduct, ProductItem } from "@autumn/shared";
-import { createContext, type ReactNode, useContext } from "react";
+import {
+	type FrontendProduct,
+	itemsAreSame,
+	type ProductItem,
+	productV2ToFeatureItems,
+} from "@autumn/shared";
+import {
+	createContext,
+	type ReactNode,
+	useCallback,
+	useContext,
+	useMemo,
+} from "react";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { getItemId } from "@/utils/product/productItemUtils";
 
 interface ProductContextValue {
 	product: FrontendProduct;
@@ -109,4 +122,94 @@ export function useSheet() {
 		setInitialItem: storeSetInitialItem,
 		closeSheet: storeCloseSheet,
 	};
+}
+
+/** Hook to get current item being edited. Uses context if available, otherwise Zustand. */
+export function useCurrentItem() {
+	const { product } = useProduct();
+	const { itemId } = useSheet();
+
+	return useMemo(() => {
+		if (!itemId || !product?.items) return null;
+
+		const featureItems = productV2ToFeatureItems({ items: product.items });
+
+		for (let i = 0; i < product.items.length; i++) {
+			const item = product.items[i];
+			if (!item) continue;
+
+			const isFeatureItem = featureItems.some((fi) => fi === item);
+			if (!isFeatureItem) continue;
+
+			const currentItemId = getItemId({ item, itemIndex: i });
+			if (currentItemId === itemId) {
+				return item;
+			}
+		}
+
+		return null;
+	}, [product, itemId]);
+}
+
+/** Hook to set the current item being edited. Uses context if available, otherwise Zustand. */
+export function useSetCurrentItem() {
+	const { product, setProduct } = useProduct();
+	const { itemId } = useSheet();
+
+	return useCallback(
+		(updatedItem: ProductItem) => {
+			if (!product || !product.items || !itemId) return;
+
+			let originalIndex = -1;
+			for (let i = 0; i < product.items.length; i++) {
+				const item = product.items[i];
+				if (!item) continue;
+
+				const currentItemId = getItemId({ item, itemIndex: i });
+				if (currentItemId === itemId) {
+					originalIndex = i;
+					break;
+				}
+			}
+
+			if (originalIndex === -1) return;
+
+			const updatedItems = [...product.items];
+			updatedItems[originalIndex] = updatedItem;
+			setProduct({ ...product, items: updatedItems });
+		},
+		[product, setProduct, itemId],
+	);
+}
+
+/** Hook to check if the current item has unsaved changes. Uses context if available, otherwise Zustand. */
+export function useHasItemChanges() {
+	const item = useCurrentItem();
+	const { initialItem } = useSheet();
+	const { features = [] } = useFeaturesQuery();
+
+	return useMemo(() => {
+		if (!item || !initialItem) return false;
+
+		const { same } = itemsAreSame({
+			item1: item,
+			item2: initialItem,
+			features,
+		});
+
+		return !same;
+	}, [item, initialItem, features]);
+}
+
+/** Hook to discard item changes (restore to initial state) and close the sheet. Uses context if available, otherwise Zustand. */
+export function useDiscardItemAndClose() {
+	const setCurrentItem = useSetCurrentItem();
+	const { initialItem, closeSheet } = useSheet();
+
+	return useCallback(() => {
+		if (initialItem) {
+			setCurrentItem(initialItem);
+		}
+		closeSheet();
+	}, [initialItem, setCurrentItem, closeSheet]);
 }
