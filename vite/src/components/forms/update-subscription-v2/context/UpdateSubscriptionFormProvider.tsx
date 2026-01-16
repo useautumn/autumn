@@ -172,6 +172,7 @@ export function UpdateSubscriptionFormProvider({
 			removeTrial: formValues.removeTrial,
 			trialLength: formValues.trialLength,
 			trialDuration: formValues.trialDuration,
+			trialEnabled: formValues.trialEnabled,
 		});
 		const freeTrialValue =
 			freeTrial === null ? undefined : (freeTrial ?? base.free_trial);
@@ -187,6 +188,7 @@ export function UpdateSubscriptionFormProvider({
 		formValues.removeTrial,
 		formValues.trialLength,
 		formValues.trialDuration,
+		formValues.trialEnabled,
 	]);
 
 	const hasBillingChanges = useHasBillingChanges({
@@ -202,6 +204,7 @@ export function UpdateSubscriptionFormProvider({
 		removeTrial: formValues.removeTrial,
 		trialLength: formValues.trialLength,
 		trialDuration: formValues.trialDuration,
+		trialEnabled: formValues.trialEnabled,
 	});
 
 	const previewQuery = useUpdateSubscriptionPreview({

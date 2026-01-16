@@ -25,6 +25,7 @@ export function useUpdateSubscriptionRequestBody({
 			trialLength,
 			trialDuration,
 			removeTrial,
+			trialEnabled,
 			version,
 			items,
 		} = formValues;
@@ -89,6 +90,7 @@ export function useUpdateSubscriptionRequestBody({
 			removeTrial,
 			trialLength,
 			trialDuration,
+			trialEnabled,
 		});
 		if (freeTrial !== undefined) {
 			requestBody.free_trial = freeTrial;

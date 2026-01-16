@@ -15,15 +15,16 @@ import { useHasPlanChanges, useProduct, useSheet } from "./PlanEditorContext";
 
 interface InlinePlanEditorProps {
 	product: FrontendProduct;
-	productName?: string;
 	onSave: (items: ProductItem[]) => void;
 	onCancel: () => void;
+	isOpen: boolean;
 }
 
 export function InlinePlanEditor({
 	product,
 	onSave,
 	onCancel,
+	isOpen,
 }: InlinePlanEditorProps) {
 	const mainContent = document.querySelector("[data-main-content]");
 
@@ -33,9 +34,13 @@ export function InlinePlanEditor({
 	}
 
 	return createPortal(
-		<InlineEditorProvider initialProduct={product}>
-			<InlinePlanEditorContent onSave={onSave} onCancel={onCancel} />
-		</InlineEditorProvider>,
+		<AnimatePresence>
+			{isOpen && (
+				<InlineEditorProvider initialProduct={product}>
+					<InlinePlanEditorContent onSave={onSave} onCancel={onCancel} />
+				</InlineEditorProvider>
+			)}
+		</AnimatePresence>,
 		mainContent,
 	);
 }
@@ -52,7 +57,13 @@ function InlinePlanEditorContent({
 	const hasPlanChanges = useHasPlanChanges();
 
 	return (
-		<div className="absolute inset-0 z-100 bg-background flex flex-col">
+		<motion.div
+			initial={{ opacity: 0, scale: 0.97, y: 8 }}
+			animate={{ opacity: 1, scale: 1, y: 0 }}
+			exit={{ opacity: 0, scale: 0.97, y: 8 }}
+			transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+			className="absolute inset-0 z-100 bg-background flex flex-col"
+		>
 			<div className="flex w-full h-full overflow-hidden relative flex-1">
 				<motion.div
 					className={cn(
@@ -103,6 +114,6 @@ function InlinePlanEditorContent({
 
 				<ProductSheets />
 			</div>
-		</div>
+		</motion.div>
 	);
 }
