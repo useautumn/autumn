@@ -6,6 +6,7 @@ import {
 	AccordionItem,
 	AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Badge } from "@/components/v2/badges/badge";
 import { LoadingShimmerText } from "@/components/v2/LoadingShimmerText";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,7 @@ export interface LineItemsPreviewProps<T extends BillingLineItem> {
 		label: string;
 		amount: number;
 		variant?: "primary" | "secondary";
+		badge?: string;
 	}[];
 	/** Accordion title for line items */
 	accordionTitle?: string;
@@ -81,9 +83,9 @@ export function LineItemsPreview<T extends BillingLineItem>({
 							</AccordionTrigger>
 							<AccordionContent className="pb-2 pt-1">
 								<div className="space-y-2">
-									{filteredItems.map((item, index) => (
+									{filteredItems.map((item) => (
 										<div
-											key={index}
+											key={item.description}
 											className="flex items-center justify-between"
 										>
 											<span className="text-sm truncate max-w-75 text-t3">
@@ -112,16 +114,21 @@ export function LineItemsPreview<T extends BillingLineItem>({
 				{/* Totals */}
 				{totals.length > 0 && (
 					<div className="space-y-1 text-sm">
-						{totals.map((total, index) => (
-							<div key={index} className="flex items-center justify-between">
+						{totals.map((total) => (
+							<div
+								key={total.label}
+								className="flex items-center justify-between"
+							>
 								<span
-									className={
+									className={cn(
+										"font-medium flex items-center gap-2",
 										total.variant === "secondary"
-											? "font-medium text-t4"
-											: "font-medium text-foreground"
-									}
+											? "text-t4"
+											: "text-foreground",
+									)}
 								>
 									{total.label}
+									{total.badge && <Badge variant="muted">{total.badge}</Badge>}
 								</span>
 								<span
 									className={
