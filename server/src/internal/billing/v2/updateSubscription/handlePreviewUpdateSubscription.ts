@@ -67,10 +67,6 @@ export const handlePreviewUpdateSubscription = createRoute({
 			},
 		});
 
-		return c.json({
-			...previewResponse,
-			autumn: autumnBillingPlan,
-			stripe: stripeBillingPlan,
-		});
+		return c.json(previewResponse);
 	},
 });
