@@ -75,17 +75,22 @@ export const isCustomerProductCanceling = (cp?: FullCusProduct) => {
 	return notNullish(cp.canceled_at);
 };
 
-export const isCustomerProductExpired = (
-	cp: FullCusProduct,
-	params: { nowMs?: number },
-) => {
-	const nowMs = params.nowMs ?? Date.now();
+export const isCustomerProductExpired = (cp?: FullCusProduct) => {
+	if (!cp) return false;
+	return cp.status === CusProductStatus.Expired;
+};
 
-	return (
+export const hasCustomerProductEnded = (
+	cp: FullCusProduct,
+	params?: { nowMs?: number },
+) => {
+	const nowMs = params?.nowMs ?? Date.now();
+
+	const hasEnded =
 		isCustomerProductCanceling(cp) &&
 		notNullish(cp.ended_at) &&
-		nowMs >= cp.ended_at
-	);
+		nowMs >= cp.ended_at;
+	return hasEnded;
 };
 
 export const isCustomerProductTrialing = (
