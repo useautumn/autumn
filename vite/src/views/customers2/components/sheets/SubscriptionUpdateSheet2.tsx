@@ -1,243 +1,41 @@
-import {
-	type FrontendProduct,
-	type FullCusProduct,
-	type ProductItem,
-	type ProductV2,
-	productV2ToFrontendProduct,
-} from "@autumn/shared";
-import { useStore } from "@tanstack/react-form";
+import type { FullCusProduct, ProductItem, ProductV2 } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
-import type { AxiosError } from "axios";
 
-import { useMemo, useState } from "react";
-import { useUpdateSubscriptionPreview } from "@/components/forms/update-subscription/use-update-subscription-preview";
+import { useMemo } from "react";
 import {
 	EditPlanSection,
-	getFreeTrial,
 	UpdateSubscriptionFooter,
 	type UpdateSubscriptionFormContext,
+	UpdateSubscriptionFormProvider,
 	UpdateSubscriptionPreviewSection,
-	useHasSubscriptionChanges,
-	useTrialState,
-	useUpdateSubscriptionForm,
-	useUpdateSubscriptionMutation,
-	useUpdateSubscriptionRequestBody,
+	useUpdateSubscriptionFormContext,
 } from "@/components/forms/update-subscription-v2";
 import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/InlinePlanEditor";
 import { SheetHeader } from "@/components/v2/sheets/SharedSheetComponents";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
-import {
-	useHasBillingChanges,
-	usePrepaidItems,
-} from "@/hooks/stores/useProductStore";
+import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
 import { cn } from "@/lib/utils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
-import { getBackendErr } from "@/utils/genUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 
-function SheetContent({
-	updateSubscriptionFormContext,
-	originalItems,
-}: {
-	updateSubscriptionFormContext: UpdateSubscriptionFormContext;
-	originalItems: FrontendProduct["items"] | undefined;
-}) {
+function SheetContent() {
 	const {
-		customerProduct,
-		prepaidItems,
-		numVersions,
-		currentVersion,
-		product,
-	} = updateSubscriptionFormContext;
-	const { closeSheet } = useSheetStore();
-	const { stripeAccount } = useOrgStripeQuery();
-	const env = useEnv();
+		formContext,
+		hasNoBillingChanges,
+		showPlanEditor,
+		productWithFormItems,
+		handlePlanEditorSave,
+		handlePlanEditorCancel,
+	} = useUpdateSubscriptionFormContext();
 
-	const [showPlanEditor, setShowPlanEditor] = useState(false);
-	const { setIsInlineEditorOpen } = useCustomerContext();
-
-	const form = useUpdateSubscriptionForm({ updateSubscriptionFormContext });
-	const { features } = useFeaturesQuery();
-	const trialState = useTrialState({ form, customerProduct });
-
-	const formValues = useStore(form.store, (state) => state.values);
-	const { prepaidOptions } = formValues;
-
-	const defaultValues = form.options.defaultValues;
-	const initialPrepaidOptions = defaultValues?.prepaidOptions ?? {};
-
-	const hasChanges = useHasSubscriptionChanges({
-		formValues,
-		initialPrepaidOptions,
-		prepaidItems,
-		customerProduct,
-		currentVersion,
-		originalItems,
-		features,
-		isTrialConfirmed: trialState.isTrialConfirmed,
-	});
-
-	// Only include prepaid options that have changed from their initial values
-	const changedPrepaidOptions = useMemo(() => {
-		const changed: Record<string, number> = {};
-		for (const [featureId, quantity] of Object.entries(prepaidOptions)) {
-			if (quantity !== initialPrepaidOptions[featureId]) {
-				changed[featureId] = quantity;
-			}
-		}
-		return Object.keys(changed).length > 0 ? changed : undefined;
-	}, [prepaidOptions, initialPrepaidOptions]);
-
-	const productWithFormItems = useMemo((): FrontendProduct | undefined => {
-		if (!product) return undefined;
-
-		const baseFrontendProduct = productV2ToFrontendProduct({
-			product: product as ProductV2,
-		});
-
-		if (formValues.items) {
-			return {
-				...baseFrontendProduct,
-				items: formValues.items,
-			};
-		}
-
-		return baseFrontendProduct;
-	}, [product, formValues.items]);
-
-	const baseProduct = useMemo((): FrontendProduct | undefined => {
-		if (!product) return undefined;
-		return productV2ToFrontendProduct({ product: product as ProductV2 });
-	}, [product]);
-	const newProduct = useMemo((): FrontendProduct | undefined => {
-		if (!product) return undefined;
-
-		const base = productV2ToFrontendProduct({ product: product as ProductV2 });
-
-		// Only include trial changes if confirmed
-		let freeTrialValue = base.free_trial;
-		if (trialState.isTrialConfirmed) {
-			const freeTrial = getFreeTrial({
-				removeTrial: formValues.removeTrial,
-				trialLength: formValues.trialLength,
-				trialDuration: formValues.trialDuration,
-			});
-			freeTrialValue =
-				freeTrial === null ? undefined : (freeTrial ?? base.free_trial);
-		}
-
-		return {
-			...base,
-			items: formValues.items ?? base.items,
-			free_trial: freeTrialValue,
-		};
-	}, [
-		product,
-		formValues.items,
-		formValues.removeTrial,
-		formValues.trialLength,
-		formValues.trialDuration,
-		trialState.isTrialConfirmed,
-	]);
-
-	const hasBillingChanges = useHasBillingChanges({
-		baseProduct: baseProduct as FrontendProduct,
-		newProduct: newProduct as FrontendProduct,
-	});
-
-	const hasPrepaidQuantityChanges = changedPrepaidOptions !== undefined;
-
-	const hasNoBillingChanges =
-		hasChanges && !hasBillingChanges && !hasPrepaidQuantityChanges;
-
-	const { buildRequestBody } = useUpdateSubscriptionRequestBody({
-		updateSubscriptionFormContext,
-		form,
-	});
-
-	// Only include trial in preview if confirmed (user clicked check button)
-	const confirmedFreeTrial = trialState.isTrialConfirmed
-		? getFreeTrial({
-				removeTrial: formValues.removeTrial,
-				trialLength: formValues.trialLength,
-				trialDuration: formValues.trialDuration,
-			})
-		: undefined;
-
-	const previewQuery = useUpdateSubscriptionPreview({
-		updateSubscriptionFormContext,
-		prepaidOptions: changedPrepaidOptions,
-		freeTrial: confirmedFreeTrial,
-		items: formValues.items,
-		version: formValues.version,
-	});
-
-	const { handleConfirm, handleInvoiceUpdate, isPending } =
-		useUpdateSubscriptionMutation({
-			updateSubscriptionFormContext,
-			buildRequestBody,
-			onInvoiceCreated: (invoiceId) => {
-				const invoiceLink = getStripeInvoiceLink({
-					stripeInvoice: invoiceId,
-					env,
-					accountId: stripeAccount?.id,
-				});
-				window.open(invoiceLink, "_blank");
-			},
-			onCheckoutRedirect: (checkoutUrl) => {
-				window.open(checkoutUrl, "_blank");
-			},
-			onSuccess: () => {
-				closeSheet();
-			},
-		});
-
-	// Handler to open the inline plan editor
-	const handleEditPlan = () => {
-		if (!productWithFormItems) return;
-		setShowPlanEditor(true);
-		setIsInlineEditorOpen(true);
-	};
-
-	const handlePlanEditorSave = (items: ProductItem[]) => {
-		form.setFieldValue("items", items);
-
-		// Initialize prepaid options to 0 for any new prepaid items
-		const currentPrepaidOptions = form.store.state.values.prepaidOptions;
-		const updatedPrepaidOptions = { ...currentPrepaidOptions };
-		let hasNewPrepaidItems = false;
-
-		for (const item of items) {
-			if (
-				item.usage_model === "prepaid" &&
-				item.feature_id &&
-				updatedPrepaidOptions[item.feature_id] === undefined
-			) {
-				updatedPrepaidOptions[item.feature_id] = 0;
-				hasNewPrepaidItems = true;
-			}
-		}
-
-		if (hasNewPrepaidItems) {
-			form.setFieldValue("prepaidOptions", updatedPrepaidOptions);
-		}
-
-		setShowPlanEditor(false);
-		setIsInlineEditorOpen(false);
-	};
-
-	const handlePlanEditorCancel = () => {
-		setShowPlanEditor(false);
-		setIsInlineEditorOpen(false);
-	};
+	const { customerProduct } = formContext;
 
 	return (
 		<div className="flex flex-col h-full overflow-y-auto">
@@ -273,43 +71,9 @@ function SheetContent({
 				</div>
 			</div>
 
-			<EditPlanSection
-				hasCustomizations={formValues.items !== null}
-				onEditPlan={handleEditPlan}
-				product={productWithFormItems as ProductV2 | undefined}
-				originalItems={originalItems}
-				customerProduct={customerProduct}
-				features={features}
-				form={form}
-				numVersions={numVersions}
-				currentVersion={currentVersion}
-				prepaidOptions={prepaidOptions}
-				initialPrepaidOptions={initialPrepaidOptions}
-				trialState={trialState}
-			/>
-
-			<UpdateSubscriptionPreviewSection
-				isLoading={previewQuery.isLoading}
-				previewData={previewQuery.data}
-				error={
-					previewQuery.error
-						? getBackendErr(
-								previewQuery.error as AxiosError,
-								"Failed to load preview",
-							)
-						: undefined
-				}
-				hasChanges={hasChanges}
-			/>
-
-			<UpdateSubscriptionFooter
-				isPending={isPending}
-				hasChanges={hasChanges}
-				isLoading={previewQuery.isLoading}
-				hasError={!!previewQuery.error}
-				onConfirm={handleConfirm}
-				onInvoiceUpdate={handleInvoiceUpdate}
-			/>
+			<EditPlanSection />
+			<UpdateSubscriptionPreviewSection />
+			<UpdateSubscriptionFooter />
 
 			{showPlanEditor && productWithFormItems && (
 				<InlinePlanEditor
@@ -325,14 +89,16 @@ function SheetContent({
 
 export function SubscriptionUpdateSheet2() {
 	const itemId = useSheetStore((s) => s.itemId);
+	const { closeSheet } = useSheetStore();
 	const { customer } = useCusQuery();
 	const axiosInstance = useAxiosInstance();
+	const { stripeAccount } = useOrgStripeQuery();
+	const env = useEnv();
+	const { setIsInlineEditorOpen } = useCustomerContext();
 
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
-
 	const { prepaidItems } = usePrepaidItems({ product: productV2 });
 
-	// Fetch numVersions for the product
 	const { data: productData } = useQuery({
 		queryKey: ["product-versions", productV2?.id],
 		queryFn: async () => {
@@ -348,7 +114,7 @@ export function SubscriptionUpdateSheet2() {
 	const numVersions = productData?.numVersions ?? productV2?.version ?? 1;
 	const currentVersion = cusProduct?.product?.version ?? 1;
 
-	const updateSubscriptionFormContext = useMemo(
+	const formContext = useMemo(
 		(): UpdateSubscriptionFormContext | null =>
 			cusProduct && productV2
 				? {
@@ -395,7 +161,7 @@ export function SubscriptionUpdateSheet2() {
 		);
 	}
 
-	if (!updateSubscriptionFormContext) {
+	if (!formContext) {
 		return (
 			<div className="flex flex-col h-full">
 				<SheetHeader title="Update Subscription" description="Loading..." />
@@ -405,9 +171,25 @@ export function SubscriptionUpdateSheet2() {
 	}
 
 	return (
-		<SheetContent
-			updateSubscriptionFormContext={updateSubscriptionFormContext}
-			originalItems={productV2?.items}
-		/>
+		<UpdateSubscriptionFormProvider
+			formContext={formContext}
+			originalItems={productV2?.items as ProductItem[] | undefined}
+			onPlanEditorOpen={() => setIsInlineEditorOpen(true)}
+			onPlanEditorClose={() => setIsInlineEditorOpen(false)}
+			onInvoiceCreated={(invoiceId) => {
+				const invoiceLink = getStripeInvoiceLink({
+					stripeInvoice: invoiceId,
+					env,
+					accountId: stripeAccount?.id,
+				});
+				window.open(invoiceLink, "_blank");
+			}}
+			onCheckoutRedirect={(checkoutUrl) => {
+				window.location.href = checkoutUrl;
+			}}
+			onSuccess={closeSheet}
+		>
+			<SheetContent />
+		</UpdateSubscriptionFormProvider>
 	);
 }

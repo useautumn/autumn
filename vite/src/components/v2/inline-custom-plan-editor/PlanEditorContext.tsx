@@ -2,6 +2,8 @@ import {
 	type FrontendProduct,
 	itemsAreSame,
 	type ProductItem,
+	type ProductV2,
+	productsAreSame,
 	productV2ToFeatureItems,
 } from "@autumn/shared";
 import {
@@ -21,6 +23,7 @@ interface ProductContextValue {
 	setProduct: (
 		product: FrontendProduct | ((prev: FrontendProduct) => FrontendProduct),
 	) => void;
+	initialProduct?: FrontendProduct;
 	sheetType: string | null;
 	itemId: string | null;
 	initialItem: ProductItem | null;
@@ -40,6 +43,7 @@ export function ProductProvider({
 	children,
 	product,
 	setProduct,
+	initialProduct,
 	sheetType,
 	itemId,
 	initialItem,
@@ -52,6 +56,7 @@ export function ProductProvider({
 	setProduct: (
 		product: FrontendProduct | ((prev: FrontendProduct) => FrontendProduct),
 	) => void;
+	initialProduct?: FrontendProduct;
 	sheetType: string | null;
 	itemId: string | null;
 	initialItem: ProductItem | null;
@@ -64,6 +69,7 @@ export function ProductProvider({
 			value={{
 				product,
 				setProduct,
+				initialProduct,
 				sheetType,
 				itemId,
 				initialItem,
@@ -87,10 +93,15 @@ export function useProduct() {
 		return {
 			product: context.product,
 			setProduct: context.setProduct,
+			initialProduct: context.initialProduct,
 		};
 	}
 
-	return { product: storeProduct, setProduct: storeSetProduct };
+	return {
+		product: storeProduct,
+		setProduct: storeSetProduct,
+		initialProduct: undefined,
+	};
 }
 
 /** Hook to get sheet state and actions. Uses context if available, otherwise Zustand. */
@@ -212,4 +223,22 @@ export function useDiscardItemAndClose() {
 		}
 		closeSheet();
 	}, [initialItem, setCurrentItem, closeSheet]);
+}
+
+/** Hook to check if the product has unsaved changes compared to initial state. Only works in context mode. */
+export function useHasPlanChanges() {
+	const { product, initialProduct } = useProduct();
+	const { features = [] } = useFeaturesQuery();
+
+	return useMemo(() => {
+		if (!initialProduct) return false;
+
+		const { itemsSame } = productsAreSame({
+			newProductV2: product as unknown as ProductV2,
+			curProductV2: initialProduct as unknown as ProductV2,
+			features,
+		});
+
+		return !itemsSame;
+	}, [product, initialProduct, features]);
 }
