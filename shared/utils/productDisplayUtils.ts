@@ -73,14 +73,17 @@ export const getFeatureItemDisplay = ({
 				? "0 "
 				: `${numberWithCommas(item.included_usage)} `;
 
-	const intervalStr = formatInterval({
-		interval: item.interval ?? undefined,
-		intervalCount: item.interval_count ?? undefined,
-	});
+	// If interval is null for a feature item, it's a one-time/lifetime feature
+	const intervalStr = item.interval
+		? formatInterval({
+				interval: item.interval,
+				intervalCount: item.interval_count ?? undefined,
+			})
+		: "one-off";
 
 	return {
 		primary_text: `${includedUsageTxt}${featureName}`,
-		secondary_text: fullDisplay && intervalStr ? intervalStr : undefined,
+		secondary_text: fullDisplay ? intervalStr : undefined,
 	};
 };
 
@@ -158,13 +161,15 @@ export const getFeaturePriceItemDisplay = ({
 		priceStr2 = `${billingFeatureName}`;
 	}
 
-	// let intervalStr = isMainPrice && item.interval ? ` per ${item.interval}` : "";
+	// If interval is null for a priced feature, it's a one-time purchase
 	const intervalStr =
 		isMainPrice || fullDisplay
-			? formatInterval({
-					interval: item.interval ?? undefined,
-					intervalCount: item.interval_count ?? undefined,
-				})
+			? item.interval
+				? formatInterval({
+						interval: item.interval,
+						intervalCount: item.interval_count ?? undefined,
+					})
+				: "one-off"
 			: "";
 
 	if (includedUsageStr) {
