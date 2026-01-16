@@ -18,12 +18,20 @@ const percentOff = ({
 	percentOff: number;
 	appliesToProducts?: string[];
 	couponId?: string;
-}): StripeDiscountWithCoupon =>
-	({
+}): StripeDiscountWithCoupon => {
+	const now = Date.now() / 1000;
+	return {
 		id: `di_${couponId}`,
 		object: "discount",
-		coupon: {} as StripeDiscountWithCoupon["coupon"],
-		start: Date.now() / 1000,
+		checkout_session: null,
+		customer: null,
+		end: null,
+		invoice: null,
+		invoice_item: null,
+		promotion_code: null,
+		start: now,
+		subscription: null,
+		subscription_item: null,
 		source: {
 			coupon: {
 				id: couponId,
@@ -34,12 +42,14 @@ const percentOff = ({
 				applies_to: appliesToProducts
 					? { products: appliesToProducts }
 					: undefined,
-				created: Date.now() / 1000,
+				created: now,
 				livemode: false,
 				valid: true,
-			},
+			} as StripeDiscountWithCoupon["source"]["coupon"],
+			type: "coupon",
 		},
-	}) as StripeDiscountWithCoupon;
+	};
+};
 
 /**
  * 10% off discount
@@ -110,12 +120,20 @@ const amountOff = ({
 	currency?: string;
 	appliesToProducts?: string[];
 	couponId?: string;
-}): StripeDiscountWithCoupon =>
-	({
+}): StripeDiscountWithCoupon => {
+	const now = Date.now() / 1000;
+	return {
 		id: `di_${couponId}`,
 		object: "discount",
-		coupon: {} as StripeDiscountWithCoupon["coupon"],
-		start: Date.now() / 1000,
+		checkout_session: null,
+		customer: null,
+		end: null,
+		invoice: null,
+		invoice_item: null,
+		promotion_code: null,
+		start: now,
+		subscription: null,
+		subscription_item: null,
 		source: {
 			coupon: {
 				id: couponId,
@@ -126,12 +144,14 @@ const amountOff = ({
 				applies_to: appliesToProducts
 					? { products: appliesToProducts }
 					: undefined,
-				created: Date.now() / 1000,
+				created: now,
 				livemode: false,
 				valid: true,
-			},
+			} as StripeDiscountWithCoupon["source"]["coupon"],
+			type: "coupon",
 		},
-	}) as StripeDiscountWithCoupon;
+	};
+};
 
 /**
  * $5 off discount (500 cents)

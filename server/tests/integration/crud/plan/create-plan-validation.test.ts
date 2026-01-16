@@ -7,10 +7,10 @@ import {
 	ResetInterval,
 	UsageModel,
 } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { TestFeature } from "../../setup/v2Features.js";
-import { expectAutumnError } from "../../utils/expectUtils/expectErrUtils.js";
 
 describe(chalk.yellowBright("Plan V2 - Mutual Exclusivity Validation"), () => {
 	const autumnV2 = new AutumnInt({ version: ApiVersion.V2_0 });
@@ -100,4 +100,3 @@ describe(chalk.yellowBright("Plan V2 - Mutual Exclusivity Validation"), () => {
 		expect(v1_2.items[0].interval).toBe(ProductItemInterval.Month);
 	});
 });
-
