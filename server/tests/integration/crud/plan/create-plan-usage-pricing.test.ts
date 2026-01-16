@@ -7,9 +7,9 @@ import {
 	ProductItemInterval,
 	UsageModel,
 } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features";
 import chalk from "chalk";
 import { AutumnCliV2 } from "@/external/autumn/autumnCliV2.js";
-import { TestFeature } from "../../setup/v2Features";
 
 describe(chalk.yellowBright("Plan V2 - Usage Pricing Tests"), () => {
 	const autumnV2 = new AutumnCliV2({ version: "2.0.0" });

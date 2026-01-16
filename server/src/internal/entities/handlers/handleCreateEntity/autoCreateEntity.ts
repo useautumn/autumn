@@ -70,7 +70,6 @@ export const autoCreateEntity = async ({
 			cusProduct,
 			inputEntities: [inputEntity],
 			fromAutoCreate: true,
-			logger: ctx.logger,
 		});
 	}
 
