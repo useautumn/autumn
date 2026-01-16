@@ -45,7 +45,7 @@ export function SectionTitle({
 
 	const showTrialToggle = !trialState.isCurrentlyTrialing;
 	const trialIsActive =
-		(trialState.isCurrentlyTrialing || trialState.hasTrialValue) &&
+		(trialState.isCurrentlyTrialing || trialState.isTrialExpanded) &&
 		!trialState.removeTrial;
 
 	return (

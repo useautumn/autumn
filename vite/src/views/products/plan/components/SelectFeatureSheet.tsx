@@ -33,7 +33,7 @@ export function SelectFeatureSheet({
 	const [searchValue, setSearchValue] = useState("");
 
 	const { features } = useFeaturesQuery();
-	const { product, setProduct } = useProduct();
+	const { product, setProduct, initialProduct } = useProduct();
 	const { setSheet } = useSheet();
 
 	useEffect(() => {
@@ -60,8 +60,14 @@ export function SelectFeatureSheet({
 		const selectedFeature = features.find((f) => f.id === featureId);
 		if (!selectedFeature) return;
 
-		// Create a new item with the selected feature
-		const newItem = getDefaultItem({ feature: selectedFeature });
+		// Check if this feature was previously configured in initialProduct
+		const previousItem = initialProduct?.items?.find(
+			(i) => i.feature_id === featureId,
+		);
+
+		// Use the previous configuration if available, otherwise create a new default item
+		const newItem =
+			previousItem ?? getDefaultItem({ feature: selectedFeature });
 
 		// Add the new item to the product
 		const newItems = [...product.items, newItem];

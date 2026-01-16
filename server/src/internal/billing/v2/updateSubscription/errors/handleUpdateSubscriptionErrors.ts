@@ -7,6 +7,7 @@ import { cusProductToProcessorType } from "@shared/utils/cusProductUtils/convert
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
 import type { AutumnBillingPlan } from "@/internal/billing/v2/types/autumnBillingPlan";
+import { handleCurrentCustomerProductErrors } from "./handleCurrentCustomerProductErrors";
 import { handleCustomPlanErrors } from "./handleCustomPlanErrors";
 import { handleFeatureQuantityErrors } from "./handleFeatureQuantityErrors";
 import {
@@ -34,6 +35,9 @@ export const handleUpdateSubscriptionErrors = async ({
 			message: `Cannot update '${customerProduct.product.name}' because it is managed by RevenueCat.`,
 		});
 	}
+
+	// 1. Current customer product errors
+	handleCurrentCustomerProductErrors({ billingContext });
 
 	// 2. Product type transition errors
 	handleProductTypeTransitionErrors({ billingContext, autumnBillingPlan });
