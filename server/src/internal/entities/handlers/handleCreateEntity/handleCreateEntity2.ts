@@ -5,12 +5,12 @@ import {
 	CreateEntityQuerySchema,
 	type CustomerData,
 	type Entity,
+	findFeatureById,
 	notNullish,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
-import type { ExtendedRequest } from "../../../../utils/models/Request.js";
 import { EntityService } from "../../../api/entities/EntityService.js";
 import { getApiEntity } from "../../entityUtils/apiEntityUtils/getApiEntity.js";
 import { constructEntity } from "../../entityUtils/entityUtils.js";
@@ -49,18 +49,21 @@ export const createEntities = async ({
 
 	for (const cusProduct of cusProducts) {
 		await createEntityForCusProduct({
-			req: ctx as unknown as ExtendedRequest,
+			ctx,
 			customer: fullCus,
 			cusProduct,
 			inputEntities,
-			logger,
 		});
 	}
 
-	let data = inputEntities.map((e: any) =>
+	let data = inputEntities.map((e) =>
 		constructEntity({
 			inputEntity: e,
-			feature: features.find((f: any) => f.id === e.feature_id)!,
+			feature: findFeatureById({
+				features,
+				featureId: e.feature_id,
+				errorOnNotFound: true,
+			}),
 			internalCustomerId: fullCus.internal_id,
 			orgId: org.id,
 			env,
@@ -68,10 +71,12 @@ export const createEntities = async ({
 	);
 
 	const newEntities: Entity[] = [];
-	if (existingEntities.some((e: Entity) => e.id === null)) {
+
+	const noIdEntity = existingEntities.find((e) => e.id === null);
+	if (noIdEntity) {
 		const updatedEntity = await EntityService.update({
 			db,
-			internalId: existingEntities.find((e: any) => e.id === null)!.internal_id,
+			internalId: noIdEntity.internal_id,
 			update: {
 				id: inputEntities[0].id,
 				name: inputEntities[0].name,

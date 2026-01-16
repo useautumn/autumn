@@ -155,7 +155,7 @@ export const createNewCustomer = async ({
 			});
 
 			const optionsList = defaultProd.prices
-				.filter((x) => isPrepaidPrice({ price: x }))
+				.filter((x) => isPrepaidPrice(x))
 				.map((x) => {
 					const ent = priceToEnt({
 						price: x,

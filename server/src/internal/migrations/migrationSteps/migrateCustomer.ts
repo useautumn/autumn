@@ -33,7 +33,6 @@ export const migrateCustomer = async ({
 	const customerLogger = createMigrationCustomerLogger({
 		ctx,
 		customerId,
-		migrationJobId: migrationJob?.id,
 	});
 
 	const customerCtx: AutumnContext = { ...ctx, logger: customerLogger };

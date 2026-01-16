@@ -3,6 +3,7 @@ import { insightsRouter } from "@/internal/analytics/insightsRouter.js";
 import { legacyAnalyticsRouter } from "@/internal/analytics/legacyAnalyticsRouter.js";
 import { configsRouter } from "@/internal/configs/configsRouter.js";
 import { eventsRouter } from "@/internal/events/eventsRouter.js";
+import { componentsRouter } from "@/internal/misc/components/componentsRouter.js";
 import { analyticsMiddleware } from "../honoMiddlewares/analyticsMiddleware.js";
 import { apiVersionMiddleware } from "../honoMiddlewares/apiVersionMiddleware.js";
 import { idempotencyMiddleware } from "../honoMiddlewares/idempotencyMiddleware.js";
@@ -16,11 +17,14 @@ import {
 	redemptionRouter,
 	referralRouter,
 } from "../internal/api/rewards/referralRouter";
+import { rewardProgramRouter } from "../internal/api/rewards/rewardProgramRouter";
+import { rewardRouter } from "../internal/api/rewards/rewardRouter";
 import { balancesRouter } from "../internal/balances/balancesRouter";
 import { billingRouter } from "../internal/billing/billingRouter";
 import { cusRouter } from "../internal/customers/cusRouter";
 import { entityRouter } from "../internal/entities/entityRouter";
 import { featureRouter } from "../internal/features/featureRouter";
+import { invoiceRouter } from "../internal/invoices/invoiceRouter.js";
 import { honoOrgRouter } from "../internal/orgs/orgRouter";
 import { platformBetaRouter } from "../internal/platform/platformBeta/platformBetaRouter";
 import {
@@ -45,6 +49,7 @@ apiRouter.route("", balancesRouter);
 apiRouter.route("", migrationRouter);
 apiRouter.route("", entityRouter);
 apiRouter.route("/customers", cusRouter);
+apiRouter.route("/invoices", invoiceRouter);
 
 apiRouter.route("/products_beta", honoProductBetaRouter);
 apiRouter.route("/products", honoProductRouter);
@@ -52,10 +57,14 @@ apiRouter.route("/plans", honoProductRouter);
 apiRouter.route("/features", featureRouter);
 
 apiRouter.route("", balancesRouter);
+
 apiRouter.route("/platform", platformBetaRouter);
 apiRouter.route("/platform/beta", platformBetaRouter);
+
 apiRouter.route("/organization", honoOrgRouter);
 
+apiRouter.route("/rewards", rewardRouter);
+apiRouter.route("/reward_programs", rewardProgramRouter);
 apiRouter.route("/referrals", referralRouter);
 apiRouter.route("/redemptions", redemptionRouter);
 apiRouter.route("/insights", insightsRouter);
@@ -63,3 +72,4 @@ apiRouter.route("/query", legacyAnalyticsRouter);
 apiRouter.route("/events", eventsRouter);
 
 apiRouter.route("/configs", configsRouter);
+apiRouter.route("/components", componentsRouter);

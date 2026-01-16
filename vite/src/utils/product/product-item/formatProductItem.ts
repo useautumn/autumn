@@ -1,34 +1,18 @@
 import {
-	BillingInterval,
-	Feature,
+	type Feature,
 	FeatureType,
-	FrontendOrg,
+	type FrontendOrg,
+	formatAmount,
+	formatInterval,
 	Infinite,
-	Organization,
-	ProductItem,
+	type ProductItem,
 	ProductItemType,
 } from "@autumn/shared";
-import { formatAmount, getItemType, intervalIsNone } from "../productItemUtils";
-import { getFeature } from "../entitlementUtils";
 import { notNullish } from "@/utils/genUtils";
-import { ProductItemInterval } from "autumn-js";
+import { getFeature } from "../entitlementUtils";
+import { getItemType, intervalIsNone } from "../productItemUtils";
 
-const getIntervalString = ({
-	interval,
-	intervalCount = 1,
-}: {
-	interval: ProductItemInterval;
-	intervalCount?: number | null;
-}) => {
-	if (!interval) return "";
-
-	if (intervalCount == 1) {
-		return `per ${interval}`;
-	}
-
-	return `per ${intervalCount} ${interval}s`;
-};
-
+// Can probably delete this...
 export const getPaidFeatureString = ({
 	item,
 	currency = "USD",
@@ -42,34 +26,34 @@ export const getPaidFeatureString = ({
 
 	if (item.price) {
 		amountStr = formatAmount({
-			defaultCurrency: currency,
+			currency,
 			amount: item.price,
 		});
-	} else if (item.tiers && item.tiers.length == 1) {
+	} else if (item.tiers && item.tiers.length === 1) {
 		amountStr = formatAmount({
-			defaultCurrency: currency,
-			amount: item.tiers![0].amount,
+			currency,
+			amount: item.tiers[0].amount,
 		});
-	} else {
+	} else if (item.tiers) {
 		amountStr = `${formatAmount({
-			defaultCurrency: currency,
-			amount: item.tiers![0].amount,
+			currency,
+			amount: item.tiers[0].amount,
 		})} - ${formatAmount({
-			defaultCurrency: currency,
-			amount: item.tiers![item.tiers!.length - 1].amount,
+			currency,
+			amount: item.tiers[item.tiers.length - 1].amount,
 		})}`;
 	}
 
-	const feature = features.find((f: Feature) => f.id == item.feature_id);
+	const feature = features.find((f: Feature) => f.id === item.feature_id);
 
 	amountStr += ` per ${item.billing_units! > 1 ? item.billing_units : ""} ${
 		feature?.name
 	}`;
 
 	if (!intervalIsNone(item.interval)) {
-		const intervalStr = getIntervalString({
-			interval: item.interval!,
-			intervalCount: item.interval_count,
+		const intervalStr = formatInterval({
+			interval: item.interval ?? undefined,
+			intervalCount: item.interval_count ?? undefined,
 		});
 		amountStr += ` ${intervalStr}`;
 	}
@@ -89,14 +73,14 @@ const getFixedPriceString = ({
 	currency?: string;
 }) => {
 	const formattedAmount = formatAmount({
-		defaultCurrency: currency,
+		currency,
 		amount: item.price!,
 	});
 
 	if (!intervalIsNone(item.interval)) {
-		const intervalStr = getIntervalString({
-			interval: item.interval!,
-			intervalCount: item.interval_count,
+		const intervalStr = formatInterval({
+			interval: item.interval ?? undefined,
+			intervalCount: item.interval_count ?? undefined,
 		});
 		return `${formattedAmount} ${intervalStr}`;
 	}
@@ -121,9 +105,9 @@ export const getFeatureString = ({
 		return `Unlimited ${feature?.name}`;
 	}
 
-	const intervalStr = getIntervalString({
-		interval: item.interval!,
-		intervalCount: item.interval_count,
+	const intervalStr = formatInterval({
+		interval: item.interval ?? undefined,
+		intervalCount: item.interval_count ?? undefined,
 	});
 
 	return `${item.included_usage ?? 0} ${feature?.name}${item.entity_feature_id ? ` per ${getFeature(item.entity_feature_id, features)?.name}` : ""}${notNullish(item.interval) ? ` ${intervalStr}` : ""}`;

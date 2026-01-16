@@ -3,6 +3,7 @@ import {
 	type AttachConfig,
 	BillingType,
 	cusProductToPrices,
+	formatAmount,
 	InternalError,
 	type PreviewLineItem,
 } from "@autumn/shared";
@@ -19,7 +20,6 @@ import {
 	isContUsePrice,
 } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-import { formatAmount } from "@/utils/formatUtils.js";
 import type { Logger } from "../../../external/logtail/logtailUtils";
 
 export const getItemsForCurProduct = async ({

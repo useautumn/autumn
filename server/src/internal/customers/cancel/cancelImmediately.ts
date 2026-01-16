@@ -6,6 +6,7 @@ import {
 	type FullCustomer,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { setStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { isOneOff } from "@/internal/products/productUtils.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
@@ -37,6 +38,12 @@ export const cancelImmediately = async ({
 	const sub = await cusProductToSub({ cusProduct, stripeCli });
 
 	if (sub) {
+		// Set lock to prevent webhook handler from processing this cancellation
+		await setStripeSubscriptionLock({
+			stripeSubscriptionId: sub.id,
+			lockedAtMs: Date.now(),
+		});
+
 		await stripeCli.subscriptions.cancel(sub.id, {
 			prorate: prorate,
 			cancellation_details: {

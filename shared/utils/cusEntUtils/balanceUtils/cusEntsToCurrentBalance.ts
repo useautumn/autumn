@@ -18,7 +18,7 @@ export const cusEntToCurrentBalance = ({
 	if (cusEnt.entitlement.allowance_type === AllowanceType.Unlimited) return 0;
 
 	const getCusEntMainBalance = () => {
-		if (isEntityScopedCusEnt({ cusEnt })) {
+		if (isEntityScopedCusEnt(cusEnt)) {
 			if (nullish(entityId)) {
 				const entities = Object.values(cusEnt.entities ?? {});
 				return sumValues(entities.map((entity) => Math.max(0, entity.balance)));

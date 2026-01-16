@@ -7,6 +7,7 @@ import {
 	filterEntityLevelCustomerEntitlementsFromFullCustomer,
 	filterPlanAndFeatureExpand,
 } from "@autumn/shared";
+
 import { CACHE_CUSTOMER_VERSION } from "@lua/cacheConfig.js";
 import type { Redis } from "ioredis";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -64,6 +65,7 @@ export const getCachedApiEntity = async ({
 		}
 
 		const entity = fullCus.entity;
+
 		if (!entity) {
 			throw new EntityNotFoundError({ entityId });
 		}

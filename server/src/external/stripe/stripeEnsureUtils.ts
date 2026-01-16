@@ -1,49 +1,25 @@
-import type { AppEnv, Organization } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { initProductInStripe } from "@/internal/products/productUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
 
-export async function ensureStripeProducts({
-	db,
-	logger,
-	req,
-	org,
-	env,
-}: {
-	db: DrizzleCli;
-	logger: any;
-	req: ExtendedRequest;
-	org: Organization;
-	env: AppEnv;
-}) {
+export async function ensureStripeProducts({ ctx }: { ctx: AutumnContext }) {
 	await ensureStripeProductsWithEnv({
-		db,
-		logger,
-		req,
-		env,
-		org,
+		ctx,
 	});
 }
 export async function ensureStripeProductsWithEnv({
-	db,
-	logger,
-	req,
-	env,
-	org,
+	ctx,
 }: {
-	db: DrizzleCli;
-	logger: any;
-	req: ExtendedRequest;
-	env: AppEnv;
-	org: Organization;
+	ctx: AutumnContext;
 }) {
+	const { db, org, env, logger } = ctx;
+
 	// let existingStripeProducts = await stripe.products.list();
 	const fullProducts = await ProductService.listFull({
 		db,
-		orgId: req.org.id,
+		orgId: org.id,
 		env,
 	});
 
@@ -51,7 +27,7 @@ export async function ensureStripeProductsWithEnv({
 
 	// Fetch updated org data to ensure we have the latest Stripe configuration
 	const products = await stripeCli.products.list({ limit: 100 });
-	const updatedOrg = await OrgService.get({ db, orgId: req.org.id });
+	const updatedOrg = await OrgService.get({ db, orgId: org.id });
 
 	const batchInit: Promise<void>[] = [];
 	for (const fullProduct of fullProducts) {

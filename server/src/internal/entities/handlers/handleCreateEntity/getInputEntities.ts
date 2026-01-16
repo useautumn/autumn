@@ -33,7 +33,7 @@ export const validateAndGetInputEntities = async ({
 	});
 
 	// 2. Get input entities
-	let inputEntities: any[] = [];
+	let inputEntities: CreateEntityParams[] = [];
 	if (Array.isArray(createEntityData)) {
 		inputEntities = createEntityData;
 	} else {

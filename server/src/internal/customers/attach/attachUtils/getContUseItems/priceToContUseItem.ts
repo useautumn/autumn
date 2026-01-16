@@ -4,6 +4,7 @@ import {
 	type FullEntitlement,
 	type PreviewLineItem,
 	type Price,
+	shouldProrate,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
@@ -15,7 +16,6 @@ import {
 	getRelatedCusPrice,
 } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { priceToInvoiceItem } from "@/internal/products/prices/priceUtils/priceToInvoiceItem.js";
-import { shouldProrate } from "@/internal/products/prices/priceUtils/prorationConfigUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { attachParamsToProduct } from "../convertAttachParams.js";
 import { getContUseDowngradeItems } from "./getContUseDowngradeItems.js";

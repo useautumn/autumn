@@ -1,3 +1,5 @@
+import { addAppContextToLogs } from "@/utils/logging/addContextToLogs";
+
 const handleResFinish = (req: any, res: any) => {
 	const skipUrls = ["/v1/customers/all/search"];
 
@@ -43,28 +45,26 @@ export const analyticsMiddleware = async (req: any, res: any, next: any) => {
 	const customerId =
 		req?.body?.customer_id || parseCustomerIdFromUrl(req.originalUrl);
 
-	const reqContext = {
-		org_id: req.org?.id,
-		org_slug: req.org?.slug,
-		env: req.env,
-		authType: req.authType,
-		body: req.body,
-		customer_id: customerId,
-		user_id: req.userId || null,
-	};
-
 	if (req.span) {
 		req.span.setAttributes({
 			org_id: req.org?.id,
 			org_slug: req.org?.slug,
 			env: req.env,
-			customer_id: reqContext.customer_id,
+			customer_id: customerId,
 		});
 	}
 
-	req.logger = req.logger.child({
-		context: {
-			context: reqContext,
+	req.logger = addAppContextToLogs({
+		logger: req.logger,
+		appContext: {
+			org_id: req.org?.id,
+			org_slug: req.org?.slug,
+			env: req.env,
+			customer_id: customerId,
+			auth_type: req.authType,
+			user_id: req.userId || null,
+			user_email: req.user?.email || null,
+			api_version: req.apiVersion?.semver,
 		},
 	});
 

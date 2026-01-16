@@ -95,8 +95,8 @@ server/test.sh
 
 
 
-.claude/
-.vscode/
+
+
 
 migration.sh
 stat.sh

@@ -6,48 +6,8 @@ import {
 	addWeeks,
 	format,
 } from "date-fns";
-import { Stripe } from "stripe";
+import type { Stripe } from "stripe";
 import { timeout } from "../genUtils.js";
-
-export const getStripeNow = async ({
-	stripeCli,
-	stripeCus,
-	stripeSub,
-	testClockId,
-}: {
-	stripeCli: Stripe;
-	stripeCus?: Stripe.Customer;
-	stripeSub?: Stripe.Subscription;
-	testClockId?: string;
-}) => {
-	if (testClockId) {
-		try {
-			let stripeClock =
-				await stripeCli.testHelpers.testClocks.retrieve(testClockId);
-			return stripeClock.frozen_time * 1000;
-		} catch (error) {}
-	}
-
-	if (stripeSub && !stripeSub.livemode && stripeSub.test_clock) {
-		try {
-			const stripeClock = await stripeCli.testHelpers.testClocks.retrieve(
-				stripeSub.test_clock as string,
-			);
-			return stripeClock.frozen_time * 1000;
-		} catch (error) {}
-	}
-
-	if (stripeCus && !stripeCus.livemode && stripeCus.test_clock) {
-		try {
-			const stripeClock = await stripeCli.testHelpers.testClocks.retrieve(
-				stripeCus.test_clock as string,
-			);
-			return stripeClock.frozen_time * 1000;
-		} catch (error) {}
-	}
-
-	return Date.now();
-};
 
 export const advanceTestClock = async ({
 	stripeCli,

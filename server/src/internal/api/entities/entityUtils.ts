@@ -2,7 +2,6 @@ import {
 	type AppEnv,
 	BillingType,
 	type Customer,
-	type Entitlement,
 	type Entity,
 	EntityExpand,
 	ErrCode,
@@ -60,16 +59,6 @@ export const entityMatchesFeature = ({
 	entity: Entity;
 }) => {
 	return feature.id === entity.feature_id;
-};
-
-export const entitlementLinkedToEntity = ({
-	entitlement,
-	entity,
-}: {
-	entitlement: Entitlement;
-	entity: Entity;
-}) => {
-	return entitlement.entity_feature_id === entity.feature_id;
 };
 
 export const isLinkedToEntity = ({

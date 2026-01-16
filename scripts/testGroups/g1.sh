@@ -31,6 +31,7 @@ BUN_PARALLEL_COMPACT \
   'server/tests/balances/check/prepaid' \
   'server/tests/balances/check/send-event' \
   'server/tests/balances/check/loose' \
+  'server/tests/balances/set-usage' \
   --max=6
 
 

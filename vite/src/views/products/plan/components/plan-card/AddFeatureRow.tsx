@@ -1,11 +1,11 @@
 import { PlusIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/v2/buttons/Button";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import {
 	useCurrentItem,
-	useProductStore,
-} from "@/hooks/stores/useProductStore";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
+	useProduct,
+	useSheet,
+} from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { checkItemIsValid } from "@/utils/product/entitlementUtils";
 
 interface AddFeatureRowProps {
@@ -15,27 +15,22 @@ interface AddFeatureRowProps {
 
 export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 	const { features } = useFeaturesQuery();
-	const setSheet = useSheetStore((s) => s.setSheet);
-	const product = useProductStore((s) => s.product);
+	const { setSheet } = useSheet();
+	const { product } = useProduct();
 	const item = useCurrentItem();
 
 	const handleAddFeatureClick = () => {
-		// Get feature IDs that are already added to the plan
 		const addedFeatureIds = new Set(
 			product.items?.map((item) => item.feature_id).filter(Boolean) || [],
 		);
 
-		// Filter out features that are already on the plan
 		const availableFeatures = features.filter(
 			(feature) => !addedFeatureIds.has(feature.id),
 		);
 
 		if (availableFeatures.length === 0) {
-			// No features available to add (either none exist or all are already added)
-			// Go directly to create flow
 			setSheet({ type: "new-feature", itemId: "new" });
 		} else {
-			// Features available to add, open select sheet
 			setSheet({ type: "select-feature", itemId: "select" });
 		}
 	};
@@ -43,7 +38,7 @@ export const AddFeatureRow = ({ disabled }: AddFeatureRowProps) => {
 	return (
 		<Button
 			variant="dotted"
-			className="group !rounded-xl !bg-transparent w-full !h-9 !border-dashed !text-primary [&_svg]:text-primary hover:!border-primary !border-primary/50 active:!border-primary focus-visible:!bg-[#FDFDFC] focus-visible:!border-dashed [data-state='open']:!bg-[#FDFDFC] disabled:relative z-95 hover:relative"
+			className="group !rounded-xl !bg-transparent w-full !h-9 !border-dashed !text-primary [&_svg]:text-primary hover:!border-primary !border-primary/50 active:!border-primary focus-visible:!bg-primary/5 focus-visible:!border-dashed [data-state='open']:!bg-primary/5 disabled:relative z-95 hover:relative"
 			disabled={disabled}
 			onClick={() => {
 				if (!checkItemIsValid(item!)) return;

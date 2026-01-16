@@ -1,7 +1,7 @@
 import {
 	type FrontendProduct,
 	formatAmount,
-	getIntervalString,
+	formatInterval,
 	productV2ToBasePrice,
 } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils";
@@ -54,7 +54,7 @@ export const getBasePriceDisplay = ({
 		});
 
 		const intervalText = basePrice.interval
-			? getIntervalString({
+			? formatInterval({
 					interval: basePrice.interval,
 					intervalCount: basePrice.interval_count,
 				})
