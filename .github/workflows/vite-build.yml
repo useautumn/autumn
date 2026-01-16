@@ -27,8 +27,6 @@ jobs:
 
       - name: Run TypeScript type check
         run: cd vite && bunx tsc --noEmit
-        env:
-          NODE_OPTIONS: "--max-old-space-size=8192"
 
   build:
     name: Build
@@ -48,5 +46,3 @@ jobs:
 
       - name: Build Vite
         run: cd vite && bunx vite build
-        env:
-          NODE_OPTIONS: "--max-old-space-size=8192"
