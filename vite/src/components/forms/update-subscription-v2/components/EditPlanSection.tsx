@@ -1,9 +1,4 @@
-import type {
-	Feature,
-	FullCusProduct,
-	ProductItem,
-	ProductV2,
-} from "@autumn/shared";
+import type { ProductItem } from "@autumn/shared";
 import {
 	buildEditsForItem,
 	featureToOptions,
@@ -18,43 +13,30 @@ import { Button } from "@/components/v2/buttons/Button";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
-import type { UseTrialStateReturn } from "../hooks/useTrialState";
-import type { UseUpdateSubscriptionForm } from "../hooks/useUpdateSubscriptionForm";
+import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 import { PriceDisplay } from "./PriceDisplay";
 import { SectionTitle } from "./SectionTitle";
 import { SubscriptionItemRow } from "./SubscriptionItemRow";
 import { TrialEditorRow } from "./TrialEditorRow";
 import { VersionChangeRow } from "./VersionChangeRow";
 
-interface EditPlanSectionProps {
-	hasCustomizations: boolean;
-	onEditPlan: () => void;
-	product?: ProductV2;
-	originalItems?: ProductItem[];
-	customerProduct?: FullCusProduct;
-	features?: Feature[];
-	form: UseUpdateSubscriptionForm;
-	numVersions?: number;
-	currentVersion?: number;
-	prepaidOptions?: Record<string, number>;
-	initialPrepaidOptions?: Record<string, number>;
-	trialState: UseTrialStateReturn;
-}
+export function EditPlanSection() {
+	const {
+		formContext,
+		form,
+		formValues,
+		features,
+		trialState,
+		originalItems,
+		initialPrepaidOptions,
+		productWithFormItems: product,
+		handleEditPlan,
+	} = useUpdateSubscriptionFormContext();
 
-export function EditPlanSection({
-	hasCustomizations,
-	onEditPlan,
-	product,
-	originalItems,
-	customerProduct,
-	features,
-	form,
-	numVersions,
-	currentVersion,
-	prepaidOptions = {},
-	initialPrepaidOptions = {},
-	trialState,
-}: EditPlanSectionProps) {
+	const { customerProduct, numVersions, currentVersion } = formContext;
+	const { prepaidOptions } = formValues;
+	const hasCustomizations = formValues.items !== null;
+
 	const { org } = useOrg();
 	const currency = org?.default_currency ?? "USD";
 
@@ -222,7 +204,7 @@ export function EditPlanSection({
 								selectedVersion={selectedVersion}
 							/>
 						)}
-						{isPaidProduct && form && (
+						{isPaidProduct && (
 							<div
 								className={cn(
 									"grid transition-[grid-template-rows] duration-200 ease-out",
@@ -244,7 +226,6 @@ export function EditPlanSection({
 										onEndTrial={trialState.handleEndTrial}
 										onCollapse={() => trialState.setIsTrialExpanded(false)}
 										onRevert={trialState.handleRevertTrial}
-										onConfirm={() => trialState.setIsTrialConfirmed(true)}
 									/>
 								</div>
 							</div>
@@ -252,7 +233,7 @@ export function EditPlanSection({
 					</div>
 				</>
 			) : null}
-			<Button variant="secondary" onClick={onEditPlan} className="w-full">
+			<Button variant="secondary" onClick={handleEditPlan} className="w-full">
 				<PencilSimpleIcon size={14} className="mr-1" />
 				Edit Plan Items
 			</Button>
