@@ -19,6 +19,47 @@ import { CustomerProductsColumns } from "./CustomerProductsColumns";
 import { ShowExpiredActionButton } from "./ShowExpiredActionButton";
 import { TransferProductDialog } from "./TransferProductDialog";
 
+// Shared scope column factory
+function createScopeColumn(
+	entities: Entity[],
+	setEntityId: (id: string) => void,
+) {
+	return {
+		header: "Scope",
+		accessorKey: "scope",
+		cell: ({ row }: { row: Row<FullCusProduct> }) => {
+			const product = row.original;
+
+			if (!product.internal_entity_id && !product.entity_id) {
+				return <span className="text-t2">Customer</span>;
+			}
+
+			const entity = entities.find(
+				(e: Entity) =>
+					e.internal_id === product.internal_entity_id ||
+					e.id === product.entity_id,
+			);
+
+			if (!entity) return <span className="text-t3">—</span>;
+
+			return (
+				<Button
+					variant="skeleton"
+					onClick={(e) => {
+						e.stopPropagation();
+						setEntityId(entity.id || entity.internal_id);
+					}}
+					className="font-medium hover:text-purple-600 cursor-pointer max-w-full px-0! hover:bg-transparent active:bg-transparent active:border-none"
+				>
+					<span className="truncate w-full">
+						{entity.name || entity.id || entity.internal_id}
+					</span>
+				</Button>
+			);
+		},
+	};
+}
+
 export function CustomerProductsTable() {
 	const env = useEnv();
 	const {
@@ -38,68 +79,32 @@ export function CustomerProductsTable() {
 		null,
 	);
 	const selectedItemId = useSheetStore((s) => s.itemId);
+	const setSheet = useSheetStore((s) => s.setSheet);
 
 	useSavedViewsQuery();
 	useFullCusSearchQuery();
 
-	// Build columns dynamically - include Scope column only when there are entity products
+	const hasPurchases = purchases.all.length > 0;
+	const hasEntityProducts =
+		subscriptions.hasEntityProducts || purchases.hasEntityProducts;
+
+	// Build columns - same for both tables to keep them consistent
 	const columns = useMemo(() => {
-		const baseColumns = [
-			CustomerProductsColumns[0], // Name
-		];
+		const baseColumns = [CustomerProductsColumns[0]];
 
-		// Add Scope column if there are entity products
-		if (subscriptions.hasEntityProducts) {
-			baseColumns.push({
-				header: "Scope",
-				accessorKey: "scope",
-				cell: ({ row }: { row: Row<FullCusProduct> }) => {
-					const product = row.original;
-
-					// If no entity, it's customer-level
-					if (!product.internal_entity_id && !product.entity_id) {
-						return <span className="text-t3">Customer</span>;
-					}
-
-					// Find the entity
-					const entity = customer.entities.find(
-						(e: Entity) =>
-							e.internal_id === product.internal_entity_id ||
-							e.id === product.entity_id,
-					);
-
-					if (!entity) return <span className="text-t3">—</span>;
-
-					return (
-						<Button
-							variant="skeleton"
-							onClick={(e) => {
-								e.stopPropagation();
-								setEntityId(entity.id || entity.internal_id);
-							}}
-							className="font-medium hover:text-purple-600 cursor-pointer max-w-full px-0! hover:bg-transparent active:bg-transparent active:border-none"
-						>
-							<span className="truncate w-full">
-								{entity.name || entity.id || entity.internal_id}
-							</span>
-						</Button>
-					);
-				},
-			});
+		if (hasEntityProducts) {
+			baseColumns.push(createScopeColumn(customer.entities, setEntityId));
 		}
 
-		// Add remaining columns
 		baseColumns.push(
-			CustomerProductsColumns[1], // Price
-			CustomerProductsColumns[2], // Status
-			CustomerProductsColumns[3], // Created At
-			CustomerProductsColumns[4], // Actions
+			CustomerProductsColumns[1],
+			CustomerProductsColumns[2],
+			CustomerProductsColumns[3],
+			CustomerProductsColumns[4],
 		);
 
 		return baseColumns;
-	}, [subscriptions.hasEntityProducts, customer.entities, setEntityId]);
-
-	const setSheet = useSheetStore((s) => s.setSheet);
+	}, [hasEntityProducts, customer.entities, setEntityId]);
 
 	const handleCancelClick = (product: FullCusProduct) => {
 		setSelectedProduct(product);
@@ -124,7 +129,7 @@ export function CustomerProductsTable() {
 		hasEntities,
 	};
 
-	const table = useCustomerTable({
+	const subscriptionTable = useCustomerTable({
 		data: subscriptions.all,
 		columns,
 		options: {
@@ -134,11 +139,18 @@ export function CustomerProductsTable() {
 		},
 	});
 
-	// Check if there are any purchases (for empty state messaging)
-	const hasPurchases = purchases.all.length > 0;
+	const purchaseTable = useCustomerTable({
+		data: purchases.all,
+		columns,
+		options: {
+			globalFilterFn: "includesString",
+			enableGlobalFilter: true,
+			meta: tableMeta,
+		},
+	});
 
 	const emptyStateChildren =
-		subscriptions.hasEntityProducts || hasPurchases ? (
+		hasEntityProducts || hasPurchases ? (
 			"No subscriptions found"
 		) : (
 			<>
@@ -164,7 +176,7 @@ export function CustomerProductsTable() {
 		);
 
 	return (
-		<div className="flex flex-col gap-4">
+		<div className="flex flex-col gap-6">
 			{selectedProduct && (
 				<>
 					<CancelProductDialog
@@ -179,9 +191,11 @@ export function CustomerProductsTable() {
 					/>
 				</>
 			)}
+
+			{/* Subscriptions Table */}
 			<Table.Provider
 				config={{
-					table,
+					table: subscriptionTable,
 					numberOfColumns: columns.length,
 					enableSorting: false,
 					isLoading,
@@ -205,13 +219,36 @@ export function CustomerProductsTable() {
 							<AttachProductSheetTrigger />
 						</Table.Actions>
 					</Table.Toolbar>
-					<SectionTag>Subscriptions</SectionTag>
+					{hasPurchases && <SectionTag>Subscriptions</SectionTag>}
 					<Table.Content>
 						<Table.Header />
 						<Table.Body />
 					</Table.Content>
 				</Table.Container>
 			</Table.Provider>
+
+			{/* Purchases Table - only rendered if there are purchases */}
+			{hasPurchases && (
+				<Table.Provider
+					config={{
+						table: purchaseTable,
+						numberOfColumns: columns.length,
+						enableSorting: false,
+						isLoading,
+						onRowClick: handleRowClick,
+						emptyStateText: "No purchases found",
+						flexibleTableColumns: true,
+						selectedItemId,
+					}}
+				>
+					<Table.Container>
+						<SectionTag>Purchases</SectionTag>
+						<Table.Content>
+							<Table.Body />
+						</Table.Content>
+					</Table.Container>
+				</Table.Provider>
+			)}
 		</div>
 	);
 }
