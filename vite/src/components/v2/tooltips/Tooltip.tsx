@@ -45,8 +45,8 @@ function TooltipContent({
 				data-slot="tooltip-content"
 				sideOffset={sideOffset}
 				className={cn(
-					`z-100 overflow-hidden rounded-[6px] px-2 py-[3px] text-t3
-         bg-card
+					`z-100 overflow-hidden rounded-[6px] px-2 py-[3px] text-t2 border
+         bg-interactive-secondary dark:bg-card
           text-[13px] font-medium leading-[1.6] tracking-[-0.039px]
           shadow-[0px_0px_4px_2px_rgba(0,0,0,0.05)]
           animate-in fade-in-0 zoom-in-95

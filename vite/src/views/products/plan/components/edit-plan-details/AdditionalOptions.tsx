@@ -17,13 +17,17 @@ export const AdditionalOptions = ({
 	return (
 		<SheetSection withSeparator={withSeparator}>
 			<div className="space-y-4">
-				{((product.planType === "free" && !product.is_add_on) ||
+				{(product.planType === "free" ||
 					product.free_trial?.card_required === false) && (
 					<AreaCheckbox
-						title="Auto-enable Plan"
+						title="Auto-enable plan"
 						description="This plan will be enabled automatically for new customers"
 						checked={product.is_default}
-						disabled={product.is_add_on}
+						disabledReason={
+							product.is_add_on
+								? "Cannot auto-enable an add-on plan"
+								: undefined
+						}
 						onCheckedChange={(checked) =>
 							setProduct({ ...product, is_default: checked })
 						}
@@ -31,7 +35,7 @@ export const AdditionalOptions = ({
 				)}
 				<AreaCheckbox
 					title={
-						product.planType === "free" ? "Limited-time Trial" : "Free Trial"
+						product.planType === "free" ? "Limited-time trial" : "Free trial"
 					}
 					checked={notNullish(product.free_trial)}
 					onCheckedChange={(checked) =>
@@ -44,6 +48,25 @@ export const AdditionalOptions = ({
 				>
 					{notNullish(product.free_trial) && <FreeTrialSection />}
 				</AreaCheckbox>
+				<AreaCheckbox
+					title="Add-on plan"
+					description="This plan can be purchased alongside base plans as an add-on"
+					checked={product.is_add_on}
+					disabledReason={
+						product.is_default
+							? "Cannot mark as add-on while auto-enable is active"
+							: !product.items.some((item) => item.interval)
+								? "You must add at least one recurring price before marking this plan as an add-on."
+								: undefined
+					}
+					onCheckedChange={(checked) =>
+						setProduct({
+							...product,
+							is_add_on: checked,
+							is_default: checked ? false : product.is_default,
+						})
+					}
+				/>
 			</div>
 		</SheetSection>
 	);
