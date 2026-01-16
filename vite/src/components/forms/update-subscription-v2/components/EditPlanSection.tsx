@@ -82,19 +82,30 @@ export function EditPlanSection() {
 				},
 			});
 
-		const oldIntervalText = originalInterval
-			? formatInterval({
-					interval: originalInterval,
-					intervalCount: originalIntervalCount,
-				})
-			: null;
+		const getIntervalText = (
+			interval: typeof originalInterval,
+			intervalCount: number,
+			hasPriceItem: boolean,
+		) => {
+			if (interval) {
+				return formatInterval({ interval, intervalCount });
+			}
+			// Only show "one-time" if there's a price item with no interval
+			// Otherwise it's variable/usage-based
+			return hasPriceItem ? "one-time" : null;
+		};
 
-		const newIntervalText = currentInterval
-			? formatInterval({
-					interval: currentInterval,
-					intervalCount: currentIntervalCount,
-				})
-			: (oldIntervalText ?? "per month");
+		const oldIntervalText = getIntervalText(
+			originalInterval,
+			originalIntervalCount,
+			!!originalPriceItem,
+		);
+
+		const newIntervalText = getIntervalText(
+			currentInterval,
+			currentIntervalCount,
+			!!currentPriceItem,
+		);
 
 		return {
 			oldPrice: formatPrice(originalPrice),
