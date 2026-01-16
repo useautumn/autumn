@@ -57,6 +57,7 @@ export function InlineEditorProvider({
 		<ProductProvider
 			product={product}
 			setProduct={setProduct}
+			initialProduct={initialProduct}
 			sheetType={sheetType}
 			itemId={itemId}
 			initialItem={initialItem}

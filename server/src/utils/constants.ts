@@ -16,6 +16,7 @@ export const ADMIN_USER_IDs = [
 
 	// Sandbox:
 	"user_2rypooIKyMQx81vMS8FFGx24UHU", // john
+	"K7NDwSwohMCV9BXJ3Yb5MxgeXhWcwj0L", // charlie
 ];
 
 export const dashboardOrigins = [
