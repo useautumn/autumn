@@ -40,9 +40,6 @@ export function EditPlanSection() {
 	const { org } = useOrg();
 	const currency = org?.default_currency ?? "USD";
 
-	const priceItem = product?.items?.find((i) => isPriceItem(i));
-	const isPaidProduct = priceItem?.price && priceItem.price > 0;
-
 	const originalItemsMap = new Map(
 		originalItems?.filter((i) => i.feature_id).map((i) => [i.feature_id, i]) ??
 			[],
@@ -123,7 +120,6 @@ export function EditPlanSection() {
 					numVersions={numVersions}
 					currentVersion={currentVersion}
 					trialState={trialState}
-					isPaidProduct={!!isPaidProduct}
 				/>
 			}
 			withSeparator
@@ -204,32 +200,30 @@ export function EditPlanSection() {
 								selectedVersion={selectedVersion}
 							/>
 						)}
-						{isPaidProduct && (
-							<div
-								className={cn(
-									"grid transition-[grid-template-rows] duration-200 ease-out",
-									trialState.isTrialExpanded ||
-										trialState.removeTrial ||
-										trialState.isCurrentlyTrialing ||
-										trialState.hasTrialValue
-										? "grid-rows-[1fr]"
-										: "grid-rows-[0fr]",
-								)}
-							>
-								<div className="overflow-hidden">
-									<TrialEditorRow
-										form={form}
-										isCurrentlyTrialing={trialState.isCurrentlyTrialing}
-										initialTrialLength={trialState.remainingTrialDays}
-										initialTrialFormatted={trialState.remainingTrialFormatted}
-										removeTrial={trialState.removeTrial}
-										onEndTrial={trialState.handleEndTrial}
-										onCollapse={() => trialState.setIsTrialExpanded(false)}
-										onRevert={trialState.handleRevertTrial}
-									/>
-								</div>
+						<div
+							className={cn(
+								"grid transition-[grid-template-rows] duration-200 ease-out",
+								trialState.isTrialExpanded ||
+									trialState.removeTrial ||
+									trialState.isCurrentlyTrialing ||
+									trialState.hasTrialValue
+									? "grid-rows-[1fr]"
+									: "grid-rows-[0fr]",
+							)}
+						>
+							<div className="overflow-hidden">
+								<TrialEditorRow
+									form={form}
+									isCurrentlyTrialing={trialState.isCurrentlyTrialing}
+									initialTrialLength={trialState.remainingTrialDays}
+									initialTrialFormatted={trialState.remainingTrialFormatted}
+									removeTrial={trialState.removeTrial}
+									onEndTrial={trialState.handleEndTrial}
+									onCollapse={() => trialState.setIsTrialExpanded(false)}
+									onRevert={trialState.handleRevertTrial}
+								/>
 							</div>
-						)}
+						</div>
 					</div>
 				</>
 			) : null}
