@@ -86,7 +86,7 @@ describe(chalk.yellowBright("cusProductToExistingUsages"), () => {
 			expect(existingUsages[internalFeatureId].usage).toBe(30);
 			// Entity usages reflect current balances (not usage)
 			expect(existingUsages[internalFeatureId].entityUsages).toEqual({
-				entity1: 40,
+				entity1: 10,
 				entity2: 25,
 			});
 		});

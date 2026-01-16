@@ -36,6 +36,7 @@ export * from "./filterCusEntUtils.js";
 
 // Find utils
 export * from "./findCustomerEntitlement/findCustomerEntitlementById.js";
+export * from "./findCustomerEntitlement/findCustomerEntitlementByFeature.js";
 export * from "./findCustomerEntitlement/findPrepaidCustomerEntitlement.js";
 // Other utils
 export * from "./getRolloverFields.js";

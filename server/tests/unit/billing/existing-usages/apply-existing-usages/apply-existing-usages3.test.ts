@@ -1,9 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { EntInterval, type ExistingUsages } from "@autumn/shared";
+import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import chalk from "chalk";
 import { applyExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/applyExistingUsages";
+
+const ctx = contexts.create({});
 
 describe(
 	chalk.yellowBright("applyExistingUsages (testing deduction order)"),
@@ -44,6 +47,7 @@ describe(
 
 				// Act
 				applyExistingUsages({
+					ctx,
 					customerProduct: cusProduct,
 					existingUsages,
 					entities: [],
@@ -96,7 +100,12 @@ describe(
 				};
 
 				// Act
-				applyExistingUsages({ customerProduct, existingUsages, entities: [] });
+				applyExistingUsages({
+					ctx,
+					customerProduct,
+					existingUsages,
+					entities: [],
+				});
 
 				// Assert: Prepaid should be depleted first (0), then pay-per-use should have 3 remaining
 				const updatedPrepaid = customerProduct.customer_entitlements.find(
@@ -149,7 +158,12 @@ describe(
 				};
 
 				// Act
-				applyExistingUsages({ customerProduct, existingUsages, entities: [] });
+				applyExistingUsages({
+					ctx,
+					customerProduct,
+					existingUsages,
+					entities: [],
+				});
 
 				const updatedPrepaid = customerProduct.customer_entitlements.find(
 					(ce) => ce.usage_allowed === false,
@@ -217,7 +231,12 @@ describe(
 				};
 
 				// Act
-				applyExistingUsages({ customerProduct, existingUsages, entities: [] });
+				applyExistingUsages({
+					ctx,
+					customerProduct,
+					existingUsages,
+					entities: [],
+				});
 
 				// Find each cusEnt by their unique characteristics
 				const findCusEnt = (usageAllowed: boolean, interval: EntInterval) =>

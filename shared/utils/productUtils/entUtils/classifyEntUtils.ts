@@ -1,3 +1,4 @@
+import type { Entity } from "../../../models/cusModels/entityModels/entityModels";
 import { FeatureType } from "../../../models/featureModels/featureEnums";
 import {
 	AllowanceType,
@@ -36,4 +37,14 @@ export const isLifetimeEntitlement = ({
 	entitlement: EntitlementWithFeature;
 }) => {
 	return entitlement.interval === EntInterval.Lifetime;
+};
+
+export const entitlementHasEntityFeature = ({
+	entitlement,
+	entity,
+}: {
+	entitlement: EntitlementWithFeature;
+	entity: Entity;
+}) => {
+	return entitlement.entity_feature_id === entity.feature_id;
 };

@@ -2,29 +2,78 @@ import {
 	cusProductToPrices,
 	ErrCode,
 	isPrepaidPrice,
+	priceToFeature,
 	RecaseError,
+	type UpdateSubscriptionV0Params,
 	type UsagePriceConfig,
 } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
 import type { AutumnBillingPlan } from "@/internal/billing/v2/types/autumnBillingPlan";
 
+const checkInputFeatureQuantitiesAreValid = ({
+	ctx,
+	params,
+	autumnBillingPlan,
+	billingContext,
+}: {
+	ctx: AutumnContext;
+	params: UpdateSubscriptionV0Params;
+	autumnBillingPlan: AutumnBillingPlan;
+	billingContext: UpdateSubscriptionBillingContext;
+}) => {
+	const targetCustomerProduct =
+		autumnBillingPlan.insertCustomerProducts?.[0] ??
+		billingContext.customerProduct;
+
+	const prepaidPrices = cusProductToPrices({
+		cusProduct: targetCustomerProduct,
+	}).filter(isPrepaidPrice);
+
+	for (const option of params.options ?? []) {
+		const targetPrepaidPrice = prepaidPrices.find((p) => {
+			const priceFeature = priceToFeature({
+				price: p,
+				features: ctx.features,
+				errorOnNotFound: false,
+			});
+			return priceFeature?.id === option.feature_id;
+		});
+
+		if (!targetPrepaidPrice) {
+			throw new RecaseError({
+				message: `Invalid feature quantity passed in (feature ID: ${option.feature_id}). This feature has no prepaid price on the updated product.`,
+			});
+		}
+	}
+};
+
 export const handleFeatureQuantityErrors = ({
-	// biome-ignore lint/correctness/noUnusedFunctionParameters: consistent signature with other error handlers
+	ctx,
 	billingContext,
 	autumnBillingPlan,
+	params,
 }: {
+	ctx: AutumnContext;
 	billingContext: UpdateSubscriptionBillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
+	params: UpdateSubscriptionV0Params;
 }) => {
+	// 1. Check if param feature IDs are valid
+	checkInputFeatureQuantitiesAreValid({
+		ctx,
+		autumnBillingPlan,
+		billingContext,
+		params,
+	});
+
 	const newCustomerProduct = autumnBillingPlan.insertCustomerProducts?.[0];
 	if (!newCustomerProduct) return;
 
 	const newPrices = cusProductToPrices({ cusProduct: newCustomerProduct });
 	const prepaidPrices = newPrices.filter(isPrepaidPrice);
 
-	if (prepaidPrices.length === 0) {
-		return;
-	}
+	if (prepaidPrices.length === 0) return;
 
 	const options = newCustomerProduct.options || [];
 	const missingFeatures: string[] = [];

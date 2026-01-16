@@ -123,11 +123,11 @@ export const executeRedisDeduction = async ({
 
 		const resultJson = JSON.parse(result) as LuaDeductionResult;
 
-		// if (resultJson.logs && resultJson.logs.length > 0) {
-		// 	ctx.logger.debug(
-		// 		`[executeRedisDeduction] Logs: ${resultJson.logs.join("\n")}`,
-		// 	);
-		// }
+		if (resultJson.logs && resultJson.logs.length > 0) {
+			ctx.logger.debug(
+				`[executeRedisDeduction] Logs: ${resultJson.logs.join("\n")}`,
+			);
+		}
 
 		if (resultJson.error) {
 			throw new RedisDeductionError({

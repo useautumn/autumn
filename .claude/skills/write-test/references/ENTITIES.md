@@ -4,6 +4,64 @@ Entities enable per-entity product attachments (workspaces, projects, teams, sea
 
 ## Core Concepts
 
+### Two Entity Patterns (Important!)
+
+There are **two distinct ways** to use entities in Autumn:
+
+#### 1. Entity Products (Attaching products TO entities)
+- Each entity gets its own product attachment
+- Entities have independent subscriptions
+- Tracking on entity deducts from entity's own balance first
+- See: `server/tests/balances/track/entity-products/`
+
+```typescript
+// Attach product TO an entity
+await autumnV1.attach({
+  customer_id: customerId,
+  entity_id: entity.id,  // Product attached to this entity
+  product_id: pro.id,
+});
+```
+
+#### 2. Per-Entity Features (Products with entity-scoped balances)
+- Customer has ONE product with features that track usage PER entity
+- Each entity gets its own balance allocation for that feature
+- Uses `entity_feature_id` in product item configuration
+- See: `server/tests/balances/track/entity-balances/`
+
+```typescript
+// Product item with per-entity balance
+const perEntityMessages = constructFeatureItem({
+  featureId: TestFeature.Messages,
+  includedUsage: 1000,
+  entityFeatureId: TestFeature.Users,  // Each User entity gets 1000 messages
+});
+
+// Attach product to CUSTOMER (not entity)
+await autumnV1.attach({
+  customer_id: customerId,
+  product_id: pro.id,  // No entity_id - attached at customer level
+});
+
+// Create entities - each automatically gets their per-entity balance
+await autumnV1.entities.create(customerId, [
+  { id: "user1", name: "User 1", feature_id: TestFeature.Users },
+  { id: "user2", name: "User 2", feature_id: TestFeature.Users },
+]);
+
+// Track usage for specific entity
+await autumnV1.track({
+  customer_id: customerId,
+  entity_id: "user1",
+  feature_id: TestFeature.Messages,
+  value: 100,  // Deducts from user1's 1000 balance
+});
+```
+
+**Key Difference:**
+- **Entity Products**: `attach({ entity_id })` - product belongs to entity
+- **Per-Entity Features**: `entity_feature_id` in item config - balance distributed to entities
+
 ### What are Entities?
 
 Entities are sub-units of a customer that can have their own:

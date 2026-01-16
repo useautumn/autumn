@@ -14,7 +14,12 @@ import { getCycleIntervalFunctions } from "./getCycleIntervalFunctions.js";
  * @param interval - BillingInterval or EntInterval
  * @param intervalCount - Number of intervals per cycle (default: 1)
  * @param now - Current time (defaults to Date.now())
- * @param floor - Whether to floor the cycle start to some unix
+ * @param floor - Minimum allowed result (unix ms). If the calculated cycle start is before
+ *   this value, returns the floor instead. Use this when the subscription/entity didn't
+ *   exist before a certain date (e.g., subscription creation date).
+ *   Example: Subscription starts 1 Jan, anchor is 15 Jan, now is 5 Jan.
+ *   Without floor: returns 15 Dec (previous cycle boundary).
+ *   With floor=1 Jan: returns 1 Jan (subscription start).
  * @returns Unix timestamp of the current cycle start
  */
 export const getCycleStart = ({
@@ -28,7 +33,7 @@ export const getCycleStart = ({
 	interval: BillingInterval | EntInterval;
 	intervalCount?: number;
 	now: number; // milliseconds since epoch;
-	floor?: number | undefined;
+	floor?: number;
 }): number => {
 	const anchorDate = anchor === "now" ? new UTCDate(now) : new UTCDate(anchor);
 	const nowDate = new UTCDate(now);
@@ -62,7 +67,12 @@ export const getCycleStart = ({
 		finalCycleStart = add(anchorDate, (cyclesPassed - 1) * intervalCount);
 	}
 
-	return floor
-		? Math.floor(finalCycleStart.getTime())
-		: finalCycleStart.getTime();
+	const result = finalCycleStart.getTime();
+
+	// If floor is provided and result is before floor, return floor
+	if (floor !== undefined && result < floor) {
+		return floor;
+	}
+
+	return result;
 };

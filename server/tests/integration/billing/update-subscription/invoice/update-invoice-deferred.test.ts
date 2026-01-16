@@ -74,14 +74,14 @@ test.concurrent(`${chalk.yellowBright("invoice-deferred: increase price (finaliz
 
 	expect(clonedResult).toMatchObject({
 		payment_url: expect.any(String),
-		invoice: {
+		invoice: expect.objectContaining({
 			status: "open",
 			stripe_id: expect.any(String),
 			total: preview.total,
 			hosted_invoice_url: expect.any(String),
-		},
-		required_action: undefined,
+		}),
 	});
+	expect(clonedResult.required_action).toBeUndefined();
 
 	const stripeInvoice = await ctx.stripeCli.invoices.retrieve(
 		result.invoice!.stripe_id,

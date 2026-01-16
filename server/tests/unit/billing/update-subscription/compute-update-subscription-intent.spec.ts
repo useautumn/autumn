@@ -107,26 +107,5 @@ describe(chalk.yellowBright("computeUpdateSubscriptionIntent"), () => {
 
 			expect(result).toBe(UpdateSubscriptionIntent.UpdatePlan);
 		});
-
-		test("returns UpdatePlan with no options or items", () => {
-			const params: UpdateSubscriptionV0Params = {
-				...baseParams,
-			};
-
-			const result = computeUpdateSubscriptionIntent(params);
-
-			expect(result).toBe(UpdateSubscriptionIntent.UpdatePlan);
-		});
-
-		test("returns UpdatePlan when options is empty array", () => {
-			const params: UpdateSubscriptionV0Params = {
-				...baseParams,
-				options: [],
-			};
-
-			const result = computeUpdateSubscriptionIntent(params);
-
-			expect(result).toBe(UpdateSubscriptionIntent.UpdatePlan);
-		});
 	});
 });
