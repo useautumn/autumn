@@ -57,7 +57,8 @@ export function buildEditsForItem({
 			const tierLabel = `${formatTierValue(newTier.to)} units`;
 
 			if (!oldTier) {
-				const prevTierTo = i === 0 ? "0" : (oldTiers[i - 1]?.to ?? "0");
+				// Use the previous NEW tier's `to` value as the starting point for this tier
+				const prevTierTo = i === 0 ? "0" : (newTiers[i - 1]?.to ?? "0");
 				const prevLabel = formatTierValue(prevTierTo);
 				edits.push({
 					id: `tier-${updatedItem.feature_id}-${i}`,

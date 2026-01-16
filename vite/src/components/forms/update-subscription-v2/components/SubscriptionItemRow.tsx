@@ -23,6 +23,7 @@ import { PlanFeatureIcon } from "@/views/products/plan/components/plan-card/Plan
 import { CustomDotIcon } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
 import type { UseUpdateSubscriptionForm } from "../hooks/useUpdateSubscriptionForm";
 import { getEditIcon } from "../utils/getEditIcon";
+import { getItemRingClass } from "../utils/ringClassUtils";
 import { CompactValueChange } from "./CompactValueChange";
 import { StatusBadge } from "./StatusBadge";
 
@@ -135,12 +136,11 @@ export function SubscriptionItemRow({
 	const singleEdit = edits.length === 1 ? edits[0] : null;
 	const hasEditableEdit = edits.some((e) => e.editable);
 
-	const getRowRingClass = () => {
-		if (isDeleted) return "ring-1 ring-inset ring-red-500/50 opacity-60";
-		if (isCreated) return "ring-1 ring-inset ring-green-500/50";
-		if (edits.length === 0) return "";
-		return "ring-1 ring-inset ring-amber-500/50";
-	};
+	const rowRingClass = getItemRingClass({
+		isDeleted,
+		isCreated,
+		hasEdits: edits.length > 0,
+	});
 
 	const renderRowIndicator = () => {
 		if (isDeleted) return <StatusBadge variant="removed">Removed</StatusBadge>;
@@ -211,7 +211,7 @@ export function SubscriptionItemRow({
 					tabIndex={hasMultipleEdits ? 0 : undefined}
 					className={cn(
 						"flex items-center flex-1 min-w-0 h-10 px-3 rounded-xl input-base",
-						getRowRingClass(),
+						rowRingClass,
 						hasMultipleEdits && "cursor-pointer",
 					)}
 					onClick={handleRowClick}
