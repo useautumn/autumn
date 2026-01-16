@@ -13,7 +13,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/v2/selects/Select";
-import { useProductStore } from "@/hooks/stores/useProductStore";
 import { formatIntervalText } from "@/utils/formatUtils/formatTextUtils";
 import { CustomiseIntervalPopover } from "../CustomiseIntervalPopover";
 
@@ -28,8 +27,6 @@ export const SelectBillingCycle = ({
 	disabled: boolean;
 	filterOneOff?: boolean;
 }) => {
-	const product = useProductStore((s) => s.product);
-
 	return (
 		<div className="w-full">
 			<FormLabel disabled={disabled}>Billing Interval</FormLabel>

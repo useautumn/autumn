@@ -1,12 +1,12 @@
+import { addDays, formatDuration, intervalToDuration } from "date-fns";
+import type { FullCusProduct } from "../../../models/cusProductModels/cusProductModels.js";
+import type { FreeTrialDuration } from "../../../models/productModels/freeTrialModels/freeTrialEnums.js";
+import { isCustomerProductTrialing } from "../../cusProductUtils/classifyCustomerProduct/classifyCustomerProduct.js";
 import {
-	type FreeTrialDuration,
-	type FullCusProduct,
 	getRemainingTrialDays,
 	getTrialLengthInDays,
-	isCustomerProductTrialing,
-} from "@autumn/shared";
-import { addDays, formatDuration, intervalToDuration } from "date-fns";
-import type { SummaryItem } from "../types/summary";
+} from "../../productUtils/freeTrialUtils.js";
+import type { ItemEdit } from "./itemEditTypes.js";
 
 function formatDaysAsReadable(totalDays: number): string {
 	if (totalDays <= 0) return "0 days";
@@ -21,6 +21,7 @@ function formatDaysAsReadable(totalDays: number): string {
 	});
 }
 
+/** Generates edit items for trial period changes */
 export function generateTrialChanges({
 	customerProduct,
 	removeTrial,
@@ -31,20 +32,23 @@ export function generateTrialChanges({
 	removeTrial: boolean;
 	trialLength: number | null;
 	trialDuration: FreeTrialDuration;
-}): SummaryItem[] {
+}): ItemEdit[] {
 	const isCurrentlyTrialing = isCustomerProductTrialing(customerProduct);
 	const remainingDays = getRemainingTrialDays({
 		trialEndsAt: customerProduct.trial_ends_at,
 	});
-	const changes: SummaryItem[] = [];
+	const changes: ItemEdit[] = [];
 
 	if (removeTrial && isCurrentlyTrialing) {
 		changes.push({
 			id: "trial-remove",
 			type: "trial",
 			label: "End Trial",
+			icon: "trial",
+			description: "Trial ended",
 			oldValue: "Active",
 			newValue: null,
+			isUpgrade: false,
 		});
 		return changes;
 	}
@@ -53,25 +57,35 @@ export function generateTrialChanges({
 		const newTrialDays = getTrialLengthInDays({ trialLength, trialDuration });
 
 		if (isCurrentlyTrialing && remainingDays !== null) {
-			// Skip if no actual change (same number of days)
 			if (newTrialDays === remainingDays) return changes;
 
 			const isExtending = newTrialDays > remainingDays;
+			const oldFormatted = formatDaysAsReadable(remainingDays);
+			const newFormatted = formatDaysAsReadable(newTrialDays);
+
 			changes.push({
 				id: isExtending ? "trial-extend" : "trial-shorten",
 				type: "trial",
 				label: isExtending ? "Extend Trial" : "Shorten Trial",
-				oldValue: formatDaysAsReadable(remainingDays),
-				newValue: formatDaysAsReadable(newTrialDays),
+				icon: "trial",
+				description: isExtending
+					? `Trial extended from ${oldFormatted} to ${newFormatted}`
+					: `Trial shortened from ${oldFormatted} to ${newFormatted}`,
+				oldValue: oldFormatted,
+				newValue: newFormatted,
+				isUpgrade: isExtending,
 			});
 		} else {
-			// Not currently trialing - adding new trial
+			const newFormatted = formatDaysAsReadable(newTrialDays);
 			changes.push({
 				id: "trial-add",
 				type: "trial",
 				label: "Free Trial",
+				icon: "trial",
+				description: `Free trial added for ${newFormatted}`,
 				oldValue: null,
-				newValue: formatDaysAsReadable(newTrialDays),
+				newValue: newFormatted,
+				isUpgrade: true,
 			});
 		}
 	}

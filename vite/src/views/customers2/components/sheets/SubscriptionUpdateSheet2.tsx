@@ -1,27 +1,24 @@
 import {
 	type FrontendProduct,
 	type FullCusProduct,
-	getProductItemDisplay,
 	type ProductItem,
 	type ProductV2,
 	productV2ToFrontendProduct,
-	UsageModel,
 } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
+
 import { useMemo, useState } from "react";
 import { useUpdateSubscriptionPreview } from "@/components/forms/update-subscription/use-update-subscription-preview";
 import {
 	EditPlanSection,
-	FreeTrialSection,
 	getFreeTrial,
-	PrepaidQuantitySection,
 	UpdateSubscriptionFooter,
 	type UpdateSubscriptionFormContext,
 	UpdateSubscriptionPreviewSection,
-	UpdateSubscriptionSummary,
 	useHasSubscriptionChanges,
+	useTrialState,
 	useUpdateSubscriptionForm,
 	useUpdateSubscriptionMutation,
 	useUpdateSubscriptionRequestBody,
@@ -30,16 +27,21 @@ import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/Inli
 import { SheetHeader } from "@/components/v2/sheets/SharedSheetComponents";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
-import { usePrepaidItems } from "@/hooks/stores/useProductStore";
+import {
+	useHasBillingChanges,
+	usePrepaidItems,
+} from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
+import { cn } from "@/lib/utils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
-import { itemToFeature } from "@/utils/product/productItemUtils/convertItem";
+
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
+import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 
 function SheetContent({
 	updateSubscriptionFormContext,
@@ -64,6 +66,7 @@ function SheetContent({
 
 	const form = useUpdateSubscriptionForm({ updateSubscriptionFormContext });
 	const { features } = useFeaturesQuery();
+	const trialState = useTrialState({ form, customerProduct });
 
 	const formValues = useStore(form.store, (state) => state.values);
 	const { prepaidOptions } = formValues;
@@ -79,6 +82,7 @@ function SheetContent({
 		currentVersion,
 		originalItems,
 		features,
+		isTrialConfirmed: trialState.isTrialConfirmed,
 	});
 
 	// Only include prepaid options that have changed from their initial values
@@ -91,38 +95,6 @@ function SheetContent({
 		}
 		return Object.keys(changed).length > 0 ? changed : undefined;
 	}, [prepaidOptions, initialPrepaidOptions]);
-
-	// Compute extended prepaid items that includes both original prepaid items
-	// and any new prepaid items added through the inline editor
-	const extendedPrepaidItems = useMemo(() => {
-		if (!formValues.items) return prepaidItems;
-
-		// Get IDs of original prepaid items
-		const originalPrepaidIds = new Set(
-			prepaidItems.map((item) => item.feature_id),
-		);
-
-		// Find new prepaid items from form that aren't in the original list
-		const newPrepaidItems = formValues.items.filter(
-			(item) =>
-				item.usage_model === UsageModel.Prepaid &&
-				item.feature_id &&
-				!originalPrepaidIds.has(item.feature_id),
-		);
-
-		// Enrich new prepaid items with feature info
-		const enrichedNewItems = newPrepaidItems.map((item) => {
-			const feature = itemToFeature({ item, features });
-			const display = getProductItemDisplay({
-				item,
-				features,
-				currency: "usd",
-			});
-			return { ...item, feature, display };
-		});
-
-		return [...prepaidItems, ...enrichedNewItems];
-	}, [prepaidItems, formValues.items, features]);
 
 	const productWithFormItems = useMemo((): FrontendProduct | undefined => {
 		if (!product) return undefined;
@@ -141,19 +113,69 @@ function SheetContent({
 		return baseFrontendProduct;
 	}, [product, formValues.items]);
 
+	const baseProduct = useMemo((): FrontendProduct | undefined => {
+		if (!product) return undefined;
+		return productV2ToFrontendProduct({ product: product as ProductV2 });
+	}, [product]);
+	const newProduct = useMemo((): FrontendProduct | undefined => {
+		if (!product) return undefined;
+
+		const base = productV2ToFrontendProduct({ product: product as ProductV2 });
+
+		// Only include trial changes if confirmed
+		let freeTrialValue = base.free_trial;
+		if (trialState.isTrialConfirmed) {
+			const freeTrial = getFreeTrial({
+				removeTrial: formValues.removeTrial,
+				trialLength: formValues.trialLength,
+				trialDuration: formValues.trialDuration,
+			});
+			freeTrialValue =
+				freeTrial === null ? undefined : (freeTrial ?? base.free_trial);
+		}
+
+		return {
+			...base,
+			items: formValues.items ?? base.items,
+			free_trial: freeTrialValue,
+		};
+	}, [
+		product,
+		formValues.items,
+		formValues.removeTrial,
+		formValues.trialLength,
+		formValues.trialDuration,
+		trialState.isTrialConfirmed,
+	]);
+
+	const hasBillingChanges = useHasBillingChanges({
+		baseProduct: baseProduct as FrontendProduct,
+		newProduct: newProduct as FrontendProduct,
+	});
+
+	const hasPrepaidQuantityChanges = changedPrepaidOptions !== undefined;
+
+	const hasNoBillingChanges =
+		hasChanges && !hasBillingChanges && !hasPrepaidQuantityChanges;
+
 	const { buildRequestBody } = useUpdateSubscriptionRequestBody({
 		updateSubscriptionFormContext,
 		form,
 	});
 
+	// Only include trial in preview if confirmed (user clicked check button)
+	const confirmedFreeTrial = trialState.isTrialConfirmed
+		? getFreeTrial({
+				removeTrial: formValues.removeTrial,
+				trialLength: formValues.trialLength,
+				trialDuration: formValues.trialDuration,
+			})
+		: undefined;
+
 	const previewQuery = useUpdateSubscriptionPreview({
 		updateSubscriptionFormContext,
 		prepaidOptions: changedPrepaidOptions,
-		freeTrial: getFreeTrial({
-			removeTrial: formValues.removeTrial,
-			trialLength: formValues.trialLength,
-			trialDuration: formValues.trialDuration,
-		}),
+		freeTrial: confirmedFreeTrial,
 		items: formValues.items,
 		version: formValues.version,
 	});
@@ -187,6 +209,27 @@ function SheetContent({
 
 	const handlePlanEditorSave = (items: ProductItem[]) => {
 		form.setFieldValue("items", items);
+
+		// Initialize prepaid options to 0 for any new prepaid items
+		const currentPrepaidOptions = form.store.state.values.prepaidOptions;
+		const updatedPrepaidOptions = { ...currentPrepaidOptions };
+		let hasNewPrepaidItems = false;
+
+		for (const item of items) {
+			if (
+				item.usage_model === "prepaid" &&
+				item.feature_id &&
+				updatedPrepaidOptions[item.feature_id] === undefined
+			) {
+				updatedPrepaidOptions[item.feature_id] = 0;
+				hasNewPrepaidItems = true;
+			}
+		}
+
+		if (hasNewPrepaidItems) {
+			form.setFieldValue("prepaidOptions", updatedPrepaidOptions);
+		}
+
 		setShowPlanEditor(false);
 		setIsInlineEditorOpen(false);
 	};
@@ -207,28 +250,42 @@ function SheetContent({
 				itemId={customerProduct.id}
 			/>
 
+			<div
+				className={cn(
+					"grid px-4 transition-[grid-template-rows] duration-200 ease-out",
+					!hasNoBillingChanges && "delay-75",
+				)}
+				style={{
+					gridTemplateRows: hasNoBillingChanges ? "1fr" : "0fr",
+				}}
+			>
+				<div className="overflow-hidden">
+					<div
+						className={cn(
+							"pt-4 transition-opacity duration-150",
+							hasNoBillingChanges ? "opacity-100 delay-75" : "opacity-0",
+						)}
+					>
+						<InfoBox variant="success" classNames={{ infoBox: "w-full" }}>
+							No changes to billing will be made
+						</InfoBox>
+					</div>
+				</div>
+			</div>
+
 			<EditPlanSection
 				hasCustomizations={formValues.items !== null}
 				onEditPlan={handleEditPlan}
-				product={product}
+				product={productWithFormItems as ProductV2 | undefined}
+				originalItems={originalItems}
 				customerProduct={customerProduct}
 				features={features}
 				form={form}
 				numVersions={numVersions}
 				currentVersion={currentVersion}
-			/>
-
-			<PrepaidQuantitySection form={form} prepaidItems={extendedPrepaidItems} />
-
-			<FreeTrialSection form={form} customerProduct={customerProduct} />
-
-			<UpdateSubscriptionSummary
-				form={form}
-				prepaidItems={prepaidItems}
-				customerProduct={customerProduct}
-				currentVersion={currentVersion}
-				currency={previewQuery.data?.currency}
-				originalItems={originalItems}
+				prepaidOptions={prepaidOptions}
+				initialPrepaidOptions={initialPrepaidOptions}
+				trialState={trialState}
 			/>
 
 			<UpdateSubscriptionPreviewSection

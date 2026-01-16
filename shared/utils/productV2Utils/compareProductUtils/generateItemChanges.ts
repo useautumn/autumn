@@ -1,10 +1,10 @@
+import type { Feature } from "../../../models/featureModels/featureModels.js";
+import type { PriceTier } from "../../../models/productV2Models/productItemModels/productItemModels.js";
 import {
-	type Feature,
-	type PriceTier,
 	type ProductItem,
 	UsageModel,
-} from "@autumn/shared";
-import type { SummaryItem } from "../types/summary";
+} from "../../../models/productV2Models/productItemModels/productItemModels.js";
+import type { ItemEdit } from "./itemEditTypes.js";
 
 function hasValue<T>(value: T | null | undefined): value is T {
 	return value !== null && value !== undefined;
@@ -37,18 +37,19 @@ function formatTierPricing({
 		: `$${firstPricedTier.amount} per unit`;
 }
 
+/** Generates edit items for product item additions, removals, and modifications */
 export function generateItemChanges({
 	originalItems,
-	customizedItems,
+	updatedItems,
 	features,
 	prepaidOptions,
 }: {
 	originalItems: ProductItem[] | undefined;
-	customizedItems: ProductItem[] | null;
+	updatedItems: ProductItem[] | null;
 	features?: Feature[];
 	prepaidOptions?: Record<string, number>;
-}): SummaryItem[] {
-	if (!customizedItems || !originalItems) return [];
+}): ItemEdit[] {
+	if (!updatedItems || !originalItems) return [];
 
 	const featureNameMap = new Map<string, string>();
 	if (features) {
@@ -65,121 +66,205 @@ export function generateItemChanges({
 		return item.feature_id ?? "Item";
 	};
 
-	const changes: SummaryItem[] = [];
+	const changes: ItemEdit[] = [];
 
 	const originalFeatureMap = new Map(
 		originalItems
 			.filter((item) => item.feature_id)
 			.map((item) => [item.feature_id, item]),
 	);
-	const customizedFeatureMap = new Map(
-		customizedItems
+	const updatedFeatureMap = new Map(
+		updatedItems
 			.filter((item) => item.feature_id)
 			.map((item) => [item.feature_id, item]),
 	);
 
 	for (const [featureId, original] of originalFeatureMap) {
-		const customized = customizedFeatureMap.get(featureId);
+		const updated = updatedFeatureMap.get(featureId);
 
-		if (!customized) {
+		if (!updated) {
+			const oldFormatted = formatItemValue(original);
 			changes.push({
 				id: `item-removed-${featureId}`,
 				type: "item",
 				label: getFeatureName(original),
-				oldValue: formatItemValue(original),
+				icon: "item",
+				description: `${getFeatureName(original)} removed (was ${oldFormatted})`,
+				oldValue: oldFormatted,
 				newValue: null,
-				productItem: original,
+				isUpgrade: false,
 			});
-		} else if (hasItemChanged(original, customized)) {
+		} else if (
+			hasItemChanged({ originalItem: original, updatedItem: updated })
+		) {
 			const oldValueFormatted = formatChangedItemValue({
 				item: original,
-				original,
-				customized,
+				originalItem: original,
+				updatedItem: updated,
 			});
 			const newValueFormatted = formatChangedItemValue({
-				item: customized,
-				original,
-				customized,
+				item: updated,
+				originalItem: original,
+				updatedItem: updated,
 			});
 			changes.push({
 				id: `item-modified-${featureId}`,
 				type: "item",
 				label: getFeatureName(original),
+				icon: "item",
+				description: `${getFeatureName(original)} changed from ${oldValueFormatted} to ${newValueFormatted}`,
 				oldValue: oldValueFormatted,
 				newValue: newValueFormatted,
-				productItem: customized,
+				isUpgrade: isItemUpgrade({
+					originalItem: original,
+					updatedItem: updated,
+				}),
 			});
 		}
 	}
 
-	for (const [featureId, customized] of customizedFeatureMap) {
+	for (const [featureId, updated] of updatedFeatureMap) {
 		if (!originalFeatureMap.has(featureId)) {
 			const prepaidQuantity =
 				featureId && prepaidOptions ? prepaidOptions[featureId] : undefined;
 
 			const isPrepaidWithQuantity =
-				customized.usage_model === UsageModel.Prepaid &&
+				updated.usage_model === UsageModel.Prepaid &&
 				hasValue(prepaidQuantity) &&
 				prepaidQuantity > 0;
 
-			const billingUnits = customized.billing_units ?? 1;
+			const billingUnits = updated.billing_units ?? 1;
 			const displayQuantity = prepaidQuantity
 				? prepaidQuantity * billingUnits
 				: 0;
 
+			const newValue = isPrepaidWithQuantity
+				? displayQuantity
+				: formatItemValue(updated);
+
 			changes.push({
 				id: `item-added-${featureId}`,
 				type: "item",
-				label: getFeatureName(customized),
+				label: getFeatureName(updated),
+				icon: "item",
+				description: `${getFeatureName(updated)} added (${newValue})`,
 				oldValue: isPrepaidWithQuantity ? 0 : null,
-				newValue: isPrepaidWithQuantity
-					? displayQuantity
-					: formatItemValue(customized),
-				productItem: customized,
+				newValue,
+				isUpgrade: true,
 			});
 		}
 	}
 
 	const originalPriceItems = originalItems.filter((item) => !item.feature_id);
-	const customizedPriceItems = customizedItems.filter(
-		(item) => !item.feature_id,
-	);
+	const updatedPriceItems = updatedItems.filter((item) => !item.feature_id);
 
-	if (originalPriceItems.length !== customizedPriceItems.length) {
-		const priceDiff = customizedPriceItems.length - originalPriceItems.length;
+	if (originalPriceItems.length !== updatedPriceItems.length) {
+		const priceDiff = updatedPriceItems.length - originalPriceItems.length;
 		if (priceDiff > 0) {
+			const label = `${priceDiff} Price Item${priceDiff > 1 ? "s" : ""}`;
 			changes.push({
 				id: "price-items-added",
 				type: "item",
-				label: `${priceDiff} Price Item${priceDiff > 1 ? "s" : ""}`,
+				label,
+				icon: "price",
+				description: `${label} added`,
 				oldValue: null,
 				newValue: String(priceDiff),
+				isUpgrade: true,
 			});
 		} else {
+			const label = `${Math.abs(priceDiff)} Price Item${Math.abs(priceDiff) > 1 ? "s" : ""}`;
 			changes.push({
 				id: "price-items-removed",
 				type: "item",
-				label: `${Math.abs(priceDiff)} Price Item${Math.abs(priceDiff) > 1 ? "s" : ""}`,
+				label,
+				icon: "price",
+				description: `${label} removed`,
 				oldValue: String(Math.abs(priceDiff)),
 				newValue: null,
+				isUpgrade: false,
 			});
+		}
+	}
+
+	if (
+		originalPriceItems.length > 0 &&
+		originalPriceItems.length === updatedPriceItems.length
+	) {
+		for (let i = 0; i < originalPriceItems.length; i++) {
+			const original = originalPriceItems[i];
+			const updated = updatedPriceItems[i];
+
+			if (original && updated) {
+				const hasChanged =
+					original.price !== updated.price ||
+					original.interval !== updated.interval ||
+					original.interval_count !== updated.interval_count;
+
+				if (hasChanged) {
+					const label =
+						originalPriceItems.length > 1
+							? `Base Price ${i + 1}`
+							: "Base Price";
+					changes.push({
+						id: `base-price-modified-${i}`,
+						type: "config",
+						label,
+						icon: "price",
+						description: `${label} modified`,
+						oldValue: original.price ?? 0,
+						newValue: updated.price ?? 0,
+						isUpgrade: (updated.price ?? 0) > (original.price ?? 0),
+					});
+				}
+			}
 		}
 	}
 
 	return changes;
 }
 
-function hasItemChanged(
-	original: ProductItem,
-	customized: ProductItem,
-): boolean {
+function hasItemChanged({
+	originalItem,
+	updatedItem,
+}: {
+	originalItem: ProductItem;
+	updatedItem: ProductItem;
+}): boolean {
 	return (
-		original.price !== customized.price ||
-		original.included_usage !== customized.included_usage ||
-		JSON.stringify(original.tiers) !== JSON.stringify(customized.tiers) ||
-		original.billing_units !== customized.billing_units ||
-		original.interval !== customized.interval
+		originalItem.price !== updatedItem.price ||
+		originalItem.included_usage !== updatedItem.included_usage ||
+		JSON.stringify(originalItem.tiers) !== JSON.stringify(updatedItem.tiers) ||
+		originalItem.billing_units !== updatedItem.billing_units ||
+		originalItem.interval !== updatedItem.interval
 	);
+}
+
+function isItemUpgrade({
+	originalItem,
+	updatedItem,
+}: {
+	originalItem: ProductItem;
+	updatedItem: ProductItem;
+}): boolean {
+	const originalIncluded =
+		originalItem.included_usage === "inf"
+			? Number.POSITIVE_INFINITY
+			: Number(originalItem.included_usage ?? 0);
+	const updatedIncluded =
+		updatedItem.included_usage === "inf"
+			? Number.POSITIVE_INFINITY
+			: Number(updatedItem.included_usage ?? 0);
+
+	if (updatedIncluded > originalIncluded) return true;
+	if (updatedIncluded < originalIncluded) return false;
+
+	const originalPrice = originalItem.price ?? 0;
+	const updatedPrice = updatedItem.price ?? 0;
+	if (updatedPrice < originalPrice) return true;
+	if (updatedPrice > originalPrice) return false;
+
+	return true;
 }
 
 function formatItemValue(item: ProductItem): string {
@@ -209,28 +294,23 @@ function formatItemValue(item: ProductItem): string {
 		return `$${item.price}`;
 	}
 
-	// Boolean features have no price/tiers/usage - just "enabled" when present
 	if (parts.length === 0) return "Enabled";
 	return parts.join(" + ");
 }
 
-/**
- * Format only the parts of an item that changed between original and customized.
- * Avoids showing unchanged values like "+ $10 per unit" when only included_usage changed.
- */
 function formatChangedItemValue({
 	item,
-	original,
-	customized,
+	originalItem,
+	updatedItem,
 }: {
 	item: ProductItem;
-	original: ProductItem;
-	customized: ProductItem;
+	originalItem: ProductItem;
+	updatedItem: ProductItem;
 }): string {
 	const parts: string[] = [];
 
 	const includedUsageChanged =
-		original.included_usage !== customized.included_usage;
+		originalItem.included_usage !== updatedItem.included_usage;
 	if (includedUsageChanged) {
 		if (item.included_usage === "inf") {
 			parts.push("Unlimited");
@@ -239,32 +319,31 @@ function formatChangedItemValue({
 		}
 	}
 
-	const priceChanged = original.price !== customized.price;
+	const priceChanged = originalItem.price !== updatedItem.price;
 	if (priceChanged && hasValue(item.price)) {
 		const billingUnits = item.billing_units ?? 1;
 		parts.push(formatPriceWithUnits(item.price, billingUnits));
 	}
 
 	const tiersChanged =
-		JSON.stringify(original.tiers) !== JSON.stringify(customized.tiers);
+		JSON.stringify(originalItem.tiers) !== JSON.stringify(updatedItem.tiers);
 	if (tiersChanged && item.tiers?.length) {
 		const billingUnits = item.billing_units ?? 1;
 		parts.push(formatTierPricing({ tiers: item.tiers, billingUnits }));
 	}
 
 	const billingUnitsChanged =
-		original.billing_units !== customized.billing_units;
+		originalItem.billing_units !== updatedItem.billing_units;
 	if (billingUnitsChanged && !priceChanged && hasValue(item.price)) {
 		const billingUnits = item.billing_units ?? 1;
 		parts.push(formatPriceWithUnits(item.price, billingUnits));
 	}
 
-	const intervalChanged = original.interval !== customized.interval;
+	const intervalChanged = originalItem.interval !== updatedItem.interval;
 	if (intervalChanged && item.interval) {
 		parts.push(`${item.interval}`);
 	}
 
-	// Boolean features or edge cases (null vs undefined) - just "enabled" when present
 	if (parts.length === 0) return "Enabled";
 	return parts.join(" + ");
 }

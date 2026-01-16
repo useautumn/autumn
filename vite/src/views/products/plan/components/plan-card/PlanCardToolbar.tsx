@@ -2,8 +2,7 @@ import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { IconButton } from "@/components/v2/buttons/IconButton";
-import { useProductStore } from "@/hooks/stores/useProductStore";
-import { useIsEditingPlan } from "@/hooks/stores/useSheetStore";
+import { useSheet } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { cn } from "@/lib/utils";
 import { pushPage } from "@/utils/genUtils";
 import { DeletePlanDialog } from "../DeletePlanDialog";
@@ -20,12 +19,10 @@ export const PlanCardToolbar = ({
 	onEdit,
 	// onDeleteSuccess,
 	editDisabled,
-	deleteDisabled,
-	deleteTooltip,
 }: PlanCardToolbarProps) => {
-	const product = useProductStore((s) => s.product);
 	const [deleteOpen, setDeleteOpen] = useState(false);
-	const isEditingPlan = useIsEditingPlan();
+	const { sheetType } = useSheet();
+	const isEditingPlan = sheetType === "edit-plan";
 	const navigate = useNavigate();
 
 	return (
