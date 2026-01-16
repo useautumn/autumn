@@ -5,6 +5,7 @@ import {
 	isOneOffPrice,
 	productsAreSame,
 	RecaseError,
+	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import { cusProductToPrices } from "@shared/utils/cusProductUtils/convertCusProduct";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -16,15 +17,26 @@ export const handleOneOffErrors = ({
 	ctx,
 	billingContext,
 	autumnBillingPlan,
+	params,
 }: {
 	ctx: AutumnContext;
 	billingContext: UpdateSubscriptionBillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
+	params: UpdateSubscriptionV0Params;
 }) => {
 	const { customerProduct } = billingContext;
 
 	// Only apply these checks to one-off products
 	if (!isCustomerProductOneOff(customerProduct)) return;
+
+	// 1. Check that free trial param isn't passed in
+	const { free_trial } = params;
+
+	if (free_trial) {
+		throw new RecaseError({
+			message: "Cannot set / remove a free trial on one off plans.",
+		});
+	}
 
 	const newCustomerProduct = autumnBillingPlan.insertCustomerProducts?.[0];
 	if (!newCustomerProduct) return;

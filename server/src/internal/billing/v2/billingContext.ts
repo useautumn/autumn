@@ -22,6 +22,7 @@ export interface TrialContext {
 	freeTrial?: FreeTrial | null;
 	trialEndsAt: number | null;
 	customFreeTrial?: FreeTrial;
+	appliesToBilling: boolean;
 }
 
 export interface BillingContext {

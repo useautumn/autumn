@@ -7,7 +7,10 @@ import {
 	expectProductCanceling,
 	expectProductScheduled,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
-import { expectProductTrialing } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
+import {
+	expectProductNotTrialing,
+	expectProductTrialing,
+} from "@tests/integration/billing/utils/expectCustomerProductTrialing";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -504,6 +507,104 @@ test.concurrent(`${chalk.yellowBright("trial-multi: trial with scheduled downgra
 	await expectProductTrialing({
 		customer,
 		productId: premium.id,
+	});
+
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+	});
+});
+
+// 5. Entity 1 & 2 on Pro, Entity 3 on Free -> Entity 3 updates to paid with trial
+test.concurrent(`${chalk.yellowBright("trial-multi: entity on free product updates with trial while others on pro")}`, async () => {
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const priceItem = items.monthlyPrice();
+
+	const pro = products.base({
+		items: [messagesItem, priceItem],
+		id: "pro",
+	});
+
+	const free = products.base({
+		id: "free",
+		items: [messagesItem],
+		isDefault: false,
+	});
+
+	const { customerId, autumnV1, ctx, entities, advancedTo } =
+		await initScenario({
+			customerId: "trial-multi-entity3-free",
+			setup: [
+				s.customer({ testClock: true, paymentMethod: "success" }),
+				s.products({ list: [pro, free] }),
+				s.entities({ count: 3, featureId: TestFeature.Users }),
+			],
+			actions: [
+				s.attach({ productId: pro.id, entityIndex: 0 }), // Entity 0 gets paid pro
+				s.attach({ productId: pro.id, entityIndex: 1 }), // Entity 1 gets paid pro (merges)
+				s.attach({ productId: free.id, entityIndex: 2 }), // Entity 2 gets free product
+			],
+		});
+
+	// Verify entities 0 and 1 are active on pro (not trialing)
+	const entity0 = await autumnV1.entities.get(customerId, entities[0].id);
+	await expectProductActive({
+		customer: entity0,
+		productId: pro.id,
+	});
+
+	const entity1 = await autumnV1.entities.get(customerId, entities[1].id);
+	await expectProductActive({
+		customer: entity1,
+		productId: pro.id,
+	});
+
+	// Verify entity 2 is active on free product
+	const entity2 = await autumnV1.entities.get(customerId, entities[2].id);
+	await expectProductActive({
+		customer: entity2,
+		productId: free.id,
+	});
+
+	// Update entity 2's free product to paid with trial
+	const updateParams = {
+		customer_id: customerId,
+		entity_id: entities[2].id,
+		product_id: free.id,
+		free_trial: {
+			length: 14,
+			duration: FreeTrialDuration.Day,
+			card_required: true,
+			unique_fingerprint: false,
+		},
+	};
+
+	// Preview should show refund for entities 0 and 1 (2 x $20 = -$40)
+	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
+	expect(preview.total).toEqual(-40);
+
+	await autumnV1.subscriptions.update(updateParams, { timeout: 4000 });
+
+	// All entities should now be trialing
+	const entity0After = await autumnV1.entities.get(customerId, entities[0].id);
+	await expectProductNotTrialing({
+		customer: entity0After,
+		productId: pro.id,
+	});
+
+	const entity1After = await autumnV1.entities.get(customerId, entities[1].id);
+	await expectProductNotTrialing({
+		customer: entity1After,
+		productId: pro.id,
+	});
+
+	const entity2After = await autumnV1.entities.get(customerId, entities[2].id);
+	await expectProductTrialing({
+		customer: entity2After,
+		productId: free.id,
+		trialEndsAt: advancedTo + ms.days(14),
 	});
 
 	await expectSubToBeCorrect({
