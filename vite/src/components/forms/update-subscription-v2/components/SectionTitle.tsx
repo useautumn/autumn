@@ -22,7 +22,6 @@ interface SectionTitleProps {
 	numVersions?: number;
 	currentVersion?: number;
 	trialState: UseTrialStateReturn;
-	isPaidProduct: boolean;
 }
 
 export function SectionTitle({
@@ -31,7 +30,6 @@ export function SectionTitle({
 	numVersions,
 	currentVersion,
 	trialState,
-	isPaidProduct,
 }: SectionTitleProps) {
 	const showVersionSelector = numVersions !== undefined && numVersions > 1;
 
@@ -45,7 +43,7 @@ export function SectionTitle({
 			}))
 		: [];
 
-	const showTrialToggle = isPaidProduct && !trialState.isCurrentlyTrialing;
+	const showTrialToggle = !trialState.isCurrentlyTrialing;
 	const trialIsActive =
 		(trialState.isCurrentlyTrialing || trialState.hasTrialValue) &&
 		!trialState.removeTrial;
