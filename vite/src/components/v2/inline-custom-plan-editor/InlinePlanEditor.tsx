@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/v2/buttons/Button";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
+import { SheetOverlay } from "@/components/v2/sheet-overlay/SheetOverlay";
 import { cn } from "@/lib/utils";
 import { CustomerPlanInfoBox } from "@/views/customers2/customer-plan/CustomerPlanInfoBox";
 import { EditPlanHeader } from "@/views/products/plan/components/EditPlanHeader";
@@ -53,7 +54,7 @@ function InlinePlanEditorContent({
 	onCancel: () => void;
 }) {
 	const { product } = useProduct();
-	const { sheetType, closeSheet } = useSheet();
+	const { sheetType } = useSheet();
 	const hasPlanChanges = useHasPlanChanges();
 
 	return (
@@ -63,6 +64,7 @@ function InlinePlanEditorContent({
 			exit={{ opacity: 0, scale: 0.97, y: 8 }}
 			transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
 			className="absolute inset-0 z-100 bg-background flex flex-col"
+			data-inline-editor-open
 		>
 			<div className="flex w-full h-full overflow-hidden relative flex-1">
 				<motion.div
@@ -99,18 +101,7 @@ function InlinePlanEditorContent({
 					</div>
 				</motion.div>
 
-				<AnimatePresence>
-					{sheetType && (
-						<motion.div
-							initial={{ opacity: 0 }}
-							animate={{ opacity: 1 }}
-							exit={{ opacity: 0 }}
-							className="absolute inset-0 bg-white/70 dark:bg-black/70"
-							style={{ zIndex: 40 }}
-							onMouseDown={() => closeSheet()}
-						/>
-					)}
-				</AnimatePresence>
+				<SheetOverlay inline />
 
 				<ProductSheets />
 			</div>

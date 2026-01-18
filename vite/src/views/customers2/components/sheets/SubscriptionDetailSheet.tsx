@@ -275,6 +275,7 @@ export function SubscriptionDetailSheet() {
 									<CustomerProductsStatus
 										status={cusProduct.status}
 										canceled={cusProduct.canceled}
+										canceled_at={cusProduct.canceled_at ?? undefined}
 										trialing={
 											isCustomerProductTrialing(cusProduct, {
 												nowMs: Date.now(),

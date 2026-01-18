@@ -1,6 +1,7 @@
 import { isOneOffProductV2, type ProductV2 } from "@autumn/shared";
 import { CubeIcon } from "@phosphor-icons/react";
-import { useMemo } from "react";
+import type { SortingState } from "@tanstack/react-table";
+import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
 import { SectionTag } from "@/components/v2/badges/SectionTag";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
@@ -19,6 +20,9 @@ type ProductWithCounts = ProductV2 & {
 export function ProductListTable() {
 	const { products, counts, isCountsLoading } = useProductsQuery();
 	const { queryStates } = useProductsQueryState();
+
+	// Shared sorting state for all tables
+	const [sorting, setSorting] = useState<SortingState>([]);
 
 	const { recurringBasePlans, recurringAddOnPlans, oneTimePlans } =
 		useMemo(() => {
@@ -100,6 +104,8 @@ export function ProductListTable() {
 			globalFilterFn: "includesString",
 			enableGlobalFilter: true,
 			enableSorting: true,
+			state: { sorting },
+			onSortingChange: setSorting,
 		},
 	});
 
@@ -110,6 +116,8 @@ export function ProductListTable() {
 			globalFilterFn: "includesString",
 			enableGlobalFilter: true,
 			enableSorting: true,
+			state: { sorting },
+			onSortingChange: setSorting,
 		},
 	});
 
@@ -120,6 +128,8 @@ export function ProductListTable() {
 			globalFilterFn: "includesString",
 			enableGlobalFilter: true,
 			enableSorting: true,
+			state: { sorting },
+			onSortingChange: setSorting,
 		},
 	});
 

@@ -68,7 +68,7 @@ export const useAnalyticsData = ({
 	} = usePostSWR({
 		url: `/query/events`,
 		data: {
-			customer_id: customerId || null,
+			customer_id: customerId || undefined,
 			interval: interval || "30d",
 			event_names: [...(eventNames || []), ...(featureIds || [])],
 			group_by: formattedGroupBy,
@@ -132,7 +132,7 @@ export const useRawAnalyticsData = () => {
 	} = usePostSWR({
 		url: `/query/raw`,
 		data: {
-			customer_id: customerId || null,
+			customer_id: customerId || undefined,
 			interval: interval || "30d",
 		},
 		queryKey,
