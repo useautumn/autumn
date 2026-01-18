@@ -34,11 +34,24 @@ export const evaluateStripeBillingPlan = async ({
 		autumnBillingPlan,
 	});
 
+	// Build stripe subscription schedule action
+	const {
+		scheduleAction: stripeSubscriptionScheduleAction,
+		subscriptionCancelAt,
+	} = buildStripeSubscriptionScheduleAction({
+		ctx,
+		billingContext,
+		finalCustomerProducts: finalFullCustomer.customer_products,
+		trialEndsAt: billingContext.trialContext?.trialEndsAt ?? undefined,
+	});
+
 	const stripeSubscriptionAction = buildStripeSubscriptionAction({
 		ctx,
 		billingContext,
 		autumnBillingPlan,
 		finalCustomerProducts: finalFullCustomer.customer_products,
+		stripeSubscriptionScheduleAction,
+		subscriptionCancelAt,
 	});
 
 	const { lineItems } = autumnBillingPlan;
@@ -60,15 +73,6 @@ export const evaluateStripeBillingPlan = async ({
 			billingContext,
 		});
 	}
-
-	// Build stripe subscription schedule action
-	const stripeSubscriptionScheduleAction =
-		buildStripeSubscriptionScheduleAction({
-			ctx,
-			billingContext,
-			finalCustomerProducts: finalFullCustomer.customer_products,
-			trialEndsAt: billingContext.trialContext?.trialEndsAt ?? undefined,
-		});
 
 	return {
 		subscriptionAction: stripeSubscriptionAction,

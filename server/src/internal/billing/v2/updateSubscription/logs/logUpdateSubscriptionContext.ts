@@ -51,6 +51,8 @@ export const logUpdateSubscriptionContext = ({
 				trialContext: trialContext
 					? `trial ends at: ${formatMs(trialContext.trialEndsAt)}, free trial ID: ${trialContext.freeTrial?.id ?? "undefined"}`
 					: "undefined",
+
+				defaultProduct: billingContext.defaultProduct?.name ?? "undefined",
 			},
 		},
 	});

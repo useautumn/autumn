@@ -6,6 +6,7 @@ import { AutumnInt } from "@/external/autumn/autumnCli";
 const defaultAutumn = new AutumnInt({ version: ApiVersion.V1_2 });
 
 type ProductState = "active" | "canceled" | "scheduled" | "undefined";
+type CustomerOrEntity = ApiCustomerV3 | ApiEntityV0;
 
 /**
  * Verify a customer/entity has the expected product in the expected state.
@@ -106,3 +107,68 @@ export const expectProductNotPresent = async (params: {
 	customer?: ApiCustomerV3 | ApiEntityV0;
 	productId: string;
 }) => expectCustomerProductCorrect({ ...params, state: "undefined" });
+
+/**
+ * Verify multiple product states in a single call.
+ * Each array contains product IDs that should be in that state.
+ *
+ * @example
+ * await expectProducts({
+ *   customer,
+ *   active: [pro.id, addon.id],
+ *   canceling: [premium.id],
+ *   scheduled: [free.id],
+ *   notPresent: [oldProduct.id],
+ * });
+ */
+export const expectCustomerProducts = async ({
+	customerId,
+	customer: providedCustomer,
+	active = [],
+	canceling = [],
+	scheduled = [],
+	notPresent = [],
+}: {
+	customerId?: string;
+	customer?: CustomerOrEntity;
+	active?: string[];
+	canceling?: string[];
+	scheduled?: string[];
+	notPresent?: string[];
+}) => {
+	const customer = providedCustomer
+		? providedCustomer
+		: await defaultAutumn.customers.get(customerId!);
+
+	for (const productId of active) {
+		await expectCustomerProductCorrect({
+			customer: customer as ApiCustomerV3,
+			productId,
+			state: "active",
+		});
+	}
+
+	for (const productId of canceling) {
+		await expectCustomerProductCorrect({
+			customer: customer as ApiCustomerV3,
+			productId,
+			state: "canceled",
+		});
+	}
+
+	for (const productId of scheduled) {
+		await expectCustomerProductCorrect({
+			customer: customer as ApiCustomerV3,
+			productId,
+			state: "scheduled",
+		});
+	}
+
+	for (const productId of notPresent) {
+		await expectCustomerProductCorrect({
+			customer: customer as ApiCustomerV3,
+			productId,
+			state: "undefined",
+		});
+	}
+};

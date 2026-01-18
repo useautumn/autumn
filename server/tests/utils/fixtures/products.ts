@@ -158,6 +158,26 @@ const oneOff = ({
 		isDefault: false,
 	});
 
+/**
+ * Recurring add-on product - $20/month base price, is_add_on: true
+ * @param items - Product items (features)
+ * @param id - Product ID (default: "addon")
+ */
+const recurringAddOn = ({
+	items,
+	id = "addon",
+}: {
+	items: ProductItem[];
+	id?: string;
+}): ProductV2 =>
+	constructProduct({
+		id,
+		items: [...items],
+		type: "pro",
+		isDefault: false,
+		isAddOn: true,
+	});
+
 export const products = {
 	base,
 	baseWithTrial,
@@ -165,4 +185,5 @@ export const products = {
 	proAnnual,
 	proWithTrial,
 	oneOff,
+	recurringAddOn,
 } as const;

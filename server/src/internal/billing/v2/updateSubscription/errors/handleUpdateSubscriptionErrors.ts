@@ -7,6 +7,7 @@ import { cusProductToProcessorType } from "@shared/utils/cusProductUtils/convert
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
 import type { AutumnBillingPlan } from "@/internal/billing/v2/types/autumnBillingPlan";
+import { handleCancelEndOfCycleErrors } from "@/internal/billing/v2/updateSubscription/errors/handleCancelEndOfCycleErrors";
 import { handleCustomPlanErrors } from "./handleCustomPlanErrors";
 import { handleFeatureQuantityErrors } from "./handleFeatureQuantityErrors";
 import {
@@ -54,4 +55,7 @@ export const handleUpdateSubscriptionErrors = async ({
 
 	// 6. Trial removal with one-off items
 	checkTrialRemovalWithOneOffItems({ billingContext, autumnBillingPlan });
+
+	// 7. Cancel end of cycle errors
+	handleCancelEndOfCycleErrors({ billingContext, params });
 };

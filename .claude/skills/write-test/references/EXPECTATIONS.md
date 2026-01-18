@@ -5,7 +5,7 @@
 ```typescript
 import { expectCustomerFeatureCorrect, expectCustomerFeatureExists } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
-import { expectProductActive, expectProductCanceling, expectProductScheduled, expectProductNotPresent } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectCustomerProducts, expectProductActive, expectProductCanceling, expectProductScheduled, expectProductNotPresent } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectProductTrialing, expectProductNotTrialing } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
@@ -80,9 +80,25 @@ expectCustomerInvoiceCorrect({
 
 ## Product State Expectations
 
+### `expectCustomerProducts` (Batch Check - Preferred)
+
+Verify multiple product states in a single call. Use this when checking 2+ products.
+
+```typescript
+await expectCustomerProducts({
+  customer,                    // Or customerId
+  active: [pro.id, addon.id],  // Products that should be active
+  canceling: [premium.id],     // Products that should be canceling
+  scheduled: [free.id],        // Products that should be scheduled
+  notPresent: [oldProduct.id], // Products that should not exist
+});
+```
+
+All arrays are optional - only include the states you need to verify.
+
 ### `expectProductActive`
 
-Verify product is active for customer/entity.
+Verify a single product is active. For multiple products, prefer `expectProducts`.
 
 ```typescript
 await expectProductActive({

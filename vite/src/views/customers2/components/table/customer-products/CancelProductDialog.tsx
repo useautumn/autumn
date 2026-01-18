@@ -40,12 +40,11 @@ export const CancelProductDialog = ({
 		);
 
 		try {
-			await axiosInstance.post(`/v1/cancel`, {
+			await axiosInstance.post(`/v1/subscriptions/update`, {
 				customer_id: customer.id || customer.internal_id,
 				product_id: cusProduct.product.id,
 				entity_id: entity?.id || entity?.internal_id,
-				cancel_immediately: cancelImmediately,
-				prorate: false,
+				cancel: cancelImmediately ? "immediately" : "end_of_cycle",
 				customer_product_id: cusProduct.id,
 			});
 			await refetch();

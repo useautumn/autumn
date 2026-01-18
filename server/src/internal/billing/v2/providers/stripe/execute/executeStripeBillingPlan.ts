@@ -58,6 +58,19 @@ export const executeStripeBillingPlan = async ({
 		});
 	}
 
+	// For schedule release, we need to release first before updating subscription with cancel_at
+	// Otherwise Stripe rejects the cancel_at update while schedule still manages subscription
+	const isReleaseAction = stripeSubscriptionScheduleAction?.type === "release";
+
+	if (isReleaseAction) {
+		await executeStripeSubscriptionScheduleAction({
+			ctx,
+			billingContext,
+			subscriptionScheduleAction: stripeSubscriptionScheduleAction,
+			stripeSubscription,
+		});
+	}
+
 	if (stripeSubscriptionAction && !resumeAfterSubscriptionAction) {
 		subscriptionResult = await executeStripeSubscriptionAction({
 			ctx,
@@ -68,7 +81,7 @@ export const executeStripeBillingPlan = async ({
 		stripeSubscription = subscriptionResult.stripeSubscription;
 	}
 
-	if (stripeSubscriptionScheduleAction) {
+	if (stripeSubscriptionScheduleAction && !isReleaseAction) {
 		const stripeSubscriptionSchedule =
 			await executeStripeSubscriptionScheduleAction({
 				ctx,
