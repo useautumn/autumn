@@ -77,5 +77,10 @@ export const executeStripeSubscriptionScheduleAction = async ({
 				subscriptionScheduleAction.stripeSubscriptionScheduleId,
 				subscriptionScheduleAction.params,
 			);
+
+		case "release":
+			return await stripeCli.subscriptionSchedules.release(
+				subscriptionScheduleAction.stripeSubscriptionScheduleId,
+			);
 	}
 };

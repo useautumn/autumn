@@ -2,6 +2,9 @@ import {
 	AttachScenario,
 	CusProductStatus,
 	type FullCusProduct,
+	isCustomerProductFree,
+	isCustomerProductOnStripeSubscription,
+	isCustomerProductOnStripeSubscriptionSchedule,
 } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
@@ -46,16 +49,34 @@ export const activateScheduledCustomerProducts = async ({
 	for (const customerProduct of customerProducts) {
 		if (!shouldActivateScheduledProduct({ customerProduct, nowMs })) continue;
 
+		// If product is free, or on the stripe schedule / subscription, then we activate it
+		const isFree = isCustomerProductFree(customerProduct);
+		const isOnStripeSubscription = isCustomerProductOnStripeSubscription({
+			customerProduct,
+			stripeSubscriptionId: stripeSubscription.id,
+		});
+		const isOnStripeSubscriptionSchedule =
+			isCustomerProductOnStripeSubscriptionSchedule({
+				customerProduct,
+				stripeSubscriptionScheduleId: stripeSubscriptionSchedule?.id,
+			});
+
+		const canActivate =
+			isFree || isOnStripeSubscription || isOnStripeSubscriptionSchedule;
+		if (!canActivate) continue;
+
 		logger.info(
 			`[handleSchedulePhaseChanges] ✅ activating: ${customerProduct.product.name}${customerProduct.entity_id ? `@${customerProduct.entity_id}` : ""}`,
 		);
 
 		const updates = {
 			status: CusProductStatus.Active,
-			subscription_ids: [stripeSubscription.id],
-			scheduled_ids: stripeSubscriptionSchedule
-				? [stripeSubscriptionSchedule.id]
-				: [],
+			subscription_ids: isFree ? [] : [stripeSubscription.id],
+			scheduled_ids: isFree
+				? []
+				: isOnStripeSubscriptionSchedule
+					? [stripeSubscriptionSchedule.id]
+					: [],
 		};
 
 		await CusProductService.update({

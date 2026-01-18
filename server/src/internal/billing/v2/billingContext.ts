@@ -53,8 +53,12 @@ export interface BillingContext {
 	isCustom: boolean;
 }
 
+export type CancelMode = "immediately" | "end_of_cycle";
+
 export interface UpdateSubscriptionBillingContext extends BillingContext {
 	customerProduct: FullCusProduct; // target customer product
+	defaultProduct?: FullProduct; // for cancel flows
+	cancelMode?: CancelMode; // for cancel flows
 }
 
 // testClockFrozenTime?: number;

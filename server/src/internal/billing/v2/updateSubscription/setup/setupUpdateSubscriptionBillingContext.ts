@@ -7,6 +7,7 @@ import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullC
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupTrialContext } from "@/internal/billing/v2/setup/setupTrialContext";
+import { setupDefaultProductContext } from "@/internal/billing/v2/updateSubscription/setup/setupDefaultProductContext";
 import { setupUpdateSubscriptionProductContext } from "@/internal/billing/v2/updateSubscription/setup/setupUpdateSubscriptionProductContext";
 import type { UpdateSubscriptionBillingContext } from "../../billingContext";
 
@@ -89,10 +90,21 @@ export const setupUpdateSubscriptionBillingContext = async ({
 	const invoiceMode = setupInvoiceModeContext({ params });
 	const isCustom = notNullish(params.items);
 
+	const defaultProduct = await setupDefaultProductContext({
+		ctx,
+		params,
+		customerProduct,
+	});
+
+	// Cancel mode from params (undefined if not canceling)
+	const cancelMode = params.cancel ?? undefined;
+
 	return {
 		fullCustomer,
 		fullProducts: [fullProduct],
 		customerProduct,
+		defaultProduct,
+		cancelMode,
 		stripeSubscription,
 		stripeSubscriptionSchedule,
 		stripeDiscounts,

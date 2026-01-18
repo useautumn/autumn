@@ -23,6 +23,7 @@ export const initCustomerProduct = ({
 		featureQuantities,
 		freeTrial,
 		trialEndsAt,
+		now,
 	} = initContext;
 	const {
 		subscriptionId,
@@ -35,13 +36,13 @@ export const initCustomerProduct = ({
 	const internalEntityId = fullCustomer.entity?.internal_id;
 	const entityId = fullCustomer.entity?.id;
 
-	const startsAt = initOptions?.startsAt ?? Date.now();
+	const startsAt = initOptions?.startsAt ?? now;
 	const endedAt = initOptions?.endedAt;
 
 	const initCustomerProductStatus = () => {
 		if (initOptions?.status) return initOptions?.status;
 
-		if (startsAt && startsAt > Date.now()) {
+		if (startsAt && startsAt > now) {
 			return CusProductStatus.Scheduled;
 		}
 
