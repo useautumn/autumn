@@ -1,17 +1,23 @@
+import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import {
+	DropdownMenuItem,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
-	DropdownMenuItem,
 } from "@/components/v2/dropdowns/DropdownMenu";
-import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { useCustomersQueryStates } from "../../hooks/useCustomersQueryStates";
 
 export const FilterStatusSubMenu = () => {
-	const { queryStates, setQueryStates } = useCustomersQueryStates();
+	const { queryStates, setFilters } = useCustomersQueryStates();
 
-	const statuses: string[] = ["canceled", "free_trial", "expired"];
+	const statuses: string[] = [
+		"active",
+		"past_due",
+		"canceled",
+		"free_trial",
+		"expired",
+	];
 	const selectedStatuses = queryStates.status || [];
 	const hasSelections = selectedStatuses.length > 0;
 
@@ -23,7 +29,7 @@ export const FilterStatusSubMenu = () => {
 			? selected.filter((s: string) => s !== status)
 			: [...selected, status];
 
-		setQueryStates({ ...queryStates, status: updated });
+		setFilters({ status: updated });
 	};
 
 	return (

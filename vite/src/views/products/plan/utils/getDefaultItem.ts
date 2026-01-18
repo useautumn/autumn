@@ -16,22 +16,27 @@ export const getDefaultItem = ({
 		feature,
 	});
 
+	// For static (boolean) features, reset_usage_when_enabled is not applicable
+	// since they don't track usage. Setting it causes mismatch with backend
+	// which doesn't store this field for boolean features.
+	const isStaticFeature = itemFeatureType === ProductItemFeatureType.Static;
+	const isContinuousUse =
+		itemFeatureType === ProductItemFeatureType.ContinuousUse;
+
 	// Create a new item with the selected feature
 	const newItem = {
 		feature_id: feature.id,
 		feature_type: itemFeatureType,
 		included_usage: null,
 		interval:
-			itemFeatureType === ProductItemFeatureType.ContinuousUse ||
-			itemFeatureType === ProductItemFeatureType.Static
-				? null
-				: ProductItemInterval.Month,
+			isContinuousUse || isStaticFeature ? null : ProductItemInterval.Month,
 		price: null,
 		tiers: null,
 		billing_units: 1,
 		entity_feature_id: null,
-		reset_usage_when_enabled:
-			itemFeatureType !== ProductItemFeatureType.ContinuousUse,
+		// Only set reset_usage_when_enabled for usage-tracked features
+		// Boolean/static features don't track usage, so this field is not applicable
+		reset_usage_when_enabled: isStaticFeature ? undefined : !isContinuousUse,
 	};
 
 	return newItem;

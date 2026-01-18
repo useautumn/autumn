@@ -19,7 +19,7 @@ import { useCustomersQueryStates } from "@/views/customers/hooks/useCustomersQue
 import { useSavedViewsQuery } from "@/views/customers/hooks/useSavedViewsQuery";
 
 export function CustomerListFilterButton() {
-	const { setQueryStates } = useCustomersQueryStates();
+	const { setFilters } = useCustomersQueryStates();
 	const [open, setOpen] = useState(false);
 
 	const { data, refetch: refetchSavedViews } = useSavedViewsQuery();
@@ -27,11 +27,7 @@ export function CustomerListFilterButton() {
 	const views = data?.views || [];
 
 	const clearFilters = () => {
-		setQueryStates({
-			status: [],
-			version: [],
-			none: false,
-		});
+		setFilters({ status: [], version: [], none: false });
 	};
 
 	const closeFilterModal = () => {
@@ -51,7 +47,7 @@ export function CustomerListFilterButton() {
 				</IconButton>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent
-				className="w-56 font-regular text-zinc-800 gap-0 p-0"
+				className="w-56 font-regular gap-0 p-0"
 				align="start"
 			>
 				<DropdownMenuGroup className="p-1">
