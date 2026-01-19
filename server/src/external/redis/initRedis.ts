@@ -17,6 +17,7 @@ import {
 	BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
 	DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
+	SET_FULL_CUSTOMER_CACHE_SCRIPT,
 } from "../../_luaScriptsV2/luaScriptsV2.js";
 
 // if (!process.env.CACHE_URL) {
@@ -171,6 +172,11 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 	redisInstance.defineCommand("batchDeleteFullCustomerCache", {
 		numberOfKeys: 0,
 		lua: BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
+	});
+
+	redisInstance.defineCommand("setFullCustomerCache", {
+		numberOfKeys: 2,
+		lua: SET_FULL_CUSTOMER_CACHE_SCRIPT,
 	});
 
 	redisInstance.on("error", (error) => {
@@ -338,6 +344,14 @@ declare module "ioredis" {
 			guardTtl: string,
 			customersJson: string,
 		): Promise<string>;
+		setFullCustomerCache(
+			guardKey: string,
+			cacheKey: string,
+			fetchTimeMs: string,
+			cacheTtl: string,
+			serializedData: string,
+			overwrite: string,
+		): Promise<"STALE_WRITE" | "CACHE_EXISTS" | "OK">;
 	}
 }
 
