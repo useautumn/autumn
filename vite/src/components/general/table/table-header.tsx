@@ -115,13 +115,7 @@ export function TableHeader({ className }: { className?: string }) {
 								key={header.id}
 								style={
 									flexibleTableColumns
-										? {
-												width: `${header.getSize()}px`,
-												maxWidth: `${header.getSize()}px`,
-												minWidth: header.column.columnDef.minSize
-													? `${header.column.columnDef.minSize}px`
-													: undefined,
-											}
+										? undefined
 										: { width: `${header.getSize()}px` }
 								}
 							>

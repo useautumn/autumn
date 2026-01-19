@@ -1,7 +1,15 @@
+import { oauthClient } from "@autumn/shared";
+import {
+	oauthProviderAuthServerMetadata,
+	oauthProviderOpenIdConfigMetadata,
+} from "@better-auth/oauth-provider";
 import { getRequestListener } from "@hono/node-server";
+import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+
 import { autumnWebhookRouter } from "./external/autumn/autumnWebhookRouter.js";
+import { cliRouter } from "./internal/dev/cli/cliRouter.js";
 import { revenuecatWebhookRouter } from "./external/revenueCat/revenuecatWebhookRouter.js";
 import { stripeWebhookRouter } from "./external/stripe/stripeWebhookRouter.js";
 import { vercelWebhookRouter } from "./external/vercel/vercelWebhookRouter.js";
@@ -64,7 +72,14 @@ export const createHonoApp = () => {
 		}),
 	);
 
-	// Better Auth handler
+	app.get("/api/auth/.well-known/openid-configuration", (c) => {
+		return oauthProviderOpenIdConfigMetadata(auth)(c.req.raw);
+	});
+
+	app.get("/.well-known/oauth-authorization-server/api/auth", (c) => {
+		return oauthProviderAuthServerMetadata(auth)(c.req.raw);
+	});
+
 	app.on(["POST", "GET"], "/api/auth/*", (c) => {
 		return auth.handler(c.req.raw);
 	});
@@ -79,6 +94,36 @@ export const createHonoApp = () => {
 	app.use("*", traceMiddleware);
 
 	app.get("/", handleHealthCheck);
+
+	// Public endpoint to get OAuth client name (for consent page)
+	app.get("/oauth/client/:client_id", async (c) => {
+		const clientId = c.req.param("client_id");
+		if (!clientId) {
+			return c.json({ error: "client_id is required" }, 400);
+		}
+
+		const db = c.get("ctx").db;
+		const client = await db
+			.select({
+				name: oauthClient.name,
+				clientId: oauthClient.clientId,
+			})
+			.from(oauthClient)
+			.where(eq(oauthClient.clientId, clientId))
+			.limit(1);
+
+		if (!client.length) {
+			return c.json({ error: "Client not found" }, 404);
+		}
+
+		return c.json({
+			client_id: client[0].clientId,
+			name: client[0].name || "Unknown Application",
+		});
+	});
+
+	// CLI routes (uses Bearer token auth, not session auth)
+	app.route("/cli", cliRouter);
 
 	// Add Render region identifier header for load balancer verification
 	app.use("*", async (c, next) => {

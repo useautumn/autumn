@@ -1,11 +1,13 @@
 import "dotenv/config";
 
-import { invitation } from "@autumn/shared";
+import { invitation, schemas } from "@autumn/shared";
+import { oauthProvider } from "@better-auth/oauth-provider";
 import { betterAuth, type User } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import {
 	admin,
 	emailOTP,
+	jwt,
 	type Organization,
 	organization,
 } from "better-auth/plugins";
@@ -19,6 +21,7 @@ import sendOTPEmail from "@/internal/emails/sendOTPEmail.js";
 import { afterOrgCreated } from "./authUtils/afterOrgCreated.js";
 import { beforeSessionCreated } from "./authUtils/beforeSessionCreated.js";
 import { ADMIN_USER_IDs } from "./constants.js";
+import { ALL_SCOPES } from "./scopeDefinitions.js";
 
 export const auth = betterAuth({
 	baseURL: process.env.BETTER_AUTH_URL,
@@ -27,7 +30,8 @@ export const auth = betterAuth({
 	},
 
 	database: drizzleAdapter(db, {
-		provider: "pg", // or "mysql", "sqlite"
+		provider: "pg",
+		schema: schemas,
 	}),
 
 	databaseHooks: {
@@ -108,6 +112,30 @@ export const auth = betterAuth({
 			impersonationSessionDuration: 1000 * 60 * 60 * 24, // 1 days
 		}),
 
+		jwt(),
+		oauthProvider({
+			loginPage: `${process.env.CLIENT_URL}/sign-in`,
+			consentPage: `${process.env.CLIENT_URL}/consent`,
+			// Resource-based scopes with CRUD actions
+			// Format: resource:action (e.g., customers:read, plans:create)
+			scopes: ALL_SCOPES,
+			clientReference: ({ session }) => {
+				return (session?.activeOrganizationId as string | undefined) ?? undefined;
+			},
+			// Use the active organization as the consent reference
+			// This makes consent org-scoped, not just user-scoped
+			postLogin: {
+				// Required: page to redirect to if shouldRedirect returns true
+				page: `${process.env.CLIENT_URL}/consent`,
+				// Required: whether to show post-login page (we don't need this, so always false)
+				shouldRedirect: async () => false,
+				// Optional: reference ID for consent (org ID makes consent org-scoped)
+				consentReferenceId: ({ session }) => {
+					return (session?.activeOrganizationId as string | undefined) ?? undefined;
+				},
+			},
+		}),
+
 		organization({
 			async sendInvitationEmail(data: {
 				id: string;
@@ -117,8 +145,8 @@ export const auth = betterAuth({
 				const inviteLink = `${process.env.CLIENT_URL}/accept?id=${data.id}`;
 				await sendInvitationEmail({
 					email: data.email,
-					orgName: data.organization.name,
-					inviteLink,
+					orgName: data.organization.name as string ?? "an organization",
+					inviteLink: inviteLink,
 				});
 
 				try {
