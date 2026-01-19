@@ -10,12 +10,14 @@ import {
 	and,
 	desc,
 	eq,
-	gt, ilike, isNotNull,
+	gt,
+	ilike,
+	isNotNull,
 	isNull,
 	lt,
 	notExists,
 	or,
-	sql
+	sql,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -155,6 +157,16 @@ export class CusSearchService {
 				? or(
 						...statuses.map((status) => {
 							switch (status) {
+								case "active":
+									return and(
+										eq(customerProducts.status, CusProductStatus.Active),
+										isNull(customerProducts.canceled_at),
+									);
+								case "past_due":
+									return and(
+										eq(customerProducts.status, CusProductStatus.PastDue),
+										isNull(customerProducts.canceled_at),
+									);
 								case "canceled":
 									return and(
 										isNotNull(customerProducts.canceled_at),
@@ -164,6 +176,7 @@ export class CusSearchService {
 									return and(
 										gt(customerProducts.trial_ends_at, Date.now()),
 										isNotNull(customerProducts.free_trial_id),
+										isNull(customerProducts.canceled_at),
 										activeProdFilter,
 									);
 								case CusProductStatus.Expired:
@@ -513,7 +526,8 @@ export class CusSearchService {
 			});
 		}
 
-		if (filters?.version && filters?.version.length > 0) {
+		// Call searchByProduct if we have version filters OR status filters
+		if ((filters?.version && filters?.version.length > 0) || (filters?.status && filters?.status.length > 0)) {
 			return await CusSearchService.searchByProduct({
 				db,
 				orgId,
@@ -642,7 +656,6 @@ export class CusSearchService {
 		return { data: finalResults, count: totalCount };
 	}
 }
-
 // // Legacy support for product_id field (if still used)
 // let productIds: string[] = [];
 // if (filters.product_id) {

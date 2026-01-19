@@ -1,10 +1,6 @@
-import { AnimatePresence, motion } from "motion/react";
-import { createPortal } from "react-dom";
-import {
-	useCurrentItem,
-	useHasItemChanges,
-	useIsCusPlanEditor,
-} from "@/hooks/stores/useProductStore";
+import { motion } from "motion/react";
+import { SheetOverlay } from "@/components/v2/sheet-overlay/SheetOverlay";
+import { useIsCusPlanEditor } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { CustomerPlanEditorBar } from "@/views/customers2/customer-plan/CustomerPlanEditorBar";
 import { CustomerPlanInfoBox } from "@/views/customers2/customer-plan/CustomerPlanInfoBox";
@@ -14,66 +10,8 @@ import { EditPlanHeader } from "./EditPlanHeader";
 import PlanCard from "./plan-card/PlanCard";
 import { SaveChangesBar } from "./SaveChangesBar";
 
-function shouldCloseSheetOnMouseDown({
-	e,
-	item,
-	sheetType,
-	hasItemChanges,
-}: {
-	e: React.MouseEvent<HTMLDivElement>;
-	item: ReturnType<typeof useCurrentItem>;
-	sheetType: string | null;
-	hasItemChanges: boolean;
-}): boolean {
-	// Don't close if item has unsaved changes
-	if (hasItemChanges) {
-		return false;
-	}
-
-	// Don't close if item is invalid
-	// if (item && !checkItemIsValid(item, false)) {
-	// 	return false;
-	// }
-
-	// Get the active element before blur happens
-	const activeElement = document.activeElement;
-
-	if (
-		activeElement &&
-		activeElement !== document.body &&
-		activeElement instanceof HTMLElement
-	) {
-		// Only apply blur behavior to inputs, textareas, and selects
-		const isInputElement =
-			activeElement.tagName === "INPUT" ||
-			activeElement.tagName === "TEXTAREA" ||
-			activeElement.tagName === "SELECT";
-
-		if (!isInputElement) {
-			// Not an input, proceed with normal close behavior
-			return !!sheetType;
-		}
-
-		// Check if the active element is within the sheet (not in the main content area)
-		const clickTarget = e.target as HTMLElement;
-		const isActiveInSheet = !clickTarget.contains(activeElement);
-
-		if (isActiveInSheet) {
-			activeElement.blur();
-			e.preventDefault(); // Prevent default to stop the click from propagating
-			return false;
-		}
-	}
-
-	// If the click is outside the sheet and no input is focused, close the sheet
-	return !!sheetType;
-}
-
 export const PlanEditor = () => {
-	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const sheetType = useSheetStore((s) => s.type);
-	const item = useCurrentItem();
-	const hasItemChanges = useHasItemChanges();
 
 	return (
 		<div className="flex w-full h-full overflow-hidden relative">
@@ -100,32 +38,7 @@ export const PlanEditor = () => {
 						)}
 					</div>
 				</div>
-				{createPortal(
-					<AnimatePresence>
-						{sheetType && (
-							<motion.div
-								initial={{ opacity: 0 }}
-								animate={{ opacity: 1 }}
-								exit={{ opacity: 0 }}
-								className="fixed inset-0 bg-white/70 dark:bg-black/70"
-								style={{ zIndex: 40 }}
-								onMouseDown={(e) => {
-									if (
-										shouldCloseSheetOnMouseDown({
-											e,
-											item,
-											sheetType,
-											hasItemChanges,
-										})
-									) {
-										closeSheet();
-									}
-								}}
-							/>
-						)}
-					</AnimatePresence>,
-					document.body,
-				)}
+				<SheetOverlay />
 			</motion.div>
 
 			<ProductSheets />

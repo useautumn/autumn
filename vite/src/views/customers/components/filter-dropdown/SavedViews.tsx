@@ -1,3 +1,7 @@
+import { TrashIcon } from "@phosphor-icons/react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
 	DropdownMenuGroup,
 	DropdownMenuItem,
@@ -9,13 +13,8 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-
-import { toast } from "sonner";
-import { getBackendErr } from "@/utils/genUtils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { Delete } from "lucide-react";
-import { useState } from "react";
+import { getBackendErr } from "@/utils/genUtils";
 import { useCustomersQueryStates } from "../../hooks/useCustomersQueryStates";
 
 interface SavedView {
@@ -34,7 +33,7 @@ export const SavedViews = ({
 	mutateViews: any;
 	setDropdownOpen: (open: boolean) => void;
 }) => {
-	const { setQueryStates } = useCustomersQueryStates();
+	const { setFilters } = useCustomersQueryStates();
 	const axiosInstance = useAxiosInstance();
 	const [deletingViewId, setDeletingViewId] = useState<string | null>(null);
 
@@ -44,24 +43,17 @@ export const SavedViews = ({
 			const decodedParams = atob(view.filters);
 			const params = new URLSearchParams(decodedParams);
 
-			// Apply all parameters using setQueryStates (this will reset pagination automatically)
+			// Apply all parameters using setFilters (this will reset pagination automatically)
 			const statusParam = params.get("status") || "";
 			const versionParam = params.get("version") || "";
 			const noneParam = params.get("none");
 
-			const queryParams = {
-				page: 1,
+			setFilters({
 				q: params.get("q") || "",
 				status: statusParam ? statusParam.split(",").filter(Boolean) : [],
 				version: versionParam ? versionParam.split(",").filter(Boolean) : [],
 				none: noneParam === "true",
-				lastItemId: "",
-			};
-
-			setQueryStates(queryParams);
-
-			// Explicitly trigger a data refetch to ensure the view is applied immediately
-			// await mutate();
+			});
 
 			toast.success(`Applied filters from ${view.name} view`);
 		} catch (error) {
@@ -95,7 +87,7 @@ export const SavedViews = ({
 				{views.map((view: SavedView) => (
 					<div
 						key={view.id}
-						className="flex items-center justify-between cursor-pointer px-2 hover:bg-zinc-100 rounded-sm"
+						className="flex items-center justify-between cursor-pointer px-2 hover:bg-accent rounded-sm"
 						onClick={async () => {
 							await applyView(view);
 							setDropdownOpen(false);
@@ -110,18 +102,22 @@ export const SavedViews = ({
 						<Popover>
 							<PopoverTrigger asChild>
 								<button
+									type="button"
 									onClick={(e) => {
 										e.stopPropagation();
 									}}
-									className="ml-2 p-1 hover:bg-zinc-200 rounded"
+									className="ml-2 p-1 hover:bg-destructive/10 rounded group"
 								>
-									<Delete size={12} className="text-t3" />
+									<TrashIcon
+										size={12}
+										className="text-t3 group-hover:text-red-500"
+									/>
 								</button>
 							</PopoverTrigger>
 							<PopoverContent
 								sideOffset={2}
 								align="start"
-								className="border border-zinc-200 w-64 z-50"
+								className="border w-64 z-200"
 								onOpenAutoFocus={(e) => e.preventDefault()}
 								onCloseAutoFocus={(e) => e.preventDefault()}
 							>
