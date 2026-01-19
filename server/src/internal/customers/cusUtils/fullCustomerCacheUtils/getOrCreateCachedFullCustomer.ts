@@ -177,12 +177,14 @@ export const getOrCreateCachedFullCustomer = async ({
 
 	// 6. Set cache (await to ensure it's ready before Redis deduction)
 	if (!skipCache && setCache) {
+		// Note (to fix): causes race condition when cache isn't set and concurrent track requests each set the cache.
 		await setCachedFullCustomer({
 			ctx,
 			fullCustomer,
 			customerId: fullCustomer.id || fullCustomer.internal_id,
 			fetchTimeMs,
 			source,
+			overwrite: true,
 		}).catch((err) => logger.error(`Failed to set cache: ${err}`));
 	}
 

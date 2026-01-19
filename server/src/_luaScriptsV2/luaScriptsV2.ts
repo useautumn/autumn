@@ -77,6 +77,15 @@ export const DELETE_FULL_CUSTOMER_CACHE_SCRIPT = readFileSync(
 );
 
 /**
+ * Lua script for setting a FullCustomer cache in Redis.
+ * Checks stale-write guard, checks if cache exists, and sets cache atomically.
+ */
+export const SET_FULL_CUSTOMER_CACHE_SCRIPT = readFileSync(
+	join(DELETE_CACHE_DIR, "setFullCustomerCache.lua"),
+	"utf-8",
+);
+
+/**
  * Lua script for batch deleting multiple FullCustomer caches from Redis.
  * For each customer: checks test guard, sets stale-write guard, deletes cache.
  */
