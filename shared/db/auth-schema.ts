@@ -30,8 +30,9 @@ export const user = pgTable(
 		role: text("role"),
 		banned: boolean("banned"),
 		banReason: text("ban_reason"),
-		banExpires: timestamp("ban_expires"),
+		banExpires: timestamp("ban_expires", { withTimezone: true }),
 		createdBy: text("created_by"),
+		lastActiveAt: timestamp("last_active_at", { withTimezone: true }),
 	},
 	(table) => [
 		foreignKey({
@@ -55,6 +56,8 @@ export const session = pgTable("session", {
 		.references(() => user.id, { onDelete: "cascade" }),
 	impersonatedBy: text("impersonated_by"),
 	activeOrganizationId: text("active_organization_id"),
+	city: text("city"),
+	country: text("country"),
 }).enableRLS();
 
 export const account = pgTable("account", {
@@ -117,6 +120,19 @@ export const invitation = pgTable("invitation", {
 		.references(() => user.id, { onDelete: "cascade" }),
 }).enableRLS();
 
+export const bannedUser = pgTable("banned_user", {
+	id: text("id").primaryKey(),
+	userId: text("user_id")
+		.notNull()
+		.references(() => user.id, { onDelete: "cascade" }),
+	banReason: text("ban_reason"),
+	banExpires: timestamp("ban_expires", { withTimezone: true }),
+	createdAt: timestamp("created_at", { withTimezone: true })
+		.notNull()
+		.$defaultFn(() => new Date()),
+	revokedAt: timestamp("revoked_at", { withTimezone: true }),
+}).enableRLS();
+
 export const authSchema = {
 	user,
 	session,
@@ -124,12 +140,14 @@ export const authSchema = {
 	verification,
 	member,
 	invitation,
+	bannedUser,
 	organizations,
 };
 
 export type User = typeof user.$inferSelect;
 export type Member = typeof member.$inferSelect;
 export type Invite = typeof invitation.$inferSelect;
+export type BannedUser = typeof bannedUser.$inferSelect;
 
 export type FullInvite = Invite & {
 	inviter: User;
