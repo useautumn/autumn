@@ -12,9 +12,7 @@ export const notNullish = <T>(value: T | null | undefined): value is T =>
 export const idRegex = /^[a-zA-Z0-9_-]+$/;
 
 export const sumValues = (vals: number[]) => {
-	return vals
-		.reduce((acc: Decimal, curr: number) => acc.add(curr), new Decimal(0))
-		.toNumber();
+	return vals.reduce((acc, curr) => acc.add(curr), new Decimal(0)).toNumber();
 };
 
 export const keyToTitle = (
@@ -68,3 +66,7 @@ export function sleepUntil(epochMs: number): Promise<void> {
 	if (delay <= 0) return Promise.resolve();
 	return new Promise((resolve) => setTimeout(resolve, delay));
 }
+
+export const deduplicateArray = <T>(array: T[]): T[] => {
+	return Array.from(new Set(array));
+};

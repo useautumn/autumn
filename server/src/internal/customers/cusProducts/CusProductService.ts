@@ -6,11 +6,20 @@ import {
 	customers,
 	ErrCode,
 	type FullCusProduct,
+	type InsertCustomerProduct,
 	InternalError,
 	products,
 	RecaseError,
 } from "@autumn/shared";
-import { and, arrayContains, eq, inArray, isNotNull, or } from "drizzle-orm";
+import {
+	and,
+	arrayContains,
+	eq,
+	inArray,
+	isNotNull,
+	not,
+	or,
+} from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const ACTIVE_STATUSES = [
@@ -444,19 +453,24 @@ export class CusProductService {
 		stripeSubId,
 		updates,
 		inStatuses = RELEVANT_STATUSES,
+		notInStatuses,
 	}: {
 		db: DrizzleCli;
 		stripeSubId: string;
-		updates: Partial<CusProduct>;
+		updates: Partial<InsertCustomerProduct>;
 		inStatuses?: string[];
+		notInStatuses?: string[];
 	}) {
 		const updated = await db
 			.update(customerProducts)
-			.set(updates as any)
+			.set(updates)
 			.where(
 				and(
 					arrayContains(customerProducts.subscription_ids, [stripeSubId]),
 					inStatuses ? inArray(customerProducts.status, inStatuses) : undefined,
+					notInStatuses
+						? not(inArray(customerProducts.status, notInStatuses))
+						: undefined,
 				),
 			)
 			.returning({

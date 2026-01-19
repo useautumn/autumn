@@ -1,6 +1,7 @@
 import {
 	AttachBranch,
 	type Feature,
+	formatAmount,
 	getAmountForQuantity,
 	getFeatureInvoiceDescription,
 	type Price,
@@ -9,7 +10,6 @@ import { PriceItem } from "@/components/pricing/attach-pricing-dialog";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
-import { formatAmount } from "@/utils/formatUtils/formatTextUtils";
 import { useProductContext } from "@/views/products/product/ProductContext";
 import { AdjustableOptions } from "./AdjustQuantity";
 

@@ -1,20 +1,24 @@
+import { cusEntToCusPrice } from "@utils/cusEntUtils/convertCusEntUtils/cusEntToCusPrice";
 import { Decimal } from "decimal.js";
 import {
-	cusEntToCusPrice, type FullCusEntWithFullCusProduct,
+	type FullCusEntWithFullCusProduct,
+	isEntityScopedCusEnt,
 	isPrepaidPrice,
-	sumValues
+	sumValues,
 } from "../../..";
 import { cusProductToFeatureOptions } from "../../cusProductUtils/convertCusProduct/cusProductToFeatureOptions.js";
 
 export const cusEntToPrepaidQuantity = ({
 	cusEnt,
+	sumAcrossEntities = false,
 }: {
 	cusEnt: FullCusEntWithFullCusProduct;
+	sumAcrossEntities?: boolean;
 }) => {
 	// 2. If cus ent is not prepaid, skip
 	const cusPrice = cusEntToCusPrice({ cusEnt });
 
-	if (!cusPrice || !isPrepaidPrice({ price: cusPrice.price })) return 0;
+	if (!cusPrice || !isPrepaidPrice(cusPrice.price)) return 0;
 
 	if (!cusEnt.customer_product) return 0;
 
@@ -30,15 +34,25 @@ export const cusEntToPrepaidQuantity = ({
 		.mul(cusPrice.price.config.billing_units ?? 1)
 		.toNumber();
 
+	if (sumAcrossEntities && isEntityScopedCusEnt(cusEnt)) {
+		return new Decimal(quantityWithUnits)
+			.mul(Object.values(cusEnt.entities).length)
+			.toNumber();
+	}
+
 	return quantityWithUnits;
 };
 
 export const cusEntsToPrepaidQuantity = ({
 	cusEnts,
+	sumAcrossEntities = false,
 }: {
 	cusEnts: FullCusEntWithFullCusProduct[];
+	sumAcrossEntities?: boolean;
 }) => {
 	return sumValues(
-		cusEnts.map((cusEnt) => cusEntToPrepaidQuantity({ cusEnt })),
+		cusEnts.map((cusEnt) =>
+			cusEntToPrepaidQuantity({ cusEnt, sumAcrossEntities }),
+		),
 	);
 };

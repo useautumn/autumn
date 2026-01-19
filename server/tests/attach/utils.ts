@@ -144,7 +144,7 @@ export const addPrefixToProducts = ({
 }) => {
 	for (const product of products) {
 		product.id = `${prefix}_${product.id}`;
-		product.name = `${prefix} ${product.name}`;
+		product.name = `${product.name} ${prefix}`;
 		product.group = prefix;
 	}
 

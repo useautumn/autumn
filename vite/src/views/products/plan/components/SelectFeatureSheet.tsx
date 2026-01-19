@@ -13,10 +13,12 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/v2/dropdowns/DropdownMenu";
 import { FormLabel } from "@/components/v2/form/FormLabel";
+import {
+	useProduct,
+	useSheet,
+} from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useProductStore } from "@/hooks/stores/useProductStore";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { getItemId } from "@/utils/product/productItemUtils";
 import { getFeatureIcon } from "@/views/products/features/utils/getFeatureIcon";
@@ -27,24 +29,17 @@ export function SelectFeatureSheet({
 }: {
 	isOnboarding?: boolean;
 }) {
-	const previousSheetType = useSheetStore((s) => s.previousType);
 	const [selectOpen, setSelectOpen] = useState(false);
 	const [searchValue, setSearchValue] = useState("");
 
 	const { features } = useFeaturesQuery();
-	const product = useProductStore((s) => s.product);
-	const setProduct = useProductStore((s) => s.setProduct);
-	const setSheet = useSheetStore((s) => s.setSheet);
+	const { product, setProduct, initialProduct } = useProduct();
+	const { setSheet } = useSheet();
 
 	useEffect(() => {
-		// If we're switching from another sheet, open immediately
-		if (previousSheetType && previousSheetType !== "select-feature") {
-			setSelectOpen(true);
-		} else {
-			// Otherwise, delay to let sheet animate in
-			const timer = setTimeout(() => setSelectOpen(true), 250);
-			return () => clearTimeout(timer);
-		}
+		// Always delay to let sheet animate in (300ms animation + buffer)
+		const timer = setTimeout(() => setSelectOpen(true), 350);
+		return () => clearTimeout(timer);
 	}, []);
 
 	// Reset search when dropdown closes
@@ -65,8 +60,14 @@ export function SelectFeatureSheet({
 		const selectedFeature = features.find((f) => f.id === featureId);
 		if (!selectedFeature) return;
 
-		// Create a new item with the selected feature
-		const newItem = getDefaultItem({ feature: selectedFeature });
+		// Check if this feature was previously configured in initialProduct
+		const previousItem = initialProduct?.items?.find(
+			(i) => i.feature_id === featureId,
+		);
+
+		// Use the previous configuration if available, otherwise create a new default item
+		const newItem =
+			previousItem ?? getDefaultItem({ feature: selectedFeature });
 
 		// Add the new item to the product
 		const newItems = [...product.items, newItem];

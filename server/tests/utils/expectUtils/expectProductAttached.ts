@@ -1,6 +1,8 @@
 import { expect } from "bun:test";
 import {
 	type ApiCustomer,
+	type ApiEntityV0,
+	type ApiEntityV1,
 	type ApiSubscription,
 	ApiVersion,
 	type CreateFreeTrial,
@@ -25,7 +27,7 @@ export const expectProductAttached = ({
 	isCanceled = false,
 	quantity,
 }: {
-	customer: Customer;
+	customer: Customer | ApiEntityV0;
 	product?: ProductV2;
 	productId?: string;
 	status?: CusProductStatus;
@@ -33,7 +35,7 @@ export const expectProductAttached = ({
 	isCanceled?: boolean;
 	quantity?: number;
 }) => {
-	const cusProducts = customer.products;
+	const cusProducts = customer.products ?? [];
 	const finalProductId = productId || product?.id;
 	const productAttached = cusProducts.find(
 		(p) => p.id === finalProductId,
@@ -130,7 +132,7 @@ export const expectScheduledApiSub = async ({
 	});
 
 	const entity = entityId
-		? await autumnV2.entities.get(customerId, entityId)
+		? await autumnV2.entities.get<ApiEntityV1>(customerId, entityId)
 		: await autumnV2.customers.get<ApiCustomer>(customerId);
 
 	const scheduledSub = entity.scheduled_subscriptions.find(

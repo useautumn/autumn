@@ -7,3 +7,7 @@ export const orgToInStatuses = ({ org }: { org: Organization }) => {
 	}
 	return [CusProductStatus.Active];
 };
+
+export const orgToCurrency = ({ org }: { org: Organization }) => {
+	return org.default_currency || "usd";
+};

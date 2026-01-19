@@ -6,10 +6,12 @@ import { TrashIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { AdminHover } from "@/components/general/AdminHover";
 import { IconButton } from "@/components/v2/buttons/IconButton";
+import {
+	useProduct,
+	useSheet,
+} from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useProductStore } from "@/hooks/stores/useProductStore";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { getItemId } from "@/utils/product/productItemUtils";
 import { useOnboarding3QueryState } from "@/views/onboarding3/hooks/useOnboarding3QueryState";
@@ -18,7 +20,6 @@ import { OnboardingStep } from "@/views/onboarding3/utils/onboardingUtils";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { PlanFeatureIcon } from "./PlanFeatureIcon";
 
-// Custom dot component with bigger height but smaller width
 export const CustomDotIcon = () => {
 	return <div className="w-[2px] h-[2px] mx-0.5 bg-current rounded-full" />;
 };
@@ -36,15 +37,13 @@ export const PlanFeatureRow = ({
 	onDelete: _onDelete,
 	index,
 	readOnly = false,
-	prepaidQuantity, //used by subscription detail sheet
+	prepaidQuantity,
 }: PlanFeatureRowProps) => {
 	const { org } = useOrg();
 	const { features } = useFeaturesQuery();
 	const { setItem } = useProductItemContext();
-	const product = useProductStore((s) => s.product);
-	const setProduct = useProductStore((s) => s.setProduct);
-	const itemId = useSheetStore((s) => s.itemId);
-	const setSheet = useSheetStore((s) => s.setSheet);
+	const { product, setProduct } = useProduct();
+	const { itemId, setSheet } = useSheet();
 	const isOnboarding = useOnboardingStore((s) => s.isOnboarding);
 	const playgroundMode = useOnboardingStore((s) => s.playgroundMode);
 	const { queryStates } = useOnboarding3QueryState();
@@ -52,14 +51,11 @@ export const PlanFeatureRow = ({
 	const ref = useRef<HTMLDivElement>(null);
 	const [isPressed, setIsPressed] = useState(false);
 
-	// Disable interaction if in onboarding and not in playground edit mode
 	const isDisabled =
 		isOnboarding &&
 		(queryStates.step !== OnboardingStep.Playground ||
 			playgroundMode !== "edit");
 
-	// Always use the current item from product.items for real-time updates
-	// Note: index is now the actual index in product.items (not filtered featureItems)
 	const item = product.items?.[index] || itemProp;
 
 	const display = getProductItemDisplay({
@@ -70,7 +66,6 @@ export const PlanFeatureRow = ({
 		amountFormatOptions: { currencyDisplay: "narrowSymbol" },
 	});
 
-	// Check if feature has a name
 	const feature = features.find((f) => f.id === item.feature_id);
 	const hasFeatureName = feature?.name && feature.name.trim() !== "";
 	const displayText = hasFeatureName
@@ -80,27 +75,23 @@ export const PlanFeatureRow = ({
 	const currentItemId = getItemId({ item, itemIndex: index });
 	const isSelected = itemId === currentItemId;
 
-	// Clear pressed state when this item is no longer selected
 	useEffect(() => {
 		if (!isSelected) setIsPressed(false);
 	}, [isSelected]);
 
-	// Also clear pressed state whenever editing state changes (catches hotkey navigation)
 	useEffect(() => {
 		if (itemId !== currentItemId) setIsPressed(false);
 	}, [itemId, currentItemId]);
 
 	const handleRowClicked = () => {
-		if (isDisabled) return;
+		if (readOnly || isDisabled) return;
 		const currentItemId = getItemId({ item, itemIndex: index });
 
-		// If not selected, select it
 		setItem(item);
 		setSheet({ type: "edit-feature", itemId: currentItemId });
 	};
 
 	const handleDeleteRow = () => {
-		// Filter out the item by reference (not by index in filtered array)
 		const newItems = product.items?.filter((i) => i !== item) || [];
 
 		setProduct({ ...product, items: newItems });
@@ -160,7 +151,6 @@ export const PlanFeatureRow = ({
 			ref={contentRef}
 			role="button"
 			tabIndex={0}
-			// data-state={isSelected ? "open" : "closed"}
 			{...(isDisabled && { "data-disabled": true })}
 			data-pressed={isPressed}
 			className={cn(
@@ -194,7 +184,6 @@ export const PlanFeatureRow = ({
 				}
 			}}
 		>
-			{/* Left side - Icons and text */}
 			<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
 				<AdminHover texts={adminHoverText()}>
 					<div className="flex flex-row items-center gap-1 shrink-0 pointer-events-auto">

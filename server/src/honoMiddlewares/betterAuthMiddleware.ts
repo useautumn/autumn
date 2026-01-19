@@ -35,6 +35,7 @@ export const betterAuthMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	// Step 3: Extract orgId and userId
 	const orgId = session?.session?.activeOrganizationId;
 	const userId = session?.user?.id;
+	const user = session?.user;
 
 	if (!orgId) {
 		throw new RecaseError({
@@ -78,6 +79,7 @@ export const betterAuthMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	ctx.features = features;
 	ctx.userId = userId;
 	ctx.authType = AuthType.Dashboard;
+	ctx.user = user;
 
 	await next();
 };

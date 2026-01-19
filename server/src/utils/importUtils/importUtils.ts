@@ -1,7 +1,6 @@
-import Stripe from "stripe";
+import { type FullProduct, isFixedPrice } from "@autumn/shared";
+import type Stripe from "stripe";
 import { subItemToFixedPrice } from "@/internal/products/prices/priceUtils/constructPriceUtils.js";
-import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
-import { FullProduct } from "@autumn/shared";
 
 // Scenario 1: Replace base price with new base price
 export const replaceBasePrice = async ({
@@ -13,7 +12,7 @@ export const replaceBasePrice = async ({
 	autumnProduct: FullProduct;
 	basePrice?: number;
 }) => {
-	let prices = autumnProduct.prices.filter((p) => !isFixedPrice({ price: p }));
+	const prices = autumnProduct.prices.filter((p) => !isFixedPrice(p));
 
 	// Get first sub item
 	const subItem = subItems[0];

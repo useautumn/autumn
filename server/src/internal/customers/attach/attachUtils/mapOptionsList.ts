@@ -11,6 +11,9 @@ import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPric
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 
+/**
+ * @deprecated Use setupFeatureQuantitiesContext from billing/v2/setup instead
+ */
 export const mapOptionsList = ({
 	optionsInput,
 	features,

@@ -1,9 +1,0 @@
-[phases.install]
-onlyIncludeFiles = [
-  "package.json",
-  "bun.lock",
-  "./server/package.json",
-  "./shared/package.json",
-  "./vite/package.json",
-]
-

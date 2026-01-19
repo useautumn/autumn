@@ -5,8 +5,8 @@ import { UsageTierSchema } from "./usagePriceConfig.js";
 export const FixedPriceConfigSchema = z.object({
 	type: z.string(),
 	amount: z.number().min(0),
-	interval: z.nativeEnum(BillingInterval),
-	interval_count: z.number().nullish(),
+	interval: z.enum(BillingInterval),
+	interval_count: z.number().optional(),
 
 	// Usage price fields
 	billing_units: z.number().nullish(),

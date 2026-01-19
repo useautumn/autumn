@@ -42,8 +42,8 @@ describe(`${chalk.yellowBright(`${testCase}: loose entitlement on entity`)}`, ()
 	test("entity should have 10 messages balance", async () => {
 		const entity = await autumnV1.entities.get(customerId, entityId);
 
-		expect(entity.features[TestFeature.Messages]).toBeDefined();
-		expect(entity.features[TestFeature.Messages].balance).toBe(10);
+		expect(entity.features![TestFeature.Messages]).toBeDefined();
+		expect(entity.features![TestFeature.Messages].balance).toBe(10);
 	});
 
 	test("v2 check: entity should have access to messages", async () => {

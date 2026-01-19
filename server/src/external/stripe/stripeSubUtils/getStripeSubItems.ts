@@ -166,7 +166,7 @@ export const getStripeSubItems = async ({
 				existingUsage,
 				withEntity: notNullish(attachParams.internalEntityId),
 				apiVersion: attachParams.apiVersion,
-				productOptions: prodOptions,
+				// productOptions: prodOptions,
 			});
 
 			if (!stripeItem) {
@@ -288,7 +288,7 @@ export const getStripeSubItems2 = async ({
 			existingUsage,
 			withEntity: notNullish(internalEntityId),
 			apiVersion: attachParams.apiVersion,
-			productOptions: prodOptions,
+			// productOptions: prodOptions,
 			fromVercel: attachParams.paymentMethod?.type === "custom",
 		});
 

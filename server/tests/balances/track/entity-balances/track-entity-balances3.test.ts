@@ -84,7 +84,7 @@ describe(`${chalk.yellowBright("track-entity-balances3: per-entity balance track
 	test("each entity should have initial balance of 100 messages", async () => {
 		for (const entity of entities) {
 			const fetchedEntity = await autumnV1.entities.get(customerId, entity.id);
-			const balance = fetchedEntity.features[TestFeature.Messages].balance;
+			const balance = fetchedEntity.features![TestFeature.Messages].balance;
 
 			expect(balance).toBe(100);
 		}
@@ -114,7 +114,7 @@ describe(`${chalk.yellowBright("track-entity-balances3: per-entity balance track
 					entities[j].id,
 				);
 				const expectedBalance = j <= i ? 90 : 100;
-				expect(fetchedEntity.features[TestFeature.Messages].balance).toBe(
+				expect(fetchedEntity.features![TestFeature.Messages].balance).toBe(
 					expectedBalance,
 				);
 			}
@@ -137,7 +137,7 @@ describe(`${chalk.yellowBright("track-entity-balances3: per-entity balance track
 		for (const entity of entities) {
 			const fetchedEntity = await autumnV1.entities.get(customerId, entity.id);
 			totalEntityBalance +=
-				fetchedEntity.features[TestFeature.Messages].balance;
+				fetchedEntity.features?.[TestFeature.Messages]?.balance ?? 0;
 		}
 		expect(totalEntityBalance).toBe(260);
 	});
@@ -177,9 +177,9 @@ describe(`${chalk.yellowBright("track-entity-balances3: per-entity balance track
 			);
 
 			totalEntityBalanceFromDb +=
-				entityFromDb.features[TestFeature.Messages].balance;
+				entityFromDb.features?.[TestFeature.Messages]?.balance ?? 0;
 			totalEntityBalanceFromCache +=
-				entityFromCache.features[TestFeature.Messages].balance;
+				entityFromCache.features?.[TestFeature.Messages]?.balance ?? 0;
 		}
 
 		// Sum of entity balances should be 260

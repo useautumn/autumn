@@ -1,7 +1,6 @@
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
-import { deleteCachedApiCustomer } from "../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { matchRoute } from "./middlewareUtils.js";
 
 /**
@@ -54,6 +53,11 @@ const coreUrls: { method: string; url: string; source?: string }[] = [
 	},
 	{
 		method: "POST",
+		url: "/subscriptions/update",
+	},
+
+	{
+		method: "POST",
 		url: "/balances/create",
 		source: "handleCreateBalance",
 	},
@@ -71,16 +75,12 @@ export const refreshCacheMiddleware = async (
 	await next();
 
 	// Only clear cache on successful responses (2xx status codes)
-	if (c.res.status < 200 || c.res.status >= 300) {
-		return;
-	}
+	if (c.res.status < 200 || c.res.status >= 300) return;
 
 	const ctx = c.get("ctx");
-	const { logger, skipCacheDeletion } = ctx;
+	const { skipCacheDeletion } = ctx;
 
-	if (skipCacheDeletion) {
-		return;
-	}
+	if (skipCacheDeletion) return;
 
 	const pathname = new URL(c.req.url).pathname.replace("/v1", "");
 	const method = c.req.method;
@@ -93,14 +93,6 @@ export const refreshCacheMiddleware = async (
 	if (pathMatch && !skipCacheDeletion) {
 		const customerId = c.req.param("customer_id");
 		if (customerId) {
-			logger.info(
-				`Clearing cache for customer ${customerId}, url: ${pathname}`,
-			);
-			await deleteCachedApiCustomer({
-				customerId,
-				ctx,
-				source: `refreshCacheMiddleware, url: ${pathname}`,
-			});
 			await deleteCachedFullCustomer({
 				customerId,
 				ctx,
@@ -119,14 +111,6 @@ export const refreshCacheMiddleware = async (
 		// For core URLs, check body for customer_id
 		const body = await c.req.json().catch(() => null);
 		if (body?.customer_id) {
-			logger.info(
-				`Clearing cache for core url ${pathname}, customerId: ${body.customer_id}`,
-			);
-			await deleteCachedApiCustomer({
-				customerId: body.customer_id,
-				ctx,
-				source: "refreshCacheMiddleware",
-			});
 			await deleteCachedFullCustomer({
 				customerId: body.customer_id,
 				ctx,

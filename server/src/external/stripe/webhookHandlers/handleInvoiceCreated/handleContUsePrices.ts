@@ -2,13 +2,13 @@ import type {
 	FullCustomerEntitlement,
 	FullCustomerPrice,
 } from "@autumn/shared";
+import { customerPriceToCustomerEntitlement } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { findLinkedCusEnts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
 import { removeReplaceablesFromCusEnt } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/linkedCusEntUtils.js";
 import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService.js";
-import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
 import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
 
 export const handleContUsePrices = async ({
@@ -28,9 +28,9 @@ export const handleContUsePrices = async ({
 	logger: any;
 	resetBalance?: boolean;
 }): Promise<boolean> => {
-	const cusEnt = getRelatedCusEnt({
-		cusPrice,
-		cusEnts,
+	const cusEnt = customerPriceToCustomerEntitlement({
+		customerPrice: cusPrice,
+		customerEntitlements: cusEnts,
 	});
 
 	if (!cusEnt) {

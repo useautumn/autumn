@@ -13,23 +13,18 @@ export const FreeTrialSchema = z.object({
 	card_required: z.boolean(),
 });
 
-export const CreateFreeTrialSchema = z
-	.object({
-		length: z
-			.string()
-			.or(z.number())
-			.transform((val) => Number(val))
-			.refine((val) => val > 0, {
-				message: "Free trial length must be greater than 0",
-			}),
-		unique_fingerprint: z.boolean().default(false),
-		duration: z.nativeEnum(FreeTrialDuration).default(FreeTrialDuration.Day),
-		card_required: z.boolean().default(true),
-	})
-	.meta({
-		id: "FreeTrialConfig",
-		title: "FreeTrialConfig",
-	});
+export const CreateFreeTrialSchema = z.object({
+	length: z
+		.string()
+		.or(z.number())
+		.transform((val) => Number(val))
+		.refine((val) => val > 0, {
+			message: "Free trial length must be greater than 0",
+		}),
+	unique_fingerprint: z.boolean().default(false),
+	duration: z.enum(FreeTrialDuration).default(FreeTrialDuration.Day),
+	card_required: z.boolean().default(true),
+});
 
 export type FreeTrial = z.infer<typeof FreeTrialSchema>;
 export type CreateFreeTrial = z.infer<typeof CreateFreeTrialSchema>;

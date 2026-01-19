@@ -17,6 +17,7 @@ export enum TestFeature {
 	Admin = "admin", // cont use
 	AdminRights = "admin_rights", // cont use
 	Words = "words", // single use (pay per use)
+	Storage = "storage", // single use (prepaid)
 
 	Action1 = "action1", // single use (pay per use)
 	Action2 = "action2", // single use (pay per use)
@@ -63,6 +64,12 @@ export const getFeatures = ({ orgId }: { orgId: string }) => ({
 	}),
 	[TestFeature.Words]: constructMeteredFeature({
 		featureId: TestFeature.Words,
+		orgId,
+		env: AppEnv.Sandbox,
+		usageType: FeatureUsageType.Single,
+	}),
+	[TestFeature.Storage]: constructMeteredFeature({
+		featureId: TestFeature.Storage,
 		orgId,
 		env: AppEnv.Sandbox,
 		usageType: FeatureUsageType.Single,

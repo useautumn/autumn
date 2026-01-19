@@ -1,10 +1,10 @@
 import { FeatureType } from "@autumn/shared";
-import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import {
 	useHasItemChanges,
-	useProductStore,
-} from "@/hooks/stores/useProductStore";
+	useProduct,
+} from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
+import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { getFeature } from "@/utils/product/entitlementUtils";
 import { isFeaturePriceItem } from "@/utils/product/getItemType";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
@@ -23,7 +23,7 @@ export function EditPlanFeatureSheet({
 }) {
 	const { item } = useProductItemContext();
 	const { features } = useFeaturesQuery();
-	const product = useProductStore((s) => s.product);
+	const { product } = useProduct();
 	const hasItemChanges = useHasItemChanges();
 
 	const emptyPriceItem =

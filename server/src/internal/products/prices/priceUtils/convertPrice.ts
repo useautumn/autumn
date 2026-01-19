@@ -1,18 +1,13 @@
 import {
 	BillingInterval,
 	BillingType,
-	type EntitlementWithFeature,
-	type Feature,
-	type FullCustomerEntitlement,
-	type FullCustomerPrice,
 	type FullProduct,
+	isFixedPrice,
 	type Price,
 	type ProductOptions,
 	UsageModel,
-	type UsagePriceConfig,
 } from "@autumn/shared";
-import { getBillingType, getPriceEntitlement } from "../priceUtils.js";
-import { isFixedPrice } from "./usagePriceUtils/classifyUsagePrice.js";
+import { getBillingType } from "../priceUtils.js";
 
 export const priceToIntervalKey = (price: Price) => {
 	return toIntervalKey({
@@ -54,52 +49,15 @@ export const intervalKeyToPrice = (intervalKey: string) => {
 	};
 };
 
-export const priceToFeature = ({
-	price,
-	ents,
-	features,
-}: {
-	price: Price;
-	ents?: EntitlementWithFeature[];
-	features?: Feature[];
-}) => {
-	if (!features && !ents) {
-		throw new Error("priceToFeature requires either ents or features as arg");
-	}
-
-	if (features) {
-		return features.find(
-			(f) =>
-				f.internal_id ===
-				(price.config as UsagePriceConfig).internal_feature_id,
-		);
-	}
-
-	const ent = getPriceEntitlement(price, ents!);
-	return ent?.feature;
-};
-
 export const priceToUsageModel = (price: Price) => {
 	const billingType = getBillingType(price.config);
-	if (isFixedPrice({ price })) {
+	if (isFixedPrice(price)) {
 		return undefined;
 	}
 	if (billingType === BillingType.UsageInAdvance) {
 		return UsageModel.Prepaid;
 	}
 	return UsageModel.PayPerUse;
-};
-
-export const cusPriceToCusEnt = ({
-	cusPrice,
-	cusEnts,
-}: {
-	cusPrice: FullCustomerPrice;
-	cusEnts: FullCustomerEntitlement[];
-}) => {
-	return cusEnts.find(
-		(ce) => ce.entitlement?.id === cusPrice.price.entitlement_id,
-	);
 };
 
 export const priceToProductOptions = ({

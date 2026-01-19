@@ -4,9 +4,11 @@ import {
 	type FullCustomer,
 	formatAmount,
 	getTotalCusProdQuantity,
-	isTrialing,
+	isCustomerProductTrialing,
+	isFixedPrice,
 	type Organization,
 	type Price,
+	priceToInvoiceAmount,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { logger } from "better-auth";
@@ -16,8 +18,6 @@ import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeS
 import { priceToInvoiceDescription } from "@/internal/invoices/invoiceFormatUtils.js";
 import { getProration } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
 import { priceToUsageModel } from "@/internal/products/prices/priceUtils/convertPrice.js";
-import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
-import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import {
 	getPriceEntitlement,
 	getPriceOptions,
@@ -66,7 +66,7 @@ export const priceToUnusedPreviewItem = ({
 	anchor?: number;
 }) => {
 	now = now || Date.now();
-	const onTrial = isTrialing({ cusProduct, now });
+	const onTrial = isCustomerProductTrialing(cusProduct, { nowMs: now });
 
 	const subItem = findStripeItemForPrice({
 		price,
@@ -91,7 +91,7 @@ export const priceToUnusedPreviewItem = ({
 		? (options?.quantity ?? 1) * (config.billing_units ?? 1)
 		: 1;
 
-	if (isFixedPrice({ price })) {
+	if (isFixedPrice(price)) {
 		quantity = customer
 			? getTotalCusProdQuantity({
 					cusProducts: customer.customer_products,
