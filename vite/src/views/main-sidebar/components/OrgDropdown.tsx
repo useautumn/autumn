@@ -67,13 +67,16 @@ export const OrgDropdown = () => {
 
 	if (isLoading)
 		return (
-			<div className="h-7 w-32 px-4 flex items-center gap-2">
-				<Skeleton className="min-w-5 h-5 bg-stone-200" />
-				<Skeleton className="w-32 h-5 bg-stone-200" />
-			</div>
+			<>
+				<ManageOrg open={manageOpen} setOpen={setManageOpen} />
+				<div className="h-7 w-32 px-4 flex items-center gap-2">
+					<Skeleton className="min-w-5 h-5 bg-stone-200" />
+					<Skeleton className="w-32 h-5 bg-stone-200" />
+				</div>
+			</>
 		);
 
-	if (!org || error) return null;
+	if (!org || error) return <ManageOrg open={manageOpen} setOpen={setManageOpen} />;
 
 	return (
 		<div className={cn("flex px-3")}>

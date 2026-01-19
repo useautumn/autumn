@@ -12,11 +12,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
 	({ className, type, startContent, endContent, variant, ...props }, ref) => {
 		const hasAdornment = startContent || endContent;
 
-		// const gradientBg =
-		//   "bg-[linear-gradient(180deg,white,theme(colors.stone.50))]";
-		const gradientBg = "bg-white";
-
-		// const gradientBg = "bg-input";
+		const gradientBg = "bg-input dark:bg-input";
 		return (
 			<>
 				{hasAdornment ? (

@@ -26,6 +26,12 @@ export function planToProductV2({
 	// Convert plan to items using shared utility
 	const items = convertPlanToItems({ plan, features });
 
+	// Check if archived field exists on plan (it's on ApiPlan, not CreatePlanParams)
+	const archived =
+		"archived" in plan && plan.archived !== undefined
+			? plan.archived
+			: undefined;
+
 	return {
 		id: plan.id,
 		name: plan.name,
@@ -42,5 +48,6 @@ export function planToProductV2({
 					card_required: plan.free_trial.card_required,
 				}
 			: null,
+		...(archived !== undefined && { archived }),
 	};
 }

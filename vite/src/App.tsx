@@ -10,8 +10,10 @@ import { useSession } from "./lib/auth-client";
 import { identifyUser } from "./utils/posthogTracking";
 import { AdminView } from "./views/admin/AdminView";
 import { ImpersonateRedirect } from "./views/admin/ImpersonateRedirect";
+import { OAuthClientsView } from "./views/admin/oauth/OAuthClientsView";
 import { AcceptInvitation } from "./views/auth/AcceptInvitation";
 import { PasswordSignIn } from "./views/auth/components/PasswordSignIn";
+import { Consent } from "./views/auth/Consent";
 import { SignIn } from "./views/auth/SignIn";
 import { Otp } from "./views/cli/Otp";
 import CustomersPage from "./views/customers/CustomersPage";
@@ -24,6 +26,7 @@ import { CloseScreen } from "./views/general/CloseScreen";
 import QuickstartView from "./views/onboarding4/QuickstartView";
 import ProductsView from "./views/products/ProductsView";
 import PlanEditorView from "./views/products/plan/PlanEditorView";
+import { OrgSettingsView } from "./views/settings/OrgSettingsView";
 import { TerminalView } from "./views/TerminalView";
 
 export function SquircleProvider({ children }: { children: React.ReactNode }) {
@@ -55,6 +58,7 @@ export default function App() {
 			<Routes>
 				<Route path="/sign-in" element={<SignIn />} />
 				<Route path="/pw-sign-in" element={<PasswordSignIn />} />
+				<Route path="/consent" element={<Consent />} />
 				<Route path="/accept" element={<AcceptInvitation />} />
 				<Route path="/close" element={<CloseScreen />} />
 
@@ -65,7 +69,9 @@ export default function App() {
 
 				<Route element={<MainLayout />}>
 					<Route path="*" element={<DefaultView />} />
+					<Route path="/settings" element={<OrgSettingsView />} />
 					<Route path="/admin" element={<AdminView />} />
+					<Route path="/admin/oauth" element={<OAuthClientsView />} />
 					<Route
 						path="/impersonate-redirect"
 						element={<ImpersonateRedirect />}
@@ -119,6 +125,7 @@ export default function App() {
 					<Route path="/events" element={<AnalyticsView />} />
 					<Route path="/sandbox/events" element={<AnalyticsView />} />
 					<Route path="/dev/cli" element={<Otp />} />
+					<Route path="/sandbox/dev/cli" element={<Otp />} />
 				</Route>
 			</Routes>
 		</BrowserRouter>

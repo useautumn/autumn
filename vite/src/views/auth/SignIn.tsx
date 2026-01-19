@@ -1,10 +1,10 @@
 import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Mail } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { Input } from "@/components/v2/inputs/Input";
@@ -15,6 +15,24 @@ import { OTPSignIn } from "./components/OTPSignIn";
 
 export const emailSchema = z.email();
 
+/**
+ * Check if URL has OAuth parameters (from OAuth provider redirect)
+ * These params are added by better-auth when redirecting unauthenticated users
+ */
+function getOAuthRedirectUrl(searchParams: URLSearchParams): string | null {
+	// Check for OAuth-specific params that indicate this is an OAuth flow
+	const clientId = searchParams.get("client_id");
+	const responseType = searchParams.get("response_type");
+	const redirectUri = searchParams.get("redirect_uri");
+
+	if (clientId && responseType && redirectUri) {
+		// Reconstruct the OAuth authorize URL with all params
+		const backendUrl = import.meta.env.VITE_BACKEND_URL;
+		return `${backendUrl}/api/auth/oauth2/authorize?${searchParams.toString()}`;
+	}
+	return null;
+}
+
 export const SignIn = () => {
 	const [email, setEmail] = useState("");
 	const [googleLoading, setGoogleLoading] = useState(false);
@@ -23,11 +41,30 @@ export const SignIn = () => {
 
 	const { org } = useOrg();
 	const navigate = useNavigate();
+	const [searchParams] = useSearchParams();
 
-	const newPath = "/sandbox/quickstart";
-	const callbackPath = "/sandbox/products?tab=products";
+	// Check if this is an OAuth flow - if so, redirect back to authorize endpoint after login
+	const oauthRedirectUrl = useMemo(
+		() => getOAuthRedirectUrl(searchParams),
+		[searchParams],
+	);
+
+	const defaultNewPath = "/sandbox/products?tab=products";
+	const defaultCallbackPath = "/sandbox/products?tab=products";
+
+	// Use OAuth redirect URL if present, otherwise use default paths
+	const newPath = oauthRedirectUrl || defaultNewPath;
+	const callbackPath = oauthRedirectUrl || defaultCallbackPath;
 
 	useEffect(() => {
+		// If this is an OAuth flow and user is already logged in, continue the OAuth flow
+		if (oauthRedirectUrl) {
+			// Don't auto-redirect to dashboard - let the OAuth flow continue
+			// The user will be redirected to consent page after they click sign-in
+			return;
+		}
+
+		// Regular sign-in flow - redirect to dashboard if already authenticated
 		if (org) {
 			if (org.deployed) {
 				navigate("/products?tab=products");
@@ -35,7 +72,7 @@ export const SignIn = () => {
 				navigate("/sandbox/products?tab=products");
 			}
 		}
-	}, [org, navigate]);
+	}, [org, navigate, oauthRedirectUrl]);
 
 	const handleEmailSignIn = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -68,10 +105,15 @@ export const SignIn = () => {
 		try {
 			const frontendUrl = import.meta.env.VITE_FRONTEND_URL;
 
+			// For OAuth flow, we need to redirect back to continue the flow
+			// For regular sign-in, use the default dashboard paths
+			const googleCallbackUrl = oauthRedirectUrl || `${frontendUrl}${defaultCallbackPath}`;
+			const googleNewUserUrl = oauthRedirectUrl || `${frontendUrl}${defaultNewPath}`;
+
 			const { error } = await signIn.social({
 				provider: "google",
-				callbackURL: `${frontendUrl}${callbackPath}`,
-				newUserCallbackURL: `${frontendUrl}${newPath}`,
+				callbackURL: googleCallbackUrl,
+				newUserCallbackURL: googleNewUserUrl,
 			});
 			if (error) {
 				toast.error(error.message || "Failed to sign in with Google");
