@@ -47,7 +47,8 @@ export const handleAllowanceUsed = async ({
 	oldFullCus: FullCustomer;
 	newFullCus: FullCustomer;
 }) => {
-	for (const cusProduct of newFullCus.customer_products) {
+	const clonedNewFullCus = structuredClone(newFullCus);
+	for (const cusProduct of clonedNewFullCus.customer_products) {
 		for (const cusEnt of cusProduct.customer_entitlements) {
 			cusEnt.usage_allowed = false;
 		}
@@ -61,7 +62,7 @@ export const handleAllowanceUsed = async ({
 	const { apiCustomer: newApiCustomer, legacyData: newLegacyData } =
 		await getApiCustomerBase({
 			ctx,
-			fullCus: newFullCus,
+			fullCus: clonedNewFullCus,
 		});
 
 	const prevCusFeature = prevApiCustomer.balances[feature.id];

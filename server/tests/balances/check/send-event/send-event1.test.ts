@@ -50,6 +50,8 @@ describe(`${chalk.yellowBright("send-event1: Testing send event")}`, () => {
 			customer_id: customerId,
 			product_id: pro.id,
 		});
+
+		await autumn.customers.get(customerId); // set cache
 	});
 
 	test("should check with track for allocated feature", async () => {
