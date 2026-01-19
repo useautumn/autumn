@@ -14,6 +14,7 @@ interface SheetHeaderProps {
 	isOnboarding?: boolean;
 	breadcrumbs?: { name: string; sheet?: string }[];
 	itemId?: string | null;
+	action?: React.ReactNode;
 }
 
 export function SheetHeader({
@@ -25,6 +26,7 @@ export function SheetHeader({
 	className,
 	isOnboarding = false,
 	itemId,
+	action,
 }: SheetHeaderProps) {
 	return (
 		<div className={cn("p-4 pb-0", className)}>
@@ -37,16 +39,19 @@ export function SheetHeader({
 			) : (
 				<h2 className="text-main">{title}</h2>
 			)}
-			<p
-				className={cn(
-					"text-t3 text-sm mt-1 truncate",
-					isOnboarding && "text-body-secondary",
-				)}
-			>
-				{description}
-			</p>
+			<div className="flex items-end justify-between gap-2 mt-1">
+				<p
+					className={cn(
+						"text-t3 text-sm flex-1",
+						isOnboarding && "text-body-secondary",
+					)}
+				>
+					{description}
+				</p>
+				{action}
+			</div>
 			{children}
-			{!noSeparator && <Separator className="mt-4" />}
+			{!noSeparator && <Separator className="mt-2" />}
 		</div>
 	);
 }

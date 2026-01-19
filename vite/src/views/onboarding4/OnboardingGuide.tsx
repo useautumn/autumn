@@ -105,9 +105,9 @@ function StepCard({
 			animate={{ flex: isActive ? 4 : 1 }}
 			transition={{ duration: 0.3, ease: "easeInOut" }}
 			className={cn(
-				"relative rounded-xl border bg-card cursor-pointer h-29 overflow-hidden",
+				"relative border dark:border-none rounded-xl bg-card cursor-pointer h-29 overflow-hidden",
 				isActive
-					? "border-primary/30"
+					? ""
 					: "hover:border-primary/20 hover:bg-interactive-secondary-hover",
 				isComplete && !isActive && "opacity-50",
 			)}

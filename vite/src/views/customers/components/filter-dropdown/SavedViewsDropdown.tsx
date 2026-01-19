@@ -1,3 +1,5 @@
+import { BookmarkIcon, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -10,8 +12,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
-import { BookmarkIcon, Trash2 } from "lucide-react";
-import { toast } from "sonner";
 import { useCustomersQueryStates } from "../../hooks/useCustomersQueryStates";
 import { useSavedViewsQuery } from "../../hooks/useSavedViewsQuery";
 
@@ -119,6 +119,7 @@ export const SavedViewsDropdown = () => {
 							>
 								<span className="truncate flex-1">{view.name}</span>
 								<button
+									type="button"
 									onClick={(e) => deleteView(view.id, view.name, e)}
 									className="ml-2 p-1 hover:bg-red-100 rounded"
 								>
