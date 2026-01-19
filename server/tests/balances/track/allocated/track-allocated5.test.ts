@@ -52,6 +52,8 @@ describe(`${chalk.yellowBright(`${testCase}: Tracking allocated feature with con
 			product_id: free.id,
 		});
 
+		await autumn.customers.get(customerId); // set cache
+
 		const promises = [];
 		let totalUsage = 0;
 		let numberOfTracks = 0;

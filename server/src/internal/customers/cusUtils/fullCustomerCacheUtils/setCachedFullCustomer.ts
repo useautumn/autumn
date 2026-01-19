@@ -2,6 +2,7 @@ import type { FullCustomer } from "@autumn/shared";
 import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
+import { addToExtraLogs } from "@/utils/logging/addToExtraLogs.js";
 import {
 	buildFullCustomerCacheGuardKey,
 	buildFullCustomerCacheKey,
@@ -20,12 +21,14 @@ export const setCachedFullCustomer = async ({
 	customerId,
 	fetchTimeMs,
 	source,
+	overwrite = false,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	customerId: string;
 	fetchTimeMs: number;
 	source?: string;
+	overwrite?: boolean;
 }): Promise<SetCacheResult> => {
 	const { org, env, logger } = ctx;
 
@@ -41,24 +44,14 @@ export const setCachedFullCustomer = async ({
 	});
 
 	const result = await tryRedisWrite(async () => {
-		// Check if guard exists (deletion happened recently)
-		const guardTime = await redis.get(guardKey);
-		if (guardTime && Number(guardTime) > fetchTimeMs) {
-			return "STALE_WRITE" as const;
-		}
-
-		// Check if cache already exists (JSON.TYPE returns null if key doesn't exist)
-		const existing = await redis.call("JSON.TYPE", cacheKey);
-		if (existing) {
-			return "CACHE_EXISTS" as const;
-		}
-
-		// Set the cache using JSON.SET (stores as native JSON for JSONPath operations)
-		const serialized = JSON.stringify(fullCustomer);
-		await redis.call("JSON.SET", cacheKey, "$", serialized);
-		await redis.expire(cacheKey, FULL_CUSTOMER_CACHE_TTL_SECONDS);
-
-		return "OK" as const;
+		return await redis.setFullCustomerCache(
+			guardKey,
+			cacheKey,
+			String(fetchTimeMs),
+			String(FULL_CUSTOMER_CACHE_TTL_SECONDS),
+			JSON.stringify(fullCustomer),
+			String(overwrite),
+		);
 	});
 
 	if (result === null) {
@@ -66,19 +59,18 @@ export const setCachedFullCustomer = async ({
 		return "FAILED";
 	}
 
-	if (result === "STALE_WRITE") {
-		logger.info(
-			`[setCachedFullCustomer] Stale write blocked for ${customerId}, source: ${source}`,
-		);
-	} else if (result === "CACHE_EXISTS") {
-		logger.debug(
-			`[setCachedFullCustomer] Cache already exists for ${customerId}, source: ${source}`,
-		);
-	} else {
-		logger.info(
-			`[setCachedFullCustomer] Set cache for ${customerId}, source: ${source}`,
-		);
-	}
+	logger.info(
+		`[setCachedFullCustomer] ${customerId}: ${result}, source: ${source}`,
+	);
+	addToExtraLogs({
+		ctx,
+		extras: {
+			setCache: {
+				result,
+				fullCustomer,
+			},
+		},
+	});
 
 	return result;
 };

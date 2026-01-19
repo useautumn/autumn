@@ -1,10 +1,20 @@
 import { beforeAll, describe } from "bun:test";
-import { ApiVersion } from "@autumn/shared";
+import {
+	ApiVersion,
+	BillingInterval,
+	type FullProduct,
+	isConsumablePrice,
+	isFixedPrice,
+} from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
+import type { Stripe } from "stripe";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { ProductService } from "@/internal/products/ProductService";
+import { constructPriceItem } from "@/internal/products/product-items/productItemUtils";
 import {
+	constructArrearItem,
 	constructFeatureItem,
 	constructPrepaidItem,
 } from "@/utils/scriptUtils/constructItem.js";
@@ -12,9 +22,6 @@ import {
 	constructProduct,
 	constructRawProduct,
 } from "@/utils/scriptUtils/createTestProducts.js";
-import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3";
-import { expectSubToBeCorrect } from "../merged/mergeUtils/expectSubCorrect";
 
 const prepaidUsersItem = constructPrepaidItem({
 	featureId: TestFeature.Users,
@@ -32,68 +39,107 @@ const free = constructProduct({
 	],
 });
 
-const oneOffCredits = constructRawProduct({
-	id: "one_off_credits",
+const growthYearly = constructRawProduct({
+	id: "growth-yearly",
 	items: [
-		constructPrepaidItem({
-			featureId: TestFeature.Credits,
+		constructArrearItem({
+			featureId: TestFeature.Words,
 			includedUsage: 0,
-			billingUnits: 1,
-			price: 0.01,
-			isOneOff: true,
+			price: 1,
+			billingUnits: 100,
+		}),
+		constructPriceItem({
+			price: 2000,
+			interval: BillingInterval.Year,
 		}),
 	],
-	// trial: true,
 });
 
 const testCase = "temp";
+
+const buildSubscriptionItems = ({
+	fullProduct,
+}: {
+	fullProduct: FullProduct;
+}): Stripe.SubscriptionScheduleCreateParams.Phase.Item[] => {
+	return fullProduct.prices.map((p) => {
+		if (isConsumablePrice(p)) {
+			return {
+				price: p.config.stripe_empty_price_id ?? undefined,
+				quantity: 0,
+			};
+		}
+		return {
+			price: p.config.stripe_price_id ?? undefined,
+			quantity: 1,
+		};
+	});
+};
 
 describe(`${chalk.yellowBright("temp:	 add on")}`, () => {
 	const customerId = testCase;
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
 	beforeAll(async () => {
-		await initCustomerV3({
-			ctx,
-			customerId,
-			withTestClock: true,
-			attachPm: "success",
+		// await initCustomerV3({
+		// 	ctx,
+		// 	customerId,
+		// 	withTestClock: true,
+		// 	attachPm: "success",
+		// });
+
+		// await initProductsV0({
+		// 	ctx,
+		// 	products: [free, growthYearly],
+		// 	prefix: testCase,
+		// });
+
+		const { stripeCli } = ctx;
+
+		const growthYearly = await ProductService.getFull({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			idOrInternalId: "growth-yearly_temp",
 		});
 
-		await initProductsV0({
-			ctx,
-			products: [free],
-			prefix: testCase,
-		});
+		// const basePrice = growthYearly.prices.find(isFixedPrice)
 
-		await autumnV1.attach({
-			customer_id: customerId,
-			product_id: free.id,
-			options: [
+		// const emptyPrice = await stripeCli.prices.create({
+		// 	product: growthYearly?.processor?.id,
+		// 	unit_amount: 0,
+		// 	currency: "usd",
+		// 	recurring: {
+		// 		...(billingIntervalToStripe({
+		// 			interval: BillingInterval.Year,
+		// 			intervalCount: 1,
+		// 		}) as any),
+		// 	},
+		// });
+
+		// console.log(emptyPrice);
+
+		const newSubscription = await stripeCli.subscriptions.create({
+			customer: "cus_ToYUVA6XSJrMa8",
+			items: [
 				{
-					feature_id: TestFeature.Users,
-					quantity: 10,
+					price: "price_1SqvPM5NEqgjQ4gyNktukeYr",
+					quantity: 1,
 				},
 			],
+			billing_mode: { type: "flexible" },
+			billing_cycle_anchor: Math.floor(new Date("2026-12-26").getTime() / 1000),
 		});
 
-		const dashboardItem = constructFeatureItem({
-			featureId: TestFeature.Dashboard,
-			isBoolean: true,
-		});
-
-		await autumnV1.attach({
-			customer_id: customerId,
-			product_id: free.id,
-			is_custom: true,
-			items: [prepaidUsersItem, dashboardItem],
-		});
-
-		await expectSubToBeCorrect({
-			db: ctx.db,
-			customerId,
-			org: ctx.org,
-			env: ctx.env,
+		await stripeCli.subscriptions.update(newSubscription.id, {
+			items: [
+				{
+					id: newSubscription.items.data[0].id,
+					deleted: true,
+				},
+				...buildSubscriptionItems({ fullProduct: growthYearly })
+			],
+			proration_behavior: "none",
 		});
 	});
 });
