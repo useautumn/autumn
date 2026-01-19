@@ -1,8 +1,7 @@
+import { AttachBranch, formatAmount } from "@autumn/shared";
 import { PriceItem } from "@/components/pricing/attach-pricing-dialog";
 import { useOrg } from "@/hooks/common/useOrg";
-import { formatAmount } from "@/utils/product/productItemUtils";
 import { useProductContext } from "@/views/products/product/ProductContext";
-import { AttachBranch } from "@autumn/shared";
 
 export const OptionsResult = () => {
 	const { org } = useOrg();
@@ -67,7 +66,7 @@ export const OptionsResult = () => {
 										<div className="flex items-center gap-2 ">
 											<span className="text-muted-foreground truncate max-w-40">
 												{formatAmount({
-													defaultCurrency: currency,
+													currency,
 													amount: proratedAmount,
 													maxFractionDigits: 2,
 												})}{" "}
@@ -79,7 +78,7 @@ export const OptionsResult = () => {
 									<span>{title}</span>
 									<span className="text-muted-foreground truncate max-w-40">
 										{formatAmount({
-											defaultCurrency: currency,
+											currency,
 											amount: amount,
 											maxFractionDigits: 2,
 										})}

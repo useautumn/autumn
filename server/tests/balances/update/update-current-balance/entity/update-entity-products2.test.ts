@@ -122,8 +122,11 @@ describe(`${chalk.yellowBright("update-entity-products2: update with mixed custo
 			current_balance: 100,
 		});
 
-		const entity1 = await autumnV2.entities.get(customerId, entities[0].id);
-		expect(entity1.balances[TestFeature.Messages]).toMatchObject({
+		const entity1 = await autumnV2.entities.get<ApiEntityV1>(
+			customerId,
+			entities[0].id,
+		);
+		expect(entity1.balances?.[TestFeature.Messages]).toMatchObject({
 			granted_balance: 100,
 			current_balance: 100,
 			usage: 0,
@@ -146,8 +149,11 @@ describe(`${chalk.yellowBright("update-entity-products2: update with mixed custo
 			current_balance: 200,
 		});
 
-		const entity2 = await autumnV2.entities.get(customerId, entities[1].id);
-		expect(entity2.balances[TestFeature.Messages]).toMatchObject({
+		const entity2 = await autumnV2.entities.get<ApiEntityV1>(
+			customerId,
+			entities[1].id,
+		);
+		expect(entity2.balances![TestFeature.Messages]).toMatchObject({
 			granted_balance: 200,
 			current_balance: 200,
 			usage: 0,

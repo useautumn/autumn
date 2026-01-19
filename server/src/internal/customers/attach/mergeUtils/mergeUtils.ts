@@ -3,14 +3,12 @@ import {
 	cusProductToEnts,
 	type Entity,
 	type FullCusProduct,
+	isAllocatedPrice,
+	isFixedPrice,
+	isPrepaidPrice,
 	type Price,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import {
-	isContUsePrice,
-	isFixedPrice,
-	isPrepaidPrice,
-} from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import {
 	getPriceEntitlement,
 	getPriceOptions,
@@ -48,7 +46,7 @@ export const getQuantityToRemove = ({
 	let finalQuantity = 1;
 	const fixedPriceMultiplier = cusProduct.quantity || 1;
 
-	if (isPrepaidPrice({ price })) {
+	if (isPrepaidPrice(price)) {
 		const options = getPriceOptions(price, cusProduct.options);
 
 		if (!options) return finalQuantity;
@@ -57,7 +55,7 @@ export const getQuantityToRemove = ({
 		finalQuantity = options.upcoming_quantity || options.quantity || 1;
 	}
 
-	if (isContUsePrice({ price })) {
+	if (isAllocatedPrice(price)) {
 		const ents = cusProductToEnts({ cusProduct });
 		const relatedEnt = getPriceEntitlement(price, ents);
 		const existingUsage = getExistingUsageFromCusProducts({
@@ -71,7 +69,7 @@ export const getQuantityToRemove = ({
 		finalQuantity = existingUsage || 0;
 	}
 
-	if (isFixedPrice({ price })) {
+	if (isFixedPrice(price)) {
 		finalQuantity = fixedPriceMultiplier * (finalQuantity || 1);
 	}
 

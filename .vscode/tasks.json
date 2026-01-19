@@ -1,0 +1,30 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run Test Pattern",
+			"type": "shell",
+			"command": "bun test ${relativeFile} -t \"${input:testPattern}\"",
+			"problemMatcher": []
+		},
+		{
+			"label": "Run Describe at Cursor",
+			"type": "shell",
+			"command": "bun test ${relativeFile} --timeout 0 -t \"$(bun scripts/testScripts/getDescribeAtCursor.ts ${file} ${lineNumber})\"",
+			"problemMatcher": []
+		},
+		{
+			"label": "Run Current Test File",
+			"type": "shell",
+			"command": "bun test ${relativeFile}",
+			"problemMatcher": []
+		}
+	],
+	"inputs": [
+		{
+			"id": "testPattern",
+			"type": "promptString",
+			"description": "Test name pattern"
+		}
+	]
+}

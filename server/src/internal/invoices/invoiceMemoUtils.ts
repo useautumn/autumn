@@ -8,7 +8,6 @@ import {
 } from "@autumn/shared";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import { isFeatureItem } from "../products/product-items/productItemUtils/getItemType.js";
-// import { getProductItemDisplay } from "../products/productUtils/productResponseUtils/getProductItemDisplay.js";
 
 export const buildInvoiceMemo = async ({
 	org,

@@ -14,12 +14,12 @@ import { context, trace } from "@opentelemetry/api";
 import { toNodeHandler } from "better-auth/node";
 import cors from "cors";
 import express from "express";
+import { addRequestToLogs } from "@/utils/logging/addContextToLogs.js";
 import { client, db } from "./db/initDrizzle.js";
 import { ClickHouseManager } from "./external/clickhouse/ClickHouseManager.js";
 import { logger } from "./external/logtail/logtailUtils.js";
 import { redirectToHono } from "./initHono.js";
 import { apiRouter } from "./internal/api/apiRouter.js";
-import mainRouter from "./internal/mainRouter.js";
 import { auth } from "./utils/auth.js";
 import { generateId } from "./utils/genUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
@@ -138,14 +138,6 @@ const init = async () => {
 		req.expand = [];
 		req.skipCache = false;
 
-		const reqContext = {
-			id: req.id,
-			env: req.headers.app_env || undefined,
-			method: req.method,
-			url: req.originalUrl,
-			timestamp: req.timestamp,
-		};
-
 		// Create span
 		const spanName = `${req.method} ${req.originalUrl} - ${req.id}`;
 		const span = tracer.startSpan(spanName);
@@ -157,12 +149,6 @@ const init = async () => {
 
 		// Store span on request for potential use in other middleware/handlers
 		req.span = span;
-
-		req.logger = logger.child({
-			context: {
-				req: reqContext,
-			},
-		});
 
 		const endSpan = () => {
 			try {
@@ -193,16 +179,26 @@ const init = async () => {
 
 	app.use(express.json());
 	app.use(async (req: any, _res: any, next: any) => {
-		req.logger.info(`${req.method} ${req.originalUrl}`, {
-			context: {
+		req.logger = addRequestToLogs({
+			logger: logger,
+			requestContext: {
+				id: req.id,
+				method: req.method,
+				url: req.originalUrl,
+				timestamp: req.timestamp,
+				user_agent: req.headers["user-agent"],
+				ip_address: req.headers["x-forwarded-for"],
+				query: req.query,
 				body: req.body,
+
+				name: `${req.method} ${req.originalUrl}`,
 			},
 		});
+
+		req.logger.info(`${req.method} ${req.originalUrl}`);
 		next();
 	});
 
-	// Legacy Express routes
-	app.use(mainRouter);
 	app.use("/v1", apiRouter);
 
 	const PORT = process.env.SERVER_PORT

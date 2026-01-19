@@ -8,7 +8,10 @@ import {
 	constructFeatureItem,
 	constructPrepaidItem,
 } from "@/utils/scriptUtils/constructItem.js";
-import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import {
+	constructProduct,
+	constructRawProduct,
+} from "@/utils/scriptUtils/createTestProducts.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3";
 import { expectSubToBeCorrect } from "../merged/mergeUtils/expectSubCorrect";
@@ -18,10 +21,29 @@ const prepaidUsersItem = constructPrepaidItem({
 	billingUnits: 1,
 	price: 10,
 });
-const addOn = constructRawProduct({
-	id: "addOn",
-	isAddOn: true,
-	items: [prepaidUsersItem],
+
+const free = constructProduct({
+	type: "free",
+	items: [
+		constructFeatureItem({
+			featureId: TestFeature.Credits,
+			includedUsage: 500,
+		}),
+	],
+});
+
+const oneOffCredits = constructRawProduct({
+	id: "one_off_credits",
+	items: [
+		constructPrepaidItem({
+			featureId: TestFeature.Credits,
+			includedUsage: 0,
+			billingUnits: 1,
+			price: 0.01,
+			isOneOff: true,
+		}),
+	],
+	// trial: true,
 });
 
 const testCase = "temp";
@@ -40,13 +62,13 @@ describe(`${chalk.yellowBright("temp:	 add on")}`, () => {
 
 		await initProductsV0({
 			ctx,
-			products: [addOn],
+			products: [free],
 			prefix: testCase,
 		});
 
 		await autumnV1.attach({
 			customer_id: customerId,
-			product_id: addOn.id,
+			product_id: free.id,
 			options: [
 				{
 					feature_id: TestFeature.Users,
@@ -62,7 +84,7 @@ describe(`${chalk.yellowBright("temp:	 add on")}`, () => {
 
 		await autumnV1.attach({
 			customer_id: customerId,
-			product_id: addOn.id,
+			product_id: free.id,
 			is_custom: true,
 			items: [prepaidUsersItem, dashboardItem],
 		});
@@ -75,3 +97,12 @@ describe(`${chalk.yellowBright("temp:	 add on")}`, () => {
 		});
 	});
 });
+
+// await createReward({
+// 	db: ctx.db,
+// 	orgId: ctx.org.id,
+// 	env: ctx.env,
+// 	autumn: autumnV1,
+// 	reward,
+// 	// productId: pro.id,
+// });

@@ -14,6 +14,8 @@ export const completeInvoiceCheckout = async ({
 	url: string;
 	isLocal?: boolean;
 }) => {
+	console.log("[completeInvoiceCheckout] Starting invoice checkout...");
+
 	let browser: Browser;
 
 	browser = await puppeteer.launch({
@@ -183,6 +185,7 @@ export const completeInvoiceCheckout = async ({
 			}
 		}
 		await timeout(20000);
+		console.log("[completeInvoiceCheckout] Invoice checkout completed");
 	} finally {
 		// always close browser
 		await browser.close();

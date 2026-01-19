@@ -2,21 +2,16 @@ import type { AppEnv, Organization } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { VercelResourceService } from "../../services/VercelResourceService.js";
 
 export const handleMarketplaceInvoiceNotPaid = async ({
-	db,
-	org,
-	env,
-	logger,
+	ctx,
 	payload,
 }: {
-	db: DrizzleCli;
-	org: Organization;
-	env: AppEnv;
-	logger: Logger;
+	ctx: AutumnContext;
 	payload: {
 		installationId: string;
 		invoiceId: string;
@@ -27,6 +22,8 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 	};
 }) => {
 	const { installationId, invoiceId, externalInvoiceId, invoiceDate } = payload;
+
+	const { db, org, env, logger } = ctx;
 
 	const stripeCli = createStripeCli({ org, env });
 
@@ -56,10 +53,8 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 
 	try {
 		const partialCustomer = await CusService.getByStripeId({
-			db,
+			ctx,
 			stripeId: invoice.customer as string,
-			orgId: org.id,
-			env,
 		});
 
 		if (!partialCustomer) {

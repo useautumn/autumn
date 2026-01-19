@@ -46,7 +46,7 @@ const buttonVariants = cva(
 					active:border-destructive-border
 					`,
 
-				dotted: `bg-white border border-dashed border-neutral-300 shadow-[0px_4px_4px_0px_rgba(0,0,0,0.02)]
+				dotted: `bg-background border border-dashed border-border shadow-[0px_4px_4px_0px_rgba(0,0,0,0.02)]
 					hover:border-primary hover:border-solid
 					focus-visible:border-primary focus-visible:border-solid
 					active:border-primary active:border-solid
@@ -144,7 +144,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 					return "active:!bg-destructive active:!border-transparent focus-visible:!bg-destructive focus-visible:!border-transparent";
 
 				case "dotted":
-					return "active:!bg-white active:!border-dashed active:!border-neutral-300 focus-visible:!bg-white focus-visible:!border-dashed focus-visible:!border-neutral-300";
+					return "active:!bg-background active:!border-dashed active:!border-border focus-visible:!bg-background focus-visible:!border-dashed focus-visible:!border-border";
 
 				default:
 					return "";

@@ -6,8 +6,8 @@ dotenv.config();
 
 import { AppEnv } from "@autumn/shared";
 import chalk from "chalk";
-import { clearOrg } from "./utils/setupUtils/clearOrg.js";
-import { setupOrg } from "./utils/setupUtils/setupOrg.js";
+import { clearOrg } from "./utils/setup/clearOrg.js";
+import { setupOrg } from "./utils/setup/setupOrg.js";
 
 async function main() {
 	console.log(chalk.blue("\n🧹 Clearing Master Org...\n"));

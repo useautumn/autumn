@@ -1,11 +1,10 @@
 import {
 	BillingType,
-	Feature,
-	FullProduct,
-	Price,
-	UsagePriceConfig,
+	type FullProduct,
+	type Price,
+	priceToFeature,
+	type UsagePriceConfig,
 } from "@autumn/shared";
-import { priceToFeature } from "../convertPrice.js";
 import { getBillingType } from "../../priceUtils.js";
 
 export const usagePriceToProductName = ({
@@ -15,7 +14,7 @@ export const usagePriceToProductName = ({
 	price: Price;
 	fullProduct: FullProduct;
 }) => {
-	let feature = priceToFeature({
+	const feature = priceToFeature({
 		price,
 		ents: fullProduct.entitlements,
 	});
@@ -24,7 +23,7 @@ export const usagePriceToProductName = ({
 		return fullProduct.name;
 	}
 
-	let billingType = getBillingType(price.config);
+	const billingType = getBillingType(price.config);
 	const billingUnits = (price.config as UsagePriceConfig).billing_units;
 	if (
 		billingType == BillingType.UsageInAdvance &&

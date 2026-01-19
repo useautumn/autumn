@@ -39,7 +39,7 @@ export function SheetHeader({
 			)}
 			<p
 				className={cn(
-					"text-t3 text-sm mt-1",
+					"text-t3 text-sm mt-1 truncate",
 					isOnboarding && "text-body-secondary",
 				)}
 			>
@@ -92,8 +92,8 @@ export function SheetSection({
 								</div>
 							)}
 							{title && (
-								<div className={cn("flex items-center gap-2")}>
-									<h3 className={cn("text-sub select-none")}>{title}</h3>
+								<div className={cn("flex items-center gap-2 flex-1")}>
+									<h3 className={cn("text-sub select-none w-full")}>{title}</h3>
 								</div>
 							)}
 						</label>
@@ -150,23 +150,23 @@ export function SheetBreadcrumbs({
 }) {
 	const setSheet = useSheetStore((s) => s.setSheet);
 	return (
-		<div className="flex items-center gap-1">
+		<div className="flex items-center gap-1 min-w-0">
 			{breadcrumbs.map((breadcrumb) => (
 				<button
 					type="button"
 					key={breadcrumb.name}
-					className="flex items-center gap-1 text-t3 cursor-pointer"
+					className="flex items-center gap-1 text-t3 cursor-pointer min-w-0 shrink"
 					onClick={() => {
 						if (breadcrumb.sheet) {
 							setSheet({ type: breadcrumb.sheet as SheetType, itemId: itemId });
 						}
 					}}
 				>
-					<h2 className="text-t3! text-main">{breadcrumb.name}</h2>
-					<CaretRightIcon size={14} />
+					<h2 className="text-t3! text-main truncate">{breadcrumb.name}</h2>
+					<CaretRightIcon size={14} className="shrink-0" />
 				</button>
 			))}
-			<h2 className="text-main">{title}</h2>
+			<h2 className="text-main truncate">{title}</h2>
 		</div>
 	);
 }

@@ -4,6 +4,7 @@ import {
 	ArrowSquareOutIcon,
 	BracketsSquareIcon,
 	CaretDownIcon,
+	LinkIcon,
 	PencilSimpleIcon,
 	SubtractIcon,
 	TicketIcon,
@@ -30,7 +31,13 @@ import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
-import { getRevenueCatCusLink, getStripeCusLink } from "@/utils/linkUtils";
+import {
+	getRevenueCatCusLink,
+	getStripeConnectViewAsLink,
+	getStripeCusLink,
+} from "@/utils/linkUtils";
+import { useAdmin } from "@/views/admin/hooks/useAdmin";
+import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccount";
 import { DeleteCustomerDialog } from "@/views/customers/customer/components/DeleteCustomerDialog";
 import UpdateCustomerDialog from "@/views/customers/customer/components/UpdateCustomerDialog";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -50,6 +57,8 @@ export function CustomerActions() {
 	const { features } = useFeaturesQuery();
 	const { org } = useOrg();
 	const { stripeAccount } = useOrgStripeQuery();
+	const { isAdmin } = useAdmin();
+	const { masterStripeAccount } = useMasterStripeAccount();
 	const env = useEnv();
 	const axiosInstance = useAxiosInstance();
 
@@ -175,6 +184,28 @@ export function CustomerActions() {
 							>
 								<ArrowSquareOutIcon className="size-3.5" />
 								Open in Stripe
+							</DropdownMenuItem>
+						)}
+					{isAdmin &&
+						masterStripeAccount?.id &&
+						stripeAccount?.id &&
+						customer?.processor?.type === ProcessorType.Stripe && (
+							<DropdownMenuItem
+								onClick={() => {
+									window.open(
+										getStripeConnectViewAsLink({
+											masterAccountId: masterStripeAccount.id,
+											connectedAccountId: stripeAccount.id,
+											env,
+											path: `customers/${stripeCustomerId}`,
+										}),
+										"_blank",
+									);
+								}}
+								className="flex gap-2"
+							>
+								<LinkIcon className="size-3.5" />
+								View in Stripe Connect
 							</DropdownMenuItem>
 						)}
 					{((customer?.processor?.id &&

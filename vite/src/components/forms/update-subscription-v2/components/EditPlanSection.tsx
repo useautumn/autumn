@@ -1,0 +1,268 @@
+import type { ProductItem } from "@autumn/shared";
+import {
+	buildEditsForItem,
+	featureToOptions,
+	formatAmount,
+	formatInterval,
+	isPriceItem,
+	UsageModel,
+} from "@autumn/shared";
+import { PencilSimpleIcon } from "@phosphor-icons/react";
+import { LayoutGroup, motion } from "motion/react";
+import { useMemo } from "react";
+import { Button } from "@/components/v2/buttons/Button";
+import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
+import { useOrg } from "@/hooks/common/useOrg";
+import { LAYOUT_TRANSITION } from "../constants/animationConstants";
+import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
+import { PriceDisplay } from "./PriceDisplay";
+import { SectionTitle } from "./SectionTitle";
+import { SubscriptionItemRow } from "./SubscriptionItemRow";
+import { TrialEditorRow } from "./TrialEditorRow";
+import { VersionChangeRow } from "./VersionChangeRow";
+
+export function EditPlanSection() {
+	const {
+		formContext,
+		form,
+		formValues,
+		features,
+		trialState,
+		originalItems,
+		initialPrepaidOptions,
+		productWithFormItems: product,
+		handleEditPlan,
+	} = useUpdateSubscriptionFormContext();
+
+	const { customerProduct, numVersions, currentVersion } = formContext;
+	const { prepaidOptions } = formValues;
+	const hasCustomizations = formValues.items !== null;
+
+	const { org } = useOrg();
+	const currency = org?.default_currency ?? "USD";
+
+	const originalItemsMap = new Map(
+		originalItems?.filter((i) => i.feature_id).map((i) => [i.feature_id, i]) ??
+			[],
+	);
+
+	const currentFeatureIds = new Set(
+		product?.items?.map((i) => i.feature_id).filter(Boolean) ?? [],
+	);
+	const deletedItems =
+		originalItems?.filter(
+			(i) => i.feature_id && !currentFeatureIds.has(i.feature_id),
+		) ?? [];
+
+	const priceChange = useMemo(() => {
+		const originalPriceItem = originalItems?.find((i) => isPriceItem(i));
+		const currentPriceItem = product?.items?.find((i) => isPriceItem(i));
+
+		const originalPrice = originalPriceItem?.price ?? 0;
+		const currentPrice = currentPriceItem?.price ?? 0;
+
+		const originalInterval = originalPriceItem?.interval;
+		const currentInterval = currentPriceItem?.interval;
+		const originalIntervalCount = originalPriceItem?.interval_count ?? 1;
+		const currentIntervalCount = currentPriceItem?.interval_count ?? 1;
+
+		const priceChanged = originalPrice !== currentPrice;
+		const intervalChanged =
+			originalInterval !== currentInterval ||
+			originalIntervalCount !== currentIntervalCount;
+
+		if (!priceChanged && !intervalChanged) return null;
+
+		const formatPrice = (amount: number) =>
+			formatAmount({
+				currency,
+				amount,
+				amountFormatOptions: {
+					style: "currency",
+					currencyDisplay: "narrowSymbol",
+				},
+			});
+
+		const getIntervalText = (
+			interval: typeof originalInterval,
+			intervalCount: number,
+			hasPriceItem: boolean,
+		) => {
+			if (interval) {
+				return formatInterval({ interval, intervalCount });
+			}
+			// Only show "one-time" if there's a price item with no interval
+			// Otherwise it's variable/usage-based
+			return hasPriceItem ? "one-time" : null;
+		};
+
+		const oldIntervalText = getIntervalText(
+			originalInterval,
+			originalIntervalCount,
+			!!originalPriceItem,
+		);
+
+		const newIntervalText = getIntervalText(
+			currentInterval,
+			currentIntervalCount,
+			!!currentPriceItem,
+		);
+
+		return {
+			oldPrice: formatPrice(originalPrice),
+			newPrice: formatPrice(currentPrice),
+			oldIntervalText: intervalChanged ? oldIntervalText : null,
+			newIntervalText,
+			isUpgrade: currentPrice > originalPrice,
+		};
+	}, [originalItems, product?.items, currency]);
+
+	const selectedVersion = form.getFieldValue("version");
+	const showVersionChange =
+		currentVersion !== undefined &&
+		selectedVersion !== undefined &&
+		selectedVersion !== currentVersion;
+
+	return (
+		<SheetSection
+			title={
+				<SectionTitle
+					hasCustomizations={hasCustomizations}
+					form={form}
+					numVersions={numVersions}
+					currentVersion={currentVersion}
+					trialState={trialState}
+				/>
+			}
+			withSeparator
+		>
+			{(product?.items?.length ?? 0) > 0 || deletedItems.length > 0 ? (
+				<>
+					<div className="flex gap-2 justify-between items-center mb-3">
+						{priceChange ? (
+							<span className="flex items-center gap-1.5">
+								<span className="text-t3">
+									{priceChange.oldPrice}
+									{priceChange.oldIntervalText &&
+										` ${priceChange.oldIntervalText}`}
+								</span>
+								<span className="text-t4">→</span>
+								<span className="font-semibold text-t1">
+									{priceChange.newPrice}
+								</span>
+								<span className="text-t3">{priceChange.newIntervalText}</span>
+							</span>
+						) : (
+							<PriceDisplay product={product} currency={currency} />
+						)}
+					</div>
+					<LayoutGroup>
+						<div className="space-y-2">
+							{product?.items?.map((item: ProductItem, index: number) => {
+								if (!item.feature_id) return null;
+
+								const featureId = item.feature_id;
+								const featureForOptions = features?.find(
+									(f) => f.id === featureId,
+								);
+								const prepaidOption = featureToOptions({
+									feature: featureForOptions,
+									options: customerProduct?.options,
+								});
+
+								const isPrepaid = item.usage_model === UsageModel.Prepaid;
+								const currentPrepaidQuantity = isPrepaid
+									? prepaidOptions[featureId]
+									: prepaidOption?.quantity;
+								const initialPrepaidQuantity = isPrepaid
+									? initialPrepaidOptions[featureId]
+									: undefined;
+
+								const originalItem = originalItemsMap.get(featureId);
+								const isCreated =
+									!originalItem && originalItems && originalItems.length > 0;
+								const edits = buildEditsForItem({
+									updatedItem: item,
+									originalItem,
+									updatedPrepaidQuantity: currentPrepaidQuantity,
+									originalPrepaidQuantity: initialPrepaidQuantity,
+								});
+
+								return (
+									<motion.div
+										key={featureId || item.price_id || index}
+										layout
+										transition={LAYOUT_TRANSITION}
+									>
+										<SubscriptionItemRow
+											item={item}
+											edits={edits}
+											prepaidQuantity={currentPrepaidQuantity}
+											form={form}
+											featureId={featureId}
+											isCreated={isCreated}
+										/>
+									</motion.div>
+								);
+							})}
+							{deletedItems.map((item: ProductItem, index: number) => (
+								<motion.div
+									key={`deleted-${item.feature_id || index}`}
+									layout
+									transition={LAYOUT_TRANSITION}
+								>
+									<SubscriptionItemRow item={item} isDeleted />
+								</motion.div>
+							))}
+							{showVersionChange && (
+								<motion.div
+									key="version-change"
+									layout
+									transition={LAYOUT_TRANSITION}
+								>
+									<VersionChangeRow
+										currentVersion={currentVersion}
+										selectedVersion={selectedVersion}
+									/>
+								</motion.div>
+							)}
+							{(trialState.isTrialExpanded || trialState.removeTrial) && (
+								<motion.div
+									key="trial-editor"
+									layout
+									transition={LAYOUT_TRANSITION}
+								>
+									<TrialEditorRow
+										form={form}
+										isCurrentlyTrialing={trialState.isCurrentlyTrialing}
+										initialTrialLength={trialState.remainingTrialDays}
+										initialTrialFormatted={trialState.remainingTrialFormatted}
+										removeTrial={trialState.removeTrial}
+										onEndTrial={trialState.handleEndTrial}
+										onCollapse={() => trialState.setIsTrialExpanded(false)}
+										onRevert={trialState.handleRevertTrial}
+									/>
+								</motion.div>
+							)}
+							<motion.div layout transition={LAYOUT_TRANSITION}>
+								<Button
+									variant="secondary"
+									onClick={handleEditPlan}
+									className="w-full"
+								>
+									<PencilSimpleIcon size={14} className="mr-1" />
+									Edit Plan Items
+								</Button>
+							</motion.div>
+						</div>
+					</LayoutGroup>
+				</>
+			) : (
+				<Button variant="secondary" onClick={handleEditPlan} className="w-full">
+					<PencilSimpleIcon size={14} className="mr-1" />
+					Edit Plan Items
+				</Button>
+			)}
+		</SheetSection>
+	);
+}

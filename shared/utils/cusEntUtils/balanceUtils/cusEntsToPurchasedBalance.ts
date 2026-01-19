@@ -1,8 +1,8 @@
+import { cusEntToCusPrice } from "@utils/cusEntUtils/convertCusEntUtils/cusEntToCusPrice.js";
 import { Decimal } from "decimal.js";
 import type { FullCustomerEntitlement } from "../../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import { BillingType } from "../../../models/productModels/priceModels/priceEnums.js";
-import { cusEntToCusPrice } from "../../productUtils/convertUtils.js";
 import { getBillingType } from "../../productUtils/priceUtils.js";
 import { nullish, sumValues } from "../../utils.js";
 import { isEntityScopedCusEnt } from "../classifyCusEntUtils.js";
@@ -15,7 +15,7 @@ export const getCusEntMainOverage = ({
 	cusEnt: FullCustomerEntitlement;
 	entityId?: string;
 }) => {
-	if (isEntityScopedCusEnt({ cusEnt })) {
+	if (isEntityScopedCusEnt(cusEnt)) {
 		if (nullish(entityId)) {
 			const entities = Object.values(cusEnt.entities ?? {});
 			return sumValues(entities.map((entity) => Math.max(0, -entity.balance)));
@@ -45,7 +45,10 @@ export const cusEntToPurchasedBalance = ({
 
 	if (billingType === BillingType.UsageInAdvance) {
 		// Purchased balance is how much was prepaid
-		const prepaidQuantity = cusEntToPrepaidQuantity({ cusEnt });
+		const prepaidQuantity = cusEntToPrepaidQuantity({
+			cusEnt,
+			sumAcrossEntities: nullish(entityId),
+		});
 
 		const mainOverage = getCusEntMainOverage({ cusEnt, entityId });
 

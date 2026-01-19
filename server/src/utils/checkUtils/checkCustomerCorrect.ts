@@ -9,11 +9,14 @@ import {
 	cusProductToProduct,
 	type FullCusProduct,
 	type FullCustomer,
+	isFixedPrice,
+	isOneOffPrice,
+	isPrepaidPrice,
 	type Organization,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle";
 import { priceToStripeItem } from "@server/external/stripe/priceToStripeItem/priceToStripeItem";
-import { isStripeSubscriptionCanceled } from "@server/external/stripe/stripeSubUtils";
+import { isStripeSubscriptionCanceled } from "@server/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils.js";
 import {
 	cusProductInPhase,
 	logPhaseItems,
@@ -29,11 +32,6 @@ import {
 	getPriceEntitlement,
 	getPriceOptions,
 } from "@server/internal/products/prices/priceUtils";
-import {
-	isFixedPrice,
-	isOneOffPrice,
-	isPrepaidPrice,
-} from "@server/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice";
 import { isFreeProduct } from "@server/internal/products/productUtils";
 import type Stripe from "stripe";
 import { formatUnixToDateTime, nullish } from "../genUtils";
@@ -150,7 +148,7 @@ const compareActualItems = async ({
 			return false;
 		});
 
-		if (isFixedPrice({ price: expectedItem.autumnPrice }) && !actualItem) {
+		if (isFixedPrice(expectedItem.autumnPrice) && !actualItem) {
 			actualItem = actualItems.find((item: any) => {
 				return item.stripeProdId === expectedItem.stripeProdId;
 			});
@@ -391,7 +389,7 @@ export const checkCusSubCorrect = async ({
 			const addToSub = cusProduct.status !== CusProductStatus.Scheduled;
 
 			for (const price of prices) {
-				if (isOneOffPrice({ price })) continue;
+				if (isOneOffPrice(price)) continue;
 
 				const relatedEnt = getPriceEntitlement(price, ents);
 				const options = getPriceOptions(price, cusProduct.options);
@@ -413,12 +411,12 @@ export const checkCusSubCorrect = async ({
 					withEntity: !!cusProduct.internal_entity_id,
 					isCheckout: false,
 					apiVersion,
-					productOptions: cusProduct.quantity
-						? {
-								product_id: product.id,
-								quantity: Number(cusProduct.quantity || 1),
-							}
-						: undefined,
+					// productOptions: cusProduct.quantity
+					// 	? {
+					// 			product_id: product.id,
+					// 			quantity: Number(cusProduct.quantity || 1),
+					// 		}
+					// 	: undefined,
 				});
 
 				if (res?.lineItem && nullish(res.lineItem.quantity)) {
@@ -447,8 +445,7 @@ export const checkCusSubCorrect = async ({
 								priceStr: `${product.id}-${formatPrice({ price })}`,
 								stripeProdId: product.processor?.id,
 								autumnPrice: price,
-								canSkip:
-									isPrepaidPrice({ price }) && res?.lineItem?.quantity === 0,
+								canSkip: isPrepaidPrice(price) && res?.lineItem?.quantity === 0,
 							});
 						}
 					}
@@ -537,7 +534,7 @@ export const checkCusSubCorrect = async ({
 		if (finalShouldBeCanceled) {
 			assert(!sub!.schedule, `sub ${subId} should NOT have a schedule`);
 			assert(
-				isStripeSubscriptionCanceled({ sub: sub! }),
+				isStripeSubscriptionCanceled(sub!),
 				`sub ${subId} should be canceled`,
 			);
 			continue;

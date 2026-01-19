@@ -29,23 +29,6 @@ export const slugify = (
 		.replace(/[^\w\s-]/g, "");
 };
 
-export const formatAmount = ({
-	amount,
-	currency,
-	maxFractionDigits = 10,
-}: {
-	amount: number;
-	currency: string;
-	maxFractionDigits?: number;
-}) => {
-	return new Intl.NumberFormat("en-US", {
-		style: "currency",
-		currency: currency,
-		minimumFractionDigits: 0,
-		maximumFractionDigits: maxFractionDigits,
-	}).format(amount);
-};
-
 export const formatIntervalText = ({
 	interval,
 	intervalCount,

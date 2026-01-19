@@ -3,7 +3,7 @@ import { loadLocalEnv } from "../src/utils/envUtils";
 loadLocalEnv();
 
 import { AppEnv } from "@autumn/shared";
-import { setupOrg } from "@tests/utils/setupUtils/setupOrg.js";
+import { setupOrg } from "@tests/utils/setup/setupOrg.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 

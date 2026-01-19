@@ -1,11 +1,11 @@
 import type { FrontendProduct } from "@autumn/shared";
+
 import { Button } from "@/components/v2/buttons/Button";
-import { useOrg } from "@/hooks/common/useOrg";
-import { useCurrentItem } from "@/hooks/stores/useProductStore";
 import {
-	useIsEditingPlanPrice,
-	useSheetStore,
-} from "@/hooks/stores/useSheetStore";
+	useCurrentItem,
+	useSheet,
+} from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
+import { useOrg } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
 import { getBasePriceDisplay } from "@/utils/product/basePriceDisplayUtils";
 import { checkItemIsValid } from "@/utils/product/entitlementUtils";
@@ -19,12 +19,12 @@ export const BasePriceDisplay = ({
 	product: FrontendProduct;
 	readOnly?: boolean;
 }) => {
-	const setSheet = useSheetStore((s) => s.setSheet);
+	const { sheetType, setSheet } = useSheet();
 	const { org } = useOrg();
 
 	const item = useCurrentItem();
 
-	const isEditingPlanPrice = useIsEditingPlanPrice();
+	const isEditingPlanPrice = sheetType === "edit-plan-price";
 
 	const handleClick = () => {
 		setSheet({ type: "edit-plan-price", itemId: product.id });

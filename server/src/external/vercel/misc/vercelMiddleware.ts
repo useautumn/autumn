@@ -1,10 +1,11 @@
-import { AppEnv, type Organization } from "@autumn/shared";
+import { AppEnv, AuthType, type Organization } from "@autumn/shared";
 import chalk from "chalk";
 import type { Context, Next } from "hono";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { addAppContextToLogs } from "@/utils/logging/addContextToLogs";
 
 export const vercelSeederMiddleware = async (
 	c: Context<HonoEnv>,
@@ -28,6 +29,17 @@ export const vercelSeederMiddleware = async (
 			env: ctx.env ?? AppEnv.Sandbox,
 		});
 	}
+
+	ctx.logger = addAppContextToLogs({
+		logger: ctx.logger,
+		appContext: {
+			org_id: ctx.org?.id,
+			org_slug: ctx.org?.slug,
+			env: ctx.env,
+			auth_type: AuthType.Vercel,
+			api_version: ctx.apiVersion?.semver,
+		},
+	});
 
 	await next();
 };

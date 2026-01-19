@@ -1,5 +1,4 @@
 import { Decimal } from "decimal.js";
-import type { FixedPriceConfig } from "../../models/productModels/priceModels/priceConfig/fixedPriceConfig.js";
 import type { UsagePriceConfig } from "../../models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import { BillingType } from "../../models/productModels/priceModels/priceEnums.js";
 import type { Price } from "../../models/productModels/priceModels/priceModels.js";
@@ -14,7 +13,8 @@ import {
 	type Proration,
 } from "../productV2Utils/productItemUtils/getProductItemRes.js";
 import { nullish } from "../utils.js";
-import { getBillingType, isFixedPrice } from "./priceUtils.js";
+import { isFixedPrice } from "./priceUtils/classifyPriceUtils.js";
+import { getBillingType } from "./priceUtils.js";
 
 export const getAmountForQuantity = ({
 	price,
@@ -111,6 +111,7 @@ export const priceToInvoiceAmount = ({
 	price,
 	item,
 	quantity,
+	productQuantity,
 	overage,
 	proration,
 	now,
@@ -118,6 +119,7 @@ export const priceToInvoiceAmount = ({
 	price?: Price;
 	item?: ProductItem;
 	quantity?: number; // quantity should be multiplied by billing units
+	productQuantity?: number;
 	overage?: number;
 	proration?: Proration;
 	now?: number;
@@ -127,8 +129,10 @@ export const priceToInvoiceAmount = ({
 	let amount = 0;
 
 	if (price) {
-		if (isFixedPrice({ price })) {
-			amount = (price.config as FixedPriceConfig).amount;
+		if (isFixedPrice(price)) {
+			amount = new Decimal(price.config.amount)
+				.mul(productQuantity ?? 1)
+				.toNumber();
 		} else {
 			const config = price.config as UsagePriceConfig;
 			const billingType = getBillingType(config);

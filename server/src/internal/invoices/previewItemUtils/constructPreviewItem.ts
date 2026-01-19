@@ -1,6 +1,5 @@
+import { formatAmount, type Organization, type Price } from "@autumn/shared";
 import { priceToUsageModel } from "@/internal/products/prices/priceUtils/convertPrice.js";
-import { formatAmount } from "@/utils/formatUtils.js";
-import { Organization, Price } from "@autumn/shared";
 
 export const constructPreviewItem = ({
 	price,

@@ -8,9 +8,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/v2/selects/Select";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { nullish } from "@/utils/genUtils";
-import { shouldShowProrationConfig } from "@/utils/product/productItemUtils";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
 const getOnIncreaseText = (option: OnIncrease) => {
@@ -43,15 +41,11 @@ const getOnDecreaseText = ({
 	}
 };
 
+/** Visibility is controlled by parent AdvancedSettings */
 export function ProrationConfig() {
-	const { features } = useFeaturesQuery();
 	const { item, setItem } = useProductItemContext();
 
 	if (!item) return null;
-
-	const showProrationConfig = shouldShowProrationConfig({ item, features });
-
-	if (!showProrationConfig) return null;
 
 	const onIncreaseValue =
 		item.config?.on_increase || OnIncrease.ProrateImmediately;

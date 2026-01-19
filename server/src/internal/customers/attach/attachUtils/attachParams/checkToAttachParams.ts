@@ -14,23 +14,12 @@ export const checkToAttachParams = async ({
 	customer: FullCustomer;
 	product: FullProduct;
 }) => {
-	const { org, env, db, logger } = ctx;
-
-	// const apiVersion =
-	// 	orgToVersion({
-	// 		org,
-	// 		reqApiVersion: req.apiVersion,
-	// 	}) || LegacyVersion.v1;
-	// const apiVersion = req.apiVersion.value;
+	const { org, env, db } = ctx;
 
 	const stripeCli = createStripeCli({ org, env });
 	const stripeCusData = await getStripeCusData({
-		stripeCli,
-		db,
-		org,
-		env,
+		ctx,
 		customer,
-		logger,
 		allowNoStripe: true,
 	});
 

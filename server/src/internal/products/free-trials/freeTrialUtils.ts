@@ -1,6 +1,5 @@
 import {
 	type CreateFreeTrial,
-	CreateFreeTrialSchema,
 	ErrCode,
 	type FreeTrial,
 	FreeTrialDuration,
@@ -12,8 +11,8 @@ import { FreeTrialService } from "@server/internal/products/free-trials/FreeTria
 import { ProductService } from "@server/internal/products/ProductService.js";
 import { isOneOff } from "@server/internal/products/productUtils.js";
 import RecaseError from "@server/utils/errorUtils.js";
-import { generateId } from "@server/utils/genUtils.js";
 import { addDays, addMinutes, addMonths, addYears } from "date-fns";
+import { initFreeTrial } from "@/internal/products/free-trials/initFreeTrial";
 
 export const validateOneOffTrial = async ({
 	prices,
@@ -29,28 +28,6 @@ export const validateOneOffTrial = async ({
 			statusCode: 400,
 		});
 	}
-};
-
-export const validateAndInitFreeTrial = ({
-	freeTrial,
-	internalProductId,
-	isCustom = false,
-}: {
-	freeTrial: CreateFreeTrial;
-	internalProductId: string;
-	isCustom?: boolean;
-}): FreeTrial => {
-	const freeTrialSchema = CreateFreeTrialSchema.parse(freeTrial);
-
-	return {
-		...freeTrialSchema,
-		id: generateId("ft"),
-		created_at: Date.now(),
-		duration: freeTrial.duration || FreeTrialDuration.Day,
-		internal_product_id: internalProductId,
-		is_custom: isCustom,
-		card_required: freeTrial.card_required ?? true,
-	};
 };
 
 export const freeTrialsAreSame = ({
@@ -150,7 +127,6 @@ export const handleNewFreeTrial = async ({
 	curFreeTrial,
 	internalProductId,
 	isCustom = false,
-	product,
 	newVersion = false,
 }: {
 	db: DrizzleCli;
@@ -158,7 +134,6 @@ export const handleNewFreeTrial = async ({
 	curFreeTrial: FreeTrial | null | undefined;
 	internalProductId: string;
 	isCustom: boolean;
-	product?: any;
 	newVersion?: boolean; // True if creating a new product version
 }) => {
 	// If new free trial is null
@@ -178,8 +153,8 @@ export const handleNewFreeTrial = async ({
 		return curFreeTrial;
 	}
 
-	const createdFreeTrial = validateAndInitFreeTrial({
-		freeTrial: newFreeTrial,
+	const createdFreeTrial = initFreeTrial({
+		freeTrialParams: newFreeTrial,
 		internalProductId,
 		isCustom,
 	});

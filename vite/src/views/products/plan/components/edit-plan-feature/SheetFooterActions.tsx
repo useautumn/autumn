@@ -1,13 +1,12 @@
 import { Button } from "@/components/v2/buttons/Button";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { useSheet } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { cn } from "@/lib/utils";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
 export function SheetFooterActions() {
 	const { setItem } = useProductItemContext();
-	const closeSheet = useSheetStore((s) => s.closeSheet);
-	const initialItem = useSheetStore((s) => s.initialItem);
+	const { closeSheet, initialItem } = useSheet();
 
 	const handleDiscard = () => {
 		if (initialItem) {
