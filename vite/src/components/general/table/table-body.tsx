@@ -1,5 +1,5 @@
 import { flexRender } from "@tanstack/react-table";
-import { Link } from "react-router";
+import { useNavigate } from "react-router";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
 	TableBody as ShadcnTableBody,
@@ -24,6 +24,7 @@ export function TableBody() {
 		selectedItemId,
 		flexibleTableColumns,
 	} = useTableContext();
+	const navigate = useNavigate();
 	const rows = table.getRowModel().rows;
 
 	if (!rows.length) {
@@ -61,10 +62,22 @@ export function TableBody() {
 							"text-t3 transition-none h-12 py-4 relative",
 							rowClassName,
 							isSelected ? "z-100" : "hover:bg-interactive-secondary-hover",
+							(rowHref || onRowClick) && "cursor-pointer",
 						)}
 						data-state={row.getIsSelected() && "selected"}
 						key={row.id}
-						onClick={!rowHref ? () => onRowClick?.(row.original) : undefined}
+						onClick={(e) => {
+							if (rowHref) {
+								// Support cmd/ctrl+click to open in new tab
+								if (e.metaKey || e.ctrlKey) {
+									window.open(rowHref, "_blank");
+								} else {
+									navigate(rowHref);
+								}
+							} else {
+								onRowClick?.(row.original);
+							}
+						}}
 					>
 						{enableSelection && (
 							<TableCell className="w-[50px]">
