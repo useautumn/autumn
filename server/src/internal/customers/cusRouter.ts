@@ -15,7 +15,7 @@ import { handleUpdateBalancesV2 } from "./handlers/handleUpdateBalancesV2.js";
 import { handleUpdateCustomerV2 } from "./handlers/handleUpdateCustomerV2.js";
 
 export const expressCusRouter = express.Router();
-expressCusRouter.get("/:customer_id/billing_portal", handleGetBillingPortal);
+// expressCusRouter.get("/:customer_id/billing_portal", handleGetBillingPortal);
 
 export const cusRouter = new Hono<HonoEnv>();
 
@@ -35,6 +35,7 @@ cusRouter.post("/:customer_id/transfer", ...handleTransferProductV2);
 
 // Billing portal
 cusRouter.post("/:customer_id/billing_portal", ...handleCreateBillingPortal);
+cusRouter.get("/:customer_id/billing_portal", ...handleGetBillingPortal);
 
 // Legacy...
 cusRouter.post("/:customer_id/balances", ...handleUpdateBalancesV2);
