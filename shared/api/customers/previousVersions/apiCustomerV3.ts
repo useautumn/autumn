@@ -1,6 +1,6 @@
 import { ApiCusReferralSchema } from "@api/customers/components/apiCusReferral.js";
 import { ApiCusUpcomingInvoiceSchema } from "@api/customers/components/apiCusUpcomingInvoice.js";
-import { ApiBaseEntitySchema } from "@api/entities/apiEntity.js";
+import { ApiBaseEntitySchema } from "@api/entities/prevVersions/apiEntityV1.js";
 import { ApiCusRewardsSchema } from "@api/others/apiDiscount.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
 import { z } from "zod/v4";

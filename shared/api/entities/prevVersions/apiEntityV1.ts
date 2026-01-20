@@ -2,10 +2,10 @@ import { ApiBalanceV0Schema } from "@api/customers/cusFeatures/previousVersions/
 import { ApiSubscriptionV0Schema } from "@api/customers/cusPlans/previousVersions/apiSubscriptionV0.js";
 import { ApiInvoiceV1Schema } from "@api/others/apiInvoice/apiInvoiceV1.js";
 import { z } from "zod/v4";
-import { ApiBaseEntitySchema } from "./apiBaseEntity.js";
+import { ApiBaseEntitySchema } from "../apiBaseEntity.js";
 
 // Re-export for backward compatibility
-export { ApiBaseEntitySchema } from "./apiBaseEntity.js";
+export { ApiBaseEntitySchema } from "../apiBaseEntity.js";
 
 export const ApiEntityV1Schema = ApiBaseEntitySchema.extend({
 	subscriptions: z.array(ApiSubscriptionV0Schema).optional().meta({

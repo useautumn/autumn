@@ -7,7 +7,9 @@ export * from "./customers/components/apiCusExpand.js";
 export * from "./customers/components/apiCusReferral.js";
 export * from "./customers/components/apiCusUpcomingInvoice.js";
 export * from "./customers/cusFeatures/apiBalanceV1.js";
+export * from "./customers/cusFeatures/cusFeatureLegacyData.js";
 export * from "./customers/cusFeatures/components/apiBalanceBreakdown/apiBalanceBreakdownV1.js";
+export * from "./customers/cusFeatures/components/apiBalanceBreakdown/balanceBreakdownLegacyData.js";
 export * from "./customers/cusFeatures/components/apiBalanceBreakdown/prevVersions/apiBalanceBreakdownV0.js";
 export * from "./customers/cusFeatures/components/apiBalanceReset/apiBalanceResetV0.js";
 export * from "./customers/cusFeatures/components/apiBalanceRollover/apiBalanceRolloverV0.js";
@@ -17,18 +19,21 @@ export * from "./customers/cusFeatures/previousVersions/apiCusFeatureV1.js";
 export * from "./customers/cusFeatures/previousVersions/apiCusFeatureV2.js";
 export * from "./customers/cusFeatures/previousVersions/apiCusFeatureV3.js";
 
+export * from "./customers/cusPlans/apiSubscriptionV1.js";
 export * from "./customers/cusPlans/cusProductLegacyData.js";
 export * from "./customers/cusPlans/previousVersions/apiSubscriptionV0.js";
 export * from "./customers/customerLegacyData.js";
 export * from "./customers/customerOpModels.js";
+export * from "./customers/apiCustomerV5.js";
 export * from "./customers/previousVersions/apiCustomerV2.js";
 export * from "./customers/previousVersions/apiCustomerV3.js";
 export * from "./customers/previousVersions/apiCustomerV4.js";
-// Entities
-export * from "./entities/apiEntity.js";
 export * from "./entities/entityLegacyData.js";
 export * from "./entities/entityOpModels.js";
+export * from "./entities/apiEntityV2.js";
 export * from "./entities/prevVersions/apiEntityV0.js";
+// Entities
+export * from "./entities/prevVersions/apiEntityV1.js";
 export * from "./errors/classes/featureErrClasses.js";
 export * from "./errors/codes/featureErrCodes.js";
 // Features
