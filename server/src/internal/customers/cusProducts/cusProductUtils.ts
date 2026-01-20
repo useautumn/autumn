@@ -80,12 +80,9 @@ export const activateDefaultProduct = async ({
 	// Initialize Stripe customer and products if needed (for paid non-trial products)
 	if (!defaultIsFree) {
 		await initStripeCusAndProducts({
-			db,
-			org,
-			env,
+			ctx,
 			customer: fullCus,
 			products: [defaultProd],
-			logger,
 		});
 	}
 

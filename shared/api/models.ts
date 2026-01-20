@@ -12,6 +12,7 @@ export * from "./utils/zodToJSDoc.js";
 export * from "./customers/apiCustomer.js";
 export * from "./customers/components/apiCusReferral.js";
 export * from "./customers/components/apiCusUpcomingInvoice.js";
+export * from "./customers/createCustomerParams.js";
 export * from "./customers/cusFeatures/apiBalance.js";
 export * from "./customers/cusFeatures/previousVersions/apiCusFeatureV0.js";
 export * from "./customers/cusFeatures/previousVersions/apiCusFeatureV1.js";

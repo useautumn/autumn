@@ -13,6 +13,7 @@ import {
 	type BillingResponse,
 	type CheckQuery,
 	type CreateBalanceParams,
+	type CreateCustomerInternalOptions,
 	type CreateCustomerParams,
 	type CreateEntityParams,
 	type CreateRewardProgram,
@@ -414,15 +415,18 @@ export class AutumnInt {
 		create: async ({
 			withAutumnId = true,
 			expand = [],
+			internalOptions,
 			...customerData
 		}: {
 			withAutumnId?: boolean;
 			expand?: CusExpand[];
-		} & CreateCustomerParams) => {
+			internalOptions?: CreateCustomerInternalOptions;
+		} & Omit<CreateCustomerParams, "internal_options">) => {
 			const data = await this.post(
 				`/customers?with_autumn_id=${withAutumnId ? "true" : "false"}${expand && expand.length > 0 ? `&expand=${expand.join(",")}` : ""}`,
 				{
 					...customerData,
+					internal_options: internalOptions,
 				},
 			);
 			return data;

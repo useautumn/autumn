@@ -8,7 +8,7 @@ import {
 import { StatusCodes } from "http-status-codes";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
+import { getOrCreateStripeCustomer } from "@/external/stripe/customers";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { CusService } from "../customers/CusService.js";
@@ -102,12 +102,9 @@ export const triggerRedemption = async ({
 			legacyVersion: true,
 		});
 
-		await createStripeCusIfNotExists({
-			db,
-			customer: customer,
-			org,
-			env,
-			logger,
+		await getOrCreateStripeCustomer({
+			ctx,
+			customer,
 		});
 
 		const stripeCusId = customer.processor.id;

@@ -1,7 +1,8 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { createStripeCli } from "../../../../external/connect/createStripeCli";
-import { createStripeCusIfNotExists } from "../../../../external/stripe/stripeCusUtils";
+import { getOrCreateStripeCustomer } from "../../../../external/stripe/customers";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
 import { routeHandler } from "../../../../utils/routerUtils";
 import { OrgService } from "../../../orgs/OrgService";
 import { toSuccessUrl } from "../../../orgs/orgUtils/convertOrgUtils";
@@ -35,24 +36,12 @@ export const handleGetBillingPortal = (req: any, res: any) =>
 
 			const stripeCli = createStripeCli({ org, env: req.env });
 
-			let stripeCusId: string = customer.processor?.id;
-			if (!customer.processor?.id) {
-				const newCus = await createStripeCusIfNotExists({
-					db: req.db,
-					org,
-					env: req.env,
-					customer,
-					logger: req.logger,
-				});
+			const stripeCustomer = await getOrCreateStripeCustomer({
+				ctx: req as AutumnContext,
+				customer,
+			});
 
-				if (!newCus) {
-					throw new RecaseError({
-						message: `Failed to create Stripe customer`,
-					});
-				}
-
-				stripeCusId = newCus.id;
-			}
+			const stripeCusId = stripeCustomer.id;
 
 			const portal = await stripeCli.billingPortal.sessions.create({
 				customer: stripeCusId,

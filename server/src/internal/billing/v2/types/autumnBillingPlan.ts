@@ -21,20 +21,23 @@ export const UpdateCustomerEntitlementSchema = z.object({
 export const AutumnBillingPlanSchema = z.object({
 	insertCustomerProducts: z.array(FullCusProductSchema),
 
-	updateCustomerProduct: z.object({
-		customerProduct: FullCusProductSchema,
-		updates: z.object({
-			options: z.array(FeatureOptionsSchema).optional(),
-			status: z.enum(CusProductStatus).optional(),
-		}),
-	}),
+	updateCustomerProduct: z
+		.object({
+			customerProduct: FullCusProductSchema,
+			updates: z.object({
+				options: z.array(FeatureOptionsSchema).optional(),
+				status: z.enum(CusProductStatus).optional(),
+			}),
+		})
+		.optional(),
+
 	deleteCustomerProduct: FullCusProductSchema.optional(), // Scheduled product to delete (e.g., when updating while canceling)
 
-	customPrices: z.array(PriceSchema), // Custom prices to insert
-	customEntitlements: z.array(EntitlementSchema), // Custom entitlements to insert
+	customPrices: z.array(PriceSchema).optional(), // Custom prices to insert
+	customEntitlements: z.array(EntitlementSchema).optional(), // Custom entitlements to insert
 	customFreeTrial: FreeTrialSchema.optional(), // Custom free trial to insert
 
-	lineItems: z.array(LineItemSchema),
+	lineItems: z.array(LineItemSchema).optional(),
 
 	updateCustomerEntitlements: z
 		.array(UpdateCustomerEntitlementSchema)

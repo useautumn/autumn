@@ -20,8 +20,6 @@ export const executeBillingPlan = async ({
 		billingContext,
 	});
 
-	// console.log("stripeBillingResult", stripeBillingResult);
-
 	if (stripeBillingResult.deferred)
 		return {
 			stripe: stripeBillingResult,

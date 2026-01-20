@@ -6,10 +6,10 @@ import {
 	type EntityData,
 	type FullCustomer,
 } from "@autumn/shared";
+import { customerActions } from "@/internal/customers/actions/index.js";
 import { autoCreateEntity } from "@/internal/entities/handlers/handleCreateEntity/autoCreateEntity.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { CusService } from "../CusService.js";
-import { handleCreateCustomer } from "../handlers/handleCreateCustomer.js";
 import { updateCustomerDetails } from "./cusUtils.js";
 
 export const getOrCreateCustomer = async ({
@@ -65,49 +65,54 @@ export const getOrCreateCustomer = async ({
 	}
 
 	if (!customer) {
-		try {
-			customer = (await handleCreateCustomer({
-				ctx,
-				cusData: {
-					id: customerId,
-					name: customerData?.name,
-					email: customerData?.email,
-					fingerprint: customerData?.fingerprint,
-					metadata: customerData?.metadata || {},
-					stripe_id: customerData?.stripe_id,
-					// default_product_id: customerData?.default_product_id,
-				},
-				createDefaultProducts: customerData?.disable_default !== true,
-			})) as FullCustomer;
+		customer = await customerActions.createWithDefaults({
+			ctx,
+			customerId,
+			customerData,
+		});
+		// try {
+		// 	customer = (await handleCreateCustomer({
+		// 		ctx,
+		// 		cusData: {
+		// 			id: customerId,
+		// 			name: customerData?.name,
+		// 			email: customerData?.email,
+		// 			fingerprint: customerData?.fingerprint,
+		// 			metadata: customerData?.metadata || {},
+		// 			stripe_id: customerData?.stripe_id,
+		// 			// default_product_id: customerData?.default_product_id,
+		// 		},
+		// 		createDefaultProducts: customerData?.disable_default !== true,
+		// 	})) as FullCustomer;
 
-			customer = await CusService.getFull({
-				db,
-				idOrInternalId: customerId || customer.internal_id,
-				orgId: org.id,
-				env,
-				inStatuses,
-				withEntities,
-				entityId,
-				expand,
-				withSubs: true,
-			});
-		} catch (error: any) {
-			if (error?.code === "23505" && customerId) {
-				customer = await CusService.getFull({
-					db,
-					idOrInternalId: customerId,
-					orgId: org.id,
-					env,
-					inStatuses,
-					withEntities,
-					entityId,
-					expand,
-					withSubs: true,
-				});
-			} else {
-				throw error;
-			}
-		}
+		// 	customer = await CusService.getFull({
+		// 		db,
+		// 		idOrInternalId: customerId || customer.internal_id,
+		// 		orgId: org.id,
+		// 		env,
+		// 		inStatuses,
+		// 		withEntities,
+		// 		entityId,
+		// 		expand,
+		// 		withSubs: true,
+		// 	});
+		// } catch (error: any) {
+		// 	if (error?.code === "23505" && customerId) {
+		// 		customer = await CusService.getFull({
+		// 			db,
+		// 			idOrInternalId: customerId,
+		// 			orgId: org.id,
+		// 			env,
+		// 			inStatuses,
+		// 			withEntities,
+		// 			entityId,
+		// 			expand,
+		// 			withSubs: true,
+		// 		});
+		// 	} else {
+		// 		throw error;
+		// 	}
+		// }
 	}
 
 	if (!skipUpdate) {

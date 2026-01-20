@@ -24,19 +24,19 @@ export const executeAutumnBillingPlan = async ({
 		customFreeTrial,
 	} = autumnBillingPlan;
 
-	ctx.logger.debug(
-		`[executeAutumnBillingPlan] inserting ${customEntitlements.length} custom entitlements and ${customPrices.length} custom prices`,
-	);
+	if (customEntitlements) {
+		await EntitlementService.insert({
+			db,
+			data: customEntitlements,
+		});
+	}
 
-	await EntitlementService.insert({
-		db,
-		data: customEntitlements,
-	});
-
-	await PriceService.insert({
-		db,
-		data: customPrices,
-	});
+	if (customPrices) {
+		await PriceService.insert({
+			db,
+			data: customPrices,
+		});
+	}
 
 	if (customFreeTrial) {
 		await FreeTrialService.insert({

@@ -305,7 +305,7 @@ export class EventsAggregationService {
 			}>;
 			const distinctCount = Number(distinctJson.data[0]?.distinct_count ?? 0);
 
-			if (distinctCount > 30) {
+			if (distinctCount > 100) {
 				throw new RecaseError({
 					message: `Too many distinct group values (${distinctCount}). Maximum allowed is 30. Please choose a property with fewer unique values.`,
 					code: ErrCode.InvalidInputs,

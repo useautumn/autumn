@@ -32,7 +32,6 @@ const logExistingUsages = ({
 			};
 		},
 	);
-	ctx.logger.debug(`[applyExistingUsages] existing usages:`, existinUsagesLogs);
 
 	addToExtraLogs({
 		ctx,
