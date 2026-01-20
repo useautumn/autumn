@@ -1,11 +1,7 @@
 import {
-	AffectedResource,
-	type ApiCustomer,
 	type AppEnv,
-	applyResponseVersionChanges,
 	CusExpand,
 	type CusProductStatus,
-	type CustomerLegacyData,
 	type FullCustomer,
 	type ListCustomersV2Params,
 	type Organization,
@@ -13,7 +9,7 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
-import { getApiCustomerBase } from "./cusUtils/apiCusUtils/getApiCustomerBase.js";
+import { getApiCustomer } from "./cusUtils/apiCusUtils/getApiCustomer.js";
 import { getPaginatedFullCusQuery } from "./getFullCusQuery.js";
 
 export class CusBatchService {
@@ -82,24 +78,11 @@ export class CusBatchService {
 					CusBatchService.normalizeCustomerData(result);
 				const fullCus = normalizedCustomer as FullCustomer;
 
-				// Since we already have fullCus from DB, call getApiCustomerBase directly
-				const { apiCustomer: baseCustomer, legacyData } =
-					await getApiCustomerBase({
-						ctx,
-						fullCus,
-						withAutumnId: false,
-					});
-
-				// Apply version changes
-				const versionedCustomer = applyResponseVersionChanges<
-					ApiCustomer,
-					CustomerLegacyData
-				>({
-					input: baseCustomer,
-					legacyData,
-					targetVersion: ctx.apiVersion,
-					resource: AffectedResource.Customer,
+				// Use getApiCustomer which handles V4 → V5 transform + version changes
+				const versionedCustomer = await getApiCustomer({
 					ctx,
+					fullCustomer: fullCus,
+					withAutumnId: false,
 				});
 
 				finals.push(versionedCustomer);

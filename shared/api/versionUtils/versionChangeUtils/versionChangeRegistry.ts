@@ -11,9 +11,12 @@ import { V1_2_TrialsUsedChange } from "@api/customers/components/apiTrialsUsed/c
 
 import { V1_2_CustomerChange } from "@api/customers/changes/V1.2_CustomerChange.js";
 import { V1_2_CustomerQueryChange } from "@api/customers/requestChanges/V1.2_CustomerQueryChange.js";
+// Import V2.1 changes
+import { V2_0_CustomerChange } from "@api/customers/changes/V2.0_CustomerChange.js";
 // Import entity changes
 import { V1_2_EntityChange } from "@api/entities/changes/V1.2_EntityChange.js";
 import { V1_2_EntityQueryChange } from "@api/entities/requestChanges/V1.2_EntityQueryChange.js";
+import { V2_0_EntityChange } from "@api/entities/changes/V2.0_EntityChange.js";
 // Import feature changes
 import { V1_2_FeatureChange } from "@api/features/changes/V1.2_FeatureChange.js";
 import { V1_2_CreateFeatureChange } from "@api/features/changes/V1.2_FeatureParamsChange.js";
@@ -33,7 +36,8 @@ import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
 
 // V2_1_CHANGES: Changes to turn V2.1 format to V2.0 format DOWNWARDS
 export const V2_1_CHANGES: VersionChangeConstructor[] = [
-	// Add V2.1 changes here when needed
+	V2_0_CustomerChange, // Transforms Customer TO V2.0 format from V2.1 format
+	V2_0_EntityChange, // Transforms Entity TO V2.0 format from V2.1 format
 ];
 
 // V2_CHANGES: Changes to turn V2.0 format to V1.2 format DOWNWARDS

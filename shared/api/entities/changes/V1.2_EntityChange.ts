@@ -11,9 +11,9 @@ import type { ApiCusProductV3 } from "../../customers/cusPlans/previousVersions/
 import type { ApiSubscriptionV0 } from "../../customers/cusPlans/previousVersions/apiSubscriptionV0.js";
 import type { ApiInvoiceV1 } from "../../others/apiInvoice/apiInvoiceV1.js";
 import { transformInvoiceToV0 } from "../../others/apiInvoice/changes/V1.2_InvoiceChange.js";
-import { ApiEntityV1Schema } from "../apiEntity.js";
 import { EntityLegacyDataSchema } from "../entityLegacyData.js";
 import { ApiEntityV0Schema } from "../prevVersions/apiEntityV0.js";
+import { ApiEntityV1Schema } from "../prevVersions/apiEntityV1.js";
 
 /**
  * V1_2_EntityChange: Transforms entity response TO V0 format (pre-V2.0)

@@ -18,6 +18,7 @@ import {
 	cusEntsToPurchasedBalance,
 	cusEntsToReset,
 	cusEntsToRollovers,
+	cusEntToCusPrice,
 	cusEntToKey,
 	dbToApiFeatureV1,
 	expandIncludes,
@@ -26,6 +27,7 @@ import {
 	getCusEntBalance,
 	nullish,
 	sumValues,
+	UsageModel,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
@@ -48,6 +50,7 @@ const cusEntsToBreakdown = ({
 	key: string;
 	breakdown: ApiBalanceBreakdownV0;
 	prepaidQuantity: number;
+	price: any | null;
 }[] => {
 	const entityId = fullCus.entity?.id;
 
@@ -61,6 +64,7 @@ const cusEntsToBreakdown = ({
 		key: string;
 		breakdown: ApiBalanceBreakdownV0;
 		prepaidQuantity: number;
+		price: any | null;
 	}[] = [];
 
 	for (const key in keyToCusEnts) {
@@ -88,6 +92,24 @@ const cusEntsToBreakdown = ({
 		// Get expires_at from the first cusEnt (since key is cusEnt.id, there's only one)
 		const expiresAt = cusEnts[0]?.expires_at ?? null;
 
+		// Build price object from entitlement's price config (needed for V2.1)
+		const cusPrice = cusEntToCusPrice({ cusEnt: cusEnts[0] });
+		const priceConfig = cusPrice?.price.config;
+
+		// Determine usage_model based on overage_allowed
+		const usageAllowed = breakdownItem.overage_allowed;
+		const usageModel = usageAllowed ? UsageModel.PayPerUse : UsageModel.Prepaid;
+
+		const price = priceConfig
+			? {
+					amount: priceConfig.usage_tiers?.[0]?.amount,
+					tiers: priceConfig.usage_tiers,
+					billing_units: priceConfig.billing_units ?? 1,
+					usage_model: usageModel,
+					max_purchase: breakdownItem.max_purchase,
+				}
+			: null;
+
 		breakdown.push({
 			key,
 			breakdown: ApiBalanceBreakdownV0Schema.parse({
@@ -108,6 +130,7 @@ const cusEntsToBreakdown = ({
 				expires_at: expiresAt,
 			}),
 			prepaidQuantity: prepaidQuantity,
+			price: price,
 		});
 	}
 
@@ -261,16 +284,30 @@ export const getApiBalance = ({
 		cusEnts,
 		sumAcrossEntities: nullish(entityId),
 	});
+	
+	// Store price info for V0 → V1 transform (breakdown legacy data)
 	const breakdownLegacyData = breakdown.map((item) => ({
+		// For V2.0 → V1.2 transform
 		key: item.key,
 		prepaid_quantity: item.prepaidQuantity,
+		// For V2.1 → V2.0 transform (stored in breakdown)
+		id: item.key,
+		overage_allowed: item.breakdown.overage_allowed ?? false,
+		max_purchase: item.breakdown.max_purchase ?? null,
+		// For V0 → V1 transform (need price in V1)
+		price: item.price,
 	}));
 
 	return {
 		data: apiBalance,
 		legacyData: {
+			// For V2.0 → V1.2 transform
 			key: masterKey,
 			prepaid_quantity: totalPrepaidQuantity,
+			// For V2.1 → V2.0 transform
+			purchased_balance: totalPurchasedBalance,
+			plan_id: planId,
+			// Combined breakdown legacy data
 			breakdown_legacy_data: breakdownLegacyData,
 		},
 	};

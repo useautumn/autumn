@@ -66,7 +66,7 @@ export const getApiEntityBase = async ({
 		created_at: entity.created_at,
 		env: fullCus.env,
 
-		subscriptions: apiSubscriptions.filter((s) => s.status === "active"),
+		subscriptions: apiSubscriptions.filter((s) => s.status !== "scheduled"),
 		scheduled_subscriptions: apiSubscriptions.filter(
 			(s) => s.status === "scheduled",
 		),

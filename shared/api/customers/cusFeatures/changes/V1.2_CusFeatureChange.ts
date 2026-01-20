@@ -126,38 +126,57 @@ const toV3BalanceParams = ({
 		);
 	}
 
+	// V0 uses granted_balance/purchased_balance/current_balance for both balance and breakdown
+	const grantedBalance = isBreakdown
+		? (input as ApiBalanceBreakdownV0).granted_balance
+		: (input as ApiBalanceV0).granted_balance;
+	const purchasedBalance = isBreakdown
+		? (input as ApiBalanceBreakdownV0).purchased_balance
+		: (input as ApiBalanceV0).purchased_balance;
+	const currentBalance = isBreakdown
+		? (input as ApiBalanceBreakdownV0).current_balance
+		: (input as ApiBalanceV0).current_balance;
+	
+	const overageAllowedValue = isBreakdown
+		? (input as ApiBalanceBreakdownV0).overage_allowed
+		: (input as ApiBalanceV0).overage_allowed;
+	
+	const maxPurchase = isBreakdown
+		? (input as ApiBalanceBreakdownV0).max_purchase
+		: (input as ApiBalanceV0).max_purchase;
+
 	let overage = 0;
 	if (isBreakdown) {
-		overage = input.overage_allowed
-			? new Decimal(input.purchased_balance).toNumber()
+		overage = overageAllowedValue
+			? new Decimal(purchasedBalance).toNumber()
 			: 0;
 	} else {
-		overage = new Decimal(input.purchased_balance)
+		overage = new Decimal(purchasedBalance)
 			.sub(prepaidQuantity)
 			.toNumber();
 	}
 
 	// 1. Get included usage
-	const includedUsage = new Decimal(input.granted_balance)
+	const includedUsage = new Decimal(grantedBalance)
 		.add(prepaidQuantity)
 		.toNumber();
 
 	// 2. Balance
 
-	const balance = new Decimal(input.current_balance).sub(overage).toNumber();
+	const balance = new Decimal(currentBalance).sub(overage).toNumber();
 
 	// 3. Usage
 	const usage = new Decimal(input.usage).toNumber();
 
 	// 4. Overage allowed
-	let overageAllowed = input.overage_allowed ?? false;
-	if (overageAllowed && input.max_purchase) {
+	let overageAllowed = overageAllowedValue ?? false;
+	if (overageAllowed && maxPurchase) {
 		overageAllowed = false;
 	}
 
 	// 5. Usage limit
-	const usageLimit = input.max_purchase
-		? new Decimal(input.max_purchase).add(includedUsage).toNumber()
+	const usageLimit = maxPurchase
+		? new Decimal(maxPurchase).add(includedUsage).toNumber()
 		: undefined;
 
 	return { includedUsage, balance, usage, overageAllowed, usageLimit };

@@ -1,7 +1,8 @@
-import type { ApiBalanceBreakdownV0 } from "@api/customers/cusFeatures/components/apiBalanceBreakdown/prevVersions/apiBalanceBreakdownV0.js";
+import type { ApiBalanceBreakdownV1 } from "@api/customers/cusFeatures/components/apiBalanceBreakdown/apiBalanceBreakdownV1.js";
 import { Decimal } from "decimal.js";
 import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import { UsageModel } from "../../models/productV2Models/productItemModels/productItemModels.js";
 import { resetIntvToEntIntv } from "../planFeatureUtils/planFeatureIntervals.js";
 import { entToOptions } from "../productUtils/convertProductUtils.js";
 import { getCusEntBalance } from "./balanceUtils.js";
@@ -105,14 +106,16 @@ export const cusEntToIncludedUsage = ({
 export const apiBalanceToBreakdownKey = ({
 	breakdown,
 }: {
-	breakdown: ApiBalanceBreakdownV0;
+	breakdown: ApiBalanceBreakdownV1;
 }) => {
 	const inteval =
 		breakdown.reset?.interval && breakdown.reset.interval !== "multiple"
 			? resetIntvToEntIntv({ resetIntv: breakdown.reset.interval })
 			: "lifetime";
 	const interval = `${breakdown.reset?.interval_count ?? 1}:${inteval}`;
-	const usageModel = `${breakdown.overage_allowed}`;
+	// Derive overage_allowed from price.usage_model
+	const overageAllowed = breakdown.price?.usage_model === UsageModel.PayPerUse;
+	const usageModel = `${overageAllowed}`;
 	const planId = `${breakdown.plan_id}`;
 
 	return `${interval}:${planId}:${usageModel}`;

@@ -1,10 +1,8 @@
+import { ApiCusReferralSchema } from "@api/customers/components/apiCusReferral";
 import { ApiTrialsUsedV1Schema } from "@api/customers/components/apiTrialsUsed/apiTrialsUsedV1";
-import {
-	ApiBaseEntitySchema,
-	ApiCusReferralSchema,
-	ApiCusRewardsSchema,
-	ApiInvoiceV1Schema,
-} from "@api/models";
+import { ApiBaseEntitySchema } from "@api/entities/apiBaseEntity";
+import { ApiCusRewardsSchema } from "@api/others/apiDiscount";
+import { ApiInvoiceV1Schema } from "@api/others/apiInvoice/apiInvoiceV1";
 import z from "zod/v4";
 
 export const ApiCusExpandSchema = z.object({

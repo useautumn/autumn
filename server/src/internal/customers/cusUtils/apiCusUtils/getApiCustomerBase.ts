@@ -52,8 +52,7 @@ export const getApiCustomerBase = async ({
 		env: fullCus.env,
 		metadata: fullCus.metadata,
 
-		// subscriptions: apiSubscriptions,
-		subscriptions: apiSubscriptions.filter((s) => s.status === "active"),
+		subscriptions: apiSubscriptions.filter((s) => s.status !== "scheduled"),
 		scheduled_subscriptions: apiSubscriptions.filter(
 			(s) => s.status === "scheduled",
 		),

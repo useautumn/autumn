@@ -2,8 +2,8 @@ import { EntityExpand } from "@models/cusModels/entityModels/entityExpand.js";
 import { z } from "zod/v4";
 import { SuccessResponseSchema } from "../common/commonResponses.js";
 import { queryStringArray } from "../common/queryHelpers.js";
-import { ApiEntitySchema } from "../entities/apiEntity.js";
 import { CreateEntityParamsSchema } from "../entities/entityOpModels.js";
+import { ApiEntitySchema } from "../entities/prevVersions/apiEntityV1.js";
 
 // Note: The meta with id is added in openapi.ts to avoid duplicate registration
 // This schema is exported through the main index and should not have an id here
