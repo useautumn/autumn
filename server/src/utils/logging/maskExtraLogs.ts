@@ -1,5 +1,5 @@
 /** Fields to mask in extra logs (replace with "[MASKED]") */
-const MASKED_FIELDS = ["fullCustomer"];
+const MASKED_FIELDS = ["setCache"];
 
 export const maskExtraLogs = (
 	extraLogs: Record<string, unknown>,

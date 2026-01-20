@@ -415,7 +415,9 @@ export class AutumnInt {
 		create: async ({
 			withAutumnId = true,
 			expand = [],
-			internalOptions,
+			internalOptions = {
+				disable_defaults: true,
+			},
 			...customerData
 		}: {
 			withAutumnId?: boolean;

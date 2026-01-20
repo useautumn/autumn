@@ -33,12 +33,13 @@ test.concurrent(`${chalk.yellowBright("mixed: free product → recurring product
 		id: "free",
 		isDefault: true,
 	});
+	const customerId = "free-to-recurring-with-oneoff";
 
-	const { customerId, autumnV1 } = await initScenario({
-		customerId: "free-to-recurring-with-oneoff",
+	const { autumnV1 } = await initScenario({
+		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [freeProduct] }),
+			s.products({ list: [freeProduct], customerIdsToDelete: [customerId] }),
 		],
 		actions: [s.attach({ productId: freeProduct.id })],
 	});

@@ -27,7 +27,12 @@ export const initCustomer = ({
 		fingerprint: customerData?.fingerprint,
 		metadata: customerData?.metadata ?? {},
 		created_at: Date.now(),
-		processor: null,
+		processor: customerData?.stripe_id
+			? {
+					id: customerData.stripe_id,
+					type: "stripe",
+				}
+			: null,
 	};
 };
 

@@ -45,9 +45,9 @@ export const executeAutumnBillingPlan = async ({
 		});
 	}
 
-	ctx.logger.debug(
-		`[execAutumnPlan] inserting new customer products: ${insertCustomerProducts.map((cp) => cp.product.id).join(", ")}`,
-	);
+	// ctx.logger.debug(
+	// 	`[execAutumnPlan] inserting new customer products: ${insertCustomerProducts.map((cp) => cp.product.id).join(", ")}`,
+	// );
 	// 2. Insert new customer products
 	await insertNewCusProducts({
 		ctx,

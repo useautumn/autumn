@@ -116,7 +116,10 @@ const logResponse = async ({
 			res: responseBody,
 		});
 
-		if (Object.keys(ctx.extraLogs).length > 0) {
+		if (
+			Object.keys(ctx.extraLogs).length > 0 &&
+			process.env.NODE_ENV === "development"
+		) {
 			const maskedLogs = maskExtraLogs(ctx.extraLogs);
 			ctx.logger.debug(`EXTRA LOGS: ${JSON.stringify(maskedLogs, null, 2)}`);
 		}

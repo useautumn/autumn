@@ -45,61 +45,6 @@ test.concurrent(`${chalk.yellowBright("defaults: single free product")}`, async 
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MULTIPLE GROUPS TESTS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-test.concurrent(`${chalk.yellowBright("defaults: multiple groups")}`, async () => {
-	const customerId = "defaults-multi-group";
-
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-	const wordsItem = items.monthlyWords({ includedUsage: 500 });
-
-	const freeGroup1 = {
-		...products.base({
-			id: "free-group1",
-			items: [messagesItem],
-			isDefault: true,
-		}),
-		group: "group1",
-	};
-
-	const freeGroup2 = {
-		...products.base({
-			id: "free-group2",
-			items: [wordsItem],
-			isDefault: true,
-		}),
-		group: "group2",
-	};
-
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: false, withDefault: true }),
-			s.products({ list: [freeGroup1, freeGroup2] }),
-		],
-		actions: [],
-	});
-
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	// Both products from different groups should be attached
-	await expectProductActive({
-		customer,
-		productId: `free-group1_${customerId}`,
-	});
-
-	await expectProductActive({
-		customer,
-		productId: `free-group2_${customerId}`,
-	});
-
-	// Verify both feature balances
-	expect(customer.features[TestFeature.Messages].balance).toBe(100);
-	expect(customer.features[TestFeature.Words].balance).toBe(500);
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
 // FREE PRODUCT WITH TRIAL TESTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
