@@ -9,11 +9,10 @@ import { handleGetPlan } from "./handlers/handleGetPlan.js";
 import { handleGetPlanDeleteInfo } from "./handlers/handleGetPlanDeleteInfo.js";
 import { handleListPlans } from "./handlers/handleListPlans.js";
 import { handleMigrateProductV2 } from "./handlers/handleMigrateProductV2.js";
-import { handlePlanHasCustomers } from "./handlers/handlePlanHasCustomers.js";
+
 import { handleUpdatePlan } from "./handlers/handleUpdateProduct/handleUpdatePlan.js";
 
 export const expressProductRouter = express.Router();
-expressProductRouter.get("/:product_id/has_customers", handlePlanHasCustomers);
 
 export const honoProductBetaRouter = new Hono<HonoEnv>();
 honoProductBetaRouter.get("", ...handleListPlans);
@@ -37,6 +36,7 @@ honoProductRouter.delete("/:product_id", ...handleDeleteProductHono);
 honoProductRouter.post("/:product_id/copy", ...handleCopyProductV2);
 
 // Info before deleting plan
+honoProductRouter.get("/:product_id/has_customers", ...handlePlanHasCustomersV2);
 honoProductRouter.post(
 	"/:product_id/has_customers",
 	...handlePlanHasCustomersV2,
