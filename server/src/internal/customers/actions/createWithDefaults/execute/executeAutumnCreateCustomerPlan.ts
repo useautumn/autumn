@@ -1,18 +1,13 @@
-import {
-	CustomerAlreadyExistsError,
-	type FullCustomer,
-	tryCatch,
-} from "@autumn/shared";
+import { tryCatch } from "@autumn/shared";
 import { isUniqueConstraintError } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
 import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan.js";
+import type { CreateCustomerContext } from "@/internal/customers/actions/createWithDefaults/createCustomerContext.js";
 import { CusService } from "../../../CusService.js";
 
-export type ExecuteAutumnResult =
-	| { type: "created"; fullCustomer: FullCustomer }
-	| { type: "existing"; fullCustomer: FullCustomer };
+export type ExecuteAutumnResult = { type: "created" } | { type: "existing" };
 
 /**
  * Execute the Autumn (DB) part of customer creation.
@@ -24,16 +19,19 @@ export type ExecuteAutumnResult =
  */
 export const executeAutumnCreateCustomerPlan = async ({
 	ctx,
-	fullCustomer,
+	context,
 	autumnBillingPlan,
 }: {
 	ctx: AutumnContext;
-	fullCustomer: FullCustomer;
+	context: CreateCustomerContext;
 	autumnBillingPlan: AutumnBillingPlan;
 }): Promise<ExecuteAutumnResult> => {
 	const { db, logger } = ctx;
+	const { fullCustomer } = context;
 
-	const { data: newFullCustomer, error } = await tryCatch(
+	let wasUpdate = false;
+
+	const { error } = await tryCatch(
 		db.transaction(async (tx) => {
 			const txDb = tx as unknown as DrizzleCli;
 
@@ -44,29 +42,19 @@ export const executeAutumnCreateCustomerPlan = async ({
 
 			if (upsertResult.wasUpdate) {
 				fullCustomer.internal_id = upsertResult.customer.internal_id;
-				throw new CustomerAlreadyExistsError({
-					customerId: fullCustomer.id || fullCustomer.internal_id,
-				});
+				wasUpdate = true;
+				return;
 			}
 
 			await executeAutumnBillingPlan({
 				ctx: { ...ctx, db: txDb },
 				autumnBillingPlan,
 			});
-
-			return {
-				...fullCustomer,
-				customer_products: autumnBillingPlan.insertCustomerProducts,
-			};
 		}),
 	);
 
-	// Handle existing customer (from upsert or race condition)
 	if (error) {
-		if (
-			error instanceof CustomerAlreadyExistsError ||
-			isUniqueConstraintError(error)
-		) {
+		if (isUniqueConstraintError(error)) {
 			logger.info(
 				`Customer already exists, returning existing: ${fullCustomer.id || fullCustomer.email}`,
 			);
@@ -76,10 +64,25 @@ export const executeAutumnCreateCustomerPlan = async ({
 				orgId: ctx.org.id,
 				env: ctx.env,
 			});
-			return { type: "existing", fullCustomer: existingCustomer };
+			context.fullCustomer = existingCustomer;
+			return { type: "existing" };
 		}
 		throw error;
 	}
 
-	return { type: "created", fullCustomer: newFullCustomer };
+	if (wasUpdate) {
+		logger.info(
+			`Customer already exists (claimed or existing): ${fullCustomer.id || fullCustomer.internal_id}`,
+		);
+		const existingCustomer = await CusService.getFull({
+			db,
+			idOrInternalId: fullCustomer.internal_id,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		});
+		context.fullCustomer = existingCustomer;
+		return { type: "existing" };
+	}
+
+	return { type: "created" };
 };

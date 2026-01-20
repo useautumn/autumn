@@ -11,6 +11,7 @@ export const CustomerDataSchema = z
 		email: z.email({ message: "not a valid email address" }).nullish().meta({
 			description: "Customer's email address",
 		}),
+
 		fingerprint: z.string().nullish().meta({
 			description:
 				"Unique identifier (eg, serial number) to detect duplicate customers and prevent free trial abuse",
@@ -20,6 +21,10 @@ export const CustomerDataSchema = z
 		}),
 		stripe_id: z.string().nullish().meta({
 			description: "Stripe customer ID if you already have one",
+		}),
+
+		create_in_stripe: z.boolean().optional().meta({
+			description: "Whether to create the customer in Stripe",
 		}),
 
 		processors: ExternalProcessorsSchema.nullish().meta({

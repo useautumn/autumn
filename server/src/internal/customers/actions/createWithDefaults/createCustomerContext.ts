@@ -1,5 +1,8 @@
 import type { FullCustomer, FullProduct } from "@autumn/shared";
-import type { TrialContext } from "@/internal/billing/v2/billingContext";
+import type {
+	BillingContext,
+	TrialContext,
+} from "@/internal/billing/v2/billingContext";
 
 export interface CreateCustomerContextFree {
 	fullCustomer: FullCustomer;
@@ -7,6 +10,7 @@ export interface CreateCustomerContextFree {
 	currentEpochMs: number;
 	trialContext?: TrialContext;
 	hasPaidProducts: boolean;
+	billingContext?: BillingContext;
 }
 
 export type CreateCustomerContext = CreateCustomerContextFree;

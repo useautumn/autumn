@@ -11,14 +11,22 @@ export const logCreateCustomerContext = ({
 	ctx: AutumnContext;
 	context: CreateCustomerContext;
 }) => {
-	const { fullCustomer, fullProducts, currentEpochMs, trialContext, hasPaidProducts } = context;
+	const {
+		fullCustomer,
+		fullProducts,
+		currentEpochMs,
+		trialContext,
+		hasPaidProducts,
+	} = context;
 
 	addToExtraLogs({
 		ctx,
 		extras: {
 			createCustomerContext: {
 				customer: `${fullCustomer.id ?? fullCustomer.internal_id} | ${fullCustomer.email ?? "no email"}`,
-				products: fullProducts.map((p) => `${p.id} (v${p.version})`).join(", ") || "none",
+				products:
+					fullProducts.map((p) => `${p.id} (v${p.version})`).join(", ") ||
+					"none",
 				hasPaidProducts,
 				currentEpochMs: formatMs(currentEpochMs),
 				trialContext: trialContext
@@ -39,13 +47,7 @@ export const logAutumnPlanResult = ({
 	addToExtraLogs({
 		ctx,
 		extras: {
-			autumnPlanResult: {
-				type: result.type,
-				internalId: result.fullCustomer.internal_id,
-				customerProducts: result.fullCustomer.customer_products?.map(
-					(cp) => `${cp.product_id} (status: ${cp.status})`,
-				) ?? [],
-			},
+			autumnPlanResult: result.type,
 		},
 	});
 };
