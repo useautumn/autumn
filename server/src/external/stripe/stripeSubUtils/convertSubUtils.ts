@@ -1,5 +1,4 @@
 import type Stripe from "stripe";
-
 export const getLatestPeriodEnd = ({
 	sub,
 	subItems,

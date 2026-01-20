@@ -5,6 +5,7 @@ import {
 	addAppContextToLogs,
 	addExtrasToLogs,
 } from "@/utils/logging/addContextToLogs";
+import { maskExtraLogs } from "@/utils/logging/maskExtraLogs.js";
 
 export const parseCustomerIdFromUrl = ({
 	url,
@@ -116,7 +117,8 @@ const logResponse = async ({
 		});
 
 		if (Object.keys(ctx.extraLogs).length > 0) {
-			ctx.logger.debug(`EXTRA LOGS:`, JSON.stringify(ctx.extraLogs, null, 2));
+			const maskedLogs = maskExtraLogs(ctx.extraLogs);
+			ctx.logger.debug(`EXTRA LOGS: ${JSON.stringify(maskedLogs, null, 2)}`);
 		}
 	} catch (error) {
 		console.error("Failed to log response to logtail");
@@ -161,9 +163,12 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	// Execute the request
 	await next();
 
+	// Re-fetch ctx after next() since handlers may have replaced it via c.set("ctx", {...})
+	const finalCtx = c.get("ctx");
+
 	// Log response asynchronously without blocking (runs after response is sent)
 	Promise.resolve()
-		.then(() => logResponse({ ctx, c, skipUrls }))
+		.then(() => logResponse({ ctx: finalCtx, c, skipUrls }))
 		.catch((error) => {
 			console.error("Failed to log response to logtail");
 			console.error(error);

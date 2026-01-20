@@ -3,6 +3,7 @@ import type { CustomerData } from "autumn-js";
 import { addHours, addMonths } from "date-fns";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { removeAllPaymentMethods } from "@/external/stripe/customers/paymentMethods/operations/removeAllPaymentMethods.js";
+import { CusService } from "@/internal/customers/CusService.js";
 import { attachPaymentMethod as attachPaymentMethodFn } from "@/utils/scriptUtils/initCustomer.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
@@ -71,14 +72,22 @@ type ScenarioAction =
 	| AttachPaymentMethodAction
 	| RemovePaymentMethodAction;
 
+type CleanupConfig = {
+	customerIdsToDelete: string[];
+	emailsToDelete: string[];
+};
+
 type ScenarioConfig = {
 	testClock: boolean;
 	attachPm?: "success" | "fail" | "authenticate";
 	customerData?: CustomerData;
 	withDefault: boolean;
+	defaultGroup?: string;
 	products: ProductV2[];
+	productPrefix?: string;
 	entityConfig?: EntityConfig;
 	customerIds?: string[];
+	cleanup: CleanupConfig;
 	actions: ScenarioAction[];
 };
 
@@ -110,19 +119,23 @@ const generateEntities = (config: EntityConfig): GeneratedEntity[] => {
  * @param paymentMethod - Attach payment method: "success", "fail", or "authenticate"
  * @param data - Customer metadata (fingerprint, name, email, etc.)
  * @param withDefault - Attach the default product on creation (default: false)
+ * @param defaultGroup - The product group to use for default product selection
  * @example s.customer({ paymentMethod: "success" })
  * @example s.customer({ paymentMethod: "success", data: { name: "Test" } })
+ * @example s.customer({ withDefault: true, defaultGroup: "enterprise" })
  */
 const customer = ({
 	testClock = true,
 	paymentMethod,
 	data,
 	withDefault,
+	defaultGroup,
 }: {
 	testClock?: boolean;
 	paymentMethod?: "success" | "fail" | "authenticate";
 	data?: CustomerData;
 	withDefault?: boolean;
+	defaultGroup?: string;
 }): ConfigFn => {
 	return (config) => ({
 		...config,
@@ -130,6 +143,7 @@ const customer = ({
 		attachPm: paymentMethod ?? config.attachPm,
 		customerData: data ?? config.customerData,
 		withDefault: withDefault ?? config.withDefault,
+		defaultGroup: defaultGroup ?? config.defaultGroup,
 	});
 };
 
@@ -137,19 +151,25 @@ const customer = ({
  * Define products to create for this test scenario.
  * Products are prefixed with customerId for test isolation.
  * @param list - Array of ProductV2 objects
+ * @param prefix - Optional custom prefix for product IDs (defaults to customerId or "shared")
  * @param customerIdsToDelete - Array of customer IDs to delete before creating products
+ * @example s.products({ list: [pro, free] })
+ * @example s.products({ list: [freeDefault], prefix: "my-prefix" }) // custom prefix when no customerId
  * @example s.products({ list: [pro, free], customerIdsToDelete: [customerId] })
  */
 const products = ({
 	list,
+	prefix,
 	customerIdsToDelete,
 }: {
 	list: ProductV2[];
+	prefix?: string;
 	customerIdsToDelete?: string[];
 }): ConfigFn => {
 	return (config) => ({
 		...config,
 		products: list,
+		productPrefix: prefix,
 		customerIds: customerIdsToDelete,
 	});
 };
@@ -330,6 +350,40 @@ const removePaymentMethod = (): ConfigFn => {
 };
 
 /**
+ * Delete a customer before the test runs.
+ * Uses API to clear cache. Silently ignores if customer doesn't exist.
+ * @param customerId - Delete by customer ID
+ * @param email - Delete all customers with this email
+ * @example s.deleteCustomer({ customerId: "test-customer" })
+ * @example s.deleteCustomer({ email: "test@example.com" })
+ */
+const deleteCustomer = (
+	params: { customerId: string } | { email: string },
+): ConfigFn => {
+	return (config) => {
+		if ("customerId" in params) {
+			return {
+				...config,
+				cleanup: {
+					...config.cleanup,
+					customerIdsToDelete: [
+						...config.cleanup.customerIdsToDelete,
+						params.customerId,
+					],
+				},
+			};
+		}
+		return {
+			...config,
+			cleanup: {
+				...config.cleanup,
+				emailsToDelete: [...config.cleanup.emailsToDelete, params.email],
+			},
+		};
+	};
+};
+
+/**
  * Scenario configuration functions.
  * Import and use with initScenario to configure test setup.
  * @example
@@ -355,6 +409,7 @@ export const s = {
 	advanceTestClock,
 	attachPaymentMethod,
 	removePaymentMethod,
+	deleteCustomer,
 } as const;
 
 // ═══════════════════════════════════════════════════════════════════
@@ -364,7 +419,13 @@ export const s = {
 const defaultConfig: ScenarioConfig = {
 	testClock: false,
 	withDefault: false,
+	defaultGroup: undefined,
 	products: [],
+	productPrefix: undefined,
+	cleanup: {
+		customerIdsToDelete: [],
+		emailsToDelete: [],
+	},
 	actions: [],
 };
 
@@ -373,7 +434,7 @@ const defaultConfig: ScenarioConfig = {
  * Uses functional composition for flexible configuration.
  * Actions are executed in the exact order they appear in the actions array.
  *
- * @param customerId - Unique identifier used as customer ID and product prefix
+ * @param customerId - Unique identifier used as customer ID and product prefix. If not provided, customer creation is skipped.
  * @param setup - Configuration functions (customer, products, entities)
  * @param actions - Action functions (attach, cancel, advanceTestClock) - executed in order
  * @returns autumnV1, autumnV2, ctx, testClockId, customer, entities, advancedTo
@@ -392,6 +453,12 @@ const defaultConfig: ScenarioConfig = {
  *   ],
  * });
  *
+ * // Products only (no customer) - useful for null ID tests
+ * const { autumnV1 } = await initScenario({
+ *   setup: [s.products({ list: [freeDefault] })],
+ *   actions: [],
+ * });
+ *
  * // Interleaved actions - executed in order
  * const { autumnV1, ctx, advancedTo } = await initScenario({
  *   customerId: "interleaved-test",
@@ -408,15 +475,48 @@ const defaultConfig: ScenarioConfig = {
  * });
  * ```
  */
-export const initScenario = async ({
+// Overload: when customerId is provided, return type has customerId: string
+export async function initScenario(params: {
+	customerId: string;
+	setup: ConfigFn[];
+	actions: ConfigFn[];
+}): Promise<{
+	customerId: string;
+	autumnV1: AutumnInt;
+	autumnV2: AutumnInt;
+	testClockId: string | undefined;
+	customer: Awaited<ReturnType<typeof initCustomerV3>>["customer"];
+	ctx: typeof ctx;
+	entities: GeneratedEntity[];
+	advancedTo: number;
+}>;
+
+// Overload: when customerId is not provided, return type has customerId: undefined
+export async function initScenario(params: {
+	customerId?: undefined;
+	setup: ConfigFn[];
+	actions: ConfigFn[];
+}): Promise<{
+	customerId: undefined;
+	autumnV1: AutumnInt;
+	autumnV2: AutumnInt;
+	testClockId: undefined;
+	customer: null;
+	ctx: typeof ctx;
+	entities: GeneratedEntity[];
+	advancedTo: number;
+}>;
+
+// Implementation
+export async function initScenario({
 	customerId,
 	setup,
 	actions,
 }: {
-	customerId: string;
+	customerId?: string;
 	setup: ConfigFn[];
 	actions: ConfigFn[];
-}) => {
+}) {
 	// Build config from setup and actions
 	const config = [...setup, ...actions].reduce((c, fn) => fn(c), defaultConfig);
 
@@ -425,25 +525,65 @@ export const initScenario = async ({
 		? generateEntities(config.entityConfig)
 		: [];
 
+	// Create a cleanup autumn client
+	const cleanupAutumn = new AutumnInt({
+		version: ApiVersion.V1_2,
+		secretKey: ctx.orgSecretKey,
+	});
+
+	// 0. Run cleanup - delete customers by ID and email before test
+	for (const customerIdToDelete of config.cleanup.customerIdsToDelete) {
+		try {
+			await cleanupAutumn.customers.delete(customerIdToDelete);
+		} catch {}
+	}
+
+	for (const emailToDelete of config.cleanup.emailsToDelete) {
+		const customers = await CusService.getByEmail({
+			db: ctx.db,
+			email: emailToDelete,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		});
+
+		for (const customerToDelete of customers) {
+			try {
+				await cleanupAutumn.customers.delete(customerToDelete.internal_id);
+			} catch {}
+		}
+	}
+
 	// 1. Initialize products & delete previous customers (prefix = customerId for isolation)
+	// Priority: explicit productPrefix > customerId > "shared"
+	const productPrefix = config.productPrefix ?? customerId ?? "shared";
 	if (config.products.length > 0) {
 		await initProductsV0({
 			ctx,
 			products: config.products,
-			prefix: customerId,
-			customerIds: config.customerIds ?? [customerId],
+			prefix: productPrefix,
+			customerIds: config.customerIds ?? (customerId ? [customerId] : []),
 		});
 	}
 
-	// 2. Initialize customer
-	const { testClockId, customer } = await initCustomerV3({
-		ctx,
-		customerId,
-		customerData: config.customerData,
-		attachPm: config.attachPm,
-		withTestClock: config.testClock,
-		withDefault: config.withDefault,
-	});
+	// 2. Initialize customer (only if customerId is provided)
+	let testClockId: string | undefined;
+	let customer: Awaited<ReturnType<typeof initCustomerV3>>["customer"] | null =
+		null;
+
+	if (customerId) {
+		const result = await initCustomerV3({
+			ctx,
+			customerId,
+			customerData: config.customerData,
+			attachPm: config.attachPm,
+			withTestClock: config.testClock,
+			withDefault: config.withDefault,
+			// Default group matches the product prefix (customerId) used in initProductsV0
+			defaultGroup: config.defaultGroup ?? customerId,
+		});
+		testClockId = result.testClockId;
+		customer = result.customer;
+	}
 
 	// 3. Create autumn clients
 	const autumnV1 = new AutumnInt({
@@ -456,8 +596,13 @@ export const initScenario = async ({
 		secretKey: ctx.orgSecretKey,
 	});
 
-	// 4. Create entities if any
+	// 4. Create entities if any (requires customerId)
 	if (generatedEntities.length > 0) {
+		if (!customerId) {
+			throw new Error(
+				"Cannot create entities: customerId is required when using s.entities()",
+			);
+		}
 		const entityDefs = generatedEntities.map((e) => ({
 			id: e.id,
 			name: e.name,
@@ -471,7 +616,12 @@ export const initScenario = async ({
 
 	for (const action of config.actions) {
 		if (action.type === "attach") {
-			const prefixedProductId = `${action.productId}_${customerId}`;
+			if (!customerId) {
+				throw new Error(
+					"Cannot attach product: customerId is required when using s.attach()",
+				);
+			}
+			const prefixedProductId = `${action.productId}_${productPrefix}`;
 
 			// Resolve entityIndex to entityId
 			let entityId: string | undefined;
@@ -495,7 +645,12 @@ export const initScenario = async ({
 				await new Promise((resolve) => setTimeout(resolve, action.timeout));
 			}
 		} else if (action.type === "cancel") {
-			const prefixedProductId = `${action.productId}_${customerId}`;
+			if (!customerId) {
+				throw new Error(
+					"Cannot cancel product: customerId is required when using s.cancel()",
+				);
+			}
+			const prefixedProductId = `${action.productId}_${productPrefix}`;
 
 			// Resolve entityIndex to entityId
 			let entityId: string | undefined;
@@ -581,4 +736,4 @@ export const initScenario = async ({
 		entities: generatedEntities,
 		advancedTo,
 	};
-};
+}

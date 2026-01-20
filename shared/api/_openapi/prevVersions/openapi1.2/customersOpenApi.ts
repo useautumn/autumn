@@ -8,7 +8,7 @@ import {
 	ApiCustomerV3Schema,
 	BillingPortalParamsSchema,
 	BillingPortalResultSchema,
-	CreateCustomerParamsSchema,
+	ExtCreateCustomerParamsSchema,
 	ListCustomersQuerySchema,
 	ListCustomersResponseSchema,
 	UpdateCustomerParamsSchema,
@@ -58,7 +58,7 @@ export const customersOpenApi = {
 			},
 			requestBody: {
 				content: {
-					"application/json": { schema: CreateCustomerParamsSchema },
+					"application/json": { schema: ExtCreateCustomerParamsSchema },
 				},
 			},
 			responses: {
