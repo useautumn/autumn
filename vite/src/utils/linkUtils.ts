@@ -100,3 +100,18 @@ export const getStripeConnectViewAsLink = ({
 	const withTest = env === AppEnv.Live ? "" : "/test";
 	return `${baseUrl}/${masterAccountId}/connect/view-as/${connectedAccountId}${withTest}/${path}`;
 };
+
+export const getStripeCouponLink = ({
+	couponId,
+	env,
+	accountId,
+}: {
+	couponId: string;
+	env: AppEnv;
+	accountId?: string;
+}) => {
+	const baseUrl = `https://dashboard.stripe.com`;
+	const accountPath = accountId ? `/${accountId}` : "";
+	const withTest = env === AppEnv.Live ? "" : "/test";
+	return `${baseUrl}${accountPath}${withTest}/coupons/${encodeURIComponent(couponId)}`;
+};
