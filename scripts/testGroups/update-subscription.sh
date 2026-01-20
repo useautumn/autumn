@@ -6,6 +6,7 @@ source "$(dirname "$0")/config.sh"
 # Exit immediately if a command exits with a non-zero status
 set -e
 
+bun test:integration create-customer
 bun test:integration update-subscription/custom-plan
 bun test:integration update-subscription/discounts
 bun test:integration update-subscription/errors
