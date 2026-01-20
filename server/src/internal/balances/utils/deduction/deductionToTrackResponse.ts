@@ -1,7 +1,7 @@
-import type { ApiBalance, Feature, FullCustomer } from "@autumn/shared";
+import type { ApiBalanceV0, Feature, FullCustomer } from "@autumn/shared";
 import {
-	fullCustomerToCustomerEntitlements,
 	findCustomerEntitlementById,
+	fullCustomerToCustomerEntitlements,
 	getRelevantFeatures,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -11,8 +11,8 @@ import type { DeductionUpdate } from "../types/deductionUpdate.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
 
 type TrackBalanceResponse = {
-	balance: ApiBalance | null;
-	balances?: Record<string, ApiBalance>;
+	balance: ApiBalanceV0 | null;
+	balances?: Record<string, ApiBalanceV0>;
 };
 
 /**
@@ -152,7 +152,7 @@ export const deductionToTrackResponse = async ({
 	});
 
 	// 3. Build balances response
-	const finalBalances: Record<string, ApiBalance> = {};
+	const finalBalances: Record<string, ApiBalanceV0> = {};
 
 	// Add primary features (always - they were requested to be tracked)
 	for (const deduction of featureDeductions) {

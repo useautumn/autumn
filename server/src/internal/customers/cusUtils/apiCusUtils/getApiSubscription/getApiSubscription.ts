@@ -1,5 +1,5 @@
 import {
-	ApiSubscriptionSchema,
+	ApiSubscriptionV0Schema,
 	CusExpand,
 	type CusProductLegacyData,
 	CusProductStatus,
@@ -81,7 +81,7 @@ export const getApiSubscription = async ({
 			})
 		: undefined;
 
-	const apiSubscription = ApiSubscriptionSchema.parse({
+	const apiSubscription = ApiSubscriptionV0Schema.parse({
 		plan: apiPlan,
 
 		plan_id: fullProduct.id,

@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import {
-	type ApiBalanceBreakdown,
+	type ApiBalanceBreakdownV0,
 	ApiVersion,
 	type CheckResponseV0,
 	type CheckResponseV1,
@@ -72,7 +72,7 @@ describe(`${chalk.yellowBright("check6: test /check on feature with multiple bal
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV2;
 
-		const expectedLifetimeBreadown: ApiBalanceBreakdown = {
+		const expectedLifetimeBreadown: ApiBalanceBreakdownV0 = {
 			id: expect.any(String),
 			plan_id: proProd.id,
 			granted_balance: 1000,

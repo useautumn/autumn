@@ -135,4 +135,3 @@ describe(`${chalk.yellowBright("update-current-balance2: update balance after tr
 		});
 	});
 });
-

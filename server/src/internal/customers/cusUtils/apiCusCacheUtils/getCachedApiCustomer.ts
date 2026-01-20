@@ -1,7 +1,7 @@
 import {
 	ApiBaseEntitySchema,
 	type ApiCustomer,
-	ApiCustomerSchema,
+	ApiCustomerV4Schema,
 	type AppEnv,
 	addToExpand,
 	CusExpand,
@@ -81,7 +81,7 @@ export const getCachedApiCustomer = async ({
 
 				// Normalize the data based on schema
 				const normalized = normalizeFromSchema<ApiCustomer>({
-					schema: ApiCustomerSchema,
+					schema: ApiCustomerV4Schema,
 					data: rest,
 				});
 
@@ -92,7 +92,7 @@ export const getCachedApiCustomer = async ({
 
 				return {
 					// ← This returns from getCachedApiCustomer!
-					apiCustomer: ApiCustomerSchema.parse(normalized),
+					apiCustomer: ApiCustomerV4Schema.parse(normalized),
 					legacyData: normalizedLegacyData,
 				};
 			}
@@ -153,7 +153,7 @@ export const getCachedApiCustomer = async ({
 		}
 
 		return {
-			apiCustomer: ApiCustomerSchema.parse(
+			apiCustomer: ApiCustomerV4Schema.parse(
 				skipEntityMerge ? masterApiCustomer : apiCustomer,
 			),
 			legacyData,

@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { ApiBalanceSchema } from "../../customers/cusFeatures/apiBalance.js";
+import { ApiBalanceV0Schema } from "../../customers/cusFeatures/previousVersions/apiBalanceV0.js";
 
 export const TrackResponseV2Schema = z.object({
 	// id: z.string().meta({
@@ -19,8 +19,8 @@ export const TrackResponseV2Schema = z.object({
 	}),
 
 	value: z.number(),
-	balance: ApiBalanceSchema.nullable(),
-	balances: z.record(z.string(), ApiBalanceSchema).optional(),
+	balance: ApiBalanceV0Schema.nullable(),
+	balances: z.record(z.string(), ApiBalanceV0Schema).optional(),
 
 	// feature_id: z.string().optional().meta({
 	// 	description: "The ID of the feature (if provided)",

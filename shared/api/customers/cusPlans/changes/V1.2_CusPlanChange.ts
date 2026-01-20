@@ -9,12 +9,12 @@ import { CusProductStatus } from "@models/cusProductModels/cusProductEnums.js";
 import { convertPlanToItems } from "@utils/planFeatureUtils/planToItems.js";
 import { getProductItemResponse } from "@utils/productV2Utils/productItemUtils/getProductItemRes.js";
 import type { z } from "zod/v4";
-import {
-	type ApiSubscription,
-	ApiSubscriptionSchema,
-} from "../apiSubscription.js";
 import { CusProductLegacyDataSchema } from "../cusProductLegacyData.js";
 import { ApiCusProductV3Schema } from "../previousVersions/apiCusProductV3.js";
+import {
+	type ApiSubscriptionV0,
+	ApiSubscriptionV0Schema,
+} from "../previousVersions/apiSubscriptionV0.js";
 
 /**
  * Transform plan from V2.0 format to V1.2 product format
@@ -25,11 +25,11 @@ export function transformSubscriptionToCusProductV3({
 	legacyData,
 	ctx,
 }: {
-	input: z.infer<typeof ApiSubscriptionSchema>;
+	input: z.infer<typeof ApiSubscriptionV0Schema>;
 	legacyData?: z.infer<typeof CusProductLegacyDataSchema>;
 	ctx: VersionContext;
 }): z.infer<typeof ApiCusProductV3Schema> {
-	const cusPlanToCusProductV3Status = (plan: ApiSubscription) => {
+	const cusPlanToCusProductV3Status = (plan: ApiSubscriptionV0) => {
 		if (plan.status === CusProductStatus.Active) {
 			if (plan.past_due) {
 				return "past_due";
@@ -114,7 +114,7 @@ export const V1_2_CusPlanChange = defineVersionChange({
 		"Added trial_ends_at field",
 	],
 	affectedResources: [AffectedResource.Customer],
-	newSchema: ApiSubscriptionSchema,
+	newSchema: ApiSubscriptionV0Schema,
 	oldSchema: ApiCusProductV3Schema,
 
 	legacyDataSchema: CusProductLegacyDataSchema,

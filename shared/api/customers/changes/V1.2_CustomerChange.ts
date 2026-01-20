@@ -6,16 +6,16 @@ import {
 import type { z } from "zod/v4";
 import type { ApiInvoiceV1 } from "../../others/apiInvoice/apiInvoiceV1.js";
 import { transformInvoiceToV0 } from "../../others/apiInvoice/changes/V1.2_InvoiceChange.js";
-import { ApiCustomerSchema } from "../apiCustomer.js";
 import type { ApiTrialsUsedV1 } from "../components/apiTrialsUsed/apiTrialsUsedV1.js";
 import { transformTrialsUsedToV0 } from "../components/apiTrialsUsed/changes/V1.2_TrialsUsedChange.js";
 import { transformBalanceToCusFeatureV3 } from "../cusFeatures/changes/V1.2_CusFeatureChange.js";
 import type { ApiCusFeatureV3 } from "../cusFeatures/previousVersions/apiCusFeatureV3.js";
-import type { ApiSubscription } from "../cusPlans/apiSubscription.js";
 import { transformSubscriptionToCusProductV3 } from "../cusPlans/changes/V1.2_CusPlanChange.js";
 import type { ApiCusProductV3 } from "../cusPlans/previousVersions/apiCusProductV3.js";
+import type { ApiSubscriptionV0 } from "../cusPlans/previousVersions/apiSubscriptionV0.js";
 import { CustomerLegacyDataSchema } from "../customerLegacyData.js";
 import { ApiCustomerV3Schema } from "../previousVersions/apiCustomerV3.js";
+import { ApiCustomerV4Schema } from "../previousVersions/apiCustomerV4.js";
 /**
  * V1_2_CustomerChange: Transforms customer response TO V1_2 format
  *
@@ -47,7 +47,7 @@ export const V1_2_CustomerChange = defineVersionChange({
 		"Added optional nested objects for expanded data",
 	],
 	affectedResources: [AffectedResource.Customer],
-	newSchema: ApiCustomerSchema,
+	newSchema: ApiCustomerV4Schema,
 	oldSchema: ApiCustomerV3Schema,
 	legacyDataSchema: CustomerLegacyDataSchema,
 
@@ -57,7 +57,7 @@ export const V1_2_CustomerChange = defineVersionChange({
 		const v3CusProducts: ApiCusProductV3[] = [
 			...input.subscriptions,
 			...input.scheduled_subscriptions,
-		].map((subscription: ApiSubscription) => {
+		].map((subscription: ApiSubscriptionV0) => {
 			const cusPlanLegacyData = legacyData?.cusProductLegacyData[
 				subscription.plan_id
 			]

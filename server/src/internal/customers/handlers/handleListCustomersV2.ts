@@ -1,7 +1,7 @@
 import {
 	AffectedResource,
 	ApiVersion,
-	type BaseApiCustomer,
+	type BaseApiCustomerV4,
 	ListCustomersV2ParamsSchema,
 	type PagePaginatedResponse,
 } from "@autumn/shared";
@@ -22,7 +22,7 @@ export const handleListCustomersV2 = createRoute({
 
 		const hasMore = customers.length === body.limit;
 
-		return c.json<PagePaginatedResponse<BaseApiCustomer>>({
+		return c.json<PagePaginatedResponse<BaseApiCustomerV4>>({
 			list: customers,
 			total: customers.length,
 			limit: body.limit,

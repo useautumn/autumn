@@ -1,12 +1,12 @@
 import type {
-	ApiBalance,
+	ApiBalanceV0,
 	FullCusEntWithFullCusProduct,
 	FullCustomer,
 } from "@autumn/shared";
 import {
-	type ApiBalanceBreakdown,
-	ApiBalanceBreakdownSchema,
-	ApiBalanceSchema,
+	type ApiBalanceBreakdownV0,
+	ApiBalanceBreakdownV0Schema,
+	ApiBalanceV0Schema,
 	CheckExpand,
 	CusExpand,
 	cusEntsToAdjustment,
@@ -46,7 +46,7 @@ const cusEntsToBreakdown = ({
 	fullCus: FullCustomer;
 }): {
 	key: string;
-	breakdown: ApiBalanceBreakdown;
+	breakdown: ApiBalanceBreakdownV0;
 	prepaidQuantity: number;
 }[] => {
 	const entityId = fullCus.entity?.id;
@@ -59,7 +59,7 @@ const cusEntsToBreakdown = ({
 
 	const breakdown: {
 		key: string;
-		breakdown: ApiBalanceBreakdown;
+		breakdown: ApiBalanceBreakdownV0;
 		prepaidQuantity: number;
 	}[] = [];
 
@@ -90,7 +90,7 @@ const cusEntsToBreakdown = ({
 
 		breakdown.push({
 			key,
-			breakdown: ApiBalanceBreakdownSchema.parse({
+			breakdown: ApiBalanceBreakdownV0Schema.parse({
 				id: key,
 
 				plan_id: planId,
@@ -128,7 +128,7 @@ export const getApiBalance = ({
 	feature: Feature;
 	includeRollovers?: boolean;
 	includeBreakdown?: boolean;
-}): { data: ApiBalance; legacyData?: CusFeatureLegacyData } => {
+}): { data: ApiBalanceV0; legacyData?: CusFeatureLegacyData } => {
 	const entityId = fullCus.entity?.id;
 
 	const apiFeature = expandIncludes({
@@ -219,7 +219,7 @@ export const getApiBalance = ({
 
 	const masterKey = breakdown ? null : cusEntToKey({ cusEnt: cusEnts[0] });
 
-	const { data: apiBalance, error } = ApiBalanceSchema.safeParse({
+	const { data: apiBalance, error } = ApiBalanceV0Schema.safeParse({
 		feature: expandIncludes({
 			expand: ctx.expand,
 			includes: [CheckExpand.BalanceFeature, CusExpand.BalancesFeature],
@@ -252,7 +252,7 @@ export const getApiBalance = ({
 		plan_id: planId,
 		breakdown: breakdown.map((item) => item.breakdown),
 		rollovers,
-	} satisfies ApiBalance);
+	} satisfies ApiBalanceV0);
 
 	if (error) throw error;
 

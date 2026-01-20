@@ -1,6 +1,6 @@
 import {
 	type ApiCustomer,
-	ApiCustomerSchema,
+	ApiCustomerV4Schema,
 	CusExpand,
 	type CustomerLegacyData,
 	type FullCustomer,
@@ -37,7 +37,7 @@ export const getApiCustomerBase = async ({
 			fullCus,
 		});
 
-	const apiCustomer = ApiCustomerSchema.extend({
+	const apiCustomer = ApiCustomerV4Schema.extend({
 		autumn_id: z.string().optional(),
 	}).parse({
 		autumn_id: withAutumnId ? fullCus.internal_id : undefined,

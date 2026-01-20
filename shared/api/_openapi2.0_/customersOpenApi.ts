@@ -1,9 +1,9 @@
 import { z } from "zod/v4";
 import { SuccessResponseSchema } from "../common/commonResponses.js";
 import {
-	ApiCustomerSchema,
-	BaseApiCustomerSchema,
-} from "../customers/apiCustomer.js";
+	ApiCustomerV4Schema,
+	BaseApiCustomerV4Schema,
+} from "../customers/previousVersions/apiCustomerV4.js";
 
 // export const ApiCustomerWithMeta = ApiCustomerSchema.meta({
 // 	id: "Customer",
@@ -36,7 +36,7 @@ export const customersOpenApi = {
 			responses: {
 				"200": {
 					description: "200 OK",
-					content: { "application/json": { schema: ApiCustomerSchema } },
+					content: { "application/json": { schema: ApiCustomerV4Schema } },
 				},
 			},
 		},
@@ -55,7 +55,9 @@ export const customersOpenApi = {
 					description: "200 OK",
 					content: {
 						"application/json": {
-							schema: createPagePaginatedResponseSchema(BaseApiCustomerSchema),
+							schema: createPagePaginatedResponseSchema(
+								BaseApiCustomerV4Schema,
+							),
 						},
 					},
 				},
@@ -75,7 +77,7 @@ export const customersOpenApi = {
 			responses: {
 				"200": {
 					description: "200 OK",
-					content: { "application/json": { schema: ApiCustomerSchema } },
+					content: { "application/json": { schema: ApiCustomerV4Schema } },
 				},
 			},
 		},
@@ -98,7 +100,7 @@ export const customersOpenApi = {
 			responses: {
 				"200": {
 					description: "200 OK",
-					content: { "application/json": { schema: ApiCustomerSchema } },
+					content: { "application/json": { schema: ApiCustomerV4Schema } },
 				},
 			},
 		},

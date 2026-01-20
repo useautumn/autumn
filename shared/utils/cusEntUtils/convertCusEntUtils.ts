@@ -1,5 +1,5 @@
+import type { ApiBalanceBreakdownV0 } from "@api/customers/cusFeatures/components/apiBalanceBreakdown/prevVersions/apiBalanceBreakdownV0.js";
 import { Decimal } from "decimal.js";
-import type { ApiBalanceBreakdown } from "../../api/customers/cusFeatures/apiBalance.js";
 import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import { resetIntvToEntIntv } from "../planFeatureUtils/planFeatureIntervals.js";
@@ -12,7 +12,7 @@ import { getStartingBalance } from "./getStartingBalance.js";
 export const cusEntsToPlanId = ({
 	cusEnts,
 }: {
-	cusEnts: (FullCusEntWithFullCusProduct)[];
+	cusEnts: FullCusEntWithFullCusProduct[];
 }) => {
 	// Get number of keys
 	const uniquePlanIds = new Set<string>();
@@ -105,7 +105,7 @@ export const cusEntToIncludedUsage = ({
 export const apiBalanceToBreakdownKey = ({
 	breakdown,
 }: {
-	breakdown: ApiBalanceBreakdown;
+	breakdown: ApiBalanceBreakdownV0;
 }) => {
 	const inteval =
 		breakdown.reset?.interval && breakdown.reset.interval !== "multiple"

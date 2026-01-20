@@ -4,8 +4,8 @@ import yaml from "yaml";
 import { createDocument } from "zod-openapi";
 import { CustomerDataSchema } from "../common/customerData.js";
 import {
-	ApiCustomerSchema,
-	BaseApiCustomerSchema,
+	ApiCustomerV4Schema,
+	BaseApiCustomerV4Schema,
 	EntityDataSchema,
 } from "../models.js";
 import { balancesOpenApi } from "./balancesOpenApi.js";
@@ -42,8 +42,8 @@ const openapi2_0 = createDocument(
 				EntityData: EntityDataSchema,
 				Plan: ApiPlanWithMeta,
 				PlanFeature: ApiPlanFeatureWithMeta,
-				Customer: ApiCustomerSchema,
-				BaseCustomer: BaseApiCustomerSchema,
+				Customer: ApiCustomerV4Schema,
+				BaseCustomer: BaseApiCustomerV4Schema,
 				Entity: ApiEntityWithMeta,
 			},
 			securitySchemes: {

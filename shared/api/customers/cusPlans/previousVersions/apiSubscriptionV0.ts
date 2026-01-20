@@ -1,7 +1,7 @@
 import { ApiPlanSchema } from "@api/products/apiPlan.js";
 import { z } from "zod/v4";
 
-export const ApiSubscriptionSchema = z.object({
+export const ApiSubscriptionV0Schema = z.object({
 	plan: ApiPlanSchema.optional(),
 	plan_id: z.string(),
 
@@ -29,4 +29,4 @@ export const ApiSubscriptionSchema = z.object({
 	// ),
 });
 
-export type ApiSubscription = z.infer<typeof ApiSubscriptionSchema>;
+export type ApiSubscriptionV0 = z.infer<typeof ApiSubscriptionV0Schema>;

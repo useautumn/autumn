@@ -1,7 +1,7 @@
 import {
-	type ApiBalance,
-	type ApiBalanceReset,
-	type ApiBalanceRollover,
+	type ApiBalanceResetV0,
+	type ApiBalanceRolloverV0,
+	type ApiBalanceV0,
 	type ApiFeatureV1,
 	cusEntsToPlanId,
 	entIntvToResetIntv,
@@ -36,7 +36,7 @@ export const cusEntsToReset = ({
 }: {
 	cusEnts: FullCusEntWithFullCusProduct[];
 	feature: Feature;
-}): ApiBalanceReset | null => {
+}): ApiBalanceResetV0 | null => {
 	// 1. If feature is allocated, null
 	if (isContUseFeature({ feature })) return null;
 
@@ -69,7 +69,7 @@ export const cusEntsToRollovers = ({
 }: {
 	cusEnts: FullCusEntWithFullCusProduct[];
 	entityId?: string;
-}): ApiBalanceRollover[] | undefined => {
+}): ApiBalanceRolloverV0[] | undefined => {
 	// If all cus ents no rollover, return undefined
 
 	if (cusEnts.every((cusEnt) => !cusEnt.entitlement.rollover)) {
@@ -96,7 +96,7 @@ export const getBooleanApiBalance = ({
 }: {
 	cusEnts: FullCusEntWithFullCusProduct[];
 	apiFeature?: ApiFeatureV1;
-}): ApiBalance => {
+}): ApiBalanceV0 => {
 	const feature = cusEnts[0].entitlement.feature;
 	const planId = cusEntsToPlanId({ cusEnts });
 	const id = cusEnts[0].id;
@@ -133,7 +133,7 @@ export const getBooleanApiBalance = ({
 			},
 		],
 		rollovers: undefined,
-	} satisfies ApiBalance;
+	} satisfies ApiBalanceV0;
 };
 
 export const getUnlimitedApiBalance = ({
@@ -142,7 +142,7 @@ export const getUnlimitedApiBalance = ({
 }: {
 	apiFeature?: ApiFeatureV1;
 	cusEnts: FullCusEntWithFullCusProduct[];
-}): ApiBalance => {
+}): ApiBalanceV0 => {
 	const feature = cusEnts[0].entitlement.feature;
 	const planId = cusEntsToPlanId({ cusEnts });
 	const id = cusEnts[0].id;

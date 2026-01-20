@@ -1,5 +1,5 @@
+import type { ApiBalanceRolloverV0 } from "@api/customers/cusFeatures/components/apiBalanceRollover/apiBalanceRolloverV0";
 import { getRolloverFields, notNullish } from "../../..";
-import type { ApiBalanceRollover } from "../../../api/customers/cusFeatures/apiBalance";
 import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
 
 export const cusEntsToRollovers = ({
@@ -8,7 +8,7 @@ export const cusEntsToRollovers = ({
 }: {
 	cusEnts: FullCusEntWithFullCusProduct[];
 	entityId?: string;
-}): ApiBalanceRollover[] | undefined => {
+}): ApiBalanceRolloverV0[] | undefined => {
 	// If all cus ents no rollover, return undefined
 
 	if (cusEnts.every((cusEnt) => !cusEnt.entitlement.rollover)) {

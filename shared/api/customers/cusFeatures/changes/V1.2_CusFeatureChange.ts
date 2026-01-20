@@ -11,15 +11,15 @@ import { FeatureType } from "../../../../models/featureModels/featureEnums.js";
 import { resetIntvToEntIntv } from "../../../../utils/planFeatureUtils/planFeatureIntervals.js";
 import { sumValues } from "../../../../utils/utils.js";
 import type { ApiFeatureV1 } from "../../../features/apiFeatureV1.js";
-import {
-	type ApiBalance,
-	type ApiBalanceBreakdown,
-	ApiBalanceSchema,
-} from "../apiBalance.js";
+import type { ApiBalanceBreakdownV0 } from "../components/apiBalanceBreakdown/prevVersions/apiBalanceBreakdownV0.js";
 import {
 	type CusFeatureLegacyData,
 	CusFeatureLegacyDataSchema,
 } from "../cusFeatureLegacyData.js";
+import {
+	type ApiBalanceV0,
+	ApiBalanceV0Schema,
+} from "../previousVersions/apiBalanceV0.js";
 import {
 	type ApiCusFeatureV3Breakdown,
 	ApiCusFeatureV3Schema,
@@ -40,7 +40,7 @@ const resetToV3IntervalParams = ({
 	feature,
 	unlimited,
 }: {
-	input: ApiBalance | ApiBalanceBreakdown;
+	input: ApiBalanceV0 | ApiBalanceBreakdownV0;
 	feature?: ApiFeatureV1;
 	unlimited: boolean;
 }): {
@@ -98,7 +98,7 @@ const toV3BalanceParams = ({
 	legacyData,
 	isBreakdown = false,
 }: {
-	input: ApiBalance | ApiBalanceBreakdown;
+	input: ApiBalanceV0 | ApiBalanceBreakdownV0;
 	feature?: ApiFeatureV1;
 	unlimited: boolean;
 	legacyData?: CusFeatureLegacyData;
@@ -119,10 +119,10 @@ const toV3BalanceParams = ({
 	let prepaidQuantity = 0;
 
 	if (isBreakdown) {
-		prepaidQuantity = (input as ApiBalanceBreakdown).prepaid_quantity ?? 0;
+		prepaidQuantity = (input as ApiBalanceBreakdownV0).prepaid_quantity ?? 0;
 	} else {
 		prepaidQuantity = sumValues(
-			(input as ApiBalance).breakdown?.map((b) => b.prepaid_quantity) ?? [],
+			(input as ApiBalanceV0).breakdown?.map((b) => b.prepaid_quantity) ?? [],
 		);
 	}
 
@@ -167,7 +167,7 @@ export function transformBalanceToCusFeatureV3({
 	input,
 	legacyData,
 }: {
-	input: z.infer<typeof ApiBalanceSchema>;
+	input: z.infer<typeof ApiBalanceV0Schema>;
 	legacyData?: CusFeatureLegacyData;
 }): z.infer<typeof ApiCusFeatureV3Schema> {
 	// 1. Is boolean feature
@@ -282,7 +282,7 @@ export const V1_2_CusFeatureChange = defineVersionChange({
 		"Removed verbose fields",
 	],
 	affectedResources: [AffectedResource.Customer],
-	newSchema: ApiBalanceSchema,
+	newSchema: ApiBalanceV0Schema,
 	oldSchema: ApiCusFeatureV3Schema,
 	legacyDataSchema: CusFeatureLegacyDataSchema,
 

@@ -28,7 +28,10 @@ export const getOrCreateApiCustomer = async ({
 	customerData?: CustomerData;
 	entityId?: string;
 	entityData?: EntityData;
-}): Promise<{ apiCustomer: ApiCustomer; legacyData?: CustomerLegacyData }> => {
+}): Promise<{
+	apiCustomer: ApiCustomer;
+	legacyData?: CustomerLegacyData;
+}> => {
 	// ========================================
 	// Phase 1: Get or Create Customer
 	// ========================================

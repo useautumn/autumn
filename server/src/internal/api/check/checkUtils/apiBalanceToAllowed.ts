@@ -1,4 +1,4 @@
-import { type ApiBalance, type Feature, FeatureType } from "@autumn/shared";
+import { type ApiBalanceV0, type Feature, FeatureType } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 
 export const apiBalanceToAllowed = ({
@@ -6,7 +6,7 @@ export const apiBalanceToAllowed = ({
 	feature,
 	requiredBalance,
 }: {
-	apiBalance: ApiBalance;
+	apiBalance: ApiBalanceV0;
 	feature: Feature;
 	requiredBalance: number;
 }) => {

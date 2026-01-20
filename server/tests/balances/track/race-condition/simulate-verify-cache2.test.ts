@@ -1,5 +1,5 @@
 // import { beforeAll, describe, test } from "bun:test";
-// import { type ApiCustomer, ApiVersion } from "@autumn/shared";
+// import { type ApiCustomerV4, ApiVersion } from "@autumn/shared";
 // import { TestFeature } from "@tests/setup/v2Features.js";
 // import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 // import chalk from "chalk";
@@ -145,7 +145,7 @@
 
 // 		// Get the customer from Redis to see current balance
 // 		const customerAfterTrack =
-// 			await autumnV2.customers.get<ApiCustomer>(customerId);
+// 			await autumnV2.customers.get<ApiCustomerV4>(customerId);
 
 // 		const fullCustomerAfterTrack = await CusService.getFull({
 // 			db: ctx.db,

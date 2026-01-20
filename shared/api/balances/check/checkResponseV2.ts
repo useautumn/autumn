@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { ApiBalanceSchema } from "../../models.js";
+import { ApiBalanceV0Schema } from "../../models.js";
 import { CheckFeaturePreviewSchema } from "./checkFeaturePreview.js";
 
 export const CheckResponseV2Schema = z.object({
@@ -8,7 +8,7 @@ export const CheckResponseV2Schema = z.object({
 	entity_id: z.string().nullish(),
 	required_balance: z.number().optional(),
 
-	balance: ApiBalanceSchema.nullable(),
+	balance: ApiBalanceV0Schema.nullable(),
 
 	preview: CheckFeaturePreviewSchema.optional(),
 });

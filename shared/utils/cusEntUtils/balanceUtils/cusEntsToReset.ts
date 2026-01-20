@@ -1,4 +1,4 @@
-import type { ApiBalanceReset } from "../../../api/customers/cusFeatures/apiBalance";
+import type { ApiBalanceResetV0 } from "@shared/api/customers/cusFeatures/components/apiBalanceReset/apiBalanceResetV0";
 import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
 import type { Feature } from "../../../models/featureModels/featureModels";
 import { isContUseFeature } from "../../featureUtils/convertFeatureUtils";
@@ -30,7 +30,7 @@ export const cusEntsToReset = ({
 }: {
 	cusEnts: FullCusEntWithFullCusProduct[];
 	feature: Feature;
-}): ApiBalanceReset | null => {
+}): ApiBalanceResetV0 | null => {
 	// 1. If feature is allocated, null
 	if (isContUseFeature({ feature })) return null;
 

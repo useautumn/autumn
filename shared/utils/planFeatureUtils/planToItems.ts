@@ -25,7 +25,8 @@ export const planToProductV2PriceItem = ({
 		feature_id: null,
 		feature: null,
 		interval: billingToItemInterval({
-			billingInterval: price?.interval ?? BillingInterval.Month,
+			billingInterval:
+				(price?.interval as BillingInterval) ?? BillingInterval.Month,
 		}),
 		interval_count: price?.interval_count ?? 1,
 		price: price?.amount ?? 0,

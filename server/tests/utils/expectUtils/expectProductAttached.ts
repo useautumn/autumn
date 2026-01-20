@@ -3,7 +3,7 @@ import {
 	type ApiCustomer,
 	type ApiEntityV0,
 	type ApiEntityV1,
-	type ApiSubscription,
+	type ApiSubscriptionV0,
 	ApiVersion,
 	type CreateFreeTrial,
 	CusProductStatus,
@@ -136,7 +136,7 @@ export const expectScheduledApiSub = async ({
 		: await autumnV2.customers.get<ApiCustomer>(customerId);
 
 	const scheduledSub = entity.scheduled_subscriptions.find(
-		(s: ApiSubscription) => s.plan_id === productId,
+		(s: ApiSubscriptionV0) => s.plan_id === productId,
 	);
 	expect(
 		scheduledSub,
