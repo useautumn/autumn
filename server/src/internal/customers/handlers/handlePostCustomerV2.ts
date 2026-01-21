@@ -8,6 +8,7 @@ import {
 	V0_2_InvoicesAlwaysExpanded,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { captureOrgEvent } from "@/utils/posthog.js";
 import { getApiCustomer } from "../cusUtils/apiCusUtils/getApiCustomer.js";
 import { getOrCreateCachedFullCustomer } from "../cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
 import { getOrSetCachedFullCustomer } from "../cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
@@ -63,6 +64,16 @@ export const handlePostCustomer = createRoute({
 
 		const duration = Date.now() - start;
 		ctx.logger.debug(`[post-customer] duration: ${duration}ms`);
+
+		await captureOrgEvent({
+			orgId: ctx.org.id,
+			event: "customer_created_via_api",
+			properties: {
+				org_slug: ctx.org.slug,
+				customer_id: fullCustomer.id || fullCustomer.internal_id,
+				env: ctx.env,
+			},
+		});
 
 		return c.json(apiCustomer);
 	},
