@@ -15,6 +15,7 @@ import {
 } from "@autumn/shared";
 
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { captureOrgEvent } from "@/utils/posthog.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { getEntsWithFeature } from "../entitlements/entitlementUtils.js";
@@ -153,6 +154,17 @@ export const handleCreatePlan = createRoute({
 				features: ctx.features,
 			},
 			ctx,
+		});
+
+		await captureOrgEvent({
+			userId: ctx.user?.id,
+			orgId: org.id,
+			event: "plan_created",
+			properties: {
+				org_slug: org.slug,
+				plan_id: product.id,
+				env,
+			},
 		});
 
 		return c.json(versionedResponse);

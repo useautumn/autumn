@@ -7,6 +7,7 @@ import { createSvixApp } from "@/external/svix/svixHelpers.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { createConnectAccount } from "@/internal/orgs/orgUtils/createConnectAccount.js";
 import { generatePublishableKey } from "../encryptUtils.js";
+import { captureOrgEvent } from "../posthog.js";
 
 export const initOrgSvixApps = async ({
 	id,
@@ -97,6 +98,15 @@ export const afterOrgCreated = async ({
 		});
 
 		logger.info(`Initialized resources for org ${id} (${slug})`);
+
+		await captureOrgEvent({
+			userId: user.id,
+			orgId: id,
+			event: "org_created",
+			properties: {
+				org_slug: slug,
+			},
+		});
 	} catch (error: any) {
 		if (error?.data && error.data.code === ("23505" as string)) {
 			logger.error(
