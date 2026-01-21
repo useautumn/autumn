@@ -1,6 +1,6 @@
 import {
-	type ApiCustomer,
-	ApiCustomerSchema,
+	type ApiCustomerV5,
+	ApiCustomerV5Schema,
 	CusExpand,
 	type CustomerLegacyData,
 	type FullCustomer,
@@ -24,7 +24,7 @@ export const getApiCustomerBase = async ({
 	ctx: RequestContext;
 	fullCus: FullCustomer;
 	withAutumnId?: boolean;
-}): Promise<{ apiCustomer: ApiCustomer; legacyData: CustomerLegacyData }> => {
+}): Promise<{ apiCustomer: ApiCustomerV5; legacyData: CustomerLegacyData }> => {
 	const { data: apiBalances, legacyData: cusFeatureLegacyData } =
 		await getApiBalances({
 			ctx,
@@ -37,7 +37,7 @@ export const getApiCustomerBase = async ({
 			fullCus,
 		});
 
-	const apiCustomer = ApiCustomerSchema.extend({
+	const apiCustomer = ApiCustomerV5Schema.extend({
 		autumn_id: z.string().optional(),
 	}).parse({
 		autumn_id: withAutumnId ? fullCus.internal_id : undefined,
@@ -52,11 +52,8 @@ export const getApiCustomerBase = async ({
 		env: fullCus.env,
 		metadata: fullCus.metadata,
 
-		// subscriptions: apiSubscriptions,
 		subscriptions: apiSubscriptions.filter((s) => s.status === "active"),
-		scheduled_subscriptions: apiSubscriptions.filter(
-			(s) => s.status === "scheduled",
-		),
+		purchases: {},
 
 		balances: apiBalances,
 

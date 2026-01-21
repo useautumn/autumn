@@ -11,8 +11,8 @@ import { getApiBalances } from "../apiCusUtils/getApiBalance/getApiBalances.js";
 type BalancesPayload = Record<
 	string,
 	{
-		granted_balance: number;
-		breakdown?: Array<{ id: string; granted_balance: number }>;
+		granted: number;
+		breakdown?: Array<{ id: string; included_grant: number }>;
 	}
 >;
 
@@ -64,10 +64,10 @@ export const setCachedGrantedBalance = async ({
 	const customerBalancesPayload: BalancesPayload = {};
 	for (const [featureId, balance] of Object.entries(customerBalances)) {
 		customerBalancesPayload[featureId] = {
-			granted_balance: balance.granted_balance,
+			granted: balance.granted,
 			breakdown: balance.breakdown?.map((bd) => ({
 				id: bd.id,
-				granted_balance: bd.granted_balance,
+				included_grant: bd.included_grant,
 			})),
 		};
 	}
@@ -94,10 +94,10 @@ export const setCachedGrantedBalance = async ({
 		const entityBalancesPayload: BalancesPayload = {};
 		for (const [featureId, balance] of Object.entries(entityBalances)) {
 			entityBalancesPayload[featureId] = {
-				granted_balance: balance.granted_balance,
+				granted: balance.granted,
 				breakdown: balance.breakdown?.map((bd) => ({
 					id: bd.id,
-					granted_balance: bd.granted_balance,
+					included_grant: bd.included_grant,
 				})),
 			};
 		}

@@ -5,7 +5,7 @@ import {
 	type CheckParams,
 	CheckParamsSchema,
 	CheckQuerySchema,
-	type CheckResponseV2,
+	type CheckResponseV3,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getCheckData } from "./checkUtils/getCheckData.js";
@@ -54,7 +54,7 @@ export const handleCheck = createRoute({
 			requiredBalance,
 		});
 
-		let response: CheckResponseV2;
+		let response: CheckResponseV3;
 		if (send_event) {
 			response = await runCheckWithTrack({
 				ctx,
@@ -79,7 +79,7 @@ export const handleCheck = createRoute({
 				})
 			: undefined;
 
-		const transformedResponse = applyResponseVersionChanges<CheckResponseV2>({
+		const transformedResponse = applyResponseVersionChanges<CheckResponseV3>({
 			input: response,
 			targetVersion: ctx.apiVersion,
 			resource: AffectedResource.Check,

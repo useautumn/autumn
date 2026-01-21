@@ -1,4 +1,4 @@
-import { CheckResponseV2Schema, FeatureType } from "@autumn/shared";
+import { CheckResponseV3Schema, FeatureType } from "@autumn/shared";
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
 import type { CheckData } from "../checkTypes/CheckData.js";
 import { apiBalanceToAllowed } from "./apiBalanceToAllowed.js";
@@ -26,7 +26,7 @@ export const getV2CheckResponse = async ({
 	}
 
 	if (!apiBalance) {
-		return CheckResponseV2Schema.parse({
+		return CheckResponseV3Schema.parse({
 			allowed: false,
 			customer_id: customerId || "",
 			entity_id: entityId,
@@ -39,9 +39,10 @@ export const getV2CheckResponse = async ({
 		apiBalance,
 		feature: featureToUse,
 		requiredBalance,
+		legacyData: checkData.cusFeatureLegacyData,
 	});
 
-	return CheckResponseV2Schema.parse({
+	return CheckResponseV3Schema.parse({
 		allowed,
 		customer_id: customerId || "",
 		entity_id: entityId,

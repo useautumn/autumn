@@ -1,4 +1,10 @@
-import type { ApiBalance, Feature, FullCustomer } from "@autumn/shared";
+import type {
+	ApiBalanceV1,
+	CusFeatureLegacyData,
+	Feature,
+	FullCustomer,
+	TrackLegacyData,
+} from "@autumn/shared";
 import {
 	fullCustomerToCustomerEntitlements,
 	findCustomerEntitlementById,
@@ -10,9 +16,10 @@ import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/ge
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
 
-type TrackBalanceResponse = {
-	balance: ApiBalance | null;
-	balances?: Record<string, ApiBalance>;
+type TrackBalanceResult = {
+	balance: ApiBalanceV1 | null;
+	balances?: Record<string, ApiBalanceV1>;
+	legacyData: TrackLegacyData;
 };
 
 /**
@@ -141,18 +148,19 @@ export const deductionToTrackResponse = async ({
 	fullCus: FullCustomer;
 	featureDeductions: FeatureDeduction[];
 	updates: Record<string, DeductionUpdate>;
-}): Promise<TrackBalanceResponse> => {
+}): Promise<TrackBalanceResult> => {
 	// 1. Compute actual deductions per feature from the raw updates
 	const actualDeductions = computeActualDeductions({ fullCus, updates });
 
-	// 2. Get API customer with balances
-	const { apiCustomer } = await getApiCustomerBase({
+	// 2. Get API customer with balances and legacy data
+	const { apiCustomer, legacyData } = await getApiCustomerBase({
 		ctx,
 		fullCus,
 	});
 
 	// 3. Build balances response
-	const finalBalances: Record<string, ApiBalance> = {};
+	const finalBalances: Record<string, ApiBalanceV1> = {};
+	const finalLegacyData: Record<string, CusFeatureLegacyData> = {};
 
 	// Add primary features (always - they were requested to be tracked)
 	for (const deduction of featureDeductions) {
@@ -166,6 +174,11 @@ export const deductionToTrackResponse = async ({
 		const balance = apiCustomer.balances[featureToUse];
 		if (balance) {
 			finalBalances[featureToUse] = balance;
+			// Also collect legacy data for this feature
+			const featureLegacyData = legacyData.cusFeatureLegacyData[featureToUse];
+			if (featureLegacyData) {
+				finalLegacyData[featureToUse] = featureLegacyData;
+			}
 		}
 	}
 
@@ -174,18 +187,26 @@ export const deductionToTrackResponse = async ({
 		return {
 			balance: null,
 			balances: undefined,
+			legacyData: {},
 		};
 	}
 
 	if (Object.keys(finalBalances).length === 1) {
+		const featureId = Object.keys(finalBalances)[0];
 		return {
 			balance: Object.values(finalBalances)[0],
 			balances: undefined,
+			legacyData: {
+				balanceLegacyData: finalLegacyData[featureId],
+			},
 		};
 	}
 
 	return {
 		balance: null,
 		balances: finalBalances,
+		legacyData: {
+			balancesLegacyData: finalLegacyData,
+		},
 	};
 };

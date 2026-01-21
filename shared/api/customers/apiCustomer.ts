@@ -18,26 +18,22 @@ export const ApiCusExpandSchema = z.object({
 	payment_method: z.any().nullish(),
 });
 
-export const BaseApiCustomerSchema = z
-	.object({
-		autumn_id: z.string().optional().meta({
-			internal: true,
-		}),
-		id: z.string().nullable(),
-		name: z.string().nullable(),
-		email: z.string().nullable(),
-		created_at: z.number(),
-		fingerprint: z.string().nullable(),
-		stripe_id: z.string().nullable(),
-		env: z.enum(AppEnv),
-		metadata: z.record(z.any(), z.any()),
-		subscriptions: z.array(ApiSubscriptionSchema),
-		scheduled_subscriptions: z.array(ApiSubscriptionSchema),
-		balances: z.record(z.string(), ApiBalanceSchema),
-	})
-	.meta({
-		id: "BaseCustomer",
-	});
+export const BaseApiCustomerSchema = z.object({
+	autumn_id: z.string().optional().meta({
+		internal: true,
+	}),
+	id: z.string().nullable(),
+	name: z.string().nullable(),
+	email: z.string().nullable(),
+	created_at: z.number(),
+	fingerprint: z.string().nullable(),
+	stripe_id: z.string().nullable(),
+	env: z.enum(AppEnv),
+	metadata: z.record(z.any(), z.any()),
+	subscriptions: z.array(ApiSubscriptionSchema),
+	scheduled_subscriptions: z.array(ApiSubscriptionSchema),
+	balances: z.record(z.string(), ApiBalanceSchema),
+});
 
 export const ApiCustomerSchema = BaseApiCustomerSchema.extend(
 	ApiCusExpandSchema.shape,

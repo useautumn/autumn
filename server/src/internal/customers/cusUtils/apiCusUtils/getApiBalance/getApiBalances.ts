@@ -1,5 +1,5 @@
 import {
-	type ApiBalance,
+	type ApiBalanceV1,
 	type CusFeatureLegacyData,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
@@ -34,7 +34,7 @@ export const getApiBalances = async ({
 		];
 	}
 
-	const apiCusFeatures: Record<string, ApiBalance> = {};
+	const apiCusFeatures: Record<string, ApiBalanceV1> = {};
 	const cusFeaturesLegacyData: Record<string, CusFeatureLegacyData> = {};
 	for (const key in featureToCusEnt) {
 		const feature = featureToCusEnt[key][0].entitlement.feature;

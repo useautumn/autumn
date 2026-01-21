@@ -1,6 +1,6 @@
 import {
-	type ApiEntityV1,
-	ApiEntityV1Schema,
+	type ApiEntityV2,
+	ApiEntityV2Schema,
 	type Entity,
 	type EntityLegacyData,
 	type FullCustomer,
@@ -25,7 +25,7 @@ export const getApiEntityBase = async ({
 	entity: Entity;
 	fullCus: FullCustomer;
 	withAutumnId?: boolean;
-}): Promise<{ apiEntity: ApiEntityV1; legacyData: EntityLegacyData }> => {
+}): Promise<{ apiEntity: ApiEntityV2; legacyData: EntityLegacyData }> => {
 	const { org } = ctx;
 
 	// Filter customer products for this entity
@@ -55,7 +55,7 @@ export const getApiEntityBase = async ({
 			fullCus: filteredFullCus,
 		});
 
-	const apiEntity = ApiEntityV1Schema.extend({
+	const apiEntity = ApiEntityV2Schema.extend({
 		autumn_id: z.string().optional(),
 	}).parse({
 		autumn_id: withAutumnId ? entity.internal_id : undefined,
@@ -67,9 +67,6 @@ export const getApiEntityBase = async ({
 		env: fullCus.env,
 
 		subscriptions: apiSubscriptions.filter((s) => s.status === "active"),
-		scheduled_subscriptions: apiSubscriptions.filter(
-			(s) => s.status === "scheduled",
-		),
 		balances: apiBalances,
 	});
 

@@ -1,7 +1,8 @@
 import type {
 	FullCustomer,
+	TrackLegacyData,
 	TrackParams,
-	TrackResponseV2,
+	TrackResponseV3,
 } from "@autumn/shared";
 import { tryCatch } from "@autumn/shared";
 import { currentRegion } from "@/external/redis/initRedis.js";
@@ -69,6 +70,11 @@ const queueEvent = ({
 	);
 };
 
+type RunRedisTrackResult = {
+	response: TrackResponseV3;
+	legacyData: TrackLegacyData;
+};
+
 /**
  * Executes deductions against cached customer data in Redis.
  * Queues sync to Postgres and event insertion after successful deduction.
@@ -85,7 +91,7 @@ export const runRedisTrack = async ({
 	featureDeductions: FeatureDeduction[];
 	overageBehavior: "cap" | "reject";
 	body: TrackParams;
-}): Promise<TrackResponseV2> => {
+}): Promise<RunRedisTrackResult> => {
 	const { data: result, error } = await tryCatch(
 		executeRedisDeduction({
 			ctx,
@@ -120,7 +126,7 @@ export const runRedisTrack = async ({
 
 	queueEvent({ ctx, body, fullCustomer });
 
-	const { balance, balances } = await deductionToTrackResponse({
+	const { balance, balances, legacyData } = await deductionToTrackResponse({
 		ctx,
 		fullCus: fullCus!,
 		featureDeductions,
@@ -128,11 +134,17 @@ export const runRedisTrack = async ({
 	});
 
 	return {
-		customer_id: body.customer_id,
-		entity_id: body.entity_id,
-		event_name: body.event_name,
-		value: body.value ?? 1,
-		balance,
-		balances,
+		response: {
+			customer_id: body.customer_id,
+			entity_id: body.entity_id,
+			event_name: body.event_name,
+			value: body.value ?? 1,
+			balance,
+			balances,
+		},
+		legacyData: {
+			feature_id: body.feature_id || body.event_name,
+			...legacyData,
+		},
 	};
 };

@@ -1,7 +1,7 @@
 import {
 	AffectedResource,
-	type ApiCustomer,
-	type ApiEntityV1,
+	type ApiCustomerV5,
+	type ApiEntityV2,
 	type ApiPlan,
 	ApiVersion,
 	ApiVersionClass,
@@ -150,7 +150,7 @@ export const handleProductsUpdated = async ({
 	});
 
 	const versionedCustomer = applyResponseVersionChanges<
-		ApiCustomer,
+		ApiCustomerV5,
 		CustomerLegacyData
 	>({
 		input: apiCustomer,
@@ -183,7 +183,7 @@ export const handleProductsUpdated = async ({
 			fullCus,
 		});
 
-		entity = applyResponseVersionChanges<ApiEntityV1, EntityLegacyData>({
+		entity = applyResponseVersionChanges<ApiEntityV2, EntityLegacyData>({
 			input: apiEntity,
 			targetVersion: ctx.apiVersion,
 			resource: AffectedResource.Entity,

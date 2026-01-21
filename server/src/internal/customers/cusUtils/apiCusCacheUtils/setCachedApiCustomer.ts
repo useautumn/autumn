@@ -1,5 +1,5 @@
 import {
-	type ApiEntityV1,
+	type ApiEntityV2,
 	addToExpand,
 	CusExpand,
 	type EntityLegacyData,
@@ -52,14 +52,16 @@ export const setCachedApiCustomer = async ({
 		});
 
 	// Build entity api customers (entity-level features only)
-	const filteredFullCus = filterEntityLevelCustomerEntitlementsFromFullCustomer({
-		fullCustomer: fullCus,
-	});
+	const filteredFullCus = filterEntityLevelCustomerEntitlementsFromFullCustomer(
+		{
+			fullCustomer: fullCus,
+		},
+	);
 
 	// Build entities first
 	const entityBatch: {
 		entityId: string;
-		entityData: ApiEntityV1 & { legacyData: EntityLegacyData };
+		entityData: ApiEntityV2 & { legacyData: EntityLegacyData };
 	}[] = [];
 	const entityFullCus = {
 		...filteredFullCus,

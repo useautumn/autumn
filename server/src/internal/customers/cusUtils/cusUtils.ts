@@ -1,5 +1,6 @@
 import {
 	type ApiCustomer,
+	type ApiCustomerV5,
 	type ApiInvoiceV1,
 	CusExpand,
 	type Customer,
@@ -29,7 +30,7 @@ export const updateCustomerDetails = async ({
 	customerData,
 }: {
 	ctx: AutumnContext;
-	customer: FullCustomer | ApiCustomer;
+	customer: FullCustomer | ApiCustomer | ApiCustomerV5;
 	customerData?: CustomerData;
 }) => {
 	const { db, logger } = ctx;

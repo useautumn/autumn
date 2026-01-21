@@ -64,8 +64,8 @@ export const checkForMisingBalance = async ({
 		const previousBalance = previousApiCustomer.balances?.[feature.id];
 		const newBalance = newApiCustomer.balances?.[feature.id];
 
-		const previousGrantedBalance = previousBalance?.granted_balance ?? 0;
-		const newGrantedBalance = newBalance?.granted_balance ?? 0;
+		const previousGrantedBalance = previousBalance?.granted ?? 0;
+		const newGrantedBalance = newBalance?.granted ?? 0;
 		const previousPrepaidQuantity =
 			previousBalance?.breakdown?.reduce(
 				(acc, curr) => acc + curr.prepaid_quantity,

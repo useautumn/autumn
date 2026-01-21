@@ -1,4 +1,4 @@
-import { type ApiCustomer, type AppEnv, CusExpand } from "@autumn/shared";
+import { type ApiCustomerV5, type AppEnv, CusExpand } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import { db } from "@/db/initDrizzle.js";
 import { hatchet } from "@/external/hatchet/initHatchet.js";
@@ -44,8 +44,8 @@ const checkSubscriptionsMatch = ({
 	cachedCustomer,
 }: {
 	ctx: AutumnContext;
-	dbCustomer: ApiCustomer;
-	cachedCustomer: ApiCustomer;
+	dbCustomer: ApiCustomerV5;
+	cachedCustomer: ApiCustomerV5;
 }): { success: boolean; message: string } => {
 	for (const subscription of dbCustomer.subscriptions) {
 		const cachedSubscription = cachedCustomer.subscriptions.find(

@@ -6,7 +6,7 @@ import {
 	ErrCode,
 	RecaseError,
 	type TrackParams,
-	type TrackResponseV2,
+	type TrackResponseV3,
 } from "@autumn/shared";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { getOrCreateCachedFullCustomer } from "../../customers/cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
@@ -52,7 +52,7 @@ export const runTrackV2 = async ({
 	}
 
 	// Try Redis deduction
-	const response: TrackResponseV2 = await runRedisTrack({
+	const { response, legacyData } = await runRedisTrack({
 		ctx,
 		fullCustomer,
 		featureDeductions,
@@ -60,15 +60,13 @@ export const runTrackV2 = async ({
 		body,
 	});
 
-	const transformedResponse = applyResponseVersionChanges<TrackResponseV2>({
+	const transformedResponse = applyResponseVersionChanges<TrackResponseV3>({
 		input: response,
 		targetVersion: apiVersion
 			? new ApiVersionClass(apiVersion)
 			: ctx.apiVersion,
 		resource: AffectedResource.Track,
-		legacyData: {
-			feature_id: body.feature_id || body.event_name,
-		},
+		legacyData,
 		ctx,
 	});
 

@@ -1,6 +1,6 @@
 import {
-	type ApiCustomer,
-	type ApiEntityV1,
+	type ApiCustomerV5,
+	type ApiEntityV2,
 	type CheckParams,
 	type CustomerLegacyData,
 	type Feature,
@@ -40,11 +40,13 @@ export const getFeatureToUse = ({
 	feature,
 	apiEntity,
 	requiredBalance,
+	legacyData,
 }: {
 	creditSystems: Feature[];
 	feature: Feature;
-	apiEntity: ApiCustomer | ApiEntityV1;
+	apiEntity: ApiCustomerV5 | ApiEntityV2;
 	requiredBalance: number;
+	legacyData?: CustomerLegacyData;
 }) => {
 	// 1. If there's a credit system & cusEnts for that credit system -> return credit system
 	// 2. If there's cusEnts for the feature -> return feature
@@ -61,6 +63,7 @@ export const getFeatureToUse = ({
 			apiBalance: mainBalance,
 			feature,
 			requiredBalance,
+			legacyData: legacyData?.cusFeatureLegacyData?.[feature.id],
 		})
 	) {
 		return feature;
@@ -75,6 +78,7 @@ export const getFeatureToUse = ({
 				apiBalance,
 				feature: creditSystem,
 				requiredBalance,
+				legacyData: legacyData?.cusFeatureLegacyData?.[creditSystem.id],
 			})
 		) {
 			return creditSystem;
@@ -104,7 +108,7 @@ export const getCheckData = async ({
 		throw new FeatureNotFoundError({ featureId: feature_id });
 	}
 
-	let apiEntity: ApiCustomer | ApiEntityV1 | undefined;
+	let apiEntity: ApiCustomerV5 | ApiEntityV2 | undefined;
 	let legacyData: CustomerLegacyData | undefined;
 	const start = performance.now();
 	const fullCustomer = await getOrCreateCachedFullCustomer({
@@ -148,6 +152,7 @@ export const getCheckData = async ({
 		feature,
 		apiEntity,
 		requiredBalance,
+		legacyData,
 	});
 
 	const apiBalance = apiEntity.balances?.[featureToUse.id];

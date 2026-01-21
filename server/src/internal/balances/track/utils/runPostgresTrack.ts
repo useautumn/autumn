@@ -1,4 +1,8 @@
-import type { TrackParams, TrackResponseV2 } from "@autumn/shared";
+import type {
+	TrackLegacyData,
+	TrackParams,
+	TrackResponseV3,
+} from "@autumn/shared";
 import { tryCatch } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { EventService } from "@/internal/api/events/EventService.js";
@@ -8,6 +12,11 @@ import { deductionToTrackResponse } from "../../utils/deduction/deductionToTrack
 import { executePostgresDeduction } from "../../utils/deduction/executePostgresDeduction.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import { handlePostgresTrackError } from "./handlePostgresTrackError.js";
+
+type RunPostgresTrackResult = {
+	response: TrackResponseV3;
+	legacyData: TrackLegacyData;
+};
 
 /**
  * Execute PostgreSQL-based tracking with full transaction support
@@ -20,7 +29,7 @@ export const runPostgresTrack = async ({
 	ctx: AutumnContext;
 	body: TrackParams;
 	featureDeductions: FeatureDeduction[];
-}): Promise<TrackResponseV2> => {
+}): Promise<RunPostgresTrackResult> => {
 	const fullCustomer = await getOrCreateCustomer({
 		ctx,
 		customerId: body.customer_id,
@@ -71,15 +80,20 @@ export const runPostgresTrack = async ({
 	// Build response using unified deductionToTrackResponse
 	if (!fullCus) {
 		return {
-			customer_id: body.customer_id,
-			entity_id: body.entity_id,
-			event_name: body.event_name,
-			value: body.value ?? 1,
-			balance: null,
+			response: {
+				customer_id: body.customer_id,
+				entity_id: body.entity_id,
+				event_name: body.event_name,
+				value: body.value ?? 1,
+				balance: null,
+			},
+			legacyData: {
+				feature_id: body.feature_id || body.event_name,
+			},
 		};
 	}
 
-	const { balance, balances } = await deductionToTrackResponse({
+	const { balance, balances, legacyData } = await deductionToTrackResponse({
 		ctx,
 		fullCus,
 		featureDeductions,
@@ -87,11 +101,17 @@ export const runPostgresTrack = async ({
 	});
 
 	return {
-		customer_id: body.customer_id,
-		entity_id: body.entity_id,
-		event_name: body.event_name,
-		value: body.value ?? 1,
-		balance,
-		balances,
+		response: {
+			customer_id: body.customer_id,
+			entity_id: body.entity_id,
+			event_name: body.event_name,
+			value: body.value ?? 1,
+			balance,
+			balances,
+		},
+		legacyData: {
+			feature_id: body.feature_id || body.event_name,
+			...legacyData,
+		},
 	};
 };

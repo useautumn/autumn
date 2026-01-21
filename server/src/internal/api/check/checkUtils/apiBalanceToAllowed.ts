@@ -1,14 +1,16 @@
-import { type ApiBalance, type Feature, FeatureType } from "@autumn/shared";
+import { type ApiBalanceV1, type CusFeatureLegacyData, type Feature, FeatureType } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 
 export const apiBalanceToAllowed = ({
 	apiBalance,
 	feature,
 	requiredBalance,
+	legacyData,
 }: {
-	apiBalance: ApiBalance;
+	apiBalance: ApiBalanceV1;
 	feature: Feature;
 	requiredBalance: number;
+	legacyData?: CusFeatureLegacyData;
 }) => {
 	if (!apiBalance) {
 		return false;
@@ -38,8 +40,8 @@ export const apiBalanceToAllowed = ({
 
 		// Check if purchase_balance < max_purchase
 		const availableBalance = new Decimal(apiBalance.max_purchase)
-			.sub(apiBalance.purchased_balance)
-			.minus(apiBalance.current_balance);
+			.sub(legacyData?.purchased_balance ?? 0)
+			.minus(apiBalance.remaining);
 
 		if (availableBalance.gte(requiredBalance)) {
 			return true;
@@ -48,7 +50,7 @@ export const apiBalanceToAllowed = ({
 
 	// 4. Balance >= required balance
 
-	if (new Decimal(apiBalance.current_balance).gte(requiredBalance)) {
+	if (new Decimal(apiBalance.remaining).gte(requiredBalance)) {
 		return true;
 	}
 

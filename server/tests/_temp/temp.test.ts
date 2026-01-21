@@ -1,4 +1,4 @@
-import { beforeAll, describe } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
@@ -8,13 +8,9 @@ import {
 	constructFeatureItem,
 	constructPrepaidItem,
 } from "@/utils/scriptUtils/constructItem.js";
-import {
-	constructProduct,
-	constructRawProduct,
-} from "@/utils/scriptUtils/createTestProducts.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3";
-import { expectSubToBeCorrect } from "../merged/mergeUtils/expectSubCorrect";
 
 const prepaidUsersItem = constructPrepaidItem({
 	featureId: TestFeature.Users,
@@ -32,25 +28,11 @@ const free = constructProduct({
 	],
 });
 
-const oneOffCredits = constructRawProduct({
-	id: "one_off_credits",
-	items: [
-		constructPrepaidItem({
-			featureId: TestFeature.Credits,
-			includedUsage: 0,
-			billingUnits: 1,
-			price: 0.01,
-			isOneOff: true,
-		}),
-	],
-	// trial: true,
-});
-
 const testCase = "temp";
 
-describe(`${chalk.yellowBright("temp:	 add on")}`, () => {
+describe(`${chalk.yellowBright("temp: v2.1 get customer")}`, () => {
 	const customerId = testCase;
-	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
+	const autumnV2_1: AutumnInt = new AutumnInt({ version: ApiVersion.V2_1 });
 
 	beforeAll(async () => {
 		await initCustomerV3({
@@ -66,43 +48,15 @@ describe(`${chalk.yellowBright("temp:	 add on")}`, () => {
 			prefix: testCase,
 		});
 
-		await autumnV1.attach({
+		await autumnV2_1.attach({
 			customer_id: customerId,
 			product_id: free.id,
-			options: [
-				{
-					feature_id: TestFeature.Users,
-					quantity: 10,
-				},
-			],
-		});
-
-		const dashboardItem = constructFeatureItem({
-			featureId: TestFeature.Dashboard,
-			isBoolean: true,
-		});
-
-		await autumnV1.attach({
-			customer_id: customerId,
-			product_id: free.id,
-			is_custom: true,
-			items: [prepaidUsersItem, dashboardItem],
-		});
-
-		await expectSubToBeCorrect({
-			db: ctx.db,
-			customerId,
-			org: ctx.org,
-			env: ctx.env,
 		});
 	});
-});
 
-// await createReward({
-// 	db: ctx.db,
-// 	orgId: ctx.org.id,
-// 	env: ctx.env,
-// 	autumn: autumnV1,
-// 	reward,
-// 	// productId: pro.id,
-// });
+	test("should get customer", async () => {
+		const customer = await autumnV2_1.customers.get(customerId);
+		expect(customer).toBeDefined();
+		console.log(customer);
+	});
+});

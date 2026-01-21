@@ -2,6 +2,7 @@
 import { V0_1_CustomerChange } from "@api/customers/changes/V0.1_CustomerChange.js";
 // Import customer changes
 import { V0_2_CustomerChange } from "@api/customers/changes/V0.2_CustomerChange.js";
+import { V2_0_CustomerChange } from "@api/customers/changes/V2.0_CustomerChange.js";
 import { V0_2_InvoicesAlwaysExpanded } from "@api/customers/changes/V0.2_InvoicesAlwaysExpanded.js";
 import { V1_1_FeaturesArrayToObject } from "@api/customers/changes/V1.1_FeaturesArrayToObject.js";
 // Import trials used changes
@@ -25,6 +26,10 @@ import { V0_2_CheckChange } from "../../balances/check/changes/V0.2_CheckChange.
 import { V1_2_CheckChange } from "../../balances/check/changes/V1.2_CheckChange.js";
 import { V1_2_CheckQueryChange } from "../../balances/check/changes/V1.2_CheckQueryChange.js";
 import { V1_2_TrackChange } from "../../balances/track/changes/V1.2_TrackChange.js";
+// Import V2.0 → V2.1 downgrade changes
+import { V2_0_CheckChange } from "../../balances/check/changes/V2.0_CheckChange.js";
+import { V2_0_TrackChange } from "../../balances/track/changes/V2.0_TrackChange.js";
+import { V2_0_EntityChange } from "@api/entities/changes/V2.0_EntityChange.js";
 // Import attach changes
 import { V0_2_AttachChange } from "../../billing/attach/changes/V0.2_AttachChange.js";
 import { ApiVersion } from "../ApiVersion.js";
@@ -33,7 +38,10 @@ import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
 
 // V2_1_CHANGES: Changes to turn V2.1 format to V2.0 format DOWNWARDS
 export const V2_1_CHANGES: VersionChangeConstructor[] = [
-	// Add V2.1 changes here when needed
+	V2_0_CheckChange,
+	V2_0_TrackChange,
+	V2_0_EntityChange,
+	V2_0_CustomerChange,
 ];
 
 // V2_CHANGES: Changes to turn V2.0 format to V1.2 format DOWNWARDS

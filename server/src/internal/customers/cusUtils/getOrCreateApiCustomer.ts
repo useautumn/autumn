@@ -1,6 +1,6 @@
 import {
 	ApiBaseEntitySchema,
-	type ApiCustomer,
+	type ApiCustomerV5,
 	type Customer,
 	type CustomerData,
 	type CustomerLegacyData,
@@ -28,11 +28,11 @@ export const getOrCreateApiCustomer = async ({
 	customerData?: CustomerData;
 	entityId?: string;
 	entityData?: EntityData;
-}): Promise<{ apiCustomer: ApiCustomer; legacyData?: CustomerLegacyData }> => {
+}): Promise<{ apiCustomer: ApiCustomerV5; legacyData?: CustomerLegacyData }> => {
 	// ========================================
 	// Phase 1: Get or Create Customer
 	// ========================================
-	let apiCustomer: ApiCustomer;
+	let apiCustomer: ApiCustomerV5;
 	let legacyData: CustomerLegacyData | undefined;
 
 	// Path A: customerId is NULL - always create new customer
@@ -62,7 +62,7 @@ export const getOrCreateApiCustomer = async ({
 	// Path B: customerId is NOT NULL - try to get, create if not found
 	else {
 		// Try to get existing customer from cache/DB
-		let apiCustomerOrUndefined: ApiCustomer | undefined;
+		let apiCustomerOrUndefined: ApiCustomerV5 | undefined;
 
 		try {
 			const fullCus = await getOrSetCachedFullCustomer({

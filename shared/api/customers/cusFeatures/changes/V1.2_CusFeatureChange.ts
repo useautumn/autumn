@@ -121,9 +121,11 @@ const toV3BalanceParams = ({
 	if (isBreakdown) {
 		prepaidQuantity = (input as ApiBalanceBreakdown).prepaid_quantity ?? 0;
 	} else {
-		prepaidQuantity = sumValues(
+		// Try to get prepaidQuantity from breakdown, fall back to legacyData
+		const fromBreakdown = sumValues(
 			(input as ApiBalance).breakdown?.map((b) => b.prepaid_quantity) ?? [],
 		);
+		prepaidQuantity = fromBreakdown || legacyData?.prepaid_quantity || 0;
 	}
 
 	let overage = 0;
