@@ -13,6 +13,7 @@ import {
 	type BillingResponse,
 	type CheckQuery,
 	type CreateBalanceParams,
+	type CreateCustomerInternalOptions,
 	type CreateCustomerParams,
 	type CreateEntityParams,
 	type CreateRewardProgram,
@@ -414,16 +415,29 @@ export class AutumnInt {
 		create: async ({
 			withAutumnId = true,
 			expand = [],
+			internalOptions = {
+				disable_defaults: true,
+			},
+			skipWebhooks,
 			...customerData
 		}: {
 			withAutumnId?: boolean;
 			expand?: CusExpand[];
-		} & CreateCustomerParams) => {
+			internalOptions?: CreateCustomerInternalOptions;
+			skipWebhooks?: boolean;
+		} & Omit<CreateCustomerParams, "internal_options">) => {
+			const headers: Record<string, string> = {};
+			if (skipWebhooks !== undefined) {
+				headers["x-skip-webhooks"] = skipWebhooks ? "true" : "false";
+			}
+
 			const data = await this.post(
 				`/customers?with_autumn_id=${withAutumnId ? "true" : "false"}${expand && expand.length > 0 ? `&expand=${expand.join(",")}` : ""}`,
 				{
 					...customerData,
+					internal_options: internalOptions,
 				},
+				Object.keys(headers).length > 0 ? headers : undefined,
 			);
 			return data;
 		},
@@ -729,9 +743,21 @@ export class AutumnInt {
 	subscriptions = {
 		update: async (
 			params: UpdateSubscriptionV0Params,
-			{ timeout }: { timeout?: number } = {},
+			{
+				timeout,
+				skipWebhooks,
+			}: { timeout?: number; skipWebhooks?: boolean } = {},
 		): Promise<BillingResponse> => {
-			const data = await this.post(`/subscriptions/update`, params);
+			const headers: Record<string, string> = {};
+			if (skipWebhooks !== undefined) {
+				headers["x-skip-webhooks"] = skipWebhooks ? "true" : "false";
+			}
+
+			const data = await this.post(
+				`/subscriptions/update`,
+				params,
+				Object.keys(headers).length > 0 ? headers : undefined,
+			);
 			if (timeout) {
 				await new Promise((resolve) => setTimeout(resolve, timeout));
 			}

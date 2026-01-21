@@ -5,13 +5,12 @@ import {
 	CreateCustomerParamsSchema,
 	CreateCustomerQuerySchema,
 	CusExpand,
+	CustomerDataSchema,
 	V0_2_InvoicesAlwaysExpanded,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getApiCustomer } from "../cusUtils/apiCusUtils/getApiCustomer.js";
 import { getOrCreateCachedFullCustomer } from "../cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
-import { getOrSetCachedFullCustomer } from "../cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
-import { handleCreateCustomer } from "./handleCreateCustomer.js";
 
 export const handlePostCustomer = createRoute({
 	versionedQuery: {
@@ -39,20 +38,18 @@ export const handlePostCustomer = createRoute({
 
 		const start = Date.now();
 
+		const customerData = CustomerDataSchema.parse(createCusParams);
+
 		const fullCustomer = await getOrCreateCachedFullCustomer({
 			ctx,
 			params: {
 				customer_id: createCusParams.id,
-				customer_data: {
-					name: createCusParams.name,
-					email: createCusParams.email,
-					fingerprint: createCusParams.fingerprint,
-					metadata: createCusParams.metadata || {},
-					stripe_id: createCusParams.stripe_id,
-					disable_default: createCusParams.disable_default,
-				},
+				customer_data: customerData,
+				entity_id: createCusParams.entity_id,
+				entity_data: createCusParams.entity_data,
 			},
 			source: "handlePostCustomer",
+			internalOptions: createCusParams.internal_options,
 		});
 
 		const apiCustomer = await getApiCustomer({
