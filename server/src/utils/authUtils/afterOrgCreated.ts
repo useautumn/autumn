@@ -1,6 +1,6 @@
+import type { Organization } from "@autumn/shared";
 import { AppEnv } from "@autumn/shared";
 import type { User } from "better-auth";
-import type { Organization } from "better-auth/plugins";
 import { db } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { createSvixApp } from "@/external/svix/svixHelpers.js";
@@ -99,23 +99,16 @@ export const afterOrgCreated = async ({
 
 		logger.info(`Initialized resources for org ${id} (${slug})`);
 
-		await captureOrgEvent({
-			orgId: id,
-			event: "user sign up",
-			properties: {
-				org_slug: slug,
-				email: user.email,
-				name: user.name,
-			},
-		});
-
-		await captureOrgEvent({
-			orgId: id,
-			event: "org_created",
-			properties: {
-				org_slug: slug,
-			},
-		});
+		// Only track analytics for self-service signups, not platform-created orgs
+		if (!org.created_by) {
+			await captureOrgEvent({
+				orgId: id,
+				event: "org created",
+				properties: {
+					org_slug: slug,
+				},
+			});
+		}
 	} catch (error: any) {
 		if (error?.data && error.data.code === ("23505" as string)) {
 			logger.error(
