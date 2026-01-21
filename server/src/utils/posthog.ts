@@ -1,12 +1,10 @@
 import { PostHog } from "posthog-node";
 
-if (!process.env.POSTHOG_API_KEY) {
-	throw new Error("POSTHOG_API_KEY environment variable is required");
-}
-
-export const posthogClient = new PostHog(process.env.POSTHOG_API_KEY, {
-	host: process.env.POSTHOG_HOST || "https://us.i.posthog.com",
-});
+export const posthogClient = process.env.POSTHOG_API_KEY
+	? new PostHog(process.env.POSTHOG_API_KEY, {
+			host: process.env.POSTHOG_HOST || "https://us.i.posthog.com",
+		})
+	: null;
 
 // Helper for capturing events with org group
 export const captureOrgEvent = async ({
@@ -20,6 +18,8 @@ export const captureOrgEvent = async ({
 	event: string;
 	properties?: Record<string, unknown>;
 }) => {
+	if (!posthogClient) return;
+
 	try {
 		await posthogClient.capture({
 			distinctId: userId || orgId,
