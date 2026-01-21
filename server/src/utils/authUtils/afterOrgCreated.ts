@@ -100,7 +100,16 @@ export const afterOrgCreated = async ({
 		logger.info(`Initialized resources for org ${id} (${slug})`);
 
 		await captureOrgEvent({
-			userId: user.id,
+			orgId: id,
+			event: "user sign up",
+			properties: {
+				org_slug: slug,
+				email: user.email,
+				name: user.name,
+			},
+		});
+
+		await captureOrgEvent({
 			orgId: id,
 			event: "org_created",
 			properties: {

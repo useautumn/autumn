@@ -1,7 +1,7 @@
 import { AppEnv } from "@autumn/shared";
 import { z } from "zod/v4";
-import { createRoute } from "../../../honoMiddlewares/routeHandler";
 import { captureOrgEvent } from "@/utils/posthog.js";
+import { createRoute } from "../../../honoMiddlewares/routeHandler";
 import { createKey } from "../api-keys/apiKeyUtils";
 
 export const handleCreateSecretKey = createRoute({
@@ -29,9 +29,8 @@ export const handleCreateSecretKey = createRoute({
 		});
 
 		await captureOrgEvent({
-			userId: ctx.user?.id,
 			orgId: org.id,
-			event: "api_key_created",
+			event: "api key created",
 			properties: {
 				org_slug: org.slug,
 				env,
