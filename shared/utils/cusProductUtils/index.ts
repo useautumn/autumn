@@ -10,6 +10,7 @@ export * from "./filterCusProductUtils.js";
 export * from "./filterCustomerProducts/filterCustomerProductsByActiveStatuses.js";
 export * from "./filterCustomerProducts/filterCustomerProductsByStripeSubscriptionId.js";
 export * from "./findCustomerProduct/findActiveCustomerProduct.js";
+export * from "./findCustomerProduct/findCustomerProduct.js";
 export * from "./findCustomerProduct/findScheduledCustomerProduct.js";
 export * from "./getCusProductFromCustomer.js";
 export * from "./productIdToCusProduct.js";

@@ -16,13 +16,17 @@ export const captureOrgEvent = async ({
 	event: string;
 	properties?: Record<string, unknown>;
 }) => {
-	await posthogClient.capture({
-		distinctId: userId || orgId,
-		event,
-		groups: { company: orgId },
-		properties: {
-			org_id: orgId,
-			...properties,
-		},
-	});
+	try {
+		await posthogClient.capture({
+			distinctId: userId || orgId,
+			event,
+			groups: { company: orgId },
+			properties: {
+				org_id: orgId,
+				...properties,
+			},
+		});
+	} catch (_error) {
+		// Don't let PostHog errors affect the caller
+	}
 };

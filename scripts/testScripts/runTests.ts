@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 
+import { existsSync } from "node:fs";
 import { readdir } from "node:fs/promises";
 import { basename, resolve } from "node:path";
 import { loadLocalEnv } from "@server/utils/envUtils.js";
@@ -627,6 +628,9 @@ class TestRunner {
 	}
 }
 
+// Base paths for shorthand test paths (tried in order)
+const TEST_BASE_PATHS = ["server/tests/integration/billing", "server/tests"];
+
 // Parse CLI arguments
 const args = process.argv.slice(2);
 const directories: string[] = [];
@@ -645,7 +649,23 @@ for (const arg of args) {
 		);
 		process.exit(1);
 	} else {
-		directories.push(arg);
+		// Try to resolve the path - if it doesn't exist, try prepending base paths
+		let resolvedPath = arg;
+		const fullPath = resolve(process.cwd(), arg);
+
+		if (!existsSync(fullPath)) {
+			// Try each base path in order
+			for (const basePath of TEST_BASE_PATHS) {
+				const withBase = `${basePath}/${arg}`;
+				const withBaseFull = resolve(process.cwd(), withBase);
+				if (existsSync(withBaseFull)) {
+					resolvedPath = withBase;
+					break;
+				}
+			}
+		}
+
+		directories.push(resolvedPath);
 	}
 }
 

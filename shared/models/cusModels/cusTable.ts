@@ -6,12 +6,10 @@ import {
 	pgTable,
 	text,
 	unique,
+	uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { collatePgColumn } from "../../db/utils.js";
-import type {
-	ExternalProcessors,
-	VercelProcessor,
-} from "../genModels/processorSchemas.js";
+import type { ExternalProcessors } from "../genModels/processorSchemas.js";
 import { organizations } from "../orgModels/orgTable.js";
 
 export type CustomerProcessor = {
@@ -43,6 +41,12 @@ export const customers = pgTable(
 			foreignColumns: [organizations.id],
 			name: "customers_org_id_fkey",
 		}).onDelete("cascade"),
+		// Ensure only ONE customer per (org, env, email) can have id = NULL
+		uniqueIndex("customers_email_null_id_unique")
+			.on(table.org_id, table.env, sql`lower(${table.email})`)
+			.where(
+				sql`${table.id} IS NULL AND ${table.email} IS NOT NULL AND ${table.email} != ''`,
+			),
 	],
 ).enableRLS();
 
