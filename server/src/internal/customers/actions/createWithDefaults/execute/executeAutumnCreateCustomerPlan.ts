@@ -83,6 +83,9 @@ export const executeAutumnCreateCustomerPlan = async ({
 			idOrInternalId: fullCustomer.internal_id,
 			orgId: ctx.org.id,
 			env: ctx.env,
+			withEntities: true,
+			withSubs: true,
+			expand: [CusExpand.Invoices],
 		});
 		context.fullCustomer = existingCustomer;
 		return { type: "existing" };
