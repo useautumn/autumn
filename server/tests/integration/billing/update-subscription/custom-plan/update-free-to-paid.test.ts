@@ -398,3 +398,100 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: update free users to alloca
 		env: ctx.env,
 	});
 });
+
+// 7. Converting free messages to unlimited with monthly price
+test.concurrent(`${chalk.yellowBright("free-to-paid: convert to unlimited with monthly price")}`, async () => {
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const free = products.base({ items: [messagesItem] });
+
+	const { customerId, autumnV1, ctx } = await initScenario({
+		customerId: "f2p-unlimited-price",
+		setup: [
+			s.customer({ testClock: true, paymentMethod: "success" }),
+			s.products({ list: [free] }),
+		],
+		actions: [s.attach({ productId: "base" })],
+	});
+
+	// Track some usage before update
+	const messagesUsage = 50;
+	await autumnV1.track(
+		{
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: messagesUsage,
+		},
+		{ timeout: 2000 },
+	);
+
+	// Step 2: Add monthly price item (converting to paid)
+	const priceItem = items.monthlyPrice();
+
+	const updateParams1 = {
+		customer_id: customerId,
+		product_id: free.id,
+		items: [messagesItem, priceItem],
+	};
+
+	const preview1 = await autumnV1.subscriptions.previewUpdate(updateParams1);
+
+	// Should charge $20 for monthly base price
+	expect(preview1.total).toEqual(20);
+
+	await autumnV1.subscriptions.update(updateParams1);
+
+	// Verify first update
+	const customer1 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	expectCustomerFeatureCorrect({
+		customer: customer1,
+		featureId: TestFeature.Messages,
+		includedUsage: messagesItem.included_usage,
+		balance: messagesItem.included_usage - messagesUsage,
+		usage: messagesUsage,
+	});
+
+	expectCustomerInvoiceCorrect({
+		customer: customer1,
+		count: 1,
+		latestTotal: 20,
+	});
+
+	// Step 3: Convert messages to unlimited
+	const unlimitedMessagesItem = items.unlimitedMessages();
+
+	const updateParams2 = {
+		customer_id: customerId,
+		product_id: free.id,
+		items: [unlimitedMessagesItem, priceItem],
+	};
+
+	const preview2 = await autumnV1.subscriptions.previewUpdate(updateParams2);
+
+	// No additional charge for unlimited upgrade
+	expect(preview2.total).toEqual(0);
+
+	await autumnV1.subscriptions.update(updateParams2);
+
+	// Verify final state
+	const customer2 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	// Messages should now be unlimited
+	expect(customer2.features[TestFeature.Messages].unlimited).toBe(true);
+
+	// Still only 1 invoice (no additional charge for unlimited)
+	expectCustomerInvoiceCorrect({
+		customer: customer2,
+		count: 2,
+		latestTotal: 0, // unlimited
+	});
+
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+	});
+});
+
+// 1. Update free -> paid -> add feature

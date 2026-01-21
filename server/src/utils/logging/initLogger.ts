@@ -134,11 +134,7 @@ export const initLogger = () => {
 			stream: pino.transport({
 				target: "@axiomhq/pino",
 				options: {
-					dataset:
-						process.env.NODE_ENV === "test" ||
-						process.env.NODE_ENV === "development"
-							? "server-dev"
-							: "express",
+					dataset: "express",
 					token: process.env.AXIOM_TOKEN,
 				},
 			}),

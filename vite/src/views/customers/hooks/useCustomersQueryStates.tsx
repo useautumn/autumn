@@ -6,7 +6,7 @@ import {
 	parseAsString,
 	useQueryStates,
 } from "nuqs";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 export const useCustomersQueryStates = () => {
 	const [queryStates, setQueryStates] = useQueryStates(
 		{
@@ -22,7 +22,13 @@ export const useCustomersQueryStates = () => {
 		},
 	);
 
-	// return { queryStates, setQueryStates };
+	// Wrapper that resets pagination when filters change
+	const setFilters = useCallback(
+		(filters: Partial<Omit<typeof queryStates, "page" | "lastItemId">>) => {
+			setQueryStates({ ...filters, page: 1, lastItemId: "" });
+		},
+		[setQueryStates],
+	);
 
 	const [stableStates, setStableStates] = useState(queryStates);
 
@@ -33,5 +39,5 @@ export const useCustomersQueryStates = () => {
 		debouncedSetStableStates(queryStates);
 	}, [queryStates]);
 
-	return { queryStates: stableStates, setQueryStates };
+	return { queryStates: stableStates, setQueryStates, setFilters };
 };

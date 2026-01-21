@@ -14,15 +14,29 @@ const StatusItem = ({
 	children,
 	text,
 	trial_ends_at,
+	canceled_at,
 	tooltip,
 	className,
 }: {
 	children: React.ReactNode;
 	text: string;
 	trial_ends_at?: number;
+	canceled_at?: number;
 	tooltip?: boolean;
 	className?: string;
 }) => {
+	const getSubtext = () => {
+		if (trial_ends_at) {
+			return `${formatDistanceToNow(trial_ends_at)} left`;
+		}
+		if (canceled_at) {
+			return `${formatDistanceToNow(canceled_at)} ago`;
+		}
+		return null;
+	};
+
+	const subtext = getSubtext();
+
 	return (
 		<div className={cn("flex items-center", className)}>
 			{tooltip ? (
@@ -31,10 +45,8 @@ const StatusItem = ({
 						<TooltipTrigger>{children}</TooltipTrigger>
 						<TooltipContent>
 							<span className="text-sm">{text} </span>
-							{trial_ends_at && (
-								<span className="text-sm text-t3">
-									({formatDistanceToNow(trial_ends_at)} left)
-								</span>
+							{subtext && (
+								<span className="text-sm text-t3">({subtext})</span>
 							)}
 						</TooltipContent>
 					</Tooltip>
@@ -45,12 +57,10 @@ const StatusItem = ({
 						{children}
 						<span className="text-sm">{text}</span>
 					</div>
-					{trial_ends_at && (
+					{subtext && (
 						<>
 							<DotIcon size={16} />
-							<span className="text-sm text-t3 pl-1 truncate">
-								{formatDistanceToNow(trial_ends_at)} left
-							</span>
+							<span className="text-sm text-t3 pl-1 truncate">{subtext}</span>
 						</>
 					)}
 				</>
@@ -63,6 +73,7 @@ export const CustomerProductsStatus = ({
 	tooltip,
 	status,
 	canceled,
+	canceled_at,
 	trialing,
 	trial_ends_at,
 	starts_at,
@@ -70,6 +81,7 @@ export const CustomerProductsStatus = ({
 	status?: CusProductStatus;
 	tooltip?: boolean;
 	canceled?: boolean;
+	canceled_at?: number;
 	trialing?: boolean;
 	trial_ends_at?: number;
 	starts_at?: number;
@@ -105,7 +117,7 @@ export const CustomerProductsStatus = ({
 	// If product is canceled, show that status
 	if (canceled) {
 		return (
-			<StatusItem text="Cancelling" tooltip={tooltip}>
+			<StatusItem text="Cancelling" tooltip={tooltip} canceled_at={canceled_at}>
 				<BanIcon
 					className="text-white bg-orange-500 dark:bg-orange-600 rounded-full p-0.5"
 					size={12}

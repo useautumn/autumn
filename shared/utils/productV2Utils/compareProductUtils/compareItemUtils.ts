@@ -103,6 +103,12 @@ const tiersAreSame = (
 	);
 };
 
+// Helper to normalize included_usage for comparison (null and 0 are equivalent)
+const normalizeIncludedUsage = (value: number | "inf" | null | undefined) => {
+	if (value === null || value === undefined) return 0;
+	return value;
+};
+
 export const featureItemsAreSame = ({
 	item1,
 	item2,
@@ -118,7 +124,10 @@ export const featureItemsAreSame = ({
 			message: `Feature ID different: ${item1.feature_id} != ${item2.feature_id}`,
 		},
 		included_usage: {
-			condition: item1.included_usage == item2.included_usage,
+			// Normalize null/undefined to 0 for comparison since they're semantically equivalent
+			condition:
+				normalizeIncludedUsage(item1.included_usage) ==
+				normalizeIncludedUsage(item2.included_usage),
 			message: `Included usage different: ${item1.included_usage} != ${item2.included_usage}`,
 		},
 		interval: {
@@ -232,7 +241,10 @@ export const featurePriceItemsAreSame = ({
 	// console.log("Item 2 config:", item2.config);
 	const entsSame = {
 		included_usage: {
-			condition: item1.included_usage == item2.included_usage,
+			// Normalize null/undefined to 0 for comparison since they're semantically equivalent
+			condition:
+				normalizeIncludedUsage(item1.included_usage) ==
+				normalizeIncludedUsage(item2.included_usage),
 			message: `Included usage different: ${item1.included_usage} != ${item2.included_usage}`,
 		},
 		usage_limit: {

@@ -96,27 +96,18 @@ export const isCustomerProductCanceling = (cp?: FullCusProduct) => {
  *
  * @param toleranceMs - Tolerance in milliseconds (default: 10 minutes)
  */
+
 export const hasCustomerProductEnded = (
 	cp: FullCusProduct,
-	params: { nowMs: number; toleranceMs?: number },
+	params?: { nowMs?: number },
 ) => {
-	if (!isCustomerProductCanceling(cp)) return false;
-	if (nullish(cp.ended_at)) return false;
-	const toleranceMs = params.toleranceMs ?? 10 * 60 * 1000; // 10 minutes default
-	return cp.ended_at <= params.nowMs + toleranceMs;
-};
+	const nowMs = params?.nowMs ?? Date.now();
 
-export const isCustomerProductExpired = (
-	cp: FullCusProduct,
-	params: { nowMs?: number },
-) => {
-	const nowMs = params.nowMs ?? Date.now();
-
-	return (
+	const hasEnded =
 		isCustomerProductCanceling(cp) &&
 		notNullish(cp.ended_at) &&
-		nowMs >= cp.ended_at
-	);
+		nowMs >= cp.ended_at;
+	return hasEnded;
 };
 
 export const isCustomerProductTrialing = (

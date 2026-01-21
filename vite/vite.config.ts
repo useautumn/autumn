@@ -89,6 +89,7 @@ export default defineConfig({
 	},
 
 	build: {
-		sourcemap: true,
+		// Disable sourcemaps in CI to reduce memory usage during build
+		sourcemap: !process.env.CI,
 	},
 });

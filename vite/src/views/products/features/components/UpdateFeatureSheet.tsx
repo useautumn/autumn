@@ -22,12 +22,14 @@ interface UpdateFeatureSheetProps {
 	open: boolean;
 	setOpen: (open: boolean) => void;
 	selectedFeature: Feature | null;
+	onSuccess?: (oldId: string, newId: string) => void;
 }
 
 function UpdateFeatureSheet({
 	open,
 	setOpen,
 	selectedFeature,
+	onSuccess,
 }: UpdateFeatureSheetProps) {
 	const [loading, setLoading] = useState(false);
 
@@ -63,6 +65,12 @@ function UpdateFeatureSheet({
 
 			await refetch();
 			toast.success("Feature updated successfully");
+
+			// Call onSuccess with old and new IDs, if it's updated from the plan editor to update the plan items.
+			if (onSuccess) {
+				onSuccess(selectedFeature.id, feature.id);
+			}
+
 			setOpen(false);
 		} catch (error: unknown) {
 			console.log(error);

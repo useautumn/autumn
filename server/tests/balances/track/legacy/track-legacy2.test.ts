@@ -1,7 +1,8 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import type { LimitedItem } from "@autumn/shared";
+import { ApiVersion, type LimitedItem } from "@autumn/shared";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructArrearItem } from "../../../../src/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "../../../../src/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "../../../../src/utils/scriptUtils/testUtils/initCustomerV3.js";
@@ -26,6 +27,7 @@ const proWithOverage = constructProduct({
 const testCase = "track-legacy2";
 describe(`${chalk.yellowBright("track-legacy2: Testing /entitled & /events, for pro with overage")}`, () => {
 	const customerId = testCase;
+	const autumn: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
 	beforeAll(async () => {
 		await initProductsV0({
@@ -50,6 +52,8 @@ describe(`${chalk.yellowBright("track-legacy2: Testing /entitled & /events, for 
 			customerId: customerId,
 			productId: proWithOverage.id,
 		});
+
+		await autumn.customers.get(customerId); // set cache
 	});
 
 	test("should have correct entitlements (pro with overage)", async () => {

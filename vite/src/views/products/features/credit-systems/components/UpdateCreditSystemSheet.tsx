@@ -21,12 +21,14 @@ interface UpdateCreditSystemSheetProps {
 	open: boolean;
 	setOpen: (open: boolean) => void;
 	selectedCreditSystem: Feature | null;
+	onSuccess?: (oldId: string, newId: string) => void;
 }
 
 function UpdateCreditSystemSheet({
 	open,
 	setOpen,
 	selectedCreditSystem,
+	onSuccess,
 }: UpdateCreditSystemSheetProps) {
 	const [loading, setLoading] = useState(false);
 	const [creditSystem, setCreditSystem] = useState<CreateFeature>({
@@ -92,6 +94,12 @@ function UpdateCreditSystemSheet({
 
 			await refetch();
 			toast.success("Credit system updated successfully");
+
+			// Call onSuccess with old and new IDs
+			if (onSuccess) {
+				onSuccess(selectedCreditSystem.id, creditSystem.id || selectedCreditSystem.id);
+			}
+
 			setOpen(false);
 		} catch (error: unknown) {
 			console.log(error);

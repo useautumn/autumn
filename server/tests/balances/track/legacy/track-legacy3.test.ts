@@ -1,7 +1,9 @@
 import { beforeAll, describe, test } from "bun:test";
-import { ProductItemInterval } from "@autumn/shared";
+import { ApiVersion, ProductItemInterval } from "@autumn/shared";
+import { timeout } from "@tests/utils/genUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
 	constructFeatureItem,
 	constructPrepaidItem,
@@ -60,6 +62,7 @@ describe(`${chalk.yellowBright(
 	let curAllowance = 0;
 	const oneTimeBillingUnits = 100; // From oneTimeAddOnMetered1 prepaid item
 	const oneTimeQuantity = 2 * oneTimeBillingUnits;
+	const autumn: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
 	beforeAll(async () => {
 		await initProductsV0({
@@ -78,19 +81,13 @@ describe(`${chalk.yellowBright(
 		});
 	});
 
-	// test("should have correct entitlements (free)", async function () {
-	//   await checkEntitledOnProduct({
-	//     customerId: customerId,
-	//     product: free,
-	//     finish: true,
-	//   });
-	// });
-
 	test("should attach pro", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
 			productId: pro.id,
 		});
+
+		await autumn.customers.get(customerId); // set cache
 	});
 
 	test("should have correct entitlements (pro)", async () => {
@@ -122,6 +119,8 @@ describe(`${chalk.yellowBright(
 				},
 			],
 		});
+
+		await autumn.customers.get(customerId); // set cache
 	});
 
 	test("should have correct entitlements (one time top up)", async () => {
