@@ -2,15 +2,14 @@ import {
 	AppEnv,
 	type Customer,
 	cusProductToProduct,
-	InternalError,
 	ProcessorType,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { createStripeCustomer } from "@/external/stripe/customers";
 import { createCustomStripeCard } from "@/external/stripe/stripeCardUtils.js";
-import { createStripeCustomer } from "@/external/stripe/stripeCusUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { customerActions } from "@/internal/customers/actions/index.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { handleCreateCustomer } from "@/internal/customers/handlers/handleCreateCustomer.js";
 import {
 	AuthError,
 	getAuthorizationToken,
@@ -45,10 +44,10 @@ export const handleUpsertInstallation = createRoute({
 				throw new AuthError("Invalid claims");
 			}
 
-			createdCustomer = await handleCreateCustomer({
+			createdCustomer = await customerActions.createWithDefaults({
 				ctx,
-				cusData: {
-					id: integrationConfigurationId,
+				customerId: integrationConfigurationId,
+				customerData: {
 					email: body.account.contact.email,
 					name: body.account.contact.name,
 					processors: {
@@ -61,16 +60,10 @@ export const handleUpsertInstallation = createRoute({
 				},
 			});
 
-			if (!createdCustomer) {
-				throw new InternalError({
-					message: "Failed to create customer",
-				});
-			}
-
 			// Create test clock for sandbox/development environments
+			const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 			let testClockId: string | undefined;
 			if (ctx.env === AppEnv.Sandbox) {
-				const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 				const testClock = await stripeCli.testHelpers.testClocks.create({
 					frozen_time: Math.floor(Date.now() / 1000),
 				});
@@ -78,10 +71,13 @@ export const handleUpsertInstallation = createRoute({
 			}
 
 			const stripeCustomer = await createStripeCustomer({
-				org: ctx.org,
-				env: ctx.env,
+				ctx,
 				customer: createdCustomer,
-				testClockId,
+				options: { testClockId },
+			});
+
+			// Add vercel-specific metadata
+			await stripeCli.customers.update(stripeCustomer.id, {
 				metadata: {
 					vercel_installation_id: integrationConfigurationId,
 				},

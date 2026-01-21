@@ -4,7 +4,7 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
+import { getOrCreateStripeCustomer } from "@/external/stripe/customers";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { RewardService } from "../../rewards/RewardService.js";
 import { CusService } from "../CusService.js";
@@ -47,12 +47,9 @@ export const handleAddCouponToCusV2 = createRoute({
 			legacyVersion: true,
 		});
 
-		await createStripeCusIfNotExists({
-			db,
-			org,
-			env,
+		await getOrCreateStripeCustomer({
+			ctx,
 			customer,
-			logger,
 		});
 
 		// Attach coupon to customer

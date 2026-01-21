@@ -435,7 +435,7 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: new trial after old expired")}
 		trialDays,
 	});
 
-	const daysAdvanced = 10;
+	const daysAdvanced = 12;
 
 	const { customerId, autumnV1, ctx, advancedTo } = await initScenario({
 		customerId: "p2p-new-trial-after-expired",

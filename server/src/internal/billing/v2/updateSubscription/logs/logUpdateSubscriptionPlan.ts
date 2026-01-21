@@ -17,20 +17,24 @@ export const logUpdateSubscriptionPlan = ({
 		billingContext,
 	});
 
-	const formatCustomerProduct = (cp: { product_id: string; product: { name: string } }) =>
-		`${cp.product.name} (${cp.product_id})`;
+	const formatCustomerProduct = (cp: {
+		product_id: string;
+		product: { name: string };
+	}) => `${cp.product.name} (${cp.product_id})`;
 
 	addToExtraLogs({
 		ctx,
 		extras: {
 			autumnBillingPlan: {
-				insertCustomerProducts: plan.insertCustomerProducts
-					.map(formatCustomerProduct)
-					.join(", ") || "none",
+				insertCustomerProducts:
+					plan.insertCustomerProducts.map(formatCustomerProduct).join(", ") ||
+					"none",
 
 				updateCustomerProduct: plan.updateCustomerProduct
 					? {
-							product: formatCustomerProduct(plan.updateCustomerProduct.customerProduct),
+							product: formatCustomerProduct(
+								plan.updateCustomerProduct.customerProduct,
+							),
 							updates: plan.updateCustomerProduct.updates,
 						}
 					: "none",
@@ -41,16 +45,18 @@ export const logUpdateSubscriptionPlan = ({
 
 				trialTransition: `${isTrialing ? "trialing" : "not trialing"} -> ${willBeTrialing ? "will trial" : "no trial"}`,
 
-				updateCustomerEntitlements: plan.updateCustomerEntitlements
-					?.map(
-						(update) =>
-							`${update.customerEntitlement.feature_id}: ${update.balanceChange > 0 ? "+" : ""}${update.balanceChange}`,
-					)
-					.join(", ") || "none",
+				updateCustomerEntitlements:
+					plan.updateCustomerEntitlements
+						?.map(
+							(update) =>
+								`${update.customerEntitlement.feature_id}: ${update.balanceChange > 0 ? "+" : ""}${update.balanceChange}`,
+						)
+						.join(", ") || "none",
 
-				lineItems: plan.lineItems.map(
-					(item) => `${item.description}: ${item.finalAmount}`,
-				),
+				lineItems:
+					plan.lineItems?.map(
+						(item) => `${item.description}: ${item.finalAmount}`,
+					) ?? "none",
 			},
 		},
 	});

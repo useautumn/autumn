@@ -9,10 +9,19 @@ import {
 	ErrCode,
 	type FullCusProduct,
 	type FullCustomer,
+	InternalError,
 	type Organization,
 	RecaseError,
 } from "@autumn/shared";
-import { and, eq, ilike, or, sql, type Table } from "drizzle-orm";
+import {
+	and,
+	eq,
+	getTableColumns,
+	ilike,
+	or,
+	sql,
+	type Table,
+} from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
@@ -207,10 +216,7 @@ export class CusService {
 	}
 
 	static async insert({ db, data }: { db: DrizzleCli; data: Customer }) {
-		const results = await db
-			.insert(customers)
-			.values(data as any)
-			.returning();
+		const results = await db.insert(customers).values(data).returning();
 
 		// If insert succeeded, return the new customer
 		if (results && results.length > 0) {
@@ -232,6 +238,117 @@ export class CusService {
 
 		// Should never reach here, but handle gracefully
 		return null;
+	}
+
+	/**
+	 * Upsert a customer using the email + null ID constraint.
+	 *
+	 * If a customer with the same (org_id, env, email) exists with id = NULL,
+	 * update that row with the new customer data (including the new ID).
+	 * Otherwise, insert a new row.
+	 *
+	 * Returns { customer, wasUpdate } to indicate if an existing row was updated.
+	 */
+	static async upsert({
+		db,
+		data,
+	}: {
+		db: DrizzleCli;
+		data: Customer;
+	}): Promise<{ customer: Customer; wasUpdate: boolean }> {
+		const columns = getTableColumns(customers);
+		const columnNames = Object.values(columns).map((col) => col.name);
+
+		// Build values array, handling jsonb columns specially
+		const values = Object.entries(columns).map(([key, col]) => {
+			const value = data[key as keyof Customer];
+			// jsonb columns need JSON.stringify
+			if (col.dataType === "json") {
+				const jsonValue =
+					value !== undefined && value !== null
+						? JSON.stringify(value)
+						: col.default !== undefined
+							? "{}"
+							: "null";
+				return sql`${jsonValue}::jsonb`;
+			}
+			return sql`${value ?? null}`;
+		});
+
+		// Build UPDATE SET clauses
+		const excludeFromUpdate = ["internal_id", "org_id", "env", "created_at"];
+
+		// For ON CONFLICT - uses EXCLUDED.column_name
+		const updateColsExcluded = Object.values(columns)
+			.filter((col) => !excludeFromUpdate.includes(col.name))
+			.map((col) => sql.raw(`${col.name} = EXCLUDED.${col.name}`));
+
+		// For CTE claim UPDATE - uses direct values
+		const updateColsValues = Object.entries(columns)
+			.filter(([_, col]) => !excludeFromUpdate.includes(col.name))
+			.map(([key, col]) => {
+				const value = data[key as keyof Customer];
+				if (col.dataType === "json") {
+					const jsonValue =
+						value !== undefined && value !== null
+							? JSON.stringify(value)
+							: col.default !== undefined
+								? "{}"
+								: "null";
+					return sql`${sql.raw(col.name)} = ${jsonValue}::jsonb`;
+				}
+				return sql`${sql.raw(col.name)} = ${value ?? null}`;
+			});
+
+		// Conflict target differs based on incoming id:
+		// - id != NULL: Use cus_id_constraint (handles ID collisions)
+		// - id = NULL: Use partial index (handles email collisions for null-id rows)
+		const conflictClause =
+			data.id !== null
+				? sql`ON CONFLICT ON CONSTRAINT cus_id_constraint`
+				: sql`ON CONFLICT (org_id, env, lower(email)) WHERE id IS NULL AND email IS NOT NULL AND email != ''`;
+
+		// CTE handles all cases:
+		// - Case A (id=NULL → id=NULL same email): claim updates existing
+		// - Case B (id=x → id=x): insert_new conflicts on cus_id_constraint, upserts
+		// - Case C (id=NULL → id=y same email): claim updates existing, sets new id
+		const results = await db.execute<
+			Customer & { xmax: string; was_claim: boolean }
+		>(sql`
+			WITH claim AS (
+				UPDATE customers
+				SET ${sql.join(updateColsValues, sql`, `)}
+				WHERE org_id = ${data.org_id}
+					AND env = ${data.env}
+					AND id IS NULL
+					AND email IS NOT NULL
+					AND lower(email) = lower(${data.email ?? ""})
+				RETURNING *, xmax::text, true as was_claim
+			),
+			insert_new AS (
+				INSERT INTO customers (${sql.raw(columnNames.join(", "))})
+				SELECT ${sql.join(values, sql`, `)}
+				WHERE NOT EXISTS (SELECT 1 FROM claim)
+				${conflictClause}
+				DO UPDATE SET ${sql.join(updateColsExcluded, sql`, `)}
+				RETURNING *, xmax::text, false as was_claim
+			)
+			SELECT * FROM claim
+			UNION ALL
+			SELECT * FROM insert_new
+		`);
+
+		if (results && results.length > 0) {
+			const { xmax, was_claim, ...customer } = results[0];
+			// wasUpdate if: claimed existing row OR xmax indicates update
+			const wasUpdate = was_claim || xmax !== "0";
+			return { customer: customer as Customer, wasUpdate };
+		}
+
+		throw new InternalError({
+			message:
+				"[CusService.upsert] Failed to insert customer, no results returned",
+		});
 	}
 
 	static async update({

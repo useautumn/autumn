@@ -1,15 +1,13 @@
 import {
-	type AppEnv,
 	type CreateCustomer,
 	CreateCustomerSchema,
 	type Customer,
 	ErrCode,
 	type FullProduct,
-	type Organization,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
+import type { Stripe } from "stripe";
+import { getOrCreateStripeCustomer } from "@/external/stripe/customers";
 import { CusService } from "@/internal/customers/CusService.js";
 import { initProductInStripe } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -18,27 +16,20 @@ import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { createNewCustomer } from "../cusUtils/createNewCustomer.js";
 
 export const initStripeCusAndProducts = async ({
-	db,
-	org,
-	env,
+	ctx,
 	customer,
 	products,
-	logger,
 }: {
-	db: DrizzleCli;
-	org: Organization;
-	env: AppEnv;
+	ctx: AutumnContext;
 	customer: Customer;
 	products: FullProduct[];
-	logger: any;
 }) => {
-	const batchInit: any[] = [
-		createStripeCusIfNotExists({
-			db,
-			org,
-			env,
+	const { db, org, env, logger } = ctx;
+
+	const batchInit: Promise<Stripe.Customer | undefined>[] = [
+		getOrCreateStripeCustomer({
+			ctx,
 			customer,
-			logger,
 		}),
 	];
 
@@ -61,10 +52,12 @@ const handleIdIsNull = async ({
 	ctx,
 	newCus,
 	createDefaultProducts,
+	defaultGroup,
 }: {
 	ctx: AutumnContext;
 	newCus: CreateCustomer;
 	createDefaultProducts?: boolean;
+	defaultGroup?: string;
 }) => {
 	const { db, org, env, logger } = ctx;
 
@@ -106,6 +99,7 @@ const handleIdIsNull = async ({
 		ctx,
 		customer: newCus,
 		createDefaultProducts,
+		defaultGroup,
 	});
 
 	return createdCustomer;
@@ -116,10 +110,12 @@ export const handleCreateCustomerWithId = async ({
 	ctx,
 	newCus,
 	createDefaultProducts = true,
+	defaultGroup,
 }: {
 	ctx: AutumnContext;
 	newCus: CreateCustomer;
 	createDefaultProducts?: boolean;
+	defaultGroup?: string;
 }) => {
 	const { db, org, env, logger } = ctx;
 
@@ -175,6 +171,7 @@ export const handleCreateCustomerWithId = async ({
 		ctx,
 		customer: newCus,
 		createDefaultProducts,
+		defaultGroup,
 	});
 };
 
@@ -182,10 +179,12 @@ export const handleCreateCustomer = async ({
 	ctx,
 	cusData,
 	createDefaultProducts = true,
+	defaultGroup,
 }: {
 	ctx: AutumnContext;
 	cusData: CreateCustomer;
 	createDefaultProducts?: boolean;
+	defaultGroup?: string;
 }) => {
 	const newCus = CreateCustomerSchema.parse(cusData);
 
@@ -197,12 +196,14 @@ export const handleCreateCustomer = async ({
 			ctx,
 			newCus,
 			createDefaultProducts,
+			defaultGroup,
 		});
 	} else {
 		createdCustomer = await handleCreateCustomerWithId({
 			ctx,
 			newCus,
 			createDefaultProducts,
+			defaultGroup,
 		});
 	}
 

@@ -1,154 +1,47 @@
-import { beforeAll, describe } from "bun:test";
-import {
-	ApiVersion,
-	BillingInterval,
-	type FullProduct,
-	isConsumablePrice,
-	isFixedPrice,
-} from "@autumn/shared";
+import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { items } from "@tests/utils/fixtures/items.js";
+import { products } from "@tests/utils/fixtures/products.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import type { Stripe } from "stripe";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { ProductService } from "@/internal/products/ProductService";
-import { constructPriceItem } from "@/internal/products/product-items/productItemUtils";
-import {
-	constructArrearItem,
-	constructFeatureItem,
-	constructPrepaidItem,
-} from "@/utils/scriptUtils/constructItem.js";
-import {
-	constructProduct,
-	constructRawProduct,
-} from "@/utils/scriptUtils/createTestProducts.js";
 
-const prepaidUsersItem = constructPrepaidItem({
-	featureId: TestFeature.Users,
-	billingUnits: 1,
-	price: 10,
-});
+test.concurrent(`${chalk.yellowBright("temp: concurrent entitled calls")}`, async () => {
+	const wordsItem = items.monthlyWords({ includedUsage: 200 });
+	const free = products.base({
+		id: "free",
+		items: [wordsItem],
+		isDefault: true,
+	});
 
-const free = constructProduct({
-	type: "free",
-	items: [
-		constructFeatureItem({
-			featureId: TestFeature.Credits,
-			includedUsage: 500,
-		}),
-	],
-});
+	const { customerId, autumnV1 } = await initScenario({
+		customerId: "temp-entitled-concurrent",
+		setup: [s.customer({ withDefault: true }), s.products({ list: [free] })],
+		actions: [],
+	});
 
-const growthYearly = constructRawProduct({
-	id: "growth-yearly",
-	items: [
-		constructArrearItem({
+	// Call /entitled 5 times concurrently
+	const entitledPromises = Array.from({ length: 5 }, () =>
+		autumnV1.entitled({
+			customerId,
 			featureId: TestFeature.Words,
-			includedUsage: 0,
-			price: 1,
-			billingUnits: 100,
 		}),
-		constructPriceItem({
-			price: 2000,
-			interval: BillingInterval.Year,
-		}),
-	],
-});
+	);
 
-const testCase = "temp";
+	const entitledResults = await Promise.all(entitledPromises);
 
-const buildSubscriptionItems = ({
-	fullProduct,
-}: {
-	fullProduct: FullProduct;
-}): Stripe.SubscriptionScheduleCreateParams.Phase.Item[] => {
-	return fullProduct.prices.map((p) => {
-		if (isConsumablePrice(p)) {
-			return {
-				price: p.config.stripe_empty_price_id ?? undefined,
-				quantity: 0,
-			};
-		}
-		return {
-			price: p.config.stripe_price_id ?? undefined,
-			quantity: 1,
-		};
+	// Verify all entitled calls succeeded
+	for (const result of entitledResults) {
+		expect(result.allowed).toBe(true);
+	}
+
+	// Call /events with value 25
+	await autumnV1.events.send({
+		customerId,
+		featureId: TestFeature.Words,
+		value: 25,
 	});
-};
 
-describe(`${chalk.yellowBright("temp:	 add on")}`, () => {
-	const customerId = testCase;
-	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
-
-	beforeAll(async () => {
-		// await initCustomerV3({
-		// 	ctx,
-		// 	customerId,
-		// 	withTestClock: true,
-		// 	attachPm: "success",
-		// });
-
-		// await initProductsV0({
-		// 	ctx,
-		// 	products: [free, growthYearly],
-		// 	prefix: testCase,
-		// });
-
-		const { stripeCli } = ctx;
-
-		const growthYearly = await ProductService.getFull({
-			db: ctx.db,
-			orgId: ctx.org.id,
-			env: ctx.env,
-			idOrInternalId: "growth-yearly_temp",
-		});
-
-		// const basePrice = growthYearly.prices.find(isFixedPrice)
-
-		// const emptyPrice = await stripeCli.prices.create({
-		// 	product: growthYearly?.processor?.id,
-		// 	unit_amount: 0,
-		// 	currency: "usd",
-		// 	recurring: {
-		// 		...(billingIntervalToStripe({
-		// 			interval: BillingInterval.Year,
-		// 			intervalCount: 1,
-		// 		}) as any),
-		// 	},
-		// });
-
-		// console.log(emptyPrice);
-
-		const newSubscription = await stripeCli.subscriptions.create({
-			customer: "cus_ToYUVA6XSJrMa8",
-			items: [
-				{
-					price: "price_1SqvPM5NEqgjQ4gyNktukeYr",
-					quantity: 1,
-				},
-			],
-			billing_mode: { type: "flexible" },
-			billing_cycle_anchor: Math.floor(new Date("2026-12-26").getTime() / 1000),
-		});
-
-		await stripeCli.subscriptions.update(newSubscription.id, {
-			items: [
-				{
-					id: newSubscription.items.data[0].id,
-					deleted: true,
-				},
-				...buildSubscriptionItems({ fullProduct: growthYearly })
-			],
-			proration_behavior: "none",
-		});
-	});
+	// Verify balance is now 200 - 25 = 175
+	const customer = await autumnV1.customers.get(customerId);
+	expect(customer.features[TestFeature.Words].balance).toBe(175);
 });
-
-// await createReward({
-// 	db: ctx.db,
-// 	orgId: ctx.org.id,
-// 	env: ctx.env,
-// 	autumn: autumnV1,
-// 	reward,
-// 	// productId: pro.id,
-// });

@@ -4,7 +4,7 @@ import {
 	SetupPaymentParamsSchema,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
+import { getOrCreateStripeCustomer } from "@/external/stripe/customers";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { toSuccessUrl } from "@/internal/orgs/orgUtils/convertOrgUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -23,15 +23,12 @@ export const handleSetupPayment = createRoute({
 		const customer = await getOrCreateCustomer({
 			ctx,
 			customerId: customer_id,
-			customerData: customer_data as any,
+			customerData: customer_data,
 		});
 
-		await createStripeCusIfNotExists({
-			db,
-			org,
-			env,
+		await getOrCreateStripeCustomer({
+			ctx,
 			customer,
-			logger,
 		});
 
 		const stripeCli = createStripeCli({ org, env });
