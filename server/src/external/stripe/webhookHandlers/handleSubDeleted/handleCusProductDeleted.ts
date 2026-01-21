@@ -4,6 +4,7 @@ import {
 	BillingType,
 	CusProductStatus,
 	cusProductToPrices,
+	customerProductHasActiveStatus,
 	type FullCusProduct,
 } from "@autumn/shared";
 import type Stripe from "stripe";
@@ -57,7 +58,11 @@ export const handleCusProductDeleted = async ({
 	const isAutumnCancel =
 		subscription.cancellation_details?.comment === "autumn_cancel";
 
-	if ((cusProduct.internal_entity_id || isV4Usage) && !isAutumnCancel) {
+	if (
+		(cusProduct.internal_entity_id || isV4Usage) &&
+		!isAutumnCancel &&
+		customerProductHasActiveStatus(cusProduct)
+	) {
 		const usagePrices = cusProductToPrices({
 			cusProduct,
 			billingType: BillingType.UsageInArrear,
