@@ -5,9 +5,9 @@ import {
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import z from "zod/v4";
-import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { createStripeCli } from "../../../../external/connect/createStripeCli";
+import { getOrCreateStripeCustomer } from "../../../../external/stripe/customers";
 import { toSuccessUrl } from "../../../orgs/orgUtils/convertOrgUtils";
 import { CusService } from "../../CusService";
 
@@ -40,12 +40,9 @@ export const handleGetBillingPortal = createRoute({
 
 		const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
-		const stripeCustomer = await createStripeCusIfNotExists({
-			db: ctx.db,
-			org: ctx.org,
-			env: ctx.env,
+		const stripeCustomer = await getOrCreateStripeCustomer({
+			ctx,
 			customer,
-			logger: ctx.logger,
 		});
 
 		const stripeCusId = stripeCustomer.id;

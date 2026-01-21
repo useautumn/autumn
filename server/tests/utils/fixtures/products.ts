@@ -1,9 +1,11 @@
 import {
+	BillingInterval,
 	type FreeTrial,
 	FreeTrialDuration,
 	type ProductItem,
 	type ProductV2,
 } from "@autumn/shared";
+import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
 import {
 	constructProduct,
 	constructRawProduct,
@@ -14,7 +16,8 @@ import {
  * @param items - Product items (features)
  * @param id - Product ID (default: "base")
  * @param isDefault - Whether this is a default product (default: false)
- * @param trialDays - Optional number of trial days
+ * @param trialDays - Optional number of trial days (shorthand)
+ * @param freeTrial - Optional full free trial config (overrides trialDays)
  */
 const base = ({
 	items,
@@ -22,23 +25,39 @@ const base = ({
 	isDefault = false,
 	isAddOn = false,
 	trialDays,
+	freeTrial,
 }: {
 	items: ProductItem[];
 	id?: string;
 	isDefault?: boolean;
 	isAddOn?: boolean;
 	trialDays?: number;
+	freeTrial?: {
+		length: number;
+		duration: FreeTrialDuration;
+		cardRequired?: boolean;
+		uniqueFingerprint?: boolean;
+	};
 }): ProductV2 => ({
 	...constructRawProduct({ id, items, isAddOn }),
 	is_default: isDefault,
-	...(trialDays && {
-		free_trial: {
-			length: trialDays,
-			duration: FreeTrialDuration.Day,
-			unique_fingerprint: false,
-			card_required: true,
-		} as unknown as FreeTrial,
-	}),
+	...(freeTrial
+		? {
+				free_trial: {
+					length: freeTrial.length,
+					duration: freeTrial.duration,
+					unique_fingerprint: freeTrial.uniqueFingerprint ?? false,
+					card_required: freeTrial.cardRequired ?? true,
+				} as unknown as FreeTrial,
+			}
+		: trialDays && {
+				free_trial: {
+					length: trialDays,
+					duration: FreeTrialDuration.Day,
+					unique_fingerprint: false,
+					card_required: true,
+				} as unknown as FreeTrial,
+			}),
 });
 
 /**
@@ -140,6 +159,40 @@ const baseWithTrial = ({
 });
 
 /**
+ * Default trial product - $20/month product with trial that's set as default
+ * @param items - Product items (features)
+ * @param id - Product ID (default: "default-trial")
+ * @param trialDays - Number of trial days (default: 7)
+ * @param cardRequired - Whether card is required for trial (default: false)
+ */
+const defaultTrial = ({
+	items,
+	id = "default-trial",
+	trialDays = 7,
+	cardRequired = false,
+}: {
+	items: ProductItem[];
+	id?: string;
+	trialDays?: number;
+	cardRequired?: boolean;
+}): ProductV2 => ({
+	...constructRawProduct({
+		id,
+		items: [
+			...items,
+			constructPriceItem({ price: 20, interval: BillingInterval.Month }),
+		],
+	}),
+	is_default: true,
+	free_trial: {
+		length: trialDays,
+		duration: FreeTrialDuration.Day,
+		unique_fingerprint: false,
+		card_required: cardRequired,
+	} as unknown as FreeTrial,
+});
+
+/**
  * One-off product - one-time purchase with $10 base price
  * @param items - Product items (features)
  * @param id - Product ID (default: "one-off")
@@ -161,6 +214,7 @@ const oneOff = ({
 export const products = {
 	base,
 	baseWithTrial,
+	defaultTrial,
 	pro,
 	proAnnual,
 	proWithTrial,

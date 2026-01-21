@@ -50,7 +50,7 @@ export const evaluateStripeBillingPlan = async ({
 
 	let stripeInvoiceAction: StripeInvoiceAction | undefined;
 	let stripeInvoiceItemsAction: StripeInvoiceItemsAction | undefined;
-	if (createManualInvoice) {
+	if (createManualInvoice && lineItems) {
 		stripeInvoiceAction = buildStripeInvoiceAction({
 			lineItems,
 		});
