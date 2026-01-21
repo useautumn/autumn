@@ -8,12 +8,10 @@ export const posthogClient = process.env.POSTHOG_API_KEY
 
 // Helper for capturing events with org group
 export const captureOrgEvent = async ({
-	userId,
 	orgId,
 	event,
 	properties = {},
 }: {
-	userId?: string;
 	orgId: string;
 	event: string;
 	properties?: Record<string, unknown>;
@@ -22,9 +20,8 @@ export const captureOrgEvent = async ({
 
 	try {
 		await posthogClient.capture({
-			distinctId: userId || orgId,
+			distinctId: orgId,
 			event,
-			groups: { company: orgId },
 			properties: {
 				org_id: orgId,
 				...properties,
