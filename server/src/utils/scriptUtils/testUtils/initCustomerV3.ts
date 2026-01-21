@@ -13,7 +13,8 @@ export const initCustomerV3 = async ({
 	attachPm,
 	withTestClock = true,
 	withDefault = false,
-	defaultGroup,
+	defaultGroup = customerId,
+	skipWebhooks,
 }: {
 	ctx: TestContext;
 	customerId: string;
@@ -22,6 +23,7 @@ export const initCustomerV3 = async ({
 	withTestClock?: boolean;
 	withDefault?: boolean;
 	defaultGroup?: string;
+	skipWebhooks?: boolean;
 }) => {
 	const name = customerId;
 	const email = `${customerId}@example.com`;
@@ -64,6 +66,7 @@ export const initCustomerV3 = async ({
 			disable_defaults: !withDefault,
 			default_group: defaultGroup,
 		},
+		skipWebhooks,
 	});
 
 	// 3. Attach payment method

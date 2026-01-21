@@ -4,6 +4,7 @@ import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeA
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan";
 import type { BillingPlan } from "@/internal/billing/v2/types/billingPlan";
 import type { BillingResult } from "@/internal/billing/v2/types/billingResult";
+import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
 
 export const executeBillingPlan = async ({
 	ctx,
@@ -28,6 +29,13 @@ export const executeBillingPlan = async ({
 	await executeAutumnBillingPlan({
 		ctx,
 		autumnBillingPlan: billingPlan.autumn,
+	});
+
+	// Queue webhooks after Autumn billing plan is executed
+	await billingPlanToSendProductsUpdated({
+		ctx,
+		autumnBillingPlan: billingPlan.autumn,
+		billingContext,
 	});
 
 	return { stripe: stripeBillingResult };

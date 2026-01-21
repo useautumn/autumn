@@ -143,10 +143,11 @@ async function runTest() {
 
 	// Detect if we're already in the server directory (e.g., when run via server/run.sh)
 	const cwd = process.cwd();
-	const serverDir =
+	const projectRoot =
 		cwd.endsWith("/server") || cwd.endsWith("\\server")
-			? cwd
-			: resolve(cwd, "server");
+			? resolve(cwd, "..")
+			: cwd;
+	const serverDir = resolve(projectRoot, "server");
 
 	// Handle special "setup" command
 	if (scriptName === "setup") {
@@ -175,7 +176,12 @@ async function runTest() {
 		return;
 	}
 
-	const shellScript = resolve(serverDir, "shell", `${scriptName}.sh`);
+	const shellScript = resolve(
+		projectRoot,
+		"scripts",
+		"testGroups",
+		`${scriptName}.sh`,
+	);
 
 	// First try to find a shell script
 	if (existsSync(shellScript)) {
@@ -186,7 +192,7 @@ async function runTest() {
 		);
 
 		const child = spawn("bash", [shellScript, ...additionalArgs], {
-			cwd: serverDir,
+			cwd: projectRoot,
 			stdio: "inherit",
 			env: { ...process.env, NODE_ENV: "production" },
 		});

@@ -9,35 +9,35 @@ source "$(dirname "$0")/config.sh"
 
 # Run tests using TypeScript runner with compact mode
 # Adjust --max to control concurren.cy (default: 6)
-bun test:integration check
 
-BUN_PARALLEL_COMPACT \
-  'server/tests/balances/track/basic' \
-  'server/tests/balances/track/concurrency' \
-  'server/tests/balances/track/breakdown' \
-  'server/tests/balances/track/credit-systems' \
-  'server/tests/balances/track/entity-products' \
-  'server/tests/balances/track/legacy' \
-  'server/tests/balances/track/allocated' \
-  'server/tests/balances/track/entity-balances' \
-  'server/tests/balances/track/negative' \
-  'server/tests/balances/track/rollovers' \
-  'server/tests/balances/track/race-condition' \
-  'server/tests/balances/track/paid-allocated' \
-  'server/tests/balances/track/edge-cases' \
-  'server/tests/balances/check/breakdown' \
-  'server/tests/balances/track/loose' \
-  'server/tests/balances/check/basic' \
-  'server/tests/balances/check/credit-systems' \
-  'server/tests/balances/check/misc' \
-  'server/tests/balances/check/prepaid' \
-  'server/tests/balances/check/send-event' \
-  'server/tests/balances/check/loose' \
-  'server/tests/balances/set-usage' \
+
+BUN_PARALLEL_V2 \
+  'integration/balances/check' \
+  'balances/track/basic' \
+  'balances/track/concurrency' \
+  'balances/track/breakdown' \
+  'balances/track/credit-systems' \
+  'balances/track/entity-products' \
+  'balances/track/legacy' \
+  'balances/track/allocated' \
+  'balances/track/entity-balances' \
+  'balances/track/negative' \
+  'balances/track/rollovers' \
+  'balances/track/race-condition' \
+  'balances/track/paid-allocated' \
+  'balances/track/edge-cases' \
+  'balances/check/breakdown' \
+  'balances/track/loose' \
+  'balances/check/credit-systems' \
+  'balances/check/misc' \
+  'balances/check/prepaid' \
+  'balances/check/send-event' \
+  'balances/check/loose' \
+  'balances/set-usage' \
   --max=6
 
 
-BUN_PARALLEL_COMPACT \
+BUN_PARALLEL_V2 \
   'server/tests/balances/update/filters' \
   'server/tests/balances/update/update-combined' \
   'server/tests/balances/update/update-current-balance/basic' \

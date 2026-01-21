@@ -4,6 +4,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
 import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan.js";
+import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated.js";
 import type { CreateCustomerContext } from "@/internal/customers/actions/createWithDefaults/createCustomerContext.js";
 import { CusService } from "../../../CusService.js";
 
@@ -83,6 +84,13 @@ export const executeAutumnCreateCustomerPlan = async ({
 		context.fullCustomer = existingCustomer;
 		return { type: "existing" };
 	}
+
+	// Queue webhooks after transaction commits successfully
+	await billingPlanToSendProductsUpdated({
+		ctx,
+		autumnBillingPlan,
+		billingContext: context,
+	});
 
 	return { type: "created" };
 };
