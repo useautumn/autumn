@@ -40,19 +40,21 @@ export const auth = betterAuth({
 						name: user.name,
 						email: user.email,
 					});
-					await posthogClient.capture({
-						distinctId: user.id,
-						event: "user_sign_up",
-						properties: {
-							$set: {
-								email: user.email,
-								name: user.name,
+					if (posthogClient) {
+						await posthogClient.capture({
+							distinctId: user.id,
+							event: "user_sign_up",
+							properties: {
+								$set: {
+									email: user.email,
+									name: user.name,
+								},
+								$set_once: {
+									created_at: new Date().toISOString(),
+								},
 							},
-							$set_once: {
-								created_at: new Date().toISOString(),
-							},
-						},
-					});
+						});
+					}
 				},
 			},
 		},
