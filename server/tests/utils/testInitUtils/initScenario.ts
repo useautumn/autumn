@@ -451,6 +451,11 @@ export const initScenario = async ({
 		secretKey: ctx.orgSecretKey,
 	});
 
+	const autumnV1Beta = new AutumnInt({
+		version: ApiVersion.V1_Beta,
+		secretKey: ctx.orgSecretKey,
+	});
+
 	const autumnV2 = new AutumnInt({
 		version: ApiVersion.V2_0,
 		secretKey: ctx.orgSecretKey,
@@ -574,6 +579,7 @@ export const initScenario = async ({
 	return {
 		customerId,
 		autumnV1,
+		autumnV1Beta,
 		autumnV2,
 		testClockId,
 		customer,

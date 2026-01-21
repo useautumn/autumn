@@ -40,6 +40,21 @@ export const computeUpdateSubscriptionPlan = async ({
 				params,
 			});
 			break;
+		case UpdateSubscriptionIntent.None:
+			plan = {
+				insertCustomerProducts: [],
+				updateCustomerProduct: {
+					customerProduct: billingContext.customerProduct,
+					updates: {},
+				},
+				deleteCustomerProduct: undefined,
+				customPrices: [],
+				customEntitlements: [],
+				customFreeTrial: undefined,
+				lineItems: [],
+				updateCustomerEntitlements: undefined,
+			};
+			break;
 	}
 
 	// Apply cancel plan if cancelMode is set in context
@@ -49,6 +64,7 @@ export const computeUpdateSubscriptionPlan = async ({
 		ctx,
 		plan,
 		billingContext,
+		params,
 	});
 
 	return plan;

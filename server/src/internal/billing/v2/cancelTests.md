@@ -28,31 +28,13 @@ Tests for canceling add-on products in various scenarios.
 
 ---
 
-### 2. `cancel-end-of-cycle.test.ts`
-Basic tests for canceling at end of cycle (non-add-on products).
-
-| Legacy File | Location | Description | Status |
-|-------------|----------|-------------|--------|
-| cancel6.test.ts | integration/billing/cancel/ | Downgrade then cancel end of cycle → verify premium canceling, scheduled removed. Re-attach → verify scheduled | [ ] |
-| cancel8.test.ts | integration/billing/cancel/ | Downgrade then cancel end of cycle (with default) → verify premium canceling, free default scheduled | [ ] |
-
----
-
-### 3. `cancel-immediately.test.ts`
+### 2. `cancel-immediately.test.ts`
 Basic tests for canceling immediately (non-add-on products).
 
 | Legacy File | Location | Description | Status |
 |-------------|----------|-------------|--------|
-| cancel3.test.ts | core/cancel/ | Cancel free product immediately → verify product removed | [ ] |
-| downgrade6.test.ts | attach/downgrade/ | Cancel (expire) active product immediately → verify customer has free product | [ ] |
-| downgrade7.test.ts | attach/downgrade/ | Cancel scheduled product immediately → verify active product not canceled | [ ] |
-| cancel7.test.ts | integration/billing/cancel/ | Downgrade then cancel immediately → verify no products, no subscriptions | [ ] |
-| cancel9.test.ts | integration/billing/cancel/ | Downgrade then cancel immediately (with default) → verify free default is active | [ ] |
 | cancel-addon4.test.ts | integration/billing/cancel/add-ons/ | Cancel usage add-on with failed payment → verify invoice still created | [ ] |
 | upgrade7.test.ts | attach/upgrade/ | Cancel immediately then attach premium → verify upgrade path | [ ] |
-| attach-response2.test.ts | attach/response/ | Cancel immediately before re-attaching (response testing) | [ ] |
-| attach-response3.test.ts | attach/response/ | Cancel immediately before re-attaching (response testing) | [ ] |
-| attach-response4.test.ts | attach/response/ | Cancel immediately before re-attaching (response testing) | [ ] |
 | mergedAddOn3.test.ts | merged/addOn/ | Cancel add-on immediately with entity → verify pro still active | [ ] |
 | mergedAddOn5.test.ts | merged/addOn/ | Cancel add-on immediately with scheduled → advance clock → verify scheduled becomes active | [ ] |
 | mergedGroup1.test.ts | merged/group/ | Cancel scheduled product from different group immediately → verify sub correct | [ ] |
@@ -60,7 +42,7 @@ Basic tests for canceling immediately (non-add-on products).
 
 ---
 
-### 4. `cancel-trial.test.ts`
+### 3. `cancel-trial.test.ts`
 Cases for canceling a product when it's on a free trial.
 
 | Legacy File | Location | Description | Status |
@@ -72,7 +54,7 @@ Cases for canceling a product when it's on a free trial.
 
 ---
 
-### 5. `stripe-cancelation.test.ts`
+### 4. `stripe-cancelation.test.ts`
 Cases where we test cancellation through Stripe CLI to verify webhooks sync correctly.
 
 | Legacy File | Location | Description | Status |
@@ -82,7 +64,7 @@ Cases where we test cancellation through Stripe CLI to verify webhooks sync corr
 
 ---
 
-### 6. `cancel-entities.test.ts`
+### 5. `cancel-entities.test.ts`
 Cases for handling cancellations in multi-entity/merged subscription situations.
 
 | Legacy File | Location | Description | Status |
@@ -95,17 +77,9 @@ Cases for handling cancellations in multi-entity/merged subscription situations.
 
 ---
 
-### 7. `cancel-consumable.test.ts`
-Cases for canceling products with consumable/arrear items. Special because arrear prices create a final invoice at end of cycle.
 
-| Legacy File | Location | Description | Status |
-|-------------|----------|-------------|--------|
-| entity3.test.ts | attach/entities/ | Cancel entity product with usage → verify correct final invoice | [ ] |
-| cancel2.test.ts | core/cancel/ | Cancel at period end with usage → advance clock → verify usage invoice correct | [ ] |
 
----
-
-### 8. `cancel-renew.test.ts` (Uncancel scenarios)
+### 7. `cancel-renew.test.ts` (Uncancel scenarios)
 Cases for renewing/uncanceling a product that was previously scheduled to cancel (non-add-on).
 
 | Legacy File | Location | Description | Status |
@@ -136,15 +110,14 @@ These tests involve cancel functionality but are primarily testing other feature
 | Test File | Tests | Migrated | Deleted |
 |-----------|-------|----------|---------|
 | cancel-addon.test.ts | 7 | [ ] | [ ] |
-| cancel-end-of-cycle.test.ts | 2 | [ ] | [ ] |
-| cancel-immediately.test.ts | 14 | [ ] | [ ] |
+| cancel-immediately.test.ts | 6 | [ ] | [ ] |
 | cancel-trial.test.ts | 4 | [ ] | [ ] |
 | stripe-cancelation.test.ts | 2 | [ ] | [ ] |
 | cancel-entities.test.ts | 5 | [ ] | [ ] |
-| cancel-consumable.test.ts | 2 | [ ] | [ ] |
+| cancel-consumable.test.ts | 2 | [x] | [x] cancel2.test.ts |
 | cancel-renew.test.ts | 2 | [ ] | [ ] |
 
-**Total Legacy Tests to Migrate: 38**
+**Total Legacy Tests to Migrate: 28** (2 done)
 
 ---
 

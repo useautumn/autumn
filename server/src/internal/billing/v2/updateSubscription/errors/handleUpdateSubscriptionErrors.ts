@@ -15,6 +15,7 @@ import {
 	handleOneOffErrors,
 } from "./handleOneOffErrors";
 import { handleProductTypeTransitionErrors } from "./handleProductTypeTransitionErrors";
+import { handleProrateBillingErrors } from "./handleProrateBillingErrors";
 
 export const handleUpdateSubscriptionErrors = async ({
 	ctx,
@@ -58,4 +59,11 @@ export const handleUpdateSubscriptionErrors = async ({
 
 	// 7. Cancel end of cycle errors
 	handleCancelEndOfCycleErrors({ billingContext, params });
+
+	// 8. Prorate billing errors
+	handleProrateBillingErrors({
+		billingContext,
+		autumnBillingPlan,
+		params,
+	});
 };

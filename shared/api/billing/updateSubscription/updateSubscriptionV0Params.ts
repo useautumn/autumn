@@ -28,9 +28,11 @@ export const ExtUpdateSubscriptionV0ParamsSchema = z.object({
 	// Cancel: 'immediately' | 'end_of_cycle' | null (null = uncancel)
 	cancel: z.enum(["immediately", "end_of_cycle"]).nullable().optional(),
 
+	// Proration: defaults to true (charge for prorations). Set to false to skip proration charges.
+	prorate_billing: z.boolean().optional(),
+
 	// reset_billing_cycle_anchor: z.boolean().optional(),
 	// new_billing_subscription: z.boolean().optional(),
-	// prorate_billing: z.boolean().optional(),
 });
 
 export const UpdateSubscriptionV0ParamsSchema =
@@ -64,7 +66,24 @@ export const UpdateSubscriptionV0ParamsSchema =
 					});
 				}
 			}
-		});
+		})
+		.refine(
+			(data) => {
+				if (data.cancel !== "immediately") return true;
+
+				const forbiddenFields = [
+					"options",
+					"items",
+					"version",
+					"free_trial",
+				] as const;
+				return !forbiddenFields.some((field) => data[field] !== undefined);
+			},
+			{
+				message:
+					"Cannot pass options, items, version, or free_trial when cancel is 'immediately'. Immediate cancellation only processes a prorated refund.",
+			},
+		);
 
 export type ExtUpdateSubscriptionV0Params = z.infer<
 	typeof ExtUpdateSubscriptionV0ParamsSchema
