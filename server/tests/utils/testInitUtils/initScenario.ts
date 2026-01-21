@@ -83,6 +83,7 @@ type ScenarioConfig = {
 	customerData?: CustomerData;
 	withDefault: boolean;
 	defaultGroup?: string;
+	skipWebhooks?: boolean;
 	products: ProductV2[];
 	productPrefix?: string;
 	entityConfig?: EntityConfig;
@@ -120,9 +121,11 @@ const generateEntities = (config: EntityConfig): GeneratedEntity[] => {
  * @param data - Customer metadata (fingerprint, name, email, etc.)
  * @param withDefault - Attach the default product on creation (default: false)
  * @param defaultGroup - The product group to use for default product selection
+ * @param skipWebhooks - Skip sending webhooks for this customer creation (default: undefined, uses server default)
  * @example s.customer({ paymentMethod: "success" })
  * @example s.customer({ paymentMethod: "success", data: { name: "Test" } })
  * @example s.customer({ withDefault: true, defaultGroup: "enterprise" })
+ * @example s.customer({ withDefault: true, skipWebhooks: false }) // Enable webhooks for testing
  */
 const customer = ({
 	testClock = true,
@@ -130,12 +133,14 @@ const customer = ({
 	data,
 	withDefault,
 	defaultGroup,
+	skipWebhooks,
 }: {
 	testClock?: boolean;
 	paymentMethod?: "success" | "fail" | "authenticate";
 	data?: CustomerData;
 	withDefault?: boolean;
 	defaultGroup?: string;
+	skipWebhooks?: boolean;
 }): ConfigFn => {
 	return (config) => ({
 		...config,
@@ -144,6 +149,7 @@ const customer = ({
 		customerData: data ?? config.customerData,
 		withDefault: withDefault ?? config.withDefault,
 		defaultGroup: defaultGroup ?? config.defaultGroup,
+		skipWebhooks: skipWebhooks ?? config.skipWebhooks,
 	});
 };
 
@@ -580,6 +586,7 @@ export async function initScenario({
 			withDefault: config.withDefault,
 			// Default group matches the product prefix (customerId) used in initProductsV0
 			defaultGroup: config.defaultGroup ?? customerId,
+			skipWebhooks: config.skipWebhooks,
 		});
 		testClockId = result.testClockId;
 		customer = result.customer;

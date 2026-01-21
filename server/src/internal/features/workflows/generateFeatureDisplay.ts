@@ -6,7 +6,7 @@ import { anthropicClient } from "@/external/ai/initAi.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "../FeatureService.js";
 
-export interface GenerateFeatureDisplayWorkflowPayload {
+export interface GenerateFeatureDisplayPayload {
 	featureId: string;
 	orgId: string;
 	env: AppEnv;
@@ -43,12 +43,12 @@ export const llmGenerateFeatureDisplay = async ({
 	return output;
 };
 
-export const generateFeatureDisplayWorkflow = async ({
+export const generateFeatureDisplay = async ({
 	ctx,
 	payload,
 }: {
 	ctx: AutumnContext;
-	payload: GenerateFeatureDisplayWorkflowPayload;
+	payload: GenerateFeatureDisplayPayload;
 }) => {
 	const { featureId } = payload;
 	const { db, logger, features } = ctx;

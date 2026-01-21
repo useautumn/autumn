@@ -78,6 +78,7 @@ Load these on-demand for detailed information:
 - [references/TRACK-CHECK.md](references/TRACK-CHECK.md) - Track/check endpoint testing, credit systems, Decimal.js
 - [references/EXPECTATIONS.md](references/EXPECTATIONS.md) - All expectation utilities
 - [references/GOTCHAS.md](references/GOTCHAS.md) - Common pitfalls, debugging, billing edge cases
+- [references/WEBHOOKS.md](references/WEBHOOKS.md) - Outbound webhook testing with Svix Play
 
 ## File Location
 

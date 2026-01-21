@@ -8,8 +8,8 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { getCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getCachedFullCustomer.js";
-import { JobName } from "../../JobName.js";
-import { createWorkflowTask } from "../createWorkflowTask.js";
+import { createWorkflowTask } from "@/queue/hatchetWorkflows/createWorkflowTask.js";
+import { JobName } from "@/queue/JobName.js";
 import { checkForMisingBalance } from "./checkForMisingBalance.js";
 
 export type VerifyCacheInput = {
@@ -30,7 +30,7 @@ type VerifyCacheOutput = {
 };
 
 // Only create workflow if Hatchet is enabled
-export const verifyCacheConsistencyWorkflow = hatchet?.workflow<
+export const verifyCacheConsistency = hatchet?.workflow<
 	VerifyCacheInput,
 	VerifyCacheOutput
 >({
@@ -79,7 +79,7 @@ const checkSubscriptionsMatch = ({
 	};
 };
 
-verifyCacheConsistencyWorkflow?.task({
+verifyCacheConsistency?.task({
 	name: JobName.VerifyCacheConsistency,
 	executionTimeout: "60s",
 	fn: createWorkflowTask<VerifyCacheInput, VerifyCacheOutput["verify"]>({

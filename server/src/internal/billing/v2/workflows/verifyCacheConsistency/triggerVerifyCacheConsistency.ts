@@ -4,12 +4,11 @@ import {
 	type FullCustomer,
 	isFreeProduct,
 } from "@autumn/shared";
-import type { Logger } from "../../../external/logtail/logtailUtils";
-import { generateId } from "../../../utils/genUtils";
-import { JobName } from "../../JobName";
-import { runHatchetWorkflow } from "../../queueUtils";
+import type { Logger } from "@/external/logtail/logtailUtils.js";
+import { workflows } from "@/queue/workflows.js";
+import { generateId } from "@/utils/genUtils.js";
 
-export const queueVerifyCacheConsistencyWorkflow = async ({
+export const triggerVerifyCacheConsistency = async ({
 	newCustomerProduct,
 	previousFullCustomer,
 	logger,
@@ -29,22 +28,23 @@ export const queueVerifyCacheConsistencyWorkflow = async ({
 		const newPrices = cusProductToPrices({ cusProduct: newCustomerProduct });
 		if (isFreeProduct({ prices: newPrices })) return;
 
-		await runHatchetWorkflow({
-			workflowName: JobName.VerifyCacheConsistency,
-			metadata: {
-				workflowId,
-				customerId: previousFullCustomer.id ?? "",
-			},
-			payload: {
+		await workflows.triggerVerifyCacheConsistency(
+			{
 				orgId: previousFullCustomer.org_id,
 				env: previousFullCustomer.env,
 				customerId: previousFullCustomer.id || previousFullCustomer.internal_id,
 				newCustomerProductId: newCustomerProduct.id,
 				source,
-				previousFullCustomer: JSON.stringify(previousFullCustomer), // is there a better approach to this...?
+				previousFullCustomer: JSON.stringify(previousFullCustomer),
 			},
-			delayMs: 5000,
-		});
+			{
+				delayMs: 5000,
+				metadata: {
+					workflowId,
+					customerId: previousFullCustomer.id ?? "",
+				},
+			},
+		);
 	} catch (error) {
 		logger.error(
 			`Failed to run verify cache consistency workflow for customer ${previousFullCustomer.id || previousFullCustomer.internal_id}, error: ${error}`,
