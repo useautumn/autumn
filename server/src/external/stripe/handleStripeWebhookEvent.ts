@@ -1,7 +1,7 @@
 import * as Sentry from "@sentry/bun";
 import type { Context } from "hono";
 import { Stripe } from "stripe";
-import { createStripeCli } from "@/external/connect/createStripeCli.js";
+
 import { handleStripeInvoicePaid } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/handleStripeInvoicePaid.js";
 import { handleStripeSubscriptionUpdated } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/handleStripeSubscriptionUpdated.js";
 import { unsetOrgStripeKeys } from "@/internal/orgs/orgUtils.js";
@@ -13,8 +13,8 @@ import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDel
 import { handleInvoiceCreated } from "./webhookHandlers/handleInvoiceCreated/handleInvoiceCreated.js";
 import { handleInvoiceFinalized } from "./webhookHandlers/handleInvoiceFinalized.js";
 import { handleInvoiceUpdated } from "./webhookHandlers/handleInvoiceUpdated.js";
+import { handleStripeSubscriptionDeleted } from "./webhookHandlers/handleStripeSubscriptionDeleted/handleStripeSubscriptionDeleted.js";
 import { handleSubCreated } from "./webhookHandlers/handleSubCreated.js";
-import { handleSubDeleted } from "./webhookHandlers/handleSubDeleted.js";
 import { handleSubscriptionScheduleCanceled } from "./webhookHandlers/handleSubScheduleCanceled.js";
 import type {
 	StripeWebhookContext,
@@ -33,41 +33,22 @@ export const handleStripeWebhookEvent = async (
 	const event = stripeEvent;
 
 	try {
-		const stripeCli = createStripeCli({ org, env });
 		switch (event.type) {
 			case "customer.subscription.created":
 				await handleSubCreated({ ctx });
 				break;
 
-			case "customer.subscription.updated": {
-				await handleStripeSubscriptionUpdated({ ctx });
+			case "customer.subscription.updated":
+				await handleStripeSubscriptionUpdated({ ctx, event });
 				break;
-			}
 
 			case "customer.subscription.deleted":
-				await handleSubDeleted({
-					ctx,
-					stripeCli,
-					data: event.data.object,
-				});
+				await handleStripeSubscriptionDeleted({ ctx, event });
 				break;
 
-			case "checkout.session.completed": {
-				const checkoutSession = event.data.object;
-				await handleCheckoutSessionCompleted({
-					ctx,
-					db,
-					data: checkoutSession,
-					org,
-					env,
-				});
+			case "invoice.paid":
+				await handleStripeInvoicePaid({ ctx, event });
 				break;
-			}
-
-			case "invoice.paid": {
-				await handleStripeInvoicePaid({ ctx });
-				break;
-			}
 
 			case "invoice.updated":
 				await handleInvoiceUpdated({
@@ -107,6 +88,18 @@ export const handleStripeWebhookEvent = async (
 			case "customer.discount.deleted":
 				await handleCusDiscountDeleted({ ctx });
 				break;
+
+			case "checkout.session.completed": {
+				const checkoutSession = event.data.object;
+				await handleCheckoutSessionCompleted({
+					ctx,
+					db,
+					data: checkoutSession,
+					org,
+					env,
+				});
+				break;
+			}
 		}
 	} catch (error) {
 		Sentry.captureException(error, {

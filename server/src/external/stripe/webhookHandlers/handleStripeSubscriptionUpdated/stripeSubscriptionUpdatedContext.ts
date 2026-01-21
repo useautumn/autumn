@@ -1,4 +1,8 @@
-import type { FullCusProduct, FullCustomer } from "@autumn/shared";
+import type {
+	FullCusProduct,
+	FullCustomer,
+	InsertCustomerProduct,
+} from "@autumn/shared";
 import type Stripe from "stripe";
 import type { ExpandedStripeSubscription } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription";
 
@@ -16,7 +20,7 @@ export interface SubscriptionPreviousAttributes {
 
 export interface StripeSubscriptionUpdatedContext {
 	stripeSubscription: ExpandedStripeSubscription;
-	previousAttributes: SubscriptionPreviousAttributes;
+	previousAttributes?: SubscriptionPreviousAttributes;
 	fullCustomer: FullCustomer;
 	/** Mutable list of customer products - can be updated in place by tasks */
 	customerProducts: FullCusProduct[];
@@ -25,6 +29,6 @@ export interface StripeSubscriptionUpdatedContext {
 
 	updatedCustomerProducts: {
 		customerProduct: FullCusProduct;
-		updates: Partial<FullCusProduct>;
+		updates: Partial<InsertCustomerProduct>;
 	}[];
 }

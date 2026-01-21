@@ -131,7 +131,13 @@ export const buildStripeSubscriptionScheduleAction = ({
 		};
 	}
 
-	// Multi-phase scenario: need a schedule
+	// No phases with items = no schedule action needed
+	// (If subscription is being canceled, the schedule gets canceled automatically by Stripe)
+	if (scheduledPhases.length === 0) {
+		return {};
+	}
+
+	// Multi-phase scenario with existing schedule: update it
 	if (stripeSubscriptionSchedule) {
 		return {
 			scheduleAction: {
@@ -145,16 +151,12 @@ export const buildStripeSubscriptionScheduleAction = ({
 		};
 	}
 
-	// No phases with items = no schedule needed
-	if (scheduledPhases.length === 0) {
-		return {};
-	}
-
-	// Only 1 phase = no transitions needed, no schedule
+	// Only 1 phase = no transitions needed, no schedule required
 	if (scheduledPhases.length === 1) {
 		return {};
 	}
 
+	// Multiple phases, no existing schedule: create one
 	return {
 		scheduleAction: {
 			type: "create",

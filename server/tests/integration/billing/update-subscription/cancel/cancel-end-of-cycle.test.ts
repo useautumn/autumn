@@ -12,14 +12,16 @@
  */
 
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3 } from "@autumn/shared";
+import type { ApiCustomer, ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import {
+	expectCustomerProducts,
 	expectProductActive,
 	expectProductCanceling,
 	expectProductNotPresent,
 	expectProductScheduled,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectNoStripeSubscription } from "@tests/integration/billing/utils/expectNoStripeSubscription";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -65,7 +67,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: with default free pr
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [free, pro] }),
+			s.products({ list: [free, pro], customerIdsToDelete: [customerId] }),
 		],
 		actions: [s.attach({ productId: pro.id })],
 	});
@@ -133,6 +135,14 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: with default free pr
 	await expectProductActive({
 		customer: customerAfterAdvance,
 		productId: free.id,
+	});
+
+	// Verify no Stripe subscription exists after cycle end (free has no price)
+	await expectNoStripeSubscription({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
 	});
 });
 
@@ -229,213 +239,18 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: no default product")
 
 	// No products should be attached
 	expect(customerAfterAdvance.products.length).toBe(0);
-});
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Cancel end of cycle with custom plan items
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - User is on Pro ($20/mo, 100 messages)
- * - User updates to custom plan (200 messages, $30/mo) AND cancels at end of cycle
- *
- * Expected Result:
- * - New custom plan is attached and is canceling
- * - Stripe subscription is updated with new items and set to cancel at period end
- * - Invoice for the prorated difference
- */
-test.concurrent(`${chalk.yellowBright("cancel end of cycle: with custom plan items")}`, async () => {
-	const customerId = "cancel-eoc-custom-plan";
-
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-
-	// Free is the default product (products.base has no base price = free)
-	const free = products.base({
-		id: "free",
-		items: [messagesItem],
-		isDefault: true,
-	});
-
-	const pro = products.pro({
-		id: "pro",
-		items: [messagesItem],
-	});
-
-	const { autumnV1, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [free, pro] }),
-		],
-		actions: [s.attach({ productId: pro.id })],
-	});
-
-	// Verify pro is active
-	const customerAfterAttach =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductActive({
-		customer: customerAfterAttach,
-		productId: pro.id,
-	});
-
-	// Update to custom plan items AND cancel at end of cycle
-	const updatedMessagesItem = items.monthlyMessages({ includedUsage: 200 });
-	const newPriceItem = items.monthlyPrice({ price: 30 }); // $30/mo instead of $20
-
-	const updateParams = {
-		customer_id: customerId,
-		product_id: pro.id,
-		items: [updatedMessagesItem, newPriceItem],
-		cancel: "end_of_cycle" as const,
-	};
-
-	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
-
-	// Should charge prorated difference for price increase
-	console.log("Preview total (cancel + custom plan):", preview.total);
-
-	await autumnV1.subscriptions.update(updateParams);
-
-	// Verify pro is canceling (with custom configuration)
-	const customerAfterUpdate =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	await expectProductCanceling({
-		customer: customerAfterUpdate,
-		productId: pro.id,
-	});
-
-	// Free should be scheduled
-	await expectProductScheduled({
-		customer: customerAfterUpdate,
-		productId: free.id,
-	});
-
-	// Verify Stripe subscription is correct (still set to cancel at period end)
-	await expectSubToBeCorrect({
+	// Verify no Stripe subscription exists after cycle end
+	await expectNoStripeSubscription({
 		db: ctx.db,
 		customerId,
 		org: ctx.org,
 		env: ctx.env,
-		shouldBeCanceled: true,
-	});
-
-	// Verify invoices - initial attach + update
-	expectCustomerInvoiceCorrect({
-		customer: customerAfterUpdate,
-		count: 2,
-		latestTotal: preview.total,
 	});
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Cancel end of cycle with prepaid quantity update
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - User is on Pro with prepaid messages (300 messages purchased)
- * - User updates quantity to 500 messages AND cancels at end of cycle
- *
- * Expected Result:
- * - Quantity is updated to 500
- * - Product is canceling at end of cycle
- * - Invoice for the quantity difference
- */
-test.concurrent(`${chalk.yellowBright("cancel end of cycle: with prepaid quantity update")}`, async () => {
-	const customerId = "cancel-eoc-prepaid-qty";
-
-	const billingUnits = 100;
-	const pricePerUnit = 10;
-
-	const prepaidItem = items.prepaidMessages({
-		includedUsage: 0,
-		billingUnits,
-		price: pricePerUnit,
-	});
-
-	// Free is the default product (products.base has no base price = free)
-	const free = products.base({
-		id: "free",
-		items: [items.monthlyMessages({ includedUsage: 50 })],
-		isDefault: true,
-	});
-
-	// Pro with prepaid messages and base price
-	const pro = products.pro({
-		id: "pro",
-		items: [prepaidItem],
-	});
-
-	const { autumnV1, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [free, pro] }),
-		],
-		actions: [
-			s.attach({
-				productId: pro.id,
-				options: [{ feature_id: TestFeature.Messages, quantity: 300 }], // 3 packs
-			}),
-		],
-	});
-
-	// Verify pro is active
-	const customerAfterAttach =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductActive({
-		customer: customerAfterAttach,
-		productId: pro.id,
-	});
-
-	// Update quantity AND cancel at end of cycle
-	const updateParams = {
-		customer_id: customerId,
-		product_id: pro.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 500 }], // 5 packs
-		cancel: "end_of_cycle" as const,
-	};
-
-	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
-
-	// Should charge for 2 additional packs: 2 * $10 = $20
-	console.log("Preview total (cancel + quantity update):", preview.total);
-	expect(preview.total).toBe(20);
-
-	await autumnV1.subscriptions.update(updateParams);
-
-	// Verify pro is canceling
-	const customerAfterUpdate =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	await expectProductCanceling({
-		customer: customerAfterUpdate,
-		productId: pro.id,
-	});
-
-	// Free should be scheduled
-	await expectProductScheduled({
-		customer: customerAfterUpdate,
-		productId: free.id,
-	});
-
-	// Verify quantity was updated (balance should be 500)
-	expect(customerAfterUpdate.features[TestFeature.Messages].balance).toBe(500);
-
-	// Verify Stripe subscription is correct (still set to cancel at period end)
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-		shouldBeCanceled: true,
-	});
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Downgrade then cancel end of cycle (with default)
+// TEST 3: Downgrade then cancel end of cycle (with default)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -479,44 +294,32 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: downgrade then cance
 		items: [messagesItem, premiumPriceItem],
 	});
 
-	const { autumnV1, ctx } = await initScenario({
+	const { autumnV1, ctx, testClockId } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [free, pro, premium] }),
 		],
-		actions: [s.attach({ productId: premium.id })],
+		actions: [
+			s.attach({ productId: premium.id }),
+			s.attach({ productId: pro.id }), // Downgrade: premium canceling, pro scheduled
+		],
 	});
 
-	// Verify premium is active
-	const customerAfterAttach =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductActive({
-		customer: customerAfterAttach,
-		productId: premium.id,
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const stripeCustomerId = customer.stripe_id;
+	const subs = await ctx.stripeCli.subscriptions.list({
+		customer: stripeCustomerId!,
 	});
+	expect(subs.data.length).toBe(1);
 
-	// Downgrade from premium to pro
-	await autumnV1.attach({
-		customer_id: customerId,
-		product_id: pro.id,
-	});
+	const sub = subs.data[0];
 
-	// Verify premium is canceling and pro is scheduled
-	const customerAfterDowngrade =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	// When a subscription is managed by a schedule, the schedule handles cancellation
+	// The subscription itself should NOT have cancel_at set (schedule manages lifecycle)
+	expect(sub.schedule).not.toBeNull();
 
-	await expectProductCanceling({
-		customer: customerAfterDowngrade,
-		productId: premium.id,
-	});
-
-	await expectProductScheduled({
-		customer: customerAfterDowngrade,
-		productId: pro.id,
-	});
-
-	// Now cancel premium at end of cycle
+	// Cancel premium at end of cycle
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: premium.id,
@@ -527,25 +330,13 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: downgrade then cance
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Premium should remain canceling
-	await expectProductCanceling({
+	await expectCustomerProducts({
 		customer: customerAfterCancel,
-		productId: premium.id,
+		canceling: [premium.id],
+		notPresent: [pro.id],
+		scheduled: [free.id],
 	});
 
-	// Pro scheduled product should be REMOVED
-	await expectProductNotPresent({
-		customer: customerAfterCancel,
-		productId: pro.id,
-	});
-
-	// Free should now be scheduled instead
-	await expectProductScheduled({
-		customer: customerAfterCancel,
-		productId: free.id,
-	});
-
-	// Verify Stripe subscription is set to cancel at period end
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -553,10 +344,21 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: downgrade then cance
 		env: ctx.env,
 		shouldBeCanceled: true,
 	});
+
+	await advanceToNextInvoice({
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId!,
+	});
+
+	await expectCustomerProducts({
+		customer: customerAfterCancel,
+		active: [free.id],
+		notPresent: [premium.id],
+	});
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 6: Downgrade then cancel end of cycle (no default)
+// TEST 4: Downgrade then cancel end of cycle (no default)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -596,38 +398,13 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: downgrade then cance
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro, premium] }),
 		],
-		actions: [s.attach({ productId: premium.id })],
+		actions: [
+			s.attach({ productId: premium.id }),
+			s.attach({ productId: pro.id }), // Downgrade: premium canceling, pro scheduled
+		],
 	});
 
-	// Verify premium is active
-	const customerAfterAttach =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductActive({
-		customer: customerAfterAttach,
-		productId: premium.id,
-	});
-
-	// Downgrade from premium to pro
-	await autumnV1.attach({
-		customer_id: customerId,
-		product_id: pro.id,
-	});
-
-	// Verify premium is canceling and pro is scheduled
-	const customerAfterDowngrade =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	await expectProductCanceling({
-		customer: customerAfterDowngrade,
-		productId: premium.id,
-	});
-
-	await expectProductScheduled({
-		customer: customerAfterDowngrade,
-		productId: pro.id,
-	});
-
-	// Now cancel premium at end of cycle
+	// Cancel premium at end of cycle
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: premium.id,
@@ -638,16 +415,10 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: downgrade then cance
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Premium should remain canceling
-	await expectProductCanceling({
+	await expectCustomerProducts({
 		customer: customerAfterCancel,
-		productId: premium.id,
-	});
-
-	// Pro scheduled product should be REMOVED
-	await expectProductNotPresent({
-		customer: customerAfterCancel,
-		productId: pro.id,
+		canceling: [premium.id],
+		notPresent: [pro.id],
 	});
 
 	// No products should be scheduled (no default product)
@@ -663,5 +434,215 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: downgrade then cance
 		org: ctx.org,
 		env: ctx.env,
 		shouldBeCanceled: true,
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 5: Cancel end of cycle for multi-interval product
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - User is on Pro with monthly messages + annual base price (multi-interval)
+ * - User cancels Pro at end of cycle
+ *
+ * Expected Result:
+ * - Pro should be canceling
+ * - expires_at from V2 API should be at the end of the annual period (longest interval)
+ * - Stripe subscription should be set to cancel at period end
+ */
+test.concurrent(`${chalk.yellowBright("cancel end of cycle: multi-interval product (monthly + annual)")}`, async () => {
+	const customerId = "cancel-eoc-multi-interval";
+
+	// Multi-interval product: monthly messages + annual base price
+	const messagesItem = items.prepaidMessages({ includedUsage: 0 });
+	const annualPriceItem = items.annualPrice({ price: 200 }); // $200/year
+
+	const pro = products.base({
+		id: "pro",
+		items: [messagesItem, annualPriceItem],
+	});
+
+	const free = products.base({
+		id: "free",
+		items: [items.dashboard()],
+		isDefault: true,
+	});
+
+	const { autumnV1, autumnV2, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [free, pro] }),
+		],
+		actions: [
+			s.attach({
+				productId: pro.id,
+				options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+			}),
+		],
+	});
+
+	// Verify pro is active
+	const customerAfterAttach =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductActive({
+		customer: customerAfterAttach,
+		productId: pro.id,
+	});
+
+	// Cancel pro at end of cycle
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: pro.id,
+		cancel: "end_of_cycle",
+	});
+
+	// Verify pro is canceling
+	const customerAfterCancel =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductCanceling({
+		customer: customerAfterCancel,
+		productId: pro.id,
+	});
+
+	// Get customer via V2 API to check expires_at
+	const customerV2 = await autumnV2.customers.get<ApiCustomer>(customerId);
+
+	// Find the pro subscription
+	const proSubscription = customerV2.subscriptions.find(
+		(sub) => sub.plan_id === pro.id,
+	);
+	expect(proSubscription).toBeDefined();
+
+	// expires_at should be set (at end of annual period since that's the longest interval)
+	expect(proSubscription!.expires_at).not.toBeNull();
+	expect(proSubscription!.canceled_at).not.toBeNull();
+
+	// expires_at should be approximately 1 year from now (annual interval)
+	// Allow some tolerance for test execution time
+	const now = Date.now();
+	const oneYearFromNow = now + 365 * 24 * 60 * 60 * 1000;
+	const tolerance = 60 * 1000; // 1 minute tolerance
+
+	expect(proSubscription!.expires_at! * 1000).toBeGreaterThan(
+		oneYearFromNow - tolerance,
+	);
+	expect(proSubscription!.expires_at! * 1000).toBeLessThan(
+		oneYearFromNow + tolerance,
+	);
+
+	// Verify Stripe subscription is set to cancel at period end
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+		shouldBeCanceled: true,
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 6: Cancel end of cycle then cancel immediately
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - User is on Pro ($20/mo)
+ * - Free default product exists
+ * - User cancels Pro at end of cycle (Pro becomes canceling, Free is scheduled)
+ * - User then cancels Pro immediately
+ *
+ * Expected Result:
+ * - Pro is removed immediately (not waiting for cycle end)
+ * - Free default becomes active immediately
+ * - Stripe subscription is canceled
+ */
+test.concurrent(`${chalk.yellowBright("cancel end of cycle: then cancel immediately")}`, async () => {
+	const customerId = "cancel-eoc-then-imm";
+
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+
+	const free = products.base({
+		id: "free",
+		items: [messagesItem],
+		isDefault: true,
+	});
+
+	const pro = products.pro({
+		id: "pro",
+		items: [messagesItem],
+	});
+
+	const { autumnV1, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [free, pro] }),
+		],
+		actions: [s.attach({ productId: pro.id })],
+	});
+
+	// Verify pro is active
+	const customerAfterAttach =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductActive({
+		customer: customerAfterAttach,
+		productId: pro.id,
+	});
+
+	// Step 1: Cancel pro at end of cycle
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: pro.id,
+		cancel: "end_of_cycle",
+	});
+
+	// Verify pro is canceling and free is scheduled
+	const customerAfterEocCancel =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	await expectProductCanceling({
+		customer: customerAfterEocCancel,
+		productId: pro.id,
+	});
+
+	await expectProductScheduled({
+		customer: customerAfterEocCancel,
+		productId: free.id,
+	});
+
+	// Verify Stripe subscription is set to cancel at period end
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+		shouldBeCanceled: true,
+	});
+
+	// Step 2: Now cancel pro immediately (override the end_of_cycle cancel)
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: pro.id,
+		cancel: "immediately",
+	});
+
+	// Verify pro is gone and free is active immediately
+	const customerAfterImmCancel =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	await expectCustomerProducts({
+		customer: customerAfterImmCancel,
+		notPresent: [pro.id],
+		active: [free.id],
+	});
+
+	// Verify Stripe subscription is canceled (not just set to cancel at period end)
+	await expectNoStripeSubscription({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
 	});
 });

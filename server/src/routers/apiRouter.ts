@@ -1,9 +1,9 @@
 import { Hono } from "hono";
 import { insightsRouter } from "@/internal/analytics/insightsRouter.js";
 import { legacyAnalyticsRouter } from "@/internal/analytics/legacyAnalyticsRouter.js";
-import { configsRouter } from "@/internal/configs/configsRouter.js";
 import { eventsRouter } from "@/internal/events/eventsRouter.js";
 import { componentsRouter } from "@/internal/misc/components/componentsRouter.js";
+import { configsRouter } from "@/internal/misc/configs/configsRouter.js";
 import { analyticsMiddleware } from "../honoMiddlewares/analyticsMiddleware.js";
 import { apiVersionMiddleware } from "../honoMiddlewares/apiVersionMiddleware.js";
 import { idempotencyMiddleware } from "../honoMiddlewares/idempotencyMiddleware.js";

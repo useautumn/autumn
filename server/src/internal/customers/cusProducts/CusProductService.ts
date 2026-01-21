@@ -439,11 +439,11 @@ export class CusProductService {
 	}: {
 		db: DrizzleCli;
 		cusProductId: string;
-		updates: Partial<CusProduct>;
+		updates: Partial<InsertCustomerProduct>;
 	}) {
 		return await db
 			.update(customerProducts)
-			.set(updates as any)
+			.set(updates)
 			.where(eq(customerProducts.id, cusProductId))
 			.returning();
 	}

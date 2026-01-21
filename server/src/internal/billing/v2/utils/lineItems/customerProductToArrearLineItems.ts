@@ -1,7 +1,10 @@
 import {
+	BillingType,
 	cusPriceToCusEntWithCusProduct,
+	cusProductToPrices,
 	type FullCusProduct,
 	isConsumablePrice,
+	isV4Usage,
 	type LineItem,
 	type LineItemContext,
 	orgToCurrency,
@@ -15,12 +18,24 @@ export const customerProductToArrearLineItems = ({
 	ctx,
 	customerProduct,
 	billingContext,
+	filters,
 }: {
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
 	billingContext: BillingContext;
+	filters: {
+		onlyV4Usage?: boolean;
+	};
 }) => {
 	let lineItems: LineItem[] = [];
+
+	let filteredPrices = cusProductToPrices({ cusProduct: customerProduct });
+
+	if (filters.onlyV4Usage) {
+		filteredPrices = filteredPrices.filter((price) =>
+			isV4Usage({ price, cusProduct: customerProduct }),
+		);
+	}
 
 	for (const cusPrice of customerProduct.customer_prices) {
 		const price = cusPrice.price;

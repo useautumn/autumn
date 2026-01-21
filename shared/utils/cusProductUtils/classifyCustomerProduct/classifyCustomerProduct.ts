@@ -69,10 +69,41 @@ export const isCustomerProductScheduled = (cp?: FullCusProduct) => {
 	return cp.status === CusProductStatus.Scheduled;
 };
 
+/**
+ * Checks if a scheduled customer product should be activated based on its starts_at time.
+ * Uses an optional tolerance to handle timing differences between Stripe and webhook arrival.
+ *
+ * @param toleranceMs - Tolerance in milliseconds (default: 10 minutes)
+ */
+export const hasCustomerProductStarted = (
+	cp: FullCusProduct,
+	params: { nowMs: number; toleranceMs?: number },
+) => {
+	if (cp.status !== CusProductStatus.Scheduled) return false;
+	const toleranceMs = params.toleranceMs ?? 10 * 60 * 1000; // 10 minutes default
+	return cp.starts_at <= params.nowMs + toleranceMs;
+};
+
 export const isCustomerProductCanceling = (cp?: FullCusProduct) => {
 	if (!cp) return false;
 
 	return notNullish(cp.canceled_at);
+};
+
+/**
+ * Checks if a canceling customer product has reached its end time.
+ * Uses an optional tolerance to handle timing differences between Stripe and webhook arrival.
+ *
+ * @param toleranceMs - Tolerance in milliseconds (default: 10 minutes)
+ */
+export const hasCustomerProductEnded = (
+	cp: FullCusProduct,
+	params: { nowMs: number; toleranceMs?: number },
+) => {
+	if (!isCustomerProductCanceling(cp)) return false;
+	if (nullish(cp.ended_at)) return false;
+	const toleranceMs = params.toleranceMs ?? 10 * 60 * 1000; // 10 minutes default
+	return cp.ended_at <= params.nowMs + toleranceMs;
 };
 
 export const isCustomerProductExpired = (
@@ -179,4 +210,11 @@ export const customerProductHasSubscriptionSchedule = ({
 	const subId = cusProduct.scheduled_ids?.[0];
 
 	return notNullish(subId);
+};
+
+export const isCustomerProductEntityScoped = (
+	customerProduct?: FullCusProduct,
+) => {
+	if (!customerProduct) return false;
+	return notNullish(customerProduct.internal_entity_id);
 };

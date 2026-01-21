@@ -238,6 +238,49 @@ const {
 } = await initScenario({ ... });
 ```
 
+## Setup vs Test Body
+
+**Rule:** Put setup actions in `initScenario.actions`, keep only the behavior under test in the test body.
+
+Ask: "What is the test actually testing?" Everything else is setup.
+
+```typescript
+// ❌ BAD - Downgrade is setup, not what we're testing
+const { autumnV1 } = await initScenario({
+  actions: [s.attach({ productId: premium.id })],
+});
+
+// Setup in test body (wrong place)
+await autumnV1.attach({ customer_id: customerId, product_id: pro.id });
+
+// The actual test: cancel behavior
+await autumnV1.subscriptions.update({
+  customer_id: customerId,
+  product_id: premium.id,
+  cancel: "end_of_cycle",
+});
+
+// ✅ GOOD - Setup in initScenario, only test behavior in body
+const { autumnV1 } = await initScenario({
+  actions: [
+    s.attach({ productId: premium.id }),
+    s.attach({ productId: pro.id }), // Downgrade is setup
+  ],
+});
+
+// The actual test: cancel behavior
+await autumnV1.subscriptions.update({
+  customer_id: customerId,
+  product_id: premium.id,
+  cancel: "end_of_cycle",
+});
+```
+
+**Benefits:**
+- Clearer test intent - reader immediately sees what's being tested
+- Less verification boilerplate - no need to verify setup worked
+- Faster test writing - `s.*` builders handle common patterns
+
 ## Test Clock Timing
 
 **Critical:** `Date.now()` doesn't change when using test clocks. Use `advancedTo`:

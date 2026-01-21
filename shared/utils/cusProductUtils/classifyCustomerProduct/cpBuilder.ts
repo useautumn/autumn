@@ -4,6 +4,7 @@ import {
 	customerProductHasActiveStatus,
 	customerProductHasRelevantStatus,
 	customerProductHasSubscriptionSchedule,
+	hasCustomerProductStarted,
 	isCusProductOnEntity,
 	isCustomerProductAddOn,
 	isCustomerProductCanceling,
@@ -23,124 +24,170 @@ type Predicate = (cp: FullCusProduct) => boolean;
 
 /**
  * Fluent builder for checking customer product conditions.
+ * Supports both AND (chaining) and OR (.or getter) operations with left-to-right evaluation.
  *
  * @example
- * // Destructure the result
- * const { valid } = cp(customerProduct).paid().recurring();
- * if (valid) { ... }
- *
- * @example
- * // Use .valid directly
+ * // AND conditions
  * if (cp(customerProduct).paid().recurring().valid) { ... }
+ *
+ * @example
+ * // OR conditions (left-to-right: free OR onStripeSub OR onStripeSchedule)
+ * if (cp(customerProduct).free().or.onStripeSubscription({...}).or.onStripeSchedule({...}).valid) { ... }
+ *
+ * @example
+ * // Mixed: ((a AND b) OR c) AND d
+ * cp(x).a().b().or.c().d().valid
  */
 class CustomerProductChecker {
 	private customerProduct: FullCusProduct | undefined;
-	private predicates: Predicate[] = [];
+	private accumulatedResult: boolean | null = null;
+	private pendingPredicates: Predicate[] = [];
 
 	constructor(customerProduct: FullCusProduct | undefined) {
 		this.customerProduct = customerProduct;
 	}
 
+	/** Flushes pending predicates, AND's them together, then OR's with accumulated result */
+	private flushPredicates(): void {
+		if (this.pendingPredicates.length === 0) return;
+		if (!this.customerProduct) {
+			this.accumulatedResult = false;
+			this.pendingPredicates = [];
+			return;
+		}
+
+		const groupResult = this.pendingPredicates.every((p) =>
+			p(this.customerProduct!),
+		);
+
+		if (this.accumulatedResult === null) {
+			this.accumulatedResult = groupResult;
+		} else {
+			this.accumulatedResult = this.accumulatedResult || groupResult;
+		}
+
+		this.pendingPredicates = [];
+	}
+
+	/** OR with previous conditions. Evaluated left-to-right. */
+	get or(): this {
+		this.flushPredicates();
+		return this;
+	}
+
 	/** Evaluates all conditions and returns the result */
 	get valid(): boolean {
 		if (!this.customerProduct) return false;
-		return this.predicates.every((p) => p(this.customerProduct!));
+		this.flushPredicates();
+		return this.accumulatedResult ?? true;
 	}
 
 	/** Product is a main product (not an add-on) */
 	main() {
-		this.predicates.push(isCustomerProductMain);
+		this.pendingPredicates.push(isCustomerProductMain);
 		return this;
 	}
 
 	/** Product is an add-on */
 	addOn() {
-		this.predicates.push(isCustomerProductAddOn);
+		this.pendingPredicates.push(isCustomerProductAddOn);
 		return this;
 	}
 
 	/** Product is a one-off (paid and all prices are one off) */
 	oneOff() {
-		this.predicates.push(isCustomerProductOneOff);
+		this.pendingPredicates.push(isCustomerProductOneOff);
 		return this;
 	}
 
 	/** Product has NO one off prices (can be free or paid) */
 	recurring() {
-		this.predicates.push(isCustomerProductRecurring);
+		this.pendingPredicates.push(isCustomerProductRecurring);
 		return this;
 	}
 
 	/** Product has no prices (free) */
 	free() {
-		this.predicates.push(isCustomerProductFree);
+		this.pendingPredicates.push(isCustomerProductFree);
 		return this;
 	}
 
 	/** Product has at least one price (not free) */
 	paid() {
-		this.predicates.push(isCustomerProductPaid);
+		this.pendingPredicates.push(isCustomerProductPaid);
 		return this;
 	}
 
 	/** Product is paid AND recurring (not free, not one-off) */
 	paidRecurring() {
-		this.predicates.push(isCustomerProductPaidRecurring);
+		this.pendingPredicates.push(isCustomerProductPaidRecurring);
 		return this;
 	}
 
 	/** Product has canceled_at set */
 	canceling() {
-		this.predicates.push(isCustomerProductCanceling);
+		this.pendingPredicates.push(isCustomerProductCanceling);
 		return this;
 	}
 
 	/** Product is not canceling */
 	notCanceling() {
-		this.predicates.push((cp) => !isCustomerProductCanceling(cp));
+		this.pendingPredicates.push((cp) => !isCustomerProductCanceling(cp));
 		return this;
 	}
 
 	/** Product has an active status (Active or PastDue) */
 	hasActiveStatus() {
-		this.predicates.push(customerProductHasActiveStatus);
+		this.pendingPredicates.push(customerProductHasActiveStatus);
 		return this;
 	}
 
 	/** Product has a relevant status (Active, PastDue, or Scheduled) */
 	hasRelevantStatus() {
-		this.predicates.push(customerProductHasRelevantStatus);
+		this.pendingPredicates.push(customerProductHasRelevantStatus);
 		return this;
 	}
 
 	/** Product is active (Active or PastDue) AND recurring (no one off prices) */
 	activeRecurring() {
-		this.predicates.push(customerProductHasActiveStatus);
-		this.predicates.push(isCustomerProductRecurring);
+		this.pendingPredicates.push(customerProductHasActiveStatus);
+		this.pendingPredicates.push(isCustomerProductRecurring);
 		return this;
 	}
 
 	/** Product has scheduled status */
 	scheduled() {
-		this.predicates.push(isCustomerProductScheduled);
+		this.pendingPredicates.push(isCustomerProductScheduled);
 		return this;
 	}
 
 	/** Product is trialing */
 	trialing({ nowMs }: { nowMs?: number } = {}) {
-		this.predicates.push((cp) => !!isCustomerProductTrialing(cp, { nowMs }));
+		this.pendingPredicates.push(
+			(cp) => !!isCustomerProductTrialing(cp, { nowMs }),
+		);
+		return this;
+	}
+
+	/** Product is scheduled and has started (starts_at <= nowMs + tolerance) */
+	hasStarted({ nowMs, toleranceMs }: { nowMs: number; toleranceMs?: number }) {
+		this.pendingPredicates.push((cp) =>
+			hasCustomerProductStarted(cp, { nowMs, toleranceMs }),
+		);
 		return this;
 	}
 
 	/** Product has a Stripe subscription attached */
 	hasSubscription() {
-		this.predicates.push((cp) => cusProductHasSubscription({ cusProduct: cp }));
+		this.pendingPredicates.push((cp) =>
+			cusProductHasSubscription({ cusProduct: cp }),
+		);
 		return this;
 	}
 
 	/** Product has a Stripe subscription schedule attached */
 	hasSchedule() {
-		this.predicates.push((cp) =>
+		this.pendingPredicates.push((cp) =>
 			customerProductHasSubscriptionSchedule({ cusProduct: cp }),
 		);
 		return this;
@@ -152,7 +199,7 @@ class CustomerProductChecker {
 	}: {
 		stripeSubscriptionId: string;
 	}) {
-		this.predicates.push(
+		this.pendingPredicates.push(
 			(cp) =>
 				!!isCustomerProductOnStripeSubscription({
 					customerProduct: cp,
@@ -168,7 +215,7 @@ class CustomerProductChecker {
 	}: {
 		stripeSubscriptionScheduleId: string;
 	}) {
-		this.predicates.push(
+		this.pendingPredicates.push(
 			(cp) =>
 				!!isCustomerProductOnStripeSubscriptionSchedule({
 					customerProduct: cp,
@@ -180,7 +227,7 @@ class CustomerProductChecker {
 
 	/** Product is on a specific entity (or no entity if undefined) */
 	onEntity({ internalEntityId }: { internalEntityId?: string }) {
-		this.predicates.push((cp) =>
+		this.pendingPredicates.push((cp) =>
 			isCusProductOnEntity({ cusProduct: cp, internalEntityId }),
 		);
 		return this;
@@ -188,13 +235,13 @@ class CustomerProductChecker {
 
 	/** Product has a specific product ID */
 	hasProductId({ productId }: { productId: string }) {
-		this.predicates.push((cp) => cp.product.id === productId);
+		this.pendingPredicates.push((cp) => cp.product.id === productId);
 		return this;
 	}
 
 	/** Product belongs to a specific product group */
 	hasProductGroup({ productGroup }: { productGroup: string }) {
-		this.predicates.push((cp) => cp.product.group === productGroup);
+		this.pendingPredicates.push((cp) => cp.product.group === productGroup);
 		return this;
 	}
 }
@@ -203,10 +250,12 @@ class CustomerProductChecker {
  * Create a fluent checker for customer product conditions.
  *
  * @example
- * const { valid } = cp(customerProduct).paid().recurring();
+ * // AND conditions
+ * if (cp(customerProduct).paid().recurring().valid) { ... }
  *
  * @example
- * if (cp(customerProduct).hasActiveStatus().main().valid) { ... }
+ * // OR conditions
+ * if (cp(customerProduct).free().or.onStripeSubscription({ stripeSubscriptionId }).valid) { ... }
  */
 export const cp = (customerProduct: FullCusProduct | undefined) =>
 	new CustomerProductChecker(customerProduct);

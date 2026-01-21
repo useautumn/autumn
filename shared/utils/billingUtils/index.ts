@@ -10,6 +10,7 @@ export * from "./invoicingUtils/filterUnchangedPricesFromLineItems.js";
 export * from "./invoicingUtils/lineItemBuilders/buildLineItem.js";
 export * from "./invoicingUtils/lineItemBuilders/fixedPriceToLineItem.js";
 export * from "./invoicingUtils/lineItemBuilders/usagePriceToLineItem.js";
+export * from "./invoicingUtils/lineItemUtils/lineItemToCustomerEntitlement.js";
 export * from "./invoicingUtils/lineItemUtils/priceToLineAmount.js";
 export * from "./invoicingUtils/lineItemUtils/tiersToLineAmount.js";
 export * from "./invoicingUtils/prorationUtils/applyProration.js";

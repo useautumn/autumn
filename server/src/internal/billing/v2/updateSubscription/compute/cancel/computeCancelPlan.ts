@@ -2,6 +2,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
 import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan";
 import { applyCancelPlan } from "./applyCancelPlan";
+import { computeCancelLineItems } from "./computeCancelLineItems";
 import { computeCancelUpdates } from "./computeCancelUpdates";
 import { computeCustomerProductToDelete } from "./computeCustomerProductToDelete";
 import { computeDefaultCustomerProduct } from "./computeDefaultCustomerProduct";
@@ -49,11 +50,15 @@ export const computeCancelPlan = ({
 	// Step 4: Find existing scheduled product to delete
 	const productToDelete = computeCustomerProductToDelete({ billingContext });
 
+	// Step 5: Compute prorated refund line items for immediate cancellation
+	const cancelLineItems = computeCancelLineItems({ ctx, billingContext });
+
 	// Apply all computed values to the plan
 	return applyCancelPlan({
 		plan,
 		cancelUpdates,
 		defaultCustomerProduct,
 		productToDelete,
+		cancelLineItems,
 	});
 };

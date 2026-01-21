@@ -27,7 +27,6 @@ export interface TrialContext {
 
 export interface BillingContext {
 	fullCustomer: FullCustomer;
-	stripeCustomer: Stripe.Customer;
 	fullProducts: FullProduct[];
 
 	featureQuantities: FeatureOptions[];
@@ -39,18 +38,20 @@ export interface BillingContext {
 	resetCycleAnchorMs: number | "now";
 
 	// Stripe context
+	stripeCustomer: Stripe.Customer;
 	stripeSubscription?: Stripe.Subscription;
 	stripeSubscriptionSchedule?: Stripe.SubscriptionSchedule;
 	stripeDiscounts?: StripeDiscountWithCoupon[];
 	paymentMethod?: Stripe.PaymentMethod;
 
 	// Unforunately, need to add custom prices, custom entitlements and free trial here, because it's determined in the setup step.
-	customPrices: Price[];
-	customEnts: Entitlement[];
+	// Optional - only needed for custom plan flows
+	customPrices?: Price[];
+	customEnts?: Entitlement[];
 
 	// Trial context
 	trialContext?: TrialContext;
-	isCustom: boolean;
+	isCustom?: boolean;
 }
 
 export type CancelMode = "immediately" | "end_of_cycle";
