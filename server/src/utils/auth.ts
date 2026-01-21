@@ -19,7 +19,6 @@ import sendOTPEmail from "@/internal/emails/sendOTPEmail.js";
 import { afterOrgCreated } from "./authUtils/afterOrgCreated.js";
 import { beforeSessionCreated } from "./authUtils/beforeSessionCreated.js";
 import { ADMIN_USER_IDs } from "./constants.js";
-import { posthogClient } from "./posthog.js";
 
 export const auth = betterAuth({
 	baseURL: process.env.BETTER_AUTH_URL,
@@ -40,21 +39,6 @@ export const auth = betterAuth({
 						name: user.name,
 						email: user.email,
 					});
-					if (posthogClient) {
-						await posthogClient.capture({
-							distinctId: user.id,
-							event: "user_sign_up",
-							properties: {
-								$set: {
-									email: user.email,
-									name: user.name,
-								},
-								$set_once: {
-									created_at: new Date().toISOString(),
-								},
-							},
-						});
-					}
 				},
 			},
 		},

@@ -15,9 +15,9 @@ import {
 } from "@autumn/shared";
 
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { captureOrgEvent } from "@/utils/posthog.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { captureOrgEvent } from "@/utils/posthog.js";
 import { getEntsWithFeature } from "../entitlements/entitlementUtils.js";
 import {
 	handleNewFreeTrial,
@@ -121,7 +121,10 @@ export const handleCreatePlan = createRoute({
 			...product,
 			description: body?.description ?? null,
 			prices,
-			entitlements: getEntsWithFeature({ ents: entitlements, features: updatedFeatures }),
+			entitlements: getEntsWithFeature({
+				ents: entitlements,
+				features: updatedFeatures,
+			}),
 			free_trial: newFreeTrial,
 		};
 
@@ -157,9 +160,8 @@ export const handleCreatePlan = createRoute({
 		});
 
 		await captureOrgEvent({
-			userId: ctx.user?.id,
 			orgId: org.id,
-			event: "plan_created",
+			event: "plan created",
 			properties: {
 				org_slug: org.slug,
 				plan_id: product.id,
