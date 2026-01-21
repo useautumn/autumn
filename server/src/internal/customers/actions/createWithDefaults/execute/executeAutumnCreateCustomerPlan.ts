@@ -1,4 +1,4 @@
-import { tryCatch } from "@autumn/shared";
+import { CusExpand, tryCatch } from "@autumn/shared";
 import { isUniqueConstraintError } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -64,6 +64,9 @@ export const executeAutumnCreateCustomerPlan = async ({
 				idOrInternalId: fullCustomer.id || fullCustomer.internal_id,
 				orgId: ctx.org.id,
 				env: ctx.env,
+				withEntities: true,
+				withSubs: true,
+				expand: [CusExpand.Invoices],
 			});
 			context.fullCustomer = existingCustomer;
 			return { type: "existing" };
@@ -80,6 +83,9 @@ export const executeAutumnCreateCustomerPlan = async ({
 			idOrInternalId: fullCustomer.internal_id,
 			orgId: ctx.org.id,
 			env: ctx.env,
+			withEntities: true,
+			withSubs: true,
+			expand: [CusExpand.Invoices],
 		});
 		context.fullCustomer = existingCustomer;
 		return { type: "existing" };
