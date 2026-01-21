@@ -53,7 +53,7 @@ const FeatureSchema = z
 			.describe(
 				"Unique ID for the feature (lowercase, underscores, no spaces)",
 			),
-		name: z.string().nullish().describe("Display name for the feature"),
+		name: z.string().describe("Display name for the feature"),
 		type: ApiFeatureType.describe(
 			"Type: single_use for consumables, continuous_use for allocated resources, boolean for on/off",
 		),
@@ -96,6 +96,14 @@ const FeatureSchema = z
 		},
 	);
 
+const PriceTierSchema = z.object({
+	to: z
+		.number()
+		.or(z.literal("inf"))
+		.describe("The upper limit of this tier (use 'inf' for unlimited)"),
+	amount: z.number().describe("The price per unit for this tier"),
+});
+
 const ProductItemSchema = z.object({
 	feature_id: z
 		.string()
@@ -116,6 +124,12 @@ const ProductItemSchema = z.object({
 		.nullish()
 		.describe(
 			"Price amount. When feature_id is null, this is a standalone flat fee. When feature_id is set with usage_model, this is the per-unit price.",
+		),
+	tiers: z
+		.array(PriceTierSchema)
+		.nullish()
+		.describe(
+			"Tiered pricing structure. Use instead of price for volume-based pricing. Each tier defines upper limit (to) and price per unit (amount).",
 		),
 	usage_model: UsageModel.nullish().describe(
 		"prepaid or pay_per_use. Required when pricing per unit of usage.",
@@ -232,9 +246,10 @@ export type PricingConfig = z.infer<typeof OrganisationConfigurationSchema>;
 // ============ SYSTEM PROMPT ============
 const SYSTEM_PROMPT = `You are a helpful pricing configuration assistant for Autumn, a billing and entitlements platform.
 
-Your job is to help users design their pricing model through natural conversation. You should:
+Your job is to help users set up their pricing model through natural conversation. You should:
 1. Ask clarifying questions to understand their needs
 2. Generate and update the pricing configuration as you learn more
+3. Read through these instructions carefully for every single message, and follow them exactly.
 
 **IMPORTANT**: Call the build_pricing tool EVERY time the user provides any information at all about their pricing, features, or products. This updates the live preview they see. Even partial information should trigger a tool call with your best interpretation.
 
@@ -244,6 +259,8 @@ Your job is to help users design their pricing model through natural conversatio
 - **continuous_use**: Non-consumable resources (seats, workspaces, projects, team members)
 - **boolean**: On/off features (advanced analytics, priority support, SSO)
 - **credit_system**: A unified credit pool that maps to multiple single_use features
+
+
 
 ## Item Types
 Products contain an array of items. There are THREE distinct item patterns:
@@ -264,7 +281,11 @@ Products contain an array of items. There are THREE distinct item patterns:
    \`{ feature_id: "credits", price: 10, usage_model: "prepaid", billing_units: 10000 }\`
    → Customer pays $10 once to receive 10,000 credits
 
-5. **Per-Unit Pricing Structure**:
+5. **Tiered Pricing**:
+   \`{ feature_id: "api_calls", included_usage: 1000, tiers: [{ to: 5000, amount: 0.02 }, { to: "inf", amount: 0.01 }], usage_model: "pay_per_use", interval: "month" }\`
+   → Customer gets 1,000 API calls free, then pays $0.02/call up to 5,000, then $0.01/call after that.
+
+6. **Per-Unit Pricing Structure**:
 For any "per-X" pricing (like "$Y per seat", "$Y per project", "$Y per website"), ALWAYS use this pattern:
 - Base subscription fee: \`{ feature_id: null, price: 10, interval: "month" }\`
 - Unit allocation: \`{ feature_id: "seats", included_usage: 1, price: 10, usage_model: "pay_per_use", billing_units: 1 }\`
@@ -273,9 +294,12 @@ This creates: $Y/month base price that includes 1 unit, then $Y per additional u
 
 
 
+
 ## Guidelines when building the config
 
 - Refer to the Item Types section above to see examples of how to build the config.
+
+- **Features vs Items**: Features define WHAT can be tracked (e.g., "credits"). Items define HOW that feature is granted in a product (recurring, one-time, free, paid). NEVER create duplicate features for the same underlying resource. For example, "monthly tokens" and "one-time tokens" should be the SAME feature ("tokens"), referenced by different items and intervals.
 
 - If you identify more than 3 features from user input, build the 3 most important (prioritizing metered features) and ask the user to confirm if they want to add more. Inform them clearly that you kept it simple to start with, but they can add more later.
 
@@ -288,15 +312,17 @@ This creates: $Y/month base price that includes 1 unit, then $Y per additional u
 - For annual variants of plans, create another separate plan but with the annual price interval. Name it <plan_name> - Annual
 
 
+
+
 ## Guidelines when responding to the user
 
 - Do NOT tell the user what pricing you have built or describe the pricing in any way, as it is a waste to read (they can see it on the right).
 
 - If the user asks about changing currency, let them know they can do so in the Autumn dashboard, under Developer > Stripe.
 
-- If the user has a price for a feature, clarify whether it should be a usage-based (pay_per_use) or prepaid (prepaid) pricing
+- If the user has a price for a feature, ask them whether it should be a usage-based (pay_per_use) or prepaid (prepaid) pricing
 
-- If you don't know something, DO NOT make up information or assume anything. They can reach us on discord here: https://discord.gg/atmn (we're very responsive)
+- If the user asks about pricing or functionality that you are not sure whether is possible, DO NOT make up information or assume it can be done. They can reach us on discord here: https://discord.gg/atmn (we're very responsive)
 
 - Keep responses very concise and friendly.`;
 
@@ -319,7 +345,7 @@ pricingAgentRouter.post("/chat", async (c) => {
 	const anthropicClient = createAnthropic({
 		apiKey: process.env.ANTHROPIC_API_KEY,
 	});
-	const baseModel = anthropicClient("claude-sonnet-4-20250514");
+	const baseModel = anthropicClient("claude-opus-4-5");
 
 	const posthog = getPostHogClient();
 	const distinctId = ctx.userId || ctx.org?.id || "anonymous";

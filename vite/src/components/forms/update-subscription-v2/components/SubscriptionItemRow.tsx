@@ -9,6 +9,7 @@ import {
 	CheckIcon,
 	PencilSimpleIcon,
 } from "@phosphor-icons/react";
+import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
@@ -21,6 +22,7 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { cn } from "@/lib/utils";
 import { PlanFeatureIcon } from "@/views/products/plan/components/plan-card/PlanFeatureIcon";
 import { CustomDotIcon } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
+import { FAST_TRANSITION } from "../constants/animationConstants";
 import type { UseUpdateSubscriptionForm } from "../hooks/useUpdateSubscriptionForm";
 import { getEditIcon } from "../utils/getEditIcon";
 import { getItemRingClass } from "../utils/ringClassUtils";
@@ -243,42 +245,64 @@ export function SubscriptionItemRow({
 					(showPrepaidOutside || hasEditableEdit) &&
 					form &&
 					featureId && (
-						<div className="flex items-center h-10 px-3 rounded-xl input-base w-fit shrink-0 gap-2">
-							{isEditingQuantity ? (
-								<>
-									<form.AppField name={`prepaidOptions.${featureId}`}>
-										{(field) => (
-											<field.QuantityField label="" min={0} hideFieldInfo />
-										)}
-									</form.AppField>
-									<IconButton
-										icon={<CheckIcon size={14} />}
-										variant="skeleton"
-										size="sm"
-										className="text-t4 hover:text-t2 hover:bg-muted"
-										onClick={() => setIsEditingQuantity(false)}
-									/>
-								</>
-							) : (
-								<>
-									<span className="text-sm tabular-nums text-t3">
-										x{prepaidQuantity ?? 0}
-									</span>
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<IconButton
-												icon={<PencilSimpleIcon size={14} />}
-												variant="skeleton"
-												size="sm"
-												className="text-t4 hover:text-t2 hover:bg-muted"
-												onClick={() => setIsEditingQuantity(true)}
-											/>
-										</TooltipTrigger>
-										<TooltipContent>Update prepaid quantity</TooltipContent>
-									</Tooltip>
-								</>
-							)}
-						</div>
+						<motion.div
+							layout
+							transition={FAST_TRANSITION}
+							className="flex items-center h-10 px-3 rounded-xl input-base w-fit shrink-0 gap-2 overflow-hidden"
+						>
+							<AnimatePresence mode="popLayout" initial={false}>
+								{isEditingQuantity ? (
+									<motion.div
+										key="edit"
+										layout
+										initial={{ opacity: 0, x: 10 }}
+										animate={{ opacity: 1, x: 0 }}
+										exit={{ opacity: 0, x: -10 }}
+										transition={FAST_TRANSITION}
+										className="flex items-center gap-2"
+									>
+										<form.AppField name={`prepaidOptions.${featureId}`}>
+											{(field) => (
+												<field.QuantityField label="" min={0} hideFieldInfo />
+											)}
+										</form.AppField>
+										<IconButton
+											icon={<CheckIcon size={14} />}
+											variant="skeleton"
+											size="sm"
+											className="text-green-600 dark:text-green-500 hover:text-green-700! dark:hover:text-green-400! hover:bg-black/5 dark:hover:bg-white/10"
+											onClick={() => setIsEditingQuantity(false)}
+										/>
+									</motion.div>
+								) : (
+									<motion.div
+										key="display"
+										layout
+										initial={{ opacity: 0, x: -10 }}
+										animate={{ opacity: 1, x: 0 }}
+										exit={{ opacity: 0, x: 10 }}
+										transition={FAST_TRANSITION}
+										className="flex items-center gap-2"
+									>
+										<span className="text-sm tabular-nums text-t3">
+											x{prepaidQuantity ?? 0}
+										</span>
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<IconButton
+													icon={<PencilSimpleIcon size={14} />}
+													variant="skeleton"
+													size="sm"
+													className="text-t4 hover:text-t2 hover:bg-muted"
+													onClick={() => setIsEditingQuantity(true)}
+												/>
+											</TooltipTrigger>
+											<TooltipContent>Update prepaid quantity</TooltipContent>
+										</Tooltip>
+									</motion.div>
+								)}
+							</AnimatePresence>
+						</motion.div>
 					)}
 			</div>
 

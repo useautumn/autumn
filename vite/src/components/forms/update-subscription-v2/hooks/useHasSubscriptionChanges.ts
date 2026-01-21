@@ -34,6 +34,7 @@ export function useHasSubscriptionChanges({
 			removeTrial: formValues.removeTrial,
 			trialLength: formValues.trialLength,
 			trialDuration: formValues.trialDuration,
+			trialEnabled: formValues.trialEnabled,
 		});
 
 		if (trialChanges.length > 0) return true;
@@ -74,6 +75,7 @@ export function useHasSubscriptionChanges({
 		formValues.removeTrial,
 		formValues.trialLength,
 		formValues.trialDuration,
+		formValues.trialEnabled,
 		formValues.version,
 		formValues.items,
 		formValues.prepaidOptions,

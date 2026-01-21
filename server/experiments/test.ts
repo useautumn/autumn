@@ -8,8 +8,9 @@ export const test = async () => {
     env: AppEnv.Sandbox,
   });
 
-  const subscription = await stripeCli.subscriptions.retrieve("sub_1Sr2ln5NEqgjQ4gyJfi9oZVl");
-  console.log(subscription);
+  // 1. Create stripe empty price?
+
+
 };
 
 await test();

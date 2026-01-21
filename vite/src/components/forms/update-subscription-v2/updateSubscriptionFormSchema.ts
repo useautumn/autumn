@@ -7,6 +7,7 @@ export const UpdateSubscriptionFormSchema = z.object({
 	trialLength: z.number().positive().nullable(),
 	trialDuration: z.enum(FreeTrialDuration),
 	removeTrial: z.boolean(),
+	trialEnabled: z.boolean(),
 
 	version: z.number().positive(),
 

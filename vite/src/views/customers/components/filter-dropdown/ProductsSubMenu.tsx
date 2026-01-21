@@ -1,19 +1,19 @@
+import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import {
+	DropdownMenuItem,
+	DropdownMenuSeparator,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
-	DropdownMenuSeparator,
-	DropdownMenuItem,
 } from "@/components/v2/dropdowns/DropdownMenu";
-import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
-import { cn } from "@/lib/utils";
-import { useCustomersQueryStates } from "../../hooks/useCustomersQueryStates";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { cn } from "@/lib/utils";
 import { getVersionCounts } from "@/utils/productUtils";
+import { useCustomersQueryStates } from "../../hooks/useCustomersQueryStates";
 
 export const ProductsSubMenu = () => {
 	const { products } = useProductsQuery();
-	const { queryStates, setQueryStates } = useCustomersQueryStates();
+	const { queryStates, setFilters } = useCustomersQueryStates();
 	const versionCounts = getVersionCounts(products);
 
 	const selectedVersions = queryStates.version;
@@ -63,14 +63,9 @@ export const ProductsSubMenu = () => {
 			allProductVersions.length > 0 &&
 			allProductVersions.every((pv) => selectedVersions.includes(pv.key));
 		if (allSelected) {
-			setQueryStates({
-				...queryStates,
-				version: [],
-				none: false,
-			});
+			setFilters({ version: [], none: false });
 		} else {
-			setQueryStates({
-				...queryStates,
+			setFilters({
 				version: allProductVersions.map((pv) => pv.key),
 				none: false,
 			});
@@ -88,7 +83,7 @@ export const ProductsSubMenu = () => {
 			selectedVersions.includes(key),
 		);
 
-		let newSelectedVersions;
+		let newSelectedVersions: string[] = [];
 		let newNone = queryStates.none;
 		if (allProductVersionsSelected) {
 			// Deselect all versions of this product
@@ -104,18 +99,14 @@ export const ProductsSubMenu = () => {
 			newNone = false;
 		}
 
-		setQueryStates({
-			...queryStates,
-			version: newSelectedVersions,
-			none: newNone,
-		});
+		setFilters({ version: newSelectedVersions, none: newNone });
 	};
 
 	const toggleVersion = (productId: string, version: string) => {
 		const versionKey = `${productId}:${version}`;
 		const isSelected = selectedVersions.includes(versionKey);
 
-		let newSelectedVersions;
+		let newSelectedVersions: string[] = [];
 		let newNone = queryStates.none;
 		if (isSelected) {
 			newSelectedVersions = selectedVersions.filter(
@@ -126,28 +117,20 @@ export const ProductsSubMenu = () => {
 			newNone = false;
 		}
 
-		setQueryStates({
-			...queryStates,
-			version: newSelectedVersions,
-			none: newNone,
-		});
+		setFilters({ version: newSelectedVersions, none: newNone });
 	};
 
 	const handleSelectNone = (e: React.MouseEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
 
-		setQueryStates({
-			...queryStates,
-			version: [],
-			none: !queryStates.none,
-		});
+		setFilters({ version: [], none: !queryStates.none });
 	};
 
 	return (
 		<DropdownMenuSub>
 			<DropdownMenuSubTrigger className="flex items-center gap-2 cursor-pointer">
-				Products
+				Plans
 				{hasSelections && (
 					<span className="text-xs text-t3 bg-muted px-1 py-0 rounded-md">
 						{selectedProductsCount}
@@ -163,17 +146,21 @@ export const ProductsSubMenu = () => {
 					<>
 						<div className="flex items-center justify-between px-2 h-6">
 							<button
+								type="button"
 								onClick={handleSelectAll}
 								className={cn(
 									"px-1 h-5 flex items-center gap-1 text-t2 text-xs hover:text-t1 bg-accent cursor-pointer rounded-md",
 									allProductVersions.length > 0 &&
-										allProductVersions.every((pv) => selectedVersions.includes(pv.key)) &&
+										allProductVersions.every((pv) =>
+											selectedVersions.includes(pv.key),
+										) &&
 										"bg-primary/10 text-primary hover:text-primary/80",
 								)}
 							>
 								Select all
 							</button>
 							<button
+								type="button"
 								onClick={handleSelectNone}
 								className={cn(
 									"px-1 h-5 flex items-center gap-1 text-t3 text-xs hover:text-t1 hover:bg-accent cursor-pointer rounded-md",
@@ -181,112 +168,119 @@ export const ProductsSubMenu = () => {
 										"bg-primary/10 text-primary hover:text-primary/80",
 								)}
 							>
-								No products
+								No plans
 							</button>
 						</div>
 						<DropdownMenuSeparator />
 
 						<div className="max-h-64 overflow-y-auto">
-					{uniqueProducts?.map((product: any) => {
-						const versionCount = versionCounts?.[product.id] || 1;
-						const productVersionKeys = Array.from(
-							{ length: versionCount },
-							(_, i) => `${product.id}:${i + 1}`,
-						);
-						const allProductVersionsSelected = productVersionKeys.every((key) =>
-							selectedVersions.includes(key),
-						);
-						const someProductVersionsSelected = productVersionKeys.some((key) =>
-							selectedVersions.includes(key),
-						);
+							{uniqueProducts?.map((product: any) => {
+								const versionCount = versionCounts?.[product.id] || 1;
+								const productVersionKeys = Array.from(
+									{ length: versionCount },
+									(_, i) => `${product.id}:${i + 1}`,
+								);
+								const allProductVersionsSelected = productVersionKeys.every(
+									(key) => selectedVersions.includes(key),
+								);
+								const someProductVersionsSelected = productVersionKeys.some(
+									(key) => selectedVersions.includes(key),
+								);
 
-						return (
-							<div key={product.id}>
-								{versionCount === 1 ? (
-									// Single version - show just one button for the product
-									<DropdownMenuItem
-										onClick={(e) => {
-											e.preventDefault();
-											toggleVersion(product.id, "1");
-										}}
-										onSelect={(e) => e.preventDefault()}
-										className="flex items-center gap-2 cursor-pointer font-medium"
-									>
-										<Checkbox
-											checked={selectedVersions.includes(`${product.id}:1`)}
-											className="border-border"
-										/>
-										{product.name}
-									</DropdownMenuItem>
-								) : (
-									// Multiple versions - show product name with hover submenu for versions
-									<DropdownMenuSub>
-										<DropdownMenuSubTrigger
-											className="flex items-center gap-2 cursor-pointer font-medium"
-											onClick={(e) => {
-												e.preventDefault();
-												toggleProduct(product);
-											}}
-										>
-											<Checkbox
-												checked={allProductVersionsSelected}
-												className="border-border"
-												ref={(ref: any) => {
-													if (
-														ref &&
-														someProductVersionsSelected &&
-														!allProductVersionsSelected
-													) {
-														ref.indeterminate = true;
-													}
-												}}
-											/>
-											{product.name}
-										</DropdownMenuSubTrigger>
-										<DropdownMenuSubContent>
+								return (
+									<div key={product.id}>
+										{versionCount === 1 ? (
+											// Single version - show just one button for the product
 											<DropdownMenuItem
 												onClick={(e) => {
 													e.preventDefault();
-													toggleProduct(product);
+													toggleVersion(product.id, "1");
 												}}
 												onSelect={(e) => e.preventDefault()}
 												className="flex items-center gap-2 cursor-pointer font-medium"
 											>
-												<Checkbox checked={allProductVersionsSelected} className="border-border" />
-												All Versions
+												<Checkbox
+													checked={selectedVersions.includes(`${product.id}:1`)}
+													className="border-border"
+												/>
+												{product.name}
 											</DropdownMenuItem>
-											<DropdownMenuSeparator />
-											{Array.from(
-												{ length: versionCount },
-												(_, i) => i + 1,
-											).map((version) => {
-												const versionKey = `${product.id}:${version}`;
-												const isVersionSelected =
-													selectedVersions.includes(versionKey);
-
-												return (
+										) : (
+											// Multiple versions - show product name with hover submenu for versions
+											<DropdownMenuSub>
+												<DropdownMenuSubTrigger
+													className="flex items-center gap-2 cursor-pointer font-medium"
+													onClick={(e) => {
+														e.preventDefault();
+														toggleProduct(product);
+													}}
+												>
+													<Checkbox
+														checked={allProductVersionsSelected}
+														className="border-border"
+														ref={(ref: any) => {
+															if (
+																ref &&
+																someProductVersionsSelected &&
+																!allProductVersionsSelected
+															) {
+																ref.indeterminate = true;
+															}
+														}}
+													/>
+													{product.name}
+												</DropdownMenuSubTrigger>
+												<DropdownMenuSubContent>
 													<DropdownMenuItem
-														key={versionKey}
 														onClick={(e) => {
 															e.preventDefault();
-															toggleVersion(product.id, version.toString());
+															toggleProduct(product);
 														}}
 														onSelect={(e) => e.preventDefault()}
-														className="flex items-center gap-2 cursor-pointer text-sm"
+														className="flex items-center gap-2 cursor-pointer font-medium"
 													>
-														<Checkbox checked={isVersionSelected} className="border-border" />v{version}
+														<Checkbox
+															checked={allProductVersionsSelected}
+															className="border-border"
+														/>
+														All Versions
 													</DropdownMenuItem>
-												);
-											})}
-										</DropdownMenuSubContent>
-									</DropdownMenuSub>
-								)}
-							</div>
-						);
-					})}
-					</div>
-				</>
-			)}
+													<DropdownMenuSeparator />
+													{Array.from(
+														{ length: versionCount },
+														(_, i) => i + 1,
+													).map((version) => {
+														const versionKey = `${product.id}:${version}`;
+														const isVersionSelected =
+															selectedVersions.includes(versionKey);
+
+														return (
+															<DropdownMenuItem
+																key={versionKey}
+																onClick={(e) => {
+																	e.preventDefault();
+																	toggleVersion(product.id, version.toString());
+																}}
+																onSelect={(e) => e.preventDefault()}
+																className="flex items-center gap-2 cursor-pointer text-sm"
+															>
+																<Checkbox
+																	checked={isVersionSelected}
+																	className="border-border"
+																/>
+																v{version}
+															</DropdownMenuItem>
+														);
+													})}
+												</DropdownMenuSubContent>
+											</DropdownMenuSub>
+										)}
+									</div>
+								);
+							})}
+						</div>
+					</>
+				)}
 			</DropdownMenuSubContent>
 		</DropdownMenuSub>
 	);

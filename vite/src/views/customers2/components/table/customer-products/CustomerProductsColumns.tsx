@@ -50,6 +50,7 @@ export const CustomerProductsColumns = [
 					status={row.original.status}
 					starts_at={row.original.starts_at ?? undefined}
 					canceled={row.original.canceled}
+					canceled_at={row.original.canceled_at ?? undefined}
 					trialing={isCustomerProductTrialing(row.original) || false}
 					trial_ends_at={row.original.trial_ends_at ?? undefined}
 				/>

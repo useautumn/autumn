@@ -7,7 +7,7 @@ import { useCusSearchQuery } from "@/views/customers/hooks/useCusSearchQuery";
 import { useCustomersQueryStates } from "@/views/customers/hooks/useCustomersQueryStates";
 
 export function CustomerListSearchBar() {
-	const { queryStates, setQueryStates } = useCustomersQueryStates();
+	const { queryStates, setFilters } = useCustomersQueryStates();
 
 	const { totalCount } = useCusSearchQuery();
 	const navigate = useNavigate();
@@ -16,9 +16,9 @@ export function CustomerListSearchBar() {
 	const debouncedSearch = useMemo(
 		() =>
 			debounce(async (query: string) => {
-				setQueryStates({ q: query, page: 1 });
+				setFilters({ q: query });
 			}, 350),
-		[location.search, location.pathname, navigate, setQueryStates],
+		[location.search, location.pathname, navigate, setFilters],
 	);
 
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

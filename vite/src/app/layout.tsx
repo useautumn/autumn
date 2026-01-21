@@ -2,10 +2,11 @@ import { AppEnv } from "@autumn/shared";
 import { ArrowRightIcon } from "@phosphor-icons/react";
 import { AutumnProvider } from "autumn-js/react";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Outlet, useNavigate } from "react-router";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { IconButton } from "@/components/v2/buttons/IconButton";
+import { PortalContainerContext } from "@/contexts/PortalContainerContext";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useGlobalErrorHandler } from "@/hooks/common/useGlobalErrorHandler";
 import { useOrg } from "@/hooks/common/useOrg";
@@ -28,6 +29,7 @@ export function MainLayout() {
 	const { data, isPending } = useSession();
 	const { org, isLoading: orgLoading } = useOrg();
 	const { handleApiError } = useGlobalErrorHandler();
+	const containerRef = useRef<HTMLDivElement>(null);
 
 	const navigate = useNavigate();
 
@@ -90,25 +92,31 @@ export function MainLayout() {
 
 	return (
 		<AutumnProvider
-			// backendUrl={import.meta.env.VITE_BACKEND_URL}
-			backendUrl="http://localhost:8080"
+			backendUrl={import.meta.env.VITE_BACKEND_URL}
+			// backendUrl="http://localhost:8080"
 			includeCredentials={true}
 		>
 			<NuqsAdapter>
-				<div className="w-screen h-screen flex bg-outer-background">
-					<CustomToaster />
-					<MainSidebar />
-					<InviteNotifications />
-					<MainContent />
-					{/* <ChatWidget /> */}
-					<CommandBar />
-				</div>
+				<PortalContainerContext.Provider value={containerRef}>
+					<div className="w-screen h-screen flex bg-outer-background">
+						<CustomToaster />
+						<MainSidebar />
+						<InviteNotifications />
+						<MainContent containerRef={containerRef} />
+						{/* <ChatWidget /> */}
+						<CommandBar />
+					</div>
+				</PortalContainerContext.Provider>
 			</NuqsAdapter>
 		</AutumnProvider>
 	);
 }
 
-const MainContent = () => {
+const MainContent = ({
+	containerRef,
+}: {
+	containerRef: React.RefObject<HTMLDivElement>;
+}) => {
 	const env = useEnv();
 	const { org } = useOrg();
 	const [showDeployDialog, setShowDeployDialog] = useState(false);
@@ -128,7 +136,10 @@ const MainContent = () => {
 					"font-normal",
 				)}
 			>
-				<div className="w-full h-full flex flex-col overflow-hidden rounded-xl border">
+				<div
+					ref={containerRef}
+					className="w-full h-full flex flex-col overflow-hidden rounded-xl border relative"
+				>
 					{env === AppEnv.Sandbox && (
 						<div className="w-full min-h-10 h-10 bg-t8/10 text-sm flex items-center justify-center relative px-4 text-t8 border-b border-t8/20">
 							<p className="font-medium font-mono">You&apos;re in sandbox</p>
@@ -159,17 +170,6 @@ const MainContent = () => {
 						<div className="w-full h-full justify-center">
 							<Outlet />
 						</div>
-						{/* <div className="md:hidden w-full h-full flex items-center justify-center">
-              <div className="bg-white p-6 rounded-lg shadow-sm text-center">
-                <h2 className="text-xl font-semibold mb-2">
-                  Autumn is coming to mobile soon
-                </h2>
-                <p className="text-gray-600">
-                  We&apos;re currently designed for larger screens. Come back on
-                  your desktop?
-                </p>
-              </div>
-            </div> */}
 					</div>
 				</div>
 			</main>

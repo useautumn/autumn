@@ -19,9 +19,9 @@ export function TableContent({
 	return (
 		<div
 			className={cn(
-				"rounded-lg border shadow-sm relative z-50 min-w-0",
+				"rounded-lg shadow-[0_0_8px_rgba(0,0,0,0.04)] border relative z-50 min-w-0",
 				!rows.length &&
-					"border-dashed bg-interactive-secondary dark:bg-transparent shadow-sm dark:shadow-none",
+					"border-dashed bg-interactive-secondary dark:bg-transparent",
 				className,
 			)}
 		>

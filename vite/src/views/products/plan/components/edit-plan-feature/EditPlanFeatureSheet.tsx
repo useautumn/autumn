@@ -1,12 +1,18 @@
 import { FeatureType } from "@autumn/shared";
+import { PencilSimpleIcon } from "@phosphor-icons/react";
+import { useState } from "react";
+import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
 	useHasItemChanges,
 	useProduct,
+	useSheet,
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { getFeature } from "@/utils/product/entitlementUtils";
 import { isFeaturePriceItem } from "@/utils/product/getItemType";
+import UpdateFeatureSheet from "@/views/products/features/components/UpdateFeatureSheet";
+import UpdateCreditSystemSheet from "@/views/products/features/credit-systems/components/UpdateCreditSystemSheet";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { AdvancedSettings } from "./AdvancedSettings";
 import { BillingType } from "./BillingType";
@@ -22,9 +28,28 @@ export function EditPlanFeatureSheet({
 	isOnboarding?: boolean;
 }) {
 	const { item } = useProductItemContext();
-	const { features } = useFeaturesQuery();
-	const { product } = useProduct();
+	const { features, refetch } = useFeaturesQuery();
+	const { product, setProduct } = useProduct();
+	const { setInitialItem } = useSheet();
 	const hasItemChanges = useHasItemChanges();
+	const [editFeatureOpen, setEditFeatureOpen] = useState(false);
+
+	const handleFeatureUpdateSuccess = async (oldId: string, newId: string) => {
+		if (oldId !== newId && product.items) {
+			// Wait for features to be refetched to avoid race condition
+			await refetch();
+			// Update the feature_id in the product item
+			const updatedItems = product.items.map((i) =>
+				i.feature_id === oldId ? { ...i, feature_id: newId } : i,
+			);
+			setProduct({ ...product, items: updatedItems });
+
+			// Also update initialItem so it doesn't show as having changes
+			if (item?.feature_id === oldId) {
+				setInitialItem({ ...item, feature_id: newId });
+			}
+		}
+	};
 
 	const emptyPriceItem =
 		item?.usage_model &&
@@ -55,6 +80,16 @@ export function EditPlanFeatureSheet({
 								use feature{" "}
 								<span className="font-medium text-t1">{feature?.name}</span>
 							</p>
+						}
+						action={
+							<IconButton
+								variant="muted"
+								size="sm"
+								icon={<PencilSimpleIcon />}
+								onClick={() => setEditFeatureOpen(true)}
+							>
+								Edit Feature
+							</IconButton>
 						}
 					/>
 				)}
@@ -98,6 +133,23 @@ export function EditPlanFeatureSheet({
 
 			{/* Footer stays at bottom */}
 			{showFooter && <SheetFooterActions />}
+
+			{/* Edit Feature Sheet */}
+			{feature?.type === FeatureType.CreditSystem ? (
+				<UpdateCreditSystemSheet
+					open={editFeatureOpen}
+					setOpen={setEditFeatureOpen}
+					selectedCreditSystem={feature ?? null}
+					onSuccess={handleFeatureUpdateSuccess}
+				/>
+			) : (
+				<UpdateFeatureSheet
+					open={editFeatureOpen}
+					setOpen={setEditFeatureOpen}
+					selectedFeature={feature ?? null}
+					onSuccess={handleFeatureUpdateSuccess}
+				/>
+			)}
 		</div>
 	);
 }

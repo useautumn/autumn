@@ -2,10 +2,12 @@ import { type FreeTrialDuration, getTrialLengthInDays } from "@autumn/shared";
 import {
 	ArrowCounterClockwiseIcon,
 	CalendarBlankIcon,
+	CheckIcon,
 	PencilSimpleIcon,
 	TrashIcon,
 } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
+import { AnimatePresence, motion } from "motion/react";
 import { useRef, useState } from "react";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
@@ -14,6 +16,7 @@ import {
 	TooltipTrigger,
 } from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
+import { FAST_TRANSITION } from "../constants/animationConstants";
 import {
 	formatTrialDuration,
 	TRIAL_DURATION_OPTIONS,
@@ -139,11 +142,10 @@ export function TrialEditorRow({
 		);
 	}
 
-	if (
-		!isEditing &&
-		!isAddingNewTrial &&
-		(hasTrialValue || isCurrentlyTrialing)
-	) {
+	const showDisplayMode =
+		!isEditing && !isAddingNewTrial && (hasTrialValue || isCurrentlyTrialing);
+
+	if (showDisplayMode) {
 		return (
 			<div className="flex items-center gap-2">
 				<div
@@ -156,9 +158,7 @@ export function TrialEditorRow({
 						<CalendarBlankIcon
 							size={14}
 							weight="fill"
-							className={cn(
-								isTrialModified ? "text-amber-400" : "text-blue-400",
-							)}
+							className="text-blue-400"
 						/>
 						<span className="text-sm text-t2">Free Trial</span>
 					</div>
@@ -178,37 +178,54 @@ export function TrialEditorRow({
 						</span>
 					) : null}
 				</div>
-				<div className="flex items-center h-10 px-3 rounded-xl input-base gap-2">
-					<IconButton
-						icon={<PencilSimpleIcon size={14} />}
-						variant="skeleton"
-						size="sm"
-						className="text-t4 hover:text-t2 hover:bg-muted"
-						onClick={() => {
-							setIsEditing(true);
-							setIsAddingNewTrial(false);
-						}}
-					/>
-				</div>
+				<motion.div
+					layout
+					transition={FAST_TRANSITION}
+					className="flex items-center h-10 px-3 rounded-xl input-base gap-2 overflow-hidden"
+				>
+					<AnimatePresence mode="popLayout" initial={false}>
+						<motion.div
+							key="display"
+							layout
+							initial={{ opacity: 0, x: -10 }}
+							animate={{ opacity: 1, x: 0 }}
+							exit={{ opacity: 0, x: 10 }}
+							transition={FAST_TRANSITION}
+							className="flex items-center gap-2"
+						>
+							<IconButton
+								icon={<PencilSimpleIcon size={14} />}
+								variant="skeleton"
+								size="sm"
+								className="text-t4 hover:text-t2 hover:bg-muted"
+								onClick={() => {
+									setIsEditing(true);
+									setIsAddingNewTrial(false);
+								}}
+							/>
+						</motion.div>
+					</AnimatePresence>
+				</motion.div>
 			</div>
 		);
 	}
 
 	const handleClearTrial = () => {
-		if (!hasTrialValue && !isCurrentlyTrialing) {
-			onCollapse();
-			setIsEditing(false);
-			setIsAddingNewTrial(true);
-			return;
-		}
+		// Just collapse - preserve the value so it can be restored
+		onCollapse();
+		setIsEditing(false);
+		setIsAddingNewTrial(true);
 
-		form.setFieldValue("trialLength", null);
+		// Only mark for removal if they're currently trialing (ending an active trial)
 		if (isCurrentlyTrialing) {
 			onEndTrial();
 		}
-		setIsEditing(false);
-		setIsAddingNewTrial(true);
 	};
+
+	const isNewTrial = !isCurrentlyTrialing;
+	const editModeRingClass = isNewTrial
+		? "ring-1 ring-inset ring-green-500/50"
+		: "ring-1 ring-inset ring-amber-500/50";
 
 	return (
 		<div
@@ -219,54 +236,85 @@ export function TrialEditorRow({
 			<div
 				className={cn(
 					"flex items-center flex-1 h-10 px-3 rounded-xl input-base",
-					"ring-1 ring-inset ring-amber-500/50",
+					editModeRingClass,
 				)}
 			>
 				<div className="flex items-center gap-2">
 					<CalendarBlankIcon
 						size={14}
 						weight="fill"
-						className="text-amber-400"
+						className="text-blue-400"
 					/>
 					<span className="text-sm text-t2">Free Trial</span>
 				</div>
 			</div>
-			<div className="flex items-center h-10 px-3 rounded-xl input-base gap-2">
-				<form.AppField name="trialLength">
-					{(field) => (
-						<field.NumberField
-							label=""
-							placeholder="7"
-							min={1}
-							className="w-16"
-							hideFieldInfo
+			<motion.div
+				layout
+				transition={FAST_TRANSITION}
+				className="flex items-center h-10 px-3 rounded-xl input-base gap-2 overflow-hidden"
+			>
+				<AnimatePresence mode="popLayout" initial={false}>
+					<motion.div
+						key="edit"
+						layout
+						initial={{ opacity: 0, x: 10 }}
+						animate={{ opacity: 1, x: 0 }}
+						exit={{ opacity: 0, x: -10 }}
+						transition={FAST_TRANSITION}
+						className="flex items-center gap-2"
+					>
+						<form.AppField name="trialLength">
+							{(field) => (
+								<field.NumberField
+									label=""
+									placeholder="7"
+									min={1}
+									className="w-16"
+									inputClassName="placeholder:opacity-50"
+									hideFieldInfo
+								/>
+							)}
+						</form.AppField>
+						<form.AppField name="trialDuration">
+							{(field) => (
+								<field.SelectField
+									placeholder="7"
+									label=""
+									options={
+										TRIAL_DURATION_OPTIONS as unknown as {
+											label: string;
+											value: FreeTrialDuration;
+										}[]
+									}
+									className="w-24"
+									hideFieldInfo
+								/>
+							)}
+						</form.AppField>
+						<IconButton
+							icon={<CheckIcon size={14} />}
+							variant="skeleton"
+							size="sm"
+							className="text-green-600 dark:text-green-500 hover:text-green-700! dark:hover:text-green-400! hover:bg-black/5 dark:hover:bg-white/10"
+							onClick={() => {
+								if (hasTrialValue) {
+									setIsEditing(false);
+									setIsAddingNewTrial(false);
+								} else {
+									handleClearTrial();
+								}
+							}}
 						/>
-					)}
-				</form.AppField>
-				<form.AppField name="trialDuration">
-					{(field) => (
-						<field.SelectField
-							placeholder="7"
-							label=""
-							options={
-								TRIAL_DURATION_OPTIONS as unknown as {
-									label: string;
-									value: FreeTrialDuration;
-								}[]
-							}
-							className="w-24"
-							hideFieldInfo
+						<IconButton
+							icon={<TrashIcon size={14} />}
+							variant="skeleton"
+							size="sm"
+							className="text-t4 hover:text-red-400!"
+							onClick={handleClearTrial}
 						/>
-					)}
-				</form.AppField>
-				<IconButton
-					icon={<TrashIcon size={14} />}
-					variant="skeleton"
-					size="sm"
-					className="text-t4 hover:text-red-400"
-					onClick={handleClearTrial}
-				/>
-			</div>
+					</motion.div>
+				</AnimatePresence>
+			</motion.div>
 		</div>
 	);
 }

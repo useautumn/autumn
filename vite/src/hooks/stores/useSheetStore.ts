@@ -122,8 +122,12 @@ export const useSheetEscapeHandler = ({
 					document.querySelector('[data-state="open"][role="alertdialog"]') ||
 					document.querySelector("dialog[open]");
 
+				const isInlineEditorOpen = document.querySelector(
+					"[data-inline-editor-open]",
+				);
+
 				// Only close sheet if no dialog is open
-				if (!isDialogOpen) {
+				if (!isDialogOpen && !isInlineEditorOpen) {
 					// Use custom onClose if provided, otherwise default closeSheet
 					if (onClose) {
 						onClose();

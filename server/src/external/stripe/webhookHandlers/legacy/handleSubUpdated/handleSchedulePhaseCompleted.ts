@@ -3,7 +3,7 @@ import {
 	CusProductStatus,
 	type FullCustomer,
 	formatMs,
-	isCustomerProductExpired,
+	hasCustomerProductEnded,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { stripeCustomerToNowMs } from "@/external/stripe/customers/index";
@@ -66,7 +66,7 @@ export const handleSchedulePhaseCompleted = async ({
 	);
 
 	for (const cusProduct of customerProducts) {
-		const shouldExpire = isCustomerProductExpired(cusProduct, { nowMs });
+		const shouldExpire = hasCustomerProductEnded(cusProduct, { nowMs });
 
 		if (shouldExpire) {
 			logger.info(

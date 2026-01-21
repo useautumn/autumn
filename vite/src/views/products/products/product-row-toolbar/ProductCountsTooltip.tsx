@@ -19,6 +19,7 @@ export const ProductCountsTooltip = ({ product }: { product: ProductV2 }) => {
 	const versionCounts = getVersionCounts(products);
 
 	const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+		e.preventDefault();
 		e.stopPropagation();
 		if (activeCount === 0) return;
 

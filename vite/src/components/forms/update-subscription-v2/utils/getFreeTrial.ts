@@ -7,12 +7,15 @@ export function getFreeTrial({
 	removeTrial,
 	trialLength,
 	trialDuration,
+	trialEnabled,
 }: {
 	removeTrial: boolean;
 	trialLength: number | null;
 	trialDuration: FreeTrialDuration;
+	trialEnabled: boolean;
 }): CreateFreeTrial | null | undefined {
 	if (removeTrial) return null;
+	if (!trialEnabled) return undefined;
 	if (trialLength !== null && trialLength > 0) {
 		return {
 			length: trialLength,

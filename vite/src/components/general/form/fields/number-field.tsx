@@ -10,6 +10,7 @@ export function NumberField({
 	min,
 	max,
 	className,
+	inputClassName,
 	hideFieldInfo,
 	disabled,
 }: {
@@ -18,6 +19,7 @@ export function NumberField({
 	min?: number;
 	max?: number;
 	className?: string;
+	inputClassName?: string;
 	hideFieldInfo?: boolean;
 	disabled?: boolean;
 }) {
@@ -51,7 +53,7 @@ export function NumberField({
 				placeholder={placeholder}
 				value={field.state.value ?? ""}
 				onChange={handleChange}
-				className="text-sm"
+				className={cn("text-sm", inputClassName)}
 				disabled={disabled}
 			/>
 			{!hideFieldInfo && <FieldInfo field={field} />}

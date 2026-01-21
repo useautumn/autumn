@@ -104,8 +104,14 @@ export function CustomerListTable({
 
 	const hasRows = table.getRowModel().rows.length > 0;
 	const hasSearchQuery = Boolean(queryStates.q?.trim());
+	const hasFilters =
+		queryStates.status.length > 0 ||
+		queryStates.version.length > 0 ||
+		queryStates.none;
+	const hasActiveFiltersOrSearch = hasSearchQuery || hasFilters;
 
-	if (!hasRows && !hasSearchQuery) {
+	// Only show empty state if org has NO customers (no filters/search active and no results)
+	if (!hasRows && !hasActiveFiltersOrSearch) {
 		return (
 			<EmptyState
 				type="customers"
@@ -142,7 +148,7 @@ export function CustomerListTable({
 				<CustomerListCreateButton />
 			</div>
 
-			{!hasRows && hasSearchQuery ? (
+			{!hasRows && hasActiveFiltersOrSearch ? (
 				<EmptyState
 					type="no-customers-found"
 					actionButton={<CustomerListCreateButton />}
