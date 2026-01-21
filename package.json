@@ -47,8 +47,8 @@
 		"q": "lsof -ti:8080 -ti:3000 | xargs kill -9"
 	},
 	"dependencies": {
-		"@better-auth/core": "^1.4.12",
-		"@better-auth/oauth-provider": "^1.4.12",
+		"@better-auth/core": "1.4.12",
+		"@better-auth/oauth-provider": "1.4.12",
 		"@wooorm/starry-night": "^3.8.0",
 		"ag-charts-react": "^12.3.0",
 		"better-auth": "1.4.12",
