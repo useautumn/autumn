@@ -8,6 +8,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
 import type { AutumnBillingPlan } from "@/internal/billing/v2/types/autumnBillingPlan";
 import { handleCancelEndOfCycleErrors } from "@/internal/billing/v2/updateSubscription/errors/handleCancelEndOfCycleErrors";
+import { handleBillingBehaviorErrors } from "./handleBillingBehaviorErrors";
 import { handleCurrentCustomerProductErrors } from "./handleCurrentCustomerProductErrors";
 import { handleCustomPlanErrors } from "./handleCustomPlanErrors";
 import { handleFeatureQuantityErrors } from "./handleFeatureQuantityErrors";
@@ -16,7 +17,6 @@ import {
 	handleOneOffErrors,
 } from "./handleOneOffErrors";
 import { handleProductTypeTransitionErrors } from "./handleProductTypeTransitionErrors";
-import { handleProrateBillingErrors } from "./handleProrateBillingErrors";
 import { handleUncancelErrors } from "./handleUncancelErrors";
 
 export const handleUpdateSubscriptionErrors = async ({
@@ -68,8 +68,8 @@ export const handleUpdateSubscriptionErrors = async ({
 	// 8. Uncancel validation errors
 	handleUncancelErrors({ billingContext });
 
-	// 9. Prorate billing errors
-	handleProrateBillingErrors({
+	// 9. Billing behavior errors
+	handleBillingBehaviorErrors({
 		billingContext,
 		autumnBillingPlan,
 		params,
