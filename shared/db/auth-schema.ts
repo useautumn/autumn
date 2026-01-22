@@ -11,7 +11,6 @@ import {
 	type Organization,
 	organizations,
 } from "../models/orgModels/orgTable.js";
-import { sqlNow } from "./utils.js";
 
 export const user = pgTable(
 	"user",
@@ -132,8 +131,8 @@ export const invitation = pgTable(
 		role: text("role"),
 		status: text("status").default("pending").notNull(),
 		createdAt: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.default(sqlNow),
+			.$defaultFn(() => /* @__PURE__ */ new Date())
+			.notNull(),
 		expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 		inviterId: text("inviter_id")
 			.notNull()
