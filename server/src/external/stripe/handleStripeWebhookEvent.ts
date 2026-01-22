@@ -10,9 +10,9 @@ import { handleWebhookErrorSkip } from "@/utils/routerUtils/webhookErrorSkip.js"
 import { getSentryTags } from "../sentry/sentryUtils.js";
 import { handleCheckoutSessionCompleted } from "./webhookHandlers/handleCheckoutCompleted.js";
 import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
-import { handleInvoiceCreated } from "./webhookHandlers/handleInvoiceCreated/handleInvoiceCreated.js";
 import { handleInvoiceFinalized } from "./webhookHandlers/handleInvoiceFinalized.js";
 import { handleInvoiceUpdated } from "./webhookHandlers/handleInvoiceUpdated.js";
+import { handleStripeInvoiceCreated } from "./webhookHandlers/handleStripeInvoiceCreated/handleStripeInvoiceCreated.js";
 import { handleStripeSubscriptionDeleted } from "./webhookHandlers/handleStripeSubscriptionDeleted/handleStripeSubscriptionDeleted.js";
 import { handleSubCreated } from "./webhookHandlers/handleSubCreated.js";
 import { handleSubscriptionScheduleCanceled } from "./webhookHandlers/handleSubScheduleCanceled.js";
@@ -57,17 +57,9 @@ export const handleStripeWebhookEvent = async (
 				});
 				break;
 
-			case "invoice.created": {
-				const createdInvoice = event.data.object;
-				await handleInvoiceCreated({
-					db,
-					org,
-					data: createdInvoice,
-					env,
-					logger,
-				});
+			case "invoice.created":
+				await handleStripeInvoiceCreated({ ctx, event });
 				break;
-			}
 
 			case "invoice.finalized": {
 				await handleInvoiceFinalized({ ctx });

@@ -60,5 +60,6 @@ export const computeCancelPlan = ({
 		defaultCustomerProduct,
 		productToDelete,
 		cancelLineItems,
+		existingCustomerProduct: billingContext.customerProduct,
 	});
 };

@@ -13,7 +13,8 @@ export const initCustomerV3 = async ({
 	attachPm,
 	withTestClock = true,
 	withDefault = false,
-	defaultProductId,
+	defaultGroup = customerId,
+	skipWebhooks,
 }: {
 	ctx: TestContext;
 	customerId: string;
@@ -21,7 +22,8 @@ export const initCustomerV3 = async ({
 	customerData?: CustomerData;
 	withTestClock?: boolean;
 	withDefault?: boolean;
-	defaultProductId?: string;
+	defaultGroup?: string;
+	skipWebhooks?: boolean;
 }) => {
 	const name = customerId;
 	const email = `${customerId}@example.com`;
@@ -58,11 +60,13 @@ export const initCustomerV3 = async ({
 		id: customerId,
 		name,
 		email,
-		// @ts-expect-error
 		fingerprint: customerData?.fingerprint,
 		stripe_id: stripeCus.id,
-		disable_default: !withDefault,
-		default_product_id: defaultProductId,
+		internalOptions: {
+			disable_defaults: !withDefault,
+			default_group: defaultGroup,
+		},
+		skipWebhooks,
 	});
 
 	// 3. Attach payment method

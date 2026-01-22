@@ -1,8 +1,10 @@
 import {
-	BillingType,
 	cusPriceToCusEntWithCusProduct,
 	cusProductToPrices,
+	EntInterval,
+	type FullCusEntWithFullCusProduct,
 	type FullCusProduct,
+	getCycleEnd,
 	isConsumablePrice,
 	isV4Usage,
 	type LineItem,
@@ -11,6 +13,8 @@ import {
 	usagePriceToLineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { UpdateCustomerEntitlement } from "@/internal/billing/v2/types/autumnBillingPlan";
+import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils";
 import type { BillingContext } from "../../billingContext";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
 
@@ -19,15 +23,23 @@ export const customerProductToArrearLineItems = ({
 	customerProduct,
 	billingContext,
 	filters,
+	updateNextResetAt,
 }: {
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
 	billingContext: BillingContext;
 	filters: {
 		onlyV4Usage?: boolean;
+		/** Optional filter to skip specific entitlements (e.g., for multi-interval billing) */
+		cusEntFilter?: (cusEnt: FullCusEntWithFullCusProduct) => boolean;
 	};
-}) => {
-	let lineItems: LineItem[] = [];
+	updateNextResetAt: boolean;
+}): {
+	lineItems: LineItem[];
+	updateCustomerEntitlements: UpdateCustomerEntitlement[];
+} => {
+	const lineItems: LineItem[] = [];
+	const billedCusEnts: FullCusEntWithFullCusProduct[] = [];
 
 	let filteredPrices = cusProductToPrices({ cusProduct: customerProduct });
 
@@ -37,16 +49,12 @@ export const customerProductToArrearLineItems = ({
 		);
 	}
 
+	const updateCustomerEntitlements: UpdateCustomerEntitlement[] = [];
+
 	for (const cusPrice of customerProduct.customer_prices) {
 		const price = cusPrice.price;
 
 		if (!isConsumablePrice(price)) continue;
-
-		// Calculate billing period
-		const billingPeriod = getLineItemBillingPeriod({
-			billingContext,
-			price,
-		});
 
 		const cusEnt = cusPriceToCusEntWithCusProduct({
 			cusProduct: customerProduct,
@@ -60,6 +68,15 @@ export const customerProductToArrearLineItems = ({
 			);
 		}
 
+		// Apply optional filter (e.g., for multi-interval billing check)
+		if (filters.cusEntFilter && !filters.cusEntFilter(cusEnt)) continue;
+
+		// Calculate billing period
+		const billingPeriod = getLineItemBillingPeriod({
+			billingContext,
+			price,
+		});
+
 		const context: LineItemContext = {
 			price,
 			product: customerProduct.product,
@@ -72,10 +89,38 @@ export const customerProductToArrearLineItems = ({
 			currency: orgToCurrency({ org: ctx.org }),
 		};
 
-		lineItems.push(usagePriceToLineItem({ cusEnt, context }));
+		const lineItem = usagePriceToLineItem({
+			cusEnt,
+			context,
+			options: { includePeriodDescription: false },
+		});
+
+		// Only include line items with non-zero amounts
+		if (lineItem.amount !== 0) {
+			lineItems.push(lineItem);
+		}
+
+		// Update to make to customer entitlement.
+		const resetBalancesUpdate = getResetBalancesUpdate({
+			cusEnt,
+			allowance: cusEnt.entitlement.allowance ?? 0,
+		});
+
+		const nextResetAt = getCycleEnd({
+			anchor: billingContext.billingCycleAnchorMs,
+			interval: cusEnt.entitlement.interval ?? EntInterval.Month,
+			intervalCount: cusEnt.entitlement.interval_count,
+			now: billingPeriod?.end ?? billingContext.currentEpochMs,
+		});
+
+		updateCustomerEntitlements.push({
+			customerEntitlement: cusEnt,
+			updates: {
+				...resetBalancesUpdate,
+				next_reset_at: updateNextResetAt ? nextResetAt : undefined,
+			},
+		});
 	}
 
-	lineItems = lineItems.filter((item) => item.amount !== 0);
-
-	return lineItems;
+	return { lineItems, updateCustomerEntitlements };
 };
