@@ -13,7 +13,7 @@ import { authClient, signIn } from "@/lib/auth-client";
 import { getBackendErr } from "@/utils/genUtils";
 import { OTPSignIn } from "./components/OTPSignIn";
 
-export const emailSchema = z.email();
+export const emailSchema = z.string().email();
 
 export const SignIn = () => {
 	const [email, setEmail] = useState("");
