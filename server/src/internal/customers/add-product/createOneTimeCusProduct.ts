@@ -13,11 +13,11 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
+import { triggerVerifyCacheConsistency } from "@/internal/billing/v2/workflows/verifyCacheConsistency/triggerVerifyCacheConsistency.js";
 import { getEntRelatedPrice } from "@/internal/products/entitlements/entitlementUtils.js";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { nullish } from "@/utils/genUtils.js";
 import type { Logger } from "../../../external/logtail/logtailUtils.js";
-import { queueVerifyCacheConsistencyWorkflow } from "../../../queue/hatchetWorkflows/verifyCacheConsistencyWorkflow/queueVerifyCacheConsistencyWorkflow.js";
 import type { InsertCusProductParams } from "../cusProducts/AttachParams.js";
 import { CusProductService } from "../cusProducts/CusProductService.js";
 import { CusEntService } from "../cusProducts/cusEnts/CusEntitlementService.js";
@@ -191,7 +191,7 @@ export const updateOneTimeCusProduct = async ({
 		scenario: AttachScenario.New,
 	});
 
-	await queueVerifyCacheConsistencyWorkflow({
+	await triggerVerifyCacheConsistency({
 		newCustomerProduct: existingCusProduct,
 		previousFullCustomer: attachParams.customer as FullCustomer,
 		logger,

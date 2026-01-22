@@ -10,12 +10,11 @@ import {
 // 	// examples: [PLAN_EXAMPLE],
 // });
 
+import { ExtCreateCustomerParamsSchema } from "../customers/createCustomerParams.js";
 import { ListCustomersV2ParamsSchema } from "../customers/crud/listCustomersParamsV2.js";
 import {
-	CreateCustomerParamsSchema,
 	CreateCustomerQuerySchema,
 	GetCustomerQuerySchema,
-	// ListCustomersResponseSchema,
 	UpdateCustomerParamsSchema,
 } from "../customers/customerOpModels.js";
 import { createPagePaginatedResponseSchema } from "../models.js";
@@ -30,7 +29,7 @@ export const customersOpenApi = {
 			},
 			requestBody: {
 				content: {
-					"application/json": { schema: CreateCustomerParamsSchema },
+					"application/json": { schema: ExtCreateCustomerParamsSchema },
 				},
 			},
 			responses: {

@@ -31,6 +31,11 @@ BUN_PARALLEL_COMPACT() {
   cd "$PROJECT_ROOT" && $BUN_CMD scripts/testScripts/runTests.ts "$@" --compact
 }
 
+# V2 test runner - shows individual tests, better error display (Ink-based)
+BUN_PARALLEL_V2() {
+  cd "$PROJECT_ROOT" && $BUN_CMD scripts/testScripts/runTestsV2.tsx "$@"
+}
+
 # Setup function
 BUN_SETUP() {
   cd "$SERVER_DIR" && $BUN_CMD tests/setupMain.ts

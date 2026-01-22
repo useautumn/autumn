@@ -129,6 +129,7 @@ export const constructArrearItem = ({
 	},
 	entityFeatureId,
 	usageLimit,
+	interval = ProductItemInterval.Month,
 	intervalCount = 1,
 }: {
 	featureId: string;
@@ -138,6 +139,7 @@ export const constructArrearItem = ({
 	config?: ProductItemConfig;
 	entityFeatureId?: string;
 	usageLimit?: number;
+	interval?: ProductItemInterval;
 	intervalCount?: number;
 }) => {
 	const item: ProductItem = {
@@ -146,7 +148,7 @@ export const constructArrearItem = ({
 		included_usage: includedUsage,
 		price: price,
 		billing_units: billingUnits,
-		interval: ProductItemInterval.Month,
+		interval: interval,
 		interval_count: intervalCount,
 		reset_usage_when_enabled: true,
 		config,
