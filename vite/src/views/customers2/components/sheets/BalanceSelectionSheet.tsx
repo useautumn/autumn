@@ -74,11 +74,19 @@ export function BalanceSelectionSheet() {
 								entityId,
 							}).balance;
 
-							const entity = customer?.entities?.find(
-								(e: Entity) =>
+							// For loose entitlements (no customer_product), check cusEnt.internal_entity_id
+							// For product entitlements, check cusProduct.internal_entity_id/entity_id
+							const entity = customer?.entities?.find((e: Entity) => {
+								// Check for entity-level loose entitlement
+								if (cusEnt.internal_entity_id) {
+									return e.internal_id === cusEnt.internal_entity_id;
+								}
+								// Check for entity-level product entitlement
+								return (
 									e.internal_id === cusProduct?.internal_entity_id ||
-									e.id === cusProduct?.entity_id,
-							);
+									e.id === cusProduct?.entity_id
+								);
+							});
 
 							const entitlement = cusEnt.entitlement;
 							const isConsumable =
