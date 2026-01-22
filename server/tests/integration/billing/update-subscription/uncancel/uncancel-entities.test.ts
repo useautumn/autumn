@@ -43,11 +43,12 @@ test.concurrent(`${chalk.yellowBright("uncancel entity: other entity active")}`,
 		],
 	});
 
-	// Cancel only entity 1's product
-	await autumnV1.cancel({
+	// Cancel only entity 1's product via subscriptions.update
+	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
 		entity_id: entities[0].id,
+		cancel: "end_of_cycle",
 	});
 
 	// Verify entity 1 is canceling, entity 2 is active
@@ -135,16 +136,18 @@ test.concurrent(`${chalk.yellowBright("uncancel: all entities")}`, async () => {
 		],
 	});
 
-	// Cancel both entities
-	await autumnV1.cancel({
+	// Cancel both entities via subscriptions.update
+	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
 		entity_id: entities[0].id,
+		cancel: "end_of_cycle",
 	});
-	await autumnV1.cancel({
+	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
 		entity_id: entities[1].id,
+		cancel: "end_of_cycle",
 	});
 
 	// Verify both are canceling
@@ -208,40 +211,36 @@ test.concurrent(`${chalk.yellowBright("uncancel: all entities")}`, async () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Uncancel entity with scheduled default product
+// TEST 3: Uncancel entity (entities don't get default products scheduled)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("uncancel entity: with scheduled default")}`, async () => {
-	const customerId = "uncancel-entity-default";
+test.concurrent(`${chalk.yellowBright("uncancel entity: no scheduled default for entities")}`, async () => {
+	const customerId = "uncancel-entity-no-scheduled";
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-	const freeMessagesItem = items.monthlyMessages({ includedUsage: 10 });
 
+	// No default product in this test - we're testing that entities
+	// don't get default products scheduled when canceled
 	const pro = products.pro({ items: [messagesItem] });
-	const free = constructProduct({
-		id: "free",
-		items: [freeMessagesItem],
-		type: "free",
-		isDefault: true,
-	});
 
 	const { autumnV1, ctx, entities } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro, free] }),
+			s.products({ list: [pro] }),
 			s.entities({ count: 1, featureId: TestFeature.Users }),
 		],
 		actions: [s.attach({ productId: pro.id, entityIndex: 0 })],
 	});
 
-	// Cancel entity's pro - should schedule free default
-	await autumnV1.cancel({
+	// Cancel entity's pro via subscriptions.update
+	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
 		entity_id: entities[0].id,
+		cancel: "end_of_cycle",
 	});
 
-	// Verify pro is canceling and free is scheduled
+	// Verify pro is canceling - entities do NOT get default products scheduled
 	const entityAfterCancel = await autumnV1.entities.get(
 		customerId,
 		entities[0].id,
@@ -249,10 +248,6 @@ test.concurrent(`${chalk.yellowBright("uncancel entity: with scheduled default")
 	await expectProductCanceling({
 		customer: entityAfterCancel,
 		productId: pro.id,
-	});
-	await expectProductScheduled({
-		customer: entityAfterCancel,
-		productId: free.id,
 	});
 
 	// Uncancel the entity's pro
@@ -263,7 +258,7 @@ test.concurrent(`${chalk.yellowBright("uncancel entity: with scheduled default")
 		cancel: null,
 	});
 
-	// Verify pro is active and free is deleted
+	// Verify pro is active
 	const entityAfterUncancel = await autumnV1.entities.get(
 		customerId,
 		entities[0].id,
@@ -271,10 +266,6 @@ test.concurrent(`${chalk.yellowBright("uncancel entity: with scheduled default")
 	await expectProductActive({
 		customer: entityAfterUncancel,
 		productId: pro.id,
-	});
-	await expectProductNotPresent({
-		customer: entityAfterUncancel,
-		productId: free.id,
 	});
 
 	// Verify balance

@@ -46,7 +46,10 @@ test.concurrent(`${chalk.yellowBright("uncancel: with scheduled default product"
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro, free] }),
 		],
-		actions: [s.attach({ productId: pro.id }), s.cancel({ productId: pro.id })],
+		actions: [
+			s.attach({ productId: pro.id }),
+			s.updateSubscription({ productId: pro.id, cancel: "end_of_cycle" }),
+		],
 	});
 
 	// Verify pro is canceling and free is scheduled
@@ -186,17 +189,12 @@ test.concurrent(`${chalk.yellowBright("uncancel: preserves usage")}`, async () =
 		messagesUsage,
 	);
 
-	// Cancel pro
-
-	await autumnV1.cancel({
+	// Cancel pro via subscriptions.update
+	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
+		cancel: "end_of_cycle",
 	});
-	// await autumnV1.subscriptions.update({
-	// 	customer_id: customerId,
-	// 	product_id: pro.id,
-	// 	cancel: "end_of_cycle",
-	// });
 
 	await new Promise((resolve) => setTimeout(resolve, 4000));
 
@@ -320,7 +318,10 @@ test.concurrent(`${chalk.yellowBright("error: uncancel expired product")}`, asyn
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro, free] }),
 		],
-		actions: [s.attach({ productId: pro.id }), s.cancel({ productId: pro.id })],
+		actions: [
+			s.attach({ productId: pro.id }),
+			s.updateSubscription({ productId: pro.id, cancel: "end_of_cycle" }),
+		],
 	});
 
 	// Advance to next billing cycle so pro expires
