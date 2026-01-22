@@ -18,7 +18,7 @@ export const BaseApiCustomerV5Schema = z
 		env: z.enum(AppEnv),
 		metadata: z.record(z.any(), z.any()),
 		subscriptions: z.array(ApiSubscriptionV1Schema),
-		purchases: z.record(z.any(), z.any()),
+		purchases: z.record(z.any(), z.any()), // need to do
 		balances: z.record(z.string(), ApiBalanceV1Schema),
 	})
 	.meta({

@@ -60,19 +60,6 @@ const checkSubscriptionsMatch = ({
 		}
 	}
 
-	for (const scheduledSubscription of dbCustomer.scheduled_subscriptions) {
-		const cachedScheduledSubscription =
-			cachedCustomer.scheduled_subscriptions.find(
-				(s) => s.plan_id === scheduledSubscription.plan_id,
-			);
-		if (!cachedScheduledSubscription) {
-			return {
-				success: false,
-				message: `Scheduled subscription ${scheduledSubscription.plan_id} not found in cached customer`,
-			};
-		}
-	}
-
 	return {
 		success: true,
 		message: "Subscriptions match",

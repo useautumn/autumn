@@ -1,4 +1,10 @@
-import { type ApiBalanceV1, type CusFeatureLegacyData, type Feature, FeatureType } from "@autumn/shared";
+import {
+	type ApiBalanceV1,
+	apiBalanceV1ToPurchasedBalance,
+	type CusFeatureLegacyData,
+	type Feature,
+	FeatureType,
+} from "@autumn/shared";
 import { Decimal } from "decimal.js";
 
 export const apiBalanceToAllowed = ({
@@ -39,11 +45,14 @@ export const apiBalanceToAllowed = ({
 		}
 
 		// Check if purchase_balance < max_purchase
-		const availableBalance = new Decimal(apiBalance.max_purchase)
-			.sub(legacyData?.purchased_balance ?? 0)
-			.minus(apiBalance.remaining);
+		const totalPurchased = apiBalanceV1ToPurchasedBalance({ apiBalance });
 
-		if (availableBalance.gte(requiredBalance)) {
+		const availableOverage = new Decimal(apiBalance.max_purchase).sub(
+			totalPurchased,
+		);
+
+		// write test for this please... (especially in overage cases, etc.)
+		if (availableOverage.add(apiBalance.remaining).gte(requiredBalance)) {
 			return true;
 		}
 	}
