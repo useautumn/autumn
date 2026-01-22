@@ -1,7 +1,9 @@
+import type { UpdateSubscriptionV0Params } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import { addStripeSubscriptionScheduleIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionScheduleIdToBillingPlan";
 import { executeStripeInvoiceAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeInvoiceAction";
+import { executeStripeRefundAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeRefundAction";
 import { executeStripeSubscriptionAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionAction";
 import { executeStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionScheduleAction";
 import { createStripeInvoiceItems } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
@@ -14,11 +16,13 @@ export const executeStripeBillingPlan = async ({
 	billingPlan,
 	billingContext,
 	resumeAfter,
+	params,
 }: {
 	ctx: AutumnContext;
 	billingPlan: BillingPlan;
 	billingContext: BillingContext;
 	resumeAfter?: StripeBillingStage;
+	params?: UpdateSubscriptionV0Params;
 }): Promise<StripeBillingPlanResult> => {
 	const {
 		subscriptionAction: stripeSubscriptionAction,
@@ -98,12 +102,19 @@ export const executeStripeBillingPlan = async ({
 		}
 	}
 
+	const stripeInvoice =
+		subscriptionResult?.stripeInvoice ?? invoiceResult?.stripeInvoice;
+
+	await executeStripeRefundAction({
+		ctx,
+		billingContext,
+		stripeInvoice,
+		params,
+	});
+
 	return {
 		stripeSubscription: subscriptionResult?.stripeSubscription,
-
-		stripeInvoice:
-			subscriptionResult?.stripeInvoice ?? invoiceResult?.stripeInvoice,
-
+		stripeInvoice,
 		requiredAction:
 			subscriptionResult?.requiredAction ?? invoiceResult?.requiredAction,
 	};

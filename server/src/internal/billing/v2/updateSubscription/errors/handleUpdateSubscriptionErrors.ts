@@ -17,6 +17,7 @@ import {
 	handleOneOffErrors,
 } from "./handleOneOffErrors";
 import { handleProductTypeTransitionErrors } from "./handleProductTypeTransitionErrors";
+import { handleRefundBehaviorErrors } from "./handleRefundBehaviorErrors";
 import { handleUncancelErrors } from "./handleUncancelErrors";
 
 export const handleUpdateSubscriptionErrors = async ({
@@ -71,6 +72,12 @@ export const handleUpdateSubscriptionErrors = async ({
 	// 9. Billing behavior errors
 	handleBillingBehaviorErrors({
 		billingContext,
+		autumnBillingPlan,
+		params,
+	});
+
+	// 10. Refund behavior errors
+	handleRefundBehaviorErrors({
 		autumnBillingPlan,
 		params,
 	});
