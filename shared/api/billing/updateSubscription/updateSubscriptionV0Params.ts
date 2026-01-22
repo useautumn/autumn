@@ -3,7 +3,6 @@ import { nullish } from "@utils/utils";
 import { z } from "zod/v4";
 import { FeatureOptionsSchema } from "../../../models/cusProductModels/cusProductModels";
 import { ProductItemSchema } from "../../../models/productV2Models/productItemModels/productItemModels";
-import { CancelModeSchema } from "../../common/cancelMode";
 import { CustomerDataSchema } from "../../common/customerData";
 import { EntityDataSchema } from "../../models";
 
@@ -29,8 +28,12 @@ export const ExtUpdateSubscriptionV0ParamsSchema = z.object({
 	// Cancel: 'immediately' | 'end_of_cycle' | null (null = uncancel)
 	cancel: z.enum(["immediately", "end_of_cycle"]).nullable().optional(),
 
-	// Proration: defaults to true (charge for prorations). Set to false to skip proration charges.
-	prorate_billing: z.boolean().optional(),
+	// Billing behavior for subscription updates:
+	// - 'prorate_immediately' (default): Invoice line items are charged immediately
+	// - 'next_cycle_only': Do NOT create any charges due to the update
+	billing_behavior: z
+		.enum(["prorate_immediately", "next_cycle_only"])
+		.optional(),
 
 	// reset_billing_cycle_anchor: z.boolean().optional(),
 	// new_billing_subscription: z.boolean().optional(),
