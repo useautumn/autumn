@@ -1,6 +1,8 @@
 import type { FullCusEntWithFullCusProduct } from "@models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+import { customerEntitlementToBillingType } from "@utils/cusEntUtils/convertCusEntUtils/customerEntitlementToBillingType.js";
 import { sortCusEntsForDeduction } from "@utils/cusEntUtils/sortCusEntsForDeduction.js";
 import { isOneOffPrice } from "@utils/productUtils/priceUtils/classifyPriceUtils.js";
+import { notNullish } from "@utils/utils.js";
 import type { FullCustomerPrice } from "../../models/cusProductModels/cusPriceModels/cusPriceModels.js";
 import type { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
 import type {
@@ -64,11 +66,15 @@ export const cusProductsToCusEnts = ({
 	featureIds,
 	internalFeatureIds,
 	inStatuses,
+	filters,
 }: {
 	cusProducts: FullCusProduct[];
 	featureIds?: string[];
 	internalFeatureIds?: string[];
 	inStatuses?: CusProductStatus[];
+	filters?: {
+		billingTypes?: BillingType[];
+	};
 }) => {
 	let cusEnts: FullCusEntWithFullCusProduct[] = [];
 
@@ -98,6 +104,15 @@ export const cusProductsToCusEnts = ({
 		cusEnts = cusEnts.filter((cusEnt) =>
 			internalFeatureIds.includes(cusEnt.entitlement.internal_feature_id),
 		);
+	}
+
+	if (filters?.billingTypes) {
+		cusEnts = cusEnts.filter((cusEnt) => {
+			const billingType = customerEntitlementToBillingType({ cusEnt });
+			return (
+				notNullish(billingType) && filters?.billingTypes?.includes(billingType)
+			);
+		});
 	}
 
 	sortCusEntsForDeduction({
@@ -145,6 +160,14 @@ export const cusProductToProduct = ({
 		entitlements: cusProductToEnts({ cusProduct }),
 		free_trial: cusProduct.free_trial,
 	} as FullProduct;
+};
+
+export const customerProductsToProducts = ({
+	customerProducts,
+}: {
+	customerProducts: FullCusProduct[];
+}): FullProduct[] => {
+	return customerProducts.map((cp) => cusProductToProduct({ cusProduct: cp }));
 };
 
 export const cusProductToCusEnts = ({

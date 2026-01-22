@@ -103,6 +103,7 @@ export * from "./models/billingModels/invoicingModels/lineItem.js";
 export * from "./models/billingModels/newProductAction.js";
 export * from "./models/billingModels/stripeAdapterModels/stripeDiscountWithCoupon.js";
 export * from "./models/billingModels/stripeAdapterModels/stripeItemSpec.js";
+export * from "./models/cusProductModels/cusPriceModels/customerPriceWithCustomerProduct.js";
 export * from "./models/migrationModels/migrationErrorTable.js";
 export * from "./models/migrationModels/migrationJobTable.js";
 export * from "./models/migrationModels/migrationModels.js";
