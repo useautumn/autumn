@@ -43,16 +43,16 @@ export const processConsumablePricesForInvoiceCreated = async ({
 				}),
 		});
 
-	if (lineItems.length === 0) return;
-
-	await createStripeInvoiceItems({
-		ctx,
-		invoiceItems: lineItemsToCreateInvoiceItemsParams({
-			stripeCustomerId: eventContext.stripeCustomer.id,
-			stripeInvoiceId: stripeInvoice.id,
-			lineItems,
-		}),
-	});
+	if (lineItems.length > 0) {
+		await createStripeInvoiceItems({
+			ctx,
+			invoiceItems: lineItemsToCreateInvoiceItemsParams({
+				stripeCustomerId: eventContext.stripeCustomer.id,
+				stripeInvoiceId: stripeInvoice.id,
+				lineItems,
+			}),
+		});
+	}
 
 	await CusEntService.batchUpdate({
 		db: ctx.db,
