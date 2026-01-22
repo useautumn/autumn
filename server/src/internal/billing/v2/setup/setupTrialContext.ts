@@ -42,6 +42,7 @@ export const setupTrialContext = ({
 				freeTrial: null,
 				trialEndsAt: null,
 				appliesToBilling: newProductIsPaidRecurring,
+				cardRequired: true,
 			};
 		} else {
 			return undefined;
@@ -67,6 +68,7 @@ export const setupTrialContext = ({
 			trialEndsAt,
 			customFreeTrial: dbFreeTrial,
 			appliesToBilling: newProductIsPaidRecurring,
+			cardRequired: dbFreeTrial.card_required,
 		};
 	}
 
@@ -84,6 +86,7 @@ export const setupTrialContext = ({
 				freeTrial: null,
 				trialEndsAt: trialEndsAt,
 				appliesToBilling: newProductIsPaidRecurring,
+				cardRequired: true,
 			};
 		} else {
 			return undefined;
@@ -96,6 +99,7 @@ export const setupTrialContext = ({
 			freeTrial: customerProduct.free_trial, // can be undefined...
 			trialEndsAt: customerProduct.trial_ends_at ?? null,
 			appliesToBilling: false,
+			cardRequired: true,
 		};
 	}
 

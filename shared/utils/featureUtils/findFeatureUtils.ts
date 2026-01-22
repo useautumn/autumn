@@ -70,3 +70,42 @@ export function findFeatureById({
 
 	return result;
 }
+
+// Overload: errorOnNotFound = true → guaranteed Feature
+export function findFeatureByIdOrInternalId(params: {
+	features: Feature[];
+	featureIdOrInternalId: string;
+	errorOnNotFound: true;
+}): Feature;
+
+// Overload: errorOnNotFound = false/undefined → Feature | undefined
+export function findFeatureByIdOrInternalId(params: {
+	features: Feature[];
+	featureIdOrInternalId: string;
+	errorOnNotFound?: false;
+}): Feature | undefined;
+
+// Implementation
+export function findFeatureByIdOrInternalId({
+	features,
+	featureIdOrInternalId,
+	errorOnNotFound,
+}: {
+	features: Feature[];
+	featureIdOrInternalId: string;
+	errorOnNotFound?: boolean;
+}): Feature | undefined {
+	const result = features.find(
+		(feature) =>
+			feature.id === featureIdOrInternalId ||
+			feature.internal_id === featureIdOrInternalId,
+	);
+
+	if (errorOnNotFound && !result) {
+		throw new InternalError({
+			message: `Feature not found for id or internal_id: ${featureIdOrInternalId}`,
+		});
+	}
+
+	return result;
+}

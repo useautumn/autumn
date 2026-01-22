@@ -12,8 +12,10 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
 import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
+import { sendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/sendProductsUpdated.js";
+import { verifyCacheConsistency } from "@/internal/billing/v2/workflows/verifyCacheConsistency/verifyCacheConsistency.js";
 import { runClearCreditSystemCacheTask } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
-import { generateFeatureDisplayWorkflow } from "@/internal/features/workflows/generateFeatureDisplayWorkflow.js";
+import { generateFeatureDisplay } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
 import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigrationTask.js";
 import { detectBaseVariant } from "@/internal/products/productUtils/detectProductVariant.js";
@@ -23,7 +25,6 @@ import { addWorkflowToLogs } from "@/utils/logging/addContextToLogs.js";
 import { hatchet } from "../external/hatchet/initHatchet.js";
 import { setSentryTags } from "../external/sentry/sentryUtils.js";
 import { createWorkerContext } from "./createWorkerContext.js";
-import { verifyCacheConsistencyWorkflow } from "./hatchetWorkflows/verifyCacheConsistencyWorkflow/verifyCacheConsistencyWorkflow.js";
 import { QUEUE_URL, sqs } from "./initSqs.js";
 import { JobName } from "./JobName.js";
 
@@ -112,7 +113,19 @@ const processMessage = async ({
 				workerLogger.error("No context found for generate feature display job");
 				return;
 			}
-			await generateFeatureDisplayWorkflow({
+			await generateFeatureDisplay({
+				ctx,
+				payload: job.data,
+			});
+			return;
+		}
+
+		if (job.name === JobName.SendProductsUpdated) {
+			if (!ctx) {
+				workerLogger.error("No context found for send products updated job");
+				return;
+			}
+			await sendProductsUpdated({
 				ctx,
 				payload: job.data,
 			});
@@ -328,7 +341,7 @@ export const initHatchetWorker = async () => {
 		console.log("Starting hatchet worker");
 
 		const worker = await hatchet.worker("hatchet-worker", {
-			workflows: [verifyCacheConsistencyWorkflow!],
+			workflows: [verifyCacheConsistency!],
 		});
 
 		// Don't await - start() runs indefinitely and would block the rest of the code

@@ -24,7 +24,7 @@ export const setupStripeSubscriptionUpdatedContext = async ({
 		subscriptionId: event.data.object.id,
 	});
 
-	const previousAttributes = event.data.previous_attributes;
+	const previousAttributes = event.data.previous_attributes ?? {};
 
 	// Get current time (respecting test clocks)
 	const stripeCli = createStripeCli({ org, env });

@@ -23,6 +23,7 @@ export interface TrialContext {
 	trialEndsAt: number | null;
 	customFreeTrial?: FreeTrial;
 	appliesToBilling: boolean;
+	cardRequired: boolean;
 }
 
 export interface BillingContext {
@@ -61,5 +62,3 @@ export interface UpdateSubscriptionBillingContext extends BillingContext {
 	defaultProduct?: FullProduct; // for cancel flows
 	cancelMode?: CancelMode; // for cancel flows
 }
-
-// testClockFrozenTime?: number;

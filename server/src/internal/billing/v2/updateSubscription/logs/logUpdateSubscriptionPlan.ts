@@ -49,13 +49,14 @@ export const logUpdateSubscriptionPlan = ({
 					plan.updateCustomerEntitlements
 						?.map(
 							(update) =>
-								`${update.customerEntitlement.feature_id}: ${update.balanceChange > 0 ? "+" : ""}${update.balanceChange}`,
+								`${update.customerEntitlement.feature_id}: ${(update.balanceChange ?? 0) > 0 ? "+" : ""}${update.balanceChange}`,
 						)
 						.join(", ") || "none",
 
-				lineItems: plan.lineItems.map(
-					(item) => `${item.description}: ${item.finalAmount}`,
-				),
+				lineItems:
+					plan.lineItems?.map(
+						(item) => `${item.description}: ${item.finalAmount}`,
+					) ?? "none",
 			},
 		},
 	});

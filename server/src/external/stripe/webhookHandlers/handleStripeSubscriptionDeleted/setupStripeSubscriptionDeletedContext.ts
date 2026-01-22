@@ -1,9 +1,14 @@
-import type {
-	FullCusProduct,
-	FullCustomer,
-	InsertCustomerProduct,
+import {
+	type FullCusProduct,
+	type FullCustomer,
+	type InsertCustomerProduct,
+	isCustomerProductOnStripeSubscription,
 } from "@autumn/shared";
 import type Stripe from "stripe";
+import {
+	type ExpandedStripeCustomer,
+	getExpandedStripeCustomer,
+} from "@/external/stripe/customers/operations/getExpandedStripeCustomer";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils";
 import {
 	type ExpandedStripeSubscription,
@@ -15,6 +20,7 @@ import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhoo
 
 export interface StripeSubscriptionDeletedContext {
 	stripeSubscription: ExpandedStripeSubscription;
+	stripeCustomer: ExpandedStripeCustomer;
 	fullCustomer: FullCustomer;
 	/** Customer products that are on this subscription */
 	customerProducts: FullCusProduct[];
@@ -57,7 +63,10 @@ export const setupStripeSubscriptionDeletedContext = async ({
 
 	// 1. Filter customer products on this subscription
 	const customerProducts = fullCustomer.customer_products.filter((cp) =>
-		cp.subscription_ids?.includes(stripeSubscriptionId),
+		isCustomerProductOnStripeSubscription({
+			customerProduct: cp,
+			stripeSubscriptionId,
+		}),
 	);
 
 	if (customerProducts.length === 0) {
@@ -85,13 +94,24 @@ export const setupStripeSubscriptionDeletedContext = async ({
 		subscriptionId: stripeSubscriptionId,
 	});
 
-	// 4. Get current time (respecting test clocks)
+	// 4. Get expanded stripe customer (for discount info)
+	const stripeCustomer = await getExpandedStripeCustomer({
+		ctx,
+		stripeCustomerId: stripeSubscription.customer.id,
+	});
+
+	if (!stripeCustomer) {
+		logger.warn("[sub.deleted] stripeCustomer not found, skipping");
+		return null;
+	}
+
+	// 5. Get current time (respecting test clocks)
 	const nowMs = await stripeSubscriptionToNowMs({
 		stripeSubscription,
 		stripeCli: ctx.stripeCli,
 	});
 
-	// 5. Get payment method for arrear invoices
+	// 6. Get payment method for arrear invoices
 	const paymentMethod = await getCusPaymentMethod({
 		stripeCli: ctx.stripeCli,
 		stripeId: stripeSubscription.customer.id,
@@ -99,6 +119,7 @@ export const setupStripeSubscriptionDeletedContext = async ({
 
 	return {
 		stripeSubscription,
+		stripeCustomer,
 		fullCustomer,
 		customerProducts,
 		nowMs,

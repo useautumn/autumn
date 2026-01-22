@@ -1,4 +1,7 @@
-import { isCustomerProductOnStripeSubscription } from "@autumn/shared";
+import {
+	type FullCusProduct,
+	isCustomerProductOnStripeSubscription,
+} from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import {
@@ -13,6 +16,7 @@ import type { StripeSubscriptionDeletedContext } from "../setupStripeSubscriptio
  * For each customer product on the deleted subscription:
  * 1. Expire the customer product and activate default if needed
  * 2. Delete any scheduled main customer product in the same group
+ * 3. Cache expired products so invoice.created can access them
  */
 export const expireAndActivateCustomerProducts = async ({
 	ctx,
@@ -28,6 +32,7 @@ export const expireAndActivateCustomerProducts = async ({
 		`[sub.deleted] Processing ${customerProducts.length} customer products for subscription ${stripeSubscription.id}`,
 	);
 
+	const expiredCustomerProducts: FullCusProduct[] = [];
 	for (const customerProduct of customerProducts) {
 		// 1. If not on stripe subscription, skip
 		const onStripeSubscription = isCustomerProductOnStripeSubscription({
@@ -43,6 +48,8 @@ export const expireAndActivateCustomerProducts = async ({
 			customerProduct,
 			fullCustomer,
 		});
+
+		expiredCustomerProducts.push(customerProduct);
 
 		trackCustomerProductUpdate({
 			eventContext,
@@ -65,4 +72,13 @@ export const expireAndActivateCustomerProducts = async ({
 			});
 		}
 	}
+
+	/**
+	 * Need to cache expired customer products to invoice.created can access them
+	 * invoice.created creates a final invoice for usage-based prices
+	 */
+	await customerProductActions.expiredCache.set({
+		stripeSubscriptionId: stripeSubscription.id,
+		customerProducts: expiredCustomerProducts,
+	});
 };
