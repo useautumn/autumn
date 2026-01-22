@@ -45,7 +45,7 @@ const processPrepaidPrice = async ({
 	const { db } = ctx;
 
 	if (!options) return;
-
+	const previousQuantity = options?.quantity ?? 0;
 	const resetQuantity = (options?.upcoming_quantity || options?.quantity) ?? 0;
 	const config = customerPrice.price.config;
 	const billingUnits = config.billing_units || 1;
@@ -123,6 +123,7 @@ const processPrepaidPrice = async ({
 	logPrepaidPriceProcessed({
 		ctx,
 		customerEntitlement,
+		previousQuantity,
 		resetQuantity,
 		newAllowance,
 		nextResetAt: end * 1000,
