@@ -1,17 +1,23 @@
 import type { StripeDiscountWithCoupon } from "@autumn/shared";
-import type Stripe from "stripe";
+import type {
+	StripeCustomerWithDiscount,
+	StripeSubscriptionWithDiscounts,
+} from "@/external/stripe/subscriptions";
 import { subToDiscounts } from "../utils/discounts/subToDiscounts";
 
 /**
  * Extracts discounts from already-fetched Stripe subscription or customer.
  * Subscription discounts take priority over customer discounts.
+ *
+ * TODO: Investigate if customer discount expand path should be
+ * "discount.source.coupon.applies_to" instead of "discount.coupon.applies_to"
  */
 export const setupStripeDiscountsForBilling = ({
 	stripeSubscription,
 	stripeCustomer,
 }: {
-	stripeSubscription?: Stripe.Subscription;
-	stripeCustomer: Stripe.Customer;
+	stripeSubscription?: StripeSubscriptionWithDiscounts;
+	stripeCustomer: StripeCustomerWithDiscount;
 }): StripeDiscountWithCoupon[] => {
 	const subscriptionDiscounts = subToDiscounts({ sub: stripeSubscription });
 
@@ -22,12 +28,16 @@ export const setupStripeDiscountsForBilling = ({
 	const customerDiscount = stripeCustomer.discount;
 	if (!customerDiscount) return [];
 
-	const coupon = customerDiscount.source?.coupon;
+	const coupon = customerDiscount.coupon;
 	if (!coupon || typeof coupon === "string") return [];
 
 	// Normalize to StripeDiscountWithCoupon format
-	return [{
-		...customerDiscount,
-		source: { coupon },
-	} as StripeDiscountWithCoupon];
+	// Extract the coupon and put it under source.coupon
+	const { coupon: _coupon, ...discountWithoutCoupon } = customerDiscount;
+	return [
+		{
+			...discountWithoutCoupon,
+			source: { coupon },
+		} as StripeDiscountWithCoupon,
+	];
 };

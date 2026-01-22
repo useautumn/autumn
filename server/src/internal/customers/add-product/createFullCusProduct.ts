@@ -19,13 +19,13 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
+import { triggerVerifyCacheConsistency } from "@/internal/billing/v2/workflows/verifyCacheConsistency/triggerVerifyCacheConsistency.js";
 import { searchCusProducts } from "@/internal/customers/cusProducts/cusProductUtils.js";
 import { getEntRelatedPrice } from "@/internal/products/entitlements/entitlementUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
-import { queueVerifyCacheConsistencyWorkflow } from "../../../queue/hatchetWorkflows/verifyCacheConsistencyWorkflow/queueVerifyCacheConsistencyWorkflow.js";
 import type { InsertCusProductParams } from "../cusProducts/AttachParams.js";
 import { CusProductService } from "../cusProducts/CusProductService.js";
 import { CusEntService } from "../cusProducts/cusEnts/CusEntitlementService.js";
@@ -545,7 +545,7 @@ export const createFullCusProduct = async ({
 		logger.error("Failed to add products updated webhook task to queue");
 	}
 
-	await queueVerifyCacheConsistencyWorkflow({
+	await triggerVerifyCacheConsistency({
 		newCustomerProduct: fullCusProduct,
 		previousFullCustomer: attachParams.customer as FullCustomer,
 		logger,

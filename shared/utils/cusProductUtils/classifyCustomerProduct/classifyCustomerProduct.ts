@@ -90,6 +90,11 @@ export const isCustomerProductCanceling = (cp?: FullCusProduct) => {
 	return notNullish(cp.canceled_at);
 };
 
+export const isCustomerProductExpired = (cp?: FullCusProduct) => {
+	if (!cp) return false;
+	return cp.status === CusProductStatus.Expired;
+};
+
 /**
  * Checks if a canceling customer product has reached its end time.
  * Uses an optional tolerance to handle timing differences between Stripe and webhook arrival.

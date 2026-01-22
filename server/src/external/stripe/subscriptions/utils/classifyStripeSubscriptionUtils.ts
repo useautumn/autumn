@@ -54,3 +54,28 @@ export const isStripeSubscriptionCanceled = (
 
 	return stripeSubscription.status === "canceled";
 };
+
+/**
+ * Checks if a Stripe subscription has any metered price items.
+ */
+export const stripeSubscriptionHasMeteredItems = (
+	stripeSubscription?: Stripe.Subscription,
+) => {
+	if (!stripeSubscription) {
+		return false;
+	}
+
+	return stripeSubscription.items.data.some(
+		(item) => item.price.recurring?.usage_type === "metered",
+	);
+};
+
+export const isStripeSubscriptionVercel = (
+	stripeSubscription?: Stripe.Subscription,
+) => {
+	if (!stripeSubscription) {
+		return false;
+	}
+
+	return Boolean(stripeSubscription.metadata?.vercel_installation_id);
+};

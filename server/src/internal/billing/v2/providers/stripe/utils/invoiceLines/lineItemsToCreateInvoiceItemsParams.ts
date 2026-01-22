@@ -7,10 +7,12 @@ import type Stripe from "stripe";
 const toStripeCreateInvoiceItemParams = ({
 	stripeCustomerId,
 	stripeSubscriptionId,
+	stripeInvoiceId,
 	lineItem,
 }: {
 	stripeCustomerId: string;
 	stripeSubscriptionId?: string;
+	stripeInvoiceId?: string;
 	lineItem: LineItem;
 }): Stripe.InvoiceItemCreateParams => {
 	const { finalAmount, description, context } = lineItem;
@@ -19,6 +21,7 @@ const toStripeCreateInvoiceItemParams = ({
 	return {
 		customer: stripeCustomerId,
 		subscription: stripeSubscriptionId,
+		invoice: stripeInvoiceId,
 		amount: atmnToStripeAmount({ amount: finalAmount }),
 		currency,
 		description,
@@ -37,16 +40,19 @@ const toStripeCreateInvoiceItemParams = ({
 export const lineItemsToCreateInvoiceItemsParams = ({
 	stripeCustomerId,
 	stripeSubscriptionId,
+	stripeInvoiceId,
 	lineItems,
 }: {
 	stripeCustomerId: string;
 	stripeSubscriptionId?: string;
+	stripeInvoiceId?: string;
 	lineItems: LineItem[];
 }): Stripe.InvoiceItemCreateParams[] => {
 	return lineItems.map((lineItem) =>
 		toStripeCreateInvoiceItemParams({
 			stripeCustomerId,
 			stripeSubscriptionId,
+			stripeInvoiceId,
 			lineItem,
 		}),
 	);

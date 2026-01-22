@@ -2,18 +2,17 @@ import {
 	type AppEnv,
 	type Customer,
 	ErrCode,
-	hashString,
 	type Organization,
 	ProcessorType,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import { Stripe } from "stripe";
+import type { Stripe } from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { createStripeCustomer } from "@/external/stripe/customers";
 import { CusService } from "@/internal/customers/CusService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import type { TestContext } from "../../../tests/utils/testInitUtils/createTestContext";
-import type { Logger } from "../logtail/logtailUtils";
 
 export const getStripeCus = async ({
 	stripeCli,
@@ -27,190 +26,6 @@ export const getStripeCus = async ({
 		return stripeCus as Stripe.Customer;
 	} catch (_error) {
 		return undefined;
-	}
-};
-
-export const createStripeCusIfNotExists = async ({
-	db,
-	org,
-	env,
-	customer,
-	logger,
-}: {
-	db: DrizzleCli;
-	org: Organization;
-	env: AppEnv;
-	customer: Customer;
-	logger: Logger;
-}) => {
-	const stripeCli = createStripeCli({ org, env });
-
-	const getCurrentStripeCus = async () => {
-		// 1. If no processor, create new customer
-		if (!customer.processor?.id) return null;
-
-		try {
-			const stripeCus = await stripeCli.customers.retrieve(
-				customer.processor.id,
-				{
-					expand: [
-						"test_clock",
-						"invoice_settings.default_payment_method",
-						"discount.source.coupon.applies_to",
-					],
-				},
-			);
-
-			// 2. If customer is deleted, create new customer
-			if (stripeCus.deleted) return null;
-
-			// 3. If customer is not deleted, return customer
-			return stripeCus as Stripe.Customer;
-		} catch (_error) {
-			// 4. If error, create new customer
-			if (
-				_error instanceof Stripe.errors.StripeError &&
-				_error.code?.includes("resource_missing")
-			) {
-				return null;
-			}
-			throw _error;
-		}
-	};
-
-	// 1. Get current stripe customer
-	const stripeCus = await getCurrentStripeCus();
-
-	if (stripeCus) return stripeCus;
-
-	// 2. If no current stripe customer, create new customer
-	logger.info(`Creating new stripe customer for ${customer.id}`);
-	const idempotencyKey = hashString(
-		`stripe-create-cus:${customer.id || customer.internal_id}:${org.id}:${env}:${Math.floor(Date.now() / 5000)}`,
-	);
-
-	const stripeCustomer = await createStripeCustomer({
-		org,
-		env,
-		customer,
-		idempotencyKey,
-	});
-
-	await CusService.update({
-		db,
-		idOrInternalId: customer.internal_id,
-		orgId: org.id,
-		env,
-		update: {
-			processor: {
-				id: stripeCustomer.id,
-				type: ProcessorType.Stripe,
-			},
-		},
-	});
-
-	customer.processor = {
-		id: stripeCustomer.id,
-		type: ProcessorType.Stripe,
-	};
-
-	return stripeCustomer;
-
-	// let createNew = false;
-	// const stripeCli = createStripeCli({ org, env });
-	// if (!customer.processor || !customer.processor.id) {
-	// 	createNew = true;
-	// } else {
-	// 	try {
-	// 		const stripeCus = await stripeCli.customers.retrieve(
-	// 			customer.processor.id,
-	// 			{
-	// 				expand: ["test_clock", "invoice_settings.default_payment_method"],
-	// 			},
-	// 		);
-	// 		if (!stripeCus.deleted) {
-	// 			return stripeCus as Stripe.Customer;
-	// 		} else {
-	// 			createNew = true;
-	// 		}
-	// 	} catch (_error) {
-	// 		createNew = true;
-	// 	}
-	// }
-
-	// if (createNew) {
-	// 	logger.info(`Creating new stripe customer for ${customer.id}`);
-	// 	const stripeCustomer = await createStripeCustomer({
-	// 		org,
-	// 		env,
-	// 		customer,
-	// 	});
-
-	// 	await CusService.update({
-	// 		db,
-	// 		idOrInternalId: customer.internal_id,
-	// 		orgId: org.id,
-	// 		env,
-	// 		update: {
-	// 			processor: {
-	// 				id: stripeCustomer.id,
-	// 				type: ProcessorType.Stripe,
-	// 			},
-	// 		},
-	// 	});
-
-	// 	customer.processor = {
-	// 		id: stripeCustomer.id,
-	// 		type: ProcessorType.Stripe,
-	// 	};
-
-	// 	return stripeCustomer;
-	// }
-};
-
-export const createStripeCustomer = async ({
-	org,
-	env,
-	customer,
-	testClockId,
-	metadata,
-	idempotencyKey,
-}: {
-	org: Organization;
-	env: AppEnv;
-	customer: Customer;
-	testClockId?: string;
-	metadata?: Record<string, unknown>;
-	idempotencyKey?: string;
-}) => {
-	const stripeCli = createStripeCli({ org, env });
-
-	try {
-		const stripeCustomer = await stripeCli.customers.create(
-			{
-				name: customer.name || undefined,
-				email: customer.email || undefined,
-				metadata: {
-					...(metadata || {}),
-					autumn_id: customer.id || null,
-					autumn_internal_id: customer.internal_id,
-				},
-				test_clock: testClockId,
-			},
-			idempotencyKey
-				? {
-						idempotencyKey,
-					}
-				: undefined,
-		);
-
-		return stripeCustomer;
-	} catch (error: any) {
-		throw new RecaseError({
-			message: `Error creating customer in Stripe. ${error.message}`,
-			code: ErrCode.StripeCreateCustomerFailed,
-			statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-		});
 	}
 };
 
@@ -321,10 +136,9 @@ export const attachPmToCus = async ({
 	let stripeCusId = customer.processor?.id;
 	if (!stripeCusId) {
 		const stripeCustomer = await createStripeCustomer({
-			org,
-			env,
+			ctx: { org, env, db } as any,
 			customer,
-			testClockId,
+			options: { testClockId },
 		});
 
 		await CusService.update({

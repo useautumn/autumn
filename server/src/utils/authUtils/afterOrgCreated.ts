@@ -1,12 +1,15 @@
+import type { Organization } from "@autumn/shared";
 import { AppEnv } from "@autumn/shared";
 import type { User } from "better-auth";
-import type { Organization } from "better-auth/plugins";
+import type { Organization as BetterAuthOrganization } from "better-auth/plugins/organization";
+import { isUniqueConstraintError } from "@/db/dbUtils.js";
 import { db } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { createSvixApp } from "@/external/svix/svixHelpers.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { createConnectAccount } from "@/internal/orgs/orgUtils/createConnectAccount.js";
 import { generatePublishableKey } from "../encryptUtils.js";
+import { captureOrgEvent } from "../posthog.js";
 
 export const initOrgSvixApps = async ({
 	id,
@@ -41,7 +44,7 @@ export const afterOrgCreated = async ({
 	user,
 	createStripeAccount = true,
 }: {
-	org: Organization;
+	org: Organization | BetterAuthOrganization;
 	user: User;
 	createStripeAccount?: boolean;
 }) => {
@@ -97,8 +100,21 @@ export const afterOrgCreated = async ({
 		});
 
 		logger.info(`Initialized resources for org ${id} (${slug})`);
+
+		// Only track analytics for self-service signups, not platform-created orgs
+		const orgHasCreatedBy = "created_by" in org && org.created_by;
+		if (!orgHasCreatedBy) {
+			await captureOrgEvent({
+				orgId: id,
+				event: "org created",
+				properties: {
+					org_slug: slug,
+				},
+			});
+		}
+		// biome-ignore lint/suspicious/noExplicitAny: don't know what error this is.
 	} catch (error: any) {
-		if (error?.data && error.data.code === ("23505" as string)) {
+		if (isUniqueConstraintError(error)) {
 			logger.error(
 				`Org ${id} already exists in Supabase -- skipping creationg`,
 			);

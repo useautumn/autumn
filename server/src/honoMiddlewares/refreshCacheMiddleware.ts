@@ -78,9 +78,8 @@ export const refreshCacheMiddleware = async (
 	if (c.res.status < 200 || c.res.status >= 300) return;
 
 	const ctx = c.get("ctx");
-	const { skipCacheDeletion } = ctx;
 
-	if (skipCacheDeletion) return;
+	if (ctx.testOptions?.skipCacheDeletion) return;
 
 	const pathname = new URL(c.req.url).pathname.replace("/v1", "");
 	const method = c.req.method;
@@ -90,7 +89,7 @@ export const refreshCacheMiddleware = async (
 		matchRoute({ url: pathname, method, pattern }),
 	);
 
-	if (pathMatch && !skipCacheDeletion) {
+	if (pathMatch) {
 		const customerId = c.req.param("customer_id");
 		if (customerId) {
 			await deleteCachedFullCustomer({

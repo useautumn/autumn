@@ -4,10 +4,14 @@ import {
 	BillingType,
 	CusProductStatus,
 	cusProductToPrices,
+	customerProductHasActiveStatus,
 	type FullCusProduct,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
+import { webhookToAttachParams } from "@/external/stripe/webhookUtils/webhookUtils.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { createUsageInvoice } from "@/internal/customers/attach/attachFunctions/upgradeDiffIntFlow/createUsageInvoice.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -17,9 +21,6 @@ import {
 	activateDefaultProduct,
 	activateFutureProduct,
 } from "@/internal/customers/cusProducts/cusProductUtils.js";
-import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
-import { getCusPaymentMethod } from "../../stripeCusUtils.js";
-import { webhookToAttachParams } from "../../webhookUtils/webhookUtils.js";
 
 export const handleCusProductDeleted = async ({
 	ctx,
@@ -57,7 +58,11 @@ export const handleCusProductDeleted = async ({
 	const isAutumnCancel =
 		subscription.cancellation_details?.comment === "autumn_cancel";
 
-	if ((cusProduct.internal_entity_id || isV4Usage) && !isAutumnCancel) {
+	if (
+		(cusProduct.internal_entity_id || isV4Usage) &&
+		!isAutumnCancel &&
+		customerProductHasActiveStatus(cusProduct)
+	) {
 		const usagePrices = cusProductToPrices({
 			cusProduct,
 			billingType: BillingType.UsageInArrear,
