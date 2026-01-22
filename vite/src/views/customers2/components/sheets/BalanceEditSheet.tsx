@@ -2,6 +2,7 @@ import {
 	cusEntsToBalance,
 	cusEntsToGrantedBalance,
 	cusEntsToPrepaidQuantity,
+	type Entity,
 	type FullCusProduct,
 	type FullCustomerEntitlement,
 	type FullCustomerPrice,
@@ -240,12 +241,25 @@ export function BalanceEditSheet() {
 			<div className="flex-1 overflow-y-auto">
 				<SheetSection withSeparator>
 					<div className="flex flex-col gap-2 rounded-lg">
-						{cusProduct?.entity_id && (
-							<InfoRow
-								label="Entity"
-								value={cusProduct.entity_name || cusProduct.entity_id}
-							/>
-						)}
+						{(() => {
+							// For loose entitlements, check selectedCusEnt.internal_entity_id
+							// For product entitlements, check cusProduct.entity_id
+							const entity = customer?.entities?.find((e: Entity) => {
+								if (selectedCusEnt.internal_entity_id) {
+									return e.internal_id === selectedCusEnt.internal_entity_id;
+								}
+								return (
+									e.internal_id === cusProduct?.internal_entity_id ||
+									e.id === cusProduct?.entity_id
+								);
+							});
+							return entity ? (
+								<InfoRow
+									label="Entity"
+									value={entity.name || entity.id}
+								/>
+							) : null;
+						})()}
 						<div>
 							<InfoRow label="Plan" value={cusProduct?.product.name || "N/A"} />
 						</div>
