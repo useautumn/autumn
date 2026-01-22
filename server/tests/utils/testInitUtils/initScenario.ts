@@ -81,6 +81,7 @@ type UpdateSubscriptionAction = {
 
 type AdvanceToNextInvoiceAction = {
 	type: "advanceToNextInvoice";
+	withPause?: boolean;
 };
 
 type ScenarioAction =
@@ -440,16 +441,22 @@ const updateSubscription = ({
 
 /**
  * Advance the test clock to the next invoice cycle.
- * Convenience wrapper for s.advanceTestClock({ toNextInvoice: true }).
+ * @param withPause - If true, advances in two steps (to month boundary, then to finalize)
  * @example s.advanceToNextInvoice()
+ * @example s.advanceToNextInvoice({ withPause: true })
  */
-const advanceToNextInvoice = (): ConfigFn => {
+const advanceToNextInvoice = ({
+	withPause,
+}: {
+	withPause?: boolean;
+} = {}): ConfigFn => {
 	return (config) => ({
 		...config,
 		actions: [
 			...config.actions,
 			{
 				type: "advanceToNextInvoice" as const,
+				withPause,
 			},
 		],
 	});
@@ -897,15 +904,30 @@ export async function initScenario({
 			}
 
 			const startingFrom = new Date(advancedTo);
-			advancedTo = await advanceTestClockFn({
-				stripeCli: ctx.stripeCli,
-				testClockId,
-				advanceTo: addHours(
-					addMonths(startingFrom, 1),
-					hoursToFinalizeInvoice,
-				).getTime(),
-				waitForSeconds: 30,
-			});
+			if (action.withPause) {
+				advancedTo = await advanceTestClockFn({
+					stripeCli: ctx.stripeCli,
+					testClockId,
+					advanceTo: addMonths(startingFrom, 1).getTime(),
+					waitForSeconds: 15,
+				});
+				await advanceTestClockFn({
+					stripeCli: ctx.stripeCli,
+					testClockId,
+					advanceTo: addHours(advancedTo, hoursToFinalizeInvoice).getTime(),
+					waitForSeconds: 15,
+				});
+			} else {
+				advancedTo = await advanceTestClockFn({
+					stripeCli: ctx.stripeCli,
+					testClockId,
+					advanceTo: addHours(
+						addMonths(startingFrom, 1),
+						hoursToFinalizeInvoice,
+					).getTime(),
+					waitForSeconds: 30,
+				});
+			}
 		}
 	}
 

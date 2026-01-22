@@ -1,30 +1,32 @@
 import { type FullCusEntWithFullCusProduct, formatMs } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
+import { appendToExtraLogs } from "@/utils/logging/addToExtraLogs";
 
 export const logPrepaidPriceProcessed = ({
 	ctx,
 	customerEntitlement,
+	previousQuantity,
 	resetQuantity,
 	newAllowance,
 	nextResetAt,
 }: {
 	ctx: StripeWebhookContext;
 	customerEntitlement: FullCusEntWithFullCusProduct;
+	previousQuantity: number;
 	resetQuantity: number;
 	newAllowance: number;
 	nextResetAt: number;
 }) => {
-	addToExtraLogs({
+	appendToExtraLogs({
 		ctx,
-		extras: {
-			prepaidPriceProcessed: {
-				featureId: customerEntitlement.entitlement.feature?.id,
-				cusEntId: customerEntitlement.id,
-				resetQuantity,
-				newAllowance,
-				nextResetAt: formatMs(nextResetAt),
-			},
+		key: "prepaidPricesProcessed",
+		value: {
+			featureId: customerEntitlement.entitlement.feature?.id,
+			cusEntId: customerEntitlement.id,
+			previousQuantity,
+			resetQuantity,
+			newAllowance,
+			nextResetAt: formatMs(nextResetAt),
 		},
 	});
 };
@@ -40,15 +42,14 @@ export const logAllocatedPriceProcessed = ({
 	replaceablesRemoved: number;
 	balanceIncremented: number;
 }) => {
-	addToExtraLogs({
+	appendToExtraLogs({
 		ctx,
-		extras: {
-			allocatedPriceProcessed: {
-				featureId: customerEntitlement.entitlement.feature?.id,
-				cusEntId: customerEntitlement.id,
-				replaceablesRemoved,
-				balanceIncremented,
-			},
+		key: "allocatedPricesProcessed",
+		value: {
+			featureId: customerEntitlement.entitlement.feature?.id,
+			cusEntId: customerEntitlement.id,
+			replaceablesRemoved,
+			balanceIncremented,
 		},
 	});
 };

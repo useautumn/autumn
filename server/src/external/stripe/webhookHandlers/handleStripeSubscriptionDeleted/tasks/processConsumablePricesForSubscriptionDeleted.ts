@@ -41,31 +41,31 @@ export const processConsumablePricesForSubscriptionDeleted = async ({
 			// No cusEntFilter - bill all consumable entitlements on cancellation
 		});
 
-	if (lineItems.length === 0) return;
+	if (lineItems.length > 0) {
+		// 2. Create, finalize, and pay a single invoice with all line items
+		const invoiceLines = lineItemsToInvoiceAddLinesParams({ lineItems });
 
-	// 2. Create, finalize, and pay a single invoice with all line items
-	const invoiceLines = lineItemsToInvoiceAddLinesParams({ lineItems });
+		const { paid, invoice } = await createInvoiceForBilling({
+			ctx,
+			billingContext,
+			stripeInvoiceAction: {
+				addLineParams: { lines: invoiceLines },
+			},
+		});
 
-	const { paid, invoice } = await createInvoiceForBilling({
-		ctx,
-		billingContext,
-		stripeInvoiceAction: {
-			addLineParams: { lines: invoiceLines },
-		},
-	});
+		await upsertInvoiceFromBilling({
+			ctx,
+			stripeInvoice: invoice,
+			fullProducts: customerProductsToProducts({ customerProducts }),
+			fullCustomer,
+		});
 
-	if (!paid) return;
+		if (!paid) return;
+	}
 
 	// 4. Reset usage balances for all affected customer entitlements (only if payment succeeded)
 	await CusEntService.batchUpdate({
 		db,
 		data: updateCustomerEntitlements,
-	});
-
-	await upsertInvoiceFromBilling({
-		ctx,
-		stripeInvoice: invoice,
-		fullProducts: customerProductsToProducts({ customerProducts }),
-		fullCustomer,
 	});
 };

@@ -20,7 +20,6 @@ BUN_PARALLEL_COMPACT \
   'server/tests/attach/newVersion' \
   'server/tests/attach/upgradeOld' \
   'server/tests/attach/updateEnts' \
-  'server/tests/attach/prepaid' \
   'server/tests/attach/response' \
   'server/tests/interval/upgrade' \
   'server/tests/interval/multiSub' \

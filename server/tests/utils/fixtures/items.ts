@@ -234,6 +234,39 @@ const oneOffMessages = ({
 // ═══════════════════════════════════════════════════════════════════
 
 /**
+ * Generic consumable item - pay-per-use overage for any feature
+ * @param featureId - Feature ID
+ * @param includedUsage - Free units before overage kicks in (default: 0)
+ * @param price - Price per billing unit (default: 0.1)
+ * @param billingUnits - Units per price (default: 1)
+ * @param entityFeatureId - Entity feature ID for per-entity balances
+ * @param interval - Billing interval (default: month)
+ */
+const consumable = ({
+	featureId,
+	includedUsage = 0,
+	price = 0.1,
+	billingUnits = 1,
+	entityFeatureId,
+	interval = ProductItemInterval.Month,
+}: {
+	featureId: string;
+	includedUsage?: number;
+	price?: number;
+	billingUnits?: number;
+	entityFeatureId?: string;
+	interval?: ProductItemInterval;
+}): LimitedItem =>
+	constructArrearItem({
+		featureId,
+		includedUsage,
+		price,
+		billingUnits,
+		entityFeatureId,
+		interval,
+	}) as LimitedItem;
+
+/**
  * Consumable messages - pay-per-use overage ($0.10/unit)
  * @param includedUsage - Free units before overage kicks in (default: 0)
  * @param entityFeatureId - Entity feature ID for per-entity balances
@@ -248,14 +281,14 @@ const consumableMessages = ({
 	entityFeatureId?: string;
 	interval?: ProductItemInterval;
 } = {}): LimitedItem =>
-	constructArrearItem({
+	consumable({
 		featureId: TestFeature.Messages,
 		includedUsage,
 		price: 0.1,
 		billingUnits: 1,
 		entityFeatureId,
 		interval,
-	}) as LimitedItem;
+	});
 
 /**
  * Consumable words - pay-per-use overage ($0.05/unit)
@@ -272,14 +305,14 @@ const consumableWords = ({
 	entityFeatureId?: string;
 	interval?: ProductItemInterval;
 } = {}): LimitedItem =>
-	constructArrearItem({
+	consumable({
 		featureId: TestFeature.Words,
 		includedUsage,
 		price: 0.05,
 		billingUnits: 1,
 		entityFeatureId,
 		interval,
-	}) as LimitedItem;
+	});
 
 // ═══════════════════════════════════════════════════════════════════
 // ALLOCATED / SEATS (prorated billing)
@@ -360,6 +393,7 @@ export const items = {
 	oneOffMessages,
 
 	// Consumable
+	consumable,
 	consumableMessages,
 	consumableWords,
 
