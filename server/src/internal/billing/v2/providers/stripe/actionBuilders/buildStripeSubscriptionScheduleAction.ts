@@ -58,7 +58,16 @@ export const buildStripeSubscriptionScheduleAction = ({
 	finalCustomerProducts: FullCusProduct[];
 	trialEndsAt?: number;
 }): StripeSubscriptionScheduleAction | undefined => {
-	const { stripeSubscriptionSchedule, stripeSubscription } = billingContext;
+	const { stripeSubscriptionSchedule, stripeSubscription, cancelMode } =
+		billingContext;
+
+	// If uncanceling and there's an existing schedule, release it
+	if (cancelMode === "uncancel" && stripeSubscriptionSchedule) {
+		return {
+			type: "release",
+			stripeSubscriptionScheduleId: stripeSubscriptionSchedule.id,
+		};
+	}
 
 	// 1. Filter customer products by stripe subscription id or stripe subscription schedule ID?
 

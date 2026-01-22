@@ -26,6 +26,10 @@ export const AutumnBillingPlanSchema = z.object({
 		updates: z.object({
 			options: z.array(FeatureOptionsSchema).optional(),
 			status: z.enum(CusProductStatus).optional(),
+			// Cancel/uncancel fields
+			canceled: z.boolean().optional(),
+			canceled_at: z.number().nullable().optional(),
+			ended_at: z.number().nullable().optional(),
 		}),
 	}),
 	deleteCustomerProduct: FullCusProductSchema.optional(), // Scheduled product to delete (e.g., when updating while canceling)

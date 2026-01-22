@@ -5,16 +5,20 @@ import {
 	Subtract,
 	User,
 } from "@phosphor-icons/react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Row } from "@tanstack/react-table";
+import type { AxiosError } from "axios";
 import { parseAsBoolean, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
+import { toast } from "sonner";
 import { AdminHover } from "@/components/general/AdminHover";
 import { Table } from "@/components/general/table";
 import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getCusProductHoverTexts } from "@/views/admin/adminUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -171,6 +175,34 @@ export function CustomerProductsTable() {
 		setTransferOpen(true);
 	};
 
+	const axiosInstance = useAxiosInstance();
+	const queryClient = useQueryClient();
+
+	const uncancelMutation = useMutation({
+		mutationFn: async (product: FullCusProduct) => {
+			const response = await axiosInstance.post("/v1/subscriptions/update", {
+				customer_id: customer.id,
+				product_id: product.product.id,
+				cancel: null,
+			});
+			return response.data;
+		},
+		onSuccess: () => {
+			toast.success("Subscription uncanceled successfully");
+			queryClient.invalidateQueries({ queryKey: ["customer", customer.id] });
+		},
+		onError: (error) => {
+			toast.error(
+				(error as AxiosError<{ message: string }>)?.response?.data?.message ??
+					"Failed to uncancel subscription",
+			);
+		},
+	});
+
+	const handleUncancelClick = (product: FullCusProduct) => {
+		uncancelMutation.mutate(product);
+	};
+
 	const handleRowClick = (cusProduct: FullCusProduct) => {
 		setSheet({
 			type: "subscription-detail",
@@ -189,6 +221,7 @@ export function CustomerProductsTable() {
 			enableGlobalFilter: true,
 			meta: {
 				onCancelClick: handleCancelClick,
+				onUncancelClick: handleUncancelClick,
 				onTransferClick: handleTransferClick,
 				hasEntities,
 			},
@@ -203,6 +236,7 @@ export function CustomerProductsTable() {
 			enableGlobalFilter: true,
 			meta: {
 				onCancelClick: handleCancelClick,
+				onUncancelClick: handleUncancelClick,
 				onTransferClick: handleTransferClick,
 				hasEntities,
 			},

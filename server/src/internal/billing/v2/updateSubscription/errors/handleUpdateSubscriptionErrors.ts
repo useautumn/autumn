@@ -15,6 +15,7 @@ import {
 	handleOneOffErrors,
 } from "./handleOneOffErrors";
 import { handleProductTypeTransitionErrors } from "./handleProductTypeTransitionErrors";
+import { handleUncancelErrors } from "./handleUncancelErrors";
 
 export const handleUpdateSubscriptionErrors = async ({
 	ctx,
@@ -28,6 +29,9 @@ export const handleUpdateSubscriptionErrors = async ({
 	params: UpdateSubscriptionV0Params;
 }) => {
 	const { customerProduct } = billingContext;
+
+	// 0. Uncancel validation errors
+	handleUncancelErrors({ billingContext });
 
 	// 1. RevenueCat error
 	if (cusProductToProcessorType(customerProduct) === ProcessorType.RevenueCat) {

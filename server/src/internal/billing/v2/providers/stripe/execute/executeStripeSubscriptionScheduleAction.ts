@@ -28,7 +28,7 @@ export const executeStripeSubscriptionScheduleAction = async ({
 	billingContext: BillingContext;
 	subscriptionScheduleAction: StripeSubscriptionScheduleAction;
 	stripeSubscription?: Stripe.Subscription;
-}): Promise<Stripe.SubscriptionSchedule> => {
+}): Promise<Stripe.SubscriptionSchedule | null> => {
 	const { org, env } = ctx;
 	const stripeCli = createStripeCli({ org, env });
 
@@ -36,15 +36,13 @@ export const executeStripeSubscriptionScheduleAction = async ({
 		`[executeStripeSubscriptionScheduleAction] Executing subscription schedule operation: ${subscriptionScheduleAction.type}`,
 	);
 
-	// Log phases
-	logSubscriptionScheduleAction({
-		ctx,
-		billingContext,
-		subscriptionScheduleAction,
-	});
-
 	switch (subscriptionScheduleAction.type) {
 		case "create": {
+			logSubscriptionScheduleAction({
+				ctx,
+				billingContext,
+				subscriptionScheduleAction,
+			});
 			const { params } = subscriptionScheduleAction;
 
 			// If there's an existing subscription, create from it first then update with phases
@@ -73,9 +71,23 @@ export const executeStripeSubscriptionScheduleAction = async ({
 		}
 
 		case "update":
+			logSubscriptionScheduleAction({
+				ctx,
+				billingContext,
+				subscriptionScheduleAction,
+			});
 			return await stripeCli.subscriptionSchedules.update(
 				subscriptionScheduleAction.stripeSubscriptionScheduleId,
 				subscriptionScheduleAction.params,
 			);
+
+		case "release":
+			ctx.logger.debug(
+				`[executeStripeSubscriptionScheduleAction] Releasing schedule: ${subscriptionScheduleAction.stripeSubscriptionScheduleId}`,
+			);
+			await stripeCli.subscriptionSchedules.release(
+				subscriptionScheduleAction.stripeSubscriptionScheduleId,
+			);
+			return null;
 	}
 };

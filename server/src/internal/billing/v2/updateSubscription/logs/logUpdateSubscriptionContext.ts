@@ -22,6 +22,7 @@ export const logUpdateSubscriptionContext = ({
 		stripeSubscription,
 		stripeSubscriptionSchedule,
 		isCustom,
+		cancelMode,
 	} = billingContext;
 
 	const fullProduct = fullProducts[0];
@@ -51,6 +52,7 @@ export const logUpdateSubscriptionContext = ({
 				trialContext: trialContext
 					? `trial ends at: ${formatMs(trialContext.trialEndsAt)}, free trial ID: ${trialContext.freeTrial?.id ?? "undefined"}`
 					: "undefined",
+				cancelMode: cancelMode ? cancelMode : "no cancel operation",
 			},
 		},
 	});

@@ -22,12 +22,12 @@ export const billingPlanToPreviewResponse = ({
 
 	const autumnBillingPlan = billingPlan.autumn;
 
-
-	const previewImmediateLineItems = autumnBillingPlan.lineItems.filter((line) => line.chargeImmediately).map((line) => ({
-		description: line.description,
-		amount: line.finalAmount,
-	}));
-
+	const previewImmediateLineItems = autumnBillingPlan.lineItems
+		.filter((line) => line.chargeImmediately)
+		.map((line) => ({
+			description: line.description,
+			amount: line.finalAmount,
+		}));
 
 	const total = new Decimal(
 		sumValues(previewImmediateLineItems.map((line) => line.amount)),

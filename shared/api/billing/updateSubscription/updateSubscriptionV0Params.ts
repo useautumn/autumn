@@ -3,6 +3,7 @@ import { nullish } from "@utils/utils";
 import { z } from "zod/v4";
 import { FeatureOptionsSchema } from "../../../models/cusProductModels/cusProductModels";
 import { ProductItemSchema } from "../../../models/productV2Models/productItemModels/productItemModels";
+import { CancelModeSchema } from "../../common/cancelMode";
 import { CustomerDataSchema } from "../../common/customerData";
 import { EntityDataSchema } from "../../models";
 
@@ -24,6 +25,8 @@ export const ExtUpdateSubscriptionV0ParamsSchema = z.object({
 	version: z.number().optional(),
 	items: z.array(ProductItemSchema).optional(), // used for custom configuration of a plan (in api - plan_override)
 	free_trial: CreateFreeTrialSchema.nullable().optional(),
+
+	cancel: CancelModeSchema.nullable().optional(),
 
 	// reset_billing_cycle_anchor: z.boolean().optional(),
 	// new_billing_subscription: z.boolean().optional(),
