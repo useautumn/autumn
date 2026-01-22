@@ -37,7 +37,7 @@ export const clearOrg = async ({
 			value: process.env.UNIT_TEST_AUTUMN_PUBLIC_KEY!,
 		}),
 	]);
-	await CacheManager.disconnect();
+	// await CacheManager.disconnect();
 
 	if (!org) {
 		throw new Error(`Org ${orgSlug} not found`);

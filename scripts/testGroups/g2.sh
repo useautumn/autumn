@@ -12,9 +12,10 @@ source "$(dirname "$0")/config.sh"
 #   'server/tests/attach/addOn' \
 #   'server/tests/attach/checkout' \
 #   'server/tests/attach/misc' \
-#   'server/tests/integration/billing/invoice-action-required' \
-#   'server/tests/integration/billing/cancel' \
-#   'server/tests/integration/billing/cancel/add-ons' \
+#   'billing/invoice-action-required' \
+#   'billing/cancel' \
+#   'billing/cancel/add-ons' \
+#   'billing/legacy/attach' \
 #   --max=6
 
 BUN_PARALLEL_V2 \
