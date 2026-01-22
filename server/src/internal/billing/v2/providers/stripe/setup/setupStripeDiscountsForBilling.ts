@@ -32,11 +32,9 @@ export const setupStripeDiscountsForBilling = ({
 	if (!coupon || typeof coupon === "string") return [];
 
 	// Normalize to StripeDiscountWithCoupon format
-	// Extract the coupon and put it under source.coupon
-	const { coupon: _coupon, ...discountWithoutCoupon } = customerDiscount;
 	return [
 		{
-			...discountWithoutCoupon,
+			...customerDiscount,
 			source: { coupon },
 		} as StripeDiscountWithCoupon,
 	];

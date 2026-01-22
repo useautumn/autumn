@@ -1,6 +1,7 @@
 import type { FullCusProduct, FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
+import { computeCancelFields } from "@/internal/billing/v2/updateSubscription/compute/cancel/computeCancelFields";
 import { cusProductToExistingRollovers } from "@/internal/billing/v2/utils/handleExistingRollovers/cusProductToExistingRollovers";
 import { cusProductToExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/cusProductToExistingUsages";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
@@ -25,6 +26,7 @@ export const computeCustomPlanNewCustomerProduct = ({
 		currentEpochMs,
 		featureQuantities,
 		trialContext,
+		cancelMode,
 	} = updateSubscriptionContext;
 
 	const existingUsages = cusProductToExistingUsages({
@@ -40,6 +42,11 @@ export const computeCustomPlanNewCustomerProduct = ({
 		`[computeNewCustomerProduct] existing usages:`,
 		existingUsages,
 	);
+
+	const cancelFields = computeCancelFields({
+		cancelMode,
+		currentCustomerProduct,
+	});
 
 	// Compute the new full customer product
 	const newFullCustomerProduct = initFullCustomerProduct({
@@ -64,8 +71,7 @@ export const computeCustomPlanNewCustomerProduct = ({
 			subscriptionScheduleId: stripeSubscriptionSchedule?.id,
 
 			startsAt: currentCustomerProduct.starts_at ?? undefined, // keep same starts at as current customer product?
-			canceledAt: currentCustomerProduct.canceled_at ?? undefined,
-			endedAt: currentCustomerProduct.ended_at ?? undefined,
+			...cancelFields,
 		},
 	});
 
