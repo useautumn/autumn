@@ -60,15 +60,21 @@ export const applyUncancelToPlan = ({
 		billingContext,
 	});
 
+	// Build the updateCustomerProduct with cancel updates merged in
+	// If plan doesn't have updateCustomerProduct, create one targeting the current product
+	const existingUpdate = plan.updateCustomerProduct;
+	const updateCustomerProduct = {
+		customerProduct:
+			existingUpdate?.customerProduct ?? billingContext.customerProduct,
+		updates: {
+			...existingUpdate?.updates,
+			...cancelUpdates,
+		},
+	};
+
 	return {
 		...plan,
-		updateCustomerProduct: {
-			...plan.updateCustomerProduct,
-			updates: {
-				...plan.updateCustomerProduct.updates,
-				...cancelUpdates,
-			},
-		},
+		updateCustomerProduct,
 		// Use the plan's deleteCustomerProduct if already set, otherwise use ours
 		deleteCustomerProduct: plan.deleteCustomerProduct ?? deleteCustomerProduct,
 	};
