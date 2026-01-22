@@ -1,6 +1,6 @@
 import { type Customer, InternalError } from "@autumn/shared";
 import { createStripeCli } from "../../../../external/connect/createStripeCli";
-import { createStripeCusIfNotExists } from "../../../../external/stripe/stripeCusUtils";
+import { getOrCreateStripeCustomer } from "../../../../external/stripe/customers";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
 import { toSuccessUrl } from "../../../orgs/orgUtils/convertOrgUtils";
 import { createDefaultPortalConfig } from "./createDefaultPortalConfig";
@@ -20,27 +20,12 @@ export const createBillingPortalSession = async ({
 	const stripeCli = createStripeCli({ org, env });
 
 	// Determine the Stripe customer ID to use
-	let stripeCustomerId: string;
+	const stripeCustomer = await getOrCreateStripeCustomer({
+		ctx,
+		customer,
+	});
 
-	if (!customer.processor?.id) {
-		const newCus = await createStripeCusIfNotExists({
-			db,
-			org,
-			env,
-			customer,
-			logger,
-		});
-
-		if (!newCus) {
-			throw new InternalError({
-				message: `Failed to create Stripe customer`,
-			});
-		}
-
-		stripeCustomerId = newCus.id;
-	} else {
-		stripeCustomerId = customer.processor.id;
-	}
+	const stripeCustomerId = stripeCustomer.id;
 
 	// 1. Try to create billing portal session
 

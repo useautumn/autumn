@@ -292,7 +292,7 @@ export class CusProductService {
 	}) {
 		// sql`${customerProducts.subscription_ids} @> ${sql`ARRAY[${stripeSubId}]`}`,
 		const data = await db.query.customerProducts.findMany({
-			where: (table, { and, or, inArray }) =>
+			where: (_table, { and, or, inArray }) =>
 				and(
 					or(arrayContains(customerProducts.subscription_ids, [stripeSubId])),
 					inStatuses ? inArray(customerProducts.status, inStatuses) : undefined,

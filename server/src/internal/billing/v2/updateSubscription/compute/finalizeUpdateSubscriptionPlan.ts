@@ -24,7 +24,7 @@ export const finalizeUpdateSubscriptionPlan = ({
 	// Filter line items based on trial state transitions
 	plan.lineItems = filterLineItemsForTrialTransition({
 		ctx,
-		lineItems: plan.lineItems,
+		lineItems: plan.lineItems ?? [],
 		billingContext,
 	});
 

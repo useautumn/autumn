@@ -304,7 +304,6 @@ test.concurrent(`${chalk.yellowBright("subscription-create: 3ds authentication r
 	const freePlan = products.base({
 		id: "free",
 		items: [freeMessages],
-		isDefault: true,
 	});
 
 	const { customerId, autumnV1 } = await initScenario({

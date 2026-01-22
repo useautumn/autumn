@@ -18,6 +18,7 @@ import { and, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { UpdateCustomerEntitlement } from "@/internal/billing/v2/types/autumnBillingPlan";
 import RecaseError from "@/utils/errorUtils.js";
 
 export class CusEntService {
@@ -176,6 +177,24 @@ export class CusEntService {
 			.returning();
 
 		return data;
+	}
+
+	static async batchUpdate({
+		db,
+		data,
+	}: {
+		db: DrizzleCli;
+		data: UpdateCustomerEntitlement[];
+	}) {
+		const updatedCustomerEntitlements = data.map((item) => ({
+			...item.customerEntitlement,
+			...item.updates,
+		}));
+
+		await CusEntService.upsert({
+			db,
+			data: updatedCustomerEntitlements,
+		});
 	}
 
 	static async getStrict({

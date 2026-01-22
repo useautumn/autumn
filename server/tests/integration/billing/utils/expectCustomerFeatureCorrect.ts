@@ -3,6 +3,7 @@ import {
 	type ApiCustomerV3,
 	type ApiEntityV0,
 	ApiVersion,
+	formatMs,
 } from "@autumn/shared";
 import type { Customer } from "autumn-js";
 import { AutumnInt } from "@/external/autumn/autumnCli";
@@ -68,8 +69,12 @@ export const expectCustomerFeatureCorrect = ({
 	if (resetsAt !== undefined) {
 		const actualResetsAt = feature?.next_reset_at ?? 0;
 		expect(actualResetsAt).toBeDefined();
-		expect(Math.abs(actualResetsAt - resetsAt)).toBeLessThanOrEqual(
-			TEN_MINUTES_MS,
-		);
+
+		const diff = Math.abs(actualResetsAt - resetsAt);
+
+		expect(
+			diff,
+			`resetsAt mismatch for ${featureId}: expected ${formatMs(resetsAt)}, got ${formatMs(actualResetsAt)} `,
+		).toBeLessThanOrEqual(TEN_MINUTES_MS);
 	}
 };

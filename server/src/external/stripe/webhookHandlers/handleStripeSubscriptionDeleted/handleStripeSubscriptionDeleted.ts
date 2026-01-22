@@ -2,8 +2,8 @@ import type Stripe from "stripe";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext";
 import { logCustomerProductUpdates } from "../common";
 import { setupStripeSubscriptionDeletedContext } from "./setupStripeSubscriptionDeletedContext";
-import { createInvoiceForArrearPrices } from "./tasks/createInvoiceForArrearPrices";
 import { expireAndActivateCustomerProducts } from "./tasks/expireAndActivateCustomerProducts";
+import { processConsumablePricesForSubscriptionDeleted } from "./tasks/processConsumablePricesForSubscriptionDeleted";
 
 /**
  * Handles Stripe subscription.deleted webhook.
@@ -34,7 +34,7 @@ export const handleStripeSubscriptionDeleted = async ({
 	logger.info(`[sub.deleted] Processing subscription.deleted`);
 
 	// Task 1: Create invoices for arrear prices (usage-based)
-	await createInvoiceForArrearPrices({ ctx, eventContext });
+	await processConsumablePricesForSubscriptionDeleted({ ctx, eventContext });
 
 	// Task 2: Expire customer products + delete scheduled + activate defaults
 	await expireAndActivateCustomerProducts({ ctx, eventContext });

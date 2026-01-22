@@ -1,11 +1,10 @@
 import type Stripe from "stripe";
-import { customerProductActions } from "@/internal/customers/cusProducts/actions/index.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import {
 	getFullStripeSub,
 	subIsPrematurelyCanceled,
-} from "../stripeSubUtils.js";
+} from "@/external/stripe/stripeSubUtils.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { handleCusProductDeleted } from "./handleSubDeleted/handleCusProductDeleted.js";
 
 export const handleSubDeleted = async ({

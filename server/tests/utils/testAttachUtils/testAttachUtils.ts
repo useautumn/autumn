@@ -141,21 +141,33 @@ export const getAttachTotal = ({
 	return dueTodayTotal.toDecimalPlaces(2).toNumber();
 };
 
+/**
+ * Advances the test clock to the next invoice (1 month from current time).
+ *
+ * @param stripeCli - Stripe client
+ * @param testClockId - Test clock ID
+ * @param currentEpochMs - Current epoch in ms (use this for consecutive advances). If not provided, uses Date.now().
+ * @param withPause - If true, advances in two steps (to month boundary, then to finalize)
+ * @returns The new epoch time in ms after advancing
+ */
 export const advanceToNextInvoice = async ({
 	stripeCli,
 	testClockId,
+	currentEpochMs,
 	withPause = false,
 }: {
 	stripeCli: Stripe;
 	testClockId: string;
+	currentEpochMs?: number;
 	withPause?: boolean;
-}) => {
+}): Promise<number> => {
+	const baseTime = currentEpochMs ? new Date(currentEpochMs) : new Date();
+
 	if (withPause) {
-		// await timeout(3000);
 		const newUnix = await advanceTestClock({
 			stripeCli,
 			testClockId,
-			advanceTo: addMonths(new Date(), 1).getTime(),
+			advanceTo: addMonths(baseTime, 1).getTime(),
 			waitForSeconds: 15,
 		});
 
@@ -168,11 +180,12 @@ export const advanceToNextInvoice = async ({
 
 		return newUnix;
 	}
+
 	return await advanceTestClock({
 		stripeCli,
 		testClockId,
 		advanceTo: addHours(
-			addMonths(new Date(), 1),
+			addMonths(baseTime, 1),
 			hoursToFinalizeInvoice,
 		).getTime(),
 		waitForSeconds: 30,

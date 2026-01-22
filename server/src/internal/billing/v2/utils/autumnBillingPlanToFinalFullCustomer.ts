@@ -52,7 +52,8 @@ export const autumnBillingPlanToFinalFullCustomer = ({
 		for (const update of updateCustomerEntitlements) {
 			const entitlement = entitlementById.get(update.customerEntitlement.id);
 			if (entitlement) {
-				entitlement.balance = (entitlement.balance ?? 0) + update.balanceChange;
+				entitlement.balance =
+					(entitlement.balance ?? 0) + (update.balanceChange ?? 0);
 			}
 		}
 	}
