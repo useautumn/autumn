@@ -114,7 +114,7 @@ export const getBooleanApiBalance = ({
 
 		overage_allowed: false,
 		max_purchase: null,
-		reset: null,
+		next_reset_at: null,
 
 		breakdown: [
 			{
@@ -126,7 +126,6 @@ export const getBooleanApiBalance = ({
 				usage: 0,
 				unlimited: false,
 				reset: null,
-				prepaid_quantity: 0,
 				expires_at: null,
 				price: null,
 			} satisfies ApiBalanceBreakdownV1,
@@ -156,7 +155,7 @@ export const getUnlimitedApiBalance = ({
 		remaining: 0,
 		usage: 0,
 
-		reset: null,
+		next_reset_at: null,
 		max_purchase: null,
 		overage_allowed: false,
 
@@ -170,7 +169,6 @@ export const getUnlimitedApiBalance = ({
 				usage: 0,
 				unlimited: true,
 				reset: null,
-				prepaid_quantity: 0,
 				expires_at: null,
 				price: null,
 			} satisfies ApiBalanceBreakdownV1,

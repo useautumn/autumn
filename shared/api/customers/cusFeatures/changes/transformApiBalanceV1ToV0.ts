@@ -6,6 +6,11 @@ import type {
 	ApiBalanceBreakdownV1,
 	ApiBalanceV1,
 } from "@api/customers/cusFeatures/apiBalanceV1.js";
+import {
+	apiBalanceBreakdownV1ToPurchasedBalance,
+	apiBalanceV1ToPurchasedBalance,
+} from "@utils/cusEntUtils/apiBalance/apiBalanceV1ToPurchasedBalance.js";
+import { deduplicateArray } from "@utils/utils.js";
 import type { CusFeatureLegacyData } from "../cusFeatureLegacyData.js";
 
 export function transformApiBalanceBreakdownV1ToV0({
@@ -15,9 +20,15 @@ export function transformApiBalanceBreakdownV1ToV0({
 }): ApiBalanceBreakdown {
 	// For usage-based billing, purchased_balance includes prepaid + overage
 	// Overage = usage beyond what was granted and prepaid
-	const totalGrantedAndPrepaid = input.included_grant + input.prepaid_grant;
-	const overage = Math.max(0, input.usage - totalGrantedAndPrepaid);
-	const purchasedBalance = input.prepaid_grant + overage;
+	// const totalGrantedAndPrepaid = input.included_grant + input.prepaid_grant;
+	// const overage = Math.max(0, input.usage - totalGrantedAndPrepaid);
+	// const purchasedBalance = input.prepaid_grant + overage;
+
+	// 1. Granted balance: just included_grant
+	// 2. Purchased balance:
+	const purchasedBalance = apiBalanceBreakdownV1ToPurchasedBalance({
+		apiBalanceBreakdown: input,
+	});
 
 	return {
 		id: input.id,
@@ -29,8 +40,8 @@ export function transformApiBalanceBreakdownV1ToV0({
 		overage_allowed: input.price?.billing_method === "usage_based",
 		max_purchase: input.price?.max_purchase ?? null,
 		reset: input.reset,
-		prepaid_quantity: input.prepaid_quantity,
 		expires_at: input.expires_at,
+		prepaid_quantity: input.prepaid_grant,
 	};
 }
 
@@ -56,10 +67,30 @@ export function transformApiBalanceV1ToV0({
 	legacyData?: CusFeatureLegacyData;
 }): ApiBalance {
 	// Get purchased_balance from legacyData (needed to split V1.granted back to V0 fields)
-	const purchasedBalance = legacyData?.purchased_balance ?? 0;
+	const purchasedBalance = apiBalanceV1ToPurchasedBalance({
+		apiBalance: input,
+	});
 
-	// V0 granted_balance = V1 granted - purchased_balance
-	const grantedBalance = input.granted - purchasedBalance;
+	const grantedBalance = input.granted;
+
+	// Define next_reset_at from input.breakdown.reset. See how I did it previously
+	const breakdownPlanIds = deduplicateArray(
+		input.breakdown?.map((b) => b.plan_id) ?? [],
+	);
+
+	// Check if there are multiple intervals
+	const uniqueIntervals = deduplicateArray(
+		input.breakdown?.map((b) => b.reset?.interval) ?? [],
+	);
+
+	const reset =
+		uniqueIntervals.length > 1
+			? {
+					interval: "multiple" as const,
+					interval_count: undefined,
+					resets_at: null,
+				}
+			: (input.breakdown?.[0]?.reset ?? null);
 
 	return {
 		feature_id: input.feature_id,
@@ -71,8 +102,8 @@ export function transformApiBalanceV1ToV0({
 		usage: input.usage,
 		overage_allowed: input.overage_allowed,
 		max_purchase: input.max_purchase,
-		reset: input.reset,
-		plan_id: legacyData?.plan_id ?? null,
+		reset: reset,
+		plan_id: breakdownPlanIds.length > 1 ? null : (breakdownPlanIds[0] ?? null),
 		breakdown: input.breakdown?.map((b) =>
 			transformApiBalanceBreakdownV1ToV0({ input: b }),
 		),

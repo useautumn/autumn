@@ -5,7 +5,7 @@ import {
 	type FullCusProduct,
 	isBooleanCusEnt,
 	isEntityScopedCusEnt,
-	isUnlimitedCusEnt,
+	isUnlimitedCustomerEntitlement,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 
@@ -31,7 +31,7 @@ export const cusProductToExistingUsages = ({
 	for (const cusEnt of cusEnts) {
 		if (isBooleanCusEnt({ cusEnt })) continue;
 
-		if (cusEnts.some(isUnlimitedCusEnt)) continue;
+		if (cusEnts.some(isUnlimitedCustomerEntitlement)) continue;
 
 		const internalFeatureId = cusEnt.entitlement.internal_feature_id;
 
