@@ -2,11 +2,18 @@ import { InternalError } from "@autumn/shared";
 import { tryCatch } from "@shared/utils";
 import Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import type { StripeCustomerWithDiscount } from "@/external/stripe/subscriptions";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
+/**
+ * Stripe Customer with expanded fields for billing operations.
+ * Extends `StripeCustomerWithDiscount` with additional expanded fields.
+ *
+ * @see https://docs.stripe.com/changelog/clover/2025-09-30/add-discount-source-property
+ */
 export type ExpandedStripeCustomer = Omit<
-	Stripe.Customer,
-	"test_clock" | "invoice_settings" | "discount"
+	StripeCustomerWithDiscount,
+	"test_clock" | "invoice_settings"
 > & {
 	test_clock: Stripe.TestHelpers.TestClock | null;
 	invoice_settings: Omit<
@@ -15,13 +22,6 @@ export type ExpandedStripeCustomer = Omit<
 	> & {
 		default_payment_method: Stripe.PaymentMethod | null;
 	};
-	discount:
-		| (Omit<Stripe.Discount, "coupon"> & {
-				coupon: Stripe.Coupon & {
-					applies_to: Stripe.Coupon.AppliesTo | null;
-				};
-		  })
-		| null;
 };
 
 export function getExpandedStripeCustomer({
@@ -62,7 +62,7 @@ export async function getExpandedStripeCustomer({
 				expand: [
 					"test_clock",
 					"invoice_settings.default_payment_method",
-					"discount.coupon.applies_to",
+					"discount.source.coupon.applies_to",
 				],
 			}),
 		);
