@@ -68,6 +68,7 @@ export const handleUpdateSubscription = createRoute({
 				autumn: autumnBillingPlan,
 				stripe: stripeBillingPlan,
 			},
+			params: body,
 		});
 
 		logStripeBillingResult({ ctx, result: billingResult.stripe });

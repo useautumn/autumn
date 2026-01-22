@@ -1,3 +1,4 @@
+import type { UpdateSubscriptionV0Params } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
@@ -10,15 +11,18 @@ export const executeBillingPlan = async ({
 	ctx,
 	billingContext,
 	billingPlan,
+	params,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
+	params?: UpdateSubscriptionV0Params;
 }): Promise<BillingResult> => {
 	const stripeBillingResult = await executeStripeBillingPlan({
 		ctx,
 		billingPlan,
 		billingContext,
+		params,
 	});
 
 	if (stripeBillingResult.deferred)

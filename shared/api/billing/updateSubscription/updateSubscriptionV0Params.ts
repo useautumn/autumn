@@ -35,6 +35,13 @@ export const ExtUpdateSubscriptionV0ParamsSchema = z.object({
 		.enum(["prorate_immediately", "next_cycle_only"])
 		.optional(),
 
+	// Refund behavior for negative invoice totals (downgrades):
+	// - 'grant_invoice_credits' (default): Apply credits to customer balance
+	// - 'refund_payment_method': Issue refund to payment method
+	refund_behavior: z
+		.enum(["grant_invoice_credits", "refund_payment_method"])
+		.optional(),
+
 	// reset_billing_cycle_anchor: z.boolean().optional(),
 	// new_billing_subscription: z.boolean().optional(),
 });
