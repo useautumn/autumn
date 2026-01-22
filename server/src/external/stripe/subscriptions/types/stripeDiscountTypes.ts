@@ -13,14 +13,18 @@ export type StripeExpandedDiscount = Omit<Stripe.Discount, "source"> & {
 };
 
 /**
- * Customer discount structure when expanded via "discount.coupon.applies_to".
+ * Customer discount structure when expanded via "discount.source.coupon.applies_to".
  *
- * TODO: Investigate if this is the correct expand path or if it should be
- * "discount.source.coupon.applies_to" to match the actual Stripe API structure.
+ * Uses the `source.coupon` structure introduced in Stripe API version 2025-09-30.clover.
+ *
+ * @see https://docs.stripe.com/changelog/clover/2025-09-30/add-discount-source-property
  */
-export type StripeCustomerExpandedDiscount = Omit<Stripe.Discount, "coupon"> & {
-	coupon: Stripe.Coupon & {
-		applies_to: Stripe.Coupon.AppliesTo | null;
+export type StripeCustomerExpandedDiscount = Omit<Stripe.Discount, "source"> & {
+	source: {
+		coupon: Stripe.Coupon & {
+			applies_to: Stripe.Coupon.AppliesTo | null;
+		};
+		type: "coupon";
 	};
 };
 
