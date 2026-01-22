@@ -45,7 +45,7 @@ test.concurrent(`${chalk.yellowBright("uncancel addon: main active")}`, async ()
 		actions: [
 			s.attach({ productId: pro.id }),
 			s.attach({ productId: addon.id }),
-			s.cancel({ productId: addon.id }),
+			s.updateSubscription({ productId: addon.id, cancel: "end_of_cycle" }),
 		],
 	});
 
@@ -125,8 +125,8 @@ test.concurrent(`${chalk.yellowBright("uncancel main: addon canceling")}`, async
 		actions: [
 			s.attach({ productId: pro.id }),
 			s.attach({ productId: addon.id }),
-			s.cancel({ productId: pro.id }),
-			s.cancel({ productId: addon.id }),
+			s.updateSubscription({ productId: pro.id, cancel: "end_of_cycle" }),
+			s.updateSubscription({ productId: addon.id, cancel: "end_of_cycle" }),
 		],
 	});
 
@@ -197,8 +197,8 @@ test.concurrent(`${chalk.yellowBright("uncancel both: main and addon")}`, async 
 		actions: [
 			s.attach({ productId: pro.id }),
 			s.attach({ productId: addon.id }),
-			s.cancel({ productId: pro.id }),
-			s.cancel({ productId: addon.id }),
+			s.updateSubscription({ productId: pro.id, cancel: "end_of_cycle" }),
+			s.updateSubscription({ productId: addon.id, cancel: "end_of_cycle" }),
 		],
 	});
 
@@ -289,10 +289,11 @@ test.concurrent(`${chalk.yellowBright("uncancel: separate subscriptions")}`, asy
 		],
 	});
 
-	// Cancel only the addon
-	await autumnV1.cancel({
+	// Cancel only the addon via subscriptions.update
+	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: addon.id,
+		cancel: "end_of_cycle",
 	});
 
 	// Verify addon is canceling, pro still active

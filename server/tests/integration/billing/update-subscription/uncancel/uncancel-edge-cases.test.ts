@@ -53,10 +53,13 @@ test.concurrent(`${chalk.yellowBright("uncancel + version upgrade")}`, async () 
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ paymentMethod: "success" }),
+			s.customer({ testClock: true, paymentMethod: "success" }),
 			s.products({ list: [pro, free] }),
 		],
-		actions: [s.attach({ productId: pro.id }), s.cancel({ productId: pro.id })],
+		actions: [
+			s.attach({ productId: pro.id }),
+			s.updateSubscription({ productId: pro.id, cancel: "end_of_cycle" }),
+		],
 	});
 
 	// Verify pro is canceling and free is scheduled
@@ -145,7 +148,10 @@ test.concurrent(`${chalk.yellowBright("uncancel + add trial")}`, async () => {
 			s.customer({ testClock: true, paymentMethod: "success" }),
 			s.products({ list: [pro, free] }),
 		],
-		actions: [s.attach({ productId: pro.id }), s.cancel({ productId: pro.id })],
+		actions: [
+			s.attach({ productId: pro.id }),
+			s.updateSubscription({ productId: pro.id, cancel: "end_of_cycle" }),
+		],
 	});
 
 	// Verify pro is canceling (not trialing)
@@ -255,10 +261,13 @@ test.concurrent(`${chalk.yellowBright("remove trial while canceling: cancel pres
 	const { autumnV1, ctx } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ paymentMethod: "success" }),
+			s.customer({ testClock: true, paymentMethod: "success" }),
 			s.products({ list: [pro, free] }),
 		],
-		actions: [s.attach({ productId: pro.id }), s.cancel({ productId: pro.id })],
+		actions: [
+			s.attach({ productId: pro.id }),
+			s.updateSubscription({ productId: pro.id, cancel: "end_of_cycle" }),
+		],
 	});
 
 	// Verify trialing + canceling
@@ -355,7 +364,7 @@ test.concurrent(`${chalk.yellowBright("uncancel during downgrade")}`, async () =
 	const { autumnV1, ctx } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ paymentMethod: "success" }),
+			s.customer({ testClock: true, paymentMethod: "success" }),
 			s.products({ list: [premium, pro] }),
 		],
 		actions: [s.attach({ productId: premium.id })],
@@ -450,10 +459,13 @@ test.concurrent(`${chalk.yellowBright("uncancel + items + invoice mode")}`, asyn
 	const { autumnV1, ctx } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ paymentMethod: "success" }),
+			s.customer({ testClock: true, paymentMethod: "success" }),
 			s.products({ list: [pro, free] }),
 		],
-		actions: [s.attach({ productId: pro.id }), s.cancel({ productId: pro.id })],
+		actions: [
+			s.attach({ productId: pro.id }),
+			s.updateSubscription({ productId: pro.id, cancel: "end_of_cycle" }),
+		],
 	});
 
 	// Verify canceling

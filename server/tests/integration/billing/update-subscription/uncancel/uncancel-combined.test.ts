@@ -58,7 +58,7 @@ test.concurrent(`${chalk.yellowBright("uncancel + update quantity")}`, async () 
 	const { autumnV1, ctx } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ paymentMethod: "success" }),
+			s.customer({ testClock: true, paymentMethod: "success" }),
 			s.products({ list: [pro, free] }),
 		],
 		actions: [
@@ -87,10 +87,11 @@ test.concurrent(`${chalk.yellowBright("uncancel + update quantity")}`, async () 
 		messagesUsage,
 	);
 
-	// Cancel pro
-	await autumnV1.cancel({
+	// Cancel pro via subscriptions.update
+	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
+		cancel: "end_of_cycle",
 	});
 
 	// Verify pro is canceling and free is scheduled
@@ -192,16 +193,17 @@ test.concurrent(`${chalk.yellowBright("uncancel + custom plan (items)")}`, async
 	const { autumnV1, ctx } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ paymentMethod: "success" }),
+			s.customer({ testClock: true, paymentMethod: "success" }),
 			s.products({ list: [pro, free] }),
 		],
 		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Cancel pro
-	await autumnV1.cancel({
+	// Cancel pro via subscriptions.update
+	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
+		cancel: "end_of_cycle",
 	});
 
 	// Verify pro is canceling and free is scheduled
@@ -319,10 +321,11 @@ test.concurrent(`${chalk.yellowBright("uncancel trialing product")}`, async () =
 	});
 	expect(trialEndsAtBefore).toBeDefined();
 
-	// Cancel the trialing product
-	await autumnV1.cancel({
+	// Cancel the trialing product via subscriptions.update
+	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: proTrial.id,
+		cancel: "end_of_cycle",
 	});
 
 	// Verify product is canceling (canceled flag set, but still trialing)

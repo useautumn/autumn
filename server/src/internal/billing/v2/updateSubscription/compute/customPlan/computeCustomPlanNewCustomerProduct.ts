@@ -69,8 +69,7 @@ export const computeCustomPlanNewCustomerProduct = ({
 			isCustom: updateSubscriptionContext.isCustom,
 			subscriptionId: stripeSubscription?.id, // don't populate if it's starting in the future.
 			subscriptionScheduleId: stripeSubscriptionSchedule?.id,
-
-			startsAt: currentCustomerProduct.starts_at ?? undefined, // keep same starts at as current customer product?
+			startsAt: currentCustomerProduct.starts_at ?? undefined,
 			...cancelFields,
 		},
 	});
