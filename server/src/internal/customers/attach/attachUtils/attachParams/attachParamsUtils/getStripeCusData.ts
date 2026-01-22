@@ -1,11 +1,9 @@
 import type { Customer } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import type Stripe from "stripe";
-import {
-	createStripeCusIfNotExists,
-	listCusPaymentMethods,
-} from "@/external/stripe/stripeCusUtils.js";
-import { createStripeCli } from "../../../../../../external/connect/createStripeCli";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { getOrCreateStripeCustomer } from "@/external/stripe/customers";
+import { listCusPaymentMethods } from "@/external/stripe/stripeCusUtils.js";
 
 export const getStripeCusData = async ({
 	ctx,
@@ -20,15 +18,12 @@ export const getStripeCusData = async ({
 		return { stripeCus: undefined, paymentMethod: undefined, now: undefined };
 	}
 
-	const { logger, db, org, env } = ctx;
+	const { org, env } = ctx;
 	const stripeCli = createStripeCli({ org, env });
 
-	const stripeCus = await createStripeCusIfNotExists({
-		db,
-		org,
-		env,
+	const stripeCus = await getOrCreateStripeCustomer({
+		ctx,
 		customer,
-		logger,
 	});
 
 	const testClock = stripeCus.test_clock as Stripe.TestHelpers.TestClock | null;

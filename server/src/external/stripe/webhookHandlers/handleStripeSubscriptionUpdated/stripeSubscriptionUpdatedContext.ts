@@ -20,7 +20,7 @@ export interface SubscriptionPreviousAttributes {
 
 export interface StripeSubscriptionUpdatedContext {
 	stripeSubscription: ExpandedStripeSubscription;
-	previousAttributes?: SubscriptionPreviousAttributes;
+	previousAttributes: SubscriptionPreviousAttributes;
 	fullCustomer: FullCustomer;
 	/** Mutable list of customer products - can be updated in place by tasks */
 	customerProducts: FullCusProduct[];

@@ -72,8 +72,12 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		skipCache: false,
 
 		// Test params:
-		skipCacheDeletion: c.req.header("x-skip-cache-deletion") === "true",
 		extraLogs: {},
+
+		testOptions: {
+			skipCacheDeletion: c.req.header("x-skip-cache-deletion") === "true",
+			skipWebhooks: c.req.header("x-skip-webhooks") === "true",
+		},
 	});
 
 	// childLogger.info(`${method} ${path}`);

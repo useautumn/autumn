@@ -1,6 +1,7 @@
 import { CusExpand } from "@models/cusModels/cusExpand.js";
 import { z } from "zod/v4";
-import { EntityDataSchema } from "../common/entityData.js";
+import { CustomerDataSchema } from "../common/customerData.js";
+import { CustomerIdSchema } from "../common/customerId.js";
 import { queryStringArray } from "../common/queryHelpers.js";
 
 export const GetCustomerQuerySchema = z.object({
@@ -21,102 +22,14 @@ export const CreateCustomerQuerySchema = z.object({
 	}),
 });
 
-const customerId = z.string().refine(
-	(val) => {
-		if (val === "") return false;
-		if (val.includes("@")) return false;
-		if (val.includes(" ")) return false;
-		if (val.includes(".")) return false;
-		return /^[a-zA-Z0-9_-]+$/.test(val);
-	},
-	{
-		error: (issue) => {
-			const input = issue.input as string;
-			if (input === "") return { message: "can't be an empty string" };
-			if (input.includes("@"))
-				return {
-					message:
-						"cannot contain @ symbol. Use only letters, numbers, underscores, and hyphens.",
-				};
-			if (input.includes(" "))
-				return {
-					message:
-						"cannot contain spaces. Use only letters, numbers, underscores, and hyphens.",
-				};
-			if (input.includes("."))
-				return {
-					message:
-						"cannot contain periods. Use only letters, numbers, underscores, and hyphens.",
-				};
-			const invalidChar = input.match(/[^a-zA-Z0-9_-]/)?.[0];
-			return {
-				message: `cannot contain '${invalidChar}'. Use only letters, numbers, underscores, and hyphens.`,
-			};
-		},
-	},
-);
-
-// Create Customer Params (based on handlePostCustomer logic)
-export const CreateCustomerParamsSchema = z.object({
-	id: customerId.nullable().meta({
-		description: "Your unique identifier for the customer",
-	}),
-
-	name: z.string().nullish().meta({
-		description: "Customer's name",
-	}),
-
-	email: z.email({ message: "not a valid email address" }).nullish().meta({
-		description: "Customer's email address",
-	}),
-
-	fingerprint: z.string().optional().meta({
-		description:
-			"Unique identifier (eg, serial number) to detect duplicate customers and prevent free trial abuse",
-	}),
-
-	metadata: z.record(z.string(), z.any()).nullish().meta({
-		description: "Additional metadata for the customer",
-	}),
-
-	stripe_id: z.string().optional().meta({
-		description: "Stripe customer ID if you already have one",
-	}),
-
-	entity_id: z.string().optional().meta({
-		internal: true,
-	}),
-	entity_data: EntityDataSchema.optional().meta({
-		internal: true,
-	}),
-	disable_default: z.boolean().optional().meta({
-		internal: true,
-	}),
-});
-
 // Update Customer Params (based on handleUpdateCustomer logic)
-export const UpdateCustomerParamsSchema = z.object({
-	id: customerId.optional().meta({
-		description: "New unique identifier for the customer.",
-	}),
-	name: z.string().nullish().meta({
-		description: "The customer's name.",
-	}),
-	email: z.email({ message: "not a valid email address" }).nullish().meta({
-		description: "Customer's email address",
-	}),
-	fingerprint: z.string().nullish().meta({
-		description:
-			"Unique identifier (eg, serial number) to detect duplicate customers.",
-	}),
-	metadata: z.record(z.any(), z.any()).nullish().meta({
-		description:
-			"Additional metadata for the customer (set individual keys to null to delete them).",
-	}),
-	stripe_id: z.string().nullish().meta({
-		description: "Stripe customer ID.",
-	}),
-});
+export const UpdateCustomerParamsSchema = z
+	.object({
+		id: CustomerIdSchema.optional().meta({
+			description: "New unique identifier for the customer",
+		}),
+	})
+	.extend(CustomerDataSchema.shape);
 
 // List Customers Query (based on the docs)
 export const ListCustomersQuerySchema = z.object({
@@ -176,7 +89,6 @@ export const GetBillingPortalResponseSchema = z.object({
 	}),
 });
 
-export type CreateCustomerParams = z.infer<typeof CreateCustomerParamsSchema>;
 export type UpdateCustomerParams = z.infer<typeof UpdateCustomerParamsSchema>;
 export type ListCustomersQuery = z.infer<typeof ListCustomersQuerySchema>;
 

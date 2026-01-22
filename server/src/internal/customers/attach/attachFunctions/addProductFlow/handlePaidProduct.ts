@@ -7,10 +7,10 @@ import {
 	isCustomerProductTrialing,
 	MetadataType,
 	SuccessCode,
+	secondsToMs,
 } from "@autumn/shared";
 import { addMinutes } from "date-fns";
 import type Stripe from "stripe";
-import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { isStripeSubscriptionCanceled } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils.js";
 
@@ -242,7 +242,8 @@ export const handlePaidProduct = async ({
 
 	subscriptions.push(sub);
 
-	const anchorToUnix = getEarliestPeriodEnd({ sub }) * 1000;
+	// const anchorToUnix = getEarliestPeriodEnd({ sub }) * 1000;
+	const anchorToUnix = secondsToMs(sub.billing_cycle_anchor);
 
 	if (config.invoiceCheckout) {
 		return AttachFunctionResponseSchema.parse({

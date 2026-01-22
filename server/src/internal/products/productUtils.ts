@@ -32,6 +32,7 @@ import RecaseError from "@server/utils/errorUtils.js";
 import { generateId, notNullish } from "@server/utils/genUtils.js";
 import { Decimal } from "decimal.js";
 import { Stripe } from "stripe";
+import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type {
 	AttachParams,
 	InsertCusProductParams,
@@ -533,9 +534,9 @@ export const initProductInStripe = async ({
 	db: DrizzleCli;
 	org: Organization;
 	env: AppEnv;
-	logger: any;
+	logger: Logger;
 	product: FullProduct;
-}) => {
+}): Promise<undefined> => {
 	if (!isStripeConnected({ org, env })) return;
 
 	await checkStripeProductExists({

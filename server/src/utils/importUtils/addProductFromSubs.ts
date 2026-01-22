@@ -1,5 +1,4 @@
 import {
-	BillingInterval,
 	type CusProductStatus,
 	type EntitlementWithFeature,
 	type FullCustomer,
@@ -12,10 +11,11 @@ import type Stripe from "stripe";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { stripeToAutumnSubStatus } from "@/external/stripe/stripeSubUtils.js";
 import { subToAutumnInterval } from "@/external/stripe/utils.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
-import { constructSub } from "@/internal/subscriptions/subUtils.js";
+import { initSubscriptionFromStripe } from "@/internal/subscriptions/utils/initSubscriptionFromStripe.js";
 import { notNullish } from "../genUtils.js";
 import type { ExtendedRequest } from "../models/Request.js";
 
@@ -142,14 +142,9 @@ export const addProductFromSubs = async ({
 		if (subFromDb.length === 0) {
 			await SubService.createSub({
 				db,
-				sub: constructSub({
-					stripeId: sub.id,
-					usageFeatures:
-						subInterval.interval === BillingInterval.Month ? usageFeatures : [],
-					orgId: org.id,
-					env,
-					currentPeriodStart: start,
-					currentPeriodEnd: end,
+				sub: initSubscriptionFromStripe({
+					ctx: req as unknown as AutumnContext,
+					stripeSubscription: sub,
 				}),
 			});
 			logger.info(`Created sub ${sub.id} in DB`);

@@ -19,9 +19,8 @@ export const buildStripeSubscriptionCreateAction = ({
 	const { stripeCustomer, paymentMethod, trialContext } = billingContext;
 
 	const trialEndsAt = trialContext?.trialEndsAt;
-	const freeTrial = trialContext?.freeTrial;
 
-	const isFreeTrialWithCardRequired = Boolean(freeTrial?.card_required);
+	const isFreeTrialWithCardRequired = trialContext?.cardRequired;
 	const isCustomPaymentMethod = paymentMethod?.type === "custom";
 
 	const stripeSubscriptionCreateParams: Stripe.SubscriptionCreateParams = {
