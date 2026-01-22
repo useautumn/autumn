@@ -51,5 +51,6 @@ export const initFullCustomer = ({
 		entities: [],
 		extra_customer_entitlements: [],
 		subscriptions: [],
+		invoices: [],
 	};
 };

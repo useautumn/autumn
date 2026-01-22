@@ -161,7 +161,7 @@ export const handleInvoiceCreated = async ({
 			env,
 			inStatuses: [
 				CusProductStatus.Active,
-				CusProductStatus.Expired,
+				// CusProductStatus.Expired,
 				CusProductStatus.PastDue,
 			],
 		});
