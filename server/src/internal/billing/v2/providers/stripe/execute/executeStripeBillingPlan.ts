@@ -78,7 +78,8 @@ export const executeStripeBillingPlan = async ({
 			billingContext,
 		});
 		if (subscriptionResult?.deferred) return subscriptionResult;
-		stripeSubscription = subscriptionResult.stripeSubscription;
+		stripeSubscription =
+			subscriptionResult.stripeSubscription ?? stripeSubscription;
 	}
 
 	if (stripeSubscriptionScheduleAction && !isReleaseAction) {
@@ -98,12 +99,12 @@ export const executeStripeBillingPlan = async ({
 		}
 	}
 
+	const stripeInvoice =
+		subscriptionResult?.stripeInvoice ?? invoiceResult?.stripeInvoice;
+
 	return {
 		stripeSubscription: subscriptionResult?.stripeSubscription,
-
-		stripeInvoice:
-			subscriptionResult?.stripeInvoice ?? invoiceResult?.stripeInvoice,
-
+		stripeInvoice,
 		requiredAction:
 			subscriptionResult?.requiredAction ?? invoiceResult?.requiredAction,
 	};

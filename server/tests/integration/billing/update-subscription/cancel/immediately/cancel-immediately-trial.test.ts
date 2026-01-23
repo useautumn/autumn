@@ -86,7 +86,7 @@ test(`${chalk.yellowBright("cancel trial immediately: basic cancel")}`, async ()
 	expect(preview.total).toBe(0);
 
 	// Execute the cancel
-	await autumnV1.subscriptions.update(cancelParams);
+	await autumnV1.subscriptions.update(cancelParams, { timeout: 2000 });
 
 	// Verify product is removed
 	const customerAfterCancel =

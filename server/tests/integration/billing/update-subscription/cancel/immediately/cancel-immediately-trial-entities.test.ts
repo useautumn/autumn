@@ -12,11 +12,9 @@
 
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, CusProductStatus } from "@autumn/shared";
-import {
-	expectCustomerProducts,
-	expectProductNotPresent,
-} from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectProductNotPresent } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectProductTrialing } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
+import { expectNoStripeSubscription } from "@tests/integration/billing/utils/expectNoStripeSubscription";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -196,12 +194,11 @@ test(`${chalk.yellowBright("cancel trial immediately entity: both entities, subs
 	});
 
 	// Verify subscription is canceled
-	await expectSubToBeCorrect({
+	await expectNoStripeSubscription({
 		db: ctx.db,
 		customerId,
 		org: ctx.org,
 		env: ctx.env,
-		shouldBeCanceled: true,
 	});
 });
 
