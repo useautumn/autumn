@@ -1,7 +1,7 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { EntityService } from "@/internal/api/entities/EntityService.js";
-import { Feature, getFeatureName } from "@autumn/shared";
+import { type Feature, getFeatureName } from "@autumn/shared";
 import { AppEnv, Entity } from "autumn-js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { EntityService } from "@/internal/api/entities/EntityService.js";
 
 export const getEntityInvoiceDescription = async ({
 	db,
@@ -15,12 +15,12 @@ export const getEntityInvoiceDescription = async ({
 	logger: any;
 }) => {
 	try {
-		let entity = await EntityService.getByInternalId({
+		const entity = await EntityService.getByInternalId({
 			db,
 			internalId: internalEntityId,
 		});
 
-		let feature = features.find(
+		const feature = features.find(
 			(f) => f.internal_id == entity?.internal_feature_id,
 		);
 
@@ -32,7 +32,7 @@ export const getEntityInvoiceDescription = async ({
 		}
 
 		if (feature && entDetails) {
-			let featureName = getFeatureName({
+			const featureName = getFeatureName({
 				feature,
 				plural: false,
 				capitalize: true,

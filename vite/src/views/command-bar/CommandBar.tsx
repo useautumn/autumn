@@ -7,8 +7,13 @@ import {
 } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { AppEnv } from "autumn-js";
-import { CircleUserRoundIcon, Monitor, Moon, PackageIcon, Sun } from "lucide-react";
-import { useTheme } from "@/contexts/ThemeProvider";
+import {
+	CircleUserRoundIcon,
+	Monitor,
+	Moon,
+	PackageIcon,
+	Sun,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useNavigate } from "react-router";
@@ -21,6 +26,7 @@ import {
 	CommandList,
 } from "@/components/ui/command";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTheme } from "@/contexts/ThemeProvider";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useCommandBarStore } from "@/hooks/stores/useCommandBarStore";

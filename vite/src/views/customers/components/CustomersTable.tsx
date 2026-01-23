@@ -1,4 +1,3 @@
-import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import {
 	CusProductSchema,
 	CusProductStatus,
@@ -6,26 +5,25 @@ import {
 	FullCusProduct,
 	ProductSchema,
 } from "@autumn/shared";
+import type React from "react";
 
 import { Link, useNavigate } from "react-router";
-import React from "react";
-import CopyButton from "@/components/general/CopyButton";
-
-import { getRedirectUrl } from "@/utils/genUtils";
-import { Badge } from "@/components/ui/badge";
-import { unixHasPassed } from "@/utils/dateUtils";
 import { z } from "zod";
+import CopyButton from "@/components/general/CopyButton";
+import { Item, Row } from "@/components/general/TableGrid";
+import { Badge } from "@/components/ui/badge";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
-import { useEnv } from "@/utils/envUtils";
-import { Item, Row } from "@/components/general/TableGrid";
-
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { cn } from "@/lib/utils";
+import { unixHasPassed } from "@/utils/dateUtils";
+import { useEnv } from "@/utils/envUtils";
+import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
+import { getRedirectUrl } from "@/utils/genUtils";
 import { getVersionCounts } from "@/utils/productUtils";
 import { CustomerRowToolbar } from "./CustomerRowToolbar";
 import { CustomerRow } from "./customers-table/CustomerRow";

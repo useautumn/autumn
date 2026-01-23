@@ -1,7 +1,6 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
 import { user } from "@autumn/shared";
-
 import { desc } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const getAllUsers = async (db: DrizzleCli) => {
 	const users = [];

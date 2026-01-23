@@ -1,8 +1,8 @@
 import { relations } from "drizzle-orm";
 
 import { features } from "../../featureModels/featureTable.js";
-import { entitlements } from "./entTable.js";
 import { products } from "../productTable.js";
+import { entitlements } from "./entTable.js";
 
 export const entitlementsRelations = relations(entitlements, ({ one }) => ({
 	feature: one(features, {

@@ -1,5 +1,5 @@
-import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
 import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
+import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
 import { BasePriceSection } from "./edit-plan-details/BasePriceSection";
 import { PlanTypeSection } from "./edit-plan-details/PlanTypeSection";
 

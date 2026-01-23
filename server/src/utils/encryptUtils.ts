@@ -50,6 +50,6 @@ export const generatePublishableKey = (env: string) => {
 	//   .replace(/[+/=]/g, "") // Remove non-URL safe characters
 	//   .slice(0, 100); // Ensure exactly 100 characters
 
-	let envString = env === AppEnv.Sandbox ? "test_" : "live_";
+	const envString = env === AppEnv.Sandbox ? "test_" : "live_";
 	return `am_pk_${envString}${KSUID.randomSync().string}`;
 };

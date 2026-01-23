@@ -4,7 +4,7 @@ import {
 	isFreeProduct,
 } from "@autumn/shared";
 
-export const allCusProductsOnSubFree =  ({
+export const allCusProductsOnSubFree = ({
 	fullCus,
 	subId,
 }: {

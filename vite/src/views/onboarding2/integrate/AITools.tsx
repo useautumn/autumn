@@ -1,18 +1,18 @@
-import { StepHeader } from "./StepHeader";
-import { Button } from "@/components/ui/button";
-import CopyButton from "@/components/general/CopyButton";
-import { ExternalLink, Download, Info } from "lucide-react";
+import { Download, ExternalLink, Info } from "lucide-react";
 import { toast } from "sonner";
+import CopyButton from "@/components/general/CopyButton";
+import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import {
 	Accordion,
-	AccordionTrigger,
 	AccordionContent,
 	AccordionItem,
+	AccordionTrigger,
 } from "@/components/ui/accordion";
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import { Button } from "@/components/ui/button";
 import CodeBlock from "@/views/onboarding/components/CodeBlock";
-import { InfoBox } from "./components/InfoBox";
 import { CodeSpan } from "./components/CodeSpan";
+import { InfoBox } from "./components/InfoBox";
+import { StepHeader } from "./StepHeader";
 
 export const AITools = () => {
 	// MCP configuration for Autumn

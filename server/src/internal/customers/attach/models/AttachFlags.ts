@@ -1,4 +1,4 @@
-import { AttachBranch } from "@autumn/shared";
+import type { AttachBranch } from "@autumn/shared";
 
 export enum ProrationBehavior {
 	Immediately = "immediately",

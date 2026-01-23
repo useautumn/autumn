@@ -527,7 +527,10 @@ export class CusSearchService {
 		}
 
 		// Call searchByProduct if we have version filters OR status filters
-		if ((filters?.version && filters?.version.length > 0) || (filters?.status && filters?.status.length > 0)) {
+		if (
+			(filters?.version && filters?.version.length > 0) ||
+			(filters?.status && filters?.status.length > 0)
+		) {
 			return await CusSearchService.searchByProduct({
 				db,
 				orgId,

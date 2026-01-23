@@ -1,6 +1,6 @@
+import { FreeTrial, Product } from "@autumn/shared";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { FreeTrial, Product } from "@autumn/shared";
 
 export const ProductTypeBadge = ({ product }: { product: any }) => {
 	const badgeType =

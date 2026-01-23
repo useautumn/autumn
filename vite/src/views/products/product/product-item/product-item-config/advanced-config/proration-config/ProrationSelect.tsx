@@ -1,3 +1,4 @@
+import type { OnDecrease, OnIncrease } from "@autumn/shared";
 import {
 	Select,
 	SelectContent,
@@ -5,7 +6,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { OnDecrease, OnIncrease } from "@autumn/shared";
 
 export const ProrationSelect = ({
 	value,

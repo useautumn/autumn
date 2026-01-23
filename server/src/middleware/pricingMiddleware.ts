@@ -1,12 +1,15 @@
-import { FeatureId, sendProductEvent } from "@/external/autumn/autumnUtils.js";
-import { isEntitled } from "@/external/autumn/autumnUtils.js";
+import {
+	FeatureId,
+	isEntitled,
+	sendProductEvent,
+} from "@/external/autumn/autumnUtils.js";
 import { handleRequestError } from "@/utils/errorUtils.js";
 
 export const pricingMiddleware = async (req: any, res: any, next: any) => {
-	let path = req.url;
-	let method = req.method;
+	const path = req.url;
+	const method = req.method;
 
-	let host = req.headers.host;
+	const host = req.headers.host;
 	if (host.includes("localhost")) {
 		next();
 		return;
@@ -33,7 +36,7 @@ export const pricingMiddleware = async (req: any, res: any, next: any) => {
 				});
 			}
 
-			if (path.match(/^\/products\/[^\/]+$/) && method === "DELETE") {
+			if (path.match(/^\/products\/[^/]+$/) && method === "DELETE") {
 				console.log("sending product delete event");
 				await sendProductEvent({
 					org: req.org,

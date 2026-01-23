@@ -1,12 +1,11 @@
+import * as AccordionPrimitive from "@radix-ui/react-accordion";
+import type { CheckoutResult } from "autumn-js";
+import { ChevronDown } from "lucide-react";
 import {
 	Accordion,
 	AccordionContent,
 	AccordionItem,
 } from "@/components/ui/accordion";
-import { CheckoutResult } from "autumn-js";
-import { ChevronDown } from "lucide-react";
-
-import * as AccordionPrimitive from "@radix-ui/react-accordion";
 import { cn } from "@/lib/utils";
 
 export function MultiAtttachLines({

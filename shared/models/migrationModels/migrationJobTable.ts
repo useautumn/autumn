@@ -1,6 +1,6 @@
-import { pgTable, text, numeric, jsonb, foreignKey } from "drizzle-orm/pg-core";
-import { products } from "../productModels/productTable.js";
+import { foreignKey, jsonb, numeric, pgTable, text } from "drizzle-orm/pg-core";
 import { organizations } from "../orgModels/orgTable.js";
+import { products } from "../productModels/productTable.js";
 
 export const migrationJobs = pgTable(
 	"migration_jobs",

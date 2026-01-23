@@ -1,7 +1,7 @@
 import {
-	Feature,
+	type Feature,
 	FeatureType,
-	ProductItem,
+	type ProductItem,
 	ProductItemFeatureType,
 } from "@autumn/shared";
 

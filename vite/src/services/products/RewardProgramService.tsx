@@ -1,6 +1,6 @@
-import { RewardProgram, CreateRewardProgram } from "@autumn/shared";
+import type { CreateRewardProgram, RewardProgram } from "@autumn/shared";
 
-import { AxiosInstance } from "axios";
+import type { AxiosInstance } from "axios";
 
 export class RewardProgramService {
 	static async createReward({

@@ -1,7 +1,7 @@
 import { BillingInterval, BillWhen, PriceType } from "@autumn/shared";
 import { useEffect, useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { invalidNumber } from "@/utils/genUtils";
 
 export const PricingConfig = ({

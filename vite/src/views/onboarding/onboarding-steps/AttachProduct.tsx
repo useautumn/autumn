@@ -1,7 +1,7 @@
-import Step from "@/components/general/OnboardingStep";
-import CodeBlock from "../components/CodeBlock";
+import type { Product } from "@autumn/shared";
 import { ArrowUpRightFromSquare } from "lucide-react";
-import { Product } from "@autumn/shared";
+import { useState } from "react";
+import Step from "@/components/general/OnboardingStep";
 import {
 	Select,
 	SelectContent,
@@ -9,7 +9,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { useState } from "react";
+import CodeBlock from "../components/CodeBlock";
 
 const attachCodeNextjs = (productId: string, apiKey: string) => {
 	return `// app/page.tsx

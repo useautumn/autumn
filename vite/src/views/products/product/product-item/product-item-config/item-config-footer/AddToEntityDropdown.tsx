@@ -1,4 +1,3 @@
-import { useProductItemContext } from "../../ProductItemContext";
 import { Button } from "@/components/ui/button";
 import {
 	Popover,
@@ -6,6 +5,7 @@ import {
 	PopoverTrigger,
 } from "@/components/ui/popover";
 import { useProductContext } from "../../../ProductContext";
+import { useProductItemContext } from "../../ProductItemContext";
 
 export const AddToEntityDropdown = () => {
 	const { product, entityFeatureIds } = useProductContext();

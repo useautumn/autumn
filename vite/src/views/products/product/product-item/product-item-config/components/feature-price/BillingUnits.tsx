@@ -1,16 +1,15 @@
-import { useState, useRef } from "react";
-import { useProductItemContext } from "../../../ProductItemContext";
-import { Input } from "@/components/ui/input";
-import { Feature, getFeatureName } from "@autumn/shared";
-
+import { type Feature, getFeatureName } from "@autumn/shared";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { cn } from "@/lib/utils";
+import { useProductItemContext } from "../../../ProductItemContext";
 
 export const BillingUnits = ({
 	className,

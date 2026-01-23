@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { defaultDiscountConfig } from "@/views/products/rewards/utils/defaultRewardModels";
 import type { FrontendReward } from "@/views/products/rewards/types/frontendReward";
+import { defaultDiscountConfig } from "@/views/products/rewards/utils/defaultRewardModels";
 
 const DEFAULT_REWARD: FrontendReward = {
 	name: "",
@@ -21,7 +21,9 @@ interface RewardState {
 	baseReward: FrontendReward | null;
 
 	// Actions
-	setReward: (reward: FrontendReward | ((prev: FrontendReward) => FrontendReward)) => void;
+	setReward: (
+		reward: FrontendReward | ((prev: FrontendReward) => FrontendReward),
+	) => void;
 	setBaseReward: (reward: FrontendReward | null) => void;
 	reset: () => void;
 }

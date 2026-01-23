@@ -1,3 +1,8 @@
+import { type Entity, type Feature, FeatureUsageType } from "@autumn/shared";
+import { PlusIcon } from "lucide-react";
+import { useState } from "react";
+import { useLocation, useNavigate } from "react-router";
+import { Button } from "@/components/ui/button";
 import {
 	Select,
 	SelectContent,
@@ -5,17 +10,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-
-import { Entity, Feature, FeatureUsageType } from "@autumn/shared";
-import { useLocation, useNavigate } from "react-router";
-
-import { CreateEntity } from "../customer-sidebar/create-entity/CreateEntity";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { PlusIcon } from "lucide-react";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useCustomerContext } from "../../CustomerContext";
 import { useCusQuery } from "../../hooks/useCusQuery";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { CreateEntity } from "../customer-sidebar/create-entity/CreateEntity";
 
 export const SelectEntity = ({
 	entityId,

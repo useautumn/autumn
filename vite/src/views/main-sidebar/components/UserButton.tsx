@@ -1,4 +1,5 @@
-import { useSession, signOut, deleteUser } from "@/lib/auth-client";
+import { LogOut } from "lucide-react";
+import { useState } from "react";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -7,8 +8,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut } from "lucide-react";
-import { useState } from "react";
+import { deleteUser, signOut, useSession } from "@/lib/auth-client";
 
 export const UserButton = () => {
 	const { data: session } = useSession();

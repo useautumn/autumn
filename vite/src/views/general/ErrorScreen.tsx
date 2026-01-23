@@ -1,11 +1,10 @@
-import { Button } from "@/components/ui/button";
-import { useEnv } from "@/utils/envUtils";
-import { Link, useNavigate } from "react-router";
-import React from "react";
-import { getRedirectUrl } from "@/utils/genUtils";
-import { useSession } from "@/lib/auth-client";
-import { authClient } from "@/lib/auth-client";
 import { AppEnv } from "@autumn/shared";
+import React from "react";
+import { Link, useNavigate } from "react-router";
+import { Button } from "@/components/ui/button";
+import { authClient, useSession } from "@/lib/auth-client";
+import { useEnv } from "@/utils/envUtils";
+import { getRedirectUrl } from "@/utils/genUtils";
 
 function ErrorScreen({
 	children,

@@ -96,8 +96,13 @@ describe(`${chalk.yellowBright("update-current-balance5: update balance with dec
 
 		// Balance should be 45.30 now (72.65 - 27.35)
 		const beforeUpdate = await autumnV2.customers.get<ApiCustomer>(customerId);
-		expect(beforeUpdate.balances[TestFeature.Credits].current_balance).toBeCloseTo(45.30, 2);
-		expect(beforeUpdate.balances[TestFeature.Credits].usage).toBeCloseTo(27.35, 2);
+		expect(
+			beforeUpdate.balances[TestFeature.Credits].current_balance,
+		).toBeCloseTo(45.3, 2);
+		expect(beforeUpdate.balances[TestFeature.Credits].usage).toBeCloseTo(
+			27.35,
+			2,
+		);
 
 		// Update to 50.50
 		await autumnV2.balances.update({
@@ -153,4 +158,3 @@ describe(`${chalk.yellowBright("update-current-balance5: update balance with dec
 		expect(balanceFromDb.current_balance).toBeCloseTo(0.01, 2);
 	});
 });
-

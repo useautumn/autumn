@@ -45,9 +45,7 @@ const StatusItem = ({
 						<TooltipTrigger>{children}</TooltipTrigger>
 						<TooltipContent>
 							<span className="text-sm">{text} </span>
-							{subtext && (
-								<span className="text-sm text-t3">({subtext})</span>
-							)}
+							{subtext && <span className="text-sm text-t3">({subtext})</span>}
 						</TooltipContent>
 					</Tooltip>
 				</TooltipProvider>
