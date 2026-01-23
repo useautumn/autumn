@@ -13,6 +13,7 @@ export type SheetType =
 	| "subscription-detail"
 	| "subscription-update"
 	| "subscription-update-v2"
+	| "subscription-cancel"
 	| "balance-selection"
 	| "balance-edit"
 	| null;

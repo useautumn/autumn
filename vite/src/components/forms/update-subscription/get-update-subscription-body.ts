@@ -4,6 +4,10 @@ import type {
 	ProductItem,
 	ProductV2,
 } from "@autumn/shared";
+import type {
+	CancelActionValue,
+	RefundBehaviorValue,
+} from "@/components/forms/update-subscription-v2/updateSubscriptionFormSchema";
 
 export const getUpdateSubscriptionBody = ({
 	customerId,
@@ -17,6 +21,8 @@ export const getUpdateSubscriptionBody = ({
 	isCustom = false,
 	freeTrial,
 	items,
+	cancelAction,
+	refundBehavior,
 }: {
 	customerId: string;
 	product: ProductV2;
@@ -31,6 +37,9 @@ export const getUpdateSubscriptionBody = ({
 	freeTrial?: CreateFreeTrial | null;
 	// Custom items - separate from isCustom logic for preview support
 	items?: ProductItem[] | null;
+	// Cancel action fields
+	cancelAction?: CancelActionValue | null;
+	refundBehavior?: RefundBehaviorValue | null;
 }) => {
 	const customData = isCustom
 		? {
@@ -80,5 +89,11 @@ export const getUpdateSubscriptionBody = ({
 
 		success_url: successUrl,
 		version: version ? Number(version) : undefined,
+
+		cancel_action: cancelAction || undefined,
+		refund_behavior:
+			cancelAction === "cancel_immediately"
+				? refundBehavior || undefined
+				: undefined,
 	};
 };

@@ -52,6 +52,8 @@ export function useUpdateSubscriptionForm({
 			trialEnabled: isTrialing,
 			version: currentVersion,
 			items: null,
+			cancelAction: null,
+			refundBehavior: null,
 		} as UpdateSubscriptionForm,
 		validators: {
 			onChange: UpdateSubscriptionFormSchema,

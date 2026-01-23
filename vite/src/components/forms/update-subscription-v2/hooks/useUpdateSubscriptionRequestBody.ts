@@ -28,6 +28,8 @@ export function useUpdateSubscriptionRequestBody({
 			trialEnabled,
 			version,
 			items,
+			cancelAction,
+			refundBehavior,
 		} = formValues;
 
 		const options = prepaidItems
@@ -102,6 +104,14 @@ export function useUpdateSubscriptionRequestBody({
 
 		if (version !== initialVersion) {
 			requestBody.version = version;
+		}
+
+		if (cancelAction) {
+			requestBody.cancel_action = cancelAction;
+		}
+
+		if (cancelAction === "cancel_immediately" && refundBehavior) {
+			requestBody.refund_behavior = refundBehavior;
 		}
 
 		return requestBody;

@@ -1,5 +1,7 @@
 import { FreeTrialDuration, type ProductItem } from "@autumn/shared";
+import { CancelActionSchema } from "node_modules/@autumn/shared/api/common/cancelMode";
 import { z } from "zod/v4";
+import { RefundBehaviorSchema } from "@/components/forms/update-subscription-v2/types/refundBehaviourSchema";
 
 export const UpdateSubscriptionFormSchema = z.object({
 	prepaidOptions: z.record(z.string(), z.number().nonnegative()),
@@ -12,6 +14,9 @@ export const UpdateSubscriptionFormSchema = z.object({
 	version: z.number().positive(),
 
 	items: z.custom<ProductItem[]>().nullable(),
+
+	cancelAction: CancelActionSchema.nullable(),
+	refundBehavior: RefundBehaviorSchema.nullable(),
 });
 
 export type UpdateSubscriptionForm = z.infer<
