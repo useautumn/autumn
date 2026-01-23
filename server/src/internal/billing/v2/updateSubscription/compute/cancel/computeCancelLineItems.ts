@@ -14,7 +14,7 @@ export const computeCancelLineItems = ({
 	ctx: AutumnContext;
 	billingContext: UpdateSubscriptionBillingContext;
 }): LineItem[] => {
-	if (billingContext.cancelMode !== "immediately") return [];
+	if (billingContext.cancelAction !== "cancel_immediately") return [];
 
 	return buildAutumnLineItems({
 		ctx,

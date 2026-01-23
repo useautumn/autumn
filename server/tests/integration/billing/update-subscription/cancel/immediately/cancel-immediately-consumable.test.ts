@@ -88,7 +88,7 @@ test.concurrent(`${chalk.yellowBright("cancel immediately consumable: customer -
 	const cancelParams = {
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: "immediately" as const,
+		cancel_action: "cancel_immediately" as const,
 	};
 	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
 
@@ -182,7 +182,7 @@ test.concurrent(`${chalk.yellowBright("cancel immediately consumable: entity - t
 		customer_id: customerId,
 		entity_id: entityId,
 		product_id: pro.id,
-		cancel: "immediately" as const,
+		cancel_action: "cancel_immediately" as const,
 	};
 	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
 
@@ -294,7 +294,7 @@ test.concurrent(`${chalk.yellowBright("cancel immediately consumable: two entiti
 		customer_id: customerId,
 		entity_id: entity1Id,
 		product_id: pro.id,
-		cancel: "immediately",
+		cancel_action: "cancel_immediately",
 	});
 
 	// Verify entity 1 product removed immediately, entity 2 still active
@@ -392,7 +392,7 @@ test.concurrent(`${chalk.yellowBright("cancel immediately consumable: entity - w
 		customer_id: customerId,
 		entity_id: entityId,
 		product_id: pro.id,
-		cancel: "immediately",
+		cancel_action: "cancel_immediately",
 	});
 
 	// Verify product removed

@@ -1,5 +1,5 @@
 import { CusProductStatus, type FullCusProduct } from "@autumn/shared";
-import type { CancelMode } from "@/internal/billing/v2/types/cancelTypes";
+import type { CancelAction } from "@/internal/billing/v2/types/cancelTypes";
 
 /**
  * Computes cancel-related fields for a new customer product.
@@ -8,10 +8,10 @@ import type { CancelMode } from "@/internal/billing/v2/types/cancelTypes";
  * Always preserves active status when replacing an active product.
  */
 export const computeCancelFields = ({
-	cancelMode,
+	cancelAction,
 	currentCustomerProduct,
 }: {
-	cancelMode?: CancelMode;
+	cancelAction?: CancelAction;
 	currentCustomerProduct: FullCusProduct;
 }): {
 	canceledAt: number | undefined;
@@ -25,7 +25,7 @@ export const computeCancelFields = ({
 			? CusProductStatus.Active
 			: undefined;
 
-	if (cancelMode === "uncancel") {
+	if (cancelAction === "uncancel") {
 		return { canceledAt: undefined, endedAt: undefined, status };
 	}
 

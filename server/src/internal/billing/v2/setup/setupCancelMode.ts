@@ -1,23 +1,20 @@
 import type { UpdateSubscriptionV0Params } from "@shared/api/billing/updateSubscription/updateSubscriptionV0Params";
-import type { CancelMode } from "@shared/api/common/cancelMode";
+import type { CancelAction } from "@shared/api/common/cancelMode";
 
 /**
- * Setup cancel mode from params
+ * Setup cancel action from params
  * @param params - The params
- * Converts cancel param to internal cancel mode
- * - cancel: null means "uncancel" (remove scheduled cancellation)
- * - cancel: "immediately" or "end_of_cycle" means cancel
- * - cancel: undefined means no cancel operation
- * @returns The cancel mode
+ * cancel_action param maps directly to internal cancel action
+ * - cancel_action: "cancel_immediately" means cancel immediately
+ * - cancel_action: "cancel_end_of_cycle" means cancel at end of cycle
+ * - cancel_action: "uncancel" means remove scheduled cancellation
+ * - cancel_action: undefined means no cancel operation
+ * @returns The cancel action
  */
-export const setupCancelMode = ({
+export const setupCancelAction = ({
 	params,
 }: {
 	params: UpdateSubscriptionV0Params;
-}): CancelMode | undefined => {
-	if (params.cancel === null) {
-		return "uncancel";
-	}
-
-	return params.cancel;
+}): CancelAction | undefined => {
+	return params.cancel_action;
 };

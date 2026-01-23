@@ -214,3 +214,10 @@ export const isCustomerProductEntityScoped = (
 	if (!customerProduct) return false;
 	return notNullish(customerProduct.internal_entity_id);
 };
+
+export const isCustomerProductCustomerScoped = (
+	customerProduct?: FullCusProduct,
+) => {
+	if (!customerProduct) return false;
+	return nullish(customerProduct.internal_entity_id);
+};

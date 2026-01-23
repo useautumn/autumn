@@ -76,7 +76,7 @@ type UpdateSubscriptionAction = {
 	type: "updateSubscription";
 	productId: string;
 	entityIndex?: number;
-	cancel?: "end_of_cycle" | "immediately";
+	cancelAction?: "cancel_end_of_cycle" | "cancel_immediately" | "uncancel";
 	items?: ProductItem[];
 };
 
@@ -413,21 +413,21 @@ const track = ({
  * Update a subscription (e.g., cancel end of cycle, add items).
  * @param productId - The product ID (without prefix)
  * @param entityIndex - Optional entity index (0-based) for entity-level subscription
- * @param cancel - Cancel mode: "end_of_cycle" or "immediately"
+ * @param cancelAction - Cancel action: "cancel_end_of_cycle", "cancel_immediately", or "uncancel"
  * @param items - Optional items to add/update on the subscription
- * @example s.updateSubscription({ productId: "pro", cancel: "end_of_cycle" }) // customer-level
- * @example s.updateSubscription({ productId: "pro", entityIndex: 0, cancel: "end_of_cycle" }) // entity-level
+ * @example s.updateSubscription({ productId: "pro", cancelAction: "cancel_end_of_cycle" }) // customer-level
+ * @example s.updateSubscription({ productId: "pro", entityIndex: 0, cancelAction: "cancel_end_of_cycle" }) // entity-level
  * @example s.updateSubscription({ productId: "pro", items: [consumableItem] }) // add items
  */
 const updateSubscription = ({
 	productId,
 	entityIndex,
-	cancel,
+	cancelAction,
 	items,
 }: {
 	productId: string;
 	entityIndex?: number;
-	cancel?: "end_of_cycle" | "immediately";
+	cancelAction?: "cancel_end_of_cycle" | "cancel_immediately" | "uncancel";
 	items?: ProductItem[];
 }): ConfigFn => {
 	return (config) => ({
@@ -438,7 +438,7 @@ const updateSubscription = ({
 				type: "updateSubscription" as const,
 				productId,
 				entityIndex,
-				cancel,
+				cancelAction,
 				items,
 			},
 		],
@@ -900,7 +900,7 @@ export async function initScenario({
 				customer_id: customerId,
 				product_id: prefixedProductId,
 				entity_id: entityId,
-				cancel: action.cancel,
+				cancel_action: action.cancelAction,
 				items: action.items,
 			});
 		} else if (action.type === "advanceToNextInvoice") {

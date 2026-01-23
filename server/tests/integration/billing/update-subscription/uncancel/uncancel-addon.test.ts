@@ -45,7 +45,10 @@ test.concurrent(`${chalk.yellowBright("uncancel addon: main active")}`, async ()
 		actions: [
 			s.attach({ productId: pro.id }),
 			s.attach({ productId: addon.id }),
-			s.updateSubscription({ productId: addon.id, cancel: "end_of_cycle" }),
+			s.updateSubscription({
+				productId: addon.id,
+				cancelAction: "cancel_end_of_cycle",
+			}),
 		],
 	});
 
@@ -65,7 +68,7 @@ test.concurrent(`${chalk.yellowBright("uncancel addon: main active")}`, async ()
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: addon.id,
-		cancel: null,
+		cancel_action: "uncancel",
 	});
 
 	// Verify addon is now active, pro unchanged
@@ -125,8 +128,14 @@ test.concurrent(`${chalk.yellowBright("uncancel main: addon canceling")}`, async
 		actions: [
 			s.attach({ productId: pro.id }),
 			s.attach({ productId: addon.id }),
-			s.updateSubscription({ productId: pro.id, cancel: "end_of_cycle" }),
-			s.updateSubscription({ productId: addon.id, cancel: "end_of_cycle" }),
+			s.updateSubscription({
+				productId: pro.id,
+				cancelAction: "cancel_end_of_cycle",
+			}),
+			s.updateSubscription({
+				productId: addon.id,
+				cancelAction: "cancel_end_of_cycle",
+			}),
 		],
 	});
 
@@ -146,7 +155,7 @@ test.concurrent(`${chalk.yellowBright("uncancel main: addon canceling")}`, async
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: null,
+		cancel_action: "uncancel",
 	});
 
 	// Verify main is active, addon still canceling
@@ -197,8 +206,14 @@ test.concurrent(`${chalk.yellowBright("uncancel both: main and addon")}`, async 
 		actions: [
 			s.attach({ productId: pro.id }),
 			s.attach({ productId: addon.id }),
-			s.updateSubscription({ productId: pro.id, cancel: "end_of_cycle" }),
-			s.updateSubscription({ productId: addon.id, cancel: "end_of_cycle" }),
+			s.updateSubscription({
+				productId: pro.id,
+				cancelAction: "cancel_end_of_cycle",
+			}),
+			s.updateSubscription({
+				productId: addon.id,
+				cancelAction: "cancel_end_of_cycle",
+			}),
 		],
 	});
 
@@ -218,12 +233,12 @@ test.concurrent(`${chalk.yellowBright("uncancel both: main and addon")}`, async 
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: null,
+		cancel_action: "uncancel",
 	});
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: addon.id,
-		cancel: null,
+		cancel_action: "uncancel",
 	});
 
 	// Verify both are active
@@ -293,7 +308,7 @@ test.concurrent(`${chalk.yellowBright("uncancel: separate subscriptions")}`, asy
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: addon.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify addon is canceling, pro still active
@@ -312,7 +327,7 @@ test.concurrent(`${chalk.yellowBright("uncancel: separate subscriptions")}`, asy
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: addon.id,
-		cancel: null,
+		cancel_action: "uncancel",
 	});
 
 	// Verify both active

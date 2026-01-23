@@ -81,7 +81,7 @@ test(`${chalk.yellowBright("cancel trial EOC: basic cancel, preview.next_cycle n
 	const cancelParams = {
 		customer_id: customerId,
 		product_id: proTrial.id,
-		cancel: "end_of_cycle" as const,
+		cancel_action: "cancel_end_of_cycle" as const,
 	};
 
 	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
@@ -200,7 +200,7 @@ test(`${chalk.yellowBright("cancel trial EOC: with consumable messages, no overa
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: proTrial.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify product is canceling
@@ -315,7 +315,7 @@ test(`${chalk.yellowBright("cancel trial EOC: premium trial with pro scheduled, 
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: premiumTrial.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify pro scheduled is removed
@@ -418,7 +418,7 @@ test(`${chalk.yellowBright("cancel trial EOC: with free default, free scheduled"
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: proTrial.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify pro is canceling and free is scheduled

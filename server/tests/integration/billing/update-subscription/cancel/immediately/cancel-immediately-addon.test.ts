@@ -80,7 +80,7 @@ test.concurrent(`${chalk.yellowBright("cancel addon immediately: basic refund")}
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: recurringAddon.id,
-		cancel: "immediately",
+		cancel_action: "cancel_immediately",
 	});
 
 	// Wait for async invoice processing
@@ -163,7 +163,7 @@ test.concurrent(`${chalk.yellowBright("cancel addon immediately: usage overage n
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: usageAddon.id,
-		cancel: "immediately",
+		cancel_action: "cancel_immediately",
 	});
 
 	// Wait for async invoice processing
@@ -245,7 +245,7 @@ test.concurrent(`${chalk.yellowBright("cancel addon immediately: free addon canc
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: freeAddon.id,
-		cancel: "immediately",
+		cancel_action: "cancel_immediately",
 	});
 
 	// Wait for processing
@@ -326,7 +326,7 @@ test.concurrent(`${chalk.yellowBright("cancel addon immediately: with scheduled 
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: recurringAddon.id,
-		cancel: "immediately",
+		cancel_action: "cancel_immediately",
 	});
 
 	// Verify: premium active, pro still scheduled, addon gone
@@ -410,7 +410,7 @@ test.concurrent(`${chalk.yellowBright("cancel addon immediately: entity product 
 		customer_id: customerId,
 		entity_id: entities[0].id,
 		product_id: recurringAddon.id,
-		cancel: "immediately",
+		cancel_action: "cancel_immediately",
 	});
 
 	// Wait for processing
@@ -482,14 +482,14 @@ test.concurrent(`${chalk.yellowBright("cancel addon immediately: cancel both pro
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Cancel add-on immediately
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: recurringAddon.id,
-		cancel: "immediately",
+		cancel_action: "cancel_immediately",
 	});
 
 	// Verify: pro canceling, addon removed
@@ -583,7 +583,7 @@ test.concurrent(`${chalk.yellowBright("cancel addon immediately: multiple addons
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: proAddon.id,
-		cancel: "immediately",
+		cancel_action: "cancel_immediately",
 	});
 
 	// Wait for processing
@@ -659,7 +659,7 @@ test.concurrent(`${chalk.yellowBright("cancel addon immediately: one-time addon 
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: oneTimeAddon.id,
-		cancel: "immediately",
+		cancel_action: "cancel_immediately",
 	});
 
 	// Wait for processing

@@ -99,7 +99,7 @@ test(`${chalk.yellowBright("cancel addon EOC: addon canceling, pro active, free 
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: addon.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify state after cancel
@@ -223,7 +223,7 @@ test(`${chalk.yellowBright("cancel addon EOC: cancel pro, addon persists with fr
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify state after cancel
@@ -335,7 +335,7 @@ test(`${chalk.yellowBright("cancel addon EOC: separate subscription (new_billing
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: addon.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify only the add-on subscription is canceling
@@ -482,7 +482,7 @@ test(`${chalk.yellowBright("cancel addon EOC: multiple addons, cancel one, other
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: addon1.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify state after cancel
@@ -590,7 +590,7 @@ test(`${chalk.yellowBright("cancel addon EOC: entity-level addon cancel")}`, asy
 		customer_id: customerId,
 		entity_id: entityId,
 		product_id: addon.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify state after cancel

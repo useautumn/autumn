@@ -87,7 +87,7 @@ test(`${chalk.yellowBright("cancel trial EOC entities: cancel one entity, other 
 		customer_id: customerId,
 		entity_id: entity1Id,
 		product_id: proTrial.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify entity 1 is canceling
@@ -177,7 +177,7 @@ test(`${chalk.yellowBright("cancel trial EOC entities: cancel both entities EOC"
 		customer_id: customerId,
 		entity_id: entity1Id,
 		product_id: proTrial.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Cancel entity 2 at end of cycle
@@ -185,7 +185,7 @@ test(`${chalk.yellowBright("cancel trial EOC entities: cancel both entities EOC"
 		customer_id: customerId,
 		entity_id: entity2Id,
 		product_id: proTrial.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify both entities are canceling
@@ -316,7 +316,7 @@ test(`${chalk.yellowBright("cancel trial EOC entities: cancel one, attach pro to
 		customer_id: customerId,
 		entity_id: entity1Id,
 		product_id: premiumTrial.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Attach pro to entity 2 (downgrade - scheduled)
@@ -442,7 +442,7 @@ test(`${chalk.yellowBright("cancel trial EOC entities: cancel entity 1, attach p
 		customer_id: customerId,
 		entity_id: entity1Id,
 		product_id: proTrial.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify entity 1 is canceling

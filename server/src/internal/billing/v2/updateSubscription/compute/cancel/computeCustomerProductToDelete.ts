@@ -1,4 +1,5 @@
 import {
+	cp,
 	type FullCusProduct,
 	findMainScheduledCustomerProductByGroup,
 } from "@autumn/shared";
@@ -15,7 +16,9 @@ export const computeCustomerProductToDelete = ({
 }): FullCusProduct | undefined => {
 	const { fullCustomer, customerProduct } = billingContext;
 
-	if (customerProduct.product.is_add_on) return undefined;
+	const { valid: isMainRecurring } = cp(customerProduct).main().recurring();
+
+	if (!isMainRecurring) return undefined;
 
 	return findMainScheduledCustomerProductByGroup({
 		fullCustomer,

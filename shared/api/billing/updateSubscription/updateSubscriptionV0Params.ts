@@ -3,7 +3,7 @@ import { nullish } from "@utils/utils";
 import { z } from "zod/v4";
 import { FeatureOptionsSchema } from "../../../models/cusProductModels/cusProductModels";
 import { ProductItemSchema } from "../../../models/productV2Models/productItemModels/productItemModels";
-import { CancelModeSchema } from "../../common/cancelMode";
+import { CancelActionSchema } from "../../common/cancelMode";
 import { CustomerDataSchema } from "../../common/customerData";
 import { EntityDataSchema } from "../../models";
 
@@ -26,8 +26,8 @@ export const ExtUpdateSubscriptionV0ParamsSchema = z.object({
 	items: z.array(ProductItemSchema).optional(), // used for custom configuration of a plan (in api - plan_override)
 	free_trial: CreateFreeTrialSchema.nullable().optional(),
 
-	// Cancel: 'immediately' | 'end_of_cycle' | null (null = uncancel)
-	cancel: z.enum(["immediately", "end_of_cycle"]).nullable().optional(),
+	// Cancel action: 'cancel_immediately' | 'cancel_end_of_cycle' | 'uncancel'
+	cancel_action: CancelActionSchema.optional(),
 
 	// Proration: defaults to true (charge for prorations). Set to false to skip proration charges.
 	prorate_billing: z.boolean().optional(),
@@ -70,7 +70,7 @@ export const UpdateSubscriptionV0ParamsSchema =
 		})
 		.refine(
 			(data) => {
-				if (data.cancel !== "immediately") return true;
+				if (data.cancel_action !== "cancel_immediately") return true;
 
 				const forbiddenFields = [
 					"options",
@@ -82,18 +82,19 @@ export const UpdateSubscriptionV0ParamsSchema =
 			},
 			{
 				message:
-					"Cannot pass options, items, version, or free_trial when cancel is 'immediately'. Immediate cancellation only processes a prorated refund.",
+					"Cannot pass options, items, version, or free_trial when cancel_action is 'cancel_immediately'. Immediate cancellation only processes a prorated refund.",
 			},
 		)
 		.refine(
 			(data) => {
-				if (data.cancel !== "end_of_cycle") return true;
+				if (data.cancel_action !== "cancel_end_of_cycle") return true;
 
-				// Cannot pass free_trial when cancel is 'end_of_cycle'
+				// Cannot pass free_trial when cancel_action is 'cancel_end_of_cycle'
 				return data.free_trial === undefined;
 			},
 			{
-				message: "Cannot pass free_trial when cancel is 'end_of_cycle'.",
+				message:
+					"Cannot pass free_trial when cancel_action is 'cancel_end_of_cycle'.",
 			},
 		);
 

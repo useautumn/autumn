@@ -58,7 +58,10 @@ test.concurrent(`${chalk.yellowBright("uncancel + version upgrade")}`, async () 
 		],
 		actions: [
 			s.attach({ productId: pro.id }),
-			s.updateSubscription({ productId: pro.id, cancel: "end_of_cycle" }),
+			s.updateSubscription({
+				productId: pro.id,
+				cancelAction: "cancel_end_of_cycle",
+			}),
 		],
 	});
 
@@ -84,7 +87,7 @@ test.concurrent(`${chalk.yellowBright("uncancel + version upgrade")}`, async () 
 	await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: null,
+		cancel_action: "uncancel",
 		version: 2,
 	});
 
@@ -92,7 +95,7 @@ test.concurrent(`${chalk.yellowBright("uncancel + version upgrade")}`, async () 
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: null,
+		cancel_action: "uncancel",
 		version: 2,
 	});
 
@@ -150,7 +153,10 @@ test.concurrent(`${chalk.yellowBright("uncancel + add trial")}`, async () => {
 		],
 		actions: [
 			s.attach({ productId: pro.id }),
-			s.updateSubscription({ productId: pro.id, cancel: "end_of_cycle" }),
+			s.updateSubscription({
+				productId: pro.id,
+				cancelAction: "cancel_end_of_cycle",
+			}),
 		],
 	});
 
@@ -171,7 +177,7 @@ test.concurrent(`${chalk.yellowBright("uncancel + add trial")}`, async () => {
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: null,
+		cancel_action: "uncancel",
 		free_trial: {
 			length: trialDays,
 			duration: FreeTrialDuration.Day,
@@ -194,7 +200,7 @@ test.concurrent(`${chalk.yellowBright("uncancel + add trial")}`, async () => {
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: null,
+		cancel_action: "uncancel",
 		free_trial: {
 			length: trialDays,
 			duration: FreeTrialDuration.Day,
@@ -266,7 +272,10 @@ test.concurrent(`${chalk.yellowBright("remove trial while canceling: cancel pres
 		],
 		actions: [
 			s.attach({ productId: pro.id }),
-			s.updateSubscription({ productId: pro.id, cancel: "end_of_cycle" }),
+			s.updateSubscription({
+				productId: pro.id,
+				cancelAction: "cancel_end_of_cycle",
+			}),
 		],
 	});
 
@@ -400,7 +409,7 @@ test.concurrent(`${chalk.yellowBright("uncancel during downgrade")}`, async () =
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: premium.id,
-		cancel: null,
+		cancel_action: "uncancel",
 	});
 
 	// Verify Premium is active, Pro is deleted
@@ -464,7 +473,10 @@ test.concurrent(`${chalk.yellowBright("uncancel + items + invoice mode")}`, asyn
 		],
 		actions: [
 			s.attach({ productId: pro.id }),
-			s.updateSubscription({ productId: pro.id, cancel: "end_of_cycle" }),
+			s.updateSubscription({
+				productId: pro.id,
+				cancelAction: "cancel_end_of_cycle",
+			}),
 		],
 	});
 
@@ -488,7 +500,7 @@ test.concurrent(`${chalk.yellowBright("uncancel + items + invoice mode")}`, asyn
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: null,
+		cancel_action: "uncancel",
 		items: [customMessagesItem, customPriceItem],
 		invoice: true,
 		finalize_invoice: true,
@@ -501,7 +513,7 @@ test.concurrent(`${chalk.yellowBright("uncancel + items + invoice mode")}`, asyn
 	const updateResult = await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: null,
+		cancel_action: "uncancel",
 		items: [customMessagesItem, customPriceItem],
 		invoice: true,
 		finalize_invoice: true,

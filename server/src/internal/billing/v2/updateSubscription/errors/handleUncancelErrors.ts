@@ -12,7 +12,7 @@ export const handleUncancelErrors = ({
 }: {
 	billingContext: UpdateSubscriptionBillingContext;
 }) => {
-	if (billingContext.cancelMode !== "uncancel") {
+	if (billingContext.cancelAction !== "uncancel") {
 		return;
 	}
 

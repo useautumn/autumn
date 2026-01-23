@@ -89,7 +89,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: customer 
 	await autumnV1Beta.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify pro is canceling
@@ -192,7 +192,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity - 
 		customer_id: customerId,
 		entity_id: entityId,
 		product_id: pro.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify pro is canceling on entity
@@ -304,14 +304,14 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: two entit
 		customer_id: customerId,
 		entity_id: entity1Id,
 		product_id: pro.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		entity_id: entity2Id,
 		product_id: pro.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify both are canceling
@@ -441,7 +441,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: two entit
 		customer_id: customerId,
 		entity_id: entity1Id,
 		product_id: pro.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify entity 1 is canceling, entity 2 is still active
@@ -556,7 +556,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 			s.track({ featureId: TestFeature.Messages, value: 250 }),
 			s.updateSubscription({
 				productId: customerPro.id,
-				cancel: "end_of_cycle",
+				cancelAction: "cancel_end_of_cycle",
 			}),
 		],
 	});
@@ -688,12 +688,12 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle consumable: entity + 
 			s.track({ featureId: TestFeature.Messages, value: 250 }),
 			s.updateSubscription({
 				productId: customerPro.id,
-				cancel: "end_of_cycle",
+				cancelAction: "cancel_end_of_cycle",
 			}),
 			s.updateSubscription({
 				entityIndex: 0,
 				productId: entityPro.id,
-				cancel: "end_of_cycle",
+				cancelAction: "cancel_end_of_cycle",
 			}),
 		],
 	});
