@@ -1,6 +1,7 @@
 import { CreditCardIcon, WalletIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
 import { useUpdateSubscriptionFormContext } from "@/components/forms/update-subscription-v2";
+import { COLLAPSE_TRANSITION } from "@/components/forms/update-subscription-v2/constants/animationConstants";
 import { PanelButton } from "@/components/v2/buttons/PanelButton";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 
@@ -21,7 +22,7 @@ export function RefundBehaviorSection() {
 					initial={{ height: 0, opacity: 0 }}
 					animate={{ height: "auto", opacity: 1 }}
 					exit={{ height: 0, opacity: 0 }}
-					transition={{ duration: 0.2, ease: "easeInOut" }}
+					transition={COLLAPSE_TRANSITION}
 					style={{ overflow: "hidden" }}
 				>
 					<SheetSection title="Refund method" withSeparator>
