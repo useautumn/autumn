@@ -1,6 +1,9 @@
 import { type Customer, ProcessorType } from "@autumn/shared";
 import { createStripeCustomer } from "@/external/stripe/customers/operations/createStripeCustomer";
-import { getExpandedStripeCustomer } from "@/external/stripe/customers/operations/getExpandedStripeCustomer";
+import {
+	type ExpandedStripeCustomer,
+	getExpandedStripeCustomer,
+} from "@/external/stripe/customers/operations/getExpandedStripeCustomer";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService";
 
@@ -16,7 +19,7 @@ export const getOrCreateStripeCustomer = async ({
 	options?: {
 		updateDb?: boolean;
 	};
-}) => {
+}): Promise<ExpandedStripeCustomer> => {
 	const { logger, db, org, env } = ctx;
 
 	const currentStripeCustomer = await getExpandedStripeCustomer({

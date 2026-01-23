@@ -9,7 +9,7 @@ import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/bil
 import type { AutumnBillingPlan } from "@/internal/billing/v2/types/autumnBillingPlan";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
 
-export const handleProrateBillingErrors = ({
+export const handleBillingBehaviorErrors = ({
 	billingContext,
 	autumnBillingPlan,
 	params,
@@ -18,8 +18,8 @@ export const handleProrateBillingErrors = ({
 	autumnBillingPlan: AutumnBillingPlan;
 	params: UpdateSubscriptionV0Params;
 }) => {
-	// Only validate when prorate_billing is explicitly set to false
-	if (params.prorate_billing !== false) return;
+	// Only validate when billing_behavior is 'next_cycle_only' (defer charges)
+	if (params.billing_behavior !== "next_cycle_only") return;
 
 	// Check 1: Free -> Paid transition
 	const newCustomerProduct = autumnBillingPlan.insertCustomerProducts?.[0];
@@ -37,7 +37,7 @@ export const handleProrateBillingErrors = ({
 		if (currentIsFree && !newIsFree) {
 			throw new RecaseError({
 				message:
-					"Cannot set prorate_billing to false when upgrading from a free product to a paid product",
+					"Cannot set billing_behavior to 'next_cycle_only' when upgrading from a free product to a paid product",
 				code: ErrCode.InvalidRequest,
 				statusCode: 400,
 			});
@@ -51,7 +51,8 @@ export const handleProrateBillingErrors = ({
 
 	if (isTrialing && !willBeTrialing) {
 		throw new RecaseError({
-			message: "Cannot set prorate_billing to false when removing a free trial",
+			message:
+				"Cannot set billing_behavior to 'next_cycle_only' when removing a free trial",
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});

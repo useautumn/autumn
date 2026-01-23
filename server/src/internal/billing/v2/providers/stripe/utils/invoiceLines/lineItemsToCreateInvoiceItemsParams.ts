@@ -25,6 +25,7 @@ const toStripeCreateInvoiceItemParams = ({
 		amount: atmnToStripeAmount({ amount: finalAmount }),
 		currency,
 		description,
+		discountable: false,
 		period: billingPeriod
 			? {
 					start: msToSeconds(billingPeriod.start),

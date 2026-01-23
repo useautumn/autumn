@@ -5,6 +5,7 @@ import type {
 	FullCusProduct,
 	FullProduct,
 	Price,
+	RefundBehavior,
 	StripeDiscountWithCoupon,
 } from "@autumn/shared";
 import type { CancelAction } from "@shared/api/common/cancelMode";
@@ -57,6 +58,9 @@ export interface BillingContext {
 
 	// Cancel action (used by update subscription for uncancel)
 	cancelAction?: CancelAction;
+
+	// Refund behavior for negative invoice totals (downgrades)
+	refundBehavior?: RefundBehavior;
 }
 
 export interface UpdateSubscriptionBillingContext extends BillingContext {

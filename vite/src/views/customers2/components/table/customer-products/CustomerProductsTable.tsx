@@ -5,6 +5,7 @@ import type { Row } from "@tanstack/react-table";
 import type { AxiosError } from "axios";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+
 import { Table } from "@/components/general/table";
 import { SectionTag } from "@/components/v2/badges/SectionTag";
 import { Button } from "@/components/v2/buttons/Button";
@@ -18,7 +19,6 @@ import { useSavedViewsQuery } from "@/views/customers/hooks/useSavedViewsQuery";
 import { useCustomerProductsData } from "@/views/customers2/hooks/useCustomerProductsData";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { AttachProductSheetTrigger } from "./AttachProductSheetTrigger";
-import { CancelProductDialog } from "./CancelProductDialog";
 import { CustomerProductsColumns } from "./CustomerProductsColumns";
 import { ShowExpiredActionButton } from "./ShowExpiredActionButton";
 import { TransferProductDialog } from "./TransferProductDialog";
@@ -77,7 +77,6 @@ export function CustomerProductsTable() {
 	} = useCustomerProductsData();
 
 	const { setEntityId } = useEntity();
-	const [cancelOpen, setCancelOpen] = useState(false);
 	const [transferOpen, setTransferOpen] = useState(false);
 	const [selectedProduct, setSelectedProduct] = useState<FullCusProduct | null>(
 		null,
@@ -111,8 +110,7 @@ export function CustomerProductsTable() {
 	}, [hasEntityProducts, customer.entities, setEntityId]);
 
 	const handleCancelClick = (product: FullCusProduct) => {
-		setSelectedProduct(product);
-		setCancelOpen(true);
+		setSheet({ type: "subscription-cancel", itemId: product.id });
 	};
 
 	const handleTransferClick = (product: FullCusProduct) => {
@@ -128,7 +126,7 @@ export function CustomerProductsTable() {
 			const response = await axiosInstance.post("/v1/subscriptions/update", {
 				customer_id: customer.id,
 				product_id: product.product.id,
-				cancel: null,
+				cancel_action: "uncancel",
 			});
 			return response.data;
 		},
@@ -211,18 +209,11 @@ export function CustomerProductsTable() {
 	return (
 		<div className="flex flex-col gap-6">
 			{selectedProduct && (
-				<>
-					<CancelProductDialog
-						cusProduct={selectedProduct}
-						open={cancelOpen}
-						setOpen={setCancelOpen}
-					/>
-					<TransferProductDialog
-						cusProduct={selectedProduct}
-						open={transferOpen}
-						setOpen={setTransferOpen}
-					/>
-				</>
+				<TransferProductDialog
+					cusProduct={selectedProduct}
+					open={transferOpen}
+					setOpen={setTransferOpen}
+				/>
 			)}
 
 			{/* Subscriptions Table */}

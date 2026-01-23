@@ -6,6 +6,7 @@ import { setupCancelAction } from "@/internal/billing/v2/setup/setupCancelMode";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
+import { setupRefundBehavior } from "@/internal/billing/v2/setup/setupRefundBehavior";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupTrialContext } from "@/internal/billing/v2/setup/setupTrialContext";
 import { setupDefaultProductContext } from "@/internal/billing/v2/updateSubscription/setup/setupDefaultProductContext";
@@ -98,6 +99,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 	});
 
 	const cancelAction = setupCancelAction({ params });
+	const refundBehavior = setupRefundBehavior({ params });
 
 	return {
 		fullCustomer,
@@ -122,5 +124,6 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		customEnts,
 		trialContext,
 		isCustom,
+		refundBehavior,
 	};
 };
