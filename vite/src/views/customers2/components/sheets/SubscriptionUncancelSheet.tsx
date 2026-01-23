@@ -1,13 +1,7 @@
-import {
-	CusProductStatus,
-	type FullCusProduct,
-	type ProductV2,
-} from "@autumn/shared";
+import type { FullCusProduct, ProductV2 } from "@autumn/shared";
 import { useMemo } from "react";
-import { CancelFooter } from "@/components/forms/cancel-subscription/components/CancelFooter";
-import { CancelModeSection } from "@/components/forms/cancel-subscription/components/CancelModeSection";
-import { CancelPreviewSection } from "@/components/forms/cancel-subscription/components/CancelPreviewSection";
-import { RefundBehaviorSection } from "@/components/forms/cancel-subscription/components/RefundBehaviorSection";
+import { UncancelFooter } from "@/components/forms/uncancel-subscription/components/UncancelFooter";
+import { UncancelPreviewSection } from "@/components/forms/uncancel-subscription/components/UncancelPreviewSection";
 import {
 	type UpdateSubscriptionFormContext,
 	UpdateSubscriptionFormProvider,
@@ -25,48 +19,32 @@ function SheetContent() {
 	const { formContext } = useUpdateSubscriptionFormContext();
 	const { customerProduct } = formContext;
 
-	const isDefault = customerProduct.product.is_default;
-	const isScheduled = customerProduct.status === CusProductStatus.Scheduled;
-
 	return (
 		<div className="flex flex-col h-full overflow-y-auto">
 			<SheetHeader
-				title="Cancel Subscription"
-				description={`Cancel ${customerProduct.product.name} for this customer`}
+				title="Uncancel Subscription"
+				description={`Resume ${customerProduct.product.name} for this customer`}
 				breadcrumbs={[
 					{ name: customerProduct.product.name, sheet: "subscription-detail" },
 				]}
 				itemId={customerProduct.id}
 			/>
 
-			{isScheduled && (
-				<div className="px-4 pt-4">
-					<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
-						This plan is scheduled to start on{" "}
-						{formatUnixToDateTime(customerProduct.starts_at).date}. Cancelling
-						will remove this schedule.
-					</InfoBox>
-				</div>
-			)}
+			<div className="px-4 pt-4">
+				<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
+					This subscription is scheduled to cancel on{" "}
+					{formatUnixToDateTime(customerProduct.canceled_at).date}. Uncancelling
+					will resume normal billing.
+				</InfoBox>
+			</div>
 
-			{isDefault && (
-				<div className="px-4 pt-4">
-					<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
-						This is the default plan. Cancelling it means this customer will be
-						left without a plan.
-					</InfoBox>
-				</div>
-			)}
-
-			<CancelModeSection />
-			<RefundBehaviorSection />
-			<CancelPreviewSection />
-			<CancelFooter />
+			<UncancelPreviewSection />
+			<UncancelFooter />
 		</div>
 	);
 }
 
-export function SubscriptionCancelSheet() {
+export function SubscriptionUncancelSheet() {
 	const itemId = useSheetStore((s) => s.itemId);
 	const { closeSheet } = useSheetStore();
 	const { customer } = useCusQuery();
@@ -96,7 +74,7 @@ export function SubscriptionCancelSheet() {
 		return (
 			<div className="flex flex-col h-full">
 				<SheetHeader
-					title="Cancel Subscription"
+					title="Uncancel Subscription"
 					description="Loading subscription..."
 				/>
 				<div className="p-4 text-sm text-t3">Loading...</div>
@@ -107,7 +85,7 @@ export function SubscriptionCancelSheet() {
 	if (!formContext) {
 		return (
 			<div className="flex flex-col h-full">
-				<SheetHeader title="Cancel Subscription" description="Loading..." />
+				<SheetHeader title="Uncancel Subscription" description="Loading..." />
 				<div className="p-4 text-sm text-t3">Loading...</div>
 			</div>
 		);
@@ -117,7 +95,7 @@ export function SubscriptionCancelSheet() {
 		<UpdateSubscriptionFormProvider
 			formContext={formContext}
 			originalItems={undefined}
-			defaultOverrides={{ cancelAction: "cancel_end_of_cycle" }}
+			defaultOverrides={{ cancelAction: "uncancel" }}
 			onSuccess={closeSheet}
 		>
 			<SheetContent />

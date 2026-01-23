@@ -328,7 +328,17 @@ export function SubscriptionDetailSheet() {
 				)}
 				{!isExpired && !isScheduled && (
 					<div className="p-4 flex gap-2">
-						{!isCanceled && (
+						{isCanceled ? (
+							<Button
+								variant="secondary"
+								className="flex-1"
+								onClick={() =>
+									setSheet({ type: "subscription-uncancel", itemId })
+								}
+							>
+								Uncancel Subscription
+							</Button>
+						) : (
 							<Button
 								variant="secondary"
 								className="flex-1"
