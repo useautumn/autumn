@@ -20,7 +20,7 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts";
  * Uncancel Basic Tests
  *
  * Core uncancel functionality and error cases.
- * Tests: cancel: null via subscriptions.update()
+ * Tests: cancel_action: "uncancel" via subscriptions.update()
  */
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -48,7 +48,10 @@ test.concurrent(`${chalk.yellowBright("uncancel: with scheduled default product"
 		],
 		actions: [
 			s.attach({ productId: pro.id }),
-			s.updateSubscription({ productId: pro.id, cancel: "end_of_cycle" }),
+			s.updateSubscription({
+				productId: pro.id,
+				cancelAction: "cancel_end_of_cycle",
+			}),
 		],
 	});
 
@@ -64,11 +67,11 @@ test.concurrent(`${chalk.yellowBright("uncancel: with scheduled default product"
 		productId: free.id,
 	});
 
-	// Uncancel via subscriptions.update with cancel: null
+	// Uncancel via subscriptions.update with cancel_action: "uncancel"
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: null,
+		cancel_action: "uncancel",
 	});
 
 	// Verify pro is now active (not canceling)
@@ -130,7 +133,7 @@ test.concurrent(`${chalk.yellowBright("uncancel: already active (no-op)")}`, asy
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: null,
+		cancel_action: "uncancel",
 	});
 
 	// Verify pro is still active
@@ -193,7 +196,7 @@ test.concurrent(`${chalk.yellowBright("uncancel: preserves usage")}`, async () =
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	await new Promise((resolve) => setTimeout(resolve, 4000));
@@ -211,7 +214,7 @@ test.concurrent(`${chalk.yellowBright("uncancel: preserves usage")}`, async () =
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: null,
+		cancel_action: "uncancel",
 	});
 
 	await new Promise((resolve) => setTimeout(resolve, 4000));
@@ -289,7 +292,7 @@ test.concurrent(`${chalk.yellowBright("error: uncancel scheduled product")}`, as
 			await autumnV1.subscriptions.update({
 				customer_id: customerId,
 				product_id: pro.id,
-				cancel: null,
+				cancel_action: "uncancel",
 			});
 		},
 	});
@@ -320,7 +323,10 @@ test.concurrent(`${chalk.yellowBright("error: uncancel expired product")}`, asyn
 		],
 		actions: [
 			s.attach({ productId: pro.id }),
-			s.updateSubscription({ productId: pro.id, cancel: "end_of_cycle" }),
+			s.updateSubscription({
+				productId: pro.id,
+				cancelAction: "cancel_end_of_cycle",
+			}),
 		],
 	});
 
@@ -349,7 +355,7 @@ test.concurrent(`${chalk.yellowBright("error: uncancel expired product")}`, asyn
 			await autumnV1.subscriptions.update({
 				customer_id: customerId,
 				product_id: pro.id,
-				cancel: null,
+				cancel_action: "uncancel",
 			});
 		},
 	});

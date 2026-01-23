@@ -84,7 +84,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: with default free pr
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify pro is canceling and free is scheduled
@@ -194,7 +194,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: no default product")
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify pro is canceling
@@ -323,7 +323,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: downgrade then cance
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: premium.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify state after cancel
@@ -408,7 +408,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: downgrade then cance
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: premium.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify state after cancel
@@ -495,7 +495,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: multi-interval produ
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify pro is canceling
@@ -595,7 +595,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: then cancel immediat
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify pro is canceling and free is scheduled
@@ -625,7 +625,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: then cancel immediat
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: "immediately",
+		cancel_action: "cancel_immediately",
 	});
 
 	// Verify pro is gone and free is active immediately

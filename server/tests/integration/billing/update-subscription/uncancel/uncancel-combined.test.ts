@@ -23,7 +23,7 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts";
  * Uncancel Combined Tests
  *
  * Tests for uncancel combined with other update operations.
- * Tests: cancel: null + options, cancel: null + items, cancel: null + trialing
+ * Tests: cancel_action: "uncancel" + options, cancel_action: "uncancel" + items, cancel_action: "uncancel" + trialing
  */
 
 // ===============================================================================
@@ -91,7 +91,7 @@ test.concurrent(`${chalk.yellowBright("uncancel + update quantity")}`, async () 
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify pro is canceling and free is scheduled
@@ -111,14 +111,14 @@ test.concurrent(`${chalk.yellowBright("uncancel + update quantity")}`, async () 
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: null,
+		cancel_action: "uncancel",
 		options: [{ feature_id: TestFeature.Messages, quantity: newQuantity }],
 	});
 
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: null,
+		cancel_action: "uncancel",
 		options: [{ feature_id: TestFeature.Messages, quantity: newQuantity }],
 	});
 
@@ -203,7 +203,7 @@ test.concurrent(`${chalk.yellowBright("uncancel + custom plan (items)")}`, async
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify pro is canceling and free is scheduled
@@ -225,14 +225,14 @@ test.concurrent(`${chalk.yellowBright("uncancel + custom plan (items)")}`, async
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: null,
+		cancel_action: "uncancel",
 		items: [updatedMessagesItem, newPriceItem],
 	});
 
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: null,
+		cancel_action: "uncancel",
 		items: [updatedMessagesItem, newPriceItem],
 	});
 
@@ -325,7 +325,7 @@ test.concurrent(`${chalk.yellowBright("uncancel trialing product")}`, async () =
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: proTrial.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify product is canceling (canceled flag set, but still trialing)
@@ -340,7 +340,7 @@ test.concurrent(`${chalk.yellowBright("uncancel trialing product")}`, async () =
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: proTrial.id,
-		cancel: null,
+		cancel_action: "uncancel",
 	});
 
 	// Verify product is still trialing and no longer canceling

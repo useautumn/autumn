@@ -131,6 +131,37 @@ const proWithTrial = ({
 	});
 
 /**
+ * Premium product with free trial - $50/month base price with configurable trial
+ * @param items - Product items (features)
+ * @param id - Product ID (default: "premium-trial")
+ * @param trialDays - Number of trial days (default: 7)
+ * @param cardRequired - Whether card is required for trial (default: true)
+ */
+const premiumWithTrial = ({
+	items,
+	id = "premium-trial",
+	trialDays = 7,
+	cardRequired = true,
+}: {
+	items: ProductItem[];
+	id?: string;
+	trialDays?: number;
+	cardRequired?: boolean;
+}): ProductV2 =>
+	constructProduct({
+		id,
+		items: [...items],
+		type: "premium",
+		isDefault: false,
+		freeTrial: {
+			length: trialDays,
+			duration: FreeTrialDuration.Day,
+			unique_fingerprint: false,
+			card_required: cardRequired,
+		},
+	});
+
+/**
  * Base (free) product with free trial - no base price, with configurable trial
  * @param items - Product items (features)
  * @param id - Product ID (default: "base-trial")
@@ -238,6 +269,7 @@ export const products = {
 	pro,
 	proAnnual,
 	proWithTrial,
+	premiumWithTrial,
 	oneOff,
 	recurringAddOn,
 } as const;

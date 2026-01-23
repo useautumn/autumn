@@ -1,7 +1,7 @@
 import {
+	cp,
 	type FullCusProduct,
 	type FullProduct,
-	notNullish,
 	nullish,
 	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
@@ -22,12 +22,14 @@ export const setupDefaultProductContext = async ({
 	customerProduct: FullCusProduct;
 }): Promise<FullProduct | undefined> => {
 	// Only fetch if cancel is requested (not null/undefined)
-	if (nullish(params.cancel)) return undefined;
+	if (nullish(params.cancel_action)) return undefined;
 
 	// Add-ons don't trigger default products
-	if (customerProduct.product.is_add_on) return undefined;
+	const { valid: isMainAndCustomerScoped } = cp(customerProduct)
+		.main()
+		.customerScoped();
 
-	if (notNullish(customerProduct.internal_entity_id)) return undefined;
+	if (!isMainAndCustomerScoped) return undefined;
 
 	const defaultProduct = await getFreeDefaultProductByGroup({
 		ctx,

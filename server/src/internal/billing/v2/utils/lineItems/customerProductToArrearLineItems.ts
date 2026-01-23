@@ -39,7 +39,6 @@ export const customerProductToArrearLineItems = ({
 	updateCustomerEntitlements: UpdateCustomerEntitlement[];
 } => {
 	const lineItems: LineItem[] = [];
-	const billedCusEnts: FullCusEntWithFullCusProduct[] = [];
 
 	let filteredPrices = cusProductToPrices({ cusProduct: customerProduct });
 
@@ -50,6 +49,8 @@ export const customerProductToArrearLineItems = ({
 	}
 
 	const updateCustomerEntitlements: UpdateCustomerEntitlement[] = [];
+
+	// If is trialing, or trial just ended, skip this...?
 
 	for (const cusPrice of customerProduct.customer_prices) {
 		const price = cusPrice.price;

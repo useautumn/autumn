@@ -48,7 +48,7 @@ test.concurrent(`${chalk.yellowBright("uncancel entity: other entity active")}`,
 		customer_id: customerId,
 		product_id: pro.id,
 		entity_id: entities[0].id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify entity 1 is canceling, entity 2 is active
@@ -74,7 +74,7 @@ test.concurrent(`${chalk.yellowBright("uncancel entity: other entity active")}`,
 		customer_id: customerId,
 		product_id: pro.id,
 		entity_id: entities[0].id,
-		cancel: null,
+		cancel_action: "uncancel",
 	});
 
 	// Verify both entities are now active
@@ -141,13 +141,13 @@ test.concurrent(`${chalk.yellowBright("uncancel: all entities")}`, async () => {
 		customer_id: customerId,
 		product_id: pro.id,
 		entity_id: entities[0].id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
 		entity_id: entities[1].id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify both are canceling
@@ -173,13 +173,13 @@ test.concurrent(`${chalk.yellowBright("uncancel: all entities")}`, async () => {
 		customer_id: customerId,
 		product_id: pro.id,
 		entity_id: entities[0].id,
-		cancel: null,
+		cancel_action: "uncancel",
 	});
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
 		entity_id: entities[1].id,
-		cancel: null,
+		cancel_action: "uncancel",
 	});
 
 	// Verify both are active
@@ -237,7 +237,7 @@ test.concurrent(`${chalk.yellowBright("uncancel entity: no scheduled default for
 		customer_id: customerId,
 		product_id: pro.id,
 		entity_id: entities[0].id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify pro is canceling - entities do NOT get default products scheduled
@@ -255,7 +255,7 @@ test.concurrent(`${chalk.yellowBright("uncancel entity: no scheduled default for
 		customer_id: customerId,
 		product_id: pro.id,
 		entity_id: entities[0].id,
-		cancel: null,
+		cancel_action: "uncancel",
 	});
 
 	// Verify pro is active
