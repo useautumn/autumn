@@ -64,7 +64,8 @@ export const initCustomerV3 = async ({
 		stripe_id: stripeCus.id,
 		internalOptions: {
 			disable_defaults: !withDefault,
-			default_group: defaultGroup,
+			// Only pass default_group when defaults are enabled
+			...(withDefault && { default_group: defaultGroup }),
 		},
 		skipWebhooks,
 	});

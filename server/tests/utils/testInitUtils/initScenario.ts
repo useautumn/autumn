@@ -1,4 +1,4 @@
-import { ApiVersion, type ProductV2 } from "@autumn/shared";
+import { ApiVersion, type ProductItem, type ProductV2 } from "@autumn/shared";
 import type { CustomerData } from "autumn-js";
 import { addHours, addMonths } from "date-fns";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -77,6 +77,7 @@ type UpdateSubscriptionAction = {
 	productId: string;
 	entityIndex?: number;
 	cancel?: "end_of_cycle" | "immediately";
+	items?: ProductItem[];
 };
 
 type AdvanceToNextInvoiceAction = {
@@ -409,21 +410,25 @@ const track = ({
 };
 
 /**
- * Update a subscription (e.g., cancel end of cycle).
+ * Update a subscription (e.g., cancel end of cycle, add items).
  * @param productId - The product ID (without prefix)
  * @param entityIndex - Optional entity index (0-based) for entity-level subscription
  * @param cancel - Cancel mode: "end_of_cycle" or "immediately"
+ * @param items - Optional items to add/update on the subscription
  * @example s.updateSubscription({ productId: "pro", cancel: "end_of_cycle" }) // customer-level
  * @example s.updateSubscription({ productId: "pro", entityIndex: 0, cancel: "end_of_cycle" }) // entity-level
+ * @example s.updateSubscription({ productId: "pro", items: [consumableItem] }) // add items
  */
 const updateSubscription = ({
 	productId,
 	entityIndex,
 	cancel,
+	items,
 }: {
 	productId: string;
 	entityIndex?: number;
 	cancel?: "end_of_cycle" | "immediately";
+	items?: ProductItem[];
 }): ConfigFn => {
 	return (config) => ({
 		...config,
@@ -434,6 +439,7 @@ const updateSubscription = ({
 				productId,
 				entityIndex,
 				cancel,
+				items,
 			},
 		],
 	});
@@ -695,7 +701,7 @@ export async function initScenario({
 			customerData: config.customerData,
 			attachPm: config.attachPm,
 			withTestClock: config.testClock,
-			withDefault: config.withDefault,
+			withDefault: config.withDefault ?? false, // RIP
 			// Default group matches the product prefix (customerId) used in initProductsV0
 			defaultGroup: config.defaultGroup ?? customerId,
 			skipWebhooks: config.skipWebhooks,
@@ -895,6 +901,7 @@ export async function initScenario({
 				product_id: prefixedProductId,
 				entity_id: entityId,
 				cancel: action.cancel,
+				items: action.items,
 			});
 		} else if (action.type === "advanceToNextInvoice") {
 			if (!testClockId) {

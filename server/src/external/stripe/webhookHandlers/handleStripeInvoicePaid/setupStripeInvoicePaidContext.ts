@@ -1,10 +1,13 @@
-import { ALL_STATUSES, cp, type FullCusProduct } from "@autumn/shared";
+import {
+	type FullCusProduct,
+	isCustomerProductOnStripeSubscription,
+} from "@autumn/shared";
 import type Stripe from "stripe";
 import {
 	type ExpandedStripeInvoice,
 	getStripeInvoice,
 } from "@/external/stripe/invoices/operations/getStripeInvoice.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { stripeInvoiceToStripeSubscriptionId } from "../../invoices/utils/convertStripeInvoice";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
 
@@ -39,12 +42,16 @@ export const setupStripeInvoicePaidContext = async ({
 	let customerProducts: FullCusProduct[] | undefined;
 
 	if (fullCustomer && stripeSubscriptionId) {
-		customerProducts = await CusProductService.getByStripeSubId({
-			db: ctx.db,
-			stripeSubId: stripeSubscriptionId,
-			orgId: ctx.org.id,
-			env: ctx.env,
-			inStatuses: ALL_STATUSES,
+		customerProducts = fullCustomer.customer_products.filter((cp) =>
+			isCustomerProductOnStripeSubscription({
+				customerProduct: cp,
+				stripeSubscriptionId,
+			}),
+		);
+
+		customerProducts = await customerProductActions.expiredCache.getAndMerge({
+			customerProducts,
+			stripeSubscriptionId,
 		});
 
 		fullCustomer.customer_products = customerProducts;

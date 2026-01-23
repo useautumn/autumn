@@ -79,6 +79,7 @@ Load these on-demand for detailed information:
 - [references/EXPECTATIONS.md](references/EXPECTATIONS.md) - All expectation utilities
 - [references/GOTCHAS.md](references/GOTCHAS.md) - Common pitfalls, debugging, billing edge cases
 - [references/WEBHOOKS.md](references/WEBHOOKS.md) - Outbound webhook testing with Svix Play
+- [references/STRIPE-BEHAVIORS.md](references/STRIPE-BEHAVIORS.md) - Stripe webhook behaviors for consumables, trials, cancellations
 
 ## File Location
 
