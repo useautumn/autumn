@@ -134,7 +134,8 @@ interface SheetFooterProps {
 	className?: string;
 }
 
-const FOOTER_LAYOUT_TRANSITION = {
+/** Shared spring transition for layout animations */
+export const LAYOUT_TRANSITION = {
 	type: "spring",
 	stiffness: 500,
 	damping: 40,
@@ -145,8 +146,11 @@ export function SheetFooter({ children, className }: SheetFooterProps) {
 	return (
 		<motion.div
 			layout
-			transition={{ layout: FOOTER_LAYOUT_TRANSITION }}
-			className={cn("p-4 w-full flex-row grid grid-cols-2 gap-2", className)}
+			transition={{ layout: LAYOUT_TRANSITION }}
+			className={cn(
+				"pt-2 px-4 pb-4 w-full flex-row grid grid-cols-2 gap-2",
+				className,
+			)}
 		>
 			{children}
 		</motion.div>
