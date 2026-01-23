@@ -1,35 +1,6 @@
-import {
-	type FullCusProduct,
-	findMainScheduledCustomerProductByGroup,
-	isCustomerProductCanceling,
-	isCustomerProductMain,
-} from "@autumn/shared";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
 import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan";
-
-/**
- * Finds the scheduled product to delete when uncanceling.
- * Only applies to main products that are currently canceling.
- */
-const findScheduledProductToDelete = ({
-	billingContext,
-}: {
-	billingContext: UpdateSubscriptionBillingContext;
-}): FullCusProduct | undefined => {
-	const { customerProduct, fullCustomer } = billingContext;
-
-	const isMain = isCustomerProductMain(customerProduct);
-	const isCanceling = isCustomerProductCanceling(customerProduct);
-
-	if (!isMain || !isCanceling) {
-		return undefined;
-	}
-
-	return findMainScheduledCustomerProductByGroup({
-		fullCustomer,
-		productGroup: customerProduct.product.group,
-	});
-};
+import { computeCustomerProductToDelete } from "@/internal/billing/v2/updateSubscription/compute/cancel/computeCustomerProductToDelete";
 
 /**
  * Applies uncancel updates to an existing billing plan.
@@ -43,11 +14,9 @@ export const applyUncancelToPlan = ({
 	billingContext: UpdateSubscriptionBillingContext;
 	plan: AutumnBillingPlan;
 }): AutumnBillingPlan => {
-	const { cancelMode } = billingContext;
+	const { cancelAction } = billingContext;
 
-	if (cancelMode !== "uncancel") {
-		return plan;
-	}
+	if (cancelAction !== "uncancel") return plan;
 
 	const cancelUpdates = {
 		canceled: false,
@@ -56,7 +25,7 @@ export const applyUncancelToPlan = ({
 	};
 
 	// Find scheduled product to delete (only for main canceling products)
-	const deleteCustomerProduct = findScheduledProductToDelete({
+	const deleteCustomerProduct = computeCustomerProductToDelete({
 		billingContext,
 	});
 

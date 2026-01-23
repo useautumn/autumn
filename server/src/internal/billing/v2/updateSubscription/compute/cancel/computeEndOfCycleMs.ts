@@ -4,18 +4,22 @@ import { getLargestInterval } from "@/internal/products/prices/priceUtils/priceI
 
 /**
  * Calculates the end of cycle timestamp for cancellation.
- * For 'immediately' mode, returns currentEpochMs.
- * For 'end_of_cycle' mode, calculates the next cycle end based on billing interval.
+ * For 'cancel_immediately' mode, returns currentEpochMs.
+ * For 'cancel_end_of_cycle' mode, calculates the next cycle end based on billing interval.
  */
 export const computeEndOfCycleMs = ({
 	billingContext,
 }: {
 	billingContext: UpdateSubscriptionBillingContext;
 }): number => {
-	const { cancelMode, customerProduct, billingCycleAnchorMs, currentEpochMs } =
-		billingContext;
+	const {
+		cancelAction,
+		customerProduct,
+		billingCycleAnchorMs,
+		currentEpochMs,
+	} = billingContext;
 
-	if (cancelMode === "immediately") {
+	if (cancelAction === "cancel_immediately") {
 		return currentEpochMs;
 	}
 

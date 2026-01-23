@@ -7,7 +7,7 @@ import type {
 	Price,
 	StripeDiscountWithCoupon,
 } from "@autumn/shared";
-import type { CancelMode } from "@shared/api/common/cancelMode";
+import type { CancelAction } from "@shared/api/common/cancelMode";
 import type { FullCustomer } from "@shared/models/cusModels/fullCusModel";
 import type Stripe from "stripe";
 import { z } from "zod/v4";
@@ -55,12 +55,12 @@ export interface BillingContext {
 	trialContext?: TrialContext;
 	isCustom?: boolean;
 
-	// Cancel mode (used by update subscription for uncancel)
-	cancelMode?: CancelMode;
+	// Cancel action (used by update subscription for uncancel)
+	cancelAction?: CancelAction;
 }
 
 export interface UpdateSubscriptionBillingContext extends BillingContext {
 	customerProduct: FullCusProduct; // target customer product
 	defaultProduct?: FullProduct; // for cancel flows
-	cancelMode?: CancelMode; // for cancel flows
+	cancelAction?: CancelAction; // for cancel flows
 }

@@ -8,6 +8,7 @@ import {
 	isCusProductOnEntity,
 	isCustomerProductAddOn,
 	isCustomerProductCanceling,
+	isCustomerProductCustomerScoped,
 	isCustomerProductFree,
 	isCustomerProductMain,
 	isCustomerProductOneOff,
@@ -242,6 +243,12 @@ class CustomerProductChecker {
 	/** Product belongs to a specific product group */
 	hasProductGroup({ productGroup }: { productGroup: string }) {
 		this.pendingPredicates.push((cp) => cp.product.group === productGroup);
+		return this;
+	}
+
+	/** Product is customer-scoped (not assigned to any entity) */
+	customerScoped() {
+		this.pendingPredicates.push(isCustomerProductCustomerScoped);
 		return this;
 	}
 }

@@ -12,9 +12,9 @@ import { computeEndOfCycleMs } from "./computeEndOfCycleMs";
 /**
  * Computes and applies the cancel plan for a subscription.
  *
- * Handles two modes:
- * - 'end_of_cycle': Schedule cancellation at cycle end, insert scheduled default product
- * - 'immediately': Cancel now, insert active default product
+ * Handles two cancel actions:
+ * - 'cancel_end_of_cycle': Schedule cancellation at cycle end, insert scheduled default product
+ * - 'cancel_immediately': Cancel now, insert active default product
  */
 export const computeCancelPlan = ({
 	ctx,
@@ -25,9 +25,9 @@ export const computeCancelPlan = ({
 	billingContext: UpdateSubscriptionBillingContext;
 	plan: AutumnBillingPlan;
 }): AutumnBillingPlan => {
-	if (!billingContext.cancelMode) return plan;
+	if (!billingContext.cancelAction) return plan;
 
-	if (billingContext.cancelMode === "uncancel") {
+	if (billingContext.cancelAction === "uncancel") {
 		return applyUncancelToPlan({
 			billingContext,
 			plan,
@@ -38,7 +38,7 @@ export const computeCancelPlan = ({
 	const endOfCycleMs = computeEndOfCycleMs({ billingContext });
 
 	ctx.logger.debug(
-		`[computeCancelPlan] ${billingContext.cancelMode}: end of cycle at ${endOfCycleMs}`,
+		`[computeCancelPlan] ${billingContext.cancelAction}: end of cycle at ${endOfCycleMs}`,
 	);
 
 	// Step 2: Build cancel updates for customer product

@@ -1,5 +1,6 @@
 import { notNullish } from "@autumn/shared";
 import type Stripe from "stripe";
+import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 
 /** Stripe subscription that is trialing with guaranteed trial_end */
 export type TrialingStripeSubscription = Stripe.Subscription & {
@@ -78,4 +79,34 @@ export const isStripeSubscriptionVercel = (
 	}
 
 	return Boolean(stripeSubscription.metadata?.vercel_installation_id);
+};
+
+/**
+ * Checks if a Stripe subscription was canceled immediately (not at end of period).
+ *
+ * For Stripe dashboard-initiated cancellations:
+ * - "Cancel at end of period" → cancel_at_period_end = true → returns false
+ * - "Cancel immediately" → cancel_at_period_end = false → returns true
+ *
+ * Note: This is only reliable for external (non-Autumn) cancellations.
+ * Autumn-initiated cancellations use a lock mechanism and are filtered out
+ * before this check in the subscription.deleted handler.
+ */
+export const wasImmediateStripeCancellation = (
+	stripeSubscription?: Stripe.Subscription,
+): boolean => {
+	if (!stripeSubscription) return false;
+
+	if (!stripeSubscription.ended_at) return false;
+
+	const latestPeriodEnd = getLatestPeriodEnd({ sub: stripeSubscription });
+	const differenceInSeconds = Math.abs(
+		stripeSubscription.ended_at - latestPeriodEnd,
+	);
+
+	return differenceInSeconds > 20;
+
+	// // If cancel_at_period_end is true, it was an end-of-period cancellation
+	// // If false, it was an immediate cancellation
+	// return !stripeSubscription.cancel_at_period_end;
 };

@@ -6,8 +6,8 @@ import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCus
 /**
  * Creates the default customer product to insert when canceling.
  * Returns undefined for add-ons or when no default product exists.
- * For 'immediately' mode, creates an active product.
- * For 'end_of_cycle' mode, creates a scheduled product.
+ * For 'cancel_immediately' mode, creates an active product.
+ * For 'cancel_end_of_cycle' mode, creates a scheduled product.
  */
 export const computeDefaultCustomerProduct = ({
 	ctx,
@@ -19,7 +19,7 @@ export const computeDefaultCustomerProduct = ({
 	endOfCycleMs: number;
 }): FullCusProduct | undefined => {
 	const {
-		cancelMode,
+		cancelAction,
 		customerProduct,
 		defaultProduct,
 		fullCustomer,
@@ -34,9 +34,10 @@ export const computeDefaultCustomerProduct = ({
 	// No default product configured
 	if (!defaultProduct) return undefined;
 
-	const startsAt = cancelMode === "immediately" ? currentEpochMs : endOfCycleMs;
+	const startsAt =
+		cancelAction === "cancel_immediately" ? currentEpochMs : endOfCycleMs;
 	const status =
-		cancelMode === "immediately"
+		cancelAction === "cancel_immediately"
 			? CusProductStatus.Active
 			: CusProductStatus.Scheduled;
 

@@ -64,7 +64,7 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: free product")}`, asy
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: free.id,
-		cancel: "immediately",
+		cancel_action: "cancel_immediately",
 	});
 
 	// Verify free is gone, no products attached
@@ -120,7 +120,7 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: default free product"
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: free.id,
-		cancel: "immediately",
+		cancel_action: "cancel_immediately",
 	});
 
 	// Verify free is gone, no products attached (default does not auto-reattach when canceled)
@@ -190,7 +190,7 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: pro with default free
 	const cancelParams = {
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: "immediately" as const,
+		cancel_action: "cancel_immediately" as const,
 	};
 	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
 
@@ -269,7 +269,7 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: pro without default")
 	const cancelParams = {
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: "immediately" as const,
+		cancel_action: "cancel_immediately" as const,
 	};
 	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
 
@@ -361,7 +361,7 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: downgrade then cancel
 	const cancelParams = {
 		customer_id: customerId,
 		product_id: premium.id,
-		cancel: "immediately" as const,
+		cancel_action: "cancel_immediately" as const,
 	};
 	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
 
@@ -463,7 +463,7 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: downgrade then cancel
 	const cancelParams = {
 		customer_id: customerId,
 		product_id: premium.id,
-		cancel: "immediately" as const,
+		cancel_action: "cancel_immediately" as const,
 	};
 	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
 
@@ -555,7 +555,7 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: multi-interval produc
 	const cancelParams = {
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: "immediately" as const,
+		cancel_action: "cancel_immediately" as const,
 	};
 	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
 
@@ -649,7 +649,7 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: one-off prepaid produ
 	const cancelParams = {
 		customer_id: customerId,
 		product_id: oneOffProduct.id,
-		cancel: "immediately" as const,
+		cancel_action: "cancel_immediately" as const,
 	};
 	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
 

@@ -268,6 +268,7 @@ export const handlePaidProduct = async ({
 				carryExistingUsages: config.carryUsage,
 				scenario: AttachScenario.New,
 				trialEndsAt: trialEndsAt || undefined,
+				startsAt: attachParams.now,
 				logger,
 			}),
 		);

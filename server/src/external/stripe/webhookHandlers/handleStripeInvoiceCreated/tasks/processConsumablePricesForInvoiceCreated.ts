@@ -1,10 +1,29 @@
 import { customerEntitlementShouldBeBilled, secondsToMs } from "@autumn/shared";
+import { getLatestPeriodStart } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 import { eventContextToArrearLineItems } from "@/external/stripe/webhookHandlers/common";
 import { lineItemsToCreateInvoiceItemsParams } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemsToCreateInvoiceItemsParams";
 import { createStripeInvoiceItems } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
 import type { InvoiceCreatedContext } from "../setupInvoiceCreatedContext";
+
+/**
+ * Checks if the subscription's trial just ended.
+ * When a trial ends, Stripe creates the first real billing period where
+ * `current_period_start` equals `trial_end`. In this case, we should skip
+ * billing for consumable usage since trial usage is free.
+ */
+const hasTrialJustEnded = ({
+	stripeSubscription,
+}: {
+	stripeSubscription: InvoiceCreatedContext["stripeSubscription"];
+}): boolean => {
+	const trialEnd = stripeSubscription.trial_end;
+	if (!trialEnd) return false;
+
+	const periodStart = getLatestPeriodStart({ sub: stripeSubscription });
+	return trialEnd === periodStart;
+};
 
 /**
  * Processes consumable (usage-in-arrear) prices for an invoice.
@@ -24,9 +43,21 @@ export const processConsumablePricesForInvoiceCreated = async ({
 	ctx: StripeWebhookContext;
 	eventContext: InvoiceCreatedContext;
 }): Promise<void> => {
-	const { stripeInvoice } = eventContext;
+	const { stripeInvoice, stripeSubscription } = eventContext;
 
-	if (stripeInvoice.billing_reason !== "subscription_cycle") return;
+	const isPeriodicInvoice =
+		stripeInvoice.billing_reason === "subscription_cycle";
+
+	const trialJustEnded = hasTrialJustEnded({ stripeSubscription });
+
+	if (!isPeriodicInvoice) return;
+
+	if (trialJustEnded) {
+		ctx.logger.info(
+			"[invoice.created] Trial just ended, skipping consumable charges",
+		);
+		return;
+	}
 
 	const invoicePeriodEndMs = secondsToMs(stripeInvoice.period_end);
 

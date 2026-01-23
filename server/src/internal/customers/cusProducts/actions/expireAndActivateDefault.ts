@@ -67,6 +67,11 @@ export const expireCustomerProductAndActivateDefault = async ({
 			: cp,
 	);
 
+	ctx.logger.info(
+		`IS ENTITY SCOPED: ${isCustomerProductEntityScoped(customerProduct)}`,
+	);
+	ctx.logger.info(`IS ADD ON: ${isCustomerProductAddOn(customerProduct)}`);
+
 	// 3. Skip default activation for add-ons
 	if (isCustomerProductAddOn(customerProduct)) return { updates };
 	if (isCustomerProductEntityScoped(customerProduct)) return { updates };

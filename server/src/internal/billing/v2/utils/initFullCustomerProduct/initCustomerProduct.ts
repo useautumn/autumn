@@ -42,6 +42,8 @@ export const initCustomerProduct = ({
 	const initCustomerProductStatus = () => {
 		if (initOptions?.status) return initOptions?.status;
 
+		// 1 minute tolerance to determine if customer product should be scheduled. (for test clock time frozen issues)
+		// const TOLERANCE_MS = ms.minutes(1);
 		if (startsAt && startsAt > now) {
 			return CusProductStatus.Scheduled;
 		}
