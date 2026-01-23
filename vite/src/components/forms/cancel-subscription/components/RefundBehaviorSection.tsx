@@ -1,37 +1,72 @@
+import { CreditCardIcon, WalletIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
-import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
+import { useUpdateSubscriptionFormContext } from "@/components/forms/update-subscription-v2";
+import {
+	OptionCard,
+	OptionCardContent,
+	OptionCardDescription,
+	OptionCardGroup,
+	OptionCardIcon,
+	OptionCardLabel,
+} from "@/components/v2/selections/OptionCard";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
-import { SHEET_ANIMATION } from "@/views/products/plan/planAnimations";
-import { useCancelSubscriptionContext } from "../context/CancelSubscriptionContext";
 
 export function RefundBehaviorSection() {
-	const { refundBehavior, setRefundBehavior, showRefundToggle } =
-		useCancelSubscriptionContext();
+	const { form, formValues, previewQuery } = useUpdateSubscriptionFormContext();
+
+	const cancelAction = formValues.cancelAction;
+	const refundBehavior = formValues.refundBehavior ?? "grant_invoice_credits";
+
+	const showRefundToggle =
+		cancelAction === "cancel_immediately" &&
+		!!previewQuery.data &&
+		previewQuery.data.total < 0;
 
 	return (
-		<AnimatePresence mode="wait">
+		<AnimatePresence initial={false}>
 			{showRefundToggle && (
 				<motion.div
-					initial={{ opacity: 0, y: 20 }}
-					animate={{ opacity: 1, y: 0 }}
-					exit={{ opacity: 0, y: 20 }}
-					transition={SHEET_ANIMATION}
+					initial={{ height: 0, opacity: 0 }}
+					animate={{ height: "auto", opacity: 1 }}
+					exit={{ height: 0, opacity: 0 }}
+					transition={{ duration: 0.2, ease: "easeInOut" }}
+					style={{ overflow: "hidden" }}
 				>
-					<SheetSection title="Credit Application" withSeparator={false}>
-						<GroupedTabButton
-							value={refundBehavior}
-							onValueChange={(value) => setRefundBehavior(value)}
-							options={[
-								{
-									value: "grant_invoice_credits",
-									label: "Credit to balance",
-								},
-								{
-									value: "refund_payment_method",
-									label: "Refund to card",
-								},
-							]}
-						/>
+					<SheetSection title="Credit application" withSeparator>
+						<OptionCardGroup>
+							<OptionCard
+								selected={refundBehavior === "grant_invoice_credits"}
+								onClick={() =>
+									form.setFieldValue("refundBehavior", "grant_invoice_credits")
+								}
+							>
+								<OptionCardIcon>
+									<WalletIcon size={18} weight="duotone" />
+								</OptionCardIcon>
+								<OptionCardContent>
+									<OptionCardLabel>Credit to balance</OptionCardLabel>
+									<OptionCardDescription>
+										Add credit to customer's account for future invoices
+									</OptionCardDescription>
+								</OptionCardContent>
+							</OptionCard>
+							<OptionCard
+								selected={refundBehavior === "refund_payment_method"}
+								onClick={() =>
+									form.setFieldValue("refundBehavior", "refund_payment_method")
+								}
+							>
+								<OptionCardIcon>
+									<CreditCardIcon size={18} weight="duotone" />
+								</OptionCardIcon>
+								<OptionCardContent>
+									<OptionCardLabel>Refund to card</OptionCardLabel>
+									<OptionCardDescription>
+										Refund the unused amount back to their payment method
+									</OptionCardDescription>
+								</OptionCardContent>
+							</OptionCard>
+						</OptionCardGroup>
 					</SheetSection>
 				</motion.div>
 			)}
