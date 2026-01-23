@@ -1,17 +1,14 @@
 import { z } from "zod/v4";
 import { FeatureOptionsSchema } from "../../../models/cusProductModels/cusProductModels.js";
 import { ProductItemSchema } from "../../../models/productV2Models/productItemModels/productItemModels.js";
-import { CustomerDataSchema } from "../../common/customerData.js";
-import { EntityDataSchema } from "../../common/entityData.js";
+import { BillingParamsBaseSchema } from "../common/billingParamsBase.js";
 
-export const ExtAttachV0ParamsSchema = z.object({
-	// Customer / Entity Info
-	customer_id: z.string(),
+export const RedirectModeSchema = z.enum(["always", "if_required"]);
+export type RedirectMode = z.infer<typeof RedirectModeSchema>;
+
+export const ExtAttachV0ParamsSchema = BillingParamsBaseSchema.extend({
+	// Product identification
 	product_id: z.string(),
-	entity_id: z.string().nullish(),
-
-	customer_data: CustomerDataSchema.optional(),
-	entity_data: EntityDataSchema.optional(),
 
 	// Invoice mode
 	invoice: z.boolean().optional(),
@@ -21,6 +18,10 @@ export const ExtAttachV0ParamsSchema = z.object({
 	// Product config
 	options: z.array(FeatureOptionsSchema).nullish(),
 	version: z.number().optional(),
+
+	// Checkout behavior
+	redirect_mode: RedirectModeSchema.optional(),
+	success_url: z.string().optional(),
 });
 
 export const AttachV0ParamsSchema = ExtAttachV0ParamsSchema.extend({
