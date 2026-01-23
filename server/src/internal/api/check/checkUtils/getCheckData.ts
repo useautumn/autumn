@@ -40,13 +40,11 @@ export const getFeatureToUse = ({
 	feature,
 	apiEntity,
 	requiredBalance,
-	legacyData,
 }: {
 	creditSystems: Feature[];
 	feature: Feature;
 	apiEntity: ApiCustomerV5 | ApiEntityV2;
 	requiredBalance: number;
-	legacyData?: CustomerLegacyData;
 }) => {
 	// 1. If there's a credit system & cusEnts for that credit system -> return credit system
 	// 2. If there's cusEnts for the feature -> return feature
@@ -63,7 +61,6 @@ export const getFeatureToUse = ({
 			apiBalance: mainBalance,
 			feature,
 			requiredBalance,
-			legacyData: legacyData?.cusFeatureLegacyData?.[feature.id],
 		})
 	) {
 		return feature;
@@ -78,7 +75,6 @@ export const getFeatureToUse = ({
 				apiBalance,
 				feature: creditSystem,
 				requiredBalance,
-				legacyData: legacyData?.cusFeatureLegacyData?.[creditSystem.id],
 			})
 		) {
 			return creditSystem;
@@ -152,7 +148,6 @@ export const getCheckData = async ({
 		feature,
 		apiEntity,
 		requiredBalance,
-		legacyData,
 	});
 
 	const apiBalance = apiEntity.balances?.[featureToUse.id];

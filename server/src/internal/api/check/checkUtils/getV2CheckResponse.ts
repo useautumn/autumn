@@ -39,7 +39,6 @@ export const getV2CheckResponse = async ({
 		apiBalance,
 		feature: featureToUse,
 		requiredBalance,
-		legacyData: checkData.cusFeatureLegacyData,
 	});
 
 	return CheckResponseV3Schema.parse({

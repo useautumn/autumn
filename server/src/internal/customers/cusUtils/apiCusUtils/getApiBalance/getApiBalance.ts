@@ -54,8 +54,14 @@ const getApiBalanceBreakdownItem = ({
 	const planId = cusEntsToPlanId({ cusEnts: [customerEntitlement] });
 
 	// Included grant
-	const allowance = cusEntsToAllowance({ cusEnts: [customerEntitlement] });
-	const adjustment = cusEntsToAdjustment({ cusEnts: [customerEntitlement] });
+	const allowance = cusEntsToAllowance({
+		cusEnts: [customerEntitlement],
+		entityId,
+	});
+	const adjustment = cusEntsToAdjustment({
+		cusEnts: [customerEntitlement],
+		entityId,
+	});
 	const includedGrant = new Decimal(allowance).add(adjustment).toNumber();
 
 	// Prepaid grant

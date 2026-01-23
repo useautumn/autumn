@@ -6,11 +6,10 @@ import type {
 	ApiBalanceBreakdownV1,
 	ApiBalanceV1,
 } from "@api/customers/cusFeatures/apiBalanceV1.js";
-import {
-	apiBalanceBreakdownV1ToPurchasedBalance,
-	apiBalanceV1ToPurchasedBalance,
-} from "@utils/cusEntUtils/apiBalance/apiBalanceV1ToPurchasedBalance.js";
+import { apiBalanceV1ToPrepaidQuantity } from "@utils/cusEntUtils/apiBalance/apiBalanceV1ToPrepaidQuantity.js";
+import { apiBalanceV1ToPurchasedBalance } from "@utils/index.js";
 import { deduplicateArray } from "@utils/utils.js";
+import Decimal from "decimal.js";
 import type { CusFeatureLegacyData } from "../cusFeatureLegacyData.js";
 
 export function transformApiBalanceBreakdownV1ToV0({
@@ -20,15 +19,9 @@ export function transformApiBalanceBreakdownV1ToV0({
 }): ApiBalanceBreakdown {
 	// For usage-based billing, purchased_balance includes prepaid + overage
 	// Overage = usage beyond what was granted and prepaid
-	// const totalGrantedAndPrepaid = input.included_grant + input.prepaid_grant;
-	// const overage = Math.max(0, input.usage - totalGrantedAndPrepaid);
-	// const purchasedBalance = input.prepaid_grant + overage;
-
-	// 1. Granted balance: just included_grant
-	// 2. Purchased balance:
-	const purchasedBalance = apiBalanceBreakdownV1ToPurchasedBalance({
-		apiBalanceBreakdown: input,
-	});
+	const totalGrantedAndPrepaid = input.included_grant + input.prepaid_grant;
+	const overage = Math.max(0, input.usage - totalGrantedAndPrepaid);
+	const purchasedBalance = input.prepaid_grant + overage;
 
 	return {
 		id: input.id,
@@ -40,8 +33,8 @@ export function transformApiBalanceBreakdownV1ToV0({
 		overage_allowed: input.price?.billing_method === "usage_based",
 		max_purchase: input.price?.max_purchase ?? null,
 		reset: input.reset,
-		expires_at: input.expires_at,
 		prepaid_quantity: input.prepaid_grant,
+		expires_at: input.expires_at,
 	};
 }
 
@@ -49,15 +42,15 @@ export function transformApiBalanceBreakdownV1ToV0({
  * Transform ApiBalanceV1 (V2.1 format) to ApiBalance (V2.0 format)
  *
  * In V1 format:
- * - `granted` = granted_balance + purchased_balance (combined)
- * - `remaining` = current_balance
+ * - `granted` = total granted amount
+ * - `remaining` = current balance
+ * - `next_reset_at` = when balance resets
  *
  * In V0 format:
- * - `granted_balance` = granted amount (excluding purchased)
- * - `purchased_balance` = purchased/prepaid amount
+ * - `granted_balance` = granted amount
+ * - `purchased_balance` = purchased/prepaid amount (calculated from breakdown)
  * - `current_balance` = remaining balance
- *
- * To convert back, we need legacyData.purchased_balance to split them.
+ * - `reset` = reset interval object
  */
 export function transformApiBalanceV1ToV0({
 	input,
@@ -66,19 +59,24 @@ export function transformApiBalanceV1ToV0({
 	input: ApiBalanceV1;
 	legacyData?: CusFeatureLegacyData;
 }): ApiBalance {
-	// Get purchased_balance from legacyData (needed to split V1.granted back to V0 fields)
+	// Calculate purchased_balance from breakdown
 	const purchasedBalance = apiBalanceV1ToPurchasedBalance({
 		apiBalance: input,
 	});
+	const prepaidQuantity = apiBalanceV1ToPrepaidQuantity({ apiBalance: input });
 
-	const grantedBalance = input.granted;
+	// V0 granted_balance = V1 granted - purchased_balance
+	// V1 granted includes both included + prepaid, but V0 splits them
+	const grantedBalance = new Decimal(input.granted)
+		.sub(prepaidQuantity)
+		.toNumber();
 
-	// Define next_reset_at from input.breakdown.reset. See how I did it previously
+	// Get plan_id from breakdown
 	const breakdownPlanIds = deduplicateArray(
 		input.breakdown?.map((b) => b.plan_id) ?? [],
 	);
 
-	// Check if there are multiple intervals
+	// Build reset object from breakdown
 	const uniqueIntervals = deduplicateArray(
 		input.breakdown?.map((b) => b.reset?.interval) ?? [],
 	);
@@ -88,9 +86,14 @@ export function transformApiBalanceV1ToV0({
 			? {
 					interval: "multiple" as const,
 					interval_count: undefined,
-					resets_at: null,
+					resets_at: input.next_reset_at,
 				}
-			: (input.breakdown?.[0]?.reset ?? null);
+			: input.breakdown?.[0]?.reset
+				? {
+						...input.breakdown[0].reset,
+						resets_at: input.next_reset_at,
+					}
+				: null;
 
 	return {
 		feature_id: input.feature_id,
