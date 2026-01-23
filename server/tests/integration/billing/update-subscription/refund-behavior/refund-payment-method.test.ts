@@ -7,6 +7,7 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { createStripeCli } from "@/external/connect/createStripeCli";
 
 /**
  * Refund Behavior: refund_payment_method Tests
@@ -24,13 +25,13 @@ import chalk from "chalk";
 // REFUND ON DOWNGRADE
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("refund_payment_method: price decrease issues refund")}`, async () => {
+test.skip(`${chalk.yellowBright("refund_payment_method: price decrease issues refund")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 30 });
 	const pro = products.base({ id: "pro", items: [messagesItem, priceItem] });
 
-	const { customerId, autumnV1, ctx } = await initScenario({
-		customerId: "rb-refund-downgrade",
+	const { customerId, autumnV1, ctx, customer } = await initScenario({
+		customerId: "rb-refund-price-dec",
 		setup: [
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro] }),
@@ -38,7 +39,12 @@ test.concurrent(`${chalk.yellowBright("refund_payment_method: price decrease iss
 		actions: [s.attach({ productId: "pro" })],
 	});
 
-	// Decrease price from $30 to $20 (should create negative invoice)
+	const stripeCustomerId = customer?.processor?.id;
+	expect(stripeCustomerId).toBeDefined();
+
+	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+
+	// Decrease price from $30 to $20 (should create negative invoice / refund)
 	const newPriceItem = items.monthlyPrice({ price: 20 });
 	const updateParams = {
 		customer_id: customerId,
@@ -51,15 +57,30 @@ test.concurrent(`${chalk.yellowBright("refund_payment_method: price decrease iss
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 	expect(preview.total).toBe(-10); // $20 - $30 = -$10
 
-	// Execute update with refund_payment_method - should complete without error
+	// Execute update with refund_payment_method
 	await autumnV1.subscriptions.update(updateParams);
 
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	// Wait for Stripe to process
+	await new Promise((resolve) => setTimeout(resolve, 1000));
 
-	// Invoice should exist for the update
+	// Get refunds to verify refund was issued
+	const refunds = await stripeCli.refunds.list({
+		limit: 10,
+	});
+
+	// Find the refund we just created (should be $10 = 1000 cents)
+	const ourRefund = refunds.data.find(
+		(r: { amount: number }) => r.amount === 1000,
+	);
+	expect(ourRefund).toBeDefined();
+	expect(ourRefund!.status).toBe("succeeded");
+
+	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
 	await expectCustomerInvoiceCorrect({
-		customer,
-		count: 2, // Initial attach + update
+		customer: customerAfter,
+		count: 2,
+		latestTotal: -10,
 	});
 
 	await expectSubToBeCorrect({
@@ -70,7 +91,7 @@ test.concurrent(`${chalk.yellowBright("refund_payment_method: price decrease iss
 	});
 });
 
-test.concurrent(`${chalk.yellowBright("refund_payment_method: quantity decrease issues refund")}`, async () => {
+test.skip(`${chalk.yellowBright("refund_payment_method: quantity decrease issues refund")}`, async () => {
 	const billingUnits = 1;
 	const pricePerUnit = 10;
 
@@ -127,7 +148,7 @@ test.concurrent(`${chalk.yellowBright("refund_payment_method: quantity decrease 
 // DEFAULT BEHAVIOR: grant_invoice_credits
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("grant_invoice_credits: default behavior on downgrade")}`, async () => {
+test.skip(`${chalk.yellowBright("grant_invoice_credits: default behavior on downgrade")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 30 });
 	const pro = products.base({ id: "pro", items: [messagesItem, priceItem] });

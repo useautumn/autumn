@@ -6,6 +6,7 @@ import { ProductItemSchema } from "../../../models/productV2Models/productItemMo
 import { CancelActionSchema } from "../../common/cancelMode";
 import { CustomerDataSchema } from "../../common/customerData";
 import { EntityDataSchema } from "../../models";
+import { RefundBehaviorSchema } from "../common/refundBehavior";
 
 export const ExtUpdateSubscriptionV0ParamsSchema = z.object({
 	// Customer / Entity Info
@@ -39,9 +40,7 @@ export const ExtUpdateSubscriptionV0ParamsSchema = z.object({
 	// Refund behavior for negative invoice totals (downgrades):
 	// - 'grant_invoice_credits' (default): Apply credits to customer balance
 	// - 'refund_payment_method': Issue refund to payment method
-	refund_behavior: z
-		.enum(["grant_invoice_credits", "refund_payment_method"])
-		.optional(),
+	refund_behavior: RefundBehaviorSchema.optional(),
 
 	// reset_billing_cycle_anchor: z.boolean().optional(),
 	// new_billing_subscription: z.boolean().optional(),

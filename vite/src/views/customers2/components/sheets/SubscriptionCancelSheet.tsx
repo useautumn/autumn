@@ -66,7 +66,7 @@ function SheetContent() {
 				)}
 
 				<CancelModeSection />
-				<RefundBehaviorSection />
+				{/* <RefundBehaviorSection /> */}
 				<CancelPreviewSection />
 				<CancelFooter />
 			</div>
