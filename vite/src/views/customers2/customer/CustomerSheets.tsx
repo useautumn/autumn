@@ -6,6 +6,7 @@ import {
 	useSheetEscapeHandler,
 	useSheetStore,
 } from "@/hooks/stores/useSheetStore";
+import { SubscriptionCancelSheet } from "@/views/customers2/components/sheets/SubscriptionCancelSheet";
 import { SubscriptionUpdateSheet2 } from "@/views/customers2/components/sheets/SubscriptionUpdateSheet2";
 import { AttachProductSheet } from "../components/sheets/AttachProductSheet";
 import { BalanceEditSheet } from "../components/sheets/BalanceEditSheet";
@@ -35,6 +36,8 @@ export function CustomerSheets() {
 				return <SubscriptionUpdateSheet />;
 			case "subscription-update-v2":
 				return <SubscriptionUpdateSheet2 />;
+			case "subscription-cancel":
+				return <SubscriptionCancelSheet />;
 			case "balance-selection":
 				return <BalanceSelectionSheet />;
 			case "balance-edit":
@@ -46,21 +49,21 @@ export function CustomerSheets() {
 
 	return (
 		<AnimatePresence mode="wait">
-				{sheetType && (
-					<motion.div
-						initial={{ x: "100%" }}
-						animate={{ x: 0 }}
-						exit={{ x: "100%" }}
-						transition={SHEET_ANIMATION}
-						className="absolute right-0 top-0 bottom-0"
-						style={{ width: "28rem", zIndex: 45 }}
-					>
-						<SheetContainer className="w-full bg-background z-40 border-l border-border/40 h-full relative">
-							<SheetCloseButton onClose={handleClose} />
-							{renderSheet()}
-						</SheetContainer>
-					</motion.div>
-				)}
-			</AnimatePresence>
+			{sheetType && (
+				<motion.div
+					initial={{ x: "100%" }}
+					animate={{ x: 0 }}
+					exit={{ x: "100%" }}
+					transition={SHEET_ANIMATION}
+					className="absolute right-0 top-0 bottom-0"
+					style={{ width: "28rem", zIndex: 45 }}
+				>
+					<SheetContainer className="w-full bg-background z-40 border-l border-border/40 h-full relative">
+						<SheetCloseButton onClose={handleClose} />
+						{renderSheet()}
+					</SheetContainer>
+				</motion.div>
+			)}
+		</AnimatePresence>
 	);
 }
