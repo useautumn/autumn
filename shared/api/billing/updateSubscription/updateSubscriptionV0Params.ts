@@ -6,6 +6,7 @@ import { ProductItemSchema } from "../../../models/productV2Models/productItemMo
 import { CancelActionSchema } from "../../common/cancelMode";
 import { CustomerDataSchema } from "../../common/customerData";
 import { EntityDataSchema } from "../../models";
+import { RefundBehaviorSchema } from "../common/refundBehavior";
 
 export const ExtUpdateSubscriptionV0ParamsSchema = z.object({
 	// Customer / Entity Info
@@ -29,8 +30,17 @@ export const ExtUpdateSubscriptionV0ParamsSchema = z.object({
 	// Cancel action: 'cancel_immediately' | 'cancel_end_of_cycle' | 'uncancel'
 	cancel_action: CancelActionSchema.optional(),
 
-	// Proration: defaults to true (charge for prorations). Set to false to skip proration charges.
-	prorate_billing: z.boolean().optional(),
+	// Billing behavior for subscription updates:
+	// - 'prorate_immediately' (default): Invoice line items are charged immediately
+	// - 'next_cycle_only': Do NOT create any charges due to the update
+	billing_behavior: z
+		.enum(["prorate_immediately", "next_cycle_only"])
+		.optional(),
+
+	// Refund behavior for negative invoice totals (downgrades):
+	// - 'grant_invoice_credits' (default): Apply credits to customer balance
+	// - 'refund_payment_method': Issue refund to payment method
+	refund_behavior: RefundBehaviorSchema.optional(),
 
 	// reset_billing_cycle_anchor: z.boolean().optional(),
 	// new_billing_subscription: z.boolean().optional(),

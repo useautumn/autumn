@@ -1,9 +1,12 @@
 import { CaretRightIcon } from "@phosphor-icons/react";
+import { motion } from "motion/react";
 import { useId } from "react";
 import { Separator } from "@/components/v2/separator";
 import { type SheetType, useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "../checkboxes/Checkbox";
+
+export { LayoutGroup } from "motion/react";
 
 interface SheetHeaderProps {
 	title: string | React.ReactNode;
@@ -131,16 +134,26 @@ interface SheetFooterProps {
 	className?: string;
 }
 
+/** Shared spring transition for layout animations */
+export const LAYOUT_TRANSITION = {
+	type: "spring",
+	stiffness: 500,
+	damping: 40,
+	mass: 1,
+} as const;
+
 export function SheetFooter({ children, className }: SheetFooterProps) {
 	return (
-		<div
+		<motion.div
+			layout
+			transition={{ layout: LAYOUT_TRANSITION }}
 			className={cn(
-				"mt-auto p-4 w-full flex-row grid grid-cols-2 gap-2 mb-2",
+				"pt-2 px-4 pb-4 w-full flex-row grid grid-cols-2 gap-2",
 				className,
 			)}
 		>
 			{children}
-		</div>
+		</motion.div>
 	);
 }
 
