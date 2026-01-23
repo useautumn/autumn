@@ -16,11 +16,10 @@ export function RefundBehaviorSection() {
 
 	const cancelAction = formValues.cancelAction;
 	const refundBehavior = formValues.refundBehavior ?? "grant_invoice_credits";
+	const previewTotal = previewQuery.data?.total ?? -1;
 
 	const showRefundToggle =
-		cancelAction === "cancel_immediately" &&
-		!!previewQuery.data &&
-		previewQuery.data.total < 0;
+		cancelAction === "cancel_immediately" && previewTotal < 0;
 
 	return (
 		<AnimatePresence initial={false}>
@@ -32,7 +31,7 @@ export function RefundBehaviorSection() {
 					transition={{ duration: 0.2, ease: "easeInOut" }}
 					style={{ overflow: "hidden" }}
 				>
-					<SheetSection title="Credit application" withSeparator>
+					<SheetSection title="Refund method" withSeparator>
 						<OptionCardGroup>
 							<OptionCard
 								selected={refundBehavior === "grant_invoice_credits"}
