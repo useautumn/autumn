@@ -13,8 +13,10 @@ import {
 
 export function useUpdateSubscriptionForm({
 	updateSubscriptionFormContext,
+	defaultOverrides,
 }: {
 	updateSubscriptionFormContext: UpdateSubscriptionFormContext;
+	defaultOverrides?: Partial<UpdateSubscriptionForm>;
 }) {
 	const { customerProduct, prepaidItems, currentVersion } =
 		updateSubscriptionFormContext;
@@ -54,6 +56,7 @@ export function useUpdateSubscriptionForm({
 			items: null,
 			cancelAction: null,
 			refundBehavior: null,
+			...defaultOverrides,
 		} as UpdateSubscriptionForm,
 		validators: {
 			onChange: UpdateSubscriptionFormSchema,

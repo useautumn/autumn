@@ -7,6 +7,7 @@ import {
 	useSheetStore,
 } from "@/hooks/stores/useSheetStore";
 import { SubscriptionCancelSheet } from "@/views/customers2/components/sheets/SubscriptionCancelSheet";
+import { SubscriptionUncancelSheet } from "@/views/customers2/components/sheets/SubscriptionUncancelSheet";
 import { SubscriptionUpdateSheet2 } from "@/views/customers2/components/sheets/SubscriptionUpdateSheet2";
 import { AttachProductSheet } from "../components/sheets/AttachProductSheet";
 import { BalanceEditSheet } from "../components/sheets/BalanceEditSheet";
@@ -38,6 +39,8 @@ export function CustomerSheets() {
 				return <SubscriptionUpdateSheet2 />;
 			case "subscription-cancel":
 				return <SubscriptionCancelSheet />;
+			case "subscription-uncancel":
+				return <SubscriptionUncancelSheet />;
 			case "balance-selection":
 				return <BalanceSelectionSheet />;
 			case "balance-edit":

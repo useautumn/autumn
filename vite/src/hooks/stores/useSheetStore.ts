@@ -14,6 +14,7 @@ export type SheetType =
 	| "subscription-update"
 	| "subscription-update-v2"
 	| "subscription-cancel"
+	| "subscription-uncancel"
 	| "balance-selection"
 	| "balance-edit"
 	| null;
