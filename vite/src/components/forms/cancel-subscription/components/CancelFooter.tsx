@@ -1,7 +1,11 @@
 import { CusProductStatus } from "@autumn/shared";
+import { motion } from "motion/react";
+import { useEffect, useState } from "react";
 import { useUpdateSubscriptionFormContext } from "@/components/forms/update-subscription-v2";
 import { Button } from "@/components/v2/buttons/Button";
 import { SheetFooter } from "@/components/v2/sheets/SharedSheetComponents";
+
+const FOOTER_DELAY_MS = 350;
 
 export function CancelFooter() {
 	const { isPending, previewQuery, handleConfirm, formContext } =
@@ -13,8 +17,19 @@ export function CancelFooter() {
 
 	const isLoading = previewQuery.isLoading;
 	const hasError = !!previewQuery.error;
+	const isReady = !isLoading && !hasError;
 
-	if (isLoading || hasError) return null;
+	const [showFooter, setShowFooter] = useState(false);
+
+	useEffect(() => {
+		if (isReady) {
+			const timer = setTimeout(() => setShowFooter(true), FOOTER_DELAY_MS);
+			return () => clearTimeout(timer);
+		}
+		setShowFooter(false);
+	}, [isReady]);
+
+	if (!showFooter) return null;
 
 	const buttonLabel = isScheduled
 		? "Cancel Scheduled Plan"
@@ -24,14 +39,20 @@ export function CancelFooter() {
 
 	return (
 		<SheetFooter className="grid-cols-1">
-			<Button
-				variant="destructive"
-				className="w-full"
-				onClick={handleConfirm}
-				isLoading={isPending}
+			<motion.div
+				initial={{ opacity: 0 }}
+				animate={{ opacity: 1 }}
+				transition={{ duration: 0.2 }}
 			>
-				{buttonLabel}
-			</Button>
+				<Button
+					variant="destructive"
+					className="w-full"
+					onClick={handleConfirm}
+					isLoading={isPending}
+				>
+					{buttonLabel}
+				</Button>
+			</motion.div>
 		</SheetFooter>
 	);
 }

@@ -49,7 +49,6 @@ export function UpdateSubscriptionPreviewSection() {
 		<LineItemsPreview
 			title="Pricing Preview"
 			isLoading={isLoading}
-			loadingText="Calculating totals"
 			lineItems={previewData?.line_items}
 			currency={previewData?.currency}
 			totals={totals}

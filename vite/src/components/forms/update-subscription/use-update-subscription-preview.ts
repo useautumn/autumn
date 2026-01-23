@@ -95,7 +95,7 @@ export function useUpdateSubscriptionPreview({
 
 	return {
 		...query,
-		isLoading: query.isLoading || isDebouncing,
+		isLoading: shouldEnable && (query.isLoading || isDebouncing),
 	};
 }
 
