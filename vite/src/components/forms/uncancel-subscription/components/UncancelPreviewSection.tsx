@@ -34,11 +34,15 @@ export function UncancelPreviewSection() {
 		return result;
 	}, [previewData]);
 
-	return error ? (
-		<SheetSection title="Pricing Preview" withSeparator>
-			<PreviewErrorDisplay error={error} />
-		</SheetSection>
-	) : (
+	if (error) {
+		return (
+			<SheetSection title="Pricing Preview" withSeparator>
+				<PreviewErrorDisplay error={error} />
+			</SheetSection>
+		);
+	}
+
+	return (
 		<LineItemsPreview
 			title="Pricing Preview"
 			isLoading={isLoading}

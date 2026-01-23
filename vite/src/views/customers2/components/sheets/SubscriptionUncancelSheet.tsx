@@ -7,7 +7,10 @@ import {
 	UpdateSubscriptionFormProvider,
 	useUpdateSubscriptionFormContext,
 } from "@/components/forms/update-subscription-v2";
-import { SheetHeader } from "@/components/v2/sheets/SharedSheetComponents";
+import {
+	LayoutGroup,
+	SheetHeader,
+} from "@/components/v2/sheets/SharedSheetComponents";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
@@ -20,27 +23,32 @@ function SheetContent() {
 	const { customerProduct } = formContext;
 
 	return (
-		<div className="flex flex-col h-full overflow-y-auto">
-			<SheetHeader
-				title="Uncancel Subscription"
-				description={`Resume ${customerProduct.product.name} for this customer`}
-				breadcrumbs={[
-					{ name: customerProduct.product.name, sheet: "subscription-detail" },
-				]}
-				itemId={customerProduct.id}
-			/>
+		<LayoutGroup>
+			<div className="flex flex-col h-full overflow-y-auto">
+				<SheetHeader
+					title="Uncancel Subscription"
+					description={`Resume ${customerProduct.product.name} for this customer`}
+					breadcrumbs={[
+						{
+							name: customerProduct.product.name,
+							sheet: "subscription-detail",
+						},
+					]}
+					itemId={customerProduct.id}
+				/>
 
-			<div className="px-4 pt-4">
-				<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
-					This subscription is scheduled to cancel on{" "}
-					{formatUnixToDateTime(customerProduct.canceled_at).date}. Uncancelling
-					will resume normal billing.
-				</InfoBox>
+				<div className="px-4 pt-4">
+					<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
+						This subscription is scheduled to cancel on{" "}
+						{formatUnixToDateTime(customerProduct.canceled_at).date}.
+						Uncancelling will resume normal billing.
+					</InfoBox>
+				</div>
+
+				<UncancelPreviewSection />
+				<UncancelFooter />
 			</div>
-
-			<UncancelPreviewSection />
-			<UncancelFooter />
-		</div>
+		</LayoutGroup>
 	);
 }
 
