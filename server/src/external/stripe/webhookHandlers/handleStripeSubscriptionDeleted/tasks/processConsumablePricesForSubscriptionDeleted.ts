@@ -1,5 +1,8 @@
 import { customerProductsToProducts, secondsToMs } from "@autumn/shared";
-import { stripeSubscriptionHasMeteredItems } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
+import {
+	stripeSubscriptionHasMeteredItems,
+	wasImmediateStripeCancellation,
+} from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import { eventContextToArrearLineItems } from "@/external/stripe/webhookHandlers/common";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { lineItemsToInvoiceAddLinesParams } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemsToInvoiceAddLinesParams";
@@ -9,9 +12,33 @@ import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntit
 import type { StripeSubscriptionDeletedContext } from "../setupStripeSubscriptionDeletedContext";
 
 /**
+ * Checks if the subscription was canceled during/at trial end.
+ * When a trialing subscription is canceled at period end, `ended_at` equals `trial_end`.
+ * In this case, we should skip arrear charges since trial usage is free.
+ */
+const wasTrialCancellation = (
+	stripeSubscription: StripeSubscriptionDeletedContext["stripeSubscription"],
+): boolean => {
+	const trialEnd = stripeSubscription.trial_end;
+	const endedAt = stripeSubscription.ended_at;
+
+	if (!trialEnd || !endedAt) return false;
+
+	// If ended_at equals trial_end, the subscription was canceled at trial end
+	return trialEnd === endedAt;
+};
+
+/**
  * Creates a single invoice for all usage-based (arrear) prices across all customer products
  * when a subscription is deleted.
- * Skips if the deletion was initiated by Autumn (e.g., during an upgrade flow).
+ *
+ * Skips creating an arrear invoice if:
+ * 1. The subscription has metered items (Stripe handles metered billing automatically)
+ * 2. The cancellation was immediate (not end-of-period) - we don't charge overage on immediate cancels
+ * 3. The subscription was canceled at trial end - trial usage is free
+ *
+ * Note: Autumn-initiated deletions are filtered out before this via the lock mechanism
+ * in setupStripeSubscriptionDeletedContext.
  */
 export const processConsumablePricesForSubscriptionDeleted = async ({
 	ctx,
@@ -23,8 +50,22 @@ export const processConsumablePricesForSubscriptionDeleted = async ({
 	const { db } = ctx;
 	const { stripeSubscription, fullCustomer, customerProducts } = eventContext;
 
-	// Check upcoming invoice
+	// Skip if subscription has metered items - Stripe handles metered billing automatically
 	if (stripeSubscriptionHasMeteredItems(stripeSubscription)) return;
+
+	// Skip if this was an immediate cancellation (not end-of-period)
+	// We only bill arrear usage when the subscription naturally ends at period end
+	// This matches the behavior of customer-level consumables (metered) where
+	// Stripe also doesn't charge overage on immediate cancels
+	if (wasImmediateStripeCancellation(stripeSubscription)) return;
+
+	// Skip if the subscription was canceled at trial end - trial usage is free
+	if (wasTrialCancellation(stripeSubscription)) {
+		ctx.logger.info(
+			"[subscription.deleted] Subscription canceled at trial end, skipping consumable charges",
+		);
+		return;
+	}
 
 	// 1. Generate arrear line items
 	// Use ended_at (when subscription was actually deleted) as the period end.

@@ -83,6 +83,17 @@ export const UpdateSubscriptionV0ParamsSchema =
 				message:
 					"Cannot pass options, items, version, or free_trial when cancel is 'immediately'. Immediate cancellation only processes a prorated refund.",
 			},
+		)
+		.refine(
+			(data) => {
+				if (data.cancel !== "end_of_cycle") return true;
+
+				// Cannot pass free_trial when cancel is 'end_of_cycle'
+				return data.free_trial === undefined;
+			},
+			{
+				message: "Cannot pass free_trial when cancel is 'end_of_cycle'.",
+			},
 		);
 
 export type ExtUpdateSubscriptionV0Params = z.infer<

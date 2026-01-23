@@ -20,9 +20,9 @@ export const upsertAutumnInvoice = async ({
 	const { stripeInvoice, customerProducts, fullCustomer } = eventContext;
 
 	// Skip first invoice (subscription_create)
-	if (stripeInvoice.billing_reason === "subscription_create") {
+	if (stripeInvoice.billing_reason !== "subscription_cycle") {
 		ctx.logger.debug(
-			"[invoice.created] Skipping invoice upsert for subscription_create",
+			"[invoice.created] Skipping invoice upsert for non periodic invoice",
 		);
 		return;
 	}

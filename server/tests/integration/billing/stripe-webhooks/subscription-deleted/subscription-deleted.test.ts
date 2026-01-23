@@ -20,43 +20,12 @@ import {
 	expectProductScheduled,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectNoStripeSubscription } from "@tests/integration/billing/utils/expectNoStripeSubscription";
+import { getSubscriptionId } from "@tests/integration/billing/utils/stripe/getSubscriptionId";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { CusService } from "@/internal/customers/CusService";
 import { timeout } from "@/utils/genUtils";
-
-/**
- * Helper to get subscription ID for a customer product.
- */
-const getSubscriptionId = async ({
-	ctx,
-	customerId,
-	productId,
-}: {
-	ctx: AutumnContext;
-	customerId: string;
-	productId: string;
-}): Promise<string> => {
-	const fullCustomer = await CusService.getFull({
-		db: ctx.db,
-		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
-
-	const customerProduct = fullCustomer.customer_products.find(
-		(cp) => cp.product.id === productId,
-	);
-
-	if (!customerProduct?.subscription_ids?.length) {
-		throw new Error(`No subscription found for product ${productId}`);
-	}
-
-	return customerProduct.subscription_ids[0];
-};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Cancel subscription directly via Stripe (with default free)

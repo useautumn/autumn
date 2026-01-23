@@ -5,7 +5,7 @@
  */
 
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, ErrCode } from "@autumn/shared";
+import { type ApiCustomerV3, ErrCode, FreeTrialDuration } from "@autumn/shared";
 import {
 	expectProductCanceling,
 	expectProductNotPresent,
@@ -279,6 +279,140 @@ test.concurrent(`${chalk.yellowBright("error: cancel immediately with items")}`,
 				product_id: pro.id,
 				cancel: "immediately",
 				items: [messagesItem],
+			});
+		},
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 6: Cannot cancel free product with end_of_cycle
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - User has a free product (no subscription)
+ * - User tries to cancel with end_of_cycle
+ *
+ * Expected Result:
+ * - Should return an error - free products can only be canceled immediately
+ */
+test.concurrent(`${chalk.yellowBright("error: cannot cancel free product with end_of_cycle")}`, async () => {
+	const customerId = "err-cancel-free-eoc";
+
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+
+	const free = products.base({
+		id: "free",
+		items: [messagesItem],
+		isDefault: true,
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [s.customer({}), s.products({ list: [free] })],
+		actions: [s.attach({ productId: free.id })],
+	});
+
+	// Try to cancel free product with end_of_cycle - should fail
+	await expectAutumnError({
+		func: async () => {
+			await autumnV1.subscriptions.update({
+				customer_id: customerId,
+				product_id: free.id,
+				cancel: "end_of_cycle",
+			});
+		},
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 7: Cannot cancel one-time product with end_of_cycle
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - User has a one-time product (no recurring subscription)
+ * - User tries to cancel with end_of_cycle
+ *
+ * Expected Result:
+ * - Should return an error - one-time products can only be canceled immediately
+ */
+test.concurrent(`${chalk.yellowBright("error: cannot cancel one-time product with end_of_cycle")}`, async () => {
+	const customerId = "err-cancel-onetime-eoc";
+
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+
+	const oneTime = products.oneOff({
+		id: "onetime",
+		items: [messagesItem],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [oneTime] }),
+		],
+		actions: [s.attach({ productId: oneTime.id })],
+	});
+
+	// Try to cancel one-time product with end_of_cycle - should fail
+	await expectAutumnError({
+		func: async () => {
+			await autumnV1.subscriptions.update({
+				customer_id: customerId,
+				product_id: oneTime.id,
+				cancel: "end_of_cycle",
+			});
+		},
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 8: Cannot pass free_trial when cancel is end_of_cycle
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - User is on Pro with trial
+ * - User tries to cancel at end of cycle while also passing free_trial
+ *
+ * Expected Result:
+ * - Should return an error - cannot combine cancel: 'end_of_cycle' with free_trial
+ */
+test.concurrent(`${chalk.yellowBright("error: cannot pass free_trial when cancel is end_of_cycle")}`, async () => {
+	const customerId = "err-cancel-eoc-with-trial";
+
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+
+	const proTrial = products.proWithTrial({
+		id: "pro-trial",
+		items: [messagesItem],
+		trialDays: 7,
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [proTrial] }),
+		],
+		actions: [s.attach({ productId: proTrial.id })],
+	});
+
+	// Try to cancel end_of_cycle while also passing free_trial - should fail
+	await expectAutumnError({
+		func: async () => {
+			await autumnV1.subscriptions.update({
+				customer_id: customerId,
+				product_id: proTrial.id,
+				cancel: "end_of_cycle",
+				free_trial: {
+					length: 14,
+					duration: FreeTrialDuration.Day,
+					card_required: true,
+					unique_fingerprint: false,
+				},
 			});
 		},
 	});

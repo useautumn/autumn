@@ -25,6 +25,9 @@ Tests for canceling add-on products in various scenarios.
 | mergedAddOn1.test.ts | merged/addOn/ | Cancel add-on end-of-cycle → advance clock → verify add-on removed | [ ] |
 | mergedAddOn4.test.ts | merged/addOn/ | Cancel add-on immediately while scheduled product exists → verify scheduled preserved | [ ] |
 | renew-addon1.test.ts | integration/billing/renew/ | Cancel add-on end-of-cycle, then re-attach (renew) → verify canceled_at is null | [ ] |
+| cancel-addon4.test.ts | integration/billing/cancel/add-ons/ | Cancel usage add-on with failed payment → verify invoice still created | [ ] |
+| mergedAddOn3.test.ts | merged/addOn/ | Cancel add-on immediately with entity → verify pro still active | [ ] |
+| mergedAddOn5.test.ts | merged/addOn/ | Cancel add-on immediately with scheduled → advance clock → verify scheduled becomes active | [ ] |
 
 ---
 
@@ -33,10 +36,7 @@ Basic tests for canceling immediately (non-add-on products).
 
 | Legacy File | Location | Description | Status |
 |-------------|----------|-------------|--------|
-| cancel-addon4.test.ts | integration/billing/cancel/add-ons/ | Cancel usage add-on with failed payment → verify invoice still created | [ ] |
 | upgrade7.test.ts | attach/upgrade/ | Cancel immediately then attach premium → verify upgrade path | [ ] |
-| mergedAddOn3.test.ts | merged/addOn/ | Cancel add-on immediately with entity → verify pro still active | [ ] |
-| mergedAddOn5.test.ts | merged/addOn/ | Cancel add-on immediately with scheduled → advance clock → verify scheduled becomes active | [ ] |
 | mergedGroup1.test.ts | merged/group/ | Cancel scheduled product from different group immediately → verify sub correct | [ ] |
 | mergedGroup2.test.ts | merged/group/ | Cancel scheduled product from different group immediately | [ ] |
 

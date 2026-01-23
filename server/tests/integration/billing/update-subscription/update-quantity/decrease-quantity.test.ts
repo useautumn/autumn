@@ -14,72 +14,65 @@ import chalk from "chalk";
  * - Basic single-feature downgrade (20 → 5 units)
  */
 
-test.concurrent(
-	`${chalk.yellowBright("update-quantity: downgrade 20 to 5 units")}`,
-	async () => {
-		const customerId = "dec-qty-basic-downgrade";
-		const billingUnits = 12;
-		const pricePerUnit = 8;
+test.concurrent(`${chalk.yellowBright("update-quantity: downgrade 20 to 5 units")}`, async () => {
+	const customerId = "dec-qty-basic-downgrade";
+	const billingUnits = 12;
+	const pricePerUnit = 8;
 
-		const prepaidItem = items.prepaid({
-			featureId: TestFeature.Messages,
-			billingUnits,
-			price: pricePerUnit,
-		});
+	const prepaidItem = items.prepaid({
+		featureId: TestFeature.Messages,
+		billingUnits,
+		price: pricePerUnit,
+	});
 
-		const product = products.base({
-			id: "prepaid",
-			items: [prepaidItem],
-		});
+	const product = products.base({
+		id: "prepaid",
+		items: [prepaidItem],
+	});
 
-		const { autumnV1 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [product] }),
-			],
-			actions: [
-				s.attach({
-					productId: product.id,
-					options: [
-						{ feature_id: TestFeature.Messages, quantity: 20 * billingUnits },
-					],
-				}),
-			],
-		});
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [product] }),
+		],
+		actions: [
+			s.attach({
+				productId: product.id,
+				options: [
+					{ feature_id: TestFeature.Messages, quantity: 20 * billingUnits },
+				],
+			}),
+		],
+	});
 
-		// Preview the downgrade
-		const preview = await autumnV1.subscriptions.previewUpdate({
-			customer_id: customerId,
-			product_id: product.id,
-			options: [
-				{ feature_id: TestFeature.Messages, quantity: 5 * billingUnits },
-			],
-		});
+	// Preview the downgrade
+	const preview = await autumnV1.subscriptions.previewUpdate({
+		customer_id: customerId,
+		product_id: product.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 5 * billingUnits }],
+	});
 
-		// Verify preview total matches expected (20 -> 5 = -15 units * $8)
-		expect(preview.total).toBe(-15 * pricePerUnit);
+	// Verify preview total matches expected (20 -> 5 = -15 units * $8)
+	expect(preview.total).toBe(-15 * pricePerUnit);
 
-		// Downgrade from 20 to 5 units
-		await autumnV1.subscriptions.update({
-			customer_id: customerId,
-			product_id: product.id,
-			options: [
-				{ feature_id: TestFeature.Messages, quantity: 5 * billingUnits },
-			],
-		});
+	// Downgrade from 20 to 5 units
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: product.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 5 * billingUnits }],
+	});
 
-		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-		const feature = customer.features?.[TestFeature.Messages];
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const feature = customer.features?.[TestFeature.Messages];
 
-		// Should have 60 messages (5 units × 12 billing_units)
-		expect(feature?.balance).toBe(60);
+	// Should have 60 messages (5 units × 12 billing_units)
+	expect(feature?.balance).toBe(60);
 
-		// Expect credit invoice for downgrade (20 -> 5 = -15 units * $8)
-		expectLatestInvoiceCorrect({
-			customer,
-			productId: product.id,
-			amount: -15 * pricePerUnit,
-		});
-	},
-);
+	// Expect credit invoice for downgrade (20 -> 5 = -15 units * $8)
+	expectLatestInvoiceCorrect({
+		customer,
+		productId: product.id,
+		amount: -15 * pricePerUnit,
+	});
+});
