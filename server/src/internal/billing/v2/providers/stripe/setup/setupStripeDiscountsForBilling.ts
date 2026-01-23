@@ -9,8 +9,11 @@ import { subToDiscounts } from "../utils/discounts/subToDiscounts";
  * Extracts discounts from already-fetched Stripe subscription or customer.
  * Subscription discounts take priority over customer discounts.
  *
- * TODO: Investigate if customer discount expand path should be
- * "discount.source.coupon.applies_to" instead of "discount.coupon.applies_to"
+ * Both subscription and customer discounts use the `source.coupon` structure
+ * introduced in Stripe API version 2025-09-30.clover.
+ *
+ * @see https://docs.stripe.com/changelog/clover/2025-09-30/add-discount-source-property
+ * @see https://docs.stripe.com/api/discounts/object
  */
 export const setupStripeDiscountsForBilling = ({
 	stripeSubscription,
@@ -28,14 +31,9 @@ export const setupStripeDiscountsForBilling = ({
 	const customerDiscount = stripeCustomer.discount;
 	if (!customerDiscount) return [];
 
-	const coupon = customerDiscount.coupon;
+	const coupon = customerDiscount.source?.coupon;
 	if (!coupon || typeof coupon === "string") return [];
 
-	// Normalize to StripeDiscountWithCoupon format
-	return [
-		{
-			...customerDiscount,
-			source: { coupon },
-		} as StripeDiscountWithCoupon,
-	];
+	// Customer discount already has source.coupon structure, return as-is
+	return [customerDiscount as StripeDiscountWithCoupon];
 };

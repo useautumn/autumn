@@ -54,6 +54,7 @@ type AdvanceClockAction = {
 	hours?: number;
 	months?: number;
 	toNextInvoice?: boolean;
+	waitForSeconds?: number;
 };
 
 type AttachPaymentMethodAction = {
@@ -298,9 +299,11 @@ const cancel = ({
  * @param hours - Number of hours to advance
  * @param months - Number of months to advance
  * @param toNextInvoice - Advance to next billing cycle + invoice finalization time
+ * @param waitForSeconds - Wait for Stripe webhooks to process after advancing
  * @example s.advanceTestClock({ days: 15 }) // advance 15 days
  * @example s.advanceTestClock({ months: 1 }) // advance 1 month
  * @example s.advanceTestClock({ toNextInvoice: true }) // advance to next invoice
+ * @example s.advanceTestClock({ days: 8, waitForSeconds: 30 }) // advance 8 days, wait 30s for webhooks
  * @example
  * // Interleaved actions:
  * s.attach({ productId: "pro" }),
@@ -314,12 +317,14 @@ const advanceTestClock = ({
 	hours,
 	months,
 	toNextInvoice,
+	waitForSeconds,
 }: {
 	days?: number;
 	weeks?: number;
 	hours?: number;
 	months?: number;
 	toNextInvoice?: boolean;
+	waitForSeconds?: number;
 }): ConfigFn => {
 	return (config) => ({
 		...config,
@@ -332,6 +337,7 @@ const advanceTestClock = ({
 				hours,
 				months,
 				toNextInvoice,
+				waitForSeconds,
 			},
 		],
 	});
@@ -828,6 +834,7 @@ export async function initScenario({
 					numberOfWeeks: action.weeks,
 					numberOfHours: action.hours,
 					numberOfMonths: action.months,
+					waitForSeconds: action.waitForSeconds,
 				});
 			}
 		} else if (action.type === "attachPaymentMethod") {

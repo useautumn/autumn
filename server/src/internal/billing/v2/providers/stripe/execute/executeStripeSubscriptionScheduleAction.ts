@@ -6,7 +6,7 @@ import { logSubscriptionScheduleAction } from "@/internal/billing/v2/providers/s
 import type { StripeSubscriptionScheduleAction } from "@/internal/billing/v2/types/billingPlan";
 
 /**
- * Maps update phase format to create phase format.
+ * Maps update phase format to create phase format (strips start_date).
  */
 const toCreatePhase = (
 	phase: Stripe.SubscriptionScheduleUpdateParams.Phase,
@@ -17,6 +17,31 @@ const toCreatePhase = (
 	})),
 	end_date: typeof phase.end_date === "number" ? phase.end_date : undefined,
 });
+
+/**
+ * Builds phases for updating a schedule that was created from a subscription.
+ * The first phase must use the schedule's actual current phase start_date.
+ */
+const buildAnchoredPhases = ({
+	params,
+	currentPhaseStart,
+}: {
+	params: { phases?: Stripe.SubscriptionScheduleUpdateParams.Phase[] };
+	currentPhaseStart: number;
+}): Stripe.SubscriptionScheduleUpdateParams.Phase[] => {
+	const inputPhases = params.phases ?? [];
+	if (inputPhases.length === 0) return [];
+
+	// First phase: preserve all fields but override start_date (can't modify current phase start)
+	// Future phases: keep as-is
+	return [
+		{
+			...inputPhases[0],
+			start_date: currentPhaseStart,
+		},
+		...inputPhases.slice(1),
+	];
+};
 
 export const executeStripeSubscriptionScheduleAction = async ({
 	ctx,
@@ -46,21 +71,25 @@ export const executeStripeSubscriptionScheduleAction = async ({
 		case "create": {
 			const { params } = subscriptionScheduleAction;
 
-			// If there's an existing subscription, create from it first then update with phases
+			// If there's an existing subscription, create schedule from it then update with phases
 			if (stripeSubscription) {
 				const schedule = await stripeCli.subscriptionSchedules.create({
 					from_subscription: stripeSubscription.id,
 				});
 
-				const newSchedule = await stripeCli.subscriptionSchedules.update(
-					schedule.id,
-					{
-						phases: params.phases,
-						end_behavior: params.end_behavior,
-					},
-				);
+				const currentPhaseStart = schedule.phases[0]?.start_date;
+				if (!currentPhaseStart) {
+					throw new Error(
+						"Cannot create schedule: missing current phase start_date",
+					);
+				}
 
-				return newSchedule;
+				const phases = buildAnchoredPhases({ params, currentPhaseStart });
+
+				return await stripeCli.subscriptionSchedules.update(schedule.id, {
+					phases,
+					end_behavior: params.end_behavior,
+				});
 			}
 
 			// No subscription - create standalone schedule
@@ -71,11 +100,24 @@ export const executeStripeSubscriptionScheduleAction = async ({
 			});
 		}
 
-		case "update":
+		case "update": {
+			const { stripeSubscriptionScheduleId, params } =
+				subscriptionScheduleAction;
+
+			// current_phase.start_date is validated in handleStripeBillingPlanErrors
+			const currentPhaseStart = billingContext.stripeSubscriptionSchedule
+				?.current_phase?.start_date as number;
+
+			const phases = buildAnchoredPhases({ params, currentPhaseStart });
+
 			return await stripeCli.subscriptionSchedules.update(
-				subscriptionScheduleAction.stripeSubscriptionScheduleId,
-				subscriptionScheduleAction.params,
+				stripeSubscriptionScheduleId,
+				{
+					...params,
+					phases,
+				},
 			);
+		}
 
 		case "release":
 			ctx.logger.debug(

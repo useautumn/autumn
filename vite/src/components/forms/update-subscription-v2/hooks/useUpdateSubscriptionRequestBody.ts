@@ -28,8 +28,30 @@ export function useUpdateSubscriptionRequestBody({
 			trialEnabled,
 			version,
 			items,
+			cancelAction,
+			refundBehavior,
 		} = formValues;
 
+		const requestBody: Record<string, unknown> = {
+			customer_id: customerId,
+			product_id: product?.id,
+			entity_id: entityId,
+			customer_product_id:
+				customerProduct.id ?? customerProduct.internal_product_id,
+		};
+
+		// For cancel actions, only include cancellation-related fields
+		if (cancelAction) {
+			requestBody.cancel_action = cancelAction;
+
+			if (cancelAction === "cancel_immediately" && refundBehavior) {
+				requestBody.refund_behavior = refundBehavior;
+			}
+
+			return requestBody;
+		}
+
+		// For non-cancel updates, include all the update fields
 		const options = prepaidItems
 			.map((item) => {
 				const featureId = item.feature_id ?? item.feature?.internal_id ?? "";
@@ -73,14 +95,6 @@ export function useUpdateSubscriptionRequestBody({
 				}
 			}
 		}
-
-		const requestBody: Record<string, unknown> = {
-			customer_id: customerId,
-			product_id: product?.id,
-			entity_id: entityId,
-			customer_product_id:
-				customerProduct.id ?? customerProduct.internal_product_id,
-		};
 
 		if (options.length > 0) {
 			requestBody.options = options;

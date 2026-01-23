@@ -145,21 +145,21 @@ test.concurrent(`${chalk.yellowBright("error: cancel non-existent product")}`, a
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Cannot combine cancel immediately with options
+// TEST 3: Cannot combine cancel_action with other update params
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * Scenario:
- * - User is on Pro ($20/mo) with prepaid messages
- * - User tries to cancel immediately while also updating options (quantity)
+ * - User is on Pro ($20/mo)
+ * - User tries to cancel while also passing options, version, items, or free_trial
  *
  * Expected Result:
- * - Should return an error - cannot combine cancel with options
+ * - Should return an error for each invalid combination
  */
-test.concurrent(`${chalk.yellowBright("error: cancel immediately with options")}`, async () => {
-	const customerId = "err-cancel-with-options";
+test.concurrent(`${chalk.yellowBright("error: cancel_action with other params")}`, async () => {
+	const customerId = "err-cancel-with-params";
 
-	const messagesItem = items.prepaidMessages({ includedUsage: 0 });
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
 	const pro = products.pro({
 		id: "pro",
@@ -172,15 +172,10 @@ test.concurrent(`${chalk.yellowBright("error: cancel immediately with options")}
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro] }),
 		],
-		actions: [
-			s.attach({
-				productId: pro.id,
-				options: [{ feature_id: "messages", quantity: 100 }],
-			}),
-		],
+		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Try to cancel immediately while also updating options - should fail
+	// Cannot combine cancel with options
 	await expectAutumnError({
 		errCode: ErrCode.InvalidRequest,
 		func: async () => {
@@ -192,40 +187,8 @@ test.concurrent(`${chalk.yellowBright("error: cancel immediately with options")}
 			});
 		},
 	});
-});
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Cannot combine cancel immediately with version
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - User is on Pro ($20/mo)
- * - User tries to cancel immediately while also specifying a version
- *
- * Expected Result:
- * - Should return an error - cannot combine cancel with version
- */
-test.concurrent(`${chalk.yellowBright("error: cancel immediately with version")}`, async () => {
-	const customerId = "err-cancel-with-version";
-
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-
-	const pro = products.pro({
-		id: "pro",
-		items: [messagesItem],
-	});
-
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro] }),
-		],
-		actions: [s.attach({ productId: pro.id })],
-	});
-
-	// Try to cancel immediately while also specifying version - should fail
+	// Cannot combine cancel with version
 	await expectAutumnError({
 		errCode: ErrCode.InvalidRequest,
 		func: async () => {
@@ -237,40 +200,8 @@ test.concurrent(`${chalk.yellowBright("error: cancel immediately with version")}
 			});
 		},
 	});
-});
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Cannot combine cancel immediately with items
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - User is on Pro ($20/mo)
- * - User tries to cancel immediately while also specifying custom items
- *
- * Expected Result:
- * - Should return an error - cannot combine cancel with items
- */
-test.concurrent(`${chalk.yellowBright("error: cancel immediately with items")}`, async () => {
-	const customerId = "err-cancel-with-items";
-
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-
-	const pro = products.pro({
-		id: "pro",
-		items: [messagesItem],
-	});
-
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro] }),
-		],
-		actions: [s.attach({ productId: pro.id })],
-	});
-
-	// Try to cancel immediately while also specifying custom items - should fail
+	// Cannot combine cancel with items
 	await expectAutumnError({
 		errCode: ErrCode.InvalidRequest,
 		func: async () => {
@@ -282,10 +213,28 @@ test.concurrent(`${chalk.yellowBright("error: cancel immediately with items")}`,
 			});
 		},
 	});
+
+	// Cannot combine cancel with free_trial
+	await expectAutumnError({
+		errCode: ErrCode.InvalidRequest,
+		func: async () => {
+			await autumnV1.subscriptions.update({
+				customer_id: customerId,
+				product_id: pro.id,
+				cancel_action: "cancel_immediately",
+				free_trial: {
+					length: 7,
+					duration: FreeTrialDuration.Day,
+					unique_fingerprint: false,
+					card_required: true,
+				},
+			});
+		},
+	});
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 6: Cannot cancel free product with end_of_cycle
+// TEST 4: Cannot cancel free product with end_of_cycle
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -326,7 +275,7 @@ test.concurrent(`${chalk.yellowBright("error: cannot cancel free product with en
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 7: Cannot cancel one-time product with end_of_cycle
+// TEST 5: Cannot cancel one-time product with end_of_cycle
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -369,7 +318,7 @@ test.concurrent(`${chalk.yellowBright("error: cannot cancel one-time product wit
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 8: Cannot pass free_trial when cancel is end_of_cycle
+// TEST 6: Cannot pass free_trial when cancel is end_of_cycle
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**

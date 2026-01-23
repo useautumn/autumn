@@ -1,5 +1,5 @@
-import { CusProductStatus, type FullCusProduct } from "@autumn/shared";
-import { ArrowLeftRight, ArrowRightFromLine, Delete } from "lucide-react";
+import type { FullCusProduct } from "@autumn/shared";
+import { ArrowLeftRight, Delete } from "lucide-react";
 import { useState } from "react";
 import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 import {
@@ -8,11 +8,10 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useCustomerContext } from "../CustomerContext";
 import { useCusQuery } from "../hooks/useCusQuery";
-import { CancelProductDialog } from "./CancelProductDialog";
 import { TransferProductDialog } from "./TransferProductDialog";
-import { UpdateStatusDropdownBtn } from "./UpdateStatusDropdownBtn";
 
 export const CusProductToolbar = ({
 	cusProduct,
@@ -23,18 +22,13 @@ export const CusProductToolbar = ({
 	const { showEntityView } = useCustomerContext();
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [transferOpen, setTransferOpen] = useState(false);
-	const [cancelOpen, setCancelOpen] = useState(false);
+	const setSheet = useSheetStore((s) => s.setSheet);
 	return (
 		<>
 			<TransferProductDialog
 				cusProduct={cusProduct}
 				open={transferOpen}
 				setOpen={setTransferOpen}
-			/>
-			<CancelProductDialog
-				cusProduct={cusProduct}
-				open={cancelOpen}
-				setOpen={setCancelOpen}
 			/>
 			<DropdownMenu open={dialogOpen} onOpenChange={setDialogOpen}>
 				<DropdownMenuTrigger asChild>
@@ -61,7 +55,7 @@ export const CusProductToolbar = ({
 						onClick={(e) => {
 							e.preventDefault();
 							e.stopPropagation();
-							setCancelOpen(true);
+							setSheet({ type: "subscription-cancel", itemId: cusProduct.id });
 							setDialogOpen(false);
 						}}
 					>
