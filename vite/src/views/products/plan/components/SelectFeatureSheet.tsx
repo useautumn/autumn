@@ -49,9 +49,11 @@ export function SelectFeatureSheet({
 		}
 	}, [selectOpen]);
 
-	// Filter features based on search
-	const filteredFeatures = features.filter((feature: Feature) =>
-		feature.name.toLowerCase().includes(searchValue.toLowerCase()),
+	// Filter features based on search and exclude archived features
+	const filteredFeatures = features.filter(
+		(feature: Feature) =>
+			!feature.archived &&
+			feature.name.toLowerCase().includes(searchValue.toLowerCase()),
 	);
 
 	const handleFeatureSelect = (featureId: string) => {
