@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { useMemo } from "react";
 import { useUpdateSubscriptionFormContext } from "@/components/forms/update-subscription-v2";
 import { PreviewErrorDisplay } from "@/components/forms/update-subscription-v2/components/PreviewErrorDisplay";
+import { LAYOUT_TRANSITION } from "@/components/forms/update-subscription-v2/constants/animationConstants";
 import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { getBackendErr } from "@/utils/genUtils";
@@ -62,7 +63,7 @@ export function CancelPreviewSection() {
 	}, [previewData, cancelAction, refundBehavior, showRefundToggle]);
 
 	return (
-		<motion.div layout transition={{ duration: 0.2, ease: "easeInOut" }}>
+		<motion.div layout transition={LAYOUT_TRANSITION}>
 			{error ? (
 				<SheetSection title="Pricing Preview" withSeparator>
 					<PreviewErrorDisplay error={error} />
