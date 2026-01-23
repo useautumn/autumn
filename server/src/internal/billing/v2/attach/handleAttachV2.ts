@@ -1,5 +1,6 @@
 import { AttachV0ParamsSchema } from "@autumn/shared";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
+import { computeAttachPlan } from "./compute/computeAttachPlan";
 import { logAttachContext } from "./logs/logAttachContext";
 import { setupAttachBillingContext } from "./setup/setupAttachBillingContext";
 
@@ -32,6 +33,29 @@ export const handleAttachV2 = createRoute({
 			params: body,
 		});
 		logAttachContext({ ctx, billingContext });
+
+		// 2. Compute
+		const autumnPlan = computeAttachPlan({
+			ctx,
+			attachBillingContext: billingContext,
+		});
+
+		ctx.logger.info("Attach V2 autumn plan:", {
+			insertCustomerProducts: autumnPlan.insertCustomerProducts.map((p) => ({
+				id: p.id,
+				productId: p.product.id,
+				status: p.status,
+				startsAt: p.starts_at,
+			})),
+			updateCustomerProduct: autumnPlan.updateCustomerProduct
+				? {
+						id: autumnPlan.updateCustomerProduct.customerProduct.id,
+						updates: autumnPlan.updateCustomerProduct.updates,
+					}
+				: undefined,
+			deleteCustomerProduct: autumnPlan.deleteCustomerProduct?.id,
+			lineItemsCount: autumnPlan.lineItems?.length ?? 0,
+		});
 
 		return c.json({ customer_id: body.customer_id }, 200);
 	},
