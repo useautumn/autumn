@@ -17,6 +17,7 @@ import {
 } from "./handleOneOffErrors";
 import { handleProductTypeTransitionErrors } from "./handleProductTypeTransitionErrors";
 import { handleProrateBillingErrors } from "./handleProrateBillingErrors";
+import { handleUncancelErrors } from "./handleUncancelErrors";
 
 export const handleUpdateSubscriptionErrors = async ({
 	ctx,
@@ -64,7 +65,10 @@ export const handleUpdateSubscriptionErrors = async ({
 	// 7. Cancel end of cycle errors
 	handleCancelEndOfCycleErrors({ billingContext, params });
 
-	// 8. Prorate billing errors
+	// 8. Uncancel validation errors
+	handleUncancelErrors({ billingContext });
+
+	// 9. Prorate billing errors
 	handleProrateBillingErrors({
 		billingContext,
 		autumnBillingPlan,

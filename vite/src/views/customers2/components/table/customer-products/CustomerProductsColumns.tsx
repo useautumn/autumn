@@ -1,7 +1,7 @@
 import { type FullCusProduct, isCustomerProductTrialing } from "@autumn/shared";
 import { FlaskIcon } from "@phosphor-icons/react";
 import type { Row, Table } from "@tanstack/react-table";
-import { ArrowRightLeft, Delete } from "lucide-react";
+import { ArrowRightLeft, Delete, RotateCcw } from "lucide-react";
 import { TableDropdownMenuCell } from "@/components/general/table/table-dropdown-menu-cell";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { createDateTimeColumn } from "@/views/customers2/utils/ColumnHelpers";
@@ -75,12 +75,15 @@ export const CustomerProductsColumns = [
 		}) => {
 			const meta = table.options.meta as {
 				onCancelClick?: (product: FullCusProduct) => void;
+				onUncancelClick?: (product: FullCusProduct) => void;
 				onTransferClick?: (product: FullCusProduct) => void;
 				onTestSheetClick?: (product: FullCusProduct) => void;
 				hasEntities?: boolean;
 			};
 
 			if (!meta?.onCancelClick) return null;
+
+			const isCanceling = row.original.canceled;
 
 			return (
 				<TableDropdownMenuCell>
@@ -106,15 +109,27 @@ export const CustomerProductsColumns = [
 							<ArrowRightLeft size={16} /> Transfer
 						</DropdownMenuItem>
 					)}
-					<DropdownMenuItem
-						className="flex items-center gap-2 text-xs text-red-500 dark:text-red-400"
-						onClick={(e) => {
-							e.stopPropagation();
-							meta.onCancelClick?.(row.original);
-						}}
-					>
-						<Delete size={16} /> Cancel
-					</DropdownMenuItem>
+					{isCanceling ? (
+						<DropdownMenuItem
+							className="flex items-center gap-2 text-xs"
+							onClick={(e) => {
+								e.stopPropagation();
+								meta.onUncancelClick?.(row.original);
+							}}
+						>
+							<RotateCcw size={16} /> Uncancel
+						</DropdownMenuItem>
+					) : (
+						<DropdownMenuItem
+							className="flex items-center gap-2 text-xs text-red-500 dark:text-red-400"
+							onClick={(e) => {
+								e.stopPropagation();
+								meta.onCancelClick?.(row.original);
+							}}
+						>
+							<Delete size={16} /> Cancel
+						</DropdownMenuItem>
+					)}
 				</TableDropdownMenuCell>
 			);
 		},

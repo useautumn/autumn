@@ -1,6 +1,7 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
 import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan";
+import { applyUncancelToPlan } from "@/internal/billing/v2/updateSubscription/compute/cancel/applyUncancelToPlan";
 import { applyCancelPlan } from "./applyCancelPlan";
 import { computeCancelLineItems } from "./computeCancelLineItems";
 import { computeCancelUpdates } from "./computeCancelUpdates";
@@ -25,6 +26,13 @@ export const computeCancelPlan = ({
 	plan: AutumnBillingPlan;
 }): AutumnBillingPlan => {
 	if (!billingContext.cancelMode) return plan;
+
+	if (billingContext.cancelMode === "uncancel") {
+		return applyUncancelToPlan({
+			billingContext,
+			plan,
+		});
+	}
 
 	// Step 1: Calculate when the subscription ends
 	const endOfCycleMs = computeEndOfCycleMs({ billingContext });
