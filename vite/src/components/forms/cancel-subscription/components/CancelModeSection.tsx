@@ -1,29 +1,68 @@
-import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
+import { CusProductStatus } from "@autumn/shared";
+import { CalendarIcon, LightningIcon } from "@phosphor-icons/react";
+import { useUpdateSubscriptionFormContext } from "@/components/forms/update-subscription-v2";
+import {
+	OptionCard,
+	OptionCardContent,
+	OptionCardDescription,
+	OptionCardGroup,
+	OptionCardIcon,
+	OptionCardLabel,
+} from "@/components/v2/selections/OptionCard";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
-import { useCancelSubscriptionContext } from "../context/CancelSubscriptionContext";
 
 export function CancelModeSection() {
-	const { cancelAction, setCancelAction, canChooseCancelMode } =
-		useCancelSubscriptionContext();
+	const { form, formValues, formContext } = useUpdateSubscriptionFormContext();
+	const { customerProduct } = formContext;
+
+	const isDefault = customerProduct.product.is_default;
+	const isScheduled = customerProduct.status === CusProductStatus.Scheduled;
+	const hasSubscription =
+		customerProduct.subscription_ids &&
+		customerProduct.subscription_ids.length > 0;
+
+	const canChooseCancelMode = !isScheduled && !isDefault && !!hasSubscription;
 
 	if (!canChooseCancelMode) return null;
 
+	const cancelAction = formValues.cancelAction ?? "cancel_end_of_cycle";
+
 	return (
-		<SheetSection title="Cancel Timing" withSeparator>
-			<GroupedTabButton
-				value={cancelAction}
-				onValueChange={(value) => setCancelAction(value)}
-				options={[
-					{
-						value: "cancel_end_of_cycle",
-						label: "End of cycle",
-					},
-					{
-						value: "cancel_immediately",
-						label: "Immediately",
-					},
-				]}
-			/>
+		<SheetSection title="When to cancel" withSeparator>
+			<OptionCardGroup>
+				<OptionCard
+					selected={cancelAction === "cancel_end_of_cycle"}
+					onClick={() =>
+						form.setFieldValue("cancelAction", "cancel_end_of_cycle")
+					}
+				>
+					<OptionCardIcon>
+						<CalendarIcon size={18} weight="duotone" />
+					</OptionCardIcon>
+					<OptionCardContent>
+						<OptionCardLabel>End of billing cycle</OptionCardLabel>
+						<OptionCardDescription>
+							Customer keeps access until their current period ends
+						</OptionCardDescription>
+					</OptionCardContent>
+				</OptionCard>
+				<OptionCard
+					selected={cancelAction === "cancel_immediately"}
+					onClick={() =>
+						form.setFieldValue("cancelAction", "cancel_immediately")
+					}
+				>
+					<OptionCardIcon>
+						<LightningIcon size={18} weight="duotone" />
+					</OptionCardIcon>
+					<OptionCardContent>
+						<OptionCardLabel>Cancel immediately</OptionCardLabel>
+						<OptionCardDescription>
+							Access ends now, unused time may be credited
+						</OptionCardDescription>
+					</OptionCardContent>
+				</OptionCard>
+			</OptionCardGroup>
 		</SheetSection>
 	);
 }

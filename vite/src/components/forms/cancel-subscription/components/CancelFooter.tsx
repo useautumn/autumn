@@ -1,12 +1,17 @@
+import { CusProductStatus } from "@autumn/shared";
 import { AnimatePresence, motion } from "motion/react";
+import { useUpdateSubscriptionFormContext } from "@/components/forms/update-subscription-v2";
 import { Button } from "@/components/v2/buttons/Button";
 import { SheetFooter } from "@/components/v2/sheets/SharedSheetComponents";
 import { SHEET_ANIMATION } from "@/views/products/plan/planAnimations";
-import { useCancelSubscriptionContext } from "../context/CancelSubscriptionContext";
 
 export function CancelFooter() {
-	const { isPending, previewQuery, handleCancel, isScheduled, isDefault } =
-		useCancelSubscriptionContext();
+	const { isPending, previewQuery, handleConfirm, formContext } =
+		useUpdateSubscriptionFormContext();
+	const { customerProduct } = formContext;
+
+	const isScheduled = customerProduct.status === CusProductStatus.Scheduled;
+	const isDefault = customerProduct.product.is_default;
 
 	const isLoading = previewQuery.isLoading;
 	const hasError = !!previewQuery.error;
@@ -31,7 +36,7 @@ export function CancelFooter() {
 						<Button
 							variant="destructive"
 							className="w-full"
-							onClick={handleCancel}
+							onClick={handleConfirm}
 							isLoading={isPending}
 						>
 							{buttonLabel}

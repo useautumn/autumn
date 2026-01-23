@@ -213,6 +213,8 @@ export function UpdateSubscriptionFormProvider({
 		freeTrial,
 		items: formValues.items,
 		version: formValues.version,
+		cancelAction: formValues.cancelAction,
+		refundBehavior: formValues.refundBehavior,
 	});
 
 	const { buildRequestBody } = useUpdateSubscriptionRequestBody({

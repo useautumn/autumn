@@ -1,15 +1,20 @@
-import type { FullCusProduct } from "@autumn/shared";
+import {
+	CusProductStatus,
+	type FullCusProduct,
+	type ProductV2,
+} from "@autumn/shared";
 import { useMemo } from "react";
 import { CancelFooter } from "@/components/forms/cancel-subscription/components/CancelFooter";
 import { CancelModeSection } from "@/components/forms/cancel-subscription/components/CancelModeSection";
 import { CancelPreviewSection } from "@/components/forms/cancel-subscription/components/CancelPreviewSection";
 import { RefundBehaviorSection } from "@/components/forms/cancel-subscription/components/RefundBehaviorSection";
 import {
-	type CancelSubscriptionFormContext,
-	CancelSubscriptionProvider,
-	useCancelSubscriptionContext,
-} from "@/components/forms/cancel-subscription/context/CancelSubscriptionContext";
+	type UpdateSubscriptionFormContext,
+	UpdateSubscriptionFormProvider,
+	useUpdateSubscriptionFormContext,
+} from "@/components/forms/update-subscription-v2";
 import { SheetHeader } from "@/components/v2/sheets/SharedSheetComponents";
+import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
@@ -17,9 +22,11 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 
 function SheetContent() {
-	const { formContext, isScheduled, isDefault } =
-		useCancelSubscriptionContext();
+	const { formContext } = useUpdateSubscriptionFormContext();
 	const { customerProduct } = formContext;
+
+	const isDefault = customerProduct.product.is_default;
+	const isScheduled = customerProduct.status === CusProductStatus.Scheduled;
 
 	return (
 		<div className="flex flex-col h-full overflow-y-auto">
@@ -32,7 +39,6 @@ function SheetContent() {
 				itemId={customerProduct.id}
 			/>
 
-			{/* Info boxes for special cases */}
 			{isScheduled && (
 				<div className="px-4 pt-4">
 					<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
@@ -65,20 +71,25 @@ export function SubscriptionCancelSheet() {
 	const { closeSheet } = useSheetStore();
 	const { customer } = useCusQuery();
 
-	const { cusProduct } = useSubscriptionById({ itemId });
+	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
+	const { prepaidItems } = usePrepaidItems({ product: productV2 });
+
+	const currentVersion = cusProduct?.product?.version ?? 1;
 
 	const formContext = useMemo(
-		(): CancelSubscriptionFormContext | null =>
+		(): UpdateSubscriptionFormContext | null =>
 			cusProduct && customer
 				? {
 						customerId: customer.id ?? customer.internal_id,
-						productId: cusProduct.product.id,
+						product: productV2 as ProductV2 | undefined,
 						entityId: cusProduct.entity_id ?? undefined,
-						customerProductId: cusProduct.id,
 						customerProduct: cusProduct as FullCusProduct,
+						prepaidItems,
+						numVersions: 1,
+						currentVersion,
 					}
 				: null,
-		[customer, cusProduct],
+		[customer, cusProduct, productV2, prepaidItems, currentVersion],
 	);
 
 	if (!cusProduct) {
@@ -103,11 +114,12 @@ export function SubscriptionCancelSheet() {
 	}
 
 	return (
-		<CancelSubscriptionProvider
+		<UpdateSubscriptionFormProvider
 			formContext={formContext}
+			originalItems={undefined}
 			onSuccess={closeSheet}
 		>
 			<SheetContent />
-		</CancelSubscriptionProvider>
+		</UpdateSubscriptionFormProvider>
 	);
 }
