@@ -181,7 +181,8 @@ describe(`${chalk.yellowBright("check-prepaid2: test /check on prepaid + pay per
 			expect.objectContaining({
 				granted_balance: prepaidItem.included_usage,
 				purchased_balance: prepaidQuantity,
-				current_balance: prepaidQuantity + prepaidItem.included_usage - curUsage,
+				current_balance:
+					prepaidQuantity + prepaidItem.included_usage - curUsage,
 				usage: curUsage,
 				overage_allowed: false,
 			}),

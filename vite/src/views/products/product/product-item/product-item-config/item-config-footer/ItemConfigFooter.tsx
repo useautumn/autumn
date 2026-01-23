@@ -1,13 +1,13 @@
+import { ArrowLeftIcon, XIcon } from "lucide-react";
+import { CustomDialogFooter } from "@/components/general/modal-components/DialogContentWrapper";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useProductItemContext } from "../../ProductItemContext";
-import { isEmptyItem } from "@/utils/product/getItemType";
-import { ArrowLeftIcon, XIcon } from "lucide-react";
-import { useProductContext } from "../../../ProductContext";
-import { AddToEntityDropdown } from "./AddToEntityDropdown";
-import { handleAutoSave } from "@/views/onboarding2/model-pricing/model-pricing-utils/modelPricingUtils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { CustomDialogFooter } from "@/components/general/modal-components/DialogContentWrapper";
+import { isEmptyItem } from "@/utils/product/getItemType";
+import { handleAutoSave } from "@/views/onboarding2/model-pricing/model-pricing-utils/modelPricingUtils";
+import { useProductContext } from "../../../ProductContext";
+import { useProductItemContext } from "../../ProductItemContext";
+import { AddToEntityDropdown } from "./AddToEntityDropdown";
 
 export const ItemConfigFooter = ({
 	handleBack,

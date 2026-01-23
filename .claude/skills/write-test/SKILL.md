@@ -26,6 +26,7 @@ Write integration tests for the Autumn billing system using the `initScenario` p
 - Use `Decimal.js` for balance calculations in track tests
 - Unique `customerId` per test
 - Use generic types with `AutumnInt`: `autumnV1.customers.get<ApiCustomerV3>()`, `autumnV1.check<CheckResponseV1>()`
+- **USE UTILITY FUNCTIONS WHENEVER POSSIBLE** - the shorter the code, the better. Check `server/tests/integration/billing/utils/` for existing utilities like `expectCustomerProducts`, `expectProductScheduled`, `expectCustomerInvoiceCorrect`, etc.
 
 **DON'T:**
 - Use `describe/beforeAll/test` (legacy pattern)
@@ -33,6 +34,7 @@ Write integration tests for the Autumn billing system using the `initScenario` p
 - Share state between tests
 - Use raw arithmetic for balance calculations (floating point errors)
 - Use `as unknown as Type` casting - use generic types instead
+- Write manual assertion loops when a utility function exists
 
 ## AutumnInt Response Types
 

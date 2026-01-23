@@ -28,5 +28,11 @@ export const useSyncPlaygroundMode = () => {
 			// Remove 'm' param when not in playground step
 			setQueryStates({ m: null });
 		}
-	}, [queryStates.m, queryStates.step, setPlaygroundMode, setQueryStates, isPlaygroundStep]);
+	}, [
+		queryStates.m,
+		queryStates.step,
+		setPlaygroundMode,
+		setQueryStates,
+		isPlaygroundStep,
+	]);
 };

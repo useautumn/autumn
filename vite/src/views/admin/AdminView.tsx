@@ -1,13 +1,13 @@
-import LoadingScreen from "../general/LoadingScreen";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 import { DefaultView } from "../DefaultView";
-import { useAdmin } from "./hooks/useAdmin";
-import { toast } from "sonner";
+import LoadingScreen from "../general/LoadingScreen";
 import { AdminTable } from "./AdminTable";
-import { columns as userColumns } from "./userColumns";
-import { columns as orgColumns } from "./orgColumns";
-import { Button } from "@/components/ui/button";
 import { CreateUser } from "./components/CreateUser";
+import { useAdmin } from "./hooks/useAdmin";
+import { columns as orgColumns } from "./orgColumns";
+import { columns as userColumns } from "./userColumns";
 
 export const AdminView = () => {
 	const { isAdmin, isPending } = useAdmin();

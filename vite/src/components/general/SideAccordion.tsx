@@ -1,3 +1,4 @@
+import { Plus, PlusIcon } from "lucide-react";
 import {
 	Accordion,
 	AccordionContent,
@@ -6,7 +7,6 @@ import {
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
-import { Plus, PlusIcon } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 interface SideAccordionProps {

@@ -1,10 +1,10 @@
-import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 import {
-	AppEnv,
-	Entity,
+	type AppEnv,
+	type Entity,
 	FeatureType,
 	FullCusEntWithFullCusProduct,
 } from "@autumn/shared";
+import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 
 export const constructEntity = ({
 	inputEntity,
@@ -21,7 +21,7 @@ export const constructEntity = ({
 	env: AppEnv;
 	deleted?: boolean;
 }) => {
-	let entity: Entity = {
+	const entity: Entity = {
 		internal_id: generateId("ety"),
 		id: inputEntity.id,
 		name: inputEntity.name,

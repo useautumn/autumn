@@ -1,9 +1,9 @@
 import CodeBlock from "@/views/onboarding/components/CodeBlock";
 import { CodeSpan } from "../components/CodeSpan";
-import { StepHeader } from "../StepHeader";
+import { InfoBox } from "../components/InfoBox";
 import { useIntegrateContext } from "../IntegrateContext";
 import { Backend, Frontend } from "../StackEnums";
-import { InfoBox } from "../components/InfoBox";
+import { StepHeader } from "../StepHeader";
 
 const nextjsAutumnProvider = ({
 	includeBackendUrl,
@@ -144,6 +144,7 @@ export const AddAutumnProvider = () => {
 							className="text-t2 font-medium underline"
 							href="https://supabase.com/docs/guides/auth/server-side/creating-a-client"
 							target="_blank"
+							rel="noopener"
 						>
 							here
 						</a>

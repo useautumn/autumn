@@ -1,3 +1,6 @@
+import { CusProductStatus, type FullCusProduct } from "@autumn/shared";
+import { ArrowLeftRight, ArrowRightFromLine, Delete } from "lucide-react";
+import { useState } from "react";
 import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 import {
 	DropdownMenu,
@@ -5,14 +8,11 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { CusProductStatus, FullCusProduct } from "@autumn/shared";
-import { UpdateStatusDropdownBtn } from "./UpdateStatusDropdownBtn";
-import { useState } from "react";
 import { useCustomerContext } from "../CustomerContext";
-import { TransferProductDialog } from "./TransferProductDialog";
-import { ArrowLeftRight, ArrowRightFromLine, Delete } from "lucide-react";
-import { CancelProductDialog } from "./CancelProductDialog";
 import { useCusQuery } from "../hooks/useCusQuery";
+import { CancelProductDialog } from "./CancelProductDialog";
+import { TransferProductDialog } from "./TransferProductDialog";
+import { UpdateStatusDropdownBtn } from "./UpdateStatusDropdownBtn";
 
 export const CusProductToolbar = ({
 	cusProduct,

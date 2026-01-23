@@ -1,5 +1,22 @@
+import {
+	CusProductSchema,
+	CusProductStatus,
+	CustomerSchema,
+	type FullCusProduct,
+	ProductSchema,
+} from "@autumn/shared";
+import type React from "react";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router";
+import { z } from "zod";
 import CopyButton from "@/components/general/CopyButton";
+import { useContextMenu } from "@/components/general/table-components/ContextMenuWrapper";
 import { Badge } from "@/components/ui/badge";
+import {
+	ContextMenu,
+	ContextMenuContent,
+	ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import {
 	Tooltip,
 	TooltipContent,
@@ -12,28 +29,12 @@ import { unixHasPassed } from "@/utils/dateUtils";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { pushPage } from "@/utils/genUtils";
 import { getVersionCounts } from "@/utils/productUtils";
-import {
-	CusProductSchema,
-	CusProductStatus,
-	CustomerSchema,
-	FullCusProduct,
-	ProductSchema,
-} from "@autumn/shared";
-import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router";
-import { z } from "zod";
+import { DeleteCustomerDialog } from "../../customer/components/DeleteCustomerDialog";
+import { useCusSearchQuery } from "../../hooks/useCusSearchQuery";
 import {
 	CustomerRowToolbar,
 	CustomerRowToolbarItems,
 } from "../CustomerRowToolbar";
-import {
-	ContextMenu,
-	ContextMenuContent,
-	ContextMenuTrigger,
-} from "@/components/ui/context-menu";
-import { useContextMenu } from "@/components/general/table-components/ContextMenuWrapper";
-import { DeleteCustomerDialog } from "../../customer/components/DeleteCustomerDialog";
-import { useCusSearchQuery } from "../../hooks/useCusSearchQuery";
 
 const CustomerWithProductsSchema = CustomerSchema.extend({
 	customer_products: z.array(

@@ -25,204 +25,192 @@ import { CusService } from "@/internal/customers/CusService.js";
 
 const billingUnits = 12;
 
-test.concurrent(
-	`${chalk.yellowBright("update-quantity: stripe sync upgrade quantity difference")}`,
-	async () => {
-		const customerId = "qty-stripe-sync-upgrade";
+test.concurrent(`${chalk.yellowBright("update-quantity: stripe sync upgrade quantity difference")}`, async () => {
+	const customerId = "qty-stripe-sync-upgrade";
 
-		const product = products.base({
-			id: "prepaid",
-			items: [
-				items.prepaid({
-					featureId: TestFeature.Messages,
-					billingUnits,
-					config: {
-						on_increase: OnIncrease.ProrateImmediately,
-						on_decrease: OnDecrease.NoProrations,
-					},
-				}),
-			],
-		});
+	const product = products.base({
+		id: "prepaid",
+		items: [
+			items.prepaid({
+				featureId: TestFeature.Messages,
+				billingUnits,
+				config: {
+					on_increase: OnIncrease.ProrateImmediately,
+					on_decrease: OnDecrease.NoProrations,
+				},
+			}),
+		],
+	});
 
-		// Initial: 5 units (60 messages)
-		const initialUnits = 5;
-		const initialQuantity = initialUnits * billingUnits;
+	// Initial: 5 units (60 messages)
+	const initialUnits = 5;
+	const initialQuantity = initialUnits * billingUnits;
 
-		const { autumnV1 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [product] }),
-			],
-			actions: [
-				s.attach({
-					productId: product.id,
-					options: [
-						{ feature_id: TestFeature.Messages, quantity: initialQuantity },
-					],
-				}),
-			],
-		});
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [product] }),
+		],
+		actions: [
+			s.attach({
+				productId: product.id,
+				options: [
+					{ feature_id: TestFeature.Messages, quantity: initialQuantity },
+				],
+			}),
+		],
+	});
 
-		const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
-		// Get Stripe subscription item quantity before update
-		const fullCustomer = await CusService.getFull({
-			db: ctx.db,
-			idOrInternalId: customerId,
-			orgId: ctx.org.id,
-			env: ctx.env,
-		});
+	// Get Stripe subscription item quantity before update
+	const fullCustomer = await CusService.getFull({
+		db: ctx.db,
+		idOrInternalId: customerId,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
 
-		const stripeCustomerId =
-			fullCustomer.processor?.id || fullCustomer.processor?.processor_id;
-		expect(stripeCustomerId).toBeDefined();
+	const stripeCustomerId =
+		fullCustomer.processor?.id || fullCustomer.processor?.processor_id;
+	expect(stripeCustomerId).toBeDefined();
 
-		const subscriptionsBefore = await stripeCli.subscriptions.list({
-			customer: stripeCustomerId as string,
-			status: "all",
-		});
+	const subscriptionsBefore = await stripeCli.subscriptions.list({
+		customer: stripeCustomerId as string,
+		status: "all",
+	});
 
-		expect(subscriptionsBefore.data.length).toBeGreaterThan(0);
-		const subscription = subscriptionsBefore.data[0];
+	expect(subscriptionsBefore.data.length).toBeGreaterThan(0);
+	const subscription = subscriptionsBefore.data[0];
 
-		const subscriptionItemBefore = subscription.items.data.find(
-			(item) => item.quantity !== undefined && item.quantity > 0,
-		);
-		expect(subscriptionItemBefore).toBeDefined();
-		expect(subscriptionItemBefore!.quantity).toBe(initialUnits);
+	const subscriptionItemBefore = subscription.items.data.find(
+		(item) => item.quantity !== undefined && item.quantity > 0,
+	);
+	expect(subscriptionItemBefore).toBeDefined();
+	expect(subscriptionItemBefore!.quantity).toBe(initialUnits);
 
-		// Update: 5 -> 8 units (difference = +3 units)
-		const updatedUnits = 8;
-		const updatedQuantity = updatedUnits * billingUnits;
-		const unitsDifference = updatedUnits - initialUnits; // +3
+	// Update: 5 -> 8 units (difference = +3 units)
+	const updatedUnits = 8;
+	const updatedQuantity = updatedUnits * billingUnits;
+	const unitsDifference = updatedUnits - initialUnits; // +3
 
-		await autumnV1.subscriptions.update({
-			customer_id: customerId,
-			product_id: product.id,
-			options: [
-				{ feature_id: TestFeature.Messages, quantity: updatedQuantity },
-			],
-		});
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: product.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: updatedQuantity }],
+	});
 
-		// Verify Stripe subscription item is updated correctly
-		const subscriptionsAfter = await stripeCli.subscriptions.list({
-			customer: stripeCustomerId as string,
-			status: "all",
-		});
+	// Verify Stripe subscription item is updated correctly
+	const subscriptionsAfter = await stripeCli.subscriptions.list({
+		customer: stripeCustomerId as string,
+		status: "all",
+	});
 
-		const subscriptionAfter = subscriptionsAfter.data[0];
-		const subscriptionItemAfter = subscriptionAfter.items.data.find(
-			(item) => item.id === subscriptionItemBefore!.id,
-		);
+	const subscriptionAfter = subscriptionsAfter.data[0];
+	const subscriptionItemAfter = subscriptionAfter.items.data.find(
+		(item) => item.id === subscriptionItemBefore!.id,
+	);
 
-		expect(subscriptionItemAfter).toBeDefined();
+	expect(subscriptionItemAfter).toBeDefined();
 
-		// In the simple case (one product), both approaches give the same result:
-		// Absolute: quantity = 8
-		// Difference: quantity = 5 + 3 = 8
-		// This test verifies the mechanism works, but the bug manifests with multiple products
-		expect(subscriptionItemAfter!.quantity).toBe(updatedUnits);
+	// In the simple case (one product), both approaches give the same result:
+	// Absolute: quantity = 8
+	// Difference: quantity = 5 + 3 = 8
+	// This test verifies the mechanism works, but the bug manifests with multiple products
+	expect(subscriptionItemAfter!.quantity).toBe(updatedUnits);
 
-		// Verify the stripeSubscriptionItemQuantityDifference is being calculated correctly
-		// by checking that the final quantity matches initialUnits + unitsDifference
-		expect(subscriptionItemAfter!.quantity).toBe(
-			initialUnits + unitsDifference,
-		);
-	},
-);
+	// Verify the stripeSubscriptionItemQuantityDifference is being calculated correctly
+	// by checking that the final quantity matches initialUnits + unitsDifference
+	expect(subscriptionItemAfter!.quantity).toBe(initialUnits + unitsDifference);
+});
 
-test.concurrent(
-	`${chalk.yellowBright("update-quantity: stripe sync downgrade quantity difference")}`,
-	async () => {
-		const customerId = "qty-stripe-sync-downgrade";
+test.concurrent(`${chalk.yellowBright("update-quantity: stripe sync downgrade quantity difference")}`, async () => {
+	const customerId = "qty-stripe-sync-downgrade";
 
-		const product = products.base({
-			id: "prepaid",
-			items: [
-				items.prepaid({
-					featureId: TestFeature.Messages,
-					billingUnits,
-					config: {
-						on_increase: OnIncrease.ProrateImmediately,
-						on_decrease: OnDecrease.NoProrations,
-					},
-				}),
-			],
-		});
+	const product = products.base({
+		id: "prepaid",
+		items: [
+			items.prepaid({
+				featureId: TestFeature.Messages,
+				billingUnits,
+				config: {
+					on_increase: OnIncrease.ProrateImmediately,
+					on_decrease: OnDecrease.NoProrations,
+				},
+			}),
+		],
+	});
 
-		// Start with 8 units (96 messages)
-		const initialUnits = 8;
-		const initialQuantity = initialUnits * billingUnits;
+	// Start with 8 units (96 messages)
+	const initialUnits = 8;
+	const initialQuantity = initialUnits * billingUnits;
 
-		const { autumnV1 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [product] }),
-			],
-			actions: [
-				s.attach({
-					productId: product.id,
-					options: [
-						{ feature_id: TestFeature.Messages, quantity: initialQuantity },
-					],
-				}),
-			],
-		});
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [product] }),
+		],
+		actions: [
+			s.attach({
+				productId: product.id,
+				options: [
+					{ feature_id: TestFeature.Messages, quantity: initialQuantity },
+				],
+			}),
+		],
+	});
 
-		const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
-		// Get Stripe subscription before downgrade
-		const fullCustomer = await CusService.getFull({
-			db: ctx.db,
-			idOrInternalId: customerId,
-			orgId: ctx.org.id,
-			env: ctx.env,
-		});
+	// Get Stripe subscription before downgrade
+	const fullCustomer = await CusService.getFull({
+		db: ctx.db,
+		idOrInternalId: customerId,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
 
-		const stripeCustomerId =
-			fullCustomer.processor?.id || fullCustomer.processor?.processor_id;
+	const stripeCustomerId =
+		fullCustomer.processor?.id || fullCustomer.processor?.processor_id;
 
-		const subscriptionsBefore = await stripeCli.subscriptions.list({
-			customer: stripeCustomerId as string,
-			status: "all",
-		});
+	const subscriptionsBefore = await stripeCli.subscriptions.list({
+		customer: stripeCustomerId as string,
+		status: "all",
+	});
 
-		const subscription = subscriptionsBefore.data[0];
-		const subscriptionItemBefore = subscription.items.data.find(
-			(item) => item.quantity !== undefined && item.quantity > 0,
-		);
-		expect(subscriptionItemBefore).toBeDefined();
-		expect(subscriptionItemBefore!.quantity).toBe(initialUnits);
+	const subscription = subscriptionsBefore.data[0];
+	const subscriptionItemBefore = subscription.items.data.find(
+		(item) => item.quantity !== undefined && item.quantity > 0,
+	);
+	expect(subscriptionItemBefore).toBeDefined();
+	expect(subscriptionItemBefore!.quantity).toBe(initialUnits);
 
-		// Downgrade: 8 -> 3 units (difference = -5 units)
-		const downgradedUnits = 3;
-		const downgradedQuantity = downgradedUnits * billingUnits;
-		const unitsDifference = downgradedUnits - initialUnits; // -5
+	// Downgrade: 8 -> 3 units (difference = -5 units)
+	const downgradedUnits = 3;
+	const downgradedQuantity = downgradedUnits * billingUnits;
+	const unitsDifference = downgradedUnits - initialUnits; // -5
 
-		await autumnV1.subscriptions.update({
-			customer_id: customerId,
-			product_id: product.id,
-			options: [
-				{ feature_id: TestFeature.Messages, quantity: downgradedQuantity },
-			],
-		});
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: product.id,
+		options: [
+			{ feature_id: TestFeature.Messages, quantity: downgradedQuantity },
+		],
+	});
 
-		const subscriptionsAfter = await stripeCli.subscriptions.list({
-			customer: stripeCustomerId as string,
-			status: "all",
-		});
+	const subscriptionsAfter = await stripeCli.subscriptions.list({
+		customer: stripeCustomerId as string,
+		status: "all",
+	});
 
-		const subscriptionAfter = subscriptionsAfter.data[0];
-		const subscriptionItemAfter = subscriptionAfter.items.data.find(
-			(item) => item.id === subscriptionItemBefore!.id,
-		);
+	const subscriptionAfter = subscriptionsAfter.data[0];
+	const subscriptionItemAfter = subscriptionAfter.items.data.find(
+		(item) => item.id === subscriptionItemBefore!.id,
+	);
 
-		expect(subscriptionItemAfter).toBeDefined();
-		expect(subscriptionItemAfter!.quantity).toBe(downgradedUnits);
-		expect(subscriptionItemAfter!.quantity).toBe(
-			initialUnits + unitsDifference,
-		);
-	},
-);
+	expect(subscriptionItemAfter).toBeDefined();
+	expect(subscriptionItemAfter!.quantity).toBe(downgradedUnits);
+	expect(subscriptionItemAfter!.quantity).toBe(initialUnits + unitsDifference);
+});

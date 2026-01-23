@@ -14,4 +14,3 @@ export const useSecretKeyStore = create<SecretKeyState>()((set) => ({
 
 export const useSecretKey = () => useSecretKeyStore((s) => s.secretKey);
 export const useSetSecretKey = () => useSecretKeyStore((s) => s.setSecretKey);
-

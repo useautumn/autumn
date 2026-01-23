@@ -1,11 +1,11 @@
+import { useState } from "react";
+import ConfettiExplosion from "react-confetti-explosion";
+import { toast } from "sonner";
 import Step from "@/components/general/OnboardingStep";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
-import { useState } from "react";
-import ConfettiExplosion from "react-confetti-explosion";
-import { toast } from "sonner";
 
 // export const CreateOrgStep = ({
 //   number,

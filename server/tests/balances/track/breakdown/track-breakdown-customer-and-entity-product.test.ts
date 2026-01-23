@@ -18,7 +18,7 @@ import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js"
  * Test 3.2: Customer has product + Entity also has same product
  * - Product A: 100 messages (attached to customer)
  * - Product A: 100 messages (attached to entity)
- * 
+ *
  * Expected:
  * - Customer level: 200 total, 2 breakdown items (one customer-level, one entity-level)
  * - Entity level: 200 total (inherits customer + own), 2 breakdown items
@@ -43,7 +43,11 @@ describe(`${chalk.yellowBright("track-breakdown-cus-and-entity-prod: customer + 
 	const customerId = testCase;
 	const autumnV2: AutumnInt = new AutumnInt({ version: ApiVersion.V2_0 });
 
-	const entity = { id: `${testCase}-user-1`, name: "User 1", feature_id: TestFeature.Users };
+	const entity = {
+		id: `${testCase}-user-1`,
+		name: "User 1",
+		feature_id: TestFeature.Users,
+	};
 
 	beforeAll(async () => {
 		await initCustomerV3({
@@ -170,8 +174,11 @@ describe(`${chalk.yellowBright("track-breakdown-cus-and-entity-prod: customer + 
 		expect(customerRes.balance?.current_balance).toBe(30);
 
 		// Breakdown sum should match
-		const sum = customerRes.balance?.breakdown?.reduce((s, b) => s + (b.current_balance ?? 0), 0) ?? 0;
+		const sum =
+			customerRes.balance?.breakdown?.reduce(
+				(s, b) => s + (b.current_balance ?? 0),
+				0,
+			) ?? 0;
 		expect(sum).toBe(30);
 	});
 });
-

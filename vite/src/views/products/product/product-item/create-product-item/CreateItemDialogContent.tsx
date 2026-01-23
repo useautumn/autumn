@@ -99,7 +99,7 @@ export const CreateItemDialogContent = ({
 };
 
 // {
-	/* <Tabs value={getTabValue()} onValueChange={handleTabChange}>
+/* <Tabs value={getTabValue()} onValueChange={handleTabChange}>
                 <TabsList className="gap-2">
                   <TabsTrigger className={tabTriggerClass} value="feature">
                     Feature

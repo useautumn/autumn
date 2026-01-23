@@ -1,10 +1,7 @@
 import type { ProductItem } from "@autumn/shared";
 import { Check, X } from "@phosphor-icons/react";
 import { IconButton } from "@/components/v2/buttons/IconButton";
-import {
-	SelectGroup,
-	SelectLabel,
-} from "@/components/v2/selects/Select";
+import { SelectGroup, SelectLabel } from "@/components/v2/selects/Select";
 import { TagSelect } from "@/components/v2/selects/TagSelect";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";

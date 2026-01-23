@@ -6,12 +6,12 @@ import {
 	type FullCusProduct,
 	type FullProduct,
 } from "@autumn/shared";
+import type Stripe from "stripe";
 import { logger } from "@/external/logtail/logtailUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BillingContext } from "@/internal/billing/v2/billingContext";
-import { customers } from "./customers";
 import { stripeCustomers } from "../stripe/customers";
-import type Stripe from "stripe";
+import { customers } from "./customers";
 
 /**
  * Create an organization fixture

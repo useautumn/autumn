@@ -91,13 +91,52 @@ export const expectProductCanceling = async (params: {
 }) => expectCustomerProductCorrect({ ...params, state: "canceled" });
 
 /**
- * Shorthand for checking product is scheduled
+ * Shorthand for checking product is scheduled.
+ * Optionally verify the `started_at` timestamp is within a tolerance of the expected value.
+ *
+ * @param startsAt - Expected timestamp in milliseconds when the product will start
+ * @param toleranceMs - Allowed deviation in milliseconds (default: 2 minutes)
  */
-export const expectProductScheduled = async (params: {
+export const expectProductScheduled = async ({
+	customerId,
+	customer: providedCustomer,
+	productId,
+	startsAt,
+	toleranceMs = 2 * 60 * 1000,
+}: {
 	customerId?: string;
 	customer?: ApiCustomerV3 | ApiEntityV0;
 	productId: string;
-}) => expectCustomerProductCorrect({ ...params, state: "scheduled" });
+	startsAt?: number;
+	toleranceMs?: number;
+}) => {
+	const customer = providedCustomer
+		? providedCustomer
+		: await defaultAutumn.customers.get(customerId!);
+
+	await expectCustomerProductCorrect({
+		customer: customer as ApiCustomerV3,
+		productId,
+		state: "scheduled",
+	});
+
+	if (startsAt !== undefined) {
+		const products = customer.products ?? [];
+		const product = products.find((p: { id?: string }) => p.id === productId);
+
+		if (!product) {
+			throw new Error(`Product ${productId} not found for startsAt check`);
+		}
+
+		const actualStartsAt = product.started_at;
+		const diff = Math.abs(actualStartsAt - startsAt);
+
+		expect(
+			diff <= toleranceMs,
+			`Product ${productId} started_at (${actualStartsAt}) should be within ${toleranceMs}ms of expected (${startsAt}), diff: ${diff}ms`,
+		).toBe(true);
+	}
+};
 
 /**
  * Shorthand for checking product does not exist

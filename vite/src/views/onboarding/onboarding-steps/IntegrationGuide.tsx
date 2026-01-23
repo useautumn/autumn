@@ -1,6 +1,6 @@
+import { AlertTriangle, ArrowUpRightFromSquare, Code } from "lucide-react";
 import Step from "@/components/general/OnboardingStep";
 import { Button } from "@/components/ui/button";
-import { Code, AlertTriangle, ArrowUpRightFromSquare } from "lucide-react";
 
 interface IntegrationGuideStepProps {
 	number: number;

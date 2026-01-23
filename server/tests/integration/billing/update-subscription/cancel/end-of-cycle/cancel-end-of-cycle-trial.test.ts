@@ -431,6 +431,13 @@ test(`${chalk.yellowBright("cancel trial EOC: with free default, free scheduled"
 		scheduled: [free.id],
 	});
 
+	// Verify free is scheduled to start when trial ends (7 days), not a month from now
+	await expectProductScheduled({
+		customer: customerAfterCancel,
+		productId: free.id,
+		startsAt: Date.now() + ms.days(7),
+	});
+
 	// Advance past trial end
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
@@ -448,8 +455,6 @@ test(`${chalk.yellowBright("cancel trial EOC: with free default, free scheduled"
 	});
 
 	// No paid invoice should be created
-	const invoices = customerAfterAdvance.invoices ?? [];
-	for (const invoice of invoices) {
-		expect(invoice.total).toBe(0);
-	}
+	for (const inv of customerAfterAdvance.invoices ?? [])
+		expect(inv.total).toBe(0);
 });

@@ -1,8 +1,8 @@
-import { TableButton } from "@/components/general/table-components/TableButton";
-import { updateSearchParams } from "@/utils/navUtils";
 import { FullCusProduct } from "@autumn/shared";
 import { ExternalLinkIcon } from "lucide-react";
 import { useNavigate } from "react-router";
+import { TableButton } from "@/components/general/table-components/TableButton";
+import { updateSearchParams } from "@/utils/navUtils";
 import { useCustomerContext } from "../CustomerContext";
 import { useCusQuery } from "../hooks/useCusQuery";
 

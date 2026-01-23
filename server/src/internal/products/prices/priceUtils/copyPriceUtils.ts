@@ -1,9 +1,14 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { PriceService } from "../PriceService.js";
-import { FixedPriceConfig, prices, PriceType } from "@autumn/shared";
+import {
+	type FixedPriceConfig,
+	type Price,
+	PriceType,
+	prices,
+	type UsagePriceConfig,
+} from "@autumn/shared";
 import { eq } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
-import { Price, UsagePriceConfig } from "@autumn/shared";
+import { PriceService } from "../PriceService.js";
 
 export const copyPrice = async ({
 	db,
@@ -20,7 +25,7 @@ export const copyPrice = async ({
 	isCustom?: boolean;
 	withPrevConfig?: boolean;
 }) => {
-	let price = (await db.query.prices.findFirst({
+	const price = (await db.query.prices.findFirst({
 		where: eq(prices.id, priceId),
 	})) as Price;
 

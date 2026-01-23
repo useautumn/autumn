@@ -166,7 +166,12 @@ export const CreateApiKeyDialog = ({
 								onChange={(e) => setName(e.target.value)}
 								variant={validationError ? "destructive" : undefined}
 								onKeyDown={(e) => {
-									if (e.key === "Enter" && name.trim() && !loading && !validationError) {
+									if (
+										e.key === "Enter" &&
+										name.trim() &&
+										!loading &&
+										!validationError
+									) {
 										e.preventDefault();
 										handleCreate();
 									}
@@ -192,7 +197,12 @@ export const CreateApiKeyDialog = ({
 									duration: 0.2,
 								}}
 							>
-								<Button onClick={() => onOpenChange(false)} className="cursor-pointer">Close</Button>
+								<Button
+									onClick={() => onOpenChange(false)}
+									className="cursor-pointer"
+								>
+									Close
+								</Button>
 							</motion.div>
 						) : (
 							<motion.div

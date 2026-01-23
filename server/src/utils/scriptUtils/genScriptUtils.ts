@@ -11,7 +11,7 @@ export const parseCsv = ({
 	return new Promise((resolve, reject) => {
 		const stream = fs.createReadStream(path);
 		const results: any[] = [];
-		let headers: string[] = [];
+		const headers: string[] = [];
 		stream
 			.pipe(csv({ separator: delimiter }))
 			.on("data", (data) => {

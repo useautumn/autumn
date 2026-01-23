@@ -1,5 +1,11 @@
-import { foreignKey, index, jsonb, text } from "drizzle-orm/pg-core";
-import { numeric, pgTable } from "drizzle-orm/pg-core";
+import {
+	foreignKey,
+	index,
+	jsonb,
+	numeric,
+	pgTable,
+	text,
+} from "drizzle-orm/pg-core";
 
 import { customers } from "../../cusModels/cusTable.js";
 import { prices } from "../../productModels/priceModels/priceTable.js";

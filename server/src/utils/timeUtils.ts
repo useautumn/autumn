@@ -1,8 +1,6 @@
-import { Duration, EntInterval } from "@autumn/shared";
-
-import { Entitlement } from "@autumn/shared";
-import { add } from "date-fns";
+import { Duration, EntInterval, Entitlement } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
+import { add } from "date-fns";
 import { formatUnixToDate } from "./genUtils.js";
 
 // Time conversion constants

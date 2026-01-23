@@ -1,5 +1,5 @@
-import { Badge } from "@/components/ui/badge";
 import { PriceType } from "@autumn/shared";
+import { Badge } from "@/components/ui/badge";
 
 interface PricingTypeBadgeProps {
 	type: string;

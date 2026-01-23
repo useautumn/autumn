@@ -1,27 +1,26 @@
 "use client";
 
-import EnvStep from "./onboarding-steps/Env";
-import MountHandler from "./onboarding-steps/MountHandler";
-import Step from "@/components/general/OnboardingStep";
-import AttachProduct from "./onboarding-steps/AttachProduct";
-import CheckAccessStep from "./onboarding-steps/CheckAccess";
-import Install from "./onboarding-steps/Install";
-import LoadingScreen from "../general/LoadingScreen";
-import IntegrationGuideStep from "./onboarding-steps/IntegrationGuide";
-import AutumnProviderStep from "./onboarding-steps/AutumnProvider";
-
-import { useState, useEffect, useRef } from "react";
-import { useSearchParams } from "react-router";
-import { useAxiosSWR } from "@/services/useAxiosSwr";
-import { useEnv } from "@/utils/envUtils";
-import { Book } from "lucide-react";
-import { ConnectStripeStep } from "./onboarding-steps/ConnectStripe";
-import { CreateSecretKey } from "./onboarding-steps/CreateSecretKey";
-import { ProductList } from "./onboarding-steps/ProductList";
-import { SampleApp } from "./onboarding-steps/SampleApp";
 import { AutumnProvider } from "autumn-js/react";
+import { Book } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router";
+import Step from "@/components/general/OnboardingStep";
 import { useSession } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useAxiosSWR } from "@/services/useAxiosSwr";
+import { useEnv } from "@/utils/envUtils";
+import LoadingScreen from "../general/LoadingScreen";
+import AttachProduct from "./onboarding-steps/AttachProduct";
+import AutumnProviderStep from "./onboarding-steps/AutumnProvider";
+import CheckAccessStep from "./onboarding-steps/CheckAccess";
+import { ConnectStripeStep } from "./onboarding-steps/ConnectStripe";
+import { CreateSecretKey } from "./onboarding-steps/CreateSecretKey";
+import EnvStep from "./onboarding-steps/Env";
+import Install from "./onboarding-steps/Install";
+import IntegrationGuideStep from "./onboarding-steps/IntegrationGuide";
+import MountHandler from "./onboarding-steps/MountHandler";
+import { ProductList } from "./onboarding-steps/ProductList";
+import { SampleApp } from "./onboarding-steps/SampleApp";
 
 function OnboardingView() {
 	const env = useEnv();

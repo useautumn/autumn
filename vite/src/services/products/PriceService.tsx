@@ -1,4 +1,4 @@
-import { AxiosInstance } from "axios";
+import type { AxiosInstance } from "axios";
 
 export class PriceService {
 	static async createPrice(axiosInstance: AxiosInstance, data: any) {

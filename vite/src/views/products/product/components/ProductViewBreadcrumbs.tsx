@@ -1,14 +1,13 @@
+import { useNavigate } from "react-router";
 import {
 	Breadcrumb,
-	BreadcrumbList,
 	BreadcrumbItem,
+	BreadcrumbList,
 	BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { navigateTo } from "@/utils/genUtils";
-
-import { useNavigate } from "react-router";
-import { useProductContext } from "../ProductContext";
 import { useEnv } from "@/utils/envUtils";
+import { navigateTo } from "@/utils/genUtils";
+import { useProductContext } from "../ProductContext";
 
 export default function ProductViewBreadcrumbs() {
 	const { product } = useProductContext();

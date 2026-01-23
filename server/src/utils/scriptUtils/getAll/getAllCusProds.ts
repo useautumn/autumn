@@ -1,8 +1,8 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { AppEnv, FullCusProduct } from "@autumn/shared";
+import { AppEnv, type FullCusProduct } from "@autumn/shared";
 import { sql } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-let cusProductsQuery = ({
+const cusProductsQuery = ({
 	lastProductId,
 	internalProductId,
 	pageSize = 250,
@@ -87,8 +87,8 @@ export const getAllFullCusProducts = async ({
 	internalProductId: string;
 }) => {
 	let lastProductId = "";
-	let allData: any[] = [];
-	let pageSize = 500;
+	const allData: any[] = [];
+	const pageSize = 500;
 
 	while (true) {
 		const data = await db.execute(
