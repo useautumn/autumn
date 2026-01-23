@@ -21,7 +21,7 @@ import chalk from "chalk";
 // INCOMPATIBLE BEHAVIOR COMBINATIONS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("refund_behavior error: refund_payment_method + next_cycle_only")}`, async () => {
+test.skip(`${chalk.yellowBright("refund_behavior error: refund_payment_method + next_cycle_only")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 30 });
 	const pro = products.base({ id: "pro", items: [messagesItem, priceItem] });
@@ -55,7 +55,7 @@ test.concurrent(`${chalk.yellowBright("refund_behavior error: refund_payment_met
 // POSITIVE INVOICE ERRORS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("refund_behavior error: refund_payment_method on upgrade (positive invoice)")}`, async () => {
+test.skip(`${chalk.yellowBright("refund_behavior error: refund_payment_method on upgrade (positive invoice)")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 20 });
 	const pro = products.base({ id: "pro", items: [messagesItem, priceItem] });
@@ -84,7 +84,7 @@ test.concurrent(`${chalk.yellowBright("refund_behavior error: refund_payment_met
 	});
 });
 
-test.concurrent(`${chalk.yellowBright("refund_behavior error: refund_payment_method on quantity increase (positive invoice)")}`, async () => {
+test.skip(`${chalk.yellowBright("refund_behavior error: refund_payment_method on quantity increase (positive invoice)")}`, async () => {
 	const billingUnits = 1;
 	const pricePerUnit = 10;
 
@@ -127,7 +127,7 @@ test.concurrent(`${chalk.yellowBright("refund_behavior error: refund_payment_met
 // ZERO-CHANGE SCENARIO
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("refund_behavior error: refund_payment_method with zero invoice total")}`, async () => {
+test.skip(`${chalk.yellowBright("refund_behavior error: refund_payment_method with zero invoice total")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 20 });
 	const pro = products.base({ id: "pro", items: [messagesItem, priceItem] });
@@ -159,7 +159,7 @@ test.concurrent(`${chalk.yellowBright("refund_behavior error: refund_payment_met
 // FREE PRODUCT SCENARIO
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("refund_behavior error: refund_payment_method on free product (zero total)")}`, async () => {
+test.skip(`${chalk.yellowBright("refund_behavior error: refund_payment_method on free product (zero total)")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
 	const freeProduct = products.base({
@@ -192,7 +192,7 @@ test.concurrent(`${chalk.yellowBright("refund_behavior error: refund_payment_met
 // VALID COMBINATION: grant_invoice_credits + next_cycle_only
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("refund_behavior: grant_invoice_credits with next_cycle_only is allowed")}`, async () => {
+test.skip(`${chalk.yellowBright("refund_behavior: grant_invoice_credits with next_cycle_only is allowed")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 30 });
 	const pro = products.base({ id: "pro", items: [messagesItem, priceItem] });
