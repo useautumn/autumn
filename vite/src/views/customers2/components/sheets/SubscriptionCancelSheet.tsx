@@ -13,7 +13,10 @@ import {
 	UpdateSubscriptionFormProvider,
 	useUpdateSubscriptionFormContext,
 } from "@/components/forms/update-subscription-v2";
-import { SheetHeader } from "@/components/v2/sheets/SharedSheetComponents";
+import {
+	LayoutGroup,
+	SheetHeader,
+} from "@/components/v2/sheets/SharedSheetComponents";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
@@ -29,40 +32,45 @@ function SheetContent() {
 	const isScheduled = customerProduct.status === CusProductStatus.Scheduled;
 
 	return (
-		<div className="flex flex-col h-full overflow-y-auto">
-			<SheetHeader
-				title="Cancel Subscription"
-				description={`Cancel ${customerProduct.product.name} for this customer`}
-				breadcrumbs={[
-					{ name: customerProduct.product.name, sheet: "subscription-detail" },
-				]}
-				itemId={customerProduct.id}
-			/>
+		<LayoutGroup>
+			<div className="flex flex-col h-full overflow-y-auto">
+				<SheetHeader
+					title="Cancel Subscription"
+					description={`Cancel ${customerProduct.product.name} for this customer`}
+					breadcrumbs={[
+						{
+							name: customerProduct.product.name,
+							sheet: "subscription-detail",
+						},
+					]}
+					itemId={customerProduct.id}
+				/>
 
-			{isScheduled && (
-				<div className="px-4 pt-4">
-					<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
-						This plan is scheduled to start on{" "}
-						{formatUnixToDateTime(customerProduct.starts_at).date}. Cancelling
-						will remove this schedule.
-					</InfoBox>
-				</div>
-			)}
+				{isScheduled && (
+					<div className="px-4 pt-4">
+						<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
+							This plan is scheduled to start on{" "}
+							{formatUnixToDateTime(customerProduct.starts_at).date}. Cancelling
+							will remove this schedule.
+						</InfoBox>
+					</div>
+				)}
 
-			{isDefault && (
-				<div className="px-4 pt-4">
-					<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
-						This is the default plan. Cancelling it means this customer will be
-						left without a plan.
-					</InfoBox>
-				</div>
-			)}
+				{isDefault && (
+					<div className="px-4 pt-4">
+						<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
+							This is the default plan. Cancelling it means this customer will
+							be left without a plan.
+						</InfoBox>
+					</div>
+				)}
 
-			<CancelModeSection />
-			<RefundBehaviorSection />
-			<CancelPreviewSection />
-			<CancelFooter />
-		</div>
+				<CancelModeSection />
+				<RefundBehaviorSection />
+				<CancelPreviewSection />
+				<CancelFooter />
+			</div>
+		</LayoutGroup>
 	);
 }
 

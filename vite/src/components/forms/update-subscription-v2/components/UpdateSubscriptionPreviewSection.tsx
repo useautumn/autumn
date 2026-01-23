@@ -1,10 +1,8 @@
 import type { AxiosError } from "axios";
 import { format } from "date-fns";
-import { AnimatePresence, motion } from "motion/react";
 import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { getBackendErr } from "@/utils/genUtils";
-import { SHEET_ANIMATION } from "@/views/products/plan/planAnimations";
 import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 import { PreviewErrorDisplay } from "./PreviewErrorDisplay";
 
@@ -37,32 +35,25 @@ export function UpdateSubscriptionPreviewSection() {
 		}
 	}
 
+	if (!hasChanges) return null;
+
+	if (error) {
+		return (
+			<SheetSection title="Pricing Preview" withSeparator>
+				<PreviewErrorDisplay error={error} />
+			</SheetSection>
+		);
+	}
+
 	return (
-		<AnimatePresence mode="wait">
-			{hasChanges && (
-				<motion.div
-					initial={{ opacity: 0, y: 20 }}
-					animate={{ opacity: 1, y: 0 }}
-					exit={{ opacity: 0, y: 20 }}
-					transition={SHEET_ANIMATION}
-				>
-					{error ? (
-						<SheetSection title="Pricing Preview" withSeparator>
-							<PreviewErrorDisplay error={error} />
-						</SheetSection>
-					) : (
-						<LineItemsPreview
-							title="Pricing Preview"
-							isLoading={isLoading}
-							loadingText="Calculating totals"
-							lineItems={previewData?.line_items}
-							currency={previewData?.currency}
-							totals={totals}
-							filterZeroAmounts
-						/>
-					)}
-				</motion.div>
-			)}
-		</AnimatePresence>
+		<LineItemsPreview
+			title="Pricing Preview"
+			isLoading={isLoading}
+			loadingText="Calculating totals"
+			lineItems={previewData?.line_items}
+			currency={previewData?.currency}
+			totals={totals}
+			filterZeroAmounts
+		/>
 	);
 }

@@ -1,10 +1,8 @@
 import type { AxiosError } from "axios";
 import { format } from "date-fns";
-import { motion } from "motion/react";
 import { useMemo } from "react";
 import { useUpdateSubscriptionFormContext } from "@/components/forms/update-subscription-v2";
 import { PreviewErrorDisplay } from "@/components/forms/update-subscription-v2/components/PreviewErrorDisplay";
-import { LAYOUT_TRANSITION } from "@/components/forms/update-subscription-v2/constants/animationConstants";
 import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { getBackendErr } from "@/utils/genUtils";
@@ -62,23 +60,23 @@ export function CancelPreviewSection() {
 		return result;
 	}, [previewData, cancelAction, refundBehavior, showRefundToggle]);
 
+	if (error) {
+		return (
+			<SheetSection title="Pricing Preview" withSeparator>
+				<PreviewErrorDisplay error={error} />
+			</SheetSection>
+		);
+	}
+
 	return (
-		<motion.div layout transition={LAYOUT_TRANSITION}>
-			{error ? (
-				<SheetSection title="Pricing Preview" withSeparator>
-					<PreviewErrorDisplay error={error} />
-				</SheetSection>
-			) : (
-				<LineItemsPreview
-					title="Pricing Preview"
-					isLoading={isLoading}
-					loadingText="Calculating totals"
-					lineItems={previewData?.line_items}
-					currency={previewData?.currency}
-					totals={totals}
-					filterZeroAmounts
-				/>
-			)}
-		</motion.div>
+		<LineItemsPreview
+			title="Pricing Preview"
+			isLoading={isLoading}
+			loadingText="Calculating totals"
+			lineItems={previewData?.line_items}
+			currency={previewData?.currency}
+			totals={totals}
+			filterZeroAmounts
+		/>
 	);
 }
