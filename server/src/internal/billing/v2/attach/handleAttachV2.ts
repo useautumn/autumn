@@ -1,5 +1,7 @@
 import { AttachV0ParamsSchema } from "@autumn/shared";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
+import { logAttachContext } from "./logs/logAttachContext";
+import { setupAttachBillingContext } from "./setup/setupAttachBillingContext";
 
 export const handleAttachV2 = createRoute({
 	body: AttachV0ParamsSchema,
@@ -23,6 +25,13 @@ export const handleAttachV2 = createRoute({
 		ctx.logger.info(
 			`=============== RUNNING ATTACH V2 FOR ${body.customer_id} ===============`,
 		);
+
+		// 1. Setup
+		const billingContext = await setupAttachBillingContext({
+			ctx,
+			params: body,
+		});
+		logAttachContext({ ctx, billingContext });
 
 		return c.json({ customer_id: body.customer_id }, 200);
 	},

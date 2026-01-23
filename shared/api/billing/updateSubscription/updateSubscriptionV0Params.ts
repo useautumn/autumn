@@ -4,46 +4,41 @@ import { z } from "zod/v4";
 import { FeatureOptionsSchema } from "../../../models/cusProductModels/cusProductModels";
 import { ProductItemSchema } from "../../../models/productV2Models/productItemModels/productItemModels";
 import { CancelActionSchema } from "../../common/cancelMode";
-import { CustomerDataSchema } from "../../common/customerData";
-import { EntityDataSchema } from "../../models";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
+import { BillingParamsBaseSchema } from "../common/billingParamsBase";
 import { RefundBehaviorSchema } from "../common/refundBehavior";
 
-export const ExtUpdateSubscriptionV0ParamsSchema = z.object({
-	// Customer / Entity Info
-	customer_id: z.string(),
-	product_id: z.string().nullish(),
-	entity_id: z.string().nullish(),
+export const ExtUpdateSubscriptionV0ParamsSchema =
+	BillingParamsBaseSchema.extend({
+		// Product identification (optional for update subscription - can target by customer_product_id)
+		product_id: z.string().nullish(),
 
-	customer_data: CustomerDataSchema.optional(),
-	entity_data: EntityDataSchema.optional(),
+		invoice: z.boolean().optional(),
+		enable_product_immediately: z.boolean().optional(),
+		finalize_invoice: z.boolean().optional(),
+		options: z.array(FeatureOptionsSchema).nullish(), // used for update quantity etc (in api - feature_quantities)
 
-	invoice: z.boolean().optional(),
-	enable_product_immediately: z.boolean().optional(),
-	finalize_invoice: z.boolean().optional(),
-	options: z.array(FeatureOptionsSchema).nullish(), // used for update quantity etc (in api - feature_quantities)
+		// New
+		version: z.number().optional(),
+		items: z.array(ProductItemSchema).optional(), // used for custom configuration of a plan (in api - plan_override)
+		free_trial: CreateFreeTrialSchema.nullable().optional(),
 
-	// New
-	version: z.number().optional(),
-	items: z.array(ProductItemSchema).optional(), // used for custom configuration of a plan (in api - plan_override)
-	free_trial: CreateFreeTrialSchema.nullable().optional(),
+		// Cancel action: 'cancel_immediately' | 'cancel_end_of_cycle' | 'uncancel'
+		cancel_action: CancelActionSchema.optional(),
 
-	// Cancel action: 'cancel_immediately' | 'cancel_end_of_cycle' | 'uncancel'
-	cancel_action: CancelActionSchema.optional(),
+		// Billing behavior for subscription updates:
+		// - 'prorate_immediately' (default): Invoice line items are charged immediately
+		// - 'next_cycle_only': Do NOT create any charges due to the update
+		billing_behavior: BillingBehaviorSchema.optional(),
 
-	// Billing behavior for subscription updates:
-	// - 'prorate_immediately' (default): Invoice line items are charged immediately
-	// - 'next_cycle_only': Do NOT create any charges due to the update
-	billing_behavior: BillingBehaviorSchema.optional(),
+		// Refund behavior for negative invoice totals (downgrades):
+		// - 'grant_invoice_credits' (default): Apply credits to customer balance
+		// - 'refund_payment_method': Issue refund to payment method
+		refund_behavior: RefundBehaviorSchema.optional(),
 
-	// Refund behavior for negative invoice totals (downgrades):
-	// - 'grant_invoice_credits' (default): Apply credits to customer balance
-	// - 'refund_payment_method': Issue refund to payment method
-	refund_behavior: RefundBehaviorSchema.optional(),
-
-	// reset_billing_cycle_anchor: z.boolean().optional(),
-	// new_billing_subscription: z.boolean().optional(),
-});
+		// reset_billing_cycle_anchor: z.boolean().optional(),
+		// new_billing_subscription: z.boolean().optional(),
+	});
 
 export const UpdateSubscriptionV0ParamsSchema =
 	ExtUpdateSubscriptionV0ParamsSchema.extend({

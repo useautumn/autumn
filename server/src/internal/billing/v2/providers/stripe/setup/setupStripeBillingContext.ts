@@ -12,26 +12,30 @@ export const setupStripeBillingContext = async ({
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
-	targetCustomerProduct: FullCusProduct;
+	targetCustomerProduct?: FullCusProduct;
 }) => {
-	const stripeSubscription = await fetchStripeSubscriptionForBilling({
-		ctx,
-		fullCus: fullCustomer,
-		products: [],
-		targetCusProductId: targetCustomerProduct.id,
-	});
+	// If no target customer product, skip subscription/schedule fetching
+	const stripeSubscription = targetCustomerProduct
+		? await fetchStripeSubscriptionForBilling({
+				ctx,
+				fullCus: fullCustomer,
+				products: [],
+				targetCusProductId: targetCustomerProduct.id,
+			})
+		: undefined;
 
-	const stripeSubscriptionSchedule =
-		await fetchStripeSubscriptionScheduleForBilling({
-			ctx,
-			fullCus: fullCustomer,
-			subscriptionScheduleId:
-				typeof stripeSubscription?.schedule === "string"
-					? stripeSubscription.schedule
-					: undefined,
-			products: [],
-			targetCusProductId: targetCustomerProduct.id,
-		});
+	const stripeSubscriptionSchedule = targetCustomerProduct
+		? await fetchStripeSubscriptionScheduleForBilling({
+				ctx,
+				fullCus: fullCustomer,
+				subscriptionScheduleId:
+					typeof stripeSubscription?.schedule === "string"
+						? stripeSubscription.schedule
+						: undefined,
+				products: [],
+				targetCusProductId: targetCustomerProduct.id,
+			})
+		: undefined;
 
 	const {
 		stripeCus: stripeCustomer,

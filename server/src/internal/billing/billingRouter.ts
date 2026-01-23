@@ -25,4 +25,4 @@ billingRouter.post(
 );
 
 // V2 Attach
-billingRouter.post("/v2/attach", ...handleAttachV2);
+billingRouter.post("/billing/attach", ...handleAttachV2);
