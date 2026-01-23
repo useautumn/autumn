@@ -28,7 +28,7 @@ export function CancelModeSection() {
 	const cancelAction = formValues.cancelAction ?? "cancel_end_of_cycle";
 
 	return (
-		<SheetSection title="When to cancel" withSeparator>
+		<SheetSection title="Cancellation" withSeparator>
 			<OptionCardGroup>
 				<OptionCard
 					selected={cancelAction === "cancel_end_of_cycle"}
