@@ -22,7 +22,7 @@ export const buildStripeSubscriptionUpdateAction = ({
 	stripeSubscriptionScheduleAction?: StripeSubscriptionScheduleAction;
 	subscriptionCancelAt?: number;
 }): StripeSubscriptionAction | undefined => {
-	const { stripeSubscription, trialContext } = billingContext;
+	const { stripeSubscription, trialContext, cancelMode } = billingContext;
 
 	if (!stripeSubscription) {
 		throw new Error(
@@ -48,9 +48,14 @@ export const buildStripeSubscriptionUpdateAction = ({
 		shouldUnsetTrialEnd = !scheduleManagesSubscription && trialEndsAt === null;
 	}
 
-	// Only set cancel_at if it differs from current value
+	// Determine cancel_at handling:
+	// 1. Clear cancel_at if uncancel mode and currently has a cancel_at
+	// 2. Set cancel_at if explicitly provided and differs from current value
 	const currentCancelAt = stripeSubscription.cancel_at;
+	const shouldClearCancelAt =
+		cancelMode === "uncancel" && currentCancelAt !== null;
 	const shouldSetCancelAt =
+		!shouldClearCancelAt &&
 		subscriptionCancelAt !== undefined &&
 		subscriptionCancelAt !== currentCancelAt;
 
@@ -61,7 +66,11 @@ export const buildStripeSubscriptionUpdateAction = ({
 			: shouldUnsetTrialEnd
 				? "now"
 				: undefined,
-		cancel_at: shouldSetCancelAt ? subscriptionCancelAt : undefined,
+		cancel_at: shouldClearCancelAt
+			? null
+			: shouldSetCancelAt
+				? subscriptionCancelAt
+				: undefined,
 		proration_behavior: "none",
 	};
 
