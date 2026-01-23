@@ -1,7 +1,5 @@
 import {
 	ErrCode,
-	type Feature,
-	FeatureType,
 	type FullCusProduct,
 	type FullCustomer,
 	type RangeEnum,
@@ -10,55 +8,16 @@ import {
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { EventsAggregationService } from "@/internal/events/EventsAggregationService.js";
-import { AnalyticsService } from "../AnalyticsService.js";
+import { eventActions } from "../actions/index.js";
 
 const QueryEventsSchema = z.object({
 	interval: z.string().nullish(),
 	event_names: z.array(z.string()).nullish(),
 	customer_id: z.string().optional(),
-	group_by: z.string().optional(),
 	bin_size: z.enum(["day", "hour", "month"]).optional(),
 	timezone: z.string().optional(),
 });
-
-const getTopEvents = async ({ ctx }: { ctx: AutumnContext }) => {
-	const { features } = ctx;
-
-	const topEventNamesRes = await AnalyticsService.getTopEventNames({
-		ctx,
-	});
-
-	const result = topEventNamesRes?.eventNames;
-
-	const featureIds: string[] = [];
-	const eventNames: string[] = [];
-
-	for (let i = 0; i < result.length; i++) {
-		// Is an event name
-		if (
-			features.some(
-				(feature: Feature) =>
-					feature.type === FeatureType.Metered &&
-					feature.event_names &&
-					feature.event_names.includes(result[i]),
-			)
-		) {
-			eventNames.push(result[i]);
-		} else if (features.some((feature: Feature) => feature.id === result[i])) {
-			featureIds.push(result[i]);
-		}
-
-		if (i >= 2) break;
-	}
-
-	return {
-		featureIds,
-		eventNames,
-	};
-};
 
 /**
  * Query events by customer ID
@@ -67,28 +26,36 @@ export const handleQueryEvents = createRoute({
 	body: QueryEventsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { db, org, env, features } = ctx;
-		let { interval, event_names, customer_id, group_by, bin_size, timezone } =
+		const { db, org, env, features, analyticsDb } = ctx;
+		let { interval, event_names, customer_id, bin_size, timezone } =
 			c.req.valid("json");
 
-		AnalyticsService.handleEarlyExit();
+		if (!analyticsDb) {
+			throw new RecaseError({
+				message: "Analytics database is not configured",
+				code: ErrCode.InternalError,
+				statusCode: StatusCodes.SERVICE_UNAVAILABLE,
+			});
+		}
 
 		let topEvents: { featureIds: string[]; eventNames: string[] } | undefined;
 
+		// Get top events if no event names provided
 		if (!event_names || event_names.length === 0) {
-			topEvents = await getTopEvents({ ctx });
+			topEvents = await eventActions.getTopEventNames({ ctx });
 			event_names = [...topEvents.eventNames, ...topEvents.featureIds];
 		}
 
-		let aggregateAll = false;
+		// Filter out empty event names
+		if (event_names && Array.isArray(event_names)) {
+			event_names = event_names.filter((name: string) => name !== "");
+		}
+
+		// Handle customer lookup
 		let customer: FullCustomer | undefined;
 		let bcExclusionFlag = false;
 
-		if (!customer_id) {
-			// No customer ID provided, set aggregateAll to true
-			aggregateAll = true;
-		} else {
-			// Customer ID provided, fetch customer data
+		if (customer_id) {
 			customer = await CusService.getFull({
 				db,
 				idOrInternalId: customer_id,
@@ -115,30 +82,30 @@ export const handleQueryEvents = createRoute({
 			}
 		}
 
-		if (event_names && Array.isArray(event_names)) {
-			event_names = event_names.filter((name: string) => name !== "");
-		}
-
 		// Use provided bin_size, or default based on interval
 		const binSize = bin_size || (interval === "24h" ? "hour" : "day");
 
-		const events = await EventsAggregationService.getTimeseriesEvents({
+		// Aggregate events using the new action
+		const aggregateResult = await eventActions.aggregate({
 			ctx,
-			params: {
-				customer_id: customer_id,
-				interval: interval as RangeEnum,
-				event_names,
-				bin_size: binSize,
-				aggregateAll,
-				group_by: group_by,
-				customer,
-				timezone: timezone,
-			},
+			eventNames: event_names,
+			customerId: customer_id,
+			interval: (interval ?? "7d") as RangeEnum,
+			binSize,
+			timezone,
 		});
+
+		// Transform to the format expected by frontend (ClickHouse-style format)
+		// Frontend expects: { meta: [{ name: string }], data: Record[], rows: number }
+		const meta = [{ name: "period" }, ...event_names.map((name) => ({ name }))];
 
 		return c.json({
 			customer,
-			events,
+			events: {
+				meta,
+				data: aggregateResult.data,
+				rows: aggregateResult.data.length,
+			},
 			features,
 			eventNames: event_names,
 			topEvents,

@@ -11,6 +11,7 @@ export class RevenueService {
 
 		if (!clickhouseClient) throw new Error("ClickHouse client not found");
 
+		// Pre-compute the threshold in milliseconds to avoid per-row conversion
 		const query = `
 SELECT
     SUM(total) AS total_payment_volume
@@ -20,8 +21,7 @@ INNER JOIN
     customers c ON invoices.internal_customer_id = c.internal_id
 WHERE
     status = 'paid'
-    -- Divide by 1000 to convert from milliseconds to seconds, then cast to DateTime
-    AND toDateTime(CAST(created_at AS Float64) / 1000) >= subtractDays(toStartOfDay(now()), 30)
+    AND created_at >= toUnixTimestamp(subtractDays(toStartOfDay(now()), 30)) * 1000
     AND c.org_id = {org_id:String}
     AND c.env = {env:String};`;
 

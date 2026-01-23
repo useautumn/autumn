@@ -7,7 +7,7 @@ import type {
 } from "@autumn/shared";
 import type { ClickHouseClient } from "@clickhouse/client";
 import type { User } from "better-auth";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { AnalyticsDb, DrizzleCli } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { OidcClaims } from "@/external/vercel/misc/vercelAuth.js";
 
@@ -22,6 +22,8 @@ export type RequestContext = {
 
 	// Objects
 	db: DrizzleCli;
+	analyticsDb: AnalyticsDb;
+
 	logger: Logger;
 	clickhouseClient?: ClickHouseClient;
 

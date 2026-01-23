@@ -6,7 +6,7 @@ import {
 	tryCatch,
 } from "@autumn/shared";
 import type { Context, Next } from "hono";
-import { db } from "@/db/initDrizzle.js";
+import { analyticsDb, db } from "@/db/initDrizzle.js";
 import { ClickHouseManager } from "@/external/clickhouse/ClickHouseManager.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
@@ -51,6 +51,8 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	c.set("ctx", {
 		// Core objects
 		db,
+		analyticsDb,
+
 		logger: childLogger,
 		clickhouseClient,
 

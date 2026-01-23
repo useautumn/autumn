@@ -88,45 +88,23 @@ export class AnalyticsService {
 	static async getTopUser({ req }: { req: ExtendedRequest }) {
 		const { clickhouseClient, org, env } = req;
 
+		// Optimized: Single query with COALESCE, uses date range instead of toDate() for index usage
 		const query = `
 SELECT 
-  c.name 
-FROM 
-  events e 
-JOIN 
-  customers c ON e.customer_id = c.id 
-WHERE 
-  toDate(e.timestamp) = today() 
-  AND e.org_id = {org_id: String} 
-  AND e.env = {env: String} 
-GROUP BY 
-  c.name 
-ORDER BY 
-  COUNT(*) DESC 
-LIMIT 1 
- 
-UNION ALL 
-
-SELECT 
-  'None' 
-WHERE 
-  NOT EXISTS ( 
-    SELECT 
-      1 
-    FROM 
-      events e 
-    JOIN 
-      customers c ON e.customer_id = c.id 
-    WHERE 
-      toDate(e.timestamp) = today() 
-      AND e.org_id = {org_id: String} 
-      AND e.env = {env: String} 
-    GROUP BY 
-      c.name 
-    ORDER BY 
-      COUNT(*) DESC 
-    LIMIT 1 
-  )
+  COALESCE(
+    (SELECT c.name 
+     FROM events e 
+     JOIN customers c ON e.customer_id = c.id 
+     WHERE e.timestamp >= toStartOfDay(now())
+       AND e.timestamp < toStartOfDay(now()) + INTERVAL 1 DAY
+       AND e.org_id = {org_id: String} 
+       AND e.env = {env: String}
+       AND e.set_usage = false
+     GROUP BY c.name 
+     ORDER BY COUNT(*) DESC 
+     LIMIT 1),
+    'None'
+  ) as name
 		`;
 
 		const result = await clickhouseClient.query({
