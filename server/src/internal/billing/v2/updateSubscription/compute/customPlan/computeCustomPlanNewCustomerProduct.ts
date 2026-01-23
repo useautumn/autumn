@@ -26,7 +26,7 @@ export const computeCustomPlanNewCustomerProduct = ({
 		currentEpochMs,
 		featureQuantities,
 		trialContext,
-		cancelMode,
+		cancelAction,
 	} = updateSubscriptionContext;
 
 	const existingUsages = cusProductToExistingUsages({
@@ -44,7 +44,7 @@ export const computeCustomPlanNewCustomerProduct = ({
 	);
 
 	const cancelFields = computeCancelFields({
-		cancelMode,
+		cancelAction,
 		currentCustomerProduct,
 	});
 

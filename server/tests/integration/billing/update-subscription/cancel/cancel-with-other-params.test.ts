@@ -79,7 +79,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: with custom plan ite
 		customer_id: customerId,
 		product_id: pro.id,
 		items: [updatedMessagesItem, newPriceItem],
-		cancel: "end_of_cycle" as const,
+		cancel_action: "cancel_end_of_cycle" as const,
 	};
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
@@ -184,7 +184,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: with prepaid quantit
 		customer_id: customerId,
 		product_id: pro.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: 500 }], // 5 packs
-		cancel: "end_of_cycle" as const,
+		cancel_action: "cancel_end_of_cycle" as const,
 	};
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
@@ -284,7 +284,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: with price increase 
 		customer_id: customerId,
 		product_id: pro.id,
 		items: [updatedMessagesItem, newPriceItem],
-		cancel: "end_of_cycle" as const,
+		cancel_action: "cancel_end_of_cycle" as const,
 	};
 
 	const result = await autumnV1.subscriptions.update(updateParams);

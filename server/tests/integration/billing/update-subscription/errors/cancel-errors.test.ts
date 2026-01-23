@@ -77,7 +77,7 @@ test.concurrent(`${chalk.yellowBright("error: cannot cancel scheduled product")}
 			await autumnV1.subscriptions.update({
 				customer_id: customerId,
 				product_id: pro.id,
-				cancel: "immediately",
+				cancel_action: "cancel_immediately",
 			});
 		},
 	});
@@ -120,7 +120,7 @@ test.concurrent(`${chalk.yellowBright("error: cancel non-existent product")}`, a
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: "immediately",
+		cancel_action: "cancel_immediately",
 	});
 
 	// Verify pro is gone
@@ -138,7 +138,7 @@ test.concurrent(`${chalk.yellowBright("error: cancel non-existent product")}`, a
 			await autumnV1.subscriptions.update({
 				customer_id: customerId,
 				product_id: pro.id,
-				cancel: "immediately",
+				cancel_action: "cancel_immediately",
 			});
 		},
 	});
@@ -187,7 +187,7 @@ test.concurrent(`${chalk.yellowBright("error: cancel immediately with options")}
 			await autumnV1.subscriptions.update({
 				customer_id: customerId,
 				product_id: pro.id,
-				cancel: "immediately",
+				cancel_action: "cancel_immediately",
 				options: [{ feature_id: "messages", quantity: 200 }],
 			});
 		},
@@ -232,7 +232,7 @@ test.concurrent(`${chalk.yellowBright("error: cancel immediately with version")}
 			await autumnV1.subscriptions.update({
 				customer_id: customerId,
 				product_id: pro.id,
-				cancel: "immediately",
+				cancel_action: "cancel_immediately",
 				version: 2,
 			});
 		},
@@ -277,7 +277,7 @@ test.concurrent(`${chalk.yellowBright("error: cancel immediately with items")}`,
 			await autumnV1.subscriptions.update({
 				customer_id: customerId,
 				product_id: pro.id,
-				cancel: "immediately",
+				cancel_action: "cancel_immediately",
 				items: [messagesItem],
 			});
 		},
@@ -319,7 +319,7 @@ test.concurrent(`${chalk.yellowBright("error: cannot cancel free product with en
 			await autumnV1.subscriptions.update({
 				customer_id: customerId,
 				product_id: free.id,
-				cancel: "end_of_cycle",
+				cancel_action: "cancel_end_of_cycle",
 			});
 		},
 	});
@@ -362,7 +362,7 @@ test.concurrent(`${chalk.yellowBright("error: cannot cancel one-time product wit
 			await autumnV1.subscriptions.update({
 				customer_id: customerId,
 				product_id: oneTime.id,
-				cancel: "end_of_cycle",
+				cancel_action: "cancel_end_of_cycle",
 			});
 		},
 	});
@@ -406,7 +406,7 @@ test.concurrent(`${chalk.yellowBright("error: cannot pass free_trial when cancel
 			await autumnV1.subscriptions.update({
 				customer_id: customerId,
 				product_id: proTrial.id,
-				cancel: "end_of_cycle",
+				cancel_action: "cancel_end_of_cycle",
 				free_trial: {
 					length: 14,
 					duration: FreeTrialDuration.Day,

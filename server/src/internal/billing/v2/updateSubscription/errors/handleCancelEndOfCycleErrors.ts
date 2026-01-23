@@ -17,7 +17,7 @@ export const handleCancelEndOfCycleErrors = ({
 	billingContext: UpdateSubscriptionBillingContext;
 	params: UpdateSubscriptionV0Params;
 }) => {
-	if (params.cancel !== "end_of_cycle") return;
+	if (billingContext.cancelAction !== "cancel_end_of_cycle") return;
 
 	const { customerProduct } = billingContext;
 

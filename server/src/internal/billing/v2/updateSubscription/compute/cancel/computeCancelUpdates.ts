@@ -10,8 +10,8 @@ export interface CancelUpdates {
 
 /**
  * Builds the cancel field updates for a customer product.
- * For 'immediately' mode, includes status: Expired.
- * For 'end_of_cycle' mode, only sets cancel fields without status change.
+ * For 'cancel_immediately' mode, includes status: Expired.
+ * For 'cancel_end_of_cycle' mode, only sets cancel fields without status change.
  */
 export const computeCancelUpdates = ({
 	billingContext,
@@ -20,9 +20,9 @@ export const computeCancelUpdates = ({
 	billingContext: UpdateSubscriptionBillingContext;
 	endOfCycleMs: number;
 }): CancelUpdates => {
-	const { cancelMode, currentEpochMs } = billingContext;
+	const { cancelAction, currentEpochMs } = billingContext;
 
-	if (cancelMode === "immediately") {
+	if (cancelAction === "cancel_immediately") {
 		return {
 			canceled: true,
 			canceled_at: currentEpochMs,

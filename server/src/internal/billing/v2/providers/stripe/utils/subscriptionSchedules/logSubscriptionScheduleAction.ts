@@ -43,10 +43,7 @@ export const logSubscriptionScheduleAction = ({
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
-	subscriptionScheduleAction: Extract<
-		StripeSubscriptionScheduleAction,
-		{ type: "create" | "update" }
-	>;
+	subscriptionScheduleAction: StripeSubscriptionScheduleAction;
 }): void => {
 	if (subscriptionScheduleAction.type === "release") {
 		ctx.logger.debug(

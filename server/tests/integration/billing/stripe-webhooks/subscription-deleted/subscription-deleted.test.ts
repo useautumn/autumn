@@ -160,7 +160,7 @@ test(`${chalk.yellowBright("sub.deleted: cancel after end_of_cycle via Stripe")}
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify pro is canceling and free is scheduled

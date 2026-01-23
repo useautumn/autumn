@@ -83,7 +83,7 @@ test(`${chalk.yellowBright("cancel trial immediately entity: one entity, other s
 		customer_id: customerId,
 		entity_id: entities[1].id,
 		product_id: proTrial.id,
-		cancel: "immediately",
+		cancel_action: "cancel_immediately",
 	});
 
 	// Wait for processing
@@ -158,7 +158,7 @@ test(`${chalk.yellowBright("cancel trial immediately entity: both entities, subs
 		customer_id: customerId,
 		entity_id: entities[0].id,
 		product_id: proTrial.id,
-		cancel: "immediately",
+		cancel_action: "cancel_immediately",
 	});
 
 	// Wait for processing
@@ -182,7 +182,7 @@ test(`${chalk.yellowBright("cancel trial immediately entity: both entities, subs
 		customer_id: customerId,
 		entity_id: entities[1].id,
 		product_id: proTrial.id,
-		cancel: "immediately",
+		cancel_action: "cancel_immediately",
 	});
 
 	// Wait for processing
@@ -261,7 +261,7 @@ test(`${chalk.yellowBright("cancel trial immediately entity: mixed EOC + immedia
 		customer_id: customerId,
 		entity_id: entities[1].id,
 		product_id: proTrial.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify subscription still trialing
@@ -278,7 +278,7 @@ test(`${chalk.yellowBright("cancel trial immediately entity: mixed EOC + immedia
 		customer_id: customerId,
 		entity_id: entities[2].id,
 		product_id: proTrial.id,
-		cancel: "immediately",
+		cancel_action: "cancel_immediately",
 	});
 
 	// Wait for processing
@@ -305,7 +305,7 @@ test(`${chalk.yellowBright("cancel trial immediately entity: mixed EOC + immedia
 		customer_id: customerId,
 		entity_id: entities[0].id,
 		product_id: proTrial.id,
-		cancel: "end_of_cycle",
+		cancel_action: "cancel_end_of_cycle",
 	});
 
 	// Verify subscription is trialing but canceled (all remaining entities are EOC canceling)
@@ -368,7 +368,7 @@ test(`${chalk.yellowBright("cancel trial immediately entity: cancel then re-atta
 		customer_id: customerId,
 		entity_id: entities[0].id,
 		product_id: proTrial.id,
-		cancel: "immediately",
+		cancel_action: "cancel_immediately",
 	});
 
 	// Wait for processing

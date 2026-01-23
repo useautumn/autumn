@@ -22,7 +22,7 @@ export const logUpdateSubscriptionContext = ({
 		stripeSubscription,
 		stripeSubscriptionSchedule,
 		isCustom,
-		cancelMode,
+		cancelAction,
 	} = billingContext;
 
 	const fullProduct = fullProducts[0];
@@ -54,7 +54,7 @@ export const logUpdateSubscriptionContext = ({
 					: "undefined",
 
 				defaultProduct: billingContext.defaultProduct?.name ?? "undefined",
-				cancelMode: cancelMode ? cancelMode : "no cancel operation",
+				cancelAction: cancelAction ? cancelAction : "no cancel operation",
 			},
 		},
 	});

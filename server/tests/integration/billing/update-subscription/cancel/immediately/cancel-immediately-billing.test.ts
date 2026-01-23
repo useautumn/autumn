@@ -98,7 +98,7 @@ test.concurrent(`${chalk.yellowBright("cancel immediately billing: base + prepai
 	const cancelParams = {
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: "immediately" as const,
+		cancel_action: "cancel_immediately" as const,
 	};
 
 	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
@@ -199,7 +199,7 @@ test.concurrent(`${chalk.yellowBright("cancel immediately billing: base + alloca
 	const cancelParams = {
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: "immediately" as const,
+		cancel_action: "cancel_immediately" as const,
 	};
 
 	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
@@ -331,7 +331,7 @@ test.concurrent(`${chalk.yellowBright("cancel immediately billing: base + prepai
 	const cancelParams = {
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: "immediately" as const,
+		cancel_action: "cancel_immediately" as const,
 	};
 
 	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
@@ -460,7 +460,7 @@ test.concurrent(`${chalk.yellowBright("cancel immediately billing: base + alloca
 	const cancelParams = {
 		customer_id: customerId,
 		product_id: pro.id,
-		cancel: "immediately" as const,
+		cancel_action: "cancel_immediately" as const,
 	};
 
 	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);

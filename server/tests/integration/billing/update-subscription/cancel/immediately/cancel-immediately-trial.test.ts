@@ -80,7 +80,7 @@ test(`${chalk.yellowBright("cancel trial immediately: basic cancel")}`, async ()
 	const cancelParams = {
 		customer_id: customerId,
 		product_id: proTrial.id,
-		cancel: "immediately" as const,
+		cancel_action: "cancel_immediately" as const,
 	};
 	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
 	expect(preview.total).toBe(0);
@@ -167,7 +167,7 @@ test(`${chalk.yellowBright("cancel trial immediately: with free default")}`, asy
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: proTrial.id,
-		cancel: "immediately",
+		cancel_action: "cancel_immediately",
 	});
 
 	// Verify pro is removed and free is active
@@ -243,7 +243,7 @@ test(`${chalk.yellowBright("cancel trial immediately: re-attach charges full pri
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: proTrial.id,
-		cancel: "immediately",
+		cancel_action: "cancel_immediately",
 	});
 
 	// Verify product is removed
@@ -349,7 +349,7 @@ test(`${chalk.yellowBright("cancel trial immediately: with scheduled downgrade, 
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: premiumTrial.id,
-		cancel: "immediately",
+		cancel_action: "cancel_immediately",
 	});
 
 	// Verify both products are removed
@@ -432,7 +432,7 @@ test(`${chalk.yellowBright("cancel trial immediately: with consumable usage, no 
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: proTrial.id,
-		cancel: "immediately",
+		cancel_action: "cancel_immediately",
 	});
 
 	// Wait for any async processing
