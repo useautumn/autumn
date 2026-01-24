@@ -1,10 +1,7 @@
 import { AppEnv, type Entity, type FullCusProduct } from "@autumn/shared";
 import { ArrowSquareOutIcon, PackageIcon } from "@phosphor-icons/react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Row } from "@tanstack/react-table";
-import type { AxiosError } from "axios";
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
 
 import { Table } from "@/components/general/table";
 import { SectionTag } from "@/components/v2/badges/SectionTag";
@@ -12,7 +9,6 @@ import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { useFullCusSearchQuery } from "@/views/customers/hooks/useFullCusSearchQuery";
 import { useSavedViewsQuery } from "@/views/customers/hooks/useSavedViewsQuery";
@@ -118,32 +114,8 @@ export function CustomerProductsTable() {
 		setTransferOpen(true);
 	};
 
-	const axiosInstance = useAxiosInstance();
-	const queryClient = useQueryClient();
-
-	const uncancelMutation = useMutation({
-		mutationFn: async (product: FullCusProduct) => {
-			const response = await axiosInstance.post("/v1/subscriptions/update", {
-				customer_id: customer.id,
-				product_id: product.product.id,
-				cancel_action: "uncancel",
-			});
-			return response.data;
-		},
-		onSuccess: () => {
-			toast.success("Subscription uncanceled successfully");
-			queryClient.invalidateQueries({ queryKey: ["customer", customer.id] });
-		},
-		onError: (error) => {
-			toast.error(
-				(error as AxiosError<{ message: string }>)?.response?.data?.message ??
-					"Failed to uncancel subscription",
-			);
-		},
-	});
-
 	const handleUncancelClick = (product: FullCusProduct) => {
-		uncancelMutation.mutate(product);
+		setSheet({ type: "subscription-uncancel", itemId: product.id });
 	};
 
 	const handleRowClick = (cusProduct: FullCusProduct) => {

@@ -39,7 +39,7 @@ import chalk from "chalk";
  * - First invoice after trial: $20 base only (no $15 overage charge for trial usage)
  * - Balance should be reset to 100 (included usage)
  */
-test(`${chalk.yellowBright("invoice.created trial: customer-level overage during trial → no charge after trial ends")}`, async () => {
+test.concurrent(`${chalk.yellowBright("invoice.created trial: customer-level overage during trial → no charge after trial ends")}`, async () => {
 	const customerId = "inv-trial-cus-overage";
 
 	const consumableItem = items.consumableMessages({ includedUsage: 100 });
@@ -111,7 +111,7 @@ test(`${chalk.yellowBright("invoice.created trial: customer-level overage during
  * - First invoice after trial: $20 base only (no $10 overage charge)
  * - Entity balance should be reset to 100
  */
-test(`${chalk.yellowBright("invoice.created trial: entity-level overage during trial → no charge after trial ends")}`, async () => {
+test.concurrent(`${chalk.yellowBright("invoice.created trial: entity-level overage during trial → no charge after trial ends")}`, async () => {
 	const customerId = "inv-trial-ent-overage";
 
 	const consumableItem = items.consumableMessages({ includedUsage: 100 });
@@ -216,7 +216,7 @@ test(`${chalk.yellowBright("invoice.created trial: entity-level overage during t
  * - NO overage charges for either entity's trial usage
  * - Both entity balances should be reset to 100
  */
-test(`${chalk.yellowBright("invoice.created trial: multiple entities with overage during trial → no charge after trial ends")}`, async () => {
+test.concurrent(`${chalk.yellowBright("invoice.created trial: multiple entities with overage during trial → no charge after trial ends")}`, async () => {
 	const customerId = "inv-trial-multi-ent";
 
 	const consumableItem = items.consumableMessages({ includedUsage: 100 });

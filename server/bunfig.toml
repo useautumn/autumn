@@ -1,0 +1,9 @@
+# Server-specific config (for run.sh which executes from server/)
+preload = ["../scripts/preload-env.ts"]
+
+[test]
+preload = ["../scripts/preload-env.ts", "./tests/setup-integration-tests.ts"]
+timeout = 0
+
+[test.env]
+NODE_ENV = "test"

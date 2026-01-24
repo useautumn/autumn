@@ -27,6 +27,8 @@ BUN_PARALLEL_V2 \
   'update-subscription/multi-product' \
   'update-subscription/update-quantity' \
   'update-subscription/version-update' \
-  'update-subscription/uncancel' \
+  'update-subscription/cancel/uncancel' \
+  'update-subscription/cancel/immediately' \
+  'update-subscription/cancel/end-of-cycle' \
   --max=2
 

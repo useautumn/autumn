@@ -174,8 +174,9 @@ export const isCustomerProductOnStripeSubscriptionSchedule = ({
 	stripeSubscriptionScheduleId,
 }: {
 	customerProduct: FullCusProduct;
-	stripeSubscriptionScheduleId: string;
+	stripeSubscriptionScheduleId: string | null;
 }) => {
+	if (!stripeSubscriptionScheduleId) return false;
 	return customerProduct.scheduled_ids?.includes(stripeSubscriptionScheduleId);
 };
 

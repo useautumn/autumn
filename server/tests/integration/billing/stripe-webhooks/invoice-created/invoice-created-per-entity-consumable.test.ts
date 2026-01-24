@@ -48,7 +48,7 @@ import chalk from "chalk";
  * - Final invoice: $20 base (single) + $45 overage = $65
  * - All entity balances reset to 100 after cycle
  */
-test(`${chalk.yellowBright("invoice.created per-entity consumable: 3 entities with varying overage → advance cycle")}`, async () => {
+test.concurrent(`${chalk.yellowBright("invoice.created per-entity consumable: 3 entities with varying overage → advance cycle")}`, async () => {
 	const customerId = "inv-pe-cons-3ent";
 
 	// Create per-entity consumable messages (100 included per entity)
@@ -172,7 +172,7 @@ test(`${chalk.yellowBright("invoice.created per-entity consumable: 3 entities wi
  * IMPORTANT: For per-entity consumables, ALL entity overages are SUMMED FIRST,
  * then the TOTAL is rounded up to billing units. NOT rounded per-entity then summed.
  */
-test(`${chalk.yellowBright("invoice.created per-entity consumable: billing units - sum then round → advance cycle")}`, async () => {
+test.concurrent(`${chalk.yellowBright("invoice.created per-entity consumable: billing units - sum then round → advance cycle")}`, async () => {
 	const customerId = "inv-pe-cons-billing-units";
 
 	// Create per-entity consumable with billingUnits=10, $1 per 10 units
@@ -254,7 +254,7 @@ test(`${chalk.yellowBright("invoice.created per-entity consumable: billing units
  * - Only Entity 3 has overage: 100 * $0.10 = $10
  * - Final invoice: $20 base (single) + $10 overage = $30
  */
-test(`${chalk.yellowBright("invoice.created per-entity consumable: mixed usage - some in overage, some within included")}`, async () => {
+test.concurrent(`${chalk.yellowBright("invoice.created per-entity consumable: mixed usage - some in overage, some within included")}`, async () => {
 	const customerId = "inv-pe-cons-mixed";
 
 	const perEntityConsumable = items.consumableMessages({
@@ -349,7 +349,7 @@ test(`${chalk.yellowBright("invoice.created per-entity consumable: mixed usage -
  * - No overage charges
  * - Final invoice: $20 base (single) only
  */
-test(`${chalk.yellowBright("invoice.created per-entity consumable: no overage - all within included → advance cycle")}`, async () => {
+test.concurrent(`${chalk.yellowBright("invoice.created per-entity consumable: no overage - all within included → advance cycle")}`, async () => {
 	const customerId = "inv-pe-cons-no-ovg";
 
 	const perEntityConsumable = items.consumableMessages({
@@ -440,7 +440,7 @@ test(`${chalk.yellowBright("invoice.created per-entity consumable: no overage - 
  * NOTE: For per-entity consumables, ALL entity overages are SUMMED FIRST,
  * then the TOTAL is rounded up to billing units.
  */
-test(`${chalk.yellowBright("invoice.created per-entity consumable: decimal usage - sum then round → advance cycle")}`, async () => {
+test.concurrent(`${chalk.yellowBright("invoice.created per-entity consumable: decimal usage - sum then round → advance cycle")}`, async () => {
 	const customerId = "inv-pe-cons-decimal";
 
 	const perEntityConsumable = items.consumableMessages({
@@ -530,7 +530,7 @@ test(`${chalk.yellowBright("invoice.created per-entity consumable: decimal usage
  * IMPORTANT: For per-entity consumables, ALL entity overages are SUMMED FIRST,
  * then the TOTAL is rounded up to billing units. NOT rounded per-entity then summed.
  */
-test(`${chalk.yellowBright("invoice.created per-entity consumable: billing units partial - sum then round → advance cycle")}`, async () => {
+test.concurrent(`${chalk.yellowBright("invoice.created per-entity consumable: billing units partial - sum then round → advance cycle")}`, async () => {
 	const customerId = "inv-pe-cons-partial-round";
 
 	// $2 per 25 units, 100 included per entity

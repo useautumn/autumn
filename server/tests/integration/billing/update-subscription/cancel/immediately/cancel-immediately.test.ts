@@ -682,3 +682,103 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: one-off prepaid produ
 		env: ctx.env,
 	});
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 8: Cancel one-off product immediately (with free default) - should NOT attach default
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - Free default product exists
+ * - User purchases one-off prepaid messages (2 packs = 200 messages)
+ * - User cancels the one-off product immediately
+ *
+ * Expected Result:
+ * - One-off product is removed immediately
+ * - Free default product is NOT attached (one-off cancellation shouldn't trigger default)
+ * - No products attached
+ * - No Stripe subscription
+ */
+test.concurrent(`${chalk.yellowBright("cancel immediately: one-off product does not create free default")}`, async () => {
+	const customerId = "cancel-imm-oneoff-no-default";
+
+	const messagesItem = items.monthlyMessages({ includedUsage: 50 });
+
+	const free = products.base({
+		id: "free",
+		items: [messagesItem],
+		isDefault: true,
+	});
+
+	const oneOffMessagesItem = items.oneOffMessages({
+		includedUsage: 0,
+		billingUnits: 100,
+		price: 10,
+	});
+
+	const oneOffProduct = products.base({
+		id: "oneoff",
+		items: [oneOffMessagesItem],
+	});
+
+	const { autumnV1, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [free, oneOffProduct] }),
+		],
+		actions: [
+			s.attach({
+				productId: oneOffProduct.id,
+				options: [{ feature_id: "messages", quantity: 200 }], // 2 packs
+			}),
+		],
+	});
+
+	// Verify one-off product is active and free is NOT attached
+	const customerAfterAttach =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectCustomerProducts({
+		customer: customerAfterAttach,
+		active: [oneOffProduct.id],
+		notPresent: [free.id],
+	});
+	expectCustomerInvoiceCorrect({
+		customer: customerAfterAttach,
+		count: 1,
+		latestTotal: 20, // 2 packs * $10 = $20
+	});
+
+	// Cancel one-off product immediately
+	const cancelParams = {
+		customer_id: customerId,
+		product_id: oneOffProduct.id,
+		cancel_action: "cancel_immediately" as const,
+	};
+	await autumnV1.subscriptions.update(cancelParams);
+
+	// Verify one-off product is gone and free default is NOT attached
+	const customerAfterCancel =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectCustomerProducts({
+		customer: customerAfterCancel,
+		notPresent: [oneOffProduct.id, free.id],
+	});
+
+	// No products should be attached (default should NOT be triggered for one-off)
+	expect(customerAfterCancel.products.length).toBe(0);
+
+	// Verify no new invoice created (no refund for one-off)
+	expectCustomerInvoiceCorrect({
+		customer: customerAfterCancel,
+		count: 1, // Still just the original invoice
+	});
+
+	// Verify no Stripe subscription exists
+	await expectNoStripeSubscription({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+	});
+});

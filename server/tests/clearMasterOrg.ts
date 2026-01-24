@@ -11,7 +11,7 @@ import { redis } from "@/external/redis/initRedis.js";
 import { clearOrg } from "./utils/setup/clearOrg.js";
 import { setupOrg } from "./utils/setup/setupOrg.js";
 
-async function main() {
+export const clearMasterOrg = async () => {
 	console.log(chalk.blue("\n🧹 Clearing Master Org...\n"));
 
 	try {
@@ -52,7 +52,7 @@ async function main() {
 		console.error(chalk.red("\n❌ Error:"), error);
 		process.exit(1);
 	}
-}
+};
 
-await main();
-process.exit(0);
+// await main();
+// process.exit(0);

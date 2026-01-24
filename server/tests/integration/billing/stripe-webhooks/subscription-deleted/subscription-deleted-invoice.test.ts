@@ -50,7 +50,7 @@ import { timeout } from "@/utils/genUtils";
  * - Autumn does NOT create a final arrear invoice (metered + immediate cancel)
  * - Only the initial attach invoice exists
  */
-test(`${chalk.yellowBright("sub.deleted invoice: customer consumable → Stripe cancel immediately → no final invoice")}`, async () => {
+test.concurrent(`${chalk.yellowBright("sub.deleted invoice: customer consumable → Stripe cancel immediately → no final invoice")}`, async () => {
 	const customerId = "sub-del-inv-cus-imm";
 
 	const consumableItem = items.consumableMessages({ includedUsage: 100 });
@@ -153,7 +153,7 @@ test(`${chalk.yellowBright("sub.deleted invoice: customer consumable → Stripe 
  * This matches the behavior of customer-level consumables where immediate
  * cancellation does not charge overage.
  */
-test(`${chalk.yellowBright("sub.deleted invoice: entity consumable → Stripe cancel immediately → no final invoice")}`, async () => {
+test.concurrent(`${chalk.yellowBright("sub.deleted invoice: entity consumable → Stripe cancel immediately → no final invoice")}`, async () => {
 	const customerId = "sub-del-inv-ent-imm";
 
 	const consumableItem = items.consumableMessages({ includedUsage: 100 });
@@ -263,7 +263,7 @@ test(`${chalk.yellowBright("sub.deleted invoice: entity consumable → Stripe ca
  * This tests that the wasImmediateStripeCancellation check works correctly
  * even when subscription items have different period ends.
  */
-test(`${chalk.yellowBright("sub.deleted invoice: multi-interval → advance 1 month → Stripe cancel immediately → no invoice")}`, async () => {
+test.concurrent(`${chalk.yellowBright("sub.deleted invoice: multi-interval → advance 1 month → Stripe cancel immediately → no invoice")}`, async () => {
 	const customerId = "sub-del-inv-multi-int";
 
 	// Multi-interval: monthly consumable + annual base price
@@ -383,7 +383,7 @@ test(`${chalk.yellowBright("sub.deleted invoice: multi-interval → advance 1 mo
  * - Autumn does NOT create a final arrear invoice (immediate cancel)
  * - Only initial attach + renewal invoices exist
  */
-test(`${chalk.yellowBright("sub.deleted invoice: entity consumable → advance 1 month → Stripe cancel immediately → no invoice")}`, async () => {
+test.concurrent(`${chalk.yellowBright("sub.deleted invoice: entity consumable → advance 1 month → Stripe cancel immediately → no invoice")}`, async () => {
 	const customerId = "sub-del-inv-ent-adv";
 
 	const consumableItem = items.consumableMessages({ includedUsage: 100 });
@@ -497,7 +497,7 @@ test(`${chalk.yellowBright("sub.deleted invoice: entity consumable → advance 1
  * - Autumn does NOT create an arrear invoice (trial usage is free)
  * - No invoices created (trial = no charge)
  */
-test(`${chalk.yellowBright("sub.deleted invoice: customer trial consumable → cancel at period end → NO arrear invoice")}`, async () => {
+test.concurrent(`${chalk.yellowBright("sub.deleted invoice: customer trial consumable → cancel at period end → NO arrear invoice")}`, async () => {
 	const customerId = "sub-del-inv-cus-trial";
 
 	const consumableItem = items.consumableMessages({ includedUsage: 100 });
@@ -607,7 +607,7 @@ test(`${chalk.yellowBright("sub.deleted invoice: customer trial consumable → c
  * - Autumn does NOT create an arrear invoice (trial usage is free)
  * - No invoices created (trial = no charge)
  */
-test(`${chalk.yellowBright("sub.deleted invoice: entity trial consumable → cancel at period end → NO arrear invoice")}`, async () => {
+test.concurrent(`${chalk.yellowBright("sub.deleted invoice: entity trial consumable → cancel at period end → NO arrear invoice")}`, async () => {
 	const customerId = "sub-del-inv-ent-trial";
 
 	const consumableItem = items.consumableMessages({ includedUsage: 100 });
@@ -726,7 +726,7 @@ test(`${chalk.yellowBright("sub.deleted invoice: entity trial consumable → can
  * This is the opposite of the immediate cancel tests - end-of-period cancellation
  * should bill any accumulated overage.
  */
-test(`${chalk.yellowBright("sub.deleted invoice: entity consumable → Stripe cancel at period end → CREATES arrear invoice")}`, async () => {
+test.concurrent(`${chalk.yellowBright("sub.deleted invoice: entity consumable → Stripe cancel at period end → CREATES arrear invoice")}`, async () => {
 	const customerId = "sub-del-inv-ent-eop";
 
 	const consumableItem = items.consumableMessages({ includedUsage: 100 });

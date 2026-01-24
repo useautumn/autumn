@@ -214,7 +214,7 @@ class CustomerProductChecker {
 	onStripeSchedule({
 		stripeSubscriptionScheduleId,
 	}: {
-		stripeSubscriptionScheduleId: string;
+		stripeSubscriptionScheduleId: string | null;
 	}) {
 		this.pendingPredicates.push(
 			(cp) =>

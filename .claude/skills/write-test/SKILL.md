@@ -13,6 +13,11 @@ Write integration tests for the Autumn billing system using the `initScenario` p
 
 ## Before Writing Any Test
 
+**ALWAYS check for duplicate test scenarios FIRST:**
+1. Search the test directory for similar scenarios using `Grep` with relevant keywords (e.g., `new_billing_subscription`, `cancel.*addon`, feature names)
+2. If a duplicate or very similar scenario exists, **WARN the user and ask for confirmation** before proceeding
+3. Only proceed with writing the test after confirming it's not a duplicate
+
 **ALWAYS read these codebase files FIRST:**
 1. `server/tests/TEST_GUIDE.md` - Core patterns, fixtures, scenario builder
 2. For billing tests: `server/tests/integration/billing/update-subscription/BILLING_GUIDE.md`
@@ -20,7 +25,7 @@ Write integration tests for the Autumn billing system using the `initScenario` p
 ## Critical Rules
 
 **DO:**
-- Use `test.concurrent()` for isolated, parallel tests
+- **ALWAYS use `test.concurrent()` for ALL tests** - never use plain `test()`. This enables parallel execution.
 - Use `initScenario` with `s.*` builders
 - Use `product.id` in `s.attach()` (never string literals)
 - Use `Decimal.js` for balance calculations in track tests
@@ -29,6 +34,7 @@ Write integration tests for the Autumn billing system using the `initScenario` p
 - **USE UTILITY FUNCTIONS WHENEVER POSSIBLE** - the shorter the code, the better. Check `server/tests/integration/billing/utils/` for existing utilities like `expectCustomerProducts`, `expectProductScheduled`, `expectCustomerInvoiceCorrect`, etc.
 
 **DON'T:**
+- Use plain `test()` - **ALWAYS use `test.concurrent()`**
 - Use `describe/beforeAll/test` (legacy pattern)
 - Use `Date.now()` with test clocks (use `advancedTo`)
 - Share state between tests

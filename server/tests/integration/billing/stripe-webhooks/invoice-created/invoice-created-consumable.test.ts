@@ -36,7 +36,7 @@ import chalk from "chalk";
  * - Total second invoice: $20 + $15.05 = $35.05
  * - Balance should be reset to 100 (included usage)
  */
-test(`${chalk.yellowBright("invoice.created consumable: attach → track decimal overage → advance cycle")}`, async () => {
+test.concurrent(`${chalk.yellowBright("invoice.created consumable: attach → track decimal overage → advance cycle")}`, async () => {
 	const customerId = "inv-created-cons-decimal";
 
 	// Create consumable messages with 100 included
@@ -107,7 +107,7 @@ test(`${chalk.yellowBright("invoice.created consumable: attach → track decimal
  * - After cycle: invoice should only include base price ($20), no overage
  * - Balance should be reset to 100 (included usage)
  */
-test(`${chalk.yellowBright("invoice.created consumable: no overage - track within included → advance cycle")}`, async () => {
+test.concurrent(`${chalk.yellowBright("invoice.created consumable: no overage - track within included → advance cycle")}`, async () => {
 	const customerId = "inv-created-cons-no-ovg";
 
 	const consumableItem = items.consumableMessages({ includedUsage: 100 });
@@ -160,7 +160,7 @@ test(`${chalk.yellowBright("invoice.created consumable: no overage - track withi
  * - Initial invoice: $20 (pro base price)
  * - After cycle: $20 base + $90 overage (900 * $0.10) = $110
  */
-test(`${chalk.yellowBright("invoice.created consumable: large overage → advance cycle")}`, async () => {
+test.concurrent(`${chalk.yellowBright("invoice.created consumable: large overage → advance cycle")}`, async () => {
 	const customerId = "inv-created-cons-large";
 
 	const consumableItem = items.consumableMessages({ includedUsage: 100 });
@@ -222,7 +222,7 @@ test(`${chalk.yellowBright("invoice.created consumable: large overage → advanc
  * - Price: 6 billing units * $1 = $6 overage
  * - Total second invoice: $20 base + $6 overage = $26
  */
-test(`${chalk.yellowBright("invoice.created consumable: billing units rounding up → advance cycle")}`, async () => {
+test.concurrent(`${chalk.yellowBright("invoice.created consumable: billing units rounding up → advance cycle")}`, async () => {
 	const customerId = "inv-created-cons-billing-units";
 
 	// Create consumable with billingUnits=10, $1 per 10 units
@@ -292,7 +292,7 @@ test(`${chalk.yellowBright("invoice.created consumable: billing units rounding u
  * - Overage charge: 6.5 * $0.10 = $0.65
  * - Total second invoice: $20 base + $0.65 overage = $20.65
  */
-test(`${chalk.yellowBright("invoice.created consumable: multiple decimal tracks accumulate → advance cycle")}`, async () => {
+test.concurrent(`${chalk.yellowBright("invoice.created consumable: multiple decimal tracks accumulate → advance cycle")}`, async () => {
 	const customerId = "inv-created-cons-multi-decimal";
 
 	const consumableItem = items.consumableMessages({ includedUsage: 100 });
@@ -361,7 +361,7 @@ test(`${chalk.yellowBright("invoice.created consumable: multiple decimal tracks 
  * - Words overage: 100 * $0.05 = $5
  * - Total second invoice: $20 base + $10 + $5 = $35
  */
-test(`${chalk.yellowBright("invoice.created consumable: multiple features → different overages → advance cycle")}`, async () => {
+test.concurrent(`${chalk.yellowBright("invoice.created consumable: multiple features → different overages → advance cycle")}`, async () => {
 	const customerId = "inv-created-cons-multi-feat";
 
 	// Create two consumable items with different pricing

@@ -51,7 +51,7 @@ import { addMonths } from "date-fns";
  * Note: The attach quantity change flow (decrease → increase → decrease) is
  * tested separately in attach-update-quantity.test.ts
  */
-test(`${chalk.yellowBright("invoice.created prepaid: quantity downgrade - balance resets on cycle")}`, async () => {
+test.concurrent(`${chalk.yellowBright("invoice.created prepaid: quantity downgrade - balance resets on cycle")}`, async () => {
 	const customerId = "inv-created-prepaid-qty-downgrade";
 
 	// Prepaid messages: $12.50 per 100 units, on_decrease: none (sets upcoming_quantity)
@@ -141,7 +141,7 @@ test(`${chalk.yellowBright("invoice.created prepaid: quantity downgrade - balanc
  * - No immediate invoice for the upgrade (prorate_next_cycle)
  * - Balance resets to 400 on cycle renewal
  */
-test(`${chalk.yellowBright("invoice.created prepaid: quantity upgrade prorate-next-cycle")}`, async () => {
+test.concurrent(`${chalk.yellowBright("invoice.created prepaid: quantity upgrade prorate-next-cycle")}`, async () => {
 	const customerId = "inv-created-prepaid-prorate-next";
 
 	// Prepaid messages: $12.50 per 100 units, on_increase: prorate_next_cycle
@@ -223,7 +223,7 @@ test(`${chalk.yellowBright("invoice.created prepaid: quantity upgrade prorate-ne
  * Expected Result:
  * - Balance resets to 300 (original quantity)
  */
-test(`${chalk.yellowBright("invoice.created prepaid: basic reset after usage")}`, async () => {
+test.concurrent(`${chalk.yellowBright("invoice.created prepaid: basic reset after usage")}`, async () => {
 	const customerId = "inv-created-prepaid-basic-reset";
 
 	const prepaidItem = items.prepaidMessages({
@@ -322,7 +322,7 @@ test(`${chalk.yellowBright("invoice.created prepaid: basic reset after usage")}`
  * - Balance after cycle: 0 (3 seats - 3 used = 0 available)
  * - Quantity is 3, upcoming_quantity is cleared
  */
-test(`${chalk.yellowBright("invoice.created prepaid: continuous-use seats downgrade")}`, async () => {
+test.concurrent(`${chalk.yellowBright("invoice.created prepaid: continuous-use seats downgrade")}`, async () => {
 	const customerId = "inv-created-prepaid-seats-downgrade";
 
 	// Prepaid users/seats: $10 per seat, billingUnits=1

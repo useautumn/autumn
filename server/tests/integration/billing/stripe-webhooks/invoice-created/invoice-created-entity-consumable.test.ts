@@ -46,7 +46,7 @@ import { addMonths } from "date-fns";
  * - Overage billed exactly once via invoice line items
  * - Balance resets after cycle
  */
-test(`${chalk.yellowBright("invoice.created entity: regular renewal - overage billed once")}`, async () => {
+test.concurrent(`${chalk.yellowBright("invoice.created entity: regular renewal - overage billed once")}`, async () => {
 	const customerId = "inv-created-ent-renewal";
 
 	// Entity-level consumable messages
@@ -140,7 +140,7 @@ test(`${chalk.yellowBright("invoice.created entity: regular renewal - overage bi
  * is rounded up to billing units INDIVIDUALLY, then summed.
  * This is DIFFERENT from per-entity features where total is summed first then rounded.
  */
-test(`${chalk.yellowBright("invoice.created entity: billing units - each entity rounded individually → advance cycle")}`, async () => {
+test.concurrent(`${chalk.yellowBright("invoice.created entity: billing units - each entity rounded individually → advance cycle")}`, async () => {
 	const customerId = "inv-ent-billing-units";
 
 	// Consumable with billingUnits=10, $1 per 10 units
@@ -249,7 +249,7 @@ test(`${chalk.yellowBright("invoice.created entity: billing units - each entity 
  * - Total overage: $16
  * - Renewal invoice: $20 + $50 + $16 = $86
  */
-test(`${chalk.yellowBright("invoice.created entity: 2 entities, 2 different products → advance cycle")}`, async () => {
+test.concurrent(`${chalk.yellowBright("invoice.created entity: 2 entities, 2 different products → advance cycle")}`, async () => {
 	const customerId = "inv-ent-2prod-2ent";
 
 	// Pro: $1 per 10 units, 100 included
@@ -371,7 +371,7 @@ test(`${chalk.yellowBright("invoice.created entity: 2 entities, 2 different prod
  * - Total overage: $29
  * - Renewal invoice: $20*2 + $50*2 + $29 = $169
  */
-test(`${chalk.yellowBright("invoice.created entity: 4 entities, 2 products (2 each) → advance cycle")}`, async () => {
+test.concurrent(`${chalk.yellowBright("invoice.created entity: 4 entities, 2 products (2 each) → advance cycle")}`, async () => {
 	const customerId = "inv-ent-4ent-2prod";
 
 	// Pro: $1 per 10 units, 100 included

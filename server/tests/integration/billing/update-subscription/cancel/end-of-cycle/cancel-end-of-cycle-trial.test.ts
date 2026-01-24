@@ -40,7 +40,7 @@ import chalk from "chalk";
  *   - Product is not present
  *   - No invoice created (was free during trial)
  */
-test(`${chalk.yellowBright("cancel trial EOC: basic cancel, preview.next_cycle null, no invoice after advance")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel trial EOC: basic cancel, preview.next_cycle null, no invoice after advance")}`, async () => {
 	const customerId = "cancel-trial-eoc-basic";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -155,7 +155,7 @@ test(`${chalk.yellowBright("cancel trial EOC: basic cancel, preview.next_cycle n
  *   - Stripe doesn't create an extra invoice when trial ends
  */
 
-test(`${chalk.yellowBright("cancel trial EOC: with consumable messages, no overage invoice")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel trial EOC: with consumable messages, no overage invoice")}`, async () => {
 	const customerId = "cancel-trial-eoc-consumable";
 
 	const consumableItem = items.consumableMessages({ includedUsage: 100 });
@@ -257,7 +257,7 @@ test(`${chalk.yellowBright("cancel trial EOC: with consumable messages, no overa
  *   - Neither premium nor pro is present
  *   - No invoice created
  */
-test(`${chalk.yellowBright("cancel trial EOC: premium trial with pro scheduled, cancel removes scheduled")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel trial EOC: premium trial with pro scheduled, cancel removes scheduled")}`, async () => {
 	const customerId = "cancel-trial-eoc-scheduled";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -379,7 +379,7 @@ test(`${chalk.yellowBright("cancel trial EOC: premium trial with pro scheduled, 
  *   - Pro is not present
  *   - No paid invoice created
  */
-test(`${chalk.yellowBright("cancel trial EOC: with free default, free scheduled")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel trial EOC: with free default, free scheduled")}`, async () => {
 	const customerId = "cancel-trial-eoc-free-default";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });

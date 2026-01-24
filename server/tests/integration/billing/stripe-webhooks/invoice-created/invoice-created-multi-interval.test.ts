@@ -38,7 +38,7 @@ import { addMonths } from "date-fns";
  * - Month 1 & 2: Only messages overage billed, words accumulate
  * - Month 3: BOTH messages AND words overage billed, both reset
  */
-test(`${chalk.yellowBright("invoice.created multi-interval: monthly + quarterly consumables over 3 months")}`, async () => {
+test.concurrent(`${chalk.yellowBright("invoice.created multi-interval: monthly + quarterly consumables over 3 months")}`, async () => {
 	const customerId = "inv-created-multi-interval";
 
 	const pro = products.pro({

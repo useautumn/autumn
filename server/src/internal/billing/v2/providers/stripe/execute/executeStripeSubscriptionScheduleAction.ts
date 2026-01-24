@@ -20,27 +20,68 @@ const toCreatePhase = (
 
 /**
  * Builds phases for updating a schedule that was created from a subscription.
- * The first phase must use the schedule's actual current phase start_date.
+ * The first phase must use the schedule's actual current phase start_date AND items.
+ * Stripe doesn't allow modifying items in an active phase, so we preserve them exactly.
  */
 const buildAnchoredPhases = ({
 	params,
-	currentPhaseStart,
+	existingSchedule,
 }: {
 	params: { phases?: Stripe.SubscriptionScheduleUpdateParams.Phase[] };
-	currentPhaseStart: number;
+	existingSchedule: Stripe.SubscriptionSchedule;
 }): Stripe.SubscriptionScheduleUpdateParams.Phase[] => {
 	const inputPhases = params.phases ?? [];
 	if (inputPhases.length === 0) return [];
 
-	// First phase: preserve all fields but override start_date (can't modify current phase start)
-	// Future phases: keep as-is
+	const currentPhaseStart = existingSchedule.current_phase?.start_date;
+	if (!currentPhaseStart) {
+		throw new Error("Cannot update schedule: missing current phase start_date");
+	}
+
+	// Map existing items to update format (response type -> request type)
+	const existingFirstPhaseItems: Stripe.SubscriptionScheduleUpdateParams.Phase["items"] =
+		existingSchedule.phases[0]?.items.map((item) => ({
+			price: typeof item.price === "string" ? item.price : item.price?.id,
+			quantity: item.quantity ?? undefined,
+		}));
+
+	// First phase: preserve start_date AND items from existing schedule
+	// Stripe doesn't allow modifying items in an active/in-progress phase
+	// The actual current state is managed by the subscription, not the schedule
+	// Future phases: keep as-is (these define what happens at phase transitions)
 	return [
 		{
 			...inputPhases[0],
 			start_date: currentPhaseStart,
+			items: existingFirstPhaseItems ?? inputPhases[0].items,
 		},
 		...inputPhases.slice(1),
 	];
+};
+
+/**
+ * Creates a schedule from an existing subscription and updates it with phases.
+ * This is the standard pattern for both "create" and "update" actions.
+ */
+const createScheduleFromSubscription = async ({
+	stripeCli,
+	subscriptionId,
+	params,
+}: {
+	stripeCli: Stripe;
+	subscriptionId: string;
+	params: Stripe.SubscriptionScheduleUpdateParams;
+}): Promise<Stripe.SubscriptionSchedule> => {
+	const schedule = await stripeCli.subscriptionSchedules.create({
+		from_subscription: subscriptionId,
+	});
+
+	const phases = buildAnchoredPhases({ params, existingSchedule: schedule });
+
+	return await stripeCli.subscriptionSchedules.update(schedule.id, {
+		phases,
+		end_behavior: params.end_behavior,
+	});
 };
 
 export const executeStripeSubscriptionScheduleAction = async ({
@@ -71,24 +112,12 @@ export const executeStripeSubscriptionScheduleAction = async ({
 		case "create": {
 			const { params } = subscriptionScheduleAction;
 
-			// If there's an existing subscription, create schedule from it then update with phases
+			// If there's an existing subscription, create schedule from it
 			if (stripeSubscription) {
-				const schedule = await stripeCli.subscriptionSchedules.create({
-					from_subscription: stripeSubscription.id,
-				});
-
-				const currentPhaseStart = schedule.phases[0]?.start_date;
-				if (!currentPhaseStart) {
-					throw new Error(
-						"Cannot create schedule: missing current phase start_date",
-					);
-				}
-
-				const phases = buildAnchoredPhases({ params, currentPhaseStart });
-
-				return await stripeCli.subscriptionSchedules.update(schedule.id, {
-					phases,
-					end_behavior: params.end_behavior,
+				return await createScheduleFromSubscription({
+					stripeCli,
+					subscriptionId: stripeSubscription.id,
+					params,
 				});
 			}
 
@@ -104,19 +133,29 @@ export const executeStripeSubscriptionScheduleAction = async ({
 			const { stripeSubscriptionScheduleId, params } =
 				subscriptionScheduleAction;
 
-			// current_phase.start_date is validated in handleStripeBillingPlanErrors
-			const currentPhaseStart = billingContext.stripeSubscriptionSchedule
-				?.current_phase?.start_date as number;
-
-			const phases = buildAnchoredPhases({ params, currentPhaseStart });
-
-			return await stripeCli.subscriptionSchedules.update(
+			// Always release + recreate to avoid "can't modify active phase" errors
+			// The subscription may have been updated first, changing its items
+			await stripeCli.subscriptionSchedules.release(
 				stripeSubscriptionScheduleId,
-				{
-					...params,
-					phases,
-				},
 			);
+
+			// Get the subscription ID from the existing schedule
+			const subscriptionId =
+				billingContext.stripeSubscriptionSchedule?.subscription;
+			if (!subscriptionId) {
+				throw new Error(
+					"Cannot update schedule: no subscription ID found on existing schedule",
+				);
+			}
+
+			return await createScheduleFromSubscription({
+				stripeCli,
+				subscriptionId:
+					typeof subscriptionId === "string"
+						? subscriptionId
+						: subscriptionId.id,
+				params,
+			});
 		}
 
 		case "release":
