@@ -1,108 +1,47 @@
-import { beforeAll, describe } from "bun:test";
-import { ApiVersion } from "@autumn/shared";
+import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { items } from "@tests/utils/fixtures/items.js";
+import { products } from "@tests/utils/fixtures/products.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import {
-	constructFeatureItem,
-	constructPrepaidItem,
-} from "@/utils/scriptUtils/constructItem.js";
-import {
-	constructProduct,
-	constructRawProduct,
-} from "@/utils/scriptUtils/createTestProducts.js";
-import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { initCustomerV3 } from "../../src/utils/scriptUtils/testUtils/initCustomerV3";
-import { expectSubToBeCorrect } from "../merged/mergeUtils/expectSubCorrect";
 
-const prepaidUsersItem = constructPrepaidItem({
-	featureId: TestFeature.Users,
-	billingUnits: 1,
-	price: 10,
-});
-
-const free = constructProduct({
-	type: "free",
-	items: [
-		constructFeatureItem({
-			featureId: TestFeature.Credits,
-			includedUsage: 500,
-		}),
-	],
-});
-
-const oneOffCredits = constructRawProduct({
-	id: "one_off_credits",
-	items: [
-		constructPrepaidItem({
-			featureId: TestFeature.Credits,
-			includedUsage: 0,
-			billingUnits: 1,
-			price: 0.01,
-			isOneOff: true,
-		}),
-	],
-	// trial: true,
-});
-
-const testCase = "temp";
-
-describe(`${chalk.yellowBright("temp:	 add on")}`, () => {
-	const customerId = testCase;
-	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
-
-	beforeAll(async () => {
-		await initCustomerV3({
-			ctx,
-			customerId,
-			withTestClock: true,
-			attachPm: "success",
-		});
-
-		await initProductsV0({
-			ctx,
-			products: [free],
-			prefix: testCase,
-		});
-
-		await autumnV1.attach({
-			customer_id: customerId,
-			product_id: free.id,
-			options: [
-				{
-					feature_id: TestFeature.Users,
-					quantity: 10,
-				},
-			],
-		});
-
-		const dashboardItem = constructFeatureItem({
-			featureId: TestFeature.Dashboard,
-			isBoolean: true,
-		});
-
-		await autumnV1.attach({
-			customer_id: customerId,
-			product_id: free.id,
-			is_custom: true,
-			items: [prepaidUsersItem, dashboardItem],
-		});
-
-		await expectSubToBeCorrect({
-			db: ctx.db,
-			customerId,
-			org: ctx.org,
-			env: ctx.env,
-		});
+test.concurrent(`${chalk.yellowBright("temp: concurrent entitled calls")}`, async () => {
+	const wordsItem = items.monthlyWords({ includedUsage: 200 });
+	const free = products.base({
+		id: "free",
+		items: [wordsItem],
+		isDefault: true,
 	});
-});
 
-// await createReward({
-// 	db: ctx.db,
-// 	orgId: ctx.org.id,
-// 	env: ctx.env,
-// 	autumn: autumnV1,
-// 	reward,
-// 	// productId: pro.id,
-// });
+	const { customerId, autumnV1 } = await initScenario({
+		customerId: "temp-entitled-concurrent",
+		setup: [s.customer({ withDefault: true }), s.products({ list: [free] })],
+		actions: [],
+	});
+
+	// Call /entitled 5 times concurrently
+	const entitledPromises = Array.from({ length: 5 }, () =>
+		autumnV1.entitled({
+			customerId,
+			featureId: TestFeature.Words,
+		}),
+	);
+
+	const entitledResults = await Promise.all(entitledPromises);
+
+	// Verify all entitled calls succeeded
+	for (const result of entitledResults) {
+		expect(result.allowed).toBe(true);
+	}
+
+	// Call /events with value 25
+	await autumnV1.events.send({
+		customerId,
+		featureId: TestFeature.Words,
+		value: 25,
+	});
+
+	// Verify balance is now 200 - 25 = 175
+	const customer = await autumnV1.customers.get(customerId);
+	expect(customer.features[TestFeature.Words].balance).toBe(175);
+});

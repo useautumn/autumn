@@ -1,15 +1,16 @@
 import {
 	type AppEnv,
 	type CheckParams,
+	type CreateCustomerInternalOptions,
 	CusExpand,
 	type Entity,
 	type FullCustomer,
 	type TrackParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { customerActions } from "@/internal/customers/actions/index.js";
 import { autoCreateEntity } from "@/internal/entities/handlers/handleCreateEntity/autoCreateEntity.js";
 import { CusService } from "../../CusService.js";
-import { handleCreateCustomer } from "../../handlers/handleCreateCustomer.js";
 import { updateCustomerDetails } from "../cusUtils.js";
 import { deleteCachedFullCustomer } from "./deleteCachedFullCustomer.js";
 import { getCachedFullCustomer } from "./getCachedFullCustomer.js";
@@ -22,12 +23,14 @@ export const getOrCreateCachedFullCustomer = async ({
 	ctx,
 	params,
 	source,
+	internalOptions,
 }: {
 	ctx: AutumnContext;
 	params: Omit<TrackParams | CheckParams, "customer_id"> & {
 		customer_id: string | null;
 	};
 	source?: string;
+	internalOptions?: CreateCustomerInternalOptions;
 }): Promise<FullCustomer> => {
 	const { org, env, db, skipCache, logger } = ctx;
 	const {
@@ -73,50 +76,12 @@ export const getOrCreateCachedFullCustomer = async ({
 
 	// 3. Create if not found
 	if (!fullCustomer) {
-		try {
-			fullCustomer = (await handleCreateCustomer({
-				ctx,
-				cusData: {
-					id: customerId,
-					name: customerData?.name,
-					email: customerData?.email,
-					fingerprint: customerData?.fingerprint,
-					metadata: customerData?.metadata || {},
-					stripe_id: customerData?.stripe_id,
-				},
-				createDefaultProducts: customerData?.disable_default !== true,
-			})) as FullCustomer;
-
-			fullCustomer = await CusService.getFull({
-				db,
-				idOrInternalId: customerId || fullCustomer.internal_id,
-				orgId: org.id,
-				env: env as AppEnv,
-				withEntities: true,
-				withSubs: true,
-				entityId,
-				expand: [CusExpand.Invoices],
-			});
-			// biome-ignore lint/suspicious/noExplicitAny: it's fine.
-		} catch (error: any) {
-			if (error?.code === "23505" && customerId) {
-				ctx.logger.debug(
-					`[getOrCreateCachedFullCustomer] insert customer duplicate key error`,
-				);
-				fullCustomer = await CusService.getFull({
-					db,
-					idOrInternalId: customerId,
-					orgId: org.id,
-					env: env as AppEnv,
-					withEntities: true,
-					withSubs: true,
-					entityId,
-					expand: [CusExpand.Invoices],
-				});
-			} else {
-				throw error;
-			}
-		}
+		fullCustomer = await customerActions.createWithDefaults({
+			ctx,
+			customerId,
+			customerData,
+			internalOptions,
+		});
 	}
 
 	// 4. Update customer details if provided
@@ -177,12 +142,14 @@ export const getOrCreateCachedFullCustomer = async ({
 
 	// 6. Set cache (await to ensure it's ready before Redis deduction)
 	if (!skipCache && setCache) {
+		// Note (to fix): causes race condition when cache isn't set and concurrent track requests each set the cache.
 		await setCachedFullCustomer({
 			ctx,
 			fullCustomer,
 			customerId: fullCustomer.id || fullCustomer.internal_id,
 			fetchTimeMs,
 			source,
+			overwrite: true,
 		}).catch((err) => logger.error(`Failed to set cache: ${err}`));
 	}
 

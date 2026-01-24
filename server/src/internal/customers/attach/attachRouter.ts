@@ -6,10 +6,8 @@ import {
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
-import {
-	createStripeCusIfNotExists,
-	getCusPaymentMethod,
-} from "@/external/stripe/stripeCusUtils.js";
+import { getOrCreateStripeCustomer } from "@/external/stripe/customers";
+import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import {
@@ -158,12 +156,9 @@ export const checkStripeConnections = async ({
 
 	if (createCus) {
 		batchProductUpdates.push(
-			createStripeCusIfNotExists({
-				db,
-				org,
-				env,
+			getOrCreateStripeCustomer({
+				ctx,
 				customer,
-				logger,
 			}),
 		);
 	}

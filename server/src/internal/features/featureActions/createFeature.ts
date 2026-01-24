@@ -1,7 +1,6 @@
 import { CreateFeatureSchema, type Feature, FeatureType } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { JobName } from "@/queue/JobName.js";
-import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { workflows } from "@/queue/workflows.js";
 import { generateId } from "@/utils/genUtils.js";
 import { FeatureService } from "../FeatureService.js";
 import {
@@ -64,13 +63,10 @@ export const createFeature = async ({
 	});
 
 	if (!skipGenerateDisplay) {
-		await addTaskToQueue({
-			jobName: JobName.GenerateFeatureDisplay,
-			payload: {
-				featureId: feature.id,
-				orgId: ctx.org.id,
-				env: ctx.env,
-			},
+		await workflows.triggerGenerateFeatureDisplay({
+			featureId: feature.id,
+			orgId: ctx.org.id,
+			env: ctx.env,
 		});
 	}
 

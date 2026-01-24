@@ -25,7 +25,14 @@ function SheetClose({
 function SheetPortal({
 	...props
 }: React.ComponentProps<typeof SheetPrimitive.Portal>) {
-	return <SheetPrimitive.Portal data-slot="sheet-portal" {...props} />;
+	const mainContent = document.querySelector("[data-main-content]");
+	return (
+		<SheetPrimitive.Portal
+			data-slot="sheet-portal"
+			container={mainContent ?? undefined}
+			{...props}
+		/>
+	);
 }
 
 function SheetOverlay({
@@ -36,7 +43,7 @@ function SheetOverlay({
 		<SheetPrimitive.Overlay
 			data-slot="sheet-overlay"
 			className={cn(
-				"data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
+				"data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 absolute inset-0 z-[150] bg-white/70 dark:bg-black/70",
 				className,
 			)}
 			{...props}
@@ -60,15 +67,15 @@ function SheetContent({
 			<SheetPrimitive.Content
 				data-slot="sheet-content"
 				className={cn(
-					"bg-card data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-0 shadow-sm transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-300",
+					"bg-card data-[state=open]:animate-in data-[state=closed]:animate-out absolute z-[150] flex flex-col gap-0 shadow-sm transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-300",
 					side === "right" &&
-						"data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right top-3 bottom-3 right-3 w-full min-w-xs max-w-md border-l border-border/40",
+						`data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right top-0 bottom-0 right-0 w-full min-w-xs max-w-md border-l border-border/40`,
 					side === "left" &&
-						"data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left top-3 bottom-3 left-3 w-3/4 border-r border-border/40 sm:max-w-sm",
+						`data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left top-0 bottom-0 left-0 w-3/4 border-r border-border/40 sm:max-w-sm`,
 					side === "top" &&
-						"data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top left-3 right-3 top-3 h-auto border-b border-border/40 ",
+						"data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top left-0 right-0 top-0 h-auto border-b border-border/40",
 					side === "bottom" &&
-						"data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom left-3 right-3 bottom-3 h-auto border-t border-border/40",
+						"data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom left-0 right-0 bottom-0 h-auto border-t border-border/40",
 					className,
 				)}
 				{...props}

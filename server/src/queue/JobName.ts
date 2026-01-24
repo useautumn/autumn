@@ -10,6 +10,8 @@ export enum JobName {
 	DetectBaseVariant = "detect-base-variant",
 
 	HandleProductsUpdated = "handle-products-updated",
+	/** Sends customer.products.updated webhook (v2 lean payload) */
+	SendProductsUpdated = "send-products-updated",
 	HandleCustomerCreated = "handle-customer-created",
 
 	SyncBalanceBatch = "sync-balance-batch",

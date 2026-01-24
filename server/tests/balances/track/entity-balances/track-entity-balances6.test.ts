@@ -5,17 +5,15 @@ import {
 	type LimitedItem,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
 import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
 import { getExpectedInvoiceTotal } from "@tests/utils/expectUtils/expectInvoiceUtils.js";
+import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { addHours, addMonths } from "date-fns";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
@@ -134,14 +132,10 @@ describe(`${chalk.yellowBright(`${testCase}: per-entity overage billing`)}`, () 
 	});
 
 	test("should have correct invoice next cycle", async () => {
-		await advanceTestClock({
+		await advanceToNextInvoice({
 			stripeCli: ctx.stripeCli,
 			testClockId,
-			advanceTo: addHours(
-				addMonths(new Date(), 1),
-				hoursToFinalizeInvoice,
-			).getTime(),
-			waitForSeconds: 30,
+			withPause: true,
 		});
 
 		const includedUsage = userMessages.included_usage;

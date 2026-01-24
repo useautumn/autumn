@@ -40,7 +40,7 @@ function CustomersFilterButton() {
 		<DropdownMenu open={open} onOpenChange={setOpen}>
 			<RenderFilterTrigger />
 			<DropdownMenuContent
-				className="w-56 font-regular text-zinc-800 gap-0 p-0"
+				className="w-56 font-regular gap-0 p-0"
 				align="start"
 			>
 				<DropdownMenuGroup className="p-1">

@@ -38,9 +38,9 @@ export const apiRouter = new Hono<HonoEnv>();
 apiRouter.use("*", secretKeyMiddleware);
 apiRouter.use("*", orgConfigMiddleware);
 apiRouter.use("*", apiVersionMiddleware);
+apiRouter.use("*", refreshCacheMiddleware);
 apiRouter.use("*", analyticsMiddleware);
 apiRouter.use("*", rateLimitMiddleware);
-apiRouter.use("*", refreshCacheMiddleware);
 apiRouter.use("*", queryMiddleware());
 apiRouter.use("*", idempotencyMiddleware);
 

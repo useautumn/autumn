@@ -32,6 +32,7 @@ function getOAuthRedirectUrl(searchParams: URLSearchParams): string | null {
 	}
 	return null;
 }
+export const emailRegex = /^[^@]+@[^@]+\.[^@]+$/;
 
 export const SignIn = () => {
 	const [email, setEmail] = useState("");
@@ -76,7 +77,7 @@ export const SignIn = () => {
 
 	const handleEmailSignIn = async (e: React.FormEvent) => {
 		e.preventDefault();
-		if (!email || !emailSchema.safeParse(email).success) {
+		if (!email || !emailRegex.test(email)) {
 			toast.error("Please enter a valid email address.");
 			return;
 		}
@@ -107,8 +108,10 @@ export const SignIn = () => {
 
 			// For OAuth flow, we need to redirect back to continue the flow
 			// For regular sign-in, use the default dashboard paths
-			const googleCallbackUrl = oauthRedirectUrl || `${frontendUrl}${defaultCallbackPath}`;
-			const googleNewUserUrl = oauthRedirectUrl || `${frontendUrl}${defaultNewPath}`;
+			const googleCallbackUrl =
+				oauthRedirectUrl || `${frontendUrl}${defaultCallbackPath}`;
+			const googleNewUserUrl =
+				oauthRedirectUrl || `${frontendUrl}${defaultNewPath}`;
 
 			const { error } = await signIn.social({
 				provider: "google",

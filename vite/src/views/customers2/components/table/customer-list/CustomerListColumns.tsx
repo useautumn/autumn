@@ -91,6 +91,9 @@ const getCusProductsInfo = ({
 								canceled={
 									(cusProduct as FullCusProduct).canceled_at ? true : undefined
 								}
+								canceled_at={
+									(cusProduct as FullCusProduct).canceled_at ?? undefined
+								}
 								tooltip={true}
 								trialing={
 									isCustomerProductTrialing(cusProduct as FullCusProduct, {

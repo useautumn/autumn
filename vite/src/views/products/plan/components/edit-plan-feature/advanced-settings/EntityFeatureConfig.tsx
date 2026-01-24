@@ -18,9 +18,10 @@ export function EntityFeatureConfig() {
 
 	if (!item) return null;
 
-	// Filter for continuous use features, excluding the current feature (can't link to itself)
+	// Filter for continuous use features, excluding the current feature (can't link to itself) and archived features
 	const continuousUseFeatures = features.filter(
 		(f) =>
+			!f.archived &&
 			f.config?.usage_type === FeatureUsageType.Continuous &&
 			f.id !== item.feature_id,
 	);

@@ -12,9 +12,9 @@ import ErrorScreen from "@/views/general/ErrorScreen";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { useCusQuery } from "../../customers/customer/hooks/useCusQuery";
 import { useCusReferralQuery } from "../../customers/customer/hooks/useCusReferralQuery";
+import { CustomerPlansSection } from "../components/CustomerPlansSection";
 import { CustomerFeatureUsageTable } from "../components/table/customer-feature-usage/CustomerFeatureUsageTable";
 import { CustomerInvoicesTable } from "../components/table/customer-invoices/CustomerInvoicesTable";
-import { CustomerProductsTable } from "../components/table/customer-products/CustomerProductsTable";
 import { CustomerUsageAnalyticsTable } from "../components/table/customer-usage-analytics/CustomerUsageAnalyticsTable";
 import { CustomerBreadcrumbs } from "./CustomerBreadcrumbs2";
 import { CustomerContext } from "./CustomerContext";
@@ -100,7 +100,7 @@ export default function CustomerView2() {
 						{/* <Separator /> */}
 						{/* <Separator className="my-2" /> */}
 						<div className="flex flex-col gap-12 w-full">
-							<CustomerProductsTable />
+							<CustomerPlansSection />
 							{/* <Separator /> */}
 							<CustomerFeatureUsageTable />
 							{/* <Separator /> */}

@@ -62,11 +62,13 @@ export const createNewCustomer = async ({
 	customer,
 	nextResetAt,
 	createDefaultProducts = true,
+	defaultGroup,
 }: {
 	ctx: AutumnContext;
 	customer: CreateCustomer;
 	nextResetAt?: number;
 	createDefaultProducts?: boolean;
+	defaultGroup?: string;
 }) => {
 	const { db, org, env, logger } = ctx;
 
@@ -135,23 +137,23 @@ export const createNewCustomer = async ({
 		defaultProds,
 	});
 
-	for (const group in groupToDefaultProd) {
+	// Filter to only the specified group if defaultGroup is provided
+	const groupsToProcess = defaultGroup
+		? Object.keys(groupToDefaultProd).filter((g) => g === defaultGroup)
+		: Object.keys(groupToDefaultProd);
+
+	for (const group of groupsToProcess) {
 		const defaultProd = groupToDefaultProd[group];
 		logger.debug(
 			`[createNewCustomer] Creating default product with ID: ${defaultProd?.id}`,
 		);
 
 		if (!isFreeProduct(defaultProd.prices)) {
-			let stripeCli = null;
-
-			stripeCli = createStripeCli({ org, env });
+			const stripeCli = createStripeCli({ org, env });
 			await initStripeCusAndProducts({
-				db,
-				org,
-				env,
+				ctx,
 				customer: newCustomer,
 				products: nonFreeProds,
-				logger,
 			});
 
 			const optionsList = defaultProd.prices

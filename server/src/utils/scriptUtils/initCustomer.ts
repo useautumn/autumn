@@ -10,11 +10,10 @@ import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { createStripeCustomer } from "@/external/stripe/customers";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import {
-	attachPmToCus,
-	createStripeCustomer,
-} from "../../external/stripe/stripeCusUtils.js";
+import { attachPmToCus } from "../../external/stripe/stripeCusUtils.js";
 
 export const createCusInStripe = async ({
 	customer,
@@ -30,10 +29,9 @@ export const createCusInStripe = async ({
 	testClockId?: string;
 }) => {
 	const stripeCustomer = await createStripeCustomer({
-		org,
-		env,
+		ctx: { org, env, db } as AutumnContext,
 		customer,
-		testClockId,
+		options: { testClockId },
 	});
 
 	await CusService.update({
