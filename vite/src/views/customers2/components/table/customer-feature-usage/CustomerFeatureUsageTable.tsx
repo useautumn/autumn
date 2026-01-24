@@ -31,15 +31,14 @@ export function CustomerFeatureUsageTable() {
 
 	const [expanded, setExpanded] = useState<ExpandedState>({});
 
-	const filteredCustomerProducts = useMemo(() => {
-		if (!entityId) {
-			return customer?.customer_products ?? [];
-		}
-
-		const selectedEntity = customer?.entities.find(
+	const selectedEntity = useMemo(() => {
+		if (!entityId) return null;
+		return customer?.entities.find(
 			(e: Entity) => e.id === entityId || e.internal_id === entityId,
 		);
+	}, [customer?.entities, entityId]);
 
+	const filteredCustomerProducts = useMemo(() => {
 		if (!selectedEntity) {
 			return customer?.customer_products ?? [];
 		}
@@ -50,7 +49,7 @@ export function CustomerFeatureUsageTable() {
 				cp.internal_entity_id === selectedEntity.internal_id ||
 				cp.entity_id === selectedEntity.id,
 		);
-	}, [customer?.customer_products, customer?.entities, entityId]);
+	}, [customer?.customer_products, selectedEntity]);
 
 	const cusEnts = useMemo((): FullCusEntWithFullCusProduct[] => {
 		const productEnts = flattenCustomerEntitlements({
@@ -58,15 +57,26 @@ export function CustomerFeatureUsageTable() {
 		});
 
 		// Add extra entitlements (loose entitlements not tied to a product)
+		// Customer level: show ALL loose entitlements (customer can access entity-scoped balances at top level)
+		// Entity level: show ONLY that entity's loose entitlements
 		const extraEnts: FullCusEntWithFullCusProduct[] = (
 			customer?.extra_customer_entitlements || []
-		).map((ent: FullCustomerEntitlement) => ({
-			...ent,
-			customer_product: null,
-		}));
+		)
+			.filter((ent: FullCustomerEntitlement) => {
+				// If no entity selected (customer level), show ALL loose entitlements
+				if (!selectedEntity) {
+					return true;
+				}
+				// If entity selected, show ONLY that entity's loose entitlements
+				return ent.internal_entity_id === selectedEntity.internal_id;
+			})
+			.map((ent: FullCustomerEntitlement) => ({
+				...ent,
+				customer_product: null,
+			}));
 
 		return [...productEnts, ...extraEnts];
-	}, [filteredCustomerProducts, customer?.extra_customer_entitlements]);
+	}, [filteredCustomerProducts, customer?.extra_customer_entitlements, selectedEntity]);
 
 	const featuresMap = useMemo(
 		() => createFeaturesMap({ features: features ?? [] }),

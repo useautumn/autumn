@@ -54,6 +54,7 @@ const ALLOWED_HEADERS = [
 	"If-Unmodified-Since",
 	"idempotency-key",
 	"Idempotency-Key",
+	"User-Agent", // Required for better-auth v1.4.0+ compatibility with Safari/Zen browser
 ];
 
 export const createHonoApp = () => {

@@ -2,6 +2,9 @@ import type { FullProduct, ProductCounts, ProductV2 } from "@autumn/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
+// Stable empty object reference to prevent infinite re-renders
+const EMPTY_COUNTS: Record<string, ProductCounts> = {};
+
 /**
  * Fetch all products for the current org.
  */
@@ -48,7 +51,7 @@ export const useProductsQuery = () => {
 
 	return {
 		products: data?.products || [],
-		counts: countsData || {},
+		counts: countsData ?? EMPTY_COUNTS,
 		groupToDefaults: data?.groupToDefaults || {},
 		isLoading,
 		isCountsLoading,

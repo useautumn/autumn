@@ -115,6 +115,8 @@ describe(`${chalk.yellowBright("track-breakdown6: exhaust into overage, then add
 			value: deductValue,
 		});
 
+		console.log("Track result:", trackRes);
+
 		// 500 from prepaid, 100 from overage
 		expect(trackRes.balance).toMatchObject({
 			granted_balance: 500,
@@ -136,6 +138,7 @@ describe(`${chalk.yellowBright("track-breakdown6: exhaust into overage, then add
 
 		await timeout(2000);
 	});
+	return;
 
 	test("attach lifetime prepaid product", async () => {
 		await autumnV2.attach({

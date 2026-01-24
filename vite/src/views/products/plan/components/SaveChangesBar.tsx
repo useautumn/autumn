@@ -128,9 +128,9 @@ export const SaveChangesBar = ({
 			<p className="text-body whitespace-nowrap truncate">
 				You have unsaved changes
 			</p>
-			<Button variant="secondary" onClick={handleDiscardClicked}>
-				Discard
-			</Button>
+		<Button variant="secondary" onClick={handleDiscardClicked} disabled={saving}>
+			Discard
+		</Button>
 			<ShortcutButton
 				metaShortcut="s"
 				onClick={handleSaveClicked}

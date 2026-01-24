@@ -17,7 +17,7 @@ export const createProductListColumns = ({
 		size: 300,
 		header: "Name",
 		accessorKey: "name",
-		enableSorting: false,
+		enableSorting: true,
 		cell: ({ row }: { row: Row<ProductV2> }) => {
 			return (
 				<div className="font-medium text-t1 flex gap-1">

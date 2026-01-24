@@ -133,7 +133,7 @@ export const handleVersionProductV2 = async ({
 		} as FullProduct,
 		org,
 		env,
-		logger: console,
+		logger: ctx.logger,
 	});
 
 	await addTaskToQueue({

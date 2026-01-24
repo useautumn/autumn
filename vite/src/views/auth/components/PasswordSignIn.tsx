@@ -5,7 +5,7 @@ import { CustomToaster } from "@/components/general/CustomToaster";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { authClient, useSession } from "@/lib/auth-client";
-import { emailSchema } from "../SignIn";
+import { emailRegex } from "../SignIn";
 
 export const PasswordSignIn = () => {
 	const [email, setEmail] = useState("");
@@ -25,7 +25,7 @@ export const PasswordSignIn = () => {
 
 	const handleEmailSignIn = async (e: React.FormEvent) => {
 		e.preventDefault();
-		if (!email || !emailSchema.safeParse(email).success) {
+		if (!email || !emailRegex.test(email)) {
 			toast.error("Please enter a valid email address.");
 			return;
 		}
@@ -67,48 +67,46 @@ export const PasswordSignIn = () => {
 					</h1>
 				</div>
 
-				<>
-					<div className="space-y-6">
-						<div className="space-y-2">
-							<Input
-								type="email"
-								placeholder="Email"
-								value={email}
-								onChange={(e) => setEmail(e.target.value)}
-								required
-								className="text-base"
-								autoComplete="email"
-							/>
-							<Input
-								type="password"
-								placeholder="Password"
-								value={password}
-								onChange={(e) => setPassword(e.target.value)}
-								required
-								className="text-base"
-								autoComplete="email"
-							/>
-						</div>
-
-						{/* Sign In Button */}
-						<Button
-							type="submit"
-							variant="auth"
-							isLoading={loading}
-							onClick={handleEmailSignIn}
-							className={height}
-						>
-							Sign in
-						</Button>
+				<div className="space-y-6">
+					<div className="space-y-2">
+						<Input
+							type="email"
+							placeholder="Email"
+							value={email}
+							onChange={(e) => setEmail(e.target.value)}
+							required
+							className="text-base"
+							autoComplete="email"
+						/>
+						<Input
+							type="password"
+							placeholder="Password"
+							value={password}
+							onChange={(e) => setPassword(e.target.value)}
+							required
+							className="text-base"
+							autoComplete="email"
+						/>
 					</div>
 
-					{/* Footer */}
-					{/* <div className="text-center space-y-2">
+					{/* Sign In Button */}
+					<Button
+						type="submit"
+						variant="auth"
+						isLoading={loading}
+						onClick={handleEmailSignIn}
+						className={height}
+					>
+						Sign in
+					</Button>
+				</div>
+
+				{/* Footer */}
+				{/* <div className="text-center space-y-2">
               <Link to="/sign-up" className="hover:underline text-t3 text-sm">
                 Create an account here
               </Link>
             </div> */}
-				</>
 			</div>
 		</div>
 	);

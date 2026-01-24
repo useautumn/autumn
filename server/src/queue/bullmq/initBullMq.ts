@@ -42,4 +42,3 @@ queueRedis.on("error", (error) => {
 workerRedis.on("error", (error) => {
 	// logger.error(`redis (queue) error: ${error.message}`);
 });
-

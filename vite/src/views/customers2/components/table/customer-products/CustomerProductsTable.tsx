@@ -1,165 +1,110 @@
 import { AppEnv, type Entity, type FullCusProduct } from "@autumn/shared";
-import {
-	ArrowSquareOutIcon,
-	PackageIcon,
-	Subtract,
-	User,
-} from "@phosphor-icons/react";
+import { ArrowSquareOutIcon, PackageIcon } from "@phosphor-icons/react";
 import type { Row } from "@tanstack/react-table";
-import { parseAsBoolean, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router";
-import { AdminHover } from "@/components/general/AdminHover";
 import { Table } from "@/components/general/table";
+import { SectionTag } from "@/components/v2/badges/SectionTag";
 import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useEnv } from "@/utils/envUtils";
-import { getCusProductHoverTexts } from "@/views/admin/adminUtils";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useFullCusSearchQuery } from "@/views/customers/hooks/useFullCusSearchQuery";
 import { useSavedViewsQuery } from "@/views/customers/hooks/useSavedViewsQuery";
+import { useCustomerProductsData } from "@/views/customers2/hooks/useCustomerProductsData";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { AttachProductSheetTrigger } from "./AttachProductSheetTrigger";
 import { CancelProductDialog } from "./CancelProductDialog";
-import { CustomerProductPrice } from "./CustomerProductPrice";
 import { CustomerProductsColumns } from "./CustomerProductsColumns";
-import { filterCustomerProductsByEntity } from "./customerProductsTableFilters";
 import { ShowExpiredActionButton } from "./ShowExpiredActionButton";
 import { TransferProductDialog } from "./TransferProductDialog";
 
+// Shared scope column factory
+function createScopeColumn(
+	entities: Entity[],
+	setEntityId: (id: string) => void,
+) {
+	return {
+		header: "Scope",
+		accessorKey: "scope",
+		cell: ({ row }: { row: Row<FullCusProduct> }) => {
+			const product = row.original;
+
+			if (!product.internal_entity_id && !product.entity_id) {
+				return <span className="text-t2">Customer</span>;
+			}
+
+			const entity = entities.find(
+				(e: Entity) =>
+					e.internal_id === product.internal_entity_id ||
+					e.id === product.entity_id,
+			);
+
+			if (!entity) return <span className="text-t3">—</span>;
+
+			return (
+				<Button
+					variant="skeleton"
+					onClick={(e) => {
+						e.stopPropagation();
+						setEntityId(entity.id || entity.internal_id);
+					}}
+					className="font-medium hover:text-purple-600 cursor-pointer max-w-full px-0! hover:bg-transparent active:bg-transparent active:border-none"
+				>
+					<span className="truncate w-full">
+						{entity.name || entity.id || entity.internal_id}
+					</span>
+				</Button>
+			);
+		},
+	};
+}
+
 export function CustomerProductsTable() {
 	const env = useEnv();
-	const { customer, isLoading } = useCusQuery();
+	const {
+		customer,
+		isLoading,
+		showExpired,
+		setShowExpired,
+		subscriptions,
+		hasEntities,
+		purchases,
+	} = useCustomerProductsData();
 
-	const { entityId } = useEntity();
-	const [showExpired, setShowExpired] = useQueryState(
-		"customerProductsShowExpired",
-		parseAsBoolean.withDefault(false),
-	);
-
+	const { setEntityId } = useEntity();
 	const [cancelOpen, setCancelOpen] = useState(false);
 	const [transferOpen, setTransferOpen] = useState(false);
 	const [selectedProduct, setSelectedProduct] = useState<FullCusProduct | null>(
 		null,
 	);
 	const selectedItemId = useSheetStore((s) => s.itemId);
-
-	const { setEntityId } = useEntity();
+	const setSheet = useSheetStore((s) => s.setSheet);
 
 	useSavedViewsQuery();
 	useFullCusSearchQuery();
 
-	const { regularProducts, entityProducts } = useMemo(
-		() =>
-			filterCustomerProductsByEntity({
-				customer,
-				showExpired: showExpired ?? false,
-			}),
-		[customer, showExpired],
-	);
+	const hasPurchases = purchases.all.length > 0;
+	const hasEntityProducts =
+		subscriptions.hasEntityProducts || purchases.hasEntityProducts;
 
-	const displayedProducts = useMemo(() => {
-		// Always just show regular products, never combine with entity products
-		return regularProducts;
-	}, [regularProducts]);
+	// Build columns - same for both tables to keep them consistent
+	const columns = useMemo(() => {
+		const baseColumns = [CustomerProductsColumns[0]];
 
-	const displayedEntityProducts = useMemo(() => {
-		if (entityId) {
-			const selectedEntity = customer.entities.find(
-				(e: Entity) => e.id === entityId || e.internal_id === entityId,
-			);
-			if (selectedEntity) {
-				return entityProducts.filter(
-					(product) =>
-						product.internal_entity_id === selectedEntity.internal_id ||
-						product.entity_id === selectedEntity.id,
-				);
-			}
+		if (hasEntityProducts) {
+			baseColumns.push(createScopeColumn(customer.entities, setEntityId));
 		}
-		return entityProducts;
-	}, [entityProducts, entityId, customer.entities]);
 
-	const attachedProductsTableColumns = useMemo(
-		() => CustomerProductsColumns,
-		[],
-	);
+		baseColumns.push(
+			CustomerProductsColumns[1],
+			CustomerProductsColumns[2],
+			CustomerProductsColumns[3],
+			CustomerProductsColumns[4],
+		);
 
-	const navigate = useNavigate();
-	const location = useLocation();
-
-	const entityProductsTableColumns = useMemo(
-		() => [
-			{
-				header: "Plan",
-				accessorKey: "plan",
-				cell: ({ row }: { row: Row<FullCusProduct> }) => {
-					const quantity = row.original.quantity;
-					const showQuantity = quantity && quantity > 1;
-
-					return (
-						<div className="font-semibold flex items-center gap-2 text-t1">
-							<AdminHover texts={getCusProductHoverTexts(row.original)}>
-								<span>{row.original.product.name}</span>
-							</AdminHover>
-							{showQuantity && (
-								<div className="text-t3 bg-muted rounded-sm p-1 py-0">
-									{quantity}
-								</div>
-							)}
-						</div>
-					);
-				},
-			},
-			{
-				header: "Entity",
-				accessorKey: "entity",
-				cell: ({ row }: { row: Row<FullCusProduct> }) => {
-					const product = row.original;
-					const entity = customer.entities.find(
-						(e: Entity) =>
-							e.internal_id === product.internal_entity_id ||
-							e.id === product.entity_id,
-					);
-
-					const handleEntityClick = (e: React.MouseEvent) => {
-						e.stopPropagation();
-						if (!entity) return;
-						setEntityId(entity.id || entity.internal_id);
-					};
-
-					if (!entity) return <span className="text-t3">—</span>;
-
-					return (
-						<Button
-							variant="skeleton"
-							onClick={handleEntityClick}
-							className="font-medium hover:text-purple-600 cursor-pointer max-w-full px-0! hover:bg-transparent active:bg-transparent active:border-none"
-						>
-							<span className="truncate w-full">
-								{entity.name || entity.id || entity.internal_id}
-							</span>
-						</Button>
-					);
-				},
-			},
-
-			{
-				header: "Price",
-				accessorKey: "price",
-				cell: ({ row }: { row: Row<FullCusProduct> }) => {
-					return <CustomerProductPrice cusProduct={row.original} />;
-				},
-			},
-			CustomerProductsColumns[2], // Status
-			CustomerProductsColumns[3], // Created At
-			CustomerProductsColumns[4], // Actions
-		],
-		[customer.entities, location.pathname, location.search, navigate],
-	);
-
-	const setSheet = useSheetStore((s) => s.setSheet);
+		return baseColumns;
+	}, [hasEntityProducts, customer.entities, setEntityId]);
 
 	const handleCancelClick = (product: FullCusProduct) => {
 		setSelectedProduct(product);
@@ -178,42 +123,35 @@ export function CustomerProductsTable() {
 		});
 	};
 
-	const hasEntities = customer.entities.length > 0;
+	const tableMeta = {
+		onCancelClick: handleCancelClick,
+		onTransferClick: handleTransferClick,
+		hasEntities,
+	};
 
-	const enableSorting = false;
-	const table = useCustomerTable({
-		data: displayedProducts,
-		columns: attachedProductsTableColumns,
+	const subscriptionTable = useCustomerTable({
+		data: subscriptions.all,
+		columns,
 		options: {
 			globalFilterFn: "includesString",
 			enableGlobalFilter: true,
-			meta: {
-				onCancelClick: handleCancelClick,
-				onTransferClick: handleTransferClick,
-				hasEntities,
-			},
+			meta: tableMeta,
 		},
 	});
 
-	const entityTable = useCustomerTable({
-		data: displayedEntityProducts, // Changed from entityProducts to displayedEntityProducts
-		columns: entityProductsTableColumns,
+	const purchaseTable = useCustomerTable({
+		data: purchases.all,
+		columns,
 		options: {
 			globalFilterFn: "includesString",
 			enableGlobalFilter: true,
-			meta: {
-				onCancelClick: handleCancelClick,
-				onTransferClick: handleTransferClick,
-				hasEntities,
-			},
+			meta: tableMeta,
 		},
 	});
-
-	const hasEntityProducts = entityProducts.length > 0; // Removed && !entityId
 
 	const emptyStateChildren =
-		entityProducts.length > 0 ? (
-			"No customer-level plans found"
+		hasEntityProducts || hasPurchases ? (
+			"No subscriptions found"
 		) : (
 			<>
 				Enable a plan to start a subscription
@@ -238,7 +176,7 @@ export function CustomerProductsTable() {
 		);
 
 	return (
-		<div className="flex flex-col gap-4">
+		<div className="flex flex-col gap-6">
 			{selectedProduct && (
 				<>
 					<CancelProductDialog
@@ -253,23 +191,25 @@ export function CustomerProductsTable() {
 					/>
 				</>
 			)}
+
+			{/* Subscriptions Table */}
 			<Table.Provider
 				config={{
-					table,
-					numberOfColumns: attachedProductsTableColumns.length,
-					enableSorting,
+					table: subscriptionTable,
+					numberOfColumns: columns.length,
+					enableSorting: false,
 					isLoading,
 					onRowClick: handleRowClick,
 					emptyStateChildren,
 					flexibleTableColumns: true,
-					selectedItemId: selectedItemId,
+					selectedItemId,
 				}}
 			>
 				<Table.Container>
 					<Table.Toolbar>
 						<Table.Heading>
 							<PackageIcon size={16} weight="fill" className="text-subtle" />
-							Subscriptions
+							Plans
 						</Table.Heading>
 						<Table.Actions>
 							<ShowExpiredActionButton
@@ -279,56 +219,35 @@ export function CustomerProductsTable() {
 							<AttachProductSheetTrigger />
 						</Table.Actions>
 					</Table.Toolbar>
-					{hasEntityProducts && (
-						<div className="text-t3 text-sm py-0 px-2 rounded-lg flex gap-2 items-center mb-3 w-fit">
-							<User size={14} weight="fill" className="text-subtle" />
-							Customer Plans
-						</div>
-					)}
-					{/* {hasProducts ? ( */}
+					{hasPurchases && <SectionTag>Subscriptions</SectionTag>}
 					<Table.Content>
 						<Table.Header />
 						<Table.Body />
 					</Table.Content>
-					{/* ) : (
-						!isLoading && (
-							<EmptyState
-								text={
-									entityProducts.length > 0
-										? "No customer-level plans."
-										: "Enable a plan to start a subscription"
-								}
-							/>
-						)
-					)} */}
 				</Table.Container>
 			</Table.Provider>
-			{hasEntityProducts && (
-				<div>
-					<div className="text-t3 text-sm py-0 px-2 rounded-lg flex gap-2 items-center mb-3 w-fit">
-						<Subtract size={14} weight="fill" className="text-subtle" />
-						Entity Plans
-					</div>
-					<Table.Provider
-						config={{
-							table: entityTable,
-							numberOfColumns: entityProductsTableColumns.length,
-							enableSorting,
-							isLoading,
-							onRowClick: handleRowClick,
-							emptyStateText: "No entity-level plans found",
-							flexibleTableColumns: true,
-							selectedItemId: selectedItemId,
-						}}
-					>
-						<Table.Container>
-							<Table.Content>
-								<Table.Header />
-								<Table.Body />
-							</Table.Content>
-						</Table.Container>
-					</Table.Provider>
-				</div>
+
+			{/* Purchases Table - only rendered if there are purchases */}
+			{hasPurchases && (
+				<Table.Provider
+					config={{
+						table: purchaseTable,
+						numberOfColumns: columns.length,
+						enableSorting: false,
+						isLoading,
+						onRowClick: handleRowClick,
+						emptyStateText: "No purchases found",
+						flexibleTableColumns: true,
+						selectedItemId,
+					}}
+				>
+					<Table.Container>
+						<SectionTag>Purchases</SectionTag>
+						<Table.Content>
+							<Table.Body />
+						</Table.Content>
+					</Table.Container>
+				</Table.Provider>
 			)}
 		</div>
 	);
