@@ -16,6 +16,7 @@ import {
  * @param items - Product items (features)
  * @param id - Product ID (default: "base")
  * @param isDefault - Whether this is a default product (default: false)
+ * @param group - Optional product group (if set, won't be overridden by test prefix)
  * @param trialDays - Optional number of trial days (shorthand)
  * @param freeTrial - Optional full free trial config (overrides trialDays)
  */
@@ -24,6 +25,7 @@ const base = ({
 	id = "base",
 	isDefault = false,
 	isAddOn = false,
+	group,
 	trialDays,
 	freeTrial,
 }: {
@@ -31,6 +33,7 @@ const base = ({
 	id?: string;
 	isDefault?: boolean;
 	isAddOn?: boolean;
+	group?: string;
 	trialDays?: number;
 	freeTrial?: {
 		length: number;
@@ -39,7 +42,7 @@ const base = ({
 		uniqueFingerprint?: boolean;
 	};
 }): ProductV2 => ({
-	...constructRawProduct({ id, items, isAddOn }),
+	...constructRawProduct({ id, items, isAddOn, group }),
 	is_default: isDefault,
 	...(freeTrial
 		? {

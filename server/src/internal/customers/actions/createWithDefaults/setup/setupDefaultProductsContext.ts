@@ -1,7 +1,10 @@
 import {
 	type CreateCustomerInternalOptions,
+	type CustomerData,
 	type FullProduct,
 	isFreeProduct,
+	ProductNotFoundError,
+	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -13,14 +16,68 @@ export interface DefaultProductsContext {
 	hasPaidProducts: boolean;
 }
 
+const getOverrideAutoEnableProduct = async ({
+	ctx,
+	customerData,
+}: {
+	ctx: AutumnContext;
+	customerData?: CustomerData;
+}): Promise<FullProduct | undefined> => {
+	const { db, org, env } = ctx;
+
+	if (!customerData?.auto_enable_plan_id) return undefined;
+
+	const plan = await ProductService.getFull({
+		db,
+		orgId: org.id,
+		env,
+		idOrInternalId: customerData.auto_enable_plan_id,
+	});
+
+	if (!plan)
+		throw new ProductNotFoundError({
+			productId: customerData.auto_enable_plan_id,
+		});
+
+	if (
+		!isFreeProduct({ prices: plan.prices }) &&
+		!isDefaultTrialFullProduct({ product: plan })
+	) {
+		throw new RecaseError({
+			message: `Auto-enable plan must be a free product, or have a free trial with 'card_required' as false`,
+		});
+	}
+
+	return plan;
+};
+
 export const setupDefaultProductsContext = async ({
 	ctx,
+	customerData,
 	internalOptions,
 }: {
 	ctx: AutumnContext;
+	customerData?: CustomerData;
 	internalOptions?: CreateCustomerInternalOptions;
 }): Promise<DefaultProductsContext> => {
 	const { db, org, env } = ctx;
+
+	const autoEnableProduct = await getOverrideAutoEnableProduct({
+		ctx,
+		customerData,
+	});
+
+	if (autoEnableProduct) {
+		const autoEnableIsPaid = !isFreeProduct({
+			prices: autoEnableProduct.prices,
+		});
+
+		return {
+			fullProducts: [autoEnableProduct],
+			paidProducts: autoEnableIsPaid ? [autoEnableProduct] : [],
+			hasPaidProducts: autoEnableIsPaid,
+		};
+	}
 
 	const defaultProds = await ProductService.listDefault({
 		db,

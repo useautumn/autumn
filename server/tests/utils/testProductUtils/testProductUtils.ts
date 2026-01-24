@@ -20,7 +20,10 @@ export const addPrefixToProducts = ({
 	for (const product of products) {
 		product.id = `${product.id}_${prefix}`;
 		product.name = `${product.name} ${prefix}`;
-		product.group = prefix;
+		// Only set group to prefix if not already defined
+		if (!product.group) {
+			product.group = prefix;
+		}
 	}
 
 	return products;
