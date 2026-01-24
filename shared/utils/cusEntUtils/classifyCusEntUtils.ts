@@ -1,5 +1,5 @@
 import { InternalError } from "@api/errors";
-import { formatMs, ms } from "@utils/common";
+import { ms } from "@utils/common";
 import type {
 	EntityBalance,
 	FullCustomerEntitlement,
@@ -92,12 +92,6 @@ export const customerEntitlementShouldBeBilled = ({
 	if (!nextResetAt) return false;
 
 	const TOLERANCE_MS = ms.minutes(30);
-
-	console.log("--------------------------------");
-	console.log("nextResetAt", formatMs(nextResetAt));
-	console.log("invoicePeriodEndMs", formatMs(invoicePeriodEndMs));
-
-	console.log("--------------------------------");
 
 	return nextResetAt <= invoicePeriodEndMs + TOLERANCE_MS;
 };

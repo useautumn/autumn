@@ -1,3 +1,5 @@
+import { cp } from "@autumn/shared";
+import { stripeSubscriptionToScheduleId } from "@/external/stripe/subscriptions";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { InvoiceService } from "@/internal/invoices/InvoiceService";
 import type { InvoiceCreatedContext } from "../setupInvoiceCreatedContext";
@@ -17,7 +19,8 @@ export const upsertAutumnInvoice = async ({
 	ctx: StripeWebhookContext;
 	eventContext: InvoiceCreatedContext;
 }): Promise<void> => {
-	const { stripeInvoice, customerProducts, fullCustomer } = eventContext;
+	const { stripeInvoice, customerProducts, fullCustomer, stripeSubscription } =
+		eventContext;
 
 	// Skip first invoice (subscription_create)
 	if (stripeInvoice.billing_reason !== "subscription_cycle") {
@@ -27,9 +30,34 @@ export const upsertAutumnInvoice = async ({
 		return;
 	}
 
-	const productIds = [...new Set(customerProducts.map((cp) => cp.product.id))];
+	// Add scheduled customer products that have started
+	const startedScheduledCustomerProducts =
+		fullCustomer.customer_products.filter((customerProduct) => {
+			const scheduleId = stripeSubscriptionToScheduleId({ stripeSubscription });
+
+			const { valid: hasStarted } = cp(customerProduct)
+				.onStripeSubscription({
+					stripeSubscriptionId: stripeSubscription.id,
+				})
+				.or.onStripeSchedule({
+					stripeSubscriptionScheduleId: scheduleId,
+				})
+				.scheduled()
+				.hasStarted({ nowMs: eventContext.nowMs });
+
+			return hasStarted;
+		});
+
+	const allCustomerProducts = [
+		...customerProducts,
+		...startedScheduledCustomerProducts,
+	];
+
+	const productIds = [
+		...new Set(allCustomerProducts.map((cp) => cp.product.id)),
+	];
 	const internalProductIds = [
-		...new Set(customerProducts.map((cp) => cp.internal_product_id)),
+		...new Set(allCustomerProducts.map((cp) => cp.internal_product_id)),
 	];
 	const internalCustomerId = fullCustomer.internal_id;
 

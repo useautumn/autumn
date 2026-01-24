@@ -217,6 +217,7 @@ export function UpdateSubscriptionFormProvider({
 		items: formValues.items,
 		version: formValues.version,
 		cancelAction: formValues.cancelAction,
+		billingBehavior: formValues.billingBehavior,
 		refundBehavior: formValues.refundBehavior,
 	});
 

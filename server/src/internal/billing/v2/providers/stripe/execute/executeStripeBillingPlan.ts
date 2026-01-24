@@ -62,7 +62,7 @@ export const executeStripeBillingPlan = async ({
 	// Otherwise Stripe rejects the cancel_at update while schedule still manages subscription
 	const isReleaseAction = stripeSubscriptionScheduleAction?.type === "release";
 
-	if (isReleaseAction) {
+	if (isReleaseAction && !resumeAfterSubscriptionAction) {
 		await executeStripeSubscriptionScheduleAction({
 			ctx,
 			billingContext,

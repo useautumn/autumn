@@ -1,3 +1,4 @@
+import type { BillingBehavior } from "@autumn/shared";
 import {
 	AppEnv,
 	type CreateFreeTrial,
@@ -34,6 +35,7 @@ interface UpdateSubscriptionBodyBuilderParams {
 
 	// Cancel action fields
 	cancelAction?: CancelActionValue | null;
+	billingBehavior?: BillingBehavior | null;
 	refundBehavior?: RefundBehaviorValue | null;
 }
 
@@ -119,6 +121,7 @@ export function useUpdateSubscriptionBodyBuilder(
 				freeTrial: mergedParams.freeTrial,
 				items: mergedParams.items,
 				cancelAction: mergedParams.cancelAction,
+				billingBehavior: mergedParams.billingBehavior,
 				refundBehavior: mergedParams.refundBehavior,
 			});
 		},

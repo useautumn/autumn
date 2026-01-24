@@ -1,4 +1,8 @@
-import type { FullCusProduct } from "@autumn/shared";
+import {
+	cusProductToPrices,
+	type FullCusProduct,
+	isConsumablePrice,
+} from "@autumn/shared";
 import { CacheManager } from "@/utils/cacheUtils/CacheManager";
 
 const getExpiredCacheKey = (stripeSubscriptionId: string) =>
@@ -17,6 +21,12 @@ export const setExpiredCustomerProductsCache = async ({
 	stripeSubscriptionId: string;
 	customerProducts: FullCusProduct[];
 }): Promise<void> => {
+	// Filter customer products only for those with usage based prices
+	const usageBasedCustomerProducts = customerProducts.filter((cp) => {
+		const prices = cusProductToPrices({ cusProduct: cp });
+		return prices.some((p) => isConsumablePrice(p));
+	});
+
 	const key = getExpiredCacheKey(stripeSubscriptionId);
-	await CacheManager.setJson(key, customerProducts, 300);
+	await CacheManager.setJson(key, usageBasedCustomerProducts, 300);
 };

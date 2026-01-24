@@ -44,7 +44,7 @@ import chalk from "chalk";
  * - No overage charges (trial usage not billed)
  * - No subscription remains
  */
-test(`${chalk.yellowBright("cancel trial EOC entities: single entity consumable overage not charged")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel trial EOC entities: single entity consumable overage not charged")}`, async () => {
 	const customerId = "cancel-trial-eoc-single-ent-overage";
 
 	const consumableItem = items.consumableMessages({ includedUsage: 100 });
@@ -146,7 +146,7 @@ test(`${chalk.yellowBright("cancel trial EOC entities: single entity consumable 
  * - Entity 2's product should still be trialing, then active after trial ends
  * - Invoice after trial ends should only be for 1 entity ($20)
  */
-test(`${chalk.yellowBright("cancel trial EOC entities: cancel one entity, other still trialing")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel trial EOC entities: cancel one entity, other still trialing")}`, async () => {
 	const customerId = "cancel-trial-eoc-ent-one";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -275,7 +275,7 @@ test(`${chalk.yellowBright("cancel trial EOC entities: cancel one entity, other 
  * - Entity 1's overage during trial should NOT be charged
  * - Invoice should only include entity 2's base price ($20)
  */
-test(`${chalk.yellowBright("cancel trial EOC entities: consumable overage during trial not charged")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel trial EOC entities: consumable overage during trial not charged")}`, async () => {
 	const customerId = "cancel-trial-eoc-ent-overage";
 
 	const consumableItem = items.consumableMessages({ includedUsage: 100 });
@@ -400,7 +400,7 @@ test(`${chalk.yellowBright("cancel trial EOC entities: consumable overage during
  *   - Both products removed
  *   - No subscription
  */
-test(`${chalk.yellowBright("cancel trial EOC entities: cancel both entities EOC")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel trial EOC entities: cancel both entities EOC")}`, async () => {
 	const customerId = "cancel-trial-eoc-ent-both";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -534,7 +534,7 @@ test(`${chalk.yellowBright("cancel trial EOC entities: cancel both entities EOC"
  *   - Entity 1's product is removed
  *   - Entity 2 is on pro (active)
  */
-test(`${chalk.yellowBright("cancel trial EOC entities: cancel one, attach pro to other (next cycle)")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel trial EOC entities: cancel one, attach pro to other (next cycle)")}`, async () => {
 	const customerId = "cancel-trial-eoc-ent-downgrade";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -673,7 +673,7 @@ test(`${chalk.yellowBright("cancel trial EOC entities: cancel one, attach pro to
  *   - Entity 1's product is removed
  *   - Entity 2 is on proTrial (active, no longer trialing - trial ended)
  */
-test(`${chalk.yellowBright("cancel trial EOC entities: cancel entity 1, attach proTrial to entity 2")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel trial EOC entities: cancel entity 1, attach proTrial to entity 2")}`, async () => {
 	const customerId = "cancel-trial-eoc-ent-attach";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -803,7 +803,7 @@ test(`${chalk.yellowBright("cancel trial EOC entities: cancel entity 1, attach p
  *   - Entity 1's product is removed
  *   - Entity 2's product is still active
  */
-test(`${chalk.yellowBright("cancel trial EOC entities: cancel entity 1 EOC after trial ends")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel trial EOC entities: cancel entity 1 EOC after trial ends")}`, async () => {
 	const customerId = "cancel-trial-eoc-ent-after-trial";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });

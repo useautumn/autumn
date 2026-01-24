@@ -29,6 +29,7 @@ export function useUpdateSubscriptionRequestBody({
 			version,
 			items,
 			cancelAction,
+			billingBehavior,
 			refundBehavior,
 		} = formValues;
 
@@ -44,8 +45,13 @@ export function useUpdateSubscriptionRequestBody({
 		if (cancelAction) {
 			requestBody.cancel_action = cancelAction;
 
-			if (cancelAction === "cancel_immediately" && refundBehavior) {
-				requestBody.refund_behavior = refundBehavior;
+			if (cancelAction === "cancel_immediately") {
+				if (billingBehavior) {
+					requestBody.billing_behavior = billingBehavior;
+				}
+				if (refundBehavior) {
+					requestBody.refund_behavior = refundBehavior;
+				}
 			}
 
 			return requestBody;

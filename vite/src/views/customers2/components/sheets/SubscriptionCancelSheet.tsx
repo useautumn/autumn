@@ -1,13 +1,14 @@
 import {
 	CusProductStatus,
+	cp,
 	type FullCusProduct,
 	type ProductV2,
 } from "@autumn/shared";
 import { useMemo } from "react";
+import { BillingBehaviorSection } from "@/components/forms/cancel-subscription/components/BillingBehaviorSection";
 import { CancelFooter } from "@/components/forms/cancel-subscription/components/CancelFooter";
 import { CancelModeSection } from "@/components/forms/cancel-subscription/components/CancelModeSection";
 import { CancelPreviewSection } from "@/components/forms/cancel-subscription/components/CancelPreviewSection";
-import { RefundBehaviorSection } from "@/components/forms/cancel-subscription/components/RefundBehaviorSection";
 import {
 	type UpdateSubscriptionFormContext,
 	UpdateSubscriptionFormProvider,
@@ -66,7 +67,7 @@ function SheetContent() {
 				)}
 
 				<CancelModeSection />
-				{/* <RefundBehaviorSection /> */}
+				<BillingBehaviorSection />
 				<CancelPreviewSection />
 				<CancelFooter />
 			</div>
@@ -100,6 +101,15 @@ export function SubscriptionCancelSheet() {
 		[customer, cusProduct, productV2, prepaidItems, currentVersion],
 	);
 
+	// Free products and one-time plans (no subscription) must use "cancel_immediately"
+	// Products with subscriptions default to "cancel_end_of_cycle" to allow end-of-cycle cancellation
+	// const hasSubscription =
+	// 	cusProduct?.subscription_ids && cusProduct.subscription_ids.length > 0;
+	const { valid: isFreeOrOneOff } = cp(cusProduct).free().or.oneOff();
+	const defaultCancelAction = isFreeOrOneOff
+		? "cancel_immediately"
+		: "cancel_end_of_cycle";
+
 	if (!cusProduct) {
 		return (
 			<div className="flex flex-col h-full">
@@ -125,7 +135,7 @@ export function SubscriptionCancelSheet() {
 		<UpdateSubscriptionFormProvider
 			formContext={formContext}
 			originalItems={undefined}
-			defaultOverrides={{ cancelAction: "cancel_end_of_cycle" }}
+			defaultOverrides={{ cancelAction: defaultCancelAction }}
 			onSuccess={closeSheet}
 		>
 			<SheetContent />

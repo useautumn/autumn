@@ -42,7 +42,7 @@ import { timeout } from "@/utils/genUtils";
  * - Free default becomes active
  * - No Stripe subscription exists
  */
-test(`${chalk.yellowBright("sub.deleted: cancel active subscription via Stripe (with default)")}`, async () => {
+test.concurrent(`${chalk.yellowBright("sub.deleted: cancel active subscription via Stripe (with default)")}`, async () => {
 	const customerId = "sub-deleted-basic";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -123,7 +123,7 @@ test(`${chalk.yellowBright("sub.deleted: cancel active subscription via Stripe (
  * - Free default becomes active
  * - No Stripe subscription exists
  */
-test(`${chalk.yellowBright("sub.deleted: cancel after end_of_cycle via Stripe")}`, async () => {
+test.concurrent(`${chalk.yellowBright("sub.deleted: cancel after end_of_cycle via Stripe")}`, async () => {
 	const customerId = "sub-deleted-after-eoc";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -226,7 +226,7 @@ test(`${chalk.yellowBright("sub.deleted: cancel after end_of_cycle via Stripe")}
  * - Free default becomes active
  * - No Stripe subscription exists
  */
-test(`${chalk.yellowBright("sub.deleted: cancel with scheduled downgrade via Stripe")}`, async () => {
+test.concurrent(`${chalk.yellowBright("sub.deleted: cancel with scheduled downgrade via Stripe")}`, async () => {
 	const customerId = "sub-deleted-downgrade";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -321,7 +321,7 @@ test(`${chalk.yellowBright("sub.deleted: cancel with scheduled downgrade via Str
  * - Free default becomes active
  * - No Stripe subscription exists
  */
-test(`${chalk.yellowBright("sub.deleted: cancel subscription with add-on via Stripe")}`, async () => {
+test.concurrent(`${chalk.yellowBright("sub.deleted: cancel subscription with add-on via Stripe")}`, async () => {
 	const customerId = "sub-deleted-addon";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });

@@ -45,7 +45,7 @@ import { isStripeSubscriptionCanceling } from "@/external/stripe/subscriptions/u
  *   - Add-on is removed
  *   - Free default is still not present
  */
-test(`${chalk.yellowBright("cancel addon EOC: addon canceling, pro active, free default not scheduled")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel addon EOC: addon canceling, pro active, free default not scheduled")}`, async () => {
 	const customerId = "cancel-addon-eoc-basic";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -162,7 +162,7 @@ test(`${chalk.yellowBright("cancel addon EOC: addon canceling, pro active, free 
  *   - Free is active
  *   - Add-on is still active
  */
-test(`${chalk.yellowBright("cancel addon EOC: cancel pro, addon persists with free scheduled")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel addon EOC: cancel pro, addon persists with free scheduled")}`, async () => {
 	const customerId = "cancel-addon-pro-free-scheduled";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -281,7 +281,7 @@ test(`${chalk.yellowBright("cancel addon EOC: cancel pro, addon persists with fr
  *   - Pro is still active with its subscription
  *   - Add-on is removed
  */
-test(`${chalk.yellowBright("cancel addon EOC: separate subscription (new_billing_subscription), correct sub canceled")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel addon EOC: separate subscription (new_billing_subscription), correct sub canceled")}`, async () => {
 	const customerId = "cancel-addon-eoc-separate-sub";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -421,7 +421,7 @@ test(`${chalk.yellowBright("cancel addon EOC: separate subscription (new_billing
  *   - Pro and Add-on 2 are still active
  *   - Add-on 1 is removed
  */
-test(`${chalk.yellowBright("cancel addon EOC: multiple addons, cancel one, other persists")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel addon EOC: multiple addons, cancel one, other persists")}`, async () => {
 	const customerId = "cancel-addon-eoc-multiple";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -543,7 +543,7 @@ test(`${chalk.yellowBright("cancel addon EOC: multiple addons, cancel one, other
  *   - Entity's Pro is still active
  *   - Entity's Add-on is removed
  */
-test(`${chalk.yellowBright("cancel addon EOC: entity-level addon cancel")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel addon EOC: entity-level addon cancel")}`, async () => {
 	const customerId = "cancel-addon-eoc-entity";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });

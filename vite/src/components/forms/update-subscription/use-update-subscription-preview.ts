@@ -1,4 +1,5 @@
 import type {
+	BillingBehavior,
 	CreateFreeTrial,
 	PreviewUpdateSubscriptionResponse,
 	ProductItem,
@@ -22,6 +23,7 @@ export function useUpdateSubscriptionPreview({
 	items,
 	version,
 	cancelAction,
+	billingBehavior,
 	refundBehavior,
 }: {
 	updateSubscriptionFormContext: UpdateSubscriptionFormContext;
@@ -31,6 +33,7 @@ export function useUpdateSubscriptionPreview({
 	items?: ProductItem[] | null;
 	version?: number;
 	cancelAction?: CancelActionValue | null;
+	billingBehavior?: BillingBehavior | null;
 	refundBehavior?: RefundBehaviorValue | null;
 }) {
 	const { customerId, product, entityId } = updateSubscriptionFormContext;
@@ -45,6 +48,7 @@ export function useUpdateSubscriptionPreview({
 		freeTrial,
 		items,
 		cancelAction,
+		billingBehavior,
 		refundBehavior,
 	});
 

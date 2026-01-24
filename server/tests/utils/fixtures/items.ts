@@ -333,6 +333,21 @@ const allocatedUsers = ({
 		includedUsage,
 	}) as LimitedItem;
 
+/**
+ * Allocated workflows - prorated billing on change ($10/workflow)
+ * @param includedUsage - Free workflows included (default: 0)
+ */
+const allocatedWorkflows = ({
+	includedUsage = 0,
+}: {
+	includedUsage?: number;
+} = {}): LimitedItem =>
+	constructArrearProratedItem({
+		featureId: TestFeature.Workflows,
+		pricePerUnit: 10,
+		includedUsage,
+	}) as LimitedItem;
+
 // ═══════════════════════════════════════════════════════════════════
 // BASE PRICES
 // ═══════════════════════════════════════════════════════════════════
@@ -399,6 +414,7 @@ export const items = {
 
 	// Allocated
 	allocatedUsers,
+	allocatedWorkflows,
 
 	// Base prices
 	monthlyPrice,

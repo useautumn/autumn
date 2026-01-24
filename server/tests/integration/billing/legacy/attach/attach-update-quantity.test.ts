@@ -42,7 +42,7 @@ import chalk from "chalk";
  * - Immediate proration invoice for the upgrade
  * - Balance increases by 100 (the additional quantity)
  */
-test(`${chalk.yellowBright("attach: quantity upgrade mid-cycle with prorate immediately")}`, async () => {
+test.concurrent(`${chalk.yellowBright("attach: quantity upgrade mid-cycle with prorate immediately")}`, async () => {
 	const customerId = "attach-qty-upgrade-mid-cycle";
 
 	const prepaidItem = items.prepaidMessages({
@@ -135,7 +135,7 @@ test(`${chalk.yellowBright("attach: quantity upgrade mid-cycle with prorate imme
  * - After increase to 400: balance becomes 400, 2 invoices (initial + proration)
  * - After decrease to 200: balance stays 400, upcoming_quantity = 2
  */
-test(`${chalk.yellowBright("attach: quantity decrease → increase → decrease flow")}`, async () => {
+test.concurrent(`${chalk.yellowBright("attach: quantity decrease → increase → decrease flow")}`, async () => {
 	const customerId = "attach-qty-dec-inc-dec";
 
 	const prepaidItem = items.prepaidMessages({
@@ -254,7 +254,7 @@ test(`${chalk.yellowBright("attach: quantity decrease → increase → decrease 
  * - Entity 1: Add-on quantity is 200 immediately
  * - Entity 2: Add-on quantity stays 300 with next_cycle_quantity of 200
  */
-test(`${chalk.yellowBright("attach: prepaid add-on with entities - upgrade and downgrade")}`, async () => {
+test.concurrent(`${chalk.yellowBright("attach: prepaid add-on with entities - upgrade and downgrade")}`, async () => {
 	const customerId = "attach-prepaid-addon-entities";
 
 	// Pro product with monthly messages
@@ -379,7 +379,7 @@ test(`${chalk.yellowBright("attach: prepaid add-on with entities - upgrade and d
  * - Subscription item quantity is updated to 4 immediately
  * - Product item quantity shows 4 (the new quantity takes effect on Stripe)
  */
-test(`${chalk.yellowBright("attach: quantity upgrade with prorate-next-cycle")}`, async () => {
+test.concurrent(`${chalk.yellowBright("attach: quantity upgrade with prorate-next-cycle")}`, async () => {
 	const customerId = "attach-qty-upgrade-prorate-next";
 
 	const prepaidItem = items.prepaidMessages({

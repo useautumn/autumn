@@ -16,9 +16,13 @@ export const logWebhookArrearLineItems = ({
 		ctx,
 		extras: {
 			arrearLineItems: {
-				lineItems: lineItems.map(
-					(item) => `${item.description}: ${item.finalAmount}`,
-				),
+				lineItems: lineItems.map((item) => {
+					const hasDiscount =
+						item.finalAmount !== undefined && item.finalAmount !== item.amount;
+					return hasDiscount
+						? `${item.description}: ${item.amount} → ${item.finalAmount} (discounted)`
+						: `${item.description}: ${item.amount}`;
+				}),
 				updateCustomerEntitlements: updateCustomerEntitlements.map(
 					(update) => ({
 						featureId: update.customerEntitlement.entitlement.feature?.id,

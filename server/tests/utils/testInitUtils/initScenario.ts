@@ -9,7 +9,7 @@ import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js"
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 import { hoursToFinalizeInvoice } from "../constants.js";
 import { advanceTestClock as advanceTestClockFn } from "../stripeUtils.js";
-import ctx from "./createTestContext.js";
+import defaultCtx, { type TestContext } from "./createTestContext.js";
 
 // ═══════════════════════════════════════════════════════════════════
 // TYPES
@@ -608,6 +608,7 @@ export async function initScenario(params: {
 	customerId: string;
 	setup: ConfigFn[];
 	actions: ConfigFn[];
+	ctx?: TestContext;
 }): Promise<{
 	customerId: string;
 	autumnV1: AutumnInt;
@@ -615,7 +616,7 @@ export async function initScenario(params: {
 	autumnV2: AutumnInt;
 	testClockId: string | undefined;
 	customer: Awaited<ReturnType<typeof initCustomerV3>>["customer"];
-	ctx: typeof ctx;
+	ctx: TestContext;
 	entities: GeneratedEntity[];
 	advancedTo: number;
 }>;
@@ -625,6 +626,7 @@ export async function initScenario(params: {
 	customerId?: undefined;
 	setup: ConfigFn[];
 	actions: ConfigFn[];
+	ctx?: TestContext;
 }): Promise<{
 	customerId: undefined;
 	autumnV1: AutumnInt;
@@ -632,7 +634,7 @@ export async function initScenario(params: {
 	autumnV2: AutumnInt;
 	testClockId: undefined;
 	customer: null;
-	ctx: typeof ctx;
+	ctx: TestContext;
 	entities: GeneratedEntity[];
 	advancedTo: number;
 }>;
@@ -642,11 +644,15 @@ export async function initScenario({
 	customerId,
 	setup,
 	actions,
+	ctx: ctxOverride,
 }: {
 	customerId?: string;
 	setup: ConfigFn[];
 	actions: ConfigFn[];
+	ctx?: TestContext;
 }) {
+	// Use provided context or fall back to default
+	const ctx = ctxOverride ?? defaultCtx;
 	// Build config from setup and actions
 	const config = [...setup, ...actions].reduce((c, fn) => fn(c), defaultConfig);
 

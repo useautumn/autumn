@@ -1,4 +1,5 @@
 import type {
+	BillingBehavior,
 	CreateFreeTrial,
 	FeatureOptions,
 	ProductItem,
@@ -22,6 +23,7 @@ export const getUpdateSubscriptionBody = ({
 	freeTrial,
 	items,
 	cancelAction,
+	billingBehavior,
 	refundBehavior,
 }: {
 	customerId: string;
@@ -39,6 +41,7 @@ export const getUpdateSubscriptionBody = ({
 	items?: ProductItem[] | null;
 	// Cancel action fields
 	cancelAction?: CancelActionValue | null;
+	billingBehavior?: BillingBehavior | null;
 	refundBehavior?: RefundBehaviorValue | null;
 }) => {
 	// For cancel actions, only include cancellation-related fields
@@ -48,6 +51,10 @@ export const getUpdateSubscriptionBody = ({
 			product_id: product.id,
 			entity_id: entityId || undefined,
 			cancel_action: cancelAction,
+			billing_behavior:
+				cancelAction === "cancel_immediately"
+					? billingBehavior || undefined
+					: undefined,
 			refund_behavior:
 				cancelAction === "cancel_immediately"
 					? refundBehavior || undefined

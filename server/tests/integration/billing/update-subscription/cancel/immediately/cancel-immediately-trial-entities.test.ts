@@ -38,7 +38,7 @@ import chalk from "chalk";
  * - Entity 1's product is still trialing
  * - Stripe subscription is still trialing (entity 1 remains)
  */
-test(`${chalk.yellowBright("cancel trial immediately entity: one entity, other still trialing")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel trial immediately entity: one entity, other still trialing")}`, async () => {
 	const customerId = "cancel-trial-imm-entity-1";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -127,7 +127,7 @@ test(`${chalk.yellowBright("cancel trial immediately entity: one entity, other s
  * - Both products are removed
  * - Stripe subscription is canceled (no entities remain)
  */
-test(`${chalk.yellowBright("cancel trial immediately entity: both entities, subscription canceled")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel trial immediately entity: both entities, subscription canceled")}`, async () => {
 	const customerId = "cancel-trial-imm-entity-2";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -219,7 +219,7 @@ test(`${chalk.yellowBright("cancel trial immediately entity: both entities, subs
  * - Entities 1 and 2 are canceling but still trialing
  * - Subscription is trialing but scheduled to cancel
  */
-test(`${chalk.yellowBright("cancel trial immediately entity: mixed EOC + immediately on 3 entities")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel trial immediately entity: mixed EOC + immediately on 3 entities")}`, async () => {
 	const customerId = "cancel-trial-imm-entity-3";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -233,7 +233,7 @@ test(`${chalk.yellowBright("cancel trial immediately entity: mixed EOC + immedia
 	const { autumnV1, ctx, entities } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ paymentMethod: "success" }),
+			s.customer({ paymentMethod: "success", testClock: false }),
 			s.products({ list: [proTrial] }),
 			s.entities({ count: 3, featureId: TestFeature.Users }),
 		],
@@ -332,7 +332,7 @@ test(`${chalk.yellowBright("cancel trial immediately entity: mixed EOC + immedia
  * - After re-attach: product active (not trialing - trial already used)
  * - Full price invoice created
  */
-test(`${chalk.yellowBright("cancel trial immediately entity: cancel then re-attach same entity")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel trial immediately entity: cancel then re-attach same entity")}`, async () => {
 	const customerId = "cancel-trial-imm-entity-4";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });

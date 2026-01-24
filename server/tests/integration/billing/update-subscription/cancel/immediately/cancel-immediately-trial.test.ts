@@ -39,7 +39,7 @@ import chalk from "chalk";
  * - No Stripe subscription (canceled)
  * - No new invoices (trial was free)
  */
-test(`${chalk.yellowBright("cancel trial immediately: basic cancel")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel trial immediately: basic cancel")}`, async () => {
 	const customerId = "cancel-trial-imm-basic";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -128,7 +128,7 @@ test(`${chalk.yellowBright("cancel trial immediately: basic cancel")}`, async ()
  * - Free default becomes active immediately
  * - No paid invoices
  */
-test(`${chalk.yellowBright("cancel trial immediately: with free default")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel trial immediately: with free default")}`, async () => {
 	const customerId = "cancel-trial-imm-default";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -203,7 +203,7 @@ test(`${chalk.yellowBright("cancel trial immediately: with free default")}`, asy
  *
  * Note: This tests the `unique_fingerprint` behavior - customer already used trial
  */
-test(`${chalk.yellowBright("cancel trial immediately: re-attach charges full price (no duplicate trial)")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel trial immediately: re-attach charges full price (no duplicate trial)")}`, async () => {
 	const customerId = "cancel-trial-imm-reattach";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -295,7 +295,7 @@ test(`${chalk.yellowBright("cancel trial immediately: re-attach charges full pri
  * - Pro scheduled is also removed (no base product anymore)
  * - No products attached (unless free default exists)
  */
-test(`${chalk.yellowBright("cancel trial immediately: with scheduled downgrade, both removed")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel trial immediately: with scheduled downgrade, both removed")}`, async () => {
 	const customerId = "cancel-trial-imm-scheduled";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -387,7 +387,7 @@ test(`${chalk.yellowBright("cancel trial immediately: with scheduled downgrade, 
  * - NO overage invoice (usage was free during trial)
  * - Only the initial $0 trial invoice exists
  */
-test(`${chalk.yellowBright("cancel trial immediately: with consumable usage, no overage charged")}`, async () => {
+test.concurrent(`${chalk.yellowBright("cancel trial immediately: with consumable usage, no overage charged")}`, async () => {
 	const customerId = "cancel-trial-imm-consumable";
 
 	const consumableItem = items.consumableMessages({ includedUsage: 100 });

@@ -42,6 +42,8 @@ export const AutumnBillingPlanSchema = z.object({
 				canceled: z.boolean().nullish(),
 				canceled_at: z.number().nullish(),
 				ended_at: z.number().nullish(),
+
+				scheduled_ids: z.array(z.string()).optional(),
 			}),
 		})
 		.optional(),

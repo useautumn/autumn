@@ -2,6 +2,7 @@ import {
 	type FullCusProduct,
 	type FullCustomer,
 	isCustomerProductOnStripeSubscription,
+	isCustomerProductOnStripeSubscriptionSchedule,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import {
@@ -18,7 +19,10 @@ import {
 	type ExpandedStripeSubscription,
 	getExpandedStripeSubscription,
 } from "@/external/stripe/subscriptions";
-import { stripeSubscriptionToNowMs } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
+import {
+	stripeSubscriptionToNowMs,
+	stripeSubscriptionToScheduleId,
+} from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext";
 
@@ -67,12 +71,22 @@ export const setupInvoiceCreatedContext = async ({
 		return null;
 	}
 
+	// 3. Get expanded stripe subscription
+	const stripeSubscription = await getExpandedStripeSubscription({
+		ctx,
+		subscriptionId: stripeSubscriptionId,
+	});
+
 	// 5. Get customer products by subscription ID
-	const currentCustomerProducts = fullCustomer.customer_products.filter((cp) =>
-		isCustomerProductOnStripeSubscription({
-			customerProduct: cp,
-			stripeSubscriptionId,
-		}),
+	const currentCustomerProducts = fullCustomer.customer_products.filter(
+		(cp) => {
+			const onStripeSubscription = isCustomerProductOnStripeSubscription({
+				customerProduct: cp,
+				stripeSubscriptionId,
+			});
+
+			return onStripeSubscription;
+		},
 	);
 
 	const customerProducts =
@@ -80,6 +94,16 @@ export const setupInvoiceCreatedContext = async ({
 			customerProducts: currentCustomerProducts,
 			stripeSubscriptionId,
 		});
+
+	const scheduledCustomerProducts = fullCustomer.customer_products.filter(
+		(cp) => {
+			const scheduleId = stripeSubscriptionToScheduleId({ stripeSubscription });
+			return isCustomerProductOnStripeSubscriptionSchedule({
+				customerProduct: cp,
+				stripeSubscriptionScheduleId: scheduleId,
+			});
+		},
+	);
 
 	if (customerProducts.length === 0) {
 		logger.info(
@@ -89,13 +113,10 @@ export const setupInvoiceCreatedContext = async ({
 	}
 
 	// 6. Update fullCustomer.customer_products with fresh data
-	fullCustomer.customer_products = customerProducts;
-
-	// 3. Get expanded stripe subscription
-	const stripeSubscription = await getExpandedStripeSubscription({
-		ctx,
-		subscriptionId: stripeSubscriptionId,
-	});
+	fullCustomer.customer_products = [
+		...customerProducts,
+		...scheduledCustomerProducts,
+	];
 
 	// 4. Get expanded stripe customer (for discount info)
 	const stripeCustomer = await getExpandedStripeCustomer({

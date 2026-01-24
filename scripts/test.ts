@@ -272,14 +272,9 @@ async function runTest() {
 	console.log(chalk.green(`✓ Found: ${testFile.relative}\n`));
 
 	// Detect test framework
-	const framework = detectTestFramework({ filePath: testFile.path });
-	const frameworkLabel = framework === "bun" ? "Bun" : "Mocha";
-	console.log(chalk.cyan(`🧪 Running test file with ${frameworkLabel}...\n`));
 
-	if (framework !== "bun") {
-		console.error(chalk.red("❌ Mocha tests are deprecated"));
-		process.exit(1);
-	}
+	const frameworkLabel = "Bun";
+	console.log(chalk.cyan(`🧪 Running test file with ${frameworkLabel}...\n`));
 
 	// Run the test file with the appropriate framework, wrapped with Infisical
 	// Respect NODE_ENV from parent process (e.g., development for logging)
