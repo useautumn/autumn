@@ -31,6 +31,12 @@ import { ApiVersion } from "../ApiVersion.js";
 import type { VersionChangeConstructor } from "./VersionChange.js";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
 
+// V2_1_CHANGES: Changes to turn V2.1 format to V2.0 format DOWNWARDS
+export const V2_1_CHANGES: VersionChangeConstructor[] = [
+	// Add V2.1 changes here when needed
+];
+
+// V2_CHANGES: Changes to turn V2.0 format to V1.2 format DOWNWARDS
 export const V2_CHANGES: VersionChangeConstructor[] = [
 	V1_2_CustomerChange, // Transforms Customer TO V1.2 format from V2 format
 	V1_2_CustomerQueryChange, // Transforms Customer Query TO V2.0 format (adds expand options)
@@ -69,6 +75,11 @@ export const V0_2_CHANGES: VersionChangeConstructor[] = [
 export const V0_1_CHANGES: VersionChangeConstructor[] = [];
 
 export function registerAllVersionChanges() {
+	VersionChangeRegistryClass.register({
+		version: ApiVersion.V2_1,
+		changes: V2_1_CHANGES,
+	});
+
 	VersionChangeRegistryClass.register({
 		version: ApiVersion.V2_0,
 		changes: V2_CHANGES,

@@ -138,14 +138,17 @@ export function createdAtToVersion({
 }: {
 	createdAt?: number;
 }): ApiVersionClass {
-	const v2_0 = new Date("2026-03-31").getTime();
-	const v1_2 = new Date("2025-05-05").getTime();
-	const v1_1 = new Date("2025-04-17").getTime();
-	const v0_2 = new Date("2025-01-30").getTime();
+	const v2_1 = VERSION_REGISTRY["2.1.0"].releasedAt;
+	const v2_0 = VERSION_REGISTRY["2.0.0"].releasedAt;
+	const v1_2 = VERSION_REGISTRY["1.2.0"].releasedAt;
+	const v1_1 = VERSION_REGISTRY["1.1.0"].releasedAt;
+	const v0_2 = VERSION_REGISTRY["0.2.0"].releasedAt;
 
 	let version: ApiVersion;
 
-	if (!createdAt || createdAt >= v2_0) {
+	if (!createdAt || createdAt >= v2_1) {
+		version = ApiVersion.V2_1;
+	} else if (createdAt >= v2_0) {
 		version = ApiVersion.V2_0;
 	} else if (createdAt >= v1_2) {
 		version = ApiVersion.V1_2;
