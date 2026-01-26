@@ -1,32 +1,35 @@
-import type { FullCustomer, TrackParams } from "@autumn/shared";
-import type { AutumnContext } from "../../../../honoUtils/HonoEnv";
-import { EventService } from "../../../api/events/EventService";
-import { buildEventInfo, initEvent } from "../../events/initEvent";
+import type { TrackParams } from "@autumn/shared";
+import { checkIdempotencyKey } from "@/internal/misc/idempotency/checkIdempotencyKey.js";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 
 export const handleEventIdempotencyKey = async ({
 	ctx,
 	body,
-	fullCustomer,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
-	fullCustomer: FullCustomer;
 }) => {
-	const eventInfo = buildEventInfo(body);
-
-	const newEvent = initEvent({
-		ctx,
-		eventInfo,
-		internalCustomerId: fullCustomer.internal_id,
-		internalEntityId: fullCustomer.entity?.internal_id ?? undefined,
-		customerId: body.customer_id,
-		entityId: body.entity_id,
+	await checkIdempotencyKey({
+		orgId: ctx.org.id,
+		env: ctx.env,
+		idempotencyKey: `track:${body.idempotency_key}`,
 	});
 
-	await EventService.insert({
-		db: ctx.db,
-		event: newEvent,
-	});
+	// const eventInfo = buildEventInfo(body);
 
-	body.skip_event = true;
+	// const newEvent = initEvent({
+	// 	ctx,
+	// 	eventInfo,
+	// 	internalCustomerId: fullCustomer.internal_id,
+	// 	internalEntityId: fullCustomer.entity?.internal_id ?? undefined,
+	// 	customerId: body.customer_id,
+	// 	entityId: body.entity_id,
+	// });
+
+	// await EventService.insert({
+	// 	db: ctx.db,
+	// 	event: newEvent,
+	// });
+
+	// body.skip_event = true;
 };
