@@ -33,6 +33,7 @@ import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
+import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
@@ -329,7 +330,7 @@ test.concurrent(`${chalk.yellowBright("sub.deleted discount: base price only dis
 			s.products({ list: [pro] }),
 			s.entities({ count: 1, featureId: TestFeature.Users }),
 		],
-		actions: [s.attach({ productId: pro.id, entityIndex: 0 })],
+		actions: [s.attach({ productId: pro.id, entityIndex: 0, timeout: 5000 })],
 	});
 
 	const entityId = entities[0].id;
@@ -393,11 +394,9 @@ test.concurrent(`${chalk.yellowBright("sub.deleted discount: base price only dis
 	});
 
 	// Advance test clock to period end (triggers subscription.deleted)
-	await advanceTestClock({
+	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
-		advanceTo: addMonths(new Date(), 1).getTime(),
-		waitForSeconds: 15,
 	});
 
 	// Verify product is removed from entity
@@ -423,7 +422,7 @@ test.concurrent(`${chalk.yellowBright("sub.deleted discount: base price only dis
 	const expectedArrearTotal = 100 * 0.1;
 
 	// Should have 2 invoices: initial ($10 = $20 * 0.5) + arrear ($10 no discount)
-	expectCustomerInvoiceCorrect({
+	await expectCustomerInvoiceCorrect({
 		customer: customerAfterCancel,
 		count: 2,
 		latestTotal: expectedArrearTotal,

@@ -261,11 +261,17 @@ export class AutumnInt {
 
 	async attach(
 		params: AttachBodyV0,
-		{ skipWebhooks }: { skipWebhooks?: boolean } = {},
+		{
+			skipWebhooks,
+			idempotencyKey,
+		}: { skipWebhooks?: boolean; idempotencyKey?: string } = {},
 	) {
 		const headers: Record<string, string> = {};
 		if (skipWebhooks !== undefined) {
 			headers["x-skip-webhooks"] = skipWebhooks ? "true" : "false";
+		}
+		if (idempotencyKey !== undefined) {
+			headers["idempotency-key"] = idempotencyKey;
 		}
 
 		const data = await this.post(

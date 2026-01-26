@@ -98,6 +98,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro usage pro
 	});
 
 	test("should attach track usage and get correct balance", async () => {
+		await timeout(5000);
 		const wordsUsage = 120000;
 		await autumn.track({
 			customer_id: customerId,

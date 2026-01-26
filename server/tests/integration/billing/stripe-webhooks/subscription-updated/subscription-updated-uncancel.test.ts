@@ -80,11 +80,16 @@ test.concurrent(`${chalk.yellowBright("sub.updated: uncancel via Stripe CLI (can
 	});
 
 	// Cancel pro at end of cycle via Autumn API
-	await autumnV1.subscriptions.update({
-		customer_id: customerId,
-		product_id: pro.id,
-		cancel_action: "cancel_end_of_cycle",
-	});
+	await autumnV1.subscriptions.update(
+		{
+			customer_id: customerId,
+			product_id: pro.id,
+			cancel_action: "cancel_end_of_cycle",
+		},
+		{
+			timeout: 5000, // wait for subscription lock to be cleared in cache
+		},
+	);
 
 	// Verify pro is canceling and free is scheduled
 	const customerAfterCancel =
@@ -112,7 +117,7 @@ test.concurrent(`${chalk.yellowBright("sub.updated: uncancel via Stripe CLI (can
 	});
 
 	// Wait for webhook to process
-	await timeout(8000);
+	await timeout(10000);
 
 	// Verify pro is active (no longer canceling)
 	const customerAfterUncancel =

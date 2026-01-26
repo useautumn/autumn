@@ -26,9 +26,14 @@ const freeProd = constructProduct({
 
 const testCase = "track-basic6";
 
+// Generate unique idempotency keys per test run to avoid Redis TTL conflicts
+const testRunId = Date.now().toString(36);
+
 describe(`${chalk.yellowBright("track-basic6: test idempotency key prevents duplicate tracks")}`, () => {
 	const customerId = "track-basic6";
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
+	const idempotencyKey1 = `test-idempotency-key-1-${testRunId}`;
+	const idempotencyKey2 = `test-idempotency-key-2-${testRunId}`;
 
 	beforeAll(async () => {
 		await initCustomerV3({
@@ -58,13 +63,12 @@ describe(`${chalk.yellowBright("track-basic6: test idempotency key prevents dupl
 
 	test("should process first track with idempotency key", async () => {
 		const deductValue = 25.5;
-		const idempotencyKey = "test-idempotency-key-1";
 
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: deductValue,
-			idempotency_key: idempotencyKey,
+			idempotency_key: idempotencyKey1,
 		});
 
 		const customer = await autumnV1.customers.get(customerId);
@@ -76,28 +80,28 @@ describe(`${chalk.yellowBright("track-basic6: test idempotency key prevents dupl
 		expect(balance).toBe(expectedBalance);
 		expect(usage).toBe(deductValue);
 
+		await timeout(2000);
 		const eventsList = await getCustomerEvents({ customerId });
 		expect(eventsList).toHaveLength(1);
-		expect(eventsList?.[0].idempotency_key).toBe(idempotencyKey);
+		expect(eventsList?.[0].idempotency_key).toBe(idempotencyKey1);
 		expect(eventsList?.[0].value).toBe(deductValue);
 	});
 
 	test("should reject second track with same idempotency key", async () => {
 		const deductValue = 30.75; // Different value
-		const idempotencyKey = "test-idempotency-key-1"; // Same key
 
 		// Get balance before attempting duplicate track
 		const customerBefore = await autumnV1.customers.get(customerId);
 		const balanceBefore = customerBefore.features[TestFeature.Messages].balance;
 		// This should fail or be rejected due to duplicate idempotency key
 		await expectAutumnError({
-			errCode: ErrCode.DuplicateEvent,
+			errCode: ErrCode.DuplicateIdempotencyKey,
 			func: async () => {
 				await autumnV1.track({
 					customer_id: customerId,
 					feature_id: TestFeature.Messages,
 					value: deductValue,
-					idempotency_key: idempotencyKey,
+					idempotency_key: idempotencyKey1, // Same key as first test
 				});
 			},
 		});
@@ -117,12 +121,11 @@ describe(`${chalk.yellowBright("track-basic6: test idempotency key prevents dupl
 
 		const eventsList = await getCustomerEvents({ customerId });
 		expect(eventsList).toHaveLength(1);
-		expect(eventsList?.[0].idempotency_key).toBe(idempotencyKey);
+		expect(eventsList?.[0].idempotency_key).toBe(idempotencyKey1);
 	});
 
 	test("should process track with different idempotency key", async () => {
 		const deductValue = 15.25;
-		const idempotencyKey = "test-idempotency-key-2"; // Different key
 
 		const customerBefore = await autumnV1.customers.get(customerId);
 		const balanceBefore = customerBefore.features[TestFeature.Messages].balance;
@@ -131,7 +134,7 @@ describe(`${chalk.yellowBright("track-basic6: test idempotency key prevents dupl
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: deductValue,
-			idempotency_key: idempotencyKey,
+			idempotency_key: idempotencyKey2, // Different key
 		});
 
 		const customer = await autumnV1.customers.get(customerId);

@@ -37,6 +37,10 @@ export const ExtCustomerDataSchema = z
 			description: "Whether to create the customer in Stripe",
 		}),
 
+		auto_enable_plan_id: z.string().optional().meta({
+			description: "The ID of the free plan to auto-enable for the customer",
+		}),
+
 		processors: ExternalProcessorsSchema.nullish().meta({
 			internal: true,
 			description: "External processors for the customer",

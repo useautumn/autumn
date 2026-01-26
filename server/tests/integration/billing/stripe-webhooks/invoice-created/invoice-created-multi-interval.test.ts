@@ -110,8 +110,8 @@ test.concurrent(`${chalk.yellowBright("invoice.created multi-interval: monthly +
 	await expectStripeInvoiceLineItemPeriodCorrect({
 		customerId,
 		productId: pro.id,
-		periodStartMs: currentEpochMs,
-		periodEndMs: addMonths(currentEpochMs, 1).getTime(),
+		periodStartMs: Date.now(),
+		periodEndMs: addMonths(Date.now(), 1).getTime(),
 	});
 
 	// Messages reset, words still accumulating
@@ -155,8 +155,8 @@ test.concurrent(`${chalk.yellowBright("invoice.created multi-interval: monthly +
 	await expectStripeInvoiceLineItemPeriodCorrect({
 		customerId,
 		productId: pro.id,
-		periodStartMs: addMonths(currentEpochMs, 1).getTime(),
-		periodEndMs: addMonths(currentEpochMs, 2).getTime(),
+		periodStartMs: addMonths(Date.now(), 1).getTime(),
+		periodEndMs: addMonths(Date.now(), 2).getTime(),
 	});
 
 	// Messages reset, words still accumulating
@@ -209,7 +209,8 @@ test.concurrent(`${chalk.yellowBright("invoice.created multi-interval: monthly +
 	await expectStripeInvoiceLineItemPeriodCorrect({
 		customerId,
 		productId: pro.id,
-		periodStartMs: currentEpochMs,
-		periodEndMs: addMonths(currentEpochMs, 3).getTime(),
+		periodStartMs: Date.now(),
+		periodEndMs: addMonths(Date.now(), 3).getTime(),
+		featureId: TestFeature.Words,
 	});
 });

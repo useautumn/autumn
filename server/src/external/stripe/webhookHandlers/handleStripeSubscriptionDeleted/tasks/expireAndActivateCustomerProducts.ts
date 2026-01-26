@@ -1,9 +1,13 @@
 import {
 	type FullCusProduct,
+	findMainScheduledCustomerProductByGroup,
+	isCustomerProductFree,
 	isCustomerProductOnStripeSubscription,
+	isCustomerProductPaid,
 } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import {
 	trackCustomerProductDeletion,
 	trackCustomerProductUpdate,
@@ -57,19 +61,44 @@ export const expireAndActivateCustomerProducts = async ({
 			updates,
 		});
 
-		// 3. Delete scheduled main product in the same group
-		const { deletedCustomerProduct } =
-			await customerProductActions.deleteScheduled({
-				ctx,
-				customerProduct,
-				fullCustomer,
-			});
+		// Find scheduled main product in the same group
+		const scheduledCustomerProduct = findMainScheduledCustomerProductByGroup({
+			fullCustomer,
+			productGroup: customerProduct.product.group,
+			internalEntityId: customerProduct.internal_entity_id ?? undefined,
+		});
 
-		if (deletedCustomerProduct) {
-			trackCustomerProductDeletion({
-				eventContext,
-				customerProduct: deletedCustomerProduct,
-			});
+		if (scheduledCustomerProduct) {
+			const scheduledIsFreeCustomerProduct = isCustomerProductFree(
+				scheduledCustomerProduct,
+			);
+			const scheduledIsPaidCustomerProduct = isCustomerProductPaid(
+				scheduledCustomerProduct,
+			);
+
+			if (scheduledIsFreeCustomerProduct) {
+				const { updates: activateScheduledUpdates } =
+					await customerProductActions.activateScheduled({
+						ctx,
+						customerProduct: scheduledCustomerProduct,
+						fullCustomer,
+					});
+
+				trackCustomerProductUpdate({
+					eventContext,
+					customerProduct: scheduledCustomerProduct,
+					updates: activateScheduledUpdates,
+				});
+			} else if (scheduledIsPaidCustomerProduct) {
+				await CusProductService.delete({
+					db: ctx.db,
+					cusProductId: scheduledCustomerProduct.id,
+				});
+				trackCustomerProductDeletion({
+					eventContext,
+					customerProduct: scheduledCustomerProduct,
+				});
+			}
 		}
 	}
 

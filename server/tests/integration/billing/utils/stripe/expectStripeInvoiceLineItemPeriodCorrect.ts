@@ -1,6 +1,7 @@
 import { expect } from "bun:test";
 import { CusExpand } from "@shared/index";
 import { isUsagePrice, ms } from "@shared/utils";
+import { formatMs } from "@shared/utils/common/formatUtils/formatUnix";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice";
@@ -68,11 +69,23 @@ export const expectStripeInvoiceLineItemPeriodCorrect = async ({
 	const TOLERANCE_MS = ms.days(1);
 
 	for (const line of usageLineItems) {
-		const periodStart = line.period.start;
-		const periodEnd = line.period.end;
+		const periodStart = line.period.start * 1000;
+		const periodEnd = line.period.end * 1000;
 		expect(periodStart).toBeDefined();
 		expect(periodEnd).toBeDefined();
-		expect(periodStart).toBeCloseTo(periodStartMs, TOLERANCE_MS);
-		expect(periodEnd).toBeCloseTo(periodEndMs, TOLERANCE_MS);
+
+		const startDiff = Math.abs(periodStart - periodStartMs);
+		const endDiff = Math.abs(periodEnd - periodEndMs);
+
+		if (startDiff > TOLERANCE_MS) {
+			throw new Error(
+				`Period start mismatch: expected ${formatMs(periodStartMs)}, got ${formatMs(periodStart)} (diff: ${startDiff}ms)`,
+			);
+		}
+		if (endDiff > TOLERANCE_MS) {
+			throw new Error(
+				`Period end mismatch: expected ${formatMs(periodEndMs)}, got ${formatMs(periodEnd)} (diff: ${endDiff}ms)`,
+			);
+		}
 	}
 };

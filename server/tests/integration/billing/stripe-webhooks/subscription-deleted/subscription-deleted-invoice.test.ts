@@ -525,9 +525,11 @@ test.concurrent(`${chalk.yellowBright("sub.deleted invoice: customer trial consu
 	});
 
 	// No invoices yet (trialing)
-	expectCustomerInvoiceCorrect({
+	await expectCustomerInvoiceCorrect({
 		customer: customerAfterAttach,
-		count: 0,
+		count: 1,
+		latestTotal: 0,
+		latestInvoiceProductId: proTrial.id,
 	});
 
 	// Track 250 messages (100 included, 150 overage = $15 if billed)
@@ -564,8 +566,8 @@ test.concurrent(`${chalk.yellowBright("sub.deleted invoice: customer trial consu
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
-		numberOfDays: 14,
-		waitForSeconds: 15,
+		numberOfDays: 20,
+		waitForSeconds: 30,
 	});
 
 	// Verify product is removed
@@ -585,9 +587,11 @@ test.concurrent(`${chalk.yellowBright("sub.deleted invoice: customer trial consu
 	});
 
 	// Key assertion: No arrear invoice created because trial usage is free
-	expectCustomerInvoiceCorrect({
+	await expectCustomerInvoiceCorrect({
 		customer: customerAfterCancel,
-		count: 0, // No invoices at all (trial was canceled before converting)
+		count: 1, // 1 initial invoice + 1 renewal invoice
+		latestTotal: 0,
+		latestInvoiceProductId: proTrial.id,
 	});
 });
 
@@ -639,9 +643,11 @@ test.concurrent(`${chalk.yellowBright("sub.deleted invoice: entity trial consuma
 	// No invoices yet (trialing)
 	const customerAfterAttach =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	expectCustomerInvoiceCorrect({
+	await expectCustomerInvoiceCorrect({
 		customer: customerAfterAttach,
-		count: 0,
+		count: 1,
+		latestTotal: 0,
+		latestInvoiceProductId: proTrial.id,
 	});
 
 	// Track 200 messages on entity (100 included, 100 overage = $10 if billed)
@@ -679,8 +685,8 @@ test.concurrent(`${chalk.yellowBright("sub.deleted invoice: entity trial consuma
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
-		numberOfDays: 14,
-		waitForSeconds: 15,
+		numberOfDays: 20,
+		waitForSeconds: 30,
 	});
 
 	// Verify product is removed from entity
@@ -701,9 +707,11 @@ test.concurrent(`${chalk.yellowBright("sub.deleted invoice: entity trial consuma
 	// Key assertion: No arrear invoice created because trial usage is free
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	expectCustomerInvoiceCorrect({
+	await expectCustomerInvoiceCorrect({
 		customer: customerAfterCancel,
-		count: 0, // No invoices at all (trial was canceled before converting)
+		count: 1,
+		latestTotal: 0,
+		latestInvoiceProductId: proTrial.id,
 	});
 });
 
@@ -757,7 +765,7 @@ test.concurrent(`${chalk.yellowBright("sub.deleted invoice: entity consumable â†
 	// Verify initial attach invoice: $20 base price
 	const customerAfterAttach =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	expectCustomerInvoiceCorrect({
+	await expectCustomerInvoiceCorrect({
 		customer: customerAfterAttach,
 		count: 1,
 		latestTotal: 20,
