@@ -1,13 +1,15 @@
 import {
 	apiKeys,
+	ErrCode,
 	oauthAccessToken,
 	oauthConsent,
 	oauthRefreshToken,
+	RecaseError,
 } from "@autumn/shared";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { clearSecretKeyCache } from "../../api-keys/cacheApiKeyUtils.js";
+import { clearSecretKeyCache } from "../../../dev/api-keys/cacheApiKeyUtils.js";
 
 /**
  * Revoke an OAuth consent and delete all linked resources:
@@ -31,7 +33,11 @@ export const handleRevokeConsent = createRoute({
 		const { consent_id } = c.req.valid("param");
 
 		if (!org?.id) {
-			return c.json({ error: "No organization found" }, 400);
+			throw new RecaseError({
+				message: "No organization found",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
 		}
 
 		// 1. Get the consent and verify it belongs to this org
@@ -46,16 +52,21 @@ export const handleRevokeConsent = createRoute({
 			.limit(1);
 
 		if (consentRecords.length === 0) {
-			return c.json({ error: "Consent not found" }, 404);
+			throw new RecaseError({
+				message: "Consent not found",
+				code: "not_found",
+				statusCode: 404,
+			});
 		}
 
 		const consent = consentRecords[0];
 
 		if (consent.referenceId !== org.id) {
-			return c.json(
-				{ error: "Consent does not belong to this organization" },
-				403,
-			);
+			throw new RecaseError({
+				message: "Consent does not belong to this organization",
+				code: "forbidden",
+				statusCode: 403,
+			});
 		}
 
 		const { clientId, referenceId } = consent;

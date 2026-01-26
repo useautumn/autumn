@@ -2,7 +2,6 @@ import express from "express";
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handlePlanHasCustomersV2 } from "@/internal/products/handlers/handlePlanHasCustomersV2.js";
-import { handlePlanHasCustomersV3 } from "@/internal/products/handlers/handlePlanHasCustomersV3.js";
 import { handleCopyProductV2 } from "./handlers/handleCopyProduct/handleCopyProductV2.js";
 import { handleCreatePlan } from "./handlers/handleCreatePlan.js";
 import { handleDeleteProduct as handleDeleteProductHono } from "./handlers/handleDeleteProduct.js";
@@ -43,10 +42,6 @@ honoProductRouter.get(
 );
 honoProductRouter.post(
 	"/:product_id/has_customers",
-	...handlePlanHasCustomersV2, // V2 for dashboard (expects ProductV2 format)
-);
-honoProductRouter.post(
-	"/:product_id/has_customers_v3",
-	...handlePlanHasCustomersV3, // V3 for CLI (accepts CreatePlanParams format)
+	...handlePlanHasCustomersV2,
 );
 honoProductRouter.get("/:product_id/deletion_info", ...handleGetPlanDeleteInfo);

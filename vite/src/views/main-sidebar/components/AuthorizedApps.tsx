@@ -12,7 +12,7 @@ import {
 	DialogTitle,
 } from "@/components/v2/dialogs/Dialog";
 import { getBackendErr } from "@/utils/genUtils";
-import { groupAndFormatScopes } from "@/utils/scopeDefinitions";
+import { groupAndFormatScopes } from "@autumn/shared";
 
 interface OAuthConsent {
 	id: string;
