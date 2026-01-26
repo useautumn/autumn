@@ -91,7 +91,7 @@ export const customerEntitlementShouldBeBilled = ({
 	const nextResetAt = cusEnt.next_reset_at;
 	if (!nextResetAt) return false;
 
-	const TOLERANCE_MS = ms.minutes(30);
+	const TOLERANCE_MS = ms.days(1);
 
 	return nextResetAt <= invoicePeriodEndMs + TOLERANCE_MS;
 };
