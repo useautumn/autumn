@@ -1,8 +1,8 @@
 import {
 	type ApiFreeTrialV2,
 	ApiFreeTrialV2Schema,
-	type ApiPlan,
-	ApiPlanSchema,
+	type ApiPlanV1,
+	ApiPlanV1Schema,
 	AttachScenario,
 	type Feature,
 	type FullCustomer,
@@ -70,7 +70,7 @@ const getTrialAvailable = async ({
 };
 
 /**
- * Convert FullProduct (DB format) to Plan API response format
+ * Convert FullProduct (DB format) to Plan API response format (V1/latest)
  */
 export const getPlanResponse = async ({
 	product,
@@ -84,7 +84,7 @@ export const getPlanResponse = async ({
 	fullCus?: FullCustomer;
 	db?: DrizzleCli;
 	currency?: string;
-}): Promise<ApiPlan> => {
+}): Promise<ApiPlanV1> => {
 	// 1. Convert prices/entitlements to items
 	const rawItems = mapToProductItems({
 		prices: product.prices,
@@ -100,7 +100,7 @@ export const getPlanResponse = async ({
 
 	// 4. Extract base price using existing helper
 	const basePriceItem = productV2ToBasePrice({ product: productV2 as any });
-	const basePrice: ApiPlan["price"] | null = basePriceItem
+	const basePrice: ApiPlanV1["price"] | null = basePriceItem
 		? {
 				amount: basePriceItem.price,
 				interval: itemToBillingInterval({ item: basePriceItem }),
@@ -149,7 +149,7 @@ export const getPlanResponse = async ({
 	});
 
 	// 9. Build Plan response
-	return ApiPlanSchema.parse({
+	return ApiPlanV1Schema.parse({
 		// Basic fields
 		id: product.id,
 		name: product.name || null,
@@ -159,7 +159,7 @@ export const getPlanResponse = async ({
 
 		// Boolean flags
 		add_on: product.is_add_on,
-		default: product.is_default,
+		auto_enable: product.is_default,
 
 		// Price field (optional - only for products with base price)
 		price: basePrice,

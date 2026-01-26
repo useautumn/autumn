@@ -1,6 +1,6 @@
+import { BillingMethod } from "@models/productV2Models/productItemModels/productItemModels.js";
 import { ResetInterval } from "@models/productModels/intervals/resetInterval.js";
 import { UsageTierSchema } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
-import { BillingMethod } from "@models/productV2Models/productItemModels/productItemModels.js";
 import { z } from "zod/v4";
 import { RolloverExpiryDurationType } from "../../../models/productModels/durationTypes/rolloverExpiryDurationType.js";
 import { BillingInterval } from "../../../models/productModels/intervals/billingInterval.js";
@@ -11,19 +11,18 @@ import {
 import { ApiFeatureV0Schema } from "../../features/prevVersions/apiFeatureV0.js";
 import { DisplaySchema } from "../components/display.js";
 
-export const ApiPlanFeatureSchema = z
+export const ApiPlanFeatureV1Schema = z
 	.object({
 		feature_id: z.string(),
 		feature: ApiFeatureV0Schema.optional(),
 
-		granted_balance: z.number(),
+		included: z.number(),
 		unlimited: z.boolean(),
 
 		reset: z
 			.object({
 				interval: z.enum(ResetInterval),
 				interval_count: z.number().optional(),
-				reset_when_enabled: z.boolean(),
 			})
 			.nullable(),
 
@@ -89,14 +88,14 @@ export const ApiPlanFeatureSchema = z
 		}
 	});
 
-export type ApiPlanFeature = z.infer<typeof ApiPlanFeatureSchema>;
+export type ApiPlanFeatureV1 = z.infer<typeof ApiPlanFeatureV1Schema>;
 
-export const ApiPlanFeatureWithMeta = ApiPlanFeatureSchema.meta({
-	id: "PlanFeature",
-	description: "Plan feature object returned by the API",
+export const ApiPlanFeatureV1WithMeta = ApiPlanFeatureV1Schema.meta({
+	id: "PlanFeatureV1",
+	description: "Plan feature object returned by the API (V1/latest)",
 	example: {
 		feature_id: "123",
-		granted_balance: 100,
+		included: 100,
 		unlimited: false,
 		price: null,
 	},

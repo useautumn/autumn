@@ -1,10 +1,12 @@
 import type { ApiPlanFeature } from "@api/products/planFeature/apiPlanFeature.js";
 import {
+	BillingMethod,
 	type ProductItem,
 	type ProductItemConfig,
 	ProductItemSchema,
 	ProductItemType,
 	type RolloverConfig,
+	UsageModel,
 } from "@models/productV2Models/productItemModels/productItemModels.js";
 import {
 	type ApiFeatureV0,
@@ -144,13 +146,21 @@ export const planFeaturesToItems = ({
 
 			price: planFeature.price?.amount,
 
-			tiers: planFeature.price?.tiers?.map((tier) => ({
-				amount: tier.amount,
-				to: tier.to,
-			})),
+		tiers: planFeature.price?.tiers?.map((tier) => ({
+			amount: tier.amount,
+			to: tier.to,
+		})),
 
-			usage_model: planFeature.price?.usage_model,
-			billing_units: planFeature.price?.billing_units,
+		// Handle both billing_method (V2.0 ApiPlanFeature) and usage_model (UpdatePlanFeatureParams)
+		usage_model:
+			planFeature.price && "billing_method" in planFeature.price
+				? planFeature.price.billing_method === BillingMethod.Prepaid
+					? UsageModel.Prepaid
+					: UsageModel.PayPerUse
+				: planFeature.price && "usage_model" in planFeature.price
+					? planFeature.price.usage_model
+					: undefined,
+		billing_units: planFeature.price?.billing_units,
 			usage_limit: planFeature.price?.max_purchase
 				? planFeature.price.max_purchase + (planFeature.granted_balance ?? 0)
 				: undefined,

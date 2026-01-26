@@ -1,8 +1,8 @@
-import { ApiPlanSchema } from "@api/products/apiPlan.js";
+import { ApiPlanV1Schema } from "@api/products/apiPlanV1.js";
 import { z } from "zod/v4";
 
 export const ApiSubscriptionV1Schema = z.object({
-	plan: ApiPlanSchema.optional(),
+	plan: ApiPlanV1Schema.optional(),
 	plan_id: z.string(),
 
 	auto_enable: z.boolean(),

@@ -29,6 +29,11 @@ export enum UsageModel {
 	PayPerUse = "pay_per_use",
 }
 
+export enum BillingMethod {
+	Prepaid = "prepaid",
+	UsageBased = "usage_based",
+}
+
 export enum ProductItemFeatureType {
 	SingleUse = "single_use",
 	ContinuousUse = "continuous_use",

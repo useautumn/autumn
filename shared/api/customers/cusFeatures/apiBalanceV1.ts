@@ -3,13 +3,9 @@ import {
 	ApiBalanceRolloverSchema,
 } from "@api/customers/cusFeatures/apiBalance.js";
 import { UsageTierSchema } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
+import { BillingMethod } from "@models/productV2Models/productItemModels/productItemModels.js";
 import { z } from "zod/v4";
 import { ApiFeatureV1Schema } from "../../features/apiFeatureV1.js";
-
-export enum BillingMethod {
-	Prepaid = "prepaid",
-	UsageBased = "usage_based",
-}
 
 export const ApiBalanceBreakdownPriceSchema = z.object({
 	amount: z.number().optional(),

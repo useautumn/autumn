@@ -545,6 +545,13 @@ export class AutumnInt {
 			const data = await this.delete(`/products/${productId}`);
 			return data;
 		},
+
+		list: async (params?: { limit?: number; offset?: number }) => {
+			const queryString = params
+				? `?${new URLSearchParams(params as Record<string, string>).toString()}`
+				: "";
+			return await this.get(`/products${queryString}`);
+		},
 	};
 
 	rewards = {

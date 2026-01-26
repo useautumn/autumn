@@ -1,9 +1,10 @@
 import {
-	type ApiPlanFeature,
-	ApiPlanFeatureSchema,
-} from "@api/products/planFeature/apiPlanFeature.js";
+	type ApiPlanFeatureV1,
+	ApiPlanFeatureV1Schema,
+} from "@api/products/planFeature/apiPlanFeatureV1.js";
 import { Infinite } from "@models/productModels/productEnums.js";
 import {
+	BillingMethod,
 	type ProductItem,
 	UsageModel,
 } from "@models/productV2Models/productItemModels/productItemModels.js";
@@ -47,7 +48,7 @@ const itemToReset = ({
 }: {
 	item: ProductItem;
 	feature: Feature;
-}) => {
+}): ApiPlanFeatureV1["reset"] => {
 	// 1. If continuous use or boolean, no reset
 	if (isContUseFeature({ feature }) || isBooleanFeature({ feature })) {
 		return null;
@@ -59,11 +60,15 @@ const itemToReset = ({
 			item.interval_count !== 1 && typeof item.interval_count === "number"
 				? item.interval_count
 				: undefined,
-		reset_when_enabled: item.reset_usage_when_enabled ?? false,
-	} satisfies ApiPlanFeature["reset"];
+		// Note: reset_when_enabled is NOT in V1 schema - removed
+	};
 };
 
-const itemToPlanFeaturePrice = ({ item }: { item: ProductItem }) => {
+const itemToPlanFeaturePrice = ({
+	item,
+}: {
+	item: ProductItem;
+}): ApiPlanFeatureV1["price"] => {
 	if (!isFeaturePriceItem(item)) {
 		return null;
 	}
@@ -85,6 +90,12 @@ const itemToPlanFeaturePrice = ({ item }: { item: ProductItem }) => {
 				}))
 			: undefined;
 
+	// V1 schema uses billing_method, NOT usage_model
+	const billingMethod =
+		item.usage_model === UsageModel.PayPerUse
+			? BillingMethod.UsageBased
+			: BillingMethod.Prepaid;
+
 	return {
 		amount: price ?? undefined,
 		tiers: tiers,
@@ -96,22 +107,30 @@ const itemToPlanFeaturePrice = ({ item }: { item: ProductItem }) => {
 				: undefined,
 
 		billing_units: item.billing_units ?? 1,
-		usage_model: item.usage_model || UsageModel.PayPerUse,
+		billing_method: billingMethod,
 		max_purchase: maxPurchase,
-	} satisfies ApiPlanFeature["price"];
+	};
 };
 
-const itemToPlanFeatureRollover = ({ item }: { item: ProductItem }) => {
+const itemToPlanFeatureRollover = ({
+	item,
+}: {
+	item: ProductItem;
+}): ApiPlanFeatureV1["rollover"] => {
 	if (!item.config?.rollover) return undefined;
 
 	return {
 		max: item.config.rollover.max ?? null,
 		expiry_duration_type: item.config.rollover.duration,
 		expiry_duration_length: item.config.rollover.length,
-	} satisfies ApiPlanFeature["rollover"];
+	};
 };
 
-const itemToPlanFeatureProration = ({ item }: { item: ProductItem }) => {
+const itemToPlanFeatureProration = ({
+	item,
+}: {
+	item: ProductItem;
+}): ApiPlanFeatureV1["proration"] => {
 	if (!item.config?.on_increase || !item.config?.on_decrease) return undefined;
 
 	if (!isFeaturePriceItem(item)) return undefined;
@@ -119,7 +138,7 @@ const itemToPlanFeatureProration = ({ item }: { item: ProductItem }) => {
 	return {
 		on_increase: item.config.on_increase,
 		on_decrease: item.config.on_decrease,
-	} satisfies ApiPlanFeature["proration"];
+	};
 };
 
 export const itemsToPlanFeatures = ({
@@ -128,7 +147,7 @@ export const itemsToPlanFeatures = ({
 }: {
 	items: ProductItem[];
 	features: Feature[];
-}): ApiPlanFeature[] => {
+}): ApiPlanFeatureV1[] => {
 	if (!items) return [];
 
 	return items.map((item) => {
@@ -140,8 +159,8 @@ export const itemsToPlanFeatures = ({
 			});
 		}
 
-		// 1. Granted balance
-		const grantedBalance =
+		// 1. Included balance (V1 uses "included", not "granted_balance")
+		const included =
 			item.included_usage === Infinite ? 0 : (item.included_usage ?? 0);
 
 		const reset = itemToReset({ item, feature });
@@ -149,23 +168,20 @@ export const itemsToPlanFeatures = ({
 		const rollover = itemToPlanFeatureRollover({ item });
 		const proration = itemToPlanFeatureProration({ item });
 
-		return ApiPlanFeatureSchema.parse({
+		return ApiPlanFeatureV1Schema.parse({
 			feature_id: item.feature_id,
 
-			granted_balance: grantedBalance,
+			included: included,
 			unlimited: item.included_usage === Infinite,
 
 			reset,
-			price,
+			price, // V1: price can be null (no need for conditional spread)
 
 			rollover,
 			proration,
 
 			display: getProductItemDisplay({ item, features }),
-
-			// Other fields
-			// entity_feature_id: item.entity_feature_id,
-		} satisfies ApiPlanFeature);
+		});
 	});
 };
 

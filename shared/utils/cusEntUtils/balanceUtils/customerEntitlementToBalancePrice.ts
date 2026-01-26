@@ -1,7 +1,5 @@
-import {
-	type ApiBalanceBreakdownPrice,
-	BillingMethod,
-} from "@api/customers/cusFeatures/apiBalanceV1";
+import type { ApiBalanceBreakdownPrice } from "@api/customers/cusFeatures/apiBalanceV1";
+import { BillingMethod } from "@models/productV2Models/productItemModels/productItemModels.js";
 import type { FullCusEntWithFullCusProduct } from "@models/cusProductModels/cusEntModels/cusEntWithProduct";
 import { cusEntsToMaxPurchase } from "@utils/cusEntUtils/convertCusEntUtils/cusEntsToMaxPurchase";
 import { cusEntToCusPrice } from "@utils/cusEntUtils/convertCusEntUtils/cusEntToCusPrice";

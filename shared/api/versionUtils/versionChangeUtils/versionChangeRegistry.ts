@@ -22,6 +22,7 @@ import { V1_2_CreateFeatureChange } from "@api/features/changes/V1.2_FeaturePara
 import { V1_2_InvoiceChange } from "@api/others/apiInvoice/changes/V1.2_InvoiceChange.js";
 // Import product changes
 import { V1_2_ProductChanges } from "@api/products/changes/V1.2_ProductChanges.js";
+import { V2_0_PlanChanges } from "@api/products/changes/V2.0_PlanChanges.js";
 import { V0_2_CheckChange } from "../../balances/check/changes/V0.2_CheckChange.js";
 import { V1_2_CheckChange } from "../../balances/check/changes/V1.2_CheckChange.js";
 import { V1_2_CheckQueryChange } from "../../balances/check/changes/V1.2_CheckQueryChange.js";
@@ -42,6 +43,7 @@ export const V2_1_CHANGES: VersionChangeConstructor[] = [
 	V2_0_TrackChange,
 	V2_0_EntityChange,
 	V2_0_CustomerChange,
+	V2_0_PlanChanges, // Transforms Plan TO V2.0 format (auto_enable → default, included → granted_balance)
 ];
 
 // V2_CHANGES: Changes to turn V2.0 format to V1.2 format DOWNWARDS

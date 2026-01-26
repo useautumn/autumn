@@ -1,5 +1,31 @@
 import type { ApiSubscription } from "@api/customers/cusPlans/apiSubscription.js";
 import type { ApiSubscriptionV1 } from "@api/customers/cusPlans/apiSubscriptionV1.js";
+import type { ApiPlan } from "@api/products/apiPlan.js";
+import type { ApiPlanV1 } from "@api/products/apiPlanV1.js";
+
+/**
+ * Transform ApiPlanV1 (V2.1) to ApiPlan (V2.0) for nested plan in subscription
+ */
+function transformPlanV1ToV0(plan: ApiPlanV1): ApiPlan {
+	return {
+		...plan,
+		default: plan.auto_enable,
+		features: plan.features.map((feature) => {
+			const { included, ...restFeature } = feature;
+			return {
+				...restFeature,
+				granted_balance: included,
+				reset: feature.reset
+					? {
+							interval: feature.reset.interval,
+							interval_count: feature.reset.interval_count,
+							reset_when_enabled: false,
+						}
+					: null,
+			};
+		}),
+	};
+}
 
 export function transformApiSubscriptionV1ToV0({
 	input,
@@ -7,7 +33,7 @@ export function transformApiSubscriptionV1ToV0({
 	input: ApiSubscriptionV1;
 }): ApiSubscription {
 	return {
-		plan: input.plan,
+		plan: input.plan ? transformPlanV1ToV0(input.plan) : undefined,
 		plan_id: input.plan_id,
 		default: input.auto_enable,
 		add_on: input.add_on,

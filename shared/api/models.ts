@@ -46,6 +46,8 @@ export * from "./others/apiInvoice/apiInvoiceV1.js";
 // Product
 export * from "./products/apiFreeTrial.js";
 export * from "./products/apiPlan.js";
+export * from "./products/apiPlanV1.js";
+export * from "./products/planFeature/apiPlanFeatureV1.js";
 export * from "./products/planFeature/previousVersions/apiProductItem.js";
 export * from "./products/planOpModels.js";
 export * from "./products/previousVersions/apiProduct.js";
@@ -71,10 +73,10 @@ export * from "./balances/check/prevVersions/CheckResponseV1.js";
 export * from "./balances/create/createBalanceParams.js";
 export * from "./balances/prevVersions/legacyUpdateBalanceModels.js";
 export * from "./balances/track/prevVersions/trackResponseV1.js";
+export * from "./balances/track/trackLegacyData.js";
 export * from "./balances/track/trackParams.js";
 export * from "./balances/track/trackResponseV2.js";
 export * from "./balances/track/trackResponseV3.js";
-export * from "./balances/track/trackLegacyData.js";
 export * from "./balances/usageModels.js";
 // Billing
 export * from "./billing/index.js";
