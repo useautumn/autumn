@@ -1,11 +1,11 @@
-import { useProductContext } from "@/views/products/product/ProductContext";
-import React from "react";
-import { AttachNewItems } from "./attach-preview/AttachNewItems";
-import { DueToday } from "./attach-preview/DueToday";
-import { DueNextCycle } from "./attach-preview/DueNextCycle";
-import { UpdateQuantity } from "./attach-preview/UpdateQuantity";
 import { AttachBranch } from "@autumn/shared";
+import React from "react";
+import { useProductContext } from "@/views/products/product/ProductContext";
+import { AttachNewItems } from "./attach-preview/AttachNewItems";
+import { DueNextCycle } from "./attach-preview/DueNextCycle";
+import { DueToday } from "./attach-preview/DueToday";
 import { OptionsInput } from "./attach-preview/OptionsInput";
+import { UpdateQuantity } from "./attach-preview/UpdateQuantity";
 
 export const AttachPreviewDetails = () => {
 	const { attachState } = useProductContext();

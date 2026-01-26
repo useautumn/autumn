@@ -11,6 +11,7 @@ export const getTrialStateTransition = ({
 	const isTrialing = isStripeSubscriptionTrialing(
 		billingContext.stripeSubscription,
 	);
+
 	const willBeTrialing = billingContextHasTrial({ billingContext });
 
 	return { isTrialing, willBeTrialing };

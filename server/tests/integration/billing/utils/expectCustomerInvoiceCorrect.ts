@@ -15,6 +15,7 @@ export const expectCustomerInvoiceCorrect = async ({
 	latestTotal,
 	latestStatus,
 	latestInvoiceProductId,
+	latestInvoiceProductIds,
 }: {
 	customerId?: string;
 	customer?: ApiCustomerV3;
@@ -22,6 +23,7 @@ export const expectCustomerInvoiceCorrect = async ({
 	latestTotal?: number;
 	latestStatus?: "paid" | "draft" | "open" | "void";
 	latestInvoiceProductId?: string;
+	latestInvoiceProductIds?: string[];
 }) => {
 	const customer = providedCustomer
 		? providedCustomer
@@ -45,5 +47,11 @@ export const expectCustomerInvoiceCorrect = async ({
 
 	if (latestInvoiceProductId !== undefined && invoices.length > 0) {
 		expect(invoices[0].product_ids).toContain(latestInvoiceProductId);
+	}
+
+	if (latestInvoiceProductIds !== undefined && invoices.length > 0) {
+		for (const productId of latestInvoiceProductIds) {
+			expect(invoices[0].product_ids).toContain(productId);
+		}
 	}
 };

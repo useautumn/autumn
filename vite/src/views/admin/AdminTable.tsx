@@ -1,8 +1,7 @@
-import { useState, useCallback } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
+import { useCallback, useState } from "react";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
-
 import { DataTable } from "./DataTable";
-import { ColumnDef } from "@tanstack/react-table";
 
 export const AdminTable = ({
 	path,

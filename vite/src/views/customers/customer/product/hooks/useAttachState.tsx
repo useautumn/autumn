@@ -119,7 +119,11 @@ export const useAttachState = ({
 				free_trial: initialProductRef.current?.free_trial || null,
 			});
 
-		console.log('[UAS] effect', { changed: hasItemsChanged, refLen: initialProductRef.current?.items?.length, hasPrepaid: productHasPrepaid(product.items) });
+		console.log("[UAS] effect", {
+			changed: hasItemsChanged,
+			refLen: initialProductRef.current?.items?.length,
+			hasPrepaid: productHasPrepaid(product.items),
+		});
 
 		setItemsChanged(hasItemsChanged);
 	}, [product]);
@@ -183,7 +187,12 @@ export const useAttachState = ({
 			return "Attach Plan";
 		})();
 
-		console.log('[BTN]', { text: result, cusId: cusProduct?.id, changed: itemsChanged, prepaid: flags.hasPrepaid });
+		console.log("[BTN]", {
+			text: result,
+			cusId: cusProduct?.id,
+			changed: itemsChanged,
+			prepaid: flags.hasPrepaid,
+		});
 		return result;
 	};
 

@@ -1,19 +1,17 @@
 import {
-	Feature,
+	type Feature,
 	FeatureType,
 	FeatureUsageType,
 	ProductItemFeatureType,
 } from "@autumn/shared";
-
+import { useEffect, useState } from "react";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { cn } from "@/lib/utils";
 import { shouldShowProrationConfig } from "@/utils/product/productItemUtils";
 
-import { cn } from "@/lib/utils";
-import { useEffect, useState } from "react";
-import { useProductItemContext } from "./ProductItemContext";
-
 import { ConfigWithFeature } from "./components/ConfigWithFeature";
+import { useProductItemContext } from "./ProductItemContext";
 import { PriceItemConfig } from "./product-item-config/PriceItemConfig";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const ProductItemConfig = () => {
 	// HOOKS

@@ -1,4 +1,4 @@
-import Stripe from "stripe";
+import type Stripe from "stripe";
 
 // Normalize items for comparison (order-agnostic, price id as string)
 const normalizePhaseItems = (

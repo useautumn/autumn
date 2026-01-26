@@ -1,5 +1,5 @@
-import inquirer from "inquirer";
 import chalk from "chalk";
+import inquirer from "inquirer";
 
 /**
  * Prompts user for Stripe test API key
@@ -111,7 +111,9 @@ export async function setupTunnelUrl(): Promise<string> {
 		),
 	);
 	console.log(
-		chalk.cyan("You can use tools like ngrok, localtunnel, or Cloudflare Tunnel."),
+		chalk.cyan(
+			"You can use tools like ngrok, localtunnel, or Cloudflare Tunnel.",
+		),
 	);
 	console.log(chalk.cyan("Example: https://your-subdomain.ngrok.io\n"));
 

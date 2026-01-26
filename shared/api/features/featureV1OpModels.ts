@@ -16,57 +16,55 @@ const featureDescriptions = {
 		"Whether the feature is archived. Archived features are hidden from the dashboard and list features endpoint.",
 };
 
-export const BaseFeatureV1ParamsSchema = z
-	.object({
-		id: z
-			.string()
-			.nonempty()
-			.regex(idRegex)
-			.meta({ description: featureDescriptions.id }),
-		name: z
-			.string()
-			.nonempty()
-			.nullish()
-			.meta({ description: featureDescriptions.name }),
-		type: z.enum(FeatureType).meta({ description: featureDescriptions.type }),
-		consumable: z.boolean().optional(),
+export const BaseFeatureV1ParamsSchema = z.object({
+	id: z
+		.string()
+		.nonempty()
+		.regex(idRegex)
+		.meta({ description: featureDescriptions.id }),
+	name: z
+		.string()
+		.nonempty()
+		.nullish()
+		.meta({ description: featureDescriptions.name }),
+	type: z.enum(FeatureType).meta({ description: featureDescriptions.type }),
+	consumable: z.boolean().optional(),
 
-		display: z
-			.object({
-				singular: z.string(),
-				plural: z.string(),
-			})
-			.optional()
-			.meta({ description: featureDescriptions.display }),
+	display: z
+		.object({
+			singular: z.string(),
+			plural: z.string(),
+		})
+		.optional()
+		.meta({ description: featureDescriptions.display }),
 
-		credit_schema: z
-			.array(
-				z.object({
-					metered_feature_id: z.string(),
-					credit_cost: z.number(),
-				}),
-			)
-			.optional()
-			.meta({ description: featureDescriptions.credit_schema }),
+	credit_schema: z
+		.array(
+			z.object({
+				metered_feature_id: z.string(),
+				credit_cost: z.number(),
+			}),
+		)
+		.optional()
+		.meta({ description: featureDescriptions.credit_schema }),
 
-		event_names: z.array(z.string()).optional(),
-	});
+	event_names: z.array(z.string()).optional(),
+});
 
 // Create Feature Params
-export const CreateFeatureV1ParamsSchema = BaseFeatureV1ParamsSchema
-	.refine(
-		(data: z.infer<typeof BaseFeatureV1ParamsSchema>) => {
-			if (data.type === FeatureType.Metered && nullish(data.consumable)) {
-				return false;
-			}
-			return true;
-		},
-		{
-			message:
-				"Please specify whether the feature is consumable (eg. API tokens, credits, etc.) or not.",
-			path: ["consumable"],
-		},
-	)
+export const CreateFeatureV1ParamsSchema = BaseFeatureV1ParamsSchema.refine(
+	(data: z.infer<typeof BaseFeatureV1ParamsSchema>) => {
+		if (data.type === FeatureType.Metered && nullish(data.consumable)) {
+			return false;
+		}
+		return true;
+	},
+	{
+		message:
+			"Please specify whether the feature is consumable (eg. API tokens, credits, etc.) or not.",
+		path: ["consumable"],
+	},
+)
 	.refine(
 		(data) => {
 			if (

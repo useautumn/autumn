@@ -4,10 +4,10 @@ import { createRoute } from "../../honoMiddlewares/routeHandler";
 
 /**
  * GET /admin/org-member
- * 
+ *
  * Query params:
  * - org_id: The org ID to get a member for
- * 
+ *
  * Returns the userId of the first member of the org.
  */
 export const handleGetOrgMember = createRoute({
@@ -32,4 +32,3 @@ export const handleGetOrgMember = createRoute({
 		return c.json({ userId: orgMember.userId });
 	},
 });
-

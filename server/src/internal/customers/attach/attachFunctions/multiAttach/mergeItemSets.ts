@@ -1,4 +1,4 @@
-import { ItemSet } from "@/utils/models/ItemSet.js";
+import type { ItemSet } from "@/utils/models/ItemSet.js";
 
 export const mergeItemSets = ({
 	curItemSet,

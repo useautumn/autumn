@@ -12,9 +12,7 @@ test.concurrent(`${chalk.yellowBright("errors: auto_enable_plan_id with non-exis
 	const customerId = "error-auto-enable-nonexistent";
 
 	const { autumnV1 } = await initScenario({
-		setup: [
-			s.deleteCustomer({ customerId }),
-		],
+		setup: [s.deleteCustomer({ customerId })],
 		actions: [],
 	});
 

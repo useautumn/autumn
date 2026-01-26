@@ -1,10 +1,10 @@
 import { relations } from "drizzle-orm";
-import { customerProducts } from "./cusProductTable.js";
 import { customers } from "../cusModels/cusTable.js";
-import { products } from "../productModels/productTable.js";
 import { freeTrials } from "../productModels/freeTrialModels/freeTrialTable.js";
+import { products } from "../productModels/productTable.js";
 import { customerEntitlements } from "./cusEntModels/cusEntTable.js";
 import { customerPrices } from "./cusPriceModels/cusPriceTable.js";
+import { customerProducts } from "./cusProductTable.js";
 
 export const customerProductsRelations = relations(
 	customerProducts,

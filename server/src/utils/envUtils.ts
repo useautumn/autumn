@@ -15,14 +15,15 @@ export const loadLocalEnv = () => {
 	// Load local .env file FIRST - these will take precedence over Infisical
 	const result = config({ path: envPath });
 	if (result.parsed) {
-		console.log(
+		// Use stderr so output doesn't pollute stdout for scripts using shell substitution
+		console.error(
 			`📄 Loading ${Object.keys(result.parsed).length} variables from ${envFileName}`,
 		);
 		for (const [key, value] of Object.entries(result.parsed)) {
 			process.env[key] = value;
 		}
 	} else {
-		console.log(
+		console.error(
 			`ℹ️  No ${envFileName} file found (using only Infisical secrets)`,
 		);
 	}

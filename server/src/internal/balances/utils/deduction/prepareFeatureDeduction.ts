@@ -1,7 +1,7 @@
 import {
 	cusEntToStartingBalance,
-	fullCustomerToCustomerEntitlements,
 	type FullCustomer,
+	fullCustomerToCustomerEntitlements,
 	getMaxOverage,
 	getRelevantFeatures,
 	isAllocatedCustomerEntitlement,
@@ -43,9 +43,9 @@ export const prepareFeatureDeduction = ({
 	const relevantFeatures = notNullish(targetBalance)
 		? [feature]
 		: getRelevantFeatures({
-			features: ctx.features,
-			featureId: feature.id,
-		});
+				features: ctx.features,
+				featureId: feature.id,
+			});
 
 	// Get customer entitlements for these features (includes both product and loose entitlements)
 	const cusEnts = fullCustomerToCustomerEntitlements({

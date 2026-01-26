@@ -1,13 +1,13 @@
+import { useParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogHeader,
 	DialogTitle,
-	DialogDescription,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import { useParams } from "react-router";
 
 export const ViewUserEvents = ({ customer }: { customer: any }) => {
 	const params = useParams();

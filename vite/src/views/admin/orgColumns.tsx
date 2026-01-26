@@ -1,7 +1,7 @@
-import { ColumnDef, Row } from "@tanstack/react-table";
-import CopyButton from "@/components/general/CopyButton";
+import type { ColumnDef, Row } from "@tanstack/react-table";
+import type { User } from "better-auth";
 import { format } from "date-fns";
-import { User } from "better-auth";
+import CopyButton from "@/components/general/CopyButton";
 import { ImpersonateButton } from "./components/ImpersonateBtn";
 
 export type Org = {

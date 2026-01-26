@@ -9,9 +9,15 @@ import postgres from "postgres";
 export const client = postgres(process.env.DATABASE_URL!);
 export const db = drizzle(client, { schema });
 
-export const initDrizzle = (params?: { maxConnections?: number, replica?: boolean }) => {
+export const initDrizzle = (params?: {
+	maxConnections?: number;
+	replica?: boolean;
+}) => {
 	const maxConnections = params?.maxConnections || 10;
-	const dbUrl = (params?.replica ? process.env.DATABASE_REPLICA_URL : process.env.DATABASE_URL) ?? "";
+	const dbUrl =
+		(params?.replica
+			? process.env.DATABASE_REPLICA_URL
+			: process.env.DATABASE_URL) ?? "";
 	const client = postgres(dbUrl, {
 		max: maxConnections,
 	});

@@ -25,6 +25,7 @@ const logStripeWebhookResponse = ({
 	statusCode: number;
 }) => {
 	const { logger, org, stripeEvent } = ctx;
+
 	logger.info(
 		`${chalk.yellow("STRIPE").padEnd(18)} ${stripeEvent.type.padEnd(30)} ${org.slug} | ${stripeEvent.id}`,
 		{
@@ -32,6 +33,9 @@ const logStripeWebhookResponse = ({
 			extras: ctx.extraLogs,
 		},
 	);
+	if (Object.keys(ctx.extraLogs).length > 0) {
+		logger.debug(`${stripeEvent.type} extra logs:`, ctx.extraLogs);
+	}
 };
 
 export const stripeLoggerMiddleware = async (

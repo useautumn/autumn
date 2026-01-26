@@ -45,6 +45,13 @@ export const logSubscriptionScheduleAction = ({
 	billingContext: BillingContext;
 	subscriptionScheduleAction: StripeSubscriptionScheduleAction;
 }): void => {
+	if (subscriptionScheduleAction.type === "release") {
+		ctx.logger.debug(
+			`[logSubscriptionScheduleAction] Action type: ${subscriptionScheduleAction.type}`,
+		);
+		return;
+	}
+
 	const phases = subscriptionScheduleAction.params.phases ?? [];
 
 	ctx.logger.debug(

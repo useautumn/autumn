@@ -1,7 +1,7 @@
 import {
-	FrontendProductItem,
+	type FrontendProductItem,
 	Infinite,
-	ProductItem,
+	type ProductItem,
 	ProductItemInterval,
 } from "@autumn/shared";
 

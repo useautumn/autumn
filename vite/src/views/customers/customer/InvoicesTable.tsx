@@ -1,8 +1,4 @@
-import {
-	type Entity,
-	type Invoice,
-	type InvoiceDiscount,
-} from "@autumn/shared";
+import type { Entity, Invoice, InvoiceDiscount } from "@autumn/shared";
 import { toast } from "sonner";
 import { AdminHover } from "@/components/general/AdminHover";
 import { Item, Row } from "@/components/general/TableGrid";

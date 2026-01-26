@@ -7,6 +7,7 @@ import {
 	getCusStripeSubCount,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
@@ -21,7 +22,6 @@ import {
 } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached";
 
 const paidAddOn = constructRawProduct({
 	id: "addOn",

@@ -1,9 +1,9 @@
 import { MetadataType } from "@autumn/shared";
 import type Stripe from "stripe";
+import { executeDeferredBillingPlan } from "@/internal/billing/v2/execute/executeDeferredBillingPlan";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 import type { AttachParams } from "../../../../../internal/customers/cusProducts/AttachParams.js";
 import { MetadataService } from "../../../../../internal/metadata/MetadataService.js";
-import { executeDeferredBillingPlan } from "@/internal/billing/v2/execute/executeDeferredBillingPlan";
 import { handleInvoiceActionRequiredCompleted } from "./handleInvoiceActionRequiredCompleted";
 import { handleInvoiceCheckoutPaid } from "./handleInvoiceCheckoutPaid";
 

@@ -1,6 +1,8 @@
-import { ProductItemType, ProductV2 } from "@autumn/shared";
-
-import { ProductItem } from "@autumn/shared";
+import {
+	type ProductItem,
+	ProductItemType,
+	type ProductV2,
+} from "@autumn/shared";
 import { getItemType } from "./product/productItemUtils";
 
 export const sortProductItems = (items: ProductItem[]) => {

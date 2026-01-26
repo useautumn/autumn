@@ -6,6 +6,7 @@ import type { HonoEnv } from "../../honoUtils/HonoEnv.js";
 import { handleAttach } from "./attach/handleAttach.js";
 import { handleCheckoutV2 } from "./checkout/handleCheckoutV2.js";
 import { handleSetupPayment } from "./handlers/handleSetupPayment.js";
+import { handleAttachV2 } from "./v2/attach/handleAttachV2.js";
 import { handleUpdateSubscription } from "./v2/updateSubscription/handleUpdateSubscription.js";
 
 export const billingRouter = new Hono<HonoEnv>();
@@ -22,3 +23,6 @@ billingRouter.post(
 	"/subscriptions/preview_update",
 	...handlePreviewUpdateSubscription,
 );
+
+// V2 Attach
+billingRouter.post("/v2/attach", ...handleAttachV2);

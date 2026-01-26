@@ -10,6 +10,7 @@ source "$(dirname "$0")/config.sh"
 # Run tests using TypeScript runner with compact mode
 # Adjust --max to control concurren.cy (default: 6)
 
+export TEST_FILE_CONCURRENCY=6
 
 BUN_PARALLEL_V2 \
   'integration/balances/check' \

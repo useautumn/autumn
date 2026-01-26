@@ -1,6 +1,6 @@
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { FullInvite, Invite, User } from "@autumn/shared";
+import { type FullInvite, Invite, User } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const useInvitesQuery = () => {
 	const axiosInstance = useAxiosInstance();

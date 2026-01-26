@@ -17,13 +17,15 @@ import { buildLineItem } from "./buildLineItem";
 export const usagePriceToLineItem = ({
 	cusEnt,
 	context,
-	shouldProrateOverride,
-	chargeImmediatelyOverride,
+	options = {},
 }: {
 	cusEnt: FullCusEntWithFullCusProduct;
 	context: LineItemContext;
-	shouldProrateOverride?: boolean;
-	chargeImmediatelyOverride?: boolean;
+	options?: {
+		shouldProrateOverride?: boolean;
+		chargeImmediatelyOverride?: boolean;
+		includePeriodDescription?: boolean;
+	};
 }) => {
 	const cusPrice = cusEntToCusPrice({ cusEnt });
 	const { feature } = context;
@@ -74,6 +76,7 @@ export const usagePriceToLineItem = ({
 	const description = usagePriceToLineDescription({
 		usage,
 		context: lineItemContext,
+		includePeriodDescription: options.includePeriodDescription,
 	});
 
 	// 4. Get amount
@@ -86,7 +89,8 @@ export const usagePriceToLineItem = ({
 	const { stripePriceId, stripeProductId } = cusEntToStripeIds({ cusEnt });
 
 	// 6. Should prorate: don't if consumable price (unless override provided)
-	const shouldProrate = shouldProrateOverride ?? !isConsumablePrice(price);
+	const shouldProrate =
+		options.shouldProrateOverride ?? !isConsumablePrice(price);
 
 	return buildLineItem({
 		context,
@@ -97,6 +101,6 @@ export const usagePriceToLineItem = ({
 		stripeProductId,
 
 		shouldProrate,
-		chargeImmediately: chargeImmediatelyOverride,
+		chargeImmediately: options.chargeImmediatelyOverride,
 	});
 };

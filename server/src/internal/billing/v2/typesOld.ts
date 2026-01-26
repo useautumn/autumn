@@ -1,11 +1,11 @@
-import {
-	type AttachBodyV1,
-	type FreeTrial,
-	type FullCusProduct,
-	type FullCustomer,
-	type FullCustomerPrice,
-	type FullProduct,
-	type LineItem,
+import type {
+	AttachBodyV1,
+	FreeTrial,
+	FullCusProduct,
+	FullCustomer,
+	FullCustomerPrice,
+	FullProduct,
+	LineItem,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { StripeInvoiceAction } from "./types/billingPlan";

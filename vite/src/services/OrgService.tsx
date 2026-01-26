@@ -1,4 +1,4 @@
-import { type UpsertVercelProcessorConfig } from "@autumn/shared";
+import type { UpsertVercelProcessorConfig } from "@autumn/shared";
 import type { AxiosInstance } from "axios";
 
 export class OrgService {

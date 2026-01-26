@@ -1,6 +1,10 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { InsertReplaceable, Replaceable, replaceables } from "@autumn/shared";
+import {
+	type InsertReplaceable,
+	type Replaceable,
+	replaceables,
+} from "@autumn/shared";
 import { eq, inArray } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export class RepService {
 	static async insert({

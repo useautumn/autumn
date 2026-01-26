@@ -39,7 +39,11 @@ export const parseChatProducts = async ({
 			env: AppEnv.Sandbox,
 		});
 
-		const { prices, entitlements, features: updatedFeatures } = await handleNewProductItems({
+		const {
+			prices,
+			entitlements,
+			features: updatedFeatures,
+		} = await handleNewProductItems({
 			db,
 			curPrices: [],
 			curEnts: [],

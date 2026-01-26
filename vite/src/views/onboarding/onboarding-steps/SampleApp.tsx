@@ -1,34 +1,29 @@
-import { Button } from "@/components/ui/button";
-import Step from "@/components/general/OnboardingStep";
-import CheckDialog from "@/components/autumn/paywall-dialog";
-
-import { useEnv } from "@/utils/envUtils";
-
-import {
-	DialogHeader,
-	DialogContent,
-	DialogTrigger,
-	DialogTitle,
-} from "@/components/ui/dialog";
-import { useEffect, useState } from "react";
-import { Dialog } from "@/components/ui/dialog";
-
-import { toast } from "sonner";
-
-import { useSearchParams } from "react-router";
-
 import { useCustomer } from "autumn-js/react";
-import PricingTable from "@/components/autumn/pricing-table";
 import {
+	ArrowUpRightFromSquare,
 	Check,
-	Lock,
-	Send,
 	ChevronDown,
 	ChevronRight,
 	Code,
-	ArrowUpRightFromSquare,
+	Lock,
+	Send,
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
+import { toast } from "sonner";
+import CheckDialog from "@/components/autumn/paywall-dialog";
+import PricingTable from "@/components/autumn/pricing-table";
+import Step from "@/components/general/OnboardingStep";
+import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { useEnv } from "@/utils/envUtils";
 import CodeBlock from "@/views/onboarding/components/CodeBlock";
 
 export const SampleApp = ({

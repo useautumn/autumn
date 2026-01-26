@@ -1,7 +1,6 @@
 import {
 	type AppEnv,
 	type CheckParams,
-	type CreateCustomerInternalOptions,
 	CusExpand,
 	type Entity,
 	type FullCustomer,
@@ -23,14 +22,12 @@ export const getOrCreateCachedFullCustomer = async ({
 	ctx,
 	params,
 	source,
-	internalOptions,
 }: {
 	ctx: AutumnContext;
 	params: Omit<TrackParams | CheckParams, "customer_id"> & {
 		customer_id: string | null;
 	};
 	source?: string;
-	internalOptions?: CreateCustomerInternalOptions;
 }): Promise<FullCustomer> => {
 	const { org, env, db, skipCache, logger } = ctx;
 	const {
@@ -80,7 +77,6 @@ export const getOrCreateCachedFullCustomer = async ({
 			ctx,
 			customerId,
 			customerData,
-			internalOptions,
 		});
 	}
 

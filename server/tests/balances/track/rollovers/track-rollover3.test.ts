@@ -5,15 +5,14 @@ import {
 	RolloverExpiryDurationType,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { addMonths } from "date-fns";
 import type Stripe from "stripe";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
-import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
@@ -22,7 +21,7 @@ const rolloverConfig = {
 	length: 1,
 	duration: RolloverExpiryDurationType.Month,
 };
-const messagesItem = constructArrearProratedItem({
+const messagesItem = constructArrearItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 400,
 	rolloverConfig,
@@ -81,11 +80,10 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for usage price f
 
 		await timeout(3000);
 
-		await advanceTestClock({
+		await advanceToNextInvoice({
 			stripeCli,
 			testClockId,
-			advanceTo: addMonths(new Date(), 1).getTime(),
-			waitForSeconds: 20,
+			withPause: true,
 		});
 
 		const cus = await autumn.customers.get(customerId);

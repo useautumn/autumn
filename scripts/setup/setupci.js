@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import { randomBytes } from "crypto";
-import { writeFileSync, copyFileSync } from "fs";
 import chalk from "chalk";
+import { randomBytes } from "crypto";
+import { copyFileSync, writeFileSync } from "fs";
 
 const genUrlSafeBase64 = (bytes) => {
 	return randomBytes(bytes)
@@ -26,8 +26,8 @@ async function main() {
 		STRIPE_WEBHOOK_URL: process.env.STRIPE_WEBHOOK_URL,
 	};
 
-	let databaseUrl = process.env.DATABASE_URL;
-	let stripeWebhookVars = [];
+	const databaseUrl = process.env.DATABASE_URL;
+	const stripeWebhookVars = [];
 	// stripeWebhookVars = await handleLocalRunSetup();
 
 	// Step 11: Write to server/.env

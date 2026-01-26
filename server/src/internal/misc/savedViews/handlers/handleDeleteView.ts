@@ -18,8 +18,7 @@ export const handleDeleteView = createRoute({
 
 		// Remove from list
 		const listKey = `saved_views_list:${org.id}:${env}`;
-		const existingViews =
-			(await CacheManager.getJson<string[]>(listKey)) || [];
+		const existingViews = (await CacheManager.getJson<string[]>(listKey)) || [];
 		const updatedViews = existingViews.filter((id: string) => id !== viewId);
 		await CacheManager.setJson(listKey, updatedViews, "forever");
 

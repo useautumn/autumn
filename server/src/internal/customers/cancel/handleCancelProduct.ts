@@ -20,7 +20,7 @@ import { CusProductService } from "../cusProducts/CusProductService.js";
 import { getExistingCusProducts } from "../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import {
 	activateDefaultProduct,
-	getDefaultProduct,
+	getFreeDefaultProductByGroup,
 } from "../cusProducts/cusProductUtils.js";
 
 export const handleCancelProduct = async ({
@@ -112,7 +112,7 @@ export const handleCancelProduct = async ({
 
 	// 2. If expire at cycle end, just cancel subscriptions
 	if (!expireImmediately && !isFree) {
-		const defaultProduct = await getDefaultProduct({
+		const defaultProduct = await getFreeDefaultProductByGroup({
 			ctx,
 			productGroup: product.group,
 		});

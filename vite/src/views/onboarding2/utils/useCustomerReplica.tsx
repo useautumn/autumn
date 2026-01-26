@@ -1,6 +1,6 @@
 import { CheckoutParams } from "autumn-js";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { toast } from "sonner";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { toSnakeCase } from "@/utils/formatUtils/formatUtils";
 
 const cusData = {

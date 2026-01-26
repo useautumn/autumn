@@ -5,12 +5,12 @@ import {
 	PaginationNext,
 	PaginationPrevious,
 } from "@/components/ui/pagination";
-import { useCustomersQueryStates } from "../../hooks/useCustomersQueryStates";
-import { CustomersSearchBar } from "../CustomersSearchBar";
-import CustomersFilterButton from "../filter-dropdown/CustomersFilterButton";
 import { useCusSearchQuery } from "../../hooks/useCusSearchQuery";
+import { useCustomersQueryStates } from "../../hooks/useCustomersQueryStates";
 import CreateCustomer from "../CreateCustomer";
 import { CustomersPagination } from "../CustomersPagination";
+import { CustomersSearchBar } from "../CustomersSearchBar";
+import CustomersFilterButton from "../filter-dropdown/CustomersFilterButton";
 
 export const CustomersTopBar = () => {
 	const { queryStates, setQueryStates } = useCustomersQueryStates();
