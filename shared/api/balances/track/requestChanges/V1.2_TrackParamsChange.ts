@@ -4,7 +4,6 @@ import {
 	defineVersionChange,
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
 import type { z } from "zod/v4";
-import { TrackParamsV0Schema } from "../prevVersions/trackParamsV0.js";
 import { TrackParamsSchema } from "../trackParams.js";
 
 /**
@@ -12,18 +11,9 @@ import { TrackParamsSchema } from "../trackParams.js";
  *
  * Applied when: sourceVersion <= V1.2
  *
- * Breaking changes introduced in V2.0 (that we transform here):
- *
- * 1. Value field location:
- *    - V1.2: `properties.value` (value passed inside properties object)
- *    - V2.0+: `value` (top-level field)
- *
- * This transformation extracts `properties.value` and maps it to the
- * top-level `value` field for V1.2 clients, ensuring they can continue
- * using the legacy format.
- *
- * Input: TrackParamsV0 (V1.2 format with properties.value)
- * Output: TrackParamsV1 (V2.0+ format with top-level value)
+ * In V1.2, `value` could be passed via `properties.value` as a legacy pattern.
+ * This transformation extracts `properties.value` and maps it to the top-level
+ * `value` field (only if `value` is not already provided).
  */
 export const V1_2_TrackParamsChange = defineVersionChange({
 	name: "V1_2 Track Params Change",
@@ -34,7 +24,7 @@ export const V1_2_TrackParamsChange = defineVersionChange({
 	],
 	affectedResources: [AffectedResource.Track],
 	newSchema: TrackParamsSchema,
-	oldSchema: TrackParamsV0Schema,
+	oldSchema: TrackParamsSchema,
 
 	affectsRequest: true,
 	affectsResponse: false,
@@ -43,7 +33,7 @@ export const V1_2_TrackParamsChange = defineVersionChange({
 	transformRequest: ({
 		input,
 	}: {
-		input: z.infer<typeof TrackParamsV0Schema>;
+		input: z.infer<typeof TrackParamsSchema>;
 	}): z.infer<typeof TrackParamsSchema> => {
 		// Keep original value if provided, otherwise extract from properties.value
 		let value = input.value;

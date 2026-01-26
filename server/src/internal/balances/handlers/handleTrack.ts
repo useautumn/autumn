@@ -2,7 +2,6 @@ import {
 	AffectedResource,
 	ApiVersion,
 	TrackParamsSchema,
-	TrackParamsV0Schema,
 	TrackQuerySchema,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -16,7 +15,7 @@ export const handleTrack = createRoute({
 	query: TrackQuerySchema,
 	versionedBody: {
 		latest: TrackParamsSchema,
-		[ApiVersion.V1_Beta]: TrackParamsV0Schema,
+		[ApiVersion.V1_Beta]: TrackParamsSchema,
 	},
 	resource: AffectedResource.Track,
 	handler: async (c) => {
