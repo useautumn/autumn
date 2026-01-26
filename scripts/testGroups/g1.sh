@@ -13,6 +13,7 @@ source "$(dirname "$0")/config.sh"
 
 BUN_PARALLEL_V2 \
   'integration/balances/check' \
+  'integration/balances/track' \
   'balances/track/basic' \
   'balances/track/concurrency' \
   'balances/track/breakdown' \
