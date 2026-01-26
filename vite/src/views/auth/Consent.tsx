@@ -17,7 +17,7 @@ import {
 	useSession,
 } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
-import { groupAndFormatScopes, type GroupedPermission } from "@/utils/scopeDefinitions";
+import { groupAndFormatScopes, type GroupedPermission } from "@autumn/shared";
 
 interface ClientInfo {
 	client_id: string;

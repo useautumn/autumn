@@ -1,13 +1,15 @@
 import {
 	apiKeys,
+	ErrCode,
 	oauthAccessToken,
 	oauthConsent,
 	oauthRefreshToken,
+	RecaseError,
 } from "@autumn/shared";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { clearSecretKeyCache } from "../../api-keys/cacheApiKeyUtils.js";
+import { clearSecretKeyCache } from "../../../dev/api-keys/cacheApiKeyUtils.js";
 
 /**
  * Revoke an OAuth consent and delete all linked resources:
@@ -52,7 +54,7 @@ export const handleRevokeConsent = createRoute({
 		if (consentRecords.length === 0) {
 			throw new RecaseError({
 				message: "Consent not found",
-				code: ErrCode.NotFound,
+				code: "not_found",
 				statusCode: 404,
 			});
 		}
@@ -62,10 +64,9 @@ export const handleRevokeConsent = createRoute({
 		if (consent.referenceId !== org.id) {
 			throw new RecaseError({
 				message: "Consent does not belong to this organization",
-				code: ErrCode.Forbidden,
+				code: "forbidden",
 				statusCode: 403,
 			});
-		}
 		}
 
 		const { clientId, referenceId } = consent;

@@ -21,7 +21,7 @@ import sendOTPEmail from "@/internal/emails/sendOTPEmail.js";
 import { afterOrgCreated } from "./authUtils/afterOrgCreated.js";
 import { beforeSessionCreated } from "./authUtils/beforeSessionCreated.js";
 import { ADMIN_USER_IDs } from "./constants.js";
-import { ALL_SCOPES } from "./scopeDefinitions.js";
+import { ALL_SCOPES } from "@autumn/shared";
 
 export const auth = betterAuth({
 	baseURL: process.env.BETTER_AUTH_URL,
