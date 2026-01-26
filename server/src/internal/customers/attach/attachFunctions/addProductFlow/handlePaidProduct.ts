@@ -12,7 +12,7 @@ import { addMinutes } from "date-fns";
 import type Stripe from "stripe";
 import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
-import { isStripeSubscriptionCanceled } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils.js";
+import { isStripeSubscriptionCanceling } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils.js";
 
 import { attachParamsToMetadata } from "@/internal/billing/attach/utils/attachParamsToMetadata.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
@@ -129,7 +129,7 @@ export const handlePaidProduct = async ({
 			});
 		}
 
-		if (isStripeSubscriptionCanceled(mergeSub)) {
+		if (isStripeSubscriptionCanceling(mergeSub)) {
 			logger.info("ADD PRODUCT FLOW, CREATING NEW SCHEDULE");
 			schedule = await subToNewSchedule({
 				ctx,
