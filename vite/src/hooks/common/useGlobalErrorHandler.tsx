@@ -1,7 +1,7 @@
+import { AppEnv } from "@autumn/shared";
 import { useNavigate } from "react-router";
 import { authClient } from "@/lib/auth-client";
 import { useEnv } from "@/utils/envUtils";
-import { AppEnv } from "@autumn/shared";
 
 export const useGlobalErrorHandler = () => {
 	const navigate = useNavigate();

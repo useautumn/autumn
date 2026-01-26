@@ -7,13 +7,13 @@ import {
 	isCustomerProductTrialing,
 	MetadataType,
 	SuccessCode,
+	secondsToMs,
 } from "@autumn/shared";
 import { addMinutes } from "date-fns";
 import type Stripe from "stripe";
-import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { isStripeSubscriptionCanceling } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils.js";
-
+import { setStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils.js";
 import { attachParamsToMetadata } from "@/internal/billing/attach/utils/attachParamsToMetadata.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
@@ -99,6 +99,11 @@ export const handlePaidProduct = async ({
 			sub: mergeSub,
 			attachParams,
 			config,
+		});
+
+		await setStripeSubscriptionLock({
+			stripeSubscriptionId: mergeSub.id,
+			lockedAtMs: attachParams.now || Date.now(),
 		});
 
 		const { updatedSub, latestInvoice, url } = await updateStripeSub2({
@@ -242,7 +247,8 @@ export const handlePaidProduct = async ({
 
 	subscriptions.push(sub);
 
-	const anchorToUnix = getEarliestPeriodEnd({ sub }) * 1000;
+	// const anchorToUnix = getEarliestPeriodEnd({ sub }) * 1000;
+	const anchorToUnix = secondsToMs(sub.billing_cycle_anchor);
 
 	if (config.invoiceCheckout) {
 		return AttachFunctionResponseSchema.parse({
@@ -267,6 +273,7 @@ export const handlePaidProduct = async ({
 				carryExistingUsages: config.carryUsage,
 				scenario: AttachScenario.New,
 				trialEndsAt: trialEndsAt || undefined,
+				// startsAt: attachParams.now,
 				logger,
 			}),
 		);

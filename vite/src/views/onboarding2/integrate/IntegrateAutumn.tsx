@@ -1,19 +1,17 @@
-import { AITools } from "./AITools";
-import { SelectStack } from "./SelectStack";
-
-import { IntegrateContext } from "./IntegrateContext";
-import { notNullish } from "@/utils/genUtils";
-import { Install } from "./integration-steps/Install";
-import { AutumnHandler } from "./integration-steps/AutumnHandler";
-
-import { AddAutumnProvider } from "./integration-steps/AddAutumnProvider";
-import { CheckoutPricingTable } from "./integration-steps/CheckoutPricingTable";
-import { EnvStep } from "./integration-steps/EnvStep";
+import { AutumnProvider } from "autumn-js/react";
 import { ArrowLeftIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { NextSteps } from "./NextSteps";
-import { AutumnProvider } from "autumn-js/react";
+import { notNullish } from "@/utils/genUtils";
 import { useOnboardingQueryState } from "../hooks/useOnboardingQueryState";
+import { AITools } from "./AITools";
+import { IntegrateContext } from "./IntegrateContext";
+import { AddAutumnProvider } from "./integration-steps/AddAutumnProvider";
+import { AutumnHandler } from "./integration-steps/AutumnHandler";
+import { CheckoutPricingTable } from "./integration-steps/CheckoutPricingTable";
+import { EnvStep } from "./integration-steps/EnvStep";
+import { Install } from "./integration-steps/Install";
+import { NextSteps } from "./NextSteps";
+import { SelectStack } from "./SelectStack";
 
 export default function IntegrateAutumn() {
 	const { queryStates, setQueryStates } = useOnboardingQueryState();

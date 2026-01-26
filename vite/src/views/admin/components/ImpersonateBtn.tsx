@@ -1,8 +1,8 @@
-import { Button } from "@/components/ui/button";
-import { impersonateUser } from "../adminUtils";
 import { User } from "better-auth";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { impersonateUser } from "../adminUtils";
 
 export const ImpersonateButton = ({ userId }: { userId?: string }) => {
 	const [loading, setLoading] = useState(false);

@@ -1,8 +1,4 @@
-import type {
-	CreateCustomerInternalOptions,
-	CustomerData,
-	FullCustomer,
-} from "@autumn/shared";
+import type { CustomerData, FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan.js";
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan.js";
@@ -35,12 +31,10 @@ export const createCustomerWithDefaults = async ({
 	ctx,
 	customerId,
 	customerData,
-	internalOptions,
 }: {
 	ctx: AutumnContext;
 	customerId: string | null;
 	customerData?: CustomerData;
-	internalOptions?: CreateCustomerInternalOptions;
 }): Promise<FullCustomer> => {
 	// ============ Phase 1: Create Autumn customer ============
 
@@ -49,7 +43,6 @@ export const createCustomerWithDefaults = async ({
 		ctx,
 		customerId,
 		customerData,
-		internalOptions,
 	});
 
 	logCreateCustomerContext({ ctx, context });

@@ -1,7 +1,4 @@
-import type {
-	EntityRolloverBalance,
-	Rollover,
-} from "@autumn/shared";
+import type { EntityRolloverBalance, Rollover } from "@autumn/shared";
 
 /**
  * Create a rollover fixture
@@ -36,4 +33,3 @@ const create = ({
 export const rollovers = {
 	create,
 } as const;
-

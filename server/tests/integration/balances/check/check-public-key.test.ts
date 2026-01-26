@@ -28,7 +28,11 @@ async function setupPublicKeyScenario({ customerId }: { customerId: string }) {
 		items: [messagesItem],
 	});
 
-	const { customerId: cusId, autumnV1, ctx } = await initScenario({
+	const {
+		customerId: cusId,
+		autumnV1,
+		ctx,
+	} = await initScenario({
 		customerId,
 		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
 		actions: [s.attach({ productId: freeProd.id })],
@@ -63,120 +67,111 @@ async function setupPublicKeyScenario({ customerId }: { customerId: string }) {
 // CHECK: Public key works for /check endpoint
 // ═══════════════════════════════════════════════════════════════════
 
-test.concurrent(
-	`${chalk.yellowBright("check-public-key: /check works with public key")}`,
-	async () => {
-		const { customerId, autumnPublic } = await setupPublicKeyScenario({
-			customerId: "check-public-key",
-		});
+test.concurrent(`${chalk.yellowBright("check-public-key: /check works with public key")}`, async () => {
+	const { customerId, autumnPublic } = await setupPublicKeyScenario({
+		customerId: "check-public-key",
+	});
 
-		const checkRes = await autumnPublic.check<CheckResponseV1>({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			required_balance: 100,
-		});
+	const checkRes = await autumnPublic.check<CheckResponseV1>({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		required_balance: 100,
+	});
 
-		expect(checkRes).toMatchObject({
-			allowed: true,
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			balance: 1000,
-			required_balance: 100,
-			code: SuccessCode.FeatureFound,
-			usage: 0,
-			included_usage: 1000,
-			overage_allowed: false,
-		});
-		expect(checkRes.next_reset_at).toBeDefined();
-	},
-);
+	expect(checkRes).toMatchObject({
+		allowed: true,
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		balance: 1000,
+		required_balance: 100,
+		code: SuccessCode.FeatureFound,
+		usage: 0,
+		included_usage: 1000,
+		overage_allowed: false,
+	});
+	expect(checkRes.next_reset_at).toBeDefined();
+});
 
 // ═══════════════════════════════════════════════════════════════════
 // CHECK: send_event blocked with public key
 // ═══════════════════════════════════════════════════════════════════
 
-test.concurrent(
-	`${chalk.yellowBright("check-public-key-send-event-blocked: send_event with public key should error")}`,
-	async () => {
-		const { customerId, autumnV1, autumnPublic } = await setupPublicKeyScenario(
-			{ customerId: "check-public-key-send-event-blocked" },
-		);
+test.concurrent(`${chalk.yellowBright("check-public-key-send-event-blocked: send_event with public key should error")}`, async () => {
+	const { customerId, autumnV1, autumnPublic } = await setupPublicKeyScenario({
+		customerId: "check-public-key-send-event-blocked",
+	});
 
-		const customerBefore =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
-		const balanceBefore = customerBefore.features[TestFeature.Messages].balance;
-		const usageBefore = customerBefore.features[TestFeature.Messages].usage;
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const balanceBefore = customerBefore.features[TestFeature.Messages].balance;
+	const usageBefore = customerBefore.features[TestFeature.Messages].usage;
 
-		await expectAutumnError({
-			func: async () => {
-				await autumnPublic.check({
-					customer_id: customerId,
-					feature_id: TestFeature.Messages,
-					required_balance: 50,
-					send_event: true,
-				});
-			},
-		});
+	await expectAutumnError({
+		func: async () => {
+			await autumnPublic.check({
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				required_balance: 50,
+				send_event: true,
+			});
+		},
+	});
 
-		const customerAfter =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		expect(customerAfter.features[TestFeature.Messages].balance).toBe(
-			balanceBefore,
-		);
-		expect(customerAfter.features[TestFeature.Messages].usage).toBe(
-			usageBefore,
-		);
-	},
-);
+	expect(customerAfter.features[TestFeature.Messages].balance).toBe(
+		balanceBefore,
+	);
+	expect(customerAfter.features[TestFeature.Messages].usage).toBe(usageBefore);
+});
 
 // ═══════════════════════════════════════════════════════════════════
 // CHECK: send_event works with secret key
 // ═══════════════════════════════════════════════════════════════════
 
-test.concurrent(
-	`${chalk.yellowBright("check-send-event: send_event with secret key tracks usage")}`,
-	async () => {
-		const { customerId, autumnV1 } = await setupPublicKeyScenario({
-			customerId: "check-send-event",
-		});
+test.concurrent(`${chalk.yellowBright("check-send-event: send_event with secret key tracks usage")}`, async () => {
+	const { customerId, autumnV1 } = await setupPublicKeyScenario({
+		customerId: "check-send-event",
+	});
 
-		// Should track usage when send_event: true with secret key
-		const checkRes = await autumnV1.check<CheckResponseV1>({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			required_balance: 150,
-			send_event: true,
-		});
+	// Should track usage when send_event: true with secret key
+	const checkRes = await autumnV1.check<CheckResponseV1>({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		required_balance: 150,
+		send_event: true,
+	});
 
-		expect(checkRes.allowed).toBe(true);
-		expect(checkRes.balance).toBe(1000 - 150);
+	expect(checkRes.allowed).toBe(true);
+	expect(checkRes.balance).toBe(1000 - 150);
 
-		await timeout(2000);
+	await timeout(2000);
 
-		const customerAfter =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		expect(customerAfter.features[TestFeature.Messages].balance).toBe(850);
-		expect(customerAfter.features[TestFeature.Messages].usage).toBe(150);
+	expect(customerAfter.features[TestFeature.Messages].balance).toBe(850);
+	expect(customerAfter.features[TestFeature.Messages].usage).toBe(150);
 
-		// Should NOT track when allowed: false (insufficient balance)
-		const checkResInsufficient = await autumnV1.check<CheckResponseV1>({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			required_balance: 900, // More than available (850)
-			send_event: true,
-		});
+	// Should NOT track when allowed: false (insufficient balance)
+	const checkResInsufficient = await autumnV1.check<CheckResponseV1>({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		required_balance: 900, // More than available (850)
+		send_event: true,
+	});
 
-		expect(checkResInsufficient.allowed).toBe(false);
+	expect(checkResInsufficient.allowed).toBe(false);
 
-		await timeout(2000);
+	await timeout(2000);
 
-		const customerAfterInsufficient =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const customerAfterInsufficient =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Balance and usage should remain unchanged
-		expect(customerAfterInsufficient.features[TestFeature.Messages].balance).toBe(850);
-		expect(customerAfterInsufficient.features[TestFeature.Messages].usage).toBe(150);
-	},
-);
+	// Balance and usage should remain unchanged
+	expect(customerAfterInsufficient.features[TestFeature.Messages].balance).toBe(
+		850,
+	);
+	expect(customerAfterInsufficient.features[TestFeature.Messages].usage).toBe(
+		150,
+	);
+});

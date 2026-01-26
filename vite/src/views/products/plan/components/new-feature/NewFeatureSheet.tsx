@@ -7,6 +7,10 @@ import type { AxiosError } from "axios";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
+import {
+	useProduct,
+	useSheet,
+} from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
@@ -14,7 +18,6 @@ import { FeatureService } from "@/services/FeatureService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { getItemId } from "@/utils/product/productItemUtils";
-import { useProduct, useSheet } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { useSaveRestoreFeature } from "../../hooks/useSaveRestoreFeature";
 import { getDefaultItem } from "../../utils/getDefaultItem";
 import { NewFeatureAdvanced } from "./NewFeatureAdvanced";

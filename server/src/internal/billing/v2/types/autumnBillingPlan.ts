@@ -2,6 +2,7 @@ import {
 	type AppEnv,
 	CusProductStatus,
 	EntitlementSchema,
+	EntityBalanceSchema,
 	FeatureOptionsSchema,
 	FreeTrialSchema,
 	FullCusProductSchema,
@@ -15,7 +16,17 @@ import type { BillingPlan } from "@/internal/billing/v2/types/billingPlan";
 
 export const UpdateCustomerEntitlementSchema = z.object({
 	customerEntitlement: FullCustomerEntitlementSchema,
-	balanceChange: z.number(),
+	balanceChange: z.number().optional(),
+
+	// For arrear billing:
+	updates: z
+		.object({
+			next_reset_at: z.number().optional(),
+			adjustment: z.number().optional(),
+			entities: z.record(z.string(), EntityBalanceSchema).optional(),
+			balance: z.number().optional(),
+		})
+		.optional(),
 });
 
 export const AutumnBillingPlanSchema = z.object({
@@ -27,7 +38,20 @@ export const AutumnBillingPlanSchema = z.object({
 			updates: z.object({
 				options: z.array(FeatureOptionsSchema).optional(),
 				status: z.enum(CusProductStatus).optional(),
+				// Cancel fields (nullish to support uncancel - setting to null)
+				canceled: z.boolean().nullish(),
+				canceled_at: z.number().nullish(),
+				ended_at: z.number().nullish(),
+
+				scheduled_ids: z.array(z.string()).optional(),
 			}),
+		})
+		.optional(),
+
+	updateByStripeScheduleId: z
+		.object({
+			oldScheduleId: z.string(),
+			newScheduleId: z.string(),
 		})
 		.optional(),
 
@@ -45,6 +69,10 @@ export const AutumnBillingPlanSchema = z.object({
 });
 
 export type AutumnBillingPlan = z.infer<typeof AutumnBillingPlanSchema>;
+
+export type UpdateCustomerEntitlement = z.infer<
+	typeof UpdateCustomerEntitlementSchema
+>;
 
 export enum StripeBillingStage {
 	InvoiceAction = "invoice_action",

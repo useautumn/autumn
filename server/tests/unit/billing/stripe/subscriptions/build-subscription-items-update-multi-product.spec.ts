@@ -12,9 +12,9 @@ import { describe, expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
+import { stripeSubscriptions } from "@tests/utils/fixtures/stripe/subscriptions";
 import chalk from "chalk";
 import { buildStripeSubscriptionItemsUpdate } from "@/internal/billing/v2/providers/stripe/utils/subscriptionItems/buildStripeSubscriptionItemsUpdate";
-import { stripeSubscriptions } from "@tests/utils/fixtures/stripe/subscriptions";
 import {
 	createCustomerPricesForProduct,
 	createProductWithAllPriceTypes,

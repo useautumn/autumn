@@ -1,12 +1,12 @@
 import { beforeAll, describe, test } from "bun:test";
 import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
-import chalk from "chalk";
-import type Stripe from "stripe";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
 import { expectFeaturesCorrect } from "@tests/utils/expectUtils/expectFeaturesCorrect.js";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
+import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";

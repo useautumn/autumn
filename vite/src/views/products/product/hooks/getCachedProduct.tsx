@@ -1,5 +1,5 @@
+import type { ProductV2 } from "@autumn/shared";
 import { useQueryClient } from "@tanstack/react-query";
-import { ProductV2 } from "@autumn/shared";
 import { useProductQueryState } from "./useProductQuery";
 
 export const useCachedProduct = ({

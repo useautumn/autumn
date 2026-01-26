@@ -1,13 +1,13 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { LegacyVersion } from "@autumn/shared";
-import chalk from "chalk";
-import { addHours, addMonths } from "date-fns";
-import type Stripe from "stripe";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
 import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { getBasePrice } from "@tests/utils/testProductUtils/testProductUtils.js";
+import chalk from "chalk";
+import { addHours, addMonths } from "date-fns";
+import type Stripe from "stripe";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";

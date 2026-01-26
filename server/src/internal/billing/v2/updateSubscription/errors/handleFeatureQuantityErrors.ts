@@ -10,6 +10,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
 import type { AutumnBillingPlan } from "@/internal/billing/v2/types/autumnBillingPlan";
+import { billingPlanToNewActiveCustomerProduct } from "@/internal/billing/v2/utils/billingPlan/billingPlanToNewActiveCustomerProduct";
 
 const checkInputFeatureQuantitiesAreValid = ({
 	ctx,
@@ -23,8 +24,11 @@ const checkInputFeatureQuantitiesAreValid = ({
 	billingContext: UpdateSubscriptionBillingContext;
 }) => {
 	const targetCustomerProduct =
-		autumnBillingPlan.insertCustomerProducts?.[0] ??
-		billingContext.customerProduct;
+		billingPlanToNewActiveCustomerProduct({
+			autumnBillingPlan,
+		}) ?? billingContext.customerProduct;
+
+	if (!targetCustomerProduct) return;
 
 	const prepaidPrices = cusProductToPrices({
 		cusProduct: targetCustomerProduct,

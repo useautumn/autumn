@@ -1,6 +1,6 @@
 // 1. Get min next reset at cus ent
 
-import { Feature, FullCustomerEntitlement } from "@autumn/shared";
+import type { Feature, FullCustomerEntitlement } from "@autumn/shared";
 
 export const getMinNextResetAtCusEnt = ({
 	cusEnts,

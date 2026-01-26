@@ -1,15 +1,43 @@
 #!/usr/bin/env bun
 
 import { existsSync } from "node:fs";
-import { readdir } from "node:fs/promises";
-import { basename, resolve } from "node:path";
+import { readdir, stat } from "node:fs/promises";
+import { basename, join, resolve } from "node:path";
 import { spawn } from "bun";
 import { Box, render, Text, useApp } from "ink";
 import pLimit from "p-limit";
 import React, { useEffect, useState } from "react";
 
-// Base paths for shorthand test paths (tried in order)
-const TEST_BASE_PATHS = ["server/tests/integration/billing", "server/tests"];
+// Base path for shorthand test paths
+const INTEGRATION_TEST_BASE = "server/tests";
+
+/**
+ * Recursively search for a folder by name within a base directory.
+ * Returns the first matching folder path, or null if not found.
+ */
+async function findFolderByName(
+	basePath: string,
+	folderName: string,
+): Promise<string | null> {
+	try {
+		const entries = await readdir(basePath);
+		for (const entry of entries) {
+			const fullPath = join(basePath, entry);
+			const entryStat = await stat(fullPath);
+
+			if (entryStat.isDirectory()) {
+				if (entry === folderName) {
+					return fullPath;
+				}
+				const found = await findFolderByName(fullPath, folderName);
+				if (found) return found;
+			}
+		}
+	} catch {
+		// Ignore errors
+	}
+	return null;
+}
 
 // Track all running processes for cleanup
 const runningProcesses = new Set<ReturnType<typeof spawn>>();
@@ -148,6 +176,11 @@ function parseErrorFromLines(
 		}
 	}
 
+	// Fall back to the test file path if no location found in stack trace
+	if (!location) {
+		location = filePath;
+	}
+
 	test.error = {
 		message: errorMessage || "Test failed",
 		location,
@@ -184,18 +217,27 @@ function extractCurrentTest(output: string): string | null {
 async function collectTestFiles(directories: string[]): Promise<string[]> {
 	const testFiles: string[] = [];
 
-	for (const dir of directories) {
-		const resolvedDir = resolve(process.cwd(), dir);
+	const collectRecursive = async (dirPath: string): Promise<void> => {
 		try {
-			const files = await readdir(resolvedDir);
-			for (const file of files) {
-				if (file.endsWith(".test.ts")) {
-					testFiles.push(resolve(resolvedDir, file));
+			const entries = await readdir(dirPath);
+			for (const entry of entries) {
+				const fullPath = join(dirPath, entry);
+				const entryStat = await stat(fullPath);
+
+				if (entryStat.isDirectory()) {
+					await collectRecursive(fullPath);
+				} else if (entry.endsWith(".test.ts")) {
+					testFiles.push(fullPath);
 				}
 			}
 		} catch (error) {
-			console.error(`Error reading directory ${dir}:`, error);
+			console.error(`Error reading directory ${dirPath}:`, error);
 		}
+	};
+
+	for (const dir of directories) {
+		const resolvedDir = resolve(process.cwd(), dir);
+		await collectRecursive(resolvedDir);
 	}
 
 	return testFiles;
@@ -307,6 +349,14 @@ function truncate(str: string, maxLength: number): string {
 	return str.substring(0, maxLength - 3) + "...";
 }
 
+function toRelativePath(absolutePath: string): string {
+	const workspaceRoot = process.cwd();
+	if (absolutePath.startsWith(workspaceRoot)) {
+		return absolutePath.slice(workspaceRoot.length + 1);
+	}
+	return absolutePath;
+}
+
 interface CompletedFileProps {
 	result: TestFileResult;
 }
@@ -352,7 +402,7 @@ function FailedTest({ test, fileName }: FailedTestProps) {
 			{test.error?.location && (
 				<Box marginLeft={2}>
 					<Text dimColor>→ </Text>
-					<Text color="cyan">{test.error.location}</Text>
+					<Text color="cyan">{toRelativePath(test.error.location)}</Text>
 				</Box>
 			)}
 		</Box>
@@ -611,7 +661,7 @@ function FinalSummary({ results }: FinalSummaryProps) {
 						<Box key={test.name} flexDirection="column" marginTop={1}>
 							<Text color="red"> ✗ {test.name}</Text>
 							{test.error?.location && (
-								<Text color="cyan"> {test.error.location}</Text>
+								<Text color="cyan"> {toRelativePath(test.error.location)}</Text>
 							)}
 							{test.error?.message && (
 								<Text color="yellow"> {test.error.message}</Text>
@@ -644,7 +694,9 @@ function FinalSummary({ results }: FinalSummaryProps) {
 async function main() {
 	const args = process.argv.slice(2);
 	const directories: string[] = [];
-	let maxParallel = 6;
+	let maxParallel = process.env.TEST_FILE_CONCURRENCY
+		? Number.parseInt(process.env.TEST_FILE_CONCURRENCY, 10)
+		: 6;
 
 	for (const arg of args) {
 		if (arg.startsWith("--max=")) {
@@ -656,18 +708,26 @@ async function main() {
 			);
 			process.exit(1);
 		} else {
-			// Try to resolve the path - if it doesn't exist, try prepending base paths
+			// Try to resolve the path in order of priority:
+			// 1. Exact path from cwd
+			// 2. Path under INTEGRATION_TEST_BASE
+			// 3. Search for folder name within INTEGRATION_TEST_BASE
 			let resolvedPath = arg;
 			const fullPath = resolve(process.cwd(), arg);
 
 			if (!existsSync(fullPath)) {
-				// Try each base path in order
-				for (const basePath of TEST_BASE_PATHS) {
-					const withBase = `${basePath}/${arg}`;
-					const withBaseFull = resolve(process.cwd(), withBase);
-					if (existsSync(withBaseFull)) {
-						resolvedPath = withBase;
-						break;
+				const withBase = `${INTEGRATION_TEST_BASE}/${arg}`;
+				const withBaseFull = resolve(process.cwd(), withBase);
+				if (existsSync(withBaseFull)) {
+					resolvedPath = withBase;
+				} else {
+					// Search for the folder by name within the base directory
+					const folderName = basename(arg);
+					const baseFullPath = resolve(process.cwd(), INTEGRATION_TEST_BASE);
+					const found = await findFolderByName(baseFullPath, folderName);
+					if (found) {
+						// Convert back to relative path
+						resolvedPath = found.replace(`${process.cwd()}/`, "");
 					}
 				}
 			}

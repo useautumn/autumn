@@ -1,17 +1,15 @@
+import type { Customer } from "@autumn/shared";
+import { Delete, Trash } from "lucide-react";
+import { useState } from "react";
 import SmallSpinner from "@/components/general/SmallSpinner";
-
+import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
+import { ContextMenuItem } from "@/components/ui/context-menu";
 import {
 	DropdownMenu,
-	DropdownMenuTrigger,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState } from "react";
-
-import { Customer } from "@autumn/shared";
-import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
-import { Delete, Trash } from "lucide-react";
-import { ContextMenuItem } from "@/components/ui/context-menu";
 
 export const CustomerRowToolbarItems = ({
 	setDeleteOpen,

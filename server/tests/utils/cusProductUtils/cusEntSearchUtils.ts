@@ -1,11 +1,12 @@
-import { BillingType, EntInterval } from "@autumn/shared";
-
-import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-
-import { FullCustomerEntitlement } from "@autumn/shared";
+import {
+	BillingType,
+	EntInterval,
+	type FullCusProduct,
+	type FullCustomerEntitlement,
+} from "@autumn/shared";
 
 import { getRelatedCusPrice } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
-import { FullCusProduct } from "@autumn/shared";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 
 export const getLifetimeFreeCusEnt = ({
@@ -22,7 +23,7 @@ export const getLifetimeFreeCusEnt = ({
 				return false;
 			}
 
-			let relatedCusPrice = getRelatedCusPrice(
+			const relatedCusPrice = getRelatedCusPrice(
 				cusEnt,
 				cusProduct.customer_prices,
 			);
@@ -49,7 +50,7 @@ export const getPrepaidCusEnt = ({
 				return false;
 			}
 
-			let relatedCusPrice = getRelatedCusPrice(
+			const relatedCusPrice = getRelatedCusPrice(
 				cusEnt,
 				cusProduct.customer_prices,
 			);
@@ -81,7 +82,7 @@ export const getUsageCusEnt = ({
 				return false;
 			}
 
-			let relatedCusPrice = getRelatedCusPrice(
+			const relatedCusPrice = getRelatedCusPrice(
 				cusEnt,
 				cusProduct.customer_prices,
 			);

@@ -95,7 +95,10 @@ export const createProduct = async ({
 	const newFullProduct: FullProduct = {
 		...product,
 		prices,
-		entitlements: getEntsWithFeature({ ents: entitlements, features: updatedFeatures }),
+		entitlements: getEntsWithFeature({
+			ents: entitlements,
+			features: updatedFeatures,
+		}),
 		free_trial: newFreeTrial,
 	};
 

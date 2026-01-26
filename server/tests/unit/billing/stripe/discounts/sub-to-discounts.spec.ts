@@ -98,7 +98,9 @@ describe(chalk.yellowBright("subToDiscounts"), () => {
 
 	describe(chalk.cyan("Successful extraction"), () => {
 		test("extracts single percent-off discount", () => {
-			const discount = discounts.twentyPercentOff({ couponId: "coupon_20_pct" });
+			const discount = discounts.twentyPercentOff({
+				couponId: "coupon_20_pct",
+			});
 			const sub = stripeSubscriptions.create({
 				id: "sub_test",
 				discounts: [discount],

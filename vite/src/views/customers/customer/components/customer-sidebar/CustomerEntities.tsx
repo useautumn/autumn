@@ -1,13 +1,9 @@
+import { type Entity, type Feature, getFeatureName } from "@autumn/shared";
+import CopyButton from "@/components/general/CopyButton";
 import { SideAccordion } from "@/components/general/SideAccordion";
 import { SidebarLabel } from "@/components/general/sidebar/sidebar-label";
-
-import { Entity, Feature } from "@autumn/shared";
-
-import { getFeatureName } from "@autumn/shared";
-
-import CopyButton from "@/components/general/CopyButton";
-import { useCusQuery } from "../../hooks/useCusQuery";
 import { useCustomerContext } from "../../CustomerContext";
+import { useCusQuery } from "../../hooks/useCusQuery";
 
 export const CustomerEntities = () => {
 	const { customer, features } = useCusQuery();

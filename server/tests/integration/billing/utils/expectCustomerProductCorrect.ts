@@ -1,11 +1,12 @@
 import { expect } from "bun:test";
 import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
-import { ApiVersion } from "@autumn/shared";
+import { ApiVersion, formatMs } from "@autumn/shared";
 import { AutumnInt } from "@/external/autumn/autumnCli";
 
 const defaultAutumn = new AutumnInt({ version: ApiVersion.V1_2 });
 
 type ProductState = "active" | "canceled" | "scheduled" | "undefined";
+type CustomerOrEntity = ApiCustomerV3 | ApiEntityV0;
 
 /**
  * Verify a customer/entity has the expected product in the expected state.
@@ -90,13 +91,52 @@ export const expectProductCanceling = async (params: {
 }) => expectCustomerProductCorrect({ ...params, state: "canceled" });
 
 /**
- * Shorthand for checking product is scheduled
+ * Shorthand for checking product is scheduled.
+ * Optionally verify the `started_at` timestamp is within a tolerance of the expected value.
+ *
+ * @param startsAt - Expected timestamp in milliseconds when the product will start
+ * @param toleranceMs - Allowed deviation in milliseconds (default: 2 minutes)
  */
-export const expectProductScheduled = async (params: {
+export const expectProductScheduled = async ({
+	customerId,
+	customer: providedCustomer,
+	productId,
+	startsAt,
+	toleranceMs = 2 * 60 * 1000,
+}: {
 	customerId?: string;
 	customer?: ApiCustomerV3 | ApiEntityV0;
 	productId: string;
-}) => expectCustomerProductCorrect({ ...params, state: "scheduled" });
+	startsAt?: number;
+	toleranceMs?: number;
+}) => {
+	const customer = providedCustomer
+		? providedCustomer
+		: await defaultAutumn.customers.get(customerId!);
+
+	await expectCustomerProductCorrect({
+		customer: customer as ApiCustomerV3,
+		productId,
+		state: "scheduled",
+	});
+
+	if (startsAt !== undefined) {
+		const products = customer.products ?? [];
+		const product = products.find((p: { id?: string }) => p.id === productId);
+
+		if (!product) {
+			throw new Error(`Product ${productId} not found for startsAt check`);
+		}
+
+		const actualStartsAt = product.started_at;
+		const diff = Math.abs(actualStartsAt - startsAt);
+
+		expect(
+			diff <= toleranceMs,
+			`Product ${productId} started_at (${formatMs(actualStartsAt)}) should be within ${toleranceMs}ms of expected (${formatMs(startsAt)}), diff: ${diff}ms`,
+		).toBe(true);
+	}
+};
 
 /**
  * Shorthand for checking product does not exist
@@ -106,3 +146,68 @@ export const expectProductNotPresent = async (params: {
 	customer?: ApiCustomerV3 | ApiEntityV0;
 	productId: string;
 }) => expectCustomerProductCorrect({ ...params, state: "undefined" });
+
+/**
+ * Verify multiple product states in a single call.
+ * Each array contains product IDs that should be in that state.
+ *
+ * @example
+ * await expectProducts({
+ *   customer,
+ *   active: [pro.id, addon.id],
+ *   canceling: [premium.id],
+ *   scheduled: [free.id],
+ *   notPresent: [oldProduct.id],
+ * });
+ */
+export const expectCustomerProducts = async ({
+	customerId,
+	customer: providedCustomer,
+	active = [],
+	canceling = [],
+	scheduled = [],
+	notPresent = [],
+}: {
+	customerId?: string;
+	customer?: CustomerOrEntity;
+	active?: string[];
+	canceling?: string[];
+	scheduled?: string[];
+	notPresent?: string[];
+}) => {
+	const customer = providedCustomer
+		? providedCustomer
+		: await defaultAutumn.customers.get(customerId!);
+
+	for (const productId of active) {
+		await expectCustomerProductCorrect({
+			customer: customer as ApiCustomerV3,
+			productId,
+			state: "active",
+		});
+	}
+
+	for (const productId of canceling) {
+		await expectCustomerProductCorrect({
+			customer: customer as ApiCustomerV3,
+			productId,
+			state: "canceled",
+		});
+	}
+
+	for (const productId of scheduled) {
+		await expectCustomerProductCorrect({
+			customer: customer as ApiCustomerV3,
+			productId,
+			state: "scheduled",
+		});
+	}
+
+	for (const productId of notPresent) {
+		await expectCustomerProductCorrect({
+			customer: customer as ApiCustomerV3,
+			productId,
+			state: "undefined",
+		});
+	}
+};

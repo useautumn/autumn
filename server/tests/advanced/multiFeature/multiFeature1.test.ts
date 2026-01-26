@@ -1,6 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion, type AppEnv, LegacyVersion } from "@autumn/shared";
-import chalk from "chalk";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import {
 	getPrepaidCusEnt,
@@ -8,6 +7,7 @@ import {
 } from "@tests/utils/cusProductUtils/cusEntSearchUtils.js";
 import { getMainCusProduct } from "@tests/utils/cusProductUtils/cusProductUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";

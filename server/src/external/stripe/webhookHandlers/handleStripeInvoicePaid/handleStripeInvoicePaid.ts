@@ -1,3 +1,4 @@
+import type Stripe from "stripe";
 import { convertToChargeAutomatically } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/tasks/convertToChargeAutomatically.js";
 import { queueCheckoutRewardTasks } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/tasks/queueCheckoutRewardTasks.js";
 import { upsertAutumnInvoice } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/tasks/upsertAutumnInvoice.js";
@@ -8,10 +9,15 @@ import { handleStripeInvoiceMetadata } from "./tasks/handleStripeInvoiceMetadata
 
 export const handleStripeInvoicePaid = async ({
 	ctx,
+	event,
 }: {
 	ctx: StripeWebhookContext;
+	event: Stripe.InvoicePaidEvent;
 }) => {
-	const invoicePaidContext = await setupStripeInvoicePaidContext({ ctx });
+	const invoicePaidContext = await setupStripeInvoicePaidContext({
+		ctx,
+		event,
+	});
 
 	if (!invoicePaidContext) {
 		ctx.logger.warn("[invoice.paid] invoicePaidContext not found, skipping");

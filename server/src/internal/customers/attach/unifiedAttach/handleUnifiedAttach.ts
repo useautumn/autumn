@@ -1,5 +1,5 @@
-import { AttachConfig, CusProductStatus } from "@autumn/shared";
-import { AttachParams } from "../../cusProducts/AttachParams.js";
+import { type AttachConfig, CusProductStatus } from "@autumn/shared";
+import type { AttachParams } from "../../cusProducts/AttachParams.js";
 
 export const handleUnifiedAttach = async ({
 	req,

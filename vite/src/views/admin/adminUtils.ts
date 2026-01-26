@@ -143,7 +143,6 @@ export const getCusEntHoverTexts = ({
 	return hoverTexts;
 };
 
-
 export const getFeatureHoverTexts = ({ feature }: { feature: Feature }) => {
 	const hoverTexts = [
 		{
@@ -152,15 +151,10 @@ export const getFeatureHoverTexts = ({ feature }: { feature: Feature }) => {
 		},
 	];
 
-
 	return hoverTexts;
 };
 
-export const getPlanHoverTexts = ({
-	plan,
-}: {
-	plan: Product | ProductV2;
-}) => {
+export const getPlanHoverTexts = ({ plan }: { plan: Product | ProductV2 }) => {
 	const hoverTexts = [
 		{
 			key: "Internal ID",
@@ -188,7 +182,6 @@ export const getInvoiceHoverTexts = ({ invoice }: { invoice: Invoice }) => {
 			key: "Stripe ID",
 			value: invoice.stripe_id,
 		},
-
 	];
 
 	return hoverTexts;

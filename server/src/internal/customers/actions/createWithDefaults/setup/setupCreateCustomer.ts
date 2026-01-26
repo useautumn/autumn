@@ -1,8 +1,4 @@
-import {
-	type CreateCustomerInternalOptions,
-	type CustomerData,
-	RecaseError,
-} from "@autumn/shared";
+import { type CustomerData, RecaseError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { initFullCustomer } from "../../../cusUtils/initCustomer.js";
 import type { CreateCustomerContext } from "../createCustomerContext.js";
@@ -20,12 +16,10 @@ export const setupCreateCustomer = async ({
 	ctx,
 	customerId,
 	customerData,
-	internalOptions,
 }: {
 	ctx: AutumnContext;
 	customerId: string | null;
 	customerData?: CustomerData;
-	internalOptions?: CreateCustomerInternalOptions;
 }): Promise<CreateCustomerContext> => {
 	// 1. Validate
 	if (!customerId && !customerData?.email) {
@@ -39,7 +33,7 @@ export const setupCreateCustomer = async ({
 
 	// 3. Fetch default products
 	const { fullProducts, paidProducts, hasPaidProducts } =
-		await setupDefaultProductsContext({ ctx, customerData, internalOptions });
+		await setupDefaultProductsContext({ ctx, customerData });
 
 	const currentEpochMs = Date.now();
 

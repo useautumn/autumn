@@ -1,3 +1,6 @@
+import { AttachBranch, AttachFunction } from "@autumn/shared";
+import { ArrowUpRightFromSquare } from "lucide-react";
+import { useState } from "react";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { Button } from "@/components/ui/button";
 import {
@@ -5,9 +8,6 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { AttachBranch, AttachFunction } from "@autumn/shared";
-import { ArrowUpRightFromSquare } from "lucide-react";
-import { useState } from "react";
 
 export const InvoiceCustomerButton = ({
 	handleAttachClicked,

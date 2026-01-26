@@ -1,4 +1,4 @@
-import { type CheckProductPreview } from "autumn-js";
+import type { CheckProductPreview } from "autumn-js";
 
 export const getAttachContent = (preview: CheckProductPreview) => {
 	const {

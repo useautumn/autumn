@@ -1,9 +1,9 @@
-import {
-	type CustomerEntitlement,
-	type EntitlementWithFeature,
-	type FullCusProduct,
-	type FullCustomerEntitlement,
-	type Rollover,
+import type {
+	CustomerEntitlement,
+	EntitlementWithFeature,
+	FullCusProduct,
+	FullCustomerEntitlement,
+	Rollover,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";

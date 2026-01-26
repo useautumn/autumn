@@ -49,7 +49,6 @@ export const handlePostCustomer = createRoute({
 				entity_data: createCusParams.entity_data,
 			},
 			source: "handlePostCustomer",
-			internalOptions: createCusParams.internal_options,
 		});
 
 		const apiCustomer = await getApiCustomer({

@@ -1,7 +1,7 @@
+import type { AxiosInstance } from "axios";
+import { toast } from "sonner";
 import { OrgService } from "@/services/OrgService";
 import { getBackendErr } from "@/utils/genUtils";
-import { AxiosInstance } from "axios";
-import { toast } from "sonner";
 
 export const connectStripe = async ({
 	testApiKey,

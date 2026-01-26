@@ -1,8 +1,8 @@
-import { MigrationService } from "../migrations/MigrationService.js";
+import { MigrationJobStep, type Organization } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { sendTextEmail } from "@/external/resend/resendUtils.js";
-import { MigrationJobStep, Organization } from "@autumn/shared";
-import { DrizzleCli } from "@/db/initDrizzle.js";
 import { safeResend } from "@/external/resend/safeResend.js";
+import { MigrationService } from "../migrations/MigrationService.js";
 import { FROM_AUTUMN } from "./constants.js";
 
 export const sendMigrationEmail = safeResend({
@@ -15,15 +15,15 @@ export const sendMigrationEmail = safeResend({
 		migrationJobId: string;
 		org: Organization;
 	}) => {
-		let migrationJob = await MigrationService.getJob({
+		const migrationJob = await MigrationService.getJob({
 			db,
 			id: migrationJobId,
 		});
 
 		// Send email
-		let getCustomersStep =
+		const getCustomersStep =
 			migrationJob.step_details[MigrationJobStep.GetCustomers];
-		let migrateStep =
+		const migrateStep =
 			migrationJob.step_details[MigrationJobStep.MigrateCustomers];
 
 		console.log("Sending migration email");

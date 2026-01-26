@@ -45,9 +45,6 @@ export const checkSubCountMatch = async ({
 			.from(metadata)
 			.where(inArray(metadata.stripe_invoice_id, invoiceIds as string[]));
 
-
-		
-
 		if (
 			stripeSubs.length - (metadataCount?.[0]?.count || 0) !==
 			subIds.length

@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from "react";
-import { useBlocker } from "./useBlocker";
+import React, { useCallback, useState } from "react";
 import { NavigationBlockerModal } from "./NavigationBlockerModal";
+import { useBlocker } from "./useBlocker";
 
 export const useProductChangedAlert = ({
 	hasChanges,

@@ -1,5 +1,4 @@
-import { EntitlementWithFeature } from "@autumn/shared";
-import { Price } from "@autumn/shared";
+import type { EntitlementWithFeature, Price } from "@autumn/shared";
 
 export const hasPriceIdsChanged = ({
 	oldPrices,

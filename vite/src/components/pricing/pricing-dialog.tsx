@@ -1,13 +1,13 @@
-import { cn } from "@/lib/utils";
+import { ArrowRight } from "lucide-react";
+import React from "react";
+import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
 	DialogFooter,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
-import React from "react";
+import { cn } from "@/lib/utils";
 
 export const PricingDialog = ({
 	open,

@@ -38,7 +38,9 @@ export function mapFrontendToApiReward(
 /**
  * Maps API reward to frontend reward
  */
-export function mapApiToFrontendReward(apiReward: CreateReward): FrontendReward {
+export function mapApiToFrontendReward(
+	apiReward: CreateReward,
+): FrontendReward {
 	let rewardCategory: FrontendRewardCategory | null = null;
 	let discountType: FrontendDiscountType | null = null;
 

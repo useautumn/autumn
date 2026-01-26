@@ -1,6 +1,6 @@
-import Step from "./Step";
-import CodeBlock from "../onboarding/components/CodeBlock";
 import { ArrowUpRightFromSquare } from "lucide-react";
+import CodeBlock from "../onboarding/components/CodeBlock";
+import Step from "./Step";
 
 const nextjs = () => {
 	return `// app/layout.tsx

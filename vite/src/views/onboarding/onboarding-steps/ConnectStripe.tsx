@@ -1,15 +1,14 @@
+import { AppEnv } from "@autumn/shared";
 import { ArrowUpRightFromSquare } from "lucide-react";
-
-import ConnectStripe, { CurrencySelect } from "../ConnectStripe";
-import Step from "@/components/general/OnboardingStep";
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import Step from "@/components/general/OnboardingStep";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { OrgService } from "@/services/OrgService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { AppEnv } from "@autumn/shared";
-import { toast } from "sonner";
 import { getBackendErr } from "@/utils/genUtils";
+import ConnectStripe, { CurrencySelect } from "../ConnectStripe";
 
 export const ConnectStripeStep = ({
 	mutate,

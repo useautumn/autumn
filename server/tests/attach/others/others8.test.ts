@@ -1,12 +1,10 @@
-import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
 import { beforeAll, describe, expect, test } from "bun:test";
+import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { getBasePrice } from "@tests/utils/testProductUtils/testProductUtils.js";
 import chalk from "chalk";
 import type Stripe from "stripe";
-import ctx from "@tests/utils/testInitUtils/createTestContext.js";
-import { TestFeature } from "@tests/setup/v2Features.js";
-import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-import { getBasePrice } from "@tests/utils/testProductUtils/testProductUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
@@ -14,6 +12,8 @@ import {
 	constructPrepaidItem,
 } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
 export const pro = constructProduct({
 	items: [

@@ -1,6 +1,6 @@
+import { useNavigate } from "react-router";
 import { useSession } from "@/lib/auth-client";
 import LoadingScreen from "../general/LoadingScreen";
-import { useNavigate } from "react-router";
 
 export const AcceptInvitation = () => {
 	const { data, isPending } = useSession();

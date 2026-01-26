@@ -1,10 +1,10 @@
-import { isFreeProduct } from "@/internal/products/productUtils.js";
 import {
 	AttachBranch,
-	AttachPreview,
+	type AttachPreview,
 	AttachScenario,
-	FullProduct,
+	type FullProduct,
 } from "@autumn/shared";
+import { isFreeProduct } from "@/internal/products/productUtils.js";
 
 export const getAttachScenario = async ({
 	preview,
@@ -13,7 +13,7 @@ export const getAttachScenario = async ({
 	preview: AttachPreview;
 	product: FullProduct;
 }) => {
-	let branch = preview.branch;
+	const branch = preview.branch;
 
 	if (
 		branch == AttachBranch.New ||

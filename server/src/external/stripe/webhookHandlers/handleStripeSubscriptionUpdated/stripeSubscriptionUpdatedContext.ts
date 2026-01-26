@@ -1,4 +1,8 @@
-import type { FullCusProduct, FullCustomer } from "@autumn/shared";
+import type {
+	FullCusProduct,
+	FullCustomer,
+	InsertCustomerProduct,
+} from "@autumn/shared";
 import type Stripe from "stripe";
 import type { ExpandedStripeSubscription } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription";
 
@@ -25,6 +29,8 @@ export interface StripeSubscriptionUpdatedContext {
 
 	updatedCustomerProducts: {
 		customerProduct: FullCusProduct;
-		updates: Partial<FullCusProduct>;
+		updates: Partial<InsertCustomerProduct>;
 	}[];
+	/** Tracks all deletions made to customer products during this handler */
+	deletedCustomerProducts: FullCusProduct[];
 }

@@ -1,16 +1,16 @@
-import { Button } from "@/components/v2/buttons/Button";
-import { Input } from "@/components/v2/inputs/Input";
+import { Pin } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
+import { Button } from "@/components/v2/buttons/Button";
+import { Input } from "@/components/v2/inputs/Input";
 import { cn } from "@/lib/utils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
-import { Pin } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
 import { useSavedViewsQuery } from "../../hooks/useSavedViewsQuery";
 
 interface SaveViewPopoverProps {
@@ -68,7 +68,7 @@ export const SaveViewPopover = ({ onClose }: SaveViewPopoverProps) => {
 					size="sm"
 					className={cn(
 						"w-full !h-full text-t3 text-sm hover:bg-accent hover:text-t2 rounded-none gap-0",
-						open && "bg-accent text-t1"
+						open && "bg-accent text-t1",
 					)}
 				>
 					<Pin size={12} className="mr-2" />
@@ -100,11 +100,7 @@ export const SaveViewPopover = ({ onClose }: SaveViewPopoverProps) => {
 							}
 						}}
 					/>
-					<Button
-						variant="primary"
-						onClick={handleSave}
-						isLoading={loading}
-					>
+					<Button variant="primary" onClick={handleSave} isLoading={loading}>
 						Save
 					</Button>
 				</div>

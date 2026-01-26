@@ -75,9 +75,10 @@ export const setCachedGrantedBalance = async ({
 	// ============================================================================
 	// 2. Build entity balances batch (entity-level products only)
 	// ============================================================================
-	const entityLevelCusProducts = filterEntityLevelCustomerEntitlementsFromFullCustomer({
-		fullCustomer: fullCus,
-	}).customer_products;
+	const entityLevelCusProducts =
+		filterEntityLevelCustomerEntitlementsFromFullCustomer({
+			fullCustomer: fullCus,
+		}).customer_products;
 
 	const entityBatch: EntityBatchItem[] = [];
 

@@ -166,7 +166,9 @@ test.concurrent(`${chalk.yellowBright("track-misc3: track creates events when cu
 	});
 
 	expect(events).toHaveLength(trackCount);
-	expect(sumValues(events.map((event) => event.value ?? 0))).toBe(totalValue);
+	expect(sumValues(events.map((event) => event.value ?? 0)).toFixed(10)).toBe(
+		totalValue.toFixed(10),
+	);
 });
 
 // ═══════════════════════════════════════════════════════════════════
