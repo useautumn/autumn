@@ -4,6 +4,7 @@ import {
 	type ApiCustomerV3,
 	type ApiEntityV0,
 	CusExpand,
+	sumValues,
 	type TrackResponseV2,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -165,9 +166,7 @@ test.concurrent(`${chalk.yellowBright("track-misc3: track creates events when cu
 	});
 
 	expect(events).toHaveLength(trackCount);
-	expect(events.reduce((acc, event) => acc + (event.value ?? 0), 0)).toBe(
-		totalValue,
-	);
+	expect(sumValues(events.map((event) => event.value ?? 0))).toBe(totalValue);
 });
 
 // ═══════════════════════════════════════════════════════════════════

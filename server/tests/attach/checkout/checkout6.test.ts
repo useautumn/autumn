@@ -79,7 +79,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing invoice checkout via checko
 			product: pro,
 		});
 	});
-	return;
 
 	test("should have no URL returned if try to attach premium (with invoice true)", async () => {
 		await expectAutumnError({
