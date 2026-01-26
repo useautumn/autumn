@@ -1,4 +1,4 @@
-import { oauthConsent } from "@autumn/shared";
+import { ErrCode, oauthConsent, RecaseError } from "@autumn/shared";
 import { eq } from "drizzle-orm";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 

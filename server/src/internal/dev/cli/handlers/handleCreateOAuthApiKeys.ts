@@ -1,4 +1,10 @@
-import { AppEnv, oauthAccessToken, oauthConsent } from "@autumn/shared";
+import {
+	AppEnv,
+	ErrCode,
+	oauthAccessToken,
+	oauthConsent,
+	RecaseError,
+} from "@autumn/shared";
 import { and, eq, gt } from "drizzle-orm";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { hashOAuthToken } from "@/utils/oauthUtils.js";
@@ -20,13 +26,11 @@ export const handleCreateOAuthApiKeys = createRoute({
 		// Get Bearer token from Authorization header
 		const authHeader = c.req.header("Authorization");
 		if (!authHeader?.startsWith("Bearer ")) {
-		if (!authHeader?.startsWith("Bearer ")) {
 			throw new RecaseError({
 				message: "Missing or invalid Authorization header",
-				code: ErrCode.Unauthorized,
+				code: ErrCode.InvalidRequest,
 				statusCode: 401,
 			});
-		}
 		}
 
 		const accessToken = authHeader.substring(7);
@@ -49,7 +53,7 @@ export const handleCreateOAuthApiKeys = createRoute({
 		if (tokenRecords.length === 0) {
 			throw new RecaseError({
 				message: "Invalid or expired access token",
-				code: ErrCode.Unauthorized,
+				code: ErrCode.InvalidRequest,
 				statusCode: 401,
 			});
 		}
@@ -60,7 +64,7 @@ export const handleCreateOAuthApiKeys = createRoute({
 		if (!userId) {
 			throw new RecaseError({
 				message: "Token missing user information",
-				code: ErrCode.Unauthorized,
+				code: ErrCode.InvalidRequest,
 				statusCode: 401,
 			});
 		}
@@ -73,7 +77,6 @@ export const handleCreateOAuthApiKeys = createRoute({
 				code: ErrCode.InvalidRequest,
 				statusCode: 400,
 			});
-		}
 		}
 
 		const clientId = tokenRecord.clientId;
