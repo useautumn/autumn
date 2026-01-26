@@ -1,10 +1,4 @@
-import type {
-	ApiBalanceV1,
-	CusFeatureLegacyData,
-	Feature,
-	FullCustomer,
-	TrackLegacyData,
-} from "@autumn/shared";
+import type { ApiBalanceV1, Feature, FullCustomer } from "@autumn/shared";
 import {
 	fullCustomerToCustomerEntitlements,
 	findCustomerEntitlementById,
@@ -19,7 +13,6 @@ import type { FeatureDeduction } from "../types/featureDeduction.js";
 type TrackBalanceResult = {
 	balance: ApiBalanceV1 | null;
 	balances?: Record<string, ApiBalanceV1>;
-	legacyData: TrackLegacyData;
 };
 
 /**
@@ -152,15 +145,14 @@ export const deductionToTrackResponse = async ({
 	// 1. Compute actual deductions per feature from the raw updates
 	const actualDeductions = computeActualDeductions({ fullCus, updates });
 
-	// 2. Get API customer with balances and legacy data
-	const { apiCustomer, legacyData } = await getApiCustomerBase({
+	// 2. Get API customer with balances
+	const { apiCustomer } = await getApiCustomerBase({
 		ctx,
 		fullCus,
 	});
 
 	// 3. Build balances response
 	const finalBalances: Record<string, ApiBalanceV1> = {};
-	const finalLegacyData: Record<string, CusFeatureLegacyData> = {};
 
 	// Add primary features (always - they were requested to be tracked)
 	for (const deduction of featureDeductions) {
@@ -174,11 +166,6 @@ export const deductionToTrackResponse = async ({
 		const balance = apiCustomer.balances[featureToUse];
 		if (balance) {
 			finalBalances[featureToUse] = balance;
-			// Also collect legacy data for this feature
-			const featureLegacyData = legacyData.cusFeatureLegacyData[featureToUse];
-			if (featureLegacyData) {
-				finalLegacyData[featureToUse] = featureLegacyData;
-			}
 		}
 	}
 
@@ -187,26 +174,18 @@ export const deductionToTrackResponse = async ({
 		return {
 			balance: null,
 			balances: undefined,
-			legacyData: {},
 		};
 	}
 
 	if (Object.keys(finalBalances).length === 1) {
-		const featureId = Object.keys(finalBalances)[0];
 		return {
 			balance: Object.values(finalBalances)[0],
 			balances: undefined,
-			legacyData: {
-				balanceLegacyData: finalLegacyData[featureId],
-			},
 		};
 	}
 
 	return {
 		balance: null,
 		balances: finalBalances,
-		legacyData: {
-			balancesLegacyData: finalLegacyData,
-		},
 	};
 };

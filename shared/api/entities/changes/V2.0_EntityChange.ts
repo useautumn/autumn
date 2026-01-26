@@ -7,7 +7,7 @@ import type { z } from "zod/v4";
 import type { ApiBalance } from "../../customers/cusFeatures/apiBalance.js";
 import { transformApiBalanceV1ToV0 } from "../../customers/cusFeatures/changes/transformApiBalanceV1ToV0.js";
 import type { ApiSubscription } from "../../customers/cusPlans/apiSubscription.js";
-import { transformApiSubscriptionV1ToV0 } from "../../customers/cusPlans/changes/transformApiSubscriptionV1ToV0.js";
+import { transformApiSubscriptionV1ToV0 } from "../../customers/cusPlans/changes/V2.0_ApiSubscriptionChange.js";
 import { ApiEntityV1Schema } from "../apiEntity.js";
 import { ApiEntityV2Schema } from "../apiEntityV2.js";
 import { EntityLegacyDataSchema } from "../entityLegacyData.js";
@@ -52,9 +52,10 @@ export const V2_0_EntityChange = defineVersionChange({
 						.map((sub) => transformApiSubscriptionV1ToV0({ input: sub }))
 				: undefined;
 
-		const transformedScheduledSubscriptions: ApiSubscription[] = allSubscriptions
-			.filter((sub) => sub.status === "scheduled")
-			.map((sub) => transformApiSubscriptionV1ToV0({ input: sub }));
+		const transformedScheduledSubscriptions: ApiSubscription[] =
+			allSubscriptions
+				.filter((sub) => sub.status === "scheduled")
+				.map((sub) => transformApiSubscriptionV1ToV0({ input: sub }));
 
 		return {
 			...input,

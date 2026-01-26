@@ -4,12 +4,12 @@ import {
 	defineVersionChange,
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
 import type { z } from "zod/v4";
+import { ApiCustomerSchema } from "../apiCustomer.js";
+import { ApiCustomerV5Schema } from "../apiCustomerV5.js";
 import type { ApiBalance } from "../cusFeatures/apiBalance.js";
 import { transformApiBalanceV1ToV0 } from "../cusFeatures/changes/transformApiBalanceV1ToV0.js";
 import type { ApiSubscription } from "../cusPlans/apiSubscription.js";
-import { transformApiSubscriptionV1ToV0 } from "../cusPlans/changes/transformApiSubscriptionV1ToV0.js";
-import { ApiCustomerSchema } from "../apiCustomer.js";
-import { ApiCustomerV5Schema } from "../apiCustomerV5.js";
+import { transformApiSubscriptionV1ToV0 } from "../cusPlans/changes/V2.0_ApiSubscriptionChange.js";
 import { CustomerLegacyDataSchema } from "../customerLegacyData.js";
 
 export const V2_0_CustomerChange = defineVersionChange({
@@ -35,8 +35,7 @@ export const V2_0_CustomerChange = defineVersionChange({
 		if (input.balances) {
 			for (const [featureId, balance] of Object.entries(input.balances)) {
 				// Get per-feature legacy data for this balance
-				const featureLegacyData =
-					legacyData?.cusFeatureLegacyData?.[featureId];
+				const featureLegacyData = legacyData?.cusFeatureLegacyData?.[featureId];
 				transformedBalances[featureId] = transformApiBalanceV1ToV0({
 					input: balance,
 					legacyData: featureLegacyData,
@@ -52,9 +51,10 @@ export const V2_0_CustomerChange = defineVersionChange({
 			.filter((sub) => sub.status !== "scheduled")
 			.map((sub) => transformApiSubscriptionV1ToV0({ input: sub }));
 
-		const transformedScheduledSubscriptions: ApiSubscription[] = allSubscriptions
-			.filter((sub) => sub.status === "scheduled")
-			.map((sub) => transformApiSubscriptionV1ToV0({ input: sub }));
+		const transformedScheduledSubscriptions: ApiSubscription[] =
+			allSubscriptions
+				.filter((sub) => sub.status === "scheduled")
+				.map((sub) => transformApiSubscriptionV1ToV0({ input: sub }));
 
 		// Return V0 customer format (without purchases field)
 		const { purchases: _purchases, ...rest } = input;

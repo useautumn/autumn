@@ -1,6 +1,5 @@
 import type {
 	FullCustomer,
-	TrackLegacyData,
 	TrackParams,
 	TrackResponseV3,
 } from "@autumn/shared";
@@ -72,7 +71,6 @@ const queueEvent = ({
 
 type RunRedisTrackResult = {
 	response: TrackResponseV3;
-	legacyData: TrackLegacyData;
 };
 
 /**
@@ -126,7 +124,7 @@ export const runRedisTrack = async ({
 
 	queueEvent({ ctx, body, fullCustomer });
 
-	const { balance, balances, legacyData } = await deductionToTrackResponse({
+	const { balance, balances } = await deductionToTrackResponse({
 		ctx,
 		fullCus: fullCus!,
 		featureDeductions,
@@ -141,10 +139,6 @@ export const runRedisTrack = async ({
 			value: body.value ?? 1,
 			balance,
 			balances,
-		},
-		legacyData: {
-			feature_id: body.feature_id || body.event_name,
-			...legacyData,
 		},
 	};
 };

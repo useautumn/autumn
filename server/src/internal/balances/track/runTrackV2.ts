@@ -52,7 +52,7 @@ export const runTrackV2 = async ({
 	}
 
 	// Try Redis deduction
-	const { response, legacyData } = await runRedisTrack({
+	const { response } = await runRedisTrack({
 		ctx,
 		fullCustomer,
 		featureDeductions,
@@ -66,7 +66,9 @@ export const runTrackV2 = async ({
 			? new ApiVersionClass(apiVersion)
 			: ctx.apiVersion,
 		resource: AffectedResource.Track,
-		legacyData,
+		legacyData: {
+			feature_id: body.feature_id || body.event_name,
+		},
 		ctx,
 	});
 

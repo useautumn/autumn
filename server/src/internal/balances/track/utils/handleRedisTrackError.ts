@@ -1,6 +1,5 @@
 import {
 	InsufficientBalanceError,
-	type TrackLegacyData,
 	type TrackParams,
 	type TrackResponseV3,
 } from "@autumn/shared";
@@ -14,7 +13,6 @@ import { runPostgresTrack } from "./runPostgresTrack.js";
 
 type HandleRedisTrackErrorResult = {
 	response: TrackResponseV3;
-	legacyData: TrackLegacyData;
 };
 
 /**

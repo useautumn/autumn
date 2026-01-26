@@ -1,8 +1,4 @@
-import type {
-	TrackLegacyData,
-	TrackParams,
-	TrackResponseV3,
-} from "@autumn/shared";
+import type { TrackParams, TrackResponseV3 } from "@autumn/shared";
 import { tryCatch } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { EventService } from "@/internal/api/events/EventService.js";
@@ -15,7 +11,6 @@ import { handlePostgresTrackError } from "./handlePostgresTrackError.js";
 
 type RunPostgresTrackResult = {
 	response: TrackResponseV3;
-	legacyData: TrackLegacyData;
 };
 
 /**
@@ -87,13 +82,10 @@ export const runPostgresTrack = async ({
 				value: body.value ?? 1,
 				balance: null,
 			},
-			legacyData: {
-				feature_id: body.feature_id || body.event_name,
-			},
 		};
 	}
 
-	const { balance, balances, legacyData } = await deductionToTrackResponse({
+	const { balance, balances } = await deductionToTrackResponse({
 		ctx,
 		fullCus,
 		featureDeductions,
@@ -108,10 +100,6 @@ export const runPostgresTrack = async ({
 			value: body.value ?? 1,
 			balance,
 			balances,
-		},
-		legacyData: {
-			feature_id: body.feature_id || body.event_name,
-			...legacyData,
 		},
 	};
 };

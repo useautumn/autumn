@@ -194,7 +194,7 @@ export const getApiBalance = ({
 				.add(totalUnused)
 				.toNumber(),
 
-			usage: new Decimal(totalUsage).add(totalRolloverUsage).toNumber(),
+			usage: new Decimal(totalUsage).add(totalRolloverUsage).sub(totalUnused).toNumber(),
 
 			unlimited: unlimited,
 			overage_allowed: usageAllowed,

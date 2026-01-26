@@ -86,7 +86,7 @@ export function transformApiBalanceV1ToV0({
 			? {
 					interval: "multiple" as const,
 					interval_count: undefined,
-					resets_at: input.next_reset_at,
+					resets_at: null,
 				}
 			: input.breakdown?.[0]?.reset
 				? {
