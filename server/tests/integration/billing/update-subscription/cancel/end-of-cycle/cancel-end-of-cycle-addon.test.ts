@@ -312,13 +312,13 @@ test.concurrent(`${chalk.yellowBright("cancel addon EOC: separate subscription (
 	const proSubId = await getSubscriptionId({
 		ctx,
 		customerId,
-		productId: `${pro.id}_${customerId}`,
+		productId: pro.id,
 	});
 
 	const addonSubId = await getSubscriptionId({
 		ctx,
 		customerId,
-		productId: `${addon.id}_${customerId}`,
+		productId: addon.id,
 	});
 
 	// Verify they are different subscriptions

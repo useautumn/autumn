@@ -47,6 +47,14 @@ export const AutumnBillingPlanSchema = z.object({
 			}),
 		})
 		.optional(),
+
+	updateByStripeScheduleId: z
+		.object({
+			oldScheduleId: z.string(),
+			newScheduleId: z.string(),
+		})
+		.optional(),
+
 	deleteCustomerProduct: FullCusProductSchema.optional(), // Scheduled product to delete (e.g., when updating while canceling)
 
 	customPrices: z.array(PriceSchema).optional(), // Custom prices to insert

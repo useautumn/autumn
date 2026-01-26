@@ -94,6 +94,7 @@ export const executeStripeBillingPlan = async ({
 		if (stripeSubscriptionSchedule) {
 			addStripeSubscriptionScheduleIdToBillingPlan({
 				autumnBillingPlan: billingPlan.autumn,
+				stripeBillingPlan: billingPlan.stripe,
 				stripeSubscriptionScheduleId: stripeSubscriptionSchedule.id,
 			});
 		}

@@ -13,10 +13,6 @@ export const handleStripeBillingPlanErrors = ({
 	// If there's an existing subscription schedule, validate it has current_phase.start_date
 	// This is required for schedule updates (Stripe requires anchoring phases to the current phase start)
 
-	console.log(
-		"Billing context stripe subscription schedule",
-		billingContext.stripeSubscriptionSchedule,
-	);
 	if (billingContext.stripeSubscriptionSchedule) {
 		const currentPhaseStart =
 			billingContext.stripeSubscriptionSchedule.current_phase?.start_date;
