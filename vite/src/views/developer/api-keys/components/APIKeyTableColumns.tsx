@@ -1,6 +1,7 @@
 import type { ApiKey } from "@autumn/shared";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { CalendarIcon, ShieldCheckIcon, TerminalIcon, UserIcon } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/v2/tooltips/Tooltip";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { APIKeyToolbar } from "./APIKeyToolbar";
 
@@ -32,7 +33,16 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 		header: "Name",
 		accessorKey: "name",
 		cell: ({ row }: { row: Row<ApiKey> }) => {
-			return <div className="font-medium text-t1">{row.original.name}</div>;
+			return (
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<div className="font-medium text-t1 truncate max-w-[150px]">
+							{row.original.name}
+						</div>
+					</TooltipTrigger>
+					<TooltipContent>{row.original.name}</TooltipContent>
+				</Tooltip>
+			);
 		},
 	},
 	{

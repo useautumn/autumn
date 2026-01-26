@@ -1,4 +1,4 @@
-import { oauthConsent } from "@autumn/shared";
+import { ErrCode, oauthConsent, RecaseError } from "@autumn/shared";
 import { eq } from "drizzle-orm";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 
@@ -18,7 +18,11 @@ export const handleGetOrgConsents = createRoute({
 		const { db, org } = ctx;
 
 		if (!org?.id) {
-			return c.json({ error: "No organization found" }, 400);
+			throw new RecaseError({
+				message: "No organization found",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
 		}
 
 		// Query consents where referenceId matches the current org

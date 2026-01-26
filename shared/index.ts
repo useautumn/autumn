@@ -213,3 +213,4 @@ export * from "./utils/productV2Utils/productItemUtils/getProductItemRes.js";
 export * from "./utils/productV2Utils/productItemUtils/itemIntervalUtils.js";
 export * from "./utils/productV3Utils/productItemUtils/productV3ItemUtils.js";
 export * from "./utils/rewardUtils/rewardMigrationUtils";
+export * from "./utils/scopeDefinitions.js";
