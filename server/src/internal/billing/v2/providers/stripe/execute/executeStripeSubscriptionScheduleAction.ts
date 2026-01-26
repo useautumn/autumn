@@ -4,6 +4,7 @@ import type { BillingContext } from "@server/internal/billing/v2/billingContext"
 import type Stripe from "stripe";
 import { logSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/logSubscriptionScheduleAction";
 import type { StripeSubscriptionScheduleAction } from "@/internal/billing/v2/types/billingPlan";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
 /**
  * Maps update phase format to create phase format (strips start_date).
@@ -148,7 +149,7 @@ export const executeStripeSubscriptionScheduleAction = async ({
 				);
 			}
 
-			return await createScheduleFromSubscription({
+			const newSchedule = await createScheduleFromSubscription({
 				stripeCli,
 				subscriptionId:
 					typeof subscriptionId === "string"
@@ -156,6 +157,17 @@ export const executeStripeSubscriptionScheduleAction = async ({
 						: subscriptionId.id,
 				params,
 			});
+
+			// Update existing customer products with the new schedule ID
+			await CusProductService.updateByStripeScheduledId({
+				db: ctx.db,
+				stripeScheduledId: stripeSubscriptionScheduleId,
+				updates: {
+					scheduled_ids: [newSchedule.id],
+				},
+			});
+
+			return newSchedule;
 		}
 
 		case "release":

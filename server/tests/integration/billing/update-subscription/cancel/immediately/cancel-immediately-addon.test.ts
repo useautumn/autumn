@@ -21,6 +21,7 @@ import {
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
@@ -300,7 +301,7 @@ test.concurrent(`${chalk.yellowBright("cancel addon immediately: with scheduled 
 		items: [messagesItem],
 	});
 
-	const { autumnV1 } = await initScenario({
+	const { autumnV1, ctx, testClockId } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -318,7 +319,8 @@ test.concurrent(`${chalk.yellowBright("cancel addon immediately: with scheduled 
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerProducts({
 		customer: customerBefore,
-		active: [premium.id, recurringAddon.id],
+		active: [recurringAddon.id],
+		canceling: [premium.id],
 		scheduled: [pro.id],
 	});
 
@@ -334,20 +336,16 @@ test.concurrent(`${chalk.yellowBright("cancel addon immediately: with scheduled 
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerProducts({
 		customer: customerAfterCancel,
-		active: [premium.id],
+		canceling: [premium.id],
 		scheduled: [pro.id],
 		notPresent: [recurringAddon.id],
 	});
 
 	// Advance test clock to next cycle
-	await initScenario({
-		customerId,
-		setup: [],
-		actions: [s.advanceTestClock({ toNextInvoice: true })],
+	await advanceToNextInvoice({
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId!,
 	});
-
-	// Wait for webhooks
-	await new Promise((resolve) => setTimeout(resolve, 3000));
 
 	// Verify: pro active, premium gone, addon gone
 	const customerAfterAdvance =
@@ -458,7 +456,7 @@ test.concurrent(`${chalk.yellowBright("cancel addon immediately: cancel both pro
 		items: [messagesItem],
 	});
 
-	const { autumnV1 } = await initScenario({
+	const { autumnV1, ctx, testClockId } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -505,10 +503,9 @@ test.concurrent(`${chalk.yellowBright("cancel addon immediately: cancel both pro
 	});
 
 	// Advance test clock
-	await initScenario({
-		customerId,
-		setup: [],
-		actions: [s.advanceTestClock({ toNextInvoice: true })],
+	await advanceToNextInvoice({
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId!,
 	});
 
 	// Wait for webhooks

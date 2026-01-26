@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
+import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 import { trackCustomerProductUpdate } from "../../../common/trackCustomerProductUpdate";
 import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext";
 
@@ -40,6 +41,17 @@ export const activateScheduledCustomerProducts = async ({
 			.or.onStripeSchedule({
 				stripeSubscriptionScheduleId: stripeSubscriptionSchedule?.id ?? "",
 			}).valid;
+
+		addToExtraLogs({
+			ctx,
+			extras: {
+				[Date.now().toString()]: {
+					product: customerProduct.product.name,
+					canActivate,
+					hasStarted,
+				},
+			},
+		});
 
 		if (!canActivate || !hasStarted) continue;
 

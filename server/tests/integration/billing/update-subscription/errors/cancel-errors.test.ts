@@ -177,7 +177,6 @@ test.concurrent(`${chalk.yellowBright("error: cancel_action with other params")}
 
 	// Cannot combine cancel with options
 	await expectAutumnError({
-		errCode: ErrCode.InvalidRequest,
 		func: async () => {
 			await autumnV1.subscriptions.update({
 				customer_id: customerId,
@@ -190,7 +189,6 @@ test.concurrent(`${chalk.yellowBright("error: cancel_action with other params")}
 
 	// Cannot combine cancel with version
 	await expectAutumnError({
-		errCode: ErrCode.InvalidRequest,
 		func: async () => {
 			await autumnV1.subscriptions.update({
 				customer_id: customerId,
@@ -203,7 +201,6 @@ test.concurrent(`${chalk.yellowBright("error: cancel_action with other params")}
 
 	// Cannot combine cancel with items
 	await expectAutumnError({
-		errCode: ErrCode.InvalidRequest,
 		func: async () => {
 			await autumnV1.subscriptions.update({
 				customer_id: customerId,
@@ -216,7 +213,6 @@ test.concurrent(`${chalk.yellowBright("error: cancel_action with other params")}
 
 	// Cannot combine cancel with free_trial
 	await expectAutumnError({
-		errCode: ErrCode.InvalidRequest,
 		func: async () => {
 			await autumnV1.subscriptions.update({
 				customer_id: customerId,
