@@ -5,12 +5,12 @@ import {
 	type EntitlementWithFeature,
 	FeatureType,
 	type FreeTrial,
+	getCycleEnd,
 } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import { applyTrialToEntitlement } from "@/internal/products/entitlements/entitlementUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { getNextEntitlementReset } from "@/utils/timeUtils.js";
-import { getAlignedUnix } from "../../../../products/prices/billingIntervalUtils2.js";
 
 export const initNextResetAt = ({
 	entitlement,
@@ -47,7 +47,10 @@ export const initNextResetAt = ({
 			? freeTrialToStripeTimestamp({ freeTrial, now })
 			: null;
 
-	const shouldApplyTrial = applyTrialToEntitlement(entitlement, freeTrial ?? null);
+	const shouldApplyTrial = applyTrialToEntitlement(
+		entitlement,
+		freeTrial ?? null,
+	);
 
 	// console.log(
 	// 	"Trial end timestamp: ",
@@ -67,11 +70,6 @@ export const initNextResetAt = ({
 		entitlement.interval_count || 1,
 	).getTime();
 
-	// console.log(
-	// 	"Next reset at calculated: ",
-	// 	formatUnixToDateTime(nextResetAtCalculated),
-	// );
-
 	// If anchorToUnix, align next reset at to anchorToUnix...
 	if (
 		anchorToUnix &&
@@ -81,14 +79,20 @@ export const initNextResetAt = ({
 		) &&
 		!shouldApplyTrial
 	) {
-		nextResetAtCalculated = getAlignedUnix({
+		nextResetAtCalculated = getCycleEnd({
 			anchor: anchorToUnix,
-			intervalConfig: {
-				interval: entitlement.interval as unknown as BillingInterval,
-				intervalCount: entitlement.interval_count || 1,
-			},
+			interval: entitlement.interval as unknown as BillingInterval,
+			intervalCount: entitlement.interval_count || 1,
 			now,
 		});
+		// nextResetAtCalculated = getAlignedUnix({
+		// 	anchor: anchorToUnix,
+		// 	intervalConfig: {
+		// 		interval: entitlement.interval as unknown as BillingInterval,
+		// 		intervalCount: entitlement.interval_count || 1,
+		// 	},
+		// 	now,
+		// });
 	}
 
 	return nextResetAtCalculated;

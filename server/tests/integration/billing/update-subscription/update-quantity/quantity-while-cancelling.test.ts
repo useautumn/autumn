@@ -6,6 +6,7 @@ import {
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem";
@@ -190,37 +191,16 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: scheduled prod
 	});
 
 	// Now update the scheduled prepaid's quantity (5 → 15 units)
-	await autumnV1.subscriptions.update({
-		customer_id: customerId,
-		product_id: prepaid.id,
-		options: [
-			{ feature_id: TestFeature.Messages, quantity: 15 * billingUnits },
-		],
-	});
-
-	// Verify state after update
-	const customerAfterUpdate =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	// Scheduled prepaid product should remain scheduled
-	await expectProductScheduled({
-		customer: customerAfterUpdate,
-		productId: prepaid.id,
-	});
-
-	// Premium product should remain canceling
-	await expectProductCanceling({
-		customer: customerAfterUpdate,
-		productId: premium.id,
-	});
-
-	// Verify Stripe subscription is correct (still set to cancel at period end)
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-		subCount: 1,
+	await expectAutumnError({
+		func: async () => {
+			await autumnV1.subscriptions.update({
+				customer_id: customerId,
+				product_id: prepaid.id,
+				options: [
+					{ feature_id: TestFeature.Messages, quantity: 15 * billingUnits },
+				],
+			});
+		},
 	});
 });
 

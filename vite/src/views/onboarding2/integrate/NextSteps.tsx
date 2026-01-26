@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { StepHeader } from "./StepHeader";
 import { SampleApp } from "../SampleApp";
 import { useIntegrateContext } from "./IntegrateContext";
+import { StepHeader } from "./StepHeader";
 
 export const NextSteps = () => {
 	const { data, mutate } = useIntegrateContext();

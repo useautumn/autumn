@@ -1,8 +1,7 @@
+import type { Entity } from "@autumn/shared";
 import { X } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import { Entity } from "@autumn/shared";
 import { useLocation, useNavigate } from "react-router";
+import { Button } from "@/components/ui/button";
 
 export const EntityHeader = ({ entity }: { entity?: Entity }) => {
 	const location = useLocation();

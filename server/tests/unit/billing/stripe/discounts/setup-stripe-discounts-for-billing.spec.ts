@@ -9,18 +9,62 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import type { StripeDiscountWithCoupon } from "@autumn/shared";
 import { discounts } from "@tests/utils/fixtures/db/discounts";
 import { stripeCustomers } from "@tests/utils/fixtures/stripe/customers";
 import { stripeSubscriptions } from "@tests/utils/fixtures/stripe/subscriptions";
 import chalk from "chalk";
+import type Stripe from "stripe";
+import type {
+	StripeCustomerWithDiscount,
+	StripeSubscriptionWithDiscounts,
+} from "@/external/stripe/subscriptions";
 import { setupStripeDiscountsForBilling } from "@/internal/billing/v2/providers/stripe/setup/setupStripeDiscountsForBilling";
 
 // ============ TESTS ============
 
 describe(chalk.yellowBright("setupStripeDiscountsForBilling"), () => {
+	const createStripeCustomer = (params?: {
+		id?: string;
+		discount?: StripeCustomerWithDiscount["discount"];
+	}) => stripeCustomers.create(params) as StripeCustomerWithDiscount;
+
+	const normalizeStripeCouponAppliesTo = (
+		coupon: StripeDiscountWithCoupon["source"]["coupon"],
+	) => {
+		const couponObject = coupon as Stripe.Coupon;
+		return {
+			...couponObject,
+			applies_to: couponObject.applies_to ?? null,
+		};
+	};
+
+	const toSubscriptionDiscounts = (
+		stripeDiscounts: StripeDiscountWithCoupon[],
+	) =>
+		stripeDiscounts.map((discount) => ({
+			...discount,
+			source: {
+				...discount.source,
+				coupon: normalizeStripeCouponAppliesTo(discount.source.coupon),
+			},
+		})) as StripeSubscriptionWithDiscounts["discounts"];
+
+	const toCustomerDiscount = (discount: StripeDiscountWithCoupon) =>
+		({
+			...discount,
+			coupon: normalizeStripeCouponAppliesTo(discount.source.coupon),
+		}) as StripeCustomerWithDiscount["discount"];
+
+	const createStripeSubscription = (params: {
+		id: string;
+		items?: { id: string; priceId: string; quantity: number }[];
+		discounts?: StripeSubscriptionWithDiscounts["discounts"];
+	}) => stripeSubscriptions.create(params) as StripeSubscriptionWithDiscounts;
+
 	describe(chalk.cyan("No discounts"), () => {
 		test("returns empty array when no subscription and no customer discount", () => {
-			const customer = stripeCustomers.create();
+			const customer = createStripeCustomer();
 
 			const result = setupStripeDiscountsForBilling({
 				stripeSubscription: undefined,
@@ -31,8 +75,8 @@ describe(chalk.yellowBright("setupStripeDiscountsForBilling"), () => {
 		});
 
 		test("returns empty array when subscription has no discounts and customer has no discount", () => {
-			const sub = stripeSubscriptions.create({ id: "sub_test", discounts: [] });
-			const customer = stripeCustomers.create();
+			const sub = createStripeSubscription({ id: "sub_test", discounts: [] });
+			const customer = createStripeCustomer();
 
 			const result = setupStripeDiscountsForBilling({
 				stripeSubscription: sub,
@@ -45,12 +89,14 @@ describe(chalk.yellowBright("setupStripeDiscountsForBilling"), () => {
 
 	describe(chalk.cyan("Subscription discounts priority"), () => {
 		test("returns subscription discounts when present", () => {
-			const subDiscount = discounts.twentyPercentOff({ couponId: "sub_coupon" });
-			const sub = stripeSubscriptions.create({
-				id: "sub_test",
-				discounts: [subDiscount],
+			const subDiscount = discounts.twentyPercentOff({
+				couponId: "sub_coupon",
 			});
-			const customer = stripeCustomers.create();
+			const sub = createStripeSubscription({
+				id: "sub_test",
+				discounts: toSubscriptionDiscounts([subDiscount]),
+			});
+			const customer = createStripeCustomer();
 
 			const result = setupStripeDiscountsForBilling({
 				stripeSubscription: sub,
@@ -64,13 +110,17 @@ describe(chalk.yellowBright("setupStripeDiscountsForBilling"), () => {
 
 		test("returns subscription discounts even when customer has discount", () => {
 			const subDiscount = discounts.tenPercentOff({ couponId: "sub_coupon" });
-			const customerDiscount = discounts.fiftyPercentOff({ couponId: "cus_coupon" });
-
-			const sub = stripeSubscriptions.create({
-				id: "sub_test",
-				discounts: [subDiscount],
+			const customerDiscount = discounts.fiftyPercentOff({
+				couponId: "cus_coupon",
 			});
-			const customer = stripeCustomers.create({ discount: customerDiscount });
+
+			const sub = createStripeSubscription({
+				id: "sub_test",
+				discounts: toSubscriptionDiscounts([subDiscount]),
+			});
+			const customer = createStripeCustomer({
+				discount: toCustomerDiscount(customerDiscount),
+			});
 
 			const result = setupStripeDiscountsForBilling({
 				stripeSubscription: sub,
@@ -87,11 +137,11 @@ describe(chalk.yellowBright("setupStripeDiscountsForBilling"), () => {
 			const discount1 = discounts.tenPercentOff({ couponId: "coupon_1" });
 			const discount2 = discounts.twentyDollarsOff({ couponId: "coupon_2" });
 
-			const sub = stripeSubscriptions.create({
+			const sub = createStripeSubscription({
 				id: "sub_test",
-				discounts: [discount1, discount2],
+				discounts: toSubscriptionDiscounts([discount1, discount2]),
 			});
-			const customer = stripeCustomers.create();
+			const customer = createStripeCustomer();
 
 			const result = setupStripeDiscountsForBilling({
 				stripeSubscription: sub,
@@ -110,7 +160,9 @@ describe(chalk.yellowBright("setupStripeDiscountsForBilling"), () => {
 				percentOff: 30,
 				couponId: "cus_coupon",
 			});
-			const customer = stripeCustomers.create({ discount: customerDiscount });
+			const customer = createStripeCustomer({
+				discount: toCustomerDiscount(customerDiscount),
+			});
 
 			const result = setupStripeDiscountsForBilling({
 				stripeSubscription: undefined,
@@ -123,10 +175,14 @@ describe(chalk.yellowBright("setupStripeDiscountsForBilling"), () => {
 		});
 
 		test("returns customer discount when subscription has no discounts", () => {
-			const customerDiscount = discounts.tenDollarsOff({ couponId: "cus_coupon" });
+			const customerDiscount = discounts.tenDollarsOff({
+				couponId: "cus_coupon",
+			});
 
-			const sub = stripeSubscriptions.create({ id: "sub_test", discounts: [] });
-			const customer = stripeCustomers.create({ discount: customerDiscount });
+			const sub = createStripeSubscription({ id: "sub_test", discounts: [] });
+			const customer = createStripeCustomer({
+				discount: toCustomerDiscount(customerDiscount),
+			});
 
 			const result = setupStripeDiscountsForBilling({
 				stripeSubscription: sub,
@@ -139,14 +195,20 @@ describe(chalk.yellowBright("setupStripeDiscountsForBilling"), () => {
 		});
 
 		test("returns customer discount when subscription discounts are all invalid", () => {
-			const customerDiscount = discounts.twentyPercentOff({ couponId: "cus_coupon" });
+			const customerDiscount = discounts.twentyPercentOff({
+				couponId: "cus_coupon",
+			});
 
 			// Subscription with only string refs (invalid)
-			const sub = stripeSubscriptions.create({
+			const sub = createStripeSubscription({
 				id: "sub_test",
-				discounts: ["di_string_ref"],
+				discounts: [
+					"di_string_ref",
+				] as StripeSubscriptionWithDiscounts["discounts"],
 			});
-			const customer = stripeCustomers.create({ discount: customerDiscount });
+			const customer = createStripeCustomer({
+				discount: toCustomerDiscount(customerDiscount),
+			});
 
 			const result = setupStripeDiscountsForBilling({
 				stripeSubscription: sub,
@@ -170,7 +232,7 @@ describe(chalk.yellowBright("setupStripeDiscountsForBilling"), () => {
 				},
 			};
 
-			const customer = stripeCustomers.create({
+			const customer = createStripeCustomer({
 				discount: invalidDiscount as never,
 			});
 
@@ -192,7 +254,7 @@ describe(chalk.yellowBright("setupStripeDiscountsForBilling"), () => {
 				},
 			};
 
-			const customer = stripeCustomers.create({
+			const customer = createStripeCustomer({
 				discount: invalidDiscount as never,
 			});
 
@@ -210,11 +272,11 @@ describe(chalk.yellowBright("setupStripeDiscountsForBilling"), () => {
 			const discount = discounts.twentyPercentOff({
 				appliesToProducts: ["prod_a", "prod_b"],
 			});
-			const sub = stripeSubscriptions.create({
+			const sub = createStripeSubscription({
 				id: "sub_test",
-				discounts: [discount],
+				discounts: toSubscriptionDiscounts([discount]),
 			});
-			const customer = stripeCustomers.create();
+			const customer = createStripeCustomer();
 
 			const result = setupStripeDiscountsForBilling({
 				stripeSubscription: sub,
@@ -231,7 +293,9 @@ describe(chalk.yellowBright("setupStripeDiscountsForBilling"), () => {
 			const discount = discounts.tenDollarsOff({
 				appliesToProducts: ["prod_x"],
 			});
-			const customer = stripeCustomers.create({ discount });
+			const customer = createStripeCustomer({
+				discount: toCustomerDiscount(discount),
+			});
 
 			const result = setupStripeDiscountsForBilling({
 				stripeSubscription: undefined,

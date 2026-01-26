@@ -1,7 +1,7 @@
-import { getBackendErr, notNullish } from "@/utils/genUtils";
-import { ProductV2 } from "@autumn/shared";
-import { AxiosInstance } from "axios";
+import type { ProductV2 } from "@autumn/shared";
+import type { AxiosInstance } from "axios";
 import { toast } from "sonner";
+import { getBackendErr, notNullish } from "@/utils/genUtils";
 
 export const handleAutoSave = async ({
 	axiosInstance,

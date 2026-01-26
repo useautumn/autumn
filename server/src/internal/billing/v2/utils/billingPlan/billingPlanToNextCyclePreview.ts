@@ -2,9 +2,9 @@ import {
 	type BillingPreviewResponse,
 	cp,
 	cusProductsToPrices,
-	formatMs,
 	getCycleEnd,
 	getSmallestInterval,
+	hasCustomerProductEnded,
 	sumValues,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -37,7 +37,8 @@ export const billingPlanToNextCyclePreview = ({
 		...insertCustomerProducts,
 		...(updatedCustomerProduct ? [updatedCustomerProduct] : []),
 	];
-	const customerProducts = allCustomerProducts.filter(
+
+	let customerProducts = allCustomerProducts.filter(
 		(customerProduct) =>
 			cp(customerProduct).paid().recurring().hasActiveStatus().valid,
 	);
@@ -51,16 +52,6 @@ export const billingPlanToNextCyclePreview = ({
 
 	if (!smallestInterval) return undefined;
 
-	ctx.logger.debug(
-		`[billingPlanToNextCyclePreview] Billing cycle anchor: ${formatMs(billingCycleAnchorMs)}`,
-	);
-	ctx.logger.debug(
-		`[billingPlanToNextCyclePreview] Smallest interval: ${smallestInterval.interval}`,
-	);
-	ctx.logger.debug(
-		`[billingPlanToNextCyclePreview] Current epoch ms: ${formatMs(billingContext.currentEpochMs)}`,
-	);
-
 	const nextCycleStart = getCycleEnd({
 		anchor: billingCycleAnchorMs,
 		interval: smallestInterval.interval,
@@ -69,9 +60,13 @@ export const billingPlanToNextCyclePreview = ({
 		floor: billingCycleAnchorMs,
 	});
 
-	ctx.logger.debug(
-		`[billingPlanToNextCyclePreview] Next cycle start: ${formatMs(nextCycleStart)}`,
-	);
+	customerProducts = customerProducts.filter((customerProduct) => {
+		return !hasCustomerProductEnded(customerProduct, {
+			nowMs: nextCycleStart,
+		});
+	});
+
+	if (customerProducts.length === 0) return undefined;
 
 	const autumnLineItems = customerProducts.flatMap((customerProduct) =>
 		customerProductToLineItems({

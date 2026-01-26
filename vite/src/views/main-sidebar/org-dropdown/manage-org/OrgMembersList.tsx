@@ -1,10 +1,10 @@
-import { Membership } from "@autumn/shared";
+import type { Membership } from "@autumn/shared";
 import { Item, Row } from "@/components/general/TableGrid";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "@/lib/auth-client";
 import { formatDateStr } from "@/utils/formatUtils/formatDateUtils";
-import { MemberRowToolbar } from "./MemberRowToolbar";
 import { useMemberships } from "../hooks/useMemberships";
+import { MemberRowToolbar } from "./MemberRowToolbar";
 
 export const OrgMembersList = () => {
 	const { memberships, isLoading: isMembersLoading } = useMemberships();
@@ -34,9 +34,7 @@ export const OrgMembersList = () => {
 				return (
 					<Row key={membership.user.id} className="flex px-6 text-sm text-t2">
 						<Item className="flex-[6]">{user.email}</Item>
-						<Item className="flex-[5] text-t3">
-							{user.name || "No name"}
-						</Item>
+						<Item className="flex-[5] text-t3">{user.name || "No name"}</Item>
 						<Item className="flex-[3]">
 							<Badge variant="outline">{member.role}</Badge>
 						</Item>

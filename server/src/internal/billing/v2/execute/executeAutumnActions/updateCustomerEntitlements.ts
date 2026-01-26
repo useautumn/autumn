@@ -17,7 +17,7 @@ export const updateCustomerEntitlements = async ({
 	const { db, logger } = ctx;
 
 	for (const updateDetail of updates ?? []) {
-		const { balanceChange, customerEntitlement } = updateDetail;
+		const { balanceChange = 0, customerEntitlement } = updateDetail;
 
 		logger.debug(
 			`updating customer entitlement ${customerEntitlement.id} by ${balanceChange}`,

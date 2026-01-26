@@ -59,9 +59,7 @@ export const CustomerPlanEditorBar = () => {
 		} else {
 			// We have a subscription ID, so we're editing an existing subscription
 			setSheet({
-				type: changesMade
-					? "subscription-update-v2"
-					: "subscription-detail",
+				type: changesMade ? "subscription-update-v2" : "subscription-detail",
 				itemId: queryStates.id,
 				data: changesMade ? { customizedProduct: product } : null,
 			});

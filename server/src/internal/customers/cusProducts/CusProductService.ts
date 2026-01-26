@@ -292,7 +292,7 @@ export class CusProductService {
 	}) {
 		// sql`${customerProducts.subscription_ids} @> ${sql`ARRAY[${stripeSubId}]`}`,
 		const data = await db.query.customerProducts.findMany({
-			where: (table, { and, or, inArray }) =>
+			where: (_table, { and, or, inArray }) =>
 				and(
 					or(arrayContains(customerProducts.subscription_ids, [stripeSubId])),
 					inStatuses ? inArray(customerProducts.status, inStatuses) : undefined,
@@ -439,11 +439,11 @@ export class CusProductService {
 	}: {
 		db: DrizzleCli;
 		cusProductId: string;
-		updates: Partial<CusProduct>;
+		updates: Partial<InsertCustomerProduct>;
 	}) {
 		return await db
 			.update(customerProducts)
-			.set(updates as any)
+			.set(updates)
 			.where(eq(customerProducts.id, cusProductId))
 			.returning();
 	}

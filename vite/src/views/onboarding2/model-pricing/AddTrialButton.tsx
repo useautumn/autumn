@@ -1,10 +1,10 @@
-import { Button } from "@/components/ui/button";
-import { CreateFreeTrial } from "@/views/products/product/free-trial/CreateFreeTrial";
-import { useState } from "react";
-import { useProductContext } from "@/views/products/product/ProductContext";
 import { PlusIcon, X } from "lucide-react";
-import { handleAutoSave } from "./model-pricing-utils/modelPricingUtils";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { CreateFreeTrial } from "@/views/products/product/free-trial/CreateFreeTrial";
+import { useProductContext } from "@/views/products/product/ProductContext";
+import { handleAutoSave } from "./model-pricing-utils/modelPricingUtils";
 
 export const AddTrialButton = () => {
 	const axiosInstance = useAxiosInstance();

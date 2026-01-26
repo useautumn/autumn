@@ -129,3 +129,13 @@ export const stripeSubscriptionToNowMs = async ({
 
 	return Date.now();
 };
+
+export const stripeSubscriptionToScheduleId = ({
+	stripeSubscription,
+}: {
+	stripeSubscription: ExpandedStripeSubscription;
+}): string | null => {
+	return typeof stripeSubscription.schedule === "string"
+		? stripeSubscription.schedule
+		: (stripeSubscription.schedule?.id ?? null);
+};

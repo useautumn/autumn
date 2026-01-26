@@ -81,6 +81,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro -> pro wi
 	});
 
 	test("should attach track usage and get correct balance", async () => {
+		await timeout(3000);
 		const wordsUsage = 120000;
 		await autumn.track({
 			customer_id: customerId,
@@ -88,7 +89,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro -> pro wi
 			feature_id: TestFeature.Words,
 		});
 
-		await timeout(4000);
+		await timeout(3000);
 
 		const { stripeSubs, cusProduct } = await runMigrationTest({
 			autumn,

@@ -1,8 +1,27 @@
 import CodeBlock from "@/views/onboarding/components/CodeBlock";
-import { StepHeader } from "../StepHeader";
+import { CodeSpan } from "../components/CodeSpan";
 import { useIntegrateContext } from "../IntegrateContext";
-
+import { Backend } from "../StackEnums";
+import { StepHeader } from "../StepHeader";
 import {} from "./handlerSnippets";
+import {
+	elysiaBetterAuth,
+	elysiaClerk,
+	elysiaOther,
+} from "./snippets/elysiaHandler";
+import {
+	expressBetterAuth,
+	expressClerk,
+	expressOther,
+	expressSupabase,
+} from "./snippets/expressHandler";
+import { general } from "./snippets/general";
+import {
+	honoBetterAuth,
+	honoClerk,
+	honoOther,
+	honoSupabase,
+} from "./snippets/honoHandler";
 import {
 	nextjsBetterAuthOrg,
 	nextjsBetterAuthUser,
@@ -18,26 +37,6 @@ import {
 	rr7Other,
 	rr7Supabase,
 } from "./snippets/rr7Handler";
-import {
-	honoBetterAuth,
-	honoClerk,
-	honoSupabase,
-	honoOther,
-} from "./snippets/honoHandler";
-import {
-	expressBetterAuth,
-	expressClerk,
-	expressOther,
-	expressSupabase,
-} from "./snippets/expressHandler";
-import {
-	elysiaBetterAuth,
-	elysiaClerk,
-	elysiaOther,
-} from "./snippets/elysiaHandler";
-import { general } from "./snippets/general";
-import { CodeSpan } from "../components/CodeSpan";
-import { Backend } from "../StackEnums";
 
 const snippet = () => {
 	return {

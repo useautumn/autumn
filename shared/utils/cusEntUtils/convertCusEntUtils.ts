@@ -12,7 +12,7 @@ import { getStartingBalance } from "./getStartingBalance.js";
 export const cusEntsToPlanId = ({
 	cusEnts,
 }: {
-	cusEnts: (FullCusEntWithFullCusProduct)[];
+	cusEnts: FullCusEntWithFullCusProduct[];
 }) => {
 	// Get number of keys
 	const uniquePlanIds = new Set<string>();

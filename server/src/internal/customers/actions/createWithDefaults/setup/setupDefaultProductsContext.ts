@@ -1,5 +1,4 @@
 import {
-	type CreateCustomerInternalOptions,
 	type CustomerData,
 	type FullProduct,
 	isFreeProduct,
@@ -54,11 +53,9 @@ const getOverrideAutoEnableProduct = async ({
 export const setupDefaultProductsContext = async ({
 	ctx,
 	customerData,
-	internalOptions,
 }: {
 	ctx: AutumnContext;
 	customerData?: CustomerData;
-	internalOptions?: CreateCustomerInternalOptions;
 }): Promise<DefaultProductsContext> => {
 	const { db, org, env } = ctx;
 
@@ -103,6 +100,7 @@ export const setupDefaultProductsContext = async ({
 	}
 
 	let selectedProducts: FullProduct[] = [];
+	const internalOptions = customerData?.internal_options;
 
 	if (internalOptions?.default_group) {
 		const defaultProd = groupToDefaultProd[internalOptions.default_group];

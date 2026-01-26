@@ -69,6 +69,21 @@ export const isCustomerProductScheduled = (cp?: FullCusProduct) => {
 	return cp.status === CusProductStatus.Scheduled;
 };
 
+/**
+ * Checks if a scheduled customer product should be activated based on its starts_at time.
+ * Uses an optional tolerance to handle timing differences between Stripe and webhook arrival.
+ *
+ * @param toleranceMs - Tolerance in milliseconds (default: 10 minutes)
+ */
+export const hasCustomerProductStarted = (
+	cp: FullCusProduct,
+	params: { nowMs: number; toleranceMs?: number },
+) => {
+	if (cp.status !== CusProductStatus.Scheduled) return false;
+	const toleranceMs = params.toleranceMs ?? 10 * 60 * 1000; // 10 minutes default
+	return cp.starts_at <= params.nowMs + toleranceMs;
+};
+
 export const isCustomerProductCanceling = (cp?: FullCusProduct) => {
 	if (!cp) return false;
 
@@ -79,6 +94,13 @@ export const isCustomerProductExpired = (cp?: FullCusProduct) => {
 	if (!cp) return false;
 	return cp.status === CusProductStatus.Expired;
 };
+
+/**
+ * Checks if a canceling customer product has reached its end time.
+ * Uses an optional tolerance to handle timing differences between Stripe and webhook arrival.
+ *
+ * @param toleranceMs - Tolerance in milliseconds (default: 10 minutes)
+ */
 
 export const hasCustomerProductEnded = (
 	cp: FullCusProduct,
@@ -152,8 +174,9 @@ export const isCustomerProductOnStripeSubscriptionSchedule = ({
 	stripeSubscriptionScheduleId,
 }: {
 	customerProduct: FullCusProduct;
-	stripeSubscriptionScheduleId: string;
+	stripeSubscriptionScheduleId: string | null;
 }) => {
+	if (!stripeSubscriptionScheduleId) return false;
 	return customerProduct.scheduled_ids?.includes(stripeSubscriptionScheduleId);
 };
 
@@ -184,4 +207,18 @@ export const customerProductHasSubscriptionSchedule = ({
 	const subId = cusProduct.scheduled_ids?.[0];
 
 	return notNullish(subId);
+};
+
+export const isCustomerProductEntityScoped = (
+	customerProduct?: FullCusProduct,
+) => {
+	if (!customerProduct) return false;
+	return notNullish(customerProduct.internal_entity_id);
+};
+
+export const isCustomerProductCustomerScoped = (
+	customerProduct?: FullCusProduct,
+) => {
+	if (!customerProduct) return false;
+	return nullish(customerProduct.internal_entity_id);
 };

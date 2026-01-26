@@ -17,22 +17,28 @@ export const saveCheckState = async ({
 	result: StateCheckResult;
 }): Promise<void> => {
 	const newFailedChecks = result.checks
-		.filter((c): c is typeof c & { type: CheckType } => c.type !== "overall_status")
+		.filter(
+			(c): c is typeof c & { type: CheckType } => c.type !== "overall_status",
+		)
 		.filter((c) => !c.passed);
 
 	// Skip Redis entirely if all checks pass
 	if (newFailedChecks.length === 0) return;
 
 	const stateKey = `state:${org.id}:${env}:${fullCus.internal_id}`;
-	
-	const existingState = (await upstash.get(stateKey)) as RedisChecksState | null;
+
+	const existingState = (await upstash.get(
+		stateKey,
+	)) as RedisChecksState | null;
 
 	if (existingState) {
 		// Merge with existing state
-		const existingFailedTypes = new Set<CheckType>(existingState.checks.map((c) => c.type));
-		const newFailedTypes = new Set<CheckType>(newFailedChecks.map((c) => c.type));
-
-
+		const existingFailedTypes = new Set<CheckType>(
+			existingState.checks.map((c) => c.type),
+		);
+		const newFailedTypes = new Set<CheckType>(
+			newFailedChecks.map((c) => c.type),
+		);
 
 		// Checks that were fixed (existed before but not now)
 		const checksToRemove = new Set<CheckType>(
@@ -44,7 +50,9 @@ export const saveCheckState = async ({
 		);
 
 		// Keep checks that still fail, remove ones that are fixed
-		const updatedChecks = existingState.checks.filter((c) => !checksToRemove.has(c.type));
+		const updatedChecks = existingState.checks.filter(
+			(c) => !checksToRemove.has(c.type),
+		);
 
 		// Add new failing checks
 		for (const check of newFailedChecks) {
@@ -65,7 +73,6 @@ export const saveCheckState = async ({
 			checks: updatedChecks,
 		};
 		await upstash.set(stateKey, JSON.stringify(updatedState));
-
 	} else {
 		// Create new state
 		const newState: RedisChecksState = {
@@ -87,7 +94,5 @@ export const saveCheckState = async ({
 			})),
 		};
 		await upstash.set(stateKey, JSON.stringify(newState));
-
 	}
 };
-

@@ -1,9 +1,9 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { ProductV2, Organization, ProductItem } from "@autumn/shared";
+import { Organization, type ProductItem, type ProductV2 } from "@autumn/shared";
 import { AppEnv } from "autumn-js";
 import { expect } from "chai";
 import Stripe from "stripe";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 
 export const attachNewContUseAndExpectCorrect = async ({
 	autumn,

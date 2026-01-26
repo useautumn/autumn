@@ -1,17 +1,16 @@
+import { type Feature, FeatureType } from "@autumn/shared";
+import { ArrowLeft, Plus } from "lucide-react";
 import {
 	CustomDialogBody,
 	CustomDialogFooter,
 } from "@/components/general/modal-components/DialogContentWrapper";
+import { Button } from "@/components/ui/button";
 import { DialogHeader } from "@/components/ui/dialog";
-
-import { Feature, FeatureType } from "@autumn/shared";
-import { useProductItemContext } from "../../ProductItemContext";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { isFeaturePriceItem } from "@/utils/product/getItemType";
 import { FeatureTypeBadge } from "@/views/products/features/components/FeatureTypeBadge";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus } from "lucide-react";
+import { useProductItemContext } from "../../ProductItemContext";
 import { CreateItemStep } from "../../utils/CreateItemStep";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 
 export const SelectFeatureStep = ({
 	popStep,

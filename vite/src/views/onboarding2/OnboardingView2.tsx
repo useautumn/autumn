@@ -1,16 +1,16 @@
+import { parseAsBoolean, parseAsString, useQueryStates } from "nuqs";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router";
+import { useOrg } from "@/hooks/common/useOrg";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useSession } from "@/lib/auth-client";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import LoadingScreen from "../general/LoadingScreen";
+import { useOnboardingQueryState } from "./hooks/useOnboardingQueryState";
+import IntegrateAutumn from "./integrate/IntegrateAutumn";
 import { ModelPricing } from "./model-pricing/ModelPricing";
 import { useListProducts } from "./model-pricing/usePricingTable";
-import { parseAsBoolean, parseAsString, useQueryStates } from "nuqs";
-import IntegrateAutumn from "./integrate/IntegrateAutumn";
-import { useEffect, useRef, useState } from "react";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useSearchParams } from "react-router";
-import { useSession } from "@/lib/auth-client";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { useOnboardingQueryState } from "./hooks/useOnboardingQueryState";
-import { useOrg } from "@/hooks/common/useOrg";
 
 export default function OnboardingView2() {
 	// const [queryStates, setQueryStates] = useQueryStates(

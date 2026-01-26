@@ -1,7 +1,7 @@
 import { relations } from "drizzle-orm";
-import { referralCodes } from "./referralCodeTable.js";
 import { customers } from "../../cusModels/cusTable.js";
 import { rewardPrograms } from "../rewardProgramModels/rewardProgramTable.js";
+import { referralCodes } from "./referralCodeTable.js";
 import { rewardRedemptions } from "./rewardRedemptionTable.js";
 
 export const referralCodeRelations = relations(

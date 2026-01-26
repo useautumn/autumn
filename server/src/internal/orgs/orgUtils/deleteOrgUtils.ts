@@ -1,9 +1,9 @@
 import { AppEnv, type Organization } from "@autumn/shared";
-import type { Logger } from "@/external/logtail/logtailUtils.js";
 import {
 	deauthorizeAccount,
 	deleteConnectedAccount,
 } from "@/external/connect/connectUtils.js";
+import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { deleteSvixApp } from "@/external/svix/svixHelpers.js";
 import { deleteStripeWebhook } from "../orgUtils.js";
 

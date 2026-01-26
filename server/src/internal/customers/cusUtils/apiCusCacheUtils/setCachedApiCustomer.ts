@@ -52,9 +52,11 @@ export const setCachedApiCustomer = async ({
 		});
 
 	// Build entity api customers (entity-level features only)
-	const filteredFullCus = filterEntityLevelCustomerEntitlementsFromFullCustomer({
-		fullCustomer: fullCus,
-	});
+	const filteredFullCus = filterEntityLevelCustomerEntitlementsFromFullCustomer(
+		{
+			fullCustomer: fullCus,
+		},
+	);
 
 	// Build entities first
 	const entityBatch: {

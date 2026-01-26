@@ -1,12 +1,12 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
 import {
 	AppEnv,
 	customers,
 	features,
-	Organization,
+	type Organization,
 	products,
 } from "@autumn/shared";
 import { and, eq, inArray } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const clearCustomersInBatches = async ({
 	db,

@@ -1,7 +1,7 @@
 import { InternalError } from "@autumn/shared";
-import type { Feature } from "@models/featureModels/featureModels";
 import type { FullCustomerEntitlement } from "@models/cusProductModels/cusEntModels/cusEntModels";
 import type { FullCusEntWithFullCusProduct } from "@models/cusProductModels/cusEntModels/cusEntWithProduct";
+import type { Feature } from "@models/featureModels/featureModels";
 
 export function findCustomerEntitlementByFeature<
 	T extends FullCustomerEntitlement | FullCusEntWithFullCusProduct,
@@ -44,8 +44,7 @@ export function findCustomerEntitlementByFeature<
 		}
 		if (
 			featureId &&
-			(ce.entitlement.feature_id === featureId ||
-				ce.feature_id === featureId)
+			(ce.entitlement.feature_id === featureId || ce.feature_id === featureId)
 		) {
 			return true;
 		}

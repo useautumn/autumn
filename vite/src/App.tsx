@@ -38,7 +38,7 @@ export default function App() {
 	const { data } = useSession();
 
 	useEffect(() => {
-		if (data) {
+		if (data?.user) {
 			identifyUser({
 				email: data.user.email,
 				name: data.user.name,

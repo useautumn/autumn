@@ -99,9 +99,7 @@ export default function ProductSidebar() {
 							{product.free_trial ? (
 								<FreeTrialView product={product} />
 							) : (
-								<span className="text-t3">
-									Add a free trial to this plan.
-								</span>
+								<span className="text-t3">Add a free trial to this plan.</span>
 							)}
 						</div>
 					</SideAccordion>

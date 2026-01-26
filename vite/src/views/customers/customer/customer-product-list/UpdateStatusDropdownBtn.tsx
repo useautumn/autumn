@@ -1,19 +1,19 @@
+import { CusProductStatus, type FullCusProduct } from "@autumn/shared";
+import { useState } from "react";
+import { toast } from "sonner";
 import SmallSpinner from "@/components/general/SmallSpinner";
+import { Button } from "@/components/ui/button";
 import {
-	DialogHeader,
-	DialogFooter,
 	Dialog,
 	DialogContent,
+	DialogFooter,
+	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { getBackendErr } from "@/utils/genUtils";
-import { CusProductStatus, FullCusProduct } from "@autumn/shared";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 import { useCustomerContext } from "../CustomerContext";
 
 export const UpdateStatusDropdownBtn = ({

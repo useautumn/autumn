@@ -1,4 +1,4 @@
-import { FullCusProduct, FullCustomer, notNullish } from "@autumn/shared";
+import { FullCusProduct, type FullCustomer, notNullish } from "@autumn/shared";
 
 export const getCusProductMinQuantity = ({
 	customer,

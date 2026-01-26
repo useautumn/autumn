@@ -259,13 +259,26 @@ export class AutumnInt {
 		return data;
 	}
 
-	async attach(params: AttachBodyV0, headers?: Record<string, string>) {
-		// const data = await this.post(`/attach`, {
-		//   customer_id: customerId,
-		//   product_id: productId,
-		//   options: toSnakeCase(options),
-		// });
-		const data = await this.post(`/attach`, params, headers);
+	async attach(
+		params: AttachBodyV0,
+		{
+			skipWebhooks,
+			idempotencyKey,
+		}: { skipWebhooks?: boolean; idempotencyKey?: string } = {},
+	) {
+		const headers: Record<string, string> = {};
+		if (skipWebhooks !== undefined) {
+			headers["x-skip-webhooks"] = skipWebhooks ? "true" : "false";
+		}
+		if (idempotencyKey !== undefined) {
+			headers["idempotency-key"] = idempotencyKey;
+		}
+
+		const data = await this.post(
+			`/attach`,
+			params,
+			Object.keys(headers).length > 0 ? headers : undefined,
+		);
 
 		return data;
 	}

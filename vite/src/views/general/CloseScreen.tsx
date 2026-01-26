@@ -44,15 +44,13 @@ export const CloseScreen = () => {
 			<div className="w-screen h-screen flex items-center justify-center p-8">
 				<div className="max-w-md flex flex-col gap-4 text-center">
 					<div className="text-red-600 text-5xl mb-2">⚠️</div>
-					<h1 className="text-xl font-semibold text-t1">
-						Connection Failed
-					</h1>
+					<h1 className="text-xl font-semibold text-t1">Connection Failed</h1>
 
 					{error === "account_already_connected" && accountId ? (
 						<p className="text-t2 text-sm">
 							The Stripe account <strong>{accountId}</strong>
-							{accountName && <> ({accountName})</>} is already connected to
-							the Autumn organization{" "}
+							{accountName && <> ({accountName})</>} is already connected to the
+							Autumn organization{" "}
 							<strong>{connectedOrgName || "another organization"}</strong>
 							{connectedOrgSlug && <> ({connectedOrgSlug})</>}. Please
 							disconnect it from there first before connecting to this
@@ -68,9 +66,13 @@ export const CloseScreen = () => {
 								"Could not retrieve Stripe account information."}
 							{error === "missing_parameters" &&
 								"Missing required parameters. Please try connecting again."}
-							{!["invalid_state", "org_not_found", "account_id_not_found", "missing_parameters", "account_already_connected"].includes(
-								error,
-							) && `An error occurred: ${error}`}
+							{![
+								"invalid_state",
+								"org_not_found",
+								"account_id_not_found",
+								"missing_parameters",
+								"account_already_connected",
+							].includes(error) && `An error occurred: ${error}`}
 						</p>
 					)}
 

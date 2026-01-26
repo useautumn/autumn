@@ -5,6 +5,7 @@ import {
 } from "@autumn/shared";
 import { createStripeCli } from "@server/external/connect/createStripeCli";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
+import { getStripeActiveSubscriptionSchedule } from "@/external/stripe/subscriptionSchedules/index";
 
 export const fetchStripeSubscriptionScheduleForBilling = async ({
 	ctx,
@@ -26,9 +27,10 @@ export const fetchStripeSubscriptionScheduleForBilling = async ({
 
 	// 1. If we have a subscription schedule ID, just retrieve that
 	if (subscriptionScheduleId) {
-		const schedule = await stripeCli.subscriptionSchedules.retrieve(
+		const schedule = await getStripeActiveSubscriptionSchedule({
+			stripeClient: stripeCli,
 			subscriptionScheduleId,
-		);
+		});
 		return schedule;
 	}
 
@@ -44,7 +46,10 @@ export const fetchStripeSubscriptionScheduleForBilling = async ({
 
 	if (!scheduleId) return undefined;
 
-	const schedule = await stripeCli.subscriptionSchedules.retrieve(scheduleId);
+	const schedule = await getStripeActiveSubscriptionSchedule({
+		stripeClient: stripeCli,
+		subscriptionScheduleId: scheduleId,
+	});
 
 	return schedule;
 };

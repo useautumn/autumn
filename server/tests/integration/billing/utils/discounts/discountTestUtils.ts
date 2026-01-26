@@ -2,10 +2,10 @@
  * Shared utilities for discount integration tests.
  */
 
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 
 /**
  * Get Stripe subscription and client for a customer.
@@ -69,7 +69,9 @@ export const createPercentCoupon = async ({
 		...(duration === "repeating" && durationInMonths
 			? { duration_in_months: durationInMonths }
 			: {}),
-		...(appliesToProducts ? { applies_to: { products: appliesToProducts } } : {}),
+		...(appliesToProducts
+			? { applies_to: { products: appliesToProducts } }
+			: {}),
 	});
 };
 
@@ -95,7 +97,9 @@ export const createAmountCoupon = async ({
 		currency,
 		duration: "repeating",
 		duration_in_months: durationInMonths,
-		...(appliesToProducts ? { applies_to: { products: appliesToProducts } } : {}),
+		...(appliesToProducts
+			? { applies_to: { products: appliesToProducts } }
+			: {}),
 	});
 };
 
