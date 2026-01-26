@@ -76,7 +76,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created per-entity consumable: 3 
 			s.track({ featureId: TestFeature.Messages, value: 150, entityIndex: 0 }), // 50 overage
 			s.track({ featureId: TestFeature.Messages, value: 250, entityIndex: 1 }), // 150 overage
 			s.track({ featureId: TestFeature.Messages, value: 350, entityIndex: 2 }), // 250 overage
-			s.advanceToNextInvoice(),
+			s.advanceToNextInvoice({ withPause: true }),
 		],
 	});
 
@@ -200,7 +200,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created per-entity consumable: bi
 			s.attach({ productId: pro.id }),
 			s.track({ featureId: TestFeature.Messages, value: 155, entityIndex: 0 }), // 55 overage
 			s.track({ featureId: TestFeature.Messages, value: 123, entityIndex: 1 }), // 23 overage
-			s.advanceToNextInvoice(),
+			s.advanceToNextInvoice({ withPause: true }),
 		],
 	});
 
@@ -279,7 +279,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created per-entity consumable: mi
 			s.track({ featureId: TestFeature.Messages, value: 50, entityIndex: 0 }), // Within included
 			s.track({ featureId: TestFeature.Messages, value: 100, entityIndex: 1 }), // Exactly at included
 			s.track({ featureId: TestFeature.Messages, value: 200, entityIndex: 2 }), // 100 overage
-			s.advanceToNextInvoice(),
+			s.advanceToNextInvoice({ withPause: true }),
 		],
 	});
 
@@ -373,7 +373,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created per-entity consumable: no
 			s.attach({ productId: pro.id }),
 			s.track({ featureId: TestFeature.Messages, value: 30, entityIndex: 0 }),
 			s.track({ featureId: TestFeature.Messages, value: 70, entityIndex: 1 }),
-			s.advanceToNextInvoice(),
+			s.advanceToNextInvoice({ withPause: true }),
 		],
 	});
 
@@ -472,7 +472,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created per-entity consumable: de
 				value: 175.75,
 				entityIndex: 1,
 			}), // 75.75 overage
-			s.advanceToNextInvoice(),
+			s.advanceToNextInvoice({ withPause: true }),
 		],
 	});
 

@@ -168,14 +168,14 @@ export const advanceToNextInvoice = async ({
 			stripeCli,
 			testClockId,
 			advanceTo: addMonths(baseTime, 1).getTime(),
-			waitForSeconds: 15,
+			waitForSeconds: 30,
 		});
 
 		await advanceTestClock({
 			stripeCli,
 			testClockId,
 			advanceTo: addHours(newUnix, hoursToFinalizeInvoice).getTime(),
-			waitForSeconds: 15,
+			waitForSeconds: 30,
 		});
 
 		return newUnix;

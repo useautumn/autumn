@@ -57,7 +57,9 @@ export const trackCustomerProductDeletion = ({
 	eventContext,
 	customerProduct,
 }: {
-	eventContext: StripeSubscriptionDeletedContext;
+	eventContext:
+		| StripeSubscriptionDeletedContext
+		| StripeSubscriptionUpdatedContext;
 	customerProduct: FullCusProduct;
 }): void => {
 	const { customerProducts, fullCustomer, deletedCustomerProducts } =

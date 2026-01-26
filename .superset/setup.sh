@@ -86,6 +86,13 @@ for sh_file in "$ROOT_PATH"/*.sh; do
     fi
 done
 
+# Copy run.sh explicitly from root
+if [ -f "$ROOT_PATH/run.sh" ]; then
+    cp "$ROOT_PATH/run.sh" "run.sh"
+    chmod +x "run.sh"
+    echo "Copied run.sh"
+fi
+
 # Copy all .sh files from server/
 echo "Copying shell scripts from server directory..."
 if [ -d "$ROOT_PATH/server" ]; then

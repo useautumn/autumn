@@ -1,5 +1,9 @@
 /** biome-ignore-all lint/a11y/noStaticElementInteractions: shush */
-import { FeatureUsageType, isFeaturePriceItem } from "@autumn/shared";
+import {
+	FeatureUsageType,
+	isFeaturePriceItem,
+	UsageModel,
+} from "@autumn/shared";
 import { AreaCheckbox } from "@/components/v2/checkboxes/AreaCheckbox";
 import {
 	SheetAccordion,
@@ -41,8 +45,11 @@ export function AdvancedSettings() {
 	const showUsageLimits = isPriced;
 	const showRollover = hasCreditSystem || usageType === FeatureUsageType.Single;
 	const showEntityFeature = hasEntityFeatureId && hasOtherContinuousFeatures;
-	// Proration shows for priced features (simplified check)
-	const showProration = isPriced;
+	// Proration shows for prepaid or continuous use features (not consumable + pay-per-use)
+	const showProration =
+		isPriced &&
+		(item.usage_model === UsageModel.Prepaid ||
+			usageType === FeatureUsageType.Continuous);
 
 	// Hide Advanced section if nothing will render inside it
 	const hasAnyContent =

@@ -6,6 +6,7 @@ import {
 	expectProductTrialing,
 } from "@tests/integration/billing/utils/expectCustomerProductTrialing.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectProductNotAttached } from "@tests/utils/expectUtils/expectProductAttached";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -79,4 +80,69 @@ test.concurrent(`${chalk.yellowBright("defaults: free product with 7-day trial")
 
 	// Verify feature balance is still available during trial
 	expect(customer.features[TestFeature.Messages].balance).toBe(100);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AUTO-ENABLE PLAN OVERRIDE TESTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.concurrent(`${chalk.yellowBright("defaults: auto-enable plan override")}`, async () => {
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const messagesItemB = items.monthlyMessages({ includedUsage: 200 });
+
+	const autoEnableProductA = products.base({
+		id: "auto-enable-a",
+		items: [messagesItem],
+		group: "auto-enable-group-a",
+		isDefault: true,
+	});
+
+	const autoEnableProductB = products.base({
+		id: "auto-enable-b",
+		items: [messagesItemB],
+		group: "auto-enable-group-b",
+		isDefault: true,
+	});
+
+	const customerIdA = "auto-enable-override-a";
+	const customerIdB = "auto-enable-override-b";
+
+	const { autumnV1 } = await initScenario({
+		setup: [
+			s.deleteCustomer({ customerId: customerIdA }),
+			s.deleteCustomer({ customerId: customerIdB }),
+			s.products({ list: [autoEnableProductA, autoEnableProductB] }),
+		],
+		actions: [],
+	});
+
+	const customerA = await autumnV1.customers.create({
+		id: customerIdA,
+		auto_enable_plan_id: autoEnableProductA.id,
+	});
+
+	const customerB = await autumnV1.customers.create({
+		id: customerIdB,
+		auto_enable_plan_id: autoEnableProductB.id,
+	});
+
+	expectProductActive({
+		customer: customerA,
+		productId: autoEnableProductA.id,
+	});
+
+	expectProductNotAttached({
+		customer: customerA,
+		productId: autoEnableProductB.id,
+	});
+
+	expectProductActive({
+		customer: customerB,
+		productId: autoEnableProductB.id,
+	});
+
+	expectProductNotAttached({
+		customer: customerB,
+		productId: autoEnableProductA.id,
+	});
 });

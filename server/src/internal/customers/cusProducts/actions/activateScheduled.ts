@@ -29,8 +29,8 @@ export const activateScheduledCustomerProduct = async ({
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
 	fullCustomer: FullCustomer;
-	subscriptionIds: string[];
-	scheduledIds: string[];
+	subscriptionIds?: string[];
+	scheduledIds?: string[];
 }): Promise<{ updates: Partial<InsertCustomerProduct> }> => {
 	const { db, org, env, logger } = ctx;
 

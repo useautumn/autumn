@@ -52,7 +52,7 @@ describe(`${chalk.yellowBright(`${testCase}/idempotency: idempotency key already
 					product_id: pro.id,
 				},
 				{
-					"idempotency-key": idempotencyKey,
+					idempotencyKey,
 				},
 			),
 			autumnV1.attach(
@@ -61,7 +61,7 @@ describe(`${chalk.yellowBright(`${testCase}/idempotency: idempotency key already
 					product_id: pro.id,
 				},
 				{
-					"idempotency-key": idempotencyKey,
+					idempotencyKey,
 				},
 			),
 		]);

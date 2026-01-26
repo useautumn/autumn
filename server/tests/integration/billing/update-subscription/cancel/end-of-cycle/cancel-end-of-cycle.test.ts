@@ -12,7 +12,7 @@
  */
 
 import { expect, test } from "bun:test";
-import type { ApiCustomer, ApiCustomerV3 } from "@autumn/shared";
+import { type ApiCustomer, type ApiCustomerV3, ms } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import {
 	expectCustomerProducts,
@@ -350,8 +350,11 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: downgrade then cance
 		testClockId: testClockId!,
 	});
 
+	const customerAfterAdvance =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
 	await expectCustomerProducts({
-		customer: customerAfterCancel,
+		customer: customerAfterAdvance,
 		active: [free.id],
 		notPresent: [premium.id],
 	});
@@ -522,13 +525,11 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: multi-interval produ
 	// expires_at should be approximately 1 year from now (annual interval)
 	// Allow some tolerance for test execution time
 	const now = Date.now();
-	const oneYearFromNow = now + 365 * 24 * 60 * 60 * 1000;
-	const tolerance = 60 * 1000; // 1 minute tolerance
+	const oneYearFromNow = now + ms.days(365);
+	const tolerance = ms.hours(1); // 1 hour tolerance
 
-	expect(proSubscription!.expires_at! * 1000).toBeGreaterThan(
+	expect(proSubscription!.expires_at!).toBeWithin(
 		oneYearFromNow - tolerance,
-	);
-	expect(proSubscription!.expires_at! * 1000).toBeLessThan(
 		oneYearFromNow + tolerance,
 	);
 

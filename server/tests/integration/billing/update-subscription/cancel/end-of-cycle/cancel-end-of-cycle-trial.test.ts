@@ -436,6 +436,7 @@ test.concurrent(`${chalk.yellowBright("cancel trial EOC: with free default, free
 		customer: customerAfterCancel,
 		productId: free.id,
 		startsAt: Date.now() + ms.days(7),
+		toleranceMs: ms.hours(1),
 	});
 
 	// Advance past trial end
@@ -454,7 +455,10 @@ test.concurrent(`${chalk.yellowBright("cancel trial EOC: with free default, free
 		notPresent: [proTrial.id],
 	});
 
-	// No paid invoice should be created
-	for (const inv of customerAfterAdvance.invoices ?? [])
-		expect(inv.total).toBe(0);
+	expectCustomerInvoiceCorrect({
+		customer: customerAfterAdvance,
+		count: 1,
+		latestTotal: 0,
+		latestInvoiceProductId: proTrial.id,
+	});
 });

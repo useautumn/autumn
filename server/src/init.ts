@@ -110,6 +110,7 @@ const init = async () => {
 				"If-None-Match",
 				"If-Modified-Since",
 				"If-Unmodified-Since",
+				"User-Agent", // Required for better-auth v1.4.0+ compatibility with Safari/Zen browser
 			],
 		}),
 	);

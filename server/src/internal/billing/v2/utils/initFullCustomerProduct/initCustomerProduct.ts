@@ -4,6 +4,7 @@ import {
 	CusProductStatus,
 	type InitFullCustomerProductContext,
 	type InitFullCustomerProductOptions,
+	ms,
 	notNullish,
 } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils";
@@ -43,8 +44,8 @@ export const initCustomerProduct = ({
 		if (initOptions?.status) return initOptions?.status;
 
 		// 1 minute tolerance to determine if customer product should be scheduled. (for test clock time frozen issues)
-		// const TOLERANCE_MS = ms.minutes(1);
-		if (startsAt && startsAt > now) {
+		const TOLERANCE_MS = ms.minutes(1);
+		if (startsAt && startsAt > now + TOLERANCE_MS) {
 			return CusProductStatus.Scheduled;
 		}
 

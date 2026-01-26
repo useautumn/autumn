@@ -1,6 +1,6 @@
 import { expect } from "bun:test";
 import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
-import { ApiVersion } from "@autumn/shared";
+import { ApiVersion, formatMs } from "@autumn/shared";
 import { AutumnInt } from "@/external/autumn/autumnCli";
 
 const defaultAutumn = new AutumnInt({ version: ApiVersion.V1_2 });
@@ -133,7 +133,7 @@ export const expectProductScheduled = async ({
 
 		expect(
 			diff <= toleranceMs,
-			`Product ${productId} started_at (${actualStartsAt}) should be within ${toleranceMs}ms of expected (${startsAt}), diff: ${diff}ms`,
+			`Product ${productId} started_at (${formatMs(actualStartsAt)}) should be within ${toleranceMs}ms of expected (${formatMs(startsAt)}), diff: ${diff}ms`,
 		).toBe(true);
 	}
 };

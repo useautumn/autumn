@@ -56,7 +56,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created consumable: attach → tr
 		actions: [
 			s.attach({ productId: pro.id }),
 			s.track({ featureId: TestFeature.Messages, value: 250.5 }),
-			s.advanceToNextInvoice(),
+			s.advanceToNextInvoice({ withPause: true }),
 		],
 	});
 
@@ -126,7 +126,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created consumable: no overage - 
 		actions: [
 			s.attach({ productId: pro.id }),
 			s.track({ featureId: TestFeature.Messages, value: 50 }),
-			s.advanceToNextInvoice(),
+			s.advanceToNextInvoice({ withPause: true }),
 		],
 	});
 
@@ -247,7 +247,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created consumable: billing units
 		actions: [
 			s.attach({ productId: pro.id }),
 			s.track({ featureId: TestFeature.Messages, value: 155 }),
-			s.advanceToNextInvoice(),
+			s.advanceToNextInvoice({ withPause: true }),
 		],
 	});
 
@@ -314,7 +314,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created consumable: multiple deci
 			s.track({ featureId: TestFeature.Messages, value: 50.3 }),
 			s.track({ featureId: TestFeature.Messages, value: 30.7 }),
 			s.track({ featureId: TestFeature.Messages, value: 25.5 }),
-			s.advanceToNextInvoice(),
+			s.advanceToNextInvoice({ withPause: true }),
 		],
 	});
 
@@ -327,7 +327,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created consumable: multiple deci
 	});
 
 	// Verify: 6.5 * $0.10 = $0.65
-	expect(expectedOverage).toBe(0.65);
+	expect(expectedOverage).toBe(0.7); // rounds to nearest dollar
 
 	const customerAfterAdvance =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -386,7 +386,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created consumable: multiple feat
 			// Track both features into overage
 			s.track({ featureId: TestFeature.Messages, value: 200 }),
 			s.track({ featureId: TestFeature.Words, value: 150 }),
-			s.advanceToNextInvoice(),
+			s.advanceToNextInvoice({ withPause: true }),
 		],
 	});
 

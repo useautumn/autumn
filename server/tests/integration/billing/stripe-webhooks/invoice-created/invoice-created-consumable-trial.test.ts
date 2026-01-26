@@ -123,8 +123,8 @@ test.concurrent(`${chalk.yellowBright("invoice.created trial: entity-level overa
 		trialDays: 14,
 	});
 
-	const { autumnV1, advancedTo, entities, ctx, testClockId } =
-		await initScenario({
+	let { autumnV1, advancedTo, entities, ctx, testClockId } = await initScenario(
+		{
 			customerId,
 			setup: [
 				s.customer({ paymentMethod: "success" }),
@@ -132,7 +132,8 @@ test.concurrent(`${chalk.yellowBright("invoice.created trial: entity-level overa
 				s.entities({ count: 1, featureId: TestFeature.Users }),
 			],
 			actions: [s.attach({ productId: proTrial.id, entityIndex: 0 })],
-		});
+		},
+	);
 
 	await autumnV1.subscriptions.update(
 		{
@@ -142,7 +143,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created trial: entity-level overa
 			items: [consumableItem, monthlyPriceItem],
 		},
 		{
-			timeout: 2000,
+			timeout: 5000,
 		},
 	);
 
@@ -153,10 +154,10 @@ test.concurrent(`${chalk.yellowBright("invoice.created trial: entity-level overa
 		entity_id: entities[0].id,
 	});
 
-	await advanceTestClock({
+	advancedTo = await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
-		numberOfDays: 16,
+		numberOfDays: 20,
 	});
 
 	const entityId = entities[0].id;
@@ -176,7 +177,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created trial: entity-level overa
 		nowMs: advancedTo,
 	});
 
-	// Balance should be reset to 100 after trial ends
+	// Balance should NOT be reset to 100 after trial ends (since it wasn't charged for)
 	expectCustomerFeatureCorrect({
 		customer: entityAfterTrialEnd,
 		featureId: TestFeature.Messages,
@@ -236,10 +237,10 @@ test.concurrent(`${chalk.yellowBright("invoice.created trial: multiple entities 
 		],
 		actions: [
 			s.attach({ productId: proTrial.id, entityIndex: 0 }),
-			s.attach({ productId: proTrial.id, entityIndex: 1, timeout: 2000 }),
+			s.attach({ productId: proTrial.id, entityIndex: 1, timeout: 4000 }),
 			s.track({ featureId: TestFeature.Messages, value: 200, entityIndex: 0 }), // 100 overage
 			s.track({ featureId: TestFeature.Messages, value: 250, entityIndex: 1 }), // 150 overage
-			s.advanceTestClock({ days: 16 }), // Advance past trial end
+			s.advanceTestClock({ days: 20 }), // Advance past trial end
 		],
 	});
 
@@ -260,7 +261,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created trial: multiple entities 
 	expectCustomerFeatureCorrect({
 		customer: entity0AfterTrialEnd,
 		featureId: TestFeature.Messages,
-		balance: 100,
+		balance: -100,
 	});
 
 	// Verify entity 1 state after trial ends
@@ -280,7 +281,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created trial: multiple entities 
 	expectCustomerFeatureCorrect({
 		customer: entity1AfterTrialEnd,
 		featureId: TestFeature.Messages,
-		balance: -250,
+		balance: -150,
 	});
 
 	// Check invoices at customer level

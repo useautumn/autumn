@@ -36,9 +36,9 @@ export const prepareNewBalanceForInsertion = async ({
 
 	const entity = fullCustomer.entity;
 
-	if (entity) {
-		newEntitlement.entity_feature_id = entity.feature_id;
-	}
+	// NOTE: We do NOT set entity_feature_id here. That field means "per-entity balances"
+	// (e.g., 10 messages per seat). For entity-scoped loose balances, we only set
+	// internal_entity_id on the cusEnt to scope the balance to a specific entity.
 
 	const newEntitlementWithFeature = enrichEntitlementWithFeature({
 		entitlement: newEntitlement,

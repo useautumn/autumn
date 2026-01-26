@@ -4,6 +4,8 @@ import { eventContextToArrearLineItems } from "@/external/stripe/webhookHandlers
 import { lineItemsToCreateInvoiceItemsParams } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemsToCreateInvoiceItemsParams";
 import { createStripeInvoiceItems } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
+import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
+import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
 import type { InvoiceCreatedContext } from "../setupInvoiceCreatedContext";
 
@@ -88,5 +90,19 @@ export const processConsumablePricesForInvoiceCreated = async ({
 	await CusEntService.batchUpdate({
 		db: ctx.db,
 		data: updateCustomerEntitlements,
+	});
+
+	// Handle rollovers
+	updateCustomerEntitlements.forEach(async (update) => {
+		const rolloverUpdates = getRolloverUpdates({
+			cusEnt: update.customerEntitlement,
+			nextResetAt: Date.now(),
+		});
+
+		await RolloverService.insert({
+			db: ctx.db,
+			rows: rolloverUpdates.toInsert,
+			fullCusEnt: update.customerEntitlement,
+		});
 	});
 };
