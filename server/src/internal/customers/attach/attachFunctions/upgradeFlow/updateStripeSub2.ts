@@ -14,7 +14,7 @@ import { SubService } from "@/internal/subscriptions/SubService.js";
 import { nullish } from "@/utils/genUtils.js";
 import type { ItemSet } from "@/utils/models/ItemSet.js";
 import { createProrationInvoice } from "../../../../../external/stripe/stripeSubUtils/updateStripeSub/createProrationinvoice.js";
-import { isStripeSubscriptionCanceled } from "../../../../../external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils.js";
+import { isStripeSubscriptionCanceling } from "../../../../../external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils.js";
 
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 import { attachParamsToCurCusProduct } from "../../attachUtils/convertAttachParams.js";
@@ -92,7 +92,7 @@ export const updateStripeSub2 = async ({
 		// cancel_at_period_end: false,
 		// TODO: will error if sub managed by a schedule
 		cancel_at_period_end:
-			isStripeSubscriptionCanceled(curSub) &&
+			isStripeSubscriptionCanceling(curSub) &&
 			!(
 				branch === AttachBranch.SameCustomEnts ||
 				branch === AttachBranch.NewVersion
