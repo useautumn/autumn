@@ -24,7 +24,7 @@ test(
 			items: [allocatedUsersItem, priceItem],
 		});
 
-		const uniqueId = `paid-alloc-lock-${Date.now()}`;
+		const uniqueId = `paid-alloc-lock`;
 		const { customerId, autumnV2 } = await initScenario({
 			customerId: uniqueId,
 			setup: [

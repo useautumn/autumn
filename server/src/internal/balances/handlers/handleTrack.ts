@@ -1,4 +1,10 @@
-import { TrackParamsSchema, TrackQuerySchema } from "@autumn/shared";
+import {
+	AffectedResource,
+	ApiVersion,
+	TrackParamsSchema,
+	TrackParamsV0Schema,
+	TrackQuerySchema,
+} from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { runTrackV2 } from "@/internal/balances/track/runTrackV2.js";
 import {
@@ -8,18 +14,14 @@ import {
 
 export const handleTrack = createRoute({
 	query: TrackQuerySchema,
-	body: TrackParamsSchema,
+	versionedBody: {
+		latest: TrackParamsSchema,
+		[ApiVersion.V1_Beta]: TrackParamsV0Schema,
+	},
+	resource: AffectedResource.Track,
 	handler: async (c) => {
 		const body = c.req.valid("json");
 		const ctx = c.get("ctx");
-
-		// Legacy: support value in properties
-		if (body.properties?.value) {
-			const parsedValue = Number(body.properties.value);
-			if (!Number.isNaN(parsedValue)) {
-				body.value = parsedValue;
-			}
-		}
 
 		// Build feature deductions
 		const featureDeductions = body.feature_id
