@@ -6,7 +6,6 @@ import { ProductItemSchema } from "../../../models/productV2Models/productItemMo
 import { CancelActionSchema } from "../../common/cancelMode";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingParamsBaseSchema } from "../common/billingParamsBase";
-import { RefundBehaviorSchema } from "../common/refundBehavior";
 
 export const ExtUpdateSubscriptionV0ParamsSchema =
 	BillingParamsBaseSchema.extend({
@@ -34,7 +33,7 @@ export const ExtUpdateSubscriptionV0ParamsSchema =
 		// Refund behavior for negative invoice totals (downgrades):
 		// - 'grant_invoice_credits' (default): Apply credits to customer balance
 		// - 'refund_payment_method': Issue refund to payment method
-		refund_behavior: RefundBehaviorSchema.optional(),
+		// refund_behavior: RefundBehaviorSchema.optional(),
 
 		// reset_billing_cycle_anchor: z.boolean().optional(),
 		// new_billing_subscription: z.boolean().optional(),
