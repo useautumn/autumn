@@ -207,6 +207,9 @@ export const handleQuantityDowngrade = async ({
 				],
 				deductionOptions: {
 					overageBehaviour: "allow",
+					customerEntitlementFilters: {
+						cusEntIds: [cusEnt.id],
+					},
 				},
 			});
 		} catch (error) {

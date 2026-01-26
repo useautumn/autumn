@@ -96,6 +96,9 @@ const updateOneOffExistingEntitlement = async ({
 				deductions: featureDeductions,
 				deductionOptions: {
 					overageBehaviour: "allow",
+					customerEntitlementFilters: {
+						cusEntIds: [cusEnt.id],
+					},
 				},
 			});
 		} catch (error) {
