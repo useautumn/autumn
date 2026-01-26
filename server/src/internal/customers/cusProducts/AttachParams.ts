@@ -4,7 +4,6 @@ import type {
 	AttachConfig,
 	AttachReplaceable,
 	AttachScenario,
-	Customer,
 	EntitlementWithFeature,
 	Entity,
 	Feature,
@@ -96,7 +95,7 @@ export type InsertCusProductParams = {
 	req?: AutumnContext;
 	now?: number;
 
-	customer: Customer;
+	customer: FullCustomer;
 	org: Organization;
 	product: FullProduct;
 	prices: Price[];
