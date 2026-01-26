@@ -76,7 +76,10 @@ describe(`${chalk.yellowBright("track-entity-breakdown1: per-entity messages bre
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV2;
 
-		expect(customerRes.balance).toMatchObject({
+		expect(
+			customerRes.balance,
+			`$customer {customerId} balance should have been 300, got ${customerRes.balance?.granted_balance} granted and ${customerRes.balance?.current_balance} current`,
+		).toMatchObject({
 			granted_balance: 300,
 			current_balance: 300,
 			usage: 0,
@@ -91,7 +94,10 @@ describe(`${chalk.yellowBright("track-entity-breakdown1: per-entity messages bre
 				feature_id: TestFeature.Messages,
 			})) as unknown as CheckResponseV2;
 
-			expect(entityRes.balance).toMatchObject({
+			expect(
+				entityRes.balance,
+				`entity ${entity.id} balance should have been 100, got ${entityRes.balance?.granted_balance} granted and ${entityRes.balance?.current_balance} current`,
+			).toMatchObject({
 				granted_balance: 100,
 				current_balance: 100,
 				usage: 0,

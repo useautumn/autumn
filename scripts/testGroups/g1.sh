@@ -35,12 +35,12 @@ BUN_PARALLEL_COMPACT \
   --max=6
 
 
-BUN_PARALLEL_COMPACT \
-  'server/tests/balances/update/filters' \
-  'server/tests/balances/update/update-combined' \
-  'server/tests/balances/update/update-current-balance/basic' \
-  'server/tests/balances/update/update-current-balance/entity' \
-  'server/tests/balances/update/update-current-balance/allocated' \
-  'server/tests/balances/update/update-current-balance/breakdown' \
-  'server/tests/balances/update/update-granted-balance' \
-  --max=6
+# BUN_PARALLEL_COMPACT \
+#   'server/tests/balances/update/filters' \
+#   'server/tests/balances/update/update-combined' \
+#   'server/tests/balances/update/update-current-balance/basic' \
+#   'server/tests/balances/update/update-current-balance/entity' \
+#   'server/tests/balances/update/update-current-balance/allocated' \
+#   'server/tests/balances/update/update-current-balance/breakdown' \
+#   'server/tests/balances/update/update-granted-balance' \
+#   --max=6

@@ -1,6 +1,6 @@
 import {
 	ACTIVE_STATUSES,
-	type ApiSubscription,
+	type ApiSubscriptionV1,
 	type CusProductLegacyData,
 	type CusProductStatus,
 	type FullCustomer,
@@ -11,9 +11,9 @@ import { getApiSubscription } from "./getApiSubscription.js";
 const mergeSubscriptionsResponses = ({
 	subscriptions,
 }: {
-	subscriptions: ApiSubscription[];
+	subscriptions: ApiSubscriptionV1[];
 }) => {
-	const getPlanKey = (cp: ApiSubscription) => {
+	const getPlanKey = (cp: ApiSubscriptionV1) => {
 		const status = ACTIVE_STATUSES.includes(cp.status as CusProductStatus)
 			? "active"
 			: cp.status;
@@ -51,7 +51,7 @@ export const getApiSubscriptions = async ({
 	fullCus: FullCustomer;
 }) => {
 	// Process full subscriptions
-	const apiSubs: ApiSubscription[] = [];
+	const apiSubs: ApiSubscriptionV1[] = [];
 
 	const cusProducts = fullCus.customer_products;
 

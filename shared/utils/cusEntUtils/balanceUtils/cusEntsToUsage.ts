@@ -3,7 +3,8 @@ import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductMod
 import { nullish } from "../../utils";
 import { cusEntsToBalance } from "./cusEntsToBalance";
 import { cusEntsToPrepaidQuantity } from "./cusEntsToPrepaidQuantity";
-import { cusEntsToGrantedBalance } from "./grantedBalanceUtils/cusEntsToGrantedBalance";
+import { cusEntsToAdjustment } from "./grantedBalanceUtils/cusEntsToAdjustment";
+import { cusEntsToAllowance } from "./grantedBalanceUtils/cusEntsToAllowance";
 
 export const cusEntsToUsage = ({
 	cusEnts,
@@ -12,7 +13,8 @@ export const cusEntsToUsage = ({
 	cusEnts: FullCusEntWithFullCusProduct[];
 	entityId?: string;
 }) => {
-	const grantedBalance = cusEntsToGrantedBalance({ cusEnts, entityId });
+	const allowance = cusEntsToAllowance({ cusEnts, entityId });
+	const adjustment = cusEntsToAdjustment({ cusEnts, entityId });
 
 	const prepaidQuantity = cusEntsToPrepaidQuantity({
 		cusEnts,
@@ -21,7 +23,8 @@ export const cusEntsToUsage = ({
 
 	const balance = cusEntsToBalance({ cusEnts, entityId });
 
-	return new Decimal(grantedBalance)
+	return new Decimal(allowance)
+		.add(adjustment)
 		.add(prepaidQuantity)
 		.sub(balance)
 		.toNumber();

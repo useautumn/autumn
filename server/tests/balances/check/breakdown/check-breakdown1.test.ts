@@ -118,7 +118,7 @@ describe(`${chalk.yellowBright("check-breakdown1: 1 breakdown item always follow
 		const breakdownItem = res.balance?.breakdown?.[0];
 		expect(breakdownItem).toBeDefined();
 
-		// Breakdown should inherit parent's numeric fields
+		// Breakdown should inherit parent's numeric fields (except plan_id which is breakdown-specific)
 		expect(breakdownItem).toMatchObject({
 			granted_balance: parentBalance?.granted_balance,
 			purchased_balance: parentBalance?.purchased_balance,
@@ -127,7 +127,6 @@ describe(`${chalk.yellowBright("check-breakdown1: 1 breakdown item always follow
 			overage_allowed: parentBalance?.overage_allowed,
 			max_purchase: parentBalance?.max_purchase,
 			reset: parentBalance?.reset,
-			plan_id: parentBalance?.plan_id,
 		});
 	});
 

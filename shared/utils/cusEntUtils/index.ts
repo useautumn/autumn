@@ -1,4 +1,6 @@
 // Balance utils
+
+export * from "./apiBalance/index.js";
 export * from "./balanceUtils/cusEntsToBalance.js";
 export * from "./balanceUtils/cusEntsToCurrentBalance.js";
 export * from "./balanceUtils/cusEntsToPrepaidQuantity.js";
@@ -8,35 +10,32 @@ export * from "./balanceUtils/cusEntsToRollovers.js";
 export * from "./balanceUtils/cusEntsToUsage.js";
 export * from "./balanceUtils/cusEntToMinBalance.js";
 export * from "./balanceUtils/cusEntToUsageAllowed.js";
-
+export * from "./balanceUtils/customerEntitlementToBalancePrice.js";
 // Granted balance utils
 export * from "./balanceUtils/grantedBalanceUtils/cusEntsToAdjustment.js";
 export * from "./balanceUtils/grantedBalanceUtils/cusEntsToAllowance.js";
-export * from "./balanceUtils/grantedBalanceUtils/cusEntsToGrantedBalance.js";
-
+// Rollover utils
+export * from "./balanceUtils/rollovers/cusEntsToRolloverBalance.js";
+export * from "./balanceUtils/rollovers/cusEntsToRolloverGranted.js";
+export * from "./balanceUtils/rollovers/cusEntsToRolloverUsage.js";
 // Balance utils barrel
 export * from "./balanceUtils.js";
-
 // Classify utils
 export * from "./classifyCusEntUtils.js";
-
 // Convert utils
 export * from "./convertCusEntUtils/cusEntsToMaxPurchase.js";
 export * from "./convertCusEntUtils/cusEntsToStartingBalance.js";
 export * from "./convertCusEntUtils/cusEntToCusPrice.js";
 export * from "./convertCusEntUtils/cusEntToKey.js";
 export * from "./convertCusEntUtils/cusEntToStripeIds.js";
-
 // Convert utils barrel
 export * from "./convertCusEntUtils.js";
-
 // Core utils
 export * from "./cusEntUtils.js";
 export * from "./filterCusEntUtils.js";
-
+export * from "./findCustomerEntitlement/findCustomerEntitlementByFeature.js";
 // Find utils
 export * from "./findCustomerEntitlement/findCustomerEntitlementById.js";
-export * from "./findCustomerEntitlement/findCustomerEntitlementByFeature.js";
 export * from "./findCustomerEntitlement/findPrepaidCustomerEntitlement.js";
 // Other utils
 export * from "./getRolloverFields.js";

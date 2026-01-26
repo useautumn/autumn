@@ -1,5 +1,5 @@
 import {
-	ApiSubscriptionSchema,
+	ApiSubscriptionV1Schema,
 	CusExpand,
 	type CusProductLegacyData,
 	CusProductStatus,
@@ -81,12 +81,12 @@ export const getApiSubscription = async ({
 			})
 		: undefined;
 
-	const apiSubscription = ApiSubscriptionSchema.parse({
+	const apiSubscription = ApiSubscriptionV1Schema.parse({
 		plan: apiPlan,
 
 		plan_id: fullProduct.id,
 		add_on: fullProduct.is_add_on,
-		default: fullProduct.is_default,
+		auto_enable: fullProduct.is_default,
 
 		status,
 		past_due: cusProduct.status === CusProductStatus.PastDue,

@@ -3,7 +3,8 @@ import {
 	cusProductsToCusEnts,
 	isBooleanCusEnt,
 	isContUseFeature,
-	isUnlimitedCusEnt,
+	isUnlimitedCustomerEntitlement,
+	sumValues,
 } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import { Decimal } from "decimal.js";
@@ -57,25 +58,22 @@ export const checkForMisingBalance = async ({
 		const feature = cusEnt.entitlement.feature;
 
 		// 1. If unlimited or boolean feature, skip
-		if (isUnlimitedCusEnt(cusEnt) || isBooleanCusEnt({ cusEnt })) continue;
+		if (isUnlimitedCustomerEntitlement(cusEnt) || isBooleanCusEnt({ cusEnt }))
+			continue;
 
 		if (isContUseFeature({ feature })) continue;
 
 		const previousBalance = previousApiCustomer.balances?.[feature.id];
 		const newBalance = newApiCustomer.balances?.[feature.id];
 
-		const previousGrantedBalance = previousBalance?.granted_balance ?? 0;
-		const newGrantedBalance = newBalance?.granted_balance ?? 0;
-		const previousPrepaidQuantity =
-			previousBalance?.breakdown?.reduce(
-				(acc, curr) => acc + curr.prepaid_quantity,
-				0,
-			) ?? 0;
-		const newPrepaidQuantity =
-			newBalance?.breakdown?.reduce(
-				(acc, curr) => acc + curr.prepaid_quantity,
-				0,
-			) ?? 0;
+		const previousGrantedBalance = previousBalance?.granted ?? 0;
+		const newGrantedBalance = newBalance?.granted ?? 0;
+		const previousPrepaidQuantity = sumValues(
+			(previousBalance?.breakdown ?? []).map((item) => item.prepaid_grant),
+		);
+		const newPrepaidQuantity = sumValues(
+			(newBalance?.breakdown ?? []).map((item) => item.prepaid_grant),
+		);
 
 		const previousTotalBalance = new Decimal(previousGrantedBalance).plus(
 			previousPrepaidQuantity,

@@ -10,14 +10,17 @@ export * from "./utils/zodToJSDoc.js";
 // Customers
 
 export * from "./customers/apiCustomer.js";
+export * from "./customers/apiCustomerV5.js";
 export * from "./customers/components/apiCusReferral.js";
 export * from "./customers/components/apiCusUpcomingInvoice.js";
 export * from "./customers/cusFeatures/apiBalance.js";
+export * from "./customers/cusFeatures/apiBalanceV1.js";
 export * from "./customers/cusFeatures/previousVersions/apiCusFeatureV0.js";
 export * from "./customers/cusFeatures/previousVersions/apiCusFeatureV1.js";
 export * from "./customers/cusFeatures/previousVersions/apiCusFeatureV2.js";
 export * from "./customers/cusFeatures/previousVersions/apiCusFeatureV3.js";
 export * from "./customers/cusPlans/apiSubscription.js";
+export * from "./customers/cusPlans/apiSubscriptionV1.js";
 export * from "./customers/cusPlans/cusProductLegacyData.js";
 export * from "./customers/customerLegacyData.js";
 export * from "./customers/customerOpModels.js";
@@ -26,6 +29,7 @@ export * from "./customers/previousVersions/apiCustomerV3.js";
 
 // Entities
 export * from "./entities/apiEntity.js";
+export * from "./entities/apiEntityV2.js";
 export * from "./entities/entityLegacyData.js";
 export * from "./entities/entityOpModels.js";
 export * from "./entities/prevVersions/apiEntityV0.js";
@@ -60,6 +64,7 @@ export * from "./referrals/referralOpModels.js";
 export * from "./balances/balancesUpdateModels.js";
 export * from "./balances/check/checkParams.js";
 export * from "./balances/check/checkResponseV2.js";
+export * from "./balances/check/checkResponseV3.js";
 export * from "./balances/check/enums/CheckExpand.js";
 export * from "./balances/check/prevVersions/CheckResponseV0.js";
 export * from "./balances/check/prevVersions/CheckResponseV1.js";
@@ -68,6 +73,8 @@ export * from "./balances/prevVersions/legacyUpdateBalanceModels.js";
 export * from "./balances/track/prevVersions/trackResponseV1.js";
 export * from "./balances/track/trackParams.js";
 export * from "./balances/track/trackResponseV2.js";
+export * from "./balances/track/trackResponseV3.js";
+export * from "./balances/track/trackLegacyData.js";
 export * from "./balances/usageModels.js";
 // Billing
 export * from "./billing/index.js";

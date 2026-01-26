@@ -1,7 +1,7 @@
 import {
 	InsufficientBalanceError,
 	type TrackParams,
-	type TrackResponseV2,
+	type TrackResponseV3,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
@@ -10,6 +10,11 @@ import {
 	RedisDeductionErrorCode,
 } from "../../utils/types/redisDeductionError.js";
 import { runPostgresTrack } from "./runPostgresTrack.js";
+
+type HandleRedisTrackErrorResult = {
+	response: TrackResponseV3;
+};
+
 /**
  * Handles errors from Redis deduction.
  * - Throws InsufficientBalanceError for INSUFFICIENT_BALANCE
@@ -26,7 +31,7 @@ export const handleRedisTrackError = async ({
 	error: Error;
 	body: TrackParams;
 	featureDeductions: FeatureDeduction[];
-}): Promise<TrackResponseV2> => {
+}): Promise<HandleRedisTrackErrorResult> => {
 	ctx.logger.warn(`Redis track error: ${error.message}`);
 	if (!(error instanceof RedisDeductionError)) {
 		throw error;
