@@ -175,7 +175,7 @@ test.concurrent(`${chalk.yellowBright("attach: quantity decrease â†’ increase â†
 	// Decrease to 200 (on_decrease: none - sets upcoming_quantity, no immediate change)
 	await autumnV1.attach({
 		customer_id: customerId,
-		product_id: `${pro.id}_${customerId}`,
+		product_id: pro.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
 	});
 
@@ -190,14 +190,14 @@ test.concurrent(`${chalk.yellowBright("attach: quantity decrease â†’ increase â†
 		customer: customerAfterDecrease,
 		productId: pro.id,
 		featureId: TestFeature.Messages,
-		quantity: 3, // Still 300 / 100
-		upcomingQuantity: 2, // 200 / 100
+		quantity: 300, // Still 300 / 100
+		upcomingQuantity: 200, // 200 / 100
 	});
 
 	// Increase to 400 (prorate_immediately - creates invoice, immediate change)
 	await autumnV1.attach({
 		customer_id: customerId,
-		product_id: `${pro.id}_${customerId}`,
+		product_id: pro.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: 400 }],
 	});
 
@@ -219,7 +219,7 @@ test.concurrent(`${chalk.yellowBright("attach: quantity decrease â†’ increase â†
 	// Decrease back to 200 (sets upcoming_quantity again)
 	await autumnV1.attach({
 		customer_id: customerId,
-		product_id: `${pro.id}_${customerId}`,
+		product_id: pro.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
 	});
 
@@ -231,8 +231,8 @@ test.concurrent(`${chalk.yellowBright("attach: quantity decrease â†’ increase â†
 		customer: customerFinal,
 		productId: pro.id,
 		featureId: TestFeature.Messages,
-		quantity: 4, // Still 400 / 100
-		upcomingQuantity: 2, // 200 / 100
+		quantity: 400, // Still 400 / 100
+		upcomingQuantity: 200, // 200 / 100
 	});
 });
 
@@ -358,8 +358,8 @@ test.concurrent(`${chalk.yellowBright("attach: prepaid add-on with entities - up
 		customer: entity2,
 		productId: prepaidAddOn.id,
 		featureId: TestFeature.Messages,
-		quantity: entity2OriginalQuantity / 100, // billingUnits = 100
-		upcomingQuantity: entity2DowngradedQuantity / 100,
+		quantity: entity2OriginalQuantity, // billingUnits = 100
+		upcomingQuantity: entity2DowngradedQuantity,
 	});
 });
 
@@ -438,7 +438,7 @@ test.concurrent(`${chalk.yellowBright("attach: quantity upgrade with prorate-nex
 		customer: customerFinal,
 		productId: pro.id,
 		featureId: TestFeature.Messages,
-		quantity: 4, // 400 / 100 billingUnits
+		quantity: 400,
 		upcomingQuantity: "undefined", // No upcoming_quantity since it's an upgrade
 	});
 

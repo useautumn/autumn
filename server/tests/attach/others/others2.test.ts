@@ -38,6 +38,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing one-off`)}`, () => {
 			ctx,
 			products: [oneOff],
 			prefix: testCase,
+			customerId,
 		});
 
 		const { testClockId: testClockId1 } = await initCustomerV3({

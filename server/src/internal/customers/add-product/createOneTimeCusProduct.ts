@@ -13,6 +13,8 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
+import { executeRedisDeduction } from "@/internal/balances/utils/deduction/executeRedisDeduction.js";
+import type { FeatureDeduction } from "@/internal/balances/utils/types/featureDeduction.js";
 import { triggerVerifyCacheConsistency } from "@/internal/billing/v2/workflows/verifyCacheConsistency/triggerVerifyCacheConsistency.js";
 import { getEntRelatedPrice } from "@/internal/products/entitlements/entitlementUtils.js";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
@@ -32,6 +34,7 @@ const updateOneOffExistingEntitlement = async ({
 	options,
 	relatedPrice,
 	logger,
+	attachParams,
 }: {
 	db: DrizzleCli;
 	cusEnt: FullCustomerEntitlement;
@@ -41,6 +44,7 @@ const updateOneOffExistingEntitlement = async ({
 	options?: FeatureOptions;
 	relatedPrice?: Price;
 	logger: any;
+	attachParams: InsertCusProductParams;
 }) => {
 	if (entitlement.allowance_type === AllowanceType.Unlimited) {
 		return;
@@ -75,6 +79,29 @@ const updateOneOffExistingEntitlement = async ({
 			balance: updatedCusEnt.balance! + resetBalance!,
 		},
 	});
+
+	const context = attachParams.req;
+	if (context) {
+		const featureDeductions: FeatureDeduction[] = [
+			{
+				feature: entitlement.feature,
+				deduction: -resetBalance,
+			},
+		];
+
+		try {
+			await executeRedisDeduction({
+				ctx: context,
+				fullCustomer: attachParams.customer,
+				deductions: featureDeductions,
+				deductionOptions: {
+					overageBehaviour: "allow",
+				},
+			});
+		} catch (error) {
+			logger.warn(`Failed to execute Redis deduction: ${error}`);
+		}
+	}
 
 	return;
 };
@@ -128,6 +155,7 @@ export const updateOneTimeCusProduct = async ({
 				options: options || undefined,
 				relatedPrice,
 				logger,
+				attachParams,
 			});
 		} else {
 			const newCusEnt = initCusEntitlement({
