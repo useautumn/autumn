@@ -1,20 +1,20 @@
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
-	DialogTitle,
-	DialogHeader,
-	DialogTrigger,
-	DialogFooter,
 	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
 } from "@/components/ui/dialog";
-import { toast } from "sonner";
-import { useState } from "react";
-import { useNavigate } from "react-router";
-import { EntityConfig } from "./EntityConfig";
-import { getBackendErr } from "@/utils/genUtils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { getBackendErr } from "@/utils/genUtils";
 import { useCustomerContext } from "../../../CustomerContext";
 import { useCusQuery } from "../../../hooks/useCusQuery";
+import { EntityConfig } from "./EntityConfig";
 
 export const CreateEntity = ({
 	open,

@@ -5,11 +5,13 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { AppEnv } from "@autumn/shared";
+
 import chalk from "chalk";
+import { redis } from "@/external/redis/initRedis.js";
 import { clearOrg } from "./utils/setup/clearOrg.js";
 import { setupOrg } from "./utils/setup/setupOrg.js";
 
-async function main() {
+export const clearMasterOrg = async () => {
 	console.log(chalk.blue("\n🧹 Clearing Master Org...\n"));
 
 	try {
@@ -30,11 +32,27 @@ async function main() {
 			orgId: org.id,
 			env: AppEnv.Sandbox,
 		});
+
+		// Flush cache if not pointed at regional Redis
+		const redisUrl = process.env.REDIS_URL ?? process.env.BUN_REDIS_URL ?? "";
+		const normalizedRedisUrl = redisUrl.toLowerCase();
+		const isRegionalRedisUrl = normalizedRedisUrl.includes(
+			"redis-17710.mc1716-0.us",
+		);
+
+		if (!isRegionalRedisUrl) await redis.flushall();
+		else
+			console.log(
+				chalk.yellow(
+					"\n⚠️  Skipping redis flush (regional Redis URL detected).\n",
+				),
+			);
 		console.log(chalk.green("\n✅ Master org setup complete!\n"));
 	} catch (error) {
 		console.error(chalk.red("\n❌ Error:"), error);
 		process.exit(1);
 	}
-}
+};
 
-main();
+// await main();
+// process.exit(0);

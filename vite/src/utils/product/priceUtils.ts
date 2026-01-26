@@ -2,15 +2,16 @@ import {
 	AllowanceType,
 	BillingInterval,
 	BillWhen,
-	EntitlementWithFeature,
+	type EntitlementWithFeature,
+	FixedPriceConfig,
+	Price,
 	PriceType,
-	ProductItem,
+	type ProductItem,
 	ProductItemInterval,
+	type UsagePriceConfig,
 } from "@autumn/shared";
-
-import { FixedPriceConfig, Price, UsagePriceConfig } from "@autumn/shared";
-import { intervalIsNone } from "./productItemUtils";
 import { isFeatureItem } from "./getItemType";
+import { intervalIsNone } from "./productItemUtils";
 
 export const getBillingUnits = (
 	config: UsagePriceConfig,

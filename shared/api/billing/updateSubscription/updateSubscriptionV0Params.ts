@@ -3,8 +3,11 @@ import { nullish } from "@utils/utils";
 import { z } from "zod/v4";
 import { FeatureOptionsSchema } from "../../../models/cusProductModels/cusProductModels";
 import { ProductItemSchema } from "../../../models/productV2Models/productItemModels/productItemModels";
+import { CancelActionSchema } from "../../common/cancelMode";
 import { CustomerDataSchema } from "../../common/customerData";
 import { EntityDataSchema } from "../../models";
+import { BillingBehaviorSchema } from "../common/billingBehavior";
+import { RefundBehaviorSchema } from "../common/refundBehavior";
 
 export const ExtUpdateSubscriptionV0ParamsSchema = z.object({
 	// Customer / Entity Info
@@ -25,9 +28,21 @@ export const ExtUpdateSubscriptionV0ParamsSchema = z.object({
 	items: z.array(ProductItemSchema).optional(), // used for custom configuration of a plan (in api - plan_override)
 	free_trial: CreateFreeTrialSchema.nullable().optional(),
 
+	// Cancel action: 'cancel_immediately' | 'cancel_end_of_cycle' | 'uncancel'
+	cancel_action: CancelActionSchema.optional(),
+
+	// Billing behavior for subscription updates:
+	// - 'prorate_immediately' (default): Invoice line items are charged immediately
+	// - 'next_cycle_only': Do NOT create any charges due to the update
+	billing_behavior: BillingBehaviorSchema.optional(),
+
+	// Refund behavior for negative invoice totals (downgrades):
+	// - 'grant_invoice_credits' (default): Apply credits to customer balance
+	// - 'refund_payment_method': Issue refund to payment method
+	refund_behavior: RefundBehaviorSchema.optional(),
+
 	// reset_billing_cycle_anchor: z.boolean().optional(),
 	// new_billing_subscription: z.boolean().optional(),
-	// prorate_billing: z.boolean().optional(),
 });
 
 export const UpdateSubscriptionV0ParamsSchema =
@@ -61,7 +76,36 @@ export const UpdateSubscriptionV0ParamsSchema =
 					});
 				}
 			}
-		});
+		})
+		.refine(
+			(data) => {
+				if (data.cancel_action !== "cancel_immediately") return true;
+
+				const forbiddenFields = [
+					"options",
+					"items",
+					"version",
+					"free_trial",
+				] as const;
+				return !forbiddenFields.some((field) => data[field] !== undefined);
+			},
+			{
+				message:
+					"Cannot pass options, items, version, or free_trial when cancel_action is 'cancel_immediately'. Immediate cancellation only processes a prorated refund.",
+			},
+		)
+		.refine(
+			(data) => {
+				if (data.cancel_action !== "cancel_end_of_cycle") return true;
+
+				// Cannot pass free_trial when cancel_action is 'cancel_end_of_cycle'
+				return data.free_trial === undefined;
+			},
+			{
+				message:
+					"Cannot pass free_trial when cancel_action is 'cancel_end_of_cycle'.",
+			},
+		);
 
 export type ExtUpdateSubscriptionV0Params = z.infer<
 	typeof ExtUpdateSubscriptionV0ParamsSchema

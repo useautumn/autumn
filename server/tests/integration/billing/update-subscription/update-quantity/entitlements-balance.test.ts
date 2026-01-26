@@ -18,150 +18,144 @@ const billingUnits = 12;
  * balance increment/decrement logic works correctly.
  */
 
-test.concurrent(
-	`${chalk.yellowBright("update-quantity: increment entitlement balance on upgrade")}`,
-	async () => {
-		const customerId = "ent-balance-upgrade";
+test.concurrent(`${chalk.yellowBright("update-quantity: increment entitlement balance on upgrade")}`, async () => {
+	const customerId = "ent-balance-upgrade";
 
-		const product = products.base({
-			id: "prepaid",
-			items: [
-				items.prepaid({
-					featureId: TestFeature.Messages,
-					billingUnits,
-				}),
-			],
-		});
+	const product = products.base({
+		id: "prepaid",
+		items: [
+			items.prepaid({
+				featureId: TestFeature.Messages,
+				billingUnits,
+			}),
+		],
+	});
 
-		const { autumnV1 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [product] }),
-			],
-			actions: [
-				s.attach({
-					productId: product.id,
-					options: [
-						{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
-					],
-				}),
-			],
-		});
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [product] }),
+		],
+		actions: [
+			s.attach({
+				productId: product.id,
+				options: [
+					{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
+				],
+			}),
+		],
+	});
 
-		const beforeUpdate = await CusService.getFull({
-			db: ctx.db,
-			idOrInternalId: customerId,
-			orgId: ctx.org.id,
-			env: ctx.env,
-		});
+	const beforeUpdate = await CusService.getFull({
+		db: ctx.db,
+		idOrInternalId: customerId,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
 
-		const customerProduct = beforeUpdate.customer_products.find(
-			(cp) => cp.product.id === product.id,
-		);
-		const beforeEntitlement = customerProduct?.customer_entitlements.find(
-			(ent) => ent.entitlement.feature_id === TestFeature.Messages,
-		);
-		const beforeBalance = beforeEntitlement?.balance || 0;
+	const customerProduct = beforeUpdate.customer_products.find(
+		(cp) => cp.product.id === product.id,
+	);
+	const beforeEntitlement = customerProduct?.customer_entitlements.find(
+		(ent) => ent.entitlement.feature_id === TestFeature.Messages,
+	);
+	const beforeBalance = beforeEntitlement?.balance || 0;
 
-		await autumnV1.subscriptions.update({
-			customer_id: customerId,
-			product_id: product.id,
-			options: [
-				{ feature_id: TestFeature.Messages, quantity: 15 * billingUnits },
-			],
-		});
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: product.id,
+		options: [
+			{ feature_id: TestFeature.Messages, quantity: 15 * billingUnits },
+		],
+	});
 
-		const afterUpdate = await CusService.getFull({
-			db: ctx.db,
-			idOrInternalId: customerId,
-			orgId: ctx.org.id,
-			env: ctx.env,
-		});
+	const afterUpdate = await CusService.getFull({
+		db: ctx.db,
+		idOrInternalId: customerId,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
 
-		const afterCustomerProduct = afterUpdate.customer_products.find(
-			(cp) => cp.product.id === product.id,
-		);
-		const afterEntitlement = afterCustomerProduct?.customer_entitlements.find(
-			(ent) => ent.entitlement.feature_id === TestFeature.Messages,
-		);
-		const afterBalance = afterEntitlement?.balance || 0;
+	const afterCustomerProduct = afterUpdate.customer_products.find(
+		(cp) => cp.product.id === product.id,
+	);
+	const afterEntitlement = afterCustomerProduct?.customer_entitlements.find(
+		(ent) => ent.entitlement.feature_id === TestFeature.Messages,
+	);
+	const afterBalance = afterEntitlement?.balance || 0;
 
-		// +5 units × 12 billing_units = +60 messages
-		expect(afterBalance).toBe(beforeBalance + 60);
-	},
-);
+	// +5 units × 12 billing_units = +60 messages
+	expect(afterBalance).toBe(beforeBalance + 60);
+});
 
-test.concurrent(
-	`${chalk.yellowBright("update-quantity: decrement entitlement balance on downgrade")}`,
-	async () => {
-		const customerId = "ent-balance-downgrade";
+test.concurrent(`${chalk.yellowBright("update-quantity: decrement entitlement balance on downgrade")}`, async () => {
+	const customerId = "ent-balance-downgrade";
 
-		const product = products.base({
-			id: "prepaid",
-			items: [
-				items.prepaid({
-					featureId: TestFeature.Messages,
-					billingUnits,
-				}),
-			],
-		});
+	const product = products.base({
+		id: "prepaid",
+		items: [
+			items.prepaid({
+				featureId: TestFeature.Messages,
+				billingUnits,
+			}),
+		],
+	});
 
-		const { autumnV1 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [product] }),
-			],
-			actions: [
-				s.attach({
-					productId: product.id,
-					options: [
-						{ feature_id: TestFeature.Messages, quantity: 15 * billingUnits },
-					],
-				}),
-			],
-		});
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [product] }),
+		],
+		actions: [
+			s.attach({
+				productId: product.id,
+				options: [
+					{ feature_id: TestFeature.Messages, quantity: 15 * billingUnits },
+				],
+			}),
+		],
+	});
 
-		const beforeUpdate = await CusService.getFull({
-			db: ctx.db,
-			idOrInternalId: customerId,
-			orgId: ctx.org.id,
-			env: ctx.env,
-		});
+	const beforeUpdate = await CusService.getFull({
+		db: ctx.db,
+		idOrInternalId: customerId,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
 
-		const customerProduct = beforeUpdate.customer_products.find(
-			(cp) => cp.product.id === product.id,
-		);
-		const beforeEntitlement = customerProduct?.customer_entitlements.find(
-			(ent) => ent.entitlement.feature_id === TestFeature.Messages,
-		);
-		const beforeBalance = beforeEntitlement?.balance || 0;
+	const customerProduct = beforeUpdate.customer_products.find(
+		(cp) => cp.product.id === product.id,
+	);
+	const beforeEntitlement = customerProduct?.customer_entitlements.find(
+		(ent) => ent.entitlement.feature_id === TestFeature.Messages,
+	);
+	const beforeBalance = beforeEntitlement?.balance || 0;
 
-		await autumnV1.subscriptions.update({
-			customer_id: customerId,
-			product_id: product.id,
-			options: [
-				{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
-			],
-		});
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: product.id,
+		options: [
+			{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
+		],
+	});
 
-		const afterUpdate = await CusService.getFull({
-			db: ctx.db,
-			idOrInternalId: customerId,
-			orgId: ctx.org.id,
-			env: ctx.env,
-		});
+	const afterUpdate = await CusService.getFull({
+		db: ctx.db,
+		idOrInternalId: customerId,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
 
-		const afterCustomerProduct = afterUpdate.customer_products.find(
-			(cp) => cp.product.id === product.id,
-		);
-		const afterEntitlement = afterCustomerProduct?.customer_entitlements.find(
-			(ent) => ent.entitlement.feature_id === TestFeature.Messages,
-		);
-		const afterBalance = afterEntitlement?.balance || 0;
+	const afterCustomerProduct = afterUpdate.customer_products.find(
+		(cp) => cp.product.id === product.id,
+	);
+	const afterEntitlement = afterCustomerProduct?.customer_entitlements.find(
+		(ent) => ent.entitlement.feature_id === TestFeature.Messages,
+	);
+	const afterBalance = afterEntitlement?.balance || 0;
 
-		// -5 units × 12 billing_units = -60 messages
-		expect(afterBalance).toBe(beforeBalance - 60);
-	},
-);
+	// -5 units × 12 billing_units = -60 messages
+	expect(afterBalance).toBe(beforeBalance - 60);
+});

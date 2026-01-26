@@ -1,15 +1,14 @@
-import { useSession, signOut, deleteUser } from "@/lib/auth-client";
+import { LogOut, Settings } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuLabel,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Settings } from "lucide-react";
-import { useState } from "react";
-import { useNavigate } from "react-router";
+import { deleteUser, signOut, useSession } from "@/lib/auth-client";
 
 export const UserButton = () => {
 	const navigate = useNavigate();
@@ -49,7 +48,10 @@ export const UserButton = () => {
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<button type="button" className="relative flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 text-white text-sm font-medium overflow-hidden group transition-all duration-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20">
+				<button
+					type="button"
+					className="relative flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 text-white text-sm font-medium overflow-hidden group transition-all duration-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+				>
 					{/* Shimmer effect */}
 					<div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200">
 						<div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/30 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-400 ease-out" />

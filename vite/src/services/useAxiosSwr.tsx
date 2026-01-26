@@ -1,7 +1,7 @@
-import useSWR, { SWRConfiguration } from "swr";
-import { useAxiosInstance } from "./useAxiosInstance";
-import { AppEnv } from "@autumn/shared";
+import type { AppEnv } from "@autumn/shared";
 import axios from "axios";
+import useSWR, { type SWRConfiguration } from "swr";
+import { useAxiosInstance } from "./useAxiosInstance";
 
 export function useAxiosSWR({
 	url,

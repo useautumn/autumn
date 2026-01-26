@@ -17,8 +17,12 @@ export const isStripeSubscriptionCanceledEvent = ({
 	previousAttributes,
 }: {
 	stripeSubscription: ExpandedStripeSubscription;
-	previousAttributes: SubscriptionPreviousAttributes;
+	previousAttributes?: SubscriptionPreviousAttributes;
 }): CancellationInfo => {
+	// If no previous attributes, we can't determine if this is a new cancellation
+	if (!previousAttributes) {
+		return { canceled: false, canceledAtMs: null, cancelsAtMs: null };
+	}
 	// Not canceled if neither cancel_at nor cancel_at_period_end is set
 	if (
 		!stripeSubscription.cancel_at &&

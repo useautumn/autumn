@@ -2,6 +2,7 @@ import type { Customer } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { buildStripeCustomerIdempotencyKey } from "@/external/stripe/customers/utils/buildIdempotencyKey";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { ExpandedStripeCustomer } from "./getExpandedStripeCustomer";
 
 export const createStripeCustomer = async ({
 	ctx,
@@ -13,7 +14,7 @@ export const createStripeCustomer = async ({
 	options?: {
 		testClockId?: string;
 	};
-}) => {
+}): Promise<ExpandedStripeCustomer> => {
 	const { org, env } = ctx;
 	const stripeCli = createStripeCli({ org, env });
 
@@ -31,6 +32,11 @@ export const createStripeCustomer = async ({
 				autumn_internal_id: customer.internal_id,
 			},
 			test_clock: options.testClockId,
+			expand: [
+				"test_clock",
+				"invoice_settings.default_payment_method",
+				"discount.source.coupon.applies_to",
+			],
 		},
 		idempotencyKey
 			? {
@@ -39,5 +45,5 @@ export const createStripeCustomer = async ({
 			: undefined,
 	);
 
-	return stripeCustomer;
+	return stripeCustomer as ExpandedStripeCustomer;
 };

@@ -11,8 +11,7 @@ import "prismjs/components/prism-rust";
 import "prismjs/components/prism-c";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import OptionButton from "./OptionButton";
-import { CopyButton } from "./OptionButton";
+import OptionButton, { CopyButton } from "./OptionButton";
 // import OptionButton from './OptionButton'
 // import CopyButton from '../CopyButton/CopyButton'
 

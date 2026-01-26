@@ -15,6 +15,7 @@ const toStripeAddLineParams = ({
 	return {
 		description,
 		amount: atmnToStripeAmount({ amount: finalAmount }),
+		discountable: false,
 		period: billingPeriod
 			? {
 					start: msToSeconds(billingPeriod.start),

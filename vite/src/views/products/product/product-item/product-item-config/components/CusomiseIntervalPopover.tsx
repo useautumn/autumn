@@ -1,14 +1,14 @@
-import { useState, useRef } from "react";
-import { useProductItemContext } from "../../ProductItemContext";
+import { Infinite } from "autumn-js";
+import { useRef, useState } from "react";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
 	Popover,
-	PopoverTrigger,
 	PopoverContent,
+	PopoverTrigger,
 } from "@/components/ui/popover";
-import { Infinite } from "autumn-js";
-import { Button } from "@/components/ui/button";
+import { useProductItemContext } from "../../ProductItemContext";
 
 export const CustomiseIntervalPopover = () => {
 	const [open, setOpen] = useState(false);

@@ -24,8 +24,8 @@ import {
 } from "../../../stripeInvoiceUtils.js";
 import { lineItemInCusProduct } from "../../../stripeSubUtils/stripeSubItemUtils.js";
 import { getStripeSubs } from "../../../stripeSubUtils.js";
-import { handleInvoicePaidMetadata } from "./handleInvoicePaidMetadata.js";
 import { handleInvoicePaidDiscount } from "./handleInvoicePaidDiscount.js";
+import { handleInvoicePaidMetadata } from "./handleInvoicePaidMetadata.js";
 
 const handleOneOffInvoicePaid = async ({
 	db,

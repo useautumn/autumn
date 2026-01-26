@@ -1,6 +1,6 @@
+import { AppEnv, AuthType, ErrCode } from "@autumn/shared";
 import { verifyPublicKey } from "@/internal/dev/api-keys/publicKeyUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { AppEnv, AuthType, ErrCode } from "@autumn/shared";
 
 const allowedEndpoints = [
 	{
@@ -82,7 +82,7 @@ export const verifyBearerPublishableKey = async (
 		});
 	}
 
-	let env: AppEnv = pkey.startsWith("am_pk_test")
+	const env: AppEnv = pkey.startsWith("am_pk_test")
 		? AppEnv.Sandbox
 		: AppEnv.Live;
 
@@ -100,7 +100,7 @@ export const verifyBearerPublishableKey = async (
 		});
 	}
 
-	let { org, features } = data;
+	const { org, features } = data;
 
 	req.minOrg = {
 		id: org.id,

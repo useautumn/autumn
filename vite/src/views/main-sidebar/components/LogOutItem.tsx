@@ -1,9 +1,8 @@
-import { authClient } from "@/lib/auth-client";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { LogOut, Trash } from "lucide-react";
-import { useState } from "react";
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { authClient } from "@/lib/auth-client";
 
 export const LogOutItem = () => {
 	const [loading, setLoading] = useState(false);

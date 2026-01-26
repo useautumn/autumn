@@ -1,4 +1,4 @@
-import { type CreateFeature, type Feature, type ProductV2 } from "@autumn/shared";
+import type { CreateFeature, Feature, ProductV2 } from "@autumn/shared";
 import { useCallback } from "react";
 import { useNavigate } from "react-router";
 import { useOrg } from "@/hooks/common/useOrg";
@@ -58,7 +58,7 @@ export const useStepActions = (props: StepActionsProps) => {
 	const handleNext = useCallback(async () => {
 		if (!validateStep(step, product, feature)) return;
 
-		let nextStep = getNextStep(step);
+		const nextStep = getNextStep(step);
 		let canProceed = true;
 
 		// Set loading for steps 1 and 2

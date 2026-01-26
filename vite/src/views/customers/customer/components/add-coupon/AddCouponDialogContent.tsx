@@ -1,19 +1,25 @@
-import { SelectContent } from "@/components/ui/select";
-import { SelectValue } from "@/components/ui/select";
-import { SelectTrigger } from "@/components/ui/select";
-import { DialogFooter } from "@/components/ui/dialog";
-import { Reward, RewardType } from "@autumn/shared";
-import { Select, SelectItem } from "@/components/ui/select";
-import { DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { type Reward, RewardType } from "@autumn/shared";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { getBackendErr } from "@/utils/genUtils";
 import { toast } from "sonner";
+import { WarningBox } from "@/components/general/modal-components/WarningBox";
+import { Button } from "@/components/ui/button";
+import {
+	DialogContent,
+	DialogFooter,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { getBackendErr } from "@/utils/genUtils";
 import { getOriginalCouponId } from "@/utils/product/couponUtils";
-import { WarningBox } from "@/components/general/modal-components/WarningBox";
-import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useCusQuery } from "../../hooks/useCusQuery";
 import { useCusReferralQuery } from "../../hooks/useCusReferralQuery";
 

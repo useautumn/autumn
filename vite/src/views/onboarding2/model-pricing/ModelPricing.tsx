@@ -1,36 +1,35 @@
-import PricingTable from "@/components/autumn/pricing-table";
-import { EditProduct } from "./EditProduct";
-import { useEffect, useState } from "react";
-
-import { getBackendErr, nullish } from "@/utils/genUtils";
-import { Feature, Product } from "autumn-js";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import type { ProductV2 } from "@autumn/shared";
+import { Feature, type Product } from "autumn-js";
+import { AutumnProvider } from "autumn-js/react";
 import { ArrowRight, PlusIcon } from "lucide-react";
-import {
-	ModelPricingContext,
-	useModelPricingContext,
-} from "./ModelPricingContext";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import PricingTable from "@/components/autumn/pricing-table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
-import { slugify } from "@/utils/formatUtils/formatTextUtils";
+import { useOrg } from "@/hooks/common/useOrg";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { cn } from "@/lib/utils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { toast } from "sonner";
+import { slugify } from "@/utils/formatUtils/formatTextUtils";
+import { getBackendErr, nullish } from "@/utils/genUtils";
 import { ProductsContext } from "@/views/products/ProductsContext";
-import { SelectEditProduct } from "./SelectEditProduct";
-import { ConnectStripeStep } from "../integrate/ConnectStripeStep";
-import { AutumnProvider } from "autumn-js/react";
 import { useProductData } from "@/views/products/product/hooks/useProductData";
+import { useProductContext } from "@/views/products/product/ProductContext";
 import ConnectStripeDialog from "../ConnectStripeDialog";
 import { useOnboardingQueryState } from "../hooks/useOnboardingQueryState";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { ProductV2 } from "@autumn/shared";
-import { useOrg } from "@/hooks/common/useOrg";
-import { useProductContext } from "@/views/products/product/ProductContext";
+import { ConnectStripeStep } from "../integrate/ConnectStripeStep";
+import { EditProduct } from "./EditProduct";
+import {
+	ModelPricingContext,
+	useModelPricingContext,
+} from "./ModelPricingContext";
+import { SelectEditProduct } from "./SelectEditProduct";
 
 const defaultProduct = {
 	id: "",

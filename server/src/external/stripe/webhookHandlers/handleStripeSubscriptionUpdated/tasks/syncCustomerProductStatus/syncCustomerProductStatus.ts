@@ -4,6 +4,7 @@ import {
 	CusProductStatus,
 	cp,
 	type FullCusProduct,
+	type InsertCustomerProduct,
 } from "@autumn/shared";
 import {
 	stripeSubscriptionToAutumnStatus,
@@ -12,8 +13,8 @@ import {
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { trackCustomerProductUpdate } from "../../../common/trackCustomerProductUpdate";
 import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext";
-import { trackCustomerProductUpdate } from "../../utils/trackCustomerProductUpdate";
 import { fixUnexpectedStatuses } from "./fixUnexpectedStatuses";
 
 /**
@@ -42,6 +43,8 @@ export const syncCustomerProductStatus = async ({
 		stripeStatus: stripeSubscription.status,
 	});
 
+	ctx.logger.debug(`AUTUMN STATUS: ${autumnStatus}`);
+
 	// Get trial_ends_at and collection_method from Stripe
 	const trialEndsAt = stripeSubscriptionToTrialEndsAtMs({ stripeSubscription });
 	const collectionMethod =
@@ -68,7 +71,7 @@ export const syncCustomerProductStatus = async ({
 		if (!valid) continue;
 
 		// Build updates
-		const updates: Partial<FullCusProduct> = {};
+		const updates: Partial<InsertCustomerProduct> = {};
 
 		// Update status if changed
 		if (customerProduct.status !== autumnStatus) {
@@ -102,7 +105,7 @@ export const syncCustomerProductStatus = async ({
 		});
 
 		trackCustomerProductUpdate({
-			subscriptionUpdatedContext,
+			eventContext: subscriptionUpdatedContext,
 			customerProduct,
 			updates,
 		});

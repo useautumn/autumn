@@ -1,4 +1,4 @@
-import { Member, User } from "../../db/auth-schema.js";
+import type { Member, User } from "../../db/auth-schema.js";
 
 export interface Membership {
 	user: User;

@@ -1,7 +1,7 @@
+import { useState } from "react";
 import CodeBlock from "@/views/onboarding/components/CodeBlock";
 import { CodeSpan } from "../components/CodeSpan";
 import { StepHeader } from "../StepHeader";
-import { useState } from "react";
 import { CreateSecretKey } from "./CreateSecretKey";
 
 export const EnvStep = () => {

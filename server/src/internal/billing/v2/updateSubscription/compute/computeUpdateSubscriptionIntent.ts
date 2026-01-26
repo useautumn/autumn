@@ -3,6 +3,7 @@ import type { UpdateSubscriptionV0Params } from "@shared/index";
 export enum UpdateSubscriptionIntent {
 	UpdateQuantity = "update_quantity",
 	UpdatePlan = "update_plan",
+	None = "none",
 }
 
 /**
@@ -19,5 +20,12 @@ export const computeUpdateSubscriptionIntent = (
 		return UpdateSubscriptionIntent.UpdatePlan;
 
 	// Version change = plan update (takes priority)
-	return UpdateSubscriptionIntent.UpdateQuantity;
+	const featureQuantitiesChanges =
+		params.options?.length && params.options.length > 0;
+
+	if (featureQuantitiesChanges) {
+		return UpdateSubscriptionIntent.UpdateQuantity;
+	}
+
+	return UpdateSubscriptionIntent.None;
 };

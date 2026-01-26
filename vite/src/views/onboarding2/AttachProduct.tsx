@@ -1,7 +1,6 @@
-import Step from "./Step";
-import CodeBlock from "../onboarding/components/CodeBlock";
+import type { Product } from "@autumn/shared";
 import { ArrowUpRightFromSquare } from "lucide-react";
-import { Product } from "@autumn/shared";
+import { useState } from "react";
 import {
 	Select,
 	SelectContent,
@@ -9,7 +8,8 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { useState } from "react";
+import CodeBlock from "../onboarding/components/CodeBlock";
+import Step from "./Step";
 
 const attachCodeNextjs = (productId: string, apiKey: string) => {
 	return `import { useCustomer } from 'autumn-js/react';

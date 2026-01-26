@@ -76,7 +76,11 @@ export function CustomerFeatureUsageTable() {
 			}));
 
 		return [...productEnts, ...extraEnts];
-	}, [filteredCustomerProducts, customer?.extra_customer_entitlements, selectedEntity]);
+	}, [
+		filteredCustomerProducts,
+		customer?.extra_customer_entitlements,
+		selectedEntity,
+	]);
 
 	const featuresMap = useMemo(
 		() => createFeaturesMap({ features: features ?? [] }),

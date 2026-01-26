@@ -5,6 +5,7 @@ import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js
 import { expectFeaturesCorrect } from "@tests/utils/expectUtils/expectFeaturesCorrect.js";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
 import { expectSubItemsCorrect } from "@tests/utils/expectUtils/expectSubUtils.js";
+import { completeInvoiceCheckout } from "@tests/utils/stripeUtils/completeInvoiceCheckout";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import type Stripe from "stripe";
@@ -20,8 +21,6 @@ import {
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-
-import { completeInvoiceCheckout } from "@tests/utils/stripeUtils/completeInvoiceCheckout";
 
 const testCase = "invoice-action-required3";
 

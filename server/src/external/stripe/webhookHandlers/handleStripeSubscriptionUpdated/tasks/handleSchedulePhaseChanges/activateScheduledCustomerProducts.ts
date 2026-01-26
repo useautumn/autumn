@@ -1,81 +1,88 @@
 import {
-	AttachScenario,
-	CusProductStatus,
-	type FullCusProduct,
+	cp,
+	hasCustomerProductStarted,
+	isCustomerProductFree,
+	isCustomerProductOnStripeSubscriptionSchedule,
 } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { customerProductActions } from "@/internal/customers/cusProducts/actions";
+import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
+import { trackCustomerProductUpdate } from "../../../common/trackCustomerProductUpdate";
 import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext";
-import { trackCustomerProductUpdate } from "../../utils/trackCustomerProductUpdate";
-import { PHASE_TOLERANCE_MS } from "./schedulePhaseConstants";
-
-/**
- * Checks if a scheduled customer product should be activated.
- * Uses tolerance to handle timing differences between Stripe and webhook arrival.
- */
-const shouldActivateScheduledProduct = ({
-	customerProduct,
-	nowMs,
-}: {
-	customerProduct: FullCusProduct;
-	nowMs: number;
-}): boolean => {
-	if (customerProduct.status !== CusProductStatus.Scheduled) return false;
-	// Activate if starts_at is within tolerance of now
-	return customerProduct.starts_at <= nowMs + PHASE_TOLERANCE_MS;
-};
 
 /**
  * Activates scheduled customer products that should now be active.
- * Tracks updates via subscriptionUpdatedContext.
+ *
+ * Filters by:
+ * 1. hasCustomerProductStarted (scheduled + starts_at reached)
+ * 2. canActivate (free OR on this subscription OR on this schedule)
+ *
+ * For free products: uses empty subscription/schedule IDs
+ * For paid products: uses IDs from stripeSubscription
  */
 export const activateScheduledCustomerProducts = async ({
 	ctx,
-	subscriptionUpdatedContext,
+	eventContext,
 }: {
 	ctx: StripeWebhookContext;
-	subscriptionUpdatedContext: StripeSubscriptionUpdatedContext;
+	eventContext: StripeSubscriptionUpdatedContext;
 }): Promise<void> => {
-	const { db, logger, org, env } = ctx;
-	const { stripeSubscription, customerProducts, nowMs, fullCustomer } =
-		subscriptionUpdatedContext;
+	const { logger } = ctx;
+	const { fullCustomer, stripeSubscription, nowMs } = eventContext;
 
 	const stripeSubscriptionSchedule = stripeSubscription.schedule;
 
-	for (const customerProduct of customerProducts) {
-		if (!shouldActivateScheduledProduct({ customerProduct, nowMs })) continue;
+	for (const customerProduct of fullCustomer.customer_products) {
+		// Check if can activate: free OR on this subscription OR on this schedule
+		const hasStarted = hasCustomerProductStarted(customerProduct, { nowMs });
+		const canActivate = cp(customerProduct)
+			.free()
+			.or.onStripeSubscription({ stripeSubscriptionId: stripeSubscription.id })
+			.or.onStripeSchedule({
+				stripeSubscriptionScheduleId: stripeSubscriptionSchedule?.id ?? "",
+			}).valid;
 
-		logger.info(
-			`[handleSchedulePhaseChanges] ✅ activating: ${customerProduct.product.name}${customerProduct.entity_id ? `@${customerProduct.entity_id}` : ""}`,
-		);
-
-		const updates = {
-			status: CusProductStatus.Active,
-			subscription_ids: [stripeSubscription.id],
-			scheduled_ids: stripeSubscriptionSchedule
-				? [stripeSubscriptionSchedule.id]
-				: [],
-		};
-
-		await CusProductService.update({
-			db,
-			cusProductId: customerProduct.id,
-			updates,
+		addToExtraLogs({
+			ctx,
+			extras: {
+				[Date.now().toString()]: {
+					product: customerProduct.product.name,
+					canActivate,
+					hasStarted,
+				},
+			},
 		});
 
-		await addProductsUpdatedWebhookTask({
+		if (!canActivate || !hasStarted) continue;
+
+		const isFree = isCustomerProductFree(customerProduct);
+
+		logger.info(
+			`Activating scheduled product: ${customerProduct.product.name}${customerProduct.entity_id ? `@${customerProduct.entity_id}` : ""}`,
+		);
+
+		// Free products get empty IDs, paid products get IDs from stripe subscription
+		const subscriptionIds = isFree ? [] : [stripeSubscription.id];
+		const scheduledIds = isFree
+			? []
+			: stripeSubscriptionSchedule &&
+					isCustomerProductOnStripeSubscriptionSchedule({
+						customerProduct,
+						stripeSubscriptionScheduleId: stripeSubscriptionSchedule.id,
+					})
+				? [stripeSubscriptionSchedule.id]
+				: [];
+
+		const { updates } = await customerProductActions.activateScheduled({
 			ctx,
-			internalCustomerId: customerProduct.internal_customer_id,
-			org,
-			env,
-			customerId: fullCustomer.id || "",
-			scenario: AttachScenario.New,
-			cusProduct: customerProduct,
+			customerProduct,
+			fullCustomer,
+			subscriptionIds,
+			scheduledIds,
 		});
 
 		trackCustomerProductUpdate({
-			subscriptionUpdatedContext,
+			eventContext,
 			customerProduct,
 			updates,
 		});

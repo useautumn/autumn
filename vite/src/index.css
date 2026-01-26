@@ -352,8 +352,8 @@ html {
 	--breakpoint-3xl: 120rem; */
 
 	/* Accordion animations */
-	--animate-accordion-down: accordion-down 0.2s ease-out;
-	--animate-accordion-up: accordion-up 0.2s ease-out;
+	--animate-accordion-down: accordion-down 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+	--animate-accordion-up: accordion-up 0.4s cubic-bezier(0.32, 0.72, 0, 1);
 
 	/* Shine animation */
 	--animate-shine: shine var(--duration) infinite linear;

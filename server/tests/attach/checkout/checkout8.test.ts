@@ -1,12 +1,12 @@
 import { beforeAll, describe, test } from "bun:test";
 import { ApiVersion } from "@autumn/shared";
-import chalk from "chalk";
 import { AutumnCli } from "@tests/cli/AutumnCli.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectCustomerV0Correct } from "@tests/utils/expectUtils/expectCustomerV0Correct.js";
 import { timeout } from "@tests/utils/genUtils.js";
 import { completeCheckoutForm } from "@tests/utils/stripeUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";

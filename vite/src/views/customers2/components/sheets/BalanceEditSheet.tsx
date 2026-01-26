@@ -254,10 +254,7 @@ export function BalanceEditSheet() {
 								);
 							});
 							return entity ? (
-								<InfoRow
-									label="Entity"
-									value={entity.name || entity.id}
-								/>
+								<InfoRow label="Entity" value={entity.name || entity.id} />
 							) : null;
 						})()}
 						<div>

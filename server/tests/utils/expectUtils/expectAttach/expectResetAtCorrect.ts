@@ -1,4 +1,4 @@
-import { Customer } from "autumn-js";
+import type { Customer } from "autumn-js";
 import { expect } from "chai";
 
 export const expectResetAtCorrect = ({

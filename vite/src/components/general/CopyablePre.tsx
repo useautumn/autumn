@@ -1,5 +1,5 @@
-import React from "react";
 import { Check, Copy } from "lucide-react";
+import React from "react";
 import CopyButton from "./CopyButton";
 
 export function CopyablePre({ text }: { text: string }) {
@@ -48,9 +48,8 @@ export function CopyableSpan({
 		<span
 			className={
 				`inline-flex items-center rounded-xl bg-muted/50 pl-3 py-1 text-md font-mono text-muted-foreground relative font-normal gap-1 cursor-pointer transition-opacity ${
-					copied ? 'opacity-30' : ''
-				}` +
-				(className ? ` ${className}` : "")
+					copied ? "opacity-30" : ""
+				}` + (className ? ` ${className}` : "")
 			}
 			onClick={handleClick}
 		>

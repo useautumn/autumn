@@ -37,7 +37,10 @@ honoProductRouter.delete("/:product_id", ...handleDeleteProductHono);
 honoProductRouter.post("/:product_id/copy", ...handleCopyProductV2);
 
 // Info before deleting plan
-honoProductRouter.get("/:product_id/has_customers", ...handlePlanHasCustomersV2);
+honoProductRouter.get(
+	"/:product_id/has_customers",
+	...handlePlanHasCustomersV2,
+);
 honoProductRouter.post(
 	"/:product_id/has_customers",
 	...handlePlanHasCustomersV2, // V2 for dashboard (expects ProductV2 format)

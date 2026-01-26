@@ -53,7 +53,7 @@ const queueEvent = ({
 	body: TrackParams;
 	fullCustomer: FullCustomer;
 }): void => {
-	if (body.skip_event || body.idempotency_key) return;
+	if (body.skip_event) return;
 
 	const eventInfo = buildEventInfo(body);
 

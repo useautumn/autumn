@@ -3,8 +3,8 @@ import { getStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { trackCustomerProductUpdate } from "../../../common/trackCustomerProductUpdate";
 import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext";
-import { trackCustomerProductUpdate } from "../../utils/trackCustomerProductUpdate";
 import { isStripeSubscriptionCanceledEvent } from "./isStripeSubscriptionCanceledEvent";
 import { scheduleDefaultProducts } from "./scheduleDefaultProducts";
 
@@ -81,7 +81,7 @@ export const handleStripeSubscriptionCanceled = async ({
 		});
 
 		trackCustomerProductUpdate({
-			subscriptionUpdatedContext,
+			eventContext: subscriptionUpdatedContext,
 			customerProduct,
 			updates,
 		});

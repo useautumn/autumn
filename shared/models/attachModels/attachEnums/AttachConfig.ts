@@ -1,4 +1,4 @@
-import { AttachBranch } from "./AttachBranch.js";
+import type { AttachBranch } from "./AttachBranch.js";
 
 export enum ProrationBehavior {
 	Immediately = "immediately",

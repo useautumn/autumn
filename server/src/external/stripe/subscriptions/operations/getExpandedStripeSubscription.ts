@@ -1,13 +1,15 @@
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { StripeExpandedDiscount } from "../types/stripeDiscountTypes";
 
 export type ExpandedStripeSubscription = Stripe.Subscription & {
 	schedule: Stripe.SubscriptionSchedule & {
 		phases: Stripe.SubscriptionSchedule.Phase[];
 	};
-
 	customer: Stripe.Customer;
+	discounts: StripeExpandedDiscount[];
+	latest_invoice: string;
 };
 
 export const getExpandedStripeSubscription = async ({
@@ -23,7 +25,11 @@ export const getExpandedStripeSubscription = async ({
 	const expandedStripeSubscription = await stripeCli.subscriptions.retrieve(
 		subscriptionId,
 		{
-			expand: ["schedule.phases", "customer.test_clock"],
+			expand: [
+				"schedule.phases",
+				"customer.test_clock",
+				"discounts.source.coupon.applies_to",
+			],
 		},
 	);
 	return expandedStripeSubscription as ExpandedStripeSubscription;

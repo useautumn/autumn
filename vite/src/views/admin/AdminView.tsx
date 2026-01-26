@@ -1,12 +1,12 @@
-import { Globe } from "lucide-react";
+import { Globe } from "@phosphor-icons/react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
+import { AdminOrgTable } from "@/views/admin/AdminOrgTable";
+import { AdminUserTable } from "@/views/admin/AdminUserTable";
 import { DefaultView } from "../DefaultView";
 import LoadingScreen from "../general/LoadingScreen";
-import { AdminUserTable } from "./AdminUserTable";
-import { AdminOrgTable } from "./AdminOrgTable";
 import { CreateUser } from "./components/CreateUser";
 import { useAdmin } from "./hooks/useAdmin";
 

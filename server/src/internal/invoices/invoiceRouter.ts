@@ -11,7 +11,8 @@ const invoiceRedirectLimiter = rateLimiter<HonoEnv>({
 	windowMs: 60 * 1000, // 1 minute
 	limit: 10,
 	standardHeaders: "draft-6",
-	keyGenerator: (c) => c.req.header("x-forwarded-for") ?? c.req.header("x-real-ip") ?? "unknown",
+	keyGenerator: (c) =>
+		c.req.header("x-forwarded-for") ?? c.req.header("x-real-ip") ?? "unknown",
 });
 
 publicInvoiceRouter.get(

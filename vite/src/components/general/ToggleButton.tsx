@@ -1,8 +1,8 @@
 import { Check } from "lucide-react";
-import { Button } from "../ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { cn } from "@/lib/utils";
+import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { InfoTooltip } from "./modal-components/InfoTooltip";
 
 export const ToggleButton = ({

@@ -1,7 +1,7 @@
-import { Decimal } from "decimal.js";
-import { timeout } from "@/utils/genUtils.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { expect } from "chai";
+import { Decimal } from "decimal.js";
+import type { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { timeout } from "@/utils/genUtils.js";
 
 export const useEntityBalanceAndExpect = async ({
 	autumn,
@@ -14,11 +14,11 @@ export const useEntityBalanceAndExpect = async ({
 	featureId: string;
 	entityId: string;
 }) => {
-	let deduction = new Decimal(Math.random() * 400)
+	const deduction = new Decimal(Math.random() * 400)
 		.toDecimalPlaces(5)
 		.toNumber();
 
-	let balanceBefore = await autumn.check({
+	const balanceBefore = await autumn.check({
 		customer_id: customerId,
 		feature_id: featureId,
 		entity_id: entityId,
@@ -32,13 +32,13 @@ export const useEntityBalanceAndExpect = async ({
 	});
 	await timeout(3000);
 
-	let balanceAfter = await autumn.check({
+	const balanceAfter = await autumn.check({
 		customer_id: customerId,
 		feature_id: featureId,
 		entity_id: entityId,
 	});
 
-	let expectedBalance = new Decimal(balanceBefore.balance!)
+	const expectedBalance = new Decimal(balanceBefore.balance!)
 		.sub(deduction)
 		.toNumber();
 

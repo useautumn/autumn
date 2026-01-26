@@ -1,6 +1,6 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { Customer, customers } from "@autumn/shared";
+import { type Customer, customers } from "@autumn/shared";
 import { inArray } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export class CusReadService {
 	static async getInInternalIds({

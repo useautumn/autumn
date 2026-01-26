@@ -1,14 +1,14 @@
-import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
-import { ItemSet } from "@/utils/models/ItemSet.js";
 import {
-	AttachConfig,
-	FullCusProduct,
+	type AttachConfig,
+	type FullCusProduct,
 	getCusProductMinQuantity,
-	ProductOptions,
+	type ProductOptions,
 } from "@autumn/shared";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
+import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
+import type { ItemSet } from "@/utils/models/ItemSet.js";
 import { mergeItemSets } from "./mergeItemSets.js";
-import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 
 export const getProdListWithoutEntities = ({
 	attachParams,
@@ -19,7 +19,7 @@ export const getProdListWithoutEntities = ({
 }) => {
 	const newProdList = structuredClone(productsList);
 	for (let i = 0; i < newProdList.length; i++) {
-		let productOptions = newProdList[i];
+		const productOptions = newProdList[i];
 		newProdList[i] = {
 			...productOptions,
 			quantity:

@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+
 type TimeCase = "upper" | "lower";
 export const formatDateStr = (date: Date | string) => {
 	return format(new Date(date), "dd MMM yyyy");

@@ -1,7 +1,9 @@
-[test]
-preload = ["./server/tests/setup-integration-tests.ts"]
-timeout = 0
+# Preload env override for all bun runs (from workspace root)
+preload = ["./scripts/preload-env.ts"]
 
+[test]
+preload = ["./scripts/preload-env.ts", "./server/tests/setup-integration-tests.ts"]
+timeout = 0
 
 [test.env]
 NODE_ENV = "test"

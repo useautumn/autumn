@@ -1,16 +1,19 @@
-import * as React from "react";
 import {
-	ColumnDef,
-	SortingState,
+	type Cell,
+	type ColumnDef,
 	flexRender,
 	getCoreRowModel,
 	getSortedRowModel,
+	type Header,
+	type HeaderGroup,
+	type Row,
+	type SortingState,
 	useReactTable,
-	HeaderGroup,
-	Header,
-	Row,
-	Cell,
 } from "@tanstack/react-table";
+import { SearchIcon } from "lucide-react";
+import * as React from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
 	Table,
 	TableBody,
@@ -19,9 +22,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { SearchIcon } from "lucide-react";
 
 interface DataTableProps<TData, TValue> {
 	columns: ColumnDef<TData, TValue>[];

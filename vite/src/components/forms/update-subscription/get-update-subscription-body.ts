@@ -1,9 +1,14 @@
 import type {
+	BillingBehavior,
 	CreateFreeTrial,
 	FeatureOptions,
 	ProductItem,
 	ProductV2,
 } from "@autumn/shared";
+import type {
+	CancelActionValue,
+	RefundBehaviorValue,
+} from "@/components/forms/update-subscription-v2/updateSubscriptionFormSchema";
 
 export const getUpdateSubscriptionBody = ({
 	customerId,
@@ -17,6 +22,9 @@ export const getUpdateSubscriptionBody = ({
 	isCustom = false,
 	freeTrial,
 	items,
+	cancelAction,
+	billingBehavior,
+	refundBehavior,
 }: {
 	customerId: string;
 	product: ProductV2;
@@ -31,7 +39,29 @@ export const getUpdateSubscriptionBody = ({
 	freeTrial?: CreateFreeTrial | null;
 	// Custom items - separate from isCustom logic for preview support
 	items?: ProductItem[] | null;
+	// Cancel action fields
+	cancelAction?: CancelActionValue | null;
+	billingBehavior?: BillingBehavior | null;
+	refundBehavior?: RefundBehaviorValue | null;
 }) => {
+	// For cancel actions, only include cancellation-related fields
+	if (cancelAction) {
+		return {
+			customer_id: customerId,
+			product_id: product.id,
+			entity_id: entityId || undefined,
+			cancel_action: cancelAction,
+			billing_behavior:
+				cancelAction === "cancel_immediately"
+					? billingBehavior || undefined
+					: undefined,
+			refund_behavior:
+				cancelAction === "cancel_immediately"
+					? refundBehavior || undefined
+					: undefined,
+		};
+	}
+
 	const customData = isCustom
 		? {
 				items: product.items,

@@ -1,6 +1,4 @@
-import { Feature } from "@autumn/shared";
-
-import { Organization } from "@autumn/shared";
+import { type Feature, Organization } from "@autumn/shared";
 
 export const getFeatureName = ({
 	feature,
