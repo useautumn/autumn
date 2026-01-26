@@ -12,7 +12,6 @@ export const expectTrialEndsAtCorrect = ({
 	const productsAfter = cusAfter.products;
 
 	for (const productBefore of productsBefore) {
-		// @ts-expect-error
 		const trialEndsAtBefore = productBefore.trial_ends_at;
 
 		if (!trialEndsAtBefore) {
@@ -20,7 +19,7 @@ export const expectTrialEndsAtCorrect = ({
 		}
 
 		const productAfter = productsAfter.find((p) => p.id === productBefore.id);
-		// @ts-expect-error
+
 		expect(productAfter?.trial_ends_at).to.equal(trialEndsAtBefore);
 	}
 };
