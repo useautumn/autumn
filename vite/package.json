@@ -17,6 +17,7 @@
 	"author": "Recase Inc.",
 	"license": "Apache-2.0",
 	"dependencies": {
+		"better-auth": "1.4.12",
 		"@ai-sdk/react": "^3.0.25",
 		"@amplitude/unified": "^1.0.0-beta.9",
 		"@autumn/shared": "workspace:*",
@@ -66,7 +67,6 @@
 		"ai": "^6.0.5",
 		"autumn-js": "^0.1.8",
 		"axios": "^1.8.3",
-		"better-auth": "^1.2.9",
 		"buffer": "^6.0.3",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
