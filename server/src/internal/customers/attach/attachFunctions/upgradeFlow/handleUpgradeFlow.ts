@@ -167,7 +167,15 @@ export const handleUpgradeFlow = async ({
 			});
 		}
 
-		const schedule = await paramsToCurSubSchedule({ attachParams });
+		const schedule = await paramsToCurSubSchedule({
+			attachParams,
+			scheduleId:
+				typeof curSub?.schedule === "string"
+					? curSub.schedule
+					: typeof curSub?.schedule === "object"
+						? curSub.schedule?.id
+						: undefined,
+		});
 
 		if (schedule) {
 			let removeCusProducts: FullCusProduct[] | undefined;
@@ -185,6 +193,11 @@ export const handleUpgradeFlow = async ({
 					addNewProducts = false;
 				}
 			}
+
+			console.log(
+				`REMOVE CUS PRODUCTS: ${removeCusProducts?.map((cp) => cp.product.id).join(", ")}`,
+			);
+			console.log(`ADD NEW PRODUCTS: ${addNewProducts}`);
 
 			await handleUpgradeFlowSchedule({
 				ctx,
