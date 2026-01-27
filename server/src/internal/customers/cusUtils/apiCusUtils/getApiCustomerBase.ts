@@ -52,7 +52,7 @@ export const getApiCustomerBase = async ({
 		env: fullCus.env,
 		metadata: fullCus.metadata,
 
-		subscriptions: apiSubscriptions.filter((s) => s.status === "active"),
+		subscriptions: apiSubscriptions,
 		purchases: {},
 
 		balances: apiBalances,

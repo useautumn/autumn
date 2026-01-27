@@ -5,7 +5,7 @@ import {
 	type FullCusProduct,
 	type FullCustomerEntitlement,
 	type FullCustomerPrice,
-	isUnlimitedCusEnt,
+	isUnlimitedCustomerEntitlement as isUnlimitedCusEnt,
 	nullish,
 	numberWithCommas,
 } from "@autumn/shared";
@@ -45,7 +45,7 @@ export function BalanceEditSheet() {
 	const [addValue, setAddValue] = useState<string>("");
 
 	const hasMultipleBalances = originalEntitlements.length > 1;
-	const [grantedBalanceChanged, setGrantedBalanceChanged] = useState(false);
+	const [_grantedBalanceChanged, setGrantedBalanceChanged] = useState(false);
 
 	// Get the selected entitlement
 	const selectedCusEnt = originalEntitlements.find(

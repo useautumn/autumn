@@ -14,6 +14,7 @@ export * from "./balanceUtils/customerEntitlementToBalancePrice.js";
 // Granted balance utils
 export * from "./balanceUtils/grantedBalanceUtils/cusEntsToAdjustment.js";
 export * from "./balanceUtils/grantedBalanceUtils/cusEntsToAllowance.js";
+export * from "./balanceUtils/grantedBalanceUtils/cusEntsToGrantedBalance.js";
 // Rollover utils
 export * from "./balanceUtils/rollovers/cusEntsToRolloverBalance.js";
 export * from "./balanceUtils/rollovers/cusEntsToRolloverGranted.js";

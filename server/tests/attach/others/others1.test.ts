@@ -1,18 +1,16 @@
-import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
-import { beforeAll, describe, expect, test } from "bun:test";
-import chalk from "chalk";
-import type Stripe from "stripe";
-import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { beforeAll, describe, test } from "bun:test";
+import { LegacyVersion } from "@autumn/shared";
 import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
 import {
 	expectDowngradeCorrect,
 	expectNextCycleCorrect,
 } from "@tests/utils/expectUtils/expectScheduleUtils.js";
-import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
+import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
 const testCase = "others1";
 
@@ -42,18 +40,18 @@ describe(`${chalk.yellowBright(`${testCase}: Testing trials: pro with trial -> p
 	const curUnix = new Date().getTime();
 
 	beforeAll(async () => {
-		await initProductsV0({
-			ctx,
-			products: [free, pro, premium],
-			prefix: testCase,
-		});
-
 		const { testClockId: testClockId1 } = await initCustomerV3({
 			ctx,
 			customerId,
 			customerData: {},
 			attachPm: "success",
 			withTestClock: true,
+		});
+
+		await initProductsV0({
+			ctx,
+			products: [free, pro, premium],
+			prefix: testCase,
 		});
 
 		testClockId = testClockId1!;
