@@ -14,7 +14,6 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { CusService } from "../CusService.js";
 import { getApiCustomer } from "../cusUtils/apiCusUtils/getApiCustomer.js";
-import { deleteCachedFullCustomer } from "../cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { getOrSetCachedFullCustomer } from "../cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
 
 export const handleUpdateCustomerV2 = createRoute({
@@ -127,13 +126,6 @@ export const handleUpdateCustomerV2 = createRoute({
 			orgId: org.id,
 			env,
 			update: updateData,
-		});
-
-		// Invalidate cache after DB update
-		await deleteCachedFullCustomer({
-			customerId: customer_id,
-			ctx,
-			source: "handleUpdateCustomerV2",
 		});
 
 		// Skip cache to get fresh data after update

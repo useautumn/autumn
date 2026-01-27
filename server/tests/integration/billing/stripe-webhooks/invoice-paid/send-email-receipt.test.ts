@@ -39,7 +39,7 @@ test(`${chalk.yellowBright("invoice.paid: sends email receipt when send_email_re
 	});
 
 	// Step 1: Create customer and attach product (initial invoice.paid fires here)
-	const { ctx, customer, testClockId } = await initScenario({
+	const { ctx, customer, testClockId, autumnV1 } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ testClock: true, paymentMethod: "success" }),
@@ -53,21 +53,16 @@ test(`${chalk.yellowBright("invoice.paid: sends email receipt when send_email_re
 	expect(testClockId).toBeDefined();
 
 	// Step 2: Update customer to enable email receipts BEFORE the next invoice.paid
-	await CusService.update({
-		db: ctx.db,
-		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
-		update: {
-			send_email_receipts: true,
-			email: testEmail,
-		},
+	// Use the API to ensure the email is synced to Stripe
+	await autumnV1.customers.update(customerId, {
+		send_email_receipts: true,
+		email: testEmail,
 	});
 
 	// Small delay to ensure DB write is committed before webhook reads it
 	await timeout(1000);
 
-	// Verify the update was applied
+	// Verify the update was applied (both Autumn and Stripe)
 	const updatedCustomer = await CusService.getFull({
 		db: ctx.db,
 		idOrInternalId: customerId,
@@ -76,6 +71,14 @@ test(`${chalk.yellowBright("invoice.paid: sends email receipt when send_email_re
 	});
 	expect(updatedCustomer.send_email_receipts).toBe(true);
 	expect(updatedCustomer.email).toBe(testEmail);
+
+	// Verify Stripe customer also has the email
+	const stripeCustomer = await ctx.stripeCli.customers.retrieve(
+		stripeCustomerId!,
+	);
+	if (!stripeCustomer.deleted) {
+		expect(stripeCustomer.email).toBe(testEmail);
+	}
 
 	// Step 3: Advance to next billing cycle - this triggers invoice.paid webhook
 	// which should now set receipt_email on the PaymentIntent
@@ -223,7 +226,7 @@ test(`${chalk.yellowBright("invoice.paid: does NOT send email receipt when custo
 	});
 
 	// Step 1: Create customer and attach product
-	const { ctx, customer, testClockId } = await initScenario({
+	const { ctx, customer, testClockId, autumnV1 } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ testClock: true, paymentMethod: "success" }),
@@ -236,22 +239,21 @@ test(`${chalk.yellowBright("invoice.paid: does NOT send email receipt when custo
 	expect(stripeCustomerId).toBeDefined();
 	expect(testClockId).toBeDefined();
 
-	// Step 2: Enable email receipts but clear the email address
-	await CusService.update({
-		db: ctx.db,
-		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
-		update: {
-			send_email_receipts: true,
-			email: "", // Empty email
-		},
+	// Step 2: Enable email receipts via API, then clear Stripe customer's email
+	// (API validates email format, so we clear Stripe email directly)
+	await autumnV1.customers.update(customerId, {
+		send_email_receipts: true,
 	});
 
-	// Small delay to ensure DB write is committed
+	// Clear the email on the Stripe customer directly
+	await ctx.stripeCli.customers.update(stripeCustomerId!, {
+		email: "",
+	});
+
+	// Small delay to ensure changes are committed
 	await timeout(1000);
 
-	// Verify the update was applied
+	// Verify send_email_receipts was enabled
 	const updatedCustomer = await CusService.getFull({
 		db: ctx.db,
 		idOrInternalId: customerId,
@@ -259,7 +261,14 @@ test(`${chalk.yellowBright("invoice.paid: does NOT send email receipt when custo
 		env: ctx.env,
 	});
 	expect(updatedCustomer.send_email_receipts).toBe(true);
-	expect(updatedCustomer.email).toBe("");
+
+	// Verify Stripe customer has no email
+	const stripeCustomer = await ctx.stripeCli.customers.retrieve(
+		stripeCustomerId!,
+	);
+	if (!stripeCustomer.deleted) {
+		expect(stripeCustomer.email).toBeNull();
+	}
 
 	// Step 3: Advance to next billing cycle - this triggers invoice.paid webhook
 	// Since customer has no email, receipt_email should NOT be set
