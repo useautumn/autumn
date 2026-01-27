@@ -1,3 +1,4 @@
+import { loadLocalEnv } from "@/utils/envUtils";
 import { execSync } from "node:child_process";
 
 const isUnitTest = () => {
@@ -31,6 +32,6 @@ if (isUnitTest()) {
 } else {
 	console.log("--- Setup integration tests ---");
 	await loadInfisicalSecrets();
-	// loadLocalEnv();
+	loadLocalEnv();
 	console.log("--- Setup integration tests complete ---");
 }
