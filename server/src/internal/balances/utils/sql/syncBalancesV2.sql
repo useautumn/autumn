@@ -8,6 +8,7 @@
 --     - entities: jsonb (the full entities object)
 --     - next_reset_at: bigint/number (unix timestamp, for conflict detection)
 --     - entity_count: number (for conflict detection)
+--     - cache_version: number (if defined, skip write if DB cache_version differs)
 --   rollover_updates: array of objects with:
 --     - rollover_id: string
 --     - balance: number
@@ -39,9 +40,11 @@ DECLARE
   ent_entities jsonb;
   ent_next_reset_at bigint;
   ent_entity_count int;
+  ent_cache_version int;
   
   db_next_reset_at bigint;
   db_entity_count int;
+  db_cache_version int;
   
   rollover_obj jsonb;
   rollover_id text;
@@ -98,6 +101,7 @@ BEGIN
       ent_entities := ent_obj->'entities';
       ent_next_reset_at := (ent_obj->>'next_reset_at')::bigint;
       ent_entity_count := COALESCE((ent_obj->>'entity_count')::int, 0);
+      ent_cache_version := COALESCE((ent_obj->>'cache_version')::int, 0);
       
       -- Get current DB values for conflict detection
       SELECT 
@@ -105,8 +109,9 @@ BEGIN
         CASE 
           WHEN ce.entities IS NULL OR jsonb_typeof(ce.entities) != 'object' THEN 0
           ELSE (SELECT count(*) FROM jsonb_object_keys(ce.entities))::int
-        END
-      INTO db_next_reset_at, db_entity_count
+        END,
+        COALESCE(ce.cache_version, 0)
+      INTO db_next_reset_at, db_entity_count, db_cache_version
       FROM customer_entitlements ce
       WHERE ce.id = ent_id;
       
@@ -121,6 +126,12 @@ BEGIN
       IF ent_entity_count != COALESCE(db_entity_count, 0) THEN
         RAISE EXCEPTION 'ENTITY_COUNT_MISMATCH cus_ent_id:% cache_count:% db_count:%',
           ent_id, ent_entity_count, COALESCE(db_entity_count, 0);
+      END IF;
+      
+      -- Guard 3: Check cache_version mismatch (stale cache detected)
+      IF ent_cache_version != db_cache_version THEN
+        RAISE EXCEPTION 'CACHE_VERSION_MISMATCH cus_ent_id:% cache_version:% db_version:%',
+          ent_id, ent_cache_version, db_cache_version;
       END IF;
       
       -- Update the customer_entitlement row directly
