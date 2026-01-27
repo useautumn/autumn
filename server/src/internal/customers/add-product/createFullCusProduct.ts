@@ -12,6 +12,7 @@ import {
 	type FullCusProduct,
 	type FullCustomer,
 	type FullProduct,
+	type InsertCustomerEntitlement,
 	type InsertReplaceable,
 	type Price,
 	ProcessorType,
@@ -173,7 +174,7 @@ export const insertFullCusProduct = async ({
 
 	await CusEntService.insert({
 		db,
-		data: cusEnts,
+		data: cusEnts as InsertCustomerEntitlement[],
 	});
 
 	await CusPriceService.insert({

@@ -27,7 +27,7 @@ export const CustomerEntitlementSchema = z.object({
 	feature_id: z.string(), // for debugging purposes
 
 	customer_product_id: z.string().nullable(),
-	entitlement_id: z.string().nullable(),
+	entitlement_id: z.string(),
 	created_at: z.number(),
 
 	// Balance fields
@@ -42,6 +42,7 @@ export const CustomerEntitlementSchema = z.object({
 
 	// Expiry for loose entitlements (entitlements without reset intervals)
 	expires_at: z.number().nullable(),
+	cache_version: z.number().optional().default(0),
 
 	// Group by fields
 	entities: z.record(z.string(), EntityBalanceSchema).nullish(),
