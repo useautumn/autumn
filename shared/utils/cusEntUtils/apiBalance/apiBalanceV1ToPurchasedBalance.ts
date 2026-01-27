@@ -4,7 +4,7 @@ import {
 	apiBalanceV1ToOverage,
 } from "@utils/cusEntUtils/apiBalance/apiBalanceV1ToOverage";
 import { apiBalanceV1ToPrepaidQuantity } from "@utils/cusEntUtils/apiBalance/apiBalanceV1ToPrepaidQuantity";
-import Decimal from "decimal.js";
+import { Decimal } from "decimal.js";
 
 export const apiBalanceBreakdownV1ToPurchasedBalance = ({
 	apiBalanceBreakdown,

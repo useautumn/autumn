@@ -9,7 +9,7 @@ import type {
 import { apiBalanceV1ToPrepaidQuantity } from "@utils/cusEntUtils/apiBalance/apiBalanceV1ToPrepaidQuantity.js";
 import { apiBalanceV1ToPurchasedBalance } from "@utils/index.js";
 import { deduplicateArray } from "@utils/utils.js";
-import Decimal from "decimal.js";
+import { Decimal } from "decimal.js";
 import type { CusFeatureLegacyData } from "../cusFeatureLegacyData.js";
 
 export function transformApiBalanceBreakdownV1ToV0({

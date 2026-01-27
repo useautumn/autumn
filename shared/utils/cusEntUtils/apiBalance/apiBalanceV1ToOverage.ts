@@ -1,6 +1,6 @@
 import type { ApiBalanceBreakdownV1, ApiBalanceV1 } from "@api/models";
 import { sumValues } from "@utils/utils";
-import Decimal from "decimal.js";
+import { Decimal } from "decimal.js";
 
 export const apiBalanceBreakdownV1ToOverage = ({
 	apiBalanceBreakdown,
@@ -24,7 +24,10 @@ export const apiBalanceV1ToOverage = ({
 	// when additional granted balance is added from other products
 	return sumValues(
 		breakdownItems.map((item) =>
-			Math.max(0, apiBalanceBreakdownV1ToOverage({ apiBalanceBreakdown: item })),
+			Math.max(
+				0,
+				apiBalanceBreakdownV1ToOverage({ apiBalanceBreakdown: item }),
+			),
 		),
 	);
 };
