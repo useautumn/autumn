@@ -14,14 +14,13 @@ export const handleCancelV2 = createRoute({
 	// body: CancelBodySchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { db, org, env } = ctx;
+
 		const {
 			customer_id,
 			product_id,
 			entity_id,
 			cancel_immediately = false,
 			prorate: bodyProrate = true,
-			customer_product_id,
 		} = await c.req.json();
 
 		const updateSubscriptionBody: UpdateSubscriptionV0Params = {

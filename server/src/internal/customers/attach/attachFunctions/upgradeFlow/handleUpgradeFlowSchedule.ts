@@ -9,7 +9,10 @@ import { isFreeProduct } from "@/internal/products/productUtils.js";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 import { attachParamsToCurCusProduct } from "../../attachUtils/convertAttachParams.js";
 import { paramsToScheduleItems } from "../../mergeUtils/paramsToScheduleItems.js";
-import { getCurrentPhaseIndex } from "../../mergeUtils/phaseUtils/phaseUtils.js";
+import {
+	getCurrentPhaseIndex,
+	logPhases,
+} from "../../mergeUtils/phaseUtils/phaseUtils.js";
 import { updateCurSchedule } from "../../mergeUtils/updateCurSchedule.js";
 
 export const handleUpgradeFlowSchedule = async ({
@@ -62,7 +65,7 @@ export const handleUpgradeFlowSchedule = async ({
 		addNewProducts,
 	});
 
-	// await logPhases({ phases: newItems.phases, db: ctx.db });
+	await logPhases({ phases: newItems.phases, db: ctx.db });
 
 	// Should release schedule...
 	const newCurPhaseIndex = getCurrentPhaseIndex({

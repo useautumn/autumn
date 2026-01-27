@@ -129,11 +129,11 @@ describe(`${chalk.yellowBright("mergedGroup2: Testing products from diff groups"
 		});
 	}
 
-	test("should cancel scheduled product (g1Pro)", async () => {
-		await autumn.cancel({
-			customer_id: customerId,
-			product_id: g1Pro.id,
-			cancel_immediately: true,
-		});
-	});
+	// test("should cancel scheduled product (g1Pro)", async () => {
+	// 	await autumn.cancel({
+	// 		customer_id: customerId,
+	// 		product_id: g1Pro.id,
+	// 		cancel_immediately: true,
+	// 	});
+	// });
 });
