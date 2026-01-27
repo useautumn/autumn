@@ -22,7 +22,7 @@ export const sendEmailReceipt = async ({
 		return;
 	}
 
-	if (!fullCustomer.should_send_email_receipts) {
+	if (!fullCustomer.send_email_receipts) {
 		logger.debug(
 			"[invoice.paid] Customer has email receipts disabled, skipping",
 		);

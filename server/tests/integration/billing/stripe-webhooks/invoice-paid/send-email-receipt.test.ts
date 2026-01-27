@@ -3,7 +3,7 @@
  *
  * Tests for the sendEmailReceipt task in the invoice.paid webhook handler.
  * Verifies that email receipts are sent (via PaymentIntent.receipt_email)
- * based on the customer's should_send_email_receipts flag.
+ * based on the customer's send_email_receipts flag.
  */
 
 import { expect, test } from "bun:test";
@@ -16,7 +16,7 @@ import { CusService } from "@/internal/customers/CusService";
 import { timeout } from "@/utils/genUtils";
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Email receipt sent when should_send_email_receipts is true
+// TEST 1: Email receipt sent when send_email_receipts is true
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -28,7 +28,7 @@ import { timeout } from "@/utils/genUtils";
  * Expected Result:
  * - PaymentIntent from the renewal invoice should have receipt_email set
  */
-test(`${chalk.yellowBright("invoice.paid: sends email receipt when should_send_email_receipts is true")}`, async () => {
+test(`${chalk.yellowBright("invoice.paid: sends email receipt when send_email_receipts is true")}`, async () => {
 	const customerId = "inv-paid-email-receipt-enabled";
 	const testEmail = "test-receipt@example.com";
 
@@ -59,7 +59,7 @@ test(`${chalk.yellowBright("invoice.paid: sends email receipt when should_send_e
 		orgId: ctx.org.id,
 		env: ctx.env,
 		update: {
-			should_send_email_receipts: true,
+			send_email_receipts: true,
 			email: testEmail,
 		},
 	});
@@ -74,7 +74,7 @@ test(`${chalk.yellowBright("invoice.paid: sends email receipt when should_send_e
 		orgId: ctx.org.id,
 		env: ctx.env,
 	});
-	expect(updatedCustomer.should_send_email_receipts).toBe(true);
+	expect(updatedCustomer.send_email_receipts).toBe(true);
 	expect(updatedCustomer.email).toBe(testEmail);
 
 	// Step 3: Advance to next billing cycle - this triggers invoice.paid webhook
@@ -121,19 +121,19 @@ test(`${chalk.yellowBright("invoice.paid: sends email receipt when should_send_e
 }, 120000); // 2 minute timeout for test clock operations
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Email receipt NOT sent when should_send_email_receipts is false
+// TEST 2: Email receipt NOT sent when send_email_receipts is false
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * Scenario:
  * - Create customer and attach paid product
- * - Customer has should_send_email_receipts: false (default)
+ * - Customer has send_email_receipts: false (default)
  * - Advance to next billing cycle (triggers invoice.paid)
  *
  * Expected Result:
  * - PaymentIntent from the renewal invoice should NOT have receipt_email set
  */
-test(`${chalk.yellowBright("invoice.paid: does NOT send email receipt when should_send_email_receipts is false")}`, async () => {
+test(`${chalk.yellowBright("invoice.paid: does NOT send email receipt when send_email_receipts is false")}`, async () => {
 	const customerId = "inv-paid-email-receipt-disabled";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -143,7 +143,7 @@ test(`${chalk.yellowBright("invoice.paid: does NOT send email receipt when shoul
 	});
 
 	// Step 1: Create customer and attach product
-	// Customer has should_send_email_receipts: false by default
+	// Customer has send_email_receipts: false by default
 	const { ctx, customer, testClockId } = await initScenario({
 		customerId,
 		setup: [
@@ -158,7 +158,7 @@ test(`${chalk.yellowBright("invoice.paid: does NOT send email receipt when shoul
 	expect(testClockId).toBeDefined();
 
 	// Step 2: Advance to next billing cycle - this triggers invoice.paid webhook
-	// Since should_send_email_receipts is false, receipt_email should NOT be set
+	// Since send_email_receipts is false, receipt_email should NOT be set
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
@@ -243,7 +243,7 @@ test(`${chalk.yellowBright("invoice.paid: does NOT send email receipt when custo
 		orgId: ctx.org.id,
 		env: ctx.env,
 		update: {
-			should_send_email_receipts: true,
+			send_email_receipts: true,
 			email: "", // Empty email
 		},
 	});
@@ -258,7 +258,7 @@ test(`${chalk.yellowBright("invoice.paid: does NOT send email receipt when custo
 		orgId: ctx.org.id,
 		env: ctx.env,
 	});
-	expect(updatedCustomer.should_send_email_receipts).toBe(true);
+	expect(updatedCustomer.send_email_receipts).toBe(true);
 	expect(updatedCustomer.email).toBe("");
 
 	// Step 3: Advance to next billing cycle - this triggers invoice.paid webhook

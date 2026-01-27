@@ -15,6 +15,7 @@ export const initCustomerV3 = async ({
 	withDefault = false,
 	defaultGroup = customerId,
 	skipWebhooks,
+	sendEmailReceipts,
 }: {
 	ctx: TestContext;
 	customerId: string;
@@ -24,10 +25,10 @@ export const initCustomerV3 = async ({
 	withDefault?: boolean;
 	defaultGroup?: string;
 	skipWebhooks?: boolean;
+	sendEmailReceipts?: boolean;
 }) => {
 	const name = customerId;
 	const email = `${customerId}@example.com`;
-	const fingerprint_ = "";
 	const { stripeCli } = ctx;
 	const autumn = new AutumnInt({
 		version: ApiVersion.V1_2,
@@ -62,6 +63,7 @@ export const initCustomerV3 = async ({
 		email,
 		fingerprint: customerData?.fingerprint,
 		stripe_id: stripeCus.id,
+		send_email_receipts: sendEmailReceipts,
 		internalOptions: {
 			disable_defaults: !withDefault,
 			// Only pass default_group when defaults are enabled
