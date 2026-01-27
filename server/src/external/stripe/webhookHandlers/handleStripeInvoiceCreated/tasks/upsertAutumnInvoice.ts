@@ -1,4 +1,5 @@
-import { cp } from "@autumn/shared";
+import { cp, stripeToAtmnAmount } from "@autumn/shared";
+import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice";
 import { stripeSubscriptionToScheduleId } from "@/external/stripe/subscriptions";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { InvoiceService } from "@/internal/invoices/InvoiceService";
@@ -24,11 +25,17 @@ export const upsertAutumnInvoice = async ({
 
 	// Skip first invoice (subscription_create)
 	if (stripeInvoice.billing_reason !== "subscription_cycle") {
-		ctx.logger.debug(
+		ctx.logger.info(
 			"[invoice.created] Skipping invoice upsert for non periodic invoice",
 		);
 		return;
 	}
+
+	const updatedStripeInvoice = await getStripeInvoice({
+		stripeClient: ctx.stripeCli,
+		invoiceId: stripeInvoice.id,
+		expand: ["discounts.source.coupon", "total_discount_amounts"],
+	});
 
 	// Add scheduled customer products that have started
 	const startedScheduledCustomerProducts =
@@ -77,11 +84,15 @@ export const upsertAutumnInvoice = async ({
 		updates: {
 			product_ids: productIds,
 			internal_product_ids: internalProductIds,
+			total: stripeToAtmnAmount({
+				amount: updatedStripeInvoice.total,
+				currency: updatedStripeInvoice.currency,
+			}),
 		},
 	});
 
 	if (updated) {
-		ctx.logger.debug(
+		ctx.logger.info(
 			`[invoice.created] Updated existing invoice ${stripeInvoice.id}`,
 		);
 		return;
@@ -90,7 +101,7 @@ export const upsertAutumnInvoice = async ({
 	// Create new
 	await InvoiceService.createInvoiceFromStripe({
 		db: ctx.db,
-		stripeInvoice,
+		stripeInvoice: updatedStripeInvoice,
 		internalCustomerId,
 		internalEntityId,
 		org: ctx.org,
@@ -99,5 +110,5 @@ export const upsertAutumnInvoice = async ({
 		items: [],
 	});
 
-	ctx.logger.debug(`[invoice.created] Created new invoice ${stripeInvoice.id}`);
+	ctx.logger.info(`[invoice.created] Created new invoice ${stripeInvoice.id}`);
 };

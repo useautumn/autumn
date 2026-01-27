@@ -147,6 +147,13 @@ export const updateInvoiceIfExists = async ({
 			updates: {
 				status: invoice.status as InvoiceStatus,
 				hosted_invoice_url: invoice.hosted_invoice_url,
+				total: stripeToAtmnAmount({
+					amount: invoice.total,
+					currency: invoice.currency,
+				}),
+				discounts: getInvoiceDiscounts({
+					expandedInvoice: invoice,
+				}),
 			},
 		});
 
