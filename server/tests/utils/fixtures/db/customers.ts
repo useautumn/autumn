@@ -23,6 +23,7 @@ const create = ({
 	customer_products: customerProducts,
 	entities: [],
 	extra_customer_entitlements: [],
+	should_send_email_receipts: false,
 });
 
 // ═══════════════════════════════════════════════════════════════════
