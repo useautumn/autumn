@@ -9,7 +9,7 @@
  */
 
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3 } from "@autumn/shared";
+import { type ApiCustomerV3, InvoiceStatus } from "@autumn/shared";
 import { calculateExpectedInvoiceAmount } from "@tests/integration/billing/utils/calculateExpectedInvoiceAmount";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -18,6 +18,7 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { InvoiceService } from "@/internal/invoices/InvoiceService";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Attach pro with consumable → track into overage (decimal) → advance cycle
@@ -67,8 +68,8 @@ test.concurrent(`${chalk.yellowBright("invoice.created consumable: attach → tr
 		options: { includeFixed: false, onlyArrear: true },
 	});
 
-	// Verify overage calculation: (250.5 - 100) * $0.10 = $15.05
-	expect(expectedOverage).toBe(15.05);
+	// Verify overage calculation: (251 - 100) * $0.10 = $15.1
+	expect(expectedOverage).toBe(15.1);
 
 	// Verify final state
 	const customerAfterAdvance =
@@ -423,4 +424,55 @@ test.concurrent(`${chalk.yellowBright("invoice.created consumable: multiple feat
 	// Both balances should be reset
 	expect(customerAfterAdvance.features[TestFeature.Messages].balance).toBe(100);
 	expect(customerAfterAdvance.features[TestFeature.Words].balance).toBe(50);
+});
+
+test.concurrent(`${chalk.yellowBright("invoice.created consumable: invoice total is correct (after invoice.created)")}`, async () => {
+	const customerId = "inv-created-cons-total-correct";
+
+	// Create two consumable items with different pricing
+	const consumableMessagesItem = items.consumableMessages({
+		includedUsage: 100,
+	});
+
+	const pro = products.pro({
+		id: "pro",
+		items: [consumableMessagesItem],
+	});
+
+	const { autumnV1, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [
+			s.attach({ productId: pro.id }),
+			// Track both features into overage
+			s.track({ featureId: TestFeature.Messages, value: 200 }),
+			s.advanceTestClock({ months: 1 }),
+		],
+	});
+
+	// Calculate expected overage for messages: (200 - 100) * $0.10 = $10
+	const messagesOverage = calculateExpectedInvoiceAmount({
+		items: pro.items,
+		usage: [{ featureId: TestFeature.Messages, value: 200 }],
+		options: { includeFixed: false, onlyArrear: true },
+	});
+
+	expect(messagesOverage).toBe(10);
+	const totalOverage = messagesOverage;
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId, {
+		with_autumn_id: true,
+	});
+
+	const invoices = await InvoiceService.list({
+		db: ctx.db,
+		internalCustomerId: customer.autumn_id!,
+	});
+
+	expect(invoices.length).toBe(2);
+	expect(invoices[1].status).toBe(InvoiceStatus.Draft);
+	expect(invoices[1].total).toBe(20 + totalOverage);
 });

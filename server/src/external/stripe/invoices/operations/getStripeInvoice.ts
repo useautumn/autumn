@@ -21,6 +21,15 @@ type InvoiceExpandMap = {
 	"discounts.source.coupon": {
 		discounts: (Stripe.Discount & { source: { coupon: Stripe.Coupon } })[];
 	};
+	total_discount_amounts: {
+		total_discount_amounts: Stripe.Invoice.TotalDiscountAmount[];
+	};
+	"total_discount_amounts.discount": {
+		total_discount_amounts: (Omit<
+			Stripe.Invoice.TotalDiscountAmount,
+			"discount"
+		> & { discount: Stripe.Discount })[];
+	};
 };
 
 type InvoiceExpandKey = keyof InvoiceExpandMap;
