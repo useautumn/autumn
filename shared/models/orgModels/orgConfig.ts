@@ -20,6 +20,7 @@ export const OrgConfigSchema = z.object({
 	cache_customer: z.boolean().default(false),
 	invoice_memos: z.boolean().default(false),
 	entity_product: z.boolean().default(false),
+	void_invoices_on_subscription_deletion: z.boolean().default(false),
 });
 
 export type OrgConfig = z.infer<typeof OrgConfigSchema>;
