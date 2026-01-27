@@ -45,6 +45,9 @@ export const ExtCustomerDataSchema = z
 			internal: true,
 			description: "External processors for the customer",
 		}),
+		should_send_email_receipts: z.boolean().optional().meta({
+			description: "Whether to send email receipts to this customer",
+		}),
 	})
 	.meta({
 		id: "CustomerData",

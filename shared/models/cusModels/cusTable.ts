@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+	boolean,
 	foreignKey,
 	jsonb,
 	numeric,
@@ -33,6 +34,9 @@ export const customers = pgTable(
 		processors: jsonb()
 			.$type<ExternalProcessors>()
 			.default({} as ExternalProcessors),
+		should_send_email_receipts: boolean("should_send_email_receipts").default(
+			false,
+		),
 	},
 	(table) => [
 		unique("cus_id_constraint").on(table.org_id, table.id, table.env),
