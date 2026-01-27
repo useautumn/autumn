@@ -1,47 +1,47 @@
-import { expect, test } from "bun:test";
-import { TestFeature } from "@tests/setup/v2Features.js";
+import { test } from "bun:test";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-test.concurrent(`${chalk.yellowBright("temp: concurrent entitled calls")}`, async () => {
-	const wordsItem = items.monthlyWords({ includedUsage: 200 });
+test.concurrent(`${chalk.yellowBright("temp: attach free default, attach pro annual, cancel immediately")}`, async () => {
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+
 	const free = products.base({
 		id: "free",
-		items: [wordsItem],
+		items: [messagesItem],
 		isDefault: true,
 	});
 
+	const proAnnual = products.proAnnual({
+		id: "pro-annual",
+		items: [messagesItem],
+	});
+
 	const { customerId, autumnV1 } = await initScenario({
-		customerId: "temp-entitled-concurrent",
-		setup: [s.customer({ withDefault: true }), s.products({ list: [free] })],
-		actions: [],
+		customerId: "temp-free-pro-annual-cancel",
+		setup: [
+			s.customer({ paymentMethod: "success", withDefault: true }),
+			s.products({ list: [free, proAnnual] }),
+		],
+		actions: [
+			// Attach pro annual (free default already attached via withDefault: true)
+			s.attach({ productId: proAnnual.id }),
+		],
 	});
 
-	// Call /entitled 5 times concurrently
-	const entitledPromises = Array.from({ length: 5 }, () =>
-		autumnV1.entitled({
-			customerId,
-			featureId: TestFeature.Words,
-		}),
-	);
+	// Verify pro annual is active
+	const customerAfterAttach = await autumnV1.customers.get(customerId);
+	console.log("Customer after attach:", JSON.stringify(customerAfterAttach.products, null, 2));
 
-	const entitledResults = await Promise.all(entitledPromises);
-
-	// Verify all entitled calls succeeded
-	for (const result of entitledResults) {
-		expect(result.allowed).toBe(true);
-	}
-
-	// Call /events with value 25
-	await autumnV1.events.send({
-		customerId,
-		featureId: TestFeature.Words,
-		value: 25,
+	// Cancel pro annual immediately
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: proAnnual.id,
+		cancel_action: "cancel_immediately",
 	});
 
-	// Verify balance is now 200 - 25 = 175
-	const customer = await autumnV1.customers.get(customerId);
-	expect(customer.features[TestFeature.Words].balance).toBe(175);
+	// Verify state after cancel
+	const customerAfterCancel = await autumnV1.customers.get(customerId);
+	console.log("Customer after cancel:", JSON.stringify(customerAfterCancel.products, null, 2));
 });
