@@ -35,6 +35,8 @@
 		"setup": "node scripts/setup/setup.js",
 		"setup:test": "infisical run --env=dev -- bun scripts/setup/setup-test.ts",
 		"t": "infisical run --env=dev -- bun scripts/test.ts",
+		"knip": "knip",
+		"knip:fix": "knip --fix",
 		"migrate-functions": "infisical run --env=dev -- bun scripts/migrations/migrate-functions.ts",
 		"migrate-functions:prod": "infisical run --env=prod -- bun scripts/migrations/migrate-functions.ts",
 		"validate-schema": "infisical run --env=prod -- bun scripts/migrations/validate-schema.ts",
@@ -64,6 +66,7 @@
 		"@types/node": "^24.9.1",
 		"concurrently": "^9.2.1",
 		"dotenv": "^16.6.1",
-		"inquirer": "^12.10.0"
+		"inquirer": "^12.10.0",
+		"knip": "^5.82.1"
 	}
 }
