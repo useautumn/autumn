@@ -1,0 +1,19 @@
+DESCRIPTION >
+    Hourly pre-aggregated events with flattened properties for fast queries.
+    Use property_key = '' for ungrouped aggregates.
+    Use property_key = '<key>' for grouped aggregates by that property.
+
+SCHEMA >
+    `org_id` String,
+    `env` String,
+    `customer_id` String,
+    `event_name` String,
+    `hour` DateTime,
+    `property_key` String,
+    `property_value` String,
+    `total_value` SimpleAggregateFunction(sum, Float64),
+    `event_count` SimpleAggregateFunction(sum, UInt64)
+
+ENGINE "AggregatingMergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(hour)"
+ENGINE_SORTING_KEY "org_id, env, event_name, property_key, hour, customer_id"

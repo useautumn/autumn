@@ -1,0 +1,41 @@
+DESCRIPTION >
+    Fast aggregate queries using pre-aggregated hourly data from events_hourly_mv.
+    Supports both ungrouped (property_key='') and grouped queries (property_key='<key>').
+    Returns unpivoted data: (period, event_name, group_value, total_value)
+
+TOKEN "aggregate_fast_read" READ
+
+NODE endpoint
+TYPE endpoint
+SQL >
+    %
+    SELECT
+        {% if String(bin_size, 'day') == 'hour' %}
+        formatDateTime(hour, '%F %T') as period,
+        {% elif String(bin_size, 'day') == 'month' %}
+        formatDateTime(toStartOfMonth(hour, {{ String(timezone, 'UTC') }}), '%F %T') as period,
+        {% else %}
+        formatDateTime(toStartOfDay(hour, {{ String(timezone, 'UTC') }}), '%F %T') as period,
+        {% end %}
+        event_name,
+        property_value as group_value,
+        sum(total_value) as total_value
+    FROM events_hourly_mv
+    WHERE
+        org_id = {{ String(org_id, '') }}
+        AND env = {{ String(env, 'test') }}
+        AND event_name IN {{ Array(event_names, 'String', default='[]') }}
+        AND hour >= toDateTime({{ String(start_date, '2024-01-01 00:00:00') }})
+        AND hour <= toDateTime({{ String(end_date, '2024-12-31 23:59:59') }})
+        AND property_key = {{ String(property_key, '') }}
+        {% if defined(customer_id) %}
+        AND customer_id = {{ String(customer_id) }}
+        {% end %}
+    GROUP BY
+        period,
+        event_name,
+        group_value
+    ORDER BY
+        period,
+        event_name,
+        group_value
