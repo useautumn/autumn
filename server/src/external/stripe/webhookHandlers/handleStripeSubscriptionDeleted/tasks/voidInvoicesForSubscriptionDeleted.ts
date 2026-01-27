@@ -18,17 +18,29 @@ export const voidInvoicesForSubscriptionDeleted = async ({
 	const { stripeSubscription } = eventContext;
 	const stripeCli = ctx.stripeCli;
 
-	// Early return if feature is disabled
 	if (!org.config.void_invoices_on_subscription_deletion) return;
+
 	const stripeCustomerId = stripeSubscription.customer.id;
-	const invoices = await stripeCli.invoices.list({
-		customer: stripeCustomerId,
-		subscription: stripeSubscription.id,
-	});
-	for (const invoice of invoices.data) {
-		if (invoice.status === "open") {
-			await stripeCli.invoices.voidInvoice(invoice.id);
-			logger.info(`[sub.deleted] Voided open invoice ${invoice.id}`);
-		}
+
+	try {
+		const invoices = await stripeCli.invoices.list({
+			customer: stripeCustomerId,
+			subscription: stripeSubscription.id,
+		});
+
+		const openInvoices = invoices.data.filter(
+			(invoice) => invoice.status === "open",
+		);
+
+		await Promise.allSettled(
+			openInvoices.map(async (invoice) => {
+				await stripeCli.invoices.voidInvoice(invoice.id);
+				logger.info(`[sub.deleted] Voided open invoice ${invoice.id}`);
+			}),
+		);
+	} catch (error) {
+		logger.warn(
+			`[sub.deleted] Failed to void invoices for subscription ${stripeSubscription.id}: ${error}`,
+		);
 	}
 };

@@ -7,50 +7,123 @@
 
 import type Stripe from "stripe";
 
-/**
- * Create a mock Stripe client with configurable paymentIntents methods
- */
-const createMockPaymentIntentsClient = ({
-	retrieveResult = { receipt_email: null } as Partial<Stripe.PaymentIntent>,
-	updateResult = {} as Partial<Stripe.PaymentIntent>,
-	retrieveError,
-	updateError,
-}: {
+// ═══════════════════════════════════════════════════════════════════
+// TYPES
+// ═══════════════════════════════════════════════════════════════════
+
+interface MockPaymentIntentsConfig {
 	retrieveResult?: Partial<Stripe.PaymentIntent>;
 	updateResult?: Partial<Stripe.PaymentIntent>;
 	retrieveError?: Error;
 	updateError?: Error;
-} = {}) => {
-	const retrieveCalls: string[] = [];
-	const updateCalls: {
-		id: string;
-		params: Stripe.PaymentIntentUpdateParams;
-	}[] = [];
+}
+
+interface MockInvoicesConfig {
+	listResult?: Partial<Stripe.ApiList<Stripe.Invoice>>;
+	voidInvoiceResult?: Partial<Stripe.Invoice>;
+	listError?: Error;
+	voidInvoiceError?: Error;
+}
+
+interface MockStripeClientConfig {
+	paymentIntents?: MockPaymentIntentsConfig;
+	invoices?: MockInvoicesConfig;
+}
+
+interface MockStripeClientCalls {
+	paymentIntents: {
+		retrieve: string[];
+		update: { id: string; params: Stripe.PaymentIntentUpdateParams }[];
+	};
+	invoices: {
+		list: Stripe.InvoiceListParams[];
+		voidInvoice: string[];
+	};
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MOCK FACTORIES
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Create a mock Stripe client with configurable methods and call tracking.
+ */
+const createMockStripeClient = (config: MockStripeClientConfig = {}) => {
+	const calls: MockStripeClientCalls = {
+		paymentIntents: {
+			retrieve: [],
+			update: [],
+		},
+		invoices: {
+			list: [],
+			voidInvoice: [],
+		},
+	};
+
+	const paymentIntentsConfig = config.paymentIntents ?? {};
+	const invoicesConfig = config.invoices ?? {};
 
 	return {
 		paymentIntents: {
 			retrieve: async (id: string) => {
-				retrieveCalls.push(id);
-				if (retrieveError) throw retrieveError;
-				return retrieveResult as Stripe.PaymentIntent;
+				calls.paymentIntents.retrieve.push(id);
+				if (paymentIntentsConfig.retrieveError)
+					throw paymentIntentsConfig.retrieveError;
+				return (paymentIntentsConfig.retrieveResult ?? {
+					receipt_email: null,
+				}) as Stripe.PaymentIntent;
 			},
 			update: async (id: string, params: Stripe.PaymentIntentUpdateParams) => {
-				updateCalls.push({ id, params });
-				if (updateError) throw updateError;
-				return updateResult as Stripe.PaymentIntent;
+				calls.paymentIntents.update.push({ id, params });
+				if (paymentIntentsConfig.updateError)
+					throw paymentIntentsConfig.updateError;
+				return (paymentIntentsConfig.updateResult ??
+					{}) as Stripe.PaymentIntent;
 			},
 		},
-		_calls: {
-			retrieve: retrieveCalls,
-			update: updateCalls,
+		invoices: {
+			list: async (params: Stripe.InvoiceListParams) => {
+				calls.invoices.list.push(params);
+				if (invoicesConfig.listError) throw invoicesConfig.listError;
+				return (invoicesConfig.listResult ?? {
+					data: [],
+				}) as Stripe.ApiList<Stripe.Invoice>;
+			},
+			voidInvoice: async (id: string) => {
+				calls.invoices.voidInvoice.push(id);
+				if (invoicesConfig.voidInvoiceError)
+					throw invoicesConfig.voidInvoiceError;
+				return (invoicesConfig.voidInvoiceResult ?? {}) as Stripe.Invoice;
+			},
 		},
+		_calls: calls,
 	};
 };
+
+// ═══════════════════════════════════════════════════════════════════
+// INVOICE HELPERS
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Create a mock Stripe invoice with configurable properties.
+ */
+const createMockInvoice = (
+	overrides: Partial<Stripe.Invoice> = {},
+): Stripe.Invoice =>
+	({
+		id: "inv_test",
+		object: "invoice",
+		status: "open",
+		customer: "cus_test",
+		subscription: "sub_test",
+		...overrides,
+	}) as Stripe.Invoice;
 
 // ═══════════════════════════════════════════════════════════════════
 // EXPORT
 // ═══════════════════════════════════════════════════════════════════
 
 export const stripeClients = {
-	createMockPaymentIntentsClient,
+	createMockStripeClient,
+	createMockInvoice,
 } as const;
