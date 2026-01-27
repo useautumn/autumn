@@ -1,0 +1,27 @@
+{
+	"$schema": "https://unpkg.com/knip@5/schema.json",
+	"workspaces": {
+		".": {
+			"ignore": [".opencode/**"]
+		},
+		"server": {
+			"entry": ["tests/**/*.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts"],
+			"ignore": ["src/_luaScripts/**", "src/_luaScriptsV2/**"]
+		},
+		"shared": {
+			"entry": ["index.ts"],
+			"project": ["**/*.ts"],
+			"includeEntryExports": false
+		},
+		"vite": {
+			"entry": ["src/main.tsx"],
+			"project": ["src/**/*.{ts,tsx}"]
+		},
+		"scripts": {
+			"entry": ["**/*.{ts,js}"],
+			"project": ["**/*.{ts,js}"]
+		}
+	},
+	"ignoreBinaries": ["infisical", "lsof", "serve"]
+}

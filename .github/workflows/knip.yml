@@ -1,0 +1,31 @@
+name: Knip
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+  pull_request:
+    branches:
+      - main
+      - staging
+
+jobs:
+  knip:
+    name: Check for unused code
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run Knip
+        run: bun knip --no-exit-code
