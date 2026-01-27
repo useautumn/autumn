@@ -24,6 +24,7 @@ export const isUnlimitedCustomerEntitlement = (
 ) => {
 	return cusEnt.entitlement.allowance_type === AllowanceType.Unlimited;
 };
+export const isUnlimitedCusEnt = isUnlimitedCustomerEntitlement;
 
 /**
  * Type guard that narrows cusEnt to have non-null entities.
