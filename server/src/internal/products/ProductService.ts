@@ -14,7 +14,17 @@ import {
 import type { DrizzleCli } from "@server/db/initDrizzle";
 import RecaseError from "@server/utils/errorUtils";
 import { notNullish } from "@server/utils/genUtils";
-import { and, desc, eq, exists, inArray, ne, or, sql } from "drizzle-orm";
+import {
+	and,
+	desc,
+	eq,
+	exists,
+	inArray,
+	isNull,
+	ne,
+	or,
+	sql,
+} from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
 import { getLatestProducts } from "./productUtils";
 
@@ -131,7 +141,11 @@ export class ProductService {
 				eq(products.env, env),
 				eq(products.is_default, true),
 				ne(products.archived, true),
-				group ? eq(products.group, group) : undefined,
+				group === "" || group === null
+					? or(isNull(products.group), eq(products.group, ""))
+					: notNullish(group)
+						? eq(products.group, group)
+						: undefined,
 				inIds ? inArray(products.id, inIds) : undefined,
 			),
 			with: {
