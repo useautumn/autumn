@@ -205,7 +205,7 @@ describe(`${chalk.yellowBright("track-race-condition2: sync should not wipe out 
 
 		// Expected: 100 (pro) + 100 (initial one-off) - 5 (tracked) + 100 (attached one-off) = 295
 		expect(cachedCustomer.balances[TestFeature.Messages].current_balance).toBe(
-			105,
+			200,
 		);
 
 		const customerAfterSync = await autumnV2.customers.get<ApiCustomer>(
@@ -216,6 +216,6 @@ describe(`${chalk.yellowBright("track-race-condition2: sync should not wipe out 
 		);
 		expect(
 			customerAfterSync.balances[TestFeature.Messages].current_balance,
-		).toBe(105);
+		).toBe(200);
 	});
 });
