@@ -16,7 +16,7 @@ export const CustomerSchema = z.object({
 	processor: z.any(),
 	processors: ExternalProcessorsSchema.nullish(),
 	metadata: z.record(z.any(), z.any()).nullish().default({}),
-	should_send_email_receipts: z.boolean().default(false),
+	send_email_receipts: z.boolean().default(false),
 });
 
 export type Customer = z.infer<typeof CustomerSchema>;
@@ -69,7 +69,7 @@ export const CreateCustomerSchema = z.object({
 	metadata: z.record(z.any(), z.any()).default({}).nullish(),
 	stripe_id: z.string().nullish(),
 	processors: ExternalProcessorsSchema.nullish(),
-	should_send_email_receipts: z.boolean().default(false),
+	send_email_receipts: z.boolean().default(false),
 });
 
 export type CreateCustomer = z.infer<typeof CreateCustomerSchema>;

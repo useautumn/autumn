@@ -2,7 +2,7 @@
  * Unit tests for sendEmailReceipt function.
  *
  * Tests the logic that sets receipt_email on PaymentIntent
- * based on customer's should_send_email_receipts flag.
+ * based on customer's send_email_receipts flag.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -38,7 +38,7 @@ const createMockFullCustomer = (
 	customer_products: [],
 	entities: [],
 	extra_customer_entitlements: [],
-	should_send_email_receipts: true,
+	send_email_receipts: true,
 	...overrides,
 });
 
@@ -81,13 +81,13 @@ describe(chalk.yellowBright("sendEmailReceipt"), () => {
 			expect(mockCli._calls.paymentIntents.update).toHaveLength(0);
 		});
 
-		test("returns when should_send_email_receipts is false", async () => {
+		test("returns when send_email_receipts is false", async () => {
 			const mockCli = stripeClients.createMockStripeClient();
 			const ctx = {
 				stripeCli: mockCli,
 				logger: createMockLogger(),
 				fullCustomer: createMockFullCustomer({
-					should_send_email_receipts: false,
+					send_email_receipts: false,
 				}),
 			} as unknown as StripeWebhookContext;
 
@@ -100,13 +100,13 @@ describe(chalk.yellowBright("sendEmailReceipt"), () => {
 			expect(mockCli._calls.paymentIntents.update).toHaveLength(0);
 		});
 
-		test("returns when should_send_email_receipts is undefined", async () => {
+		test("returns when send_email_receipts is undefined", async () => {
 			const mockCli = stripeClients.createMockStripeClient();
 			const ctx = {
 				stripeCli: mockCli,
 				logger: createMockLogger(),
 				fullCustomer: createMockFullCustomer({
-					should_send_email_receipts: undefined as unknown as boolean,
+					send_email_receipts: undefined as unknown as boolean,
 				}),
 			} as unknown as StripeWebhookContext;
 

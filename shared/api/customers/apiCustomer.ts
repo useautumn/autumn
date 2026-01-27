@@ -34,6 +34,7 @@ export const BaseApiCustomerSchema = z
 		subscriptions: z.array(ApiSubscriptionSchema),
 		scheduled_subscriptions: z.array(ApiSubscriptionSchema),
 		balances: z.record(z.string(), ApiBalanceSchema),
+		send_email_receipts: z.boolean(),
 	})
 	.meta({
 		id: "BaseCustomer",
