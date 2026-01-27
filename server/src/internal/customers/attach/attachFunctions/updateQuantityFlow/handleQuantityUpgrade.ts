@@ -17,7 +17,6 @@ import {
 import { Decimal } from "decimal.js";
 import type { Stripe } from "stripe";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
-import { executeRedisDeduction } from "@/internal/balances/utils/deduction/executeRedisDeduction";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
@@ -202,27 +201,6 @@ export const handleQuantityUpgrade = async ({
 			id: cusEnt.id,
 			amount: incrementBy,
 		});
-
-		try {
-			await executeRedisDeduction({
-				ctx,
-				fullCustomer: attachParams.customer,
-				deductions: [
-					{
-						feature: cusEnt.entitlement.feature,
-						deduction: -incrementBy,
-					},
-				],
-				deductionOptions: {
-					overageBehaviour: "allow",
-					customerEntitlementFilters: {
-						cusEntIds: [cusEnt.id],
-					},
-				},
-			});
-		} catch (error) {
-			logger.warn(`Failed to execute Redis deduction: ${error}`);
-		}
 	}
 	return { invoice };
 };

@@ -43,7 +43,7 @@ export const rollbackDeduction = async ({
 				db,
 				id: cusEntId,
 				updates: {
-					balance: originalCusEnt.balance,
+					balance: originalCusEnt.balance ?? 0,
 					additional_balance: originalCusEnt.additional_balance,
 					adjustment: originalCusEnt.adjustment,
 					entities: originalCusEnt.entities,

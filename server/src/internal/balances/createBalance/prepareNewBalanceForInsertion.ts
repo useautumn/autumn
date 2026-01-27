@@ -1,6 +1,5 @@
 import {
 	type CreateBalanceParams,
-	type CustomerEntitlement,
 	enrichEntitlementWithFeature,
 	type Feature,
 	type FullCustomer,
@@ -61,7 +60,7 @@ export const prepareNewBalanceForInsertion = async ({
 		now: Date.now(),
 		productOptions: undefined,
 		expires_at: params.expires_at ?? null,
-	}) satisfies CustomerEntitlement;
+	});
 
 	// If entity is provided, assign balance to entity instead of customer-level
 	if (entity) {
