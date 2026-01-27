@@ -1,5 +1,5 @@
-import { beforeAll, describe, expect, test } from "bun:test";
-import { type AppEnv, LegacyVersion, type Organization } from "@autumn/shared";
+import { beforeAll, describe, test } from "bun:test";
+import { LegacyVersion } from "@autumn/shared";
 import { attachAndExpectCorrect } from "@tests/utils/expectUtils/expectAttach.js";
 import {
 	expectDowngradeCorrect,
@@ -7,8 +7,6 @@ import {
 } from "@tests/utils/expectUtils/expectScheduleUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
@@ -46,6 +44,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing trials: pro with trial -> p
 			ctx,
 			products: [free, pro, premium],
 			prefix: testCase,
+			customerId,
 		});
 
 		const { testClockId: testClockId1 } = await initCustomerV3({
