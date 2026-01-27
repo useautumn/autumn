@@ -1,6 +1,6 @@
+import { stripeInvoiceIdToPaymentIntent } from "@/external/stripe/invoices/utils/convertStripeInvoice.js";
 import type { StripeInvoicePaidContext } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/setupStripeInvoicePaidContext.js";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext.js";
-import { nullish } from "@/utils/genUtils.js";
 
 /**
  * Sends an email receipt to the customer by setting `receipt_email` on the PaymentIntent.
@@ -16,20 +16,38 @@ export const sendEmailReceipt = async ({
 	const { stripeCli, logger, fullCustomer } = ctx;
 	const { stripeInvoice } = invoicePaidContext;
 
-	// 1. Check if customer exists and has email receipts enabled
-	if (!fullCustomer) {
-		logger.debug("[invoice.paid] No fullCustomer, skipping email receipt");
+	const stripeCustomerId = fullCustomer?.processor?.id;
+	if (!stripeCustomerId) {
+		logger.debug(
+			"[invoice.paid] Customer has no Stripe ID, skipping email receipt",
+		);
 		return;
 	}
 
-	if (!fullCustomer.send_email_receipts) {
+	const stripeCustomer = await stripeCli.customers.retrieve(stripeCustomerId);
+
+	// 1. Check if customer exists and has email receipts enabled
+	if (!stripeCustomer) {
+		logger.debug("[invoice.paid] No stripeCustomer, skipping email receipt");
+		return;
+	}
+	// Check if customer is deleted
+	if (stripeCustomer.deleted) {
+		logger.debug(
+			"[invoice.paid] Stripe customer is deleted, skipping email receipt",
+		);
+		return;
+	}
+
+	if (!fullCustomer?.send_email_receipts) {
 		logger.debug(
 			"[invoice.paid] Customer has email receipts disabled, skipping",
 		);
 		return;
 	}
 
-	const customerEmail = fullCustomer.email;
+	const customerEmail = stripeCustomer.email;
+
 	if (!customerEmail) {
 		logger.debug(
 			"[invoice.paid] Customer has no email, skipping email receipt",
@@ -37,14 +55,13 @@ export const sendEmailReceipt = async ({
 		return;
 	}
 
-	// 2. Extract payment intent ID from the invoice
-	const payments = stripeInvoice.payments;
-	const firstPayment = payments?.data?.[0];
-	const paymentIntentId = firstPayment?.payment?.payment_intent as
-		| string
-		| undefined;
+	// 2. Get payment intent ID from the invoice
+	const paymentIntentId = await stripeInvoiceIdToPaymentIntent({
+		stripeClient: stripeCli,
+		invoiceId: stripeInvoice.id,
+	});
 
-	if (nullish(paymentIntentId)) {
+	if (!paymentIntentId) {
 		logger.debug(
 			"[invoice.paid] No payment intent found on invoice, skipping email receipt",
 		);

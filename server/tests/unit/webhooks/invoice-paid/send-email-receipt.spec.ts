@@ -9,6 +9,7 @@ import { describe, expect, test } from "bun:test";
 import { AppEnv, type FullCustomer } from "@autumn/shared";
 import { stripeClients } from "@tests/utils/fixtures/stripe/clients";
 import chalk from "chalk";
+import type Stripe from "stripe";
 import type { StripeInvoicePaidContext } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/setupStripeInvoicePaidContext";
 import { sendEmailReceipt } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/tasks/sendEmailReceipt";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
@@ -119,14 +120,19 @@ describe(chalk.yellowBright("sendEmailReceipt"), () => {
 			expect(mockCli._calls.paymentIntents.update).toHaveLength(0);
 		});
 
-		test("returns when customer has no email", async () => {
-			const mockCli = stripeClients.createMockStripeClient();
+		test("returns when stripe customer has no email", async () => {
+			const mockCli = stripeClients.createMockStripeClient({
+				customers: {
+					retrieveResult: {
+						id: "cus_mock",
+						email: null,
+					} as Partial<Stripe.Customer>,
+				},
+			});
 			const ctx = {
 				stripeCli: mockCli,
 				logger: createMockLogger(),
-				fullCustomer: createMockFullCustomer({
-					email: undefined as unknown as string,
-				}),
+				fullCustomer: createMockFullCustomer(),
 			} as unknown as StripeWebhookContext;
 
 			await sendEmailReceipt({
@@ -138,12 +144,19 @@ describe(chalk.yellowBright("sendEmailReceipt"), () => {
 			expect(mockCli._calls.paymentIntents.update).toHaveLength(0);
 		});
 
-		test("returns when customer has empty string email", async () => {
-			const mockCli = stripeClients.createMockStripeClient();
+		test("returns when stripe customer has empty string email", async () => {
+			const mockCli = stripeClients.createMockStripeClient({
+				customers: {
+					retrieveResult: {
+						id: "cus_mock",
+						email: "",
+					} as Partial<Stripe.Customer>,
+				},
+			});
 			const ctx = {
 				stripeCli: mockCli,
 				logger: createMockLogger(),
-				fullCustomer: createMockFullCustomer({ email: "" }),
+				fullCustomer: createMockFullCustomer(),
 			} as unknown as StripeWebhookContext;
 
 			await sendEmailReceipt({
@@ -156,7 +169,14 @@ describe(chalk.yellowBright("sendEmailReceipt"), () => {
 		});
 
 		test("returns when invoice has no payments", async () => {
-			const mockCli = stripeClients.createMockStripeClient();
+			const mockCli = stripeClients.createMockStripeClient({
+				invoices: {
+					retrieveResult: {
+						id: "inv_test",
+						payments: { data: [] },
+					} as unknown as Partial<Stripe.Invoice>,
+				},
+			});
 			const ctx = {
 				stripeCli: mockCli,
 				logger: createMockLogger(),
@@ -176,6 +196,14 @@ describe(chalk.yellowBright("sendEmailReceipt"), () => {
 	describe(chalk.cyan("PaymentIntent already has receipt_email"), () => {
 		test("returns without updating when receipt_email already set", async () => {
 			const mockCli = stripeClients.createMockStripeClient({
+				invoices: {
+					retrieveResult: {
+						id: "inv_test",
+						payments: {
+							data: [{ payment: { payment_intent: { id: "pi_123" } } }],
+						},
+					} as Partial<Stripe.Invoice>,
+				},
 				paymentIntents: {
 					retrieveResult: { receipt_email: "existing@example.com" },
 				},
@@ -198,12 +226,26 @@ describe(chalk.yellowBright("sendEmailReceipt"), () => {
 
 	describe(chalk.cyan("Success - sets receipt_email"), () => {
 		test("updates PaymentIntent with customer email when all conditions met", async () => {
+			const customerEmail = "customer@example.com";
 			const mockCli = stripeClients.createMockStripeClient({
+				customers: {
+					retrieveResult: {
+						id: "cus_mock",
+						email: customerEmail,
+					} as Partial<Stripe.Customer>,
+				},
+				invoices: {
+					retrieveResult: {
+						id: "inv_test",
+						payments: {
+							data: [{ payment: { payment_intent: { id: "pi_123" } } }],
+						},
+					} as Partial<Stripe.Invoice>,
+				},
 				paymentIntents: {
 					retrieveResult: { receipt_email: null },
 				},
 			});
-			const customerEmail = "customer@example.com";
 			const ctx = {
 				stripeCli: mockCli,
 				logger: createMockLogger(),
@@ -228,6 +270,14 @@ describe(chalk.yellowBright("sendEmailReceipt"), () => {
 	describe(chalk.cyan("Error handling"), () => {
 		test("does not throw when paymentIntents.retrieve fails", async () => {
 			const mockCli = stripeClients.createMockStripeClient({
+				invoices: {
+					retrieveResult: {
+						id: "inv_test",
+						payments: {
+							data: [{ payment: { payment_intent: { id: "pi_123" } } }],
+						},
+					} as Partial<Stripe.Invoice>,
+				},
 				paymentIntents: {
 					retrieveError: new Error("Stripe API error"),
 				},
@@ -249,6 +299,14 @@ describe(chalk.yellowBright("sendEmailReceipt"), () => {
 
 		test("does not throw when paymentIntents.update fails", async () => {
 			const mockCli = stripeClients.createMockStripeClient({
+				invoices: {
+					retrieveResult: {
+						id: "inv_test",
+						payments: {
+							data: [{ payment: { payment_intent: { id: "pi_123" } } }],
+						},
+					} as Partial<Stripe.Invoice>,
+				},
 				paymentIntents: {
 					retrieveResult: { receipt_email: null },
 					updateError: new Error("Stripe API error"),

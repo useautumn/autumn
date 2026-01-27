@@ -20,14 +20,22 @@ interface MockPaymentIntentsConfig {
 
 interface MockInvoicesConfig {
 	listResult?: Partial<Stripe.ApiList<Stripe.Invoice>>;
+	retrieveResult?: Partial<Stripe.Invoice>;
 	voidInvoiceResult?: Partial<Stripe.Invoice>;
 	listError?: Error;
+	retrieveError?: Error;
 	voidInvoiceError?: Error;
+}
+
+interface MockCustomersConfig {
+	retrieveResult?: Partial<Stripe.Customer> | Stripe.DeletedCustomer;
+	retrieveError?: Error;
 }
 
 interface MockStripeClientConfig {
 	paymentIntents?: MockPaymentIntentsConfig;
 	invoices?: MockInvoicesConfig;
+	customers?: MockCustomersConfig;
 }
 
 interface MockStripeClientCalls {
@@ -37,7 +45,11 @@ interface MockStripeClientCalls {
 	};
 	invoices: {
 		list: Stripe.InvoiceListParams[];
+		retrieve: string[];
 		voidInvoice: string[];
+	};
+	customers: {
+		retrieve: string[];
 	};
 }
 
@@ -56,12 +68,17 @@ const createMockStripeClient = (config: MockStripeClientConfig = {}) => {
 		},
 		invoices: {
 			list: [],
+			retrieve: [],
 			voidInvoice: [],
+		},
+		customers: {
+			retrieve: [],
 		},
 	};
 
 	const paymentIntentsConfig = config.paymentIntents ?? {};
 	const invoicesConfig = config.invoices ?? {};
+	const customersConfig = config.customers ?? {};
 
 	return {
 		paymentIntents: {
@@ -89,11 +106,38 @@ const createMockStripeClient = (config: MockStripeClientConfig = {}) => {
 					data: [],
 				}) as Stripe.ApiList<Stripe.Invoice>;
 			},
+			retrieve: async (id: string, _params?: Stripe.InvoiceRetrieveParams) => {
+				calls.invoices.retrieve.push(id);
+				if (invoicesConfig.retrieveError) throw invoicesConfig.retrieveError;
+				return (invoicesConfig.retrieveResult ?? {
+					id: "inv_mock",
+					payments: {
+						data: [
+							{
+								payment: {
+									payment_intent: { id: "pi_mock" },
+								},
+							},
+						],
+					},
+				}) as Stripe.Invoice;
+			},
 			voidInvoice: async (id: string) => {
 				calls.invoices.voidInvoice.push(id);
 				if (invoicesConfig.voidInvoiceError)
 					throw invoicesConfig.voidInvoiceError;
 				return (invoicesConfig.voidInvoiceResult ?? {}) as Stripe.Invoice;
+			},
+		},
+		customers: {
+			retrieve: async (id: string) => {
+				calls.customers.retrieve.push(id);
+				if (customersConfig.retrieveError) throw customersConfig.retrieveError;
+				return (customersConfig.retrieveResult ?? {
+					id: "cus_mock",
+					email: "mock@example.com",
+					deleted: false,
+				}) as Stripe.Customer | Stripe.DeletedCustomer;
 			},
 		},
 		_calls: calls,
