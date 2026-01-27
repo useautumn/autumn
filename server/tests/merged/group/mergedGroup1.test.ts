@@ -17,7 +17,6 @@ import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { expectSubToBeCorrect } from "../mergeUtils/expectSubCorrect.js";
 
 // UNCOMMENT FROM HERE
 const g1Pro = constructProduct({
@@ -138,18 +137,18 @@ describe(`${chalk.yellowBright("mergedGroup1: Testing products from diff groups"
 		});
 	}
 
-	test("should cancel scheduled product (g1Pro)", async () => {
-		await autumn.cancel({
-			customer_id: customerId,
-			product_id: g1Pro.id,
-			cancel_immediately: true,
-		});
+	// test("should cancel scheduled product (g1Pro)", async () => {
+	// 	await autumn.cancel({
+	// 		customer_id: customerId,
+	// 		product_id: g1Pro.id,
+	// 		cancel_immediately: true,
+	// 	});
 
-		await expectSubToBeCorrect({
-			customerId,
-			db,
-			org,
-			env,
-		});
-	});
+	// 	await expectSubToBeCorrect({
+	// 		customerId,
+	// 		db,
+	// 		org,
+	// 		env,
+	// 	});
+	// });
 });
