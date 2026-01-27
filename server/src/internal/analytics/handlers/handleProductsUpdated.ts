@@ -2,7 +2,7 @@ import {
 	AffectedResource,
 	type ApiCustomerV5,
 	type ApiEntityV2,
-	type ApiPlan,
+	type ApiPlanV1,
 	ApiVersion,
 	ApiVersionClass,
 	type AppEnv,
@@ -165,7 +165,7 @@ export const handleProductsUpdated = async ({
 		features,
 	});
 
-	const versionedPlan = applyResponseVersionChanges<ApiPlan, PlanLegacyData>({
+	const versionedPlan = applyResponseVersionChanges<ApiPlanV1, PlanLegacyData>({
 		input: apiPlan,
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Product,

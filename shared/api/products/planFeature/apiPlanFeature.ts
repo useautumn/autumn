@@ -1,6 +1,6 @@
 import { ResetInterval } from "@models/productModels/intervals/resetInterval.js";
 import { UsageTierSchema } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
-import { BillingMethod } from "@models/productV2Models/productItemModels/productItemModels.js";
+import { UsageModel } from "@models/productV2Models/productItemModels/productItemModels.js";
 import { z } from "zod/v4";
 import { RolloverExpiryDurationType } from "../../../models/productModels/durationTypes/rolloverExpiryDurationType.js";
 import { BillingInterval } from "../../../models/productModels/intervals/billingInterval.js";
@@ -36,7 +36,7 @@ export const ApiPlanFeatureSchema = z
 				interval_count: z.number().optional(),
 
 				billing_units: z.number(),
-				billing_method: z.enum(BillingMethod),
+				usage_model: z.enum(UsageModel),
 				max_purchase: z.number().nullable(),
 			})
 			.nullable(),

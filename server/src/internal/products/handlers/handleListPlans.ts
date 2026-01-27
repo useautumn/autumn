@@ -1,6 +1,6 @@
 import {
 	AffectedResource,
-	type ApiPlan,
+	type ApiPlanV1,
 	applyResponseVersionChanges,
 	ListPlansQuerySchema,
 } from "@autumn/shared";
@@ -74,7 +74,7 @@ export const handleListPlans = createRoute({
 
 		const plansList = await Promise.all(batchResponse);
 		const res = plansList.map((p) => {
-			return applyResponseVersionChanges<ApiPlan>({
+			return applyResponseVersionChanges<ApiPlanV1>({
 				input: p,
 				targetVersion: ctx.apiVersion,
 				resource: AffectedResource.Product,

@@ -1,4 +1,5 @@
 import { type ApiPlanV1, ApiPlanV1Schema } from "@api/products/apiPlanV1.js";
+import { transformPlanV1ToV0 } from "@api/products/planFeature/transformPlanFeatureV1ToV0.js";
 import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import {
 	AffectedResource,
@@ -36,30 +37,6 @@ export const V2_0_PlanChanges = defineVersionChange({
 		input: ApiPlanV1;
 		legacyData?: PlanLegacyData;
 	}): ApiPlan => {
-		// Convert plan to V2.0 format
-		// Key changes:
-		// - auto_enable -> default
-		// - included -> granted_balance
-		// - reset gains reset_when_enabled (default to false)
-		return {
-			...input,
-			default: input.auto_enable,
-			features: input.features.map((feature) => {
-				// Destructure to remove V2.1-only fields
-				const { included, ...restFeature } = feature;
-
-				return {
-					...restFeature,
-					granted_balance: included,
-					reset: feature.reset
-						? {
-								interval: feature.reset.interval,
-								interval_count: feature.reset.interval_count,
-								reset_when_enabled: false, // V2.0 has this field, default to false
-							}
-						: null,
-				};
-			}),
-		} satisfies ApiPlan;
+		return transformPlanV1ToV0(input);
 	},
 });
