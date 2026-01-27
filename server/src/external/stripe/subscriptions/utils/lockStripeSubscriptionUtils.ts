@@ -1,4 +1,4 @@
-import { redis } from "@/external/redis/initRedis";
+import { getPrimaryRedis } from "@/external/redis/initRedis";
 import { tryRedisRead, tryRedisWrite } from "@/utils/cacheUtils/cacheUtils";
 
 export const setStripeSubscriptionLock = async ({
@@ -8,14 +8,17 @@ export const setStripeSubscriptionLock = async ({
 	stripeSubscriptionId: string;
 	lockedAtMs: number;
 }) => {
-	await tryRedisWrite(async () => {
-		await redis.set(
-			`sub:${stripeSubscriptionId}`,
-			JSON.stringify({ lockedAtMs }),
-			"EX",
-			process.env.NODE_ENV === "production" ? 60 : 3,
-		);
-	});
+	const primaryRedis = getPrimaryRedis();
+	await tryRedisWrite(
+		async () =>
+			primaryRedis.set(
+				`sub:${stripeSubscriptionId}`,
+				JSON.stringify({ lockedAtMs }),
+				"EX",
+				process.env.NODE_ENV === "production" ? 60 : 3,
+			),
+		primaryRedis,
+	);
 };
 
 export type StripeSubscriptionLock = {
@@ -27,9 +30,10 @@ export const getStripeSubscriptionLock = async ({
 }: {
 	stripeSubscriptionId: string;
 }): Promise<StripeSubscriptionLock | null> => {
-	return await tryRedisRead(async () => {
-		const value = await redis.get(`sub:${stripeSubscriptionId}`);
+	const primaryRedis = getPrimaryRedis();
+	return tryRedisRead(async () => {
+		const value = await primaryRedis.get(`sub:${stripeSubscriptionId}`);
 		if (!value) return null;
 		return JSON.parse(value) as StripeSubscriptionLock;
-	});
+	}, primaryRedis);
 };
