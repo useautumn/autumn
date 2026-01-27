@@ -456,6 +456,11 @@ export const initScenario = async ({
 		secretKey: ctx.orgSecretKey,
 	});
 
+	const autumnV2_1 = new AutumnInt({
+		version: ApiVersion.V2_1,
+		secretKey: ctx.orgSecretKey,
+	});
+
 	// 4. Create entities if any
 	if (generatedEntities.length > 0) {
 		const entityDefs = generatedEntities.map((e) => ({
@@ -575,6 +580,7 @@ export const initScenario = async ({
 		customerId,
 		autumnV1,
 		autumnV2,
+		autumnV2_1,
 		testClockId,
 		customer,
 		ctx,

@@ -99,8 +99,8 @@ function detectTestFramework({
 	try {
 		const { readFileSync } = require("node:fs");
 		const content = readFileSync(filePath, "utf-8");
-		// Check first 20 lines for bun:test import
-		const lines = content.split("\n").slice(0, 20);
+		// Check first 40 lines for bun:test import
+		const lines = content.split("\n").slice(0, 40);
 		const hasBunTest = lines.some(
 			(line: string) =>
 				line.includes('from "bun:test"') || line.includes("from 'bun:test'"),
