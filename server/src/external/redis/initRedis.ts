@@ -355,4 +355,7 @@ declare module "ioredis" {
 	}
 }
 
+/** Get the primary Redis instance (us-west-2) to avoid replication lag issues */
+export const getPrimaryRedis = () => getRegionalRedis(REGION_US_WEST_2);
+
 export { redis };
