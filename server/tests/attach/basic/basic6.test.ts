@@ -7,14 +7,12 @@ import {
 } from "@autumn/shared";
 import { AutumnCli } from "@tests/cli/AutumnCli.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
-import { advanceTestClock } from "@tests/utils/stripeUtils.js";
+import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { addHours, addMonths } from "date-fns";
 import type Stripe from "stripe";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { attachFailedPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
+import { attachFailedPaymentMethod } from "@/external/stripe/stripeCusUtils";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
@@ -76,7 +74,7 @@ describe(`${chalk.yellowBright("basic6: Testing subscription past_due")}`, () =>
 	});
 
 	test("should attach pro product and switch to failed payment method", async () => {
-		await autumnV1.attach({
+		const res = await autumnV1.attach({
 			customer_id: customerId,
 			product_id: proProd.id,
 		});
@@ -88,14 +86,9 @@ describe(`${chalk.yellowBright("basic6: Testing subscription past_due")}`, () =>
 	});
 
 	test("should advance to next cycle", async () => {
-		await advanceTestClock({
+		await advanceToNextInvoice({
 			stripeCli,
 			testClockId,
-			advanceTo: addHours(
-				addMonths(new Date(), 1),
-				hoursToFinalizeInvoice,
-			).getTime(),
-			waitForSeconds: 30,
 		});
 	});
 
