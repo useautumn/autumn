@@ -13,7 +13,7 @@ import { getFeature } from "../entitlementUtils";
 import { getItemType, intervalIsNone } from "../productItemUtils";
 
 // Can probably delete this...
-export const getPaidFeatureString = ({
+const getPaidFeatureString = ({
 	item,
 	currency = "USD",
 	features,
@@ -88,7 +88,7 @@ const getFixedPriceString = ({
 	return `${formattedAmount}`;
 };
 
-export const getFeatureString = ({
+const getFeatureString = ({
 	item,
 	features,
 }: {

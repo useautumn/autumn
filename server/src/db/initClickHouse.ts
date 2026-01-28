@@ -7,4 +7,4 @@ export const clickhouseClient: ClickHouseClient = createClient({
 	max_open_connections: 10,
 });
 
-export const clickhouse = clickhouseClient;
+const clickhouse = clickhouseClient;

@@ -14,7 +14,7 @@ import type { StripeSubscriptionScheduleAction } from "@/internal/billing/v2/typ
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export type StripeSubscriptionScheduleResult = {
+type StripeSubscriptionScheduleResult = {
 	scheduleAction?: StripeSubscriptionScheduleAction;
 	subscriptionCancelAt?: number;
 };

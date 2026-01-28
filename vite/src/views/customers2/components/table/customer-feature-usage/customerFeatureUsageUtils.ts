@@ -194,7 +194,7 @@ export function processNonBooleanEntitlements({
 /**
  * Filters entitlements to only boolean features
  */
-export function filterBooleanEntitlements({
+function filterBooleanEntitlements({
 	entitlements,
 }: {
 	entitlements: FullCusEntWithFullCusProduct[];

@@ -160,7 +160,7 @@ export const handleUpsertRevenueCatConfig = createRoute({
 	},
 });
 
-export const handleGetVercelSink = createRoute({
+const handleGetVercelSink = createRoute({
 	handler: async (c) => {
 		const { db, org, env } = c.get("ctx");
 		const vercelConfig = org.processor_configs?.vercel;

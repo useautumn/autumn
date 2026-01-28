@@ -28,7 +28,7 @@ import { roundUsage } from "@/internal/products/prices/priceUtils/usagePriceUtil
 import { formatUnixToDate } from "@/utils/genUtils.js";
 import { getUsageFromBalance } from "../adjustAllowance.js";
 
-export const createDowngradeProrationInvoice = async ({
+const createDowngradeProrationInvoice = async ({
 	org,
 	cusPrice,
 	stripeCli,

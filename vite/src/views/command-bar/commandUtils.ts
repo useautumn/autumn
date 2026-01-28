@@ -1,7 +1,7 @@
 /**
  * Calculate Levenshtein distance between two strings
  */
-export function levenshteinDistance(a: string, b: string): number {
+function levenshteinDistance(a: string, b: string): number {
 	const matrix: number[][] = [];
 
 	for (let i = 0; i <= b.length; i++) {

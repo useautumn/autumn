@@ -3,7 +3,7 @@ import type Stripe from "stripe";
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 
 /** Stripe subscription that is trialing with guaranteed trial_end */
-export type TrialingStripeSubscription = Stripe.Subscription & {
+type TrialingStripeSubscription = Stripe.Subscription & {
 	status: "trialing";
 	trial_end: number;
 };

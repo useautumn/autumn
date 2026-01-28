@@ -2,12 +2,12 @@ import type { CTEConfig } from "../buildCte.js";
 import { CTEBuilder } from "../buildCte.js";
 import { inferMode } from "../typeDetection.js";
 
-export type QueryStrategy = "correlated" | "join_group_by";
+type QueryStrategy = "correlated" | "join_group_by";
 
 /**
  * Calculate the maximum nesting depth of a CTE configuration
  */
-export function calculateNestingDepth({
+function calculateNestingDepth({
 	config,
 	current = 0,
 }: {
@@ -31,7 +31,7 @@ export function calculateNestingDepth({
 /**
  * Detect if any nested relations will return arrays (one-to-many)
  */
-export function detectArrayRelations({
+function detectArrayRelations({
 	config,
 }: {
 	config: CTEConfig;

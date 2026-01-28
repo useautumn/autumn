@@ -12,5 +12,5 @@ export const useSecretKeyStore = create<SecretKeyState>()((set) => ({
 	clearSecretKey: () => set({ secretKey: "" }),
 }));
 
-export const useSecretKey = () => useSecretKeyStore((s) => s.secretKey);
-export const useSetSecretKey = () => useSecretKeyStore((s) => s.setSecretKey);
+const useSecretKey = () => useSecretKeyStore((s) => s.secretKey);
+const useSetSecretKey = () => useSecretKeyStore((s) => s.setSecretKey);

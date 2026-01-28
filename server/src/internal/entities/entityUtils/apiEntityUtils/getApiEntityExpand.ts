@@ -4,7 +4,7 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { InvoiceService } from "../../../invoices/InvoiceService";
 import { invoicesToResponse } from "../../../invoices/invoiceUtils";
 
-export type ApiEntityExpand = {
+type ApiEntityExpand = {
 	invoices?: any[];
 };
 

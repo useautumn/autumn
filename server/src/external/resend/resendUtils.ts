@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 import { logger } from "../logtail/logtailUtils.js";
 
-export interface ResendEmailProps {
+interface ResendEmailProps {
 	to: string;
 	subject: string;
 	body: string;

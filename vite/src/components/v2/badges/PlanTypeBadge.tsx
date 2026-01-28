@@ -29,7 +29,7 @@ const badgeVariants = cva(
 	},
 );
 
-export interface PlanTypeBadgeProps extends VariantProps<typeof badgeVariants> {
+interface PlanTypeBadgeProps extends VariantProps<typeof badgeVariants> {
 	className?: string;
 	iconOnly?: boolean;
 	noIcon?: boolean;

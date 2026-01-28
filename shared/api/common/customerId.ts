@@ -35,4 +35,4 @@ export const CustomerIdSchema = z.string().refine(
 	},
 );
 
-export type CustomerId = z.infer<typeof CustomerIdSchema>;
+type CustomerId = z.infer<typeof CustomerIdSchema>;

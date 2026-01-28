@@ -20,7 +20,7 @@ import {
 import RecaseError from "@server/utils/errorUtils";
 import { addDays } from "date-fns";
 
-export const entIntervalToTrialDuration = ({
+const entIntervalToTrialDuration = ({
 	interval,
 	intervalCount,
 }: {
@@ -45,7 +45,7 @@ export const entIntervalToTrialDuration = ({
 	}
 };
 
-export const trialToDays = (freeTrial: FreeTrial) => {
+const trialToDays = (freeTrial: FreeTrial) => {
 	let days: number;
 	switch (freeTrial.duration) {
 		case FreeTrialDuration.Day:
@@ -85,7 +85,7 @@ export const applyTrialToEntitlement = (
 	return false;
 };
 
-export const addTrialToNextResetAt = (
+const addTrialToNextResetAt = (
 	nextResetAt: number,
 	freeTrial: FreeTrial | null,
 ) => {
@@ -94,7 +94,7 @@ export const addTrialToNextResetAt = (
 	return addDays(new Date(nextResetAt), freeTrial.length).getTime();
 };
 
-export const rolloversAreSame = ({
+const rolloversAreSame = ({
 	rollover1,
 	rollover2,
 }: {

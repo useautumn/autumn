@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { Button, type ButtonProps } from "../buttons/Button";
 import { iconButtonVariants } from "../buttons/IconButton";
 
-export interface IconCheckboxProps
+interface IconCheckboxProps
 	extends ButtonProps,
 		VariantProps<typeof iconButtonVariants> {
 	checked?: boolean;

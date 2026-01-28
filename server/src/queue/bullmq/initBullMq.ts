@@ -23,7 +23,7 @@ export const queue = new Queue("autumn", {
 	},
 });
 
-export const queueRedis = new Redis(process.env.QUEUE_URL, {
+const queueRedis = new Redis(process.env.QUEUE_URL, {
 	tls: caText ? { ca: caText } : undefined,
 });
 

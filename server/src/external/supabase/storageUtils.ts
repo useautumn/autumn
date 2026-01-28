@@ -1,6 +1,6 @@
 import { createSupabaseClient } from "@/external/supabase/createSupabaseClient";
 
-export const readFile = async ({
+const readFile = async ({
 	bucket = "autumn",
 	path,
 }: {
@@ -16,7 +16,7 @@ export const readFile = async ({
 	return data;
 };
 
-export const uploadFile = async ({
+const uploadFile = async ({
 	path,
 	file,
 	contentType,

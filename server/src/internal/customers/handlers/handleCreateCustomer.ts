@@ -106,7 +106,7 @@ const handleIdIsNull = async ({
 };
 
 // CAN ALSO USE DURING MIGRATION...
-export const handleCreateCustomerWithId = async ({
+const handleCreateCustomerWithId = async ({
 	ctx,
 	newCus,
 	createDefaultProducts = true,
@@ -175,7 +175,7 @@ export const handleCreateCustomerWithId = async ({
 	});
 };
 
-export const handleCreateCustomer = async ({
+const handleCreateCustomer = async ({
 	ctx,
 	cusData,
 	createDefaultProducts = true,

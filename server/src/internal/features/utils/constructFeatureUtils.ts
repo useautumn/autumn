@@ -7,7 +7,7 @@ import {
 } from "@autumn/shared";
 import { generateId, keyToTitle } from "@server/utils/genUtils";
 
-export const constructFeature = ({
+const constructFeature = ({
 	id,
 	name,
 	orgId,

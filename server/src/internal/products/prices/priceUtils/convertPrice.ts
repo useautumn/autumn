@@ -16,7 +16,7 @@ export const priceToIntervalKey = (price: Price) => {
 	});
 };
 
-export const toIntervalKey = ({
+const toIntervalKey = ({
 	interval,
 	intervalCount,
 }: {

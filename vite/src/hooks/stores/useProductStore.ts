@@ -133,7 +133,7 @@ export const useWillVersion = () => {
 	}, [product, baseProduct, features]);
 };
 
-export const useHasDetailsChanged = () => {
+const useHasDetailsChanged = () => {
 	const product = useProductStore((s) => s.product);
 	const baseProduct = useProductStore((s) => s.baseProduct);
 	const { features = [] } = useFeaturesQuery();
@@ -163,7 +163,7 @@ export const useHasDetailsChanged = () => {
 	}, [product, baseProduct, features]);
 };
 
-export const useCurrentItem = () => {
+const useCurrentItem = () => {
 	const product = useProductStore((s) => s.product);
 	const itemId = useSheetStore((s) => s.itemId);
 
@@ -194,7 +194,7 @@ export const useCurrentItem = () => {
 /**
  * Hook to check if the current item has unsaved changes compared to its initial state
  */
-export const useHasItemChanges = () => {
+const useHasItemChanges = () => {
 	const item = useCurrentItem();
 	const initialItem = useSheetStore((s) => s.initialItem);
 	const { features = [] } = useFeaturesQuery();
@@ -228,7 +228,7 @@ export const useDiscardItemAndClose = () => {
 	};
 };
 
-export const useSetCurrentItem = () => {
+const useSetCurrentItem = () => {
 	const product = useProductStore((s) => s.product);
 	const setProduct = useProductStore((s) => s.setProduct);
 	const itemId = useSheetStore((s) => s.itemId);

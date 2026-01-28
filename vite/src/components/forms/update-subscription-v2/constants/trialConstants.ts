@@ -6,7 +6,7 @@ export const TRIAL_DURATION_OPTIONS = [
 	{ label: "Years", value: FreeTrialDuration.Year },
 ] as const;
 
-export const DURATION_LABELS: Record<
+const DURATION_LABELS: Record<
 	FreeTrialDuration,
 	{ singular: string; plural: string }
 > = {

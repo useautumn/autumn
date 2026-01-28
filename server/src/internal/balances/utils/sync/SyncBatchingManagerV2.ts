@@ -23,7 +23,7 @@ interface CustomerBatch {
  * Batching manager for syncing FullCustomer cache to PostgreSQL.
  * Batches by customer, collects modified cusEntIds within a time window.
  */
-export class SyncBatchingManagerV2 {
+class SyncBatchingManagerV2 {
 	private customerBatches: Map<string, CustomerBatch> = new Map();
 
 	private readonly BATCH_WINDOW_MS =

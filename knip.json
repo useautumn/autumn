@@ -8,7 +8,6 @@
 			"entry": ["tests/**/*.ts"],
 			"project": ["src/**/*.ts", "tests/**/*.ts"],
 			"ignore": [
-				"src/_luaScripts/**",
 				"src/_luaScriptsV2/**",
 				"src/utils/importUtils/**",
 				"src/utils/scriptUtils/**",
@@ -18,7 +17,8 @@
 		"shared": {
 			"entry": ["index.ts"],
 			"project": ["**/*.ts"],
-			"includeEntryExports": false
+			"includeEntryExports": false,
+			"ignore": ["api/balances/track/changes/V0.2_TrackChange.ts"]
 		},
 		"vite": {
 			"entry": ["src/main.tsx"],

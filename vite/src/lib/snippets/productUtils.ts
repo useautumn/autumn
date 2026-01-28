@@ -3,7 +3,7 @@ import type { ProductV2 } from "@autumn/shared";
 /**
  * Gets the first paid product (product with a price)
  */
-export function getFirstPaidProduct({
+function getFirstPaidProduct({
 	products,
 }: {
 	products: ProductV2[];

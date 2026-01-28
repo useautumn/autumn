@@ -22,7 +22,7 @@ import { ApiCusProductV2Schema } from "../previousVersions/apiCusProductV2.js";
  * Transform product from V2 format to V1 format
  * Exported so it can be reused in other transformations (e.g., V0_2_CustomerChange)
  */
-export const transformItemToPrice = ({
+const transformItemToPrice = ({
 	item,
 }: {
 	item: z.infer<typeof ApiProductItemSchema>;
@@ -135,7 +135,7 @@ export function transformCusProductV2ToV1({
 	return v1CusProduct;
 }
 
-export const V0_2_CusProductChange = defineVersionChange({
+const V0_2_CusProductChange = defineVersionChange({
 	newVersion: ApiVersion.V1_1, // Breaking change introduced in V1_1
 	oldVersion: ApiVersion.V0_2, // Applied when targetVersion <= V0_2
 	description: ["Customer product response revamped to fit ProductV2 schema"],

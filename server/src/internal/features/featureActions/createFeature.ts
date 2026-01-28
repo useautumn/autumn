@@ -8,7 +8,7 @@ import {
 	validateMeteredConfig,
 } from "../featureUtils.js";
 
-export const validateFeature = (data: any) => {
+const validateFeature = (data: any) => {
 	const featureType = data.type;
 
 	// validateFeatureId(data.id);

@@ -112,7 +112,7 @@ export const activateDefaultProduct = async ({
 	return true;
 };
 
-export const activateFutureProduct = async ({
+const activateFutureProduct = async ({
 	ctx,
 	cusProduct,
 }: {
@@ -213,7 +213,7 @@ export const getMainCusProduct = async ({
 	return mainCusProduct as FullCusProduct;
 };
 
-export const getCusProductsWithStripeSubId = ({
+const getCusProductsWithStripeSubId = ({
 	cusProducts,
 	stripeSubId,
 	curCusProductId,

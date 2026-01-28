@@ -12,13 +12,13 @@ export type SendProductsUpdatedPayload = {
 	scenario: string;
 };
 
-export type GenerateFeatureDisplayPayload = {
+type GenerateFeatureDisplayPayload = {
 	featureId: string;
 	orgId: string;
 	env: AppEnv;
 };
 
-export type VerifyCacheConsistencyPayload = {
+type VerifyCacheConsistencyPayload = {
 	customerId: string;
 	orgId: string;
 	env: AppEnv;

@@ -1,7 +1,7 @@
 import z from "zod/v4";
 import { FullCusProductSchema } from "../cusProductModels/cusProductModels";
 
-export enum OngoingCusProductActionEnum {
+enum OngoingCusProductActionEnum {
 	Expire = "expire",
 	Cancel = "cancel",
 	Uncancel = "uncancel",

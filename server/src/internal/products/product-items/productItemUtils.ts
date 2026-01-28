@@ -109,7 +109,7 @@ export const constructPriceItem = ({
 	return item;
 };
 
-export const constructFeaturePriceItem = ({
+const constructFeaturePriceItem = ({
 	feature_id,
 
 	feature_type,

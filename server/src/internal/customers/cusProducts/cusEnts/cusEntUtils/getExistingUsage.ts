@@ -21,7 +21,7 @@ import {
 	getUnlimitedAndUsageAllowed,
 } from "../cusEntUtils.js";
 
-export const getExistingCusEntAndUsage = async ({
+const getExistingCusEntAndUsage = async ({
 	curCusProduct,
 	entitlement,
 	relatedPrice,
@@ -55,7 +55,7 @@ export const getExistingCusEntAndUsage = async ({
 	}
 };
 
-export const getExistingUsages = ({
+const getExistingUsages = ({
 	curCusProduct,
 	entities,
 	features,

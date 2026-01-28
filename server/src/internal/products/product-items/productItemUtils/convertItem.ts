@@ -6,7 +6,7 @@ import {
 	UsageModel,
 } from "@autumn/shared";
 
-export const itemToFeature = ({
+const itemToFeature = ({
 	item,
 	features,
 }: {

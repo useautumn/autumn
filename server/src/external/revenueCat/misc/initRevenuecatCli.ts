@@ -1,7 +1,7 @@
 import { decryptData } from "@server/utils/encryptUtils.js";
 import type { RevenueCatProductsResponse } from "../revenuecatTypes";
 
-export type ListRevenuecatProductsResponse = {
+type ListRevenuecatProductsResponse = {
 	products: { id: string; name: string }[];
 };
 
