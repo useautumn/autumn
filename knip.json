@@ -11,8 +11,10 @@
 				"src/_luaScriptsV2/**",
 				"src/utils/importUtils/**",
 				"src/utils/scriptUtils/**",
-				"src/utils/workerUtils/**"
-			]
+				"src/utils/workerUtils/**",
+				"src/db/**"
+			],
+			"ignoreDependencies": ["@react-email/components"]
 		},
 		"shared": {
 			"entry": ["index.ts"],
@@ -24,7 +26,12 @@
 			"entry": ["src/main.tsx"],
 			"project": ["src/**/*.{ts,tsx}"],
 			"ignore": ["src/components/ai-elements/**"],
-			"ignoreDependencies": ["tailwindcss"]
+			"ignoreDependencies": [
+				"tailwindcss",
+				"tailwind-scrollbar-hide",
+				"tailwindcss-animate",
+				"@squircle/tailwindcss"
+			]
 		},
 		"scripts": {
 			"entry": ["**/*.{ts,js}"],
