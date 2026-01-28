@@ -1,6 +1,6 @@
 import { Decimal } from "decimal.js";
 
-export type CalculateDeductionParams = {
+type CalculateDeductionParams = {
 	currentBalance: number;
 	currentAdjustment: number;
 	amountToDeduct: number;
@@ -9,7 +9,7 @@ export type CalculateDeductionParams = {
 	alterGrantedBalance?: boolean;
 };
 
-export type CalculateDeductionResult = {
+type CalculateDeductionResult = {
 	deducted: number;
 	newBalance: number;
 	newAdjustment: number;

@@ -6,4 +6,4 @@ export const ApiTrialsUsedV0Schema = z.object({
 	fingerprint: z.string().nullish(),
 });
 
-export type ApiTrialsUsedV0 = z.infer<typeof ApiTrialsUsedV0Schema>;
+type ApiTrialsUsedV0 = z.infer<typeof ApiTrialsUsedV0Schema>;

@@ -20,5 +20,5 @@ export const useSDKStore = create<SDKState>()(
 	),
 );
 
-export const useSelectedSDK = () => useSDKStore((s) => s.selectedSDK);
-export const useSetSelectedSDK = () => useSDKStore((s) => s.setSelectedSDK);
+const useSelectedSDK = () => useSDKStore((s) => s.selectedSDK);
+const useSetSelectedSDK = () => useSDKStore((s) => s.setSelectedSDK);

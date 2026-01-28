@@ -64,7 +64,7 @@ const deleteStripeWebhooks = async ({
 	}
 };
 
-export const deleteStripeAccounts = async ({
+const deleteStripeAccounts = async ({
 	org,
 	logger,
 }: {

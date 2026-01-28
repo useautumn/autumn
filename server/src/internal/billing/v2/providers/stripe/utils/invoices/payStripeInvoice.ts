@@ -16,7 +16,7 @@ export type PayInvoiceResult = {
 	stripeError?: Stripe.errors.StripeError;
 };
 
-export type PayStripeInvoiceParams = {
+type PayStripeInvoiceParams = {
 	stripeCli: Stripe;
 	invoiceId: string;
 	paymentMethod?: Stripe.PaymentMethod | null;

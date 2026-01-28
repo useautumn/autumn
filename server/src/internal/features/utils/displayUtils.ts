@@ -26,7 +26,7 @@ export const getFeatureName = ({
 	return featureName;
 };
 
-export const getFeatureNameWithCapital = ({
+const getFeatureNameWithCapital = ({
 	feature,
 }: {
 	feature: Feature;

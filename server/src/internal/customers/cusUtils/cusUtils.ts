@@ -81,7 +81,7 @@ export const updateCustomerDetails = async ({
 	}
 };
 
-export const getCusInvoices = async ({
+const getCusInvoices = async ({
 	db,
 	internalCustomerId,
 	invoices,
@@ -116,7 +116,7 @@ export const getCusInvoices = async ({
 };
 
 // IMPORTANT FUNCTION
-export const getCusEntsInFeatures = async ({
+const getCusEntsInFeatures = async ({
 	customer,
 	internalFeatureIds,
 	logger,
@@ -161,7 +161,7 @@ export const getCusEntsInFeatures = async ({
 	return { cusEnts, cusPrices };
 };
 
-export const parseCusExpand = (expand?: string): CusExpand[] => {
+const parseCusExpand = (expand?: string): CusExpand[] => {
 	if (expand) {
 		const options = expand.split(",");
 		const result: CusExpand[] = [];

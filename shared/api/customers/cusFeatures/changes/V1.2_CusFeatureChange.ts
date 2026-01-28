@@ -273,7 +273,7 @@ export function transformBalanceToCusFeatureV3({
  * Input: ApiCusFeature (V2.0+ format)
  * Output: ApiCusFeatureV3 (V1.2 format)
  */
-export const V1_2_CusFeatureChange = defineVersionChange({
+const V1_2_CusFeatureChange = defineVersionChange({
 	newVersion: ApiVersion.V2_0,
 	oldVersion: ApiVersion.V1_2,
 	description: [

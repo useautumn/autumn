@@ -1,7 +1,7 @@
 import type { ProductItem } from "@autumn/shared";
 import { createContext, useContext } from "react";
 
-export interface ProductItemContextType {
+interface ProductItemContextType {
 	item: ProductItem | null;
 	initialItem?: ProductItem | null;
 	setItem: (item: ProductItem) => void;

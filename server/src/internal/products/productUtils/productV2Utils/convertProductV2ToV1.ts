@@ -11,7 +11,7 @@ import { itemToPriceAndEnt } from "@/internal/products/product-items/productItem
  * V1 product format with entitlements as a record (used in tests)
  * Different from FullProduct which has entitlements as an array
  */
-export type ProductV1 = {
+type ProductV1 = {
 	id: string;
 	name: string;
 	is_default: boolean;

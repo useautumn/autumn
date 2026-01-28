@@ -6,7 +6,7 @@ import type {
 } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
 
-export const cusEntMatchesEntity = ({
+const cusEntMatchesEntity = ({
 	cusEnt,
 	entity,
 }: {
@@ -69,7 +69,7 @@ export const findCusEnt = ({
 	});
 };
 
-export const filterCusEnts = ({
+const filterCusEnts = ({
 	feature,
 	cusEnts,
 	entity,

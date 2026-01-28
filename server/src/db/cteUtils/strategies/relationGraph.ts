@@ -7,7 +7,7 @@ import { type CTEMode, inferMode } from "../typeDetection.js";
 /**
  * Get table name from Drizzle table object
  */
-export function getTableName(table: PgTable): string {
+function getTableName(table: PgTable): string {
 	return (table as any)[Symbol.for("drizzle:Name")] || String(table);
 }
 
@@ -27,7 +27,7 @@ export interface RelationNode {
 /**
  * Parse join condition SQL to extract column names
  */
-export function parseJoinCondition({
+function parseJoinCondition({
 	joinCondition,
 	parentTableName,
 	targetTableName,

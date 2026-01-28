@@ -18,7 +18,7 @@ import { SelectFeatureDropdown } from "./SelectFeatureDropdown";
 import { SelectGroupByDropdown } from "./SelectGroupByDropdown";
 
 // Simple intervals without bin size options
-export const SIMPLE_INTERVALS: Record<string, string> = {
+const SIMPLE_INTERVALS: Record<string, string> = {
 	"24h": "Last 24 hours",
 	"7d": "Last 7 days",
 	"30d": "Last 30 days",
@@ -26,12 +26,12 @@ export const SIMPLE_INTERVALS: Record<string, string> = {
 };
 
 // Intervals that support bin size selection (day/month)
-export const BIN_SIZE_INTERVALS: Record<string, string> = {
+const BIN_SIZE_INTERVALS: Record<string, string> = {
 	"90d": "Last 90 days",
 	"3bc": "Latest 3 billing cycles",
 };
 
-export const ALL_INTERVALS: Record<string, string> = {
+const ALL_INTERVALS: Record<string, string> = {
 	...SIMPLE_INTERVALS,
 	...BIN_SIZE_INTERVALS,
 };

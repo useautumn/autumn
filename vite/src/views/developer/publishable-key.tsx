@@ -29,7 +29,7 @@ export const PublishableKeySection = () => {
 	);
 };
 
-export const CopyPublishableKey = ({
+const CopyPublishableKey = ({
 	type,
 	value,
 }: {

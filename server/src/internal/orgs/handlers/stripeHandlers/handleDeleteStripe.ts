@@ -13,7 +13,7 @@ import { OrgService } from "../../OrgService.js";
 import { clearOrgCache } from "../../orgUtils/clearOrgCache.js";
 import { isStripeConnected } from "../../orgUtils.js";
 
-export const disconnectStripe = async ({
+const disconnectStripe = async ({
 	org,
 	env,
 	logger,
@@ -58,7 +58,7 @@ export const disconnectStripe = async ({
 	}
 };
 
-export const clearStripeConfig = async ({
+const clearStripeConfig = async ({
 	db,
 	org,
 	env,

@@ -33,7 +33,7 @@ const getSingularAndPlural = (feature: Feature) => {
 	return { singular, plural };
 };
 
-export const formatPrepaidPrice = ({
+const formatPrepaidPrice = ({
 	quantity,
 	ents,
 	price,
@@ -58,7 +58,7 @@ export const formatPrepaidPrice = ({
 	}
 };
 
-export const formatFixedPrice = ({
+const formatFixedPrice = ({
 	org,
 	price,
 	quantity,
@@ -83,7 +83,7 @@ export const formatFixedPrice = ({
 	}
 };
 
-export const formatInArrearProrated = ({
+const formatInArrearProrated = ({
 	price,
 	ents,
 	quantity,

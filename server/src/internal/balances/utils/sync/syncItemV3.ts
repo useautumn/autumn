@@ -64,7 +64,7 @@ const handleSyncPostgresError = async ({
 	return true;
 };
 
-export interface SyncItemV3 {
+interface SyncItemV3 {
 	customerId: string;
 	orgId: string;
 	env: string;

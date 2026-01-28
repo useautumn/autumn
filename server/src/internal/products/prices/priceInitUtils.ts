@@ -15,7 +15,7 @@ import { getBillingType } from "@server/internal/products/prices/priceUtils";
 import RecaseError from "@server/utils/errorUtils";
 import { generateId } from "@server/utils/genUtils";
 
-export const constructPrice = ({
+const constructPrice = ({
 	name,
 	config,
 	orgId,

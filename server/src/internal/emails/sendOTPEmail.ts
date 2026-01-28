@@ -1,4 +1,4 @@
-import OTPEmail from "@emails/OTPEmail.js";
+import OTPEmail from "@emails/otpemail.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { createResendCli } from "@/external/resend/resendUtils.js";
 import { FROM_AUTUMN } from "./constants.js";

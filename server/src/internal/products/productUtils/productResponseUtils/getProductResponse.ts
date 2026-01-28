@@ -82,7 +82,7 @@ export const getProductItemResponse = ({
 	});
 };
 
-export const getFreeTrialResponse = async ({
+const getFreeTrialResponse = async ({
 	db,
 	product,
 	fullCus,
@@ -127,7 +127,7 @@ export const getFreeTrialResponse = async ({
 	return null;
 };
 
-export const getProductProperties = ({
+const getProductProperties = ({
 	product,
 	freeTrial,
 }: {

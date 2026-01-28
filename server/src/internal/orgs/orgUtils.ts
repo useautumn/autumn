@@ -112,7 +112,7 @@ export const isStripeConnected = ({
 	}
 };
 
-export const constructOrg = ({ id, slug }: { id: string; slug: string }) => {
+const constructOrg = ({ id, slug }: { id: string; slug: string }) => {
 	return {
 		id,
 		slug,
@@ -174,7 +174,7 @@ export const getStripeWebhookSecret = (org: Organization, env: AppEnv) => {
 	return decryptData(webhookSecret);
 };
 
-export const initDefaultConfig = () => {
+const initDefaultConfig = () => {
 	return {
 		free_trial_paid_to_paid: false,
 
@@ -265,7 +265,7 @@ export const createOrgResponse = ({
 	};
 };
 
-export const getOrgAndFeatures = async ({ req }: { req: any }) => {
+const getOrgAndFeatures = async ({ req }: { req: any }) => {
 	const [org, features] = await Promise.all([
 		OrgService.getFromReq(req),
 		FeatureService.getFromReq(req),
@@ -274,7 +274,7 @@ export const getOrgAndFeatures = async ({ req }: { req: any }) => {
 	return { org, features };
 };
 
-export const updateOrgConfig = async ({
+const updateOrgConfig = async ({
 	db,
 	org,
 	config,

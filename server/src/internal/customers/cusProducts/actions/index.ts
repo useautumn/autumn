@@ -25,8 +25,4 @@ export const customerProductActions = {
 	},
 };
 
-export {
-	expireCustomerProductAndActivateDefault,
-	activateScheduledCustomerProduct,
-	deleteScheduledCustomerProduct,
-};
+;

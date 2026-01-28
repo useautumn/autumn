@@ -40,7 +40,7 @@ export const findContUsePrice = ({ prices }: { prices: Price[] }) => {
 	});
 };
 
-export const findPriceForFeature = ({
+const findPriceForFeature = ({
 	prices,
 	feature,
 	internalFeatureId,
@@ -114,14 +114,4 @@ export const priceToProduct = ({
 	return products.find(
 		(p: Product) => p.internal_id == price.internal_product_id,
 	);
-};
-
-export const filterByBillingType = ({
-	prices,
-	billingType,
-}: {
-	prices: Price[];
-	billingType: BillingType;
-}) => {
-	return prices.filter((p) => getBillingType(p.config) == billingType);
 };

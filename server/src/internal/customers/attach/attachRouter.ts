@@ -88,7 +88,7 @@ export const handlePrepaidErrors = async ({
 	}
 };
 
-export const handlePublicAttachErrors = async ({
+const handlePublicAttachErrors = async ({
 	curCusProduct,
 	isPublic,
 }: {
@@ -184,7 +184,7 @@ export const checkStripeConnections = async ({
 	});
 };
 
-export const createStripePrices = async ({
+const createStripePrices = async ({
 	ctx,
 	attachParams,
 	useCheckout,
@@ -220,7 +220,7 @@ export const createStripePrices = async ({
 	await Promise.all(batchPriceUpdates);
 };
 
-export const customerHasPm = async ({
+const customerHasPm = async ({
 	attachParams,
 }: {
 	attachParams: AttachParams;

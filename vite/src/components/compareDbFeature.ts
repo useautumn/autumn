@@ -5,7 +5,7 @@ import {
 	FeatureType,
 } from "@autumn/shared";
 
-export const creditSchemasSame = ({
+const creditSchemasSame = ({
 	schema1,
 	schema2,
 }: {

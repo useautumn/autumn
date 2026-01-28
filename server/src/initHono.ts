@@ -9,7 +9,6 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 
 import { autumnWebhookRouter } from "./external/autumn/autumnWebhookRouter.js";
-import { cliRouter } from "./internal/dev/cli/cliRouter.js";
 import { revenuecatWebhookRouter } from "./external/revenueCat/revenuecatWebhookRouter.js";
 import { stripeWebhookRouter } from "./external/stripe/stripeWebhookRouter.js";
 import { vercelWebhookRouter } from "./external/vercel/vercelWebhookRouter.js";
@@ -18,6 +17,7 @@ import { errorMiddleware } from "./honoMiddlewares/errorMiddleware.js";
 import { traceMiddleware } from "./honoMiddlewares/traceMiddleware.js";
 import type { HonoEnv } from "./honoUtils/HonoEnv.js";
 import { handleHealthCheck } from "./honoUtils/handleHealthCheck.js";
+import { cliRouter } from "./internal/dev/cli/cliRouter.js";
 import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
 import { apiRouter } from "./routers/apiRouter.js";
 import { internalRouter } from "./routers/internalRouter.js";
@@ -39,6 +39,8 @@ const ALLOWED_HEADERS = [
 	"app_env",
 	"x-api-version",
 	"x-client-type",
+	"x-request-id",
+	"x-visitor-id",
 	"Authorization",
 	"Content-Type",
 	"Accept",
@@ -57,7 +59,7 @@ const ALLOWED_HEADERS = [
 	"User-Agent", // Required for better-auth v1.4.0+ compatibility with Safari/Zen browser
 ];
 
-export const createHonoApp = () => {
+const createHonoApp = () => {
 	const app = new Hono<HonoEnv>();
 
 	// CORS configuration (must be before routes)

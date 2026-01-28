@@ -23,7 +23,7 @@ export const userRelations = relations(user, ({ many }) => ({
 	oauthConsents: many(oauthConsent),
 }));
 
-export const sessionRelations = relations(session, ({ one, many }) => ({
+const sessionRelations = relations(session, ({ one, many }) => ({
 	user: one(user, {
 		fields: [session.userId],
 		references: [user.id],
@@ -32,7 +32,7 @@ export const sessionRelations = relations(session, ({ one, many }) => ({
 	oauthAccessTokens: many(oauthAccessToken),
 }));
 
-export const accountRelations = relations(account, ({ one }) => ({
+const accountRelations = relations(account, ({ one }) => ({
 	user: one(user, {
 		fields: [account.userId],
 		references: [user.id],
@@ -62,7 +62,7 @@ export const inviteRelations = relations(invitation, ({ one }) => ({
 }));
 
 // OAuth Provider relations
-export const oauthClientRelations = relations(oauthClient, ({ one, many }) => ({
+const oauthClientRelations = relations(oauthClient, ({ one, many }) => ({
 	user: one(user, {
 		fields: [oauthClient.userId],
 		references: [user.id],
@@ -72,7 +72,7 @@ export const oauthClientRelations = relations(oauthClient, ({ one, many }) => ({
 	oauthConsents: many(oauthConsent),
 }));
 
-export const oauthRefreshTokenRelations = relations(
+const oauthRefreshTokenRelations = relations(
 	oauthRefreshToken,
 	({ one, many }) => ({
 		oauthClient: one(oauthClient, {
@@ -91,7 +91,7 @@ export const oauthRefreshTokenRelations = relations(
 	}),
 );
 
-export const oauthAccessTokenRelations = relations(
+const oauthAccessTokenRelations = relations(
 	oauthAccessToken,
 	({ one }) => ({
 		oauthClient: one(oauthClient, {
@@ -113,7 +113,7 @@ export const oauthAccessTokenRelations = relations(
 	}),
 );
 
-export const oauthConsentRelations = relations(oauthConsent, ({ one }) => ({
+const oauthConsentRelations = relations(oauthConsent, ({ one }) => ({
 	oauthClient: one(oauthClient, {
 		fields: [oauthConsent.clientId],
 		references: [oauthClient.clientId],

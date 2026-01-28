@@ -1,6 +1,6 @@
 import type { Snippet } from "./types";
 
-export const PYTHON_SNIPPETS: Record<string, Snippet> = {
+const PYTHON_SNIPPETS: Record<string, Snippet> = {
 	install: {
 		id: "install",
 		title: "Install the SDK",

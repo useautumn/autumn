@@ -19,7 +19,7 @@ env:
 
 jobs:
   checks:
-    name: Type Check # To add: Lint check
+    name: Type Check
     runs-on: ubuntu-latest
     
     steps:

@@ -289,6 +289,6 @@ export const handleErrorSkip = (err: Error, c: Context<HonoEnv>) => {
  * Note: This doesn't actually prevent errors from reaching onError handler
  * It's used within the main error handler to check for skip cases
  */
-export const errorSkipMiddleware = (err: Error, c: Context<HonoEnv>) => {
+const errorSkipMiddleware = (err: Error, c: Context<HonoEnv>) => {
 	return handleErrorSkip(err, c);
 };

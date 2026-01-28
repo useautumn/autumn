@@ -30,7 +30,7 @@ import { attachParamsToProduct } from "../convertAttachParams.js";
 import { intervalsAreSame } from "../getAttachConfig.js";
 import { priceToContUseItem } from "./priceToContUseItem.js";
 
-export const getContUseNewItems = async ({
+const getContUseNewItems = async ({
 	price,
 	ent,
 	attachParams,

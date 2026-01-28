@@ -84,7 +84,7 @@ export const validateCreditSystem = (config: CreditSystemConfig) => {
 	return newConfig;
 };
 
-export const getCusFeatureType = ({ feature }: { feature: Feature }) => {
+const getCusFeatureType = ({ feature }: { feature: Feature }) => {
 	if (feature.type === FeatureType.Boolean) {
 		return ApiFeatureType.Static;
 	} else if (feature.type === FeatureType.Metered) {
@@ -98,7 +98,7 @@ export const getCusFeatureType = ({ feature }: { feature: Feature }) => {
 	}
 };
 
-export const isCreditSystem = ({ feature }: { feature: Feature }) => {
+const isCreditSystem = ({ feature }: { feature: Feature }) => {
 	return feature.type === FeatureType.CreditSystem;
 };
 

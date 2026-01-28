@@ -21,7 +21,7 @@ export type DeductionOptions = {
 };
 
 /** Core params for deduction (shared by Redis & Postgres) */
-export type DeductionParams = {
+type DeductionParams = {
 	ctx: AutumnContext;
 	fullCus: FullCustomer;
 	entityId?: string;
@@ -30,7 +30,7 @@ export type DeductionParams = {
 };
 
 /** Result from deduction (same for Redis & Postgres) */
-export type DeductionResult = {
+type DeductionResult = {
 	oldFullCus: FullCustomer;
 	fullCus: FullCustomer | undefined;
 	isPaidAllocated: boolean;
@@ -58,7 +58,7 @@ export type PreparedFeatureDeduction = {
 };
 
 /** Result from Postgres deduction */
-export type PostgresDeductionResult = {
+type PostgresDeductionResult = {
 	updates: Record<string, DeductionUpdate>;
 	remaining: number;
 };

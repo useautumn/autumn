@@ -13,7 +13,7 @@ import type { FullCustomer } from "@shared/models/cusModels/fullCusModel";
 import type Stripe from "stripe";
 import { z } from "zod/v4";
 
-export const InvoiceModeSchema = z.object({
+const InvoiceModeSchema = z.object({
 	finalizeInvoice: z.boolean().default(false),
 	enableProductImmediately: z.boolean().default(true),
 });

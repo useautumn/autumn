@@ -17,7 +17,7 @@ import type { CronContext } from "./utils/CronContext.js";
 
 const { db, client } = initDrizzle();
 
-export const cronTask = async () => {
+const cronTask = async () => {
 	try {
 		// const [productCusEnts, looseCusEnts] = await Promise.all([
 		// 	CusEntService.getActiveResetPassed({ db, batchSize: 500 }),

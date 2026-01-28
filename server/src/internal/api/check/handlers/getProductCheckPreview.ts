@@ -20,7 +20,7 @@ import { notNullish } from "@/utils/genUtils.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { getAttachScenario } from "./attachToCheckPreview/getAttachScenario.js";
 
-export const attachToCheckPreview = async ({
+const attachToCheckPreview = async ({
 	preview,
 	params,
 	product,

@@ -32,7 +32,7 @@ export function useAxiosSWR({
 	});
 }
 
-export function useAxiosPostSWR({
+function useAxiosPostSWR({
 	url,
 	env,
 	data,
@@ -97,7 +97,7 @@ export function usePostSWR({
 	});
 }
 
-export function useDemoSWR({
+function useDemoSWR({
 	url,
 	publishableKey,
 	options = {},

@@ -11,7 +11,7 @@ import {
 import { getCusPriceUsage } from "@server/internal/customers/cusProducts/cusPrices/cusPriceUtils";
 import type Stripe from "stripe";
 
-export const createSubMeta = ({ features }: { features: Feature[] }) => {
+const createSubMeta = ({ features }: { features: Feature[] }) => {
 	const usageFeatures = features.map((f) => ({
 		internal_id: f.internal_id,
 		id: f.id,
@@ -109,7 +109,7 @@ export const getInvoiceItemForUsage = ({
 	return invoiceItem;
 };
 
-export const getPlaceholderItem = ({
+const getPlaceholderItem = ({
 	product,
 	org,
 	interval,
@@ -136,7 +136,7 @@ export const getPlaceholderItem = ({
 	};
 };
 
-export const createEmptySubItem = ({
+const createEmptySubItem = ({
 	recurring,
 	stripeProductId,
 }: {

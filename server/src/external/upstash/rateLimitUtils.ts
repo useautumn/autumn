@@ -154,7 +154,7 @@ export const getRateLimitKey = async ({
 	}
 };
 
-export const getRateLimitConfig = ({
+const getRateLimitConfig = ({
 	rateLimitType,
 }: {
 	rateLimitType: RateLimitType;

@@ -96,7 +96,7 @@ const setSubscriptionsScript = readFileSync(
 export const SET_SUBSCRIPTIONS_SCRIPT = `${CACHE_KEY_UTILS}\n${setSubscriptionsScript}`;
 
 // Legacy export for backwards compatibility
-export const SET_CUSTOMER_PRODUCTS_SCRIPT = SET_SUBSCRIPTIONS_SCRIPT;
+const SET_CUSTOMER_PRODUCTS_SCRIPT = SET_SUBSCRIPTIONS_SCRIPT;
 
 // Prepend cache key utils to SET_CUSTOMER_DETAILS_SCRIPT
 const setCustomerDetailsScript = readFileSync(
@@ -155,7 +155,7 @@ const setEntityScript = readFileSync(
 	join(__dirname, "entityLuaScripts/setEntity.lua"),
 	"utf-8",
 );
-export const SET_ENTITY_SCRIPT = `${CACHE_KEY_UTILS}\n${CACHE_BALANCE_UTILS}\n${CHECK_ENTITY_CACHE_EXISTS}\n${setEntityScript}`;
+const SET_ENTITY_SCRIPT = `${CACHE_KEY_UTILS}\n${CACHE_BALANCE_UTILS}\n${CHECK_ENTITY_CACHE_EXISTS}\n${setEntityScript}`;
 
 // Prepend cache key utils and balance utils to SET_ENTITIES_BATCH_SCRIPT
 const setEntitiesBatchScript = readFileSync(
@@ -185,4 +185,4 @@ export function getBatchDeductionScript(): string {
 	return `${CACHE_KEY_UTILS}\n${LOAD_BALANCES}\n${FILTER_BALANCE_UTILS}\n${ACCUMULATOR_UTILS}\n${SUBSCRIPTION_UTILS}\n${GET_CUSTOMER_ENTITY_UTILS}\n${batchDeduction}`;
 }
 
-export const BATCH_DEDUCTION_SCRIPT = getBatchDeductionScript();
+const BATCH_DEDUCTION_SCRIPT = getBatchDeductionScript();

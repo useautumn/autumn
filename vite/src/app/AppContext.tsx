@@ -2,7 +2,7 @@ import { createContext, useContext } from "react";
 
 export const AppContext = createContext<any>(null);
 
-export const useAppContext = () => {
+const useAppContext = () => {
 	const context = useContext(AppContext);
 
 	if (context === undefined) {

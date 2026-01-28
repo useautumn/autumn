@@ -3,27 +3,27 @@ import type { ReactNode } from "react";
 import type { SDKType } from "@/hooks/stores/useSDKStore";
 import type { AuthProvider, BackendStack, CustomerType } from "./types";
 
-export interface StackOption {
+interface StackOption {
 	value: string;
 	label: string;
 	asset?: string;
 	icon?: ReactNode;
 }
 
-export interface SDKOption {
+interface SDKOption {
 	value: SDKType;
 	label: string;
 	icon: string;
 }
 
-export const FRONTEND_OPTIONS: StackOption[] = [
+const FRONTEND_OPTIONS: StackOption[] = [
 	{ value: "nextjs", label: "Next.js", asset: "/frameworks/nextjs.png" },
 	{ value: "rr7", label: "RR7", asset: "/frameworks/react-router.svg" },
 	{ value: "vite", label: "Vite SPA", asset: "/frameworks/vite.svg" },
 	{ value: "general", label: "Other", asset: "/frameworks/react.png" },
 ];
 
-export const BACKEND_OPTIONS: StackOption[] = [
+const BACKEND_OPTIONS: StackOption[] = [
 	{ value: "nextjs", label: "Next.js", asset: "/frameworks/nextjs.png" },
 	{ value: "rr7", label: "RR7", asset: "/frameworks/react-router.svg" },
 	{ value: "hono", label: "Hono", asset: "/frameworks/hono.png" },
@@ -32,7 +32,7 @@ export const BACKEND_OPTIONS: StackOption[] = [
 	{ value: "general", label: "Other", asset: "/frameworks/nodejs.svg" },
 ];
 
-export const AUTH_OPTIONS: StackOption[] = [
+const AUTH_OPTIONS: StackOption[] = [
 	{
 		value: "betterauth",
 		label: "Better Auth",
@@ -43,7 +43,7 @@ export const AUTH_OPTIONS: StackOption[] = [
 	{ value: "other", label: "Other", asset: "/auth-key.png" },
 ];
 
-export const CUSTOMER_TYPE_OPTIONS: StackOption[] = [
+const CUSTOMER_TYPE_OPTIONS: StackOption[] = [
 	{
 		value: "user",
 		label: "Users",
@@ -63,7 +63,7 @@ export const SDK_OPTIONS: SDKOption[] = [
 	{ value: "curl", label: "cURL", icon: "/frameworks/curl.png" },
 ];
 
-export interface StackSection {
+interface StackSection {
 	label: string;
 	configKey: "backend" | "auth" | "customerType";
 	options: StackOption[];
@@ -79,4 +79,4 @@ export const STACK_SECTIONS: StackSection[] = [
 	},
 ];
 
-export type { AuthProvider, BackendStack, CustomerType };
+;
