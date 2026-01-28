@@ -227,6 +227,66 @@ const defaultTrial = ({
 });
 
 /**
+ * Premium product - $50/month base price
+ * @param items - Product items (features)
+ * @param id - Product ID (default: "premium")
+ */
+const premium = ({
+	items,
+	id = "premium",
+}: {
+	items: ProductItem[];
+	id?: string;
+}): ProductV2 =>
+	constructProduct({
+		id,
+		items: [...items],
+		type: "premium",
+		isDefault: false,
+	});
+
+/**
+ * Growth product - $100/month base price
+ * @param items - Product items (features)
+ * @param id - Product ID (default: "growth")
+ */
+const growth = ({
+	items,
+	id = "growth",
+}: {
+	items: ProductItem[];
+	id?: string;
+}): ProductV2 =>
+	constructProduct({
+		id,
+		items: [...items],
+		type: "growth",
+		isDefault: false,
+	});
+
+/**
+ * Ultra product - $200/month base price (uses base with custom price)
+ * @param items - Product items (features)
+ * @param id - Product ID (default: "ultra")
+ */
+const ultra = ({
+	items,
+	id = "ultra",
+}: {
+	items: ProductItem[];
+	id?: string;
+}): ProductV2 => ({
+	...constructRawProduct({
+		id,
+		items: [
+			...items,
+			constructPriceItem({ price: 200, interval: BillingInterval.Month }),
+		],
+	}),
+	is_default: false,
+});
+
+/**
  * One-off product - one-time purchase with $10 base price
  * @param items - Product items (features)
  * @param id - Product ID (default: "one-off")
@@ -272,7 +332,10 @@ export const products = {
 	pro,
 	proAnnual,
 	proWithTrial,
+	premium,
 	premiumWithTrial,
+	growth,
+	ultra,
 	oneOff,
 	recurringAddOn,
 } as const;

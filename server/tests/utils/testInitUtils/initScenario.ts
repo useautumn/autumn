@@ -86,6 +86,16 @@ type AdvanceToNextInvoiceAction = {
 	withPause?: boolean;
 };
 
+type BillingAttachAction = {
+	type: "billingAttach";
+	productId: string;
+	entityIndex?: number;
+	options?: FeatureOption[];
+	newBillingSubscription?: boolean;
+	timeout?: number;
+	isAddOn?: boolean;
+};
+
 type ScenarioAction =
 	| AttachAction
 	| CancelAction
@@ -94,7 +104,8 @@ type ScenarioAction =
 	| RemovePaymentMethodAction
 	| TrackAction
 	| UpdateSubscriptionAction
-	| AdvanceToNextInvoiceAction;
+	| AdvanceToNextInvoiceAction
+	| BillingAttachAction;
 
 type CleanupConfig = {
 	customerIdsToDelete: string[];

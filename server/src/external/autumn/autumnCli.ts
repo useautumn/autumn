@@ -795,4 +795,43 @@ export class AutumnInt {
 			return data;
 		},
 	};
+
+	billing = {
+		attach: async (
+			params: AttachBodyV0,
+			{
+				skipWebhooks,
+				idempotencyKey,
+				timeout,
+			}: {
+				skipWebhooks?: boolean;
+				idempotencyKey?: string;
+				timeout?: number;
+			} = {},
+		) => {
+			const headers: Record<string, string> = {};
+			if (skipWebhooks !== undefined) {
+				headers["x-skip-webhooks"] = skipWebhooks ? "true" : "false";
+			}
+			if (idempotencyKey !== undefined) {
+				headers["idempotency-key"] = idempotencyKey;
+			}
+
+			const data = await this.post(
+				`/billing/attach`,
+				params,
+				Object.keys(headers).length > 0 ? headers : undefined,
+			);
+
+			if (timeout) {
+				await new Promise((resolve) => setTimeout(resolve, timeout));
+			}
+			return data;
+		},
+
+		previewAttach: async (params: AttachBodyV0) => {
+			const data = await this.post(`/billing/attach/preview`, params);
+			return data;
+		},
+	};
 }
