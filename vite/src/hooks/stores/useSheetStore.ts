@@ -87,8 +87,7 @@ export const useSheetStore = create<SheetState>((set) => ({
 
 // Convenience selectors for common patterns
 export const useIsSheetOpen = () => useSheetStore((s) => s.type !== null);
-const useIsEditingPlan = () =>
-	useSheetStore((s) => s.type === "edit-plan");
+const useIsEditingPlan = () => useSheetStore((s) => s.type === "edit-plan");
 const useIsEditingFeature = () =>
 	useSheetStore((s) => s.type === "edit-feature");
 const useIsCreatingFeature = () =>

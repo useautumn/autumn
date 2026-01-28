@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
+import { Table } from "@/components/general/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/v2/buttons/Button";
-import { Table } from "@/components/general/table";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import { type AdminUser, createAdminUserColumns } from "./AdminUserColumns";
 import { useAdminTable } from "./hooks/useAdminTable";
@@ -23,13 +23,16 @@ export const AdminUserTable = () => {
 		url,
 	});
 
-	const rows: AdminUser[] = data?.rows || [];
+	const rows: AdminUser[] = useMemo(() => data?.rows || [], [data?.rows]);
+
+	const lastRow = rows[rows.length - 1];
+	const firstRow = rows[0];
 
 	const pageInfo = {
 		hasNextPage: data?.hasNextPage || false,
 		hasPrevPage: rows.length !== 0 && page > 1,
-		lastItem: `${rows[rows.length - 1]?.id},${rows[rows.length - 1]?.createdAt}`,
-		firstItem: `${rows[0]?.id},${rows[0]?.createdAt}`,
+		lastItem: lastRow ? `${lastRow.id},${lastRow.createdAt}` : undefined,
+		firstItem: firstRow ? `${firstRow.id},${firstRow.createdAt}` : undefined,
 		page,
 	};
 
@@ -56,13 +59,19 @@ export const AdminUserTable = () => {
 	const table = useAdminTable({
 		data: rows,
 		columns,
-		options: {
-			globalFilterFn: "includesString",
-			enableGlobalFilter: true,
-		},
 	});
 
 	const enableSorting = false;
+
+	const tableConfig = useMemo(() => ({
+		table,
+		numberOfColumns: columns.length,
+		enableSorting,
+		isLoading,
+		emptyStateText: "No users found.",
+		rowClassName: "h-10",
+		flexibleTableColumns: true,
+	}), [table, columns.length, enableSorting, isLoading]);
 
 	return (
 		<div className="space-y-4">
@@ -80,15 +89,7 @@ export const AdminUserTable = () => {
 			</div>
 
 			<Table.Provider
-				config={{
-					table,
-					numberOfColumns: columns.length,
-					enableSorting,
-					isLoading,
-					emptyStateText: "No users found.",
-					rowClassName: "h-10",
-					flexibleTableColumns: true,
-				}}
+				config={tableConfig}
 			>
 				<Table.Container>
 					<Table.Content className="w-fit">

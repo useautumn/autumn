@@ -40,7 +40,7 @@ export type ExternalCusProductProcessors = z.infer<
 
 export enum VercelMarketplaceMode {
 	Installation = "installation",
-	}
+}
 
 /**
  * Organization-level Vercel processor configuration

@@ -40,7 +40,7 @@ honoOrgRouter.get("/me", (c) => {
 	return c.json({
 		name: org.name,
 		slug: org.slug,
-		env
+		env,
 	});
 });
 honoOrgRouter.patch("", ...handleUpdateOrg);

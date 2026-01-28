@@ -31,11 +31,7 @@ function calculateNestingDepth({
 /**
  * Detect if any nested relations will return arrays (one-to-many)
  */
-function detectArrayRelations({
-	config,
-}: {
-	config: CTEConfig;
-}): boolean {
+function detectArrayRelations({ config }: { config: CTEConfig }): boolean {
 	if (!config.with) return false;
 
 	for (const [fieldName, nested] of Object.entries(config.with)) {

@@ -7,6 +7,7 @@ import {
 	FeatureType,
 	FeatureUsageType,
 	type FullCustomer,
+	isAllocatedPrice,
 	type MeteredConfig,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -123,11 +124,11 @@ export const isPaidContinuousUse = ({
 
 	const hasPaid = cusPrices.some((cp) => {
 		const config = cp.price.config as UsagePriceConfig;
-		if (config.internal_feature_id === feature.internal_id) {
-			return true;
-		}
 
-		return false;
+		const featureIdMatches = config.internal_feature_id === feature.internal_id;
+		const allocatedPrice = isAllocatedPrice(cp.price);
+
+		return featureIdMatches && allocatedPrice;
 	});
 
 	return hasPaid;
