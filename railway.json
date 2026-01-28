@@ -5,7 +5,7 @@
     "dockerfilePath": "docker/Dockerfile"
   },
   "deploy": {
-    "startCommand": "cd /app/server && bun start",
+    "startCommand": "bun start",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 300
   }
