@@ -28,7 +28,7 @@ export async function createTestOrgForPR({
 }: {
 	db: DrizzleCli;
 	prNumber: string;
-}): Promise<{ apiKey: string; orgId: string }> {
+}): Promise<{ apiKey: string; orgId: string; alreadyExisted: boolean }> {
 	console.log(
 		chalk.magentaBright(
 			`\n================ Creating Test Organization for PR #${prNumber} ================\n`,
@@ -76,7 +76,7 @@ export async function createTestOrgForPR({
 				chalk.greenBright("✅ Created API key for existing organization"),
 			);
 		}
-		return { apiKey: key, orgId };
+		return { apiKey: key, orgId, alreadyExisted: true };
 	}
 
 	// Create the test organization
@@ -118,7 +118,7 @@ export async function createTestOrgForPR({
 		console.log(chalk.greenBright("✅ Created API key for test organization"));
 	}
 
-	return { apiKey: key, orgId };
+	return { apiKey: key, orgId, alreadyExisted: false };
 }
 
 /**

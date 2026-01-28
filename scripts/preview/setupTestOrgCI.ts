@@ -1,7 +1,8 @@
 import "dotenv/config";
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, type Organization } from "@autumn/shared";
 import { initDrizzle } from "@server/db/initDrizzle.js";
 import { setupOrg } from "@server/tests/utils/setup/setupOrg.js";
+import { clearOrg } from "@server/utils/scriptUtils/clearOrg.js";
 import { createTestOrgForPR } from "../setupTestUtils/createTestOrg.js";
 
 const main = async () => {
@@ -13,7 +14,16 @@ const main = async () => {
 	console.log(`Setting up test organization for PR #${prNumber}...`);
 
 	const { db } = initDrizzle();
-	const { apiKey, orgId } = await createTestOrgForPR({ db, prNumber });
+	const { apiKey, orgId, alreadyExisted } = await createTestOrgForPR({ db, prNumber });
+
+	// If org already existed, clear it first to avoid duplicate feature errors
+	if (alreadyExisted) {
+		console.log("Clearing existing org data before setup...");
+		await clearOrg({
+			db,
+			org: { id: orgId } as Organization,
+		});
+	}
 
 	// Insert v2 features for the test org
 	await setupOrg({
