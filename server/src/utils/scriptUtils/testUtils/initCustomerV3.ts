@@ -18,7 +18,7 @@ export const initCustomerV3 = async ({
 }: {
 	ctx: TestContext;
 	customerId: string;
-	attachPm?: "success" | "fail" | "authenticate";
+	attachPm?: "success" | "fail" | "authenticate" | "alipay";
 	customerData?: CustomerData;
 	withTestClock?: boolean;
 	withDefault?: boolean;

@@ -17,8 +17,8 @@ import express from "express";
 import { addRequestToLogs } from "@/utils/logging/addContextToLogs.js";
 import { client, db } from "./db/initDrizzle.js";
 import { ClickHouseManager } from "./external/clickhouse/ClickHouseManager.js";
-import { warmupRegionalRedis } from "./external/redis/initRedis.js";
 import { logger } from "./external/logtail/logtailUtils.js";
+import { warmupRegionalRedis } from "./external/redis/initRedis.js";
 import { redirectToHono } from "./initHono.js";
 import { apiRouter } from "./internal/api/apiRouter.js";
 import { auth } from "./utils/auth.js";
@@ -98,6 +98,8 @@ const init = async () => {
 				"app_env",
 				"x-api-version",
 				"x-client-type",
+				"x-request-id",
+				"x-visitor-id",
 				"Authorization",
 				"Content-Type",
 				"Accept",

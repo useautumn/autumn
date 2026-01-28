@@ -1,5 +1,4 @@
 import {
-	type CusProductStatus,
 	type EntitlementWithFeature,
 	type FullCustomer,
 	type FullProduct,
@@ -9,7 +8,7 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
-import { stripeToAutumnSubStatus } from "@/external/stripe/stripeSubUtils.js";
+import { stripeSubscriptionToAutumnStatus } from "@/external/stripe/subscriptions/index.js";
 import { subToAutumnInterval } from "@/external/stripe/utils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
@@ -113,7 +112,7 @@ export const addProductFromSubs = async ({
 		anchorToUnix: anchorToUnix || end * 1000,
 
 		subscriptionStatus: sub?.status
-			? (stripeToAutumnSubStatus(sub?.status) as CusProductStatus)
+			? stripeSubscriptionToAutumnStatus({ stripeStatus: sub?.status })
 			: undefined,
 
 		canceledAt: sub?.canceled_at ? sub.canceled_at * 1000 : null,
