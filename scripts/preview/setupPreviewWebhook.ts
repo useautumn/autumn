@@ -5,15 +5,15 @@ import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import Stripe from "stripe";
+import { TEST_ORG_CONFIG } from "../setupTestUtils/createTestOrg.js";
 
 const main = async () => {
 	const serverUrl = process.env.SERVER_URL;
-	const orgId = process.env.TESTS_ORG_ID;
+	const orgId = process.env.TESTS_ORG_ID || TEST_ORG_CONFIG.id;
 	const stripeSecretKey = process.env.STRIPE_SANDBOX_SECRET_KEY;
 	const databaseUrl = process.env.DATABASE_URL;
 
 	if (!serverUrl) throw new Error("SERVER_URL not set");
-	if (!orgId) throw new Error("TESTS_ORG_ID not set");
 	if (!stripeSecretKey) throw new Error("STRIPE_SANDBOX_SECRET_KEY not set");
 	if (!databaseUrl) throw new Error("DATABASE_URL not set");
 

@@ -5,15 +5,8 @@
     "dockerfilePath": "docker/Dockerfile"
   },
   "deploy": {
-    "startCommand": "bun start",
+    "startCommand": "cd /app/server && bun start",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 300
-  },
-  "environments": {
-    "pr": {
-      "deploy": {
-        "startCommand": "chmod +x /app/scripts/preview/start.sh && /app/scripts/preview/start.sh"
-      }
-    }
   }
 }
