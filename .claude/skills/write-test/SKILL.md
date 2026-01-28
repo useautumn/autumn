@@ -28,6 +28,7 @@ Write integration tests for the Autumn billing system using the `initScenario` p
 - **ALWAYS use `test.concurrent()` for ALL tests** - never use plain `test()`. This enables parallel execution.
 - Use `initScenario` with `s.*` builders
 - Use `product.id` in `s.attach()` (never string literals)
+- Use `product.id` in expectations too (initScenario already prefixes with customerId)
 - Use `Decimal.js` for balance calculations in track tests
 - Unique `customerId` per test
 - Use generic types with `AutumnInt`: `autumnV1.customers.get<ApiCustomerV3>()`, `autumnV1.check<CheckResponseV1>()`
@@ -41,6 +42,7 @@ Write integration tests for the Autumn billing system using the `initScenario` p
 - Use raw arithmetic for balance calculations (floating point errors)
 - Use `as unknown as Type` casting - use generic types instead
 - Write manual assertion loops when a utility function exists
+- Use `${product.id}_${customerId}` for productId - just use `product.id` (already prefixed)
 
 ## AutumnInt Response Types
 

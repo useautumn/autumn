@@ -70,7 +70,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro with mixed features"
 	// Verify product is active
 	await expectProductActive({
 		customer,
-		productId: `${pro.id}_${customerId}`,
+		productId: pro.id,
 	});
 
 	// Verify consumable words feature (50 included, no prepaid)
@@ -154,7 +154,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro with allocated, crea
 	// Verify product is active
 	await expectProductActive({
 		customer,
-		productId: `${pro.id}_${customerId}`,
+		productId: pro.id,
 	});
 
 	// Verify users feature: 3 included, 5 used, -2 balance (overage)
@@ -214,7 +214,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach base with prepaid messag
 		func: async () => {
 			await autumnV1.billing.attach({
 				customer_id: customerId,
-				product_id: `${base.id}_${customerId}`,
+				product_id: base.id,
 			});
 		},
 	});
@@ -260,7 +260,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro with prepaid message
 		func: async () => {
 			await autumnV1.billing.attach({
 				customer_id: customerId,
-				product_id: `${pro.id}_${customerId}`,
+				product_id: pro.id,
 			});
 		},
 	});
@@ -311,7 +311,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro with prepaid message
 	// Verify product is active
 	await expectProductActive({
 		customer,
-		productId: `${pro.id}_${customerId}`,
+		productId: pro.id,
 	});
 
 	// Verify messages feature: 0 prepaid purchased

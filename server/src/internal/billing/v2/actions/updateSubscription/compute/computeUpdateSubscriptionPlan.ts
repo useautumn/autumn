@@ -3,15 +3,15 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/types";
 import type { AutumnBillingPlan } from "@/internal/billing/v2/types";
 
-import { computeCancelPlan } from "@/internal/billing/v2/updateSubscription/compute/cancel/computeCancelPlan";
+import { computeCancelPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/cancel/computeCancelPlan";
 
 import {
 	computeUpdateSubscriptionIntent,
 	UpdateSubscriptionIntent,
-} from "@/internal/billing/v2/updateSubscription/compute/computeUpdateSubscriptionIntent";
-import { computeCustomPlan } from "@/internal/billing/v2/updateSubscription/compute/customPlan/computeCustomPlan";
-import { finalizeUpdateSubscriptionPlan } from "@/internal/billing/v2/updateSubscription/compute/finalizeUpdateSubscriptionPlan";
-import { computeUpdateQuantityPlan } from "@/internal/billing/v2/updateSubscription/compute/updateQuantity/computeUpdateQuantityPlan";
+} from "@/internal/billing/v2/actions/updateSubscription/compute/computeUpdateSubscriptionIntent";
+import { computeCustomPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/customPlan/computeCustomPlan";
+import { finalizeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/finalizeUpdateSubscriptionPlan";
+import { computeUpdateQuantityPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/updateQuantity/computeUpdateQuantityPlan";
 
 /**
  * Compute the subscription update plan

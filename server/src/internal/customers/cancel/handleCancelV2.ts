@@ -4,10 +4,10 @@ import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBilling
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
-import { computeUpdateSubscriptionPlan } from "@/internal/billing/v2/updateSubscription/compute/computeUpdateSubscriptionPlan";
-import { handleUpdateSubscriptionErrors } from "@/internal/billing/v2/updateSubscription/errors/handleUpdateSubscriptionErrors";
-import { logUpdateSubscriptionContext } from "@/internal/billing/v2/updateSubscription/logs/logUpdateSubscriptionContext";
-import { setupUpdateSubscriptionBillingContext } from "@/internal/billing/v2/updateSubscription/setup/setupUpdateSubscriptionBillingContext";
+import { computeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/computeUpdateSubscriptionPlan";
+import { handleUpdateSubscriptionErrors } from "@/internal/billing/v2/actions/updateSubscription/errors/handleUpdateSubscriptionErrors";
+import { logUpdateSubscriptionContext } from "@/internal/billing/v2/actions/updateSubscription/logs/logUpdateSubscriptionContext";
+import { setupUpdateSubscriptionBillingContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionBillingContext";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 
 export const handleCancelV2 = createRoute({

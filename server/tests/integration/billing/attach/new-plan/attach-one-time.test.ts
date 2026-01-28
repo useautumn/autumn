@@ -72,7 +72,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time purchase")}`, a
 	// Verify product is active
 	await expectProductActive({
 		customer,
-		productId: `${oneOff.id}_${customerId}`,
+		productId: oneOff.id,
 	});
 
 	// Verify messages balance (100 from 1 pack)
@@ -134,7 +134,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time purchase twice"
 	// Attach same product again
 	await autumnV1.billing.attach({
 		customer_id: customerId,
-		product_id: `${oneOff.id}_${customerId}`,
+		product_id: oneOff.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
 	});
 
@@ -199,7 +199,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro then one-time as mai
 	// Attach one-time without isAddOn - should replace pro
 	await autumnV1.billing.attach({
 		customer_id: customerId,
-		product_id: `${oneOff.id}_${customerId}`,
+		product_id: oneOff.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
 		// Note: NOT setting is_add_on: true
 	});
@@ -209,13 +209,13 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro then one-time as mai
 	// Verify pro is no longer present (replaced)
 	await expectProductNotPresent({
 		customer,
-		productId: `${pro.id}_${customerId}`,
+		productId: pro.id,
 	});
 
 	// Verify one-time is active
 	await expectProductActive({
 		customer,
-		productId: `${oneOff.id}_${customerId}`,
+		productId: oneOff.id,
 	});
 });
 
@@ -323,7 +323,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time as add-on to pr
 	// Attach one-time add-on (is_add_on defined at product level, not in attach params)
 	await autumnV1.billing.attach({
 		customer_id: customerId,
-		product_id: `${oneOffAddon.id}_${customerId}`,
+		product_id: oneOffAddon.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
 	});
 
@@ -332,11 +332,11 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time as add-on to pr
 	// Verify both products are active
 	await expectProductActive({
 		customer,
-		productId: `${pro.id}_${customerId}`,
+		productId: pro.id,
 	});
 	await expectProductActive({
 		customer,
-		productId: `${oneOffAddon.id}_${customerId}`,
+		productId: oneOffAddon.id,
 	});
 
 	// Verify combined messages balance (100 from pro + 50 from one-off = 150)

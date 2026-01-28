@@ -55,7 +55,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach free product")}`, async 
 	// Verify product is active
 	await expectProductActive({
 		customer,
-		productId: `${free.id}_${customerId}`,
+		productId: free.id,
 	});
 
 	// Verify messages feature has correct balance
@@ -111,7 +111,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach free with multiple featu
 	// Verify product is active
 	await expectProductActive({
 		customer,
-		productId: `${free.id}_${customerId}`,
+		productId: free.id,
 	});
 
 	// Verify messages feature

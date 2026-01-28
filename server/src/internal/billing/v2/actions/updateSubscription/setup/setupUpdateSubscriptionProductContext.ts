@@ -7,7 +7,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { ProductService } from "@/internal/products/ProductService";
-import { setupCustomFullProduct } from "../../setup/setupCustomFullProduct";
+import { setupCustomFullProduct } from "../../../setup/setupCustomFullProduct";
 import { findTargetCustomerProduct } from "./findTargetCustomerProduct";
 
 export const setupUpdateSubscriptionProductContext = async ({
