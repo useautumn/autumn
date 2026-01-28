@@ -30,6 +30,13 @@ jobs:
           curl -1sLf 'https://artifacts-cli.infisical.com/setup.deb.sh' | sudo -E bash
           sudo apt-get update && sudo apt-get install -y infisical
 
+      - name: Authenticate with Infisical
+        env:
+          INFISICAL_UNIVERSAL_AUTH_CLIENT_ID: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_ID }}
+          INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET }}
+        run: |
+          echo "INFISICAL_TOKEN=$(infisical login --method=universal-auth --client-id=$INFISICAL_UNIVERSAL_AUTH_CLIENT_ID --client-secret=$INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET --silent --plain)" >> $GITHUB_ENV
+
       - name: Install dependencies
         run: bun install
 
@@ -39,8 +46,6 @@ jobs:
       - name: Run Test Group 1 (Balances)
         env:
           SERVER_URL: ${{ inputs.preview_url }}
-          INFISICAL_UNIVERSAL_AUTH_CLIENT_ID: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_ID }}
-          INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET }}
         run: infisical run --projectId=$INFISICAL_PROJECT_ID --env=test -- ./scripts/testGroups/g1.sh
 
       - name: Upload test results
@@ -68,6 +73,13 @@ jobs:
           curl -1sLf 'https://artifacts-cli.infisical.com/setup.deb.sh' | sudo -E bash
           sudo apt-get update && sudo apt-get install -y infisical
 
+      - name: Authenticate with Infisical
+        env:
+          INFISICAL_UNIVERSAL_AUTH_CLIENT_ID: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_ID }}
+          INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET }}
+        run: |
+          echo "INFISICAL_TOKEN=$(infisical login --method=universal-auth --client-id=$INFISICAL_UNIVERSAL_AUTH_CLIENT_ID --client-secret=$INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET --silent --plain)" >> $GITHUB_ENV
+
       - name: Install dependencies
         run: bun install
 
@@ -77,8 +89,6 @@ jobs:
       - name: Run Test Group 2 (Attach)
         env:
           SERVER_URL: ${{ inputs.preview_url }}
-          INFISICAL_UNIVERSAL_AUTH_CLIENT_ID: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_ID }}
-          INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET }}
         run: infisical run --projectId=$INFISICAL_PROJECT_ID --env=test -- ./scripts/testGroups/g2.sh
 
       - name: Upload test results
@@ -107,14 +117,19 @@ jobs:
           curl -1sLf 'https://artifacts-cli.infisical.com/setup.deb.sh' | sudo -E bash
           sudo apt-get update && sudo apt-get install -y infisical
 
+      - name: Authenticate with Infisical
+        env:
+          INFISICAL_UNIVERSAL_AUTH_CLIENT_ID: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_ID }}
+          INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET }}
+        run: |
+          echo "INFISICAL_TOKEN=$(infisical login --method=universal-auth --client-id=$INFISICAL_UNIVERSAL_AUTH_CLIENT_ID --client-secret=$INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET --silent --plain)" >> $GITHUB_ENV
+
       - name: Install dependencies
         run: bun install
 
       - name: Cleanup Stripe webhook
         env:
           SERVER_URL: ${{ inputs.preview_url }}
-          INFISICAL_UNIVERSAL_AUTH_CLIENT_ID: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_ID }}
-          INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET }}
         run: infisical run --projectId=$INFISICAL_PROJECT_ID --env=test -- bun scripts/preview/cleanupPreviewWebhook.ts
 
   report-status:

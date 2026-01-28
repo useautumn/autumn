@@ -24,19 +24,20 @@ jobs:
           curl -1sLf 'https://artifacts-cli.infisical.com/setup.deb.sh' | sudo -E bash
           sudo apt-get update && sudo apt-get install -y infisical
 
+      - name: Authenticate with Infisical
+        env:
+          INFISICAL_UNIVERSAL_AUTH_CLIENT_ID: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_ID }}
+          INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET }}
+        run: |
+          echo "INFISICAL_TOKEN=$(infisical login --method=universal-auth --client-id=$INFISICAL_UNIVERSAL_AUTH_CLIENT_ID --client-secret=$INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET --silent --plain)" >> $GITHUB_ENV
+
       - name: Install dependencies
         run: bun install
 
       - name: Run database migrations
-        env:
-          INFISICAL_UNIVERSAL_AUTH_CLIENT_ID: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_ID }}
-          INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET }}
         run: infisical run --projectId=$INFISICAL_PROJECT_ID --env=test -- bun run db:push
 
       - name: Setup test organization
-        env:
-          INFISICAL_UNIVERSAL_AUTH_CLIENT_ID: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_ID }}
-          INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET }}
         run: infisical run --projectId=$INFISICAL_PROJECT_ID --env=test -- bun scripts/preview/setupTestOrgCI.ts
 
       - name: Deploy to Railway Preview
@@ -52,8 +53,6 @@ jobs:
       - name: Setup Stripe webhook for preview URL
         env:
           SERVER_URL: https://${{ steps.deploy.outputs.service_domain }}
-          INFISICAL_UNIVERSAL_AUTH_CLIENT_ID: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_ID }}
-          INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET }}
         run: infisical run --projectId=$INFISICAL_PROJECT_ID --env=test -- bun scripts/preview/setupPreviewWebhook.ts
 
       - name: Wait for deployment to be healthy
