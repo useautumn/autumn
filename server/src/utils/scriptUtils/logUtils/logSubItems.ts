@@ -1,6 +1,6 @@
 import { stripeToAtmnAmount } from "@autumn/shared";
+import { subItemToAutumnInterval } from "@tests/utils/stripeUtils";
 import type Stripe from "stripe";
-import { subItemToAutumnInterval } from "@/external/stripe/utils.js";
 import type { Logger } from "../../../external/logtail/logtailUtils";
 
 export const logSubItems = ({
