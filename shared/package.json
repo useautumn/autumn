@@ -17,9 +17,9 @@
 		"api": "bun api/api.ts",
 		"ts": "bunx tsgo --build --noEmit",
 		"db:push": "bun db:generate && bun db:migrate",
-		"db:generate": "cross-env NODE_OPTIONS=\"--import tsx\" bunx drizzle-kit generate --config drizzle.config.ts",
-		"db:migrate": "cross-env NODE_OPTIONS=\"--import tsx\" bunx drizzle-kit migrate --config drizzle.config.ts",
-		"db:studio": "cross-env NODE_OPTIONS=\"--import tsx\" bunx drizzle-kit studio --config drizzle.config.ts"
+		"db:generate": "cross-env bunx drizzle-kit generate --config drizzle.config.ts",
+		"db:migrate": "cross-env bunx drizzle-kit migrate --config drizzle.config.ts",
+		"db:studio": "cross-env bunx drizzle-kit studio --config drizzle.config.ts"
 	},
 	"dependencies": {
 		"@date-fns/utc": "catalog:",
