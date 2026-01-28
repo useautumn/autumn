@@ -148,7 +148,7 @@ export const attachPaymentMethod = async ({
 }: {
 	stripeCli: Stripe;
 	stripeCusId: string;
-	type: "success" | "fail" | "authenticate";
+	type: "success" | "fail" | "authenticate" | "alipay";
 }) => {
 	try {
 		// Use pre-defined payment method IDs for special test cards
@@ -170,6 +170,18 @@ export const attachPaymentMethod = async ({
 				invoice_settings: {
 					default_payment_method: pms.data[0].id,
 				},
+			});
+			return;
+		}
+
+		// Alipay case - create and attach alipay payment method
+		if (type === "alipay") {
+			const pm = await stripeCli.paymentMethods.create({
+				type: "alipay",
+			});
+
+			await stripeCli.paymentMethods.attach(pm.id, {
+				customer: stripeCusId,
 			});
 			return;
 		}

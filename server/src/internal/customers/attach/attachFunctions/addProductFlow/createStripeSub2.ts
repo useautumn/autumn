@@ -47,6 +47,11 @@ export const createStripeSub2 = async ({
 		paymentMethodData = {
 			default_payment_method: paymentMethod.id,
 		};
+		// if (paymentMethod.type === "alipay") {
+
+		// } else {
+
+		// }
 	}
 
 	const { subItems, invoiceItems, usageFeatures } = itemSet;
@@ -70,6 +75,7 @@ export const createStripeSub2 = async ({
 			payment_behavior: isCustomPaymentMethod
 				? "default_incomplete"
 				: "allow_incomplete",
+			// payment_behavior: "default_incomplete",
 
 			add_invoice_items: invoiceItems,
 			collection_method: invoiceOnly ? "send_invoice" : "charge_automatically",

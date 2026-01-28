@@ -17,6 +17,7 @@ import express from "express";
 import { addRequestToLogs } from "@/utils/logging/addContextToLogs.js";
 import { client, db } from "./db/initDrizzle.js";
 import { ClickHouseManager } from "./external/clickhouse/ClickHouseManager.js";
+import { warmupRegionalRedis } from "./external/redis/initRedis.js";
 import { logger } from "./external/logtail/logtailUtils.js";
 import { redirectToHono } from "./initHono.js";
 import { apiRouter } from "./internal/api/apiRouter.js";
@@ -118,7 +119,7 @@ const init = async () => {
 	app.all("/api/auth/*", toNodeHandler(auth));
 
 	// Initialize managers in parallel for faster startup
-	await Promise.all([ClickHouseManager.getInstance()]);
+	await Promise.all([ClickHouseManager.getInstance(), warmupRegionalRedis()]);
 
 	app.use(async (req: any, res: any, next: any) => {
 		// Add Render region identifier headers for load balancer verification

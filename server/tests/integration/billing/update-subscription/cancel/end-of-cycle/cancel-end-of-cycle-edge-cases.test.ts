@@ -301,3 +301,107 @@ test.concurrent(`${chalk.yellowBright("cancel EOC edge: entity cancel -> uncance
 		productId: pro.id,
 	});
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 3: Cancel pro EOC with empty group - free default NOT scheduled
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - Free default product with prefixed group (standard behavior)
+ * - Pro product with group: "" (explicitly empty - no group)
+ * - User cancels Pro at end of cycle
+ *
+ * Expected Result:
+ * - Pro should be canceling
+ * - Free default should NOT be scheduled (different groups: "" vs prefixed)
+ * - After advancing to next cycle:
+ *   - Pro is removed
+ *   - Free is NOT present (wasn't scheduled because groups don't match)
+ */
+test.concurrent(`${chalk.yellowBright("cancel EOC edge: pro with empty group - free default NOT scheduled")}`, async () => {
+	const customerId = "cancel-eoc-empty-group-no-default";
+
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+
+	// Free is the default product - will get prefixed group from initScenario
+	const free = products.base({
+		id: "free",
+		items: [messagesItem],
+		isDefault: true,
+	});
+
+	// Pro with explicit empty group - should NOT match free's prefixed group
+	const pro = products.pro({
+		id: "pro",
+		items: [messagesItem],
+	});
+	// Explicitly set empty group (will be preserved due to our fix)
+	pro.group = "";
+
+	const { autumnV1, ctx, testClockId } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [free, pro] }),
+		],
+		actions: [s.attach({ productId: pro.id })],
+	});
+
+	// Verify pro is active
+	const customerAfterAttach =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductActive({
+		customer: customerAfterAttach,
+		productId: pro.id,
+	});
+
+	// Cancel pro at end of cycle
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: pro.id,
+		cancel_action: "cancel_end_of_cycle",
+	});
+
+	// Verify pro is canceling and free is NOT scheduled (groups don't match)
+	const customerAfterCancel =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	await expectCustomerProducts({
+		customer: customerAfterCancel,
+		canceling: [pro.id],
+		notPresent: [free.id], // Free should NOT be scheduled because groups don't match
+	});
+
+	// Advance to next billing cycle
+	await advanceToNextInvoice({
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId!,
+	});
+
+	// After advancing, pro should be gone and free should NOT be present
+	const customerAfterAdvance =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	await expectProductNotPresent({
+		customer: customerAfterAdvance,
+		productId: pro.id,
+	});
+
+	// Free should also not be present (wasn't scheduled)
+	await expectProductNotPresent({
+		customer: customerAfterAdvance,
+		productId: free.id,
+	});
+
+	// No products should remain
+	expect(customerAfterAdvance.products.length).toBe(0);
+
+	// Verify no Stripe subscription exists
+	await expectNoStripeSubscription({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+	});
+});

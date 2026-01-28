@@ -3,7 +3,6 @@ import {
 	type AttachConfig,
 	type AttachReplaceable,
 	ProrationBehavior,
-	RecaseError,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { sanitizeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
@@ -11,7 +10,6 @@ import { sanitizeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubI
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
-import { nullish } from "@/utils/genUtils.js";
 import type { ItemSet } from "@/utils/models/ItemSet.js";
 import { createProrationInvoice } from "../../../../../external/stripe/stripeSubUtils/updateStripeSub/createProrationinvoice.js";
 import { isStripeSubscriptionCanceling } from "../../../../../external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils.js";
@@ -44,12 +42,12 @@ export const updateStripeSub2 = async ({
 	const { stripeCli, paymentMethod } = attachParams;
 	const { invoiceOnly, proration } = config;
 
-	if (config.requirePaymentMethod !== false && nullish(paymentMethod)) {
-		throw new RecaseError({
-			message: "Payment method is required",
-			code: "payment_method_required",
-		});
-	}
+	// if (config.requirePaymentMethod !== false && nullish(paymentMethod)) {
+	// 	throw new RecaseError({
+	// 		message: "Payment method is required",
+	// 		code: "payment_method_required",
+	// 	});
+	// }
 
 	if (curSub.billing_mode.type !== "flexible") {
 		curSub = await stripeCli.subscriptions.migrate(curSub.id, {

@@ -13,6 +13,7 @@ import {
 	type FullCusProduct,
 	type FullCustomerEntitlement,
 	getStartingBalance,
+	type InsertCustomerEntitlement,
 	type Price,
 	type ProductOptions,
 } from "@autumn/shared";
@@ -139,7 +140,7 @@ export const initCusEntitlement = ({
 	now?: number;
 	productOptions?: ProductOptions;
 	expires_at?: number | null;
-}) => {
+}): InsertCustomerEntitlement => {
 	now = now || Date.now();
 	let { newBalance, newEntities } = initCusEntBalance({
 		entitlement,

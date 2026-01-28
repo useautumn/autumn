@@ -68,6 +68,7 @@ export const initCustomerEntitlement = ({
 		next_reset_at: nextResetAt,
 
 		expires_at: null,
+		cache_version: 0,
 	};
 };
 
