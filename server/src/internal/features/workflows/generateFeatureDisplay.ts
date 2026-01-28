@@ -12,11 +12,7 @@ export interface GenerateFeatureDisplayPayload {
 	env: AppEnv;
 }
 
-const llmGenerateFeatureDisplay = async ({
-	feature,
-}: {
-	feature: Feature;
-}) => {
+const llmGenerateFeatureDisplay = async ({ feature }: { feature: Feature }) => {
 	const prompt = `I'm building an entitlement system and my users can create features on my platform. I also help with displaying components (like pricing table) so I need to get the feature name in singular and plural form. 
   
   Based on the feature name passed in, please generate a singular and plural form, in lowercase.

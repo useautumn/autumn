@@ -26,11 +26,7 @@ export const getFeatureName = ({
 	return featureName;
 };
 
-const getFeatureNameWithCapital = ({
-	feature,
-}: {
-	feature: Feature;
-}) => {
+const getFeatureNameWithCapital = ({ feature }: { feature: Feature }) => {
 	if (feature.name.length > 0) {
 		return `${feature.name.charAt(0).toUpperCase()}${feature.name.slice(1)}`;
 	}

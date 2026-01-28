@@ -78,5 +78,3 @@ export const STACK_SECTIONS: StackSection[] = [
 		options: CUSTOMER_TYPE_OPTIONS,
 	},
 ];
-
-;

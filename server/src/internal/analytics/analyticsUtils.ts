@@ -48,9 +48,7 @@ export async function getBillingCycleStartDate(
 	);
 }
 
-function checkIfAllProductsAreFree(
-	fullProducts: FullProduct[],
-): boolean {
+function checkIfAllProductsAreFree(fullProducts: FullProduct[]): boolean {
 	return fullProducts.every((product: FullProduct) => {
 		const isFree = isFreeProduct(product.prices);
 
@@ -98,9 +96,11 @@ function getDateRangesFromSubscriptions(
 	return { startDates, endDates, createdDates };
 }
 
-function getDateRangesFromEntitlements(
-	customerProducts?: FullCusProduct[],
-): { startDates: string[]; endDates: string[]; createdDates: string[] } {
+function getDateRangesFromEntitlements(customerProducts?: FullCusProduct[]): {
+	startDates: string[];
+	endDates: string[];
+	createdDates: string[];
+} {
 	const startDates: string[] = [];
 	const endDates: string[] = [];
 	const createdDates: string[] = [];

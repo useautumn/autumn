@@ -12,10 +12,7 @@ export type AdminOrg = {
 	users: User[];
 };
 
-export const createAdminOrgColumns = (): ColumnDef<
-	AdminOrg,
-	unknown
->[] => [
+export const createAdminOrgColumns = (): ColumnDef<AdminOrg, unknown>[] => [
 	{
 		id: "id",
 		header: "ID",

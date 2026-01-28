@@ -81,11 +81,7 @@ export function prepareTimeseriesChartData({
 /**
  * Extracts unique event names from events
  */
-function getAvailableFeatures({
-	events,
-}: {
-	events: Event[];
-}): string[] {
+function getAvailableFeatures({ events }: { events: Event[] }): string[] {
 	if (!events || events.length === 0) return [];
 	return Array.from(new Set(events.map((e) => e.event_name)));
 }
