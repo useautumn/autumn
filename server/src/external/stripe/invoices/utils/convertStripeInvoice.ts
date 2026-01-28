@@ -11,7 +11,7 @@ export const stripeInvoiceToStripeSubscriptionId = (
 /**
  * Finds the payment intent from a specific invoice.
  */
-const stripeInvoiceIdToPaymentIntent = async ({
+export const stripeInvoiceIdToPaymentIntent = async ({
 	stripeClient,
 	invoiceId,
 }: {
