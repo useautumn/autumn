@@ -8,8 +8,10 @@ on:
 jobs:
   deploy-preview:
     runs-on: ubuntu-latest
+    env:
+      PREVIEW_URL: https://dev-server-pr-${{ github.event.pull_request.number }}.up.railway.app
     outputs:
-      preview_url: ${{ steps.deploy.outputs.service_domain }}
+      preview_url: ${{ env.PREVIEW_URL }}
     steps:
       - uses: actions/checkout@v4
 
@@ -38,24 +40,13 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: bun --cwd scripts preview/setupTestOrgCI.ts
 
-      - name: Deploy to Railway Preview
-        id: deploy
-        uses: ayungavis/railway-preview-deploy@v1.0.2
-        with:
-          railway_api_token: ${{ secrets.RAILWAY_API_TOKEN }}
-          project_id: ${{ secrets.RAILWAY_PROJECT_ID }}
-          environment_name: 'development'
-          preview_environment_name: 'pr-${{ github.event.pull_request.number }}'
-          branch_name: ${{ github.head_ref }}
-
       - name: Setup Stripe webhook for preview URL
         env:
-          SERVER_URL: https://${{ steps.deploy.outputs.service_domain }}
+          SERVER_URL: ${{ env.PREVIEW_URL }}
         run: bun --cwd scripts preview/setupPreviewWebhook.ts
 
       - name: Wait for deployment to be healthy
         run: |
-          PREVIEW_URL="https://${{ steps.deploy.outputs.service_domain }}"
           echo "Waiting for $PREVIEW_URL to be healthy..."
 
           for i in {1..30}; do
@@ -78,7 +69,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `Preview deployed: https://${{ steps.deploy.outputs.service_domain }}`
+              body: `Preview deployed: ${{ env.PREVIEW_URL }}`
             })
 
       - name: Trigger Integration Tests
@@ -91,7 +82,7 @@ jobs:
               workflow_id: 'integration-tests.yml',
               ref: '${{ github.head_ref }}',
               inputs: {
-                preview_url: 'https://${{ steps.deploy.outputs.service_domain }}',
+                preview_url: '${{ env.PREVIEW_URL }}',
                 pr_number: '${{ github.event.pull_request.number }}'
               }
             })
