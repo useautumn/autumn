@@ -189,7 +189,7 @@ export function parseScope(scope: string): {
  * Group scopes by resource (filters out OpenID scopes)
  */
 export function groupScopesByResource(
-	scopes: string[]
+	scopes: string[],
 ): Map<ResourceType, ScopeActionType[]> {
 	const grouped = new Map<ResourceType, ScopeActionType[]>();
 
@@ -230,11 +230,11 @@ export function formatActions(actions: ScopeActionType[]): string {
 
 	// Sort actions by their order
 	const sortedActions = [...actions].sort(
-		(a, b) => ACTION_METADATA[a].order - ACTION_METADATA[b].order
+		(a, b) => ACTION_METADATA[a].order - ACTION_METADATA[b].order,
 	);
 
 	const verbs = sortedActions.map((action) =>
-		ACTION_METADATA[action].verb.toLowerCase()
+		ACTION_METADATA[action].verb.toLowerCase(),
 	);
 
 	if (actions.length === 2) {
@@ -254,14 +254,17 @@ export function formatActions(actions: ScopeActionType[]): string {
  */
 export function formatResourcePermission(
 	resource: ResourceType,
-	actions: ScopeActionType[]
+	actions: ScopeActionType[],
 ): string {
 	const actionString = formatActions(actions);
 	const resourceName = RESOURCE_METADATA[resource].namePlural.toLowerCase();
 
 	// Capitalize first letter
 	return (
-		actionString.charAt(0).toUpperCase() + actionString.slice(1) + " " + resourceName
+		actionString.charAt(0).toUpperCase() +
+		actionString.slice(1) +
+		" " +
+		resourceName
 	);
 }
 

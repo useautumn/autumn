@@ -115,4 +115,4 @@ const IconBadge = React.forwardRef<HTMLSpanElement, IconBadgeProps>(
 
 IconBadge.displayName = "IconBadge";
 
-export { IconBadge,  };
+export { IconBadge };

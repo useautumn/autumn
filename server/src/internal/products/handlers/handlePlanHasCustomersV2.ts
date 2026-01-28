@@ -1,9 +1,9 @@
 import {
 	ApiVersion,
 	type CreatePlanParams,
-	planToProductV2,
 	ProductNotFoundError,
 	type ProductV2,
+	planToProductV2,
 	productsAreSame,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
@@ -38,7 +38,10 @@ export const handlePlanHasCustomersV2 = createRoute({
 		// V2.0+ (CLI): body is CreatePlanParams, convert to ProductV2
 		// < V2.0 (Dashboard): body is already ProductV2
 		const productV2 = apiVersion.gte(ApiVersion.V2_0)
-			? (planToProductV2({ plan: body as CreatePlanParams, features }) as ProductV2)
+			? (planToProductV2({
+					plan: body as CreatePlanParams,
+					features,
+				}) as ProductV2)
 			: (body as ProductV2);
 
 		const { itemsSame, freeTrialsSame } = productsAreSame({

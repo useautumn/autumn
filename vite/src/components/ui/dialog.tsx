@@ -138,13 +138,9 @@ function DialogDescription({
 
 export {
 	Dialog,
-	
 	DialogContent,
-	
 	DialogFooter,
 	DialogHeader,
-	
-	
 	DialogTitle,
 	DialogTrigger,
 };

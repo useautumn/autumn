@@ -24,5 +24,3 @@ export const customerProductActions = {
 		getAndMerge: getExpiredCustomerProductsCacheAndMerge,
 	},
 };
-
-;

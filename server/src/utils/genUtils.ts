@@ -38,9 +38,7 @@ export const keyToTitle = (key: string) => {
 		.replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
-const notNullOrUndefined = <T>(
-	value: T | null | undefined,
-): value is T => {
+const notNullOrUndefined = <T>(value: T | null | undefined): value is T => {
 	return value !== null && value !== undefined;
 };
 

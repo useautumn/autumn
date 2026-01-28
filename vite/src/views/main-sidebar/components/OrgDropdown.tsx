@@ -76,7 +76,8 @@ export const OrgDropdown = () => {
 			</>
 		);
 
-	if (!org || error) return <ManageOrg open={manageOpen} setOpen={setManageOpen} />;
+	if (!org || error)
+		return <ManageOrg open={manageOpen} setOpen={setManageOpen} />;
 
 	return (
 		<div className={cn("flex px-3")}>
