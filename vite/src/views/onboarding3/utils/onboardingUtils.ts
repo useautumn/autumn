@@ -39,9 +39,7 @@ const getStepNumber = (step: OnboardingStep): number => {
 };
 
 // Helper to get next step
-const getNextStep = (
-	currentStep: OnboardingStep,
-): OnboardingStep | null => {
+const getNextStep = (currentStep: OnboardingStep): OnboardingStep | null => {
 	switch (currentStep) {
 		case OnboardingStep.PlanDetails:
 			return OnboardingStep.FeatureCreation;
@@ -248,10 +246,7 @@ const handleCreatePlanSuccess = async (
 };
 
 // Product creation helper
-const createProduct = async (
-	product: any,
-	axiosInstance: AxiosInstance,
-) => {
+const createProduct = async (product: any, axiosInstance: AxiosInstance) => {
 	try {
 		// const result = CreateProductSchema.safeParse({
 		// 	name: product?.name,

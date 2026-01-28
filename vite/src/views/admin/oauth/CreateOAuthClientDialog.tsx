@@ -37,7 +37,9 @@ export const CreateOAuthClientDialog = ({
 	const [step, setStep] = useState<"form" | "success">("form");
 	const [isLoading, setIsLoading] = useState(false);
 	const [showSecret, setShowSecret] = useState(false);
-	const [createdClient, setCreatedClient] = useState<CreatedClient | null>(null);
+	const [createdClient, setCreatedClient] = useState<CreatedClient | null>(
+		null,
+	);
 
 	const [formData, setFormData] = useState({
 		name: "",
@@ -91,7 +93,9 @@ export const CreateOAuthClientDialog = ({
 			const { data, error } = await authClient.oauth2.createClient({
 				client_name: formData.name,
 				redirect_uris: redirectUris,
-				token_endpoint_auth_method: formData.isPublic ? "none" : "client_secret_basic",
+				token_endpoint_auth_method: formData.isPublic
+					? "none"
+					: "client_secret_basic",
 				scope: formData.scopes.join(" "),
 			});
 
@@ -179,7 +183,9 @@ export const CreateOAuthClientDialog = ({
 									</button>
 									<button
 										type="button"
-										onClick={() => setFormData({ ...formData, isPublic: false })}
+										onClick={() =>
+											setFormData({ ...formData, isPublic: false })
+										}
 										className={cn(
 											"flex-1 px-3 py-2 rounded-lg border text-sm text-left transition-colors cursor-pointer",
 											!formData.isPublic
@@ -221,9 +227,7 @@ export const CreateOAuthClientDialog = ({
 								</span>
 								<TagInput
 									value={formData.scopes}
-									onChange={(scopes) =>
-										setFormData({ ...formData, scopes })
-									}
+									onChange={(scopes) => setFormData({ ...formData, scopes })}
 									placeholder="Add scope..."
 								/>
 								<p className="text-xs text-muted-foreground">
@@ -305,9 +309,7 @@ export const CreateOAuthClientDialog = ({
 									</span>
 									<div className="flex items-center gap-2">
 										<code className="flex-1 px-3 py-2 text-sm bg-muted rounded-lg font-mono break-all">
-											{showSecret
-												? createdClient.clientSecret
-												: "•".repeat(32)}
+											{showSecret ? createdClient.clientSecret : "•".repeat(32)}
 										</code>
 										<Button
 											variant="secondary"
@@ -334,7 +336,8 @@ export const CreateOAuthClientDialog = ({
 										</Button>
 									</div>
 									<p className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
-										This secret will only be shown once. Please save it securely!
+										This secret will only be shown once. Please save it
+										securely!
 									</p>
 								</div>
 							)}

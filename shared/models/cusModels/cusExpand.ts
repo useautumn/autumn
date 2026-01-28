@@ -1,7 +1,6 @@
 // Previous customer expand options for v1.2 of the API
-export enum CusExpandV0 {
-	// UpcomingInvoice = "upcoming_invoice",
-}
+export enum CusExpandV0 {}
+// UpcomingInvoice = "upcoming_invoice",
 
 // New customer expand options!
 export enum CusExpand {

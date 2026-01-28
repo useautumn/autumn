@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
+import { Table } from "@/components/general/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/v2/buttons/Button";
-import { Table } from "@/components/general/table";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import { type AdminOrg, createAdminOrgColumns } from "./AdminOrgColumns";
 import { useAdminTable } from "./hooks/useAdminTable";
@@ -23,13 +23,16 @@ export const AdminOrgTable = () => {
 		url,
 	});
 
-	const rows: AdminOrg[] = data?.rows || [];
+	const rows: AdminOrg[] = useMemo(() => data?.rows || [], [data?.rows]);
+
+	const lastRow = rows[rows.length - 1];
+	const firstRow = rows[0];
 
 	const pageInfo = {
 		hasNextPage: data?.hasNextPage || false,
 		hasPrevPage: rows.length !== 0 && page > 1,
-		lastItem: `${rows[rows.length - 1]?.id},${rows[rows.length - 1]?.createdAt}`,
-		firstItem: `${rows[0]?.id},${rows[0]?.createdAt}`,
+		lastItem: lastRow ? `${lastRow.id},${lastRow.createdAt}` : undefined,
+		firstItem: firstRow ? `${firstRow.id},${firstRow.createdAt}` : undefined,
 		page,
 	};
 
@@ -56,10 +59,6 @@ export const AdminOrgTable = () => {
 	const table = useAdminTable({
 		data: rows,
 		columns,
-		options: {
-			globalFilterFn: "includesString",
-			enableGlobalFilter: true,
-		},
 	});
 
 	const enableSorting = false;

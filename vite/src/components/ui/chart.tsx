@@ -345,11 +345,4 @@ function getPayloadConfigFromPayload(
 		: config[key as keyof typeof config];
 }
 
-export {
-	ChartContainer,
-	ChartTooltip,
-	ChartTooltipContent,
-	
-	
-	
-};
+export { ChartContainer, ChartTooltip, ChartTooltipContent };

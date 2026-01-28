@@ -1,4 +1,11 @@
-import { ArrowLeft, Building2, Calendar, Key, Shield, Trash2 } from "lucide-react";
+import {
+	ArrowLeft,
+	Building2,
+	Calendar,
+	Key,
+	Shield,
+	Trash2,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -239,7 +246,8 @@ export const OrgSettingsView = () => {
 						</h2>
 					</div>
 					<p className="text-xs text-t3 mt-1">
-						External applications that have been granted access to this organization
+						External applications that have been granted access to this
+						organization
 					</p>
 				</div>
 

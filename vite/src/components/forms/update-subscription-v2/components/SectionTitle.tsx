@@ -79,7 +79,6 @@ export function SectionTitle({
 									/>
 								}
 								variant="secondary"
-								size="sm"
 								className={cn(
 									"h-7 whitespace-nowrap",
 									trialIsActive &&
