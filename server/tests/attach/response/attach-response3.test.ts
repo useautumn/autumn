@@ -69,10 +69,10 @@ describe(`${chalk.yellowBright(`${testCase}: Testing v0.2 / v1.2 response for at
 	test("should return correct v1.2 responses for attach", async () => {
 		const autumnV1 = new AutumnInt({ version: ApiVersion.V1_2 });
 
-		await autumnV1.cancel({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
-			product_id: pro.id,
-			cancel_immediately: true,
+			product_id: premium.id,
+			cancel_action: "uncancel",
 		});
 
 		const attachResponse = await autumnV1.attach({

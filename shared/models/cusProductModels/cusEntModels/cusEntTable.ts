@@ -2,6 +2,7 @@ import {
 	boolean,
 	foreignKey,
 	index,
+	integer,
 	jsonb,
 	numeric,
 	pgTable,
@@ -41,6 +42,7 @@ export const customerEntitlements = pgTable(
 
 		// Expiry for loose entitlements (entitlements without reset intervals)
 		expires_at: numeric({ mode: "number" }),
+		cache_version: integer("cache_version").default(0),
 
 		// Optional...
 		customer_id: text("customer_id"),
@@ -76,3 +78,6 @@ export const customerEntitlements = pgTable(
 );
 
 collatePgColumn(customerEntitlements.id, "C");
+
+export type InsertCustomerEntitlement =
+	typeof customerEntitlements.$inferInsert;

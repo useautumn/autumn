@@ -32,6 +32,7 @@ const updateOneOffExistingEntitlement = async ({
 	options,
 	relatedPrice,
 	logger,
+	attachParams,
 }: {
 	db: DrizzleCli;
 	cusEnt: FullCustomerEntitlement;
@@ -41,6 +42,7 @@ const updateOneOffExistingEntitlement = async ({
 	options?: FeatureOptions;
 	relatedPrice?: Price;
 	logger: any;
+	attachParams: InsertCusProductParams;
 }) => {
 	if (entitlement.allowance_type === AllowanceType.Unlimited) {
 		return;
@@ -128,6 +130,7 @@ export const updateOneTimeCusProduct = async ({
 				options: options || undefined,
 				relatedPrice,
 				logger,
+				attachParams,
 			});
 		} else {
 			const newCusEnt = initCusEntitlement({

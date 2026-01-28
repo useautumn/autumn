@@ -78,6 +78,7 @@ const create = ({
 
 		internal_entity_id: null,
 		expires_at: null,
+		cache_version: 0,
 	};
 };
 

@@ -304,10 +304,34 @@ export const paramsToCurSub = async ({
 
 export const paramsToCurSubSchedule = async ({
 	attachParams,
+	scheduleId,
 }: {
 	attachParams: AttachParams;
+	scheduleId?: string;
 }) => {
 	const { stripeCli } = attachParams;
+	if (scheduleId) {
+		try {
+			const schedule = await stripeCli.subscriptionSchedules.retrieve(
+				scheduleId,
+				{
+					expand: ["phases.items.price"],
+				},
+			);
+
+			if (schedule.status === "canceled" || schedule.status === "released") {
+				return undefined;
+			}
+
+			return schedule as Stripe.SubscriptionSchedule;
+		} catch (error: any) {
+			attachParams.req?.logger.error(
+				`[paramsToCurSubSchedule] Error getting schedule id: ${scheduleId}, message: ${error.message}`,
+			);
+			return undefined;
+		}
+	}
+
 	const curCusProduct = attachParamsToCurCusProduct({ attachParams });
 
 	const subScheduleIds = curCusProduct?.scheduled_ids || [];

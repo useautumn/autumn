@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { handlePreviewUpdateSubscription } from "@/internal/billing/v2/updateSubscription/handlePreviewUpdateSubscription.js";
 import { handleAttachPreview } from "@/internal/customers/attach/handleAttachPreview/handleAttachPreview.js";
-import { handleCancel } from "@/internal/customers/cancel/handleCancel.js";
+import { handleCancelV2 } from "@/internal/customers/cancel/handleCancelV2.js";
 import type { HonoEnv } from "../../honoUtils/HonoEnv.js";
 import { handleAttach } from "./attach/handleAttach.js";
 import { handleCheckoutV2 } from "./checkout/handleCheckoutV2.js";
@@ -13,7 +13,7 @@ export const billingRouter = new Hono<HonoEnv>();
 
 // Legacy
 billingRouter.post("/attach/preview", ...handleAttachPreview);
-billingRouter.post("/cancel", ...handleCancel);
+billingRouter.post("/cancel", ...handleCancelV2);
 
 billingRouter.post("/setup_payment", ...handleSetupPayment);
 billingRouter.post("/checkout", ...handleCheckoutV2);

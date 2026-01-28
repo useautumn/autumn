@@ -59,7 +59,7 @@ type AdvanceClockAction = {
 
 type AttachPaymentMethodAction = {
 	type: "attachPaymentMethod";
-	paymentMethodType: "success" | "fail" | "authenticate";
+	paymentMethodType: "success" | "fail" | "authenticate" | "alipay";
 };
 
 type RemovePaymentMethodAction = {
@@ -103,7 +103,7 @@ type CleanupConfig = {
 
 type ScenarioConfig = {
 	testClock: boolean;
-	attachPm?: "success" | "fail" | "authenticate";
+	attachPm?: "success" | "fail" | "authenticate" | "alipay";
 	customerData?: CustomerData;
 	withDefault: boolean;
 	defaultGroup?: string;
@@ -160,7 +160,7 @@ const customer = ({
 	skipWebhooks,
 }: {
 	testClock?: boolean;
-	paymentMethod?: "success" | "fail" | "authenticate";
+	paymentMethod?: "success" | "fail" | "authenticate" | "alipay";
 	data?: CustomerData;
 	withDefault?: boolean;
 	defaultGroup?: string;
@@ -353,7 +353,7 @@ const advanceTestClock = ({
 const attachPaymentMethod = ({
 	type,
 }: {
-	type: "success" | "fail" | "authenticate";
+	type: "success" | "fail" | "authenticate" | "alipay";
 }): ConfigFn => {
 	return (config) => ({
 		...config,

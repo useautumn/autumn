@@ -64,6 +64,7 @@ export const payForInvoice = async ({
 				statusCode: 400,
 			});
 		} else {
+			const invoice = await stripeCli.invoices.retrieve(invoiceId);
 			return {
 				paid: false,
 				error: new RecaseError({
@@ -71,7 +72,7 @@ export const payForInvoice = async ({
 					code: ErrCode.CustomerHasNoPaymentMethod,
 					statusCode: 400,
 				}),
-				invoice: null,
+				invoice: invoice,
 			};
 		}
 	}
@@ -147,6 +148,13 @@ export const updateInvoiceIfExists = async ({
 			updates: {
 				status: invoice.status as InvoiceStatus,
 				hosted_invoice_url: invoice.hosted_invoice_url,
+				total: stripeToAtmnAmount({
+					amount: invoice.total,
+					currency: invoice.currency,
+				}),
+				discounts: getInvoiceDiscounts({
+					expandedInvoice: invoice,
+				}),
 			},
 		});
 

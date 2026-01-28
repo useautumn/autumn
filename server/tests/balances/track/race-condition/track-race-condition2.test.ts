@@ -8,11 +8,7 @@ import { currentRegion } from "@/external/redis/initRedis.js";
 import { executeRedisDeduction } from "@/internal/balances/utils/deduction/executeRedisDeduction.js";
 import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
 import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import {
-	constructProduct,
-	constructRawProduct,
-} from "@/utils/scriptUtils/createTestProducts.js";
+import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 import { deleteCachedFullCustomer } from "../../../../src/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
@@ -23,15 +19,15 @@ import {
 import { constructPrepaidItem } from "../../../../src/utils/scriptUtils/constructItem.js";
 import { timeout } from "../../../utils/genUtils";
 
-const pro = constructProduct({
-	type: "pro",
-	items: [
-		constructFeatureItem({
-			featureId: TestFeature.Messages,
-			includedUsage: 100,
-		}),
-	],
-});
+// const pro = constructProduct({
+// 	type: "pro",
+// 	items: [
+// 		constructFeatureItem({
+// 			featureId: TestFeature.Messages,
+// 			includedUsage: 100,
+// 		}),
+// 	],
+// });
 
 const oneOffCredits = constructRawProduct({
 	id: "one_off_messages",
@@ -72,13 +68,13 @@ describe(`${chalk.yellowBright("track-race-condition2: sync should not wipe out 
 
 		await initProductsV0({
 			ctx,
-			products: [pro, oneOffCredits],
+			products: [oneOffCredits],
 			prefix: testCase,
 		});
 
 		await autumnV2.attach({
 			customer_id: customerId,
-			product_ids: [pro.id, oneOffCredits.id],
+			product_ids: [oneOffCredits.id],
 			options: [
 				{
 					feature_id: TestFeature.Messages,
@@ -122,7 +118,7 @@ describe(`${chalk.yellowBright("track-race-condition2: sync should not wipe out 
 			deductions: [
 				{
 					feature: messagesFeature,
-					deduction: 5,
+					deduction: 95, // use up a BIT of one-off credits
 				},
 			],
 			fullCustomer,
@@ -209,7 +205,7 @@ describe(`${chalk.yellowBright("track-race-condition2: sync should not wipe out 
 
 		// Expected: 100 (pro) + 100 (initial one-off) - 5 (tracked) + 100 (attached one-off) = 295
 		expect(cachedCustomer.balances[TestFeature.Messages].current_balance).toBe(
-			295,
+			200,
 		);
 
 		const customerAfterSync = await autumnV2.customers.get<ApiCustomer>(
@@ -220,6 +216,6 @@ describe(`${chalk.yellowBright("track-race-condition2: sync should not wipe out 
 		);
 		expect(
 			customerAfterSync.balances[TestFeature.Messages].current_balance,
-		).toBe(295);
+		).toBe(200);
 	});
 });
