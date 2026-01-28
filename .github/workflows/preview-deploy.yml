@@ -8,8 +8,6 @@ on:
 jobs:
   deploy-preview:
     runs-on: ubuntu-latest
-    env:
-      INFISICAL_PROJECT_ID: ${{ secrets.INFISICAL_PROJECT_ID }}
     outputs:
       preview_url: ${{ steps.deploy.outputs.service_domain }}
     steps:
@@ -19,26 +17,24 @@ jobs:
         with:
           bun-version: 1.3.2
 
-      - name: Install Infisical CLI
-        run: |
-          curl -1sLf 'https://artifacts-cli.infisical.com/setup.deb.sh' | sudo -E bash
-          sudo apt-get update && sudo apt-get install -y infisical
-
-      - name: Authenticate with Infisical
-        env:
-          INFISICAL_UNIVERSAL_AUTH_CLIENT_ID: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_ID }}
-          INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET }}
-        run: |
-          echo "INFISICAL_TOKEN=$(infisical login --method=universal-auth --client-id=$INFISICAL_UNIVERSAL_AUTH_CLIENT_ID --client-secret=$INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET --silent --plain)" >> $GITHUB_ENV
+      - name: Fetch Infisical Secrets
+        uses: Infisical/secrets-action@v1.0.9
+        with:
+          method: "universal"
+          client-id: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET }}
+          project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
+          env-slug: "test"
+          export-type: "env"
 
       - name: Install dependencies
         run: bun install
 
       - name: Run database migrations
-        run: infisical run --projectId=$INFISICAL_PROJECT_ID --env=test -- bun run db:push
+        run: bun run db:push
 
       - name: Setup test organization
-        run: infisical run --projectId=$INFISICAL_PROJECT_ID --env=test -- bun scripts/preview/setupTestOrgCI.ts
+        run: bun scripts/preview/setupTestOrgCI.ts
 
       - name: Deploy to Railway Preview
         id: deploy
@@ -53,7 +49,7 @@ jobs:
       - name: Setup Stripe webhook for preview URL
         env:
           SERVER_URL: https://${{ steps.deploy.outputs.service_domain }}
-        run: infisical run --projectId=$INFISICAL_PROJECT_ID --env=test -- bun scripts/preview/setupPreviewWebhook.ts
+        run: bun scripts/preview/setupPreviewWebhook.ts
 
       - name: Wait for deployment to be healthy
         run: |
