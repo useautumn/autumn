@@ -8,6 +8,8 @@ on:
 jobs:
   deploy-preview:
     runs-on: ubuntu-latest
+    env:
+      INFISICAL_PROJECT_ID: ${{ secrets.INFISICAL_PROJECT_ID }}
     outputs:
       preview_url: ${{ steps.deploy.outputs.service_domain }}
     steps:
@@ -29,13 +31,13 @@ jobs:
         env:
           INFISICAL_UNIVERSAL_AUTH_CLIENT_ID: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_ID }}
           INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET }}
-        run: infisical run --env=test -- bun run db:push
+        run: infisical run --projectId=$INFISICAL_PROJECT_ID --env=test -- bun run db:push
 
       - name: Setup test organization
         env:
           INFISICAL_UNIVERSAL_AUTH_CLIENT_ID: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_ID }}
           INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET }}
-        run: infisical run --env=test -- bun scripts/preview/setupTestOrgCI.ts
+        run: infisical run --projectId=$INFISICAL_PROJECT_ID --env=test -- bun scripts/preview/setupTestOrgCI.ts
 
       - name: Deploy to Railway Preview
         id: deploy
@@ -52,7 +54,7 @@ jobs:
           SERVER_URL: https://${{ steps.deploy.outputs.service_domain }}
           INFISICAL_UNIVERSAL_AUTH_CLIENT_ID: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_ID }}
           INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET }}
-        run: infisical run --env=test -- bun scripts/preview/setupPreviewWebhook.ts
+        run: infisical run --projectId=$INFISICAL_PROJECT_ID --env=test -- bun scripts/preview/setupPreviewWebhook.ts
 
       - name: Wait for deployment to be healthy
         run: |

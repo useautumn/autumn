@@ -16,6 +16,8 @@ jobs:
   test-group-1:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      INFISICAL_PROJECT_ID: ${{ secrets.INFISICAL_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -39,7 +41,7 @@ jobs:
           SERVER_URL: ${{ inputs.preview_url }}
           INFISICAL_UNIVERSAL_AUTH_CLIENT_ID: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_ID }}
           INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET }}
-        run: infisical run --env=test -- ./scripts/testGroups/g1.sh
+        run: infisical run --projectId=$INFISICAL_PROJECT_ID --env=test -- ./scripts/testGroups/g1.sh
 
       - name: Upload test results
         if: always()
@@ -52,6 +54,8 @@ jobs:
   test-group-2:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      INFISICAL_PROJECT_ID: ${{ secrets.INFISICAL_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -75,7 +79,7 @@ jobs:
           SERVER_URL: ${{ inputs.preview_url }}
           INFISICAL_UNIVERSAL_AUTH_CLIENT_ID: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_ID }}
           INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET }}
-        run: infisical run --env=test -- ./scripts/testGroups/g2.sh
+        run: infisical run --projectId=$INFISICAL_PROJECT_ID --env=test -- ./scripts/testGroups/g2.sh
 
       - name: Upload test results
         if: always()
@@ -89,6 +93,8 @@ jobs:
     needs: [test-group-1, test-group-2]
     if: always()
     runs-on: ubuntu-latest
+    env:
+      INFISICAL_PROJECT_ID: ${{ secrets.INFISICAL_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -109,7 +115,7 @@ jobs:
           SERVER_URL: ${{ inputs.preview_url }}
           INFISICAL_UNIVERSAL_AUTH_CLIENT_ID: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_ID }}
           INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET: ${{ secrets.INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET }}
-        run: infisical run --env=test -- bun scripts/preview/cleanupPreviewWebhook.ts
+        run: infisical run --projectId=$INFISICAL_PROJECT_ID --env=test -- bun scripts/preview/cleanupPreviewWebhook.ts
 
   report-status:
     needs: [test-group-1, test-group-2]
