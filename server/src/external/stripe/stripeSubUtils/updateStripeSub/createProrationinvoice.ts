@@ -7,7 +7,7 @@ import { attachParamsToMetadata } from "../../../../internal/billing/attach/util
 import type { Logger } from "../../../logtail/logtailUtils.js";
 import { payForInvoice } from "../../stripeInvoiceUtils.js";
 
-export const undoSubUpdate = async ({
+const undoSubUpdate = async ({
 	stripeCli,
 	curSub,
 	updatedSub,

@@ -8,7 +8,7 @@ import { getCustomerAndProducts } from "./attachParamsUtils/getCusAndProducts.js
 import { getPricesAndEnts } from "./attachParamsUtils/getPricesAndEnts.js";
 import { getStripeCusData } from "./attachParamsUtils/getStripeCusData.js";
 
-export const getRewards = async ({
+const getRewards = async ({
 	ctx,
 	attachBody,
 	stripeCli,

@@ -10,7 +10,7 @@ import { pricesOnlyOneOff } from "../prices/priceUtils.js";
 import { isFeatureItem } from "../product-items/productItemUtils/getItemType.js";
 import { isFreeProduct } from "../productUtils.js";
 
-export const prodIsAddOn = ({ product }: { product: FullProduct }) => {
+const prodIsAddOn = ({ product }: { product: FullProduct }) => {
 	return product.is_add_on;
 };
 
@@ -48,7 +48,7 @@ export const isFreeProductV2 = ({
 	);
 };
 
-export const isDefaultTrial = ({
+const isDefaultTrial = ({
 	product,
 	skipDefault = false,
 }: {

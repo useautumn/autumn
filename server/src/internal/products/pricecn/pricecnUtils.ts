@@ -26,7 +26,7 @@ import {
 } from "../product-items/productItemUtils/getItemType.js";
 import { isProductUpgrade } from "../productUtils.js";
 
-export const sortProductItems = (items: ProductItem[], features: Feature[]) => {
+const sortProductItems = (items: ProductItem[], features: Feature[]) => {
 	items.sort((a, b) => {
 		const aIsPriceItem = isPriceItem(a);
 		const bIsPriceItem = isPriceItem(b);
@@ -70,7 +70,7 @@ export const sortProductItems = (items: ProductItem[], features: Feature[]) => {
 	return items;
 };
 
-export const getIncludedFeatureName = ({
+const getIncludedFeatureName = ({
 	item,
 	feature,
 }: {
@@ -83,7 +83,7 @@ export const getIncludedFeatureName = ({
 	});
 };
 
-export const getPriceText = ({
+const getPriceText = ({
 	item,
 	org,
 }: {
@@ -154,7 +154,7 @@ export const getPricecnPrice = ({
 	}
 };
 
-export const featureToPricecnItem = ({
+const featureToPricecnItem = ({
 	feature,
 	item,
 }: {
@@ -192,7 +192,7 @@ export const featureToPricecnItem = ({
 	};
 };
 
-export const featurePricetoPricecnItem = ({
+const featurePricetoPricecnItem = ({
 	feature,
 	item,
 	org,
@@ -258,7 +258,7 @@ export const featurePricetoPricecnItem = ({
 	};
 };
 
-export const getAttachScenario = ({
+const getAttachScenario = ({
 	curMainProduct,
 	curScheduledProduct,
 	fullProduct,

@@ -7,7 +7,7 @@ import {
 } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
 
-export const constructMigrationError = ({
+const constructMigrationError = ({
 	migrationJobId,
 	internalCustomerId,
 	data,

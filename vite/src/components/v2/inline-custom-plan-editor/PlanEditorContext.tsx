@@ -163,7 +163,7 @@ export function useCurrentItem() {
 }
 
 /** Hook to set the current item being edited. Uses context if available, otherwise Zustand. */
-export function useSetCurrentItem() {
+function useSetCurrentItem() {
 	const { product, setProduct } = useProduct();
 	const { itemId } = useSheet();
 

@@ -13,7 +13,7 @@ import { notNullish, nullish } from "../genUtils";
 import { isFeatureItem, isFeaturePriceItem, isPriceItem } from "./getItemType";
 import { itemToUsageType } from "./productItemUtils/convertItem";
 
-export const itemIsUnlimited = (item: ProductItem) => {
+const itemIsUnlimited = (item: ProductItem) => {
 	return item.included_usage === Infinite;
 };
 
@@ -37,7 +37,7 @@ export const intervalIsNone = (
 	);
 };
 
-export const getShowParams = (item: ProductItem | null) => {
+const getShowParams = (item: ProductItem | null) => {
 	if (!item) {
 		return {
 			price: false,
@@ -57,7 +57,7 @@ export const getShowParams = (item: ProductItem | null) => {
 	};
 };
 
-export const shouldShowProrationConfig = ({
+const shouldShowProrationConfig = ({
 	item,
 	features,
 }: {
@@ -87,7 +87,7 @@ export const shouldShowProrationConfig = ({
 	return false;
 };
 
-export const itemsHaveSameInterval = ({
+const itemsHaveSameInterval = ({
 	item1,
 	item2,
 }: {

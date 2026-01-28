@@ -16,7 +16,7 @@ import type { Logger } from "../../../../../external/logtail/logtailUtils.js";
 import { attachParamsToProduct } from "../convertAttachParams.js";
 import { getContUseInvoiceItems } from "./getContUseInvoiceItems.js";
 
-export const filterContUsageProrations = async ({
+const filterContUsageProrations = async ({
 	sub,
 	stripeCli,
 	curCusProduct,

@@ -13,7 +13,7 @@ import { authClient, signIn } from "@/lib/auth-client";
 import { getBackendErr } from "@/utils/genUtils";
 import { OTPSignIn } from "./components/OTPSignIn";
 
-export const emailSchema = z.string().email();
+const emailSchema = z.string().email();
 
 /**
  * Check if URL has OAuth parameters (from OAuth provider redirect)

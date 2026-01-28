@@ -23,7 +23,7 @@ import {
 	getSummedEntityBalances,
 } from "./entBalanceUtils.js";
 
-export const getCusEntMasterBalance = ({
+const getCusEntMasterBalance = ({
 	cusEnt,
 	entities,
 }: {
@@ -65,7 +65,7 @@ export const getCusEntMasterBalance = ({
 	};
 };
 
-export const getCusEntBalance = ({
+const getCusEntBalance = ({
 	cusEnt,
 	entityId,
 }: {
@@ -117,7 +117,7 @@ export const getRelatedCusPrice = (
 };
 
 // 3. Perform deductions and update customer balance
-export const updateCusEntInStripe = async ({
+const updateCusEntInStripe = async ({
 	cusEnt,
 	cusPrices,
 	org,
@@ -243,7 +243,7 @@ export const getFeatureBalance = ({
 	return balance;
 };
 
-export const getPaidFeatureBalance = ({
+const getPaidFeatureBalance = ({
 	cusEnts,
 	internalFeatureId,
 }: {
@@ -269,7 +269,7 @@ export const getPaidFeatureBalance = ({
 	return paidAllowance;
 };
 
-export const cusEntsContainFeature = ({
+const cusEntsContainFeature = ({
 	cusEnts,
 	feature,
 }: {

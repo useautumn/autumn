@@ -25,7 +25,7 @@ const allowedEndpoints = [
 	},
 ];
 
-export interface IsAllowedEndpointProps {
+interface IsAllowedEndpointProps {
 	pattern: string;
 	path: string;
 	method: string;

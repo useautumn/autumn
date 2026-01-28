@@ -56,7 +56,7 @@ export const isV4Usage = ({
 };
 
 // export const
-export const onIncreaseToStripeProration = ({
+const onIncreaseToStripeProration = ({
 	onIncrease,
 }: {
 	onIncrease: OnIncrease;
@@ -71,7 +71,7 @@ export const onIncreaseToStripeProration = ({
 	return behavior as Stripe.SubscriptionItemUpdateParams.ProrationBehavior;
 };
 
-export const onDecreaseToStripeProration = ({
+const onDecreaseToStripeProration = ({
 	onDecrease,
 }: {
 	onDecrease: OnDecrease;

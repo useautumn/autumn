@@ -24,7 +24,7 @@ import type {
 	UsageParams,
 } from "autumn-js";
 
-export default class AutumnError extends Error {
+class AutumnError extends Error {
 	message: string;
 	code: string;
 

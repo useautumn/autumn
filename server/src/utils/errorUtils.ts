@@ -7,7 +7,7 @@ import { ZodError } from "zod/v4";
 import { formatZodError } from "../errors/formatZodError.js";
 import { getSentryTags } from "../external/sentry/sentryUtils.js";
 
-export const isPaymentDeclined = (error: any) => {
+const isPaymentDeclined = (error: any) => {
 	return (
 		error instanceof RecaseError && error.code === ErrCode.StripeCardDeclined
 	);
@@ -142,7 +142,7 @@ export const handleRequestError = ({
 	}
 };
 
-export const handleFrontendReqError = ({
+const handleFrontendReqError = ({
 	error,
 	req,
 	res,

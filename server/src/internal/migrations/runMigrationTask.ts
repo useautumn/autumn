@@ -5,7 +5,7 @@ import { MigrationService } from "./MigrationService.js";
 import { getMigrationCustomers } from "./migrationSteps/getMigrationCustomers.js";
 import { migrateCustomers } from "./migrationSteps/migrateCustomers.js";
 
-export interface MigrationTaskPayload {
+interface MigrationTaskPayload {
 	migrationJobId: string;
 	orgId: string;
 	env: AppEnv;

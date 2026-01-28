@@ -11,7 +11,7 @@ import type { IconButtonProps } from "./IconButton";
 import { IconButton } from "./IconButton";
 
 /** Hook for copy-to-clipboard with auto-reset state */
-export const useCopyAnimation = ({
+const useCopyAnimation = ({
 	text,
 	timeout = 1500,
 }: {
@@ -41,7 +41,7 @@ export const useCopyAnimation = ({
 };
 
 /** Animated icon that transitions between copy and check */
-export const AnimatedCopyIcon = ({
+const AnimatedCopyIcon = ({
 	copied,
 	size = "size-3.5",
 }: {

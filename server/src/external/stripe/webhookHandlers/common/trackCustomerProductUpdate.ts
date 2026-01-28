@@ -2,7 +2,7 @@ import type { FullCusProduct, InsertCustomerProduct } from "@autumn/shared";
 import type { StripeSubscriptionDeletedContext } from "../handleStripeSubscriptionDeleted/setupStripeSubscriptionDeletedContext";
 import type { StripeSubscriptionUpdatedContext } from "../handleStripeSubscriptionUpdated/stripeSubscriptionUpdatedContext";
 
-export type SubscriptionEventContext =
+type SubscriptionEventContext =
 	| StripeSubscriptionUpdatedContext
 	| StripeSubscriptionDeletedContext;
 

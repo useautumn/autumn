@@ -23,4 +23,4 @@ export const PlanOverrideSchema = z
 		},
 	);
 
-export type PlanOverride = z.infer<typeof PlanOverrideSchema>;
+type PlanOverride = z.infer<typeof PlanOverrideSchema>;

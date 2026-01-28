@@ -1,7 +1,7 @@
 import type { ProductItem } from "@autumn/shared";
 import { notNullish, nullish } from "../genUtils";
 
-export const isEmptyItem = (item: ProductItem) => {
+const isEmptyItem = (item: ProductItem) => {
 	return nullish(item.price) && nullish(item.feature_id) && nullish(item.tiers);
 };
 

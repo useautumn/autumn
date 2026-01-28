@@ -18,7 +18,7 @@ import { getBillingType } from "@server/internal/products/prices/priceUtils";
  * Searches both `fullProducts` and `fullCustomer.customer_products` for full coverage,
  * since prices may exist in either location depending on context.
  */
-export const billingContextLookupPriceByStripePriceId = ({
+const billingContextLookupPriceByStripePriceId = ({
 	stripePriceId,
 	billingContext,
 }: {

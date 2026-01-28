@@ -30,7 +30,7 @@ export const validateOneOffTrial = async ({
 	}
 };
 
-export const freeTrialsAreSame = ({
+const freeTrialsAreSame = ({
 	ft1,
 	ft2,
 }: {

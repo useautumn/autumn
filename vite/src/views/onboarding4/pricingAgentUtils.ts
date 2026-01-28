@@ -56,7 +56,7 @@ export interface AgentPricingConfig {
 /**
  * Transform an AgentPricingConfig (from the AI) into PricingTier[] (for the UI)
  */
-export function transformConfigToTiers({
+function transformConfigToTiers({
 	config,
 	features,
 }: {

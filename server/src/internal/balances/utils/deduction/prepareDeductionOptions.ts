@@ -4,7 +4,7 @@ import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
 
 /** Deduction options with all defaults resolved (no optional fields) */
-export type ResolvedDeductionOptions = Required<
+type ResolvedDeductionOptions = Required<
 	Omit<DeductionOptions, "customerEntitlementFilters">
 > & {
 	customerEntitlementFilters: DeductionOptions["customerEntitlementFilters"];

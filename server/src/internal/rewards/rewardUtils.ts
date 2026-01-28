@@ -86,13 +86,13 @@ export const getRewardCat = (reward: Reward) => {
 	return RewardCategory.Discount;
 };
 
-export enum CouponType {
+enum CouponType {
 	AddInvoiceBalance = "add_invoice_balance",
 	AddBillingCredits = "add_billing_credits",
 	Standard = "standard",
 }
 
-export const getCouponType = (reward: Reward) => {
+const getCouponType = (reward: Reward) => {
 	if (!reward) return null;
 
 	const config = reward.discount_config;
@@ -170,7 +170,7 @@ export const initRewardStripePrices = async ({
 	return;
 };
 
-export const formatReward = ({ reward }: { reward: Reward }) => {
+const formatReward = ({ reward }: { reward: Reward }) => {
 	if (!reward) return "";
 	const discountString =
 		reward.type === RewardType.PercentageDiscount
@@ -186,7 +186,7 @@ export const formatReward = ({ reward }: { reward: Reward }) => {
 	return discountString;
 };
 
-export const getAmountAfterReward = ({
+const getAmountAfterReward = ({
 	amount,
 	reward,
 	subDiscounts,
@@ -230,7 +230,7 @@ export const getAmountAfterReward = ({
 	return amount;
 };
 
-export const discountAppliesToPrice = ({
+const discountAppliesToPrice = ({
 	discount,
 	product,
 	price,
@@ -282,7 +282,7 @@ export const getUnusedAmountAfterDiscount = ({
 	return amountAfterDiscount;
 };
 
-export const getAmountAfterStripeDiscounts = ({
+const getAmountAfterStripeDiscounts = ({
 	price,
 	amount,
 	product,

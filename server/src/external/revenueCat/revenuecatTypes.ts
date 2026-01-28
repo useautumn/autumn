@@ -1,17 +1,17 @@
 // RevenueCat Webhook Event Types
 
-export type RevCatExperiment = {
+type RevCatExperiment = {
 	experiment_id: string;
 	experiment_variant: string;
 	enrolled_at_ms: number;
 };
 
-export type RevCatSubscriberAttribute = {
+type RevCatSubscriberAttribute = {
 	updated_at_ms: number;
 	value: string;
 };
 
-export type RevCatEvent = {
+type RevCatEvent = {
 	event_timestamp_ms: number;
 	product_id: string;
 	period_type: "NORMAL" | "INTRO" | "TRIAL";
@@ -69,19 +69,19 @@ export type RevCatEvent = {
 	experiments: RevCatExperiment[];
 };
 
-export type RevCatWebhookPayload = {
+type RevCatWebhookPayload = {
 	event: RevCatEvent;
 	api_version: string;
 };
 
-export type RevenueCatOfferings = {
+type RevenueCatOfferings = {
 	object: "list";
 	items: RevenueCatOffering[];
 	next_page: string | null;
 	url: string;
 };
 
-export type RevenueCatOffering = {
+type RevenueCatOffering = {
 	object: "offering";
 	id: string;
 	lookup_key: string | null;
@@ -95,14 +95,14 @@ export type RevenueCatOffering = {
 	packages: RevenueCatOfferingPackageList;
 };
 
-export type RevenueCatOfferingPackageList = {
+type RevenueCatOfferingPackageList = {
 	object: "list";
 	items: RevenueCatOfferingPackage[];
 	next_page: string | null;
 	url: string;
 };
 
-export type RevenueCatOfferingPackage = {
+type RevenueCatOfferingPackage = {
 	object: "package";
 	id: string;
 	lookup_key: string | null;
@@ -112,27 +112,27 @@ export type RevenueCatOfferingPackage = {
 	products: RevenueCatOfferingProductList;
 };
 
-export type RevenueCatOfferingProductList = {
+type RevenueCatOfferingProductList = {
 	object: "list";
 	items: RevenueCatOfferingProductItem[];
 	next_page: string | null;
 	url: string;
 };
 
-export type RevenueCatOfferingProductItem = {
+type RevenueCatOfferingProductItem = {
 	product: Record<string, unknown>;
 	eligibility_criteria: string;
 };
 
 // RevenueCat Products API Types
 
-export type RevenueCatProductSubscription = {
+type RevenueCatProductSubscription = {
 	duration: string;
 	grace_period_duration?: string;
 	trial_duration?: string;
 };
 
-export type RevenueCatProductOneTime = {
+type RevenueCatProductOneTime = {
 	is_consumable: boolean;
 };
 

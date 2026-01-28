@@ -1,0 +1,42 @@
+{
+	"$schema": "https://unpkg.com/knip@5/schema.json",
+	"workspaces": {
+		".": {
+			"ignore": [".opencode/**"]
+		},
+		"server": {
+			"entry": ["tests/**/*.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts"],
+			"ignore": [
+				"src/_luaScriptsV2/**",
+				"src/utils/importUtils/**",
+				"src/utils/scriptUtils/**",
+				"src/utils/workerUtils/**",
+				"src/db/**"
+			],
+			"ignoreDependencies": ["@react-email/components"]
+		},
+		"shared": {
+			"entry": ["index.ts"],
+			"project": ["**/*.ts"],
+			"includeEntryExports": false,
+			"ignore": ["api/balances/track/changes/V0.2_TrackChange.ts"]
+		},
+		"vite": {
+			"entry": ["src/main.tsx"],
+			"project": ["src/**/*.{ts,tsx}"],
+			"ignore": ["src/components/ai-elements/**"],
+			"ignoreDependencies": [
+				"tailwindcss",
+				"tailwind-scrollbar-hide",
+				"tailwindcss-animate",
+				"@squircle/tailwindcss"
+			]
+		},
+		"scripts": {
+			"entry": ["**/*.{ts,js}"],
+			"project": ["**/*.{ts,js}"]
+		}
+	},
+	"ignoreBinaries": ["infisical", "lsof", "serve"]
+}

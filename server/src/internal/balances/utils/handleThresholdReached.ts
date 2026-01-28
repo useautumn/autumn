@@ -36,7 +36,7 @@ const cleanApiCustomer = ({
 	});
 };
 
-export const handleAllowanceUsed = async ({
+const handleAllowanceUsed = async ({
 	ctx,
 	feature,
 	oldFullCus,

@@ -226,7 +226,7 @@ export const getInvoiceDiscounts = ({
 	return autumnDiscounts;
 };
 
-export const getInvoiceExpansion = () => {
+const getInvoiceExpansion = () => {
 	return {
 		expand: ["discounts", "discounts.coupon"],
 	};

@@ -29,7 +29,7 @@ import { getDefaultAttachConfig } from "../attach/attachUtils/getAttachConfig.js
 import { CusService } from "../CusService.js";
 import { initStripeCusAndProducts } from "../handlers/handleCreateCustomer.js";
 
-export const getGroupToDefaultProd = async ({
+const getGroupToDefaultProd = async ({
 	defaultProds,
 }: {
 	defaultProds: FullProduct[];
