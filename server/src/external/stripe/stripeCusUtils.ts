@@ -111,6 +111,7 @@ export const getCusPaymentMethod = async ({
 		const paymentMethod = await stripeCli.paymentMethods.retrieve(
 			paymentMethodId as string,
 		);
+
 		return paymentMethod;
 	}
 };

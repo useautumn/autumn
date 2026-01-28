@@ -64,6 +64,7 @@ export const payForInvoice = async ({
 				statusCode: 400,
 			});
 		} else {
+			const invoice = await stripeCli.invoices.retrieve(invoiceId);
 			return {
 				paid: false,
 				error: new RecaseError({
@@ -71,7 +72,7 @@ export const payForInvoice = async ({
 					code: ErrCode.CustomerHasNoPaymentMethod,
 					statusCode: 400,
 				}),
-				invoice: null,
+				invoice: invoice,
 			};
 		}
 	}
