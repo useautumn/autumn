@@ -51,7 +51,7 @@ export const revenuecatSeederMiddleware = async (
 	await next();
 };
 
-export const logRevCatWebhook = ({
+const logRevCatWebhook = ({
 	logger,
 	org,
 	event,

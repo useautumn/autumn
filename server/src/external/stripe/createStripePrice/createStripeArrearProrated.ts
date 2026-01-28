@@ -19,7 +19,7 @@ import type Stripe from "stripe";
 import { billingIntervalToStripe } from "../stripePriceUtils";
 import { priceToInArrearTiers } from "./createStripeInArrear";
 
-export interface StripeMeteredPriceParams {
+interface StripeMeteredPriceParams {
 	stripeCli: Stripe;
 	price: Price;
 	entitlements: EntitlementWithFeature[];
@@ -108,7 +108,7 @@ export const createStripeMeteredPrice = async ({
 	return stripePrice;
 };
 
-export const arrearProratedToStripeTiers = (
+const arrearProratedToStripeTiers = (
 	price: Price,
 	entitlement: EntitlementWithFeature,
 ) => {

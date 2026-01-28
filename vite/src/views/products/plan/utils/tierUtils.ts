@@ -39,7 +39,7 @@ export const addTier = ({
 	}
 };
 
-export const removeTiers = ({
+const removeTiers = ({
 	item,
 	setItem,
 }: {

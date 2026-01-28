@@ -20,7 +20,7 @@ import {
 	getBillingType,
 } from "@/internal/products/prices/priceUtils.js";
 
-export const getUsageInvoiceItems = async ({
+const getUsageInvoiceItems = async ({
 	db,
 	logger,
 	attachParams,

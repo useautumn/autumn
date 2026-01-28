@@ -21,7 +21,7 @@ import {
 } from "date-fns";
 import { formatUnixToDateTime } from "@/utils/genUtils.js";
 
-export const subtractBillingIntervalUnix = ({
+const subtractBillingIntervalUnix = ({
 	unixTimestamp,
 	interval,
 	intervalCount = 1,
@@ -54,7 +54,7 @@ export const subtractBillingIntervalUnix = ({
 	return subtractedDate.getTime();
 };
 
-export const addBillingIntervalUnix = ({
+const addBillingIntervalUnix = ({
 	unixTimestamp,
 	interval,
 	intervalCount = 1,
@@ -114,7 +114,7 @@ export const getNextStartOfMonthUnix = ({
 	return twelveOClock.getTime();
 };
 
-export const getAlignedIntervalUnix = ({
+const getAlignedIntervalUnix = ({
 	alignWithUnix,
 	interval,
 	intervalCount,
@@ -211,7 +211,7 @@ export const getAlignedIntervalUnix = ({
 	return billingCycleAnchorUnix;
 };
 
-export const subtractFromUnixTillAligned = ({
+const subtractFromUnixTillAligned = ({
 	targetUnix,
 	originalUnix,
 }: {

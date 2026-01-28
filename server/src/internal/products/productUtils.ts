@@ -59,7 +59,7 @@ export const getLatestProducts = (products: FullProduct[]) => {
 	return Object.values(latestProducts) as FullProduct[];
 };
 
-export const getProductVersionCounts = (products: FullProduct[]) => {
+const getProductVersionCounts = (products: FullProduct[]) => {
 	const versionCounts = products.reduce((acc: any, product: any) => {
 		if (!acc[product.id]) {
 			acc[product.id] = 1;
@@ -194,7 +194,7 @@ export const isFreeProduct = (prices: Price[]) => {
 	return totalPrice === 0;
 };
 
-export const getOptionsFromPrices = (prices: Price[], features: Feature[]) => {
+const getOptionsFromPrices = (prices: Price[], features: Feature[]) => {
 	const featureToOptions: { [key: string]: any } = {};
 	for (const price of prices) {
 		if (price.config!.type === PriceType.Fixed) {
@@ -293,7 +293,7 @@ export const checkStripeProductExists = async ({
 	}
 };
 
-export const getPricesForProduct = (product: FullProduct, prices: Price[]) => {
+const getPricesForProduct = (product: FullProduct, prices: Price[]) => {
 	return prices.filter((p) => p.internal_product_id === product.internal_id);
 };
 
@@ -515,7 +515,7 @@ export const isOneOff = (prices: Price[]) => {
 	);
 };
 
-export const itemsAreOneOff = (items: Entitlement[]) => {
+const itemsAreOneOff = (items: Entitlement[]) => {
 	return items.every(
 		(item) =>
 			item.interval === null ||
@@ -569,7 +569,7 @@ export const initProductInStripe = async ({
 	await Promise.all(batchPriceUpdate);
 };
 
-export const searchProductsByStripeId = async ({
+const searchProductsByStripeId = async ({
 	products,
 	stripeId,
 }: {

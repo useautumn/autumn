@@ -10,13 +10,13 @@ import { filterByExpiredStatus } from "@/views/customers2/utils/tableFilterUtils
 /**
  * Determines if a customer product is a one-off purchase using existing utilities
  */
-export function isOneOffCusProduct(cusProduct: FullCusProduct): boolean {
+function isOneOffCusProduct(cusProduct: FullCusProduct): boolean {
 	const fullProduct = cusProductToProduct({ cusProduct });
 	const productV2 = mapToProductV2({ product: fullProduct });
 	return isOneOffProductV2({ items: productV2.items });
 }
 
-export function filterCustomerProducts({
+function filterCustomerProducts({
 	customer,
 	showExpired,
 }: {
@@ -29,7 +29,7 @@ export function filterCustomerProducts({
 	});
 }
 
-export function filterCustomerProductsByEntity({
+function filterCustomerProductsByEntity({
 	customer,
 	showExpired,
 }: {

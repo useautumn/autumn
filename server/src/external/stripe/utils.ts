@@ -6,7 +6,7 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 
-export const calculateMetered1Price = ({
+const calculateMetered1Price = ({
 	product,
 	numEvents,
 	metered1Feature,
@@ -91,7 +91,7 @@ export const subToAutumnInterval = (sub: Stripe.Subscription) => {
 //     return BillingInterval.Year;
 //   }
 // };
-export const subItemToAutumnInterval = (item: Stripe.SubscriptionItem) => {
+const subItemToAutumnInterval = (item: Stripe.SubscriptionItem) => {
 	return {
 		interval: item.price.recurring?.interval as BillingInterval,
 		intervalCount: item.price.recurring?.interval_count || 1,

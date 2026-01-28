@@ -10,7 +10,7 @@ const maskApiKey = (apiKey: string) => {
 	return apiKey.slice(0, 15) + apiKey.slice(15).replace(/./g, "*");
 };
 
-export const verifySecretKey = async (req: any, res: any, next: any) => {
+const verifySecretKey = async (req: any, res: any, next: any) => {
 	const authHeader = req.headers.authorization || req.headers.Authorization;
 
 	if (!authHeader || !authHeader.startsWith("Bearer ")) {

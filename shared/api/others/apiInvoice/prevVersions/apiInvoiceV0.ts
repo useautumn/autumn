@@ -31,4 +31,4 @@ export const ApiInvoiceV0Schema = z.object({
 	}),
 });
 
-export type ApiInvoiceV0 = z.infer<typeof ApiInvoiceV0Schema>;
+type ApiInvoiceV0 = z.infer<typeof ApiInvoiceV0Schema>;

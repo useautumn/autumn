@@ -29,7 +29,7 @@ import PlanEditorView from "./views/products/plan/PlanEditorView";
 import { OrgSettingsView } from "./views/settings/OrgSettingsView";
 import { TerminalView } from "./views/TerminalView";
 
-export function SquircleProvider({ children }: { children: React.ReactNode }) {
+function SquircleProvider({ children }: { children: React.ReactNode }) {
 	React.useEffect(() => void init(), []);
 	return children;
 }

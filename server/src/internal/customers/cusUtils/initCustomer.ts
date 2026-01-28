@@ -5,7 +5,7 @@ import { generateId } from "@/utils/genUtils.js";
 /**
  * Build a Customer object ready for insertion.
  */
-export const initCustomer = ({
+const initCustomer = ({
 	ctx,
 	customerId,
 	customerData,

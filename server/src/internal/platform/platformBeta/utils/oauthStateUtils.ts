@@ -5,7 +5,7 @@ import { CacheManager } from "../../../../utils/cacheUtils/CacheManager";
 const STATE_KEY_PREFIX = "oauth_state:";
 const STATE_EXPIRY_SECONDS = 10 * 60; // 10 minutes
 
-export type OAuthState = {
+type OAuthState = {
 	organization_slug: string;
 	env: "test" | "live";
 	redirect_uri: string;

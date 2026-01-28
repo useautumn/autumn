@@ -33,7 +33,7 @@ export type VercelBillingPlan = {
 /**
  * Vercel Installation type for Vercel Billing endpoints.
  */
-export type VercelInstallation = {
+type VercelInstallation = {
 	billingPlan: {
 		id: string; // Partner-provided billing plan. Example: "pro200"
 		type: "prepayment" | "subscription";
@@ -103,7 +103,7 @@ export type VercelUpsertInstallation = {
  * Type for a Vercel Provisioned Resource.
  * Represents all configuration and status for a user's provisioned integration resource.
  */
-export type VercelResource = {
+type VercelResource = {
 	id: string; // The partner-specific ID of the resource
 	productId: string; // The partner-specific ID/slug of the product, eg. "redis"
 	protocolSettings?: {
@@ -171,7 +171,7 @@ export type VercelResource = {
 	}>; // Secret values for this resource
 };
 
-export type VercelMarketplaceInvoice = {
+type VercelMarketplaceInvoice = {
 	configuration: {
 		id: string;
 	};

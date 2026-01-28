@@ -32,7 +32,7 @@ export function createDateTimeColumn<T>({
 /**
  * Creates a reusable ID column with copy button.
  */
-export function createIdCopyColumn<T>({
+function createIdCopyColumn<T>({
 	header = "ID",
 	accessorKey,
 	displayKey,

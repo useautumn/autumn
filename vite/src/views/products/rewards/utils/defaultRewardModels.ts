@@ -15,12 +15,12 @@ export const defaultDiscountConfig: DiscountConfig = {
 	price_ids: [],
 };
 
-export const defaultFreeProductConfig: FreeProductConfig = {
+const defaultFreeProductConfig: FreeProductConfig = {
 	duration_type: CouponDurationType.Months,
 	duration_value: 0,
 };
 
-export const defaultReward: CreateReward = {
+const defaultReward: CreateReward = {
 	name: "",
 	id: "",
 	promo_codes: [{ code: "" }],

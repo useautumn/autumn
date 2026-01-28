@@ -26,4 +26,4 @@ export const createLoopsContact = async (user: User) => {
 	}
 };
 
-export { createLoopsCli };
+;

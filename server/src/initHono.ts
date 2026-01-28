@@ -57,7 +57,7 @@ const ALLOWED_HEADERS = [
 	"User-Agent", // Required for better-auth v1.4.0+ compatibility with Safari/Zen browser
 ];
 
-export const createHonoApp = () => {
+const createHonoApp = () => {
 	const app = new Hono<HonoEnv>();
 
 	// CORS configuration (must be before routes)

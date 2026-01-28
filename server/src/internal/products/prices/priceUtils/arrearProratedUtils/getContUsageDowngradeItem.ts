@@ -32,7 +32,7 @@ export const getReplaceables = ({
 	return newReplaceables;
 };
 
-export const getContUsageDowngradeItem = ({
+const getContUsageDowngradeItem = ({
 	price,
 	cusEnt,
 	prevOverage,

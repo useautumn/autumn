@@ -28,7 +28,7 @@ import SidebarBottom from "./SidebarBottom";
 import { SidebarContext } from "./SidebarContext";
 import { SidebarRail } from "./SidebarRail";
 
-export const buildDevSubTabs = ({
+const buildDevSubTabs = ({
 	flags,
 }: {
 	flags: {

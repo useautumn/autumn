@@ -2,7 +2,7 @@ import { Router } from "express";
 import { EntitlementService } from "./entitlements/EntitlementService.js";
 import { handleGetProductDeleteInfo } from "./handlers/handleGetProductDeleteInfo.js";
 
-export const expressProductRouter: Router = Router({ mergeParams: true });
+const expressProductRouter: Router = Router({ mergeParams: true });
 
 import { Hono } from "hono";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";

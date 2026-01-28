@@ -167,7 +167,7 @@ export const findStripePriceFromPrices = ({
 	);
 };
 
-export const lineItemInCusProduct = ({
+const lineItemInCusProduct = ({
 	cusProduct,
 	lineItem,
 }: {
@@ -199,7 +199,7 @@ export const subItemInCusProduct = ({
 	return stripeProdId === subItem.price.product || notNullish(price);
 };
 
-export const scheduleItemToPrice = ({
+const scheduleItemToPrice = ({
 	scheduleItem,
 	cusProducts,
 }: {
@@ -255,7 +255,7 @@ export const isLicenseItem = ({
 	return stripeItem.price?.recurring?.usage_type === "licensed";
 };
 
-export const isMeteredItem = ({
+const isMeteredItem = ({
 	stripeItem,
 }: {
 	stripeItem: Stripe.SubscriptionItem | Stripe.LineItem;

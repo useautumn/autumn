@@ -11,7 +11,7 @@ import { createConnectAccount } from "@/internal/orgs/orgUtils/createConnectAcco
 import { generatePublishableKey } from "../encryptUtils.js";
 import { captureOrgEvent } from "../posthog.js";
 
-export const initOrgSvixApps = async ({
+const initOrgSvixApps = async ({
 	id,
 	slug,
 }: {

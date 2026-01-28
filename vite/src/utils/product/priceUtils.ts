@@ -13,7 +13,7 @@ import {
 import { isFeatureItem } from "./getItemType";
 import { intervalIsNone } from "./productItemUtils";
 
-export const getBillingUnits = (
+const getBillingUnits = (
 	config: UsagePriceConfig,
 	entitlements: EntitlementWithFeature[],
 ) => {
@@ -38,7 +38,7 @@ export const getBillingUnits = (
 	return `${entitlement.allowance} `;
 };
 
-export const getDefaultPriceConfig = (type: PriceType) => {
+const getDefaultPriceConfig = (type: PriceType) => {
 	if (type === PriceType.Fixed) {
 		return {
 			type: PriceType.Fixed,

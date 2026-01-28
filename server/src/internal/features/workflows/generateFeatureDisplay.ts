@@ -12,7 +12,7 @@ export interface GenerateFeatureDisplayPayload {
 	env: AppEnv;
 }
 
-export const llmGenerateFeatureDisplay = async ({
+const llmGenerateFeatureDisplay = async ({
 	feature,
 }: {
 	feature: Feature;

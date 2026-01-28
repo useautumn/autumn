@@ -134,7 +134,7 @@ export function productToBillingPlan({
 	return bp;
 }
 
-export const listVercelPlansForOrg = async ({
+const listVercelPlansForOrg = async ({
 	db,
 	org,
 	env,

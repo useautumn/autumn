@@ -11,7 +11,7 @@ import {
 	type RefundBehaviorValue,
 } from "@/components/forms/update-subscription-v2/types/refundBehaviourSchema";
 
-export type BillingBehaviorValue = BillingBehavior;
+type BillingBehaviorValue = BillingBehavior;
 export type { RefundBehaviorValue };
 export type CancelActionValue = z.infer<typeof CancelActionSchema>;
 

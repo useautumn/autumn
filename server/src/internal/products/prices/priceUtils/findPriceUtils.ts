@@ -40,7 +40,7 @@ export const findContUsePrice = ({ prices }: { prices: Price[] }) => {
 	});
 };
 
-export const findPriceForFeature = ({
+const findPriceForFeature = ({
 	prices,
 	feature,
 	internalFeatureId,
@@ -116,7 +116,7 @@ export const priceToProduct = ({
 	);
 };
 
-export const filterByBillingType = ({
+const filterByBillingType = ({
 	prices,
 	billingType,
 }: {

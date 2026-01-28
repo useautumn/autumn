@@ -1,6 +1,6 @@
 import { PostHog } from "posthog-node";
 
-export const posthogClient = process.env.POSTHOG_API_KEY
+const posthogClient = process.env.POSTHOG_API_KEY
 	? new PostHog(process.env.POSTHOG_API_KEY, {
 			host: process.env.POSTHOG_HOST || "https://us.i.posthog.com",
 		})

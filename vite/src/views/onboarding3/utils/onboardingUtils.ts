@@ -27,7 +27,7 @@ export enum OnboardingStep {
 }
 
 // Helper to convert step enum to number for display
-export const getStepNumber = (step: OnboardingStep): number => {
+const getStepNumber = (step: OnboardingStep): number => {
 	const stepOrder = [
 		OnboardingStep.PlanDetails,
 		OnboardingStep.FeatureCreation,
@@ -39,7 +39,7 @@ export const getStepNumber = (step: OnboardingStep): number => {
 };
 
 // Helper to get next step
-export const getNextStep = (
+const getNextStep = (
 	currentStep: OnboardingStep,
 ): OnboardingStep | null => {
 	switch (currentStep) {
@@ -59,7 +59,7 @@ export const getNextStep = (
 };
 
 // Step configuration for headers and descriptions
-export const stepConfig = {
+const stepConfig = {
 	[OnboardingStep.PlanDetails]: {
 		title: "Create your first Plan",
 		description:
@@ -88,7 +88,7 @@ export const stepConfig = {
 };
 
 // Check if user needs state reset to prevent conflicts
-export const checkForStateConflicts = (
+const checkForStateConflicts = (
 	step: OnboardingStep,
 	productCreatedRef: MutableRefObject<{
 		created: boolean;
@@ -113,7 +113,7 @@ export const checkForStateConflicts = (
 };
 
 // Create initial empty product state
-export const createInitialProductState = (env?: string) => ({
+const createInitialProductState = (env?: string) => ({
 	id: "",
 	name: "",
 	items: [],
@@ -128,7 +128,7 @@ export const createInitialProductState = (env?: string) => ({
 });
 
 // Reset creation tracking refs
-export const resetCreationTracking = (
+const resetCreationTracking = (
 	productCreatedRef: MutableRefObject<{
 		created: boolean;
 		latestId: string | null;
@@ -143,7 +143,7 @@ export const resetCreationTracking = (
 };
 
 // Handle back navigation logic
-export const handleBackNavigation = async (
+const handleBackNavigation = async (
 	step: OnboardingStep,
 	productCreatedRef: MutableRefObject<{
 		created: boolean;
@@ -194,7 +194,7 @@ export const handleBackNavigation = async (
 };
 
 // Handle plan selection logic
-export const handlePlanSelection = async (
+const handlePlanSelection = async (
 	planId: string,
 	selectedProductId: string,
 	_baseProduct: any,
@@ -222,7 +222,7 @@ export const handlePlanSelection = async (
 };
 
 // Handle create plan dialog success
-export const handleCreatePlanSuccess = async (
+const handleCreatePlanSuccess = async (
 	newProduct: any,
 	axiosInstance: AxiosInstance,
 	setBaseProduct: (product: any) => void,
@@ -248,7 +248,7 @@ export const handleCreatePlanSuccess = async (
 };
 
 // Product creation helper
-export const createProduct = async (
+const createProduct = async (
 	product: any,
 	axiosInstance: AxiosInstance,
 ) => {
@@ -316,7 +316,7 @@ export const createProduct = async (
 };
 
 // Feature creation helper
-export const createFeature = async (
+const createFeature = async (
 	feature: CreateFeature,
 	axiosInstance: AxiosInstance,
 ) => {
@@ -351,7 +351,7 @@ export const createFeature = async (
 };
 
 // Product item creation helper
-export const createProductItem = (createdFeature: CreateFeature) => {
+const createProductItem = (createdFeature: CreateFeature) => {
 	// Map feature type to product item feature type
 	let featureType: ProductItemFeatureType;
 
@@ -415,7 +415,7 @@ export const createProductItem = (createdFeature: CreateFeature) => {
 };
 
 // Find next closest non-deleted product when a product is deleted
-export const findNextClosestProduct = (
+const findNextClosestProduct = (
 	deletedProductId: string,
 	products: any[],
 	currentSelectedId?: string,
@@ -450,7 +450,7 @@ export const findNextClosestProduct = (
 };
 
 // Sync product items with updated features to prevent feature type mismatches
-export const syncProductItemsWithFeature = (
+const syncProductItemsWithFeature = (
 	product: ProductV2,
 	updatedFeature: CreateFeature | Feature,
 ): ProductV2 => {
@@ -477,7 +477,7 @@ export const syncProductItemsWithFeature = (
 };
 
 // Helper to get baseProduct from products array by ID
-export const getBaseProduct = (
+const getBaseProduct = (
 	products: ProductV2[] | undefined,
 	baseProductId: string | null,
 ): ProductV2 | null => {
@@ -486,7 +486,7 @@ export const getBaseProduct = (
 };
 
 // Helper to get baseFeature from features array by ID
-export const getBaseFeature = (
+const getBaseFeature = (
 	features: (Feature | CreateFeature)[] | undefined,
 	baseFeatureId: string | null,
 ): Feature | CreateFeature | null => {

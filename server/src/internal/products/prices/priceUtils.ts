@@ -26,7 +26,7 @@ import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
 import { compareBillingIntervals } from "./priceUtils/priceIntervalUtils.js";
 
-export const constructPrice = ({
+const constructPrice = ({
 	internalProductId,
 	entitlementId,
 	orgId,
@@ -232,7 +232,7 @@ export const getPriceOptions = (
 	return options;
 };
 
-export const pricesAreSame = (price1: Price, price2: Price) => {
+const pricesAreSame = (price1: Price, price2: Price) => {
 	for (const key in price1.config) {
 		const originalValue = (price1.config as any)[key];
 		const newValue = (price2.config as any)[key];
@@ -253,7 +253,7 @@ export const pricesAreSame = (price1: Price, price2: Price) => {
 	return true;
 };
 
-export const getUsageTier = (price: Price, quantity: number) => {
+const getUsageTier = (price: Price, quantity: number) => {
 	const usageConfig = price.config as UsagePriceConfig;
 	for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
 		if (i === usageConfig.usage_tiers.length - 1) {
@@ -316,11 +316,11 @@ export const getPriceForOverage = (price: Price, overage?: number) => {
 	return Number(amount.toFixed(10));
 };
 
-export const priceToEventName = (productName: string, featureName: string) => {
+const priceToEventName = (productName: string, featureName: string) => {
 	return `${productName} - ${featureName}`;
 };
 
-export const roundPriceAmounts = (price: Price) => {
+const roundPriceAmounts = (price: Price) => {
 	if (price.config!.type === PriceType.Fixed) {
 		const config = price.config as FixedPriceConfig;
 		config.amount = Number(config.amount.toFixed(10));
@@ -358,7 +358,7 @@ export const getProductForPrice = (price: Price, products: FullProduct[]) => {
 };
 
 // Price to price / tiers
-export const priceToAmountOrTiers = (price: Price) => {
+const priceToAmountOrTiers = (price: Price) => {
 	if (price.config!.type === PriceType.Fixed) {
 		const config = price.config as FixedPriceConfig;
 		return {
@@ -378,7 +378,7 @@ export const priceToAmountOrTiers = (price: Price) => {
 	}
 };
 
-export const roundUsage = ({
+const roundUsage = ({
 	usage,
 	billingUnits,
 }: {

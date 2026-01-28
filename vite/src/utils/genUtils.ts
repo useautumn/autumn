@@ -3,12 +3,12 @@ import { AxiosError } from "axios";
 import type { NavigateFunction } from "react-router-dom";
 import { ZodError } from "zod/v3";
 
-export const compareStatus = (statusA: string, statusB: string) => {
+const compareStatus = (statusA: string, statusB: string) => {
 	const statusOrder = ["scheduled", "active", "past_due", "expired"];
 	return statusOrder.indexOf(statusA) - statusOrder.indexOf(statusB);
 };
 
-export const invalidNumber = (value: unknown) => {
+const invalidNumber = (value: unknown) => {
 	return Number.isNaN(parseFloat(value as string));
 };
 
@@ -31,7 +31,7 @@ export const getBackendErr = (
 	}
 };
 
-export const getBackendErrObj = (error: AxiosError) => {
+const getBackendErrObj = (error: AxiosError) => {
 	if (error.response?.data) {
 		const data = error.response.data as { code: string; message: string };
 		if (data.code) {
@@ -162,7 +162,7 @@ export const nullish = (value: unknown) => {
 	return value === null || value === undefined;
 };
 
-export const parseNumberInput = ({
+const parseNumberInput = ({
 	value,
 	fallback = 0,
 }: {
@@ -175,7 +175,7 @@ export const parseNumberInput = ({
 	return Number.isNaN(numValue) ? fallback : numValue;
 };
 
-export const getMetaKey = () => {
+const getMetaKey = () => {
 	if (navigator.userAgent.includes("Mac")) {
 		return "⌘";
 	}

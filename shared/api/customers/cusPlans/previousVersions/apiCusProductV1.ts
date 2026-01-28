@@ -14,4 +14,4 @@ export const ApiCusProductV1Schema = ApiCusProductV0Schema.extend({
 	current_period_start: z.number().nullish(),
 });
 
-export type ApiCusProductV1 = z.infer<typeof ApiCusProductV1Schema>;
+type ApiCusProductV1 = z.infer<typeof ApiCusProductV1Schema>;

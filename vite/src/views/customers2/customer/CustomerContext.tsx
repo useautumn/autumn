@@ -1,7 +1,7 @@
 import type { CustomerWithProducts } from "@autumn/shared";
 import { createContext, useContext } from "react";
 
-export type CustomerContextType = {
+type CustomerContextType = {
 	customer: CustomerWithProducts;
 	entityId: string | null;
 	setEntityId: (entityId: string | null) => void;
