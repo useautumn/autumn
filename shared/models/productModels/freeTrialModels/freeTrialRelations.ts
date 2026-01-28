@@ -1,6 +1,6 @@
 import { relations } from "drizzle-orm";
-import { freeTrials } from "./freeTrialTable.js";
 import { products } from "../productTable.js";
+import { freeTrials } from "./freeTrialTable.js";
 
 export const freeTrialRelations = relations(freeTrials, ({ one }) => ({
 	product: one(products, {

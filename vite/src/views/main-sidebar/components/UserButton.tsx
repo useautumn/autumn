@@ -1,16 +1,17 @@
-import { useSession, signOut, deleteUser } from "@/lib/auth-client";
+import { LogOut, Settings } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuLabel,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut } from "lucide-react";
-import { useState } from "react";
+import { deleteUser, signOut, useSession } from "@/lib/auth-client";
 
 export const UserButton = () => {
+	const navigate = useNavigate();
 	const { data: session } = useSession();
 	const user = session?.user;
 	const [isLoading, setIsLoading] = useState(false);
@@ -47,7 +48,10 @@ export const UserButton = () => {
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<button className="relative flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 text-white text-sm font-medium overflow-hidden group transition-all duration-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20">
+				<button
+					type="button"
+					className="relative flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 text-white text-sm font-medium overflow-hidden group transition-all duration-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+				>
 					{/* Shimmer effect */}
 					<div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200">
 						<div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/30 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-400 ease-out" />
@@ -71,6 +75,14 @@ export const UserButton = () => {
 				className="ml-3 flex flex-col gap-1 min-w-40"
 				sideOffset={12}
 			>
+				<DropdownMenuItem
+					onClick={() => navigate("/settings")}
+					className="cursor-pointer flex items-center gap-2 text-sm rounded-sm text-t2"
+				>
+					<Settings size={10} />
+					<span>Organization Settings</span>
+				</DropdownMenuItem>
+				<DropdownMenuSeparator />
 				<DropdownMenuItem
 					onClick={handleSignOut}
 					disabled={isLoading}

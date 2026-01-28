@@ -1,6 +1,7 @@
 import {
 	filterUnchangedPricesFromLineItems,
 	isCustomerProductOneOff,
+	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
@@ -13,15 +14,17 @@ export const finalizeUpdateSubscriptionPlan = ({
 	ctx,
 	plan,
 	billingContext,
+	params,
 }: {
 	ctx: AutumnContext;
 	plan: AutumnBillingPlan;
 	billingContext: UpdateSubscriptionBillingContext;
+	params: UpdateSubscriptionV0Params;
 }): AutumnBillingPlan => {
 	// Filter line items based on trial state transitions
 	plan.lineItems = filterLineItemsForTrialTransition({
 		ctx,
-		lineItems: plan.lineItems,
+		lineItems: plan.lineItems ?? [],
 		billingContext,
 	});
 
@@ -48,6 +51,11 @@ export const finalizeUpdateSubscriptionPlan = ({
 
 	// Guard: if current customer product is one off, make sure there are no line items.
 	if (isCustomerProductOneOff(billingContext.customerProduct)) {
+		plan.lineItems = [];
+	}
+
+	// Guard: if billing_behavior is 'next_cycle_only', clear line items (skip proration charges)
+	if (params.billing_behavior === "next_cycle_only") {
 		plan.lineItems = [];
 	}
 

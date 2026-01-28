@@ -13,5 +13,6 @@ export const billingPlanToUpdatedCustomerProduct = ({
 	return {
 		...updateCustomerProduct.customerProduct,
 		...updateCustomerProduct.updates,
+		canceled: updateCustomerProduct.updates?.canceled ?? false, // for type safety
 	};
 };

@@ -143,10 +143,11 @@ async function runTest() {
 
 	// Detect if we're already in the server directory (e.g., when run via server/run.sh)
 	const cwd = process.cwd();
-	const serverDir =
+	const projectRoot =
 		cwd.endsWith("/server") || cwd.endsWith("\\server")
-			? cwd
-			: resolve(cwd, "server");
+			? resolve(cwd, "..")
+			: cwd;
+	const serverDir = resolve(projectRoot, "server");
 
 	// Handle special "setup" command
 	if (scriptName === "setup") {
@@ -175,7 +176,12 @@ async function runTest() {
 		return;
 	}
 
-	const shellScript = resolve(serverDir, "shell", `${scriptName}.sh`);
+	const shellScript = resolve(
+		projectRoot,
+		"scripts",
+		"testGroups",
+		`${scriptName}.sh`,
+	);
 
 	// First try to find a shell script
 	if (existsSync(shellScript)) {
@@ -186,7 +192,7 @@ async function runTest() {
 		);
 
 		const child = spawn("bash", [shellScript, ...additionalArgs], {
-			cwd: serverDir,
+			cwd: projectRoot,
 			stdio: "inherit",
 			env: { ...process.env, NODE_ENV: "production" },
 		});
@@ -266,14 +272,9 @@ async function runTest() {
 	console.log(chalk.green(`✓ Found: ${testFile.relative}\n`));
 
 	// Detect test framework
-	const framework = detectTestFramework({ filePath: testFile.path });
-	const frameworkLabel = framework === "bun" ? "Bun" : "Mocha";
-	console.log(chalk.cyan(`🧪 Running test file with ${frameworkLabel}...\n`));
 
-	if (framework !== "bun") {
-		console.error(chalk.red("❌ Mocha tests are deprecated"));
-		process.exit(1);
-	}
+	const frameworkLabel = "Bun";
+	console.log(chalk.cyan(`🧪 Running test file with ${frameworkLabel}...\n`));
 
 	// Run the test file with the appropriate framework, wrapped with Infisical
 	// Respect NODE_ENV from parent process (e.g., development for logging)

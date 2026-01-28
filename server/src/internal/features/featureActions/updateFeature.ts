@@ -8,6 +8,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { workflows } from "@/queue/workflows.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { FeatureService } from "../FeatureService.js";
 import {
@@ -173,13 +174,10 @@ export const updateFeature = async ({
 
 	// Queue display generation if name changed
 	if (isChangingName && updatedFeature) {
-		await addTaskToQueue({
-			jobName: JobName.GenerateFeatureDisplay,
-			payload: {
-				featureId: updatedFeature.id,
-				orgId: ctx.org.id,
-				env: ctx.env,
-			},
+		await workflows.triggerGenerateFeatureDisplay({
+			featureId: updatedFeature.id,
+			orgId: ctx.org.id,
+			env: ctx.env,
 		});
 	}
 

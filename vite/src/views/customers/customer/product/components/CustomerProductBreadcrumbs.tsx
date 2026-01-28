@@ -1,13 +1,13 @@
+import { useNavigate } from "react-router";
 import {
 	Breadcrumb,
-	BreadcrumbList,
 	BreadcrumbItem,
 	BreadcrumbLink,
+	BreadcrumbList,
 	BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { navigateTo, pushPage } from "@/utils/genUtils";
 import { useProductContext } from "@/views/products/product/ProductContext";
-import { useNavigate } from "react-router";
 import { useCusQuery } from "../../hooks/useCusQuery";
 
 export const CustomerProductBreadcrumbs = () => {

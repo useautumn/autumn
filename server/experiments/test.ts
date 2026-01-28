@@ -1,6 +1,5 @@
 import { AppEnv } from "autumn-js";
 import { initScript } from "../src/utils/scriptUtils/scriptUtils";
-import Stripe from "stripe";
 
 export const test = async () => {
 	

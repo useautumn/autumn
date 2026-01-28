@@ -1,5 +1,7 @@
+import { AlertCircle, Loader2, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
+import { Button } from "@/components/v2/buttons/Button";
 import { authClient } from "@/lib/auth-client";
 import { useAxiosInstance } from "../../services/useAxiosInstance";
 import { useAdmin } from "./hooks/useAdmin";
@@ -82,28 +84,52 @@ export function ImpersonateRedirect() {
 	}
 
 	return (
-		<div className="min-h-screen flex items-center justify-center bg-zinc-950">
-			<div className="text-center">
-				{error ? (
-					<div className="text-red-400">
-						<p className="text-lg font-medium">Error</p>
-						<p className="text-sm mt-2">{error}</p>
-						<button
-							type="button"
-							onClick={() => {
-								window.location.href = redirect;
-							}}
-							className="mt-4 px-4 py-2 bg-zinc-800 text-white rounded hover:bg-zinc-700"
-						>
-							Continue anyway
-						</button>
-					</div>
-				) : (
-					<div className="text-zinc-400">
-						<div className="animate-spin size-8 border-2 border-zinc-600 border-t-white rounded-full mx-auto mb-4" />
-						<p className="text-sm">{status}</p>
-					</div>
-				)}
+		<div className="min-h-screen flex items-center justify-center bg-background">
+			<div className="max-w-md w-full mx-4">
+				<div className="border border-border rounded-xl bg-card p-8 shadow-lg">
+					{error ? (
+						<div className="text-center">
+							<div className="flex justify-center mb-4">
+								<div className="rounded-full bg-red-100 dark:bg-red-900/30 p-3">
+									<AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+								</div>
+							</div>
+							<h2 className="text-lg font-semibold text-t1 mb-2">
+								Impersonation Failed
+							</h2>
+							<p className="text-sm text-t3 mb-6">{error}</p>
+							<Button
+								variant="primary"
+								onClick={() => {
+									window.location.href = redirect;
+								}}
+								className="w-full"
+							>
+								Continue Anyway
+							</Button>
+						</div>
+					) : (
+						<div className="text-center">
+							<div className="flex justify-center mb-4">
+								<div className="rounded-full bg-blue-100 dark:bg-blue-900/30 p-3">
+									<ShieldCheck className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+								</div>
+							</div>
+							<h2 className="text-lg font-semibold text-t1 mb-2">
+								Admin Impersonation
+							</h2>
+							<div className="flex items-center justify-center gap-2 text-sm text-t3 mb-4">
+								<Loader2 className="w-4 h-4 animate-spin" />
+								<span>{status}</span>
+							</div>
+							<div className="bg-muted/50 rounded-lg p-3 mt-4">
+								<p className="text-xs text-t4">
+									Switching to organization context...
+								</p>
+							</div>
+						</div>
+					)}
+				</div>
 			</div>
 		</div>
 	);

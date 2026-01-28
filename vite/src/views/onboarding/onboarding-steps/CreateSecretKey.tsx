@@ -1,16 +1,13 @@
-import { Input } from "@/components/ui/input";
-
-import { DevContext } from "@/views/developer/DevContext";
-
-import Step from "@/components/general/OnboardingStep";
-
-import { useEnv } from "@/utils/envUtils";
+import { CheckIcon, CopyIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import Step from "@/components/general/OnboardingStep";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { DevService } from "@/services/DevService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { Button } from "@/components/ui/button";
-import { CheckIcon, CopyIcon } from "lucide-react";
+import { useEnv } from "@/utils/envUtils";
+import { DevContext } from "@/views/developer/DevContext";
 
 export const CreateSecretKey = ({
 	apiKey,

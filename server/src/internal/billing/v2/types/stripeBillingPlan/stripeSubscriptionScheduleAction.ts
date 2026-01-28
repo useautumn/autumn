@@ -14,6 +14,10 @@ export const StripeSubscriptionScheduleActionSchema = z.discriminatedUnion(
 			params:
 				z.custom<import("stripe").Stripe.SubscriptionScheduleUpdateParams>(),
 		}),
+		z.object({
+			type: z.literal("release"),
+			stripeSubscriptionScheduleId: z.string(),
+		}),
 	],
 );
 

@@ -7,9 +7,9 @@ import {
 	type TrackParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { customerActions } from "@/internal/customers/actions/index.js";
 import { autoCreateEntity } from "@/internal/entities/handlers/handleCreateEntity/autoCreateEntity.js";
 import { CusService } from "../../CusService.js";
-import { handleCreateCustomer } from "../../handlers/handleCreateCustomer.js";
 import { updateCustomerDetails } from "../cusUtils.js";
 import { deleteCachedFullCustomer } from "./deleteCachedFullCustomer.js";
 import { getCachedFullCustomer } from "./getCachedFullCustomer.js";
@@ -73,50 +73,11 @@ export const getOrCreateCachedFullCustomer = async ({
 
 	// 3. Create if not found
 	if (!fullCustomer) {
-		try {
-			fullCustomer = (await handleCreateCustomer({
-				ctx,
-				cusData: {
-					id: customerId,
-					name: customerData?.name,
-					email: customerData?.email,
-					fingerprint: customerData?.fingerprint,
-					metadata: customerData?.metadata || {},
-					stripe_id: customerData?.stripe_id,
-				},
-				createDefaultProducts: customerData?.disable_default !== true,
-			})) as FullCustomer;
-
-			fullCustomer = await CusService.getFull({
-				db,
-				idOrInternalId: customerId || fullCustomer.internal_id,
-				orgId: org.id,
-				env: env as AppEnv,
-				withEntities: true,
-				withSubs: true,
-				entityId,
-				expand: [CusExpand.Invoices],
-			});
-			// biome-ignore lint/suspicious/noExplicitAny: it's fine.
-		} catch (error: any) {
-			if (error?.code === "23505" && customerId) {
-				ctx.logger.debug(
-					`[getOrCreateCachedFullCustomer] insert customer duplicate key error`,
-				);
-				fullCustomer = await CusService.getFull({
-					db,
-					idOrInternalId: customerId,
-					orgId: org.id,
-					env: env as AppEnv,
-					withEntities: true,
-					withSubs: true,
-					entityId,
-					expand: [CusExpand.Invoices],
-				});
-			} else {
-				throw error;
-			}
-		}
+		fullCustomer = await customerActions.createWithDefaults({
+			ctx,
+			customerId,
+			customerData,
+		});
 	}
 
 	// 4. Update customer details if provided

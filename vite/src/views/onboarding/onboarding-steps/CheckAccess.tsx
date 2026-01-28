@@ -1,3 +1,6 @@
+import type { Feature, Product } from "@autumn/shared";
+import { ArrowUpRightFromSquare } from "lucide-react";
+import { useState } from "react";
 import { CodeDisplay } from "@/components/general/CodeDisplay";
 import Step from "@/components/general/OnboardingStep";
 import {
@@ -7,12 +10,8 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-
-import CodeBlock from "../components/CodeBlock";
-import { ArrowUpRightFromSquare } from "lucide-react";
-import { Feature, Product } from "@autumn/shared";
-import { useState } from "react";
 import { FeatureTypeBadge } from "@/views/products/features/components/FeatureTypeBadge";
+import CodeBlock from "../components/CodeBlock";
 
 const checkAccessCode = (
 	apiKey: string,

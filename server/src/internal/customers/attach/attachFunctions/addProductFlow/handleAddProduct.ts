@@ -2,6 +2,7 @@ import {
 	AttachBranch,
 	type AttachConfig,
 	AttachFunctionResponseSchema,
+	AttachScenario,
 	SuccessCode,
 } from "@autumn/shared";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
@@ -60,6 +61,7 @@ export const handleFreeProduct = async ({
 				carryExistingUsages: config?.carryUsage || false,
 				anchorToUnix,
 				logger,
+				scenario: AttachScenario.New,
 			}),
 		);
 	}

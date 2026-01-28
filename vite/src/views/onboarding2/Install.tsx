@@ -1,8 +1,7 @@
+import { ArrowUpRightFromSquare } from "lucide-react";
 import { CodeDisplay } from "@/components/general/CodeDisplay";
 import Step from "@/components/general/OnboardingStep";
-
 import CodeBlock from "../onboarding/components/CodeBlock";
-import { ArrowUpRightFromSquare } from "lucide-react";
 
 const installCode = `npm install autumn-js`;
 const installCodePnpm = `pnpm install autumn-js`;

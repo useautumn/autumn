@@ -7,9 +7,11 @@ import { lineItemToPeriodDescription } from "./lineItemToPeriodDescription";
 export const usagePriceToLineDescription = ({
 	usage,
 	context,
+	includePeriodDescription = true,
 }: {
 	usage: number;
 	context: LineItemContext;
+	includePeriodDescription?: boolean;
 }): string => {
 	const { price, feature } = context;
 	const billingUnits = price.config.billing_units ?? 1;
@@ -30,7 +32,7 @@ export const usagePriceToLineDescription = ({
 	const { product } = context;
 	let description = `${product.name} - ${featureUsageDescription}`;
 
-	if (!isOneOffPrice(price)) {
+	if (!isOneOffPrice(price) && includePeriodDescription) {
 		const periodDescription = lineItemToPeriodDescription({
 			context,
 		});

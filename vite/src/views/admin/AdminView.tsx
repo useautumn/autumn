@@ -1,15 +1,17 @@
-import LoadingScreen from "../general/LoadingScreen";
-import { authClient } from "@/lib/auth-client";
-import { DefaultView } from "../DefaultView";
-import { useAdmin } from "./hooks/useAdmin";
+import { Globe } from "@phosphor-icons/react";
+import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { AdminTable } from "./AdminTable";
-import { columns as userColumns } from "./userColumns";
-import { columns as orgColumns } from "./orgColumns";
 import { Button } from "@/components/ui/button";
+import { authClient } from "@/lib/auth-client";
+import { AdminOrgTable } from "@/views/admin/AdminOrgTable";
+import { AdminUserTable } from "@/views/admin/AdminUserTable";
+import { DefaultView } from "../DefaultView";
+import LoadingScreen from "../general/LoadingScreen";
 import { CreateUser } from "./components/CreateUser";
+import { useAdmin } from "./hooks/useAdmin";
 
 export const AdminView = () => {
+	const navigate = useNavigate();
 	const { isAdmin, isPending } = useAdmin();
 
 	if (isPending) {
@@ -36,11 +38,18 @@ export const AdminView = () => {
 	};
 
 	return (
-		<div className="flex flex-col p-6">
-			{/* 1. User list */}
-
+		<div className="flex flex-col p-6 gap-8">
 			<div className="flex justify-end absolute top-10 right-10 gap-2">
 				<CreateUser />
+				<Button
+					onClick={() => navigate("/admin/oauth")}
+					variant="outline"
+					size="sm"
+					className="w-fit"
+				>
+					<Globe className="w-4 h-4 mr-1.5" />
+					OAuth Clients
+				</Button>
 				<Button
 					onClick={handleStopImpersonating}
 					variant="outline"
@@ -51,9 +60,9 @@ export const AdminView = () => {
 				</Button>
 			</div>
 
-			<div className="text-xs">
-				<AdminTable path="/admin/users" columns={userColumns} title="Users" />
-				<AdminTable path="/admin/orgs" columns={orgColumns} title="Orgs" />
+			<div className="flex gap-8">
+				<AdminUserTable />
+				<AdminOrgTable />
 			</div>
 		</div>
 	);

@@ -5,8 +5,13 @@ import {
 	type Product,
 } from "@autumn/shared";
 import { createStripeCli } from "@server/external/connect/createStripeCli";
+import type { StripeSubscriptionWithDiscounts } from "@server/external/stripe/subscriptions";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 
+/**
+ * Fetches a Stripe subscription with expanded discounts for billing operations.
+ * Returns the subscription with `discounts.source.coupon.applies_to` expanded.
+ */
 export const fetchStripeSubscriptionForBilling = async ({
 	ctx,
 	fullCus,
@@ -17,7 +22,7 @@ export const fetchStripeSubscriptionForBilling = async ({
 	fullCus: FullCustomer;
 	products: Product[];
 	targetCusProductId?: string;
-}) => {
+}): Promise<StripeSubscriptionWithDiscounts | undefined> => {
 	const { org, env } = ctx;
 	const stripeCli = createStripeCli({ org, env });
 
@@ -47,5 +52,5 @@ export const fetchStripeSubscriptionForBilling = async ({
 		});
 	}
 
-	return sub;
+	return sub as StripeSubscriptionWithDiscounts;
 };

@@ -1,9 +1,13 @@
-import { cp, type FullCusProduct } from "@autumn/shared";
+import {
+	type FullCusProduct,
+	isCustomerProductOnStripeSubscription,
+} from "@autumn/shared";
 import type Stripe from "stripe";
 import {
 	type ExpandedStripeInvoice,
 	getStripeInvoice,
 } from "@/external/stripe/invoices/operations/getStripeInvoice.js";
+import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { stripeInvoiceToStripeSubscriptionId } from "../../invoices/utils/convertStripeInvoice";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
 
@@ -15,12 +19,14 @@ export interface StripeInvoicePaidContext {
 
 export const setupStripeInvoicePaidContext = async ({
 	ctx,
+	event,
 }: {
 	ctx: StripeWebhookContext;
+	event: Stripe.InvoicePaidEvent;
 }): Promise<StripeInvoicePaidContext | null> => {
-	const { stripeEvent, stripeCli } = ctx;
+	const { stripeCli } = ctx;
 
-	const invoiceData = stripeEvent.data.object as Stripe.Invoice;
+	const invoiceData = event.data.object;
 
 	const stripeInvoice = await getStripeInvoice({
 		stripeClient: stripeCli,
@@ -36,16 +42,19 @@ export const setupStripeInvoicePaidContext = async ({
 	let customerProducts: FullCusProduct[] | undefined;
 
 	if (fullCustomer && stripeSubscriptionId) {
-		customerProducts = fullCustomer.customer_products.filter(
-			(customerProduct) => {
-				const { valid } = cp(customerProduct)
-					.paid()
-					.recurring()
-					.onStripeSubscription({ stripeSubscriptionId });
-
-				return valid;
-			},
+		customerProducts = fullCustomer.customer_products.filter((cp) =>
+			isCustomerProductOnStripeSubscription({
+				customerProduct: cp,
+				stripeSubscriptionId,
+			}),
 		);
+
+		customerProducts = await customerProductActions.expiredCache.getAndMerge({
+			customerProducts,
+			stripeSubscriptionId,
+		});
+
+		fullCustomer.customer_products = customerProducts;
 	}
 
 	return {

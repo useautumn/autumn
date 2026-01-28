@@ -12,7 +12,7 @@ import {
 import { StatusCodes } from "http-status-codes";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
+import { getOrCreateStripeCustomer } from "@/external/stripe/customers";
 import { handleAddProduct } from "@/internal/customers/attach/attachFunctions/addProductFlow/handleAddProduct.js";
 import { rewardProgramToAttachParams } from "@/internal/customers/attach/attachUtils/attachParams/convertToParams.js";
 import { getCustomerSub } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
@@ -138,12 +138,9 @@ export const triggerFreePaidProduct = async ({
 			}
 		} else {
 			// Create stripe customer if not exists
-			await createStripeCusIfNotExists({
-				db,
+			await getOrCreateStripeCustomer({
+				ctx,
 				customer: fullCus,
-				org,
-				env,
-				logger,
 			});
 
 			await handleAddProduct({

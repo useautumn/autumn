@@ -1,7 +1,7 @@
+import { Infinite } from "@autumn/shared";
 import { Input } from "@/components/ui/input";
 import { useOrg } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
-import { Infinite } from "@autumn/shared";
 
 export const UsageTierInput = ({
 	value,

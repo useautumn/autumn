@@ -1,3 +1,4 @@
+import SmallSpinner from "@/components/general/SmallSpinner";
 import {
 	Pagination,
 	PaginationContent,
@@ -5,9 +6,8 @@ import {
 	PaginationNext,
 	PaginationPrevious,
 } from "@/components/ui/pagination";
-import { useCustomersQueryStates } from "../hooks/useCustomersQueryStates";
-import SmallSpinner from "@/components/general/SmallSpinner";
 import { useCusSearchQuery } from "../hooks/useCusSearchQuery";
+import { useCustomersQueryStates } from "../hooks/useCustomersQueryStates";
 
 export const CustomersPagination = () => {
 	const { isLoading, totalCount } = useCusSearchQuery();

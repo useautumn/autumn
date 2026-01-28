@@ -1,6 +1,6 @@
+import { ArrowUpRightFromSquare } from "lucide-react";
 import Step from "@/components/general/OnboardingStep";
 import CodeBlock from "../components/CodeBlock";
-import { ArrowUpRightFromSquare } from "lucide-react";
 
 const react = () => {
 	return `import { AutumnProvider } from "autumn-js/react";

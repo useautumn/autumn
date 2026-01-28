@@ -1,17 +1,21 @@
+import type {
+	Feature,
+	Organization,
+	ProductItem,
+	ProductV2,
+} from "@autumn/shared";
+import { getFeatureNameWithCapital } from "@/internal/features/utils/displayUtils.js";
 import {
 	featurePricetoPricecnItem,
 	getPriceText,
 } from "@/internal/products/pricecn/pricecnUtils.js";
 import {
 	isFeatureItem,
+	isFeaturePriceItem,
 	isPriceItem,
 } from "@/internal/products/product-items/productItemUtils/getItemType.js";
-
-import { Feature, Organization, ProductItem, ProductV2 } from "@autumn/shared";
-import { formatCurrency, formatTiers } from "./previewUtils.js";
-import { isFeaturePriceItem } from "@/internal/products/product-items/productItemUtils/getItemType.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { getFeatureNameWithCapital } from "@/internal/features/utils/displayUtils.js";
+import { formatCurrency, formatTiers } from "./previewUtils.js";
 
 export const getProductChargeText = ({
 	product,
@@ -22,10 +26,10 @@ export const getProductChargeText = ({
 	org: Organization;
 	features: Feature[];
 }) => {
-	let basePrices = product.items.filter((i) => isPriceItem(i));
-	let total = basePrices.reduce((acc, curr) => acc + curr.price!, 0);
+	const basePrices = product.items.filter((i) => isPriceItem(i));
+	const total = basePrices.reduce((acc, curr) => acc + curr.price!, 0);
 
-	let itemStrs = [];
+	const itemStrs = [];
 	if (total > 0) {
 		itemStrs.push(
 			formatCurrency({
@@ -35,18 +39,18 @@ export const getProductChargeText = ({
 		);
 	}
 
-	let prepaidPrices = product.items.filter(
+	const prepaidPrices = product.items.filter(
 		(i) => isFeaturePriceItem(i) && i.usage_model == "prepaid",
 	);
 
-	let prepaidStrings = prepaidPrices.map((i) => {
-		let feature = features.find((f) => f.id === i.feature_id);
-		let priceStr = formatTiers({
+	const prepaidStrings = prepaidPrices.map((i) => {
+		const feature = features.find((f) => f.id === i.feature_id);
+		const priceStr = formatTiers({
 			tiers: i.tiers!,
 			org,
 		});
 
-		let featureStr =
+		const featureStr =
 			i.billing_units && i.billing_units > 1
 				? `${i.billing_units} ${feature?.name}`
 				: feature?.name;
@@ -67,15 +71,15 @@ export const getItemDescription = ({
 	product: ProductV2;
 	org: Organization;
 }) => {
-	let prices = product.items.filter((i) => !isFeatureItem(i));
+	const prices = product.items.filter((i) => !isFeatureItem(i));
 
-	let priceStr = getPriceText({
+	const priceStr = getPriceText({
 		item,
 		org,
 	});
 
 	if (isPriceItem(item)) {
-		let baseName =
+		const baseName =
 			prices.length == 1
 				? product.name
 				: notNullish(item.interval)
@@ -84,7 +88,7 @@ export const getItemDescription = ({
 
 		return baseName;
 	} else {
-		let feature = features.find((f) => f.id === item.feature_id);
+		const feature = features.find((f) => f.id === item.feature_id);
 		// let pricecnItem = featurePricetoPricecnItem({
 		//   feature,
 		//   item,

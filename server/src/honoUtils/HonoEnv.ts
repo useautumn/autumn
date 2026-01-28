@@ -36,10 +36,12 @@ export type RequestContext = {
 	expand: string[];
 	skipCache: boolean;
 
-	// For test...
-	skipCacheDeletion?: boolean;
-
 	extraLogs: Record<string, unknown>;
+
+	testOptions?: {
+		skipCacheDeletion?: boolean;
+		skipWebhooks?: boolean;
+	};
 };
 
 export type AutumnContext = RequestContext;

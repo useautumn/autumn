@@ -14,13 +14,13 @@ import {
 	isPrepaidPrice,
 	type Price,
 	type ProductItem,
+	sortProductItems,
 	toApiFeature,
 	UsageModel,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { getFreeTrialAfterFingerprint } from "../../free-trials/freeTrialUtils.js";
-import { sortProductItems } from "../../pricecn/pricecnUtils.js";
 import { getLargestInterval } from "../../prices/priceUtils/priceIntervalUtils.js";
 import { getItemType } from "../../product-items/productItemUtils/getItemType.js";
 import { itemToPriceOrTiers } from "../../product-items/productItemUtils.js";

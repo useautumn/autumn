@@ -32,4 +32,3 @@ export function useProductTable<TData>({
 		...options,
 	});
 }
-

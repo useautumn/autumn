@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import { ApiVersion, SuccessCode } from "@autumn/shared";
+import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached";
 import { completeInvoiceCheckout } from "@tests/utils/stripeUtils/completeInvoiceCheckout";
@@ -10,7 +11,6 @@ import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 
 const pro = constructProduct({
 	type: "pro",

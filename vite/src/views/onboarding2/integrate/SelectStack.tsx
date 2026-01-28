@@ -1,8 +1,8 @@
-import { StepHeader } from "./StepHeader";
-import { useIntegrateContext } from "./IntegrateContext";
-import { SelectFrameworks } from "./select-stack/SelectFrameworks";
-import { InfoBox } from "./components/InfoBox";
 import { Button } from "@/components/ui/button";
+import { InfoBox } from "./components/InfoBox";
+import { useIntegrateContext } from "./IntegrateContext";
+import { StepHeader } from "./StepHeader";
+import { SelectFrameworks } from "./select-stack/SelectFrameworks";
 
 export const SelectStack = () => {
 	const { queryStates, setQueryStates } = useIntegrateContext();
@@ -44,6 +44,7 @@ export const SelectStack = () => {
 								className="text-t2 font-medium underline"
 								href="https://docs.useautumn.com/setup/backend"
 								target="_blank"
+								rel="noopener"
 							>
 								here
 							</a>

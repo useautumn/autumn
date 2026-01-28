@@ -1,5 +1,9 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { ApiVersion, type CheckResponseV2, ResetInterval } from "@autumn/shared";
+import {
+	ApiVersion,
+	type CheckResponseV2,
+	ResetInterval,
+} from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";

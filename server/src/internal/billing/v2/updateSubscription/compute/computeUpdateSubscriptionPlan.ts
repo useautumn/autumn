@@ -2,6 +2,9 @@ import type { UpdateSubscriptionV0Params } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
 import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan";
+
+import { computeCancelPlan } from "@/internal/billing/v2/updateSubscription/compute/cancel/computeCancelPlan";
+
 import {
 	computeUpdateSubscriptionIntent,
 	UpdateSubscriptionIntent,
@@ -39,12 +42,31 @@ export const computeUpdateSubscriptionPlan = async ({
 				params,
 			});
 			break;
+		case UpdateSubscriptionIntent.None:
+			plan = {
+				insertCustomerProducts: [],
+				updateCustomerProduct: {
+					customerProduct: billingContext.customerProduct,
+					updates: {},
+				},
+				deleteCustomerProduct: undefined,
+				customPrices: [],
+				customEntitlements: [],
+				customFreeTrial: undefined,
+				lineItems: [],
+				updateCustomerEntitlements: undefined,
+			};
+			break;
 	}
+
+	// Apply cancel plan if cancelAction is set in context
+	plan = computeCancelPlan({ ctx, billingContext, plan });
 
 	plan = finalizeUpdateSubscriptionPlan({
 		ctx,
 		plan,
 		billingContext,
+		params,
 	});
 
 	return plan;

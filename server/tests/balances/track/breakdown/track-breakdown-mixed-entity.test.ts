@@ -19,7 +19,7 @@ import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js"
  * - Product A: 100 messages per-entity (attached to customer, shared entitlement)
  * - Product B: 50 messages (attached directly to entity-1)
  * - Product C: 50 messages (attached directly to entity-2)
- * 
+ *
  * Expected breakdown at customer level:
  * - 1 breakdown for per-entity product (shared customer_entitlement_id, aggregated)
  * - 1 breakdown for entity-1's product (unique customer_entitlement_id)
@@ -119,7 +119,9 @@ describe(`${chalk.yellowBright("track-breakdown-mixed-entity: per-entity + entit
 		expect(res.balance?.breakdown).toHaveLength(3);
 
 		const breakdowns = res.balance?.breakdown ?? [];
-		const balances = breakdowns.map((b) => b.granted_balance).sort((a, b) => (a ?? 0) - (b ?? 0));
+		const balances = breakdowns
+			.map((b) => b.granted_balance)
+			.sort((a, b) => (a ?? 0) - (b ?? 0));
 		expect(balances).toEqual([50, 50, 200]);
 
 		// All IDs should be unique (different customer_entitlement_ids)
@@ -148,7 +150,9 @@ describe(`${chalk.yellowBright("track-breakdown-mixed-entity: per-entity + entit
 		// Entity should have 2 breakdowns
 		expect(res.balance?.breakdown).toHaveLength(2);
 
-		const balances = res.balance?.breakdown?.map((b) => b.granted_balance).sort((a, b) => (a ?? 0) - (b ?? 0));
+		const balances = res.balance?.breakdown
+			?.map((b) => b.granted_balance)
+			.sort((a, b) => (a ?? 0) - (b ?? 0));
 		expect(balances).toEqual([50, 100]);
 	});
 
@@ -168,7 +172,11 @@ describe(`${chalk.yellowBright("track-breakdown-mixed-entity: per-entity + entit
 
 		// Entity-1 breakdown sum should be 70
 		expect(trackRes.balance?.breakdown).toHaveLength(2);
-		const entitySum = trackRes.balance?.breakdown?.reduce((sum, b) => sum + (b.current_balance ?? 0), 0) ?? 0;
+		const entitySum =
+			trackRes.balance?.breakdown?.reduce(
+				(sum, b) => sum + (b.current_balance ?? 0),
+				0,
+			) ?? 0;
 		expect(entitySum).toBe(70);
 
 		// Customer should reflect deduction
@@ -201,4 +209,3 @@ describe(`${chalk.yellowBright("track-breakdown-mixed-entity: per-entity + entit
 		});
 	});
 });
-

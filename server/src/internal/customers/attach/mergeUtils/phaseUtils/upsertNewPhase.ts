@@ -1,5 +1,5 @@
 import { differenceInDays } from "date-fns";
-import Stripe from "stripe";
+import type Stripe from "stripe";
 
 export const phaseAndUnixMatch = ({
 	phase,

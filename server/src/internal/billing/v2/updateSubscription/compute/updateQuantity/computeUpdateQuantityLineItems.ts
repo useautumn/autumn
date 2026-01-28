@@ -93,15 +93,19 @@ export const computeUpdateQuantityLineItems = ({
 			...lineItemContext,
 			direction: "refund",
 		},
-		shouldProrateOverride: shouldApplyProration,
-		chargeImmediatelyOverride: chargeImmediately,
+		options: {
+			shouldProrateOverride: shouldApplyProration,
+			chargeImmediatelyOverride: chargeImmediately,
+		},
 	});
 
 	const chargeLineItem = usagePriceToLineItem({
 		cusEnt: newCustomerEntitlement,
 		context: lineItemContext,
-		shouldProrateOverride: shouldApplyProration,
-		chargeImmediatelyOverride: chargeImmediately,
+		options: {
+			shouldProrateOverride: shouldApplyProration,
+			chargeImmediatelyOverride: chargeImmediately,
+		},
 	});
 
 	// Don't return line items if they sum to 0

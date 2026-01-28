@@ -1,15 +1,15 @@
-import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
-import { notNullish } from "@/utils/genUtils";
-import { useProductContext } from "@/views/products/product/ProductContext";
 import {
 	AttachBranch,
 	FeatureType,
 	FeatureUsageType,
-	ProductItem,
+	type ProductItem,
 	ProductItemFeatureType,
 } from "@autumn/shared";
 import { format } from "date-fns";
-import { InfoIcon, CheckCircle } from "lucide-react";
+import { CheckCircle, InfoIcon } from "lucide-react";
+import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
+import { notNullish } from "@/utils/genUtils";
+import { useProductContext } from "@/views/products/product/ProductContext";
 
 export const AttachInfo = () => {
 	const { attachState, product } = useProductContext();

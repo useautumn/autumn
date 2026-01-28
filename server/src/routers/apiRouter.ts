@@ -1,9 +1,9 @@
 import { Hono } from "hono";
 import { insightsRouter } from "@/internal/analytics/insightsRouter.js";
 import { legacyAnalyticsRouter } from "@/internal/analytics/legacyAnalyticsRouter.js";
-import { configsRouter } from "@/internal/configs/configsRouter.js";
 import { eventsRouter } from "@/internal/events/eventsRouter.js";
 import { componentsRouter } from "@/internal/misc/components/componentsRouter.js";
+import { configsRouter } from "@/internal/misc/configs/configsRouter.js";
 import { analyticsMiddleware } from "../honoMiddlewares/analyticsMiddleware.js";
 import { apiVersionMiddleware } from "../honoMiddlewares/apiVersionMiddleware.js";
 import { idempotencyMiddleware } from "../honoMiddlewares/idempotencyMiddleware.js";
@@ -38,9 +38,9 @@ export const apiRouter = new Hono<HonoEnv>();
 apiRouter.use("*", secretKeyMiddleware);
 apiRouter.use("*", orgConfigMiddleware);
 apiRouter.use("*", apiVersionMiddleware);
+apiRouter.use("*", refreshCacheMiddleware);
 apiRouter.use("*", analyticsMiddleware);
 apiRouter.use("*", rateLimitMiddleware);
-apiRouter.use("*", refreshCacheMiddleware);
 apiRouter.use("*", queryMiddleware());
 apiRouter.use("*", idempotencyMiddleware);
 

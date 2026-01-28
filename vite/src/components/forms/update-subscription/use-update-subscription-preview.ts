@@ -1,4 +1,5 @@
 import type {
+	BillingBehavior,
 	CreateFreeTrial,
 	PreviewUpdateSubscriptionResponse,
 	ProductItem,
@@ -7,6 +8,10 @@ import { useQuery } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
 import { useEffect, useMemo, useState } from "react";
 import type { UpdateSubscriptionFormContext } from "@/components/forms/update-subscription-v2/context/UpdateSubscriptionFormProvider";
+import type {
+	CancelActionValue,
+	RefundBehaviorValue,
+} from "@/components/forms/update-subscription-v2/updateSubscriptionFormSchema";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useUpdateSubscriptionBodyBuilder } from "./use-update-subscription-body-builder";
 
@@ -17,6 +22,9 @@ export function useUpdateSubscriptionPreview({
 	enabled,
 	items,
 	version,
+	cancelAction,
+	billingBehavior,
+	refundBehavior,
 }: {
 	updateSubscriptionFormContext: UpdateSubscriptionFormContext;
 	prepaidOptions?: Record<string, number>;
@@ -24,6 +32,9 @@ export function useUpdateSubscriptionPreview({
 	enabled?: boolean;
 	items?: ProductItem[] | null;
 	version?: number;
+	cancelAction?: CancelActionValue | null;
+	billingBehavior?: BillingBehavior | null;
+	refundBehavior?: RefundBehaviorValue | null;
 }) {
 	const { customerId, product, entityId } = updateSubscriptionFormContext;
 	const axiosInstance = useAxiosInstance();
@@ -36,6 +47,9 @@ export function useUpdateSubscriptionPreview({
 		version: version ?? product?.version,
 		freeTrial,
 		items,
+		cancelAction,
+		billingBehavior,
+		refundBehavior,
 	});
 
 	const shouldEnable =
@@ -85,7 +99,7 @@ export function useUpdateSubscriptionPreview({
 
 	return {
 		...query,
-		isLoading: query.isLoading || isDebouncing,
+		isLoading: shouldEnable && (query.isLoading || isDebouncing),
 	};
 }
 

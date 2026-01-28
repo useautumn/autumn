@@ -1,5 +1,5 @@
-import { Badge } from "@/components/ui/badge";
 import { CusProductStatus } from "@autumn/shared";
+import { Badge } from "@/components/ui/badge";
 
 export const StatusBadge = ({ status }: { status: string }) => {
 	const statusToVariant: any = {
