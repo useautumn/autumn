@@ -4,6 +4,8 @@ export { getAxiosInstance, setupOrg } from "./setup/setupOrg.js";
 
 import axios from "axios";
 
+const BASE_URL = process.env.SERVER_URL || "http://localhost:8080";
+
 export const getPublicAxiosInstance = ({
 	withBearer,
 	pkey = process.env.UNIT_TEST_AUTUMN_PUBLIC_KEY!,
@@ -19,7 +21,7 @@ export const getPublicAxiosInstance = ({
 				"x-publishable-key": pkey,
 			};
 	return axios.create({
-		baseURL: "http://localhost:8080",
+		baseURL: BASE_URL,
 		headers: headers,
 	});
 };

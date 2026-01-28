@@ -1,0 +1,67 @@
+name: Preview Deploy
+
+on:
+  pull_request:
+    branches: [main, dev]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+    outputs:
+      preview_url: ${{ steps.deploy.outputs.service_domain }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Railway Preview
+        id: deploy
+        uses: ayungavis/railway-preview-deploy@v1.0.2
+        with:
+          railway_api_token: ${{ secrets.RAILWAY_API_TOKEN }}
+          project_id: ${{ secrets.RAILWAY_PROJECT_ID }}
+          environment_name: 'development'
+          preview_environment_name: 'pr-${{ github.event.pull_request.number }}'
+          branch_name: ${{ github.head_ref }}
+
+      - name: Wait for deployment to be healthy
+        run: |
+          PREVIEW_URL="https://${{ steps.deploy.outputs.service_domain }}"
+          echo "Waiting for $PREVIEW_URL to be healthy..."
+
+          for i in {1..30}; do
+            if curl -sf "$PREVIEW_URL/health" > /dev/null 2>&1; then
+              echo "Preview is healthy!"
+              exit 0
+            fi
+            echo "Attempt $i/30 - waiting 20s..."
+            sleep 20
+          done
+
+          echo "Preview failed to become healthy"
+          exit 1
+
+      - name: Comment PR with preview URL
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `Preview deployed: https://${{ steps.deploy.outputs.service_domain }}`
+            })
+
+      - name: Trigger Integration Tests
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'integration-tests.yml',
+              ref: '${{ github.head_ref }}',
+              inputs: {
+                preview_url: 'https://${{ steps.deploy.outputs.service_domain }}',
+                pr_number: '${{ github.event.pull_request.number }}'
+              }
+            })

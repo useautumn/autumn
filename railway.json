@@ -1,0 +1,19 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "docker/Dockerfile"
+  },
+  "deploy": {
+    "startCommand": "bun start",
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 300
+  },
+  "environments": {
+    "pr": {
+      "deploy": {
+        "startCommand": "chmod +x /app/scripts/preview/start.sh && /app/scripts/preview/start.sh"
+      }
+    }
+  }
+}

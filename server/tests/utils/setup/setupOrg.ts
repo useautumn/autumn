@@ -5,6 +5,8 @@ import { initDrizzle } from "@/db/initDrizzle";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
+const BASE_URL = process.env.SERVER_URL || "http://localhost:8080";
+
 export const getAxiosInstance = (apiKey?: string) => {
 	// Priority: 1. Passed apiKey, 2. Org secret key from context, 3. TEST_ORG_SECRET_KEY fallback
 	// Import ctx here to avoid circular dependency issues
@@ -18,7 +20,7 @@ export const getAxiosInstance = (apiKey?: string) => {
 	}
 
 	return axios.create({
-		baseURL: "http://localhost:8080",
+		baseURL: BASE_URL,
 		headers: {
 			Authorization: `Bearer ${secretKey}`,
 			"x-api-version": "0.1",
