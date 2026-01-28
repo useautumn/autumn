@@ -119,6 +119,10 @@ export const getCachedFullCustomer = async ({
 		fullCustomer.extra_customer_entitlements = [];
 	}
 
+	if (!fullCustomer.send_email_receipts) {
+		fullCustomer.send_email_receipts = false;
+	}
+
 	// Round balance fields to handle floating-point precision from JSON.NUMINCRBY
 	return roundFullCustomerBalances(fullCustomer);
 };

@@ -468,6 +468,19 @@ export class AutumnInt {
 			return data;
 		},
 
+		update: async (
+			customerId: string,
+			updates: {
+				name?: string;
+				email?: string;
+				send_email_receipts?: boolean;
+				metadata?: Record<string, unknown>;
+			},
+		) => {
+			const data = await this.patch(`/customers/${customerId}`, updates);
+			return data;
+		},
+
 		setBalance: async ({
 			customerId,
 			balances,

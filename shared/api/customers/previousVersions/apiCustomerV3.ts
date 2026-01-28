@@ -173,6 +173,9 @@ export const ApiCustomerV3Schema = z.object({
 	metadata: z.record(z.any(), z.any()).default({}).meta({
 		description: cusDescriptions.metadata,
 	}),
+	send_email_receipts: z.boolean().default(false).meta({
+		description: "Whether to send email receipts to the customer.",
+	}),
 	products: z.array(ApiCusProductV3Schema).meta({
 		description: cusDescriptions.products,
 	}),
