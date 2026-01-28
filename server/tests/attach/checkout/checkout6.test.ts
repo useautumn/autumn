@@ -86,7 +86,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing invoice checkout via checko
 			invoice: true,
 		});
 
-		console.log("Res:", res);
+		expect(res.url).toBeUndefined();
 	});
 
 	test("should attach premium product via invoice enable immediately", async () => {
