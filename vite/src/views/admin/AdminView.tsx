@@ -60,7 +60,7 @@ export const AdminView = () => {
 				</Button>
 			</div>
 
-			<div className="flex gap-8">
+			<div className="flex flex-col gap-8">
 				<AdminUserTable />
 				<AdminOrgTable />
 			</div>
