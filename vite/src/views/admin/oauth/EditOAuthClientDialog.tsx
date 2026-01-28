@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/v2/buttons/Button";
 import {
 	Dialog,
@@ -10,7 +11,6 @@ import {
 	DialogTitle,
 } from "@/components/v2/dialogs/Dialog";
 import { TagInput } from "@/components/v2/inputs/TagInput";
-import { Textarea } from "@/components/ui/textarea";
 import { authClient } from "@/lib/auth-client";
 import { getBackendErr } from "@/utils/genUtils";
 
@@ -100,45 +100,45 @@ export const EditOAuthClientDialog = ({
 	return (
 		<Dialog open={open} onOpenChange={handleClose}>
 			<DialogContent className="max-w-lg">
-			<DialogHeader>
-				<DialogTitle>Edit OAuth Client</DialogTitle>
-				<DialogDescription>
-					Update settings for {client?.client_name || "this client"}
-				</DialogDescription>
-			</DialogHeader>
+				<DialogHeader>
+					<DialogTitle>Edit OAuth Client</DialogTitle>
+					<DialogDescription>
+						Update settings for {client?.client_name || "this client"}
+					</DialogDescription>
+				</DialogHeader>
 
-			<div className="flex flex-col gap-4 py-2">
-				{/* Redirect URIs */}
-				<div className="flex flex-col gap-1.5">
-					<span className="text-sm font-medium text-foreground">
-						Redirect URIs
-					</span>
-					<Textarea
-						value={redirectUris}
-						onChange={(e) => setRedirectUris(e.target.value)}
-						placeholder="http://localhost:3000/callback"
-						rows={4}
-					/>
-					<p className="text-xs text-muted-foreground">
-						One URI per line. These are the allowed callback URLs.
-					</p>
-				</div>
+				<div className="flex flex-col gap-4 py-2">
+					{/* Redirect URIs */}
+					<div className="flex flex-col gap-1.5">
+						<span className="text-sm font-medium text-foreground">
+							Redirect URIs
+						</span>
+						<Textarea
+							value={redirectUris}
+							onChange={(e) => setRedirectUris(e.target.value)}
+							placeholder="http://localhost:3000/callback"
+							rows={4}
+						/>
+						<p className="text-xs text-muted-foreground">
+							One URI per line. These are the allowed callback URLs.
+						</p>
+					</div>
 
-				{/* Scopes */}
-				<div className="flex flex-col gap-1.5">
-					<span className="text-sm font-medium text-foreground">
-						Allowed Scopes
-					</span>
-					<TagInput
-						value={scopes}
-						onChange={setScopes}
-						placeholder="Add scope..."
-					/>
-					<p className="text-xs text-muted-foreground">
-						Press space or enter to add a scope
-					</p>
+					{/* Scopes */}
+					<div className="flex flex-col gap-1.5">
+						<span className="text-sm font-medium text-foreground">
+							Allowed Scopes
+						</span>
+						<TagInput
+							value={scopes}
+							onChange={setScopes}
+							placeholder="Add scope..."
+						/>
+						<p className="text-xs text-muted-foreground">
+							Press space or enter to add a scope
+						</p>
+					</div>
 				</div>
-			</div>
 
 				<DialogFooter>
 					<Button variant="secondary" onClick={handleClose}>

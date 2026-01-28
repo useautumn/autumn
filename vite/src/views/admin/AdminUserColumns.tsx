@@ -11,10 +11,7 @@ export type AdminUser = {
 	lastSignedIn: string;
 };
 
-export const createAdminUserColumns = (): ColumnDef<
-	AdminUser,
-	unknown
->[] => [
+export const createAdminUserColumns = (): ColumnDef<AdminUser, unknown>[] => [
 	{
 		id: "id",
 		header: "ID",

@@ -37,7 +37,10 @@ export const handleGetConsentApiKeys = createRoute({
 		}
 
 		if (consentRecords[0].referenceId !== org.id) {
-			return c.json({ error: "Consent does not belong to this organization" }, 403);
+			return c.json(
+				{ error: "Consent does not belong to this organization" },
+				403,
+			);
 		}
 
 		// Query API keys where meta->>'oauth_consent_id' = consent_id
@@ -50,9 +53,7 @@ export const handleGetConsentApiKeys = createRoute({
 				name: apiKeys.name,
 			})
 			.from(apiKeys)
-			.where(
-				sql`${apiKeys.meta}->>'oauth_consent_id' = ${consent_id}`,
-			);
+			.where(sql`${apiKeys.meta}->>'oauth_consent_id' = ${consent_id}`);
 
 		return c.json({ apiKeys: keys });
 	},

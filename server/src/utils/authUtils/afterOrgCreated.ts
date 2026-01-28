@@ -11,13 +11,7 @@ import { createConnectAccount } from "@/internal/orgs/orgUtils/createConnectAcco
 import { generatePublishableKey } from "../encryptUtils.js";
 import { captureOrgEvent } from "../posthog.js";
 
-const initOrgSvixApps = async ({
-	id,
-	slug,
-}: {
-	id: string;
-	slug: string;
-}) => {
+const initOrgSvixApps = async ({ id, slug }: { id: string; slug: string }) => {
 	const batchCreate = [];
 	batchCreate.push(
 		createSvixApp({

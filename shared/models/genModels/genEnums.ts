@@ -3,8 +3,7 @@ export enum AppEnv {
 	Live = "live",
 }
 
-export enum Duration {
-	}
+export enum Duration {}
 
 export enum ProcessorType {
 	Stripe = "stripe",
