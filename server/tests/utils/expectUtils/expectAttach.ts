@@ -116,7 +116,7 @@ export const attachAndExpectCorrect = async ({
 
 	if (checkout_url) {
 		await completeCheckoutForm(checkout_url);
-		await timeout(5000);
+		await timeout(10000);
 	}
 
 	if (waitForInvoice) {
