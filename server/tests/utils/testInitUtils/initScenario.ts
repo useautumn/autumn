@@ -108,6 +108,7 @@ type ScenarioConfig = {
 	withDefault: boolean;
 	defaultGroup?: string;
 	skipWebhooks?: boolean;
+	sendEmailReceipts?: boolean;
 	products: ProductV2[];
 	productPrefix?: string;
 	entityConfig?: EntityConfig;
@@ -146,10 +147,12 @@ const generateEntities = (config: EntityConfig): GeneratedEntity[] => {
  * @param withDefault - Attach the default product on creation (default: false)
  * @param defaultGroup - The product group to use for default product selection
  * @param skipWebhooks - Skip sending webhooks for this customer creation (default: undefined, uses server default)
+ * @param send_email_receipts - Whether to send email receipts to the customer
  * @example s.customer({ paymentMethod: "success" })
  * @example s.customer({ paymentMethod: "success", data: { name: "Test" } })
  * @example s.customer({ withDefault: true, defaultGroup: "enterprise" })
  * @example s.customer({ withDefault: true, skipWebhooks: false }) // Enable webhooks for testing
+ * @example s.customer({ paymentMethod: "success", send_email_receipts: true })
  */
 const customer = ({
 	testClock = true,
@@ -158,6 +161,7 @@ const customer = ({
 	withDefault,
 	defaultGroup,
 	skipWebhooks,
+	send_email_receipts,
 }: {
 	testClock?: boolean;
 	paymentMethod?: "success" | "fail" | "authenticate";
@@ -165,6 +169,7 @@ const customer = ({
 	withDefault?: boolean;
 	defaultGroup?: string;
 	skipWebhooks?: boolean;
+	send_email_receipts?: boolean;
 }): ConfigFn => {
 	return (config) => ({
 		...config,
@@ -174,6 +179,7 @@ const customer = ({
 		withDefault: withDefault ?? config.withDefault,
 		defaultGroup: defaultGroup ?? config.defaultGroup,
 		skipWebhooks: skipWebhooks ?? config.skipWebhooks,
+		sendEmailReceipts: send_email_receipts ?? config.sendEmailReceipts,
 	});
 };
 
@@ -717,6 +723,7 @@ export async function initScenario({
 			// Default group matches the product prefix (customerId) used in initProductsV0
 			defaultGroup: config.defaultGroup ?? customerId,
 			skipWebhooks: config.skipWebhooks,
+			sendEmailReceipts: config.sendEmailReceipts,
 		});
 		testClockId = result.testClockId;
 		customer = result.customer;
