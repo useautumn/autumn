@@ -38,6 +38,7 @@
 	"dependencies": {
 		"@ai-sdk/anthropic": "^3.0.9",
 		"@autumn/shared": "workspace:*",
+		"@axiomhq/pino": "^1.3.1",
 		"@aws-sdk/client-sqs": "^3.926.0",
 		"@better-auth/dash": "catalog:",
 		"@better-auth/oauth-provider": "^1.4.12",
