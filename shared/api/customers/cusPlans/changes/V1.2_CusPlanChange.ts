@@ -105,7 +105,7 @@ export function transformSubscriptionToCusProductV3({
  * Input: ApiCusPlan (V2.0+ format with "product" field)
  * Output: ApiCusProductV3 (V1.2 format with verbose fields)
  */
-export const V1_2_CusPlanChange = defineVersionChange({
+const V1_2_CusPlanChange = defineVersionChange({
 	newVersion: ApiVersion.V2_0,
 	oldVersion: ApiVersion.V1_2,
 	description: [

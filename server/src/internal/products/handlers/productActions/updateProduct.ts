@@ -26,7 +26,7 @@ import { handleUpdateProductDetails } from "../handleUpdateProduct/updateProduct
 import { handleVersionProductV2 } from "../handleVersionProduct.js";
 import { validateDefaultFlag } from "./validateDefaultFlag.js";
 
-export interface UpdateProductParams {
+interface UpdateProductParams {
 	ctx: AutumnContext;
 	productId: string;
 	query: {

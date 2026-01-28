@@ -41,12 +41,23 @@ export const getStripeCusData = async ({
 			: undefined;
 
 	if (!paymentMethod) {
+		// paymentMethod =
+		// 	(await getCusPaymentMethod({
+		// 		stripeCli,
+		// 		stripeId: stripeCus.id,
+		// 	})) ?? undefined;
+
 		const paymentMethods = await listCusPaymentMethods({
 			stripeCli,
 			stripeId: stripeCus.id,
 		});
 
 		paymentMethod = paymentMethods.length ? paymentMethods[0] : undefined;
+
+		if (paymentMethod?.type === "alipay") {
+			await stripeCli.paymentMethods.detach(paymentMethod.id);
+			paymentMethod = undefined;
+		}
 	}
 
 	return { stripeCus, paymentMethod, now };

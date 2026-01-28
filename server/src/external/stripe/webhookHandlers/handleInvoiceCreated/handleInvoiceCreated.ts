@@ -132,7 +132,7 @@ export const sendUsageAndReset = async ({
 	}
 };
 
-export const handleInvoiceCreated = async ({
+const handleInvoiceCreated = async ({
 	db,
 	org,
 	data,
@@ -205,7 +205,7 @@ export const handleInvoiceCreated = async ({
 	}
 };
 
-export const validateProductShouldReset = ({
+const validateProductShouldReset = ({
 	subscription,
 	_invoice,
 }: {

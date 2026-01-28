@@ -31,4 +31,4 @@ export const ApiCusProductV2Schema = z.object({
 	quantity: z.number().optional(),
 });
 
-export type ApiCusProductV2 = z.infer<typeof ApiCusProductV2Schema>;
+type ApiCusProductV2 = z.infer<typeof ApiCusProductV2Schema>;

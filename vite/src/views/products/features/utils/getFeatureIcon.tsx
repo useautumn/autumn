@@ -15,7 +15,7 @@ import type React from "react";
 /**
  * Icon configuration with icon component, color class, and optional label
  */
-export interface FeatureIconConfig {
+interface FeatureIconConfig {
 	icon: React.ReactNode;
 	color: string;
 	label: string;
@@ -112,7 +112,7 @@ export const getFeatureIcon = ({ feature }: { feature: Feature }) => {
  * Returns the appropriate icon component for a product item.
  * Uses getFeatureIconConfig as the single source of truth.
  */
-export const getProductItemFeatureIcon = ({ item }: { item: ProductItem }) => {
+const getProductItemFeatureIcon = ({ item }: { item: ProductItem }) => {
 	const config = getFeatureIconConfig(item.feature_type);
 	return <span className={config.color}>{config.icon}</span>;
 };

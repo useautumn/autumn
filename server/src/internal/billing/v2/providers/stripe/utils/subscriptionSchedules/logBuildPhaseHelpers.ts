@@ -49,7 +49,7 @@ export const logTransitionPoints = ({
  * Logs a single phase during the build process.
  * This is a flexible helper that accepts a custom format function for items.
  */
-export const logPhase = <T>({
+const logPhase = <T>({
 	ctx,
 	logPrefix,
 	phaseIndex,

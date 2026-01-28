@@ -39,7 +39,7 @@ import { getExistingCusProducts } from "../cusProducts/cusProductUtils/getExisti
 import { updateOneTimeCusProduct } from "./createOneTimeCusProduct.js";
 import { initCusEntitlement } from "./initCusEnt.js";
 
-export const initCusPrice = ({
+const initCusPrice = ({
 	price,
 	customer,
 	cusProductId,
@@ -60,7 +60,7 @@ export const initCusPrice = ({
 	return cusPrice;
 };
 
-export const initCusProduct = ({
+const initCusProduct = ({
 	customer,
 	product,
 	// subscriptionId,
@@ -154,7 +154,7 @@ export const initCusProduct = ({
 	};
 };
 
-export const insertFullCusProduct = async ({
+const insertFullCusProduct = async ({
 	db,
 	cusProd,
 	cusEnts,
@@ -188,7 +188,7 @@ export const insertFullCusProduct = async ({
 	});
 };
 
-export const expireOrDeleteCusProduct = async ({
+const expireOrDeleteCusProduct = async ({
 	db,
 	startsAt,
 	product,
@@ -237,7 +237,7 @@ export const expireOrDeleteCusProduct = async ({
 	}
 };
 
-export const getExistingCusProduct = async ({
+const getExistingCusProduct = async ({
 	db,
 	cusProducts,
 	product,

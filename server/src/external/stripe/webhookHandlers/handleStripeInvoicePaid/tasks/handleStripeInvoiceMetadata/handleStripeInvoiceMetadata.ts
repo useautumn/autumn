@@ -1,6 +1,6 @@
 import { MetadataType } from "@autumn/shared";
-import { handleInvoiceActionRequiredCompleted } from "@/external/stripe/webhookHandlers/legacy/handleInvoicePaid/handleInvoiceActionRequiredCompleted.js";
-import { handleInvoiceCheckoutPaid } from "@/external/stripe/webhookHandlers/legacy/handleInvoicePaid/handleInvoiceCheckoutPaid.js";
+import { handleInvoiceActionRequiredCompleted } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/tasks/handleStripeInvoiceMetadata/handleInvoiceActionRequiredCompleted.js";
+import { handleInvoiceCheckoutPaid } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/tasks/handleStripeInvoiceMetadata/handleInvoiceCheckoutPaid.js";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext.js";
 import { executeDeferredBillingPlan } from "@/internal/billing/v2/execute/executeDeferredBillingPlan.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
@@ -42,7 +42,7 @@ export const handleStripeInvoiceMetadata = async ({
 	if (metadata.type === MetadataType.InvoiceActionRequired) {
 		await handleInvoiceActionRequiredCompleted({
 			ctx,
-			invoice: stripeInvoice,
+			stripeInvoice,
 			metadata,
 		});
 		return;

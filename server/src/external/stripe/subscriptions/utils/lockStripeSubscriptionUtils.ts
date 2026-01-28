@@ -21,7 +21,7 @@ export const setStripeSubscriptionLock = async ({
 	);
 };
 
-export type StripeSubscriptionLock = {
+type StripeSubscriptionLock = {
 	lockedAtMs: number;
 };
 

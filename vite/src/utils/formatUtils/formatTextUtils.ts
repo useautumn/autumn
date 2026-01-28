@@ -12,7 +12,7 @@ export const keyToTitle = (
 		.replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
-export const keyToTitleFirstCaps = (key: string) => {
+const keyToTitleFirstCaps = (key: string) => {
 	// Capitalize first char
 	const res = key.replace(/^\w/, (char) => char.toUpperCase());
 	// Replace underscores with spaces

@@ -1,9 +1,42 @@
 import { relations } from "drizzle-orm";
 import { organizations } from "../models/orgModels/orgTable.js";
-import { invitation, member, user } from "./auth-schema.js";
+import {
+	account,
+	invitation,
+	member,
+	oauthAccessToken,
+	oauthClient,
+	oauthConsent,
+	oauthRefreshToken,
+	session,
+	user,
+} from "./auth-schema.js";
 
 export const userRelations = relations(user, ({ many }) => ({
+	sessions: many(session),
+	accounts: many(account),
 	memberships: many(member),
+	invitations: many(invitation),
+	oauthClients: many(oauthClient),
+	oauthRefreshTokens: many(oauthRefreshToken),
+	oauthAccessTokens: many(oauthAccessToken),
+	oauthConsents: many(oauthConsent),
+}));
+
+const sessionRelations = relations(session, ({ one, many }) => ({
+	user: one(user, {
+		fields: [session.userId],
+		references: [user.id],
+	}),
+	oauthRefreshTokens: many(oauthRefreshToken),
+	oauthAccessTokens: many(oauthAccessToken),
+}));
+
+const accountRelations = relations(account, ({ one }) => ({
+	user: one(user, {
+		fields: [account.userId],
+		references: [user.id],
+	}),
 }));
 
 export const memberRelations = relations(member, ({ one }) => ({
@@ -24,6 +57,69 @@ export const inviteRelations = relations(invitation, ({ one }) => ({
 	}),
 	inviter: one(user, {
 		fields: [invitation.inviterId],
+		references: [user.id],
+	}),
+}));
+
+// OAuth Provider relations
+const oauthClientRelations = relations(oauthClient, ({ one, many }) => ({
+	user: one(user, {
+		fields: [oauthClient.userId],
+		references: [user.id],
+	}),
+	oauthRefreshTokens: many(oauthRefreshToken),
+	oauthAccessTokens: many(oauthAccessToken),
+	oauthConsents: many(oauthConsent),
+}));
+
+const oauthRefreshTokenRelations = relations(
+	oauthRefreshToken,
+	({ one, many }) => ({
+		oauthClient: one(oauthClient, {
+			fields: [oauthRefreshToken.clientId],
+			references: [oauthClient.clientId],
+		}),
+		session: one(session, {
+			fields: [oauthRefreshToken.sessionId],
+			references: [session.id],
+		}),
+		user: one(user, {
+			fields: [oauthRefreshToken.userId],
+			references: [user.id],
+		}),
+		oauthAccessTokens: many(oauthAccessToken),
+	}),
+);
+
+const oauthAccessTokenRelations = relations(
+	oauthAccessToken,
+	({ one }) => ({
+		oauthClient: one(oauthClient, {
+			fields: [oauthAccessToken.clientId],
+			references: [oauthClient.clientId],
+		}),
+		session: one(session, {
+			fields: [oauthAccessToken.sessionId],
+			references: [session.id],
+		}),
+		user: one(user, {
+			fields: [oauthAccessToken.userId],
+			references: [user.id],
+		}),
+		oauthRefreshToken: one(oauthRefreshToken, {
+			fields: [oauthAccessToken.refreshId],
+			references: [oauthRefreshToken.id],
+		}),
+	}),
+);
+
+const oauthConsentRelations = relations(oauthConsent, ({ one }) => ({
+	oauthClient: one(oauthClient, {
+		fields: [oauthConsent.clientId],
+		references: [oauthClient.clientId],
+	}),
+	user: one(user, {
+		fields: [oauthConsent.userId],
 		references: [user.id],
 	}),
 }));

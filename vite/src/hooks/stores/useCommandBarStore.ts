@@ -37,4 +37,4 @@ export const useCommandBarStore = create<CommandBarState>((set) => ({
 }));
 
 // Convenience selector for checking if command bar is open
-export const useIsCommandBarOpen = () => useCommandBarStore((s) => s.open);
+const useIsCommandBarOpen = () => useCommandBarStore((s) => s.open);

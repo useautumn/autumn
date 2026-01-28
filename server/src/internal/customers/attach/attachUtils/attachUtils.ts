@@ -13,7 +13,7 @@ import {
 	attachParamsToProduct,
 } from "./convertAttachParams.js";
 
-export const getCycleWillReset = ({
+const getCycleWillReset = ({
 	attachParams,
 	stripeSubs,
 }: {
@@ -29,7 +29,7 @@ export const getCycleWillReset = ({
 	});
 };
 
-export const removeCurCusProductItems = async ({
+const removeCurCusProductItems = async ({
 	sub,
 	cusProduct,
 	subItems,

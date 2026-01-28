@@ -26,7 +26,7 @@ export function useUpdateSubscriptionForm({
 
 // Subscribe to form changes and clear prepaid options when productId changes
 // Prevents stale prepaid options from causing "no prepaid price found" in the `checkout` call
-export function useResetPrepaidOnProductChange({
+function useResetPrepaidOnProductChange({
 	form,
 }: {
 	form: UseUpdateSubscriptionForm;

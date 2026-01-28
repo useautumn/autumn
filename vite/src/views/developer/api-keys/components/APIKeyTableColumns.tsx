@@ -1,21 +1,53 @@
 import type { ApiKey } from "@autumn/shared";
 import type { ColumnDef, Row } from "@tanstack/react-table";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, ShieldCheckIcon, TerminalIcon, UserIcon } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/v2/tooltips/Tooltip";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { APIKeyToolbar } from "./APIKeyToolbar";
 
+// Parse meta to get source info
+function getSourceInfo(meta: ApiKey["meta"]): {
+	type: "cli" | "dashboard" | "autumn_support" | null;
+	author?: string;
+} {
+	if (!meta || typeof meta !== "object") return { type: null };
+
+	if (meta.created_via === "oauth") {
+		return { type: "cli" };
+	}
+
+	if (meta.created_via === "autumn_support") {
+		return { type: "autumn_support" };
+	}
+
+	if (meta.author) {
+		return { type: "dashboard", author: meta.author };
+	}
+
+	return { type: null };
+}
+
 export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 	{
-		size: 150,
+		size: 120,
 		header: "Name",
 		accessorKey: "name",
 		cell: ({ row }: { row: Row<ApiKey> }) => {
-			return <div className="font-medium text-t1">{row.original.name}</div>;
+			return (
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<div className="font-medium text-t1 truncate max-w-[150px]">
+							{row.original.name}
+						</div>
+					</TooltipTrigger>
+					<TooltipContent>{row.original.name}</TooltipContent>
+				</Tooltip>
+			);
 		},
 	},
 	{
 		header: "Preview",
-		size: 300,
+		size: 150,
 		accessorKey: "prefix",
 		cell: ({ row }: { row: Row<ApiKey> }) => {
 			const apiKey = row.original;
@@ -28,6 +60,49 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 					)}
 				</div>
 			);
+		},
+	},
+	{
+		header: "Source",
+		size: 100,
+		accessorKey: "meta",
+		cell: ({ row }: { row: Row<ApiKey> }) => {
+			const source = getSourceInfo(row.original.meta);
+
+			if (source.type === "cli") {
+				return (
+					<div className="flex justify-start items-center">
+						<span className="text-tiny flex items-center gap-1 px-1.5 py-0.5 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 rounded-md">
+							<TerminalIcon size={12} />
+							CLI
+						</span>
+					</div>
+				);
+			}
+
+			if (source.type === "autumn_support") {
+				return (
+					<div className="flex justify-start items-center">
+						<span className="text-tiny flex items-center gap-1 px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-md">
+							<ShieldCheckIcon size={12} />
+							Autumn Support
+						</span>
+					</div>
+				);
+			}
+
+			if (source.type === "dashboard" && source.author) {
+				return (
+					<div className="flex justify-start items-center">
+						<span className="text-tiny flex items-center gap-1 px-1.5 py-0.5 bg-muted text-t2 rounded-md">
+							<UserIcon size={12} className="shrink-0" />
+							{source.author}
+						</span>
+					</div>
+				);
+			}
+
+			return <div className="text-t4">—</div>;
 		},
 	},
 	{

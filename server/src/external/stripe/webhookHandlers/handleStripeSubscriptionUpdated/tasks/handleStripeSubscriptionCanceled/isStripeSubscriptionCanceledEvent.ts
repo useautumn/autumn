@@ -2,7 +2,7 @@ import type { ExpandedStripeSubscription } from "@/external/stripe/subscriptions
 import { nullish } from "@/utils/genUtils";
 import type { SubscriptionPreviousAttributes } from "../../stripeSubscriptionUpdatedContext";
 
-export interface CancellationInfo {
+interface CancellationInfo {
 	canceled: boolean;
 	canceledAtMs: number | null;
 	cancelsAtMs: number | null;

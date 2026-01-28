@@ -23,7 +23,7 @@ const KeystrokeContainer = ({ keyStroke }: { keyStroke: string }) => {
 	);
 };
 
-export interface CommandRowProps {
+interface CommandRowProps {
 	/** Icon to display (React node) */
 	icon?: React.ReactNode;
 	/** Main title text */

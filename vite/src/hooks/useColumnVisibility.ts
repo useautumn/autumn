@@ -6,7 +6,7 @@ const STORAGE_PREFIX = "autumn:table-columns:";
 type StoredColumnValue = boolean | { visible: boolean; name: string };
 type StoredVisibility = Record<string, StoredColumnValue>;
 
-export interface ColumnMeta {
+interface ColumnMeta {
 	visible: boolean;
 	name?: string;
 }
@@ -29,7 +29,7 @@ function getVisibility(value: StoredColumnValue): boolean {
 }
 
 /** Parse stored value to get column meta (visibility + optional name) */
-export function getColumnMeta(
+function getColumnMeta(
 	stored: StoredVisibility,
 	columnId: string,
 ): ColumnMeta | null {

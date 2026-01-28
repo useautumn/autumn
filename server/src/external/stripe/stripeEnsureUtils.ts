@@ -4,7 +4,7 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { initProductInStripe } from "@/internal/products/productUtils.js";
 
-export async function ensureStripeProducts({ ctx }: { ctx: AutumnContext }) {
+async function ensureStripeProducts({ ctx }: { ctx: AutumnContext }) {
 	await ensureStripeProductsWithEnv({
 		ctx,
 	});

@@ -24,7 +24,7 @@ import { ApiCusProductV1Schema } from "../cusPlans/previousVersions/apiCusProduc
  */
 
 // Core customer object (without products/features/invoices)
-export const ApiCustomerV1CoreSchema = z.object({
+const ApiCustomerV1CoreSchema = z.object({
 	// Internal fields
 	id: z.string().nullable(),
 	name: z.string().nullable(),
@@ -55,4 +55,4 @@ export const ApiCustomerV1Schema = z.object({
 });
 
 export type ApiCustomerV1 = z.infer<typeof ApiCustomerV1Schema>;
-export type ApiCustomerV1Core = z.infer<typeof ApiCustomerV1CoreSchema>;
+type ApiCustomerV1Core = z.infer<typeof ApiCustomerV1CoreSchema>;

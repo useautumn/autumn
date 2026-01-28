@@ -1,40 +1,38 @@
 {
-  "ts-node": {
-    "esm": true,
-    "experimentalSpecifier": true
-  },
-  "compilerOptions": {
-    "target": "ES2020",
-    "moduleResolution": "bundler",
-    "module": "Preserve",
+	"ts-node": {
+		"esm": true,
+		"experimentalSpecifier": true
+	},
+	"compilerOptions": {
+		"target": "ES2020",
+		"moduleResolution": "bundler",
+		"module": "Preserve",
 
-    // "declaration": true,
-    "jsx": "react-jsx",
-    "rootDir": ".",
-    "outDir": "./dist",
-    "strict": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "paths": {
-      "@/*": ["./src/*"],
-      "@server/*": ["./src/*"],
-      "@shared/*": ["../shared/*"],
-      "@emails/*": ["./emails/*"],
-      "@scripts/*": ["./scripts/*"],
-      "@lua/*": ["./src/_luaScripts/*"],
-      "@tests/*": ["./tests/*"],
+		// "declaration": true,
+		"jsx": "react-jsx",
+		"rootDir": ".",
+		"outDir": "./dist",
+		"strict": true,
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"paths": {
+			"@/*": ["./src/*"],
+			"@server/*": ["./src/*"],
+			"@shared/*": ["../shared/*"],
+			"@scripts/*": ["./scripts/*"],
+			"@lua/*": ["./src/_luaScripts/*"],
+			"@tests/*": ["./tests/*"],
 
-
-      // From shared package?
-      "@autumn/shared": ["../shared/index.ts"],
-      "@autumn/shared/*": ["../shared/*"],
-      "@api/*": ["../shared/api/*"],
-      "@models/*": ["../shared/models/*"],
-      "@utils/*": ["../shared/utils/*"],
-    }
-  },
-  "include": ["src", "tests", "scripts", "emails", "experiments"],
-  "exclude": ["node_modules", "dist", "tests/archives"]
+			// From shared package?
+			"@autumn/shared": ["../shared/index.ts"],
+			"@autumn/shared/*": ["../shared/*"],
+			"@api/*": ["../shared/api/*"],
+			"@models/*": ["../shared/models/*"],
+			"@utils/*": ["../shared/utils/*"]
+		}
+	},
+	"include": ["src", "tests", "scripts", "experiments"],
+	"exclude": ["node_modules", "dist", "tests/archives"]
 }

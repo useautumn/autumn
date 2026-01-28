@@ -6,7 +6,7 @@ import type {
 	StackConfig,
 } from "./types";
 
-export const REACT_SNIPPETS: Record<string, Snippet> = {
+const REACT_SNIPPETS: Record<string, Snippet> = {
 	install: {
 		id: "install",
 		title: "Install the SDK",

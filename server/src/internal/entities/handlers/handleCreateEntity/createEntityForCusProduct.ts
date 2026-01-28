@@ -21,7 +21,7 @@ import { findLinkedCusEnts } from "@/internal/customers/cusProducts/cusEnts/cusE
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 
-export const updateLinkedCusEnt = async ({
+const updateLinkedCusEnt = async ({
 	db,
 	linkedCusEnt,
 	inputEntities,

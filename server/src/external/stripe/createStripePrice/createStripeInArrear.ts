@@ -19,7 +19,7 @@ import { StatusCodes } from "http-status-codes";
 import type Stripe from "stripe";
 import { billingIntervalToStripe } from "../stripePriceUtils";
 
-export const searchStripeMeter = async ({
+const searchStripeMeter = async ({
 	stripeCli,
 	eventName,
 	meterId,
@@ -60,7 +60,7 @@ export const searchStripeMeter = async ({
 	return stripeMeter;
 };
 
-export const getStripeMeter = async ({
+const getStripeMeter = async ({
 	product,
 	feature,
 	stripeCli,

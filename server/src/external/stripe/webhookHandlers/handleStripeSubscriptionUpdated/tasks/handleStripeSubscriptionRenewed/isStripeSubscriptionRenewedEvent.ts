@@ -2,7 +2,7 @@ import type { ExpandedStripeSubscription } from "@/external/stripe/subscriptions
 import { notNullish, nullish } from "@/utils/genUtils";
 import type { SubscriptionPreviousAttributes } from "../../stripeSubscriptionUpdatedContext";
 
-export interface RenewalInfo {
+interface RenewalInfo {
 	renewed: boolean;
 	renewedAtMs: number;
 }

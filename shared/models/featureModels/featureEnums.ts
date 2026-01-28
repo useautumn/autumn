@@ -5,7 +5,6 @@ export enum FeatureType {
 }
 
 export enum AggregateType {
-	Count = "count",
 	Sum = "sum",
 }
 

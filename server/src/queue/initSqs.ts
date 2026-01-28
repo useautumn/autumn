@@ -6,7 +6,7 @@ const DEFAULT_AWS_REGION = "us-west-2";
  * Extracts the AWS region from a given SQS queue URL.
  * Returns undefined if the URL is empty or invalid.
  */
-export function extractRegionFromQueueUrl({
+function extractRegionFromQueueUrl({
 	queueUrl,
 }: {
 	queueUrl: string | undefined;
