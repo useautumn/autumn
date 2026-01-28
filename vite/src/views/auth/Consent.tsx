@@ -286,9 +286,9 @@ export const Consent = () => {
 	}
 
 	return (
-		<div className="w-screen h-screen bg-background flex items-center justify-center p-4">
+		<div className="w-screen min-h-screen bg-background flex items-center justify-center py-8 px-4">
 			<CustomToaster />
-			<div className="w-full max-w-[420px] space-y-6">
+			<div className="w-full max-w-[420px] space-y-6 max-h-full overflow-y-auto">
 				{/* Logo */}
 				<div className="flex justify-center">
 					<img src="/logo_hd.png" alt="Autumn" className="w-12 h-12" />
