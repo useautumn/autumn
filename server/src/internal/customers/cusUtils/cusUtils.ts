@@ -48,6 +48,13 @@ export const updateCustomerDetails = async ({
 			updates.email = customerData.email;
 		}
 	}
+	// Update send_email_receipts if explicitly provided
+	if (customerData?.send_email_receipts !== undefined) {
+		const fullCus = customer as FullCustomer;
+		if (fullCus.send_email_receipts !== customerData.send_email_receipts) {
+			updates.send_email_receipts = customerData.send_email_receipts;
+		}
+	}
 
 	if (Object.keys(updates).length > 0) {
 		logger.info(`Updating customer details:`, {

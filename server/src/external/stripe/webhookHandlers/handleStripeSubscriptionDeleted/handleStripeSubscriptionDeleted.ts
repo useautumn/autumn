@@ -4,6 +4,7 @@ import { logCustomerProductUpdates } from "../common";
 import { setupStripeSubscriptionDeletedContext } from "./setupStripeSubscriptionDeletedContext";
 import { expireAndActivateCustomerProducts } from "./tasks/expireAndActivateCustomerProducts";
 import { processConsumablePricesForSubscriptionDeleted } from "./tasks/processConsumablePricesForSubscriptionDeleted";
+import { voidInvoicesForSubscriptionDeleted } from "./tasks/voidInvoicesForSubscriptionDeleted";
 
 /**
  * Handles Stripe subscription.deleted webhook.
@@ -39,7 +40,10 @@ export const handleStripeSubscriptionDeleted = async ({
 	// Task 2: Expire customer products + delete scheduled + activate defaults
 	await expireAndActivateCustomerProducts({ ctx, eventContext });
 
-	// Task 3: Log all customer product updates and deletions
+	// Task 3: Void open invoices (if org config enabled)
+	await voidInvoicesForSubscriptionDeleted({ ctx, eventContext });
+
+	// Task 4: Log all customer product updates and deletions
 	logCustomerProductUpdates({
 		ctx,
 		eventContext,

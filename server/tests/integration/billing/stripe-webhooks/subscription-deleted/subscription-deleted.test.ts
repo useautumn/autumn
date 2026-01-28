@@ -9,10 +9,11 @@
  * - Expire customer products on the deleted subscription
  * - Activate default products if available
  * - Delete any scheduled products in the same group
+ * - Void open invoices when org config enabled (void_invoices_on_subscription_deletion)
  */
 
-import { test } from "bun:test";
-import type { ApiCustomerV3 } from "@autumn/shared";
+import { expect, test } from "bun:test";
+import { type ApiCustomerV3, ApiVersion } from "@autumn/shared";
 import {
 	expectCustomerProducts,
 	expectProductActive,
@@ -23,8 +24,13 @@ import { expectNoStripeSubscription } from "@tests/integration/billing/utils/exp
 import { getSubscriptionId } from "@tests/integration/billing/utils/stripe/getSubscriptionId";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { AutumnInt } from "@/external/autumn/autumnCli";
+import { attachFailedPaymentMethod } from "@/external/stripe/stripeCusUtils";
+import { CusService } from "@/internal/customers/CusService";
+import { OrgService } from "@/internal/orgs/OrgService";
 import { timeout } from "@/utils/genUtils";
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -42,7 +48,7 @@ import { timeout } from "@/utils/genUtils";
  * - Free default becomes active
  * - No Stripe subscription exists
  */
-test.concurrent(`${chalk.yellowBright("sub.deleted: cancel active subscription via Stripe (with default)")}`, async () => {
+test(`${chalk.yellowBright("sub.deleted: cancel active subscription via Stripe (with default)")}`, async () => {
 	const customerId = "sub-deleted-basic";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -123,7 +129,7 @@ test.concurrent(`${chalk.yellowBright("sub.deleted: cancel active subscription v
  * - Free default becomes active
  * - No Stripe subscription exists
  */
-test.concurrent(`${chalk.yellowBright("sub.deleted: cancel after end_of_cycle via Stripe")}`, async () => {
+test(`${chalk.yellowBright("sub.deleted: cancel after end_of_cycle via Stripe")}`, async () => {
 	const customerId = "sub-deleted-after-eoc";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -226,7 +232,7 @@ test.concurrent(`${chalk.yellowBright("sub.deleted: cancel after end_of_cycle vi
  * - Free default becomes active
  * - No Stripe subscription exists
  */
-test.concurrent(`${chalk.yellowBright("sub.deleted: cancel with scheduled downgrade via Stripe")}`, async () => {
+test(`${chalk.yellowBright("sub.deleted: cancel with scheduled downgrade via Stripe")}`, async () => {
 	const customerId = "sub-deleted-downgrade";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -321,7 +327,7 @@ test.concurrent(`${chalk.yellowBright("sub.deleted: cancel with scheduled downgr
  * - Free default becomes active
  * - No Stripe subscription exists
  */
-test.concurrent(`${chalk.yellowBright("sub.deleted: cancel subscription with add-on via Stripe")}`, async () => {
+test(`${chalk.yellowBright("sub.deleted: cancel subscription with add-on via Stripe")}`, async () => {
 	const customerId = "sub-deleted-addon";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
