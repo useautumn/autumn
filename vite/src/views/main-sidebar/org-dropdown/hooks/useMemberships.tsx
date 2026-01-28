@@ -1,13 +1,13 @@
+import { AppEnv } from "@autumn/shared";
+import { useEffect } from "react";
+import { useNavigate } from "react-router";
 import {
 	authClient,
 	useListOrganizations,
 	useSession,
 } from "@/lib/auth-client";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
-import { useEffect } from "react";
-import { useNavigate } from "react-router";
 import { useEnv } from "@/utils/envUtils";
-import { AppEnv } from "@autumn/shared";
 
 export const useMemberships = () => {
 	const { data, error, isLoading, mutate } = useAxiosSWR({

@@ -2,13 +2,14 @@ import type { AppEnv, EventInsert, Price } from "@autumn/shared";
 import { SendMessageCommand } from "@aws-sdk/client-sqs";
 import { generateId } from "@server/utils/genUtils";
 import { isHatchetEnabled } from "@/external/hatchet/initHatchet.js";
-import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
-import type { GenerateFeatureDisplayWorkflowPayload } from "@/internal/features/workflows/generateFeatureDisplayWorkflow.js";
 import {
 	type VerifyCacheInput,
-	verifyCacheConsistencyWorkflow,
-} from "./hatchetWorkflows/verifyCacheConsistencyWorkflow/verifyCacheConsistencyWorkflow.js";
+	verifyCacheConsistency,
+} from "@/internal/billing/v2/workflows/verifyCacheConsistency/verifyCacheConsistency.js";
+import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
+import type { GenerateFeatureDisplayPayload } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { JobName } from "./JobName.js";
+import type { SendProductsUpdatedPayload } from "./workflows.js";
 
 export interface Payloads {
 	[JobName.RewardMigration]: {
@@ -42,7 +43,8 @@ export interface Payloads {
 		events: EventInsert[];
 	};
 	[JobName.ClearCreditSystemCustomerCache]: ClearCreditSystemCachePayload;
-	[JobName.GenerateFeatureDisplay]: GenerateFeatureDisplayWorkflowPayload;
+	[JobName.GenerateFeatureDisplay]: GenerateFeatureDisplayPayload;
+	[JobName.SendProductsUpdated]: SendProductsUpdatedPayload;
 	[JobName.VerifyCacheConsistency]: {
 		customerId: string;
 		orgId: string;
@@ -136,7 +138,7 @@ export interface HatchetPayloads {
 }
 
 const hatchetWorkflows = {
-	[JobName.VerifyCacheConsistency]: verifyCacheConsistencyWorkflow,
+	[JobName.VerifyCacheConsistency]: verifyCacheConsistency,
 };
 
 /**

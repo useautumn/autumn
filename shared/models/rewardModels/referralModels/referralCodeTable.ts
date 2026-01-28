@@ -1,14 +1,14 @@
 import {
-	text,
 	foreignKey,
-	pgTable,
 	numeric,
+	pgTable,
 	primaryKey,
+	text,
 	unique,
 } from "drizzle-orm/pg-core";
 import { customers } from "../../cusModels/cusTable.js";
-import { rewardPrograms } from "../rewardProgramModels/rewardProgramTable.js";
 import { organizations } from "../../orgModels/orgTable.js";
+import { rewardPrograms } from "../rewardProgramModels/rewardProgramTable.js";
 
 export const referralCodes = pgTable(
 	"referral_codes",

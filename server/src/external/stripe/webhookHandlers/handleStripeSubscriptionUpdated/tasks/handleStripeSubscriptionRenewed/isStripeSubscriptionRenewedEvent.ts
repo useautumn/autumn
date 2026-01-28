@@ -1,6 +1,6 @@
+import type { ExpandedStripeSubscription } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription";
 import { notNullish, nullish } from "@/utils/genUtils";
 import type { SubscriptionPreviousAttributes } from "../../stripeSubscriptionUpdatedContext";
-import type { ExpandedStripeSubscription } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription";
 
 export interface RenewalInfo {
 	renewed: boolean;
@@ -16,8 +16,12 @@ export const isStripeSubscriptionRenewedEvent = ({
 	previousAttributes,
 }: {
 	stripeSubscription: ExpandedStripeSubscription;
-	previousAttributes: SubscriptionPreviousAttributes;
+	previousAttributes?: SubscriptionPreviousAttributes;
 }): RenewalInfo => {
+	// If no previous attributes, we can't determine if this is a renewal
+	if (!previousAttributes) {
+		return { renewed: false, renewedAtMs: Date.now() };
+	}
 	// Un-canceled at period end
 	const uncanceledAtPeriodEnd =
 		previousAttributes.cancel_at_period_end &&
@@ -25,11 +29,13 @@ export const isStripeSubscriptionRenewedEvent = ({
 
 	// cancel_at was set, now cleared
 	const uncancelAt =
-		notNullish(previousAttributes.cancel_at) && nullish(stripeSubscription.cancel_at);
+		notNullish(previousAttributes.cancel_at) &&
+		nullish(stripeSubscription.cancel_at);
 
 	// canceled_at was set (edge case)
 	const uncanceledAt =
-		notNullish(previousAttributes.canceled_at) && stripeSubscription.canceled_at;
+		notNullish(previousAttributes.canceled_at) &&
+		stripeSubscription.canceled_at;
 
 	return {
 		renewed: !!(uncanceledAtPeriodEnd || uncancelAt || uncanceledAt),

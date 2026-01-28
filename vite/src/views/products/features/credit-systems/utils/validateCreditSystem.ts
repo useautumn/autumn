@@ -1,4 +1,4 @@
-import { CreateFeature } from "@autumn/shared";
+import type { CreateFeature } from "@autumn/shared";
 
 export const validateCreditSystem = (
 	creditSystem: CreateFeature,

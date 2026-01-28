@@ -14,13 +14,15 @@ export const buildStripeSubscriptionUpdateAction = ({
 	billingContext,
 	subItemsUpdate,
 	stripeSubscriptionScheduleAction,
+	subscriptionCancelAt,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	subItemsUpdate: Stripe.SubscriptionUpdateParams.Item[];
 	stripeSubscriptionScheduleAction?: StripeSubscriptionScheduleAction;
+	subscriptionCancelAt?: number;
 }): StripeSubscriptionAction | undefined => {
-	const { stripeSubscription, trialContext } = billingContext;
+	const { stripeSubscription, trialContext, cancelAction } = billingContext;
 
 	if (!stripeSubscription) {
 		throw new Error(
@@ -46,6 +48,17 @@ export const buildStripeSubscriptionUpdateAction = ({
 		shouldUnsetTrialEnd = !scheduleManagesSubscription && trialEndsAt === null;
 	}
 
+	// Determine cancel_at handling:
+	// 1. Clear cancel_at if uncancel action and currently has a cancel_at
+	// 2. Set cancel_at if explicitly provided and differs from current value
+	const currentCancelAt = stripeSubscription.cancel_at;
+	const shouldClearCancelAt =
+		cancelAction === "uncancel" && currentCancelAt !== null;
+	const shouldSetCancelAt =
+		!shouldClearCancelAt &&
+		subscriptionCancelAt !== undefined &&
+		subscriptionCancelAt !== currentCancelAt;
+
 	const params: Stripe.SubscriptionUpdateParams = {
 		items: subItemsUpdate.length > 0 ? subItemsUpdate : undefined,
 		trial_end: shouldSetTrialEnd
@@ -53,14 +66,17 @@ export const buildStripeSubscriptionUpdateAction = ({
 			: shouldUnsetTrialEnd
 				? "now"
 				: undefined,
+		cancel_at: shouldClearCancelAt
+			? null
+			: shouldSetCancelAt
+				? subscriptionCancelAt
+				: undefined,
 		proration_behavior: "none",
 	};
 
-	const hasNoUpdates = [
-		params.items,
-		params.trial_end,
-		params.cancel_at_period_end,
-	].every((field) => field === undefined);
+	const hasNoUpdates = [params.items, params.trial_end, params.cancel_at].every(
+		(field) => field === undefined,
+	);
 
 	if (hasNoUpdates) {
 		return undefined;

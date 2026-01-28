@@ -1,4 +1,4 @@
-import { ProductItem } from "@autumn/shared";
+import type { ProductItem } from "@autumn/shared";
 import { notNullish, nullish } from "../genUtils";
 
 export const isEmptyItem = (item: ProductItem) => {

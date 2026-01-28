@@ -5,8 +5,10 @@ import type {
 	FullCusProduct,
 	FullProduct,
 	Price,
+	RefundBehavior,
 	StripeDiscountWithCoupon,
 } from "@autumn/shared";
+import type { CancelAction } from "@shared/api/common/cancelMode";
 import type { FullCustomer } from "@shared/models/cusModels/fullCusModel";
 import type Stripe from "stripe";
 import { z } from "zod/v4";
@@ -23,11 +25,11 @@ export interface TrialContext {
 	trialEndsAt: number | null;
 	customFreeTrial?: FreeTrial;
 	appliesToBilling: boolean;
+	cardRequired: boolean;
 }
 
 export interface BillingContext {
 	fullCustomer: FullCustomer;
-	stripeCustomer: Stripe.Customer;
 	fullProducts: FullProduct[];
 
 	featureQuantities: FeatureOptions[];
@@ -39,22 +41,30 @@ export interface BillingContext {
 	resetCycleAnchorMs: number | "now";
 
 	// Stripe context
+	stripeCustomer: Stripe.Customer;
 	stripeSubscription?: Stripe.Subscription;
 	stripeSubscriptionSchedule?: Stripe.SubscriptionSchedule;
 	stripeDiscounts?: StripeDiscountWithCoupon[];
 	paymentMethod?: Stripe.PaymentMethod;
 
 	// Unforunately, need to add custom prices, custom entitlements and free trial here, because it's determined in the setup step.
-	customPrices: Price[];
-	customEnts: Entitlement[];
+	// Optional - only needed for custom plan flows
+	customPrices?: Price[];
+	customEnts?: Entitlement[];
 
 	// Trial context
 	trialContext?: TrialContext;
-	isCustom: boolean;
+	isCustom?: boolean;
+
+	// Cancel action (used by update subscription for uncancel)
+	cancelAction?: CancelAction;
+
+	// Refund behavior for negative invoice totals (downgrades)
+	refundBehavior?: RefundBehavior;
 }
 
 export interface UpdateSubscriptionBillingContext extends BillingContext {
 	customerProduct: FullCusProduct; // target customer product
+	defaultProduct?: FullProduct; // for cancel flows
+	cancelAction?: CancelAction; // for cancel flows
 }
-
-// testClockFrozenTime?: number;

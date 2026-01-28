@@ -1,20 +1,20 @@
+import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
-	DialogTitle,
-	DialogHeader,
 	DialogContent,
-	DialogTrigger,
 	DialogDescription,
 	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useProductContext } from "../ProductContext";
-import { toast } from "sonner";
-import { useState } from "react";
-import { updateProduct } from "../utils/updateProduct";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useProductQuery } from "../hooks/useProductQuery";
+import { useProductContext } from "../ProductContext";
+import { updateProduct } from "../utils/updateProduct";
 
 export default function ConfirmNewVersionDialog({
 	open,

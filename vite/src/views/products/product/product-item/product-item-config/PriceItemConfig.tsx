@@ -1,15 +1,15 @@
+import { UsageModel } from "@autumn/shared";
+import { CircleGauge, Cog } from "lucide-react";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { SelectType } from "@/components/general/SelectType";
-import { CircleGauge, Cog } from "lucide-react";
-import { useProductItemContext } from "../ProductItemContext";
+import { nullish } from "@/utils/genUtils";
+import CreateFixedPrice from "../../prices/CreateFixedPrice";
+import { ConfigWithFeature } from "../components/ConfigWithFeature";
 import {
 	defaultPaidFeatureItem,
 	defaultPriceItem,
 } from "../create-product-item/defaultItemConfigs";
-import { ConfigWithFeature } from "../components/ConfigWithFeature";
-import CreateFixedPrice from "../../prices/CreateFixedPrice";
-import { UsageModel } from "@autumn/shared";
-import { nullish } from "@/utils/genUtils";
+import { useProductItemContext } from "../ProductItemContext";
 
 export const PriceItemConfig = () => {
 	const { item, setItem, isUpdate } = useProductItemContext();

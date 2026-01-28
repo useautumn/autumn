@@ -86,6 +86,7 @@ const UpdateSubscriptionFormReactContext =
 interface UpdateSubscriptionFormProviderProps {
 	formContext: UpdateSubscriptionFormContext;
 	originalItems: ProductItem[] | undefined;
+	defaultOverrides?: Partial<UpdateSubscriptionForm>;
 	onPlanEditorOpen?: () => void;
 	onPlanEditorClose?: () => void;
 	onInvoiceCreated?: (invoiceId: string) => void;
@@ -97,6 +98,7 @@ interface UpdateSubscriptionFormProviderProps {
 export function UpdateSubscriptionFormProvider({
 	formContext,
 	originalItems,
+	defaultOverrides,
 	onPlanEditorOpen,
 	onPlanEditorClose,
 	onInvoiceCreated,
@@ -111,6 +113,7 @@ export function UpdateSubscriptionFormProvider({
 
 	const form = useUpdateSubscriptionForm({
 		updateSubscriptionFormContext: formContext,
+		defaultOverrides,
 	});
 	const { features } = useFeaturesQuery();
 	const trialState = useTrialState({ form, customerProduct });
@@ -213,6 +216,9 @@ export function UpdateSubscriptionFormProvider({
 		freeTrial,
 		items: formValues.items,
 		version: formValues.version,
+		cancelAction: formValues.cancelAction,
+		billingBehavior: formValues.billingBehavior,
+		refundBehavior: formValues.refundBehavior,
 	});
 
 	const { buildRequestBody } = useUpdateSubscriptionRequestBody({

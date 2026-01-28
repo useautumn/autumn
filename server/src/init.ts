@@ -110,6 +110,7 @@ const init = async () => {
 				"If-None-Match",
 				"If-Modified-Since",
 				"If-Unmodified-Since",
+				"User-Agent", // Required for better-auth v1.4.0+ compatibility with Safari/Zen browser
 			],
 		}),
 	);
@@ -231,6 +232,8 @@ if (process.env.NODE_ENV === "development") {
 			logger.error(`WORKER DIED: ${worker.process.pid}`);
 			cluster.fork();
 		});
+
+		registerShutdownHandlers();
 	} else {
 		init();
 		registerShutdownHandlers();
@@ -254,21 +257,3 @@ async function gracefulShutdown() {
 		process.exit(1);
 	}
 }
-
-// Close connections gracefully?
-const closeConnections = async () => {
-	console.log("Closing connections");
-	await client.end();
-};
-
-process.on("SIGTERM", async () => {
-	console.log("SIGTERM received, shutting down gracefully");
-	await closeConnections();
-	process.exit(0);
-});
-
-process.on("SIGINT", async () => {
-	console.log("SIGINT received, shutting down gracefully");
-	await closeConnections();
-	process.exit(0);
-});

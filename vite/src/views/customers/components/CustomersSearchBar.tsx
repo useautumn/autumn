@@ -1,8 +1,8 @@
-import SmallSpinner from "@/components/general/SmallSpinner";
 import { debounce } from "lodash";
-import { useEffect, useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
+import SmallSpinner from "@/components/general/SmallSpinner";
 import { useCustomersQueryStates } from "../hooks/useCustomersQueryStates";
 
 export function CustomersSearchBar() {

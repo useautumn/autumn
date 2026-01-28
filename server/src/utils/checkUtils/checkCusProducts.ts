@@ -1,8 +1,8 @@
 import {
-  CusProductStatus,
-  cusProductToPrices,
-  type FullCusProduct,
-  isFreeProduct,
+	CusProductStatus,
+	cusProductToPrices,
+	type FullCusProduct,
+	isFreeProduct,
 } from "@autumn/shared";
 import type { FullCustomer } from "../../../../shared/models/cusModels/fullCusModel";
 import { getRelatedCusPrice } from "../../internal/customers/cusProducts/cusEnts/cusEntUtils";

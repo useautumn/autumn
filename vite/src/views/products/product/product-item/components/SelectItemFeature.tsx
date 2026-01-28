@@ -1,3 +1,7 @@
+import { type Feature, FeatureType, ProductItemType } from "@autumn/shared";
+import { PlusIcon, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
 	Select,
 	SelectContent,
@@ -5,18 +9,13 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { useProductItemContext } from "../ProductItemContext";
-import { useProductContext } from "../../ProductContext";
-import { FeatureTypeBadge } from "@/views/products/features/components/FeatureTypeBadge";
-import { Feature, FeatureType, ProductItemType } from "@autumn/shared";
-import { X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { PlusIcon } from "lucide-react";
-import { getItemType } from "@/utils/product/productItemUtils";
-import { CreateItemStep } from "../utils/CreateItemStep";
-import { useEffect, useState } from "react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { getItemType } from "@/utils/product/productItemUtils";
 import CreateFeatureSheet from "@/views/products/features/components/CreateFeatureSheet";
+import { FeatureTypeBadge } from "@/views/products/features/components/FeatureTypeBadge";
+import { useProductContext } from "../../ProductContext";
+import { useProductItemContext } from "../ProductItemContext";
+import { CreateItemStep } from "../utils/CreateItemStep";
 
 export const SelectItemFeature = () => {
 	const { features } = useFeaturesQuery();

@@ -39,15 +39,15 @@ export function PreviewPlanCard({
 				)}
 			</CardContent>
 
-		{previewApiKey && product.basePrice.type !== "free" && (
-			<CardFooter className="pt-3">
-				<PreviewCheckoutButton
-					productId={product.id}
-					previewApiKey={previewApiKey}
-					isSyncing={isSyncing}
-				/>
-			</CardFooter>
-		)}
+			{previewApiKey && product.basePrice.type !== "free" && (
+				<CardFooter className="pt-3">
+					<PreviewCheckoutButton
+						productId={product.id}
+						previewApiKey={previewApiKey}
+						isSyncing={isSyncing}
+					/>
+				</CardFooter>
+			)}
 		</Card>
 	);
 }

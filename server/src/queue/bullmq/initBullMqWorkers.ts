@@ -5,12 +5,12 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
 import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
+import { generateFeatureDisplay } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
 import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigrationTask.js";
 import { detectBaseVariant } from "@/internal/products/productUtils/detectProductVariant.js";
 import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutReward.js";
 import { addWorkflowToLogs } from "@/utils/logging/addContextToLogs.js";
-import { generateFeatureDisplayWorkflow } from "../../internal/features/workflows/generateFeatureDisplayWorkflow.js";
 import { createWorkerContext } from "../createWorkerContext.js";
 import { JobName } from "../JobName.js";
 import { workerRedis } from "./initBullMq.js";
@@ -61,7 +61,7 @@ const initWorker = ({ id, db }: { id: number; db: DrizzleCli }) => {
 						return;
 					}
 
-					await generateFeatureDisplayWorkflow({
+					await generateFeatureDisplay({
 						ctx,
 						payload: job.data,
 					});

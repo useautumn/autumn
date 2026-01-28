@@ -8,8 +8,7 @@ const checkDescriptions = {
 	customer_id: "ID which you provided when creating the customer",
 	product_id:
 		"ID of the product to check access to. Required if feature_id is not provided.",
-	feature_id:
-		"ID of the feature to check access to. Required if product_id is not provided.",
+	feature_id: "ID of the feature to check access to.",
 	required_balance:
 		"If you know the amount of the feature the end user is consuming in advance. If their balance is below this quantity, allowed will be false.",
 	send_event:

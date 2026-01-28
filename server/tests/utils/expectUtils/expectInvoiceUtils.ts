@@ -15,6 +15,11 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
 import { getSubsFromCusId } from "./expectSubUtils.js";
 
+/**
+ * @deprecated Use `calculateExpectedInvoiceAmount` from
+ * `@tests/integration/billing/utils/calculateExpectedInvoiceAmount` instead.
+ * The new utility is synchronous and works directly with ProductItem[] without DB/Stripe calls.
+ */
 export const getExpectedInvoiceTotal = async ({
 	customerId,
 	productId,

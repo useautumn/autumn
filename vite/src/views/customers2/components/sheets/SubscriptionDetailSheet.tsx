@@ -15,16 +15,13 @@ import {
 	HashIcon,
 	HeartbeatIcon,
 	Info,
-	PencilSimpleIcon,
-	ShoppingBagIcon,
 	SubtractIcon,
 	TimerIcon,
 	XCircle,
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router";
-// import { Badge } from "@/components/v2/Badge";
 import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { InfoRow } from "@/components/v2/InfoRow";
@@ -43,7 +40,6 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { BasePriceDisplay } from "@/views/products/plan/components/plan-card/BasePriceDisplay";
 import { PlanFeatureRow } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
 import { useFeaturesQuery } from "../../../../hooks/queries/useFeaturesQuery";
-import { CancelProductDialog } from "../table/customer-products/CancelProductDialog";
 import { CustomerProductsStatus } from "../table/customer-products/CustomerProductsStatus";
 import { UpdatePlanButton } from "./UpdatePlanButton";
 
@@ -68,8 +64,6 @@ export function SubscriptionDetailSheet() {
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
 	const isExpired = cusProduct?.status === CusProductStatus.Expired;
 	const isCanceled = cusProduct?.canceled;
-
-	const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
 	useEffect(() => {
 		if (
@@ -334,11 +328,23 @@ export function SubscriptionDetailSheet() {
 				)}
 				{!isExpired && !isScheduled && (
 					<div className="p-4 flex gap-2">
-						{!isCanceled && (
+						{isCanceled ? (
 							<Button
 								variant="secondary"
 								className="flex-1"
-								onClick={() => setCancelDialogOpen(true)}
+								onClick={() =>
+									setSheet({ type: "subscription-uncancel", itemId })
+								}
+							>
+								Uncancel Subscription
+							</Button>
+						) : (
+							<Button
+								variant="secondary"
+								className="flex-1"
+								onClick={() =>
+									setSheet({ type: "subscription-cancel", itemId })
+								}
 							>
 								Cancel Subscription
 							</Button>
@@ -353,12 +359,6 @@ export function SubscriptionDetailSheet() {
 					</div>
 				)}
 			</div>
-
-			<CancelProductDialog
-				cusProduct={cusProduct}
-				open={cancelDialogOpen}
-				setOpen={setCancelDialogOpen}
-			/>
 		</div>
 	);
 }

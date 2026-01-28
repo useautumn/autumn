@@ -127,8 +127,10 @@ export const constructArrearItem = ({
 		on_increase: OnIncrease.ProrateImmediately,
 		on_decrease: OnDecrease.ProrateImmediately,
 	},
+	rolloverConfig,
 	entityFeatureId,
 	usageLimit,
+	interval = ProductItemInterval.Month,
 	intervalCount = 1,
 }: {
 	featureId: string;
@@ -136,8 +138,10 @@ export const constructArrearItem = ({
 	price?: number;
 	billingUnits?: number;
 	config?: ProductItemConfig;
+	rolloverConfig?: RolloverConfig;
 	entityFeatureId?: string;
 	usageLimit?: number;
+	interval?: ProductItemInterval;
 	intervalCount?: number;
 }) => {
 	const item: ProductItem = {
@@ -146,10 +150,13 @@ export const constructArrearItem = ({
 		included_usage: includedUsage,
 		price: price,
 		billing_units: billingUnits,
-		interval: ProductItemInterval.Month,
+		interval: interval,
 		interval_count: intervalCount,
 		reset_usage_when_enabled: true,
-		config,
+		config: {
+			...config,
+			...(rolloverConfig ? { rollover: rolloverConfig } : {}),
+		},
 		entity_feature_id: entityFeatureId,
 		usage_limit: usageLimit,
 	};

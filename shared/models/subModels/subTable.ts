@@ -1,14 +1,14 @@
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
+	foreignKey,
+	jsonb,
+	numeric,
 	pgTable,
 	text,
-	numeric,
-	jsonb,
-	foreignKey,
 	unique,
 } from "drizzle-orm/pg-core";
-import { organizations } from "../orgModels/orgTable.js";
 import { sqlNow } from "../../db/utils.js";
-import { InferSelectModel, InferInsertModel } from "drizzle-orm";
+import { organizations } from "../orgModels/orgTable.js";
 
 export const subscriptions = pgTable(
 	"subscriptions",

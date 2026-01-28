@@ -1,22 +1,26 @@
 import { formatMs } from "@autumn/shared";
+import type Stripe from "stripe";
 import { handleStripeSubscriptionCanceled } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/tasks/handleStripeSubscriptionCanceled/handleStripeSubscriptionCanceled.js";
 import { syncAutumnSubscription } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/tasks/syncAutumnSubscription.js";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
+import { logCustomerProductUpdates } from "../common";
 import { setupStripeSubscriptionUpdatedContext } from "./setupStripeSubscriptionUpdatedContext.js";
 import { handleCancelOnPastDue } from "./tasks/handleCancelOnPastDue.js";
 import { handleSchedulePhaseChanges } from "./tasks/handleSchedulePhaseChanges/handleSchedulePhaseChanges.js";
 import { handleStripeSubscriptionRenewed } from "./tasks/handleStripeSubscriptionRenewed/handleStripeSubscriptionRenewed.js";
 import { syncCustomerProductStatus } from "./tasks/syncCustomerProductStatus/syncCustomerProductStatus.js";
-import { logCustomerProductUpdates } from "./utils/logCustomerProductUpdates.js";
 
 export const handleStripeSubscriptionUpdated = async ({
 	ctx,
+	event,
 }: {
 	ctx: StripeWebhookContext;
+	event: Stripe.CustomerSubscriptionUpdatedEvent;
 }) => {
 	const subscriptionUpdatedContext =
 		await setupStripeSubscriptionUpdatedContext({
 			ctx,
+			event,
 		});
 
 	ctx.logger.debug(
@@ -33,7 +37,7 @@ export const handleStripeSubscriptionUpdated = async ({
 	// 1. Handle schedule phase changes
 	await handleSchedulePhaseChanges({
 		ctx,
-		subscriptionUpdatedContext,
+		eventContext: subscriptionUpdatedContext,
 	});
 
 	// 2. Sync status from Stripe to customer products (sends webhook event too)
@@ -68,6 +72,7 @@ export const handleStripeSubscriptionUpdated = async ({
 	// 6. Log all customer product updates
 	logCustomerProductUpdates({
 		ctx,
-		subscriptionUpdatedContext,
+		eventContext: subscriptionUpdatedContext,
+		logPrefix: "[sub.updated]",
 	});
 };

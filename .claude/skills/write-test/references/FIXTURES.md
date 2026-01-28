@@ -109,18 +109,34 @@ items.oneOffPrice({ price?: number })   // Default: $50 one-time
 
 ## Product Fixtures (`products.*`)
 
-### `products.base()`
+### `products.base()` — FREE Product
 
-No base price. Use for free products or custom pricing.
+**This IS your free product fixture.** No base price = free. Don't use `constructProduct()` for free products.
 
 ```typescript
 products.base({
   items: ProductItem[],
   id?: string,           // Default: "base"
-  isDefault?: boolean,   // Default: false
+  isDefault?: boolean,   // Default: false — set true for default free tier
   isAddOn?: boolean,     // Default: false
   trialDays?: number,    // Optional trial
 })
+```
+
+**Common usage:**
+```typescript
+// Free default product
+const free = products.base({
+  id: "free",
+  items: [items.monthlyMessages({ includedUsage: 100 })],
+  isDefault: true,  // Makes it the default fallback product
+});
+
+// Custom-priced product (not free, not pro)
+const premium = products.base({
+  id: "premium",
+  items: [items.monthlyMessages(), items.monthlyPrice({ price: 50 })],
+});
 ```
 
 ### `products.pro()`

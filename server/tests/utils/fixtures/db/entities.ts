@@ -33,7 +33,3 @@ const create = ({
 export const entities = {
 	create,
 } as const;
-
-
-
-

@@ -6,7 +6,10 @@ import {
 import { cusProductToProcessorType } from "@shared/utils/cusProductUtils/convertCusProduct";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
+import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import type { AutumnBillingPlan } from "@/internal/billing/v2/types/autumnBillingPlan";
+import { handleCancelEndOfCycleErrors } from "@/internal/billing/v2/updateSubscription/errors/handleCancelEndOfCycleErrors";
+import { handleBillingBehaviorErrors } from "./handleBillingBehaviorErrors";
 import { handleCurrentCustomerProductErrors } from "./handleCurrentCustomerProductErrors";
 import { handleCustomPlanErrors } from "./handleCustomPlanErrors";
 import { handleFeatureQuantityErrors } from "./handleFeatureQuantityErrors";
@@ -15,6 +18,8 @@ import {
 	handleOneOffErrors,
 } from "./handleOneOffErrors";
 import { handleProductTypeTransitionErrors } from "./handleProductTypeTransitionErrors";
+import { handleRefundBehaviorErrors } from "./handleRefundBehaviorErrors";
+import { handleUncancelErrors } from "./handleUncancelErrors";
 
 export const handleUpdateSubscriptionErrors = async ({
 	ctx,
@@ -58,4 +63,26 @@ export const handleUpdateSubscriptionErrors = async ({
 
 	// 6. Trial removal with one-off items
 	checkTrialRemovalWithOneOffItems({ billingContext, autumnBillingPlan });
+
+	// 7. Cancel end of cycle errors
+	handleCancelEndOfCycleErrors({ billingContext, params });
+
+	// 8. Uncancel validation errors
+	handleUncancelErrors({ billingContext });
+
+	// 9. Billing behavior errors
+	handleBillingBehaviorErrors({
+		billingContext,
+		autumnBillingPlan,
+		params,
+	});
+
+	// 10. Refund behavior errors
+	handleRefundBehaviorErrors({
+		autumnBillingPlan,
+		params,
+	});
+
+	// 11. Stripe billing plan errors (validate Stripe resources)
+	handleStripeBillingPlanErrors({ billingContext });
 };

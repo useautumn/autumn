@@ -47,7 +47,6 @@ export const runTrackV2 = async ({
 		await handleEventIdempotencyKey({
 			ctx,
 			body,
-			fullCustomer,
 		});
 	}
 

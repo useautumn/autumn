@@ -7,7 +7,7 @@ import {
 	findPriceFromStripeId,
 } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
-import { constructSub } from "@/internal/subscriptions/subUtils.js";
+import { initSubscription } from "@/internal/subscriptions/utils/initSubscription.js";
 import { getEmptyPriceItem } from "../../priceToStripeItem/priceToStripeItem.js";
 import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
 
@@ -30,9 +30,8 @@ export const handleCheckoutSub = async ({
 
 	await SubService.createSub({
 		db,
-		sub: constructSub({
+		sub: initSubscription({
 			stripeId: subscription.id,
-			usageFeatures: attachParams.itemSets?.[0]?.usageFeatures || [],
 			orgId: org.id,
 			env: attachParams.customer.env,
 			currentPeriodStart: start,

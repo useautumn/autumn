@@ -1,6 +1,11 @@
-import { Organization, Price, Product, UsagePriceConfig } from "@autumn/shared";
+import type {
+	Organization,
+	Price,
+	Product,
+	UsagePriceConfig,
+} from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import Stripe from "stripe";
+import type Stripe from "stripe";
 
 export const constructStripeInvoiceItem = ({
 	product,
@@ -29,7 +34,7 @@ export const constructStripeInvoiceItem = ({
 		new Decimal(amount).mul(100).round().toNumber(),
 	);
 
-	let priceData =
+	const priceData =
 		amountInCents > 0
 			? {
 					price_data: {
@@ -43,7 +48,7 @@ export const constructStripeInvoiceItem = ({
 					currency: org.default_currency || "usd",
 				};
 
-	let invoiceItem: Stripe.InvoiceItemCreateParams = {
+	const invoiceItem: Stripe.InvoiceItemCreateParams = {
 		subscription: stripeSubId,
 		...priceData,
 

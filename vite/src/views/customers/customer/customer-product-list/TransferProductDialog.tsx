@@ -1,3 +1,6 @@
+import type { FullCusProduct } from "@autumn/shared";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -13,13 +16,9 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { FullCusProduct } from "@autumn/shared";
-
-import { useEffect, useState } from "react";
-import { useCustomerContext } from "../CustomerContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { toast } from "sonner";
 import { getBackendErr } from "@/utils/genUtils";
+import { useCustomerContext } from "../CustomerContext";
 import { useCusQuery } from "../hooks/useCusQuery";
 
 export const TransferProductDialog = ({

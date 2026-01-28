@@ -1,4 +1,4 @@
-import { Membership } from "@autumn/shared";
+import type { Membership } from "@autumn/shared";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
@@ -8,9 +8,9 @@ import { Input } from "@/components/v2/inputs/Input";
 import { useOrg } from "@/hooks/common/useOrg";
 import { authClient, useSession } from "@/lib/auth-client";
 import OrgLogoUploader from "@/views/main-sidebar/org-dropdown/manage-org/OrgLogoUploader";
+import { useMemberships } from "../org-dropdown/hooks/useMemberships";
 import { DeleteOrgPopover } from "../org-dropdown/manage-org/DeleteOrgPopover";
 import { LeaveOrgPopover } from "../org-dropdown/manage-org/LeaveOrgPopover";
-import { useMemberships } from "../org-dropdown/hooks/useMemberships";
 
 export const OrgDetails = () => {
 	const { org, mutate } = useOrg();

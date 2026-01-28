@@ -1,7 +1,7 @@
 import type { AppEnv } from "@autumn/shared";
 import { getFeatures } from "@tests/setup/v2Features.js";
 import axios from "axios";
-import { initDrizzle } from "@/db/initDrizzle.js";
+import { initDrizzle } from "@/db/initDrizzle";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
@@ -33,8 +33,7 @@ export const setupOrg = async ({
 	orgId: string;
 	env: AppEnv;
 }) => {
-	const { client, db } = initDrizzle();
-
+	const { db } = initDrizzle();
 	// Only insert v2 features
 	const v2Features = getFeatures({ orgId });
 	await FeatureService.insert({
@@ -57,6 +56,4 @@ export const setupOrg = async ({
 	});
 
 	console.log("✅ Inserted v2 features");
-
-	await client.end();
 };

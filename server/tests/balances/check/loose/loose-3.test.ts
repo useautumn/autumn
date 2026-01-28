@@ -69,7 +69,9 @@ describe(`${chalk.yellowBright("check-loose3: mixed product + loose entitlement"
 		expect(res.balance?.current_balance).toBe(600);
 
 		// When mixed sources, plan_id should be null and breakdown should exist
-		expect(res.balance?.breakdown?.find((b) => b.plan_id === null)).toBeDefined();
+		expect(
+			res.balance?.breakdown?.find((b) => b.plan_id === null),
+		).toBeDefined();
 		expect(res.balance?.breakdown).toBeDefined();
 		expect(res.balance?.breakdown).toHaveLength(2);
 	});

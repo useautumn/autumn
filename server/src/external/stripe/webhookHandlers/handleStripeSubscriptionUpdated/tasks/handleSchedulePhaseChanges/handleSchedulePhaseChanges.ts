@@ -17,13 +17,12 @@ import { releaseScheduleIfLastPhase } from "./releaseScheduleIfLastPhase";
  */
 export const handleSchedulePhaseChanges = async ({
 	ctx,
-	subscriptionUpdatedContext,
+	eventContext,
 }: {
 	ctx: StripeWebhookContext;
-	subscriptionUpdatedContext: StripeSubscriptionUpdatedContext;
+	eventContext: StripeSubscriptionUpdatedContext;
 }): Promise<void> => {
-	const { stripeSubscription, previousAttributes, nowMs } =
-		subscriptionUpdatedContext;
+	const { stripeSubscription, previousAttributes, nowMs } = eventContext;
 	const { logger } = ctx;
 
 	// Check if subscription is locked (being modified by another process)
@@ -53,21 +52,12 @@ export const handleSchedulePhaseChanges = async ({
 		`[handleSchedulePhaseChanges] sub: ${stripeSubscription.id}, now: ${formatMs(nowMs)}, currentPhase: ${currentPhaseIndex + 1}/${stripeSubscriptionSchedule.phases.length}`,
 	);
 
-	// Step 1: Activate scheduled customer products (modifies customerProducts in place)
-	await activateScheduledCustomerProducts({
-		ctx,
-		subscriptionUpdatedContext,
-	});
+	// Step 1: Activate scheduled customer products
+	await activateScheduledCustomerProducts({ ctx, eventContext });
 
 	// Step 2: Expire ended customer products (uses updated customerProducts from step 1)
-	await expireEndedCustomerProducts({
-		ctx,
-		subscriptionUpdatedContext,
-	});
+	await expireEndedCustomerProducts({ ctx, eventContext });
 
 	// Step 3: Release schedule if at last phase
-	await releaseScheduleIfLastPhase({
-		ctx,
-		subscriptionUpdatedContext,
-	});
+	await releaseScheduleIfLastPhase({ ctx, eventContext });
 };

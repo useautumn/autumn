@@ -1,18 +1,18 @@
 import { useState } from "react";
+import { toast } from "sonner";
+import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import { Button } from "@/components/ui/button";
 import {
 	Dialog,
-	DialogTrigger,
 	DialogContent,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-	DialogFooter,
+	DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { authClient } from "@/lib/auth-client";
 import { getBackendErr } from "@/utils/genUtils";
-import { toast } from "sonner";
 
 export const CreateUser = () => {
 	const [open, setOpen] = useState(false);

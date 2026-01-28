@@ -1,6 +1,5 @@
-import { notNullish } from "@/utils/genUtils.js";
-import { nullish } from "@/utils/genUtils.js";
-import { Entity } from "@autumn/shared";
+import type { Entity } from "@autumn/shared";
+import { notNullish, nullish } from "@/utils/genUtils.js";
 
 export const logEntityToAction = ({
 	entityToAction,
@@ -35,11 +34,13 @@ export const getEntityToAction = ({
 	feature: any;
 	logger: any;
 }) => {
-	let entityToAction: any = {};
+	const entityToAction: any = {};
 	let createCount = 0;
-	let replacedEntities: string[] = [];
+	const replacedEntities: string[] = [];
 	for (const inputEntity of inputEntities) {
-		let curEntity = existingEntities.find((e: any) => e.id === inputEntity.id);
+		const curEntity = existingEntities.find(
+			(e: any) => e.id === inputEntity.id,
+		);
 
 		if (curEntity && curEntity.deleted) {
 			entityToAction[inputEntity.id] = {

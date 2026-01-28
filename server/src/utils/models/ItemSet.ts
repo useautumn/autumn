@@ -1,4 +1,4 @@
-import { type Price } from "@autumn/shared";
+import type { Price } from "@autumn/shared";
 import type Stripe from "stripe";
 
 // export const ItemSetSchema = z.object({

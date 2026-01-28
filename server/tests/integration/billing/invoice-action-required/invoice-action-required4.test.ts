@@ -5,7 +5,13 @@ import {
 	ProductItemInterval,
 	RolloverExpiryDurationType,
 } from "@autumn/shared";
+import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import {
+	expectProductAttached,
+	expectProductNotAttached,
+} from "@tests/utils/expectUtils/expectProductAttached";
+import { completeInvoiceConfirmation } from "@tests/utils/stripeUtils/completeInvoiceConfirmation";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -18,12 +24,6 @@ import {
 } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
-import {
-	expectProductAttached,
-	expectProductNotAttached,
-} from "@tests/utils/expectUtils/expectProductAttached";
-import { completeInvoiceConfirmation } from "@tests/utils/stripeUtils/completeInvoiceConfirmation";
 
 const pro = constructProduct({
 	type: "pro",

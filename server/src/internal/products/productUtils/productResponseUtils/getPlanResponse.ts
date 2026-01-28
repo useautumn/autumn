@@ -12,10 +12,10 @@ import {
 	itemToBillingInterval,
 	productV2ToBasePrice,
 	productV2ToFeatureItems,
+	sortProductItems,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getFreeTrialAfterFingerprint } from "../../free-trials/freeTrialUtils.js";
-import { sortProductItems } from "../../pricecn/pricecnUtils.js";
 import { mapToProductItems } from "../../productV2Utils.js";
 import { getAttachScenario } from "./getAttachScenario.js";
 

@@ -1,3 +1,5 @@
+import { InternalError } from "@api/errors";
+import { ms } from "@utils/common";
 import type {
 	EntityBalance,
 	FullCustomerEntitlement,
@@ -67,4 +69,29 @@ export const isAllocatedCustomerEntitlement = (
 	if (!isContinuous) return false;
 
 	return true;
+};
+
+/**
+ *
+ * Only applicable for paid customer entitlements
+ */
+export const customerEntitlementShouldBeBilled = ({
+	cusEnt,
+	invoicePeriodEndMs,
+}: {
+	cusEnt: FullCusEntWithFullCusProduct;
+	invoicePeriodEndMs: number;
+}) => {
+	if (!isPaidCustomerEntitlement(cusEnt)) {
+		throw new InternalError({
+			message: `[customerEntitlementShouldReset] this function is only applicable to paid customer entitlements`,
+		});
+	}
+
+	const nextResetAt = cusEnt.next_reset_at;
+	if (!nextResetAt) return false;
+
+	const TOLERANCE_MS = ms.days(1);
+
+	return nextResetAt <= invoicePeriodEndMs + TOLERANCE_MS;
 };

@@ -1,4 +1,4 @@
-import { Organization, PriceTier } from "@autumn/shared";
+import type { Organization, PriceTier } from "@autumn/shared";
 
 export const formatCurrency = ({
 	amount,
@@ -30,11 +30,11 @@ export const formatTiers = ({
 		});
 	}
 
-	let tiersStart = formatCurrency({
+	const tiersStart = formatCurrency({
 		amount: tiers[0].amount,
 		defaultCurrency: org.default_currency!,
 	});
-	let tiersEnd = formatCurrency({
+	const tiersEnd = formatCurrency({
 		amount: tiers[tiers.length - 1].amount,
 		defaultCurrency: org.default_currency!,
 	});
@@ -50,8 +50,8 @@ export const getItemsHtml = ({
 	org: Organization;
 }) => {
 	let html = "";
-	let pricedItems = items.filter((item) => item.amount != 0);
-	let totalAmount = pricedItems.reduce((acc: number, item: any) => {
+	const pricedItems = items.filter((item) => item.amount != 0);
+	const totalAmount = pricedItems.reduce((acc: number, item: any) => {
 		return acc + item.amount;
 	}, 0);
 
@@ -74,7 +74,7 @@ export const getItemsHtml = ({
 export const itemsToHtml = ({ items }: { items: any[] }) => {
 	let html = "";
 
-	for (let item of items) {
+	for (const item of items) {
 		if (item.amount == 0) {
 			continue;
 		}

@@ -13,7 +13,6 @@ import { initCustomerPrice } from "./initCustomerPrice";
 import { initCustomerProduct } from "./initCustomerProduct";
 
 export const initFullCustomerProduct = ({
-	// biome-ignore lint/correctness/noUnusedFunctionParameters: will need it at some point
 	ctx,
 	initContext,
 	initOptions,
