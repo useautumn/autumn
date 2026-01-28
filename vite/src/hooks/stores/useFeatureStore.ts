@@ -34,7 +34,7 @@ export const useFeatureStore = create<FeatureState>((set) => ({
 	reset: () => set(initialState),
 }));
 
-export const useHasFeatureChanges = () => {
+const useHasFeatureChanges = () => {
 	const feature = useFeatureStore((s) => s.feature);
 	const baseFeature = useFeatureStore((s) => s.baseFeature);
 

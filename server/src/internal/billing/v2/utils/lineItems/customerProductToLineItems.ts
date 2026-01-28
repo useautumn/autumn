@@ -20,7 +20,7 @@ import { getBillingCycleAnchorForDirection } from "@/internal/billing/v2/utils/b
 import type { BillingContext } from "../../billingContext";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
 
-export type LineItemDirection = "charge" | "refund";
+type LineItemDirection = "charge" | "refund";
 
 /**
  * Generates line items for a customer product.

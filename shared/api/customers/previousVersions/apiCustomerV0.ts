@@ -22,7 +22,7 @@ import { ApiTrialsUsedV0Schema } from "../components/apiTrialsUsed/prevVersions/
  */
 
 // Core customer object (without products/features/invoices)
-export const ApiCustomerV0CoreSchema = z.object({
+const ApiCustomerV0CoreSchema = z.object({
 	// Internal fields
 	id: z.string().nullable(),
 	name: z.string().default(""),
@@ -51,5 +51,5 @@ export const ApiCustomerV0Schema = z.object({
 	trials_used: z.array(ApiTrialsUsedV0Schema).optional(),
 });
 
-export type ApiCustomerV0 = z.infer<typeof ApiCustomerV0Schema>;
-export type ApiCustomerV0Core = z.infer<typeof ApiCustomerV0CoreSchema>;
+type ApiCustomerV0 = z.infer<typeof ApiCustomerV0Schema>;
+type ApiCustomerV0Core = z.infer<typeof ApiCustomerV0CoreSchema>;

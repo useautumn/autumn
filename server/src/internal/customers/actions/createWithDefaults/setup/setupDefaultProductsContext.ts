@@ -9,7 +9,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { isDefaultTrialFullProduct } from "@/internal/products/productUtils/classifyProduct.js";
 
-export interface DefaultProductsContext {
+interface DefaultProductsContext {
 	fullProducts: FullProduct[];
 	paidProducts: FullProduct[];
 	hasPaidProducts: boolean;

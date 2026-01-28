@@ -33,7 +33,7 @@ export const RELEVANT_STATUSES = [
 	CusProductStatus.Scheduled,
 ];
 
-export const orgOwnsCusProduct = async ({
+const orgOwnsCusProduct = async ({
 	cusProduct,
 	orgId,
 	env,
@@ -52,7 +52,7 @@ export const orgOwnsCusProduct = async ({
 	return true;
 };
 
-export const filterByOrgAndEnv = ({
+const filterByOrgAndEnv = ({
 	cusProducts,
 	orgId,
 	env,

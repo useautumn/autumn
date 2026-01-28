@@ -13,7 +13,7 @@ import { getOrgLogoUrl } from "@/utils/orgUtils";
 const MAX_SIZE_MB = 10;
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 
-export interface OrgLogoUploaderProps {
+interface OrgLogoUploaderProps {
 	initialLogoUrl?: string;
 }
 

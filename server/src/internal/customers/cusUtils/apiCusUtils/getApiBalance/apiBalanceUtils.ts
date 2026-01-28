@@ -13,7 +13,7 @@ import {
 	toIntervalCountResponse,
 } from "@autumn/shared";
 
-export const cusEntsToNextResetAt = ({
+const cusEntsToNextResetAt = ({
 	cusEnts,
 }: {
 	cusEnts: FullCusEntWithFullCusProduct[];
@@ -30,7 +30,7 @@ export const cusEntsToNextResetAt = ({
 	return result;
 };
 
-export const cusEntsToReset = ({
+const cusEntsToReset = ({
 	cusEnts,
 	feature,
 }: {
@@ -63,7 +63,7 @@ export const cusEntsToReset = ({
 	};
 };
 
-export const cusEntsToRollovers = ({
+const cusEntsToRollovers = ({
 	cusEnts,
 	entityId,
 }: {

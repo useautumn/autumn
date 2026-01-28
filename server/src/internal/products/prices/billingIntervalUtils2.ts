@@ -42,7 +42,7 @@ const isLessThanEquals = ({ a, b }: { a: UTCDate; b: UTCDate }) => {
 	return false;
 };
 
-export const subtractIntervalFromAnchor = ({
+const subtractIntervalFromAnchor = ({
 	anchor,
 	intervalConfig,
 	now,

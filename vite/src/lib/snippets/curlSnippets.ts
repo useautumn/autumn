@@ -1,6 +1,6 @@
 import type { Snippet } from "./types";
 
-export const CURL_SNIPPETS: Record<string, Snippet> = {
+const CURL_SNIPPETS: Record<string, Snippet> = {
 	"env-setup": {
 		id: "env-setup",
 		title: "Get your API key",

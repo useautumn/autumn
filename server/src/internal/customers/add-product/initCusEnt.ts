@@ -22,7 +22,7 @@ import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { generateId, notNullish } from "@/utils/genUtils.js";
 import { initNextResetAt } from "../cusProducts/insertCusProduct/initCusEnt/initNextResetAt.js";
 
-export const initCusEntEntities = ({
+const initCusEntEntities = ({
 	entitlement,
 	entities,
 	existingCusEnt,

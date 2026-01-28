@@ -7,7 +7,7 @@ import type {
 
 import { createStripeCli } from "../connect/createStripeCli.js";
 
-export const isStripeCardDeclined = (error: any) => {
+const isStripeCardDeclined = (error: any) => {
 	return (
 		error.code === "card_declined" ||
 		error.code === "expired_card" ||

@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { create } from "zustand";
 
 // Sheet types that can be displayed
-export type CustomerBalanceSheetType = "edit-balance" | null;
+type CustomerBalanceSheetType = "edit-balance" | null;
 
 // Store state interface
 interface CustomerBalanceSheetState {
@@ -75,14 +75,14 @@ export const useCustomerBalanceSheetStore = create<CustomerBalanceSheetState>(
 );
 
 // Convenience selectors
-export const useIsCustomerBalanceSheetOpen = () =>
+const useIsCustomerBalanceSheetOpen = () =>
 	useCustomerBalanceSheetStore((s) => s.type !== null);
 
 /**
  * Hook to handle Escape key to close sheet and unfocus active elements
  * Only closes sheet if no dialog is currently open
  */
-export const useCustomerBalanceSheetEscapeHandler = () => {
+const useCustomerBalanceSheetEscapeHandler = () => {
 	const sheetType = useCustomerBalanceSheetStore((s) => s.type);
 	const closeSheet = useCustomerBalanceSheetStore((s) => s.closeSheet);
 
@@ -114,7 +114,7 @@ export const useCustomerBalanceSheetEscapeHandler = () => {
 /**
  * Hook to close sheet when component unmounts (e.g., navigating away)
  */
-export const useCustomerBalanceSheetCleanup = () => {
+const useCustomerBalanceSheetCleanup = () => {
 	const closeSheet = useCustomerBalanceSheetStore((s) => s.closeSheet);
 
 	useEffect(() => {

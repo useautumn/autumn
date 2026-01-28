@@ -15,7 +15,7 @@ import {
 	differenceInYears,
 } from "date-fns";
 
-export type IntervalFns = {
+type IntervalFns = {
 	add: (date: Date, amount: number) => Date;
 	difference: (later: Date, earlier: Date) => number;
 };

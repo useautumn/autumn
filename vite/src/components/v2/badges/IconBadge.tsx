@@ -20,7 +20,7 @@ const iconBadgeVariants = cva(
 	},
 );
 
-export interface IconBadgeProps
+interface IconBadgeProps
 	extends Omit<
 			React.ComponentProps<"span">,
 			keyof VariantProps<typeof iconBadgeVariants>
@@ -115,4 +115,4 @@ const IconBadge = React.forwardRef<HTMLSpanElement, IconBadgeProps>(
 
 IconBadge.displayName = "IconBadge";
 
-export { IconBadge, iconBadgeVariants };
+export { IconBadge,  };

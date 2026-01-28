@@ -26,7 +26,7 @@ export const parseCtxForAction = ({
 	} as Partial<ExtendedRequest>;
 };
 
-export const constructAction = ({
+const constructAction = ({
 	org,
 	env,
 	customer,

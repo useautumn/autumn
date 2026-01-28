@@ -16,7 +16,7 @@ import {
 	isOneOff,
 } from "../../productUtils";
 
-export const disableCurrentDefault = async ({
+const disableCurrentDefault = async ({
 	ctx,
 	body,
 	curProduct,

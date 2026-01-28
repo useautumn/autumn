@@ -24,7 +24,7 @@ import { createStripeInArrearPrice } from "./createStripeInArrear";
 import { createStripeOneOffTieredProduct } from "./createStripeOneOffTiered";
 import { createStripePrepaid } from "./createStripePrepaid";
 
-export const checkCurStripePrice = async ({
+const checkCurStripePrice = async ({
 	price,
 	stripeCli,
 	currency,

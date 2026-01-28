@@ -1,7 +1,7 @@
 import posthog from "posthog-js";
 
 // Toggle this to enable/disable tracking in development
-export const TRACK_IN_DEVELOPMENT = false;
+const TRACK_IN_DEVELOPMENT = false;
 
 /**
  * Wrapper function to conditionally track events based on environment
@@ -55,14 +55,14 @@ export function identifyUser({
 /**
  * Track user sign-up
  */
-export function trackSignUp() {
+function trackSignUp() {
 	trackEvent("user_signed_up");
 }
 
 /**
  * Track onboarding product creation
  */
-export function trackOnboardingProductCreation({
+function trackOnboardingProductCreation({
 	productType,
 }: {
 	productType: "free" | "paid";
@@ -75,7 +75,7 @@ export function trackOnboardingProductCreation({
 /**
  * Track onboarding feature creation
  */
-export function trackOnboardingFeatureCreation({
+function trackOnboardingFeatureCreation({
 	featureType,
 }: {
 	featureType: string;
@@ -88,20 +88,20 @@ export function trackOnboardingFeatureCreation({
 /**
  * Track onboarding feature configuration
  */
-export function trackOnboardingFeatureConfigured() {
+function trackOnboardingFeatureConfigured() {
 	trackEvent("onboarding_feature_configured");
 }
 
 /**
  * Track onboarding playground completion
  */
-export function trackOnboardingPlaygroundCompleted() {
+function trackOnboardingPlaygroundCompleted() {
 	trackEvent("onboarding_playground_completed");
 }
 
 /**
  * Track onboarding integration completion
  */
-export function trackOnboardingIntegrationCompleted() {
+function trackOnboardingIntegrationCompleted() {
 	trackEvent("onboarding_integration_completed");
 }

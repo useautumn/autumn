@@ -1,5 +1,6 @@
 import type { Reward } from "@autumn/shared";
-import { Delete } from "lucide-react";
+import { RewardType } from "@autumn/shared";
+import { ArrowSquareOut, Trash } from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
 import SmallSpinner from "@/components/general/SmallSpinner";
@@ -10,16 +11,21 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { RewardService } from "@/services/products/RewardService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
+import { getStripeCouponLink } from "@/utils/linkUtils";
 
 export const RewardRowToolbar = ({ reward }: { reward: Reward }) => {
 	const { refetch } = useRewardsQuery();
+	const { stripeAccount } = useOrgStripeQuery();
 	const axiosInstance = useAxiosInstance();
+	const env = useEnv();
 	const [deleteLoading, setDeleteLoading] = useState(false);
-	const [deleteOpen, setDeleteOpen] = useState(false);
+	const [dropdownOpen, setDropdownOpen] = useState(false);
 
 	const handleDelete = async () => {
 		setDeleteLoading(true);
@@ -35,14 +41,43 @@ export const RewardRowToolbar = ({ reward }: { reward: Reward }) => {
 		}
 
 		setDeleteLoading(false);
-		setDeleteOpen(false);
+		setDropdownOpen(false);
 	};
+
+	const handleOpenInStripe = () => {
+		if (!reward.id) return;
+		window.open(
+			getStripeCouponLink({
+				couponId: reward.id,
+				env,
+				accountId: stripeAccount?.id,
+			}),
+			"_blank",
+		);
+	};
+
+	const isDiscountReward = reward.type !== RewardType.FreeProduct;
+
 	return (
-		<DropdownMenu open={deleteOpen} onOpenChange={setDeleteOpen}>
+		<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
 			<DropdownMenuTrigger asChild>
 				<ToolbarButton />
 			</DropdownMenuTrigger>
 			<DropdownMenuContent className="text-t2" align="end">
+				{isDiscountReward && reward.id && (
+					<DropdownMenuItem
+						className="flex items-center"
+						onClick={(e) => {
+							e.stopPropagation();
+							handleOpenInStripe();
+						}}
+					>
+						<div className="flex items-center justify-between w-full gap-2">
+							Open in Stripe
+							<ArrowSquareOut size={12} className="text-t3" />
+						</div>
+					</DropdownMenuItem>
+				)}
 				<DropdownMenuItem
 					className="flex items-center"
 					onClick={async (e) => {
@@ -56,7 +91,7 @@ export const RewardRowToolbar = ({ reward }: { reward: Reward }) => {
 						{deleteLoading ? (
 							<SmallSpinner />
 						) : (
-							<Delete size={12} className="text-t3" />
+							<Trash size={12} className="text-t3" />
 						)}
 					</div>
 				</DropdownMenuItem>

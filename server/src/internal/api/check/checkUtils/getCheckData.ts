@@ -35,7 +35,7 @@ const getFeatureAndCreditSystems = ({
 	return { feature, creditSystems, allFeatures: features };
 };
 
-export const getFeatureToUse = ({
+const getFeatureToUse = ({
 	creditSystems,
 	feature,
 	apiEntity,

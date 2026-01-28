@@ -62,4 +62,3 @@ export function useLocalStorage<T>(
 	return [storedValue, setValue];
 }
 
-export default useLocalStorage;

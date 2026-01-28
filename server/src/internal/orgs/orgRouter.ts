@@ -35,6 +35,14 @@ internalOrgRouter.get("/invites", ...handleGetInvites);
 
 export const honoOrgRouter = new Hono<HonoEnv>();
 honoOrgRouter.get("", ...handleGetOrg);
+honoOrgRouter.get("/me", (c) => {
+	const { org, env } = c.get("ctx");
+	return c.json({
+		name: org.name,
+		slug: org.slug,
+		env
+	});
+});
 honoOrgRouter.patch("", ...handleUpdateOrg);
 honoOrgRouter.get("/stripe", ...handleGetStripeAccount);
 honoOrgRouter.delete("/stripe", ...handleDeleteStripe);

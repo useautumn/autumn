@@ -241,7 +241,7 @@ const OrganisationConfigurationSchema = z.object({
 	products: z.array(ProductSchema),
 });
 
-export type PricingConfig = z.infer<typeof OrganisationConfigurationSchema>;
+type PricingConfig = z.infer<typeof OrganisationConfigurationSchema>;
 
 // ============ SYSTEM PROMPT ============
 const SYSTEM_PROMPT = `You are a helpful pricing configuration assistant for Autumn, a billing and entitlements platform.

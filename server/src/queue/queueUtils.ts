@@ -133,7 +133,7 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 };
 
 // Hatchet workflow payloads
-export interface HatchetPayloads {
+interface HatchetPayloads {
 	[JobName.VerifyCacheConsistency]: VerifyCacheInput;
 }
 

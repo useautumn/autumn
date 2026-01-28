@@ -6,7 +6,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 // Create Invoice
 // ============================================
 
-export type CreateInvoiceParams = {
+type CreateInvoiceParams = {
 	stripeCli: Stripe;
 	stripeCusId: string;
 	stripeSubId?: string;
@@ -47,7 +47,7 @@ export const createStripeInvoice = async ({
 // Add Invoice Lines
 // ============================================
 
-export type AddInvoiceLinesParams = {
+type AddInvoiceLinesParams = {
 	stripeCli: Stripe;
 	invoiceId: string;
 	lines: Stripe.InvoiceAddLinesParams.Line[];
@@ -69,7 +69,7 @@ export const addStripeInvoiceLines = async ({
 // Finalize Invoice
 // ============================================
 
-export type FinalizeInvoiceParams = {
+type FinalizeInvoiceParams = {
 	stripeCli: Stripe;
 	invoiceId: string;
 	autoAdvance?: boolean;
@@ -91,7 +91,7 @@ export const finalizeStripeInvoice = async ({
 // Create Invoice Items
 // ============================================
 
-export type CreateStripeInvoiceItemsParams = {
+type CreateStripeInvoiceItemsParams = {
 	ctx: AutumnContext;
 	invoiceItems: Stripe.InvoiceItemCreateParams[];
 };

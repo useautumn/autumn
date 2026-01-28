@@ -5,8 +5,8 @@ import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { useSidebarContext } from "../SidebarContext";
 
-export const sandboxStyles = "text-t8 bg-t8/10 border-t8 ";
-export const liveStyles = "text-primary bg-primary/10 border-primary";
+const sandboxStyles = "text-t8 bg-t8/10 border-t8 ";
+const liveStyles = "text-primary bg-primary/10 border-primary";
 
 export const ExpandedEnvTrigger = ({ isHovered }: { isHovered: boolean }) => {
 	const env = useEnv();

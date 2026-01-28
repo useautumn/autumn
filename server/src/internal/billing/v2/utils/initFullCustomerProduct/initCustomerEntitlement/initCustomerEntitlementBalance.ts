@@ -10,7 +10,7 @@ import {
 } from "@autumn/shared";
 import { initCustomerEntitlementEntities } from "./initCustomerEntitlementEntities";
 
-export interface InitCustomerEntitlementBalanceResult {
+interface InitCustomerEntitlementBalanceResult {
 	balance: number;
 	entities: Record<string, EntityBalance> | null;
 }

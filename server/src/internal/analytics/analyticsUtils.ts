@@ -48,7 +48,7 @@ export async function getBillingCycleStartDate(
 	);
 }
 
-export function checkIfAllProductsAreFree(
+function checkIfAllProductsAreFree(
 	fullProducts: FullProduct[],
 ): boolean {
 	return fullProducts.every((product: FullProduct) => {
@@ -58,11 +58,11 @@ export function checkIfAllProductsAreFree(
 	});
 }
 
-export function formatDateToString(date: Date): string {
+function formatDateToString(date: Date): string {
 	return date.toISOString().replace("T", " ").split(".")[0];
 }
 
-export function getDateRangesFromSubscriptions(
+function getDateRangesFromSubscriptions(
 	customerProductsFiltered: FullCusProduct[],
 	subscriptions: Subscription[],
 ): { startDates: string[]; endDates: string[]; createdDates: string[] } {
@@ -98,7 +98,7 @@ export function getDateRangesFromSubscriptions(
 	return { startDates, endDates, createdDates };
 }
 
-export function getDateRangesFromEntitlements(
+function getDateRangesFromEntitlements(
 	customerProducts?: FullCusProduct[],
 ): { startDates: string[]; endDates: string[]; createdDates: string[] } {
 	const startDates: string[] = [];
@@ -143,7 +143,7 @@ export function getDateRangesFromEntitlements(
 	return { startDates, endDates, createdDates };
 }
 
-export function calculateBillingCycleResult(
+function calculateBillingCycleResult(
 	startDates: string[],
 	endDates: string[],
 	createdDates: string[],
@@ -190,7 +190,7 @@ export function calculateBillingCycleResult(
 	};
 }
 
-export function calculateStartDateFromInterval(
+function calculateStartDateFromInterval(
 	interval: EntInterval | null | undefined,
 	nextResetAt: number | null | undefined,
 	createdAt: number,

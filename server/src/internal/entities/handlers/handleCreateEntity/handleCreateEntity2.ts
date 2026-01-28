@@ -17,7 +17,7 @@ import { constructEntity } from "../../entityUtils/entityUtils.js";
 import { createEntityForCusProduct } from "./createEntityForCusProduct.js";
 import { validateAndGetInputEntities } from "./getInputEntities.js";
 
-export const createEntities = async ({
+const createEntities = async ({
 	ctx,
 	logger,
 	customerId,

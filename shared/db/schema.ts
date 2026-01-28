@@ -69,7 +69,12 @@ import {
 import {
 	account,
 	invitation,
+	jwks,
 	member,
+	oauthAccessToken,
+	oauthClient,
+	oauthConsent,
+	oauthRefreshToken,
 	session,
 	user,
 	verification,
@@ -112,6 +117,12 @@ export {
 	verification,
 	member,
 	invitation,
+	// OAuth Provider
+	jwks,
+	oauthClient,
+	oauthAccessToken,
+	oauthRefreshToken,
+	oauthConsent,
 	// Relations
 	organizationsRelations,
 	entitlementsRelations,

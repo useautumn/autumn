@@ -35,7 +35,7 @@ import {
 	isPriceItem,
 } from "./getItemType.js";
 
-export const getResetUsage = ({
+const getResetUsage = ({
 	item,
 	feature,
 }: {
@@ -55,7 +55,7 @@ export const getResetUsage = ({
 	return item.reset_usage_when_enabled;
 };
 // ITEM TO PRICE AND ENTITLEMENT
-export const toPrice = ({
+const toPrice = ({
 	item,
 	orgId,
 	internalProductId,
@@ -161,7 +161,7 @@ export const toFeature = ({
 	return { price: null, ent };
 };
 
-export const toFeatureAndPrice = ({
+const toFeatureAndPrice = ({
 	item,
 	orgId,
 	internalFeatureId,

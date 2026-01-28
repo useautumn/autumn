@@ -15,7 +15,7 @@ export function SheetContainer({ children, className }: SheetContainerProps) {
 
 // Re-export shared components for backwards compatibility
 export {
-	SheetFooter,
+	
 	SheetHeader,
 	SheetSection,
 } from "./SharedSheetComponents";

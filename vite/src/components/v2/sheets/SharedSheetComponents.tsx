@@ -157,7 +157,7 @@ export function SheetFooter({ children, className }: SheetFooterProps) {
 	);
 }
 
-export function SheetBreadcrumbs({
+function SheetBreadcrumbs({
 	breadcrumbs,
 	title,
 	itemId,

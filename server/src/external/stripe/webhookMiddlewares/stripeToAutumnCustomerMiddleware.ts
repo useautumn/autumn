@@ -6,7 +6,7 @@ import type {
 	StripeWebhookHonoEnv,
 } from "./stripeWebhookContext";
 
-export const getAutumnCustomerId = async ({
+const getAutumnCustomerId = async ({
 	ctx,
 }: {
 	ctx: StripeWebhookContext;

@@ -5,7 +5,7 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 
-export const creditSystemContainsFeature = ({
+const creditSystemContainsFeature = ({
 	creditSystem,
 	meteredFeatureId,
 }: {

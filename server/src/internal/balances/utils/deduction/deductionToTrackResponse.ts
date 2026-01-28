@@ -19,7 +19,7 @@ type TrackBalanceResponse = {
  * Convert updates keyed by cusEntId to actualDeductions keyed by featureId.
  * Looks up each cusEntId in fullCus to determine its feature.
  */
-export const computeActualDeductions = ({
+const computeActualDeductions = ({
 	fullCus,
 	updates,
 }: {
