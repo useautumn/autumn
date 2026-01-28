@@ -1,3 +1,4 @@
+import { loadLocalEnv } from "@/utils/envUtils";
 import { execSync } from "node:child_process";
 import { loadLocalEnv } from "@/utils/envUtils";
 

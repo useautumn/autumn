@@ -106,3 +106,44 @@ test.concurrent(`${chalk.yellowBright("create: null ID no email (error)")}`, asy
 		},
 	});
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SEND EMAIL RECEIPTS TESTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.concurrent(`${chalk.yellowBright("create: with send_email_receipts true")}`, async () => {
+	const customerId = "create-send-email-receipts-true";
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [s.deleteCustomer({ customerId })],
+		actions: [],
+	});
+
+	const data = await autumnV1.customers.create({
+		id: customerId,
+		name: "Email Receipts Customer",
+		email: `${customerId}@example.com`,
+		send_email_receipts: true,
+	});
+
+	expect(data.id).toBe(customerId);
+	expect(data.send_email_receipts).toBe(true);
+});
+
+test.concurrent(`${chalk.yellowBright("create: send_email_receipts defaults to false")}`, async () => {
+	const customerId = "create-send-email-receipts-default";
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [s.deleteCustomer({ customerId })],
+		actions: [],
+	});
+
+	const data = await autumnV1.customers.create({
+		id: customerId,
+		name: "No Email Receipts Customer",
+		email: `${customerId}@example.com`,
+	});
+
+	expect(data.id).toBe(customerId);
+	expect(data.send_email_receipts).toBe(false);
+});

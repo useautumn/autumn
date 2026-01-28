@@ -100,6 +100,7 @@ export const V1_2_CustomerChange = defineVersionChange({
 			stripe_id: input.stripe_id,
 			env: input.env,
 			metadata: input.metadata,
+			send_email_receipts: input.send_email_receipts,
 			products: v3CusProducts,
 			features: v3_features,
 
