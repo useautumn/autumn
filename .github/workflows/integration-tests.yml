@@ -118,7 +118,7 @@ jobs:
       - name: Cleanup Stripe webhook
         env:
           SERVER_URL: ${{ inputs.preview_url }}
-        run: bun scripts/preview/cleanupPreviewWebhook.ts
+        run: bun --cwd scripts preview/cleanupPreviewWebhook.ts
 
   report-status:
     needs: [test-group-1, test-group-2]

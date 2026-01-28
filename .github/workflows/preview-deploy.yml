@@ -34,7 +34,7 @@ jobs:
         run: bun run db:push
 
       - name: Setup test organization
-        run: bun scripts/preview/setupTestOrgCI.ts
+        run: bun --cwd scripts preview/setupTestOrgCI.ts
 
       - name: Deploy to Railway Preview
         id: deploy
@@ -49,7 +49,7 @@ jobs:
       - name: Setup Stripe webhook for preview URL
         env:
           SERVER_URL: https://${{ steps.deploy.outputs.service_domain }}
-        run: bun scripts/preview/setupPreviewWebhook.ts
+        run: bun --cwd scripts preview/setupPreviewWebhook.ts
 
       - name: Wait for deployment to be healthy
         run: |
