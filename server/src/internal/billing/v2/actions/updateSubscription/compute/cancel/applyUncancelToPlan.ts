@@ -1,6 +1,6 @@
 import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/types";
 import type { AutumnBillingPlan } from "@/internal/billing/v2/types";
-import { computeCustomerProductToDelete } from "@/internal/billing/v2/updateSubscription/compute/cancel/computeCustomerProductToDelete";
+import { computeCustomerProductToDelete } from "@/internal/billing/v2/actions/updateSubscription/compute/cancel/computeCustomerProductToDelete";
 
 /**
  * Applies uncancel updates to an existing billing plan.

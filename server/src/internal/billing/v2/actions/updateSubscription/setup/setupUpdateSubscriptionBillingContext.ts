@@ -9,9 +9,9 @@ import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoic
 
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupTrialContext } from "@/internal/billing/v2/setup/setupTrialContext";
-import { setupDefaultProductContext } from "@/internal/billing/v2/updateSubscription/setup/setupDefaultProductContext";
-import { setupUpdateSubscriptionProductContext } from "@/internal/billing/v2/updateSubscription/setup/setupUpdateSubscriptionProductContext";
-import type { UpdateSubscriptionBillingContext } from "../../types";
+import { setupDefaultProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupDefaultProductContext";
+import { setupUpdateSubscriptionProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionProductContext";
+import type { UpdateSubscriptionBillingContext } from "../../../types";
 
 /**
  * Fetch the context for updating a subscription

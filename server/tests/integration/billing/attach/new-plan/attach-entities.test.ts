@@ -67,7 +67,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: create entity, attach pro to en
 
 	await expectProductActive({
 		customer: entity,
-		productId: `${pro.id}_${customerId}`,
+		productId: pro.id,
 	});
 
 	// Verify entity has messages feature
@@ -83,9 +83,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: create entity, attach pro to en
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Customer should not have products array with this product
-	const customerProduct = customer.products?.find(
-		(p) => p.id === `${pro.id}_${customerId}`,
-	);
+	const customerProduct = customer.products?.find((p) => p.id === pro.id);
 	expect(customerProduct).toBeUndefined();
 });
 
@@ -137,11 +135,11 @@ test.concurrent(`${chalk.yellowBright("new-plan: create 2 entities, attach pro t
 	// Both entities should have the product
 	await expectProductActive({
 		customer: entity1,
-		productId: `${pro.id}_${customerId}`,
+		productId: pro.id,
 	});
 	await expectProductActive({
 		customer: entity2,
-		productId: `${pro.id}_${customerId}`,
+		productId: pro.id,
 	});
 
 	// Both should have independent balances
@@ -234,7 +232,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro to entity 1, advance
 	// Attach pro to entity 2 mid-cycle
 	await autumnV1.billing.attach({
 		customer_id: customerId,
-		product_id: `${pro.id}_${customerId}`,
+		product_id: pro.id,
 		entity_id: entities[1].id,
 	});
 
@@ -251,11 +249,11 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro to entity 1, advance
 	// Both should have the product
 	await expectProductActive({
 		customer: entity1,
-		productId: `${pro.id}_${customerId}`,
+		productId: pro.id,
 	});
 	await expectProductActive({
 		customer: entity2,
-		productId: `${pro.id}_${customerId}`,
+		productId: pro.id,
 	});
 
 	// Get customer to check invoices
@@ -314,7 +312,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro annual to entity")}`
 
 	await expectProductActive({
 		customer: entity,
-		productId: `${proAnnual.id}_${customerId}`,
+		productId: proAnnual.id,
 	});
 
 	// Verify messages feature
@@ -380,11 +378,11 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro to customer, then pr
 	// Both should have the product
 	await expectProductActive({
 		customer,
-		productId: `${pro.id}_${customerId}`,
+		productId: pro.id,
 	});
 	await expectProductActive({
 		customer: entity,
-		productId: `${pro.id}_${customerId}`,
+		productId: pro.id,
 	});
 
 	// Both should have independent balances
@@ -448,11 +446,11 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach free to customer, then f
 	// Both should have the product
 	await expectProductActive({
 		customer,
-		productId: `${free.id}_${customerId}`,
+		productId: free.id,
 	});
 	await expectProductActive({
 		customer: entity,
-		productId: `${free.id}_${customerId}`,
+		productId: free.id,
 	});
 
 	// Both should have independent balances

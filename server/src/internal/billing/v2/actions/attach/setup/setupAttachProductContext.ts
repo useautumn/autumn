@@ -1,7 +1,7 @@
 import type { AttachParamsV0 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { ProductService } from "@/internal/products/ProductService";
-import { setupCustomFullProduct } from "../../setup/setupCustomFullProduct";
+import { setupCustomFullProduct } from "../../../setup/setupCustomFullProduct";
 
 /**
  * Loads the product being attached, handling version and custom items params.

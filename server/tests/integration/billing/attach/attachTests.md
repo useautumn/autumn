@@ -92,6 +92,17 @@
     s.billing.attach({ productId: pro.id, isAddOn: true });
     ```
 
+13. **Product IDs in expectations - just use `product.id`**
+    - `initScenario` already prefixes product IDs with `customerId`
+    - Don't double-prefix in expectations
+    ```typescript
+    // ✅ GOOD - just use product.id
+    expectProductActive({ customer, productId: pro.id });
+    
+    // ❌ BAD - double prefix
+    expectProductActive({ customer, productId: `${pro.id}_${customerId}` });
+    ```
+
 13. **Scheduled-switch tests must advance test clock with `advanceToNextInvoice()`**
     - After scheduling a downgrade, advance the test clock to verify:
       - A. Next cycle invoice is correct

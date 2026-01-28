@@ -28,6 +28,22 @@ s.attach({ productId: pro.id })
 ```
 Products are prefixed by `initScenario`. Always use `product.id`.
 
+### Product IDs in Expectations - Just Use `product.id`
+```typescript
+// WRONG - Double prefix (initScenario already adds customerId prefix)
+expectProductActive({
+  customer,
+  productId: `${pro.id}_${customerId}`,  // Will fail!
+});
+
+// RIGHT - Just use product.id directly
+expectProductActive({
+  customer,
+  productId: pro.id,
+});
+```
+`initScenario` already prefixes product IDs with `customerId`. When verifying products, just use `product.id` directly.
+
 ### Multiple Products Need Unique IDs
 ```typescript
 // WRONG - Same default ID
