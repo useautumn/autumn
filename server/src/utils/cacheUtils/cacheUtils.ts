@@ -1,5 +1,5 @@
-import type { Redis } from "ioredis";
 import { trace } from "@opentelemetry/api";
+import type { Redis } from "ioredis";
 import { redis } from "@/external/redis/initRedis.js";
 import { logger } from "../../external/logtail/logtailUtils.js";
 

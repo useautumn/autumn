@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
+import { Table } from "@/components/general/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/v2/buttons/Button";
-import { Table } from "@/components/general/table";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import { type AdminOrg, createAdminOrgColumns } from "./AdminOrgColumns";
 import { useAdminTable } from "./hooks/useAdminTable";

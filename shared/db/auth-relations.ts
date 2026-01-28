@@ -91,27 +91,24 @@ const oauthRefreshTokenRelations = relations(
 	}),
 );
 
-const oauthAccessTokenRelations = relations(
-	oauthAccessToken,
-	({ one }) => ({
-		oauthClient: one(oauthClient, {
-			fields: [oauthAccessToken.clientId],
-			references: [oauthClient.clientId],
-		}),
-		session: one(session, {
-			fields: [oauthAccessToken.sessionId],
-			references: [session.id],
-		}),
-		user: one(user, {
-			fields: [oauthAccessToken.userId],
-			references: [user.id],
-		}),
-		oauthRefreshToken: one(oauthRefreshToken, {
-			fields: [oauthAccessToken.refreshId],
-			references: [oauthRefreshToken.id],
-		}),
+const oauthAccessTokenRelations = relations(oauthAccessToken, ({ one }) => ({
+	oauthClient: one(oauthClient, {
+		fields: [oauthAccessToken.clientId],
+		references: [oauthClient.clientId],
 	}),
-);
+	session: one(session, {
+		fields: [oauthAccessToken.sessionId],
+		references: [session.id],
+	}),
+	user: one(user, {
+		fields: [oauthAccessToken.userId],
+		references: [user.id],
+	}),
+	oauthRefreshToken: one(oauthRefreshToken, {
+		fields: [oauthAccessToken.refreshId],
+		references: [oauthRefreshToken.id],
+	}),
+}));
 
 const oauthConsentRelations = relations(oauthConsent, ({ one }) => ({
 	oauthClient: one(oauthClient, {

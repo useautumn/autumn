@@ -20,8 +20,9 @@ test.concurrent(`${chalk.yellowBright("prepaid-users: attach 50 users then track
 		items: [prepaidUsersItem],
 	});
 
-	const { customerId, autumnV2 } = await initScenario({
-		customerId: "temp-prepaid-users-concurrent",
+	const customerId = "prepaid-allocated-users-concurrent";
+	const { autumnV2 } = await initScenario({
+		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro] }),
