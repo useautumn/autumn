@@ -13,7 +13,8 @@ export const adminAuthMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	});
 
 	// Check if user has admin role
-	const isAdmin = data?.user?.role === "admin";
+	const isAdmin =
+		data?.user?.role === "admin" || !!data?.session?.impersonatedBy;
 
 	if (!isAdmin) {
 		throw new RecaseError({
