@@ -55,11 +55,9 @@ fi
 # Format: "boundary_date,hours_per_chunk"
 # From each boundary until the next, use that chunk size
 BOUNDARIES=(
-    "2025-10-01 00:00:00,72"   # Oct 1: 3-day (72 hour) chunks
-    "2025-12-03 00:00:00,24"   # Dec 3: 1-day (24 hour) chunks  
-    "2025-12-12 00:00:00,3"    # Dec 12: 3-hour chunks (high volume)
+    "2026-01-21 00:00:00,24"   # Jan 21: 1-day (24 hour) chunks - last 7 days
 )
-END_DATE="2026-01-26 00:00:00"
+END_DATE="2026-01-28 00:00:00"
 
 # Function to add hours to a date (macOS compatible)
 add_hours() {
@@ -108,6 +106,35 @@ get_chunk_hours() {
     done
     
     echo $chunk_hours
+}
+
+# Wait for any running copy jobs to complete before starting a new one
+wait_for_copy_jobs() {
+    local max_attempts=60  # 5 minutes max wait (60 * 5s)
+    local attempt=0
+    
+    while [[ $attempt -lt $max_attempts ]]; do
+        # Check for waiting/working copy jobs using the status filter
+        local waiting_jobs
+        local working_jobs
+        waiting_jobs=$(tb --cloud job ls --status waiting --kind copy 2>/dev/null | grep -c "^id:" 2>/dev/null) || waiting_jobs=0
+        working_jobs=$(tb --cloud job ls --status working --kind copy 2>/dev/null | grep -c "^id:" 2>/dev/null) || working_jobs=0
+        local total_active=$((waiting_jobs + working_jobs))
+        
+        if [[ "$total_active" -eq 0 ]]; then
+            return 0
+        fi
+        
+        if [[ $attempt -eq 0 ]]; then
+            echo "  Waiting for $total_active existing copy job(s) to complete..."
+        fi
+        
+        sleep 5
+        attempt=$((attempt + 1))
+    done
+    
+    echo "Error: Timed out waiting for existing copy jobs to complete"
+    exit 1
 }
 
 # Generate all chunks
@@ -170,6 +197,9 @@ for i in "${!CHUNKS[@]}"; do
     IFS=',' read -r CHUNK_START CHUNK_END <<< "${CHUNKS[$i]}"
     
     echo "=== Chunk $CHUNK_NUM/$TOTAL_CHUNKS: $CHUNK_START -> $CHUNK_END ==="
+    
+    # Wait for any existing copy jobs to complete first
+    wait_for_copy_jobs
     
     START_TIME=$(date +%s)
     

@@ -1,0 +1,34 @@
+DESCRIPTION >
+    Experimental: Aggregates events with optional property grouping using JSON Type MV.
+    Supports multi-property GROUP BY via properties.field::String syntax.
+
+TOKEN "aggregate_exp_one_read" READ
+
+NODE endpoint
+TYPE endpoint
+SQL >
+    %
+    SELECT
+        {% if String(bin_size, 'day') == 'hour' %}
+        formatDateTime(hour, '%F %T') as period,
+        {% elif String(bin_size, 'day') == 'month' %}
+        formatDateTime(toStartOfMonth(hour, {{ String(timezone, 'UTC') }}), '%F %T') as period,
+        {% else %}
+        formatDateTime(toStartOfDay(hour, {{ String(timezone, 'UTC') }}), '%F %T') as period,
+        {% end %}
+        event_name,
+        {% if defined(group_by) %}
+        properties.{{ String(group_by) }}::String as group_value,
+        dynamicType(properties.{{ String(group_by) }}) as group_value_type,
+        {% end %}
+        sum(total_value) as total_value,
+        sum(event_count) as event_count
+    FROM events_hourly_exp_json_mv
+    WHERE
+        org_id = {{ String(org_id, '') }}
+        AND customer_id = {{ String(customer_id, '') }}
+        AND event_name IN {{ Array(event_names, 'String', default='[]') }}
+        AND hour >= toDateTime({{ String(start_date, '2024-01-01 00:00:00') }})
+        AND hour <= toDateTime({{ String(end_date, '2024-12-31 23:59:59') }})
+    GROUP BY period, event_name {% if defined(group_by) %}, group_value {% end %}
+    ORDER BY period, event_name
