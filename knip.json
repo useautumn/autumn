@@ -14,7 +14,7 @@
 				"src/utils/workerUtils/**",
 				"src/db/**"
 			],
-			"ignoreDependencies": ["@react-email/components"]
+			"ignoreDependencies": ["@react-email/components", "@axiomhq/pino"]
 		},
 		"shared": {
 			"entry": ["index.ts"],
