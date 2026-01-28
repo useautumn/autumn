@@ -1,11 +1,12 @@
+import { RefundBehaviorSchema } from "@api/billing/common/refundBehavior";
 import { CreateFreeTrialSchema } from "@models/productModels/freeTrialModels/freeTrialModels";
 import { nullish } from "@utils/utils";
 import { z } from "zod/v4";
 import { FeatureOptionsSchema } from "../../../models/cusProductModels/cusProductModels";
 import { ProductItemSchema } from "../../../models/productV2Models/productItemModels/productItemModels";
-import { CancelActionSchema } from "../../common/cancelMode";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingParamsBaseSchema } from "../common/billingParamsBase";
+import { CancelActionSchema } from "../common/cancelAction";
 
 export const ExtUpdateSubscriptionV0ParamsSchema =
 	BillingParamsBaseSchema.extend({
@@ -42,6 +43,7 @@ export const ExtUpdateSubscriptionV0ParamsSchema =
 export const UpdateSubscriptionV0ParamsSchema =
 	ExtUpdateSubscriptionV0ParamsSchema.extend({
 		customer_product_id: z.string().optional(),
+		refund_behavior: RefundBehaviorSchema.optional(),
 	})
 		.refine(
 			(data) => {

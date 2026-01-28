@@ -1,11 +1,18 @@
-import { AttachV0ParamsSchema } from "@autumn/shared";
+import { AttachParamsV0Schema, RecaseError } from "@autumn/shared";
+import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
+import { executeBillingPlan } from "../execute/executeBillingPlan";
+import { evaluateStripeBillingPlan } from "../providers/stripe/actionBuilders/evaluateStripeBillingPlan";
+import { logStripeBillingPlan } from "../providers/stripe/logs/logStripeBillingPlan";
+import { logStripeBillingResult } from "../providers/stripe/logs/logStripeBillingResult";
+import { billingResultToResponse } from "../utils/billingResult/billingResultToResponse";
 import { computeAttachPlan } from "./compute/computeAttachPlan";
+import { handleAttachV2Errors } from "./errors/handleAttachV2Errors";
 import { logAttachContext } from "./logs/logAttachContext";
 import { setupAttachBillingContext } from "./setup/setupAttachBillingContext";
 
 export const handleAttachV2 = createRoute({
-	body: AttachV0ParamsSchema,
+	body: AttachParamsV0Schema,
 	lock:
 		process.env.NODE_ENV !== "development"
 			? {
@@ -35,28 +42,56 @@ export const handleAttachV2 = createRoute({
 		logAttachContext({ ctx, billingContext });
 
 		// 2. Compute
-		const autumnPlan = computeAttachPlan({
+		const autumnBillingPlan = computeAttachPlan({
 			ctx,
 			attachBillingContext: billingContext,
 		});
 
-		ctx.logger.info("Attach V2 autumn plan:", {
-			insertCustomerProducts: autumnPlan.insertCustomerProducts.map((p) => ({
-				id: p.id,
-				productId: p.product.id,
-				status: p.status,
-				startsAt: p.starts_at,
-			})),
-			updateCustomerProduct: autumnPlan.updateCustomerProduct
-				? {
-						id: autumnPlan.updateCustomerProduct.customerProduct.id,
-						updates: autumnPlan.updateCustomerProduct.updates,
-					}
-				: undefined,
-			deleteCustomerProduct: autumnPlan.deleteCustomerProduct?.id,
-			lineItemsCount: autumnPlan.lineItems?.length ?? 0,
+		logAutumnBillingPlan({ ctx, plan: autumnBillingPlan, billingContext });
+
+		// 3. Errors
+		handleAttachV2Errors({
+			ctx,
+			billingContext,
+			autumnBillingPlan,
+			params: body,
 		});
 
-		return c.json({ customer_id: body.customer_id }, 200);
+		// 4. Handle checkout mode (redirect to Stripe checkout)
+		if (billingContext.checkoutMode !== null) {
+			throw new RecaseError({
+				message: `Checkout flow not yet implemented for attach v2 (checkoutMode: ${billingContext.checkoutMode}). Please add a payment method to the customer first.`,
+				statusCode: 400,
+			});
+		}
+
+		// 5. Evaluate Stripe billing plan
+		const stripeBillingPlan = await evaluateStripeBillingPlan({
+			ctx,
+			billingContext,
+			autumnBillingPlan,
+		});
+
+		logStripeBillingPlan({ ctx, stripeBillingPlan, billingContext });
+
+		// 6. Execute billing plan
+		const billingResult = await executeBillingPlan({
+			ctx,
+			billingContext,
+			billingPlan: {
+				autumn: autumnBillingPlan,
+				stripe: stripeBillingPlan,
+			},
+		});
+
+		logStripeBillingResult({ ctx, result: billingResult.stripe });
+
+		// 7. Format response
+		const response = billingResultToResponse({
+			billingContext,
+			billingResult,
+		});
+
+		return c.json(response, 200);
 	},
 });

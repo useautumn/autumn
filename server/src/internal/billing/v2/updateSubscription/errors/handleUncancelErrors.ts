@@ -1,5 +1,5 @@
 import { CusProductStatus, RecaseError } from "@autumn/shared";
-import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
+import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/types";
 
 /**
  * Validates uncancel operation and throws appropriate errors.

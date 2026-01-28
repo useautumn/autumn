@@ -6,8 +6,8 @@ import {
 	findMainScheduledCustomerProductByGroup,
 	isOneOffProduct,
 	isProductUpgrade,
-	type PlanTiming,
 } from "@autumn/shared";
+import type { PlanTiming } from "@/internal/billing/v2/types";
 
 /**
  * Sets up the transition context for attaching a product.
@@ -33,18 +33,14 @@ export const setupAttachTransitionContext = ({
 		};
 	}
 
-	const internalEntityId = fullCustomer.entity?.internal_id;
-
 	const currentCustomerProduct = findMainActiveCustomerProductByGroup({
 		fullCus: fullCustomer,
 		productGroup: attachProduct.group,
-		internalEntityId,
 	});
 
 	const scheduledCustomerProduct = findMainScheduledCustomerProductByGroup({
 		fullCustomer,
 		productGroup: attachProduct.group,
-		internalEntityId,
 	});
 
 	// Compute planTiming (upgrade = immediate, downgrade = end_of_cycle)

@@ -5,8 +5,8 @@ import {
 	RecaseError,
 	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
-import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
-import type { AutumnBillingPlan } from "@/internal/billing/v2/types/autumnBillingPlan";
+import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/types";
+import type { AutumnBillingPlan } from "@/internal/billing/v2/types";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
 
 export const handleBillingBehaviorErrors = ({

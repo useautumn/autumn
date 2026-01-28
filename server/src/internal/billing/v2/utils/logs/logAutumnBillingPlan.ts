@@ -1,17 +1,19 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
-import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan";
+import type {
+	AutumnBillingPlan,
+	BillingContext,
+} from "@/internal/billing/v2/types";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 
-export const logUpdateSubscriptionPlan = ({
+export const logAutumnBillingPlan = ({
 	ctx,
 	plan,
 	billingContext,
 }: {
 	ctx: AutumnContext;
 	plan: AutumnBillingPlan;
-	billingContext: UpdateSubscriptionBillingContext;
+	billingContext: BillingContext;
 }) => {
 	const { isTrialing, willBeTrialing } = getTrialStateTransition({
 		billingContext,

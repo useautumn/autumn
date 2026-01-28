@@ -15,8 +15,10 @@ import {
 	isCustomerProductScheduled,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
-import type { AutumnBillingPlan } from "@/internal/billing/v2/types/autumnBillingPlan.js";
+import type {
+	AutumnBillingPlan,
+	BillingContext,
+} from "@/internal/billing/v2/types";
 import type { CreateCustomerContext } from "@/internal/customers/actions/createWithDefaults/createCustomerContext";
 import { workflows } from "@/queue/workflows.js";
 

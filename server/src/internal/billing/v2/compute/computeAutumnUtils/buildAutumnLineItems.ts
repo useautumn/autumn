@@ -1,5 +1,5 @@
 import type { FullCusProduct, LineItem } from "@autumn/shared";
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
+import type { BillingContext } from "@/internal/billing/v2/types";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
 import { customerProductToLineItems } from "../../utils/lineItems/customerProductToLineItems";
 import { logBuildAutumnLineItems } from "./logBuildAutumnLineItems";

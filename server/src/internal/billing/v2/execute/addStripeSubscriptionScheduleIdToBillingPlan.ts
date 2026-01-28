@@ -2,7 +2,7 @@ import { CusProductStatus, cp } from "@autumn/shared";
 import type {
 	AutumnBillingPlan,
 	StripeBillingPlan,
-} from "@/internal/billing/v2/types/billingPlan";
+} from "@/internal/billing/v2/types";
 
 export const addStripeSubscriptionScheduleIdToBillingPlan = ({
 	autumnBillingPlan,

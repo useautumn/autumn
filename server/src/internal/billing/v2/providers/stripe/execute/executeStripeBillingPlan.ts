@@ -1,13 +1,13 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
+import type { BillingContext } from "@/internal/billing/v2/types";
 import { addStripeSubscriptionScheduleIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionScheduleIdToBillingPlan";
 import { executeStripeInvoiceAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeInvoiceAction";
 import { executeStripeSubscriptionAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionAction";
 import { executeStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionScheduleAction";
 import { createStripeInvoiceItems } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
-import { StripeBillingStage } from "@/internal/billing/v2/types/autumnBillingPlan";
-import type { BillingPlan } from "@/internal/billing/v2/types/billingPlan";
-import type { StripeBillingPlanResult } from "@/internal/billing/v2/types/billingResult";
+import { StripeBillingStage } from "@/internal/billing/v2/types";
+import type { BillingPlan } from "@/internal/billing/v2/types";
+import type { StripeBillingPlanResult } from "@/internal/billing/v2/types";
 
 export const executeStripeBillingPlan = async ({
 	ctx,

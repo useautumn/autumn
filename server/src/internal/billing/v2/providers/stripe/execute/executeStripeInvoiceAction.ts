@@ -1,14 +1,14 @@
 import { ms } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
+import type { BillingContext } from "@/internal/billing/v2/types";
 import { shouldDeferBillingPlan } from "@/internal/billing/v2/providers/stripe/utils/common/shouldDeferBillingPlan";
 import { createInvoiceForBilling } from "@/internal/billing/v2/providers/stripe/utils/invoices/createInvoiceForBilling";
-import { StripeBillingStage } from "@/internal/billing/v2/types/autumnBillingPlan";
+import { StripeBillingStage } from "@/internal/billing/v2/types";
 import type {
 	BillingPlan,
 	StripeInvoiceMetadata,
-} from "@/internal/billing/v2/types/billingPlan";
-import type { StripeBillingPlanResult } from "@/internal/billing/v2/types/billingResult";
+} from "@/internal/billing/v2/types";
+import type { StripeBillingPlanResult } from "@/internal/billing/v2/types";
 import { isDeferredInvoiceMode } from "@/internal/billing/v2/utils/billingContext/isDeferredInvoiceMode";
 import { upsertInvoiceFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertInvoiceFromBilling";
 import { insertMetadataFromBillingPlan } from "@/internal/metadata/utils/insertMetadataFromBillingPlan";

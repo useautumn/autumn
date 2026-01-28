@@ -1,7 +1,9 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
-import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan";
-import type { AttachBillingContext } from "../types/attachBillingContext";
+import type {
+	AttachBillingContext,
+	AutumnBillingPlan,
+} from "@/internal/billing/v2/types";
 import { computeAttachNewCustomerProduct } from "./computeAttachNewCustomerProduct";
 import { computeAttachTransitionUpdates } from "./computeAttachTransitionUpdates";
 import { finalizeAttachPlan } from "./finalizeAttachPlan";

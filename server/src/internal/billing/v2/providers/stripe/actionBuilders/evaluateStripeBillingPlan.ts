@@ -2,7 +2,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/actionBuilders/buildStripeSubscriptionScheduleAction";
 import { shouldCreateManualStripeInvoice } from "@/internal/billing/v2/providers/stripe/utils/invoices/shouldCreateManualStripeInvoice";
 import { autumnBillingPlanToFinalFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer";
-import type { BillingContext } from "../../../billingContext";
+import type { BillingContext } from "../../../types";
 import { buildStripeInvoiceAction } from "../../../providers/stripe/actionBuilders/buildStripeInvoiceAction";
 import { buildStripeInvoiceItemsAction } from "../../../providers/stripe/actionBuilders/buildStripeInvoiceItemsAction";
 import { buildStripeSubscriptionAction } from "../../../providers/stripe/actionBuilders/buildStripeSubscriptionAction";
@@ -11,7 +11,7 @@ import type {
 	StripeBillingPlan,
 	StripeInvoiceAction,
 	StripeInvoiceItemsAction,
-} from "../../../types/billingPlan";
+} from "../../../types";
 import { initStripeResourcesForBillingPlan } from "../utils/common/initStripeResourcesForProducts";
 
 export const evaluateStripeBillingPlan = async ({

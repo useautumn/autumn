@@ -1,7 +1,7 @@
 import type { FullCustomer } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import type { AutumnBillingPlan } from "@/internal/billing/v2/types/autumnBillingPlan.js";
+import type { AutumnBillingPlan } from "@/internal/billing/v2/types";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { initSubscriptionFromStripe } from "@/internal/subscriptions/utils/initSubscriptionFromStripe.js";
 import type { CreateCustomerContext } from "./createCustomerContext.js";

@@ -1,6 +1,6 @@
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
+import type { BillingContext } from "@/internal/billing/v2/types";
 import { willStripeSubscriptionUpdateCreateInvoice } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/willStripeSubscriptionUpdateCreateInvoice";
-import type { StripeSubscriptionAction } from "@/internal/billing/v2/types/billingPlan";
+import type { StripeSubscriptionAction } from "@/internal/billing/v2/types";
 
 export const shouldCreateManualStripeInvoice = ({
 	billingContext,

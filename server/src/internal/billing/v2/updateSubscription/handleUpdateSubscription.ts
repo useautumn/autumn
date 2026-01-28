@@ -4,7 +4,7 @@ import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/l
 import { computeUpdateSubscriptionPlan } from "@/internal/billing/v2/updateSubscription/compute/computeUpdateSubscriptionPlan";
 import { handleUpdateSubscriptionErrors } from "@/internal/billing/v2/updateSubscription/errors/handleUpdateSubscriptionErrors";
 import { logUpdateSubscriptionContext } from "@/internal/billing/v2/updateSubscription/logs/logUpdateSubscriptionContext";
-import { logUpdateSubscriptionPlan } from "@/internal/billing/v2/updateSubscription/logs/logUpdateSubscriptionPlan";
+import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 import { billingResultToResponse } from "@/internal/billing/v2/utils/billingResult/billingResultToResponse";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { executeBillingPlan } from "../execute/executeBillingPlan";
@@ -45,7 +45,7 @@ export const handleUpdateSubscription = createRoute({
 			billingContext,
 			params: body,
 		});
-		logUpdateSubscriptionPlan({ ctx, plan: autumnBillingPlan, billingContext });
+		logAutumnBillingPlan({ ctx, plan: autumnBillingPlan, billingContext });
 
 		await handleUpdateSubscriptionErrors({
 			ctx,

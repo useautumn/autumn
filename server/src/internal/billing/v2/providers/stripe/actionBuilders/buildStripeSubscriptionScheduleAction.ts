@@ -5,10 +5,10 @@ import {
 	isCustomerProductOnStripeSubscriptionSchedule,
 } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
-import type { BillingContext } from "@server/internal/billing/v2/billingContext";
+import type { BillingContext } from "@/internal/billing/v2/types";
 import { buildStripePhasesUpdate } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/buildStripePhasesUpdate";
 import type Stripe from "stripe";
-import type { StripeSubscriptionScheduleAction } from "@/internal/billing/v2/types/billingPlan";
+import type { StripeSubscriptionScheduleAction } from "@/internal/billing/v2/types";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES

@@ -11,7 +11,7 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
-import type { TrialContext } from "@/internal/billing/v2/billingContext";
+import type { TrialContext } from "@/internal/billing/v2/types";
 import { initFreeTrial } from "@/internal/products/free-trials/initFreeTrial";
 
 export const setupTrialContext = ({

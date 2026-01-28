@@ -1,9 +1,9 @@
 import { createStripeCli } from "@server/external/connect/createStripeCli";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
-import type { BillingContext } from "@server/internal/billing/v2/billingContext";
+import type { BillingContext } from "@/internal/billing/v2/types";
 import type Stripe from "stripe";
 import { logSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/logSubscriptionScheduleAction";
-import type { StripeSubscriptionScheduleAction } from "@/internal/billing/v2/types/billingPlan";
+import type { StripeSubscriptionScheduleAction } from "@/internal/billing/v2/types";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
 /**

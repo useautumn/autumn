@@ -1,5 +1,5 @@
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
-import type { StripeSubscriptionAction } from "@/internal/billing/v2/types/billingPlan";
+import type { BillingContext } from "@/internal/billing/v2/types";
+import type { StripeSubscriptionAction } from "@/internal/billing/v2/types";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
 
 export const willStripeSubscriptionUpdateCreateInvoice = ({

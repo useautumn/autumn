@@ -1,10 +1,10 @@
-import { type AttachV0Params, notNullish } from "@autumn/shared";
+import { type AttachParamsV0, notNullish } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
-import type { AttachBillingContext } from "../types/attachBillingContext";
+import type { AttachBillingContext } from "@/internal/billing/v2/types";
 import { setupAttachCheckoutMode } from "./setupAttachCheckoutMode";
 import { setupAttachEndOfCycleMs } from "./setupAttachEndOfCycleMs";
 import { setupAttachProductContext } from "./setupAttachProductContext";
@@ -18,7 +18,7 @@ export const setupAttachBillingContext = async ({
 	params,
 }: {
 	ctx: AutumnContext;
-	params: AttachV0Params;
+	params: AttachParamsV0;
 }): Promise<AttachBillingContext> => {
 	const fullCustomer = await setupFullCustomerContext({
 		ctx,
@@ -72,6 +72,8 @@ export const setupAttachBillingContext = async ({
 	const checkoutMode = setupAttachCheckoutMode({
 		paymentMethod,
 		redirectMode: params.redirect_mode,
+		attachProduct,
+		stripeSubscription,
 	});
 
 	return {

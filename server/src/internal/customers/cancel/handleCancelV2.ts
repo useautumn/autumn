@@ -7,8 +7,8 @@ import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/l
 import { computeUpdateSubscriptionPlan } from "@/internal/billing/v2/updateSubscription/compute/computeUpdateSubscriptionPlan";
 import { handleUpdateSubscriptionErrors } from "@/internal/billing/v2/updateSubscription/errors/handleUpdateSubscriptionErrors";
 import { logUpdateSubscriptionContext } from "@/internal/billing/v2/updateSubscription/logs/logUpdateSubscriptionContext";
-import { logUpdateSubscriptionPlan } from "@/internal/billing/v2/updateSubscription/logs/logUpdateSubscriptionPlan";
 import { setupUpdateSubscriptionBillingContext } from "@/internal/billing/v2/updateSubscription/setup/setupUpdateSubscriptionBillingContext";
+import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 
 export const handleCancelV2 = createRoute({
 	// body: CancelBodySchema,
@@ -48,7 +48,7 @@ export const handleCancelV2 = createRoute({
 			billingContext,
 			params: updateSubscriptionBody,
 		});
-		logUpdateSubscriptionPlan({ ctx, plan: autumnBillingPlan, billingContext });
+		logAutumnBillingPlan({ ctx, plan: autumnBillingPlan, billingContext });
 
 		await handleUpdateSubscriptionErrors({
 			ctx,

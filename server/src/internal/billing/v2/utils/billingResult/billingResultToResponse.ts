@@ -1,6 +1,8 @@
 import { type BillingResponse, stripeToAtmnAmount } from "@autumn/shared";
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
-import type { BillingResult } from "@/internal/billing/v2/types/billingResult";
+import type {
+	BillingContext,
+	BillingResult,
+} from "@/internal/billing/v2/types";
 
 export const billingResultToResponse = ({
 	billingContext,

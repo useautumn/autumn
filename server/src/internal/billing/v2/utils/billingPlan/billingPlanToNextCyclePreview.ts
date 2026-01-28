@@ -8,8 +8,7 @@ import {
 	sumValues,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
-import type { BillingPlan } from "@/internal/billing/v2/types/billingPlan";
+import type { BillingContext, BillingPlan } from "@/internal/billing/v2/types";
 import { billingPlanToUpdatedCustomerProduct } from "@/internal/billing/v2/utils/billingPlan/billingPlanToUpdatedCustomerProduct";
 import { customerProductToLineItems } from "../lineItems/customerProductToLineItems";
 

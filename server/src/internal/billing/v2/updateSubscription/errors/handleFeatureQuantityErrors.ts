@@ -8,8 +8,8 @@ import {
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
-import type { AutumnBillingPlan } from "@/internal/billing/v2/types/autumnBillingPlan";
+import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/types";
+import type { AutumnBillingPlan } from "@/internal/billing/v2/types";
 import { billingPlanToNewActiveCustomerProduct } from "@/internal/billing/v2/utils/billingPlan/billingPlanToNewActiveCustomerProduct";
 
 const checkInputFeatureQuantitiesAreValid = ({

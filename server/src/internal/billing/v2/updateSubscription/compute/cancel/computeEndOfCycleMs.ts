@@ -1,5 +1,5 @@
 import { cusProductToPrices, getCycleEnd } from "@autumn/shared";
-import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
+import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/types";
 import { getLargestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils";
 
 /**
