@@ -5,8 +5,8 @@ import {
 	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
-import type { AutumnBillingPlan } from "@/internal/billing/v2/types/autumnBillingPlan";
+import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/types";
+import type { AutumnBillingPlan } from "@/internal/billing/v2/types";
 
 export const handleCustomPlanErrors = ({
 	ctx,

@@ -6,7 +6,7 @@ import { BillingParamsBaseSchema } from "../common/billingParamsBase.js";
 export const RedirectModeSchema = z.enum(["always", "if_required"]);
 export type RedirectMode = z.infer<typeof RedirectModeSchema>;
 
-export const ExtAttachV0ParamsSchema = BillingParamsBaseSchema.extend({
+export const ExtAttachParamsV0Schema = BillingParamsBaseSchema.extend({
 	// Product identification
 	product_id: z.string(),
 
@@ -22,9 +22,11 @@ export const ExtAttachV0ParamsSchema = BillingParamsBaseSchema.extend({
 	// Checkout behavior
 	redirect_mode: RedirectModeSchema.optional(),
 	success_url: z.string().optional(),
+
+	new_billing_subscription: z.boolean().optional(),
 });
 
-export const AttachV0ParamsSchema = ExtAttachV0ParamsSchema.extend({
+export const AttachParamsV0Schema = ExtAttachParamsV0Schema.extend({
 	// Custom product configuration
 	items: z.array(ProductItemSchema).optional(),
 }).refine(
@@ -39,5 +41,5 @@ export const AttachV0ParamsSchema = ExtAttachV0ParamsSchema.extend({
 	},
 );
 
-export type ExtAttachV0Params = z.infer<typeof ExtAttachV0ParamsSchema>;
-export type AttachV0Params = z.infer<typeof AttachV0ParamsSchema>;
+export type ExtAttachParamsV0 = z.infer<typeof ExtAttachParamsV0Schema>;
+export type AttachParamsV0 = z.infer<typeof AttachParamsV0Schema>;

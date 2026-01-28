@@ -1,4 +1,4 @@
-import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan";
+import type { AutumnBillingPlan } from "@/internal/billing/v2/types";
 
 export const removeStripeSubscriptionIdFromBillingPlan = ({
 	autumnBillingPlan,

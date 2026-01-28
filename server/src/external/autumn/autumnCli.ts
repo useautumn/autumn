@@ -9,6 +9,7 @@ import {
 	type ApiCusProductV3,
 	type ApiEntityV0,
 	type AttachBodyV0,
+	type AttachParamsV0,
 	type BalancesUpdateParams,
 	type BillingResponse,
 	type CheckQuery,
@@ -798,7 +799,7 @@ export class AutumnInt {
 
 	billing = {
 		attach: async (
-			params: AttachBodyV0,
+			params: AttachParamsV0,
 			{
 				skipWebhooks,
 				idempotencyKey,
@@ -829,7 +830,7 @@ export class AutumnInt {
 			return data;
 		},
 
-		previewAttach: async (params: AttachBodyV0) => {
+		previewAttach: async (params: AttachParamsV0) => {
 			const data = await this.post(`/billing/attach/preview`, params);
 			return data;
 		},

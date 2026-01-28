@@ -1,8 +1,10 @@
 import { filterUnchangedPricesFromLineItems } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyStripeDiscountsToLineItems";
-import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan";
-import type { AttachBillingContext } from "../types/attachBillingContext";
+import type {
+	AttachBillingContext,
+	AutumnBillingPlan,
+} from "@/internal/billing/v2/types";
 
 /**
  * Finalizes the attach billing plan by:

@@ -1,6 +1,6 @@
 import { formatMs } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
+import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/types";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 
 export const logUpdateSubscriptionContext = ({

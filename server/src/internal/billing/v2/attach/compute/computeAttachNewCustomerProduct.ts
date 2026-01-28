@@ -1,9 +1,9 @@
 import { CusProductStatus, type FullCusProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { AttachBillingContext } from "@/internal/billing/v2/types";
 import { cusProductToExistingRollovers } from "@/internal/billing/v2/utils/handleExistingRollovers/cusProductToExistingRollovers";
 import { cusProductToExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/cusProductToExistingUsages";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
-import type { AttachBillingContext } from "../types/attachBillingContext";
 
 /**
  * Creates the new FullCusProduct to insert when attaching a product.

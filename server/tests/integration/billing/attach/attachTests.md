@@ -77,7 +77,22 @@
     await autumn.attach({ ... });
     ```
 
-12. **Scheduled-switch tests must advance test clock with `advanceToNextInvoice()`**
+12. **Add-on is defined at product level, NOT in attach params**
+    - Use `products.recurringAddOn()` or `products.base({ isAddOn: true })` when creating the product
+    - Do NOT pass `is_add_on` to the attach endpoint
+    ```typescript
+    // ✅ GOOD - define add-on at product creation
+    const addon = products.recurringAddOn({ id: "addon", items: [...] });
+    // or
+    const addon = products.base({ id: "addon", items: [...], isAddOn: true });
+    
+    s.billing.attach({ productId: addon.id });
+    
+    // ❌ BAD - is_add_on is not an attach param
+    s.billing.attach({ productId: pro.id, isAddOn: true });
+    ```
+
+13. **Scheduled-switch tests must advance test clock with `advanceToNextInvoice()`**
     - After scheduling a downgrade, advance the test clock to verify:
       - A. Next cycle invoice is correct
       - B. Products on customer are correct after cycle

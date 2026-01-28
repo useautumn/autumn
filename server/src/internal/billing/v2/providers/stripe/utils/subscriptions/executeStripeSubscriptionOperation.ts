@@ -1,8 +1,8 @@
 import { InternalError, nullish } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
-import type { StripeSubscriptionAction } from "@/internal/billing/v2/types/billingPlan";
+import type { BillingContext } from "@/internal/billing/v2/types";
+import type { StripeSubscriptionAction } from "@/internal/billing/v2/types";
 
 export const executeStripeSubscriptionOperation = async ({
 	ctx,

@@ -93,7 +93,6 @@ type BillingAttachAction = {
 	options?: FeatureOption[];
 	newBillingSubscription?: boolean;
 	timeout?: number;
-	isAddOn?: boolean;
 };
 
 type ScenarioAction =
@@ -526,6 +525,51 @@ const deleteCustomer = (
 };
 
 /**
+ * Attach a product using the NEW billing/attach V2 endpoint.
+ * Product ID is auto-prefixed with customerId.
+ *
+ * NOTE: Add-on is defined at product level using `products.recurringAddOn()` or
+ * `products.base({ isAddOn: true })`, NOT in the attach params.
+ *
+ * @param productId - The product ID (without prefix)
+ * @param entityIndex - Optional entity index (0-based) to attach to (omit for customer-level)
+ * @param options - Optional feature options (e.g., prepaid quantity)
+ * @param newBillingSubscription - Create a separate Stripe subscription for this product
+ * @param timeout - Optional timeout in milliseconds for the attach request
+ * @example s.billing.attach({ productId: "pro" }) // customer-level
+ * @example s.billing.attach({ productId: "pro", entityIndex: 0 }) // attach to first entity
+ * @example s.billing.attach({ productId: "pro", options: [{ feature_id: "messages", quantity: 100 }] })
+ */
+const billingAttach = ({
+	productId,
+	entityIndex,
+	options,
+	newBillingSubscription,
+	timeout,
+}: {
+	productId: string;
+	entityIndex?: number;
+	options?: FeatureOption[];
+	newBillingSubscription?: boolean;
+	timeout?: number;
+}): ConfigFn => {
+	return (config) => ({
+		...config,
+		actions: [
+			...config.actions,
+			{
+				type: "billingAttach" as const,
+				productId,
+				entityIndex,
+				options,
+				newBillingSubscription,
+				timeout,
+			},
+		],
+	});
+};
+
+/**
  * Scenario configuration functions.
  * Import and use with initScenario to configure test setup.
  * @example
@@ -555,6 +599,9 @@ export const s = {
 	track,
 	updateSubscription,
 	deleteCustomer,
+	billing: {
+		attach: billingAttach,
+	},
 } as const;
 
 // ═══════════════════════════════════════════════════════════════════
@@ -966,6 +1013,35 @@ export async function initScenario({
 					waitForSeconds: 30,
 				});
 			}
+		} else if (action.type === "billingAttach") {
+			if (!customerId) {
+				throw new Error(
+					"Cannot attach product: customerId is required when using s.billing.attach()",
+				);
+			}
+			const prefixedProductId = `${action.productId}_${productPrefix}`;
+
+			// Resolve entityIndex to entityId
+			let entityId: string | undefined;
+			if (action.entityIndex !== undefined) {
+				if (action.entityIndex >= generatedEntities.length) {
+					throw new Error(
+						`entityIndex ${action.entityIndex} is out of bounds. Only ${generatedEntities.length} entities configured.`,
+					);
+				}
+				entityId = generatedEntities[action.entityIndex].id;
+			}
+
+			await autumnV1.billing.attach(
+				{
+					customer_id: customerId,
+					product_id: prefixedProductId,
+					entity_id: entityId,
+					options: action.options,
+					new_billing_subscription: action.newBillingSubscription,
+				},
+				{ timeout: action.timeout },
+			);
 		}
 	}
 

@@ -3,10 +3,10 @@ import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/strip
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
 import { handleUpdateSubscriptionErrors } from "@/internal/billing/v2/updateSubscription/errors/handleUpdateSubscriptionErrors";
 import { billingPlanToPreviewResponse } from "@/internal/billing/v2/utils/billingPlanToPreviewResponse";
+import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { computeUpdateSubscriptionPlan } from "./compute/computeUpdateSubscriptionPlan";
 import { logUpdateSubscriptionContext } from "./logs/logUpdateSubscriptionContext";
-import { logUpdateSubscriptionPlan } from "./logs/logUpdateSubscriptionPlan";
 import { setupUpdateSubscriptionBillingContext } from "./setup/setupUpdateSubscriptionBillingContext";
 
 export const handlePreviewUpdateSubscription = createRoute({
@@ -34,7 +34,7 @@ export const handlePreviewUpdateSubscription = createRoute({
 			billingContext: updateSubscriptionBillingContext,
 			params: body,
 		});
-		logUpdateSubscriptionPlan({
+		logAutumnBillingPlan({
 			ctx,
 			plan: autumnBillingPlan,
 			billingContext: updateSubscriptionBillingContext,

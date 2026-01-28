@@ -13,9 +13,11 @@ import {
 	usagePriceToLineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { UpdateCustomerEntitlement } from "@/internal/billing/v2/types/autumnBillingPlan";
+import type {
+	BillingContext,
+	UpdateCustomerEntitlement,
+} from "@/internal/billing/v2/types";
 import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils";
-import type { BillingContext } from "../../billingContext";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
 
 export const customerProductToArrearLineItems = ({

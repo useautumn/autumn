@@ -1,5 +1,5 @@
 /**
- * Attach Free Product Tests
+ * Attach Free Product Tests (Attach V2)
  *
  * Tests for attaching free products when customer has no existing product.
  * Free products have no base price and only provide included usage/features.
@@ -47,7 +47,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach free product")}`, async 
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [s.customer({}), s.products({ list: [free] })],
-		actions: [s.attach({ productId: free.id })],
+		actions: [s.billing.attach({ productId: free.id })],
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -55,7 +55,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach free product")}`, async 
 	// Verify product is active
 	await expectProductActive({
 		customer,
-		productId: free.id,
+		productId: `${free.id}_${customerId}`,
 	});
 
 	// Verify messages feature has correct balance
@@ -81,7 +81,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach free product")}`, async 
 /**
  * Scenario:
  * - Customer has no existing product
- * - Attach free product with: messages (100), words (200), dashboard (boolean), unlimited messages
+ * - Attach free product with: messages (100), words (200), dashboard (boolean)
  *
  * Expected Result:
  * - Product is active
@@ -103,7 +103,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach free with multiple featu
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [s.customer({}), s.products({ list: [free] })],
-		actions: [s.attach({ productId: free.id })],
+		actions: [s.billing.attach({ productId: free.id })],
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -111,7 +111,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach free with multiple featu
 	// Verify product is active
 	await expectProductActive({
 		customer,
-		productId: free.id,
+		productId: `${free.id}_${customerId}`,
 	});
 
 	// Verify messages feature

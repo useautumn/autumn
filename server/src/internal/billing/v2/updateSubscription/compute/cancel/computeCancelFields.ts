@@ -1,5 +1,5 @@
 import { CusProductStatus, type FullCusProduct } from "@autumn/shared";
-import type { CancelAction } from "@/internal/billing/v2/types/cancelTypes";
+import type { CancelAction } from "@autumn/shared";
 
 /**
  * Computes cancel-related fields for a new customer product.

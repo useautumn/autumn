@@ -1,6 +1,6 @@
 import type { FullCusProduct, FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
+import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/types";
 import { computeCancelFields } from "@/internal/billing/v2/updateSubscription/compute/cancel/computeCancelFields";
 import { cusProductToExistingRollovers } from "@/internal/billing/v2/utils/handleExistingRollovers/cusProductToExistingRollovers";
 import { cusProductToExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/cusProductToExistingUsages";

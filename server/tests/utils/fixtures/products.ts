@@ -290,19 +290,23 @@ const ultra = ({
  * One-off product - one-time purchase with $10 base price
  * @param items - Product items (features)
  * @param id - Product ID (default: "one-off")
+ * @param isAddOn - Whether this is an add-on product (default: false)
  */
 const oneOff = ({
 	items,
 	id = "one-off",
+	isAddOn = false,
 }: {
 	items: ProductItem[];
 	id?: string;
+	isAddOn?: boolean;
 }): ProductV2 =>
 	constructProduct({
 		id,
 		items: [...items],
 		type: "one_off",
 		isDefault: false,
+		isAddOn,
 	});
 
 /**

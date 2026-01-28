@@ -1,5 +1,5 @@
 import { ErrCode, InternalError } from "@autumn/shared";
-import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
+import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/types";
 
 /**
  * Validates Stripe-specific billing context requirements before executing billing plan.

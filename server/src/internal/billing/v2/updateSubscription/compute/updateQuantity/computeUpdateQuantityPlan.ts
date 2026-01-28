@@ -1,6 +1,6 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
-import type { AutumnBillingPlan } from "@/internal/billing/v2/types/billingPlan";
+import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/types";
+import type { AutumnBillingPlan } from "@/internal/billing/v2/types";
 import { computeUpdateQuantityDetails } from "./computeUpdateQuantityDetails";
 
 export const computeUpdateQuantityPlan = ({

@@ -9,8 +9,8 @@ import {
 } from "@autumn/shared";
 import { cusProductToPrices } from "@shared/utils/cusProductUtils/convertCusProduct";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
-import type { AutumnBillingPlan } from "@/internal/billing/v2/types/autumnBillingPlan";
+import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/types";
+import type { AutumnBillingPlan } from "@/internal/billing/v2/types";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
 
 export const handleOneOffErrors = ({

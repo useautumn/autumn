@@ -1,7 +1,7 @@
 import { customerProductsToPricesWithProduct } from "@/external/stripe/subscriptionSchedules/utils/logStripeSchedulePhaseUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
-import type { StripeBillingPlan } from "@/internal/billing/v2/types/billingPlan";
+import type { BillingContext } from "@/internal/billing/v2/types";
+import type { StripeBillingPlan } from "@/internal/billing/v2/types";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 
 export const logStripeBillingPlan = ({

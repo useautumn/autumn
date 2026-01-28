@@ -6,7 +6,7 @@ import {
 	type Price,
 	secondsToMs,
 } from "@autumn/shared";
-import type { BillingContext } from "../../billingContext";
+import type { BillingContext } from "@/internal/billing/v2/types";
 
 /**
  * Calculates the billing period (start and end) for a line item based on the billing context.

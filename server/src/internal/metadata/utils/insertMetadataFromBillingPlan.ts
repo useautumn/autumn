@@ -3,12 +3,12 @@ import { addDays } from "date-fns";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
-import type { StripeBillingStage } from "@/internal/billing/v2/types/autumnBillingPlan";
 import type {
+	BillingContext,
 	BillingPlan,
 	DeferredAutumnBillingPlanData,
-} from "@/internal/billing/v2/types/billingPlan";
+	StripeBillingStage,
+} from "@/internal/billing/v2/types";
 import { generateId } from "@/utils/genUtils";
 import { MetadataService } from "../MetadataService";
 

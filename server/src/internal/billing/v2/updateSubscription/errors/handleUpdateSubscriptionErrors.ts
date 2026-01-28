@@ -5,9 +5,11 @@ import {
 } from "@autumn/shared";
 import { cusProductToProcessorType } from "@shared/utils/cusProductUtils/convertCusProduct";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
-import type { AutumnBillingPlan } from "@/internal/billing/v2/types/autumnBillingPlan";
+import type {
+	AutumnBillingPlan,
+	UpdateSubscriptionBillingContext,
+} from "@/internal/billing/v2/types";
 import { handleCancelEndOfCycleErrors } from "@/internal/billing/v2/updateSubscription/errors/handleCancelEndOfCycleErrors";
 import { handleBillingBehaviorErrors } from "./handleBillingBehaviorErrors";
 import { handleCurrentCustomerProductErrors } from "./handleCurrentCustomerProductErrors";
@@ -18,7 +20,7 @@ import {
 	handleOneOffErrors,
 } from "./handleOneOffErrors";
 import { handleProductTypeTransitionErrors } from "./handleProductTypeTransitionErrors";
-import { handleRefundBehaviorErrors } from "./handleRefundBehaviorErrors";
+
 import { handleUncancelErrors } from "./handleUncancelErrors";
 
 export const handleUpdateSubscriptionErrors = async ({
@@ -73,12 +75,6 @@ export const handleUpdateSubscriptionErrors = async ({
 	// 9. Billing behavior errors
 	handleBillingBehaviorErrors({
 		billingContext,
-		autumnBillingPlan,
-		params,
-	});
-
-	// 10. Refund behavior errors
-	handleRefundBehaviorErrors({
 		autumnBillingPlan,
 		params,
 	});

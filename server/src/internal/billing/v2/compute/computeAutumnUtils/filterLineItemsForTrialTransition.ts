@@ -1,6 +1,6 @@
 import { isOneOffPrice, type LineItem } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
+import type { BillingContext } from "@/internal/billing/v2/types";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
 
 /**

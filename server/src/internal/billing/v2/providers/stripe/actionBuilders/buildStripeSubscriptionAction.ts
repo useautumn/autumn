@@ -1,6 +1,6 @@
 import type { FullCusProduct } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
-import type { BillingContext } from "@server/internal/billing/v2/billingContext";
+import type { BillingContext } from "@/internal/billing/v2/types";
 import { buildStripeSubscriptionItemsUpdate } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionItems/buildStripeSubscriptionItemsUpdate";
 import { buildStripeSubscriptionCreateAction } from "@server/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionCreateAction";
 import { buildStripeSubscriptionUpdateAction } from "@server/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionUpdateAction";
@@ -9,7 +9,7 @@ import type {
 	AutumnBillingPlan,
 	StripeSubscriptionAction,
 	StripeSubscriptionScheduleAction,
-} from "@/internal/billing/v2/types/billingPlan";
+} from "@/internal/billing/v2/types";
 
 export const buildStripeSubscriptionAction = ({
 	ctx,

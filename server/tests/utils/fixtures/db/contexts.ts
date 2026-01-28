@@ -9,7 +9,7 @@ import {
 import type Stripe from "stripe";
 import { logger } from "@/external/logtail/logtailUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@/internal/billing/v2/billingContext";
+import type { BillingContext } from "@/internal/billing/v2/types";
 import { stripeCustomers } from "../stripe/customers";
 import { customers } from "./customers";
 

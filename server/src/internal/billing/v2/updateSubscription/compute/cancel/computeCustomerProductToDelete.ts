@@ -3,7 +3,7 @@ import {
 	type FullCusProduct,
 	findMainScheduledCustomerProductByGroup,
 } from "@autumn/shared";
-import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/billingContext";
+import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/types";
 
 /**
  * Finds an existing scheduled customer product in the same group to delete.

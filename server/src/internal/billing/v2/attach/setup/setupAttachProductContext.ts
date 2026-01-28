@@ -1,4 +1,4 @@
-import type { AttachV0Params } from "@autumn/shared";
+import type { AttachParamsV0 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { ProductService } from "@/internal/products/ProductService";
 import { setupCustomFullProduct } from "../../setup/setupCustomFullProduct";
@@ -11,7 +11,7 @@ export const setupAttachProductContext = async ({
 	params,
 }: {
 	ctx: AutumnContext;
-	params: AttachV0Params;
+	params: AttachParamsV0;
 }) => {
 	const { db, org, env } = ctx;
 

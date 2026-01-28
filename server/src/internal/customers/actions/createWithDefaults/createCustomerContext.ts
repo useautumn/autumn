@@ -1,8 +1,5 @@
 import type { FullCustomer, FullProduct } from "@autumn/shared";
-import type {
-	BillingContext,
-	TrialContext,
-} from "@/internal/billing/v2/billingContext";
+import type { BillingContext, TrialContext } from "@/internal/billing/v2/types";
 
 export interface CreateCustomerContextFree {
 	fullCustomer: FullCustomer;

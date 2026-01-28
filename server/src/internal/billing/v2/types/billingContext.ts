@@ -1,14 +1,13 @@
 import type {
+	CancelAction,
 	Entitlement,
 	FeatureOptions,
 	FreeTrial,
 	FullCusProduct,
 	FullProduct,
 	Price,
-	RefundBehavior,
 	StripeDiscountWithCoupon,
 } from "@autumn/shared";
-import type { CancelAction } from "@shared/api/common/cancelMode";
 import type { FullCustomer } from "@shared/models/cusModels/fullCusModel";
 import type Stripe from "stripe";
 import { z } from "zod/v4";
@@ -58,9 +57,6 @@ export interface BillingContext {
 
 	// Cancel action (used by update subscription for uncancel)
 	cancelAction?: CancelAction;
-
-	// Refund behavior for negative invoice totals (downgrades)
-	refundBehavior?: RefundBehavior;
 }
 
 export interface UpdateSubscriptionBillingContext extends BillingContext {
