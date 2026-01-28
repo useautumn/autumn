@@ -2,7 +2,6 @@ import {
 	type ColumnDef,
 	getCoreRowModel,
 	getFilteredRowModel,
-	type TableOptions,
 	useReactTable,
 } from "@tanstack/react-table";
 
@@ -13,20 +12,17 @@ import {
 export function useAdminTable<TData>({
 	data,
 	columns,
-	options = {},
 }: {
 	data: TData[];
 	columns: ColumnDef<TData, unknown>[];
-	options?: Partial<TableOptions<TData>>;
 }) {
-	const enableSorting = false;
-
 	return useReactTable({
 		data,
 		columns,
 		getCoreRowModel: getCoreRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
-		enableSorting,
-		...options,
+		enableSorting: false,
+		enableGlobalFilter: true,
+		globalFilterFn: "includesString",
 	});
 }
