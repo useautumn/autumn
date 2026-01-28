@@ -75,7 +75,9 @@ export function useUpdateSubscriptionBodyBuilder(
 				hasChanges && !!storeProduct?.id && product === storeProduct
 					? true
 					: undefined;
-			const version = storeProduct?.id ? storeProduct.version : undefined;
+			const version =
+				mergedParams.version ??
+				(storeProduct?.id ? storeProduct.version : undefined);
 
 			// Convert prepaidOptions to options array
 			const options = mergedParams.prepaidOptions
