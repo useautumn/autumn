@@ -1,14 +1,11 @@
 name: Knip
 
 on:
-  push:
-    branches:
-      - main
-      - staging
   pull_request:
     branches:
       - main
       - staging
+      - dev
 
 jobs:
   knip:
