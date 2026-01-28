@@ -44,6 +44,7 @@
 		"@squircle/core": "^1.0.6",
 		"@squircle/paint-polyfill": "^1.0.6",
 		"@tailwindcss/vite": "^4.0.13",
+		"tailwindcss": "^4.0.13",
 		"@tanstack/react-form": "^1.23.8",
 		"@tanstack/react-query": "^5.85.6",
 		"@tanstack/react-table": "^8.21.3",
