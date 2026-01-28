@@ -8,10 +8,8 @@ on:
 jobs:
   deploy-preview:
     runs-on: ubuntu-latest
-    env:
-      PREVIEW_URL: https://dev-server-pr-${{ github.event.pull_request.number }}.up.railway.app
     outputs:
-      preview_url: ${{ env.PREVIEW_URL }}
+      preview_url: ${{ steps.deploy.outputs.service_domain }}
     steps:
       - uses: actions/checkout@v4
 
@@ -52,15 +50,17 @@ jobs:
 
       - name: Setup Stripe webhook for preview URL
         env:
-          SERVER_URL: ${{ env.PREVIEW_URL }}
+          SERVER_URL: https://${{ steps.deploy.outputs.service_domain }}
         run: bun --cwd scripts preview/setupPreviewWebhook.ts
 
       - name: Wait for deployment to be healthy
         run: |
-          echo "Waiting for $PREVIEW_URL to be healthy..."
+          DEPLOY_URL="https://${{ steps.deploy.outputs.service_domain }}"
+          echo "Railway deploy output domain: ${{ steps.deploy.outputs.service_domain }}"
+          echo "Waiting for $DEPLOY_URL to be healthy..."
 
           for i in {1..30}; do
-            if curl -sf "$PREVIEW_URL/health" > /dev/null 2>&1; then
+            if curl -sf "$DEPLOY_URL/health" > /dev/null 2>&1; then
               echo "Preview is healthy!"
               exit 0
             fi
@@ -79,7 +79,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `Preview deployed: ${{ env.PREVIEW_URL }}`
+              body: `Preview deployed: https://${{ steps.deploy.outputs.service_domain }}`
             })
 
       - name: Trigger Integration Tests
@@ -92,7 +92,7 @@ jobs:
               workflow_id: 'integration-tests.yml',
               ref: '${{ github.head_ref }}',
               inputs: {
-                preview_url: '${{ env.PREVIEW_URL }}',
+                preview_url: 'https://${{ steps.deploy.outputs.service_domain }}',
                 pr_number: '${{ github.event.pull_request.number }}'
               }
             })
