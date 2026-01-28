@@ -23,7 +23,8 @@
 		"vite": {
 			"entry": ["src/main.tsx"],
 			"project": ["src/**/*.{ts,tsx}"],
-			"ignore": ["src/components/ai-elements/**"]
+			"ignore": ["src/components/ai-elements/**"],
+			"ignoreDependencies": ["tailwindcss"]
 		},
 		"scripts": {
 			"entry": ["**/*.{ts,js}"],
