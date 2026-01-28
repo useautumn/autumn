@@ -170,46 +170,45 @@ export function SubscriptionDetailSheet() {
 				description={`Subscription details for ${cusProduct.product.name}`}
 			/>
 
-			{/* Plan Items */}
-			{productV2?.items && productV2.items.length > 0 && (
-				<SheetSection>
-					{productV2 && (
-						<div className="flex gap-2 justify-between items-center h-6 mb-3">
-							<BasePriceDisplay product={productV2} readOnly={true} />
+			<div className="flex-1 overflow-y-auto min-h-0">
+				{/* Plan Items */}
+				{productV2?.items && productV2.items.length > 0 && (
+					<SheetSection>
+						{productV2 && (
+							<div className="flex gap-2 justify-between items-center h-6 mb-3">
+								<BasePriceDisplay product={productV2} readOnly={true} />
+							</div>
+						)}
+
+						<div className="space-y-2">
+							{productV2.items.map((item: ProductItem, index: number) => {
+								if (!item.feature_id) return null;
+
+								const feature = features.find((f) => f.id === item.feature_id);
+								const prepaidOption = featureToOptions({
+									feature,
+									options: cusProduct.options,
+								});
+
+								// const prepaidQuantity = prepaidOption ? prepaidOption.quantity / (item.billing_units || 1) : null;
+								const prepaidQuantity =
+									item.usage_model === UsageModel.Prepaid
+										? prepaidOption?.quantity
+										: null;
+
+								return (
+									<PlanFeatureRow
+										key={item.feature_id || item.price_id || index}
+										item={item}
+										index={index}
+										readOnly={true}
+										prepaidQuantity={prepaidQuantity}
+									/>
+								);
+							})}
 						</div>
-					)}
-
-					<div className="space-y-2">
-						{productV2.items.map((item: ProductItem, index: number) => {
-							if (!item.feature_id) return null;
-
-							const feature = features.find((f) => f.id === item.feature_id);
-							const prepaidOption = featureToOptions({
-								feature,
-								options: cusProduct.options,
-							});
-
-							// const prepaidQuantity = prepaidOption ? prepaidOption.quantity / (item.billing_units || 1) : null;
-							const prepaidQuantity =
-								item.usage_model === UsageModel.Prepaid
-									? prepaidOption?.quantity
-									: null;
-
-							return (
-								<PlanFeatureRow
-									key={item.feature_id || item.price_id || index}
-									item={item}
-									index={index}
-									readOnly={true}
-									prepaidQuantity={prepaidQuantity}
-								/>
-							);
-						})}
-					</div>
-				</SheetSection>
-			)}
-
-			<div className="flex-1 overflow-y-auto">
+					</SheetSection>
+				)}
 				{/* Product Information */}
 				<SheetSection withSeparator={true}>
 					<div className="flex gap-2 justify-between">
@@ -326,39 +325,39 @@ export function SubscriptionDetailSheet() {
 						<UpdatePlanButton cusProduct={cusProduct} />
 					</div>
 				)}
-				{!isExpired && !isScheduled && (
-					<div className="p-4 flex gap-2">
-						{isCanceled ? (
-							<Button
-								variant="secondary"
-								className="flex-1"
-								onClick={() =>
-									setSheet({ type: "subscription-uncancel", itemId })
-								}
-							>
-								Uncancel Subscription
-							</Button>
-						) : (
-							<Button
-								variant="secondary"
-								className="flex-1"
-								onClick={() =>
-									setSheet({ type: "subscription-cancel", itemId })
-								}
-							>
-								Cancel Subscription
-							</Button>
-						)}
-						<Button
-							variant="primary"
-							className="flex-1"
-							onClick={handleUpdateSubscription}
-						>
-							Update Subscription
-						</Button>
-					</div>
-				)}
 			</div>
+
+			{/* Fixed Footer */}
+			{!isExpired && !isScheduled && (
+				<div className="p-4 flex gap-2 border-t border-border/40">
+					{isCanceled ? (
+						<Button
+							variant="secondary"
+							className="flex-1"
+							onClick={() =>
+								setSheet({ type: "subscription-uncancel", itemId })
+							}
+						>
+							Uncancel Subscription
+						</Button>
+					) : (
+						<Button
+							variant="secondary"
+							className="flex-1"
+							onClick={() => setSheet({ type: "subscription-cancel", itemId })}
+						>
+							Cancel Subscription
+						</Button>
+					)}
+					<Button
+						variant="primary"
+						className="flex-1"
+						onClick={handleUpdateSubscription}
+					>
+						Update Subscription
+					</Button>
+				</div>
+			)}
 		</div>
 	);
 }
