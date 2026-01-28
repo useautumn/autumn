@@ -54,6 +54,7 @@
 		"autumn-js": "^0.1.8",
 		"axios": "^1.8.3",
 		"better-auth": "catalog:",
+		"buffer": "^6.0.3",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"cmdk": "^1.1.1",
@@ -101,7 +102,6 @@
 		"typescript": "~5.7.2",
 		"typescript-eslint": "^8.24.1",
 		"vite": "^6.2.0",
-		"vite-plugin-node-polyfills": "^0.25.0",
 		"vite-tsconfig-paths": "^5.1.4"
 	}
 }
