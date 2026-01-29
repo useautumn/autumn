@@ -53,6 +53,23 @@ export const constructReward = ({
 		return promoCode.code.length > 0;
 	});
 
+	// Validate promo codes - Stripe only allows alphanumeric characters (a-z, A-Z, 0-9)
+	for (const promoCode of promoCodes) {
+		if (!/^[a-zA-Z0-9]+$/.test(promoCode.code)) {
+			throw new RecaseError({
+				message:
+					"Promotional code can only contain letters and numbers (a-z, A-Z, 0-9)",
+				code: ErrCode.InvalidReward,
+			});
+		}
+		if (promoCode.code.length > 500) {
+			throw new RecaseError({
+				message: "Promotional code cannot exceed 500 characters",
+				code: ErrCode.InvalidReward,
+			});
+		}
+	}
+
 	let configData = {};
 	if (reward.type === RewardType.FreeProduct) {
 		configData = {
