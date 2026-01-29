@@ -30,6 +30,15 @@ export function TableContentVirtualized({
 
 	// Calculate header height for scroll container offset
 	const headerHeight = 28; // h-7 = 1.75rem = 28px
+	const rowHeight = virtualization?.rowHeight ?? 40;
+
+	// Calculate actual content height based on row count
+	const contentHeight = rows.length * rowHeight;
+
+	// minHeight ensures usability on small screens, but only when content would exceed it
+	// This allows small tables to be exactly as tall as their content
+	const MIN_TABLE_HEIGHT = 400;
+	const minHeight = contentHeight > MIN_TABLE_HEIGHT ? MIN_TABLE_HEIGHT : undefined;
 
 	// Provide updated context with scroll container to children
 	const contextWithRef = {
@@ -74,6 +83,7 @@ export function TableContentVirtualized({
 					ref={setScrollContainer}
 					className="rounded-b-lg w-full [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-neutral-400 [&::-webkit-scrollbar-thumb]:rounded-full dark:[&::-webkit-scrollbar-thumb]:bg-neutral-600"
 					style={{
+						minHeight,
 						maxHeight: virtualization?.containerHeight
 							? `calc(${virtualization.containerHeight} - ${headerHeight}px)`
 							: undefined,
