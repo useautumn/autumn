@@ -1,0 +1,65 @@
+DESCRIPTION >
+    Aggregate queries with grouping by a property key or customer_id.
+    Uses PER-BIN TOP 9 groups + "AUTUMN_RESERVED" bucket (10 max total per bin).
+    Each time bin shows its own top 9 groups, not global top 9.
+    Returns unpivoted data: (period, event_name, group_value, total_value, _truncated)
+    _truncated is true only if at least one bin has more than 9 unique values.
+    Frontend maps "AUTUMN_RESERVED" to "Other values" for display.
+    Parameters:
+      - group_column: 'customer_id' to group by customer, 'property' (default) to group by property_key
+
+TOKEN "aggregate_groupable_read" READ
+
+NODE base
+DESCRIPTION >
+    Aggregate raw data by period, event_name, and group_value.
+SQL >
+    %
+    SELECT
+        {% if String(bin_size, 'day') == 'hour' %}
+        formatDateTime(hour, '%F %T') as period,
+        {% elif String(bin_size, 'day') == 'month' %}
+        formatDateTime(toStartOfMonth(hour, {{ String(timezone, 'UTC') }}), '%F %T') as period,
+        {% else %}
+        formatDateTime(toStartOfDay(hour, {{ String(timezone, 'UTC') }}), '%F %T') as period,
+        {% end %}
+        event_name,
+        {% if String(group_column, 'property') == 'customer_id' %}
+        customer_id as group_value,
+        {% else %}
+        {{ column('properties.' + String(property_key, '')) }}::String as group_value,
+        {% end %}
+        sum(total_value) as total_value
+    FROM events_hourly_mv
+    WHERE
+        org_id = {{ String(org_id, '') }}
+        AND env = {{ String(env, 'test') }}
+        AND event_name IN {{ Array(event_names, 'String', default='[]') }}
+        AND hour >= toDateTime({{ String(start_date, '2024-01-01 00:00:00') }})
+        AND hour <= toDateTime({{ String(end_date, '2024-12-31 23:59:59') }})
+        {% if defined(customer_id) and String(customer_id, '') != '' %}
+        AND customer_id = {{ String(customer_id) }}
+        {% end %}
+    GROUP BY period, event_name, group_value
+
+NODE ranked
+DESCRIPTION >
+    Rank groups within each bin by total_value descending.
+SQL >
+    SELECT
+        *,
+        row_number() OVER (PARTITION BY period, event_name ORDER BY total_value DESC) as rn
+    FROM base
+
+NODE endpoint
+TYPE endpoint
+SQL >
+    SELECT
+        period,
+        event_name,
+        if(rn <= 9, group_value, 'AUTUMN_RESERVED') as group_value,
+        sum(total_value) as total_value,
+        max(rn) > 9 as _truncated
+    FROM ranked
+    GROUP BY period, event_name, group_value
+    ORDER BY period, event_name, group_value

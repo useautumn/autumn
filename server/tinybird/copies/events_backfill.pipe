@@ -1,0 +1,20 @@
+DESCRIPTION >
+    Chunked backfill of events from Postgres
+
+NODE migrate
+SQL >
+    %
+    SELECT *
+    FROM postgresql(
+        'us-west-3.pg.psdb.cloud:5432',
+        'postgres',
+        'events',
+        {{tb_secret('PG_USERNAME')}},
+        {{tb_secret('PG_PASSWORD')}},
+        'public'
+    )
+    WHERE timestamp > {{DateTime(start_date, '2025-01-01 00:00:00')}}
+      AND timestamp <= {{DateTime(end_date, '2025-01-01 00:00:01')}}
+
+TYPE COPY
+TARGET_DATASOURCE events
