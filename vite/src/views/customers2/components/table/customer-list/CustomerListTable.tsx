@@ -7,30 +7,51 @@ import { IconButton } from "@/components/v2/buttons/IconButton";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
+import { useMounted } from "@/hooks/useMounted";
 import { pushPage } from "@/utils/genUtils";
 import { useCustomersQueryStates } from "@/views/customers/hooks/useCustomersQueryStates";
+import { FULL_CUSTOMERS_QUERY_KEY } from "@/views/customers/hooks/useFullCusSearchQuery";
 import { useCustomerListColumns } from "@/views/customers2/hooks/useCustomerListColumns";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
+import LoadingScreen from "@/views/general/LoadingScreen";
 import type { CustomerWithProducts } from "./CustomerListColumns";
 import { CustomerListCreateButton } from "./CustomerListCreateButton";
 import { CustomerListFilterButton } from "./CustomerListFilterButton";
-import { CustomerListPagination } from "./CustomerListPagination";
+import {
+	CustomerListPageSizeSelector,
+	CustomerListPagination,
+} from "./CustomerListPagination";
 import { CustomerListSearchBar } from "./CustomerListSearchBar";
 
 export function CustomerListTable({
 	customers,
+	isLoading,
 }: {
 	customers: CustomerWithProducts[];
+	isLoading: boolean;
 }) {
+	// Defer rendering until after mount to ensure correct table layout on navigation
+	const isMounted = useMounted();
+
 	const { features } = useFeaturesQuery();
+	const { queryStates } = useCustomersQueryStates();
 
 	// Subscribe to full_customers query to get reactive updates
+	// Query key must match useFullCusSearchQuery for proper cache sharing
 	const {
 		data: fullCustomersData,
 		isLoading: isFullCustomersLoading,
 		isFetching: isFullCustomersFetching,
 	} = useQuery<{ fullCustomers: FullCustomer[] }>({
-		queryKey: ["full_customers"],
+		queryKey: [
+			FULL_CUSTOMERS_QUERY_KEY,
+			queryStates.page,
+			queryStates.pageSize,
+			queryStates.status,
+			queryStates.version,
+			queryStates.none,
+			queryStates.q,
+		],
 		// Placeholder queryFn - actual fetching is done by useFullCusSearchQuery
 		queryFn: () => Promise.resolve({ fullCustomers: [] }),
 		// Don't fetch - just subscribe to existing data from useFullCusSearchQuery
@@ -92,6 +113,11 @@ export function CustomerListTable({
 		},
 	});
 
+	// Don't render table until mounted to ensure correct layout on navigation
+	if (!isMounted) {
+		return <LoadingScreen />;
+	}
+
 	const getRowHref = (customer: CustomerWithProducts) =>
 		pushPage({
 			path: `/customers/${customer.id || customer.internal_id}`,
@@ -100,8 +126,6 @@ export function CustomerListTable({
 
 	const enableSorting = false;
 
-	const { queryStates } = useCustomersQueryStates();
-
 	const hasRows = table.getRowModel().rows.length > 0;
 	const hasSearchQuery = Boolean(queryStates.q?.trim());
 	const hasFilters =
@@ -109,6 +133,11 @@ export function CustomerListTable({
 		queryStates.version.length > 0 ||
 		queryStates.none;
 	const hasActiveFiltersOrSearch = hasSearchQuery || hasFilters;
+
+	// Show loading state while customers data is being fetched
+	if (isLoading) {
+		return <LoadingScreen />;
+	}
 
 	// Only show empty state if org has NO customers (no filters/search active and no results)
 	if (!hasRows && !hasActiveFiltersOrSearch) {
@@ -138,14 +167,38 @@ export function CustomerListTable({
 	}
 
 	return (
-		<>
-			<div className="flex w-full justify-between items-center h-10 pb-4">
+		<Table.Provider
+			config={{
+				table,
+				numberOfColumns: columns.length,
+				enableSorting,
+				isLoading: false,
+				getRowHref,
+				emptyStateText: "No matching results found.",
+				rowClassName: "h-10",
+				enableColumnVisibility: true,
+				columnVisibilityStorageKey: "customer-list",
+				columnGroups,
+				columnVisibilityInToolbar: true,
+				flexibleTableColumns: true,
+				virtualization: {
+					containerHeight: "calc(100vh - 120px)",
+				},
+			}}
+		>
+			<div className="flex w-full items-center h-10 pb-4 gap-4">
 				<div className="flex items-center gap-2">
+					<Table.ColumnVisibility />
 					<CustomerListFilterButton />
 					<CustomerListSearchBar />
-					<CustomerListPagination />
 				</div>
-				<CustomerListCreateButton />
+				<div className="flex items-center gap-2">
+					<CustomerListPagination />
+					<CustomerListPageSizeSelector />
+				</div>
+				<div className="flex items-center gap-2 ml-auto">
+					<CustomerListCreateButton />
+				</div>
 			</div>
 
 			{!hasRows && hasActiveFiltersOrSearch ? (
@@ -154,28 +207,12 @@ export function CustomerListTable({
 					actionButton={<CustomerListCreateButton />}
 				/>
 			) : (
-				<Table.Provider
-					config={{
-						table,
-						numberOfColumns: columns.length,
-						enableSorting,
-						isLoading: false,
-						getRowHref,
-						emptyStateText: "No matching results found.",
-						rowClassName: "h-10",
-						enableColumnVisibility: true,
-						columnVisibilityStorageKey: "customer-list",
-						columnGroups,
-					}}
-				>
-					<Table.Container>
-						<Table.Content>
-							<Table.Header />
-							<Table.Body />
-						</Table.Content>
-					</Table.Container>
-				</Table.Provider>
+				<Table.Container>
+					<Table.VirtualizedContent>
+						<Table.VirtualizedBody />
+					</Table.VirtualizedContent>
+				</Table.Container>
 			)}
-		</>
+		</Table.Provider>
 	);
 }
