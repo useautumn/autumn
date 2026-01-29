@@ -1,11 +1,85 @@
+import type { Row } from "@tanstack/react-table";
+import type { VirtualItem } from "@tanstack/react-virtual";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { memo, useCallback, useMemo } from "react";
 import { TableBody as ShadcnTableBody, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { useTableContext } from "./table-context";
 import { TableEmptyState, TableRowCells } from "./table-row-cells";
 
 const DEFAULT_ROW_HEIGHT = 40;
-const DEFAULT_OVERSCAN = 20;
+const DEFAULT_OVERSCAN = 30;
+
+interface VirtualRowProps<T> {
+	row: Row<T>;
+	virtualRow: VirtualItem;
+	isSelected: boolean;
+	rowHref?: string;
+	rowClassName?: string;
+	enableSelection?: boolean;
+	flexibleTableColumns?: boolean;
+	onRowClick?: (row: T) => void;
+}
+
+/** Memoized row component - only re-renders when row data changes */
+const VirtualRowInner = <T,>({
+	row,
+	virtualRow,
+	isSelected,
+	rowHref,
+	rowClassName,
+	enableSelection,
+	flexibleTableColumns,
+	onRowClick,
+}: VirtualRowProps<T>) => {
+	const handleClick = useCallback(() => {
+		if (!rowHref) onRowClick?.(row.original);
+	}, [rowHref, onRowClick, row.original]);
+
+	const handleContextMenu = useCallback(
+		(e: React.MouseEvent) => {
+			if (rowHref) {
+				e.preventDefault();
+				window.open(rowHref, "_blank", "noopener,noreferrer");
+			}
+		},
+		[rowHref],
+	);
+
+	return (
+		<TableRow
+			data-state={row.getIsSelected() && "selected"}
+			data-index={virtualRow.index}
+			className={cn(
+				"text-t3 transition-none h-10 relative border-b",
+				rowClassName,
+				isSelected ? "z-100" : "hover:bg-interactive-secondary-hover",
+			)}
+			onClick={handleClick}
+			onContextMenu={handleContextMenu}
+		>
+			<TableRowCells
+				row={row}
+				enableSelection={enableSelection}
+				flexibleTableColumns={flexibleTableColumns}
+				rowHref={rowHref}
+			/>
+		</TableRow>
+	);
+};
+
+// Memoize with custom comparator for optimal performance
+const VirtualRow = memo(VirtualRowInner, (prevProps, nextProps) => {
+	// Only re-render if essential data changed
+	return (
+		prevProps.row.id === nextProps.row.id &&
+		prevProps.isSelected === nextProps.isSelected &&
+		prevProps.row.getIsSelected() === nextProps.row.getIsSelected() &&
+		prevProps.rowHref === nextProps.rowHref &&
+		prevProps.virtualRow.index === nextProps.virtualRow.index &&
+		prevProps.rowClassName === nextProps.rowClassName
+	);
+}) as typeof VirtualRowInner;
 
 export function TableBodyVirtualized() {
 	const {
@@ -35,6 +109,25 @@ export function TableBodyVirtualized() {
 		overscan,
 	});
 
+	// Memoize virtual items to prevent unnecessary recalculations
+	const virtualRows = virtualizer.getVirtualItems();
+
+	// Memoize padding calculations
+	const { paddingTop, paddingBottom } = useMemo(() => {
+		const top = virtualRows[0]?.start ?? 0;
+		const bottom =
+			virtualizer.getTotalSize() - (virtualRows[virtualRows.length - 1]?.end ?? 0);
+		return { paddingTop: top, paddingBottom: bottom };
+	}, [virtualRows, virtualizer]);
+
+	// Memoize the onRowClick handler
+	const memoizedOnRowClick = useCallback(
+		(original: unknown) => {
+			onRowClick?.(original);
+		},
+		[onRowClick],
+	);
+
 	if (!rows.length) {
 		return (
 			<TableEmptyState
@@ -46,67 +139,40 @@ export function TableBodyVirtualized() {
 		);
 	}
 
-	const virtualRows = virtualizer.getVirtualItems();
-
-	// Padding-based virtualization - creates scroll space without absolute positioning
-	const paddingTop = virtualRows[0]?.start ?? 0;
-	const paddingBottom =
-		virtualizer.getTotalSize() -
-		(virtualRows[virtualRows.length - 1]?.end ?? 0);
-
 	return (
 		<ShadcnTableBody className="bg-interactive-secondary">
 			{/* Top spacer row */}
 			{paddingTop > 0 && (
-				<tr style={{ height: `${paddingTop}px` }}>
-					<td
-						colSpan={numberOfColumns}
-						style={{ padding: 0, border: "none" }}
-					/>
+				<tr style={{ height: paddingTop }}>
+					<td colSpan={numberOfColumns} style={{ padding: 0, border: "none" }} />
 				</tr>
 			)}
 
-			{/* Visible rows */}
+			{/* Visible rows - using memoized VirtualRow component */}
 			{virtualRows.map((virtualRow) => {
 				const row = rows[virtualRow.index];
-				const isSelected = selectedItemId === (row.original as any).id;
+				const isSelected = selectedItemId === (row.original as { id?: string }).id;
 				const rowHref = getRowHref?.(row.original);
 
 				return (
-					<TableRow
+					<VirtualRow
 						key={row.id}
-						data-state={row.getIsSelected() && "selected"}
-						className={cn(
-							"text-t3 transition-none h-12 py-4 relative border-b",
-							rowClassName,
-							isSelected ? "z-100" : "hover:bg-interactive-secondary-hover",
-						)}
-						onClick={!rowHref ? () => onRowClick?.(row.original) : undefined}
-						onContextMenu={(e) => {
-							if (rowHref) {
-								e.preventDefault();
-								window.open(rowHref, "_blank", "noopener,noreferrer");
-								window.focus();
-							}
-						}}
-					>
-						<TableRowCells
-							row={row}
-							enableSelection={enableSelection}
-							flexibleTableColumns={flexibleTableColumns}
-							rowHref={rowHref}
-						/>
-					</TableRow>
+						row={row}
+						virtualRow={virtualRow}
+						isSelected={isSelected}
+						rowHref={rowHref}
+						rowClassName={rowClassName}
+						enableSelection={enableSelection}
+						flexibleTableColumns={flexibleTableColumns}
+						onRowClick={memoizedOnRowClick}
+					/>
 				);
 			})}
 
 			{/* Bottom spacer row */}
 			{paddingBottom > 0 && (
-				<tr style={{ height: `${paddingBottom}px` }}>
-					<td
-						colSpan={numberOfColumns}
-						style={{ padding: 0, border: "none" }}
-					/>
+				<tr style={{ height: paddingBottom }}>
+					<td colSpan={numberOfColumns} style={{ padding: 0, border: "none" }} />
 				</tr>
 			)}
 		</ShadcnTableBody>
