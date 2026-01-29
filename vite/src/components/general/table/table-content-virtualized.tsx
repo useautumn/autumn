@@ -41,9 +41,9 @@ export function TableContentVirtualized({
 					className,
 				)}
 			>
-				{/* Column visibility toggle - adjusted for scrollbar gutter */}
+				{/* Column visibility toggle */}
 				{enableColumnVisibility && (
-					<div className="absolute right-8 top-1 z-45 h-fit">
+					<div className="absolute right-7 top-1 z-45 h-fit">
 						<TableColumnVisibility />
 					</div>
 				)}
@@ -56,12 +56,14 @@ export function TableContentVirtualized({
 				{/* Scroll container wrapping the table - optimized for fast scrolling */}
 				<div
 					ref={scrollContainerRef}
-					className="overflow-auto rounded-lg w-full [&::-webkit-scrollbar-track]:mt-7 [&::-webkit-scrollbar-thumb]:mt-7"
-					style={{ 
+					className="rounded-lg w-full [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-track]:mt-7 [&::-webkit-scrollbar-thumb]:bg-neutral-400 [&::-webkit-scrollbar-thumb]:rounded-full dark:[&::-webkit-scrollbar-thumb]:bg-neutral-600"
+					style={{
 						height: virtualization?.containerHeight,
-						scrollbarGutter: 'stable',
-						willChange: 'scroll-position',
-						contain: 'strict',
+						willChange: "scroll-position",
+						contain: "strict",
+						overflow: "auto",
+						scrollbarWidth: "thin",
+						scrollbarColor: "rgba(155, 155, 155, 0.5) transparent",
 					}}
 				>
 					<Table
