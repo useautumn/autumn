@@ -31,10 +31,8 @@ function CustomersPage() {
 				customers,
 			}}
 		>
-			<div className="flex flex-col gap-4 h-fit relative w-full pb-8 max-w-5xl mx-auto pt-8">
-				<div className="h-fit max-h-full px-10">
-					<CustomerListTable customers={customers} />
-				</div>
+			<div className=" max-h-full px-10 flex flex-col gap-4 h-full relative w-full pb-8 max-w-5xl mx-auto pt-8">
+				<CustomerListTable customers={customers} />
 			</div>
 		</CustomersContext.Provider>
 	);
