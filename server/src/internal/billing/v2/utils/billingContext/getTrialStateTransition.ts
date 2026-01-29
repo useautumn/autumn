@@ -1,5 +1,5 @@
 import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
-import type { BillingContext } from "@/internal/billing/v2/types";
+import type { BillingContext } from "@autumn/shared";
 import { billingContextHasTrial } from "./billingContextHasTrial";
 
 /** Gets the trial state transition for a billing context. */

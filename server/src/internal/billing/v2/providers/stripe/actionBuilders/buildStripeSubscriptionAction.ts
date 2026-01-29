@@ -9,7 +9,7 @@ import type {
 	BillingContext,
 	StripeSubscriptionAction,
 	StripeSubscriptionScheduleAction,
-} from "@/internal/billing/v2/types";
+} from "@autumn/shared";
 
 export const buildStripeSubscriptionAction = ({
 	ctx,

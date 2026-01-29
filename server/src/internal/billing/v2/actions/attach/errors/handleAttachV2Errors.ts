@@ -12,7 +12,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type {
 	AttachBillingContext,
 	AutumnBillingPlan,
-} from "@/internal/billing/v2/types";
+} from "@autumn/shared";
 
 /**
  * Validates that we're not trying to modify a customer managed by an external PSP like RevenueCat.

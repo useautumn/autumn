@@ -2,8 +2,8 @@ import { cusProductToProduct } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@/internal/billing/v2/types";
-import type { AutumnBillingPlan } from "@/internal/billing/v2/types";
+import type { BillingContext } from "@autumn/shared";
+import type { AutumnBillingPlan } from "@autumn/shared";
 import { checkStripeProductExists } from "@/internal/products/productUtils";
 
 export const initStripeResourcesForBillingPlan = async ({

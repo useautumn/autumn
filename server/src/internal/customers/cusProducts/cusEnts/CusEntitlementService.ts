@@ -19,7 +19,7 @@ import { and, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import type { UpdateCustomerEntitlement } from "@/internal/billing/v2/types";
+import type { UpdateCustomerEntitlement } from "@autumn/shared";
 import RecaseError from "@/utils/errorUtils.js";
 
 export class CusEntService {

@@ -9,7 +9,7 @@ import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/s
 import type {
 	AutumnBillingPlan,
 	UpdateSubscriptionBillingContext,
-} from "@/internal/billing/v2/types";
+} from "@autumn/shared";
 import { handleCancelEndOfCycleErrors } from "@/internal/billing/v2/actions/updateSubscription/errors/handleCancelEndOfCycleErrors";
 import { handleBillingBehaviorErrors } from "./handleBillingBehaviorErrors";
 import { handleCurrentCustomerProductErrors } from "./handleCurrentCustomerProductErrors";

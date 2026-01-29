@@ -1,7 +1,7 @@
 import { formatSecondsToDate } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
-import type { BillingContext } from "@/internal/billing/v2/types";
-import type { StripeSubscriptionScheduleAction } from "@server/internal/billing/v2/types";
+import type { BillingContext } from "@autumn/shared";
+import type { StripeSubscriptionScheduleAction } from "@autumn/shared";
 import type Stripe from "stripe";
 import { billingContextFormatPriceByStripePriceId } from "@/internal/billing/v2/utils/billingContextPriceLookup";
 

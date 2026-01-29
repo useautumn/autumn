@@ -1,6 +1,6 @@
 import { formatMs } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { AttachBillingContext } from "@/internal/billing/v2/types";
+import type { AttachBillingContext } from "@autumn/shared";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 
 export const logAttachContext = ({

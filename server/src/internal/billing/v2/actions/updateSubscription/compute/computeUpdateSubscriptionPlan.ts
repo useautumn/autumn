@@ -1,7 +1,7 @@
 import type { UpdateSubscriptionV0Params } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/types";
-import type { AutumnBillingPlan } from "@/internal/billing/v2/types";
+import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
+import type { AutumnBillingPlan } from "@autumn/shared";
 
 import { computeCancelPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/cancel/computeCancelPlan";
 

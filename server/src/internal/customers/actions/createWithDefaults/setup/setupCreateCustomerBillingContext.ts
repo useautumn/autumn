@@ -1,6 +1,6 @@
 import { getOrCreateStripeCustomer } from "@/external/stripe/customers/index.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import type { BillingContext } from "@/internal/billing/v2/types";
+import type { BillingContext } from "@autumn/shared";
 import type { CreateCustomerContext } from "../createCustomerContext.js";
 
 /**

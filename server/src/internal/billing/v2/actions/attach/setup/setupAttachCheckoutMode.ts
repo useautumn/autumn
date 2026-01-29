@@ -5,7 +5,7 @@ import {
 	type RedirectMode,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import type { CheckoutMode } from "@/internal/billing/v2/types";
+import type { CheckoutMode } from "@autumn/shared";
 
 /**
  * Determines the checkout mode for attach operations.

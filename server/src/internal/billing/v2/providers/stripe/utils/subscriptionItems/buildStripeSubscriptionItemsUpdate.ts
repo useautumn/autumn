@@ -4,13 +4,13 @@ import {
 	getLargestInterval,
 } from "@autumn/shared";
 import { customerProductToStripeItemSpecs } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionItems/customerProductToStripeItemSpecs";
-import type { StripeItemSpec } from "@shared/models/billingModels/stripeAdapterModels/stripeItemSpec";
+import type { StripeItemSpec } from "@autumn/shared";
 import type { FullCusProduct } from "@shared/models/cusProductModels/cusProductModels";
 import type Stripe from "stripe";
 import { stripeSubscriptionItemToStripePriceId } from "@/external/stripe/subscriptions/subscriptionItems/utils/convertStripeSubscriptionItemUtils";
 import { findStripeSubscriptionItemByStripePriceId } from "@/external/stripe/subscriptions/subscriptionItems/utils/findStripeSubscriptionItemUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@/internal/billing/v2/types";
+import type { BillingContext } from "@autumn/shared";
 import { findStripeItemSpecByStripePriceId } from "./findStripeItemSpec";
 
 /**

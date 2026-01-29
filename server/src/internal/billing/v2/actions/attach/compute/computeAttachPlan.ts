@@ -3,7 +3,7 @@ import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutum
 import type {
 	AttachBillingContext,
 	AutumnBillingPlan,
-} from "@/internal/billing/v2/types";
+} from "@autumn/shared";
 import { computeAttachNewCustomerProduct } from "./computeAttachNewCustomerProduct";
 import { computeAttachTransitionUpdates } from "./computeAttachTransitionUpdates";
 import { finalizeAttachPlan } from "./finalizeAttachPlan";

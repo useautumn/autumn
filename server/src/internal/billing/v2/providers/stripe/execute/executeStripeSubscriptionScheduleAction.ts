@@ -5,7 +5,7 @@ import { logSubscriptionScheduleAction } from "@/internal/billing/v2/providers/s
 import type {
 	BillingContext,
 	StripeSubscriptionScheduleAction,
-} from "@/internal/billing/v2/types";
+} from "@autumn/shared";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
 /**

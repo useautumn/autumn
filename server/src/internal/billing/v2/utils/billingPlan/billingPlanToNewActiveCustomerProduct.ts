@@ -1,5 +1,5 @@
 import { cp } from "@autumn/shared";
-import type { AutumnBillingPlan } from "@/internal/billing/v2/types";
+import type { AutumnBillingPlan } from "@autumn/shared";
 
 export const billingPlanToNewActiveCustomerProduct = ({
 	autumnBillingPlan,

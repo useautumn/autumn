@@ -1,6 +1,6 @@
 import type { LineItem } from "@autumn/shared";
-import type { BillingContext } from "@/internal/billing/v2/types";
-import type { StripeInvoiceItemsAction } from "../../../types";
+import type { BillingContext } from "@autumn/shared";
+import type { StripeInvoiceItemsAction } from "@autumn/shared";
 import { lineItemsToCreateInvoiceItemsParams } from "../utils/invoiceLines/lineItemsToCreateInvoiceItemsParams";
 
 /**

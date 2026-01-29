@@ -14,8 +14,8 @@ import type {
 	BillingContext,
 	BillingPlan,
 	StripeBillingPlanResult,
-} from "@/internal/billing/v2/types";
-import { StripeBillingStage } from "@/internal/billing/v2/types";
+} from "@autumn/shared";
+import { StripeBillingStage } from "@autumn/shared";
 import { upsertInvoiceFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertInvoiceFromBilling";
 import { upsertSubscriptionFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertSubscriptionFromBilling";
 import { insertMetadataFromBillingPlan } from "@/internal/metadata/utils/insertMetadataFromBillingPlan";

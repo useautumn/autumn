@@ -15,7 +15,7 @@ import {
 import { cusEntToInvoiceUsage } from "@shared/utils/cusEntUtils/overageUtils/cusEntToInvoiceUsage";
 import { priceToStripeItem } from "@/external/stripe/priceToStripeItem/priceToStripeItem";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@/internal/billing/v2/types";
+import type { BillingContext } from "@autumn/shared";
 
 /**
  * Convert a customer product to stripe item specs

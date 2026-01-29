@@ -10,7 +10,7 @@ import type Stripe from "stripe";
 import type {
 	BillingContext,
 	StripeSubscriptionScheduleAction,
-} from "@/internal/billing/v2/types";
+} from "@autumn/shared";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES

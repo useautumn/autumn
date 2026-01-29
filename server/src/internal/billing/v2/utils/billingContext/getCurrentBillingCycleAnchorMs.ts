@@ -1,5 +1,5 @@
 import { secondsToMs } from "@autumn/shared";
-import type { BillingContext } from "../../types";
+import type { BillingContext } from "@autumn/shared";
 
 export const getCurrentBillingCycleAnchorMs = ({
 	billingContext,

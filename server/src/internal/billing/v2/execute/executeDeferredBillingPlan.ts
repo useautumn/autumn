@@ -2,7 +2,7 @@ import type { Metadata } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan";
-import type { DeferredAutumnBillingPlanData } from "@/internal/billing/v2/types";
+import type { DeferredAutumnBillingPlanData } from "@autumn/shared";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 

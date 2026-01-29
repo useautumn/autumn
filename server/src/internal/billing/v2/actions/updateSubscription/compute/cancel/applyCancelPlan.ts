@@ -1,5 +1,5 @@
 import type { FullCusProduct, LineItem } from "@autumn/shared";
-import type { AutumnBillingPlan } from "@/internal/billing/v2/types";
+import type { AutumnBillingPlan } from "@autumn/shared";
 import type { CancelUpdates } from "./computeCancelUpdates";
 
 /**

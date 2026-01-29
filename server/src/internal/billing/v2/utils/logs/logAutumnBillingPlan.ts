@@ -2,7 +2,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type {
 	AutumnBillingPlan,
 	BillingContext,
-} from "@/internal/billing/v2/types";
+} from "@autumn/shared";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 

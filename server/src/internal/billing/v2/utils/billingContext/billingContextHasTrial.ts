@@ -1,4 +1,4 @@
-import type { BillingContext } from "@/internal/billing/v2/types";
+import type { BillingContext } from "@autumn/shared";
 
 /**
  * Check if the billing context will create a trial that ends later than the current epoch.

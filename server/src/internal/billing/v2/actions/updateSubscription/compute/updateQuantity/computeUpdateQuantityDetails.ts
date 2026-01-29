@@ -11,7 +11,7 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/types";
+import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
 import { getLineItemBillingPeriod } from "@/internal/billing/v2/utils/lineItems/getLineItemBillingPeriod";
 import { calculateUpdateQuantityDifferences } from "./calculateUpdateQuantityDifferences";
 import { calculateUpdateQuantityEntitlementChange } from "./calculateUpdateQuantityEntitlementChange";

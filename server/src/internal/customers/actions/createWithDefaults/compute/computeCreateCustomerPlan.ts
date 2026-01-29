@@ -1,5 +1,5 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import type { AutumnBillingPlan } from "@/internal/billing/v2/types";
+import type { AutumnBillingPlan } from "@autumn/shared";
 import { initFullCustomerProductFromProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProductFromProduct.js";
 import type { CreateCustomerContext } from "../createCustomerContext.js";
 
