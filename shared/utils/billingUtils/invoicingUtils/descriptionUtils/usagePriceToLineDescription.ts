@@ -29,8 +29,7 @@ export const usagePriceToLineDescription = ({
 		billingUnits,
 	});
 
-	const { product } = context;
-	let description = `${product.name} - ${featureUsageDescription}`;
+	let description = featureUsageDescription;
 
 	if (!isOneOffPrice(price) && includePeriodDescription) {
 		const periodDescription = lineItemToPeriodDescription({

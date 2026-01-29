@@ -4,6 +4,7 @@ export const BillingPreviewResponseSchema = z.object({
 	customer_id: z.string(),
 	line_items: z.array(
 		z.object({
+			title: z.string(),
 			description: z.string(),
 			amount: z.number(),
 		}),

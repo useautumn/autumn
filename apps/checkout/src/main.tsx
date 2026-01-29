@@ -1,24 +1,43 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { CheckoutPage } from "./pages/CheckoutPage";
 import "./index.css";
 
+const queryClient = new QueryClient({
+	defaultOptions: {
+		queries: {
+			retry: 1,
+			staleTime: 1000 * 60, // 1 minute
+		},
+	},
+});
+
 createRoot(document.getElementById("root")!).render(
-	<BrowserRouter>
-		<Routes>
-			<Route path="/c/:checkoutId" element={<CheckoutPage />} />
-			<Route path="*" element={<NotFound />} />
-		</Routes>
-	</BrowserRouter>,
+	<QueryClientProvider client={queryClient}>
+		<BrowserRouter>
+			<Routes>
+				<Route path="/c/:checkoutId" element={<CheckoutPage />} />
+				<Route path="*" element={<NotFound />} />
+			</Routes>
+		</BrowserRouter>
+	</QueryClientProvider>,
 );
 
 function NotFound() {
 	return (
-		<div className="checkout-container">
-			<div className="checkout-card">
-				<h2>Page not found</h2>
-				<p>The checkout page you're looking for doesn't exist.</p>
-			</div>
+		<div className="min-h-screen flex items-center justify-center p-4 bg-background">
+			<Card className="w-full max-w-md">
+				<CardHeader>
+					<CardTitle>Page not found</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<p className="text-muted-foreground">
+						The checkout page you're looking for doesn't exist.
+					</p>
+				</CardContent>
+			</Card>
 		</div>
 	);
 }

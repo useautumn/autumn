@@ -21,7 +21,7 @@ export const fixedPriceToDescription = ({
 	// biome-ignore lint/correctness/noUnusedVariables: Might be used in the future
 	const amount = formatAmount({ currency, amount: config.amount });
 
-	let description = `${product.name} - Base Price`;
+	let description = "Base Price";
 
 	if (!isOneOffPrice(price)) {
 		const periodDescription = lineItemToPeriodDescription({

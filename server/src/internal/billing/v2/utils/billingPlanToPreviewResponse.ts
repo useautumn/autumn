@@ -25,10 +25,16 @@ export const billingPlanToPreviewResponse = ({
 
 	const previewImmediateLineItems = planLineItems
 		.filter((line) => line.chargeImmediately)
-		.map((line) => ({
-			description: line.description,
-			amount: line.finalAmount,
-		}));
+		.map((line) => {
+			// Use feature name if available, otherwise product name
+			const title =
+				line.context.feature?.name || line.context.product.name || "Item";
+			return {
+				title,
+				description: line.description,
+				amount: line.finalAmount,
+			};
+		});
 
 	const total = new Decimal(
 		sumValues(previewImmediateLineItems.map((line) => line.amount)),
