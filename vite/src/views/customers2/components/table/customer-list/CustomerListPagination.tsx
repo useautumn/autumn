@@ -6,14 +6,24 @@ import {
 	PaginationItem,
 } from "@/components/ui/pagination";
 import { IconButton } from "@/components/v2/buttons/IconButton";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/v2/selects/Select";
 import { useCusSearchQuery } from "@/views/customers/hooks/useCusSearchQuery";
 import { useCustomersQueryStates } from "@/views/customers/hooks/useCustomersQueryStates";
+
+const PAGE_SIZE_OPTIONS = [50, 100, 250, 500];
 
 export function CustomerListPagination() {
 	const { isLoading, totalCount } = useCusSearchQuery();
 	const { queryStates, setQueryStates } = useCustomersQueryStates();
 
-	const totalPages = Math.ceil((totalCount || 0) / 30);
+	const pageSize = queryStates.pageSize || 50;
+	const totalPages = Math.ceil((totalCount || 0) / pageSize);
 	const currentPage = Number(queryStates.page) || 1;
 	const canGoPrev = currentPage > 1;
 	const canGoNext = totalPages > 0 && currentPage < totalPages;
@@ -66,5 +76,33 @@ export function CustomerListPagination() {
 				</Pagination>
 			)}
 		</div>
+	);
+}
+
+export function CustomerListPageSizeSelector() {
+	const { queryStates, setQueryStates } = useCustomersQueryStates();
+	const pageSize = queryStates.pageSize || 50;
+
+	return (
+		<Select
+			value={pageSize.toString()}
+			onValueChange={(value) => {
+				setQueryStates({
+					pageSize: Number(value),
+					page: 1,
+				});
+			}}
+		>
+			<SelectTrigger className="h-7 w-fit px-2 text-xs">
+				<SelectValue />
+			</SelectTrigger>
+			<SelectContent>
+				{PAGE_SIZE_OPTIONS.map((size) => (
+					<SelectItem key={size} value={size.toString()}>
+						{size}
+					</SelectItem>
+				))}
+			</SelectContent>
+		</Select>
 	);
 }

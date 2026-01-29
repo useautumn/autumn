@@ -97,12 +97,18 @@ function SelectContent({
 	className,
 	children,
 	position = "popper",
+	onEscapeKeyDown,
 	...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
 	return (
 		<SelectPrimitive.Portal>
 			<SelectPrimitive.Content
 				data-slot="select-content"
+				onEscapeKeyDown={(e) => {
+					// Stop propagation to prevent parent dialogs/sheets from closing
+					e.stopPropagation();
+					onEscapeKeyDown?.(e);
+				}}
 				className={cn(
 					// z-[200] to appear above sheets (z-[150])
 					"bg-interactive-secondary text-popover-foreground relative z-[200] max-h-(--radix-select-content-available-height) min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border shadow-md",

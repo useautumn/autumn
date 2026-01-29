@@ -17,7 +17,7 @@ export const useCusSearchQuery = () => {
 				none: queryStates.none,
 			},
 			page: queryStates.page,
-			page_size: 30,
+			page_size: queryStates.pageSize,
 		});
 		return { customers: data.customers, totalCount: data.totalCount };
 	};
@@ -38,6 +38,7 @@ export const useCusSearchQuery = () => {
 		queryKey: [
 			"customers",
 			queryStates.page,
+			queryStates.pageSize,
 			queryStates.status,
 			queryStates.version,
 			queryStates.none,

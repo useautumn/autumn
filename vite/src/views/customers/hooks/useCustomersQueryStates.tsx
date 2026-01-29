@@ -15,6 +15,7 @@ export const useCustomersQueryStates = () => {
 			version: parseAsArrayOf(parseAsString).withDefault([]),
 			none: parseAsBoolean.withDefault(false),
 			page: parseAsInteger.withDefault(1),
+			pageSize: parseAsInteger.withDefault(50),
 			lastItemId: parseAsString.withDefault(""),
 		},
 		{
