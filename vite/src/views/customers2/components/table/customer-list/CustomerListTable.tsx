@@ -188,6 +188,7 @@ export function CustomerListTable({
 		>
 			<div className="flex w-full items-center h-10 pb-4 gap-4">
 				<div className="flex items-center gap-2">
+					<Table.ColumnVisibility />
 					<CustomerListFilterButton />
 					<CustomerListSearchBar />
 				</div>
@@ -197,7 +198,6 @@ export function CustomerListTable({
 				</div>
 				<div className="flex items-center gap-2 ml-auto">
 					<CustomerListCreateButton />
-					<Table.ColumnVisibility />
 				</div>
 			</div>
 

@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { Table } from "@/components/ui/table";
+import { useScrollbarWidth } from "@/hooks/useScrollbarWidth";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { TableColumnVisibility } from "./table-column-visibility";
@@ -62,6 +63,12 @@ export function TableContentVirtualized({
 	// Using full column IDs ensures any visibility change is detected
 	const visibleColumnKey = visibleColumns.map((col) => col.id).join(",");
 
+	// Track scrollbar width to compensate header alignment
+	const { scrollbarWidth } = useScrollbarWidth({
+		scrollContainer,
+		deps: [rows.length],
+	});
+
 	// Provide updated context with scroll container to children
 	const contextWithRef = {
 		...context,
@@ -89,7 +96,13 @@ export function TableContentVirtualized({
 					className="overflow-x-auto overflow-y-hidden scrollbar-none"
 					style={{ scrollbarWidth: "none" }}
 				>
-					<div className="relative" style={{ minWidth: `${totalWidth}px` }}>
+					<div
+						className="relative bg-card border-b"
+						style={{
+							minWidth: `${totalWidth}px`,
+							paddingRight: scrollbarWidth,
+						}}
+					>
 						{/* Column visibility toggle - only render if not in toolbar */}
 						{enableColumnVisibility && !columnVisibilityInToolbar && (
 							<div className="absolute right-7 top-1 z-45">
@@ -100,7 +113,7 @@ export function TableContentVirtualized({
 							className="p-0 w-full rounded-t-lg"
 							flexibleTableColumns={flexibleTableColumns}
 						>
-							<TableHeader />
+							<TableHeader hideBorder />
 						</Table>
 					</div>
 				</div>
