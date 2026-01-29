@@ -71,8 +71,10 @@ const VirtualRowInner = <T,>({
 // Memoize with custom comparator for optimal performance
 const VirtualRow = memo(VirtualRowInner, (prevProps, nextProps) => {
 	// Only re-render if essential data changed
+	// IMPORTANT: Check row.original identity to handle data changes with keepPreviousData
 	return (
 		prevProps.row.id === nextProps.row.id &&
+		prevProps.row.original === nextProps.row.original &&
 		prevProps.isSelected === nextProps.isSelected &&
 		prevProps.row.getIsSelected() === nextProps.row.getIsSelected() &&
 		prevProps.rowHref === nextProps.rowHref &&
@@ -95,18 +97,21 @@ export function TableBodyVirtualized() {
 		selectedItemId,
 		flexibleTableColumns,
 		virtualization,
-		scrollContainerRef,
+		scrollContainer,
 	} = useTableContext();
 
 	const rows = table.getRowModel().rows;
 	const rowHeight = virtualization?.rowHeight ?? DEFAULT_ROW_HEIGHT;
 	const overscan = virtualization?.overscan ?? DEFAULT_OVERSCAN;
 
+	// Don't initialize virtualizer until scroll container is ready
+	// This prevents incorrect virtual item calculations on initial render
 	const virtualizer = useVirtualizer({
 		count: rows.length,
-		getScrollElement: () => scrollContainerRef?.current ?? null,
+		getScrollElement: () => scrollContainer,
 		estimateSize: () => rowHeight,
 		overscan,
+		enabled: !!scrollContainer,
 	});
 
 	// Memoize virtual items to prevent unnecessary recalculations
@@ -128,7 +133,8 @@ export function TableBodyVirtualized() {
 		[onRowClick],
 	);
 
-	if (!rows.length) {
+	// Don't render until scroll container is available to prevent virtualization issues
+	if (!scrollContainer || !rows.length) {
 		return (
 			<TableEmptyState
 				numberOfColumns={numberOfColumns}

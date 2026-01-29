@@ -1,5 +1,5 @@
 import type { Table as TanstackTable } from "@tanstack/react-table";
-import { createContext, type ReactNode, type RefObject, useContext } from "react";
+import { createContext, type ReactNode, useContext } from "react";
 import type { ColumnGroup } from "@/hooks/useColumnVisibility";
 
 export interface VirtualizationConfig {
@@ -32,8 +32,8 @@ export interface TableProps<T> {
 	selectedItemId?: string | null;
 	/** Virtualization config - only needed when using VirtualizedContent/VirtualizedBody */
 	virtualization?: VirtualizationConfig;
-	/** Ref to scroll container - set internally by VirtualizedContent, used by VirtualizedBody */
-	scrollContainerRef?: RefObject<HTMLDivElement | null>;
+	/** Scroll container element - set internally by VirtualizedContent, used by VirtualizedBody */
+	scrollContainer?: HTMLDivElement | null;
 }
 
 //biome-ignore lint/suspicious/noExplicitAny: type could be any here
