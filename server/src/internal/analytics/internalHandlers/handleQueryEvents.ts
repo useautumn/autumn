@@ -115,7 +115,7 @@ export const handleQueryEvents = createRoute({
 		const binSize = bin_size || (interval === "24h" ? "hour" : "day");
 
 		const aggregateStart = performance.now();
-		const events = await eventActions.aggregate({
+		const { formatted: events, truncated } = await eventActions.aggregate({
 			ctx,
 			params: {
 				customer_id,
@@ -139,6 +139,7 @@ export const handleQueryEvents = createRoute({
 			eventNames: event_names,
 			topEvents,
 			bcExclusionFlag,
+			truncated,
 		});
 	},
 });

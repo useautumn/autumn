@@ -9,7 +9,8 @@ import { UTCDate } from "@date-fns/utc";
 import { addDays, addHours, addMonths, format, sub } from "date-fns";
 import { Decimal } from "decimal.js";
 import {
-	type AggregateFastPipeRow,
+	type AggregateGroupablePipeRow,
+	type AggregateSimplePipeRow,
 	getTinybirdPipes,
 } from "@/external/tinybird/initTinybird.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -148,19 +149,16 @@ const generateAllPeriods = ({
 /** Builds column name based on event name, group value, and noCount flag */
 const buildColumnName = ({
 	eventName,
-	groupValue,
 	noCount,
 }: {
 	eventName: string;
-	groupValue?: string;
 	noCount?: boolean;
 }): string => {
-	const baseName = noCount ? eventName : `${eventName}_count`;
-	return groupValue ? `${baseName}__${groupValue}` : baseName;
+	return noCount ? eventName : `${eventName}_count`;
 };
 
-/** Pivots ungrouped results into the original format with dynamic columns */
-const pivotUngroupedResults = ({
+/** Formats simple pipe results (no grouping) into pivoted format */
+const formatSimpleResults = ({
 	rows,
 	eventNames,
 	noCount,
@@ -168,7 +166,7 @@ const pivotUngroupedResults = ({
 	endDate,
 	binSize,
 }: {
-	rows: AggregateFastPipeRow[];
+	rows: AggregateSimplePipeRow[];
 	eventNames: string[];
 	noCount?: boolean;
 	startDate: string;
@@ -212,8 +210,8 @@ const pivotUngroupedResults = ({
 	return { meta, rows: data.length, data };
 };
 
-/** Formats grouped results with a properties.{groupBy} column (unpivoted format for frontend) */
-const formatGroupedResults = ({
+/** Formats groupable pipe results (with grouping) into unpivoted format */
+const formatGroupableResults = ({
 	rows,
 	eventNames,
 	groupBy,
@@ -222,7 +220,7 @@ const formatGroupedResults = ({
 	endDate,
 	binSize,
 }: {
-	rows: AggregateFastPipeRow[];
+	rows: AggregateGroupablePipeRow[];
 	eventNames: string[];
 	groupBy: string;
 	noCount?: boolean;
@@ -234,7 +232,7 @@ const formatGroupedResults = ({
 	// groupBy already comes with "properties." prefix from frontend
 	const groupByColumn = groupBy;
 
-	// Collect all unique group values
+	// Collect all unique group values from the results
 	const allGroupValues = new Set<string>();
 	for (const row of rows) {
 		if (row.group_value) {
@@ -291,10 +289,15 @@ const formatGroupedResults = ({
 		}
 	}
 
-	// Sort by period then group value
+	// Sort by period then group value (but put "Other" last within each period)
 	data.sort((a, b) => {
 		const periodCompare = String(a.period).localeCompare(String(b.period));
 		if (periodCompare !== 0) return periodCompare;
+		// Put "Other" last
+		const aIsOther = a[groupByColumn] === "Other";
+		const bIsOther = b[groupByColumn] === "Other";
+		if (aIsOther && !bIsOther) return 1;
+		if (!aIsOther && bIsOther) return -1;
 		return String(a[groupByColumn]).localeCompare(String(b[groupByColumn]));
 	});
 
@@ -311,46 +314,6 @@ const formatGroupedResults = ({
 	return { meta, rows: data.length, data };
 };
 
-/** Formats pipe results into the expected format (pivoted for ungrouped, unpivoted for grouped) */
-const formatResults = ({
-	rows,
-	eventNames,
-	noCount,
-	groupBy,
-	startDate,
-	endDate,
-	binSize,
-}: {
-	rows: AggregateFastPipeRow[];
-	eventNames: string[];
-	noCount?: boolean;
-	groupBy?: string;
-	startDate: string;
-	endDate: string;
-	binSize: string;
-}): ClickHouseResult => {
-	if (groupBy) {
-		return formatGroupedResults({
-			rows,
-			eventNames,
-			groupBy,
-			noCount,
-			startDate,
-			endDate,
-			binSize,
-		});
-	}
-
-	return pivotUngroupedResults({
-		rows,
-		eventNames,
-		noCount,
-		startDate,
-		endDate,
-		binSize,
-	});
-};
-
 /** Aggregates events into time-bucketed timeseries data */
 export const aggregate = async ({
 	ctx,
@@ -358,7 +321,7 @@ export const aggregate = async ({
 }: {
 	ctx: AutumnContext;
 	params: TimeseriesEventsParams;
-}): Promise<ClickHouseResult> => {
+}): Promise<{ formatted: ClickHouseResult; truncated: boolean }> => {
 	const pipes = getTinybirdPipes();
 	const { org, env } = ctx;
 
@@ -368,47 +331,93 @@ export const aggregate = async ({
 
 	const { startDate, endDate } = await calculateDateRange({ ctx, params });
 
-	// Strip "properties." prefix for property_key (MV stores just the key name)
-	const propertyKey = params.group_by?.startsWith("properties.")
-		? params.group_by.slice("properties.".length)
-		: (params.group_by ?? "");
-
-	const pipeParams = {
-		org_id: org.id,
-		env,
-		event_names: params.event_names,
-		start_date: startDate,
-		end_date: endDate,
-		bin_size: binSize,
-		timezone,
-		customer_id: params.aggregateAll ? undefined : params.customer_id,
-		property_key: propertyKey,
-	};
-
-	ctx.logger.debug("Calling Tinybird aggregate_fast pipe", { pipeParams });
-
 	const startTime = performance.now();
-	const result = await pipes.aggregateFast(pipeParams);
-	const queryDuration = performance.now() - startTime;
+	let formatted: ClickHouseResult;
+	let truncated = false;
 
-	const formatted = formatResults({
-		rows: result.data,
-		eventNames: params.event_names,
-		noCount: params.no_count,
-		groupBy: params.group_by,
-		startDate,
-		endDate,
-		binSize,
-	});
+	// Route to appropriate pipe based on whether grouping is requested
+	if (params.group_by) {
+		// Use aggregate_groupable pipe for grouped queries
+		// Strip "properties." prefix for property_key (pipe expects just the key name)
+		const propertyKey = params.group_by.startsWith("properties.")
+			? params.group_by.slice("properties.".length)
+			: params.group_by;
 
-	ctx.logger.debug("Aggregate results", {
-		queryMs: Math.round(queryDuration),
-		rawRows: result.data.length,
-		rawSample: result.data.slice(0, 3),
-		formattedRows: formatted.rows,
-		formattedSample: formatted.data.slice(0, 3),
-		columns: formatted.meta.map((m) => m.name),
-	});
+		const pipeParams = {
+			org_id: org.id,
+			env,
+			event_names: params.event_names,
+			start_date: startDate,
+			end_date: endDate,
+			bin_size: binSize,
+			timezone,
+			customer_id: params.aggregateAll ? undefined : params.customer_id,
+			property_key: propertyKey,
+		};
 
-	return formatted;
+		ctx.logger.debug("Calling Tinybird aggregate_groupable pipe", {
+			pipeParams,
+		});
+
+		const result = await pipes.aggregateGroupable(pipeParams);
+
+		// Extract truncation flag from first row (all rows have the same value)
+		truncated = result.data.length > 0 && result.data[0]._truncated === true;
+
+		formatted = formatGroupableResults({
+			rows: result.data,
+			eventNames: params.event_names,
+			groupBy: params.group_by,
+			noCount: params.no_count,
+			startDate,
+			endDate,
+			binSize,
+		});
+
+		ctx.logger.debug("Aggregate groupable results", {
+			queryMs: Math.round(performance.now() - startTime),
+			rawRows: result.data.length,
+			rawSample: result.data.slice(0, 3),
+			formattedRows: formatted.rows,
+			formattedSample: formatted.data.slice(0, 3),
+			columns: formatted.meta.map((m) => m.name),
+			truncated,
+		});
+	} else {
+		// Use aggregate_simple pipe for ungrouped queries
+		const pipeParams = {
+			org_id: org.id,
+			env,
+			event_names: params.event_names,
+			start_date: startDate,
+			end_date: endDate,
+			bin_size: binSize,
+			timezone,
+			customer_id: params.aggregateAll ? undefined : params.customer_id,
+		};
+
+		ctx.logger.debug("Calling Tinybird aggregate_simple pipe", { pipeParams });
+
+		const result = await pipes.aggregateSimple(pipeParams);
+
+		formatted = formatSimpleResults({
+			rows: result.data,
+			eventNames: params.event_names,
+			noCount: params.no_count,
+			startDate,
+			endDate,
+			binSize,
+		});
+
+		ctx.logger.debug("Aggregate simple results", {
+			queryMs: Math.round(performance.now() - startTime),
+			rawRows: result.data.length,
+			rawSample: result.data.slice(0, 3),
+			formattedRows: formatted.rows,
+			formattedSample: formatted.data.slice(0, 3),
+			columns: formatted.meta.map((m) => m.name),
+		});
+	}
+
+	return { formatted, truncated };
 };

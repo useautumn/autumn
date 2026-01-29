@@ -1,10 +1,10 @@
 export {
-	type AggregateFastPipeParams,
-	type AggregateFastPipeRow,
-	aggregateFastPipeParamsSchema,
-	aggregateFastPipeResponseSchema,
-	createAggregateFastPipe,
-} from "./aggregateFastPipe.js";
+	type AggregateGroupablePipeParams,
+	type AggregateGroupablePipeRow,
+	aggregateGroupablePipeParamsSchema,
+	aggregateGroupablePipeResponseSchema,
+	createAggregateGroupablePipe,
+} from "./aggregateGroupablePipe.js";
 export {
 	type AggregatePipeParams,
 	type AggregatePipeRow,
@@ -12,6 +12,13 @@ export {
 	aggregatePipeResponseSchema,
 	createAggregatePipe,
 } from "./aggregatePipe.js";
+export {
+	type AggregateSimplePipeParams,
+	type AggregateSimplePipeRow,
+	aggregateSimplePipeParamsSchema,
+	aggregateSimplePipeResponseSchema,
+	createAggregateSimplePipe,
+} from "./aggregateSimplePipe.js";
 export {
 	createListEventsPipe,
 	type ListEventsPipeParams,
