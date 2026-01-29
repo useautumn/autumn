@@ -1,0 +1,18 @@
+DESCRIPTION >
+    Experimental: Hourly aggregates with native JSON data type for properties.
+    Requires JSON data type beta access from Tinybird.
+    Allows multi-property GROUP BY at query time via properties.field syntax.
+
+SCHEMA >
+    `org_id` String,
+    `env` String,
+    `customer_id` String,
+    `event_name` String,
+    `hour` DateTime,
+    `properties` JSON,
+    `total_value` SimpleAggregateFunction(sum, Float64),
+    `event_count` SimpleAggregateFunction(sum, UInt64)
+
+ENGINE "AggregatingMergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(hour)"
+ENGINE_SORTING_KEY "org_id, env, event_name, hour, customer_id"
