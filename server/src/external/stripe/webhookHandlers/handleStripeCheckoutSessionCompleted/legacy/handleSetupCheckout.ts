@@ -5,8 +5,8 @@ import { handleOneOffFunction } from "@/internal/customers/attach/attachFunction
 import { getDefaultAttachConfig } from "@/internal/customers/attach/attachUtils/getAttachConfig.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { isOneOff } from "@/internal/products/productUtils.js";
-import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
-import { getCusPaymentMethod } from "../../stripeCusUtils.js";
+import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
+import { getCusPaymentMethod } from "../../../stripeCusUtils.js";
 
 export const handleSetupCheckout = async ({
 	ctx,

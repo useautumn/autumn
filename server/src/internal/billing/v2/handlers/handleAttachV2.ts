@@ -25,7 +25,7 @@ export const handleAttachV2 = createRoute({
 		const { billingContext, billingResult } = await billingActions.attach({
 			ctx,
 			params: body,
-			preview: true,
+			preview: false,
 		});
 
 		if (!billingResult) {

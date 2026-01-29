@@ -6,6 +6,7 @@ export * from "./billingResult";
 
 // Stripe billing plan types
 export * from "./stripeBillingPlan/stripeBillingPlan";
+export * from "./stripeBillingPlan/stripeCheckoutSessionAction";
 export * from "./stripeBillingPlan/stripeInvoiceAction";
 export * from "./stripeBillingPlan/stripeInvoiceItemsAction";
 export * from "./stripeBillingPlan/stripeSubscriptionAction";

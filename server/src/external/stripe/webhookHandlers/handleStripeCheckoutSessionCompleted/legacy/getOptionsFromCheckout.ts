@@ -6,7 +6,7 @@ import {
 	getPriceEntitlement,
 	priceIsOneOffAndTiered,
 } from "@/internal/products/prices/priceUtils.js";
-import { findStripeItemForPrice } from "../../stripeSubUtils/stripeSubItemUtils.js";
+import { findStripeItemForPrice } from "../../../stripeSubUtils/stripeSubItemUtils.js";
 
 export const getOptionsFromCheckoutSession = async ({
 	checkoutSession,

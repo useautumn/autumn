@@ -7,21 +7,19 @@ import {
 import {
 	type StripeBillingPlan,
 	StripeBillingPlanSchema,
+	type StripeCheckoutSessionAction,
 	type StripeInvoiceAction,
-	StripeInvoiceActionSchema,
 	type StripeInvoiceItemsAction,
-	StripeInvoiceItemsActionSchema,
 	type StripeInvoiceMetadata,
 	type StripeSubscriptionAction,
-	StripeSubscriptionActionSchema,
 	type StripeSubscriptionScheduleAction,
-	StripeSubscriptionScheduleActionSchema,
 } from "./stripeBillingPlan/stripeBillingPlan";
 
 export type {
 	AutumnBillingPlan,
 	DeferredAutumnBillingPlanData,
 	StripeBillingPlan,
+	StripeCheckoutSessionAction,
 	StripeInvoiceAction,
 	StripeInvoiceItemsAction,
 	StripeInvoiceMetadata,

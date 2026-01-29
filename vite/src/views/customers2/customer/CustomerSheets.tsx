@@ -10,6 +10,7 @@ import { SubscriptionCancelSheet } from "@/views/customers2/components/sheets/Su
 import { SubscriptionUncancelSheet } from "@/views/customers2/components/sheets/SubscriptionUncancelSheet";
 import { SubscriptionUpdateSheet2 } from "@/views/customers2/components/sheets/SubscriptionUpdateSheet2";
 import { AttachProductSheet } from "../components/sheets/AttachProductSheet";
+import { AttachProductSheetV2 } from "../components/sheets/AttachProductSheetV2";
 import { BalanceEditSheet } from "../components/sheets/BalanceEditSheet";
 import { BalanceSelectionSheet } from "../components/sheets/BalanceSelectionSheet";
 import { SubscriptionDetailSheet } from "../components/sheets/SubscriptionDetailSheet";
@@ -31,6 +32,8 @@ export function CustomerSheets() {
 		switch (sheetType) {
 			case "attach-product":
 				return <AttachProductSheet />;
+			case "attach-product-v2":
+				return <AttachProductSheetV2 />;
 			case "subscription-detail":
 				return <SubscriptionDetailSheet />;
 			case "subscription-update":

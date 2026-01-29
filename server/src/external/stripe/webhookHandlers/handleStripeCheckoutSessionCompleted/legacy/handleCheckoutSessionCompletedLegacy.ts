@@ -18,13 +18,13 @@ import { getMetadataFromCheckoutSession } from "@/internal/metadata/metadataUtil
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
-import { getEarliestPeriodEnd } from "../stripeSubUtils/convertSubUtils.js";
-import { getOptionsFromCheckoutSession } from "./handleCheckoutCompleted/getOptionsFromCheckout.js";
-import { handleCheckoutSub } from "./handleCheckoutCompleted/handleCheckoutSub.js";
-import { handleRemainingSets } from "./handleCheckoutCompleted/handleRemainingSets.js";
-import { handleSetupCheckout } from "./handleCheckoutCompleted/handleSetupCheckout.js";
+import { getEarliestPeriodEnd } from "../../../stripeSubUtils/convertSubUtils.js";
+import { getOptionsFromCheckoutSession } from "./getOptionsFromCheckout.js";
+import { handleCheckoutSub } from "./handleCheckoutSub.js";
+import { handleRemainingSets } from "./handleRemainingSets.js";
+import { handleSetupCheckout } from "./handleSetupCheckout.js";
 
-export const handleCheckoutSessionCompleted = async ({
+export const handleCheckoutSessionCompletedLegacy = async ({
 	ctx,
 	db,
 	org,

@@ -10,8 +10,12 @@
  * - Allocated features track entity usage
  */
 
-import { test } from "bun:test";
-import { type ApiCustomerV3, ErrCode } from "@autumn/shared";
+import { expect, test } from "bun:test";
+import {
+	type ApiCustomerV3,
+	type AttachPreview,
+	ErrCode,
+} from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -57,12 +61,22 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro with mixed features"
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro] }),
 		],
-		actions: [
-			s.billing.attach({
-				productId: pro.id,
-				options: [{ feature_id: TestFeature.Messages, quantity: 1 }], // 1 pack of 100
-			}),
-		],
+		actions: [],
+	});
+
+	// 1. Preview attach - verify base ($20) + prepaid ($10) = $30
+	const preview = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: pro.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+	});
+	expect((preview as AttachPreview).due_today.total).toBe(30);
+
+	// 2. Attach
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -99,7 +113,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro with mixed features"
 		usage: 0,
 	});
 
-	// Verify invoice: base ($20) + prepaid ($10) = $30
+	// Verify invoice matches preview total: $30
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
@@ -137,7 +151,20 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro with allocated, crea
 			s.products({ list: [pro] }),
 			s.entities({ count: 5, featureId: TestFeature.Users }),
 		],
-		actions: [s.billing.attach({ productId: pro.id })],
+		actions: [],
+	});
+
+	// 1. Preview attach - verify base price ($20)
+	const preview = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: pro.id,
+	});
+	expect((preview as AttachPreview).due_today.total).toBe(20);
+
+	// 2. Attach
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
 	});
 
 	// Track 5 users (creates overage of 2)
@@ -166,7 +193,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro with allocated, crea
 		usage: 5,
 	});
 
-	// Verify invoices: initial ($20) + overage (2 users @ $10 = $20)
+	// Verify invoices: initial ($20 matches preview) + overage (2 users @ $10 = $20)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
@@ -208,9 +235,9 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach base with prepaid messag
 		actions: [],
 	});
 
-	// Attempt to attach without options - should fail
+	// Attempt to attach without options - should fail (no preview needed for error case)
 	await expectAutumnError({
-		errCode: ErrCode.InvalidRequest,
+		errCode: ErrCode.InvalidOptions,
 		func: async () => {
 			await autumnV1.billing.attach({
 				customer_id: customerId,
@@ -254,9 +281,9 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro with prepaid message
 		actions: [],
 	});
 
-	// Attempt to attach without options - should fail
+	// Attempt to attach without options - should fail (no preview needed for error case)
 	await expectAutumnError({
-		errCode: ErrCode.InvalidRequest,
+		errCode: ErrCode.InvalidOptions,
 		func: async () => {
 			await autumnV1.billing.attach({
 				customer_id: customerId,
@@ -298,12 +325,22 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro with prepaid message
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro] }),
 		],
-		actions: [
-			s.billing.attach({
-				productId: pro.id,
-				options: [{ feature_id: TestFeature.Messages, quantity: 0 }],
-			}),
-		],
+		actions: [],
+	});
+
+	// 1. Preview attach - verify only base price ($20), no prepaid
+	const preview = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: pro.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 0 }],
+	});
+	expect((preview as AttachPreview).due_today.total).toBe(20);
+
+	// 2. Attach
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 0 }],
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -322,7 +359,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro with prepaid message
 		usage: 0,
 	});
 
-	// Verify invoice: only base price ($20), no prepaid
+	// Verify invoice matches preview total: $20
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,

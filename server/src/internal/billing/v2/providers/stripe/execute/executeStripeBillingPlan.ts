@@ -1,13 +1,16 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@/internal/billing/v2/types";
 import { addStripeSubscriptionScheduleIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionScheduleIdToBillingPlan";
+import { executeStripeCheckoutSessionAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeCheckoutSessionAction";
 import { executeStripeInvoiceAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeInvoiceAction";
 import { executeStripeSubscriptionAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionAction";
 import { executeStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionScheduleAction";
 import { createStripeInvoiceItems } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
+import type {
+	BillingContext,
+	BillingPlan,
+	StripeBillingPlanResult,
+} from "@/internal/billing/v2/types";
 import { StripeBillingStage } from "@/internal/billing/v2/types";
-import type { BillingPlan } from "@/internal/billing/v2/types";
-import type { StripeBillingPlanResult } from "@/internal/billing/v2/types";
 
 export const executeStripeBillingPlan = async ({
 	ctx,
@@ -25,7 +28,18 @@ export const executeStripeBillingPlan = async ({
 		invoiceAction: stripeInvoiceAction,
 		invoiceItemsAction: stripeInvoiceItemsAction,
 		subscriptionScheduleAction: stripeSubscriptionScheduleAction,
+		checkoutSessionAction: stripeCheckoutSessionAction,
 	} = billingPlan.stripe;
+
+	// Execute checkout session FIRST if present (returns early with deferred result)
+	if (stripeCheckoutSessionAction) {
+		return executeStripeCheckoutSessionAction({
+			ctx,
+			billingPlan,
+			billingContext,
+			checkoutSessionAction: stripeCheckoutSessionAction,
+		});
+	}
 
 	// Collect results from each stage
 	let invoiceResult: StripeBillingPlanResult | undefined;

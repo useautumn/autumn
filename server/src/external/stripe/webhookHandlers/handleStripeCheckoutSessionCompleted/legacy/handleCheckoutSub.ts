@@ -8,8 +8,8 @@ import {
 } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { initSubscription } from "@/internal/subscriptions/utils/initSubscription.js";
-import { getEmptyPriceItem } from "../../priceToStripeItem/priceToStripeItem.js";
-import { subToPeriodStartEnd } from "../../stripeSubUtils/convertSubUtils.js";
+import { getEmptyPriceItem } from "../../../priceToStripeItem/priceToStripeItem.js";
+import { subToPeriodStartEnd } from "../../../stripeSubUtils/convertSubUtils.js";
 
 export const handleCheckoutSub = async ({
 	stripeCli,

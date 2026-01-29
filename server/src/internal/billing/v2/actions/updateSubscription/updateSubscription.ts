@@ -68,7 +68,7 @@ export async function updateSubscription({
 		stripe: stripeBillingPlan,
 	};
 
-	if (!preview) {
+	if (preview) {
 		return {
 			billingContext,
 			billingPlan,

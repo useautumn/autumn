@@ -11,8 +11,7 @@ import {
 	PriceSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
-import type { BillingContext } from "@/internal/billing/v2/types";
-import type { BillingPlan } from "@/internal/billing/v2/types";
+import type { BillingContext, BillingPlan } from "@/internal/billing/v2/types";
 
 export const UpdateCustomerEntitlementSchema = z.object({
 	customerEntitlement: FullCustomerEntitlementSchema,
@@ -85,5 +84,5 @@ export type DeferredAutumnBillingPlanData = {
 	env: AppEnv;
 	billingPlan: BillingPlan;
 	billingContext: BillingContext;
-	resumeAfter: StripeBillingStage;
+	resumeAfter?: StripeBillingStage;
 };

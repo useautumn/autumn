@@ -50,11 +50,14 @@ export const buildAutumnLineItems = ({
 	// will be handled in finalizeUpdateSubscriptionPlan
 	const allLineItems = [...deletedLineItems, ...newLineItems];
 
-	logBuildAutumnLineItems({
-		logger,
-		deletedLineItems,
-		newLineItems,
-	});
+	const debugLogs = false;
+	if (debugLogs) {
+		logBuildAutumnLineItems({
+			logger,
+			deletedLineItems,
+			newLineItems,
+		});
+	}
 
 	return allLineItems;
 };

@@ -1,4 +1,4 @@
-import { type AttachParamsV0, RecaseError } from "@autumn/shared";
+import type { AttachParamsV0 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeAttachPlan } from "@/internal/billing/v2/actions/attach/compute/computeAttachPlan";
 import { handleAttachV2Errors } from "@/internal/billing/v2/actions/attach/errors/handleAttachV2Errors";
@@ -15,6 +15,13 @@ import type {
 } from "@/internal/billing/v2/types";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 
+export interface AttachResult {
+	billingContext: AttachBillingContext;
+	billingPlan?: BillingPlan;
+	billingResult?: BillingResult | null;
+	checkoutUrl?: string;
+}
+
 export async function attach({
 	ctx,
 	params,
@@ -23,11 +30,7 @@ export async function attach({
 	ctx: AutumnContext;
 	params: AttachParamsV0;
 	preview?: boolean;
-}): Promise<{
-	billingContext: AttachBillingContext;
-	billingPlan: BillingPlan;
-	billingResult: BillingResult | null;
-}> {
+}): Promise<AttachResult> {
 	// 1. Setup
 	const billingContext = await setupAttachBillingContext({
 		ctx,
@@ -52,19 +55,12 @@ export async function attach({
 		params,
 	});
 
-	if (billingContext.checkoutMode !== null) {
-		// 4. Handle checkout mode (redirect to Stripe checkout)
-		throw new RecaseError({
-			message: `Checkout flow not yet implemented for attach v2 (checkoutMode: ${billingContext.checkoutMode}). Please add a payment method to the customer first.`,
-			statusCode: 400,
-		});
-	}
-
-	// 5. Evaluate Stripe billing plan
+	// 4. Evaluate Stripe billing plan (handles checkout mode internally)
 	const stripeBillingPlan = await evaluateStripeBillingPlan({
 		ctx,
 		billingContext,
 		autumnBillingPlan,
+		checkoutMode: billingContext.checkoutMode,
 	});
 
 	logStripeBillingPlan({ ctx, stripeBillingPlan, billingContext });
@@ -74,12 +70,17 @@ export async function attach({
 		stripe: stripeBillingPlan,
 	};
 
-	if (!preview) {
+	if (preview) {
 		return {
 			billingContext,
 			billingPlan,
 			billingResult: null,
 		};
+	}
+
+	if (billingContext.checkoutMode === "autumn_checkout") {
+		// return autumn checkout URL
+		// return await createAutumnCheckout();
 	}
 
 	// 6. Execute billing plan
@@ -95,5 +96,6 @@ export async function attach({
 		billingContext,
 		billingPlan,
 		billingResult,
+		checkoutUrl: billingResult.stripe.stripeCheckoutSession?.url ?? undefined,
 	};
 }
