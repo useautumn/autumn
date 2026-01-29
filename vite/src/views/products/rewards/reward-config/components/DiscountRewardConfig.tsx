@@ -72,12 +72,15 @@ export function DiscountRewardConfig({
 						<Input
 							placeholder="SAVE20"
 							value={reward.promo_codes[0]?.code || ""}
-							onChange={(e) =>
+							maxLength={500}
+							onChange={(e) => {
+								// Stripe only allows alphanumeric characters (a-z, A-Z, 0-9)
+								const sanitized = e.target.value.replace(/[^a-zA-Z0-9]/g, "");
 								setReward({
 									...reward,
-									promo_codes: e.target.value ? [{ code: e.target.value }] : [],
-								})
-							}
+									promo_codes: sanitized ? [{ code: sanitized }] : [],
+								});
+							}}
 						/>
 					</div>
 				</div>
