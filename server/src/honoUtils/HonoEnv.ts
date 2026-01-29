@@ -41,6 +41,7 @@ export type RequestContext = {
 	testOptions?: {
 		skipCacheDeletion?: boolean;
 		skipWebhooks?: boolean;
+		eventId?: string;
 	};
 };
 
