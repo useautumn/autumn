@@ -36,16 +36,6 @@ const VirtualRowInner = <T,>({
 		if (!rowHref) onRowClick?.(row.original);
 	}, [rowHref, onRowClick, row.original]);
 
-	const handleContextMenu = useCallback(
-		(e: React.MouseEvent) => {
-			if (rowHref) {
-				e.preventDefault();
-				window.open(rowHref, "_blank", "noopener,noreferrer");
-			}
-		},
-		[rowHref],
-	);
-
 	return (
 		<TableRow
 			data-state={row.getIsSelected() && "selected"}
@@ -56,7 +46,6 @@ const VirtualRowInner = <T,>({
 				isSelected ? "z-100" : "hover:bg-interactive-secondary-hover",
 			)}
 			onClick={handleClick}
-			onContextMenu={handleContextMenu}
 		>
 			<TableRowCells
 				row={row}
@@ -81,7 +70,8 @@ const VirtualRow = memo(VirtualRowInner, (prevProps, nextProps) => {
 		prevProps.rowHref === nextProps.rowHref &&
 		prevProps.virtualRow.index === nextProps.virtualRow.index &&
 		prevProps.rowClassName === nextProps.rowClassName &&
-		prevProps.row.getVisibleCells().length === nextProps.row.getVisibleCells().length
+		prevProps.row.getVisibleCells().length ===
+			nextProps.row.getVisibleCells().length
 	);
 }) as typeof VirtualRowInner;
 
