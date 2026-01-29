@@ -1,0 +1,221 @@
+:root {
+	font-family:
+		system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	line-height: 1.5;
+	font-weight: 400;
+
+	color-scheme: light;
+	color: #1a1a2e;
+	background-color: #f5f5f7;
+
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+* {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+body {
+	min-height: 100vh;
+	display: flex;
+	justify-content: center;
+	align-items: flex-start;
+	padding: 40px 20px;
+}
+
+#root {
+	width: 100%;
+	max-width: 480px;
+}
+
+/* Checkout Container */
+.checkout-container {
+	width: 100%;
+}
+
+.checkout-container h1 {
+	font-size: 1.5rem;
+	font-weight: 600;
+	margin-bottom: 24px;
+	color: #1a1a2e;
+}
+
+/* Checkout Card */
+.checkout-card {
+	background: white;
+	border-radius: 12px;
+	padding: 24px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Line Items */
+.line-items {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.line-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.line-item .description {
+	color: #4a4a5a;
+	font-size: 0.95rem;
+}
+
+.line-item .amount {
+	font-weight: 500;
+	color: #1a1a2e;
+}
+
+/* Divider */
+.divider {
+	height: 1px;
+	background: #e5e5e7;
+	margin: 20px 0;
+}
+
+/* Total Row */
+.total-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 8px;
+}
+
+.total-label {
+	font-weight: 600;
+	color: #1a1a2e;
+}
+
+.total-amount {
+	font-size: 1.25rem;
+	font-weight: 700;
+	color: #1a1a2e;
+}
+
+/* Next Cycle */
+.next-cycle {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 12px;
+	background: #f5f5f7;
+	border-radius: 8px;
+	margin-top: 16px;
+	font-size: 0.875rem;
+}
+
+.next-cycle-label {
+	color: #6a6a7a;
+}
+
+.next-cycle-info {
+	color: #4a4a5a;
+	font-weight: 500;
+}
+
+/* Confirm Button */
+.confirm-button {
+	width: 100%;
+	margin-top: 24px;
+	padding: 14px 24px;
+	background: #0066ff;
+	color: white;
+	border: none;
+	border-radius: 8px;
+	font-size: 1rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background 0.2s;
+}
+
+.confirm-button:hover:not(:disabled) {
+	background: #0052cc;
+}
+
+.confirm-button:disabled {
+	background: #99c2ff;
+	cursor: not-allowed;
+}
+
+/* Loading State */
+.loading-card {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 16px;
+	padding: 48px 24px;
+}
+
+.spinner {
+	width: 32px;
+	height: 32px;
+	border: 3px solid #e5e5e7;
+	border-top-color: #0066ff;
+	border-radius: 50%;
+	animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Error State */
+.error-card {
+	text-align: center;
+	padding: 48px 24px;
+}
+
+.error-card h2 {
+	color: #dc3545;
+	margin-bottom: 8px;
+}
+
+.error-card p {
+	color: #6a6a7a;
+}
+
+/* Success State */
+.success-card {
+	text-align: center;
+	padding: 48px 24px;
+}
+
+.success-icon {
+	width: 48px;
+	height: 48px;
+	background: #28a745;
+	color: white;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 1.5rem;
+	margin: 0 auto 16px;
+}
+
+.success-card h2 {
+	color: #1a1a2e;
+	margin-bottom: 8px;
+}
+
+.success-card p {
+	color: #6a6a7a;
+}
+
+.invoice-info {
+	margin-top: 16px;
+	font-size: 0.875rem;
+	color: #8a8a9a;
+}

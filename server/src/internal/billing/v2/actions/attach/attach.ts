@@ -6,6 +6,7 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeAttachPlan } from "@/internal/billing/v2/actions/attach/compute/computeAttachPlan";
+import { createAutumnCheckout } from "@/internal/billing/v2/actions/attach/createAutumnCheckout";
 import { handleAttachV2Errors } from "@/internal/billing/v2/actions/attach/errors/handleAttachV2Errors";
 import { logAttachContext } from "@/internal/billing/v2/actions/attach/logs/logAttachContext";
 import { setupAttachBillingContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachBillingContext";
@@ -26,10 +27,12 @@ export async function attach({
 	ctx,
 	params,
 	preview = false,
+	skipAutumnCheckout = false,
 }: {
 	ctx: AutumnContext;
 	params: AttachParamsV0;
 	preview?: boolean;
+	skipAutumnCheckout?: boolean;
 }): Promise<AttachResult> {
 	// 1. Setup
 	const billingContext = await setupAttachBillingContext({
@@ -78,9 +81,18 @@ export async function attach({
 		};
 	}
 
-	if (billingContext.checkoutMode === "autumn_checkout") {
-		// return autumn checkout URL
-		// return await createAutumnCheckout();
+	if (
+		billingContext.checkoutMode === "autumn_checkout" &&
+		!skipAutumnCheckout
+	) {
+		const checkoutResult = await createAutumnCheckout({
+			ctx,
+			params,
+			billingContext,
+			billingPlan,
+		});
+
+		return checkoutResult;
 	}
 
 	// 6. Execute billing plan
