@@ -167,7 +167,25 @@ export function CustomerListTable({
 	}
 
 	return (
-		<>
+		<Table.Provider
+			config={{
+				table,
+				numberOfColumns: columns.length,
+				enableSorting,
+				isLoading: false,
+				getRowHref,
+				emptyStateText: "No matching results found.",
+				rowClassName: "h-10",
+				enableColumnVisibility: true,
+				columnVisibilityStorageKey: "customer-list",
+				columnGroups,
+				columnVisibilityInToolbar: true,
+				flexibleTableColumns: true,
+				virtualization: {
+					containerHeight: "calc(100vh - 120px)",
+				},
+			}}
+		>
 			<div className="flex w-full items-center h-10 pb-4 gap-4">
 				<div className="flex items-center gap-2">
 					<CustomerListFilterButton />
@@ -179,6 +197,7 @@ export function CustomerListTable({
 				</div>
 				<div className="flex items-center gap-2 ml-auto">
 					<CustomerListCreateButton />
+					<Table.ColumnVisibility />
 				</div>
 			</div>
 
@@ -188,31 +207,12 @@ export function CustomerListTable({
 					actionButton={<CustomerListCreateButton />}
 				/>
 			) : (
-				<Table.Provider
-					config={{
-						table,
-						numberOfColumns: columns.length,
-						enableSorting,
-						isLoading: false,
-						getRowHref,
-						emptyStateText: "No matching results found.",
-						rowClassName: "h-10",
-						enableColumnVisibility: true,
-						columnVisibilityStorageKey: "customer-list",
-						columnGroups,
-						flexibleTableColumns: true,
-						virtualization: {
-							containerHeight: "calc(100vh - 120px)",
-						},
-					}}
-				>
-					<Table.Container>
-						<Table.VirtualizedContent>
-							<Table.VirtualizedBody />
-						</Table.VirtualizedContent>
-					</Table.Container>
-				</Table.Provider>
+				<Table.Container>
+					<Table.VirtualizedContent>
+						<Table.VirtualizedBody />
+					</Table.VirtualizedContent>
+				</Table.Container>
 			)}
-		</>
+		</Table.Provider>
 	);
 }

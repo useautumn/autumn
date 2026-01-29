@@ -17,6 +17,7 @@ export function TableContentVirtualized({
 	const {
 		flexibleTableColumns,
 		enableColumnVisibility,
+		columnVisibilityInToolbar,
 		table,
 		virtualization,
 	} = context;
@@ -90,8 +91,8 @@ export function TableContentVirtualized({
 					style={{ scrollbarWidth: "none" }}
 				>
 					<div className="relative" style={{ minWidth: `${totalWidth}px` }}>
-						{/* Column visibility toggle - positioned relative to content width */}
-						{enableColumnVisibility && (
+						{/* Column visibility toggle - only render if not in toolbar */}
+						{enableColumnVisibility && !columnVisibilityInToolbar && (
 							<div className="absolute right-7 top-1 z-45">
 								<TableColumnVisibility />
 							</div>
