@@ -203,7 +203,7 @@ export const ProductsSubMenu = () => {
 													checked={selectedVersions.includes(`${product.id}:1`)}
 													className="border-border"
 												/>
-												{product.name}
+												<span className="truncate">{product.name}</span>
 											</DropdownMenuItem>
 										) : (
 											// Multiple versions - show product name with hover submenu for versions
@@ -215,20 +215,20 @@ export const ProductsSubMenu = () => {
 														toggleProduct(product);
 													}}
 												>
-													<Checkbox
-														checked={allProductVersionsSelected}
-														className="border-border"
-														ref={(ref: any) => {
-															if (
-																ref &&
-																someProductVersionsSelected &&
-																!allProductVersionsSelected
-															) {
-																ref.indeterminate = true;
-															}
-														}}
-													/>
-													{product.name}
+												<Checkbox
+													checked={allProductVersionsSelected}
+													className="border-border"
+													ref={(ref: any) => {
+														if (
+															ref &&
+															someProductVersionsSelected &&
+															!allProductVersionsSelected
+														) {
+															ref.indeterminate = true;
+														}
+													}}
+												/>
+												<span className="truncate">{product.name}</span>
 												</DropdownMenuSubTrigger>
 												<DropdownMenuSubContent>
 													<DropdownMenuItem
