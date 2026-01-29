@@ -27,10 +27,12 @@ export async function attach({
 	ctx,
 	params,
 	preview = false,
+	skipAutumnCheckout = false,
 }: {
 	ctx: AutumnContext;
 	params: AttachParamsV0;
 	preview?: boolean;
+	skipAutumnCheckout?: boolean;
 }): Promise<AttachResult> {
 	// 1. Setup
 	const billingContext = await setupAttachBillingContext({
@@ -79,13 +81,18 @@ export async function attach({
 		};
 	}
 
-	if (billingContext.checkoutMode === "autumn_checkout") {
-		return await createAutumnCheckout({
+	if (
+		billingContext.checkoutMode === "autumn_checkout" &&
+		!skipAutumnCheckout
+	) {
+		const checkoutResult = await createAutumnCheckout({
 			ctx,
 			params,
 			billingContext,
 			billingPlan,
 		});
+
+		return checkoutResult;
 	}
 
 	// 6. Execute billing plan

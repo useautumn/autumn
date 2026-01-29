@@ -76,6 +76,7 @@ export const checkoutMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		env,
 		features: orgWithFeatures.features,
 		isPublic: true,
+		customerId: checkout.customer_id,
 	});
 
 	// Attach checkout to context for handlers

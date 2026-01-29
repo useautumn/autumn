@@ -6,7 +6,8 @@
 			"server",
 			"shared",
 			"vite",
-			"scripts"
+			"scripts",
+			"apps/checkout"
 		],
 		"catalog": {
 			"better-auth": "catalog:",
@@ -16,7 +17,10 @@
 			"@sentry/bun": "10.25.0",
 			"@clickhouse/client": "1.11.2",
 			"@date-fns/utc": "2.1.0",
-			"@better-auth/dash": "0.1.6"
+			"@better-auth/dash": "0.1.6",
+			"@orpc/contract": "^1.0.0",
+			"@orpc/client": "^1.0.0",
+			"@orpc/openapi-client": "^1.0.0"
 		}
 	},
 	"overrides": {

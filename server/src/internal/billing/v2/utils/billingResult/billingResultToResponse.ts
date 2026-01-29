@@ -1,7 +1,8 @@
-import { type BillingResponse, stripeToAtmnAmount } from "@autumn/shared";
-import type {
-	BillingContext,
-	BillingResult,
+import type { BillingContext, BillingResult } from "@autumn/shared";
+import {
+	type BillingResponse,
+	checkoutToUrl,
+	stripeToAtmnAmount,
 } from "@autumn/shared";
 
 export const billingResultToResponse = ({
@@ -17,13 +18,16 @@ export const billingResultToResponse = ({
 
 	const stripeInvoice = billingResult.stripe.stripeInvoice;
 	const stripeCheckoutSession = billingResult.stripe.stripeCheckoutSession;
+	const autumnCheckout = billingResult.autumn?.checkout;
 
-	// Checkout session URL takes priority, then invoice hosted URL
-	const paymentUrl = stripeCheckoutSession?.url
-		? stripeCheckoutSession.url
-		: stripeInvoice?.status === "open" && stripeInvoice.hosted_invoice_url
-			? stripeInvoice.hosted_invoice_url
-			: null;
+	// Autumn checkout URL takes priority, then Stripe checkout session, then invoice hosted URL
+	const paymentUrl = autumnCheckout
+		? checkoutToUrl({ checkoutId: autumnCheckout.id })
+		: stripeCheckoutSession?.url
+			? stripeCheckoutSession.url
+			: stripeInvoice?.status === "open" && stripeInvoice.hosted_invoice_url
+				? stripeInvoice.hosted_invoice_url
+				: null;
 
 	return {
 		customer_id: customerId,
