@@ -1,10 +1,6 @@
 DESCRIPTION >
-    Materializes events into hourly aggregates with flattened properties.
-    Creates two types of rows:
-    1. Aggregate rows (property_key='') for ungrouped queries
-    2. Property-grouped rows for each top-level JSON property key/value
-    
-    Uses arrayJoin with a constructed array to generate both row types in a single pass.
+    Materializes events into hourly aggregates with native JSON properties.
+    Allows multi-property GROUP BY via properties.field syntax.
 
 NODE materialize
 SQL >
@@ -14,21 +10,11 @@ SQL >
         customer_id,
         event_name,
         toStartOfHour(timestamp) as hour,
-        prop.1 as property_key,
-        prop.2 as property_value,
+        CAST(coalesce(properties, '{}') AS JSON) as properties,
         sum(toFloat64(coalesce(value, 1))) as total_value,
         count() as event_count
     FROM events
-    ARRAY JOIN
-        arrayConcat(
-            [('', '')],
-            if(
-                properties IS NOT NULL AND properties != '',
-                JSONExtractKeysAndValues(assumeNotNull(properties), 'String'),
-                []
-            )
-        ) as prop
-    GROUP BY org_id, env, customer_id, event_name, hour, property_key, property_value
+    GROUP BY org_id, env, customer_id, event_name, hour, properties
 
 TYPE materialized
 DATASOURCE events_hourly_mv
