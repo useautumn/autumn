@@ -87,7 +87,7 @@ export const SavedViews = ({
 				{views.map((view: SavedView) => (
 					<div
 						key={view.id}
-						className="flex items-center justify-between cursor-pointer px-2 hover:bg-accent rounded-sm"
+						className="flex items-center justify-between cursor-pointer px-2 hover:bg-accent rounded-sm min-w-0"
 						onClick={async () => {
 							await applyView(view);
 							setDropdownOpen(false);
@@ -95,9 +95,9 @@ export const SavedViews = ({
 					>
 						<DropdownMenuItem
 							key={view.id}
-							className="px-0 hover:bg-transparent"
+							className="px-0 hover:bg-transparent min-w-0 flex-1 transition-none"
 						>
-							<span className="truncate flex-1">{view.name}</span>
+							<span className="truncate">{view.name}</span>
 						</DropdownMenuItem>
 						<Popover>
 							<PopoverTrigger asChild>
