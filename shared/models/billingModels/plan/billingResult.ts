@@ -1,4 +1,4 @@
-import type { PaymentFailureCode } from "@autumn/shared";
+import type { Checkout, PaymentFailureCode } from "@autumn/shared";
 import type Stripe from "stripe";
 
 export interface StripeBillingPlanResult {
@@ -12,6 +12,11 @@ export interface StripeBillingPlanResult {
 	};
 }
 
+export interface AutumnBillingResult {
+	checkout?: Checkout;
+}
+
 export interface BillingResult {
 	stripe: StripeBillingPlanResult;
+	autumn?: AutumnBillingResult;
 }

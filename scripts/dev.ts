@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const VITE_PORT = 3000;
 const SERVER_PORT = 8080;
+const CHECKOUT_PORT = 3001;
 
 /**
  * Read environment variable from .env file
@@ -53,6 +54,18 @@ async function startDev() {
 			rmSync(viteCachePath, { recursive: true, force: true });
 		}
 
+		// Clear checkout Vite cache
+		const checkoutCachePath = join(
+			projectRoot,
+			"apps/checkout",
+			"node_modules",
+			".vite",
+		);
+		if (existsSync(checkoutCachePath)) {
+			console.log("🧹 Clearing Checkout Vite cache...\n");
+			rmSync(checkoutCachePath, { recursive: true, force: true });
+		}
+
 		console.log("🚀 Starting development servers in watch mode...\n");
 
 		// Use cmd on Windows, sh on Unix
@@ -63,16 +76,17 @@ async function startDev() {
 			const serverCmd = `cd server && set SERVER_PORT=${SERVER_PORT} && bun dev`;
 			const workersCmd = `cd server && bun workers:dev`;
 			const viteCmd = `cd vite && set VITE_PORT=${VITE_PORT} && bun dev`;
+			const checkoutCmd = `cd apps/checkout && set VITE_PORT=${CHECKOUT_PORT} && bun dev`;
 			shellArgs = [
 				"cmd",
 				"/c",
-				`bunx concurrently -n server,workers,vite -c green,yellow,blue "${serverCmd}" "${workersCmd}" "${viteCmd}"`,
+				`bunx concurrently -n server,workers,vite,checkout -c green,yellow,blue,magenta "${serverCmd}" "${workersCmd}" "${viteCmd}" "${checkoutCmd}"`,
 			];
 		} else {
 			shellArgs = [
 				"sh",
 				"-c",
-				`bunx concurrently -n server,workers,vite -c green,yellow,blue "cd server && SERVER_PORT=${SERVER_PORT} bun dev" "cd server && bun workers:dev" "cd vite && VITE_PORT=${VITE_PORT} bun dev"`,
+				`bunx concurrently -n server,workers,vite,checkout -c green,yellow,blue,magenta "cd server && SERVER_PORT=${SERVER_PORT} bun dev" "cd server && bun workers:dev" "cd vite && VITE_PORT=${VITE_PORT} bun dev" "cd apps/checkout && VITE_PORT=${CHECKOUT_PORT} bun dev"`,
 			];
 		}
 
@@ -82,6 +96,7 @@ async function startDev() {
 				...process.env,
 				VITE_PORT: VITE_PORT.toString(),
 				SERVER_PORT: SERVER_PORT.toString(),
+				CHECKOUT_PORT: CHECKOUT_PORT.toString(),
 			},
 			stdout: "inherit",
 			stderr: "inherit",

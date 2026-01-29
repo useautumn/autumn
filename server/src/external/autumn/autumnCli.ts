@@ -11,6 +11,7 @@ import {
 	type AttachBodyV0,
 	type AttachParamsV0,
 	type BalancesUpdateParams,
+	type BillingPreviewResponse,
 	type BillingResponse,
 	type CheckQuery,
 	type CreateBalanceParams,
@@ -830,8 +831,10 @@ export class AutumnInt {
 			return data;
 		},
 
-		previewAttach: async (params: AttachParamsV0) => {
-			const data = await this.post(`/billing/attach/preview`, params);
+		previewAttach: async (
+			params: AttachParamsV0,
+		): Promise<BillingPreviewResponse> => {
+			const data = await this.post(`/billing/preview_attach`, params);
 			return data;
 		},
 	};
