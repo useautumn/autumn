@@ -9,11 +9,11 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
 import { useMounted } from "@/hooks/useMounted";
 import { pushPage } from "@/utils/genUtils";
-import LoadingScreen from "@/views/general/LoadingScreen";
 import { useCustomersQueryStates } from "@/views/customers/hooks/useCustomersQueryStates";
 import { FULL_CUSTOMERS_QUERY_KEY } from "@/views/customers/hooks/useFullCusSearchQuery";
 import { useCustomerListColumns } from "@/views/customers2/hooks/useCustomerListColumns";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
+import LoadingScreen from "@/views/general/LoadingScreen";
 import type { CustomerWithProducts } from "./CustomerListColumns";
 import { CustomerListCreateButton } from "./CustomerListCreateButton";
 import { CustomerListFilterButton } from "./CustomerListFilterButton";
@@ -25,8 +25,10 @@ import { CustomerListSearchBar } from "./CustomerListSearchBar";
 
 export function CustomerListTable({
 	customers,
+	isLoading,
 }: {
 	customers: CustomerWithProducts[];
+	isLoading: boolean;
 }) {
 	// Defer rendering until after mount to ensure correct table layout on navigation
 	const isMounted = useMounted();
@@ -132,6 +134,11 @@ export function CustomerListTable({
 		queryStates.none;
 	const hasActiveFiltersOrSearch = hasSearchQuery || hasFilters;
 
+	// Show loading state while customers data is being fetched
+	if (isLoading) {
+		return <LoadingScreen />;
+	}
+
 	// Only show empty state if org has NO customers (no filters/search active and no results)
 	if (!hasRows && !hasActiveFiltersOrSearch) {
 		return (
@@ -161,14 +168,16 @@ export function CustomerListTable({
 
 	return (
 		<>
-			<div className="flex w-full justify-between items-center h-10 pb-4">
+			<div className="flex w-full items-center h-10 pb-4 gap-4">
 				<div className="flex items-center gap-2">
 					<CustomerListFilterButton />
 					<CustomerListSearchBar />
-					<CustomerListPagination />
 				</div>
 				<div className="flex items-center gap-2">
+					<CustomerListPagination />
 					<CustomerListPageSizeSelector />
+				</div>
+				<div className="flex items-center gap-2 ml-auto">
 					<CustomerListCreateButton />
 				</div>
 			</div>
@@ -193,7 +202,7 @@ export function CustomerListTable({
 						columnGroups,
 						flexibleTableColumns: true,
 						virtualization: {
-							containerHeight: "calc(100vh - 150px)",
+							containerHeight: "calc(100vh - 120px)",
 						},
 					}}
 				>

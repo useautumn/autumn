@@ -19,6 +19,7 @@ interface VirtualRowProps<T> {
 	enableSelection?: boolean;
 	flexibleTableColumns?: boolean;
 	onRowClick?: (row: T) => void;
+	visibleColumnKey: string;
 }
 
 /** Memoized row component - only re-renders when row data changes */
@@ -31,6 +32,7 @@ const VirtualRowInner = <T,>({
 	enableSelection,
 	flexibleTableColumns,
 	onRowClick,
+	visibleColumnKey,
 }: VirtualRowProps<T>) => {
 	const handleClick = useCallback(() => {
 		if (!rowHref) onRowClick?.(row.original);
@@ -63,6 +65,7 @@ const VirtualRowInner = <T,>({
 				enableSelection={enableSelection}
 				flexibleTableColumns={flexibleTableColumns}
 				rowHref={rowHref}
+				visibleColumnKey={visibleColumnKey}
 			/>
 		</TableRow>
 	);
@@ -72,6 +75,7 @@ const VirtualRowInner = <T,>({
 const VirtualRow = memo(VirtualRowInner, (prevProps, nextProps) => {
 	// Only re-render if essential data changed
 	// IMPORTANT: Check row.original identity to handle data changes with keepPreviousData
+	// Also check visible column key (passed as prop) to handle column visibility changes
 	return (
 		prevProps.row.id === nextProps.row.id &&
 		prevProps.row.original === nextProps.row.original &&
@@ -79,7 +83,8 @@ const VirtualRow = memo(VirtualRowInner, (prevProps, nextProps) => {
 		prevProps.row.getIsSelected() === nextProps.row.getIsSelected() &&
 		prevProps.rowHref === nextProps.rowHref &&
 		prevProps.virtualRow.index === nextProps.virtualRow.index &&
-		prevProps.rowClassName === nextProps.rowClassName
+		prevProps.rowClassName === nextProps.rowClassName &&
+		prevProps.visibleColumnKey === nextProps.visibleColumnKey
 	);
 }) as typeof VirtualRowInner;
 
@@ -98,6 +103,7 @@ export function TableBodyVirtualized() {
 		flexibleTableColumns,
 		virtualization,
 		scrollContainer,
+		visibleColumnKey = "",
 	} = useTableContext();
 
 	const rows = table.getRowModel().rows;
@@ -108,7 +114,7 @@ export function TableBodyVirtualized() {
 	// This prevents incorrect virtual item calculations on initial render
 	const virtualizer = useVirtualizer({
 		count: rows.length,
-		getScrollElement: () => scrollContainer,
+		getScrollElement: () => scrollContainer ?? null,
 		estimateSize: () => rowHeight,
 		overscan,
 		enabled: !!scrollContainer,
@@ -121,7 +127,8 @@ export function TableBodyVirtualized() {
 	const { paddingTop, paddingBottom } = useMemo(() => {
 		const top = virtualRows[0]?.start ?? 0;
 		const bottom =
-			virtualizer.getTotalSize() - (virtualRows[virtualRows.length - 1]?.end ?? 0);
+			virtualizer.getTotalSize() -
+			(virtualRows[virtualRows.length - 1]?.end ?? 0);
 		return { paddingTop: top, paddingBottom: bottom };
 	}, [virtualRows, virtualizer]);
 
@@ -150,14 +157,18 @@ export function TableBodyVirtualized() {
 			{/* Top spacer row */}
 			{paddingTop > 0 && (
 				<tr style={{ height: paddingTop }}>
-					<td colSpan={numberOfColumns} style={{ padding: 0, border: "none" }} />
+					<td
+						colSpan={numberOfColumns}
+						style={{ padding: 0, border: "none" }}
+					/>
 				</tr>
 			)}
 
 			{/* Visible rows - using memoized VirtualRow component */}
 			{virtualRows.map((virtualRow) => {
 				const row = rows[virtualRow.index];
-				const isSelected = selectedItemId === (row.original as { id?: string }).id;
+				const isSelected =
+					selectedItemId === (row.original as { id?: string }).id;
 				const rowHref = getRowHref?.(row.original);
 
 				return (
@@ -171,6 +182,7 @@ export function TableBodyVirtualized() {
 						enableSelection={enableSelection}
 						flexibleTableColumns={flexibleTableColumns}
 						onRowClick={memoizedOnRowClick}
+						visibleColumnKey={visibleColumnKey}
 					/>
 				);
 			})}
@@ -178,7 +190,10 @@ export function TableBodyVirtualized() {
 			{/* Bottom spacer row */}
 			{paddingBottom > 0 && (
 				<tr style={{ height: paddingBottom }}>
-					<td colSpan={numberOfColumns} style={{ padding: 0, border: "none" }} />
+					<td
+						colSpan={numberOfColumns}
+						style={{ padding: 0, border: "none" }}
+					/>
 				</tr>
 			)}
 		</ShadcnTableBody>
