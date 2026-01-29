@@ -1,7 +1,7 @@
 import type { TrackParams, TrackResponseV2 } from "@autumn/shared";
 import { tryCatch } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { EventService } from "@/internal/api/events/EventService.js";
+import { globalEventBatchingManager } from "@/internal/balances/events/EventBatchingManager.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { buildEventInfo, initEvent } from "../../events/initEvent.js";
 import { deductionToTrackResponse } from "../../utils/deduction/deductionToTrackResponse.js";
@@ -65,7 +65,8 @@ export const runPostgresTrack = async ({
 			entityId: body.entity_id,
 		});
 
-		await EventService.insert({ db: ctx.db, event });
+		// await EventService.insert({ db: ctx.db, event });
+		globalEventBatchingManager.addEvent(event);
 	}
 
 	// Build response using unified deductionToTrackResponse

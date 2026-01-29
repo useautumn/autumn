@@ -1,4 +1,6 @@
 import type { EventInsert } from "@autumn/shared";
+import { logger } from "@server/external/logtail/logtailUtils.js";
+import { sendEventsToTinybird } from "@server/external/tinybird/sendEvents/sendEvents.js";
 import { JobName } from "@server/queue/JobName.js";
 import { addTaskToQueue } from "@server/queue/queueUtils.js";
 
@@ -6,16 +8,11 @@ class BatchingManager {
 	private events: Map<string, EventInsert> = new Map();
 	private timer: NodeJS.Timeout | null = null;
 	private readonly batchWindow = 100; // 100ms batching window
-	private readonly maxBatchSize = 1000; // Max events per batch (PostgreSQL has ~65k param limit, ~11 fields per event = ~5.9k max)
+	private readonly maxBatchSize = 200; // Max events per batch (~200kb per event, keep batches under 10MB for Tinybird)
 
-	/**
-	 * Add an event to the batch
-	 */
+	/** Add an event to the batch */
 	addEvent(event: EventInsert): void {
-		// Generate a unique key for deduplication
-		// Use event ID as the key (already unique)
 		const key = event.id;
-
 		this.events.set(key, event);
 
 		// Auto-execute if batch size is reached
@@ -34,9 +31,7 @@ class BatchingManager {
 		}, this.batchWindow);
 	}
 
-	/**
-	 * Execute the current batch by queuing to BullMQ
-	 */
+	/** Execute the current batch - queue to SQS for Postgres and send to Tinybird */
 	private async executeBatch(): Promise<void> {
 		if (this.timer) {
 			clearTimeout(this.timer);
@@ -51,18 +46,24 @@ class BatchingManager {
 		const currentEvents = new Map(this.events);
 		this.events.clear();
 
-		try {
-			const eventItems = Array.from(currentEvents.values());
-			// Queue event batch (uses random MessageGroupId for SQS FIFO ordering)
-			await addTaskToQueue({
+		const eventItems = Array.from(currentEvents.values());
+
+		// Queue to SQS for Postgres and publish to Tinybird in parallel
+		await Promise.all([
+			addTaskToQueue({
 				jobName: JobName.InsertEventBatch,
-				payload: {
-					events: eventItems,
-				},
-			});
-		} catch (error) {
-			console.error(`❌ Failed to queue event batch:`, error);
-		}
+				payload: { events: eventItems },
+			}).catch((error) => {
+				logger.error(
+					{ error, eventCount: eventItems.length },
+					"Failed to queue event batch to SQS",
+				);
+			}),
+			sendEventsToTinybird({
+				events: eventItems,
+				logger,
+			}),
+		]);
 	}
 }
 

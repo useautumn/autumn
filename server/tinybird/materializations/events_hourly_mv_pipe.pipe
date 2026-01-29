@@ -1,0 +1,20 @@
+DESCRIPTION >
+    Materializes events into hourly aggregates with native JSON properties.
+    Allows multi-property GROUP BY via properties.field syntax.
+
+NODE materialize
+SQL >
+    SELECT
+        org_id,
+        env,
+        customer_id,
+        event_name,
+        toStartOfHour(timestamp) as hour,
+        CAST(coalesce(properties, '{}') AS JSON) as properties,
+        sum(toFloat64(coalesce(value, 1))) as total_value,
+        count() as event_count
+    FROM events
+    GROUP BY org_id, env, customer_id, event_name, hour, properties
+
+TYPE materialized
+DATASOURCE events_hourly_mv
