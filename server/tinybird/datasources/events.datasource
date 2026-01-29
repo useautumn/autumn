@@ -1,0 +1,23 @@
+DESCRIPTION >
+    Events ingested via HTTP Events API for real-time analytics
+
+SCHEMA >
+    `id` String `json:$.id`,
+    `org_id` String `json:$.org_id`,
+    `org_slug` Nullable(String) `json:$.org_slug`,
+    `internal_customer_id` Nullable(String) `json:$.internal_customer_id`,
+    `env` String `json:$.env`,
+    `created_at` Nullable(Int64) `json:$.created_at`,
+    `timestamp` DateTime64(6) `json:$.timestamp`,
+    `event_name` String `json:$.event_name`,
+    `idempotency_key` Nullable(String) `json:$.idempotency_key`,
+    `value` Nullable(Decimal(38, 19)) `json:$.value`,
+    `set_usage` Nullable(UInt8) `json:$.set_usage`,
+    `entity_id` Nullable(String) `json:$.entity_id`,
+    `internal_entity_id` Nullable(String) `json:$.internal_entity_id`,
+    `customer_id` String `json:$.customer_id`,
+    `properties` JSON `json:$.properties`
+
+ENGINE "MergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(timestamp)"
+ENGINE_SORTING_KEY "org_id, env, customer_id, event_name, timestamp"

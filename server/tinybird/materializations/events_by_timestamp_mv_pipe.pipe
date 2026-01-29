@@ -1,0 +1,21 @@
+DESCRIPTION >
+    Materializes events into events_by_timestamp_mv for fast time-range listing.
+    Copies all event columns without aggregation - just re-sorted by timestamp.
+
+NODE materialize
+SQL >
+    SELECT
+        id,
+        org_id,
+        env,
+        customer_id,
+        event_name,
+        timestamp,
+        value,
+        properties,
+        idempotency_key,
+        entity_id
+    FROM events
+
+TYPE materialized
+DATASOURCE events_by_timestamp_mv
