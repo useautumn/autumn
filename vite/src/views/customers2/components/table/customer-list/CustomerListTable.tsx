@@ -199,7 +199,6 @@ export function CustomerListTable({
 				>
 					<Table.Container>
 						<Table.VirtualizedContent>
-							<Table.Header />
 							<Table.VirtualizedBody />
 						</Table.VirtualizedContent>
 					</Table.Container>
