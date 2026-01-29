@@ -21,6 +21,8 @@ export interface TableProps<T> {
 	columnVisibilityStorageKey?: string;
 	/** Column groups for UI organization (renders as submenus in visibility dropdown) */
 	columnGroups?: ColumnGroup[];
+	/** Render column visibility in the toolbar instead of inside table content */
+	columnVisibilityInToolbar?: boolean;
 	/** For navigation - returns href string, enables cmd+click to open in new tab */
 	getRowHref?: (row: T) => string;
 	/** For non-navigation actions like opening sheets/modals */
