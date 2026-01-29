@@ -11,7 +11,7 @@ import { useFullCusSearchQuery } from "./hooks/useFullCusSearchQuery";
 import { useSavedViewsQuery } from "./hooks/useSavedViewsQuery";
 
 function CustomersPage() {
-	const { customers } = useCusSearchQuery();
+	const { customers, isLoading: customersLoading } = useCusSearchQuery();
 
 	const { isLoading: productsLoading } = useProductsQuery();
 	const resetProductStore = useProductStore((s) => s.reset);
@@ -32,7 +32,7 @@ function CustomersPage() {
 			}}
 		>
 			<div className="max-h-full px-10 flex flex-col h-full relative w-full pb-8 max-w-5xl mx-auto pt-8">
-				<CustomerListTable customers={customers} />
+				<CustomerListTable customers={customers} isLoading={customersLoading} />
 			</div>
 		</CustomersContext.Provider>
 	);

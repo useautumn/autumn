@@ -22,7 +22,7 @@ export function CustomerListPagination() {
 	const { isLoading, totalCount } = useCusSearchQuery();
 	const { queryStates, setQueryStates } = useCustomersQueryStates();
 
-	const pageSize = queryStates.pageSize || 100;
+	const pageSize = queryStates.pageSize || 50;
 	const totalPages = Math.ceil((totalCount || 0) / pageSize);
 	const currentPage = Number(queryStates.page) || 1;
 	const canGoPrev = currentPage > 1;
@@ -81,7 +81,7 @@ export function CustomerListPagination() {
 
 export function CustomerListPageSizeSelector() {
 	const { queryStates, setQueryStates } = useCustomersQueryStates();
-	const pageSize = queryStates.pageSize || 100;
+	const pageSize = queryStates.pageSize || 50;
 
 	return (
 		<Select

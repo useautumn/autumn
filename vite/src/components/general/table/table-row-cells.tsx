@@ -16,6 +16,7 @@ interface TableRowCellsProps<T> {
 	enableSelection?: boolean;
 	flexibleTableColumns?: boolean;
 	rowHref?: string;
+	visibleColumnKey?: string;
 }
 
 function TableRowCellsInner<T>({
@@ -23,6 +24,7 @@ function TableRowCellsInner<T>({
 	enableSelection,
 	flexibleTableColumns,
 	rowHref,
+	visibleColumnKey: _visibleColumnKey,
 }: TableRowCellsProps<T>) {
 	return (
 		<>
@@ -79,18 +81,23 @@ function TableRowCellsInner<T>({
 }
 
 /** Memoized TableRowCells - prevents unnecessary re-renders during virtualization scrolling */
-export const TableRowCells = memo(TableRowCellsInner, (prevProps, nextProps) => {
-	// Custom comparator - only re-render if essential data changed
-	// IMPORTANT: Check row.original identity to handle data changes with keepPreviousData
-	return (
-		prevProps.row.id === nextProps.row.id &&
-		prevProps.row.original === nextProps.row.original &&
-		prevProps.row.getIsSelected() === nextProps.row.getIsSelected() &&
-		prevProps.rowHref === nextProps.rowHref &&
-		prevProps.enableSelection === nextProps.enableSelection &&
-		prevProps.flexibleTableColumns === nextProps.flexibleTableColumns
-	);
-}) as typeof TableRowCellsInner;
+export const TableRowCells = memo(
+	TableRowCellsInner,
+	(prevProps, nextProps) => {
+		// Custom comparator - only re-render if essential data changed
+		// IMPORTANT: Check row.original identity to handle data changes with keepPreviousData
+		// Also check visible column key (passed as prop) to handle column visibility changes
+		return (
+			prevProps.row.id === nextProps.row.id &&
+			prevProps.row.original === nextProps.row.original &&
+			prevProps.row.getIsSelected() === nextProps.row.getIsSelected() &&
+			prevProps.rowHref === nextProps.rowHref &&
+			prevProps.enableSelection === nextProps.enableSelection &&
+			prevProps.flexibleTableColumns === nextProps.flexibleTableColumns &&
+			prevProps.visibleColumnKey === nextProps.visibleColumnKey
+		);
+	},
+) as typeof TableRowCellsInner;
 
 interface TableEmptyStateProps {
 	numberOfColumns: number;
