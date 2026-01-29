@@ -11,7 +11,7 @@
  */
 
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
+import type { ApiCustomerV3, ApiEntityV0, AttachPreview } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -51,12 +51,22 @@ test.concurrent(`${chalk.yellowBright("new-plan: create entity, attach pro to en
 			s.products({ list: [pro] }),
 			s.entities({ count: 1, featureId: TestFeature.Users }),
 		],
-		actions: [
-			s.billing.attach({
-				productId: pro.id,
-				entityIndex: 0, // Attach to first entity
-			}),
-		],
+		actions: [],
+	});
+
+	// 1. Preview attach to entity - $20
+	const preview = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: pro.id,
+		entity_id: entities[0].id,
+	});
+	expect((preview as AttachPreview).due_today.total).toBe(20);
+
+	// 2. Attach to entity
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		entity_id: entities[0].id,
 	});
 
 	// Get entity and verify it has the product
@@ -85,6 +95,13 @@ test.concurrent(`${chalk.yellowBright("new-plan: create entity, attach pro to en
 	// Customer should not have products array with this product
 	const customerProduct = customer.products?.find((p) => p.id === pro.id);
 	expect(customerProduct).toBeUndefined();
+
+	// Verify invoice on customer matches preview total: $20
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 1,
+		latestTotal: 20,
+	});
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -116,10 +133,35 @@ test.concurrent(`${chalk.yellowBright("new-plan: create 2 entities, attach pro t
 			s.products({ list: [pro] }),
 			s.entities({ count: 2, featureId: TestFeature.Users }),
 		],
-		actions: [
-			s.billing.attach({ productId: pro.id, entityIndex: 0 }),
-			s.billing.attach({ productId: pro.id, entityIndex: 1 }),
-		],
+		actions: [],
+	});
+
+	// 1. Preview and attach to entity 1 - $20
+	const preview1 = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: pro.id,
+		entity_id: entities[0].id,
+	});
+	expect((preview1 as AttachPreview).due_today.total).toBe(20);
+
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		entity_id: entities[0].id,
+	});
+
+	// 2. Preview and attach to entity 2 - $20
+	const preview2 = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: pro.id,
+		entity_id: entities[1].id,
+	});
+	expect((preview2 as AttachPreview).due_today.total).toBe(20);
+
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		entity_id: entities[1].id,
 	});
 
 	// Get both entities and verify independent balances
@@ -188,6 +230,14 @@ test.concurrent(`${chalk.yellowBright("new-plan: create 2 entities, attach pro t
 		balance: 100, // Unchanged
 		usage: 0,
 	});
+
+	// Verify 2 invoices, each $20
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 2,
+		latestTotal: 20,
+	});
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -219,7 +269,21 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro to entity 1, advance
 			s.products({ list: [pro] }),
 			s.entities({ count: 2, featureId: TestFeature.Users }),
 		],
-		actions: [s.billing.attach({ productId: pro.id, entityIndex: 0 })],
+		actions: [],
+	});
+
+	// 1. Preview and attach to entity 1 - $20 (full price)
+	const preview1 = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: pro.id,
+		entity_id: entities[0].id,
+	});
+	expect((preview1 as AttachPreview).due_today.total).toBe(20);
+
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		entity_id: entities[0].id,
 	});
 
 	// Advance 2 weeks
@@ -229,7 +293,15 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro to entity 1, advance
 		numberOfWeeks: 2,
 	});
 
-	// Attach pro to entity 2 mid-cycle
+	// 2. Preview attach to entity 2 mid-cycle (prorated)
+	const preview2 = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: pro.id,
+		entity_id: entities[1].id,
+	});
+	const entity2Total = (preview2 as AttachPreview).due_today.total;
+
+	// 3. Attach to entity 2 mid-cycle
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -259,14 +331,12 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro to entity 1, advance
 	// Get customer to check invoices
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Should have 2 invoices: one full price, one prorated
+	// Should have 2 invoices: one full price ($20), one prorated
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
+		latestTotal: entity2Total, // Prorated amount matches preview
 	});
-
-	// Entity 2's invoice should be prorated (roughly half of $20 = ~$10)
-	// Note: exact amount depends on billing cycle alignment
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -296,12 +366,22 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro annual to entity")}`
 			s.products({ list: [proAnnual] }),
 			s.entities({ count: 1, featureId: TestFeature.Users }),
 		],
-		actions: [
-			s.billing.attach({
-				productId: proAnnual.id,
-				entityIndex: 0,
-			}),
-		],
+		actions: [],
+	});
+
+	// 1. Preview attach to entity - $200 (annual)
+	const preview = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: proAnnual.id,
+		entity_id: entities[0].id,
+	});
+	expect((preview as AttachPreview).due_today.total).toBe(200);
+
+	// 2. Attach to entity
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: proAnnual.id,
+		entity_id: entities[0].id,
 	});
 
 	// Get entity and verify product
@@ -324,7 +404,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro annual to entity")}`
 		usage: 0,
 	});
 
-	// Get customer and verify invoice (annual = $200)
+	// Get customer and verify invoice matches preview total: $200
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectCustomerInvoiceCorrect({
@@ -362,10 +442,33 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro to customer, then pr
 			s.products({ list: [pro] }),
 			s.entities({ count: 1, featureId: TestFeature.Users }),
 		],
-		actions: [
-			s.billing.attach({ productId: pro.id }), // Customer-level
-			s.billing.attach({ productId: pro.id, entityIndex: 0 }), // Entity-level
-		],
+		actions: [],
+	});
+
+	// 1. Preview and attach to customer - $20
+	const previewCust = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: pro.id,
+	});
+	expect((previewCust as AttachPreview).due_today.total).toBe(20);
+
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+	});
+
+	// 2. Preview and attach to entity - $20
+	const previewEnt = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: pro.id,
+		entity_id: entities[0].id,
+	});
+	expect((previewEnt as AttachPreview).due_today.total).toBe(20);
+
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		entity_id: entities[0].id,
 	});
 
 	// Get customer and entity
@@ -399,6 +502,13 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro to customer, then pr
 		includedUsage: 100,
 		balance: 100,
 		usage: 0,
+	});
+
+	// Verify 2 invoices, each $20
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 2,
+		latestTotal: 20,
 	});
 });
 
@@ -430,10 +540,33 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach free to customer, then f
 			s.products({ list: [free] }),
 			s.entities({ count: 1, featureId: TestFeature.Users }),
 		],
-		actions: [
-			s.billing.attach({ productId: free.id }), // Customer-level
-			s.billing.attach({ productId: free.id, entityIndex: 0 }), // Entity-level
-		],
+		actions: [],
+	});
+
+	// 1. Preview and attach to customer - $0 (free)
+	const previewCust = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: free.id,
+	});
+	expect((previewCust as AttachPreview).due_today.total).toBe(0);
+
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: free.id,
+	});
+
+	// 2. Preview and attach to entity - $0 (free)
+	const previewEnt = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: free.id,
+		entity_id: entities[0].id,
+	});
+	expect((previewEnt as AttachPreview).due_today.total).toBe(0);
+
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: free.id,
+		entity_id: entities[0].id,
 	});
 
 	// Get customer and entity
@@ -469,7 +602,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach free to customer, then f
 		usage: 0,
 	});
 
-	// Verify no invoices (both free)
+	// Verify no invoices (both free) - matches preview total of 0
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 0,

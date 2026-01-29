@@ -29,6 +29,9 @@ export const BillingResponseSchema = z.object({
 
 	payment_url: z.string().nullable(),
 
+	// Checkout URL for Stripe Checkout session (when customer has no payment method)
+	checkout_url: z.string().nullable(),
+
 	required_action: BillingResponseRequiredActionSchema.optional(),
 });
 

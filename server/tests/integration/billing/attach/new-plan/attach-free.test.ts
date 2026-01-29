@@ -11,7 +11,7 @@
  */
 
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3 } from "@autumn/shared";
+import type { ApiCustomerV3, AttachPreview } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -47,7 +47,20 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach free product")}`, async 
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [s.customer({}), s.products({ list: [free] })],
-		actions: [s.billing.attach({ productId: free.id })],
+		actions: [],
+	});
+
+	// 1. Preview attach - verify no charge for free product
+	const preview = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: free.id,
+	});
+	expect((preview as AttachPreview).due_today.total).toBe(0);
+
+	// 2. Attach
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: free.id,
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -67,7 +80,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach free product")}`, async 
 		usage: 0,
 	});
 
-	// Verify no invoice created (free product)
+	// Verify no invoice created (free product) - matches preview total of 0
 	expectCustomerInvoiceCorrect({
 		customer,
 		count: 0,
@@ -103,7 +116,20 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach free with multiple featu
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [s.customer({}), s.products({ list: [free] })],
-		actions: [s.billing.attach({ productId: free.id })],
+		actions: [],
+	});
+
+	// 1. Preview attach - verify no charge for free product
+	const preview = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: free.id,
+	});
+	expect((preview as AttachPreview).due_today.total).toBe(0);
+
+	// 2. Attach
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: free.id,
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -135,7 +161,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach free with multiple featu
 	// Verify dashboard feature (boolean - just check it exists)
 	expect(customer.features[TestFeature.Dashboard]).toBeDefined();
 
-	// Verify no invoice created (free product)
+	// Verify no invoice created (free product) - matches preview total of 0
 	expectCustomerInvoiceCorrect({
 		customer,
 		count: 0,

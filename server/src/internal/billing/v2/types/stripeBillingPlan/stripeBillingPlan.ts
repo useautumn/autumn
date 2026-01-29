@@ -1,5 +1,9 @@
 import { z } from "zod/v4";
 import {
+	type StripeCheckoutSessionAction,
+	StripeCheckoutSessionActionSchema,
+} from "./stripeCheckoutSessionAction";
+import {
 	type StripeInvoiceAction,
 	StripeInvoiceActionSchema,
 } from "./stripeInvoiceAction";
@@ -17,10 +21,12 @@ import {
 } from "./stripeSubscriptionScheduleAction";
 
 export {
+	StripeCheckoutSessionActionSchema,
 	StripeInvoiceActionSchema,
 	StripeInvoiceItemsActionSchema,
 	StripeSubscriptionActionSchema,
 	StripeSubscriptionScheduleActionSchema,
+	type StripeCheckoutSessionAction,
 	type StripeInvoiceAction,
 	type StripeInvoiceItemsAction,
 	type StripeSubscriptionAction,
@@ -32,6 +38,7 @@ export const StripeBillingPlanSchema = z.object({
 	subscriptionScheduleAction: StripeSubscriptionScheduleActionSchema.optional(),
 	invoiceAction: StripeInvoiceActionSchema.optional(),
 	invoiceItemsAction: StripeInvoiceItemsActionSchema.optional(),
+	checkoutSessionAction: StripeCheckoutSessionActionSchema.optional(),
 });
 
 export type StripeBillingPlan = z.infer<typeof StripeBillingPlanSchema>;

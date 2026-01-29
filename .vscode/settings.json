@@ -24,5 +24,13 @@
 		"editor.defaultFormatter": "biomejs.biome"
 	},
 	"postman.settings.dotenv-detection-notification-visibility": false,
-	"typescript.preferences.importModuleSpecifier": "non-relative"
+	"typescript.preferences.importModuleSpecifier": "non-relative",
+	"files.exclude": {
+		// "**/.claude": true,
+		"**/.cursor": true,
+		"**/.github": true,
+		"**/.opencode": true,
+		"**/.superset": true,
+		"**/.vscode": true
+	}
 }

@@ -1,7 +1,7 @@
 import { ApiVersion, isUsagePrice, type Organization } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import { getEmptyPriceItem } from "../../priceToStripeItem/priceToStripeItem.js";
+import { getEmptyPriceItem } from "../../../priceToStripeItem/priceToStripeItem.js";
 
 export const handleRemainingSets = async ({
 	stripeCli,

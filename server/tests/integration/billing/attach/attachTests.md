@@ -63,18 +63,30 @@
     });
     ```
 
-11. **Always call attach preview before attach to verify `preview.total`**
-    - The preview endpoint validates pricing before the actual attach
+11. **ALWAYS call `billing.previewAttach` before `billing.attach` and verify**
+    - Call preview BEFORE every attach to verify pricing
+    - Assert `preview.due_today.total` matches expected amount EXACTLY (not `toBeCloseTo`)
+    - After attach, verify invoice total matches preview total
     ```typescript
-    const preview = await autumn.attachPreview({
+    // 1. Preview first - verify expected charge
+    const preview = await autumnV1.billing.previewAttach({
       customer_id: customerId,
-      product_id: productId,
+      product_id: pro.id,
       entity_id: entityId,  // Optional for entity-level
+      options: [{ feature_id: TestFeature.Messages, quantity: 1 }],  // If prepaid
     });
-    expect(preview.total).toBe(expectedTotal);
+    expect(preview.due_today.total).toBe(30);  // EXACT match, not toBeCloseTo
     
-    // Then perform the actual attach
-    await autumn.attach({ ... });
+    // 2. Attach
+    await autumnV1.billing.attach({ ... });
+    
+    // 3. Verify invoice matches preview
+    const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+    expectCustomerInvoiceCorrect({
+      customer,
+      count: 1,
+      latestTotal: 30,  // Must match preview.due_today.total
+    });
     ```
 
 12. **Add-on is defined at product level, NOT in attach params**

@@ -1,4 +1,7 @@
-import { UpdateSubscriptionV0ParamsSchema, InternalError } from "@autumn/shared";
+import {
+	InternalError,
+	UpdateSubscriptionV0ParamsSchema,
+} from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { billingResultToResponse } from "../utils/billingResult/billingResultToResponse";
@@ -26,7 +29,7 @@ export const handleUpdateSubscription = createRoute({
 			await billingActions.updateSubscription({
 				ctx,
 				params: body,
-				preview: true,
+				preview: false,
 			});
 
 		if (!billingResult) {

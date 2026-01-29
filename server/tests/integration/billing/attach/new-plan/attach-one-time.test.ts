@@ -12,7 +12,7 @@
  */
 
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
+import type { ApiCustomerV3, ApiEntityV0, AttachPreview } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import {
@@ -59,12 +59,22 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time purchase")}`, a
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [oneOff] }),
 		],
-		actions: [
-			s.billing.attach({
-				productId: oneOff.id,
-				options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
-			}),
-		],
+		actions: [],
+	});
+
+	// 1. Preview attach - verify base ($10) + prepaid ($10) = $20
+	const preview = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: oneOff.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+	});
+	expect((preview as AttachPreview).due_today.total).toBe(20);
+
+	// 2. Attach
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: oneOff.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -83,11 +93,11 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time purchase")}`, a
 		usage: 0,
 	});
 
-	// Verify invoice: one-time charge ($10 base + $10 messages = $20)
+	// Verify invoice matches preview total: $20
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
-		latestTotal: 20, // oneOff base ($10) + prepaid ($10)
+		latestTotal: 20,
 	});
 });
 
@@ -123,15 +133,33 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time purchase twice"
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [oneOff] }),
 		],
-		actions: [
-			s.billing.attach({
-				productId: oneOff.id,
-				options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
-			}),
-		],
+		actions: [],
 	});
 
-	// Attach same product again
+	// 1. Preview first attach - $20
+	const preview1 = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: oneOff.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+	});
+	expect((preview1 as AttachPreview).due_today.total).toBe(20);
+
+	// 2. First attach
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: oneOff.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+	});
+
+	// 3. Preview second attach - $20
+	const preview2 = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: oneOff.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+	});
+	expect((preview2 as AttachPreview).due_today.total).toBe(20);
+
+	// 4. Second attach
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: oneOff.id,
@@ -148,7 +176,7 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time purchase twice"
 		usage: 0,
 	});
 
-	// Verify two invoices created
+	// Verify two invoices created, each matching preview total
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
@@ -193,15 +221,34 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro then one-time as mai
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro, oneOff] }),
 		],
-		actions: [s.billing.attach({ productId: pro.id })],
+		actions: [],
 	});
 
-	// Attach one-time without isAddOn - should replace pro
+	// 1. Preview and attach pro first - $20
+	const previewPro = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: pro.id,
+	});
+	expect((previewPro as AttachPreview).due_today.total).toBe(20);
+
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+	});
+
+	// 2. Preview one-time replacement (includes refund for pro)
+	const previewOneOff = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: oneOff.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+	});
+	const oneOffTotal = (previewOneOff as AttachPreview).due_today.total;
+
+	// 3. Attach one-time without isAddOn - should replace pro
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: oneOff.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
-		// Note: NOT setting is_add_on: true
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -216,6 +263,13 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro then one-time as mai
 	await expectProductActive({
 		customer,
 		productId: oneOff.id,
+	});
+
+	// Verify latest invoice matches preview
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 2, // pro invoice + one-off invoice
+		latestTotal: oneOffTotal,
 	});
 });
 
@@ -251,12 +305,22 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time with quantity=0
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [oneOff] }),
 		],
-		actions: [
-			s.billing.attach({
-				productId: oneOff.id,
-				options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
-			}),
-		],
+		actions: [],
+	});
+
+	// 1. Preview attach - base ($10) + messages ($10) = $20
+	const preview = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: oneOff.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+	});
+	expect((preview as AttachPreview).due_today.total).toBe(20);
+
+	// 2. Attach
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: oneOff.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -269,11 +333,11 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time with quantity=0
 		usage: 0,
 	});
 
-	// Verify invoice: only messages charged
+	// Verify invoice matches preview total: $20
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
-		latestTotal: 20, // base ($10) + messages ($10)
+		latestTotal: 20,
 	});
 });
 
@@ -317,10 +381,30 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time as add-on to pr
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro, oneOffAddon] }),
 		],
-		actions: [s.billing.attach({ productId: pro.id })],
+		actions: [],
 	});
 
-	// Attach one-time add-on (is_add_on defined at product level, not in attach params)
+	// 1. Preview and attach pro - $20
+	const previewPro = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: pro.id,
+	});
+	expect((previewPro as AttachPreview).due_today.total).toBe(20);
+
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+	});
+
+	// 2. Preview add-on - base ($10) + prepaid ($5) = $15
+	const previewAddOn = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: oneOffAddon.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+	});
+	expect((previewAddOn as AttachPreview).due_today.total).toBe(15);
+
+	// 3. Attach add-on
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: oneOffAddon.id,
@@ -345,6 +429,13 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time as add-on to pr
 		featureId: TestFeature.Messages,
 		balance: 150,
 		usage: 0,
+	});
+
+	// Verify two invoices: pro ($20) + add-on ($15)
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 2,
+		latestTotal: 15,
 	});
 });
 
@@ -379,12 +470,22 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time with multiple f
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [oneOff] }),
 		],
-		actions: [
-			s.billing.attach({
-				productId: oneOff.id,
-				options: [{ feature_id: TestFeature.Messages, quantity: 2 }], // 2 packs = 200 messages
-			}),
-		],
+		actions: [],
+	});
+
+	// 1. Preview attach - base ($10) + 2 packs ($20) = $30
+	const preview = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: oneOff.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 2 }],
+	});
+	expect((preview as AttachPreview).due_today.total).toBe(30);
+
+	// 2. Attach
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: oneOff.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 2 }],
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -397,11 +498,11 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time with multiple f
 		usage: 0,
 	});
 
-	// Verify invoice
+	// Verify invoice matches preview total: $30
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
-		latestTotal: 30, // base ($10) + 2 packs ($20)
+		latestTotal: 30,
 	});
 });
 
@@ -439,13 +540,24 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time to entity")}`, 
 			s.products({ list: [oneOff] }),
 			s.entities({ count: 1, featureId: TestFeature.Users }),
 		],
-		actions: [
-			s.billing.attach({
-				productId: oneOff.id,
-				entityIndex: 0, // Attach to first entity
-				options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
-			}),
-		],
+		actions: [],
+	});
+
+	// 1. Preview attach to entity - base ($10) + prepaid ($10) = $20
+	const preview = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: oneOff.id,
+		entity_id: entities[0].id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+	});
+	expect((preview as AttachPreview).due_today.total).toBe(20);
+
+	// 2. Attach to entity
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: oneOff.id,
+		entity_id: entities[0].id,
+		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
 	});
 
 	// Get entity to verify balance
@@ -467,4 +579,11 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach one-time to entity")}`, 
 
 	// Customer should not have messages feature (it's on the entity)
 	expect(customer.features[TestFeature.Messages]).toBeUndefined();
+
+	// Verify invoice on customer matches preview total: $20
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 1,
+		latestTotal: 20,
+	});
 });

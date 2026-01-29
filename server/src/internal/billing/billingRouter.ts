@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { handlePreviewAttach } from "@/internal/billing/v2/handlers/handlePreviewAttach.js";
 import { handleAttachPreview } from "@/internal/customers/attach/handleAttachPreview/handleAttachPreview.js";
 import { handleCancelV2 } from "@/internal/customers/cancel/handleCancelV2.js";
 import type { HonoEnv } from "../../honoUtils/HonoEnv.js";
@@ -26,3 +27,4 @@ billingRouter.post(
 
 // V2 Attach
 billingRouter.post("/billing/attach", ...handleAttachV2);
+billingRouter.post("/billing/preview_attach", ...handlePreviewAttach);

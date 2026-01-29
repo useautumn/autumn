@@ -16,6 +16,14 @@ export const billingResultToResponse = ({
 	const customerId = fullCustomer.id ?? fullCustomer.internal_id;
 
 	const stripeInvoice = billingResult.stripe.stripeInvoice;
+	const stripeCheckoutSession = billingResult.stripe.stripeCheckoutSession;
+
+	// Checkout session URL takes priority, then invoice hosted URL
+	const paymentUrl = stripeCheckoutSession?.url
+		? stripeCheckoutSession.url
+		: stripeInvoice?.status === "open" && stripeInvoice.hosted_invoice_url
+			? stripeInvoice.hosted_invoice_url
+			: null;
 
 	return {
 		customer_id: customerId,
@@ -32,11 +40,8 @@ export const billingResultToResponse = ({
 					hosted_invoice_url: stripeInvoice.hosted_invoice_url ?? null,
 				}
 			: undefined,
-		payment_url:
-			stripeInvoice?.status === "open" && stripeInvoice.hosted_invoice_url
-				? stripeInvoice.hosted_invoice_url
-				: null,
-
+		payment_url: paymentUrl,
+		checkout_url: stripeCheckoutSession?.url ?? null,
 		required_action: billingResult.stripe.requiredAction,
 	} satisfies BillingResponse;
 };
