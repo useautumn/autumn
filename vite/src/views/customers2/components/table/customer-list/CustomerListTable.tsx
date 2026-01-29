@@ -14,7 +14,10 @@ import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import type { CustomerWithProducts } from "./CustomerListColumns";
 import { CustomerListCreateButton } from "./CustomerListCreateButton";
 import { CustomerListFilterButton } from "./CustomerListFilterButton";
-import { CustomerListPagination } from "./CustomerListPagination";
+import {
+	CustomerListPageSizeSelector,
+	CustomerListPagination,
+} from "./CustomerListPagination";
 import { CustomerListSearchBar } from "./CustomerListSearchBar";
 
 export function CustomerListTable({
@@ -145,7 +148,10 @@ export function CustomerListTable({
 					<CustomerListSearchBar />
 					<CustomerListPagination />
 				</div>
-				<CustomerListCreateButton />
+				<div className="flex items-center gap-2">
+					<CustomerListPageSizeSelector />
+					<CustomerListCreateButton />
+				</div>
 			</div>
 
 			{!hasRows && hasActiveFiltersOrSearch ? (
@@ -166,13 +172,17 @@ export function CustomerListTable({
 						enableColumnVisibility: true,
 						columnVisibilityStorageKey: "customer-list",
 						columnGroups,
+						flexibleTableColumns: true,
+						virtualization: {
+							containerHeight: "calc(100vh - 150px)",
+						},
 					}}
 				>
 					<Table.Container>
-						<Table.Content>
+						<Table.VirtualizedContent>
 							<Table.Header />
-							<Table.Body />
-						</Table.Content>
+							<Table.VirtualizedBody />
+						</Table.VirtualizedContent>
 					</Table.Container>
 				</Table.Provider>
 			)}

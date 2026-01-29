@@ -18,7 +18,7 @@ export const useFullCusSearchQuery = () => {
 				`/customers/all/full_customers`,
 				{
 					search: queryStates.q,
-					page_size: 30,
+					page_size: queryStates.pageSize,
 					page: queryStates.page,
 					filters: {
 						status: queryStates.status,
@@ -46,6 +46,7 @@ export const useFullCusSearchQuery = () => {
 	}, [
 		// Trigger on all state changes that affect the payload
 		queryStates.page,
+		queryStates.pageSize,
 		queryStates.status,
 		queryStates.version,
 		queryStates.none,

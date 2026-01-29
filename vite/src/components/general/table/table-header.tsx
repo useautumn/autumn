@@ -83,11 +83,16 @@ export function TableHeader({ className }: { className?: string }) {
 	const rows = table.getRowModel().rows;
 
 	return (
-		<ShadcnTableHeader className={className}>
+		<ShadcnTableHeader
+			className={cn(
+				"sticky top-0 z-20 bg-card",
+				className,
+			)}
+		>
 			{headerGroups.map((headerGroup) => (
 				<TableRow
 					className={cn(
-						"border-b bg-card text-t4 sticky top-0 z-20",
+						"border-b bg-card text-t4",
 						!rows.length && "border-dashed",
 					)}
 					key={headerGroup.id}

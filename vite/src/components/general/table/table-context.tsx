@@ -1,6 +1,15 @@
 import type { Table as TanstackTable } from "@tanstack/react-table";
-import { createContext, type ReactNode, useContext } from "react";
+import { createContext, type ReactNode, type RefObject, useContext } from "react";
 import type { ColumnGroup } from "@/hooks/useColumnVisibility";
+
+export interface VirtualizationConfig {
+	/** Height of the scroll container, e.g., "calc(100vh - 240px)" */
+	containerHeight: string;
+	/** Height of each row in pixels (default: 40) */
+	rowHeight?: number;
+	/** Number of rows to render outside visible area (default: 20) */
+	overscan?: number;
+}
 
 export interface TableProps<T> {
 	table: TanstackTable<T>;
@@ -21,6 +30,10 @@ export interface TableProps<T> {
 	emptyStateText?: string;
 	flexibleTableColumns?: boolean;
 	selectedItemId?: string | null;
+	/** Virtualization config - only needed when using VirtualizedContent/VirtualizedBody */
+	virtualization?: VirtualizationConfig;
+	/** Ref to scroll container - set internally by VirtualizedContent, used by VirtualizedBody */
+	scrollContainerRef?: RefObject<HTMLDivElement | null>;
 }
 
 //biome-ignore lint/suspicious/noExplicitAny: type could be any here
