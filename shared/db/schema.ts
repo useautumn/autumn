@@ -3,6 +3,7 @@
 // Analytics Tables
 import { actions } from "../models/analyticsModels/actionTable.js";
 import { chatResults } from "../models/chatResultModels/chatResultTable.js";
+import { checkouts } from "../models/checkouts/checkoutTable.js";
 // Customer Relations
 import { customersRelations } from "../models/cusModels/cusRelations.js";
 
@@ -84,6 +85,7 @@ export {
 	// Tables
 	organizations,
 	chatResults,
+	checkouts,
 	freeTrials,
 	entitlements,
 	prices,
