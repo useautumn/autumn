@@ -44,9 +44,7 @@ function TableRowCellsInner<T>({
 					? {
 							width: `${cell.column.getSize()}px`,
 							maxWidth: `${cell.column.getSize()}px`,
-							minWidth: cell.column.columnDef.minSize
-								? `${cell.column.columnDef.minSize}px`
-								: undefined,
+							minWidth: `${cell.column.getSize()}px`,
 						}
 					: { width: `${cell.column.getSize()}px` };
 
@@ -83,9 +81,10 @@ function TableRowCellsInner<T>({
 /** Memoized TableRowCells - prevents unnecessary re-renders during virtualization scrolling */
 export const TableRowCells = memo(TableRowCellsInner, (prevProps, nextProps) => {
 	// Custom comparator - only re-render if essential data changed
-	// We compare row.id to detect data changes, and selection state for checkbox updates
+	// IMPORTANT: Check row.original identity to handle data changes with keepPreviousData
 	return (
 		prevProps.row.id === nextProps.row.id &&
+		prevProps.row.original === nextProps.row.original &&
 		prevProps.row.getIsSelected() === nextProps.row.getIsSelected() &&
 		prevProps.rowHref === nextProps.rowHref &&
 		prevProps.enableSelection === nextProps.enableSelection &&

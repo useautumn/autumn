@@ -110,6 +110,13 @@ export function TableHeader({ className }: { className?: string }) {
 					)}
 					{headerGroup.headers.map((header, index, arr) => {
 						const isLast = index === arr.length - 1;
+						const headerStyle = flexibleTableColumns
+							? {
+									width: `${header.getSize()}px`,
+									maxWidth: `${header.getSize()}px`,
+									minWidth: `${header.getSize()}px`,
+								}
+							: { width: `${header.getSize()}px` };
 						return (
 							<TableHead
 								className={cn(
@@ -118,11 +125,7 @@ export function TableHeader({ className }: { className?: string }) {
 									isLast && enableColumnVisibility && "pr-8",
 								)}
 								key={header.id}
-								style={
-									flexibleTableColumns
-										? undefined
-										: { width: `${header.getSize()}px` }
-								}
+								style={headerStyle}
 							>
 								<div className="flex items-center justify-between w-full">
 									<HeaderContent header={header} />

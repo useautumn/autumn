@@ -7,8 +7,11 @@ import { IconButton } from "@/components/v2/buttons/IconButton";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
+import { useMounted } from "@/hooks/useMounted";
 import { pushPage } from "@/utils/genUtils";
+import LoadingScreen from "@/views/general/LoadingScreen";
 import { useCustomersQueryStates } from "@/views/customers/hooks/useCustomersQueryStates";
+import { FULL_CUSTOMERS_QUERY_KEY } from "@/views/customers/hooks/useFullCusSearchQuery";
 import { useCustomerListColumns } from "@/views/customers2/hooks/useCustomerListColumns";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import type { CustomerWithProducts } from "./CustomerListColumns";
@@ -25,15 +28,28 @@ export function CustomerListTable({
 }: {
 	customers: CustomerWithProducts[];
 }) {
+	// Defer rendering until after mount to ensure correct table layout on navigation
+	const isMounted = useMounted();
+
 	const { features } = useFeaturesQuery();
+	const { queryStates } = useCustomersQueryStates();
 
 	// Subscribe to full_customers query to get reactive updates
+	// Query key must match useFullCusSearchQuery for proper cache sharing
 	const {
 		data: fullCustomersData,
 		isLoading: isFullCustomersLoading,
 		isFetching: isFullCustomersFetching,
 	} = useQuery<{ fullCustomers: FullCustomer[] }>({
-		queryKey: ["full_customers"],
+		queryKey: [
+			FULL_CUSTOMERS_QUERY_KEY,
+			queryStates.page,
+			queryStates.pageSize,
+			queryStates.status,
+			queryStates.version,
+			queryStates.none,
+			queryStates.q,
+		],
 		// Placeholder queryFn - actual fetching is done by useFullCusSearchQuery
 		queryFn: () => Promise.resolve({ fullCustomers: [] }),
 		// Don't fetch - just subscribe to existing data from useFullCusSearchQuery
@@ -95,6 +111,11 @@ export function CustomerListTable({
 		},
 	});
 
+	// Don't render table until mounted to ensure correct layout on navigation
+	if (!isMounted) {
+		return <LoadingScreen />;
+	}
+
 	const getRowHref = (customer: CustomerWithProducts) =>
 		pushPage({
 			path: `/customers/${customer.id || customer.internal_id}`,
@@ -102,8 +123,6 @@ export function CustomerListTable({
 		});
 
 	const enableSorting = false;
-
-	const { queryStates } = useCustomersQueryStates();
 
 	const hasRows = table.getRowModel().rows.length > 0;
 	const hasSearchQuery = Boolean(queryStates.q?.trim());

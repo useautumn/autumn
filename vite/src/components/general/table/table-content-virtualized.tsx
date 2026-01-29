@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useState } from "react";
 import { Table } from "@/components/ui/table";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
@@ -22,13 +22,15 @@ export function TableContentVirtualized({
 	const sheetType = useSheetStore((s) => s.type);
 	const rows = table.getRowModel().rows;
 
-	// Create the scroll container ref
-	const scrollContainerRef = useRef<HTMLDivElement>(null);
+	// Use state instead of ref so changes trigger re-renders for virtualizer
+	const [scrollContainer, setScrollContainer] = useState<HTMLDivElement | null>(
+		null,
+	);
 
-	// Provide updated context with scrollContainerRef to children
+	// Provide updated context with scroll container to children
 	const contextWithRef = {
 		...context,
-		scrollContainerRef,
+		scrollContainer,
 	};
 
 	return (
@@ -55,7 +57,7 @@ export function TableContentVirtualized({
 
 				{/* Scroll container wrapping the table - optimized for fast scrolling */}
 				<div
-					ref={scrollContainerRef}
+					ref={setScrollContainer}
 					className="rounded-lg w-full [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-track]:mt-7 [&::-webkit-scrollbar-thumb]:bg-neutral-400 [&::-webkit-scrollbar-thumb]:rounded-full dark:[&::-webkit-scrollbar-thumb]:bg-neutral-600"
 					style={{
 						height: virtualization?.containerHeight,
