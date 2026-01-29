@@ -1,6 +1,6 @@
 import type { Row } from "@tanstack/react-table";
 import { flexRender } from "@tanstack/react-table";
-import type { ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 import { Link } from "react-router";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -18,7 +18,7 @@ interface TableRowCellsProps<T> {
 	rowHref?: string;
 }
 
-export function TableRowCells<T>({
+function TableRowCellsInner<T>({
 	row,
 	enableSelection,
 	flexibleTableColumns,
@@ -79,6 +79,19 @@ export function TableRowCells<T>({
 		</>
 	);
 }
+
+/** Memoized TableRowCells - prevents unnecessary re-renders during virtualization scrolling */
+export const TableRowCells = memo(TableRowCellsInner, (prevProps, nextProps) => {
+	// Custom comparator - only re-render if essential data changed
+	// We compare row.id to detect data changes, and selection state for checkbox updates
+	return (
+		prevProps.row.id === nextProps.row.id &&
+		prevProps.row.getIsSelected() === nextProps.row.getIsSelected() &&
+		prevProps.rowHref === nextProps.rowHref &&
+		prevProps.enableSelection === nextProps.enableSelection &&
+		prevProps.flexibleTableColumns === nextProps.flexibleTableColumns
+	);
+}) as typeof TableRowCellsInner;
 
 interface TableEmptyStateProps {
 	numberOfColumns: number;

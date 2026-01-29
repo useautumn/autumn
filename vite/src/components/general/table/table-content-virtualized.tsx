@@ -53,13 +53,15 @@ export function TableContentVirtualized({
 					<div className="bg-white/60 dark:bg-black/60 absolute pointer-events-none rounded-lg -inset-[1px] z-70" />
 				)}
 
-				{/* Scroll container wrapping the table */}
+				{/* Scroll container wrapping the table - optimized for fast scrolling */}
 				<div
 					ref={scrollContainerRef}
 					className="overflow-auto rounded-lg w-full [&::-webkit-scrollbar-track]:mt-7 [&::-webkit-scrollbar-thumb]:mt-7"
 					style={{ 
 						height: virtualization?.containerHeight,
 						scrollbarGutter: 'stable',
+						willChange: 'scroll-position',
+						contain: 'strict',
 					}}
 				>
 					<Table

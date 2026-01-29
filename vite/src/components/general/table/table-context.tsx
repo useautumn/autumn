@@ -7,7 +7,7 @@ export interface VirtualizationConfig {
 	containerHeight: string;
 	/** Height of each row in pixels (default: 40) */
 	rowHeight?: number;
-	/** Number of rows to render outside visible area (default: 20) */
+	/** Number of rows to render outside visible area (default: 30) - higher values improve fast scrolling smoothness */
 	overscan?: number;
 }
 
