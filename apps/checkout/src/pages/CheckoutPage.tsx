@@ -1,170 +1,125 @@
-import type {
-	ConfirmCheckoutResponse,
-	GetCheckoutResponse,
-} from "@autumn/shared";
-import { useEffect, useState } from "react";
+import type { ConfirmCheckoutResponse } from "@autumn/shared";
+import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { checkoutApi } from "@/api/checkoutClient";
-
-type CheckoutState =
-	| { status: "loading" }
-	| { status: "error"; message: string }
-	| { status: "loaded"; data: GetCheckoutResponse }
-	| { status: "confirming"; data: GetCheckoutResponse }
-	| { status: "confirmed"; result: ConfirmCheckoutResponse };
+import { CheckoutErrorState } from "@/components/checkout/CheckoutErrorState";
+import { CheckoutLoadingState } from "@/components/checkout/CheckoutLoadingState";
+import { CheckoutSuccessState } from "@/components/checkout/CheckoutSuccessState";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { useCheckout, useConfirmCheckout } from "@/hooks/useCheckout";
+import { formatAmount, formatDate } from "@/utils/formatUtils";
 
 export function CheckoutPage() {
-	const { checkoutId } = useParams<{ checkoutId: string }>();
-	const [state, setState] = useState<CheckoutState>({ status: "loading" });
+	const { checkoutId: checkoutIdParam } = useParams<{ checkoutId: string }>();
+	const checkoutId = checkoutIdParam ?? "";
+	const [confirmResult, setConfirmResult] =
+		useState<ConfirmCheckoutResponse | null>(null);
 
-	useEffect(() => {
-		if (!checkoutId) {
-			setState({ status: "error", message: "Missing checkout ID" });
-			return;
-		}
+	const { data: checkoutData, isLoading, error } = useCheckout({ checkoutId });
 
-		const loadCheckout = async () => {
-			try {
-				const data = await checkoutApi.getCheckout({ checkout_id: checkoutId });
-				setState({ status: "loaded", data });
-			} catch (err) {
-				const message =
-					err instanceof Error ? err.message : "Failed to load checkout";
-				setState({ status: "error", message });
-			}
-		};
+	const confirmMutation = useConfirmCheckout({ checkoutId });
 
-		loadCheckout();
-	}, [checkoutId]);
-
-	const handleConfirm = async () => {
-		if (state.status !== "loaded" || !checkoutId) return;
-
-		setState({ status: "confirming", data: state.data });
-
-		try {
-			const result = await checkoutApi.confirmCheckout({
-				checkout_id: checkoutId,
-			});
-			setState({ status: "confirmed", result });
-		} catch (err) {
-			const message =
-				err instanceof Error ? err.message : "Failed to confirm checkout";
-			setState({ status: "error", message });
-		}
+	const handleConfirm = () => {
+		confirmMutation.mutate(undefined, {
+			onSuccess: (result) => {
+				setConfirmResult(result);
+			},
+		});
 	};
 
-	if (state.status === "loading") {
-		return <LoadingState />;
+	if (!checkoutId) {
+		return <CheckoutErrorState message="Missing checkout ID" />;
 	}
 
-	if (state.status === "error") {
-		return <ErrorState message={state.message} />;
+	if (isLoading) {
+		return <CheckoutLoadingState />;
 	}
 
-	if (state.status === "confirmed") {
-		return <SuccessState result={state.result} />;
+	if (error) {
+		const message =
+			error instanceof Error ? error.message : "Failed to load checkout";
+		return <CheckoutErrorState message={message} />;
 	}
 
-	const { preview } = state.data;
-	const isConfirming = state.status === "confirming";
+	if (confirmResult) {
+		return <CheckoutSuccessState result={confirmResult} />;
+	}
+
+	if (!checkoutData) {
+		return <CheckoutErrorState message="No checkout data available" />;
+	}
+
+	const { preview } = checkoutData;
+
+	console.log("preview:", JSON.stringify(preview, null, 2));
 
 	return (
-		<div className="checkout-container">
-			<h1>Checkout</h1>
+		<div className="min-h-screen bg-background px-6 py-12 flex items-center justify-center">
+			<div className="w-full max-w-lg flex flex-col gap-8">
+				{/* Header */}
+				<h1 className="text-2xl font-semibold text-foreground">Checkout</h1>
 
-			<div className="checkout-card">
-				<div className="line-items">
+				{/* Line items card */}
+				<div className="bg-card border border-border shadow-sm rounded-lg divide-y divide-border">
 					{preview.line_items.map((item) => (
-						<div key={item.description} className="line-item">
-							<span className="description">{item.description}</span>
-							<span className="amount">
+						<div
+							key={item.description}
+							className="flex justify-between items-start gap-4 px-4 py-3.5"
+						>
+							<div className="flex flex-col gap-0.5">
+								<span className="font-medium text-foreground">
+									{item.title}
+								</span>
+								<span className="text-sm text-muted-foreground">
+									{item.description}
+								</span>
+							</div>
+							<span className="font-medium tabular-nums shrink-0">
 								{formatAmount(item.amount, preview.currency)}
 							</span>
 						</div>
 					))}
 				</div>
 
-				<div className="divider" />
+				<Separator />
 
-				<div className="total-row">
-					<span className="total-label">Total due today</span>
-					<span className="total-amount">
-						{formatAmount(preview.total, preview.currency)}
-					</span>
-				</div>
-
-				{preview.next_cycle && (
-					<div className="next-cycle">
-						<span className="next-cycle-label">Next billing cycle</span>
-						<span className="next-cycle-info">
-							{formatAmount(preview.next_cycle.total, preview.currency)}{" "}
-							starting {formatDate(preview.next_cycle.starts_at)}
+				{/* Amount due today */}
+				<div className="flex flex-col gap-1">
+					<div className="flex justify-between items-center">
+						<span className="text-base font-medium text-muted-foreground">
+							Amount due today
+						</span>
+						<span className="text-2xl font-semibold tabular-nums">
+							{formatAmount(preview.total, preview.currency)}
 						</span>
 					</div>
-				)}
+					{preview.next_cycle && (
+						<p className="text-sm text-muted-foreground">
+							Then {formatAmount(preview.next_cycle.total, preview.currency)}
+							/month starting {formatDate(preview.next_cycle.starts_at)}
+						</p>
+					)}
+				</div>
 
-				<button
-					type="button"
-					className="confirm-button"
-					onClick={handleConfirm}
-					disabled={isConfirming}
-				>
-					{isConfirming ? "Processing..." : "Confirm Purchase"}
-				</button>
-			</div>
-		</div>
-	);
-}
+				{/* Button */}
+				<div className="pt-4">
+					<Button
+						className="w-full h-12 text-base rounded-xl"
+						onClick={handleConfirm}
+						disabled={confirmMutation.isPending}
+					>
+						{confirmMutation.isPending ? "Processing..." : "Confirm Purchase"}
+					</Button>
+				</div>
 
-function LoadingState() {
-	return (
-		<div className="checkout-container">
-			<div className="checkout-card loading-card">
-				<div className="spinner" />
-				<p>Loading checkout...</p>
-			</div>
-		</div>
-	);
-}
-
-function ErrorState({ message }: { message: string }) {
-	return (
-		<div className="checkout-container">
-			<div className="checkout-card error-card">
-				<h2>Something went wrong</h2>
-				<p>{message}</p>
-			</div>
-		</div>
-	);
-}
-
-function SuccessState({ result }: { result: ConfirmCheckoutResponse }) {
-	return (
-		<div className="checkout-container">
-			<div className="checkout-card success-card">
-				<div className="success-icon">✓</div>
-				<h2>Purchase Complete</h2>
-				<p>Your order has been confirmed.</p>
-				{result.invoice_id && (
-					<p className="invoice-info">Invoice ID: {result.invoice_id}</p>
+				{confirmMutation.error && (
+					<p className="text-sm text-destructive text-center">
+						{confirmMutation.error instanceof Error
+							? confirmMutation.error.message
+							: "Failed to confirm checkout"}
+					</p>
 				)}
 			</div>
 		</div>
 	);
-}
-
-function formatAmount(cents: number, currency: string): string {
-	return new Intl.NumberFormat("en-US", {
-		style: "currency",
-		currency: currency.toUpperCase(),
-	}).format(cents / 100);
-}
-
-function formatDate(timestamp: number): string {
-	return new Date(timestamp * 1000).toLocaleDateString("en-US", {
-		month: "short",
-		day: "numeric",
-		year: "numeric",
-	});
 }

@@ -8,8 +8,8 @@ import {
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
-import { attach } from "@/internal/billing/v2/actions/attach/attach";
 import { billingPlanToPreviewResponse } from "@/internal/billing/v2/utils/billingPlanToPreviewResponse";
+import { billingActions } from "@/internal/billing/v2/actions";
 
 /**
  * GET /checkouts/:checkout_id
@@ -33,7 +33,7 @@ export const handleGetCheckout = createRoute({
 		const params = checkout.params as AttachParamsV0;
 
 		// Re-run attach in preview mode to get current billing plan
-		const { billingContext, billingPlan } = await attach({
+		const { billingContext, billingPlan } = await billingActions.attach({
 			ctx,
 			params,
 			preview: true,
