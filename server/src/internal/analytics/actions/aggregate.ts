@@ -338,10 +338,23 @@ export const aggregate = async ({
 	// Route to appropriate pipe based on whether grouping is requested
 	if (params.group_by) {
 		// Use aggregate_groupable pipe for grouped queries
-		// Strip "properties." prefix for property_key (pipe expects just the key name)
-		const propertyKey = params.group_by.startsWith("properties.")
-			? params.group_by.slice("properties.".length)
-			: params.group_by;
+		// Determine group_column and property_key based on group_by value
+		let groupColumn: "property" | "customer_id";
+		let propertyKey: string;
+
+		if (params.group_by === "customer_id") {
+			// Special case: group by customer_id column directly
+			groupColumn = "customer_id";
+			propertyKey = "";
+		} else if (params.group_by.startsWith("properties.")) {
+			// Standard case: group by a property value
+			groupColumn = "property";
+			propertyKey = params.group_by.slice("properties.".length);
+		} else {
+			// Fallback: treat as property key (legacy behavior)
+			groupColumn = "property";
+			propertyKey = params.group_by;
+		}
 
 		const pipeParams = {
 			org_id: org.id,
@@ -352,6 +365,7 @@ export const aggregate = async ({
 			bin_size: binSize,
 			timezone,
 			customer_id: params.aggregateAll ? undefined : params.customer_id,
+			group_column: groupColumn,
 			property_key: propertyKey,
 		};
 

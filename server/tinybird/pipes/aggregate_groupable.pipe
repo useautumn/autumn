@@ -1,10 +1,12 @@
 DESCRIPTION >
-    Aggregate queries with grouping by a property key.
+    Aggregate queries with grouping by a property key or customer_id.
     Uses PER-BIN TOP 9 groups + "AUTUMN_RESERVED" bucket (10 max total per bin).
     Each time bin shows its own top 9 groups, not global top 9.
     Returns unpivoted data: (period, event_name, group_value, total_value, _truncated)
     _truncated is true only if at least one bin has more than 9 unique values.
     Frontend maps "AUTUMN_RESERVED" to "Other values" for display.
+    Parameters:
+      - group_column: 'customer_id' to group by customer, 'property' (default) to group by property_key
 
 TOKEN "aggregate_groupable_read" READ
 
@@ -22,7 +24,11 @@ SQL >
         formatDateTime(toStartOfDay(hour, {{ String(timezone, 'UTC') }}), '%F %T') as period,
         {% end %}
         event_name,
+        {% if String(group_column, 'property') == 'customer_id' %}
+        customer_id as group_value,
+        {% else %}
         {{ column('properties.' + String(property_key, '')) }}::String as group_value,
+        {% end %}
         sum(total_value) as total_value
     FROM events_hourly_mv
     WHERE

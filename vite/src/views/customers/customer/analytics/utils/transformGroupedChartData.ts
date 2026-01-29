@@ -92,7 +92,9 @@ export function transformGroupedData({
 		return events;
 	}
 
-	const groupByColumn = `properties.${groupBy}`;
+	// Handle special case for customer_id (not a property)
+	const groupByColumn =
+		groupBy === "customer_id" ? "customer_id" : `properties.${groupBy}`;
 
 	// Check if data has the group_by column
 	const hasGroupColumn = events.meta.some((m) => m.name === groupByColumn);

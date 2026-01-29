@@ -75,7 +75,9 @@ export const AnalyticsView = () => {
 			return [];
 		}
 
-		const groupByColumn = `properties.${groupBy}`;
+		// Handle special case for customer_id (not a property)
+		const groupByColumn =
+			groupBy === "customer_id" ? "customer_id" : `properties.${groupBy}`;
 		const uniqueValues = new Set<string>();
 
 		for (const row of events.data) {
@@ -104,7 +106,9 @@ export const AnalyticsView = () => {
 		// Apply frontend filter if a group filter is selected
 		let filteredEvents = events;
 		if (groupBy && groupFilter) {
-			const groupByColumn = `properties.${groupBy}`;
+			// Handle special case for customer_id (not a property)
+			const groupByColumn =
+				groupBy === "customer_id" ? "customer_id" : `properties.${groupBy}`;
 			const filteredData = events.data.filter(
 				(row: Record<string, string | number>) =>
 					String(row[groupByColumn]) === groupFilter,
