@@ -36,8 +36,6 @@ export interface TableProps<T> {
 	virtualization?: VirtualizationConfig;
 	/** Scroll container element - set internally by VirtualizedContent, used by VirtualizedBody */
 	scrollContainer?: HTMLDivElement | null;
-	/** Key that changes when visible columns change - used for memo invalidation */
-	visibleColumnKey?: string;
 }
 
 //biome-ignore lint/suspicious/noExplicitAny: type could be any here

@@ -35,7 +35,7 @@ export class CusBatchService {
 			withEntities: true,
 			withTrialsUsed: false,
 			withSubs: true,
-			limit: 100,
+			limit: internalCustomerIds.length || 100,
 			offset: 0,
 			internalCustomerIds,
 		});

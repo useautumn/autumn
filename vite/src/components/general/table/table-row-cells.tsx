@@ -16,7 +16,6 @@ interface TableRowCellsProps<T> {
 	enableSelection?: boolean;
 	flexibleTableColumns?: boolean;
 	rowHref?: string;
-	visibleColumnKey?: string;
 }
 
 function TableRowCellsInner<T>({
@@ -24,8 +23,9 @@ function TableRowCellsInner<T>({
 	enableSelection,
 	flexibleTableColumns,
 	rowHref,
-	visibleColumnKey: _visibleColumnKey,
 }: TableRowCellsProps<T>) {
+	const visibleCells = row.getVisibleCells();
+
 	return (
 		<>
 			{enableSelection && (
@@ -37,7 +37,7 @@ function TableRowCellsInner<T>({
 					/>
 				</TableCell>
 			)}
-			{row.getVisibleCells().map((cell, cellIndex) => {
+			{visibleCells.map((cell, cellIndex) => {
 				const cellContent = flexRender(
 					cell.column.columnDef.cell,
 					cell.getContext(),
@@ -84,9 +84,9 @@ function TableRowCellsInner<T>({
 export const TableRowCells = memo(
 	TableRowCellsInner,
 	(prevProps, nextProps) => {
-		// Custom comparator - only re-render if essential data changed
-		// IMPORTANT: Check row.original identity to handle data changes with keepPreviousData
-		// Also check visible column key (passed as prop) to handle column visibility changes
+		// Only re-render if essential data changed
+		// Check row.original identity to handle data changes with keepPreviousData
+		// Check visible cells length to catch column additions/removals
 		return (
 			prevProps.row.id === nextProps.row.id &&
 			prevProps.row.original === nextProps.row.original &&
@@ -94,7 +94,7 @@ export const TableRowCells = memo(
 			prevProps.rowHref === nextProps.rowHref &&
 			prevProps.enableSelection === nextProps.enableSelection &&
 			prevProps.flexibleTableColumns === nextProps.flexibleTableColumns &&
-			prevProps.visibleColumnKey === nextProps.visibleColumnKey
+			prevProps.row.getVisibleCells().length === nextProps.row.getVisibleCells().length
 		);
 	},
 ) as typeof TableRowCellsInner;

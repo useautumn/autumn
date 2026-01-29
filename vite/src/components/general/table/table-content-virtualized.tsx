@@ -62,11 +62,10 @@ export function TableContentVirtualized({
 	// Using full column IDs ensures any visibility change is detected
 	const visibleColumnKey = visibleColumns.map((col) => col.id).join(",");
 
-	// Provide updated context with scroll container and visible column key to children
+	// Provide updated context with scroll container to children
 	const contextWithRef = {
 		...context,
 		scrollContainer,
-		visibleColumnKey,
 	};
 
 	return (
