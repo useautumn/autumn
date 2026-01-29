@@ -1,5 +1,5 @@
 import { InternalError } from "../../../../api/errors";
-import type { LineItemContext } from "../../../../models/billingModels/invoicingModels/lineItemContext";
+import type { LineItemContext } from "../../../../models/billingModels/lineItem/lineItemContext";
 import { isOneOffPrice } from "../../../productUtils/priceUtils/classifyPriceUtils";
 import { featureUsageToDescription } from "./featureUsageToDescription";
 import { lineItemToPeriodDescription } from "./lineItemToPeriodDescription";

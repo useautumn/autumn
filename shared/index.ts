@@ -96,16 +96,9 @@ export * from "./models/genModels/processorSchemas.js";
 
 // Attach Function Response
 export * from "./models/attachModels/attachFunctionResponse.js";
-export * from "./models/billingModels/cusProductActions.js";
-export * from "./models/billingModels/existingRollovers.js";
-export * from "./models/billingModels/existingUsages.js";
+
+// Billing Models (all from single index)
 export * from "./models/billingModels/index.js";
-export * from "./models/billingModels/initFullCustomerProductContext.js";
-export * from "./models/billingModels/invoicingModels/lineItem.js";
-// Billing Models
-export * from "./models/billingModels/newProductAction.js";
-export * from "./models/billingModels/stripeAdapterModels/stripeDiscountWithCoupon.js";
-export * from "./models/billingModels/stripeAdapterModels/stripeItemSpec.js";
 export * from "./models/cusProductModels/cusPriceModels/customerPriceWithCustomerProduct.js";
 export * from "./models/migrationModels/migrationErrorTable.js";
 export * from "./models/migrationModels/migrationJobTable.js";

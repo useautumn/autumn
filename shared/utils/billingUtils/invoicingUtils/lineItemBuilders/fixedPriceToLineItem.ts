@@ -1,5 +1,5 @@
-import type { LineItem } from "../../../../models/billingModels/invoicingModels/lineItem";
-import type { LineItemContext } from "../../../../models/billingModels/invoicingModels/lineItemContext";
+import type { LineItem } from "../../../../models/billingModels/lineItem/lineItem";
+import type { LineItemContext } from "../../../../models/billingModels/lineItem/lineItemContext";
 import { fixedPriceToDescription } from "../descriptionUtils/fixedPriceToLineDescription";
 import { priceToLineAmount } from "../lineItemUtils/priceToLineAmount";
 import { buildLineItem } from "./buildLineItem";

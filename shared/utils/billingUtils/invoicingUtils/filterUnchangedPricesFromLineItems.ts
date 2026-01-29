@@ -1,4 +1,4 @@
-import type { LineItem } from "@models/billingModels/invoicingModels/lineItem";
+import type { LineItem } from "@models/billingModels/lineItem/lineItem";
 
 /**
  * Filters out line item pairs where a refund and charge item have the same price ID

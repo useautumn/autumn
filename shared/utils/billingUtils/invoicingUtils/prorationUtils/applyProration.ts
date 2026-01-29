@@ -1,5 +1,5 @@
 import { Decimal } from "decimal.js";
-import type { BillingPeriod } from "../../../../models/billingModels/invoicingModels/lineItemContext";
+import type { BillingPeriod } from "../../../../models/billingModels/lineItem/lineItemContext";
 
 export const applyProration = ({
 	now,

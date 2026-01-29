@@ -4,8 +4,8 @@ import {
 	type LineItem,
 	type LineItemCreate,
 	LineItemSchema,
-} from "../../../../models/billingModels/invoicingModels/lineItem";
-import type { LineItemContext } from "../../../../models/billingModels/invoicingModels/lineItemContext";
+} from "../../../../models/billingModels/lineItem/lineItem";
+import type { LineItemContext } from "../../../../models/billingModels/lineItem/lineItemContext";
 import { applyProration } from "../prorationUtils/applyProration";
 
 export const buildLineItem = ({
