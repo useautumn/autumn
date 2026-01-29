@@ -72,7 +72,10 @@ function HeaderContent<T>({
 	);
 }
 
-export function TableHeader({ className }: { className?: string }) {
+export function TableHeader({
+	className,
+	hideBorder,
+}: { className?: string; hideBorder?: boolean }) {
 	const {
 		table,
 		enableSelection,
@@ -92,7 +95,8 @@ export function TableHeader({ className }: { className?: string }) {
 			{headerGroups.map((headerGroup) => (
 				<TableRow
 					className={cn(
-						"border-b bg-card text-t4",
+						"bg-card text-t4",
+						!hideBorder && "border-b",
 						!rows.length && "border-dashed",
 					)}
 					key={headerGroup.id}

@@ -219,7 +219,6 @@ export function TableColumnVisibility() {
 				{columnVisibilityInToolbar ? (
 					<IconButton
 						variant="secondary"
-						size="icon"
 						className={cn(isOpen && "btn-secondary-active")}
 						icon={
 							<FadersHorizontalIcon
@@ -228,7 +227,9 @@ export function TableColumnVisibility() {
 								className="text-t3"
 							/>
 						}
-					/>
+					>
+						Display
+					</IconButton>
 				) : (
 					<Button
 						variant="skeleton"
@@ -249,7 +250,11 @@ export function TableColumnVisibility() {
 					</Button>
 				)}
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="start" side="right" className="min-w-[150px] relative">
+			<DropdownMenuContent
+				align="start"
+				side="right"
+				className="min-w-[150px] relative"
+			>
 				{/* Base columns (not in any group) */}
 				{baseColumns.map((column) => (
 					<ColumnCheckboxItem key={column.id} column={column} />
