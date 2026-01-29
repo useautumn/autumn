@@ -1,5 +1,5 @@
 import { InternalError } from "../../../../api/errors/base/InternalError";
-import type { LineItemContext } from "../../../../models/billingModels/invoicingModels/lineItemContext";
+import type { LineItemContext } from "../../../../models/billingModels/lineItem/lineItemContext";
 import type { FullCusEntWithFullCusProduct } from "../../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
 import { cusEntsToPrepaidQuantity } from "../../../cusEntUtils/balanceUtils/cusEntsToPrepaidQuantity";
 import { cusEntToCusPrice } from "../../../cusEntUtils/convertCusEntUtils/cusEntToCusPrice";

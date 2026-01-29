@@ -1,4 +1,4 @@
-import type { LineItemContext } from "../../../../models/billingModels/invoicingModels/lineItemContext";
+import type { LineItemContext } from "../../../../models/billingModels/lineItem/lineItemContext";
 import { formatMsToDate } from "../../../common/formatUtils";
 
 export const lineItemToPeriodDescription = ({
