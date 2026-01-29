@@ -139,6 +139,7 @@ export const createCustomerListColumns = (): ColumnDef<
 		id: "name",
 		header: "Name",
 		accessorKey: "name",
+		size: 150,
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
 			return <div className="font-medium text-t1">{row.original.name}</div>;
 		},
@@ -147,6 +148,7 @@ export const createCustomerListColumns = (): ColumnDef<
 		id: "customer_id",
 		header: "ID",
 		accessorKey: "id",
+		size: 150,
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
 			const customer = row.original;
 			return (
@@ -164,6 +166,7 @@ export const createCustomerListColumns = (): ColumnDef<
 		id: "email",
 		header: "Email",
 		accessorKey: "email",
+		size: 120,
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
 			return (
 				<div className="truncate">
@@ -176,6 +179,7 @@ export const createCustomerListColumns = (): ColumnDef<
 		id: "customer_products",
 		header: "Products",
 		accessorKey: "customer_products",
+		size: 120,
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
 			return getCusProductsInfo({
 				customer: row.original,
