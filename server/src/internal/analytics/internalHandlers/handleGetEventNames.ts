@@ -1,56 +1,39 @@
 import { type Feature, FeatureType } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { queryWithCache } from "@/utils/cacheUtils/queryWithCache.js";
-import { AnalyticsService } from "../AnalyticsService.js";
+import { eventActions } from "../actions/index.js";
 
-/**
- * Get top event names for the organization
- */
+/** Get top event names for the organization */
 export const handleGetEventNames = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { org, env, features } = ctx;
 
-		AnalyticsService.handleEarlyExit();
-
-		const result = await queryWithCache({
+		const topNames = await queryWithCache({
 			ttl: 3600,
 			key: `top_events:${org.id}_${env}`,
 			fn: async () => {
-				const res = await AnalyticsService.getTopEventNames({
-					ctx,
-				});
-
-				return res?.eventNames;
+				const { eventNames } = await eventActions.getTopEventNames({ ctx });
+				return eventNames;
 			},
 		});
 
 		const featureIds: string[] = [];
 		const eventNames: string[] = [];
 
-		for (let i = 0; i < result.length; i++) {
-			// Is an event name
-			if (
-				features.some(
-					(feature: Feature) =>
-						feature.type === FeatureType.Metered &&
-						feature.event_names &&
-						feature.event_names.includes(result[i]),
-				)
-			) {
-				eventNames.push(result[i]);
-			} else if (
-				features.some((feature: Feature) => feature.id === result[i])
-			) {
-				featureIds.push(result[i]);
-			}
+		for (const name of topNames.slice(0, 3)) {
+			const isMeteredEventName = features.some(
+				(f: Feature) =>
+					f.type === FeatureType.Metered && f.event_names?.includes(name),
+			);
 
-			if (i >= 2) break;
+			if (isMeteredEventName) {
+				eventNames.push(name);
+			} else if (features.some((f: Feature) => f.id === name)) {
+				featureIds.push(name);
+			}
 		}
 
-		return c.json({
-			featureIds,
-			eventNames,
-		});
+		return c.json({ featureIds, eventNames });
 	},
 });

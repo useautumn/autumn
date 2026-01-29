@@ -12,8 +12,8 @@ import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { EventsAggregationService } from "@/internal/events/EventsAggregationService.js";
-import { AnalyticsService } from "../AnalyticsService.js";
+import { queryWithCache } from "@/utils/cacheUtils/queryWithCache.js";
+import { eventActions } from "../actions/index.js";
 
 const QueryEventsSchema = z.object({
 	interval: z.string().nullish(),
@@ -24,77 +24,77 @@ const QueryEventsSchema = z.object({
 	timezone: z.string().optional(),
 });
 
+/** Gets top event names, categorized into feature IDs and event names (with caching) */
 const getTopEvents = async ({ ctx }: { ctx: AutumnContext }) => {
-	const { features } = ctx;
+	const { org, env, features } = ctx;
 
-	const topEventNamesRes = await AnalyticsService.getTopEventNames({
-		ctx,
+	const topNames = await queryWithCache({
+		ttl: 3600, // Cache for 1 hour
+		key: `top_events:${org.id}_${env}`,
+		fn: async () => {
+			const { eventNames } = await eventActions.getTopEventNames({ ctx });
+			return eventNames;
+		},
 	});
-
-	const result = topEventNamesRes?.eventNames;
 
 	const featureIds: string[] = [];
 	const eventNames: string[] = [];
 
-	for (let i = 0; i < result.length; i++) {
-		// Is an event name
-		if (
-			features.some(
-				(feature: Feature) =>
-					feature.type === FeatureType.Metered &&
-					feature.event_names &&
-					feature.event_names.includes(result[i]),
-			)
-		) {
-			eventNames.push(result[i]);
-		} else if (features.some((feature: Feature) => feature.id === result[i])) {
-			featureIds.push(result[i]);
-		}
+	for (const name of topNames.slice(0, 3)) {
+		const isMeteredEventName = features.some(
+			(f: Feature) =>
+				f.type === FeatureType.Metered && f.event_names?.includes(name),
+		);
 
-		if (i >= 2) break;
+		if (isMeteredEventName) {
+			eventNames.push(name);
+		} else if (features.some((f: Feature) => f.id === name)) {
+			featureIds.push(name);
+		}
 	}
 
-	return {
-		featureIds,
-		eventNames,
-	};
+	return { featureIds, eventNames };
 };
 
-/**
- * Query events by customer ID
- */
+/** Query events by customer ID */
 export const handleQueryEvents = createRoute({
 	body: QueryEventsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { db, org, env, features } = ctx;
+		const { db, org, env, features, logger } = ctx;
 		let { interval, event_names, customer_id, group_by, bin_size, timezone } =
 			c.req.valid("json");
 
-		AnalyticsService.handleEarlyExit();
-
 		let topEvents: { featureIds: string[]; eventNames: string[] } | undefined;
 
+		// Get top events if no event names provided
 		if (!event_names || event_names.length === 0) {
+			const topEventsStart = performance.now();
 			topEvents = await getTopEvents({ ctx });
+			logger.debug("getTopEvents timing", {
+				durationMs: Math.round(performance.now() - topEventsStart),
+			});
 			event_names = [...topEvents.eventNames, ...topEvents.featureIds];
+		} else {
+			event_names = event_names.filter((name) => name !== "");
 		}
 
-		let aggregateAll = false;
+		// Determine if aggregating all customers or a specific one
+		const aggregateAll = !customer_id;
 		let customer: FullCustomer | undefined;
 		let bcExclusionFlag = false;
 
-		if (!customer_id) {
-			// No customer ID provided, set aggregateAll to true
-			aggregateAll = true;
-		} else {
-			// Customer ID provided, fetch customer data
+		if (customer_id) {
+			const cusServiceStart = performance.now();
 			customer = await CusService.getFull({
 				db,
 				idOrInternalId: customer_id,
 				orgId: org.id,
 				env,
 				withSubs: true,
+			});
+			logger.debug("CusService.getFull timing", {
+				durationMs: Math.round(performance.now() - cusServiceStart),
 			});
 
 			if (!customer) {
@@ -105,35 +105,31 @@ export const handleQueryEvents = createRoute({
 				});
 			}
 
-			// Check for bcExclusionFlag only if we have a specific customer
-			if (customer.customer_products) {
-				customer.customer_products.forEach((product: FullCusProduct) => {
-					if (product.product.is_default) {
-						bcExclusionFlag = true;
-					}
-				});
-			}
+			// Check for bcExclusionFlag (customer has default product)
+			bcExclusionFlag =
+				customer.customer_products?.some(
+					(p: FullCusProduct) => p.product.is_default,
+				) ?? false;
 		}
 
-		if (event_names && Array.isArray(event_names)) {
-			event_names = event_names.filter((name: string) => name !== "");
-		}
-
-		// Use provided bin_size, or default based on interval
 		const binSize = bin_size || (interval === "24h" ? "hour" : "day");
 
-		const events = await EventsAggregationService.getTimeseriesEvents({
+		const aggregateStart = performance.now();
+		const events = await eventActions.aggregate({
 			ctx,
 			params: {
-				customer_id: customer_id,
+				customer_id,
 				interval: interval as RangeEnum,
 				event_names,
 				bin_size: binSize,
 				aggregateAll,
-				group_by: group_by,
+				group_by,
 				customer,
-				timezone: timezone,
+				timezone,
 			},
+		});
+		logger.debug("eventActions.aggregate timing", {
+			durationMs: Math.round(performance.now() - aggregateStart),
 		});
 
 		return c.json({

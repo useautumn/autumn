@@ -120,7 +120,9 @@ export const auth = betterAuth({
 			// Format: resource:action (e.g., customers:read, plans:create)
 			scopes: ALL_SCOPES,
 			clientReference: ({ session }) => {
-				return (session?.activeOrganizationId as string | undefined) ?? undefined;
+				return (
+					(session?.activeOrganizationId as string | undefined) ?? undefined
+				);
 			},
 			// Use the active organization as the consent reference
 			// This makes consent org-scoped, not just user-scoped
@@ -131,7 +133,9 @@ export const auth = betterAuth({
 				shouldRedirect: async () => false,
 				// Optional: reference ID for consent (org ID makes consent org-scoped)
 				consentReferenceId: ({ session }) => {
-					return (session?.activeOrganizationId as string | undefined) ?? undefined;
+					return (
+						(session?.activeOrganizationId as string | undefined) ?? undefined
+					);
 				},
 			},
 		}),
@@ -145,7 +149,7 @@ export const auth = betterAuth({
 				const inviteLink = `${process.env.CLIENT_URL}/accept?id=${data.id}`;
 				await sendInvitationEmail({
 					email: data.email,
-					orgName: data.organization.name as string ?? "an organization",
+					orgName: (data.organization.name as string) ?? "an organization",
 					inviteLink: inviteLink,
 				});
 

@@ -1,0 +1,4 @@
+tb --cloud copy run events_backfill --param start_date='2025-02-01 00:00:00' --param end_date='2025-02-08 00:00:00'
+tb --cloud copy run events_backfill --param start_date='2025-02-08 00:00:00' --param end_date='2025-02-15 00:00:00'
+tb --cloud copy run events_backfill --param start_date='2025-02-15 00:00:00' --param end_date='2025-02-22 00:00:00'
+tb --cloud copy run events_backfill --param start_date='2025-02-22 00:00:00' --param end_date='2025-03-01 00:00:00'

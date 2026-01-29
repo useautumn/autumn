@@ -1,6 +1,8 @@
 import type { BinSizeEnum, FullCustomer, RangeEnum } from "@autumn/shared";
 
 export type ClickHouseResult<T = Record<string, string | number>> = {
+	meta: Array<{ name: string; type?: string }>;
+	rows: number;
 	data: T[];
 };
 
