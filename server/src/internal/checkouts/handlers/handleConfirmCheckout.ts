@@ -3,6 +3,7 @@ import {
 	type Checkout,
 	CheckoutAction,
 	CheckoutStatus,
+	type ConfirmCheckoutResponse,
 	ErrCode,
 	RecaseError,
 } from "@autumn/shared";
@@ -34,6 +35,14 @@ export const handleConfirmCheckout = createRoute({
 			});
 		}
 
+		if (checkout.status !== CheckoutStatus.Pending) {
+			throw new RecaseError({
+				message: "Checkout is not pending",
+				code: ErrCode.InvalidRequest,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+
 		const params = checkout.params as AttachParamsV0;
 
 		try {
@@ -42,6 +51,7 @@ export const handleConfirmCheckout = createRoute({
 				ctx,
 				params,
 				preview: false,
+				skipAutumnCheckout: true,
 			});
 
 			// Delete from cache (one-time use)
@@ -63,7 +73,7 @@ export const handleConfirmCheckout = createRoute({
 				customer_id: checkout.customer_id,
 				product_id: billingContext.attachProduct.id,
 				invoice_id: billingResult?.stripe?.stripeInvoice?.id ?? null,
-			});
+			} satisfies ConfirmCheckoutResponse);
 		} catch (error) {
 			// Don't delete from cache on error - allow retry
 			if (error instanceof RecaseError) {

@@ -24,7 +24,7 @@ export async function createAutumnCheckout({
 	billingContext: AttachBillingContext;
 	billingPlan: BillingPlan;
 }): Promise<AttachResult> {
-	const { checkoutUrl } = await billingPlanToAutumnCheckout({
+	const { checkout, checkoutUrl } = await billingPlanToAutumnCheckout({
 		ctx,
 		params,
 		billingContext,
@@ -34,7 +34,10 @@ export async function createAutumnCheckout({
 	return {
 		billingContext,
 		billingPlan,
-		billingResult: null,
+		billingResult: {
+			stripe: {},
+			autumn: { checkout },
+		},
 		checkoutUrl,
 	};
 }

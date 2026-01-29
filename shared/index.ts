@@ -10,20 +10,19 @@ export * from "./api/billing/common/cancelAction.js";
 export * from "./api/common/cursorPaginationSchemas.js";
 // API MODELS
 export * from "./api/models.js";
-
 // API VERSIONING SYSTEM
 export * from "./api/versionUtils/versionUtils.js";
-
 // Auth Models
 export * from "./db/auth-schema.js";
 export * from "./enums/APIVersion.js";
 export * from "./enums/AttachErrCode.js";
 export * from "./enums/ErrCode.js";
 export * from "./enums/LoggerAction.js";
-
 // ENUMS
 export * from "./enums/SuccessCode.js";
 export * from "./enums/WebhookEventType.js";
+// Internal API (checkout app, dashboard)
+export * from "./internal/index.js";
 
 // ANALYTICS MODELS
 export * from "./models/analyticsModels/actionEnums.js";

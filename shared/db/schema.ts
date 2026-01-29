@@ -3,6 +3,7 @@
 // Analytics Tables
 import { actions } from "../models/analyticsModels/actionTable.js";
 import { chatResults } from "../models/chatResultModels/chatResultTable.js";
+import { checkoutsRelations } from "../models/checkouts/checkoutRelations.js";
 import { checkouts } from "../models/checkouts/checkoutTable.js";
 // Customer Relations
 import { customersRelations } from "../models/cusModels/cusRelations.js";
@@ -145,6 +146,7 @@ export {
 	replaceableRelations,
 	invoiceRelations,
 	rolloverRelations,
+	checkoutsRelations,
 	// Auth Relations
 	userRelations,
 	memberRelations,

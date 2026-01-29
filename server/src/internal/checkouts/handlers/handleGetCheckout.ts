@@ -3,6 +3,7 @@ import {
 	type Checkout,
 	CheckoutAction,
 	ErrCode,
+	type GetCheckoutResponse,
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
@@ -52,6 +53,6 @@ export const handleGetCheckout = createRoute({
 			billingPlan,
 		});
 
-		return c.json({ preview });
+		return c.json({ preview } satisfies GetCheckoutResponse);
 	},
 });
