@@ -11,7 +11,7 @@ import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCyc
 import { setupTrialContext } from "@/internal/billing/v2/setup/setupTrialContext";
 import { setupDefaultProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupDefaultProductContext";
 import { setupUpdateSubscriptionProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionProductContext";
-import type { UpdateSubscriptionBillingContext } from "../../../types";
+import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
 
 /**
  * Fetch the context for updating a subscription

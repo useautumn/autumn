@@ -7,7 +7,7 @@ import type {
 	BillingPlan,
 	StripeBillingPlanResult,
 	StripeCheckoutSessionAction,
-} from "@/internal/billing/v2/types";
+} from "@autumn/shared";
 import {
 	insertMetadataFromBillingPlan,
 	updateMetadataWithCheckoutSession,

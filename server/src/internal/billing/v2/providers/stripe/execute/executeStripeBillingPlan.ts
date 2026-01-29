@@ -9,8 +9,8 @@ import type {
 	BillingContext,
 	BillingPlan,
 	StripeBillingPlanResult,
-} from "@/internal/billing/v2/types";
-import { StripeBillingStage } from "@/internal/billing/v2/types";
+} from "@autumn/shared";
+import { StripeBillingStage } from "@autumn/shared";
 
 export const executeStripeBillingPlan = async ({
 	ctx,

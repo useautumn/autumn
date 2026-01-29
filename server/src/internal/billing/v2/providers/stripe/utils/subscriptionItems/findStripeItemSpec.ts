@@ -1,4 +1,4 @@
-import type { StripeItemSpec } from "@shared/models/billingModels/stripeAdapterModels/stripeItemSpec";
+import type { StripeItemSpec } from "@autumn/shared";
 
 export const findStripeItemSpecByStripePriceId = ({
 	stripePriceId,

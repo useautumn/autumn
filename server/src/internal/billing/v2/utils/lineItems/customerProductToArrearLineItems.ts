@@ -16,7 +16,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type {
 	BillingContext,
 	UpdateCustomerEntitlement,
-} from "@/internal/billing/v2/types";
+} from "@autumn/shared";
 import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
 

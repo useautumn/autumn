@@ -2,7 +2,7 @@ import { CusProductStatus } from "@autumn/shared";
 import type {
 	AttachBillingContext,
 	AutumnBillingPlan,
-} from "@/internal/billing/v2/types";
+} from "@autumn/shared";
 
 /**
  * Computes the updates to apply to the current customer product during an attach transition.

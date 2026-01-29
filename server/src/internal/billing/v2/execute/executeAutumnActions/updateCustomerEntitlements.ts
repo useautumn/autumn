@@ -1,5 +1,5 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { AutumnBillingPlan } from "@/internal/billing/v2/types";
+import type { AutumnBillingPlan } from "@autumn/shared";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 
 /**

@@ -7,8 +7,8 @@ import type {
 	BillingPlan,
 	StripeBillingPlanResult,
 	StripeInvoiceMetadata,
-} from "@/internal/billing/v2/types";
-import { StripeBillingStage } from "@/internal/billing/v2/types";
+} from "@autumn/shared";
+import { StripeBillingStage } from "@autumn/shared";
 import { isDeferredInvoiceMode } from "@/internal/billing/v2/utils/billingContext/isDeferredInvoiceMode";
 import { upsertInvoiceFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertInvoiceFromBilling";
 import { insertMetadataFromBillingPlan } from "@/internal/metadata/utils/insertMetadataFromBillingPlan";

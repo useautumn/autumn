@@ -4,7 +4,7 @@ import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers
 import type {
 	AttachBillingContext,
 	AutumnBillingPlan,
-} from "@/internal/billing/v2/types";
+} from "@autumn/shared";
 
 /**
  * Finalizes the attach billing plan by:

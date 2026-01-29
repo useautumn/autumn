@@ -7,7 +7,7 @@ import {
 	isOneOffProduct,
 	isProductUpgrade,
 } from "@autumn/shared";
-import type { PlanTiming } from "@/internal/billing/v2/types";
+import type { PlanTiming } from "@autumn/shared";
 
 /**
  * Sets up the transition context for attaching a product.

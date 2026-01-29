@@ -1,4 +1,9 @@
-import type { AttachParamsV0 } from "@autumn/shared";
+import type {
+	AttachBillingContext,
+	AttachParamsV0,
+	BillingPlan,
+	BillingResult,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeAttachPlan } from "@/internal/billing/v2/actions/attach/compute/computeAttachPlan";
 import { handleAttachV2Errors } from "@/internal/billing/v2/actions/attach/errors/handleAttachV2Errors";
@@ -8,11 +13,6 @@ import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBilling
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
-import type {
-	AttachBillingContext,
-	BillingPlan,
-	BillingResult,
-} from "@/internal/billing/v2/types";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 
 export interface AttachResult {

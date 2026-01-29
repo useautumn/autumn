@@ -5,8 +5,8 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@/internal/billing/v2/types";
-import type { BillingPlan } from "@/internal/billing/v2/types";
+import type { BillingContext } from "@autumn/shared";
+import type { BillingPlan } from "@autumn/shared";
 import { billingPlanToNextCyclePreview } from "./billingPlan/billingPlanToNextCyclePreview";
 
 export const billingPlanToPreviewResponse = ({

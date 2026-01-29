@@ -11,7 +11,7 @@ import type {
 	AutumnBillingPlan,
 	BillingContext,
 	StripeCheckoutSessionAction,
-} from "@/internal/billing/v2/types";
+} from "@autumn/shared";
 
 export const buildStripeCheckoutSessionAction = ({
 	ctx,

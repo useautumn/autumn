@@ -14,7 +14,7 @@ import type {
 	StripeCheckoutSessionAction,
 	StripeInvoiceAction,
 	StripeInvoiceItemsAction,
-} from "../../../types";
+} from "@autumn/shared";
 import { initStripeResourcesForBillingPlan } from "../utils/common/initStripeResourcesForProducts";
 
 export const evaluateStripeBillingPlan = async ({

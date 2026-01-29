@@ -5,7 +5,7 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils";
-import type { PlanTiming } from "@/internal/billing/v2/types";
+import type { PlanTiming } from "@autumn/shared";
 import { getLargestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils";
 
 /**

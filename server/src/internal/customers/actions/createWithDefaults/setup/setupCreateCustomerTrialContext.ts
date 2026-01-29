@@ -4,7 +4,7 @@ import {
 	type FullProduct,
 	InternalError,
 } from "@autumn/shared";
-import type { TrialContext } from "@/internal/billing/v2/types";
+import type { TrialContext } from "@autumn/shared";
 
 export const setupCreateCustomerTrialContext = ({
 	paidProducts,

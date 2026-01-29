@@ -2,7 +2,7 @@ import { type BillingResponse, stripeToAtmnAmount } from "@autumn/shared";
 import type {
 	BillingContext,
 	BillingResult,
-} from "@/internal/billing/v2/types";
+} from "@autumn/shared";
 
 export const billingResultToResponse = ({
 	billingContext,

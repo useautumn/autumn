@@ -1,4 +1,4 @@
-import type { BillingContext } from "@/internal/billing/v2/types";
+import type { BillingContext } from "@autumn/shared";
 import {
 	type PayInvoiceResult,
 	payStripeInvoice,
@@ -13,7 +13,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type {
 	StripeInvoiceAction,
 	StripeInvoiceMetadata,
-} from "@/internal/billing/v2/types";
+} from "@autumn/shared";
 
 export const createInvoiceForBilling = async ({
 	ctx,

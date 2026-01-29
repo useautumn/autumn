@@ -4,7 +4,7 @@ import {
 	RecaseError,
 	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
-import type { UpdateSubscriptionBillingContext } from "@/internal/billing/v2/types";
+import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
 
 /**
  * Validates cancel: 'end_of_cycle' requests.

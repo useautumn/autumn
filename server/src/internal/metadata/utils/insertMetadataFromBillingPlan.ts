@@ -8,7 +8,7 @@ import type {
 	BillingPlan,
 	DeferredAutumnBillingPlanData,
 	StripeBillingStage,
-} from "@/internal/billing/v2/types";
+} from "@autumn/shared";
 import { generateId } from "@/utils/genUtils";
 import { MetadataService } from "../MetadataService";
 

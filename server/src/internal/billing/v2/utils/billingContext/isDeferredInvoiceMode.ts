@@ -1,4 +1,4 @@
-import type { BillingContext } from "@/internal/billing/v2/types";
+import type { BillingContext } from "@autumn/shared";
 
 export const isDeferredInvoiceMode = ({
 	billingContext,

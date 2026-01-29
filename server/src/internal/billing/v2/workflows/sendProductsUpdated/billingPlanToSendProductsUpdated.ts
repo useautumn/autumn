@@ -18,7 +18,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type {
 	AutumnBillingPlan,
 	BillingContext,
-} from "@/internal/billing/v2/types";
+} from "@autumn/shared";
 import type { CreateCustomerContext } from "@/internal/customers/actions/createWithDefaults/createCustomerContext";
 import { workflows } from "@/queue/workflows.js";
 

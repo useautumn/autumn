@@ -9,7 +9,7 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
-import type { TrialContext } from "@/internal/billing/v2/types";
+import type { TrialContext } from "@autumn/shared";
 
 /**
  * Determine the billing cycle anchor based on product transitions.

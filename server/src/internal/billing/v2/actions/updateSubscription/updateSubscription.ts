@@ -12,7 +12,7 @@ import type {
 	BillingPlan,
 	BillingResult,
 	UpdateSubscriptionBillingContext,
-} from "@/internal/billing/v2/types";
+} from "@autumn/shared";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 
 export async function updateSubscription({
