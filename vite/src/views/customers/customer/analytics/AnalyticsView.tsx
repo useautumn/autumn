@@ -56,11 +56,16 @@ export const AnalyticsView = () => {
 	} = useAnalyticsData({ hasCleared });
 
 	// Show toast when data is truncated due to too many unique group values
+	const hasShownTruncationToast = useRef(false);
 	useEffect(() => {
-		if (truncated && groupBy) {
+		if (truncated && groupBy && !hasShownTruncationToast.current) {
 			toast.error(
 				`Too many unique values for '${groupBy}'. Showing top 10 by volume.`,
 			);
+			hasShownTruncationToast.current = true;
+		}
+		if (!truncated || !groupBy) {
+			hasShownTruncationToast.current = false;
 		}
 	}, [truncated, groupBy]);
 
@@ -231,7 +236,7 @@ export const AnalyticsView = () => {
 						</div>
 						<QueryTopbar />
 					</div>
-					{(queryLoading || topEventsLoading || !chartData) && (
+					{(queryLoading || topEventsLoading) && (
 						<div className="flex-1">
 							<p className="text-t3 text-sm shimmer w-fit">
 								Loading chart {customerId ? `for ${customerId}` : ""}
