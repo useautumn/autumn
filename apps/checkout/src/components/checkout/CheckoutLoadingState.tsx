@@ -6,7 +6,10 @@ export function CheckoutLoadingState() {
 		<div className="min-h-screen bg-background px-6 py-12 flex items-center justify-center">
 			<div className="w-full max-w-lg flex flex-col gap-8">
 				{/* Header */}
-				<Skeleton className="h-8 w-32" />
+				<div className="flex flex-col gap-2">
+					<Skeleton className="h-8 w-32" />
+					<Skeleton className="h-5 w-48" />
+				</div>
 
 				{/* Line items card */}
 				<div className="bg-card border border-border shadow-sm rounded-lg divide-y divide-border">

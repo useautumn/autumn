@@ -1,13 +1,39 @@
-import type { ConfirmCheckoutResponse } from "@autumn/shared";
-import { useState } from "react";
+import type { CheckoutChange, ConfirmCheckoutResponse } from "@autumn/shared";
+import { useCallback, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
+import { useDebouncedCallback } from "use-debounce";
 import { CheckoutErrorState } from "@/components/checkout/CheckoutErrorState";
 import { CheckoutLoadingState } from "@/components/checkout/CheckoutLoadingState";
 import { CheckoutSuccessState } from "@/components/checkout/CheckoutSuccessState";
+import { OrderSummary } from "@/components/checkout/OrderSummary";
+import { PlanSelectionCard } from "@/components/checkout/PlanSelectionCard";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useCheckout, useConfirmCheckout } from "@/hooks/useCheckout";
-import { formatAmount, formatDate } from "@/utils/formatUtils";
+import {
+	useCheckout,
+	useConfirmCheckout,
+	usePreviewCheckout,
+} from "@/hooks/useCheckout";
+import { formatAmount } from "@/utils/formatUtils";
+
+function buildOptionsArray(
+	incoming: CheckoutChange[],
+	quantities: Record<string, number>,
+): { feature_id: string; quantity: number }[] {
+	const options: { feature_id: string; quantity: number }[] = [];
+
+	for (const change of incoming) {
+		for (const fq of change.feature_quantities) {
+			const quantity = quantities[fq.feature_id] ?? fq.quantity;
+			options.push({
+				feature_id: fq.feature_id,
+				quantity,
+			});
+		}
+	}
+
+	return options;
+}
 
 export function CheckoutPage() {
 	const { checkoutId: checkoutIdParam } = useParams<{ checkoutId: string }>();
@@ -15,9 +41,36 @@ export function CheckoutPage() {
 	const [confirmResult, setConfirmResult] =
 		useState<ConfirmCheckoutResponse | null>(null);
 
-	const { data: checkoutData, isLoading, error } = useCheckout({ checkoutId });
+	// Local quantity overrides for optimistic UI
+	const [quantities, setQuantities] = useState<Record<string, number>>({});
 
+	const { data: checkoutData, isLoading, error } = useCheckout({ checkoutId });
+	const previewMutation = usePreviewCheckout({ checkoutId });
 	const confirmMutation = useConfirmCheckout({ checkoutId });
+
+	// Debounced preview update
+	const debouncedPreview = useDebouncedCallback(
+		(options: { feature_id: string; quantity: number }[]) => {
+			previewMutation.mutate(options);
+		},
+		300,
+	);
+
+	const handleQuantityChange = useCallback(
+		(featureId: string, quantity: number, _billingUnits: number) => {
+			// Update local state immediately for optimistic UI
+			// Quantity is in actual units (e.g., 500 messages), which is what the API expects
+			setQuantities((prev) => ({ ...prev, [featureId]: quantity }));
+
+			// Build options and trigger debounced preview
+			if (checkoutData) {
+				const newQuantities = { ...quantities, [featureId]: quantity };
+				const options = buildOptionsArray(checkoutData.incoming, newQuantities);
+				debouncedPreview(options);
+			}
+		},
+		[checkoutData, quantities, debouncedPreview],
+	);
 
 	const handleConfirm = () => {
 		confirmMutation.mutate(undefined, {
@@ -26,6 +79,12 @@ export function CheckoutPage() {
 			},
 		});
 	};
+
+	// Get first incoming plan name for order summary
+	const primaryPlanName = useMemo(() => {
+		if (!checkoutData?.incoming?.length) return "Order";
+		return checkoutData.incoming[0].plan.name || "Order";
+	}, [checkoutData]);
 
 	if (!checkoutId) {
 		return <CheckoutErrorState message="Missing checkout ID" />;
@@ -49,69 +108,62 @@ export function CheckoutPage() {
 		return <CheckoutErrorState message="No checkout data available" />;
 	}
 
-	const { preview } = checkoutData;
-
-	console.log("preview:", JSON.stringify(preview, null, 2));
+	const { preview, incoming } = checkoutData;
+	const { total, currency } = preview;
+	const isUpdating = previewMutation.isPending;
 
 	return (
 		<div className="min-h-screen bg-background px-6 py-12 flex items-center justify-center">
 			<div className="w-full max-w-lg flex flex-col gap-8">
 				{/* Header */}
-				<h1 className="text-2xl font-semibold text-foreground">Checkout</h1>
+				<h1 className="text-2xl font-semibold text-foreground">
+					Confirm your order
+				</h1>
 
-				{/* Line items card */}
-				<div className="bg-card border border-border shadow-sm rounded-lg divide-y divide-border">
-					{preview.line_items.map((item) => (
-						<div
-							key={item.description}
-							className="flex justify-between items-start gap-4 px-4 py-3.5"
-						>
-							<div className="flex flex-col gap-0.5">
-								<span className="font-medium text-foreground">
-									{item.title}
-								</span>
-								<span className="text-sm text-muted-foreground">
-									{item.description}
-								</span>
-							</div>
-							<span className="font-medium tabular-nums shrink-0">
-								{formatAmount(item.amount, preview.currency)}
-							</span>
-						</div>
+				{/* Plan selection section - one card per incoming plan */}
+				<div className="flex flex-col gap-4">
+					{incoming.map((change) => (
+						<PlanSelectionCard
+							key={change.plan.id}
+							change={change}
+							currency={currency}
+							quantities={quantities}
+							onQuantityChange={handleQuantityChange}
+						/>
 					))}
 				</div>
 
 				<Separator />
 
+				{/* Order summary section */}
+				<OrderSummary planName={primaryPlanName} preview={preview} />
+
+				<Separator />
+
 				{/* Amount due today */}
-				<div className="flex flex-col gap-1">
-					<div className="flex justify-between items-center">
-						<span className="text-base font-medium text-muted-foreground">
-							Amount due today
-						</span>
-						<span className="text-2xl font-semibold tabular-nums">
-							{formatAmount(preview.total, preview.currency)}
-						</span>
-					</div>
-					{preview.next_cycle && (
-						<p className="text-sm text-muted-foreground">
-							Then {formatAmount(preview.next_cycle.total, preview.currency)}
-							/month starting {formatDate(preview.next_cycle.starts_at)}
-						</p>
-					)}
+				<div className="flex items-center justify-between">
+					<span className="text-base font-medium text-foreground">
+						Amount due today
+					</span>
+					<span className="text-2xl font-semibold tabular-nums text-foreground">
+						{formatAmount(total, currency)}
+					</span>
 				</div>
 
-				{/* Button */}
-				<div className="pt-4">
-					<Button
-						className="w-full h-12 text-base rounded-xl"
-						onClick={handleConfirm}
-						disabled={confirmMutation.isPending}
-					>
-						{confirmMutation.isPending ? "Processing..." : "Confirm Purchase"}
-					</Button>
-				</div>
+				{/* Confirm button */}
+				<Button
+					className="w-full h-12 text-base font-medium rounded-lg"
+					onClick={handleConfirm}
+					disabled={confirmMutation.isPending || isUpdating}
+				>
+					{confirmMutation.isPending
+						? "Processing..."
+						: isUpdating
+							? "Updating..."
+							: "Confirm purchase"}
+				</Button>
 
+				{/* Error message */}
 				{confirmMutation.error && (
 					<p className="text-sm text-destructive text-center">
 						{confirmMutation.error instanceof Error

@@ -3,25 +3,38 @@ import {
 	type Checkout,
 	CheckoutAction,
 	ErrCode,
+	FeatureOptionsSchema,
 	type GetCheckoutResponse,
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
+import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { billingActions } from "@/internal/billing/v2/actions/index.js";
 import { billingPlanToChanges } from "@/internal/billing/v2/utils/billingPlanToChanges.js";
 import { billingPlanToPreviewResponse } from "@/internal/billing/v2/utils/billingPlanToPreviewResponse.js";
 
+const PreviewCheckoutBodySchema = z.object({
+	options: z.array(
+		FeatureOptionsSchema.pick({
+			feature_id: true,
+			quantity: true,
+		}),
+	),
+});
+
 /**
- * GET /checkouts/:checkout_id
+ * POST /checkouts/:checkout_id/preview
  *
- * Returns checkout preview data for the UI to render.
- * The checkout is already fetched and validated by the middleware.
+ * Returns updated checkout preview with new feature quantities.
+ * Used for inline quantity editing in the checkout UI.
  */
-export const handleGetCheckout = createRoute({
+export const handlePreviewCheckout = createRoute({
+	body: PreviewCheckoutBodySchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const checkout = c.get("checkout") as Checkout;
+		const body = c.req.valid("json");
 
 		if (checkout.action !== CheckoutAction.Attach) {
 			throw new RecaseError({
@@ -31,9 +44,15 @@ export const handleGetCheckout = createRoute({
 			});
 		}
 
-		const params = checkout.params as AttachParamsV0;
+		const originalParams = checkout.params as AttachParamsV0;
 
-		// Re-run attach in preview mode to get current billing plan
+		// Merge provided options with original params
+		const params: AttachParamsV0 = {
+			...originalParams,
+			options: body.options,
+		};
+
+		// Re-run attach in preview mode with updated options
 		const { billingContext, billingPlan } = await billingActions.attach({
 			ctx,
 			params,
@@ -57,7 +76,7 @@ export const handleGetCheckout = createRoute({
 			billingPlan,
 		});
 
-		// Build changes array
+		// Build incoming/outgoing changes
 		const { incoming, outgoing } = await billingPlanToChanges({
 			ctx,
 			billingContext,
