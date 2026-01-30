@@ -7,6 +7,7 @@ import {
 import type { AgGridReact } from "ag-grid-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
@@ -51,7 +52,17 @@ export const AnalyticsView = () => {
 		topEventsLoading,
 		topEvents,
 		groupBy,
+		truncated,
 	} = useAnalyticsData({ hasCleared });
+
+	// Show toast when data is truncated due to too many unique group values
+	useEffect(() => {
+		if (truncated && groupBy) {
+			toast.error(
+				`Too many unique values for '${groupBy}'. Showing top 10 by volume.`,
+			);
+		}
+	}, [truncated, groupBy]);
 
 	// Clear the filter when groupBy changes
 	useEffect(() => {
@@ -216,7 +227,7 @@ export const AnalyticsView = () => {
 						</div>
 						<QueryTopbar />
 					</div>
-					{(queryLoading || topEventsLoading) && (
+					{(queryLoading || topEventsLoading || !chartData) && (
 						<div className="flex-1">
 							<p className="text-t3 text-sm shimmer w-fit">
 								Loading chart {customerId ? `for ${customerId}` : ""}

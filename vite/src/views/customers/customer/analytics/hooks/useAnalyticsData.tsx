@@ -97,6 +97,7 @@ export const useAnalyticsData = ({
 		bcExclusionFlag: data?.bcExclusionFlag ?? false,
 		topEventsLoading,
 		groupBy,
+		truncated: data?.truncated ?? false,
 	};
 };
 

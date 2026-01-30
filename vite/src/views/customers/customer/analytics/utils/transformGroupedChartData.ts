@@ -209,13 +209,15 @@ export function generateChartConfig({
 		const groupValue = parts[parts.length - 1];
 
 		const featureName = getFeatureName({ key: featureKey, features });
+		const displayGroupValue =
+			groupValue === "AUTUMN_RESERVED" ? "Other values" : groupValue;
 
 		config.push({
 			xKey: "period",
 			yKey: meta.name,
 			type: "bar",
 			stacked: true,
-			yName: `${featureName} (${groupValue})`,
+			yName: `${featureName} (${displayGroupValue})`,
 			fill: colorsToUse[colorIndex % colorsToUse.length],
 		});
 
