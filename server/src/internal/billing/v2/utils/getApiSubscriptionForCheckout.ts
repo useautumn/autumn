@@ -1,6 +1,7 @@
 import {
 	type BillingContext,
 	type CheckoutSubscription,
+	CusExpand,
 	CusProductStatus,
 	cusProductToPlanStatus,
 	cusProductToProduct,
@@ -33,12 +34,13 @@ export const getApiSubscriptionForCheckout = async ({
 	const { fullCustomer, stripeSubscription } = billingContext;
 	const currency = orgToCurrency({ org: ctx.org });
 
-	// Always get plan for checkout
+	// Always get plan for checkout (with features expanded for display)
 	const plan = await getPlanResponse({
 		product: fullProduct,
 		features: ctx.features,
 		fullCus: fullCustomer,
 		currency,
+		expand: [CusExpand.PlanFeaturesFeature],
 	});
 
 	const status = cusProductToPlanStatus({ status: cusProduct.status });

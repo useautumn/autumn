@@ -56,7 +56,7 @@ export function QuantityInput({
 	}
 
 	return (
-		<div className="flex items-center border border-border rounded-lg overflow-hidden bg-background">
+		<div className="flex items-center border border-border rounded-lg overflow-hidden shadow-[0_4px_4px_0_rgba(0,0,0,0.02),inset_0_-3px_4px_0_rgba(0,0,0,0.04)]">
 			<button
 				type="button"
 				className="h-8 w-8 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-r border-border"

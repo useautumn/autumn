@@ -2,6 +2,7 @@ import {
 	type ApiPlanFeature,
 	ApiPlanFeatureSchema,
 } from "@api/products/planFeature/apiPlanFeature.js";
+import { CusExpand } from "@models/cusModels/cusExpand.js";
 import { Infinite } from "@models/productModels/productEnums.js";
 import {
 	type ProductItem,
@@ -9,10 +10,12 @@ import {
 } from "@models/productV2Models/productItemModels/productItemModels.js";
 import { InternalError } from "../../api/models.js";
 import type { Feature } from "../../models/featureModels/featureModels.js";
+import { expandIncludes } from "../expandUtils.js";
 import {
 	isBooleanFeature,
 	isContUseFeature,
 } from "../featureUtils/convertFeatureUtils.js";
+import { toApiFeature } from "../featureUtils.js";
 import { getProductItemDisplay } from "../productDisplayUtils.js";
 import { isFeaturePriceItem } from "../productV2Utils/productItemUtils/getItemType.js";
 import { itemToBillingInterval } from "../productV2Utils/productItemUtils/itemIntervalUtils.js";
@@ -125,11 +128,18 @@ const itemToPlanFeatureProration = ({ item }: { item: ProductItem }) => {
 export const itemsToPlanFeatures = ({
 	items,
 	features,
+	expand = [],
 }: {
 	items: ProductItem[];
 	features: Feature[];
+	expand?: string[];
 }): ApiPlanFeature[] => {
 	if (!items) return [];
+
+	const shouldExpandFeature = expandIncludes({
+		expand,
+		includes: [CusExpand.PlanFeaturesFeature],
+	});
 
 	return items.map((item) => {
 		const feature = features.find((f) => f.id === item.feature_id);
@@ -149,9 +159,14 @@ export const itemsToPlanFeatures = ({
 		const rollover = itemToPlanFeatureRollover({ item });
 		const proration = itemToPlanFeatureProration({ item });
 
+		// Convert feature to API format if expand requested
+		const apiFeature = shouldExpandFeature
+			? toApiFeature({ feature })
+			: undefined;
+
 		return ApiPlanFeatureSchema.parse({
 			feature_id: item.feature_id,
-
+			feature: apiFeature,
 			granted_balance: grantedBalance,
 			unlimited: item.included_usage === Infinite,
 

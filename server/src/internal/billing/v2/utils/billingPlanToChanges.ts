@@ -1,11 +1,13 @@
 import {
 	addToExpand,
 	type BillingContext,
+	type BillingPeriod,
 	type BillingPlan,
 	type CheckoutChange,
 	CusExpand,
 	type FullCusProduct,
 	isPrepaidPrice,
+	type LineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { cusProductToBalances } from "@/internal/customers/cusUtils/apiCusUtils/getApiBalance/cusProductToBalances.js";
@@ -51,6 +53,23 @@ function cusProductToFeatureQuantities({
 }
 
 /**
+ * Get billing period for a specific product from line items.
+ */
+function getBillingPeriodForProduct({
+	lineItems,
+	productId,
+}: {
+	lineItems: LineItem[];
+	productId: string;
+}): BillingPeriod | undefined {
+	const lineItem = lineItems.find(
+		(line) =>
+			line.context.product.id === productId && line.context.billingPeriod,
+	);
+	return lineItem?.context.billingPeriod;
+}
+
+/**
  * Convert a BillingPlan into incoming and outgoing CheckoutChange arrays.
  * Incoming = products being added, Outgoing = products being canceled/expired/deleted.
  */
@@ -72,6 +91,8 @@ export const billingPlanToChanges = async ({
 		add: [CusExpand.SubscriptionsPlan],
 	});
 
+	const lineItems = autumn.lineItems ?? [];
+
 	// 1. Products being added (incoming)
 	for (const cusProduct of autumn.insertCustomerProducts) {
 		const subscription = await getApiSubscriptionForCheckout({
@@ -86,10 +107,17 @@ export const billingPlanToChanges = async ({
 			fullCustomer,
 		});
 
+		const billingPeriod = getBillingPeriodForProduct({
+			lineItems,
+			productId: cusProduct.product.id,
+		});
+
 		incoming.push({
 			plan: subscription.plan,
 			balances,
 			feature_quantities: cusProductToFeatureQuantities({ cusProduct }),
+			period_start: billingPeriod?.start,
+			period_end: billingPeriod?.end,
 		});
 	}
 
@@ -110,12 +138,19 @@ export const billingPlanToChanges = async ({
 				fullCustomer,
 			});
 
+			const billingPeriod = getBillingPeriodForProduct({
+				lineItems,
+				productId: customerProduct.product.id,
+			});
+
 			outgoing.push({
 				plan: subscription.plan,
 				feature_quantities: cusProductToFeatureQuantities({
 					cusProduct: customerProduct,
 				}),
 				balances,
+				period_start: billingPeriod?.start,
+				period_end: billingPeriod?.end,
 			});
 		}
 	}
@@ -136,10 +171,17 @@ export const billingPlanToChanges = async ({
 			fullCustomer,
 		});
 
+		const billingPeriod = getBillingPeriodForProduct({
+			lineItems,
+			productId: cusProduct.product.id,
+		});
+
 		outgoing.push({
 			plan: subscription.plan,
 			feature_quantities: cusProductToFeatureQuantities({ cusProduct }),
 			balances,
+			period_start: billingPeriod?.start,
+			period_end: billingPeriod?.end,
 		});
 	}
 

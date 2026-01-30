@@ -36,5 +36,7 @@ export const fixedPriceToLineItem = ({
 		description,
 		stripePriceId,
 		stripeProductId,
+		usage: quantity,
+		overage: quantity,
 	});
 };

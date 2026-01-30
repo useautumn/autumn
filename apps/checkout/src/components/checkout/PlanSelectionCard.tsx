@@ -1,6 +1,8 @@
 import type { CheckoutChange } from "@autumn/shared";
-import { Check } from "@phosphor-icons/react";
+import { CheckIcon } from "@phosphor-icons/react";
+import { Fragment } from "react";
 import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { formatAmount } from "@/utils/formatUtils";
 import { QuantityInput } from "./QuantityInput";
 
@@ -82,25 +84,29 @@ export function PlanSelectionCard({
 			{/* Plan header */}
 			<div className="flex items-center justify-between px-4 py-4">
 				<div className="flex flex-col gap-0.5">
-					<span className="text-base font-medium text-muted-foreground">
+					<span className="text-base font-semibold text--foreground">
 						{plan.name}
 					</span>
 					{basePrice && (
-						<span className="text-lg font-semibold text-foreground">
-							{formatAmount(basePrice.amount, currency)} per{" "}
-							{basePrice.interval}
+						<div className="flex items-center gap-1">
+						<span className="text-base text-foreground">
+							{formatAmount(basePrice.amount, currency)} 
 						</span>
+							<span className="text-base text-muted-foreground">
+								per{" "}{basePrice.interval}
+							</span>
+						</div>
 					)}
 				</div>
 				<div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/20 bg-primary/5 text-primary">
-					<Check className="h-4 w-4" weight="bold" />
+					<CheckIcon className="h-4 w-4" weight="bold" />
 					<span className="text-sm font-medium">Selected</span>
 				</div>
 			</div>
 
 			{/* Prepaid features */}
 			{prepaidFeatures.length > 0 && (
-				<div className="divide-y divide-border border-t border-border">
+				<div className="flex flex-col">
 					{prepaidFeatures.map((feature) => {
 						const currentQuantity =
 							quantities[feature.featureId] ?? feature.quantity;
@@ -110,12 +116,13 @@ export function PlanSelectionCard({
 						const intervalLabel = formatInterval(feature.interval);
 
 						return (
-							<div
-								key={feature.featureId}
-								className="flex items-center justify-between px-4 py-4"
-							>
+							<Fragment key={feature.featureId}>
+								<div className="px-4">
+									<Separator className="w-auto" />
+								</div>
+								<div className="flex items-center justify-between px-4 py-4">
 								<div className="flex flex-col gap-0.5">
-									<span className="font-medium text-foreground">
+									<span className="font-semibold text-foreground">
 										{feature.name}
 									</span>
 									<span className="text-sm text-muted-foreground">
@@ -126,7 +133,7 @@ export function PlanSelectionCard({
 									</span>
 								</div>
 								<div className="flex items-center gap-4">
-									<span className="font-medium tabular-nums text-foreground">
+									<span className="text-[15px] font-medium leading-none tracking-tight tabular-nums text-secondary-foreground">
 										{formatAmount(totalPrice, currency)}/{intervalLabel}
 									</span>
 									<QuantityInput
@@ -148,7 +155,8 @@ export function PlanSelectionCard({
 										disabled={isUpdating}
 									/>
 								</div>
-							</div>
+								</div>
+							</Fragment>
 						);
 					})}
 				</div>
