@@ -4,8 +4,6 @@ import { apiAuthMiddleware } from "@/middleware/apiAuthMiddleware.js";
 import { expressApiVersionMiddleware } from "@/middleware/expressApiVersionMiddleware.js";
 import { pricingMiddleware } from "@/middleware/pricingMiddleware.js";
 import { refreshCacheMiddleware } from "@/middleware/refreshCacheMiddleware.js";
-import { expressCusRouter } from "../customers/cusRouter.js";
-import { expressProductRouter } from "../products/productRouter.js";
 
 const apiRouter: Router = Router();
 
@@ -14,9 +12,5 @@ apiRouter.use(pricingMiddleware);
 apiRouter.use(analyticsMiddleware);
 apiRouter.use(expressApiVersionMiddleware as any);
 apiRouter.use(refreshCacheMiddleware);
-
-// Analytics
-apiRouter.use("/products", expressProductRouter);
-apiRouter.use("/customers", expressCusRouter);
 
 export { apiRouter };
