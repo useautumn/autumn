@@ -1,3 +1,4 @@
+import type { GetCheckoutResponse } from "@autumn/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { checkoutApi } from "@/api/checkoutClient";
 
@@ -11,6 +12,22 @@ export function useCheckout({ checkoutId }: { checkoutId: string }) {
 		queryKey: checkoutKeys.detail(checkoutId),
 		queryFn: () => checkoutApi.getCheckout({ checkout_id: checkoutId }),
 		enabled: !!checkoutId,
+	});
+}
+
+export function usePreviewCheckout({ checkoutId }: { checkoutId: string }) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (options: { feature_id: string; quantity: number }[]) =>
+			checkoutApi.previewCheckout({ checkout_id: checkoutId, options }),
+		onSuccess: (data) => {
+			// Update the checkout query cache with new preview data
+			queryClient.setQueryData(
+				checkoutKeys.detail(checkoutId),
+				data as GetCheckoutResponse,
+			);
+		},
 	});
 }
 
