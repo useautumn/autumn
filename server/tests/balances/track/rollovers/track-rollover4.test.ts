@@ -7,6 +7,7 @@ import {
 	RolloverExpiryDurationType,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
@@ -40,7 +41,7 @@ export const pro = constructProduct({
 
 const testCase = "track-rollover4";
 
-describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for usage price feature`)}`, () => {
+describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for prepaid messages`)}`, () => {
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let testClockId: string;
@@ -128,11 +129,11 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for usage price f
 
 	// let usage2 = 50;
 	test("should  reset again and have correct rollover", async () => {
-		await advanceTestClock({
+		await advanceToNextInvoice({
 			stripeCli,
 			testClockId,
-			advanceTo: addMonths(curUnix, 1).getTime(),
-			waitForSeconds: 20,
+			withPause: true,
+			currentEpochMs: curUnix,
 		});
 
 		const newRollover = Math.min(balance + rollover, rolloverConfig.max);

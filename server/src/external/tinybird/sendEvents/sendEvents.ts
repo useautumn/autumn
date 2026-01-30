@@ -35,28 +35,26 @@ export const sendEventsToTinybird = async ({
 
 	try {
 		const result = await tinybirdIngest.events(tinybirdEvents);
-		logger?.debug(
-			{
+		logger?.info(`Sent ${events.length} events to Tinybird`, {
+			data: {
 				eventCount: events.length,
 				successfulRows: result.successful_rows,
 				quarantinedRows: result.quarantined_rows,
 			},
-			`Sent ${events.length} events to Tinybird`,
-		);
+		});
 	} catch (error) {
 		// All retries exhausted - log error with unique ID and capture in Sentry
 		const errorId = generateErrorId();
 		const errorMessage = error instanceof Error ? error.message : String(error);
 
-		logger?.error(
-			{
+		logger?.error(`[${errorId}] Failed to send events to Tinybird`, {
+			data: {
 				errorId,
 				eventCount: events.length,
 				error: errorMessage,
-				eventIds: events.slice(0, 10).map((e) => e.id),
+				events: events,
 			},
-			`[${errorId}] Failed to send events to Tinybird`,
-		);
+		});
 
 		Sentry.captureException(error, {
 			tags: {
@@ -64,8 +62,10 @@ export const sendEventsToTinybird = async ({
 				service: "tinybird",
 			},
 			extra: {
-				eventCount: events.length,
-				eventIds: events.slice(0, 10).map((e) => e.id),
+				data: {
+					eventCount: events.length,
+					events: events,
+				},
 			},
 		});
 	}

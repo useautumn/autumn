@@ -7,7 +7,10 @@ export const aggregateGroupablePipeResponseSchema = z.object({
 	event_name: z.string(),
 	group_value: z.string(),
 	total_value: z.number(),
-	_truncated: z.union([z.boolean(), z.number()]).transform(v => Boolean(v)).optional(),
+	_truncated: z
+		.union([z.boolean(), z.number()])
+		.transform((v) => Boolean(v))
+		.optional(),
 });
 
 export type AggregateGroupablePipeRow = z.infer<

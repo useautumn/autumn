@@ -75,7 +75,10 @@ function HeaderContent<T>({
 export function TableHeader({
 	className,
 	hideBorder,
-}: { className?: string; hideBorder?: boolean }) {
+}: {
+	className?: string;
+	hideBorder?: boolean;
+}) {
 	const {
 		table,
 		enableSelection,
@@ -86,12 +89,7 @@ export function TableHeader({
 	const rows = table.getRowModel().rows;
 
 	return (
-		<ShadcnTableHeader
-			className={cn(
-				"sticky top-0 z-20 bg-card",
-				className,
-			)}
-		>
+		<ShadcnTableHeader className={cn("sticky top-0 z-20 bg-card", className)}>
 			{headerGroups.map((headerGroup) => (
 				<TableRow
 					className={cn(
