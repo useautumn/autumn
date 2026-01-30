@@ -63,15 +63,18 @@ export const AdminUserTable = () => {
 
 	const enableSorting = false;
 
-	const tableConfig = useMemo(() => ({
-		table,
-		numberOfColumns: columns.length,
-		enableSorting,
-		isLoading,
-		emptyStateText: "No users found.",
-		rowClassName: "h-10",
-		flexibleTableColumns: true,
-	}), [table, columns.length, enableSorting, isLoading]);
+	const tableConfig = useMemo(
+		() => ({
+			table,
+			numberOfColumns: columns.length,
+			enableSorting,
+			isLoading,
+			emptyStateText: "No users found.",
+			rowClassName: "h-10",
+			flexibleTableColumns: true,
+		}),
+		[table, columns.length, enableSorting, isLoading],
+	);
 
 	return (
 		<div className="space-y-4">
@@ -88,9 +91,7 @@ export const AdminUserTable = () => {
 				/>
 			</div>
 
-			<Table.Provider
-				config={tableConfig}
-			>
+			<Table.Provider config={tableConfig}>
 				<Table.Container>
 					<Table.Content className="w-fit">
 						<Table.Header />

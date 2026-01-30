@@ -1,10 +1,19 @@
 import { ErrCode, type EventInsert, events, RecaseError } from "@autumn/shared";
 import { and, desc, eq } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
+import type { Logger } from "pino";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export class EventService {
-	static async insert({ db, event }: { db: DrizzleCli; event: EventInsert }) {
+	/** Insert event(s) into Postgres (Tinybird publishing is handled by EventBatchingManager) */
+	static async insert({
+		db,
+		event,
+	}: {
+		db: DrizzleCli;
+		event: EventInsert | EventInsert[];
+		logger?: Logger;
+	}) {
 		try {
 			const results = await db
 				.insert(events)
@@ -20,7 +29,8 @@ export class EventService {
 					code: ErrCode.DuplicateEvent,
 					statusCode: StatusCodes.CONFLICT,
 				});
-			} else throw error;
+			}
+			throw error;
 		}
 	}
 

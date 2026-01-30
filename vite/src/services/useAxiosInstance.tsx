@@ -51,7 +51,8 @@ export function useAxiosInstance(params?: {
 				) {
 					try {
 						// Get user's organizations
-						const { data: organizations } = await authClient.organization.list();
+						const { data: organizations } =
+							await authClient.organization.list();
 
 						if (organizations && organizations.length > 0) {
 							// User has other organizations, switch to the first available one
