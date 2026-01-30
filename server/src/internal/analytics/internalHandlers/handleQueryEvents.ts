@@ -12,7 +12,7 @@ import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { EventsAggregationService } from "@/internal/events/EventsAggregationService.js";
+import * as eventActions from "../actions/aggregate.js";
 import { AnalyticsService } from "../AnalyticsService.js";
 
 const QueryEventsSchema = z.object({
@@ -122,7 +122,7 @@ export const handleQueryEvents = createRoute({
 		// Use provided bin_size, or default based on interval
 		const binSize = bin_size || (interval === "24h" ? "hour" : "day");
 
-		const events = await EventsAggregationService.getTimeseriesEvents({
+		const { formatted: events, truncated } = await eventActions.aggregate({
 			ctx,
 			params: {
 				customer_id: customer_id,
@@ -143,6 +143,7 @@ export const handleQueryEvents = createRoute({
 			eventNames: event_names,
 			topEvents,
 			bcExclusionFlag,
+			truncated,
 		});
 	},
 });
