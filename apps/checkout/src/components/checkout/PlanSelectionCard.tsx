@@ -1,43 +1,29 @@
-import type { CheckoutChange } from "@autumn/shared";
+import type { ApiPlanFeature, CheckoutChange } from "@autumn/shared";
+import { Check } from "@phosphor-icons/react";
 import { Fragment } from "react";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { formatAmount } from "@/utils/formatUtils";
 import { QuantityInput } from "./QuantityInput";
 
-interface PrepaidFeatureInfo {
-	featureId: string;
-	name: string;
-	quantity: number;
-	unitPrice: number;
-	billingUnits: number;
-	maxPurchase: number | null;
-	interval: string;
-}
+function getPricedFeatures(features: ApiPlanFeature[]): {
+	prepaid: ApiPlanFeature[];
+	payPerUse: ApiPlanFeature[];
+} {
+	const prepaid: ApiPlanFeature[] = [];
+	const payPerUse: ApiPlanFeature[] = [];
 
-function getPrepaidFeatures(change: CheckoutChange): PrepaidFeatureInfo[] {
-	const { plan, feature_quantities } = change;
-	const prepaidFeatures: PrepaidFeatureInfo[] = [];
+	for (const feature of features) {
+		if (!feature.price) continue;
 
-	for (const feature of plan.features) {
-		if (feature.price?.usage_model === "prepaid") {
-			const quantityInfo = feature_quantities.find(
-				(fq) => fq.feature_id === feature.feature_id,
-			);
-
-			prepaidFeatures.push({
-				featureId: feature.feature_id,
-				name: feature.feature?.name || feature.feature_id,
-				quantity: quantityInfo?.quantity || 0,
-				unitPrice: feature.price.amount || 0,
-				billingUnits: feature.price.billing_units || 1,
-				maxPurchase: feature.price.max_purchase,
-				interval: feature.price.interval || "month",
-			});
+		if (feature.price.usage_model === "prepaid") {
+			prepaid.push(feature);
+		} else {
+			payPerUse.push(feature);
 		}
 	}
 
-	return prepaidFeatures;
+	return { prepaid, payPerUse };
 }
 
 function formatInterval(interval: string): string {
@@ -53,6 +39,21 @@ function formatInterval(interval: string): string {
 		default:
 			return interval;
 	}
+}
+
+function getFeatureName(feature: ApiPlanFeature): string {
+	return feature.feature?.name || feature.feature_id;
+}
+
+function getFeatureUnitDisplay(
+	feature: ApiPlanFeature,
+	plural: boolean,
+): string {
+	const display = feature.feature?.display;
+	if (display) {
+		return plural ? display.plural : display.singular;
+	}
+	return plural ? "units" : "unit";
 }
 
 interface PlanSelectionCardProps {
@@ -74,82 +75,126 @@ export function PlanSelectionCard({
 	onQuantityChange,
 	isUpdating = false,
 }: PlanSelectionCardProps) {
-	const { plan } = change;
-	const prepaidFeatures = getPrepaidFeatures(change);
+	const { plan, feature_quantities } = change;
+	const { prepaid, payPerUse } = getPricedFeatures(plan.features);
 	const basePrice = plan.price;
+	const hasPricedFeatures = prepaid.length > 0 || payPerUse.length > 0;
 
 	return (
 		<Card className="py-0 gap-0">
 			{/* Plan header */}
 			<div className="flex items-center justify-between px-4 py-4">
-				<div className="flex flex-col gap-0.5">
-					<span className="text-base font-semibold text-foreground">
-						{plan.name}
-					</span>
+				<div className="flex justify-between items-center w-full gap-0.5">
+					<span className="text-base text-foreground">{plan.name}</span>
 					{basePrice && (
-						<div className="flex items-center gap-1">
-							<span className="text-base text-foreground">
-								{formatAmount(basePrice.amount, currency)}
-							</span>
-							<span className="text-base text-muted-foreground">
-								per {basePrice.interval}
-							</span>
+						<div className="flex items-center gap-1 text-muted-foreground">
+							{formatAmount(basePrice.amount, currency)} per{" "}
+							{basePrice.interval}
 						</div>
 					)}
 				</div>
 			</div>
 
-			{/* Prepaid features */}
-			{prepaidFeatures.length > 0 && (
+			{hasPricedFeatures && (
 				<div className="flex flex-col">
-					{prepaidFeatures.map((feature) => {
+					{/* Prepaid features - show quantity selector */}
+					{prepaid.map((feature) => {
+						const price = feature.price;
+						if (!price) return null;
+
+						const quantityInfo = feature_quantities.find(
+							(fq) => fq.feature_id === feature.feature_id,
+						);
 						const currentQuantity =
-							quantities[feature.featureId] ?? feature.quantity;
-						// Price per billing unit, so total = (quantity / billingUnits) * unitPrice
-						const units = currentQuantity / feature.billingUnits;
-						const totalPrice = units * feature.unitPrice;
-						const intervalLabel = formatInterval(feature.interval);
+							quantities[feature.feature_id] ?? quantityInfo?.quantity ?? 0;
+
+						const billingUnits = price.billing_units || 1;
+						const unitPrice = price.amount || 0;
+						const units = currentQuantity / billingUnits;
+						const totalPrice = units * unitPrice;
+						const intervalLabel = formatInterval(price.interval || "month");
 
 						return (
-							<Fragment key={feature.featureId}>
+							<Fragment key={feature.feature_id}>
 								<div className="px-4">
 									<Separator className="w-auto" />
 								</div>
 								<div className="flex items-center justify-between px-4 py-4">
-								<div className="flex flex-col gap-0.5">
-									<span className="font-semibold text-foreground">
-										{feature.name}
-									</span>
+									<div className="flex flex-col gap-0.5">
+										<span className="text-foreground">
+											{getFeatureName(feature)}
+										</span>
+										<span className="text-sm text-muted-foreground">
+											{formatAmount(unitPrice, currency)} per{" "}
+											{billingUnits === 1
+												? getFeatureUnitDisplay(feature, false)
+												: `${billingUnits} ${getFeatureUnitDisplay(feature, true)}`}
+										</span>
+									</div>
+									<div className="flex items-center gap-4">
+										<span className="text-[15px] text-muted-foreground leading-none tracking-tight tabular-nums">
+											{formatAmount(totalPrice, currency)}/{intervalLabel}
+										</span>
+										<QuantityInput
+											value={currentQuantity}
+											onChange={(value) =>
+												onQuantityChange(
+													feature.feature_id,
+													value,
+													billingUnits,
+												)
+											}
+											min={0}
+											max={
+												price.max_purchase
+													? price.max_purchase * billingUnits
+													: undefined
+											}
+											step={billingUnits}
+											disabled={isUpdating}
+										/>
+									</div>
+								</div>
+							</Fragment>
+						);
+					})}
+
+					{/* Pay-per-use features - show rate with checkmark */}
+					{payPerUse.map((feature) => {
+						const price = feature.price;
+						if (!price) return null;
+
+						const billingUnits = price.billing_units || 1;
+
+						// Handle tiered pricing
+						let priceDisplay: string;
+						if (price.tiers && price.tiers.length > 0) {
+							const firstTier = price.tiers[0];
+							const tierPrice =
+								firstTier?.unit_price ?? firstTier?.flat_price ?? 0;
+							priceDisplay = `From ${formatAmount(tierPrice, currency)}`;
+						} else {
+							priceDisplay = formatAmount(price.amount || 0, currency);
+						}
+
+						return (
+							<Fragment key={feature.feature_id}>
+								<div className="px-4">
+									<Separator className="w-auto" />
+								</div>
+								<div className="flex items-center justify-between px-4 py-3">
+									<div className="flex items-center gap-3">
+										<Check className="h-4 w-4 text-muted-foreground shrink-0" />
+										<span className="text-sm text-foreground">
+											{getFeatureName(feature)}
+										</span>
+									</div>
 									<span className="text-sm text-muted-foreground">
-										{formatAmount(feature.unitPrice, currency)} per{" "}
-										{feature.billingUnits === 1
-											? "unit"
-											: `${feature.billingUnits} units`}
+										{priceDisplay} per{" "}
+										{billingUnits === 1
+											? getFeatureUnitDisplay(feature, false)
+											: `${billingUnits} ${getFeatureUnitDisplay(feature, true)}`}
 									</span>
-								</div>
-								<div className="flex items-center gap-4">
-									<span className="text-[15px] font-medium leading-none tracking-tight tabular-nums text-secondary-foreground">
-										{formatAmount(totalPrice, currency)}/{intervalLabel}
-									</span>
-									<QuantityInput
-										value={currentQuantity}
-										onChange={(value) =>
-											onQuantityChange(
-												feature.featureId,
-												value,
-												feature.billingUnits,
-											)
-										}
-										min={0}
-										max={
-											feature.maxPurchase
-												? feature.maxPurchase * feature.billingUnits
-												: 999999
-										}
-										step={feature.billingUnits}
-										disabled={isUpdating}
-									/>
-								</div>
 								</div>
 							</Fragment>
 						);
