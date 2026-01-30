@@ -145,7 +145,7 @@ export function CheckoutPage() {
 					<span className="text-base font-medium text-foreground">
 						Amount due today
 					</span>
-					<span className="text-2xl font-semibold tabular-nums text-foreground">
+					<span className="text-lg font-medium  text-foreground">
 						{formatAmount(total, currency)}
 					</span>
 				</div>

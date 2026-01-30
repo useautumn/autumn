@@ -49,6 +49,8 @@ export const CheckoutChangeSchema = z.object({
 		}),
 	),
 	balances: z.record(z.string(), ApiBalanceSchema),
+	period_start: z.number().optional(),
+	period_end: z.number().optional(),
 });
 
 /**

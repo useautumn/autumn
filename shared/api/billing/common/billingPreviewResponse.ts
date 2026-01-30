@@ -7,11 +7,17 @@ export const BillingPreviewResponseSchema = z.object({
 			title: z.string(),
 			description: z.string(),
 			amount: z.number(),
+			is_base: z.boolean().optional(),
+			total_quantity: z.number(),
+			paid_quantity: z.number(),
 		}),
 	),
 
 	total: z.number(),
 	currency: z.string(),
+
+	period_start: z.number().optional(),
+	period_end: z.number().optional(),
 
 	next_cycle: z
 		.object({
