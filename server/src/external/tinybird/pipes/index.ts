@@ -26,3 +26,10 @@ export {
 	listEventsPipeParamsSchema,
 	listEventsPipeResponseSchema,
 } from "./listEventsPipe.js";
+export {
+	createListEventNamesPipe,
+	type ListEventNamesPipeParams,
+	type ListEventNamesPipeRow,
+	listEventNamesPipeParamsSchema,
+	listEventNamesPipeResponseSchema,
+} from "./listEventNamesPipe.js";

@@ -13,6 +13,7 @@ import { useOrg } from "@/hooks/common/useOrg";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
+import { useEventNames } from "@/views/customers/customer/analytics/hooks/useEventNames";
 import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
@@ -126,6 +127,7 @@ const MainContent = ({
 	useFeaturesQuery();
 	useRewardsQuery();
 	useCusSearchQuery();
+	useEventNames();
 
 	return (
 		<AppContext.Provider value={{}}>
