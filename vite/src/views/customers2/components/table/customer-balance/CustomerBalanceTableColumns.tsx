@@ -1,7 +1,7 @@
 import type {
 	Entity,
 	FullCusEntWithFullCusProduct,
-	FullCusProduct,
+	FullCustomer,
 } from "@autumn/shared";
 import type { Row } from "@tanstack/react-table";
 import { AdminHover } from "@/components/general/AdminHover";
@@ -14,37 +14,25 @@ import { FeatureBalanceDisplay } from "../customer-feature-usage/FeatureBalanceD
 
 function UsageCell({
 	ent,
-	filteredCustomerProducts,
+	fullCustomer,
 	entityId,
 }: {
 	ent: FullCusEntWithFullCusProduct;
-	filteredCustomerProducts: FullCusProduct[];
+	fullCustomer: FullCustomer | null | undefined;
 	entityId: string | null;
 }) {
-	const hookResult = useFeatureUsageBalance({
-		cusProducts: filteredCustomerProducts,
+	const {
+		allowance,
+		balance,
+		initialAllowance,
+		usageType,
+		shouldShowOutOfBalance,
+		shouldShowUsed,
+	} = useFeatureUsageBalance({
+		fullCustomer,
 		featureId: ent.entitlement.feature.id,
 		entityId,
 	});
-
-	// For loose entitlements (no customer_product), use the entitlement data directly
-	const isLooseEntitlement = !ent.customer_product;
-	const allowance = isLooseEntitlement
-		? (ent.entitlement.allowance ?? 0)
-		: hookResult.allowance;
-	const balance = isLooseEntitlement ? (ent.balance ?? 0) : hookResult.balance;
-	const initialAllowance = isLooseEntitlement
-		? (ent.entitlement.allowance ?? 0)
-		: hookResult.initialAllowance;
-	const usageType = isLooseEntitlement
-		? ent.entitlement.feature.config?.usage_type
-		: hookResult.usageType;
-	const shouldShowOutOfBalance = isLooseEntitlement
-		? allowance > 0 || balance > 0
-		: hookResult.shouldShowOutOfBalance;
-	const shouldShowUsed = isLooseEntitlement
-		? balance < 0 || (balance === 0 && allowance <= 0)
-		: hookResult.shouldShowUsed;
 
 	if (ent.unlimited) {
 		return <span className="text-t4">Unlimited</span>;
@@ -64,26 +52,18 @@ function UsageCell({
 
 function BarCell({
 	ent,
-	filteredCustomerProducts,
+	fullCustomer,
 	entityId,
 }: {
 	ent: FullCusEntWithFullCusProduct;
-	filteredCustomerProducts: FullCusProduct[];
+	fullCustomer: FullCustomer | null | undefined;
 	entityId: string | null;
 }) {
-	const hookResult = useFeatureUsageBalance({
-		cusProducts: filteredCustomerProducts,
+	const { allowance, balance, quantity } = useFeatureUsageBalance({
+		fullCustomer,
 		featureId: ent.entitlement.feature.id,
 		entityId,
 	});
-
-	// For loose entitlements (no customer_product), use the entitlement data directly
-	const isLooseEntitlement = !ent.customer_product;
-	const allowance = isLooseEntitlement
-		? (ent.entitlement.allowance ?? 0)
-		: hookResult.allowance;
-	const balance = isLooseEntitlement ? (ent.balance ?? 0) : hookResult.balance;
-	const quantity = isLooseEntitlement ? 1 : hookResult.quantity;
 
 	// Determine whether to show reset or expiry info
 	const hasReset = ent.next_reset_at != null;
@@ -123,12 +103,12 @@ function BarCell({
 }
 
 export const CustomerBalanceTableColumns = ({
-	filteredCustomerProducts,
+	fullCustomer,
 	entityId,
 	aggregatedMap,
 	entities = [],
 }: {
-	filteredCustomerProducts: FullCusProduct[];
+	fullCustomer: FullCustomer | null | undefined;
 	entityId: string | null;
 	aggregatedMap: Map<string, FullCusEntWithFullCusProduct[]>;
 	entities?: unknown[];
@@ -172,7 +152,7 @@ export const CustomerBalanceTableColumns = ({
 		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => (
 			<UsageCell
 				ent={row.original}
-				filteredCustomerProducts={filteredCustomerProducts}
+				fullCustomer={fullCustomer}
 				entityId={entityId}
 			/>
 		),
@@ -184,7 +164,7 @@ export const CustomerBalanceTableColumns = ({
 		cell: ({ row }: { row: Row<FullCusEntWithFullCusProduct> }) => (
 			<BarCell
 				ent={row.original}
-				filteredCustomerProducts={filteredCustomerProducts}
+				fullCustomer={fullCustomer}
 				entityId={entityId}
 			/>
 		),

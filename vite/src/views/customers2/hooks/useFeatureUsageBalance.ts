@@ -4,13 +4,13 @@ import {
 	cusEntsToBalance,
 	cusEntsToGrantedBalance,
 	cusEntsToPrepaidQuantity,
-	cusProductsToCusEnts,
-	type FullCusProduct,
+	type FullCustomer,
+	fullCustomerToCustomerEntitlements,
 	nullish,
 } from "@autumn/shared";
 
 export interface FeatureUsageBalanceParams {
-	cusProducts: FullCusProduct[];
+	fullCustomer: FullCustomer | null | undefined;
 	featureId: string;
 	entityId?: string | null;
 }
@@ -28,18 +28,20 @@ export interface FeatureUsageBalanceResult {
 }
 
 /**
- * Calculates feature usage balance metrics from customer products
+ * Calculates feature usage balance metrics from full customer (includes extra entitlements)
  */
 export function useFeatureUsageBalance({
-	cusProducts,
+	fullCustomer,
 	featureId,
 	entityId,
 }: FeatureUsageBalanceParams): FeatureUsageBalanceResult {
-	const cusEnts = cusProductsToCusEnts({
-		cusProducts,
-		featureIds: [featureId],
-		inStatuses: ACTIVE_STATUSES,
-	});
+	const cusEnts = fullCustomer
+		? fullCustomerToCustomerEntitlements({
+				fullCustomer,
+				featureId,
+				inStatuses: ACTIVE_STATUSES,
+			})
+		: [];
 
 	//without manual update adjustment, no rollovers
 	const initialAllowance = cusEntsToAllowance({

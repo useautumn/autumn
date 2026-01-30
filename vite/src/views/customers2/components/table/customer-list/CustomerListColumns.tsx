@@ -2,6 +2,7 @@ import {
 	CusProductStatus,
 	type CustomerSchema,
 	type FullCusProduct,
+	type FullCustomer,
 	isCustomerProductTrialing,
 } from "@autumn/shared";
 import type { ColumnDef, Row } from "@tanstack/react-table";
@@ -26,8 +27,8 @@ type CustomerWithProducts = z.infer<typeof CustomerSchema> & {
 		trial_ends_at?: number | null;
 		[key: string]: unknown;
 	}>;
-	/** Full customer products with entitlements - merged from full_customers query */
-	fullCustomerProducts?: FullCusProduct[];
+	/** Full customer data with entitlements - merged from full_customers query */
+	fullCustomer?: FullCustomer;
 	/** Whether the full customer data is still loading */
 	isFullDataLoading?: boolean;
 };
@@ -237,7 +238,7 @@ export const createUsageColumn = ({
 		const customer = row.original;
 		return (
 			<FeatureUsageCell
-				customerProducts={customer.fullCustomerProducts}
+				fullCustomer={customer.fullCustomer}
 				featureId={featureId}
 				isLoading={customer.isFullDataLoading}
 			/>
