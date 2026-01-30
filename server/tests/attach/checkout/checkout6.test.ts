@@ -13,7 +13,7 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
-export const pro = constructProduct({
+const pro = constructProduct({
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Messages,
@@ -23,7 +23,7 @@ export const pro = constructProduct({
 	type: "pro",
 });
 
-export const premium = constructProduct({
+const premium = constructProduct({
 	items: [
 		constructFeatureItem({
 			featureId: TestFeature.Messages,

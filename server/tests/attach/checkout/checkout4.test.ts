@@ -29,7 +29,7 @@ const pro = constructProduct({
 
 const reward = constructCoupon({
 	id: "checkout4",
-	promoCode: "checkout4_code",
+	promoCode: "checkout4code",
 	discountType: RewardType.PercentageDiscount,
 	discountValue: 50,
 });
