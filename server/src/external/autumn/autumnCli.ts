@@ -23,6 +23,7 @@ import {
 	type LegacyVersion,
 	type OrgConfig,
 	type RewardRedemption,
+	type SetupPaymentParams,
 	type TrackParams,
 	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
@@ -808,5 +809,10 @@ export class AutumnInt {
 			const data = await this.post(`/subscriptions/preview_update`, params);
 			return data;
 		},
+	};
+
+	setupPayment = async (params: SetupPaymentParams) => {
+		const data = await this.post(`/setup_payment`, params);
+		return data;
 	};
 }

@@ -23,6 +23,7 @@ import { getOptionsFromCheckoutSession } from "./handleCheckoutCompleted/getOpti
 import { handleCheckoutSub } from "./handleCheckoutCompleted/handleCheckoutSub.js";
 import { handleRemainingSets } from "./handleCheckoutCompleted/handleRemainingSets.js";
 import { handleSetupCheckout } from "./handleCheckoutCompleted/handleSetupCheckout.js";
+import { handleStandaloneSetupCheckout } from "./handleCheckoutCompleted/handleStandaloneSetupCheckout.js";
 
 export const handleCheckoutSessionCompleted = async ({
 	ctx,
@@ -39,7 +40,18 @@ export const handleCheckoutSessionCompleted = async ({
 }) => {
 	const { logger } = ctx;
 	const metadata = await getMetadataFromCheckoutSession(data, db);
+
 	if (!metadata) {
+		if (data.mode === "setup") {
+			logger.info(
+				"checkout.completed: setup mode without metadata, handling standalone setup",
+			);
+			await handleStandaloneSetupCheckout({
+				ctx,
+				checkoutSession: data,
+			});
+			return;
+		}
 		logger.info("checkout.completed: metadata not found, skipping");
 		return;
 	}
