@@ -12,7 +12,7 @@ import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import * as eventActions from "../actions/aggregate.js";
+import { eventActions } from "../actions/index.js";
 import { AnalyticsService } from "../AnalyticsService.js";
 
 const QueryEventsSchema = z.object({
@@ -27,7 +27,7 @@ const QueryEventsSchema = z.object({
 const getTopEvents = async ({ ctx }: { ctx: AutumnContext }) => {
 	const { features } = ctx;
 
-	const topEventNamesRes = await AnalyticsService.getTopEventNames({
+	const topEventNamesRes = await eventActions.getTopEventNames({
 		ctx,
 	});
 
